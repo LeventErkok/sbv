@@ -29,7 +29,7 @@ there is one. The allSat function returns all satisfying assignments, lazily.
 
 The library communicates with SMT solvers via the SMT-Lib interface:
      
-        http://goedel.cs.uiowa.edu/smtlib/
+        [http://goedel.cs.uiowa.edu/smtlib/](http://goedel.cs.uiowa.edu/smtlib/)
 
 While the library is designed to work with any SMT-Lib compliant SMT-solver,
 solver specific support is required for parsing counter-example/model data since
@@ -39,9 +39,7 @@ future, at which point the sbv library can be generalized as well.)
 Currently, we only support the Yices SMT solver from SRI as far as the counter-example
 and model generation support is concerned:
 
-        [yices]
-
-[yices]: http://yices.csl.sri.com/
+        [http://yices.csl.sri.com/](http://yices.csl.sri.com/)
 
 You should download and install Yices on your machine, and make sure the
 "yices" executable is in your path before using the sbv library.
