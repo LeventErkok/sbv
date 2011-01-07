@@ -1,0 +1,14 @@
+INPUTS
+  s0 :: [8U], aliasing "x"
+  s1 :: [8U], aliasing "y"
+CONSTANTS
+  s_2 = False
+  s_1 = True
+TABLES
+ARRAYS
+DEFINE
+  s2 :: [8U] = s0 + s1
+  s3 :: [8U] = s0 - s1
+  s4 :: [8U] = s2 * s3
+OUTPUTS
+  s4

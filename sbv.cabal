@@ -1,0 +1,82 @@
+Name:          sbv
+Version:       0.4
+Category:      Formal Methods, Theorem Provers, SAT, SMT, Bit vectors
+Synopsis:      Symbolic bit-vectors
+Description:   Adds support for symbolic-bit vectors, allowing formal models of bit-precise
+               programs to be created. Supports symbolic arrays. Provides light-weight connection to
+               SMT solvers to produce formal property proofs of theoremhood and satisfiability,
+               with counter-examples.
+License:       BSD3
+License-file:  LICENSE
+Stability:     Experimental
+Author:        Levent Erkok
+Maintainer:    Levent Erkok (erkokl@gmail.com)
+Build-Type:    Custom
+Cabal-Version: >= 1.6
+Data-Files: SBVUnitTest/GoldFiles/*.gold
+Extra-Source-Files: INSTALL, README, COPYRIGHT
+
+Flag test
+  Description: Run the unit-test suite after build
+  Default    : False
+
+Library
+  ghc-options     : -Wall
+  ghc-prof-options: -auto-all -caf-all
+  Build-Depends   : base >= 3 && < 5
+                  , process >= 1.0.1
+                  , containers >= 0.2.0
+                  , QuickCheck >= 2.1.0.3
+                  , strict-concurrency >= 0.2.3
+                  , haskell98
+                  , old-time >= 1.0.0.2
+                  , parallel >= 2.2.0.1
+                  , mtl >= 1.1.0.2
+                  , array >= 0.2.0.0
+                  , HUnit >= 1.2.2.3
+                  , directory >= 1.0.1.1
+                  , filepath >= 1.1.0.4
+  Exposed-modules : Data.SBV
+  Other-modules   : Data.SBV.BitVectors.Data
+                  , Data.SBV.BitVectors.Bit
+                  , Data.SBV.BitVectors.Model
+                  , Data.SBV.BitVectors.Splittable
+                  , Data.SBV.BitVectors.Polynomial
+                  , Data.SBV.BitVectors.PrettyNum
+                  , Data.SBV.SMT.SMT
+                  , Data.SBV.SMT.SMTLib
+                  , Data.SBV.Provers.Prover
+                  , Data.SBV.Provers.SExpr
+                  , Data.SBV.Provers.Yices
+                  , Data.SBV.Utils.Boolean
+                  , Data.SBV.Utils.TDiff
+                  , Data.SBV.Utils.SBVTest
+                  , Data.SBV.Examples.Arrays.Memory
+                  , Data.SBV.Examples.Basics.BasicTests
+                  , Data.SBV.Examples.Basics.Higher
+                  , Data.SBV.Examples.Basics.Index
+                  , Data.SBV.Examples.Basics.ProofTests
+                  , Data.SBV.Examples.Basics.QRem
+                  , Data.SBV.Examples.Basics.UnsafeFunctionEquality
+                  , Data.SBV.Examples.BitPrecise.BitTricks
+                  , Data.SBV.Examples.BitPrecise.Legato
+                  , Data.SBV.Examples.CRC.CCITT
+                  , Data.SBV.Examples.CRC.CCITT_Unidir
+                  , Data.SBV.Examples.CRC.GenPoly
+                  , Data.SBV.Examples.CRC.Parity
+                  , Data.SBV.Examples.CRC.USB5
+                  , Data.SBV.Examples.PrefixSum.PrefixSum
+                  , Data.SBV.Examples.Puzzles.DogCatMouse
+                  , Data.SBV.Examples.Puzzles.MagicSquare
+                  , Data.SBV.Examples.Puzzles.NQueens
+                  , Data.SBV.Examples.Puzzles.PowerSet
+                  , Data.SBV.Examples.Puzzles.Sudoku
+                  , Data.SBV.Examples.Puzzles.U2Bridge
+                  , Data.SBV.Examples.Puzzles.Temperature
+
+Executable SBVUnitTests
+  main-is         : SBVUnitTest/SBVUnitTest.hs
+  if flag(test)
+    x-run-unittests: True
+  else
+    x-run-unittests: False

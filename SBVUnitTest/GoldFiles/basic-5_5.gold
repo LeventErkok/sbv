@@ -1,0 +1,14 @@
+INPUTS
+  s0 :: [8U], aliasing "x"
+  s1 :: [8U], aliasing "q"
+CONSTANTS
+  s_2 = False
+  s_1 = True
+  s2 = 1 :: [8U]
+TABLES
+ARRAYS
+DEFINE
+  s3 :: [8U] = s0 + s2
+OUTPUTS
+  s1
+  s3

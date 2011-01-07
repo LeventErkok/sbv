@@ -1,0 +1,5 @@
+One solution found
+Satisfiable. Model:
+  s0 = 3 :: [16U]
+  s1 = 41 :: [16U]
+  s2 = 56 :: [16U]
