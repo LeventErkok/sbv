@@ -34,19 +34,20 @@ While the library is designed to work with any SMT-Lib compliant SMT-solver,
 solver specific support is required for parsing counter-example/model data since
 there is currently no agreed upon format for getting models from arbitrary SMT
 solvers. (The SMT-Lib2 initiative will potentially address this issue in the
-future, at which point the sbv library can be generalized as well.)
-Currently, we only support the Yices SMT solver from SRI as far as the counter-example
+future, at which point the sbv library can be generalized as well.) Currently, we
+only support the Yices SMT solver from SRI as far as the counter-example
 and model generation support is concerned:
 [http://yices.csl.sri.com/](http://yices.csl.sri.com/)
 
-You should download and install Yices on your machine, and make sure the
+You **should** download and install Yices on your machine, and make sure the
 "yices" executable is in your path before using the sbv library.
 
 Examples
 =========
-Please see the files under the [Examples](http://github.com/LeventErkok/sbv/tree/master/Data/SBV/Examples)
-directory for a number of interesting applications and use cases. Amongst others, it contains solvers for
-Sudoku and N-Queens puzzles as mandatory SMT solver examples..
+Please see the files under the
+[Examples](http://github.com/LeventErkok/sbv/tree/master/Data/SBV/Examples)
+directory for a number of interesting applications and use cases. Amongst others,
+it contains solvers for Sudoku and N-Queens puzzles as mandatory SMT solver examples..
 
 Installation
 ============
