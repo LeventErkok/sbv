@@ -46,9 +46,9 @@ You should download and install Yices on your machine, and make sure the
 
 Examples
 =========
-Please see the files under the [Data/SBV/Examples] directory for a number of interesting
-applications and use cases. Amongst others, it contains solvers for Sudoku and N-Queens
-puzzles as mandatory SMT solver examples..
+Please see the files under the [Examples](http://github.com/LeventErkok/sbv/tree/master/Data/SBV/Examples)
+directory for a number of interesting applications and use cases. Amongst others, it contains solvers for
+Sudoku and N-Queens puzzles as mandatory SMT solver examples..
 
 Installation
 ============
