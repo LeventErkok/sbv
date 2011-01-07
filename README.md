@@ -27,9 +27,8 @@ assignment to inputs such that the predicate fails. For a satisfiability
 check via the sat function, the library will return a satisfying assignment, if
 there is one. The allSat function returns all satisfying assignments, lazily.
 
-The library communicates with SMT solvers via the SMT-Lib interface:
-     
-        [http://goedel.cs.uiowa.edu/smtlib/](http://goedel.cs.uiowa.edu/smtlib/)
+The library communicates with SMT solvers via the SMT-Lib interface: 
+[http://goedel.cs.uiowa.edu/smtlib/](http://goedel.cs.uiowa.edu/smtlib/)
 
 While the library is designed to work with any SMT-Lib compliant SMT-solver,
 solver specific support is required for parsing counter-example/model data since
@@ -38,8 +37,7 @@ solvers. (The SMT-Lib2 initiative will potentially address this issue in the
 future, at which point the sbv library can be generalized as well.)
 Currently, we only support the Yices SMT solver from SRI as far as the counter-example
 and model generation support is concerned:
-
-        [http://yices.csl.sri.com/](http://yices.csl.sri.com/)
+[http://yices.csl.sri.com/](http://yices.csl.sri.com/)
 
 You should download and install Yices on your machine, and make sure the
 "yices" executable is in your path before using the sbv library.
