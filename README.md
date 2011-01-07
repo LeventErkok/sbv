@@ -1,4 +1,5 @@
-SBV: Symbolic Bit Vectors in Haskell.
+SBV: Symbolic Bit Vectors in Haskell
+====================================
 
 Express and properties about bit-precise Haskell programs and automatically prove
 them using SMT solvers.
