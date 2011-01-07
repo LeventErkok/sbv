@@ -1,6 +1,6 @@
 OVERVIEW
 ========
-The sbv library provides support for dealing with Symbolic Bit Vectors
+The Haskell sbv library provides support for dealing with Symbolic Bit Vectors
 in Haskell. It introduces the types:
 
   - SBool: symbolic booleans
@@ -46,7 +46,7 @@ INSTALLATION
 The sbv library is cabalized. Assuming you have cabal/ghc installed, it should merely
 be a matter of running cabal. Please see the INSTALL file for installation details.
 
-COPYRIGHT, LICENSING
-====================
+COPYRIGHT, LICENSE
+==================
 The sbv library is distributed with the BSD3 license. See the COPYRIGHT file for
 details. The LICENSE file contains the BSD3 verbiage.
