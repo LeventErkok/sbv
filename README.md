@@ -39,7 +39,9 @@ future, at which point the sbv library can be generalized as well.)
 Currently, we only support the Yices SMT solver from SRI as far as the counter-example
 and model generation support is concerned:
 
-        http://yices.csl.sri.com/
+        [yices]
+
+[yices]: http://yices.csl.sri.com/
 
 You should download and install Yices on your machine, and make sure the
 "yices" executable is in your path before using the sbv library.
