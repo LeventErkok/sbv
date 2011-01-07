@@ -7,8 +7,6 @@
 module Data.SBV.Examples.BitPrecise.Legato where
 
 {- An encoding and correctness proof of Legato's multiplier in Haskell
-   Inspired by the Cryptol version. Note that the Haskell version is
-   a deep(-er) embedding of the interpreter
 
    For details: 
      http://www.cs.utexas.edu/~moore/acl2/workshop-2004/contrib/legato/Weakest-Preconditions-Report.pdf
