@@ -10,6 +10,7 @@ License:       BSD3
 License-file:  LICENSE
 Stability:     Experimental
 Author:        Levent Erkok
+Homepage:      http://github.com/LeventErkok/sbv
 Maintainer:    Levent Erkok (erkokl@gmail.com)
 Build-Type:    Custom
 Cabal-Version: >= 1.6
