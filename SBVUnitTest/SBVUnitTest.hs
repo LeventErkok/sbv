@@ -28,7 +28,8 @@ import qualified Data.SBV.Examples.Basics.UnsafeFunctionEquality as T07 (testSui
 import qualified Data.SBV.Examples.BitPrecise.BitTricks          as T08 (testSuite)
 import qualified Data.SBV.Examples.BitPrecise.Legato             as T09 (testSuite)
 import qualified Data.SBV.Examples.CRC.CCITT                     as T10 (testSuite)
-import qualified Data.SBV.Examples.Puzzles.DogCatMouse           as T11 (testSuite)
+import qualified Data.SBV.Examples.CRC.CCITT_Unidir              as T11 (testSuite)
+import qualified Data.SBV.Examples.Puzzles.DogCatMouse           as T12 (testSuite)
 
 testCollection :: [SBVTestSuite]
 testCollection = [
@@ -43,6 +44,7 @@ testCollection = [
      , T09.testSuite
      , T10.testSuite
      , T11.testSuite
+     , T12.testSuite
      ]
 -- No user serviceable parts below..
 

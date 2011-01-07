@@ -54,3 +54,10 @@ ccitHDis3 = print =<< prove (crcUniGood 3)
 -- False; i.e., HD doesn't go to 4 just because we only look at uni-directional errors
 ccitHDis4 :: IO ()
 ccitHDis4 = print =<< prove (crcUniGood 4)
+
+-- Test suite
+testSuite :: SBVTestSuite
+testSuite = mkTestSuite $ \_ -> test [
+   "ccitHDis3" ~: assert       =<< isTheorem (crcUniGood 3)
+ , "ccitHDis4" ~: assert . not =<< isTheorem (crcUniGood 4)
+ ]
