@@ -44,8 +44,11 @@ and model generation support is concerned:
 You should download and install Yices on your machine, and make sure the
 "yices" executable is in your path before using the sbv library.
 
-Please see the files under the Data/SBV/Examples directory for a number of
-interesting applications and use cases.
+Examples
+=========
+Please see the files under the [Data/SBV/Examples] directory for a number of interesting
+applications and use cases. Amongst others, it contains solvers for Sudoku and N-Queens
+puzzles as mandatory SMT solver examples..
 
 Installation
 ============
