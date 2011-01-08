@@ -18,8 +18,7 @@ The function `prove` has the following type:
 
 The class `Provable` comes with instances for n-ary predicates, for arbitrary n.
 The predicates are just regular Haskell functions over symbolic signed and unsigned
-bit-vectors. Similar functions for checking satisfiability (`sat` and `allSat`) are
-also provided.
+bit-vectors. Functions for checking satisfiability (`sat` and `allSat`) are also provided.
 
 Overview
 ========
@@ -32,13 +31,16 @@ in Haskell. It introduces the types:
   - Arrays of symbolic values
 
 The user can construct ordinary Haskell programs using these types, which behave
-very similar to their concrete counterparts. However, predicates (i.e., functions
-that return `SBool`) built out of these types can be:
+very similar to their concrete counterparts. In particular these types belong to the
+standard `Num`, `Bits`, custom versions of `Eq` and `Ord`, and several custom classes
+for simplifying bit-precise programming with symbolic values, while taking full advantage
+of Haskell's type inference to avoid many common mistakes.
+
+Furthermore, predicates (i.e., functions that return `SBool`) built out of these types can also be:
 
   - proven correct via an external SMT solver (the `prove` function)
   - checked for satisfiability (the `sat` and `allSat` functions)
   - quick-checked
-  - or used with concrete values, as ordinary Haskell functions
 
 If a predicate is not valid, `prove` will return a counterexample: An 
 assignment to inputs such that the predicate fails. The `sat` function will
