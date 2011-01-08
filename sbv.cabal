@@ -1,8 +1,8 @@
 Name:          sbv
 Version:       0.4
 Category:      Formal Methods, Theorem Provers, SAT, SMT, Bit vectors
-Synopsis:      Symbolic bit-vectors
-Description:   Adds support for symbolic-bit vectors, allowing formal models of bit-precise
+Synopsis:      Symbolic Bit Vectors. Express properties about bit-precise Haskell programs and automatically prove them using SMT solvers.
+Description:   Adds support for symbolic bit vectors, allowing formal models of bit-precise
                programs to be created. Supports symbolic arrays. Provides light-weight connection to
                SMT solvers to produce formal property proofs of theoremhood and satisfiability,
                with counter-examples.
