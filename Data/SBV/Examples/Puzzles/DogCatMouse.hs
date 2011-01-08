@@ -25,10 +25,10 @@ puzzle dog cat mouse =
     &&&  dog + cat + mouse .== 100                     -- buy precisely 100 animals
     &&&  1500 * dog + 100 * cat + 25 * mouse .== 10000 -- spend exactly 100 dollars (use cents since we don't have fractions)
 
--- returns the only solution:
---   dog = 3 :: [16U]
---   cat = 41 :: [16U]
---   mouse = 56 :: [16U
+-- prints the only solution:
+--   dog = 3 :: SWord16
+--   cat = 41 :: SWord16
+--   mouse = 56 :: SWord16
 main :: IO ()
 main = print =<< allSat (forAll ["dog", "cat", "mouse"] puzzle)
 

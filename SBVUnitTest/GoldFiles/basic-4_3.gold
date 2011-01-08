@@ -1,12 +1,12 @@
 INPUTS
-  s0 :: [8U], aliasing "x"
+  s0 :: SWord8, aliasing "x"
 CONSTANTS
   s_2 = False
   s_1 = True
 TABLES
 ARRAYS
 DEFINE
-  s1 :: [8U] = s0 + s0
-  s2 :: [8U] = s1 * s1
+  s1 :: SWord8 = s0 + s0
+  s2 :: SWord8 = s1 * s1
 OUTPUTS
   s2

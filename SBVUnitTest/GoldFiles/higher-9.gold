@@ -1,2 +1,2 @@
 Falsifiable. Counter-example:
-  s0 = 128 :: [8U]
+  s0 = 128 :: SWord8

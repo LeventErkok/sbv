@@ -11,7 +11,7 @@ them using SMT solvers.
         Q.E.D.
         Prelude Data.SBV> prove $ \(x::SWord8) -> x `shiftL` 2 .== x
         Falsifiable. Counter-example:
-          s0 = 128 :: [8U]
+          s0 = 128 :: SWord8
 
 The function `prove` has the following type:
     
