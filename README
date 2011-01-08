@@ -32,9 +32,9 @@ in Haskell. It introduces the types:
 
 The user can construct ordinary Haskell programs using these types, which behave
 very similar to their concrete counterparts. In particular these types belong to the
-standard `Num`, `Bits`, custom versions of `Eq` and `Ord`, and several custom classes
-for simplifying bit-precise programming with symbolic values, while taking full advantage
-of Haskell's type inference to avoid many common mistakes.
+standard classes `Num`, `Bits`, (custom versions of) `Eq` and `Ord`, along with several
+other custom classes for simplifying bit-precise programming with symbolic values. The
+framework takes full advantage of Haskell's type inference to avoid many common mistakes.
 
 Furthermore, predicates (i.e., functions that return `SBool`) built out of these types can also be:
 
