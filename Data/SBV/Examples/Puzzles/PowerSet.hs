@@ -26,3 +26,9 @@ powerSet xs = do putStrLn $ "Finding all subsets of " ++ show xs
             | True           = putStrLn $ "Subset #" ++ show i ++ ": " ++ show (concat (zipWith pick ss xs))
            pick True a  = [a]
            pick False _ = []
+
+-- Test suite
+testSuite :: SBVTestSuite
+testSuite = mkTestSuite $ \_ -> test [
+  "TBD" ~: assert True
+ ]

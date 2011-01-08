@@ -30,3 +30,9 @@ solve = do res <- allSat $ free_ >>= output . revOf
            disp _ x = putStrLn $ " " ++ show x ++ "C --> " ++ show ((round f) :: Integer) ++ "F (exact value: " ++ show f ++ "F)"
               where f :: Double
                     f  = 32 + (9 * fromIntegral x) / 5
+
+-- Test suite
+testSuite :: SBVTestSuite
+testSuite = mkTestSuite $ \_ -> test [
+  "TBD" ~: assert True
+ ]

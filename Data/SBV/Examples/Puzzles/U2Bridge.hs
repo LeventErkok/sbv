@@ -171,3 +171,9 @@ main :: IO ()
 main = go 1
  where go i = do p <- solveN i
                  if p then return () else go (i+1)
+
+-- Test suite
+testSuite :: SBVTestSuite
+testSuite = mkTestSuite $ \_ -> test [
+  "TBD" ~: assert True
+ ]

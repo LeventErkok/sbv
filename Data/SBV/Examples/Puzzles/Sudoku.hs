@@ -228,3 +228,9 @@ puzzle6 = (64, f)
 
 main :: IO ()
 main = mapM_ solve [puzzle0, puzzle1, puzzle2, puzzle3, puzzle4, puzzle5, puzzle6]
+
+-- Test suite
+testSuite :: SBVTestSuite
+testSuite = mkTestSuite $ \_ -> test [
+  "TBD" ~: assert True
+ ]
