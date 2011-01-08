@@ -232,5 +232,7 @@ main = mapM_ solve [puzzle0, puzzle1, puzzle2, puzzle3, puzzle4, puzzle5, puzzle
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test [
-  "TBD" ~: assert True
+  "sudoku " ++ show n ~: assert (checkPuzzle s)
+     | (n, s) <- zip [(0::Int)..] [puzzle0, puzzle1, puzzle2, puzzle3, puzzle4, puzzle5, puzzle6]
  ]
+ where checkPuzzle (i, f) = isSatisfiable $ mapM (const free_) [1..i] >>= output . valid . f
