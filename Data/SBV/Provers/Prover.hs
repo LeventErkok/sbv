@@ -15,6 +15,7 @@ module Data.SBV.Provers.Prover (
        , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..)
        , isSatisfiable, isTheorem
        , isSatisfiableWithin, isTheoremWithin
+       , numberOfModels
        , Equality(..)
        , prove, proveWith
        , sat, satWith
@@ -159,6 +160,14 @@ isSatisfiableWithin i = checkSatisfiable (Just i)
 isTheorem, isSatisfiable :: Provable a => a -> IO Bool
 isTheorem     p = fromJust `fmap` checkTheorem     Nothing p
 isSatisfiable p = fromJust `fmap` checkSatisfiable Nothing p
+
+-- return the number of models that satisfy the predicate
+numberOfModels :: Provable a => a -> IO Int
+numberOfModels p = do AllSatResult rs <- allSat p
+                      return $ sum $ map walk rs
+  where walk (Satisfiable{}) = 1
+        -- shouldn't happen, but just in case
+        walk r               = error $ "numberOfModels: Unexpected result from an allSat check: " ++ show (AllSatResult [r])
 
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
 proveWith config a = generateTrace config False a >>= callSolver [] "Checking Theoremhood.." ThmResult config
