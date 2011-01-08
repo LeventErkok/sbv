@@ -25,7 +25,7 @@ Overview
 The Haskell sbv library provides support for dealing with Symbolic Bit Vectors
 in Haskell. It introduces the types:
 
-  - `SBool`: Symbolic booleans (bits)
+  - `SBool`: Symbolic Booleans (bits)
   - `SWord8`, `SWord16`, `SWord32`, `SWord64`: Symbolic counterparts of Words (unsigned)
   - `SInt8`,  `SInt16`,  `SInt32`,  `SInt64`: Symbolic counterparts of Ints (signed)
   - Arrays of symbolic values
