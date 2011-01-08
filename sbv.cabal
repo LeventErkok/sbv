@@ -1,6 +1,6 @@
 Name:          sbv
-Version:       0.4
-Category:      Formal Methods, Theorem Provers, SAT, SMT, Bit vectors, Symbolic computation
+Version:       0.5
+Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic computation
 Synopsis:      Symbolic Bit Vectors: Prove bit-precise program properties using SMT solvers.
 Description:   Adds support for symbolic bit vectors, allowing formal models of bit-precise
                programs to be created. Supports symbolic arrays. Provides light-weight connection to
