@@ -66,3 +66,10 @@ genPoly hd = do putStrLn $ "*** Looking for polynomials with HD = " ++ show hd
 
 findHD3Polynomials :: IO ()
 findHD3Polynomials = genPoly 3
+
+-- Test suite
+testSuite :: SBVTestSuite
+testSuite = mkTestSuite $ \_ -> test [
+   "crcGood" ~: assert       =<< isSatisfiable (crcGood 3 0)
+ , "crcGood" ~: assert . not =<< isTheorem (crcGood 3 12)
+ ]
