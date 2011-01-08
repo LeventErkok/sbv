@@ -34,25 +34,15 @@ import qualified Data.SBV.Examples.CRC.Parity                    as T13 (testSui
 import qualified Data.SBV.Examples.CRC.USB5                      as T14 (testSuite)
 import qualified Data.SBV.Examples.PrefixSum.PrefixSum           as T15 (testSuite)
 import qualified Data.SBV.Examples.Puzzles.DogCatMouse           as T16 (testSuite)
+import qualified Data.SBV.Examples.Puzzles.MagicSquare           as T17 (testSuite)
 
 testCollection :: [SBVTestSuite]
 testCollection = [
-       T01.testSuite
-     , T02.testSuite
-     , T03.testSuite
-     , T04.testSuite
-     , T05.testSuite
-     , T06.testSuite
-     , T07.testSuite
-     , T08.testSuite
-     , T09.testSuite
-     , T10.testSuite
-     , T11.testSuite
-     , T12.testSuite
-     , T13.testSuite
-     , T14.testSuite
-     , T15.testSuite
-     , T16.testSuite
+       T01.testSuite, T02.testSuite, T03.testSuite, T04.testSuite
+     , T05.testSuite, T06.testSuite, T07.testSuite, T08.testSuite
+     , T09.testSuite, T10.testSuite, T11.testSuite, T12.testSuite
+     , T13.testSuite, T14.testSuite, T15.testSuite, T16.testSuite
+     , T17.testSuite
      ]
 -- No user serviceable parts below..
 
