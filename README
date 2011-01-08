@@ -13,6 +13,13 @@ them using SMT solvers.
         Falsifiable. Counter-example:
           s0 = 128 :: [8U]
 
+The function `prove` (and its friends `sat`, `allSat`) has types of the form:
+    
+        prove :: (Provable a) => a -> IO ThmResult
+
+where the class `Provable` has instances for predicates of arbitrary arity that can be formed
+as regular Haskell functions over symbolic signed and unsigned bit-vectors.
+
 Overview
 ========
 The Haskell sbv library provides support for dealing with Symbolic Bit Vectors
