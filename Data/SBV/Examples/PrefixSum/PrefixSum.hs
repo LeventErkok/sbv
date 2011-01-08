@@ -48,12 +48,19 @@ fl (zero, f) pl = zipPL (zipWith f (rsh flpq) p) flpq
 
 -- Correctness theorem, for a powerlist of given size and
 -- an associative operator. We'll run the symbolic execution over Word32's
-flIsCorrect :: Int -> (forall a. (OrdSymbolic a, Bits a) => (a, a -> a -> a)) -> IO ThmResult
-flIsCorrect n zf = prove $ do
+flIsCorrect :: Int -> (forall a. (OrdSymbolic a, Bits a) => (a, a -> a -> a)) -> Symbolic SBool
+flIsCorrect n zf = do
         args :: PowerList SWord32 <- mapM (const free_) [1..n]
         output $ ps zf args .== fl zf args
 
 -- Instances that can be proven directly:
 thm1, thm2 :: IO ThmResult
-thm1 = flIsCorrect  8 (0, (+))
-thm2 = flIsCorrect 16 (0, smax)
+thm1 = prove $ flIsCorrect  8 (0, (+))
+thm2 = prove $ flIsCorrect 16 (0, smax)
+
+-- Test suite
+testSuite :: SBVTestSuite
+testSuite = mkTestSuite $ \_ -> test [
+   "prefixSum1" ~: assert =<< isTheorem (flIsCorrect  8 (0, (+)))
+ , "prefixSum1" ~: assert =<< isTheorem (flIsCorrect 16 (0, smax))
+ ]
