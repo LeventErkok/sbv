@@ -4,11 +4,14 @@ SBV: Symbolic Bit Vectors in Haskell
 Express properties about bit-precise Haskell programs and automatically prove
 them using SMT solvers.
 
-    Prelude Data.SBV> prove $ \(x::SWord8) -> x `shiftL` 2 .== x*4
-    Q.E.D.
-    Prelude Data.SBV> prove $ \(x::SWord8) -> x `shiftL` 2 .== x
-    Falsifiable. Counter-example:
-      s0 = 128 :: [8U]
+        $ ghci
+        Prelude> :m Data.SBV
+        Prelude> :set -XScopedTypeVariables
+        Prelude Data.SBV> prove $ \(x::SWord8) -> x `shiftL` 2 .== x*4
+        Q.E.D.
+        Prelude Data.SBV> prove $ \(x::SWord8) -> x `shiftL` 2 .== x
+        Falsifiable. Counter-example:
+          s0 = 128 :: [8U]
 
 Overview
 ========
