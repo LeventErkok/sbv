@@ -33,6 +33,6 @@ solve = do res <- allSat $ free_ >>= output . revOf
 
 -- Test suite
 testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-  "TBD" ~: assert True
+testSuite = mkTestSuite $ \goldCheck -> test [
+  "temperature" ~: sat revOf `goldCheck` "temperature.gold"
  ]
