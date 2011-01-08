@@ -3,7 +3,7 @@
 # The sbv library is distributed with the BSD3 license. See the LICENSE file
 # in the distribution for details.
 
-.PHONY: all install test sdist clean gold
+.PHONY: all install test sdist clean docs gold
 
 all: install test sdist
 
