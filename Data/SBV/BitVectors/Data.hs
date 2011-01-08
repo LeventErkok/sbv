@@ -66,7 +66,9 @@ class HasSignAndSize a where
   sizeOf   :: a -> Size
   hasSign  :: a -> Bool
   showType :: a -> String
-  showType a = if hasSign a then "SInt" else "SWord" ++ show (sizeOf a)
+  showType a
+    | not (hasSign a) && sizeOf a == 1 = "SBool"
+    | True                             = if hasSign a then "SInt" else "SWord" ++ show (sizeOf a)
 
 instance HasSignAndSize Bit    where {sizeOf _ =  1; hasSign _ = False}
 instance HasSignAndSize Int8   where {sizeOf _ =  8; hasSign _ = True }
