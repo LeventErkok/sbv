@@ -29,15 +29,7 @@ powerSet xs = do putStrLn $ "Finding all subsets of " ++ show xs
 
 -- Test suite
 testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-   "powerSet 0" ~: assert $ (== 2^0) `fmap` numberOfModels (mkPSet 0)
- , "powerSet 1" ~: assert $ (== 2^1) `fmap` numberOfModels (mkPSet 1)
- , "powerSet 2" ~: assert $ (== 2^2) `fmap` numberOfModels (mkPSet 2)
- , "powerSet 3" ~: assert $ (== 2^3) `fmap` numberOfModels (mkPSet 3)
- , "powerSet 4" ~: assert $ (== 2^4) `fmap` numberOfModels (mkPSet 4)
- , "powerSet 5" ~: assert $ (== 2^5) `fmap` numberOfModels (mkPSet 5)
- , "powerSet 6" ~: assert $ (== 2^6) `fmap` numberOfModels (mkPSet 6)
- , "powerSet 7" ~: assert $ (== 2^7) `fmap` numberOfModels (mkPSet 7)
- , "powerSet 8" ~: assert $ (== 2^8) `fmap` numberOfModels (mkPSet 8)
- ]
- where mkPSet n = mapM (const free_) [1 .. n] >>= output . genPowerSet
+testSuite = mkTestSuite $ \_ -> test [ "powerSet " ++ show i ~: assert (pSet i) | i <- [0 .. 7] ]
+ where pSet :: Int -> IO Bool
+       pSet n = do cnt <- numberOfModels $ mapM (const free_) [1 .. n] >>= output . genPowerSet
+                   return (cnt == 2^n)
