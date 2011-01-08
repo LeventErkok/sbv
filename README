@@ -32,19 +32,20 @@ in Haskell. It introduces the types:
   - Arrays of symbolic values
 
 The user can construct ordinary Haskell programs using these types, which behave
-very similar to their concrete counterparts. However, the predicates (i.e., functions
-that return SBool) built out of these types can be:
+very similar to their concrete counterparts. However, predicates (i.e., functions
+that return `SBool`) built out of these types can be:
 
   - proven correct via an external SMT solver (the `prove` function)
   - checked for satisfiability (the `sat` and `allSat` functions)
   - quick-checked
+  - or used with concrete values, as ordinary Haskell functions
 
-If a predicate is not valid, the `prove` function will return a counterexample: An 
-assignment to inputs such that the predicate fails. For a satisfiability
-check, the `sat` function will return a satisfying assignment, if
-there is one. The `allSat` function returns all satisfying assignments, lazily.
+If a predicate is not valid, `prove` will return a counterexample: An 
+assignment to inputs such that the predicate fails. The `sat` function will
+return a satisfying assignment, if there is one. The `allSat` function returns
+all satisfying assignments, lazily.
 
-The library communicates with SMT solvers via the SMT-Lib interface: 
+The sbv library uses third-party SMT solvers via the standard SMT-Lib interface: 
 [http://goedel.cs.uiowa.edu/smtlib/](http://goedel.cs.uiowa.edu/smtlib/)
 
 While the library is designed to work with any SMT-Lib compliant SMT-solver,
