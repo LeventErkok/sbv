@@ -42,3 +42,9 @@ usbGood sent16 received16 =
          received = mkSWord11 received16
          frameSent     = mkFrame sent
          frameReceived = mkFrame received
+
+-- Test suite
+testSuite :: SBVTestSuite
+testSuite = mkTestSuite $ \_ -> test [
+   "usbGood" ~: assert =<< isTheorem usbGood
+ ]
