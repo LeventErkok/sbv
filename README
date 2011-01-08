@@ -13,12 +13,13 @@ them using SMT solvers.
         Falsifiable. Counter-example:
           s0 = 128 :: [8U]
 
-The function `prove` (and its friends `sat`, `allSat`) has types of the form:
+The function `prove` has the following type:
     
         prove :: (Provable a) => a -> IO ThmResult
 
-where the class `Provable` has instances for predicates of arbitrary arity that can be formed
-as regular Haskell functions over symbolic signed and unsigned bit-vectors.
+The class `Provable` has instances for n-ary predicates that can be formed
+as regular Haskell functions over symbolic signed and unsigned bit-vectors. Similar
+functions for checking satisfiability (`sat` and `allSat`) are also provided.
 
 Overview
 ========
