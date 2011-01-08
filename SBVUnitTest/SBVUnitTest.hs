@@ -30,7 +30,8 @@ import qualified Data.SBV.Examples.BitPrecise.Legato             as T09 (testSui
 import qualified Data.SBV.Examples.CRC.CCITT                     as T10 (testSuite)
 import qualified Data.SBV.Examples.CRC.CCITT_Unidir              as T11 (testSuite)
 import qualified Data.SBV.Examples.CRC.GenPoly                   as T12 (testSuite)
-import qualified Data.SBV.Examples.Puzzles.DogCatMouse           as T13 (testSuite)
+import qualified Data.SBV.Examples.CRC.Parity                    as T13 (testSuite)
+import qualified Data.SBV.Examples.Puzzles.DogCatMouse           as T14 (testSuite)
 
 testCollection :: [SBVTestSuite]
 testCollection = [
@@ -47,6 +48,7 @@ testCollection = [
      , T11.testSuite
      , T12.testSuite
      , T13.testSuite
+     , T14.testSuite
      ]
 -- No user serviceable parts below..
 

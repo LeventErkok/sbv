@@ -28,3 +28,9 @@ parityOK x y = isOdd cnt ==> px .== bnot py
   where cnt = count (zipWith (./=) (blastLE x) (blastLE y))
         px  = parity x
         py  = parity y
+
+-- Test suite
+testSuite :: SBVTestSuite
+testSuite = mkTestSuite $ \_ -> test [
+   "parity" ~: assert =<< isTheorem parityOK
+ ]
