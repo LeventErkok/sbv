@@ -7,6 +7,7 @@
 module Data.SBV.Examples.CRC.USB5 where
 
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 newtype SWord11 = S11 SWord16
 

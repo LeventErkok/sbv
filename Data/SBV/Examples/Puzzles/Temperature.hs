@@ -7,6 +7,7 @@
 module Data.SBV.Examples.Puzzles.Temperature where
 
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 type Temp = SWord16 -- larger than we need actually
 

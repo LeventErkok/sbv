@@ -13,6 +13,7 @@ module Data.SBV.Examples.Puzzles.U2Bridge where
 import Data.Maybe(fromJust)
 import Control.Monad.State
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 data U2Member = Bono | Edge | Adam | Larry
               deriving (Show, Enum)

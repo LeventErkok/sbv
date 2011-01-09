@@ -7,6 +7,7 @@
 module Data.SBV.Examples.Arrays.Memory where
 
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 type Address = SWord32
 type Value   = SWord64

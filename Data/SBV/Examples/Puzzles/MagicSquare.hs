@@ -6,8 +6,9 @@
 
 module Data.SBV.Examples.Puzzles.MagicSquare where
 
-import Data.SBV
 import Data.List
+import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 type Elem  = SWord32
 type Row   = [Elem]

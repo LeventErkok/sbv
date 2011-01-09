@@ -7,6 +7,7 @@
 module Data.SBV.Examples.CRC.GenPoly where
 
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 -- We don't have native support for 48 bits in Data.SBV
 -- So, represent as 32 high-bits and 16 low

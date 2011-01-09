@@ -12,6 +12,7 @@ module Data.SBV.Examples.Basics.UnsafeFunctionEquality where
 
 import System.IO.Unsafe
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 -- I claim this is actually safe, similar to trusted FFI calls..
 instance Equality (a -> b) => Eq (a -> b) where

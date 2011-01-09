@@ -10,6 +10,7 @@
 module Data.SBV.Examples.Basics.BasicTests where
 
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 test0 :: (forall a. Num a => (a -> a -> a)) -> Word8
 test0 f = f (3 :: Word8) 2

@@ -7,6 +7,7 @@
 module Data.SBV.Examples.Puzzles.DogCatMouse where
 
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 {- Puzzle:
      Spend exactly 100 dollars and buy exactly 100 animals.

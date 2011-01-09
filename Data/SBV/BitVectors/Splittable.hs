@@ -10,7 +10,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE BangPatterns #-}
 
-module Data.SBV.BitVectors.Splittable (FromBits, split, (#), extend, fromBitsLE, fromBitsBE) where
+module Data.SBV.BitVectors.Splittable (FromBits(..), split, (#), extend) where
 
 import Data.Word
 

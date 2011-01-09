@@ -6,9 +6,10 @@
 
 module Data.SBV.Examples.Puzzles.Sudoku where
 
-import Data.SBV
 import Data.List
 import Data.Maybe(fromJust)
+import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 type Row   = [SWord8]
 type Board = [Row]

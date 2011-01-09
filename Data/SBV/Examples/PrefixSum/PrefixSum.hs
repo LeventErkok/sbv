@@ -13,6 +13,7 @@
 module Data.SBV.Examples.PrefixSum.PrefixSum where
 
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 -- A poor man's representation of powerlists and
 -- basic operations on them:

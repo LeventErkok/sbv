@@ -10,6 +10,7 @@
 module Data.SBV.Examples.Basics.ProofTests where
 
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 f1, f2, f3, f4 :: Num a => a -> a -> a
 f1 x y = (x+y)*(x-y)

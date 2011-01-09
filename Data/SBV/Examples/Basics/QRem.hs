@@ -7,6 +7,7 @@
 module Data.SBV.Examples.Basics.QRem where
 
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 -- check: if (a, b) = x `quotRem` y then x = y*a + b
 -- being careful about y = 0. When divisor is 0, then quotient is

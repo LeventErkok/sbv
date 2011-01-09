@@ -34,6 +34,7 @@ so we adopt this change as well.
 
 import Data.Array
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 type Address  = SWord32
 data Register = RegX  | RegA  deriving (Eq, Ord, Ix, Bounded, Enum)

@@ -11,6 +11,7 @@ module Data.SBV.Examples.CRC.CCITT_Unidir where
 -- even if we consider only uni-directional errors
 
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 -- We don't have native support for 48 bits in Data.SBV
 -- So, represent as 32 high-bits and 16 low

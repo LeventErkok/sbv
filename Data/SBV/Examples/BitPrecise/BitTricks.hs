@@ -11,6 +11,7 @@
 module Data.SBV.Examples.BitPrecise.BitTricks where
 
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 -- http://graphics.stanford.edu/~seander/bithacks.html#IntegerMinOrMax
 fastMinCorrect :: SInt32 -> SInt32 -> SBool

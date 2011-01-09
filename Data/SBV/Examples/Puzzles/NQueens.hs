@@ -7,6 +7,7 @@
 module Data.SBV.Examples.Puzzles.NQueens where
 
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 type Solution = [SWord8]
 

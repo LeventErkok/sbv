@@ -7,6 +7,7 @@
 module Data.SBV.Examples.Basics.Index where
 
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 -- prove that the "select" primitive is working correctly
 test1 :: Int -> IO Bool

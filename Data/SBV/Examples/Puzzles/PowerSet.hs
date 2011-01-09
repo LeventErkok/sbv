@@ -7,6 +7,7 @@
 module Data.SBV.Examples.Puzzles.PowerSet where
 
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 -- the seemingly vacuous test ".<= true" is necessary
 -- so that Yices will return a satisfying assignment

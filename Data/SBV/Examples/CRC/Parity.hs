@@ -7,6 +7,7 @@
 module Data.SBV.Examples.CRC.Parity where
 
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 parity :: SWord64 -> SBool
 parity x = bnot (isOdd cnt)

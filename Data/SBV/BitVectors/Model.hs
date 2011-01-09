@@ -18,7 +18,7 @@ module Data.SBV.BitVectors.Model (
   , SBool, SWord8, SWord16, SWord32, SWord64, SInt8, SInt16, SInt32, SInt64, SArray, SFunArray, SymArray(..)
   , SBV(..)
   , Mergeable(..), EqSymbolic(..), OrdSymbolic(..)
-  , bitValue, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE, lsb, msb, BVDivisible, bvQuotRem
+  , bitValue, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE, lsb, msb, BVDivisible(..)
   , output, Result
   , module Data.Bits
   , module Data.SBV.Utils.Boolean

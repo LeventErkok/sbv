@@ -7,6 +7,7 @@
 module Data.SBV.Examples.Basics.Higher where
 
 import Data.SBV
+import Data.SBV.Utils.SBVTest
 
 type B = SWord8
 
