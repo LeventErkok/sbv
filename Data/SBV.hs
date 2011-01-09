@@ -21,7 +21,9 @@
 --
 -- The function 'prove' has the following type:
 --
--- >      prove :: Provable a => a -> IO ThmResult
+-- @
+--        'prove' :: 'Provable' a => a -> 'IO' 'ThmResult'
+-- @
 --
 -- The class 'Provable' comes with instances for n-ary predicates, for arbitrary n.
 -- The predicates are just regular Haskell functions over symbolic signed and unsigned
@@ -40,7 +42,7 @@
 --
 -- The user can construct ordinary Haskell programs using these types, which behave
 -- very similar to their concrete counterparts. In particular these types belong to the
--- standard classes 'Num', 'Bits', (custom versions of) 'Eq' ('EqSymbolic') 
+-- standard classes 'Num', 'Bits', custom versions of 'Eq' ('EqSymbolic') 
 -- and 'Ord' ('OrdSymbolic'), along with several other custom classes for simplifying
 -- bit-precise programming with symbolic values. The framework takes full advantage
 -- of Haskell's type inference to avoid many common mistakes.
