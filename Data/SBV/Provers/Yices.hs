@@ -13,6 +13,7 @@ import Data.List(sortBy, isPrefixOf)
 import Data.SBV.BitVectors.Data
 import Data.SBV.SMT.SMT
 import Data.SBV.Provers.SExpr
+import System.Environment
 
 yices :: SMTSolver
 yices = SMTSolver {
@@ -20,7 +21,11 @@ yices = SMTSolver {
          , executable = "yices"
          -- , options    = ["-tc", "-smt", "-e"]   -- For Yices1
          , options    = ["-m", "-f"]  -- For Yices2
-         , engine     = \cfg inps pgm -> standardSolver cfg pgm (ProofError cfg) (interpret cfg inps)
+         , engine     = \cfg inps pgm -> do
+                                execName <-                getEnv "SBV_YICES"           `catch` (\_ -> return (executable (solver cfg)))
+                                execOpts <- (words `fmap` (getEnv "SBV_YICES_OPTIONS")) `catch` (\_ -> return (options (solver cfg)))
+                                let cfg' = cfg { solver = (solver cfg) {executable = execName, options = execOpts} }
+                                standardSolver cfg' pgm (ProofError cfg) (interpret cfg inps)
          }
 
 timeout :: Int -> SMTSolver -> SMTSolver
