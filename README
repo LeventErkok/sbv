@@ -47,6 +47,8 @@ assignment to inputs such that the predicate fails. The `sat` function will
 return a satisfying assignment, if there is one. The `allSat` function returns
 all satisfying assignments, lazily.
 
+Use of SMT solvers
+==================
 The sbv library uses third-party SMT solvers via the standard SMT-Lib interface: 
 [http://goedel.cs.uiowa.edu/smtlib/](http://goedel.cs.uiowa.edu/smtlib/)
 
@@ -60,6 +62,8 @@ and model generation support is concerned:
 [http://yices.csl.sri.com/](http://yices.csl.sri.com/) However, other solvers can
 be hooked up with relative ease.
 
+Prerequisites
+=============
 You **should** download and install Yices on your machine, and make sure the
 "yices" executable is in your path before using the sbv library, as it is the
 current default solver. Alternatively, you can specify the location of yices
@@ -78,6 +82,9 @@ Installation
 ============
 The sbv library is cabalized. Assuming you have cabal/ghc installed, it should merely
 be a matter of running cabal. Please see the INSTALL file for installation details.
+
+Once the installation is done, you can run the executable @SBVUnitTests@ which will
+execute the regression test suite for sbv on your machine to ensure all is well.
 
 Copyright, License
 ==================
