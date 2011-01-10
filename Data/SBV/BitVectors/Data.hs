@@ -418,7 +418,7 @@ output i@(SBV _ (Right f)) = do
         liftIO $ modifyIORef (routs st) (sw:)
         return i
 
--- | run a symbolic computation and return a 'Result'
+-- | Run a symbolic computation and return a 'Result'
 runSymbolic :: Symbolic a -> IO Result
 runSymbolic (Symbolic c) = do
    ctr    <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
@@ -480,9 +480,10 @@ class Ord a => SymWord a where
   isSymbolic = not . isConcrete
 
 ---------------------------------------------------------------------------------
--- Symbolic Arrays
+-- * Symbolic Arrays
+---------------------------------------------------------------------------------
 
--- The SymArray class
+-- | The SymArray class, abstracts the notion of arrays of symbolic values
 class SymArray array where
   newArray_      :: (HasSignAndSize a, HasSignAndSize b) => Maybe (SBV b) -> Symbolic (array a b)
   newArray       :: (HasSignAndSize a, HasSignAndSize b) => String -> Maybe (SBV b) -> Symbolic (array a b)
@@ -491,9 +492,9 @@ class SymArray array where
   writeArray     :: SymWord b => array a b -> SBV a -> SBV b -> array a b
   mergeArrays    :: SymWord b => SBV Bool -> array a b -> array a b -> array a b
 
--- Arrays implemented in terms of SMT-arrays
-type ArrayIndex = Int
+-- | Arrays implemented in terms of SMT-arrays
 data SArray a b = SArray ((Bool, Size), (Bool, Size)) (Cached ArrayIndex)
+type ArrayIndex = Int
 
 instance Show (SArray a b) where
   show (SArray (a, b) _) = "SArray<" ++ sh a ++ ":" ++ sh b ++ ">"
@@ -543,7 +544,7 @@ declNewSArray mkNm mbInit = do
    liftIO $ modifyIORef (rArrayMap st) (IMap.insert i (nm, (asgnsz, bsgnsz), actx))
    return $ SArray (asgnsz, bsgnsz) $ cache $ const $ return i
 
--- Arrays implemented internally as functions
+-- | Arrays implemented internally as functions
 data SFunArray a b = SFunArray (SBV a -> SBV b)
 
 instance (HasSignAndSize a, HasSignAndSize b) => Show (SFunArray a b) where
@@ -553,8 +554,9 @@ instance (HasSignAndSize a, HasSignAndSize b) => Show (SFunArray a b) where
           bi = (hasSign (undefined :: b), sizeOf (undefined :: b))
 
 ---------------------------------------------------------------------------------
--- Cached values
---
+-- * Cached values
+---------------------------------------------------------------------------------
+
 -- We implement a peculiar caching mechanism, applicable to the use case in
 -- implementation of SBV's.  Whenever an SBV is used, we do not want to keep on
 -- evaluating it in the then-current state. That will produce essentially a
