@@ -1,8 +1,14 @@
-{- (c) Copyright Levent Erkok. All rights reserved.
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Data.SBV.BitVectors.Polynomials
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+-- Portability :  portable
 --
--- The sbv library is distributed with the BSD3 license. See the LICENSE file
--- in the distribution for details.
--}
+-- Implementation of polynomial arithmetic
+-----------------------------------------------------------------------------
 
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -21,6 +27,8 @@ import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
 import Data.SBV.BitVectors.Splittable
 
+-- | The Polynomial class
+-- Implements polynomial addition, multiplication, division, and modulus operations
 -- NB. We assume:
 --     a `pDiv` 0 = a
 --     a `pMod` 0 = a

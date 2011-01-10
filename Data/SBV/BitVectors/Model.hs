@@ -1,8 +1,14 @@
-{- (c) Copyright Levent Erkok. All rights reserved.
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Data.SBV.BitVectors.Model
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+-- Portability :  portable
 --
--- The sbv library is distributed with the BSD3 license. See the LICENSE file
--- in the distribution for details.
--}
+-- Instance declarations for our symbolic world
+-----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE Rank2Types #-}

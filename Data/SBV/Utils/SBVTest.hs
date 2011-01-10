@@ -1,8 +1,14 @@
-{- (c) Copyright Levent Erkok. All rights reserved.
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Data.SBV.Utils.SBVTest
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+-- Portability :  portable
 --
--- The sbv library is distributed with the BSD3 license. See the LICENSE file
--- in the distribution for details.
--}
+-- Integration with HUnit-based test suite for SBV
+-----------------------------------------------------------------------------
 
 {-# LANGUAGE RankNTypes #-}
 module Data.SBV.Utils.SBVTest(generateGoldCheck, showsAs, ioShowsAs, mkTestSuite, SBVTestSuite(..), module Test.HUnit) where

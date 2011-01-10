@@ -1,8 +1,14 @@
-{- (c) Copyright Levent Erkok. All rights reserved.
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Main
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+-- Portability :  portable
 --
--- The sbv library is distributed with the BSD3 license. See the LICENSE file
--- in the distribution for details.
--}
+-- Setup module for the sbv library
+-----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -Wall #-}
 module Main(main) where

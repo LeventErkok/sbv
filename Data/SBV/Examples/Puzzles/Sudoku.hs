@@ -1,8 +1,14 @@
-{- (c) Copyright Levent Erkok. All rights reserved.
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Data.SBV.Examples.Puzzles.Sudoku
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+-- Portability :  portable
 --
--- The sbv library is distributed with the BSD3 license. See the LICENSE file
--- in the distribution for details.
--}
+-- The Sudoku solver
+-----------------------------------------------------------------------------
 
 module Data.SBV.Examples.Puzzles.Sudoku where
 

@@ -1,20 +1,24 @@
-{- (c) Copyright Levent Erkok. All rights reserved.
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Data.SBV.Examples.Puzzles.DogCatMouse
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+-- Portability :  portable
 --
--- The sbv library is distributed with the BSD3 license. See the LICENSE file
--- in the distribution for details.
--}
+-- Puzzle:
+--   Spend exactly 100 dollars and buy exactly 100 animals.
+--   Dogs cost 15 dollars, cats cost 1 dollar, and mice cost 25 cents each.
+--   You have to buy at least one of each.
+--   How many of each should you buy?
+-----------------------------------------------------------------------------
 
 module Data.SBV.Examples.Puzzles.DogCatMouse where
 
 import Data.SBV
 import Data.SBV.Utils.SBVTest
 
-{- Puzzle:
-     Spend exactly 100 dollars and buy exactly 100 animals.
-     Dogs cost 15 dollars, cats cost 1 dollar, and mice cost 25 cents each.
-     You have to buy at least one of each.
-     How many should you buy?
--}
 
 type Count = SWord16 -- much larger than we actually need, but it works..
 

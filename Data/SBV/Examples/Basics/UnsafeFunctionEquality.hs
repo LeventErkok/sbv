@@ -1,8 +1,17 @@
-{- (c) Copyright Levent Erkok. All rights reserved.
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Data.SBV.Examples.Basics.UnsafeFunctionEquality
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+-- Portability :  portable
 --
--- The sbv library is distributed with the BSD3 license. See the LICENSE file
--- in the distribution for details.
--}
+-- Lifting of equality directly to functions, i.e., making functions
+-- instance of the Haskell Eq class. This is unsafe (due to the use of
+-- unsafePerformIO), but it's actually more akin to trusted FFI calls,
+-- and can be marked "pure"
+-----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -14,7 +23,6 @@ import System.IO.Unsafe
 import Data.SBV
 import Data.SBV.Utils.SBVTest
 
--- I claim this is actually safe, similar to trusted FFI calls..
 instance Equality (a -> b) => Eq (a -> b) where
   f == g = unsafePerformIO $ do
               r <- f === g

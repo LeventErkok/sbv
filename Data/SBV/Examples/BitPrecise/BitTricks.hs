@@ -1,12 +1,15 @@
-{- (c) Copyright Levent Erkok. All rights reserved.
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Data.SBV.Examples.BitPrecise.BitTricks
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+-- Portability :  portable
 --
--- The sbv library is distributed with the BSD3 license. See the LICENSE file
--- in the distribution for details.
--}
-
-{- Checks the correctness of a few tricks from the large collection found in:
-        http://graphics.stanford.edu/~seander/bithacks.html
--}
+-- Checks the correctness of a few tricks from the large collection found in:
+--      http://graphics.stanford.edu/~seander/bithacks.html
+-----------------------------------------------------------------------------
 
 module Data.SBV.Examples.BitPrecise.BitTricks where
 

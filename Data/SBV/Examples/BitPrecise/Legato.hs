@@ -1,16 +1,22 @@
-{- (c) Copyright Levent Erkok. All rights reserved.
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Data.SBV.Examples.BitPrecise.Legato
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+-- Portability :  portable
 --
--- The sbv library is distributed with the BSD3 license. See the LICENSE file
--- in the distribution for details.
--}
+-- Checks the correctness of a few tricks from the large collection found in:
+--      http://graphics.stanford.edu/~seander/bithacks.html
+-- An encoding and correctness proof of Legato's multiplier in Haskell
+--
+-- For details: 
+--   http://www.cs.utexas.edu/~moore/acl2/workshop-2004/contrib/legato/Weakest-Preconditions-Report.pdf
+-----------------------------------------------------------------------------
 
 module Data.SBV.Examples.BitPrecise.Legato where
 
-{- An encoding and correctness proof of Legato's multiplier in Haskell
-
-   For details: 
-     http://www.cs.utexas.edu/~moore/acl2/workshop-2004/contrib/legato/Weakest-Preconditions-Report.pdf
--}
 
 {- Here's Legato's algorithm, as coded in Mostek assembly
 

@@ -1,8 +1,14 @@
-{- (c) Copyright Levent Erkok. All rights reserved.
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Data.SBV.BitVectors.Data
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+-- Portability :  portable
 --
--- The sbv library is distributed with the BSD3 license. See the LICENSE file
--- in the distribution for details.
--}
+-- Internal data-structures for the sbv library
+-----------------------------------------------------------------------------
 
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE PatternGuards #-}
@@ -12,15 +18,36 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Data.SBV.BitVectors.Data where
+module Data.SBV.BitVectors.Data
+ ( -- * Unsigned Symbolic types
+   SBool, SWord8, SWord16, SWord32, SWord64
+   -- * Signed Symbolic types
+ , SInt8, SInt16, SInt32, SInt64
+   -- * Symbolic Word interface
+ , SymWord(..)
+   -- * Underlying concrete words
+ , CW(..)
+ , mkConstCW, liftCW2, mapCW, mapCW2
+   -- * Underlying symbolic words
+ , SW(..), trueSW, falseSW
+   -- * A computed symbolic value
+ , SBV(..), NodeId(..), mkSymSBV
+   -- * Symbolic Arrays
+ , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), SArray(..)
+   -- * Internal operations
+ , sbvToSW
+ , SBVExpr(..), newExpr
+ , cache, uncache, HasSignAndSize(..)
+ , Op(..), NamedSymVar, getTableIndex, Pgm, Symbolic, runSymbolic, State, Size, output, Result(..)
+ ) where
 
 import Control.Monad.Reader
 import Control.Parallel.Strategies(NFData(..))
 import Data.Bits
 import Data.Int
 import Data.Word
-import qualified Data.Foldable    as F
-import qualified Data.Sequence    as S
+import qualified Data.Foldable as F
+import qualified Data.Sequence as S
 import Data.SBV.BitVectors.Bit
 
 import Data.IORef
@@ -32,10 +59,15 @@ import Test.QuickCheck hiding(Result)
 
 import System.IO.Unsafe -- see the note at the bottom of the file
 
-data CW      = W1  { wcToW1 :: Bit   }
-             | W8  { wcToW8 :: Word8 }  | W16 { wcToW16 :: Word16} | W32 { wcToW32 :: Word32} | W64 { wcToW64 :: Word64 }
-             | I8  { wcToI8 :: Int8  }  | I16 { wcToI16 :: Int16 } | I32 { wcToI32 :: Int32 } | I64 { wcToI64 :: Int64  }
-             deriving (Eq, Ord)
+-- | 'CW' represents a concrete word of a fixed size:
+-- The unsigned variants are: 'W1', 'W8', 'W16', 'W32', and 'W64'
+-- The signed variants are  : 'I8', 'I16', 'I32', I64'
+-- Endianness is mostly irrelevant (see 'blastBE' and 'blastLE' functions)
+-- For signed words, the most significant digit is considered to be the sign
+data CW = W1  { wcToW1 :: Bit   }
+        | W8  { wcToW8 :: Word8 }  | W16 { wcToW16 :: Word16} | W32 { wcToW32 :: Word32} | W64 { wcToW64 :: Word64 }
+        | I8  { wcToI8 :: Int8  }  | I16 { wcToI16 :: Int16 } | I32 { wcToI32 :: Int32 } | I64 { wcToI64 :: Int64  }
+        deriving (Eq, Ord)
 type Size      = Int
 newtype NodeId = NodeId Int
                deriving (Eq, Ord)
@@ -183,9 +215,19 @@ instance Show SBVExpr where
   show (SBVApp op  [a, b])    = unwords [show a, show op, show b]
   show (SBVApp op  args)      = unwords (show op : map show args)
 
+-- | A program is a sequence of assignments
 type Pgm         = S.Seq (SW, SBVExpr)
+
+-- | 'NamedSymVar' pairs symbolic words and user given/automatically generated names
 type NamedSymVar = (SW, String)
-data Result      = Result [NamedSymVar] [(SW, CW)] [((Int, Int, Int), [SW])] [(Int, ArrayInfo)] Pgm [SW]
+
+-- | Result of running a symbolic computation
+data Result      = Result [NamedSymVar]                 -- inputs
+                          [(SW, CW)]                    -- constants
+                          [((Int, Int, Int), [SW])]     -- tables (automatically constructed)
+                          [(Int, ArrayInfo)]            -- arrays (user specified)
+                          Pgm                           -- assignments
+                          [SW]                          -- outputs
 
 instance Show Result where
   show (Result _ cs _ _ _ [r])
@@ -247,14 +289,31 @@ data State  = State { rctr       :: IORef Int
 
 data SBV a = SBV !(Bool, Size) !(Either CW (Cached SW))
 
+-- | 'SBool': A symbolic boolean
 type SBool   = SBV Bool
+
+-- | 'SWord8': 8-bit unsigned symbolic value
 type SWord8  = SBV Word8
+
+-- | 'SWord16': 16-bit unsigned symbolic value
 type SWord16 = SBV Word16
+
+-- | 'SWord32': 32-bit unsigned symbolic value
 type SWord32 = SBV Word32
+
+-- | 'SWord64': 64-bit unsigned symbolic value
 type SWord64 = SBV Word64
+
+-- | 'SInt8': 8-bit signed symbolic value
 type SInt8   = SBV Int8
+
+-- | 'SInt16': 16-bit signed symbolic value
 type SInt16  = SBV Int16
+
+-- | 'SInt32': 32-bit signed symbolic value
 type SInt32  = SBV Int32
+
+-- | 'SInt64': 64-bit signed symbolic value
 type SInt64  = SBV Int64
 
 -- Needed to satisfy the Num hierarchy
@@ -299,9 +358,6 @@ getTableIndex st at rt elts = do
                           modifyIORef (rtblMap st) (Map.insert elts (i, at, rt))
                           return i
 
-mkConstSW :: Integral a => State -> (Bool, Size) -> a -> IO SW
-mkConstSW st sgnsz a = newConst st $ mkConstCW sgnsz a
-
 mkConstCW :: Integral a => (Bool, Size) -> a -> CW
 mkConstCW (False, 1)  0 = W1  Zero
 mkConstCW (False, 1)  1 = W1  One
@@ -332,6 +388,12 @@ sbvToSW :: State -> SBV a -> IO SW
 sbvToSW st (SBV _ (Left c))  = newConst st c
 sbvToSW st (SBV _ (Right f)) = uncache f st
 
+-------------------------------------------------------------------------
+-- * Symbolic Computations
+-------------------------------------------------------------------------
+-- | A Symbolic computation. Represented by a reader monad carrying the
+-- state of the computation, layered on top of IO for creating unique
+-- references to hold onto intermediate results.
 newtype Symbolic a = Symbolic (ReaderT State IO a)
                    deriving (Monad, MonadIO, MonadReader State)
 
@@ -356,6 +418,7 @@ output i@(SBV _ (Right f)) = do
         liftIO $ modifyIORef (routs st) (sw:)
         return i
 
+-- | run a symbolic computation and return a 'Result'
 runSymbolic :: Symbolic a -> IO Result
 runSymbolic (Symbolic c) = do
    ctr    <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
@@ -388,16 +451,28 @@ runSymbolic (Symbolic c) = do
    arrs  <- IMap.toAscList `fmap` readIORef arrays
    return $ Result (reverse inpsR) cnsts tbls arrs rpgm (reverse outsR)
 
--- The SymWord class
+-------------------------------------------------------------------------------
+-- * Symbolic Words
+-------------------------------------------------------------------------------
+-- | A 'SymWord' is a potentiall symbolic bitvector that can be created instances of
+-- to be fed to a symbolic program.
 class Ord a => SymWord a where
+  -- | Create a user named input
   free       :: String -> Symbolic (SBV a)
+  -- | Create an automatically named input
   free_      :: Symbolic (SBV a)
+  -- | Turn a literal constant to symbolic
   literal    :: a -> SBV a
+  -- | Extract a literal, if the value is concrete
   unliteral  :: SBV a -> Maybe a
+  -- | Extract a literal, from a CW representation
   fromCW     :: CW -> a
+  -- | Is the symbolic word concrete?
   isConcrete :: SBV a -> Bool
+  -- | Is the symbolic word really symbolic?
   isSymbolic :: SBV a -> Bool
 
+  -- | minimal complete definiton: free, free_, literal, fromCW
   unliteral (SBV _ (Left c))  = Just $ fromCW c
   unliteral _                 = Nothing
   isConcrete (SBV _ (Left _)) = True

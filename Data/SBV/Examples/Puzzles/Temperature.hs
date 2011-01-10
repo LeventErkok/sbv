@@ -1,8 +1,16 @@
-{- (c) Copyright Levent Erkok. All rights reserved.
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Data.SBV.Examples.Puzzles.Temperature
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+-- Portability :  portable
 --
--- The sbv library is distributed with the BSD3 license. See the LICENSE file
--- in the distribution for details.
--}
+-- Puzzle:
+--   What 2 digit fahrenheit/celcius values are reverses of each other?
+--   Ignoring the fractions in the conversion
+-----------------------------------------------------------------------------
 
 module Data.SBV.Examples.Puzzles.Temperature where
 

@@ -1,8 +1,14 @@
-{- (c) Copyright Levent Erkok. All rights reserved.
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Data.SBV.Utils.TDiff
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+-- Portability :  portable
 --
--- The sbv library is distributed with the BSD3 license. See the LICENSE file
--- in the distribution for details.
--}
+-- Runs an IO computation printing the time it took to run it
+-----------------------------------------------------------------------------
 
 module Data.SBV.Utils.TDiff(timeIf) where
 
@@ -18,6 +24,9 @@ showTDiff itd = et
         pico = showFFloat (Just 3) (((10**(-12))::Double) * fromIntegral (tdPicosec td)) "s"
         et = concatMap (\(v, c) -> ' ':show v ++ [c]) vals ++ sec
 
+-- | If selected, runs the computation @m@, and prints the time it took
+-- to run it. The return type should be an instance of 'NFData' to ensure
+-- the correct elapsed time is printed.
 timeIf :: NFData a => Bool -> String -> IO a -> IO a
 timeIf False _ m = m
 timeIf True  w m = do start <- getClockTime

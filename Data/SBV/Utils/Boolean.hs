@@ -1,8 +1,15 @@
-{- (c) Copyright Levent Erkok. All rights reserved.
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Data.SBV.Utils.Boolean
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+-- Portability :  portable
 --
--- The sbv library is distributed with the BSD3 license. See the LICENSE file
--- in the distribution for details.
--}
+-- Abstraction of booleans. Unfortunately, Haskell makes Bool's very hard to
+-- work with, by making it a fixed-data type. This is our workaround
+-----------------------------------------------------------------------------
 
 module Data.SBV.Utils.Boolean where
 
@@ -11,6 +18,7 @@ infixr 3 &&&, ~&   -- and, nand
 infixr 2 |||, ~|   -- or, nor
 infixr 1 ==>, <=>  -- implies, iff
 
+-- | The boolean class
 -- minimal complete definition: true, bnot, &&&
 -- but it's advisable to define false, ||| as well (typically)
 class Boolean b where

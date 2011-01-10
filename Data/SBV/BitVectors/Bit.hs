@@ -1,8 +1,14 @@
-{- (c) Copyright Levent Erkok. All rights reserved.
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Data.SBV.BitVectors.Bit
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+-- Portability :  portable
 --
--- The sbv library is distributed with the BSD3 license. See the LICENSE file
--- in the distribution for details.
--}
+-- Representation of bits, in particular, bits are instances of Num
+-----------------------------------------------------------------------------
 
 module Data.SBV.BitVectors.Bit where
 
@@ -30,7 +36,7 @@ instance Num Bit where
   fromInteger _ = One
 
 instance Bits Bit where
-  a .&. b  = a * b 
+  a .&. b  = a * b
   a .|. b  = a + b
   Zero `xor` a = a
   One  `xor` a = negate a
