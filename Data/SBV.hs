@@ -75,7 +75,9 @@
 --
 -- You /should/ download and install Yices on your machine, and make sure the
 -- @yices@ executable is in your path before using the sbv library, as it is the
--- current default solver.
+-- current default solver. Alternatively you can specify the location of yices
+-- executable in the environment variable @SBV_YICES@ and the options to yices
+-- in @SBV_YICES_OPTIONS@. (The default for the latter is '\"-m -f\"'.)
 --
 -- The sbv library is hosted at <http://github.com/LeventErkok/sbv>.
 -- Comments, bug reports, and patches are always welcome.
