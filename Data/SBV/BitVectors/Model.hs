@@ -144,6 +144,7 @@ instance SymWord Int64 where
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.
+--
 -- Minimal complete definition: '.=='
 infix 4 .==, ./=
 class EqSymbolic a where
@@ -153,6 +154,9 @@ class EqSymbolic a where
 
 -- | Symbolic Comparisons. Similar to 'Eq', we cannot implement Haskell's 'Ord' class
 -- since there is no way to return an 'Ordering' value from a symbolic comparison.
+-- Furthermore, 'OrdSymbolic' requires 'Mergeable' to implement if-then-else, for the
+-- benefit of implementing symbolic versions of 'max' and 'min' functions.
+--
 -- Minimal complete definition: '.<'
 infix 4 .<, .<=, .>, .>=
 class (Mergeable a, EqSymbolic a) => OrdSymbolic a where
@@ -420,6 +424,7 @@ instance (SymWord a, Arbitrary a) => Arbitrary (SBV a) where
 
 -- |  Symbolic choice operator, parameterized via a class
 -- 'select' is a total-indexing function, with the default.
+--
 -- Minimal complete definition: 'symbolicMerge'
 class Mergeable a where
    -- | Merge two values based on the condition

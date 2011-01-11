@@ -483,6 +483,9 @@ class Ord a => SymWord a where
 -- are left unspecified, i.e., the solver is free to choose any value. This is the right thing
 -- to do if arrays are used as inputs to functions to be verified, typically. Reading an
 -- uninitilized entry is an error.
+-- While it's certainly possible for user to create instances of 'SymArray', the
+-- 'SArray' and 'SFunArray' instances already provided should cover most use cases
+-- in practice.
 class SymArray array where
   -- | Create a new array, with an optional initial value
   newArray_      :: (HasSignAndSize a, HasSignAndSize b) => Maybe (SBV b) -> Symbolic (array a b)
