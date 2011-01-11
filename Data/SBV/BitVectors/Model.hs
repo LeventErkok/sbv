@@ -20,14 +20,9 @@
 {-# LANGUAGE FunctionalDependencies #-}
 
 module Data.SBV.BitVectors.Model (
-    Symbolic, runSymbolic, SymWord(..)
-  , SBool, SWord8, SWord16, SWord32, SWord64, SInt8, SInt16, SInt32, SInt64, SArray, SFunArray, SymArray(..)
-  , SBV(..)
-  , Mergeable(..), EqSymbolic(..), OrdSymbolic(..)
-  , bitValue, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE, lsb, msb, BVDivisible(..)
-  , output, Result
-  , module Data.Bits
-  , module Data.SBV.Utils.Boolean
+    Mergeable(..), EqSymbolic(..), OrdSymbolic(..), BVDivisible(..)
+  , bitValue, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE
+  , lsb, msb
   )
   where
 
@@ -147,13 +142,18 @@ instance SymWord Int64 where
   literal = SBV (True, 64) . Left . I64
   fromCW  = wcToI64
 
--- We can't use the Eq/Ord classes, since Haskell insists on returning Bool
+-- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
+-- Comparing symbolic values will necessarily return a symbolic value.
+-- Minimal complete definition: '.=='
 infix 4 .==, ./=
 class EqSymbolic a where
   (.==), (./=) :: a -> a -> SBool
   -- minimal complete definition: .==
   x ./= y = bnot (x .== y)
 
+-- | Symbolic Comparisons. Similar to 'Eq', we cannot implement Haskell's 'Ord' class
+-- since there is no way to return an 'Ordering' value from a symbolic comparison.
+-- Minimal complete definition: '.<'
 infix 4 .<, .<=, .>, .>=
 class (Mergeable a, EqSymbolic a) => OrdSymbolic a where
   (.<), (.<=), (.>), (.>=) :: a -> a -> SBool
@@ -418,11 +418,19 @@ instance (SymWord b, Arbitrary b) => Arbitrary (SFunArray a b) where
 instance (SymWord a, Arbitrary a) => Arbitrary (SBV a) where
   arbitrary = arbitrary >>= return . literal
 
--- Symbolic choice operator, parameterized via a class
--- minimum complete definition: symbolicMerge
+-- |  Symbolic choice operator, parameterized via a class
+-- 'select' is a total-indexing function, with the default.
+-- Minimal complete definition: 'symbolicMerge'
 class Mergeable a where
+   -- | Merge two values based on the condition
    symbolicMerge :: SBool -> a -> a -> a
+   -- | Choose one or the other element, based on the condition.
+   -- This is similar to 'symbolicMerge', but it has a default
+   -- implementation that makes sure it's short-cut if the condition is concrete
    ite           :: SBool -> a -> a -> a
+   -- | Total indexing operation. @select xs default index@ is intuitively
+   -- the same as @xs !! index@, except it evaluates to @default@ if @index@
+   -- overflows
    select        :: (Bits b, SymWord b, Integral b) => [a] -> a -> SBV b -> a
    -- default definitions
    ite s a b

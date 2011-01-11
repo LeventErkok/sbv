@@ -12,18 +12,18 @@
 -- Express properties about bit-precise Haskell programs and automatically prove
 -- them using SMT solvers.
 --
--- >      $ ghci -XScopedTypeVariables
--- >      Prelude> :m Data.SBV
--- >      Prelude Data.SBV> prove $ \(x::SWord8) -> x `shiftL` 2 .== 4*x
--- >      Q.E.D.
--- >      Prelude Data.SBV> prove $ forAll ["x"] $ \(x::SWord8) -> x `shiftL` 2 .== x
--- >      Falsifiable. Counter-example:
--- >        x = 128 :: SWord8
+-- >   $ ghci -XScopedTypeVariables
+-- >   Prelude> :m Data.SBV
+-- >   Prelude Data.SBV> prove $ \(x::SWord8) -> x `shiftL` 2 .== 4*x
+-- >   Q.E.D.
+-- >   Prelude Data.SBV> prove $ forAll ["x"] $ \(x::SWord8) -> x `shiftL` 2 .== x
+-- >   Falsifiable. Counter-example:
+-- >     x = 128 :: SWord8
 --
 -- The function 'prove' has the following type:
 --
 -- @
---        'prove' :: 'Provable' a => a -> 'IO' 'ThmResult'
+--     'prove' :: 'Provable' a => a -> 'IO' 'ThmResult'
 -- @
 --
 -- The class 'Provable' comes with instances for n-ary predicates, for arbitrary n.
@@ -84,19 +84,45 @@
 -- Comments, bug reports, and patches are always welcome.
 
 module Data.SBV (
-    module Data.SBV.BitVectors.Model
+  -- * Symbolic types
+  -- ** Symbolic bit
+    SBool
+  -- ** Unsigned symbolic bit-vectors
+  , SWord8, SWord16, SWord32, SWord64
+  -- ** Signed symbolic bit-vectors
+  , SInt8, SInt16, SInt32, SInt64
+  -- ** Arrays of symbolic values
+  , SymArray(..), SArray, SFunArray
+  -- * Conditionals: Mergeable values
+  , Mergeable(..)
+  -- * Symbolic equality
+  , EqSymbolic(..)
+  -- * Symbolic ordering
+  , OrdSymbolic(..)
+  , bitValue, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE
+  , lsb, msb, BVDivisible(..)
+  , output, Result
+  , Symbolic
+  , runSymbolic
+  , SymWord(..)
+  , SBV(..)
+  , module Data.SBV.Utils.Boolean
   , module Data.SBV.BitVectors.PrettyNum
   , module Data.SBV.BitVectors.Polynomial
   , module Data.SBV.BitVectors.Splittable
   , module Data.SBV.Provers.Prover
+  , module Data.Bits
   , module Data.Word
   , module Data.Int
   ) where
 
+import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
 import Data.SBV.BitVectors.PrettyNum
 import Data.SBV.BitVectors.Polynomial
 import Data.SBV.BitVectors.Splittable
 import Data.SBV.Provers.Prover
+import Data.SBV.Utils.Boolean
+import Data.Bits
 import Data.Word
 import Data.Int

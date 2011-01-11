@@ -18,6 +18,7 @@
 
 module Data.SBV.BitVectors.Splittable (FromBits(..), split, (#), extend) where
 
+import Data.Bits
 import Data.Word
 
 import Data.SBV.BitVectors.Data

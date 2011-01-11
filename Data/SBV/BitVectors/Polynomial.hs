@@ -19,6 +19,7 @@ module Data.SBV.BitVectors.Polynomial (
      , pAdd, pMult, pDiv, pMod, pDivMod
      ) where
 
+import Data.Bits
 import Data.List(genericTake)
 import Data.Maybe(fromJust)
 import Data.Word
@@ -26,6 +27,7 @@ import Data.Word
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
 import Data.SBV.BitVectors.Splittable
+import Data.SBV.Utils.Boolean
 
 -- | The Polynomial class
 -- Implements polynomial addition, multiplication, division, and modulus operations

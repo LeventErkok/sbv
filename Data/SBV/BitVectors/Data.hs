@@ -19,22 +19,14 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Data.SBV.BitVectors.Data
- ( -- * Unsigned Symbolic types
-   SBool, SWord8, SWord16, SWord32, SWord64
-   -- * Signed Symbolic types
+ ( SBool, SWord8, SWord16, SWord32, SWord64
  , SInt8, SInt16, SInt32, SInt64
-   -- * Symbolic Word interface
  , SymWord(..)
-   -- * Underlying concrete words
  , CW(..)
  , mkConstCW, liftCW2, mapCW, mapCW2
-   -- * Underlying symbolic words
  , SW(..), trueSW, falseSW
-   -- * A computed symbolic value
  , SBV(..), NodeId(..), mkSymSBV
-   -- * Symbolic Arrays
  , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), SArray(..)
-   -- * Internal operations
  , sbvToSW
  , SBVExpr(..), newExpr
  , cache, uncache, HasSignAndSize(..)
@@ -255,7 +247,9 @@ instance Show Result where
                         | True     = ", aliasing " ++ show nm
           sha (i, (nm, (ai, bi), ctx)) = "  " ++ ni ++ " :: " ++ mkT ai ++ " -> " ++ mkT bi ++ alias
                                        ++ "\n     Context: "     ++ show ctx
-            where mkT (b, s) = "[" ++ show s ++ (if b then "S" else "U") ++ "]"
+            where mkT (b, s)
+                   | s == 1  = "SBool"
+                   | True    = if b then "SInt" else "SWord" ++ show s
                   ni = "array" ++ show i
                   alias | ni == nm = ""
                         | True     = ", aliasing " ++ show nm
@@ -289,31 +283,31 @@ data State  = State { rctr       :: IORef Int
 
 data SBV a = SBV !(Bool, Size) !(Either CW (Cached SW))
 
--- | 'SBool': A symbolic boolean
+-- | A symbolic boolean/bit
 type SBool   = SBV Bool
 
--- | 'SWord8': 8-bit unsigned symbolic value
+-- | 8-bit unsigned symbolic value
 type SWord8  = SBV Word8
 
--- | 'SWord16': 16-bit unsigned symbolic value
+-- | 16-bit unsigned symbolic value
 type SWord16 = SBV Word16
 
--- | 'SWord32': 32-bit unsigned symbolic value
+-- | 32-bit unsigned symbolic value
 type SWord32 = SBV Word32
 
--- | 'SWord64': 64-bit unsigned symbolic value
+-- | 64-bit unsigned symbolic value
 type SWord64 = SBV Word64
 
--- | 'SInt8': 8-bit signed symbolic value
+-- | 8-bit signed symbolic value, 2's complement representation
 type SInt8   = SBV Int8
 
--- | 'SInt16': 16-bit signed symbolic value
+-- | 16-bit signed symbolic value, 2's complement representation
 type SInt16  = SBV Int16
 
--- | 'SInt32': 32-bit signed symbolic value
+-- | 32-bit signed symbolic value, 2's complement representation
 type SInt32  = SBV Int32
 
--- | 'SInt64': 64-bit signed symbolic value
+-- | 64-bit signed symbolic value, 2's complement representation
 type SInt64  = SBV Int64
 
 -- Needed to satisfy the Num hierarchy
@@ -454,7 +448,7 @@ runSymbolic (Symbolic c) = do
 -------------------------------------------------------------------------------
 -- * Symbolic Words
 -------------------------------------------------------------------------------
--- | A 'SymWord' is a potentiall symbolic bitvector that can be created instances of
+-- | A 'SymWord' is a potential symbolic bitvector that can be created instances of
 -- to be fed to a symbolic program.
 class Ord a => SymWord a where
   -- | Create a user named input
@@ -483,22 +477,34 @@ class Ord a => SymWord a where
 -- * Symbolic Arrays
 ---------------------------------------------------------------------------------
 
--- | The SymArray class, abstracts the notion of arrays of symbolic values
+-- | Flat arrays of symbolic values
+-- An @array a b@ is an array indexed by the type @'SBV' a@, with elements of type @'SBV' b@
+-- If an initial value is not provided in 'newArray_' and 'newArray' methods, then the elements
+-- are left unspecified, i.e., the solver is free to choose any value. This is the right thing
+-- to do if arrays are used as inputs to functions to be verified, typically. Reading an
+-- uninitilized entry is an error.
 class SymArray array where
+  -- | Create a new array, with an optional initial value
   newArray_      :: (HasSignAndSize a, HasSignAndSize b) => Maybe (SBV b) -> Symbolic (array a b)
+  -- | Create a named new array with, with an optional initial value
   newArray       :: (HasSignAndSize a, HasSignAndSize b) => String -> Maybe (SBV b) -> Symbolic (array a b)
+  -- | Read the array element at @a@
   readArray      :: array a b -> SBV a -> SBV b
+  -- | Reset all the elements of the array to the value @b@
   resetArray     :: SymWord b => array a b -> SBV b -> array a b
+  -- | Update the element at @a@ to be @b@
   writeArray     :: SymWord b => array a b -> SBV a -> SBV b -> array a b
+  -- | Merge two given arrays on the symbolic condition
+  -- Intuitively: @mergeArrays cond a b = if cond then a else b@.
+  -- Merging pushes the if-then-else choice down on to elements
   mergeArrays    :: SymWord b => SBV Bool -> array a b -> array a b -> array a b
 
--- | Arrays implemented in terms of SMT-arrays
+-- | Arrays implemented in terms of SMT-arrays: <http://goedel.cs.uiowa.edu/smtlib/theories/ArraysEx.smt2>
 data SArray a b = SArray ((Bool, Size), (Bool, Size)) (Cached ArrayIndex)
 type ArrayIndex = Int
 
-instance Show (SArray a b) where
-  show (SArray (a, b) _) = "SArray<" ++ sh a ++ ":" ++ sh b ++ ">"
-    where sh (s, sz) = show sz ++ if s then "S" else "U"
+instance (HasSignAndSize a, HasSignAndSize b) => Show (SArray a b) where
+  show (SArray{}) = "SArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"
 
 instance SymArray SArray where
   newArray_  = declNewSArray (\t -> "array" ++ show t)
@@ -544,14 +550,11 @@ declNewSArray mkNm mbInit = do
    liftIO $ modifyIORef (rArrayMap st) (IMap.insert i (nm, (asgnsz, bsgnsz), actx))
    return $ SArray (asgnsz, bsgnsz) $ cache $ const $ return i
 
--- | Arrays implemented internally as functions
+-- | Arrays implemented internally as functions, and rendered as SMT-Lib functions
 data SFunArray a b = SFunArray (SBV a -> SBV b)
 
 instance (HasSignAndSize a, HasSignAndSize b) => Show (SFunArray a b) where
-  show (SFunArray _) = "SFunArray<" ++ sh ai ++ ":" ++ sh bi ++ ">"
-    where sh (s, sz) = show sz ++ if s then "S" else "U"
-          ai = (hasSign (undefined :: a), sizeOf (undefined :: a))
-          bi = (hasSign (undefined :: b), sizeOf (undefined :: b))
+  show (SFunArray _) = "SFunArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"
 
 ---------------------------------------------------------------------------------
 -- * Cached values
