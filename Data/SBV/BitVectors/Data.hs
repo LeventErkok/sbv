@@ -486,6 +486,8 @@ class Ord a => SymWord a where
 -- While it's certainly possible for user to create instances of 'SymArray', the
 -- 'SArray' and 'SFunArray' instances already provided should cover most use cases
 -- in practice.
+--
+-- Minimal complete definition: All methods are required, no defaults.
 class SymArray array where
   -- | Create a new array, with an optional initial value
   newArray_      :: (HasSignAndSize a, HasSignAndSize b) => Maybe (SBV b) -> Symbolic (array a b)

@@ -39,8 +39,8 @@ main = defaultMainWithHooks simpleUserHooks{ runTests = unittest True, postInst 
          case testers of
            [tp] -> runTester tp
            _    -> bailOut
-         where pkgDesc = localPkgDescr lbi
-               sbvName = display $ package pkgDesc
+         where pkgDesc  = localPkgDescr lbi
+               sbvName  = display $ package pkgDesc
                report  = putStrLn $ "*** Please report to the maintainer: " ++ maintainer pkgDesc
                bailOut = do putStrLn "*** Cannot find SBV unit-tester program!"
                             report
@@ -50,7 +50,8 @@ main = defaultMainWithHooks simpleUserHooks{ runTests = unittest True, postInst 
                                 case lookup "x-run-unittests" (customFieldsBI (buildInfo tp)) of
                                         Just "False" -> do checkDefSolver
                                                            putStrLn "*** Please run \"SBVUnitTests\" executable to perform unit-tests."
-                                                           putStrLn $ sbvName ++ " installed successfully. Enjoy!"
+                                                           putStrLn $ "*** Package " ++ sbvName ++ " installed successfully. Enjoy!"
+                                                           putStrLn $ "*** Further info: " ++ homepage pkgDesc
                                                            exitWith ExitSuccess
                                         _            -> return ()
                         mbP <- findExecutable $ exeName tp
