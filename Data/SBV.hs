@@ -7,6 +7,9 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
+-- (The sbv library is hosted at <http://github.com/LeventErkok/sbv>.
+-- Comments, bug reports, and patches are always welcome.)
+--
 -- SBV: Symbolic Bit Vectors in Haskell
 --
 -- Express properties about bit-precise Haskell programs and automatically prove
@@ -40,6 +43,8 @@
 --   * 'SInt8',  'SInt16',  'SInt32',  'SInt64': Symbolic Ints (signed)
 --
 --   * 'SArray', 'SFunArray': Flat arrays of symbolic values
+--
+--   * Symbolic polynomials over GF(2^n), and polynomial arithmetic
 --
 -- The user can construct ordinary Haskell programs using these types, which behave
 -- very similar to their concrete counterparts. In particular these types belong to the
@@ -79,38 +84,48 @@
 -- current default solver. Alternatively, you can specify the location of yices
 -- executable in the environment variable @SBV_YICES@ and the options to yices
 -- in @SBV_YICES_OPTIONS@. (The default for the latter is '\"-m -f\"'.)
---
--- The sbv library is hosted at <http://github.com/LeventErkok/sbv>.
--- Comments, bug reports, and patches are always welcome.
 
 module Data.SBV (
-  -- * Symbolic types
-  -- ** Symbolic bit
+  -- * Programming with Symbolic values
+  -- ** Symbolic types
+  -- *** Symbolic bit
     SBool
-  -- ** Unsigned symbolic bit-vectors
+  -- *** Unsigned symbolic bit-vectors
   , SWord8, SWord16, SWord32, SWord64
-  -- ** Signed symbolic bit-vectors
+  -- *** Signed symbolic bit-vectors
   , SInt8, SInt16, SInt32, SInt64
-  -- ** Arrays of symbolic values
+  -- *** Arrays of symbolic values
   , SymArray(..), SArray, SFunArray
-  -- * Conditionals: Mergeable values
+  -- ** Conditionals: Mergeable values
   , Mergeable(..)
-  -- * Symbolic equality
+  -- ** Symbolic equality
   , EqSymbolic(..)
-  -- * Symbolic ordering
+  -- ** Symbolic ordering
   , OrdSymbolic(..)
-  , bitValue, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE
-  , lsb, msb, BVDivisible(..)
-  , output, Result
-  , Symbolic
-  , runSymbolic
-  , SymWord(..)
-  , SBV(..)
-  , module Data.SBV.Utils.Boolean
-  , module Data.SBV.BitVectors.PrettyNum
-  , module Data.SBV.BitVectors.Polynomial
-  , module Data.SBV.BitVectors.Splittable
+  -- ** Division
+  , BVDivisible(..)
+  -- ** The Boolean class
+  , Boolean(..)
+  -- *** Generalizations of boolean operations
+  , bAnd, bOr, bAny, bAll
+  -- ** Operations on symbolic words
+  -- *** Word level
+  , bitValue, setBitTo, oneIf, lsb, msb
+  -- *** List level
+  , allEqual, allDifferent
+  -- *** Blasting/Unblasting
+  , blastBE, blastLE, FromBits(..)
+  -- *** Splitting, joining, and extending
+  , Splittable(..)
+  -- ** Polynomial arithmetic
+  , Polynomial(..)
+  -- ** Pretty-printing and reading numbers in Hex & Binary
+  , PrettyNum(..), readBin
+  -- * Proving properties
   , module Data.SBV.Provers.Prover
+  -- * Internals (for developers only)
+  , output, Result, Symbolic, runSymbolic, SymWord(..), SBV(..)
+  -- * Module exports
   , module Data.Bits
   , module Data.Word
   , module Data.Int

@@ -14,7 +14,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE PatternGuards #-}
 
-module Data.SBV.BitVectors.PrettyNum (hex, hexS, bin, binS, readBin) where
+module Data.SBV.BitVectors.PrettyNum (PrettyNum(..), readBin) where
 
 import Data.Maybe(fromJust)
 import Data.Char(ord)
@@ -27,10 +27,19 @@ import Data.SBV.BitVectors.Bit
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model () -- instances only
 
+-- | PrettyNum class captures printing of numbers in hex and binary formats; also supporting negative numbers.
+--
+-- Minimal complete definition: 'hexS' and 'binS'
 class PrettyNum a where
-  hexS, binS :: a -> String
-  hex, bin   :: a -> IO ()
+  -- | Show a number in hexadecimal (starting with @0x@)
+  hexS :: a -> String
+  -- | Show a number in binary (starting with @0b@)
+  binS :: a -> String
+  -- | IO version of 'hexS'
+  hex :: a -> IO ()
   hex = putStrLn . hexS
+  -- | IO version of 'binS'
+  bin   :: a -> IO ()
   bin = putStrLn . binS
 
 -- Why not default methods? Because defaults need "Integral a" and Bool/Bit are not..
@@ -75,7 +84,7 @@ shex a
  = "-0x" ++ pad l (s16 (abs ((fromIntegral a) :: Integer)))  ++ t
  | True
  =  "0x" ++ pad l (s16 a) ++ t
- where t = " :: [" ++ show (l*4) ++ (if hasSign a then "S" else "U") ++ "]"
+ where t = " :: " ++ (if hasSign a then "Word" else "Int") ++ show (l*4)
        l = sizeOf a `div` 4
 
 sbin :: (HasSignAndSize a, Integral a) => a -> String
@@ -84,7 +93,7 @@ sbin a
  = "-0b" ++ pad l (s2 (abs ((fromIntegral a) :: Integer)))  ++ t
  | True
  =  "0b" ++ pad l (s2 a) ++ t
- where t = " :: [" ++ show l ++ (if hasSign a then "S" else "U") ++ "]"
+ where t = " :: " ++ (if hasSign a then "Word" else "Int") ++ show l
        l = sizeOf a
 
 pad :: Int -> String -> String
@@ -94,8 +103,7 @@ s2, s16 :: Integral a => a -> String
 s2  v = showIntAtBase 2 dig v "" where dig = fromJust . flip lookup [(0, '0'), (1, '1')]
 s16 v = showHex v ""
 
--- a more convenient interface for reading binary numbers
--- also supporting negatives
+-- | A more convenient interface for reading binary numbers, also supports negative numbers
 readBin :: Num a => String -> a
 readBin ('-':s) = -(readBin s)
 readBin s = case readInt 2 isDigit cvt s' of

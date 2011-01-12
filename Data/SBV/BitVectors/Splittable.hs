@@ -16,7 +16,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE BangPatterns #-}
 
-module Data.SBV.BitVectors.Splittable (FromBits(..), split, (#), extend) where
+module Data.SBV.BitVectors.Splittable (Splittable(..), FromBits(..)) where
 
 import Data.Bits
 import Data.Word
@@ -25,6 +25,12 @@ import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
 
 infixr 5 #
+-- | Splitting an @a@ into two @b@'s and joining back.
+-- Intuitively, @a@ is a larger bit-size word than @b@, typically double.
+-- The 'extend' operation captures embedding of a @b@ value into an @a@
+-- without changing its semantic value.
+--
+-- Minimal complete definition: All, no defaults.
 class Splittable a b | b -> a where
   split  :: a -> (b, b)
   (#)    :: b -> b -> a
@@ -98,20 +104,25 @@ instance Splittable SWord16 SWord8 where
                     newExpr st (False, 16) (SBVApp Join [asw, bsw])
   extend b = 0 # b
 
--- unblasting
+-- | Unblasting a value from symbolic-bits. The bits can be given little-endian
+-- or big-endian. For a signed number in little-endian, we assume the very last bit
+-- is the sign digit. This is a bit awkward, but it is more consistent with the "reverse" view of
+-- little-big-endian representations
+--
+-- Minimal complete definiton: 'fromBitsLE'
 class FromBits a where
  fromBitsLE, fromBitsBE :: [SBool] -> a
- -- for a signed number in little-endian, we assume the very last bit is the sign digit
- -- this sounds weird a bit, but it is more consistent with the "reverse" view of
- -- LE/BE representations
  fromBitsBE = fromBitsLE . reverse
 
+-- | Construct a symbolic word from its bits given in little-endian
 fromBinLE :: (Bits a, SymWord a) => [SBool] -> SBV a
 fromBinLE = go 0 0
   where go !acc _  []     = acc
         go !acc !i (x:xs) = go (ite x (setBit acc i) acc) (i+1) xs
 
--- little-endian input
+-- | Perform a sanity check that we should receive precisely the same
+-- number of bits as required by the resulting type. Unsigned version,
+-- the input is assumed little-endian
 checkAndConvert :: (Bits a, SymWord a) => Int -> [SBool] -> SBV a
 checkAndConvert sz xs
   | sz /= l
@@ -121,7 +132,7 @@ checkAndConvert sz xs
   where l   = length xs
         ssz = show sz
 
--- little-endian input
+-- | Same as 'checkAndConvert', but for signed words
 checkAndConvertSigned :: (Bits a, SymWord a) => Int -> [SBool] -> SBV a
 checkAndConvertSigned sz xs
   | sz /= l

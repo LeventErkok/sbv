@@ -299,15 +299,21 @@ instance Boolean SBool where
                    | x == y = Just falseSW
                    | True   = Nothing
 
-allDifferent, allEqual :: (Eq a, SymWord a) => [SBV a] -> SBool
+-- | Returns (symbolic) true if all the elements of the given list are different
+allDifferent :: (Eq a, SymWord a) => [SBV a] -> SBool
 allDifferent (x:xs@(_:_)) = bAll ((./=) x) xs &&& allDifferent xs
 allDifferent _            = true
+
+-- | Returns (symbolic) true if all the elements of the given list are the same
+allEqual :: (Eq a, SymWord a) => [SBV a] -> SBool
 allEqual (x:xs@(_:_))     = bAll ((.==) x) xs
 allEqual _                = true
 
+-- | Returns 1 if the boolean is true, otherwise 0
 oneIf :: (Num a, SymWord a) => SBool -> SBV a
 oneIf t = ite t 1 0
 
+-- Num instance for symbolic words
 instance (Ord a, Num a, SymWord a) => Num (SBV a) where
   fromInteger = literal . fromIntegral
   (+) = liftSym2 (mkSymOp Plus)  (+)
@@ -347,26 +353,47 @@ instance (Bits a, SymWord a) => Bits (SBV a) where
     | y == 0               = x
     | True                 = liftSym1 (mkSymOp1 (Ror y)) (`rotateR` y) x
 
--- In bit-value, 0 is the least-significant bit
+-- | Replacement for 'testBit'. Since 'testBit' requires a 'Bool' to be returned,
+-- we cannot implement it for symbolic words. Index 0 is the least-significant bit.
 bitValue :: (Bits a, SymWord a) => SBV a -> Int -> SBool
 bitValue x i = (x .&. bit i) ./= 0
 
+-- | Generalization of 'setBit' based on a symbolic boolean. Note that 'setBit' and
+-- 'clearBit' are still available on Symbolic words, this operation comes handy when
+-- the condition to set/clear happens to be symbolic
 setBitTo :: (Bits a, SymWord a) => SBV a -> Int -> SBool -> SBV a
 setBitTo x i b = ite b (setBit x i) (clearBit x i)
 
--- big/little-endian blasting of a word
-blastLE, blastBE :: (Bits a, SymWord a) => SBV a -> [SBool]
+-- | Little-endian blasting of a word into its bits. Also see the 'FromBits' class
+blastLE :: (Bits a, SymWord a) => SBV a -> [SBool]
 blastLE x = map (bitValue x) [0 .. (sizeOf x)-1]
+
+-- | Big-endian blasting of a word into its bits. Also see the 'FromBits' class
+blastBE :: (Bits a, SymWord a) => SBV a -> [SBool]
 blastBE = reverse . blastLE
 
-lsb, msb :: (Bits a, SymWord a) => SBV a -> SBool
+-- | Least significant bit of a word, always stored at index 0
+lsb :: (Bits a, SymWord a) => SBV a -> SBool
 lsb x = bitValue x 0
+
+-- | Most significant bit of a word, always stored at the last position
+msb :: (Bits a, SymWord a) => SBV a -> SBool
 msb x = bitValue x ((sizeOf x) - 1)
 
--- unsigned bit-vector quot-rem
--- quotRem by 0 is defined as follows:
---     x `quotRem` 0 = (0, x)
-
+-- | The 'BVDivisible' class captures the essence of division of words.
+-- Unfortunately we cannot use Haskell's 'Integral' class since the 'Real'
+-- and 'Enum' superclasses are not implementable for symbolic bit-vectors.
+-- However, 'quotRem' makes perfect sense, and the 'BVDivisible' class captures
+-- this operation. One issue is how division by 0 behaves. The verification
+-- technology requires total functions, and there are several design choices
+-- here. We follow Isabelle/HOL approach of assigning the value 0 for division
+-- by 0. Therefore, we impose the following law:
+--
+--     @ x `bvQuotRem` 0 = (0, x) @
+--
+-- Note that our instances implement this law even when @x@ is @0@ itself.
+--
+-- Minimal complete definition: 'bvQuotRem'
 class BVDivisible a where
   bvQuotRem :: a -> a -> (a, a)
 

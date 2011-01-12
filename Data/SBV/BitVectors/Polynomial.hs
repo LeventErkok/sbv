@@ -14,10 +14,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternGuards #-}
 
-module Data.SBV.BitVectors.Polynomial (
-       polynomial, showPoly
-     , pAdd, pMult, pDiv, pMod, pDivMod
-     ) where
+module Data.SBV.BitVectors.Polynomial (Polynomial(..)) where
 
 import Data.Bits
 import Data.List(genericTake)
@@ -29,16 +26,36 @@ import Data.SBV.BitVectors.Model
 import Data.SBV.BitVectors.Splittable
 import Data.SBV.Utils.Boolean
 
--- | The Polynomial class
--- Implements polynomial addition, multiplication, division, and modulus operations
--- NB. We assume:
---     a `pDiv` 0 = a
---     a `pMod` 0 = a
--- for all a (including 0)
+-- | Implements polynomial addition, multiplication, division, and modulus operations
+-- over GF(2^n).  NB. Similar to 'bvQuotRem', division by @0@ is interpreted as follows:
+--
+--     @x `pDiv` 0 = 0@
+--
+--     @x `pMod` 0 = a@
+--
+-- for all @x@ (including @0@)
+--
+-- Minimal complete definiton: 'pMult', 'pDivMod', 'showPoly'
 class Bits a => Polynomial a where
+ -- | Given bit-positions to be set, create a polynomial
+ -- For instance
+ --
+ --     @polynomial [0, 1, 3] :: SWord8@
+ -- 
+ -- will evaluate to @11@, since it sets the bits @0@, @1@, and @3@. Mathematicans would write this polynomial
+ -- as @x^3 + x + 1@. And in fact, 'showPoly' will show it like that.
  polynomial :: [Int] -> a
- pAdd, pMult, pDiv, pMod :: a -> a -> a
+ -- | Add two polynomials in GF(2^n)
+ pAdd  :: a -> a -> a
+ -- | Multiply two polynomials in GF(2^n)
+ pMult :: a -> a -> a
+ -- | Divide two polynomials in GF(2^n), see above note for division by 0
+ pDiv  :: a -> a -> a
+ -- | Compute modulus of two polynomials in GF(2^n), see above note for modulus by 0
+ pMod  :: a -> a -> a
+ -- | Division and modulus packed together
  pDivMod :: a -> a -> (a, a)
+ -- | Display a polynomial like a mathematician would (over the monomial @x@)
  showPoly :: a -> String
 
  -- defaults.. Minumum complete definition: pMult, pDivMod, showPoly
@@ -65,11 +82,12 @@ liftS f s
   | Just x <- unliteral s = f x
   | True                  = show s
 
+-- | Pretty print as a polynomial
 sp :: Bits a => a -> String
 sp a
  | null cs = "0" ++ t
  | True    = foldr (\x y -> sh x ++ " + " ++ y) (sh (last cs)) (init cs) ++ t
- where t  = " :: [" ++ show n ++ "U]"
+ where t  = " :: SWord" ++ show n
        n  = bitSize a
        is = [n-1, n-2 .. 0]
        cs = map fst $ filter snd $ zip is (map (testBit a) is)
@@ -77,6 +95,7 @@ sp a
        sh 1 = "x"
        sh i = "x^" ++ show i
 
+-- | Add two polynomials
 addPoly :: [SBool] -> [SBool] -> [SBool]
 addPoly xs    []      = xs
 addPoly []    ys      = ys
@@ -93,6 +112,7 @@ ites s xs ys
        go (a:as) []     = ite s a false : go as []
        go (a:as) (b:bs) = ite s a b : go as bs
 
+-- | Multiply two polynomials, note that the result might overflow! We'll ignore higher-order bits
 polyMult :: (Bits a, SymWord a, FromBits (SBV a)) => SBV a -> SBV a -> SBV a
 polyMult x y = fromBitsLE $ genericTake sz $ mul xs ys [] ++ repeat false
   where xs = blastLE x
@@ -102,7 +122,7 @@ polyMult x y = fromBitsLE $ genericTake sz $ mul xs ys [] ++ repeat false
         mul as (b:bs) ps = mul (false:as) bs (ites b (as `addPoly` ps) ps)
 
 polyDivMod :: (Bits a, SymWord a, FromBits (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
-polyDivMod x y = (adjust d, adjust r)
+polyDivMod x y = ite (y .== 0) (0, x) (adjust d, adjust r)
    where adjust xs = fromBitsLE $ genericTake sz $ xs ++ repeat false
          sz     = sizeOf x
          (d, r) = mdp (blastLE x) (blastLE y)
