@@ -1,6 +1,9 @@
 SBV: Symbolic Bit Vectors in Haskell
 ====================================
 
+(The sbv library is hosted at [http://github.com/LeventErkok/sbv](http://github.com/LeventErkok/sbv).
+Comments, bug reports, and patches are always welcome.)
+
 Express properties about bit-precise Haskell programs and automatically prove
 them using SMT solvers.
 
