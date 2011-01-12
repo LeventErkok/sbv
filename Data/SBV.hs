@@ -89,6 +89,7 @@
 {-# OPTIONS_HADDOCK prune #-}
 module Data.SBV (
   -- * Programming with symbolic values
+  -- $progIntro
   -- ** Symbolic types
   -- *** Symbolic bit
     SBool
@@ -124,10 +125,13 @@ module Data.SBV (
   -- ** Pretty-printing and reading numbers in Hex & Binary
   , PrettyNum(..), readBin
   -- * Proving properties
+  -- $proveIntro
   , module Data.SBV.Provers.Prover
   -- * Internals (for developers only)
+  -- $internalIntro
   , output, Result, Symbolic, runSymbolic, SymWord(..), SBV(..)
   -- * Module exports
+  -- $moduleExportIntro
   , module Data.Bits
   , module Data.Word
   , module Data.Int
@@ -143,3 +147,18 @@ import Data.SBV.Utils.Boolean
 import Data.Bits
 import Data.Word
 import Data.Int
+
+-- Haddock section documentation
+{- $progIntro
+TBD: Programming with symbolic values
+-}
+{- $proveIntro
+TBD: Proving with symbolic values
+-}
+{- $internalIntro
+TBD: Internal developer API
+-}
+{- $moduleExportIntro
+The SBV library exports the following modules wholesale, as user programs will have to import these
+three modules to make any sensible use of the SBV functionality.
+-}
