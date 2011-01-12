@@ -86,7 +86,6 @@
 -- in @SBV_YICES_OPTIONS@. (The default for the latter is '\"-m -f\"'.)
 ---------------------------------------------------------------------------------
 
-{-# OPTIONS_HADDOCK prune #-}
 module Data.SBV (
   -- * Programming with symbolic values
   -- $progIntro
