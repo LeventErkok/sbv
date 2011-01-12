@@ -29,9 +29,7 @@ import Data.SBV.Utils.Boolean
 -- | Implements polynomial addition, multiplication, division, and modulus operations
 -- over GF(2^n).  NB. Similar to 'bvQuotRem', division by @0@ is interpreted as follows:
 --
---     @x `pDiv` 0 = 0@
---
---     @x `pMod` 0 = a@
+--     @x `pDivMod` 0 = (0, x)@
 --
 -- for all @x@ (including @0@)
 --
