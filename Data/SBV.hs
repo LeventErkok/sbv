@@ -1,4 +1,4 @@
------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
 -- |
 -- Module      :  Data.SBV
 -- Copyright   :  (c) Levent Erkok
@@ -84,9 +84,11 @@
 -- current default solver. Alternatively, you can specify the location of yices
 -- executable in the environment variable @SBV_YICES@ and the options to yices
 -- in @SBV_YICES_OPTIONS@. (The default for the latter is '\"-m -f\"'.)
+---------------------------------------------------------------------------------
 
+{-# OPTIONS_HADDOCK prune #-}
 module Data.SBV (
-  -- * Programming with Symbolic values
+  -- * Programming with symbolic values
   -- ** Symbolic types
   -- *** Symbolic bit
     SBool
@@ -96,6 +98,17 @@ module Data.SBV (
   , SInt8, SInt16, SInt32, SInt64
   -- *** Arrays of symbolic values
   , SymArray(..), SArray, SFunArray
+  -- ** Operations on symbolic words
+  -- *** Word level
+  , bitValue, setBitTo, oneIf, lsb, msb
+  -- *** List level
+  , allEqual, allDifferent
+  -- *** Blasting/Unblasting
+  , blastBE, blastLE, FromBits(..)
+  -- *** Splitting, joining, and extending
+  , Splittable(..)
+  -- ** Polynomial arithmetic
+  , Polynomial(..)
   -- ** Conditionals: Mergeable values
   , Mergeable(..)
   -- ** Symbolic equality
@@ -108,17 +121,6 @@ module Data.SBV (
   , Boolean(..)
   -- *** Generalizations of boolean operations
   , bAnd, bOr, bAny, bAll
-  -- ** Operations on symbolic words
-  -- *** Word level
-  , bitValue, setBitTo, oneIf, lsb, msb
-  -- *** List level
-  , allEqual, allDifferent
-  -- *** Blasting/Unblasting
-  , blastBE, blastLE, FromBits(..)
-  -- *** Splitting, joining, and extending
-  , Splittable(..)
-  -- ** Polynomial arithmetic
-  , Polynomial(..)
   -- ** Pretty-printing and reading numbers in Hex & Binary
   , PrettyNum(..), readBin
   -- * Proving properties
