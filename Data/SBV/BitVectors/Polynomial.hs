@@ -45,8 +45,16 @@ class Bits a => Polynomial a where
  polynomial :: [Int] -> a
  -- | Add two polynomials in GF(2^n)
  pAdd  :: a -> a -> a
- -- | Multiply two polynomials in GF(2^n)
- pMult :: a -> a -> a
+ -- | Multiply two polynomials in GF(2^n), and reduce it by the irreducible specified by
+ -- the polynomial as specified by coefficients of the third argument. Note that the third
+ -- argument is specifically left in this form as it is usally in GF(2^(n+1)), which is not available in our
+ -- formalism. (That is, we would need SWord9 for SWord8 multiplication, etc.) Also note that we do not
+ -- support symbolic irreducibles, which is a minor shortcoming. (Most GF's will come with fixed irreducibles,
+ -- so this should not be a problem in practice.)
+ --
+ -- Passing [] for the third argument will multiply the polynomials and then ignore the higher bits that won't
+ -- fit into the resulting size.
+ pMult :: (a, a, [Int]) -> a
  -- | Divide two polynomials in GF(2^n), see above note for division by 0
  pDiv  :: a -> a -> a
  -- | Compute modulus of two polynomials in GF(2^n), see above note for modulus by 0
@@ -71,8 +79,8 @@ instance Polynomial SWord16 where {showPoly = liftS sp; pMult = polyMult;      p
 instance Polynomial SWord32 where {showPoly = liftS sp; pMult = polyMult;      pDivMod = polyDivMod}
 instance Polynomial SWord64 where {showPoly = liftS sp; pMult = polyMult;      pDivMod = polyDivMod}
 
-lift :: SymWord a => (SBV a -> SBV a -> SBV a) -> a -> a -> a
-lift f x y = fromJust $ unliteral (f (literal x) (literal y))
+lift :: SymWord a => ((SBV a, SBV a, [Int]) -> SBV a) -> (a, a, [Int]) -> a
+lift f (x, y, z) = fromJust $ unliteral $ f (literal x, literal y, z)
 liftC :: SymWord a => (SBV a -> SBV a -> (SBV a, SBV a)) -> a -> a -> (a, a)
 liftC f x y = let (a, b) = f (literal x) (literal y) in (fromJust (unliteral a), fromJust (unliteral b))
 liftS :: SymWord a => (a -> String) -> SBV a -> String
@@ -110,11 +118,13 @@ ites s xs ys
        go (a:as) []     = ite s a false : go as []
        go (a:as) (b:bs) = ite s a b : go as bs
 
--- | Multiply two polynomials, note that the result might overflow! We'll ignore higher-order bits
-polyMult :: (Bits a, SymWord a, FromBits (SBV a)) => SBV a -> SBV a -> SBV a
-polyMult x y = fromBitsLE $ genericTake sz $ mul xs ys [] ++ repeat false
-  where xs = blastLE x
-        ys = blastLE y
+-- | Multiply two polynomials and reduce by the third (concrete) irreducible, given by its coefficients.
+-- See the remarks for the 'pMult' function for this design choice
+polyMult :: (Bits a, SymWord a, FromBits (SBV a)) => (SBV a, SBV a, [Int]) -> SBV a
+polyMult (x, y, red) = fromBitsLE $ genericTake sz $ r ++ repeat false
+  where (_, r) = mdp ms rs
+        ms = genericTake (2*sz) $ mul (blastLE x) (blastLE y) [] ++ repeat false
+        rs = genericTake (2*sz) $ [if i `elem` red then true else false |  i <- [0 .. foldr max 0 red] ] ++ repeat false
         sz = sizeOf x
         mul _  []     ps = ps
         mul as (b:bs) ps = mul (false:as) bs (ites b (as `addPoly` ps) ps)
