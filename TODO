@@ -10,4 +10,5 @@
       - Z3 is Windows only
 - Support blasting specifications to generate AIGs
       - Potentially integrate with ABC (http://www.eecs.berkeley.edu/~alanmi/abc/)
+- Support for non-BV logics? LIA?
 - Documentation
