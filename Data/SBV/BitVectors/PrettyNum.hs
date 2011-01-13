@@ -84,7 +84,7 @@ shex a
  = "-0x" ++ pad l (s16 (abs ((fromIntegral a) :: Integer)))  ++ t
  | True
  =  "0x" ++ pad l (s16 a) ++ t
- where t = " :: " ++ (if hasSign a then "Word" else "Int") ++ show (l*4)
+ where t = " :: " ++ (if hasSign a then "Int" else "Word") ++ show (l*4)
        l = sizeOf a `div` 4
 
 sbin :: (HasSignAndSize a, Integral a) => a -> String
@@ -93,7 +93,7 @@ sbin a
  = "-0b" ++ pad l (s2 (abs ((fromIntegral a) :: Integer)))  ++ t
  | True
  =  "0b" ++ pad l (s2 a) ++ t
- where t = " :: " ++ (if hasSign a then "Word" else "Int") ++ show l
+ where t = " :: " ++ (if hasSign a then "Int" else "Word") ++ show l
        l = sizeOf a
 
 pad :: Int -> String -> String
