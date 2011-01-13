@@ -85,7 +85,7 @@ sp :: Bits a => a -> String
 sp a
  | null cs = "0" ++ t
  | True    = foldr (\x y -> sh x ++ " + " ++ y) (sh (last cs)) (init cs) ++ t
- where t  = " :: SWord" ++ show n
+ where t  = " :: GF(2^" ++ show n ++ ")"
        n  = bitSize a
        is = [n-1, n-2 .. 0]
        cs = map fst $ filter snd $ zip is (map (testBit a) is)
