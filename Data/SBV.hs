@@ -89,7 +89,9 @@
 module Data.SBV (
   -- * Programming with symbolic values
   -- $progIntro
+
   -- ** Symbolic types
+
   -- *** Symbolic bit
     SBool
   -- *** Unsigned symbolic bit-vectors
@@ -125,12 +127,31 @@ module Data.SBV (
   , PrettyNum(..), readBin
   -- * Proving properties
   -- $proveIntro
-  , module Data.SBV.Provers.Prover
+
+  -- ** Predicates
+  , Predicate, Provable(..)
+  ,      SMTSolver(..), SMTConfig(..)
+       , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..)
+       , isSatisfiable, isTheorem
+       , isSatisfiableWithin, isTheoremWithin
+       , numberOfModels
+       , Equality(..)
+       , prove, proveWith
+       , sat, satWith
+       , allSat, allSatWith
+       , SatModel(..), getModel, displayModels
+       , defaultSMTCfg, verboseSMTCfg, timingSMTCfg, verboseTimingSMTCfg
+       , yices
+       , timeout
+
   -- * Internals (for developers only)
   -- $internalIntro
+
   , output, Result, Symbolic, runSymbolic, SymWord(..), SBV(..)
+
   -- * Module exports
   -- $moduleExportIntro
+
   , module Data.Bits
   , module Data.Word
   , module Data.Int
@@ -149,10 +170,38 @@ import Data.Int
 
 -- Haddock section documentation
 {- $progIntro
-TBD: Programming with symbolic values
+The SBV library is really two things:
+
+  * A framework for writing bit-precise programs in Haskell
+
+  * A framework for proving properties of such programs using SMT solvers
+
+In this first section we will look at the constructs that will let us construct such
+programs in Haskell. The goal is to have a "seamless" experience, i.e., program in
+the usual Haskell style without distractions of symbolic coding. While Haskell helps
+in some aspects (the 'Num' and 'Bits' classes simplify coding), it makes life harder
+in others. For instance, @if-then-else@ only takes 'Bool' as a test in Haskell, and
+comparisons ('>' etc.) only return 'Bool's. Clearly we would like these values to be
+symbolic (i.e., 'SBool'), thus stopping us from using some native Haskell constructs.
+When symbolic versions of operators are needed, they are typically obtained by prepending a dot,
+for instance '==' becomes '.=='. Care has been taken to make the transition painless. In
+particular, any Haskell program you build out of symbolic components is fully concretely
+executable within Haskell, without the need for any custom interpreters. (They are truly
+Haskell programs, not AST's built out of pieces of syntax.) This provides for an integrated
+feel of the system, one of the original design goals for SBV.
 -}
 {- $proveIntro
-TBD: Proving with symbolic values
+The SBV library provides a "push-button" verification system via automated SMT solving. The
+design goal is to let SMT solvers be used without any knowledge of how SMT solvers work
+or how different logics operate. The details are hidden behind the SBV framework, providing
+Haskell programmers with a clean API that is unencumbered by the details of individual solvers.
+To that end, we use the SMT-Lib standard (<http://goedel.cs.uiowa.edu/smtlib/>)
+to communicate with arbitrary SMT solvers. Unfortunately,
+the SMT-Lib version 1.X does not standardize how models are communicated back from solvers, so
+there is some work in parsing individual SMT solver output. The 2.X version of the SMT-Lib
+standard (not yet implemented by SMT solvers widely, unfortunately) will bring new standard features
+for getting models; at which time the SBV framework can be modified into a truly plug-and-play
+system where arbitrary SMT solvers can be used.
 -}
 {- $internalIntro
 TBD: Internal developer API

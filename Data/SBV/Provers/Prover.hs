@@ -58,11 +58,37 @@ timeout n s
  | True                   = error $ "SBV.Prover.timeout: Solver " ++ show nm ++ " does not support time-outs"
  where nm = name (solver s)
 
--- The predicate type; things that are "provable"
+-- | A predicate is a symbolic program that returns a (symbolic) boolean value. For all intents and
+-- purposes, it can be treated as an n-ary function from symbolic-values to a boolean. The 'Symbolic'
+-- monad captures the underlying representation, and can/should be ignored by the users of the library,
+-- unless you are building further utilities on top of SBV itself. Instead, simply use the 'Predicate'
+-- type when necessary.
 type Predicate = Symbolic SBool
 
+-- | A type @a@ is provable if we can turn it into a predicate.
+-- Note that a predicate can be made from a curried function of arbitrary arity, where
+-- each element is either a symbolic type or up-to a 7-tuple of symbolic-types. So
+-- predicates can be constructed from almost arbitrary Haskell functions that have arbitrary
+-- shapes. (See the instance declarations below.)
 class Provable a where
+  -- | Turns a value into a predicate, internally naming the inputs.
+  -- In this case the sbv library will use names of the form @s1, s2@, etc. to name these variables
+  -- Example:
+  --
+  -- >  forAll_ $ \(x::SWord8) y -> x `shiftL` 2 .== y
+  --
+  -- is a predicate with two arguments, captured using an ordinary Haskell function. Internally,
+  -- @x@ will be named @s0@ and @y@ will be named @s1@.
   forAll_ :: a -> Predicate
+  -- | Turns a value into a predicate, allowing users to provide names for the inputs.
+  -- If the user does not provide enough number of names for the free variables, the remaining ones
+  -- will be internally generated. Note that the names are only used for printing models and has no
+  -- other significance; in particular, we do not check that they are unique. Example:
+  --
+  -- >  forAll ["x", "y"] $ \(x::SWord8) y -> x `shiftL` 2 .== y
+  --
+  -- This is the same as above, except the variables will be named @x@ and @y@ respectively,
+  -- simplifying the counter-examples when they are printed.
   forAll  :: [String] -> a -> Predicate
 
 instance Provable Predicate where
