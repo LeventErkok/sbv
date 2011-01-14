@@ -125,24 +125,32 @@ module Data.SBV (
   , bAnd, bOr, bAny, bAll
   -- ** Pretty-printing and reading numbers in Hex & Binary
   , PrettyNum(..), readBin
+
   -- * Proving properties
   -- $proveIntro
 
   -- ** Predicates
-  , Predicate, Provable(..)
-  ,      SMTSolver(..), SMTConfig(..)
-       , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..)
-       , isSatisfiable, isTheorem
-       , isSatisfiableWithin, isTheoremWithin
-       , numberOfModels
-       , Equality(..)
-       , prove, proveWith
-       , sat, satWith
-       , allSat, allSatWith
-       , SatModel(..), getModel, displayModels
-       , defaultSMTCfg, verboseSMTCfg, timingSMTCfg, verboseTimingSMTCfg
-       , yices
-       , timeout
+  , Predicate, Provable(..), Equality(..)
+  -- ** Proving properties
+  , prove, proveWith, isTheorem, isTheoremWithin
+  -- ** Checking satisfiability
+  , sat, satWith, isSatisfiable, isSatisfiableWithin
+  -- ** Finding all satisfying assignments
+  , allSat, allSatWith, numberOfModels
+  -- * Model extraction
+  -- $modelExtraction
+
+  -- ** Inspecting proof results
+  -- $resultTypes
+  , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..)
+
+  -- ** Programmable model extraction
+  -- TODO
+  , SatModel(..), getModel, displayModels
+
+  -- * SMT Interface: Configurations and solvers
+  , SMTConfig(..), SMTSolver(..), defaultSMTCfg, verboseSMTCfg, timingSMTCfg, verboseTimingSMTCfg, timeout
+  , yices
 
   -- * Internals (for developers only)
   -- $internalIntro
@@ -190,6 +198,7 @@ executable within Haskell, without the need for any custom interpreters. (They a
 Haskell programs, not AST's built out of pieces of syntax.) This provides for an integrated
 feel of the system, one of the original design goals for SBV.
 -}
+
 {- $proveIntro
 The SBV library provides a "push-button" verification system via automated SMT solving. The
 design goal is to let SMT solvers be used without any knowledge of how SMT solvers work
@@ -203,9 +212,24 @@ standard (not yet implemented by SMT solvers widely, unfortunately) will bring n
 for getting models; at which time the SBV framework can be modified into a truly plug-and-play
 system where arbitrary SMT solvers can be used.
 -}
-{- $internalIntro
-TBD: Internal developer API
+
+{- $modelExtraction
+The default 'Show' instances for prover calls provide all the counter-example information in a
+human-readable form and should be sufficient for most casual uses of sbv. However, tools built
+on top of sbv will inevitably need to look into the constructed models more deeply, programmatically
+extracting their results and performing actions based on them. The API provided in this section
+aims at simplifying this task.
 -}
+
+{- $resultTypes
+'ThmResult', 'SatResult', and 'AllSatResult' are simple newtype wrappers over 'SMTResult'. Their
+main purpose is so that we can provide custom 'Show' instances to print results accordingly.
+-}
+
+{- $internalIntro
+TODO: Internal developer API
+-}
+
 {- $moduleExportIntro
 The SBV library exports the following modules wholesale, as user programs will have to import these
 three modules to make any sensible use of the SBV functionality.

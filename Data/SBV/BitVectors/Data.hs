@@ -54,7 +54,7 @@ import System.IO.Unsafe -- see the note at the bottom of the file
 -- | 'CW' represents a concrete word of a fixed size:
 -- The unsigned variants are: 'W1', 'W8', 'W16', 'W32', and 'W64'
 -- The signed variants are  : 'I8', 'I16', 'I32', I64'
--- Endianness is mostly irrelevant (see 'blastBE' and 'blastLE' functions)
+-- Endianness is mostly irrelevant (see the 'FromBits' class).
 -- For signed words, the most significant digit is considered to be the sign
 data CW = W1  { wcToW1 :: Bit   }
         | W8  { wcToW8 :: Word8 }  | W16 { wcToW16 :: Word16} | W32 { wcToW32 :: Word32} | W64 { wcToW64 :: Word64 }

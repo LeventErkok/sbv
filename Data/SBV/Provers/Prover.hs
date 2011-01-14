@@ -45,13 +45,25 @@ import Data.SBV.SMT.SMTLib
 import qualified Data.SBV.Provers.Yices as Yices
 import Data.SBV.Utils.TDiff
 
-defaultSMTCfg, verboseSMTCfg, timingSMTCfg, verboseTimingSMTCfg :: SMTConfig
+-- | Default configuration for the SMT solver. Non-verbose, non-timing, prints results in base 10, and uses
+-- the Yices SMT solver.
+defaultSMTCfg :: SMTConfig
 defaultSMTCfg = SMTConfig {verbose = False, timing  = False, printBase = 10, solver = Yices.yices}
+
+-- | Same as 'defaultSMTCfg', except verbose
+verboseSMTCfg :: SMTConfig
 verboseSMTCfg = defaultSMTCfg {verbose=True}
+
+-- | Same as 'defaultSMTCfg', except prints timing info
+timingSMTCfg :: SMTConfig
 timingSMTCfg  = defaultSMTCfg {timing=True}
+
+-- | Same as 'defaultSMTCfg', except both verbose and timing info
+verboseTimingSMTCfg :: SMTConfig
 verboseTimingSMTCfg = timingSMTCfg {verbose=True}
 
 -- We might need a better system if we add more backend solvers
+-- | Adds a time out of @n@ seconds to a given solver configuration
 timeout :: Int -> SMTConfig -> SMTConfig
 timeout n s
  | nm == name Yices.yices = s{solver = Yices.timeout n (solver s)}
@@ -155,12 +167,17 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymW
   forAll (s:ss) k = free s >>= \a -> forAll ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   forAll []     k = forAll_ k
 
+-- | Prove a predicate, equivalent to @'proveWith' 'defaultSMTCfg'@
 prove :: Provable a => a -> IO ThmResult
 prove = proveWith defaultSMTCfg
 
+-- | Find a satisfying assignment for a predicate, equivalent to @'satWith' 'defaultSMTCfg'@
 sat :: Provable a => a -> IO SatResult
 sat = satWith defaultSMTCfg
 
+-- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
+-- Satisfying assignments are constructed lazily, so they will be available as returned by the solver
+-- and on demand.
 allSat :: Provable a => a -> IO AllSatResult
 allSat = allSatWith defaultSMTCfg
 
@@ -183,17 +200,29 @@ checkSatisfiable mbTo p = do r <- s p
                                _                           -> error $ "SBV.isSatisfiable: Received: " ++ show r
    where s = maybe sat (\i -> satWith (timeout i defaultSMTCfg)) mbTo
 
--- with time-outs (seconds)
-isTheoremWithin, isSatisfiableWithin :: Provable a => Int -> a -> IO (Maybe Bool)
-isTheoremWithin     i = checkTheorem (Just i)
+-- | Checks theoremhood within the given time limit of @i@ seconds.
+-- Returns @Nothing@ if times out, or the result wrapped in a @Just@ otherwise.
+isTheoremWithin :: Provable a => Int -> a -> IO (Maybe Bool)
+isTheoremWithin i = checkTheorem (Just i)
+
+-- | Checks satisfiability within the given time limit of @i@ seconds.
+-- Returns @Nothing@ if times out, or the result wrapped in a @Just@ otherwise.
+isSatisfiableWithin :: Provable a => Int -> a -> IO (Maybe Bool)
 isSatisfiableWithin i = checkSatisfiable (Just i)
 
--- without time-outs
-isTheorem, isSatisfiable :: Provable a => a -> IO Bool
-isTheorem     p = fromJust `fmap` checkTheorem     Nothing p
+-- | Checks theoremhood
+isTheorem :: Provable a => a -> IO Bool
+isTheorem p = fromJust `fmap` checkTheorem Nothing p
+
+-- | Checks satisfiability
+isSatisfiable :: Provable a => a -> IO Bool
 isSatisfiable p = fromJust `fmap` checkSatisfiable Nothing p
 
--- return the number of models that satisfy the predicate
+-- | Returns the number of models that satisfy the predicate, as it would
+-- be returned by 'allSat'. Note that the number of models is always a
+-- finite number, and hence this will always return a result. Of course,
+-- computing it might take quite long, as it literally generates and counts
+-- the number of satisfying models.
 numberOfModels :: Provable a => a -> IO Int
 numberOfModels p = do AllSatResult rs <- allSat p
                       return $ sum $ map walk rs
@@ -201,12 +230,15 @@ numberOfModels p = do AllSatResult rs <- allSat p
         -- shouldn't happen, but just in case
         walk r               = error $ "numberOfModels: Unexpected result from an allSat check: " ++ show (AllSatResult [r])
 
+-- | Proves the predicate using the given SMT-solver
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
 proveWith config a = generateTrace config False a >>= callSolver [] "Checking Theoremhood.." ThmResult config
 
+-- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
 satWith config a = generateTrace config True a >>= callSolver [] "Checking Satisfiability.." SatResult config
 
+-- | Find all satisfying assignments using the given SMT-solver
 allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
 allSatWith config p = do when (verbose config) $ putStrLn  "** Checking Satisfiability, all solutions.."
                          sbvPgm <- generateTrace config True p
@@ -253,7 +285,9 @@ generateTrace config isSat predicate = do
           Result is consts tbls arrs pgm [o@(SW{})] -> timeIf isTiming "translation" $ return (is, toSMTLib isSat is consts tbls arrs pgm o)
           _                                         -> error $ "SBVProver.callSolver: Impossible happened: " ++ show res
 
--- Higher order equality..
+-- | Equality as a proof method. Allows for
+-- very concise construction of equivalence proofs, which is very typical in
+-- bit-precise proofs.
 infix 4 ===
 class Equality a where
   (===) :: a -> a -> IO ThmResult

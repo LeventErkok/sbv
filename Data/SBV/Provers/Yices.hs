@@ -21,6 +21,9 @@ import Data.SBV.SMT.SMT
 import Data.SBV.Provers.SExpr
 import System.Environment
 
+-- | The description of the Yices SMT solver
+-- The default executable is @\"yices\"@, which must be in your path. You can use the @SBV_YICES@ environment variable to point to the executable on your system.
+-- The default options are @\"-m -f\"@, which is valid for Yices 2 series. You can use the @SBV_YICES_OPTIONS@ environment variable to override the options.
 yices :: SMTSolver
 yices = SMTSolver {
            name       = "Yices"

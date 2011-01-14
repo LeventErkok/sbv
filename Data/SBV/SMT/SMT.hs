@@ -28,27 +28,34 @@ import System.Directory(findExecutable)
 import System.Process(readProcessWithExitCode)
 import System.Exit
 
+-- | Solver configuration
 data SMTConfig = SMTConfig {
-         verbose   :: Bool
-       , timing    :: Bool
-       , printBase :: Int
-       , solver    :: SMTSolver
+         verbose   :: Bool      -- ^ Debug mode
+       , timing    :: Bool      -- ^ Print timing information on how long different phases took (construction, solving, etc.)
+       , printBase :: Int       -- ^ Print literals in this base
+       , solver    :: SMTSolver -- ^ The actual SMT solver
        }
 
 type SMTEngine = SMTConfig -> [NamedSymVar] -> String -> IO SMTResult
 
+-- | An SMT solver
 data SMTSolver = SMTSolver {
-         name       :: String
-       , executable :: String
-       , options    :: [String]
-       , engine     :: SMTEngine
+         name       :: String    -- ^ Printable name of the solver
+       , executable :: String    -- ^ The path to its executable
+       , options    :: [String]  -- ^ Options to provide to the solver
+       , engine     :: SMTEngine -- ^ The solver engine, responsible for interpreting solver output
        }
 
-data SMTResult = Unsatisfiable SMTConfig
-               | Satisfiable   SMTConfig [(String, CW)]
-               | Unknown       SMTConfig [(String, CW)]
-               | ProofError    SMTConfig [String]
-               | TimeOut       SMTConfig
+-- | The result of an SMT solver call. Each constructor is tagged with
+-- the 'SMTConfig' that created it so that further tools can inspect it
+-- and build layers of results, if needed. For ordinary uses of the library,
+-- this type should not be needed, instead use the accessor functions on
+-- it. (Custom Show instances and model extractors.)
+data SMTResult = Unsatisfiable SMTConfig                  -- ^ Unsatisfiable
+               | Satisfiable   SMTConfig [(String, CW)]   -- ^ Satisfiable with model
+               | Unknown       SMTConfig [(String, CW)]   -- ^ Prover returned unknown, with a potential (possibly bogus) model
+               | ProofError    SMTConfig [String]         -- ^ Prover errored out
+               | TimeOut       SMTConfig                  -- ^ Computation timed out
 
 resultConfig :: SMTResult -> SMTConfig
 resultConfig (Unsatisfiable c) = c
@@ -64,9 +71,14 @@ instance NFData SMTResult where
   rnf (ProofError _ xs)   = rnf xs `seq` ()
   rnf (TimeOut _)         = ()
 
--- wrappers; so we can give custom show instances basically
+-- | A 'prove' call results in a 'ThmResult'
 newtype ThmResult    = ThmResult    SMTResult
+
+-- | A 'sat' call results in a 'SatResult'
+-- The reason for having a separate 'SatResult' is to have a more meaningful 'Show' instance.
 newtype SatResult    = SatResult    SMTResult
+
+-- | An 'allSat' call results in a 'AllSatResult'
 newtype AllSatResult = AllSatResult [SMTResult]
 
 instance Show ThmResult where
