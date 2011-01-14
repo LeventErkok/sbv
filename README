@@ -1,12 +1,6 @@
 SBV: Symbolic Bit Vectors in Haskell
 ====================================
 
-(The sbv library is hosted at [http://github.com/LeventErkok/sbv](http://github.com/LeventErkok/sbv).
-Comments, bug reports, and patches are always welcome. The hackage site
-[http://hackage.haskell.org/package/sbv](http://hackage.haskell.org/package/sbv) is the best place
-for reading the Haddock documentation. Or, you can directly look at the
-[Examples](http://github.com/LeventErkok/sbv/tree/master/Data/SBV/Examples) to get a jump start.)
-
 Express properties about bit-precise Haskell programs and automatically prove
 them using SMT solvers.
 
@@ -25,6 +19,17 @@ The function `prove` has the following type:
 The class `Provable` comes with instances for n-ary predicates, for arbitrary n.
 The predicates are just regular Haskell functions over symbolic signed and unsigned
 bit-vectors. Functions for checking satisfiability (`sat` and `allSat`) are also provided.
+
+Resources
+=========
+The sbv library is hosted at [http://github.com/LeventErkok/sbv](http://github.com/LeventErkok/sbv).
+
+The hackage site
+[http://hackage.haskell.org/package/sbv](http://hackage.haskell.org/package/sbv) is the best place
+for the API documentation. Or, you can directly look at the
+[Examples](http://github.com/LeventErkok/sbv/tree/master/Data/SBV/Examples) to get a jump start.
+
+Comments, bug reports, and patches are always welcome.
 
 Overview
 ========
@@ -88,12 +93,17 @@ the Puzzles directory.
 Installation
 ============
 The sbv library is cabalized. Assuming you have cabal/ghc installed, it should merely
-be a matter of running cabal. Please see the INSTALL file for installation details.
+be a matter of running 
+     
+         cabal install sbv
+	 
+Please see the [INSTALL](http://github.com/LeventErkok/sbv/tree/master/INSTALL) for installation details.
 
 Once the installation is done, you can run the executable @SBVUnitTests@ which will
 execute the regression test suite for sbv on your machine to ensure all is well.
 
 Copyright, License
 ==================
-The sbv library is distributed with the BSD3 license. See the COPYRIGHT file for
-details. The LICENSE file contains the BSD3 verbiage.
+The sbv library is distributed with the BSD3 license. See the [COPYRIGHT](http://github.com/LeventErkok/sbv/tree/master/COPYRIGHT) for
+details. The [LICENSE](http://github.com/LeventErkok/sbv/tree/master/LICENSE) file contains
+the [BSD3](http://en.wikipedia.org/wiki/BSD_licenses) verbiage.
