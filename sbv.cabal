@@ -3,9 +3,9 @@ Version:       0.5
 Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic computation
 Synopsis:      Symbolic Bit Vectors: Prove bit-precise program properties using SMT solvers.
 Description:   Adds support for symbolic bit vectors, allowing formal models of bit-precise
-               programs to be created. Supports symbolic arrays. Provides light-weight connection to
-               SMT solvers to produce formal property proofs of theoremhood and satisfiability,
-               with counter-examples.
+               programs to be created. Supports symbolic arrays. Aims to provide "seamless"
+               integration with SMT solvers to produce formal property proofs of theoremhood
+               and satisfiability, with counter-examples.
 License:       BSD3
 License-file:  LICENSE
 Stability:     Experimental
