@@ -97,13 +97,13 @@ be a matter of running
      
          cabal install sbv
 	 
-Please see the [INSTALL](http://github.com/LeventErkok/sbv/tree/master/INSTALL) for installation details.
+Please see [INSTALL](http://github.com/LeventErkok/sbv/tree/master/INSTALL) for installation details.
 
 Once the installation is done, you can run the executable @SBVUnitTests@ which will
 execute the regression test suite for sbv on your machine to ensure all is well.
 
 Copyright, License
 ==================
-The sbv library is distributed with the BSD3 license. See the [COPYRIGHT](http://github.com/LeventErkok/sbv/tree/master/COPYRIGHT) for
+The sbv library is distributed with the BSD3 license. See [COPYRIGHT](http://github.com/LeventErkok/sbv/tree/master/COPYRIGHT) for
 details. The [LICENSE](http://github.com/LeventErkok/sbv/tree/master/LICENSE) file contains
 the [BSD3](http://en.wikipedia.org/wiki/BSD_licenses) verbiage.
