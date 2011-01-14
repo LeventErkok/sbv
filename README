@@ -99,7 +99,7 @@ be a matter of running
 	 
 Please see [INSTALL](http://github.com/LeventErkok/sbv/tree/master/INSTALL) for installation details.
 
-Once the installation is done, you can run the executable @SBVUnitTests@ which will
+Once the installation is done, you can run the executable `SBVUnitTests` which will
 execute the regression test suite for sbv on your machine to ensure all is well.
 
 Copyright, License
