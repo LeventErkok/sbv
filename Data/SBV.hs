@@ -145,18 +145,13 @@ module Data.SBV (
   , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..)
 
   -- ** Programmable model extraction
-  -- TODO
   , SatModel(..), getModel, displayModels
 
   -- * SMT Interface: Configurations and solvers
   , SMTConfig(..), SMTSolver(..), defaultSMTCfg, verboseSMTCfg, timingSMTCfg, verboseTimingSMTCfg, timeout
   , yices
 
-  -- * Internals (for developers only)
-  -- $internalIntro
-
-  , output, Result, Symbolic, runSymbolic, SymWord(..), SBV(..)
-
+  , Symbolic, output, SymWord(..)
   -- * Module exports
   -- $moduleExportIntro
 
@@ -224,10 +219,6 @@ aims at simplifying this task.
 {- $resultTypes
 'ThmResult', 'SatResult', and 'AllSatResult' are simple newtype wrappers over 'SMTResult'. Their
 main purpose is so that we can provide custom 'Show' instances to print results accordingly.
--}
-
-{- $internalIntro
-TODO: Internal developer API
 -}
 
 {- $moduleExportIntro

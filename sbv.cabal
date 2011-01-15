@@ -38,6 +38,7 @@ Library
                   , directory >= 1.0.1.1
                   , filepath >= 1.1.0.4
   Exposed-modules : Data.SBV
+                  , Data.SBV.Internals
   Other-modules   : Data.SBV.BitVectors.Data
                   , Data.SBV.BitVectors.Bit
                   , Data.SBV.BitVectors.Model
