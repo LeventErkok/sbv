@@ -13,7 +13,6 @@
 module Data.SBV.Examples.CRC.USB5 where
 
 import Data.SBV
-import Data.SBV.Utils.SBVTest
 
 newtype SWord11 = S11 SWord16
 
@@ -49,9 +48,3 @@ usbGood sent16 received16 =
          received = mkSWord11 received16
          frameSent     = mkFrame sent
          frameReceived = mkFrame received
-
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-   "usbGood" ~: assert =<< isTheorem usbGood
- ]

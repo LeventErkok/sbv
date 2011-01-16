@@ -13,7 +13,6 @@
 module Data.SBV.Examples.Puzzles.PowerSet where
 
 import Data.SBV
-import Data.SBV.Utils.SBVTest
 
 -- the seemingly vacuous test ".<= true" is necessary
 -- so that Yices will return a satisfying assignment
@@ -33,10 +32,3 @@ powerSet xs = do putStrLn $ "Finding all subsets of " ++ show xs
             | True           = putStrLn $ "Subset #" ++ show i ++ ": " ++ show (concat (zipWith pick ss xs))
            pick True a  = [a]
            pick False _ = []
-
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [ "powerSet " ++ show i ~: assert (pSet i) | i <- [0 .. 7] ]
- where pSet :: Int -> IO Bool
-       pSet n = do cnt <- numberOfModels $ mapM (const free_) [1 .. n] >>= output . genPowerSet
-                   return (cnt == 2^n)

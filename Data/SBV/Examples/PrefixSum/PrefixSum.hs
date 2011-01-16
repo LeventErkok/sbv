@@ -14,13 +14,9 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
--- PrefixSum's over powerlists, proving equivalence of
--- the reference algorithm against Fischer-Ladner version
-
 module Data.SBV.Examples.PrefixSum.PrefixSum where
 
 import Data.SBV
-import Data.SBV.Utils.SBVTest
 
 -- A poor man's representation of powerlists and
 -- basic operations on them:
@@ -65,10 +61,3 @@ flIsCorrect n zf = do
 thm1, thm2 :: IO ThmResult
 thm1 = prove $ flIsCorrect  8 (0, (+))
 thm2 = prove $ flIsCorrect 16 (0, smax)
-
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-   "prefixSum1" ~: assert =<< isTheorem (flIsCorrect  8 (0, (+)))
- , "prefixSum1" ~: assert =<< isTheorem (flIsCorrect 16 (0, smax))
- ]

@@ -15,7 +15,6 @@
 module Data.SBV.Examples.Puzzles.Temperature where
 
 import Data.SBV
-import Data.SBV.Utils.SBVTest
 
 type Temp = SWord16 -- larger than we need actually
 
@@ -39,9 +38,3 @@ solve = do res <- allSat $ free_ >>= output . revOf
            disp _ x = putStrLn $ " " ++ show x ++ "C --> " ++ show ((round f) :: Integer) ++ "F (exact value: " ++ show f ++ "F)"
               where f :: Double
                     f  = 32 + (9 * fromIntegral x) / 5
-
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-  "temperature" ~: sat revOf `goldCheck` "temperature.gold"
- ]

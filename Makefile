@@ -22,5 +22,7 @@ clean:
 docs:
 	cabal haddock --hyperlink-source
 
+release: clean all docs
+
 gold:
 	ghc -idist/build/autogen/ SBVUnitTest/SBVUnitTest.hs -e createGolds

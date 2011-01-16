@@ -14,7 +14,6 @@ module Data.SBV.Examples.Puzzles.MagicSquare where
 
 import Data.List
 import Data.SBV
-import Data.SBV.Utils.SBVTest
 
 type Elem  = SWord32
 type Row   = [Elem]
@@ -63,11 +62,3 @@ magic n
                 sboard = map (map literal) board
                 sh2 z = let s = show z in if length s < 2 then ' ':s else s
                 printRow r = putStr "   " >> mapM_ (\x -> putStr ((sh2 x) ++ " ")) r >> putStrLn ""
-
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-   "magic 2" ~: assert . not =<< isSatisfiable (mkMagic 2)
- , "magic 3" ~: assert       =<< isSatisfiable (mkMagic 3)
- ]
- where mkMagic n = mapM (const free_) [1 .. n*n] >>= output . isMagic . chunk n

@@ -281,6 +281,10 @@ data State  = State { rctr       :: IORef Int
                     , rArrayMap  :: IORef ArrayMap
                     }
 
+-- | The "Symbolic" value. Either a constant (@Left@) or a symbolic
+-- value (@Right Cached@). Note that caching is essential for making
+-- sure sharing is preserved. The parameter 'a' is phantom, but is
+-- extremely important in keeping the user interface strongly typed.
 data SBV a = SBV !(Bool, Size) !(Either CW (Cached SW))
 
 -- | A symbolic boolean/bit
@@ -400,6 +404,8 @@ mkSymSBV sgnsz mbNm = do
         liftIO $ modifyIORef (rinps st) ((sw, nm):)
         return $ SBV sgnsz $ Right $ cache (const (return sw))
 
+-- | Mark an interim result as an output. Useful when constructing Symbolic programs
+-- that return multiple values, or when the result is programmatically computed.
 output :: SBV a -> Symbolic (SBV a)
 output i@(SBV _ (Left c)) = do
         st <- ask
@@ -449,7 +455,9 @@ runSymbolic (Symbolic c) = do
 -- * Symbolic Words
 -------------------------------------------------------------------------------
 -- | A 'SymWord' is a potential symbolic bitvector that can be created instances of
--- to be fed to a symbolic program.
+-- to be fed to a symbolic program. Note that these methods are typically not needed
+-- in casual uses with 'prove', 'sat', 'allSat' etc, as default instances automatically
+-- provide the necessary bits.
 class Ord a => SymWord a where
   -- | Create a user named input
   free       :: String -> Symbolic (SBV a)

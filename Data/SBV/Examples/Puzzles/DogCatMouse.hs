@@ -17,8 +17,6 @@
 module Data.SBV.Examples.Puzzles.DogCatMouse where
 
 import Data.SBV
-import Data.SBV.Utils.SBVTest
-
 
 type Count = SWord16 -- much larger than we actually need, but it works..
 
@@ -36,9 +34,3 @@ puzzle dog cat mouse =
 --   mouse = 56 :: SWord16
 main :: IO ()
 main = print =<< allSat (forAll ["dog", "cat", "mouse"] puzzle)
-
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-  "dog cat mouse" ~: allSat puzzle `goldCheck` "dogCatMouse.gold"
- ]

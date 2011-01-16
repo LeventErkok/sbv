@@ -14,7 +14,6 @@
 module Data.SBV.Examples.BitPrecise.BitTricks where
 
 import Data.SBV
-import Data.SBV.Utils.SBVTest
 
 -- http://graphics.stanford.edu/~seander/bithacks.html#IntegerMinOrMax
 fastMinCorrect :: SInt32 -> SInt32 -> SBool
@@ -58,13 +57,3 @@ queries =
         check "Opposite signs       " oppositeSignsCorrect
         check "Conditional set/clear" conditionalSetClearCorrect
         check "PowerOfTwo           " powerOfTwoCorrect
-
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-   "fast min"              ~: assert =<< isTheorem fastMinCorrect
- , "fast max"              ~: assert =<< isTheorem fastMaxCorrect
- , "opposite signs"        ~: assert =<< isTheorem oppositeSignsCorrect
- , "conditional set clear" ~: assert =<< isTheorem conditionalSetClearCorrect
- , "power of two"          ~: assert =<< isTheorem powerOfTwoCorrect
- ]

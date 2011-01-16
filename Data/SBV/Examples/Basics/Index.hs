@@ -13,7 +13,6 @@
 module Data.SBV.Examples.Basics.Index where
 
 import Data.SBV
-import Data.SBV.Utils.SBVTest
 
 -- prove that the "select" primitive is working correctly
 test1 :: Int -> IO Bool
@@ -68,8 +67,3 @@ tests :: IO ()
 tests = do mapM test1 [0..50] >>= print . and
            mapM test2 [0..50] >>= print . and
            mapM test3 [0..50] >>= print . and
-
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test $ zipWith tst [f x | f <- [test1, test2, test3], x <- [0..13]] [(0::Int)..]
-  where tst t i = "index-" ++ show i ~: t `ioShowsAs` "True"

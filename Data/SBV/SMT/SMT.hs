@@ -55,7 +55,7 @@ data SMTResult = Unsatisfiable SMTConfig                  -- ^ Unsatisfiable
                | Satisfiable   SMTConfig [(String, CW)]   -- ^ Satisfiable with model
                | Unknown       SMTConfig [(String, CW)]   -- ^ Prover returned unknown, with a potential (possibly bogus) model
                | ProofError    SMTConfig [String]         -- ^ Prover errored out
-               | TimeOut       SMTConfig                  -- ^ Computation timed out
+               | TimeOut       SMTConfig                  -- ^ Computation timed out (see the 'timeout' combinator)
 
 resultConfig :: SMTResult -> SMTConfig
 resultConfig (Unsatisfiable c) = c
@@ -102,8 +102,19 @@ instance Show AllSatResult where
                                      ("Unknown #" ++ show i ++ "(No assignment to variables returned)") "Unknown. Potential assignment:\n"
                                      ("Solution #" ++ show i ++ " (No assignment to variables returned)") ("Solution #" ++ show i ++ ":\n") s
 
+-- | Instances of 'SatModel' can be automatically extracted from models returned by the
+-- solvers. The idea is that the sbv infrastructure provides a stream of 'CW''s (constant-words)
+-- coming from the solver, and the type @a@ is interpreted based on these constants. Many typical
+-- instances are already provided, so new instances can be declared with relative ease.
+--
+-- Minimum complete definition: 'parseCWs'
 class SatModel a where
+  -- | Given a sequence of constant-words, extract one instance of the type @a@, returning
+  -- the remaining elements untouched. If the next element is not what's expected for this
+  -- type you should return 'Nothing'
   parseCWs  :: [CW] -> Maybe (a, [CW])
+  -- | Given a parsed model instance, transform it using @f@, and return the result.
+  -- The default definition for this method should be sufficient in most use cases.
   cvtModel  :: (a -> Maybe b) -> Maybe (a, [CW]) -> Maybe (b, [CW])
   cvtModel f x = x >>= \(a, r) -> f a >>= \b -> return (b, r)
 
@@ -183,6 +194,7 @@ instance (SatModel a, SatModel b, SatModel c, SatModel d, SatModel e, SatModel f
                    ((b, c, d, e, f, g), hs) <- parseCWs bs
                    return ((a, b, c, d, e, f, g), hs)
 
+-- | Given an 'SMTResult', extract an arbitrarily typed model from it, given a 'SatModel' instance
 getModel :: SatModel a => SMTResult -> a
 getModel (Unsatisfiable _) = error "SatModel.getModel: Unsatisfiable result"
 getModel (Unknown _ _)     = error "Impossible! Backend solver returned unknown for Bit-vector problem!"
@@ -193,6 +205,9 @@ getModel (Satisfiable _ m) = case parseCWs [c | (_, c) <- m] of
                                Just (_, ys) -> error $ "SBV.getModel: Partially constructed model; remaining elements: " ++ show ys
                                Nothing      -> error $ "SBV.getModel: Cannot construct a model from: " ++ show m
 
+-- | Given an 'allSat' call, we typically want to iterate over it and print the results in sequence. The
+-- 'displayModels' function automates this task by calling 'disp' on each result, consecutively. The first
+-- 'Int' argument to 'disp' 'is the current model number.
 displayModels :: SatModel a => (Int -> a -> IO ()) -> AllSatResult -> IO Int
 displayModels disp (AllSatResult ms) = do
     inds <- zipWithM display (map getModel ms) [(1::Int)..]

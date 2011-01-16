@@ -13,7 +13,6 @@
 module Data.SBV.Examples.Arrays.Memory where
 
 import Data.SBV
-import Data.SBV.Utils.SBVTest
 
 type Address = SWord32
 type Value   = SWord64
@@ -43,13 +42,3 @@ tests = do print =<< prove raw
            print =<< prove waw
            print =<< prove wcommutesBad
            print =<< prove wcommutesGood
-
-
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-     "memory-raw"           ~: assert       =<< isTheorem raw
-   , "memory-waw"           ~: assert       =<< isTheorem waw
-   , "memory-wcommute-bad"  ~: assert . not =<< isTheorem wcommutesBad
-   , "memory-wcommute-good" ~: assert       =<< isTheorem wcommutesGood
-   ]

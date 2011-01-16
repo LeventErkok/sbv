@@ -13,7 +13,6 @@
 module Data.SBV.Examples.CRC.CCITT where
 
 import Data.SBV
-import Data.SBV.Utils.SBVTest
 
 -- We don't have native support for 48 bits in Data.SBV
 -- So, represent as 32 high-bits and 16 low
@@ -60,10 +59,3 @@ hw4 = do res <- allSat hw4has84Inhabitants
          disp i (sh, sl, rh, rl) = do putStrLn $ "Solution #" ++ show i ++ ": "
                                       putStrLn $ "  Sent    : " ++ binS (mkFrame (literal sh, literal sl))
                                       putStrLn $ "  Received: " ++ binS (mkFrame (literal rh, literal rl))
-
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-  "ccitt" ~: crcPgm `goldCheck` "ccitt.gold"
- ]
- where crcPgm = runSymbolic $ forAll_ crcGood

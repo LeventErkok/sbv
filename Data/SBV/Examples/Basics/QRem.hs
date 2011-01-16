@@ -13,7 +13,6 @@
 module Data.SBV.Examples.Basics.QRem where
 
 import Data.SBV
-import Data.SBV.Utils.SBVTest
 
 -- check: if (a, b) = x `quotRem` y then x = y*a + b
 -- being careful about y = 0. When divisor is 0, then quotient is
@@ -25,9 +24,3 @@ qrem x y = ite (y .== 0) ((0, x) .== (a, b)) (x .== y * a + b)
 main :: IO ()
 main = do print =<< prove (qrem :: SWord8 -> SWord8 -> SBool)
           -- print =<< prove (qrem :: SWord16 -> SWord16 -> SBool)   -- takes too long!
-
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-   "qrem" ~: assert =<< isTheorem (qrem :: SWord8 -> SWord8 -> SBool)
- ]

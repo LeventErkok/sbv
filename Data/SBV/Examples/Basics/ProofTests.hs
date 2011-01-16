@@ -16,7 +16,6 @@
 module Data.SBV.Examples.Basics.ProofTests where
 
 import Data.SBV
-import Data.SBV.Utils.SBVTest
 
 f1, f2, f3, f4 :: Num a => a -> a -> a
 f1 x y = (x+y)*(x-y)
@@ -43,15 +42,3 @@ queries = do print =<< prove f1eqf2   -- QED
              print =<< prove f1Single -- QED
              print =<< sat f1eqf2     -- yes. any output ok
              print =<< sat f1eqf3     -- yes, 0;0
-
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-   "proofs-1"  ~: assert       =<< isTheorem f1eqf2
- , "proofs-2"  ~: assert . not =<< isTheorem f1eqf3
- , "proofs-3"  ~: assert       =<< isTheorem f3eqf4
- , "proofs-4"  ~: assert       =<< isTheorem f1Single
- , "proofs-5"  ~: assert       =<< isSatisfiable f1eqf2
- , "proofs-6"  ~: assert       =<< isSatisfiable f1eqf3
- , "proofs-7"  ~: assert . not =<< isSatisfiable (\x -> x .== x+(1 :: SWord16))
- ]

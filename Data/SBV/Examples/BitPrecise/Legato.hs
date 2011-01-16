@@ -7,8 +7,6 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Checks the correctness of a few tricks from the large collection found in:
---      http://graphics.stanford.edu/~seander/bithacks.html
 -- An encoding and correctness proof of Legato's multiplier in Haskell
 --
 -- For details: 
@@ -40,7 +38,6 @@ so we adopt this change as well.
 
 import Data.Array
 import Data.SBV
-import Data.SBV.Utils.SBVTest
 
 type Address  = SWord32
 data Register = RegX  | RegA  deriving (Eq, Ord, Ix, Bounded, Enum)
@@ -183,10 +180,3 @@ type Model = SFunArray
 --   About 30 minutes with SArray memory model
 correctnessTheorem :: IO ThmResult
 correctnessTheorem = proveWith timingSMTCfg legatoIsCorrect
-
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-  "legato" ~: legatoPgm `goldCheck` "legato.gold"
- ]
- where legatoPgm = runSymbolic $ forAll ["mem", "addrX", "x", "addrY", "y", "addrLow", "regX", "regA", "memVals", "flagC", "flagZ"] legatoIsCorrect

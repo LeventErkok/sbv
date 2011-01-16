@@ -1,11 +1,11 @@
 Name:          sbv
 Version:       0.5
-Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic computation
+Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic computation, Math
 Synopsis:      Symbolic Bit Vectors: Prove bit-precise program properties using SMT solvers.
 Description:   Adds support for symbolic bit vectors, allowing formal models of bit-precise
-               programs to be created. Supports symbolic arrays. Aims to provide "seamless"
-               integration with SMT solvers to produce formal property proofs of theoremhood
-               and satisfiability, with counter-examples.
+               programs to be created. Supports symbolic arrays and polynomials over GF(2^n).
+               Aims to provide "seamless" integration with SMT solvers to produce formal
+               property proofs of theoremhood and satisfiability, with counter-examples.
 License:       BSD3
 License-file:  LICENSE
 Stability:     Experimental
@@ -39,6 +39,7 @@ Library
                   , filepath >= 1.1.0.4
   Exposed-modules : Data.SBV
                   , Data.SBV.Internals
+                  , Data.SBV.Examples
   Other-modules   : Data.SBV.BitVectors.Data
                   , Data.SBV.BitVectors.Bit
                   , Data.SBV.BitVectors.Model
@@ -75,6 +76,28 @@ Library
                   , Data.SBV.Examples.Puzzles.Sudoku
                   , Data.SBV.Examples.Puzzles.U2Bridge
                   , Data.SBV.Examples.Puzzles.Temperature
+                  , Data.SBV.TestSuite.Arrays.Memory
+                  , Data.SBV.TestSuite.Basics.BasicTests
+                  , Data.SBV.TestSuite.Basics.Higher
+                  , Data.SBV.TestSuite.Basics.Index
+                  , Data.SBV.TestSuite.Basics.ProofTests
+                  , Data.SBV.TestSuite.Basics.QRem
+                  , Data.SBV.TestSuite.Basics.UnsafeFunctionEquality
+                  , Data.SBV.TestSuite.BitPrecise.BitTricks
+                  , Data.SBV.TestSuite.BitPrecise.Legato
+                  , Data.SBV.TestSuite.CRC.CCITT
+                  , Data.SBV.TestSuite.CRC.CCITT_Unidir
+                  , Data.SBV.TestSuite.CRC.GenPoly
+                  , Data.SBV.TestSuite.CRC.Parity
+                  , Data.SBV.TestSuite.CRC.USB5
+                  , Data.SBV.TestSuite.PrefixSum.PrefixSum
+                  , Data.SBV.TestSuite.Puzzles.DogCatMouse
+                  , Data.SBV.TestSuite.Puzzles.MagicSquare
+                  , Data.SBV.TestSuite.Puzzles.NQueens
+                  , Data.SBV.TestSuite.Puzzles.PowerSet
+                  , Data.SBV.TestSuite.Puzzles.Sudoku
+                  , Data.SBV.TestSuite.Puzzles.U2Bridge
+                  , Data.SBV.TestSuite.Puzzles.Temperature
 
 Executable SBVUnitTests
   main-is         : SBVUnitTest/SBVUnitTest.hs

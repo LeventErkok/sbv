@@ -15,7 +15,6 @@ module Data.SBV.Examples.Puzzles.Sudoku where
 import Data.List
 import Data.Maybe(fromJust)
 import Data.SBV
-import Data.SBV.Utils.SBVTest
 
 type Row   = [SWord8]
 type Board = [Row]
@@ -235,11 +234,3 @@ puzzle6 = (64, f)
 
 main :: IO ()
 main = mapM_ solve [puzzle0, puzzle1, puzzle2, puzzle3, puzzle4, puzzle5, puzzle6]
-
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-  "sudoku " ++ show n ~: assert (checkPuzzle s)
-     | (n, s) <- zip [(0::Int)..] [puzzle0, puzzle1, puzzle2, puzzle3, puzzle4, puzzle5, puzzle6]
- ]
- where checkPuzzle (i, f) = isSatisfiable $ mapM (const free_) [1..i] >>= output . valid . f
