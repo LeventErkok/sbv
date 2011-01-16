@@ -7,7 +7,7 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- The Sudoku solver
+-- The Sudoku solver, quintessential SMT solver example!
 -----------------------------------------------------------------------------
 
 module Data.SBV.Examples.Puzzles.Sudoku where
@@ -16,13 +16,22 @@ import Data.List
 import Data.Maybe(fromJust)
 import Data.SBV
 
+-------------------------------------------------------------------
+-- * Modeling Sudoku
+-------------------------------------------------------------------
+-- | A row is a sequence of 8-bit words, too large indeed for representing 1-9, but does not harm
 type Row   = [SWord8]
+
+-- | A Sudoku board is a sequence of 9 rows
 type Board = [Row]
 
-check :: Row -> SBool
+-- | Given a series of elements, make sure they are all different
+-- and they all are numbers between 1 and 9
+check :: [SWord8] -> SBool
 check grp = bAnd $ allDifferent grp : map rangeFine grp
   where rangeFine x = x .> 0 &&& x .<= 9
 
+-- | Given a full Sudoku board, check that it is valid
 valid :: Board -> SBool
 valid rows = bAnd $ literal sizesOK : map check (rows ++ columns ++ squares)
   where sizesOK = length rows == 9 && all (\r -> length r == 9) rows
@@ -33,24 +42,21 @@ valid rows = bAnd $ literal sizesOK : map check (rows ++ columns ++ squares)
         chunk _ [] = []
         chunk i xs = let (f, r) = splitAt i xs in f : chunk i r
 
--- A puzzle is a pair: First is the number of missing elements, second
--- is a function that given that many elements returns the final board
+-- | A puzzle is a pair: First is the number of missing elements, second
+-- is a function that given that many elements returns the final board.
 type Puzzle = (Int, [SWord8] -> Board)
 
--- With "sat"; valid can be turned into a solver:
-solve0 :: Puzzle -> IO ()
-solve0 (i, f) = print =<< sat (mapM (const free_) [1..i] >>= output . valid . f)
+-------------------------------------------------------------------
+-- * Solving Sudoku puzzles
+-------------------------------------------------------------------
 
--- Verbose version; to see what's going on:
-solve1 :: Puzzle -> IO ()
-solve1 (i, f) = print =<< satWith verboseSMTCfg (mapM (const free_) [1..i] >>= output . valid . f)
-
--- Fancier output; but nothing fundamental below
+-- | Solve a given puzzle and print the results
 solve :: Puzzle -> IO ()
 solve p@(i, f) = do putStrLn "Solving the puzzle.."
                     SatResult res <- sat $ mapM (const free_) [1..i] >>= output . valid . f
                     dispSolution p (getModel res)
 
+-- | Helper function to display results nicely, not really needed, but helps presentation
 dispSolution :: Puzzle -> [Word8] -> IO ()
 dispSolution (i, f) fs
   | lmod /= i = error $ "Impossible! Backend solver returned " ++ show lmod ++ " values, was expecting: " ++ show i
@@ -62,7 +68,7 @@ dispSolution (i, f) fs
         final = f (map literal fs)
         printRow r = putStr "   " >> mapM_ (\x -> putStr (show (fromJust (unliteral x)) ++ " ")) r >> putStrLn ""
 
--- Find all solutions
+-- | Find all solutions to a puzzle
 solveAll :: Puzzle -> IO ()
 solveAll p@(i, f) = do putStrLn "Finding all solutions.."
                        res <- allSat $ mapM (const free_) [1..i] >>= output . valid . f
@@ -71,8 +77,11 @@ solveAll p@(i, f) = do putStrLn "Finding all solutions.."
    where disp n s = do putStrLn $ "Solution #" ++ show n
                        dispSolution p s
 
--- Examples
--- Find an arbitrary good board
+-------------------------------------------------------------------
+-- * Example boards
+-------------------------------------------------------------------
+
+-- | Find an arbitrary good board
 puzzle0 :: Puzzle
 puzzle0 = (81, f)
   where f   [ a1, a2, a3, a4, a5, a6, a7, a8, a9,
@@ -95,6 +104,7 @@ puzzle0 = (81, f)
              [i1, i2, i3, i4, i5, i6, i7, i8, i9] ]
         f _ = error "puzzle0 needs exactly 81 elements!"
 
+-- | A random puzzle, found on the internet..
 puzzle1 :: Puzzle
 puzzle1 = (49, f)
   where f   [ a1,     a3, a4, a5, a6, a7,     a9,
@@ -117,6 +127,7 @@ puzzle1 = (49, f)
              [i1,  5, i3, i4, i5, i6, i7,  7, i9] ]
         f _ = error "puzzle1 needs exactly 49 elements!"
 
+-- | Another random puzzle, found on the internet..
 puzzle2 :: Puzzle
 puzzle2 = (55, f)
   where f   [     a2,     a4, a5, a6, a7,     a9,
@@ -139,6 +150,7 @@ puzzle2 = (55, f)
              [i1,  6, i3, i4, i5, i6,  2, i8,  3] ]
         f _ = error "puzzle2 needs exactly 55 elements!"
 
+-- | Another random puzzle, found on the internet..
 puzzle3 :: Puzzle
 puzzle3 = (56, f)
   where f   [     a2, a3, a4,     a6,     a8, a9,
@@ -161,8 +173,9 @@ puzzle3 = (56, f)
              [i1, i2,  4, i4,  5, i6, i7, i8,  9] ]
         f _ = error "puzzle3 needs exactly 56 elements!"
 
--- According to the "web," this is the "toughest" 
--- sudoku puzzle ever.. It even has a name: Al Escargot.
+-- | According to the web, this is the toughest 
+-- sudoku puzzle ever.. It even has a name: Al Escargot:
+-- <http://zonkedyak.blogspot.com/2006/11/worlds-hardest-sudoku-puzzle-al.html>
 puzzle4 :: Puzzle
 puzzle4 = (58, f)
   where f   [     a2, a3, a4, a5,     a7,     a9,
@@ -185,7 +198,7 @@ puzzle4 = (58, f)
              [i1, i2,  7, i4, i5, i6,  3, i8, i9] ]
         f _ = error "puzzle4 needs exactly 58 elements!"
 
--- Andy's "diabolical" example:
+-- | This one has been called diabolical, apparently
 puzzle5 :: Puzzle
 puzzle5 = (53, f)
   where f   [ a1,     a3,     a5, a6,         a9,
@@ -208,8 +221,8 @@ puzzle5 = (53, f)
              [i1,  5,  4, i4, i5,  8, i7,  7, i9] ]
         f _ = error "puzzle5 needs exactly 53 elements!"
 
--- The following is "nefarious" according to
--- http://haskell.org/haskellwiki/Sudoku
+-- | The following is nefarious according to
+-- <http://haskell.org/haskellwiki/Sudoku>
 puzzle6 :: Puzzle
 puzzle6 = (64, f)
   where f   [ a1, a2, a3, a4,     a6, a7,     a9,
@@ -232,5 +245,6 @@ puzzle6 = (64, f)
              [i1, i2, i3, i4, i5, i6, i7,  5, i9] ]
         f _ = error "puzzle6 needs exactly 64 elements!"
 
+-- | Solve them all, this takes a fraction of a second to run for each case
 allPuzzles :: IO ()
 allPuzzles = mapM_ solve [puzzle0, puzzle1, puzzle2, puzzle3, puzzle4, puzzle5, puzzle6]
