@@ -47,7 +47,7 @@ import Data.List(intercalate, sortBy)
 import qualified Data.Map    as Map
 import qualified Data.IntMap as IMap
 
-import Test.QuickCheck hiding(Result)
+import Test.QuickCheck hiding(Result, output)
 
 import System.IO.Unsafe -- see the note at the bottom of the file
 
