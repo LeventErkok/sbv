@@ -39,7 +39,15 @@ Library
                   , filepath >= 1.1.0.4
   Exposed-modules : Data.SBV
                   , Data.SBV.Internals
-                  , Data.SBV.Examples
+                  , Data.SBV.Examples.BitPrecise.BitTricks
+                  , Data.SBV.Examples.BitPrecise.Legato
+                  , Data.SBV.Examples.Puzzles.DogCatMouse
+                  , Data.SBV.Examples.Puzzles.MagicSquare
+                  , Data.SBV.Examples.Puzzles.NQueens
+                  , Data.SBV.Examples.Puzzles.PowerSet
+                  , Data.SBV.Examples.Puzzles.Sudoku
+                  , Data.SBV.Examples.Puzzles.U2Bridge
+                  , Data.SBV.Examples.Puzzles.Temperature
   Other-modules   : Data.SBV.BitVectors.Data
                   , Data.SBV.BitVectors.Bit
                   , Data.SBV.BitVectors.Model
@@ -61,21 +69,12 @@ Library
                   , Data.SBV.Examples.Basics.ProofTests
                   , Data.SBV.Examples.Basics.QRem
                   , Data.SBV.Examples.Basics.UnsafeFunctionEquality
-                  , Data.SBV.Examples.BitPrecise.BitTricks
-                  , Data.SBV.Examples.BitPrecise.Legato
                   , Data.SBV.Examples.CRC.CCITT
                   , Data.SBV.Examples.CRC.CCITT_Unidir
                   , Data.SBV.Examples.CRC.GenPoly
                   , Data.SBV.Examples.CRC.Parity
                   , Data.SBV.Examples.CRC.USB5
                   , Data.SBV.Examples.PrefixSum.PrefixSum
-                  , Data.SBV.Examples.Puzzles.DogCatMouse
-                  , Data.SBV.Examples.Puzzles.MagicSquare
-                  , Data.SBV.Examples.Puzzles.NQueens
-                  , Data.SBV.Examples.Puzzles.PowerSet
-                  , Data.SBV.Examples.Puzzles.Sudoku
-                  , Data.SBV.Examples.Puzzles.U2Bridge
-                  , Data.SBV.Examples.Puzzles.Temperature
                   , Data.SBV.TestSuite.Arrays.Memory
                   , Data.SBV.TestSuite.Basics.BasicTests
                   , Data.SBV.TestSuite.Basics.Higher

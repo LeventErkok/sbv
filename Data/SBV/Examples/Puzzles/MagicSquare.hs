@@ -7,7 +7,9 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Solves the magic-square puzzle
+-- Solves the magic-square puzzle. An NxN magic square is one where all entries
+-- are filled with numbers from 1 to NxN such that sums of all rows, columns
+-- and diagonals is the same.
 -----------------------------------------------------------------------------
 
 module Data.SBV.Examples.Puzzles.MagicSquare where
@@ -15,18 +17,26 @@ module Data.SBV.Examples.Puzzles.MagicSquare where
 import Data.List
 import Data.SBV
 
+-- | Use 32-bit words for elements.
 type Elem  = SWord32
+
+-- | A row is a list of elements
 type Row   = [Elem]
+
+-- | The puzzle board is a list of rows
 type Board = [Row]
 
-check :: Elem -> Elem -> Row -> SBool
+-- | Checks that all elements in a list are within bounds
+check :: Elem -> Elem -> [Elem] -> SBool
 check low high grp = bAll rangeFine grp
   where rangeFine x = x .>= low &&& x .<= high
 
+-- | Get the diagonal of a square matrix
 diag :: [[a]] -> [a]
 diag ((a:_):rs) = a : diag (map tail rs)
 diag _          = []
 
+-- | Test if a given board is a magic square
 isMagic :: Board -> SBool
 isMagic rows = bAnd $ fromBool isSquare : allEqual (map sum items) : allDifferent (concat rows) : map chk items
   where items = d1 : d2 : rows ++ columns
@@ -37,10 +47,12 @@ isMagic rows = bAnd $ fromBool isSquare : allEqual (map sum items) : allDifferen
         d2 = diag (map reverse rows)
         chk = check (literal 1) (literal (n*n))
 
+-- | Group a list of elements in the sublists of length @i@
 chunk :: Int -> [a] -> [[a]]
 chunk _ [] = []
 chunk i xs = let (f, r) = splitAt i xs in f : chunk i r
 
+-- | Given @n@, magic @n@ prints all solutions to the @nxn@ magic square problem
 magic :: Int -> IO ()
 magic n
  | n < 0 = putStrLn $ "n must be non-negative, received: " ++ show n

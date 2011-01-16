@@ -173,7 +173,7 @@ solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ 
                shL False = " --> "
                shL True  = " <-- "
 
-main :: IO ()
-main = go 1
+solveU2 :: IO ()
+solveU2 = go 1
  where go i = do p <- solveN i
                  if p then return () else go (i+1)

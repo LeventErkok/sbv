@@ -232,5 +232,5 @@ puzzle6 = (64, f)
              [i1, i2, i3, i4, i5, i6, i7,  5, i9] ]
         f _ = error "puzzle6 needs exactly 64 elements!"
 
-main :: IO ()
-main = mapM_ solve [puzzle0, puzzle1, puzzle2, puzzle3, puzzle4, puzzle5, puzzle6]
+allPuzzles :: IO ()
+allPuzzles = mapM_ solve [puzzle0, puzzle1, puzzle2, puzzle3, puzzle4, puzzle5, puzzle6]
