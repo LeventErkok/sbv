@@ -4,7 +4,7 @@ Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic computatio
 Synopsis:      Symbolic Bit Vectors: Prove bit-precise program properties using SMT solvers.
 Description:   Adds support for symbolic bit vectors, allowing formal models of bit-precise
                programs to be created. Supports symbolic arrays and polynomials over GF(2^n).
-               Aims to provide "seamless" integration with SMT solvers to produce formal
+               Aims to provide seamless integration with SMT solvers to produce formal
                property proofs of theoremhood and satisfiability, with counter-examples.
 License:       BSD3
 License-file:  LICENSE
