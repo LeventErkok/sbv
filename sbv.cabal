@@ -6,7 +6,7 @@ Description:   Adds support for symbolic bit vectors, allowing formal models of 
                programs to be created. Supports symbolic arrays and polynomials over GF(2^n).
                Aims to provide seamless integration with SMT solvers to produce formal
                property proofs of theoremhood and satisfiability, with counter-examples.
-Copyright:     Levent Erkok 2011
+Copyright:     Levent Erkok, 2011
 License:       BSD3
 License-file:  LICENSE
 Stability:     Experimental
