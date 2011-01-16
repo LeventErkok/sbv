@@ -12,7 +12,7 @@
 
 module Data.SBV.Utils.TDiff(timeIf) where
 
-import Control.Parallel.Strategies
+import Control.DeepSeq
 import System.Time
 import Numeric
 

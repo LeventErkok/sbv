@@ -13,7 +13,7 @@
 module Data.SBV.BitVectors.Bit where
 
 import Data.Bits
-import Control.Parallel.Strategies(NFData(..))
+import Control.DeepSeq(NFData(..))
 
 data Bit = Zero | One
          deriving (Eq, Ord)

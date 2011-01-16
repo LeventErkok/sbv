@@ -15,7 +15,7 @@
 module Data.SBV.SMT.SMT where
 
 import Control.Monad(when, zipWithM)
-import Control.Parallel.Strategies(NFData(..))
+import Control.DeepSeq(NFData(..))
 import Data.Char(isSpace)
 import Data.List(intercalate)
 import Data.Word

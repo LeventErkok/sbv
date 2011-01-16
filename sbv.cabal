@@ -1,11 +1,12 @@
 Name:          sbv
-Version:       0.9
+Version:       0.9.1
 Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math
 Synopsis:      Symbolic Bit Vectors: Prove bit-precise program properties using SMT solvers.
 Description:   Adds support for symbolic bit vectors, allowing formal models of bit-precise
                programs to be created. Supports symbolic arrays and polynomials over GF(2^n).
                Aims to provide seamless integration with SMT solvers to produce formal
                property proofs of theoremhood and satisfiability, with counter-examples.
+Copyright:     Levent Erkok 2011
 License:       BSD3
 License-file:  LICENSE
 Stability:     Experimental
@@ -25,13 +26,13 @@ Library
   ghc-options     : -Wall
   ghc-prof-options: -auto-all -caf-all
   Build-Depends   : base >= 3 && < 5
+                  , deepseq >= 1.1.0.2
                   , process >= 1.0.1
                   , containers >= 0.2.0
                   , QuickCheck >= 2.1.0.3
                   , strict-concurrency >= 0.2.3
                   , haskell98
                   , old-time >= 1.0.0.2
-                  , parallel >= 2.2.0.1
                   , mtl >= 1.1.0.2
                   , array >= 0.2.0.0
                   , HUnit >= 1.2.2.3

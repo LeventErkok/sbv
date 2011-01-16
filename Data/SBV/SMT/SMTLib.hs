@@ -13,7 +13,7 @@
 
 module Data.SBV.SMT.SMTLib(SMTLibPgm, toSMTLib, addNonEqConstraints) where
 
-import Control.Parallel.Strategies(NFData(..))
+import Control.DeepSeq(NFData(..))
 import qualified Data.Foldable    as F
 import Data.List (intercalate)
 

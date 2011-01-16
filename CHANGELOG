@@ -1,0 +1,8 @@
+2011-01-15 Levent Erkok <erkokl@gmail.com>
+
+* Accommodate for NFData moving to the deepSeq package
+* Second public hackage release, version 0.9.1
+
+2011-01-15 Levent Erkok <erkokl@gmail.com>
+
+* First public hackage release, version 0.9

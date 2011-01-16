@@ -34,7 +34,7 @@ module Data.SBV.BitVectors.Data
  ) where
 
 import Control.Monad.Reader
-import Control.Parallel.Strategies(NFData(..))
+import Control.DeepSeq(NFData(..))
 import Data.Bits
 import Data.Int
 import Data.Word
