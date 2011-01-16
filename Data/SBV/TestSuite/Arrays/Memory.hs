@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuites.Arrays.Memory
+-- Module      :  Data.SBV.TestSuite.Arrays.Memory
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Test suite for Data.SBV.Examples.Arrays.Memory
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuites.Arrays.Memory(testSuite) where
+module Data.SBV.TestSuite.Arrays.Memory(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals

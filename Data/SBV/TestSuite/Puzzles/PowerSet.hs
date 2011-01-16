@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuites.Puzzles.PowerSet
+-- Module      :  Data.SBV.TestSuite.Puzzles.PowerSet
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Test suite for Data.SBV.Examples.Puzzles.PowerSet
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuites.Puzzles.PowerSet(testSuite) where
+module Data.SBV.TestSuite.Puzzles.PowerSet(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals

@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuites.Puzzles.Temperature
+-- Module      :  Data.SBV.TestSuite.Puzzles.Temperature
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Test suite for Data.SBV.Examples.Puzzles.Temperature
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuites.Puzzles.Temperature(testSuite) where
+module Data.SBV.TestSuite.Puzzles.Temperature(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals

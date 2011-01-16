@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuites.Basics.BasicTests
+-- Module      :  Data.SBV.TestSuite.Basics.BasicTests
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,9 +10,8 @@
 -- Test suite for Data.SBV.Examples.Basics.BasicTests
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuites.Basics.BasicTests(testSuite) where
+module Data.SBV.TestSuite.Basics.BasicTests(testSuite) where
 
-import Data.SBV
 import Data.SBV.Internals
 import Data.SBV.Examples.Basics.BasicTests
 

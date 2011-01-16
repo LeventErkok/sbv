@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuites.BitPrecise.Legato
+-- Module      :  Data.SBV.TestSuite.BitPrecise.Legato
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Test suite for Data.SBV.Examples.BitPrecise.Legato
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuites.BitPrecise.Legato(testSuite) where
+module Data.SBV.TestSuite.BitPrecise.Legato(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals

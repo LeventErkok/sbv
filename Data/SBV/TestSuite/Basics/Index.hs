@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuites.Basics.Index
+-- Module      :  Data.SBV.TestSuite.Basics.Index
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,9 +10,8 @@
 -- Test suite for Data.SBV.Examples.Basics.Index
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuites.Basics.Index(testSuite) where
+module Data.SBV.TestSuite.Basics.Index(testSuite) where
 
-import Data.SBV
 import Data.SBV.Internals
 import Data.SBV.Examples.Basics.Index
 

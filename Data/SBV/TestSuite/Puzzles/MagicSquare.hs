@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuites.Puzzles.MagicSquare
+-- Module      :  Data.SBV.TestSuite.Puzzles.MagicSquare
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Test suite for Data.SBV.Examples.Puzzles.MagicSquare
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuites.Puzzles.MagicSquare(testSuite) where
+module Data.SBV.TestSuite.Puzzles.MagicSquare(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals

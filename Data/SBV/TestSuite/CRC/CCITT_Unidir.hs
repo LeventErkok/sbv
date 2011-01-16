@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuites.CRC.CCITT_Unidir
+-- Module      :  Data.SBV.TestSuite.CRC.CCITT_Unidir
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Test suite for Data.SBV.Examples.CRC.CCITT_Unidir
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuites.CRC.CCITT_Unidir(testSuite) where
+module Data.SBV.TestSuite.CRC.CCITT_Unidir(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals

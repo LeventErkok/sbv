@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuites.Basics.ProofTests
+-- Module      :  Data.SBV.TestSuite.Basics.ProofTests
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Test suite for Data.SBV.Examples.Basics.ProofTests
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuites.Basics.ProofTests(testSuite)  where
+module Data.SBV.TestSuite.Basics.ProofTests(testSuite)  where
 
 import Data.SBV
 import Data.SBV.Internals

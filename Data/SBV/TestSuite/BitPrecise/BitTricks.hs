@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuites.BitPrecise.BitTricks
+-- Module      :  Data.SBV.TestSuite.BitPrecise.BitTricks
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Test suite for Data.SBV.Examples.BitPrecise.BitTricks
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuites.BitPrecise.BitTricks(testSuite) where
+module Data.SBV.TestSuite.BitPrecise.BitTricks(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals

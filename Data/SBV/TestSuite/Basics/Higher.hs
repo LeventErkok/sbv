@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuites.Basics.Higher
+-- Module      :  Data.SBV.TestSuite.Basics.Higher
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Test suite for Data.SBV.Examples.Basics.Higher
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuites.Basics.Higher(testSuite) where
+module Data.SBV.TestSuite.Basics.Higher(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals

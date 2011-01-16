@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuites.CRC.GenPoly
+-- Module      :  Data.SBV.TestSuite.CRC.GenPoly
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Test suite for Data.SBV.Examples.CRC.GenPoly
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuites.CRC.GenPoly(testSuite) where
+module Data.SBV.TestSuite.CRC.GenPoly(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals

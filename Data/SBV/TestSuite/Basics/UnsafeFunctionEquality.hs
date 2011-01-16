@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuites.Basics.UnsafeFunctionEquality
+-- Module      :  Data.SBV.TestSuite.Basics.UnsafeFunctionEquality
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,9 +10,8 @@
 -- Test suite for Data.SBV.Examples.Basics.UnsafeFunctionEquality
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuites.Basics.UnsafeFunctionEquality(testSuite) where
+module Data.SBV.TestSuite.Basics.UnsafeFunctionEquality(testSuite) where
 
-import Data.SBV
 import Data.SBV.Internals
 import Data.SBV.Examples.Basics.UnsafeFunctionEquality
 
