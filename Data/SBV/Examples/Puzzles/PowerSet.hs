@@ -14,11 +14,11 @@ module Data.SBV.Examples.Puzzles.PowerSet where
 
 import Data.SBV
 
--- the seemingly vacuous test ".<= true" is necessary
+genPowerSet :: [SBool] -> SBool
+-- The following definition reveals an issue in Yices's model generation. The
+-- seemingly vacuous test ".<= true" is necessary
 -- so that Yices will return a satisfying assignment
 -- otherwise, it just skips the "unused" inputs..
-genPowerSet :: [SBool] -> SBool
--- genPowerSet = const true   -- this is what I'd like to write.. see above
 genPowerSet = bAll (.<= (true :: SBool))
 
 powerSet :: [Word8] -> IO ()

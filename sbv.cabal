@@ -44,7 +44,6 @@ Library
                   , Data.SBV.Examples.Puzzles.DogCatMouse
                   , Data.SBV.Examples.Puzzles.MagicSquare
                   , Data.SBV.Examples.Puzzles.NQueens
-                  , Data.SBV.Examples.Puzzles.PowerSet
                   , Data.SBV.Examples.Puzzles.Sudoku
                   , Data.SBV.Examples.Puzzles.U2Bridge
                   , Data.SBV.Examples.Puzzles.Temperature
@@ -75,6 +74,7 @@ Library
                   , Data.SBV.Examples.CRC.Parity
                   , Data.SBV.Examples.CRC.USB5
                   , Data.SBV.Examples.PrefixSum.PrefixSum
+                  , Data.SBV.Examples.Puzzles.PowerSet
                   , Data.SBV.TestSuite.Arrays.Memory
                   , Data.SBV.TestSuite.Basics.BasicTests
                   , Data.SBV.TestSuite.Basics.Higher
