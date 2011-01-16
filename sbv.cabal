@@ -1,5 +1,5 @@
 Name:          sbv
-Version:       0.5
+Version:       0.9
 Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic computation, Math
 Synopsis:      Symbolic Bit Vectors: Prove bit-precise program properties using SMT solvers.
 Description:   Adds support for symbolic bit vectors, allowing formal models of bit-precise
@@ -46,7 +46,6 @@ Library
                   , Data.SBV.Examples.Puzzles.NQueens
                   , Data.SBV.Examples.Puzzles.Sudoku
                   , Data.SBV.Examples.Puzzles.U2Bridge
-                  , Data.SBV.Examples.Puzzles.Temperature
   Other-modules   : Data.SBV.BitVectors.Data
                   , Data.SBV.BitVectors.Bit
                   , Data.SBV.BitVectors.Model
@@ -75,6 +74,7 @@ Library
                   , Data.SBV.Examples.CRC.USB5
                   , Data.SBV.Examples.PrefixSum.PrefixSum
                   , Data.SBV.Examples.Puzzles.PowerSet
+                  , Data.SBV.Examples.Puzzles.Temperature
                   , Data.SBV.TestSuite.Arrays.Memory
                   , Data.SBV.TestSuite.Basics.BasicTests
                   , Data.SBV.TestSuite.Basics.Higher
