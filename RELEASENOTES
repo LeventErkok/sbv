@@ -1,0 +1,11 @@
+Hackage: <http://hackage.haskell.org/package/sbv>
+GitHub:  <http://github.com/LeventErkok/sbv>
+
+Version 0.9.1, 2011-01-15
+
+  * Accommodate for NFData moving to the deepSeq package
+  * Second public hackage release
+
+Version 0.9, 2011-01-15
+
+  * First public hackage release <http://hackage.haskell.org/package/sbv>
