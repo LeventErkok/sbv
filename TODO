@@ -8,7 +8,6 @@
    - Potential issues (as of 2011 January):
       - MathSat is not open-source
       - Z3 is Windows only
-- Support uninterpreted functions
 - Support blasting specifications to generate AIGs
       - Potentially integrate with ABC (http://www.eecs.berkeley.edu/~alanmi/abc/)
 - Support for non-BV logics? LIA?
