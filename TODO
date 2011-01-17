@@ -1,4 +1,3 @@
-- Make sure SBVUnitTests can use SBV_YICES path etc.
 - Restrict import lists
 - Integrate other SMT solvers
    - Candidates:
