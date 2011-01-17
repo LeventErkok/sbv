@@ -1,3 +1,4 @@
+- Support uninterpreted function counterexamples
 - Integrate other SMT solvers
    - Candidates:
       - CVC3 (http://cs.nyu.edu/acsys/cvc3/)
