@@ -13,21 +13,21 @@
 {-# OPTIONS_GHC -Wall #-}
 module Main(main) where
 
-import Control.Monad(when)
-import Distribution.PackageDescription
-import Distribution.Simple
-import Distribution.Simple.LocalBuildInfo(LocalBuildInfo(..))
-import Distribution.Text(display)
-import System.Directory(findExecutable)
-import System.Process(system)
-import System.Exit
-import Data.SBV.Provers.Prover(SMTSolver(..), SMTConfig(..), defaultSMTCfg)
+import Control.Monad                      (when)
+import Distribution.PackageDescription    (executables, modulePath, package, maintainer, customFieldsBI, homepage, exeName, buildInfo)
+import Distribution.Simple                (defaultMainWithHooks, simpleUserHooks, runTests, postInst)
+import Distribution.Simple.LocalBuildInfo (LocalBuildInfo(..))
+import Distribution.Text                  (display)
+import System.Directory                   (findExecutable)
+import System.Exit                        (exitWith, ExitCode(..))
+import System.Process                     (system)
+import Data.SBV.Provers.Prover            (SMTSolver(..), yices)
 
 main :: IO ()
 main = defaultMainWithHooks simpleUserHooks{ runTests = unittest True, postInst = unittest False}
  where checkDefSolver = do
-                let ex = executable $ solver $ defaultSMTCfg
-                    nm = name $ solver $ defaultSMTCfg
+                let ex = executable yices
+                    nm = name yices
                 mbP <- findExecutable ex
                 case mbP of
                   Nothing -> do putStrLn $ "*** The sbv library requires the default solver " ++ nm ++ " to be installed."
