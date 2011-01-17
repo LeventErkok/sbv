@@ -336,7 +336,9 @@ type SInt64  = SBV Int64
 -- Needed to satisfy the Num hierarchy
 instance Show (SBV a) where
   show (SBV _         (Left c))  = show c
-  show (SBV (sgn, sz) (Right _)) = "<SBV> :: [" ++ show sz ++ (if sgn then "S" else "U") ++ "]"
+  show (SBV (sgn, sz) (Right _)) = "<SBV> :: " ++ t
+                where t | not sgn && sz == 1 = "SBool"
+                        | True               = (if sgn then "SInt" else "SWord") ++ show sz
 
 instance Eq (SBV a) where
   SBV _ (Left a) == SBV _ (Left b) = a == b
