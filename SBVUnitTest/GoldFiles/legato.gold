@@ -18,6 +18,7 @@ CONSTANTS
   s35 = 128 :: SWord8
 TABLES
 ARRAYS
+UNINTERPRETED CONSTANTS
 DEFINE
   s10 :: SBool = s0 /= s2
   s11 :: SBool = s0 /= s4

@@ -31,6 +31,7 @@ module Data.SBV.BitVectors.Data
  , SBVExpr(..), newExpr
  , cache, uncache, HasSignAndSize(..)
  , Op(..), NamedSymVar, getTableIndex, Pgm, Symbolic, runSymbolic, State, Size, output, Result(..)
+ , SBVType(..), newUninterpreted
  ) where
 
 import Control.DeepSeq                 (NFData(..))
@@ -71,6 +72,15 @@ falseSW, trueSW :: SW
 falseSW = SW (False, 1) $ NodeId (-2)
 trueSW  = SW (False, 1) $ NodeId (-1)
 
+newtype SBVType = SBVType [(Bool, Size)]
+             deriving (Eq, Ord)
+
+instance Show SBVType where
+  show (SBVType []) = error "SBV: internal error, empty SBVType"
+  show (SBVType xs) = intercalate " -> " $ map sh xs
+    where sh (False, 1) = "SBool"
+          sh (s, sz)    = (if s then "SInt" else "SWord") ++ show sz
+
 data Op = Plus | Times | Minus
         | Quot | Rem -- quot and rem are unsigned only
         | Equal | NotEqual
@@ -83,6 +93,7 @@ data Op = Plus | Times | Minus
         | LkUp (Int, Int, Int, Int) !SW !SW   -- (table-index, arg-type, res-type, length of the table) index out-of-bounds-value
         | ArrEq   Int Int
         | ArrRead Int
+        | Uninterpreted String
         deriving (Eq, Ord)
 data SBVExpr = SBVApp {-# UNPACK #-} !Op {-# UNPACK #-} ![SW]
              deriving (Eq, Ord)
@@ -179,6 +190,7 @@ instance Show Op where
         where tinfo = "table" ++ show ti ++ "(" ++ show at ++ " -> " ++ show rt ++ ", " ++ show l ++ ")"
   show (ArrEq i j)   = "array" ++ show i ++ " == array" ++ show j
   show (ArrRead i)   = "select array" ++ show i
+  show (Uninterpreted i) = "ui_" ++ i
   show op
     | Just s <- op `lookup` syms = s
     | True                       = error "impossible happened; can't find op!"
@@ -219,14 +231,15 @@ data Result      = Result [NamedSymVar]                 -- inputs
                           [(SW, CW)]                    -- constants
                           [((Int, Int, Int), [SW])]     -- tables (automatically constructed)
                           [(Int, ArrayInfo)]            -- arrays (user specified)
+                          [(String, SBVType)]           -- uninterpreted constants
                           Pgm                           -- assignments
                           [SW]                          -- outputs
 
 instance Show Result where
-  show (Result _ cs _ _ _ [r])
+  show (Result _ cs _ _ [] _ [r])
     | Just c <- r `lookup` cs
     = show c
-  show (Result is cs ts as xs os)  = intercalate "\n" $
+  show (Result is cs ts as uis xs os)  = intercalate "\n" $
                    ["INPUTS"]
                 ++ map shn is
                 ++ ["CONSTANTS"]
@@ -235,6 +248,8 @@ instance Show Result where
                 ++ map sht ts
                 ++ ["ARRAYS"]
                 ++ map sha as
+                ++ ["UNINTERPRETED CONSTANTS"]
+                ++ map shui uis
                 ++ ["DEFINE"]
                 ++ map (\(s, e) -> "  " ++ shs s ++ " = " ++ show e) (F.toList xs)
                 ++ ["OUTPUTS"]
@@ -254,6 +269,7 @@ instance Show Result where
                   ni = "array" ++ show i
                   alias | ni == nm = ""
                         | True     = ", aliasing " ++ show nm
+          shui (nm, t) = "  ui_" ++ nm ++ " :: " ++ show t
 
 data ArrayContext = ArrayFree
                   | ArrayInit SW
@@ -271,6 +287,7 @@ type CnstMap    = Map.Map CW SW
 type TableMap   = Map.Map [SW] (Int, Int, Int)
 type ArrayInfo  = (String, ((Bool, Size), (Bool, Size)), ArrayContext)
 type ArrayMap   = IMap.IntMap ArrayInfo
+type UIMap      = Map.Map String SBVType
 
 data State  = State { rctr       :: IORef Int
                     , rinps      :: IORef [NamedSymVar]
@@ -280,6 +297,7 @@ data State  = State { rctr       :: IORef Int
                     , rconstMap  :: IORef CnstMap
                     , rexprMap   :: IORef ExprMap
                     , rArrayMap  :: IORef ArrayMap
+                    , rUIMap     :: IORef UIMap
                     }
 
 -- | The "Symbolic" value. Either a constant (@Left@) or a symbolic
@@ -335,6 +353,17 @@ incCtr s = do ctr <- readIORef (rctr s)
               let i = ctr + 1
               i `seq` writeIORef (rctr s) i
               return ctr
+
+newUninterpreted :: State -> String -> SBVType -> IO ()
+newUninterpreted st nm t = do
+        uiMap <- readIORef (rUIMap st)
+        case nm `Map.lookup` uiMap of
+          Just t' -> if t /= t'
+                     then error $  "Uninterpreted constant " ++ nm ++ " used at incompatible types\n"
+                                ++ "      Current type      : " ++ show t ++ "\n"
+                                ++ "      Previously used at: " ++ show t'
+                     else return ()
+          Nothing -> modifyIORef (rUIMap st) (Map.insert nm t)
 
 -- Create a new constant; hash-cons as necessary
 newConst :: State -> CW -> IO SW
@@ -430,6 +459,7 @@ runSymbolic (Symbolic c) = do
    outs   <- newIORef []
    tables <- newIORef Map.empty
    arrays <- newIORef IMap.empty
+   uis    <- newIORef Map.empty
    let st = State { rctr      = ctr
                   , rinps     = inps
                   , routs     = outs
@@ -438,6 +468,7 @@ runSymbolic (Symbolic c) = do
                   , rconstMap = cmap
                   , rArrayMap = arrays
                   , rexprMap  = emap
+                  , rUIMap    = uis
                   }
    _ <- newConst st $ W1 Zero -- s(-2) == falseSW
    _ <- newConst st $ W1 One  -- s(-1) == trueSW
@@ -450,7 +481,8 @@ runSymbolic (Symbolic c) = do
    cnsts <- (sortBy cmp . map swap . Map.toList) `fmap` readIORef (rconstMap st)
    tbls  <- (sortBy (\((x, _, _), _) ((y, _, _), _) -> x `compare` y) . map swap . Map.toList) `fmap` readIORef tables
    arrs  <- IMap.toAscList `fmap` readIORef arrays
-   return $ Result (reverse inpsR) cnsts tbls arrs rpgm (reverse outsR)
+   unint <- Map.toList `fmap` readIORef uis
+   return $ Result (reverse inpsR) cnsts tbls arrs unint rpgm (reverse outsR)
 
 -------------------------------------------------------------------------------
 -- * Symbolic Words
@@ -615,13 +647,14 @@ instance NFData CW where
   rnf (I64 w) = rnf w `seq` ()
 
 instance NFData Result where
-  rnf (Result inps consts tbls arrs pgm outs) = rnf inps `seq` rnf consts `seq` rnf tbls `seq` rnf arrs `seq` rnf pgm `seq` rnf outs
+  rnf (Result inps consts tbls arrs uis pgm outs) = rnf inps `seq` rnf consts `seq` rnf tbls `seq` rnf arrs `seq` rnf uis `seq` rnf pgm `seq` rnf outs
 
 instance NFData ArrayContext
 instance NFData Pgm
 instance NFData SW
+instance NFData SBVType
 
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where
   property (SBV _ (Left (W1 b))) = property . bit2Bool $ b
-  property s                     = error $ "BV.Testable.SBool: impossible: quickcheck with non-constant bit: " ++ show s
+  property s                     = error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show s ++ ")"

@@ -5,6 +5,7 @@ CONSTANTS
   s_1 = True
 TABLES
 ARRAYS
+UNINTERPRETED CONSTANTS
 DEFINE
   s1 :: SWord8 = s0 + s0
   s2 :: SWord8 = s0 - s0

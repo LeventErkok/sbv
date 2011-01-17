@@ -6,6 +6,7 @@ CONSTANTS
   s1 = 9 :: SWord8
 TABLES
 ARRAYS
+UNINTERPRETED CONSTANTS
 DEFINE
   s2 :: SWord8 = s0 * s0
   s3 :: SWord8 = s1 - s2

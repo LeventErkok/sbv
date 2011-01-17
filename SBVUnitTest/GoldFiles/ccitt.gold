@@ -77,6 +77,7 @@ CONSTANTS
   s6250 = 1 :: SWord64
 TABLES
 ARRAYS
+UNINTERPRETED CONSTANTS
 DEFINE
   s4 :: SBool = s0 == s2
   s5 :: SBool = s1 == s3

@@ -125,6 +125,8 @@ module Data.SBV (
   , bAnd, bOr, bAny, bAll
   -- ** Pretty-printing and reading numbers in Hex & Binary
   , PrettyNum(..), readBin
+  -- * Uninterpreted constants and functions
+  , Uninterpreted(..)
 
   -- * Proving properties
   -- $proveIntro
