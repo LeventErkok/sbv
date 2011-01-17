@@ -1,3 +1,5 @@
+- Make sure SBVUnitTests can use SBV_YICES path etc.
+- Restrict import lists
 - Integrate other SMT solvers
    - Candidates:
       - CVC3 (http://cs.nyu.edu/acsys/cvc3/)
@@ -8,6 +10,7 @@
    - Potential issues (as of 2011 January):
       - MathSat is not open-source
       - Z3 is Windows only
+- Support uninterpreted functions
 - Support blasting specifications to generate AIGs
       - Potentially integrate with ABC (http://www.eecs.berkeley.edu/~alanmi/abc/)
 - Support for non-BV logics? LIA?
