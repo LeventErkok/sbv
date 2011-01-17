@@ -47,6 +47,7 @@ Library
                   , Data.SBV.Examples.Puzzles.NQueens
                   , Data.SBV.Examples.Puzzles.Sudoku
                   , Data.SBV.Examples.Puzzles.U2Bridge
+                  , Data.SBV.Examples.Uninterpreted.AUF
   Other-modules   : Data.SBV.BitVectors.Data
                   , Data.SBV.BitVectors.Bit
                   , Data.SBV.BitVectors.Model
@@ -76,6 +77,7 @@ Library
                   , Data.SBV.Examples.PrefixSum.PrefixSum
                   , Data.SBV.Examples.Puzzles.PowerSet
                   , Data.SBV.Examples.Puzzles.Temperature
+                  , Data.SBV.Examples.Uninterpreted.Uninterpreted
                   , Data.SBV.TestSuite.Arrays.Memory
                   , Data.SBV.TestSuite.Basics.BasicTests
                   , Data.SBV.TestSuite.Basics.Higher
@@ -98,6 +100,8 @@ Library
                   , Data.SBV.TestSuite.Puzzles.Sudoku
                   , Data.SBV.TestSuite.Puzzles.U2Bridge
                   , Data.SBV.TestSuite.Puzzles.Temperature
+                  , Data.SBV.TestSuite.Uninterpreted.AUF
+                  , Data.SBV.TestSuite.Uninterpreted.Uninterpreted
 
 Executable SBVUnitTests
   main-is         : SBVUnitTest/SBVUnitTest.hs
