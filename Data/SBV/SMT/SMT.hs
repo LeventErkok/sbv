@@ -14,19 +14,20 @@
 
 module Data.SBV.SMT.SMT where
 
-import Control.Monad(when, zipWithM)
-import Control.DeepSeq(NFData(..))
-import Data.Char(isSpace)
-import Data.List(intercalate)
-import Data.Word
-import Data.Int
+import Control.DeepSeq  (NFData(..))
+import Control.Monad    (when, zipWithM)
+import Data.Char        (isSpace)
+import Data.Int         (Int8, Int16, Int32, Int64)
+import Data.List        (intercalate)
+import Data.Word        (Word8, Word16, Word32, Word64)
+import System.Directory (findExecutable)
+import System.Process   (readProcessWithExitCode)
+import System.Exit      (ExitCode(..))
+
 import Data.SBV.BitVectors.Bit
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.PrettyNum
 import Data.SBV.Utils.TDiff
-import System.Directory(findExecutable)
-import System.Process(readProcessWithExitCode)
-import System.Exit
 
 -- | Solver configuration
 data SMTConfig = SMTConfig {

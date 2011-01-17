@@ -12,8 +12,8 @@
 
 module Data.SBV.BitVectors.Bit where
 
-import Data.Bits
-import Control.DeepSeq(NFData(..))
+import Control.DeepSeq (NFData(..))
+import Data.Bits       (Bits(..))
 
 data Bit = Zero | One
          deriving (Eq, Ord)

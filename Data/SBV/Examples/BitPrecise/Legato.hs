@@ -40,7 +40,8 @@
 
 module Data.SBV.Examples.BitPrecise.Legato where
 
-import Data.Array
+import Data.Array (Array, Ix(..), (!), (//), array)
+
 import Data.SBV
 
 ------------------------------------------------------------------

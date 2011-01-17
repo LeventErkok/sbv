@@ -16,10 +16,10 @@
 
 module Data.SBV.BitVectors.Polynomial (Polynomial(..)) where
 
-import Data.Bits
-import Data.List(genericTake)
-import Data.Maybe(fromJust)
-import Data.Word
+import Data.Bits  (Bits(..))
+import Data.List  (genericTake)
+import Data.Maybe (fromJust)
+import Data.Word  (Word8, Word16, Word32, Word64)
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model

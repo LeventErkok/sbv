@@ -14,12 +14,13 @@
 
 module Data.SBV.Provers.Yices(yices, timeout) where
 
-import Data.Char(isDigit)
-import Data.List(sortBy, isPrefixOf)
+import Data.Char          (isDigit)
+import Data.List          (sortBy, isPrefixOf)
+import System.Environment (getEnv)
+
 import Data.SBV.BitVectors.Data
-import Data.SBV.SMT.SMT
 import Data.SBV.Provers.SExpr
-import System.Environment
+import Data.SBV.SMT.SMT
 
 -- | The description of the Yices SMT solver
 -- The default executable is @\"yices\"@, which must be in your path. You can use the @SBV_YICES@ environment variable to point to the executable on your system.

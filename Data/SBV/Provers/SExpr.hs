@@ -12,9 +12,9 @@
 
 module Data.SBV.Provers.SExpr where
 
-import Control.Monad.Error() -- for Monad (Either String) instance
-import Data.Char (isDigit, ord)
-import Numeric
+import Control.Monad.Error ()             -- for Monad (Either String) instance
+import Data.Char           (isDigit, ord)
+import Numeric             (readInt, readDec)
 
 data SExpr = S_Con String
            | S_Num Integer

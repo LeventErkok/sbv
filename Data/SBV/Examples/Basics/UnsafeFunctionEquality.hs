@@ -19,7 +19,8 @@
 
 module Data.SBV.Examples.Basics.UnsafeFunctionEquality where
 
-import System.IO.Unsafe
+import System.IO.Unsafe (unsafePerformIO)
+
 import Data.SBV
 
 instance Equality (a -> b) => Eq (a -> b) where

@@ -20,7 +20,7 @@ module Data.SBV.Internals (
   , module Data.SBV.Utils.SBVTest
   ) where
 
-import Data.SBV.BitVectors.Data(Result, runSymbolic, SBV(..))
+import Data.SBV.BitVectors.Data (Result, runSymbolic, SBV(..))
 import Data.SBV.Utils.SBVTest
 
 {- $testFramework

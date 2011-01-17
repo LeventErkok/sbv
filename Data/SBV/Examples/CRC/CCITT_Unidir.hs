@@ -13,7 +13,6 @@
 
 module Data.SBV.Examples.CRC.CCITT_Unidir where
 
-
 import Data.SBV
 
 -- We don't have native support for 48 bits in Data.SBV

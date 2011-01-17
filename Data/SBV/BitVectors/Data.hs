@@ -33,23 +33,24 @@ module Data.SBV.BitVectors.Data
  , Op(..), NamedSymVar, getTableIndex, Pgm, Symbolic, runSymbolic, State, Size, output, Result(..)
  ) where
 
-import Control.Monad.Reader
-import Control.DeepSeq(NFData(..))
-import Data.Bits
-import Data.Int
-import Data.Word
-import qualified Data.Foldable as F
-import qualified Data.Sequence as S
+import Control.DeepSeq                 (NFData(..))
+import Control.Monad.Reader            (MonadReader, ReaderT, ask, runReaderT)
+import Control.Monad.Trans             (MonadIO, liftIO)
+import Data.Bits                       (Bits(..))
+import Data.Int                        (Int8, Int16, Int32, Int64)
+import Data.Word                       (Word8, Word16, Word32, Word64)
+import Data.IORef                      (IORef, newIORef, modifyIORef, readIORef, writeIORef)
+import Data.List                       (intercalate, sortBy)
+
+import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, insert)
+import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
+import qualified Data.Foldable as F    (toList)
+import qualified Data.Sequence as S    (Seq, empty, (|>))
+
+import System.IO.Unsafe                (unsafePerformIO) -- see the note at the bottom of the file
+import Test.QuickCheck                 (Testable(..))
+
 import Data.SBV.BitVectors.Bit
-
-import Data.IORef
-import Data.List(intercalate, sortBy)
-import qualified Data.Map    as Map
-import qualified Data.IntMap as IMap
-
-import Test.QuickCheck hiding(Result, output)
-
-import System.IO.Unsafe -- see the note at the bottom of the file
 
 -- | 'CW' represents a concrete word of a fixed size:
 -- The unsigned variants are: 'W1', 'W8', 'W16', 'W32', and 'W64'

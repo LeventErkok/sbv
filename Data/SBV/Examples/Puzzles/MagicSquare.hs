@@ -14,7 +14,8 @@
 
 module Data.SBV.Examples.Puzzles.MagicSquare where
 
-import Data.List
+import Data.List (genericLength, transpose)
+
 import Data.SBV
 
 -- | Use 32-bit words for elements.

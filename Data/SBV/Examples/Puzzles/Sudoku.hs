@@ -12,8 +12,9 @@
 
 module Data.SBV.Examples.Puzzles.Sudoku where
 
-import Data.List
-import Data.Maybe(fromJust)
+import Data.List  (transpose)
+import Data.Maybe (fromJust)
+
 import Data.SBV
 
 -------------------------------------------------------------------

@@ -26,15 +26,16 @@ module Data.SBV.BitVectors.Model (
   )
   where
 
-import Data.Array
-import Data.Bits
-import Data.Int
-import Data.List(genericLength, genericIndex, genericSplitAt, unzip4, unzip5, unzip6, unzip7)
-import Data.Word
+import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
+import Data.Bits       (Bits(..))
+import Data.Int        (Int8, Int16, Int32, Int64)
+import Data.List       (genericLength, genericIndex, genericSplitAt, unzip4, unzip5, unzip6, unzip7)
+import Data.Word       (Word8, Word16, Word32, Word64)
+import Test.QuickCheck (Arbitrary(..))
+
 import Data.SBV.BitVectors.Bit
 import Data.SBV.BitVectors.Data
 import Data.SBV.Utils.Boolean
-import Test.QuickCheck hiding((.&.), Result, (==>))
 
 liftSym1 :: (State -> (Bool, Size) -> SW -> IO SW) -> (forall a. (Ord a, Bits a) => a -> a) -> SBV b -> SBV b
 liftSym1 _   opC (SBV sgnsz (Left a))  = SBV sgnsz $ Left  $ mapCW opC a

@@ -13,9 +13,9 @@
 
 module Data.SBV.SMT.SMTLib(SMTLibPgm, toSMTLib, addNonEqConstraints) where
 
-import Control.DeepSeq(NFData(..))
-import qualified Data.Foldable    as F
-import Data.List (intercalate)
+import Control.DeepSeq              (NFData(..))
+import qualified Data.Foldable as F (toList)
+import Data.List                    (intercalate)
 
 import Data.SBV.BitVectors.Bit
 import Data.SBV.BitVectors.Data

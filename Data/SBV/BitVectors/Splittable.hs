@@ -18,8 +18,8 @@
 
 module Data.SBV.BitVectors.Splittable (Splittable(..), FromBits(..)) where
 
-import Data.Bits
-import Data.Word
+import Data.Bits (Bits(..))
+import Data.Word (Word8, Word16, Word32, Word64)
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model

@@ -33,10 +33,10 @@ module Data.SBV.Provers.Prover (
        ) where
 
 
-import Control.Monad(when)
-import Control.Concurrent(forkIO)
-import Control.Concurrent.Chan.Strict
-import Data.Maybe(fromJust, isJust)
+import Control.Monad                  (when)
+import Control.Concurrent             (forkIO)
+import Control.Concurrent.Chan.Strict (newChan, writeChan, getChanContents)
+import Data.Maybe                     (fromJust, isJust)
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model

@@ -16,8 +16,9 @@
 
 module Data.SBV.Examples.Puzzles.U2Bridge where
 
-import Data.Maybe(fromJust)
-import Control.Monad.State
+import Control.Monad.State (State, runState, put, get, modify, evalState)
+import Data.Maybe          (fromJust)
+
 import Data.SBV
 
 -------------------------------------------------------------

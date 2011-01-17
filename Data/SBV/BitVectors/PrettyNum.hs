@@ -16,12 +16,12 @@
 
 module Data.SBV.BitVectors.PrettyNum (PrettyNum(..), readBin) where
 
-import Data.Maybe(fromJust)
-import Data.Char(ord)
-import Data.List(isPrefixOf)
-import Data.Int
-import Data.Word
-import Numeric
+import Data.Char  (ord)
+import Data.Int   (Int8, Int16, Int32, Int64)
+import Data.List  (isPrefixOf)
+import Data.Maybe (fromJust)
+import Data.Word  (Word8, Word16, Word32, Word64)
+import Numeric    (showIntAtBase, showHex, readInt)
 
 import Data.SBV.BitVectors.Bit
 import Data.SBV.BitVectors.Data
