@@ -12,9 +12,9 @@
 
 module Data.SBV.Utils.TDiff(timeIf) where
 
-import Control.DeepSeq
-import System.Time
-import Numeric
+import Control.DeepSeq (rnf, NFData(..))
+import System.Time     (TimeDiff(..), normalizeTimeDiff, diffClockTimes, getClockTime)
+import Numeric         (showFFloat)
 
 showTDiff :: TimeDiff -> String
 showTDiff itd = et

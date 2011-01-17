@@ -13,8 +13,8 @@
 {-# LANGUAGE RankNTypes #-}
 module Data.SBV.Utils.SBVTest(generateGoldCheck, showsAs, ioShowsAs, mkTestSuite, SBVTestSuite(..), module Test.HUnit) where
 
-import System.FilePath((</>))
-import Test.HUnit hiding(State)
+import System.FilePath ((</>))
+import Test.HUnit      (Test(..), Assertion, assert, (~:), test)
 
 -- | A Test-suite, parameterized by the gold-check generator/checker
 data SBVTestSuite = SBVTestSuite ((forall a. Show a => (IO a -> FilePath -> IO ())) -> Test)

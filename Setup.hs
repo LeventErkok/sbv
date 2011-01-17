@@ -21,6 +21,7 @@ import Distribution.Text                  (display)
 import System.Directory                   (findExecutable)
 import System.Exit                        (exitWith, ExitCode(..))
 import System.Process                     (system)
+
 import Data.SBV.Provers.Prover            (SMTSolver(..), yices)
 
 main :: IO ()

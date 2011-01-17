@@ -12,17 +12,17 @@
 
 module Main(main, createGolds) where
 
-import Control.Monad(when)
-import System.Directory(doesDirectoryExist, findExecutable)
-import System.Environment(getArgs, getEnv)
-import System.Exit
-import System.FilePath((</>))
-import System.Process
-import Test.HUnit
+import Control.Monad           (when)
+import System.Directory        (doesDirectoryExist, findExecutable)
+import System.Environment      (getArgs, getEnv)
+import System.Exit             (exitWith, ExitCode(..))
+import System.FilePath         ((</>))
+import System.Process          (readProcessWithExitCode)
+import Test.HUnit              (Test(..), Counts(..), runTestTT)
 
-import Data.SBV
-import Data.SBV.Utils.SBVTest
-import Paths_sbv(getDataDir)
+import Data.SBV                (yices, SMTSolver(..))
+import Data.SBV.Utils.SBVTest  (SBVTestSuite(..), generateGoldCheck)
+import Paths_sbv               (getDataDir)
 
 -- To add a new collection of tests, import below and add to testCollection variable
 import qualified Data.SBV.TestSuite.Arrays.Memory                 as T01(testSuite)
