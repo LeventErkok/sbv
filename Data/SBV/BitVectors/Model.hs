@@ -656,6 +656,12 @@ instance HasSignAndSize a => Uninterpreted (SBV a) where
           result st = do newUninterpreted st nm (SBVType [sgnsza])
                          newExpr st sgnsza $ SBVApp (Uninterpreted nm) []
 
+-- Forcing an argument; this is a necessary evil to make sure all the arguments
+-- to an uninterpreted function are evaluated before called; the semantics of
+-- such functions is necessarily strict; deviating from Haskell's
+forceArg :: SW -> IO ()
+forceArg (SW (b, s) n) = b `seq` s `seq` n `seq` return ()
+
 -- Functions of one argument
 instance (HasSignAndSize b, HasSignAndSize a) => Uninterpreted (SBV b -> SBV a) where
   uninterpret nm arg0 = SBV sgnsza $ Right $ cache result
@@ -663,6 +669,7 @@ instance (HasSignAndSize b, HasSignAndSize a) => Uninterpreted (SBV b -> SBV a) 
           sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
           result st = do newUninterpreted st nm (SBVType [sgnszb, sgnsza])
                          sw0 <- sbvToSW st arg0
+                         mapM_ forceArg [sw0]
                          newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0]
 
 -- Functions of two arguments
@@ -674,6 +681,7 @@ instance (HasSignAndSize c, HasSignAndSize b, HasSignAndSize a) => Uninterpreted
           result st = do newUninterpreted st nm (SBVType [sgnszc, sgnszb, sgnsza])
                          sw0 <- sbvToSW st arg0
                          sw1 <- sbvToSW st arg1
+                         mapM_ forceArg [sw0, sw1]
                          newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1]
 
 -- Functions of three arguments
@@ -687,6 +695,7 @@ instance (HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a
                          sw0 <- sbvToSW st arg0
                          sw1 <- sbvToSW st arg1
                          sw2 <- sbvToSW st arg2
+                         mapM_ forceArg [sw0, sw1, sw2]
                          newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2]
 
 -- Functions of four arguments
@@ -703,6 +712,7 @@ instance (HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b
                          sw1 <- sbvToSW st arg1
                          sw2 <- sbvToSW st arg2
                          sw3 <- sbvToSW st arg3
+                         mapM_ forceArg [sw0, sw1, sw2, sw3]
                          newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3]
 
 -- Functions of five arguments
@@ -721,6 +731,7 @@ instance (HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c
                          sw2 <- sbvToSW st arg2
                          sw3 <- sbvToSW st arg3
                          sw4 <- sbvToSW st arg4
+                         mapM_ forceArg [sw0, sw1, sw2, sw3, sw4]
                          newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4]
 
 -- Functions of six arguments
@@ -741,6 +752,7 @@ instance (HasSignAndSize g, HasSignAndSize f, HasSignAndSize e, HasSignAndSize d
                          sw3 <- sbvToSW st arg3
                          sw4 <- sbvToSW st arg4
                          sw5 <- sbvToSW st arg5
+                         mapM_ forceArg [sw0, sw1, sw2, sw3, sw4, sw5]
                          newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5]
 
 -- Functions of seven arguments
@@ -763,6 +775,7 @@ instance (HasSignAndSize h, HasSignAndSize g, HasSignAndSize f, HasSignAndSize e
                          sw4 <- sbvToSW st arg4
                          sw5 <- sbvToSW st arg5
                          sw6 <- sbvToSW st arg6
+                         mapM_ forceArg [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
                          newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
 
 -- Uncurried functions of two arguments
