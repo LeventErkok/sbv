@@ -336,7 +336,7 @@ type SInt64  = SBV Int64
 -- Needed to satisfy the Num hierarchy
 instance Show (SBV a) where
   show (SBV _         (Left c))  = show c
-  show (SBV (sgn, sz) (Right _)) = "<SBV> :: " ++ t
+  show (SBV (sgn, sz) (Right _)) = "<symbolic> :: " ++ t
                 where t | not sgn && sz == 1 = "SBool"
                         | True               = (if sgn then "SInt" else "SWord") ++ show sz
 
@@ -361,7 +361,7 @@ newUninterpreted st nm t = do
         uiMap <- readIORef (rUIMap st)
         case nm `Map.lookup` uiMap of
           Just t' -> if t /= t'
-                     then error $  "Uninterpreted constant " ++ nm ++ " used at incompatible types\n"
+                     then error $  "Uninterpreted constant " ++ show nm ++ " used at incompatible types\n"
                                 ++ "      Current type      : " ++ show t ++ "\n"
                                 ++ "      Previously used at: " ++ show t'
                      else return ()
