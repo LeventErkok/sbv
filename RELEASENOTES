@@ -1,6 +1,10 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
+Version 0.9.7, 2011-01-18
+
+  * Better hackage documentation, mostly
+
 Version 0.9.6, 2011-01-18
 
   * Improve support for uninterpreted functions

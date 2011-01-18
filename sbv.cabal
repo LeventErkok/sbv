@@ -1,12 +1,49 @@
 Name:          sbv
-Version:       0.9.6
+Version:       0.9.7
 Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math
 Synopsis:      Symbolic Bit Vectors: Prove bit-precise program properties using SMT solvers.
-Description:   Adds support for symbolic bit vectors, allowing formal models of bit-precise
-               programs to be created. Supports symbolic arrays and polynomials over GF(2^n).
-               Supports uninterpreted constants and functions. Aims to provide seamless integration
-               with SMT solvers to produce formal property proofs of theoremhood and
-               satisfiability, with counter-examples.
+Description:   Express properties about bit-precise Haskell programs and automatically prove
+               them using SMT solvers. The SBV library adds support for symbolic bit vectors,
+               allowing formal models of bit-precise programs to be created.
+               .
+               >   $ ghci -XScopedTypeVariables
+               >   Prelude> :m Data.SBV
+               >   Prelude Data.SBV> prove $ \(x::SWord8) -> x `shiftL` 2 .== 4*x
+               >   Q.E.D.
+               >   Prelude Data.SBV> prove $ forAll ["x"] $ \(x::SWord8) -> x `shiftL` 2 .== x
+               >   Falsifiable. Counter-example:
+               >     x = 128 :: SWord8
+               .
+               The library introduces the following types and concepts:
+               .
+                 * 'SBool': Symbolic Booleans (bits)
+               .
+                 * 'SWord8', 'SWord16', 'SWord32', 'SWord64': Symbolic Words (unsigned)
+               .
+                 * 'SInt8',  'SInt16',  'SInt32',  'SInt64': Symbolic Ints (signed)
+               .
+                 * 'SArray', 'SFunArray': Flat arrays of symbolic values
+               .
+                 * Symbolic polynomials over GF(2^n), and polynomial arithmetic
+               .
+                 * Uninterpreted constants and functions over symbolic values
+               .
+               Predicates (i.e., functions that return 'SBool') built out of
+               these types can be:
+               .
+                 * proven correct via an external SMT solver (the 'prove' function)
+               .
+                 * checked for satisfiability (the 'sat' and 'allSat' functions)
+               .
+                 * quick-checked
+               .
+               In addition to the library, the installation will create the
+               executable @SBVUnitTests@. You should run it once the installation is complete,
+               to make sure the unit tests are run and all is well.
+               .
+               SBV is hosted at GitHub: <http://github.com/LeventErkok/sbv>. Comments,
+               bug reports, and patches are always welcome.
+
 Copyright:     Levent Erkok, 2011
 License:       BSD3
 License-file:  LICENSE
