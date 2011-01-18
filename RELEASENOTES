@@ -1,6 +1,14 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
+Version 0.9.6, 2011-01-18
+
+  * Improve support for uninterpreted functions
+
+Version 0.9.5, 2011-01-18
+
+  * Improved examples, documentation
+
 Version 0.9.4, 2011-01-17
 
   * Add examples of polynomial arithmetic over GF(2^n)
