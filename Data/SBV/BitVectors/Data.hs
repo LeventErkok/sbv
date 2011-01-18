@@ -38,6 +38,7 @@ import Control.DeepSeq                 (NFData(..))
 import Control.Monad.Reader            (MonadReader, ReaderT, ask, runReaderT)
 import Control.Monad.Trans             (MonadIO, liftIO)
 import Data.Bits                       (Bits(..))
+import Data.Char                       (isAlpha, isAlphaNum)
 import Data.Int                        (Int8, Int16, Int32, Int64)
 import Data.Word                       (Word8, Word16, Word32, Word64)
 import Data.IORef                      (IORef, newIORef, modifyIORef, readIORef, writeIORef)
@@ -357,7 +358,10 @@ incCtr s = do ctr <- readIORef (rctr s)
               return ctr
 
 newUninterpreted :: State -> String -> SBVType -> IO ()
-newUninterpreted st nm t = do
+newUninterpreted st nm t
+  | null nm || not (isAlpha (head nm)) || not (all isAlphaNum (tail nm))
+  = error $ "Bad uninterpreted constant name: " ++ show nm ++ ". Must be a valid identifier."
+  | True = do
         uiMap <- readIORef (rUIMap st)
         case nm `Map.lookup` uiMap of
           Just t' -> if t /= t'
