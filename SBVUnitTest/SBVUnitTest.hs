@@ -49,7 +49,8 @@ import qualified Data.SBV.TestSuite.Puzzles.Sudoku                as T21(testSui
 import qualified Data.SBV.TestSuite.Puzzles.Temperature           as T22(testSuite)
 import qualified Data.SBV.TestSuite.Puzzles.U2Bridge              as T23(testSuite)
 import qualified Data.SBV.TestSuite.Uninterpreted.AUF             as T24(testSuite)
-import qualified Data.SBV.TestSuite.Uninterpreted.Uninterpreted   as T25(testSuite)
+import qualified Data.SBV.TestSuite.Uninterpreted.Function        as T25(testSuite)
+import qualified Data.SBV.TestSuite.Uninterpreted.Uninterpreted   as T26(testSuite)
 
 testCollection :: [SBVTestSuite]
 testCollection = [
@@ -59,7 +60,7 @@ testCollection = [
      , T13.testSuite, T14.testSuite, T15.testSuite, T16.testSuite
      , T17.testSuite, T18.testSuite, T19.testSuite, T20.testSuite
      , T21.testSuite, T22.testSuite, T23.testSuite, T24.testSuite
-     , T25.testSuite
+     , T25.testSuite, T26.testSuite
      ]
 -- No user serviceable parts below..
 
