@@ -13,10 +13,11 @@
       - STP (http://sites.google.com/site/stpfastprover/)
       - MathSat (http://mathsat4.disi.unitn.it/)
       - Z3 (http://research.microsoft.com/en-us/um/redmond/projects/z3/)
-      - OpenSMT
+      - OpenSMT (http://verify.inf.unisi.ch/opensmt)
    - Potential issues (as of 2011 January):
       - MathSat is not open-source
       - Z3 is Windows only
+      - OpenSMT has QF_BV support but not QF_AUFBV
 - Support blasting specifications to generate AIGs
       - Potentially integrate with ABC (http://www.eecs.berkeley.edu/~alanmi/abc/)
 - Better documentation
