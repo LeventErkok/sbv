@@ -1,4 +1,6 @@
-- Support uninterpreted function counterexamples
+- Uninterpreted function counterexamples:
+   - Currently not very robust in parsing Yices's output
+   - Might be worth waiting till SMT-Lib2 stabilizes
 - Integrate other SMT solvers
    - Candidates:
       - CVC3 (http://cs.nyu.edu/acsys/cvc3/)

@@ -47,16 +47,23 @@ data SMTSolver = SMTSolver {
        , engine     :: SMTEngine -- ^ The solver engine, responsible for interpreting solver output
        }
 
+-- | A model, as returned by a solver
+data SMTModel = SMTModel {
+        modelAssocs    :: [(String, CW)]
+     ,  modelUninterps :: [(String, [String])]  -- very crude!
+     }
+     deriving Show
+
 -- | The result of an SMT solver call. Each constructor is tagged with
 -- the 'SMTConfig' that created it so that further tools can inspect it
 -- and build layers of results, if needed. For ordinary uses of the library,
 -- this type should not be needed, instead use the accessor functions on
 -- it. (Custom Show instances and model extractors.)
-data SMTResult = Unsatisfiable SMTConfig                  -- ^ Unsatisfiable
-               | Satisfiable   SMTConfig [(String, CW)]   -- ^ Satisfiable with model
-               | Unknown       SMTConfig [(String, CW)]   -- ^ Prover returned unknown, with a potential (possibly bogus) model
-               | ProofError    SMTConfig [String]         -- ^ Prover errored out
-               | TimeOut       SMTConfig                  -- ^ Computation timed out (see the 'timeout' combinator)
+data SMTResult = Unsatisfiable SMTConfig            -- ^ Unsatisfiable
+               | Satisfiable   SMTConfig SMTModel   -- ^ Satisfiable with model
+               | Unknown       SMTConfig SMTModel   -- ^ Prover returned unknown, with a potential (possibly bogus) model
+               | ProofError    SMTConfig [String]   -- ^ Prover errored out
+               | TimeOut       SMTConfig            -- ^ Computation timed out (see the 'timeout' combinator)
 
 resultConfig :: SMTResult -> SMTConfig
 resultConfig (Unsatisfiable c) = c
@@ -71,6 +78,9 @@ instance NFData SMTResult where
   rnf (Unknown _ xs)      = rnf xs `seq` ()
   rnf (ProofError _ xs)   = rnf xs `seq` ()
   rnf (TimeOut _)         = ()
+
+instance NFData SMTModel where
+  rnf (SMTModel assocs unints) = rnf assocs `seq` rnf unints `seq` ()
 
 -- | A 'prove' call results in a 'ThmResult'
 newtype ThmResult    = ThmResult    SMTResult
@@ -201,7 +211,7 @@ getModel (Unsatisfiable _) = error "SatModel.getModel: Unsatisfiable result"
 getModel (Unknown _ _)     = error "Impossible! Backend solver returned unknown for Bit-vector problem!"
 getModel (ProofError _ s)  = error $ unlines $ "An error happened: " : s
 getModel (TimeOut _)       = error $ "Timeout"
-getModel (Satisfiable _ m) = case parseCWs [c | (_, c) <- m] of
+getModel (Satisfiable _ m) = case parseCWs [c | (_, c) <- modelAssocs m] of
                                Just (x, []) -> x
                                Just (_, ys) -> error $ "SBV.getModel: Partially constructed model; remaining elements: " ++ show ys
                                Nothing      -> error $ "SBV.getModel: Cannot construct a model from: " ++ show m
@@ -217,22 +227,32 @@ displayModels disp (AllSatResult ms) = do
 
 showSMTResult :: String -> String -> String -> String -> String -> SMTResult -> String
 showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel result = case result of
-  Unsatisfiable _  -> unsatMsg
-  Satisfiable _ [] -> satMsg
-  Satisfiable _ m  -> satMsgModel ++ intercalate "\n" (map (shM cfg) m)
-  Unknown _ []     -> unkMsg
-  Unknown _ m      -> unkMsgModel ++ intercalate "\n" (map (shM cfg) m)
-  ProofError _ []  -> "*** An error occurred. No additional information available. Try running in verbose mode"
-  ProofError _ ls  -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
-  TimeOut _        -> "*** Timeout"
+  Unsatisfiable _                -> unsatMsg
+  Satisfiable _ (SMTModel [] []) -> satMsg
+  Satisfiable _ m                -> satMsgModel ++ intercalate "\n" (map (shM cfg) (modelAssocs m) ++ concatMap shUI (modelUninterps m))
+  Unknown _ (SMTModel [] [])     -> unkMsg
+  Unknown _ m                    -> unkMsgModel ++ intercalate "\n" (map (shM cfg) (modelAssocs m) ++ concatMap shUI (modelUninterps m))
+  ProofError _ []                -> "*** An error occurred. No additional information available. Try running in verbose mode"
+  ProofError _ ls                -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
+  TimeOut _                      -> "*** Timeout"
  where cfg = resultConfig result
 
-shM :: SMTConfig -> (String, CW) -> String
-shM cfg (s, v) = "  " ++ s ++ " = " ++ sh (printBase cfg) v
+shCW :: SMTConfig -> CW -> String
+shCW cfg v = sh (printBase cfg) v
   where sh 2  = binS
         sh 10 = show
         sh 16 = hexS
         sh n  = \w -> show w ++ " -- Ignoring unsupported printBase " ++ show n ++ ", use 2, 10, or 16."
+
+shM :: SMTConfig -> (String, CW) -> String
+shM cfg (s, v) = "  " ++ s ++ " = " ++ shCW cfg v
+
+-- very crude..
+shUI :: (String, [String]) -> [String]
+shUI (flong, cases) = ("  -- uninterpreted: " ++ f) : map shC cases
+  where tf = dropWhile (/= '_') flong
+        f  =  if null tf then flong else tail tf
+        shC s = "       " ++ s
 
 pipeProcess :: String -> String -> [String] -> String -> IO (Either String [String])
 pipeProcess nm execName opts script = do

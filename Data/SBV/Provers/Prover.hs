@@ -255,13 +255,13 @@ allSatWith config p = do when (verbose config) $ putStrLn  "** Checking Satisfia
           where loop !n nonEqConsts = do
                   SatResult r <- callSolver nonEqConsts ("Looking for solution " ++ show n) SatResult config sbvPgm
                   case r of
-                    Satisfiable _ []    -> final r
-                    Unknown _ []        -> final r
-                    ProofError _ _      -> final r
-                    TimeOut _           -> stop
-                    Unsatisfiable _     -> stop
-                    Satisfiable _ model -> add r >> loop (n+1) (model : nonEqConsts)
-                    Unknown     _ model -> add r >> loop (n+1) (model : nonEqConsts)
+                    Satisfiable _ (SMTModel [] _) -> final r
+                    Unknown _ (SMTModel [] _)     -> final r
+                    ProofError _ _                -> final r
+                    TimeOut _                     -> stop
+                    Unsatisfiable _               -> stop
+                    Satisfiable _ model           -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
+                    Unknown     _ model           -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
 
 callSolver :: [[(String, CW)]] -> String -> (SMTResult -> b) -> SMTConfig -> ([NamedSymVar], SMTLibPgm) -> IO b
 callSolver nonEqConstraints checkMsg wrap config (inps, smtLibPgm) = do

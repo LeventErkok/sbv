@@ -14,6 +14,7 @@
 
 module Data.SBV.Provers.Yices(yices, timeout) where
 
+import Control.Monad      (foldM)
 import Data.Char          (isDigit)
 import Data.List          (sortBy, isPrefixOf)
 import System.Environment (getEnv)
@@ -48,10 +49,17 @@ sortByNodeId = sortBy (\(x, _) (y, _) -> compare x y)
 
 interpret :: SMTConfig -> [NamedSymVar] -> [String] -> SMTResult
 interpret cfg _    ("unsat":_)      = Unsatisfiable cfg
-interpret cfg inps ("unknown":rest) = Unknown       cfg  $ map (\(_, y) -> y) $ sortByNodeId $ concatMap (getCounterExample inps) rest
-interpret cfg inps ("sat":rest)     = Satisfiable   cfg  $ map (\(_, y) -> y) $ sortByNodeId $ concatMap (getCounterExample inps) rest
+interpret cfg inps ("unknown":rest) = Unknown       cfg  $ extractMap inps rest
+interpret cfg inps ("sat":rest)     = Satisfiable   cfg  $ extractMap inps rest
 interpret cfg _    ("timeout":_)    = TimeOut       cfg
 interpret cfg _    ls               = ProofError    cfg  $ ls
+
+extractMap :: [NamedSymVar] -> [String] -> SMTModel
+extractMap inps solverLines =
+   SMTModel { modelAssocs    = map (\(_, y) -> y) $ sortByNodeId $ concatMap (getCounterExample inps) modelLines
+            , modelUninterps = extractUnints unintLines
+            }
+  where (modelLines, unintLines) = break ("--- uninterpreted_" `isPrefixOf`) solverLines
 
 getCounterExample :: [NamedSymVar] -> String -> [(Int, (String, CW))]
 getCounterExample inps line
@@ -77,3 +85,44 @@ getCounterExample inps line
 isComment :: String -> Bool
 isComment s = any (`isPrefixOf` s) prefixes
   where prefixes = ["---", "default"]
+
+extractUnints :: [String] -> [(String, [String])]
+extractUnints [] = []
+extractUnints xs = case extractUnint first of
+                     Nothing -> extractUnints rest
+                     Just x   -> x : extractUnints rest
+  where first = takeWhile p xs
+        rest  = tail' (dropWhile p xs)
+        p = not . ("----" `isPrefixOf`)
+        tail' []       = []
+        tail' (_ : rs) = rs
+
+extractUnint :: [String] -> Maybe (String, [String])
+extractUnint []           = Nothing
+extractUnint (tag : rest)
+  | null tag' = Nothing
+  | True      = foldM (getUIVal f) (0, []) rest >>= \(_, xs) -> return (f, reverse xs)
+  where tag' = dropWhile (/= '_') tag
+        f    = takeWhile (/= ' ') (tail tag')
+
+getUIVal :: String -> (Int, [String]) -> String -> Maybe (Int, [String])
+getUIVal f (cnt, sofar) s
+  | "default: " `isPrefixOf` s
+  = getDefaultVal cnt f (dropWhile (/= ' ') s) >>= \d -> return (cnt, d : sofar)
+  | True
+  = case parseSExpr s of
+       Right (S_App [S_Con "=", (S_App (S_Con v : args)), S_Num i]) | v == "uninterpreted_" ++ f
+              -> getCallVal cnt f args i >>= \(cnt', d) -> return (cnt', d : sofar)
+       _ -> Nothing
+
+getDefaultVal :: Int -> String -> String -> Maybe String
+getDefaultVal cnt f n = case parseSExpr n of
+                          Right (S_Num i) -> Just $ f ++ " " ++ unwords (replicate cnt "_") ++ " = " ++ show i
+                          _               -> Nothing
+
+getCallVal :: Int -> String -> [SExpr] -> Integer -> Maybe (Int, String)
+getCallVal cnt f args res = mapM getArg args >>= \as -> return (cnt `max` length as, f ++ " " ++ unwords as ++ " = " ++ show res)
+
+getArg :: SExpr -> Maybe String
+getArg (S_Num i) = Just (show i)
+getArg _         = Nothing
