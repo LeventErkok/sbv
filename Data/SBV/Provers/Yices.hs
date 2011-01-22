@@ -16,7 +16,7 @@ module Data.SBV.Provers.Yices(yices, timeout) where
 
 import Data.Char          (isDigit)
 import Data.List          (sortBy, isPrefixOf, intercalate)
-import Data.Maybe         (isJust, fromJust)
+import Data.Maybe         (catMaybes)
 import System.Environment (getEnv)
 
 import Data.SBV.BitVectors.Data
@@ -60,14 +60,11 @@ extractMap inps solverLines =
             , modelUninterps = [(n, ls) | (UFun, n, ls) <- uis]
             , modelArrays    = [(n, ls) | (UArr, n, ls) <- uis]
             } 
-  where (modelLines, unintLines) = break (\s -> any (`isPrefixOf` s) extras) solverLines
-        extras = ["--- uninterpreted_", "--- array_" ]
-        uis    = extractUnints unintLines
+  where (modelLines, unintLines) = break ("--- " `isPrefixOf`) solverLines
+        uis = extractUnints unintLines
 
 getCounterExample :: [NamedSymVar] -> String -> [(Int, (String, CW))]
-getCounterExample inps line
-    | isComment line = []
-    | True           = either err extract (parseSExpr line)
+getCounterExample inps line = either err extract (parseSExpr line)
   where err r =  error $  "*** Failed to parse Yices model output from: "
                        ++ "*** " ++ show line ++ "\n"
                        ++ "*** Reason: " ++ r ++ "\n"
@@ -84,61 +81,54 @@ getCounterExample inps line
         extract (S_App [S_Con "=", S_Num i, S_Con v]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (hasSign s, sizeOf s) i))]
         extract _                                                                    = []
 
--- this is largely by observation of Yices output; not quite sure if it captures all
-isComment :: String -> Bool
-isComment s = any (`isPrefixOf` s) prefixes
-  where prefixes = ["---", "default"]
-
 extractUnints :: [String] -> [(UnintKind, String, [String])]
-extractUnints [] = []
-extractUnints xs = case extractUnint first of
-                     Nothing -> extractUnints rest
-                     Just x  -> x : extractUnints rest
-  where first = takeWhile p xs
-        rest  = tail' (dropWhile p xs)
-        p = not . ("----" `isPrefixOf`)
-        tail' []       = []
-        tail' (_ : rs) = rs
+extractUnints = catMaybes . map extractUnint . chunks
+  where chunks []     = []
+        chunks (x:xs) = let (f, r) = span (not . ("---" `isPrefixOf`)) xs in (x:f) : chunks r
 
 data UnintKind = UFun | UArr deriving Eq
 
+-- Parsing the Yices output is done extremely crudely and designed
+-- mostly by observation of Yices output. Likely to have bugs and
+-- brittle as Yices evolves. We really need an SMT-Lib2 like interface.
 extractUnint :: [String] -> Maybe (UnintKind, String, [String])
 extractUnint []           = Nothing
 extractUnint (tag : rest)
-  | null tag'          = Nothing
-  | not (isJust mbKnd) = Nothing
-  | True               = mapM (getUIVal knd) rest >>= \xs -> return (knd, f', xs)
-  where mbKnd | "--- uninterpreted_" `isPrefixOf` tag = Just UFun
-              | "--- array_"         `isPrefixOf` tag = Just UArr
-              | True                                  = Nothing
-        knd = fromJust mbKnd
+  | null tag'             = Nothing
+  | True                  = mapM (getUIVal knd f') rest >>= \xs -> return (knd, f', xs)
+  where knd | "--- uninterpreted_" `isPrefixOf` tag = UFun
+            | True                                  = UArr
         tag' = dropWhile (/= '_') tag
         f    = takeWhile (/= ' ') (tail tag')
         f'   = case knd of
                 UArr -> "array_" ++ f
                 _    -> f
 
-getUIVal :: UnintKind -> String -> Maybe String
-getUIVal knd s
+getUIVal :: UnintKind -> String -> String -> Maybe String
+getUIVal knd f s
   | "default: " `isPrefixOf` s
-  = getDefaultVal (dropWhile (/= ' ') s)
+  = getDefaultVal knd f (dropWhile (/= ' ') s)
   | True
   = case parseSExpr s of
-       Right (S_App [S_Con "=", (S_App (S_Con _ : args)), S_Num i]) -> getCallVal knd args i
+       Right (S_App [S_Con "=", (S_App (S_Con _ : args)), S_Num i]) -> getCallVal knd f args i
        _ -> Nothing
 
-getDefaultVal :: String -> Maybe String
-getDefaultVal n = case parseSExpr n of
-                    Right (S_Num i) -> Just $ "default: " ++ show i
-                    _               -> Nothing
+getDefaultVal :: UnintKind -> String -> String -> Maybe String
+getDefaultVal knd f n = case parseSExpr n of
+                         Right (S_Num i) -> Just $ showDefault knd f (show i)
+                         _               -> Nothing
 
-getCallVal :: UnintKind -> [SExpr] -> Integer -> Maybe String
-getCallVal knd args res = mapM getArg args >>= \as -> return (showCall knd as (show res))
+getCallVal :: UnintKind -> String -> [SExpr] -> Integer -> Maybe String
+getCallVal knd f args res = mapM getArg args >>= \as -> return (showCall knd f as (show res))
 
 getArg :: SExpr -> Maybe String
 getArg (S_Num i) = Just (show i)
 getArg _         = Nothing
 
-showCall :: UnintKind -> [String] -> String -> String
-showCall UFun as res = unwords as ++ " -> " ++ res
-showCall UArr as res = "[" ++ intercalate ", " as ++ "]" ++ " = " ++ res
+showDefault :: UnintKind -> String -> String -> String
+showDefault UFun f res = f ++ " _ = "  ++ res
+showDefault UArr f res = f ++ "[_] = " ++ res
+
+showCall :: UnintKind -> String -> [String] -> String -> String
+showCall UFun f as res = f ++ " " ++ unwords as ++ " = " ++ res
+showCall UArr f as res = f ++ "[" ++ intercalate ", " as ++ "]" ++ " = " ++ res

@@ -29,14 +29,16 @@ parseSExpr inp = do (sexp, []) <- parse inpToks
                       cln (':':':':r) sofar = cln r (" :: " ++ sofar)
                       cln (c:r)       sofar = cln r (c:sofar)
                   in reverse (map reverse (words (cln inp "")))
-        parse []         = fail "ran out of tokens"
+        die w = fail $  "SBV.Provers.SExpr: Failed to parse S-Expr: " ++ w
+                     ++ "\n*** Input : <" ++ inp ++ ">"
+        parse []         = die "ran out of tokens"
         parse ("(":toks) = do (f, r) <- parseApp toks []
                               return (S_App f, r)
-        parse (")":_)    = fail "extra tokens after close paren"
+        parse (")":_)    = die "extra tokens after close paren"
         parse [tok]      = do t <- pTok tok
                               return (t, [])
-        parse _          = fail "ill-formed s-expr"
-        parseApp []         _     = fail "failed to grab s-expr application"
+        parse _          = die "ill-formed s-expr"
+        parseApp []         _     = die "failed to grab s-expr application"
         parseApp (")":toks) sofar = return (reverse sofar, toks)
         parseApp ("(":toks) sofar = do (f, r) <- parse ("(":toks)
                                        parseApp r (f : sofar)
@@ -47,4 +49,4 @@ parseSExpr inp = do (sexp, []) <- parse inpToks
         pTok n | all isDigit n = mkNum $ readDec n
         pTok n                 = return $ S_Con $ n
         mkNum [(n, "")] = return $ S_Num n
-        mkNum _         = fail "cannot read number"
+        mkNum _         = die "cannot read number"
