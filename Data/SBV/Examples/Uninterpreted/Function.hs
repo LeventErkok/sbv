@@ -31,8 +31,8 @@ thmGood x y z = x .== y+2 ==> f x z .== f (y + 2) z
 --   s0 = 0 :: SWord8
 --   s1 = 128 :: SWord8
 --   -- uninterpreted: f
---        128 0 -> 32768
---        default: 0
+--        f 128 0 = 32768
+--        f _ = 0
 -- @
 --
 -- Note how the counterexample function @f@ returned by Yices violates commutativity;
