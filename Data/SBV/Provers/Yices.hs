@@ -14,7 +14,6 @@
 
 module Data.SBV.Provers.Yices(yices, timeout) where
 
-import Control.Monad      (foldM)
 import Data.Char          (isDigit)
 import Data.List          (sortBy, isPrefixOf, intercalate)
 import Data.Maybe         (isJust, fromJust)
@@ -108,7 +107,7 @@ extractUnint []           = Nothing
 extractUnint (tag : rest)
   | null tag'          = Nothing
   | not (isJust mbKnd) = Nothing
-  | True               = foldM (getUIVal knd f') (0, []) rest >>= \(_, xs) -> return (knd, f', reverse xs)
+  | True               = mapM (getUIVal knd) rest >>= \xs -> return (knd, f', xs)
   where mbKnd | "--- uninterpreted_" `isPrefixOf` tag = Just UFun
               | "--- array_"         `isPrefixOf` tag = Just UArr
               | True                                  = Nothing
@@ -119,31 +118,27 @@ extractUnint (tag : rest)
                 UArr -> "array_" ++ f
                 _    -> f
 
-getUIVal :: UnintKind -> String -> (Int, [String]) -> String -> Maybe (Int, [String])
-getUIVal knd f (cnt, sofar) s
+getUIVal :: UnintKind -> String -> Maybe String
+getUIVal knd s
   | "default: " `isPrefixOf` s
-  = getDefaultVal knd cnt f (dropWhile (/= ' ') s) >>= \d -> return (cnt, d : sofar)
+  = getDefaultVal (dropWhile (/= ' ') s)
   | True
   = case parseSExpr s of
-       Right (S_App [S_Con "=", (S_App (S_Con _ : args)), S_Num i]) -> getCallVal knd cnt f args i >>= \(cnt', d) -> return (cnt', d : sofar)
+       Right (S_App [S_Con "=", (S_App (S_Con _ : args)), S_Num i]) -> getCallVal knd args i
        _ -> Nothing
 
-getDefaultVal :: UnintKind -> Int -> String -> String -> Maybe String
-getDefaultVal knd cnt f n = case parseSExpr n of
-                              Right (S_Num i) -> Just $ showDefault knd cnt f (show i)
-                              _               -> Nothing
+getDefaultVal :: String -> Maybe String
+getDefaultVal n = case parseSExpr n of
+                    Right (S_Num i) -> Just $ "default: " ++ show i
+                    _               -> Nothing
 
-getCallVal :: UnintKind -> Int -> String -> [SExpr] -> Integer -> Maybe (Int, String)
-getCallVal knd cnt f args res = mapM getArg args >>= \as -> return (cnt `max` length as, showCall knd f as (show res))
+getCallVal :: UnintKind -> [SExpr] -> Integer -> Maybe String
+getCallVal knd args res = mapM getArg args >>= \as -> return (showCall knd as (show res))
 
 getArg :: SExpr -> Maybe String
 getArg (S_Num i) = Just (show i)
 getArg _         = Nothing
 
-showDefault :: UnintKind -> Int -> String -> String -> String
-showDefault UFun cnt f res = f ++ " " ++ unwords (replicate cnt "_")          ++  " = " ++ res
-showDefault UArr cnt f res = f ++ "[" ++ intercalate ", " (replicate cnt "_") ++ "] = " ++ res
-
-showCall :: UnintKind -> String -> [String] -> String -> String
-showCall UFun f as res = f ++ " " ++ unwords as ++ " = " ++ res
-showCall UArr f as res = f ++ "[" ++ intercalate ", " as ++ "]" ++ " = " ++ res
+showCall :: UnintKind -> [String] -> String -> String
+showCall UFun as res = unwords as ++ " -> " ++ res
+showCall UArr as res = "[" ++ intercalate ", " as ++ "]" ++ " = " ++ res
