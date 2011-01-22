@@ -1,6 +1,12 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
+Version 0.9.8, 2011-01-22
+
+  * Better support for uninterpreted-functions
+  * Support counter-examples with SArray's
+  * Documentation updates
+
 Version 0.9.7, 2011-01-18
 
   * First stable public hackage release
