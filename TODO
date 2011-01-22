@@ -1,6 +1,4 @@
-- Change the array interface to explicitly use uninterpreted constants
-  for uninitialized array elements
-- Uninterpreted function counterexamples:
+- Uninterpreted function/array counterexamples:
    - Currently not very robust in parsing Yices's output
    - Might be worth waiting till SMT-Lib2 stabilizes
 - Top level CAF's might need to be specifically treated to
