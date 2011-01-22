@@ -57,8 +57,8 @@ interpret cfg _    ls               = ProofError    cfg  $ ls
 extractMap :: [NamedSymVar] -> [String] -> SMTModel
 extractMap inps solverLines =
    SMTModel { modelAssocs    = map (\(_, y) -> y) $ sortByNodeId $ concatMap (getCounterExample inps) modelLines
-            , modelUninterps = [(n, ls) | (UFun, n, ls) <- uis]
-            , modelArrays    = [(n, ls) | (UArr, n, ls) <- uis]
+            , modelUninterps = [(n, ls) | (UFun _ n, ls) <- uis]
+            , modelArrays    = [(n, ls) | (UArr _ n, ls) <- uis]
             } 
   where (modelLines, unintLines) = break ("--- " `isPrefixOf`) solverLines
         uis = extractUnints unintLines
@@ -81,54 +81,51 @@ getCounterExample inps line = either err extract (parseSExpr line)
         extract (S_App [S_Con "=", S_Num i, S_Con v]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (hasSign s, sizeOf s) i))]
         extract _                                                                    = []
 
-extractUnints :: [String] -> [(UnintKind, String, [String])]
+extractUnints :: [String] -> [(UnintKind, [String])]
 extractUnints = catMaybes . map extractUnint . chunks
   where chunks []     = []
         chunks (x:xs) = let (f, r) = span (not . ("---" `isPrefixOf`)) xs in (x:f) : chunks r
 
-data UnintKind = UFun | UArr deriving Eq
+data UnintKind = UFun Int String | UArr Int String
 
 -- Parsing the Yices output is done extremely crudely and designed
 -- mostly by observation of Yices output. Likely to have bugs and
 -- brittle as Yices evolves. We really need an SMT-Lib2 like interface.
-extractUnint :: [String] -> Maybe (UnintKind, String, [String])
+extractUnint :: [String] -> Maybe (UnintKind, [String])
 extractUnint []           = Nothing
 extractUnint (tag : rest)
   | null tag'             = Nothing
-  | True                  = mapM (getUIVal knd f') rest >>= \xs -> return (knd, f', xs)
-  where knd | "--- uninterpreted_" `isPrefixOf` tag = UFun
-            | True                                  = UArr
+  | True                  = mapM (getUIVal knd) rest >>= \xs -> return (knd, xs)
+  where knd | "--- uninterpreted_" `isPrefixOf` tag = UFun 1 f
+            | True                                  = UArr 1 ("array_" ++ f)
         tag' = dropWhile (/= '_') tag
         f    = takeWhile (/= ' ') (tail tag')
-        f'   = case knd of
-                UArr -> "array_" ++ f
-                _    -> f
 
-getUIVal :: UnintKind -> String -> String -> Maybe String
-getUIVal knd f s
+getUIVal :: UnintKind -> String -> Maybe String
+getUIVal knd s
   | "default: " `isPrefixOf` s
-  = getDefaultVal knd f (dropWhile (/= ' ') s)
+  = getDefaultVal knd (dropWhile (/= ' ') s)
   | True
   = case parseSExpr s of
-       Right (S_App [S_Con "=", (S_App (S_Con _ : args)), S_Num i]) -> getCallVal knd f args i
+       Right (S_App [S_Con "=", (S_App (S_Con _ : args)), S_Num i]) -> getCallVal knd args i
        _ -> Nothing
 
-getDefaultVal :: UnintKind -> String -> String -> Maybe String
-getDefaultVal knd f n = case parseSExpr n of
-                         Right (S_Num i) -> Just $ showDefault knd f (show i)
-                         _               -> Nothing
+getDefaultVal :: UnintKind -> String -> Maybe String
+getDefaultVal knd n = case parseSExpr n of
+                        Right (S_Num i) -> Just $ showDefault knd (show i)
+                        _               -> Nothing
 
-getCallVal :: UnintKind -> String -> [SExpr] -> Integer -> Maybe String
-getCallVal knd f args res = mapM getArg args >>= \as -> return (showCall knd f as (show res))
+getCallVal :: UnintKind -> [SExpr] -> Integer -> Maybe String
+getCallVal knd args res = mapM getArg args >>= \as -> return (showCall knd as (show res))
 
 getArg :: SExpr -> Maybe String
 getArg (S_Num i) = Just (show i)
 getArg _         = Nothing
 
-showDefault :: UnintKind -> String -> String -> String
-showDefault UFun f res = f ++ " _ = "  ++ res
-showDefault UArr f res = f ++ "[_] = " ++ res
+showDefault :: UnintKind -> String -> String
+showDefault (UFun arity f) res = f ++ " " ++ intercalate " "  (replicate arity "_") ++ " = "  ++ res
+showDefault (UArr arity f) res = f ++ "[" ++ intercalate ", " (replicate arity "_") ++ "] = " ++ res
 
-showCall :: UnintKind -> String -> [String] -> String -> String
-showCall UFun f as res = f ++ " " ++ unwords as ++ " = " ++ res
-showCall UArr f as res = f ++ "[" ++ intercalate ", " as ++ "]" ++ " = " ++ res
+showCall :: UnintKind -> [String] -> String -> String
+showCall (UFun _ f) as res = f ++ " " ++ unwords as ++ " = " ++ res
+showCall (UArr _ f) as res = f ++ "[" ++ intercalate ", " as ++ "]" ++ " = " ++ res
