@@ -28,12 +28,11 @@ thmGood x y z = x .== y+2 ==> f x z .== f (y + 2) z
 --
 -- @
 -- ghci> prove thmBad
--- Falsifiable. Counter-example:
 --   s0 = 0 :: SWord8
 --   s1 = 128 :: SWord8
 --   -- uninterpreted: f
---        f 128 0 = 32768
---        f _ _ = 0
+--        128 0 -> 32768
+--        default: 0
 -- @
 --
 -- Note how the counterexample function @f@ returned by Yices violates commutativity;
