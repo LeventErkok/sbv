@@ -50,6 +50,7 @@ data SMTSolver = SMTSolver {
 -- | A model, as returned by a solver
 data SMTModel = SMTModel {
         modelAssocs    :: [(String, CW)]
+     ,  modelArrays    :: [(String, [String])]  -- very crude!
      ,  modelUninterps :: [(String, [String])]  -- very crude!
      }
      deriving Show
@@ -80,7 +81,7 @@ instance NFData SMTResult where
   rnf (TimeOut _)         = ()
 
 instance NFData SMTModel where
-  rnf (SMTModel assocs unints) = rnf assocs `seq` rnf unints `seq` ()
+  rnf (SMTModel assocs unints uarrs) = rnf assocs `seq` rnf unints `seq` rnf uarrs `seq` ()
 
 -- | A 'prove' call results in a 'ThmResult'
 newtype ThmResult    = ThmResult    SMTResult
@@ -227,15 +228,21 @@ displayModels disp (AllSatResult ms) = do
 
 showSMTResult :: String -> String -> String -> String -> String -> SMTResult -> String
 showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel result = case result of
-  Unsatisfiable _                -> unsatMsg
-  Satisfiable _ (SMTModel [] []) -> satMsg
-  Satisfiable _ m                -> satMsgModel ++ intercalate "\n" (map (shM cfg) (modelAssocs m) ++ concatMap shUI (modelUninterps m))
-  Unknown _ (SMTModel [] [])     -> unkMsg
-  Unknown _ m                    -> unkMsgModel ++ intercalate "\n" (map (shM cfg) (modelAssocs m) ++ concatMap shUI (modelUninterps m))
-  ProofError _ []                -> "*** An error occurred. No additional information available. Try running in verbose mode"
-  ProofError _ ls                -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
-  TimeOut _                      -> "*** Timeout"
+  Unsatisfiable _                   -> unsatMsg
+  Satisfiable _ (SMTModel [] [] []) -> satMsg
+  Satisfiable _ m                   -> satMsgModel ++ showModel cfg m
+  Unknown _ (SMTModel [] [] [])     -> unkMsg
+  Unknown _ m                       -> unkMsgModel ++ showModel cfg m
+  ProofError _ []                   -> "*** An error occurred. No additional information available. Try running in verbose mode"
+  ProofError _ ls                   -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
+  TimeOut _                         -> "*** Timeout"
  where cfg = resultConfig result
+
+showModel :: SMTConfig -> SMTModel -> String
+showModel cfg m = intercalate "\n" (map (shM cfg) assocs ++ concatMap shUI uninterps ++ concatMap shUA arrs)
+  where assocs    = modelAssocs m
+        uninterps = modelUninterps m
+        arrs      = modelArrays m
 
 shCW :: SMTConfig -> CW -> String
 shCW cfg v = sh (printBase cfg) v
@@ -247,12 +254,17 @@ shCW cfg v = sh (printBase cfg) v
 shM :: SMTConfig -> (String, CW) -> String
 shM cfg (s, v) = "  " ++ s ++ " = " ++ shCW cfg v
 
--- very crude..
+-- very crude.. printing uninterpreted functions
 shUI :: (String, [String]) -> [String]
 shUI (flong, cases) = ("  -- uninterpreted: " ++ f) : map shC cases
   where tf = dropWhile (/= '_') flong
         f  =  if null tf then flong else tail tf
         shC s = "       " ++ s
+
+-- very crude.. printing array values
+shUA :: (String, [String]) -> [String]
+shUA (f, cases) = ("  -- array: " ++ f) : map shC cases
+  where shC s = "       " ++ s
 
 pipeProcess :: String -> String -> [String] -> String -> IO (Either String [String])
 pipeProcess nm execName opts script = do

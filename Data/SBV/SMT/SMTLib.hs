@@ -71,7 +71,7 @@ mkTable ((i, at, rt), elts) = (" :extrafuns ((" ++ t ++ " Array[" ++ show at ++ 
 
 declArray :: (Int, ArrayInfo) -> [String]
 declArray (i, (_, ((_, at), (_, rt)), ctx)) = adecl : ctxInfo
-  where nm = "array" ++ show i
+  where nm = "array_" ++ show i
         adecl = " :extrafuns ((" ++ nm ++ " Array[" ++ show at ++ ":" ++ show rt ++ "]))"
         ctxInfo = case ctx of
                     ArrayFree    -> []
@@ -79,8 +79,8 @@ declArray (i, (_, ((_, at), (_, rt)), ctx)) = adecl : ctxInfo
                                     in [ " :extrafuns ((" ++ iv ++ " BitVec[" ++ show at ++ "]))"
                                        , " :assumption (= (select " ++ nm ++ " " ++ iv ++ ") " ++ show sw ++ ")"
                                        ]
-                    ArrayMutate j a b -> [" :assumption (= " ++ nm ++ " (store array" ++ show j ++ " " ++ show a ++ " " ++ show b ++ "))"]
-                    ArrayMerge  t j k -> [" :assumption (= " ++ nm ++ " (ite (= bv1[1] " ++ show t ++ ") array" ++ show j ++ " array" ++ show k ++ "))"]
+                    ArrayMutate j a b -> [" :assumption (= " ++ nm ++ " (store array_" ++ show j ++ " " ++ show a ++ " " ++ show b ++ "))"]
+                    ArrayMerge  t j k -> [" :assumption (= " ++ nm ++ " (ite (= bv1[1] " ++ show t ++ ") array_" ++ show j ++ " array_" ++ show k ++ "))"]
 
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = [" :extrafuns ((uninterpreted_" ++ i ++ " " ++ cvtType t ++ "))"]
@@ -165,8 +165,8 @@ cvtExp (SBVApp (LkUp (t, at, _, l) i e) [])
         le0  = "(" ++ less ++ " " ++ show i ++ " " ++ mkCnst 0 ++ ")"
         gtl  = "(" ++ leq  ++ " " ++ mkCnst l ++ " " ++ show i ++ ")"
 cvtExp (SBVApp (Extract i j) [a]) = "(extract[" ++ show i ++ ":" ++ show j ++ "] " ++ show a ++ ")"
-cvtExp (SBVApp (ArrEq i j) []) = "(ite (= array" ++ show i ++ " array" ++ show j ++") bv1[1] bv0[1])"
-cvtExp (SBVApp (ArrRead i) [a]) = "(select array" ++ show i ++ " " ++ show a ++ ")"
+cvtExp (SBVApp (ArrEq i j) []) = "(ite (= array_" ++ show i ++ " array_" ++ show j ++") bv1[1] bv0[1])"
+cvtExp (SBVApp (ArrRead i) [a]) = "(select array_" ++ show i ++ " " ++ show a ++ ")"
 cvtExp (SBVApp (Uninterpreted nm) [])   = "uninterpreted_" ++ nm
 cvtExp (SBVApp (Uninterpreted nm) args) = "(uninterpreted_" ++ nm ++ " " ++ intercalate " " (map show args) ++ ")"
 cvtExp inp@(SBVApp op args)

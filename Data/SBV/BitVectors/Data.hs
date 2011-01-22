@@ -189,9 +189,9 @@ instance Show Op where
   show (LkUp (ti, at, rt, l) i e)
         = "lookup(" ++ tinfo ++ ", " ++ show i ++ ", " ++ show e ++ ")"
         where tinfo = "table" ++ show ti ++ "(" ++ show at ++ " -> " ++ show rt ++ ", " ++ show l ++ ")"
-  show (ArrEq i j)   = "array" ++ show i ++ " == array" ++ show j
-  show (ArrRead i)   = "select array" ++ show i
-  show (Uninterpreted i) = "ui_" ++ i
+  show (ArrEq i j)   = "array_" ++ show i ++ " == array_" ++ show j
+  show (ArrRead i)   = "select array_" ++ show i
+  show (Uninterpreted i) = "uninterpreted_" ++ i
   show op
     | Just s <- op `lookup` syms = s
     | True                       = error "impossible happened; can't find op!"
@@ -267,10 +267,10 @@ instance Show Result where
             where mkT (b, s)
                    | s == 1  = "SBool"
                    | True    = if b then "SInt" else "SWord" ++ show s
-                  ni = "array" ++ show i
+                  ni = "array_" ++ show i
                   alias | ni == nm = ""
                         | True     = ", aliasing " ++ show nm
-          shui (nm, t) = "  ui_" ++ nm ++ " :: " ++ show t
+          shui (nm, t) = "  uninterpreted_" ++ nm ++ " :: " ++ show t
 
 data ArrayContext = ArrayFree
                   | ArrayInit SW
@@ -280,7 +280,7 @@ data ArrayContext = ArrayFree
 instance Show ArrayContext where
   show ArrayFree           = " initialized with random elements"
   show (ArrayInit s)       = " initialized with " ++ show s ++ ":: " ++ showType s
-  show (ArrayMutate i a b) = " cloned from array" ++ show i ++ " with " ++ show a ++ " :: " ++ showType a ++ " |-> " ++ show b ++ " :: " ++ showType b
+  show (ArrayMutate i a b) = " cloned from array_" ++ show i ++ " with " ++ show a ++ " :: " ++ showType a ++ " |-> " ++ show b ++ " :: " ++ showType b
   show (ArrayMerge s i j)  = " merged arrays " ++ show i ++ " and " ++ show j ++ " on condition " ++ show s
 
 type ExprMap    = Map.Map SBVExpr SW
@@ -528,8 +528,8 @@ class Ord a => SymWord a where
 -- An @array a b@ is an array indexed by the type @'SBV' a@, with elements of type @'SBV' b@
 -- If an initial value is not provided in 'newArray_' and 'newArray' methods, then the elements
 -- are left unspecified, i.e., the solver is free to choose any value. This is the right thing
--- to do if arrays are used as inputs to functions to be verified, typically. Reading an
--- uninitilized entry is an error.
+-- to do if arrays are used as inputs to functions to be verified, typically. 
+--
 -- While it's certainly possible for user to create instances of 'SymArray', the
 -- 'SArray' and 'SFunArray' instances already provided should cover most use cases
 -- in practice.
@@ -538,7 +538,7 @@ class Ord a => SymWord a where
 class SymArray array where
   -- | Create a new array, with an optional initial value
   newArray_      :: (HasSignAndSize a, HasSignAndSize b) => Maybe (SBV b) -> Symbolic (array a b)
-  -- | Create a named new array with, with an optional initial value
+  -- | Create a named new array, with an optional initial value
   newArray       :: (HasSignAndSize a, HasSignAndSize b) => String -> Maybe (SBV b) -> Symbolic (array a b)
   -- | Read the array element at @a@
   readArray      :: array a b -> SBV a -> SBV b
@@ -559,7 +559,7 @@ instance (HasSignAndSize a, HasSignAndSize b) => Show (SArray a b) where
   show (SArray{}) = "SArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"
 
 instance SymArray SArray where
-  newArray_  = declNewSArray (\t -> "array" ++ show t)
+  newArray_  = declNewSArray (\t -> "array_" ++ show t)
   newArray n = declNewSArray (const n)
   readArray (SArray (_, bsgnsz) f) a = SBV bsgnsz $ Right $ cache r
      where r st = do arr <- uncache f st
@@ -569,7 +569,7 @@ instance SymArray SArray where
      where g st = do amap <- readIORef (rArrayMap st)
                      val <- sbvToSW st b
                      let j = IMap.size amap
-                     j `seq` modifyIORef (rArrayMap st) (IMap.insert j ("array" ++ show j, ainfo, ArrayInit val))
+                     j `seq` modifyIORef (rArrayMap st) (IMap.insert j ("array_" ++ show j, ainfo, ArrayInit val))
                      return j
   writeArray (SArray ainfo f) a b = SArray ainfo $ cache g
      where g st = do arr  <- uncache f st
@@ -577,7 +577,7 @@ instance SymArray SArray where
                      val  <- sbvToSW st b
                      amap <- readIORef (rArrayMap st)
                      let j = IMap.size amap
-                     j `seq` modifyIORef (rArrayMap st) (IMap.insert j ("array" ++ show j, ainfo, ArrayMutate arr addr val))
+                     j `seq` modifyIORef (rArrayMap st) (IMap.insert j ("array_" ++ show j, ainfo, ArrayMutate arr addr val))
                      return j
   mergeArrays t (SArray ainfo a) (SArray _ b) = SArray ainfo $ cache h
     where h st = do ai <- uncache a st
@@ -585,7 +585,7 @@ instance SymArray SArray where
                     ts <- sbvToSW st t
                     amap <- readIORef (rArrayMap st)
                     let k = IMap.size amap
-                    k `seq` modifyIORef (rArrayMap st) (IMap.insert k ("array" ++ show k, ainfo, ArrayMerge ts ai bi))
+                    k `seq` modifyIORef (rArrayMap st) (IMap.insert k ("array_" ++ show k, ainfo, ArrayMerge ts ai bi))
                     return k
 
 declNewSArray :: forall a b. (HasSignAndSize a, HasSignAndSize b) => (Int -> String) -> Maybe (SBV b) -> Symbolic (SArray a b)
