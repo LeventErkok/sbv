@@ -532,7 +532,9 @@ class Ord a => SymWord a where
 --
 -- While it's certainly possible for user to create instances of 'SymArray', the
 -- 'SArray' and 'SFunArray' instances already provided should cover most use cases
--- in practice.
+-- in practice. (There are some differences between these models, however, see the corresponding
+-- declaration.)
+--
 --
 -- Minimal complete definition: All methods are required, no defaults.
 class SymArray array where
@@ -552,6 +554,17 @@ class SymArray array where
   mergeArrays    :: SymWord b => SBV Bool -> array a b -> array a b -> array a b
 
 -- | Arrays implemented in terms of SMT-arrays: <http://goedel.cs.uiowa.edu/smtlib/theories/ArraysEx.smt2>
+--
+--   * Maps directly to SMT-lib arrays
+--
+--   * Reading from an unintialized value is OK and yields an uninterpreted result
+--
+--   * Can check for equality of these arrays
+--
+--   * Cannot quick-check theorems using @SArray@ values
+--
+--   * Typically slower as it heavily relies on SMT-solving for the array theory
+--
 data SArray a b = SArray ((Bool, Size), (Bool, Size)) (Cached ArrayIndex)
 type ArrayIndex = Int
 
@@ -602,7 +615,18 @@ declNewSArray mkNm mbInit = do
    liftIO $ modifyIORef (rArrayMap st) (IMap.insert i (nm, (asgnsz, bsgnsz), actx))
    return $ SArray (asgnsz, bsgnsz) $ cache $ const $ return i
 
--- | Arrays implemented internally as functions, and rendered as SMT-Lib functions
+-- | Arrays implemented internally as functions
+--
+--    * Internally handled by the library and not mapped to SMT-Lib
+--
+--    * Reading an uninitialized value is considered an error (will throw exception)
+--
+--    * Cannot check for equality (internally represented as functions)
+--
+--    * Can quick-check
+--
+--    * Typically faster as it gets compiled away during translation
+--
 data SFunArray a b = SFunArray (SBV a -> SBV b)
 
 instance (HasSignAndSize a, HasSignAndSize b) => Show (SFunArray a b) where
