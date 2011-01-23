@@ -3,6 +3,8 @@
 # The sbv library is distributed with the BSD3 license. See the LICENSE file
 # in the distribution for details.
 
+SRCS = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs)
+
 .PHONY: all install test sdist clean docs gold
 
 all: install test sdist
@@ -11,7 +13,10 @@ install:
 	cabal install
 
 test:
-	cabal test
+	@echo "Executing inline tests.."
+	@doctest ${SRCS} | grep -v "Could not find documentation" | exit 0
+	@echo "Starting external test suite.."
+	@cabal test
 
 sdist:
 	cabal sdist
