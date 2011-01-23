@@ -282,16 +282,17 @@ instance Show Result where
                         | True     = ", aliasing " ++ show nm
           shui (nm, t) = "  uninterpreted_" ++ nm ++ " :: " ++ show t
 
-data ArrayContext = ArrayFree
-                  | ArrayInit SW
+data ArrayContext = ArrayFree (Maybe SW)
+                  | ArrayReset Int SW
                   | ArrayMutate Int SW SW
                   | ArrayMerge  SW Int Int
 
 instance Show ArrayContext where
-  show ArrayFree           = " initialized with random elements"
-  show (ArrayInit s)       = " initialized with " ++ show s ++ ":: " ++ showType s
-  show (ArrayMutate i a b) = " cloned from array_" ++ show i ++ " with " ++ show a ++ " :: " ++ showType a ++ " |-> " ++ show b ++ " :: " ++ showType b
-  show (ArrayMerge s i j)  = " merged arrays " ++ show i ++ " and " ++ show j ++ " on condition " ++ show s
+  show (ArrayFree Nothing)  = " initialized with random elements"
+  show (ArrayFree (Just s)) = " initialized with " ++ show s ++ " :: " ++ showType s
+  show (ArrayReset i s)     = " reset array_" ++ show i ++ " with " ++ show s ++ " :: " ++ showType s
+  show (ArrayMutate i a b)  = " cloned from array_" ++ show i ++ " with " ++ show a ++ " :: " ++ showType a ++ " |-> " ++ show b ++ " :: " ++ showType b
+  show (ArrayMerge s i j)   = " merged arrays " ++ show i ++ " and " ++ show j ++ " on condition " ++ show s
 
 type ExprMap    = Map.Map SBVExpr SW
 type CnstMap    = Map.Map CW SW
@@ -304,8 +305,14 @@ type UIMap      = Map.Map String SBVType
 unintFnUIKind :: (String, SBVType) -> (String, UnintKind)
 unintFnUIKind (s, t) = (s, UFun (typeArity t) s)
 
-arrayUIKind :: (Int, ArrayInfo) -> (String, UnintKind)
-arrayUIKind (i, (nm, _, _)) = ("array_" ++ show i, UArr 1 nm) -- arrays are always 1-dimensional in the SMT-land. (Unless encoded explicitly)
+arrayUIKind :: (Int, ArrayInfo) -> Maybe (String, UnintKind)
+arrayUIKind (i, (nm, _, ctx)) 
+  | external ctx = Just ("array_" ++ show i, UArr 1 nm) -- arrays are always 1-dimensional in the SMT-land. (Unless encoded explicitly)
+  | True         = Nothing
+  where external (ArrayFree{})   = True
+        external (ArrayReset{})  = False
+        external (ArrayMutate{}) = False
+        external (ArrayMerge{})  = False
 
 data State  = State { rctr       :: IORef Int
                     , rinps      :: IORef [NamedSymVar]
@@ -597,11 +604,12 @@ instance SymArray SArray where
      where r st = do arr <- uncache f st
                      i   <- sbvToSW st a
                      newExpr st bsgnsz (SBVApp (ArrRead arr) [i])
-  resetArray (SArray ainfo _) b = SArray ainfo $ cache g
+  resetArray (SArray ainfo f) b = SArray ainfo $ cache g
      where g st = do amap <- readIORef (rArrayMap st)
                      val <- sbvToSW st b
+                     i <- uncache f st
                      let j = IMap.size amap
-                     j `seq` modifyIORef (rArrayMap st) (IMap.insert j ("array_" ++ show j, ainfo, ArrayInit val))
+                     j `seq` modifyIORef (rArrayMap st) (IMap.insert j ("array_" ++ show j, ainfo, ArrayReset i val))
                      return j
   writeArray (SArray ainfo f) a b = SArray ainfo $ cache g
      where g st = do arr  <- uncache f st
@@ -628,9 +636,9 @@ declNewSArray mkNm mbInit = do
    amap <- liftIO $ readIORef $ rArrayMap st
    let i = IMap.size amap
        nm = mkNm i
-   actx <- case mbInit of
-             Nothing   -> return ArrayFree
-             Just ival -> liftIO $ ArrayInit `fmap` sbvToSW st ival
+   actx <- liftIO $ case mbInit of
+                     Nothing   -> return $ ArrayFree Nothing
+                     Just ival -> sbvToSW st ival >>= \sw -> return $ ArrayFree (Just sw)
    liftIO $ modifyIORef (rArrayMap st) (IMap.insert i (nm, (asgnsz, bsgnsz), actx))
    return $ SArray (asgnsz, bsgnsz) $ cache $ const $ return i
 

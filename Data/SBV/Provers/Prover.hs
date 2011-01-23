@@ -36,7 +36,7 @@ module Data.SBV.Provers.Prover (
 import Control.Monad                  (when)
 import Control.Concurrent             (forkIO)
 import Control.Concurrent.Chan.Strict (newChan, writeChan, getChanContents)
-import Data.Maybe                     (fromJust, isJust)
+import Data.Maybe                     (fromJust, isJust, catMaybes)
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
@@ -283,7 +283,7 @@ generateTrace config isSat predicate = do
         msg "Translating to SMT-Lib.."
         case res of
           Result is consts tbls arrs uis pgm [o@(SW{})] ->
-             timeIf isTiming "translation" $ let uiMap = map arrayUIKind arrs ++ map unintFnUIKind uis
+             timeIf isTiming "translation" $ let uiMap = catMaybes (map arrayUIKind arrs) ++ map unintFnUIKind uis
                                              in return (is, uiMap, toSMTLib isSat is consts tbls arrs uis pgm o)
           _ -> error $ "SBVProver.callSolver: Impossible happened: " ++ show res
 

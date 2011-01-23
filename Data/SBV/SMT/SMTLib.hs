@@ -74,13 +74,15 @@ declArray (i, (_, ((_, at), (_, rt)), ctx)) = adecl : ctxInfo
   where nm = "array_" ++ show i
         adecl = " :extrafuns ((" ++ nm ++ " Array[" ++ show at ++ ":" ++ show rt ++ "]))"
         ctxInfo = case ctx of
-                    ArrayFree    -> []
-                    ArrayInit sw -> let iv = nm ++ "_freeInitializer"
-                                    in [ " :extrafuns ((" ++ iv ++ " BitVec[" ++ show at ++ "]))"
-                                       , " :assumption (= (select " ++ nm ++ " " ++ iv ++ ") " ++ show sw ++ ")"
-                                       ]
+                    ArrayFree Nothing   -> []
+                    ArrayFree (Just sw) -> declA sw
+                    ArrayReset _ sw     -> declA sw
                     ArrayMutate j a b -> [" :assumption (= " ++ nm ++ " (store array_" ++ show j ++ " " ++ show a ++ " " ++ show b ++ "))"]
                     ArrayMerge  t j k -> [" :assumption (= " ++ nm ++ " (ite (= bv1[1] " ++ show t ++ ") array_" ++ show j ++ " array_" ++ show k ++ "))"]
+        declA sw = let iv = nm ++ "_freeInitializer"
+                   in [ " :extrafuns ((" ++ iv ++ " BitVec[" ++ show at ++ "]))"
+                      , " :assumption (= (select " ++ nm ++ " " ++ iv ++ ") " ++ show sw ++ ")"
+                      ]
 
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = [" :extrafuns ((uninterpreted_" ++ i ++ " " ++ cvtType t ++ "))"]

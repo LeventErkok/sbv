@@ -96,10 +96,10 @@ extractUnints modelMap = catMaybes . map (extractUnint modelMap) . chunks
 -- mostly by observation of Yices output. Likely to have bugs and
 -- brittle as Yices evolves. We really need an SMT-Lib2 like interface.
 extractUnint :: [(String, UnintKind)] -> [String] -> Maybe (UnintKind, [String])
-extractUnint _ []              = Nothing
+extractUnint _    []           = Nothing
 extractUnint mmap (tag : rest)
-  | not (isJust mbKnd)         = Nothing
   | null tag'                  = Nothing
+  | not (isJust mbKnd)         = Nothing
   | True                       = mapM (getUIVal knd) rest >>= \xs -> return (knd, format knd xs)
   where mbKnd | "--- uninterpreted_" `isPrefixOf` tag = uf `lookup` mmap
               | True                                  = af `lookup` mmap
