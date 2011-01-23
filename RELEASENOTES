@@ -1,6 +1,11 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
+Version 0.9.9, not released yet
+
+  * Current working version
+  * Move to using doctest style inline tests
+
 Version 0.9.8, 2011-01-23
 
   * Better support for uninterpreted-functions
@@ -11,3 +16,7 @@ Version 0.9.8, 2011-01-23
 Version 0.9.7, 2011-01-18
 
   * First stable public hackage release
+
+Versions 0.X.X - 0.9.6
+
+  * Basic infrastructure, design exploration
