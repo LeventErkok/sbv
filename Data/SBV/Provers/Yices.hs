@@ -15,7 +15,7 @@
 module Data.SBV.Provers.Yices(yices, timeout) where
 
 import Data.Char          (isDigit)
-import Data.List          (sortBy, isPrefixOf, intercalate)
+import Data.List          (sortBy, isPrefixOf, intercalate, transpose, partition)
 import Data.Maybe         (catMaybes)
 import System.Environment (getEnv)
 
@@ -59,9 +59,15 @@ extractMap inps modelMap solverLines =
    SMTModel { modelAssocs    = map (\(_, y) -> y) $ sortByNodeId $ concatMap (getCounterExample inps) modelLines
             , modelUninterps = [(n, ls) | (UFun _ n, ls) <- uis]
             , modelArrays    = [(n, ls) | (UArr _ n, ls) <- uis]
-            } 
-  where (modelLines, unintLines) = break ("--- " `isPrefixOf`) solverLines
+            }
+  where (modelLines, unintLines) = moveConstUIs $ break ("--- " `isPrefixOf`) solverLines
         uis = extractUnints modelMap unintLines
+
+-- another crude hack
+moveConstUIs :: ([String], [String]) -> ([String], [String])
+moveConstUIs (pre, post) = (pre', concatMap mkDecl extras ++ post)
+  where (extras, pre') = partition ("(= uninterpreted_" `isPrefixOf`) pre
+        mkDecl s = ["--- " ++ takeWhile (/= ' ') (drop 3 s) ++ " ---", s]
 
 getCounterExample :: [NamedSymVar] -> String -> [(Int, (String, CW))]
 getCounterExample inps line = either err extract (parseSExpr line)
@@ -93,7 +99,7 @@ extractUnint :: [(String, UnintKind)] -> [String] -> Maybe (UnintKind, [String])
 extractUnint _ []              = Nothing
 extractUnint mmap (tag : rest)
   | null tag'                  = Nothing
-  | True                       = mapM (getUIVal knd) rest >>= \xs -> return (knd, xs)
+  | True                       = mapM (getUIVal knd) rest >>= \xs -> return (knd, format knd xs)
   where knd | "--- uninterpreted_" `isPrefixOf` tag = maybe (UFun 1 uf) id (uf `lookup` mmap)
             | True                                  = maybe (UArr 1 af) id (af `lookup` mmap)
         tag' = dropWhile (/= '_') tag
@@ -101,31 +107,42 @@ extractUnint mmap (tag : rest)
         uf   = f
         af   = "array_" ++ f
 
-getUIVal :: UnintKind -> String -> Maybe String
+getUIVal :: UnintKind -> String -> Maybe (String, [String], String)
 getUIVal knd s
   | "default: " `isPrefixOf` s
   = getDefaultVal knd (dropWhile (/= ' ') s)
   | True
   = case parseSExpr s of
        Right (S_App [S_Con "=", (S_App (S_Con _ : args)), S_Num i]) -> getCallVal knd args i
+       Right (S_App [S_Con "=", S_Con _, S_Num i])                  -> getCallVal knd []   i
        _ -> Nothing
 
-getDefaultVal :: UnintKind -> String -> Maybe String
+getDefaultVal :: UnintKind -> String -> Maybe (String, [String], String)
 getDefaultVal knd n = case parseSExpr n of
                         Right (S_Num i) -> Just $ showDefault knd (show i)
                         _               -> Nothing
 
-getCallVal :: UnintKind -> [SExpr] -> Integer -> Maybe String
+getCallVal :: UnintKind -> [SExpr] -> Integer -> Maybe (String, [String], String)
 getCallVal knd args res = mapM getArg args >>= \as -> return (showCall knd as (show res))
 
 getArg :: SExpr -> Maybe String
 getArg (S_Num i) = Just (show i)
 getArg _         = Nothing
 
-showDefault :: UnintKind -> String -> String
-showDefault (UFun cnt f) res = f ++ " " ++ intercalate " "  (replicate cnt "_") ++ " = "  ++ res
-showDefault (UArr cnt f) res = f ++ "[" ++ intercalate ", " (replicate cnt "_") ++ "] = " ++ res
+showDefault :: UnintKind -> String -> (String, [String], String)
+showDefault (UFun cnt f) res = (f, replicate cnt "_", res)
+showDefault (UArr cnt f) res = (f, replicate cnt "_", res)
 
-showCall :: UnintKind -> [String] -> String -> String
-showCall (UFun _ f) as res = f ++ " " ++ unwords as ++ " = " ++ res
-showCall (UArr _ f) as res = f ++ "[" ++ intercalate ", " as ++ "]" ++ " = " ++ res
+showCall :: UnintKind -> [String] -> String -> (String, [String], String)
+showCall (UFun _ f) as res = (f, as, res)
+showCall (UArr _ f) as res = (f, as, res)
+
+format :: UnintKind -> [(String, [String], String)] -> [String]
+format (UFun{}) eqns = fmtFun eqns
+format (UArr{}) eqns = let fmt (f, as, r) = f ++ "[" ++ intercalate ", " as ++ "] = " ++ r in map fmt eqns
+
+fmtFun :: [(String, [String], String)] -> [String]
+fmtFun ls = map fmt ls
+  where fmt (f, as, r) = f ++ " " ++ unwords (map align (zip as (lens ++ repeat 0))) ++ " = " ++ r
+        lens           = map (maximum . (0:)) $ map (map length) $ transpose [as | (_, as, _) <- ls]
+        align (s, i)   = take (i `max` length s) (s ++ repeat ' ')
