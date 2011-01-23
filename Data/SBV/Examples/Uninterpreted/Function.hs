@@ -26,15 +26,14 @@ thmGood x y z = x .== y+2 ==> f x z .== f (y + 2) z
 -- Indeed, the SMT solver (Yices in this case) returns a counter-example
 -- function that is not commutative. We have:
 --
--- @
--- ghci> prove $ forAll ["x", "y"] thmBad
+--
+-- >>> prove $ forAll ["x", "y"] thmBad
 -- Falsifiable. Counter-example:
 --   x = 0 :: SWord8
 --   y = 128 :: SWord8
 --   -- uninterpreted: f
 --        f 128 0 = 32768
 --        f _   _ = 0
--- @
 --
 -- Note how the counterexample function @f@ returned by Yices violates commutativity;
 -- thus providing evidence that the asserted theorem is not valid.

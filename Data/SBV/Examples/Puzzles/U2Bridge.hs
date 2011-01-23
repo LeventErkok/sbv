@@ -239,9 +239,9 @@ solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ 
                shL True  = " <-- "
 
 -- | Solve the U2-bridge crossing puzzle, starting by testing solutions with
--- increasing number of steps, until we find one. This call prints:
+-- increasing number of steps, until we find one. We have:
 --
--- @
+-- >>> solveU2
 -- Checking for solutions with 1 move.
 -- Checking for solutions with 2 moves.
 -- Checking for solutions with 3 moves.
@@ -261,8 +261,7 @@ solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ 
 -- 13 <-- Edge
 -- 15 --> Edge, Bono
 -- Total time: 17
--- Found: 2 solutions with 5 moves
--- @
+-- Found: 2 solutions with 5 moves.
 --
 -- Finding the all 2 possible solutions to the puzzle.
 solveU2 :: IO ()
