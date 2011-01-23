@@ -125,7 +125,7 @@ instance (SymWord a, Provable p) => Provable (SBV a -> p) where
   forAll (s:ss) k = free s >>= \a -> forAll ss $ k a
   forAll []     k = forAll_ k
 
--- Memory
+-- Arrays (memory)
 instance (HasSignAndSize a, HasSignAndSize b, SymArray array, Provable p) => Provable (array a b -> p) where
   forAll_       k = newArray_  Nothing >>= \a -> forAll_   $ k a
   forAll (s:ss) k = newArray s Nothing >>= \a -> forAll ss $ k a
