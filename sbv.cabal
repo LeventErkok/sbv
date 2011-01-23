@@ -84,6 +84,7 @@ Library
                   , Data.SBV.Examples.BitPrecise.BitTricks
                   , Data.SBV.Examples.BitPrecise.Legato
                   , Data.SBV.Examples.Polynomials.Polynomials
+                  , Data.SBV.Examples.PrefixSum.PrefixSum
                   , Data.SBV.Examples.Puzzles.DogCatMouse
                   , Data.SBV.Examples.Puzzles.MagicSquare
                   , Data.SBV.Examples.Puzzles.NQueens
@@ -117,7 +118,6 @@ Library
                   , Data.SBV.Examples.CRC.GenPoly
                   , Data.SBV.Examples.CRC.Parity
                   , Data.SBV.Examples.CRC.USB5
-                  , Data.SBV.Examples.PrefixSum.PrefixSum
                   , Data.SBV.Examples.Puzzles.PowerSet
                   , Data.SBV.Examples.Puzzles.Temperature
                   , Data.SBV.Examples.Uninterpreted.Uninterpreted

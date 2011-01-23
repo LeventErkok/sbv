@@ -8,7 +8,9 @@
 -- Portability :  portable
 --
 -- The PrefixSum algorithm over power-lists and proof of
--- the Fischer-Ladner implementation
+-- the Ladner-Fischer implementation.
+-- See <http://www.cs.utexas.edu/users/psp/powerlist.pdf>
+-- and <http://www.cs.utexas.edu/~plaxton/c/337/05f/slides/ParallelRecursion-4.pdf>.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE Rank2Types #-}
@@ -18,46 +20,56 @@ module Data.SBV.Examples.PrefixSum.PrefixSum where
 
 import Data.SBV
 
--- A poor man's representation of powerlists and
--- basic operations on them:
+-- | A poor man's representation of powerlists and
+-- basic operations on them: <http://www.cs.utexas.edu/users/psp/powerlist.pdf>.
+-- We merely represent power-lists by ordinary lists.
 type PowerList a = [a]
 
+-- | The tie operator, concatenation
 tiePL :: PowerList a -> PowerList a -> PowerList a
 tiePL = (++)
 
+-- | The zip operator, zips the power-lists of the same size, returns
+-- a powerlist of double the size.
 zipPL :: PowerList a -> PowerList a -> PowerList a
 zipPL []     []     = []
 zipPL (x:xs) (y:ys) = x : y : zipPL xs ys
 zipPL _      _      = error "zipPL: nonsimilar powerlists received"
 
+-- | Inverse of zipping
 unzipPL :: PowerList a -> (PowerList a, PowerList a)
 unzipPL = unzip . chunk2
   where chunk2 []       = []
         chunk2 (x:y:xs) = (x,y) : chunk2 xs
-        chunk2 _        = error "fl.unzipPL: malformed powerlist"
+        chunk2 _        = error "unzipPL: malformed powerlist"
 
--- Reference prefix sum is simply scanl1
+-- | Reference prefix sum (@ps@) is simply Haskell's @scanl1@ function
 ps :: (a, a -> a -> a) -> PowerList a -> PowerList a
 ps (_, f) = scanl1 f
 
--- Fischer-Ladner version
-fl :: (a, a -> a -> a) -> PowerList a -> PowerList a
-fl _ []         = error "fl: malformed (empty) powerlist"
-fl _ [x]        = [x]
-fl (zero, f) pl = zipPL (zipWith f (rsh flpq) p) flpq
+-- | The Ladner-Fischer (@lf@) implementation of prefix-sum. See <http://www.cs.utexas.edu/~plaxton/c/337/05f/slides/ParallelRecursion-4.pdf>
+-- or pg. 16 of <http://www.cs.utexas.edu/users/psp/powerlist.pdf>.
+lf :: (a, a -> a -> a) -> PowerList a -> PowerList a
+lf _ []         = error "lf: malformed (empty) powerlist"
+lf _ [x]        = [x]
+lf (zero, f) pl = zipPL (zipWith f (rsh flpq) p) flpq
    where (p, q) = unzipPL pl
          pq     = zipWith f p q
-         flpq   = fl (zero, f) pq
+         flpq   = lf (zero, f) pq
          rsh xs = zero : init xs
 
--- Correctness theorem, for a powerlist of given size and
--- an associative operator. We'll run the symbolic execution over Word32's
+-- | Correctness theorem, for a powerlist of given size, an associative operator, and its unit element
 flIsCorrect :: Int -> (forall a. (OrdSymbolic a, Bits a) => (a, a -> a -> a)) -> Symbolic SBool
 flIsCorrect n zf = do
         args :: PowerList SWord32 <- mapM (const free_) [1..n]
-        output $ ps zf args .== fl zf args
+        output $ ps zf args .== lf zf args
 
--- Instances that can be proven directly:
-thm1, thm2 :: IO ThmResult
+-- | Proves Ladner-Fischer is equivalent to reference specification for addition.
+-- @0@ is the unit element, and we use a power-list of size @8@.
+thm1 :: IO ThmResult
 thm1 = prove $ flIsCorrect  8 (0, (+))
+
+-- | Proves Ladner-Fischer is equivalent to reference specification for the function @max@.
+-- @0@ is the unit element, and we use a power-list of size @16@.
+thm2 :: IO ThmResult
 thm2 = prove $ flIsCorrect 16 (0, smax)
