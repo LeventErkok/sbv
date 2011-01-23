@@ -27,12 +27,13 @@ thmGood x y z = x .== y+2 ==> f x z .== f (y + 2) z
 -- function that is not commutative. We have:
 --
 -- @
--- ghci> prove thmBad
---   s0 = 0 :: SWord8
---   s1 = 128 :: SWord8
+-- ghci> prove $ forAll ["x", "y"] thmBad
+-- Falsifiable. Counter-example:
+--   x = 0 :: SWord8
+--   y = 128 :: SWord8
 --   -- uninterpreted: f
 --        f 128 0 = 32768
---        f _ = 0
+--        f _   _ = 0
 -- @
 --
 -- Note how the counterexample function @f@ returned by Yices violates commutativity;
