@@ -178,6 +178,11 @@ sat = satWith defaultSMTCfg
 -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
 -- Satisfying assignments are constructed lazily, so they will be available as returned by the solver
 -- and on demand.
+--
+-- NB. Uninterpreted constant/function values and counter-examples for array values are ignored for
+-- the purposes of @'allSat'@. That is, only the satisfying assignments modulo uninterpreted functions and
+-- array inputs will be returned. This is due to the limitation of not having a robust means of getting a
+-- function counter-example back from the SMT solver.
 allSat :: Provable a => a -> IO AllSatResult
 allSat = allSatWith defaultSMTCfg
 
