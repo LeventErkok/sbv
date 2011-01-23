@@ -15,13 +15,12 @@
 -- Express properties about bit-precise Haskell programs and automatically prove
 -- them using SMT solvers.
 --
--- >   $ ghci -XScopedTypeVariables
--- >   Prelude> :m Data.SBV
--- >   Prelude Data.SBV> prove $ \(x::SWord8) -> x `shiftL` 2 .== 4*x
--- >   Q.E.D.
--- >   Prelude Data.SBV> prove $ forAll ["x"] $ \(x::SWord8) -> x `shiftL` 2 .== x
--- >   Falsifiable. Counter-example:
--- >     x = 128 :: SWord8
+-- >>> prove $ \x -> x `shiftL` 2 .== 4 * (x :: SWord8)
+-- Q.E.D.
+--
+-- >>> prove $ forAll ["x"] $ \x -> x `shiftL` 2 .== (x :: SWord8)
+-- Falsifiable. Counter-example:
+--   x = 128 :: SWord8
 --
 -- The function 'prove' has the following type:
 --
