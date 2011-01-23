@@ -688,6 +688,7 @@ instance NFData ArrayContext
 instance NFData Pgm
 instance NFData SW
 instance NFData SBVType
+instance NFData UnintKind
 
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where

@@ -263,27 +263,28 @@ allSatWith config p = do when (verbose config) $ putStrLn  "** Checking Satisfia
                     Satisfiable _ model             -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
                     Unknown     _ model             -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
 
-callSolver :: [[(String, CW)]] -> String -> (SMTResult -> b) -> SMTConfig -> ([NamedSymVar], SMTLibPgm) -> IO b
-callSolver nonEqConstraints checkMsg wrap config (inps, smtLibPgm) = do
+callSolver :: [[(String, CW)]] -> String -> (SMTResult -> b) -> SMTConfig -> ([NamedSymVar], [(String, UnintKind)], SMTLibPgm) -> IO b
+callSolver nonEqConstraints checkMsg wrap config (inps, modelMap, smtLibPgm) = do
         let msg = when (verbose config) . putStrLn . ("** " ++)
         msg checkMsg
         let finalPgm = addNonEqConstraints nonEqConstraints smtLibPgm
         msg $ "Generated SMTLib program:\n" ++ finalPgm
-        smtAnswer <- engine (solver config) config inps finalPgm
+        smtAnswer <- engine (solver config) config inps modelMap finalPgm
         msg "Done.."
         return $ wrap smtAnswer
 
-generateTrace :: Provable a => SMTConfig -> Bool -> a -> IO ([NamedSymVar], SMTLibPgm)
+generateTrace :: Provable a => SMTConfig -> Bool -> a -> IO ([NamedSymVar], [(String, UnintKind)], SMTLibPgm)
 generateTrace config isSat predicate = do
         let msg = when (verbose config) . putStrLn . ("** " ++)
             isTiming = timing config
-        msg "Generating a symbolic trace.."
+        msg "Starting symbolic simulation.."
         res <- timeIf isTiming "problem construction" $ runSymbolic $ forAll_ predicate
         msg $ "Generated symbolic trace:\n" ++ show res
         msg "Translating to SMT-Lib.."
         case res of
-          Result is consts tbls arrs uis pgm [o@(SW{})] -> timeIf isTiming "translation" $ return (is, toSMTLib isSat is consts tbls arrs uis pgm o)
+          Result is consts tbls arrs uis pgm [o@(SW{})] -> timeIf isTiming "translation" $ return (is, uiMap, toSMTLib isSat is consts tbls arrs uis pgm o)
           _                                             -> error $ "SBVProver.callSolver: Impossible happened: " ++ show res
+  where uiMap = []
 
 -- | Equality as a proof method. Allows for
 -- very concise construction of equivalence proofs, which is very typical in
