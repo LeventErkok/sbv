@@ -94,10 +94,12 @@ extractUnint _ []              = Nothing
 extractUnint mmap (tag : rest)
   | null tag'                  = Nothing
   | True                       = mapM (getUIVal knd) rest >>= \xs -> return (knd, xs)
-  where knd | "--- uninterpreted_" `isPrefixOf` tag = maybe (UFun 1 f)               id (f `lookup` mmap)
-            | True                                  = maybe (UArr 1 ("array_" ++ f)) id (f `lookup` mmap)
+  where knd | "--- uninterpreted_" `isPrefixOf` tag = maybe (UFun 1 uf) id (uf `lookup` mmap)
+            | True                                  = maybe (UArr 1 af) id (af `lookup` mmap)
         tag' = dropWhile (/= '_') tag
         f    = takeWhile (/= ' ') (tail tag')
+        uf   = f
+        af   = "array_" ++ f
 
 getUIVal :: UnintKind -> String -> Maybe String
 getUIVal knd s
@@ -121,8 +123,8 @@ getArg (S_Num i) = Just (show i)
 getArg _         = Nothing
 
 showDefault :: UnintKind -> String -> String
-showDefault (UFun arity f) res = f ++ " " ++ intercalate " "  (replicate arity "_") ++ " = "  ++ res
-showDefault (UArr arity f) res = f ++ "[" ++ intercalate ", " (replicate arity "_") ++ "] = " ++ res
+showDefault (UFun cnt f) res = f ++ " " ++ intercalate " "  (replicate cnt "_") ++ " = "  ++ res
+showDefault (UArr cnt f) res = f ++ "[" ++ intercalate ", " (replicate cnt "_") ++ "] = " ++ res
 
 showCall :: UnintKind -> [String] -> String -> String
 showCall (UFun _ f) as res = f ++ " " ++ unwords as ++ " = " ++ res

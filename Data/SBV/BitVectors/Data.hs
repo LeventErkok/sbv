@@ -26,12 +26,12 @@ module Data.SBV.BitVectors.Data
  , mkConstCW, liftCW2, mapCW, mapCW2
  , SW(..), trueSW, falseSW
  , SBV(..), NodeId(..), mkSymSBV
- , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), SArray(..)
+ , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), SArray(..), arrayUIKind
  , sbvToSW
  , SBVExpr(..), newExpr
  , cache, uncache, HasSignAndSize(..)
  , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, State, Size, output, Result(..)
- , SBVType(..), newUninterpreted
+ , SBVType(..), newUninterpreted, unintFnUIKind
  ) where
 
 import Control.DeepSeq                 (NFData(..))
@@ -75,6 +75,10 @@ trueSW  = SW (False, 1) $ NodeId (-1)
 
 newtype SBVType = SBVType [(Bool, Size)]
              deriving (Eq, Ord)
+
+-- how many arguments does the type take?
+typeArity :: SBVType -> Int
+typeArity (SBVType xs) = length xs - 1
 
 instance Show SBVType where
   show (SBVType []) = error "SBV: internal error, empty SBVType"
@@ -231,15 +235,16 @@ type NamedSymVar = (SW, String)
 -- | 'UnintKind' pairs array names and uninterpreted constants with their "kinds"
 -- used mainly for printing counterexamples
 data UnintKind = UFun Int String | UArr Int String      -- in each case, arity and the aliasing name
+ deriving Show
 
 -- | Result of running a symbolic computation
-data Result      = Result [NamedSymVar]                 -- inputs
-                          [(SW, CW)]                    -- constants
-                          [((Int, Int, Int), [SW])]     -- tables (automatically constructed)
-                          [(Int, ArrayInfo)]            -- arrays (user specified)
-                          [(String, SBVType)]           -- uninterpreted constants
-                          Pgm                           -- assignments
-                          [SW]                          -- outputs
+data Result = Result [NamedSymVar]                 -- inputs
+                     [(SW, CW)]                    -- constants
+                     [((Int, Int, Int), [SW])]     -- tables (automatically constructed)
+                     [(Int, ArrayInfo)]            -- arrays (user specified)
+                     [(String, SBVType)]           -- uninterpreted constants
+                     Pgm                           -- assignments
+                     [SW]                          -- outputs
 
 instance Show Result where
   show (Result _ cs _ _ [] _ [r])
@@ -294,6 +299,13 @@ type TableMap   = Map.Map [SW] (Int, Int, Int)
 type ArrayInfo  = (String, ((Bool, Size), (Bool, Size)), ArrayContext)
 type ArrayMap   = IMap.IntMap ArrayInfo
 type UIMap      = Map.Map String SBVType
+
+
+unintFnUIKind :: (String, SBVType) -> (String, UnintKind)
+unintFnUIKind (s, t) = (s, UFun (typeArity t) s)
+
+arrayUIKind :: (Int, ArrayInfo) -> (String, UnintKind)
+arrayUIKind (i, (nm, _, _)) = ("array_" ++ show i, UArr 1 nm) -- arrays are always 1-dimensional in the SMT-land. (Unless encoded explicitly)
 
 data State  = State { rctr       :: IORef Int
                     , rinps      :: IORef [NamedSymVar]
