@@ -6,6 +6,10 @@
   a side effect properly. (Seems to happen only in the
   presence of uninterpreted functions. Is this necessarily
   the case?)
+- Should uninterpreted functions behave like other "free_"
+  allocatable items? That would be a more consistent design,
+  but the word/int assumption under free_ is a strong one. Need to
+  explore the design space here.
 - Integrate other SMT solvers
    - Candidates:
       - CVC3 (http://cs.nyu.edu/acsys/cvc3/)

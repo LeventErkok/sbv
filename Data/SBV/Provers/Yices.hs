@@ -16,7 +16,7 @@ module Data.SBV.Provers.Yices(yices, timeout) where
 
 import Data.Char          (isDigit)
 import Data.List          (sortBy, isPrefixOf, intercalate, transpose, partition)
-import Data.Maybe         (catMaybes)
+import Data.Maybe         (catMaybes, isJust, fromJust)
 import System.Environment (getEnv)
 
 import Data.SBV.BitVectors.Data
@@ -98,10 +98,12 @@ extractUnints modelMap = catMaybes . map (extractUnint modelMap) . chunks
 extractUnint :: [(String, UnintKind)] -> [String] -> Maybe (UnintKind, [String])
 extractUnint _ []              = Nothing
 extractUnint mmap (tag : rest)
+  | not (isJust mbKnd)         = Nothing
   | null tag'                  = Nothing
   | True                       = mapM (getUIVal knd) rest >>= \xs -> return (knd, format knd xs)
-  where knd | "--- uninterpreted_" `isPrefixOf` tag = maybe (UFun 1 uf) id (uf `lookup` mmap)
-            | True                                  = maybe (UArr 1 af) id (af `lookup` mmap)
+  where mbKnd | "--- uninterpreted_" `isPrefixOf` tag = uf `lookup` mmap
+              | True                                  = af `lookup` mmap
+        knd = fromJust mbKnd
         tag' = dropWhile (/= '_') tag
         f    = takeWhile (/= ' ') (tail tag')
         uf   = f
