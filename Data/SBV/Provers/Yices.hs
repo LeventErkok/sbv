@@ -32,11 +32,11 @@ yices = SMTSolver {
          , executable = "yices"
          -- , options    = ["-tc", "-smt", "-e"]   -- For Yices1
          , options    = ["-m", "-f"]  -- For Yices2
-         , engine     = \cfg inps pgm -> do
+         , engine     = \cfg inps modelMap pgm -> do
                                 execName <-                getEnv "SBV_YICES"           `catch` (\_ -> return (executable (solver cfg)))
                                 execOpts <- (words `fmap` (getEnv "SBV_YICES_OPTIONS")) `catch` (\_ -> return (options (solver cfg)))
                                 let cfg' = cfg { solver = (solver cfg) {executable = execName, options = execOpts} }
-                                standardSolver cfg' pgm (ProofError cfg) (interpret cfg inps)
+                                standardSolver cfg' pgm (ProofError cfg) (interpret cfg inps modelMap)
          }
 
 timeout :: Int -> SMTSolver -> SMTSolver
@@ -47,21 +47,21 @@ timeout n s
 sortByNodeId :: [(Int, a)] -> [(Int, a)]
 sortByNodeId = sortBy (\(x, _) (y, _) -> compare x y)
 
-interpret :: SMTConfig -> [NamedSymVar] -> [String] -> SMTResult
-interpret cfg _    ("unsat":_)      = Unsatisfiable cfg
-interpret cfg inps ("unknown":rest) = Unknown       cfg  $ extractMap inps rest
-interpret cfg inps ("sat":rest)     = Satisfiable   cfg  $ extractMap inps rest
-interpret cfg _    ("timeout":_)    = TimeOut       cfg
-interpret cfg _    ls               = ProofError    cfg  $ ls
+interpret :: SMTConfig -> [NamedSymVar] -> [(String, UnintKind)] -> [String] -> SMTResult
+interpret cfg _    _        ("unsat":_)      = Unsatisfiable cfg
+interpret cfg inps modelMap ("unknown":rest) = Unknown       cfg  $ extractMap inps modelMap rest
+interpret cfg inps modelMap ("sat":rest)     = Satisfiable   cfg  $ extractMap inps modelMap rest
+interpret cfg _    _        ("timeout":_)    = TimeOut       cfg
+interpret cfg _    _        ls               = ProofError    cfg  $ ls
 
-extractMap :: [NamedSymVar] -> [String] -> SMTModel
-extractMap inps solverLines =
+extractMap :: [NamedSymVar] -> [(String, UnintKind)] -> [String] -> SMTModel
+extractMap inps modelMap solverLines =
    SMTModel { modelAssocs    = map (\(_, y) -> y) $ sortByNodeId $ concatMap (getCounterExample inps) modelLines
             , modelUninterps = [(n, ls) | (UFun _ n, ls) <- uis]
             , modelArrays    = [(n, ls) | (UArr _ n, ls) <- uis]
             } 
   where (modelLines, unintLines) = break ("--- " `isPrefixOf`) solverLines
-        uis = extractUnints unintLines
+        uis = extractUnints modelMap unintLines
 
 getCounterExample :: [NamedSymVar] -> String -> [(Int, (String, CW))]
 getCounterExample inps line = either err extract (parseSExpr line)
@@ -81,23 +81,21 @@ getCounterExample inps line = either err extract (parseSExpr line)
         extract (S_App [S_Con "=", S_Num i, S_Con v]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (hasSign s, sizeOf s) i))]
         extract _                                                                    = []
 
-extractUnints :: [String] -> [(UnintKind, [String])]
-extractUnints = catMaybes . map extractUnint . chunks
+extractUnints :: [(String, UnintKind)] -> [String] -> [(UnintKind, [String])]
+extractUnints modelMap = catMaybes . map (extractUnint modelMap) . chunks
   where chunks []     = []
         chunks (x:xs) = let (f, r) = span (not . ("---" `isPrefixOf`)) xs in (x:f) : chunks r
-
-data UnintKind = UFun Int String | UArr Int String
 
 -- Parsing the Yices output is done extremely crudely and designed
 -- mostly by observation of Yices output. Likely to have bugs and
 -- brittle as Yices evolves. We really need an SMT-Lib2 like interface.
-extractUnint :: [String] -> Maybe (UnintKind, [String])
-extractUnint []           = Nothing
-extractUnint (tag : rest)
-  | null tag'             = Nothing
-  | True                  = mapM (getUIVal knd) rest >>= \xs -> return (knd, xs)
-  where knd | "--- uninterpreted_" `isPrefixOf` tag = UFun 1 f
-            | True                                  = UArr 1 ("array_" ++ f)
+extractUnint :: [(String, UnintKind)] -> [String] -> Maybe (UnintKind, [String])
+extractUnint _ []              = Nothing
+extractUnint mmap (tag : rest)
+  | null tag'                  = Nothing
+  | True                       = mapM (getUIVal knd) rest >>= \xs -> return (knd, xs)
+  where knd | "--- uninterpreted_" `isPrefixOf` tag = maybe (UFun 1 f)               id (f `lookup` mmap)
+            | True                                  = maybe (UArr 1 ("array_" ++ f)) id (f `lookup` mmap)
         tag' = dropWhile (/= '_') tag
         f    = takeWhile (/= ' ') (tail tag')
 

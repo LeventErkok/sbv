@@ -37,7 +37,7 @@ data SMTConfig = SMTConfig {
        , solver    :: SMTSolver -- ^ The actual SMT solver
        }
 
-type SMTEngine = SMTConfig -> [NamedSymVar] -> String -> IO SMTResult
+type SMTEngine = SMTConfig -> [NamedSymVar] -> [(String, UnintKind)] -> String -> IO SMTResult
 
 -- | An SMT solver
 data SMTSolver = SMTSolver {

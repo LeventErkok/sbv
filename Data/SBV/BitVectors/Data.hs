@@ -30,7 +30,7 @@ module Data.SBV.BitVectors.Data
  , sbvToSW
  , SBVExpr(..), newExpr
  , cache, uncache, HasSignAndSize(..)
- , Op(..), NamedSymVar, getTableIndex, Pgm, Symbolic, runSymbolic, State, Size, output, Result(..)
+ , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, State, Size, output, Result(..)
  , SBVType(..), newUninterpreted
  ) where
 
@@ -227,6 +227,10 @@ type Pgm         = S.Seq (SW, SBVExpr)
 
 -- | 'NamedSymVar' pairs symbolic words and user given/automatically generated names
 type NamedSymVar = (SW, String)
+
+-- | 'UnintKind' pairs array names and uninterpreted constants with their "kinds"
+-- used mainly for printing counterexamples
+data UnintKind = UFun Int String | UArr Int String      -- in each case, arity and the aliasing name
 
 -- | Result of running a symbolic computation
 data Result      = Result [NamedSymVar]                 -- inputs
