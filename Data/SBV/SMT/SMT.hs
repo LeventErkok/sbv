@@ -106,13 +106,15 @@ instance Show SatResult where
 
 instance Show AllSatResult where
   show (AllSatResult [])  =  "No solutions found"
-  show (AllSatResult [s]) =  "One solution found\n" ++ show (SatResult s)
-  show (AllSatResult ss)  =  "Multiple solutions found:\n"       -- shouldn't display how-many; would be too slow/leak-space to compute everything..
+  show (AllSatResult [s]) =  "Only one solution found:\n" ++ shUnique s
+        where shUnique = showSMTResult "Unsatisfiable"
+                                       ("Unknown (No assignment to variables returned)") "Unknown. Potential assignment:\n" "" ""
+  show (AllSatResult ss)  =  "Multiple solutions found:\n"      -- shouldn't display how-many; would be too slow/leak-space to compute everything..
                           ++ unlines (zipWith sh [(1::Int)..] ss)
                           ++ "Done."
-        where sh i s = showSMTResult "Unsatisfiable"
-                                     ("Unknown #" ++ show i ++ "(No assignment to variables returned)") "Unknown. Potential assignment:\n"
-                                     ("Solution #" ++ show i ++ " (No assignment to variables returned)") ("Solution #" ++ show i ++ ":\n") s
+        where sh i = showSMTResult "Unsatisfiable"
+                                   ("Unknown #" ++ show i ++ "(No assignment to variables returned)") "Unknown. Potential assignment:\n"
+                                   ("Solution #" ++ show i ++ " (No assignment to variables returned)") ("Solution #" ++ show i ++ ":\n")
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
 -- solvers. The idea is that the sbv infrastructure provides a stream of 'CW''s (constant-words)
