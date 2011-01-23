@@ -514,6 +514,8 @@ runSymbolic (Symbolic c) = do
 -- to be fed to a symbolic program. Note that these methods are typically not needed
 -- in casual uses with 'prove', 'sat', 'allSat' etc, as default instances automatically
 -- provide the necessary bits.
+--
+-- Minimal complete definiton: free, free_, literal, fromCW
 class Ord a => SymWord a where
   -- | Create a user named input
   free       :: String -> Symbolic (SBV a)
@@ -530,7 +532,7 @@ class Ord a => SymWord a where
   -- | Is the symbolic word really symbolic?
   isSymbolic :: SBV a -> Bool
 
-  -- | minimal complete definiton: free, free_, literal, fromCW
+  -- minimal complete definiton: free, free_, literal, fromCW
   unliteral (SBV _ (Left c))  = Just $ fromCW c
   unliteral _                 = Nothing
   isConcrete (SBV _ (Left _)) = True
