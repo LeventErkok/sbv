@@ -26,7 +26,8 @@ Description:   Express properties about bit-precise Haskell programs and automat
                .
                  * Symbolic polynomials over GF(2^n), and polynomial arithmetic
                .
-                 * Uninterpreted constants and functions over symbolic values
+                 * Uninterpreted constants and functions over symbolic values, with user
+                   defined SMT-Lib axioms
                .
                Predicates (i.e., functions that return 'SBool') built out of
                these types can be:
