@@ -6,6 +6,7 @@
   a side effect properly. (Seems to happen only in the
   presence of uninterpreted functions. Is this necessarily
   the case?)
+- Investigate reifyGraph to see if the idea is applicable
 - Should uninterpreted functions behave like other "free_"
   allocatable items? That would be a more consistent design,
   but the word/int assumption under free_ is a strong one. Need to
