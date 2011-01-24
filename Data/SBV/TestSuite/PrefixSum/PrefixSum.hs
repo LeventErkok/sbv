@@ -18,11 +18,8 @@ import Data.SBV.Examples.PrefixSum.PrefixSum
 
 -- Test suite
 testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck ->
-   let genSize i = runSymbolic (genPrefixSumInstance i) `goldCheck` ("prefixSum_" ++ show i ++ ".gold")
-   in test [
-        "prefixSum1" ~: assert =<< isTheorem (flIsCorrect  8 (0, (+)))
-      , "prefixSum2" ~: assert =<< isTheorem (flIsCorrect 16 (0, smax))
-      , "prefixSum3" ~: genSize 4
-      , "prefixSum4" ~: genSize 16
-      ]
+testSuite = mkTestSuite $ \goldCheck -> test [
+    "prefixSum1" ~: assert =<< isTheorem (flIsCorrect  8 (0, (+)))
+  , "prefixSum2" ~: assert =<< isTheorem (flIsCorrect 16 (0, smax))
+  , "prefixSum3" ~: runSymbolic (genPrefixSumInstance 16) `goldCheck` "prefixSum_16.gold"
+  ]
