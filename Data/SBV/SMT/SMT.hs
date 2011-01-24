@@ -279,11 +279,20 @@ pipeProcess nm execName opts script = do
                                 ExitSuccess  ->  if null errors
                                                  then return $ Right $ map clean (filter (not . null) (lines contents))
                                                  else return $ Left errors
-                                ExitFailure n -> return $ Left $  "Failed to invoke " ++ nm
-                                                               ++ "\nExecutable: " ++ show execPath
-                                                               ++ "\nOptions   : " ++ unwords opts
-                                                               ++ "\nExit code : " ++ show n
+                                ExitFailure n -> let errors' = if null (dropWhile isSpace errors)
+                                                               then "(No error message printed on stderr by the executable.)"
+                                                               else errors
+                                                 in return $ Left $  "Failed to complete the call to " ++ nm
+                                                                  ++ "\nExecutable: " ++ show execPath
+                                                                  ++ "\nOptions   : " ++ unwords opts
+                                                                  ++ "\nExit code : " ++ show n
+                                                                  ++ "\nError message:"
+                                                                  ++ "\n" ++ line ++ "\n"
+                                                                  ++ intercalate "\n" (lines errors')
+                                                                  ++ "\n" ++ line
+                                                                  ++ "\nGiving up.."
   where clean = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+        line  = take 78 $ repeat '='
 
 standardSolver :: SMTConfig -> String -> ([String] -> a) -> ([String] -> a) -> IO a
 standardSolver config script failure success = do
