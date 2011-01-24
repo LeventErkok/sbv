@@ -280,15 +280,17 @@ pipeProcess nm execName opts script = do
                                                  then return $ Right $ map clean (filter (not . null) (lines contents))
                                                  else return $ Left errors
                                 ExitFailure n -> let errors' = if null (dropWhile isSpace errors)
-                                                               then "(No error message printed on stderr by the executable.)"
+                                                               then (if null (dropWhile isSpace contents)
+                                                                     then "(No error message printed on stderr by the executable.)"
+                                                                     else contents)
                                                                else errors
                                                  in return $ Left $  "Failed to complete the call to " ++ nm
-                                                                  ++ "\nExecutable: " ++ show execPath
-                                                                  ++ "\nOptions   : " ++ unwords opts
-                                                                  ++ "\nExit code : " ++ show n
-                                                                  ++ "\nError message:"
+                                                                  ++ "\nExecutable   : " ++ show execPath
+                                                                  ++ "\nOptions      : " ++ unwords opts
+                                                                  ++ "\nExit code    : " ++ show n
+                                                                  ++ "\nSolver output: "
                                                                   ++ "\n" ++ line ++ "\n"
-                                                                  ++ intercalate "\n" (lines errors')
+                                                                  ++ intercalate "\n" (filter (not . null) (lines errors'))
                                                                   ++ "\n" ++ line
                                                                   ++ "\nGiving up.."
   where clean = reverse . dropWhile isSpace . reverse . dropWhile isSpace
