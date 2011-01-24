@@ -19,7 +19,8 @@ import Data.SBV.Examples.Uninterpreted.AUF
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
-   "auf-0" ~: assert =<< isTheorem thm
- , "auf-1" ~: pgm `goldCheck` "auf-1.gold"
+   "auf-0" ~: assert =<< isTheorem thm1
+ , "auf-1" ~: assert =<< isTheorem thm2
+ , "auf-2" ~: pgm `goldCheck` "auf-1.gold"
  ]
- where pgm = runSymbolic $ forAll ["x", "y", "a", "initVal"] thm
+ where pgm = runSymbolic $ forAll ["x", "y", "a", "initVal"] thm1
