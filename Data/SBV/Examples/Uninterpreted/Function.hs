@@ -18,7 +18,10 @@ import Data.SBV
 f :: SWord8 -> SWord8 -> SWord16
 f = uninterpret "f"
 
--- | Asserts that @f x z == f (y+2) z@ whenever @x == y+2@. Naturally correct.
+-- | Asserts that @f x z == f (y+2) z@ whenever @x == y+2@. Naturally correct:
+--
+-- >>> prove thmGood
+-- Q.E.D.
 thmGood :: SWord8 -> SWord8 -> SWord8 -> SBool
 thmGood x y z = x .== y+2 ==> f x z .== f (y + 2) z
 
