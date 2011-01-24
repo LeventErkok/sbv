@@ -1,12 +1,13 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Version 0.9.9, not released yet
+Version 0.9.9, 2011-01-23
 
-  * Current working version
+  * Support for user-defined SMT-Lib axioms to be
+    specified for uninterpreted constants/functions
   * Move to using doctest style inline tests
 
-Version 0.9.8, 2011-01-23
+Version 0.9.8, 2011-01-22
 
   * Better support for uninterpreted-functions
   * Support counter-examples with SArray's
