@@ -1,6 +1,11 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
+Version 0.9.10, Not released yet
+
+  * Current working version
+  * More tests
+
 Version 0.9.9, 2011-01-23
 
   * Support for user-defined SMT-Lib axioms to be
