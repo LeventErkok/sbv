@@ -287,9 +287,9 @@ generateTrace config isSat predicate = do
         msg $ "Generated symbolic trace:\n" ++ show res
         msg "Translating to SMT-Lib.."
         case res of
-          Result is consts tbls arrs uis pgm [o@(SW{})] ->
+          Result is consts tbls arrs uis axs pgm [o@(SW{})] ->
              timeIf isTiming "translation" $ let uiMap = catMaybes (map arrayUIKind arrs) ++ map unintFnUIKind uis
-                                             in return (is, uiMap, toSMTLib isSat is consts tbls arrs uis pgm o)
+                                             in return (is, uiMap, toSMTLib isSat is consts tbls arrs uis axs pgm o)
           _ -> error $ "SBVProver.callSolver: Impossible happened: " ++ show res
 
 -- | Equality as a proof method. Allows for

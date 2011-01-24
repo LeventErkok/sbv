@@ -22,7 +22,7 @@
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), BVDivisible(..), Uninterpreted(..)
   , bitValue, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE
-  , lsb, msb
+  , lsb, msb, SBVUF, sbvUFName
   )
   where
 
@@ -635,23 +635,45 @@ instance SymArray SFunArray where
 instance SymWord b => Mergeable (SFunArray a b) where
   symbolicMerge = mergeArrays
 
+-- | An uninterpreted function handle. This is the handle to be used for
+-- adding axioms about uninterpreted constants/functions. Note that
+-- we will leave this abstract for safety purposes
+newtype SBVUF = SBVUF String
+
+-- | Get the name associated with the uninterpreted-value; useful when
+-- constructing axioms about this UI.
+sbvUFName :: SBVUF -> String
+sbvUFName (SBVUF s) = s
+
+-- The name we use for translating the UF constants to SMT-Lib..
+mkUFName :: String -> SBVUF
+mkUFName nm = SBVUF $ "uninterpreted_" ++ nm
+
 -- | Uninterpreted constants and functions. An uninterpreted constant is
 -- a value that is indexed by its name. The only property the prover assumes
 -- about these values are that they are equivalent to themselves; i.e., (for
 -- functions) they return the same results when applied to same arguments.
 -- We support uninterpreted-functions as a general means of black-box'ing
--- operations that are "irrelevant" for the purposes of the proof; i.e., when
+-- operations that are /irrelevant/ for the purposes of the proof; i.e., when
 -- the proofs can be performed without any knowledge about the function itself.
 --
--- Minimal complete definition: 'uninterpret'. However, most instances in
+-- Minimal complete definition: 'uninterpretWithHandle'. However, most instances in
 -- practice are already provided by SBV, so end-users should not need to define their
 -- own instances.
 class Uninterpreted a where
+  -- | Uninterpret a value, receiving an object that can be used instead. Use this version
+  -- when you do not need to add an axiom about this value.
   uninterpret :: String -> a
+  -- | Uninterpret a value, but also get a handle to the resulting object. This handle
+  -- can be used to add axioms for this object. (See 'addAxiom'.)
+  uninterpretWithHandle :: String -> (SBVUF, a)
+
+  -- minimal complete definition: 'uninterpretWithHandle'
+  uninterpret = snd . uninterpretWithHandle
 
 -- Plain constants
 instance HasSignAndSize a => Uninterpreted (SBV a) where
-  uninterpret nm = SBV sgnsza $ Right $ cache result
+  uninterpretWithHandle nm = (mkUFName nm, SBV sgnsza $ Right $ cache result)
     where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
           result st = do newUninterpreted st nm (SBVType [sgnsza])
                          newExpr st sgnsza $ SBVApp (Uninterpreted nm) []
@@ -664,144 +686,151 @@ forceArg (SW (b, s) n) = b `seq` s `seq` n `seq` return ()
 
 -- Functions of one argument
 instance (HasSignAndSize b, HasSignAndSize a) => Uninterpreted (SBV b -> SBV a) where
-  uninterpret nm arg0 = SBV sgnsza $ Right $ cache result
-    where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
-          sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
-          result st = do newUninterpreted st nm (SBVType [sgnszb, sgnsza])
-                         sw0 <- sbvToSW st arg0
-                         mapM_ forceArg [sw0]
-                         newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0]
+  uninterpretWithHandle nm = (mkUFName nm, f)
+    where f arg0 = SBV sgnsza $ Right $ cache result
+           where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
+                 sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
+                 result st = do newUninterpreted st nm (SBVType [sgnszb, sgnsza])
+                                sw0 <- sbvToSW st arg0
+                                mapM_ forceArg [sw0]
+                                newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0]
 
 -- Functions of two arguments
 instance (HasSignAndSize c, HasSignAndSize b, HasSignAndSize a) => Uninterpreted (SBV c -> SBV b -> SBV a) where
-  uninterpret nm arg0 arg1 = SBV sgnsza $ Right $ cache result
-    where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
-          sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
-          sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
-          result st = do newUninterpreted st nm (SBVType [sgnszc, sgnszb, sgnsza])
-                         sw0 <- sbvToSW st arg0
-                         sw1 <- sbvToSW st arg1
-                         mapM_ forceArg [sw0, sw1]
-                         newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1]
+  uninterpretWithHandle nm = (mkUFName nm, f)
+    where f arg0 arg1 = SBV sgnsza $ Right $ cache result
+           where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
+                 sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
+                 sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
+                 result st = do newUninterpreted st nm (SBVType [sgnszc, sgnszb, sgnsza])
+                                sw0 <- sbvToSW st arg0
+                                sw1 <- sbvToSW st arg1
+                                mapM_ forceArg [sw0, sw1]
+                                newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1]
 
 -- Functions of three arguments
 instance (HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a) => Uninterpreted (SBV d -> SBV c -> SBV b -> SBV a) where
-  uninterpret nm arg0 arg1 arg2 = SBV sgnsza $ Right $ cache result
-    where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
-          sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
-          sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
-          sgnszd = (hasSign (undefined :: d), sizeOf (undefined :: d))
-          result st = do newUninterpreted st nm (SBVType [sgnszd, sgnszc, sgnszb, sgnsza])
-                         sw0 <- sbvToSW st arg0
-                         sw1 <- sbvToSW st arg1
-                         sw2 <- sbvToSW st arg2
-                         mapM_ forceArg [sw0, sw1, sw2]
-                         newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2]
+  uninterpretWithHandle nm = (mkUFName nm, f)
+    where f arg0 arg1 arg2 = SBV sgnsza $ Right $ cache result
+           where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
+                 sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
+                 sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
+                 sgnszd = (hasSign (undefined :: d), sizeOf (undefined :: d))
+                 result st = do newUninterpreted st nm (SBVType [sgnszd, sgnszc, sgnszb, sgnsza])
+                                sw0 <- sbvToSW st arg0
+                                sw1 <- sbvToSW st arg1
+                                sw2 <- sbvToSW st arg2
+                                mapM_ forceArg [sw0, sw1, sw2]
+                                newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2]
 
 -- Functions of four arguments
 instance (HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
             => Uninterpreted (SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
-  uninterpret nm arg0 arg1 arg2 arg3 = SBV sgnsza $ Right $ cache result
-    where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
-          sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
-          sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
-          sgnszd = (hasSign (undefined :: d), sizeOf (undefined :: d))
-          sgnsze = (hasSign (undefined :: e), sizeOf (undefined :: e))
-          result st = do newUninterpreted st nm (SBVType [sgnsze, sgnszd, sgnszc, sgnszb, sgnsza])
-                         sw0 <- sbvToSW st arg0
-                         sw1 <- sbvToSW st arg1
-                         sw2 <- sbvToSW st arg2
-                         sw3 <- sbvToSW st arg3
-                         mapM_ forceArg [sw0, sw1, sw2, sw3]
-                         newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3]
+  uninterpretWithHandle nm = (mkUFName nm, f)
+    where f arg0 arg1 arg2 arg3 = SBV sgnsza $ Right $ cache result
+           where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
+                 sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
+                 sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
+                 sgnszd = (hasSign (undefined :: d), sizeOf (undefined :: d))
+                 sgnsze = (hasSign (undefined :: e), sizeOf (undefined :: e))
+                 result st = do newUninterpreted st nm (SBVType [sgnsze, sgnszd, sgnszc, sgnszb, sgnsza])
+                                sw0 <- sbvToSW st arg0
+                                sw1 <- sbvToSW st arg1
+                                sw2 <- sbvToSW st arg2
+                                sw3 <- sbvToSW st arg3
+                                mapM_ forceArg [sw0, sw1, sw2, sw3]
+                                newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3]
 
 -- Functions of five arguments
 instance (HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
             => Uninterpreted (SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
-  uninterpret nm arg0 arg1 arg2 arg3 arg4 = SBV sgnsza $ Right $ cache result
-    where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
-          sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
-          sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
-          sgnszd = (hasSign (undefined :: d), sizeOf (undefined :: d))
-          sgnsze = (hasSign (undefined :: e), sizeOf (undefined :: e))
-          sgnszf = (hasSign (undefined :: f), sizeOf (undefined :: f))
-          result st = do newUninterpreted st nm (SBVType [sgnszf, sgnsze, sgnszd, sgnszc, sgnszb, sgnsza])
-                         sw0 <- sbvToSW st arg0
-                         sw1 <- sbvToSW st arg1
-                         sw2 <- sbvToSW st arg2
-                         sw3 <- sbvToSW st arg3
-                         sw4 <- sbvToSW st arg4
-                         mapM_ forceArg [sw0, sw1, sw2, sw3, sw4]
-                         newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4]
+  uninterpretWithHandle nm = (mkUFName nm, f)
+    where f arg0 arg1 arg2 arg3 arg4 = SBV sgnsza $ Right $ cache result
+           where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
+                 sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
+                 sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
+                 sgnszd = (hasSign (undefined :: d), sizeOf (undefined :: d))
+                 sgnsze = (hasSign (undefined :: e), sizeOf (undefined :: e))
+                 sgnszf = (hasSign (undefined :: f), sizeOf (undefined :: f))
+                 result st = do newUninterpreted st nm (SBVType [sgnszf, sgnsze, sgnszd, sgnszc, sgnszb, sgnsza])
+                                sw0 <- sbvToSW st arg0
+                                sw1 <- sbvToSW st arg1
+                                sw2 <- sbvToSW st arg2
+                                sw3 <- sbvToSW st arg3
+                                sw4 <- sbvToSW st arg4
+                                mapM_ forceArg [sw0, sw1, sw2, sw3, sw4]
+                                newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4]
 
 -- Functions of six arguments
 instance (HasSignAndSize g, HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
             => Uninterpreted (SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
-  uninterpret nm arg0 arg1 arg2 arg3 arg4 arg5 = SBV sgnsza $ Right $ cache result
-    where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
-          sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
-          sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
-          sgnszd = (hasSign (undefined :: d), sizeOf (undefined :: d))
-          sgnsze = (hasSign (undefined :: e), sizeOf (undefined :: e))
-          sgnszf = (hasSign (undefined :: f), sizeOf (undefined :: f))
-          sgnszg = (hasSign (undefined :: g), sizeOf (undefined :: g))
-          result st = do newUninterpreted st nm (SBVType [sgnszg, sgnszf, sgnsze, sgnszd, sgnszc, sgnszb, sgnsza])
-                         sw0 <- sbvToSW st arg0
-                         sw1 <- sbvToSW st arg1
-                         sw2 <- sbvToSW st arg2
-                         sw3 <- sbvToSW st arg3
-                         sw4 <- sbvToSW st arg4
-                         sw5 <- sbvToSW st arg5
-                         mapM_ forceArg [sw0, sw1, sw2, sw3, sw4, sw5]
-                         newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5]
+  uninterpretWithHandle nm = (mkUFName nm, f)
+    where f arg0 arg1 arg2 arg3 arg4 arg5 = SBV sgnsza $ Right $ cache result
+           where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
+                 sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
+                 sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
+                 sgnszd = (hasSign (undefined :: d), sizeOf (undefined :: d))
+                 sgnsze = (hasSign (undefined :: e), sizeOf (undefined :: e))
+                 sgnszf = (hasSign (undefined :: f), sizeOf (undefined :: f))
+                 sgnszg = (hasSign (undefined :: g), sizeOf (undefined :: g))
+                 result st = do newUninterpreted st nm (SBVType [sgnszg, sgnszf, sgnsze, sgnszd, sgnszc, sgnszb, sgnsza])
+                                sw0 <- sbvToSW st arg0
+                                sw1 <- sbvToSW st arg1
+                                sw2 <- sbvToSW st arg2
+                                sw3 <- sbvToSW st arg3
+                                sw4 <- sbvToSW st arg4
+                                sw5 <- sbvToSW st arg5
+                                mapM_ forceArg [sw0, sw1, sw2, sw3, sw4, sw5]
+                                newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5]
 
 -- Functions of seven arguments
 instance (HasSignAndSize h, HasSignAndSize g, HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
             => Uninterpreted (SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
-  uninterpret nm arg0 arg1 arg2 arg3 arg4 arg5 arg6 = SBV sgnsza $ Right $ cache result
-    where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
-          sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
-          sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
-          sgnszd = (hasSign (undefined :: d), sizeOf (undefined :: d))
-          sgnsze = (hasSign (undefined :: e), sizeOf (undefined :: e))
-          sgnszf = (hasSign (undefined :: f), sizeOf (undefined :: f))
-          sgnszg = (hasSign (undefined :: g), sizeOf (undefined :: g))
-          sgnszh = (hasSign (undefined :: h), sizeOf (undefined :: h))
-          result st = do newUninterpreted st nm (SBVType [sgnszh, sgnszg, sgnszf, sgnsze, sgnszd, sgnszc, sgnszb, sgnsza])
-                         sw0 <- sbvToSW st arg0
-                         sw1 <- sbvToSW st arg1
-                         sw2 <- sbvToSW st arg2
-                         sw3 <- sbvToSW st arg3
-                         sw4 <- sbvToSW st arg4
-                         sw5 <- sbvToSW st arg5
-                         sw6 <- sbvToSW st arg6
-                         mapM_ forceArg [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
-                         newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
+  uninterpretWithHandle nm = (mkUFName nm, f)
+    where f arg0 arg1 arg2 arg3 arg4 arg5 arg6 = SBV sgnsza $ Right $ cache result
+           where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
+                 sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
+                 sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
+                 sgnszd = (hasSign (undefined :: d), sizeOf (undefined :: d))
+                 sgnsze = (hasSign (undefined :: e), sizeOf (undefined :: e))
+                 sgnszf = (hasSign (undefined :: f), sizeOf (undefined :: f))
+                 sgnszg = (hasSign (undefined :: g), sizeOf (undefined :: g))
+                 sgnszh = (hasSign (undefined :: h), sizeOf (undefined :: h))
+                 result st = do newUninterpreted st nm (SBVType [sgnszh, sgnszg, sgnszf, sgnsze, sgnszd, sgnszc, sgnszb, sgnsza])
+                                sw0 <- sbvToSW st arg0
+                                sw1 <- sbvToSW st arg1
+                                sw2 <- sbvToSW st arg2
+                                sw3 <- sbvToSW st arg3
+                                sw4 <- sbvToSW st arg4
+                                sw5 <- sbvToSW st arg5
+                                sw6 <- sbvToSW st arg6
+                                mapM_ forceArg [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
+                                newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
 
 -- Uncurried functions of two arguments
 instance (HasSignAndSize c, HasSignAndSize b, HasSignAndSize a) => Uninterpreted ((SBV c, SBV b) -> SBV a) where
-  uninterpret nm (arg0, arg1) = uninterpret nm arg0 arg1
+  uninterpretWithHandle nm = let (h, f) = uninterpretWithHandle nm in (h, \(arg0, arg1) -> f arg0 arg1)
 
 -- Uncurried functions of three arguments
 instance (HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a) => Uninterpreted ((SBV d, SBV c, SBV b) -> SBV a) where
-  uninterpret nm (arg0, arg1, arg2) = uninterpret nm arg0 arg1 arg2
+  uninterpretWithHandle nm = let (h, f) = uninterpretWithHandle nm in (h, \(arg0, arg1, arg2) -> f arg0 arg1 arg2)
 
 -- Uncurried functions of four arguments
 instance (HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
             => Uninterpreted ((SBV e, SBV d, SBV c, SBV b) -> SBV a) where
-  uninterpret nm (arg0, arg1, arg2, arg3) = uninterpret nm arg0 arg1 arg2 arg3
+  uninterpretWithHandle nm = let (h, f) = uninterpretWithHandle nm in (h, \(arg0, arg1, arg2, arg3) -> f arg0 arg1 arg2 arg3)
 
 -- Uncurried functions of five arguments
 instance (HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
             => Uninterpreted ((SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
-  uninterpret nm (arg0, arg1, arg2, arg3, arg4) = uninterpret nm arg0 arg1 arg2 arg3 arg4
+  uninterpretWithHandle nm = let (h, f) = uninterpretWithHandle nm in (h, \(arg0, arg1, arg2, arg3, arg4) -> f arg0 arg1 arg2 arg3 arg4)
 
 -- Uncurried functions of six arguments
 instance (HasSignAndSize g, HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
             => Uninterpreted ((SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
-  uninterpret nm (arg0, arg1, arg2, arg3, arg4, arg5) = uninterpret nm arg0 arg1 arg2 arg3 arg4 arg5
+  uninterpretWithHandle nm = let (h, f) = uninterpretWithHandle nm in (h, \(arg0, arg1, arg2, arg3, arg4, arg5) -> f arg0 arg1 arg2 arg3 arg4 arg5)
 
 -- Uncurried functions of seven arguments
 instance (HasSignAndSize h, HasSignAndSize g, HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
             => Uninterpreted ((SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
-  uninterpret nm (arg0, arg1, arg2, arg3, arg4, arg5, arg6) = uninterpret nm arg0 arg1 arg2 arg3 arg4 arg5 arg6
+  uninterpretWithHandle nm = let (h, f) = uninterpretWithHandle nm in (h, \(arg0, arg1, arg2, arg3, arg4, arg5, arg6) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6)

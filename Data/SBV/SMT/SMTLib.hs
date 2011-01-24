@@ -33,8 +33,17 @@ addNonEqConstraints nonEqConstraints (SMTLibPgm (aliasTable, pre, post)) = inter
           | Just sw <- s `lookup` aliasTable = (show sw, c)
           | True                             = (s, c)
 
-toSMTLib :: Bool -> [(SW, String)] -> [(SW, CW)] -> [((Int, Int, Int), [SW])] -> [(Int, ArrayInfo)] -> [(String, SBVType)] -> Pgm -> SW -> SMTLibPgm
-toSMTLib isSat inps consts tbls arrs uis asgnsSeq out = SMTLibPgm (aliasTable, pre, post)
+toSMTLib :: Bool                        -- ^ is this a sat problem?
+         -> [(SW, String)]              -- ^ inputs and aliasing names
+         -> [(SW, CW)]                  -- ^ constants
+         -> [((Int, Int, Int), [SW])]   -- ^ auto-generated tables
+         -> [(Int, ArrayInfo)]          -- ^ user specified arrays
+         -> [(String, SBVType)]         -- ^ uninterpreted functions/constants
+         -> [(String, [String])]        -- ^ user given axioms
+         -> Pgm                         -- ^ assignments
+         -> SW                          -- ^ output variable
+         -> SMTLibPgm
+toSMTLib isSat inps consts tbls arrs uis axs asgnsSeq out = SMTLibPgm (aliasTable, pre, post)
   where logic
          | null tbls && null arrs && null uis = "QF_BV"
          | True                               = "QF_AUFBV"
@@ -56,6 +65,8 @@ toSMTLib isSat inps consts tbls arrs uis asgnsSeq out = SMTLibPgm (aliasTable, p
               ++ concatMap declArray arrs
               ++ [ " ; --- uninterpreted constants ---" ]
               ++ concatMap declUI uis
+              ++ [ " ; --- user given axioms ---" ]
+              ++ map declAx axs
               ++ [ " ; --- assignments ---" ]
               ++ map cvtAsgn asgns
         post =    [ " ; --- formula ---" ]
@@ -83,6 +94,9 @@ declArray (i, (_, ((_, at), (_, rt)), ctx)) = adecl : ctxInfo
                    in [ " :extrafuns ((" ++ iv ++ " BitVec[" ++ show at ++ "]))"
                       , " :assumption (= (select " ++ nm ++ " " ++ iv ++ ") " ++ show sw ++ ")"
                       ]
+
+declAx :: (String, [String]) -> String
+declAx (nm, ls) = (" ;; -- user given axiom: " ++ nm ++ "\n   ") ++ intercalate "\n   " ls
 
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = [" :extrafuns ((uninterpreted_" ++ i ++ " " ++ cvtType t ++ "))"]

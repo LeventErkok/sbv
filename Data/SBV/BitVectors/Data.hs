@@ -31,7 +31,7 @@ module Data.SBV.BitVectors.Data
  , SBVExpr(..), newExpr
  , cache, uncache, HasSignAndSize(..)
  , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, State, Size, output, Result(..)
- , SBVType(..), newUninterpreted, unintFnUIKind
+ , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
  ) where
 
 import Control.DeepSeq                 (NFData(..))
@@ -243,14 +243,15 @@ data Result = Result [NamedSymVar]                 -- inputs
                      [((Int, Int, Int), [SW])]     -- tables (automatically constructed)
                      [(Int, ArrayInfo)]            -- arrays (user specified)
                      [(String, SBVType)]           -- uninterpreted constants
+                     [(String, [String])]          -- axioms
                      Pgm                           -- assignments
                      [SW]                          -- outputs
 
 instance Show Result where
-  show (Result _ cs _ _ [] _ [r])
+  show (Result _ cs _ _ [] [] _ [r])
     | Just c <- r `lookup` cs
     = show c
-  show (Result is cs ts as uis xs os)  = intercalate "\n" $
+  show (Result is cs ts as uis axs xs os)  = intercalate "\n" $
                    ["INPUTS"]
                 ++ map shn is
                 ++ ["CONSTANTS"]
@@ -261,6 +262,8 @@ instance Show Result where
                 ++ map sha as
                 ++ ["UNINTERPRETED CONSTANTS"]
                 ++ map shui uis
+                ++ ["AXIOMS"]
+                ++ map shax axs
                 ++ ["DEFINE"]
                 ++ map (\(s, e) -> "  " ++ shs s ++ " = " ++ show e) (F.toList xs)
                 ++ ["OUTPUTS"]
@@ -281,6 +284,7 @@ instance Show Result where
                   alias | ni == nm = ""
                         | True     = ", aliasing " ++ show nm
           shui (nm, t) = "  uninterpreted_" ++ nm ++ " :: " ++ show t
+          shax (nm, ss) = "  -- user defined axiom: " ++ nm ++ "\n  " ++ intercalate "\n  " ss
 
 data ArrayContext = ArrayFree (Maybe SW)
                   | ArrayReset Int SW
@@ -323,6 +327,7 @@ data State  = State { rctr       :: IORef Int
                     , rexprMap   :: IORef ExprMap
                     , rArrayMap  :: IORef ArrayMap
                     , rUIMap     :: IORef UIMap
+                    , raxioms    :: IORef [(String, [String])]
                     }
 
 -- | The "Symbolic" value. Either a constant (@Left@) or a symbolic
@@ -478,6 +483,14 @@ output i@(SBV _ (Right f)) = do
         liftIO $ modifyIORef (routs st) (sw:)
         return i
 
+-- | Add a user specified axiom to the generated SMT-Lib file. Note that the input is a
+-- mere string; we perform no checking on the input that it's well-formed or is sensical.
+-- A separate formalization of SMT-Lib would be very useful here.
+addAxiom :: String -> [String] -> Symbolic ()
+addAxiom nm ax = do
+        st <- ask
+        liftIO $ modifyIORef (raxioms st) ((nm, ax) :)
+
 -- | Run a symbolic computation and return a 'Result'
 runSymbolic :: Symbolic a -> IO Result
 runSymbolic (Symbolic c) = do
@@ -490,6 +503,7 @@ runSymbolic (Symbolic c) = do
    tables <- newIORef Map.empty
    arrays <- newIORef IMap.empty
    uis    <- newIORef Map.empty
+   axioms <- newIORef []
    let st = State { rctr      = ctr
                   , rinps     = inps
                   , routs     = outs
@@ -499,6 +513,7 @@ runSymbolic (Symbolic c) = do
                   , rArrayMap = arrays
                   , rexprMap  = emap
                   , rUIMap    = uis
+                  , raxioms   = axioms
                   }
    _ <- newConst st $ W1 Zero -- s(-2) == falseSW
    _ <- newConst st $ W1 One  -- s(-1) == trueSW
@@ -512,7 +527,8 @@ runSymbolic (Symbolic c) = do
    tbls  <- (sortBy (\((x, _, _), _) ((y, _, _), _) -> x `compare` y) . map swap . Map.toList) `fmap` readIORef tables
    arrs  <- IMap.toAscList `fmap` readIORef arrays
    unint <- Map.toList `fmap` readIORef uis
-   return $ Result (reverse inpsR) cnsts tbls arrs unint rpgm (reverse outsR)
+   axs   <- reverse `fmap` readIORef axioms
+   return $ Result (reverse inpsR) cnsts tbls arrs unint axs rpgm (reverse outsR)
 
 -------------------------------------------------------------------------------
 -- * Symbolic Words
@@ -704,7 +720,8 @@ instance NFData CW where
   rnf (I64 w) = rnf w `seq` ()
 
 instance NFData Result where
-  rnf (Result inps consts tbls arrs uis pgm outs) = rnf inps `seq` rnf consts `seq` rnf tbls `seq` rnf arrs `seq` rnf uis `seq` rnf pgm `seq` rnf outs
+  rnf (Result inps consts tbls arrs uis axs pgm outs)
+        = rnf inps `seq` rnf consts `seq` rnf tbls `seq` rnf arrs `seq` rnf uis `seq` rnf axs `seq` rnf pgm `seq` rnf outs
 
 instance NFData ArrayContext
 instance NFData Pgm

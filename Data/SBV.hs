@@ -128,6 +128,10 @@ module Data.SBV (
   , PrettyNum(..), readBin
   -- * Uninterpreted constants and functions
   , Uninterpreted(..)
+  -- ** Accessing the handle
+  , SBVUF, sbvUFName
+  -- ** Adding axioms
+  , addAxiom
 
   -- * Proving properties
   -- $proveIntro
