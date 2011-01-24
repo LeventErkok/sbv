@@ -1,0 +1,117 @@
+INPUTS
+  s0 :: SWord32
+  s1 :: SWord32
+  s2 :: SWord32
+  s3 :: SWord32
+  s4 :: SWord32
+  s5 :: SWord32
+  s6 :: SWord32
+  s7 :: SWord32
+  s8 :: SWord32
+  s9 :: SWord32
+  s10 :: SWord32
+  s11 :: SWord32
+  s12 :: SWord32
+  s13 :: SWord32
+  s14 :: SWord32
+  s15 :: SWord32
+CONSTANTS
+  s_2 = False
+  s_1 = True
+TABLES
+ARRAYS
+UNINTERPRETED CONSTANTS
+  uninterpreted_flOp :: SWord32 -> SWord32 -> SWord32
+  uninterpreted_u :: SWord32
+AXIOMS
+  -- user defined axiom: flOp is associative
+  :assumption (forall (?x BitVec[32]) (?y BitVec[32]) (?z BitVec[32])
+                      (= (uninterpreted_flOp (uninterpreted_flOp ?x ?y) ?z)
+                         (uninterpreted_flOp ?x (uninterpreted_flOp ?y ?z))
+                      )
+              )
+  -- user defined axiom: u is left-unit for flOp
+  :assumption (forall (?x BitVec[32])
+                      (= (uninterpreted_flOp uninterpreted_u ?x)
+                         ?x
+                      )
+              )
+DEFINE
+  s16 :: SWord32 = uninterpreted_u
+  s17 :: SWord32 = s16 uninterpreted_flOp s0
+  s18 :: SBool = s0 == s17
+  s19 :: SWord32 = s0 uninterpreted_flOp s1
+  s20 :: SWord32 = s16 uninterpreted_flOp s19
+  s21 :: SBool = s19 == s20
+  s22 :: SWord32 = s19 uninterpreted_flOp s2
+  s23 :: SWord32 = s20 uninterpreted_flOp s2
+  s24 :: SBool = s22 == s23
+  s25 :: SWord32 = s22 uninterpreted_flOp s3
+  s26 :: SWord32 = s2 uninterpreted_flOp s3
+  s27 :: SWord32 = s19 uninterpreted_flOp s26
+  s28 :: SWord32 = s16 uninterpreted_flOp s27
+  s29 :: SBool = s25 == s28
+  s30 :: SWord32 = s25 uninterpreted_flOp s4
+  s31 :: SWord32 = s28 uninterpreted_flOp s4
+  s32 :: SBool = s30 == s31
+  s33 :: SWord32 = s30 uninterpreted_flOp s5
+  s34 :: SWord32 = s4 uninterpreted_flOp s5
+  s35 :: SWord32 = s28 uninterpreted_flOp s34
+  s36 :: SBool = s33 == s35
+  s37 :: SWord32 = s33 uninterpreted_flOp s6
+  s38 :: SWord32 = s35 uninterpreted_flOp s6
+  s39 :: SBool = s37 == s38
+  s40 :: SWord32 = s37 uninterpreted_flOp s7
+  s41 :: SWord32 = s6 uninterpreted_flOp s7
+  s42 :: SWord32 = s34 uninterpreted_flOp s41
+  s43 :: SWord32 = s27 uninterpreted_flOp s42
+  s44 :: SWord32 = s16 uninterpreted_flOp s43
+  s45 :: SBool = s40 == s44
+  s46 :: SWord32 = s40 uninterpreted_flOp s8
+  s47 :: SWord32 = s44 uninterpreted_flOp s8
+  s48 :: SBool = s46 == s47
+  s49 :: SWord32 = s46 uninterpreted_flOp s9
+  s50 :: SWord32 = s8 uninterpreted_flOp s9
+  s51 :: SWord32 = s44 uninterpreted_flOp s50
+  s52 :: SBool = s49 == s51
+  s53 :: SWord32 = s49 uninterpreted_flOp s10
+  s54 :: SWord32 = s51 uninterpreted_flOp s10
+  s55 :: SBool = s53 == s54
+  s56 :: SWord32 = s53 uninterpreted_flOp s11
+  s57 :: SWord32 = s10 uninterpreted_flOp s11
+  s58 :: SWord32 = s50 uninterpreted_flOp s57
+  s59 :: SWord32 = s44 uninterpreted_flOp s58
+  s60 :: SBool = s56 == s59
+  s61 :: SWord32 = s56 uninterpreted_flOp s12
+  s62 :: SWord32 = s59 uninterpreted_flOp s12
+  s63 :: SBool = s61 == s62
+  s64 :: SWord32 = s61 uninterpreted_flOp s13
+  s65 :: SWord32 = s12 uninterpreted_flOp s13
+  s66 :: SWord32 = s59 uninterpreted_flOp s65
+  s67 :: SBool = s64 == s66
+  s68 :: SWord32 = s64 uninterpreted_flOp s14
+  s69 :: SWord32 = s66 uninterpreted_flOp s14
+  s70 :: SBool = s68 == s69
+  s71 :: SWord32 = s68 uninterpreted_flOp s15
+  s72 :: SWord32 = s14 uninterpreted_flOp s15
+  s73 :: SWord32 = s65 uninterpreted_flOp s72
+  s74 :: SWord32 = s58 uninterpreted_flOp s73
+  s75 :: SWord32 = s43 uninterpreted_flOp s74
+  s76 :: SBool = s71 == s75
+  s77 :: SBool = s70 & s76
+  s78 :: SBool = s67 & s77
+  s79 :: SBool = s63 & s78
+  s80 :: SBool = s60 & s79
+  s81 :: SBool = s55 & s80
+  s82 :: SBool = s52 & s81
+  s83 :: SBool = s48 & s82
+  s84 :: SBool = s45 & s83
+  s85 :: SBool = s39 & s84
+  s86 :: SBool = s36 & s85
+  s87 :: SBool = s32 & s86
+  s88 :: SBool = s29 & s87
+  s89 :: SBool = s24 & s88
+  s90 :: SBool = s21 & s89
+  s91 :: SBool = s18 & s90
+OUTPUTS
+  s91

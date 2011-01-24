@@ -12,6 +12,7 @@ TABLES
 ARRAYS
 UNINTERPRETED CONSTANTS
   uninterpreted_f :: SWord32 -> SWord64
+AXIOMS
 DEFINE
   s4 :: SWord32 = s0 + s3
   s5 :: SBool = s1 == s4
