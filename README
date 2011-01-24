@@ -26,8 +26,7 @@ The sbv library is hosted at [http://github.com/LeventErkok/sbv](http://github.c
 
 The hackage site
 [http://hackage.haskell.org/package/sbv](http://hackage.haskell.org/package/sbv) is the best place
-for details on the API. Or, you can directly look at the
-[Examples](http://github.com/LeventErkok/sbv/tree/master/Data/SBV/Examples) to get a jump start.
+for details on the API and the example use cases.
 
 Comments, bug reports, and patches are always welcome.
 
