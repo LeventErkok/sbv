@@ -554,6 +554,8 @@ class Ord a => SymWord a where
   isConcrete :: SBV a -> Bool
   -- | Is the symbolic word really symbolic?
   isSymbolic :: SBV a -> Bool
+  -- | Does it concretely satisfy the given predicate?
+  isConcretely :: SBV a -> (a -> Bool) -> Bool
 
   -- minimal complete definiton: free, free_, literal, fromCW
   unliteral (SBV _ (Left c))  = Just $ fromCW c
@@ -561,6 +563,9 @@ class Ord a => SymWord a where
   isConcrete (SBV _ (Left _)) = True
   isConcrete _                = False
   isSymbolic = not . isConcrete
+  isConcretely s p
+    | Just i <- unliteral s = p i
+    | True                  = False
 
 ---------------------------------------------------------------------------------
 -- * Symbolic Arrays

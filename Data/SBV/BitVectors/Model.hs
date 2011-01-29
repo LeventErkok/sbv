@@ -317,15 +317,25 @@ oneIf t = ite t 1 0
 -- Num instance for symbolic words
 instance (Ord a, Num a, SymWord a) => Num (SBV a) where
   fromInteger = literal . fromIntegral
-  (+) = liftSym2 (mkSymOp Plus)  (+)
-  (*) = liftSym2 (mkSymOp Times) (*)
-  (-) = liftSym2 (mkSymOp Minus) (-)
+  x + y
+    | x `isConcretely` (== 0) = y
+    | y `isConcretely` (== 0) = x
+    | True                    = liftSym2 (mkSymOp Plus)  (+) x y
+  x * y
+    | x `isConcretely` (== 0) = 0
+    | y `isConcretely` (== 0) = 0
+    | x `isConcretely` (== 1) = y
+    | y `isConcretely` (== 1) = x
+    | True                    = liftSym2 (mkSymOp Times) (*) x y
+  x - y
+    | y `isConcretely` (== 0) = x
+    | True                    = liftSym2 (mkSymOp Minus) (-) x y
   abs a
-   | hasSign a = ite (a .< 0) (-a) a
-   | True      = a
+    | hasSign a = ite (a .< 0) (-a) a
+    | True      = a
   signum a
-   | hasSign a = ite (a .< 0) (-1) (ite (a .== 0) 0 1)
-   | True      = oneIf (a ./= 0)
+    | hasSign a = ite (a .< 0) (-1) (ite (a .== 0) 0 1)
+    | True      = oneIf (a ./= 0)
 
 -- NB. The default definition of "testBit" relies on equality,
 -- which is not available for symbolic SBV's. There is no
