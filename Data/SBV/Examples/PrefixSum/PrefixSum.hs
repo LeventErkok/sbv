@@ -19,6 +19,7 @@
 module Data.SBV.Examples.PrefixSum.PrefixSum where
 
 import Data.SBV
+import Data.SBV.Internals(runSymbolic)
 
 ----------------------------------------------------------------------
 -- * Formalizing power-lists
@@ -207,3 +208,97 @@ prefixSum i
         yices' = yices { options    = ["-tc", "-smt", "-e"]
                        , executable = "/usr/local/yices-1.0.28/bin/yices"
                        }
+
+----------------------------------------------------------------------
+-- * Inspecting symbolic traces
+----------------------------------------------------------------------
+
+-- | A symbolic trace can help illustrate the action of Ladner-Fischer. This
+-- generator produces the actions of Ladner-Fischer for addition, showing how
+-- the computation proceeds:
+--
+-- >>> ladnerFischerTrace 8
+-- INPUTS
+--   s0 :: SWord8
+--   s1 :: SWord8
+--   s2 :: SWord8
+--   s3 :: SWord8
+--   s4 :: SWord8
+--   s5 :: SWord8
+--   s6 :: SWord8
+--   s7 :: SWord8
+-- CONSTANTS
+--   s_2 = False
+--   s_1 = True
+-- TABLES
+-- ARRAYS
+-- UNINTERPRETED CONSTANTS
+-- AXIOMS
+-- DEFINE
+--   s8 :: SWord8 = s0 + s1
+--   s9 :: SWord8 = s2 + s8
+--   s10 :: SWord8 = s2 + s3
+--   s11 :: SWord8 = s8 + s10
+--   s12 :: SWord8 = s4 + s11
+--   s13 :: SWord8 = s4 + s5
+--   s14 :: SWord8 = s11 + s13
+--   s15 :: SWord8 = s6 + s14
+--   s16 :: SWord8 = s6 + s7
+--   s17 :: SWord8 = s13 + s16
+--   s18 :: SWord8 = s11 + s17
+-- OUTPUTS
+--   s0
+--   s8
+--   s9
+--   s11
+--   s12
+--   s14
+--   s15
+--   s18
+ladnerFischerTrace :: Int -> IO ()
+ladnerFischerTrace n = gen >>= print
+  where gen = runSymbolic $ do args :: [SWord8] <- mapM (const free_) [1..n]
+                               mapM_ output $ lf (0, (+)) args
+
+-- | Trace generator for the reference spec. It clearly demonstrates that the reference
+-- implementation fewer operations, but is not parallelizable at all:
+--
+-- >>> scanlTrace 8
+-- INPUTS
+--   s0 :: SWord8
+--   s1 :: SWord8
+--   s2 :: SWord8
+--   s3 :: SWord8
+--   s4 :: SWord8
+--   s5 :: SWord8
+--   s6 :: SWord8
+--   s7 :: SWord8
+-- CONSTANTS
+--   s_2 = False
+--   s_1 = True
+-- TABLES
+-- ARRAYS
+-- UNINTERPRETED CONSTANTS
+-- AXIOMS
+-- DEFINE
+--   s8 :: SWord8 = s0 + s1
+--   s9 :: SWord8 = s2 + s8
+--   s10 :: SWord8 = s3 + s9
+--   s11 :: SWord8 = s4 + s10
+--   s12 :: SWord8 = s5 + s11
+--   s13 :: SWord8 = s6 + s12
+--   s14 :: SWord8 = s7 + s13
+-- OUTPUTS
+--   s0
+--   s8
+--   s9
+--   s10
+--   s11
+--   s12
+--   s13
+--   s14
+--
+scanlTrace :: Int -> IO ()
+scanlTrace n = gen >>= print
+  where gen = runSymbolic $ do args :: [SWord8] <- mapM (const free_) [1..n]
+                               mapM_ output $ ps (0, (+)) args
