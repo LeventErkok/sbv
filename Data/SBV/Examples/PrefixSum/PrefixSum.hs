@@ -64,10 +64,10 @@ ps (_, f) = scanl1 f
 lf :: (a, a -> a -> a) -> PowerList a -> PowerList a
 lf _ []         = error "lf: malformed (empty) powerlist"
 lf _ [x]        = [x]
-lf (zero, f) pl = zipPL (zipWith f (rsh flpq) p) flpq
+lf (zero, f) pl = zipPL (zipWith f (rsh lfpq) p) lfpq
    where (p, q) = unzipPL pl
          pq     = zipWith f p q
-         flpq   = lf (zero, f) pq
+         lfpq   = lf (zero, f) pq
          rsh xs = zero : init xs
 
 
