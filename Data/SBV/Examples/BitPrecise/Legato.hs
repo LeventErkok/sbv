@@ -16,21 +16,15 @@
 -- @
 --    step1 :       LDX #8         ; load X immediate with the integer 8 
 --    step2 :       LDA #0         ; load A immediate with the integer 0 
---    step3 :       CLC            ; set C to 0
---    step4 : LOOP  ROR F1         ; rotate F1 right circular through C 
---    step5 :       BCC ZCOEF      ; branch to ZCOEF if C = 0 
---    step6 :       CLC            ; set C to 0 
---    step7 :       ADC F2         ; set A to A+F2+C and C to the carry 
---    step8 : ZCOEF ROR A          ; rotate A right circular through C 
---    step9 :       ROR LOW        ; rotate LOW right circular through C 
---    step10:       DEX            ; set X to X-1 
---    step11:       BNE LOOP       ; branch to LOOP if Z = 0 
+--    step3 : LOOP  ROR F1         ; rotate F1 right circular through C 
+--    step4 :       BCC ZCOEF      ; branch to ZCOEF if C = 0 
+--    step5 :       CLC            ; set C to 0 
+--    step6 :       ADC F2         ; set A to A+F2+C and C to the carry 
+--    step7 : ZCOEF ROR A          ; rotate A right circular through C 
+--    step8 :       ROR LOW        ; rotate LOW right circular through C 
+--    step9 :       DEX            ; set X to X-1 
+--    step10:       BNE LOOP       ; branch to LOOP if Z = 0 
 -- @
---
--- NB. The CLC in step3 was later added by Warren Hunt; the
--- original spec did not include this statement. However, without this
--- addition, the algorithm does not work correctly for all starting states,
--- so we adopt this change as well.
 --
 -- This program came to be known as the Legato's challenge in the community, where
 -- the challenge was to prove that it indeed does perform multiplication. This file
@@ -204,7 +198,6 @@ legato :: Address -> Address -> Address -> Program
 legato f1Addr f2Addr lowAddr = start
   where start   =    ldx 8
                    $ lda 0
-                   $ clc
                    $ loop
         loop    =    rorM f1Addr
                    $ bcc zeroCoef
