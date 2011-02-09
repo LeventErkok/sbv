@@ -87,6 +87,7 @@ Library
                   , Data.SBV.Examples.Polynomials.Polynomials
                   , Data.SBV.Examples.PrefixSum.PrefixSum
                   , Data.SBV.Examples.Puzzles.DogCatMouse
+                  , Data.SBV.Examples.Puzzles.Euler185
                   , Data.SBV.Examples.Puzzles.MagicSquare
                   , Data.SBV.Examples.Puzzles.NQueens
                   , Data.SBV.Examples.Puzzles.Sudoku

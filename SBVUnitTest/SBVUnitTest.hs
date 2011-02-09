@@ -42,15 +42,16 @@ import qualified Data.SBV.TestSuite.CRC.USB5                      as T14(testSui
 import qualified Data.SBV.TestSuite.Polynomials.Polynomials       as T15(testSuite)
 import qualified Data.SBV.TestSuite.PrefixSum.PrefixSum           as T16(testSuite)
 import qualified Data.SBV.TestSuite.Puzzles.DogCatMouse           as T17(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.MagicSquare           as T18(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.NQueens               as T19(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.PowerSet              as T20(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.Sudoku                as T21(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.Temperature           as T22(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.U2Bridge              as T23(testSuite)
-import qualified Data.SBV.TestSuite.Uninterpreted.AUF             as T24(testSuite)
-import qualified Data.SBV.TestSuite.Uninterpreted.Function        as T25(testSuite)
-import qualified Data.SBV.TestSuite.Uninterpreted.Uninterpreted   as T26(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.Euler185              as T18(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.MagicSquare           as T19(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.NQueens               as T20(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.PowerSet              as T21(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.Sudoku                as T22(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.Temperature           as T23(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.U2Bridge              as T24(testSuite)
+import qualified Data.SBV.TestSuite.Uninterpreted.AUF             as T25(testSuite)
+import qualified Data.SBV.TestSuite.Uninterpreted.Function        as T26(testSuite)
+import qualified Data.SBV.TestSuite.Uninterpreted.Uninterpreted   as T27(testSuite)
 
 testCollection :: [SBVTestSuite]
 testCollection = [
@@ -60,7 +61,7 @@ testCollection = [
      , T13.testSuite, T14.testSuite, T15.testSuite, T16.testSuite
      , T17.testSuite, T18.testSuite, T19.testSuite, T20.testSuite
      , T21.testSuite, T22.testSuite, T23.testSuite, T24.testSuite
-     , T25.testSuite, T26.testSuite
+     , T25.testSuite, T26.testSuite, T27.testSuite
      ]
 -- No user serviceable parts below..
 
