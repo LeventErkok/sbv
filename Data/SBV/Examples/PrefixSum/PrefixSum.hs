@@ -79,7 +79,7 @@ lf (zero, f) pl = zipPL (zipWith f (rsh lfpq) p) lfpq
 -- | Correctness theorem, for a powerlist of given size, an associative operator, and its left-unit element
 flIsCorrect :: Int -> (forall a. (OrdSymbolic a, Bits a) => (a, a -> a -> a)) -> Symbolic SBool
 flIsCorrect n zf = do
-        args :: PowerList SWord32 <- mapM (const free_) [1..n]
+        args :: PowerList SWord32 <- mkFreeVars n
         output $ ps zf args .== lf zf args
 
 -- | Proves Ladner-Fischer is equivalent to reference specification for addition.
@@ -127,7 +127,7 @@ thm2 = prove $ flIsCorrect 16 (0, smax)
 -- Also, the unit @0@ is clearly not a left-unit for @flOp@, as the third
 -- equation for @flOp@ will simply map many elements to @0@.
 thm3 :: IO ThmResult
-thm3 = prove $ do args :: PowerList SWord32 <- mapM (const free_) [(1::Int)..8]
+thm3 = prove $ do args :: PowerList SWord32 <- mkFreeVars 8
                   output $ ps (u, op) args .== lf (u, op) args
   where op :: SWord32 -> SWord32 -> SWord32
         op = uninterpret "flOp"
@@ -141,7 +141,7 @@ thm3 = prove $ do args :: PowerList SWord32 <- mapM (const free_) [(1::Int)..8]
 -- the necessary axioms for associativity and left-unit. The first argument states how wide the power list should be.
 genPrefixSumInstance :: Int -> Symbolic SBool
 genPrefixSumInstance n = do
-     args :: PowerList SWord32 <- mapM (const free_) [1..n]
+     args :: PowerList SWord32 <- mkFreeVars n
      addAxiom "flOp is associative"     $ assocAxiom (sbvUFName opH)
      addAxiom "u is left-unit for flOp" $ leftUnitAxiom (sbvUFName opH) (sbvUFName uH)
      output $ ps (u, op) args .== lf (u, op) args
@@ -257,7 +257,7 @@ prefixSum i
 --   s18
 ladnerFischerTrace :: Int -> IO ()
 ladnerFischerTrace n = gen >>= print
-  where gen = runSymbolic $ do args :: [SWord8] <- mapM (const free_) [1..n]
+  where gen = runSymbolic $ do args :: [SWord8] <- mkFreeVars n
                                mapM_ output $ lf (0, (+)) args
 
 -- | Trace generator for the reference spec. It clearly demonstrates that the reference
@@ -300,5 +300,5 @@ ladnerFischerTrace n = gen >>= print
 --
 scanlTrace :: Int -> IO ()
 scanlTrace n = gen >>= print
-  where gen = runSymbolic $ do args :: [SWord8] <- mapM (const free_) [1..n]
+  where gen = runSymbolic $ do args :: [SWord8] <- mkFreeVars n
                                mapM_ output $ ps (0, (+)) args

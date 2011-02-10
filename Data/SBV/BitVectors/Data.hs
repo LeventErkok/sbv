@@ -544,6 +544,8 @@ class Ord a => SymWord a where
   free       :: String -> Symbolic (SBV a)
   -- | Create an automatically named input
   free_      :: Symbolic (SBV a)
+  -- | Get a bunch of new words
+  mkFreeVars   :: Int -> Symbolic [SBV a]
   -- | Turn a literal constant to symbolic
   literal    :: a -> SBV a
   -- | Extract a literal, if the value is concrete
@@ -558,6 +560,7 @@ class Ord a => SymWord a where
   isConcretely :: SBV a -> (a -> Bool) -> Bool
 
   -- minimal complete definiton: free, free_, literal, fromCW
+  mkFreeVars n = mapM (const free_) [1 .. n]
   unliteral (SBV _ (Left c))  = Just $ fromCW c
   unliteral _                 = Nothing
   isConcrete (SBV _ (Left _)) = True

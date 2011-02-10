@@ -20,5 +20,5 @@ import Data.SBV.Examples.Puzzles.PowerSet
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test [ "powerSet " ++ show i ~: assert (pSet i) | i <- [0 .. 7] ]
  where pSet :: Int -> IO Bool
-       pSet n = do cnt <- numberOfModels $ mapM (const free_) [1 .. n] >>= output . genPowerSet
+       pSet n = do cnt <- numberOfModels $ mkFreeVars n >>= output . genPowerSet
                    return (cnt == 2^n)

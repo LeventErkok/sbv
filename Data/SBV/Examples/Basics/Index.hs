@@ -17,7 +17,7 @@ import Data.SBV
 -- prove that the "select" primitive is working correctly
 test1 :: Int -> IO Bool
 test1 n = isTheorem $ do
-            elts <- mapM (const free_) [1 .. n]
+            elts <- mkFreeVars n
             err  <- free_
             ind  <- free_
             ind2 <- free_
@@ -32,8 +32,8 @@ test1 n = isTheorem $ do
 
 test2 :: Int -> IO Bool
 test2 n = isTheorem $ do
-            elts1 <- mapM (const free_) [1 .. n]
-            elts2 <- mapM (const free_) [1 .. n]
+            elts1 <- mkFreeVars n
+            elts2 <- mkFreeVars n
             let elts = zip elts1 elts2
             err1  <- free_
             err2  <- free_
@@ -51,7 +51,7 @@ test2 n = isTheorem $ do
 
 test3 :: Int -> IO Bool
 test3 n = isTheorem $ do
-            eltsI <- mapM (const free_) [1 .. n]
+            eltsI <- mkFreeVars n
             let elts = map Left eltsI
             errI  <- free_
             let err = Left errI
