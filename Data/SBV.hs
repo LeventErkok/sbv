@@ -162,6 +162,10 @@ module Data.SBV (
 
   -- * Symbolic computations
   , Symbolic, output, SymWord(..)
+
+  -- * Getting SMT-Lib output (for offline analysis)
+  , compileToSMTLib
+
   -- * Module exports
   -- $moduleExportIntro
 

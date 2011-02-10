@@ -30,13 +30,14 @@ module Data.SBV.Provers.Prover (
        , defaultSMTCfg, verboseSMTCfg, timingSMTCfg, verboseTimingSMTCfg
        , Yices.yices
        , timeout
+       , compileToSMTLib
        ) where
-
 
 import Control.Monad                  (when)
 import Control.Concurrent             (forkIO)
 import Control.Concurrent.Chan.Strict (newChan, writeChan, getChanContents)
 import Data.Maybe                     (fromJust, isJust, catMaybes)
+import System.Time                    (getClockTime)
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
@@ -235,18 +236,28 @@ numberOfModels p = do AllSatResult rs <- allSat p
         -- shouldn't happen, but just in case
         walk r               = error $ "numberOfModels: Unexpected result from an allSat check: " ++ show (AllSatResult [r])
 
+-- | Compiles to SMT-Lib and returns the resulting program as a string. Useful for saving
+-- the result to a file for off-line analysis, for instance if you have an SMT solver that's not natively
+-- supported out-of-the box by the SBV library.
+compileToSMTLib :: Provable a => a -> IO String
+compileToSMTLib a = do
+        t <- getClockTime
+        let comments = ["Created on " ++ show t]
+        (_, _, smtLibPgm) <- generateTrace defaultSMTCfg False comments a
+        return $ show smtLibPgm ++ "\n"
+
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
-proveWith config a = generateTrace config False a >>= callSolver [] "Checking Theoremhood.." ThmResult config
+proveWith config a = generateTrace config False [] a >>= callSolver [] "Checking Theoremhood.." ThmResult config
 
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
-satWith config a = generateTrace config True a >>= callSolver [] "Checking Satisfiability.." SatResult config
+satWith config a = generateTrace config True [] a >>= callSolver [] "Checking Satisfiability.." SatResult config
 
 -- | Find all satisfying assignments using the given SMT-solver
 allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
 allSatWith config p = do when (verbose config) $ putStrLn  "** Checking Satisfiability, all solutions.."
-                         sbvPgm <- generateTrace config True p
+                         sbvPgm <- generateTrace config True [] p
                          resChan <- newChan
                          let add  = writeChan resChan . Just
                              stop = writeChan resChan Nothing
@@ -278,8 +289,8 @@ callSolver nonEqConstraints checkMsg wrap config (inps, modelMap, smtLibPgm) = d
         msg "Done.."
         return $ wrap smtAnswer
 
-generateTrace :: Provable a => SMTConfig -> Bool -> a -> IO ([NamedSymVar], [(String, UnintKind)], SMTLibPgm)
-generateTrace config isSat predicate = do
+generateTrace :: Provable a => SMTConfig -> Bool -> [String] -> a -> IO ([NamedSymVar], [(String, UnintKind)], SMTLibPgm)
+generateTrace config isSat comments predicate = do
         let msg = when (verbose config) . putStrLn . ("** " ++)
             isTiming = timing config
         msg "Starting symbolic simulation.."
@@ -289,7 +300,7 @@ generateTrace config isSat predicate = do
         case res of
           Result is consts tbls arrs uis axs pgm [o@(SW{})] ->
              timeIf isTiming "translation" $ let uiMap = catMaybes (map arrayUIKind arrs) ++ map unintFnUIKind uis
-                                             in return (is, uiMap, toSMTLib isSat is consts tbls arrs uis axs pgm o)
+                                             in return (is, uiMap, toSMTLib isSat comments is consts tbls arrs uis axs pgm o)
           _ -> error $ "SBVProver.callSolver: Impossible happened: " ++ show res
 
 -- | Equality as a proof method. Allows for
