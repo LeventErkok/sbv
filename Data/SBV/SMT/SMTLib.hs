@@ -17,7 +17,6 @@ import Control.DeepSeq              (NFData(..))
 import qualified Data.Foldable as F (toList)
 import Data.List                    (intercalate)
 
-import Data.SBV.BitVectors.Bit
 import Data.SBV.BitVectors.Data
 
 newtype SMTLibPgm = SMTLibPgm ([(String, SW)], [String], [String])
@@ -132,22 +131,16 @@ cvtCnst :: (SW, CW) -> String
 cvtCnst (s, c) = " :assumption (= " ++ show s ++ " " ++ cvtCW c ++ ")"
 
 cvtCW :: CW -> String
-cvtCW (W1  b)    = if bit2Bool b then "bv1[1]" else "bv0[1]"
-cvtCW (W8  w)    = "bv" ++ show w ++ "[8]"
-cvtCW (W16 w)    = "bv" ++ show w ++ "[16]"
-cvtCW (W32 w)    = "bv" ++ show w ++ "[32]"
-cvtCW (W64 w)    = "bv" ++ show w ++ "[64]"
+cvtCW x | not (hasSign x) = "bv" ++ show (cwVal x)
+                                          ++ "[" ++ show (sizeOf x) ++ "]"
+
 -- signed numbers (with 2's complement representation) is problematic
 -- since there's no way to put a bvneg over a positive number to get minBound..
 -- Hence, we punt and use binary notation in that particular case
-cvtCW (I8  w) | w == minBound = mkMinBound 8
-              | True          = negIf (w < 0) $ "bv" ++ show (abs w) ++ "[8]"
-cvtCW (I16 w) | w == minBound = mkMinBound 16
-              | True          = negIf (w < 0) $ "bv" ++ show (abs w) ++ "[16]"
-cvtCW (I32 w) | w == minBound = mkMinBound 32
-              | True          = negIf (w < 0) $ "bv" ++ show (abs w) ++ "[32]"
-cvtCW (I64 w) | w == minBound = mkMinBound 64
-              | True          = negIf (w < 0) $ "bv" ++ show (abs w) ++ "[64]"
+cvtCW x | cwVal x == least = mkMinBound (sizeOf x)
+  where least = negate (2 ^ sizeOf x)
+cvtCW x = negIf (w < 0) $ "bv" ++ show (abs w) ++ "[" ++ show (sizeOf x) ++ "]"
+  where w = cwVal x
 
 negIf :: Bool -> String -> String
 negIf True  a = "(bvneg " ++ a ++ ")"

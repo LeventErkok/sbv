@@ -24,7 +24,6 @@ import System.Directory (findExecutable)
 import System.Process   (readProcessWithExitCode)
 import System.Exit      (ExitCode(..))
 
-import Data.SBV.BitVectors.Bit
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.PrettyNum
 import Data.SBV.Utils.TDiff
@@ -132,41 +131,38 @@ class SatModel a where
   cvtModel  :: (a -> Maybe b) -> Maybe (a, [CW]) -> Maybe (b, [CW])
   cvtModel f x = x >>= \(a, r) -> f a >>= \b -> return (b, r)
 
+genParse :: Integral a => (Bool,Size) -> [CW] -> Maybe (a,[CW])
+genParse (signed,size) (x:r)
+  | hasSign x == signed && sizeOf x == size = Just (fromIntegral (cwVal x),r)
+genParse _ _ = Nothing
+
 instance SatModel Bool where
-  parseCWs (W1 i:r) = Just (bit2Bool i,  r)
-  parseCWs _        = Nothing
+  parseCWs xs = do (x,r) <- genParse (False,1) xs
+                   return ((x :: Integer) /= 0, r)
 
 instance SatModel Word8 where
-  parseCWs (W8 i:r) = Just (i,  r)
-  parseCWs _        = Nothing
+  parseCWs = genParse (False,8)
 
 instance SatModel Int8 where
-  parseCWs (I8 i:r) = Just (i,  r)
-  parseCWs _        = Nothing
+  parseCWs = genParse (True,8)
 
 instance SatModel Word16 where
-  parseCWs (W16 i:r) = Just (i,  r)
-  parseCWs _         = Nothing
+  parseCWs = genParse (False,16)
 
 instance SatModel Int16 where
-  parseCWs (I16 i:r) = Just (i,  r)
-  parseCWs _         = Nothing
+  parseCWs = genParse (True,16)
 
 instance SatModel Word32 where
-  parseCWs (W32 i:r) = Just (i,  r)
-  parseCWs _         = Nothing
+  parseCWs = genParse (False,32)
 
 instance SatModel Int32 where
-  parseCWs (I32 i:r) = Just (i,  r)
-  parseCWs _         = Nothing
+  parseCWs = genParse (True,32)
 
 instance SatModel Word64 where
-  parseCWs (W64 i:r) = Just (i,  r)
-  parseCWs _         = Nothing
+  parseCWs = genParse (False,64)
 
 instance SatModel Int64 where
-  parseCWs (I64 i:r) = Just (i,  r)
-  parseCWs _         = Nothing
+  parseCWs = genParse (True,64)
 
 -- when reading a list; go as long as we can (maximal-munch)
 -- note that this never fails..

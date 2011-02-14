@@ -45,56 +45,42 @@ class PrettyNum a where
 -- Why not default methods? Because defaults need "Integral a" and Bool/Bit are not..
 instance PrettyNum Bool   where {hexS = show; binS = show}
 instance PrettyNum Bit    where {hexS = show; binS = show}
-instance PrettyNum Word8  where {hexS = shex; binS = sbin}
-instance PrettyNum Int8   where {hexS = shex; binS = sbin}
-instance PrettyNum Word16 where {hexS = shex; binS = sbin}
-instance PrettyNum Int16  where {hexS = shex; binS = sbin}
-instance PrettyNum Word32 where {hexS = shex; binS = sbin}
-instance PrettyNum Int32  where {hexS = shex; binS = sbin}
-instance PrettyNum Word64 where {hexS = shex; binS = sbin}
-instance PrettyNum Int64  where {hexS = shex; binS = sbin}
+instance PrettyNum Word8  where {hexS = shex (False,8) ; binS = sbin (False,8) }
+instance PrettyNum Int8   where {hexS = shex (True,8)  ; binS = sbin (True,8)  }
+instance PrettyNum Word16 where {hexS = shex (False,16); binS = sbin (False,16)}
+instance PrettyNum Int16  where {hexS = shex (True,16);  binS = sbin (True,16) }
+instance PrettyNum Word32 where {hexS = shex (False,32); binS = sbin (False,32)}
+instance PrettyNum Int32  where {hexS = shex (True,32);  binS = sbin (True,32) }
+instance PrettyNum Word64 where {hexS = shex (False,64); binS = sbin (False,64)}
+instance PrettyNum Int64  where {hexS = shex (True,64);  binS = sbin (True,64) }
 
 instance PrettyNum CW where
-  hexS (W1  i) = hexS $ bit2Bool i
-  hexS (W8  i) = hexS i
-  hexS (W16 i) = hexS i
-  hexS (W32 i) = hexS i
-  hexS (W64 i) = hexS i
-  hexS (I8  i) = hexS i
-  hexS (I16 i) = hexS i
-  hexS (I32 i) = hexS i
-  hexS (I64 i) = hexS i
-  binS (W1  i) = binS $ bit2Bool i
-  binS (W8  i) = binS i
-  binS (W16 i) = binS i
-  binS (W32 i) = binS i
-  binS (W64 i) = binS i
-  binS (I8  i) = binS i
-  binS (I16 i) = binS i
-  binS (I32 i) = binS i
-  binS (I64 i) = binS i
+  hexS cw | cwIsBit cw  = hexS (cwToBool cw)
+  hexS cw               = shex (hasSign cw, sizeOf cw) (cwVal cw)
+
+  binS cw | cwIsBit cw  = binS (cwToBool cw)
+  binS cw               = sbin (hasSign cw, sizeOf cw) (cwVal cw)
 
 instance (SymWord a, PrettyNum a) => PrettyNum (SBV a) where
   hexS s = maybe (show s) (hexS :: a -> String) $ unliteral s
   binS s = maybe (show s) (binS :: a -> String) $ unliteral s
 
-shex :: (HasSignAndSize a, Integral a) => a -> String
-shex a
+shex :: (Integral a) => (Bool,Size) -> a -> String
+shex (signed,size) a
  | a < 0
  = "-0x" ++ pad l (s16 (abs ((fromIntegral a) :: Integer)))  ++ t
  | True
  =  "0x" ++ pad l (s16 a) ++ t
- where t = " :: " ++ (if hasSign a then "Int" else "Word") ++ show (l*4)
-       l = sizeOf a `div` 4
+ where t = " :: " ++ (if signed then "Int" else "Word") ++ show size
+       l = (size + 3) `div` 4
 
-sbin :: (HasSignAndSize a, Integral a) => a -> String
-sbin a
+sbin :: (Integral a) => (Bool,Size) -> a -> String
+sbin (signed,size) a
  | a < 0
- = "-0b" ++ pad l (s2 (abs ((fromIntegral a) :: Integer)))  ++ t
+ = "-0b" ++ pad size (s2 (abs ((fromIntegral a) :: Integer)))  ++ t
  | True
- =  "0b" ++ pad l (s2 a) ++ t
- where t = " :: " ++ (if hasSign a then "Int" else "Word") ++ show l
-       l = sizeOf a
+ =  "0b" ++ pad size (s2 a) ++ t
+ where t = " :: " ++ (if signed then "Int" else "Word") ++ show size
 
 pad :: Int -> String -> String
 pad l s = replicate (l - length s) '0' ++ s

@@ -36,9 +36,10 @@ class Splittable a b | b -> a where
   (#)    :: b -> b -> a
   extend :: b -> a
 
-genSplit :: (Integral a, Num b) => Int -> Integer -> a -> (b, b)
-genSplit ss mask x = (fromIntegral ((ix `shiftR` ss) .&. mask), fromIntegral (ix .&. mask))
+genSplit :: (Integral a, Num b) => Int -> a -> (b, b)
+genSplit ss x = (fromIntegral ((ix `shiftR` ss) .&. mask), fromIntegral (ix .&. mask))
   where ix = toInteger x
+        mask = 2 ^ ss - 1
 
 genJoin :: (Integral b, Num a) => Int -> b -> b -> a
 genJoin ss x y = fromIntegral ((ix `shiftL` ss) .|. iy)
@@ -47,29 +48,36 @@ genJoin ss x y = fromIntegral ((ix `shiftL` ss) .|. iy)
 
 -- concrete instances
 instance Splittable Word64 Word32 where
-  split = genSplit 32 4294967295
+  split = genSplit 32
   (#)   = genJoin  32
   extend b = 0 # b
 
 instance Splittable Word32 Word16 where
-  split = genSplit 16 65535
+  split = genSplit 16
   (#)   = genJoin  16
   extend b = 0 # b
 
 instance Splittable Word16 Word8 where
-  split = genSplit 8 255
+  split = genSplit 8
   (#)   = genJoin  8
   extend b = 0 # b
 
+cwSplit :: (SymWord a, Num a) => CW -> (SBV a, SBV a)
+cwSplit z = (literal x, literal y)
+  where (x,y) = genSplit (sizeOf z `div` 2) (cwVal z)
+
+cwJoin :: (SymWord a, Num a) => CW -> CW -> SBV a
+cwJoin x y = literal (genJoin (sizeOf x) (cwVal x) (cwVal y))
+
 -- symbolic instances
 instance Splittable SWord64 SWord32 where
-  split (SBV _ (Left (W64 z))) = (literal x, literal y) where (x, y) = split z
-  split z                      = (SBV (False, 32) (Right (cache x)), SBV (False, 32) (Right (cache y)))
+  split (SBV _ (Left z)) = cwSplit z
+  split z = (SBV (False, 32) (Right (cache x)), SBV (False, 32) (Right (cache y)))
     where x st = do zsw <- sbvToSW st z
                     newExpr st (False, 32) (SBVApp (Extract 63 32) [zsw])
           y st = do zsw <- sbvToSW st z
                     newExpr st (False, 32) (SBVApp (Extract 31  0) [zsw])
-  (SBV _ (Left (W32 a))) # (SBV _ (Left (W32 b))) = SBV (False, 64) (Left (W64 (a # b)))
+  (SBV _ (Left a)) # (SBV _ (Left b)) = cwJoin a b
   a # b = SBV (False, 64) (Right (cache c))
     where c st = do asw <- sbvToSW st a
                     bsw <- sbvToSW st b
@@ -77,13 +85,13 @@ instance Splittable SWord64 SWord32 where
   extend b = 0 # b
 
 instance Splittable SWord32 SWord16 where
-  split (SBV _ (Left (W32 z))) = (literal x, literal y) where (x, y) = split z
+  split (SBV _ (Left z)) = cwSplit z
   split z                      = (SBV (False, 16) (Right (cache x)), SBV (False, 16) (Right (cache y)))
     where x st = do zsw <- sbvToSW st z
                     newExpr st (False, 16) (SBVApp (Extract 31 16) [zsw])
           y st = do zsw <- sbvToSW st z
                     newExpr st (False, 16) (SBVApp (Extract 15  0) [zsw])
-  (SBV _ (Left (W16 a))) # (SBV _ (Left (W16 b))) = SBV (False, 32) (Left (W32 (a # b)))
+  (SBV _ (Left a)) # (SBV _ (Left b)) = cwJoin a b
   a # b = SBV (False, 32) (Right (cache c))
     where c st = do asw <- sbvToSW st a
                     bsw <- sbvToSW st b
@@ -91,13 +99,13 @@ instance Splittable SWord32 SWord16 where
   extend b = 0 # b
 
 instance Splittable SWord16 SWord8 where
-  split (SBV _ (Left (W16 z))) = (literal x, literal y) where (x, y) = split z
-  split z                      = (SBV (False, 8) (Right (cache x)), SBV (False, 8) (Right (cache y)))
+  split (SBV _ (Left z)) = cwSplit z
+  split z                = (SBV (False, 8) (Right (cache x)), SBV (False, 8) (Right (cache y)))
     where x st = do zsw <- sbvToSW st z
                     newExpr st (False, 8) (SBVApp (Extract 15 8) [zsw])
           y st = do zsw <- sbvToSW st z
                     newExpr st (False, 8) (SBVApp (Extract  7 0) [zsw])
-  (SBV _ (Left (W8 a))) # (SBV _ (Left (W8 b))) = SBV (False, 16) (Left (W16 (a # b)))
+  (SBV _ (Left a)) # (SBV _ (Left b)) = cwJoin a b
   a # b = SBV (False, 16) (Right (cache c))
     where c st = do asw <- sbvToSW st a
                     bsw <- sbvToSW st b

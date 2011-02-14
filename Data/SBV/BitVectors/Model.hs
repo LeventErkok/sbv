@@ -33,7 +33,6 @@ import Data.List       (genericLength, genericIndex, genericSplitAt, unzip4, unz
 import Data.Word       (Word8, Word16, Word32, Word64)
 import Test.QuickCheck (Arbitrary(..))
 
-import Data.SBV.BitVectors.Bit
 import Data.SBV.BitVectors.Data
 import Data.SBV.Utils.Boolean
 
@@ -53,7 +52,7 @@ liftSym2 opS _   a@(SBV sgnsz _)      b                = SBV sgnsz $ Right $ cac
 liftSym2B :: (State -> (Bool, Size) -> SW -> SW -> IO SW)
           -> (forall a. Ord a => a -> a -> Bool)
           -> SBV b -> SBV b -> SBool
-liftSym2B _   opC (SBV _ (Left a)) (SBV _ (Left b)) = SBV (False, 1) $ Left  $ W1 $ bool2Bit $ liftCW2 opC a b
+liftSym2B _   opC (SBV _ (Left a)) (SBV _ (Left b)) = literal (liftCW2 opC a b)
 liftSym2B opS _   a                b                = SBV (False, 1) $ Right $ cache c
   where c st = do sw1 <- sbvToSW st a
                   sw2 <- sbvToSW st b
@@ -62,7 +61,7 @@ liftSym2B opS _   a                b                = SBV (False, 1) $ Right $ c
 liftSym1Bool :: (State -> (Bool, Size) -> SW -> IO SW)
              -> (Bool -> Bool)
              -> SBool -> SBool
-liftSym1Bool _   opC (SBV _ (Left (W1 a))) = SBV (False, 1) $ Left  $ W1 $ bool2Bit $ opC $ bit2Bool a
+liftSym1Bool _   opC (SBV _ (Left a)) = literal $ opC $ cwToBool a
 liftSym1Bool opS _   a                     = SBV (False, 1) $ Right $ cache c
   where c st = do sw <- sbvToSW st a
                   opS st (False, 1) sw
@@ -70,8 +69,9 @@ liftSym1Bool opS _   a                     = SBV (False, 1) $ Right $ cache c
 liftSym2Bool :: (State -> (Bool, Size) -> SW -> SW -> IO SW)
              -> (Bool -> Bool -> Bool)
              -> SBool -> SBool -> SBool
-liftSym2Bool _   opC (SBV _ (Left (W1 a))) (SBV _ (Left (W1 b))) = SBV (False, 1) $ Left  $ W1 $ bool2Bit $ bit2Bool a `opC` bit2Bool b
-liftSym2Bool opS _   a                     b                     = SBV (False, 1) $ Right $ cache c
+liftSym2Bool _   opC (SBV _ (Left a)) (SBV _ (Left b)) =
+                                        literal (cwToBool a `opC` cwToBool b)
+liftSym2Bool opS _   a b = SBV (False, 1) $ Right $ cache c
   where c st = do sw1 <- sbvToSW st a
                   sw2 <- sbvToSW st b
                   opS st (False, 1) sw1 sw2
@@ -89,59 +89,73 @@ mkSymOp1 :: Op -> State -> (Bool, Size) -> SW -> IO SW
 mkSymOp1 = mkSymOp1SC (const Nothing)
 
 -- Symbolic-Word class instances
+
+genFree :: (Bool,Size) -> String -> Symbolic (SBV a)
+genFree s     = mkSymSBV s . Just
+
+genFree_ :: (Bool,Size) -> Symbolic (SBV a)
+genFree_ s    = mkSymSBV s Nothing
+
+genLiteral :: Integral a => (Bool,Size) -> a -> SBV b
+genLiteral s  = SBV s . Left . mkConstCW s
+
+genFromCW :: Integral a => CW -> a
+genFromCW x   = fromInteger (cwVal x)
+
 instance SymWord Bool where
-  free    = mkSymSBV (False, 1) . Just
-  free_   = mkSymSBV (False, 1) Nothing
-  literal = SBV (False, 1) . Left . W1 . bool2Bit
-  fromCW  = bit2Bool . wcToW1
+  free      = genFree (False, 1)
+  free_     = genFree_ (False, 1)
+  literal x = genLiteral (False, 1) (if x then (1::Integer) else 0)
+  fromCW    = cwToBool
 
 instance SymWord Word8 where
-  free    = mkSymSBV (False, 8) . Just
-  free_   = mkSymSBV (False, 8) Nothing
-  literal = SBV (False, 8)  . Left . W8
-  fromCW  = wcToW8
+  free    = genFree (False, 8)
+  free_   = genFree_ (False, 8)
+  literal = genLiteral (False, 8)
+  fromCW  = genFromCW
 
 instance SymWord Int8 where
-  free    = mkSymSBV (True, 8) . Just
-  free_   = mkSymSBV (True, 8) Nothing
-  literal = SBV (True, 8)  . Left . I8
-  fromCW  = wcToI8
+  free    = genFree (True, 8)
+  free_   = genFree_ (True, 8)
+  literal = genLiteral (True, 8)
+  fromCW  = genFromCW
 
 instance SymWord Word16 where
-  free    = mkSymSBV (False, 16) . Just
-  free_   = mkSymSBV (False, 16) Nothing
-  literal = SBV (False, 16) . Left . W16
-  fromCW  = wcToW16
+  free    = genFree (False, 16)
+  free_   = genFree_ (False, 16)
+  literal = genLiteral (False, 16)
+  fromCW  = genFromCW
 
 instance SymWord Int16 where
-  free    = mkSymSBV (True, 16) . Just
-  free_   = mkSymSBV (True, 16) Nothing
-  literal = SBV (True, 16) . Left .  I16
-  fromCW  = wcToI16
+  free    = genFree (True, 16)
+  free_   = genFree_ (True, 16)
+  literal = genLiteral (True, 16)
+  fromCW  = genFromCW
 
 instance SymWord Word32 where
-  free    = mkSymSBV (False, 32) . Just
-  free_   = mkSymSBV (False, 32) Nothing
-  literal = SBV (False, 32) . Left . W32
-  fromCW  = wcToW32
+  free    = genFree (False, 32)
+  free_   = genFree_ (False, 32)
+  literal = genLiteral (False, 32)
+  fromCW  = genFromCW
 
 instance SymWord Int32 where
-  free    = mkSymSBV (True, 32) . Just
-  free_   = mkSymSBV (True, 32) Nothing
-  literal = SBV (True, 32) . Left . I32
-  fromCW  = wcToI32
+  free    = genFree (True, 32)
+  free_   = genFree_ (True, 32)
+  literal = genLiteral (True, 32)
+  fromCW  = genFromCW
 
 instance SymWord Word64 where
-  free    = mkSymSBV (False, 64) . Just
-  free_   = mkSymSBV (False, 64) Nothing
-  literal = SBV (False, 64) . Left . W64
-  fromCW  = wcToW64
+  free    = genFree (False, 64)
+  free_   = genFree_ (False, 64)
+  literal = genLiteral (False, 64)
+  fromCW  = genFromCW
 
 instance SymWord Int64 where
-  free    = mkSymSBV (True, 64) . Just
-  free_   = mkSymSBV (True, 64) Nothing
-  literal = SBV (True, 64) . Left . I64
-  fromCW  = wcToI64
+  free    = genFree (True, 64)
+  free_   = genFree_ (True, 64)
+  literal = genLiteral (True, 64)
+  fromCW  = genFromCW
+
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.
@@ -331,11 +345,11 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
     | y `isConcretely` (== 0) = x
     | True                    = liftSym2 (mkSymOp Minus) (-) x y
   abs a
-    | hasSign a = ite (a .< 0) (-a) a
-    | True      = a
+   | hasSign a = ite (a .< 0) (-a) a
+   | True      = a
   signum a
-    | hasSign a = ite (a .< 0) (-1) (ite (a .== 0) 0 1)
-    | True      = oneIf (a ./= 0)
+   | hasSign a = ite (a .< 0) (-1) (ite (a .== 0) 0 1)
+   | True      = oneIf (a ./= 0)
 
 -- NB. The default definition of "testBit" relies on equality,
 -- which is not available for symbolic SBV's. There is no
@@ -424,6 +438,16 @@ instance BVDivisible Word8 where
   bvQuotRem x 0 = (0, x)
   bvQuotRem x y = x `quotRem` y
 
+instance BVDivisible Integer where
+  bvQuotRem x 0 = (0, x)
+  bvQuotRem x y = x `quotRem` y
+
+instance BVDivisible CW where
+  bvQuotRem x y
+    | cwSameType x y = let (r1, r2) = bvQuotRem (cwVal x) (cwVal y)
+                       in (x { cwVal = r1 }, y { cwVal = r2 })
+  bvQuotRem x y = error $ "SBV.liftQRem: impossible, unexpected args received: " ++ show (x, y)
+
 instance BVDivisible SWord64 where
   bvQuotRem = liftQRem
 
@@ -438,17 +462,11 @@ instance BVDivisible SWord8 where
 
 liftQRem :: (SymWord a, Num a, BVDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
 liftQRem x y = ite (y .== 0) (0, x) (qr x y)
-  where qr (SBV sgnsz (Left a)) (SBV _ (Left b)) = let (q, r) = mapCW22 bvQuotRem a b in (SBV sgnsz (Left q), SBV sgnsz (Left r))
+  where qr (SBV sgnsz (Left a)) (SBV _ (Left b)) = let (q, r) = bvQuotRem a b in (SBV sgnsz (Left q), SBV sgnsz (Left r))
         qr a@(SBV sgnsz _)      b                = (SBV sgnsz (Right (cache (mk Quot))), SBV sgnsz (Right (cache (mk Rem))))
                 where mk o st = do sw1 <- sbvToSW st a
                                    sw2 <- sbvToSW st b
                                    mkSymOp o st sgnsz sw1 sw2
-        mapCW22 :: (forall a. (Ord a, Bits a, BVDivisible a) => a -> a -> (a, a)) -> CW -> CW -> (CW, CW)
-        mapCW22 f (W8  a) (W8  b) = let (r1, r2) = a `f` b in (W8  r1, W8  r2)
-        mapCW22 f (W16 a) (W16 b) = let (r1, r2) = a `f` b in (W16 r1, W16 r2)
-        mapCW22 f (W32 a) (W32 b) = let (r1, r2) = a `f` b in (W32 r1, W32 r2)
-        mapCW22 f (W64 a) (W64 b) = let (r1, r2) = a `f` b in (W64 r1, W64 r2)
-        mapCW22 _ a       b       = error $ "SBV.liftQRem: impossible, unexpected args received: " ++ show (a, b)
 
 -- Quickcheck interface
 
