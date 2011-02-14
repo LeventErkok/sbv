@@ -10,8 +10,6 @@
 -- Internal data-structures for the sbv library
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE Rank2Types #-}
-{-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE TypeOperators #-}
@@ -37,7 +35,6 @@ module Data.SBV.BitVectors.Data
 import Control.DeepSeq                 (NFData(..))
 import Control.Monad.Reader            (MonadReader, ReaderT, ask, runReaderT)
 import Control.Monad.Trans             (MonadIO, liftIO)
-import Data.Bits                       (Bits(..))
 import Data.Char                       (isAlpha, isAlphaNum)
 import Data.Int                        (Int8, Int16, Int32, Int64)
 import Data.Word                       (Word8, Word16, Word32, Word64)
@@ -136,17 +133,17 @@ instance HasSignAndSize Word32 where {sizeOf _ = 32; hasSign _ = False}
 instance HasSignAndSize Int64  where {sizeOf _ = 64; hasSign _ = True }
 instance HasSignAndSize Word64 where {sizeOf _ = 64; hasSign _ = False}
 
-liftCW :: (forall a. (Ord a, Bits a) => a -> b) -> CW -> b
+liftCW :: (Integer -> b) -> CW -> b
 liftCW f x = f (cwVal x)
 
-liftCW2 :: (forall a. (Ord a, Bits a) => a -> a -> b) -> CW -> CW -> b
+liftCW2 :: (Integer -> Integer -> b) -> CW -> CW -> b
 liftCW2 f x y | cwSameType x y = f (cwVal x) (cwVal y)
 liftCW2 _ a b = error $ "SBV.liftCW2: impossible, incompatible args received: " ++ show (a, b)
 
-mapCW :: (forall a. (Ord a, Bits a) => a -> a) -> CW -> CW
-mapCW f x       = normCW $ x { cwVal = f (cwVal x) }
+mapCW :: (Integer -> Integer) -> CW -> CW
+mapCW f x  = normCW $ x { cwVal = f (cwVal x) }
 
-mapCW2 :: (forall a. (Ord a, Bits a) => a -> a -> a) -> CW -> CW -> CW
+mapCW2 :: (Integer -> Integer -> Integer) -> CW -> CW -> CW
 mapCW2 f x y
   | cwSameType x y = normCW $ CW (cwSigned x) (cwSize y) (f (cwVal x) (cwVal y))
 mapCW2 _ a b = error $ "SBV.mapCW2: impossible, incompatible args received: " ++ show (a, b)

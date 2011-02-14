@@ -11,7 +11,6 @@
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -36,13 +35,15 @@ import Test.QuickCheck (Arbitrary(..))
 import Data.SBV.BitVectors.Data
 import Data.SBV.Utils.Boolean
 
-liftSym1 :: (State -> (Bool, Size) -> SW -> IO SW) -> (forall a. (Ord a, Bits a) => a -> a) -> SBV b -> SBV b
+liftSym1 :: (State -> (Bool, Size) -> SW -> IO SW) ->
+            (Integer -> Integer) -> SBV b -> SBV b
 liftSym1 _   opC (SBV sgnsz (Left a))  = SBV sgnsz $ Left  $ mapCW opC a
 liftSym1 opS _   a@(SBV sgnsz _)       = SBV sgnsz $ Right $ cache c
    where c st = do swa <- sbvToSW st a
                    opS st sgnsz swa
 
-liftSym2 :: (State -> (Bool, Size) -> SW -> SW -> IO SW) -> (forall a. (Ord a, Bits a) => a -> a -> a) -> SBV b -> SBV b -> SBV b
+liftSym2 :: (State -> (Bool, Size) -> SW -> SW -> IO SW) ->
+            (Integer -> Integer -> Integer) -> SBV b -> SBV b -> SBV b
 liftSym2 _   opC (SBV sgnsz (Left a)) (SBV _ (Left b)) = SBV sgnsz $ Left  $ mapCW2 opC a b
 liftSym2 opS _   a@(SBV sgnsz _)      b                = SBV sgnsz $ Right $ cache c
   where c st = do sw1 <- sbvToSW st a
@@ -50,7 +51,7 @@ liftSym2 opS _   a@(SBV sgnsz _)      b                = SBV sgnsz $ Right $ cac
                   opS st sgnsz sw1 sw2
 
 liftSym2B :: (State -> (Bool, Size) -> SW -> SW -> IO SW)
-          -> (forall a. Ord a => a -> a -> Bool)
+          -> (Integer -> Integer -> Bool)
           -> SBV b -> SBV b -> SBool
 liftSym2B _   opC (SBV _ (Left a)) (SBV _ (Left b)) = literal (liftCW2 opC a b)
 liftSym2B opS _   a                b                = SBV (False, 1) $ Right $ cache c
