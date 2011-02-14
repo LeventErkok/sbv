@@ -12,6 +12,7 @@
 
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternGuards #-}
 
 module Data.SBV.BitVectors.Polynomial (Polynomial(..)) where
