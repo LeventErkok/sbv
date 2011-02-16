@@ -90,10 +90,10 @@ mkSymOp1 = mkSymOp1SC (const Nothing)
 
 -- Symbolic-Word class instances
 
-genFree :: (Bool,Size) -> String -> Symbolic (SBV a)
+genFree :: (Bool, Size) -> String -> Symbolic (SBV a)
 genFree s = mkSymSBV s . Just
 
-genFree_ :: (Bool,Size) -> Symbolic (SBV a)
+genFree_ :: (Bool, Size) -> Symbolic (SBV a)
 genFree_ s = mkSymSBV s Nothing
 
 genLiteral :: Integral a => (Bool,Size) -> a -> SBV b
