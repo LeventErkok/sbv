@@ -1,6 +1,10 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
+Version 0.9.11, Not released yet
+  
+  * Current working version
+
 Version 0.9.10, 2011-02-15
 
   * Integrate commits from Iavor: Generalize SBV's to keep
