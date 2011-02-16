@@ -69,13 +69,12 @@ cwToBool x = cwVal x /= 0
 
 normCW :: CW -> CW
 normCW x = x { cwVal = norm }
-  where
-  norm | cwSize x == 0  = 0
-       | cwSigned x     = let rg = 2 ^ (cwSize x - 1)
-                          in case divMod (cwVal x) rg of
-                              (a,b) | even a  -> b
-                              (_,b)           -> b - rg
-       | otherwise      = cwVal x `mod` (2 ^ cwSize x)
+  where norm | cwSize x == 0  = 0
+             | cwSigned x     = let rg = 2 ^ (cwSize x - 1)
+                                in case divMod (cwVal x) rg of
+                                    (a,b) | even a  -> b
+                                    (_,b)           -> b - rg
+             | True           = cwVal x `mod` (2 ^ cwSize x)
 
 type Size      = Int
 newtype NodeId = NodeId Int
@@ -123,7 +122,7 @@ class HasSignAndSize a where
   showType :: a -> String
   showType a
     | not (hasSign a) && sizeOf a == 1 = "SBool"
-    | True                             = if hasSign a then "SInt" else "SWord" ++ show (sizeOf a)
+    | True                             = (if hasSign a then "SInt" else "SWord") ++ show (sizeOf a)
 
 instance HasSignAndSize Bool   where {sizeOf _ =  1; hasSign _ = False}
 instance HasSignAndSize Int8   where {sizeOf _ =  8; hasSign _ = True }

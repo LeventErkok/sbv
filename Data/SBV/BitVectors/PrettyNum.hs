@@ -23,7 +23,6 @@ import Data.Maybe (fromJust)
 import Data.Word  (Word8, Word16, Word32, Word64)
 import Numeric    (showIntAtBase, showHex, readInt)
 
-import Data.SBV.BitVectors.Bit
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model () -- instances only
 
@@ -42,9 +41,8 @@ class PrettyNum a where
   bin   :: a -> IO ()
   bin = putStrLn . binS
 
--- Why not default methods? Because defaults need "Integral a" and Bool/Bit are not..
+-- Why not default methods? Because defaults need "Integral a" but Bool is not..
 instance PrettyNum Bool   where {hexS = show; binS = show}
-instance PrettyNum Bit    where {hexS = show; binS = show}
 instance PrettyNum Word8  where {hexS = shex (False,8) ; binS = sbin (False,8) }
 instance PrettyNum Int8   where {hexS = shex (True,8)  ; binS = sbin (True,8)  }
 instance PrettyNum Word16 where {hexS = shex (False,16); binS = sbin (False,16)}

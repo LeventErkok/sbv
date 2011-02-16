@@ -63,16 +63,15 @@ liftSym1Bool :: (State -> (Bool, Size) -> SW -> IO SW)
              -> (Bool -> Bool)
              -> SBool -> SBool
 liftSym1Bool _   opC (SBV _ (Left a)) = literal $ opC $ cwToBool a
-liftSym1Bool opS _   a                     = SBV (False, 1) $ Right $ cache c
+liftSym1Bool opS _   a                = SBV (False, 1) $ Right $ cache c
   where c st = do sw <- sbvToSW st a
                   opS st (False, 1) sw
 
 liftSym2Bool :: (State -> (Bool, Size) -> SW -> SW -> IO SW)
              -> (Bool -> Bool -> Bool)
              -> SBool -> SBool -> SBool
-liftSym2Bool _   opC (SBV _ (Left a)) (SBV _ (Left b)) =
-                                        literal (cwToBool a `opC` cwToBool b)
-liftSym2Bool opS _   a b = SBV (False, 1) $ Right $ cache c
+liftSym2Bool _   opC (SBV _ (Left a)) (SBV _ (Left b)) = literal (cwToBool a `opC` cwToBool b)
+liftSym2Bool opS _   a                b                = SBV (False, 1) $ Right $ cache c
   where c st = do sw1 <- sbvToSW st a
                   sw2 <- sbvToSW st b
                   opS st (False, 1) sw1 sw2
@@ -92,71 +91,70 @@ mkSymOp1 = mkSymOp1SC (const Nothing)
 -- Symbolic-Word class instances
 
 genFree :: (Bool,Size) -> String -> Symbolic (SBV a)
-genFree s     = mkSymSBV s . Just
+genFree s = mkSymSBV s . Just
 
 genFree_ :: (Bool,Size) -> Symbolic (SBV a)
-genFree_ s    = mkSymSBV s Nothing
+genFree_ s = mkSymSBV s Nothing
 
 genLiteral :: Integral a => (Bool,Size) -> a -> SBV b
 genLiteral s  = SBV s . Left . mkConstCW s
 
 genFromCW :: Integral a => CW -> a
-genFromCW x   = fromInteger (cwVal x)
+genFromCW x = fromInteger (cwVal x)
 
 instance SymWord Bool where
-  free      = genFree (False, 1)
-  free_     = genFree_ (False, 1)
+  free      = genFree    (False, 1)
+  free_     = genFree_   (False, 1)
   literal x = genLiteral (False, 1) (if x then (1::Integer) else 0)
   fromCW    = cwToBool
 
 instance SymWord Word8 where
-  free    = genFree (False, 8)
-  free_   = genFree_ (False, 8)
+  free    = genFree    (False, 8)
+  free_   = genFree_   (False, 8)
   literal = genLiteral (False, 8)
   fromCW  = genFromCW
 
 instance SymWord Int8 where
-  free    = genFree (True, 8)
-  free_   = genFree_ (True, 8)
+  free    = genFree    (True, 8)
+  free_   = genFree_   (True, 8)
   literal = genLiteral (True, 8)
   fromCW  = genFromCW
 
 instance SymWord Word16 where
-  free    = genFree (False, 16)
-  free_   = genFree_ (False, 16)
+  free    = genFree    (False, 16)
+  free_   = genFree_   (False, 16)
   literal = genLiteral (False, 16)
   fromCW  = genFromCW
 
 instance SymWord Int16 where
-  free    = genFree (True, 16)
-  free_   = genFree_ (True, 16)
+  free    = genFree    (True, 16)
+  free_   = genFree_   (True, 16)
   literal = genLiteral (True, 16)
   fromCW  = genFromCW
 
 instance SymWord Word32 where
-  free    = genFree (False, 32)
-  free_   = genFree_ (False, 32)
+  free    = genFree    (False, 32)
+  free_   = genFree_   (False, 32)
   literal = genLiteral (False, 32)
   fromCW  = genFromCW
 
 instance SymWord Int32 where
-  free    = genFree (True, 32)
-  free_   = genFree_ (True, 32)
+  free    = genFree    (True, 32)
+  free_   = genFree_   (True, 32)
   literal = genLiteral (True, 32)
   fromCW  = genFromCW
 
 instance SymWord Word64 where
-  free    = genFree (False, 64)
-  free_   = genFree_ (False, 64)
+  free    = genFree    (False, 64)
+  free_   = genFree_   (False, 64)
   literal = genLiteral (False, 64)
   fromCW  = genFromCW
 
 instance SymWord Int64 where
-  free    = genFree (True, 64)
-  free_   = genFree_ (True, 64)
+  free    = genFree    (True, 64)
+  free_   = genFree_   (True, 64)
   literal = genLiteral (True, 64)
   fromCW  = genFromCW
-
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.
