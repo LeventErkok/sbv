@@ -1,9 +1,9 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Version 0.9.11, Not released yet
+Version 0.9.11, 2011-02-16
   
-  * Current working version
+  * Make ghc-7.0 happy, minor re-org on the cabal file/Setup.hs
 
 Version 0.9.10, 2011-02-15
 
