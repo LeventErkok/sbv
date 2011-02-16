@@ -113,7 +113,7 @@ data Op = Plus | Times | Minus
         | ArrRead Int
         | Uninterpreted String
         deriving (Eq, Ord)
-data SBVExpr = SBVApp {-# UNPACK #-} !Op {-# UNPACK #-} ![SW]
+data SBVExpr = SBVApp !Op ![SW]
              deriving (Eq, Ord)
 
 class HasSignAndSize a where

@@ -139,6 +139,7 @@ Library
                   , Data.SBV.TestSuite.PrefixSum.PrefixSum
                   , Data.SBV.TestSuite.Polynomials.Polynomials
                   , Data.SBV.TestSuite.Puzzles.DogCatMouse
+                  , Data.SBV.TestSuite.Puzzles.Euler185
                   , Data.SBV.TestSuite.Puzzles.MagicSquare
                   , Data.SBV.TestSuite.Puzzles.NQueens
                   , Data.SBV.TestSuite.Puzzles.PowerSet

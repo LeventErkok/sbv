@@ -13,9 +13,8 @@
 {-# OPTIONS_GHC -Wall #-}
 module Main(main) where
 
-import Control.Monad                      (when)
 import Distribution.PackageDescription    (executables, modulePath, package, maintainer, customFieldsBI, homepage, exeName, buildInfo)
-import Distribution.Simple                (defaultMainWithHooks, simpleUserHooks, runTests, postInst)
+import Distribution.Simple                (defaultMainWithHooks, simpleUserHooks, postInst)
 import Distribution.Simple.LocalBuildInfo (LocalBuildInfo(..))
 import Distribution.Text                  (display)
 import System.Directory                   (findExecutable)
@@ -25,7 +24,7 @@ import System.Process                     (system)
 import Data.SBV.Provers.Prover            (SMTSolver(..), yices)
 
 main :: IO ()
-main = defaultMainWithHooks simpleUserHooks{ runTests = unittest True, postInst = unittest False}
+main = defaultMainWithHooks simpleUserHooks{ postInst = unittest }
  where checkDefSolver = do
                 let ex = executable yices
                     nm = name yices
@@ -35,7 +34,7 @@ main = defaultMainWithHooks simpleUserHooks{ runTests = unittest True, postInst 
                                 putStrLn $ "*** The executable " ++ show ex ++ " must be in your path."
                                 putStrLn $ "*** Do not forget to install " ++ nm ++ "!"
                   Just _  -> return ()
-       unittest forced _ _ _ lbi = do
+       unittest _ _ _ lbi = do
          let testers = [ex | ex <- executables pkgDesc, modulePath ex == "SBVUnitTest/SBVUnitTest.hs"]
          case testers of
            [tp] -> runTester tp
@@ -47,14 +46,13 @@ main = defaultMainWithHooks simpleUserHooks{ runTests = unittest True, postInst 
                             report
                             exitWith $ ExitFailure 1
                runTester tp = do
-                        when (not forced) $
-                                case lookup "x-run-unittests" (customFieldsBI (buildInfo tp)) of
-                                        Just "False" -> do checkDefSolver
-                                                           putStrLn "*** Please run \"SBVUnitTests\" executable to perform unit-tests."
-                                                           putStrLn $ "*** Package " ++ sbvName ++ " installed successfully. Enjoy!"
-                                                           putStrLn $ "*** Further info: " ++ homepage pkgDesc
-                                                           exitWith ExitSuccess
-                                        _            -> return ()
+                        case lookup "x-run-unittests" (customFieldsBI (buildInfo tp)) of
+                                 Just "False" -> do checkDefSolver
+                                                    putStrLn "*** Please run \"SBVUnitTests\" executable to perform unit-tests."
+                                                    putStrLn $ "*** Package " ++ sbvName ++ " installed successfully. Enjoy!"
+                                                    putStrLn $ "*** Further info: " ++ homepage pkgDesc
+                                                    exitWith ExitSuccess
+                                 _            -> return ()
                         mbP <- findExecutable $ exeName tp
                         case mbP of
                           Nothing -> bailOut
