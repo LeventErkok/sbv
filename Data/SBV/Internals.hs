@@ -14,13 +14,13 @@
 
 module Data.SBV.Internals (
     -- * Running symbolic programs /manually/
-    Result, runSymbolic, SBV(..)
+    Result, runSymbolic, SBV(..), mkConstCW
     -- * Integrating with the test framework
     -- $testFramework
   , module Data.SBV.Utils.SBVTest
   ) where
 
-import Data.SBV.BitVectors.Data (Result, runSymbolic, SBV(..))
+import Data.SBV.BitVectors.Data (Result, runSymbolic, SBV(..), mkConstCW)
 import Data.SBV.Utils.SBVTest
 
 {- $testFramework
