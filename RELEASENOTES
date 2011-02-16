@@ -3,7 +3,10 @@ GitHub:  <http://github.com/LeventErkok/sbv>
 
 Version 0.9.10, Not released yet
 
-  * Current working version
+  * Integrate commits from Iavor: Generalize SBV's to keep
+    track the integer directly without resorting to different
+    leaf types
+  * Remove the unnecessary CLC instruction from the Legato example
   * More tests
 
 Version 0.9.9, 2011-01-23
