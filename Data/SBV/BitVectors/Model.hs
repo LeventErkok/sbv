@@ -21,7 +21,7 @@
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), BVDivisible(..), Uninterpreted(..)
   , bitValue, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE
-  , lsb, msb, SBVUF, sbvUFName
+  , lsb, msb, SBVUF, sbvUFName, genFree, genFree_
   )
   where
 
