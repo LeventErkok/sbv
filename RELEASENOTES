@@ -1,7 +1,7 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Version 0.9.10, Not released yet
+Version 0.9.10, 2011-02-15
 
   * Integrate commits from Iavor: Generalize SBV's to keep
     track the integer directly without resorting to different
