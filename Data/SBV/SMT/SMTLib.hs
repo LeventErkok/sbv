@@ -173,7 +173,7 @@ cvtExp (SBVApp (LkUp (t, at, _, l) i e) [])
         lkUp = "(select table" ++ show t ++ " " ++ show i ++ ")"
         cond
          | hasSign i = "(or " ++ le0 ++ " " ++ gtl ++ ") "
-         | True      = gtl
+         | True      = gtl ++ " "
         (less, leq) = if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
         mkCnst = cvtCW . mkConstCW (hasSign i, sizeOf i)
         le0  = "(" ++ less ++ " " ++ show i ++ " " ++ mkCnst 0 ++ ")"
