@@ -34,7 +34,7 @@ nQueens :: Int -> IO ()
 nQueens n
  | n < 0 = putStrLn $ "n must be non-negative, received: " ++ show n
  | True  = do putStrLn $ "Finding all " ++ show n ++ "-queens solutions.."
-              res <- allSat $ mkFreeVars n >>= output . isValid n
+              res <- allSat $ mkFreeVars n >>= return . isValid n
               cnt <- displayModels disp res
               putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
    where disp i s = do putStr $ "Solution #" ++ show i ++ ": "

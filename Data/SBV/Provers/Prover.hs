@@ -109,12 +109,14 @@ instance Provable Predicate where
   forAll _ = id
 
 instance Provable SBool where
-  forAll_  = output
-  forAll _ = output
+  forAll_  = return
+  forAll _ = return
 
 {-
 -- The following works, but it lets us write properties that
--- are typically bogus.. Such as: prove $ \x y -> (x::SInt8) == y
+-- are not useful.. Such as: prove $ \x y -> (x::SInt8) == y
+-- Running that will throw an exception since Haskell's equality
+-- is not be supported by symbolic things. (Needs .==).
 instance Provable Bool where
   forAll_  x = forAll_  (if x then true else false :: SBool)
   forAll s x = forAll s (if x then true else false :: SBool)
@@ -294,14 +296,14 @@ generateTrace config isSat comments predicate = do
         let msg = when (verbose config) . putStrLn . ("** " ++)
             isTiming = timing config
         msg "Starting symbolic simulation.."
-        res <- timeIf isTiming "problem construction" $ runSymbolic $ forAll_ predicate
+        res <- timeIf isTiming "problem construction" $ runSymbolic $ forAll_ predicate >>= output
         msg $ "Generated symbolic trace:\n" ++ show res
         msg "Translating to SMT-Lib.."
         case res of
-          Result is consts tbls arrs uis axs pgm [o@(SW{})] ->
+          Result is consts tbls arrs uis axs pgm [o@(SW (False, 1) _)] | sizeOf o == 1 ->
              timeIf isTiming "translation" $ let uiMap = catMaybes (map arrayUIKind arrs) ++ map unintFnUIKind uis
                                              in return (is, uiMap, toSMTLib isSat comments is consts tbls arrs uis axs pgm o)
-          _ -> error $ "SBVProver.callSolver: Impossible happened: " ++ show res
+          _ -> error $ "SBVProver.generateTrace: Impossible happened:\n" ++ show res
 
 -- | Equality as a proof method. Allows for
 -- very concise construction of equivalence proofs, which is very typical in

@@ -33,7 +33,7 @@ guesses = [ ("5616185650518293", 2), ("3847439647293047", 1), ("5855462940810587
 -- number of matching digits match what's given in the problem statement.
 euler185 :: Symbolic SBool
 euler185 = do soln <- mkFreeVars 16
-              output $ bAll digit soln &&& bAnd (map (genConstr soln) guesses)
+              return $ bAll digit soln &&& bAnd (map (genConstr soln) guesses)
   where genConstr a (b, c) = sum (zipWith eq a b) .== (c :: SWord8)
         digit x = (x :: SWord8) .>= 0 &&& x .<= 9
         eq x y =  ite (x .== fromIntegral (ord y - ord '0')) 1 0

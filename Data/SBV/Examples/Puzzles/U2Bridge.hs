@@ -215,7 +215,7 @@ solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ 
                               p1 <- free_
                               p2 <- free_
                               return (b, p1, p2)
-              res <- allSat $ mapM (const genAct) [1..n] >>= output . isValid
+              res <- allSat $ mapM (const genAct) [1..n] >>= return . isValid
               cnt <- displayModels disp res
               if cnt == 0 then return False
                           else do putStrLn $ "Found: " ++ show cnt ++ " solution" ++ plu cnt ++ " with " ++ show n ++ " move" ++ plu n ++ "."

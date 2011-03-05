@@ -21,4 +21,4 @@ testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
   "ccitt" ~: crcPgm `goldCheck` "ccitt.gold"
  ]
- where crcPgm = runSymbolic $ forAll_ crcGood
+ where crcPgm = runSymbolic $ forAll_ crcGood >>= output

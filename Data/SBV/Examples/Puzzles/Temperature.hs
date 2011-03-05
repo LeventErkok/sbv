@@ -31,7 +31,7 @@ revOf c = swap (digits c) .== digits (d2f c)
         swap (a, b) = (b, a)
 
 solve :: IO ()
-solve = do res <- allSat $ free_ >>= output . revOf
+solve = do res <- allSat $ free_ >>= return . revOf
            cnt <- displayModels disp res
            putStrLn $ "Found " ++ show cnt ++ " solutions."
      where disp :: Int -> Word16 -> IO ()

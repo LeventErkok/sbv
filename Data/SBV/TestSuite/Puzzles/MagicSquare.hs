@@ -22,4 +22,4 @@ testSuite = mkTestSuite $ \_ -> test [
    "magic 2" ~: assert . not =<< isSatisfiable (mkMagic 2)
  , "magic 3" ~: assert       =<< isSatisfiable (mkMagic 3)
  ]
- where mkMagic n = mkFreeVars (n*n) >>= output . isMagic . chunk n
+ where mkMagic n = mkFreeVars (n*n) >>= return . isMagic . chunk n

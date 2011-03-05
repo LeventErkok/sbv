@@ -80,7 +80,7 @@ lf (zero, f) pl = zipPL (zipWith f (rsh lfpq) p) lfpq
 flIsCorrect :: Int -> (forall a. (OrdSymbolic a, Bits a) => (a, a -> a -> a)) -> Symbolic SBool
 flIsCorrect n zf = do
         args :: PowerList SWord32 <- mkFreeVars n
-        output $ ps zf args .== lf zf args
+        return $ ps zf args .== lf zf args
 
 -- | Proves Ladner-Fischer is equivalent to reference specification for addition.
 -- @0@ is the left-unit element, and we use a power-list of size @8@.
@@ -128,7 +128,7 @@ thm2 = prove $ flIsCorrect 16 (0, smax)
 -- equation for @flOp@ will simply map many elements to @0@.
 thm3 :: IO ThmResult
 thm3 = prove $ do args :: PowerList SWord32 <- mkFreeVars 8
-                  output $ ps (u, op) args .== lf (u, op) args
+                  return $ ps (u, op) args .== lf (u, op) args
   where op :: SWord32 -> SWord32 -> SWord32
         op = uninterpret "flOp"
         u :: SWord32
@@ -144,7 +144,7 @@ genPrefixSumInstance n = do
      args :: PowerList SWord32 <- mkFreeVars n
      addAxiom "flOp is associative"     $ assocAxiom (sbvUFName opH)
      addAxiom "u is left-unit for flOp" $ leftUnitAxiom (sbvUFName opH) (sbvUFName uH)
-     output $ ps (u, op) args .== lf (u, op) args
+     return $ ps (u, op) args .== lf (u, op) args
   where op :: SWord32 -> SWord32 -> SWord32
         opH :: SBVUF
         (opH, op) = uninterpretWithHandle "flOp"

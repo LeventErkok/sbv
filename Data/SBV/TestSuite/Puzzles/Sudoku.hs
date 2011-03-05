@@ -22,4 +22,4 @@ testSuite = mkTestSuite $ \_ -> test [
   "sudoku " ++ show n ~: assert (checkPuzzle s)
      | (n, s) <- zip [(0::Int)..] [puzzle0, puzzle1, puzzle2, puzzle3, puzzle4, puzzle5, puzzle6]
  ]
- where checkPuzzle (i, f) = isSatisfiable $ mkFreeVars i >>= output . valid . f
+ where checkPuzzle (i, f) = isSatisfiable $ mkFreeVars i >>= return . valid . f

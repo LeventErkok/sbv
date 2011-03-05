@@ -58,7 +58,7 @@ magic :: Int -> IO ()
 magic n
  | n < 0 = putStrLn $ "n must be non-negative, received: " ++ show n
  | True  = do putStrLn $ "Finding all " ++ show n ++ "-magic squares.."
-              res <- allSat $ mkFreeVars n2 >>= output . isMagic . chunk n
+              res <- allSat $ mkFreeVars n2 >>= return . isMagic . chunk n
               cnt <- displayModels disp res
               putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
    where n2 = n * n

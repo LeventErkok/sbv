@@ -22,3 +22,4 @@ testSuite = mkTestSuite $ \goldCheck -> test [
   "legato" ~: legatoPgm `goldCheck` "legato.gold"
  ]
  where legatoPgm = runSymbolic $ forAll ["mem", "addrX", "x", "addrY", "y", "addrLow", "regX", "regA", "memVals", "flagC", "flagZ"] legatoIsCorrect
+                                 >>= output

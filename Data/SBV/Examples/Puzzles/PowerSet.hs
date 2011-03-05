@@ -23,7 +23,7 @@ genPowerSet = bAll (.<= (true :: SBool))
 
 powerSet :: [Word8] -> IO ()
 powerSet xs = do putStrLn $ "Finding all subsets of " ++ show xs
-                 res <- allSat $ mkFreeVars n >>= output . genPowerSet
+                 res <- allSat $ mkFreeVars n >>= return . genPowerSet
                  cnt <- displayModels disp res
                  putStrLn $ "Found: " ++ show cnt ++ " subset(s)."
      where n = length xs
