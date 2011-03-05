@@ -25,5 +25,11 @@ testSuite = mkTestSuite $ \_ -> test [
  , "proofs-4"  ~: assert       =<< isTheorem f1Single
  , "proofs-5"  ~: assert       =<< isSatisfiable f1eqf2
  , "proofs-6"  ~: assert       =<< isSatisfiable f1eqf3
- , "proofs-7"  ~: assert . not =<< isSatisfiable (\x -> x .== x+(1 :: SWord16))
+ , "proofs-7"  ~: assert . not =<< isSatisfiable (\x -> x .== x + (1 :: SWord16))
+ , "proofs-8"  ~: assert       =<< isSatisfiable (\x -> x :: SBool)
+ , "proofs-9"  ~: assert       =<< isSatisfiable (\x -> return x :: Predicate)
+ , "proofs-10" ~: assert       =<< isSatisfiable (forAll_ $ \x -> x :: SBool)
+ , "proofs-11" ~: assert       =<< isSatisfiable (forAll_ $ \x -> return x :: Predicate)
+ , "proofs-12" ~: assert       =<< isSatisfiable (forAll ["q"] $ \x -> x :: SBool)
+ , "proofs-13" ~: assert       =<< isSatisfiable (forAll ["q"] $ \x -> return x :: Predicate)
  ]
