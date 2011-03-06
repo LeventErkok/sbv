@@ -30,7 +30,7 @@ module Data.SBV.BitVectors.Data
  , sbvToSW
  , SBVExpr(..), newExpr
  , cache, uncache, HasSignAndSize(..)
- , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, State, Size, output, Result(..)
+ , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, State, Size, Outputtable(..), Result(..)
  , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
  ) where
 
@@ -50,6 +50,8 @@ import qualified Data.Sequence as S    (Seq, empty, (|>))
 
 import System.IO.Unsafe                (unsafePerformIO) -- see the note at the bottom of the file
 import Test.QuickCheck                 (Testable(..))
+
+import Data.SBV.Utils.Lib
 
 
 -- | 'CW' represents a concrete word of a fixed size:
@@ -442,17 +444,38 @@ mkSymSBV sgnsz mbNm = do
 
 -- | Mark an interim result as an output. Useful when constructing Symbolic programs
 -- that return multiple values, or when the result is programmatically computed.
-output :: SBV a -> Symbolic (SBV a)
-output i@(SBV _ (Left c)) = do
-        st <- ask
-        sw <- liftIO $ newConst st c
-        liftIO $ modifyIORef (routs st) (sw:)
-        return i
-output i@(SBV _ (Right f)) = do
-        st <- ask
-        sw <- liftIO $ uncache f st
-        liftIO $ modifyIORef (routs st) (sw:)
-        return i
+class Outputtable a where
+  output :: a -> Symbolic a
+
+instance Outputtable (SBV a) where
+  output i@(SBV _ (Left c)) = do
+          st <- ask
+          sw <- liftIO $ newConst st c
+          liftIO $ modifyIORef (routs st) (sw:)
+          return i
+  output i@(SBV _ (Right f)) = do
+          st <- ask
+          sw <- liftIO $ uncache f st
+          liftIO $ modifyIORef (routs st) (sw:)
+          return i
+
+instance (Outputtable a, Outputtable b) => Outputtable (a, b) where
+  output = mlift2 (,) output output
+
+instance (Outputtable a, Outputtable b, Outputtable c) => Outputtable (a, b, c) where
+  output = mlift3 (,,) output output output
+
+instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d) => Outputtable (a, b, c, d) where
+  output = mlift4 (,,,) output output output output
+
+instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtable e) => Outputtable (a, b, c, d, e) where
+  output = mlift5 (,,,,) output output output output output
+
+instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtable e, Outputtable f) => Outputtable (a, b, c, d, e, f) where
+  output = mlift6 (,,,,,) output output output output output output
+
+instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtable e, Outputtable f, Outputtable g) => Outputtable (a, b, c, d, e, f, g) where
+  output = mlift7 (,,,,,,) output output output output output output output
 
 -- | Add a user specified axiom to the generated SMT-Lib file. Note that the input is a
 -- mere string; we perform no checking on the input that it's well-formed or is sensical.

@@ -99,7 +99,7 @@ Library
                   , Data.SBV.BitVectors.Splittable
                   , Data.SBV.BitVectors.Polynomial
                   , Data.SBV.BitVectors.PrettyNum
-                  , Data.SBV.C.C
+                  , Data.SBV.Compilers.C
                   , Data.SBV.SMT.SMT
                   , Data.SBV.SMT.SMTLib
                   , Data.SBV.Provers.Prover
@@ -108,6 +108,7 @@ Library
                   , Data.SBV.Utils.Boolean
                   , Data.SBV.Utils.TDiff
                   , Data.SBV.Utils.SBVTest
+                  , Data.SBV.Utils.Lib
                   , Data.SBV.Examples.Arrays.Memory
                   , Data.SBV.Examples.Basics.BasicTests
                   , Data.SBV.Examples.Basics.Higher
