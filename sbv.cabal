@@ -99,6 +99,7 @@ Library
                   , Data.SBV.BitVectors.Splittable
                   , Data.SBV.BitVectors.Polynomial
                   , Data.SBV.BitVectors.PrettyNum
+                  , Data.SBV.C.C
                   , Data.SBV.SMT.SMT
                   , Data.SBV.SMT.SMTLib
                   , Data.SBV.Provers.Prover

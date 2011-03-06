@@ -166,6 +166,9 @@ module Data.SBV (
   -- * Getting SMT-Lib output (for offline analysis)
   , compileToSMTLib
 
+  -- * Compiling symbolic programs to C
+  , compileToC
+
   -- * Module exports
   -- $moduleExportIntro
 
@@ -179,6 +182,7 @@ import Data.SBV.BitVectors.Model
 import Data.SBV.BitVectors.PrettyNum
 import Data.SBV.BitVectors.Polynomial
 import Data.SBV.BitVectors.Splittable
+import Data.SBV.C.C
 import Data.SBV.Provers.Prover
 import Data.SBV.Utils.Boolean
 import Data.Bits
