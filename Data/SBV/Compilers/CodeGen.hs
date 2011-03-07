@@ -17,6 +17,7 @@ import Data.List (isPrefixOf)
 import Control.Monad (when, filterM)
 import System.Directory (createDirectory, doesDirectoryExist, doesFileExist)
 import System.FilePath ((</>))
+import Text.PrettyPrint.HughesPJ (Doc, render)
 
 import Data.SBV.BitVectors.Data (Outputtable(..), runSymbolic, Symbolic, Result, SymWord(..), SBV(..))
 
@@ -43,18 +44,18 @@ codeGen l mbDirName nm args f = do
                                        resp <- getLine
                                        return $ map toLower resp `isPrefixOf` "yes"
 
-renderFile :: Maybe FilePath -> (FilePath, [String]) -> IO ()
-renderFile (Just d) (f, cs) = do let fn = d </> f
-                                 putStrLn $ "Generating: " ++ show fn ++ ".."
-                                 writeFile fn (unlines cs)
-renderFile Nothing  (f, cs) =  do putStrLn $ "== BEGIN: " ++ show f ++ " ================"
-                                  mapM_ putStrLn cs
-                                  putStrLn $ "== END: " ++ show f ++ " =================="
+renderFile :: Maybe FilePath -> (FilePath, Doc) -> IO ()
+renderFile (Just d) (f, p) = do let fn = d </> f
+                                putStrLn $ "Generating: " ++ show fn ++ ".."
+                                writeFile fn (render p)
+renderFile Nothing  (f, p) = do putStrLn $ "== BEGIN: " ++ show f ++ " ================"
+                                putStr (render p)
+                                putStrLn $ "== END: " ++ show f ++ " =================="
 
 -- | Abstract over code generation for different languages
 class SBVTarget a where
   targetName :: a -> String
-  translate  :: a -> String -> Result -> [(FilePath, [String])]
+  translate  :: a -> String -> Result -> [(FilePath, Doc)]
 
 -- | Abstract over input variables over generated functions
 class CgArgs a where

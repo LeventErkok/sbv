@@ -80,6 +80,7 @@ Library
                   , HUnit               >= 1.2.2.3
                   , directory           >= 1.0.1.1
                   , filepath            >= 1.1.0.4
+                  , pretty              >= 1.0.1.1
   Exposed-modules : Data.SBV
                   , Data.SBV.Internals
                   , Data.SBV.Examples.BitPrecise.BitTricks
