@@ -22,7 +22,7 @@ import Data.SBV.BitVectors.Data (Outputtable(..), runSymbolic, Symbolic, Result,
 
 codeGen :: (SBVTarget l, CgArgs a, Outputtable b) => l -> Maybe FilePath -> String -> [String] -> (a -> b) -> IO ()
 codeGen l mbDirName nm args f = do
-   putStrLn $ "Translating " ++ nm ++ " to " ++ targetName l ++ ".."
+   putStrLn $ "Compiling " ++ nm ++ " to " ++ targetName l ++ ".."
    res <- runSymbolic $ cgArgs args >>= output . f
    let files = translate l nm res
    goOn <- maybe (return True) (check files) mbDirName

@@ -24,7 +24,9 @@ data SBVToC = SBVToC
 --   will be written to stdout. Use @`Just` \".\"@ for creating files in
 --   the current directory. The second argument is name of the function,
 --   which also forms the names of the C and header files. The third argument
---   is the names of the arguments to be used, finally followed by the computation.
+--   is the names of the arguments to be used and the names of the outputs, if any.
+--   (Provide as many arguments as you like, SBV will make up ones if you don't pass
+--   enough.) The final argument is the computation to be compiled.
 compileToC :: (CgArgs a, Outputtable b) => Maybe FilePath -> String -> [String] -> (a -> b) -> IO ()
 compileToC = codeGen SBVToC
 
