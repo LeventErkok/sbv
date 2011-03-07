@@ -30,7 +30,7 @@ module Data.SBV.BitVectors.Data
  , sbvToSW
  , SBVExpr(..), newExpr
  , cache, uncache, HasSignAndSize(..)
- , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, State, Size, Outputtable(..), Result(..)
+ , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, runSymbolic', State, Size, Outputtable(..), Result(..)
  , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
  ) where
 
@@ -487,7 +487,12 @@ addAxiom nm ax = do
 
 -- | Run a symbolic computation and return a 'Result'
 runSymbolic :: Symbolic a -> IO Result
-runSymbolic (Symbolic c) = do
+runSymbolic c = do (_, r) <- runSymbolic' c
+                   return r
+
+-- | Run a symbolic computation, and return a extra value paired up with the 'Result'
+runSymbolic' :: Symbolic a -> IO (a, Result)
+runSymbolic' (Symbolic c) = do
    ctr    <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
    pgm    <- newIORef S.empty
    emap   <- newIORef Map.empty
@@ -511,7 +516,7 @@ runSymbolic (Symbolic c) = do
                   }
    _ <- newConst st (mkConstCW (False,1) (0::Integer)) -- s(-2) == falseSW
    _ <- newConst st (mkConstCW (False,1) (1::Integer)) -- s(-1) == trueSW
-   _ <- runReaderT c st
+   r <- runReaderT c st
    rpgm  <- readIORef pgm
    inpsR <- readIORef inps
    outsR <- readIORef outs
@@ -522,7 +527,7 @@ runSymbolic (Symbolic c) = do
    arrs  <- IMap.toAscList `fmap` readIORef arrays
    unint <- Map.toList `fmap` readIORef uis
    axs   <- reverse `fmap` readIORef axioms
-   return $ Result (reverse inpsR) cnsts tbls arrs unint axs rpgm (reverse outsR)
+   return $ (r, Result (reverse inpsR) cnsts tbls arrs unint axs rpgm (reverse outsR))
 
 -------------------------------------------------------------------------------
 -- * Symbolic Words
