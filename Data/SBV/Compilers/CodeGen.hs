@@ -23,12 +23,10 @@ import Text.PrettyPrint.HughesPJ (Doc, render)
 
 import Data.SBV.BitVectors.Data (Outputtable(..), runSymbolic', Symbolic, Result, SymWord(..), SBV(..))
 
-codeGen :: (SBVTarget l, CgArgs a, Outputtable b) => l -> Maybe FilePath -> String -> [String] -> (a -> b) -> IO ()
+codeGen :: (SBVTarget l, SymExecutable f) => l -> Maybe FilePath -> String -> [String] -> f -> IO ()
 codeGen l mbDirName nm args f = do
    putStrLn $ "Compiling " ++ nm ++ " to " ++ targetName l ++ ".."
-   (extraNames, res) <- runSymbolic' $ do (extras, arg) <- cgArgs args
-                                          _ <- output $ f arg
-                                          return extras
+   (extraNames, res) <- symExecute args f
    let files = translate l nm extraNames res
    goOn <- maybe (return True) (check files) mbDirName
    if goOn then do mapM_ (renderFile mbDirName) files
@@ -120,3 +118,26 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymW
                   (ns6, f) <- cgArgs ns5
                   (ns7, g) <- cgArgs ns6
                   return (ns7, (a, b, c, d, e, f, g))
+
+-- | Abstract over functions that we can symbolically execute
+class SymExecutable f where
+   symExecute :: [String] -> f -> IO ([String], Result)
+
+-- Single arg
+instance (CgArgs a, Outputtable r) => SymExecutable (a -> r) where
+   symExecute args f = runSymbolic' $ do (ns1, a) <- cgArgs args
+                                         _ <- output $ f a
+                                         return ns1
+
+{-
+-- While the following (and 3-arg, 4-arg) versions are acceptable, they
+-- lead to overlapping instances in practice, which is more confusing than
+-- helpful. So stick to uncurried functions for the time being.
+
+-- 2 args
+instance (CgArgs a, CgArgs b, Outputtable r) => SymExecutable (a -> b -> r) where
+   symExecute args f = runSymbolic' $ do (ns1, a) <- cgArgs args
+                                         (ns2, b) <- cgArgs ns1
+                                         _ <- output $ f a b
+                                         return ns2
+-}

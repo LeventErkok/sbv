@@ -37,7 +37,7 @@ tbd msg = error $ "SBV->C: " ++ msg
 --   is the names of the arguments to be used and the names of the outputs, if any.
 --   (Provide as many arguments as you like, SBV will make up ones if you don't pass
 --   enough.) The final argument is the computation to be compiled.
-compileToC :: (CgArgs a, Outputtable b) => Maybe FilePath -> String -> [String] -> (a -> b) -> IO ()
+compileToC :: SymExecutable f => Maybe FilePath -> String -> [String] -> f -> IO ()
 compileToC = codeGen SBVToC
 
 cgen :: String -> [String] -> Result -> [(FilePath, Doc)]
