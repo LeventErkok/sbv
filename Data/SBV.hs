@@ -167,7 +167,7 @@ module Data.SBV (
   , compileToSMTLib
 
   -- * Compiling symbolic programs to C
-  , compileToC
+  , compileToC, compileToC'
 
   -- * Module exports
   -- $moduleExportIntro

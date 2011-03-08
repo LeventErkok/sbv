@@ -81,6 +81,7 @@ Library
                   , directory           >= 1.0.1.1
                   , filepath            >= 1.1.0.4
                   , pretty              >= 1.0.1.1
+                  , random              >= 1.0.0.2
   Exposed-modules : Data.SBV
                   , Data.SBV.Internals
                   , Data.SBV.Examples.BitPrecise.BitTricks

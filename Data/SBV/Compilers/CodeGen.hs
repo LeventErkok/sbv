@@ -23,18 +23,18 @@ import Text.PrettyPrint.HughesPJ (Doc, render)
 
 import Data.SBV.BitVectors.Data (Outputtable(..), runSymbolic', Symbolic, Result, SymWord(..), SBV(..))
 
-codeGen :: (SBVTarget l, SymExecutable f) => l -> Maybe FilePath -> String -> [String] -> f -> IO ()
-codeGen l mbDirName nm args f = do
-   putStrLn $ "Compiling " ++ nm ++ " to " ++ targetName l ++ ".."
+codeGen :: (SBVTarget l, SymExecutable f) => l -> [Integer] -> Maybe FilePath -> String -> [String] -> f -> IO ()
+codeGen l rands mbDirName nm args f = do
+   putStrLn $ "Compiling " ++ show nm ++ " to " ++ targetName l ++ ".."
    (extraNames, res) <- symExecute args f
-   let files = translate l nm extraNames res
+   let files = translate l rands nm extraNames res
    goOn <- maybe (return True) (check files) mbDirName
    if goOn then do mapM_ (renderFile mbDirName) files
                    putStrLn "Done."
            else putStrLn "Aborting."
   where createOutDir :: FilePath -> IO ()
         createOutDir dn = do b <- doesDirectoryExist dn
-                             when (not b) $ do putStrLn $ "Creating directory " ++ show dn
+                             when (not b) $ do putStrLn $ "Creating directory " ++ show dn ++ ".."
                                                createDirectory dn
         check files dn = do createOutDir dn
                             dups <- filterM (\fn -> doesFileExist (dn </> fn)) (map fst files)
@@ -57,7 +57,7 @@ renderFile Nothing  (f, p) = do putStrLn $ "== BEGIN: " ++ show f ++ " =========
 -- | Abstract over code generation for different languages
 class SBVTarget a where
   targetName :: a -> String
-  translate  :: a -> String -> [String] -> Result -> [(FilePath, Doc)]
+  translate  :: a -> [Integer] -> String -> [String] -> Result -> [(FilePath, Doc)]
 
 -- | Abstract over input variables over generated functions
 class CgArgs a where
