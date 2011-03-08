@@ -1,4 +1,4 @@
------------------------------------------------------------------------------
+----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.SBV.Compilers.C
 -- Copyright   :  (c) Levent Erkok
@@ -12,11 +12,13 @@
 
 module Data.SBV.Compilers.C(compileToC, compileToC') where
 
+import Data.Maybe(isJust)
 import Text.PrettyPrint.HughesPJ
+import System.Random
 
 import Data.SBV.BitVectors.Data
+import Data.SBV.BitVectors.PrettyNum(shex)
 import Data.SBV.Compilers.CodeGen
-import System.Random
 
 -- token for the target language
 data SBVToC = SBVToC
@@ -106,16 +108,26 @@ specifier (s, sz)     = tbd $ "Unsupported specifier at type " ++ (if s then "SI
 
 -- | Make a constant value of the given type. We don't check for out of bounds here, as it should not be needed.
 mkConst :: Integer -> (Bool, Int) -> Doc
-mkConst i (False,  1) = integer i
-mkConst i (False,  8) = integer i <> text "U"
-mkConst i (True,   8) = integer i
-mkConst i (False, 16) = integer i <> text "U"
-mkConst i (True,  16) = integer i
-mkConst i (False, 32) = integer i <> text "UL"
-mkConst i (True,  32) = integer i <> text "L"
-mkConst i (False, 64) = integer i <> text "ULL"
-mkConst i (True,  64) = integer i <> text "LL"
+mkConst i   (False,  1) = integer i
+mkConst i t@(False,  8) = text (shex False t i) <> text "U"
+mkConst i t@(True,   8) = text (shex False t i)
+mkConst i t@(False, 16) = text (shex False t i) <> text "U"
+mkConst i t@(True,  16) = text (shex False t i)
+mkConst i t@(False, 32) = text (shex False t i) <> text "UL"
+mkConst i t@(True,  32) = text (shex False t i) <> text "L"
+mkConst i t@(False, 64) = text (shex False t i) <> text "ULL"
+mkConst i t@(True,  64) = text (shex False t i) <> text "LL"
 mkConst i (s, sz)     = tbd $ "Unsupported constant " ++ show i ++ " at type " ++ (if s then "SInt" else "SWord") ++ show sz
+
+-- | Show a constant. There are many options here, using binary, decimal, etc. We simply
+--   8-bit or less constants using decimal; otherwise we use hex.
+--   Note that this automatically takes care of the boolean (1-bit) value problem, since it
+--   shows the result as an integer, which is OK as far as C is concerned.
+showConst :: CW -> Doc
+showConst cw
+  | sz <= 8 = integer (cwVal cw)
+  | True    = text $ shex False sgsz (cwVal cw)
+  where sgsz@(_, sz) = (hasSign cw, sizeOf cw)
 
 -- | Generate a makefile for ease of experimentation..
 genMake :: String -> String -> Doc
@@ -225,7 +237,7 @@ genDriver randVals fn (CType (inps, outs)) =
 
 -- | Generate the C program
 genCProg :: String -> Doc -> Result -> Doc
-genCProg fn proto (Result inps _consts tbls arrs uints axms asgns outs)
+genCProg fn proto (Result inps consts tbls arrs uints axms asgns outs)
   | not (null arrs)  = tbd "User level arrays are currently not supported."
   | not (null uints) = tbd "Uninterpreted constants are currently not supported."
   | not (null axms)  = tbd "User given axioms are currently not supported."
@@ -238,17 +250,26 @@ genCProg fn proto (Result inps _consts tbls arrs uints axms asgns outs)
   $$ text ""
   $$ proto
   $$ text "{"
-  $+$ nest 2 (   genInps inps
-              $$ genTbls tbls
+  $+$ nest 2 (   vcat (map genInp inps)
+              $$ vcat (map genTbl tbls)
               $$ genDefs asgns
               $$ genOuts outs)
   $$ text "}"
   $$ text ""
  where nm = text fn
-       genInps :: [NamedSymVar] -> Doc
-       genInps = comment . text . show
-       genTbls :: [((Int, Int, Int), [SW])] -> Doc
-       genTbls = comment . text . show
+       isConst s = isJust $ lookup s consts
+       getConst s =  maybe (error ("SBV2C: Cannot find " ++ show s ++ " in the constants table")) id (lookup s consts)
+       genInp :: NamedSymVar -> Doc
+       genInp (sw@(SW bs _), n)
+         | show s == n = empty
+         | True        = mkParam (s, bs) <+> text "=" <+> text n <> semi
+         where s = show sw
+       genTbl :: ((Int, (Bool, Int), (Bool, Int)), [SW]) -> Doc
+       genTbl ((i, _, (sg, sz)), elts)
+         | all isConst elts = mkParam ("table" ++ show i, (sg, sz)) <> text "[] = {"
+                              $$ nest 4 (fsep (punctuate comma (map (showConst . getConst) elts)))
+                              $$ text "};"
+         | True             = tbd $ "Tables (select) with non-constant elements are currently not supported"
        genDefs :: Pgm -> Doc
        genDefs = comment . text . show
        genOuts :: [SW] -> Doc
