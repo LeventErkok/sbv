@@ -110,7 +110,7 @@ data Op = Plus | Times | Minus
         | Shl Int | Shr Int | Rol Int | Ror Int
         | Extract Int Int -- Extract i j: extract bits i to j. Least significant bit is 0 (big-endian)
         | Join  -- Concat two words to form a bigger one, in the order given
-        | LkUp (Int, Int, Int, Int) !SW !SW   -- (table-index, arg-type, res-type, length of the table) index out-of-bounds-value
+        | LkUp (Int, (Bool, Int), (Bool, Int), Int) !SW !SW   -- (table-index, arg-type, res-type, length of the table) index out-of-bounds-value
         | ArrEq   Int Int
         | ArrRead Int
         | Uninterpreted String
@@ -221,14 +221,14 @@ data UnintKind = UFun Int String | UArr Int String      -- in each case, arity a
  deriving Show
 
 -- | Result of running a symbolic computation
-data Result = Result [NamedSymVar]                 -- inputs
-                     [(SW, CW)]                    -- constants
-                     [((Int, Int, Int), [SW])]     -- tables (automatically constructed)
-                     [(Int, ArrayInfo)]            -- arrays (user specified)
-                     [(String, SBVType)]           -- uninterpreted constants
-                     [(String, [String])]          -- axioms
-                     Pgm                           -- assignments
-                     [SW]                          -- outputs
+data Result = Result [NamedSymVar]                              -- inputs
+                     [(SW, CW)]                                 -- constants
+                     [((Int, (Bool, Int), (Bool, Int)), [SW])]  -- tables (automatically constructed) (tableno, index-type, result-type) elts
+                     [(Int, ArrayInfo)]                         -- arrays (user specified)
+                     [(String, SBVType)]                        -- uninterpreted constants
+                     [(String, [String])]                       -- axioms
+                     Pgm                                        -- assignments
+                     [SW]                                       -- outputs
 
 instance Show Result where
   show (Result _ cs _ _ [] [] _ [r])
@@ -283,7 +283,7 @@ instance Show ArrayContext where
 
 type ExprMap    = Map.Map SBVExpr SW
 type CnstMap    = Map.Map CW SW
-type TableMap   = Map.Map [SW] (Int, Int, Int)
+type TableMap   = Map.Map [SW] (Int, (Bool, Int), (Bool, Int))
 type ArrayInfo  = (String, ((Bool, Size), (Bool, Size)), ArrayContext)
 type ArrayMap   = IMap.IntMap ArrayInfo
 type UIMap      = Map.Map String SBVType
@@ -395,7 +395,7 @@ newConst st c = do
                   return sw
 
 -- Create a new table; hash-cons as necessary
-getTableIndex :: State -> Int -> Int -> [SW] -> IO Int
+getTableIndex :: State -> (Bool, Int) -> (Bool, Int) -> [SW] -> IO Int
 getTableIndex st at rt elts = do
   tblMap <- readIORef (rtblMap st)
   case elts `Map.lookup` tblMap of

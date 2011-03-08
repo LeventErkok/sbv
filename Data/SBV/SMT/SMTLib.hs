@@ -35,16 +35,16 @@ addNonEqConstraints nonEqConstraints (SMTLibPgm (aliasTable, pre, post)) = inter
           | Just sw <- s `lookup` aliasTable = (show sw, c)
           | True                             = (s, c)
 
-toSMTLib :: Bool                        -- ^ is this a sat problem?
-         -> [String]                    -- ^ extra comments to place on top
-         -> [(SW, String)]              -- ^ inputs and aliasing names
-         -> [(SW, CW)]                  -- ^ constants
-         -> [((Int, Int, Int), [SW])]   -- ^ auto-generated tables
-         -> [(Int, ArrayInfo)]          -- ^ user specified arrays
-         -> [(String, SBVType)]         -- ^ uninterpreted functions/constants
-         -> [(String, [String])]        -- ^ user given axioms
-         -> Pgm                         -- ^ assignments
-         -> SW                          -- ^ output variable
+toSMTLib :: Bool                                        -- ^ is this a sat problem?
+         -> [String]                                    -- ^ extra comments to place on top
+         -> [(SW, String)]                              -- ^ inputs and aliasing names
+         -> [(SW, CW)]                                  -- ^ constants
+         -> [((Int, (Bool, Int), (Bool, Int)), [SW])]   -- ^ auto-generated tables
+         -> [(Int, ArrayInfo)]                          -- ^ user specified arrays
+         -> [(String, SBVType)]                         -- ^ uninterpreted functions/constants
+         -> [(String, [String])]                        -- ^ user given axioms
+         -> Pgm                                         -- ^ assignments
+         -> SW                                          -- ^ output variable
          -> SMTLibPgm
 toSMTLib isSat comments inps consts tbls arrs uis axs asgnsSeq out = SMTLibPgm (aliasTable, pre, post)
   where logic
@@ -79,8 +79,12 @@ toSMTLib isSat comments inps consts tbls arrs uis axs asgnsSeq out = SMTLibPgm (
         aliasTable = map (\(x, y) -> (y, x)) inps
         asgns = F.toList asgnsSeq
 
-mkTable :: ((Int, Int, Int), [SW]) -> [String]
-mkTable ((i, at, rt), elts) = (" :extrafuns ((" ++ t ++ " Array[" ++ show at ++ ":" ++ show rt ++ "]))") : zipWith mkElt elts [(0::Int)..]
+-- TODO: Does this work for SMT-Lib when the index/element types are signed?
+-- Currently we ignore the signedness of the arguments, as there appears to be no way
+-- to capture that in SMT-Lib; and likely it does not matter. Would be good to check
+-- explicitly though.
+mkTable :: ((Int, (Bool, Int), (Bool, Int)), [SW]) -> [String]
+mkTable ((i, (_, at), (_, rt)), elts) = (" :extrafuns ((" ++ t ++ " Array[" ++ show at ++ ":" ++ show rt ++ "]))") : zipWith mkElt elts [(0::Int)..]
   where t = "table" ++ show i
         mkElt x k = " :assumption (= (select " ++ t ++ " bv" ++ show k ++ "[" ++ show at ++ "]) " ++ show x ++ ")"
 
@@ -131,9 +135,7 @@ cvtCnst :: (SW, CW) -> String
 cvtCnst (s, c) = " :assumption (= " ++ show s ++ " " ++ cvtCW c ++ ")"
 
 cvtCW :: CW -> String
-cvtCW x | not (hasSign x) = "bv" ++ show (cwVal x)
-                                          ++ "[" ++ show (sizeOf x) ++ "]"
-
+cvtCW x | not (hasSign x) = "bv" ++ show (cwVal x) ++ "[" ++ show (sizeOf x) ++ "]"
 -- signed numbers (with 2's complement representation) is problematic
 -- since there's no way to put a bvneg over a positive number to get minBound..
 -- Hence, we punt and use binary notation in that particular case
@@ -166,7 +168,7 @@ cvtExp (SBVApp (Rol i) [a])   = rot "rotate_left"  i a
 cvtExp (SBVApp (Ror i) [a])   = rot "rotate_right" i a
 cvtExp (SBVApp (Shl i) [a])   = shft "bvshl"  "bvshl"  i a
 cvtExp (SBVApp (Shr i) [a])   = shft "bvlshr" "bvashr" i a
-cvtExp (SBVApp (LkUp (t, at, _, l) i e) [])
+cvtExp (SBVApp (LkUp (t, (_, at), (_, _), l) i e) [])
   | needsCheck = "(ite " ++ cond ++ show e ++ " " ++ lkUp ++ ")"
   | True       = lkUp
   where needsCheck = (2::Integer)^(at) > (fromIntegral l)

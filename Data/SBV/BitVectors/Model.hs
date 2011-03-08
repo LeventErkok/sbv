@@ -531,18 +531,17 @@ instance SymWord a => Mergeable (SBV a) where
           i' = fromIntegral i
       in if i' < 0 || i' >= genericLength xs then err else genericIndex xs i'
   select [] err _   = err
-  select xs err ind = SBV sgnsz $ Right $ cache r
-     where sind  = sizeOf ind
-           serr  = sizeOf err
-           sgnsz = (hasSign err, serr)
+  select xs err ind = SBV sgnszElt $ Right $ cache r
+     where sgnszInd = (hasSign ind, sizeOf ind)
+           sgnszElt = (hasSign err, sizeOf err)
            r st  = do sws <- mapM (sbvToSW st) xs
                       swe <- sbvToSW st err
                       if all (== swe) sws  -- off-chance that all elts are the same
                          then return swe
-                         else do idx <- getTableIndex st sind serr sws
+                         else do idx <- getTableIndex st sgnszInd sgnszElt sws
                                  swi <- sbvToSW st ind
                                  let len = length xs
-                                 newExpr st sgnsz (SBVApp (LkUp (idx, sind, sizeOf err, len) swi swe) [])
+                                 newExpr st sgnszElt (SBVApp (LkUp (idx, sgnszInd, sgnszElt, len) swi swe) [])
 
 -- Unit
 instance Mergeable () where
