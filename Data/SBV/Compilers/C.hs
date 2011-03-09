@@ -10,9 +10,12 @@
 -- Compilation of symbolic programs to C
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE PatternGuards #-}
+
 module Data.SBV.Compilers.C(compileToC, compileToC') where
 
 import Data.Maybe(isJust)
+import qualified Data.Foldable as F (toList)
 import Text.PrettyPrint.HughesPJ
 import System.Random
 
@@ -77,21 +80,36 @@ mkCType extraNames ins outs = CType (map mkVar ins, map mkVar (zip outs outNames
 pprCFunHeader :: String -> CType -> Doc
 pprCFunHeader fn (CType (ins, outs)) = retType <+> text fn <> parens (fsep (punctuate comma (map mkParam ins ++ os)))
   where (retType, os) = case outs of
-                          [(_, bs)] -> (pprCWord bs, [])
+                          [(_, bs)] -> (pprCWord False bs, [])
                           _         -> (text "void", map mkPParam outs)
 
 mkParam, mkPParam :: (String, (Bool, Int)) -> Doc
-mkParam  (n, bs) = pprCWord bs <+> text n
-mkPParam (n, bs) = pprCWord bs <+> text "*" <> text n
+mkParam  (n, bs) = pprCWord True  bs <+> text n
+mkPParam (n, bs) = pprCWord False bs <+> text "*" <> text n
+
+-- | Renders as "SWord8 s0", etc. the first parameter is the width of the typefield
+declSW :: Int -> SW -> Doc
+declSW w sw@(SW sgsz _) = pad (showCType sgsz) <+> text (show sw)
+  where pad s = text $ s ++ take (w - length s) (repeat ' ')
+
+-- | Renders as "s0", etc, or the corresponding constant
+showSW :: SW -> [(SW, CW)] -> Doc
+showSW sw consts
+  | sw == falseSW                 = text "0"
+  | sw == trueSW                  = text "1"
+  | Just cw <- sw `lookup` consts = showConst cw
+  | True                          = text $ show sw
 
 -- | Words as it would be defined in the standard header stdint.h
-pprCWord :: (Bool, Int) -> Doc
-pprCWord (False, 1) = text "SBool"
-pprCWord (s, sz)
-  | sz `elem` [8, 16, 32, 64]
-  = text $ (if s then "SInt" else "SWord") ++ show sz
-pprCWord (s, sz)
-  = tbd $ "Unsupported bitvector type: " ++ (if s then "SInt" else "SWord") ++ show sz
+pprCWord :: Bool -> (Bool, Int) -> Doc
+pprCWord cnst sgsz = (if cnst then text "const" else empty) <+> text (showCType sgsz)
+
+showCType :: (Bool, Int) -> String
+showCType (False, 1) = "SBool"
+showCType (s, sz)
+  | sz `elem` [8, 16, 32, 64] = t
+  | True                      = tbd $ "Unsupported bitvector type: " ++ t
+ where t = (if s then "SInt" else "SWord") ++ show sz
 
 -- | The printf specifier for the type
 specifier :: (Bool, Int) -> Doc
@@ -107,27 +125,26 @@ specifier (True,  64) = text "%\"PRId64\""
 specifier (s, sz)     = tbd $ "Unsupported specifier at type " ++ (if s then "SInt" else "SWord") ++ show sz
 
 -- | Make a constant value of the given type. We don't check for out of bounds here, as it should not be needed.
+--   There are many options here, using binary, decimal, etc. We simply
+--   8-bit or less constants using decimal; otherwise we use hex.
+--   Note that this automatically takes care of the boolean (1-bit) value problem, since it
+--   shows the result as an integer, which is OK as far as C is concerned.
 mkConst :: Integer -> (Bool, Int) -> Doc
 mkConst i   (False,  1) = integer i
-mkConst i t@(False,  8) = text (shex False t i) <> text "U"
-mkConst i t@(True,   8) = text (shex False t i)
+mkConst i   (False,  8) = integer i <> text "U"
+mkConst i   (True,   8) = integer i
 mkConst i t@(False, 16) = text (shex False t i) <> text "U"
 mkConst i t@(True,  16) = text (shex False t i)
 mkConst i t@(False, 32) = text (shex False t i) <> text "UL"
 mkConst i t@(True,  32) = text (shex False t i) <> text "L"
 mkConst i t@(False, 64) = text (shex False t i) <> text "ULL"
 mkConst i t@(True,  64) = text (shex False t i) <> text "LL"
-mkConst i (s, sz)     = tbd $ "Unsupported constant " ++ show i ++ " at type " ++ (if s then "SInt" else "SWord") ++ show sz
+mkConst i   (True,  1)  = tbd $ "Unsupported signed 1-bit value " ++ show i
+mkConst i   (s, sz)     = tbd $ "Unsupported constant " ++ show i ++ " at type " ++ (if s then "SInt" else "SWord") ++ show sz
 
--- | Show a constant. There are many options here, using binary, decimal, etc. We simply
---   8-bit or less constants using decimal; otherwise we use hex.
---   Note that this automatically takes care of the boolean (1-bit) value problem, since it
---   shows the result as an integer, which is OK as far as C is concerned.
+-- | Show a constant
 showConst :: CW -> Doc
-showConst cw
-  | sz <= 8 = integer (cwVal cw)
-  | True    = text $ shex False sgsz (cwVal cw)
-  where sgsz@(_, sz) = (hasSign cw, sizeOf cw)
+showConst cw = mkConst (cwVal cw) (hasSign cw, sizeOf cw)
 
 -- | Generate a makefile for ease of experimentation..
 genMake :: String -> String -> Doc
@@ -194,6 +211,9 @@ genHeader fn signature =
  where nm  = text fn
        tag = text "__" <> nm <> text "__HEADER_INCLUDED__"
 
+sepIf :: Bool -> Doc
+sepIf b = if b then text "" else empty
+
 -- | Generate an example driver program
 genDriver :: [Integer] -> String -> CType -> Doc
 genDriver randVals fn (CType (inps, outs)) =
@@ -208,8 +228,8 @@ genDriver randVals fn (CType (inps, outs)) =
   $$ text "int main(void)"
   $$ text "{"
   $$ text ""
-  $$ nest 2 (   vcat (map (\p -> mkParam p <> semi) (if singleOut then [] else outs))
-             $$ (if singleOut then empty else text "")
+  $$ nest 2 (   vcat (map (\ (n, bs) -> pprCWord False bs <+> text n <> semi) (if singleOut then [] else outs))
+             $$ sepIf (not singleOut)
              $$ call
              $$ text ""
              $$ (case outs of
@@ -225,7 +245,7 @@ genDriver randVals fn (CType (inps, outs)) =
                     [_] -> True
                     _   -> False
        call = case outs of
-                [(_, bs)] -> pprCWord bs <+> text "sbvResult" <+> text "=" <+> fcall <> semi
+                [(_, bs)] -> pprCWord True bs <+> text "sbvResult" <+> text "=" <+> fcall <> semi
                 _         -> fcall <> semi
        mkCVal (_, bsz@(b, sz)) r
          | not b = mkConst (abs r `mod` (2^sz))                bsz
@@ -237,7 +257,7 @@ genDriver randVals fn (CType (inps, outs)) =
 
 -- | Generate the C program
 genCProg :: String -> Doc -> Result -> Doc
-genCProg fn proto (Result inps consts tbls arrs uints axms asgns outs)
+genCProg fn proto (Result inps preConsts tbls arrs uints axms asgns outs)
   | not (null arrs)  = tbd "User level arrays are currently not supported."
   | not (null uints) = tbd "Uninterpreted constants are currently not supported."
   | not (null axms)  = tbd "User given axioms are currently not supported."
@@ -250,28 +270,41 @@ genCProg fn proto (Result inps consts tbls arrs uints axms asgns outs)
   $$ text ""
   $$ proto
   $$ text "{"
-  $+$ nest 2 (   vcat (map genInp inps)
+  $+$ nest 2 (   let (anyOut, is) = unzip (map genInp inps) in vcat is $$ sepIf (or anyOut)
               $$ vcat (map genTbl tbls)
-              $$ genDefs asgns
+              $$ vcat (map genAsgn assignments)
+              $$ sepIf (not (null assignments))
               $$ genOuts outs)
   $$ text "}"
   $$ text ""
  where nm = text fn
-       isConst s = isJust $ lookup s consts
-       getConst s =  maybe (error ("SBV2C: Cannot find " ++ show s ++ " in the constants table")) id (lookup s consts)
-       genInp :: NamedSymVar -> Doc
+       assignments = F.toList asgns
+       typeWidth = maximum (0 : [len (hasSign s, sizeOf s) | (s, _) <- assignments])
+                where len (False, 1) = 5 -- SBool
+                      len (False, n) = 5 + length (show n) -- SWordN
+                      len (True,  n) = 4 + length (show n) -- SIntN
+       consts = (falseSW, falseCW) : (trueSW, trueCW) : preConsts
+       isConst s = isJust (lookup s consts)
+       getConst s = maybe (error ("SBV2C: Cannot find " ++ show s ++ " in the constants table")) id (lookup s consts)
+       genInp :: NamedSymVar -> (Bool, Doc)
        genInp (sw@(SW bs _), n)
-         | show s == n = empty
-         | True        = mkParam (s, bs) <+> text "=" <+> text n <> semi
+         | show s == n = (False, empty)  -- no aliasing, so no need to assign
+         | True        = (True, mkParam (s, bs) <+> text "=" <+> text n <> semi)
          where s = show sw
        genTbl :: ((Int, (Bool, Int), (Bool, Int)), [SW]) -> Doc
        genTbl ((i, _, (sg, sz)), elts)
          | all isConst elts = mkParam ("table" ++ show i, (sg, sz)) <> text "[] = {"
                               $$ nest 4 (fsep (punctuate comma (map (showConst . getConst) elts)))
                               $$ text "};"
+                              $$ text ""
          | True             = tbd $ "Tables (select) with non-constant elements are currently not supported"
-       genDefs :: Pgm -> Doc
-       genDefs = comment . text . show
+       genAsgn :: (SW, SBVExpr) -> Doc
+       genAsgn (sw, n) = declSW typeWidth sw <+> text "=" <+> ppExpr consts n <> semi
        genOuts :: [SW] -> Doc
        genOuts = comment . text . show
-       comment d = text "/*" $$ d $$ text "*/"
+
+ppExpr :: [(SW, CW)] -> SBVExpr -> Doc
+ppExpr _consts e = text "0;" <+> comment (text (show e))
+
+comment :: Doc -> Doc
+comment d = text "/*" <+> d <+> text "*/"

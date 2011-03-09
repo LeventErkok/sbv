@@ -24,7 +24,7 @@ module Data.SBV.BitVectors.Data
  , SymWord(..)
  , CW, cwVal, cwSameType, cwIsBit, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
- , SW(..), trueSW, falseSW
+ , SW(..), trueSW, falseSW, trueCW, falseCW
  , SBV(..), NodeId(..), mkSymSBV
  , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), SArray(..), arrayUIKind
  , sbvToSW
@@ -74,8 +74,8 @@ normCW x = x { cwVal = norm }
   where norm | cwSize x == 0  = 0
              | cwSigned x     = let rg = 2 ^ (cwSize x - 1)
                                 in case divMod (cwVal x) rg of
-                                    (a,b) | even a  -> b
-                                    (_,b)           -> b - rg
+                                    (a, b) | even a -> b
+                                    (_, b)          -> b - rg
              | True           = cwVal x `mod` (2 ^ cwSize x)
 
 type Size      = Int
@@ -87,6 +87,10 @@ data SW        = SW (Bool, Size) NodeId
 falseSW, trueSW :: SW
 falseSW = SW (False, 1) $ NodeId (-2)
 trueSW  = SW (False, 1) $ NodeId (-1)
+
+falseCW, trueCW :: CW
+falseCW = CW False 1 0
+trueCW  = CW False 1 1
 
 newtype SBVType = SBVType [(Bool, Size)]
              deriving (Eq, Ord)
@@ -405,7 +409,7 @@ getTableIndex st at rt elts = do
                           return i
 
 mkConstCW :: Integral a => (Bool, Size) -> a -> CW
-mkConstCW (signed,size) a = normCW $ CW signed size (toInteger a)
+mkConstCW (signed, size) a = normCW $ CW signed size (toInteger a)
 
 -- Create a new expression; hash-cons as necessary
 newExpr :: State -> (Bool, Size) -> SBVExpr -> IO SW
