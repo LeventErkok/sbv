@@ -19,6 +19,7 @@ The function `prove` has the following type:
 The class `Provable` comes with instances for n-ary predicates, for arbitrary n.
 The predicates are just regular Haskell functions over symbolic signed and unsigned
 bit-vectors. Functions for checking satisfiability (`sat` and `allSat`) are also provided.
+In addition, functions using the SBV library can be compiled to C automatically.
 
 Resources
 =========
@@ -59,6 +60,9 @@ If a predicate is not valid, `prove` will return a counterexample: An
 assignment to inputs such that the predicate fails. The `sat` function will
 return a satisfying assignment, if there is one. The `allSat` function returns
 all satisfying assignments, lazily.
+
+The library also provides code generation facilities, where symbolic Haskell
+functions can be compiled to straight-line C programs.
 
 Use of SMT solvers
 ==================

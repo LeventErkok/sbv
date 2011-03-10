@@ -3,8 +3,9 @@ Version:       0.9.12
 Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math
 Synopsis:      Symbolic Bit Vectors: Prove bit-precise program properties using SMT solvers.
 Description:   Express properties about bit-precise Haskell programs and automatically prove
-               them using SMT solvers. The SBV library adds support for symbolic bit vectors,
-               allowing formal models of bit-precise programs to be created.
+               them using SMT solvers. Automatically generate C programs from Haskell functions.
+               The SBV library adds support for symbolic bit vectors, allowing formal models of
+               bit-precise programs to be created.
                .
                >   $ ghci -XScopedTypeVariables
                >   Prelude> :m Data.SBV
