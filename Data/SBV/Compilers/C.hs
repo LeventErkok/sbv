@@ -14,6 +14,7 @@
 
 module Data.SBV.Compilers.C(compileToC, compileToC') where
 
+import Data.Char(isSpace)
 import Data.Maybe(isJust)
 import qualified Data.Foldable as F (toList)
 import Text.PrettyPrint.HughesPJ
@@ -126,12 +127,12 @@ specifier :: (Bool, Int) -> Doc
 specifier (False,  1) = text "%d"
 specifier (False,  8) = text "%\"PRIu8\""
 specifier (True,   8) = text "%\"PRId8\""
-specifier (False, 16) = text "0x%04\"PRIX16\""
+specifier (False, 16) = text "0x%04\"PRIx16\"U"
 specifier (True,  16) = text "%\"PRId16\""
-specifier (False, 32) = text "0x%08\"PRIX32\""
-specifier (True,  32) = text "%\"PRId32\""
-specifier (False, 64) = text "0x%016\"PRIX64\""
-specifier (True,  64) = text "%\"PRId64\""
+specifier (False, 32) = text "0x%08\"PRIx32\"UL"
+specifier (True,  32) = text "%\"PRId32\"L"
+specifier (False, 64) = text "0x%016\"PRIx64\"ULL"
+specifier (True,  64) = text "%\"PRId64\"LL"
 specifier (s, sz)     = die $ "Format specifier at type " ++ (if s then "SInt" else "SWord") ++ show sz
 
 -- | Make a constant value of the given type. We don't check for out of bounds here, as it should not be needed.
@@ -243,8 +244,8 @@ genDriver randVals fn (CType (inps, outs)) =
              $$ call
              $$ text ""
              $$ (case outs of
-                   [(n, bsz)] ->   text "printf" <> parens (doubleQuotes (fcall <+> text "=" <+> specifier bsz <> text "\\n") <> comma <+> text n) <> semi
-                   _          ->   text "printf" <> parens (doubleQuotes (fcall <+> text "->\\n")) <> semi
+                   [(n, bsz)] ->   text "printf" <> parens (printQuotes (fcall <+> text "=" <+> specifier bsz <> text "\\n") <> comma <+> text n) <> semi
+                   _          ->   text "printf" <> parens (printQuotes (fcall <+> text "->\\n")) <> semi
                                  $$ vcat (map display outs))
              $$ text ""
              $$ text "return 0" <> semi)
@@ -263,7 +264,7 @@ genDriver randVals fn (CType (inps, outs)) =
        fcall = case outs of
                 [_] -> nm <> parens (fsep (punctuate comma (zipWith mkCVal inps randVals)))
                 _   -> nm <> parens (fsep (punctuate comma (zipWith mkCVal inps randVals ++ map (\ (n, _) -> text "&" <> text n) outs)))
-       display (s, bsz) = text "printf" <> parens (doubleQuotes (text " " <+> text s <+> text "=" <+> specifier bsz <> text "\\n") <> comma <+> text s) <> semi
+       display (s, bsz) = text "printf" <> parens (printQuotes (text " " <+> text s <+> text "=" <+> specifier bsz <> text "\\n") <> comma <+> text s) <> semi
 
 -- | Generate the C program
 genCProg :: Bool -> String -> Doc -> Result -> [String] -> Doc
@@ -346,7 +347,7 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
         p (ArrEq _ _)       _ = tbd $ "User specified arrays (ArrEq)"
         p (Uninterpreted s) _ = tbd $ "Uninterpreted constants (" ++ show s ++ ")"
         p (Extract i j) [a]   = extract i j (let s = head opArgs in (hasSign s, sizeOf s)) a
-        p Join _              = tbd $ "Word concatenation operator"
+        p Join [a, b]         = join (let (s1 : s2 : _) = opArgs in ((hasSign s1, sizeOf s1), (hasSign s2, sizeOf s2), a, b))
         p (Rol i) [a]         = rotate True  i a (sizeOf (head opArgs))
         p (Ror i) [a]         = rotate False i a (sizeOf (head opArgs))
         p (Shl i) [a]         = shift True  i a (let s = head opArgs in (hasSign s, sizeOf s))
@@ -396,3 +397,16 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
         extract 15  8 (False, 16) a = text "(SWord8)"  <+> (parens (a <+> text ">> 8"))
         extract  7  0 (False, 16) a = text "(SWord8)"  <+> a
         extract  i  j (sg, sz)    _ = tbd $ "extract with " ++ show (i, j, (sg, sz))
+        -- TBD: ditto here for join, just like extract above
+        join ((False,  8), (False,  8), a, b) = parens ((parens (text "(SWord16)" <+> a)) <+> text "<< 8")  <+> text "|" <+> parens (text "(SWord16)" <+> b)
+        join ((False, 16), (False, 16), a, b) = parens ((parens (text "(SWord32)" <+> a)) <+> text "<< 16") <+> text "|" <+> parens (text "(SWord32)" <+> b)
+        join ((False, 32), (False, 32), a, b) = parens ((parens (text "(SWord64)" <+> a)) <+> text "<< 32") <+> text "|" <+> parens (text "(SWord64)" <+> b)
+        join (sgsz1, sgsz2, _, _)             = tbd $ "join with " ++ show (sgsz1, sgsz2)
+
+-- same as doubleQuotes, except we have to make sure there are no line breaks..
+-- Otherwise breaks the generated code.. sigh
+printQuotes :: Doc -> Doc
+printQuotes d = text $ '"' : trim (render d) ++ "\""
+ where trim ""        = ""
+       trim ('\n':cs) = ' ' : trim (dropWhile isSpace cs)
+       trim (c:cs)    = c   : trim cs
