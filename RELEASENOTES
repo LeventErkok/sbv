@@ -1,10 +1,22 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
+Version 0.9.12, 2011-03-10
+  
+  New features:
+    * Add support for compilation to C
+    * Add a mechanism for offline saving of SMT-Lib files
+
+  Bug fixes:
+    * Output naming bug, reported by Josef Svenningsson
+    * Specification bug in Legato's multipler example
+
+======================================================================
 Version 0.9.11, 2011-02-16
   
   * Make ghc-7.0 happy, minor re-org on the cabal file/Setup.hs
 
+======================================================================
 Version 0.9.10, 2011-02-15
 
   * Integrate commits from Iavor: Generalize SBV's to keep
@@ -12,24 +24,24 @@ Version 0.9.10, 2011-02-15
     leaf types
   * Remove the unnecessary CLC instruction from the Legato example
   * More tests
-
+======================================================================
 Version 0.9.9, 2011-01-23
 
   * Support for user-defined SMT-Lib axioms to be
     specified for uninterpreted constants/functions
   * Move to using doctest style inline tests
-
+======================================================================
 Version 0.9.8, 2011-01-22
 
   * Better support for uninterpreted-functions
   * Support counter-examples with SArray's
   * Ladner-Fischer scheme example
   * Documentation updates
-
+======================================================================
 Version 0.9.7, 2011-01-18
 
   * First stable public hackage release
-
+======================================================================
 Versions 0.X.X - 0.9.6
 
   * Basic infrastructure, design exploration
