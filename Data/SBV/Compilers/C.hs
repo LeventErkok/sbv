@@ -32,34 +32,40 @@ instance SBVTarget SBVToC where
 
 -- Unsupported features, or features TBD go thorough here..
 tbd :: String -> a
-tbd msg = error $ "SBV->C: " ++ msg ++ " currently not supported."
+tbd msg = error $ "SBV->C: Not yet supported: " ++ msg
 
--- | Given a symbolic computation, render it as an equivalent
---   C program. The first argument is an optional directory name
---   under which the files will be saved. If `Nothing`, the result
---   will be written to stdout. Use @`Just` \".\"@ for creating files in
---   the current directory. The second argument is name of the function,
---   which also forms the names of the C and header files. The third argument
---   is the names of the arguments to be used and the names of the outputs, if any.
---   Provide as many arguments as you like, SBV will make up ones if you don't pass
---   enough. The final argument is the computation to be compiled. Compilation will
---   also generate a @Makefile@ and a sample driver program, which executes the program over random
---   input values.
-compileToC :: SymExecutable f => Maybe FilePath -> String -> [String] -> f -> IO ()
-compileToC mbDir fn extraNames f = do rands <- newStdGen >>= return . randoms
-                                      codeGen SBVToC rands mbDir fn extraNames f
+-- | Given a symbolic computation, render it as an equivalent C program.
+--
+--    * First argument: States whether run-time-checks should be inserted for index-out-of-bounds or shifting-by-large values etc.
+--      If `False`, such checks are ignored, gaining efficiency, at the cost of potential undefined behavior.
+--
+--    * Second argument is an optional directory name under which the files will be saved. If `Nothing`, the result
+--      will be written to stdout. Use @`Just` \".\"@ for creating files in the current directory.
+--
+--    * The third argument is name of the function, which also forms the names of the C and header files.
+--
+--    * The fourth argument are the names of the arguments to be used and the names of the outputs, if any.
+--       Provide as many arguments as you like, SBV will make up ones if you don't pass enough.
+--
+--    * The fifth and the final argument is the computation to be compiled.
+--
+-- Compilation will also generate a @Makefile@ and a sample driver program, which executes the program over random
+-- input values.
+compileToC :: SymExecutable f => Bool -> Maybe FilePath -> String -> [String] -> f -> IO ()
+compileToC rtc mbDir fn extraNames f = do rands <- newStdGen >>= return . randoms
+                                          codeGen SBVToC rands rtc mbDir fn extraNames f
 
 -- | Same as 'compileToC', except use the specified values (first argument) instead of random values
 -- when generating the driver program. This version is useful mainly for generating repeatable test values.
-compileToC' :: SymExecutable f => [Integer] -> Maybe FilePath -> String -> [String] -> f -> IO ()
+compileToC' :: SymExecutable f => [Integer] -> Bool -> Maybe FilePath -> String -> [String] -> f -> IO ()
 compileToC' dvals = codeGen SBVToC (dvals ++ repeat 0)
 
-cgen :: [Integer] -> String -> [String] -> Result -> [(FilePath, Doc)]
-cgen randVals nm extraNames sbvProg@(Result ins _ _ _ _ _ _ outs) =
+cgen :: [Integer] -> Bool -> String -> [String] -> Result -> [(FilePath, Doc)]
+cgen randVals rtc nm extraNames sbvProg@(Result ins _ _ _ _ _ _ outs) =
         [ ("Makefile",  genMake   nm nmd)
         , (nm  ++ ".h", genHeader nm sig)
         , (nmd ++ ".c", genDriver randVals nm typ)
-        , (nm  ++ ".c", genCProg  nm sig sbvProg (map fst outputVars))
+        , (nm  ++ ".c", genCProg  rtc nm sig sbvProg (map fst outputVars))
         ]
   where nmd = nm ++ "_driver"
         typ@(CType (_, outputVars)) = mkCType extraNames ins outs
@@ -108,7 +114,7 @@ showCType :: (Bool, Int) -> String
 showCType (False, 1) = "SBool"
 showCType (s, sz)
   | sz `elem` [8, 16, 32, 64] = t
-  | True                      = tbd $ "Unsupported bitvector type: " ++ t
+  | True                      = tbd $ "Non-regular bitvector type: " ++ t
  where t = (if s then "SInt" else "SWord") ++ show sz
 
 -- | The printf specifier for the type
@@ -122,7 +128,7 @@ specifier (False, 32) = text "%\"PRIu32\""
 specifier (True,  32) = text "%\"PRId32\""
 specifier (False, 64) = text "%\"PRIu64\""
 specifier (True,  64) = text "%\"PRId64\""
-specifier (s, sz)     = tbd $ "Unsupported specifier at type " ++ (if s then "SInt" else "SWord") ++ show sz
+specifier (s, sz)     = tbd $ "Format specifier at type " ++ (if s then "SInt" else "SWord") ++ show sz
 
 -- | Make a constant value of the given type. We don't check for out of bounds here, as it should not be needed.
 --   There are many options here, using binary, decimal, etc. We simply
@@ -139,8 +145,8 @@ mkConst i t@(False, 32) = text (shex False t i) <> text "UL"
 mkConst i t@(True,  32) = text (shex False t i) <> text "L"
 mkConst i t@(False, 64) = text (shex False t i) <> text "ULL"
 mkConst i t@(True,  64) = text (shex False t i) <> text "LL"
-mkConst i   (True,  1)  = tbd $ "Unsupported signed 1-bit value " ++ show i
-mkConst i   (s, sz)     = tbd $ "Unsupported constant " ++ show i ++ " at type " ++ (if s then "SInt" else "SWord") ++ show sz
+mkConst i   (True,  1)  = tbd $ "Signed 1-bit value " ++ show i
+mkConst i   (s, sz)     = tbd $ "Constant " ++ show i ++ " at type " ++ (if s then "SInt" else "SWord") ++ show sz
 
 -- | Show a constant
 showConst :: CW -> Doc
@@ -256,11 +262,11 @@ genDriver randVals fn (CType (inps, outs)) =
        display (s, bsz) = text "printf" <> parens (doubleQuotes (text " " <+> text s <+> text "=" <+> specifier bsz <> text "\\n") <> comma <+> text s) <> semi
 
 -- | Generate the C program
-genCProg :: String -> Doc -> Result -> [String] -> Doc
-genCProg fn proto (Result inps preConsts tbls arrs uints axms asgns outs) outputVars
-  | not (null arrs)  = tbd "User level arrays are"
-  | not (null uints) = tbd "Uninterpreted constants are"
-  | not (null axms)  = tbd "User given axioms are"
+genCProg :: Bool -> String -> Doc -> Result -> [String] -> Doc
+genCProg rtc fn proto (Result inps preConsts tbls arrs uints axms asgns outs) outputVars
+  | not (null arrs)  = tbd "User specified arrays"
+  | not (null uints) = tbd "Uninterpreted constants"
+  | not (null axms)  = tbd "User given axioms"
   | True
   =  text "/* File:" <+> doubleQuotes (nm <> text ".c") <> text ". Automatically generated by SBV. Do not edit! */"
   $$ text ""
@@ -302,7 +308,7 @@ genCProg fn proto (Result inps preConsts tbls arrs uints axms asgns outs) output
        getNodeId s@(SW _ (NodeId n)) | isConst s = -1
                                      | True      = n
        genAsgn :: (SW, SBVExpr) -> (Int, Doc)
-       genAsgn (sw, n) = (getNodeId sw, declSW typeWidth sw <+> text "=" <+> ppExpr consts n <> semi)
+       genAsgn (sw, n) = (getNodeId sw, declSW typeWidth sw <+> text "=" <+> ppExpr rtc consts n <> semi)
        genOuts :: [SW] -> Doc
        genOuts [sw] = text "return" <+> showSW consts sw <> semi
        genOuts os
@@ -325,12 +331,50 @@ genCProg fn proto (Result inps preConsts tbls arrs uints axms asgns outs) output
          | a     && not pa   = text "" $$ d $$ layout True  rs
          | True              = text "" $$ d $$ layout False rs
 
-ppExpr :: [(SW, CW)] -> SBVExpr -> Doc
-ppExpr consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
-  where p Plus  [a, b] = a <+> text "+" <+> b
-        p Minus [a, b] = a <+> text "-" <+> b
-        p Times [a, b] = a <+> text "*" <+> b
-        p o args       = text "0" <+> comment (text ("Operator " ++ show o ++ " applied to " ++ show args ++ " is"))
-
-comment :: Doc -> Doc
-comment d = text "/*" <+> d <+> text "*/"
+ppExpr :: Bool -> [(SW, CW)] -> SBVExpr -> Doc
+ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
+  where cBinOps = [ (Plus, "+"), (Times, "*"), (Minus, "-"), (Quot, "/"), (Rem, "%")
+                  , (Equal, "=="), (NotEqual, "!=")
+                  , (LessThan, "<"), (GreaterThan, ">"), (LessEq, "<="), (GreaterEq, ">=")
+                  , (And, "&"), (Or, "|"), (XOr, "^")
+                  ]
+        p (ArrRead _)       _ = tbd $ "User specified arrays (ArrRead)"
+        p (ArrEq _ _)       _ = tbd $ "User specified arrays (ArrEq)"
+        p (Uninterpreted s) _ = tbd $ "Uninterpreted constants (" ++ show s ++ ")"
+        p (Rol i) _           = tbd $ "Rotate-left operator (" ++ show i ++")"
+        p (Ror i) _           = tbd $ "Rotate-right operator (" ++ show i ++")"
+        p (Extract i j) _     = tbd $ "Segment-extraction operator (" ++ show i ++ "-" ++ show  j ++")"
+        p Join _              = tbd $ "Word concatenation operator"
+        p (Shl i) [a]         = shift "<<" i a (let s = head opArgs in (hasSign s, sizeOf s))
+        p (Shr i) [a]         = shift ">>" i a (let s = head opArgs in (hasSign s, sizeOf s))
+        p Not [a] = text "~" <> a
+        p Ite [a, b, c] = a <+> text "?" <+> b <+> text ":" <+> c
+        p (LkUp (t, (as, at), _, len) ind def) []
+          | not rtc     -- ignore run-time-checks per user request
+          = lkUp
+          | needsCheckL && needsCheckR
+          = checkBoth  <+> text "?" <+> lkUp <+> text ":" <+> showSW consts def
+          | needsCheckL
+          = checkLeft  <+> text "?" <+> lkUp <+> text ":" <+> showSW consts def
+          | needsCheckR
+          = checkRight <+> text "?" <+> lkUp <+> text ":" <+> showSW consts def
+          | True
+          = lkUp
+          where index = showSW consts ind
+                lkUp = text "table" <> int t <> brackets (showSW consts ind)
+                checkLeft  = index <+> text "< 0"
+                checkRight = index <+> text ">=" <+> int len
+                checkBoth  = parens (checkLeft <+> text "||" <+> checkRight)
+                (needsCheckL, needsCheckR) | as   = (True,  (2::Integer)^(at-1)-1  >= (fromIntegral len))
+                                           | True = (False, (2::Integer)^(at)  -1  >= (fromIntegral len))
+        p o [a, b]
+          | Just co <- lookup o cBinOps
+          = a <+> text co <+> b
+        p o args = error $ "SBV->C: Impossible happened. Received operator " ++ show o ++ " applied to " ++ show args
+        shift o i a (sg, sz)
+          | not rtc = if i == 0 then a else a <+> text o <+> int i
+          | sg      = tbd $ "Operator " ++ o ++ " applied to a signed argument"
+          | i < 0   = tbd $ "Operator " ++ o ++ " with a negative shift amount (" ++ show i ++ ")"
+          | i >= sz = tbd $ "Operator " ++ o ++ " shifting with a larger-than-bit-size argument (" ++ show i ++"), applied to a " ++ show sz ++ "-bit argument"
+          | i == 0  = a
+          | True    = a <+> text o <+> int i

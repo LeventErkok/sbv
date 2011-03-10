@@ -23,11 +23,11 @@ import Text.PrettyPrint.HughesPJ (Doc, render)
 
 import Data.SBV.BitVectors.Data (Outputtable(..), runSymbolic', Symbolic, Result, SymWord(..), SBV(..))
 
-codeGen :: (SBVTarget l, SymExecutable f) => l -> [Integer] -> Maybe FilePath -> String -> [String] -> f -> IO ()
-codeGen l rands mbDirName nm args f = do
+codeGen :: (SBVTarget l, SymExecutable f) => l -> [Integer] -> Bool -> Maybe FilePath -> String -> [String] -> f -> IO ()
+codeGen l rands rtc mbDirName nm args f = do
    putStrLn $ "Compiling " ++ show nm ++ " to " ++ targetName l ++ ".."
    (extraNames, res) <- symExecute args f
-   let files = translate l rands nm extraNames res
+   let files = translate l rands rtc nm extraNames res
    goOn <- maybe (return True) (check files) mbDirName
    if goOn then do mapM_ (renderFile mbDirName) files
                    putStrLn "Done."
@@ -57,7 +57,7 @@ renderFile Nothing  (f, p) = do putStrLn $ "== BEGIN: " ++ show f ++ " =========
 -- | Abstract over code generation for different languages
 class SBVTarget a where
   targetName :: a -> String
-  translate  :: a -> [Integer] -> String -> [String] -> Result -> [(FilePath, Doc)]
+  translate  :: a -> [Integer] -> Bool -> String -> [String] -> Result -> [(FilePath, Doc)]
 
 -- | Abstract over input variables over generated functions
 class CgArgs a where

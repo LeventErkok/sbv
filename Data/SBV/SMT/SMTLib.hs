@@ -168,7 +168,7 @@ cvtExp (SBVApp (Rol i) [a])   = rot "rotate_left"  i a
 cvtExp (SBVApp (Ror i) [a])   = rot "rotate_right" i a
 cvtExp (SBVApp (Shl i) [a])   = shft "bvshl"  "bvshl"  i a
 cvtExp (SBVApp (Shr i) [a])   = shft "bvlshr" "bvashr" i a
-cvtExp (SBVApp (LkUp (t, (_, at), (_, _), l) i e) [])
+cvtExp (SBVApp (LkUp (t, (_, at), _, l) i e) [])
   | needsCheck = "(ite " ++ cond ++ show e ++ " " ++ lkUp ++ ")"
   | True       = lkUp
   where needsCheck = (2::Integer)^(at) > (fromIntegral l)
