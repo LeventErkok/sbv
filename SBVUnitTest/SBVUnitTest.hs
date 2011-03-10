@@ -40,19 +40,20 @@ import qualified Data.SBV.TestSuite.CRC.GenPoly                   as T12(testSui
 import qualified Data.SBV.TestSuite.CRC.Parity                    as T13(testSuite)
 import qualified Data.SBV.TestSuite.CRC.USB5                      as T14(testSuite)
 import qualified Data.SBV.TestSuite.CodeGeneration.AddSub         as T15(testSuite)
-import qualified Data.SBV.TestSuite.Polynomials.Polynomials       as T16(testSuite)
-import qualified Data.SBV.TestSuite.PrefixSum.PrefixSum           as T17(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.DogCatMouse           as T18(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.Euler185              as T19(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.MagicSquare           as T20(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.NQueens               as T21(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.PowerSet              as T22(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.Sudoku                as T23(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.Temperature           as T24(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.U2Bridge              as T25(testSuite)
-import qualified Data.SBV.TestSuite.Uninterpreted.AUF             as T26(testSuite)
-import qualified Data.SBV.TestSuite.Uninterpreted.Function        as T27(testSuite)
-import qualified Data.SBV.TestSuite.Uninterpreted.Uninterpreted   as T28(testSuite)
+import qualified Data.SBV.TestSuite.CodeGeneration.CgTests        as T16(testSuite)
+import qualified Data.SBV.TestSuite.Polynomials.Polynomials       as T18(testSuite)
+import qualified Data.SBV.TestSuite.PrefixSum.PrefixSum           as T19(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.DogCatMouse           as T20(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.Euler185              as T21(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.MagicSquare           as T22(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.NQueens               as T23(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.PowerSet              as T24(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.Sudoku                as T25(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.Temperature           as T26(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.U2Bridge              as T27(testSuite)
+import qualified Data.SBV.TestSuite.Uninterpreted.AUF             as T28(testSuite)
+import qualified Data.SBV.TestSuite.Uninterpreted.Function        as T29(testSuite)
+import qualified Data.SBV.TestSuite.Uninterpreted.Uninterpreted   as T30(testSuite)
 
 testCollection :: [SBVTestSuite]
 testCollection = [
@@ -60,9 +61,10 @@ testCollection = [
      , T05.testSuite, T06.testSuite, T07.testSuite, T08.testSuite
      , T09.testSuite, T10.testSuite, T11.testSuite, T12.testSuite
      , T13.testSuite, T14.testSuite, T15.testSuite, T16.testSuite
-     , T17.testSuite, T18.testSuite, T19.testSuite, T20.testSuite
+     {- , T17.testSuite-}, T18.testSuite, T19.testSuite, T20.testSuite
      , T21.testSuite, T22.testSuite, T23.testSuite, T24.testSuite
      , T25.testSuite, T26.testSuite, T27.testSuite, T28.testSuite
+     , T29.testSuite, T30.testSuite
      ]
 -- No user serviceable parts below..
 
