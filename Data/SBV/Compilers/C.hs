@@ -350,18 +350,14 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
         p Not [a] = text "~" <> a
         p Ite [a, b, c] = a <+> text "?" <+> b <+> text ":" <+> c
         p (LkUp (t, (as, at), _, len) ind def) []
-          | not rtc     -- ignore run-time-checks per user request
-          = lkUp
-          | needsCheckL && needsCheckR
-          = checkBoth  <+> text "?" <+> lkUp <+> text ":" <+> showSW consts def
-          | needsCheckL
-          = checkLeft  <+> text "?" <+> lkUp <+> text ":" <+> showSW consts def
-          | needsCheckR
-          = checkRight <+> text "?" <+> lkUp <+> text ":" <+> showSW consts def
-          | True
-          = lkUp
-          where index = showSW consts ind
+          | not rtc                    = lkUp -- ignore run-time-checks per user request
+          | needsCheckL && needsCheckR = cndLkUp checkBoth
+          | needsCheckL                = cndLkUp checkLeft
+          | needsCheckR                = cndLkUp checkRight
+          | True                       = lkUp
+          where [index, defVal] = map (showSW consts) [ind, def]
                 lkUp = text "table" <> int t <> brackets (showSW consts ind)
+                cndLkUp cnd = cnd <+> text "?" <+> defVal <+> text ":" <+> lkUp
                 checkLeft  = index <+> text "< 0"
                 checkRight = index <+> text ">=" <+> int len
                 checkBoth  = parens (checkLeft <+> text "||" <+> checkRight)
@@ -372,7 +368,7 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
           = a <+> text co <+> b
         p o args = error $ "SBV->C: Impossible happened. Received operator " ++ show o ++ " applied to " ++ show args
         shift o i a (sg, sz)
-          | not rtc = if i == 0 then a else a <+> text o <+> int i
+          | not rtc = if i == 0 then a else a <+> text o <+> int i -- ignore run-time-checks per user request
           | sg      = tbd $ "Operator " ++ o ++ " applied to a signed argument"
           | i < 0   = tbd $ "Operator " ++ o ++ " with a negative shift amount (" ++ show i ++ ")"
           | i >= sz = tbd $ "Operator " ++ o ++ " shifting with a larger-than-bit-size argument (" ++ show i ++"), applied to a " ++ show sz ++ "-bit argument"
