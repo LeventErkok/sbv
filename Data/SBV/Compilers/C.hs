@@ -300,10 +300,9 @@ genCProg rtc fn proto (Result inps preConsts tbls arrs uints axms asgns outs) ou
        consts = (falseSW, falseCW) : (trueSW, trueCW) : preConsts
        isConst s = isJust (lookup s consts)
        genInp :: NamedSymVar -> Doc
-       genInp (sw@(SW bs _), n)
-         | s == n = empty  -- no aliasing, so no need to assign
-         | True   = mkParam (s, bs) <+> text "=" <+> text n <> semi
-         where s = show sw
+       genInp (sw, n)
+         | show sw == n = empty  -- no aliasing, so no need to assign
+         | True         = declSW typeWidth sw <+> text "=" <+> text n <> semi
        genTbl :: ((Int, (Bool, Int), (Bool, Int)), [SW]) -> (Int, Doc)
        genTbl ((i, _, (sg, sz)), elts) =  (location, static <+> mkParam ("table" ++ show i, (sg, sz)) <> text "[] = {"
                                                      $$ nest 4 (fsep (punctuate comma (map (showSW consts) elts)))
