@@ -25,7 +25,7 @@ import Data.SBV
 -- but is simple and easy to convince yourself that it is correct. For instance:
 --
 -- >>> popCount_Slow 0x0123456789ABCDEF
--- 32
+-- 32 :: SWord8
 popCount_Slow :: SWord64 -> SWord8
 popCount_Slow inp = go inp 0 0
   where go :: SWord64 -> Int -> SWord8 -> SWord8
@@ -85,8 +85,8 @@ reference version.
 --
 -- >>> prove fastPopCountIsCorrect
 -- Q.E.D.
-fastPopCountIsCorrect :: IO ThmResult
-fastPopCountIsCorrect = prove $ \x -> popCount x .== popCount_Slow x
+fastPopCountIsCorrect :: SWord64 -> SBool
+fastPopCountIsCorrect x = popCount x .== popCount_Slow x
 
 -----------------------------------------------------------------------------
 -- * Code generation
