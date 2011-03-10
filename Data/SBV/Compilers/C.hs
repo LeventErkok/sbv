@@ -281,15 +281,15 @@ genCProg rtc fn proto (Result inps preConsts tbls arrs uints axms asgns outs) ou
   $$ text ""
   $$ proto
   $$ text "{"
-  $+$ nest 2 (   vcat mappedInputs
-              $$ layout (or anyOuts) (merge (map genTbl tbls) (map genAsgn assignments))
-              $$ sepIf (not (null assignments) || not (null tbls))
-              $$ genOuts outs)
+  $$ text ""
+  $$ nest 2 (   vcat (map genInp inps)
+             $$ layout True False (merge (map genTbl tbls) (map genAsgn assignments))
+             $$ sepIf (not (null assignments) || not (null tbls))
+             $$ genOuts outs)
   $$ text "}"
   $$ text ""
  where nm = text fn
        assignments = F.toList asgns
-       (anyOuts, mappedInputs) = unzip $ map genInp inps
        typeWidth = getMax 0 [len (hasSign s, sizeOf s) | (s, _) <- assignments]
                 where len (False, 1) = 5 -- SBool
                       len (False, n) = 5 + length (show n) -- SWordN
@@ -299,10 +299,10 @@ genCProg rtc fn proto (Result inps preConsts tbls arrs uints axms asgns outs) ou
                       getMax m (x:xs) = getMax (m `max` x) xs
        consts = (falseSW, falseCW) : (trueSW, trueCW) : preConsts
        isConst s = isJust (lookup s consts)
-       genInp :: NamedSymVar -> (Bool, Doc)
+       genInp :: NamedSymVar -> Doc
        genInp (sw@(SW bs _), n)
-         | s == n = (False, empty)  -- no aliasing, so no need to assign
-         | True   = (True, mkParam (s, bs) <+> text "=" <+> text n <> semi)
+         | s == n = empty  -- no aliasing, so no need to assign
+         | True   = mkParam (s, bs) <+> text "=" <+> text n <> semi
          where s = show sw
        genTbl :: ((Int, (Bool, Int), (Bool, Int)), [SW]) -> (Int, Doc)
        genTbl ((i, _, (sg, sz)), elts) =  (location, static <+> mkParam ("table" ++ show i, (sg, sz)) <> text "[] = {"
@@ -329,12 +329,13 @@ genCProg rtc fn proto (Result inps preConsts tbls arrs uints axms asgns outs) ou
          | i < i'                                 = (False, t) : merge trest as
          | True                                   = (True,  a) : merge ts arest
        -- layout makes sure tables and assignments are clearly separated
-       layout :: Bool -> [(Bool, Doc)] -> Doc
-       layout _  []          = empty
-       layout pa ((a, d):rs)
-         | a     && pa       =            d $$ layout True  rs
-         | a     && not pa   = text "" $$ d $$ layout True  rs
-         | True              = text "" $$ d $$ layout False rs
+       layout :: Bool -> Bool -> [(Bool, Doc)] -> Doc
+       layout _  _  []          = empty
+       layout f  pa ((a, d):rs)
+         | f             =            d $$ layout False True  rs
+         | a && pa       =            d $$ layout False True  rs
+         | a && not pa   = text "" $$ d $$ layout False True  rs
+         | True          = text "" $$ d $$ layout False False rs
 
 ppExpr :: Bool -> [(SW, CW)] -> SBVExpr -> Doc
 ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
