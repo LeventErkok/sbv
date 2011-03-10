@@ -168,7 +168,9 @@ adc a k m = k . setFlag FlagZ (v' .== 0) . setFlag FlagC c' . setReg RegA v' $ m
         ra = getReg RegA m
         c  = getFlag FlagC m
         v' = v + ra + ite (c .== true) 1 0
-        c' = bitValue v' 7 -- c is true if the sum overflowed
+        c' = -- to detect overflow, perform the computation at 16 bits and check
+             -- that the result is larger than 255
+             ((0 # v) + (0 # ra) + ite (c .== true) 1 0) .> 255
 
 -- | DEX: Decrement the value of register @X@
 dex :: Instruction
@@ -210,7 +212,6 @@ legato f1Addr f2Addr lowAddr = start
                    $ bne loop
                    $ end
 
-
 ------------------------------------------------------------------
 -- * Verification interface
 ------------------------------------------------------------------
@@ -246,8 +247,11 @@ legatoIsCorrect mem (addrX, x) (addrY, y) addrLow initVals
         = allDifferent [addrX, addrY, addrLow]    -- note the conditional: addresses must be distinct!
                 ==> result .== expected
     where (hi, lo) = runLegato (addrX, x) (addrY, y) addrLow (initMachine mem initVals)
-          result   = 256 * hi + lo
-          expected = x * y
+          -- NB. perform the comparison over 16 bit values to avoid overflow!
+          -- If Value changes to be something else, modify this accordingly.
+          result, expected :: SWord16
+          result   = 256 * (0 # hi) + (0 # lo)
+          expected = (0 # x) * (0 # y)
 
 ------------------------------------------------------------------
 -- * Verification
@@ -259,9 +263,27 @@ type Model = SFunArray
 -- type Model = SArray
 
 -- | The correctness theorem.
---   On a decent MacBook Pro, this proof takes about 30 seconds with 'SFunArray' memory model above
---   and about 30 minutes with the 'SArray' memory model
+--   On a decent MacBook Pro, this proof takes about 3 minutes with the 'SFunArray' memory model
+--   and about 30 minutes with the 'SArray' model.
 correctnessTheorem :: IO ThmResult
 correctnessTheorem = proveWith timingSMTCfg $
     forAll ["mem", "addrX", "x", "addrY", "y", "addrLow", "regX", "regA", "memVals", "flagC", "flagZ"]
            legatoIsCorrect
+
+------------------------------------------------------------------
+-- * C Code generation
+------------------------------------------------------------------
+
+-- | Create a version of `runLegato` that is suitable for code-generation.
+-- This essentially means uncurrying the functions and providing values for
+-- parameters that are not necessary for code-generation; such as the arbitrary
+-- mostek state or addresses for the values. Depending on the needs, more parameters
+-- can be included.
+cg_runLegato :: (Value, Value) -> (Value, Value)
+cg_runLegato (x, y) = runLegato (0, x) (1, y) 2 (initMachine (mkSFunArray 0) (0, 0, 0, false, false))
+
+-- | Generate a C program that implements Legato's algorithm automatically.
+--   You can change the second argument of `compileToC` to @`Just` dirName@ to place the output
+--   files in that directory.
+legatoInC :: IO ()
+legatoInC = compileToC True Nothing "runLegato" [] cg_runLegato
