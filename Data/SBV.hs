@@ -101,7 +101,7 @@ module Data.SBV (
   -- *** Signed symbolic bit-vectors
   , SInt8, SInt16, SInt32, SInt64
   -- *** Arrays of symbolic values
-  , SymArray(..), SArray, SFunArray
+  , SymArray(..), SArray, SFunArray, mkSFunArray
   -- ** Operations on symbolic words
   -- *** Word level
   , bitValue, setBitTo, oneIf, lsb, msb

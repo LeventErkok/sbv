@@ -26,7 +26,7 @@ module Data.SBV.BitVectors.Data
  , mkConstCW ,liftCW2, mapCW, mapCW2
  , SW(..), trueSW, falseSW, trueCW, falseCW
  , SBV(..), NodeId(..), mkSymSBV
- , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), SArray(..), arrayUIKind
+ , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), mkSFunArray, SArray(..), arrayUIKind
  , sbvToSW
  , SBVExpr(..), newExpr
  , cache, uncache, HasSignAndSize(..)
@@ -685,6 +685,11 @@ data SFunArray a b = SFunArray (SBV a -> SBV b)
 
 instance (HasSignAndSize a, HasSignAndSize b) => Show (SFunArray a b) where
   show (SFunArray _) = "SFunArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"
+
+-- | Make a constant fun-array always returning a fixed value.
+-- Useful for creating arrays in a pure context. (Otherwise use `newArray`.)
+mkSFunArray :: SBV b -> SFunArray a b
+mkSFunArray i = SFunArray (const i)
 
 ---------------------------------------------------------------------------------
 -- * Cached values
