@@ -1,4 +1,4 @@
-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.SBV.Compilers.C
 -- Copyright   :  (c) Levent Erkok
@@ -30,7 +30,11 @@ instance SBVTarget SBVToC where
   targetName _ = "C"
   translate _  = cgen
 
--- Unsupported features, or features TBD go thorough here..
+-- Unexpected input, or things we will probably never support
+die :: String -> a
+die msg = error $ "SBV->C: Unexpected: " ++ msg
+
+-- Unsupported features, or features TBD
 tbd :: String -> a
 tbd msg = error $ "SBV->C: Not yet supported: " ++ msg
 
@@ -114,7 +118,7 @@ showCType :: (Bool, Int) -> String
 showCType (False, 1) = "SBool"
 showCType (s, sz)
   | sz `elem` [8, 16, 32, 64] = t
-  | True                      = tbd $ "Non-regular bitvector type: " ++ t
+  | True                      = die $ "Non-regular bitvector type: " ++ t
  where t = (if s then "SInt" else "SWord") ++ show sz
 
 -- | The printf specifier for the type
@@ -122,13 +126,13 @@ specifier :: (Bool, Int) -> Doc
 specifier (False,  1) = text "%d"
 specifier (False,  8) = text "%\"PRIu8\""
 specifier (True,   8) = text "%\"PRId8\""
-specifier (False, 16) = text "%\"PRIu16\""
+specifier (False, 16) = text "0x%04\"PRIX16\""
 specifier (True,  16) = text "%\"PRId16\""
-specifier (False, 32) = text "%\"PRIu32\""
+specifier (False, 32) = text "0x%08\"PRIX32\""
 specifier (True,  32) = text "%\"PRId32\""
-specifier (False, 64) = text "%\"PRIu64\""
+specifier (False, 64) = text "0x%016\"PRIX64\""
 specifier (True,  64) = text "%\"PRId64\""
-specifier (s, sz)     = tbd $ "Format specifier at type " ++ (if s then "SInt" else "SWord") ++ show sz
+specifier (s, sz)     = die $ "Format specifier at type " ++ (if s then "SInt" else "SWord") ++ show sz
 
 -- | Make a constant value of the given type. We don't check for out of bounds here, as it should not be needed.
 --   There are many options here, using binary, decimal, etc. We simply
@@ -145,8 +149,8 @@ mkConst i t@(False, 32) = text (shex False t i) <> text "UL"
 mkConst i t@(True,  32) = text (shex False t i) <> text "L"
 mkConst i t@(False, 64) = text (shex False t i) <> text "ULL"
 mkConst i t@(True,  64) = text (shex False t i) <> text "LL"
-mkConst i   (True,  1)  = tbd $ "Signed 1-bit value " ++ show i
-mkConst i   (s, sz)     = tbd $ "Constant " ++ show i ++ " at type " ++ (if s then "SInt" else "SWord") ++ show sz
+mkConst i   (True,  1)  = die $ "Signed 1-bit value " ++ show i
+mkConst i   (s, sz)     = die $ "Constant " ++ show i ++ " at type " ++ (if s then "SInt" else "SWord") ++ show sz
 
 -- | Show a constant
 showConst :: CW -> Doc
@@ -312,7 +316,7 @@ genCProg rtc fn proto (Result inps preConsts tbls arrs uints axms asgns outs) ou
        genOuts :: [SW] -> Doc
        genOuts [sw] = text "return" <+> showSW consts sw <> semi
        genOuts os
-         | length os /= length outputVars = error $ "SBV->C: Impossible happened, mismatch outputs: " ++ show (os, outputVars)
+         | length os /= length outputVars = die $ "Mismatched outputs: " ++ show (os, outputVars)
          | True                           = vcat (zipWith assignOut outputVars os)
          where assignOut v sw = text "*" <> text v <+> text "=" <+> showSW consts sw <> semi
        -- merge tables intermixed with assignments, paying attention to putting tables as
@@ -341,12 +345,12 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
         p (ArrRead _)       _ = tbd $ "User specified arrays (ArrRead)"
         p (ArrEq _ _)       _ = tbd $ "User specified arrays (ArrEq)"
         p (Uninterpreted s) _ = tbd $ "Uninterpreted constants (" ++ show s ++ ")"
-        p (Rol i) _           = tbd $ "Rotate-left operator (" ++ show i ++")"
-        p (Ror i) _           = tbd $ "Rotate-right operator (" ++ show i ++")"
-        p (Extract i j) _     = tbd $ "Segment-extraction operator (" ++ show i ++ "-" ++ show  j ++")"
+        p (Extract i j) [a]   = extract i j (let s = head opArgs in (hasSign s, sizeOf s)) a
         p Join _              = tbd $ "Word concatenation operator"
-        p (Shl i) [a]         = shift "<<" i a (let s = head opArgs in (hasSign s, sizeOf s))
-        p (Shr i) [a]         = shift ">>" i a (let s = head opArgs in (hasSign s, sizeOf s))
+        p (Rol i) [a]         = rotate True  i a (sizeOf (head opArgs))
+        p (Ror i) [a]         = rotate False i a (sizeOf (head opArgs))
+        p (Shl i) [a]         = shift True  i a (let s = head opArgs in (hasSign s, sizeOf s))
+        p (Shr i) [a]         = shift False i a (let s = head opArgs in (hasSign s, sizeOf s))
         p Not [a] = text "~" <> a
         p Ite [a, b, c] = a <+> text "?" <+> b <+> text ":" <+> c
         p (LkUp (t, (as, at), _, len) ind def) []
@@ -366,11 +370,29 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
         p o [a, b]
           | Just co <- lookup o cBinOps
           = a <+> text co <+> b
-        p o args = error $ "SBV->C: Impossible happened. Received operator " ++ show o ++ " applied to " ++ show args
-        shift o i a (sg, sz)
-          | not rtc = if i == 0 then a else a <+> text o <+> int i -- ignore run-time-checks per user request
-          | sg      = tbd $ "Operator " ++ o ++ " applied to a signed argument"
-          | i < 0   = tbd $ "Operator " ++ o ++ " with a negative shift amount (" ++ show i ++ ")"
-          | i >= sz = tbd $ "Operator " ++ o ++ " shifting with a larger-than-bit-size argument (" ++ show i ++"), applied to a " ++ show sz ++ "-bit argument"
+        p o args = die $ "Received operator " ++ show o ++ " applied to " ++ show args
+        shift toLeft i a (sg, sz)
+          | i < 0   = shift (not toLeft) (-i) a (sg, sz)
           | i == 0  = a
-          | True    = a <+> text o <+> int i
+          | i >= sz = mkConst 0 (sg, sz)
+          | True    = a <+> text cop <+> int i
+          where cop | toLeft = "<<"
+                    | True   = ">>"
+        rotate toLeft i a sz
+          | i < 0   = rotate (not toLeft) (-i) a sz
+          | i == 0  = a
+          | i >= sz = rotate toLeft (i `mod` sz) a sz
+          | True    =     parens (a <+> text cop  <+> int i)
+                      <+> text "|"
+                      <+> parens (a <+> text cop' <+> int (sz - i))
+          where (cop, cop') | toLeft = ("<<", ">>")
+                            | True   = (">>", "<<")
+        -- TBD: below we only support the values that SBV actually currently generates.
+        -- we would need to add new ones if we generate others. (Check instances in Data/SBV/BitVectors/Splittable.hs).
+        extract 63 32 (False, 64) a = text "(SWord32)" <+> (parens (a <+> text ">> 32"))
+        extract 31  0 (False, 64) a = text "(SWord32)" <+> a
+        extract 31 16 (False, 32) a = text "(SWord16)" <+> (parens (a <+> text ">> 16"))
+        extract 15  0 (False, 32) a = text "(SWord16)" <+> a
+        extract 15  8 (False, 16) a = text "(SWord8)"  <+> (parens (a <+> text ">> 8"))
+        extract  7  0 (False, 16) a = text "(SWord8)"  <+> a
+        extract  i  j (sg, sz)    _ = tbd $ "extract with " ++ show (i, j, (sg, sz))
