@@ -13,8 +13,10 @@
 ---------------------------------------------------------------------------------
 
 module Data.SBV.Internals (
-    -- * Running symbolic programs /manually/
-    Result, runSymbolic, SBV(..), CW, mkConstCW, genFree, genFree_
+   -- * Running symbolic programs /manually/
+    Result, runSymbolic
+    -- * Other internal structures useful for low-level programming
+  , SBV(..), CW, mkConstCW, genFree, genFree_
     -- * Integrating with the test framework
     -- $testFramework
   , module Data.SBV.Utils.SBVTest
