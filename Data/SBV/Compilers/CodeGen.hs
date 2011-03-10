@@ -15,7 +15,7 @@
 module Data.SBV.Compilers.CodeGen where
 
 import Data.Char (toLower)
-import Data.List (isPrefixOf)
+import Data.List (isPrefixOf, intersperse)
 import Control.Monad (when, filterM)
 import System.Directory (createDirectory, doesDirectoryExist, doesFileExist)
 import System.FilePath ((</>))
@@ -23,11 +23,24 @@ import Text.PrettyPrint.HughesPJ (Doc, render)
 
 import Data.SBV.BitVectors.Data (Outputtable(..), runSymbolic', Symbolic, Result, SymWord(..), SBV(..))
 
+-- | Representation of a collection of generated programs. Code generation
+-- produces a number of files (drivers, source, headers, etc.) and corresponding
+-- contents.
+newtype CgPgmBundle = CgPgmBundle [(FilePath, Doc)]
+
+instance Show CgPgmBundle where
+   show (CgPgmBundle fs) = concat $ intersperse "\n" $ map showFile fs
+
+showFile :: (FilePath, Doc) -> String
+showFile (f, d) =  "== BEGIN: " ++ show f ++ " ================\n"
+                ++ render d
+                ++ "== END: " ++ show f ++ " =================="
+
 codeGen :: (SBVTarget l, SymExecutable f) => l -> [Integer] -> Bool -> Maybe FilePath -> String -> [String] -> f -> IO ()
 codeGen l rands rtc mbDirName nm args f = do
    putStrLn $ "Compiling " ++ show nm ++ " to " ++ targetName l ++ ".."
    (extraNames, res) <- symExecute args f
-   let files = translate l rands rtc nm extraNames res
+   let CgPgmBundle files = translate l rands rtc nm extraNames res
    goOn <- maybe (return True) (check files) mbDirName
    if goOn then do mapM_ (renderFile mbDirName) files
                    putStrLn "Done."
@@ -46,18 +59,21 @@ codeGen l rands rtc mbDirName nm args f = do
                                        resp <- getLine
                                        return $ map toLower resp `isPrefixOf` "yes"
 
+codeGen' :: (SBVTarget l, SymExecutable f) => l -> [Integer] -> Bool -> String -> [String] -> f -> IO CgPgmBundle
+codeGen' l rands rtc nm args f = do
+   (extraNames, res) <- symExecute args f
+   return $ translate l rands rtc nm extraNames res
+
 renderFile :: Maybe FilePath -> (FilePath, Doc) -> IO ()
 renderFile (Just d) (f, p) = do let fn = d </> f
                                 putStrLn $ "Generating: " ++ show fn ++ ".."
                                 writeFile fn (render p)
-renderFile Nothing  (f, p) = do putStrLn $ "== BEGIN: " ++ show f ++ " ================"
-                                putStr (render p)
-                                putStrLn $ "== END: " ++ show f ++ " =================="
+renderFile Nothing  fp     = putStrLn $ showFile fp
 
 -- | Abstract over code generation for different languages
 class SBVTarget a where
   targetName :: a -> String
-  translate  :: a -> [Integer] -> Bool -> String -> [String] -> Result -> [(FilePath, Doc)]
+  translate  :: a -> [Integer] -> Bool -> String -> [String] -> Result -> CgPgmBundle
 
 -- | Abstract over input variables over generated functions
 class CgArgs a where

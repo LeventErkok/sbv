@@ -167,7 +167,7 @@ module Data.SBV (
   , compileToSMTLib
 
   -- * Compiling symbolic programs to C
-  , compileToC, compileToC'
+  , CgPgmBundle(..), compileToC, compileToC'
 
   -- * Module exports
   -- $moduleExportIntro
@@ -183,6 +183,7 @@ import Data.SBV.BitVectors.PrettyNum
 import Data.SBV.BitVectors.Polynomial
 import Data.SBV.BitVectors.Splittable
 import Data.SBV.Compilers.C
+import Data.SBV.Compilers.CodeGen
 import Data.SBV.Provers.Prover
 import Data.SBV.Utils.Boolean
 import Data.Bits

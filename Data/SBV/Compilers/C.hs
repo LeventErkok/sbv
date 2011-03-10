@@ -60,13 +60,13 @@ compileToC :: SymExecutable f => Bool -> Maybe FilePath -> String -> [String] ->
 compileToC rtc mbDir fn extraNames f = do rands <- newStdGen >>= return . randoms
                                           codeGen SBVToC rands rtc mbDir fn extraNames f
 
--- | Same as 'compileToC', except use the specified values (first argument) instead of random values
--- when generating the driver program. This version is useful mainly for generating repeatable test values.
-compileToC' :: SymExecutable f => [Integer] -> Bool -> Maybe FilePath -> String -> [String] -> f -> IO ()
-compileToC' dvals = codeGen SBVToC (dvals ++ repeat 0)
+-- | Alternative interface for generating C. The output driver program uses the specified values (first argument) instead of random values.
+-- Also this version returns the generated files for further manipulation. (Useful mainly for generating regression tests.)
+compileToC' :: SymExecutable f => [Integer] -> Bool -> String -> [String] -> f -> IO CgPgmBundle
+compileToC' dvals = codeGen' SBVToC (dvals ++ repeat 0)
 
-cgen :: [Integer] -> Bool -> String -> [String] -> Result -> [(FilePath, Doc)]
-cgen randVals rtc nm extraNames sbvProg@(Result ins _ _ _ _ _ _ outs) =
+cgen :: [Integer] -> Bool -> String -> [String] -> Result -> CgPgmBundle
+cgen randVals rtc nm extraNames sbvProg@(Result ins _ _ _ _ _ _ outs) = CgPgmBundle
         [ ("Makefile",  genMake   nm nmd)
         , (nm  ++ ".h", genHeader nm sig)
         , (nmd ++ ".c", genDriver randVals nm typ)
