@@ -19,7 +19,8 @@ import Data.SBV.Examples.BitPrecise.Legato
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
-  "legato" ~: legatoPgm `goldCheck` "legato.gold"
+   "legato-1" ~: legatoPgm `goldCheck` "legato.gold"
+ , "legato-2" ~: compileToC' [87, 92] True "legatoMult" ["x", "y", "hi", "lo"] cg_runLegato `goldCheck` "legato_c.gold"
  ]
  where legatoPgm = runSymbolic $ forAll ["mem", "addrX", "x", "addrY", "y", "addrLow", "regX", "regA", "memVals", "flagC", "flagZ"] legatoIsCorrect
                                  >>= output
