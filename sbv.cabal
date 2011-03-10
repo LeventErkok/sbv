@@ -88,6 +88,7 @@ Library
                   , Data.SBV.Internals
                   , Data.SBV.Examples.BitPrecise.BitTricks
                   , Data.SBV.Examples.BitPrecise.Legato
+                  , Data.SBV.Examples.CodeGeneration.AddSub
                   , Data.SBV.Examples.Polynomials.Polynomials
                   , Data.SBV.Examples.PrefixSum.PrefixSum
                   , Data.SBV.Examples.Puzzles.DogCatMouse
@@ -138,6 +139,7 @@ Library
                   , Data.SBV.TestSuite.Basics.UnsafeFunctionEquality
                   , Data.SBV.TestSuite.BitPrecise.BitTricks
                   , Data.SBV.TestSuite.BitPrecise.Legato
+                  , Data.SBV.TestSuite.CodeGeneration.AddSub
                   , Data.SBV.TestSuite.CRC.CCITT
                   , Data.SBV.TestSuite.CRC.CCITT_Unidir
                   , Data.SBV.TestSuite.CRC.GenPoly
