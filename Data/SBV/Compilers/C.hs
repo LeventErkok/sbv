@@ -283,7 +283,7 @@ genCProg rtc fn proto (Result inps preConsts tbls arrs uints axms asgns outs) ou
   $$ text "{"
   $$ text ""
   $$ nest 2 (   vcat (map genInp inps)
-             $$ layout True False (merge (map genTbl tbls) (map genAsgn assignments))
+             $$ vcat (merge (map genTbl tbls) (map genAsgn assignments))
              $$ sepIf (not (null assignments) || not (null tbls))
              $$ genOuts outs)
   $$ text "}"
@@ -321,20 +321,12 @@ genCProg rtc fn proto (Result inps preConsts tbls arrs uints axms asgns outs) ou
          where assignOut v sw = text "*" <> text v <+> text "=" <+> showSW consts sw <> semi
        -- merge tables intermixed with assignments, paying attention to putting tables as
        -- early as possible.. Note that the assignment list (second argument) is sorted on its order
-       merge :: [(Int, Doc)] -> [(Int, Doc)] -> [(Bool, Doc)]
-       merge []               as                  = map (\(_, a) -> (True,  a)) as
-       merge ts               []                  = map (\(_, t) -> (False, t)) ts
+       merge :: [(Int, Doc)] -> [(Int, Doc)] -> [Doc]
+       merge []               as                  = map snd as
+       merge ts               []                  = map snd ts
        merge ts@((i, t):trest) as@((i', a):arest)
-         | i < i'                                 = (False, t) : merge trest as
-         | True                                   = (True,  a) : merge ts arest
-       -- layout makes sure tables and assignments are clearly separated
-       layout :: Bool -> Bool -> [(Bool, Doc)] -> Doc
-       layout _  _  []          = empty
-       layout f  pa ((a, d):rs)
-         | f             =            d $$ layout False True  rs
-         | a && pa       =            d $$ layout False True  rs
-         | a && not pa   = text "" $$ d $$ layout False True  rs
-         | True          = text "" $$ d $$ layout False False rs
+         | i < i'                                 = t : merge trest as
+         | True                                   = a : merge ts arest
 
 ppExpr :: Bool -> [(SW, CW)] -> SBVExpr -> Doc
 ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
