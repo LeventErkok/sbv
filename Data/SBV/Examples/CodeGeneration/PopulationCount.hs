@@ -32,7 +32,8 @@ import Data.SBV
 -- As you can verify by writing the above in binary and counting the 1's in it.
 popCount_Slow :: SWord64 -> SWord8
 popCount_Slow inp = go inp 0 0
-  where go x 64 c = c
+  where go :: SWord64 -> Int -> SWord8 -> SWord8
+        go _ 64 c = c
         go x i  c = go (x `shiftR` 1) (i+1) (ite (x .&. 1 .== 1) (c+1) c)
 
 -----------------------------------------------------------------------------
@@ -45,9 +46,9 @@ popCount_Slow inp = go inp 0 0
 -- 8 times, and goes in bytes, and hence is more efficient.
 popCount :: SWord64 -> SWord8
 popCount inp = go inp 0 0
-  where go x 8 c = c
+  where go :: SWord64 -> Int -> SWord8 -> SWord8
+        go _ 8 c = c
         go x i c = go (x `shiftR` 8) (i+1) (c + select pop8 0 (x .&. 0xff))
-
 
 -- | Look-up table, containing population counts for all possible 8-bit
 -- value, from 0 to 255.
@@ -86,7 +87,7 @@ pop8 = [ 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
 -- >>> prove fastPopCountIsCorrect
 -- Q.E.D.
 fastPopCountIsCorrect :: IO ThmResult
-fastPopCountIsCorrect = \x -> popCount x .== popCount_Slow x
+fastPopCountIsCorrect = prove $ \x -> popCount x .== popCount_Slow x
 
 -----------------------------------------------------------------------------
 -- * Code generation
@@ -96,4 +97,4 @@ fastPopCountIsCorrect = \x -> popCount x .== popCount_Slow x
 -- generate C code to compute population-counts for us. This action will generate all the
 -- C files that you will need, including a driver program for test purposes.
 genPopCountInC :: IO ()
-genPopCountInC = compileToC False (Just "popCountC") ["x", "pc"] popCount
+genPopCountInC = compileToC False (Just "popCountC") "popCount" ["x", "pc"] popCount

@@ -19,5 +19,6 @@ import Data.SBV.Examples.CodeGeneration.PopulationCount
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
-   "popCount" ~: compileToC' [0x0123456789ABCDEF] True "popCount" ["x", "pc"] popCount `goldCheck` "popCount.gold"
+   "popCount-1" ~: compileToC' [0x0123456789ABCDEF] False "popCount" ["x", "pc"] popCount `goldCheck` "popCount1.gold"
+ , "popCount-2" ~: compileToC' [0x0123456789ABCDEF] True  "popCount" ["x", "pc"] popCount `goldCheck` "popCount2.gold"
  ]
