@@ -114,6 +114,27 @@ peek a m = readArray (memory m) a
 poke :: Address -> Value -> Program
 poke a v m = m {memory = writeArray (memory m) a v}
 
+-- | Checking overflow. In Legato's multipler the @ADC@ instruction
+-- needs to see if the expression x + y + c overflowed, as checked
+-- by this function. Note that we verify the correctness of this check
+-- separately below in `checkOverflowCorrect`.
+checkOverflow :: SWord8 -> SWord8 -> SBool -> SBool
+checkOverflow x y c = s .< x ||| s .< y ||| s' .< s
+  where s  = x + y
+        s' = s + (ite c 1 0)
+
+-- | Correctness theorem for our `checkOverflow` implementation.
+--
+--   We have:
+--
+--   >>> checkOverflowCorrect
+--   Q.E.D.
+checkOverflowCorrect :: IO ThmResult
+checkOverflowCorrect = checkOverflow === overflow
+  where -- Reference spec for overflow. We do the addition
+        -- using 16 bits and check that it's larger than 255
+        overflow :: SWord8 -> SWord8 -> SBool -> SBool
+        overflow x y c = (0 # x) + (0 # y) + ite c 1 0 .> 255
 ------------------------------------------------------------------
 -- * Instruction set
 ------------------------------------------------------------------
@@ -167,10 +188,8 @@ adc a k m = k . setFlag FlagZ (v' .== 0) . setFlag FlagC c' . setReg RegA v' $ m
   where v  = peek a m
         ra = getReg RegA m
         c  = getFlag FlagC m
-        v' = v + ra + ite (c .== true) 1 0
-        c' = -- to detect overflow, perform the computation at 16 bits and check
-             -- that the result is larger than 255
-             ((0 # v) + (0 # ra) + ite (c .== true) 1 0) .> 255
+        v' = v + ra + ite c 1 0
+        c' = checkOverflow v ra c
 
 -- | DEX: Decrement the value of register @X@
 dex :: Instruction
@@ -283,7 +302,7 @@ cg_runLegato :: (Value, Value) -> (Value, Value)
 cg_runLegato (x, y) = runLegato (0, x) (1, y) 2 (initMachine (mkSFunArray 0) (0, 0, 0, false, false))
 
 -- | Generate a C program that implements Legato's algorithm automatically.
---   (You can change the second argument of `compileToC` to @`Just` dirName@ to place the output
+--   (You can change the second argument of `compileToC` to @`Just` \"dirName\"@ to place the output
 --   files in that directory.)
 legatoInC :: IO ()
 legatoInC = compileToC True Nothing "runLegato" ["x", "y", "hi", "lo"] cg_runLegato
