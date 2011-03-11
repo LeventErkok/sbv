@@ -49,6 +49,9 @@ Description:   Express properties about bit-precise Haskell programs and automat
                .
                SBV is hosted at GitHub: <http://github.com/LeventErkok/sbv>. Comments,
                bug reports, and patches are always welcome.
+               .
+               Galois, Inc. (<http://www.galois.com>) has contributed to the development of SBV,
+               by providing time and computing machinery.
 
 Copyright:     Levent Erkok, 2011
 License:       BSD3
@@ -57,7 +60,7 @@ Stability:     Experimental
 Author:        Levent Erkok
 Homepage:      http://github.com/LeventErkok/sbv
 Bug-reports:   http://github.com/LeventErkok/sbv/issues
-Maintainer:    Levent Erkok (erkokl@gmail.com)
+Maintainer:    Levent Erkok (levent.erkok@galois.com)
 Build-Type:    Custom
 Cabal-Version: >= 1.6
 Data-Files: SBVUnitTest/GoldFiles/*.gold
