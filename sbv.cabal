@@ -1,5 +1,5 @@
 Name:          sbv
-Version:       0.9.12
+Version:       0.9.13
 Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math
 Synopsis:      Symbolic Bit Vectors: Prove bit-precise program properties using SMT solvers.
 Description:   Express properties about bit-precise Haskell programs and automatically prove
@@ -38,6 +38,10 @@ Description:   Express properties about bit-precise Haskell programs and automat
                  * checked for satisfiability (the 'sat' and 'allSat' functions)
                .
                  * quick-checked
+               .
+               The SBV library can also compile Haskell functions that manipulate symbolic
+               values directly to C, rendering them as straight-line C programs that can be
+               executed in, say, embedded platforms.
                .
                In addition to the library, the installation will create the
                executable @SBVUnitTests@. You should run it once the installation is complete,
