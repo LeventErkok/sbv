@@ -404,6 +404,57 @@ lsb x = bitValue x 0
 msb :: (Bits a, SymWord a) => SBV a -> SBool
 msb x = bitValue x ((sizeOf x) - 1)
 
+-- | Enum instance. These instances are suitable for use with concrete values,
+-- and will be less useful for symbolic values around. Note that `fromEnum` requires
+-- a concrete argument for obvious reasons. Other variants (succ, pred, [x..]) etc are similarly
+-- limited. While symbolic variants can be defined for many of these, but they will just diverge
+-- as final sizes cannot be determined statically.
+instance (Bounded a, Integral a, Num a, SymWord a) => Enum (SBV a) where
+  succ x
+    | v == (maxBound :: a) = error $ "Enum.succ{" ++ showType x ++ "}: tried to take `succ' of maxBound"
+    | True                 = fromIntegral $ v + 1
+    where v = enumCvt "succ" x
+  pred x
+    | v == (minBound :: a) = error $ "Enum.pred{" ++ showType x ++ "}: tried to take `pred' of minBound"
+    | True                 = fromIntegral $ v - 1
+    where v = enumCvt "pred" x
+  toEnum x
+    | xi < fromIntegral (minBound :: a) || xi > fromIntegral (maxBound :: a)
+    = error $ "Enum.toEnum{" ++ showType r ++ "}: " ++ show x ++ " is out-of-bounds " ++ show (minBound :: a, maxBound :: a)
+    | True
+    = r
+    where xi :: Integer
+          xi = fromIntegral x
+          r  :: SBV a
+          r  = fromIntegral x
+  fromEnum x
+     | r < fromIntegral (minBound :: Int) || r > fromIntegral (maxBound :: Int)
+     = error $ "Enum.fromEnum{" ++ showType x ++ "}:  value " ++ show r ++ " is outside of Int's bounds " ++ show (minBound :: Int, maxBound :: Int)
+     | True
+     = fromIntegral r
+    where r :: Integer
+          r = enumCvt "fromEnum" x
+  enumFrom x = map fromIntegral [xi .. fromIntegral (maxBound :: a)]
+     where xi :: Integer
+           xi = enumCvt "enumFrom" x
+  enumFromThen x y
+     | yi >= xi  = map fromIntegral [xi, yi .. fromIntegral (maxBound :: a)]
+     | True      = map fromIntegral [xi, yi .. fromIntegral (minBound :: a)]
+       where xi, yi :: Integer
+             xi = enumCvt "enumFromThen.x" x
+             yi = enumCvt "enumFromThen.y" y
+  enumFromThenTo x y z = map fromIntegral [xi, yi .. zi]
+       where xi, yi, zi :: Integer
+             xi = enumCvt "enumFromThenTo.x" x
+             yi = enumCvt "enumFromThenTo.y" y
+             zi = enumCvt "enumFromThenTo.z" z
+
+-- | Helper function for use in enum operations
+enumCvt :: (SymWord a, Integral a, Num b) => String -> SBV a -> b
+enumCvt w x = case unliteral x of
+                Nothing -> error $ "Enum." ++ w ++ "{" ++ showType x ++ "}: Called on symbolic value " ++ show x
+                Just v  -> fromIntegral v
+
 -- | The 'BVDivisible' class captures the essence of division of words.
 -- Unfortunately we cannot use Haskell's 'Integral' class since the 'Real'
 -- and 'Enum' superclasses are not implementable for symbolic bit-vectors.
