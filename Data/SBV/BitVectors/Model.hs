@@ -1,4 +1,4 @@
-
+-----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.SBV.BitVectors.Model
 -- Copyright   :  (c) Levent Erkok
