@@ -1,4 +1,4 @@
------------------------------------------------------------------------------
+
 -- |
 -- Module      :  Data.SBV.BitVectors.Model
 -- Copyright   :  (c) Levent Erkok
@@ -199,7 +199,13 @@ instance EqSymbolic (SBV a) where
   (.==) = liftSym2B (mkSymOpSC opt Equal)    (==)
              where opt x y = if x == y then Just trueSW else Nothing
   (./=) = liftSym2B (mkSymOpSC opt NotEqual) (/=)
-             where opt x y = if x == y then Just falseSW else Nothing
+             where -- N.B. we can't say 
+                   --   opt x y = if x /= y then Just trueSW else Nothing
+                   -- here as it would be unsound.. There's no guarantee
+                   -- that the SW value corresponding to x and y won't equal
+                   -- the following is a more conservative optimization
+                   -- that says Nothing if it can't deduce otherwise
+                   opt x y = if x == y then Just falseSW else Nothing
 
 instance SymWord a => OrdSymbolic (SBV a) where
   (.<)  = liftSym2B (mkSymOp LessThan)    (<)
@@ -310,8 +316,10 @@ instance Boolean SBool where
                    | True                       = Nothing
   (<+>) = liftSym2Bool (mkSymOpSC opt XOr) (<+>)
             where opt x y
-                   | x == y = Just falseSW
-                   | True   = Nothing
+                   | x == y       = Just falseSW
+                   | x == falseSW = Just y
+                   | y == falseSW = Just x
+                   | True         = Nothing
 
 -- | Returns (symbolic) true if all the elements of the given list are different
 allDifferent :: (Eq a, SymWord a) => [SBV a] -> SBool
