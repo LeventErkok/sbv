@@ -71,9 +71,9 @@ compile1 top =
 -- we realize that we can compute the values of the sequence at evaluation time
 -- (of the Haskell function), then just look up the index in the generated
 -- table.  The following function does just this: we generate the table using
--- 'fib0'.  Remember, it's just a Haskell function that computes Fibonacci, and
--- then we select the right element from the list.  This generates constant-time
--- C code.  Here's the code for
+-- 'fib0'---remember, 'fib0' is just a Haskell function that computes
+-- Fibonacci---and then we select the right element from the list at runtime of
+-- the C code.  This generates constant-time C code.  Here's the code for
 --
 -- >>> compile2 20
 --
