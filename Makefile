@@ -16,7 +16,7 @@ test:
 	@echo "Executing inline tests.."
 	@time (doctest ${SRCS} | grep -v "Could not find documentation" | exit 0)
 	@echo "Starting external test suite.."
-	@time SBVUnitTests
+	@time (SBVUnitTests | cat)
 
 sdist:
 	cabal sdist
