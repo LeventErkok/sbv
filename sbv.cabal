@@ -98,6 +98,7 @@ Library
                   , Data.SBV.Examples.BitPrecise.BitTricks
                   , Data.SBV.Examples.BitPrecise.Legato
                   , Data.SBV.Examples.CodeGeneration.AddSub
+                  , Data.SBV.Examples.CodeGeneration.Fib
                   , Data.SBV.Examples.CodeGeneration.PopulationCount
                   , Data.SBV.Examples.Polynomials.Polynomials
                   , Data.SBV.Examples.PrefixSum.PrefixSum
