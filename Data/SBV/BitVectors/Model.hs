@@ -301,25 +301,37 @@ instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c, OrdSymbolic d, OrdSymboli
 instance Boolean SBool where
   true  = literal True
   false = literal False
-  bnot  = liftSym1Bool (mkSymOp1 Not) not
-  (&&&) = liftSym2Bool (mkSymOpSC opt And) (&&)
-            where opt x y
-                   | x == falseSW || y == falseSW = Just falseSW
-                   | x == trueSW                  = Just y
-                   | y == trueSW                  = Just x
-                   | True                         = Nothing
-  (|||) = liftSym2Bool (mkSymOpSC opt Or)  (||)
-            where opt x y
-                   | x == trueSW || y == trueSW = Just trueSW
-                   | x == falseSW               = Just y
-                   | y == falseSW               = Just x
-                   | True                       = Nothing
-  (<+>) = liftSym2Bool (mkSymOpSC opt XOr) (<+>)
-            where opt x y
-                   | x == y       = Just falseSW
-                   | x == falseSW = Just y
-                   | y == falseSW = Just x
-                   | True         = Nothing
+  bnot  b | b `isConcretely` (== False) = true
+          | b `isConcretely` (== True)  = false
+          | True                        = liftSym1Bool (mkSymOp1 Not) not b
+  a &&& b | a `isConcretely` (== False) || b `isConcretely` (== False) = false
+          | a `isConcretely` (== True)                                 = b
+          | b `isConcretely` (== True)                                 = a
+          | True                                                       = liftSym2Bool (mkSymOpSC opt And) (&&) a b
+          where opt x y
+                 | x == falseSW || y == falseSW = Just falseSW
+                 | x == trueSW                  = Just y
+                 | y == trueSW                  = Just x
+                 | True                         = Nothing
+  a ||| b | a `isConcretely` (== True)  || b `isConcretely` (== True) = true
+          | a `isConcretely` (== False)                               = b
+          | b `isConcretely` (== False)                               = a
+          | True                                                      = liftSym2Bool (mkSymOpSC opt Or)  (||) a b
+          where opt x y
+                 | x == trueSW || y == trueSW = Just trueSW
+                 | x == falseSW               = Just y
+                 | y == falseSW               = Just x
+                 | True                       = Nothing
+  a <+> b | a `isConcretely` (== False) = b
+          | b `isConcretely` (== False) = a
+          | a `isConcretely` (== True)  = bnot b
+          | b `isConcretely` (== True)  = bnot a
+          | True                        = liftSym2Bool (mkSymOpSC opt XOr) (<+>) a b
+          where opt x y
+                 | x == y       = Just falseSW
+                 | x == falseSW = Just y
+                 | y == falseSW = Just x
+                 | True         = Nothing
 
 -- | Returns (symbolic) true if all the elements of the given list are different
 allDifferent :: (Eq a, SymWord a) => [SBV a] -> SBool
