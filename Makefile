@@ -14,9 +14,9 @@ install:
 
 test:
 	@echo "Executing inline tests.."
-	@doctest ${SRCS} | grep -v "Could not find documentation" | exit 0
+	@time (doctest ${SRCS} | grep -v "Could not find documentation" | exit 0)
 	@echo "Starting external test suite.."
-	SBVUnitTests
+	@time SBVUnitTests
 
 sdist:
 	cabal sdist
@@ -26,6 +26,9 @@ clean:
 
 docs:
 	cabal haddock --hyperlink-source
+
+configure:
+	cabal configure
 
 release: clean all docs
 
