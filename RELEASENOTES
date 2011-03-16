@@ -1,9 +1,17 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Version 0.9.13, Not-yet-released
+Version 0.9.13, 2011-03-16
     
-    * Current development version
+  Bug fixes:
+    * Make sure SBool short-cut evaluations are done
+      as early as possible, as these help with coding
+      recursion-depth based algorithms, when dealing
+      with symbolic termination issues.
+  Examples:
+    * Add fibonacci code-generation example, original
+      code by Lee Pike.
+    * Add a GCD code-generation/verification example
 
 ======================================================================
 Version 0.9.12, 2011-03-10
