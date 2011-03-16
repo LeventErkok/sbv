@@ -98,7 +98,7 @@ Library
                   , Data.SBV.Examples.BitPrecise.BitTricks
                   , Data.SBV.Examples.BitPrecise.Legato
                   , Data.SBV.Examples.CodeGeneration.AddSub
-                  , Data.SBV.Examples.CodeGeneration.Fib
+                  , Data.SBV.Examples.CodeGeneration.GCD
                   , Data.SBV.Examples.CodeGeneration.PopulationCount
                   , Data.SBV.Examples.Polynomials.Polynomials
                   , Data.SBV.Examples.PrefixSum.PrefixSum
@@ -152,6 +152,7 @@ Library
                   , Data.SBV.TestSuite.BitPrecise.Legato
                   , Data.SBV.TestSuite.CodeGeneration.AddSub
                   , Data.SBV.TestSuite.CodeGeneration.CgTests
+                  , Data.SBV.TestSuite.CodeGeneration.GCD
                   , Data.SBV.TestSuite.CodeGeneration.PopulationCount
                   , Data.SBV.TestSuite.CRC.CCITT
                   , Data.SBV.TestSuite.CRC.CCITT_Unidir
