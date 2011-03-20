@@ -748,4 +748,4 @@ instance NFData UnintKind
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where
   property (SBV _ (Left b)) = property (cwToBool b)
-  property s                     = error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show s ++ ")"
+  property s                = error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show s ++ ")"
