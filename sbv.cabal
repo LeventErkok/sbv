@@ -133,7 +133,6 @@ Library
                   , Data.SBV.Examples.Basics.Index
                   , Data.SBV.Examples.Basics.ProofTests
                   , Data.SBV.Examples.Basics.QRem
-                  , Data.SBV.Examples.Basics.UnsafeFunctionEquality
                   , Data.SBV.Examples.CRC.CCITT
                   , Data.SBV.Examples.CRC.CCITT_Unidir
                   , Data.SBV.Examples.CRC.GenPoly
@@ -148,7 +147,6 @@ Library
                   , Data.SBV.TestSuite.Basics.Index
                   , Data.SBV.TestSuite.Basics.ProofTests
                   , Data.SBV.TestSuite.Basics.QRem
-                  , Data.SBV.TestSuite.Basics.UnsafeFunctionEquality
                   , Data.SBV.TestSuite.BitPrecise.BitTricks
                   , Data.SBV.TestSuite.BitPrecise.Legato
                   , Data.SBV.TestSuite.CodeGeneration.AddSub

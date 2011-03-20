@@ -25,50 +25,50 @@ import Data.SBV.Utils.SBVTest  (SBVTestSuite(..), generateGoldCheck)
 import Paths_sbv               (getDataDir)
 
 -- To add a new collection of tests, import below and add to testCollection variable
-import qualified Data.SBV.TestSuite.Arrays.Memory                  as T01(testSuite)
-import qualified Data.SBV.TestSuite.Basics.BasicTests              as T02(testSuite)
-import qualified Data.SBV.TestSuite.Basics.Higher                  as T03(testSuite)
-import qualified Data.SBV.TestSuite.Basics.Index                   as T04(testSuite)
-import qualified Data.SBV.TestSuite.Basics.ProofTests              as T05(testSuite)
-import qualified Data.SBV.TestSuite.Basics.QRem                    as T06(testSuite)
-import qualified Data.SBV.TestSuite.Basics.UnsafeFunctionEquality  as T07(testSuite)
-import qualified Data.SBV.TestSuite.BitPrecise.BitTricks           as T08(testSuite)
-import qualified Data.SBV.TestSuite.BitPrecise.Legato              as T09(testSuite)
-import qualified Data.SBV.TestSuite.CRC.CCITT                      as T10(testSuite)
-import qualified Data.SBV.TestSuite.CRC.CCITT_Unidir               as T11(testSuite)
-import qualified Data.SBV.TestSuite.CRC.GenPoly                    as T12(testSuite)
-import qualified Data.SBV.TestSuite.CRC.Parity                     as T13(testSuite)
-import qualified Data.SBV.TestSuite.CRC.USB5                       as T14(testSuite)
-import qualified Data.SBV.TestSuite.CodeGeneration.AddSub          as T15(testSuite)
-import qualified Data.SBV.TestSuite.CodeGeneration.CgTests         as T16(testSuite)
-import qualified Data.SBV.TestSuite.CodeGeneration.Fibonacci       as T17(testSuite)
-import qualified Data.SBV.TestSuite.CodeGeneration.GCD             as T18(testSuite)
-import qualified Data.SBV.TestSuite.CodeGeneration.PopulationCount as T19(testSuite)
-import qualified Data.SBV.TestSuite.Polynomials.Polynomials        as T20(testSuite)
-import qualified Data.SBV.TestSuite.PrefixSum.PrefixSum            as T21(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.DogCatMouse            as T22(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.Euler185               as T23(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.MagicSquare            as T24(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.NQueens                as T25(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.PowerSet               as T26(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.Sudoku                 as T27(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.Temperature            as T28(testSuite)
-import qualified Data.SBV.TestSuite.Puzzles.U2Bridge               as T29(testSuite)
-import qualified Data.SBV.TestSuite.Uninterpreted.AUF              as T30(testSuite)
-import qualified Data.SBV.TestSuite.Uninterpreted.Function         as T31(testSuite)
-import qualified Data.SBV.TestSuite.Uninterpreted.Uninterpreted    as T32(testSuite)
+import qualified Data.SBV.TestSuite.Arrays.Memory                  as T01_01(testSuite)
+import qualified Data.SBV.TestSuite.Basics.BasicTests              as T02_01(testSuite)
+import qualified Data.SBV.TestSuite.Basics.Higher                  as T02_02(testSuite)
+import qualified Data.SBV.TestSuite.Basics.Index                   as T02_03(testSuite)
+import qualified Data.SBV.TestSuite.Basics.ProofTests              as T02_04(testSuite)
+import qualified Data.SBV.TestSuite.Basics.QRem                    as T02_05(testSuite)
+import qualified Data.SBV.TestSuite.BitPrecise.BitTricks           as T03_01(testSuite)
+import qualified Data.SBV.TestSuite.BitPrecise.Legato              as T03_02(testSuite)
+import qualified Data.SBV.TestSuite.CRC.CCITT                      as T04_01(testSuite)
+import qualified Data.SBV.TestSuite.CRC.CCITT_Unidir               as T04_02(testSuite)
+import qualified Data.SBV.TestSuite.CRC.GenPoly                    as T04_03(testSuite)
+import qualified Data.SBV.TestSuite.CRC.Parity                     as T04_04(testSuite)
+import qualified Data.SBV.TestSuite.CRC.USB5                       as T04_05(testSuite)
+import qualified Data.SBV.TestSuite.CodeGeneration.AddSub          as T05_01(testSuite)
+import qualified Data.SBV.TestSuite.CodeGeneration.CgTests         as T05_02(testSuite)
+import qualified Data.SBV.TestSuite.CodeGeneration.Fibonacci       as T05_03(testSuite)
+import qualified Data.SBV.TestSuite.CodeGeneration.GCD             as T05_04(testSuite)
+import qualified Data.SBV.TestSuite.CodeGeneration.PopulationCount as T05_05(testSuite)
+import qualified Data.SBV.TestSuite.Polynomials.Polynomials        as T06_01(testSuite)
+import qualified Data.SBV.TestSuite.PrefixSum.PrefixSum            as T07_01(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.DogCatMouse            as T08_01(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.Euler185               as T08_02(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.MagicSquare            as T08_03(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.NQueens                as T08_04(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.PowerSet               as T08_05(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.Sudoku                 as T08_06(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.Temperature            as T08_07(testSuite)
+import qualified Data.SBV.TestSuite.Puzzles.U2Bridge               as T08_08(testSuite)
+import qualified Data.SBV.TestSuite.Uninterpreted.AUF              as T09_01(testSuite)
+import qualified Data.SBV.TestSuite.Uninterpreted.Function         as T09_02(testSuite)
+import qualified Data.SBV.TestSuite.Uninterpreted.Uninterpreted    as T09_03(testSuite)
 
 testCollection :: [SBVTestSuite]
 testCollection = [
-       T01.testSuite, T02.testSuite, T03.testSuite, T04.testSuite
-     , T05.testSuite, T06.testSuite, T07.testSuite, T08.testSuite
-     , T09.testSuite, T10.testSuite, T11.testSuite, T12.testSuite
-     , T13.testSuite, T14.testSuite, T15.testSuite, T16.testSuite
-     , T17.testSuite, T18.testSuite, T19.testSuite, T20.testSuite
-     , T21.testSuite, T22.testSuite, T23.testSuite, T24.testSuite
-     , T25.testSuite, T26.testSuite, T27.testSuite, T28.testSuite
-     , T29.testSuite, T30.testSuite, T31.testSuite, T32.testSuite
+       T01_01.testSuite, T02_01.testSuite, T02_02.testSuite, T02_03.testSuite
+     , T02_04.testSuite, T02_05.testSuite, T03_01.testSuite, T03_02.testSuite
+     , T04_01.testSuite, T04_02.testSuite, T04_03.testSuite, T04_04.testSuite
+     , T04_05.testSuite, T05_01.testSuite, T05_02.testSuite, T05_03.testSuite
+     , T05_04.testSuite, T05_05.testSuite, T06_01.testSuite, T07_01.testSuite
+     , T08_01.testSuite, T08_02.testSuite, T08_03.testSuite, T08_04.testSuite
+     , T08_05.testSuite, T08_06.testSuite, T08_07.testSuite, T08_08.testSuite
+     , T09_01.testSuite, T09_02.testSuite, T09_03.testSuite
      ]
+
 -- No user serviceable parts below..
 
 main :: IO ()
