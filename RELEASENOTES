@@ -1,12 +1,12 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Version 0.9.14, Not yet released
+Version 0.9.14, 2011-03-19
     
   - Reimplement sharing using Stable names, inspired
     by the Data.Reify techniques. This avoids tricks
-    with unsafe memory stashing, and hence is much
-    safer. Also, this version avoids issues with CAFs.
+    with unsafe memory stashing, and hence is safe.
+    Thus, the issues with respect to CAFs are solved.
 
 ======================================================================
 Version 0.9.13, 2011-03-16
