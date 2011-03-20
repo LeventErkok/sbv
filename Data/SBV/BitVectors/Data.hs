@@ -29,7 +29,7 @@ module Data.SBV.BitVectors.Data
  , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), mkSFunArray, SArray(..), arrayUIKind
  , sbvToSW
  , SBVExpr(..), newExpr
- , cache, uncache, HasSignAndSize(..)
+ , cache, uncache, uncacheAI, HasSignAndSize(..)
  , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, runSymbolic', State, Size, Outputtable(..), Result(..)
  , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
  ) where
@@ -43,16 +43,15 @@ import Data.Word                       (Word8, Word16, Word32, Word64)
 import Data.IORef                      (IORef, newIORef, modifyIORef, readIORef, writeIORef)
 import Data.List                       (intercalate, sortBy)
 
-import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, insert)
+import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
 import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
 import qualified Data.Foldable as F    (toList)
 import qualified Data.Sequence as S    (Seq, empty, (|>))
 
-import System.IO.Unsafe                (unsafePerformIO) -- see the note at the bottom of the file
+import System.Mem.StableName
 import Test.QuickCheck                 (Testable(..))
 
 import Data.SBV.Utils.Lib
-
 
 -- | 'CW' represents a concrete word of a fixed size:
 -- Endianness is mostly irrelevant (see the 'FromBits' class).
@@ -79,10 +78,8 @@ normCW x = x { cwVal = norm }
              | True           = cwVal x `mod` (2 ^ cwSize x)
 
 type Size      = Int
-newtype NodeId = NodeId Int
-               deriving (Eq, Ord)
-data SW        = SW (Bool, Size) NodeId
-               deriving (Eq, Ord)
+newtype NodeId = NodeId Int deriving (Eq, Ord)
+data SW        = SW (Bool, Size) NodeId deriving (Eq, Ord)
 
 falseSW, trueSW :: SW
 falseSW = SW (False, 1) $ NodeId (-2)
@@ -285,13 +282,13 @@ instance Show ArrayContext where
   show (ArrayMutate i a b)  = " cloned from array_" ++ show i ++ " with " ++ show a ++ " :: " ++ showType a ++ " |-> " ++ show b ++ " :: " ++ showType b
   show (ArrayMerge s i j)   = " merged arrays " ++ show i ++ " and " ++ show j ++ " on condition " ++ show s
 
-type ExprMap    = Map.Map SBVExpr SW
-type CnstMap    = Map.Map CW SW
-type TableMap   = Map.Map [SW] (Int, (Bool, Int), (Bool, Int))
-type ArrayInfo  = (String, ((Bool, Size), (Bool, Size)), ArrayContext)
-type ArrayMap   = IMap.IntMap ArrayInfo
-type UIMap      = Map.Map String SBVType
-
+type ExprMap   = Map.Map SBVExpr SW
+type CnstMap   = Map.Map CW SW
+type TableMap  = Map.Map [SW] (Int, (Bool, Int), (Bool, Int))
+type ArrayInfo = (String, ((Bool, Size), (Bool, Size)), ArrayContext)
+type ArrayMap  = IMap.IntMap ArrayInfo
+type UIMap     = Map.Map String SBVType
+type Cache a   = IMap.IntMap [(StableName (State -> IO a), a)]
 
 unintFnUIKind :: (String, SBVType) -> (String, UnintKind)
 unintFnUIKind (s, t) = (s, UFun (typeArity t) s)
@@ -315,6 +312,8 @@ data State  = State { rctr       :: IORef Int
                     , rArrayMap  :: IORef ArrayMap
                     , rUIMap     :: IORef UIMap
                     , raxioms    :: IORef [(String, [String])]
+                    , rSWCache   :: IORef (Cache SW)
+                    , rAICache   :: IORef (Cache Int)
                     }
 
 -- | The "Symbolic" value. Either a constant (@Left@) or a symbolic
@@ -497,16 +496,18 @@ runSymbolic c = do (_, r) <- runSymbolic' c
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
 runSymbolic' :: Symbolic a -> IO (a, Result)
 runSymbolic' (Symbolic c) = do
-   ctr    <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
-   pgm    <- newIORef S.empty
-   emap   <- newIORef Map.empty
-   cmap   <- newIORef Map.empty
-   inps   <- newIORef []
-   outs   <- newIORef []
-   tables <- newIORef Map.empty
-   arrays <- newIORef IMap.empty
-   uis    <- newIORef Map.empty
-   axioms <- newIORef []
+   ctr     <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
+   pgm     <- newIORef S.empty
+   emap    <- newIORef Map.empty
+   cmap    <- newIORef Map.empty
+   inps    <- newIORef []
+   outs    <- newIORef []
+   tables  <- newIORef Map.empty
+   arrays  <- newIORef IMap.empty
+   uis     <- newIORef Map.empty
+   axioms  <- newIORef []
+   swCache <- newIORef IMap.empty
+   aiCache <- newIORef IMap.empty
    let st = State { rctr      = ctr
                   , rinps     = inps
                   , routs     = outs
@@ -517,6 +518,8 @@ runSymbolic' (Symbolic c) = do
                   , rexprMap  = emap
                   , rUIMap    = uis
                   , raxioms   = axioms
+                  , rSWCache  = swCache
+                  , rAICache  = aiCache
                   }
    _ <- newConst st (mkConstCW (False,1) (0::Integer)) -- s(-2) == falseSW
    _ <- newConst st (mkConstCW (False,1) (1::Integer)) -- s(-1) == trueSW
@@ -628,18 +631,18 @@ instance SymArray SArray where
   newArray_  = declNewSArray (\t -> "array_" ++ show t)
   newArray n = declNewSArray (const n)
   readArray (SArray (_, bsgnsz) f) a = SBV bsgnsz $ Right $ cache r
-     where r st = do arr <- uncache f st
+     where r st = do arr <- uncacheAI f st
                      i   <- sbvToSW st a
                      newExpr st bsgnsz (SBVApp (ArrRead arr) [i])
   resetArray (SArray ainfo f) b = SArray ainfo $ cache g
      where g st = do amap <- readIORef (rArrayMap st)
                      val <- sbvToSW st b
-                     i <- uncache f st
+                     i <- uncacheAI f st
                      let j = IMap.size amap
                      j `seq` modifyIORef (rArrayMap st) (IMap.insert j ("array_" ++ show j, ainfo, ArrayReset i val))
                      return j
   writeArray (SArray ainfo f) a b = SArray ainfo $ cache g
-     where g st = do arr  <- uncache f st
+     where g st = do arr  <- uncacheAI f st
                      addr <- sbvToSW st a
                      val  <- sbvToSW st b
                      amap <- readIORef (rArrayMap st)
@@ -647,8 +650,8 @@ instance SymArray SArray where
                      j `seq` modifyIORef (rArrayMap st) (IMap.insert j ("array_" ++ show j, ainfo, ArrayMutate arr addr val))
                      return j
   mergeArrays t (SArray ainfo a) (SArray _ b) = SArray ainfo $ cache h
-    where h st = do ai <- uncache a st
-                    bi <- uncache b st
+    where h st = do ai <- uncacheAI a st
+                    bi <- uncacheAI b st
                     ts <- sbvToSW st t
                     amap <- readIORef (rArrayMap st)
                     let k = IMap.size amap
@@ -696,32 +699,37 @@ mkSFunArray i = SFunArray (const i)
 ---------------------------------------------------------------------------------
 
 -- We implement a peculiar caching mechanism, applicable to the use case in
--- implementation of SBV's.  Whenever an SBV is used, we do not want to keep on
--- evaluating it in the then-current state. That will produce essentially a
--- semantically equivalent value. Thus, we want to run it only once, and reuse
--- that result.
+-- implementation of SBV's.  Whenever we do a state based computation, we do
+-- not want to keep on evaluating it in the then-current state. That will
+-- produce essentially a semantically equivalent value. Thus, we want to run
+-- it only once, and reuse that result, capturing the sharing at the Haskell
+-- level. This is similar to the "type-safe observable sharing" work, but also
+-- takes into the account of how symbolic simulation executes.
 --
 -- Note that this is *not* a general memo utility!
 
-newtype Cached a = Cached { uncache :: (State -> IO a) }
+newtype Cached a = Cached (State -> IO a)
 
-{-# NOINLINE cache #-}
 cache :: (State -> IO a) -> Cached a
-cache f = unsafePerformIO $ do
-             storage <- newIORef Nothing
-             return $ Cached (g storage)
-  where g storage s = do mbb <- readIORef storage
-                         case mbb of
-                           Just x  -> return x
-                           Nothing -> do r <- f s
-                                         writeIORef storage (Just r)
-                                         return r
-
-{- The following would be a perfectly good definition of cache,
-   except for performance:
-
 cache = Cached
--}
+
+uncache :: Cached SW -> State -> IO SW
+uncache = uncacheGen rSWCache
+
+uncacheAI :: Cached ArrayIndex -> State -> IO ArrayIndex
+uncacheAI = uncacheGen rAICache
+
+uncacheGen :: (State -> IORef (Cache a)) -> Cached a -> State -> IO a
+uncacheGen getCache (Cached f) st = do
+        let rCache = getCache st
+        stored <- readIORef rCache
+        sn <- f `seq` makeStableName f
+        let h = hashStableName sn
+        case maybe Nothing (sn `lookup`) (h `IMap.lookup` stored) of
+          Just r  -> return r
+          Nothing -> do r <- f st
+                        r `seq` modifyIORef rCache (IMap.insertWith (++) h [(sn, r)])
+                        return r
 
 -- Technicalities..
 instance NFData CW where

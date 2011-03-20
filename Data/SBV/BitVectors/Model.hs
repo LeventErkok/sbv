@@ -711,8 +711,8 @@ instance (SymWord a, Bounded a) => Bounded (SBV a) where
 -- SArrays are both "EqSymbolic" and "Mergeable"
 instance EqSymbolic (SArray a b) where
   (SArray _ a) .== (SArray _ b) = SBV (False, 1) $ Right $ cache c
-    where c st = do ai <- uncache a st
-                    bi <- uncache b st
+    where c st = do ai <- uncacheAI a st
+                    bi <- uncacheAI b st
                     newExpr st (False, 1) (SBVApp (ArrEq ai bi) [])
 
 instance SymWord b => Mergeable (SArray a b) where
