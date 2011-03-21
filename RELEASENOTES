@@ -3,7 +3,11 @@ GitHub:  <http://github.com/LeventErkok/sbv>
 
 Version 1.0, Not released yet
    
-  - Current development version 
+  Bug fix:
+    * Fix rotateL/rotateR instances on concrete
+      words. Previous versions was bogus since
+      it relied on the Integer instance, which
+      does the wrong thing after normalization.
 
 ======================================================================
 Version 0.9.14, 2011-03-19
