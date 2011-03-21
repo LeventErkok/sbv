@@ -391,11 +391,18 @@ instance (Bits a, SymWord a) => Bits (SBV a) where
   rotateL x y
     | y < 0                = rotateR x (-y)
     | y == 0               = x
-    | True                 = liftSym1 (mkSymOp1 (Rol y)) (`rotateL` y) x
+    | True                 = liftSym1 (mkSymOp1 (Rol y)) (mkRot shiftL shiftR y (bitSize x)) x
   rotateR x y
     | y < 0                = rotateL x (-y)
     | y == 0               = x
-    | True                 = liftSym1 (mkSymOp1 (Ror y)) (`rotateR` y) x
+    | True                 = liftSym1 (mkSymOp1 (Ror y)) (mkRot shiftR shiftL y (bitSize x)) x
+
+-- Since the underlying representation is just Integers, rotations has to be
+-- careful on the bit-size
+mkRot :: (Integer -> Int -> Integer) -> (Integer -> Int -> Integer) -> Int -> Int -> Integer -> Integer
+mkRot _   _   _  0 _ = 0
+mkRot op1 op2 y' s x = x `op1` y .|. x `op2` (s - y)
+  where y = y' `mod` s
 
 -- | Replacement for 'testBit'. Since 'testBit' requires a 'Bool' to be returned,
 -- we cannot implement it for symbolic words. Index 0 is the least-significant bit.
