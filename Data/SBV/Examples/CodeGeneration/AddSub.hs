@@ -109,9 +109,9 @@ addSub (x, y) = (x+y, x-y)
 -- >  SWord8 sum;
 -- >  SWord8 dif;
 -- >  
--- >  addSub(125, 57, &sum, &dif);
+-- >  addSub(0x7d, 0x39, &sum, &dif);
 -- >  
--- >  printf("addSub(125, 57, &sum, &dif) ->\n");
+-- >  printf("addSub(0x7d, 0x39, &sum, &dif) ->\n");
 -- >  printf("  sum = %"PRIu8"\n", sum);
 -- >  printf("  dif = %"PRIu8"\n", dif);
 -- >  
