@@ -3,11 +3,18 @@ GitHub:  <http://github.com/LeventErkok/sbv>
 
 Version 1.0, Not released yet
    
-  Bug fix:
+  Bug fixes:
     * Fix rotateL/rotateR instances on concrete
       words. Previous versions was bogus since
       it relied on the Integer instance, which
       does the wrong thing after normalization.
+    * Fix conversion of signed numbers from bits,
+      previous version did not handle two's
+      complement layout correctly
+  Other
+    * Add a sleuth of concrete test cases on
+      arithmetic to catch bugs. There are many
+      of them (~30K), but they run quickly.
 
 ======================================================================
 Version 0.9.14, 2011-03-19
