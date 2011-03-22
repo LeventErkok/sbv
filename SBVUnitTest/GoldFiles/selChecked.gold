@@ -59,9 +59,9 @@ SWord8 selChecked(const SWord8 s0);
 
 int main(void)
 {
-  const SWord8 out0 = selChecked(65);
+  const SWord8 out0 = selChecked(0x41);
   
-  printf("selChecked(65) = %"PRIu8"\n", out0);
+  printf("selChecked(0x41) = %"PRIu8"\n", out0);
   
   return 0;
 }
@@ -75,11 +75,11 @@ int main(void)
 
 SWord8 selChecked(const SWord8 s0)
 {
-  const SWord8 s3 = s0 + 2;
+  const SWord8 s3 = s0 + 0x02;
   const SWord8 table0[] = {
-      1, s3
+      0x01,   s3
   };
-  const SWord8 s5 = s0 >= 2 ? 3 : table0[s0];
+  const SWord8 s5 = s0 >= 2 ? 0x03 : table0[s0];
   
   return s5;
 }

@@ -142,8 +142,8 @@ specifier (s, sz)     = die $ "Format specifier at type " ++ (if s then "SInt" e
 --   shows the result as an integer, which is OK as far as C is concerned.
 mkConst :: Integer -> (Bool, Int) -> Doc
 mkConst i   (False,  1) = integer i
-mkConst i   (False,  8) = integer i
-mkConst i   (True,   8) = integer i
+mkConst i t@(False,  8) = text (shex False True t i)
+mkConst i t@(True,   8) = text (shex False True t i)
 mkConst i t@(False, 16) = text (shex False True t i) <> text "U"
 mkConst i t@(True,  16) = text (shex False True t i)
 mkConst i t@(False, 32) = text (shex False True t i) <> text "UL"
@@ -305,7 +305,7 @@ genCProg rtc fn proto (Result inps preConsts tbls arrs uints axms asgns outs) ou
          | True         = declSW typeWidth sw <+> text "=" <+> text n <> semi
        genTbl :: ((Int, (Bool, Int), (Bool, Int)), [SW]) -> (Int, Doc)
        genTbl ((i, _, (sg, sz)), elts) =  (location, static <+> mkParam ("table" ++ show i, (sg, sz)) <> text "[] = {"
-                                                     $$ nest 4 (fsep (punctuate comma (map (showSW consts) elts)))
+                                                     $$ nest 4 (fsep (punctuate comma (align (map (showSW consts) elts))))
                                                      $$ text "};")
          where static   = if location == -1 then text "static" else empty
                location = maximum (-1 : map getNodeId elts)
@@ -327,6 +327,13 @@ genCProg rtc fn proto (Result inps preConsts tbls arrs uints axms asgns outs) ou
        merge ts@((i, t):trest) as@((i', a):arest)
          | i < i'                                 = t : merge trest as
          | True                                   = a : merge ts arest
+       -- Align a bunch of docs to occupy the exact same length by padding in the left by space
+       -- this is ugly and inefficient, but easy to code..
+       align :: [Doc] -> [Doc]
+       align ds = map (text . pad) ss
+         where ss    = map render ds
+               l     = maximum (0 : map length ss)
+               pad s = take (l - length s) (repeat ' ') ++ s
 
 ppExpr :: Bool -> [(SW, CW)] -> SBVExpr -> Doc
 ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)

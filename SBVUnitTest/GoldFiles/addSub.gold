@@ -63,9 +63,9 @@ int main(void)
   SWord8 sum;
   SWord8 dif;
   
-  addSub(76, 92, &sum, &dif);
+  addSub(0x4c, 0x5c, &sum, &dif);
   
-  printf("addSub(76, 92, &sum, &dif) ->\n");
+  printf("addSub(0x4c, 0x5c, &sum, &dif) ->\n");
   printf("  sum = %"PRIu8"\n", sum);
   printf("  dif = %"PRIu8"\n", dif);
   
