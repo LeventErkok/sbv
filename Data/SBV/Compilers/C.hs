@@ -144,12 +144,12 @@ mkConst :: Integer -> (Bool, Int) -> Doc
 mkConst i   (False,  1) = integer i
 mkConst i   (False,  8) = integer i
 mkConst i   (True,   8) = integer i
-mkConst i t@(False, 16) = text (shex False t i) <> text "U"
-mkConst i t@(True,  16) = text (shex False t i)
-mkConst i t@(False, 32) = text (shex False t i) <> text "UL"
-mkConst i t@(True,  32) = text (shex False t i) <> text "L"
-mkConst i t@(False, 64) = text (shex False t i) <> text "ULL"
-mkConst i t@(True,  64) = text (shex False t i) <> text "LL"
+mkConst i t@(False, 16) = text (shex False True t i) <> text "U"
+mkConst i t@(True,  16) = text (shex False True t i)
+mkConst i t@(False, 32) = text (shex False True t i) <> text "UL"
+mkConst i t@(True,  32) = text (shex False True t i) <> text "L"
+mkConst i t@(False, 64) = text (shex False True t i) <> text "ULL"
+mkConst i t@(True,  64) = text (shex False True t i) <> text "LL"
 mkConst i   (True,  1)  = die $ "Signed 1-bit value " ++ show i
 mkConst i   (s, sz)     = die $ "Constant " ++ show i ++ " at type " ++ (if s then "SInt" else "SWord") ++ show sz
 
@@ -340,8 +340,8 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
         p (Uninterpreted s) _ = tbd $ "Uninterpreted constants (" ++ show s ++ ")"
         p (Extract i j) [a]   = extract i j (let s = head opArgs in (hasSign s, sizeOf s)) a
         p Join [a, b]         = join (let (s1 : s2 : _) = opArgs in ((hasSign s1, sizeOf s1), (hasSign s2, sizeOf s2), a, b))
-        p (Rol i) [a]         = rotate True  i a (sizeOf (head opArgs))
-        p (Ror i) [a]         = rotate False i a (sizeOf (head opArgs))
+        p (Rol i) [a]         = rotate True  i a (let s = head opArgs in (hasSign s, sizeOf s))
+        p (Ror i) [a]         = rotate False i a (let s = head opArgs in (hasSign s, sizeOf s))
         p (Shl i) [a]         = shift True  i a (let s = head opArgs in (hasSign s, sizeOf s))
         p (Shr i) [a]         = shift False i a (let s = head opArgs in (hasSign s, sizeOf s))
         p Not [a] = text "~" <> a
@@ -371,10 +371,12 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
           | True    = a <+> text cop <+> int i
           where cop | toLeft = "<<"
                     | True   = ">>"
-        rotate toLeft i a sz
-          | i < 0   = rotate (not toLeft) (-i) a sz
+        rotate toLeft i a (True, sz)
+          = tbd $ "Rotation of signed words at size " ++ show (toLeft, i, a, sz)
+        rotate toLeft i a (False, sz)
+          | i < 0   = rotate (not toLeft) (-i) a (False, sz)
           | i == 0  = a
-          | i >= sz = rotate toLeft (i `mod` sz) a sz
+          | i >= sz = rotate toLeft (i `mod` sz) a (False, sz)
           | True    =     parens (a <+> text cop  <+> int i)
                       <+> text "|"
                       <+> parens (a <+> text cop' <+> int (sz - i))
