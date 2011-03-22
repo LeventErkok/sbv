@@ -39,6 +39,7 @@ testSuite = mkTestSuite $ \_ -> test $
      ++ genIntTest "shiftR"           shiftR
      ++ genIntTest "rotateL"          rotateL
      ++ genIntTest "rotateR"          rotateR
+     ++ genBlasts
 
 genBinTest :: String -> (forall a. Bits a => a -> a -> a) -> [Test]
 genBinTest nm op = map mkTest $
@@ -79,6 +80,26 @@ genIntTest nm op = map mkTest $
   where pair (x, y, a) b   = (x, y, show ((fromIntegral a) `asTypeOf` b) == show b)
         mkTest (x, y, s) = "arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y ~: s `showsAs` "True"
         is = [-10 .. 10]
+
+genBlasts :: [Test]
+genBlasts = map mkTest $
+             [(show x, fromBitsLE (blastLE x) .== x) | x <- sw8s ]
+          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- sw8s ]
+          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- si8s ]
+          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- si8s ]
+          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- sw16s ]
+          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- sw16s ]
+          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- si16s ]
+          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- si16s ]
+          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- sw32s ]
+          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- sw32s ]
+          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- si32s ]
+          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- si32s ]
+          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- sw64s ]
+          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- sw64s ]
+          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- si64s ]
+          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- si64s ]
+  where mkTest (x, r) = "blast-" ++ show x ~: r `showsAs` "True"
 
 -- Concrete test data
 xsSigned, xsUnsigned :: (Num a, Enum a, Bounded a) => [a]

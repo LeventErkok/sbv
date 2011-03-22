@@ -129,8 +129,7 @@ fromBinLE = go 0 0
         go !acc !i (x:xs) = go (ite x (setBit acc i) acc) (i+1) xs
 
 -- | Perform a sanity check that we should receive precisely the same
--- number of bits as required by the resulting type. Unsigned version,
--- the input is assumed little-endian
+-- number of bits as required by the resulting type. The input is little-endian
 checkAndConvert :: (Bits a, SymWord a) => Int -> [SBool] -> SBV a
 checkAndConvert sz xs
   | sz /= l
@@ -140,27 +139,15 @@ checkAndConvert sz xs
   where l   = length xs
         ssz = show sz
 
--- | Same as 'checkAndConvert', but for signed words
-checkAndConvertSigned :: (Bits a, SymWord a) => Int -> [SBool] -> SBV a
-checkAndConvertSigned sz xs
-  | sz /= l
-  = error $ "SBV.fromBits.SInt" ++ ssz ++ ": Expected " ++ ssz ++ " elements, got: " ++ show l
-  | True
-  = ite sgn (-res) res
-  where l   = length xs
-        ssz = show sz
-        sgn = last xs
-        res = fromBinLE (init xs)
-
 instance FromBits SBool where
  fromBitsLE [x] = x
  fromBitsLE xs  = error $ "SBV.fromBits.SBool: Expected 1 element, got: " ++ show (length xs)
 
-instance FromBits SWord8  where fromBitsLE = checkAndConvert        8
-instance FromBits SInt8   where fromBitsLE = checkAndConvertSigned  8
-instance FromBits SWord16 where fromBitsLE = checkAndConvert       16
-instance FromBits SInt16  where fromBitsLE = checkAndConvertSigned 16
-instance FromBits SWord32 where fromBitsLE = checkAndConvert       32
-instance FromBits SInt32  where fromBitsLE = checkAndConvertSigned 32
-instance FromBits SWord64 where fromBitsLE = checkAndConvert       64
-instance FromBits SInt64  where fromBitsLE = checkAndConvertSigned 64
+instance FromBits SWord8  where fromBitsLE = checkAndConvert  8
+instance FromBits SInt8   where fromBitsLE = checkAndConvert  8
+instance FromBits SWord16 where fromBitsLE = checkAndConvert 16
+instance FromBits SInt16  where fromBitsLE = checkAndConvert 16
+instance FromBits SWord32 where fromBitsLE = checkAndConvert 32
+instance FromBits SInt32  where fromBitsLE = checkAndConvert 32
+instance FromBits SWord64 where fromBitsLE = checkAndConvert 64
+instance FromBits SInt64  where fromBitsLE = checkAndConvert 64
