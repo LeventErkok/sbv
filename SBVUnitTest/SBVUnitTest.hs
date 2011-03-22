@@ -26,11 +26,12 @@ import Paths_sbv               (getDataDir)
 
 -- To add a new collection of tests, import below and add to testCollection variable
 import qualified Data.SBV.TestSuite.Arrays.Memory                  as T01_01(testSuite)
-import qualified Data.SBV.TestSuite.Basics.BasicTests              as T02_01(testSuite)
-import qualified Data.SBV.TestSuite.Basics.Higher                  as T02_02(testSuite)
-import qualified Data.SBV.TestSuite.Basics.Index                   as T02_03(testSuite)
-import qualified Data.SBV.TestSuite.Basics.ProofTests              as T02_04(testSuite)
-import qualified Data.SBV.TestSuite.Basics.QRem                    as T02_05(testSuite)
+import qualified Data.SBV.TestSuite.Basics.Arithmetic              as T02_01(testSuite)
+import qualified Data.SBV.TestSuite.Basics.BasicTests              as T02_02(testSuite)
+import qualified Data.SBV.TestSuite.Basics.Higher                  as T02_03(testSuite)
+import qualified Data.SBV.TestSuite.Basics.Index                   as T02_04(testSuite)
+import qualified Data.SBV.TestSuite.Basics.ProofTests              as T02_05(testSuite)
+import qualified Data.SBV.TestSuite.Basics.QRem                    as T02_06(testSuite)
 import qualified Data.SBV.TestSuite.BitPrecise.BitTricks           as T03_01(testSuite)
 import qualified Data.SBV.TestSuite.BitPrecise.Legato              as T03_02(testSuite)
 import qualified Data.SBV.TestSuite.CRC.CCITT                      as T04_01(testSuite)
@@ -60,13 +61,13 @@ import qualified Data.SBV.TestSuite.Uninterpreted.Uninterpreted    as T09_03(tes
 testCollection :: [SBVTestSuite]
 testCollection = [
        T01_01.testSuite, T02_01.testSuite, T02_02.testSuite, T02_03.testSuite
-     , T02_04.testSuite, T02_05.testSuite, T03_01.testSuite, T03_02.testSuite
-     , T04_01.testSuite, T04_02.testSuite, T04_03.testSuite, T04_04.testSuite
-     , T04_05.testSuite, T05_01.testSuite, T05_02.testSuite, T05_03.testSuite
-     , T05_04.testSuite, T05_05.testSuite, T06_01.testSuite, T07_01.testSuite
-     , T08_01.testSuite, T08_02.testSuite, T08_03.testSuite, T08_04.testSuite
-     , T08_05.testSuite, T08_06.testSuite, T08_07.testSuite, T08_08.testSuite
-     , T09_01.testSuite, T09_02.testSuite, T09_03.testSuite
+     , T02_04.testSuite, T02_05.testSuite, T02_06.testSuite, T03_01.testSuite
+     , T03_02.testSuite, T04_01.testSuite, T04_02.testSuite, T04_03.testSuite
+     , T04_04.testSuite, T04_05.testSuite, T05_01.testSuite, T05_02.testSuite
+     , T05_03.testSuite, T05_04.testSuite, T05_05.testSuite, T06_01.testSuite
+     , T07_01.testSuite, T08_01.testSuite, T08_02.testSuite, T08_03.testSuite
+     , T08_04.testSuite, T08_05.testSuite, T08_06.testSuite, T08_07.testSuite
+     , T08_08.testSuite, T09_01.testSuite, T09_02.testSuite, T09_03.testSuite
      ]
 
 -- No user serviceable parts below..

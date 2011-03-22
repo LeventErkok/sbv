@@ -142,6 +142,7 @@ Library
                   , Data.SBV.Examples.Puzzles.Temperature
                   , Data.SBV.Examples.Uninterpreted.Uninterpreted
                   , Data.SBV.TestSuite.Arrays.Memory
+                  , Data.SBV.TestSuite.Basics.Arithmetic
                   , Data.SBV.TestSuite.Basics.BasicTests
                   , Data.SBV.TestSuite.Basics.Higher
                   , Data.SBV.TestSuite.Basics.Index
