@@ -83,58 +83,58 @@ and generate C code for it.
 -- >  #include <stdint.h>
 -- >  #include "sgcd.h"
 -- >  
--- >  SWord8 sgcd(const SWord8 x, const SWord8 y)
--- >  {
--- >    const SWord8 s0 = x;
--- >    const SWord8 s1 = y;
--- >    const SBool  s3 = s1 == 0;
--- >    const SWord8 s4 = s0 % s1;
--- >    const SWord8 s5 = s3 ? s0 : s4;
--- >    const SBool  s6 = 0 == s5;
--- >    const SWord8 s7 = s1 % s5;
--- >    const SWord8 s8 = s6 ? s1 : s7;
--- >    const SBool  s9 = 0 == s8;
--- >    const SWord8 s10 = s5 % s8;
--- >    const SWord8 s11 = s9 ? s5 : s10;
--- >    const SBool  s12 = 0 == s11;
--- >    const SWord8 s13 = s8 % s11;
--- >    const SWord8 s14 = s12 ? s8 : s13;
--- >    const SBool  s15 = 0 == s14;
--- >    const SWord8 s16 = s11 % s14;
--- >    const SWord8 s17 = s15 ? s11 : s16;
--- >    const SBool  s18 = 0 == s17;
--- >    const SWord8 s19 = s14 % s17;
--- >    const SWord8 s20 = s18 ? s14 : s19;
--- >    const SBool  s21 = 0 == s20;
--- >    const SWord8 s22 = s17 % s20;
--- >    const SWord8 s23 = s21 ? s17 : s22;
--- >    const SBool  s24 = 0 == s23;
--- >    const SWord8 s25 = s20 % s23;
--- >    const SWord8 s26 = s24 ? s20 : s25;
--- >    const SBool  s27 = 0 == s26;
--- >    const SWord8 s28 = s23 % s26;
--- >    const SWord8 s29 = s27 ? s23 : s28;
--- >    const SBool  s30 = 0 == s29;
--- >    const SWord8 s31 = s26 % s29;
--- >    const SWord8 s32 = s30 ? s26 : s31;
--- >    const SBool  s33 = 0 == s32;
--- >    const SWord8 s34 = s29 % s32;
--- >    const SWord8 s35 = s33 ? s29 : s34;
--- >    const SBool  s36 = 0 == s35;
--- >    const SWord8 s37 = s36 ? s32 : s35;
--- >    const SWord8 s38 = s33 ? s29 : s37;
--- >    const SWord8 s39 = s30 ? s26 : s38;
--- >    const SWord8 s40 = s27 ? s23 : s39;
--- >    const SWord8 s41 = s24 ? s20 : s40;
--- >    const SWord8 s42 = s21 ? s17 : s41;
--- >    const SWord8 s43 = s18 ? s14 : s42;
--- >    const SWord8 s44 = s15 ? s11 : s43;
--- >    const SWord8 s45 = s12 ? s8 : s44;
--- >    const SWord8 s46 = s9 ? s5 : s45;
--- >    const SWord8 s47 = s6 ? s1 : s46;
--- >    const SWord8 s48 = s3 ? s0 : s47;
--- >    
--- >    return s48;
--- >  }
+-- > SWord8 sgcd(const SWord8 x, const SWord8 y)
+-- > {
+-- >   const SWord8 s0 = x;
+-- >   const SWord8 s1 = y;
+-- >   const SBool  s3 = s1 == 0x00;
+-- >   const SWord8 s4 = s0 % s1;
+-- >   const SWord8 s5 = s3 ? s0 : s4;
+-- >   const SBool  s6 = 0x00 == s5;
+-- >   const SWord8 s7 = s1 % s5;
+-- >   const SWord8 s8 = s6 ? s1 : s7;
+-- >   const SBool  s9 = 0x00 == s8;
+-- >   const SWord8 s10 = s5 % s8;
+-- >   const SWord8 s11 = s9 ? s5 : s10;
+-- >   const SBool  s12 = 0x00 == s11;
+-- >   const SWord8 s13 = s8 % s11;
+-- >   const SWord8 s14 = s12 ? s8 : s13;
+-- >   const SBool  s15 = 0x00 == s14;
+-- >   const SWord8 s16 = s11 % s14;
+-- >   const SWord8 s17 = s15 ? s11 : s16;
+-- >   const SBool  s18 = 0x00 == s17;
+-- >   const SWord8 s19 = s14 % s17;
+-- >   const SWord8 s20 = s18 ? s14 : s19;
+-- >   const SBool  s21 = 0x00 == s20;
+-- >   const SWord8 s22 = s17 % s20;
+-- >   const SWord8 s23 = s21 ? s17 : s22;
+-- >   const SBool  s24 = 0x00 == s23;
+-- >   const SWord8 s25 = s20 % s23;
+-- >   const SWord8 s26 = s24 ? s20 : s25;
+-- >   const SBool  s27 = 0x00 == s26;
+-- >   const SWord8 s28 = s23 % s26;
+-- >   const SWord8 s29 = s27 ? s23 : s28;
+-- >   const SBool  s30 = 0x00 == s29;
+-- >   const SWord8 s31 = s26 % s29;
+-- >   const SWord8 s32 = s30 ? s26 : s31;
+-- >   const SBool  s33 = 0x00 == s32;
+-- >   const SWord8 s34 = s29 % s32;
+-- >   const SWord8 s35 = s33 ? s29 : s34;
+-- >   const SBool  s36 = 0x00 == s35;
+-- >   const SWord8 s37 = s36 ? s32 : s35;
+-- >   const SWord8 s38 = s33 ? s29 : s37;
+-- >   const SWord8 s39 = s30 ? s26 : s38;
+-- >   const SWord8 s40 = s27 ? s23 : s39;
+-- >   const SWord8 s41 = s24 ? s20 : s40;
+-- >   const SWord8 s42 = s21 ? s17 : s41;
+-- >   const SWord8 s43 = s18 ? s14 : s42;
+-- >   const SWord8 s44 = s15 ? s11 : s43;
+-- >   const SWord8 s45 = s12 ? s8 : s44;
+-- >   const SWord8 s46 = s9 ? s5 : s45;
+-- >   const SWord8 s47 = s6 ? s1 : s46;
+-- >   const SWord8 s48 = s3 ? s0 : s47;
+-- >   
+-- >   return s48;
+-- > }
 genGCDInC :: IO ()
 genGCDInC = compileToC False (Just "sgcdC") "sgcd" ["x", "y"] sgcd
