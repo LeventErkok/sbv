@@ -480,6 +480,9 @@ instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtabl
 instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtable e, Outputtable f, Outputtable g) => Outputtable (a, b, c, d, e, f, g) where
   output = mlift7 (,,,,,,) output output output output output output output
 
+instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtable e, Outputtable f, Outputtable g, Outputtable h) => Outputtable (a, b, c, d, e, f, g, h) where
+  output = mlift8 (,,,,,,,) output output output output output output output output
+
 -- | Add a user specified axiom to the generated SMT-Lib file. Note that the input is a
 -- mere string; we perform no checking on the input that it's well-formed or is sensical.
 -- A separate formalization of SMT-Lib would be very useful here.
