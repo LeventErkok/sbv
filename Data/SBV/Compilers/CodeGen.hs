@@ -135,6 +135,18 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymW
                   (ns7, g) <- cgArgs ns6
                   return (ns7, (a, b, c, d, e, f, g))
 
+-- 8-Tuple
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, SymWord h) => CgArgs (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h) where
+   cgArgs ns = do (ns1, a) <- cgArgs ns
+                  (ns2, b) <- cgArgs ns1
+                  (ns3, c) <- cgArgs ns2
+                  (ns4, d) <- cgArgs ns3
+                  (ns5, e) <- cgArgs ns4
+                  (ns6, f) <- cgArgs ns5
+                  (ns7, g) <- cgArgs ns6
+                  (ns8, h) <- cgArgs ns7
+                  return (ns8, (a, b, c, d, e, f, g, h))
+
 -- | Abstract over functions that we can symbolically execute
 class SymExecutable f where
    symExecute :: [String] -> f -> IO ([String], Result)
