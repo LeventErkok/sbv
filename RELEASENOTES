@@ -13,8 +13,8 @@ Version 0.9.15, Not released yet
       complement layout correctly
   Other
     * Add a sleuth of concrete test cases on
-      arithmetic to catch bugs. There are many
-      of them (~30K), but they run quickly.
+      arithmetic to catch bugs. (There are many
+      of them, ~30K, but they run quickly.)
 
 ======================================================================
 Version 0.9.14, 2011-03-19
@@ -22,7 +22,7 @@ Version 0.9.14, 2011-03-19
   - Reimplement sharing using Stable names, inspired
     by the Data.Reify techniques. This avoids tricks
     with unsafe memory stashing, and hence is safe.
-    Thus, the issues with respect to CAFs are solved.
+    Thus, issues with respect to CAFs are now resolved.
 
 ======================================================================
 Version 0.9.13, 2011-03-16
