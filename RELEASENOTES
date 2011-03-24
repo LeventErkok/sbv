@@ -1,7 +1,7 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Version 1.0, Not released yet
+Version 0.9.15, Not released yet
    
   Bug fixes:
     * Fix rotateL/rotateR instances on concrete
