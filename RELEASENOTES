@@ -1,9 +1,10 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Version 1.0, Not yet released
+Version 0.9.16, Not yet released
 
-    * Current development version
+    * Further optimizations on Bits instance of SBV
+    * Add AES algorithm as an example
 
 ======================================================================
 Version 0.9.15, 2011-03-24
