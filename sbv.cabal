@@ -98,6 +98,7 @@ Library
                   , Data.SBV.Examples.BitPrecise.BitTricks
                   , Data.SBV.Examples.BitPrecise.Legato
                   , Data.SBV.Examples.CodeGeneration.AddSub
+                  , Data.SBV.Examples.CodeGeneration.AES
                   , Data.SBV.Examples.CodeGeneration.Fibonacci
                   , Data.SBV.Examples.CodeGeneration.GCD
                   , Data.SBV.Examples.CodeGeneration.PopulationCount
