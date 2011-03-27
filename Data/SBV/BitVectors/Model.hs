@@ -374,10 +374,25 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
 -- NB. The default definition of "testBit" relies on equality,
 -- which is not available for symbolic SBV's. There is no
 -- way to implement testBit to return Bool, obviously; instead use bitValue
+-- Also, in the optimizations below, use of -1 is valid as
+-- -1 has all bits set to True for both signed and unsigned values
 instance (Bits a, SymWord a) => Bits (SBV a) where
-  (.&.)                    = liftSym2 (mkSymOp  And) (.&.)
-  (.|.)                    = liftSym2 (mkSymOp  Or)  (.|.)
-  xor                      = liftSym2 (mkSymOp  XOr) xor
+  x .&. y
+    | x `isConcretely` (== 0)  = 0
+    | x `isConcretely` (== -1) = y
+    | y `isConcretely` (== 0)  = 0
+    | y `isConcretely` (== -1) = x
+    | True                     = liftSym2 (mkSymOp  And) (.&.) x y
+  x .|. y
+    | x `isConcretely` (== 0)  = y
+    | x `isConcretely` (== -1) = -1
+    | y `isConcretely` (== 0)  = x
+    | y `isConcretely` (== -1) = -1
+    | True                     = liftSym2 (mkSymOp  Or)  (.|.) x y
+  x `xor` y
+    | x `isConcretely` (== 0)  = y
+    | y `isConcretely` (== 0)  = x
+    | True                     = liftSym2 (mkSymOp  XOr) xor x y
   complement               = liftSym1 (mkSymOp1 Not) complement
   bitSize  (SBV (_ ,s) _)  = s
   isSigned (SBV (b, _) _)  = b
