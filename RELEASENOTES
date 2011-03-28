@@ -1,10 +1,14 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Version 0.9.16, Not yet released
+Version 0.9.16, 2011-03-28
 
+  Code:
     * Further optimizations on Bits instance of SBV
-    * Add AES algorithm as an example
+  Examples:
+    * Add AES algorithm as an example, showing how
+      encryption algorithms are particularly suitable
+      for use with the code-generator
 
 ======================================================================
 Version 0.9.15, 2011-03-24
@@ -17,7 +21,7 @@ Version 0.9.15, 2011-03-24
     * Fix conversion of signed numbers from bits,
       previous version did not handle two's
       complement layout correctly
-  Other
+  Testing:
     * Add a sleuth of concrete test cases on
       arithmetic to catch bugs. (There are many
       of them, ~30K, but they run quickly.)
