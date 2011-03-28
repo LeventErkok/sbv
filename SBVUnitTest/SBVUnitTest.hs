@@ -40,10 +40,11 @@ import qualified Data.SBV.TestSuite.CRC.GenPoly                    as T04_03(tes
 import qualified Data.SBV.TestSuite.CRC.Parity                     as T04_04(testSuite)
 import qualified Data.SBV.TestSuite.CRC.USB5                       as T04_05(testSuite)
 import qualified Data.SBV.TestSuite.CodeGeneration.AddSub          as T05_01(testSuite)
-import qualified Data.SBV.TestSuite.CodeGeneration.CgTests         as T05_02(testSuite)
-import qualified Data.SBV.TestSuite.CodeGeneration.Fibonacci       as T05_03(testSuite)
-import qualified Data.SBV.TestSuite.CodeGeneration.GCD             as T05_04(testSuite)
-import qualified Data.SBV.TestSuite.CodeGeneration.PopulationCount as T05_05(testSuite)
+import qualified Data.SBV.TestSuite.CodeGeneration.AES             as T05_02(testSuite)
+import qualified Data.SBV.TestSuite.CodeGeneration.CgTests         as T05_03(testSuite)
+import qualified Data.SBV.TestSuite.CodeGeneration.Fibonacci       as T05_04(testSuite)
+import qualified Data.SBV.TestSuite.CodeGeneration.GCD             as T05_05(testSuite)
+import qualified Data.SBV.TestSuite.CodeGeneration.PopulationCount as T05_06(testSuite)
 import qualified Data.SBV.TestSuite.Polynomials.Polynomials        as T06_01(testSuite)
 import qualified Data.SBV.TestSuite.PrefixSum.PrefixSum            as T07_01(testSuite)
 import qualified Data.SBV.TestSuite.Puzzles.DogCatMouse            as T08_01(testSuite)
@@ -64,10 +65,11 @@ testCollection = [
      , T02_04.testSuite, T02_05.testSuite, T02_06.testSuite, T03_01.testSuite
      , T03_02.testSuite, T04_01.testSuite, T04_02.testSuite, T04_03.testSuite
      , T04_04.testSuite, T04_05.testSuite, T05_01.testSuite, T05_02.testSuite
-     , T05_03.testSuite, T05_04.testSuite, T05_05.testSuite, T06_01.testSuite
-     , T07_01.testSuite, T08_01.testSuite, T08_02.testSuite, T08_03.testSuite
-     , T08_04.testSuite, T08_05.testSuite, T08_06.testSuite, T08_07.testSuite
-     , T08_08.testSuite, T09_01.testSuite, T09_02.testSuite, T09_03.testSuite
+     , T05_03.testSuite, T05_04.testSuite, T05_05.testSuite, T05_06.testSuite
+     , T06_01.testSuite, T07_01.testSuite, T08_01.testSuite, T08_02.testSuite
+     , T08_03.testSuite, T08_04.testSuite, T08_05.testSuite, T08_06.testSuite
+     , T08_07.testSuite, T08_08.testSuite, T09_01.testSuite, T09_02.testSuite
+     , T09_03.testSuite
      ]
 
 -- No user serviceable parts below..
