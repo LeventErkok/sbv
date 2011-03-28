@@ -98,6 +98,18 @@ gf28Pow n k = pow k
 gf28Inverse :: GF28 -> GF28
 gf28Inverse x = x `gf28Pow` 254
 
+-- | Multiplication by 2 in GF(2^8). We use the standard bit-blasting trick
+-- to obtain fast code.
+gtimes2 :: GF28 -> GF28
+gtimes2 g = fromBitsLE [b7, b0 <+> b7, b1, b2 <+> b7, b3 <+> b7, b4, b5, b6]
+  where [b0, b1, b2, b3, b4, b5, b6, b7] = blastLE g
+
+-- | Multiplication by 3 in GF(2^8)
+gtimes3 g = gtimes2 g `xor` g
+gtimesE g = select (map (`gf28Mult` 0xE) [0..255]) 0 g
+gtimesB g = select (map (`gf28Mult` 0xB) [0..255]) 0 g
+gtimesD g = select (map (`gf28Mult` 0xD) [0..255]) 0 g
+gtimes9 g = select (map (`gf28Mult` 0x9) [0..255]) 0 g
 -----------------------------------------------------------------------------
 -- * Implementing AES
 -----------------------------------------------------------------------------
@@ -138,6 +150,13 @@ fromBytes :: [GF28] -> SWord32
 fromBytes [x1, x2, x3, x4] = (x1 # x2) # (x3 # x4)
 fromBytes xs               = error $ "fromBytes: Unexpected input: " ++ show xs
 
+-- | Rotating a state row by a fixed amount to the right.
+rotR :: [GF28] -> Int -> [GF28]
+rotR [a, b, c, d] 1 = [d, a, b, c]
+rotR [a, b, c, d] 2 = [c, d, a, b]
+rotR [a, b, c, d] 3 = [b, c, d, a]
+rotR xs           i = error $ "rotR: Unexpected input: " ++ show (xs, i)
+
 -----------------------------------------------------------------------------
 -- ** The key schedule
 -----------------------------------------------------------------------------
@@ -148,11 +167,11 @@ rcon i = [roundConstants !! i, 0, 0, 0]
  where roundConstants :: [GF28]
        roundConstants = 0 : [ gf28Pow 2 (i-1) | i <- [1 .. ] ]
 
--- | The SubWord function, as specified in Section 5.2 of the AES standard.
+-- | The @SubWord@ function, as specified in Section 5.2 of the AES standard.
 subWord :: [GF28] -> [GF28]
 subWord = map sbox
 
--- | The RotWord function, as specified in Section 5.2 of the AES standard.
+-- | The @RotWord@ function, as specified in Section 5.2 of the AES standard.
 rotWord :: [GF28] -> [GF28]
 rotWord [a, b, c, d] = [b, c, d, a]
 rotWord xs           = error $ "rotWord: Unexpected input: " ++ show xs
@@ -225,55 +244,53 @@ addRoundKey :: Key -> State -> State
 addRoundKey = zipWith xor
 
 -----------------------------------------------------------------------------
--- ** Tables for T-Box encryption. Left here
+-- ** Tables for T-Box encryption
 -----------------------------------------------------------------------------
-t0Func :: Int -> [GF28]
-t0Func a = [gtimes2 s, s, s, gtimes3 s] where s = sboxTable !! a
 
-t0Table, t1Table, t2Table, t3Table :: [SWord32]
-t0Table = [ fromBytes (t0Func a)          | a <- [0..255] ]
-t1Table = [ fromBytes (t0Func a `rotR` 1) | a <- [0..255] ]
-t2Table = [ fromBytes (t0Func a `rotR` 2) | a <- [0..255] ]
-t3Table = [ fromBytes (t0Func a `rotR` 3) | a <- [0..255] ]
+-- | T-box table generation function.for encryption
+t0Func :: GF28 -> [GF28]
+t0Func a = [gtimes2 s, s, s, gtimes3 s] where s = sbox a
 
-t0, t1, t2, t3 :: GF28 -> SWord32
-t0 = select t0Table 0
-t1 = select t1Table 0
-t2 = select t2Table 0
-t3 = select t3Table 0
+-- | First look-up table used in encryption
+t0 :: GF28 -> SWord32
+t0 = select t0Table 0 where t0Table = [fromBytes (t0Func a)          | a <- [0..255]]
+
+-- | Second look-up table used in encryption
+t1 :: GF28 -> SWord32
+t1 = select t1Table 0 where t1Table = [fromBytes (t0Func a `rotR` 1) | a <- [0..255]]
+
+-- | Third look-up table used in encryption
+t2 :: GF28 -> SWord32
+t2 = select t2Table 0 where t2Table = [fromBytes (t0Func a `rotR` 2) | a <- [0..255]]
+
+-- | Fourth look-up table used in encryption
+t3 :: GF28 -> SWord32
+t3 = select t3Table 0 where t3Table = [fromBytes (t0Func a `rotR` 3) | a <- [0..255]]
 
 -----------------------------------------------------------------------------
--- ** Tables for T-Box decryption.
+-- ** Tables for T-Box decryption
 -----------------------------------------------------------------------------
-u0, u1, u2, u3 :: GF28 -> SWord32
-u0 = select u0Table 0
-u1 = select u1Table 0
-u2 = select u2Table 0
-u3 = select u3Table 0
 
-u0Func :: Int -> [GF28]
-u0Func a = [gtimesE s, gtimes9 s, gtimesD s, gtimesB s] where s = unSBoxTable !! a
+-- | T-box table generating function for decryption
+u0Func :: GF28 -> [GF28]
+u0Func a = [gtimesE s, gtimes9 s, gtimesD s, gtimesB s] where s = unSBox a
 
-u0Table, u1Table, u2Table, u3Table :: [SWord32]
-u0Table = [ fromBytes (u0Func a)          | a <- [0..255] ]
-u1Table = [ fromBytes (u0Func a `rotR` 1) | a <- [0..255] ]
-u2Table = [ fromBytes (u0Func a `rotR` 2) | a <- [0..255] ]
-u3Table = [ fromBytes (u0Func a `rotR` 3) | a <- [0..255] ]
+-- | First look-up table used in decryption
+u0 :: GF28 -> SWord32
+u0 = select t0Table 0 where t0Table = [fromBytes (u0Func a)          | a <- [0..255]]
 
-rotR :: [GF28] -> Int -> [GF28]
-rotR [a, b, c, d] 1 = [d, a, b, c]
-rotR [a, b, c, d] 2 = [c, d, a, b]
-rotR [a, b, c, d] 3 = [b, c, d, a]
-rotR xs           i = error $ "rotR: Unexpected input: " ++ show (xs, i)
+-- | Second look-up table used in decryption
+u1 :: GF28 -> SWord32
+u1 = select t1Table 0 where t1Table = [fromBytes (u0Func a `rotR` 1) | a <- [0..255]]
 
-gtimes2, gtimes3, gtimesE, gtimes9, gtimesD, gtimesB :: GF28 -> GF28
-gtimes2 g = fromBitsLE [b7, b0 <+> b7, b1, b2 <+> b7, b3 <+> b7, b4, b5, b6]
-  where [b0, b1, b2, b3, b4, b5, b6, b7] = blastLE g
-gtimes3 g = gtimes2 g `xor` g
-gtimesE g = select (map (`gf28Mult` 0xE) [0..255]) 0 g
-gtimesB g = select (map (`gf28Mult` 0xB) [0..255]) 0 g
-gtimesD g = select (map (`gf28Mult` 0xD) [0..255]) 0 g
-gtimes9 g = select (map (`gf28Mult` 0x9) [0..255]) 0 g
+-- | Third look-up table used in decryption
+u2 :: GF28 -> SWord32
+u2 = select t2Table 0 where t2Table = [fromBytes (u0Func a `rotR` 2) | a <- [0..255]]
+
+-- | Fourth look-up table used in decryption
+u3 :: GF28 -> SWord32
+u3 = select t3Table 0 where t3Table = [fromBytes (u0Func a `rotR` 3) | a <- [0..255]]
+
 
 invMixColumns :: State -> State
 invMixColumns state = map fromBytes $ transpose $ mmult m (map toBytes state)
