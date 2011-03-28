@@ -5,7 +5,7 @@
 
 SRCS = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs)
 
-.PHONY: all install test sdist clean docs gold
+.PHONY: all install test sdist clean docs gold tags
 
 all: install test sdist
 
@@ -34,3 +34,7 @@ release: clean all docs
 
 gold:
 	ghc -idist/build/autogen/ SBVUnitTest/SBVUnitTest.hs -e createGolds
+
+tags:
+	find -name \*.\*hs | xargs hasktags -c
+	sort -o tags tags
