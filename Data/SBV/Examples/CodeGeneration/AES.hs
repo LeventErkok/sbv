@@ -276,11 +276,11 @@ aesRound :: Bool -> State -> Key -> State
 aesRound isFinal s key = d `addRoundKey` key
   where d = map (f isFinal) [0..3]
         a = map toBytes s
-        f True j = e0 `xor` e1 `xor` e2 `xor` e3
-              where e0 = fromBytes [sbox (a !! ((j+0) `mod` 4) !! 0), 0, 0, 0]
-                    e1 = fromBytes [0, sbox (a !! ((j+1) `mod` 4) !! 1), 0, 0]
-                    e2 = fromBytes [0, 0, sbox (a !! ((j+2) `mod` 4) !! 2), 0]
-                    e3 = fromBytes [0, 0, 0, sbox (a !! ((j+3) `mod` 4) !! 3)]
+        f True j = fromBytes $ [ sbox (a !! ((j+0) `mod` 4) !! 0)
+                               , sbox (a !! ((j+1) `mod` 4) !! 1)
+                               , sbox (a !! ((j+2) `mod` 4) !! 2)
+                               , sbox (a !! ((j+3) `mod` 4) !! 3)
+                               ]
         f False j = e0 `xor` e1 `xor` e2 `xor` e3
               where e0 = t0 (a !! ((j+0) `mod` 4) !! 0)
                     e1 = t1 (a !! ((j+1) `mod` 4) !! 1)
@@ -293,11 +293,11 @@ aesInvRound :: Bool -> State -> Key -> State
 aesInvRound isFinal s key = d `addRoundKey` key
   where d = map (f isFinal) [0..3]
         a = map toBytes s
-        f True j = e0 `xor` e1 `xor` e2 `xor` e3
-              where e0 = fromBytes [unSBox (a !! ((j+0) `mod` 4) !! 0), 0, 0, 0]
-                    e1 = fromBytes [0, unSBox (a !! ((j+3) `mod` 4) !! 1), 0, 0]
-                    e2 = fromBytes [0, 0, unSBox (a !! ((j+2) `mod` 4) !! 2), 0]
-                    e3 = fromBytes [0, 0, 0, unSBox (a !! ((j+1) `mod` 4) !! 3)]
+        f True j = fromBytes [ unSBox (a !! ((j+0) `mod` 4) !! 0)
+                             , unSBox (a !! ((j+3) `mod` 4) !! 1)
+                             , unSBox (a !! ((j+2) `mod` 4) !! 2)
+                             , unSBox (a !! ((j+1) `mod` 4) !! 3)
+                             ]
         f False j = e0 `xor` e1 `xor` e2 `xor` e3
               where e0 = u0 (a !! ((j+0) `mod` 4) !! 0)
                     e1 = u1 (a !! ((j+3) `mod` 4) !! 1)
