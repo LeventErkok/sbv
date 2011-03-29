@@ -72,10 +72,6 @@ source-repository head
     type:       git
     location:   git://github.com/LeventErkok/sbv.git
 
-Flag test
-  Description: Run the unit-test suite after build
-  Default    : False
-
 Library
   ghc-options     : -Wall
   ghc-prof-options: -auto-all -caf-all
@@ -178,7 +174,3 @@ Library
 
 Executable SBVUnitTests
   main-is         : SBVUnitTest/SBVUnitTest.hs
-  if flag(test)
-    x-run-unittests: True
-  else
-    x-run-unittests: False
