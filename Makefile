@@ -33,7 +33,7 @@ configure:
 release: clean all docs
 
 gold:
-	ghc -idist/build/autogen/ SBVUnitTest/SBVUnitTest.hs -e createGolds
+	ghc -idist/build/autogen/ SBVUnitTest/SBVUnitTest.hs -e "createGolds \"${TGTS}\""
 
 tags:
 	find -name \*.\*hs | xargs hasktags -c

@@ -59,26 +59,51 @@ import qualified Data.SBV.TestSuite.Uninterpreted.AUF              as T09_01(tes
 import qualified Data.SBV.TestSuite.Uninterpreted.Function         as T09_02(testSuite)
 import qualified Data.SBV.TestSuite.Uninterpreted.Uninterpreted    as T09_03(testSuite)
 
-testCollection :: [SBVTestSuite]
+testCollection :: [(String, SBVTestSuite)]
 testCollection = [
-       T01_01.testSuite, T02_01.testSuite, T02_02.testSuite, T02_03.testSuite
-     , T02_04.testSuite, T02_05.testSuite, T02_06.testSuite, T03_01.testSuite
-     , T03_02.testSuite, T04_01.testSuite, T04_02.testSuite, T04_03.testSuite
-     , T04_04.testSuite, T04_05.testSuite, T05_01.testSuite, T05_02.testSuite
-     , T05_03.testSuite, T05_04.testSuite, T05_05.testSuite, T05_06.testSuite
-     , T06_01.testSuite, T07_01.testSuite, T08_01.testSuite, T08_02.testSuite
-     , T08_03.testSuite, T08_04.testSuite, T08_05.testSuite, T08_06.testSuite
-     , T08_07.testSuite, T08_08.testSuite, T09_01.testSuite, T09_02.testSuite
-     , T09_03.testSuite
+       ("mem",         T01_01.testSuite)
+     , ("arith",       T02_01.testSuite)
+     , ("basic",       T02_02.testSuite)
+     , ("higher",      T02_03.testSuite)
+     , ("index",       T02_04.testSuite)
+     , ("proof",       T02_05.testSuite)
+     , ("qrem",        T02_06.testSuite)
+     , ("bitTricks",   T03_01.testSuite)
+     , ("legato",      T03_02.testSuite)
+     , ("ccitt",       T04_01.testSuite)
+     , ("ccitt2",      T04_02.testSuite)
+     , ("genPoly",     T04_03.testSuite)
+     , ("parity",      T04_04.testSuite)
+     , ("usb5",        T04_05.testSuite)
+     , ("addSub",      T05_01.testSuite)
+     , ("aes",         T05_02.testSuite)
+     , ("cgtest",      T05_03.testSuite)
+     , ("fib",         T05_04.testSuite)
+     , ("gcd",         T05_05.testSuite)
+     , ("popCount",    T05_06.testSuite)
+     , ("poly",        T06_01.testSuite)
+     , ("prefixSum",   T07_01.testSuite)
+     , ("dogCatMouse", T08_01.testSuite)
+     , ("euler185",    T08_02.testSuite)
+     , ("magicSquare", T08_03.testSuite)
+     , ("nQueens",     T08_04.testSuite)
+     , ("powerset",    T08_05.testSuite)
+     , ("sudoku",      T08_06.testSuite)
+     , ("temperature", T08_07.testSuite)
+     , ("u2bridge",    T08_08.testSuite)
+     , ("auf1",        T09_01.testSuite)
+     , ("auf2",        T09_02.testSuite)
+     , ("unint",       T09_03.testSuite)
      ]
 
 -- No user serviceable parts below..
 
 main :: IO ()
-main = getArgs >>= run False
+main = do tgts <- getArgs
+          run tgts False []
 
-createGolds :: IO ()
-createGolds = run True ["SBVUnitTest/GoldFiles"]
+createGolds :: String -> IO ()
+createGolds tgts = run (words tgts) True ["SBVUnitTest/GoldFiles"]
 
 checkGoldDir :: FilePath -> IO ()
 checkGoldDir gd = do e <- doesDirectoryExist gd
@@ -117,23 +142,31 @@ checkYicesVersion p =
                                            putStrLn $ "*** However, upgrading to Yices 2.X is highly recommended!"
                                            exitWith $ ExitFailure 1
 
-run :: Bool -> [String] -> IO ()
-run shouldCreate [gd] =
-        do putStrLn $ "*** Starting SBV unit tests..\n*** Gold files at: " ++ show gd
+run :: [String] -> Bool -> [String] -> IO ()
+run targets shouldCreate [gd] =
+        do mapM_ checkTgt targets
+           putStrLn $ "*** Starting SBV unit tests..\n*** Gold files at: " ++ show gd
            checkGoldDir gd
            checkYices
-           let mkTst (SBVTestSuite f) = f $ generateGoldCheck gd shouldCreate
-           cts <- runTestTT $ TestList $ map mkTst testCollection
-           decide cts
-run shouldCreate [] = getDataDir >>= \d -> run shouldCreate[d </> "SBVUnitTest" </> "GoldFiles"]
-run _            _  = error "SBVUnitTests.run: impossible happened!"
+           cts <- runTestTT $ TestList $ map mkTst [c | (tc, c) <- testCollection, select tc]
+           decide shouldCreate cts
+  where mkTst (SBVTestSuite f) = f $ generateGoldCheck gd shouldCreate
+        select tc = null targets || tc `elem` targets
+        checkTgt t | t `elem` allTargets = return ()
+                   | True                = do putStrLn $ "*** Unknown test target: " ++ show t
+                                              exitWith $ ExitFailure 1
+        allTargets = map fst testCollection
+run targets shouldCreate [] = getDataDir >>= \d -> run targets shouldCreate [d </> "SBVUnitTest" </> "GoldFiles"]
+run _       _            _  = error "SBVUnitTests.run: impossible happened!"
 
-decide :: Counts -> IO ()
-decide cts@(Counts c t e f) = do
+decide :: Bool -> Counts -> IO ()
+decide shouldCreate cts@(Counts c t e f) = do
         when (c /= t) $ putStrLn $ "*** Not all test cases were tried. (Only tested " ++ show t ++ " of " ++ show c ++ ")"
         when (e /= 0) $ putStrLn $ "*** " ++ show e ++ " (of " ++ show c ++ ") test cases in error."
         when (f /= 0) $ putStrLn $ "*** " ++ show f ++ " (of " ++ show c ++ ") test cases failed."
         if (c == t && e == 0 && f == 0)
-           then do putStrLn $ "All " ++ show c ++ " test cases successfully passed."
+           then do if shouldCreate
+                      then putStrLn $ "All " ++ show c ++ " test cases executed in gold-file generation mode."
+                      else putStrLn $ "All " ++ show c ++ " test cases successfully passed."
                    exitWith $ ExitSuccess
            else exitWith $ ExitFailure 2
