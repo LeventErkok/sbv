@@ -503,13 +503,12 @@ aes128IsCorrect (i0, i1, i2, i3) (k0, k1, k2, k3) = pt .== pt'
 -- is a sample of the generated straightline C-code:
 --
 -- @
---   const SWord32 s1066 = s2 ^ s1065;
---   const SWord16 s1067 = (SWord16) s1066;
---   const SWord8  s1068 = (SWord8) (s1067 >> 8);
---   const SWord32 s1069 = table3[s1068];
---   const SWord32 s1070 = s801 ^ s1069;
---   const SWord16 s1326 = (SWord16) (s7 >> 16);
---   const SWord8  s1327 = (SWord8) (s1326 >> 8);
+--   const SWord8  s1915 = (SWord8) s1912;
+--   const SWord8  s1916 = table0[s1915];
+--   const SWord16 s1917 = (((SWord16) s1914) << 8) | ((SWord16) s1916);
+--   const SWord32 s1918 = (((SWord32) s1911) << 16) | ((SWord32) s1917);
+--   const SWord32 s1919 = s1844 ^ s1918;
+--   const SWord32 s1920 = s1903 ^ s1919;
 -- @
 --
 -- The GNU C-compiler does a fine job of optimizing this straightline code to generate a fairly efficient C implementation.
