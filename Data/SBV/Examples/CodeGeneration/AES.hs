@@ -146,12 +146,21 @@ rotWord xs           = error $ "rotWord: Unexpected input: " ++ show xs
 -- of AES.
 invMixColumns :: State -> State
 invMixColumns state = map fromBytes $ transpose $ mmult (map toBytes state)
- where dot v = foldr1 xor . zipWith gf28Mult v
-       mmult n = [map (dot r) n | r <- [ [0xe, 0xb, 0xd, 0x9]
-                                       , [0x9, 0xe, 0xb, 0xd]
-                                       , [0xd, 0x9, 0xe, 0xb]
-                                       , [0xb, 0xd, 0x9, 0xe]
+ where dot f   = foldr1 xor . zipWith ($) f
+       mmult n = [map (dot r) n | r <- [ [mE, mB, mD, m9]
+                                       , [m9, mE, mB, mD]
+                                       , [mD, m9, mE, mB]
+                                       , [mB, mD, m9, mE]
                                        ]]
+       -- table-lookup versions of gf28Mult with the constants used in invMixColumns
+       mE = select mETable 0
+       mB = select mBTable 0
+       mD = select mDTable 0
+       m9 = select m9Table 0
+       mETable = map (gf28Mult 0xE) [0..255]
+       mBTable = map (gf28Mult 0xB) [0..255]
+       mDTable = map (gf28Mult 0xD) [0..255]
+       m9Table = map (gf28Mult 0x9) [0..255]
 
 -- | Key expansion. Starting with the given key, returns an infinite sequence of
 -- words, as described by the AES standard, Section 5.2, Figure 11.
@@ -187,7 +196,6 @@ sboxTable = [xformByte (gf28Inverse b) | b <- [0 .. 255]]
 sbox :: GF28 -> GF28
 sbox = select sboxTable 0
 
-
 -----------------------------------------------------------------------------
 -- ** The inverse S-box transformation
 -----------------------------------------------------------------------------
@@ -201,6 +209,14 @@ unSBoxTable = [gf28Inverse (xformByte b) | b <- [0 .. 255]]
 -- | The inverse s-box transformation.
 unSBox :: GF28 -> GF28
 unSBox = select unSBoxTable 0
+
+-- | Prove that the 'sbox' and 'unSBox' are inverses. We have:
+--
+-- >>> prove sboxInverseCorrect
+-- Q.E.D.
+--
+sboxInverseCorrect :: GF28 -> SBool
+sboxInverseCorrect x = unSBox (sbox x) .== x &&& sbox (unSBox x) .== x
 
 -----------------------------------------------------------------------------
 -- ** AddRoundKey transformation
