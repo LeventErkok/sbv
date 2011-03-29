@@ -1,7 +1,8 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Version 0.9.17, Not yet released
+======================================================================
+Version 0.9.17, 2011-03-29
    
   Code:
     * Simplify and reorganize the test suite
