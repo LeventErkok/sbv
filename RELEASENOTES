@@ -5,6 +5,9 @@ Version 0.9.17, Not yet released
    
   Code:
     * Simplify and reorganize the test suite
+  Examples:
+    * Improve AES decryption example, by using
+      table-lookups in InvMixColumns.
   
 ======================================================================
 Version 0.9.16, 2011-03-28
