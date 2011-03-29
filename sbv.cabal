@@ -55,7 +55,7 @@ Description:   Express properties about bit-precise Haskell programs and automat
                provided comments/feedback, or contributed to the development of SBV in various ways:
                Iavor Diatchki, Lee Pike, Don Stewart, and Josef Svenningsson.
 
-Copyright:     Levent Erkok, 2011
+Copyright:     Levent Erkok, 2010-2011
 License:       BSD3
 License-file:  LICENSE
 Stability:     Experimental
