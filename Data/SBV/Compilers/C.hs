@@ -167,13 +167,13 @@ genMake fn dn =
   $$ text ""
   $$ text "all:" <+> nmd
   $$ text ""
-  $$ nmo <> text ":" <+> fsep [nmc, nmh]
+  $$ nmo <> text ":" <+> hsep [nmc, nmh]
   $$ text "\t${CC} ${CCFLAGS}" <+> text "-c" <+> nmc <+> text "-o" <+> nmo
   $$ text ""
   $$ nmdo <> text ":" <+> nmdc
   $$ text "\t${CC} ${CCFLAGS}" <+> text "-c" <+> nmdc <+> text "-o" <+> nmdo
   $$ text ""
-  $$ nmd <> text ":" <+> fsep [nmo, nmdo]
+  $$ nmd <> text ":" <+> hsep [nmo, nmdo]
   $$ text "\t${CC} ${CCFLAGS}" <+> nmo <+> nmdo <+> text "-o" <+> nmd
   $$ text ""
   $$ text "clean:"
@@ -407,7 +407,11 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
 -- same as doubleQuotes, except we have to make sure there are no line breaks..
 -- Otherwise breaks the generated code.. sigh
 printQuotes :: Doc -> Doc
-printQuotes d = text $ '"' : trim (render d) ++ "\""
+printQuotes d = text $ '"' : ppSameLine d ++ "\""
+
+-- Remove newlines.. Useful when generating Makefile and such
+ppSameLine :: Doc -> String
+ppSameLine = trim . render
  where trim ""        = ""
        trim ('\n':cs) = ' ' : trim (dropWhile isSpace cs)
        trim (c:cs)    = c   : trim cs
