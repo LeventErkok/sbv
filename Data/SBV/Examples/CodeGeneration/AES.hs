@@ -40,12 +40,6 @@ import Data.List (transpose)
 -- maximum degree 7. They are conveniently represented as values between 0 and 255.
 type GF28 = SWord8
 
--- | Addition in GF(2^8). Addition corresponds to simple 'xor'. Note that we
--- define it for vectors of GF(2^8) values, as that version is more convenient to
--- use in AES.
-gf28Add :: [GF28] -> [GF28] -> [GF28]
-gf28Add = zipWith xor
-
 -- | Multiplication in GF(2^8). This is simple polynomial multipliation, followed
 -- by the irreducible polynomial @x^8+x^5+x^3+x^1+1@. We simply use the 'pMult'
 -- function exported by SBV to do the operation. 
@@ -127,19 +121,8 @@ rotR xs           i = error $ "rotR: Unexpected input: " ++ show (xs, i)
 -----------------------------------------------------------------------------
 
 -- | Definition of round-constants, as specified in Section 5.2 of the AES standard.
-rcon :: Int -> [GF28]
-rcon i = [roundConstants !! i, 0, 0, 0]
- where roundConstants :: [GF28]
-       roundConstants = 0 : [ gf28Pow 2 (k-1) | k <- [1 .. ] ]
-
--- | The @SubWord@ function, as specified in Section 5.2 of the AES standard.
-subWord :: [GF28] -> [GF28]
-subWord = map sbox
-
--- | The @RotWord@ function, as specified in Section 5.2 of the AES standard.
-rotWord :: [GF28] -> [GF28]
-rotWord [a, b, c, d] = [b, c, d, a]
-rotWord xs           = error $ "rotWord: Unexpected input: " ++ show xs
+roundConstants :: [GF28]
+roundConstants = 0 : [ gf28Pow 2 (k-1) | k <- [1 .. ] ]
 
 -- | The @InvMixColumns@ transformation, as described in Section 5.3.3 of the standard. Note
 -- that this transformation is only used explicitly during key-expansion in the T-Box implementation
@@ -165,16 +148,19 @@ invMixColumns state = map fromBytes $ transpose $ mmult (map toBytes state)
 -- | Key expansion. Starting with the given key, returns an infinite sequence of
 -- words, as described by the AES standard, Section 5.2, Figure 11.
 keyExpansion :: Int -> Key -> [Key]
-keyExpansion nk key = chop4 (map fromBytes keys)
-   where keys :: [[GF28]]
-         keys = map toBytes key ++ [nextWord i prev old | i <- [nk ..] | prev <- drop (nk-1) keys | old <- keys]
+keyExpansion nk key = chop4 keys
+   where keys :: [SWord32]
+         keys = key ++ [nextWord i prev old | i <- [nk ..] | prev <- drop (nk-1) keys | old <- keys]
          chop4 :: [a] -> [[a]]
          chop4 xs = let (f, r) = splitAt 4 xs in f : chop4 r
-         nextWord :: Int -> [GF28] -> [GF28] -> [GF28]
+         nextWord :: Int -> SWord32 -> SWord32 -> SWord32
          nextWord i prev old
-           | i `mod` nk == 0           = old `gf28Add` (subWord (rotWord prev) `gf28Add` rcon (i `div` nk))
-           | i `mod` nk == 4 && nk > 6 = old `gf28Add` (subWord prev)
-           | True                      = old `gf28Add` prev
+           | i `mod` nk == 0           = old `xor` (subWordRcon (prev `rotateL` 8) (roundConstants !! (i `div` nk)))
+           | i `mod` nk == 4 && nk > 6 = old `xor` (subWordRcon prev 0)
+           | True                      = old `xor` prev
+         subWordRcon :: SWord32 -> GF28 -> SWord32
+         subWordRcon w rc = fromBytes [a `xor` rc, b, c, d]
+            where [a, b, c, d] = map sbox $ toBytes w
 
 -----------------------------------------------------------------------------
 -- ** The S-box transformation
