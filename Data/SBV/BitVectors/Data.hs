@@ -407,6 +407,7 @@ getTableIndex st at rt elts = do
                           modifyIORef (rtblMap st) (Map.insert elts (i, at, rt))
                           return i
 
+-- Create a constant word
 mkConstCW :: Integral a => (Bool, Size) -> a -> CW
 mkConstCW (signed, size) a = normCW $ CW signed size (toInteger a)
 
