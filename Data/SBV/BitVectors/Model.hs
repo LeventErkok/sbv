@@ -407,24 +407,20 @@ instance (Bits a, SymWord a) => Bits (SBV a) where
   rotateL x y
     | y < 0                = rotateR x (-y)
     | y == 0               = x
-    | True                 = liftSym1 (mkSymOp1 (Rol y)) (mkRot True rotateL (isSigned x) (bitSize x) y) x
+    | True                 = liftSym1 (mkSymOp1 (Rol y)) (rot True (bitSize x) y) x
   rotateR x y
     | y < 0                = rotateL x (-y)
     | y == 0               = x
-    | True                 = liftSym1 (mkSymOp1 (Ror y)) (mkRot False rotateR (isSigned x) (bitSize x) y) x
+    | True                 = liftSym1 (mkSymOp1 (Ror y)) (rot False (bitSize x) y) x
 
 -- Since the underlying representation is just Integers, rotations has to be careful on the bit-size
--- we piggy-back on Haskell equivalents
-mkRot :: Bool -> (forall a. Bits a => (a -> Int -> a)) -> Bool -> Int -> Int -> Integer -> Integer
-mkRot _ op False 8  y x = fromIntegral $ ((fromIntegral x) :: Word8 ) `op` y
-mkRot _ op False 16 y x = fromIntegral $ ((fromIntegral x) :: Word16) `op` y
-mkRot _ op False 32 y x = fromIntegral $ ((fromIntegral x) :: Word32) `op` y
-mkRot _ op False 64 y x = fromIntegral $ ((fromIntegral x) :: Word64) `op` y
-mkRot _ op True  8  y x = fromIntegral $ ((fromIntegral x) :: Int8 ) `op` y
-mkRot _ op True  16 y x = fromIntegral $ ((fromIntegral x) :: Int16) `op` y
-mkRot _ op True  32 y x = fromIntegral $ ((fromIntegral x) :: Int32) `op` y
-mkRot _ op True  64 y x = fromIntegral $ ((fromIntegral x) :: Int64) `op` y
-mkRot d _  sg    sz y x = error $ "Unsupported rotation: " ++ show (d, sg, sz, x, y)
+rot :: Bool -> Int -> Int -> Integer -> Integer
+rot toLeft sz amt x
+  | sz < 2 = x
+  | True   = (norm x y') `shiftL` y  .|. norm (x `shiftR` y') y
+  where (y, y') | toLeft = (amt `mod` sz, sz - y)
+                | True   = (sz - y', amt `mod` sz)
+        norm v s = v .&. ((1 `shiftL` s) - 1)
 
 -- | Replacement for 'testBit'. Since 'testBit' requires a 'Bool' to be returned,
 -- we cannot implement it for symbolic words. Index 0 is the least-significant bit.
