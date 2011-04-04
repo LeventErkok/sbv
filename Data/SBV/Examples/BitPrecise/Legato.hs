@@ -293,16 +293,13 @@ correctnessTheorem = proveWith timingSMTCfg $
 -- * C Code generation
 ------------------------------------------------------------------
 
--- | A version of `runLegato` that is suitable for code-generation.
--- This essentially means uncurrying the arguments and providing values for
--- parameters that are not necessary for code-generation; such as the arbitrary
--- mostek state or addresses for the values. Depending on the needs, more parameters
--- can be included.
-cg_runLegato :: (Value, Value) -> (Value, Value)
-cg_runLegato (x, y) = runLegato (0, x) (1, y) 2 (initMachine (mkSFunArray 0) (0, 0, 0, false, false))
-
 -- | Generate a C program that implements Legato's algorithm automatically.
---   (You can change the second argument of `compileToC` to @`Just` \"dirName\"@ to place the output
+--   (You can change the first argument of `compileToC` to @`Just` \"dirName\"@ to place the output
 --   files in that directory.)
 legatoInC :: IO ()
-legatoInC = compileToC True Nothing "runLegato" ["x", "y", "hi", "lo"] cg_runLegato
+legatoInC = compileToC Nothing "runLegato" $ do
+        x <- cgInput "x"
+        y <- cgInput "y"
+        let (hi, lo) = runLegato (0, x) (1, y) 2 (initMachine (mkSFunArray 0) (0, 0, 0, false, false))
+        cgOutput "hi" hi
+        cgOutput "lo" hi
