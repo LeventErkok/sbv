@@ -24,7 +24,9 @@ testSuite = mkTestSuite $ \goldCheck -> test [
  ]
  where legatoPgm = runSymbolic $ forAll ["mem", "addrX", "x", "addrY", "y", "addrLow", "regX", "regA", "memVals", "flagC", "flagZ"] legatoIsCorrect
                                  >>= output
-       legatoC = compileToC' (defaultCgConfig {cgDriverVals = [87, 92], cgRTC = True}) "legatoMult" $ do
+       legatoC = compileToC' "legatoMult" $ do
+                    cgSetDriverValues [87, 92]
+                    cgPerformRTCs True
                     x <- cgInput "x"
                     y <- cgInput "y"
                     let (hi, lo) = runLegato (0, x) (1, y) 2 (initMachine (mkSFunArray 0) (0, 0, 0, false, false))

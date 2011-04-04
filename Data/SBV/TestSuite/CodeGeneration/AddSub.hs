@@ -21,7 +21,9 @@ testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
    "addSub" ~: code `goldCheck` "addSub.gold"
  ]
- where code = compileToC' (defaultCgConfig { cgDriverVals = [76, 92], cgRTC = True }) "addSub" $ do
+ where code = compileToC' "addSub" $ do
+                cgSetDriverValues [76, 92]
+                cgPerformRTCs True
                 x <- cgInput "x"
                 y <- cgInput "y"
                 let (s, d) = addSub x y
