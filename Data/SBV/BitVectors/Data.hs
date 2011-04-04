@@ -554,7 +554,7 @@ runSymbolic' (Symbolic c) = do
 -- provide the necessary bits.
 --
 -- Minimal complete definiton: free, free_, literal, fromCW
-class Ord a => SymWord a where
+class (Bounded a, Ord a) => SymWord a where
   -- | Create a user named input
   free       :: String -> Symbolic (SBV a)
   -- | Create an automatically named input

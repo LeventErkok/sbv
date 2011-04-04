@@ -197,22 +197,29 @@ for natural reasons..
 -}
 
 instance EqSymbolic (SBV a) where
-  (.==) = liftSym2B (mkSymOpSC opt Equal)    (==)
-             where opt x y = if x == y then Just trueSW else Nothing
-  (./=) = liftSym2B (mkSymOpSC opt NotEqual) (/=)
-             where -- N.B. we can't say 
-                   --   opt x y = if x /= y then Just trueSW else Nothing
-                   -- here as it would be unsound.. There's no guarantee
-                   -- that the SW value corresponding to x and y won't equal
-                   -- the following is a more conservative optimization
-                   -- that says Nothing if it can't deduce otherwise
-                   opt x y = if x == y then Just falseSW else Nothing
+  (.==) = liftSym2B (mkSymOpSC (eqOpt trueSW) Equal)    (==)
+  (./=) = liftSym2B (mkSymOpSC (eqOpt falseSW) NotEqual) (/=)
+
+eqOpt :: SW -> SW -> SW -> Maybe SW
+eqOpt w x y = if x == y then Just w else Nothing
 
 instance SymWord a => OrdSymbolic (SBV a) where
-  (.<)  = liftSym2B (mkSymOp LessThan)    (<)
-  (.<=) = liftSym2B (mkSymOp LessEq)      (<=)
-  (.>)  = liftSym2B (mkSymOp GreaterThan) (>)
-  (.>=) = liftSym2B (mkSymOp GreaterEq)   (>=)
+  x .< y
+    | x `isConcretely` (== maxBound) = false
+    | y `isConcretely` (== minBound) = false
+    | True                           = liftSym2B (mkSymOpSC (eqOpt falseSW) LessThan)    (<)  x y
+  x .<= y
+    | x `isConcretely` (== minBound) = true
+    | y `isConcretely` (== maxBound) = true
+    | True                           = liftSym2B (mkSymOpSC (eqOpt trueSW) LessEq)       (<=) x y
+  x .> y
+    | x `isConcretely` (== minBound) = false
+    | y `isConcretely` (== maxBound) = false
+    | True                           = liftSym2B (mkSymOpSC (eqOpt falseSW) GreaterThan) (>)  x y
+  x .>= y
+    | x `isConcretely` (== maxBound) = true
+    | y `isConcretely` (== minBound) = true
+    | True                           = liftSym2B (mkSymOpSC (eqOpt trueSW) GreaterEq)    (>=) x y
 
 -- Bool
 instance EqSymbolic Bool where
