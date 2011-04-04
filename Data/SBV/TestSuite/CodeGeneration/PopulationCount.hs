@@ -19,6 +19,11 @@ import Data.SBV.Examples.CodeGeneration.PopulationCount
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
-   "popCount-1" ~: compileToC' [0x0123456789ABCDEF] False "popCount" ["x", "pc"] popCount `goldCheck` "popCount1.gold"
- , "popCount-2" ~: compileToC' [0x0123456789ABCDEF] True  "popCount" ["x", "pc"] popCount `goldCheck` "popCount2.gold"
+   "popCount-1" ~: genC False `goldCheck` "popCount1.gold"
+ , "popCount-2" ~: genC True  `goldCheck` "popCount2.gold"
  ]
+ where genC b = compileToC' "popCount" $ do
+                  cgSetDriverValues [0x0123456789ABCDEF]
+                  cgPerformRTCs b
+                  x <- cgInput "x"
+                  cgReturn $ popCount x
