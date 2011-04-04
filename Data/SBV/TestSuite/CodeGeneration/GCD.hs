@@ -19,5 +19,10 @@ import Data.SBV.Examples.CodeGeneration.GCD
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
-   "gcd" ~: compileToC' [55, 154] False "sgcd" ["x", "y"] sgcd `goldCheck` "gcd.gold"
+   "gcd" ~: gcdC `goldCheck` "gcd.gold"
  ]
+ where gcdC = compileToC' "sgcd" $ do
+                cgSetDriverValues [55,154]
+                x <- cgInput "x"
+                y <- cgInput "y"
+                cgReturn $ sgcd x y
