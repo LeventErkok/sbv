@@ -16,10 +16,11 @@ import Data.SBV
 
 genPowerSet :: [SBool] -> SBool
 -- The following definition reveals an issue in Yices's model generation. The
--- seemingly vacuous test ".<= true" is necessary
+-- seemingly vacuous test of checking true-or-false is necessary
 -- so that Yices will return a satisfying assignment
 -- otherwise, it just skips the "unused" inputs..
-genPowerSet = bAll (.<= (true :: SBool))
+genPowerSet = bAll isBool
+  where isBool x = x .== true ||| x .== false
 
 powerSet :: [Word8] -> IO ()
 powerSet xs = do putStrLn $ "Finding all subsets of " ++ show xs
