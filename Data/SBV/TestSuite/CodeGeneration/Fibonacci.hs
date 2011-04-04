@@ -19,6 +19,12 @@ import Data.SBV.Examples.CodeGeneration.Fibonacci
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
-   "fib1" ~: compileToC' [12] True "fib1" ["n"] (fib1 64) `goldCheck` "fib1.gold"
- , "fib2" ~: compileToC' [20] True "fib2" ["n"] (fib2 64) `goldCheck` "fib2.gold"
+   "fib1" ~: tst [12] "fib1" (fib1 64) `goldCheck` "fib1.gold"
+ , "fib2" ~: tst [20] "fib2" (fib2 64) `goldCheck` "fib2.gold"
  ]
+ where tst vs nm f = compileToC' nm $ do cgPerformRTCs True
+                                         cgSetDriverValues vs
+                                         n <- cgInput "n"
+                                         cgReturn $ f n
+
+
