@@ -235,7 +235,7 @@ genDriver randVals fn inps outs mbRet =
   $$ text ""
   $$ nest 2 (   vcat (map mkInp pairedInputs)
              $$ vcat (map mkOut outs)
-             $$ sepIf (isJust mbRet)
+             $$ sepIf (not (null pairedInputs) || not (null outs))
              $$ call
              $$ text ""
              $$ (case mbRet of
