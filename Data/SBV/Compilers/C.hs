@@ -356,7 +356,7 @@ genCProg rtc fn proto (Result _ preConsts tbls arrs uints axms asgns _) inVars o
 
 ppExpr :: Bool -> [(SW, CW)] -> SBVExpr -> Doc
 ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
-  where cBinOps = [ (Plus, "+"), (Times, "*"), (Minus, "-"), (Quot, "/"), (Rem, "%")
+  where cBinOps = [ (Plus, "+"), (Times, "*"), (Minus, "-")
                   , (Equal, "=="), (NotEqual, "!=")
                   , (LessThan, "<"), (GreaterThan, ">"), (LessEq, "<="), (GreaterEq, ">=")
                   , (And, "&"), (Or, "|"), (XOr, "^")
@@ -386,6 +386,9 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
                 checkBoth  = parens (checkLeft <+> text "||" <+> checkRight)
                 (needsCheckL, needsCheckR) | as   = (True,  (2::Integer)^(at-1)-1  >= (fromIntegral len))
                                            | True = (False, (2::Integer)^(at)  -1  >= (fromIntegral len))
+        -- Div/Rem should be careful on 0, in the SBV world x `div` 0 is 0, x `rem` 0 is x
+        p Quot [a, b] = parens (b <+> text "== 0") <+> text "?" <+> text "0" <+> text ":" <+> parens (a <+> text "/" <+> b)
+        p Rem  [a, b] = parens (b <+> text "== 0") <+> text "?" <+>    a     <+> text ":" <+> parens (a <+> text "%" <+> b)
         p o [a, b]
           | Just co <- lookup o cBinOps
           = a <+> text co <+> b
