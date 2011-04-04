@@ -118,8 +118,8 @@ addSub x y = (x+y, x-y)
 -- >   return 0;
 -- > }
 --
-genAddSub :: IO ()
-genAddSub = compileToC (Just "genAddSub") "addSub" $ do
+genAddSub :: IO CgPgmBundle
+genAddSub = compileToC "addSub" $ do
         x <- cgInput "x"
         y <- cgInput "y"
         let (s, d) = addSub x y

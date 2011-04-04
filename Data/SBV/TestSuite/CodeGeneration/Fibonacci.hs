@@ -22,9 +22,9 @@ testSuite = mkTestSuite $ \goldCheck -> test [
    "fib1" ~: tst [12] "fib1" (fib1 64) `goldCheck` "fib1.gold"
  , "fib2" ~: tst [20] "fib2" (fib2 64) `goldCheck` "fib2.gold"
  ]
- where tst vs nm f = compileToC' nm $ do cgPerformRTCs True
-                                         cgSetDriverValues vs
-                                         n <- cgInput "n"
-                                         cgReturn $ f n
+ where tst vs nm f = compileToC nm $ do cgPerformRTCs True
+                                        cgSetDriverValues vs
+                                        n <- cgInput "n"
+                                        cgReturn $ f n
 
 

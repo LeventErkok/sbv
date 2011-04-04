@@ -126,7 +126,7 @@ cgReturnArr vs
 
 -- | Representation of a collection of generated programs. Code generation
 -- produces a number of files (drivers, source, headers, etc.) and corresponding
--- contents.
+-- contents. Note that we do not export the constructors, this type should be left abstract.
 newtype CgPgmBundle = CgPgmBundle [(FilePath, Doc)]
 
 instance Show CgPgmBundle where
@@ -137,8 +137,8 @@ showFile (f, d) =  "== BEGIN: " ++ show f ++ " ================\n"
                 ++ render d
                 ++ "== END: " ++ show f ++ " =================="
 
-codeGen' :: CgTarget l => l -> CgConfig -> String -> SBVCodeGen () -> IO CgPgmBundle
-codeGen' l cgConfig nm (SBVCodeGen comp) = do
+codeGen :: CgTarget l => l -> CgConfig -> String -> SBVCodeGen () -> IO CgPgmBundle
+codeGen l cgConfig nm (SBVCodeGen comp) = do
    (((), st'), res) <- runSymbolic' $ runStateT comp initCgState { cgFinalConfig = cgConfig }
    let st = st' { cgInputs       = reverse (cgInputs st')
                 , cgOutputs      = reverse (cgOutputs st')
@@ -150,30 +150,22 @@ codeGen' l cgConfig nm (SBVCodeGen comp) = do
    let finalCfg = cgFinalConfig st
    return $ translate l (cgRTC finalCfg) (cgDriverVals finalCfg) nm st res
 
-codeGen :: CgTarget l => l -> CgConfig -> String -> Maybe FilePath -> SBVCodeGen () -> IO ()
-codeGen l cgConfig nm mbDirName comp = do
-   putStrLn $ "Compiling " ++ show nm ++ " to " ++ targetName l ++ ".."
-   CgPgmBundle files <- codeGen' l cgConfig nm comp
-   goOn <- maybe (return True) (check files) mbDirName
-   if goOn then do mapM_ (renderFile mbDirName) files
-                   putStrLn "Done."
-           else putStrLn "Aborting."
-  where createOutDir :: FilePath -> IO ()
-        createOutDir dn = do b <- doesDirectoryExist dn
-                             when (not b) $ do putStrLn $ "Creating directory " ++ show dn ++ ".."
-                                               createDirectory dn
-        check files dn = do createOutDir dn
-                            dups <- filterM (\fn -> doesFileExist (dn </> fn)) (map fst files)
-                            case dups of
-                              [] -> return True
-                              _  -> do putStrLn $ "Code generation would override the following " ++ (if length dups == 1 then "file:" else "files:")
-                                       mapM_ (\fn -> putStrLn ("\t" ++ fn)) dups
-                                       putStr "Continue? [yn] "
-                                       resp <- getLine
-                                       return $ map toLower resp `isPrefixOf` "yes"
-
-renderFile :: Maybe FilePath -> (FilePath, Doc) -> IO ()
-renderFile (Just d) (f, p) = do let fn = d </> f
-                                putStrLn $ "Generating: " ++ show fn ++ ".."
-                                writeFile fn (render p)
-renderFile Nothing  fp     = putStrLn $ showFile fp
+renderCgPgmBundle :: FilePath -> CgPgmBundle -> IO ()
+renderCgPgmBundle dirName (CgPgmBundle files) = do
+        b <- doesDirectoryExist dirName
+        when (not b) $ do putStrLn $ "Creating directory " ++ show dirName ++ ".."
+                          createDirectory dirName
+        dups <- filterM (\fn -> doesFileExist (dirName </> fn)) (map fst files)
+        goOn <- case dups of
+                  [] -> return True
+                  _  -> do putStrLn $ "Code generation would override the following " ++ (if length dups == 1 then "file:" else "files:")
+                           mapM_ (\fn -> putStrLn ("\t" ++ fn)) dups
+                           putStr "Continue? [yn] "
+                           resp <- getLine
+                           return $ map toLower resp `isPrefixOf` "yes"
+        if goOn then do mapM_ renderFile files
+                        putStrLn "Done."
+                else putStrLn "Aborting."
+  where renderFile (f, p) = do let fn = dirName </> f
+                               putStrLn $ "Generating: " ++ show fn ++ ".."
+                               writeFile fn (render p)

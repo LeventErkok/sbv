@@ -211,7 +211,7 @@ fastPopCountIsCorrect x = popCount x .== popCount_Slow x
 -- > 
 -- > veryclean: clean
 -- > 	rm -f popCount_driver
-genPopCountInC :: IO ()
-genPopCountInC = compileToC (Just "popCountC") "popCount" $ do
+genPopCountInC :: IO CgPgmBundle
+genPopCountInC = compileToC "popCount" $ do
         x <- cgInput "x"
         cgReturn $ popCount x

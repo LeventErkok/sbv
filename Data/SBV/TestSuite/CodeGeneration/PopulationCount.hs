@@ -22,7 +22,7 @@ testSuite = mkTestSuite $ \goldCheck -> test [
    "popCount-1" ~: genC False `goldCheck` "popCount1.gold"
  , "popCount-2" ~: genC True  `goldCheck` "popCount2.gold"
  ]
- where genC b = compileToC' "popCount" $ do
+ where genC b = compileToC "popCount" $ do
                   cgSetDriverValues [0x0123456789ABCDEF]
                   cgPerformRTCs b
                   x <- cgInput "x"

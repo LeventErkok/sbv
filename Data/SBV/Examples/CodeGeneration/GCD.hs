@@ -136,8 +136,8 @@ and generate C code for it.
 -- >   
 -- >   return s48;
 -- > }
-genGCDInC :: IO ()
-genGCDInC = compileToC (Just "sgcdC") "sgcd" $ do
+genGCDInC :: IO CgPgmBundle
+genGCDInC = compileToC "sgcd" $ do
                 x <- cgInput "x"
                 y <- cgInput "y"
                 cgReturn $ sgcd x y

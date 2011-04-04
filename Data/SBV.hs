@@ -168,7 +168,7 @@ module Data.SBV (
 
   -- * Compiling symbolic programs to C
   -- $cCodeGeneration
-  , CgPgmBundle(..), CgConfig(..), defaultCgConfig, cgPerformRTCs, cgSetDriverValues
+  , CgPgmBundle, cgPerformRTCs, cgSetDriverValues
 
   -- ** Designating inputs
   , cgInput, cgInputArr
@@ -180,7 +180,7 @@ module Data.SBV (
   , cgReturn, cgReturnArr
 
   -- ** Compiling to C
-  , compileToC, compileToC'
+  , compileToC, renderC
 
   -- * Module exports
   -- $moduleExportIntro

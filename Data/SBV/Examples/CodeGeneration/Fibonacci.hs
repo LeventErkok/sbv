@@ -97,8 +97,8 @@ fib1 top n = fib' 0 1 0
 -- >   
 -- >   return s34;
 -- > }
-genFib1 :: SWord32 -> IO ()
-genFib1 top = compileToC Nothing "fib1" $ do
+genFib1 :: SWord32 -> IO CgPgmBundle
+genFib1 top = compileToC "fib1" $ do
         x <- cgInput "x"
         cgReturn $ fib1 top x
 
@@ -151,8 +151,8 @@ fib2 top n = select table 0 n
 -- >   
 -- >   return s65;
 -- > }
-genFib2 :: SWord32 -> IO ()
-genFib2 top = compileToC Nothing "fibLookup" $ do
+genFib2 :: SWord32 -> IO CgPgmBundle
+genFib2 top = compileToC "fibLookup" $ do
         cgPerformRTCs True       -- protect against potential overflow, our table is not big enough
         x <- cgInput "x"
         cgReturn $ fib2 top x
