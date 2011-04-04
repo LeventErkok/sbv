@@ -71,8 +71,9 @@ fib1 top n = fib' 0 1 0
 -- from the code generated for the call @genFib1 10@, where the code will work correctly
 -- for indexes up to 10:
 --
--- > SWord32 fib1(const SWord32 s0)
+-- > SWord32 fib1(const SWord32 x)
 -- > {
+-- >   const SWord32 s0 = x;
 -- >   const SBool   s2 = s0 == 0x00000000UL;
 -- >   const SBool   s4 = s0 == 0x00000001UL;
 -- >   const SBool   s6 = s0 == 0x00000002UL;
@@ -96,8 +97,10 @@ fib1 top n = fib' 0 1 0
 -- >   
 -- >   return s34;
 -- > }
-genFib1 :: SWord32 -> IO ()  
-genFib1 top = compileToC False Nothing "fib1" [] (fib1 top)
+genFib1 :: SWord32 -> IO ()
+genFib1 top = compileToC Nothing "fib1" $ do
+        x <- cgInput "x"
+        cgReturn $ fib1 top x
 
 -----------------------------------------------------------------------------
 -- * Generating a look-up table
@@ -122,8 +125,9 @@ fib2 top n = select table 0 n
 -- naturally. (Note that this function returns @0@ if the index is larger
 -- than 64, as specified by the call to 'select' with default @0@.)
 --
--- > SWord32 fibLookup(const SWord32 s0)
+-- > SWord32 fibLookup(const SWord32 x)
 -- > {
+-- >   const SWord32 s0 = x;
 -- >   static const SWord32 table0[] = {
 -- >       0x00000000UL, 0x00000001UL, 0x00000001UL, 0x00000002UL,
 -- >       0x00000003UL, 0x00000005UL, 0x00000008UL, 0x0000000dUL,
@@ -148,4 +152,7 @@ fib2 top n = select table 0 n
 -- >   return s65;
 -- > }
 genFib2 :: SWord32 -> IO ()
-genFib2 top = compileToC True Nothing "fibLookup" [] (fib2 top)
+genFib2 top = compileToC Nothing "fibLookup" $ do
+        cgPerformRTCs True       -- protect against potential overflow, our table is not big enough
+        x <- cgInput "x"
+        cgReturn $ fib2 top x
