@@ -27,7 +27,7 @@ module Data.SBV.BitVectors.Data
  , SW(..), trueSW, falseSW, trueCW, falseCW
  , SBV(..), NodeId(..), mkSymSBV
  , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), mkSFunArray, SArray(..), arrayUIKind
- , sbvToSW
+ , sbvToSW, sbvToSymSW
  , SBVExpr(..), newExpr
  , cache, uncache, uncacheAI, HasSignAndSize(..)
  , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, runSymbolic', State, Size, Outputtable(..), Result(..)
@@ -445,6 +445,11 @@ mkSymSBV sgnsz mbNm = do
             sw = SW sgnsz (NodeId ctr)
         liftIO $ modifyIORef (rinps st) ((sw, nm):)
         return $ SBV sgnsz $ Right $ cache (const (return sw))
+
+sbvToSymSW :: SBV a -> Symbolic SW
+sbvToSymSW sbv = do
+        st <- ask
+        liftIO $ sbvToSW st sbv
 
 -- | Mark an interim result as an output. Useful when constructing Symbolic programs
 -- that return multiple values, or when the result is programmatically computed.

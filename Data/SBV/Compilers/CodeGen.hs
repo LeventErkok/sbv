@@ -10,18 +10,108 @@
 -- Code generation utilities
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Data.SBV.Compilers.CodeGen where
 
+import Control.Monad.Trans
+import Control.Monad.State.Lazy
 import Data.Char (toLower)
-import Data.List (isPrefixOf, intersperse)
-import Control.Monad (when, filterM)
+import Data.List (nub, isPrefixOf, intersperse, (\\))
 import System.Directory (createDirectory, doesDirectoryExist, doesFileExist)
 import System.FilePath ((</>))
 import Text.PrettyPrint.HughesPJ (Doc, render)
 
-import Data.SBV.BitVectors.Data (Outputtable(..), runSymbolic', Symbolic, Result, SymWord(..), SBV(..))
+import Data.SBV.BitVectors.Data
+
+-- | Abstract over code generation for different languages
+class CgTarget a where
+  targetName :: a -> String
+  translate  :: a -> Bool -> [Integer] -> String -> CgState -> Result -> CgPgmBundle
+
+-- | Options for code-generation.
+data CgConfig = CgConfig {
+          cgRTC        :: Bool          -- ^ If 'True', perform run-time-checks for index-out-of-bounds or shifting-by-large values etc.
+        , cgDriverVals :: [Integer]     -- ^ Values to use for the driver program generated, useful for generating non-random drivers.
+        }
+
+defaultCgConfig :: CgConfig
+defaultCgConfig = CgConfig { cgRTC = False, cgDriverVals = [] }
+
+-- | Abstraction of target language values
+data CgVal = CgAtomic SW
+           | CgArray  [SW]
+
+data CgState = CgState {
+          cgInputs       :: [(String, CgVal)]
+        , cgOutputs      :: [(String, CgVal)]
+        , cgReturns      :: [CgVal]
+        }
+
+initCgState :: CgState
+initCgState = CgState {
+          cgInputs       = []
+        , cgOutputs      = []
+        , cgReturns      = []
+        }
+
+newtype SBVCodeGen a = SBVCodeGen (StateT CgState Symbolic a)
+                   deriving (Monad, MonadIO, MonadState CgState)
+
+-- Reach into symbolic monad..
+liftSymbolic :: Symbolic a -> SBVCodeGen a
+liftSymbolic = SBVCodeGen . lift
+
+-- Reach into symbolic monad and output a value. Returns the corresponding SW
+cgSBVToSW :: SBV a -> SBVCodeGen SW
+cgSBVToSW = liftSymbolic . sbvToSymSW
+
+-- | Creates an atomic input in the generated code.
+cgInput :: (HasSignAndSize a, SymWord a) => String -> SBVCodeGen (SBV a)
+cgInput nm = do r <- liftSymbolic free_
+                sw <- cgSBVToSW r
+                modify (\s -> s { cgInputs = (nm, CgAtomic sw) : cgInputs s })
+                return r
+
+-- | Creates an array input in the generated code.
+cgInputArr :: (HasSignAndSize a, SymWord a) => Int -> String -> SBVCodeGen [SBV a]
+cgInputArr sz nm
+  | sz < 1 = error $ "SBV.cgInputArr: Array inputs must have at least one element, given " ++ show sz ++ " for " ++ show nm
+  | True   = do rs <- liftSymbolic $ (mapM (const free_) [1..sz])
+                sws <- mapM cgSBVToSW rs
+                modify (\s -> s { cgInputs = (nm, CgArray sws) : cgInputs s })
+                return rs
+
+-- | Creates an atomic output in the generated code.
+cgOutput :: (HasSignAndSize a, SymWord a) => String -> SBV a -> SBVCodeGen ()
+cgOutput nm v = do _ <- liftSymbolic (output v)
+                   sw <- cgSBVToSW v
+                   modify (\s -> s { cgOutputs = (nm, CgAtomic sw) : cgOutputs s })
+
+-- | Creates an array output in the generated code.
+cgOutputArr :: (HasSignAndSize a, SymWord a) => String -> [SBV a] -> SBVCodeGen ()
+cgOutputArr nm vs
+  | sz < 1 = error $ "SBV.cgOutputArr: Array outputs must have at least one element, received " ++ show sz ++ " for " ++ show nm
+  | True   = do _ <- liftSymbolic (mapM output vs)
+                sws <- mapM cgSBVToSW vs
+                modify (\s -> s { cgOutputs = (nm, CgArray sws) : cgOutputs s })
+  where sz = length vs
+
+-- | Creates a returned (unnamed) value in the generated code.
+cgReturn :: (HasSignAndSize a, SymWord a) => SBV a -> SBVCodeGen ()
+cgReturn v = do _ <- liftSymbolic (output v)
+                sw <- cgSBVToSW v
+                modify (\s -> s { cgReturns = CgAtomic sw : cgReturns s })
+
+-- | Creates a returned (unnamed) array value in the generated code.
+cgReturnArr :: (HasSignAndSize a, SymWord a) => [SBV a] -> SBVCodeGen ()
+cgReturnArr vs
+  | sz < 1 = error $ "SBV.cgReturnArr: Array returns must have at least one element, received " ++ show sz
+  | True   = do _ <- liftSymbolic (mapM output vs)
+                sws <- mapM cgSBVToSW vs
+                modify (\s -> s { cgReturns = CgArray sws : cgReturns s })
+  where sz = length vs
 
 -- | Representation of a collection of generated programs. Code generation
 -- produces a number of files (drivers, source, headers, etc.) and corresponding
@@ -36,11 +126,22 @@ showFile (f, d) =  "== BEGIN: " ++ show f ++ " ================\n"
                 ++ render d
                 ++ "== END: " ++ show f ++ " =================="
 
-codeGen :: (SBVTarget l, SymExecutable f) => l -> [Integer] -> Bool -> Maybe FilePath -> String -> [String] -> f -> IO ()
-codeGen l rands rtc mbDirName nm args f = do
+codeGen' :: CgTarget l => l -> CgConfig -> String -> SBVCodeGen () -> IO CgPgmBundle
+codeGen' l cgConfig nm (SBVCodeGen comp) = do
+   (((), st'), res) <- runSymbolic' $ runStateT comp initCgState
+   let st = st' { cgInputs       = reverse (cgInputs st')
+                , cgOutputs      = reverse (cgOutputs st')
+                }
+       allNamedVars = map fst (cgInputs st ++ cgOutputs st)
+       dupNames = allNamedVars \\ nub allNamedVars
+   when (not (null dupNames)) $ do
+        error $ "SBV.codeGen: The following input/output names are duplicated: " ++ unwords dupNames
+   return $ translate l (cgRTC cgConfig) (cgDriverVals cgConfig) nm st res
+
+codeGen :: CgTarget l => l -> CgConfig -> String -> Maybe FilePath -> SBVCodeGen () -> IO ()
+codeGen l cgConfig nm mbDirName comp = do
    putStrLn $ "Compiling " ++ show nm ++ " to " ++ targetName l ++ ".."
-   (extraNames, res) <- symExecute args f
-   let CgPgmBundle files = translate l rands rtc nm extraNames res
+   CgPgmBundle files <- codeGen' l cgConfig nm comp
    goOn <- maybe (return True) (check files) mbDirName
    if goOn then do mapM_ (renderFile mbDirName) files
                    putStrLn "Done."
@@ -59,113 +160,8 @@ codeGen l rands rtc mbDirName nm args f = do
                                        resp <- getLine
                                        return $ map toLower resp `isPrefixOf` "yes"
 
-codeGen' :: (SBVTarget l, SymExecutable f) => l -> [Integer] -> Bool -> String -> [String] -> f -> IO CgPgmBundle
-codeGen' l rands rtc nm args f = do
-   (extraNames, res) <- symExecute args f
-   return $ translate l rands rtc nm extraNames res
-
 renderFile :: Maybe FilePath -> (FilePath, Doc) -> IO ()
 renderFile (Just d) (f, p) = do let fn = d </> f
                                 putStrLn $ "Generating: " ++ show fn ++ ".."
                                 writeFile fn (render p)
 renderFile Nothing  fp     = putStrLn $ showFile fp
-
--- | Abstract over code generation for different languages
-class SBVTarget a where
-  targetName :: a -> String
-  translate  :: a -> [Integer] -> Bool -> String -> [String] -> Result -> CgPgmBundle
-
--- | Abstract over input variables over generated functions
-class CgArgs a where
-   cgArgs :: [String] -> Symbolic ([String], a)
-
--- Single arg
-instance SymWord a => CgArgs (SBV a) where
-   cgArgs []     = free_  >>= \v -> return ([], v)
-   cgArgs (s:ss) = free s >>= \v -> return (ss, v)
-
--- Tuples
-instance (SymWord a, SymWord b) => CgArgs (SBV a, SBV b) where
-   cgArgs ns = do (ns1, a) <- cgArgs ns
-                  (ns2, b) <- cgArgs ns1
-                  return (ns2, (a, b))
-
--- 3-Tuple
-instance (SymWord a, SymWord b, SymWord c) => CgArgs (SBV a, SBV b, SBV c) where
-   cgArgs ns = do (ns1, a) <- cgArgs ns
-                  (ns2, b) <- cgArgs ns1
-                  (ns3, c) <- cgArgs ns2
-                  return (ns3, (a, b, c))
-
--- 4-Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d) => CgArgs (SBV a, SBV b, SBV c, SBV d) where
-   cgArgs ns = do (ns1, a) <- cgArgs ns
-                  (ns2, b) <- cgArgs ns1
-                  (ns3, c) <- cgArgs ns2
-                  (ns4, d) <- cgArgs ns3
-                  return (ns4, (a, b, c, d))
-
--- 5-Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e) => CgArgs (SBV a, SBV b, SBV c, SBV d, SBV e) where
-   cgArgs ns = do (ns1, a) <- cgArgs ns
-                  (ns2, b) <- cgArgs ns1
-                  (ns3, c) <- cgArgs ns2
-                  (ns4, d) <- cgArgs ns3
-                  (ns5, e) <- cgArgs ns4
-                  return (ns5, (a, b, c, d, e))
-
--- 6-Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f) => CgArgs (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
-   cgArgs ns = do (ns1, a) <- cgArgs ns
-                  (ns2, b) <- cgArgs ns1
-                  (ns3, c) <- cgArgs ns2
-                  (ns4, d) <- cgArgs ns3
-                  (ns5, e) <- cgArgs ns4
-                  (ns6, f) <- cgArgs ns5
-                  return (ns6, (a, b, c, d, e, f))
-
--- 7-Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g) => CgArgs (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
-   cgArgs ns = do (ns1, a) <- cgArgs ns
-                  (ns2, b) <- cgArgs ns1
-                  (ns3, c) <- cgArgs ns2
-                  (ns4, d) <- cgArgs ns3
-                  (ns5, e) <- cgArgs ns4
-                  (ns6, f) <- cgArgs ns5
-                  (ns7, g) <- cgArgs ns6
-                  return (ns7, (a, b, c, d, e, f, g))
-
--- 8-Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, SymWord h) => CgArgs (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h) where
-   cgArgs ns = do (ns1, a) <- cgArgs ns
-                  (ns2, b) <- cgArgs ns1
-                  (ns3, c) <- cgArgs ns2
-                  (ns4, d) <- cgArgs ns3
-                  (ns5, e) <- cgArgs ns4
-                  (ns6, f) <- cgArgs ns5
-                  (ns7, g) <- cgArgs ns6
-                  (ns8, h) <- cgArgs ns7
-                  return (ns8, (a, b, c, d, e, f, g, h))
-
--- | Abstract over functions that we can symbolically execute
-class SymExecutable f where
-   symExecute :: [String] -> f -> IO ([String], Result)
-
--- Single arg
-instance (CgArgs a, Outputtable r) => SymExecutable (a -> r) where
-   symExecute args f = runSymbolic' $ do (ns1, a) <- cgArgs args
-                                         _ <- output $ f a
-                                         return ns1
-
-{-
--- While the following (and 3-arg, 4-arg) versions are acceptable, they
--- lead to overlapping instances in practice, which is more confusing than
--- helpful. So stick to uncurried functions for the time being.
-
--- 2 args
-instance (CgArgs a, CgArgs b, Outputtable r) => SymExecutable (a -> b -> r) where
-   symExecute args f = runSymbolic' $ do (ns1, a) <- cgArgs args
-                                         (ns2, b) <- cgArgs ns1
-                                         _ <- output $ f a b
-                                         return ns2
--}
