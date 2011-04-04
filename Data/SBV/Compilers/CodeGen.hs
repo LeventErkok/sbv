@@ -36,6 +36,7 @@ data CgConfig = CgConfig {
         , cgDriverVals :: [Integer]     -- ^ Values to use for the driver program generated, useful for generating non-random drivers.
         }
 
+-- | Default options for code generation. The run-time checks are turned-off, and the driver values are completely random.
 defaultCgConfig :: CgConfig
 defaultCgConfig = CgConfig { cgRTC = False, cgDriverVals = [] }
 
