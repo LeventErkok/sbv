@@ -4,7 +4,10 @@ GitHub:  <http://github.com/LeventErkok/sbv>
 ======================================================================
 Version 0.9.18, Not yet released
 
-    * Current working version
+    * Re-engineer code-generation, and compilation to C.
+      In particular, allo arrays of inputs to be specified,
+      both as function arguments and output reference values.
+    * Update code-generation examples to use the new API.
 
 ======================================================================
 Version 0.9.17, 2011-03-29
