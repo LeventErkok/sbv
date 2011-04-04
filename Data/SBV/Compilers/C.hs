@@ -53,10 +53,10 @@ compileToC :: Maybe FilePath -> String -> SBVCodeGen () -> IO ()
 compileToC mbDir nm f = do rands <- newStdGen >>= return . randoms
                            codeGen SBVToC (defaultCgConfig { cgDriverVals = rands }) nm mbDir f
 
--- | Alternative interface for generating C, more configurable via the 'CgConfig' argument.
--- Also this version returns the generated files for further manipulation. (Useful mainly for generating regression tests.)
-compileToC' :: CgConfig -> String -> SBVCodeGen () -> IO CgPgmBundle
-compileToC' cfg = codeGen' SBVToC (cfg { cgDriverVals = cgDriverVals cfg ++ repeat 0 })
+-- | Alternative interface for generating C, but returns the programs for further manipulation.
+compileToC' :: String -> SBVCodeGen () -> IO CgPgmBundle
+compileToC' nm f = do rands <- newStdGen >>= return . randoms
+                      codeGen' SBVToC (defaultCgConfig { cgDriverVals = rands }) nm f
 
 cgen :: Bool -> [Integer] -> String -> CgState -> Result -> CgPgmBundle
 cgen rtc randVals nm st sbvProg = CgPgmBundle
