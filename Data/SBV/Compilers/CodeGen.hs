@@ -48,6 +48,7 @@ data CgState = CgState {
           cgInputs       :: [(String, CgVal)]
         , cgOutputs      :: [(String, CgVal)]
         , cgReturns      :: [CgVal]
+        , cgFinalConfig  :: CgConfig
         }
 
 initCgState :: CgState
@@ -55,6 +56,7 @@ initCgState = CgState {
           cgInputs       = []
         , cgOutputs      = []
         , cgReturns      = []
+        , cgFinalConfig  = defaultCgConfig
         }
 
 newtype SBVCodeGen a = SBVCodeGen (StateT CgState Symbolic a)
@@ -67,6 +69,14 @@ liftSymbolic = SBVCodeGen . lift
 -- Reach into symbolic monad and output a value. Returns the corresponding SW
 cgSBVToSW :: SBV a -> SBVCodeGen SW
 cgSBVToSW = liftSymbolic . sbvToSymSW
+
+-- | Sets RTC (run-time-checks) for index-out-of-bounds, shift-with-large value etc. on/off.
+cgPerformRTCs :: Bool -> SBVCodeGen ()
+cgPerformRTCs b = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgRTC = b } })
+
+-- | Sets driver program run time values, useful for generating programs with fixed drivers for testing.
+cgSetDriverValues :: [Integer] -> SBVCodeGen ()
+cgSetDriverValues vs = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgDriverVals = vs } })
 
 -- | Creates an atomic input in the generated code.
 cgInput :: (HasSignAndSize a, SymWord a) => String -> SBVCodeGen (SBV a)
@@ -129,7 +139,7 @@ showFile (f, d) =  "== BEGIN: " ++ show f ++ " ================\n"
 
 codeGen' :: CgTarget l => l -> CgConfig -> String -> SBVCodeGen () -> IO CgPgmBundle
 codeGen' l cgConfig nm (SBVCodeGen comp) = do
-   (((), st'), res) <- runSymbolic' $ runStateT comp initCgState
+   (((), st'), res) <- runSymbolic' $ runStateT comp initCgState { cgFinalConfig = cgConfig }
    let st = st' { cgInputs       = reverse (cgInputs st')
                 , cgOutputs      = reverse (cgOutputs st')
                 }
@@ -137,7 +147,8 @@ codeGen' l cgConfig nm (SBVCodeGen comp) = do
        dupNames = allNamedVars \\ nub allNamedVars
    when (not (null dupNames)) $ do
         error $ "SBV.codeGen: The following input/output names are duplicated: " ++ unwords dupNames
-   return $ translate l (cgRTC cgConfig) (cgDriverVals cgConfig) nm st res
+   let finalCfg = cgFinalConfig st
+   return $ translate l (cgRTC finalCfg) (cgDriverVals finalCfg) nm st res
 
 codeGen :: CgTarget l => l -> CgConfig -> String -> Maybe FilePath -> SBVCodeGen () -> IO ()
 codeGen l cgConfig nm mbDirName comp = do

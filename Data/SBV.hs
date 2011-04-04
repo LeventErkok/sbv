@@ -168,7 +168,7 @@ module Data.SBV (
 
   -- * Compiling symbolic programs to C
   -- $cCodeGeneration
-  , CgPgmBundle(..), CgConfig(..), defaultCgConfig
+  , CgPgmBundle(..), CgConfig(..), defaultCgConfig, cgPerformRTCs, cgSetDriverValues
 
   -- ** Designating inputs
   , cgInput, cgInputArr
