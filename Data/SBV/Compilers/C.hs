@@ -259,9 +259,12 @@ genDriver randVals fn inps outs mbRet =
                     | True   = (r `mod` (2^sz)) - (2^(sz-1))
        mkInp (_,  _, CgAtomic{})         = empty  -- constant, no need to declare
        mkInp (_,  n, CgArray [])         = die $ "Unsupported empty array value for " ++ show n
-       mkInp (vs, n, CgArray sws@(sw:_)) = pprCWord True (hasSign sw, sizeOf sw) <+> text n <> brackets (int (length sws)) <+> text "= {"
-                                                     $$ nest 4 (fsep (punctuate comma (align vs)))
-                                                     $$ text "};"
+       mkInp (vs, n, CgArray sws@(sw:_)) =  pprCWord True (hasSign sw, sizeOf sw) <+> text n <> brackets (int (length sws)) <+> text "= {"
+                                                      $$ nest 4 (fsep (punctuate comma (align vs)))
+                                                      $$ text "};"
+                                         $$ text "printf" <> parens (printQuotes (text "Contents of input array" <+> text n <> text ":\\n")) <> semi
+                                         $$ display (n, CgArray sws)
+                                         $$ text ""
        mkOut (v, CgAtomic sw)            = let sgsz = (hasSign sw, sizeOf sw) in pprCWord False sgsz <+> text v <> semi
        mkOut (v, CgArray [])             = die $ "Unsupported empty array value for " ++ show v
        mkOut (v, CgArray sws@(sw:_))     = pprCWord False (hasSign sw, sizeOf sw) <+> text v <> brackets (int (length sws)) <> semi
@@ -278,12 +281,14 @@ genDriver randVals fn inps outs mbRet =
        display (n, CgAtomic sw)         = text "printf" <> parens (printQuotes (text " " <+> text n <+> text "=" <+> specifier (hasSign sw, sizeOf sw)
                                                                                 <> text "\\n") <> comma <+> text n) <> semi
        display (n, CgArray [])         =  die $ "Unsupported empty array value for " ++ show n
-       display (n, CgArray sws@(sw:_)) =   text "for(int" <+> nctr <+> text "= 0; " <+> nctr <+> text "<" <+> int (length sws) <+> text "; ++" <> nctr <> text ")"
-                                        $$ nest 2 (text "printf" <> parens (printQuotes (text " " <+> entry <+> text "=" <+> spec <> text "\\n")
-                                                                 <> comma <+> entry) <> semi)
-                  where nctr  = text n <+> text "_ctr"
-                        entry = text n <> text "[" <> nctr <> text "]"
-                        spec  = specifier (hasSign sw, sizeOf sw)
+       display (n, CgArray sws@(sw:_)) =   text "int" <+> nctr <> semi
+                                        $$ text "for(" <> nctr <+> text "= 0; " <+> nctr <+> text "<" <+> int (length sws) <+> text "; ++" <> nctr <> text ")"
+                                        $$ nest 2 (text "printf" <> parens (printQuotes (text " " <+> entrySpec <+> text "=" <+> spec <> text "\\n")
+                                                                 <> comma <+> nctr <+> comma <> entry) <> semi)
+                  where nctr      = text n <> text "_ctr"
+                        entry     = text n <> text "[" <> nctr <> text "]"
+                        entrySpec = text n <> text "[%d]"
+                        spec      = specifier (hasSign sw, sizeOf sw)
 
 -- | Generate the C program
 genCProg :: Bool -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SW -> Doc
