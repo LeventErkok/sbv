@@ -5,7 +5,7 @@ GitHub:  <http://github.com/LeventErkok/sbv>
 Version 0.9.18, Not yet released
 
     * Re-engineer code-generation, and compilation to C.
-      In particular, allo arrays of inputs to be specified,
+      In particular, allow arrays of inputs to be specified,
       both as function arguments and output reference values.
     * Update code-generation examples to use the new API.
 
