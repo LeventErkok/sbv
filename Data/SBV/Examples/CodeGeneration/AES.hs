@@ -512,14 +512,12 @@ aes128IsCorrect (i0, i1, i2, i3) (k0, k1, k2, k3) = pt .== pt'
 -- @
 --
 -- The GNU C-compiler does a fine job of optimizing this straightline code to generate a fairly efficient C implementation.
-cgAES128BlockEncrypt :: IO ()
-cgAES128BlockEncrypt = compileToC True Nothing "aes128BlockEncrypt" args enc
-  where args     = inpWords ++ keyWords
-        inpWords = ["pt0", "pt1", "pt2", "pt3"]         -- names to use in the generated C prototype for the plain-text words
-        keyWords = ["key0", "key1", "key2", "key3"]     -- ditto for key-words
-        -- NB. The following can be written much more nicely once we have type-naturals added to GHC
-        enc (pt0, pt1, pt2, pt3, key0, key1, key2, key3) = (ct0, ct1, ct2, ct3)
-          where key = [key0, key1, key2, key3]
-                pt  = [pt0, pt1, pt2, pt3]
-                (encKS, _) = aesKeySchedule key
-                [ct0, ct1, ct2, ct3] = aesEncrypt pt encKS
+cgAES128BlockEncrypt :: IO CgPgmBundle
+cgAES128BlockEncrypt = compileToC "aes128BlockEncrypt" $ do
+        pt  <- cgInputArr 4 "pt"        -- plain-text as an array of 4 Word32's
+        key <- cgInputArr 4 "key"       -- key as an array of 4 Word32s
+        -- Use the test values from Appendix C.1 of the AES standard as the driver values
+        cgSetDriverValues $    [0x00112233, 0x44556677, 0x8899aabb, 0xccddeeff]
+                            ++ [0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f]
+        let (encKs, _) = aesKeySchedule key
+        cgOutputArr "ct" $ aesEncrypt pt encKs

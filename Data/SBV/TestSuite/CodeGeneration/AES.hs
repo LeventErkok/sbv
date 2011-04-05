@@ -19,12 +19,14 @@ import Data.SBV.Examples.CodeGeneration.AES
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
-   "aes128Enc" ~: compileToC' driverInputs True "aes128Enc" [] (aes128EncDec True)  `goldCheck` "aes128Enc.gold"
- , "aes128Dec" ~: compileToC' driverInputs True "aes128Dec" [] (aes128EncDec False) `goldCheck` "aes128Dec.gold"
+   "aes128Enc" ~: compileToC "aes128Enc" (aes128EncDec True)  `goldCheck` "aes128Enc.gold"
+ , "aes128Dec" ~: compileToC "aes128Dec" (aes128EncDec False) `goldCheck` "aes128Dec.gold"
  ]
  where driverInputs = replicate 8 0
-       aes128EncDec d (i0, i1, i2, i3, k0, k1, k2, k3) = (o0, o1, o2, o3)
-          where key = [k0, k1, k2, k3]
-                i   = [i0, i1, i2, i3]
-                (encKS, decKS) = aesKeySchedule key
-                [o0, o1, o2, o3] = if d then aesEncrypt i encKS else aesDecrypt i decKS
+       aes128EncDec d = do pt  <- cgInputArr 4 "pt"
+                           key <- cgInputArr 4 "key"
+                           cgSetDriverValues $ repeat 0
+                           let (encKs, decKs) = aesKeySchedule key
+                               res | d    = aesEncrypt pt encKs
+                                   | True = aesDecrypt pt decKs
+                           cgOutputArr "ct" res
