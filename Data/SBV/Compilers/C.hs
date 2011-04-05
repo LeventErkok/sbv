@@ -255,13 +255,22 @@ genDriver randVals fn inps outs mbRet =
                 (frs, srs) = splitAt l rs
        mkRVal sw r = mkConst ival sgsz
          where sgsz@(sg, sz) = (hasSign sw, sizeOf sw)
-               ival | not sg = r `mod` (2^sz)
-                    | True   = (r `mod` (2^sz)) - (2^(sz-1))
+               ival | r >= minVal && r <= maxVal = r
+                    | not sg                     = r `mod` (2^sz)
+                    | True                       = (r `mod` (2^sz)) - (2^(sz-1))
+                    where expSz, expSz', minVal, maxVal :: Integer
+                          expSz  = 2^(sz-1)
+                          expSz' = 2*expSz
+                          minVal | not sg = 0
+                                 | True   = -expSz
+                          maxVal | not sg = expSz'-1
+                                 | True   = expSz-1
        mkInp (_,  _, CgAtomic{})         = empty  -- constant, no need to declare
        mkInp (_,  n, CgArray [])         = die $ "Unsupported empty array value for " ++ show n
        mkInp (vs, n, CgArray sws@(sw:_)) =  pprCWord True (hasSign sw, sizeOf sw) <+> text n <> brackets (int (length sws)) <+> text "= {"
                                                       $$ nest 4 (fsep (punctuate comma (align vs)))
                                                       $$ text "};"
+                                         $$ text ""
                                          $$ text "printf" <> parens (printQuotes (text "Contents of input array" <+> text n <> text ":\\n")) <> semi
                                          $$ display (n, CgArray sws)
                                          $$ text ""
