@@ -39,10 +39,10 @@ die msg = error $ "SBV->C: Unexpected: " ++ msg
 tbd :: String -> a
 tbd msg = error $ "SBV->C: Not yet supported: " ++ msg
 
--- | Given a symbolic computation, render it as an equivalent C program. The first
--- argument is the name of the C function to generate.
+-- | Given a symbolic computation, render it as an equivalent collection of files
+-- that make up a C program. The first argument is the name of the C function to generate.
 -- Compilation will also generate a @Makefile@,  a header file, and a driver (test) program,
--- as a 'CgPgmBundle'. Use 'renderC' to save it to disk.
+-- as a 'CgPgmBundle'. Use the function 'renderC' to save the corresponding files to the disk.
 compileToC :: String -> SBVCodeGen () -> IO CgPgmBundle
 compileToC nm f = do rands <- newStdGen >>= return . randoms
                      codeGen SBVToC (defaultCgConfig { cgDriverVals = rands }) nm f

@@ -166,7 +166,7 @@ module Data.SBV (
   -- * Getting SMT-Lib output (for offline analysis)
   , compileToSMTLib
 
-  -- * Compiling symbolic programs to C
+  -- * Code generation from symbolic programs
   -- $cCodeGeneration
   , CgPgmBundle, cgPerformRTCs, cgSetDriverValues
 
@@ -179,7 +179,7 @@ module Data.SBV (
   -- ** Designating return values
   , cgReturn, cgReturnArr
 
-  -- ** Compiling to C
+  -- ** Compilation to C
   , compileToC, renderC
 
   -- * Module exports

@@ -126,7 +126,10 @@ cgReturnArr vs
 
 -- | Representation of a collection of generated programs. Code generation
 -- produces a number of files (drivers, source, headers, etc.) and corresponding
--- contents. Note that we do not export the constructors, this type should be left abstract.
+-- contents. Note that we do not export the constructors. Instead, the 'Show'
+-- instance can be used to display the output on stdout, or the function `renderC`
+-- can be used to save the result as a collection of files that comprise the C
+-- program (@header@, @driver@, @Makefile@, etc.).
 newtype CgPgmBundle = CgPgmBundle [(FilePath, Doc)]
 
 instance Show CgPgmBundle where
