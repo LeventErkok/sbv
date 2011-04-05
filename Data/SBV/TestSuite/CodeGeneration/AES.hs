@@ -22,8 +22,7 @@ testSuite = mkTestSuite $ \goldCheck -> test [
    "aes128Enc" ~: compileToC "aes128Enc" (aes128EncDec True)  `goldCheck` "aes128Enc.gold"
  , "aes128Dec" ~: compileToC "aes128Dec" (aes128EncDec False) `goldCheck` "aes128Dec.gold"
  ]
- where driverInputs = replicate 8 0
-       aes128EncDec d = do pt  <- cgInputArr 4 "pt"
+ where aes128EncDec d = do pt  <- cgInputArr 4 "pt"
                            key <- cgInputArr 4 "key"
                            cgSetDriverValues $ repeat 0
                            let (encKs, decKs) = aesKeySchedule key
