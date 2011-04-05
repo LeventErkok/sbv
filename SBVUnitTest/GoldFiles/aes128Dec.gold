@@ -62,6 +62,7 @@ int main(void)
   const SWord32 pt[4] = {
       0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00000000UL
   };
+  
   printf("Contents of input array pt:\n");
   int pt_ctr;
   for(pt_ctr = 0;  pt_ctr < 4 ; ++pt_ctr)
@@ -70,6 +71,7 @@ int main(void)
   const SWord32 key[4] = {
       0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00000000UL
   };
+  
   printf("Contents of input array key:\n");
   int key_ctr;
   for(key_ctr = 0;  key_ctr < 4 ; ++key_ctr)
