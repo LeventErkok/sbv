@@ -18,9 +18,13 @@ import Data.SBV.Internals
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
-   "codegen1" ~: compileToC' [65] True  "selChecked"   [] sel `goldCheck` "selChecked.gold"
- , "codegen2" ~: compileToC' [65] False "selUnChecked" [] sel `goldCheck` "selUnchecked.gold"
+   "codegen1" ~: genSelect True  "selChecked"   `goldCheck` "selChecked.gold"
+ , "codegen2" ~: genSelect False "selUnChecked" `goldCheck` "selUnchecked.gold"
  ]
-
-sel :: SWord8 -> SWord8
-sel x = select [1, x+2] 3 x
+ where genSelect b n = compileToC n $ do
+                         cgSetDriverValues [65]
+                         cgPerformRTCs b
+                         let sel :: SWord8 -> SWord8
+                             sel x = select [1, x+2] 3 x
+                         x <- cgInput "x"
+                         cgReturn $ sel x

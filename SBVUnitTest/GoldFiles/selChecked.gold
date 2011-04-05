@@ -44,7 +44,7 @@ typedef int32_t SInt32;
 typedef int64_t SInt64;
 
 /* Entry point prototype: */
-SWord8 selChecked(const SWord8 s0);
+SWord8 selChecked(const SWord8 x);
 
 #endif /* __selChecked__HEADER_INCLUDED__ */
 == END: "selChecked.h" ==================
@@ -59,9 +59,9 @@ SWord8 selChecked(const SWord8 s0);
 
 int main(void)
 {
-  const SWord8 out0 = selChecked(0x41);
+  const SWord8 __result = selChecked(65);
   
-  printf("selChecked(0x41) = %"PRIu8"\n", out0);
+  printf("selChecked(65) = %"PRIu8"\n", __result);
   
   return 0;
 }
@@ -73,13 +73,14 @@ int main(void)
 #include <stdint.h>
 #include "selChecked.h"
 
-SWord8 selChecked(const SWord8 s0)
+SWord8 selChecked(const SWord8 x)
 {
-  const SWord8 s3 = s0 + 0x02;
+  const SWord8 s0 = x;
+  const SWord8 s3 = s0 + 2;
   const SWord8 table0[] = {
-      0x01,   s3
+       1, s3
   };
-  const SWord8 s5 = s0 >= 2 ? 0x03 : table0[s0];
+  const SWord8 s5 = s0 >= 2 ? 3 : table0[s0];
   
   return s5;
 }
