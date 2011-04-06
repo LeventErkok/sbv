@@ -460,4 +460,15 @@ align ds = map (text . pad) ss
 -- are function-name/code pairs for each function to include in the library. Similar to 'compileToC', use
 -- 'renderC' to write the contents to disk.
 compileToCLib :: String -> [(String, SBVCodeGen ())] -> IO CgPgmBundle
-compileToCLib = undefined
+compileToCLib libName comps = mergeToLib libName `fmap` mapM (uncurry compileToC) comps
+
+-- | Merge a bunch of bundles to generate code for a library
+mergeToLib :: String -> [CgPgmBundle] -> CgPgmBundle
+mergeToLib _libName bundles = CgPgmBundle $ mkDriver drivers : mkMake makeFiles : headers ++ sources
+  where files = concat [fs | CgPgmBundle fs <- bundles]
+        makeFiles = filter isCgMakefile files
+        headers   = filter isCgHeader   files
+        sources   = filter isCgSource   files
+        drivers   = filter isCgDriver   files
+        mkDriver ds = head ds
+        mkMake   ms = head ms

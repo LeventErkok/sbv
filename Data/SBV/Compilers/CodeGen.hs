@@ -137,6 +137,17 @@ data CgPgmKind = CgMakefile
                | CgHeader
                | CgSource
                | CgDriver
+               deriving Eq
+
+isCgMakefile, isCgHeader, isCgSource, isCgDriver :: (FilePath, (CgPgmKind, [Doc])) -> Bool
+isCgMakefile (_, (CgMakefile, _)) = True
+isCgMakefile _                    = False
+isCgHeader   (_, (CgHeader, _))   = True
+isCgHeader   _                    = False
+isCgSource   (_, (CgSource, _))   = True
+isCgSource   _                    = False
+isCgDriver   (_, (CgDriver, _))   = True
+isCgDriver   _                    = False
 
 instance Show CgPgmBundle where
    show (CgPgmBundle fs) = concat $ intersperse "\n" $ map showFile fs
@@ -155,7 +166,7 @@ codeGen l cgConfig nm (SBVCodeGen comp) = do
        allNamedVars = map fst (cgInputs st ++ cgOutputs st)
        dupNames = allNamedVars \\ nub allNamedVars
    when (not (null dupNames)) $ do
-        error $ "SBV.codeGen: The following input/output names are duplicated: " ++ unwords dupNames
+        error $ "SBV.codeGen: " ++ show nm ++ " has following argument names duplicated: " ++ unwords dupNames
    let finalCfg = cgFinalConfig st
    return $ translate l (cgRTC finalCfg) (cgDriverVals finalCfg) nm st res
 

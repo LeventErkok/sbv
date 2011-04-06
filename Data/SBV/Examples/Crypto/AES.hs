@@ -555,7 +555,7 @@ cgAES128Library = renderC "aes128Lib" =<< genAESLib
         -- decryption
         dec128 = do pt   <- cgInputArr 4  "ct"    -- cipher-text
                     xkey <- cgInputArr 44 "xkey"  -- expanded key, for 128-bit AES, the key-expansion has 44 Word32's
-                    cgOutputArr "ct" $ aesDecrypt pt (xkeyToKS xkey)
+                    cgOutputArr "pt" $ aesDecrypt pt (xkeyToKS xkey)
         -- Helpers
         chop4 :: [a] -> [[a]]
         chop4 [] = []
