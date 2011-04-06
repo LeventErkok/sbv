@@ -180,7 +180,7 @@ module Data.SBV (
   , cgReturn, cgReturnArr
 
   -- ** Compilation to C
-  , compileToC, renderC, renderCLib
+  , compileToC, compileToCLib, renderC
 
   -- * Module exports
   -- $moduleExportIntro

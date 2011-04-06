@@ -12,7 +12,7 @@
 
 {-# LANGUAGE PatternGuards #-}
 
-module Data.SBV.Compilers.C(compileToC, renderC, renderCLib) where
+module Data.SBV.Compilers.C(compileToC, compileToCLib, renderC) where
 
 import Data.Char(isSpace)
 import Data.Maybe(isJust)
@@ -454,9 +454,10 @@ align ds = map (text . pad) ss
         l     = maximum (0 : map length ss)
         pad s = take (l - length s) (repeat ' ') ++ s
 
--- | Create a library archive (.a) from given program bundles. Useful when generating code
+-- | Create code to generate a library archive (.a) from given symbolic functions. Useful when generating code
 -- from multiple functions that work together as a library. The first argument is the name of the
 -- archive to generate, followed by the list of functions to include. The elements of the list
--- are function-name/code pairs for each function to include in the library.
-renderCLib :: String -> [(String, SBVCodeGen ())] -> IO ()
-renderCLib = undefined
+-- are function-name/code pairs for each function to include in the library. Similar to 'compileToC', use
+-- 'renderC' to write the contents to disk.
+compileToCLib :: String -> [(String, SBVCodeGen ())] -> IO CgPgmBundle
+compileToCLib = undefined

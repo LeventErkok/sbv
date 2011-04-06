@@ -537,11 +537,13 @@ cgAES128BlockEncrypt = compileToC "aes128BlockEncrypt" $ do
 
 -- | Generate a C library, containing functions for performing 128-bit enc/dec/key-expansion.
 cgAES128Library :: IO ()
-cgAES128Library = renderCLib "aes128Lib" [ ("aes128KeySchedule",  keySchedule)
-                                         , ("aes128BlockEncrypt", enc128)
-                                         , ("aes128BlockDecrypt", dec128)
-                                         ]
-  where -- key-schedule
+cgAES128Library = renderC "aes128Lib" =<< genAESLib
+  where -- the library
+        genAESLib = compileToCLib "sbvAES128" [ ("aes128KeySchedule",  keySchedule)
+                                              , ("aes128BlockEncrypt", enc128)
+                                              , ("aes128BlockDecrypt", dec128)
+                                              ]
+        -- key-schedule
         keySchedule = do key <- cgInputArr 4 "key"     -- key
                          let (encKS, decKS) = aesKeySchedule key
                          cgOutputArr "encKS" (ksToXKey encKS)
