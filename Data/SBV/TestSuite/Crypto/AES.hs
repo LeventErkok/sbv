@@ -14,7 +14,7 @@ module Data.SBV.TestSuite.Crypto.AES(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals
-import Data.SBV.Crypto.CodeGeneration.AES
+import Data.SBV.Examples.Crypto.AES
 
 -- Test suite
 testSuite :: SBVTestSuite
