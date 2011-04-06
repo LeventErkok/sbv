@@ -21,7 +21,7 @@ testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
    "gcd" ~: gcdC `goldCheck` "gcd.gold"
  ]
- where gcdC = compileToC "sgcd" $ do
+ where gcdC = compileToC' "sgcd" $ do
                 cgSetDriverValues [55,154]
                 x <- cgInput "x"
                 y <- cgInput "y"

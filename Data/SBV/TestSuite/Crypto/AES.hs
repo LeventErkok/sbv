@@ -19,8 +19,8 @@ import Data.SBV.Examples.Crypto.AES
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
-   "aes128Enc" ~: compileToC "aes128Enc" (aes128EncDec True)  `goldCheck` "aes128Enc.gold"
- , "aes128Dec" ~: compileToC "aes128Dec" (aes128EncDec False) `goldCheck` "aes128Dec.gold"
+   "aes128Enc" ~: compileToC' "aes128Enc" (aes128EncDec True)  `goldCheck` "aes128Enc.gold"
+ , "aes128Dec" ~: compileToC' "aes128Dec" (aes128EncDec False) `goldCheck` "aes128Dec.gold"
  ]
  where aes128EncDec d = do pt  <- cgInputArr 4 "pt"
                            key <- cgInputArr 4 "key"

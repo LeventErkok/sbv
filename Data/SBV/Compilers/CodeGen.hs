@@ -124,15 +124,10 @@ cgReturnArr vs
                 modify (\s -> s { cgReturns = CgArray sws : cgReturns s })
   where sz = length vs
 
--- | Representation of a collection of generated programs. Code generation
--- produces a number of files (drivers, source, headers, etc.) and corresponding
--- contents. Note that we do not export the constructors. Instead, the 'Show'
--- instance can be used to display the output on stdout, or the function `renderC`
--- can be used to save the result as a collection of files that comprise the C
--- program (@header@, @driver@, @Makefile@, etc.).
+-- | Representation of a collection of generated programs.
 newtype CgPgmBundle = CgPgmBundle [(FilePath, (CgPgmKind, [Doc]))]
 
--- Different kinds of "files" we can produce. Currently this is quite "C" specific
+-- | Different kinds of "files" we can produce. Currently this is quite "C" specific.
 data CgPgmKind = CgMakefile
                | CgHeader
                | CgSource
@@ -170,8 +165,9 @@ codeGen l cgConfig nm (SBVCodeGen comp) = do
    let finalCfg = cgFinalConfig st
    return $ translate l (cgRTC finalCfg) (cgDriverVals finalCfg) nm st res
 
-renderCgPgmBundle :: FilePath -> CgPgmBundle -> IO ()
-renderCgPgmBundle dirName (CgPgmBundle files) = do
+renderCgPgmBundle :: Maybe FilePath -> CgPgmBundle -> IO ()
+renderCgPgmBundle Nothing        bundle              = putStrLn $ show bundle
+renderCgPgmBundle (Just dirName) (CgPgmBundle files) = do
         b <- doesDirectoryExist dirName
         when (not b) $ do putStrLn $ "Creating directory " ++ show dirName ++ ".."
                           createDirectory dirName

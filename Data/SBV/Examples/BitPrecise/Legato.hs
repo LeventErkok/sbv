@@ -294,8 +294,8 @@ correctnessTheorem = proveWith timingSMTCfg $
 ------------------------------------------------------------------
 
 -- | Generate a C program that implements Legato's algorithm automatically.
-legatoInC :: IO CgPgmBundle
-legatoInC = compileToC "runLegato" $ do
+legatoInC :: IO ()
+legatoInC = compileToC Nothing "runLegato" $ do
                 x <- cgInput "x"
                 y <- cgInput "y"
                 let (hi, lo) = runLegato (0, x) (1, y) 2 (initMachine (mkSFunArray 0) (0, 0, 0, false, false))

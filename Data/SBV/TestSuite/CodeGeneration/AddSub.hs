@@ -21,7 +21,7 @@ testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
    "addSub" ~: code `goldCheck` "addSub.gold"
  ]
- where code = compileToC "addSub" $ do
+ where code = compileToC' "addSub" $ do
                 cgSetDriverValues [76, 92]
                 cgPerformRTCs True
                 x <- cgInput "x"

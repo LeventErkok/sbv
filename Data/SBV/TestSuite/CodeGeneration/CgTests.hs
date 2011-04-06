@@ -24,14 +24,14 @@ testSuite = mkTestSuite $ \goldCheck -> test [
  , "selUnchecked" ~: genSelect False "selUnChecked" `goldCheck` "selUnchecked.gold"
  , "codegen1"     ~: foo `goldCheck` "codeGen1.gold"
  ]
- where genSelect b n = compileToC n $ do
+ where genSelect b n = compileToC' n $ do
                          cgSetDriverValues [65]
                          cgPerformRTCs b
                          let sel :: SWord8 -> SWord8
                              sel x = select [1, x+2] 3 x
                          x <- cgInput "x"
                          cgReturn $ sel x
-       foo = compileToC "foo" $ do
+       foo = compileToC' "foo" $ do
                         cgSetDriverValues $ repeat 0
                         (x::SInt16)    <- cgInput "x"
                         (ys::[SInt64]) <- cgInputArr 45 "xArr"

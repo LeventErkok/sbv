@@ -512,8 +512,8 @@ aes128IsCorrect (i0, i1, i2, i3) (k0, k1, k2, k3) = pt .== pt'
 -- @
 --
 -- The GNU C-compiler does a fine job of optimizing this straightline code to generate a fairly efficient C implementation.
-cgAES128BlockEncrypt :: IO CgPgmBundle
-cgAES128BlockEncrypt = compileToC "aes128BlockEncrypt" $ do
+cgAES128BlockEncrypt :: IO ()
+cgAES128BlockEncrypt = compileToC Nothing "aes128BlockEncrypt" $ do
         pt  <- cgInputArr 4 "pt"        -- plain-text as an array of 4 Word32's
         key <- cgInputArr 4 "key"       -- key as an array of 4 Word32s
         -- Use the test values from Appendix C.1 of the AES standard as the driver values
@@ -537,13 +537,11 @@ cgAES128BlockEncrypt = compileToC "aes128BlockEncrypt" $ do
 
 -- | Generate a C library, containing functions for performing 128-bit enc/dec/key-expansion.
 cgAES128Library :: IO ()
-cgAES128Library = renderC "aes128Lib" =<< genAESLib
-  where -- the library
-        genAESLib = compileToCLib "sbvAES128" [ ("aes128KeySchedule",  keySchedule)
-                                              , ("aes128BlockEncrypt", enc128)
-                                              , ("aes128BlockDecrypt", dec128)
-                                              ]
-        -- key-schedule
+cgAES128Library = compileToCLib Nothing "aes128Lib" [ ("aes128KeySchedule",  keySchedule)
+                                                    , ("aes128BlockEncrypt", enc128)
+                                                    , ("aes128BlockDecrypt", dec128)
+                                                    ]
+  where -- key-schedule
         keySchedule = do key <- cgInputArr 4 "key"     -- key
                          let (encKS, decKS) = aesKeySchedule key
                          cgOutputArr "encKS" (ksToXKey encKS)
@@ -556,16 +554,17 @@ cgAES128Library = renderC "aes128Lib" =<< genAESLib
         dec128 = do pt   <- cgInputArr 4  "ct"    -- cipher-text
                     xkey <- cgInputArr 44 "xkey"  -- expanded key, for 128-bit AES, the key-expansion has 44 Word32's
                     cgOutputArr "pt" $ aesDecrypt pt (xkeyToKS xkey)
-        -- Helpers
-        chop4 :: [a] -> [[a]]
-        chop4 [] = []
-        chop4 xs = let (f, r) = splitAt 4 xs in f : chop4 r
-        -- turn a series of expanded keys to our internal KS type
+        -- Transforming back and forth from our KS type to a flat array used by the generated C code
+        -- Turn a series of expanded keys to our internal KS type
         xkeyToKS :: [SWord32] -> KS
         xkeyToKS xs = (f, m, l)
            where f = take 4 xs                       -- first round key
                  m = chop4 (take 36 (drop 4 xs))     -- middle rounds
                  l = drop 40 xs                      -- last round key
-        -- turn a KS to a series of expanded key words
+        -- Turn a KS to a series of expanded key words
         ksToXKey :: KS -> [SWord32]
         ksToXKey (f, m, l) = f ++ concat m ++ l
+        -- chunk in fours. (This function must be in some standard library, where?)
+        chop4 :: [a] -> [[a]]
+        chop4 [] = []
+        chop4 xs = let (f, r) = splitAt 4 xs in f : chop4 r
