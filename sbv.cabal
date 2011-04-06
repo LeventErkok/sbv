@@ -94,10 +94,10 @@ Library
                   , Data.SBV.Examples.BitPrecise.BitTricks
                   , Data.SBV.Examples.BitPrecise.Legato
                   , Data.SBV.Examples.CodeGeneration.AddSub
-                  , Data.SBV.Examples.CodeGeneration.AES
                   , Data.SBV.Examples.CodeGeneration.Fibonacci
                   , Data.SBV.Examples.CodeGeneration.GCD
                   , Data.SBV.Examples.CodeGeneration.PopulationCount
+                  , Data.SBV.Examples.Crypto.AES
                   , Data.SBV.Examples.Polynomials.Polynomials
                   , Data.SBV.Examples.PrefixSum.PrefixSum
                   , Data.SBV.Examples.Puzzles.DogCatMouse
@@ -148,11 +148,11 @@ Library
                   , Data.SBV.TestSuite.BitPrecise.BitTricks
                   , Data.SBV.TestSuite.BitPrecise.Legato
                   , Data.SBV.TestSuite.CodeGeneration.AddSub
-                  , Data.SBV.TestSuite.CodeGeneration.AES
                   , Data.SBV.TestSuite.CodeGeneration.CgTests
                   , Data.SBV.TestSuite.CodeGeneration.Fibonacci
                   , Data.SBV.TestSuite.CodeGeneration.GCD
                   , Data.SBV.TestSuite.CodeGeneration.PopulationCount
+                  , Data.SBV.TestSuite.Crypto.AES
                   , Data.SBV.TestSuite.CRC.CCITT
                   , Data.SBV.TestSuite.CRC.CCITT_Unidir
                   , Data.SBV.TestSuite.CRC.GenPoly

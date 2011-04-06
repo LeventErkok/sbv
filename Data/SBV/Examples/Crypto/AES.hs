@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.CodeGeneration.AES
+-- Module      :  Data.SBV.Examples.Crypto.AES
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -27,7 +27,7 @@
 
 {-# LANGUAGE ParallelListComp #-}
 
-module Data.SBV.Examples.CodeGeneration.AES where
+module Data.SBV.Examples.Crypto.AES where
 
 import Data.SBV
 import Data.List (transpose)

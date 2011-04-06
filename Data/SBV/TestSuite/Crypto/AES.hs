@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.CodeGeneration.AES
+-- Module      :  Data.SBV.TestSuite.Crypto.AES
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,11 +10,11 @@
 -- Test suite for Data.SBV.Examples.CodeGeneration.AES
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.CodeGeneration.AES(testSuite) where
+module Data.SBV.TestSuite.Crypto.AES(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals
-import Data.SBV.Examples.CodeGeneration.AES
+import Data.SBV.Crypto.CodeGeneration.AES
 
 -- Test suite
 testSuite :: SBVTestSuite
