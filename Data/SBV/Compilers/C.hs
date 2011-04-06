@@ -12,7 +12,7 @@
 
 {-# LANGUAGE PatternGuards #-}
 
-module Data.SBV.Compilers.C(compileToC, renderC) where
+module Data.SBV.Compilers.C(compileToC, renderC, renderCLib) where
 
 import Data.Char(isSpace)
 import Data.Maybe(isJust)
@@ -54,10 +54,10 @@ renderC = renderCgPgmBundle
 
 cgen :: Bool -> [Integer] -> String -> CgState -> Result -> CgPgmBundle
 cgen rtc randVals nm st sbvProg = CgPgmBundle
-        [ ("Makefile",  genMake   nm nmd)
-        , (nm  ++ ".h", genHeader nm sig)
-        , (nmd ++ ".c", genDriver randVals nm ins outs mbRet)
-        , (nm  ++ ".c", genCProg  rtc nm sig sbvProg ins outs mbRet)
+        [ ("Makefile",  (CgMakefile, [genMake   nm nmd]))
+        , (nm  ++ ".h", (CgHeader,   [genHeader nm sig]))
+        , (nmd ++ ".c", (CgSource,   [genDriver randVals nm ins outs mbRet]))
+        , (nm  ++ ".c", (CgDriver,   [genCProg  rtc nm sig sbvProg ins outs mbRet]))
         ]
   where nmd = nm ++ "_driver"
         sig = pprCFunHeader nm ins outs mbRet
@@ -453,3 +453,10 @@ align ds = map (text . pad) ss
   where ss    = map render ds
         l     = maximum (0 : map length ss)
         pad s = take (l - length s) (repeat ' ') ++ s
+
+-- | Create a library archive (.a) from given program bundles. Useful when generating code
+-- from multiple functions that work together as a library. The first argument is the name of the
+-- archive to generate, followed by the list of functions to include. The elements of the list
+-- are function-name/code pairs for each function to include in the library.
+renderCLib :: String -> [(String, SBVCodeGen ())] -> IO ()
+renderCLib = undefined

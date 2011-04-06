@@ -521,3 +521,49 @@ cgAES128BlockEncrypt = compileToC "aes128BlockEncrypt" $ do
                             ++ [0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f]
         let (encKs, _) = aesKeySchedule key
         cgOutputArr "ct" $ aesEncrypt pt encKs
+
+-----------------------------------------------------------------------------
+-- * C-library generation
+-- ${libraryIntro}
+-----------------------------------------------------------------------------
+{- $libraryIntro
+   The 'cgAES128BlockEncrypt' example shows how to generate code for 128-bit AES encryption. As the generated
+   function performs encryption on a given block, it performs key expansion as necessary. However, this is
+   not quite practical: We would like to expand the key only once, and encrypt the stream of plain-text blocks using
+   the same expanded key (potentially using some crypto-mode), until we decide to change the key. In this
+   section, we show how to use SBV to instead generate a library of functions that can be used in such a scenario.
+   The generated library is a typical @.a@ archive, that can be linked using the C-compiler as usual.
+-}
+
+-- | Generate a C library, containing functions for performing 128-bit enc/dec/key-expansion.
+cgAES128Library :: IO ()
+cgAES128Library = renderCLib "aes128Lib" [ ("aes128KeySchedule",  keySchedule)
+                                         , ("aes128BlockEncrypt", enc128)
+                                         , ("aes128BlockDecrypt", dec128)
+                                         ]
+  where -- key-schedule
+        keySchedule = do key <- cgInputArr 4 "key"     -- key
+                         let (encKS, decKS) = aesKeySchedule key
+                         cgOutputArr "encKS" (ksToXKey encKS)
+                         cgOutputArr "decKS" (ksToXKey decKS)
+        -- encryption
+        enc128 = do pt   <- cgInputArr 4  "pt"    -- plain-text
+                    xkey <- cgInputArr 44 "xkey"  -- expanded key, for 128-bit AES, the key-expansion has 44 Word32's
+                    cgOutputArr "ct" $ aesEncrypt pt (xkeyToKS xkey)
+        -- decryption
+        dec128 = do pt   <- cgInputArr 4  "ct"    -- cipher-text
+                    xkey <- cgInputArr 44 "xkey"  -- expanded key, for 128-bit AES, the key-expansion has 44 Word32's
+                    cgOutputArr "ct" $ aesDecrypt pt (xkeyToKS xkey)
+        -- Helpers
+        chop4 :: [a] -> [[a]]
+        chop4 [] = []
+        chop4 xs = let (f, r) = splitAt 4 xs in f : chop4 r
+        -- turn a series of expanded keys to our internal KS type
+        xkeyToKS :: [SWord32] -> KS
+        xkeyToKS xs = (f, m, l)
+           where f = take 4 xs                       -- first round key
+                 m = chop4 (take 36 (drop 4 xs))     -- middle rounds
+                 l = drop 40 xs                      -- last round key
+        -- turn a KS to a series of expanded key words
+        ksToXKey :: KS -> [SWord32]
+        ksToXKey (f, m, l) = f ++ concat m ++ l

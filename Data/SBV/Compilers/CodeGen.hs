@@ -21,7 +21,7 @@ import Data.Char (toLower)
 import Data.List (nub, isPrefixOf, intersperse, (\\))
 import System.Directory (createDirectory, doesDirectoryExist, doesFileExist)
 import System.FilePath ((</>))
-import Text.PrettyPrint.HughesPJ (Doc, render)
+import Text.PrettyPrint.HughesPJ (Doc, render, vcat)
 
 import Data.SBV.BitVectors.Data
 
@@ -130,15 +130,21 @@ cgReturnArr vs
 -- instance can be used to display the output on stdout, or the function `renderC`
 -- can be used to save the result as a collection of files that comprise the C
 -- program (@header@, @driver@, @Makefile@, etc.).
-newtype CgPgmBundle = CgPgmBundle [(FilePath, Doc)]
+newtype CgPgmBundle = CgPgmBundle [(FilePath, (CgPgmKind, [Doc]))]
+
+-- Different kinds of "files" we can produce. Currently this is quite "C" specific
+data CgPgmKind = CgMakefile
+               | CgHeader
+               | CgSource
+               | CgDriver
 
 instance Show CgPgmBundle where
    show (CgPgmBundle fs) = concat $ intersperse "\n" $ map showFile fs
 
-showFile :: (FilePath, Doc) -> String
-showFile (f, d) =  "== BEGIN: " ++ show f ++ " ================\n"
-                ++ render d
-                ++ "== END: " ++ show f ++ " =================="
+showFile :: (FilePath, (CgPgmKind, [Doc])) -> String
+showFile (f, (_, ds)) =  "== BEGIN: " ++ show f ++ " ================\n"
+                      ++ render (vcat ds)
+                      ++ "== END: " ++ show f ++ " =================="
 
 codeGen :: CgTarget l => l -> CgConfig -> String -> SBVCodeGen () -> IO CgPgmBundle
 codeGen l cgConfig nm (SBVCodeGen comp) = do
@@ -169,6 +175,6 @@ renderCgPgmBundle dirName (CgPgmBundle files) = do
         if goOn then do mapM_ renderFile files
                         putStrLn "Done."
                 else putStrLn "Aborting."
-  where renderFile (f, p) = do let fn = dirName </> f
-                               putStrLn $ "Generating: " ++ show fn ++ ".."
-                               writeFile fn (render p)
+  where renderFile (f, (_, ds)) = do let fn = dirName </> f
+                                     putStrLn $ "Generating: " ++ show fn ++ ".."
+                                     writeFile fn (render (vcat ds))
