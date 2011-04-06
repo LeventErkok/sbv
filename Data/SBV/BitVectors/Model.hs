@@ -456,10 +456,10 @@ lsb x = bitValue x 0
 msb :: (Bits a, SymWord a) => SBV a -> SBool
 msb x = bitValue x ((sizeOf x) - 1)
 
--- | Enum instance. These instances are suitable for use with concrete values,
+-- Enum instance. These instances are suitable for use with concrete values,
 -- and will be less useful for symbolic values around. Note that `fromEnum` requires
 -- a concrete argument for obvious reasons. Other variants (succ, pred, [x..]) etc are similarly
--- limited. While symbolic variants can be defined for many of these, but they will just diverge
+-- limited. While symbolic variants can be defined for many of these, they will just diverge
 -- as final sizes cannot be determined statically.
 instance (Bounded a, Integral a, Num a, SymWord a) => Enum (SBV a) where
   succ x
