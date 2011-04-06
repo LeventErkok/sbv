@@ -4,9 +4,14 @@ GitHub:  <http://github.com/LeventErkok/sbv>
 ======================================================================
 Version 0.9.18, Not yet released
 
+  Code:
     * Re-engineer code-generation, and compilation to C.
       In particular, allow arrays of inputs to be specified,
       both as function arguments and output reference values.
+    * Add support for generation of generation of C-libraries,
+      allowing code generation for a set of functions that
+      work together.
+  Examples:
     * Update code-generation examples to use the new API.
 
 ======================================================================
