@@ -31,16 +31,16 @@ addSub x y = (x+y, x-y)
 -- > all: addSub_driver
 -- > 
 -- > addSub.o: addSub.c addSub.h
--- > 	${CC} ${CCFLAGS} -c addSub.c -o addSub.o
+-- > 	${CC} ${CCFLAGS} -c $< -o $@
 -- > 
 -- > addSub_driver.o: addSub_driver.c
--- > 	${CC} ${CCFLAGS} -c addSub_driver.c -o addSub_driver.o
+-- > 	${CC} ${CCFLAGS} -c $< -o $@
 -- > 
 -- > addSub_driver: addSub.o addSub_driver.o
--- > 	${CC} ${CCFLAGS} addSub.o addSub_driver.o -o addSub_driver
+-- > 	${CC} ${CCFLAGS} $^ -o $@
 -- > 
 -- > clean:
--- > 	rm -f addSub_driver.o addSub.o
+-- > 	rm -f *.o
 -- > 
 -- > veryclean: clean
 -- > 	rm -f addSub_driver
@@ -119,7 +119,7 @@ addSub x y = (x+y, x-y)
 -- > }
 --
 genAddSub :: IO ()
-genAddSub = compileToC Nothing "addSub" $ do
+genAddSub = compileToC (Just "xx") "addSub" $ do
         x <- cgInput "x"
         y <- cgInput "y"
         let (s, d) = addSub x y
