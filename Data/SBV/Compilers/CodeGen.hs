@@ -129,15 +129,14 @@ newtype CgPgmBundle = CgPgmBundle [(FilePath, (CgPgmKind, [Doc]))]
 
 -- | Different kinds of "files" we can produce. Currently this is quite "C" specific.
 data CgPgmKind = CgMakefile
-               | CgHeader
+               | CgHeader [Doc]
                | CgSource
                | CgDriver
-               deriving Eq
 
 isCgMakefile, isCgHeader, isCgSource, isCgDriver :: (FilePath, (CgPgmKind, [Doc])) -> Bool
 isCgMakefile (_, (CgMakefile, _)) = True
 isCgMakefile _                    = False
-isCgHeader   (_, (CgHeader, _))   = True
+isCgHeader   (_, (CgHeader _, _)) = True
 isCgHeader   _                    = False
 isCgSource   (_, (CgSource, _))   = True
 isCgSource   _                    = False
