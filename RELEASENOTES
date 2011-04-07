@@ -2,7 +2,7 @@ Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
 ======================================================================
-Version 0.9.18, Not yet released
+Version 0.9.18, 2011-04-07
 
   Code:
     * Re-engineer code-generation, and compilation to C.
