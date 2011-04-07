@@ -7,16 +7,16 @@ CCFLAGS=-Wall -O3 -DNDEBUG -fomit-frame-pointer
 all: aes128Dec_driver
 
 aes128Dec.o: aes128Dec.c aes128Dec.h
-	${CC} ${CCFLAGS} -c aes128Dec.c -o aes128Dec.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 aes128Dec_driver.o: aes128Dec_driver.c
-	${CC} ${CCFLAGS} -c aes128Dec_driver.c -o aes128Dec_driver.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 aes128Dec_driver: aes128Dec.o aes128Dec_driver.o
-	${CC} ${CCFLAGS} aes128Dec.o aes128Dec_driver.o -o aes128Dec_driver
+	${CC} ${CCFLAGS} $^ -o $@
 
 clean:
-	rm -f aes128Dec_driver.o aes128Dec.o
+	rm -f *.o
 
 veryclean: clean
 	rm -f aes128Dec_driver

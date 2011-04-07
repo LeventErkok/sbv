@@ -7,16 +7,16 @@ CCFLAGS=-Wall -O3 -DNDEBUG -fomit-frame-pointer
 all: legatoMult_driver
 
 legatoMult.o: legatoMult.c legatoMult.h
-	${CC} ${CCFLAGS} -c legatoMult.c -o legatoMult.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 legatoMult_driver.o: legatoMult_driver.c
-	${CC} ${CCFLAGS} -c legatoMult_driver.c -o legatoMult_driver.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 legatoMult_driver: legatoMult.o legatoMult_driver.o
-	${CC} ${CCFLAGS} legatoMult.o legatoMult_driver.o -o legatoMult_driver
+	${CC} ${CCFLAGS} $^ -o $@
 
 clean:
-	rm -f legatoMult_driver.o legatoMult.o
+	rm -f *.o
 
 veryclean: clean
 	rm -f legatoMult_driver

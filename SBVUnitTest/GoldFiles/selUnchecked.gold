@@ -7,16 +7,16 @@ CCFLAGS=-Wall -O3 -DNDEBUG -fomit-frame-pointer
 all: selUnChecked_driver
 
 selUnChecked.o: selUnChecked.c selUnChecked.h
-	${CC} ${CCFLAGS} -c selUnChecked.c -o selUnChecked.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 selUnChecked_driver.o: selUnChecked_driver.c
-	${CC} ${CCFLAGS} -c selUnChecked_driver.c -o selUnChecked_driver.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 selUnChecked_driver: selUnChecked.o selUnChecked_driver.o
-	${CC} ${CCFLAGS} selUnChecked.o selUnChecked_driver.o -o selUnChecked_driver
+	${CC} ${CCFLAGS} $^ -o $@
 
 clean:
-	rm -f selUnChecked_driver.o selUnChecked.o
+	rm -f *.o
 
 veryclean: clean
 	rm -f selUnChecked_driver

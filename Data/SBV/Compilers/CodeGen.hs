@@ -134,14 +134,14 @@ data CgPgmKind = CgMakefile
                | CgDriver
 
 isCgMakefile, isCgHeader, isCgSource, isCgDriver :: (FilePath, (CgPgmKind, [Doc])) -> Bool
-isCgMakefile (_, (CgMakefile, _)) = True
-isCgMakefile _                    = False
-isCgHeader   (_, (CgHeader _, _)) = True
-isCgHeader   _                    = False
-isCgSource   (_, (CgSource, _))   = True
-isCgSource   _                    = False
-isCgDriver   (_, (CgDriver, _))   = True
-isCgDriver   _                    = False
+isCgMakefile (_, (CgMakefile{}, _)) = True
+isCgMakefile _                      = False
+isCgHeader   (_, (CgHeader{}, _))   = True
+isCgHeader   _                      = False
+isCgSource   (_, (CgSource{}, _))   = True
+isCgSource   _                      = False
+isCgDriver   (_, (CgDriver{}, _))   = True
+isCgDriver   _                      = False
 
 instance Show CgPgmBundle where
    show (CgPgmBundle fs) = concat $ intersperse "\n" $ map showFile fs

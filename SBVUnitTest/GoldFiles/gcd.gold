@@ -7,16 +7,16 @@ CCFLAGS=-Wall -O3 -DNDEBUG -fomit-frame-pointer
 all: sgcd_driver
 
 sgcd.o: sgcd.c sgcd.h
-	${CC} ${CCFLAGS} -c sgcd.c -o sgcd.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 sgcd_driver.o: sgcd_driver.c
-	${CC} ${CCFLAGS} -c sgcd_driver.c -o sgcd_driver.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 sgcd_driver: sgcd.o sgcd_driver.o
-	${CC} ${CCFLAGS} sgcd.o sgcd_driver.o -o sgcd_driver
+	${CC} ${CCFLAGS} $^ -o $@
 
 clean:
-	rm -f sgcd_driver.o sgcd.o
+	rm -f *.o
 
 veryclean: clean
 	rm -f sgcd_driver

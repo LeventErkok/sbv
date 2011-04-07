@@ -7,16 +7,16 @@ CCFLAGS=-Wall -O3 -DNDEBUG -fomit-frame-pointer
 all: fib2_driver
 
 fib2.o: fib2.c fib2.h
-	${CC} ${CCFLAGS} -c fib2.c -o fib2.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 fib2_driver.o: fib2_driver.c
-	${CC} ${CCFLAGS} -c fib2_driver.c -o fib2_driver.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 fib2_driver: fib2.o fib2_driver.o
-	${CC} ${CCFLAGS} fib2.o fib2_driver.o -o fib2_driver
+	${CC} ${CCFLAGS} $^ -o $@
 
 clean:
-	rm -f fib2_driver.o fib2.o
+	rm -f *.o
 
 veryclean: clean
 	rm -f fib2_driver
