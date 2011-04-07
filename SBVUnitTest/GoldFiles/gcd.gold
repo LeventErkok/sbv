@@ -62,7 +62,7 @@ int main(void)
   const SWord8 __result = sgcd(55, 154);
   
   printf("sgcd(55, 154) = %"PRIu8"\n", __result);
-  
+
   return 0;
 }
 == END: "sgcd_driver.c" ==================

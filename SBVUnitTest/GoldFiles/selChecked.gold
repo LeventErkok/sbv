@@ -62,7 +62,7 @@ int main(void)
   const SWord8 __result = selChecked(65);
   
   printf("selChecked(65) = %"PRIu8"\n", __result);
-  
+
   return 0;
 }
 == END: "selChecked_driver.c" ==================

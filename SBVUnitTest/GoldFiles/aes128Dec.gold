@@ -85,7 +85,7 @@ int main(void)
   int ct_ctr;
   for(ct_ctr = 0;  ct_ctr < 4 ; ++ct_ctr)
     printf("  ct[%d] = 0x%08"PRIx32"UL\n", ct_ctr ,ct[ct_ctr]);
-  
+
   return 0;
 }
 == END: "aes128Dec_driver.c" ==================

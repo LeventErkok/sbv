@@ -62,7 +62,7 @@ int main(void)
   const SWord32 __result = fib1(0x0000000cUL);
   
   printf("fib1(0x0000000cUL) = 0x%08"PRIx32"UL\n", __result);
-  
+
   return 0;
 }
 == END: "fib1_driver.c" ==================

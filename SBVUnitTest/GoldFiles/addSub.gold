@@ -68,7 +68,7 @@ int main(void)
   printf("addSub(76, 92, &sum, &dif) ->\n");
   printf("  sum = %"PRIu8"\n", sum);
   printf("  dif = %"PRIu8"\n", dif);
-  
+
   return 0;
 }
 == END: "addSub_driver.c" ==================

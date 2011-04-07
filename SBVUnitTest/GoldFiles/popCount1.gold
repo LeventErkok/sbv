@@ -62,7 +62,7 @@ int main(void)
   const SWord8 __result = popCount(0x0123456789abcdefULL);
   
   printf("popCount(0x0123456789abcdefULL) = %"PRIu8"\n", __result);
-  
+
   return 0;
 }
 == END: "popCount_driver.c" ==================

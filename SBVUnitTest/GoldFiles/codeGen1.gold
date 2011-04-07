@@ -97,7 +97,7 @@ int main(void)
   int yArr_ctr;
   for(yArr_ctr = 0;  yArr_ctr < 45 ; ++yArr_ctr)
     printf("  yArr[%d] = %"PRId64"LL\n", yArr_ctr ,yArr[yArr_ctr]);
-  
+
   return 0;
 }
 == END: "foo_driver.c" ==================
