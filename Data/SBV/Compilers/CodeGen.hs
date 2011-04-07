@@ -59,6 +59,9 @@ initCgState = CgState {
         , cgFinalConfig  = defaultCgConfig
         }
 
+-- | The code-generation monad. Allows for precise layout of input values
+-- reference parameters (for returning composite values in languages such as C),
+-- and return values.
 newtype SBVCodeGen a = SBVCodeGen (StateT CgState Symbolic a)
                    deriving (Monad, MonadIO, MonadState CgState)
 
@@ -132,16 +135,6 @@ data CgPgmKind = CgMakefile
                | CgHeader [Doc]
                | CgSource
                | CgDriver
-
-isCgMakefile, isCgHeader, isCgSource, isCgDriver :: (FilePath, (CgPgmKind, [Doc])) -> Bool
-isCgMakefile (_, (CgMakefile{}, _)) = True
-isCgMakefile _                      = False
-isCgHeader   (_, (CgHeader{}, _))   = True
-isCgHeader   _                      = False
-isCgSource   (_, (CgSource{}, _))   = True
-isCgSource   _                      = False
-isCgDriver   (_, (CgDriver{}, _))   = True
-isCgDriver   _                      = False
 
 instance Show CgPgmBundle where
    show (CgPgmBundle fs) = concat $ intersperse "\n" $ map showFile fs
