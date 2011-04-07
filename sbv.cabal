@@ -53,7 +53,7 @@ Description:   Express properties about bit-precise Haskell programs and automat
                Galois, Inc. (<http://www.galois.com>) has contributed to the development of SBV,
                by providing time and computing machinery. The following people reported bugs,
                provided comments/feedback, or contributed to the development of SBV in various ways:
-               Iavor Diatchki, Lee Pike, Don Stewart, and Josef Svenningsson.
+               Ian Blumenfeld, Iavor Diatchki, Lee Pike, Austin Seipp, Don Stewart, and Josef Svenningsson.
 
 Copyright:     Levent Erkok, 2010-2011
 License:       BSD3
