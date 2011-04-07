@@ -40,8 +40,7 @@ Description:   Express properties about bit-precise Haskell programs and automat
                  * quick-checked
                .
                The SBV library can also compile Haskell functions that manipulate symbolic
-               values directly to C, rendering them as straight-line C programs that can be
-               executed in, say, embedded platforms.
+               values directly to C, rendering them as straight-line C programs.
                .
                In addition to the library, the installation will create the
                executable @SBVUnitTests@. You should run it once the installation is complete,
