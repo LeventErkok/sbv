@@ -43,6 +43,7 @@ module Data.SBV.Examples.Crypto.RC4
 , decrypt              -- :: [SWord8] -> RC4 -> ([SWord8], RC4)
 
   -- * Tests & Verification
+, checkProps           -- :: IO ()
 , doAllTests           -- :: IO ()
 
   -- * C Code generation
@@ -51,6 +52,7 @@ module Data.SBV.Examples.Crypto.RC4
 import Data.SBV
 import Data.Maybe (fromJust)
 import qualified Data.ByteString as B
+import Control.Monad
 
 import qualified Crypto.Cipher.RC4 as Crypto
 import qualified Data.Vector.Unboxed as V
@@ -157,11 +159,22 @@ decrypt = encrypt
 
 -- | Basic quickcheck properties for the crypto-api interface and some checks against
 -- @cryptocipher@'s RC4 implementation.
-checkRc4Props :: IO ()
-checkRc4Props = sequence_ [ test "cryptocipher ksa equivalence" $ quickCheck prop_crypto_ksa_eq
-                          , test "cryptocipher encrypt equivalence" $ quickCheck prop_crypto_enc_eq
-                          , test "cryptocipher decrypt equivalence" $ quickCheck prop_crypto_dec_eq
-                          ]
+-- 
+--  * Tests our key-scheduling algorithm against cryptocipher's implementation.
+-- 
+--  * Tests our encryption algorithm against cryptocipher's implementation.
+-- 
+--  * Tests our decryption algorithm against cryptocipher's implementation.
+-- 
+--  * Checks all the test vectors described in <http://tools.ietf.org/html/draft-josefsson-rc4-test-vectors-02>
+-- 
+checkProps :: IO ()
+checkProps = sequence_ [ test "cryptocipher ksa equivalence" $ quickCheck prop_crypto_ksa_eq
+                       , test "cryptocipher encrypt equivalence" $ quickCheck prop_crypto_enc_eq
+                       , test "cryptocipher decrypt equivalence" $ quickCheck prop_crypto_dec_eq
+                       -- Test vectors
+                       , test "test vectors are correct" check_all_test_vectors
+                       ]
   where prop_crypto_ksa_eq :: [Word8] -> Bool
         prop_crypto_ksa_eq key = (length key) > 1 ==> k1 == k2
           where k1 = let (v,_,_) = initCtx' key in sw2w $ arr2sw v
@@ -182,9 +195,73 @@ checkRc4Props = sequence_ [ test "cryptocipher ksa equivalence" $ quickCheck pro
                            (_,enc) = Crypto.encrypt k $ B.pack pt
                            (_,dec) = Crypto.decrypt k enc
                        in dec
+        
+        -- Test vectors
+        check_test_vector :: RC4 -> Int -> [Word8] -> Bool
+        check_test_vector st offset v = v == sw2w (take vl $ drop offset ks)
+          where ks = keystream st
+                vl = length v
+
+        check_key_vectors :: [Word8] -> [(Int,[Word8])] -> IO () 
+        check_key_vectors key vectors = do
+          putStrLn $ "checking key " ++ show key ++ " (" ++ show (length key * 8) ++ "bit)"
+          let ctx = initCtx' key
+          forM_ vectors $ \x -> do
+            let v = uncurry (check_test_vector ctx) x
+            unless v $ putStrLn $ "FAILURE: key = " ++ show key ++ ", vector = " ++ show vectors
+        
+        check_all_test_vectors :: IO ()
+        check_all_test_vectors = forM_ vecs $ uncurry check_key_vectors
+          where vecs = [ ([1..5], 
+                            [ (0x0, [0xb2, 0x39, 0x63, 0x05, 0xf0, 0x3d, 0xc0, 0x27, 0xcc, 0xc3, 0x52, 0x4a, 0x0a, 0x11, 0x18, 0xa8])
+                            ])
+                       , ([1..7],
+                            [
+                            ])
+                       , ([1..8],
+                            [
+                            ])
+                       , ([1..0x0a],
+                            [
+                            ])
+                       , ([1..0x10],
+                            [
+                            ])
+                       , ([1..0x18],
+                            [
+                            ])
+                       , ([1..0x20],
+                            [
+                            ])
+                         
+                       , ([0x83,0x32,0x22,0x77,0x2a],
+                            [
+                            ])
+                       , ([0x19, 0x10, 0x83, 0x32, 0x22, 0x77, 0x2a],
+                            [
+                            ])
+                       , ([0x64, 0x19, 0x10, 0x83, 0x32, 0x22, 0x77, 0x2a],
+                            [
+                            ])
+                       , ([0x8b, 0x37, 0x64, 0x19, 0x10, 0x83, 0x32, 0x22, 0x77, 0x2a],
+                            [
+                            ])
+                       , ([0xeb, 0xb4, 0x62, 0x27, 0xc6, 0xcc, 0x8b, 0x37, 0x64, 0x19, 0x10, 0x83, 0x32, 0x22, 0x77, 0x2a],
+                            [
+                            ])
+                       , ([0xc1, 0x09, 0x16, 0x39, 0x08, 0xeb, 0xe5, 0x1d, 0xeb, 0xb4, 0x62, 0x27, 0xc6, 0xcc, 0x8b, 0x37, 0x64, 0x19, 0x10, 0x83, 0x32, 0x22, 0x77, 0x2a],
+                            [
+                            ])
+                       , ([0x1a, 0xda, 0x31, 0xd5, 0xcf, 0x68, 0x82, 0x21, 0xc1, 0x09, 0x16, 0x39, 0x08, 0xeb, 0xe5, 0x1d, 0xeb, 0xb4, 0x62, 0x27, 0xc6, 0xcc, 0x8b, 0x37, 0x64, 0x19, 0x10, 0x83, 0x32, 0x22, 0x77, 0x2a],
+                            [
+                            ])
+                       ]
+                
+-- lazy keystream generation
+keystream :: RC4 -> [SWord8]
+keystream st = let (z,st') = prga st in z:(keystream st')
 
 -- ByteString interface, used for testing.
-
 initCtx' :: [Word8] -> RC4
 initCtx' = initCtx . w2sw
 
@@ -196,7 +273,6 @@ encryptBS ctx bs
 
 decryptBS :: RC4 -> B.ByteString -> (B.ByteString, RC4)
 decryptBS = encryptBS
-
 
 
 -- | This gives a correctness theorem for 'swap' and proves it via the
@@ -227,13 +303,9 @@ proveRc4IsCorrect
                 (dec,_) = decrypt ctx enc
             in dec .== [pt1,pt2,pt3,pt4,pt5]
 
--- | Run all tests and verification functions. We test:
--- 
---  * Tests our key-scheduling algorithm against cryptocipher's implementation.
--- 
---  * Tests our encryption algorithm against cryptocipher's implementation.
--- 
---  * Tests our decryption algorithm against cryptocipher's implementation.
+-- | Run all tests and verification functions:
+--  
+--  * Runs all QuickCheck tests
 -- 
 --  * Verifies our 'swap' implementation is correct, via the SMT solver.
 -- 
@@ -261,11 +333,10 @@ proveRc4IsCorrect
 -- @
 -- 
 doAllTests :: IO ()
-doAllTests 
-  = sequence_ [ checkRc4Props
-              , verif "swap is correct" proveSwapIsCorrect
-              , verif "rc4 is correct"  proveRc4IsCorrect
-              ]
+doAllTests = sequence_ [ checkProps
+                       , verif "swap is correct" proveSwapIsCorrect
+                       , verif "rc4 is correct"  proveRc4IsCorrect
+                       ]
 
 test, verif :: String -> IO a -> IO ()
 test x f = putStrLn ("testing: "++x) >> f >> return ()
