@@ -535,12 +535,12 @@ cgAES128BlockEncrypt = compileToC Nothing "aes128BlockEncrypt" $ do
    The generated library is a typical @.a@ archive, that can be linked using the C-compiler as usual.
 -}
 
--- | Generate a C library, containing functions for performing 128-bit enc/dec/key-expansion.
-cgAES128Library :: IO ()
-cgAES128Library = compileToCLib Nothing "aes128Lib" [ ("aes128KeySchedule",  keySchedule)
-                                                    , ("aes128BlockEncrypt", enc128)
-                                                    , ("aes128BlockDecrypt", dec128)
-                                                    ]
+-- | Components of the AES-128 implementation that the library is generated from
+aes128LibComponents :: [(String, SBVCodeGen ())]
+aes128LibComponents = [ ("aes128KeySchedule",  keySchedule)
+                      , ("aes128BlockEncrypt", enc128)
+                      , ("aes128BlockDecrypt", dec128)
+                      ]
   where -- key-schedule
         keySchedule = do key <- cgInputArr 4 "key"     -- key
                          let (encKS, decKS) = aesKeySchedule key
@@ -568,3 +568,7 @@ cgAES128Library = compileToCLib Nothing "aes128Lib" [ ("aes128KeySchedule",  key
         chop4 :: [a] -> [[a]]
         chop4 [] = []
         chop4 xs = let (f, r) = splitAt 4 xs in f : chop4 r
+
+-- | Generate a C library, containing functions for performing 128-bit enc/dec/key-expansion.
+cgAES128Library :: IO ()
+cgAES128Library = compileToCLib Nothing "aes128Lib" aes128LibComponents
