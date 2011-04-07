@@ -13,6 +13,8 @@ Version 0.9.18, Not yet released
       work together.
   Examples:
     * Update code-generation examples to use the new API.
+    * Include a library-generation example for doing 128-bit
+      AES encryption
 
 ======================================================================
 Version 0.9.17, 2011-03-29
