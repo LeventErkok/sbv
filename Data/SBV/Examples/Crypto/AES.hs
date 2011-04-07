@@ -570,5 +570,10 @@ aes128LibComponents = [ ("aes128KeySchedule",  keySchedule)
         chop4 xs = let (f, r) = splitAt 4 xs in f : chop4 r
 
 -- | Generate a C library, containing functions for performing 128-bit enc/dec/key-expansion.
+-- A note on performance: In a very rough speed test, the generated code was able to do
+-- 6.3 million block encryptions per second on a decent MacBook Pro. On the same machine, OpenSSL
+-- reports 8.2 million block encryptions per second. So, the generated code is about 25% slower
+-- as compared to the highly optimized OpenSSL implementation. (Note that the speed test was done
+-- somewhat simplistically, so these numbers should be considered very rough estimates.)
 cgAES128Library :: IO ()
 cgAES128Library = compileToCLib Nothing "aes128Lib" aes128LibComponents
