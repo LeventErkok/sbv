@@ -173,7 +173,7 @@ checkProps = sequence_ [ test "cryptocipher ksa equivalence" $ quickCheck prop_c
                        , test "cryptocipher encrypt equivalence" $ quickCheck prop_crypto_enc_eq
                        , test "cryptocipher decrypt equivalence" $ quickCheck prop_crypto_dec_eq
                        -- Test vectors
-                       , test "test vectors are correct" check_all_test_vectors
+                       , test "all test vectors are correct" check_all_test_vectors
                        ]
   where prop_crypto_ksa_eq :: [Word8] -> Bool
         prop_crypto_ksa_eq key = (length key) > 1 ==> k1 == k2
@@ -204,14 +204,14 @@ checkProps = sequence_ [ test "cryptocipher ksa equivalence" $ quickCheck prop_c
 
         check_key_vectors :: [Word8] -> [(Int,[Word8])] -> IO () 
         check_key_vectors key vectors = do
-          putStrLn $ "checking key " ++ show key ++ " (" ++ show (length key * 8) ++ "bit)"
+          putStrLn $ "checking key " ++ show key ++ " (" ++ show (length key * 8) ++ "-bit)"
           let ctx = initCtx' key
           forM_ vectors $ \idx -> do
             let v = uncurry (check_test_vector ctx) idx
             unless v $ putStrLn $ "FAILURE: idx = " ++ show idx ++ ", vector = " ++ show vectors
         
         check_all_test_vectors :: IO ()
-        check_all_test_vectors = forM_ vecs $ uncurry check_key_vectors
+        check_all_test_vectors = mapM_ (uncurry check_key_vectors) vecs
           where vecs = [ ([1..5], 
                             [ (0x0,    [0xb2, 0x39, 0x63, 0x05, 0xf0, 0x3d, 0xc0, 0x27, 0xcc, 0xc3, 0x52, 0x4a, 0x0a, 0x11, 0x18, 0xa8])
                             , (0x10,   [0x69, 0x82, 0x94, 0x4f, 0x18, 0xfc, 0x82, 0xd5, 0x89, 0xc4, 0x03, 0xa4, 0x7a, 0x0d, 0x09, 0x19])
