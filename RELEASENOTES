@@ -2,7 +2,14 @@ Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
 ======================================================================
-Version 0.9.18, Not yet released
+Version 0.9.19, Not yet released
+
+  Examples:
+    * Add an RC4 implementation with library generation for doing
+      RC4 encryption with 40-bit keys.
+
+======================================================================
+Version 0.9.18, 2011-04-07
 
   Code:
     * Re-engineer code-generation, and compilation to C.
@@ -13,7 +20,8 @@ Version 0.9.18, Not yet released
       work together.
   Examples:
     * Update code-generation examples to use the new API.
-    * Add an RC4 implementation.
+    * Include a library-generation example for doing 128-bit
+      AES encryption
 
 ======================================================================
 Version 0.9.17, 2011-03-29

@@ -7,16 +7,16 @@ CCFLAGS=-Wall -O3 -DNDEBUG -fomit-frame-pointer
 all: selChecked_driver
 
 selChecked.o: selChecked.c selChecked.h
-	${CC} ${CCFLAGS} -c selChecked.c -o selChecked.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 selChecked_driver.o: selChecked_driver.c
-	${CC} ${CCFLAGS} -c selChecked_driver.c -o selChecked_driver.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 selChecked_driver: selChecked.o selChecked_driver.o
-	${CC} ${CCFLAGS} selChecked.o selChecked_driver.o -o selChecked_driver
+	${CC} ${CCFLAGS} $^ -o $@
 
 clean:
-	rm -f selChecked_driver.o selChecked.o
+	rm -f *.o
 
 veryclean: clean
 	rm -f selChecked_driver
@@ -62,7 +62,7 @@ int main(void)
   const SWord8 __result = selChecked(65);
   
   printf("selChecked(65) = %"PRIu8"\n", __result);
-  
+
   return 0;
 }
 == END: "selChecked_driver.c" ==================

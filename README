@@ -62,8 +62,7 @@ return a satisfying assignment, if there is one. The `allSat` function returns
 all satisfying assignments, lazily.
 
 The SBV library can also compile Haskell functions that manipulate symbolic
-values directly to C, rendering them as straight-line C programs that can be
-executed in, say, embedded platforms.
+values directly to C, rendering them as straight-line C programs.
 
 Use of SMT solvers
 ==================
@@ -120,4 +119,4 @@ Thanks
 by providing time and computing machinery.
 
 The following people reported bugs, provided comments/feedback, or contributed to the development of SBV in various ways:
-Iavor Diatchki, Lee Pike, Austin Seipp, Don Stewart, and Josef Svenningsson.
+Ian Blumenfeld, Ian Calvert, Iavor Diatchki, Lee Pike, Austin Seipp, Don Stewart, and Josef Svenningsson.

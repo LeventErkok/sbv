@@ -7,16 +7,16 @@ CCFLAGS=-Wall -O3 -DNDEBUG -fomit-frame-pointer
 all: aes128Enc_driver
 
 aes128Enc.o: aes128Enc.c aes128Enc.h
-	${CC} ${CCFLAGS} -c aes128Enc.c -o aes128Enc.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 aes128Enc_driver.o: aes128Enc_driver.c
-	${CC} ${CCFLAGS} -c aes128Enc_driver.c -o aes128Enc_driver.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 aes128Enc_driver: aes128Enc.o aes128Enc_driver.o
-	${CC} ${CCFLAGS} aes128Enc.o aes128Enc_driver.o -o aes128Enc_driver
+	${CC} ${CCFLAGS} $^ -o $@
 
 clean:
-	rm -f aes128Enc_driver.o aes128Enc.o
+	rm -f *.o
 
 veryclean: clean
 	rm -f aes128Enc_driver
@@ -85,7 +85,7 @@ int main(void)
   int ct_ctr;
   for(ct_ctr = 0;  ct_ctr < 4 ; ++ct_ctr)
     printf("  ct[%d] = 0x%08"PRIx32"UL\n", ct_ctr ,ct[ct_ctr]);
-  
+
   return 0;
 }
 == END: "aes128Enc_driver.c" ==================

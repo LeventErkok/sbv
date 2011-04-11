@@ -168,6 +168,9 @@ module Data.SBV (
 
   -- * Code generation from symbolic programs
   -- $cCodeGeneration
+  , SBVCodeGen
+
+  -- ** Setting code-generation options
   , cgPerformRTCs, cgSetDriverValues
 
   -- ** Designating inputs

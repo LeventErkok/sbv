@@ -7,16 +7,16 @@ CCFLAGS=-Wall -O3 -DNDEBUG -fomit-frame-pointer
 all: foo_driver
 
 foo.o: foo.c foo.h
-	${CC} ${CCFLAGS} -c foo.c -o foo.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 foo_driver.o: foo_driver.c
-	${CC} ${CCFLAGS} -c foo_driver.c -o foo_driver.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 foo_driver: foo.o foo_driver.o
-	${CC} ${CCFLAGS} foo.o foo_driver.o -o foo_driver
+	${CC} ${CCFLAGS} $^ -o $@
 
 clean:
-	rm -f foo_driver.o foo.o
+	rm -f *.o
 
 veryclean: clean
 	rm -f foo_driver
@@ -97,7 +97,7 @@ int main(void)
   int yArr_ctr;
   for(yArr_ctr = 0;  yArr_ctr < 45 ; ++yArr_ctr)
     printf("  yArr[%d] = %"PRId64"LL\n", yArr_ctr ,yArr[yArr_ctr]);
-  
+
   return 0;
 }
 == END: "foo_driver.c" ==================

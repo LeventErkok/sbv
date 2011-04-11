@@ -7,16 +7,16 @@ CCFLAGS=-Wall -O3 -DNDEBUG -fomit-frame-pointer
 all: sgcd_driver
 
 sgcd.o: sgcd.c sgcd.h
-	${CC} ${CCFLAGS} -c sgcd.c -o sgcd.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 sgcd_driver.o: sgcd_driver.c
-	${CC} ${CCFLAGS} -c sgcd_driver.c -o sgcd_driver.o
+	${CC} ${CCFLAGS} -c $< -o $@
 
 sgcd_driver: sgcd.o sgcd_driver.o
-	${CC} ${CCFLAGS} sgcd.o sgcd_driver.o -o sgcd_driver
+	${CC} ${CCFLAGS} $^ -o $@
 
 clean:
-	rm -f sgcd_driver.o sgcd.o
+	rm -f *.o
 
 veryclean: clean
 	rm -f sgcd_driver
@@ -62,7 +62,7 @@ int main(void)
   const SWord8 __result = sgcd(55, 154);
   
   printf("sgcd(55, 154) = %"PRIu8"\n", __result);
-  
+
   return 0;
 }
 == END: "sgcd_driver.c" ==================

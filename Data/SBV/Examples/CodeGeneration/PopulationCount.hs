@@ -198,19 +198,19 @@ fastPopCountIsCorrect x = popCount x .== popCount_Slow x
 -- > all: popCount_driver
 -- > 
 -- > popCount.o: popCount.c popCount.h
--- > 	${CC} ${CCFLAGS} -c popCount.c -o popCount.o
+-- > 	${CC} ${CCFLAGS} -c $< -o $@
 -- > 
 -- > popCount_driver.o: popCount_driver.c
--- > 	${CC} ${CCFLAGS} -c popCount_driver.c -o popCount_driver.o
+-- > 	${CC} ${CCFLAGS} -c $< -o $@
 -- > 
 -- > popCount_driver: popCount.o popCount_driver.o
--- > 	${CC} ${CCFLAGS} popCount.o popCount_driver.o -o popCount_driver
+-- > 	${CC} ${CCFLAGS} $^ -o $@
 -- > 
 -- > clean:
--- > 	rm -f popCount_driver.o popCount.o
+-- > 	rm -f *.o
 -- > 
 -- > veryclean: clean
--- > 	rm -f popCount_driver
+-- >	rm -f popCount_driver
 genPopCountInC :: IO ()
 genPopCountInC = compileToC Nothing "popCount" $ do
         x <- cgInput "x"

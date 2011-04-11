@@ -535,12 +535,12 @@ cgAES128BlockEncrypt = compileToC Nothing "aes128BlockEncrypt" $ do
    The generated library is a typical @.a@ archive, that can be linked using the C-compiler as usual.
 -}
 
--- | Generate a C library, containing functions for performing 128-bit enc/dec/key-expansion.
-cgAES128Library :: IO ()
-cgAES128Library = compileToCLib Nothing "aes128Lib" [ ("aes128KeySchedule",  keySchedule)
-                                                    , ("aes128BlockEncrypt", enc128)
-                                                    , ("aes128BlockDecrypt", dec128)
-                                                    ]
+-- | Components of the AES-128 implementation that the library is generated from
+aes128LibComponents :: [(String, SBVCodeGen ())]
+aes128LibComponents = [ ("aes128KeySchedule",  keySchedule)
+                      , ("aes128BlockEncrypt", enc128)
+                      , ("aes128BlockDecrypt", dec128)
+                      ]
   where -- key-schedule
         keySchedule = do key <- cgInputArr 4 "key"     -- key
                          let (encKS, decKS) = aesKeySchedule key
@@ -568,3 +568,12 @@ cgAES128Library = compileToCLib Nothing "aes128Lib" [ ("aes128KeySchedule",  key
         chop4 :: [a] -> [[a]]
         chop4 [] = []
         chop4 xs = let (f, r) = splitAt 4 xs in f : chop4 r
+
+-- | Generate a C library, containing functions for performing 128-bit enc/dec/key-expansion.
+-- A note on performance: In a very rough speed test, the generated code was able to do
+-- 6.3 million block encryptions per second on a decent MacBook Pro. On the same machine, OpenSSL
+-- reports 8.2 million block encryptions per second. So, the generated code is about 25% slower
+-- as compared to the highly optimized OpenSSL implementation. (Note that the speed test was done
+-- somewhat simplistically, so these numbers should be considered very rough estimates.)
+cgAES128Library :: IO ()
+cgAES128Library = compileToCLib Nothing "aes128Lib" aes128LibComponents
