@@ -303,7 +303,13 @@ generateTrace config isSat comments predicate = do
           Result is consts tbls arrs uis axs pgm [o@(SW (False, 1) _)] | sizeOf o == 1 ->
              timeIf isTiming "translation" $ let uiMap = catMaybes (map arrayUIKind arrs) ++ map unintFnUIKind uis
                                              in return (is, uiMap, toSMTLib isSat comments is consts tbls arrs uis axs pgm o)
-          _ -> error $ "SBVProver.generateTrace: Impossible happened:\n" ++ show res
+          Result _is _consts _tbls _arrs _uis _axs _pgm os -> case length os of
+                        0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
+                        1  -> error $ "Impossible happened, non-boolean output in " ++ show os
+                                    ++ "\nDetected while generating the trace:\n" ++ show res
+                        _  -> error $ "User error: Multiple output values detected: " ++ show os
+                                    ++ "\nDetected while generating the trace:\n" ++ show res
+                                    ++ "\n*** Check calls to \"output\", they are typically not needed!"
 
 -- | Equality as a proof method. Allows for
 -- very concise construction of equivalence proofs, which is very typical in
