@@ -753,6 +753,10 @@ instance NFData Pgm
 instance NFData SW
 instance NFData SBVType
 instance NFData UnintKind
+instance NFData a => NFData (Cached a) where
+  rnf (Cached f) = f `seq` ()
+instance NFData a => NFData (SBV a) where
+  rnf (SBV x y) = rnf x `seq` rnf y `seq` ()
 
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where
