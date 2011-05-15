@@ -414,11 +414,11 @@ instance (Bits a, SymWord a) => Bits (SBV a) where
   rotateL x y
     | y < 0                = rotateR x (-y)
     | y == 0               = x
-    | True                 = liftSym1 (mkSymOp1 (Rol y)) (rot True (bitSize x) y) x
+    | True                 = let sz = bitSize x in liftSym1 (mkSymOp1 (Rol (y `mod` sz))) (rot True sz y) x
   rotateR x y
     | y < 0                = rotateL x (-y)
     | y == 0               = x
-    | True                 = liftSym1 (mkSymOp1 (Ror y)) (rot False (bitSize x) y) x
+    | True                 = let sz = bitSize x in liftSym1 (mkSymOp1 (Ror (y `mod` sz))) (rot False sz y) x
 
 -- Since the underlying representation is just Integers, rotations has to be careful on the bit-size
 rot :: Bool -> Int -> Int -> Integer -> Integer
