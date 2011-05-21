@@ -99,6 +99,7 @@ Library
                   , Data.SBV.Examples.Crypto.AES
                   , Data.SBV.Examples.Polynomials.Polynomials
                   , Data.SBV.Examples.PrefixSum.PrefixSum
+                  , Data.SBV.Examples.Puzzles.Counts
                   , Data.SBV.Examples.Puzzles.DogCatMouse
                   , Data.SBV.Examples.Puzzles.Euler185
                   , Data.SBV.Examples.Puzzles.MagicSquare
