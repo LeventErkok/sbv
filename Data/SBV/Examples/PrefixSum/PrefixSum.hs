@@ -30,7 +30,7 @@ import Data.SBV.Internals(runSymbolic)
 -- We merely represent power-lists by ordinary lists.
 type PowerList a = [a]
 
--- | The tie operator, concatenation
+-- | The tie operator, concatenation.
 tiePL :: PowerList a -> PowerList a -> PowerList a
 tiePL = (++)
 
@@ -41,7 +41,7 @@ zipPL []     []     = []
 zipPL (x:xs) (y:ys) = x : y : zipPL xs ys
 zipPL _      _      = error "zipPL: nonsimilar powerlists received"
 
--- | Inverse of zipping
+-- | Inverse of zipping.
 unzipPL :: PowerList a -> (PowerList a, PowerList a)
 unzipPL = unzip . chunk2
   where chunk2 []       = []
@@ -52,7 +52,7 @@ unzipPL = unzip . chunk2
 -- * Reference prefix-sum implementation
 ----------------------------------------------------------------------
 
--- | Reference prefix sum (@ps@) is simply Haskell's @scanl1@ function
+-- | Reference prefix sum (@ps@) is simply Haskell's @scanl1@ function.
 ps :: (a, a -> a -> a) -> PowerList a -> PowerList a
 ps (_, f) = scanl1 f
 
@@ -76,7 +76,7 @@ lf (zero, f) pl = zipPL (zipWith f (rsh lfpq) p) lfpq
 -- * Sample proofs for concrete operators
 ----------------------------------------------------------------------
 
--- | Correctness theorem, for a powerlist of given size, an associative operator, and its left-unit element
+-- | Correctness theorem, for a powerlist of given size, an associative operator, and its left-unit element.
 flIsCorrect :: Int -> (forall a. (OrdSymbolic a, Bits a) => (a, a -> a -> a)) -> Symbolic SBool
 flIsCorrect n zf = do
         args :: PowerList SWord32 <- mkFreeVars n
@@ -96,7 +96,7 @@ thm2 = prove $ flIsCorrect 16 (0, smax)
 -- * Attempt at proving for arbitrary operators
 ----------------------------------------------------------------------
 -- | Try proving correctness for an arbitrary operator. This proof will /not/ go through since the
--- SMT solver does not know that the operator associative and has the given left-unit element
+-- SMT solver does not know that the operator associative and has the given left-unit element. We have:
 --
 -- >>> thm3
 -- Falsifiable. Counter-example:
@@ -195,7 +195,7 @@ genPrefixSumInstance n = do
 -- >>> prefixSum 4
 -- Q.E.D.
 --
--- Note that these proofs tend to run long. Also, Yices-1.0.28 ran out of memory
+-- Note that these proofs tend to run long. Also, Yices ran out of memory
 -- and crashed on my box when I tried for size @8@, after running for about 2.5 minutes..
 prefixSum :: Int -> IO ThmResult
 prefixSum i
