@@ -4,7 +4,10 @@ GitHub:  <http://github.com/LeventErkok/sbv>
 ======================================================================
 Version 0.9.19, Not yet released
     
-    * Current working version
+   Code:
+    * Many minor improvements
+   Examples:
+    * Add sentence-counting example
 
 ======================================================================
 Version 0.9.18, 2011-04-07
