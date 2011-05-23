@@ -217,7 +217,7 @@ addRoundKey = zipWith xor
 -- ** Tables for T-Box encryption
 -----------------------------------------------------------------------------
 
--- | T-box table generation function.for encryption
+-- | T-box table generation function for encryption
 t0Func :: GF28 -> [GF28]
 t0Func a = [s `gf28Mult` 2, s, s, s `gf28Mult` 3] where s = sbox a
 

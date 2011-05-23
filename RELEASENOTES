@@ -3,9 +3,12 @@ GitHub:  <http://github.com/LeventErkok/sbv>
 
 ======================================================================
 Version 0.9.19, Not yet released
-
-  Examples:
-    * Add an RC4 implementation with library generation for doing
+    
+   Code:
+    * Many minor improvements
+   Examples:
+    * Add sentence-counting example
+    * Add an RC4 implementation with library generation, for doing
       RC4 encryption with 40-bit keys.
 
 ======================================================================
