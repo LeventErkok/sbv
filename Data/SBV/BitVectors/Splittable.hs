@@ -72,7 +72,7 @@ cwJoin x y = literal (genJoin (sizeOf x) (cwVal x) (cwVal y))
 -- symbolic instances
 instance Splittable SWord64 SWord32 where
   split (SBV _ (Left z)) = cwSplit z
-  split z = (SBV (False, 32) (Right (cache x)), SBV (False, 32) (Right (cache y)))
+  split z                = (SBV (False, 32) (Right (cache x)), SBV (False, 32) (Right (cache y)))
     where x st = do zsw <- sbvToSW st z
                     newExpr st (False, 32) (SBVApp (Extract 63 32) [zsw])
           y st = do zsw <- sbvToSW st z
@@ -86,7 +86,7 @@ instance Splittable SWord64 SWord32 where
 
 instance Splittable SWord32 SWord16 where
   split (SBV _ (Left z)) = cwSplit z
-  split z                      = (SBV (False, 16) (Right (cache x)), SBV (False, 16) (Right (cache y)))
+  split z                = (SBV (False, 16) (Right (cache x)), SBV (False, 16) (Right (cache y)))
     where x st = do zsw <- sbvToSW st z
                     newExpr st (False, 16) (SBVApp (Extract 31 16) [zsw])
           y st = do zsw <- sbvToSW st z
