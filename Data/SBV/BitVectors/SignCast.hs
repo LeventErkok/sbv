@@ -31,14 +31,22 @@ import Data.SBV.BitVectors.Model()  -- instances only
 -- a signed one, the most significant bit is interpreted
 -- as the sign. We only define instances when the source
 -- and target types are precisely the same size.
--- The idea is that signCast and unsignCast must form
--- an isomorphism between the types a and b, i.e., we
--- expect the following property to hold.
+-- The idea is that 'signCast' and 'unsignCast' must form
+-- an isomorphism pair between the types @a@ and @b@, i.e., we
+-- expect the following two properties to hold:
 --
 -- @
 --    signCast . unsignCast = id
 --    unsingCast . signCast = id
 -- @
+--
+-- Note that one naive way to implement both these operations
+-- is simply to compute @fromBitsLE . blastLE@, i.e., first
+-- get all the bits of the word and then reconstruct in the target
+-- type. While this is semantically correct, it generates a lot
+-- of code (both during proofs via SMT-Lib, and when compiled to C).
+-- The goal of this class is to avoid that cost, so these operations
+-- can be compiled very efficiently, they will essentially become no-op's.
 --
 -- Minimal complete definition: All, no defaults.
 class SignCast a b | a -> b, b -> a where
