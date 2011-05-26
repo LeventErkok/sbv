@@ -5,6 +5,9 @@ GitHub:  <http://github.com/LeventErkok/sbv>
 Version 0.9.19, Not yet released
     
    Code:
+    * Add SignCast class for conversion between signed/unsigned
+      quantities for same-sized bit-vectors
+    * Expose HasSignAndSize class through Data.SBV.Internals
     * Many minor improvements
    Examples:
     * Add sentence-counting example

@@ -40,6 +40,7 @@ testSuite = mkTestSuite $ \_ -> test $
      ++ genIntTest "rotateL"          rotateL
      ++ genIntTest "rotateR"          rotateR
      ++ genBlasts
+     ++ genCasts
 
 genBinTest :: String -> (forall a. Bits a => a -> a -> a) -> [Test]
 genBinTest nm op = map mkTest $
@@ -87,19 +88,41 @@ genBlasts = map mkTest $
           ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- sw8s ]
           ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- si8s ]
           ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- si8s ]
-          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- sw16s ]
-          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- sw16s ]
-          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- si16s ]
-          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- si16s ]
-          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- sw32s ]
-          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- sw32s ]
-          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- si32s ]
-          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- si32s ]
-          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- sw64s ]
-          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- sw64s ]
-          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- si64s ]
-          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- si64s ]
+          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- sw16s]
+          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- sw16s]
+          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- si16s]
+          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- si16s]
+          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- sw32s]
+          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- sw32s]
+          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- si32s]
+          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- si32s]
+          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- sw64s]
+          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- sw64s]
+          ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- si64s]
+          ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- si64s]
   where mkTest (x, r) = "blast-" ++ show x ~: r `showsAs` "True"
+
+genCasts :: [Test]
+genCasts = map mkTest $
+            [(show x, unsignCast (signCast x) .== x) | x <- sw8s ]
+         ++ [(show x, unsignCast (signCast x) .== x) | x <- sw16s]
+         ++ [(show x, unsignCast (signCast x) .== x) | x <- sw32s]
+         ++ [(show x, unsignCast (signCast x) .== x) | x <- sw64s]
+         ++ [(show x, signCast (unsignCast x) .== x) | x <- si8s ]
+         ++ [(show x, signCast (unsignCast x) .== x) | x <- si16s]
+         ++ [(show x, signCast (unsignCast x) .== x) | x <- si8s ]
+         ++ [(show x, signCast (unsignCast x) .== x) | x <- si16s]
+         ++ [(show x, signCast (unsignCast x) .== x) | x <- si32s]
+         ++ [(show x, signCast (unsignCast x) .== x) | x <- si64s]
+         ++ [(show x, signCast x .== fromBitsLE (blastLE x))   | x <- sw8s ]
+         ++ [(show x, signCast x .== fromBitsLE (blastLE x))   | x <- sw16s]
+         ++ [(show x, signCast x .== fromBitsLE (blastLE x))   | x <- sw32s]
+         ++ [(show x, signCast x .== fromBitsLE (blastLE x))   | x <- sw64s]
+         ++ [(show x, unsignCast x .== fromBitsLE (blastLE x)) | x <- si8s ]
+         ++ [(show x, unsignCast x .== fromBitsLE (blastLE x)) | x <- si16s]
+         ++ [(show x, unsignCast x .== fromBitsLE (blastLE x)) | x <- si32s]
+         ++ [(show x, unsignCast x .== fromBitsLE (blastLE x)) | x <- si64s]
+  where mkTest (x, r) = "cast-" ++ show x ~: r `showsAs` "True"
 
 -- Concrete test data
 xsSigned, xsUnsigned :: (Num a, Enum a, Bounded a) => [a]

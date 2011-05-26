@@ -461,6 +461,15 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
         extract 15  0 (False, 32) a = text "(SWord16)" <+> a
         extract 15  8 (False, 16) a = text "(SWord8)"  <+> (parens (a <+> text ">> 8"))
         extract  7  0 (False, 16) a = text "(SWord8)"  <+> a
+        -- the followings are used by sign-conversions. (Check instances in Data/SBV/BitVectors/SignCast.hs).
+        extract 63  0 (False, 64) a = text "(SInt64)"  <+> a
+        extract 63  0 (True,  64) a = text "(SWord64)" <+> a
+        extract 31  0 (False, 32) a = text "(SInt32)"  <+> a
+        extract 31  0 (True,  32) a = text "(SWord32)" <+> a
+        extract 15  0 (False, 16) a = text "(SInt16)"  <+> a
+        extract 15  0 (True,  16) a = text "(SWord16)" <+> a
+        extract  7  0 (False,  8) a = text "(SInt8)"   <+> a
+        extract  7  0 (True,   8) a = text "(SWord8)"  <+> a
         extract  i  j (sg, sz)    _ = tbd $ "extract with " ++ show (i, j, (sg, sz))
         -- TBD: ditto here for join, just like extract above
         join ((False,  8), (False,  8), a, b) = parens ((parens (text "(SWord16)" <+> a)) <+> text "<< 8")  <+> text "|" <+> parens (text "(SWord16)" <+> b)
