@@ -602,8 +602,8 @@ verif x f = putStrLn ("verifying: "++x) >> f >> return ()
 -- both encryption and decryption. It uses 40bit keys and takes 64 byte inputs at
 -- a time.
 codegenRC4 :: IO ()
-codegenRC4 = compileToCLib (Just "rc4_out") "rc4Lib" [ ("rc4_cipher_128", rc4_cipher)
-                                                     , ("init_ctx_128", init_ctx)
+codegenRC4 = compileToCLib (Just "rc4_out") "rc4Lib" [ ("rc4_cipher_64byte", rc4_cipher)
+                                                     , ("init_ctx_40bit", init_ctx)
                                                      ]
   where -- context initialization
         init_ctx = do key <- cgInputArr 5 "key"
