@@ -11,8 +11,7 @@ Version 0.9.19, Not yet released
     * Many minor improvements, file re-orgs
    Examples:
     * Add sentence-counting example
-    * Add an RC4 implementation with library generation, for doing
-      RC4 encryption with 40-bit keys.
+    * Add an implementation of RC4
 
 ======================================================================
 Version 0.9.18, 2011-04-07
