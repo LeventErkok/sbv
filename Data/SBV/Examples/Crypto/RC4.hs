@@ -124,18 +124,19 @@ decrypt key ct = map cvt $ zipWith xor (keyScheduleString key) ct
 -----------------------------------------------------------------------------
 
 -- | Prove that round-trip encryption/decryption leaves the plain-text unchanged.
--- The theorem is stated parametrically over key and plain-text sizes. Here is the
--- proof for a 40-bit key (5 bytes) and 40-bit plaintext (again 5 bytes).
+-- The theorem is stated parametrically over key and plain-text sizes. The expression
+-- performs the proof for a 40-bit key (5 bytes) and 40-bit plaintext (again 5 bytes).
 --
 -- Note that this theorem is trivial to prove, since it is essentially establishing
 -- xor'in the same value twice leaves a word unchanged (i.e., @x `xor` y `xor` y = x@).
 -- However, the proof takes quite a while to complete, as it gives rise to a fairly
 -- large symbolic trace. The time spent in completing this proof is purely in the symbolic
--- simulation, while the actual proof time taken by Yices is comparatively negligable.
-rc4IsCorrect :: Int -> Int -> IO ThmResult
-rc4IsCorrect keyLen ptLen = prove $ do
-        key <- mkFreeVars keyLen
-        pt  <- mkFreeVars ptLen
+-- simulation, and communication with the SMT solver, while the actual proof time taken
+-- by Yices is comparatively negligable.
+rc4IsCorrect :: IO ThmResult
+rc4IsCorrect = prove $ do
+        key <- mkFreeVars 5
+        pt  <- mkFreeVars 5
         let ks  = keySchedule key
             ct  = zipWith xor ks pt
             pt' = zipWith xor ks ct
