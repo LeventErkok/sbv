@@ -698,10 +698,9 @@ data SFunArray a b = SFunArray (SBV a -> SBV b)
 instance (HasSignAndSize a, HasSignAndSize b) => Show (SFunArray a b) where
   show (SFunArray _) = "SFunArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"
 
--- | Make a constant fun-array always returning a fixed value.
--- Useful for creating arrays in a pure context. (Otherwise use `newArray`.)
-mkSFunArray :: SBV b -> SFunArray a b
-mkSFunArray i = SFunArray (const i)
+-- | Lift a function to an array. Useful for creating arrays in a pure context. (Otherwise use `newArray`.)
+mkSFunArray :: (SBV a -> SBV b) -> SFunArray a b
+mkSFunArray = SFunArray
 
 ---------------------------------------------------------------------------------
 -- * Cached values

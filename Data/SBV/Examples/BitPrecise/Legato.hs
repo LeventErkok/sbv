@@ -298,6 +298,6 @@ legatoInC :: IO ()
 legatoInC = compileToC Nothing "runLegato" $ do
                 x <- cgInput "x"
                 y <- cgInput "y"
-                let (hi, lo) = runLegato (0, x) (1, y) 2 (initMachine (mkSFunArray 0) (0, 0, 0, false, false))
+                let (hi, lo) = runLegato (0, x) (1, y) 2 (initMachine (mkSFunArray (const 0)) (0, 0, 0, false, false))
                 cgOutput "hi" hi
                 cgOutput "lo" lo
