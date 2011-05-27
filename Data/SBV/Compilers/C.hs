@@ -540,7 +540,7 @@ genLibMake libName fs =
        libh = libName ++ ".h"
        libd = libName ++ "_driver"
        os   = map (flip replaceExtension ".o") fs
-       mkObj o f =  text o <> text (":" ++ unwords [f, libh])
+       mkObj o f =  text o <> text (": " ++ unwords [f, libh])
                  $$ text "\t${CC} ${CCFLAGS} -c $< -o $@"
                  $$ text ""
 
