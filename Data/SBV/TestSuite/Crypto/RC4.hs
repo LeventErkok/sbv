@@ -18,9 +18,9 @@ import Data.SBV.Examples.Crypto.RC4
 
 -- Test suite
 testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
+testSuite = mkTestSuite $ \_ -> test [
    "rc4swap" ~: assert =<< isTheorem swapIsCorrect
  ]
  where swapIsCorrect i j = swap i j (swap j i s) `arrEq` s
-          where arrEq a b = bAnd [readArray a i .== readArray b i | i <- [0 .. 255]]
+          where arrEq a b = bAnd [readArray a k .== readArray b k | k <- [0 .. 255]]
                 s = mkSFunArray id
