@@ -18,7 +18,7 @@
 -- the code, and instead focus on a clear implementation. We then
 -- prove using the SMT solver that our encryption function followed by
 -- decryption yields the original string. From this, we extract fast C
--- code that executes RC4 over 256 byte inputs with a key size of 128
+-- code that executes RC4 over 64 byte inputs with a key size of 40
 -- bits.
 {-# LANGUAGE ScopedTypeVariables, PatternGuards #-}
 module Data.SBV.Examples.Crypto.RC4
@@ -51,12 +51,13 @@ module Data.SBV.Examples.Crypto.RC4
 ) where
 import Data.SBV
 import Data.Maybe (fromJust)
-import qualified Data.ByteString as B
 import Control.Monad
-
-import qualified Crypto.Cipher.RC4 as Crypto
-import qualified Data.Vector.Unboxed as V
 import Test.QuickCheck (quickCheck)
+
+--import qualified Crypto.Cipher.RC4 as Crypto
+--import qualified Data.Vector.Unboxed as V
+--import qualified Data.ByteString as B
+
 
 --------------------------
 -- Types
@@ -153,6 +154,25 @@ encrypt c plaintxt = k ([],c) plaintxt
 decrypt :: RC4 -> [SWord8] -> ([SWord8], RC4)
 decrypt = encrypt
 
+-- lazy keystream generation
+keystream :: RC4 -> [SWord8]
+keystream st = let (z,st') = prga st in z:(keystream st')
+
+{-
+-- ByteString interface, used for testing.
+initCtx' :: [Word8] -> RC4
+initCtx' = initCtx . w2sw
+
+encryptBS :: RC4 -> B.ByteString -> (B.ByteString, RC4)
+encryptBS ctx bs
+  = let (s,ctx') = encrypt ctx $ w2sw $ B.unpack bs
+    in (toBS s,ctx')
+  where toBS = B.pack . sw2w
+
+decryptBS :: RC4 -> B.ByteString -> (B.ByteString, RC4)
+decryptBS = encryptBS
+-}
+
 
 --------------------------
 -- Verification & Tests
@@ -168,13 +188,14 @@ decrypt = encrypt
 --  * Checks all the test vectors described in <http://tools.ietf.org/html/draft-josefsson-rc4-test-vectors-02>
 -- 
 checkProps :: IO ()
-checkProps = sequence_ [ test "cryptocipher ksa equivalence" $ quickCheck prop_crypto_ksa_eq
-                       , test "cryptocipher encrypt equivalence" $ quickCheck prop_crypto_enc_eq
-                       , test "cryptocipher decrypt equivalence" $ quickCheck prop_crypto_dec_eq
-                       -- Test vectors
-                       , test "reference test vectors" check_all_test_vectors
+checkProps = sequence_ [ test "reference test vectors" check_all_test_vectors -- Test vectors
+--                     , test "cryptocipher ksa equivalence" $ quickCheck prop_crypto_ksa_eq
+--                     , test "cryptocipher encrypt equivalence" $ quickCheck prop_crypto_enc_eq
+--                     , test "cryptocipher decrypt equivalence" $ quickCheck prop_crypto_dec_eq
                        ]
-  where prop_crypto_ksa_eq :: [Word8] -> Bool
+  
+  where {-
+        prop_crypto_ksa_eq :: [Word8] -> Bool
         prop_crypto_ksa_eq key = (length key) > 1 ==> k1 == k2
           where k1 = let (v,_,_) = initCtx' key in sw2w $ arr2sw v
                 k2 = let (v,_,_) = Crypto.initCtx key in V.toList v
@@ -194,7 +215,7 @@ checkProps = sequence_ [ test "cryptocipher ksa equivalence" $ quickCheck prop_c
                            (_,enc) = Crypto.encrypt k $ B.pack pt
                            (_,dec) = Crypto.decrypt k enc
                        in dec
-        
+        -}
         -- Test vectors
         check_test_vector :: RC4 -> Int -> [Word8] -> Bool
         check_test_vector st offset v = v == sw2w (take vl $ drop offset ks)
@@ -204,7 +225,7 @@ checkProps = sequence_ [ test "cryptocipher ksa equivalence" $ quickCheck prop_c
         check_key_vectors :: [Word8] -> [(Int,[Word8])] -> IO () 
         check_key_vectors key vectors = do
           putStrLn $ "checking keystream for key " ++ show key ++ " (" ++ show (length key * 8) ++ "-bit)"
-          let ctx = initCtx' key
+          let ctx = initCtx . w2sw $ key
           forM_ vectors $ \idx -> do
             let v = uncurry (check_test_vector ctx) idx
             unless v $ putStrLn $ "FAILURE: idx = " ++ show idx ++ ", vector = " ++ show vectors
@@ -492,23 +513,6 @@ checkProps = sequence_ [ test "cryptocipher ksa equivalence" $ quickCheck prop_c
                             , (0x1000, [0x37, 0x0b, 0x1c, 0x1f, 0xe6, 0x55, 0x91, 0x6d, 0x97, 0xfd, 0x0d, 0x47, 0xca, 0x1d, 0x72, 0xb8])
                             ])
                        ]
-                
--- lazy keystream generation
-keystream :: RC4 -> [SWord8]
-keystream st = let (z,st') = prga st in z:(keystream st')
-
--- ByteString interface, used for testing.
-initCtx' :: [Word8] -> RC4
-initCtx' = initCtx . w2sw
-
-encryptBS :: RC4 -> B.ByteString -> (B.ByteString, RC4)
-encryptBS ctx bs
-  = let (s,ctx') = encrypt ctx $ w2sw $ B.unpack bs
-    in (toBS s,ctx')
-  where toBS = B.pack . sw2w
-
-decryptBS :: RC4 -> B.ByteString -> (B.ByteString, RC4)
-decryptBS = encryptBS
 
 
 -- | This gives a correctness theorem for 'swap' and proves it via the
@@ -551,12 +555,6 @@ proveRc4IsCorrect
 -- 
 -- @
 --     *Data.SBV.Examples.Crypto.RC4> doAllTests 
---     testing: cryptocipher ksa equivalence
---     +++ OK, passed 100 tests.
---     testing: cryptocipher encrypt equivalence
---     +++ OK, passed 100 tests.
---     testing: cryptocipher decrypt equivalence
---     +++ OK, passed 100 tests.
 --     testing: all test vectors are correct
 --     checking keystream for key [1,2,3,4,5] (40-bit)
 --     checking keystream for key [1,2,3,4,5,6,7] (56-bit)

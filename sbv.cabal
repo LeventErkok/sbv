@@ -88,9 +88,6 @@ Library
                   , filepath            >= 1.1.0.4
                   , pretty              >= 1.0.1.1
                   , random              >= 1.0.0.2
-                  , vector              >= 0.7.0.1
-                  , bytestring          >= 0.9.1.9
-                  , cryptocipher        >= 0.2.8
   Exposed-modules : Data.SBV
                   , Data.SBV.Internals
                   , Data.SBV.Examples.BitPrecise.BitTricks
