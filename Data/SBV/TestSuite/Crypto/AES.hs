@@ -7,7 +7,7 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Test suite for Data.SBV.Examples.CodeGeneration.AES
+-- Test suite for Data.SBV.Examples.Crypto.AES
 -----------------------------------------------------------------------------
 
 module Data.SBV.TestSuite.Crypto.AES(testSuite) where
