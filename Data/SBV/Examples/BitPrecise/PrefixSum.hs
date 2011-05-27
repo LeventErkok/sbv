@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.PrefixSum.PrefixSum
+-- Module      :  Data.SBV.Examples.BitPrecise.PrefixSum
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -16,7 +16,7 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Data.SBV.Examples.PrefixSum.PrefixSum where
+module Data.SBV.Examples.BitPrecise.PrefixSum where
 
 import Data.SBV
 import Data.SBV.Internals(runSymbolic)

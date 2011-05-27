@@ -92,13 +92,13 @@ Library
                   , Data.SBV.Internals
                   , Data.SBV.Examples.BitPrecise.BitTricks
                   , Data.SBV.Examples.BitPrecise.Legato
+                  , Data.SBV.Examples.BitPrecise.PrefixSum
                   , Data.SBV.Examples.CodeGeneration.AddSub
                   , Data.SBV.Examples.CodeGeneration.Fibonacci
                   , Data.SBV.Examples.CodeGeneration.GCD
                   , Data.SBV.Examples.CodeGeneration.PopulationCount
                   , Data.SBV.Examples.Crypto.AES
                   , Data.SBV.Examples.Polynomials.Polynomials
-                  , Data.SBV.Examples.PrefixSum.PrefixSum
                   , Data.SBV.Examples.Puzzles.Counts
                   , Data.SBV.Examples.Puzzles.DogCatMouse
                   , Data.SBV.Examples.Puzzles.Euler185
@@ -148,6 +148,7 @@ Library
                   , Data.SBV.TestSuite.Basics.QRem
                   , Data.SBV.TestSuite.BitPrecise.BitTricks
                   , Data.SBV.TestSuite.BitPrecise.Legato
+                  , Data.SBV.TestSuite.BitPrecise.PrefixSum
                   , Data.SBV.TestSuite.CodeGeneration.AddSub
                   , Data.SBV.TestSuite.CodeGeneration.CgTests
                   , Data.SBV.TestSuite.CodeGeneration.Fibonacci
@@ -159,7 +160,6 @@ Library
                   , Data.SBV.TestSuite.CRC.GenPoly
                   , Data.SBV.TestSuite.CRC.Parity
                   , Data.SBV.TestSuite.CRC.USB5
-                  , Data.SBV.TestSuite.PrefixSum.PrefixSum
                   , Data.SBV.TestSuite.Polynomials.Polynomials
                   , Data.SBV.TestSuite.Puzzles.DogCatMouse
                   , Data.SBV.TestSuite.Puzzles.Euler185

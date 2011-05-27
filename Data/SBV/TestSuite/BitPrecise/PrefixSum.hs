@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.PrefixSum.PrefixSum
+-- Module      :  Data.SBV.TestSuite.BitPrecise.PrefixSum
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,11 +10,11 @@
 -- Test suite for Data.SBV.Examples.PrefixSum.PrefixSum
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.PrefixSum.PrefixSum(testSuite) where
+module Data.SBV.TestSuite.BitPrecise.PrefixSum(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals
-import Data.SBV.Examples.PrefixSum.PrefixSum
+import Data.SBV.Examples.BitPrecise.PrefixSum
 
 -- Test suite
 testSuite :: SBVTestSuite
