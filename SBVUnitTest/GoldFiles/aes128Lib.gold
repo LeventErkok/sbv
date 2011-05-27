@@ -3746,13 +3746,13 @@ aes128Lib.a: aes128KeySchedule.o aes128BlockEncrypt.o aes128BlockDecrypt.o
 aes128Lib_driver: aes128Lib_driver.c aes128Lib.h
 	${CC} ${CCFLAGS} $< -o $@ aes128Lib.a
 
-aes128KeySchedule.o:aes128KeySchedule.c aes128Lib.h
+aes128KeySchedule.o: aes128KeySchedule.c aes128Lib.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
-aes128BlockEncrypt.o:aes128BlockEncrypt.c aes128Lib.h
+aes128BlockEncrypt.o: aes128BlockEncrypt.c aes128Lib.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
-aes128BlockDecrypt.o:aes128BlockDecrypt.c aes128Lib.h
+aes128BlockDecrypt.o: aes128BlockDecrypt.c aes128Lib.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
 clean:
