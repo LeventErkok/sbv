@@ -40,6 +40,7 @@ data S = SLeaf SWord8
 instance Mergeable S where
   symbolicMerge b (SLeaf i)  (SLeaf j)    = SLeaf (ite b i j)
   symbolicMerge b (SBin l r) (SBin l' r') = SBin  (ite b l l') (ite b r r')
+  symbolicMerge _ _          _            = error $ "RC4.symbolicMerge: Impossible happened while merging states"
 
 -- | Reading a value. We bit-blast the index and descend down the full tree
 -- according to bit-values.
@@ -57,11 +58,11 @@ writeS s i j = walk (blastBE i) s
         walk (b:bs) (SBin l r) = ite b (SBin l (walk bs r)) (SBin (walk bs l) r)
         walk _      _          = error $ "RC4.writeS: Impossible happened while reading: " ++ show i
 
--- | Construct the fully balanced initial tree, where the leaves are simply the numbers 0 through 255.
+-- | Construct the fully balanced initial tree, where the leaves are simply the numbers @0@ through @255@.
 initS :: S
 initS = mkTree [SLeaf i | i <- [0 .. 255]]
   where mkTree []  = error $ "RC4: initS: Impossible happened"
-        mkTree [n] = n
+        mkTree [l] = l
         mkTree ns  = let (l, r) = splitAt (length ns `div` 2) ns in SBin (mkTree l) (mkTree r)
 
 -- | The key is a stream of 'Word8' values.

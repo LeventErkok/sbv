@@ -19,7 +19,6 @@ import Data.SBV.Examples.Crypto.RC4
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test [
-   "rc4swap" ~: assert =<< isTheorem swapIsCorrect
+   "rc4swap" ~: assert =<< isTheorem readWrite
  ]
- where swapIsCorrect i j = swap i j (swap j i initS) `arrEq` initS
-          where arrEq a b = bAnd [readS a k .== readS b k | k <- [0 .. 255]]
+ where readWrite i j = readS (writeS initS i j) i .== j
