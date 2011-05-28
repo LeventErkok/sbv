@@ -21,6 +21,5 @@ testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test [
    "rc4swap" ~: assert =<< isTheorem swapIsCorrect
  ]
- where swapIsCorrect i j = swap i j (swap j i s) `arrEq` s
-          where arrEq a b = bAnd [readArray a k .== readArray b k | k <- [0 .. 255]]
-                s = mkSFunArray id
+ where swapIsCorrect i j = swap i j (swap j i initS) `arrEq` initS
+          where arrEq a b = bAnd [readS a k .== readS b k | k <- [0 .. 255]]
