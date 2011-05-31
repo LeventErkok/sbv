@@ -7,6 +7,9 @@ Version 0.9.19, Not yet released
    Code:
     * Add SignCast class for conversion between signed/unsigned
       quantities for same-sized bit-vectors
+    * Add full-binary trees that can be indexed symbolically (STree). The
+      advantage of this type is that the reads and writes take
+      logarithmic time. Suitable for implementing faster symbolic look-up.
     * Expose HasSignAndSize class through Data.SBV.Internals
     * Many minor improvements, file re-orgs
    Examples:
