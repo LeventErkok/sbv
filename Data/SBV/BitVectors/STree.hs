@@ -22,12 +22,13 @@ import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
 
 -- | A symbolic tree containing values of type e, indexed by
--- elements of type i. Note that these trees are always full,
--- i.e., their shape is constant. They are useful when dealing
--- with data-structures that are indexed with symbolic values,
--- and where access time is important. 'STree' structures provide
+-- elements of type i. Note that these are full-trees, and their
+-- their shapes remain constant. There is no API provided that
+-- can change the shape of the tree. These structures are useful
+-- when dealing -- with data-structures that are indexed with symbolic
+-- values where access time is important. 'STree' structures provide
 -- logarithmic time reads and writes.
-data STree i e = SLeaf e
+data STree i e = SLeaf e                        -- NB. parameter 'i' is phantom
                | SBin  (STree i e) (STree i e)
                deriving Show
 
@@ -44,7 +45,7 @@ readSTree s i = walk (blastBE i) s
         walk (b:bs) (SBin l r) = ite b (walk bs r) (walk bs l)
         walk _      _          = error $ "SBV.STree.readSTree: Impossible happened while reading: " ++ show i
 
--- | Writing a value. Similar to how reads are done. The important thing is that the tree
+-- | Writing a value, similar to how reads are done. The important thing is that the tree
 -- representation keeps updates to a minimum.
 writeSTree :: (Bits i, SymWord i, SymWord e) => STree (SBV i) (SBV e) -> SBV i -> SBV e -> STree (SBV i) (SBV e)
 writeSTree s i j = walk (blastBE i) s
