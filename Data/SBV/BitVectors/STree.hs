@@ -11,8 +11,10 @@
 -- time access to elements. Both reads and writes are supported.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE BangPatterns        #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE BangPatterns         #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleContexts     #-}
 
 module Data.SBV.BitVectors.STree (STree, readSTree, writeSTree, mkSTree) where
 
@@ -28,18 +30,21 @@ import Data.SBV.BitVectors.Model
 -- when dealing -- with data-structures that are indexed with symbolic
 -- values where access time is important. 'STree' structures provide
 -- logarithmic time reads and writes.
-data STree i e = SLeaf e                        -- NB. parameter 'i' is phantom
-               | SBin  (STree i e) (STree i e)
-               deriving Show
+type STree i e = STreeInternal (SBV i) (SBV e)
 
-instance Mergeable e => Mergeable (STree i e) where
+-- Internal representation, not exposed to the user
+data STreeInternal i e = SLeaf e                        -- NB. parameter 'i' is phantom
+                       | SBin  (STreeInternal i e) (STreeInternal i e)
+                       deriving Show
+
+instance (SymWord e, Mergeable (SBV e)) => Mergeable (STree i e) where
   symbolicMerge b (SLeaf i)  (SLeaf j)    = SLeaf (ite b i j)
   symbolicMerge b (SBin l r) (SBin l' r') = SBin  (ite b l l') (ite b r r')
   symbolicMerge _ _          _            = error $ "SBV.STree.symbolicMerge: Impossible happened while merging states"
 
 -- | Reading a value. We bit-blast the index and descend down the full tree
 -- according to bit-values.
-readSTree :: (Bits i, SymWord i, SymWord e) => STree (SBV i) (SBV e) -> SBV i -> SBV e
+readSTree :: (Bits i, SymWord i, SymWord e) => STree i e -> SBV i -> SBV e
 readSTree s i = walk (blastBE i) s
   where walk []     (SLeaf v)  = v
         walk (b:bs) (SBin l r) = ite b (walk bs r) (walk bs l)
@@ -47,14 +52,14 @@ readSTree s i = walk (blastBE i) s
 
 -- | Writing a value, similar to how reads are done. The important thing is that the tree
 -- representation keeps updates to a minimum.
-writeSTree :: (Bits i, SymWord i, SymWord e) => STree (SBV i) (SBV e) -> SBV i -> SBV e -> STree (SBV i) (SBV e)
+writeSTree :: (Mergeable (SBV e), Bits i, SymWord i, SymWord e) => STree i e -> SBV i -> SBV e -> STree i e
 writeSTree s i j = walk (blastBE i) s
   where walk []     _          = SLeaf j
         walk (b:bs) (SBin l r) = SBin (ite b l (walk bs l)) (ite b (walk bs r) r)
         walk _      _          = error $ "SBV.STree.writeSTree: Impossible happened while reading: " ++ show i
 
 -- | Construct the fully balanced initial tree using the given values
-mkSTree :: forall i e. HasSignAndSize i => [SBV e] -> STree (SBV i) (SBV e)
+mkSTree :: forall i e. HasSignAndSize i => [SBV e] -> STree i e
 mkSTree ivals
   | reqd /= given = error $ "SBV.STree.mkSTree: Required " ++ show reqd ++ " elements, received: " ++ show given
   | True          = go ivals

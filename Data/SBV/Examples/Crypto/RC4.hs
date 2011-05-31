@@ -33,7 +33,7 @@ import Data.SBV
 -- | RC4 State contains 256 8-bit values. We use the symbolically accessible
 -- full-binary type 'STree' to represent the state, since RC4 needs
 -- access to the array via a symbolic index and it's important to minimize access time.
-type S = STree SWord8 SWord8
+type S = STree Word8 Word8
 
 -- | Construct the fully balanced initial tree, where the leaves are simply the numbers @0@ through @255@.
 initS :: S
