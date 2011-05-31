@@ -21,4 +21,4 @@ testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test [
    "rc4swap" ~: assert =<< isTheorem readWrite
  ]
- where readWrite i j = readS (writeS initS i j) i .== j
+ where readWrite i j = readSTree (writeSTree initS i j) i .== j

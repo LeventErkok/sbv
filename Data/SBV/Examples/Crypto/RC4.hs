@@ -30,40 +30,14 @@ import Data.SBV
 -- * Types
 -----------------------------------------------------------------------------
 
--- | RC4 State contains 256 8-bit values. We use a tree structure
--- to represent the state since RC4 needs access to the array via
--- a symbolic index and it's important to minimize access time.
-data S = SLeaf SWord8
-       | SBin  S S
-       deriving Show
-
-instance Mergeable S where
-  symbolicMerge b (SLeaf i)  (SLeaf j)    = SLeaf (ite b i j)
-  symbolicMerge b (SBin l r) (SBin l' r') = SBin  (ite b l l') (ite b r r')
-  symbolicMerge _ _          _            = error $ "RC4.symbolicMerge: Impossible happened while merging states"
-
--- | Reading a value. We bit-blast the index and descend down the full tree
--- according to bit-values.
-readS :: S -> SWord8 -> SWord8
-readS s i = walk (blastBE i) s
-  where walk []     (SLeaf v)  = v
-        walk (b:bs) (SBin l r) = ite b (walk bs r) (walk bs l)
-        walk _      _          = error $ "RC4.readS: Impossible happened while reading: " ++ show i
-
--- | Writing a value. Similar to how reads are done. The important thing is that the tree
--- representation keeps updates to a minimum.
-writeS :: S -> SWord8 -> SWord8 -> S
-writeS s i j = walk (blastBE i) s
-  where walk []     _          = SLeaf j
-        walk (b:bs) (SBin l r) = ite b (SBin l (walk bs r)) (SBin (walk bs l) r)
-        walk _      _          = error $ "RC4.writeS: Impossible happened while reading: " ++ show i
+-- | RC4 State contains 256 8-bit values. We use the symbolically accessible
+-- full-binary types supported by SBV to represent the state, since RC4 needs
+-- access to the array via a symbolic index and it's important to minimize access time.
+type S = STree SWord8 SWord8
 
 -- | Construct the fully balanced initial tree, where the leaves are simply the numbers @0@ through @255@.
 initS :: S
-initS = mkTree [SLeaf i | i <- [0 .. 255]]
-  where mkTree []  = error $ "RC4: initS: Impossible happened"
-        mkTree [l] = l
-        mkTree ns  = let (l, r) = splitAt (length ns `div` 2) ns in SBin (mkTree l) (mkTree r)
+initS = mkSTree (map literal [0 .. 255])
 
 -- | The key is a stream of 'Word8' values.
 type Key = [SWord8]
@@ -78,17 +52,17 @@ type RC4 = (S, SWord8, SWord8)
 
 -- | Swaps two elements in the RC4 array.
 swap :: SWord8 -> SWord8 -> S -> S
-swap i j st = writeS (writeS st i stj) j sti
-  where sti = readS st i
-        stj = readS st j
+swap i j st = writeSTree (writeSTree st i stj) j sti
+  where sti = readSTree st i
+        stj = readSTree st j
 
 -- | Implements the PRGA used in RC4. We return the new state and the next key value generated.
 prga :: RC4 -> (SWord8, RC4)
-prga (st', i', j') = (readS st kInd, (st, i, j))
+prga (st', i', j') = (readSTree st kInd, (st, i, j))
   where i    = i' + 1
-        j    = j' + readS st' i
+        j    = j' + readSTree st' i
         st   = swap i j st'
-        kInd = readS st i + readS st j
+        kInd = readSTree st i + readSTree st j
 
 -----------------------------------------------------------------------------
 -- * Key schedule
@@ -103,7 +77,7 @@ initRC4 key
  = snd $ foldl mix (0, initS) [0..255]
  where keyLength = length key
        mix :: (SWord8, S) -> SWord8 -> (SWord8, S)
-       mix (j', s) i = let j = j' + readS s i + genericIndex key (fromJust (unliteral i) `mod` fromIntegral keyLength)
+       mix (j', s) i = let j = j' + readSTree s i + genericIndex key (fromJust (unliteral i) `mod` fromIntegral keyLength)
                        in (j, swap i j s)
 
 -- | The key-schedule. Note that this function returns an infinite list.

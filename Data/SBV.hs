@@ -102,6 +102,8 @@ module Data.SBV (
   , SInt8, SInt16, SInt32, SInt64
   -- *** Arrays of symbolic values
   , SymArray(..), SArray, SFunArray, mkSFunArray
+  -- *** Full binary trees
+  , STree, readSTree, writeSTree, mkSTree
   -- ** Operations on symbolic words
   -- *** Word level
   , bitValue, setBitTo, oneIf, lsb, msb
@@ -199,8 +201,9 @@ import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
 import Data.SBV.BitVectors.PrettyNum
 import Data.SBV.BitVectors.Polynomial
-import Data.SBV.BitVectors.Splittable
 import Data.SBV.BitVectors.SignCast
+import Data.SBV.BitVectors.Splittable
+import Data.SBV.BitVectors.STree
 import Data.SBV.Compilers.C
 import Data.SBV.Compilers.CodeGen
 import Data.SBV.Provers.Prover

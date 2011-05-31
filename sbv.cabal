@@ -115,6 +115,7 @@ Library
                   , Data.SBV.BitVectors.PrettyNum
                   , Data.SBV.BitVectors.SignCast
                   , Data.SBV.BitVectors.Splittable
+                  , Data.SBV.BitVectors.STree
                   , Data.SBV.Compilers.C
                   , Data.SBV.Compilers.CodeGen
                   , Data.SBV.SMT.SMT
