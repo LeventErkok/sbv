@@ -25,6 +25,8 @@ Description:   Express properties about bit-precise Haskell programs and automat
                .
                  * 'SArray', 'SFunArray': Flat arrays of symbolic values
                .
+                 * 'STree': Full binary trees of symbolic values (for fast symbolic access)
+               .
                  * Symbolic polynomials over GF(2^n), and polynomial arithmetic
                .
                  * Uninterpreted constants and functions over symbolic values, with user
