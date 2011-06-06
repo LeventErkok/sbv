@@ -166,6 +166,7 @@ Library
                   , Data.SBV.TestSuite.CRC.Parity
                   , Data.SBV.TestSuite.CRC.USB5
                   , Data.SBV.TestSuite.Polynomials.Polynomials
+                  , Data.SBV.TestSuite.Puzzles.Counts
                   , Data.SBV.TestSuite.Puzzles.DogCatMouse
                   , Data.SBV.TestSuite.Puzzles.Euler185
                   , Data.SBV.TestSuite.Puzzles.MagicSquare

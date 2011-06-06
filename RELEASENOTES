@@ -2,9 +2,9 @@ Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
 ======================================================================
-Version 0.9.20, Not yet released
+Version 0.9.20, 2011-06-05
    
-    * Current working version
+    * Regression on 0.9.19; add missing file to cabal
 
 ======================================================================
 Version 0.9.19, 2011-06-05
