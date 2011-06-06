@@ -27,7 +27,7 @@ import Data.SBV.BitVectors.Model
 -- elements of type i. Note that these are full-trees, and their
 -- their shapes remain constant. There is no API provided that
 -- can change the shape of the tree. These structures are useful
--- when dealing -- with data-structures that are indexed with symbolic
+-- when dealing with data-structures that are indexed with symbolic
 -- values where access time is important. 'STree' structures provide
 -- logarithmic time reads and writes.
 type STree i e = STreeInternal (SBV i) (SBV e)
