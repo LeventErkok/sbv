@@ -36,5 +36,5 @@ gold:
 	ghc -idist/build/autogen/ SBVUnitTest/SBVUnitTest.hs -e "createGolds \"${TGTS}\""
 
 tags:
-	find -name \*.\*hs | xargs hasktags -c
+	find . -name \*.\*hs | xargs hasktags -c
 	sort -o tags tags
