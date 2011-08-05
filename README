@@ -115,8 +115,5 @@ the [BSD3](http://en.wikipedia.org/wiki/BSD_licenses) verbiage.
 
 Thanks
 ======
-[Galois, Inc.](http://www.galois.com) has contributed to the development of SBV,
-by providing time and computing machinery.
-
 The following people reported bugs, provided comments/feedback, or contributed to the development of SBV in various ways:
 Ian Blumenfeld, Ian Calvert, Iavor Diatchki, Lee Pike, Austin Seipp, Don Stewart, Josef Svenningsson, and Nis Wegmann.
