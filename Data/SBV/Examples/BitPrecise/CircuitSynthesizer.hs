@@ -197,4 +197,4 @@ testAdder = synthesize (4,2) specAdd
         mkNum :: [SBool] -> SWord8
         mkNum = foldl add 0
           where add s b = 2*s + ite b 1 0
-        blast = take 2 . blastLE
+        blast = reverse . take 2 . blastLE
