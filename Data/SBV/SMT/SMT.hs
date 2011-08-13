@@ -205,22 +205,22 @@ instance (SatModel a, SatModel b, SatModel c, SatModel d, SatModel e, SatModel f
                    return ((a, b, c, d, e, f, g), hs)
 
 -- | Given an 'SMTResult', extract an arbitrarily typed model from it, given a 'SatModel' instance
-getModel :: SatModel a => SMTResult -> a
-getModel (Unsatisfiable _) = error "SatModel.getModel: Unsatisfiable result"
-getModel (Unknown _ _)     = error "Impossible! Backend solver returned unknown for Bit-vector problem!"
-getModel (ProofError _ s)  = error $ unlines $ "An error happened: " : s
-getModel (TimeOut _)       = error $ "Timeout"
-getModel (Satisfiable _ m) = case parseCWs [c | (_, c) <- modelAssocs m] of
-                               Just (x, []) -> x
-                               Just (_, ys) -> error $ "SBV.getModel: Partially constructed model; remaining elements: " ++ show ys
-                               Nothing      -> error $ "SBV.getModel: Cannot construct a model from: " ++ show m
+getModel :: SatModel a => SatResult -> Either String a
+getModel (SatResult (Unsatisfiable _)) = Left $ "SatModel.getModel: Unsatisfiable result"
+getModel (SatResult (Unknown _ _))     = Left $ "Impossible! Backend solver returned unknown for Bit-vector problem!"
+getModel (SatResult (ProofError _ s))  = Left $ unlines $ "An error happened: " : s
+getModel (SatResult (TimeOut _))       = Left $ "Timeout"
+getModel (SatResult (Satisfiable _ m)) = case parseCWs [c | (_, c) <- modelAssocs m] of
+                                           Just (x, []) -> Right x
+                                           Just (_, ys) -> Left $ "SBV.getModel: Partially constructed model; remaining elements: " ++ show ys
+                                           Nothing      -> Left $ "SBV.getModel: Cannot construct a model from: " ++ show m
 
 -- | Given an 'allSat' call, we typically want to iterate over it and print the results in sequence. The
 -- 'displayModels' function automates this task by calling 'disp' on each result, consecutively. The first
 -- 'Int' argument to 'disp' 'is the current model number.
 displayModels :: SatModel a => (Int -> a -> IO ()) -> AllSatResult -> IO Int
 displayModels disp (AllSatResult ms) = do
-    inds <- zipWithM display (map getModel ms) [(1::Int)..]
+    inds <- zipWithM display [a | Right a <- map (getModel . SatResult) ms] [(1::Int)..]
     return $ last (0:inds)
   where display r i = disp i r >> return i
 

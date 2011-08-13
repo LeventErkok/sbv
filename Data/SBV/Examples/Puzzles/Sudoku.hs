@@ -54,8 +54,10 @@ type Puzzle = (Int, [SWord8] -> Board)
 -- | Solve a given puzzle and print the results
 solve :: Puzzle -> IO ()
 solve p@(i, f) = do putStrLn "Solving the puzzle.."
-                    SatResult res <- sat $ mkFreeVars i >>= return . valid . f
-                    dispSolution p (getModel res)
+                    model <- getModel `fmap` sat (mkFreeVars i >>= return . valid . f)
+                    case model of
+                      Right sln -> dispSolution p sln
+                      Left m    -> putStrLn $ "Unsolvable puzzle: " ++ m
 
 -- | Helper function to display results nicely, not really needed, but helps presentation
 dispSolution :: Puzzle -> [Word8] -> IO ()
