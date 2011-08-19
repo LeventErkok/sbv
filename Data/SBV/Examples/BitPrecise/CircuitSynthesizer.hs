@@ -72,14 +72,14 @@ type Spec = [SBool] -> [SBool]
 -- Synthesize a given spec with 'nInps' inputs and 'nOuts' outputs
 -- This code looks kind of gnarly, and you need to know some of the
 -- details of SBV to make full sense of it. In any case, here it goes..
-synthesize :: (Int, Int) -> Spec -> IO ()
-synthesize (nInps, nOuts) spec = synth 1 -- Start with just a program with one instruction
+synthesize :: (Int, Int) -> Int -> Spec -> IO ()
+synthesize (nInps, nOuts) s spec = synth s
   where inps = sequence (replicate nInps [false, true])
         specOuts = map spec inps
         -- synthesize a program of given number of AND gates
         synth gateCount = do
            putStrLn $ "Trying to find a program with " ++ show gateCount ++ " AND gates.."
-           res <- sat $ do
+           res <- satWith (timeout (gateCount*6) timingSMTCfg) $ do
                     -- generate the gates. For each gate, we need two inputs,
                     -- each of which requires two bits to state whether they are complemented
                     circuit <- do couts <- mkFreeVars nOuts          -- complement bits each output
@@ -119,7 +119,7 @@ synthesize (nInps, nOuts) spec = synth 1 -- Start with just a program with one i
 
 -- Generate the xor circuit
 testXOR :: IO ()
-testXOR = synthesize (2,1) specXor
+testXOR = synthesize (2,1) 1 specXor
   where specXor :: Spec
         specXor [a, b] = [ite a (bnot b) b]
         specXor _      = error "specXor: needs two elements"
@@ -149,7 +149,7 @@ By De-morgan's rules, the output is: b'a+a'b; which is indeed a correct definiti
 
 -- Generate the majority circuit for 3 inputs
 testMajority :: IO ()
-testMajority = synthesize (3,1) specMaj
+testMajority = synthesize (3,1) 1 specMaj
   where specMaj :: Spec
         specMaj [a, b, c] = [(a &&& b) <+> (a &&& c) <+> (b &&& c)]
         specMaj _         = error "specMac: needs three elements"
@@ -187,14 +187,34 @@ Simplification gives:
 This is indeed a correct implementation of the majority function.
 -}
 
--- Generate a 2-bit adder; we ignore the carry-out
-testAdder :: IO ()
-testAdder = synthesize (4,2) specAdd
+-- Generate an N-bit adder; we ignore the carry-out
+testAdderN :: Int -> Int -> IO ()
+testAdderN n sa = synthesize (n*2,n) sa specAdd
   where specAdd :: Spec
-        specAdd [a0, a1, b0, b1] = blast (mkNum [a0, a1] + mkNum [b0, b1])
-        specAdd _ = error "specAdd needs 4 elements"
+        specAdd xs = let (a, b) = splitAt n xs in blast (mkNum a + mkNum b)
         -- assume big-endian
         mkNum :: [SBool] -> SWord8
         mkNum = foldl add 0
           where add s b = 2*s + ite b 1 0
-        blast = reverse . take 2 . blastLE
+        blast = reverse . take n . blastLE
+
+{- testAdderN 2 11
+Generates:
+Trying to find a program with 11 AND gates..
+  Inputs are 0 through 3
+  AND gates:
+    4 <- 3 & 1
+    5 <- 4 & 2
+    6 <- ~2 & ~4
+    7 <- ~1 & 3
+    8 <- ~6 & ~5
+    9 <- ~3 & 1
+    10 <- 8 & ~0
+    11 <- ~9 & 7
+    12 <- ~8 & 0
+    13 <- ~9 & ~11
+    14 <- ~12 & ~10
+  OUTPUTS: 
+    ~14
+    ~13
+-}
