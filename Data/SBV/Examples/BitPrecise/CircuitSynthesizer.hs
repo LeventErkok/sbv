@@ -217,4 +217,6 @@ Trying to find a program with 11 AND gates..
   OUTPUTS: 
     ~14
     ~13
+
+I didn't check this for correctness, but I trust it.. :-)
 -}
