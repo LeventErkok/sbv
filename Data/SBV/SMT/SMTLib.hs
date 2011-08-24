@@ -11,7 +11,7 @@
 -----------------------------------------------------------------------------
 {-# LANGUAGE PatternGuards #-}
 
-module Data.SBV.SMT.SMTLib(SMTLibPgm, toSMTLib, addNonEqConstraints) where
+module Data.SBV.SMT.SMTLib(SMTLibPgm(..), toSMTLib, addNonEqConstraints) where
 
 import Control.DeepSeq              (NFData(..))
 import qualified Data.Foldable as F (toList)

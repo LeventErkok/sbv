@@ -46,7 +46,7 @@ import Data.SBV.BitVectors.Model
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 import qualified Data.SBV.Provers.Yices as Yices
-import qualified Data.SBV.Provers.Z3_QBVF as QBVF
+import qualified Data.SBV.Provers.Z3_QBVF as Z3
 import Data.SBV.Utils.TDiff
 
 -- | Default configuration for the SMT solver. Non-verbose, non-timing, prints results in base 10, and uses
@@ -261,8 +261,8 @@ satWith config a = generateTrace config True [] a >>= callSolver [] "Checking Sa
 
 -- | Find a satisfying model using the QBVF solver
 qbvf :: Provable a => a -> IO QBVFResult
-qbvf a = do (_, _, r) <- simulate QBVF.qbvfSolver defaultSMTCfg True [] a
-            return r
+qbvf a = simulate Z3.qbvfSolver cfg True [] a >>= callSolver [] "Checking QBVF Satisfiability.." (const (QBVFResult ())) cfg
+ where cfg = verboseSMTCfg { solver = Z3.z3 }
 
 -- | Find all satisfying assignments using the given SMT-solver
 allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
@@ -290,11 +290,8 @@ allSatWith config p = do when (verbose config) $ putStrLn  "** Checking Satisfia
                     Unknown     _ model             -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
 
 callSolver :: [[(String, CW)]] -> String -> (SMTResult -> b) -> SMTConfig -> ([(Quantifier, NamedSymVar)], [(String, UnintKind)], SMTLibPgm) -> IO b
-callSolver nonEqConstraints checkMsg wrap config (qinps, modelMap, smtLibPgm)
-  | needsExistentials (map fst qinps)
-  = error "SBV: Existential variables are not supported via SMT-Lib. Use the QBVF solver instead."
-  | True
-  = do let msg = when (verbose config) . putStrLn . ("** " ++)
+callSolver nonEqConstraints checkMsg wrap config (qinps, modelMap, smtLibPgm) = do
+       let msg = when (verbose config) . putStrLn . ("** " ++)
            inps = map snd qinps
        msg checkMsg
        let finalPgm = addNonEqConstraints nonEqConstraints smtLibPgm
@@ -304,7 +301,7 @@ callSolver nonEqConstraints checkMsg wrap config (qinps, modelMap, smtLibPgm)
        return $ wrap smtAnswer
 
 generateTrace :: Provable a => SMTConfig -> Bool -> [String] -> a -> IO ([(Quantifier, NamedSymVar)], [(String, UnintKind)], SMTLibPgm)
-generateTrace = simulate (\a b c d e f g h i j -> return (toSMTLib a b c d e f g h i j))
+generateTrace = simulate toSMTLib
 
 simulate :: (NFData res, Provable a)
          => (   Bool                                        -- is this a sat problem?
@@ -317,7 +314,7 @@ simulate :: (NFData res, Provable a)
              -> [(String, [String])]                        -- user given axioms
              -> Pgm                                         -- assignments
              -> SW                                          -- output variable
-             -> IO res)
+             -> res)
          -> SMTConfig -> Bool -> [String] -> a -> IO ([(Quantifier, NamedSymVar)], [(String, UnintKind)], res)
 simulate converter config isSat comments predicate = do
         let msg = when (verbose config) . putStrLn . ("** " ++)
@@ -329,8 +326,7 @@ simulate converter config isSat comments predicate = do
         case res of
           Result is consts tbls arrs uis axs pgm [o@(SW (False, 1) _)] | sizeOf o == 1 ->
              timeIf isTiming "translation" $ do let uiMap = catMaybes (map arrayUIKind arrs) ++ map unintFnUIKind uis
-                                                r <- converter isSat comments is consts tbls arrs uis axs pgm o
-                                                return (is, uiMap, r)
+                                                return (is, uiMap, converter isSat comments is consts tbls arrs uis axs pgm o)
           Result _is _consts _tbls _arrs _uis _axs _pgm os -> case length os of
                         0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
                         1  -> error $ "Impossible happened, non-boolean output in " ++ show os
