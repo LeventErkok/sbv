@@ -78,7 +78,8 @@ cgSBVToSW = liftSymbolic . sbvToSymSW
 cgPerformRTCs :: Bool -> SBVCodeGen ()
 cgPerformRTCs b = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgRTC = b } })
 
--- | Should we generate a driver program? Default: 'True'.
+-- | Should we generate a driver program? Default: 'True'. When a library is generated, then it will have
+-- a driver if any of the contituent functions has a driver. (See 'compileToCLib'.)
 cgGenerateDriver :: Bool -> SBVCodeGen ()
 cgGenerateDriver b = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgGenDriver = b } })
 

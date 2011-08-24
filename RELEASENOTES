@@ -7,6 +7,12 @@ Version 0.9.22, Not yet released
   Code:
    * Change getModel, so it returns an Either value to indicate
      something went wrong; instead of throwing an error
+  Code generation:
+   * Add "cgGenerateDriver" function, which can be used to turn
+     on/off driver program generation. Default is to generate
+     a driver. (Issue "cgGenerateDriver False" to skip the driver.)
+     For a library, a driver will be generated if any of the
+     constituent parts has a driver. Otherwise it'll be skipped.
 
 ======================================================================
 Version 0.9.21, 2011-08-05
