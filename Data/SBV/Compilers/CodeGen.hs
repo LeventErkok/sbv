@@ -28,17 +28,18 @@ import Data.SBV.BitVectors.Data
 -- | Abstract over code generation for different languages
 class CgTarget a where
   targetName :: a -> String
-  translate  :: a -> Bool -> [Integer] -> String -> CgState -> Result -> CgPgmBundle
+  translate  :: a -> CgConfig -> String -> CgState -> Result -> CgPgmBundle
 
 -- | Options for code-generation.
 data CgConfig = CgConfig {
           cgRTC        :: Bool          -- ^ If 'True', perform run-time-checks for index-out-of-bounds or shifting-by-large values etc.
         , cgDriverVals :: [Integer]     -- ^ Values to use for the driver program generated, useful for generating non-random drivers.
+        , cgGenDriver  :: Bool          -- ^ If 'True', will generate a driver program
         }
 
 -- | Default options for code generation. The run-time checks are turned-off, and the driver values are completely random.
 defaultCgConfig :: CgConfig
-defaultCgConfig = CgConfig { cgRTC = False, cgDriverVals = [] }
+defaultCgConfig = CgConfig { cgRTC = False, cgDriverVals = [], cgGenDriver = True }
 
 -- | Abstraction of target language values
 data CgVal = CgAtomic SW
@@ -73,11 +74,15 @@ liftSymbolic = SBVCodeGen . lift
 cgSBVToSW :: SBV a -> SBVCodeGen SW
 cgSBVToSW = liftSymbolic . sbvToSymSW
 
--- | Sets RTC (run-time-checks) for index-out-of-bounds, shift-with-large value etc. on/off.
+-- | Sets RTC (run-time-checks) for index-out-of-bounds, shift-with-large value etc. on/off. Default: 'False'.
 cgPerformRTCs :: Bool -> SBVCodeGen ()
 cgPerformRTCs b = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgRTC = b } })
 
--- | Sets driver program run time values, useful for generating programs with fixed drivers for testing.
+-- | Should we generate a driver program? Default: 'True'.
+cgGenerateDriver :: Bool -> SBVCodeGen ()
+cgGenerateDriver b = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgGenDriver = b } })
+
+-- | Sets driver program run time values, useful for generating programs with fixed drivers for testing. Default: None, i.e., use random values.
 cgSetDriverValues :: [Integer] -> SBVCodeGen ()
 cgSetDriverValues vs = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgDriverVals = vs } })
 
@@ -136,6 +141,10 @@ data CgPgmKind = CgMakefile
                | CgSource
                | CgDriver
 
+isCgDriver :: CgPgmKind -> Bool
+isCgDriver CgDriver = True
+isCgDriver _        = False
+
 instance Show CgPgmBundle where
    show (CgPgmBundle fs) = concat $ intersperse "\n" $ map showFile fs
 
@@ -154,8 +163,7 @@ codeGen l cgConfig nm (SBVCodeGen comp) = do
        dupNames = allNamedVars \\ nub allNamedVars
    when (not (null dupNames)) $ do
         error $ "SBV.codeGen: " ++ show nm ++ " has following argument names duplicated: " ++ unwords dupNames
-   let finalCfg = cgFinalConfig st
-   return $ translate l (cgRTC finalCfg) (cgDriverVals finalCfg) nm st res
+   return $ translate l (cgFinalConfig st) nm st res
 
 renderCgPgmBundle :: Maybe FilePath -> CgPgmBundle -> IO ()
 renderCgPgmBundle Nothing        bundle              = putStrLn $ show bundle

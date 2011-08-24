@@ -149,6 +149,8 @@ module Data.SBV (
   , sat, satWith, isSatisfiable, isSatisfiableWithin
   -- ** Finding all satisfying assignments
   , allSat, allSatWith, numberOfModels
+  -- ** Finding a satisfying model for a QBVF problem
+  , qbvf, QBVFResult(..)
   -- * Model extraction
   -- $modelExtraction
 
@@ -175,7 +177,7 @@ module Data.SBV (
   , SBVCodeGen
 
   -- ** Setting code-generation options
-  , cgPerformRTCs, cgSetDriverValues
+  , cgPerformRTCs, cgSetDriverValues, cgGenerateDriver
 
   -- ** Designating inputs
   , cgInput, cgInputArr
