@@ -22,7 +22,7 @@
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), BVDivisible(..), Uninterpreted(..)
   , bitValue, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE
-  , lsb, msb, SBVUF, sbvUFName, genFree, genFree_
+  , lsb, msb, SBVUF, sbvUFName, genFree, genFree_, exists, exists_
   )
   where
 
@@ -91,11 +91,11 @@ mkSymOp1 = mkSymOp1SC (const Nothing)
 
 -- Symbolic-Word class instances
 
-genFree :: (Bool, Size) -> String -> Symbolic (SBV a)
-genFree s = mkSymSBV s . Just
+genFree :: Quantifier -> (Bool, Size) -> String -> Symbolic (SBV a)
+genFree q s = mkSymSBV q s . Just
 
-genFree_ :: (Bool, Size) -> Symbolic (SBV a)
-genFree_ s = mkSymSBV s Nothing
+genFree_ :: Quantifier -> (Bool, Size) -> Symbolic (SBV a)
+genFree_ b s = mkSymSBV b s Nothing
 
 genLiteral :: Integral a => (Bool,Size) -> a -> SBV b
 genLiteral s  = SBV s . Left . mkConstCW s
@@ -104,56 +104,74 @@ genFromCW :: Integral a => CW -> a
 genFromCW x = fromInteger (cwVal x)
 
 instance SymWord Bool where
-  free      = genFree    (False, 1)
-  free_     = genFree_   (False, 1)
+  free      = genFree  ALL (False, 1)
+  free_     = genFree_ ALL (False, 1)
+  exists    = genFree  EX  (False, 1)
+  exists_   = genFree_ EX  (False, 1)
   literal x = genLiteral (False, 1) (if x then (1::Integer) else 0)
   fromCW    = cwToBool
 
 instance SymWord Word8 where
-  free    = genFree    (False, 8)
-  free_   = genFree_   (False, 8)
+  free    = genFree   ALL (False, 8)
+  free_   = genFree_  ALL (False, 8)
+  exists  = genFree   EX  (False, 8)
+  exists_ = genFree_  EX  (False, 8)
   literal = genLiteral (False, 8)
   fromCW  = genFromCW
 
 instance SymWord Int8 where
-  free    = genFree    (True, 8)
-  free_   = genFree_   (True, 8)
+  free    = genFree   ALL (True, 8)
+  free_   = genFree_  ALL (True, 8)
+  exists  = genFree   EX  (True, 8)
+  exists_ = genFree_  EX  (True, 8)
   literal = genLiteral (True, 8)
   fromCW  = genFromCW
 
 instance SymWord Word16 where
-  free    = genFree    (False, 16)
-  free_   = genFree_   (False, 16)
+  free    = genFree   ALL (False, 16)
+  free_   = genFree_  ALL (False, 16)
+  exists  = genFree   EX  (False, 16)
+  exists_ = genFree_  EX  (False, 16)
   literal = genLiteral (False, 16)
   fromCW  = genFromCW
 
 instance SymWord Int16 where
-  free    = genFree    (True, 16)
-  free_   = genFree_   (True, 16)
+  free    = genFree   ALL (True, 16)
+  free_   = genFree_  ALL (True, 16)
+  exists  = genFree   EX  (True, 16)
+  exists_ = genFree_  EX  (True, 16)
   literal = genLiteral (True, 16)
   fromCW  = genFromCW
 
 instance SymWord Word32 where
-  free    = genFree    (False, 32)
-  free_   = genFree_   (False, 32)
+  free    = genFree   ALL (False, 32)
+  free_   = genFree_  ALL (False, 32)
+  exists  = genFree   EX  (False, 32)
+  exists_ = genFree_  EX  (False, 32)
   literal = genLiteral (False, 32)
   fromCW  = genFromCW
 
 instance SymWord Int32 where
-  free    = genFree    (True, 32)
-  free_   = genFree_   (True, 32)
+  free    = genFree   ALL (True, 32)
+  free_   = genFree_  ALL (True, 32)
+  exists  = genFree   EX  (True, 32)
+  exists_ = genFree_  EX  (True, 32)
   literal = genLiteral (True, 32)
   fromCW  = genFromCW
 
 instance SymWord Word64 where
-  free    = genFree    (False, 64)
-  free_   = genFree_   (False, 64)
+  free    = genFree   ALL (False, 64)
+  free_   = genFree_  ALL (False, 64)
+  exists  = genFree   EX  (False, 64)
+  exists_ = genFree_  EX  (False, 64)
   literal = genLiteral (False, 64)
   fromCW  = genFromCW
 
 instance SymWord Int64 where
-  free    = genFree    (True, 64)
-  free_   = genFree_   (True, 64)
+  free    = genFree   ALL (True, 64)
+  free_   = genFree_  ALL (True, 64)
+  exists  = genFree   EX  (True, 64)
+  exists_ = genFree_  EX  (True, 64)
   literal = genLiteral (True, 64)
   fromCW  = genFromCW
 

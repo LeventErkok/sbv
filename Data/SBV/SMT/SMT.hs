@@ -92,6 +92,11 @@ newtype SatResult    = SatResult    SMTResult
 -- | An 'allSat' call results in a 'AllSatResult'
 newtype AllSatResult = AllSatResult [SMTResult]
 
+-- | A 'qbvf' call results in a 'QBVFResult'
+-- (NB. Currently this is simply unit, to be elaborated later.)
+newtype QBVFResult = QBVFResult ()
+instance NFData QBVFResult
+
 instance Show ThmResult where
   show (ThmResult r) = showSMTResult "Q.E.D."
                                      "Unknown"     "Unknown. Potential counter-example:\n"

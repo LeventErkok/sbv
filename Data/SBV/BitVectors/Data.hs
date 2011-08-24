@@ -32,6 +32,7 @@ module Data.SBV.BitVectors.Data
  , cache, uncache, uncacheAI, HasSignAndSize(..)
  , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, runSymbolic', State, Size, Outputtable(..), Result(..)
  , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
+ , Quantifier(..), needsExistentials
  ) where
 
 import Control.DeepSeq                 (NFData(..))
@@ -80,6 +81,11 @@ normCW x = x { cwVal = norm }
 type Size      = Int
 newtype NodeId = NodeId Int deriving (Eq, Ord)
 data SW        = SW (Bool, Size) NodeId deriving (Eq, Ord)
+
+data Quantifier = ALL | EX deriving Eq
+
+needsExistentials :: [Quantifier] -> Bool
+needsExistentials = (EX `elem`)
 
 falseSW, trueSW :: SW
 falseSW = SW (False, 1) $ NodeId (-2)
@@ -222,7 +228,7 @@ data UnintKind = UFun Int String | UArr Int String      -- in each case, arity a
  deriving Show
 
 -- | Result of running a symbolic computation
-data Result = Result [NamedSymVar]                              -- inputs
+data Result = Result [(Quantifier, NamedSymVar)]                -- inputs (possibly existential)
                      [(SW, CW)]                                 -- constants
                      [((Int, (Bool, Int), (Bool, Int)), [SW])]  -- tables (automatically constructed) (tableno, index-type, result-type) elts
                      [(Int, ArrayInfo)]                         -- arrays (user specified)
@@ -255,8 +261,10 @@ instance Show Result where
     where shs sw = show sw ++ " :: " ++ showType sw
           sht ((i, at, rt), es)  = "  Table " ++ show i ++ " : " ++ show at ++ "->" ++ show rt ++ " = " ++ show es
           shc (sw, cw) = "  " ++ show sw ++ " = " ++ show cw
-          shn (sw, nm) = "  " ++ ni ++ " :: " ++ showType sw ++ alias
+          shn (q, (sw, nm)) = "  " ++ ni ++ " :: " ++ showType sw ++ ex ++ alias
             where ni = show sw
+                  ex | q == ALL = ""
+                     | True     = ", existential"
                   alias | ni == nm = ""
                         | True     = ", aliasing " ++ show nm
           sha (i, (nm, (ai, bi), ctx)) = "  " ++ ni ++ " :: " ++ mkT ai ++ " -> " ++ mkT bi ++ alias
@@ -303,7 +311,7 @@ arrayUIKind (i, (nm, _, ctx))
         external (ArrayMerge{})  = False
 
 data State  = State { rctr       :: IORef Int
-                    , rinps      :: IORef [NamedSymVar]
+                    , rinps      :: IORef [(Quantifier, NamedSymVar)]
                     , routs      :: IORef [SW]
                     , rtblMap    :: IORef TableMap
                     , spgm       :: IORef Pgm
@@ -437,13 +445,13 @@ sbvToSW st (SBV _ (Right f)) = uncache f st
 newtype Symbolic a = Symbolic (ReaderT State IO a)
                    deriving (Monad, MonadIO, MonadReader State)
 
-mkSymSBV :: (Bool, Size) -> Maybe String -> Symbolic (SBV a)
-mkSymSBV sgnsz mbNm = do
+mkSymSBV :: Quantifier -> (Bool, Size) -> Maybe String -> Symbolic (SBV a)
+mkSymSBV q sgnsz mbNm = do
         st <- ask
         ctr <- liftIO $ incCtr st
         let nm = maybe ('s':show ctr) id mbNm
             sw = SW sgnsz (NodeId ctr)
-        liftIO $ modifyIORef (rinps st) ((sw, nm):)
+        liftIO $ modifyIORef (rinps st) ((q, (sw, nm)):)
         return $ SBV sgnsz $ Right $ cache (const (return sw))
 
 sbvToSymSW :: SBV a -> Symbolic SW
@@ -560,7 +568,13 @@ class (Bounded a, Ord a) => SymWord a where
   -- | Create an automatically named input
   free_      :: Symbolic (SBV a)
   -- | Get a bunch of new words
-  mkFreeVars   :: Int -> Symbolic [SBV a]
+  mkFreeVars :: Int -> Symbolic [SBV a]
+  -- | Create an existential variable
+  exists     :: String -> Symbolic (SBV a)
+  -- | Create an automatically named existential variable
+  exists_    :: Symbolic (SBV a)
+  -- | Create a bunch of existentials
+  mkExistVars :: Int -> Symbolic [SBV a]
   -- | Turn a literal constant to symbolic
   literal    :: a -> SBV a
   -- | Extract a literal, if the value is concrete
@@ -575,7 +589,8 @@ class (Bounded a, Ord a) => SymWord a where
   isConcretely :: SBV a -> (a -> Bool) -> Bool
 
   -- minimal complete definiton: free, free_, literal, fromCW
-  mkFreeVars n = mapM (const free_) [1 .. n]
+  mkFreeVars n  = mapM (const free_) [1 .. n]
+  mkExistVars n = mapM (const exists_) [1 .. n]
   unliteral (SBV _ (Left c))  = Just $ fromCW c
   unliteral _                 = Nothing
   isConcrete (SBV _ (Left _)) = True
@@ -750,6 +765,7 @@ instance NFData Result where
 instance NFData ArrayContext
 instance NFData Pgm
 instance NFData SW
+instance NFData Quantifier
 instance NFData SBVType
 instance NFData UnintKind
 instance NFData a => NFData (Cached a) where

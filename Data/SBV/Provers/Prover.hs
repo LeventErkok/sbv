@@ -18,7 +18,7 @@
 
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate, Provable(..)
-       , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..)
+       , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..), QBVFResult(..)
        , isSatisfiable, isTheorem
        , isSatisfiableWithin, isTheoremWithin
        , numberOfModels
@@ -26,6 +26,7 @@ module Data.SBV.Provers.Prover (
        , prove, proveWith
        , sat, satWith
        , allSat, allSatWith
+       , qbvf
        , SatModel(..), getModel, displayModels
        , defaultSMTCfg, verboseSMTCfg, timingSMTCfg, verboseTimingSMTCfg
        , Yices.yices
@@ -33,9 +34,10 @@ module Data.SBV.Provers.Prover (
        , compileToSMTLib
        ) where
 
-import Control.Monad                  (when)
+import Control.DeepSeq                 (NFData(..))
 import Control.Concurrent             (forkIO)
 import Control.Concurrent.Chan.Strict (newChan, writeChan, getChanContents)
+import Control.Monad                  (when)
 import Data.Maybe                     (fromJust, isJust, catMaybes)
 import System.Time                    (getClockTime)
 
@@ -44,6 +46,7 @@ import Data.SBV.BitVectors.Model
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 import qualified Data.SBV.Provers.Yices as Yices
+import qualified Data.SBV.Provers.Z3_QBVF as QBVF
 import Data.SBV.Utils.TDiff
 
 -- | Default configuration for the SMT solver. Non-verbose, non-timing, prints results in base 10, and uses
@@ -256,6 +259,11 @@ proveWith config a = generateTrace config False [] a >>= callSolver [] "Checking
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
 satWith config a = generateTrace config True [] a >>= callSolver [] "Checking Satisfiability.." SatResult config
 
+-- | Find a satisfying model using the QBVF solver
+qbvf :: Provable a => a -> IO QBVFResult
+qbvf a = do (_, _, r) <- simulate QBVF.qbvfSolver defaultSMTCfg True [] a
+            return r
+
 -- | Find all satisfying assignments using the given SMT-solver
 allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
 allSatWith config p = do when (verbose config) $ putStrLn  "** Checking Satisfiability, all solutions.."
@@ -281,18 +289,37 @@ allSatWith config p = do when (verbose config) $ putStrLn  "** Checking Satisfia
                     Satisfiable _ model             -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
                     Unknown     _ model             -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
 
-callSolver :: [[(String, CW)]] -> String -> (SMTResult -> b) -> SMTConfig -> ([NamedSymVar], [(String, UnintKind)], SMTLibPgm) -> IO b
-callSolver nonEqConstraints checkMsg wrap config (inps, modelMap, smtLibPgm) = do
-        let msg = when (verbose config) . putStrLn . ("** " ++)
-        msg checkMsg
-        let finalPgm = addNonEqConstraints nonEqConstraints smtLibPgm
-        msg $ "Generated SMTLib program:\n" ++ finalPgm
-        smtAnswer <- engine (solver config) config inps modelMap finalPgm
-        msg "Done.."
-        return $ wrap smtAnswer
+callSolver :: [[(String, CW)]] -> String -> (SMTResult -> b) -> SMTConfig -> ([(Quantifier, NamedSymVar)], [(String, UnintKind)], SMTLibPgm) -> IO b
+callSolver nonEqConstraints checkMsg wrap config (qinps, modelMap, smtLibPgm)
+  | needsExistentials (map fst qinps)
+  = error "SBV: Existential variables are not supported via SMT-Lib. Use the QBVF solver instead."
+  | True
+  = do let msg = when (verbose config) . putStrLn . ("** " ++)
+           inps = map snd qinps
+       msg checkMsg
+       let finalPgm = addNonEqConstraints nonEqConstraints smtLibPgm
+       msg $ "Generated SMTLib program:\n" ++ finalPgm
+       smtAnswer <- engine (solver config) config inps modelMap finalPgm
+       msg "Done.."
+       return $ wrap smtAnswer
 
-generateTrace :: Provable a => SMTConfig -> Bool -> [String] -> a -> IO ([NamedSymVar], [(String, UnintKind)], SMTLibPgm)
-generateTrace config isSat comments predicate = do
+generateTrace :: Provable a => SMTConfig -> Bool -> [String] -> a -> IO ([(Quantifier, NamedSymVar)], [(String, UnintKind)], SMTLibPgm)
+generateTrace = simulate (\a b c d e f g h i j -> return (toSMTLib a b c d e f g h i j))
+
+simulate :: (NFData res, Provable a)
+         => (   Bool                                        -- is this a sat problem?
+             -> [String]                                    -- extra comments to place on top
+             -> [(Quantifier, (SW, String))]                -- inputs and aliasing names
+             -> [(SW, CW)]                                  -- constants
+             -> [((Int, (Bool, Int), (Bool, Int)), [SW])]   -- auto-generated tables
+             -> [(Int, ArrayInfo)]                          -- user specified arrays
+             -> [(String, SBVType)]                         -- uninterpreted functions/constants
+             -> [(String, [String])]                        -- user given axioms
+             -> Pgm                                         -- assignments
+             -> SW                                          -- output variable
+             -> IO res)
+         -> SMTConfig -> Bool -> [String] -> a -> IO ([(Quantifier, NamedSymVar)], [(String, UnintKind)], res)
+simulate converter config isSat comments predicate = do
         let msg = when (verbose config) . putStrLn . ("** " ++)
             isTiming = timing config
         msg "Starting symbolic simulation.."
@@ -301,8 +328,9 @@ generateTrace config isSat comments predicate = do
         msg "Translating to SMT-Lib.."
         case res of
           Result is consts tbls arrs uis axs pgm [o@(SW (False, 1) _)] | sizeOf o == 1 ->
-             timeIf isTiming "translation" $ let uiMap = catMaybes (map arrayUIKind arrs) ++ map unintFnUIKind uis
-                                             in return (is, uiMap, toSMTLib isSat comments is consts tbls arrs uis axs pgm o)
+             timeIf isTiming "translation" $ do let uiMap = catMaybes (map arrayUIKind arrs) ++ map unintFnUIKind uis
+                                                r <- converter isSat comments is consts tbls arrs uis axs pgm o
+                                                return (is, uiMap, r)
           Result _is _consts _tbls _arrs _uis _axs _pgm os -> case length os of
                         0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
                         1  -> error $ "Impossible happened, non-boolean output in " ++ show os
