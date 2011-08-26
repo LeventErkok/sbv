@@ -18,7 +18,7 @@
 
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate, Provable(..)
-       , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..), QBVFResult(..)
+       , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..)
        , isSatisfiable, isTheorem
        , isSatisfiableWithin, isTheoremWithin
        , numberOfModels
@@ -26,10 +26,11 @@ module Data.SBV.Provers.Prover (
        , prove, proveWith
        , sat, satWith
        , allSat, allSatWith
-       , qbvf
+       , qbvf, qbvfWith
        , SatModel(..), getModel, displayModels
        , defaultSMTCfg, verboseSMTCfg, timingSMTCfg, verboseTimingSMTCfg
        , Yices.yices
+       , Z3.z3
        , timeout
        , compileToSMTLib
        ) where
@@ -181,6 +182,10 @@ prove = proveWith defaultSMTCfg
 sat :: Provable a => a -> IO SatResult
 sat = satWith defaultSMTCfg
 
+-- | Find a satisfying model using the QBVF solver, using the default configuration
+qbvf :: Provable a => a -> IO QBVFResult
+qbvf = qbvfWith defaultSMTCfg { solver = Z3.z3 }
+
 -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
 -- Satisfying assignments are constructed lazily, so they will be available as returned by the solver
 -- and on demand.
@@ -248,26 +253,25 @@ compileToSMTLib :: Provable a => a -> IO String
 compileToSMTLib a = do
         t <- getClockTime
         let comments = ["Created on " ++ show t]
-        (_, _, smtLibPgm) <- generateTrace defaultSMTCfg False comments a
+        (_, _, smtLibPgm) <- simulate toSMTLib1 defaultSMTCfg False comments a
         return $ show smtLibPgm ++ "\n"
 
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
-proveWith config a = generateTrace config False [] a >>= callSolver [] "Checking Theoremhood.." ThmResult config
+proveWith config a = simulate toSMTLib1 config False [] a >>= callSolver [] "Checking Theoremhood.." ThmResult config
 
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
-satWith config a = generateTrace config True [] a >>= callSolver [] "Checking Satisfiability.." SatResult config
+satWith config a = simulate toSMTLib1 config True [] a >>= callSolver [] "Checking Satisfiability.." SatResult config
 
 -- | Find a satisfying model using the QBVF solver
-qbvf :: Provable a => a -> IO QBVFResult
-qbvf a = simulate Z3.qbvfSolver cfg True [] a >>= callSolver [] "Checking QBVF Satisfiability.." (const (QBVFResult ())) cfg
- where cfg = verboseSMTCfg { solver = Z3.z3 }
+qbvfWith :: Provable a => SMTConfig -> a -> IO QBVFResult
+qbvfWith cfg a = simulate toSMTLib2 cfg True [] a >>= callSolver [] "Checking QBVF Satisfiability.." QBVFResult cfg
 
 -- | Find all satisfying assignments using the given SMT-solver
 allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
 allSatWith config p = do when (verbose config) $ putStrLn  "** Checking Satisfiability, all solutions.."
-                         sbvPgm <- generateTrace config True [] p
+                         sbvPgm <- simulate toSMTLib1 config True [] p
                          resChan <- newChan
                          let add  = writeChan resChan . Just
                              stop = writeChan resChan Nothing
@@ -299,9 +303,6 @@ callSolver nonEqConstraints checkMsg wrap config (qinps, modelMap, smtLibPgm) = 
        smtAnswer <- engine (solver config) config inps modelMap finalPgm
        msg "Done.."
        return $ wrap smtAnswer
-
-generateTrace :: Provable a => SMTConfig -> Bool -> [String] -> a -> IO ([(Quantifier, NamedSymVar)], [(String, UnintKind)], SMTLibPgm)
-generateTrace = simulate toSMTLib
 
 simulate :: (NFData res, Provable a)
          => (   Bool                                        -- is this a sat problem?
