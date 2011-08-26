@@ -13,6 +13,8 @@ Version 0.9.22, Not yet released
      a driver. (Issue "cgGenerateDriver False" to skip the driver.)
      For a library, a driver will be generated if any of the
      constituent parts has a driver. Otherwise it'll be skipped.
+  QBVF solving:
+   * Add experimental support for QBVF solving via Z3
 
 ======================================================================
 Version 0.9.21, 2011-08-05
