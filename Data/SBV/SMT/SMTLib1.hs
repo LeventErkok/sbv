@@ -51,7 +51,7 @@ cvt :: Bool                                        -- ^ is this a sat problem?
     -> ([String], [String])
 cvt isSat comments qinps consts tbls arrs uis axs asgnsSeq out
   | needsExistentials (map fst qinps)
-  = error "SBV: No existential variables present. Use prove/sat instead."
+  = error "SBV: Existential variables are not supported via SMT-Lib. Use the QBVF solver instead."
   | True
   = (pre, post)
   where logic
