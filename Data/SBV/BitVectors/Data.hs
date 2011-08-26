@@ -33,6 +33,7 @@ module Data.SBV.BitVectors.Data
  , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, runSymbolic', State, Size, Outputtable(..), Result(..)
  , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
  , Quantifier(..), needsExistentials
+ , SMTLibPgm(..), SMTLibVersion(..)
  ) where
 
 import Control.DeepSeq                 (NFData(..))
@@ -754,7 +755,22 @@ uncacheGen getCache (Cached f) st = do
                         r `seq` modifyIORef rCache (IMap.insertWith (++) h [(sn, r)])
                         return r
 
--- Technicalities..
+-- Representation of SMTLib Programs
+data SMTLibVersion = SMTLib1
+                   | SMTLib2
+                   deriving Eq
+
+-- in between pre and post goes the refuted models
+data SMTLibPgm = SMTLibPgm SMTLibVersion  ( [(String, SW)]          -- alias table
+                                          , [String]                -- pre: declarations.
+                                          , [String])               -- post: formula
+instance NFData SMTLibVersion
+instance NFData SMTLibPgm
+
+instance Show SMTLibPgm where
+  show (SMTLibPgm _ (_, pre, post)) = intercalate "\n" $ pre ++ post
+
+-- Other Technicalities..
 instance NFData CW where
   rnf (CW x y z) = x `seq` y `seq` z `seq` ()
 
