@@ -60,7 +60,9 @@
 --
 --   * proven correct via an external SMT solver (the 'prove' function)
 --
---   * checked for satisfiability (the 'sat' and 'allSat' functions)
+--   * checked for satisfiability (the 'sat', 'allSat', and 'qbvf' functions)
+--
+--   * used in synthesis (the `qbvf` function)
 --
 --   * quick-checked
 --
@@ -72,14 +74,10 @@
 -- The sbv library uses third-party SMT solvers via the standard SMT-Lib interface:
 -- <http://goedel.cs.uiowa.edu/smtlib/>.
 --
--- While the library is designed to work with any SMT-Lib compliant SMT-solver,
--- solver specific support is required for parsing counter-example/model data since
--- there is currently no agreed upon format for getting models from arbitrary SMT
--- solvers. (The SMT-Lib2 initiative will potentially address this issue in the
--- future, at which point the sbv library can be generalized as well.) Currently, we
--- only support the Yices SMT solver from SRI as far as the counter-example
--- and model generation support is concerned: <http://yices.csl.sri.com/>.
--- However, other solvers can be hooked up with relative ease.
+-- The SBV library is designed to work with any SMT-Lib compliant SMT-solver.
+-- Currently, we support the Yices SMT solver from SRI fully: <http://yices.csl.sri.com/>.
+-- The SBV library interfaces with Microsoft's Z3 SMT solver for QBVF problems: 
+-- <http://research.microsoft.com/en-us/um/redmond/projects/z3/>.
 --
 -- You /should/ download and install Yices on your machine, and make sure the
 -- @yices@ executable is in your path before using the sbv library, as it is the

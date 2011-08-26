@@ -37,7 +37,9 @@ Description:   Express properties about bit-precise Haskell programs and automat
                .
                  * proven correct via an external SMT solver (the 'prove' function)
                .
-                 * checked for satisfiability (the 'sat' and 'allSat' functions)
+                 * checked for satisfiability (the 'sat', 'allSat', and 'qbvf' functions)
+               .
+                 * used in synthesis (the 'qbvf' function)
                .
                  * quick-checked
                .
