@@ -17,6 +17,7 @@ module Data.SBV.Provers.Z3_QBVF(z3) where
 import Data.Char          (isDigit)
 import Data.List          (sortBy, intercalate)
 import System.Environment (getEnv)
+import qualified System.Info as S(os)
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.Provers.SExpr
@@ -30,7 +31,7 @@ z3 :: SMTSolver
 z3 = SMTSolver {
            name       = "z3"
          , executable = "z3"
-         , options    = ["/in", "/smt2"]
+         , options    = if S.os == "linux" then ["-in", "-smt2"] else ["/in", "/smt2"]
          , engine     = \cfg inps modelMap pgm -> do
                                 execName <-                getEnv "SBV_Z3"           `catch` (\_ -> return (executable (solver cfg)))
                                 execOpts <- (words `fmap` (getEnv "SBV_Z3_OPTIONS")) `catch` (\_ -> return (options (solver cfg)))

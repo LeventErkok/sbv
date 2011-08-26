@@ -83,12 +83,11 @@
 -- @yices@ executable is in your path before using the sbv library, as it is the
 -- current default solver. Alternatively, you can specify the location of yices
 -- executable in the environment variable @SBV_YICES@ and the options to yices
--- in @SBV_YICES_OPTIONS@. (The default for the latter is '\"-m -f\"'.)
+-- in @SBV_YICES_OPTIONS@.
 --
 -- Use of the QBVF solver (see 'qbvf') requires an installation of z3. Again,
 -- z3 must be in your path. Or, you can use the @SBV_Z3@ and @SBV_Z3_OPTIONS@
--- environment variables to set the executable and the options. (The default
--- for the latter is '\"\/in \/smt2\"'.)
+-- environment variables to set the executable and the options.
 ---------------------------------------------------------------------------------
 
 module Data.SBV (
