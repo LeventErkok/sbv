@@ -93,9 +93,7 @@ newtype SatResult    = SatResult    SMTResult
 newtype AllSatResult = AllSatResult [SMTResult]
 
 -- | A 'qbvf' call results in a 'QBVFResult'
--- (NB. Currently this is simply unit, to be elaborated later.)
-newtype QBVFResult = QBVFResult ()
-instance NFData QBVFResult
+newtype QBVFResult = QBVFResult SMTResult
 
 instance Show ThmResult where
   show (ThmResult r) = showSMTResult "Q.E.D."
@@ -119,6 +117,11 @@ instance Show AllSatResult where
         where sh i = showSMTResult "Unsatisfiable"
                                    ("Unknown #" ++ show i ++ "(No assignment to variables returned)") "Unknown. Potential assignment:\n"
                                    ("Solution #" ++ show i ++ " (No assignment to variables returned)") ("Solution #" ++ show i ++ ":\n")
+
+instance Show QBVFResult where
+   show (QBVFResult r) = showSMTResult "Unsatisfiable"
+                                       "Unknown" "Unknown. Potential model for prefix existentials:\n"
+                                       "Satisfiable" "Satisfiable. Prefix existentials:\n" r
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
 -- solvers. The idea is that the sbv infrastructure provides a stream of 'CW''s (constant-words)
@@ -269,15 +272,15 @@ shUA :: (String, [String]) -> [String]
 shUA (f, cases) = ("  -- array: " ++ f) : map shC cases
   where shC s = "       " ++ s
 
-pipeProcess :: String -> String -> [String] -> String -> IO (Either String [String])
-pipeProcess nm execName opts script = do
+pipeProcess :: String -> String -> [String] -> String -> (String -> String) -> IO (Either String [String])
+pipeProcess nm execName opts script cleanErrs = do
         mbExecPath <- findExecutable execName
         case mbExecPath of
           Nothing -> return $ Left $ "Unable to locate executable for " ++ nm
                                    ++ "\nExecutable specified: " ++ show execName
           Just execPath -> do (ec, contents, errors) <- readProcessWithExitCode execPath opts script
                               case ec of
-                                ExitSuccess  ->  if null errors
+                                ExitSuccess  ->  if null (cleanErrs errors)
                                                  then return $ Right $ map clean (filter (not . null) (lines contents))
                                                  else return $ Left errors
                                 ExitFailure n -> let errors' = if null (dropWhile isSpace errors)
@@ -297,8 +300,8 @@ pipeProcess nm execName opts script = do
   where clean = reverse . dropWhile isSpace . reverse . dropWhile isSpace
         line  = take 78 $ repeat '='
 
-standardSolver :: SMTConfig -> String -> ([String] -> a) -> ([String] -> a) -> IO a
-standardSolver config script failure success = do
+standardSolver :: SMTConfig -> String -> (String -> String) -> ([String] -> a) -> ([String] -> a) -> IO a
+standardSolver config script cleanErrs failure success = do
     let msg      = when (verbose config) . putStrLn . ("** " ++)
         smtSolver= solver config
         exec     = executable smtSolver
@@ -306,7 +309,7 @@ standardSolver config script failure success = do
         isTiming = timing config
         nmSolver = name smtSolver
     msg $ "Calling: " ++ show (unwords (exec:opts))
-    contents <- timeIf isTiming nmSolver $ pipeProcess nmSolver exec opts script
+    contents <- timeIf isTiming nmSolver $ pipeProcess nmSolver exec opts script cleanErrs
     msg $ nmSolver ++ " output:\n" ++ either id (intercalate "\n") contents
     case contents of
       Left e   -> return $ failure (lines e)
