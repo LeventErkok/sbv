@@ -86,14 +86,15 @@ You **should** download and install Yices (version 2.X) on your machine, and
 make sure the "yices" executable is in your path before using the sbv library,
 as it is the current default solver. Alternatively, you can specify the location
 of yices executable in the environment variable `SBV_YICES` and the options to yices
-in `SBV_YICES_OPTIONS`. (The default for the latter is `"-m -f"`.)
+in `SBV_YICES_OPTIONS`. The default for the latter is `"-m -f"`.
 
 If QBVF (quantified bit-vectors) solver is to be used, you should also install
 Microsoft's z3 SMT solver. Again, the environment variables 
 `SBV_Z3` and `SBV_Z3_OPTIONS` can be used for choosing executable location
-and custom options.  (The default for the latter is `"/in /smt2"`.) (Microsoft
+and custom options.  The default for the latter is `"/in /smt2"`. Microsoft
 releases Z3 natively on Windows, and Linux for SMT-Comp purposes, and you can
-also run it on Mac via Wine or similar emulators.
+also run it on Mac via Wine or similar emulators. You should download at least
+version 3.0.
 
 Examples
 =========
