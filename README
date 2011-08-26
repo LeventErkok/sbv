@@ -53,7 +53,7 @@ framework takes full advantage of Haskell's type inference to avoid many common 
 Furthermore, predicates (i.e., functions that return `SBool`) built out of these types can also be:
 
   - proven correct via an external SMT solver (the `prove` function)
-  - checked for satisfiability (the `sat` and `allSat` functions)
+  - checked for satisfiability (the `sat`, `allSat`, and `qbvf` functions)
   - used in synthesis (the `qbvf` function)
   - quick-checked
 
