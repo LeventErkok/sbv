@@ -86,6 +86,11 @@
 -- current default solver. Alternatively, you can specify the location of yices
 -- executable in the environment variable @SBV_YICES@ and the options to yices
 -- in @SBV_YICES_OPTIONS@. (The default for the latter is '\"-m -f\"'.)
+--
+-- Use of the QBVF solver (see 'qbvf') requires an installation of z3. Again,
+-- z3 must be in your path. Or, you can use the @SBV_Z3@ and @SBV_Z3_OPTIONS@
+-- environment variables to set the executable and the options. (The default
+-- for the latter is '\"\/in \/smt2\"'.)
 ---------------------------------------------------------------------------------
 
 module Data.SBV (
@@ -150,7 +155,8 @@ module Data.SBV (
   -- ** Finding all satisfying assignments
   , allSat, allSatWith, numberOfModels
   -- ** Finding a satisfying model for a QBVF problem
-  , qbvf, QBVFResult(..)
+  , qbvf, qbvfWith
+
   -- * Model extraction
   -- $modelExtraction
 
@@ -164,7 +170,7 @@ module Data.SBV (
 
   -- * SMT Interface: Configurations and solvers
   , SMTConfig(..), SMTSolver(..), defaultSMTCfg, verboseSMTCfg, timingSMTCfg, verboseTimingSMTCfg, timeout
-  , yices
+  , yices, z3
 
   -- * Symbolic computations
   , Symbolic, output, SymWord(..)
