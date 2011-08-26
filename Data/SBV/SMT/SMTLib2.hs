@@ -27,11 +27,19 @@ addNonEqConstraints nonEqConstraints (SMTLibPgm _ (aliasTable, pre, post)) = int
           | Just sw <- s `lookup` aliasTable = (show sw, c)
           | True                             = (s, c)
 
--- We do not need this currently since we do not yet support allSat for SMT-Lib2
--- targets. But eventually we'll have to implement this as we settle on SMT-Lib2 for
--- all interaction.
 nonEqs :: [(String, CW)] -> [String]
-nonEqs _ =  error "SBV: TBD: SMTLib2: Support for non-eq-constraints not implemented yet."
+nonEqs []     =  []
+nonEqs [sc]   =  ["(assert " ++ nonEq sc ++ ")"]
+nonEqs (sc:r) =  ["(assert (or " ++ nonEq sc]
+              ++ map (("           " ++) . nonEq) r
+              ++ ["        ))"]
+
+nonEq :: (String, CW) -> String
+nonEq (s, c) = "(not (= " ++ s ++ " " ++ cvtCW c ++ "))"
+
+-- TODO: fix this
+cvtCW :: CW -> String
+cvtCW = show
 
 cvt :: Bool                                        -- ^ is this a sat problem?
     -> [String]                                    -- ^ extra comments to place on top
