@@ -14,7 +14,7 @@ module Data.SBV.Provers.SExpr where
 
 import Control.Monad.Error ()             -- for Monad (Either String) instance
 import Data.Char           (isDigit, ord)
-import Numeric             (readInt, readDec)
+import Numeric             (readInt, readDec, readHex)
 
 data SExpr = S_Con String
            | S_Num Integer
@@ -46,6 +46,8 @@ parseSExpr inp = do (sexp, []) <- parse inpToks
                                        parseApp toks (t : sofar)
         pTok ('0':'b':r)       = mkNum $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
         pTok ('b':'v':r)       = mkNum $ readDec (takeWhile (/= '[') r)
+        pTok ('#':'b':r)       = mkNum $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
+        pTok ('#':'x':r)       = mkNum $ readHex r
         pTok n | all isDigit n = mkNum $ readDec n
         pTok n                 = return $ S_Con $ n
         mkNum [(n, "")] = return $ S_Num n
