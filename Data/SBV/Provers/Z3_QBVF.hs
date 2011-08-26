@@ -12,42 +12,58 @@
 
 {-# LANGUAGE PatternGuards #-}
 
-module Data.SBV.Provers.Z3_QBVF(qbvfSolver, z3) where
+module Data.SBV.Provers.Z3_QBVF(z3) where
 
+import Data.Char          (isDigit)
+import Data.List          (sortBy, intercalate)
 import System.Environment (getEnv)
 
 import Data.SBV.BitVectors.Data
+import Data.SBV.Provers.SExpr
 import Data.SBV.SMT.SMT
-import Data.SBV.SMT.SMTLib(SMTLibPgm(..))
+import Data.SBV.SMT.SMTLib
 
+-- | The description of the Z3 SMT solver
+-- The default executable is @\"z3\"@, which must be in your path. You can use the @SBV_Z3@ environment variable to point to the executable on your system.
+-- The default options are @\"\/in \/smt2\"@, which is valid for Z3 3.0 series. You can use the @SBV_Z3_OPTIONS@ environment variable to override the options.
 z3 :: SMTSolver
 z3 = SMTSolver {
            name       = "z3"
          , executable = "z3"
-         , options    = ["/smt2", "/m", "/in"]
-         , engine     = \cfg _inps _modelMap pgm -> do
+         , options    = ["/in", "/smt2"]
+         , engine     = \cfg inps modelMap pgm -> do
                                 execName <-                getEnv "SBV_Z3"           `catch` (\_ -> return (executable (solver cfg)))
                                 execOpts <- (words `fmap` (getEnv "SBV_Z3_OPTIONS")) `catch` (\_ -> return (options (solver cfg)))
                                 let cfg' = cfg { solver = (solver cfg) {executable = execName, options = execOpts} }
-                                standardSolver cfg' pgm (ProofError cfg) (ProofError cfg)
+                                standardSolver cfg' pgm cleanErrs (ProofError cfg) (interpretSolverOutput cfg (extractMap inps modelMap))
          }
+ where -- This is quite crude and failure prone.. But is necessary to get z3 working through Wine on Mac
+       cleanErrs = intercalate "\n" . filter (not . junk) . lines
+       junk "fixme:heap:HeapSetInformation 0x0 1 0x0 0" = True
+       junk _                                           = False
 
-qbvfSolver :: Bool                                        -- ^ is this a sat problem?
-           -> [String]                                    -- ^ extra comments to place on top
-           -> [(Quantifier, (SW, String))]                -- ^ inputs and aliasing names
-           -> [(SW, CW)]                                  -- ^ constants
-           -> [((Int, (Bool, Int), (Bool, Int)), [SW])]   -- ^ auto-generated tables
-           -> [(Int, ArrayInfo)]                          -- ^ user specified arrays
-           -> [(String, SBVType)]                         -- ^ uninterpreted functions/constants
-           -> [(String, [String])]                        -- ^ user given axioms
-           -> Pgm                                         -- ^ assignments
-           -> SW                                          -- ^ output variable
-           -> SMTLibPgm
-qbvfSolver _isSat _comments qinps _consts _tbls _arrs _uis _axs _asgnsSeq _out
-  | not (needsExistentials (map fst qinps))
-  = error "qbvf: There are no existentials in this problem for QBVF solving. Use 'sat', or 'prove' instead."
-  | True
-  = SMTLibPgm ([], [], [ "(assert (exists ((x (_ BitVec 16))) (forall ((y (_ BitVec 16))) (bvuge y x))))"
-                       , "(check-sat)"
-                       , "(get-model)"
-                       ])
+extractMap :: [NamedSymVar] -> [(String, UnintKind)] -> [String] -> SMTModel
+extractMap inps _modelMap solverLines =
+   SMTModel { modelAssocs    = map (\(_, y) -> y) $ sortByNodeId $ concatMap (getCounterExample inps) solverLines
+            , modelUninterps = []
+            , modelArrays    = []
+            }
+  where sortByNodeId :: [(Int, a)] -> [(Int, a)]
+        sortByNodeId = sortBy (\(x, _) (y, _) -> compare x y)
+
+getCounterExample :: [NamedSymVar] -> String -> [(Int, (String, CW))]
+getCounterExample inps line = either err extract (parseSExpr line)
+  where err r =  error $  "*** Failed to parse SMT-Lib2 model output from: "
+                       ++ "*** " ++ show line ++ "\n"
+                       ++ "*** Reason: " ++ r ++ "\n"
+        isInput ('s':v)
+          | all isDigit v = let inpId :: Int
+                                inpId = read v
+                            in case [(s, nm) | (s@(SW _ (NodeId n)), nm) <-  inps, n == inpId] of
+                                 []        -> Nothing
+                                 [(s, nm)] -> Just (inpId, s, nm)
+                                 matches -> error $  "SBV.SMTLib2: Cannot uniquely identify value for "
+                                                  ++ 's':v ++ " in "  ++ show matches
+        isInput _       = Nothing
+        extract (S_App [S_App [S_Con v, S_Num i]]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (hasSign s, sizeOf s) i))]
+        extract _                                                                 = []
