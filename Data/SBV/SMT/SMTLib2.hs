@@ -62,7 +62,7 @@ cvt _isSat comments qinps _consts _tbls _arrs _uis _axs _asgnsSeq _out
                ]
                ++ map ("; " ++) comments
                ++ topDecls
-        post = [ "(assert (forall ((s2 (_ BitVec 16))) (bvuge (bvadd s2 s1) s0)))"
+        post = [ "(assert (forall ((s2 (_ BitVec 16))) (and (bvuge s1 #x0005) (bvuge (bvsub (bvadd s2 s1) #x0001) s0))))"
                ]
         topExists = takeWhile (\(q, _) -> q == EX) qinps
         topDecls  = ["(declare-fun " ++ show s ++ " () " ++ smtType s ++ ")" | (_, (s, _)) <- topExists]
