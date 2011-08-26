@@ -22,6 +22,7 @@ import System.Environment (getEnv)
 import Data.SBV.BitVectors.Data
 import Data.SBV.Provers.SExpr
 import Data.SBV.SMT.SMT
+import Data.SBV.SMT.SMTLib
 
 -- | The description of the Yices SMT solver
 -- The default executable is @\"yices\"@, which must be in your path. You can use the @SBV_YICES@ environment variable to point to the executable on your system.
@@ -36,7 +37,7 @@ yices = SMTSolver {
                                 execName <-                getEnv "SBV_YICES"           `catch` (\_ -> return (executable (solver cfg)))
                                 execOpts <- (words `fmap` (getEnv "SBV_YICES_OPTIONS")) `catch` (\_ -> return (options (solver cfg)))
                                 let cfg' = cfg { solver = (solver cfg) {executable = execName, options = execOpts} }
-                                standardSolver cfg' pgm (ProofError cfg) (interpret cfg inps modelMap)
+                                standardSolver cfg' pgm id (ProofError cfg) (interpretSolverOutput cfg (extractMap inps modelMap))
          }
 
 timeout :: Int -> SMTSolver -> SMTSolver
@@ -46,13 +47,6 @@ timeout n s
 
 sortByNodeId :: [(Int, a)] -> [(Int, a)]
 sortByNodeId = sortBy (\(x, _) (y, _) -> compare x y)
-
-interpret :: SMTConfig -> [NamedSymVar] -> [(String, UnintKind)] -> [String] -> SMTResult
-interpret cfg _    _        ("unsat":_)      = Unsatisfiable cfg
-interpret cfg inps modelMap ("unknown":rest) = Unknown       cfg  $ extractMap inps modelMap rest
-interpret cfg inps modelMap ("sat":rest)     = Satisfiable   cfg  $ extractMap inps modelMap rest
-interpret cfg _    _        ("timeout":_)    = TimeOut       cfg
-interpret cfg _    _        ls               = ProofError    cfg  $ ls
 
 extractMap :: [NamedSymVar] -> [(String, UnintKind)] -> [String] -> SMTModel
 extractMap inps modelMap solverLines =
