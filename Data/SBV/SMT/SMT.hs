@@ -278,12 +278,13 @@ pipeProcess nm execName opts script cleanErrs = do
         case mbExecPath of
           Nothing -> return $ Left $ "Unable to locate executable for " ++ nm
                                    ++ "\nExecutable specified: " ++ show execName
-          Just execPath -> do (ec, contents, errors) <- readProcessWithExitCode execPath opts script
+          Just execPath -> do (ec, contents, allErrors) <- readProcessWithExitCode execPath opts script
+                              let errors = dropWhile isSpace (cleanErrs allErrors)
                               case ec of
-                                ExitSuccess  ->  if null (cleanErrs errors)
+                                ExitSuccess  ->  if null errors
                                                  then return $ Right $ map clean (filter (not . null) (lines contents))
                                                  else return $ Left errors
-                                ExitFailure n -> let errors' = if null (dropWhile isSpace errors)
+                                ExitFailure n -> let errors' = if null errors
                                                                then (if null (dropWhile isSpace contents)
                                                                      then "(No error message printed on stderr by the executable.)"
                                                                      else contents)
