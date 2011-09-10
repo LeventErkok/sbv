@@ -186,9 +186,9 @@ cvtExp inp@(SBVApp op args)
   | Just f <- lookup op smtOpTable
   = f (any hasSign args) (map show args)
   | True
-  = error $ "SBV.SMT.SMTLib.cvtExp: impossible happened; can't translate: " ++ show inp
+  = error $ "SBV.SMT.SMTLib1.cvtExp: impossible happened; can't translate: " ++ show inp
   where lift2  o _ [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
-        lift2  o _ sbvs   = error $ "SBV.SMTLib.cvtExp.lift2: Unexpected arguments: "   ++ show (o, sbvs)
+        lift2  o _ sbvs   = error $ "SBV.SMTLib1.cvtExp.lift2: Unexpected arguments: "   ++ show (o, sbvs)
         lift2B oU oS sgn sbvs
           | sgn
           = "(ite " ++ lift2 oS sgn sbvs ++ " bv1[1] bv0[1])"
@@ -196,7 +196,7 @@ cvtExp inp@(SBVApp op args)
           = "(ite " ++ lift2 oU sgn sbvs ++ " bv1[1] bv0[1])"
         lift2N o sgn sbvs = "(bvnot " ++ lift2 o sgn sbvs ++ ")"
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
-        lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib.cvtExp.lift1: Unexpected arguments: "   ++ show (o, sbvs)
+        lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib1.cvtExp.lift1: Unexpected arguments: "   ++ show (o, sbvs)
         smtOpTable = [ (Plus,          lift2   "bvadd")
                      , (Minus,         lift2   "bvsub")
                      , (Times,         lift2   "bvmul")
@@ -216,6 +216,6 @@ cvtExp inp@(SBVApp op args)
                      ]
 
 cvtType :: SBVType -> String
-cvtType (SBVType []) = error "SBV.SMT.SMTLib.cvtType: internal: received an empty type!"
+cvtType (SBVType []) = error "SBV.SMT.SMTLib1.cvtType: internal: received an empty type!"
 cvtType (SBVType xs) = intercalate " " $ map sh xs
   where sh (_, s) = "BitVec[" ++ show s ++ "]"
