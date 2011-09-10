@@ -75,9 +75,16 @@ cvt isSat comments qinps consts tbls arrs uis axs asgnsSeq out
              ++ [ "; --- skolem constants ---" ]
              ++ [ "(declare-fun " ++ show s ++ " " ++ smtFunType ss s ++ ")" | Right (s, ss) <- skolemInps]
              ++ [ "; --- formula ---" ]
-             ++ [ "(assert (forall (" ++ intercalate "\n                 " ["(" ++ show s ++ " " ++ smtType s ++ ")" | Left s <- skolemInps] ++ ")" ]
-             ++ map (("            " ++) . mkLet) asgns
-             ++ [ "                 " ++ assertOut ++ replicate (2 + length asgns) ')' ]
+             ++ [if null foralls
+                 then "(assert "
+                 else "(assert (forall (" ++ intercalate "\n                 "
+                                             ["(" ++ show s ++ " " ++ smtType s ++ ")" | s <- foralls] ++ ")"]
+             ++ map (letAlign . mkLet) asgns
+             ++ [ letAlign assertOut ++ replicate ((if null foralls then 1 else 2) + length asgns) ')' ]
+        foralls = [s | Left s <- skolemInps]
+        letAlign s
+          | null foralls = "   " ++ s
+          | True         = "            " ++ s
         assertOut
            | isSat = "(= " ++ show out ++ " #b1)"
            | True  = "(= " ++ show out ++ " #b0)"
