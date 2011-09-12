@@ -565,7 +565,7 @@ runSymbolic' (Symbolic c) = do
 -- Minimal complete definiton: free, free_, literal, fromCW
 class (Bounded a, Ord a) => SymWord a where
   -- | Create a user named input
-  free       :: String -> Symbolic (SBV a)
+  free, forall :: String -> Symbolic (SBV a)
   -- | Create an automatically named input
   free_      :: Symbolic (SBV a)
   -- | Get a bunch of new words
@@ -590,6 +590,7 @@ class (Bounded a, Ord a) => SymWord a where
   isConcretely :: SBV a -> (a -> Bool) -> Bool
 
   -- minimal complete definiton: free, free_, literal, fromCW
+  forall = free
   mkFreeVars n  = mapM (const free_) [1 .. n]
   mkExistVars n = mapM (const exists_) [1 .. n]
   unliteral (SBV _ (Left c))  = Just $ fromCW c
