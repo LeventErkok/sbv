@@ -33,11 +33,12 @@ yices = SMTSolver {
          , executable = "yices"
          -- , options    = ["-tc", "-smt", "-e"]   -- For Yices1
          , options    = ["-m", "-f"]  -- For Yices2
-         , engine     = \cfg inps modelMap pgm -> do
+         , engine     = \cfg _isSat qinps modelMap _skolemMap pgm -> do
                                 execName <-                getEnv "SBV_YICES"           `catch` (\_ -> return (executable (solver cfg)))
                                 execOpts <- (words `fmap` (getEnv "SBV_YICES_OPTIONS")) `catch` (\_ -> return (options (solver cfg)))
                                 let cfg' = cfg { solver = (solver cfg) {executable = execName, options = execOpts} }
-                                standardSolver cfg' pgm id (ProofError cfg) (interpretSolverOutput cfg (extractMap inps modelMap))
+                                    script = SMTScript { scriptBody = pgm, scriptModel = Nothing }
+                                standardSolver cfg' script id (ProofError cfg) (interpretSolverOutput cfg (extractMap (map snd qinps) modelMap))
          }
 
 timeout :: Int -> SMTSolver -> SMTSolver

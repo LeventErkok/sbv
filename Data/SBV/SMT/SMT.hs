@@ -14,15 +14,20 @@
 
 module Data.SBV.SMT.SMT where
 
-import Control.DeepSeq  (NFData(..))
-import Control.Monad    (when, zipWithM)
-import Data.Char        (isSpace)
-import Data.Int         (Int8, Int16, Int32, Int64)
-import Data.List        (intercalate)
-import Data.Word        (Word8, Word16, Word32, Word64)
-import System.Directory (findExecutable)
-import System.Process   (readProcessWithExitCode)
-import System.Exit      (ExitCode(..))
+import qualified Control.Exception as C
+
+import Control.Concurrent (newEmptyMVar, takeMVar, putMVar, forkIO)
+import Control.DeepSeq    (NFData(..))
+import Control.Monad      (when, zipWithM)
+import Data.Char          (isSpace)
+import Data.Int           (Int8, Int16, Int32, Int64)
+import Data.List          (intercalate, isPrefixOf)
+import Data.Maybe         (isNothing, fromJust)
+import Data.Word          (Word8, Word16, Word32, Word64)
+import System.Directory   (findExecutable)
+import System.Process     (readProcessWithExitCode, runInteractiveProcess, waitForProcess)
+import System.Exit        (ExitCode(..))
+import System.IO          (hClose, hFlush, hPutStr, hGetContents, hGetLine)
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.PrettyNum
@@ -36,7 +41,7 @@ data SMTConfig = SMTConfig {
        , solver    :: SMTSolver -- ^ The actual SMT solver
        }
 
-type SMTEngine = SMTConfig -> [NamedSymVar] -> [(String, UnintKind)] -> String -> IO SMTResult
+type SMTEngine = SMTConfig -> Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [Either SW (SW, [SW])] -> String -> IO SMTResult
 
 -- | An SMT solver
 data SMTSolver = SMTSolver {
@@ -65,6 +70,12 @@ data SMTResult = Unsatisfiable SMTConfig            -- ^ Unsatisfiable
                | ProofError    SMTConfig [String]   -- ^ Prover errored out
                | TimeOut       SMTConfig            -- ^ Computation timed out (see the 'timeout' combinator)
 
+-- | A script, to be passed to the solver.
+data SMTScript = SMTScript {
+          scriptBody  :: String        -- ^ Initial feed
+        , scriptModel :: Maybe String  -- ^ Optional continuation script, if the result is sat
+        }
+
 resultConfig :: SMTResult -> SMTConfig
 resultConfig (Unsatisfiable c) = c
 resultConfig (Satisfiable c _) = c
@@ -92,9 +103,6 @@ newtype SatResult    = SatResult    SMTResult
 -- | An 'allSat' call results in a 'AllSatResult'
 newtype AllSatResult = AllSatResult [SMTResult]
 
--- | A 'qbvf' call results in a 'QBVFResult'
-newtype QBVFResult = QBVFResult SMTResult
-
 instance Show ThmResult where
   show (ThmResult r) = showSMTResult "Q.E.D."
                                      "Unknown"     "Unknown. Potential counter-example:\n"
@@ -118,10 +126,6 @@ instance Show AllSatResult where
                                    ("Unknown #" ++ show i ++ "(No assignment to variables returned)") "Unknown. Potential assignment:\n"
                                    ("Solution #" ++ show i ++ " (No assignment to variables returned)") ("Solution #" ++ show i ++ ":\n")
 
-instance Show QBVFResult where
-   show (QBVFResult r) = showSMTResult "Unsatisfiable"
-                                       "Unknown" "Unknown. Potential model for prefix existentials:\n"
-                                       "Satisfiable" "Satisfiable. Prefix existentials:\n" r
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
 -- solvers. The idea is that the sbv infrastructure provides a stream of 'CW''s (constant-words)
@@ -272,13 +276,13 @@ shUA :: (String, [String]) -> [String]
 shUA (f, cases) = ("  -- array: " ++ f) : map shC cases
   where shC s = "       " ++ s
 
-pipeProcess :: String -> String -> [String] -> String -> (String -> String) -> IO (Either String [String])
-pipeProcess nm execName opts script cleanErrs = do
+pipeProcess :: Bool -> String -> String -> [String] -> SMTScript -> (String -> String) -> IO (Either String [String])
+pipeProcess verb nm execName opts script cleanErrs = do
         mbExecPath <- findExecutable execName
         case mbExecPath of
           Nothing -> return $ Left $ "Unable to locate executable for " ++ nm
                                    ++ "\nExecutable specified: " ++ show execName
-          Just execPath -> do (ec, contents, allErrors) <- readProcessWithExitCode execPath opts script
+          Just execPath -> do (ec, contents, allErrors) <- runSolver verb execPath opts script
                               let errors = dropWhile isSpace (cleanErrs allErrors)
                               case ec of
                                 ExitSuccess  ->  if null errors
@@ -301,7 +305,7 @@ pipeProcess nm execName opts script cleanErrs = do
   where clean = reverse . dropWhile isSpace . reverse . dropWhile isSpace
         line  = take 78 $ repeat '='
 
-standardSolver :: SMTConfig -> String -> (String -> String) -> ([String] -> a) -> ([String] -> a) -> IO a
+standardSolver :: SMTConfig -> SMTScript -> (String -> String) -> ([String] -> a) -> ([String] -> a) -> IO a
 standardSolver config script cleanErrs failure success = do
     let msg      = when (verbose config) . putStrLn . ("** " ++)
         smtSolver= solver config
@@ -310,8 +314,44 @@ standardSolver config script cleanErrs failure success = do
         isTiming = timing config
         nmSolver = name smtSolver
     msg $ "Calling: " ++ show (unwords (exec:opts))
-    contents <- timeIf isTiming nmSolver $ pipeProcess nmSolver exec opts script cleanErrs
+    contents <- timeIf isTiming nmSolver $ pipeProcess (verbose config) nmSolver exec opts script cleanErrs
     msg $ nmSolver ++ " output:\n" ++ either id (intercalate "\n") contents
     case contents of
       Left e   -> return $ failure (lines e)
       Right xs -> return $ success xs
+
+-- A variant of readProcessWithExitCode; except it knows about continuation strings
+-- and can speak SMT-Lib2 (just a little)
+runSolver :: Bool -> FilePath -> [String] -> SMTScript -> IO (ExitCode, String, String)
+runSolver verb execPath opts script
+ | isNothing $ scriptModel script
+ = readProcessWithExitCode execPath opts (scriptBody script)
+ | True
+ = do (send, ask, cleanUp) <- do
+                (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
+                let send l    = hPutStr inh (l ++ "\n") >> hFlush inh
+                    recv      = hGetLine outh
+                    ask l     = send l >> recv
+                    cleanUp r = do outMVar <- newEmptyMVar
+                                   out <- hGetContents outh
+                                   _ <- forkIO $ C.evaluate (length out) >> putMVar outMVar ()
+                                   err <- hGetContents errh
+                                   _ <- forkIO $ C.evaluate (length err) >> putMVar outMVar ()
+                                   hClose inh
+                                   takeMVar outMVar
+                                   takeMVar outMVar
+                                   hClose outh
+                                   hClose errh
+                                   ex <- waitForProcess pid
+                                   return (ex, r ++ "\n" ++ out, err)
+                return (send, ask, cleanUp)
+      send "(set-option :produce-models true)"
+      send "(set-logic UFBV)"
+      mapM_ send (lines (scriptBody script))
+      r <- ask "(check-sat)"
+      when ("sat" `isPrefixOf` r) $ do
+        let mls = lines (fromJust (scriptModel script))
+        when verb $ do putStrLn $ "** Sending the following model extraction commands:"
+                       mapM_ putStrLn mls
+        mapM_ send mls
+      cleanUp r

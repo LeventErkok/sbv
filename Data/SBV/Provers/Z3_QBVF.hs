@@ -32,25 +32,39 @@ z3 = SMTSolver {
            name       = "z3"
          , executable = "z3"
          , options    = if S.os == "linux" then ["-in", "-smt2"] else ["/in", "/smt2"]
-         , engine     = \cfg inps modelMap pgm -> do
+         , engine     = \cfg isSat qinps modelMap skolemMap pgm -> do
                                 execName <-                getEnv "SBV_Z3"           `catch` (\_ -> return (executable (solver cfg)))
                                 execOpts <- (words `fmap` (getEnv "SBV_Z3_OPTIONS")) `catch` (\_ -> return (options (solver cfg)))
                                 let cfg' = cfg { solver = (solver cfg) {executable = execName, options = execOpts} }
-                                standardSolver cfg' pgm cleanErrs (ProofError cfg) (interpretSolverOutput cfg (extractMap inps modelMap))
+                                    script = SMTScript { scriptBody = "(set-option :mbqi true)\n" ++ pgm, scriptModel = Just (cont skolemMap)}
+                                standardSolver cfg' script cleanErrs (ProofError cfg) (interpretSolverOutput cfg (extractMap isSat qinps modelMap . zipWith match skolemMap))
          }
  where -- This is quite crude and failure prone.. But is necessary to get z3 working through Wine on Mac
        cleanErrs = intercalate "\n" . filter (not . junk) . lines
        junk "fixme:heap:HeapSetInformation 0x0 1 0x0 0" = True
        junk _                                           = False
+       zero :: Int -> String
+       zero 1  = "#b0"
+       zero sz = "#x" ++ replicate (sz `div` 4) '0'
+       cont skolemMap = intercalate "\n" $ map extract skolemMap
+        where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ zero (sizeOf s) ++ "))\")"
+              extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
+              extract (Right (s, ss)) = "(eval (" ++ show s ++ concat [' ' : zero (sizeOf a) | a <- ss] ++ "))"
+       match (Left _)        l = l
+       match (Right (_, [])) l = l
+       match (Right (s, _))  l = "((" ++ show s ++ " " ++ l ++ "))"
 
-extractMap :: [NamedSymVar] -> [(String, UnintKind)] -> [String] -> SMTModel
-extractMap inps _modelMap solverLines =
+extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [String] -> SMTModel
+extractMap isSat qinps _modelMap solverLines =
    SMTModel { modelAssocs    = map (\(_, y) -> y) $ sortByNodeId $ concatMap (getCounterExample inps) solverLines
             , modelUninterps = []
             , modelArrays    = []
             }
   where sortByNodeId :: [(Int, a)] -> [(Int, a)]
         sortByNodeId = sortBy (\(x, _) (y, _) -> compare x y)
+        -- for a "proof" we only care about prefix universals in the counter-examples
+        inps | isSat = map snd qinps
+             | True  = map snd $ takeWhile ((== ALL) . fst) qinps
 
 getCounterExample :: [NamedSymVar] -> String -> [(Int, (String, CW))]
 getCounterExample inps line = either err extract (parseSExpr line)

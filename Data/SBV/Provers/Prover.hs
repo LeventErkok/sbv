@@ -26,7 +26,8 @@ module Data.SBV.Provers.Prover (
        , prove, proveWith
        , sat, satWith
        , allSat, allSatWith
-       , qbvf, qbvfWith
+       , qbvfSat, qbvfSatWith
+       , qbvfProve, qbvfProveWith
        , SatModel(..), getModel, displayModels
        , defaultSMTCfg, verboseSMTCfg, timingSMTCfg, verboseTimingSMTCfg
        , Yices.yices
@@ -178,13 +179,17 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymW
 prove :: Provable a => a -> IO ThmResult
 prove = proveWith defaultSMTCfg
 
+-- | Prove a predicate using the QBVF solver, using the default configuration
+qbvfProve :: Provable a => a -> IO ThmResult
+qbvfProve = qbvfProveWith defaultSMTCfg { solver = Z3.z3 }
+
 -- | Find a satisfying assignment for a predicate, equivalent to @'satWith' 'defaultSMTCfg'@
 sat :: Provable a => a -> IO SatResult
 sat = satWith defaultSMTCfg
 
 -- | Find a satisfying model using the QBVF solver, using the default configuration
-qbvf :: Provable a => a -> IO QBVFResult
-qbvf = qbvfWith defaultSMTCfg { solver = Z3.z3 }
+qbvfSat :: Provable a => a -> IO SatResult
+qbvfSat = qbvfSatWith defaultSMTCfg { solver = Z3.z3 }
 
 -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
 -- Satisfying assignments are constructed lazily, so they will be available as returned by the solver
@@ -253,20 +258,26 @@ compileToSMTLib :: Provable a => a -> IO String
 compileToSMTLib a = do
         t <- getClockTime
         let comments = ["Created on " ++ show t]
-        (_, _, smtLibPgm) <- simulate toSMTLib1 defaultSMTCfg False comments a
+        (_, _, _, smtLibPgm) <- simulate toSMTLib1 defaultSMTCfg False comments a
         return $ show smtLibPgm ++ "\n"
 
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
-proveWith config a = simulate toSMTLib1 config False [] a >>= callSolver [] "Checking Theoremhood.." ThmResult config
+proveWith config a = simulate toSMTLib1 config False [] a >>= callSolver False [] "Checking Theoremhood.." ThmResult config
 
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
-satWith config a = simulate toSMTLib1 config True [] a >>= callSolver [] "Checking Satisfiability.." SatResult config
+satWith config a = simulate toSMTLib1 config True [] a >>= callSolver True [] "Checking Satisfiability.." SatResult config
+
+-- | Prove a predicate using the QBVF solver
+qbvfProveWith :: Provable a => SMTConfig -> a -> IO ThmResult
+qbvfProveWith cfg' a = simulate toSMTLib2 cfg False [] a >>= callSolver False [] "Checking QBVF Theoremhood.." ThmResult cfg
+  where cfg = cfg' { solver = Z3.z3 }
 
 -- | Find a satisfying model using the QBVF solver
-qbvfWith :: Provable a => SMTConfig -> a -> IO QBVFResult
-qbvfWith cfg a = simulate toSMTLib2 cfg True [] a >>= callSolver [] "Checking QBVF Satisfiability.." QBVFResult cfg
+qbvfSatWith :: Provable a => SMTConfig -> a -> IO SatResult
+qbvfSatWith cfg' a = simulate toSMTLib2 cfg True [] a >>= callSolver True [] "Checking QBVF Satisfiability.." SatResult cfg
+  where cfg = cfg' { solver = Z3.z3 }
 
 -- | Find all satisfying assignments using the given SMT-solver
 allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
@@ -283,7 +294,7 @@ allSatWith config p = do when (verbose config) $ putStrLn  "** Checking Satisfia
                          return $ AllSatResult $ map fromJust $ takeWhile isJust results
   where go sbvPgm add stop final = loop
           where loop !n nonEqConsts = do
-                  SatResult r <- callSolver nonEqConsts ("Looking for solution " ++ show n) SatResult config sbvPgm
+                  SatResult r <- callSolver True nonEqConsts ("Looking for solution " ++ show n) SatResult config sbvPgm
                   case r of
                     Satisfiable _ (SMTModel [] _ _) -> final r
                     Unknown _ (SMTModel [] _ _)     -> final r
@@ -293,14 +304,13 @@ allSatWith config p = do when (verbose config) $ putStrLn  "** Checking Satisfia
                     Satisfiable _ model             -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
                     Unknown     _ model             -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
 
-callSolver :: [[(String, CW)]] -> String -> (SMTResult -> b) -> SMTConfig -> ([(Quantifier, NamedSymVar)], [(String, UnintKind)], SMTLibPgm) -> IO b
-callSolver nonEqConstraints checkMsg wrap config (qinps, modelMap, smtLibPgm) = do
+callSolver :: Bool -> [[(String, CW)]] -> String -> (SMTResult -> b) -> SMTConfig -> ([(Quantifier, NamedSymVar)], [(String, UnintKind)], [Either SW (SW, [SW])], SMTLibPgm) -> IO b
+callSolver isSat nonEqConstraints checkMsg wrap config (qinps, modelMap, skolemMap, smtLibPgm) = do
        let msg = when (verbose config) . putStrLn . ("** " ++)
-           inps = map snd qinps
        msg checkMsg
        let finalPgm = addNonEqConstraints nonEqConstraints smtLibPgm
        msg $ "Generated SMTLib program:\n" ++ finalPgm
-       smtAnswer <- engine (solver config) config inps modelMap finalPgm
+       smtAnswer <- engine (solver config) config isSat qinps modelMap skolemMap finalPgm
        msg "Done.."
        return $ wrap smtAnswer
 
@@ -308,6 +318,7 @@ simulate :: (NFData res, Provable a)
          => (   Bool                                        -- is this a sat problem?
              -> [String]                                    -- extra comments to place on top
              -> [(Quantifier, (SW, String))]                -- inputs and aliasing names
+             -> [Either SW (SW, [SW])]                      -- skolem map
              -> [(SW, CW)]                                  -- constants
              -> [((Int, (Bool, Int), (Bool, Int)), [SW])]   -- auto-generated tables
              -> [(Int, ArrayInfo)]                          -- user specified arrays
@@ -316,7 +327,7 @@ simulate :: (NFData res, Provable a)
              -> Pgm                                         -- assignments
              -> SW                                          -- output variable
              -> res)
-         -> SMTConfig -> Bool -> [String] -> a -> IO ([(Quantifier, NamedSymVar)], [(String, UnintKind)], res)
+         -> SMTConfig -> Bool -> [String] -> a -> IO ([(Quantifier, NamedSymVar)], [(String, UnintKind)], [Either SW (SW, [SW])], res)
 simulate converter config isSat comments predicate = do
         let msg = when (verbose config) . putStrLn . ("** " ++)
             isTiming = timing config
@@ -326,8 +337,16 @@ simulate converter config isSat comments predicate = do
         msg "Translating to SMT-Lib.."
         case res of
           Result is consts tbls arrs uis axs pgm [o@(SW (False, 1) _)] | sizeOf o == 1 ->
-             timeIf isTiming "translation" $ do let uiMap = catMaybes (map arrayUIKind arrs) ++ map unintFnUIKind uis
-                                                return (is, uiMap, converter isSat comments is consts tbls arrs uis axs pgm o)
+             timeIf isTiming "translation" $ do let uiMap     = catMaybes (map arrayUIKind arrs) ++ map unintFnUIKind uis
+                                                    skolemMap = skolemize (if isSat then is else map flipQ is)
+                                                        where flipQ (ALL, x) = (EX, x)
+                                                              flipQ (EX, x)  = (ALL, x)
+                                                              skolemize :: [(Quantifier, NamedSymVar)] -> [Either SW (SW, [SW])]
+                                                              skolemize qinps = go qinps ([], [])
+                                                                where go []                   (_,  sofar) = reverse sofar
+                                                                      go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
+                                                                      go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
+                                                return (is, uiMap, skolemMap, converter isSat comments is skolemMap consts tbls arrs uis axs pgm o)
           Result _is _consts _tbls _arrs _uis _axs _pgm os -> case length os of
                         0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
                         1  -> error $ "Impossible happened, non-boolean output in " ++ show os
