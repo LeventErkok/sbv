@@ -15,7 +15,7 @@
 module Data.SBV.Provers.Z3_QBVF(z3) where
 
 import Data.Char          (isDigit)
-import Data.List          (sortBy, intercalate)
+import Data.List          (sortBy, intercalate, isPrefixOf)
 import System.Environment (getEnv)
 import qualified System.Info as S(os)
 
@@ -42,6 +42,7 @@ z3 = SMTSolver {
  where -- This is quite crude and failure prone.. But is necessary to get z3 working through Wine on Mac
        cleanErrs = intercalate "\n" . filter (not . junk) . lines
        junk "fixme:heap:HeapSetInformation 0x0 1 0x0 0" = True
+       junk s | "WARNING:" `isPrefixOf` s               = True
        junk _                                           = False
        zero :: Int -> String
        zero 1  = "#b0"
