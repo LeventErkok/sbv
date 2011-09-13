@@ -54,6 +54,7 @@ tbd m = error $ "SBV.SMTLib2: Not-yet-supported: " ++ m ++ ". Please report."
 
 cvt :: Bool                                        -- ^ is this a sat problem?
     -> [String]                                    -- ^ extra comments to place on top
+    -> [(Quantifier, NamedSymVar)]                 -- ^ inputs
     -> [Either SW (SW, [SW])]                      -- ^ skolemized version inputs
     -> [(SW, CW)]                                  -- ^ constants
     -> [((Int, (Bool, Int), (Bool, Int)), [SW])]   -- ^ auto-generated tables
@@ -63,7 +64,7 @@ cvt :: Bool                                        -- ^ is this a sat problem?
     -> Pgm                                         -- ^ assignments
     -> SW                                          -- ^ output variable
     -> ([String], [String])
-cvt isSat comments skolemInps consts tbls arrs uis axs asgnsSeq out
+cvt isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq out
   | not (null uis)
   = tbd "uninterpreted functions"
   | not (null axs)

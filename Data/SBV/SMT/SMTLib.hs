@@ -33,15 +33,10 @@ type SMTLibConverter =  Bool                                        -- ^ is this
 
 toSMTLib1, toSMTLib2 :: SMTLibConverter
 (toSMTLib1, toSMTLib2) = (cvt SMTLib1, cvt SMTLib2)
-  where cvt v isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq out
-         | v == SMTLib1 && exs
-         = error "SBV: Existential variables are not supported via SMT-Lib. Use 'qbvf' instead."
-         | True
-         = SMTLibPgm v (aliasTable, pre, post)
-         where exs = needsExistentials (map fst qinps)
-               aliasTable  = map (\(_, (x, y)) -> (y, x)) qinps
+  where cvt v isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq out = SMTLibPgm v (aliasTable, pre, post)
+         where aliasTable  = map (\(_, (x, y)) -> (y, x)) qinps
                converter   = if v == SMTLib1 then SMT1.cvt else SMT2.cvt
-               (pre, post) = converter isSat comments skolemMap consts tbls arrs uis axs asgnsSeq out
+               (pre, post) = converter isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq out
 
 addNonEqConstraints :: [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
 addNonEqConstraints _qinps cs p@(SMTLibPgm SMTLib1 _) = SMT1.addNonEqConstraints cs p
