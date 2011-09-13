@@ -206,7 +206,7 @@ prefixSum i
   = proveWith cfg $ genPrefixSumInstance i
   where cfg = defaultSMTCfg { solver = yices' }
         yices' = yices { options    = ["-tc", "-smt", "-e"]
-                       , executable = "/usr/local/yices-1.0.29/bin/yices"
+                       , executable = "yices-1.0.29"
                        }
 
 ----------------------------------------------------------------------
