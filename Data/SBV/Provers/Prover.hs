@@ -21,7 +21,7 @@ module Data.SBV.Provers.Prover (
        , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..)
        , isSatisfiable, isTheorem
        , isSatisfiableWithin, isTheoremWithin
-       , numberOfModels
+       , numberOfModels, numberOfQBVFModels
        , Equality(..)
        , prove, proveWith
        , sat, satWith
@@ -259,10 +259,13 @@ isSatisfiable p = fromJust `fmap` checkSatisfiable Nothing p
 -- the number of satisfying models.
 numberOfModels :: Provable a => a -> IO Int
 numberOfModels p = do AllSatResult rs <- allSat p
-                      return $ sum $ map walk rs
-  where walk (Satisfiable{}) = 1
-        -- shouldn't happen, but just in case
-        walk r               = error $ "numberOfModels: Unexpected result from an allSat check: " ++ show (AllSatResult [r])
+                      return $ length rs
+
+-- | Returns the number of models that satisfy a QBVF predicate, as it would
+-- be returned by 'qbvfAllSat'.
+numberOfQBVFModels :: Provable a => a -> IO Int
+numberOfQBVFModels p = do AllSatResult rs <- qbvfAllSat p
+                          return $ length rs
 
 -- | Compiles to SMT-Lib and returns the resulting program as a string. Useful for saving
 -- the result to a file for off-line analysis, for instance if you have an SMT solver that's not natively
