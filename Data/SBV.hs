@@ -154,7 +154,7 @@ module Data.SBV (
   -- ** Finding all satisfying assignments
   , allSat, allSatWith, numberOfModels
   -- ** Finding a satisfying model for a QBVF problem
-  , qbvfSat, qbvfSatWith
+  , qbvfSat, qbvfSatWith, qbvfAllSat, qbvfAllSatWith
 
   -- * Model extraction
   -- $modelExtraction

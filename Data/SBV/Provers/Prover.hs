@@ -27,6 +27,7 @@ module Data.SBV.Provers.Prover (
        , sat, satWith
        , allSat, allSatWith
        , qbvfSat, qbvfSatWith
+       , qbvfAllSat, qbvfAllSatWith
        , qbvfProve, qbvfProveWith
        , SatModel(..), getModel, displayModels
        , defaultSMTCfg, verboseSMTCfg, timingSMTCfg, verboseTimingSMTCfg
@@ -36,10 +37,10 @@ module Data.SBV.Provers.Prover (
        , compileToSMTLib
        ) where
 
-import Control.DeepSeq                 (NFData(..))
 import Control.Concurrent             (forkIO)
 import Control.Concurrent.Chan.Strict (newChan, writeChan, getChanContents)
 import Control.Monad                  (when)
+import Data.List                      (intercalate)
 import Data.Maybe                     (fromJust, isJust, catMaybes)
 import System.Time                    (getClockTime)
 
@@ -187,7 +188,8 @@ qbvfProve = qbvfProveWith defaultSMTCfg { solver = Z3.z3 }
 sat :: Provable a => a -> IO SatResult
 sat = satWith defaultSMTCfg
 
--- | Find a satisfying model using the QBVF solver, using the default configuration
+-- | Find a satisfying model using the QBVF solver, using the default configuration. NB. If there
+-- is a solution, all universally quantified variables will be assigned the value @0@.
 qbvfSat :: Provable a => a -> IO SatResult
 qbvfSat = qbvfSatWith defaultSMTCfg { solver = Z3.z3 }
 
@@ -200,7 +202,18 @@ qbvfSat = qbvfSatWith defaultSMTCfg { solver = Z3.z3 }
 -- array inputs will be returned. This is due to the limitation of not having a robust means of getting a
 -- function counter-example back from the SMT solver.
 allSat :: Provable a => a -> IO AllSatResult
-allSat = allSatWith defaultSMTCfg
+allSat = allSatWith toSMTLib1 defaultSMTCfg
+
+-- | Variant of 'allSat' for QBVF, equivalent to @'qbvfAllSatWith' 'defaultSMTCfg'@.
+--
+-- NB. The notion of `allSat' for a quantified formula might be surprising for the unsuspecting user.
+-- Due to the potential nesting, `qbvfSat` will only return those satisfying assignments
+-- for differing values of top-level existentials only. In particular, it will not descend
+-- down to any universally quantified variables at all. (For instance, if a formula is
+-- satisfiable but it has no existentials, then `qbvfSat` will always return precisely one model
+-- for it.)
+qbvfAllSat :: Provable a => a -> IO AllSatResult
+qbvfAllSat = qbvfAllSatWith defaultSMTCfg { solver = Z3.z3 }
 
 -- Decision procedures (with optional timeout)
 checkTheorem :: Provable a => Maybe Int -> a -> IO (Maybe Bool)
@@ -263,71 +276,75 @@ compileToSMTLib a = do
 
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
-proveWith config a = simulate toSMTLib1 config False [] a >>= callSolver False [] "Checking Theoremhood.." ThmResult config
+proveWith config a = simulate toSMTLib1 config False [] a >>= callSolver False "Checking Theoremhood.." ThmResult config
 
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
-satWith config a = simulate toSMTLib1 config True [] a >>= callSolver True [] "Checking Satisfiability.." SatResult config
+satWith config a = simulate toSMTLib1 config True [] a >>= callSolver True "Checking Satisfiability.." SatResult config
 
 -- | Prove a predicate using the QBVF solver
 qbvfProveWith :: Provable a => SMTConfig -> a -> IO ThmResult
-qbvfProveWith cfg' a = simulate toSMTLib2 cfg False [] a >>= callSolver False [] "Checking QBVF Theoremhood.." ThmResult cfg
+qbvfProveWith cfg' a = simulate toSMTLib2 cfg False [] a >>= callSolver False "Checking QBVF Theoremhood.." ThmResult cfg
   where cfg = cfg' { solver = Z3.z3 }
 
 -- | Find a satisfying model using the QBVF solver
 qbvfSatWith :: Provable a => SMTConfig -> a -> IO SatResult
-qbvfSatWith cfg' a = simulate toSMTLib2 cfg True [] a >>= callSolver True [] "Checking QBVF Satisfiability.." SatResult cfg
+qbvfSatWith cfg' a = simulate toSMTLib2 cfg True [] a >>= callSolver True "Checking QBVF Satisfiability.." SatResult cfg
   where cfg = cfg' { solver = Z3.z3 }
 
--- | Find all satisfying assignments using the given SMT-solver
-allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
-allSatWith config p = do when (verbose config) $ putStrLn  "** Checking Satisfiability, all solutions.."
-                         sbvPgm <- simulate toSMTLib1 config True [] p
-                         resChan <- newChan
-                         let add  = writeChan resChan . Just
-                             stop = writeChan resChan Nothing
-                             final r = add r >> stop
-                             -- only fork if non-verbose.. otherwise stdout gets garbled
-                             fork io = if verbose config then io else forkIO io >> return ()
-                         fork $ go sbvPgm add stop final (1::Int) []
-                         results <- getChanContents resChan
-                         return $ AllSatResult $ map fromJust $ takeWhile isJust results
-  where go sbvPgm add stop final = loop
-          where loop !n nonEqConsts = do
-                  SatResult r <- callSolver True nonEqConsts ("Looking for solution " ++ show n) SatResult config sbvPgm
-                  case r of
-                    Satisfiable _ (SMTModel [] _ _) -> final r
-                    Unknown _ (SMTModel [] _ _)     -> final r
-                    ProofError _ _                  -> final r
-                    TimeOut _                       -> stop
-                    Unsatisfiable _                 -> stop
-                    Satisfiable _ model             -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
-                    Unknown     _ model             -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
+-- | Find all satisfying models using the QBVF solver
+qbvfAllSatWith :: SMTConfig -> Provable a => a -> IO AllSatResult
+qbvfAllSatWith cfg = allSatWith toSMTLib2 cfg { solver = Z3.z3 }
 
-callSolver :: Bool -> [[(String, CW)]] -> String -> (SMTResult -> b) -> SMTConfig -> ([(Quantifier, NamedSymVar)], [(String, UnintKind)], [Either SW (SW, [SW])], SMTLibPgm) -> IO b
-callSolver isSat nonEqConstraints checkMsg wrap config (qinps, modelMap, skolemMap, smtLibPgm) = do
+-- | Find all satisfying assignments using the given SMT-solver
+allSatWith :: Provable a => SMTLibConverter -> SMTConfig -> a -> IO AllSatResult
+allSatWith converter config p = do
+        msg "Checking Satisfiability, all solutions.."
+        sbvPgm <- simulate converter config True [] p
+        resChan <- newChan
+        let add  = writeChan resChan . Just
+            stop = writeChan resChan Nothing
+            final r = add r >> stop
+            -- only fork if non-verbose.. otherwise stdout gets garbled
+            fork io = if verbose config then io else forkIO io >> return ()
+        fork $ go sbvPgm add stop final (1::Int) []
+        results <- getChanContents resChan
+        return $ AllSatResult $ map fromJust $ takeWhile isJust results
+  where msg = when (verbose config) . putStrLn . ("** " ++)
+        go sbvPgm add stop final = loop
+          where loop !n nonEqConsts = do
+                  curResult <- invoke nonEqConsts n sbvPgm
+                  case curResult of
+                    Nothing     -> stop
+                    Just (SatResult r) -> case r of
+                                            Satisfiable _ (SMTModel [] _ _) -> final r
+                                            Unknown _ (SMTModel [] _ _)     -> final r
+                                            ProofError _ _                  -> final r
+                                            TimeOut _                       -> stop
+                                            Unsatisfiable _                 -> stop
+                                            Satisfiable _ model             -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
+                                            Unknown     _ model             -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
+        invoke nonEqConsts n (qinps, modelMap, skolemMap, smtLibPgm) = do
+               msg $ "Looking for solution " ++ show n
+               case addNonEqConstraints qinps nonEqConsts smtLibPgm of
+                 Nothing ->  -- no new constraints added, stop
+                            return Nothing
+                 Just finalPgm -> do msg $ "Generated SMTLib program:\n" ++ finalPgm
+                                     smtAnswer <- engine (solver config) config True qinps modelMap skolemMap finalPgm
+                                     msg "Done.."
+                                     return $ Just $ SatResult smtAnswer
+
+callSolver :: Bool -> String -> (SMTResult -> b) -> SMTConfig -> ([(Quantifier, NamedSymVar)], [(String, UnintKind)], [Either SW (SW, [SW])], SMTLibPgm) -> IO b
+callSolver isSat checkMsg wrap config (qinps, modelMap, skolemMap, smtLibPgm) = do
        let msg = when (verbose config) . putStrLn . ("** " ++)
        msg checkMsg
-       let finalPgm = addNonEqConstraints nonEqConstraints smtLibPgm
+       let finalPgm = intercalate "\n" (pre ++ post) where SMTLibPgm _ (_, pre, post) = smtLibPgm
        msg $ "Generated SMTLib program:\n" ++ finalPgm
        smtAnswer <- engine (solver config) config isSat qinps modelMap skolemMap finalPgm
        msg "Done.."
        return $ wrap smtAnswer
 
-simulate :: (NFData res, Provable a)
-         => (   Bool                                        -- is this a sat problem?
-             -> [String]                                    -- extra comments to place on top
-             -> [(Quantifier, (SW, String))]                -- inputs and aliasing names
-             -> [Either SW (SW, [SW])]                      -- skolem map
-             -> [(SW, CW)]                                  -- constants
-             -> [((Int, (Bool, Int), (Bool, Int)), [SW])]   -- auto-generated tables
-             -> [(Int, ArrayInfo)]                          -- user specified arrays
-             -> [(String, SBVType)]                         -- uninterpreted functions/constants
-             -> [(String, [String])]                        -- user given axioms
-             -> Pgm                                         -- assignments
-             -> SW                                          -- output variable
-             -> res)
-         -> SMTConfig -> Bool -> [String] -> a -> IO ([(Quantifier, NamedSymVar)], [(String, UnintKind)], [Either SW (SW, [SW])], res)
+simulate :: Provable a => SMTLibConverter -> SMTConfig -> Bool -> [String] -> a -> IO ([(Quantifier, NamedSymVar)], [(String, UnintKind)], [Either SW (SW, [SW])], SMTLibPgm)
 simulate converter config isSat comments predicate = do
         let msg = when (verbose config) . putStrLn . ("** " ++)
             isTiming = timing config

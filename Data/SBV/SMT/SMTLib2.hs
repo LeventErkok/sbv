@@ -20,21 +20,30 @@ import Numeric (showHex)
 
 import Data.SBV.BitVectors.Data
 
-addNonEqConstraints :: [[(String, CW)]] -> SMTLibPgm -> String
-addNonEqConstraints nonEqConstraints (SMTLibPgm _ (aliasTable, pre, post)) = intercalate "\n" $
-     pre
-  ++ [ "; --- refuted-models ---" ]
-  ++ concatMap nonEqs (map (map intName) nonEqConstraints)
-  ++ post
- where intName (s, c)
+addNonEqConstraints :: [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
+addNonEqConstraints qinps allNonEqConstraints (SMTLibPgm _ (aliasTable, pre, post))
+  | null allNonEqConstraints
+  = Just $ intercalate "\n" $ pre ++ post
+  | null refutedModel
+  = Nothing
+  | True
+  = Just $ intercalate "\n" $ pre
+    ++ [ "; --- refuted-models ---" ]
+    ++ concatMap nonEqs (map (map intName) nonEqConstraints)
+    ++ post
+ where refutedModel = concatMap nonEqs (map (map intName) nonEqConstraints)
+       intName (s, c)
           | Just sw <- s `lookup` aliasTable = (show sw, c)
           | True                             = (s, c)
+       -- with QBVF, we only add top-level existentials to the refuted-models list
+       nonEqConstraints = filter (not . null) $ map (filter (\(s, _) -> s `elem` topUnivs)) allNonEqConstraints
+       topUnivs = [s | (_, (_, s)) <- takeWhile (\p -> fst p == EX) qinps]
 
 nonEqs :: [(String, CW)] -> [String]
 nonEqs []     =  []
 nonEqs [sc]   =  ["(assert " ++ nonEq sc ++ ")"]
 nonEqs (sc:r) =  ["(assert (or " ++ nonEq sc]
-              ++ map (("           " ++) . nonEq) r
+              ++ map (("            " ++) . nonEq) r
               ++ ["        ))"]
 
 nonEq :: (String, CW) -> String
@@ -83,9 +92,8 @@ cvt isSat comments skolemInps consts tbls arrs uis axs asgnsSeq out
         letAlign s
           | null foralls = "   " ++ s
           | True         = "            " ++ s
-        assertOut
-           | isSat = "(= " ++ show out ++ " #b1)"
-           | True  = "(= " ++ show out ++ " #b0)"
+        assertOut | isSat = "(= " ++ show out ++ " #b1)"
+                  | True  = "(= " ++ show out ++ " #b0)"
         skolemMap = M.fromList [(s, ss) | Right (s, ss) <- skolemInps, not (null ss)]
         asgns = F.toList asgnsSeq
         mkLet (s, e) = "(let ((" ++ show s ++ " " ++ cvtExp skolemMap e ++ "))" 

@@ -18,8 +18,8 @@ import Data.List (intercalate)
 
 import Data.SBV.BitVectors.Data
 
-addNonEqConstraints :: [[(String, CW)]] -> SMTLibPgm -> String
-addNonEqConstraints nonEqConstraints (SMTLibPgm _ (aliasTable, pre, post)) = intercalate "\n" $
+addNonEqConstraints :: [[(String, CW)]] -> SMTLibPgm -> Maybe String
+addNonEqConstraints nonEqConstraints (SMTLibPgm _ (aliasTable, pre, post)) = Just $ intercalate "\n" $
      pre
   ++ [ " ; --- refuted-models ---" ]
   ++ concatMap nonEqs (map (map intName) nonEqConstraints)
