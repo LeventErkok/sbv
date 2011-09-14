@@ -219,8 +219,8 @@ instance (SatModel a, SatModel b, SatModel c, SatModel d, SatModel e, SatModel f
 -- | Given an 'SMTResult', extract an arbitrarily typed model from it, given a 'SatModel' instance
 getModel :: SatModel a => SatResult -> Either String a
 getModel (SatResult (Unsatisfiable _)) = Left $ "SatModel.getModel: Unsatisfiable result"
-getModel (SatResult (Unknown _ _))     = Left $ "Impossible! Backend solver returned unknown for Bit-vector problem!"
-getModel (SatResult (ProofError _ s))  = Left $ unlines $ "An error happened: " : s
+getModel (SatResult (Unknown _ _))     = error $ "Impossible! Backend solver returned unknown for Bit-vector problem!"
+getModel (SatResult (ProofError _ s))  = error $ unlines $ "Backend solver complains: " : s
 getModel (SatResult (TimeOut _))       = Left $ "Timeout"
 getModel (SatResult (Satisfiable _ m)) = case parseCWs [c | (_, c) <- modelAssocs m] of
                                            Just (x, []) -> Right x
@@ -345,8 +345,6 @@ runSolver verb execPath opts script
                                    ex <- waitForProcess pid
                                    return (ex, r ++ "\n" ++ out, err)
                 return (send, ask, cleanUp)
-      send "(set-option :produce-models true)"
-      send "(set-logic UFBV)"
       mapM_ send (lines (scriptBody script))
       r <- ask "(check-sat)"
       when ("sat" `isPrefixOf` r) $ do
