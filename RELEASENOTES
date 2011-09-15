@@ -1,0 +1,162 @@
+Hackage: <http://hackage.haskell.org/package/sbv>
+GitHub:  <http://github.com/LeventErkok/sbv>
+
+======================================================================
+Version 0.9.22, Not yet released
+   
+  Code:
+   * Change getModel, so it returns an Either value to indicate
+     something went wrong; instead of throwing an error
+  Code generation:
+   * Add "cgGenerateDriver" function, which can be used to turn
+     on/off driver program generation. Default is to generate
+     a driver. (Issue "cgGenerateDriver False" to skip the driver.)
+     For a library, a driver will be generated if any of the
+     constituent parts has a driver. Otherwise it'll be skipped.
+  QBVF solving:
+   * Add experimental support for QBVF solving via Z3
+
+======================================================================
+Version 0.9.21, 2011-08-05
+   
+   Code generation:
+    * Allow for inclusion of user makefiles
+    * Allow for CCFLAGS to be set by the user
+    * Other minor clean-up
+
+======================================================================
+Version 0.9.20, 2011-06-05
+   
+    * Regression on 0.9.19; add missing file to cabal
+
+======================================================================
+Version 0.9.19, 2011-06-05
+    
+   Code:
+    * Add SignCast class for conversion between signed/unsigned
+      quantities for same-sized bit-vectors
+    * Add full-binary trees that can be indexed symbolically (STree). The
+      advantage of this type is that the reads and writes take
+      logarithmic time. Suitable for implementing faster symbolic look-up.
+    * Expose HasSignAndSize class through Data.SBV.Internals
+    * Many minor improvements, file re-orgs
+   Examples:
+    * Add sentence-counting example
+    * Add an implementation of RC4
+
+======================================================================
+Version 0.9.18, 2011-04-07
+
+  Code:
+    * Re-engineer code-generation, and compilation to C.
+      In particular, allow arrays of inputs to be specified,
+      both as function arguments and output reference values.
+    * Add support for generation of generation of C-libraries,
+      allowing code generation for a set of functions that
+      work together.
+  Examples:
+    * Update code-generation examples to use the new API.
+    * Include a library-generation example for doing 128-bit
+      AES encryption
+
+======================================================================
+Version 0.9.17, 2011-03-29
+   
+  Code:
+    * Simplify and reorganize the test suite
+  Examples:
+    * Improve AES decryption example, by using
+      table-lookups in InvMixColumns.
+  
+======================================================================
+Version 0.9.16, 2011-03-28
+
+  Code:
+    * Further optimizations on Bits instance of SBV
+  Examples:
+    * Add AES algorithm as an example, showing how
+      encryption algorithms are particularly suitable
+      for use with the code-generator
+
+======================================================================
+Version 0.9.15, 2011-03-24
+   
+  Bug fixes:
+    * Fix rotateL/rotateR instances on concrete
+      words. Previous versions was bogus since
+      it relied on the Integer instance, which
+      does the wrong thing after normalization.
+    * Fix conversion of signed numbers from bits,
+      previous version did not handle two's
+      complement layout correctly
+  Testing:
+    * Add a sleuth of concrete test cases on
+      arithmetic to catch bugs. (There are many
+      of them, ~30K, but they run quickly.)
+
+======================================================================
+Version 0.9.14, 2011-03-19
+    
+  - Reimplement sharing using Stable names, inspired
+    by the Data.Reify techniques. This avoids tricks
+    with unsafe memory stashing, and hence is safe.
+    Thus, issues with respect to CAFs are now resolved.
+
+======================================================================
+Version 0.9.13, 2011-03-16
+    
+  Bug fixes:
+    * Make sure SBool short-cut evaluations are done
+      as early as possible, as these help with coding
+      recursion-depth based algorithms, when dealing
+      with symbolic termination issues.
+  Examples:
+    * Add fibonacci code-generation example, original
+      code by Lee Pike.
+    * Add a GCD code-generation/verification example
+
+======================================================================
+Version 0.9.12, 2011-03-10
+  
+  New features:
+    * Add support for compilation to C
+    * Add a mechanism for offline saving of SMT-Lib files
+
+  Bug fixes:
+    * Output naming bug, reported by Josef Svenningsson
+    * Specification bug in Legato's multipler example
+
+======================================================================
+Version 0.9.11, 2011-02-16
+  
+  * Make ghc-7.0 happy, minor re-org on the cabal file/Setup.hs
+
+======================================================================
+Version 0.9.10, 2011-02-15
+
+  * Integrate commits from Iavor: Generalize SBV's to keep
+    track the integer directly without resorting to different
+    leaf types
+  * Remove the unnecessary CLC instruction from the Legato example
+  * More tests
+======================================================================
+Version 0.9.9, 2011-01-23
+
+  * Support for user-defined SMT-Lib axioms to be
+    specified for uninterpreted constants/functions
+  * Move to using doctest style inline tests
+======================================================================
+Version 0.9.8, 2011-01-22
+
+  * Better support for uninterpreted-functions
+  * Support counter-examples with SArray's
+  * Ladner-Fischer scheme example
+  * Documentation updates
+======================================================================
+Version 0.9.7, 2011-01-18
+
+  * First stable public hackage release
+======================================================================
+Versions 0.X.X - 0.9.6
+
+  * Basic infrastructure, design exploration

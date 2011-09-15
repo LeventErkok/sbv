@@ -1,0 +1,14 @@
+INPUTS
+  s0 :: SWord8, aliasing "x"
+CONSTANTS
+  s_2 = False
+  s_1 = True
+  s1 = 1 :: SWord8
+TABLES
+ARRAYS
+UNINTERPRETED CONSTANTS
+AXIOMS
+DEFINE
+  s2 :: SWord8 = s0 + s1
+OUTPUTS
+  s2

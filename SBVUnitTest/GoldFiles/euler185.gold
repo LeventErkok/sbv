@@ -1,0 +1,17 @@
+Only one solution found:
+  s0 = 4 :: SWord8
+  s1 = 6 :: SWord8
+  s2 = 4 :: SWord8
+  s3 = 0 :: SWord8
+  s4 = 2 :: SWord8
+  s5 = 6 :: SWord8
+  s6 = 1 :: SWord8
+  s7 = 5 :: SWord8
+  s8 = 7 :: SWord8
+  s9 = 1 :: SWord8
+  s10 = 8 :: SWord8
+  s11 = 4 :: SWord8
+  s12 = 9 :: SWord8
+  s13 = 5 :: SWord8
+  s14 = 3 :: SWord8
+  s15 = 3 :: SWord8

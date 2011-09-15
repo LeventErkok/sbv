@@ -1,0 +1,4 @@
+Only one solution found:
+  s0 = 3 :: SWord16
+  s1 = 41 :: SWord16
+  s2 = 56 :: SWord16

@@ -1,0 +1,19 @@
+The sbv library can be installed simply by issuing cabal install
+like this:
+
+     cabal install sbv
+
+Once the installation is done, you will get the Data.SBV library.
+The installation will also put a binary named
+
+     SBVUnitTests
+
+in your .cabal/bin directory (or wherever you installed it.) It's
+highly recommended that you run this program to ensure everything
+is working correctly. In particular, you will first need to install
+Yices, the default SMT solver used by sbv, from SRI. (You can get it
+from http://yices.csl.sri.com/.) Please make sure that the "yices"
+executable is in your path.
+
+Once you have installed sbv, you can use it in your Haskell programs
+by simply importing the Data.SBV module.
