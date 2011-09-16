@@ -20,9 +20,6 @@ import Numeric (showHex)
 
 import Data.SBV.BitVectors.Data
 
-tbd :: String -> a
-tbd m = error $ "SBV.SMTLib2: Not-yet-supported: " ++ m ++ ". Please report."
-
 addNonEqConstraints :: [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
 addNonEqConstraints qinps allNonEqConstraints (SMTLibPgm _ (aliasTable, pre, post))
   | null allNonEqConstraints
@@ -85,11 +82,11 @@ cvt isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq out = (pre
              ++ [ "; --- tables ---" ]
              ++ map declTable tbls
              ++ concat tableConstants
-             ++ [ " ; --- arrays ---" ]
+             ++ [ "; --- arrays ---" ]
              ++ concat arrayConstants
-             ++ [ " ; --- uninterpreted constants ---" ]
+             ++ [ "; --- uninterpreted constants ---" ]
              ++ concatMap declUI uis
-             ++ [ " ; --- user given axioms ---" ]
+             ++ [ "; --- user given axioms ---" ]
              ++ map declAx axs
              ++ [ "; --- formula ---" ]
              ++ [if null foralls
