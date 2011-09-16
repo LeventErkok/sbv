@@ -224,8 +224,8 @@ getModel (SatResult (ProofError _ s))  = error $ unlines $ "Backend solver compl
 getModel (SatResult (TimeOut _))       = Left $ "Timeout"
 getModel (SatResult (Satisfiable _ m)) = case parseCWs [c | (_, c) <- modelAssocs m] of
                                            Just (x, []) -> Right x
-                                           Just (_, ys) -> Left $ "SBV.getModel: Partially constructed model; remaining elements: " ++ show ys
-                                           Nothing      -> Left $ "SBV.getModel: Cannot construct a model from: " ++ show m
+                                           Just (_, ys) -> error $ "SBV.getModel: Partially constructed model; remaining elements: " ++ show ys
+                                           Nothing      -> error $ "SBV.getModel: Cannot construct a model from: " ++ show m
 
 -- | Given an 'allSat' call, we typically want to iterate over it and print the results in sequence. The
 -- 'displayModels' function automates this task by calling 'disp' on each result, consecutively. The first
