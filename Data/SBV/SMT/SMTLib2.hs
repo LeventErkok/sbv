@@ -94,13 +94,15 @@ cvt isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq out = (pre
                  else "(assert (forall (" ++ intercalate "\n                 "
                                              ["(" ++ show s ++ " " ++ smtType s ++ ")" | s <- foralls] ++ ")"]
              ++ map (letAlign . mkLet) asgns
-             ++ map letAlign (if null tableDelayeds && null arrayDelayeds then [] else "(and " : tableDelayeds ++ arrayDelayeds)
+             ++ map letAlign (if null delayedEqualities then [] else "(implies " : conj delayedEqualities)
              ++ [ letAlign assertOut ++ replicate noOfCloseParens ')' ]
-        noOfCloseParens = length asgns + (if null foralls then 1 else 2) + (if null tableDelayeds then 0 else 1)
+        noOfCloseParens = length asgns + (if null foralls then 1 else 2) + (if null delayedEqualities then 0 else 1)
         (tableConstants, allTableDelayeds) = unzip $ map (genTableData (not (null foralls)) (map fst consts)) tbls
         (arrayConstants, allArrayDelayeds) = unzip $ map (declArray (map fst consts) skolemMap) arrs
-        tableDelayeds = concat allTableDelayeds
-        arrayDelayeds = concat allArrayDelayeds
+        delayedEqualities = concat allTableDelayeds ++ concat allArrayDelayeds
+        conj []  = []
+        conj [x] = [x]
+        conj xs  = "(and" : map ("     " ++) xs ++ [")"]
         foralls = [s | Left s <- skolemInps]
         letAlign s
           | null foralls = "   " ++ s
