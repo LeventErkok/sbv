@@ -155,7 +155,7 @@ declArray consts skolemMap (i, (_, ((_, at), (_, rt)), ctx)) = (adecl : map wrap
                     ArrayMerge  t j k -> [(t `elem` consts,            "(= " ++ nm ++ " (ite (= #b1 " ++ ssw t ++ ") array_" ++ show j ++ " array_" ++ show k ++ "))")]
         declA sw = let iv = nm ++ "_freeInitializer"
                    in [ (True,             "(declare-fun " ++ iv ++ "() (_ BitVec " ++ show at ++ "))")
-                      , (sw `elem` consts, "(= (read " ++ nm ++ " " ++ iv ++ ") " ++ ssw sw ++ ")")
+                      , (sw `elem` consts, "(= (select " ++ nm ++ " " ++ iv ++ ") " ++ ssw sw ++ ")")
                       ]
         wrap (False, s) = s
         wrap (True, s)  = "(assert " ++ s ++ ")"

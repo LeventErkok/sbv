@@ -108,7 +108,7 @@ declArray (i, (_, ((_, at), (_, rt)), ctx)) = adecl : ctxInfo
                     ArrayMerge  t j k -> [" :assumption (= " ++ nm ++ " (ite (= bv1[1] " ++ show t ++ ") array_" ++ show j ++ " array_" ++ show k ++ "))"]
         declA sw = let iv = nm ++ "_freeInitializer"
                    in [ " :extrafuns ((" ++ iv ++ " BitVec[" ++ show at ++ "]))"
-                      , " :assumption (= (read " ++ nm ++ " " ++ iv ++ ") " ++ show sw ++ ")"
+                      , " :assumption (= (select " ++ nm ++ " " ++ iv ++ ") " ++ show sw ++ ")"
                       ]
 
 declAx :: (String, [String]) -> String
