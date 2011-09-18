@@ -252,7 +252,7 @@ cvtExp skolemMap tableMap expr = sh expr
                 mkCnst = cvtCW . mkConstCW (hasSign i, sizeOf i)
                 le0  = "(" ++ less ++ " " ++ ssw i ++ " " ++ mkCnst 0 ++ ")"
                 gtl  = "(" ++ leq  ++ " " ++ mkCnst l ++ " " ++ ssw i ++ ")"
-        sh (SBVApp (Extract i j) [a]) = "(extract[" ++ show i ++ ":" ++ show j ++ "] " ++ ssw a ++ ")"
+        sh (SBVApp (Extract i j) [a]) = "((_ extract " ++ show i ++ " " ++ show j ++ ") " ++ ssw a ++ ")"
         sh (SBVApp (ArrEq i j) []) = "(ite (= array_" ++ show i ++ " array_" ++ show j ++") #b1 #b0)"
         sh (SBVApp (ArrRead i) [a]) = "(select array_" ++ show i ++ " " ++ ssw a ++ ")"
         sh (SBVApp (Uninterpreted nm) [])   = "uninterpreted_" ++ nm
