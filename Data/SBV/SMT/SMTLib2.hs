@@ -291,7 +291,7 @@ cvtExp skolemMap tableMap expr = sh expr
                              ]
 
 rot :: (SW -> String) -> String -> Int -> SW -> String
-rot ssw o c x = "(" ++ o ++ "[" ++ show c ++ "] " ++ ssw x ++ ")"
+rot ssw o c x = "((_ " ++ o ++ " " ++ show c ++ ") " ++ ssw x ++ ")"
 
 shft :: (SW -> String) -> String -> String -> Int -> SW -> String
 shft ssw oW oS c x = "(" ++ o ++ " " ++ ssw x ++ " " ++ cvtCW c' ++ ")"
