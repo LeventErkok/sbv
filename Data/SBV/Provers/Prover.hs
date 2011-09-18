@@ -55,7 +55,7 @@ import Data.SBV.Utils.TDiff
 -- | Default configuration for the SMT solver. Non-verbose, non-timing, prints results in base 10, and uses
 -- the Yices SMT solver.
 defaultSMTCfg :: SMTConfig
-defaultSMTCfg = SMTConfig {verbose = False, timing  = False, printBase = 10, solver = Yices.yices}
+defaultSMTCfg = SMTConfig {verbose = False, timing = False, printBase = 10, smtFile = Nothing, solver = Yices.yices}
 
 -- | Same as 'defaultSMTCfg', except verbose
 verboseSMTCfg :: SMTConfig
