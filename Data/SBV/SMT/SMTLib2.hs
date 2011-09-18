@@ -15,6 +15,7 @@ module Data.SBV.SMT.SMTLib2(cvt, addNonEqConstraints) where
 
 import qualified Data.Foldable as F (toList)
 import qualified Data.Map      as M
+import qualified Data.IntMap   as IM
 import Data.List (intercalate, partition)
 import Numeric (showHex)
 
@@ -49,6 +50,9 @@ nonEqs (sc:r) =  ["(assert (or " ++ nonEq sc]
 nonEq :: (String, CW) -> String
 nonEq (s, c) = "(not (= " ++ s ++ " " ++ cvtCW c ++ "))"
 
+tbd :: String -> a
+tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
+
 cvt :: Bool                                        -- ^ is this a sat problem?
     -> [String]                                    -- ^ extra comments to place on top
     -> [(Quantifier, NamedSymVar)]                 -- ^ inputs
@@ -62,13 +66,9 @@ cvt :: Bool                                        -- ^ is this a sat problem?
     -> SW                                          -- ^ output variable
     -> ([String], [String])
 cvt isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq out = (pre, [])
-  where logic = qf ++ ar ++ uf ++ "BV"
-          where qf | null foralls && null axs = "QF_"   -- axioms are likely to have quantifiers
-                   | True                     = ""
-                ar | null arrs && null uf     = ""
-                   | True                     = "A"
-                uf | null uis && null tbls    = ""
-                   | True                     = "UF"
+  where -- the logic is an over-approaximation
+        logic | null foralls = "QF_AUFBV"
+              | True         = "AUFBV"
         -- z3 v1.0 doesn't line AUFBV yet, so commnet if that's the case
         logicWorkAround "AUFBV" s = "; " ++ s
         logicWorkAround _       s = s
@@ -82,9 +82,10 @@ cvt isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq out = (pre
              ++ map declConst consts
              ++ [ "; --- skolem constants ---" ]
              ++ [ "(declare-fun " ++ show s ++ " " ++ smtFunType ss s ++ ")" | Right (s, ss) <- skolemInps]
-             ++ [ "; --- tables ---" ]
-             ++ map declTable tbls
-             ++ concat tableConstants
+             ++ [ "; --- constant tables ---" ]
+             ++ concatMap constTable constTables
+             ++ [ "; --- skolemized tables ---" ]
+             ++ map (skolemTable (intercalate " " (map smtType foralls))) skolemTables
              ++ [ "; --- arrays ---" ]
              ++ concat arrayConstants
              ++ [ "; --- uninterpreted constants ---" ]
@@ -97,25 +98,30 @@ cvt isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq out = (pre
                  else "(assert (forall (" ++ intercalate "\n                 "
                                              ["(" ++ show s ++ " " ++ smtType s ++ ")" | s <- foralls] ++ ")"]
              ++ map (letAlign . mkLet) asgns
-             ++ map letAlign (if null delayedEqualities then [] else (("(=> (and " ++ deH) : map (align 9) (deTs ++ [")"])))
+             ++ map letAlign (if null delayedEqualities then [] else (("(and " ++ deH) : map (align 5) deTs))
              ++ [ impAlign (letAlign assertOut) ++ replicate noOfCloseParens ')' ]
         noOfCloseParens = length asgns + (if null foralls then 1 else 2) + (if null delayedEqualities then 0 else 1)
-        (tableConstants, allTableDelayeds) = unzip $ map (genTableData (not (null foralls)) (map fst consts)) tbls
+        (constTables, skolemTables) = ([(t, d) | (t, Left d) <- allTables], [(t, d) | (t, Right d) <- allTables])
+        allTables = [(t, genTableData (not (null foralls), forallArgs) (map fst consts) t) | t <- tbls]
         (arrayConstants, allArrayDelayeds) = unzip $ map (declArray (map fst consts) skolemMap) arrs
-        delayedEqualities@(~(deH:deTs)) = concat allTableDelayeds ++ concat allArrayDelayeds
+        delayedEqualities@(~(deH:deTs)) = concat (map snd skolemTables) ++ concat allArrayDelayeds
         foralls = [s | Left s <- skolemInps]
+        forallArgs = concatMap ((" " ++) . show) foralls
         letAlign s
           | null foralls = "   " ++ s
           | True         = "            " ++ s
         impAlign s
           | null delayedEqualities = s
-          | True                   = "    " ++ s
+          | True                   = "     " ++ s
         align n s = replicate n ' ' ++ s
         assertOut | isSat = "(= " ++ show out ++ " #b1)"
                   | True  = "(= " ++ show out ++ " #b0)"
         skolemMap = M.fromList [(s, ss) | Right (s, ss) <- skolemInps, not (null ss)]
+        tableMap  = IM.fromList $ map mkConstTable constTables ++ map mkSkTable skolemTables
+          where mkConstTable (((t, _, _), _), _) = (t, "table" ++ show t)
+                mkSkTable    (((t, _, _), _), _) = (t, "(table" ++ show t ++ forallArgs ++ ")")
         asgns = F.toList asgnsSeq
-        mkLet (s, e) = "(let ((" ++ show s ++ " " ++ cvtExp skolemMap e ++ "))"
+        mkLet (s, e) = "(let ((" ++ show s ++ " " ++ cvtExp skolemMap tableMap e ++ "))"
         declConst (s, c) = "(define-fun " ++ show s ++ " " ++ smtFunType [] s ++ " " ++ cvtCW c ++ ")"
 
 declUI :: (String, SBVType) -> [String]
@@ -125,27 +131,41 @@ declUI (i, t) = ["(declare-fun uninterpreted_" ++ i ++ " " ++ cvtType t ++ ")"]
 declAx :: (String, [String]) -> String
 declAx (nm, ls) = (";; -- user given axiom: " ++ nm ++ "\n   ") ++ intercalate "\n" ls
 
-declTable :: ((Int, (Bool, Int), (Bool, Int)), [SW]) -> String
-declTable ((i, (_, at), (_, rt)), _elts) = decl
+constTable :: (((Int, (Bool, Int), (Bool, Int)), [SW]), [String]) -> [String]
+constTable (((i, (_, at), (_, rt)), _elts), is) = decl : map wrap is
+  where t       = "table" ++ show i
+        bv sz   = "(_ BitVec " ++ show sz ++ ")"
+        decl    = "(declare-fun " ++ t ++ " () (Array " ++ bv at ++ " " ++ bv rt ++ "))"
+        wrap  s = "(assert " ++ s ++ ")"
+
+skolemTable :: String -> (((Int, (Bool, Int), (Bool, Int)), [SW]), [String]) -> String
+skolemTable qs (((i, (_, at), (_, rt)), _elts), _) = decl
   where t         = "table" ++ show i
         bv sz     = "(_ BitVec " ++ show sz ++ ")"
-        decl      = "(declare-fun " ++ t ++ " (" ++ bv at ++ ") " ++ bv rt ++ ")"
+        decl      = "(declare-fun " ++ t ++ " (" ++ qs ++ ") (Array " ++ bv at ++ " " ++ bv rt ++ "))"
 
-genTableData :: Bool -> [SW] -> ((Int, (Bool, Int), (Bool, Int)), [SW]) -> ([String], [String])
-genTableData quantified consts ((i, (sa, at), (_, _rt)), elts) = (map snd pre, map snd post)
+-- Left if all constants, Right if otherwise
+genTableData :: (Bool, String) -> [SW] -> ((Int, (Bool, Int), (Bool, Int)), [SW]) -> Either [String] [String]
+genTableData (quantified, args) consts ((i, (sa, at), (_, _rt)), elts)
+  | null post = Left  (map (topLevel . snd) pre)
+  | True      = Right (map (nested   . snd) (pre ++ post))
   where (pre, post) = partition fst (zipWith mkElt elts [(0::Int)..])
         t           = "table" ++ show i
-        mkElt x k   = (isReady, wrap ("(= (" ++ t ++ " " ++ idx ++ ") " ++ show x ++ ")"))
+        mkElt x k   = (isReady, (idx, show x))
           where idx = cvtCW (mkConstCW (sa, at) k)
                 isReady = not quantified || x `elem` consts
-                wrap s | isReady = "(assert " ++ s ++ ")"
-                       | True    = s
+        topLevel (idx, v) = "(= (select " ++ t ++ " " ++ idx ++ ") " ++ v ++ ")"
+        nested   (idx, v) = "(= (select (" ++ t ++ args ++ ") " ++ idx ++ ") " ++ v ++ ")"
 
+-- TODO: We currently do not support non-constant arrays, as we might have to skolemize those.
+-- Implement this properly.
 declArray :: [SW] -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String])
 declArray consts skolemMap (i, (_, ((_, at), (_, rt)), ctx)) = (adecl : map wrap pre, map snd post)
   where (pre, post) = partition fst ctxInfo
         nm = "array_" ++ show i
-        ssw sw = cvtSW skolemMap sw
+        ssw sw 
+         | sw `elem` consts = cvtSW skolemMap sw
+         | True             = tbd "Non-constant array initializer"
         adecl = "(declare-fun " ++ nm ++ "() (Array (_ BitVec " ++ show at ++ ") (_ BitVec " ++ show rt ++ ")))"
         ctxInfo = case ctx of
                     ArrayFree Nothing   -> []
@@ -172,7 +192,8 @@ cvtType (SBVType xs) = "(" ++ intercalate " " (map sh body) ++ ") " ++ sh ret
   where (body, ret) = (init xs, last xs)
         sh (_, s)   = "(_ BitVec " ++ show s ++ ")"
 
-type SkolemMap = M.Map SW [SW]
+type SkolemMap = M.Map  SW [SW]
+type TableMap  = IM.IntMap String
 
 cvtSW :: SkolemMap -> SW -> String
 cvtSW skolemMap s
@@ -206,8 +227,13 @@ negIf False a = a
 mkMinBound :: Int -> String
 mkMinBound i = "#b1" ++ take (i-1) (repeat '0')
 
-cvtExp :: SkolemMap -> SBVExpr -> String
-cvtExp skolemMap expr = sh expr
+getTable :: TableMap -> Int -> String
+getTable m i
+  | Just tn <- i `IM.lookup` m = tn
+  | True                       = error $ "SBV.SMTLib2: Cannot locate table " ++ show i
+
+cvtExp :: SkolemMap -> TableMap -> SBVExpr -> String
+cvtExp skolemMap tableMap expr = sh expr
   where ssw = cvtSW skolemMap
         sh (SBVApp Ite [a, b, c]) = "(ite (= #b1 " ++ ssw a ++ ") " ++ ssw b ++ " " ++ ssw c ++ ")"
         sh (SBVApp (Rol i) [a])   = rot ssw "rotate_left"  i a
@@ -218,7 +244,7 @@ cvtExp skolemMap expr = sh expr
           | needsCheck = "(ite " ++ cond ++ ssw e ++ " " ++ lkUp ++ ")"
           | True       = lkUp
           where needsCheck = (2::Integer)^(at) > (fromIntegral l)
-                lkUp = "(table" ++ show t ++ " " ++ show i ++ ")"
+                lkUp = "(select " ++ getTable tableMap t ++ " " ++ show i ++ ")"
                 cond
                  | hasSign i = "(or " ++ le0 ++ " " ++ gtl ++ ") "
                  | True      = gtl ++ " "
