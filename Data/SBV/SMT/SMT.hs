@@ -35,10 +35,11 @@ import Data.SBV.Utils.TDiff
 
 -- | Solver configuration
 data SMTConfig = SMTConfig {
-         verbose   :: Bool      -- ^ Debug mode
-       , timing    :: Bool      -- ^ Print timing information on how long different phases took (construction, solving, etc.)
-       , printBase :: Int       -- ^ Print literals in this base
-       , solver    :: SMTSolver -- ^ The actual SMT solver
+         verbose   :: Bool           -- ^ Debug mode
+       , timing    :: Bool           -- ^ Print timing information on how long different phases took (construction, solving, etc.)
+       , printBase :: Int            -- ^ Print literals in this base
+       , solver    :: SMTSolver      -- ^ The actual SMT solver
+       , smtFile   :: Maybe FilePath -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
        }
 
 type SMTEngine = SMTConfig -> Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [Either SW (SW, [SW])] -> String -> IO SMTResult
@@ -314,6 +315,10 @@ standardSolver config script cleanErrs failure success = do
         isTiming = timing config
         nmSolver = name smtSolver
     msg $ "Calling: " ++ show (unwords (exec:opts))
+    case smtFile config of
+      Nothing -> return ()
+      Just f  -> do putStrLn $ "** Saving the generated script in file: " ++ show f
+                    writeFile f (scriptBody script)
     contents <- timeIf isTiming nmSolver $ pipeProcess (verbose config) nmSolver exec opts script cleanErrs
     msg $ nmSolver ++ " output:\n" ++ either id (intercalate "\n") contents
     case contents of
