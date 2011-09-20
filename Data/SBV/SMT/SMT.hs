@@ -115,18 +115,18 @@ instance Show SatResult where
                                      "Satisfiable" "Satisfiable. Model:\n" r
 
 
+-- NB. The Show instance of AllSatResults have to be careful in being lazy enough
+-- as the typical use case is to pull results out as they become available.
 instance Show AllSatResult where
-  show (AllSatResult [])  =  "No solutions found"
-  show (AllSatResult [s]) =  "Only one solution found:\n" ++ shUnique s
-        where shUnique = showSMTResult "Unsatisfiable"
-                                       ("Unknown (No assignment to variables returned)") "Unknown. Potential assignment:\n" "" ""
-  show (AllSatResult ss)  =  "Multiple solutions found:\n"      -- shouldn't display how-many; would be too slow/leak-space to compute everything..
-                          ++ unlines (zipWith sh [(1::Int)..] ss)
-                          ++ "Done."
-        where sh i = showSMTResult "Unsatisfiable"
-                                   ("Unknown #" ++ show i ++ "(No assignment to variables returned)") "Unknown. Potential assignment:\n"
-                                   ("Solution #" ++ show i ++ " (No assignment to variables returned)") ("Solution #" ++ show i ++ ":\n")
-
+  show (AllSatResult xs) = go (0::Int) xs
+    where go c (s:ss) = let c' = c+1 in c' `seq` (sh c' s ++ "\n" ++ go c' ss)
+          go c []     = case c of
+                          0 -> "No solutions found."
+                          1 -> "No other solution found. Unique solution shown above."
+                          _ -> "Found " ++ show c ++ " solutions."
+          sh i = showSMTResult "Unsatisfiable"
+                               ("Unknown #" ++ show i ++ "(No assignment to variables returned)") "Unknown. Potential assignment:\n"
+                               ("Solution #" ++ show i ++ " (No assignment to variables returned)") ("Solution #" ++ show i ++ ":\n")
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
 -- solvers. The idea is that the sbv infrastructure provides a stream of 'CW''s (constant-words)
