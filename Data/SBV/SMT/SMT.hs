@@ -122,7 +122,7 @@ instance Show AllSatResult where
     where go c (s:ss) = let c' = c+1 in c' `seq` (sh c' s ++ "\n" ++ go c' ss)
           go c []     = case c of
                           0 -> "No solutions found."
-                          1 -> "No other solution found. Unique solution shown above."
+                          1 -> "This is a unique solution."
                           _ -> "Found " ++ show c ++ " solutions."
           sh i = showSMTResult "Unsatisfiable"
                                ("Unknown #" ++ show i ++ "(No assignment to variables returned)") "Unknown. Potential assignment:\n"
