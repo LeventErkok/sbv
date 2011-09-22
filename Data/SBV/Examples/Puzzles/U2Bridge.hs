@@ -211,9 +211,9 @@ instance SatModel U2Member where
 -- | See if there is a solution that has precisely @n@ steps
 solveN :: Int -> IO Bool
 solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ plu n ++ "."
-              let genAct = do b  <- forall_
-                              p1 <- forall_
-                              p2 <- forall_
+              let genAct = do b  <- exists_
+                              p1 <- exists_
+                              p2 <- exists_
                               return (b, p1, p2)
               res <- allSat $ mapM (const genAct) [1..n] >>= return . isValid
               cnt <- displayModels disp res
