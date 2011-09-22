@@ -124,14 +124,19 @@ instance Show AllSatResult where
   show (AllSatResult (e, xs)) = go (0::Int) xs
     where uniqueWarn | e    = " (Unique up to prefix existentials.)"
                      | True = ""
-          go c (s:ss) = let c' = c+1 in c' `seq` (sh c' s ++ "\n" ++ go c' ss)
+          go c (s:ss) = let c'      = c+1
+                            (ok, o) = sh c' s
+                        in c' `seq` if ok then (o ++ "\n" ++ go c' ss) else o
           go c []     = case c of
                           0 -> "No solutions found."
                           1 -> "This is the only solution." ++ uniqueWarn
                           _ -> "Found " ++ show c ++ " different solutions." ++ uniqueWarn
-          sh i = showSMTResult "Unsatisfiable"
-                               ("Unknown #" ++ show i ++ "(No assignment to variables returned)") "Unknown. Potential assignment:\n"
-                               ("Solution #" ++ show i ++ " (No assignment to variables returned)") ("Solution #" ++ show i ++ ":\n")
+          sh i c = (ok, showSMTResult "Unsatisfiable"
+                                      ("Unknown #" ++ show i ++ "(No assignment to variables returned)") "Unknown. Potential assignment:\n"
+                                      ("Solution #" ++ show i ++ " (No assignment to variables returned)") ("Solution #" ++ show i ++ ":\n") c)
+              where ok = case c of
+                           Satisfiable{} -> True
+                           _             -> False
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
 -- solvers. The idea is that the sbv infrastructure provides a stream of 'CW''s (constant-words)

@@ -31,6 +31,8 @@ module Data.SBV.Provers.Prover (
        , compileToSMTLib
        ) where
 
+import qualified Control.Exception as E
+
 import Control.Concurrent             (forkIO)
 import Control.Concurrent.Chan.Strict (newChan, writeChan, getChanContents)
 import Control.Monad                  (when)
@@ -250,9 +252,11 @@ allSatWith config p = do
         let add  = writeChan resChan . Just
             stop = writeChan resChan Nothing
             final r = add r >> stop
+            die m  = final (ProofError config [m])
             -- only fork if non-verbose.. otherwise stdout gets garbled
             fork io = if verbose config then io else forkIO io >> return ()
-        fork $ go sbvPgm add stop final (1::Int) []
+        fork $ E.catch (go sbvPgm add stop final (1::Int) [])
+                       (\e -> die (show (e::E.SomeException)))
         results <- getChanContents resChan
         -- See if there are any existentials below any universals
         -- If such is the case, then the solutions are unique upto prefix existentials
