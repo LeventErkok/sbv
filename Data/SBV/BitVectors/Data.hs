@@ -444,7 +444,7 @@ sbvToSW st (SBV _ (Right f)) = uncache f st
 -- state of the computation, layered on top of IO for creating unique
 -- references to hold onto intermediate results.
 newtype Symbolic a = Symbolic (ReaderT State IO a)
-                   deriving (Monad, MonadIO, MonadReader State)
+                   deriving (Functor, Monad, MonadIO, MonadReader State)
 
 mkSymSBV :: Quantifier -> (Bool, Size) -> Maybe String -> Symbolic (SBV a)
 mkSymSBV q sgnsz mbNm = do
