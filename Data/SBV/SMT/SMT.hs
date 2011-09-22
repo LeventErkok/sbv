@@ -103,8 +103,9 @@ newtype ThmResult    = ThmResult    SMTResult
 -- The reason for having a separate 'SatResult' is to have a more meaningful 'Show' instance.
 newtype SatResult    = SatResult    SMTResult
 
--- | An 'allSat' call results in a 'AllSatResult'
-newtype AllSatResult = AllSatResult [SMTResult]
+-- | An 'allSat' call results in a 'AllSatResult'. The boolean says whether
+-- we should warn the user about prefix-existentials.
+newtype AllSatResult = AllSatResult (Bool, [SMTResult])
 
 instance Show ThmResult where
   show (ThmResult r) = showSMTResult "Q.E.D."
@@ -120,12 +121,14 @@ instance Show SatResult where
 -- NB. The Show instance of AllSatResults have to be careful in being lazy enough
 -- as the typical use case is to pull results out as they become available.
 instance Show AllSatResult where
-  show (AllSatResult xs) = go (0::Int) xs
-    where go c (s:ss) = let c' = c+1 in c' `seq` (sh c' s ++ "\n" ++ go c' ss)
+  show (AllSatResult (e, xs)) = go (0::Int) xs
+    where uniqueWarn | e    = " (Unique up to prefix existentials.)"
+                     | True = ""
+          go c (s:ss) = let c' = c+1 in c' `seq` (sh c' s ++ "\n" ++ go c' ss)
           go c []     = case c of
                           0 -> "No solutions found."
-                          1 -> "This is a unique solution. (Upto prefix existentials.)"
-                          _ -> "Found " ++ show c ++ " different solutions. (Upto prefix existentials.)"
+                          1 -> "This is the only solution." ++ uniqueWarn
+                          _ -> "Found " ++ show c ++ " different solutions." ++ uniqueWarn
           sh i = showSMTResult "Unsatisfiable"
                                ("Unknown #" ++ show i ++ "(No assignment to variables returned)") "Unknown. Potential assignment:\n"
                                ("Solution #" ++ show i ++ " (No assignment to variables returned)") ("Solution #" ++ show i ++ ":\n")
@@ -234,7 +237,7 @@ getModel (SatResult (Satisfiable _ m)) = case parseCWs [c | (_, c) <- modelAssoc
 -- 'displayModels' function automates this task by calling 'disp' on each result, consecutively. The first
 -- 'Int' argument to 'disp' 'is the current model number.
 displayModels :: SatModel a => (Int -> a -> IO ()) -> AllSatResult -> IO Int
-displayModels disp (AllSatResult ms) = do
+displayModels disp (AllSatResult (_, ms)) = do
     inds <- zipWithM display [a | Right a <- map (getModel . SatResult) ms] [(1::Int)..]
     return $ last (0:inds)
   where display r i = disp i r >> return i

@@ -4,17 +4,30 @@ GitHub:  <http://github.com/LeventErkok/sbv>
 ======================================================================
 Version 0.9.22, Not yet released
    
-  Code:
-   * Change getModel, so it returns an Either value to indicate
-     something went wrong; instead of throwing an error
-  Code generation:
-   * Add "cgGenerateDriver" function, which can be used to turn
-     on/off driver program generation. Default is to generate
-     a driver. (Issue "cgGenerateDriver False" to skip the driver.)
-     For a library, a driver will be generated if any of the
-     constituent parts has a driver. Otherwise it'll be skipped.
-  QBVF solving:
-   * Add experimental support for QBVF solving via Z3
+  The major change in this release is the support for quantifiers. The
+  SBV library no longer assumes all variables are universals in a proof,
+  and existential in a sat call. Instead, the user marks them appropriately
+  using forall/exists, and the solver respects these. Note that this is
+  a breaking change in sat calls in particular, as the semantics of
+  formulas is essentially changing. While this is unfortunate, it's
+  more uniform and simpler to understand in general.
+
+  This release also adds support for the Z3 solver, which is the main
+  SMT-solver used for solving formulas involving quantifiers. More formally,
+  we use the new AUFBV/ABV/UFBV logics when quantifiers are involved. Also, 
+  the communication with Z3 is now done via SMT-Lib2 format. Eventually
+  the SMTLib1 connection will be severed.
+
+  Other changes:
+    Code:
+     * Change getModel, so it returns an Either value to indicate
+       something went wrong; instead of throwing an error
+    Code generation:
+     * Add "cgGenerateDriver" function, which can be used to turn
+       on/off driver program generation. Default is to generate
+       a driver. (Issue "cgGenerateDriver False" to skip the driver.)
+       For a library, a driver will be generated if any of the
+       constituent parts has a driver. Otherwise it'll be skipped.
 
 ======================================================================
 Version 0.9.21, 2011-08-05

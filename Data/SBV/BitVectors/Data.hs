@@ -564,12 +564,12 @@ runSymbolic' (Symbolic c) = do
 --
 -- Minimal complete definiton: free, free_, literal, fromCW
 class (Bounded a, Ord a) => SymWord a where
-  -- | Create a user named input
-  free, forall :: String -> Symbolic (SBV a)
+  -- | Create a user named input (universal)
+  forall :: String -> Symbolic (SBV a)
   -- | Create an automatically named input
-  free_      :: Symbolic (SBV a)
+  forall_ :: Symbolic (SBV a)
   -- | Get a bunch of new words
-  mkFreeVars :: Int -> Symbolic [SBV a]
+  mkForallVars :: Int -> Symbolic [SBV a]
   -- | Create an existential variable
   exists     :: String -> Symbolic (SBV a)
   -- | Create an automatically named existential variable
@@ -589,10 +589,9 @@ class (Bounded a, Ord a) => SymWord a where
   -- | Does it concretely satisfy the given predicate?
   isConcretely :: SBV a -> (a -> Bool) -> Bool
 
-  -- minimal complete definiton: free, free_, literal, fromCW
-  forall = free
-  mkFreeVars n  = mapM (const free_) [1 .. n]
-  mkExistVars n = mapM (const exists_) [1 .. n]
+  -- minimal complete definiton: forall, forall_, exists, exists_, literal, fromCW
+  mkForallVars n = mapM (const forall_) [1 .. n]
+  mkExistVars n  = mapM (const exists_) [1 .. n]
   unliteral (SBV _ (Left c))  = Just $ fromCW c
   unliteral _                 = Nothing
   isConcrete (SBV _ (Left _)) = True

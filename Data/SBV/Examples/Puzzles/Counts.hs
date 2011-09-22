@@ -63,7 +63,7 @@ puzzle cnt = cnt .== last css
 -- In this sentence, the number of occurrences of 0 is 1, of 1 is 7, of 2 is 3, of 3 is 2, of 4 is 1, of 5 is 1, of 6 is 1, of 7 is 2, of 8 is 1, of 9 is 1.
 -- Found: 2 solution(s).
 solve :: IO ()
-solve = do res <- allSat $ mkFreeVars 10 >>= return . puzzle
+solve = do res <- allSat $ mkExistVars 10 >>= return . puzzle
            cnt <- displayModels disp res
            putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
   where disp n s = do putStrLn $ "Solution #" ++ show n

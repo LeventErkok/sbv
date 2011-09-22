@@ -107,8 +107,8 @@ instance Provable Bool where
 
 -- Functions
 instance (SymWord a, Provable p) => Provable (SBV a -> p) where
-  forAll_       k = free_  >>= \a -> forAll_   $ k a
-  forAll (s:ss) k = free s >>= \a -> forAll ss $ k a
+  forAll_       k = forall_  >>= \a -> forAll_   $ k a
+  forAll (s:ss) k = forall s >>= \a -> forAll ss $ k a
   forAll []     k = forAll_ k
 
 -- Arrays (memory)
@@ -119,38 +119,38 @@ instance (HasSignAndSize a, HasSignAndSize b, SymArray array, Provable p) => Pro
 
 -- 2 Tuple
 instance (SymWord a, SymWord b, Provable p) => Provable ((SBV a, SBV b) -> p) where
-  forAll_       k = free_  >>= \a -> forAll_   $ \b -> k (a, b)
-  forAll (s:ss) k = free s >>= \a -> forAll ss $ \b -> k (a, b)
+  forAll_       k = forall_  >>= \a -> forAll_   $ \b -> k (a, b)
+  forAll (s:ss) k = forall s >>= \a -> forAll ss $ \b -> k (a, b)
   forAll []     k = forAll_ k
 
 -- 3 Tuple
 instance (SymWord a, SymWord b, SymWord c, Provable p) => Provable ((SBV a, SBV b, SBV c) -> p) where
-  forAll_       k = free_  >>= \a -> forAll_   $ \b c -> k (a, b, c)
-  forAll (s:ss) k = free s >>= \a -> forAll ss $ \b c -> k (a, b, c)
+  forAll_       k = forall_  >>= \a -> forAll_   $ \b c -> k (a, b, c)
+  forAll (s:ss) k = forall s >>= \a -> forAll ss $ \b c -> k (a, b, c)
   forAll []     k = forAll_ k
 
 -- 4 Tuple
 instance (SymWord a, SymWord b, SymWord c, SymWord d, Provable p) => Provable ((SBV a, SBV b, SBV c, SBV d) -> p) where
-  forAll_       k = free_  >>= \a -> forAll_   $ \b c d -> k (a, b, c, d)
-  forAll (s:ss) k = free s >>= \a -> forAll ss $ \b c d -> k (a, b, c, d)
+  forAll_       k = forall_  >>= \a -> forAll_   $ \b c d -> k (a, b, c, d)
+  forAll (s:ss) k = forall s >>= \a -> forAll ss $ \b c d -> k (a, b, c, d)
   forAll []     k = forAll_ k
 
 -- 5 Tuple
 instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, Provable p) => Provable ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
-  forAll_       k = free_  >>= \a -> forAll_   $ \b c d e -> k (a, b, c, d, e)
-  forAll (s:ss) k = free s >>= \a -> forAll ss $ \b c d e -> k (a, b, c, d, e)
+  forAll_       k = forall_  >>= \a -> forAll_   $ \b c d e -> k (a, b, c, d, e)
+  forAll (s:ss) k = forall s >>= \a -> forAll ss $ \b c d e -> k (a, b, c, d, e)
   forAll []     k = forAll_ k
 
 -- 6 Tuple
 instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, Provable p) => Provable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
-  forAll_       k = free_  >>= \a -> forAll_   $ \b c d e f -> k (a, b, c, d, e, f)
-  forAll (s:ss) k = free s >>= \a -> forAll ss $ \b c d e f -> k (a, b, c, d, e, f)
+  forAll_       k = forall_  >>= \a -> forAll_   $ \b c d e f -> k (a, b, c, d, e, f)
+  forAll (s:ss) k = forall s >>= \a -> forAll ss $ \b c d e f -> k (a, b, c, d, e, f)
   forAll []     k = forAll_ k
 
 -- 7 Tuple
 instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, Provable p) => Provable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
-  forAll_       k = free_  >>= \a -> forAll_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  forAll (s:ss) k = free s >>= \a -> forAll ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  forAll_       k = forall_  >>= \a -> forAll_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  forAll (s:ss) k = forall s >>= \a -> forAll ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   forAll []     k = forAll_ k
 
 -- | Prove a predicate, equivalent to @'proveWith' 'yices'@
@@ -215,7 +215,7 @@ isSatisfiable p = fromJust `fmap` checkSatisfiable Nothing p
 -- computing it might take quite long, as it literally generates and counts
 -- the number of satisfying models.
 numberOfModels :: Provable a => a -> IO Int
-numberOfModels p = do AllSatResult rs <- allSat p
+numberOfModels p = do AllSatResult (_, rs) <- allSat p
                       return $ length rs
 
 -- | Compiles to SMT-Lib and returns the resulting program as a string. Useful for saving
@@ -245,7 +245,7 @@ allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
 allSatWith config p = do
         let converter = if useSMTLib2 config then toSMTLib2 else toSMTLib1
         msg "Checking Satisfiability, all solutions.."
-        sbvPgm <- simulate converter config True [] p
+        sbvPgm@(qinps, _, _, _) <- simulate converter config True [] p
         resChan <- newChan
         let add  = writeChan resChan . Just
             stop = writeChan resChan Nothing
@@ -254,7 +254,10 @@ allSatWith config p = do
             fork io = if verbose config then io else forkIO io >> return ()
         fork $ go sbvPgm add stop final (1::Int) []
         results <- getChanContents resChan
-        return $ AllSatResult $ map fromJust $ takeWhile isJust results
+        -- See if there are any existentials below any universals
+        -- If such is the case, then the solutions are unique upto prefix existentials
+        let w = ALL `elem` map fst qinps
+        return $ AllSatResult (w,  map fromJust (takeWhile isJust results))
   where msg = when (verbose config) . putStrLn . ("** " ++)
         go sbvPgm add stop final = loop
           where loop !n nonEqConsts = do

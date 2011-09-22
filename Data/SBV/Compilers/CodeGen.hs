@@ -89,7 +89,7 @@ cgSetDriverValues vs = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgD
 
 -- | Creates an atomic input in the generated code.
 cgInput :: (HasSignAndSize a, SymWord a) => String -> SBVCodeGen (SBV a)
-cgInput nm = do r <- liftSymbolic free_
+cgInput nm = do r <- liftSymbolic forall_
                 sw <- cgSBVToSW r
                 modify (\s -> s { cgInputs = (nm, CgAtomic sw) : cgInputs s })
                 return r
@@ -98,7 +98,7 @@ cgInput nm = do r <- liftSymbolic free_
 cgInputArr :: (HasSignAndSize a, SymWord a) => Int -> String -> SBVCodeGen [SBV a]
 cgInputArr sz nm
   | sz < 1 = error $ "SBV.cgInputArr: Array inputs must have at least one element, given " ++ show sz ++ " for " ++ show nm
-  | True   = do rs <- liftSymbolic $ (mapM (const free_) [1..sz])
+  | True   = do rs <- liftSymbolic $ (mapM (const forall_) [1..sz])
                 sws <- mapM cgSBVToSW rs
                 modify (\s -> s { cgInputs = (nm, CgArray sws) : cgInputs s })
                 return rs

@@ -26,16 +26,16 @@ test1 f = runSymbolic $ do let x = literal (3 :: Word8)
                                y = literal (2 :: Word8)
                            output $ f x y
 test2 f = runSymbolic $ do let x = literal (3 :: Word8)
-                           y :: SWord8 <- free "y"
+                           y :: SWord8 <- forall "y"
                            output $ f x y
-test3 f = runSymbolic $ do x :: SWord8 <- free "x"
-                           y :: SWord8 <- free "y"
+test3 f = runSymbolic $ do x :: SWord8 <- forall "x"
+                           y :: SWord8 <- forall "y"
                            output $ f x y
-test4 f = runSymbolic $ do x :: SWord8 <- free "x"
+test4 f = runSymbolic $ do x :: SWord8 <- forall "x"
                            output $ f x x
-test5 f = runSymbolic $ do x :: SWord8 <- free "x"
+test5 f = runSymbolic $ do x :: SWord8 <- forall "x"
                            let r = f x x
-                           q :: SWord8 <- free "q"
+                           q :: SWord8 <- forall "q"
                            _ <- output q
                            output r
 
