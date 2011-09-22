@@ -52,7 +52,7 @@ cvt :: Bool                                        -- ^ is this a sat problem?
     -> ([String], [String])
 cvt isSat comments qinps _skolemInps consts tbls arrs uis axs asgnsSeq out
   | needsExistentials (map fst qinps)
-  = error $ "SBV: Existential variables are not supported via SMT-Lib. Use the QBVF solver instead."
+  = error $ "SBV: Existential variables are not supported via SMT-Lib. Use a quantification supporting solver (i.e., z3) instead."
   | True
   = (pre, post)
   where logic

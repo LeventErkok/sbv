@@ -58,11 +58,11 @@
 -- Furthermore, predicates (i.e., functions that return 'SBool') built out of
 -- these types can also be:
 --
---   * proven correct via an external SMT solver (the 'prove' and 'qbvfProve' functions)
+--   * proven correct via an external SMT solver (the 'prove' function)
 --
---   * checked for satisfiability (the 'sat', 'allSat', and 'qbvfSat' functions)
+--   * checked for satisfiability (the 'sat', 'allSat' functions)
 --
---   * used in synthesis (the `qbvfSat` function)
+--   * used in synthesis (the `sat` function with existentials)
 --
 --   * quick-checked
 --
@@ -84,7 +84,7 @@
 -- executable in the environment variable @SBV_YICES@ and the options to yices
 -- in @SBV_YICES_OPTIONS@.
 --
--- Use of the 'qbvfProve', 'qbvfSat', and 'qbvfAllSat' commands require an installation of z3. Again,
+-- Use of quantified variables require an installation of z3. Again,
 -- z3 must be in your path. Or, you can use the @SBV_Z3@ and @SBV_Z3_OPTIONS@
 -- environment variables to set the executable and the options.
 ---------------------------------------------------------------------------------
@@ -146,14 +146,10 @@ module Data.SBV (
   , Predicate, Provable(..), Equality(..)
   -- ** Proving properties
   , prove, proveWith, isTheorem, isTheoremWithin
-  -- ** Proving QBVF properties
-  , qbvfProve, qbvfProveWith
   -- ** Checking satisfiability
   , sat, satWith, isSatisfiable, isSatisfiableWithin
   -- ** Finding all satisfying assignments
   , allSat, allSatWith, numberOfModels
-  -- ** Finding a satisfying model for a QBVF problem
-  , qbvfSat, qbvfSatWith, qbvfAllSat, qbvfAllSatWith, numberOfQBVFModels
 
   -- * Model extraction
   -- $modelExtraction

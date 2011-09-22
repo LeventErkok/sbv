@@ -21,14 +21,11 @@ module Data.SBV.Provers.Prover (
        , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..)
        , isSatisfiable, isTheorem
        , isSatisfiableWithin, isTheoremWithin
-       , numberOfModels, numberOfQBVFModels
+       , numberOfModels
        , Equality(..)
        , prove, proveWith
        , sat, satWith
        , allSat, allSatWith
-       , qbvfSat, qbvfSatWith
-       , qbvfAllSat, qbvfAllSatWith
-       , qbvfProve, qbvfProveWith
        , SatModel(..), getModel, displayModels
        , yices, z3
        , compileToSMTLib
@@ -51,11 +48,11 @@ import Data.SBV.Utils.TDiff
 
 -- | Default configuration for the Yices SMT Solver.
 yices :: SMTConfig
-yices = SMTConfig {verbose = False, timing = False, timeOut = Nothing, printBase = 10, smtFile = Nothing, solver = Yices.yices}
+yices = SMTConfig {verbose = False, timing = False, timeOut = Nothing, printBase = 10, smtFile = Nothing, solver = Yices.yices, useSMTLib2 = False}
 
 -- | Default configuration for the Z3 SMT solver
 z3 :: SMTConfig
-z3 = yices { solver = Z3.z3 }
+z3 = yices { solver = Z3.z3, useSMTLib2 = True }
 
 -- | A predicate is a symbolic program that returns a (symbolic) boolean value. For all intents and
 -- purposes, it can be treated as an n-ary function from symbolic-values to a boolean. The 'Symbolic'
@@ -160,18 +157,9 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymW
 prove :: Provable a => a -> IO ThmResult
 prove = proveWith yices
 
--- | Prove a predicate using the QBVF solver, using the default configuration
-qbvfProve :: Provable a => a -> IO ThmResult
-qbvfProve = qbvfProveWith z3
-
 -- | Find a satisfying assignment for a predicate, equivalent to @'satWith' 'yices'@
 sat :: Provable a => a -> IO SatResult
 sat = satWith yices
-
--- | Find a satisfying model using the QBVF solver, using the default configuration. NB. If there
--- is a solution, all universally quantified variables will be assigned the value @0@.
-qbvfSat :: Provable a => a -> IO SatResult
-qbvfSat = qbvfSatWith z3
 
 -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'yices'@.
 -- Satisfying assignments are constructed lazily, so they will be available as returned by the solver
@@ -182,18 +170,7 @@ qbvfSat = qbvfSatWith z3
 -- array inputs will be returned. This is due to the limitation of not having a robust means of getting a
 -- function counter-example back from the SMT solver.
 allSat :: Provable a => a -> IO AllSatResult
-allSat = allSatWith toSMTLib1 yices
-
--- | Variant of 'allSat' for QBVF, equivalent to @'qbvfAllSatWith' 'yices'@.
---
--- NB. The notion of `allSat' for a quantified formula might be surprising for the unsuspecting user.
--- Due to the potential nesting, `qbvfSat` will only return those satisfying assignments
--- for differing values of top-level existentials only. In particular, it will not descend
--- down to any universally quantified variables at all. (For instance, if a formula is
--- satisfiable but it has no existentials, then `qbvfSat` will always return precisely one model
--- for it.)
-qbvfAllSat :: Provable a => a -> IO AllSatResult
-qbvfAllSat = qbvfAllSatWith z3
+allSat = allSatWith yices
 
 -- Decision procedures (with optional timeout)
 checkTheorem :: Provable a => Maybe Int -> a -> IO (Maybe Bool)
@@ -241,45 +218,32 @@ numberOfModels :: Provable a => a -> IO Int
 numberOfModels p = do AllSatResult rs <- allSat p
                       return $ length rs
 
--- | Returns the number of models that satisfy a QBVF predicate, as it would
--- be returned by 'qbvfAllSat'.
-numberOfQBVFModels :: Provable a => a -> IO Int
-numberOfQBVFModels p = do AllSatResult rs <- qbvfAllSat p
-                          return $ length rs
-
 -- | Compiles to SMT-Lib and returns the resulting program as a string. Useful for saving
 -- the result to a file for off-line analysis, for instance if you have an SMT solver that's not natively
--- supported out-of-the box by the SBV library.
-compileToSMTLib :: Provable a => a -> IO String
-compileToSMTLib a = do
+-- supported out-of-the box by the SBV library. If 'smtLib2' parameter is False, then we will generate
+-- SMTLib1 output, otherwise we will generate SMTLib2 output
+compileToSMTLib :: Provable a => Bool -> a -> IO String
+compileToSMTLib smtLib2 a = do
         t <- getClockTime
         let comments = ["Created on " ++ show t]
-        (_, _, _, smtLibPgm) <- simulate toSMTLib1 yices False comments a
+            cvt = if smtLib2 then toSMTLib2 else toSMTLib1
+        (_, _, _, smtLibPgm) <- simulate cvt yices False comments a
         return $ show smtLibPgm ++ "\n"
 
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
-proveWith config a = simulate toSMTLib1 config False [] a >>= callSolver False "Checking Theoremhood.." ThmResult config
+proveWith config a = simulate cvt config False [] a >>= callSolver False "Checking Theoremhood.." ThmResult config
+  where cvt = if useSMTLib2 config then toSMTLib2 else toSMTLib1
 
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
-satWith config a = simulate toSMTLib1 config True [] a >>= callSolver True "Checking Satisfiability.." SatResult config
-
--- | Prove a predicate using the QBVF solver
-qbvfProveWith :: Provable a => SMTConfig -> a -> IO ThmResult
-qbvfProveWith cfg a = simulate toSMTLib2 cfg False [] a >>= callSolver False "Checking QBVF Theoremhood.." ThmResult cfg
-
--- | Find a satisfying model using the QBVF solver
-qbvfSatWith :: Provable a => SMTConfig -> a -> IO SatResult
-qbvfSatWith cfg a = simulate toSMTLib2 cfg True [] a >>= callSolver True "Checking QBVF Satisfiability.." SatResult cfg
-
--- | Find all satisfying models using the QBVF solver
-qbvfAllSatWith :: SMTConfig -> Provable a => a -> IO AllSatResult
-qbvfAllSatWith = allSatWith toSMTLib2
+satWith config a = simulate cvt config True [] a >>= callSolver True "Checking Satisfiability.." SatResult config
+  where cvt = if useSMTLib2 config then toSMTLib2 else toSMTLib1
 
 -- | Find all satisfying assignments using the given SMT-solver
-allSatWith :: Provable a => SMTLibConverter -> SMTConfig -> a -> IO AllSatResult
-allSatWith converter config p = do
+allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
+allSatWith config p = do
+        let converter = if useSMTLib2 config then toSMTLib2 else toSMTLib1
         msg "Checking Satisfiability, all solutions.."
         sbvPgm <- simulate converter config True [] p
         resChan <- newChan

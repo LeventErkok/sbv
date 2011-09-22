@@ -53,8 +53,8 @@ framework takes full advantage of Haskell's type inference to avoid many common 
 Furthermore, predicates (i.e., functions that return `SBool`) built out of these types can also be:
 
   - proven correct via an external SMT solver (the `prove` function)
-  - checked for satisfiability (the `sat`, `allSat`, `qbvf`, and `qbvfAllSat` functions)
-  - used in synthesis (the `qbvfSat` function)
+  - checked for satisfiability (the `sat`, and `allSat` functions)
+  - used in synthesis (the `sat` function with existentials)
   - quick-checked
 
 If a predicate is not valid, `prove` will return a counterexample: An 
@@ -64,11 +64,6 @@ all satisfying assignments, lazily.
 
 The SBV library can also compile Haskell functions that manipulate symbolic
 values directly to C, rendering them as straight-line C programs.
-
-Note that bit-vector theories of SMT solvers are essentially quantifier-free. However, the `qbvfSat`
-function interfaces with Z3's QBVF solver, allowing quantified bit-vector formulas. The QBVF
-solver increases the power of the SBV library greatly. Furthermore, the QBVF solver can also be
-used for synthesis purposes.
 
 Use of SMT solvers
 ==================
@@ -88,7 +83,7 @@ as it is the current default solver. Alternatively, you can specify the location
 of yices executable in the environment variable `SBV_YICES` and the options to yices
 in `SBV_YICES_OPTIONS`. The default for the latter is `"-m -f"`.
 
-If QBVF (quantified bit-vectors) solver is to be used, you should also install
+If quantified bit-vectors are to be used, you should also install
 Microsoft's z3 SMT solver. Again, the environment variables 
 `SBV_Z3` and `SBV_Z3_OPTIONS` can be used for choosing executable location
 and custom options.  The default for the latter is `"/in /smt2"`. Microsoft

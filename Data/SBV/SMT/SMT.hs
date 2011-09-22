@@ -35,12 +35,13 @@ import Data.SBV.Utils.TDiff
 
 -- | Solver configuration
 data SMTConfig = SMTConfig {
-         verbose   :: Bool           -- ^ Debug mode
-       , timing    :: Bool           -- ^ Print timing information on how long different phases took (construction, solving, etc.)
-       , timeOut   :: Maybe Int      -- ^ How much time to give to the solver. (In seconds)
-       , printBase :: Int            -- ^ Print literals in this base
-       , solver    :: SMTSolver      -- ^ The actual SMT solver
-       , smtFile   :: Maybe FilePath -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
+         verbose    :: Bool           -- ^ Debug mode
+       , timing     :: Bool           -- ^ Print timing information on how long different phases took (construction, solving, etc.)
+       , timeOut    :: Maybe Int      -- ^ How much time to give to the solver. (In seconds)
+       , printBase  :: Int            -- ^ Print literals in this base
+       , solver     :: SMTSolver      -- ^ The actual SMT solver
+       , smtFile    :: Maybe FilePath -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
+       , useSMTLib2 :: Bool           -- ^ If True, we'll treat the solver as using SMTLib2 input format. Otherwise, SMTLib1
        }
 
 type SMTEngine = SMTConfig -> Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [Either SW (SW, [SW])] -> String -> IO SMTResult
