@@ -68,11 +68,13 @@ extractMap isSat qinps _modelMap solverLines =
             }
   where sortByNodeId :: [(Int, a)] -> [(Int, a)]
         sortByNodeId = sortBy (\(x, _) (y, _) -> compare x y)
-        inps -- for "sat" we only care about prefix existentials in the counter-examples. But for "completeness" we
-             -- will drop only the trainling foralls
-             | isSat = map snd $ reverse $ dropWhile ((== ALL) . fst) $ reverse qinps
-             -- for "proof" we only care about prefix universals in the counter-examples
-             | True  = map snd $ takeWhile ((== ALL) . fst) qinps
+        inps -- for "sat", display the prefix existentials. For completeness, we will drop
+             -- only the trailing foralls. Exception: Don't drop anything if it's all a sequence of foralls
+             | isSat = if all (== ALL) (map fst qinps)
+                       then map snd qinps
+                       else map snd $ reverse $ dropWhile ((== ALL) . fst) $ reverse qinps
+             -- for "proof", just display the prefix universals
+             | True  = map snd $ takeWhile ((== ALL) . fst) $ qinps
 
 getCounterExample :: [NamedSymVar] -> String -> [(Int, (String, CW))]
 getCounterExample inps line = either err extract (parseSExpr line)
