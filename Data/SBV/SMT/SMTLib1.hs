@@ -51,11 +51,14 @@ cvt :: Bool                                        -- ^ is this a sat problem?
     -> SW                                          -- ^ output variable
     -> ([String], [String])
 cvt isSat comments qinps _skolemInps consts tbls arrs uis axs asgnsSeq out
-  | needsExistentials (map fst qinps)
-  = error $ "SBV: Existential variables are not supported via SMT-Lib. Use a quantification supporting solver (i.e., z3) instead."
+  | not ((isSat && allExistential) || (not isSat && allUniversal))
+  = error "SBV: The chosen solver does not support quantified variables. (Use z3 instead.)"
   | True
   = (pre, post)
-  where logic
+  where quantifiers    = map fst qinps
+        allExistential = all (== EX)  quantifiers
+        allUniversal   = all (== ALL) quantifiers
+        logic
          | null tbls && null arrs && null uis = "QF_BV"
          | True                               = "QF_AUFBV"
         inps = map (fst . snd) qinps
