@@ -22,6 +22,7 @@ sdist:
 	cabal sdist
 
 clean:
+	rm -rf dist
 	cabal clean
 
 docs:

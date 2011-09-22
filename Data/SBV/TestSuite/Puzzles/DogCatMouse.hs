@@ -19,5 +19,9 @@ import Data.SBV.Examples.Puzzles.DogCatMouse
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
-  "dog cat mouse" ~: allSat puzzle `goldCheck` "dogCatMouse.gold"
+  "dog cat mouse" ~: allSat p `goldCheck` "dogCatMouse.gold"
  ]
+ where p = do d <- exists "d"
+              c <- exists "c"
+              m <- exists "m"
+              return $ puzzle d c m
