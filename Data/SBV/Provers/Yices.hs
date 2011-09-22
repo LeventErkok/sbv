@@ -12,7 +12,7 @@
 
 {-# LANGUAGE PatternGuards #-}
 
-module Data.SBV.Provers.Yices(yices, timeout) where
+module Data.SBV.Provers.Yices(yices) where
 
 import Data.Char          (isDigit)
 import Data.List          (sortBy, isPrefixOf, intercalate, transpose, partition)
@@ -36,15 +36,14 @@ yices = SMTSolver {
          , engine     = \cfg _isSat qinps modelMap _skolemMap pgm -> do
                                 execName <-                getEnv "SBV_YICES"           `catch` (\_ -> return (executable (solver cfg)))
                                 execOpts <- (words `fmap` (getEnv "SBV_YICES_OPTIONS")) `catch` (\_ -> return (options (solver cfg)))
-                                let cfg' = cfg { solver = (solver cfg) {executable = execName, options = execOpts} }
+                                let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
                                     script = SMTScript { scriptBody = pgm, scriptModel = Nothing }
                                 standardSolver cfg' script id (ProofError cfg) (interpretSolverOutput cfg (extractMap (map snd qinps) modelMap))
          }
-
-timeout :: Int -> SMTSolver -> SMTSolver
-timeout n s
-  | n <= 0 = error $ "Yices.timeout value should be > 0, received: " ++ show n
-  | True   = s{options = options s ++ ["-t", show n]}
+  where addTimeOut Nothing  o   = o
+        addTimeOut (Just i) o
+          | i < 0               = error $ "Yices: Timeout value must be non-negative, received: " ++ show i
+          | True                = o ++ ["-t", show i]
 
 sortByNodeId :: [(Int, a)] -> [(Int, a)]
 sortByNodeId = sortBy (\(x, _) (y, _) -> compare x y)

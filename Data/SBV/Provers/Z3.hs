@@ -1,18 +1,18 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Provers.Z3_QBVF
+-- Module      :  Data.SBV.Provers.Z3
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- The connection to the QBVF solver as provided by Z3
+-- The connection to the Z3 SMT solver
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE PatternGuards #-}
 
-module Data.SBV.Provers.Z3_QBVF(z3) where
+module Data.SBV.Provers.Z3(z3) where
 
 import Data.Char          (isDigit)
 import Data.List          (sortBy, intercalate, isPrefixOf)
@@ -26,7 +26,7 @@ import Data.SBV.SMT.SMTLib
 
 -- | The description of the Z3 SMT solver
 -- The default executable is @\"z3\"@, which must be in your path. You can use the @SBV_Z3@ environment variable to point to the executable on your system.
--- The default options are @\"\/in \/smt2\"@, which is valid for Z3 3.0 series. You can use the @SBV_Z3_OPTIONS@ environment variable to override the options.
+-- The default options are @\"\/in \/smt2\"@, which is valid for Z3 3.2. You can use the @SBV_Z3_OPTIONS@ environment variable to override the options.
 z3 :: SMTSolver
 z3 = SMTSolver {
            name       = "z3"
@@ -35,7 +35,7 @@ z3 = SMTSolver {
          , engine     = \cfg isSat qinps modelMap skolemMap pgm -> do
                                 execName <-                getEnv "SBV_Z3"           `catch` (\_ -> return (executable (solver cfg)))
                                 execOpts <- (words `fmap` (getEnv "SBV_Z3_OPTIONS")) `catch` (\_ -> return (options (solver cfg)))
-                                let cfg' = cfg { solver = (solver cfg) {executable = execName, options = execOpts} }
+                                let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
                                     script = SMTScript { scriptBody = "(set-option :mbqi true)\n" ++ pgm, scriptModel = Just (cont skolemMap)}
                                 standardSolver cfg' script cleanErrs (ProofError cfg) (interpretSolverOutput cfg (extractMap isSat qinps modelMap . zipWith match skolemMap))
          }
@@ -54,6 +54,11 @@ z3 = SMTSolver {
        match (Left _)        l = l
        match (Right (_, [])) l = l
        match (Right (s, _))  l = "((" ++ show s ++ " " ++ l ++ "))"
+       addTimeOut Nothing  o   = o
+       addTimeOut (Just i) o
+         | i < 0               = error $ "Z3: Timeout value must be non-negative, received: " ++ show i
+         | S.os == "linux"     = o ++ ["-T:" ++ show i]
+         | True                = o ++ ["/T:" ++ show i]
 
 extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [String] -> SMTModel
 extractMap isSat qinps _modelMap solverLines =

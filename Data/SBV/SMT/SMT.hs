@@ -37,6 +37,7 @@ import Data.SBV.Utils.TDiff
 data SMTConfig = SMTConfig {
          verbose   :: Bool           -- ^ Debug mode
        , timing    :: Bool           -- ^ Print timing information on how long different phases took (construction, solving, etc.)
+       , timeOut   :: Maybe Int      -- ^ How much time to give to the solver. (In seconds)
        , printBase :: Int            -- ^ Print literals in this base
        , solver    :: SMTSolver      -- ^ The actual SMT solver
        , smtFile   :: Maybe FilePath -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
