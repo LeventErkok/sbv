@@ -75,7 +75,7 @@
 -- <http://goedel.cs.uiowa.edu/smtlib/>.
 --
 -- The SBV library is designed to work with any SMT-Lib compliant SMT-solver.
--- Currently, we support the Yices SMT solver from SRI fully: <http://yices.csl.sri.com/>,
+-- Currently, we support the Yices SMT solver from SRI: <http://yices.csl.sri.com/>,
 -- and the Z3 SMT solver from Microsoft: <http://research.microsoft.com/en-us/um/redmond/projects/z3/>.
 --
 -- You /should/ download and install Yices on your machine, and make sure the

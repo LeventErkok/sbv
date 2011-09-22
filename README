@@ -71,7 +71,7 @@ The sbv library uses third-party SMT solvers via the standard SMT-Lib interface:
 [http://goedel.cs.uiowa.edu/smtlib/](http://goedel.cs.uiowa.edu/smtlib/)
 
 The SBV library is designed to work with any SMT-Lib compliant SMT-solver. 
-Currently, we support the Yices SMT solver from SRI fully:
+Currently, we support the Yices SMT solver from SRI:
 [http://yices.csl.sri.com/](http://yices.csl.sri.com/) and the Z3 SMT solver
 from Microsoft: [http://research.microsoft.com/en-us/um/redmond/projects/z3/](http://research.microsoft.com/en-us/um/redmond/projects/z3/)
 
