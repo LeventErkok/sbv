@@ -53,8 +53,8 @@ framework takes full advantage of Haskell's type inference to avoid many common 
 Furthermore, predicates (i.e., functions that return `SBool`) built out of these types can also be:
 
   - proven correct via an external SMT solver (the `prove` function)
-  - checked for satisfiability (the `sat`, `allSat`, and `qbvf` functions)
-  - used in synthesis (the `qbvf` function)
+  - checked for satisfiability (the `sat`, `allSat`, `qbvf`, and `qbvfAllSat` functions)
+  - used in synthesis (the `qbvfSat` function)
   - quick-checked
 
 If a predicate is not valid, `prove` will return a counterexample: An 
@@ -65,9 +65,9 @@ all satisfying assignments, lazily.
 The SBV library can also compile Haskell functions that manipulate symbolic
 values directly to C, rendering them as straight-line C programs.
 
-Note that bit-vector theories of SMT solvers are essentially quantifier-free. However, the `qbvf`
+Note that bit-vector theories of SMT solvers are essentially quantifier-free. However, the `qbvfSat`
 function interfaces with Z3's QBVF solver, allowing quantified bit-vector formulas. The QBVF
-solver increases the power of the SBV library greatly. Furthermore, the qbvf solver can also be
+solver increases the power of the SBV library greatly. Furthermore, the QBVF solver can also be
 used for synthesis purposes.
 
 Use of SMT solvers
@@ -77,8 +77,8 @@ The sbv library uses third-party SMT solvers via the standard SMT-Lib interface:
 
 The SBV library is designed to work with any SMT-Lib compliant SMT-solver. 
 Currently, we support the Yices SMT solver from SRI fully:
-[http://yices.csl.sri.com/](http://yices.csl.sri.com/). The SBV library interfaces
-with Microsoft's Z3 SMT solver for QBVF problems: [http://research.microsoft.com/en-us/um/redmond/projects/z3/](http://research.microsoft.com/en-us/um/redmond/projects/z3/)
+[http://yices.csl.sri.com/](http://yices.csl.sri.com/) and the Z3 SMT solver
+from Microsoft: [http://research.microsoft.com/en-us/um/redmond/projects/z3/](http://research.microsoft.com/en-us/um/redmond/projects/z3/)
 
 Prerequisites
 =============
@@ -94,7 +94,7 @@ Microsoft's z3 SMT solver. Again, the environment variables
 and custom options.  The default for the latter is `"/in /smt2"`. Microsoft
 releases Z3 natively on Windows, and Linux for SMT-Comp purposes, and you can
 also run it on Mac via Wine or similar emulators. You should download at least
-version 3.0.
+version 3.2.
 
 Examples
 =========
