@@ -1,4 +1,4 @@
-Only one solution found:
+Solution #1:
   s0 = 4 :: SWord8
   s1 = 6 :: SWord8
   s2 = 4 :: SWord8
@@ -15,3 +15,4 @@ Only one solution found:
   s13 = 5 :: SWord8
   s14 = 3 :: SWord8
   s15 = 3 :: SWord8
+This is the only solution.

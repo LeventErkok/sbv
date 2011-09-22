@@ -106,7 +106,11 @@ testCollection = [
 
 main :: IO ()
 main = do tgts <- getArgs
-          run tgts False []
+          case tgts of
+            [x] | x `elem` ["-h", "--help", "-?"]
+                   -> putStrLn "Usage: SBVUnitTests [-l] [targets]" -- Not quite right, but sufficient
+            ["-l"] -> showTargets
+            _      -> run tgts False []
 
 createGolds :: String -> IO ()
 createGolds tgts = run (words tgts) True ["SBVUnitTest/GoldFiles"]
@@ -148,6 +152,13 @@ checkYicesVersion p =
                                            putStrLn $ "*** However, upgrading to Yices 2.X is highly recommended!"
                                            exitWith $ ExitFailure 1
 
+allTargets :: [String]
+allTargets = map fst testCollection
+
+showTargets :: IO ()
+showTargets = do putStrLn "Known test targets are:"
+                 mapM_ (putStrLn . ("\t" ++))  allTargets
+
 run :: [String] -> Bool -> [String] -> IO ()
 run targets shouldCreate [gd] =
         do mapM_ checkTgt targets
@@ -161,7 +172,6 @@ run targets shouldCreate [gd] =
         checkTgt t | t `elem` allTargets = return ()
                    | True                = do putStrLn $ "*** Unknown test target: " ++ show t
                                               exitWith $ ExitFailure 1
-        allTargets = map fst testCollection
 run targets shouldCreate [] = getDataDir >>= \d -> run targets shouldCreate [d </> "SBVUnitTest" </> "GoldFiles"]
 run _       _            _  = error "SBVUnitTests.run: impossible happened!"
 
