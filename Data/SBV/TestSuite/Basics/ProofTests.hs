@@ -23,13 +23,12 @@ testSuite = mkTestSuite $ \_ -> test [
  , "proofs-2"  ~: assert . not =<< isTheorem f1eqf3
  , "proofs-3"  ~: assert       =<< isTheorem f3eqf4
  , "proofs-4"  ~: assert       =<< isTheorem f1Single
- , "proofs-5"  ~: assert       =<< isSatisfiable f1eqf2
- , "proofs-6"  ~: assert       =<< isSatisfiable f1eqf3
- , "proofs-7"  ~: assert . not =<< isSatisfiable (\x -> x .== x + (1 :: SWord16))
- , "proofs-8"  ~: assert       =<< isSatisfiable (\x -> x :: SBool)
- , "proofs-9"  ~: assert       =<< isSatisfiable (\x -> return x :: Predicate)
- , "proofs-10" ~: assert       =<< isSatisfiable (forAll_ $ \x -> x :: SBool)
- , "proofs-11" ~: assert       =<< isSatisfiable (forAll_ $ \x -> return x :: Predicate)
- , "proofs-12" ~: assert       =<< isSatisfiable (forAll ["q"] $ \x -> x :: SBool)
- , "proofs-13" ~: assert       =<< isSatisfiable (forAll ["q"] $ \x -> return x :: Predicate)
+ , "proofs-5"  ~: assert       =<< isSatisfiable (f1 `xyEq` f2)
+ , "proofs-6"  ~: assert       =<< isSatisfiable (f1 `xyEq` f3)
+ , "proofs-7"  ~: assert . not =<< isSatisfiable (exists "x" >>= \x -> return (x .== x + (1 :: SWord16)))
+ , "proofs-8"  ~: assert       =<< isSatisfiable (exists "x" >>= \x -> return (x :: SBool))
+ , "proofs-9"  ~: assert       =<< isSatisfiable (exists "x" >>= \x -> (return x) :: Predicate)
  ]
+ where func1 `xyEq` func2 = do x <- exists_
+                               y <- exists_
+                               return $ func1 x y .== func2 x (y :: SWord8)

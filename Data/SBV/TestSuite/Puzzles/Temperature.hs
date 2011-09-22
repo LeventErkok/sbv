@@ -19,5 +19,5 @@ import Data.SBV.Examples.Puzzles.Temperature
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
-  "temperature" ~: sat revOf `goldCheck` "temperature.gold"
+  "temperature" ~: sat (revOf `fmap` exists_) `goldCheck` "temperature.gold"
  ]
