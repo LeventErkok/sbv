@@ -17,7 +17,8 @@ import Distribution.Simple (defaultMainWithHooks, simpleUserHooks, postInst)
 import System.Directory    (findExecutable)
 import System.Exit         (exitWith, ExitCode(..))
 
-import Data.SBV.Provers.Prover (SMTSolver(..), yices)
+import Data.SBV.Provers.Prover (SMTSolver(..))
+import Data.SBV.Provers.Yices  (yices)
 
 main :: IO ()
 main = defaultMainWithHooks simpleUserHooks{ postInst = checkDefSolver }

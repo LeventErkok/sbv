@@ -30,10 +30,7 @@ module Data.SBV.Provers.Prover (
        , qbvfAllSat, qbvfAllSatWith
        , qbvfProve, qbvfProveWith
        , SatModel(..), getModel, displayModels
-       , defaultSMTCfg, verboseSMTCfg, timingSMTCfg, verboseTimingSMTCfg
-       , Yices.yices
-       , Z3.z3
-       , timeout
+       , yices, z3
        , compileToSMTLib
        ) where
 
@@ -49,33 +46,16 @@ import Data.SBV.BitVectors.Model
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 import qualified Data.SBV.Provers.Yices as Yices
-import qualified Data.SBV.Provers.Z3_QBVF as Z3
+import qualified Data.SBV.Provers.Z3    as Z3
 import Data.SBV.Utils.TDiff
 
--- | Default configuration for the SMT solver. Non-verbose, non-timing, prints results in base 10, and uses
--- the Yices SMT solver.
-defaultSMTCfg :: SMTConfig
-defaultSMTCfg = SMTConfig {verbose = False, timing = False, printBase = 10, smtFile = Nothing, solver = Yices.yices}
+-- | Default configuration for the Yices SMT Solver.
+yices :: SMTConfig
+yices = SMTConfig {verbose = False, timing = False, timeOut = Nothing, printBase = 10, smtFile = Nothing, solver = Yices.yices}
 
--- | Same as 'defaultSMTCfg', except verbose
-verboseSMTCfg :: SMTConfig
-verboseSMTCfg = defaultSMTCfg {verbose=True}
-
--- | Same as 'defaultSMTCfg', except prints timing info
-timingSMTCfg :: SMTConfig
-timingSMTCfg  = defaultSMTCfg {timing=True}
-
--- | Same as 'defaultSMTCfg', except both verbose and timing info
-verboseTimingSMTCfg :: SMTConfig
-verboseTimingSMTCfg = timingSMTCfg {verbose=True}
-
--- We might need a better system if we add more backend solvers
--- | Adds a time out of @n@ seconds to a given solver configuration
-timeout :: Int -> SMTConfig -> SMTConfig
-timeout n s
- | nm == name Yices.yices = s{solver = Yices.timeout n (solver s)}
- | True                   = error $ "SBV.Prover.timeout: Solver " ++ show nm ++ " does not support time-outs"
- where nm = name (solver s)
+-- | Default configuration for the Z3 SMT solver
+z3 :: SMTConfig
+z3 = yices { solver = Z3.z3 }
 
 -- | A predicate is a symbolic program that returns a (symbolic) boolean value. For all intents and
 -- purposes, it can be treated as an n-ary function from symbolic-values to a boolean. The 'Symbolic'
@@ -176,24 +156,24 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymW
   forAll (s:ss) k = free s >>= \a -> forAll ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   forAll []     k = forAll_ k
 
--- | Prove a predicate, equivalent to @'proveWith' 'defaultSMTCfg'@
+-- | Prove a predicate, equivalent to @'proveWith' 'yices'@
 prove :: Provable a => a -> IO ThmResult
-prove = proveWith defaultSMTCfg
+prove = proveWith yices
 
 -- | Prove a predicate using the QBVF solver, using the default configuration
 qbvfProve :: Provable a => a -> IO ThmResult
-qbvfProve = qbvfProveWith defaultSMTCfg { solver = Z3.z3 }
+qbvfProve = qbvfProveWith z3
 
--- | Find a satisfying assignment for a predicate, equivalent to @'satWith' 'defaultSMTCfg'@
+-- | Find a satisfying assignment for a predicate, equivalent to @'satWith' 'yices'@
 sat :: Provable a => a -> IO SatResult
-sat = satWith defaultSMTCfg
+sat = satWith yices
 
 -- | Find a satisfying model using the QBVF solver, using the default configuration. NB. If there
 -- is a solution, all universally quantified variables will be assigned the value @0@.
 qbvfSat :: Provable a => a -> IO SatResult
-qbvfSat = qbvfSatWith defaultSMTCfg { solver = Z3.z3 }
+qbvfSat = qbvfSatWith z3
 
--- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
+-- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'yices'@.
 -- Satisfying assignments are constructed lazily, so they will be available as returned by the solver
 -- and on demand.
 --
@@ -202,9 +182,9 @@ qbvfSat = qbvfSatWith defaultSMTCfg { solver = Z3.z3 }
 -- array inputs will be returned. This is due to the limitation of not having a robust means of getting a
 -- function counter-example back from the SMT solver.
 allSat :: Provable a => a -> IO AllSatResult
-allSat = allSatWith toSMTLib1 defaultSMTCfg
+allSat = allSatWith toSMTLib1 yices
 
--- | Variant of 'allSat' for QBVF, equivalent to @'qbvfAllSatWith' 'defaultSMTCfg'@.
+-- | Variant of 'allSat' for QBVF, equivalent to @'qbvfAllSatWith' 'yices'@.
 --
 -- NB. The notion of `allSat' for a quantified formula might be surprising for the unsuspecting user.
 -- Due to the potential nesting, `qbvfSat` will only return those satisfying assignments
@@ -213,7 +193,7 @@ allSat = allSatWith toSMTLib1 defaultSMTCfg
 -- satisfiable but it has no existentials, then `qbvfSat` will always return precisely one model
 -- for it.)
 qbvfAllSat :: Provable a => a -> IO AllSatResult
-qbvfAllSat = qbvfAllSatWith defaultSMTCfg { solver = Z3.z3 }
+qbvfAllSat = qbvfAllSatWith z3
 
 -- Decision procedures (with optional timeout)
 checkTheorem :: Provable a => Maybe Int -> a -> IO (Maybe Bool)
@@ -223,7 +203,7 @@ checkTheorem mbTo p = do r <- pr p
                            ThmResult (Satisfiable _ _) -> return $ Just False
                            ThmResult (TimeOut _)       -> return Nothing
                            _                           -> error $ "SBV.isTheorem: Received:\n" ++ show r
-   where pr = maybe prove (\i -> proveWith (timeout i defaultSMTCfg)) mbTo
+   where pr = maybe prove (\i -> proveWith (yices{timeOut = Just i})) mbTo
 
 checkSatisfiable :: Provable a => Maybe Int -> a -> IO (Maybe Bool)
 checkSatisfiable mbTo p = do r <- s p
@@ -232,7 +212,7 @@ checkSatisfiable mbTo p = do r <- s p
                                SatResult (Unsatisfiable _) -> return $ Just False
                                SatResult (TimeOut _)       -> return Nothing
                                _                           -> error $ "SBV.isSatisfiable: Received: " ++ show r
-   where s = maybe sat (\i -> satWith (timeout i defaultSMTCfg)) mbTo
+   where s = maybe sat (\i -> satWith yices{timeOut = Just i}) mbTo
 
 -- | Checks theoremhood within the given time limit of @i@ seconds.
 -- Returns @Nothing@ if times out, or the result wrapped in a @Just@ otherwise.
@@ -274,7 +254,7 @@ compileToSMTLib :: Provable a => a -> IO String
 compileToSMTLib a = do
         t <- getClockTime
         let comments = ["Created on " ++ show t]
-        (_, _, _, smtLibPgm) <- simulate toSMTLib1 defaultSMTCfg False comments a
+        (_, _, _, smtLibPgm) <- simulate toSMTLib1 yices False comments a
         return $ show smtLibPgm ++ "\n"
 
 -- | Proves the predicate using the given SMT-solver
@@ -287,17 +267,15 @@ satWith config a = simulate toSMTLib1 config True [] a >>= callSolver True "Chec
 
 -- | Prove a predicate using the QBVF solver
 qbvfProveWith :: Provable a => SMTConfig -> a -> IO ThmResult
-qbvfProveWith cfg' a = simulate toSMTLib2 cfg False [] a >>= callSolver False "Checking QBVF Theoremhood.." ThmResult cfg
-  where cfg = cfg' { solver = Z3.z3 }
+qbvfProveWith cfg a = simulate toSMTLib2 cfg False [] a >>= callSolver False "Checking QBVF Theoremhood.." ThmResult cfg
 
 -- | Find a satisfying model using the QBVF solver
 qbvfSatWith :: Provable a => SMTConfig -> a -> IO SatResult
-qbvfSatWith cfg' a = simulate toSMTLib2 cfg True [] a >>= callSolver True "Checking QBVF Satisfiability.." SatResult cfg
-  where cfg = cfg' { solver = Z3.z3 }
+qbvfSatWith cfg a = simulate toSMTLib2 cfg True [] a >>= callSolver True "Checking QBVF Satisfiability.." SatResult cfg
 
 -- | Find all satisfying models using the QBVF solver
 qbvfAllSatWith :: SMTConfig -> Provable a => a -> IO AllSatResult
-qbvfAllSatWith cfg = allSatWith toSMTLib2 cfg { solver = Z3.z3 }
+qbvfAllSatWith = allSatWith toSMTLib2
 
 -- | Find all satisfying assignments using the given SMT-solver
 allSatWith :: Provable a => SMTLibConverter -> SMTConfig -> a -> IO AllSatResult

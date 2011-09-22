@@ -75,9 +75,8 @@
 -- <http://goedel.cs.uiowa.edu/smtlib/>.
 --
 -- The SBV library is designed to work with any SMT-Lib compliant SMT-solver.
--- Currently, we support the Yices SMT solver from SRI fully: <http://yices.csl.sri.com/>.
--- The SBV library interfaces with Microsoft's Z3 SMT solver for QBVF problems: 
--- <http://research.microsoft.com/en-us/um/redmond/projects/z3/>.
+-- Currently, we support the Yices SMT solver from SRI fully: <http://yices.csl.sri.com/>,
+-- and the Z3 SMT solver from Microsoft: <http://research.microsoft.com/en-us/um/redmond/projects/z3/>.
 --
 -- You /should/ download and install Yices on your machine, and make sure the
 -- @yices@ executable is in your path before using the sbv library, as it is the
@@ -85,7 +84,7 @@
 -- executable in the environment variable @SBV_YICES@ and the options to yices
 -- in @SBV_YICES_OPTIONS@.
 --
--- Use of the QBVF solver (see 'qbvfProve' and 'qbvfSat') requires an installation of z3. Again,
+-- Use of the 'qbvfProve', 'qbvfSat', and 'qbvfAllSat' commands require an installation of z3. Again,
 -- z3 must be in your path. Or, you can use the @SBV_Z3@ and @SBV_Z3_OPTIONS@
 -- environment variables to set the executable and the options.
 ---------------------------------------------------------------------------------
@@ -168,8 +167,7 @@ module Data.SBV (
   , SatModel(..), getModel, displayModels
 
   -- * SMT Interface: Configurations and solvers
-  , SMTConfig(..), SMTSolver(..), defaultSMTCfg, verboseSMTCfg, timingSMTCfg, verboseTimingSMTCfg, timeout
-  , yices, z3
+  , SMTConfig(..), SMTSolver(..), yices, z3
 
   -- * Symbolic computations
   , Symbolic, output, SymWord(..)

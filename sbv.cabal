@@ -128,7 +128,7 @@ Library
                   , Data.SBV.Provers.Prover
                   , Data.SBV.Provers.SExpr
                   , Data.SBV.Provers.Yices
-                  , Data.SBV.Provers.Z3_QBVF
+                  , Data.SBV.Provers.Z3
                   , Data.SBV.Utils.Boolean
                   , Data.SBV.Utils.TDiff
                   , Data.SBV.Utils.SBVTest
