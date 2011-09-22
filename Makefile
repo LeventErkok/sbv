@@ -30,7 +30,7 @@ docs:
 configure:
 	cabal configure
 
-release: clean all docs
+release: tags clean all docs
 
 gold:
 	ghc -idist/build/autogen/ SBVUnitTest/SBVUnitTest.hs -e "createGolds \"${TGTS}\""
