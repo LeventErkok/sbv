@@ -285,7 +285,7 @@ type Model = SFunArray
 --   On a decent MacBook Pro, this proof takes about 3 minutes with the 'SFunArray' memory model
 --   and about 30 minutes with the 'SArray' model.
 correctnessTheorem :: IO ThmResult
-correctnessTheorem = proveWith timingSMTCfg $
+correctnessTheorem = proveWith yices{timing = True} $
     forAll ["mem", "addrX", "x", "addrY", "y", "addrLow", "regX", "regA", "memVals", "flagC", "flagZ"]
            legatoIsCorrect
 

@@ -19,6 +19,7 @@
 module Data.SBV.Examples.BitPrecise.PrefixSum where
 
 import Data.SBV
+import qualified Data.SBV.Provers.Yices as Yices
 import Data.SBV.Internals(runSymbolic)
 
 ----------------------------------------------------------------------
@@ -204,10 +205,10 @@ prefixSum i
   = error $ "prefixSum: input must be a power of 2 larger than 2, received: " ++ show i
   | True
   = proveWith cfg $ genPrefixSumInstance i
-  where cfg = defaultSMTCfg { solver = yices' }
-        yices' = yices { options    = ["-tc", "-smt", "-e"]
-                       , executable = "yices-1.0.29"
-                       }
+  where cfg = yices { solver = yices' }
+        yices' = Yices.yices { options    = ["-tc", "-smt", "-e"]
+                             , executable = "yices-1.0.29"
+                             }
 
 ----------------------------------------------------------------------
 -- * Inspecting symbolic traces
