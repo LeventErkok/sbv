@@ -24,6 +24,8 @@ import Data.SBV                (yices, SMTSolver(..))
 import Data.SBV.Utils.SBVTest  (SBVTestSuite(..), generateGoldCheck)
 import Paths_sbv               (getDataDir)
 
+import qualified Data.SBV.Provers.Yices as Yices
+
 -- To add a new collection of tests, import below and add to testCollection variable
 import qualified Data.SBV.TestSuite.Arrays.Memory                  as T01_01(testSuite)
 import qualified Data.SBV.TestSuite.Basics.Arithmetic              as T02_01(testSuite)
@@ -118,7 +120,7 @@ checkGoldDir gd = do e <- doesDirectoryExist gd
                                 exitWith $ ExitFailure 1
 
 checkYices :: IO ()
-checkYices = do ex <- getEnv "SBV_YICES" `catch` (\_ -> return (executable yices))
+checkYices = do ex <- getEnv "SBV_YICES" `catch` (\_ -> return (executable Yices.yices))
                 mbP <- findExecutable ex
                 case mbP of
                   Nothing -> do putStrLn $ "*** Cannot find default SMT solver executable for " ++ nm
@@ -128,7 +130,7 @@ checkYices = do ex <- getEnv "SBV_YICES" `catch` (\_ -> return (executable yices
                                 exitWith $ ExitFailure 1
                   Just p  -> do putStrLn $ "*** Using solver : " ++ nm ++ " (" ++ show p ++ ")"
                                 checkYicesVersion p
- where nm = name yices
+ where nm = name Yices.yices
 
 checkYicesVersion :: FilePath -> IO ()
 checkYicesVersion p =
@@ -138,7 +140,7 @@ checkYicesVersion p =
                                  exitWith $ ExitFailure 1
              ExitSuccess   -> do let isYices1 = take 2 yOut == "1." -- crude test; might fail..
                                  when isYices1 $ putStrLn $ "*** Yices version 1.X is detected. Version 2.X is strongly recommended!"
-                                 opts <- getEnv "SBV_YICES_OPTIONS" `catch` (\_ -> return (unwords (options yices)))
+                                 opts <- getEnv "SBV_YICES_OPTIONS" `catch` (\_ -> return (unwords (options Yices.yices)))
                                  when (isYices1 && opts /= "-tc -smt -e") $ do
                                            putStrLn $ "*** Either install Yices 2.X, or set the environment variable:"
                                            putStrLn $ "***     SBV_YICES_OPTIONS=\"-tc -smt -e\""
