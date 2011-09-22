@@ -562,7 +562,7 @@ runSymbolic' (Symbolic c) = do
 -- in casual uses with 'prove', 'sat', 'allSat' etc, as default instances automatically
 -- provide the necessary bits.
 --
--- Minimal complete definiton: free, free_, literal, fromCW
+-- Minimal complete definiton: forall, forall_, exists, exists_, literal, fromCW
 class (Bounded a, Ord a) => SymWord a where
   -- | Create a user named input (universal)
   forall :: String -> Symbolic (SBV a)

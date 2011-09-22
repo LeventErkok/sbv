@@ -77,7 +77,7 @@ class Provable a where
   -- @x@ will be named @s0@ and @y@ will be named @s1@.
   forAll_ :: a -> Predicate
   -- | Turns a value into a predicate, allowing users to provide names for the inputs.
-  -- If the user does not provide enough number of names for the free variables, the remaining ones
+  -- If the user does not provide enough number of names for the variables, the remaining ones
   -- will be internally generated. Note that the names are only used for printing models and has no
   -- other significance; in particular, we do not check that they are unique. Example:
   --
