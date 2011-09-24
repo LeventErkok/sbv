@@ -23,10 +23,10 @@ extendData :: SWord48 -> SWord64
 extendData (h, l) = h # l # 0
 
 mkFrame :: SWord48 -> SWord64
-mkFrame msg@(h, l) = h # l # crc msg
+mkFrame msg@(h, l) = h # l # crc_48_16 msg
 
-crc :: SWord48 -> SWord16
-crc msg = res
+crc_48_16 :: SWord48 -> SWord16
+crc_48_16 msg = res
   where msg64, divisor :: SWord64
         msg64   = extendData msg
         divisor = polynomial [16, 12, 5, 0]

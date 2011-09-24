@@ -15,7 +15,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternGuards #-}
 
-module Data.SBV.BitVectors.Polynomial (Polynomial(..)) where
+module Data.SBV.BitVectors.Polynomial (Polynomial(..), crc, crcBV) where
 
 import Data.Bits  (Bits(..))
 import Data.List  (genericTake)
@@ -171,3 +171,35 @@ divx n i xs ys'        = (q:qs, rs)
   where q        = xs `idx` i
         xs'      = ites q (xs `addPoly` ys') xs
         (qs, rs) = divx (n-1) (i-1) xs' (tail ys')
+
+-- | Compute CRCs over bit-vectors. The call @crcBV n m p@ computes
+-- the CRC of the message @m@ with respect to polynomial @p@. The
+-- inputs are assumed to be blasted big-endian. The number
+-- @n@ specifies how many bits of CRC is needed. Note that @n@
+-- is actually the degree of the polynomial @p@, and thus it seems
+-- redundant to pass it in. However, in a typical proof context,
+-- the polynomial can be symbolic, so we cannot compute the degree
+-- easily. While this can be worked-around by generating code that
+-- accounts for all possible degrees, the resulting code would
+-- be unnecessarily big and complicated, and much harder to reason
+-- with. (Also note that a CRC is just the remainder from the
+-- polynomial division, but this routine is much faster in practice.)
+--
+-- NB. The @n@th bit of the polynomial @p@ /must/ be set for the CRC
+-- to be computed correctly. If not, the result will not be correct.
+-- Also, if @p@ is @0@ (i.e., all @False@ bits), then the result will
+-- be constructed from the lower bits of @m@, following the polynomial
+-- division by 0 rule. (See also the note for the 'Polynomial' class.)
+crcBV :: Int -> [SBool] -> [SBool] -> [SBool]
+crcBV n m p = take n $ go (replicate n false) m
+  where mask = drop (length p - n) p
+        go c []     = c
+        go c (b:bs) = go next bs
+          where c' = drop 1 c ++ [b]
+                next = ite (head c) (zipWith (<+>) c' mask) c'
+
+-- | Compute CRC's over polynomials, i.e., symbolic words. The first
+-- 'Int' argument plays the same role as the one in the 'crcBV' function.
+crc :: (FromBits (SBV a), FromBits (SBV b), Bits a, Bits b, SymWord a, SymWord b) => Int -> SBV a -> SBV b -> SBV b
+crc n m p = fromBitsBE $ replicate (sz - n) false ++ crcBV n (blastBE m) (blastBE p)
+  where sz = sizeOf p

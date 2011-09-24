@@ -22,6 +22,8 @@ Version 0.9.22, Not yet released
     Code:
      * Change getModel, so it returns an Either value to indicate
        something went wrong; instead of throwing an error
+     * Add support for computing CRCs directly (without needing
+       polynomial division).
     Code generation:
      * Add "cgGenerateDriver" function, which can be used to turn
        on/off driver program generation. Default is to generate

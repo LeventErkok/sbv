@@ -26,11 +26,11 @@ extendData :: SWord11 -> SWord16
 extendData (S11 w) = w `shiftL` 5
 
 mkFrame :: SWord11 -> SWord16
-mkFrame w = extendData w .|. crc w
+mkFrame w = extendData w .|. crc_11_16 w
 
 -- crc returns 16 bits, but the first 11 are always 0
-crc :: SWord11 -> SWord16
-crc msg = crc16 .&. 0x1F -- just get the last 5 bits
+crc_11_16 :: SWord11 -> SWord16
+crc_11_16 msg = crc16 .&. 0x1F -- just get the last 5 bits
   where divisor :: SWord16
         divisor = polynomial [5, 2, 0]
         crc16 = pMod (extendData msg) divisor

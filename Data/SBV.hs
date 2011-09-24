@@ -43,7 +43,7 @@
 --
 --   * 'SArray', 'SFunArray': Flat arrays of symbolic values
 --
---   * Symbolic polynomials over GF(2^n), and polynomial arithmetic
+--   * Symbolic polynomials over GF(2^n), polynomial arithmetic, and CRCs
 --
 --   * Uninterpreted constants and functions over symbolic values, with user
 --     defined SMT-Lib axioms
@@ -116,8 +116,8 @@ module Data.SBV (
   , Splittable(..)
   -- *** Sign-casting
   , SignCast(..)
-  -- ** Polynomial arithmetic
-  , Polynomial(..)
+  -- ** Polynomial arithmetic and CRCs
+  , Polynomial(..), crcBV, crc
   -- ** Conditionals: Mergeable values
   , Mergeable(..)
   -- ** Symbolic equality

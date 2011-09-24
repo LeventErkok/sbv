@@ -22,10 +22,10 @@ extendData :: SWord48 -> SWord64
 extendData (h, l) = h # l # 0
 
 mkFrame :: SWord64 -> SWord48 -> SWord64
-mkFrame poly msg@(h, l) = h # l # crc msg poly
+mkFrame poly msg@(h, l) = h # l # crc_48_16 msg poly
 
-crc :: SWord48 -> SWord64 -> SWord16
-crc msg poly = res
+crc_48_16 :: SWord48 -> SWord64 -> SWord16
+crc_48_16 msg poly = res
   where msg64 = extendData msg
         crc64 = pMod msg64 poly
         (_, res) = split (snd (split crc64))
