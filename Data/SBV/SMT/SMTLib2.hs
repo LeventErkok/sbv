@@ -50,9 +50,6 @@ nonEqs (sc:r) =  ["(assert (or " ++ nonEq sc]
 nonEq :: (String, CW) -> String
 nonEq (s, c) = "(not (= " ++ s ++ " " ++ cvtCW c ++ "))"
 
-tbd :: String -> a
-tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
-
 cvt :: Bool                                        -- ^ is this a sat problem?
     -> [String]                                    -- ^ extra comments to place on top
     -> [(Quantifier, NamedSymVar)]                 -- ^ inputs
@@ -87,8 +84,10 @@ cvt isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq out = (pre
              ++ concatMap constTable constTables
              ++ [ "; --- skolemized tables ---" ]
              ++ map (skolemTable (intercalate " " (map smtType foralls))) skolemTables
-             ++ [ "; --- arrays ---" ]
-             ++ concat arrayConstants
+             ++ [ "; --- constant arrays ---" ]
+             ++ concatMap constArr constArrays
+             ++ [ "; --- skolemized arrays ---" ]
+             ++ map (skolemArray (intercalate " " (map smtType foralls))) skolemArrays
              ++ [ "; --- uninterpreted constants ---" ]
              ++ concatMap declUI uis
              ++ [ "; --- user given axioms ---" ]
@@ -102,10 +101,11 @@ cvt isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq out = (pre
              ++ map letAlign (if null delayedEqualities then [] else (("(and " ++ deH) : map (align 5) deTs))
              ++ [ impAlign (letAlign assertOut) ++ replicate noOfCloseParens ')' ]
         noOfCloseParens = length asgns + (if null foralls then 1 else 2) + (if null delayedEqualities then 0 else 1)
-        (constTables, skolemTables) = ([(t, d) | (t, Left d) <- allTables], [(t, d) | (t, Right d) <- allTables])
         allTables = [(t, genTableData skolemMap (not (null foralls), forallArgs) (map fst consts) t) | t <- tbls]
-        (arrayConstants, allArrayDelayeds) = unzip $ map (declArray (map fst consts) skolemMap) arrs
-        delayedEqualities@(~(deH:deTs)) = concat (map snd skolemTables) ++ concat allArrayDelayeds
+        (constTables, skolemTables) = ([(t, d) | (t, Left d) <- allTables], [(t, d) | (t, Right d) <- allTables])
+        allArrays = [(a, genArrData skolemMap (not (null foralls), forallArgs) (map fst consts) a) | a <- arrs]
+        (constArrays, skolemArrays) = ([(t, d) | (t, Left d) <- allArrays], [(t, d) | (t, Right d) <- allArrays])
+        delayedEqualities@(~(deH:deTs)) = concatMap snd skolemTables ++ concatMap snd skolemArrays
         foralls = [s | Left s <- skolemInps]
         forallArgs = concatMap ((" " ++) . show) foralls
         letAlign s
@@ -159,9 +159,29 @@ genTableData skolemMap (quantified, args) consts ((i, (sa, at), (_, _rt)), elts)
         topLevel (idx, v) = "(= (" ++ t ++ " " ++ idx ++ ") " ++ v ++ ")"
         nested   (idx, v) = "(= (" ++ t ++ args ++ " " ++ idx ++ ") " ++ v ++ ")"
 
--- TODO: We currently do not support non-constant arrays, as we might have to skolemize those.
--- Implement this properly.
-declArray :: [SW] -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String])
+constArr = error "constArr"
+skolemArray = error "skolemArray"
+
+-- Left if all constants, Right if otherwise
+genArrData :: SkolemMap -> (Bool, String) -> [SW] -> (Int, ArrayInfo) -> Either [String] [String]
+genArrData skolemMap (quantified, args) consts (i, (_, ((_, at), (_, rt)), ctx))
+  | not quantified || constCtx ctx = Left  decls
+  | True                           = Right decls
+  where nm  = "array_" ++ show i
+        ssw = cvtSW skolemMap
+        constCtx = case ctx of
+                     ArrayFree Nothing   -> True
+                     ArrayFree (Just sw) -> sw `elem` consts
+                     ArrayReset sw       -> sw `elem` consts
+                     ArrayMutate _ a b   -> any (`elem` consts) [a, b]
+                     ArrayMerge c _ _    -> c `elem` consts
+        decls = case ctx of
+                   ArrayFree Nothing   -> []
+                   ArrayFree (Just sw) ->
+                   ArrayReset sw       ->
+                   ArrayMutate _ a b   ->
+                   ArrayMerge c _ _    ->
+{-
 declArray consts skolemMap (i, (_, ((_, at), (_, rt)), ctx)) = (adecl : map wrap pre, map snd post)
   where (pre, post) = partition fst ctxInfo
         nm = "array_" ++ show i
@@ -181,6 +201,7 @@ declArray consts skolemMap (i, (_, ((_, at), (_, rt)), ctx)) = (adecl : map wrap
                       ]
         wrap (False, s) = s
         wrap (True, s)  = "(assert " ++ s ++ ")"
+-}
 
 smtType :: SW -> String
 smtType s = "(_ BitVec " ++ show (sizeOf s) ++ ")"
