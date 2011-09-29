@@ -161,6 +161,8 @@ genTableData skolemMap (quantified, args) consts ((i, (sa, at), (_, _rt)), elts)
 
 -- TODO: We currently do not support non-constant arrays when quantifiers are present, as
 -- we might have to skolemize those. Implement this properly.
+-- The difficulty is with the ArrayReset/Mutate/Merge: We have to postpone an init if
+-- the components are themselves postponed, so this cannot be implemented as a simple map.
 declArray :: Bool -> [SW] -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String])
 declArray quantified consts skolemMap (i, (_, ((_, at), (_, rt)), ctx)) = (adecl : map wrap pre, map snd post)
   where topLevel = not quantified || case ctx of
