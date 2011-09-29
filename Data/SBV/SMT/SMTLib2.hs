@@ -104,7 +104,7 @@ cvt isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq out = (pre
         noOfCloseParens = length asgns + (if null foralls then 1 else 2) + (if null delayedEqualities then 0 else 1)
         (constTables, skolemTables) = ([(t, d) | (t, Left d) <- allTables], [(t, d) | (t, Right d) <- allTables])
         allTables = [(t, genTableData skolemMap (not (null foralls), forallArgs) (map fst consts) t) | t <- tbls]
-        (arrayConstants, allArrayDelayeds) = unzip $ map (declArray (map fst consts) skolemMap) arrs
+        (arrayConstants, allArrayDelayeds) = unzip $ map (declArray (not (null foralls)) (map fst consts) skolemMap) arrs
         delayedEqualities@(~(deH:deTs)) = concat (map snd skolemTables) ++ concat allArrayDelayeds
         foralls = [s | Left s <- skolemInps]
         forallArgs = concatMap ((" " ++) . show) foralls
@@ -159,15 +159,23 @@ genTableData skolemMap (quantified, args) consts ((i, (sa, at), (_, _rt)), elts)
         topLevel (idx, v) = "(= (" ++ t ++ " " ++ idx ++ ") " ++ v ++ ")"
         nested   (idx, v) = "(= (" ++ t ++ args ++ " " ++ idx ++ ") " ++ v ++ ")"
 
--- TODO: We currently do not support non-constant arrays, as we might have to skolemize those.
--- Implement this properly.
-declArray :: [SW] -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String])
-declArray consts skolemMap (i, (_, ((_, at), (_, rt)), ctx)) = (adecl : map wrap pre, map snd post)
-  where (pre, post) = partition fst ctxInfo
+-- TODO: We currently do not support non-constant arrays when quantifiers are present, as
+-- we might have to skolemize those. Implement this properly.
+declArray :: Bool -> [SW] -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String])
+declArray quantified consts skolemMap (i, (_, ((_, at), (_, rt)), ctx)) = (adecl : map wrap pre, map snd post)
+  where topLevel = not quantified || case ctx of
+                                       ArrayFree Nothing -> True
+                                       ArrayFree (Just sw) -> sw `elem` consts
+                                       ArrayReset _ sw     -> sw `elem` consts
+                                       ArrayMutate _ a b   -> all (`elem` consts) [a, b]
+                                       ArrayMerge c _ _    -> c `elem` consts
+        (pre, post) = partition fst ctxInfo
         nm = "array_" ++ show i
         ssw sw
-         | sw `elem` consts = cvtSW skolemMap sw
-         | True             = tbd "Non-constant array initializer"
+         | topLevel || sw `elem` consts
+         = cvtSW skolemMap sw
+         | True
+         = tbd "Non-constant array initializer in a quantified context"
         adecl = "(declare-fun " ++ nm ++ "() (Array (_ BitVec " ++ show at ++ ") (_ BitVec " ++ show rt ++ ")))"
         ctxInfo = case ctx of
                     ArrayFree Nothing   -> []
