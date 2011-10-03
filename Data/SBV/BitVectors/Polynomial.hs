@@ -34,7 +34,7 @@ import Data.SBV.Utils.Boolean
 --
 -- for all @x@ (including @0@)
 --
--- Minimal complete definiton: 'pMult', 'pDivMod', 'showPoly'
+-- Minimal complete definiton: 'pMult', 'pDivMod', 'showPolynomial'
 class Bits a => Polynomial a where
  -- | Given bit-positions to be set, create a polynomial
  -- For instance
