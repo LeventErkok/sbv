@@ -62,23 +62,28 @@ class Bits a => Polynomial a where
  pMod  :: a -> a -> a
  -- | Division and modulus packed together
  pDivMod :: a -> a -> (a, a)
- -- | Display a polynomial like a mathematician would (over the monomial @x@)
+ -- | Display a polynomial like a mathematician would (over the monomial @x@), with a type
  showPoly :: a -> String
+ -- | Display a polynomial like a mathematician would (over the monomial @x@), the first argument
+ -- controls if the final type is shown as well.
+ showPolynomial :: Bool -> a -> String
 
- -- defaults.. Minumum complete definition: pMult, pDivMod, showPoly
+ -- defaults.. Minumum complete definition: pMult, pDivMod, showPolynomial
  polynomial = foldr (flip setBit) 0
  pAdd       = xor
  pDiv x y   = fst (pDivMod x y)
  pMod x y   = snd (pDivMod x y)
+ showPoly   = showPolynomial False
 
-instance Polynomial Word8   where {showPoly = sp;       pMult = lift polyMult; pDivMod = liftC polyDivMod}
-instance Polynomial Word16  where {showPoly = sp;       pMult = lift polyMult; pDivMod = liftC polyDivMod}
-instance Polynomial Word32  where {showPoly = sp;       pMult = lift polyMult; pDivMod = liftC polyDivMod}
-instance Polynomial Word64  where {showPoly = sp;       pMult = lift polyMult; pDivMod = liftC polyDivMod}
-instance Polynomial SWord8  where {showPoly = liftS sp; pMult = polyMult;      pDivMod = polyDivMod}
-instance Polynomial SWord16 where {showPoly = liftS sp; pMult = polyMult;      pDivMod = polyDivMod}
-instance Polynomial SWord32 where {showPoly = liftS sp; pMult = polyMult;      pDivMod = polyDivMod}
-instance Polynomial SWord64 where {showPoly = liftS sp; pMult = polyMult;      pDivMod = polyDivMod}
+
+instance Polynomial Word8   where {showPolynomial   = sp;           pMult = lift polyMult; pDivMod = liftC polyDivMod}
+instance Polynomial Word16  where {showPolynomial   = sp;           pMult = lift polyMult; pDivMod = liftC polyDivMod}
+instance Polynomial Word32  where {showPolynomial   = sp;           pMult = lift polyMult; pDivMod = liftC polyDivMod}
+instance Polynomial Word64  where {showPolynomial   = sp;           pMult = lift polyMult; pDivMod = liftC polyDivMod}
+instance Polynomial SWord8  where {showPolynomial b = liftS (sp b); pMult = polyMult;      pDivMod = polyDivMod}
+instance Polynomial SWord16 where {showPolynomial b = liftS (sp b); pMult = polyMult;      pDivMod = polyDivMod}
+instance Polynomial SWord32 where {showPolynomial b = liftS (sp b); pMult = polyMult;      pDivMod = polyDivMod}
+instance Polynomial SWord64 where {showPolynomial b = liftS (sp b); pMult = polyMult;      pDivMod = polyDivMod}
 
 lift :: SymWord a => ((SBV a, SBV a, [Int]) -> SBV a) -> (a, a, [Int]) -> a
 lift f (x, y, z) = fromJust $ unliteral $ f (literal x, literal y, z)
@@ -90,11 +95,12 @@ liftS f s
   | True                  = show s
 
 -- | Pretty print as a polynomial
-sp :: Bits a => a -> String
-sp a
+sp :: Bits a => Bool -> a -> String
+sp st a
  | null cs = "0" ++ t
  | True    = foldr (\x y -> sh x ++ " + " ++ y) (sh (last cs)) (init cs) ++ t
- where t  = " :: GF(2^" ++ show n ++ ")"
+ where t | st   = " :: GF(2^" ++ show n ++ ")"
+         | True = ""
        n  = bitSize a
        is = [n-1, n-2 .. 0]
        cs = map fst $ filter snd $ zip is (map (testBit a) is)
