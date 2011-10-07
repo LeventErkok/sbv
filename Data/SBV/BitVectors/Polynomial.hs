@@ -197,7 +197,7 @@ divx n i xs ys'        = (q:qs, rs)
 -- be constructed from the lower bits of @m@, following the polynomial
 -- division by 0 rule. (See also the note for the 'Polynomial' class.)
 crcBV :: Int -> [SBool] -> [SBool] -> [SBool]
-crcBV n m p = take n $ go (replicate n false) m
+crcBV n m p = take n $ go (replicate n false) (m ++ replicate n false)
   where mask = drop (length p - n) p
         go c []     = c
         go c (b:bs) = go next bs
