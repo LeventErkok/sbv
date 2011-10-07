@@ -102,6 +102,7 @@ Library
                   , Data.SBV.Examples.CodeGeneration.PopulationCount
                   , Data.SBV.Examples.Crypto.AES
                   , Data.SBV.Examples.Crypto.RC4
+                  , Data.SBV.Examples.Existentials.CRCPolynomial
                   , Data.SBV.Examples.Polynomials.Polynomials
                   , Data.SBV.Examples.Puzzles.Counts
                   , Data.SBV.Examples.Puzzles.DogCatMouse
