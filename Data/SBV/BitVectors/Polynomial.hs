@@ -196,6 +196,18 @@ divx n i xs ys'        = (q:qs, rs)
 -- Also, if @p@ is @0@ (i.e., all @False@ bits), then the result will
 -- be constructed from the lower bits of @m@, following the polynomial
 -- division by 0 rule. (See also the note for the 'Polynomial' class.)
+--
+-- NB. The literature on CRC's has many variants on how CRC's are computed.
+-- We follow the "painless guide" and compute the CRC as follows:
+--
+--     * Extend the message 'm' by adding 'n' 0 bits on the right
+--
+--     * Divide the polynomial thus obtained by the 'p'
+--
+--     * The remainder is the CRC value.
+--
+-- There are many variants on final XOR's, reversed polynomials etc., so
+-- it is essential to double check you use the correct /algorithm/.
 crcBV :: Int -> [SBool] -> [SBool] -> [SBool]
 crcBV n m p = take n $ go (replicate n false) (m ++ replicate n false)
   where mask = drop (length p - n) p
