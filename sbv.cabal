@@ -165,6 +165,7 @@ Library
                   , Data.SBV.TestSuite.CodeGeneration.PopulationCount
                   , Data.SBV.TestSuite.Crypto.AES
                   , Data.SBV.TestSuite.Crypto.RC4
+                  , Data.SBV.TestSuite.Existentials.CRCPolynomial
                   , Data.SBV.TestSuite.CRC.CCITT
                   , Data.SBV.TestSuite.CRC.CCITT_Unidir
                   , Data.SBV.TestSuite.CRC.GenPoly
