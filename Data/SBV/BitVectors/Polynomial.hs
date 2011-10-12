@@ -192,13 +192,16 @@ divx n i xs ys'        = (q:qs, rs)
 -- polynomial division, but this routine is much faster in practice.)
 --
 -- NB. The @n@th bit of the polynomial @p@ /must/ be set for the CRC
--- to be computed correctly. If not, the result will not be correct.
--- Also, if @p@ is @0@ (i.e., all @False@ bits), then the result will
--- be constructed from the lower bits of @m@, following the polynomial
--- division by 0 rule. (See also the note for the 'Polynomial' class.)
+-- to be computed correctly. Note that the polynomial argument 'p' will
+-- not even have this bit present most of the time, as it will typically
+-- contain bits @0@ through @n-1@ as usual in the CRC literature. The higher
+-- order @n@th bit is simply assumed to be set, as it does not make
+-- sense to use a polynomial of a lesser degree. This is usually not a problem
+-- since CRC polynomials are designed and expressed this way.
 --
 -- NB. The literature on CRC's has many variants on how CRC's are computed.
--- We follow the "painless guide" and compute the CRC as follows:
+-- We follow the painless guide (<http://www.ross.net/crc/download/crc_v3.txt>)
+-- and compute the CRC as follows:
 --
 --     * Extend the message 'm' by adding 'n' 0 bits on the right
 --
