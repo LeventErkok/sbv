@@ -30,6 +30,8 @@ Version 0.9.22, Not yet released
        a driver. (Issue "cgGenerateDriver False" to skip the driver.)
        For a library, a driver will be generated if any of the
        constituent parts has a driver. Otherwise it'll be skipped.
+    Examples:
+     * Add CRC polynomial generation example via existentials
 
 ======================================================================
 Version 0.9.21, 2011-08-05
