@@ -187,3 +187,4 @@ Library
 
 Executable SBVUnitTests
   main-is         : SBVUnitTest/SBVUnitTest.hs
+  Other-modules   : SBVUnitTest.SBVUnitTestBuildTime

@@ -4,13 +4,21 @@
 # in the distribution for details.
 
 SRCS = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs)
+STAMPFILE=SBVUnitTest/SBVUnitTestBuildTime.hs
 
-.PHONY: all install test sdist clean docs gold tags
+.PHONY: all install test sdist clean docs gold tags stamp
 
 all: install test sdist
 
-install:
+install: stamp
 	cabal install
+
+stamp:
+	@echo "-- Auto-generated, don't edit"				 >  ${STAMPFILE}
+	@echo "module SBVUnitTest.SBVUnitTestBuildTime (buildTime) where" >> ${STAMPFILE}
+	@echo ""								 >> ${STAMPFILE}
+	@echo "buildTime :: String"					 >> ${STAMPFILE}
+	@echo "buildTime = \"$(shell date)\""				 >> ${STAMPFILE}
 
 test:
 	@echo "Executing inline tests.."

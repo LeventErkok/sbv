@@ -24,6 +24,8 @@ import Data.SBV                (yices, SMTSolver(..))
 import Data.SBV.Utils.SBVTest  (SBVTestSuite(..), generateGoldCheck)
 import Paths_sbv               (getDataDir)
 
+import SBVUnitTest.SBVUnitTestBuildTime (buildTime)
+
 import qualified Data.SBV.Provers.Yices as Yices
 
 -- To add a new collection of tests, import below and add to testCollection variable
@@ -107,7 +109,8 @@ testCollection = [
 -- No user serviceable parts below..
 
 main :: IO ()
-main = do tgts <- getArgs
+main = do putStrLn $ "*** SBVUnitTester, built: " ++ buildTime
+          tgts <- getArgs
           case tgts of
             [x] | x `elem` ["-h", "--help", "-?"]
                    -> putStrLn "Usage: SBVUnitTests [-l] [targets]" -- Not quite right, but sufficient
