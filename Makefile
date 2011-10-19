@@ -14,11 +14,11 @@ install: stamp
 	cabal install
 
 stamp:
-	@echo "-- Auto-generated, don't edit"				 >  ${STAMPFILE}
+	@echo "-- Auto-generated, don't edit"				  >  ${STAMPFILE}
 	@echo "module SBVUnitTest.SBVUnitTestBuildTime (buildTime) where" >> ${STAMPFILE}
-	@echo ""								 >> ${STAMPFILE}
-	@echo "buildTime :: String"					 >> ${STAMPFILE}
-	@echo "buildTime = \"$(shell date)\""				 >> ${STAMPFILE}
+	@echo ""							  >> ${STAMPFILE}
+	@echo "buildTime :: String"					  >> ${STAMPFILE}
+	@echo "buildTime = \"$(shell date)\""				  >> ${STAMPFILE}
 
 test:
 	@echo "Executing inline tests.."
@@ -41,6 +41,9 @@ configure:
 
 release: tags clean all docs
 
+# use this as follows: make gold TGTS="cgUSB5"
+# where the tag is one (or many) given in the SBVUnitTest.hs file
+# if TGTS is not specified, then all gold files are regenerated
 gold:
 	ghc -idist/build/autogen/ SBVUnitTest/SBVUnitTest.hs -e "createGolds \"${TGTS}\""
 
