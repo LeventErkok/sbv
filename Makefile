@@ -39,7 +39,7 @@ docs:
 configure:
 	cabal configure
 
-release: tags clean all docs
+release: clean tags all docs
 
 # use this as follows: make gold TGTS="cgUSB5"
 # where the tag is one (or many) given in the SBVUnitTest.hs file
