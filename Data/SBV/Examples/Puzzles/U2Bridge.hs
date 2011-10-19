@@ -263,7 +263,7 @@ solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ 
 -- Total time: 17
 -- Found: 2 solutions with 5 moves.
 --
--- Finding the all 2 possible solutions to the puzzle.
+-- Finding all possible solutions to the puzzle.
 solveU2 :: IO ()
 solveU2 = go 1
  where go i = do p <- solveN i
