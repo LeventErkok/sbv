@@ -97,6 +97,7 @@ Library
                   , Data.SBV.Examples.BitPrecise.Legato
                   , Data.SBV.Examples.BitPrecise.PrefixSum
                   , Data.SBV.Examples.CodeGeneration.AddSub
+                  , Data.SBV.Examples.CodeGeneration.CRC_USB5
                   , Data.SBV.Examples.CodeGeneration.Fibonacci
                   , Data.SBV.Examples.CodeGeneration.GCD
                   , Data.SBV.Examples.CodeGeneration.PopulationCount
@@ -160,6 +161,7 @@ Library
                   , Data.SBV.TestSuite.BitPrecise.PrefixSum
                   , Data.SBV.TestSuite.CodeGeneration.AddSub
                   , Data.SBV.TestSuite.CodeGeneration.CgTests
+                  , Data.SBV.TestSuite.CodeGeneration.CRC_USB5
                   , Data.SBV.TestSuite.CodeGeneration.Fibonacci
                   , Data.SBV.TestSuite.CodeGeneration.GCD
                   , Data.SBV.TestSuite.CodeGeneration.PopulationCount
