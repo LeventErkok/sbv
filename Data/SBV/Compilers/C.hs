@@ -422,7 +422,7 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
         p Not [a]
           -- be careful about booleans, bitwise complement is not correct for them!
           | s == 1
-          = parens ((text "~" <> a) <+> text "&" <+> text "0x01U")
+          = parens (text "~" <> a) <+> text "&" <+> text "0x01U"
           | True
           = text "~" <> a
           where s = sizeOf (head opArgs)
