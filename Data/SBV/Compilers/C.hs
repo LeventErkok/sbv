@@ -419,7 +419,13 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
         p (Ror i) [a]         = rotate False i a (let s = head opArgs in (hasSign s, sizeOf s))
         p (Shl i) [a]         = shift True  i a (let s = head opArgs in (hasSign s, sizeOf s))
         p (Shr i) [a]         = shift False i a (let s = head opArgs in (hasSign s, sizeOf s))
-        p Not [a] = text "~" <> a
+        p Not [a]
+          -- be careful about booleans, bitwise complement is not correct for them!
+          | s == 1
+          = parens ((text "~" <> a) <+> text "&" <+> text "0x01U")
+          | True
+          = text "~" <> a
+          where s = sizeOf (head opArgs)
         p Ite [a, b, c] = a <+> text "?" <+> b <+> text ":" <+> c
         p (LkUp (t, (as, at), _, len) ind def) []
           | not rtc                    = lkUp -- ignore run-time-checks per user request
