@@ -2,7 +2,7 @@
 #
 # The sbv library is distributed with the BSD3 license. See the LICENSE file
 # in the distribution for details.
-
+SHELL := /usr/bin/env bash
 SRCS = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs)
 STAMPFILE=SBVUnitTest/SBVUnitTestBuildTime.hs
 
