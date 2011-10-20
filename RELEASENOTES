@@ -18,6 +18,10 @@ Version 0.9.22, Not yet released
   the communication with Z3 is now done via SMT-Lib2 format. Eventually
   the SMTLib1 connection will be severed.
 
+  The other main change is the support for C code generation with
+  uninterpreted functions enabling users to interface with external
+  C functions defined elsewhere. See below for details.
+
   Other changes:
     Code:
      * Change getModel, so it returns an Either value to indicate
@@ -32,6 +36,11 @@ Version 0.9.22, Not yet released
        constituent parts has a driver. Otherwise it'll be skipped.
      * Fix a bug in C code generation where "Not" over booleans were
        incorrectly getting translated due to need for masking.
+     * Add support for compilation with uninterpreted functions. Users
+       can now specify the corresponding C code and SBV will simply
+       call the "native" functions instead of generating it. This
+       enables interfacing with other C programs. See the functions:
+       cgAddPrototype, cgAddDecl, and cgAddLDFlags.
     Examples:
      * Add CRC polynomial generation example via existentials
      * Add USB CRC code generation example, both via polynomials and

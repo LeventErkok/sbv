@@ -187,6 +187,9 @@ module Data.SBV (
   -- ** Designating return values
   , cgReturn, cgReturnArr
 
+  -- ** Code generation with uninterpreted functions
+  , cgAddPrototype, cgAddDecl, cgAddLDFlags
+
   -- ** Compilation to C
   , compileToC, compileToCLib
 

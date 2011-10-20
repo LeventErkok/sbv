@@ -49,6 +49,9 @@ data CgState = CgState {
           cgInputs       :: [(String, CgVal)]
         , cgOutputs      :: [(String, CgVal)]
         , cgReturns      :: [CgVal]
+        , cgPrototypes   :: [String]    -- extra stuff that goes into the header
+        , cgDecls        :: [String]    -- extra stuff that goes into the top of the file
+        , cgLDFlags      :: [String]    -- extra options that go to the linker
         , cgFinalConfig  :: CgConfig
         }
 
@@ -57,6 +60,9 @@ initCgState = CgState {
           cgInputs       = []
         , cgOutputs      = []
         , cgReturns      = []
+        , cgPrototypes   = []
+        , cgDecls        = []
+        , cgLDFlags      = []
         , cgFinalConfig  = defaultCgConfig
         }
 
@@ -86,6 +92,22 @@ cgGenerateDriver b = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgGen
 -- | Sets driver program run time values, useful for generating programs with fixed drivers for testing. Default: None, i.e., use random values.
 cgSetDriverValues :: [Integer] -> SBVCodeGen ()
 cgSetDriverValues vs = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgDriverVals = vs } })
+
+-- | Adds the given lines to the header file generated, useful for generating programs with uninterpreted functions.
+cgAddPrototype :: [String] -> SBVCodeGen ()
+cgAddPrototype ss = modify (\s -> let old = cgPrototypes s
+                                      new = if null old then ss else old ++ [""] ++ ss
+                                  in s { cgPrototypes = new })
+
+-- | Adds the given lines to the program file generated, useful for generating programs with uninterpreted functions.
+cgAddDecl :: [String] -> SBVCodeGen ()
+cgAddDecl ss = modify (\s -> let old = cgDecls s
+                                 new = if null old then ss else old ++ [""] ++ ss
+                             in s { cgDecls = new })
+
+-- | Adds the given words to the compiler options in the generated Makefile, useful for linking extra stuff in
+cgAddLDFlags :: [String] -> SBVCodeGen ()
+cgAddLDFlags ss = modify (\s -> s { cgLDFlags = cgLDFlags s ++ ss })
 
 -- | Creates an atomic input in the generated code.
 cgInput :: (HasSignAndSize a, SymWord a) => String -> SBVCodeGen (SBV a)
