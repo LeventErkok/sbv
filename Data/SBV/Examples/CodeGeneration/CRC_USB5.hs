@@ -72,7 +72,7 @@ crcGood = prove $ \i -> crcUSB i .== crcUSB' i
 -- | Generate a C function to compute the USB CRC, using the internal CRC
 -- function.
 cg1 :: IO ()
-cg1 = compileToC (Just "cg1") "crcUSB1" $ do
+cg1 = compileToC (Just "crcUSB1") "crcUSB1" $ do
         msg <- cgInput "msg"
         cgOutput "crc" (crcUSB msg)
 
@@ -81,6 +81,6 @@ cg1 = compileToC (Just "cg1") "crcUSB1" $ do
 -- C code, it's less efficient; it has about 30% more code. So, the above
 -- version is preferable for code generation purposes.
 cg2 :: IO ()
-cg2 = compileToC (Just "cg2") "crcUSB2" $ do
+cg2 = compileToC (Just "crcUSB2") "crcUSB2" $ do
         msg <- cgInput "msg"
         cgOutput "crc" (crcUSB' msg)
