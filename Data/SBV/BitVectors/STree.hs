@@ -15,6 +15,7 @@
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
 
 module Data.SBV.BitVectors.STree (STree, readSTree, writeSTree, mkSTree) where
 

@@ -15,6 +15,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TypeSynonymInstances   #-}
 {-# LANGUAGE PatternGuards          #-}
+{-# LANGUAGE FlexibleInstances      #-}
 
 module Data.SBV.BitVectors.SignCast (SignCast(..)) where
 
