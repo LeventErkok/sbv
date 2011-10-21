@@ -159,7 +159,7 @@ cgReturnArr vs
 newtype CgPgmBundle = CgPgmBundle [(FilePath, (CgPgmKind, [Doc]))]
 
 -- | Different kinds of "files" we can produce. Currently this is quite "C" specific.
-data CgPgmKind = CgMakefile
+data CgPgmKind = CgMakefile [String]
                | CgHeader [Doc]
                | CgSource
                | CgDriver
