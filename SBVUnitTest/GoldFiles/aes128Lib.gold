@@ -3614,7 +3614,7 @@ void aes128KeySchedule_driver(void)
   
   printf("Contents of input array key:\n");
   int key_ctr;
-  for(key_ctr = 0;  key_ctr < 4 ; ++key_ctr)
+  for(key_ctr = 0; key_ctr < 4 ; ++key_ctr)
     printf("  key[%d] = 0x%08"PRIx32"UL\n", key_ctr ,key[key_ctr]);
   
   SWord32 encKS[44];
@@ -3624,10 +3624,10 @@ void aes128KeySchedule_driver(void)
   
   printf("aes128KeySchedule(key, encKS, decKS) ->\n");
   int encKS_ctr;
-  for(encKS_ctr = 0;  encKS_ctr < 44 ; ++encKS_ctr)
+  for(encKS_ctr = 0; encKS_ctr < 44 ; ++encKS_ctr)
     printf("  encKS[%d] = 0x%08"PRIx32"UL\n", encKS_ctr ,encKS[encKS_ctr]);
   int decKS_ctr;
-  for(decKS_ctr = 0;  decKS_ctr < 44 ; ++decKS_ctr)
+  for(decKS_ctr = 0; decKS_ctr < 44 ; ++decKS_ctr)
     printf("  decKS[%d] = 0x%08"PRIx32"UL\n", decKS_ctr ,decKS[decKS_ctr]);
 }
 
@@ -3639,7 +3639,7 @@ void aes128BlockEncrypt_driver(void)
   
   printf("Contents of input array pt:\n");
   int pt_ctr;
-  for(pt_ctr = 0;  pt_ctr < 4 ; ++pt_ctr)
+  for(pt_ctr = 0; pt_ctr < 4 ; ++pt_ctr)
     printf("  pt[%d] = 0x%08"PRIx32"UL\n", pt_ctr ,pt[pt_ctr]);
   
   const SWord32 xkey[44] = {
@@ -3658,7 +3658,7 @@ void aes128BlockEncrypt_driver(void)
   
   printf("Contents of input array xkey:\n");
   int xkey_ctr;
-  for(xkey_ctr = 0;  xkey_ctr < 44 ; ++xkey_ctr)
+  for(xkey_ctr = 0; xkey_ctr < 44 ; ++xkey_ctr)
     printf("  xkey[%d] = 0x%08"PRIx32"UL\n", xkey_ctr ,xkey[xkey_ctr]);
   
   SWord32 ct[4];
@@ -3667,7 +3667,7 @@ void aes128BlockEncrypt_driver(void)
   
   printf("aes128BlockEncrypt(pt, xkey, ct) ->\n");
   int ct_ctr;
-  for(ct_ctr = 0;  ct_ctr < 4 ; ++ct_ctr)
+  for(ct_ctr = 0; ct_ctr < 4 ; ++ct_ctr)
     printf("  ct[%d] = 0x%08"PRIx32"UL\n", ct_ctr ,ct[ct_ctr]);
 }
 
@@ -3679,7 +3679,7 @@ void aes128BlockDecrypt_driver(void)
   
   printf("Contents of input array ct:\n");
   int ct_ctr;
-  for(ct_ctr = 0;  ct_ctr < 4 ; ++ct_ctr)
+  for(ct_ctr = 0; ct_ctr < 4 ; ++ct_ctr)
     printf("  ct[%d] = 0x%08"PRIx32"UL\n", ct_ctr ,ct[ct_ctr]);
   
   const SWord32 xkey[44] = {
@@ -3698,7 +3698,7 @@ void aes128BlockDecrypt_driver(void)
   
   printf("Contents of input array xkey:\n");
   int xkey_ctr;
-  for(xkey_ctr = 0;  xkey_ctr < 44 ; ++xkey_ctr)
+  for(xkey_ctr = 0; xkey_ctr < 44 ; ++xkey_ctr)
     printf("  xkey[%d] = 0x%08"PRIx32"UL\n", xkey_ctr ,xkey[xkey_ctr]);
   
   SWord32 pt[4];
@@ -3707,7 +3707,7 @@ void aes128BlockDecrypt_driver(void)
   
   printf("aes128BlockDecrypt(ct, xkey, pt) ->\n");
   int pt_ctr;
-  for(pt_ctr = 0;  pt_ctr < 4 ; ++pt_ctr)
+  for(pt_ctr = 0; pt_ctr < 4 ; ++pt_ctr)
     printf("  pt[%d] = 0x%08"PRIx32"UL\n", pt_ctr ,pt[pt_ctr]);
 }
 

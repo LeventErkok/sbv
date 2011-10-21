@@ -83,7 +83,7 @@ int main(void)
   
   printf("Contents of input array xArr:\n");
   int xArr_ctr;
-  for(xArr_ctr = 0;  xArr_ctr < 45 ; ++xArr_ctr)
+  for(xArr_ctr = 0; xArr_ctr < 45 ; ++xArr_ctr)
     printf("  xArr[%d] = %"PRId64"LL\n", xArr_ctr ,xArr[xArr_ctr]);
   
   SWord16 z;
@@ -95,10 +95,10 @@ int main(void)
   printf("foo(0x0000, xArr, &z, zArr, yArr) = %"PRId16"\n", __result);
   printf("  z = 0x%04"PRIx16"U\n", z);
   int zArr_ctr;
-  for(zArr_ctr = 0;  zArr_ctr < 7 ; ++zArr_ctr)
+  for(zArr_ctr = 0; zArr_ctr < 7 ; ++zArr_ctr)
     printf("  zArr[%d] = %"PRId16"\n", zArr_ctr ,zArr[zArr_ctr]);
   int yArr_ctr;
-  for(yArr_ctr = 0;  yArr_ctr < 45 ; ++yArr_ctr)
+  for(yArr_ctr = 0; yArr_ctr < 45 ; ++yArr_ctr)
     printf("  yArr[%d] = %"PRId64"LL\n", yArr_ctr ,yArr[yArr_ctr]);
 
   return 0;

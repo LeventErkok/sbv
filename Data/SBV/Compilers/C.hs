@@ -344,7 +344,7 @@ genDriver randVals fn inps outs mbRet = [pre, header, body, post]
                                                                                 <> text "\\n") <> comma <+> text n) <> semi
        display (n, CgArray [])         =  die $ "Unsupported empty array value for " ++ show n
        display (n, CgArray sws@(sw:_)) =   text "int" <+> nctr <> semi
-                                        $$ text "for(" <> nctr <+> text "= 0; " <+> nctr <+> text "<" <+> int (length sws) <+> text "; ++" <> nctr <> text ")"
+                                        $$ text "for(" <> nctr <+> text "= 0;" <+> nctr <+> text "<" <+> int (length sws) <+> text "; ++" <> nctr <> text ")"
                                         $$ nest 2 (text "printf" <> parens (printQuotes (text " " <+> entrySpec <+> text "=" <+> spec <> text "\\n")
                                                                  <> comma <+> nctr <+> comma <> entry) <> semi)
                   where nctr      = text n <> text "_ctr"
