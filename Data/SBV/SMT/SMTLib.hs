@@ -9,7 +9,6 @@
 --
 -- Conversion of symbolic programs to SMTLib format
 -----------------------------------------------------------------------------
-{-# LANGUAGE PatternGuards #-}
 
 module Data.SBV.SMT.SMTLib(SMTLibPgm, SMTLibConverter, toSMTLib1, toSMTLib2, addNonEqConstraints, interpretSolverOutput) where
 
@@ -47,4 +46,4 @@ interpretSolverOutput cfg _          ("unsat":_)      = Unsatisfiable cfg
 interpretSolverOutput cfg extractMap ("unknown":rest) = Unknown       cfg  $ extractMap rest
 interpretSolverOutput cfg extractMap ("sat":rest)     = Satisfiable   cfg  $ extractMap rest
 interpretSolverOutput cfg _          ("timeout":_)    = TimeOut       cfg
-interpretSolverOutput cfg _          ls               = ProofError    cfg  $ ls
+interpretSolverOutput cfg _          ls               = ProofError    cfg  ls

@@ -22,5 +22,5 @@ qrem x y = ite (y .== 0) ((0, x) .== (a, b)) (x .== y * a + b)
   where (a, b) = x `bvQuotRem` y
 
 check :: IO ()
-check = do print =<< prove (qrem :: SWord8 -> SWord8 -> SBool)
-           -- print =<< prove (qrem :: SWord16 -> SWord16 -> SBool)   -- takes too long!
+check = print =<< prove (qrem :: SWord8 -> SWord8 -> SBool)
+         -- print =<< prove (qrem :: SWord16 -> SWord16 -> SBool)   -- takes too long!

@@ -121,7 +121,7 @@ poke a v m = m {memory = writeArray (memory m) a v}
 checkOverflow :: SWord8 -> SWord8 -> SBool -> SBool
 checkOverflow x y c = s .< x ||| s .< y ||| s' .< s
   where s  = x + y
-        s' = s + (ite c 1 0)
+        s' = s + ite c 1 0
 
 -- | Correctness theorem for our `checkOverflow` implementation.
 --

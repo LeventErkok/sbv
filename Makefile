@@ -4,9 +4,10 @@
 # in the distribution for details.
 SHELL := /usr/bin/env bash
 SRCS = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs)
+LINTSRCS = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs)
 STAMPFILE=SBVUnitTest/SBVUnitTestBuildTime.hs
 
-.PHONY: all install test sdist clean docs gold tags stamp
+.PHONY: all install test sdist clean docs gold tags stamp lint
 
 all: install test sdist
 
@@ -47,6 +48,10 @@ release: clean tags all docs
 gold:
 	ghc -idist/build/autogen/ SBVUnitTest/SBVUnitTest.hs -e "createGolds \"${TGTS}\""
 
+lint:
+	@hlint ${LINTSRCS} -q -rhlintReport.html	\
+	       -i "Use otherwise"			\
+	       -i "Use import/export shortcut"
 tags:
 	find . -name \*.\*hs | xargs hasktags -c
 	sort -o tags tags

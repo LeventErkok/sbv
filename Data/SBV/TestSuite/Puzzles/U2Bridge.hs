@@ -27,5 +27,5 @@ testSuite = mkTestSuite $ \goldCheck -> test [
  , "U2Bridge-6" ~: assert $ (0 ==) `fmap` count 6
  ]
  where act     = do b <- exists_; p1 <- exists_; p2 <- exists_; return (b, p1, p2)
-       count n = numberOfModels $ mapM (const act) [1..(n::Int)] >>= return . isValid
-       solve n = sat $ mapM (const act) [1..(n::Int)] >>= return . isValid
+       count n = numberOfModels $ isValid `fmap` mapM (const act) [1..(n::Int)]
+       solve n = sat $ isValid `fmap` mapM (const act) [1..(n::Int)]

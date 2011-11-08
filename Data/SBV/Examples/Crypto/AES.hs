@@ -155,8 +155,8 @@ keyExpansion nk key = chop4 keys
          chop4 xs = let (f, r) = splitAt 4 xs in f : chop4 r
          nextWord :: Int -> SWord32 -> SWord32 -> SWord32
          nextWord i prev old
-           | i `mod` nk == 0           = old `xor` (subWordRcon (prev `rotateL` 8) (roundConstants !! (i `div` nk)))
-           | i `mod` nk == 4 && nk > 6 = old `xor` (subWordRcon prev 0)
+           | i `mod` nk == 0           = old `xor` subWordRcon (prev `rotateL` 8) (roundConstants !! (i `div` nk))
+           | i `mod` nk == 4 && nk > 6 = old `xor` subWordRcon prev 0
            | True                      = old `xor` prev
          subWordRcon :: SWord32 -> GF28 -> SWord32
          subWordRcon w rc = fromBytes [a `xor` rc, b, c, d]
@@ -278,11 +278,11 @@ aesRound :: Bool -> State -> Key -> State
 aesRound isFinal s key = d `addRoundKey` key
   where d = map (f isFinal) [0..3]
         a = map toBytes s
-        f True j = fromBytes $ [ sbox (a !! ((j+0) `mod` 4) !! 0)
-                               , sbox (a !! ((j+1) `mod` 4) !! 1)
-                               , sbox (a !! ((j+2) `mod` 4) !! 2)
-                               , sbox (a !! ((j+3) `mod` 4) !! 3)
-                               ]
+        f True j = fromBytes [ sbox (a !! ((j+0) `mod` 4) !! 0)
+                             , sbox (a !! ((j+1) `mod` 4) !! 1)
+                             , sbox (a !! ((j+2) `mod` 4) !! 2)
+                             , sbox (a !! ((j+3) `mod` 4) !! 3)
+                             ]
         f False j = e0 `xor` e1 `xor` e2 `xor` e3
               where e0 = t0 (a !! ((j+0) `mod` 4) !! 0)
                     e1 = t1 (a !! ((j+1) `mod` 4) !! 1)

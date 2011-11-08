@@ -49,6 +49,6 @@ parseSExpr inp = do (sexp, []) <- parse inpToks
         pTok ('#':'b':r)       = mkNum $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
         pTok ('#':'x':r)       = mkNum $ readHex r
         pTok n | all isDigit n = mkNum $ readDec n
-        pTok n                 = return $ S_Con $ n
+        pTok n                 = return $ S_Con n
         mkNum [(n, "")] = return $ S_Num n
         mkNum _         = die "cannot read number"

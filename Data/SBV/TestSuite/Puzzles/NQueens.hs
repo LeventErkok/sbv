@@ -29,4 +29,4 @@ testSuite = mkTestSuite $ \_ -> test [
  , "nQueens 7" ~: assert $ (== 40) `fmap` numberOfModels (mkQueens 7)
  , "nQueens 8" ~: assert $ (== 92) `fmap` numberOfModels (mkQueens 8)
  ]
- where mkQueens n = mkExistVars n >>= return . isValid n
+ where mkQueens n = isValid n `fmap` mkExistVars n

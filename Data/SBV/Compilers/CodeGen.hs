@@ -18,7 +18,7 @@ module Data.SBV.Compilers.CodeGen where
 import Control.Monad.Trans
 import Control.Monad.State.Lazy
 import Data.Char (toLower)
-import Data.List (nub, isPrefixOf, intersperse, (\\))
+import Data.List (nub, isPrefixOf, intercalate, (\\))
 import System.Directory (createDirectory, doesDirectoryExist, doesFileExist)
 import System.FilePath ((</>))
 import Text.PrettyPrint.HughesPJ (Doc, render, vcat)
@@ -120,7 +120,7 @@ cgInput nm = do r <- liftSymbolic forall_
 cgInputArr :: (HasSignAndSize a, SymWord a) => Int -> String -> SBVCodeGen [SBV a]
 cgInputArr sz nm
   | sz < 1 = error $ "SBV.cgInputArr: Array inputs must have at least one element, given " ++ show sz ++ " for " ++ show nm
-  | True   = do rs <- liftSymbolic $ (mapM (const forall_) [1..sz])
+  | True   = do rs <- liftSymbolic $ mapM (const forall_) [1..sz]
                 sws <- mapM cgSBVToSW rs
                 modify (\s -> s { cgInputs = (nm, CgArray sws) : cgInputs s })
                 return rs
@@ -169,7 +169,7 @@ isCgDriver CgDriver = True
 isCgDriver _        = False
 
 instance Show CgPgmBundle where
-   show (CgPgmBundle fs) = concat $ intersperse "\n" $ map showFile fs
+   show (CgPgmBundle fs) = intercalate "\n" $ map showFile fs
 
 showFile :: (FilePath, (CgPgmKind, [Doc])) -> String
 showFile (f, (_, ds)) =  "== BEGIN: " ++ show f ++ " ================\n"
@@ -184,21 +184,21 @@ codeGen l cgConfig nm (SBVCodeGen comp) = do
                 }
        allNamedVars = map fst (cgInputs st ++ cgOutputs st)
        dupNames = allNamedVars \\ nub allNamedVars
-   when (not (null dupNames)) $ do
+   unless (null dupNames) $
         error $ "SBV.codeGen: " ++ show nm ++ " has following argument names duplicated: " ++ unwords dupNames
    return $ translate l (cgFinalConfig st) nm st res
 
 renderCgPgmBundle :: Maybe FilePath -> CgPgmBundle -> IO ()
-renderCgPgmBundle Nothing        bundle              = putStrLn $ show bundle
+renderCgPgmBundle Nothing        bundle              = print bundle
 renderCgPgmBundle (Just dirName) (CgPgmBundle files) = do
         b <- doesDirectoryExist dirName
-        when (not b) $ do putStrLn $ "Creating directory " ++ show dirName ++ ".."
-                          createDirectory dirName
+        unless b $ do putStrLn $ "Creating directory " ++ show dirName ++ ".."
+                      createDirectory dirName
         dups <- filterM (\fn -> doesFileExist (dirName </> fn)) (map fst files)
         goOn <- case dups of
                   [] -> return True
                   _  -> do putStrLn $ "Code generation would override the following " ++ (if length dups == 1 then "file:" else "files:")
-                           mapM_ (\fn -> putStrLn ("\t" ++ fn)) dups
+                           mapM_ (\fn -> putStrLn ('\t' : fn)) dups
                            putStr "Continue? [yn] "
                            resp <- getLine
                            return $ map toLower resp `isPrefixOf` "yes"

@@ -27,7 +27,7 @@ testSuite = mkTestSuite $ \_ -> test [
  , "proofs-6"  ~: assert       =<< isSatisfiable (f1 `xyEq` f3)
  , "proofs-7"  ~: assert . not =<< isSatisfiable (exists "x" >>= \x -> return (x .== x + (1 :: SWord16)))
  , "proofs-8"  ~: assert       =<< isSatisfiable (exists "x" >>= \x -> return (x :: SBool))
- , "proofs-9"  ~: assert       =<< isSatisfiable (exists "x" >>= \x -> (return x) :: Predicate)
+ , "proofs-9"  ~: assert       =<< isSatisfiable (exists "x" >>= \x -> return x :: Predicate)
  ]
  where func1 `xyEq` func2 = do x <- exists_
                                y <- exists_

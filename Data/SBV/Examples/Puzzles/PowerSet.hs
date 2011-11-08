@@ -24,7 +24,7 @@ genPowerSet = bAll isBool
 
 powerSet :: [Word8] -> IO ()
 powerSet xs = do putStrLn $ "Finding all subsets of " ++ show xs
-                 res <- allSat $ mkExistVars n >>= return . genPowerSet
+                 res <- allSat $ genPowerSet `fmap` mkExistVars n
                  cnt <- displayModels disp res
                  putStrLn $ "Found: " ++ show cnt ++ " subset(s)."
      where n = length xs

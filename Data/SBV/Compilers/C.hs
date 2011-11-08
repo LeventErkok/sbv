@@ -15,7 +15,7 @@
 module Data.SBV.Compilers.C(compileToC, compileToCLib, compileToC', compileToCLib') where
 
 import Data.Char (isSpace)
-import Data.List (intercalate, nub)
+import Data.List (nub)
 import Data.Maybe (isJust)
 import qualified Data.Foldable as F (toList)
 import Text.PrettyPrint.HughesPJ
@@ -46,7 +46,7 @@ compileToC mbDirName nm f = compileToC' nm f >>= renderCgPgmBundle mbDirName
 
 -- | Lower level version of 'compileToC', producing a 'CgPgmBundle'
 compileToC' :: String -> SBVCodeGen () -> IO CgPgmBundle
-compileToC' nm f = do rands <- newStdGen >>= return . randoms
+compileToC' nm f = do rands <- randoms `fmap` newStdGen
                       codeGen SBVToC (defaultCgConfig { cgDriverVals = rands }) nm f
 
 -- | Create code to generate a library archive (.a) from given symbolic functions. Useful when generating code
@@ -102,8 +102,8 @@ cgen cfg nm st sbvProg = CgPgmBundle $ filt [ ("Makefile",  (CgMakefile flags, [
         mbRet    = case cgReturns st of
                      []           -> Nothing
                      [CgAtomic o] -> Just o
-                     [CgArray _]  -> tbd $ "Non-atomic return values"
-                     _            -> tbd $ "Multiple return values"
+                     [CgArray _]  -> tbd "Non-atomic return values"
+                     _            -> tbd "Multiple return values"
         extProtos = case cgPrototypes st of
                      [] -> empty
                      xs -> vcat $ text "/* User given prototypes: */" : map text xs
@@ -123,16 +123,16 @@ pprCFunHeader fn ins outs mbRet = retType <+> text fn <> parens (fsep (punctuate
 
 mkParam, mkPParam :: (String, CgVal) -> Doc
 mkParam  (n, CgAtomic sw)     = let sgsz = (hasSign sw, sizeOf sw) in pprCWord True  sgsz <+> text n
-mkParam  (_, CgArray  [])     = die $ "mkParam: CgArray with no elements!"
+mkParam  (_, CgArray  [])     = die "mkParam: CgArray with no elements!"
 mkParam  (n, CgArray  (sw:_)) = let sgsz = (hasSign sw, sizeOf sw) in pprCWord True  sgsz <+> text "*" <> text n
 mkPParam (n, CgAtomic sw)     = let sgsz = (hasSign sw, sizeOf sw) in pprCWord False sgsz <+> text "*" <> text n
-mkPParam (_, CgArray  [])     = die $ "mPkParam: CgArray with no elements!"
+mkPParam (_, CgArray  [])     = die "mPkParam: CgArray with no elements!"
 mkPParam (n, CgArray  (sw:_)) = let sgsz = (hasSign sw, sizeOf sw) in pprCWord False sgsz <+> text "*" <> text n
 
 -- | Renders as "const SWord8 s0", etc. the first parameter is the width of the typefield
 declSW :: Int -> SW -> Doc
 declSW w sw@(SW sgsz _) = text "const" <+> pad (showCType sgsz) <+> text (show sw)
-  where pad s = text $ s ++ take (w - length s) (repeat ' ')
+  where pad s = text $ s ++ replicate (w - length s) ' '
 
 -- | Renders as "s0", etc, or the corresponding constant
 showSW :: [(SW, CW)] -> SW -> Doc
@@ -201,7 +201,7 @@ genMake ifdr fn dn ldFlags = foldr1 ($$) [l | (True, l) <- lns]
              , (True, text "")
              , (True, text "CC=gcc")
              , (True, text "CCFLAGS?=-Wall -O3 -DNDEBUG -fomit-frame-pointer")
-             , (ifld, text "LDFLAGS?=" <> text (intercalate " " ldFlags))
+             , (ifld, text "LDFLAGS?=" <> text (unwords ldFlags))
              , (True, text "")
              , (ifdr, text "all:" <+> nmd)
              , (ifdr, text "")
@@ -297,13 +297,13 @@ genDriver randVals fn inps outs mbRet = [pre, header, body, post]
               $$  text ""
        nm = text fn
        pairedInputs = matchRands (map abs randVals) inps
-       matchRands _      []                                   = []
-       matchRands []     _                                    = die $ "Run out of driver values!"
-       matchRands (r:rs) ((n, CgAtomic sw)              : cs) = ([mkRVal sw r], n, CgAtomic sw) : matchRands rs cs
-       matchRands _      ((n, CgArray [])               : _ ) = die $ "Unsupported empty array input " ++ show n
-       matchRands rs     ((n, a@(CgArray sws@((sw:_)))) : cs)
-          | length frs /= l                                   = die $ "Run out of driver values!"
-          | True                                              = (map (mkRVal sw) frs, n, a) : matchRands srs cs
+       matchRands _      []                                 = []
+       matchRands []     _                                  = die "Run out of driver values!"
+       matchRands (r:rs) ((n, CgAtomic sw)            : cs) = ([mkRVal sw r], n, CgAtomic sw) : matchRands rs cs
+       matchRands _      ((n, CgArray [])             : _ ) = die $ "Unsupported empty array input " ++ show n
+       matchRands rs     ((n, a@(CgArray sws@(sw:_))) : cs)
+          | length frs /= l                                 = die "Run out of driver values!"
+          | True                                            = (map (mkRVal sw) frs, n, a) : matchRands srs cs
           where l          = length sws
                 (frs, srs) = splitAt l rs
        mkRVal sw r = mkConst ival sgsz
@@ -422,8 +422,8 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
                   , (LessThan, "<"), (GreaterThan, ">"), (LessEq, "<="), (GreaterEq, ">=")
                   , (And, "&"), (Or, "|"), (XOr, "^")
                   ]
-        p (ArrRead _)       _  = tbd $ "User specified arrays (ArrRead)"
-        p (ArrEq _ _)       _  = tbd $ "User specified arrays (ArrEq)"
+        p (ArrRead _)       _  = tbd "User specified arrays (ArrRead)"
+        p (ArrEq _ _)       _  = tbd "User specified arrays (ArrEq)"
         p (Uninterpreted s) [] = text "/* Uninterpreted constant */" <+> text s
         p (Uninterpreted s) as = text "/* Uninterpreted function */" <+> text s <> parens (fsep (punctuate comma as))
         p (Extract i j) [a]    = extract i j (let s = head opArgs in (hasSign s, sizeOf s)) a
@@ -452,8 +452,8 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
                 checkLeft  = index <+> text "< 0"
                 checkRight = index <+> text ">=" <+> int len
                 checkBoth  = parens (checkLeft <+> text "||" <+> checkRight)
-                (needsCheckL, needsCheckR) | as   = (True,  (2::Integer)^(at-1)-1  >= (fromIntegral len))
-                                           | True = (False, (2::Integer)^(at)  -1  >= (fromIntegral len))
+                (needsCheckL, needsCheckR) | as   = (True,  (2::Integer)^(at-1)-1  >= fromIntegral len)
+                                           | True = (False, (2::Integer)^at    -1  >= fromIntegral len)
         -- Div/Rem should be careful on 0, in the SBV world x `div` 0 is 0, x `rem` 0 is x
         p Quot [a, b] = parens (b <+> text "== 0") <+> text "?" <+> text "0" <+> text ":" <+> parens (a <+> text "/" <+> b)
         p Rem  [a, b] = parens (b <+> text "== 0") <+> text "?" <+>    a     <+> text ":" <+> parens (a <+> text "%" <+> b)
@@ -481,11 +481,11 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
                             | True   = (">>", "<<")
         -- TBD: below we only support the values that SBV actually currently generates.
         -- we would need to add new ones if we generate others. (Check instances in Data/SBV/BitVectors/Splittable.hs).
-        extract 63 32 (False, 64) a = text "(SWord32)" <+> (parens (a <+> text ">> 32"))
+        extract 63 32 (False, 64) a = text "(SWord32)" <+> parens (a <+> text ">> 32")
         extract 31  0 (False, 64) a = text "(SWord32)" <+> a
-        extract 31 16 (False, 32) a = text "(SWord16)" <+> (parens (a <+> text ">> 16"))
+        extract 31 16 (False, 32) a = text "(SWord16)" <+> parens (a <+> text ">> 16")
         extract 15  0 (False, 32) a = text "(SWord16)" <+> a
-        extract 15  8 (False, 16) a = text "(SWord8)"  <+> (parens (a <+> text ">> 8"))
+        extract 15  8 (False, 16) a = text "(SWord8)"  <+> parens (a <+> text ">> 8")
         extract  7  0 (False, 16) a = text "(SWord8)"  <+> a
         -- the followings are used by sign-conversions. (Check instances in Data/SBV/BitVectors/SignCast.hs).
         extract 63  0 (False, 64) a = text "(SInt64)"  <+> a
@@ -498,9 +498,9 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
         extract  7  0 (True,   8) a = text "(SWord8)"  <+> a
         extract  i  j (sg, sz)    _ = tbd $ "extract with " ++ show (i, j, (sg, sz))
         -- TBD: ditto here for join, just like extract above
-        join ((False,  8), (False,  8), a, b) = parens ((parens (text "(SWord16)" <+> a)) <+> text "<< 8")  <+> text "|" <+> parens (text "(SWord16)" <+> b)
-        join ((False, 16), (False, 16), a, b) = parens ((parens (text "(SWord32)" <+> a)) <+> text "<< 16") <+> text "|" <+> parens (text "(SWord32)" <+> b)
-        join ((False, 32), (False, 32), a, b) = parens ((parens (text "(SWord64)" <+> a)) <+> text "<< 32") <+> text "|" <+> parens (text "(SWord64)" <+> b)
+        join ((False,  8), (False,  8), a, b) = parens (parens (text "(SWord16)" <+> a) <+> text "<< 8")  <+> text "|" <+> parens (text "(SWord16)" <+> b)
+        join ((False, 16), (False, 16), a, b) = parens (parens (text "(SWord32)" <+> a) <+> text "<< 16") <+> text "|" <+> parens (text "(SWord32)" <+> b)
+        join ((False, 32), (False, 32), a, b) = parens (parens (text "(SWord64)" <+> a) <+> text "<< 32") <+> text "|" <+> parens (text "(SWord64)" <+> b)
         join (sgsz1, sgsz2, _, _)             = tbd $ "join with " ++ show (sgsz1, sgsz2)
 
 -- same as doubleQuotes, except we have to make sure there are no line breaks..
@@ -521,11 +521,11 @@ align :: [Doc] -> [Doc]
 align ds = map (text . pad) ss
   where ss    = map render ds
         l     = maximum (0 : map length ss)
-        pad s = take (l - length s) (repeat ' ') ++ s
+        pad s = replicate (l - length s) ' ' ++ s
 
 -- | Merge a bunch of bundles to generate code for a library
 mergeToLib :: String -> [CgPgmBundle] -> CgPgmBundle
-mergeToLib libName bundles = CgPgmBundle $ sources ++ libHeader : (if anyDriver then [libDriver] else []) ++ [libMake]
+mergeToLib libName bundles = CgPgmBundle $ sources ++ libHeader : [libDriver | anyDriver] ++ [libMake]
   where files       = concat [fs | CgPgmBundle fs <- bundles]
         sigs        = concat [ss | (_, (CgHeader ss, _)) <- files]
         drivers     = [ds | (_, (CgDriver, ds)) <- files]
@@ -551,7 +551,7 @@ genLibMake ifdr libName fs ldFlags = foldr1 ($$) [l | (True, l) <- lns]
              , (True,  text "")
              , (True,  text "CC=gcc")
              , (True,  text "CCFLAGS?=-Wall -O3 -DNDEBUG -fomit-frame-pointer")
-             , (ifld,  text "LDFLAGS?=" <> text (intercalate " " ldFlags))
+             , (ifld,  text "LDFLAGS?=" <> text (unwords ldFlags))
              , (True,  text "AR=ar")
              , (True,  text "ARFLAGS=cr")
              , (True,  text "")
@@ -577,7 +577,7 @@ genLibMake ifdr libName fs ldFlags = foldr1 ($$) [l | (True, l) <- lns]
        liba = libName ++ ".a"
        libh = libName ++ ".h"
        libd = libName ++ "_driver"
-       os   = map (flip replaceExtension ".o") fs
+       os   = map (`replaceExtension` ".o") fs
        mkObj o f =  text o <> text (": " ++ unwords [f, libh])
                  $$ text "\t${CC} ${CCFLAGS} -c $< -o $@"
                  $$ text ""
@@ -611,5 +611,5 @@ mergeDrivers libName inc ds = pre : concatMap mkDFun ds ++ [callDrivers (map fst
                $$ text ""
            where tag  = "** Driver run for " ++ f ++ ":"
                  ptag = "printf(\"" ++ tag ++ "\\n\");"
-                 lsep = take (length tag) (repeat '=')
+                 lsep = replicate (length tag) '='
                  psep = "printf(\"" ++ lsep ++ "\\n\");"

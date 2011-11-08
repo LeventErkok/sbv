@@ -17,7 +17,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE PatternGuards       #-}
 
 module Data.SBV.Examples.Crypto.RC4 where
 

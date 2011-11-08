@@ -54,7 +54,7 @@ type Puzzle = (Int, [SWord8] -> Board)
 -- | Solve a given puzzle and print the results
 solve :: Puzzle -> IO ()
 solve p@(i, f) = do putStrLn "Solving the puzzle.."
-                    model <- getModel `fmap` sat (mkExistVars i >>= return . valid . f)
+                    model <- getModel `fmap` sat ((valid . f) `fmap` mkExistVars i)
                     case model of
                       Right sln -> dispSolution p sln
                       Left m    -> putStrLn $ "Unsolvable puzzle: " ++ m
@@ -74,7 +74,7 @@ dispSolution (i, f) fs
 -- | Find all solutions to a puzzle
 solveAll :: Puzzle -> IO ()
 solveAll p@(i, f) = do putStrLn "Finding all solutions.."
-                       res <- allSat $ mkExistVars i >>= return . valid . f
+                       res <- allSat $ (valid . f) `fmap` mkExistVars i
                        cnt <- displayModels disp res
                        putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
    where disp n s = do putStrLn $ "Solution #" ++ show n

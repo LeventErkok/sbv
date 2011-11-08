@@ -97,7 +97,7 @@ liftS f s
 -- | Pretty print as a polynomial
 sp :: Bits a => Bool -> a -> String
 sp st a
- | null cs = "0" ++ t
+ | null cs = '0' : t
  | True    = foldr (\x y -> sh x ++ " + " ++ y) (sh (last cs)) (init cs) ++ t
  where t | st   = " :: GF(2^" ++ show n ++ ")"
          | True = ""

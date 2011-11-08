@@ -31,10 +31,10 @@ revOf c = swap (digits c) .== digits (d2f c)
         swap (a, b) = (b, a)
 
 solve :: IO ()
-solve = do res <- allSat $ exists_ >>= return . revOf
+solve = do res <- allSat $ revOf `fmap` exists_
            cnt <- displayModels disp res
            putStrLn $ "Found " ++ show cnt ++ " solutions."
      where disp :: Int -> Word16 -> IO ()
-           disp _ x = putStrLn $ " " ++ show x ++ "C --> " ++ show ((round f) :: Integer) ++ "F (exact value: " ++ show f ++ "F)"
+           disp _ x = putStrLn $ " " ++ show x ++ "C --> " ++ show (round f :: Integer) ++ "F (exact value: " ++ show f ++ "F)"
               where f :: Double
                     f  = 32 + (9 * fromIntegral x) / 5

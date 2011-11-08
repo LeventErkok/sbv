@@ -33,8 +33,8 @@ z3 = SMTSolver {
          , executable = "z3"
          , options    = if S.os == "linux" then ["-in", "-smt2"] else ["/in", "/smt2"]
          , engine     = \cfg isSat qinps modelMap skolemMap pgm -> do
-                                execName <-                getEnv "SBV_Z3"           `catch` (\_ -> return (executable (solver cfg)))
-                                execOpts <- (words `fmap` (getEnv "SBV_Z3_OPTIONS")) `catch` (\_ -> return (options (solver cfg)))
+                                execName <-               getEnv "SBV_Z3"          `catch` (\_ -> return (executable (solver cfg)))
+                                execOpts <- (words `fmap` getEnv "SBV_Z3_OPTIONS") `catch` (\_ -> return (options (solver cfg)))
                                 let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
                                     script = SMTScript { scriptBody = "(set-option :mbqi true)\n" ++ pgm, scriptModel = Just (cont skolemMap)}
                                 standardSolver cfg' script cleanErrs (ProofError cfg) (interpretSolverOutput cfg (extractMap isSat qinps modelMap . zipWith match skolemMap))
@@ -62,7 +62,7 @@ z3 = SMTSolver {
 
 extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [String] -> SMTModel
 extractMap isSat qinps _modelMap solverLines =
-   SMTModel { modelAssocs    = map (\(_, y) -> y) $ sortByNodeId $ concatMap (getCounterExample inps) solverLines
+   SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (getCounterExample inps) solverLines
             , modelUninterps = []
             , modelArrays    = []
             }
@@ -74,7 +74,7 @@ extractMap isSat qinps _modelMap solverLines =
                        then map snd qinps
                        else map snd $ reverse $ dropWhile ((== ALL) . fst) $ reverse qinps
              -- for "proof", just display the prefix universals
-             | True  = map snd $ takeWhile ((== ALL) . fst) $ qinps
+             | True  = map snd $ takeWhile ((== ALL) . fst) qinps
 
 getCounterExample :: [NamedSymVar] -> String -> [(Int, (String, CW))]
 getCounterExample inps line = either err extract (parseSExpr line)

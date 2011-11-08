@@ -86,7 +86,7 @@ cvt isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq out = (pre
              ++ [ "; --- constant tables ---" ]
              ++ concatMap constTable constTables
              ++ [ "; --- skolemized tables ---" ]
-             ++ map (skolemTable (intercalate " " (map smtType foralls))) skolemTables
+             ++ map (skolemTable (unwords (map smtType foralls))) skolemTables
              ++ [ "; --- arrays ---" ]
              ++ concat arrayConstants
              ++ [ "; --- uninterpreted constants ---" ]
@@ -99,13 +99,13 @@ cvt isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq out = (pre
                  else "(assert (forall (" ++ intercalate "\n                 "
                                              ["(" ++ show s ++ " " ++ smtType s ++ ")" | s <- foralls] ++ ")"]
              ++ map (letAlign . mkLet) asgns
-             ++ map letAlign (if null delayedEqualities then [] else (("(and " ++ deH) : map (align 5) deTs))
+             ++ map letAlign (if null delayedEqualities then [] else ("(and " ++ deH) : map (align 5) deTs)
              ++ [ impAlign (letAlign assertOut) ++ replicate noOfCloseParens ')' ]
         noOfCloseParens = length asgns + (if null foralls then 1 else 2) + (if null delayedEqualities then 0 else 1)
         (constTables, skolemTables) = ([(t, d) | (t, Left d) <- allTables], [(t, d) | (t, Right d) <- allTables])
         allTables = [(t, genTableData skolemMap (not (null foralls), forallArgs) (map fst consts) t) | t <- tbls]
         (arrayConstants, allArrayDelayeds) = unzip $ map (declArray (not (null foralls)) (map fst consts) skolemMap) arrs
-        delayedEqualities@(~(deH:deTs)) = concat (map snd skolemTables) ++ concat allArrayDelayeds
+        delayedEqualities@(~(deH:deTs)) = concatMap snd skolemTables ++ concat allArrayDelayeds
         foralls = [s | Left s <- skolemInps]
         forallArgs = concatMap ((" " ++) . show) foralls
         letAlign s
@@ -196,11 +196,11 @@ smtType :: SW -> String
 smtType s = "(_ BitVec " ++ show (sizeOf s) ++ ")"
 
 smtFunType :: [SW] -> SW -> String
-smtFunType ss s = "(" ++ intercalate " " (map smtType ss) ++ ") " ++ smtType s
+smtFunType ss s = "(" ++ unwords (map smtType ss) ++ ") " ++ smtType s
 
 cvtType :: SBVType -> String
 cvtType (SBVType []) = error "SBV.SMT.SMTLib2.cvtType: internal: received an empty type!"
-cvtType (SBVType xs) = "(" ++ intercalate " " (map sh body) ++ ") " ++ sh ret
+cvtType (SBVType xs) = "(" ++ unwords (map sh body) ++ ") " ++ sh ret
   where (body, ret) = (init xs, last xs)
         sh (_, s)   = "(_ BitVec " ++ show s ++ ")"
 
@@ -218,7 +218,7 @@ cvtSW skolemMap s
 hex :: Int -> Integer -> String
 hex 1  v = "#b" ++ show v
 hex sz v = "#x" ++ pad (sz `div` 4) (showHex v "")
-  where pad n s = take (n - length s) (repeat '0') ++ s
+  where pad n s = replicate (n - length s) '0' ++ s
 
 cvtCW :: CW -> String
 cvtCW x | not (hasSign x) = hex (sizeOf x) (cwVal x)
@@ -237,7 +237,7 @@ negIf False a = a
 -- anamoly at the 2's complement min value! Have to use binary notation here
 -- as there is no positive value we can provide to make the bvneg work.. (see above)
 mkMinBound :: Int -> String
-mkMinBound i = "#b1" ++ take (i-1) (repeat '0')
+mkMinBound i = "#b1" ++ replicate (i-1) '0'
 
 getTable :: TableMap -> Int -> String
 getTable m i
@@ -255,7 +255,7 @@ cvtExp skolemMap tableMap expr = sh expr
         sh (SBVApp (LkUp (t, (_, at), _, l) i e) [])
           | needsCheck = "(ite " ++ cond ++ ssw e ++ " " ++ lkUp ++ ")"
           | True       = lkUp
-          where needsCheck = (2::Integer)^(at) > (fromIntegral l)
+          where needsCheck = (2::Integer)^at > fromIntegral l
                 lkUp = "(" ++ getTable tableMap t ++ " " ++ ssw i ++ ")"
                 cond
                  | hasSign i = "(or " ++ le0 ++ " " ++ gtl ++ ") "
@@ -268,7 +268,7 @@ cvtExp skolemMap tableMap expr = sh expr
         sh (SBVApp (ArrEq i j) []) = "(ite (= array_" ++ show i ++ " array_" ++ show j ++") #b1 #b0)"
         sh (SBVApp (ArrRead i) [a]) = "(select array_" ++ show i ++ " " ++ ssw a ++ ")"
         sh (SBVApp (Uninterpreted nm) [])   = "uninterpreted_" ++ nm
-        sh (SBVApp (Uninterpreted nm) args) = "(uninterpreted_" ++ nm ++ " " ++ intercalate " " (map ssw args) ++ ")"
+        sh (SBVApp (Uninterpreted nm) args) = "(uninterpreted_" ++ nm ++ " " ++ unwords (map ssw args) ++ ")"
         sh inp@(SBVApp op args)
           | Just f <- lookup op smtOpTable
           = f (any hasSign args) (map ssw args)

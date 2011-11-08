@@ -56,7 +56,7 @@ genPoly hd = do putStrLn $ "*** Looking for polynomials with HD = " ++ show hd
                 mapM_ (\(i, s) -> putStrLn (show i ++ ". " ++ showPoly (mkPoly s)))  (zip [(1::Integer)..] res)
                 putStrLn $ "*** Skipped the followings, proof exceeded timeout value of " ++ show waitFor
                 mapM_ (\(i, s) -> putStrLn (show i ++ ". " ++ showPoly (mkPoly s)))  (zip [(1::Integer)..] skipped)
-                putStrLn $ "*** Done."
+                putStrLn "*** Done."
   where go :: SWord16 -> [SWord16] -> [SWord16] -> IO ([SWord16], [SWord16])
         go poly skip acc
          | poly == maxBound = return (skip, acc)

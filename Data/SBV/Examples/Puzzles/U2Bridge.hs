@@ -12,10 +12,10 @@
 
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE PatternGuards #-}
 
 module Data.SBV.Examples.Puzzles.U2Bridge where
 
+import Control.Monad       (unless)
 import Control.Monad.State (State, runState, put, get, modify, evalState)
 import Data.Maybe          (fromJust)
 
@@ -179,7 +179,7 @@ type Actions = [(SBool, SU2Member, SU2Member)]
 
 -- | Run a sequence of given actions.
 run :: Actions -> Move [Status]
-run = sequence . map step
+run = mapM step
  where step (b, p1, p2) = ite b (move1 p1) (move2 p1 p2) >> get
 
 -------------------------------------------------------------
@@ -215,7 +215,7 @@ solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ 
                               p1 <- exists_
                               p2 <- exists_
                               return (b, p1, p2)
-              res <- allSat $ mapM (const genAct) [1..n] >>= return . isValid
+              res <- allSat $ isValid `fmap` mapM (const genAct) [1..n]
               cnt <- displayModels disp res
               if cnt == 0 then return False
                           else do putStrLn $ "Found: " ++ show cnt ++ " solution" ++ plu cnt ++ " with " ++ show n ++ " move" ++ plu n ++ "."
@@ -267,4 +267,4 @@ solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ 
 solveU2 :: IO ()
 solveU2 = go 1
  where go i = do p <- solveN i
-                 if p then return () else go (i+1)
+                 unless p $ go (i+1)

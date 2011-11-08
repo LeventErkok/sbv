@@ -40,9 +40,9 @@ queries = do print =<< prove f1eqf2   -- QED
              print =<< prove f1eqf3   -- No
              print =<< prove f3eqf4   -- QED
              print =<< prove f1Single -- QED
-             print =<< (sat $ do x <- exists "x"
-                                 y <- exists "y"
-                                 return $ f1 x y .== f2 x (y :: SWord8))  -- yes, any output OK
-             print =<< (sat $ do x <- exists "x"
-                                 y <- exists "y"
-                                 return $ f1 x y .== f3 x (y:: SWord8))    -- yes, 0;0
+             print =<< sat (do x <- exists "x"
+                               y <- exists "y"
+                               return $ f1 x y .== f2 x (y :: SWord8))  -- yes, any output OK
+             print =<< sat (do x <- exists "x"
+                               y <- exists "y"
+                               return $ f1 x y .== f3 x (y:: SWord8))    -- yes, 0;0

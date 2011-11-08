@@ -58,7 +58,7 @@ magic :: Int -> IO ()
 magic n
  | n < 0 = putStrLn $ "n must be non-negative, received: " ++ show n
  | True  = do putStrLn $ "Finding all " ++ show n ++ "-magic squares.."
-              res <- allSat $ mkExistVars n2 >>= return . isMagic . chunk n
+              res <- allSat $ (isMagic . chunk n) `fmap` mkExistVars n2
               cnt <- displayModels disp res
               putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
    where n2 = n * n
@@ -71,7 +71,7 @@ magic n
                putStrLn $ "Valid Check: " ++ show (isMagic sboard)
                putStrLn "Done."
           where lmod  = length model
-                board = chunk n $ model
+                board = chunk n model
                 sboard = map (map literal) board
                 sh2 z = let s = show z in if length s < 2 then ' ':s else s
-                printRow r = putStr "   " >> mapM_ (\x -> putStr ((sh2 x) ++ " ")) r >> putStrLn ""
+                printRow r = putStr "   " >> mapM_ (\x -> putStr (sh2 x ++ " ")) r >> putStrLn ""

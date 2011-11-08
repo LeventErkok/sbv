@@ -12,7 +12,6 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE PatternGuards #-}
 
 module Data.SBV.BitVectors.PrettyNum (PrettyNum(..), readBin, shex, sbin) where
 
@@ -81,7 +80,7 @@ instance (SymWord a, PrettyNum a) => PrettyNum (SBV a) where
 shex :: (Integral a) => Bool -> Bool -> (Bool, Size) -> a -> String
 shex shType shPre (signed, size) a
  | a < 0
- = "-" ++ pre ++ pad l (s16 (abs ((fromIntegral a) :: Integer)))  ++ t
+ = "-" ++ pre ++ pad l (s16 (abs (fromIntegral a :: Integer)))  ++ t
  | True
  =  pre ++ pad l (s16 a) ++ t
  where t | shType = " :: " ++ (if signed then "Int" else "Word") ++ show size
@@ -93,7 +92,7 @@ shex shType shPre (signed, size) a
 sbin :: (Integral a) => Bool -> Bool -> (Bool, Size) -> a -> String
 sbin shType shPre (signed,size) a
  | a < 0
- = "-" ++ pre ++ pad size (s2 (abs ((fromIntegral a) :: Integer)))  ++ t
+ = "-" ++ pre ++ pad size (s2 (abs (fromIntegral a :: Integer)))  ++ t
  | True
  =  pre ++ pad size (s2 a) ++ t
  where t | shType = " :: " ++ (if signed then "Int" else "Word") ++ show size

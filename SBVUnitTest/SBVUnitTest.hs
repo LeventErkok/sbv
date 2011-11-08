@@ -12,7 +12,7 @@
 
 module Main(main, createGolds) where
 
-import Control.Monad           (when)
+import Control.Monad           (unless, when)
 import System.Directory        (doesDirectoryExist, findExecutable)
 import System.Environment      (getArgs, getEnv)
 import System.Exit             (exitWith, ExitCode(..))
@@ -20,6 +20,7 @@ import System.FilePath         ((</>))
 import System.Process          (readProcessWithExitCode)
 import Test.HUnit              (Test(..), Counts(..), runTestTT)
 
+import Data.List               (isPrefixOf)
 import Data.SBV                (yices, SMTSolver(..))
 import Data.SBV.Utils.SBVTest  (SBVTestSuite(..), generateGoldCheck)
 import Paths_sbv               (getDataDir)
@@ -124,11 +125,10 @@ createGolds tgts = run (words tgts) True ["SBVUnitTest/GoldFiles"]
 
 checkGoldDir :: FilePath -> IO ()
 checkGoldDir gd = do e <- doesDirectoryExist gd
-                     when (not e) $
-                             do putStrLn $ "*** Cannot locate gold file repository!"
-                                putStrLn $ "*** Please call with one argument, the directory name of the gold files."
-                                putStrLn $ "*** Cannot run test cases, exiting."
-                                exitWith $ ExitFailure 1
+                     unless e $ do putStrLn "*** Cannot locate gold file repository!"
+                                   putStrLn "*** Please call with one argument, the directory name of the gold files."
+                                   putStrLn "*** Cannot run test cases, exiting."
+                                   exitWith $ ExitFailure 1
 
 checkYices :: IO ()
 checkYices = do ex <- getEnv "SBV_YICES" `catch` (\_ -> return (executable Yices.yices))
@@ -136,8 +136,8 @@ checkYices = do ex <- getEnv "SBV_YICES" `catch` (\_ -> return (executable Yices
                 case mbP of
                   Nothing -> do putStrLn $ "*** Cannot find default SMT solver executable for " ++ nm
                                 putStrLn $ "*** Please make sure the executable " ++ show ex
-                                putStrLn $ "*** is installed and is in your path."
-                                putStrLn $ "*** Cannot run test cases, exiting."
+                                putStrLn   "*** is installed and is in your path."
+                                putStrLn   "*** Cannot run test cases, exiting."
                                 exitWith $ ExitFailure 1
                   Just p  -> do putStrLn $ "*** Using solver : " ++ nm ++ " (" ++ show p ++ ")"
                                 checkYicesVersion p
@@ -147,16 +147,16 @@ checkYicesVersion :: FilePath -> IO ()
 checkYicesVersion p =
         do (ec, yOut, _yErr) <- readProcessWithExitCode p ["-V"] ""
            case ec of
-             ExitFailure _ -> do putStrLn $ "*** Cannot determine Yices version. Please install Yices version 2.X first."
+             ExitFailure _ -> do putStrLn "*** Cannot determine Yices version. Please install Yices version 2.X first."
                                  exitWith $ ExitFailure 1
-             ExitSuccess   -> do let isYices1 = take 2 yOut == "1." -- crude test; might fail..
-                                 when isYices1 $ putStrLn $ "*** Yices version 1.X is detected. Version 2.X is strongly recommended!"
+             ExitSuccess   -> do let isYices1 = "1." `isPrefixOf` yOut -- crude test; might fail..
+                                 when isYices1 $ putStrLn "*** Yices version 1.X is detected. Version 2.X is strongly recommended!"
                                  opts <- getEnv "SBV_YICES_OPTIONS" `catch` (\_ -> return (unwords (options Yices.yices)))
                                  when (isYices1 && opts /= "-tc -smt -e") $ do
-                                           putStrLn $ "*** Either install Yices 2.X, or set the environment variable:"
-                                           putStrLn $ "***     SBV_YICES_OPTIONS=\"-tc -smt -e\""
-                                           putStrLn $ "*** To use Yices 1.X with SBV."
-                                           putStrLn $ "*** However, upgrading to Yices 2.X is highly recommended!"
+                                           putStrLn "*** Either install Yices 2.X, or set the environment variable:"
+                                           putStrLn "***     SBV_YICES_OPTIONS=\"-tc -smt -e\""
+                                           putStrLn "*** To use Yices 1.X with SBV."
+                                           putStrLn "*** However, upgrading to Yices 2.X is highly recommended!"
                                            exitWith $ ExitFailure 1
 
 allTargets :: [String]
@@ -187,9 +187,9 @@ decide shouldCreate cts@(Counts c t e f) = do
         when (c /= t) $ putStrLn $ "*** Not all test cases were tried. (Only tested " ++ show t ++ " of " ++ show c ++ ")"
         when (e /= 0) $ putStrLn $ "*** " ++ show e ++ " (of " ++ show c ++ ") test cases in error."
         when (f /= 0) $ putStrLn $ "*** " ++ show f ++ " (of " ++ show c ++ ") test cases failed."
-        if (c == t && e == 0 && f == 0)
+        if c == t && e == 0 && f == 0
            then do if shouldCreate
                       then putStrLn $ "All " ++ show c ++ " test cases executed in gold-file generation mode."
                       else putStrLn $ "All " ++ show c ++ " test cases successfully passed."
-                   exitWith $ ExitSuccess
+                   exitWith ExitSuccess
            else exitWith $ ExitFailure 2

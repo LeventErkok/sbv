@@ -152,7 +152,7 @@ negIf False a = a
 -- anamoly at the 2's complement min value! Have to use binary notation here
 -- as there is no positive value we can provide to make the bvneg work.. (see above)
 mkMinBound :: Int -> String
-mkMinBound i = "bv1" ++ take (i-1) (repeat '0') ++ "[" ++ show i ++ "]"
+mkMinBound i = "bv1" ++ replicate (i-1) '0' ++ "[" ++ show i ++ "]"
 
 rot :: String -> Int -> SW -> String
 rot o c x = "(" ++ o ++ "[" ++ show c ++ "] " ++ show x ++ ")"
@@ -172,7 +172,7 @@ cvtExp (SBVApp (Shr i) [a])   = shft "bvlshr" "bvashr" i a
 cvtExp (SBVApp (LkUp (t, (_, at), _, l) i e) [])
   | needsCheck = "(ite " ++ cond ++ show e ++ " " ++ lkUp ++ ")"
   | True       = lkUp
-  where needsCheck = (2::Integer)^(at) > (fromIntegral l)
+  where needsCheck = (2::Integer)^at > fromIntegral l
         lkUp = "(select table" ++ show t ++ " " ++ show i ++ ")"
         cond
          | hasSign i = "(or " ++ le0 ++ " " ++ gtl ++ ") "
@@ -185,7 +185,7 @@ cvtExp (SBVApp (Extract i j) [a]) = "(extract[" ++ show i ++ ":" ++ show j ++ "]
 cvtExp (SBVApp (ArrEq i j) []) = "(ite (= array_" ++ show i ++ " array_" ++ show j ++") bv1[1] bv0[1])"
 cvtExp (SBVApp (ArrRead i) [a]) = "(select array_" ++ show i ++ " " ++ show a ++ ")"
 cvtExp (SBVApp (Uninterpreted nm) [])   = "uninterpreted_" ++ nm
-cvtExp (SBVApp (Uninterpreted nm) args) = "(uninterpreted_" ++ nm ++ " " ++ intercalate " " (map show args) ++ ")"
+cvtExp (SBVApp (Uninterpreted nm) args) = "(uninterpreted_" ++ nm ++ " " ++ unwords (map show args) ++ ")"
 cvtExp inp@(SBVApp op args)
   | Just f <- lookup op smtOpTable
   = f (any hasSign args) (map show args)
@@ -221,5 +221,5 @@ cvtExp inp@(SBVApp op args)
 
 cvtType :: SBVType -> String
 cvtType (SBVType []) = error "SBV.SMT.SMTLib1.cvtType: internal: received an empty type!"
-cvtType (SBVType xs) = intercalate " " $ map sh xs
+cvtType (SBVType xs) = unwords $ map sh xs
   where sh (_, s) = "BitVec[" ++ show s ++ "]"

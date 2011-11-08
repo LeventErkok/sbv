@@ -39,7 +39,7 @@ f33 x y z = (x, y, z)
 
 
 t :: IO [ThmResult]
-t = sequence $ [
+t = sequence [
        f11 === f11
      , f12 === f12
      , f21 === f21

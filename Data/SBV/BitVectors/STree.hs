@@ -11,7 +11,6 @@
 -- time access to elements. Both reads and writes are supported.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE BangPatterns         #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleContexts     #-}
@@ -41,7 +40,7 @@ data STreeInternal i e = SLeaf e                        -- NB. parameter 'i' is 
 instance (SymWord e, Mergeable (SBV e)) => Mergeable (STree i e) where
   symbolicMerge b (SLeaf i)  (SLeaf j)    = SLeaf (ite b i j)
   symbolicMerge b (SBin l r) (SBin l' r') = SBin  (ite b l l') (ite b r r')
-  symbolicMerge _ _          _            = error $ "SBV.STree.symbolicMerge: Impossible happened while merging states"
+  symbolicMerge _ _          _            = error "SBV.STree.symbolicMerge: Impossible happened while merging states"
 
 -- | Reading a value. We bit-blast the index and descend down the full tree
 -- according to bit-values.
@@ -64,8 +63,8 @@ mkSTree :: forall i e. HasSignAndSize i => [SBV e] -> STree i e
 mkSTree ivals
   | reqd /= given = error $ "SBV.STree.mkSTree: Required " ++ show reqd ++ " elements, received: " ++ show given
   | True          = go ivals
-  where reqd = 2 ^ (sizeOf (undefined :: i))
+  where reqd = 2 ^ sizeOf (undefined :: i)
         given = length ivals
-        go []  = error $ "SBV.STree.mkSTree: Impossible happened, ran out of elements"
+        go []  = error "SBV.STree.mkSTree: Impossible happened, ran out of elements"
         go [l] = SLeaf l
         go ns  = let (l, r) = splitAt (length ns `div` 2) ns in SBin (go l) (go r)

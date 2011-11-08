@@ -52,7 +52,7 @@ count n cnts = ite (n .< 10)
 puzzle :: Counts -> SBool
 puzzle cnt = cnt .== last css
   where ones = replicate 10 1  -- all digits occur once to start with
-        css  = [ones] ++ zipWith count cnt css
+        css  = ones : zipWith count cnt css
 
 -- | Finds all two known solutions to this puzzle. We have:
 --
@@ -63,7 +63,7 @@ puzzle cnt = cnt .== last css
 -- In this sentence, the number of occurrences of 0 is 1, of 1 is 7, of 2 is 3, of 3 is 2, of 4 is 1, of 5 is 1, of 6 is 1, of 7 is 2, of 8 is 1, of 9 is 1.
 -- Found: 2 solution(s).
 solve :: IO ()
-solve = do res <- allSat $ mkExistVars 10 >>= return . puzzle
+solve = do res <- allSat $ puzzle `fmap` mkExistVars 10
            cnt <- displayModels disp res
            putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
   where disp n s = do putStrLn $ "Solution #" ++ show n

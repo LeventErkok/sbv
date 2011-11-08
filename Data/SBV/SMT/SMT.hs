@@ -126,7 +126,7 @@ instance Show AllSatResult where
                      | True = ""
           go c (s:ss) = let c'      = c+1
                             (ok, o) = sh c' s
-                        in c' `seq` if ok then (o ++ "\n" ++ go c' ss) else o
+                        in c' `seq` if ok then o ++ "\n" ++ go c' ss else o
           go c []     = case c of
                           0 -> "No solutions found."
                           1 -> "This is the only solution." ++ uniqueWarn
@@ -229,10 +229,10 @@ instance (SatModel a, SatModel b, SatModel c, SatModel d, SatModel e, SatModel f
 
 -- | Given an 'SMTResult', extract an arbitrarily typed model from it, given a 'SatModel' instance
 getModel :: SatModel a => SatResult -> Either String a
-getModel (SatResult (Unsatisfiable _)) = Left $ "SatModel.getModel: Unsatisfiable result"
-getModel (SatResult (Unknown _ _))     = error $ "Impossible! Backend solver returned unknown for Bit-vector problem!"
+getModel (SatResult (Unsatisfiable _)) = Left "SatModel.getModel: Unsatisfiable result"
+getModel (SatResult (Unknown _ _))     = error "Impossible! Backend solver returned unknown for Bit-vector problem!"
 getModel (SatResult (ProofError _ s))  = error $ unlines $ "Backend solver complains: " : s
-getModel (SatResult (TimeOut _))       = Left $ "Timeout"
+getModel (SatResult (TimeOut _))       = Left "Timeout"
 getModel (SatResult (Satisfiable _ m)) = case parseCWs [c | (_, c) <- modelAssocs m] of
                                            Just (x, []) -> Right x
                                            Just (_, ys) -> error $ "SBV.getModel: Partially constructed model; remaining elements: " ++ show ys
@@ -314,7 +314,7 @@ pipeProcess verb nm execName opts script cleanErrs = do
                                                                   ++ "\n" ++ line
                                                                   ++ "\nGiving up.."
   where clean = reverse . dropWhile isSpace . reverse . dropWhile isSpace
-        line  = take 78 $ repeat '='
+        line  = replicate 78 '='
 
 standardSolver :: SMTConfig -> SMTScript -> (String -> String) -> ([String] -> a) -> ([String] -> a) -> IO a
 standardSolver config script cleanErrs failure success = do
@@ -364,7 +364,7 @@ runSolver verb execPath opts script
       r <- ask "(check-sat)"
       when ("sat" `isPrefixOf` r) $ do
         let mls = lines (fromJust (scriptModel script))
-        when verb $ do putStrLn $ "** Sending the following model extraction commands:"
+        when verb $ do putStrLn "** Sending the following model extraction commands:"
                        mapM_ putStrLn mls
         mapM_ send mls
       cleanUp r
