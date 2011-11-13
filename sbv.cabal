@@ -32,16 +32,20 @@ Description:   Express properties about bit-precise Haskell programs and automat
                  * Uninterpreted constants and functions over symbolic values, with user
                    defined SMT-Lib axioms
                .
-               Predicates (i.e., functions that return 'SBool') built out of
+               Predicates (functions that return 'SBool') built out of
                these types can be:
                .
                  * proven correct via an external SMT solver (the 'prove' function)
                .
-                 * checked for satisfiability (the 'sat', 'allSat', and 'qbvf' functions)
+                 * checked for satisfiability (the 'sat', and 'allSat' functions)
                .
-                 * used in synthesis (the 'qbvf' function)
+                 * used in synthesis (the 'sat' function with existential variables)
                .
                  * quick-checked
+               .
+               Predicates can have both existential and universal variables. Use of
+               alternating quantifiers provides considerable expressive power.
+               Furthermore, existential variables allow synthesis via model generation.
                .
                The SBV library can also compile Haskell functions that manipulate symbolic
                values directly to C, rendering them as straight-line C programs.
