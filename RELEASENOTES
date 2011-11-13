@@ -170,12 +170,14 @@ Version 0.9.10, 2011-02-15
     leaf types
   * Remove the unnecessary CLC instruction from the Legato example
   * More tests
+
 ======================================================================
 Version 0.9.9, 2011-01-23
 
   * Support for user-defined SMT-Lib axioms to be
     specified for uninterpreted constants/functions
   * Move to using doctest style inline tests
+
 ======================================================================
 Version 0.9.8, 2011-01-22
 
@@ -183,10 +185,12 @@ Version 0.9.8, 2011-01-22
   * Support counter-examples with SArray's
   * Ladner-Fischer scheme example
   * Documentation updates
+
 ======================================================================
 Version 0.9.7, 2011-01-18
 
   * First stable public hackage release
+
 ======================================================================
 Versions 0.X.X - 0.9.6
 
