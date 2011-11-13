@@ -40,7 +40,7 @@ docs:
 configure:
 	cabal configure
 
-release: clean tags all docs
+release: clean tags all docs lint
 
 # use this as follows: make gold TGTS="cgUSB5"
 # where the tag is one (or many) given in the SBVUnitTest.hs file
@@ -49,9 +49,9 @@ gold:
 	ghc -idist/build/autogen/ SBVUnitTest/SBVUnitTest.hs -e "createGolds \"${TGTS}\""
 
 lint:
-	@hlint ${LINTSRCS} -q -rhlintReport.html	\
-	       -i "Use otherwise"			\
-	       -i "Use import/export shortcut"
+	-@hlint ${LINTSRCS} -q -rhlintReport.html	\
+	        -i "Use otherwise"			\
+	        -i "Use import/export shortcut"
 tags:
 	find . -name \*.\*hs | xargs hasktags -c
 	sort -o tags tags

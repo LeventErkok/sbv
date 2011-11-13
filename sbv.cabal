@@ -55,7 +55,7 @@ Description:   Express properties about bit-precise Haskell programs and automat
                .
                The following people reported bugs, provided comments/feedback, or contributed to the
                development of SBV in various ways: Ian Blumenfeld, Ian Calvert, Iavor Diatchki,
-               Lee Pike, Austin Seipp, Don Stewart, Josef Svenningsson, and Nis Wegmann.
+               Tom Hawkins, Lee Pike, Austin Seipp, Don Stewart, Josef Svenningsson, and Nis Wegmann.
 
 Copyright:     Levent Erkok, 2010-2011
 License:       BSD3

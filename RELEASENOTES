@@ -2,15 +2,16 @@ Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
 ======================================================================
-Version 0.9.22, Not yet released
+Version 0.9.22, 2011-11-13
    
   The major change in this release is the support for quantifiers. The
-  SBV library no longer assumes all variables are universals in a proof,
-  and existential in a sat call. Instead, the user marks them appropriately
-  using forall/exists, and the solver respects these. Note that this is
-  a breaking change in sat calls in particular, as the semantics of
-  formulas is essentially changing. While this is unfortunate, it's
-  more uniform and simpler to understand in general.
+  SBV library *no* longer assumes all variables are universals in a proof,
+  (and correspondingly existential in a sat) call. Instead, the user
+  marks free-variables appropriately using forall/exists functions, and the
+  solver translates them accordingly. Note that this is a non-backwards
+  compatible change in sat calls, as the semantics of formulas is essentially
+  changing. While this is unfortunate, it's more uniform and simpler to understand
+  in general.
 
   This release also adds support for the Z3 solver, which is the main
   SMT-solver used for solving formulas involving quantifiers. More formally,

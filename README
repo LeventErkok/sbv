@@ -120,4 +120,5 @@ the [BSD3](http://en.wikipedia.org/wiki/BSD_licenses) verbiage.
 Thanks
 ======
 The following people reported bugs, provided comments/feedback, or contributed to the development of SBV in various ways:
-Ian Blumenfeld, Ian Calvert, Iavor Diatchki, Lee Pike, Austin Seipp, Don Stewart, Josef Svenningsson, and Nis Wegmann.
+Ian Blumenfeld, Ian Calvert, Iavor Diatchki, Tom Hawkins, Lee Pike, Austin Seipp, Don Stewart, Josef Svenningsson,
+and Nis Wegmann.
