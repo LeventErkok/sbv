@@ -2,6 +2,11 @@ Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
 ======================================================================
+Version 0.9.23, Not yet released
+  
+   *  Current working version
+
+======================================================================
 Version 0.9.22, 2011-11-13
    
   The major change in this release is the support for quantifiers. The
