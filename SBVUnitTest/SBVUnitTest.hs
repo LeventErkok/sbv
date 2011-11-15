@@ -112,7 +112,7 @@ testCollection = [
 -- No user serviceable parts below..
 
 main :: IO ()
-main = do putStrLn $ "*** SBVUnitTester, built: " ++ buildTime
+main = do putStrLn $ "*** SBVUnitTester, version time stamp: " ++ buildTime
           tgts <- getArgs
           case tgts of
             [x] | x `elem` ["-h", "--help", "-?"]
