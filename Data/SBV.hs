@@ -101,6 +101,11 @@ module Data.SBV (
   , SWord8, SWord16, SWord32, SWord64
   -- *** Signed symbolic bit-vectors
   , SInt8, SInt16, SInt32, SInt64
+  -- *** Signed unbounded integers
+  -- $unboundedLimitations
+  , SInteger
+  -- *** Abstract SBV type
+  , SBV
   -- *** Arrays of symbolic values
   , SymArray(..), SArray, SFunArray, mkSFunArray
   -- *** Full binary trees
@@ -284,4 +289,23 @@ these characteristics make them suitable for use in hard real-time systems, as w
 {- $moduleExportIntro
 The SBV library exports the following modules wholesale, as user programs will have to import these
 three modules to make any sensible use of the SBV functionality.
+-}
+
+{- $unboundedLimitations
+The SBV library supports unbounded signed integers with the type 'SInteger', which are not subject to
+overflow/underflow as it is the case with the bounded types, such as 'SWord8', 'SInt16', etc. However,
+some bit-vector based operations are /not/ supported for the 'SInteger' type while in the verification mode. That
+is, you can use these operations on 'SInteger' values during normal programming/simulation.
+but the SMT translation will not support these operations since there corresponding operations are not supported in SMT-Lib.
+Note that this should rarely be a problem in practice, as these operations are mostly meaningful on fixed-size
+bit-vectors. The operations that are restricted to bounded word/int sizes are:
+
+   * Rotations and shifts: 'rotateL', 'rotateR', 'shiftL', 'shiftR'
+
+   * Bitwise logical ops: '.&.', '.|.', 'xor', 'complement'
+
+   * Extraction and concatenation: 'split', '#', and 'extend' (see the 'Splittable' class)
+
+Usual arithmetic ('+', '-', '*', 'bvQuotRem') and logical operations ('.<', '.<=', '.>', '.>=', '.==', './=') operations are
+supported for 'SInteger' fully, both in programming and verification modes.
 -}
