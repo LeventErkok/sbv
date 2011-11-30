@@ -624,6 +624,9 @@ class Ord a => SymWord a where
   isSymbolic :: SBV a -> Bool
   -- | Does it concretely satisfy the given predicate?
   isConcretely :: SBV a -> (a -> Bool) -> Bool
+  -- | max/minbounds, if available. Note that we don't want
+  -- to impose "Bounded" on our class as Integer is not Bounded but it is a SymWord
+  mbMaxBound, mbMinBound :: Maybe a
 
   -- minimal complete definiton: forall, forall_, exists, exists_, literal, fromCW
   mkForallVars n = mapM (const forall_) [1 .. n]

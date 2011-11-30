@@ -22,7 +22,7 @@
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), BVDivisible(..), Uninterpreted(..)
   , bitValue, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE
-  , lsb, msb, SBVUF, sbvUFName, genVar, genVar_, forall, forall_, exists, exists_
+  , lsb, msb, SBVUF, sbvUFName, genFinVar, genFinVar_, forall, forall_, exists, exists_
   )
   where
 
@@ -55,27 +55,27 @@ liftSym2B :: (State -> (Bool, Size) -> SW -> SW -> IO SW)
           -> (Integer -> Integer -> Bool)
           -> SBV b -> SBV b -> SBool
 liftSym2B _   opC (SBV _ (Left a)) (SBV _ (Left b)) = literal (liftCW2 opC a b)
-liftSym2B opS _   a                b                = SBV (False, 1) $ Right $ cache c
+liftSym2B opS _   a                b                = SBV (False, Size (Just 1)) $ Right $ cache c
   where c st = do sw1 <- sbvToSW st a
                   sw2 <- sbvToSW st b
-                  opS st (False, 1) sw1 sw2
+                  opS st (False, Size (Just 1)) sw1 sw2
 
 liftSym1Bool :: (State -> (Bool, Size) -> SW -> IO SW)
              -> (Bool -> Bool)
              -> SBool -> SBool
 liftSym1Bool _   opC (SBV _ (Left a)) = literal $ opC $ cwToBool a
-liftSym1Bool opS _   a                = SBV (False, 1) $ Right $ cache c
+liftSym1Bool opS _   a                = SBV (False, Size (Just 1)) $ Right $ cache c
   where c st = do sw <- sbvToSW st a
-                  opS st (False, 1) sw
+                  opS st (False, Size (Just 1)) sw
 
 liftSym2Bool :: (State -> (Bool, Size) -> SW -> SW -> IO SW)
              -> (Bool -> Bool -> Bool)
              -> SBool -> SBool -> SBool
 liftSym2Bool _   opC (SBV _ (Left a)) (SBV _ (Left b)) = literal (cwToBool a `opC` cwToBool b)
-liftSym2Bool opS _   a                b                = SBV (False, 1) $ Right $ cache c
+liftSym2Bool opS _   a                b                = SBV (False, Size (Just 1)) $ Right $ cache c
   where c st = do sw1 <- sbvToSW st a
                   sw2 <- sbvToSW st b
-                  opS st (False, 1) sw1 sw2
+                  opS st (False, Size (Just 1)) sw1 sw2
 
 mkSymOpSC :: (SW -> SW -> Maybe SW) -> Op -> State -> (Bool, Size) -> SW -> SW -> IO SW
 mkSymOpSC shortCut op st sgnsz a b = maybe (newExpr st sgnsz (SBVApp op [a, b])) return (shortCut a b)
@@ -91,89 +91,118 @@ mkSymOp1 = mkSymOp1SC (const Nothing)
 
 -- Symbolic-Word class instances
 
-genVar :: Quantifier -> (Bool, Size) -> String -> Symbolic (SBV a)
-genVar q s = mkSymSBV q s . Just
+genFinVar :: Quantifier -> (Bool, Int) -> String -> Symbolic (SBV a)
+genFinVar q (sg, sz) = mkSymSBV q (sg, Size (Just sz)) . Just
 
-genVar_ :: Quantifier -> (Bool, Size) -> Symbolic (SBV a)
-genVar_ b s = mkSymSBV b s Nothing
+genFinVar_ :: Quantifier -> (Bool, Int) -> Symbolic (SBV a)
+genFinVar_ b (sg, sz) = mkSymSBV b (sg, Size (Just sz)) Nothing
 
-genLiteral :: Integral a => (Bool,Size) -> a -> SBV b
-genLiteral s  = SBV s . Left . mkConstCW s
+genFinLiteral :: Integral a => (Bool, Int) -> a -> SBV b
+genFinLiteral (sg, sz)  = SBV s . Left . mkConstCW s
+  where s = (sg, Size (Just sz))
 
 genFromCW :: Integral a => CW -> a
 genFromCW x = fromInteger (cwVal x)
 
 instance SymWord Bool where
-  forall    = genVar  ALL (False, 1)
-  forall_   = genVar_ ALL (False, 1)
-  exists    = genVar  EX  (False, 1)
-  exists_   = genVar_ EX  (False, 1)
-  literal x = genLiteral (False, 1) (if x then (1::Integer) else 0)
-  fromCW    = cwToBool
+  forall     = genFinVar  ALL (False, 1)
+  forall_    = genFinVar_ ALL (False, 1)
+  exists     = genFinVar  EX  (False, 1)
+  exists_    = genFinVar_ EX  (False, 1)
+  literal x  = genFinLiteral (False, 1) (if x then (1::Integer) else 0)
+  fromCW     = cwToBool
+  mbMaxBound = Just maxBound
+  mbMinBound = Just minBound
 
 instance SymWord Word8 where
-  forall  = genVar   ALL (False, 8)
-  forall_ = genVar_  ALL (False, 8)
-  exists  = genVar   EX  (False, 8)
-  exists_ = genVar_  EX  (False, 8)
-  literal = genLiteral (False, 8)
-  fromCW  = genFromCW
+  forall     = genFinVar   ALL (False, 8)
+  forall_    = genFinVar_  ALL (False, 8)
+  exists     = genFinVar   EX  (False, 8)
+  exists_    = genFinVar_  EX  (False, 8)
+  literal    = genFinLiteral (False, 8)
+  fromCW     = genFromCW
+  mbMaxBound = Just maxBound
+  mbMinBound = Just minBound
 
 instance SymWord Int8 where
-  forall  = genVar   ALL (True, 8)
-  forall_ = genVar_  ALL (True, 8)
-  exists  = genVar   EX  (True, 8)
-  exists_ = genVar_  EX  (True, 8)
-  literal = genLiteral (True, 8)
-  fromCW  = genFromCW
+  forall     = genFinVar   ALL (True, 8)
+  forall_    = genFinVar_  ALL (True, 8)
+  exists     = genFinVar   EX  (True, 8)
+  exists_    = genFinVar_  EX  (True, 8)
+  literal    = genFinLiteral (True, 8)
+  fromCW     = genFromCW
+  mbMaxBound = Just maxBound
+  mbMinBound = Just minBound
 
 instance SymWord Word16 where
-  forall  = genVar   ALL (False, 16)
-  forall_ = genVar_  ALL (False, 16)
-  exists  = genVar   EX  (False, 16)
-  exists_ = genVar_  EX  (False, 16)
-  literal = genLiteral (False, 16)
-  fromCW  = genFromCW
+  forall     = genFinVar   ALL (False, 16)
+  forall_    = genFinVar_  ALL (False, 16)
+  exists     = genFinVar   EX  (False, 16)
+  exists_    = genFinVar_  EX  (False, 16)
+  literal    = genFinLiteral (False, 16)
+  fromCW     = genFromCW
+  mbMaxBound = Just maxBound
+  mbMinBound = Just minBound
 
 instance SymWord Int16 where
-  forall  = genVar   ALL (True, 16)
-  forall_ = genVar_  ALL (True, 16)
-  exists  = genVar   EX  (True, 16)
-  exists_ = genVar_  EX  (True, 16)
-  literal = genLiteral (True, 16)
-  fromCW  = genFromCW
+  forall     = genFinVar   ALL (True, 16)
+  forall_    = genFinVar_  ALL (True, 16)
+  exists     = genFinVar   EX  (True, 16)
+  exists_    = genFinVar_  EX  (True, 16)
+  literal    = genFinLiteral (True, 16)
+  fromCW     = genFromCW
+  mbMaxBound = Just maxBound
+  mbMinBound = Just minBound
 
 instance SymWord Word32 where
-  forall  = genVar   ALL (False, 32)
-  forall_ = genVar_  ALL (False, 32)
-  exists  = genVar   EX  (False, 32)
-  exists_ = genVar_  EX  (False, 32)
-  literal = genLiteral (False, 32)
-  fromCW  = genFromCW
+  forall     = genFinVar   ALL (False, 32)
+  forall_    = genFinVar_  ALL (False, 32)
+  exists     = genFinVar   EX  (False, 32)
+  exists_    = genFinVar_  EX  (False, 32)
+  literal    = genFinLiteral (False, 32)
+  fromCW     = genFromCW
+  mbMaxBound = Just maxBound
+  mbMinBound = Just minBound
 
 instance SymWord Int32 where
-  forall  = genVar   ALL (True, 32)
-  forall_ = genVar_  ALL (True, 32)
-  exists  = genVar   EX  (True, 32)
-  exists_ = genVar_  EX  (True, 32)
-  literal = genLiteral (True, 32)
-  fromCW  = genFromCW
+  forall     = genFinVar   ALL (True, 32)
+  forall_    = genFinVar_  ALL (True, 32)
+  exists     = genFinVar   EX  (True, 32)
+  exists_    = genFinVar_  EX  (True, 32)
+  literal    = genFinLiteral (True, 32)
+  fromCW     = genFromCW
+  mbMaxBound = Just maxBound
+  mbMinBound = Just minBound
 
 instance SymWord Word64 where
-  forall  = genVar   ALL (False, 64)
-  forall_ = genVar_  ALL (False, 64)
-  exists  = genVar   EX  (False, 64)
-  exists_ = genVar_  EX  (False, 64)
-  literal = genLiteral (False, 64)
-  fromCW  = genFromCW
+  forall     = genFinVar   ALL (False, 64)
+  forall_    = genFinVar_  ALL (False, 64)
+  exists     = genFinVar   EX  (False, 64)
+  exists_    = genFinVar_  EX  (False, 64)
+  literal    = genFinLiteral (False, 64)
+  fromCW     = genFromCW
+  mbMaxBound = Just maxBound
+  mbMinBound = Just minBound
 
 instance SymWord Int64 where
-  forall  = genVar   ALL (True, 64)
-  forall_ = genVar_  ALL (True, 64)
-  exists  = genVar   EX  (True, 64)
-  exists_ = genVar_  EX  (True, 64)
-  literal = genLiteral (True, 64)
-  fromCW  = genFromCW
+  forall     = genFinVar   ALL (True, 64)
+  forall_    = genFinVar_  ALL (True, 64)
+  exists     = genFinVar   EX  (True, 64)
+  exists_    = genFinVar_  EX  (True, 64)
+  literal    = genFinLiteral (True, 64)
+  fromCW     = genFromCW
+  mbMaxBound = Just maxBound
+  mbMinBound = Just minBound
+
+instance SymWord Integer where
+  forall     = mkSymSBV ALL (True, Size Nothing) . Just
+  forall_    = mkSymSBV ALL (True, Size Nothing) Nothing
+  exists     = mkSymSBV EX  (True, Size Nothing) . Just
+  exists_    = mkSymSBV EX  (True, Size Nothing) Nothing
+  literal    = SBV (True, Size Nothing) . Left . mkConstCW (True, Size Nothing)
+  fromCW     = genFromCW
+  mbMaxBound = Nothing
+  mbMinBound = Nothing
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.
@@ -223,21 +252,21 @@ eqOpt w x y = if x == y then Just w else Nothing
 
 instance SymWord a => OrdSymbolic (SBV a) where
   x .< y
-    | x `isConcretely` (== maxBound) = false
-    | y `isConcretely` (== minBound) = false
-    | True                           = liftSym2B (mkSymOpSC (eqOpt falseSW) LessThan)    (<)  x y
+    | Just mb <- mbMaxBound, x `isConcretely` (== mb) = false
+    | Just mb <- mbMinBound, y `isConcretely` (== mb) = false
+    | True                                            = liftSym2B (mkSymOpSC (eqOpt falseSW) LessThan)    (<)  x y
   x .<= y
-    | x `isConcretely` (== minBound) = true
-    | y `isConcretely` (== maxBound) = true
-    | True                           = liftSym2B (mkSymOpSC (eqOpt trueSW) LessEq)       (<=) x y
+    | Just mb <- mbMinBound, x `isConcretely` (== mb) = true
+    | Just mb <- mbMaxBound, y `isConcretely` (== mb) = true
+    | True                                            = liftSym2B (mkSymOpSC (eqOpt trueSW) LessEq)       (<=) x y
   x .> y
-    | x `isConcretely` (== minBound) = false
-    | y `isConcretely` (== maxBound) = false
-    | True                           = liftSym2B (mkSymOpSC (eqOpt falseSW) GreaterThan) (>)  x y
+    | Just mb <- mbMinBound, x `isConcretely` (== mb) = false
+    | Just mb <- mbMaxBound, y `isConcretely` (== mb) = false
+    | True                                            = liftSym2B (mkSymOpSC (eqOpt falseSW) GreaterThan) (>)  x y
   x .>= y
-    | x `isConcretely` (== maxBound) = true
-    | y `isConcretely` (== minBound) = true
-    | True                           = liftSym2B (mkSymOpSC (eqOpt trueSW) GreaterEq)    (>=) x y
+    | Just mb <- mbMaxBound, x `isConcretely` (== mb) = true
+    | Just mb <- mbMinBound, y `isConcretely` (== mb) = true
+    | True                                            = liftSym2B (mkSymOpSC (eqOpt trueSW) GreaterEq)    (>=) x y
 
 -- Bool
 instance EqSymbolic Bool where
@@ -418,8 +447,9 @@ instance (Bits a, SymWord a) => Bits (SBV a) where
     | x `isConcretely` (== 0)  = y
     | y `isConcretely` (== 0)  = x
     | True                     = liftSym2 (mkSymOp  XOr) xor x y
-  complement               = liftSym1 (mkSymOp1 Not) complement
-  bitSize  (SBV (_ ,s) _)  = s
+  complement = liftSym1 (mkSymOp1 Not) complement
+  bitSize  (SBV (_, Size (Just s)) _) = s
+  bitSize  (SBV (_, Size Nothing)  _) = error "Data.Bits.bitSize(Integer)"
   isSigned (SBV (b, _) _)  = b
   shiftL x y
     | y < 0                = shiftR x (-y)
@@ -460,7 +490,9 @@ setBitTo x i b = ite b (setBit x i) (clearBit x i)
 
 -- | Little-endian blasting of a word into its bits. Also see the 'FromBits' class
 blastLE :: (Bits a, SymWord a) => SBV a -> [SBool]
-blastLE x = map (bitValue x) [0 .. (sizeOf x)-1]
+blastLE x
+ | isInfPrec x = error "SBV.blastLE: Called on an infinite precision value"
+ | True        = map (bitValue x) [0 .. (intSizeOf x)-1]
 
 -- | Big-endian blasting of a word into its bits. Also see the 'FromBits' class
 blastBE :: (Bits a, SymWord a) => SBV a -> [SBool]
@@ -472,7 +504,9 @@ lsb x = bitValue x 0
 
 -- | Most significant bit of a word, always stored at the last position
 msb :: (Bits a, SymWord a) => SBV a -> SBool
-msb x = bitValue x ((sizeOf x) - 1)
+msb x
+ | isInfPrec x = error "SBV.msb: Called on an infinite precision value"
+ | True        = bitValue x ((intSizeOf x) - 1)
 
 -- Enum instance. These instances are suitable for use with concrete values,
 -- and will be less useful for symbolic values around. Note that `fromEnum` requires
@@ -546,7 +580,15 @@ instance BVDivisible Word64 where
   bvQuotRem x 0 = (0, x)
   bvQuotRem x y = x `quotRem` y
 
+instance BVDivisible Int64 where
+  bvQuotRem x 0 = (0, x)
+  bvQuotRem x y = x `quotRem` y
+
 instance BVDivisible Word32 where
+  bvQuotRem x 0 = (0, x)
+  bvQuotRem x y = x `quotRem` y
+
+instance BVDivisible Int32 where
   bvQuotRem x 0 = (0, x)
   bvQuotRem x y = x `quotRem` y
 
@@ -554,7 +596,15 @@ instance BVDivisible Word16 where
   bvQuotRem x 0 = (0, x)
   bvQuotRem x y = x `quotRem` y
 
+instance BVDivisible Int16 where
+  bvQuotRem x 0 = (0, x)
+  bvQuotRem x y = x `quotRem` y
+
 instance BVDivisible Word8 where
+  bvQuotRem x 0 = (0, x)
+  bvQuotRem x y = x `quotRem` y
+
+instance BVDivisible Int8 where
   bvQuotRem x 0 = (0, x)
   bvQuotRem x y = x `quotRem` y
 
@@ -571,13 +621,28 @@ instance BVDivisible CW where
 instance BVDivisible SWord64 where
   bvQuotRem = liftQRem
 
+instance BVDivisible SInt64 where
+  bvQuotRem = liftQRem
+
 instance BVDivisible SWord32 where
+  bvQuotRem = liftQRem
+
+instance BVDivisible SInt32 where
   bvQuotRem = liftQRem
 
 instance BVDivisible SWord16 where
   bvQuotRem = liftQRem
 
+instance BVDivisible SInt16 where
+  bvQuotRem = liftQRem
+
 instance BVDivisible SWord8 where
+  bvQuotRem = liftQRem
+
+instance BVDivisible SInt8 where
+  bvQuotRem = liftQRem
+
+instance BVDivisible SInteger where
   bvQuotRem = liftQRem
 
 liftQRem :: (SymWord a, Num a, BVDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
@@ -760,10 +825,10 @@ instance (SymWord a, Bounded a) => Bounded (SBV a) where
 
 -- SArrays are both "EqSymbolic" and "Mergeable"
 instance EqSymbolic (SArray a b) where
-  (SArray _ a) .== (SArray _ b) = SBV (False, 1) $ Right $ cache c
+  (SArray _ a) .== (SArray _ b) = SBV (False, Size (Just 1)) $ Right $ cache c
     where c st = do ai <- uncacheAI a st
                     bi <- uncacheAI b st
-                    newExpr st (False, 1) (SBVApp (ArrEq ai bi) [])
+                    newExpr st (False, Size (Just 1)) (SBVApp (ArrEq ai bi) [])
 
 instance SymWord b => Mergeable (SArray a b) where
   symbolicMerge = mergeArrays
