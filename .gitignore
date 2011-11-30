@@ -3,4 +3,3 @@ dist
 tags
 TAGS
 SBVUnitTest/SBVUnitTestBuildTime.hs
-hlintReport.html
