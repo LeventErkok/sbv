@@ -34,7 +34,7 @@ solve :: IO ()
 solve = do res <- allSat $ revOf `fmap` exists_
            cnt <- displayModels disp res
            putStrLn $ "Found " ++ show cnt ++ " solutions."
-     where disp :: Int -> Word16 -> IO ()
-           disp _ x = putStrLn $ " " ++ show x ++ "C --> " ++ show (round f :: Integer) ++ "F (exact value: " ++ show f ++ "F)"
+     where disp :: Int -> (Bool, Word16) -> IO ()
+           disp _ (_, x) = putStrLn $ " " ++ show x ++ "C --> " ++ show (round f :: Integer) ++ "F (exact value: " ++ show f ++ "F)"
               where f :: Double
                     f  = 32 + (9 * fromIntegral x) / 5

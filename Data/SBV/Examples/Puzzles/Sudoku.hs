@@ -60,8 +60,8 @@ solve p@(i, f) = do putStrLn "Solving the puzzle.."
                       Left m    -> putStrLn $ "Unsolvable puzzle: " ++ m
 
 -- | Helper function to display results nicely, not really needed, but helps presentation
-dispSolution :: Puzzle -> [Word8] -> IO ()
-dispSolution (i, f) fs
+dispSolution :: Puzzle -> (Bool, [Word8]) -> IO ()
+dispSolution (i, f) (_, fs)
   | lmod /= i = error $ "Impossible! Backend solver returned " ++ show lmod ++ " values, was expecting: " ++ show i
   | True      = do putStrLn "Final board:"
                    mapM_ printRow final

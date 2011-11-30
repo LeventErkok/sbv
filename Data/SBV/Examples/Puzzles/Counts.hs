@@ -66,8 +66,8 @@ solve :: IO ()
 solve = do res <- allSat $ puzzle `fmap` mkExistVars 10
            cnt <- displayModels disp res
            putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
-  where disp n s = do putStrLn $ "Solution #" ++ show n
-                      dispSolution s
+  where disp n (_, s) = do putStrLn $ "Solution #" ++ show n
+                           dispSolution s
         dispSolution :: [Word8] -> IO ()
         dispSolution ns = putStrLn soln
           where soln =  "In this sentence, the number of occurrences"

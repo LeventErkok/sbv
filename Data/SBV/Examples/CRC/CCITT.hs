@@ -55,7 +55,7 @@ hw4 :: IO ()
 hw4 = do res <- allSat hw4has84Inhabitants
          cnt <- displayModels disp res
          putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
-   where disp :: Int -> (Word32, Word16, Word32, Word16) -> IO ()
-         disp i (sh, sl, rh, rl) = do putStrLn $ "Solution #" ++ show i ++ ": "
-                                      putStrLn $ "  Sent    : " ++ binS (mkFrame (literal sh, literal sl))
-                                      putStrLn $ "  Received: " ++ binS (mkFrame (literal rh, literal rl))
+   where disp :: Int -> (Bool, (Word32, Word16, Word32, Word16)) -> IO ()
+         disp i (_, (sh, sl, rh, rl)) = do putStrLn $ "Solution #" ++ show i ++ ": "
+                                           putStrLn $ "  Sent    : " ++ binS (mkFrame (literal sh, literal sl))
+                                           putStrLn $ "  Received: " ++ binS (mkFrame (literal rh, literal rl))

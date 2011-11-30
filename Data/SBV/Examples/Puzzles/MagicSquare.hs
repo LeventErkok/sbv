@@ -62,7 +62,7 @@ magic n
               cnt <- displayModels disp res
               putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
    where n2 = n * n
-         disp i model
+         disp i (_, model)
           | lmod /= n2
           = error $ "Impossible! Backend solver returned " ++ show n ++ " values, was expecting: " ++ show lmod
           | True

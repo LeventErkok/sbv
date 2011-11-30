@@ -75,8 +75,8 @@ genPoly hd = do res <- allSatWith z3 $ do
                         return $ bitValue p 0 &&& crcGood hd p s r
                 cnt <- displayModels disp res
                 putStrLn $ "Found: " ++ show cnt ++ " polynomail(s)."
-        where disp :: Int -> Word16 -> IO ()
-              disp n s = do putStrLn $ "Polynomial #" ++ show n ++ ". x^16 + " ++ showPolynomial False s
+        where disp :: Int -> (Bool, Word16) -> IO ()
+              disp n (_, s) = do putStrLn $ "Polynomial #" ++ show n ++ ". x^16 + " ++ showPolynomial False s
 
 -- | Find and display all degree 16 polynomials with hamming distance at least 4, for 48 bit messages.
 --

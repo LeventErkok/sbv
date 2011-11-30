@@ -28,7 +28,7 @@ powerSet xs = do putStrLn $ "Finding all subsets of " ++ show xs
                  cnt <- displayModels disp res
                  putStrLn $ "Found: " ++ show cnt ++ " subset(s)."
      where n = length xs
-           disp i ss
+           disp i (_, ss)
             | length ss /= n = error $ "Expected " ++ show n ++ " results; got: " ++ show (length ss)
             | True           = putStrLn $ "Subset #" ++ show i ++ ": " ++ show (concat (zipWith pick ss xs))
            pick True a  = [a]

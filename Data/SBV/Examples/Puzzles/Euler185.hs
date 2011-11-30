@@ -47,4 +47,4 @@ solve :: IO ()
 solve = do res <- allSat euler185
            cnt <- displayModels disp res
            putStrLn $ "Number of solutions: " ++ show cnt
-   where disp _ ss = putStrLn $ concatMap show (ss :: [Word8])
+   where disp _ (_, ss) = putStrLn $ concatMap show (ss :: [Word8])

@@ -37,8 +37,8 @@ nQueens n
               res <- allSat $ isValid n `fmap` mkExistVars n
               cnt <- displayModels disp res
               putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
-   where disp i s = do putStr $ "Solution #" ++ show i ++ ": "
-                       dispSolution s
+   where disp i (_, s) = do putStr $ "Solution #" ++ show i ++ ": "
+                            dispSolution s
          dispSolution :: [Word8] -> IO ()
          dispSolution model
            | lmod /= n = error $ "Impossible! Backend solver returned " ++ show lmod ++ " values, was expecting: " ++ show n
