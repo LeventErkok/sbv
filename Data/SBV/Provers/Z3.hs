@@ -40,13 +40,15 @@ z3 = SMTSolver {
                                 standardSolver cfg' script cleanErrs (ProofError cfg) (interpretSolverOutput cfg (extractMap isSat qinps modelMap . zipWith match skolemMap))
          }
  where -- This is quite crude and failure prone.. But is necessary to get z3 working through Wine on Mac
+       -- TODO: get rid of this once there's a native Z3 release
        cleanErrs = intercalate "\n" . filter (not . junk) . lines
        junk "fixme:heap:HeapSetInformation 0x0 1 0x0 0" = True
        junk s | "WARNING:" `isPrefixOf` s               = True
        junk _                                           = False
-       zero :: Int -> String
-       zero 1  = "#b0"
-       zero sz = "#x" ++ replicate (sz `div` 4) '0'
+       zero :: Size -> String
+       zero (Size Nothing)   = "0"
+       zero (Size (Just 1))  = "#b0"
+       zero (Size (Just sz)) = "#x" ++ replicate (sz `div` 4) '0'
        cont skolemMap = intercalate "\n" $ map extract skolemMap
         where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ zero (sizeOf s) ++ "))\")"
               extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
@@ -90,5 +92,8 @@ getCounterExample inps line = either err extract (parseSExpr line)
                                  matches -> error $  "SBV.SMTLib2: Cannot uniquely identify value for "
                                                   ++ 's':v ++ " in "  ++ show matches
         isInput _       = Nothing
-        extract (S_App [S_App [S_Con v, S_Num i]]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (hasSign s, sizeOf s) i))]
-        extract _                                                                 = []
+        extract (S_App [S_App [S_Con v, S_Num i]])
+                | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (hasSign s, sizeOf s) i))]
+        extract (S_App [S_App [S_Con v, S_App [S_Con "-", S_Num i]]])
+                | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (hasSign s, sizeOf s) (-i)))]
+        extract _                              = []

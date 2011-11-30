@@ -119,19 +119,19 @@ pprCFunHeader :: String -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SW ->
 pprCFunHeader fn ins outs mbRet = retType <+> text fn <> parens (fsep (punctuate comma (map mkParam ins ++ map mkPParam outs)))
   where retType = case mbRet of
                    Nothing -> text "void"
-                   Just sw -> pprCWord False (hasSign sw, sizeOf sw)
+                   Just sw -> pprCWord False (hasSign sw, intSizeOf sw)
 
 mkParam, mkPParam :: (String, CgVal) -> Doc
-mkParam  (n, CgAtomic sw)     = let sgsz = (hasSign sw, sizeOf sw) in pprCWord True  sgsz <+> text n
+mkParam  (n, CgAtomic sw)     = let sgsz = (hasSign sw, intSizeOf sw) in pprCWord True  sgsz <+> text n
 mkParam  (_, CgArray  [])     = die "mkParam: CgArray with no elements!"
-mkParam  (n, CgArray  (sw:_)) = let sgsz = (hasSign sw, sizeOf sw) in pprCWord True  sgsz <+> text "*" <> text n
-mkPParam (n, CgAtomic sw)     = let sgsz = (hasSign sw, sizeOf sw) in pprCWord False sgsz <+> text "*" <> text n
+mkParam  (n, CgArray  (sw:_)) = let sgsz = (hasSign sw, intSizeOf sw) in pprCWord True  sgsz <+> text "*" <> text n
+mkPParam (n, CgAtomic sw)     = let sgsz = (hasSign sw, intSizeOf sw) in pprCWord False sgsz <+> text "*" <> text n
 mkPParam (_, CgArray  [])     = die "mPkParam: CgArray with no elements!"
-mkPParam (n, CgArray  (sw:_)) = let sgsz = (hasSign sw, sizeOf sw) in pprCWord False sgsz <+> text "*" <> text n
+mkPParam (n, CgArray  (sw:_)) = let sgsz = (hasSign sw, intSizeOf sw) in pprCWord False sgsz <+> text "*" <> text n
 
 -- | Renders as "const SWord8 s0", etc. the first parameter is the width of the typefield
 declSW :: Int -> SW -> Doc
-declSW w sw@(SW sgsz _) = text "const" <+> pad (showCType sgsz) <+> text (show sw)
+declSW w sw@(SW (sg, _) _) = text "const" <+> pad (showCType (sg, intSizeOf sw)) <+> text (show sw)
   where pad s = text $ s ++ replicate (w - length s) ' '
 
 -- | Renders as "s0", etc, or the corresponding constant
@@ -186,7 +186,7 @@ mkConst i   (s, sz)     = die $ "Constant " ++ show i ++ " at type " ++ (if s th
 
 -- | Show a constant
 showConst :: CW -> Doc
-showConst cw = mkConst (cwVal cw) (hasSign cw, sizeOf cw)
+showConst cw = mkConst (cwVal cw) (hasSign cw, intSizeOf cw)
 
 -- | Generate a makefile. The first argument is True if we have a driver.
 genMake :: Bool -> String -> String -> [String] -> Doc
@@ -286,7 +286,7 @@ genDriver randVals fn inps outs mbRet = [pre, header, body, post]
                       $$ call
                       $$ text ""
                       $$ (case mbRet of
-                              Just sw -> text "printf" <> parens (printQuotes (fcall <+> text "=" <+> specifier (hasSign sw, sizeOf sw) <> text "\\n")
+                              Just sw -> text "printf" <> parens (printQuotes (fcall <+> text "=" <+> specifier (hasSign sw, intSizeOf sw) <> text "\\n")
                                                                               <> comma <+> resultVar) <> semi
                               Nothing -> text "printf" <> parens (printQuotes (fcall <+> text "->\\n")) <> semi)
                       $$ vcat (map display outs)
@@ -307,7 +307,7 @@ genDriver randVals fn inps outs mbRet = [pre, header, body, post]
           where l          = length sws
                 (frs, srs) = splitAt l rs
        mkRVal sw r = mkConst ival sgsz
-         where sgsz@(sg, sz) = (hasSign sw, sizeOf sw)
+         where sgsz@(sg, sz) = (hasSign sw, intSizeOf sw)
                ival | r >= minVal && r <= maxVal = r
                     | not sg                     = r `mod` (2^sz)
                     | True                       = (r `mod` (2^sz)) - (2^(sz-1))
@@ -320,27 +320,27 @@ genDriver randVals fn inps outs mbRet = [pre, header, body, post]
                                  | True   = expSz-1
        mkInp (_,  _, CgAtomic{})         = empty  -- constant, no need to declare
        mkInp (_,  n, CgArray [])         = die $ "Unsupported empty array value for " ++ show n
-       mkInp (vs, n, CgArray sws@(sw:_)) =  pprCWord True (hasSign sw, sizeOf sw) <+> text n <> brackets (int (length sws)) <+> text "= {"
+       mkInp (vs, n, CgArray sws@(sw:_)) =  pprCWord True (hasSign sw, intSizeOf sw) <+> text n <> brackets (int (length sws)) <+> text "= {"
                                                       $$ nest 4 (fsep (punctuate comma (align vs)))
                                                       $$ text "};"
                                          $$ text ""
                                          $$ text "printf" <> parens (printQuotes (text "Contents of input array" <+> text n <> text ":\\n")) <> semi
                                          $$ display (n, CgArray sws)
                                          $$ text ""
-       mkOut (v, CgAtomic sw)            = let sgsz = (hasSign sw, sizeOf sw) in pprCWord False sgsz <+> text v <> semi
+       mkOut (v, CgAtomic sw)            = let sgsz = (hasSign sw, intSizeOf sw) in pprCWord False sgsz <+> text v <> semi
        mkOut (v, CgArray [])             = die $ "Unsupported empty array value for " ++ show v
-       mkOut (v, CgArray sws@(sw:_))     = pprCWord False (hasSign sw, sizeOf sw) <+> text v <> brackets (int (length sws)) <> semi
+       mkOut (v, CgArray sws@(sw:_))     = pprCWord False (hasSign sw, intSizeOf sw) <+> text v <> brackets (int (length sws)) <> semi
        resultVar = text "__result"
        call = case mbRet of
                 Nothing -> fcall <> semi
-                Just sw -> pprCWord True (hasSign sw, sizeOf sw) <+> resultVar <+> text "=" <+> fcall <> semi
+                Just sw -> pprCWord True (hasSign sw, intSizeOf sw) <+> resultVar <+> text "=" <+> fcall <> semi
        fcall = nm <> parens (fsep (punctuate comma (map mkCVal pairedInputs ++ map mkOVal outs)))
        mkCVal ([v], _, CgAtomic{}) = v
        mkCVal (vs,  n, CgAtomic{}) = die $ "Unexpected driver value computed for " ++ show n ++ render (hcat vs)
        mkCVal (_,   n, CgArray{})  = text n
        mkOVal (n, CgAtomic{})      = text "&" <> text n
        mkOVal (n, CgArray{})       = text n
-       display (n, CgAtomic sw)         = text "printf" <> parens (printQuotes (text " " <+> text n <+> text "=" <+> specifier (hasSign sw, sizeOf sw)
+       display (n, CgAtomic sw)         = text "printf" <> parens (printQuotes (text " " <+> text n <+> text "=" <+> specifier (hasSign sw, intSizeOf sw)
                                                                                 <> text "\\n") <> comma <+> text n) <> semi
        display (n, CgArray [])         =  die $ "Unsupported empty array value for " ++ show n
        display (n, CgArray sws@(sw:_)) =   text "int" <+> nctr <> semi
@@ -350,11 +350,12 @@ genDriver randVals fn inps outs mbRet = [pre, header, body, post]
                   where nctr      = text n <> text "_ctr"
                         entry     = text n <> text "[" <> nctr <> text "]"
                         entrySpec = text n <> text "[%d]"
-                        spec      = specifier (hasSign sw, sizeOf sw)
+                        spec      = specifier (hasSign sw, intSizeOf sw)
 
 -- | Generate the C program
 genCProg :: Bool -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SW -> Doc -> [Doc]
-genCProg rtc fn proto (Result ins preConsts tbls arrs _ _ asgns _) inVars outVars mbRet extDecls
+genCProg rtc fn proto (Result hasInf ins preConsts tbls arrs _ _ asgns _) inVars outVars mbRet extDecls
+  | hasInf                          = tbd "Unbounded integers"
   | not (null arrs)                 = tbd "User specified arrays"
   | needsExistentials (map fst ins) = error "SBV->C: Cannot compile functions with existentially quantified variables."
   | True                            = [pre, header, post]
@@ -378,7 +379,7 @@ genCProg rtc fn proto (Result ins preConsts tbls arrs _ _ asgns _) inVars outVar
              $$ text ""
        nm = text fn
        assignments = F.toList asgns
-       typeWidth = getMax 0 [len (hasSign s, sizeOf s) | (s, _) <- assignments]
+       typeWidth = getMax 0 [len (hasSign s, intSizeOf s) | (s, _) <- assignments]
                 where len (False, 1) = 5 -- SBool
                       len (False, n) = 5 + length (show n) -- SWordN
                       len (True,  n) = 4 + length (show n) -- SIntN
@@ -396,11 +397,14 @@ genCProg rtc fn proto (Result ins preConsts tbls arrs _ _ asgns _) inVars outVar
                  | True  = text entry          <+> text "=" <+> showSW consts sw <> semi
                  where entry = cNm ++ "[" ++ show i ++ "]"
        mkRet sw = text "return" <+> showSW consts sw <> semi
-       genTbl :: ((Int, (Bool, Int), (Bool, Int)), [SW]) -> (Int, Doc)
-       genTbl ((i, _, (sg, sz)), elts) =  (location, static <+> pprCWord True (sg, sz) <+> text ("table" ++ show i) <> text "[] = {"
+       genTbl :: ((Int, (Bool, Size), (Bool, Size)), [SW]) -> (Int, Doc)
+       genTbl ((i, _, (sg, sz)), elts) =  (location, static <+> pprCWord True (sg, szv) <+> text ("table" ++ show i) <> text "[] = {"
                                                      $$ nest 4 (fsep (punctuate comma (align (map (showSW consts) elts))))
                                                      $$ text "};")
-         where static   = if location == -1 then text "static" else empty
+         where szv = case sz of
+                      Size Nothing  -> die "Unbounded integer"
+                      Size (Just v) -> v
+               static   = if location == -1 then text "static" else empty
                location = maximum (-1 : map getNodeId elts)
        getNodeId s@(SW _ (NodeId n)) | isConst s = -1
                                      | True      = n
@@ -426,27 +430,30 @@ ppExpr rtc consts (SBVApp op opArgs) = p op (map (showSW consts) opArgs)
         p (ArrEq _ _)       _  = tbd "User specified arrays (ArrEq)"
         p (Uninterpreted s) [] = text "/* Uninterpreted constant */" <+> text s
         p (Uninterpreted s) as = text "/* Uninterpreted function */" <+> text s <> parens (fsep (punctuate comma as))
-        p (Extract i j) [a]    = extract i j (let s = head opArgs in (hasSign s, sizeOf s)) a
-        p Join [a, b]          = join (let (s1 : s2 : _) = opArgs in ((hasSign s1, sizeOf s1), (hasSign s2, sizeOf s2), a, b))
-        p (Rol i) [a]          = rotate True  i a (let s = head opArgs in (hasSign s, sizeOf s))
-        p (Ror i) [a]          = rotate False i a (let s = head opArgs in (hasSign s, sizeOf s))
-        p (Shl i) [a]          = shift True  i a (let s = head opArgs in (hasSign s, sizeOf s))
-        p (Shr i) [a]          = shift False i a (let s = head opArgs in (hasSign s, sizeOf s))
+        p (Extract i j) [a]    = extract i j (let s = head opArgs in (hasSign s, intSizeOf s)) a
+        p Join [a, b]          = join (let (s1 : s2 : _) = opArgs in ((hasSign s1, intSizeOf s1), (hasSign s2, intSizeOf s2), a, b))
+        p (Rol i) [a]          = rotate True  i a (let s = head opArgs in (hasSign s, intSizeOf s))
+        p (Ror i) [a]          = rotate False i a (let s = head opArgs in (hasSign s, intSizeOf s))
+        p (Shl i) [a]          = shift True  i a (let s = head opArgs in (hasSign s, intSizeOf s))
+        p (Shr i) [a]          = shift False i a (let s = head opArgs in (hasSign s, intSizeOf s))
         p Not [a]
           -- be careful about booleans, bitwise complement is not correct for them!
           | s == 1
           = parens (text "~" <> a) <+> text "&" <+> text "0x01U"
           | True
           = text "~" <> a
-          where s = sizeOf (head opArgs)
+          where s = intSizeOf (head opArgs)
         p Ite [a, b, c] = a <+> text "?" <+> b <+> text ":" <+> c
-        p (LkUp (t, (as, at), _, len) ind def) []
+        p (LkUp (t, (as, sizeAT), _, len) ind def) []
           | not rtc                    = lkUp -- ignore run-time-checks per user request
           | needsCheckL && needsCheckR = cndLkUp checkBoth
           | needsCheckL                = cndLkUp checkLeft
           | needsCheckR                = cndLkUp checkRight
           | True                       = lkUp
-          where [index, defVal] = map (showSW consts) [ind, def]
+          where at = case sizeAT of
+                        Size Nothing  -> die "Unbounded integer"
+                        Size (Just v) -> v
+                [index, defVal] = map (showSW consts) [ind, def]
                 lkUp = text "table" <> int t <> brackets (showSW consts ind)
                 cndLkUp cnd = cnd <+> text "?" <+> defVal <+> text ":" <+> lkUp
                 checkLeft  = index <+> text "< 0"

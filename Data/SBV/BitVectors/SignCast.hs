@@ -81,18 +81,18 @@ genericSign :: (Integral a, SymWord a, Num b, SymWord b) => SBV a -> SBV b
 genericSign x
   | Just c <- unliteral x = literal $ fromIntegral c
   | True                  = SBV sgsz (Right (cache y))
-     where sgsz@(_, sz) = (True, sizeOf x)
+     where sgsz = (True, sizeOf x)
            y st = do xsw <- sbvToSW st x
-                     newExpr st sgsz (SBVApp (Extract (sz-1) 0) [xsw])
+                     newExpr st sgsz (SBVApp (Extract (intSizeOf x-1) 0) [xsw])
 
 -- Same comments as above, regarding the implementation.
 genericUnsign :: (Integral a, SymWord a, Num b, SymWord b) => SBV a -> SBV b
 genericUnsign x
   | Just c <- unliteral x = literal $ fromIntegral c
   | True                  = SBV sgsz (Right (cache y))
-     where sgsz@(_, sz) = (False, sizeOf x)
+     where sgsz = (False, sizeOf x)
            y st = do xsw <- sbvToSW st x
-                     newExpr st sgsz (SBVApp (Extract (sz-1) 0) [xsw])
+                     newExpr st sgsz (SBVApp (Extract (intSizeOf x-1) 0) [xsw])
 
 -- symbolic instances
 instance SignCast SWord8 SInt8 where

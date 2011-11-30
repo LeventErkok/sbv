@@ -21,7 +21,7 @@ import Control.DeepSeq    (NFData(..))
 import Control.Monad      (when, zipWithM)
 import Data.Char          (isSpace)
 import Data.Int           (Int8, Int16, Int32, Int64)
-import Data.List          (intercalate, isPrefixOf)
+import Data.List          (intercalate, isPrefixOf, isInfixOf)
 import Data.Maybe         (isNothing, fromJust)
 import Data.Word          (Word8, Word16, Word32, Word64)
 import System.Directory   (findExecutable)
@@ -160,32 +160,35 @@ genParse (signed,size) (x:r)
 genParse _ _ = Nothing
 
 instance SatModel Bool where
-  parseCWs xs = do (x,r) <- genParse (False,1) xs
+  parseCWs xs = do (x,r) <- genParse (False, Size (Just 1)) xs
                    return ((x :: Integer) /= 0, r)
 
 instance SatModel Word8 where
-  parseCWs = genParse (False,8)
+  parseCWs = genParse (False, Size (Just 8))
 
 instance SatModel Int8 where
-  parseCWs = genParse (True,8)
+  parseCWs = genParse (True, Size (Just 8))
 
 instance SatModel Word16 where
-  parseCWs = genParse (False,16)
+  parseCWs = genParse (False, Size (Just 16))
 
 instance SatModel Int16 where
-  parseCWs = genParse (True,16)
+  parseCWs = genParse (True, Size (Just 16))
 
 instance SatModel Word32 where
-  parseCWs = genParse (False,32)
+  parseCWs = genParse (False, Size (Just 32))
 
 instance SatModel Int32 where
-  parseCWs = genParse (True,32)
+  parseCWs = genParse (True, Size (Just 32))
 
 instance SatModel Word64 where
-  parseCWs = genParse (False,64)
+  parseCWs = genParse (False, Size (Just 64))
 
 instance SatModel Int64 where
-  parseCWs = genParse (True,64)
+  parseCWs = genParse (True, Size (Just 64))
+
+instance SatModel Integer where
+  parseCWs = genParse (True, Size Nothing)
 
 -- when reading a list; go as long as we can (maximal-munch)
 -- note that this never fails..
@@ -228,20 +231,25 @@ instance (SatModel a, SatModel b, SatModel c, SatModel d, SatModel e, SatModel f
                    return ((a, b, c, d, e, f, g), hs)
 
 -- | Given an 'SMTResult', extract an arbitrarily typed model from it, given a 'SatModel' instance
-getModel :: SatModel a => SatResult -> Either String a
-getModel (SatResult (Unsatisfiable _)) = Left "SatModel.getModel: Unsatisfiable result"
-getModel (SatResult (Unknown _ _))     = error "Impossible! Backend solver returned unknown for Bit-vector problem!"
+-- The first argument is "True" if this is an alleged model
+getModel :: SatModel a => SatResult -> Either String (Bool, a)
+getModel (SatResult (Unsatisfiable _)) = Left "SBV.getModel: Unsatisfiable result"
+getModel (SatResult (Unknown _ m))     = Right (True, extractModel m)
 getModel (SatResult (ProofError _ s))  = error $ unlines $ "Backend solver complains: " : s
 getModel (SatResult (TimeOut _))       = Left "Timeout"
-getModel (SatResult (Satisfiable _ m)) = case parseCWs [c | (_, c) <- modelAssocs m] of
-                                           Just (x, []) -> Right x
-                                           Just (_, ys) -> error $ "SBV.getModel: Partially constructed model; remaining elements: " ++ show ys
-                                           Nothing      -> error $ "SBV.getModel: Cannot construct a model from: " ++ show m
+getModel (SatResult (Satisfiable _ m)) = Right (False, extractModel m)
+
+extractModel :: SatModel a => SMTModel -> a
+extractModel m = case parseCWs [c | (_, c) <- modelAssocs m] of
+                   Just (x, []) -> x
+                   Just (_, ys) -> error $ "SBV.getModel: Partially constructed model; remaining elements: " ++ show ys
+                   Nothing      -> error $ "SBV.getModel: Cannot construct a model from: " ++ show m
 
 -- | Given an 'allSat' call, we typically want to iterate over it and print the results in sequence. The
 -- 'displayModels' function automates this task by calling 'disp' on each result, consecutively. The first
--- 'Int' argument to 'disp' 'is the current model number.
-displayModels :: SatModel a => (Int -> a -> IO ()) -> AllSatResult -> IO Int
+-- 'Int' argument to 'disp' 'is the current model number. The second argument is a tuple, where the first
+-- element indicates whether the model is alleged (i.e., if the solver is not sure, returing Unknown)
+displayModels :: SatModel a => (Int -> (Bool, a) -> IO ()) -> AllSatResult -> IO Int
 displayModels disp (AllSatResult (_, ms)) = do
     inds <- zipWithM display [a | Right a <- map (getModel . SatResult) ms] [(1::Int)..]
     return $ last (0:inds)
@@ -358,11 +366,15 @@ runSolver verb execPath opts script
                                    hClose outh
                                    hClose errh
                                    ex <- waitForProcess pid
-                                   return (ex, r ++ "\n" ++ out, err)
+                                   -- if the status is unknown, prepare for the possibility of not having a model
+                                   -- TBD: This is rather crude and potentially Z3 specific
+                                   if "unknown" `isPrefixOf` r && "error" `isInfixOf` (out ++ err)
+                                      then return (ExitSuccess, r               , "")
+                                      else return (ex,          r ++ "\n" ++ out, err)
                 return (send, ask, cleanUp)
       mapM_ send (lines (scriptBody script))
       r <- ask "(check-sat)"
-      when ("sat" `isPrefixOf` r) $ do
+      when (any (`isPrefixOf` r) ["sat", "unknown"]) $ do
         let mls = lines (fromJust (scriptModel script))
         when verb $ do putStrLn "** Sending the following model extraction commands:"
                        mapM_ putStrLn mls

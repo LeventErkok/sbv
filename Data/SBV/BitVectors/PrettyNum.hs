@@ -57,19 +57,25 @@ instance PrettyNum Word64 where
   {hexS = shex True True (False,64); binS = sbin True True (False,64); hex = shex False False (False,64); bin = sbin False False (False,64);}
 instance PrettyNum Int64  where
   {hexS = shex True True (True,64);  binS = sbin True True (True,64) ; hex = shex False False (True,64);  bin = sbin False False (True,64) ;}
+instance PrettyNum Integer where
+  {hexS = shexI True True; binS = sbinI True True; hex = shexI False False; bin = sbinI False False;}
 
 instance PrettyNum CW where
-  hexS cw | cwIsBit cw  = hexS (cwToBool cw)
-  hexS cw               = shex True True (hasSign cw, sizeOf cw) (cwVal cw)
+  hexS cw | cwIsBit cw   = hexS (cwToBool cw)
+          | isInfPrec cw = shexI True True (cwVal cw)
+          | True         = shex True True (hasSign cw, intSizeOf cw) (cwVal cw)
 
-  binS cw | cwIsBit cw  = binS (cwToBool cw)
-  binS cw               = sbin True True (hasSign cw, sizeOf cw) (cwVal cw)
+  binS cw | cwIsBit cw   = binS (cwToBool cw)
+          | isInfPrec cw = sbinI True True (cwVal cw)
+          | True         = sbin True True (hasSign cw, intSizeOf cw) (cwVal cw)
 
   hex cw | cwIsBit cw   = hexS (cwToBool cw)
-  hex cw                = shex False False (hasSign cw, sizeOf cw) (cwVal cw)
+         | isInfPrec cw = shexI False False (cwVal cw)
+         | True         = shex False False (hasSign cw, intSizeOf cw) (cwVal cw)
 
   bin cw | cwIsBit cw   = binS (cwToBool cw)
-  bin cw                = sbin False False (hasSign cw, sizeOf cw) (cwVal cw)
+         | isInfPrec cw = sbinI False False (cwVal cw)
+         | True         = sbin False False (hasSign cw, intSizeOf cw) (cwVal cw)
 
 instance (SymWord a, PrettyNum a) => PrettyNum (SBV a) where
   hexS s = maybe (show s) (hexS :: a -> String) $ unliteral s
@@ -77,25 +83,47 @@ instance (SymWord a, PrettyNum a) => PrettyNum (SBV a) where
   hex  s = maybe (show s) (hex :: a -> String)  $ unliteral s
   bin  s = maybe (show s) (bin :: a -> String)  $ unliteral s
 
-shex :: (Integral a) => Bool -> Bool -> (Bool, Size) -> a -> String
+shex :: (Integral a) => Bool -> Bool -> (Bool, Int) -> a -> String
 shex shType shPre (signed, size) a
  | a < 0
  = "-" ++ pre ++ pad l (s16 (abs (fromIntegral a :: Integer)))  ++ t
  | True
- =  pre ++ pad l (s16 a) ++ t
+ = pre ++ pad l (s16 a) ++ t
  where t | shType = " :: " ++ (if signed then "Int" else "Word") ++ show size
          | True   = ""
        pre | shPre = "0x"
            | True  = ""
        l = (size + 3) `div` 4
 
-sbin :: (Integral a) => Bool -> Bool -> (Bool, Size) -> a -> String
+shexI :: Bool -> Bool -> Integer -> String
+shexI shType shPre a
+ | a < 0
+ = "-" ++ pre ++ s16 (abs a)  ++ t
+ | True
+ = pre ++ s16 a ++ t
+ where t | shType = " :: Integer"
+         | True   = ""
+       pre | shPre = "0x"
+           | True  = ""
+
+sbin :: (Integral a) => Bool -> Bool -> (Bool, Int) -> a -> String
 sbin shType shPre (signed,size) a
  | a < 0
  = "-" ++ pre ++ pad size (s2 (abs (fromIntegral a :: Integer)))  ++ t
  | True
- =  pre ++ pad size (s2 a) ++ t
+ = pre ++ pad size (s2 a) ++ t
  where t | shType = " :: " ++ (if signed then "Int" else "Word") ++ show size
+         | True   = ""
+       pre | shPre = "0b"
+           | True  = ""
+
+sbinI :: Bool -> Bool -> Integer -> String
+sbinI shType shPre a
+ | a < 0
+ = "-" ++ pre ++ s2 (abs a) ++ t
+ | True
+ =  pre ++ s2 a ++ t
+ where t | shType = " :: Integer"
          | True   = ""
        pre | shPre = "0b"
            | True  = ""

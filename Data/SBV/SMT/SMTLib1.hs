@@ -14,7 +14,8 @@
 module Data.SBV.SMT.SMTLib1(cvt, addNonEqConstraints) where
 
 import qualified Data.Foldable as F (toList)
-import Data.List (intercalate)
+import Data.List  (intercalate)
+import Data.Maybe (fromMaybe)
 
 import Data.SBV.BitVectors.Data
 
@@ -38,19 +39,22 @@ nonEqs (sc:r) =  [" :assumption (or " ++ nonEq sc]
 nonEq :: (String, CW) -> String
 nonEq (s, c) = "(not (= " ++ s ++ " " ++ cvtCW c ++ "))"
 
-cvt :: Bool                                        -- ^ is this a sat problem?
+cvt :: Bool                                        -- ^ has infinite precision values
+    -> Bool                                        -- ^ is this a sat problem?
     -> [String]                                    -- ^ extra comments to place on top
     -> [(Quantifier, NamedSymVar)]                 -- ^ inputs
     -> [Either SW (SW, [SW])]                      -- ^ skolemized version of the inputs
     -> [(SW, CW)]                                  -- ^ constants
-    -> [((Int, (Bool, Int), (Bool, Int)), [SW])]   -- ^ auto-generated tables
+    -> [((Int, (Bool, Size), (Bool, Size)), [SW])] -- ^ auto-generated tables
     -> [(Int, ArrayInfo)]                          -- ^ user specified arrays
     -> [(String, SBVType)]                         -- ^ uninterpreted functions/constants
     -> [(String, [String])]                        -- ^ user given axioms
     -> Pgm                                         -- ^ assignments
     -> SW                                          -- ^ output variable
     -> ([String], [String])
-cvt isSat comments qinps _skolemInps consts tbls arrs uis axs asgnsSeq out
+cvt hasInf isSat comments qinps _skolemInps consts tbls arrs uis axs asgnsSeq out
+  | hasInf
+  = error "SBV: The chosen solver does not support infinite precision values. (Use z3 instead.)"
   | not ((isSat && allExistential) || (not isSat && allUniversal))
   = error "SBV: The chosen solver does not support quantified variables. (Use z3 instead.)"
   | True
@@ -94,15 +98,23 @@ cvt isSat comments qinps _skolemInps consts tbls arrs uis axs asgnsSeq out
 -- Currently we ignore the signedness of the arguments, as there appears to be no way
 -- to capture that in SMT-Lib; and likely it does not matter. Would be good to check
 -- explicitly though.
-mkTable :: ((Int, (Bool, Int), (Bool, Int)), [SW]) -> [String]
-mkTable ((i, (_, at), (_, rt)), elts) = (" :extrafuns ((" ++ t ++ " Array[" ++ show at ++ ":" ++ show rt ++ "]))") : zipWith mkElt elts [(0::Int)..]
+mkTable :: ((Int, (Bool, Size), (Bool, Size)), [SW]) -> [String]
+mkTable ((i, (_, atSz), (_, rtSz)), elts) = (" :extrafuns ((" ++ t ++ " Array[" ++ show at ++ ":" ++ show rt ++ "]))") : zipWith mkElt elts [(0::Int)..]
   where t = "table" ++ show i
         mkElt x k = " :assumption (= (select " ++ t ++ " bv" ++ show k ++ "[" ++ show at ++ "]) " ++ show x ++ ")"
+        at = fromMaybe (die "Unbounded integers") (unSize atSz)
+        rt = fromMaybe (die "Unbounded integers") (unSize rtSz)
+
+-- Unexpected input, or things we will probably never support
+die :: String -> a
+die msg = error $ "SBV->SMTLib1: Unexpected: " ++ msg
 
 declArray :: (Int, ArrayInfo) -> [String]
-declArray (i, (_, ((_, at), (_, rt)), ctx)) = adecl : ctxInfo
+declArray (i, (_, ((_, atSz), (_, rtSz)), ctx)) = adecl : ctxInfo
   where nm = "array_" ++ show i
         adecl = " :extrafuns ((" ++ nm ++ " Array[" ++ show at ++ ":" ++ show rt ++ "]))"
+        at = fromMaybe (die "Unbounded integers") (unSize atSz)
+        rt = fromMaybe (die "Unbounded integers") (unSize rtSz)
         ctxInfo = case ctx of
                     ArrayFree Nothing   -> []
                     ArrayFree (Just sw) -> declA sw
@@ -127,7 +139,7 @@ mkFormula isSat s
 
 -- SMTLib represents signed/unsigned quantities with the same type
 decl :: SW -> String
-decl s = " :extrafuns  ((" ++ show s ++ " BitVec[" ++ show (sizeOf s) ++ "]))"
+decl s = " :extrafuns  ((" ++ show s ++ " BitVec[" ++ show (intSizeOf s) ++ "]))"
 
 cvtAsgn :: (SW, SBVExpr) -> String
 cvtAsgn (s, e) = " :assumption (= " ++ show s ++ " " ++ cvtExp e ++ ")"
@@ -136,13 +148,13 @@ cvtCnst :: (SW, CW) -> String
 cvtCnst (s, c) = " :assumption (= " ++ show s ++ " " ++ cvtCW c ++ ")"
 
 cvtCW :: CW -> String
-cvtCW x | not (hasSign x) = "bv" ++ show (cwVal x) ++ "[" ++ show (sizeOf x) ++ "]"
+cvtCW x | not (hasSign x) = "bv" ++ show (cwVal x) ++ "[" ++ show (intSizeOf x) ++ "]"
 -- signed numbers (with 2's complement representation) is problematic
 -- since there's no way to put a bvneg over a positive number to get minBound..
 -- Hence, we punt and use binary notation in that particular case
-cvtCW x | cwVal x == least = mkMinBound (sizeOf x)
-  where least = negate (2 ^ sizeOf x)
-cvtCW x = negIf (w < 0) $ "bv" ++ show (abs w) ++ "[" ++ show (sizeOf x) ++ "]"
+cvtCW x | cwVal x == least = mkMinBound (intSizeOf x)
+  where least = negate (2 ^ intSizeOf x)
+cvtCW x = negIf (w < 0) $ "bv" ++ show (abs w) ++ "[" ++ show (intSizeOf x) ++ "]"
   where w = cwVal x
 
 negIf :: Bool -> String -> String
@@ -169,10 +181,11 @@ cvtExp (SBVApp (Rol i) [a])   = rot "rotate_left"  i a
 cvtExp (SBVApp (Ror i) [a])   = rot "rotate_right" i a
 cvtExp (SBVApp (Shl i) [a])   = shft "bvshl"  "bvshl"  i a
 cvtExp (SBVApp (Shr i) [a])   = shft "bvlshr" "bvashr" i a
-cvtExp (SBVApp (LkUp (t, (_, at), _, l) i e) [])
+cvtExp (SBVApp (LkUp (t, (_, atSz), _, l) i e) [])
   | needsCheck = "(ite " ++ cond ++ show e ++ " " ++ lkUp ++ ")"
   | True       = lkUp
-  where needsCheck = (2::Integer)^at > fromIntegral l
+  where at = fromMaybe (die "Unbounded integers") (unSize atSz)
+        needsCheck = (2::Integer)^at > fromIntegral l
         lkUp = "(select table" ++ show t ++ " " ++ show i ++ ")"
         cond
          | hasSign i = "(or " ++ le0 ++ " " ++ gtl ++ ") "
@@ -222,4 +235,5 @@ cvtExp inp@(SBVApp op args)
 cvtType :: SBVType -> String
 cvtType (SBVType []) = error "SBV.SMT.SMTLib1.cvtType: internal: received an empty type!"
 cvtType (SBVType xs) = unwords $ map sh xs
-  where sh (_, s) = "BitVec[" ++ show s ++ "]"
+  where sh (_, Size Nothing)  = die "unbounded Integer"
+        sh (_, Size (Just s)) = "BitVec[" ++ show s ++ "]"

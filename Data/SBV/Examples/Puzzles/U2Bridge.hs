@@ -221,8 +221,8 @@ solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ 
                           else do putStrLn $ "Found: " ++ show cnt ++ " solution" ++ plu cnt ++ " with " ++ show n ++ " move" ++ plu n ++ "."
                                   return True
   where plu v = if v == 1 then "" else "s"
-        disp :: Int -> [(Bool, U2Member, U2Member)] -> IO ()
-        disp i ss
+        disp :: Int -> (Bool, [(Bool, U2Member, U2Member)]) -> IO ()
+        disp i (_, ss)
          | lss /= n = error $ "Expected " ++ show n ++ " results; got: " ++ show lss
          | True     = do putStrLn $ "Solution #" ++ show i ++ ": "
                          go False 0 ss

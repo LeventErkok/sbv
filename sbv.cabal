@@ -23,6 +23,8 @@ Description:   Express properties about bit-precise Haskell programs and automat
                .
                  * 'SInt8',  'SInt16',  'SInt32',  'SInt64': Symbolic Ints (signed)
                .
+                 * 'SInteger': Symbolic unbounded integers (signed)
+               .
                  * 'SArray', 'SFunArray': Flat arrays of symbolic values
                .
                  * 'STree': Full binary trees of symbolic values (for fast symbolic access)

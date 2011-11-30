@@ -149,7 +149,7 @@ document.body.className = "script";
 <ul>
 <li><a id="hint0" href="javascript:show('hint0')">Warning: Parse error (7)</a></li>
 <li><a id="hint1" href="javascript:show('hint1')">Warning: Reduce duplication (1)</a></li>
-<li><a id="hint2" href="javascript:show('hint2')">Warning: Redundant $ (3)</a></li>
+<li><a id="hint2" href="javascript:show('hint2')">Warning: Redundant $ (4)</a></li>
 <li><a id="hint3" href="javascript:show('hint3')">Warning: Use camelCase (6)</a></li>
 <li><a id="hint4" href="javascript:show('hint4')">Warning: Use head (5)</a></li>
 </ul>
@@ -158,20 +158,21 @@ document.body.className = "script";
 <ul>
 <li><a id="file0" href="javascript:show('file0')">./Data/SBV/BitVectors/Data.hs (1)</a></li>
 <li><a id="file1" href="javascript:show('file1')">./Data/SBV/BitVectors/Model.hs (1)</a></li>
-<li><a id="file2" href="javascript:show('file2')">./Data/SBV/BitVectors/Splittable.hs (1)</a></li>
-<li><a id="file3" href="javascript:show('file3')">./Data/SBV/Examples/Basics/BasicTests.hs (1)</a></li>
-<li><a id="file4" href="javascript:show('file4')">./Data/SBV/Examples/BitPrecise/Legato.hs (4)</a></li>
-<li><a id="file5" href="javascript:show('file5')">./Data/SBV/Examples/CRC/CCITT.hs (1)</a></li>
-<li><a id="file6" href="javascript:show('file6')">./Data/SBV/Examples/CRC/CCITT_Unidir.hs (1)</a></li>
-<li><a id="file7" href="javascript:show('file7')">./Data/SBV/Examples/CRC/GenPoly.hs (1)</a></li>
-<li><a id="file8" href="javascript:show('file8')">./Data/SBV/Examples/CRC/USB5.hs (1)</a></li>
-<li><a id="file9" href="javascript:show('file9')">./Data/SBV/Examples/CodeGeneration/PopulationCount.hs (1)</a></li>
-<li><a id="file10" href="javascript:show('file10')">./Data/SBV/Examples/Crypto/AES.hs (4)</a></li>
-<li><a id="file11" href="javascript:show('file11')">./Data/SBV/Examples/Existentials/CRCPolynomial.hs (1)</a></li>
-<li><a id="file12" href="javascript:show('file12')">./Data/SBV/Examples/Puzzles/Counts.hs (1)</a></li>
-<li><a id="file13" href="javascript:show('file13')">./Data/SBV/Provers/Prover.hs (1)</a></li>
-<li><a id="file14" href="javascript:show('file14')">./Data/SBV/Provers/SExpr.hs (1)</a></li>
-<li><a id="file15" href="javascript:show('file15')">./Data/SBV/TestSuite/Existentials/CRCPolynomial.hs (1)</a></li>
+<li><a id="file2" href="javascript:show('file2')">./Data/SBV/BitVectors/STree.hs (1)</a></li>
+<li><a id="file3" href="javascript:show('file3')">./Data/SBV/BitVectors/Splittable.hs (1)</a></li>
+<li><a id="file4" href="javascript:show('file4')">./Data/SBV/Examples/Basics/BasicTests.hs (1)</a></li>
+<li><a id="file5" href="javascript:show('file5')">./Data/SBV/Examples/BitPrecise/Legato.hs (4)</a></li>
+<li><a id="file6" href="javascript:show('file6')">./Data/SBV/Examples/CRC/CCITT.hs (1)</a></li>
+<li><a id="file7" href="javascript:show('file7')">./Data/SBV/Examples/CRC/CCITT_Unidir.hs (1)</a></li>
+<li><a id="file8" href="javascript:show('file8')">./Data/SBV/Examples/CRC/GenPoly.hs (1)</a></li>
+<li><a id="file9" href="javascript:show('file9')">./Data/SBV/Examples/CRC/USB5.hs (1)</a></li>
+<li><a id="file10" href="javascript:show('file10')">./Data/SBV/Examples/CodeGeneration/PopulationCount.hs (1)</a></li>
+<li><a id="file11" href="javascript:show('file11')">./Data/SBV/Examples/Crypto/AES.hs (4)</a></li>
+<li><a id="file12" href="javascript:show('file12')">./Data/SBV/Examples/Existentials/CRCPolynomial.hs (1)</a></li>
+<li><a id="file13" href="javascript:show('file13')">./Data/SBV/Examples/Puzzles/Counts.hs (1)</a></li>
+<li><a id="file14" href="javascript:show('file14')">./Data/SBV/Provers/Prover.hs (1)</a></li>
+<li><a id="file15" href="javascript:show('file15')">./Data/SBV/Provers/SExpr.hs (1)</a></li>
+<li><a id="file16" href="javascript:show('file16')">./Data/SBV/TestSuite/Existentials/CRCPolynomial.hs (1)</a></li>
 </ul>
 
 </div>
@@ -183,11 +184,11 @@ v1.8.17
 </p>
 
 <div class="hint0 file0">
-./Data/SBV/BitVectors/Data.hs:568:3: Warning: Parse error<br/>
+./Data/SBV/BitVectors/Data.hs:604:3: Warning: Parse error<br/>
 Error message<br/>
 <pre>Parse error: forall</pre>
 Code<br/>
-<pre>  <span class='hs-keyword'>class</span> <span class='hs-layout'>(</span><span class='hs-conid'>Bounded</span> <span class='hs-varid'>a</span><span class='hs-layout'>,</span> <span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>SymWord</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>where</span>
+<pre>  <span class='hs-keyword'>class</span> <span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>SymWord</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>where</span>
     <span class='hs-comment'>-- | Create a user named input (universal)</span>
 <span class='hs-varop'>&gt;</span>   <span class='hs-keyword'>forall</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>String</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Symbolic</span> <span class='hs-layout'>(</span><span class='hs-conid'>SBV</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span>
     <span class='hs-comment'>-- | Create an automatically named input</span>
@@ -196,19 +197,19 @@ Code<br/>
 </div>
 
 <div class="hint0 file1">
-./Data/SBV/BitVectors/Model.hs:25:50: Warning: Parse error<br/>
+./Data/SBV/BitVectors/Model.hs:25:56: Warning: Parse error<br/>
 Error message<br/>
 <pre>Parse error: forall</pre>
 Code<br/>
 <pre>      <span class='hs-conid'>Mergeable</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-conid'>EqSymbolic</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-conid'>OrdSymbolic</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-conid'>BVDivisible</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-conid'>Uninterpreted</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
     <span class='hs-layout'>,</span> <span class='hs-varid'>bitValue</span><span class='hs-layout'>,</span> <span class='hs-varid'>setBitTo</span><span class='hs-layout'>,</span> <span class='hs-varid'>allEqual</span><span class='hs-layout'>,</span> <span class='hs-varid'>allDifferent</span><span class='hs-layout'>,</span> <span class='hs-varid'>oneIf</span><span class='hs-layout'>,</span> <span class='hs-varid'>blastBE</span><span class='hs-layout'>,</span> <span class='hs-varid'>blastLE</span>
-<span class='hs-varop'>&gt;</span>   <span class='hs-layout'>,</span> <span class='hs-varid'>lsb</span><span class='hs-layout'>,</span> <span class='hs-varid'>msb</span><span class='hs-layout'>,</span> <span class='hs-conid'>SBVUF</span><span class='hs-layout'>,</span> <span class='hs-varid'>sbvUFName</span><span class='hs-layout'>,</span> <span class='hs-varid'>genVar</span><span class='hs-layout'>,</span> <span class='hs-varid'>genVar_</span><span class='hs-layout'>,</span> <span class='hs-keyword'>forall</span><span class='hs-layout'>,</span> <span class='hs-varid'>forall_</span><span class='hs-layout'>,</span> <span class='hs-varid'>exists</span><span class='hs-layout'>,</span> <span class='hs-varid'>exists_</span>
+<span class='hs-varop'>&gt;</span>   <span class='hs-layout'>,</span> <span class='hs-varid'>lsb</span><span class='hs-layout'>,</span> <span class='hs-varid'>msb</span><span class='hs-layout'>,</span> <span class='hs-conid'>SBVUF</span><span class='hs-layout'>,</span> <span class='hs-varid'>sbvUFName</span><span class='hs-layout'>,</span> <span class='hs-varid'>genFinVar</span><span class='hs-layout'>,</span> <span class='hs-varid'>genFinVar_</span><span class='hs-layout'>,</span> <span class='hs-keyword'>forall</span><span class='hs-layout'>,</span> <span class='hs-varid'>forall_</span><span class='hs-layout'>,</span> <span class='hs-varid'>exists</span><span class='hs-layout'>,</span> <span class='hs-varid'>exists_</span>
     <span class='hs-layout'>)</span>
     <span class='hs-keyword'>where</span>
 </pre>
 </div>
 
-<div class="hint0 file2">
+<div class="hint0 file3">
 ./Data/SBV/BitVectors/Splittable.hs:36:5: Warning: Parse error<br/>
 Error message<br/>
 <pre>Parse error: )</pre>
@@ -220,7 +221,16 @@ Code<br/>
 </pre>
 </div>
 
-<div class="hint0 file3">
+<div class="hint2 file2">
+./Data/SBV/BitVectors/STree.hs:65:5: Warning: Redundant $<br/>
+Found<br/>
+<pre><span class='hs-definition'>error</span> <span class='hs-varop'>$</span> <span class='hs-str'>"SBV.STree.mkSTree: Cannot build an infinitely large tree"</span></pre>
+Why not<br/>
+<pre><span class='hs-definition'>error</span> <span class='hs-str'>"SBV.STree.mkSTree: Cannot build an infinitely large tree"</span></pre>
+
+</div>
+
+<div class="hint0 file4">
 ./Data/SBV/Examples/Basics/BasicTests.hs:29:43: Warning: Parse error<br/>
 Error message<br/>
 <pre>Parse error: forall</pre>
@@ -233,7 +243,7 @@ Code<br/>
 </pre>
 </div>
 
-<div class="hint1 file4">
+<div class="hint1 file5">
 ./Data/SBV/Examples/BitPrecise/Legato.hs:167:9: Warning: Reduce duplication<br/>
 Found<br/>
 <pre><span class='hs-definition'>c</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>getFlag</span> <span class='hs-conid'>FlagC</span> <span class='hs-varid'>m</span>
@@ -245,7 +255,7 @@ Why not<br/>
 
 </div>
 
-<div class="hint2 file4">
+<div class="hint2 file5">
 ./Data/SBV/Examples/BitPrecise/Legato.hs:221:22: Warning: Redundant $<br/>
 Found<br/>
 <pre><span class='hs-definition'>lda</span> <span class='hs-num'>0</span> <span class='hs-varop'>$</span> <span class='hs-varid'>loop</span></pre>
@@ -254,7 +264,7 @@ Why not<br/>
 
 </div>
 
-<div class="hint2 file4">
+<div class="hint2 file5">
 ./Data/SBV/Examples/BitPrecise/Legato.hs:226:22: Warning: Redundant $<br/>
 Found<br/>
 <pre><span class='hs-definition'>adc</span> <span class='hs-varid'>f2Addr</span> <span class='hs-varop'>$</span> <span class='hs-varid'>zeroCoef</span></pre>
@@ -263,7 +273,7 @@ Why not<br/>
 
 </div>
 
-<div class="hint2 file4">
+<div class="hint2 file5">
 ./Data/SBV/Examples/BitPrecise/Legato.hs:231:22: Warning: Redundant $<br/>
 Found<br/>
 <pre><span class='hs-definition'>bne</span> <span class='hs-varid'>loop</span> <span class='hs-varop'>$</span> <span class='hs-varid'>end</span></pre>
@@ -272,7 +282,7 @@ Why not<br/>
 
 </div>
 
-<div class="hint3 file9">
+<div class="hint3 file10">
 ./Data/SBV/Examples/CodeGeneration/PopulationCount.hs:30:1: Warning: Use camelCase<br/>
 Found<br/>
 <pre><span class='hs-definition'>popCount_Slow</span> <span class='hs-varid'>inp</span> <span class='hs-keyglyph'>=</span> <span class='hs-varop'>...</span></pre>
@@ -281,7 +291,7 @@ Why not<br/>
 
 </div>
 
-<div class="hint3 file5">
+<div class="hint3 file6">
 ./Data/SBV/Examples/CRC/CCITT.hs:28:1: Warning: Use camelCase<br/>
 Found<br/>
 <pre><span class='hs-definition'>crc_48_16</span> <span class='hs-varid'>msg</span> <span class='hs-keyglyph'>=</span> <span class='hs-varop'>...</span></pre>
@@ -290,7 +300,7 @@ Why not<br/>
 
 </div>
 
-<div class="hint3 file6">
+<div class="hint3 file7">
 ./Data/SBV/Examples/CRC/CCITT_Unidir.hs:29:1: Warning: Use camelCase<br/>
 Found<br/>
 <pre><span class='hs-definition'>crc_48_16</span> <span class='hs-varid'>msg</span> <span class='hs-keyglyph'>=</span> <span class='hs-varop'>...</span></pre>
@@ -299,7 +309,7 @@ Why not<br/>
 
 </div>
 
-<div class="hint3 file7">
+<div class="hint3 file8">
 ./Data/SBV/Examples/CRC/GenPoly.hs:28:1: Warning: Use camelCase<br/>
 Found<br/>
 <pre><span class='hs-definition'>crc_48_16</span> <span class='hs-varid'>msg</span> <span class='hs-varid'>poly</span> <span class='hs-keyglyph'>=</span> <span class='hs-varop'>...</span></pre>
@@ -308,7 +318,7 @@ Why not<br/>
 
 </div>
 
-<div class="hint3 file8">
+<div class="hint3 file9">
 ./Data/SBV/Examples/CRC/USB5.hs:33:1: Warning: Use camelCase<br/>
 Found<br/>
 <pre><span class='hs-definition'>crc_11_16</span> <span class='hs-varid'>msg</span> <span class='hs-keyglyph'>=</span> <span class='hs-varop'>...</span></pre>
@@ -317,7 +327,7 @@ Why not<br/>
 
 </div>
 
-<div class="hint4 file10">
+<div class="hint4 file11">
 ./Data/SBV/Examples/Crypto/AES.hs:281:38: Warning: Use head<br/>
 Found<br/>
 <pre><span class='hs-definition'>a</span> <span class='hs-varop'>!!</span> <span class='hs-layout'>(</span><span class='hs-layout'>(</span><span class='hs-varid'>j</span> <span class='hs-varop'>+</span> <span class='hs-num'>0</span><span class='hs-layout'>)</span> <span class='hs-varop'>`mod`</span> <span class='hs-num'>4</span><span class='hs-layout'>)</span> <span class='hs-varop'>!!</span> <span class='hs-num'>0</span></pre>
@@ -326,7 +336,7 @@ Why not<br/>
 
 </div>
 
-<div class="hint4 file10">
+<div class="hint4 file11">
 ./Data/SBV/Examples/Crypto/AES.hs:287:30: Warning: Use head<br/>
 Found<br/>
 <pre><span class='hs-definition'>a</span> <span class='hs-varop'>!!</span> <span class='hs-layout'>(</span><span class='hs-layout'>(</span><span class='hs-varid'>j</span> <span class='hs-varop'>+</span> <span class='hs-num'>0</span><span class='hs-layout'>)</span> <span class='hs-varop'>`mod`</span> <span class='hs-num'>4</span><span class='hs-layout'>)</span> <span class='hs-varop'>!!</span> <span class='hs-num'>0</span></pre>
@@ -335,7 +345,7 @@ Why not<br/>
 
 </div>
 
-<div class="hint4 file10">
+<div class="hint4 file11">
 ./Data/SBV/Examples/Crypto/AES.hs:298:40: Warning: Use head<br/>
 Found<br/>
 <pre><span class='hs-definition'>a</span> <span class='hs-varop'>!!</span> <span class='hs-layout'>(</span><span class='hs-layout'>(</span><span class='hs-varid'>j</span> <span class='hs-varop'>+</span> <span class='hs-num'>0</span><span class='hs-layout'>)</span> <span class='hs-varop'>`mod`</span> <span class='hs-num'>4</span><span class='hs-layout'>)</span> <span class='hs-varop'>!!</span> <span class='hs-num'>0</span></pre>
@@ -344,7 +354,7 @@ Why not<br/>
 
 </div>
 
-<div class="hint4 file10">
+<div class="hint4 file11">
 ./Data/SBV/Examples/Crypto/AES.hs:304:30: Warning: Use head<br/>
 Found<br/>
 <pre><span class='hs-definition'>a</span> <span class='hs-varop'>!!</span> <span class='hs-layout'>(</span><span class='hs-layout'>(</span><span class='hs-varid'>j</span> <span class='hs-varop'>+</span> <span class='hs-num'>0</span><span class='hs-layout'>)</span> <span class='hs-varop'>`mod`</span> <span class='hs-num'>4</span><span class='hs-layout'>)</span> <span class='hs-varop'>!!</span> <span class='hs-num'>0</span></pre>
@@ -353,7 +363,7 @@ Why not<br/>
 
 </div>
 
-<div class="hint0 file11">
+<div class="hint0 file12">
 ./Data/SBV/Examples/Existentials/CRCPolynomial.hs:63:39: Warning: Parse error<br/>
 Error message<br/>
 <pre>Parse error: forall</pre>
@@ -366,7 +376,7 @@ Code<br/>
 </pre>
 </div>
 
-<div class="hint4 file12">
+<div class="hint4 file13">
 ./Data/SBV/Examples/Puzzles/Counts.hs:74:47: Warning: Use head<br/>
 Found<br/>
 <pre><span class='hs-definition'>ns</span> <span class='hs-varop'>!!</span> <span class='hs-num'>0</span></pre>
@@ -375,7 +385,7 @@ Why not<br/>
 
 </div>
 
-<div class="hint0 file13">
+<div class="hint0 file14">
 ./Data/SBV/Provers/Prover.hs:113:21: Warning: Parse error<br/>
 Error message<br/>
 <pre>Parse error: forall</pre>
@@ -387,7 +397,7 @@ Code<br/>
 </pre>
 </div>
 
-<div class="hint3 file14">
+<div class="hint3 file15">
 ./Data/SBV/Provers/SExpr.hs:19:1: Warning: Use camelCase<br/>
 Found<br/>
 <pre><span class='hs-keyword'>data</span> <span class='hs-conid'>SExpr</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>S_Con</span> <span class='hs-conid'>String</span>
@@ -400,7 +410,7 @@ Why not<br/>
 
 </div>
 
-<div class="hint0 file15">
+<div class="hint0 file16">
 ./Data/SBV/TestSuite/Existentials/CRCPolynomial.hs:26:31: Warning: Parse error<br/>
 Error message<br/>
 <pre>Parse error: forall</pre>

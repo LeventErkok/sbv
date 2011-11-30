@@ -4,7 +4,20 @@ GitHub:  <http://github.com/LeventErkok/sbv>
 ======================================================================
 Version 0.9.23, Not yet released
   
-   *  Current working version
+  Library:
+   * Add support for SInteger, the type of signed unbounded integer
+     values. 
+  Other:
+   * Change getModel to return a tuple in the success case, where
+     the first component is a boolean indicating whether the model
+     is "potential." This is used to indicate that the solver
+     actually returned "unknown" for the problem and the model
+     might therefore be bogus. Note that we did not need this before
+     since we only supported bounded bit-vectors, which has a decidable
+     theory. With the addition of unbounded Integer's, the solvers
+     can now return unknown. This should still be rare in practice,
+     but can happen with the use of quantification and non-linear
+     constructs. (i.e., multiplication of two variables.)
 
 ======================================================================
 Version 0.9.22, 2011-11-13
