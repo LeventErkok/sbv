@@ -331,7 +331,7 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 , (Quot,          lift2   "div")
                                 , (Rem,           lift2   "mod")
                                 , (Equal,         lift2B  "=" "=")
-                                , (NotEqual,      lift2N  "=")
+                                , (NotEqual,      lift2B  "distinct" "distinct")
                                 , (LessThan,      lift2B  "<"  "<")
                                 , (GreaterThan,   lift2B  ">"  ">")
                                 , (LessEq,        lift2B  "<=" "<=")
