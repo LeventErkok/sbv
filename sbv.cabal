@@ -34,14 +34,15 @@ Description:   Express properties about bit-precise Haskell programs and automat
                  * Uninterpreted constants and functions over symbolic values, with user
                    defined SMT-Lib axioms
                .
-               Predicates (functions that return 'SBool') built out of
-               these types can be:
+               Functions built out of these types can be:
                .
                  * proven correct via an external SMT solver (the 'prove' function)
                .
                  * checked for satisfiability (the 'sat', and 'allSat' functions)
                .
                  * used in synthesis (the 'sat' function with existential variables)
+               .
+                 * optimized with respect to cost functions (the 'optimize', 'maximize', and 'minimize' functions)
                .
                  * quick-checked
                .
@@ -122,6 +123,7 @@ Library
                   , Data.SBV.Examples.Uninterpreted.Function
   Other-modules   : Data.SBV.BitVectors.Data
                   , Data.SBV.BitVectors.Model
+                  , Data.SBV.BitVectors.Optimize
                   , Data.SBV.BitVectors.Polynomial
                   , Data.SBV.BitVectors.PrettyNum
                   , Data.SBV.BitVectors.SignCast

@@ -7,6 +7,9 @@ Version 0.9.23, Not yet released
   Library:
    * Add support for SInteger, the type of signed unbounded integer
      values. 
+   * Add functions 'optimize', 'maximize', and 'minimize' that can
+     be used to find optimal solutions to given constraints with
+     respect to a given cost function.
   Other:
    * Change getModel to return a tuple in the success case, where
      the first component is a boolean indicating whether the model

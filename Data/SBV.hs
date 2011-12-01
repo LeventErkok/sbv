@@ -156,6 +156,10 @@ module Data.SBV (
   -- ** Finding all satisfying assignments
   , allSat, allSatWith, numberOfModels
 
+  -- * Optimization
+  -- $optimizeIntro
+  , minimize, maximize, optimize
+
   -- * Model extraction
   -- $modelExtraction
 
@@ -208,6 +212,7 @@ module Data.SBV (
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
+import Data.SBV.BitVectors.Optimize
 import Data.SBV.BitVectors.PrettyNum
 import Data.SBV.BitVectors.Polynomial
 import Data.SBV.BitVectors.SignCast
@@ -256,6 +261,30 @@ there is some work in parsing individual SMT solver output. The 2.X version of t
 standard (not yet implemented by SMT solvers widely, unfortunately) will bring new standard features
 for getting models; at which time the SBV framework can be modified into a truly plug-and-play
 system where arbitrary SMT solvers can be used.
+-}
+
+{- $optimizeIntro
+Symbolic optimization. A call of the form:
+
+    @minimize cost n valid@
+
+returns @Just xs@, such that:
+
+   * @xs@ has precisely @n@ elements
+
+   * @valid xs@ holds
+
+   * @cost xs@ is minimal. That is, for all sequences @ys@ that satisfy the first two criteria above, @cost xs .<= cost ys@ holds.
+
+If there is no such sequence, then 'minimize' will return 'Nothing'.
+
+The function 'maximize' is similar, except the comparator is '.>='. So the value returned has the largest cost (or value, in that case).
+
+The function 'optimize' allows the user to give a custom comparison function.
+
+Logically, the SBV optimization engine satisfies the following predicate:
+
+   @exists xs. forall ys. valid xs && (valid ys ``implies`` (cost xs ``cmp`` cost ys))@
 -}
 
 {- $modelExtraction

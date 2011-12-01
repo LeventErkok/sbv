@@ -51,11 +51,12 @@ standard classes `Num`, `Bits`, (custom versions of) `Eq` and `Ord`, along with 
 other custom classes for simplifying bit-precise programming with symbolic values. The
 framework takes full advantage of Haskell's type inference to avoid many common mistakes.
 
-Furthermore, predicates (i.e., functions that return `SBool`) built out of these types can also be:
+Furthermore, functions built out of these types can also be:
 
   - proven correct via an external SMT solver (the `prove` function)
   - checked for satisfiability (the `sat`, and `allSat` functions)
   - used in synthesis (the `sat` function with existentials)
+  - optimized with respect to cost functions (the 'optimize', 'maximize', and 'minimize' functions)
   - quick-checked
 
 If a predicate is not valid, `prove` will return a counterexample: An 
