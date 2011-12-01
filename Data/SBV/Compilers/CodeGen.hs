@@ -178,7 +178,7 @@ showFile (f, (_, ds)) =  "== BEGIN: " ++ show f ++ " ================\n"
 
 codeGen :: CgTarget l => l -> CgConfig -> String -> SBVCodeGen () -> IO CgPgmBundle
 codeGen l cgConfig nm (SBVCodeGen comp) = do
-   (((), st'), res) <- runSymbolic' $ runStateT comp initCgState { cgFinalConfig = cgConfig }
+   (((), st'), res) <- runSymbolic' True $ runStateT comp initCgState { cgFinalConfig = cgConfig }
    let st = st' { cgInputs       = reverse (cgInputs st')
                 , cgOutputs      = reverse (cgOutputs st')
                 }

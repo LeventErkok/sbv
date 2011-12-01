@@ -354,7 +354,7 @@ genDriver randVals fn inps outs mbRet = [pre, header, body, post]
 
 -- | Generate the C program
 genCProg :: Bool -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SW -> Doc -> [Doc]
-genCProg rtc fn proto (Result hasInf ins preConsts tbls arrs _ _ asgns _) inVars outVars mbRet extDecls
+genCProg rtc fn proto (Result hasInf cgs ins preConsts tbls arrs _ _ asgns _) inVars outVars mbRet extDecls
   | hasInf                          = tbd "Unbounded integers"
   | not (null arrs)                 = tbd "User specified arrays"
   | needsExistentials (map fst ins) = error "SBV->C: Cannot compile functions with existentially quantified variables."
@@ -365,6 +365,7 @@ genCProg rtc fn proto (Result hasInf ins preConsts tbls arrs _ _ asgns _) inVars
               $$ text "#include <stdint.h>"
        header = text "#include" <+> doubleQuotes (nm <> text ".h")
        post   = text ""
+             $$ vcat (map codeSeg cgs)
              $$ extDecls
              $$ proto
              $$ text "{"
@@ -379,6 +380,9 @@ genCProg rtc fn proto (Result hasInf ins preConsts tbls arrs _ _ asgns _) inVars
              $$ text ""
        nm = text fn
        assignments = F.toList asgns
+       codeSeg (fnm, ls) =  text "/* User specified custom code for" <+> doubleQuotes (text fnm) <+> text "*/"
+                         $$ vcat (map text ls)
+                         $$ text ""
        typeWidth = getMax 0 [len (hasSign s, intSizeOf s) | (s, _) <- assignments]
                 where len (False, 1) = 5 -- SBool
                       len (False, n) = 5 + length (show n) -- SWordN

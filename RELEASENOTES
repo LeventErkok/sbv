@@ -10,6 +10,11 @@ Version 0.9.23, Not yet released
    * Add functions 'optimize', 'maximize', and 'minimize' that can
      be used to find optimal solutions to given constraints with
      respect to a given cost function.
+   * Add 'cgUninterpret', which simplifies code generation when we want
+     to use an alternate definition in the target language. This is
+     important for efficient code generation, or when we want to
+     take advantage of native libraries available in the target
+     platform.
   Other:
    * Change getModel to return a tuple in the success case, where
      the first component is a boolean indicating whether the model

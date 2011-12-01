@@ -30,7 +30,7 @@ module Data.SBV.BitVectors.Data
  , sbvToSW, sbvToSymSW
  , SBVExpr(..), newExpr
  , cache, uncache, uncacheAI, HasSignAndSize(..)
- , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, runSymbolic', State, Size(..), Outputtable(..), Result(..)
+ , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, runSymbolic', State, inCodeGenMode, Size(..), Outputtable(..), Result(..)
  , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
  , Quantifier(..), needsExistentials
  , SMTLibPgm(..), SMTLibVersion(..)
@@ -45,6 +45,7 @@ import Data.Int                        (Int8, Int16, Int32, Int64)
 import Data.Word                       (Word8, Word16, Word32, Word64)
 import Data.IORef                      (IORef, newIORef, modifyIORef, readIORef, writeIORef)
 import Data.List                       (intercalate, sortBy)
+import Data.Maybe                      (isJust, fromJust)
 
 import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
 import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
@@ -250,6 +251,7 @@ data UnintKind = UFun Int String | UArr Int String      -- in each case, arity a
 
 -- | Result of running a symbolic computation
 data Result = Result Bool                                         -- contains unbounded integers
+                     [(String, [String])]                         -- uninterpeted code segments
                      [(Quantifier, NamedSymVar)]                  -- inputs (possibly existential)
                      [(SW, CW)]                                   -- constants
                      [((Int, (Bool, Size), (Bool, Size)), [SW])]  -- tables (automatically constructed) (tableno, index-type, result-type) elts
@@ -260,10 +262,10 @@ data Result = Result Bool                                         -- contains un
                      [SW]                                         -- outputs
 
 instance Show Result where
-  show (Result _ _ cs _ _ [] [] _ [r])
+  show (Result _ _ _ cs _ _ [] [] _ [r])
     | Just c <- r `lookup` cs
     = show c
-  show (Result _ is cs ts as uis axs xs os)  = intercalate "\n" $
+  show (Result _ cgs is cs ts as uis axs xs os)  = intercalate "\n" $
                    ["INPUTS"]
                 ++ map shn is
                 ++ ["CONSTANTS"]
@@ -274,6 +276,8 @@ instance Show Result where
                 ++ map sha as
                 ++ ["UNINTERPRETED CONSTANTS"]
                 ++ map shui uis
+                ++ ["USER GIVEN CODE SEGMENTS"]
+                ++ concatMap shcg cgs
                 ++ ["AXIOMS"]
                 ++ map shax axs
                 ++ ["DEFINE"]
@@ -283,6 +287,7 @@ instance Show Result where
     where shs sw = show sw ++ " :: " ++ showType sw
           sht ((i, at, rt), es)  = "  Table " ++ show i ++ " : " ++ mkT at ++ "->" ++ mkT rt ++ " = " ++ show es
           shc (sw, cw) = "  " ++ show sw ++ " = " ++ show cw
+          shcg (s, ss) = ("Variable: " ++ s) : map ("  " ++) ss
           shn (q, (sw, nm)) = "  " ++ ni ++ " :: " ++ showType sw ++ ex ++ alias
             where ni = show sw
                   ex | q == ALL = ""
@@ -319,6 +324,7 @@ type TableMap  = Map.Map [SW] (Int, (Bool, Size), (Bool, Size))
 type ArrayInfo = (String, ((Bool, Size), (Bool, Size)), ArrayContext)
 type ArrayMap  = IMap.IntMap ArrayInfo
 type UIMap     = Map.Map String SBVType
+type CgMap     = Map.Map String [String]
 type Cache a   = IMap.IntMap [(StableName (State -> IO a), a)]
 
 unintFnUIKind :: (String, SBVType) -> (String, UnintKind)
@@ -333,19 +339,21 @@ arrayUIKind (i, (nm, _, ctx))
         external (ArrayMutate{}) = False
         external (ArrayMerge{})  = False
 
-data State  = State { rctr       :: IORef Int
-                    , rInfPrec   :: IORef Bool
-                    , rinps      :: IORef [(Quantifier, NamedSymVar)]
-                    , routs      :: IORef [SW]
-                    , rtblMap    :: IORef TableMap
-                    , spgm       :: IORef Pgm
-                    , rconstMap  :: IORef CnstMap
-                    , rexprMap   :: IORef ExprMap
-                    , rArrayMap  :: IORef ArrayMap
-                    , rUIMap     :: IORef UIMap
-                    , raxioms    :: IORef [(String, [String])]
-                    , rSWCache   :: IORef (Cache SW)
-                    , rAICache   :: IORef (Cache Int)
+data State  = State { inCodeGenMode :: Bool
+                    , rctr          :: IORef Int
+                    , rInfPrec      :: IORef Bool
+                    , rinps         :: IORef [(Quantifier, NamedSymVar)]
+                    , routs         :: IORef [SW]
+                    , rtblMap       :: IORef TableMap
+                    , spgm          :: IORef Pgm
+                    , rconstMap     :: IORef CnstMap
+                    , rexprMap      :: IORef ExprMap
+                    , rArrayMap     :: IORef ArrayMap
+                    , rUIMap        :: IORef UIMap
+                    , rCgMap        :: IORef CgMap
+                    , raxioms       :: IORef [(String, [String])]
+                    , rSWCache      :: IORef (Cache SW)
+                    , rAICache      :: IORef (Cache Int)
                     }
 
 -- | The "Symbolic" value. Either a constant (@Left@) or a symbolic
@@ -410,8 +418,8 @@ incCtr s = do ctr <- readIORef (rctr s)
               i `seq` writeIORef (rctr s) i
               return ctr
 
-newUninterpreted :: State -> String -> SBVType -> IO ()
-newUninterpreted st nm t
+newUninterpreted :: State -> String -> SBVType -> Maybe [String] -> IO ()
+newUninterpreted st nm t mbCode
   | null nm || not (isAlpha (head nm)) || not (all validChar (tail nm))
   = error $ "Bad uninterpreted constant name: " ++ show nm ++ ". Must be a valid identifier."
   | True = do
@@ -422,7 +430,8 @@ newUninterpreted st nm t
                                 ++ "      Current type      : " ++ show t ++ "\n"
                                 ++ "      Previously used at: " ++ show t'
                      else return ()
-          Nothing -> modifyIORef (rUIMap st) (Map.insert nm t)
+          Nothing -> do modifyIORef (rUIMap st) (Map.insert nm t)
+                        when (isJust mbCode) $ modifyIORef (rCgMap st) (Map.insert nm (fromJust mbCode))
   where validChar x = isAlphaNum x || x `elem` "_"
 
 -- Create a new constant; hash-cons as necessary
@@ -541,12 +550,11 @@ addAxiom nm ax = do
 
 -- | Run a symbolic computation and return a 'Result'
 runSymbolic :: Symbolic a -> IO Result
-runSymbolic c = do (_, r) <- runSymbolic' c
-                   return r
+runSymbolic c = snd `fmap` runSymbolic' False c
 
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
-runSymbolic' :: Symbolic a -> IO (a, Result)
-runSymbolic' (Symbolic c) = do
+runSymbolic' :: Bool -> Symbolic a -> IO (a, Result)
+runSymbolic' cgMode (Symbolic c) = do
    ctr     <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
    pgm     <- newIORef S.empty
    emap    <- newIORef Map.empty
@@ -556,23 +564,26 @@ runSymbolic' (Symbolic c) = do
    tables  <- newIORef Map.empty
    arrays  <- newIORef IMap.empty
    uis     <- newIORef Map.empty
+   cgs     <- newIORef Map.empty
    axioms  <- newIORef []
    swCache <- newIORef IMap.empty
    aiCache <- newIORef IMap.empty
    infPrec <- newIORef False
-   let st = State { rctr      = ctr
-                  , rInfPrec  = infPrec
-                  , rinps     = inps
-                  , routs     = outs
-                  , rtblMap   = tables
-                  , spgm      = pgm
-                  , rconstMap = cmap
-                  , rArrayMap = arrays
-                  , rexprMap  = emap
-                  , rUIMap    = uis
-                  , raxioms   = axioms
-                  , rSWCache  = swCache
-                  , rAICache  = aiCache
+   let st = State { inCodeGenMode = cgMode
+                  , rctr          = ctr
+                  , rInfPrec      = infPrec
+                  , rinps         = inps
+                  , routs         = outs
+                  , rtblMap       = tables
+                  , spgm          = pgm
+                  , rconstMap     = cmap
+                  , rArrayMap     = arrays
+                  , rexprMap      = emap
+                  , rUIMap        = uis
+                  , rCgMap        = cgs
+                  , raxioms       = axioms
+                  , rSWCache      = swCache
+                  , rAICache      = aiCache
                   }
    _ <- newConst st (mkConstCW (False, Size (Just 1)) (0::Integer)) -- s(-2) == falseSW
    _ <- newConst st (mkConstCW (False, Size (Just 1)) (1::Integer)) -- s(-1) == trueSW
@@ -588,7 +599,8 @@ runSymbolic' (Symbolic c) = do
    unint <- Map.toList `fmap` readIORef uis
    axs   <- reverse `fmap` readIORef axioms
    hasInfPrec <- readIORef infPrec
-   return $ (r, Result hasInfPrec (reverse inpsR) cnsts tbls arrs unint axs rpgm (reverse outsR))
+   cgMap <- Map.toList `fmap` readIORef cgs
+   return $ (r, Result hasInfPrec cgMap (reverse inpsR) cnsts tbls arrs unint axs rpgm (reverse outsR))
 
 -------------------------------------------------------------------------------
 -- * Symbolic Words
@@ -814,8 +826,8 @@ instance NFData CW where
   rnf (CW x y z) = x `seq` y `seq` z `seq` ()
 
 instance NFData Result where
-  rnf (Result isInf inps consts tbls arrs uis axs pgm outs)
-        = rnf isInf `seq` rnf inps `seq` rnf consts `seq` rnf tbls `seq` rnf arrs `seq` rnf uis `seq` rnf axs `seq` rnf pgm `seq` rnf outs
+  rnf (Result isInf cgs inps consts tbls arrs uis axs pgm outs)
+        = rnf isInf `seq` rnf cgs `seq` rnf inps `seq` rnf consts `seq` rnf tbls `seq` rnf arrs `seq` rnf uis `seq` rnf axs `seq` rnf pgm `seq` rnf outs
 
 instance NFData Size
 instance NFData ArrayContext
