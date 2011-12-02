@@ -234,6 +234,7 @@ prefixSum i
 -- TABLES
 -- ARRAYS
 -- UNINTERPRETED CONSTANTS
+-- USER GIVEN CODE SEGMENTS
 -- AXIOMS
 -- DEFINE
 --   s8 :: SWord8 = s0 + s1
@@ -280,6 +281,7 @@ ladnerFischerTrace n = gen >>= print
 -- TABLES
 -- ARRAYS
 -- UNINTERPRETED CONSTANTS
+-- USER GIVEN CODE SEGMENTS
 -- AXIOMS
 -- DEFINE
 --   s8 :: SWord8 = s0 + s1
