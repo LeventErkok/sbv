@@ -24,13 +24,18 @@ import Data.SBV
 -- use of tables etc., so we uninterpret it for code generation purposes
 -- using the 'cgUninterpret' function.
 shiftLeft :: SWord32 -> SWord32 -> SWord32
-shiftLeft = cgUninterpret "SBV_SHIFTLEFT" cCode $ \x y ->
-                select [x * literal (bit b) | b <- [0.. bitSize x - 1]] (literal 0) y
-  where -- the code we'd like SBV to spit out. Note that this is arbitrary
-        -- C code. In this case we just used a macro, but it could be a function,
-        -- include files etc. Also see 'cgAddDecl', 'cgAddLDFlags', and 'cgAddPrototype'
-        -- functions.
+shiftLeft = cgUninterpret "SBV_SHIFTLEFT" cCode hCode
+  where -- the C code we'd like SBV to spit out when generating code. Note that this is
+        -- arbitrary C code. In this case we just used a macro, but it could be a function,
+        -- text that includes files etc. It should essentially bring the name SBV_SHIFTLEFT
+        -- used above into scope when compiled. If no code is needed, one can also just
+        -- provide the empty list for the same effect. Also see 'cgAddDecl', 'cgAddLDFlags',
+        -- and 'cgAddPrototype' functions for further variations.
         cCode = ["#define SBV_SHIFTLEFT(x, y) ((x) << (y))"]
+        -- the Haskell code we'd like SBV to use when running inside Haskell or when
+        -- translated to SMTLib for verification purposes. This is good old Haskell
+        -- code, as one would typically write.
+        hCode x y = select [x * literal (bit b) | b <- [0.. bitSize x - 1]] (literal 0) y
 
 -- | Test function that uses shiftLeft defined above. When used as a normal Haskell function
 -- or in verification the definition is fully used, i.e., no uninterpretation happens. To wit,
