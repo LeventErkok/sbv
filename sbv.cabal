@@ -108,6 +108,7 @@ Library
                   , Data.SBV.Examples.CodeGeneration.Fibonacci
                   , Data.SBV.Examples.CodeGeneration.GCD
                   , Data.SBV.Examples.CodeGeneration.PopulationCount
+                  , Data.SBV.Examples.CodeGeneration.Uninterpreted
                   , Data.SBV.Examples.Crypto.AES
                   , Data.SBV.Examples.Crypto.RC4
                   , Data.SBV.Examples.Existentials.CRCPolynomial
@@ -173,6 +174,7 @@ Library
                   , Data.SBV.TestSuite.CodeGeneration.Fibonacci
                   , Data.SBV.TestSuite.CodeGeneration.GCD
                   , Data.SBV.TestSuite.CodeGeneration.PopulationCount
+                  , Data.SBV.TestSuite.CodeGeneration.Uninterpreted
                   , Data.SBV.TestSuite.Crypto.AES
                   , Data.SBV.TestSuite.Crypto.RC4
                   , Data.SBV.TestSuite.Existentials.CRCPolynomial
