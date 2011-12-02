@@ -148,7 +148,7 @@ skolemTable qs (((i, (_, atSz), (_, rtSz)), _elts), _) = decl
 
 -- Left if all constants, Right if otherwise
 genTableData :: SkolemMap -> (Bool, String) -> [SW] -> ((Int, (Bool, Size), (Bool, Size)), [SW]) -> Either [String] [String]
-genTableData skolemMap (quantified, args) consts ((i, (sa, at), (_, _rt)), elts)
+genTableData skolemMap (_quantified, args) consts ((i, (sa, at), (_, _rt)), elts)
   | null post = Left  (map (topLevel . snd) pre)
   | True      = Right (map (nested   . snd) (pre ++ post))
   where ssw = cvtSW skolemMap
@@ -156,7 +156,7 @@ genTableData skolemMap (quantified, args) consts ((i, (sa, at), (_, _rt)), elts)
         t           = "table" ++ show i
         mkElt x k   = (isReady, (idx, ssw x))
           where idx = cvtCW (mkConstCW (sa, at) k)
-                isReady = not quantified || x `elem` consts
+                isReady = x `elem` consts
         topLevel (idx, v) = "(= (" ++ t ++ " " ++ idx ++ ") " ++ v ++ ")"
         nested   (idx, v) = "(= (" ++ t ++ args ++ " " ++ idx ++ ") " ++ v ++ ")"
 
