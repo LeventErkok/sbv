@@ -23,6 +23,7 @@ ARRAYS
 UNINTERPRETED CONSTANTS
   uninterpreted_flOp :: SWord32 -> SWord32 -> SWord32
   uninterpreted_u :: SWord32
+USER GIVEN CODE SEGMENTS
 AXIOMS
   -- user defined axiom: flOp is associative
   :assumption (forall (?x BitVec[32]) (?y BitVec[32]) (?z BitVec[32])
