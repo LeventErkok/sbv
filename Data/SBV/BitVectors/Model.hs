@@ -895,7 +895,9 @@ class Uninterpreted a where
 
 -- Plain constants
 instance HasSignAndSize a => Uninterpreted (SBV a) where
-  sbvUninterpret mbCgData nm = (mkUFName nm, SBV sgnsza $ Right $ cache result)
+  sbvUninterpret mbCgData nm
+     | Just (_, v) <- mbCgData = (mkUFName nm, v)
+     | True                    = (mkUFName nm, SBV sgnsza $ Right $ cache result)
     where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
           result st | Just (_, v) <- mbCgData, not (inCodeGenMode st) = sbvToSW st v
                     | True = do newUninterpreted st nm (SBVType [sgnsza]) (fst `fmap` mbCgData)
@@ -908,9 +910,13 @@ forceArg :: SW -> IO ()
 forceArg (SW (b, s) n) = b `seq` s `seq` n `seq` return ()
 
 -- Functions of one argument
-instance (HasSignAndSize b, HasSignAndSize a) => Uninterpreted (SBV b -> SBV a) where
+instance (SymWord b, HasSignAndSize b, HasSignAndSize a) => Uninterpreted (SBV b -> SBV a) where
   sbvUninterpret mbCgData nm = (mkUFName nm, f)
-    where f arg0 = SBV sgnsza $ Right $ cache result
+    where f arg0
+           | Just (_, v) <- mbCgData, isConcrete arg0
+           = v arg0
+           | True
+           = SBV sgnsza $ Right $ cache result
            where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
                  sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
                  result st | Just (_, v) <- mbCgData, not (inCodeGenMode st) = sbvToSW st (v arg0)
@@ -920,9 +926,13 @@ instance (HasSignAndSize b, HasSignAndSize a) => Uninterpreted (SBV b -> SBV a) 
                                        newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0]
 
 -- Functions of two arguments
-instance (HasSignAndSize c, HasSignAndSize b, HasSignAndSize a) => Uninterpreted (SBV c -> SBV b -> SBV a) where
+instance (SymWord c, SymWord b, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a) => Uninterpreted (SBV c -> SBV b -> SBV a) where
   sbvUninterpret mbCgData nm = (mkUFName nm, f)
-    where f arg0 arg1 = SBV sgnsza $ Right $ cache result
+    where f arg0 arg1
+           | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1
+           = v arg0 arg1
+           | True
+           = SBV sgnsza $ Right $ cache result
            where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
                  sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
                  sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
@@ -934,9 +944,13 @@ instance (HasSignAndSize c, HasSignAndSize b, HasSignAndSize a) => Uninterpreted
                                        newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1]
 
 -- Functions of three arguments
-instance (HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a) => Uninterpreted (SBV d -> SBV c -> SBV b -> SBV a) where
+instance (SymWord d, SymWord c, SymWord b, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a) => Uninterpreted (SBV d -> SBV c -> SBV b -> SBV a) where
   sbvUninterpret mbCgData nm = (mkUFName nm, f)
-    where f arg0 arg1 arg2 = SBV sgnsza $ Right $ cache result
+    where f arg0 arg1 arg2
+           | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1, isConcrete arg2
+           = v arg0 arg1 arg2
+           | True
+           = SBV sgnsza $ Right $ cache result
            where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
                  sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
                  sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
@@ -950,10 +964,14 @@ instance (HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a
                                        newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2]
 
 -- Functions of four arguments
-instance (HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
+instance (SymWord e, SymWord d, SymWord c, SymWord b, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
             => Uninterpreted (SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbvUninterpret mbCgData nm = (mkUFName nm, f)
-    where f arg0 arg1 arg2 arg3 = SBV sgnsza $ Right $ cache result
+    where f arg0 arg1 arg2 arg3
+           | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3
+           = v arg0 arg1 arg2 arg3
+           | True
+           = SBV sgnsza $ Right $ cache result
            where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
                  sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
                  sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
@@ -969,10 +987,14 @@ instance (HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b
                                        newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3]
 
 -- Functions of five arguments
-instance (HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
+instance (SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
             => Uninterpreted (SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbvUninterpret mbCgData nm = (mkUFName nm, f)
-    where f arg0 arg1 arg2 arg3 arg4 = SBV sgnsza $ Right $ cache result
+    where f arg0 arg1 arg2 arg3 arg4
+           | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4
+           = v arg0 arg1 arg2 arg3 arg4
+           | True
+           = SBV sgnsza $ Right $ cache result
            where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
                  sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
                  sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
@@ -990,10 +1012,14 @@ instance (HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c
                                        newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4]
 
 -- Functions of six arguments
-instance (HasSignAndSize g, HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
+instance (SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasSignAndSize g, HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
             => Uninterpreted (SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbvUninterpret mbCgData nm = (mkUFName nm, f)
-    where f arg0 arg1 arg2 arg3 arg4 arg5 = SBV sgnsza $ Right $ cache result
+    where f arg0 arg1 arg2 arg3 arg4 arg5
+           | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5
+           = v arg0 arg1 arg2 arg3 arg4 arg5
+           | True
+           = SBV sgnsza $ Right $ cache result
            where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
                  sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
                  sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
@@ -1013,10 +1039,14 @@ instance (HasSignAndSize g, HasSignAndSize f, HasSignAndSize e, HasSignAndSize d
                                        newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5]
 
 -- Functions of seven arguments
-instance (HasSignAndSize h, HasSignAndSize g, HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
+instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasSignAndSize h, HasSignAndSize g, HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
             => Uninterpreted (SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbvUninterpret mbCgData nm = (mkUFName nm, f)
-    where f arg0 arg1 arg2 arg3 arg4 arg5 arg6 = SBV sgnsza $ Right $ cache result
+    where f arg0 arg1 arg2 arg3 arg4 arg5 arg6
+           | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5, isConcrete arg6
+           = v arg0 arg1 arg2 arg3 arg4 arg5 arg6
+           | True
+           = SBV sgnsza $ Right $ cache result
            where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
                  sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
                  sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
@@ -1038,35 +1068,35 @@ instance (HasSignAndSize h, HasSignAndSize g, HasSignAndSize f, HasSignAndSize e
                                       newExpr st sgnsza $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
 
 -- Uncurried functions of two arguments
-instance (HasSignAndSize c, HasSignAndSize b, HasSignAndSize a) => Uninterpreted ((SBV c, SBV b) -> SBV a) where
+instance (SymWord c, SymWord b, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a) => Uninterpreted ((SBV c, SBV b) -> SBV a) where
   sbvUninterpret mbCgData nm = let (h, f) = sbvUninterpret (uc2 `fmap` mbCgData) nm in (h, \(arg0, arg1) -> f arg0 arg1)
     where uc2 (cs, fn) = (cs, \a b -> fn (a, b))
 
 -- Uncurried functions of three arguments
-instance (HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a) => Uninterpreted ((SBV d, SBV c, SBV b) -> SBV a) where
+instance (SymWord d, SymWord c, SymWord b, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a) => Uninterpreted ((SBV d, SBV c, SBV b) -> SBV a) where
   sbvUninterpret mbCgData nm = let (h, f) = sbvUninterpret (uc3 `fmap` mbCgData) nm in (h, \(arg0, arg1, arg2) -> f arg0 arg1 arg2)
     where uc3 (cs, fn) = (cs, \a b c -> fn (a, b, c))
 
 -- Uncurried functions of four arguments
-instance (HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
+instance (SymWord e, SymWord d, SymWord c, SymWord b, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
             => Uninterpreted ((SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvUninterpret mbCgData nm = let (h, f) = sbvUninterpret (uc4 `fmap` mbCgData) nm in (h, \(arg0, arg1, arg2, arg3) -> f arg0 arg1 arg2 arg3)
     where uc4 (cs, fn) = (cs, \a b c d -> fn (a, b, c, d))
 
 -- Uncurried functions of five arguments
-instance (HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
+instance (SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
             => Uninterpreted ((SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvUninterpret mbCgData nm = let (h, f) = sbvUninterpret (uc5 `fmap` mbCgData) nm in (h, \(arg0, arg1, arg2, arg3, arg4) -> f arg0 arg1 arg2 arg3 arg4)
     where uc5 (cs, fn) = (cs, \a b c d e -> fn (a, b, c, d, e))
 
 -- Uncurried functions of six arguments
-instance (HasSignAndSize g, HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
+instance (SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasSignAndSize g, HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
             => Uninterpreted ((SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvUninterpret mbCgData nm = let (h, f) = sbvUninterpret (uc6 `fmap` mbCgData) nm in (h, \(arg0, arg1, arg2, arg3, arg4, arg5) -> f arg0 arg1 arg2 arg3 arg4 arg5)
     where uc6 (cs, fn) = (cs, \a b c d e f -> fn (a, b, c, d, e, f))
 
 -- Uncurried functions of seven arguments
-instance (HasSignAndSize h, HasSignAndSize g, HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
+instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasSignAndSize h, HasSignAndSize g, HasSignAndSize f, HasSignAndSize e, HasSignAndSize d, HasSignAndSize c, HasSignAndSize b, HasSignAndSize a)
             => Uninterpreted ((SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvUninterpret mbCgData nm = let (h, f) = sbvUninterpret (uc7 `fmap` mbCgData) nm in (h, \(arg0, arg1, arg2, arg3, arg4, arg5, arg6) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6)
     where uc7 (cs, fn) = (cs, \a b c d e f g -> fn (a, b, c, d, e, f, g))
