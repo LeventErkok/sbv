@@ -25,7 +25,7 @@ import Data.SBV
 -- using the 'cgUninterpret' function.
 shiftLeft :: SWord32 -> SWord32 -> SWord32
 shiftLeft = cgUninterpret "SBV_SHIFTLEFT" cCode $ \x y ->
-                select [x * literal (bit y) | y <- [0..(bitSize x) - 1]] (literal 0) y
+                select [x * literal (bit b) | b <- [0..(bitSize x) - 1]] (literal 0) y
   where -- the code we'd like SBV to spit out. Note that this is arbitrary
         -- C code. In this case we just used a macro, but it could be a function,
         -- include files etc. Also see 'cgAddDecl', 'cgAddLDFlags', and 'cgAddPrototype'
@@ -49,5 +49,5 @@ tstShiftLeft x y z = x `shiftLeft` z + y `shiftLeft` z
 -- and 'cgAddPrototype'.)
 genCCode :: IO ()
 genCCode = compileToC Nothing "tst" $ do
-                [a, b, c] <- cgInputArr 3 "vs"
-                cgReturn $ tstShiftLeft a b c
+                [x, y, z] <- cgInputArr 3 "vs"
+                cgReturn $ tstShiftLeft x y z
