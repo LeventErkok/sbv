@@ -49,5 +49,5 @@ tstShiftLeft x y z = x `shiftLeft` z + y `shiftLeft` z
 -- and 'cgAddPrototype'.)
 genCCode :: IO ()
 genCCode = compileToC Nothing "tst" $ do
-                [x, y, z] <- cgInputArr 3 "vs"
-                cgReturn $ tstShiftLeft x y z
+                [a, b, c] <- cgInputArr 3 "vs"
+                cgReturn $ tstShiftLeft a b c
