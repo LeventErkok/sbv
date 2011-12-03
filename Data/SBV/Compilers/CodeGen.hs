@@ -33,13 +33,14 @@ class CgTarget a where
 -- | Options for code-generation.
 data CgConfig = CgConfig {
           cgRTC        :: Bool          -- ^ If 'True', perform run-time-checks for index-out-of-bounds or shifting-by-large values etc.
+        , cgInteger    :: Maybe Int     -- ^ Bit-size to use for representing SInteger (if any)
         , cgDriverVals :: [Integer]     -- ^ Values to use for the driver program generated, useful for generating non-random drivers.
         , cgGenDriver  :: Bool          -- ^ If 'True', will generate a driver program
         }
 
 -- | Default options for code generation. The run-time checks are turned-off, and the driver values are completely random.
 defaultCgConfig :: CgConfig
-defaultCgConfig = CgConfig { cgRTC = False, cgDriverVals = [], cgGenDriver = True }
+defaultCgConfig = CgConfig { cgRTC = False, cgInteger = Nothing, cgDriverVals = [], cgGenDriver = True }
 
 -- | Abstraction of target language values
 data CgVal = CgAtomic SW
@@ -83,6 +84,17 @@ cgSBVToSW = liftSymbolic . sbvToSymSW
 -- | Sets RTC (run-time-checks) for index-out-of-bounds, shift-with-large value etc. on/off. Default: 'False'.
 cgPerformRTCs :: Bool -> SBVCodeGen ()
 cgPerformRTCs b = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgRTC = b } })
+
+-- | Sets number of bits to be used for representing the 'SInteger' type in the generated C code.
+-- The argument must be one of @8@, @16@, @32@, or @64@. Note that this is essentially unsafe as
+-- the semantics of unbounded Haskell integers becomes reduced to the corresponding bit size, as
+-- typical in most C implementations.
+cgIntegerSize :: Int -> SBVCodeGen ()
+cgIntegerSize i
+  | i `notElem` [8, 16, 32, 64]
+  = error $ "SBV.cgIntegrerSize: Argument must be one of 8, 16, 32, or 64. Received: " ++ show i
+  | True
+  = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgInteger = Just i }})
 
 -- | Should we generate a driver program? Default: 'True'. When a library is generated, then it will have
 -- a driver if any of the contituent functions has a driver. (See 'compileToCLib'.)

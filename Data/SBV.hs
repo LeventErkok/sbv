@@ -197,7 +197,7 @@ module Data.SBV (
   , cgReturn, cgReturnArr
 
   -- ** Code generation with uninterpreted functions
-  , cgAddPrototype, cgAddDecl, cgAddLDFlags
+  , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIntegerSize
 
   -- ** Compilation to C
   , compileToC, compileToCLib
