@@ -4,7 +4,11 @@ GitHub:  <http://github.com/LeventErkok/sbv>
 ======================================================================
 Version 0.9.24, Not yet released
 
-   * Current working version
+   * Add "forSome," analogous to "forAll." (The name "exists" would've
+     been better, but it's already taken.) This is not as useful as
+     one might think as forAll and forSome do not nest, as an inner
+     application of one pushes its argument to a Predicate, making
+     the outer one useless, but it's nonetheless useful by itself.
 
 ======================================================================
 Version 0.9.23, 2011-12-05

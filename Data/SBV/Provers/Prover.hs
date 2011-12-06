@@ -69,7 +69,7 @@ type Predicate = Symbolic SBool
 -- predicates can be constructed from almost arbitrary Haskell functions that have arbitrary
 -- shapes. (See the instance declarations below.)
 class Provable a where
-  -- | Turns a value into a predicate, internally naming the inputs.
+  -- | Turns a value into a universally quantified predicate, internally naming the inputs.
   -- In this case the sbv library will use names of the form @s1, s2@, etc. to name these variables
   -- Example:
   --
@@ -88,14 +88,25 @@ class Provable a where
   -- This is the same as above, except the variables will be named @x@ and @y@ respectively,
   -- simplifying the counter-examples when they are printed.
   forAll  :: [String] -> a -> Predicate
+  -- | Turns a value into an existentially quantified predicate. (Indeed, 'exists' would have been
+  -- a better choice here for the name, but alas it's already taken.)
+  forSome_ :: a -> Predicate
+  -- | Version of 'forSome' that allows user defined names
+  forSome :: [String] -> a -> Predicate
 
 instance Provable Predicate where
-  forAll_  = id
-  forAll _ = id
+  forAll_    = id
+  forAll []  = id
+  forAll xs  = error $ "SBV.forAll: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
+  forSome_   = id
+  forSome [] = id
+  forSome xs = error $ "SBV.forSome: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
 
 instance Provable SBool where
-  forAll_  = return
-  forAll _ = return
+  forAll_   = return
+  forAll _  = return
+  forSome_  = return
+  forSome _ = return
 
 {-
 -- The following works, but it lets us write properties that
@@ -103,57 +114,82 @@ instance Provable SBool where
 -- Running that will throw an exception since Haskell's equality
 -- is not be supported by symbolic things. (Needs .==).
 instance Provable Bool where
-  forAll_  x = forAll_  (if x then true else false :: SBool)
-  forAll s x = forAll s (if x then true else false :: SBool)
+  forAll_  x  = forAll_   (if x then true else false :: SBool)
+  forAll s x  = forAll s  (if x then true else false :: SBool)
+  forSome_  x = forSome_  (if x then true else false :: SBool)
+  forSome s x = forSome s (if x then true else false :: SBool)
 -}
 
 -- Functions
 instance (SymWord a, Provable p) => Provable (SBV a -> p) where
-  forAll_       k = forall_  >>= \a -> forAll_   $ k a
-  forAll (s:ss) k = forall s >>= \a -> forAll ss $ k a
-  forAll []     k = forAll_ k
+  forAll_        k = forall_   >>= \a -> forAll_   $ k a
+  forAll (s:ss)  k = forall s  >>= \a -> forAll ss $ k a
+  forAll []      k = forAll_ k
+  forSome_       k = exists_  >>= \a -> forSome_   $ k a
+  forSome (s:ss) k = exists s >>= \a -> forSome ss $ k a
+  forSome []     k = forSome_ k
 
--- Arrays (memory)
+-- Arrays (memory), only supported universally for the time being
 instance (HasSignAndSize a, HasSignAndSize b, SymArray array, Provable p) => Provable (array a b -> p) where
   forAll_       k = newArray_  Nothing >>= \a -> forAll_   $ k a
   forAll (s:ss) k = newArray s Nothing >>= \a -> forAll ss $ k a
   forAll []     k = forAll_ k
+  forSome_      _ = error "SBV.forSome: Existential arrays are not currently supported."
+  forSome _     _ = error "SBV.forSome: Existential arrays are not currently supported."
 
 -- 2 Tuple
 instance (SymWord a, SymWord b, Provable p) => Provable ((SBV a, SBV b) -> p) where
-  forAll_       k = forall_  >>= \a -> forAll_   $ \b -> k (a, b)
-  forAll (s:ss) k = forall s >>= \a -> forAll ss $ \b -> k (a, b)
-  forAll []     k = forAll_ k
+  forAll_        k = forall_  >>= \a -> forAll_   $ \b -> k (a, b)
+  forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b -> k (a, b)
+  forAll []      k = forAll_ k
+  forSome_       k = exists_  >>= \a -> forSome_   $ \b -> k (a, b)
+  forSome (s:ss) k = exists s >>= \a -> forSome ss $ \b -> k (a, b)
+  forSome []     k = forSome_ k
 
 -- 3 Tuple
 instance (SymWord a, SymWord b, SymWord c, Provable p) => Provable ((SBV a, SBV b, SBV c) -> p) where
-  forAll_       k = forall_  >>= \a -> forAll_   $ \b c -> k (a, b, c)
-  forAll (s:ss) k = forall s >>= \a -> forAll ss $ \b c -> k (a, b, c)
-  forAll []     k = forAll_ k
+  forAll_       k  = forall_  >>= \a -> forAll_   $ \b c -> k (a, b, c)
+  forAll (s:ss) k  = forall s >>= \a -> forAll ss $ \b c -> k (a, b, c)
+  forAll []     k  = forAll_ k
+  forSome_       k = exists_  >>= \a -> forSome_   $ \b c -> k (a, b, c)
+  forSome (s:ss) k = exists s >>= \a -> forSome ss $ \b c -> k (a, b, c)
+  forSome []     k = forSome_ k
 
 -- 4 Tuple
 instance (SymWord a, SymWord b, SymWord c, SymWord d, Provable p) => Provable ((SBV a, SBV b, SBV c, SBV d) -> p) where
-  forAll_       k = forall_  >>= \a -> forAll_   $ \b c d -> k (a, b, c, d)
-  forAll (s:ss) k = forall s >>= \a -> forAll ss $ \b c d -> k (a, b, c, d)
-  forAll []     k = forAll_ k
+  forAll_        k = forall_  >>= \a -> forAll_   $ \b c d -> k (a, b, c, d)
+  forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d -> k (a, b, c, d)
+  forAll []      k = forAll_ k
+  forSome_       k = exists_  >>= \a -> forSome_   $ \b c d -> k (a, b, c, d)
+  forSome (s:ss) k = exists s >>= \a -> forSome ss $ \b c d -> k (a, b, c, d)
+  forSome []     k = forSome_ k
 
 -- 5 Tuple
 instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, Provable p) => Provable ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
-  forAll_       k = forall_  >>= \a -> forAll_   $ \b c d e -> k (a, b, c, d, e)
-  forAll (s:ss) k = forall s >>= \a -> forAll ss $ \b c d e -> k (a, b, c, d, e)
-  forAll []     k = forAll_ k
+  forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e -> k (a, b, c, d, e)
+  forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e -> k (a, b, c, d, e)
+  forAll []      k = forAll_ k
+  forSome_       k = exists_  >>= \a -> forSome_   $ \b c d e -> k (a, b, c, d, e)
+  forSome (s:ss) k = exists s >>= \a -> forSome ss $ \b c d e -> k (a, b, c, d, e)
+  forSome []     k = forSome_ k
 
 -- 6 Tuple
 instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, Provable p) => Provable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
-  forAll_       k = forall_  >>= \a -> forAll_   $ \b c d e f -> k (a, b, c, d, e, f)
-  forAll (s:ss) k = forall s >>= \a -> forAll ss $ \b c d e f -> k (a, b, c, d, e, f)
-  forAll []     k = forAll_ k
+  forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e f -> k (a, b, c, d, e, f)
+  forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e f -> k (a, b, c, d, e, f)
+  forAll []      k = forAll_ k
+  forSome_       k = exists_  >>= \a -> forSome_   $ \b c d e f -> k (a, b, c, d, e, f)
+  forSome (s:ss) k = exists s >>= \a -> forSome ss $ \b c d e f -> k (a, b, c, d, e, f)
+  forSome []     k = forSome_ k
 
 -- 7 Tuple
 instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, Provable p) => Provable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
-  forAll_       k = forall_  >>= \a -> forAll_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  forAll (s:ss) k = forall s >>= \a -> forAll ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  forAll []     k = forAll_ k
+  forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  forAll []      k = forAll_ k
+  forSome_       k = exists_  >>= \a -> forSome_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  forSome (s:ss) k = exists s >>= \a -> forSome ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  forSome []     k = forSome_ k
 
 -- | Prove a predicate, equivalent to @'proveWith' 'yices'@
 prove :: Provable a => a -> IO ThmResult

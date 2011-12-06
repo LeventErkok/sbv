@@ -402,14 +402,15 @@ Why not<br/>
 </div>
 
 <div class="hint1 file15">
-./Data/SBV/Provers/Prover.hs:113:21: Warning: Parse error<br/>
+./Data/SBV/Provers/Prover.hs:126:22: Warning: Parse error<br/>
 Error message<br/>
 <pre>Parse error: forall</pre>
 Code<br/>
 <pre>  <span class='hs-keyword'>instance</span> <span class='hs-layout'>(</span><span class='hs-conid'>SymWord</span> <span class='hs-varid'>a</span><span class='hs-layout'>,</span> <span class='hs-conid'>Provable</span> <span class='hs-varid'>p</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Provable</span> <span class='hs-layout'>(</span><span class='hs-conid'>SBV</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>p</span><span class='hs-layout'>)</span> <span class='hs-keyword'>where</span>
-    <span class='hs-varid'>forAll_</span>       <span class='hs-varid'>k</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>forall_</span>  <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>forAll_</span>   <span class='hs-varop'>$</span> <span class='hs-varid'>k</span> <span class='hs-varid'>a</span>
-<span class='hs-varop'>&gt;</span>   <span class='hs-varid'>forAll</span> <span class='hs-layout'>(</span><span class='hs-varid'>s</span><span class='hs-conop'>:</span><span class='hs-varid'>ss</span><span class='hs-layout'>)</span> <span class='hs-varid'>k</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyword'>forall</span> <span class='hs-varid'>s</span> <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>forAll</span> <span class='hs-varid'>ss</span> <span class='hs-varop'>$</span> <span class='hs-varid'>k</span> <span class='hs-varid'>a</span>
-    <span class='hs-varid'>forAll</span> <span class='hs-conid'>[]</span>     <span class='hs-varid'>k</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>forAll_</span> <span class='hs-varid'>k</span>
+    <span class='hs-varid'>forAll_</span>        <span class='hs-varid'>k</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>forall_</span>   <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>forAll_</span>   <span class='hs-varop'>$</span> <span class='hs-varid'>k</span> <span class='hs-varid'>a</span>
+<span class='hs-varop'>&gt;</span>   <span class='hs-varid'>forAll</span> <span class='hs-layout'>(</span><span class='hs-varid'>s</span><span class='hs-conop'>:</span><span class='hs-varid'>ss</span><span class='hs-layout'>)</span>  <span class='hs-varid'>k</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyword'>forall</span> <span class='hs-varid'>s</span>  <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>forAll</span> <span class='hs-varid'>ss</span> <span class='hs-varop'>$</span> <span class='hs-varid'>k</span> <span class='hs-varid'>a</span>
+    <span class='hs-varid'>forAll</span> <span class='hs-conid'>[]</span>      <span class='hs-varid'>k</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>forAll_</span> <span class='hs-varid'>k</span>
+    <span class='hs-varid'>forSome_</span>       <span class='hs-varid'>k</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>exists_</span>  <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>forSome_</span>   <span class='hs-varop'>$</span> <span class='hs-varid'>k</span> <span class='hs-varid'>a</span>
 </pre>
 </div>
 
