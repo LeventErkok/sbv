@@ -26,7 +26,7 @@ module Data.SBV.Provers.Prover (
        , prove, proveWith
        , sat, satWith
        , allSat, allSatWith
-       , SatModel(..), getModel, displayModels
+       , SatModel(..), Modelable(..), displayModels
        , yices, z3
        , compileToSMTLib
        ) where

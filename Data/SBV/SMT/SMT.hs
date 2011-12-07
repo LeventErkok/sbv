@@ -230,17 +230,41 @@ instance (SatModel a, SatModel b, SatModel c, SatModel d, SatModel e, SatModel f
                    ((b, c, d, e, f, g), hs) <- parseCWs bs
                    return ((a, b, c, d, e, f, g), hs)
 
+-- | Various SMT results that we can extract models out of.
+class Modelable a where
+  -- | Is there a model?
+  modelExists :: a -> Bool
+  -- | Extract a model, the result is a tuple where the first argument (if True)
+  -- indicates whether the model was "probable". (i.e., if the solver returned unknown.)
+  getModel :: SatModel b => a -> Either String (Bool, b)
+
+  -- | A simple way to get a model if it exists
+  extractModel :: SatModel b => a -> Maybe b
+  extractModel a = case getModel a of
+                     Right (_, b) -> Just b
+                     _            -> Nothing
+
+instance Modelable ThmResult where
+  getModel    (ThmResult r) = getModelFromSMTResult r
+  modelExists (ThmResult (Satisfiable{})) = True
+  modelExists _                           = False
+
+instance Modelable SatResult where
+  getModel (SatResult r) = getModelFromSMTResult r
+  modelExists (SatResult (Satisfiable{})) = True
+  modelExists _                           = False
+
 -- | Given an 'SMTResult', extract an arbitrarily typed model from it, given a 'SatModel' instance
 -- The first argument is "True" if this is an alleged model
-getModel :: SatModel a => SatResult -> Either String (Bool, a)
-getModel (SatResult (Unsatisfiable _)) = Left "SBV.getModel: Unsatisfiable result"
-getModel (SatResult (Unknown _ m))     = Right (True, extractModel m)
-getModel (SatResult (ProofError _ s))  = error $ unlines $ "Backend solver complains: " : s
-getModel (SatResult (TimeOut _))       = Left "Timeout"
-getModel (SatResult (Satisfiable _ m)) = Right (False, extractModel m)
+getModelFromSMTResult :: SatModel a => SMTResult -> Either String (Bool, a)
+getModelFromSMTResult (Unsatisfiable _) = Left "SBV.getModel: Unsatisfiable result"
+getModelFromSMTResult (Unknown _ m)     = Right (True, parseModelOut m)
+getModelFromSMTResult (ProofError _ s)  = error $ unlines $ "Backend solver complains: " : s
+getModelFromSMTResult (TimeOut _)       = Left "Timeout"
+getModelFromSMTResult (Satisfiable _ m) = Right (False, parseModelOut m)
 
-extractModel :: SatModel a => SMTModel -> a
-extractModel m = case parseCWs [c | (_, c) <- modelAssocs m] of
+parseModelOut :: SatModel a => SMTModel -> a
+parseModelOut m = case parseCWs [c | (_, c) <- modelAssocs m] of
                    Just (x, []) -> x
                    Just (_, ys) -> error $ "SBV.getModel: Partially constructed model; remaining elements: " ++ show ys
                    Nothing      -> error $ "SBV.getModel: Cannot construct a model from: " ++ show m
