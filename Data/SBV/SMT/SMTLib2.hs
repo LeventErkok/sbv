@@ -13,6 +13,7 @@
 
 module Data.SBV.SMT.SMTLib2(cvt, addNonEqConstraints) where
 
+import Data.Bits (bit)
 import qualified Data.Foldable as F (toList)
 import qualified Data.Map      as M
 import qualified Data.IntMap   as IM
@@ -261,11 +262,12 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         ensureBV       = not hasInfPrecArgs || unbounded expr
         lift2  o _ [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
         lift2  o _ sbvs   = error $ "SBV.SMTLib2.sh.lift2: Unexpected arguments: "   ++ show (o, sbvs)
-        lift2B oU oS sgn sbvs
+        lift2B oU oS sgn sbvs = "(ite " ++ lift2S oU oS sgn sbvs ++ " #b1 #b0)"
+        lift2S oU oS sgn sbvs
           | sgn
-          = "(ite " ++ lift2 oS sgn sbvs ++ " #b1 #b0)"
+          = lift2 oS sgn sbvs
           | True
-          = "(ite " ++ lift2 oU sgn sbvs ++ " #b1 #b0)"
+          = lift2 oU sgn sbvs
         lift2N o sgn sbvs = "(bvnot " ++ lift2 o sgn sbvs ++ ")"
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
         lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib2.sh.lift1: Unexpected arguments: "   ++ show (o, sbvs)
@@ -290,11 +292,22 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (Uninterpreted nm) [])   = "uninterpreted_" ++ nm
         sh (SBVApp (Uninterpreted nm) args) = "(uninterpreted_" ++ nm ++ " " ++ unwords (map ssw args) ++ ")"
         -- Group 2: Only supported for BV
-        sh (SBVApp (Rol i) [a])       | ensureBV = rot  ssw "rotate_left"  i a
-        sh (SBVApp (Ror i) [a])       | ensureBV = rot  ssw "rotate_right" i a
-        sh (SBVApp (Shl i) [a])       | ensureBV = shft ssw "bvshl"  "bvshl"  i a
-        sh (SBVApp (Shr i) [a])       | ensureBV = shft ssw "bvlshr" "bvashr" i a
         sh (SBVApp (Extract i j) [a]) | ensureBV = "((_ extract " ++ show i ++ " " ++ show j ++ ") " ++ ssw a ++ ")"
+        -- Group 3: Different mappings for BV and Integer
+        sh (SBVApp (Rol i) [a])
+           | not hasInfPrecArgs = rot  ssw "rotate_left"  i a
+           | True               = sh (SBVApp (Shl i) [a])     -- Haskell treats rotateL as shiftL for unbounded values
+        sh (SBVApp (Ror i) [a])
+           | not hasInfPrecArgs = rot  ssw "rotate_right" i a
+           | True               = sh (SBVApp (Shr i) [a])     -- Haskell treats rotateR as shiftR for unbounded values
+        sh (SBVApp (Shl i) [a])
+           | not hasInfPrecArgs = shft ssw "bvshl"  "bvshl"  i a
+           | i < 0              = sh (SBVApp (Shr (-i)) [a])  -- flip sign/direction
+           | True               = "(* " ++ ssw a ++ " " ++ show (bit i :: Integer) ++ ")"  -- Implement shiftL by multiplication by 2^i
+        sh (SBVApp (Shr i) [a])
+           | not hasInfPrecArgs = shft ssw "bvlshr" "bvashr" i a
+           | i < 0              = sh (SBVApp (Shl (-i)) [a])  -- flip sign/direction
+           | True               = "(div " ++ ssw a ++ " " ++ show (bit i :: Integer) ++ ")"  -- Implement shiftR by division by 2^i
         sh (SBVApp op args)
           | Just f <- lookup op smtBVOpTable, ensureBV
           = f (any hasSign args) (map ssw args)
@@ -316,8 +329,8 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           where smtOpBVTable  = [ (Plus,          lift2   "bvadd")
                                 , (Minus,         lift2   "bvsub")
                                 , (Times,         lift2   "bvmul")
-                                , (Quot,          lift2   "bvudiv")
-                                , (Rem,           lift2   "bvurem")
+                                , (Quot,          lift2S  "bvudiv" "bvsdiv")
+                                , (Rem,           lift2S  "bvurem" "bvsrem")
                                 , (Equal,         lift2   "bvcomp")
                                 , (NotEqual,      lift2N  "bvcomp")
                                 , (LessThan,      lift2B  "bvult" "bvslt")
