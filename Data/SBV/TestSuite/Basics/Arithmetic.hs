@@ -52,6 +52,7 @@ genBinTest nm op = map mkTest $
      ++ zipWith pair [(show x, show y, x `op` y) | x <- i16s, y <- i16s] [x `op` y | x <- si16s, y <- si16s]
      ++ zipWith pair [(show x, show y, x `op` y) | x <- i32s, y <- i32s] [x `op` y | x <- si32s, y <- si32s]
      ++ zipWith pair [(show x, show y, x `op` y) | x <- i64s, y <- i64s] [x `op` y | x <- si64s, y <- si64s]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- iUBs, y <- iUBs] [x `op` y | x <- siUBs, y <- siUBs]
   where pair (x, y, a) b   = (x, y, show (fromIntegral a `asTypeOf` b) == show b)
         mkTest (x, y, s) = "arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
 
@@ -65,6 +66,7 @@ genUnTest nm op = map mkTest $
      ++ zipWith pair [(show x, op x) | x <- i16s] [op x | x <- si16s]
      ++ zipWith pair [(show x, op x) | x <- i32s] [op x | x <- si32s]
      ++ zipWith pair [(show x, op x) | x <- i64s] [op x | x <- si64s]
+     ++ zipWith pair [(show x, op x) | x <- iUBs] [op x | x <- siUBs]
   where pair (x, a) b   = (x, show (fromIntegral a `asTypeOf` b) == show b)
         mkTest (x, s) = "arithmetic-" ++ nm ++ "." ++ x ~: s `showsAs` "True"
 
@@ -78,6 +80,7 @@ genIntTest nm op = map mkTest $
      ++ zipWith pair [("s16", show x, show y, x `op` y) | x <- i16s, y <- is] [x `op` y | x <- si16s, y <- is]
      ++ zipWith pair [("s32", show x, show y, x `op` y) | x <- i32s, y <- is] [x `op` y | x <- si32s, y <- is]
      ++ zipWith pair [("s64", show x, show y, x `op` y) | x <- i64s, y <- is] [x `op` y | x <- si64s, y <- is]
+     ++ zipWith pair [("iUB", show x, show y, x `op` y) | x <- iUBs, y <- is] [x `op` y | x <- siUBs, y <- is]
   where pair (t, x, y, a) b       = (t, x, y, show a, show b, show (fromIntegral a `asTypeOf` b) == show b)
         mkTest (t, x, y, a, b, s) = "arithmetic-" ++ nm ++ "." ++ t ++ "_" ++ x ++ "_" ++ y ++ "_" ++ a ++ "_" ++ b ~: s `showsAs` "True"
         is = [-10 .. 10]
@@ -176,3 +179,9 @@ i64s = xsSigned
 
 si64s :: [SInt64]
 si64s = xsSigned
+
+iUBs :: [Integer]
+iUBs = [-1000000 .. -999995] ++ [-5 .. 5] ++ [999995 ..  1000000]
+
+siUBs :: [SInteger]
+siUBs = map literal iUBs
