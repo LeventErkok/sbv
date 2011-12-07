@@ -271,7 +271,6 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         lift2N o sgn sbvs = "(bvnot " ++ lift2 o sgn sbvs ++ ")"
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
         lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib2.sh.lift1: Unexpected arguments: "   ++ show (o, sbvs)
-        -- Group 1: Same translation, regardless BV/Int
         sh (SBVApp Ite [a, b, c]) = "(ite (= #b1 " ++ ssw a ++ ") " ++ ssw b ++ " " ++ ssw c ++ ")"
         sh (SBVApp (LkUp (t, (_, atSz), _, l) i e) [])
           | needsCheck = "(ite " ++ cond ++ ssw e ++ " " ++ lkUp ++ ")"
@@ -291,9 +290,7 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (ArrRead i) [a]) = "(select array_" ++ show i ++ " " ++ ssw a ++ ")"
         sh (SBVApp (Uninterpreted nm) [])   = "uninterpreted_" ++ nm
         sh (SBVApp (Uninterpreted nm) args) = "(uninterpreted_" ++ nm ++ " " ++ unwords (map ssw args) ++ ")"
-        -- Group 2: Only supported for BV
         sh (SBVApp (Extract i j) [a]) | ensureBV = "((_ extract " ++ show i ++ " " ++ show j ++ ") " ++ ssw a ++ ")"
-        -- Group 3: Different mappings for BV and Integer
         sh (SBVApp (Rol i) [a])
            | not hasInfPrecArgs = rot  ssw "rotate_left"  i a
            | True               = sh (SBVApp (Shl i) [a])     -- Haskell treats rotateL as shiftL for unbounded values
@@ -311,7 +308,10 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp op args)
           | Just f <- lookup op smtBVOpTable, ensureBV
           = f (any hasSign args) (map ssw args)
-          where smtBVOpTable = [ (And,  lift2 "bvand")
+          where -- The first 4 operators below do make sense for Integer's in Haskell, but there's
+                -- no obvious counterpart for them in the SMTLib translation.
+                -- TODO: provide support for these.
+                smtBVOpTable = [ (And,  lift2 "bvand")
                                , (Or,   lift2 "bvor")
                                , (XOr,  lift2 "bvxor")
                                , (Not,  lift1 "bvnot")
