@@ -449,7 +449,7 @@ instance (Bits a, SymWord a) => Bits (SBV a) where
     | True                     = liftSym2 (mkSymOp  XOr) xor x y
   complement = liftSym1 (mkSymOp1 Not) complement
   bitSize  (SBV (_, Size (Just s)) _) = s
-  bitSize  (SBV (_, Size Nothing)  _) = error "Data.Bits.bitSize(Integer)"
+  bitSize  (SBV (_, Size Nothing)  _) = error "Data.Bits.bitSize(SInteger)"
   isSigned (SBV (b, _) _)  = b
   shiftL x y
     | y < 0                = shiftR x (-y)
@@ -462,11 +462,13 @@ instance (Bits a, SymWord a) => Bits (SBV a) where
   rotateL x y
     | y < 0                = rotateR x (-y)
     | y == 0               = x
-    | True                 = let sz = bitSize x in liftSym1 (mkSymOp1 (Rol (y `mod` sz))) (rot True sz y) x
+    | not (isInfPrec x)    = let sz = bitSize x in liftSym1 (mkSymOp1 (Rol (y `mod` sz))) (rot True sz y) x
+    | True                 = shiftL x y   -- for unbounded Integers, rotateL is the same as shiftL in Haskell
   rotateR x y
     | y < 0                = rotateL x (-y)
     | y == 0               = x
-    | True                 = let sz = bitSize x in liftSym1 (mkSymOp1 (Ror (y `mod` sz))) (rot False sz y) x
+    | not (isInfPrec x)    = let sz = bitSize x in liftSym1 (mkSymOp1 (Ror (y `mod` sz))) (rot False sz y) x
+    | True                 = shiftR x y   -- for unbounded integers, rotateR is the same as shiftR in Haskell
 
 -- Since the underlying representation is just Integers, rotations has to be careful on the bit-size
 rot :: Bool -> Int -> Int -> Integer -> Integer
