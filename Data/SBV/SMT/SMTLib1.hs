@@ -206,7 +206,7 @@ cvtExp inp@(SBVApp op args)
   = error $ "SBV.SMT.SMTLib1.cvtExp: impossible happened; can't translate: " ++ show inp
   where lift2  o _ [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
         lift2  o _ sbvs   = error $ "SBV.SMTLib1.cvtExp.lift2: Unexpected arguments: "   ++ show (o, sbvs)
-        lift2B oU oS sgn sbvs = "(ite " ++ lift2S oU oS sgn sbvs ++ " #b1 #b0)"
+        lift2B oU oS sgn sbvs = "(ite " ++ lift2S oU oS sgn sbvs ++ " bv1[1] bv0[1])"
         lift2S oU oS sgn sbvs
           | sgn
           = lift2 oS sgn sbvs
