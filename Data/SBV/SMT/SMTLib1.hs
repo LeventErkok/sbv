@@ -206,19 +206,20 @@ cvtExp inp@(SBVApp op args)
   = error $ "SBV.SMT.SMTLib1.cvtExp: impossible happened; can't translate: " ++ show inp
   where lift2  o _ [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
         lift2  o _ sbvs   = error $ "SBV.SMTLib1.cvtExp.lift2: Unexpected arguments: "   ++ show (o, sbvs)
-        lift2B oU oS sgn sbvs
+        lift2B oU oS sgn sbvs = "(ite " ++ lift2S oU oS sgn sbvs ++ " #b1 #b0)"
+        lift2S oU oS sgn sbvs
           | sgn
-          = "(ite " ++ lift2 oS sgn sbvs ++ " bv1[1] bv0[1])"
+          = lift2 oS sgn sbvs
           | True
-          = "(ite " ++ lift2 oU sgn sbvs ++ " bv1[1] bv0[1])"
+          = lift2 oU sgn sbvs
         lift2N o sgn sbvs = "(bvnot " ++ lift2 o sgn sbvs ++ ")"
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
         lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib1.cvtExp.lift1: Unexpected arguments: "   ++ show (o, sbvs)
         smtOpTable = [ (Plus,          lift2   "bvadd")
                      , (Minus,         lift2   "bvsub")
                      , (Times,         lift2   "bvmul")
-                     , (Quot,          lift2   "bvudiv")
-                     , (Rem,           lift2   "bvurem")
+                     , (Quot,          lift2S  "bvudiv" "bvsdiv")
+                     , (Rem,           lift2S  "bvurem" "bvsrem")
                      , (Equal,         lift2   "bvcomp")
                      , (NotEqual,      lift2N  "bvcomp")
                      , (LessThan,      lift2B  "bvult" "bvslt")
