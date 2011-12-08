@@ -409,12 +409,9 @@ instance Eq (SBV a) where
   SBV _ (Left a) /= SBV _ (Left b) = a /= b
   a /= b = error $ "Comparing symbolic bit-vectors; Use (./=) instead. Received: " ++ show (a, b)
 
--- are these too strict?
-instance HasSignAndSize (SBV a) where
-  sizeOf    (SBV (_, mbs) _) = mbs
-  intSizeOf (SBV (_, mbs) _) = maybe (error "attempting to compute size of SInteger") id $ unSize mbs
-  isInfPrec (SBV (_, mbs) _) = maybe True (const False) $ unSize mbs
-  hasSign   (SBV (b, _) _)   = b
+instance HasSignAndSize a => HasSignAndSize (SBV a) where
+  sizeOf  _ = sizeOf  (undefined :: a)
+  hasSign _ = hasSign (undefined :: a)
 
 incCtr :: State -> IO Int
 incCtr s = do ctr <- readIORef (rctr s)
@@ -615,7 +612,7 @@ runSymbolic' cgMode (Symbolic c) = do
 -- provide the necessary bits.
 --
 -- Minimal complete definiton: forall, forall_, exists, exists_, literal, fromCW
-class Ord a => SymWord a where
+class (HasSignAndSize a, Ord a) => SymWord a where
   -- | Create a user named input (universal)
   forall :: String -> Symbolic (SBV a)
   -- | Create an automatically named input
