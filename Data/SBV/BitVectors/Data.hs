@@ -155,7 +155,7 @@ instance HasSignAndSize Int32   where {sizeOf _ = Size (Just 32); intSizeOf _ = 
 instance HasSignAndSize Word32  where {sizeOf _ = Size (Just 32); intSizeOf _ = 32; isInfPrec _ = False; hasSign _ = False}
 instance HasSignAndSize Int64   where {sizeOf _ = Size (Just 64); intSizeOf _ = 64; isInfPrec _ = False; hasSign _ = True }
 instance HasSignAndSize Word64  where {sizeOf _ = Size (Just 64); intSizeOf _ = 64; isInfPrec _ = False; hasSign _ = False}
-instance HasSignAndSize Integer where {sizeOf _ = Size Nothing; intSizeOf _ = error "attempting to compute size of Integer"; isInfPrec _ = True; hasSign _ = True}
+instance HasSignAndSize Integer where {sizeOf _ = Size Nothing; intSizeOf _ = error "Data.Bits.bitSize(Integer)"; isInfPrec _ = True; hasSign _ = True}
 
 liftCW :: (Integer -> b) -> CW -> b
 liftCW f x = f (cwVal x)
