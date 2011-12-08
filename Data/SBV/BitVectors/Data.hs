@@ -45,7 +45,7 @@ import Data.Int                        (Int8, Int16, Int32, Int64)
 import Data.Word                       (Word8, Word16, Word32, Word64)
 import Data.IORef                      (IORef, newIORef, modifyIORef, readIORef, writeIORef)
 import Data.List                       (intercalate, sortBy)
-import Data.Maybe                      (isJust, fromJust)
+import Data.Maybe                      (isJust, fromJust, fromMaybe)
 
 import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
 import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
@@ -135,27 +135,30 @@ data Op = Plus | Times | Minus
 data SBVExpr = SBVApp !Op ![SW]
              deriving (Eq, Ord)
 
+-- minimal complete definition: sizeOf, hasSign
 class HasSignAndSize a where
   sizeOf     :: a -> Size
-  intSizeOf  :: a -> Int
   hasSign    :: a -> Bool
+  intSizeOf  :: a -> Int
   isInfPrec  :: a -> Bool
   showType   :: a -> String
   showType a
     | isInfPrec a                         = "SInteger"
     | not (hasSign a) && intSizeOf a == 1 = "SBool"
     | True                                = (if hasSign a then "SInt" else "SWord") ++ show (intSizeOf a)
+  isInfPrec = maybe True (const False) . unSize . sizeOf
+  intSizeOf = fromMaybe (error "SBV.HasSignAndSize.bitSize((S)Integer)") . unSize . sizeOf
 
-instance HasSignAndSize Bool    where {sizeOf _ = Size (Just 1) ; intSizeOf _ =  1; isInfPrec _ = False; hasSign _ = False}
-instance HasSignAndSize Int8    where {sizeOf _ = Size (Just 8) ; intSizeOf _ =  8; isInfPrec _ = False; hasSign _ = True }
-instance HasSignAndSize Word8   where {sizeOf _ = Size (Just 8) ; intSizeOf _ =  8; isInfPrec _ = False; hasSign _ = False}
-instance HasSignAndSize Int16   where {sizeOf _ = Size (Just 16); intSizeOf _ = 16; isInfPrec _ = False; hasSign _ = True }
-instance HasSignAndSize Word16  where {sizeOf _ = Size (Just 16); intSizeOf _ = 16; isInfPrec _ = False; hasSign _ = False}
-instance HasSignAndSize Int32   where {sizeOf _ = Size (Just 32); intSizeOf _ = 32; isInfPrec _ = False; hasSign _ = True }
-instance HasSignAndSize Word32  where {sizeOf _ = Size (Just 32); intSizeOf _ = 32; isInfPrec _ = False; hasSign _ = False}
-instance HasSignAndSize Int64   where {sizeOf _ = Size (Just 64); intSizeOf _ = 64; isInfPrec _ = False; hasSign _ = True }
-instance HasSignAndSize Word64  where {sizeOf _ = Size (Just 64); intSizeOf _ = 64; isInfPrec _ = False; hasSign _ = False}
-instance HasSignAndSize Integer where {sizeOf _ = Size Nothing; intSizeOf _ = error "Data.Bits.bitSize(Integer)"; isInfPrec _ = True; hasSign _ = True}
+instance HasSignAndSize Bool    where {sizeOf _ = Size (Just 1) ; hasSign _ = False}
+instance HasSignAndSize Int8    where {sizeOf _ = Size (Just 8) ; hasSign _ = True }
+instance HasSignAndSize Word8   where {sizeOf _ = Size (Just 8) ; hasSign _ = False}
+instance HasSignAndSize Int16   where {sizeOf _ = Size (Just 16); hasSign _ = True }
+instance HasSignAndSize Word16  where {sizeOf _ = Size (Just 16); hasSign _ = False}
+instance HasSignAndSize Int32   where {sizeOf _ = Size (Just 32); hasSign _ = True }
+instance HasSignAndSize Word32  where {sizeOf _ = Size (Just 32); hasSign _ = False}
+instance HasSignAndSize Int64   where {sizeOf _ = Size (Just 64); hasSign _ = True }
+instance HasSignAndSize Word64  where {sizeOf _ = Size (Just 64); hasSign _ = False}
+instance HasSignAndSize Integer where {sizeOf _ = Size Nothing;   hasSign _ = True}
 
 liftCW :: (Integer -> b) -> CW -> b
 liftCW f x = f (cwVal x)
@@ -406,6 +409,7 @@ instance Eq (SBV a) where
   SBV _ (Left a) /= SBV _ (Left b) = a /= b
   a /= b = error $ "Comparing symbolic bit-vectors; Use (./=) instead. Received: " ++ show (a, b)
 
+-- are these too strict?
 instance HasSignAndSize (SBV a) where
   sizeOf    (SBV (_, mbs) _) = mbs
   intSizeOf (SBV (_, mbs) _) = maybe (error "attempting to compute size of SInteger") id $ unSize mbs
