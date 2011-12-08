@@ -186,11 +186,11 @@ v1.8.17
 </p>
 
 <div class="hint1 file0">
-./Data/SBV/BitVectors/Data.hs:616:3: Warning: Parse error<br/>
+./Data/SBV/BitVectors/Data.hs:617:3: Warning: Parse error<br/>
 Error message<br/>
 <pre>Parse error: forall</pre>
 Code<br/>
-<pre>  <span class='hs-keyword'>class</span> <span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>SymWord</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>where</span>
+<pre>  <span class='hs-keyword'>class</span> <span class='hs-layout'>(</span><span class='hs-conid'>HasSignAndSize</span> <span class='hs-varid'>a</span><span class='hs-layout'>,</span> <span class='hs-conid'>Ord</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>SymWord</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>where</span>
     <span class='hs-comment'>-- | Create a user named input (universal)</span>
 <span class='hs-varop'>&gt;</span>   <span class='hs-keyword'>forall</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>String</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Symbolic</span> <span class='hs-layout'>(</span><span class='hs-conid'>SBV</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span>
     <span class='hs-comment'>-- | Create an automatically named input</span>
