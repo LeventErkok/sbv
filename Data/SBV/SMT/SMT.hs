@@ -238,30 +238,29 @@ class Modelable a where
   -- indicates whether the model was "probable". (i.e., if the solver returned unknown.)
   getModel :: SatModel b => a -> Either String (Bool, b)
 
-  -- | A simple way to get a model if it exists
+  -- | A simpler variant of 'getModel' to get a model out without the fuss.
   extractModel :: SatModel b => a -> Maybe b
   extractModel a = case getModel a of
                      Right (_, b) -> Just b
                      _            -> Nothing
 
 instance Modelable ThmResult where
-  getModel    (ThmResult r) = getModelFromSMTResult r
-  modelExists (ThmResult (Satisfiable{})) = True
-  modelExists _                           = False
+  getModel    (ThmResult r) = getModel r
+  modelExists (ThmResult r) = modelExists r
 
 instance Modelable SatResult where
-  getModel (SatResult r) = getModelFromSMTResult r
-  modelExists (SatResult (Satisfiable{})) = True
-  modelExists _                           = False
+  getModel    (SatResult r) = getModel r
+  modelExists (SatResult r) = modelExists r
 
--- | Given an 'SMTResult', extract an arbitrarily typed model from it, given a 'SatModel' instance
--- The first argument is "True" if this is an alleged model
-getModelFromSMTResult :: SatModel a => SMTResult -> Either String (Bool, a)
-getModelFromSMTResult (Unsatisfiable _) = Left "SBV.getModel: Unsatisfiable result"
-getModelFromSMTResult (Unknown _ m)     = Right (True, parseModelOut m)
-getModelFromSMTResult (ProofError _ s)  = error $ unlines $ "Backend solver complains: " : s
-getModelFromSMTResult (TimeOut _)       = Left "Timeout"
-getModelFromSMTResult (Satisfiable _ m) = Right (False, parseModelOut m)
+instance Modelable SMTResult where
+  getModel (Unsatisfiable _) = Left "SBV.getModel: Unsatisfiable result"
+  getModel (Unknown _ m)     = Right (True, parseModelOut m)
+  getModel (ProofError _ s)  = error $ unlines $ "Backend solver complains: " : s
+  getModel (TimeOut _)       = Left "Timeout"
+  getModel (Satisfiable _ m) = Right (False, parseModelOut m)
+  modelExists (Satisfiable{}) = True
+  modelExists (Unknown _ m)   = not (null (modelAssocs m))  -- Should we just return True?
+  modelExists _               = False
 
 parseModelOut :: SatModel a => SMTModel -> a
 parseModelOut m = case parseCWs [c | (_, c) <- modelAssocs m] of
