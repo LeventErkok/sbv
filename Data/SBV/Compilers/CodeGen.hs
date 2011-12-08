@@ -122,14 +122,14 @@ cgAddLDFlags :: [String] -> SBVCodeGen ()
 cgAddLDFlags ss = modify (\s -> s { cgLDFlags = cgLDFlags s ++ ss })
 
 -- | Creates an atomic input in the generated code.
-cgInput :: (HasSignAndSize a, SymWord a) => String -> SBVCodeGen (SBV a)
+cgInput :: SymWord a => String -> SBVCodeGen (SBV a)
 cgInput nm = do r <- liftSymbolic forall_
                 sw <- cgSBVToSW r
                 modify (\s -> s { cgInputs = (nm, CgAtomic sw) : cgInputs s })
                 return r
 
 -- | Creates an array input in the generated code.
-cgInputArr :: (HasSignAndSize a, SymWord a) => Int -> String -> SBVCodeGen [SBV a]
+cgInputArr :: SymWord a => Int -> String -> SBVCodeGen [SBV a]
 cgInputArr sz nm
   | sz < 1 = error $ "SBV.cgInputArr: Array inputs must have at least one element, given " ++ show sz ++ " for " ++ show nm
   | True   = do rs <- liftSymbolic $ mapM (const forall_) [1..sz]
@@ -138,13 +138,13 @@ cgInputArr sz nm
                 return rs
 
 -- | Creates an atomic output in the generated code.
-cgOutput :: (HasSignAndSize a, SymWord a) => String -> SBV a -> SBVCodeGen ()
+cgOutput :: SymWord a => String -> SBV a -> SBVCodeGen ()
 cgOutput nm v = do _ <- liftSymbolic (output v)
                    sw <- cgSBVToSW v
                    modify (\s -> s { cgOutputs = (nm, CgAtomic sw) : cgOutputs s })
 
 -- | Creates an array output in the generated code.
-cgOutputArr :: (HasSignAndSize a, SymWord a) => String -> [SBV a] -> SBVCodeGen ()
+cgOutputArr :: SymWord a => String -> [SBV a] -> SBVCodeGen ()
 cgOutputArr nm vs
   | sz < 1 = error $ "SBV.cgOutputArr: Array outputs must have at least one element, received " ++ show sz ++ " for " ++ show nm
   | True   = do _ <- liftSymbolic (mapM output vs)
@@ -153,13 +153,13 @@ cgOutputArr nm vs
   where sz = length vs
 
 -- | Creates a returned (unnamed) value in the generated code.
-cgReturn :: (HasSignAndSize a, SymWord a) => SBV a -> SBVCodeGen ()
+cgReturn :: SymWord a => SBV a -> SBVCodeGen ()
 cgReturn v = do _ <- liftSymbolic (output v)
                 sw <- cgSBVToSW v
                 modify (\s -> s { cgReturns = CgAtomic sw : cgReturns s })
 
 -- | Creates a returned (unnamed) array value in the generated code.
-cgReturnArr :: (HasSignAndSize a, SymWord a) => [SBV a] -> SBVCodeGen ()
+cgReturnArr :: SymWord a => [SBV a] -> SBVCodeGen ()
 cgReturnArr vs
   | sz < 1 = error $ "SBV.cgReturnArr: Array returns must have at least one element, received " ++ show sz
   | True   = do _ <- liftSymbolic (mapM output vs)
