@@ -448,9 +448,8 @@ instance (Bits a, SymWord a) => Bits (SBV a) where
     | y `isConcretely` (== 0)  = x
     | True                     = liftSym2 (mkSymOp  XOr) xor x y
   complement = liftSym1 (mkSymOp1 Not) complement
-  bitSize  (SBV (_, Size (Just s)) _) = s
-  bitSize  (SBV (_, Size Nothing)  _) = error "Data.Bits.bitSize(SInteger)"
-  isSigned (SBV (b, _) _)  = b
+  bitSize  _ = intSizeOf (undefined :: a)
+  isSigned _ = hasSign   (undefined :: a)
   shiftL x y
     | y < 0                = shiftR x (-y)
     | y == 0               = x
