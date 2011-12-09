@@ -159,6 +159,10 @@ genParse (signed,size) (x:r)
   | hasSign x == signed && sizeOf x == size = Just (fromIntegral (cwVal x),r)
 genParse _ _ = Nothing
 
+-- base case, that comes in handy if there are no real variables
+instance SatModel () where
+  parseCWs xs = return ((), xs)
+
 instance SatModel Bool where
   parseCWs xs = do (x,r) <- genParse (False, Size (Just 1)) xs
                    return ((x :: Integer) /= 0, r)
