@@ -14,7 +14,7 @@
 
 module Data.SBV.Provers.Z3(z3) where
 
-import Data.Char          (isDigit)
+import Data.Char          (isDigit, toLower)
 import Data.List          (sortBy, intercalate, isPrefixOf)
 import System.Environment (getEnv)
 import qualified System.Info as S(os)
@@ -24,6 +24,13 @@ import Data.SBV.Provers.SExpr
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 
+-- Choose the correct prefix character for passing options
+-- TBD: Is there a more foolproof way of determining this?
+optionPrefix :: Char
+optionPrefix
+  | map toLower S.os `elem` ["linux", "darwin"] = '-'
+  | True                                        = '/'   -- windows
+
 -- | The description of the Z3 SMT solver
 -- The default executable is @\"z3\"@, which must be in your path. You can use the @SBV_Z3@ environment variable to point to the executable on your system.
 -- The default options are @\"\/in \/smt2\"@, which is valid for Z3 3.2. You can use the @SBV_Z3_OPTIONS@ environment variable to override the options.
@@ -31,7 +38,7 @@ z3 :: SMTSolver
 z3 = SMTSolver {
            name       = "z3"
          , executable = "z3"
-         , options    = if S.os == "linux" then ["-in", "-smt2"] else ["/in", "/smt2"]
+         , options    = map (optionPrefix:) ["in", "smt2"]
          , engine     = \cfg isSat qinps modelMap skolemMap pgm -> do
                                 execName <-               getEnv "SBV_Z3"          `catch` (\_ -> return (executable (solver cfg)))
                                 execOpts <- (words `fmap` getEnv "SBV_Z3_OPTIONS") `catch` (\_ -> return (options (solver cfg)))
