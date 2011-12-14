@@ -11,7 +11,7 @@ STAMPFILE=SBVUnitTest/SBVUnitTestBuildTime.hs
 
 all: install test sdist
 
-install: stamp
+install: tags stamp
 	cabal install
 
 stamp:
