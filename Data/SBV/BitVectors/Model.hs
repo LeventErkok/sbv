@@ -32,6 +32,7 @@ import Data.Int        (Int8, Int16, Int32, Int64)
 import Data.List       (genericLength, genericIndex, genericSplitAt, unzip4, unzip5, unzip6, unzip7)
 import Data.Word       (Word8, Word16, Word32, Word64)
 import Test.QuickCheck (Arbitrary(..))
+import System.Random
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.Utils.Boolean
@@ -91,11 +92,11 @@ mkSymOp1 = mkSymOp1SC (const Nothing)
 
 -- Symbolic-Word class instances
 
-genFinVar :: Quantifier -> (Bool, Int) -> String -> Symbolic (SBV a)
+genFinVar :: (Random a, SymWord a) => Quantifier -> (Bool, Int) -> String -> Symbolic (SBV a)
 genFinVar q (sg, sz) = mkSymSBV q (sg, Size (Just sz)) . Just
 
-genFinVar_ :: Quantifier -> (Bool, Int) -> Symbolic (SBV a)
-genFinVar_ b (sg, sz) = mkSymSBV b (sg, Size (Just sz)) Nothing
+genFinVar_ :: (Random a, SymWord a) => Quantifier -> (Bool, Int) -> Symbolic (SBV a)
+genFinVar_ q (sg, sz) = mkSymSBV q (sg, Size (Just sz)) Nothing
 
 genFinLiteral :: Integral a => (Bool, Int) -> a -> SBV b
 genFinLiteral (sg, sz)  = SBV s . Left . mkConstCW s
@@ -900,7 +901,7 @@ instance HasSignAndSize a => Uninterpreted (SBV a) where
      | Just (_, v) <- mbCgData = (mkUFName nm, v)
      | True                    = (mkUFName nm, SBV sgnsza $ Right $ cache result)
     where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
-          result st | Just (_, v) <- mbCgData, not (inCodeGenMode st) = sbvToSW st v
+          result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st v
                     | True = do newUninterpreted st nm (SBVType [sgnsza]) (fst `fmap` mbCgData)
                                 newExpr st sgnsza $ SBVApp (Uninterpreted nm) []
 
@@ -920,7 +921,7 @@ instance (SymWord b, HasSignAndSize a) => Uninterpreted (SBV b -> SBV a) where
            = SBV sgnsza $ Right $ cache result
            where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
                  sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
-                 result st | Just (_, v) <- mbCgData, not (inCodeGenMode st) = sbvToSW st (v arg0)
+                 result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st (v arg0)
                            | True = do newUninterpreted st nm (SBVType [sgnszb, sgnsza]) (fst `fmap` mbCgData)
                                        sw0 <- sbvToSW st arg0
                                        mapM_ forceArg [sw0]
@@ -937,7 +938,7 @@ instance (SymWord c, SymWord b, HasSignAndSize a) => Uninterpreted (SBV c -> SBV
            where sgnsza = (hasSign (undefined :: a), sizeOf (undefined :: a))
                  sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
                  sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
-                 result st | Just (_, v) <- mbCgData, not (inCodeGenMode st) = sbvToSW st (v arg0 arg1)
+                 result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st (v arg0 arg1)
                            | True = do newUninterpreted st nm (SBVType [sgnszc, sgnszb, sgnsza]) (fst `fmap` mbCgData)
                                        sw0 <- sbvToSW st arg0
                                        sw1 <- sbvToSW st arg1
@@ -956,7 +957,7 @@ instance (SymWord d, SymWord c, SymWord b, HasSignAndSize a) => Uninterpreted (S
                  sgnszb = (hasSign (undefined :: b), sizeOf (undefined :: b))
                  sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
                  sgnszd = (hasSign (undefined :: d), sizeOf (undefined :: d))
-                 result st | Just (_, v) <- mbCgData, not (inCodeGenMode st) = sbvToSW st (v arg0 arg1 arg2)
+                 result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st (v arg0 arg1 arg2)
                            | True = do newUninterpreted st nm (SBVType [sgnszd, sgnszc, sgnszb, sgnsza]) (fst `fmap` mbCgData)
                                        sw0 <- sbvToSW st arg0
                                        sw1 <- sbvToSW st arg1
@@ -977,7 +978,7 @@ instance (SymWord e, SymWord d, SymWord c, SymWord b, HasSignAndSize a) => Unint
                  sgnszc = (hasSign (undefined :: c), sizeOf (undefined :: c))
                  sgnszd = (hasSign (undefined :: d), sizeOf (undefined :: d))
                  sgnsze = (hasSign (undefined :: e), sizeOf (undefined :: e))
-                 result st | Just (_, v) <- mbCgData, not (inCodeGenMode st) = sbvToSW st (v arg0 arg1 arg2 arg3)
+                 result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st (v arg0 arg1 arg2 arg3)
                            | True = do newUninterpreted st nm (SBVType [sgnsze, sgnszd, sgnszc, sgnszb, sgnsza]) (fst `fmap` mbCgData)
                                        sw0 <- sbvToSW st arg0
                                        sw1 <- sbvToSW st arg1
@@ -1000,7 +1001,7 @@ instance (SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasSignAndSize 
                  sgnszd = (hasSign (undefined :: d), sizeOf (undefined :: d))
                  sgnsze = (hasSign (undefined :: e), sizeOf (undefined :: e))
                  sgnszf = (hasSign (undefined :: f), sizeOf (undefined :: f))
-                 result st | Just (_, v) <- mbCgData, not (inCodeGenMode st) = sbvToSW st (v arg0 arg1 arg2 arg3 arg4)
+                 result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st (v arg0 arg1 arg2 arg3 arg4)
                            | True = do newUninterpreted st nm (SBVType [sgnszf, sgnsze, sgnszd, sgnszc, sgnszb, sgnsza]) (fst `fmap` mbCgData)
                                        sw0 <- sbvToSW st arg0
                                        sw1 <- sbvToSW st arg1
@@ -1025,7 +1026,7 @@ instance (SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasS
                  sgnsze = (hasSign (undefined :: e), sizeOf (undefined :: e))
                  sgnszf = (hasSign (undefined :: f), sizeOf (undefined :: f))
                  sgnszg = (hasSign (undefined :: g), sizeOf (undefined :: g))
-                 result st | Just (_, v) <- mbCgData, not (inCodeGenMode st) = sbvToSW st (v arg0 arg1 arg2 arg3 arg4 arg5)
+                 result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st (v arg0 arg1 arg2 arg3 arg4 arg5)
                            | True = do newUninterpreted st nm (SBVType [sgnszg, sgnszf, sgnsze, sgnszd, sgnszc, sgnszb, sgnsza]) (fst `fmap` mbCgData)
                                        sw0 <- sbvToSW st arg0
                                        sw1 <- sbvToSW st arg1
@@ -1053,7 +1054,7 @@ instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymW
                  sgnszf = (hasSign (undefined :: f), sizeOf (undefined :: f))
                  sgnszg = (hasSign (undefined :: g), sizeOf (undefined :: g))
                  sgnszh = (hasSign (undefined :: h), sizeOf (undefined :: h))
-                 result st | Just (_, v) <- mbCgData, not (inCodeGenMode st) = sbvToSW st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6)
+                 result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6)
                           | True = do newUninterpreted st nm (SBVType [sgnszh, sgnszg, sgnszf, sgnsze, sgnszd, sgnszc, sgnszb, sgnsza]) (fst `fmap` mbCgData)
                                       sw0 <- sbvToSW st arg0
                                       sw1 <- sbvToSW st arg1

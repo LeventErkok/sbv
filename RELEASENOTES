@@ -11,6 +11,15 @@ Version 0.9.24, Not yet released
      application of one pushes its argument to a Predicate, making
      the outer one useless, but it's nonetheless useful by itself.
    * Add a "Modelable" class, which simplifies model extraction.
+   * Add support for quick-check at the "Symbolic SBool" level. Previously
+     SBV only allowed functions returning SBool to be quick-checked, which
+     forced a certain style of coding. In particular with the addition
+     of quantifiers, the new coding style mostly puts the top-level
+     expressions in the Symbolic monad, which were not quick-checkable
+     before. With new support, the quickCheck, prove, sat, and allSat
+     commands are all interchangeable with obvious meanings.
+  Dependencies
+   * Bump up random package dependency to 1.0.1.1 (from 1.0.0.2)
 
 ======================================================================
 Version 0.9.23, 2011-12-05

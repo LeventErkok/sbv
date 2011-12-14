@@ -30,7 +30,7 @@ module Data.SBV.BitVectors.Data
  , sbvToSW, sbvToSymSW
  , SBVExpr(..), newExpr
  , cache, uncache, uncacheAI, HasSignAndSize(..)
- , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, runSymbolic', State, inCodeGenMode, Size(..), Outputtable(..), Result(..)
+ , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, runSymbolic', State, inProofMode, SBVRunMode(..), Size(..), Outputtable(..), Result(..)
  , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
  , Quantifier(..), needsExistentials
  , SMTLibPgm(..), SMTLibVersion(..)
@@ -53,7 +53,10 @@ import qualified Data.Foldable as F    (toList)
 import qualified Data.Sequence as S    (Seq, empty, (|>))
 
 import System.Mem.StableName
+import System.Random
 import Test.QuickCheck                 (Testable(..))
+import Test.QuickCheck         as QC   (whenFail)
+import Test.QuickCheck.Monadic as QC   (monadicIO, run, assert)
 
 import Data.SBV.Utils.Lib
 
@@ -134,6 +137,7 @@ data Op = Plus | Times | Minus
 
 data SBVExpr = SBVApp !Op ![SW]
              deriving (Eq, Ord)
+
 
 -- minimal complete definition: sizeOf, hasSign
 class HasSignAndSize a where
@@ -254,6 +258,7 @@ data UnintKind = UFun Int String | UArr Int String      -- in each case, arity a
 
 -- | Result of running a symbolic computation
 data Result = Result Bool                                         -- contains unbounded integers
+                     [(String, CW)]                               -- quick-check counter-example information (if any)
                      [(String, [String])]                         -- uninterpeted code segments
                      [(Quantifier, NamedSymVar)]                  -- inputs (possibly existential)
                      [(SW, CW)]                                   -- constants
@@ -265,10 +270,10 @@ data Result = Result Bool                                         -- contains un
                      [SW]                                         -- outputs
 
 instance Show Result where
-  show (Result _ _ _ cs _ _ [] [] _ [r])
+  show (Result _ _ _ _ cs _ _ [] [] _ [r])
     | Just c <- r `lookup` cs
     = show c
-  show (Result _ cgs is cs ts as uis axs xs os)  = intercalate "\n" $
+  show (Result _ _ cgs is cs ts as uis axs xs os)  = intercalate "\n" $
                    ["INPUTS"]
                 ++ map shn is
                 ++ ["CONSTANTS"]
@@ -342,7 +347,14 @@ arrayUIKind (i, (nm, _, ctx))
         external (ArrayMutate{}) = False
         external (ArrayMerge{})  = False
 
-data State  = State { inCodeGenMode :: Bool
+-- | Different means of running a symbolic piece of code
+data SBVRunMode = Proof       -- ^ Symbolic simulation mode, for proof purposes
+                | CodeGen     -- ^ Code generation mode
+                | QuickCheck  -- ^ Quick-check (concrete simulation) mode
+                deriving Eq
+
+data State  = State { runMode       :: SBVRunMode
+                    , rQcInfo       :: IORef [(String, CW)]
                     , rctr          :: IORef Int
                     , rInfPrec      :: IORef Bool
                     , rinps         :: IORef [(Quantifier, NamedSymVar)]
@@ -358,6 +370,9 @@ data State  = State { inCodeGenMode :: Bool
                     , rSWCache      :: IORef (Cache SW)
                     , rAICache      :: IORef (Cache Int)
                     }
+
+inProofMode :: State -> Bool
+inProofMode s = runMode s == Proof
 
 -- | The "Symbolic" value. Either a constant (@Left@) or a symbolic
 -- value (@Right Cached@). Note that caching is essential for making
@@ -488,15 +503,22 @@ sbvToSW st (SBV _ (Right f)) = uncache f st
 newtype Symbolic a = Symbolic (ReaderT State IO a)
                    deriving (Functor, Monad, MonadIO, MonadReader State)
 
-mkSymSBV :: Quantifier -> (Bool, Size) -> Maybe String -> Symbolic (SBV a)
+mkSymSBV :: forall a. (Random a, SymWord a) => Quantifier -> (Bool, Size) -> Maybe String -> Symbolic (SBV a)
 mkSymSBV q sgnsz mbNm = do
         st <- ask
-        ctr <- liftIO $ incCtr st
-        let nm = maybe ('s':show ctr) id mbNm
-            sw = SW sgnsz (NodeId ctr)
-        when (isInfPrec sw) $ liftIO $ writeIORef (rInfPrec st) True
-        liftIO $ modifyIORef (rinps st) ((q, (sw, nm)):)
-        return $ SBV sgnsz $ Right $ cache (const (return sw))
+        case runMode st of
+          QuickCheck | q == EX -> case mbNm of
+                                    Nothing -> error $ "Cannot quick-check in the presence of existential variables, type: " ++ showType (undefined :: SBV a)
+                                    Just nm -> error $ "Cannot quick-check in the presence of existential variable " ++ nm ++ " :: " ++ showType (undefined :: SBV a)
+          QuickCheck           -> do v@(SBV _ (Left cw)) <- liftIO randomIO
+                                     liftIO $ modifyIORef (rQcInfo st) ((maybe "_" id mbNm, cw):)
+                                     return v
+          _          -> do ctr <- liftIO $ incCtr st
+                           let nm = maybe ('s':show ctr) id mbNm
+                               sw = SW sgnsz (NodeId ctr)
+                           when (isInfPrec sw) $ liftIO $ writeIORef (rInfPrec st) True
+                           liftIO $ modifyIORef (rinps st) ((q, (sw, nm)):)
+                           return $ SBV sgnsz $ Right $ cache (const (return sw))
 
 sbvToSymSW :: SBV a -> Symbolic SW
 sbvToSymSW sbv = do
@@ -549,14 +571,15 @@ addAxiom nm ax = do
         st <- ask
         liftIO $ modifyIORef (raxioms st) ((nm, ax) :)
 
--- | Run a symbolic computation and return a 'Result'
+-- | Run a symbolic computation in Proof mode and return a 'Result'
 runSymbolic :: Symbolic a -> IO Result
-runSymbolic c = snd `fmap` runSymbolic' False c
+runSymbolic c = snd `fmap` runSymbolic' Proof c
 
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
-runSymbolic' :: Bool -> Symbolic a -> IO (a, Result)
-runSymbolic' cgMode (Symbolic c) = do
+runSymbolic' :: SBVRunMode -> Symbolic a -> IO (a, Result)
+runSymbolic' currentRunMode (Symbolic c) = do
    ctr     <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
+   qcInfo  <- newIORef []
    pgm     <- newIORef S.empty
    emap    <- newIORef Map.empty
    cmap    <- newIORef Map.empty
@@ -570,7 +593,8 @@ runSymbolic' cgMode (Symbolic c) = do
    swCache <- newIORef IMap.empty
    aiCache <- newIORef IMap.empty
    infPrec <- newIORef False
-   let st = State { inCodeGenMode = cgMode
+   let st = State { runMode       = currentRunMode
+                  , rQcInfo       = qcInfo
                   , rctr          = ctr
                   , rInfPrec      = infPrec
                   , rinps         = inps
@@ -601,7 +625,8 @@ runSymbolic' cgMode (Symbolic c) = do
    axs   <- reverse `fmap` readIORef axioms
    hasInfPrec <- readIORef infPrec
    cgMap <- Map.toList `fmap` readIORef cgs
-   return $ (r, Result hasInfPrec cgMap (reverse inpsR) cnsts tbls arrs unint axs rpgm (reverse outsR))
+   qcs <- reverse `fmap` readIORef qcInfo
+   return $ (r, Result hasInfPrec qcs cgMap (reverse inpsR) cnsts tbls arrs unint axs rpgm (reverse outsR))
 
 -------------------------------------------------------------------------------
 -- * Symbolic Words
@@ -653,6 +678,11 @@ class (HasSignAndSize a, Ord a) => SymWord a where
     | Just i <- unliteral s = p i
     | True                  = False
 
+instance (Random a, SymWord a) => Random (SBV a) where
+  randomR (l, h) g = case (unliteral l, unliteral h) of
+                       (Just lb, Just hb) -> let (v, g') = randomR (lb, hb) g in (literal (v :: a), g')
+                       _                  -> error $ "SBV.Random: Cannot generate random values with symbolic bounds"
+  random         g = let (v, g') = random g in (literal (v :: a) , g')
 ---------------------------------------------------------------------------------
 -- * Symbolic Arrays
 ---------------------------------------------------------------------------------
@@ -827,8 +857,8 @@ instance NFData CW where
   rnf (CW x y z) = x `seq` y `seq` z `seq` ()
 
 instance NFData Result where
-  rnf (Result isInf cgs inps consts tbls arrs uis axs pgm outs)
-        = rnf isInf `seq` rnf cgs `seq` rnf inps `seq` rnf consts `seq` rnf tbls `seq` rnf arrs `seq` rnf uis `seq` rnf axs `seq` rnf pgm `seq` rnf outs
+  rnf (Result isInf qcInfo cgs inps consts tbls arrs uis axs pgm outs)
+        = rnf isInf `seq` rnf qcInfo `seq` rnf cgs `seq` rnf inps `seq` rnf consts `seq` rnf tbls `seq` rnf arrs `seq` rnf uis `seq` rnf axs `seq` rnf pgm `seq` rnf outs
 
 instance NFData Size
 instance NFData ArrayContext
@@ -846,3 +876,23 @@ instance NFData a => NFData (SBV a) where
 instance Testable SBool where
   property (SBV _ (Left b)) = property (cwToBool b)
   property s                = error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show s ++ ")"
+
+instance Testable (Symbolic SBool) where
+  property m = QC.whenFail msg (QC.monadicIO test)
+    where test = do result <- run $ do (r, p) <- runSymbolic' QuickCheck (m >>= output)
+                                       case r of
+                                         SBV (False, Size (Just 1)) (Left c)  -> decide (cwToBool c) (complain p)
+                                         SBV (False, Size (Just 1)) (Right _)
+                                                                 -> error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show r ++ ")"
+                                         _ -> error $ "SBV.quickCheck: Impossible happened: Improper result type: " ++ show r
+
+                    QC.assert result
+          decide True  _ = return True
+          decide False c = c >> return False
+          msg = putStrLn "See above for SBV generated counter-example information (if any)."
+          complain (Result _ qcInfo _ _ _ _ _ _ _ _ _)
+            | null qcInfo = putStrLn "Symbolic trace has no recorded quick-check counter-example information"
+            | True        = putStrLn "Quickcheck counter-example:" >> mapM_ (putStrLn . ("  " ++) . info) qcInfo
+            where maxLen = maximum (0:[length s | (s, _) <- qcInfo])
+                  shN s = s ++ replicate (maxLen - length s) ' '
+                  info (n, cw) = shN n ++ " = " ++ show cw

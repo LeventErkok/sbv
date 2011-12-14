@@ -14,7 +14,7 @@
 
 module Data.SBV.Internals (
    -- * Running symbolic programs /manually/
-    Result, runSymbolic
+    Result, SBVRunMode(..), runSymbolic, runSymbolic'
     -- * Other internal structures useful for low-level programming
   , SBV(..), HasSignAndSize(..), CW, mkConstCW, genFinVar, genFinVar_
   -- * Compilation to C
@@ -24,7 +24,7 @@ module Data.SBV.Internals (
   , module Data.SBV.Utils.SBVTest
   ) where
 
-import Data.SBV.BitVectors.Data   (Result, runSymbolic, SBV(..), HasSignAndSize(..), CW, mkConstCW)
+import Data.SBV.BitVectors.Data   (Result, SBVRunMode(..), runSymbolic, runSymbolic', SBV(..), HasSignAndSize(..), CW, mkConstCW)
 import Data.SBV.BitVectors.Model  (genFinVar, genFinVar_)
 import Data.SBV.Compilers.C       (compileToC', compileToCLib')
 import Data.SBV.Compilers.CodeGen (CgPgmBundle(..), CgPgmKind(..))

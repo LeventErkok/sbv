@@ -341,7 +341,7 @@ simulate converter config isSat comments predicate = do
         msg $ "Generated symbolic trace:\n" ++ show res
         msg "Translating to SMT-Lib.."
         case res of
-          Result hasInfPrec _codeSegs is consts tbls arrs uis axs pgm [o@(SW (False, Size (Just 1)) _)] ->
+          Result hasInfPrec _qcInfo _codeSegs is consts tbls arrs uis axs pgm [o@(SW (False, Size (Just 1)) _)] ->
              timeIf isTiming "translation" $ do let uiMap     = catMaybes (map arrayUIKind arrs) ++ map unintFnUIKind uis
                                                     skolemMap = skolemize (if isSat then is else map flipQ is)
                                                         where flipQ (ALL, x) = (EX, x)
@@ -352,7 +352,7 @@ simulate converter config isSat comments predicate = do
                                                                       go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
                                                                       go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
                                                 return (is, uiMap, skolemMap, converter hasInfPrec isSat comments is skolemMap consts tbls arrs uis axs pgm o)
-          Result _hasInfPrec _codeSegs _is _consts _tbls _arrs _uis _axs _pgm os -> case length os of
+          Result _hasInfPrec _qcInfo _codeSegs _is _consts _tbls _arrs _uis _axs _pgm os -> case length os of
                         0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
                         1  -> error $ "Impossible happened, non-boolean output in " ++ show os
                                     ++ "\nDetected while generating the trace:\n" ++ show res
