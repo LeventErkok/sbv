@@ -46,6 +46,8 @@ Description:   Express properties about bit-precise Haskell programs and automat
                .
                  * quick-checked
                .
+                 * used in concrete test case generation (the 'genTest' function)
+               .
                Predicates can have both existential and universal variables. Use of
                alternating quantifiers provides considerable expressive power.
                Furthermore, existential variables allow synthesis via model generation.

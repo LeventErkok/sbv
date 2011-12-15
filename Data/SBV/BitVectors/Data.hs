@@ -22,7 +22,7 @@ module Data.SBV.BitVectors.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
  , SInt8, SInt16, SInt32, SInt64, SInteger
  , SymWord(..)
- , CW, cwVal, cwSameType, cwIsBit, cwToBool
+ , CW(..), cwSameType, cwIsBit, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
  , SW(..), trueSW, falseSW, trueCW, falseCW
  , SBV(..), NodeId(..), mkSymSBV
@@ -59,8 +59,11 @@ import Data.SBV.Utils.Lib
 
 -- | 'CW' represents a concrete word of a fixed size:
 -- Endianness is mostly irrelevant (see the 'FromBits' class).
--- For signed words, the most significant digit is considered to be the sign
-data CW = CW { cwSigned :: !Bool, cwSize :: !Size, cwVal :: !Integer }
+-- For signed words, the most significant digit is considered to be the sign.
+data CW = CW { cwSigned :: !Bool    -- ^ Is the word signed?
+             , cwSize   :: !Size    -- ^ Size of the word (unbounded if Nothing)
+             , cwVal    :: !Integer -- ^ The underlying value, represented as a Haskell 'Integer'
+             }
         deriving (Eq, Ord)
 
 cwSameType :: CW -> CW -> Bool

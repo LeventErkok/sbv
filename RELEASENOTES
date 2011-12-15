@@ -18,6 +18,7 @@ Version 0.9.24, Not yet released
      expressions in the Symbolic monad, which were not quick-checkable
      before. With new support, the quickCheck, prove, sat, and allSat
      commands are all interchangeable with obvious meanings.
+   * Add support for concrete test case generation, see the genTest function.
   Dependencies
    * Bump up random package dependency to 1.0.1.1 (from 1.0.0.2)
 
