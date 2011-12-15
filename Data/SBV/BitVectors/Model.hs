@@ -35,6 +35,7 @@ import Data.List       (genericLength, genericIndex, genericSplitAt, unzip4, unz
 import Data.Word       (Word8, Word16, Word32, Word64)
 
 import Test.QuickCheck                           (Testable(..), Arbitrary(..))
+import qualified Test.QuickCheck         as QC   (whenFail)
 import qualified Test.QuickCheck.Monadic as QC   (monadicIO, run)
 import System.Random
 
@@ -1110,7 +1111,7 @@ instance Testable SBool where
   property s                = error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show s ++ ")"
 
 instance Testable (Symbolic SBool) where
-  property m = QC.monadicIO test
+  property m = QC.whenFail (putStrLn msg) $ QC.monadicIO test
     where test = do die <- QC.run $ do (r, p) <- runSymbolic' QuickCheck (m >>= output)
                                        case () of
                                          _ | isSymbolic r        -> error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show r ++ ")"
@@ -1118,8 +1119,9 @@ instance Testable (Symbolic SBool) where
                                          _                       -> do putStrLn $ complain (getQCInfo p)
                                                                        return True
                     when die $ fail "Falsifiable"
-          complain []     = "(Predicate contains no universally quantified variables.)"
-          complain qcInfo = intercalate "\n" $ map (("  " ++) . info) qcInfo
+          msg = "*** SBV: See the custom counter example reported above."
+          complain []     = "*** SBV Counter Example: Predicate contains no universally quantified variables."
+          complain qcInfo = intercalate "\n" $ "*** SBV Counter Example:" : map (("  " ++) . info) qcInfo
             where maxLen = maximum (0:[length s | (s, _) <- qcInfo])
                   shN s = s ++ replicate (maxLen - length s) ' '
                   info (n, cw) = shN n ++ " = " ++ show cw
