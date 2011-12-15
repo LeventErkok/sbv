@@ -30,7 +30,7 @@ module Data.SBV.BitVectors.Data
  , sbvToSW, sbvToSymSW
  , SBVExpr(..), newExpr
  , cache, uncache, uncacheAI, HasSignAndSize(..)
- , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, runSymbolic', State, inProofMode, SBVRunMode(..), Size(..), Outputtable(..), Result(..)
+ , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, runSymbolic', State, inProofMode, SBVRunMode(..), Size(..), Outputtable(..), Result(..), getQCInfo
  , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
  , Quantifier(..), needsExistentials
  , SMTLibPgm(..), SMTLibVersion(..)
@@ -54,9 +54,6 @@ import qualified Data.Sequence as S    (Seq, empty, (|>))
 
 import System.Mem.StableName
 import System.Random
-import Test.QuickCheck                 (Testable(..))
-import Test.QuickCheck         as QC   (whenFail)
-import Test.QuickCheck.Monadic as QC   (monadicIO, run, assert)
 
 import Data.SBV.Utils.Lib
 
@@ -268,6 +265,9 @@ data Result = Result Bool                                         -- contains un
                      [(String, [String])]                         -- axioms
                      Pgm                                          -- assignments
                      [SW]                                         -- outputs
+
+getQCInfo :: Result -> [(String, CW)]
+getQCInfo (Result _ qc _ _ _ _ _ _ _ _ _) = qc
 
 instance Show Result where
   show (Result _ _ _ _ cs _ _ [] [] _ [r])
@@ -871,28 +871,3 @@ instance NFData a => NFData (Cached a) where
   rnf (Cached f) = f `seq` ()
 instance NFData a => NFData (SBV a) where
   rnf (SBV x y) = rnf x `seq` rnf y `seq` ()
-
--- Quickcheck interface on symbolic-booleans..
-instance Testable SBool where
-  property (SBV _ (Left b)) = property (cwToBool b)
-  property s                = error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show s ++ ")"
-
-instance Testable (Symbolic SBool) where
-  property m = QC.whenFail msg (QC.monadicIO test)
-    where test = do result <- run $ do (r, p) <- runSymbolic' QuickCheck (m >>= output)
-                                       case r of
-                                         SBV (False, Size (Just 1)) (Left c)  -> decide (cwToBool c) (complain p)
-                                         SBV (False, Size (Just 1)) (Right _)
-                                                                 -> error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show r ++ ")"
-                                         _ -> error $ "SBV.quickCheck: Impossible happened: Improper result type: " ++ show r
-
-                    QC.assert result
-          decide True  _ = return True
-          decide False c = c >> return False
-          msg = putStrLn "See above for SBV generated counter-example information (if any)."
-          complain (Result _ qcInfo _ _ _ _ _ _ _ _ _)
-            | null qcInfo = putStrLn "Symbolic trace has no recorded quick-check counter-example information"
-            | True        = putStrLn "Quickcheck counter-example:" >> mapM_ (putStrLn . ("  " ++) . info) qcInfo
-            where maxLen = maximum (0:[length s | (s, _) <- qcInfo])
-                  shN s = s ++ replicate (maxLen - length s) ' '
-                  info (n, cw) = shN n ++ " = " ++ show cw

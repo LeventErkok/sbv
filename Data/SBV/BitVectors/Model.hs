@@ -26,12 +26,16 @@ module Data.SBV.BitVectors.Model (
   )
   where
 
+import Control.Monad   (when)
+
 import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits       (Bits(..))
 import Data.Int        (Int8, Int16, Int32, Int64)
-import Data.List       (genericLength, genericIndex, genericSplitAt, unzip4, unzip5, unzip6, unzip7)
+import Data.List       (genericLength, genericIndex, genericSplitAt, unzip4, unzip5, unzip6, unzip7, intercalate)
 import Data.Word       (Word8, Word16, Word32, Word64)
-import Test.QuickCheck (Arbitrary(..))
+
+import Test.QuickCheck                           (Testable(..), Arbitrary(..))
+import qualified Test.QuickCheck.Monadic as QC   (monadicIO, run)
 import System.Random
 
 import Data.SBV.BitVectors.Data
@@ -1099,3 +1103,23 @@ instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymW
             => Uninterpreted ((SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvUninterpret mbCgData nm = let (h, f) = sbvUninterpret (uc7 `fmap` mbCgData) nm in (h, \(arg0, arg1, arg2, arg3, arg4, arg5, arg6) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6)
     where uc7 (cs, fn) = (cs, \a b c d e f g -> fn (a, b, c, d, e, f, g))
+
+-- Quickcheck interface on symbolic-booleans..
+instance Testable SBool where
+  property (SBV _ (Left b)) = property (cwToBool b)
+  property s                = error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show s ++ ")"
+
+instance Testable (Symbolic SBool) where
+  property m = QC.monadicIO test
+    where test = do die <- QC.run $ do (r, p) <- runSymbolic' QuickCheck (m >>= output)
+                                       case () of
+                                         _ | isSymbolic r        -> error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show r ++ ")"
+                                         _ | r `isConcretely` id -> return False
+                                         _                       -> do putStrLn $ complain (getQCInfo p)
+                                                                       return True
+                    when die $ fail "Falsifiable"
+          complain []     = "(Predicate contains no universally quantified variables.)"
+          complain qcInfo = intercalate "\n" $ map (("  " ++) . info) qcInfo
+            where maxLen = maximum (0:[length s | (s, _) <- qcInfo])
+                  shN s = s ++ replicate (maxLen - length s) ' '
+                  info (n, cw) = shN n ++ " = " ++ show cw
