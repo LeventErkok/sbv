@@ -12,6 +12,8 @@
 
 module Data.SBV.BitVectors.GenTest (genTest) where
 
+import Data.Maybe (fromMaybe)
+
 import Data.SBV.BitVectors.Data
 
 -- | Generate a set of concrete test values from a symbolic program. The output
@@ -19,7 +21,5 @@ import Data.SBV.BitVectors.Data
 genTest :: Outputtable a => Int -> Symbolic a -> IO [([CW], [CW])]
 genTest n m = sequence [tc | _ <- [1 .. n]]
   where tc = do (_, Result _ tvals _ _ cs _ _ _ _ _ os) <- runSymbolic' QuickCheck (m >>= output)
-                let cval o = case o `lookup` cs of
-                               Nothing -> error "Cannot quick-check in the presence of uninterpeted constants!"
-                               Just s  -> s
+                let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
                 return (map snd tvals, map cval os)

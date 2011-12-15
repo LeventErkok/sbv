@@ -62,7 +62,7 @@ writeSTree s i j = walk (blastBE i) s
 mkSTree :: forall i e. HasSignAndSize i => [SBV e] -> STree i e
 mkSTree ivals
   | isInfPrec (undefined :: i)
-  = error $ "SBV.STree.mkSTree: Cannot build an infinitely large tree"
+  = error "SBV.STree.mkSTree: Cannot build an infinitely large tree"
   | reqd /= given
   = error $ "SBV.STree.mkSTree: Required " ++ show reqd ++ " elements, received: " ++ show given
   | True
