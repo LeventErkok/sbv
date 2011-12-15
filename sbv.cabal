@@ -123,6 +123,7 @@ Library
                   , Data.SBV.Examples.Uninterpreted.AUF
                   , Data.SBV.Examples.Uninterpreted.Function
   Other-modules   : Data.SBV.BitVectors.Data
+                  , Data.SBV.BitVectors.GenTest
                   , Data.SBV.BitVectors.Model
                   , Data.SBV.BitVectors.Optimize
                   , Data.SBV.BitVectors.Polynomial

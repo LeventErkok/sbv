@@ -180,6 +180,9 @@ module Data.SBV (
   -- * Getting SMT-Lib output (for offline analysis)
   , compileToSMTLib
 
+  -- * Test case generation
+  , genTest, CW(..)
+
   -- * Code generation from symbolic programs
   -- $cCodeGeneration
   , SBVCodeGen
@@ -211,6 +214,7 @@ module Data.SBV (
   ) where
 
 import Data.SBV.BitVectors.Data
+import Data.SBV.BitVectors.GenTest
 import Data.SBV.BitVectors.Model
 import Data.SBV.BitVectors.Optimize
 import Data.SBV.BitVectors.PrettyNum
