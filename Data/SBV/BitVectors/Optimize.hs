@@ -18,7 +18,7 @@ module Data.SBV.BitVectors.Optimize (OptimizeOpts(..), optimize, optimizeWith, m
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model (OrdSymbolic(..), EqSymbolic(..))
 import Data.SBV.Provers.Prover   (satWith, z3)
-import Data.SBV.SMT.SMT          (SatModel, getModel, modelExists, SMTConfig(..))
+import Data.SBV.SMT.SMT          (SatModel, getModel, SMTConfig(..))
 import Data.SBV.Utils.Boolean
 
 -- | Optimizer configuration. Note that iterative and quantified approaches are in general not interchangeable.
@@ -52,9 +52,6 @@ maximizeWith cfg opts = optimizeWith cfg opts (.>=)
 --
 --   >>> maximize Quantified sum 3 (bAll (.< (10 :: SInteger)))
 --   Just [9,9,9]
---
---   >>> maximize Quantified sum 3 (bAll (.> (10 :: SInteger)))
---   Nothing
 maximize :: (Show a, Show cost, SatModel a, SymWord a, OrdSymbolic cost) => OptimizeOpts -> ([SBV a] -> cost) -> Int -> ([SBV a] -> SBool) -> IO (Maybe [a])
 maximize = maximizeWith z3
 
@@ -66,9 +63,6 @@ minimizeWith cfg opts = optimizeWith cfg opts (.<=)
 --
 --   >>> minimize Quantified sum 3 (bAll (.> (10 :: SInteger)))
 --   Just [11,11,11]
---
---   >>> minimize Quantified sum 3 (bAll (.< (10 :: SInteger)))
---   Nothing
 minimize :: (Show a, Show cost, SatModel a, SymWord a, OrdSymbolic cost) => OptimizeOpts -> ([SBV a] -> cost) -> Int -> ([SBV a] -> SBool) -> IO (Maybe [a])
 minimize = minimizeWith z3
 
@@ -78,42 +72,35 @@ quantOptimize cfg cmp cost n valid = do
            m <- satWith cfg $ do xs <- mkExistVars  n
                                  ys <- mkForallVars n
                                  return $ valid xs &&& (valid ys ==> cost xs `cmp` cost ys)
-           if not (modelExists m)
-              then return Nothing
-              else case getModel m of
-                     Left e           -> error $ "SBV: Optimization call failed:\n" ++ e
-                     Right (True, _)  -> error "SBV: Backend solver reported \"unknown\""
-                     Right (False, a) -> return $ Just a
+           case getModel m of
+              Right (True, _)  -> error "SBV: Backend solver reported \"unknown\""
+              Right (False, a) -> return $ Just a
+              Left _           -> return Nothing
 
 -- | Optimization using iteration
 iterOptimize :: (Show cost, OrdSymbolic cost, Show a, SatModel a, SymWord a) => Bool -> SMTConfig -> (cost -> cost -> SBool) -> ([SBV a] -> cost) -> Int -> ([SBV a] -> SBool) -> IO (Maybe [a])
 iterOptimize chatty cfg cmp cost n valid = do
         msg "Trying to find a satisfying solution."
         m <- satWith cfg $ valid `fmap` mkExistVars n
-        if not (modelExists m)
-           then do msg "The problem is unsatisfiable"
-                   return Nothing
-           else case getModel m of
-                  Left e           -> error $ "SBV: Optimization call failed:\n" ++ e
-                  Right (True, _)  -> error "SBV: Backend solver reported \"unknown\""
-                  Right (False, a) -> do msg $ "First solution found: " ++ show a
-                                         let c = cost (map literal a)
-                                         msg $ "Initial cost is     : " ++ show c
-                                         msg "Starting iterative search."
-                                         go (1::Int) a c
+        case getModel m of
+          Left _ -> return Nothing
+          Right (True, _)  -> error "SBV: Backend solver reported \"unknown\""
+          Right (False, a) -> do msg $ "First solution found: " ++ show a
+                                 let c = cost (map literal a)
+                                 msg $ "Initial value is    : " ++ show c
+                                 msg "Starting iterative search."
+                                 go (1::Int) a c
   where msg m | chatty = putStrLn $ "*** " ++ m
               | True   = return ()
         go i curSol curCost = do
                 msg $ "Round " ++ show i ++ " ****************************"
                 m <- satWith cfg $ do xs <- mkExistVars n
                                       return $ let c = cost xs in valid xs &&& (c `cmp` curCost &&& c ./= curCost)
-                if not (modelExists m)
-                   then do msg "The current solution is optimal. Terminating search."
-                           return $ Just curSol
-                   else case getModel m of
-                          Left e           -> error $ "SBV: Optimization call failed:\n" ++ e
-                          Right (True, _)  -> error "SBV: Unexpected alleged model received."
-                          Right (False, a) -> do msg $ "Solution: " ++ show a
-                                                 let c = cost (map literal a)
-                                                 msg $ "Cost    : " ++ show c
-                                                 go (i+1) a c
+                case getModel m of
+                  Left _ -> do msg "The current solution is optimal. Terminating search."
+                               return $ Just curSol
+                  Right (True, _)  -> error "SBV: Backend solver reported \"unknown\""
+                  Right (False, a) -> do msg $ "Solution: " ++ show a
+                                         let c = cost (map literal a)
+                                         msg $ "Value   : " ++ show c
+                                         go (i+1) a c
