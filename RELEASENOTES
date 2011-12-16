@@ -19,6 +19,7 @@ Version 0.9.24, Not yet released
      before. With new support, the quickCheck, prove, sat, and allSat
      commands are all interchangeable with obvious meanings.
    * Add support for concrete test case generation, see the genTest function.
+   * Improve optimize routines and add support for iterative optimization.
   Dependencies
    * Bump up random package dependency to 1.0.1.1 (from 1.0.0.2)
 
