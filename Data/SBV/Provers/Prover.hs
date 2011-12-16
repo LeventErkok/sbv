@@ -27,7 +27,7 @@ module Data.SBV.Provers.Prover (
        , sat, satWith
        , allSat, allSatWith
        , SatModel(..), Modelable(..), displayModels
-       , yices, z3
+       , yices, z3, defaultSMTCfg
        , compileToSMTLib
        ) where
 
@@ -55,6 +55,10 @@ yices = SMTConfig {verbose = False, timing = False, timeOut = Nothing, printBase
 -- | Default configuration for the Z3 SMT solver
 z3 :: SMTConfig
 z3 = yices { solver = Z3.z3, useSMTLib2 = True }
+
+-- | The default solver used by SBV. This is currently set to yices.
+defaultSMTCfg :: SMTConfig
+defaultSMTCfg = yices
 
 -- | A predicate is a symbolic program that returns a (symbolic) boolean value. For all intents and
 -- purposes, it can be treated as an n-ary function from symbolic-values to a boolean. The 'Symbolic'
@@ -191,15 +195,15 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymW
   forSome (s:ss) k = exists s >>= \a -> forSome ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   forSome []     k = forSome_ k
 
--- | Prove a predicate, equivalent to @'proveWith' 'yices'@
+-- | Prove a predicate, equivalent to @'proveWith' 'defaultSMTCfg'@
 prove :: Provable a => a -> IO ThmResult
-prove = proveWith yices
+prove = proveWith defaultSMTCfg
 
--- | Find a satisfying assignment for a predicate, equivalent to @'satWith' 'yices'@
+-- | Find a satisfying assignment for a predicate, equivalent to @'satWith' 'defaultSMTCfg'@
 sat :: Provable a => a -> IO SatResult
-sat = satWith yices
+sat = satWith defaultSMTCfg
 
--- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'yices'@.
+-- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
 -- Satisfying assignments are constructed lazily, so they will be available as returned by the solver
 -- and on demand.
 --
@@ -208,7 +212,7 @@ sat = satWith yices
 -- array inputs will be returned. This is due to the limitation of not having a robust means of getting a
 -- function counter-example back from the SMT solver.
 allSat :: Provable a => a -> IO AllSatResult
-allSat = allSatWith yices
+allSat = allSatWith defaultSMTCfg
 
 -- Decision procedures (with optional timeout)
 checkTheorem :: Provable a => Maybe Int -> a -> IO (Maybe Bool)
@@ -218,7 +222,7 @@ checkTheorem mbTo p = do r <- pr p
                            ThmResult (Satisfiable _ _) -> return $ Just False
                            ThmResult (TimeOut _)       -> return Nothing
                            _                           -> error $ "SBV.isTheorem: Received:\n" ++ show r
-   where pr = maybe prove (\i -> proveWith (yices{timeOut = Just i})) mbTo
+   where pr = maybe prove (\i -> proveWith (defaultSMTCfg{timeOut = Just i})) mbTo
 
 checkSatisfiable :: Provable a => Maybe Int -> a -> IO (Maybe Bool)
 checkSatisfiable mbTo p = do r <- s p
@@ -227,7 +231,7 @@ checkSatisfiable mbTo p = do r <- s p
                                SatResult (Unsatisfiable _) -> return $ Just False
                                SatResult (TimeOut _)       -> return Nothing
                                _                           -> error $ "SBV.isSatisfiable: Received: " ++ show r
-   where s = maybe sat (\i -> satWith yices{timeOut = Just i}) mbTo
+   where s = maybe sat (\i -> satWith defaultSMTCfg{timeOut = Just i}) mbTo
 
 -- | Checks theoremhood within the given time limit of @i@ seconds.
 -- Returns @Nothing@ if times out, or the result wrapped in a @Just@ otherwise.
@@ -265,7 +269,7 @@ compileToSMTLib smtLib2 a = do
         t <- getClockTime
         let comments = ["Created on " ++ show t]
             cvt = if smtLib2 then toSMTLib2 else toSMTLib1
-        (_, _, _, smtLibPgm) <- simulate cvt yices False comments a
+        (_, _, _, smtLibPgm) <- simulate cvt defaultSMTCfg False comments a
         return $ show smtLibPgm ++ "\n"
 
 -- | Proves the predicate using the given SMT-solver

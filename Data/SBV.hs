@@ -159,6 +159,7 @@ module Data.SBV (
   -- * Optimization
   -- $optimizeIntro
   , minimize, maximize, optimize
+  , minimizeWith, maximizeWith, optimizeWith
 
   -- * Model extraction
   -- $modelExtraction
@@ -172,7 +173,7 @@ module Data.SBV (
   , SatModel(..), Modelable(..), displayModels
 
   -- * SMT Interface: Configurations and solvers
-  , SMTConfig(..), SMTSolver(..), yices, z3
+  , SMTConfig(..), OptimizeOpts(..), SMTSolver(..), yices, z3, defaultSMTCfg
 
   -- * Symbolic computations
   , Symbolic, output, SymWord(..)
@@ -270,7 +271,7 @@ system where arbitrary SMT solvers can be used.
 {- $optimizeIntro
 Symbolic optimization. A call of the form:
 
-    @minimize cost n valid@
+    @minimize Quantified cost n valid@
 
 returns @Just xs@, such that:
 
@@ -286,9 +287,15 @@ The function 'maximize' is similar, except the comparator is '.>='. So the value
 
 The function 'optimize' allows the user to give a custom comparison function.
 
-Logically, the SBV optimization engine satisfies the following predicate:
+The 'OptimizeOpts' argument controls how the optimization is done. If 'Quantified' is used, then the SBV optimization engine satisfies the following predicate:
 
    @exists xs. forall ys. valid xs && (valid ys ``implies`` (cost xs ``cmp`` cost ys))@
+
+Note that this may cause efficiency problems as it involves nested quantifiers. If 'OptimizeOpts' is set to 'Iterative True', then SBV will programmatically
+search for an optimal solution, by repeatedly calling the solver appropriately. (The boolean argument controls whether progress reports are given. Set it to
+'False' for quiet operation.) Note that the quantified and iterative versions are two different optimization approaches and may not necessarily yield the same
+results. In particular, the quantified version can find solutions where there is no global optimum value, while the iterative version would simply loop forever
+in such cases. On the other hand, the iterative version might be more suitable if the quantified version of the problem is too hard to deal with by the SMT solver.
 -}
 
 {- $modelExtraction
