@@ -78,10 +78,12 @@ quantOptimize cfg cmp cost n valid = do
            m <- satWith cfg $ do xs <- mkExistVars  n
                                  ys <- mkForallVars n
                                  return $ valid xs &&& (valid ys ==> cost xs `cmp` cost ys)
-           case getModel m of
-             Left e           -> error $ "SBV: Optimization call failed:\n" ++ e
-             Right (False, a) -> return $ Just a
-             _                -> return Nothing
+           if not (modelExists m)
+              then return Nothing
+              else case getModel m of
+                     Left e           -> error $ "SBV: Optimization call failed:\n" ++ e
+                     Right (True, _)  -> error "SBV: Backend solver reported \"unknown\""
+                     Right (False, a) -> return $ Just a
 
 -- | Optimization using iteration
 iterOptimize :: (Show cost, OrdSymbolic cost, Show a, SatModel a, SymWord a) => Bool -> SMTConfig -> (cost -> cost -> SBool) -> ([SBV a] -> cost) -> Int -> ([SBV a] -> SBool) -> IO (Maybe [a])
@@ -93,7 +95,7 @@ iterOptimize chatty cfg cmp cost n valid = do
                    return Nothing
            else case getModel m of
                   Left e           -> error $ "SBV: Optimization call failed:\n" ++ e
-                  Right (True, _)  -> error "SBV: Unexpected alleged model received."
+                  Right (True, _)  -> error "SBV: Backend solver reported \"unknown\""
                   Right (False, a) -> do msg $ "First solution found: " ++ show a
                                          let c = cost (map literal a)
                                          msg $ "Initial cost is     : " ++ show c

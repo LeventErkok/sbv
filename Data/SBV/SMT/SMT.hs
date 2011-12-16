@@ -263,7 +263,7 @@ instance Modelable SMTResult where
   getModel (TimeOut _)       = Left "Timeout"
   getModel (Satisfiable _ m) = Right (False, parseModelOut m)
   modelExists (Satisfiable{}) = True
-  modelExists (Unknown _ m)   = not (null (modelAssocs m))  -- Should we just return True?
+  modelExists (Unknown{})     = False -- don't risk it
   modelExists _               = False
 
 parseModelOut :: SatModel a => SMTModel -> a
