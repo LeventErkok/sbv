@@ -17,9 +17,10 @@ import Data.Maybe (fromMaybe)
 import Data.SBV.BitVectors.Data
 
 -- | Generate a set of concrete test values from a symbolic program. The output
--- can be rendered as test vectors in different languages as necessary.
-genTest :: Outputtable a => Int -> Symbolic a -> IO [([CW], [CW])]
+-- can be rendered as test vectors in different languages as necessary. Use the
+-- function 'output' call to indicate what fields should be in the test result.
+genTest :: Int -> Symbolic () -> IO [([CW], [CW])]
 genTest n m = sequence [tc | _ <- [1 .. n]]
-  where tc = do (_, Result _ tvals _ _ cs _ _ _ _ _ os) <- runSymbolic' QuickCheck (m >>= output)
+  where tc = do (_, Result _ tvals _ _ cs _ _ _ _ _ os) <- runSymbolic' Concrete m
                 let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
                 return (map snd tvals, map cval os)
