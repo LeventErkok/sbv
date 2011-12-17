@@ -2,11 +2,13 @@
 #
 # The sbv library is distributed with the BSD3 license. See the LICENSE file
 # in the distribution for details.
-SHELL := /usr/bin/env bash
-SRCS = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs)
-LINTSRCS = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs)
-STAMPFILE=SBVUnitTest/SBVUnitTestBuildTime.hs
-DEPSRCS  = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE))
+SHELL     := /usr/bin/env bash
+SRCS      = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs)
+LINTSRCS  = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs)
+STAMPFILE = SBVUnitTest/SBVUnitTestBuildTime.hs
+DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE))
+CABAL     = cabal
+CABPFLAG  = --disable-library-profiling
 
 .PHONY: all install test sdist clean docs gold stamp lint
 
@@ -22,7 +24,7 @@ $(STAMPFILE): $(DEPSRCS)
 	@echo "buildTime = \"$(shell date)\""				  >> ${STAMPFILE}
 	@find . -name \*.\*hs | xargs hasktags -c
 	@sort -o tags tags
-	cabal install
+	$(CABAL) $(CABPFLAG) install
 
 test:
 	@echo "Executing inline tests.."
@@ -31,16 +33,16 @@ test:
 	@time (SBVUnitTests | cat)
 
 sdist:
-	cabal sdist
+	$(CABAL) sdist
 
 clean:
 	rm -rf dist $(STAMPFILE)
 
 docs:
-	cabal haddock --hyperlink-source
+	$(CABAL) haddock --hyperlink-source
 
 configure:
-	cabal configure
+	$(CABAL) $(CABPFLAG) configure
 
 release: clean install sdist docs lint test
 
