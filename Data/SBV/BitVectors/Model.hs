@@ -1112,7 +1112,7 @@ instance Testable SBool where
 
 instance Testable (Symbolic SBool) where
   property m = QC.whenFail (putStrLn msg) $ QC.monadicIO test
-    where test = do die <- QC.run $ do (r, p) <- runSymbolic' QuickCheck (m >>= output)
+    where test = do die <- QC.run $ do (r, p) <- runSymbolic' Concrete (m >>= output)
                                        case () of
                                          _ | isSymbolic r        -> error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show r ++ ")"
                                          _ | r `isConcretely` id -> return False

@@ -353,11 +353,11 @@ arrayUIKind (i, (nm, _, ctx))
 -- | Different means of running a symbolic piece of code
 data SBVRunMode = Proof       -- ^ Symbolic simulation mode, for proof purposes
                 | CodeGen     -- ^ Code generation mode
-                | QuickCheck  -- ^ Quick-check (concrete simulation) mode
+                | Concrete    -- ^ Concrete simulation mode
                 deriving Eq
 
 data State  = State { runMode       :: SBVRunMode
-                    , rQcInfo       :: IORef [(String, CW)]
+                    , rCInfo        :: IORef [(String, CW)]
                     , rctr          :: IORef Int
                     , rInfPrec      :: IORef Bool
                     , rinps         :: IORef [(Quantifier, NamedSymVar)]
@@ -510,12 +510,12 @@ mkSymSBV :: forall a. (Random a, SymWord a) => Quantifier -> (Bool, Size) -> May
 mkSymSBV q sgnsz mbNm = do
         st <- ask
         case runMode st of
-          QuickCheck | q == EX -> case mbNm of
-                                    Nothing -> error $ "Cannot quick-check in the presence of existential variables, type: " ++ showType (undefined :: SBV a)
-                                    Just nm -> error $ "Cannot quick-check in the presence of existential variable " ++ nm ++ " :: " ++ showType (undefined :: SBV a)
-          QuickCheck           -> do v@(SBV _ (Left cw)) <- liftIO randomIO
-                                     liftIO $ modifyIORef (rQcInfo st) ((maybe "_" id mbNm, cw):)
-                                     return v
+          Concrete | q == EX -> case mbNm of
+                                  Nothing -> error $ "Cannot quick-check in the presence of existential variables, type: " ++ showType (undefined :: SBV a)
+                                  Just nm -> error $ "Cannot quick-check in the presence of existential variable " ++ nm ++ " :: " ++ showType (undefined :: SBV a)
+          Concrete           -> do v@(SBV _ (Left cw)) <- liftIO randomIO
+                                   liftIO $ modifyIORef (rCInfo st) ((maybe "_" id mbNm, cw):)
+                                   return v
           _          -> do ctr <- liftIO $ incCtr st
                            let nm = maybe ('s':show ctr) id mbNm
                                sw = SW sgnsz (NodeId ctr)
@@ -582,7 +582,7 @@ runSymbolic c = snd `fmap` runSymbolic' Proof c
 runSymbolic' :: SBVRunMode -> Symbolic a -> IO (a, Result)
 runSymbolic' currentRunMode (Symbolic c) = do
    ctr     <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
-   qcInfo  <- newIORef []
+   cInfo   <- newIORef []
    pgm     <- newIORef S.empty
    emap    <- newIORef Map.empty
    cmap    <- newIORef Map.empty
@@ -596,22 +596,22 @@ runSymbolic' currentRunMode (Symbolic c) = do
    swCache <- newIORef IMap.empty
    aiCache <- newIORef IMap.empty
    infPrec <- newIORef False
-   let st = State { runMode       = currentRunMode
-                  , rQcInfo       = qcInfo
-                  , rctr          = ctr
-                  , rInfPrec      = infPrec
-                  , rinps         = inps
-                  , routs         = outs
-                  , rtblMap       = tables
-                  , spgm          = pgm
-                  , rconstMap     = cmap
-                  , rArrayMap     = arrays
-                  , rexprMap      = emap
-                  , rUIMap        = uis
-                  , rCgMap        = cgs
-                  , raxioms       = axioms
-                  , rSWCache      = swCache
-                  , rAICache      = aiCache
+   let st = State { runMode   = currentRunMode
+                  , rCInfo    = cInfo
+                  , rctr      = ctr
+                  , rInfPrec  = infPrec
+                  , rinps     = inps
+                  , routs     = outs
+                  , rtblMap   = tables
+                  , spgm      = pgm
+                  , rconstMap = cmap
+                  , rArrayMap = arrays
+                  , rexprMap  = emap
+                  , rUIMap    = uis
+                  , rCgMap    = cgs
+                  , raxioms   = axioms
+                  , rSWCache  = swCache
+                  , rAICache  = aiCache
                   }
    _ <- newConst st (mkConstCW (False, Size (Just 1)) (0::Integer)) -- s(-2) == falseSW
    _ <- newConst st (mkConstCW (False, Size (Just 1)) (1::Integer)) -- s(-1) == trueSW
@@ -628,8 +628,8 @@ runSymbolic' currentRunMode (Symbolic c) = do
    axs   <- reverse `fmap` readIORef axioms
    hasInfPrec <- readIORef infPrec
    cgMap <- Map.toList `fmap` readIORef cgs
-   qcs <- reverse `fmap` readIORef qcInfo
-   return $ (r, Result hasInfPrec qcs cgMap (reverse inpsR) cnsts tbls arrs unint axs rpgm (reverse outsR))
+   traceVals <- reverse `fmap` readIORef cInfo
+   return $ (r, Result hasInfPrec traceVals cgMap (reverse inpsR) cnsts tbls arrs unint axs rpgm (reverse outsR))
 
 -------------------------------------------------------------------------------
 -- * Symbolic Words
