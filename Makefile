@@ -6,20 +6,23 @@ SHELL := /usr/bin/env bash
 SRCS = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs)
 LINTSRCS = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs)
 STAMPFILE=SBVUnitTest/SBVUnitTestBuildTime.hs
+DEPSRCS  = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE))
 
-.PHONY: all install test sdist clean docs gold tags stamp lint
+.PHONY: all install test sdist clean docs gold stamp lint
 
-all: install test sdist
+all: install
 
-install: tags stamp
-	cabal install
+install: $(STAMPFILE)
 
-stamp:
+$(STAMPFILE): $(DEPSRCS)
 	@echo "-- Auto-generated, don't edit"				  >  ${STAMPFILE}
 	@echo "module SBVUnitTest.SBVUnitTestBuildTime (buildTime) where" >> ${STAMPFILE}
 	@echo ""							  >> ${STAMPFILE}
 	@echo "buildTime :: String"					  >> ${STAMPFILE}
 	@echo "buildTime = \"$(shell date)\""				  >> ${STAMPFILE}
+	@find . -name \*.\*hs | xargs hasktags -c
+	@sort -o tags tags
+	cabal install
 
 test:
 	@echo "Executing inline tests.."
@@ -31,7 +34,7 @@ sdist:
 	cabal sdist
 
 clean:
-	rm -rf dist
+	rm -rf dist $(STAMPFILE)
 	cabal clean
 
 docs:
@@ -40,7 +43,7 @@ docs:
 configure:
 	cabal configure
 
-release: clean tags all docs lint
+release: clean install sdist docs lint test
 
 # use this as follows: make gold TGTS="cgUSB5"
 # where the tag is one (or many) given in the SBVUnitTest.hs file
@@ -52,6 +55,3 @@ lint:
 	-@hlint ${LINTSRCS} -q -rhlintReport.html	\
 	        -i "Use otherwise"			\
 	        -i "Use import/export shortcut"
-tags:
-	find . -name \*.\*hs | xargs hasktags -c
-	sort -o tags tags
