@@ -85,7 +85,6 @@ source-repository head
 
 Library
   ghc-options     : -Wall
-  ghc-prof-options: -auto-all -caf-all
   Build-Depends   : base                >= 3 && < 5
                   , deepseq             >= 1.1.0.2
                   , process             >= 1.0.1.3
