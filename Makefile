@@ -35,7 +35,6 @@ sdist:
 
 clean:
 	rm -rf dist $(STAMPFILE)
-	cabal clean
 
 docs:
 	cabal haddock --hyperlink-source
