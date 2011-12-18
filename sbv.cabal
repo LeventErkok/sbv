@@ -77,7 +77,7 @@ Maintainer:    Levent Erkok (erkokl@gmail.com)
 Build-Type:    Custom
 Cabal-Version: >= 1.8
 Data-Files: SBVUnitTest/GoldFiles/*.gold
-Extra-Source-Files: INSTALL, README, COPYRIGHT
+Extra-Source-Files: INSTALL, README, COPYRIGHT, RELEASENOTES
 
 source-repository head
     type:       git
