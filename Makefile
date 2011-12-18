@@ -41,7 +41,7 @@ clean:
 docs:
 	$(CABAL) haddock --hyperlink-source
 
-release: clean install sdist docs test hlint
+release: clean install sdist docs hlint test
 
 # use this as follows: make gold TGTS="cgUSB5"
 # where the tag is one (or many) given in the SBVUnitTest.hs file
