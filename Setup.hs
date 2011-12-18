@@ -17,12 +17,12 @@ import Distribution.Simple (defaultMainWithHooks, simpleUserHooks, postInst)
 import System.Directory    (findExecutable)
 import System.Exit         (exitWith, ExitCode(..))
 
-import Data.SBV.Provers.Prover (SMTSolver(..))
-import Data.SBV.Provers.Yices  (yices)
+import Data.SBV.Provers.Prover (SMTConfig(..), SMTSolver(..), defaultSMTCfg)
 
 main :: IO ()
 main = defaultMainWithHooks simpleUserHooks{ postInst = checkDefSolver }
  where checkDefSolver _ _ _ _ = do
+                -- Issue a warning if the executable is not found; but otherwise harmless.
                 mbP <- findExecutable ex
                 case mbP of
                    Nothing -> do putStrLn $ "*** The sbv library requires the default solver " ++ nm ++ " to be installed."
@@ -30,5 +30,5 @@ main = defaultMainWithHooks simpleUserHooks{ postInst = checkDefSolver }
                                  putStrLn $ "*** Do not forget to install " ++ nm ++ "!"
                    Just _  -> return ()
                 exitWith ExitSuccess
-       ex = executable yices
-       nm = name yices
+       ex = executable (solver defaultSMTCfg)
+       nm = name (solver defaultSMTCfg)
