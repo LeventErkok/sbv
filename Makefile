@@ -10,7 +10,7 @@ DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs
 CABAL     = cabal
 CABPFLAG  = --disable-library-profiling --disable-documentation
 
-.PHONY: all install test sdist clean docs gold stamp lint
+.PHONY: all install test sdist clean docs gold stamp hlint
 
 all: install
 
@@ -41,7 +41,7 @@ clean:
 docs:
 	$(CABAL) haddock --hyperlink-source
 
-release: clean install sdist docs lint test
+release: clean install sdist docs hlint test
 
 # use this as follows: make gold TGTS="cgUSB5"
 # where the tag is one (or many) given in the SBVUnitTest.hs file
@@ -49,7 +49,7 @@ release: clean install sdist docs lint test
 gold:
 	ghc -idist/build/autogen/ SBVUnitTest/SBVUnitTest.hs -e "createGolds \"${TGTS}\""
 
-lint:
+hlint:
 	-@hlint ${LINTSRCS} -q -rhlintReport.html \
-			-i "Use otherwise" 	  \
-			-i "Parse error"
+			    -i "Use otherwise" 	  \
+			    -i "Parse error"
