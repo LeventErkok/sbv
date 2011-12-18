@@ -24,7 +24,7 @@ $(STAMPFILE): $(DEPSRCS)
 	@echo "buildTime = \"$(shell date)\""				  >> ${STAMPFILE}
 	@find . -name \*.\*hs | xargs hasktags -c
 	@sort -o tags tags
-	$(CABAL) $(CABPFLAG) install
+	-$(CABAL) $(CABPFLAG) install || rm $(STAMPFILE) && false
 
 test:
 	@echo "Executing inline tests.."
