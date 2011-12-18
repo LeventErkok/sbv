@@ -29,8 +29,7 @@ type Board = [Row]
 
 -- | Checks that all elements in a list are within bounds
 check :: Elem -> Elem -> [Elem] -> SBool
-check low high grp = bAll rangeFine grp
-  where rangeFine x = x .>= low &&& x .<= high
+check low high = bAll $ \x -> x .>= low &&& x .<= high
 
 -- | Get the diagonal of a square matrix
 diag :: [[a]] -> [a]

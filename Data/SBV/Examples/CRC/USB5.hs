@@ -48,3 +48,5 @@ usbGood sent16 received16 =
          received = mkSWord11 received16
          frameSent     = mkFrame sent
          frameReceived = mkFrame received
+
+{-# ANN crc_11_16 "HLint: ignore Use camelCase" #-}

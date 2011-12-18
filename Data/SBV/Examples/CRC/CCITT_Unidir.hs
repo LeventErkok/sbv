@@ -57,3 +57,5 @@ ccitHDis3 = print =<< prove (crcUniGood 3)
 -- False; i.e., HD doesn't go to 4 just because we only look at uni-directional errors
 ccitHDis4 :: IO ()
 ccitHDis4 = print =<< prove (crcUniGood 4)
+
+{-# ANN crc_48_16 "HLint: ignore Use camelCase" #-}

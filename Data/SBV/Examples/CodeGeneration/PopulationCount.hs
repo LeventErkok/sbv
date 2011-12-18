@@ -24,10 +24,10 @@ import Data.SBV
 -- and add 1 to a running count. This is slow, as it requires 64 iterations,
 -- but is simple and easy to convince yourself that it is correct. For instance:
 --
--- >>> popCount_Slow 0x0123456789ABCDEF
+-- >>> popCountSlow 0x0123456789ABCDEF
 -- 32 :: SWord8
-popCount_Slow :: SWord64 -> SWord8
-popCount_Slow inp = go inp 0 0
+popCountSlow :: SWord64 -> SWord8
+popCountSlow inp = go inp 0 0
   where go :: SWord64 -> Int -> SWord8 -> SWord8
         go _ 64 c = c
         go x i  c = go (x `shiftR` 1) (i+1) (ite (x .&. 1 .== 1) (c+1) c)
@@ -50,14 +50,14 @@ popCount inp = go inp 0 0
 -- value, from 0 to 255. Note that we do not \"hard-code\" the values, but
 -- merely use the slow version to compute them.
 pop8 :: [SWord8]
-pop8 = map popCount_Slow [0 .. 255]
+pop8 = map popCountSlow [0 .. 255]
 
 -----------------------------------------------------------------------------
 -- * Verification
 -----------------------------------------------------------------------------
 
 {- $VerificationIntro
-We prove that `popCount` and `popCount_Slow` are functionally equivalent.
+We prove that `popCount` and `popCountSlow` are functionally equivalent.
 This is essential as we will automatically generate C code from `popCount`,
 and we would like to make sure that the fast version is correct with
 respect to the slower reference version.
@@ -69,7 +69,7 @@ respect to the slower reference version.
 -- >>> prove fastPopCountIsCorrect
 -- Q.E.D.
 fastPopCountIsCorrect :: SWord64 -> SBool
-fastPopCountIsCorrect x = popCount x .== popCount_Slow x
+fastPopCountIsCorrect x = popCount x .== popCountSlow x
 
 -----------------------------------------------------------------------------
 -- * Code generation

@@ -77,8 +77,8 @@ getCounterExample inps line = either err extract (parseSExpr line)
                                  matches -> error $  "SBV.Yices: Cannot uniquely identify value for "
                                                   ++ 's':v ++ " in "  ++ show matches
         isInput _       = Nothing
-        extract (S_App [S_Con "=", S_Con v, S_Num i]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (hasSign s, sizeOf s) i))]
-        extract (S_App [S_Con "=", S_Num i, S_Con v]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (hasSign s, sizeOf s) i))]
+        extract (SApp [SCon "=", SCon v, SNum i]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (hasSign s, sizeOf s) i))]
+        extract (SApp [SCon "=", SNum i, SCon v]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (hasSign s, sizeOf s) i))]
         extract _                                                                    = []
 
 extractUnints :: [(String, UnintKind)] -> [String] -> [(UnintKind, [String])]
@@ -109,20 +109,20 @@ getUIVal knd s
   = getDefaultVal knd (dropWhile (/= ' ') s)
   | True
   = case parseSExpr s of
-       Right (S_App [S_Con "=", S_App (S_Con _ : args), S_Num i]) -> getCallVal knd args i
-       Right (S_App [S_Con "=", S_Con _, S_Num i])                -> getCallVal knd []   i
+       Right (SApp [SCon "=", SApp (SCon _ : args), SNum i]) -> getCallVal knd args i
+       Right (SApp [SCon "=", SCon _, SNum i])                -> getCallVal knd []   i
        _ -> Nothing
 
 getDefaultVal :: UnintKind -> String -> Maybe (String, [String], String)
 getDefaultVal knd n = case parseSExpr n of
-                        Right (S_Num i) -> Just $ showDefault knd (show i)
+                        Right (SNum i) -> Just $ showDefault knd (show i)
                         _               -> Nothing
 
 getCallVal :: UnintKind -> [SExpr] -> Integer -> Maybe (String, [String], String)
 getCallVal knd args res = mapM getArg args >>= \as -> return (showCall knd as (show res))
 
 getArg :: SExpr -> Maybe String
-getArg (S_Num i) = Just (show i)
+getArg (SNum i) = Just (show i)
 getArg _         = Nothing
 
 showDefault :: UnintKind -> String -> (String, [String], String)

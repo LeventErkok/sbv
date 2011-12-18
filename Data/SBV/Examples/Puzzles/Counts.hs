@@ -43,7 +43,7 @@ count n cnts = ite (n .< 10)
                         (upd d1 (upd d2 (upd d3 cnts))))  -- three digits
   where (r1, d1)   = n  `bvQuotRem` 10
         (d3, d2)   = r1 `bvQuotRem` 10
-        upd d vals = zipWith inc [0..] vals
+        upd d = zipWith inc [0..]
           where inc i c = ite (i .== d) (c+1) c
 
 -- | Encoding of the puzzle. The solution is a sequence of 10 numbers
@@ -82,3 +82,4 @@ solve = do res <- allSat $ puzzle `fmap` mkExistVars 10
                      ++ ", of 8 is " ++ show (ns !! 8)
                      ++ ", of 9 is " ++ show (ns !! 9)
                      ++ "."
+{-# ANN solve "HLint: ignore Use head" #-}

@@ -301,3 +301,5 @@ legatoInC = compileToC Nothing "runLegato" $ do
                 let (hi, lo) = runLegato (0, x) (1, y) 2 (initMachine (mkSFunArray (const 0)) (0, 0, 0, false, false))
                 cgOutput "hi" hi
                 cgOutput "lo" lo
+
+{-# ANN legato "HLint: ignore Redundant $" #-}

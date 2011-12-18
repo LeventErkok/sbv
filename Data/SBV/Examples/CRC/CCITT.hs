@@ -59,3 +59,5 @@ hw4 = do res <- allSat hw4has84Inhabitants
          disp i (_, (sh, sl, rh, rl)) = do putStrLn $ "Solution #" ++ show i ++ ": "
                                            putStrLn $ "  Sent    : " ++ binS (mkFrame (literal sh, literal sl))
                                            putStrLn $ "  Received: " ++ binS (mkFrame (literal rh, literal rl))
+
+{-# ANN crc_48_16 "HLint: ignore Use camelCase" #-}

@@ -301,7 +301,7 @@ showModel cfg m = intercalate "\n" (map (shM cfg) assocs ++ concatMap shUI unint
         arrs      = modelArrays m
 
 shCW :: SMTConfig -> CW -> String
-shCW cfg v = sh (printBase cfg) v
+shCW = sh . printBase
   where sh 2  = binS
         sh 10 = show
         sh 16 = hexS

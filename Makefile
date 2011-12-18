@@ -50,6 +50,4 @@ gold:
 	ghc -idist/build/autogen/ SBVUnitTest/SBVUnitTest.hs -e "createGolds \"${TGTS}\""
 
 lint:
-	-@hlint ${LINTSRCS} -q -rhlintReport.html	\
-	        -i "Use otherwise"			\
-	        -i "Use import/export shortcut"
+	-@hlint ${LINTSRCS} -q -rhlintReport.html -i "Use otherwise"			

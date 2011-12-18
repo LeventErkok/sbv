@@ -349,3 +349,5 @@ bit-vectors. The operations that are restricted to bounded word/int sizes are:
 Usual arithmetic ('+', '-', '*', 'bvQuotRem') and logical operations ('.<', '.<=', '.>', '.>=', '.==', './=') operations are
 supported for 'SInteger' fully, both in programming and verification modes.
 -}
+
+{-# ANN Data.SBV "HLint: ignore Use import/export shortcut #-}

@@ -35,7 +35,7 @@ shiftLeft = cgUninterpret "SBV_SHIFTLEFT" cCode hCode
         -- the Haskell code we'd like SBV to use when running inside Haskell or when
         -- translated to SMTLib for verification purposes. This is good old Haskell
         -- code, as one would typically write.
-        hCode x y = select [x * literal (bit b) | b <- [0.. bitSize x - 1]] (literal 0) y
+        hCode x = select [x * literal (bit b) | b <- [0.. bitSize x - 1]] (literal 0)
 
 -- | Test function that uses shiftLeft defined above. When used as a normal Haskell function
 -- or in verification the definition is fully used, i.e., no uninterpretation happens. To wit,
