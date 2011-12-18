@@ -8,7 +8,7 @@ LINTSRCS  = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs
 STAMPFILE = SBVUnitTest/SBVUnitTestBuildTime.hs
 DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE))
 CABAL     = cabal
-CABPFLAG  = --disable-library-profiling --disable-documentation
+CABPFLAG  = --disable-library-profiling --disable-documentation --force-reinstalls
 
 .PHONY: all install test sdist clean docs gold stamp hlint
 
