@@ -350,4 +350,4 @@ Usual arithmetic ('+', '-', '*', 'bvQuotRem') and logical operations ('.<', '.<=
 supported for 'SInteger' fully, both in programming and verification modes.
 -}
 
-{-# ANN Data.SBV "HLint: ignore Use import/export shortcut #-}
+{-# ANN module "HLint: ignore Use import/export shortcut" #-}

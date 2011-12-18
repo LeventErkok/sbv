@@ -50,4 +50,6 @@ gold:
 	ghc -idist/build/autogen/ SBVUnitTest/SBVUnitTest.hs -e "createGolds \"${TGTS}\""
 
 lint:
-	-@hlint ${LINTSRCS} -q -rhlintReport.html -i "Use otherwise"			
+	-@hlint ${LINTSRCS} -q -rhlintReport.html \
+			-i "Use otherwise" 	  \
+			-i "Parse error"
