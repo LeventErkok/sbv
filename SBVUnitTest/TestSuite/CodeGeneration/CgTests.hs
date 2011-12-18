@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.CodeGeneration.CgTests
+-- Module      :  TestSuite.CodeGeneration.CgTests
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -12,10 +12,12 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Data.SBV.TestSuite.CodeGeneration.CgTests(testSuite) where
+module TestSuite.CodeGeneration.CgTests(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals
+
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

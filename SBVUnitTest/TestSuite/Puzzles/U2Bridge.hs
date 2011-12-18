@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.Puzzles.U2Bridge
+-- Module      :  TestSuite.Puzzles.U2Bridge
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,11 +10,12 @@
 -- Test suite for Data.SBV.Examples.Puzzles.U2Bridge
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.Puzzles.U2Bridge(testSuite) where
+module TestSuite.Puzzles.U2Bridge(testSuite) where
 
 import Data.SBV
-import Data.SBV.Internals
 import Data.SBV.Examples.Puzzles.U2Bridge
+
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.CRC.CCITT
+-- Module      :  Examples.CRC.CCITT
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- CRC checks, hamming distance, etc.
 -----------------------------------------------------------------------------
 
-module Data.SBV.Examples.CRC.CCITT where
+module Examples.CRC.CCITT where
 
 import Data.SBV
 

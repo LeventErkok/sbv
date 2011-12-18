@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.Existentials.CRCPolynomial
+-- Module      :  TestSuite.Existentials.CRCPolynomial
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,11 +10,13 @@
 -- Test suite for Data.SBV.Examples.Existentials.CRCPolynomial
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.Existentials.CRCPolynomial(testSuite) where
+module TestSuite.Existentials.CRCPolynomial(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals
 import Data.SBV.Examples.Existentials.CRCPolynomial
+
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

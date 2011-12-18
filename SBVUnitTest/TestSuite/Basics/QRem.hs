@@ -1,20 +1,21 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.Basics.QRem
+-- Module      :  TestSuite.Basics.QRem
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Test suite for Data.SBV.Examples.Basics.QRem
+-- Test suite for Examples.Basics.QRem
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.Basics.QRem(testSuite) where
+module TestSuite.Basics.QRem(testSuite) where
 
 import Data.SBV
-import Data.SBV.Internals
-import Data.SBV.Examples.Basics.QRem
+
+import Examples.Basics.QRem
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

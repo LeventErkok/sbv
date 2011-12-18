@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Utils.SBVTest
+-- Module      :  SBVTest
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -11,7 +11,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE RankNTypes #-}
-module Data.SBV.Utils.SBVTest(generateGoldCheck, showsAs, ioShowsAs, mkTestSuite, SBVTestSuite(..), module Test.HUnit) where
+module SBVTest(generateGoldCheck, showsAs, ioShowsAs, mkTestSuite, SBVTestSuite(..), module Test.HUnit) where
 
 import System.FilePath ((</>))
 import Test.HUnit      (Test(..), Assertion, assert, (~:), test)

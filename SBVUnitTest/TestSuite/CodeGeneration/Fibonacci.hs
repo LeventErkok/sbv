@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.CodeGeneration.Fibonacci
+-- Module      :  TestSuite.CodeGeneration.Fibonacci
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,11 +10,13 @@
 -- Test suite for Data.SBV.Examples.CodeGeneration.Fibonacci
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.CodeGeneration.Fibonacci(testSuite) where
+module TestSuite.CodeGeneration.Fibonacci(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.Fibonacci
+
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

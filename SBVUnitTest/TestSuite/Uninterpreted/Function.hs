@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.Uninterpreted.Function
+-- Module      :  TestSuite.Uninterpreted.Function
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,11 +10,12 @@
 -- Testsuite for Data.SBV.Examples.Uninterpreted.Function
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.Uninterpreted.Function where
+module TestSuite.Uninterpreted.Function where
 
 import Data.SBV
-import Data.SBV.Internals
 import Data.SBV.Examples.Uninterpreted.Function
+
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

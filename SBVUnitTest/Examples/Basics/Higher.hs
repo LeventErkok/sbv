@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.Basics.Higher
+-- Module      :  Examples.Basics.Higher
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Testing function equality
 -----------------------------------------------------------------------------
 
-module Data.SBV.Examples.Basics.Higher where
+module Examples.Basics.Higher where
 
 import Data.SBV
 

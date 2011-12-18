@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.Arrays.Memory
+-- Module      :  Examples.Arrays.Memory
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Simple memory abstraction and properties
 -----------------------------------------------------------------------------
 
-module Data.SBV.Examples.Arrays.Memory where
+module Examples.Arrays.Memory where
 
 import Data.SBV
 

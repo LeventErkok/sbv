@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.Uninterpreted.Uninterpreted
+-- Module      :  Examples.Uninterpreted.Uninterpreted
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Testing uninterpreted functions
 -----------------------------------------------------------------------------
 
-module Data.SBV.Examples.Uninterpreted.Uninterpreted where
+module Examples.Uninterpreted.Uninterpreted where
 
 import Data.SBV
 

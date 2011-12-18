@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.Basics.BasicTests
+-- Module      :  Examples.Basics.BasicTests
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -13,7 +13,7 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Data.SBV.Examples.Basics.BasicTests where
+module Examples.Basics.BasicTests where
 
 import Data.SBV
 import Data.SBV.Internals

@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.Polynomials.Polynomials
+-- Module      :  TestSuite.Polynomials.Polynomials
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,11 +10,12 @@
 -- Test suite for Data.SBV.Examples.Polynomials.Polynomials
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.Polynomials.Polynomials(testSuite) where
+module TestSuite.Polynomials.Polynomials(testSuite) where
 
 import Data.SBV
-import Data.SBV.Internals
 import Data.SBV.Examples.Polynomials.Polynomials
+
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

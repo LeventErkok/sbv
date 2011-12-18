@@ -1,20 +1,21 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.CRC.Parity
+-- Module      :  TestSuite.CRC.Parity
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Test suite for Data.SBV.Examples.CRC.Parity
+-- Test suite for Examples.CRC.Parity
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.CRC.Parity(testSuite) where
+module TestSuite.CRC.Parity(testSuite) where
 
 import Data.SBV
-import Data.SBV.Internals
-import Data.SBV.Examples.CRC.Parity
+
+import Examples.CRC.Parity
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

@@ -22,6 +22,9 @@ Version 0.9.24, Not yet released
    * Improve optimize routines and add support for iterative optimization.
   Dependencies
    * Bump up random package dependency to 1.0.1.1 (from 1.0.0.2)
+  Internal
+   * Major reorganization of files to and build infrastructure to
+     decrease build times and better layout
 
 ======================================================================
 Version 0.9.23, 2011-12-05

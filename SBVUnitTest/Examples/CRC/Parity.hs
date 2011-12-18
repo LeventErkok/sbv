@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.CRC.Parity
+-- Module      :  Examples.CRC.Parity
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Parity check as CRC's
 -----------------------------------------------------------------------------
 
-module Data.SBV.Examples.CRC.Parity where
+module Examples.CRC.Parity where
 
 import Data.SBV
 

@@ -1,19 +1,19 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.Basics.BasicTests
+-- Module      :  TestSuite.Basics.BasicTests
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Test suite for Data.SBV.Examples.Basics.BasicTests
+-- Test suite for Examples.Basics.BasicTests
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.Basics.BasicTests(testSuite) where
+module TestSuite.Basics.BasicTests(testSuite) where
 
-import Data.SBV.Internals
-import Data.SBV.Examples.Basics.BasicTests
+import Examples.Basics.BasicTests
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

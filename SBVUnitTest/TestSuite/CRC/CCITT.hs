@@ -1,20 +1,22 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.CRC.CCITT
+-- Module      :  TestSuite.CRC.CCITT
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Test suite for Data.SBV.Examples.CRC.CCITT
+-- Test suite for Examples.CRC.CCITT
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.CRC.CCITT(testSuite) where
+module TestSuite.CRC.CCITT(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals
-import Data.SBV.Examples.CRC.CCITT
+
+import Examples.CRC.CCITT
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

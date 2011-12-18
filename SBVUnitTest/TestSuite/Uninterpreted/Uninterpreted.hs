@@ -1,20 +1,21 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.TestSuite.Uninterpreted
+-- Module      :  Examples.TestSuite.Uninterpreted
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Test suite for Data.SBV.Examples.Uninterpreted.Uninterpreted
+-- Test suite for Examples.Uninterpreted.Uninterpreted
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.Uninterpreted.Uninterpreted where
+module TestSuite.Uninterpreted.Uninterpreted where
 
 import Data.SBV
-import Data.SBV.Internals
-import Data.SBV.Examples.Uninterpreted.Uninterpreted
+
+import Examples.Uninterpreted.Uninterpreted
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

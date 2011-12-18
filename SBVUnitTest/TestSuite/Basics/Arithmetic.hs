@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.Basics.Arithmetic
+-- Module      :  TestSuite.Basics.Arithmetic
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -12,10 +12,11 @@
 
 {-# LANGUAGE Rank2Types #-}
 
-module Data.SBV.TestSuite.Basics.Arithmetic(testSuite) where
+module TestSuite.Basics.Arithmetic(testSuite) where
 
 import Data.SBV
-import Data.SBV.Internals
+
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

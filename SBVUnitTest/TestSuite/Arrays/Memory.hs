@@ -1,20 +1,21 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.Arrays.Memory
+-- Module      :  TestSuite.Arrays.Memory
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Test suite for Data.SBV.Examples.Arrays.Memory
+-- Test suite for Examples.Arrays.Memory
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.Arrays.Memory(testSuite) where
+module TestSuite.Arrays.Memory(testSuite) where
 
 import Data.SBV
-import Data.SBV.Internals
-import Data.SBV.Examples.Arrays.Memory
+
+import Examples.Arrays.Memory
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

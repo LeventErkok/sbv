@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.CodeGeneration.PopulationCount
+-- Module      :  TestSuite.CodeGeneration.PopulationCount
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,11 +10,13 @@
 -- Test suite for Data.SBV.Examples.CodeGeneration.PopulationCount
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.CodeGeneration.PopulationCount(testSuite) where
+module TestSuite.CodeGeneration.PopulationCount(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.PopulationCount
+
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

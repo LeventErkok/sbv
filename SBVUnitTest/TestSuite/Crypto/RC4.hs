@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.Crypto.RC4
+-- Module      :  TestSuite.Crypto.RC4
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,11 +10,12 @@
 -- Test suite for Data.SBV.Examples.Crypto.RC4
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.Crypto.RC4(testSuite) where
+module TestSuite.Crypto.RC4(testSuite) where
 
 import Data.SBV
-import Data.SBV.Internals
 import Data.SBV.Examples.Crypto.RC4
+
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

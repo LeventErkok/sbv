@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.Basics.QRem
+-- Module      :  Examples.Basics.QRem
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Testing the qrem (quote-rem) function
 -----------------------------------------------------------------------------
 
-module Data.SBV.Examples.Basics.QRem where
+module Examples.Basics.QRem where
 
 import Data.SBV
 

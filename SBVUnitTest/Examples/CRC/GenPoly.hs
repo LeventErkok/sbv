@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.CRC.GenPoly
+-- Module      :  Examples.CRC.GenPoly
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Finds good polynomials for CRC's
 -----------------------------------------------------------------------------
 
-module Data.SBV.Examples.CRC.GenPoly where
+module Examples.CRC.GenPoly where
 
 import Data.SBV
 

@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.CRC.CCITT_Unidir
+-- Module      :  Examples.CRC.CCITT_Unidir
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -11,7 +11,7 @@
 -- even if we consider only uni-directional errors
 -----------------------------------------------------------------------------
 
-module Data.SBV.Examples.CRC.CCITT_Unidir where
+module Examples.CRC.CCITT_Unidir where
 
 import Data.SBV
 

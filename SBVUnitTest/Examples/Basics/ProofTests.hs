@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.Basics.ProofTests
+-- Module      :  Examples.Basics.ProofTests
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -13,7 +13,7 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Data.SBV.Examples.Basics.ProofTests where
+module Examples.Basics.ProofTests where
 
 import Data.SBV
 

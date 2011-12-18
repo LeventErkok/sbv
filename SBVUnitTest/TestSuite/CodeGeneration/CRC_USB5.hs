@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.CodeGeneration.CRC_USB5
+-- Module      :  TestSuite.CodeGeneration.CRC_USB5
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,11 +10,13 @@
 -- Test suite for Data.SBV.Examples.CodeGeneration.CRC_USB5
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.CodeGeneration.CRC_USB5(testSuite) where
+module TestSuite.CodeGeneration.CRC_USB5(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.CRC_USB5
+
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

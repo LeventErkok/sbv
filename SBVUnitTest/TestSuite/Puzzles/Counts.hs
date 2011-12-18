@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.Puzzles.Counts
+-- Module      :  TestSuite.Puzzles.Counts
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,11 +10,13 @@
 -- Test suite for Data.SBV.Examples.Puzzles.Counts
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.Puzzles.Counts(testSuite) where
+module TestSuite.Puzzles.Counts(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals
 import Data.SBV.Examples.Puzzles.Counts
+
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

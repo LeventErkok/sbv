@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.Basics.Index
+-- Module      :  Examples.Basics.Index
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Testing the select function
 -----------------------------------------------------------------------------
 
-module Data.SBV.Examples.Basics.Index where
+module Examples.Basics.Index where
 
 import Data.SBV
 

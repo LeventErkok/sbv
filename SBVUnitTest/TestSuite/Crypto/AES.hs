@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.Crypto.AES
+-- Module      :  TestSuite.Crypto.AES
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,11 +10,13 @@
 -- Test suite for Data.SBV.Examples.Crypto.AES
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.Crypto.AES(testSuite) where
+module TestSuite.Crypto.AES(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals
 import Data.SBV.Examples.Crypto.AES
+
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

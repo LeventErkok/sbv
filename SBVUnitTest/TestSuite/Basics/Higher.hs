@@ -1,20 +1,21 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.Basics.Higher
+-- Module      :  TestSuite.Basics.Higher
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Test suite for Data.SBV.Examples.Basics.Higher
+-- Test suite for Examples.Basics.Higher
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.Basics.Higher(testSuite) where
+module TestSuite.Basics.Higher(testSuite) where
 
 import Data.SBV
-import Data.SBV.Internals
-import Data.SBV.Examples.Basics.Higher
+
+import Examples.Basics.Higher
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

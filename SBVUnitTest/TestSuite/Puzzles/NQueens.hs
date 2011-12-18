@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.Puzzles.NQueens
+-- Module      :  TestSuite.Puzzles.NQueens
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,11 +10,12 @@
 -- Test suite for Data.SBV.Examples.Puzzles.NQueens
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.Puzzles.NQueens(testSuite) where
+module TestSuite.Puzzles.NQueens(testSuite) where
 
 import Data.SBV
-import Data.SBV.Internals
 import Data.SBV.Examples.Puzzles.NQueens
+
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

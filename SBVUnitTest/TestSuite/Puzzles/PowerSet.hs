@@ -1,20 +1,21 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.Puzzles.PowerSet
+-- Module      :  TestSuite.Puzzles.PowerSet
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Test suite for Data.SBV.Examples.Puzzles.PowerSet
+-- Test suite for Examples.Puzzles.PowerSet
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.Puzzles.PowerSet(testSuite) where
+module TestSuite.Puzzles.PowerSet(testSuite) where
 
 import Data.SBV
-import Data.SBV.Internals
-import Data.SBV.Examples.Puzzles.PowerSet
+
+import Examples.Puzzles.PowerSet
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

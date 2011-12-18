@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.CodeGeneration.AddSub
+-- Module      :  TestSuite.CodeGeneration.AddSub
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,11 +10,13 @@
 -- Test suite for Data.SBV.Examples.CodeGeneration.AddSub
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.CodeGeneration.AddSub(testSuite) where
+module TestSuite.CodeGeneration.AddSub(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.AddSub
+
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

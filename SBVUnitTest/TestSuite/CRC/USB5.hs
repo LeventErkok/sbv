@@ -1,20 +1,21 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.CRC.USB5
+-- Module      :  TestSuite.CRC.USB5
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Test suite for Data.SBV.Examples.CRC.USB5
+-- Test suite for Examples.CRC.USB5
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.CRC.USB5(testSuite) where
+module TestSuite.CRC.USB5(testSuite) where
 
 import Data.SBV
-import Data.SBV.Internals
-import Data.SBV.Examples.CRC.USB5
+
+import Examples.CRC.USB5
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

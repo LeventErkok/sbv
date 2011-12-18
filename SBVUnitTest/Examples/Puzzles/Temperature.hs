@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.Puzzles.Temperature
+-- Module      :  Examples.Puzzles.Temperature
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -12,7 +12,7 @@
 --   Ignoring the fractions in the conversion
 -----------------------------------------------------------------------------
 
-module Data.SBV.Examples.Puzzles.Temperature where
+module Examples.Puzzles.Temperature where
 
 import Data.SBV
 

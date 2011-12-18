@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.Puzzles.PowerSet
+-- Module      :  Examples.Puzzles.PowerSet
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Computes the powerset of a givenset
 -----------------------------------------------------------------------------
 
-module Data.SBV.Examples.Puzzles.PowerSet where
+module Examples.Puzzles.PowerSet where
 
 import Data.SBV
 

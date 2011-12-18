@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.Puzzles.Sudoku
+-- Module      :  TestSuite.Puzzles.Sudoku
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,11 +10,12 @@
 -- Test suite for Data.SBV.Examples.Puzzles.Sudoku
 -----------------------------------------------------------------------------
 
-module Data.SBV.TestSuite.Puzzles.Sudoku(testSuite) where
+module TestSuite.Puzzles.Sudoku(testSuite) where
 
 import Data.SBV
-import Data.SBV.Internals
 import Data.SBV.Examples.Puzzles.Sudoku
+
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite

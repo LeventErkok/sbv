@@ -17,11 +17,11 @@ all: install
 install: $(STAMPFILE)
 
 $(STAMPFILE): $(DEPSRCS)
-	@echo "-- Auto-generated, don't edit"				  >  ${STAMPFILE}
-	@echo "module SBVUnitTest.SBVUnitTestBuildTime (buildTime) where" >> ${STAMPFILE}
-	@echo ""							  >> ${STAMPFILE}
-	@echo "buildTime :: String"					  >> ${STAMPFILE}
-	@echo "buildTime = \"$(shell date)\""				  >> ${STAMPFILE}
+	@echo "-- Auto-generated, don't edit"		       >  ${STAMPFILE}
+	@echo "module SBVUnitTestBuildTime (buildTime) where"  >> ${STAMPFILE}
+	@echo ""					       >> ${STAMPFILE}
+	@echo "buildTime :: String"			       >> ${STAMPFILE}
+	@echo "buildTime = \"$(shell date)\""		       >> ${STAMPFILE}
 	@find . -name \*.\*hs | xargs hasktags -c
 	@sort -o tags tags
 	-$(CABAL) $(CABPFLAG) install || rm $(STAMPFILE) && false

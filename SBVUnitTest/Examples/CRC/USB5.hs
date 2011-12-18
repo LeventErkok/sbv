@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.CRC.USB5
+-- Module      :  Examples.CRC.USB5
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- The USB5 CRC implementation
 -----------------------------------------------------------------------------
 
-module Data.SBV.Examples.CRC.USB5 where
+module Examples.CRC.USB5 where
 
 import Data.SBV
 

@@ -75,7 +75,7 @@ Homepage:      http://github.com/LeventErkok/sbv
 Bug-reports:   http://github.com/LeventErkok/sbv/issues
 Maintainer:    Levent Erkok (erkokl@gmail.com)
 Build-Type:    Custom
-Cabal-Version: >= 1.6
+Cabal-Version: >= 1.8
 Data-Files: SBVUnitTest/GoldFiles/*.gold
 Extra-Source-Files: INSTALL, README, COPYRIGHT
 
@@ -85,20 +85,19 @@ source-repository head
 
 Library
   ghc-options     : -Wall
-  Build-Depends   : base                >= 3 && < 5
-                  , deepseq             >= 1.1.0.2
-                  , process             >= 1.0.1.3
+  Build-Depends   : array               >= 0.3.0.1
+                  , base                >= 3 && < 5
                   , containers          >= 0.3.0.0
-                  , QuickCheck          >= 2.4.0.1
-                  , strict-concurrency  >= 0.2.4.1
-                  , old-time            >= 1.0.0.5
-                  , mtl                 >= 2.0.1.0
-                  , array               >= 0.3.0.1
-                  , HUnit               >= 1.2.2.3
+                  , deepseq             >= 1.1.0.2
                   , directory           >= 1.0.1.1
                   , filepath            >= 1.1.0.4
+                  , mtl                 >= 2.0.1.0
+                  , old-time            >= 1.0.0.5
                   , pretty              >= 1.0.1.1
+                  , process             >= 1.0.1.3
+                  , QuickCheck          >= 2.4.0.1
                   , random              >= 1.0.1.1
+                  , strict-concurrency  >= 0.2.4.1
   Exposed-modules : Data.SBV
                   , Data.SBV.Internals
                   , Data.SBV.Examples.BitPrecise.BitTricks
@@ -144,61 +143,69 @@ Library
                   , Data.SBV.Provers.Z3
                   , Data.SBV.Utils.Boolean
                   , Data.SBV.Utils.TDiff
-                  , Data.SBV.Utils.SBVTest
                   , Data.SBV.Utils.Lib
-                  , Data.SBV.Examples.Arrays.Memory
-                  , Data.SBV.Examples.Basics.BasicTests
-                  , Data.SBV.Examples.Basics.Higher
-                  , Data.SBV.Examples.Basics.Index
-                  , Data.SBV.Examples.Basics.ProofTests
-                  , Data.SBV.Examples.Basics.QRem
-                  , Data.SBV.Examples.CRC.CCITT
-                  , Data.SBV.Examples.CRC.CCITT_Unidir
-                  , Data.SBV.Examples.CRC.GenPoly
-                  , Data.SBV.Examples.CRC.Parity
-                  , Data.SBV.Examples.CRC.USB5
-                  , Data.SBV.Examples.Puzzles.PowerSet
-                  , Data.SBV.Examples.Puzzles.Temperature
-                  , Data.SBV.Examples.Uninterpreted.Uninterpreted
-                  , Data.SBV.TestSuite.Arrays.Memory
-                  , Data.SBV.TestSuite.Basics.Arithmetic
-                  , Data.SBV.TestSuite.Basics.BasicTests
-                  , Data.SBV.TestSuite.Basics.Higher
-                  , Data.SBV.TestSuite.Basics.Index
-                  , Data.SBV.TestSuite.Basics.ProofTests
-                  , Data.SBV.TestSuite.Basics.QRem
-                  , Data.SBV.TestSuite.BitPrecise.BitTricks
-                  , Data.SBV.TestSuite.BitPrecise.Legato
-                  , Data.SBV.TestSuite.BitPrecise.PrefixSum
-                  , Data.SBV.TestSuite.CodeGeneration.AddSub
-                  , Data.SBV.TestSuite.CodeGeneration.CgTests
-                  , Data.SBV.TestSuite.CodeGeneration.CRC_USB5
-                  , Data.SBV.TestSuite.CodeGeneration.Fibonacci
-                  , Data.SBV.TestSuite.CodeGeneration.GCD
-                  , Data.SBV.TestSuite.CodeGeneration.PopulationCount
-                  , Data.SBV.TestSuite.CodeGeneration.Uninterpreted
-                  , Data.SBV.TestSuite.Crypto.AES
-                  , Data.SBV.TestSuite.Crypto.RC4
-                  , Data.SBV.TestSuite.Existentials.CRCPolynomial
-                  , Data.SBV.TestSuite.CRC.CCITT
-                  , Data.SBV.TestSuite.CRC.CCITT_Unidir
-                  , Data.SBV.TestSuite.CRC.GenPoly
-                  , Data.SBV.TestSuite.CRC.Parity
-                  , Data.SBV.TestSuite.CRC.USB5
-                  , Data.SBV.TestSuite.Polynomials.Polynomials
-                  , Data.SBV.TestSuite.Puzzles.Counts
-                  , Data.SBV.TestSuite.Puzzles.DogCatMouse
-                  , Data.SBV.TestSuite.Puzzles.Euler185
-                  , Data.SBV.TestSuite.Puzzles.MagicSquare
-                  , Data.SBV.TestSuite.Puzzles.NQueens
-                  , Data.SBV.TestSuite.Puzzles.PowerSet
-                  , Data.SBV.TestSuite.Puzzles.Sudoku
-                  , Data.SBV.TestSuite.Puzzles.U2Bridge
-                  , Data.SBV.TestSuite.Puzzles.Temperature
-                  , Data.SBV.TestSuite.Uninterpreted.AUF
-                  , Data.SBV.TestSuite.Uninterpreted.Uninterpreted
-                  , Data.SBV.TestSuite.Uninterpreted.Function
 
 Executable SBVUnitTests
-  main-is         : SBVUnitTest/SBVUnitTest.hs
-  Other-modules   : SBVUnitTest.SBVUnitTestBuildTime
+  ghc-options     : -Wall
+  Build-depends   : base      >= 3 && < 5
+                  , directory >= 1.0.1.1
+                  , HUnit     >= 1.2.2.3
+                  , filepath  >= 1.1.0.4
+                  , process   >= 1.0.1.3
+                  , sbv
+  Hs-Source-Dirs  : SBVUnitTest
+  main-is         : SBVUnitTest.hs
+  Other-modules   : SBVUnitTestBuildTime
+                  , SBVTest
+                  , Examples.Arrays.Memory
+                  , Examples.Basics.BasicTests
+                  , Examples.Basics.Higher
+                  , Examples.Basics.Index
+                  , Examples.Basics.ProofTests
+                  , Examples.Basics.QRem
+                  , Examples.CRC.CCITT
+                  , Examples.CRC.CCITT_Unidir
+                  , Examples.CRC.GenPoly
+                  , Examples.CRC.Parity
+                  , Examples.CRC.USB5
+                  , Examples.Puzzles.PowerSet
+                  , Examples.Puzzles.Temperature
+                  , Examples.Uninterpreted.Uninterpreted
+                  , TestSuite.Arrays.Memory
+                  , TestSuite.Basics.Arithmetic
+                  , TestSuite.Basics.BasicTests
+                  , TestSuite.Basics.Higher
+                  , TestSuite.Basics.Index
+                  , TestSuite.Basics.ProofTests
+                  , TestSuite.Basics.QRem
+                  , TestSuite.BitPrecise.BitTricks
+                  , TestSuite.BitPrecise.Legato
+                  , TestSuite.BitPrecise.PrefixSum
+                  , TestSuite.CodeGeneration.AddSub
+                  , TestSuite.CodeGeneration.CgTests
+                  , TestSuite.CodeGeneration.CRC_USB5
+                  , TestSuite.CodeGeneration.Fibonacci
+                  , TestSuite.CodeGeneration.GCD
+                  , TestSuite.CodeGeneration.PopulationCount
+                  , TestSuite.CodeGeneration.Uninterpreted
+                  , TestSuite.Crypto.AES
+                  , TestSuite.Crypto.RC4
+                  , TestSuite.Existentials.CRCPolynomial
+                  , TestSuite.CRC.CCITT
+                  , TestSuite.CRC.CCITT_Unidir
+                  , TestSuite.CRC.GenPoly
+                  , TestSuite.CRC.Parity
+                  , TestSuite.CRC.USB5
+                  , TestSuite.Polynomials.Polynomials
+                  , TestSuite.Puzzles.Counts
+                  , TestSuite.Puzzles.DogCatMouse
+                  , TestSuite.Puzzles.Euler185
+                  , TestSuite.Puzzles.MagicSquare
+                  , TestSuite.Puzzles.NQueens
+                  , TestSuite.Puzzles.PowerSet
+                  , TestSuite.Puzzles.Sudoku
+                  , TestSuite.Puzzles.U2Bridge
+                  , TestSuite.Puzzles.Temperature
+                  , TestSuite.Uninterpreted.AUF
+                  , TestSuite.Uninterpreted.Function
+                  , TestSuite.Uninterpreted.Uninterpreted

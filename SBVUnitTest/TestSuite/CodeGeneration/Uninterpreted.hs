@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.TestSuite.CodeGeneration.Uninterpreted
+-- Module      :  TestSuite.CodeGeneration.Uninterpreted
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -9,11 +9,13 @@
 --
 -- Test suite for Data.SBV.Examples.CodeGeneration.Uninterpreted
 -----------------------------------------------------------------------------
-module Data.SBV.TestSuite.CodeGeneration.Uninterpreted(testSuite) where
+module TestSuite.CodeGeneration.Uninterpreted(testSuite) where
 
 import Data.SBV
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.Uninterpreted
+
+import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite
