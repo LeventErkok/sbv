@@ -24,7 +24,7 @@ $(STAMPFILE): $(DEPSRCS)
 	@echo "buildTime = \"$(shell date)\""		       >> ${STAMPFILE}
 	@find . -name \*.\*hs | xargs hasktags -c
 	@sort -o tags tags
-	-$(CABAL) $(CABPFLAG) install || rm $(STAMPFILE) && false
+	($(CABAL) $(CABPFLAG) install || (rm $(STAMPFILE) && false))
 
 test:
 	@echo "Executing inline tests.."
@@ -41,7 +41,7 @@ clean:
 docs:
 	$(CABAL) haddock --hyperlink-source
 
-release: clean install sdist docs hlint test
+release: clean install sdist docs test hlint
 
 # use this as follows: make gold TGTS="cgUSB5"
 # where the tag is one (or many) given in the SBVUnitTest.hs file
@@ -50,6 +50,5 @@ gold:
 	ghc -idist/build/autogen/ SBVUnitTest/SBVUnitTest.hs -e "createGolds \"${TGTS}\""
 
 hlint:
-	-@hlint ${LINTSRCS} -q -rhlintReport.html \
-			    -i "Use otherwise" 	  \
-			    -i "Parse error"
+	@echo "Running HLint.."
+	@hlint ${LINTSRCS} -q -rhlintReport.html -i "Use otherwise" -i "Parse error"
