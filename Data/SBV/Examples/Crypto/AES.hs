@@ -49,7 +49,7 @@ gf28Mult x y = pMult (x, y, [8, 4, 3, 1, 0])
 -- | Exponentiation by a constant in GF(2^8). The implementation uses the usual
 -- square-and-multiply trick to speed up the computation.
 gf28Pow :: GF28 -> Int -> GF28
-gf28Pow n k = pow k
+gf28Pow n = pow
   where sq x  = x `gf28Mult` x
         pow 0    = 1
         pow i
@@ -577,3 +577,6 @@ aes128LibComponents = [ ("aes128KeySchedule",  keySchedule)
 -- somewhat simplistically, so these numbers should be considered very rough estimates.)
 cgAES128Library :: IO ()
 cgAES128Library = compileToCLib Nothing "aes128Lib" aes128LibComponents
+
+{-# ANN aesRound    "HLint: ignore Use head" #-}
+{-# ANN aesInvRound "HLint: ignore Use head" #-}

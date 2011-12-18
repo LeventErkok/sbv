@@ -72,3 +72,5 @@ genPoly hd = do putStrLn $ "*** Looking for polynomials with HD = " ++ show hd
 
 findHD3Polynomials :: IO ()
 findHD3Polynomials = genPoly 3
+
+{-# ANN crc_48_16 "HLint: ignore Use camelCase" #-}
