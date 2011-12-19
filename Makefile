@@ -47,7 +47,7 @@ docs:
 	@(set -o pipefail; $(CABAL) haddock --hyperlink-source 2>&1 | $(SIMPLIFY))
 
 release: clean install sdist docs hlint test
-	@echo "SBV is ready for release!"
+	@echo "*** SBV is ready for release!"
 
 # use this as follows: make gold TGTS="cgUSB5"
 # where the tag is one (or many) given in the SBVUnitTest.hs file
