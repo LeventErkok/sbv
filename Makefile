@@ -8,7 +8,7 @@ LINTSRCS  = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs
 STAMPFILE = SBVUnitTest/SBVUnitTestBuildTime.hs
 DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE))
 CABAL     = cabal
-CABPFLAG  = --disable-library-profiling --disable-documentation --force-reinstalls
+CABPFLAG  = --disable-library-profiling --disable-documentation --force-reinstalls --ghc-options=-Werror
 
 .PHONY: all install test sdist clean docs gold stamp hlint
 
@@ -24,13 +24,13 @@ $(STAMPFILE): $(DEPSRCS)
 	@echo "buildTime = \"$(shell date)\""		       >> ${STAMPFILE}
 	@find . -name \*.\*hs | xargs hasktags -c
 	@sort -o tags tags
-	($(CABAL) $(CABPFLAG) install || (rm $(STAMPFILE) && false))
+	@($(CABAL) $(CABPFLAG) install || (rm $(STAMPFILE) && false))
 
 test:
 	@echo "Executing inline tests.."
 	@time (doctest ${SRCS} | grep -v "Could not find documentation" | exit 0)
 	@echo "Starting external test suite.."
-	@time (SBVUnitTests | cat)
+	@time SBVUnitTests
 
 sdist:
 	$(CABAL) sdist
