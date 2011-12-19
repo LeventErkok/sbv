@@ -10,6 +10,7 @@ DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs
 CABAL     = cabal
 CABPFLAG  = --disable-library-profiling --disable-documentation --force-reinstalls --ghc-options=-Werror
 SIMPLIFY  = ./buildUtils/simplify
+TIME      = /usr/bin/time
 
 .PHONY: all install test sdist clean docs gold stamp hlint simplify
 
@@ -32,9 +33,9 @@ $(STAMPFILE): $(DEPSRCS)
 
 test:
 	@echo "Executing inline tests.."
-	@time (doctest ${SRCS} | grep -v "Could not find documentation" | exit 0)
+	@$(TIME) (doctest ${SRCS} | grep -v "Could not find documentation" | exit 0)
 	@echo "Starting external test suite.."
-	@time SBVUnitTests
+	@$(TIME) SBVUnitTests
 
 sdist:
 	@(set -o pipefail; $(CABAL) sdist | $(SIMPLIFY))
