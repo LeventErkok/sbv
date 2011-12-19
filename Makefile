@@ -33,7 +33,7 @@ $(STAMPFILE): $(DEPSRCS)
 
 test:
 	@echo "Executing inline tests.."
-	@$(TIME) (doctest ${SRCS} | grep -v "Could not find documentation" | exit 0)
+	@($(TIME) doctest ${SRCS} | grep -v "Could not find documentation" | exit 0)
 	@echo "Starting external test suite.."
 	@$(TIME) SBVUnitTests
 
