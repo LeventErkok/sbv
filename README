@@ -94,8 +94,7 @@ If quantified bit-vectors are to be used, you should also install
 Microsoft's z3 SMT solver. Again, the environment variables 
 `SBV_Z3` and `SBV_Z3_OPTIONS` can be used for choosing executable location
 and custom options.  The default for the latter is `"/in /smt2"`. Microsoft
-releases Z3 natively on Windows, and Linux for SMT-Comp purposes, and you can
-also run it on Mac via Wine or similar emulators. You should download at least
+releases Z3 natively on Windows, Linux, and MacOS-X. You should download at least
 version 3.2.
 
 Examples
