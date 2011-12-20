@@ -25,6 +25,8 @@ Version 0.9.24, Not yet released
   Internal
    * Major reorganization of files to and build infrastructure to
      decrease build times and better layout
+   * Get rid of custom Setup.hs, just use simple build. The extra work
+     was not worth the complexity.
 
 ======================================================================
 Version 0.9.23, 2011-12-05
