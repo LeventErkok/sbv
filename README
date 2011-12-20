@@ -99,7 +99,7 @@ on Mac and Linux.
 Both Yices [(download)](http://yices.csl.sri.com/download-yices2.shtml)
 and Z3 [(download)](http://research.microsoft.com/en-us/um/redmond/projects/z3/download.html)
 are available on Windows, Linux, and Mac-OSX. 
-You should download version 2.X of Yices, and 3.2 of Z3, at the least.
+You should download version 2.X of Yices, and 3.2 of Z3, or later.
 
 Examples
 =========
