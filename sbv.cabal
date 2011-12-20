@@ -1,6 +1,6 @@
 Name:          sbv
 Version:       0.9.24
-Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math
+Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math, SMT
 Synopsis:      Symbolic bit vectors: Bit-precise verification and automatic C-code generation.
 Description:   Express properties about bit-precise Haskell programs and automatically prove
                them using SMT solvers. Automatically generate C programs from Haskell functions.
@@ -74,7 +74,7 @@ Author:        Levent Erkok
 Homepage:      http://github.com/LeventErkok/sbv
 Bug-reports:   http://github.com/LeventErkok/sbv/issues
 Maintainer:    Levent Erkok (erkokl@gmail.com)
-Build-Type:    Custom
+Build-Type:    Simple
 Cabal-Version: >= 1.8
 Data-Files: SBVUnitTest/GoldFiles/*.gold
 Extra-Source-Files: INSTALL, README, COPYRIGHT, RELEASENOTES
