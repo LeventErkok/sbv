@@ -84,22 +84,18 @@ from Microsoft: [http://research.microsoft.com/en-us/um/redmond/projects/z3/](ht
 
 Prerequisites
 =============
-You **should** download and install Yices (version 2.X) on your machine, and
+You **should** [(download)](http://yices.csl.sri.com/download-yices2.shtml)
+and install Yices (version 2.X) on your machine, and
 make sure the "yices" executable is in your path before using the sbv library,
 as it is the current default solver. Alternatively, you can specify the location
 of yices executable in the environment variable `SBV_YICES` and the options to yices
 in `SBV_YICES_OPTIONS`. The default for the latter is `"-m -f"`.
 
-If quantified bit-vectors are to be used, you should also install
-Microsoft's z3 SMT solver. Again, the environment variables 
-`SBV_Z3` and `SBV_Z3_OPTIONS` can be used for choosing executable location
+SBV can also use Microsoft's Z3 SMT solver as a
+backend [(download)](http://research.microsoft.com/en-us/um/redmond/projects/z3/download.html).
+The environment variables `SBV_Z3` and `SBV_Z3_OPTIONS` can be used for choosing executable location
 and custom options.  The default for the latter is `"/in /smt2"` on Windows and `"-in -smt2"`
-on Mac and Linux.
-
-Both Yices [(download)](http://yices.csl.sri.com/download-yices2.shtml)
-and Z3 [(download)](http://research.microsoft.com/en-us/um/redmond/projects/z3/download.html)
-are available on Windows, Linux, and Mac-OSX. 
-You should download version 2.X of Yices, and 3.2 of Z3, or later.
+on Mac and Linux. You should download Z3 version 3.2 or later.
 
 Examples
 =========
