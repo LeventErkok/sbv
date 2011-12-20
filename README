@@ -96,8 +96,8 @@ Microsoft's z3 SMT solver. Again, the environment variables
 and custom options.  The default for the latter is `"/in /smt2"` on Windows and `"-in -smt2"`
 on Mac and Linux.
 
-Both Yices [http://yices.csl.sri.com/download-yices2.shtml](download)
-and Z3 [http://research.microsoft.com/en-us/um/redmond/projects/z3/download.html](download)
+Both Yices [download](http://yices.csl.sri.com/download-yices2.shtml)
+and Z3 [download](http://research.microsoft.com/en-us/um/redmond/projects/z3/download.html)
 are available on Windows, Linux, and Mac-OSX. 
 You should download version 2.X of Yices, and 3.2 of Z3, at the least.
 
