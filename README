@@ -84,7 +84,7 @@ from Microsoft: [http://research.microsoft.com/en-us/um/redmond/projects/z3/](ht
 
 Prerequisites
 =============
-You **should** [(download)](http://yices.csl.sri.com/download-yices2.shtml)
+You **should** [download](http://yices.csl.sri.com/download-yices2.shtml)
 and install Yices (version 2.X) on your machine, and
 make sure the "yices" executable is in your path before using the sbv library,
 as it is the current default solver. Alternatively, you can specify the location
