@@ -8,28 +8,41 @@ LINTSRCS  = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs
 STAMPFILE = SBVUnitTest/SBVUnitTestBuildTime.hs
 DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE))
 CABAL     = cabal
-CABPFLAG  = --disable-library-profiling --disable-documentation --force-reinstalls --ghc-options=-Werror
+CABPFLAGS = --disable-library-profiling --disable-documentation --ghc-options=-Werror
 SIMPLIFY  = ./buildUtils/simplify
 TIME      = /usr/bin/time
 
-.PHONY: all install test sdist clean docs gold stamp hlint simplify
+# Add --force-reinstalls if we have the new cabal
+CABALVERSION=$(word 3, $(shell cabal --version))
+ifeq ("$(CABALVERSION)", "0.10.2")
+else
+CABPFLAGS+=--force-reinstalls
+endif
 
-all: simplify install
-
-simplify:
-	@(make -s -C buildUtils)
-
-install: $(STAMPFILE)
-
-$(STAMPFILE): $(DEPSRCS)
+define mkStamp
 	@echo "-- Auto-generated, don't edit"		       >  ${STAMPFILE}
 	@echo "module SBVUnitTestBuildTime (buildTime) where"  >> ${STAMPFILE}
 	@echo ""					       >> ${STAMPFILE}
 	@echo "buildTime :: String"			       >> ${STAMPFILE}
 	@echo "buildTime = \"$(shell date)\""		       >> ${STAMPFILE}
+endef
+
+define mkTags
 	@find . -name \*.\*hs | xargs hasktags -c
 	@sort -o tags tags
-	@((set -o pipefail; $(CABAL) $(CABPFLAG) install 2>&1 | $(SIMPLIFY)) || (rm $(STAMPFILE) && false))
+endef
+
+.PHONY: all install test sdist clean docs gold stamp hlint
+
+all: install
+
+install: $(STAMPFILE)
+
+$(STAMPFILE): $(DEPSRCS)
+	@(make -s -C buildUtils)
+	$(call mkStamp)
+	$(call mkTags)
+	@((set -o pipefail; $(CABAL) $(CABPFLAGS) install 2>&1 | $(SIMPLIFY)) || (rm $(STAMPFILE) && false))
 
 test:
 	@echo "Executing inline tests.."
@@ -53,7 +66,7 @@ release: clean install sdist docs hlint test
 # where the tag is one (or many) given in the SBVUnitTest.hs file
 # if TGTS is not specified, then all gold files are regenerated
 gold:
-	ghc -idist/build/autogen/ SBVUnitTest/SBVUnitTest.hs -e "createGolds \"${TGTS}\""
+	dist/build/SBVUnitTests/SBVUnitTests -c ${TGTS}
 
 hlint:
 	@echo "Running HLint.."
