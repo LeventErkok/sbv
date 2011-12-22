@@ -10,7 +10,7 @@
 -- SBV library unit-test program
 -----------------------------------------------------------------------------
 
-module Main(main, createGolds) where
+module Main(main) where
 
 import Control.Monad           (unless, when)
 import System.Directory        (doesDirectoryExist, findExecutable)
@@ -118,6 +118,8 @@ main = do putStrLn $ "*** SBVUnitTester, version time stamp: " ++ buildTime
             [x] | x `elem` ["-h", "--help", "-?"]
                    -> putStrLn "Usage: SBVUnitTests [-l] [targets]" -- Not quite right, but sufficient
             ["-l"] -> showTargets
+            -- undocumented really
+            ("-c":ts) -> createGolds (unwords ts)
             _      -> run tgts False []
 
 createGolds :: String -> IO ()
