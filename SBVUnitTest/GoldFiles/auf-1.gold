@@ -27,5 +27,6 @@ DEFINE
   s15 :: SWord64 = uninterpreted_f s14
   s16 :: SBool = s11 == s15
   s17 :: SBool = s6 | s16
+CONSTRAINTS
 OUTPUTS
   s17

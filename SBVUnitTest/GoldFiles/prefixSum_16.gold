@@ -114,5 +114,6 @@ DEFINE
   s89 :: SBool = s24 & s88
   s90 :: SBool = s21 & s89
   s91 :: SBool = s18 & s90
+CONSTRAINTS
 OUTPUTS
   s91

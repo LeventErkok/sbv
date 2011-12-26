@@ -370,8 +370,9 @@ genDriver mbISize randVals fn inps outs mbRet = [pre, header, body, post]
 
 -- | Generate the C program
 genCProg :: Bool -> Maybe Int -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SW -> Doc -> [Doc]
-genCProg rtc mbISize fn proto (Result hasInfPrec _ cgs ins preConsts tbls arrs _ _ asgns _) inVars outVars mbRet extDecls
+genCProg rtc mbISize fn proto (Result hasInfPrec _ cgs ins preConsts tbls arrs _ _ asgns cstrs _) inVars outVars mbRet extDecls
   | isNothing mbISize && hasInfPrec = dieUnbounded
+  | not (null cstrs)                = tbd "Explicit constraints"
   | not (null arrs)                 = tbd "User specified arrays"
   | needsExistentials (map fst ins) = error "SBV->C: Cannot compile functions with existentially quantified variables."
   | True                            = [pre, header, post]

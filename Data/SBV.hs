@@ -135,6 +135,8 @@ module Data.SBV (
   , Boolean(..)
   -- *** Generalizations of boolean operations
   , bAnd, bOr, bAny, bAll
+  -- ** Adding constraints
+  , constrain
   -- ** Pretty-printing and reading numbers in Hex & Binary
   , PrettyNum(..), readBin
   -- * Uninterpreted constants and functions

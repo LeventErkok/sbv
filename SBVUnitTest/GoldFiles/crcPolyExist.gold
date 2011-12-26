@@ -3529,5 +3529,6 @@ DEFINE
   s3518 :: SBool = s3516 > s3517
   s3519 :: SBool = s13 | s3518
   s3520 :: SBool = s8 & s3519
+CONSTRAINTS
 OUTPUTS
   s3520

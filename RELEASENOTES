@@ -20,6 +20,10 @@ Version 0.9.24, Not yet released
      commands are all interchangeable with obvious meanings.
    * Add support for concrete test case generation, see the genTest function.
    * Improve optimize routines and add support for iterative optimization.
+   * Add function "constrain", simplifying conjunctive constraints, especially
+     useful for adding constraints at variable generation time via forall/exists.
+  Examples
+   * Add Data/SBV/Examples/Puzzles/Coins.hs. (Shows the usage of "constrain".)
   Dependencies
    * Bump up random package dependency to 1.0.1.1 (from 1.0.0.2)
   Internal

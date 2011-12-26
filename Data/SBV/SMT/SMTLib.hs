@@ -28,15 +28,16 @@ type SMTLibConverter =  Bool                                        -- ^ has inf
                      -> [(String, SBVType)]                         -- ^ uninterpreted functions/constants
                      -> [(String, [String])]                        -- ^ user given axioms
                      -> Pgm                                         -- ^ assignments
+                     -> [SW]                                        -- ^ extra constraints
                      -> SW                                          -- ^ output variable
                      -> SMTLibPgm
 
 toSMTLib1, toSMTLib2 :: SMTLibConverter
 (toSMTLib1, toSMTLib2) = (cvt SMTLib1, cvt SMTLib2)
-  where cvt v hasInfPrec isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq out = SMTLibPgm v (aliasTable, pre, post)
+  where cvt v hasInfPrec isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out = SMTLibPgm v (aliasTable, pre, post)
          where aliasTable  = map (\(_, (x, y)) -> (y, x)) qinps
                converter   = if v == SMTLib1 then SMT1.cvt else SMT2.cvt
-               (pre, post) = converter hasInfPrec isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq out
+               (pre, post) = converter hasInfPrec isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out
 
 addNonEqConstraints :: [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
 addNonEqConstraints _qinps cs p@(SMTLibPgm SMTLib1 _) = SMT1.addNonEqConstraints cs p

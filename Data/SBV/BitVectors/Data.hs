@@ -22,7 +22,7 @@ module Data.SBV.BitVectors.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
  , SInt8, SInt16, SInt32, SInt64, SInteger
  , SymWord(..)
- , CW(..), cwSameType, cwIsBit, cwToBool
+ , CW(..), cwSameType, cwIsBit, cwToBool, constrain
  , mkConstCW ,liftCW2, mapCW, mapCW2
  , SW(..), trueSW, falseSW, trueCW, falseCW
  , SBV(..), NodeId(..), mkSymSBV
@@ -267,16 +267,17 @@ data Result = Result Bool                                         -- contains un
                      [(String, SBVType)]                          -- uninterpreted constants
                      [(String, [String])]                         -- axioms
                      Pgm                                          -- assignments
+                     [SW]                                         -- additional constraints (boolean)
                      [SW]                                         -- outputs
 
 getQCInfo :: Result -> [(String, CW)]
-getQCInfo (Result _ qc _ _ _ _ _ _ _ _ _) = qc
+getQCInfo (Result _ qc _ _ _ _ _ _ _ _ _ _) = qc
 
 instance Show Result where
-  show (Result _ _ _ _ cs _ _ [] [] _ [r])
+  show (Result _ _ _ _ cs _ _ [] [] _ [] [r])
     | Just c <- r `lookup` cs
     = show c
-  show (Result _ _ cgs is cs ts as uis axs xs os)  = intercalate "\n" $
+  show (Result _ _ cgs is cs ts as uis axs xs cstrs os)  = intercalate "\n" $
                    ["INPUTS"]
                 ++ map shn is
                 ++ ["CONSTANTS"]
@@ -293,6 +294,8 @@ instance Show Result where
                 ++ map shax axs
                 ++ ["DEFINE"]
                 ++ map (\(s, e) -> "  " ++ shs s ++ " = " ++ show e) (F.toList xs)
+                ++ ["CONSTRAINTS"]
+                ++ map (("  " ++) . show) cstrs
                 ++ ["OUTPUTS"]
                 ++ map (("  " ++) . show) os
     where shs sw = show sw ++ " :: " ++ showType sw
@@ -361,6 +364,7 @@ data State  = State { runMode       :: SBVRunMode
                     , rctr          :: IORef Int
                     , rInfPrec      :: IORef Bool
                     , rinps         :: IORef [(Quantifier, NamedSymVar)]
+                    , rConstraints  :: IORef [SW]
                     , routs         :: IORef [SW]
                     , rtblMap       :: IORef TableMap
                     , spgm          :: IORef Pgm
@@ -596,29 +600,31 @@ runSymbolic' currentRunMode (Symbolic c) = do
    swCache <- newIORef IMap.empty
    aiCache <- newIORef IMap.empty
    infPrec <- newIORef False
-   let st = State { runMode   = currentRunMode
-                  , rCInfo    = cInfo
-                  , rctr      = ctr
-                  , rInfPrec  = infPrec
-                  , rinps     = inps
-                  , routs     = outs
-                  , rtblMap   = tables
-                  , spgm      = pgm
-                  , rconstMap = cmap
-                  , rArrayMap = arrays
-                  , rexprMap  = emap
-                  , rUIMap    = uis
-                  , rCgMap    = cgs
-                  , raxioms   = axioms
-                  , rSWCache  = swCache
-                  , rAICache  = aiCache
+   cstrs   <- newIORef []
+   let st = State { runMode      = currentRunMode
+                  , rCInfo       = cInfo
+                  , rctr         = ctr
+                  , rInfPrec     = infPrec
+                  , rinps        = inps
+                  , routs        = outs
+                  , rtblMap      = tables
+                  , spgm         = pgm
+                  , rconstMap    = cmap
+                  , rArrayMap    = arrays
+                  , rexprMap     = emap
+                  , rUIMap       = uis
+                  , rCgMap       = cgs
+                  , raxioms      = axioms
+                  , rSWCache     = swCache
+                  , rAICache     = aiCache
+                  , rConstraints = cstrs
                   }
    _ <- newConst st (mkConstCW (False, Size (Just 1)) (0::Integer)) -- s(-2) == falseSW
    _ <- newConst st (mkConstCW (False, Size (Just 1)) (1::Integer)) -- s(-1) == trueSW
    r <- runReaderT c st
    rpgm  <- readIORef pgm
-   inpsR <- readIORef inps
-   outsR <- readIORef outs
+   inpsO <- reverse `fmap` readIORef inps
+   outsO <- reverse `fmap` readIORef outs
    let swap (a, b) = (b, a)
        cmp  (a, _) (b, _) = a `compare` b
    cnsts <- (sortBy cmp . map swap . Map.toList) `fmap` readIORef (rconstMap st)
@@ -629,7 +635,8 @@ runSymbolic' currentRunMode (Symbolic c) = do
    hasInfPrec <- readIORef infPrec
    cgMap <- Map.toList `fmap` readIORef cgs
    traceVals <- reverse `fmap` readIORef cInfo
-   return $ (r, Result hasInfPrec traceVals cgMap (reverse inpsR) cnsts tbls arrs unint axs rpgm (reverse outsR))
+   extraCstrs   <- reverse `fmap` readIORef cstrs
+   return $ (r, Result hasInfPrec traceVals cgMap inpsO cnsts tbls arrs unint axs rpgm extraCstrs outsO)
 
 -------------------------------------------------------------------------------
 -- * Symbolic Words
@@ -804,6 +811,20 @@ mkSFunArray :: (SBV a -> SBV b) -> SFunArray a b
 mkSFunArray = SFunArray
 
 ---------------------------------------------------------------------------------
+-- | Adding arbitrary constraints. A constraint adds a conjunction to the
+-- final formula that must always be satisfied. NB. 'constrain' is merely a
+-- convenient way of adding extra conjuncts to the final result, allowing one
+-- to express constraints much more easily earlier. A good use case is
+-- attaching a constraint to a 'forall' or 'exists' variable at the time
+-- of its creation, instead of waiting for the final returned formula.
+---------------------------------------------------------------------------------
+constrain :: SBool -> Symbolic ()
+constrain b = do
+        st <- ask
+        liftIO $ do v <- sbvToSW st b
+                    modifyIORef (rConstraints st) (v:)
+
+---------------------------------------------------------------------------------
 -- * Cached values
 ---------------------------------------------------------------------------------
 
@@ -860,8 +881,8 @@ instance NFData CW where
   rnf (CW x y z) = x `seq` y `seq` z `seq` ()
 
 instance NFData Result where
-  rnf (Result isInf qcInfo cgs inps consts tbls arrs uis axs pgm outs)
-        = rnf isInf `seq` rnf qcInfo `seq` rnf cgs `seq` rnf inps `seq` rnf consts `seq` rnf tbls `seq` rnf arrs `seq` rnf uis `seq` rnf axs `seq` rnf pgm `seq` rnf outs
+  rnf (Result isInf qcInfo cgs inps consts tbls arrs uis axs pgm cstr outs)
+        = rnf isInf `seq` rnf qcInfo `seq` rnf cgs `seq` rnf inps `seq` rnf consts `seq` rnf tbls `seq` rnf arrs `seq` rnf uis `seq` rnf axs `seq` rnf pgm `seq` rnf cstr `seq` rnf outs
 
 instance NFData Size
 instance NFData ArrayContext

@@ -1825,5 +1825,6 @@ DEFINE
   s1813 :: SWord8 = if s1369 then s1811 else s1812
   s1815 :: SBool = s1813 > s1814
   s1816 :: SBool = s8 | s1815
+CONSTRAINTS
 OUTPUTS
   s1816

@@ -115,6 +115,7 @@ Library
                   , Data.SBV.Examples.Crypto.RC4
                   , Data.SBV.Examples.Existentials.CRCPolynomial
                   , Data.SBV.Examples.Polynomials.Polynomials
+                  , Data.SBV.Examples.Puzzles.Coins
                   , Data.SBV.Examples.Puzzles.Counts
                   , Data.SBV.Examples.Puzzles.DogCatMouse
                   , Data.SBV.Examples.Puzzles.Euler185
@@ -198,6 +199,7 @@ Executable SBVUnitTests
                   , TestSuite.CRC.GenPoly
                   , TestSuite.CRC.Parity
                   , TestSuite.CRC.USB5
+                  , TestSuite.Puzzles.Coins
                   , TestSuite.Polynomials.Polynomials
                   , TestSuite.Puzzles.Counts
                   , TestSuite.Puzzles.DogCatMouse

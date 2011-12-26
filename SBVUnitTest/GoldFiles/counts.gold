@@ -1699,5 +1699,6 @@ DEFINE
   s1688 :: SBool = s554 & s1687
   s1689 :: SBool = s394 & s1688
   s1690 :: SBool = s234 & s1689
+CONSTRAINTS
 OUTPUTS
   s1690

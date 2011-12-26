@@ -8954,5 +8954,6 @@ DEFINE
   s8943 :: SWord16 = s8941 * s8942
   s8944 :: SBool = s8940 == s8943
   s8945 :: SBool = s15 | s8944
+CONSTRAINTS
 OUTPUTS
   s8945

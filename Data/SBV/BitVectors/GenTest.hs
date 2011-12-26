@@ -21,6 +21,8 @@ import Data.SBV.BitVectors.Data
 -- function 'output' call to indicate what fields should be in the test result.
 genTest :: Int -> Symbolic () -> IO [([CW], [CW])]
 genTest n m = sequence [tc | _ <- [1 .. n]]
-  where tc = do (_, Result _ tvals _ _ cs _ _ _ _ _ os) <- runSymbolic' Concrete m
-                let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
-                return (map snd tvals, map cval os)
+  where tc = do (_, Result _ tvals _ _ cs _ _ _ _ _ cstrs os) <- runSymbolic' Concrete m
+                case cstrs of
+                  [] -> let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
+                        in return (map snd tvals, map cval os)
+                  _  -> error "Not yet supported: Quickcheck in the presence of explicit constraints."
