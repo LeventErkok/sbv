@@ -30,7 +30,7 @@ module Data.SBV.BitVectors.Data
  , sbvToSW, sbvToSymSW
  , SBVExpr(..), newExpr
  , cache, uncache, uncacheAI, HasSignAndSize(..)
- , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, runSymbolic', State, inProofMode, SBVRunMode(..), Size(..), Outputtable(..), Result(..), getQCInfo
+ , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, runSymbolic', State, inProofMode, SBVRunMode(..), Size(..), Outputtable(..), Result(..), getTraceInfo, getConstraints
  , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
  , Quantifier(..), needsExistentials
  , SMTLibPgm(..), SMTLibVersion(..)
@@ -270,8 +270,11 @@ data Result = Result Bool                                         -- contains un
                      [SW]                                         -- additional constraints (boolean)
                      [SW]                                         -- outputs
 
-getQCInfo :: Result -> [(String, CW)]
-getQCInfo (Result _ qc _ _ _ _ _ _ _ _ _ _) = qc
+getConstraints :: Result -> [SW]
+getConstraints (Result _ _ _ _ _ _ _ _ _ _ cstrs _) = cstrs
+
+getTraceInfo :: Result -> [(String, CW)]
+getTraceInfo (Result _ tvals _ _ _ _ _ _ _ _ _ _) = tvals
 
 instance Show Result where
   show (Result _ _ _ _ cs _ _ [] [] _ [] [r])
