@@ -32,11 +32,12 @@ import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits       (Bits(..))
 import Data.Int        (Int8, Int16, Int32, Int64)
 import Data.List       (genericLength, genericIndex, genericSplitAt, unzip4, unzip5, unzip6, unzip7, intercalate)
+import Data.Maybe      (fromMaybe)
 import Data.Word       (Word8, Word16, Word32, Word64)
 
 import Test.QuickCheck                           (Testable(..), Arbitrary(..))
 import qualified Test.QuickCheck         as QC   (whenFail)
-import qualified Test.QuickCheck.Monadic as QC   (monadicIO, run)
+import qualified Test.QuickCheck.Monadic as QC   (monadicIO, run, pre)
 import System.Random
 
 import Data.SBV.BitVectors.Data
@@ -1112,13 +1113,21 @@ instance Testable SBool where
 
 instance Testable (Symbolic SBool) where
   property m = QC.whenFail (putStrLn msg) $ QC.monadicIO test
-    where test = do die <- QC.run $ do (r, p) <- runSymbolic' Concrete (m >>= output)
-                                       case () of
-                                         _ | isSymbolic r        -> error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show r ++ ")"
-                                         _ | r `isConcretely` id -> return False
-                                         _                       -> do putStrLn $ complain (getQCInfo p)
-                                                                       return True
-                    when die $ fail "Falsifiable"
+    where test = do mbDie <- QC.run $ do
+                                (r, Result _ tvals _ _ cs _ _ _ _ _ cstrs _) <- runSymbolic' Concrete m
+                                let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
+                                    cond = all (cwToBool . cval) cstrs
+                                when (isSymbolic r) $ error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show r ++ ")"
+                                if cond
+                                   then if r `isConcretely` id
+                                           then return $ Just True
+                                           else do putStrLn $ complain tvals
+                                                   return Nothing
+                                   else return $ Just False
+                    case mbDie of
+                      Just True  -> return ()           -- test successfull, continue
+                      Just False -> QC.pre False        -- precondition failed, ignore
+                      Nothing    -> fail "Falsifiable"  -- property failed, die
           msg = "*** SBV: See the custom counter example reported above."
           complain []     = "*** SBV Counter Example: Predicate contains no universally quantified variables."
           complain qcInfo = intercalate "\n" $ "*** SBV Counter Example:" : map (("  " ++) . info) qcInfo
