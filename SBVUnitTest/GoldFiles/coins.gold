@@ -16,7 +16,7 @@ CONSTANTS
   s11 = 100 :: SWord16
   s84 = 0 :: SWord16
   s88 = 95 :: SWord16
-  s542 = 115 :: SWord16
+  s551 = 115 :: SWord16
 TABLES
 ARRAYS
 UNINTERPRETED CONSTANTS
@@ -551,7 +551,16 @@ DEFINE
   s539 :: SBool = s3 /= s534
   s540 :: SWord16 = s123 + s492
   s541 :: SBool = s88 /= s540
-  s543 :: SBool = s534 == s542
+  s542 :: SBool = s0 > s18
+  s543 :: SBool = s18 > s30
+  s544 :: SBool = s30 > s42
+  s545 :: SBool = s42 > s54
+  s546 :: SBool = s54 > s66
+  s547 :: SBool = s545 & s546
+  s548 :: SBool = s544 & s547
+  s549 :: SBool = s543 & s548
+  s550 :: SBool = s542 & s549
+  s552 :: SBool = s534 == s551
 CONSTRAINTS
   s17
   s29
@@ -901,5 +910,6 @@ CONSTRAINTS
   s538
   s539
   s541
+  s550
 OUTPUTS
-  s543
+  s552

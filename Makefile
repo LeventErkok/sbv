@@ -44,19 +44,19 @@ $(STAMPFILE): $(DEPSRCS)
 	$(call mkTags)
 	@((set -o pipefail; $(CABAL) $(CABPFLAGS) install 2>&1 | $(SIMPLIFY)) || (rm $(STAMPFILE) && false))
 
-test:
+test: install
 	@echo "Executing inline tests.."
 	@($(TIME) doctest ${SRCS} | grep -v "Could not find documentation" | exit 0)
 	@echo "Starting external test suite.."
 	@$(TIME) SBVUnitTests
 
-sdist:
+sdist: install
 	@(set -o pipefail; $(CABAL) sdist | $(SIMPLIFY))
 
 clean:
 	rm -rf dist $(STAMPFILE)
 
-docs:
+docs: install
 	@(set -o pipefail; $(CABAL) haddock --hyperlink-source 2>&1 | $(SIMPLIFY))
 
 release: clean install sdist docs hlint test
@@ -65,9 +65,9 @@ release: clean install sdist docs hlint test
 # use this as follows: make gold TGTS="cgUSB5"
 # where the tag is one (or many) given in the SBVUnitTest.hs file
 # if TGTS is not specified, then all gold files are regenerated
-gold:
+gold: install
 	dist/build/SBVUnitTests/SBVUnitTests -c ${TGTS}
 
-hlint:
+hlint: install
 	@echo "Running HLint.."
 	@hlint ${LINTSRCS} -q -rhlintReport.html -i "Use otherwise" -i "Parse error"
