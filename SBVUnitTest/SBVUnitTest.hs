@@ -12,20 +12,21 @@
 
 module Main(main) where
 
-import Control.Monad           (unless, when)
-import System.Directory        (doesDirectoryExist, findExecutable)
-import System.Environment      (getArgs, getEnv)
-import System.Exit             (exitWith, ExitCode(..))
-import System.FilePath         ((</>))
-import System.Process          (readProcessWithExitCode)
-import Test.HUnit              (Test(..), Counts(..), runTestTT)
+import Control.Monad        (unless, when)
+import System.Directory     (doesDirectoryExist, findExecutable)
+import System.Environment   (getArgs, getEnv)
+import System.Exit          (exitWith, ExitCode(..))
+import System.FilePath      ((</>))
+import System.Process       (readProcessWithExitCode)
+import Test.HUnit           (Test(..), Counts(..), runTestTT)
 
-import Data.List               (isPrefixOf)
-import Data.SBV                (yices, SMTSolver(..), SMTConfig(..))
-import SBVTest                 (SBVTestSuite(..), generateGoldCheck)
-import Paths_sbv               (getDataDir)
+import Data.List            (isPrefixOf)
+import Data.SBV             (yices, SMTSolver(..), SMTConfig(..))
+import Data.Version         (showVersion)
+import SBVTest              (SBVTestSuite(..), generateGoldCheck)
+import Paths_sbv            (getDataDir, version)
 
-import SBVUnitTestBuildTime    (buildTime)
+import SBVUnitTestBuildTime (buildTime)
 
 -- To add a new collection of tests, import below and add to testCollection variable
 import qualified TestSuite.Arrays.Memory                  as T01_01(testSuite)
@@ -114,7 +115,7 @@ testCollection = [
 -- No user serviceable parts below..
 
 main :: IO ()
-main = do putStrLn $ "*** SBVUnitTester, version time stamp: " ++ buildTime
+main = do putStrLn $ "*** SBVUnitTester, version: " ++ showVersion version ++ ", time stamp: " ++ buildTime
           tgts <- getArgs
           case tgts of
             [x] | x `elem` ["-h", "--help", "-?"]
