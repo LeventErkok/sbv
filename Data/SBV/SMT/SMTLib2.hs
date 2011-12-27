@@ -65,9 +65,10 @@ cvt :: Bool                                        -- ^ has infinite precision v
     -> [(String, SBVType)]                         -- ^ uninterpreted functions/constants
     -> [(String, [String])]                        -- ^ user given axioms
     -> Pgm                                         -- ^ assignments
+    -> [SW]                                        -- ^ extra constraints
     -> SW                                          -- ^ output variable
     -> ([String], [String])
-cvt hasInf isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq out = (pre, [])
+cvt hasInf isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq cstrs out = (pre, [])
   where -- the logic is an over-approaximation
         logic
           | hasInf = ["; Has unbounded Integers; no logic specified."]   -- combination, let the solver pick
@@ -119,8 +120,10 @@ cvt hasInf isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq out
           | null delayedEqualities = s
           | True                   = "     " ++ s
         align n s = replicate n ' ' ++ s
-        assertOut | isSat = "(= " ++ show out ++ " #b1)"
-                  | True  = "(= " ++ show out ++ " #b0)"
+        assertOut
+           | isSat = c
+           | True  = "(not " ++ c ++ ")"
+           where c = conjunct skolemMap (out:cstrs)
         skolemMap = M.fromList [(s, ss) | Right (s, ss) <- skolemInps, not (null ss)]
         tableMap  = IM.fromList $ map mkConstTable constTables ++ map mkSkTable skolemTables
           where mkConstTable (((t, _, _), _), _) = (t, "table" ++ show t)
@@ -128,6 +131,14 @@ cvt hasInf isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq out
         asgns = F.toList asgnsSeq
         mkLet (s, e) = "(let ((" ++ show s ++ " " ++ cvtExp skolemMap tableMap e ++ "))"
         declConst (s, c) = "(define-fun " ++ show s ++ " " ++ swFunType [] s ++ " " ++ cvtCW c ++ ")"
+
+conjunct :: SkolemMap -> [SW] -> String
+conjunct skMap cs = case cs of
+                     []  -> "true"
+                     [x] -> mkConj x
+                     _   -> "(and " ++ unwords (map mkConj cs) ++ ")"
+  where mkConj x = "(= " ++ ssw x ++ " " ++ "#b1)"
+        ssw = cvtSW skMap
 
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = ["(declare-fun uninterpreted_" ++ i ++ " " ++ cvtType t ++ ")"]

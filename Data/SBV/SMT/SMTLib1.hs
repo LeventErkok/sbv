@@ -50,9 +50,10 @@ cvt :: Bool                                        -- ^ has infinite precision v
     -> [(String, SBVType)]                         -- ^ uninterpreted functions/constants
     -> [(String, [String])]                        -- ^ user given axioms
     -> Pgm                                         -- ^ assignments
+    -> [SW]                                        -- ^ extra constraints
     -> SW                                          -- ^ output variable
     -> ([String], [String])
-cvt hasInf isSat comments qinps _skolemInps consts tbls arrs uis axs asgnsSeq out
+cvt hasInf isSat comments qinps _skolemInps consts tbls arrs uis axs asgnsSeq cstrs out
   | hasInf
   = error "SBV: The chosen solver does not support infinite precision values. (Use z3 instead.)"
   | not ((isSat && allExistential) || (not isSat && allUniversal))
@@ -89,10 +90,13 @@ cvt hasInf isSat comments qinps _skolemInps consts tbls arrs uis axs asgnsSeq ou
               ++ map declAx axs
               ++ [ " ; --- assignments ---" ]
               ++ map cvtAsgn asgns
-        post =    [ " ; --- formula ---" ]
+        post =    [ " ; --- constraints ---" ]
+               ++ map (mkCstr (if isSat then "bv1[1]" else "bv0[1]")) cstrs
+               ++ [ " ; --- formula ---" ]
                ++ [mkFormula isSat out]
                ++ [")"]
         asgns = F.toList asgnsSeq
+        mkCstr e s = ":assumption (= " ++ show s ++ " " ++ e ++ ")"
 
 -- TODO: Does this work for SMT-Lib when the index/element types are signed?
 -- Currently we ignore the signedness of the arguments, as there appears to be no way
