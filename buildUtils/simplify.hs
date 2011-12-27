@@ -44,6 +44,7 @@ junk s = any (`isPrefixOf` s) junkPre || any (`isInfixOf` s) junkIn
                  , "Warning: The documentation for the following packages are not installed."
                  , "links will be generated to these packages:"
                  , "haddock coverage for"
+                 , "Could not find documentation"
                  ]
        junkIn  = [ "(reinstall) changes:"
                  , "could not find link destinations for"

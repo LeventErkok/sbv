@@ -46,7 +46,7 @@ $(STAMPFILE): $(DEPSRCS)
 
 test: install
 	@echo "Executing inline tests.."
-	@($(TIME) doctest ${SRCS} | grep -v "Could not find documentation" | exit 0)
+	@$(TIME) doctest ${SRCS}
 	@echo "Starting external test suite.."
 	@$(TIME) SBVUnitTests
 
