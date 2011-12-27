@@ -120,10 +120,14 @@ cvt hasInf isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq cst
           | null delayedEqualities = s
           | True                   = "     " ++ s
         align n s = replicate n ' ' ++ s
+        -- if sat,   we assert cstrs /\ out
+        -- if prove, we assert ~(cstrs => out) = cstrs /\ not out
         assertOut
-           | isSat = c
-           | True  = "(not " ++ c ++ ")"
-           where c = conjunct skolemMap (out:cstrs)
+           | null cstrs = o
+           | True       = "(and " ++ unwords (map mkConj cstrs ++ [o]) ++ ")"
+           where mkConj x = "(= " ++ cvtSW skolemMap x ++ " #b1)"
+                 o | isSat =            mkConj out
+                   | True  = "(not " ++ mkConj out ++ ")"
         skolemMap = M.fromList [(s, ss) | Right (s, ss) <- skolemInps, not (null ss)]
         tableMap  = IM.fromList $ map mkConstTable constTables ++ map mkSkTable skolemTables
           where mkConstTable (((t, _, _), _), _) = (t, "table" ++ show t)
@@ -131,14 +135,6 @@ cvt hasInf isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq cst
         asgns = F.toList asgnsSeq
         mkLet (s, e) = "(let ((" ++ show s ++ " " ++ cvtExp skolemMap tableMap e ++ "))"
         declConst (s, c) = "(define-fun " ++ show s ++ " " ++ swFunType [] s ++ " " ++ cvtCW c ++ ")"
-
-conjunct :: SkolemMap -> [SW] -> String
-conjunct skMap cs = case cs of
-                     []  -> "true"
-                     [x] -> mkConj x
-                     _   -> "(and " ++ unwords (map mkConj cs) ++ ")"
-  where mkConj x = "(= " ++ ssw x ++ " " ++ "#b1)"
-        ssw = cvtSW skMap
 
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = ["(declare-fun uninterpreted_" ++ i ++ " " ++ cvtType t ++ ")"]

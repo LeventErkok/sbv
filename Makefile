@@ -56,7 +56,7 @@ sdist: install
 clean:
 	rm -rf dist $(STAMPFILE)
 
-docs: install
+docs:
 	@(set -o pipefail; $(CABAL) haddock --hyperlink-source 2>&1 | $(SIMPLIFY))
 
 release: clean install sdist docs hlint test

@@ -91,12 +91,12 @@ cvt hasInf isSat comments qinps _skolemInps consts tbls arrs uis axs asgnsSeq cs
               ++ [ " ; --- assignments ---" ]
               ++ map cvtAsgn asgns
         post =    [ " ; --- constraints ---" ]
-               ++ map (mkCstr (if isSat then "bv1[1]" else "bv0[1]")) cstrs
+               ++ map mkCstr cstrs
                ++ [ " ; --- formula ---" ]
                ++ [mkFormula isSat out]
                ++ [")"]
         asgns = F.toList asgnsSeq
-        mkCstr e s = ":assumption (= " ++ show s ++ " " ++ e ++ ")"
+        mkCstr s = ":assumption (= " ++ show s ++ " bv1[1])"
 
 -- TODO: Does this work for SMT-Lib when the index/element types are signed?
 -- Currently we ignore the signedness of the arguments, as there appears to be no way

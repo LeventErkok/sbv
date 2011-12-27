@@ -55,6 +55,7 @@ import qualified Data.Sequence as S    (Seq, empty, (|>))
 import System.Mem.StableName
 import System.Random
 
+import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.Lib
 
 -- | 'CW' represents a concrete word of a fixed size:
@@ -814,39 +815,22 @@ mkSFunArray :: (SBV a -> SBV b) -> SFunArray a b
 mkSFunArray = SFunArray
 
 ---------------------------------------------------------------------------------
--- | Adding arbitrary constraints. A constraint adds a conjunction to the
--- final formula that must always be satisfied. NB. 'constrain' is merely a
--- convenient way of adding extra conjuncts to the final result, allowing one
--- to express constraints much more easily earlier. A good use case is
--- attaching a constraint to a 'forall' or 'exists' variable at the time
--- of its creation, instead of waiting for the final returned formula.
---
--- Note that the effect of 'constrain' for a 'genTest' and 'quickCheck' are
--- different than the proof cases. While 'constrain' adds a conjuction for
--- sat/prove problems, it acts as a filter for 'genTest' and 'quickCheck'. That
--- is, test cases that do not satisfy the constraints will be /ignored/ by
--- the 'genTest' and 'quickCheck' calls. Note that this can imply test case
--- generation can take arbitrarily long, if the constraints are hard to satisfy
--- by the radom stream used by 'genTest' and 'quickCheck'. Also see the corresponding
--- function 'pConstrain'.
+-- | Adding arbitrary constraints.
 ---------------------------------------------------------------------------------
-constrain :: SBool -> Symbolic ()
+constrain :: Boolean b => b -> Symbolic ()
 constrain b = do
         st <- ask
-        liftIO $ do v <- sbvToSW st b
+        liftIO $ do v <- sbvToSW st (undefined b )
                     modifyIORef (rConstraints st) (v:)
 
 ---------------------------------------------------------------------------------
--- | Adding a probabilistic constraint. This is similar to a 'constrain' call,
--- except the constraint is added with probability given by the first argument.
--- That is, a call 'pConstrain' @0.8@ @c@ will add the constraint @c@ 80% of the
--- time. This is useful for 'genTest' and 'quickCheck' functions, where we
--- want to filter the test cases according to some probability distribution.
--- (See also the function 'constrain'.) Note that 'pConstrain' is only allowed for
--- 'genTest' and 'quickCheck'. Calls to 'pConstrain' in a prove/sat call or
--- in code-generation will be rejected, as it makes no sense.
+-- | Adding a probabilistic constraint. The 'Double' argument is the probability
+-- threshold. A threshold of '0' would mean the constraint is ignored, while a
+-- threshold of '1' means the constraint is always added. Probabilistic constraints
+-- are useful for 'genTest' and 'quickCheck' calls where we restrict our attention
+-- to /interesting/ parts of the input domain.
 ---------------------------------------------------------------------------------
-pConstrain :: Double -> SBool -> Symbolic ()
+pConstrain :: Boolean b => Double -> b -> Symbolic ()
 pConstrain t c
   | t < 0 || t > 1
   = error $ "SBV: pConstrain: Invalid probability threshold: " ++ show t ++ ", must be in [0, 1]."
