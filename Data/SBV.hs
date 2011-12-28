@@ -158,6 +158,8 @@ module Data.SBV (
   -- ** Adding constraints
   -- $constrainIntro
   , constrain, pConstrain
+  -- ** Checking constraint vacuity
+  , isVacuous, isVacuousWith
 
   -- * Optimization
   -- $optimizeIntro
@@ -410,7 +412,8 @@ the presence of constraints, formulas that are /provable/ are not necessarily
 
 This predicate is unsatisfiable since no element of 'SWord8' is less than itself. But
 it's (vacuously) true, since it excludes the entire domain of values, thus making the proof
-trivial. Hence, this predicate is provable, but is not satisfiable.
+trivial. Hence, this predicate is provable, but is not satisfiable. To make sure the given
+constraints are not vacuous, the functions 'isVacuous' (and 'isVacuousWith') can be used.
 
 Also note that this semantics imply that test case generation ('genTest') and quick-check
 can take arbitrarily long in the presence of constraints, if the random input values generated

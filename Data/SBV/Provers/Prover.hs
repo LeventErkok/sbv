@@ -26,6 +26,7 @@ module Data.SBV.Provers.Prover (
        , prove, proveWith
        , sat, satWith
        , allSat, allSatWith
+       , isVacuous, isVacuousWith
        , SatModel(..), Modelable(..), displayModels
        , yices, z3, defaultSMTCfg
        , compileToSMTLib
@@ -214,6 +215,43 @@ sat = satWith defaultSMTCfg
 allSat :: Provable a => a -> IO AllSatResult
 allSat = allSatWith defaultSMTCfg
 
+-- | Check if the given constraints are satisfiable, equivalent to @'isVacuousWith' 'defaultSMTCfg'@. This
+-- call can be used to ensure that the specified constraints (via 'constrain') are satisfiable, i.e., that
+-- the proof involving these constraints is not passing vacuously. Here is an example. Consider the following
+-- predicate:
+--
+-- >>> let pred = do { x <- forall "x"; constrain $ x .< x; return $ x .>= (5 :: SWord8) }
+--
+-- This predicate asserts that all 8-bit values are larger than 5, subject to the constraint that the
+-- values considered satisfy @x .< x@, i.e., they are less than themselves. Since there are no values that
+-- satisfy this constraint, the proof will pass vacuously:
+--
+-- >>> prove pred
+-- Q.E.D.
+--
+-- We can use 'isVacuous' to make sure to see that the pass was vacuous:
+--
+-- >>> isVacuous pred
+-- True
+--
+-- While the above example is trivial, things can get complicated if there are multiple constraints with
+-- non-straightforward relations; so if constraints are used one should make sure to check the predicate
+-- is not vacuously true. Here's an example that is not vacuous:
+--
+--  >>> let pred' = do { x <- forall "x"; constrain $ x .> 6; return $ x .>= (5 :: SWord8) }
+--
+-- This time the proof passes as expected:
+--
+--  >>> prove pred'
+--  Q.E.D.
+--
+-- And the proof is not vacuous:
+--
+--  >>> isVacuous pred'
+--  False
+isVacuous :: Provable a => a -> IO Bool
+isVacuous = isVacuousWith defaultSMTCfg
+
 -- Decision procedures (with optional timeout)
 checkTheorem :: Provable a => Maybe Int -> a -> IO (Maybe Bool)
 checkTheorem mbTo p = do r <- pr p
@@ -282,6 +320,23 @@ satWith :: Provable a => SMTConfig -> a -> IO SatResult
 satWith config a = simulate cvt config True [] a >>= callSolver True "Checking Satisfiability.." SatResult config
   where cvt = if useSMTLib2 config then toSMTLib2 else toSMTLib1
 
+-- | Determine if the constraints are vacuous using the given SMT-solver
+isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
+isVacuousWith config a = do
+        Result ub tr uic is cs ts as uis ax asgn cstr _ <- runSymbolic True $ forAll_ a >>= output
+        case cstr of
+           [] -> return False -- no constraints, no need to check
+           _  -> do let is'  = [(EX, i) | (_, i) <- is] -- map all quantifiers to "exists" for the constraint check
+                        res' = Result ub tr uic is' cs ts as uis ax asgn cstr [trueSW]
+                        cvt  = if useSMTLib2 config then toSMTLib2 else toSMTLib1
+                    SatResult result <- runProofOn cvt config True [] res' >>= callSolver True "Checking Satisfiability.." SatResult config
+                    case result of
+                      Unsatisfiable{} -> return True  -- constraints are unsatisfiable!
+                      Satisfiable{}   -> return False -- constraints are satisfiable!
+                      Unknown{}       -> error "SBV: isVacuous: Solver returned unknown!"
+                      ProofError _ ls -> error $ "SBV: isVacuous: error encountered:\n" ++ unlines ls
+                      TimeOut _       -> error "SBV: isVacuous: time-out."
+
 -- | Find all satisfying assignments using the given SMT-solver
 allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
 allSatWith config p = do
@@ -344,10 +399,15 @@ simulate converter config isSat comments predicate = do
         res <- timeIf isTiming "problem construction" $ runSymbolic isSat $ forAll_ predicate >>= output
         msg $ "Generated symbolic trace:\n" ++ show res
         msg "Translating to SMT-Lib.."
-        case res of
-          Result hasInfPrec _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs [o@(SW (False, Size (Just 1)) _)] ->
-             timeIf isTiming "translation" $ do let uiMap     = catMaybes (map arrayUIKind arrs) ++ map unintFnUIKind uis
-                                                    skolemMap = skolemize (if isSat then is else map flipQ is)
+        runProofOn converter config isSat comments res
+
+runProofOn :: SMTLibConverter -> SMTConfig -> Bool -> [String] -> Result -> IO ([(Quantifier, NamedSymVar)], [(String, UnintKind)], [Either SW (SW, [SW])], SMTLibPgm)
+runProofOn converter config isSat comments res =
+        let isTiming = timing config
+        in case res of
+             Result hasInfPrec _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs [o@(SW (False, Size (Just 1)) _)] ->
+               timeIf isTiming "translation" $ let uiMap     = catMaybes (map arrayUIKind arrs) ++ map unintFnUIKind uis
+                                                   skolemMap = skolemize (if isSat then is else map flipQ is)
                                                         where flipQ (ALL, x) = (EX, x)
                                                               flipQ (EX, x)  = (ALL, x)
                                                               skolemize :: [(Quantifier, NamedSymVar)] -> [Either SW (SW, [SW])]
@@ -355,14 +415,14 @@ simulate converter config isSat comments predicate = do
                                                                 where go []                   (_,  sofar) = reverse sofar
                                                                       go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
                                                                       go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
-                                                return (is, uiMap, skolemMap, converter hasInfPrec isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o)
-          Result _hasInfPrec _qcInfo _codeSegs _is _consts _tbls _arrs _uis _axs _pgm _cstrs os -> case length os of
-                        0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
-                        1  -> error $ "Impossible happened, non-boolean output in " ++ show os
-                                    ++ "\nDetected while generating the trace:\n" ++ show res
-                        _  -> error $ "User error: Multiple output values detected: " ++ show os
-                                    ++ "\nDetected while generating the trace:\n" ++ show res
-                                    ++ "\n*** Check calls to \"output\", they are typically not needed!"
+                                               in return (is, uiMap, skolemMap, converter hasInfPrec isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o)
+             Result _hasInfPrec _qcInfo _codeSegs _is _consts _tbls _arrs _uis _axs _pgm _cstrs os -> case length os of
+                           0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
+                           1  -> error $ "Impossible happened, non-boolean output in " ++ show os
+                                       ++ "\nDetected while generating the trace:\n" ++ show res
+                           _  -> error $ "User error: Multiple output values detected: " ++ show os
+                                       ++ "\nDetected while generating the trace:\n" ++ show res
+                                       ++ "\n*** Check calls to \"output\", they are typically not needed!"
 
 -- | Equality as a proof method. Allows for
 -- very concise construction of equivalence proofs, which is very typical in
