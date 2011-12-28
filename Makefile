@@ -32,7 +32,7 @@ define mkTags
 	@sort -o tags tags
 endef
 
-.PHONY: all install test sdist clean docs gold stamp hlint
+.PHONY: all install test sdist clean docs gold stamp hlint tags
 
 all: install
 
@@ -71,3 +71,6 @@ gold: install
 hlint: install
 	@echo "Running HLint.."
 	@hlint ${LINTSRCS} -q -rhlintReport.html -i "Use otherwise" -i "Parse error"
+
+tags:
+	$(call mkTags)
