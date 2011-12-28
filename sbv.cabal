@@ -1,5 +1,5 @@
 Name:          sbv
-Version:       0.9.24
+Version:       0.9.25
 Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math, SMT
 Synopsis:      Symbolic bit vectors: Bit-precise verification and automatic C-code generation.
 Description:   Express properties about bit-precise Haskell programs and automatically prove
