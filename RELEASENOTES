@@ -26,9 +26,21 @@ Version 0.9.24, Not yet released
      is different for genTest and quickCheck functions, where constraints
      will be used for appropriately filtering acceptable test values
      in those two cases.
-   * Add function "pConstrain", which probabilistically adds constraints. This
+   * Add "pConstrain", which probabilistically adds constraints. This
      is useful for quickCheck and genTest functions for filtering acceptable
      test values. (Calls to pConstrain will be rejected for sat/prove calls.)
+   * Add "isVacuous" which can be used to check that the constraints added
+     via constrain are satisfable. This is useful to prevent vacuous passes,
+     i.e., when a proof is not just passing because the constraints imposed
+     are inconsistent. (Also added accompanying isVacuousWith.)
+   * Add "free" and "free_", analogous to "forall/forall_" and "exists/exists_"
+     The difference is that free behaves universally in a proof context, while
+     it behaves existentially in a sat context. This allows us to express
+     properties more succinctly, since the intended semantics is usually this
+     way depending on the context. (i.e., in a proof, we want our variables
+     universal, in a sat call existential.) Of course, exists/forall are still
+     available when mixed quantifiers are needed, or when the user wants to
+     be explicit about the quantifiers.
   Examples
    * Add Data/SBV/Examples/Puzzles/Coins.hs. (Shows the usage of "constrain".)
   Dependencies
