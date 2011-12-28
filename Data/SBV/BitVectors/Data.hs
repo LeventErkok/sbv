@@ -357,10 +357,9 @@ arrayUIKind (i, (nm, _, ctx))
         external (ArrayMerge{})  = False
 
 -- | Different means of running a symbolic piece of code
-data SBVRunMode = Proof       -- ^ Symbolic simulation mode, for proof purposes
+data SBVRunMode = Proof Bool  -- ^ Symbolic simulation mode, for proof purposes. Bool is True if it's a sat instance
                 | CodeGen     -- ^ Code generation mode
                 | Concrete    -- ^ Concrete simulation mode
-                deriving Eq
 
 data State  = State { runMode       :: SBVRunMode
                     , rCInfo        :: IORef [(String, CW)]
@@ -382,7 +381,10 @@ data State  = State { runMode       :: SBVRunMode
                     }
 
 inProofMode :: State -> Bool
-inProofMode s = runMode s == Proof
+inProofMode s = case runMode s of
+                  Proof{}  -> True
+                  CodeGen  -> False
+                  Concrete -> False
 
 -- | The "Symbolic" value. Either a constant (@Left@) or a symbolic
 -- value (@Right Cached@). Note that caching is essential for making
@@ -513,9 +515,15 @@ sbvToSW st (SBV _ (Right f)) = uncache f st
 newtype Symbolic a = Symbolic (ReaderT State IO a)
                    deriving (Functor, Monad, MonadIO, MonadReader State)
 
-mkSymSBV :: forall a. (Random a, SymWord a) => Quantifier -> (Bool, Size) -> Maybe String -> Symbolic (SBV a)
-mkSymSBV q sgnsz mbNm = do
+mkSymSBV :: forall a. (Random a, SymWord a) => Maybe Quantifier -> (Bool, Size) -> Maybe String -> Symbolic (SBV a)
+mkSymSBV mbQ sgnsz mbNm = do
         st <- ask
+        let q = case (mbQ, runMode st) of
+                  (Just x,  _)           -> x   -- user given, just take it
+                  (Nothing, Concrete)    -> ALL -- concrete simulation, pick universal
+                  (Nothing, Proof True)  -> EX  -- sat mode, pick existential
+                  (Nothing, Proof False) -> ALL -- proof mode, pick universal
+                  (Nothing, CodeGen)     -> ALL -- code generation, pick universal
         case runMode st of
           Concrete | q == EX -> case mbNm of
                                   Nothing -> error $ "Cannot quick-check in the presence of existential variables, type: " ++ showType (undefined :: SBV a)
@@ -581,9 +589,10 @@ addAxiom nm ax = do
         st <- ask
         liftIO $ modifyIORef (raxioms st) ((nm, ax) :)
 
--- | Run a symbolic computation in Proof mode and return a 'Result'
-runSymbolic :: Symbolic a -> IO Result
-runSymbolic c = snd `fmap` runSymbolic' Proof c
+-- | Run a symbolic computation in Proof mode and return a 'Result'. The boolean
+-- argument indicates if this is a sat instance or not.
+runSymbolic :: Bool -> Symbolic a -> IO Result
+runSymbolic b c = snd `fmap` runSymbolic' (Proof b) c
 
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
 runSymbolic' :: SBVRunMode -> Symbolic a -> IO (a, Result)
@@ -658,17 +667,23 @@ class (HasSignAndSize a, Ord a) => SymWord a where
   -- | Get a bunch of new words
   mkForallVars :: Int -> Symbolic [SBV a]
   -- | Create an existential variable
-  exists     :: String -> Symbolic (SBV a)
+  exists  :: String -> Symbolic (SBV a)
   -- | Create an automatically named existential variable
-  exists_    :: Symbolic (SBV a)
+  exists_ :: Symbolic (SBV a)
   -- | Create a bunch of existentials
   mkExistVars :: Int -> Symbolic [SBV a]
+  -- | Create a free variable, universal in a proof, existential in sat
+  free :: String -> Symbolic (SBV a)
+  -- | Create an unnamed free variable, universal in proof, existential in sat
+  free_ :: Symbolic (SBV a)
+  -- | Create a bunch of free vars
+  mkFreeVars :: Int -> Symbolic [SBV a]
   -- | Turn a literal constant to symbolic
-  literal    :: a -> SBV a
+  literal :: a -> SBV a
   -- | Extract a literal, if the value is concrete
-  unliteral  :: SBV a -> Maybe a
+  unliteral :: SBV a -> Maybe a
   -- | Extract a literal, from a CW representation
-  fromCW     :: CW -> a
+  fromCW :: CW -> a
   -- | Is the symbolic word concrete?
   isConcrete :: SBV a -> Bool
   -- | Is the symbolic word really symbolic?
@@ -679,9 +694,10 @@ class (HasSignAndSize a, Ord a) => SymWord a where
   -- to impose "Bounded" on our class as Integer is not Bounded but it is a SymWord
   mbMaxBound, mbMinBound :: Maybe a
 
-  -- minimal complete definiton: forall, forall_, exists, exists_, literal, fromCW
+  -- minimal complete definiton: forall, forall_, exists, exists_, free, free_, literal, fromCW
   mkForallVars n = mapM (const forall_) [1 .. n]
   mkExistVars n  = mapM (const exists_) [1 .. n]
+  mkFreeVars n   = mapM (const free_)   [1 .. n]
   unliteral (SBV _ (Left c))  = Just $ fromCW c
   unliteral _                 = Nothing
   isConcrete (SBV _ (Left _)) = True

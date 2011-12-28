@@ -341,7 +341,7 @@ simulate converter config isSat comments predicate = do
         let msg = when (verbose config) . putStrLn . ("** " ++)
             isTiming = timing config
         msg "Starting symbolic simulation.."
-        res <- timeIf isTiming "problem construction" $ runSymbolic $ forAll_ predicate >>= output
+        res <- timeIf isTiming "problem construction" $ runSymbolic isSat $ forAll_ predicate >>= output
         msg $ "Generated symbolic trace:\n" ++ show res
         msg "Translating to SMT-Lib.."
         case res of

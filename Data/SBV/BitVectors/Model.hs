@@ -98,10 +98,10 @@ mkSymOp1 = mkSymOp1SC (const Nothing)
 
 -- Symbolic-Word class instances
 
-genFinVar :: (Random a, SymWord a) => Quantifier -> (Bool, Int) -> String -> Symbolic (SBV a)
+genFinVar :: (Random a, SymWord a) => Maybe Quantifier -> (Bool, Int) -> String -> Symbolic (SBV a)
 genFinVar q (sg, sz) = mkSymSBV q (sg, Size (Just sz)) . Just
 
-genFinVar_ :: (Random a, SymWord a) => Quantifier -> (Bool, Int) -> Symbolic (SBV a)
+genFinVar_ :: (Random a, SymWord a) => Maybe Quantifier -> (Bool, Int) -> Symbolic (SBV a)
 genFinVar_ q (sg, sz) = mkSymSBV q (sg, Size (Just sz)) Nothing
 
 genFinLiteral :: Integral a => (Bool, Int) -> a -> SBV b
@@ -112,100 +112,120 @@ genFromCW :: Integral a => CW -> a
 genFromCW x = fromInteger (cwVal x)
 
 instance SymWord Bool where
-  forall     = genFinVar  ALL (False, 1)
-  forall_    = genFinVar_ ALL (False, 1)
-  exists     = genFinVar  EX  (False, 1)
-  exists_    = genFinVar_ EX  (False, 1)
+  forall     = genFinVar  (Just ALL) (False, 1)
+  forall_    = genFinVar_ (Just ALL) (False, 1)
+  exists     = genFinVar  (Just EX)  (False, 1)
+  exists_    = genFinVar_ (Just EX)  (False, 1)
+  free       = genFinVar  Nothing    (False, 1)
+  free_      = genFinVar_ Nothing    (False, 1)
   literal x  = genFinLiteral (False, 1) (if x then (1::Integer) else 0)
   fromCW     = cwToBool
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Word8 where
-  forall     = genFinVar   ALL (False, 8)
-  forall_    = genFinVar_  ALL (False, 8)
-  exists     = genFinVar   EX  (False, 8)
-  exists_    = genFinVar_  EX  (False, 8)
+  forall     = genFinVar   (Just ALL) (False, 8)
+  forall_    = genFinVar_  (Just ALL) (False, 8)
+  exists     = genFinVar   (Just EX)  (False, 8)
+  exists_    = genFinVar_  (Just EX)  (False, 8)
+  free       = genFinVar   Nothing    (False, 8)
+  free_      = genFinVar_  Nothing    (False, 8)
   literal    = genFinLiteral (False, 8)
   fromCW     = genFromCW
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Int8 where
-  forall     = genFinVar   ALL (True, 8)
-  forall_    = genFinVar_  ALL (True, 8)
-  exists     = genFinVar   EX  (True, 8)
-  exists_    = genFinVar_  EX  (True, 8)
+  forall     = genFinVar   (Just ALL) (True, 8)
+  forall_    = genFinVar_  (Just ALL) (True, 8)
+  exists     = genFinVar   (Just EX)  (True, 8)
+  exists_    = genFinVar_  (Just EX)  (True, 8)
+  free       = genFinVar   Nothing    (True, 8)
+  free_      = genFinVar_  Nothing    (True, 8)
   literal    = genFinLiteral (True, 8)
   fromCW     = genFromCW
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Word16 where
-  forall     = genFinVar   ALL (False, 16)
-  forall_    = genFinVar_  ALL (False, 16)
-  exists     = genFinVar   EX  (False, 16)
-  exists_    = genFinVar_  EX  (False, 16)
+  forall     = genFinVar   (Just ALL) (False, 16)
+  forall_    = genFinVar_  (Just ALL) (False, 16)
+  exists     = genFinVar   (Just EX)  (False, 16)
+  exists_    = genFinVar_  (Just EX)  (False, 16)
+  free       = genFinVar   Nothing    (False, 16)
+  free_      = genFinVar_  Nothing    (False, 16)
   literal    = genFinLiteral (False, 16)
   fromCW     = genFromCW
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Int16 where
-  forall     = genFinVar   ALL (True, 16)
-  forall_    = genFinVar_  ALL (True, 16)
-  exists     = genFinVar   EX  (True, 16)
-  exists_    = genFinVar_  EX  (True, 16)
+  forall     = genFinVar   (Just ALL) (True, 16)
+  forall_    = genFinVar_  (Just ALL) (True, 16)
+  exists     = genFinVar   (Just EX)  (True, 16)
+  exists_    = genFinVar_  (Just EX)  (True, 16)
+  free       = genFinVar   Nothing    (True, 16)
+  free_      = genFinVar_  Nothing    (True, 16)
   literal    = genFinLiteral (True, 16)
   fromCW     = genFromCW
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Word32 where
-  forall     = genFinVar   ALL (False, 32)
-  forall_    = genFinVar_  ALL (False, 32)
-  exists     = genFinVar   EX  (False, 32)
-  exists_    = genFinVar_  EX  (False, 32)
+  forall     = genFinVar   (Just ALL) (False, 32)
+  forall_    = genFinVar_  (Just ALL) (False, 32)
+  exists     = genFinVar   (Just EX)  (False, 32)
+  exists_    = genFinVar_  (Just EX)  (False, 32)
+  free       = genFinVar   Nothing    (False, 32)
+  free_      = genFinVar_  Nothing    (False, 32)
   literal    = genFinLiteral (False, 32)
   fromCW     = genFromCW
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Int32 where
-  forall     = genFinVar   ALL (True, 32)
-  forall_    = genFinVar_  ALL (True, 32)
-  exists     = genFinVar   EX  (True, 32)
-  exists_    = genFinVar_  EX  (True, 32)
+  forall     = genFinVar   (Just ALL) (True, 32)
+  forall_    = genFinVar_  (Just ALL) (True, 32)
+  exists     = genFinVar   (Just EX)  (True, 32)
+  exists_    = genFinVar_  (Just EX)  (True, 32)
+  free       = genFinVar   Nothing    (True, 32)
+  free_      = genFinVar_  Nothing    (True, 32)
   literal    = genFinLiteral (True, 32)
   fromCW     = genFromCW
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Word64 where
-  forall     = genFinVar   ALL (False, 64)
-  forall_    = genFinVar_  ALL (False, 64)
-  exists     = genFinVar   EX  (False, 64)
-  exists_    = genFinVar_  EX  (False, 64)
+  forall     = genFinVar   (Just ALL) (False, 64)
+  forall_    = genFinVar_  (Just ALL) (False, 64)
+  exists     = genFinVar   (Just EX)  (False, 64)
+  exists_    = genFinVar_  (Just EX)  (False, 64)
+  free       = genFinVar   Nothing    (False, 64)
+  free_      = genFinVar_  Nothing    (False, 64)
   literal    = genFinLiteral (False, 64)
   fromCW     = genFromCW
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Int64 where
-  forall     = genFinVar   ALL (True, 64)
-  forall_    = genFinVar_  ALL (True, 64)
-  exists     = genFinVar   EX  (True, 64)
-  exists_    = genFinVar_  EX  (True, 64)
+  forall     = genFinVar   (Just ALL) (True, 64)
+  forall_    = genFinVar_  (Just ALL) (True, 64)
+  exists     = genFinVar   (Just EX)  (True, 64)
+  exists_    = genFinVar_  (Just EX)  (True, 64)
+  free       = genFinVar   Nothing    (True, 64)
+  free_      = genFinVar_  Nothing    (True, 64)
   literal    = genFinLiteral (True, 64)
   fromCW     = genFromCW
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Integer where
-  forall     = mkSymSBV ALL (True, Size Nothing) . Just
-  forall_    = mkSymSBV ALL (True, Size Nothing) Nothing
-  exists     = mkSymSBV EX  (True, Size Nothing) . Just
-  exists_    = mkSymSBV EX  (True, Size Nothing) Nothing
+  forall     = mkSymSBV (Just ALL) (True, Size Nothing) . Just
+  forall_    = mkSymSBV (Just ALL) (True, Size Nothing) Nothing
+  exists     = mkSymSBV (Just EX)  (True, Size Nothing) . Just
+  exists_    = mkSymSBV (Just EX)  (True, Size Nothing) Nothing
+  free       = mkSymSBV Nothing    (True, Size Nothing) . Just
+  free_      = mkSymSBV Nothing    (True, Size Nothing) Nothing
   literal    = SBV (True, Size Nothing) . Left . mkConstCW (True, Size Nothing)
   fromCW     = genFromCW
   mbMaxBound = Nothing

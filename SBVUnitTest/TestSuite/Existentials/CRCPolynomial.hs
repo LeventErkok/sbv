@@ -23,7 +23,7 @@ testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
   "crcPolyExist" ~: pgm `goldCheck` "crcPolyExist.gold"
  ]
- where pgm = runSymbolic $ do
+ where pgm = runSymbolic True $ do
                 p <- exists "poly"
                 s <- do sh <- forall "sh"
                         sl <- forall "sl"
