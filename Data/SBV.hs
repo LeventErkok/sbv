@@ -414,7 +414,7 @@ trivial. Hence, this predicate is provable, but is not satisfiable.
 
 Also note that this semantics imply that test case generation ('genTest') and quick-check
 can take arbitrarily long in the presence of constraints, if the random input values generated
-rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'False'@.)
+rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'false'@.)
 
 A probabilistic constraint (see 'pConstrain') attaches a probability threshold for the
 constraint to be considered. For instance:
