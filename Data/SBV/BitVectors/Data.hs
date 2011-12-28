@@ -55,7 +55,6 @@ import qualified Data.Sequence as S    (Seq, empty, (|>))
 import System.Mem.StableName
 import System.Random
 
-import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.Lib
 
 -- | 'CW' represents a concrete word of a fixed size:
@@ -817,10 +816,10 @@ mkSFunArray = SFunArray
 ---------------------------------------------------------------------------------
 -- | Adding arbitrary constraints.
 ---------------------------------------------------------------------------------
-constrain :: Boolean b => b -> Symbolic ()
-constrain b = do
+constrain :: SBool -> Symbolic ()
+constrain c = do
         st <- ask
-        liftIO $ do v <- sbvToSW st (undefined b )
+        liftIO $ do v <- sbvToSW st c
                     modifyIORef (rConstraints st) (v:)
 
 ---------------------------------------------------------------------------------
@@ -830,7 +829,7 @@ constrain b = do
 -- are useful for 'genTest' and 'quickCheck' calls where we restrict our attention
 -- to /interesting/ parts of the input domain.
 ---------------------------------------------------------------------------------
-pConstrain :: Boolean b => Double -> b -> Symbolic ()
+pConstrain :: Double -> SBool -> Symbolic ()
 pConstrain t c
   | t < 0 || t > 1
   = error $ "SBV: pConstrain: Invalid probability threshold: " ++ show t ++ ", must be in [0, 1]."
