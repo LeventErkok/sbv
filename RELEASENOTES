@@ -2,7 +2,7 @@ Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
 ======================================================================
-Version 0.9.24, Not yet released
+Version 0.9.24, 2011-12-28
 
   Library:
    * Add "forSome," analogous to "forAll." (The name "exists" would've
