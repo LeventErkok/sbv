@@ -296,7 +296,8 @@ The 'OptimizeOpts' argument controls how the optimization is done. If 'Quantifie
 
    @exists xs. forall ys. valid xs && (valid ys ``implies`` (cost xs ``cmp`` cost ys))@
 
-Note that this may cause efficiency problems as it involves nested quantifiers. If 'OptimizeOpts' is set to 'Iterative' 'True', then SBV will programmatically
+Note that this may cause efficiency problems as it involves alternating quantifiers.
+If 'OptimizeOpts' is set to 'Iterative' 'True', then SBV will programmatically
 search for an optimal solution, by repeatedly calling the solver appropriately. (The boolean argument controls whether progress reports are given. Use
 'False' for quiet operation.) Note that the quantified and iterative versions are two different optimization approaches and may not necessarily yield the same
 results. In particular, the quantified version can find solutions where there is no global optimum value, while the iterative version would simply loop forever
