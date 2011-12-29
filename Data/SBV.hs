@@ -187,7 +187,7 @@ module Data.SBV (
   , compileToSMTLib
 
   -- * Test case generation
-  , genTest, CW(..), Size(..)
+  , genTest, CW(..), Size(..), cwToBool
 
   -- * Code generation from symbolic programs
   -- $cCodeGeneration
@@ -427,7 +427,8 @@ constraint to be considered. For instance:
 
 will add the constraint @c@ 80% of the time. This variant is useful for 'genTest' and 'quickCheck' functions,
 where we want to filter the test cases according to some probability distribution, to make sure that the test-vectors
-are drawn from interesting subsets of the input space.
+are drawn from interesting subsets of the input space. (In the above example, the test vectors will come out such that
+80% of the time @c@ will be satisfied, and 20% of the time @not c@ will be satisified.)
 
 Note that while 'constrain' can be used freely, 'pConstrain' is only allowed in the contexts of
 'genTest' or 'quickCheck'. Calls to 'pConstrain' in a prove/sat call will be rejected as it makes no sense.

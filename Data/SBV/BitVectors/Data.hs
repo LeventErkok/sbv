@@ -22,7 +22,7 @@ module Data.SBV.BitVectors.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
  , SInt8, SInt16, SInt32, SInt64, SInteger
  , SymWord(..)
- , CW(..), cwSameType, cwIsBit, cwToBool, constrain, pConstrain
+ , CW(..), cwSameType, cwIsBit, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
  , SW(..), trueSW, falseSW, trueCW, falseCW
  , SBV(..), NodeId(..), mkSymSBV
@@ -30,7 +30,8 @@ module Data.SBV.BitVectors.Data
  , sbvToSW, sbvToSymSW
  , SBVExpr(..), newExpr
  , cache, uncache, uncacheAI, HasSignAndSize(..)
- , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, runSymbolic', State, inProofMode, SBVRunMode(..), Size(..), Outputtable(..), Result(..), getTraceInfo, getConstraints
+ , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, runSymbolic', State, inProofMode, SBVRunMode(..), Size(..), Outputtable(..), Result(..)
+ , getTraceInfo, getConstraints, addConstraint
  , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
  , Quantifier(..), needsExistentials
  , SMTLibPgm(..), SMTLibVersion(..)
@@ -45,7 +46,7 @@ import Data.Int                        (Int8, Int16, Int32, Int64)
 import Data.Word                       (Word8, Word16, Word32, Word64)
 import Data.IORef                      (IORef, newIORef, modifyIORef, readIORef, writeIORef)
 import Data.List                       (intercalate, sortBy)
-import Data.Maybe                      (isJust, fromJust, fromMaybe)
+import Data.Maybe                      (isJust, isNothing, fromJust, fromMaybe)
 
 import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
 import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
@@ -72,6 +73,7 @@ cwSameType x y = cwSigned x == cwSigned y && cwSize x == cwSize y
 cwIsBit :: CW -> Bool
 cwIsBit x = not (hasSign x) && not (isInfPrec x) && intSizeOf x == 1
 
+-- | Convert a CW to a Haskell boolean
 cwToBool :: CW -> Bool
 cwToBool x = cwVal x /= 0
 
@@ -834,35 +836,29 @@ instance (HasSignAndSize a, HasSignAndSize b) => Show (SFunArray a b) where
 mkSFunArray :: (SBV a -> SBV b) -> SFunArray a b
 mkSFunArray = SFunArray
 
----------------------------------------------------------------------------------
--- | Adding arbitrary constraints.
----------------------------------------------------------------------------------
-constrain :: SBool -> Symbolic ()
-constrain c = do
-        st <- ask
-        liftIO $ do v <- sbvToSW st c
-                    modifyIORef (rConstraints st) (v:)
-
----------------------------------------------------------------------------------
--- | Adding a probabilistic constraint. The 'Double' argument is the probability
--- threshold. A threshold of '0' would mean the constraint is ignored, while a
--- threshold of '1' means the constraint is always added. Probabilistic constraints
--- are useful for 'genTest' and 'quickCheck' calls where we restrict our attention
--- to /interesting/ parts of the input domain.
----------------------------------------------------------------------------------
-pConstrain :: Double -> SBool -> Symbolic ()
-pConstrain t c
-  | t < 0 || t > 1
+-- | Handling constraints
+addConstraint :: Maybe Double -> SBool -> SBool -> Symbolic ()
+addConstraint mbT c c'
+  | isNothing mbT
+  = impose c
+  | Just t <- mbT, t < 0 || t > 1
   = error $ "SBV: pConstrain: Invalid probability threshold: " ++ show t ++ ", must be in [0, 1]."
   | True
-  = do st <- ask
+  = do let Just t = mbT
+       st <- ask
        case runMode st of
-         Concrete _ -> when (t > 0) $ do r <- liftIO $ do g <- readIORef (rStdGen st)
-                                                          let (v, g') = randomR (0, 1) g
-                                                          writeIORef (rStdGen st) g'
-                                                          return v
-                                         when (r <= t) $ constrain c
+         Concrete _ -> if t > 0
+                       then do r <- liftIO $ do g <- readIORef (rStdGen st)
+                                                let (r, g') = randomR (0, 1) g
+                                                writeIORef (rStdGen st) g'
+                                                return r
+                               impose (if r <= t then c else c')
+                       else impose c'
          _        -> error "SBV: pConstrain only allowed in 'genTest' or 'quickCheck' contexts."
+  where impose :: SBool -> Symbolic ()
+        impose cstr = do st <- ask
+                         liftIO $ do v <- sbvToSW st cstr
+                                     modifyIORef (rConstraints st) (v:)
 
 ---------------------------------------------------------------------------------
 -- * Cached values

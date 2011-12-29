@@ -23,6 +23,7 @@ module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), BVDivisible(..), Uninterpreted(..)
   , bitValue, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE
   , lsb, msb, SBVUF, sbvUFName, genFinVar, genFinVar_, forall, forall_, exists, exists_
+  , constrain, pConstrain
   )
   where
 
@@ -1125,6 +1126,22 @@ instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymW
             => Uninterpreted ((SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvUninterpret mbCgData nm = let (h, f) = sbvUninterpret (uc7 `fmap` mbCgData) nm in (h, \(arg0, arg1, arg2, arg3, arg4, arg5, arg6) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6)
     where uc7 (cs, fn) = (cs, \a b c d e f g -> fn (a, b, c, d, e, f, g))
+
+---------------------------------------------------------------------------------
+-- | Adding arbitrary constraints.
+---------------------------------------------------------------------------------
+constrain :: SBool -> Symbolic ()
+constrain c = addConstraint Nothing c (bnot c)
+
+---------------------------------------------------------------------------------
+-- | Adding a probabilistic constraint. The 'Double' argument is the probability
+-- threshold. A threshold of '0' would mean the constraint is ignored, while a
+-- threshold of '1' means the constraint is always added. Probabilistic constraints
+-- are useful for 'genTest' and 'quickCheck' calls where we restrict our attention
+-- to /interesting/ parts of the input domain.
+---------------------------------------------------------------------------------
+pConstrain :: Double -> SBool -> Symbolic ()
+pConstrain t c = addConstraint (Just t) c (bnot c)
 
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where
