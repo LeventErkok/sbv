@@ -6,14 +6,8 @@ Latest Hackage released version: 0.9.24
 ======================================================================
 Version 0.9.25, Not yet released
 
-  * Fix pConstrain probability handling to respect the given threshold
-    for the generated values, not just for controlling when the constraint
-    is added.  Previous implementation was adding the constraint with the given
-    threshold, but was not checking that the constraint was satisfied
-    once it got added in a genTest/quickCheck run, with a failure triggering
-    another random coin toss to see whether constraint should be added. While
-    both semantics can be reasonable, the latter (i.e., the current
-    implementation) is more intuitive from an end-user perspective.
+  * Better handling of the pConstrain probability threshold for test
+    case generation and quickCheck purposes.
 
 ======================================================================
 Version 0.9.24, 2011-12-28
