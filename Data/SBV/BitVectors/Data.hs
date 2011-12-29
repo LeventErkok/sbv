@@ -357,11 +357,12 @@ arrayUIKind (i, (nm, _, ctx))
         external (ArrayMerge{})  = False
 
 -- | Different means of running a symbolic piece of code
-data SBVRunMode = Proof Bool  -- ^ Symbolic simulation mode, for proof purposes. Bool is True if it's a sat instance
-                | CodeGen     -- ^ Code generation mode
-                | Concrete    -- ^ Concrete simulation mode
+data SBVRunMode = Proof Bool      -- ^ Symbolic simulation mode, for proof purposes. Bool is True if it's a sat instance
+                | CodeGen         -- ^ Code generation mode
+                | Concrete StdGen -- ^ Concrete simulation mode. The StdGen is for the pConstraint acceptance in cross runs
 
 data State  = State { runMode       :: SBVRunMode
+                    , rStdGen       :: IORef StdGen
                     , rCInfo        :: IORef [(String, CW)]
                     , rctr          :: IORef Int
                     , rInfPrec      :: IORef Bool
@@ -382,9 +383,9 @@ data State  = State { runMode       :: SBVRunMode
 
 inProofMode :: State -> Bool
 inProofMode s = case runMode s of
-                  Proof{}  -> True
-                  CodeGen  -> False
-                  Concrete -> False
+                  Proof{}    -> True
+                  CodeGen    -> False
+                  Concrete{} -> False
 
 -- | The "Symbolic" value. Either a constant (@Left@) or a symbolic
 -- value (@Right Cached@). Note that caching is essential for making
@@ -520,17 +521,17 @@ mkSymSBV mbQ sgnsz mbNm = do
         st <- ask
         let q = case (mbQ, runMode st) of
                   (Just x,  _)           -> x   -- user given, just take it
-                  (Nothing, Concrete)    -> ALL -- concrete simulation, pick universal
+                  (Nothing, Concrete{})  -> ALL -- concrete simulation, pick universal
                   (Nothing, Proof True)  -> EX  -- sat mode, pick existential
                   (Nothing, Proof False) -> ALL -- proof mode, pick universal
                   (Nothing, CodeGen)     -> ALL -- code generation, pick universal
         case runMode st of
-          Concrete | q == EX -> case mbNm of
-                                  Nothing -> error $ "Cannot quick-check in the presence of existential variables, type: " ++ showType (undefined :: SBV a)
-                                  Just nm -> error $ "Cannot quick-check in the presence of existential variable " ++ nm ++ " :: " ++ showType (undefined :: SBV a)
-          Concrete           -> do v@(SBV _ (Left cw)) <- liftIO randomIO
-                                   liftIO $ modifyIORef (rCInfo st) ((maybe "_" id mbNm, cw):)
-                                   return v
+          Concrete _ | q == EX -> case mbNm of
+                                    Nothing -> error $ "Cannot quick-check in the presence of existential variables, type: " ++ showType (undefined :: SBV a)
+                                    Just nm -> error $ "Cannot quick-check in the presence of existential variable " ++ nm ++ " :: " ++ showType (undefined :: SBV a)
+          Concrete _           -> do v@(SBV _ (Left cw)) <- liftIO randomIO
+                                     liftIO $ modifyIORef (rCInfo st) ((maybe "_" id mbNm, cw):)
+                                     return v
           _          -> do ctr <- liftIO $ incCtr st
                            let nm = maybe ('s':show ctr) id mbNm
                                sw = SW sgnsz (NodeId ctr)
@@ -613,7 +614,11 @@ runSymbolic' currentRunMode (Symbolic c) = do
    aiCache <- newIORef IMap.empty
    infPrec <- newIORef False
    cstrs   <- newIORef []
+   rGen    <- case currentRunMode of
+                Concrete g -> newIORef g
+                _          -> newStdGen >>= newIORef
    let st = State { runMode      = currentRunMode
+                  , rStdGen      = rGen
                   , rCInfo       = cInfo
                   , rctr         = ctr
                   , rInfPrec     = infPrec
@@ -852,8 +857,11 @@ pConstrain t c
   | True
   = do st <- ask
        case runMode st of
-         Concrete -> when (t > 0) $ do r <- liftIO $ randomRIO (0, 1)
-                                       when (r <= t) $ constrain c
+         Concrete _ -> when (t > 0) $ do r <- liftIO $ do g <- readIORef (rStdGen st)
+                                                          let (v, g') = randomR (0, 1) g
+                                                          writeIORef (rStdGen st) g'
+                                                          return v
+                                         when (r <= t) $ constrain c
          _        -> error "SBV: pConstrain only allowed in 'genTest' or 'quickCheck' contexts."
 
 ---------------------------------------------------------------------------------

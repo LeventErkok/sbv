@@ -13,6 +13,7 @@
 module Data.SBV.BitVectors.GenTest (genTest) where
 
 import Data.Maybe (fromMaybe)
+import System.Random
 
 import Data.SBV.BitVectors.Data
 
@@ -24,14 +25,12 @@ genTest :: Int -> Symbolic () -> IO [([CW], [CW])]
 genTest n m = gen 0 []
   where gen i sofar
          | i == n = return (reverse sofar)
-         | True   = do mbT <- tc
-                       case mbT of
-                        Nothing -> gen i     sofar
-                        Just t  -> gen (i+1) (t:sofar)
-        tc = do (_, Result _ tvals _ _ cs _ _ _ _ _ cstrs os) <- runSymbolic' Concrete m
-                let cval = fromMaybe (error "Cannot generate tests in the presence of uninterpeted constants!") . (`lookup` cs)
-                    cond = all (cwToBool . cval) cstrs
-                    io   = (map snd tvals, map cval os)
-                if cond
-                   then return $ Just io
-                   else return Nothing
+         | True   = do g <- newStdGen
+                       t <- tc g
+                       gen (i+1) (t:sofar)
+        tc g = do (_, Result _ tvals _ _ cs _ _ _ _ _ cstrs os) <- runSymbolic' (Concrete g) m
+                  let cval = fromMaybe (error "Cannot generate tests in the presence of uninterpeted constants!") . (`lookup` cs)
+                      cond = all (cwToBool . cval) cstrs
+                  if cond
+                     then return (map snd tvals, map cval os)
+                     else tc g  -- try again, with the same set of constraints
