@@ -423,16 +423,28 @@ rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'fals
 A probabilistic constraint (see 'pConstrain') attaches a probability threshold for the
 constraint to be considered. For instance:
 
-  @'pConstrain' 0.8 c@
+  @
+     'pConstrain' 0.8 c
+  @
 
-will add the constraint @c@ 80% of the time. This variant is useful for 'genTest' and 'quickCheck' functions,
-where we want to filter the test cases according to some probability distribution, to make sure that the test-vectors
-are drawn from interesting subsets of the input space. (In the above example, the test vectors will come out such that
-80% of the time @c@ will be satisfied, and 20% of the time @not c@ will be satisified.)
+will make sure that the condition @c@ is satisfied 80% of the time (and correspondingly, falsified 20%
+of the time), in expectation. This variant is useful for 'genTest' and 'quickCheck' functions, where we
+want to filter the test cases according to some probability distribution, to make sure that the test-vectors
+are drawn from interesting subsets of the input space. For instance, if we were to generate 100 test cases
+with the above constraint, we'd expect about 80 of them to satisfy the condition @c@, while about 20 of them
+will fail it.
+
+The following properties hold:
+
+  @
+    'constrain'      = 'pConstrain' 1
+    'pConstrain' t c = 'pConstrain' (1-t) (not c)
+  @
 
 Note that while 'constrain' can be used freely, 'pConstrain' is only allowed in the contexts of
-'genTest' or 'quickCheck'. Calls to 'pConstrain' in a prove/sat call will be rejected as it makes no sense.
-Also, 'constrain' and 'pConstrain' calls during code-generation will also be rejected, for similar reasons.
+'genTest' or 'quickCheck'. Calls to 'pConstrain' in a prove/sat call will be rejected as SBV does not
+deal with probabilistic constraints when it comes to satisfiability and proofs.
+Also, both 'constrain' and 'pConstrain' calls during code-generation will also be rejected, for similar reasons.
 -}
 
 {-# ANN module "HLint: ignore Use import/export shortcut" #-}

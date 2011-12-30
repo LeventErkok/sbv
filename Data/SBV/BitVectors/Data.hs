@@ -46,7 +46,7 @@ import Data.Int                        (Int8, Int16, Int32, Int64)
 import Data.Word                       (Word8, Word16, Word32, Word64)
 import Data.IORef                      (IORef, newIORef, modifyIORef, readIORef, writeIORef)
 import Data.List                       (intercalate, sortBy)
-import Data.Maybe                      (isJust, isNothing, fromJust, fromMaybe)
+import Data.Maybe                      (isJust, fromJust, fromMaybe)
 
 import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
 import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
@@ -361,7 +361,12 @@ arrayUIKind (i, (nm, _, ctx))
 -- | Different means of running a symbolic piece of code
 data SBVRunMode = Proof Bool      -- ^ Symbolic simulation mode, for proof purposes. Bool is True if it's a sat instance
                 | CodeGen         -- ^ Code generation mode
-                | Concrete StdGen -- ^ Concrete simulation mode. The StdGen is for the pConstraint acceptance in cross runs
+                | Concrete StdGen -- ^ Concrete simulation mode. The StdGen is for the pConstrain acceptance in cross runs
+
+isConcreteMode :: SBVRunMode -> Bool
+isConcreteMode (Concrete _) = True
+isConcreteMode (Proof{})    = False
+isConcreteMode CodeGen      = False
 
 data State  = State { runMode       :: SBVRunMode
                     , rStdGen       :: IORef StdGen
@@ -448,6 +453,13 @@ incCtr s = do ctr <- readIORef (rctr s)
               let i = ctr + 1
               i `seq` writeIORef (rctr s) i
               return ctr
+
+throwDice :: State -> IO Double
+throwDice st = do g <- readIORef (rStdGen st)
+                  let (r, g') = randomR (0, 1) g
+                  writeIORef (rStdGen st) g'
+                  return r
+
 
 newUninterpreted :: State -> String -> SBVType -> Maybe [String] -> IO ()
 newUninterpreted st nm t mbCode
@@ -836,29 +848,27 @@ instance (HasSignAndSize a, HasSignAndSize b) => Show (SFunArray a b) where
 mkSFunArray :: (SBV a -> SBV b) -> SFunArray a b
 mkSFunArray = SFunArray
 
+
 -- | Handling constraints
+imposeConstraint :: SBool -> Symbolic ()
+imposeConstraint c = do st <- ask
+                        case runMode st of
+                          CodeGen -> error "SBV: constraints are not allowed in code-generation"
+                          _       -> do liftIO $ do v <- sbvToSW st c
+                                                    modifyIORef (rConstraints st) (v:)
+
 addConstraint :: Maybe Double -> SBool -> SBool -> Symbolic ()
-addConstraint mbT c c'
-  | isNothing mbT
-  = impose c
-  | Just t <- mbT, t < 0 || t > 1
+addConstraint Nothing  c _  = imposeConstraint c
+addConstraint (Just t) c c'
+  | t < 0 || t > 1
   = error $ "SBV: pConstrain: Invalid probability threshold: " ++ show t ++ ", must be in [0, 1]."
   | True
-  = do let Just t = mbT
-       st <- ask
-       case runMode st of
-         Concrete _ -> if t > 0
-                       then do r <- liftIO $ do g <- readIORef (rStdGen st)
-                                                let (r, g') = randomR (0, 1) g
-                                                writeIORef (rStdGen st) g'
-                                                return r
-                               impose (if r <= t then c else c')
-                       else impose c'
-         _        -> error "SBV: pConstrain only allowed in 'genTest' or 'quickCheck' contexts."
-  where impose :: SBool -> Symbolic ()
-        impose cstr = do st <- ask
-                         liftIO $ do v <- sbvToSW st cstr
-                                     modifyIORef (rConstraints st) (v:)
+  = do st <- ask
+       when (not (isConcreteMode (runMode st))) $ error "SBV: pConstrain only allowed in 'genTest' or 'quickCheck' contexts."
+       case () of
+         () | t > 0 && t < 1 -> liftIO (throwDice st) >>= \d -> imposeConstraint (if d <= t then c else c')
+            | t > 0          -> imposeConstraint c
+            | True           -> imposeConstraint c'
 
 ---------------------------------------------------------------------------------
 -- * Cached values

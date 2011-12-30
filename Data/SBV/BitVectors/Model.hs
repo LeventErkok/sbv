@@ -1135,10 +1135,8 @@ constrain c = addConstraint Nothing c (bnot c)
 
 ---------------------------------------------------------------------------------
 -- | Adding a probabilistic constraint. The 'Double' argument is the probability
--- threshold. A threshold of '0' would mean the constraint is ignored, while a
--- threshold of '1' means the constraint is always added. Probabilistic constraints
--- are useful for 'genTest' and 'quickCheck' calls where we restrict our attention
--- to /interesting/ parts of the input domain.
+-- threshold. Probabilistic constraints are useful for 'genTest' and 'quickCheck'
+-- calls where we restrict our attention to /interesting/ parts of the input domain.
 ---------------------------------------------------------------------------------
 pConstrain :: Double -> SBool -> Symbolic ()
 pConstrain t c = addConstraint (Just t) c (bnot c)
