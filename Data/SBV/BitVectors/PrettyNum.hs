@@ -13,7 +13,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Data.SBV.BitVectors.PrettyNum (PrettyNum(..), readBin, shex, sbin) where
+module Data.SBV.BitVectors.PrettyNum (PrettyNum(..), readBin, shex, shexI, sbin, sbinI) where
 
 import Data.Char  (ord)
 import Data.Int   (Int8, Int16, Int32, Int64)
