@@ -21,14 +21,14 @@ import Data.SBV.BitVectors.Data
 -- can be rendered as test vectors in different languages as necessary. Use the
 -- function 'output' call to indicate what fields should be in the test result.
 -- (Also see 'constrain' and 'pConstrain' for filtering acceptable test values.)
-genTest :: Int -> Symbolic () -> IO [([CW], [CW])]
+genTest :: Outputtable a => Int -> Symbolic a -> IO [([CW], [CW])]
 genTest n m = gen 0 []
   where gen i sofar
-         | i == n = return (reverse sofar)
+         | i == n = return $ reverse sofar
          | True   = do g <- newStdGen
                        t <- tc g
                        gen (i+1) (t:sofar)
-        tc g = do (_, Result _ tvals _ _ cs _ _ _ _ _ cstrs os) <- runSymbolic' (Concrete g) m
+        tc g = do (_, Result _ tvals _ _ cs _ _ _ _ _ cstrs os) <- runSymbolic' (Concrete g) (m >>= output)
                   let cval = fromMaybe (error "Cannot generate tests in the presence of uninterpeted constants!") . (`lookup` cs)
                       cond = all (cwToBool . cval) cstrs
                   if cond
