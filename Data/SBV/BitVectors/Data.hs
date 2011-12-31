@@ -575,6 +575,9 @@ instance Outputtable (SBV a) where
           liftIO $ modifyIORef (routs st) (sw:)
           return i
 
+instance Outputtable a => Outputtable [a] where
+  output = mapM output
+
 instance (Outputtable a, Outputtable b) => Outputtable (a, b) where
   output = mlift2 (,) output output
 
