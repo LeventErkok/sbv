@@ -62,7 +62,8 @@ Furthermore, functions built out of these types can also be:
   - used in synthesis (the `sat` function with existentials)
   - optimized with respect to cost functions (the 'optimize', 'maximize', and 'minimize' functions)
   - quick-checked
-  - used in concrete test case generation (the 'genTest' function)
+  - used in concrete test case generation (the 'genTest' function), rendered as values in various
+    languages, including Haskell and C.
 
 If a predicate is not valid, `prove` will return a counterexample: An 
 assignment to inputs such that the predicate fails. The `sat` function will

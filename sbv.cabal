@@ -46,7 +46,8 @@ Description:   Express properties about bit-precise Haskell programs and automat
                .
                  * quick-checked
                .
-                 * used in concrete test case generation (the 'genTest' function)
+                 * used in concrete test case generation (the 'genTest' function), rendered as values in various
+                   languages, including Haskell and C.
                .
                Predicates can have both existential and universal variables. Use of
                alternating quantifiers provides considerable expressive power.
