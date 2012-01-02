@@ -736,9 +736,11 @@ instance SymWord a => Mergeable (SBV a) where
                       () | swt == falseSW -> sbvToSW st b
                       () -> do swa <- sbvToSW st a
                                swb <- sbvToSW st b
-                               if swa == swb
-                                  then return swa
-                                  else newExpr st sgnsz (SBVApp Ite [swt, swa, swb])
+                               case () of
+                                 () | swa == swb                      -> return swa
+                                 () | swa == trueSW && swb == falseSW -> return swt
+                                 () | swa == falseSW && swa == trueSW -> newExpr st sgnsz (SBVApp Not [swt])
+                                 ()                                   -> newExpr st sgnsz (SBVApp Ite [swt, swa, swb])
   -- Custom version of select that translates to SMT-Lib tables at the base type of words
   select xs err ind
     | Just i <- unliteral ind
