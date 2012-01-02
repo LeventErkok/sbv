@@ -32,9 +32,12 @@ veryclean: clean
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
+
+/* The boolean type */
+typedef bool SBool;
 
 /* Unsigned bit-vectors */
-typedef uint8_t  SBool  ;
 typedef uint8_t  SWord8 ;
 typedef uint16_t SWord16;
 typedef uint32_t SWord32;
@@ -57,13 +60,14 @@ SWord16 crcUSB5(const SWord16 msg);
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include "crcUSB5.h"
 
 int main(void)
 {
   const SWord16 __result = crcUSB5(0xfedcU);
-  
+
   printf("crcUSB5(0xfedcU) = 0x%04"PRIx16"U\n", __result);
 
   return 0;
@@ -74,6 +78,7 @@ int main(void)
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "crcUSB5.h"
 
 SWord16 crcUSB5(const SWord16 msg)
@@ -88,95 +93,95 @@ SWord16 crcUSB5(const SWord16 msg)
   const SBool   s11 = 0x0000U != s10;
   const SWord16 s13 = s1 & 0x1000U;
   const SBool   s14 = 0x0000U != s13;
-  const SBool   s15 = (~s14) & 0x01U;
+  const SBool   s15 = !s14;
   const SBool   s16 = s5 ? s15 : s14;
   const SWord16 s18 = s1 & 0x0800U;
   const SBool   s19 = 0x0000U != s18;
-  const SBool   s20 = (~s19) & 0x01U;
+  const SBool   s20 = !s19;
   const SBool   s21 = s8 ? s20 : s19;
   const SWord16 s23 = s1 & 0x0400U;
   const SBool   s24 = 0x0000U != s23;
-  const SBool   s25 = (~s24) & 0x01U;
+  const SBool   s25 = !s24;
   const SBool   s26 = s5 ? s25 : s24;
-  const SBool   s27 = (~s26) & 0x01U;
+  const SBool   s27 = !s26;
   const SBool   s28 = s11 ? s27 : s26;
   const SWord16 s30 = s1 & 0x0200U;
   const SBool   s31 = 0x0000U != s30;
-  const SBool   s32 = (~s31) & 0x01U;
+  const SBool   s32 = !s31;
   const SBool   s33 = s8 ? s32 : s31;
-  const SBool   s34 = (~s33) & 0x01U;
+  const SBool   s34 = !s33;
   const SBool   s35 = s16 ? s34 : s33;
   const SWord16 s37 = s1 & 0x0100U;
   const SBool   s38 = 0x0000U != s37;
-  const SBool   s39 = (~s38) & 0x01U;
+  const SBool   s39 = !s38;
   const SBool   s40 = s11 ? s39 : s38;
-  const SBool   s41 = (~s40) & 0x01U;
+  const SBool   s41 = !s40;
   const SBool   s42 = s21 ? s41 : s40;
   const SWord16 s44 = s1 & 0x0080U;
   const SBool   s45 = 0x0000U != s44;
-  const SBool   s46 = (~s45) & 0x01U;
+  const SBool   s46 = !s45;
   const SBool   s47 = s16 ? s46 : s45;
-  const SBool   s48 = (~s47) & 0x01U;
+  const SBool   s48 = !s47;
   const SBool   s49 = s28 ? s48 : s47;
   const SWord16 s51 = s1 & 0x0040U;
   const SBool   s52 = 0x0000U != s51;
-  const SBool   s53 = (~s52) & 0x01U;
+  const SBool   s53 = !s52;
   const SBool   s54 = s21 ? s53 : s52;
-  const SBool   s55 = (~s54) & 0x01U;
+  const SBool   s55 = !s54;
   const SBool   s56 = s35 ? s55 : s54;
   const SWord16 s58 = s1 & 0x0020U;
   const SBool   s59 = 0x0000U != s58;
-  const SBool   s60 = (~s59) & 0x01U;
+  const SBool   s60 = !s59;
   const SBool   s61 = s28 ? s60 : s59;
-  const SBool   s62 = (~s61) & 0x01U;
+  const SBool   s62 = !s61;
   const SBool   s63 = s42 ? s62 : s61;
-  const SBool   s64 = (~s5) & 0x01U;
+  const SBool   s64 = !s5;
   const SBool   s65 = s5 ? s64 : s5;
-  const SBool   s66 = (~s8) & 0x01U;
+  const SBool   s66 = !s8;
   const SBool   s67 = s8 ? s66 : s8;
-  const SBool   s68 = (~s11) & 0x01U;
+  const SBool   s68 = !s11;
   const SBool   s69 = s11 ? s68 : s11;
-  const SBool   s70 = (~s16) & 0x01U;
+  const SBool   s70 = !s16;
   const SBool   s71 = s16 ? s70 : s16;
-  const SBool   s72 = (~s21) & 0x01U;
+  const SBool   s72 = !s21;
   const SBool   s73 = s21 ? s72 : s21;
-  const SBool   s74 = (~s28) & 0x01U;
+  const SBool   s74 = !s28;
   const SBool   s75 = s28 ? s74 : s28;
-  const SBool   s76 = (~s35) & 0x01U;
+  const SBool   s76 = !s35;
   const SBool   s77 = s35 ? s76 : s35;
-  const SBool   s78 = (~s42) & 0x01U;
+  const SBool   s78 = !s42;
   const SBool   s79 = s42 ? s78 : s42;
-  const SBool   s80 = (~s49) & 0x01U;
+  const SBool   s80 = !s49;
   const SBool   s81 = s49 ? s80 : s49;
-  const SBool   s82 = (~s56) & 0x01U;
+  const SBool   s82 = !s56;
   const SBool   s83 = s56 ? s82 : s56;
-  const SBool   s84 = (~s63) & 0x01U;
+  const SBool   s84 = !s63;
   const SBool   s85 = s63 ? s84 : s63;
   const SWord16 s87 = s1 & 0x0010U;
   const SBool   s88 = 0x0000U != s87;
-  const SBool   s89 = (~s88) & 0x01U;
+  const SBool   s89 = !s88;
   const SBool   s90 = s35 ? s89 : s88;
-  const SBool   s91 = (~s90) & 0x01U;
+  const SBool   s91 = !s90;
   const SBool   s92 = s49 ? s91 : s90;
   const SWord16 s94 = s1 & 0x0008U;
   const SBool   s95 = 0x0000U != s94;
-  const SBool   s96 = (~s95) & 0x01U;
+  const SBool   s96 = !s95;
   const SBool   s97 = s42 ? s96 : s95;
-  const SBool   s98 = (~s97) & 0x01U;
+  const SBool   s98 = !s97;
   const SBool   s99 = s56 ? s98 : s97;
   const SWord16 s101 = s1 & 0x0004U;
   const SBool   s102 = 0x0000U != s101;
-  const SBool   s103 = (~s102) & 0x01U;
+  const SBool   s103 = !s102;
   const SBool   s104 = s49 ? s103 : s102;
-  const SBool   s105 = (~s104) & 0x01U;
+  const SBool   s105 = !s104;
   const SBool   s106 = s63 ? s105 : s104;
   const SWord16 s108 = s1 & 0x0002U;
   const SBool   s109 = 0x0000U != s108;
-  const SBool   s110 = (~s109) & 0x01U;
+  const SBool   s110 = !s109;
   const SBool   s111 = s56 ? s110 : s109;
   const SWord16 s113 = s1 & 0x0001U;
   const SBool   s114 = 0x0000U != s113;
-  const SBool   s115 = (~s114) & 0x01U;
+  const SBool   s115 = !s114;
   const SBool   s116 = s63 ? s115 : s114;
   const SWord16 s117 = s116 ? 0x0001U : 0x0000U;
   const SWord16 s118 = 0x0002U | s117;
@@ -210,7 +215,7 @@ SWord16 crcUSB5(const SWord16 msg)
   const SWord16 s146 = 0x8000U | s145;
   const SWord16 s147 = s65 ? s146 : s145;
   const SWord16 s148 = s1 | s147;
-  
+
   return s148;
 }
 == END: "crcUSB5.c" ==================

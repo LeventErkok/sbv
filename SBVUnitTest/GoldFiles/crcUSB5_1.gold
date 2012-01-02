@@ -32,9 +32,12 @@ veryclean: clean
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
+
+/* The boolean type */
+typedef bool SBool;
 
 /* Unsigned bit-vectors */
-typedef uint8_t  SBool  ;
 typedef uint8_t  SWord8 ;
 typedef uint16_t SWord16;
 typedef uint32_t SWord32;
@@ -57,13 +60,14 @@ SWord16 crcUSB5(const SWord16 msg);
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include "crcUSB5.h"
 
 int main(void)
 {
   const SWord16 __result = crcUSB5(0xfedcU);
-  
+
   printf("crcUSB5(0xfedcU) = 0x%04"PRIx16"U\n", __result);
 
   return 0;
@@ -74,6 +78,7 @@ int main(void)
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "crcUSB5.h"
 
 SWord16 crcUSB5(const SWord16 msg)
@@ -101,77 +106,72 @@ SWord16 crcUSB5(const SWord16 msg)
   const SBool   s31 = 0x0000U != s30;
   const SWord16 s33 = s0 & 0x0001U;
   const SBool   s34 = 0x0000U != s33;
-  const SBool   s35 = (~s13) & 0x01U;
+  const SBool   s35 = !s13;
   const SBool   s36 = s4 ? s35 : s13;
-  const SBool   s37 = (~s16) & 0x01U;
+  const SBool   s37 = !s16;
   const SBool   s38 = s7 ? s37 : s16;
-  const SBool   s39 = (~s19) & 0x01U;
+  const SBool   s39 = !s19;
   const SBool   s40 = s4 ? s39 : s19;
-  const SBool   s41 = (~s40) & 0x01U;
+  const SBool   s41 = !s40;
   const SBool   s42 = s10 ? s41 : s40;
-  const SBool   s43 = (~s22) & 0x01U;
+  const SBool   s43 = !s22;
   const SBool   s44 = s7 ? s43 : s22;
-  const SBool   s45 = (~s44) & 0x01U;
+  const SBool   s45 = !s44;
   const SBool   s46 = s36 ? s45 : s44;
-  const SBool   s47 = (~s25) & 0x01U;
+  const SBool   s47 = !s25;
   const SBool   s48 = s10 ? s47 : s25;
-  const SBool   s49 = (~s48) & 0x01U;
+  const SBool   s49 = !s48;
   const SBool   s50 = s38 ? s49 : s48;
-  const SBool   s51 = (~s28) & 0x01U;
+  const SBool   s51 = !s28;
   const SBool   s52 = s36 ? s51 : s28;
-  const SBool   s53 = (~s52) & 0x01U;
+  const SBool   s53 = !s52;
   const SBool   s54 = s42 ? s53 : s52;
-  const SBool   s55 = (~s31) & 0x01U;
+  const SBool   s55 = !s31;
   const SBool   s56 = s38 ? s55 : s31;
-  const SBool   s57 = (~s56) & 0x01U;
+  const SBool   s57 = !s56;
   const SBool   s58 = s46 ? s57 : s56;
-  const SBool   s59 = (~s34) & 0x01U;
+  const SBool   s59 = !s34;
   const SBool   s60 = s42 ? s59 : s34;
-  const SBool   s61 = (~s60) & 0x01U;
+  const SBool   s61 = !s60;
   const SBool   s62 = s50 ? s61 : s60;
-  const SBool   s63 = s46 ? 1 : 0;
-  const SBool   s64 = (~s63) & 0x01U;
-  const SBool   s65 = s54 ? s64 : s63;
-  const SBool   s66 = s50 ? 1 : 0;
-  const SBool   s67 = (~s66) & 0x01U;
-  const SBool   s68 = s58 ? s67 : s66;
-  const SBool   s69 = s54 ? 1 : 0;
-  const SBool   s70 = (~s69) & 0x01U;
-  const SBool   s71 = s62 ? s70 : s69;
-  const SBool   s72 = s58 ? 1 : 0;
-  const SBool   s73 = s62 ? 1 : 0;
-  const SWord16 s74 = s73 ? 0x0001U : 0x0000U;
-  const SWord16 s75 = 0x0002U | s74;
-  const SWord16 s76 = s72 ? s75 : s74;
-  const SWord16 s77 = 0x0004U | s76;
-  const SWord16 s78 = s71 ? s77 : s76;
-  const SWord16 s79 = 0x0008U | s78;
-  const SWord16 s80 = s68 ? s79 : s78;
-  const SWord16 s81 = 0x0010U | s80;
-  const SWord16 s82 = s65 ? s81 : s80;
-  const SWord16 s83 = 0x0020U | s82;
-  const SWord16 s84 = s34 ? s83 : s82;
-  const SWord16 s85 = 0x0040U | s84;
-  const SWord16 s86 = s31 ? s85 : s84;
-  const SWord16 s87 = 0x0080U | s86;
-  const SWord16 s88 = s28 ? s87 : s86;
-  const SWord16 s89 = 0x0100U | s88;
-  const SWord16 s90 = s25 ? s89 : s88;
-  const SWord16 s91 = 0x0200U | s90;
-  const SWord16 s92 = s22 ? s91 : s90;
-  const SWord16 s93 = 0x0400U | s92;
-  const SWord16 s94 = s19 ? s93 : s92;
-  const SWord16 s96 = s94 | 0x0800U;
-  const SWord16 s97 = s16 ? s96 : s94;
-  const SWord16 s99 = s97 | 0x1000U;
-  const SWord16 s100 = s13 ? s99 : s97;
-  const SWord16 s102 = s100 | 0x2000U;
-  const SWord16 s103 = s10 ? s102 : s100;
-  const SWord16 s105 = s103 | 0x4000U;
-  const SWord16 s106 = s7 ? s105 : s103;
-  const SWord16 s108 = s106 | 0x8000U;
-  const SWord16 s109 = s4 ? s108 : s106;
-  
-  return s109;
+  const SBool   s63 = !s46;
+  const SBool   s64 = s54 ? s63 : s46;
+  const SBool   s65 = !s50;
+  const SBool   s66 = s58 ? s65 : s50;
+  const SBool   s67 = !s54;
+  const SBool   s68 = s62 ? s67 : s54;
+  const SWord16 s69 = s62 ? 0x0001U : 0x0000U;
+  const SWord16 s70 = 0x0002U | s69;
+  const SWord16 s71 = s58 ? s70 : s69;
+  const SWord16 s72 = 0x0004U | s71;
+  const SWord16 s73 = s68 ? s72 : s71;
+  const SWord16 s74 = 0x0008U | s73;
+  const SWord16 s75 = s66 ? s74 : s73;
+  const SWord16 s76 = 0x0010U | s75;
+  const SWord16 s77 = s64 ? s76 : s75;
+  const SWord16 s78 = 0x0020U | s77;
+  const SWord16 s79 = s34 ? s78 : s77;
+  const SWord16 s80 = 0x0040U | s79;
+  const SWord16 s81 = s31 ? s80 : s79;
+  const SWord16 s82 = 0x0080U | s81;
+  const SWord16 s83 = s28 ? s82 : s81;
+  const SWord16 s84 = 0x0100U | s83;
+  const SWord16 s85 = s25 ? s84 : s83;
+  const SWord16 s86 = 0x0200U | s85;
+  const SWord16 s87 = s22 ? s86 : s85;
+  const SWord16 s88 = 0x0400U | s87;
+  const SWord16 s89 = s19 ? s88 : s87;
+  const SWord16 s91 = s89 | 0x0800U;
+  const SWord16 s92 = s16 ? s91 : s89;
+  const SWord16 s94 = s92 | 0x1000U;
+  const SWord16 s95 = s13 ? s94 : s92;
+  const SWord16 s97 = s95 | 0x2000U;
+  const SWord16 s98 = s10 ? s97 : s95;
+  const SWord16 s100 = s98 | 0x4000U;
+  const SWord16 s101 = s7 ? s100 : s98;
+  const SWord16 s103 = s101 | 0x8000U;
+  const SWord16 s104 = s4 ? s103 : s101;
+
+  return s104;
 }
 == END: "crcUSB5.c" ==================
