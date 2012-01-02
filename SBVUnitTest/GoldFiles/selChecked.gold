@@ -32,9 +32,12 @@ veryclean: clean
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
+
+/* The boolean type */
+typedef bool SBool;
 
 /* Unsigned bit-vectors */
-typedef uint8_t  SBool  ;
 typedef uint8_t  SWord8 ;
 typedef uint16_t SWord16;
 typedef uint32_t SWord32;
@@ -57,13 +60,14 @@ SWord8 selChecked(const SWord8 x);
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include "selChecked.h"
 
 int main(void)
 {
   const SWord8 __result = selChecked(65);
-  
+
   printf("selChecked(65) = %"PRIu8"\n", __result);
 
   return 0;
@@ -74,6 +78,7 @@ int main(void)
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "selChecked.h"
 
 SWord8 selChecked(const SWord8 x)
@@ -84,7 +89,7 @@ SWord8 selChecked(const SWord8 x)
        1, s3
   };
   const SWord8 s5 = s0 >= 2 ? 3 : table0[s0];
-  
+
   return s5;
 }
 == END: "selChecked.c" ==================

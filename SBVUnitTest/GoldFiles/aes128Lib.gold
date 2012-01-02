@@ -3,6 +3,7 @@
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "aes128Lib.h"
 
 void aes128KeySchedule(const SWord32 *key, SWord32 *encKS,
@@ -1644,7 +1645,7 @@ void aes128KeySchedule(const SWord32 *key, SWord32 *encKS,
   const SWord8  s1779 = s1773 ^ s1778;
   const SWord16 s1780 = (((SWord16) s1772) << 8) | ((SWord16) s1779);
   const SWord32 s1781 = (((SWord32) s1765) << 16) | ((SWord32) s1780);
-  
+
   encKS[0] = s0;
   encKS[1] = s1;
   encKS[2] = s2;
@@ -1740,6 +1741,7 @@ void aes128KeySchedule(const SWord32 *key, SWord32 *encKS,
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "aes128Lib.h"
 
 void aes128BlockEncrypt(const SWord32 *pt, const SWord32 *xkey,
@@ -2643,7 +2645,7 @@ void aes128BlockEncrypt(const SWord32 *pt, const SWord32 *xkey,
   const SWord16 s1886 = (((SWord16) s1883) << 8) | ((SWord16) s1885);
   const SWord32 s1887 = (((SWord32) s1881) << 16) | ((SWord32) s1886);
   const SWord32 s1888 = s47 ^ s1887;
-  
+
   ct[0] = s1848;
   ct[1] = s1862;
   ct[2] = s1876;
@@ -2655,6 +2657,7 @@ void aes128BlockEncrypt(const SWord32 *pt, const SWord32 *xkey,
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "aes128Lib.h"
 
 void aes128BlockDecrypt(const SWord32 *ct, const SWord32 *xkey,
@@ -3558,7 +3561,7 @@ void aes128BlockDecrypt(const SWord32 *ct, const SWord32 *xkey,
   const SWord16 s1886 = (((SWord16) s1883) << 8) | ((SWord16) s1885);
   const SWord32 s1887 = (((SWord32) s1881) << 16) | ((SWord32) s1886);
   const SWord32 s1888 = s47 ^ s1887;
-  
+
   pt[0] = s1848;
   pt[1] = s1862;
   pt[2] = s1876;
@@ -3573,9 +3576,12 @@ void aes128BlockDecrypt(const SWord32 *ct, const SWord32 *xkey,
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
+
+/* The boolean type */
+typedef bool SBool;
 
 /* Unsigned bit-vectors */
-typedef uint8_t  SBool  ;
 typedef uint8_t  SWord8 ;
 typedef uint16_t SWord16;
 typedef uint32_t SWord32;
@@ -3603,6 +3609,7 @@ void aes128BlockDecrypt(const SWord32 *ct, const SWord32 *xkey,
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include "aes128Lib.h"
 
@@ -3611,17 +3618,17 @@ void aes128KeySchedule_driver(void)
   const SWord32 key[4] = {
       0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00000000UL
   };
-  
+
   printf("Contents of input array key:\n");
   int key_ctr;
   for(key_ctr = 0; key_ctr < 4 ; ++key_ctr)
     printf("  key[%d] = 0x%08"PRIx32"UL\n", key_ctr ,key[key_ctr]);
-  
+
   SWord32 encKS[44];
   SWord32 decKS[44];
-  
+
   aes128KeySchedule(key, encKS, decKS);
-  
+
   printf("aes128KeySchedule(key, encKS, decKS) ->\n");
   int encKS_ctr;
   for(encKS_ctr = 0; encKS_ctr < 44 ; ++encKS_ctr)
@@ -3636,12 +3643,12 @@ void aes128BlockEncrypt_driver(void)
   const SWord32 pt[4] = {
       0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00000000UL
   };
-  
+
   printf("Contents of input array pt:\n");
   int pt_ctr;
   for(pt_ctr = 0; pt_ctr < 4 ; ++pt_ctr)
     printf("  pt[%d] = 0x%08"PRIx32"UL\n", pt_ctr ,pt[pt_ctr]);
-  
+
   const SWord32 xkey[44] = {
       0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00000000UL,
       0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00000000UL,
@@ -3655,16 +3662,16 @@ void aes128BlockEncrypt_driver(void)
       0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00000000UL,
       0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00000000UL
   };
-  
+
   printf("Contents of input array xkey:\n");
   int xkey_ctr;
   for(xkey_ctr = 0; xkey_ctr < 44 ; ++xkey_ctr)
     printf("  xkey[%d] = 0x%08"PRIx32"UL\n", xkey_ctr ,xkey[xkey_ctr]);
-  
+
   SWord32 ct[4];
-  
+
   aes128BlockEncrypt(pt, xkey, ct);
-  
+
   printf("aes128BlockEncrypt(pt, xkey, ct) ->\n");
   int ct_ctr;
   for(ct_ctr = 0; ct_ctr < 4 ; ++ct_ctr)
@@ -3676,12 +3683,12 @@ void aes128BlockDecrypt_driver(void)
   const SWord32 ct[4] = {
       0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00000000UL
   };
-  
+
   printf("Contents of input array ct:\n");
   int ct_ctr;
   for(ct_ctr = 0; ct_ctr < 4 ; ++ct_ctr)
     printf("  ct[%d] = 0x%08"PRIx32"UL\n", ct_ctr ,ct[ct_ctr]);
-  
+
   const SWord32 xkey[44] = {
       0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00000000UL,
       0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00000000UL,
@@ -3695,16 +3702,16 @@ void aes128BlockDecrypt_driver(void)
       0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00000000UL,
       0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00000000UL
   };
-  
+
   printf("Contents of input array xkey:\n");
   int xkey_ctr;
   for(xkey_ctr = 0; xkey_ctr < 44 ; ++xkey_ctr)
     printf("  xkey[%d] = 0x%08"PRIx32"UL\n", xkey_ctr ,xkey[xkey_ctr]);
-  
+
   SWord32 pt[4];
-  
+
   aes128BlockDecrypt(ct, xkey, pt);
-  
+
   printf("aes128BlockDecrypt(ct, xkey, pt) ->\n");
   int pt_ctr;
   for(pt_ctr = 0; pt_ctr < 4 ; ++pt_ctr)
@@ -3717,19 +3724,20 @@ int main(void)
   printf("** Driver run for aes128KeySchedule:\n");
   printf("====================================\n");
   aes128KeySchedule_driver();
-  
+
   printf("=====================================\n");
   printf("** Driver run for aes128BlockEncrypt:\n");
   printf("=====================================\n");
   aes128BlockEncrypt_driver();
-  
+
   printf("=====================================\n");
   printf("** Driver run for aes128BlockDecrypt:\n");
   printf("=====================================\n");
   aes128BlockDecrypt_driver();
-  
+
   return 0;
-}== END: "aes128Lib_driver.c" ==================
+}
+== END: "aes128Lib_driver.c" ==================
 == BEGIN: "Makefile" ================
 # Makefile for aes128Lib. Automatically generated by SBV. Do not edit!
 

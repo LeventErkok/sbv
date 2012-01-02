@@ -32,9 +32,12 @@ veryclean: clean
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
+
+/* The boolean type */
+typedef bool SBool;
 
 /* Unsigned bit-vectors */
-typedef uint8_t  SBool  ;
 typedef uint8_t  SWord8 ;
 typedef uint16_t SWord16;
 typedef uint32_t SWord32;
@@ -57,13 +60,14 @@ SWord64 fib1(const SWord64 n);
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include "fib1.h"
 
 int main(void)
 {
   const SWord64 __result = fib1(0x000000000000000cULL);
-  
+
   printf("fib1(0x000000000000000cULL) = 0x%016"PRIx64"ULL\n", __result);
 
   return 0;
@@ -74,6 +78,7 @@ int main(void)
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "fib1.h"
 
 SWord64 fib1(const SWord64 n)
@@ -207,7 +212,7 @@ SWord64 fib1(const SWord64 n)
   const SWord64 s244 = s6 ? 0x0000000000000001ULL : s243;
   const SWord64 s245 = s4 ? 0x0000000000000001ULL : s244;
   const SWord64 s246 = s2 ? 0x0000000000000000ULL : s245;
-  
+
   return s246;
 }
 == END: "fib1.c" ==================

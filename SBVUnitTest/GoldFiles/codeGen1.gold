@@ -32,9 +32,12 @@ veryclean: clean
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
+
+/* The boolean type */
+typedef bool SBool;
 
 /* Unsigned bit-vectors */
-typedef uint8_t  SBool  ;
 typedef uint8_t  SWord8 ;
 typedef uint16_t SWord16;
 typedef uint32_t SWord32;
@@ -58,6 +61,7 @@ SInt16 foo(const SInt16 x, const SInt64 *xArr, SWord16 *z,
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include "foo.h"
 
@@ -80,18 +84,18 @@ int main(void)
       0x0000000000000000LL, 0x0000000000000000LL, 0x0000000000000000LL,
       0x0000000000000000LL, 0x0000000000000000LL, 0x0000000000000000LL
   };
-  
+
   printf("Contents of input array xArr:\n");
   int xArr_ctr;
   for(xArr_ctr = 0; xArr_ctr < 45 ; ++xArr_ctr)
     printf("  xArr[%d] = %"PRId64"LL\n", xArr_ctr ,xArr[xArr_ctr]);
-  
+
   SWord16 z;
   SInt16 zArr[7];
   SInt64 yArr[45];
-  
+
   const SInt16 __result = foo(0x0000, xArr, &z, zArr, yArr);
-  
+
   printf("foo(0x0000, xArr, &z, zArr, yArr) = %"PRId16"\n", __result);
   printf("  z = 0x%04"PRIx16"U\n", z);
   int zArr_ctr;
@@ -109,6 +113,7 @@ int main(void)
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "foo.h"
 
 SInt16 foo(const SInt16 x, const SInt64 *xArr, SWord16 *z,
@@ -162,7 +167,7 @@ SInt16 foo(const SInt16 x, const SInt64 *xArr, SWord16 *z,
   const SInt64 s45 = xArr[44];
   const SInt16 s48 = s0 + 0x0001;
   const SInt16 s50 = s0 * 0x0002;
-  
+
   *z = 0x0005U;
   zArr[0] = s48;
   zArr[1] = s48;

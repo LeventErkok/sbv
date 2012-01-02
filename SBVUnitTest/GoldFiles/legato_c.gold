@@ -32,9 +32,12 @@ veryclean: clean
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
+
+/* The boolean type */
+typedef bool SBool;
 
 /* Unsigned bit-vectors */
-typedef uint8_t  SBool  ;
 typedef uint8_t  SWord8 ;
 typedef uint16_t SWord16;
 typedef uint32_t SWord32;
@@ -58,6 +61,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include "legatoMult.h"
 
@@ -65,9 +69,9 @@ int main(void)
 {
   SWord8 hi;
   SWord8 lo;
-  
+
   legatoMult(87, 92, &hi, &lo);
-  
+
   printf("legatoMult(87, 92, &hi, &lo) ->\n");
   printf("  hi = %"PRIu8"\n", hi);
   printf("  lo = %"PRIu8"\n", lo);
@@ -80,6 +84,7 @@ int main(void)
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "legatoMult.h"
 
 void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
@@ -89,22 +94,22 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s1 = y;
   const SWord8 s3 = s0 & 1;
   const SBool  s5 = s3 != 0;
-  const SBool  s6 = 0 == s5;
+  const SBool  s6 = false == s5;
   const SWord8 s7 = (s0 >> 1) | (s0 << 7);
   const SWord8 s9 = s7 & 127;
   const SWord8 s10 = 1 & s9;
   const SBool  s11 = 0 != s10;
-  const SBool  s12 = 0 == s11;
+  const SBool  s12 = false == s11;
   const SWord8 s13 = (s9 >> 1) | (s9 << 7);
   const SWord8 s14 = 127 & s13;
   const SWord8 s15 = 1 & s14;
   const SBool  s16 = 0 != s15;
-  const SBool  s17 = 0 == s16;
+  const SBool  s17 = false == s16;
   const SWord8 s18 = (s14 >> 1) | (s14 << 7);
   const SWord8 s19 = 127 & s18;
   const SWord8 s20 = 1 & s19;
   const SBool  s21 = 0 != s20;
-  const SBool  s22 = 0 == s21;
+  const SBool  s22 = false == s21;
   const SWord8 s24 = s5 ? 128 : 0;
   const SWord8 s25 = 1 & s24;
   const SBool  s26 = 0 != s25;
@@ -117,7 +122,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s33 = s29 ? s31 : s32;
   const SWord8 s34 = 1 & s33;
   const SBool  s35 = 0 != s34;
-  const SBool  s36 = 0 == s35;
+  const SBool  s36 = false == s35;
   const SWord8 s37 = (s24 >> 1) | (s24 << 7);
   const SWord8 s38 = 128 | s37;
   const SWord8 s39 = 127 & s37;
@@ -136,7 +141,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s52 = s48 ? s50 : s51;
   const SWord8 s53 = 1 & s52;
   const SBool  s54 = 0 != s53;
-  const SBool  s55 = 0 == s54;
+  const SBool  s55 = false == s54;
   const SWord8 s56 = (s40 >> 1) | (s40 << 7);
   const SWord8 s57 = 128 | s56;
   const SWord8 s58 = 127 & s56;
@@ -155,7 +160,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s71 = s67 ? s69 : s70;
   const SWord8 s72 = 1 & s71;
   const SBool  s73 = 0 != s72;
-  const SBool  s74 = 0 == s73;
+  const SBool  s74 = false == s73;
   const SWord8 s75 = (s59 >> 1) | (s59 << 7);
   const SWord8 s76 = 128 | s75;
   const SWord8 s77 = 127 & s75;
@@ -174,7 +179,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s90 = s86 ? s88 : s89;
   const SWord8 s91 = 1 & s90;
   const SBool  s92 = 0 != s91;
-  const SBool  s93 = 0 == s92;
+  const SBool  s93 = false == s92;
   const SWord8 s94 = (s78 >> 1) | (s78 << 7);
   const SWord8 s95 = 128 | s94;
   const SWord8 s96 = 127 & s94;
@@ -279,7 +284,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s195 = s194 ? s88 : s89;
   const SWord8 s196 = 1 & s195;
   const SBool  s197 = 0 != s196;
-  const SBool  s198 = 0 == s197;
+  const SBool  s198 = false == s197;
   const SBool  s199 = s189 < s1;
   const SBool  s200 = s189 < s78;
   const SBool  s201 = s199 | s200;
@@ -388,7 +393,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s304 = s303 ? s69 : s70;
   const SWord8 s305 = 1 & s304;
   const SBool  s306 = 0 != s305;
-  const SBool  s307 = 0 == s306;
+  const SBool  s307 = false == s306;
   const SBool  s308 = s298 < s1;
   const SBool  s309 = s298 < s59;
   const SBool  s310 = s308 | s309;
@@ -410,7 +415,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s326 = s322 ? s324 : s325;
   const SWord8 s327 = 1 & s326;
   const SBool  s328 = 0 != s327;
-  const SBool  s329 = 0 == s328;
+  const SBool  s329 = false == s328;
   const SWord8 s330 = (s314 >> 1) | (s314 << 7);
   const SWord8 s331 = 128 | s330;
   const SWord8 s332 = 127 & s330;
@@ -515,7 +520,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s431 = s430 ? s324 : s325;
   const SWord8 s432 = 1 & s431;
   const SBool  s433 = 0 != s432;
-  const SBool  s434 = 0 == s433;
+  const SBool  s434 = false == s433;
   const SBool  s435 = s425 < s1;
   const SBool  s436 = s425 < s314;
   const SBool  s437 = s435 | s436;
@@ -625,7 +630,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s541 = s540 ? s50 : s51;
   const SWord8 s542 = 1 & s541;
   const SBool  s543 = 0 != s542;
-  const SBool  s544 = 0 == s543;
+  const SBool  s544 = false == s543;
   const SBool  s545 = s535 < s1;
   const SBool  s546 = s535 < s40;
   const SBool  s547 = s545 | s546;
@@ -647,7 +652,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s563 = s559 ? s561 : s562;
   const SWord8 s564 = 1 & s563;
   const SBool  s565 = 0 != s564;
-  const SBool  s566 = 0 == s565;
+  const SBool  s566 = false == s565;
   const SWord8 s567 = (s551 >> 1) | (s551 << 7);
   const SWord8 s568 = 128 | s567;
   const SWord8 s569 = 127 & s567;
@@ -666,7 +671,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s582 = s578 ? s580 : s581;
   const SWord8 s583 = 1 & s582;
   const SBool  s584 = 0 != s583;
-  const SBool  s585 = 0 == s584;
+  const SBool  s585 = false == s584;
   const SWord8 s586 = (s570 >> 1) | (s570 << 7);
   const SWord8 s587 = 128 | s586;
   const SWord8 s588 = 127 & s586;
@@ -771,7 +776,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s687 = s686 ? s580 : s581;
   const SWord8 s688 = 1 & s687;
   const SBool  s689 = 0 != s688;
-  const SBool  s690 = 0 == s689;
+  const SBool  s690 = false == s689;
   const SBool  s691 = s681 < s1;
   const SBool  s692 = s681 < s570;
   const SBool  s693 = s691 | s692;
@@ -880,7 +885,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s796 = s795 ? s561 : s562;
   const SWord8 s797 = 1 & s796;
   const SBool  s798 = 0 != s797;
-  const SBool  s799 = 0 == s798;
+  const SBool  s799 = false == s798;
   const SBool  s800 = s790 < s1;
   const SBool  s801 = s790 < s551;
   const SBool  s802 = s800 | s801;
@@ -902,7 +907,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s818 = s814 ? s816 : s817;
   const SWord8 s819 = 1 & s818;
   const SBool  s820 = 0 != s819;
-  const SBool  s821 = 0 == s820;
+  const SBool  s821 = false == s820;
   const SWord8 s822 = (s806 >> 1) | (s806 << 7);
   const SWord8 s823 = 128 | s822;
   const SWord8 s824 = 127 & s822;
@@ -1007,7 +1012,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s923 = s922 ? s816 : s817;
   const SWord8 s924 = 1 & s923;
   const SBool  s925 = 0 != s924;
-  const SBool  s926 = 0 == s925;
+  const SBool  s926 = false == s925;
   const SBool  s927 = s917 < s1;
   const SBool  s928 = s917 < s806;
   const SBool  s929 = s927 | s928;
@@ -1118,7 +1123,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s1034 = s1033 ? s31 : s32;
   const SWord8 s1035 = 1 & s1034;
   const SBool  s1036 = 0 != s1035;
-  const SBool  s1037 = 0 == s1036;
+  const SBool  s1037 = false == s1036;
   const SBool  s1038 = s1028 < s1;
   const SBool  s1039 = s1028 < s24;
   const SBool  s1040 = s1038 | s1039;
@@ -1140,7 +1145,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s1056 = s1052 ? s1054 : s1055;
   const SWord8 s1057 = 1 & s1056;
   const SBool  s1058 = 0 != s1057;
-  const SBool  s1059 = 0 == s1058;
+  const SBool  s1059 = false == s1058;
   const SWord8 s1060 = (s1044 >> 1) | (s1044 << 7);
   const SWord8 s1061 = 128 | s1060;
   const SWord8 s1062 = 127 & s1060;
@@ -1159,7 +1164,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s1075 = s1071 ? s1073 : s1074;
   const SWord8 s1076 = 1 & s1075;
   const SBool  s1077 = 0 != s1076;
-  const SBool  s1078 = 0 == s1077;
+  const SBool  s1078 = false == s1077;
   const SWord8 s1079 = (s1063 >> 1) | (s1063 << 7);
   const SWord8 s1080 = 128 | s1079;
   const SWord8 s1081 = 127 & s1079;
@@ -1178,7 +1183,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s1094 = s1090 ? s1092 : s1093;
   const SWord8 s1095 = 1 & s1094;
   const SBool  s1096 = 0 != s1095;
-  const SBool  s1097 = 0 == s1096;
+  const SBool  s1097 = false == s1096;
   const SWord8 s1098 = (s1082 >> 1) | (s1082 << 7);
   const SWord8 s1099 = 128 | s1098;
   const SWord8 s1100 = 127 & s1098;
@@ -1283,7 +1288,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s1199 = s1198 ? s1092 : s1093;
   const SWord8 s1200 = 1 & s1199;
   const SBool  s1201 = 0 != s1200;
-  const SBool  s1202 = 0 == s1201;
+  const SBool  s1202 = false == s1201;
   const SBool  s1203 = s1193 < s1;
   const SBool  s1204 = s1193 < s1082;
   const SBool  s1205 = s1203 | s1204;
@@ -1392,7 +1397,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s1308 = s1307 ? s1073 : s1074;
   const SWord8 s1309 = 1 & s1308;
   const SBool  s1310 = 0 != s1309;
-  const SBool  s1311 = 0 == s1310;
+  const SBool  s1311 = false == s1310;
   const SBool  s1312 = s1302 < s1;
   const SBool  s1313 = s1302 < s1063;
   const SBool  s1314 = s1312 | s1313;
@@ -1414,7 +1419,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s1330 = s1326 ? s1328 : s1329;
   const SWord8 s1331 = 1 & s1330;
   const SBool  s1332 = 0 != s1331;
-  const SBool  s1333 = 0 == s1332;
+  const SBool  s1333 = false == s1332;
   const SWord8 s1334 = (s1318 >> 1) | (s1318 << 7);
   const SWord8 s1335 = 128 | s1334;
   const SWord8 s1336 = 127 & s1334;
@@ -1519,7 +1524,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s1435 = s1434 ? s1328 : s1329;
   const SWord8 s1436 = 1 & s1435;
   const SBool  s1437 = 0 != s1436;
-  const SBool  s1438 = 0 == s1437;
+  const SBool  s1438 = false == s1437;
   const SBool  s1439 = s1429 < s1;
   const SBool  s1440 = s1429 < s1318;
   const SBool  s1441 = s1439 | s1440;
@@ -1629,7 +1634,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s1545 = s1544 ? s1054 : s1055;
   const SWord8 s1546 = 1 & s1545;
   const SBool  s1547 = 0 != s1546;
-  const SBool  s1548 = 0 == s1547;
+  const SBool  s1548 = false == s1547;
   const SBool  s1549 = s1539 < s1;
   const SBool  s1550 = s1539 < s1044;
   const SBool  s1551 = s1549 | s1550;
@@ -1651,7 +1656,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s1567 = s1563 ? s1565 : s1566;
   const SWord8 s1568 = 1 & s1567;
   const SBool  s1569 = 0 != s1568;
-  const SBool  s1570 = 0 == s1569;
+  const SBool  s1570 = false == s1569;
   const SWord8 s1571 = (s1555 >> 1) | (s1555 << 7);
   const SWord8 s1572 = 128 | s1571;
   const SWord8 s1573 = 127 & s1571;
@@ -1670,7 +1675,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s1586 = s1582 ? s1584 : s1585;
   const SWord8 s1587 = 1 & s1586;
   const SBool  s1588 = 0 != s1587;
-  const SBool  s1589 = 0 == s1588;
+  const SBool  s1589 = false == s1588;
   const SWord8 s1590 = (s1574 >> 1) | (s1574 << 7);
   const SWord8 s1591 = 128 | s1590;
   const SWord8 s1592 = 127 & s1590;
@@ -1775,7 +1780,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s1691 = s1690 ? s1584 : s1585;
   const SWord8 s1692 = 1 & s1691;
   const SBool  s1693 = 0 != s1692;
-  const SBool  s1694 = 0 == s1693;
+  const SBool  s1694 = false == s1693;
   const SBool  s1695 = s1685 < s1;
   const SBool  s1696 = s1685 < s1574;
   const SBool  s1697 = s1695 | s1696;
@@ -1884,7 +1889,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s1800 = s1799 ? s1565 : s1566;
   const SWord8 s1801 = 1 & s1800;
   const SBool  s1802 = 0 != s1801;
-  const SBool  s1803 = 0 == s1802;
+  const SBool  s1803 = false == s1802;
   const SBool  s1804 = s1794 < s1;
   const SBool  s1805 = s1794 < s1555;
   const SBool  s1806 = s1804 | s1805;
@@ -1906,7 +1911,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s1822 = s1818 ? s1820 : s1821;
   const SWord8 s1823 = 1 & s1822;
   const SBool  s1824 = 0 != s1823;
-  const SBool  s1825 = 0 == s1824;
+  const SBool  s1825 = false == s1824;
   const SWord8 s1826 = (s1810 >> 1) | (s1810 << 7);
   const SWord8 s1827 = 128 | s1826;
   const SWord8 s1828 = 127 & s1826;
@@ -2011,7 +2016,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s1927 = s1926 ? s1820 : s1821;
   const SWord8 s1928 = 1 & s1927;
   const SBool  s1929 = 0 != s1928;
-  const SBool  s1930 = 0 == s1929;
+  const SBool  s1930 = false == s1929;
   const SBool  s1931 = s1921 < s1;
   const SBool  s1932 = s1921 < s1810;
   const SBool  s1933 = s1931 | s1932;
@@ -2123,7 +2128,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s2039 = s2037 ? s2038 : s19;
   const SWord8 s2040 = 1 & s2039;
   const SBool  s2041 = 0 != s2040;
-  const SBool  s2042 = 0 == s2041;
+  const SBool  s2042 = false == s2041;
   const SWord8 s2043 = (s1 >> 1) | (s1 << 7);
   const SWord8 s2044 = 127 & s2043;
   const SWord8 s2045 = 1 & s2044;
@@ -2140,7 +2145,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s2056 = s2052 ? s2054 : s2055;
   const SWord8 s2057 = 1 & s2056;
   const SBool  s2058 = 0 != s2057;
-  const SBool  s2059 = 0 == s2058;
+  const SBool  s2059 = false == s2058;
   const SWord8 s2060 = (s2044 >> 1) | (s2044 << 7);
   const SWord8 s2061 = 128 | s2060;
   const SWord8 s2062 = 127 & s2060;
@@ -2159,7 +2164,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s2075 = s2071 ? s2073 : s2074;
   const SWord8 s2076 = 1 & s2075;
   const SBool  s2077 = 0 != s2076;
-  const SBool  s2078 = 0 == s2077;
+  const SBool  s2078 = false == s2077;
   const SWord8 s2079 = (s2063 >> 1) | (s2063 << 7);
   const SWord8 s2080 = 128 | s2079;
   const SWord8 s2081 = 127 & s2079;
@@ -2178,7 +2183,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s2094 = s2090 ? s2092 : s2093;
   const SWord8 s2095 = 1 & s2094;
   const SBool  s2096 = 0 != s2095;
-  const SBool  s2097 = 0 == s2096;
+  const SBool  s2097 = false == s2096;
   const SWord8 s2098 = (s2082 >> 1) | (s2082 << 7);
   const SWord8 s2099 = 128 | s2098;
   const SWord8 s2100 = 127 & s2098;
@@ -2197,7 +2202,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s2113 = s2109 ? s2111 : s2112;
   const SWord8 s2114 = 1 & s2113;
   const SBool  s2115 = 0 != s2114;
-  const SBool  s2116 = 0 == s2115;
+  const SBool  s2116 = false == s2115;
   const SWord8 s2117 = (s2101 >> 1) | (s2101 << 7);
   const SWord8 s2118 = 128 | s2117;
   const SWord8 s2119 = 127 & s2117;
@@ -2302,7 +2307,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s2218 = s2217 ? s2111 : s2112;
   const SWord8 s2219 = 1 & s2218;
   const SBool  s2220 = 0 != s2219;
-  const SBool  s2221 = 0 == s2220;
+  const SBool  s2221 = false == s2220;
   const SBool  s2222 = s2212 < s1;
   const SBool  s2223 = s2212 < s2101;
   const SBool  s2224 = s2222 | s2223;
@@ -2411,7 +2416,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s2327 = s2326 ? s2092 : s2093;
   const SWord8 s2328 = 1 & s2327;
   const SBool  s2329 = 0 != s2328;
-  const SBool  s2330 = 0 == s2329;
+  const SBool  s2330 = false == s2329;
   const SBool  s2331 = s2321 < s1;
   const SBool  s2332 = s2321 < s2082;
   const SBool  s2333 = s2331 | s2332;
@@ -2433,7 +2438,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s2349 = s2345 ? s2347 : s2348;
   const SWord8 s2350 = 1 & s2349;
   const SBool  s2351 = 0 != s2350;
-  const SBool  s2352 = 0 == s2351;
+  const SBool  s2352 = false == s2351;
   const SWord8 s2353 = (s2337 >> 1) | (s2337 << 7);
   const SWord8 s2354 = 128 | s2353;
   const SWord8 s2355 = 127 & s2353;
@@ -2538,7 +2543,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s2454 = s2453 ? s2347 : s2348;
   const SWord8 s2455 = 1 & s2454;
   const SBool  s2456 = 0 != s2455;
-  const SBool  s2457 = 0 == s2456;
+  const SBool  s2457 = false == s2456;
   const SBool  s2458 = s2448 < s1;
   const SBool  s2459 = s2448 < s2337;
   const SBool  s2460 = s2458 | s2459;
@@ -2648,7 +2653,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s2564 = s2563 ? s2073 : s2074;
   const SWord8 s2565 = 1 & s2564;
   const SBool  s2566 = 0 != s2565;
-  const SBool  s2567 = 0 == s2566;
+  const SBool  s2567 = false == s2566;
   const SBool  s2568 = s2558 < s1;
   const SBool  s2569 = s2558 < s2063;
   const SBool  s2570 = s2568 | s2569;
@@ -2670,7 +2675,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s2586 = s2582 ? s2584 : s2585;
   const SWord8 s2587 = 1 & s2586;
   const SBool  s2588 = 0 != s2587;
-  const SBool  s2589 = 0 == s2588;
+  const SBool  s2589 = false == s2588;
   const SWord8 s2590 = (s2574 >> 1) | (s2574 << 7);
   const SWord8 s2591 = 128 | s2590;
   const SWord8 s2592 = 127 & s2590;
@@ -2689,7 +2694,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s2605 = s2601 ? s2603 : s2604;
   const SWord8 s2606 = 1 & s2605;
   const SBool  s2607 = 0 != s2606;
-  const SBool  s2608 = 0 == s2607;
+  const SBool  s2608 = false == s2607;
   const SWord8 s2609 = (s2593 >> 1) | (s2593 << 7);
   const SWord8 s2610 = 128 | s2609;
   const SWord8 s2611 = 127 & s2609;
@@ -2794,7 +2799,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s2710 = s2709 ? s2603 : s2604;
   const SWord8 s2711 = 1 & s2710;
   const SBool  s2712 = 0 != s2711;
-  const SBool  s2713 = 0 == s2712;
+  const SBool  s2713 = false == s2712;
   const SBool  s2714 = s2704 < s1;
   const SBool  s2715 = s2704 < s2593;
   const SBool  s2716 = s2714 | s2715;
@@ -2903,7 +2908,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s2819 = s2818 ? s2584 : s2585;
   const SWord8 s2820 = 1 & s2819;
   const SBool  s2821 = 0 != s2820;
-  const SBool  s2822 = 0 == s2821;
+  const SBool  s2822 = false == s2821;
   const SBool  s2823 = s2813 < s1;
   const SBool  s2824 = s2813 < s2574;
   const SBool  s2825 = s2823 | s2824;
@@ -2925,7 +2930,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s2841 = s2837 ? s2839 : s2840;
   const SWord8 s2842 = 1 & s2841;
   const SBool  s2843 = 0 != s2842;
-  const SBool  s2844 = 0 == s2843;
+  const SBool  s2844 = false == s2843;
   const SWord8 s2845 = (s2829 >> 1) | (s2829 << 7);
   const SWord8 s2846 = 128 | s2845;
   const SWord8 s2847 = 127 & s2845;
@@ -3030,7 +3035,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s2946 = s2945 ? s2839 : s2840;
   const SWord8 s2947 = 1 & s2946;
   const SBool  s2948 = 0 != s2947;
-  const SBool  s2949 = 0 == s2948;
+  const SBool  s2949 = false == s2948;
   const SBool  s2950 = s2940 < s1;
   const SBool  s2951 = s2940 < s2829;
   const SBool  s2952 = s2950 | s2951;
@@ -3141,7 +3146,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s3057 = s3056 ? s2054 : s2055;
   const SWord8 s3058 = 1 & s3057;
   const SBool  s3059 = 0 != s3058;
-  const SBool  s3060 = 0 == s3059;
+  const SBool  s3060 = false == s3059;
   const SBool  s3061 = s3051 < s1;
   const SBool  s3062 = s3051 < s2044;
   const SBool  s3063 = s3061 | s3062;
@@ -3163,7 +3168,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s3079 = s3075 ? s3077 : s3078;
   const SWord8 s3080 = 1 & s3079;
   const SBool  s3081 = 0 != s3080;
-  const SBool  s3082 = 0 == s3081;
+  const SBool  s3082 = false == s3081;
   const SWord8 s3083 = (s3067 >> 1) | (s3067 << 7);
   const SWord8 s3084 = 128 | s3083;
   const SWord8 s3085 = 127 & s3083;
@@ -3182,7 +3187,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s3098 = s3094 ? s3096 : s3097;
   const SWord8 s3099 = 1 & s3098;
   const SBool  s3100 = 0 != s3099;
-  const SBool  s3101 = 0 == s3100;
+  const SBool  s3101 = false == s3100;
   const SWord8 s3102 = (s3086 >> 1) | (s3086 << 7);
   const SWord8 s3103 = 128 | s3102;
   const SWord8 s3104 = 127 & s3102;
@@ -3201,7 +3206,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s3117 = s3113 ? s3115 : s3116;
   const SWord8 s3118 = 1 & s3117;
   const SBool  s3119 = 0 != s3118;
-  const SBool  s3120 = 0 == s3119;
+  const SBool  s3120 = false == s3119;
   const SWord8 s3121 = (s3105 >> 1) | (s3105 << 7);
   const SWord8 s3122 = 128 | s3121;
   const SWord8 s3123 = 127 & s3121;
@@ -3306,7 +3311,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s3222 = s3221 ? s3115 : s3116;
   const SWord8 s3223 = 1 & s3222;
   const SBool  s3224 = 0 != s3223;
-  const SBool  s3225 = 0 == s3224;
+  const SBool  s3225 = false == s3224;
   const SBool  s3226 = s3216 < s1;
   const SBool  s3227 = s3216 < s3105;
   const SBool  s3228 = s3226 | s3227;
@@ -3415,7 +3420,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s3331 = s3330 ? s3096 : s3097;
   const SWord8 s3332 = 1 & s3331;
   const SBool  s3333 = 0 != s3332;
-  const SBool  s3334 = 0 == s3333;
+  const SBool  s3334 = false == s3333;
   const SBool  s3335 = s3325 < s1;
   const SBool  s3336 = s3325 < s3086;
   const SBool  s3337 = s3335 | s3336;
@@ -3437,7 +3442,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s3353 = s3349 ? s3351 : s3352;
   const SWord8 s3354 = 1 & s3353;
   const SBool  s3355 = 0 != s3354;
-  const SBool  s3356 = 0 == s3355;
+  const SBool  s3356 = false == s3355;
   const SWord8 s3357 = (s3341 >> 1) | (s3341 << 7);
   const SWord8 s3358 = 128 | s3357;
   const SWord8 s3359 = 127 & s3357;
@@ -3542,7 +3547,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s3458 = s3457 ? s3351 : s3352;
   const SWord8 s3459 = 1 & s3458;
   const SBool  s3460 = 0 != s3459;
-  const SBool  s3461 = 0 == s3460;
+  const SBool  s3461 = false == s3460;
   const SBool  s3462 = s3452 < s1;
   const SBool  s3463 = s3452 < s3341;
   const SBool  s3464 = s3462 | s3463;
@@ -3652,7 +3657,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s3568 = s3567 ? s3077 : s3078;
   const SWord8 s3569 = 1 & s3568;
   const SBool  s3570 = 0 != s3569;
-  const SBool  s3571 = 0 == s3570;
+  const SBool  s3571 = false == s3570;
   const SBool  s3572 = s3562 < s1;
   const SBool  s3573 = s3562 < s3067;
   const SBool  s3574 = s3572 | s3573;
@@ -3674,7 +3679,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s3590 = s3586 ? s3588 : s3589;
   const SWord8 s3591 = 1 & s3590;
   const SBool  s3592 = 0 != s3591;
-  const SBool  s3593 = 0 == s3592;
+  const SBool  s3593 = false == s3592;
   const SWord8 s3594 = (s3578 >> 1) | (s3578 << 7);
   const SWord8 s3595 = 128 | s3594;
   const SWord8 s3596 = 127 & s3594;
@@ -3693,7 +3698,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s3609 = s3605 ? s3607 : s3608;
   const SWord8 s3610 = 1 & s3609;
   const SBool  s3611 = 0 != s3610;
-  const SBool  s3612 = 0 == s3611;
+  const SBool  s3612 = false == s3611;
   const SWord8 s3613 = (s3597 >> 1) | (s3597 << 7);
   const SWord8 s3614 = 128 | s3613;
   const SWord8 s3615 = 127 & s3613;
@@ -3798,7 +3803,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s3714 = s3713 ? s3607 : s3608;
   const SWord8 s3715 = 1 & s3714;
   const SBool  s3716 = 0 != s3715;
-  const SBool  s3717 = 0 == s3716;
+  const SBool  s3717 = false == s3716;
   const SBool  s3718 = s3708 < s1;
   const SBool  s3719 = s3708 < s3597;
   const SBool  s3720 = s3718 | s3719;
@@ -3907,7 +3912,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s3823 = s3822 ? s3588 : s3589;
   const SWord8 s3824 = 1 & s3823;
   const SBool  s3825 = 0 != s3824;
-  const SBool  s3826 = 0 == s3825;
+  const SBool  s3826 = false == s3825;
   const SBool  s3827 = s3817 < s1;
   const SBool  s3828 = s3817 < s3578;
   const SBool  s3829 = s3827 | s3828;
@@ -3929,7 +3934,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s3845 = s3841 ? s3843 : s3844;
   const SWord8 s3846 = 1 & s3845;
   const SBool  s3847 = 0 != s3846;
-  const SBool  s3848 = 0 == s3847;
+  const SBool  s3848 = false == s3847;
   const SWord8 s3849 = (s3833 >> 1) | (s3833 << 7);
   const SWord8 s3850 = 128 | s3849;
   const SWord8 s3851 = 127 & s3849;
@@ -4034,7 +4039,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s3950 = s3949 ? s3843 : s3844;
   const SWord8 s3951 = 1 & s3950;
   const SBool  s3952 = 0 != s3951;
-  const SBool  s3953 = 0 == s3952;
+  const SBool  s3953 = false == s3952;
   const SBool  s3954 = s3944 < s1;
   const SBool  s3955 = s3944 < s3833;
   const SBool  s3956 = s3954 | s3955;
@@ -6409,7 +6414,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s6325 = s17 ? s6041 : s6324;
   const SWord8 s6326 = s12 ? s5758 : s6325;
   const SWord8 s6327 = s6 ? s5191 : s6326;
-  
+
   *hi = s4056;
   *lo = s6327;
 }

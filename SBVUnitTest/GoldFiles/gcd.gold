@@ -32,9 +32,12 @@ veryclean: clean
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
+
+/* The boolean type */
+typedef bool SBool;
 
 /* Unsigned bit-vectors */
-typedef uint8_t  SBool  ;
 typedef uint8_t  SWord8 ;
 typedef uint16_t SWord16;
 typedef uint32_t SWord32;
@@ -57,13 +60,14 @@ SWord8 sgcd(const SWord8 x, const SWord8 y);
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include "sgcd.h"
 
 int main(void)
 {
   const SWord8 __result = sgcd(55, 154);
-  
+
   printf("sgcd(55, 154) = %"PRIu8"\n", __result);
 
   return 0;
@@ -74,6 +78,7 @@ int main(void)
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "sgcd.h"
 
 SWord8 sgcd(const SWord8 x, const SWord8 y)
@@ -126,7 +131,7 @@ SWord8 sgcd(const SWord8 x, const SWord8 y)
   const SWord8 s46 = s9 ? s5 : s45;
   const SWord8 s47 = s6 ? s1 : s46;
   const SWord8 s48 = s3 ? s0 : s47;
-  
+
   return s48;
 }
 == END: "sgcd.c" ==================
