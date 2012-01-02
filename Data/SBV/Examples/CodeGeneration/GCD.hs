@@ -81,6 +81,7 @@ and generate C code for it.
 -- > 
 -- > #include <inttypes.h>
 -- > #include <stdint.h>
+-- > #include <stdbool.h>
 -- > #include "sgcd.h"
 -- > 
 -- > SWord8 sgcd(const SWord8 x, const SWord8 y)
