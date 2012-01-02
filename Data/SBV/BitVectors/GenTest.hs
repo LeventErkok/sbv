@@ -97,6 +97,10 @@ c n vs = intercalate "\n" $
               , "#include <stdio.h>"
               , "#include <inttypes.h>"
               , "#include <stdint.h>"
+              , "#include <stdbool.h>"
+              , ""
+              , "/* The boolean type */"
+              , "typedef bool SBool;"
               , ""
               , "/* Unsigned bit-vectors */"
               , "typedef uint8_t  SWord8 ;"
@@ -109,12 +113,6 @@ c n vs = intercalate "\n" $
               , "typedef int16_t SInt16;"
               , "typedef int32_t SInt32;"
               , "typedef int64_t SInt64;"
-              , ""
-              , "#ifdef bool"
-              , "typedef bool SBool;"
-              , "#else"
-              , "typedef uint8_t SBool;"
-              , "#endif"
               , ""
               , "typedef struct {"
               , "  struct {"
@@ -138,7 +136,7 @@ c n vs = intercalate "\n" $
               , "int main(void)"
               , "{"
               , "  int i;"
-              , "  for(i = 0; i < fooLength; ++i)"
+              , "  for(i = 0; i < " ++ n ++ "Length; ++i)"
               , "  {"
               , "    " ++ outLine
               , "  }"
@@ -161,7 +159,7 @@ c n vs = intercalate "\n" $
                         _                       -> error $ "SBV.renderTest: Unexpected CW: " ++ show cw
         mkLine (is, os) = "{{" ++ intercalate ", " (map v is) ++ "}, {" ++ intercalate ", " (map v os) ++ "}}"
         v cw = case (cwSigned cw, cwSize cw) of
-                  (False, Size (Just 1)) -> if cwToBool cw then "0x1" else "0x0"
+                  (False, Size (Just 1)) -> if cwToBool cw then "true " else "false"
                   (sgn, Size (Just sz))  -> shex  False True (sgn, sz) (cwVal cw)
                   (_,   Size Nothing)    -> shexI False True           (cwVal cw)
         outLine
@@ -170,11 +168,14 @@ c n vs = intercalate "\n" $
                     ++ concatMap ("\n           , " ++ ) (zipWith inp is [(0::Int)..] ++ zipWith out os [(0::Int)..])
                     ++ ");"
           where (is, os) = head vs
-                inp _ i = n ++ "[i].input.i"  ++ show i
-                out _ i = n ++ "[i].output.o" ++ show i
+                inp cw i = mkBool cw (n ++ "[i].input.i"  ++ show i)
+                out cw i = mkBool cw (n ++ "[i].output.o" ++ show i)
+                mkBool cw s = case (cwSigned cw, cwSize cw) of
+                                (False, Size (Just 1)) -> "(" ++ s ++ " == true) ? \"true \" : \"false\""
+                                _                      -> s
                 fmtString = unwords (map fmt is) ++ " -> " ++ unwords (map fmt os)
         fmt cw = case (cwSigned cw, cwSize cw) of
-                    (False, Size (Just  1)) -> "%d"
+                    (False, Size (Just  1)) -> "%s"
                     (False, Size (Just  8)) -> "0x%02\"PRIx8\""
                     (False, Size (Just 16)) -> "0x%04\"PRIx16\"U"
                     (False, Size (Just 32)) -> "0x%08\"PRIx32\"UL"
