@@ -466,7 +466,7 @@ ppExpr mbISize rtc consts (SBVApp op opArgs) = p op (map (showSW mbISize consts)
         p Not [a]
           -- be careful about booleans, bitwise complement is not correct for them!
           | s == 1
-          = parens (text "!" <> a)
+          = text "!" <> a
           | True
           = text "~" <> a
           where s = cSizeOf mbISize (head opArgs)
