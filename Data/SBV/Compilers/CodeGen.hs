@@ -17,11 +17,12 @@ module Data.SBV.Compilers.CodeGen where
 
 import Control.Monad.Trans
 import Control.Monad.State.Lazy
-import Data.Char (toLower)
-import Data.List (nub, isPrefixOf, intercalate, (\\))
-import System.Directory (createDirectory, doesDirectoryExist, doesFileExist)
-import System.FilePath ((</>))
-import Text.PrettyPrint.HughesPJ (Doc, render, vcat)
+import Data.Char                 (toLower, isSpace)
+import Data.List                 (nub, isPrefixOf, intercalate, (\\))
+import System.Directory          (createDirectory, doesDirectoryExist, doesFileExist)
+import System.FilePath           ((</>))
+import Text.PrettyPrint.HughesPJ (Doc, vcat)
+import qualified Text.PrettyPrint.HughesPJ as P (render)
 
 import Data.SBV.BitVectors.Data
 
@@ -185,7 +186,7 @@ instance Show CgPgmBundle where
 
 showFile :: (FilePath, (CgPgmKind, [Doc])) -> String
 showFile (f, (_, ds)) =  "== BEGIN: " ++ show f ++ " ================\n"
-                      ++ render (vcat ds)
+                      ++ render' (vcat ds)
                       ++ "== END: " ++ show f ++ " =================="
 
 codeGen :: CgTarget l => l -> CgConfig -> String -> SBVCodeGen () -> IO CgPgmBundle
@@ -219,4 +220,10 @@ renderCgPgmBundle (Just dirName) (CgPgmBundle files) = do
                 else putStrLn "Aborting."
   where renderFile (f, (_, ds)) = do let fn = dirName </> f
                                      putStrLn $ "Generating: " ++ show fn ++ ".."
-                                     writeFile fn (render (vcat ds))
+                                     writeFile fn (render' (vcat ds))
+
+-- Pretty's render might have "leading" white-space in empty lines, eliminate:
+render' :: Doc -> String
+render' = unlines . map clean . lines . P.render
+  where clean x | all isSpace x = ""
+                | True          = x

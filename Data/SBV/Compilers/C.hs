@@ -19,9 +19,9 @@ import Data.Char                     (isSpace)
 import Data.List                     (nub)
 import Data.Maybe                    (isJust, fromMaybe, isNothing)
 import qualified Data.Foldable as F  (toList)
-import Text.PrettyPrint.HughesPJ
 import System.FilePath               (takeBaseName, replaceExtension)
 import System.Random
+import Text.PrettyPrint.HughesPJ
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.PrettyNum (shex)
@@ -153,12 +153,12 @@ declSW mbISize w sw@(SW (sg, _) _) = text "const" <+> pad (showCType (sg, cSizeO
 -- | Renders as "s0", etc, or the corresponding constant
 showSW :: Maybe Int -> [(SW, CW)] -> SW -> Doc
 showSW mbISize consts sw
-  | sw == falseSW                 = text "0"
-  | sw == trueSW                  = text "1"
+  | sw == falseSW                 = text "false"
+  | sw == trueSW                  = text "true"
   | Just cw <- sw `lookup` consts = showConst mbISize cw
   | True                          = text $ show sw
 
--- | Words as it would be defined in the standard header stdint.h
+-- | Words as it would map to a C word
 pprCWord :: Bool -> (Bool, Int) -> Doc
 pprCWord cnst sgsz = (if cnst then text "const" else empty) <+> text (showCType sgsz)
 
@@ -188,7 +188,7 @@ specifier (s, sz)     = die $ "Format specifier at type " ++ (if s then "SInt" e
 --   Note that this automatically takes care of the boolean (1-bit) value problem, since it
 --   shows the result as an integer, which is OK as far as C is concerned.
 mkConst :: Integer -> (Bool, Int) -> Doc
-mkConst i   (False,  1) = integer i
+mkConst i   (False,  1) = text (if i == 0 then "false" else "true")
 mkConst i   (False,  8) = integer i
 mkConst i   (True,   8) = integer i
 mkConst i t@(False, 16) = text (shex False True t i) <> text "U"
@@ -255,9 +255,12 @@ genHeader fn sigs protos =
   $$ text ""
   $$ text "#include <inttypes.h>"
   $$ text "#include <stdint.h>"
+  $$ text "#include <stdbool.h>"
+  $$ text ""
+  $$ text "/* The boolean type */"
+  $$ text "typedef bool SBool;"
   $$ text ""
   $$ text "/* Unsigned bit-vectors */"
-  $$ text "typedef uint8_t  SBool  ;"
   $$ text "typedef uint8_t  SWord8 ;"
   $$ text "typedef uint16_t SWord16;"
   $$ text "typedef uint32_t SWord32;"
@@ -290,6 +293,7 @@ genDriver mbISize randVals fn inps outs mbRet = [pre, header, body, post]
               $$ text ""
               $$ text "#include <inttypes.h>"
               $$ text "#include <stdint.h>"
+              $$ text "#include <stdbool.h>"
               $$ text "#include <stdio.h>"
        header =  text "#include" <+> doubleQuotes (nm <> text ".h")
               $$ text ""
@@ -380,6 +384,7 @@ genCProg rtc mbISize fn proto (Result hasInfPrec _ cgs ins preConsts tbls arrs _
               $$ text ""
               $$ text "#include <inttypes.h>"
               $$ text "#include <stdint.h>"
+              $$ text "#include <stdbool.h>"
        header = text "#include" <+> doubleQuotes (nm <> text ".h")
        post   = text ""
              $$ vcat (map codeSeg cgs)
@@ -461,7 +466,7 @@ ppExpr mbISize rtc consts (SBVApp op opArgs) = p op (map (showSW mbISize consts)
         p Not [a]
           -- be careful about booleans, bitwise complement is not correct for them!
           | s == 1
-          = parens (text "~" <> a) <+> text "&" <+> text "0x01U"
+          = parens (text "!" <> a)
           | True
           = text "~" <> a
           where s = cSizeOf mbISize (head opArgs)
@@ -620,6 +625,7 @@ mergeDrivers libName inc ds = pre : concatMap mkDFun ds ++ [callDrivers (map fst
             $$ text ""
             $$ text "#include <inttypes.h>"
             $$ text "#include <stdint.h>"
+            $$ text "#include <stdbool.h>"
             $$ text "#include <stdio.h>"
             $$ inc
         mkDFun (f, [_pre, _header, body, _post]) = [header, body, post]
