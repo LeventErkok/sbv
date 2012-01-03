@@ -9,8 +9,7 @@ Version 0.9.25, Not yet released
   * Better handling of the pConstrain probability threshold for test
     case generation and quickCheck purposes.
   * Add 'renderTest', which accompanies 'genTest' to render test
-    vectors as Haskell values that can be incorporated in other
-    Haskell programs.
+    vectors as Haskell/C/Forte program segments.
 
 ======================================================================
 Version 0.9.24, 2011-12-28
