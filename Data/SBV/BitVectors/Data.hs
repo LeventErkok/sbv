@@ -578,6 +578,9 @@ instance Outputtable (SBV a) where
 instance Outputtable a => Outputtable [a] where
   output = mapM output
 
+instance Outputtable () where
+  output = return
+
 instance (Outputtable a, Outputtable b) => Outputtable (a, b) where
   output = mlift2 (,) output output
 

@@ -167,7 +167,7 @@ module Data.SBV (
   , minimizeWith, maximizeWith, optimizeWith
 
   -- * Computing expected values
-  , expectedValue
+  , expectedValue, expectedValueWith
 
   -- * Model extraction
   -- $modelExtraction
