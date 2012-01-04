@@ -166,6 +166,9 @@ module Data.SBV (
   , minimize, maximize, optimize
   , minimizeWith, maximizeWith, optimizeWith
 
+  -- * Computing expected values
+  , expectedValue
+
   -- * Model extraction
   -- $modelExtraction
 
@@ -220,17 +223,18 @@ module Data.SBV (
   ) where
 
 import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.GenTest
 import Data.SBV.BitVectors.Model
-import Data.SBV.BitVectors.Optimize
 import Data.SBV.BitVectors.PrettyNum
-import Data.SBV.BitVectors.Polynomial
 import Data.SBV.BitVectors.SignCast
 import Data.SBV.BitVectors.Splittable
 import Data.SBV.BitVectors.STree
 import Data.SBV.Compilers.C
 import Data.SBV.Compilers.CodeGen
 import Data.SBV.Provers.Prover
+import Data.SBV.Tools.GenTest
+import Data.SBV.Tools.ExpectedValue
+import Data.SBV.Tools.Optimize
+import Data.SBV.Tools.Polynomial
 import Data.SBV.Utils.Boolean
 import Data.Bits
 import Data.Word

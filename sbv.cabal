@@ -127,10 +127,7 @@ Library
                   , Data.SBV.Examples.Uninterpreted.AUF
                   , Data.SBV.Examples.Uninterpreted.Function
   Other-modules   : Data.SBV.BitVectors.Data
-                  , Data.SBV.BitVectors.GenTest
                   , Data.SBV.BitVectors.Model
-                  , Data.SBV.BitVectors.Optimize
-                  , Data.SBV.BitVectors.Polynomial
                   , Data.SBV.BitVectors.PrettyNum
                   , Data.SBV.BitVectors.SignCast
                   , Data.SBV.BitVectors.Splittable
@@ -145,6 +142,10 @@ Library
                   , Data.SBV.Provers.SExpr
                   , Data.SBV.Provers.Yices
                   , Data.SBV.Provers.Z3
+                  , Data.SBV.Tools.ExpectedValue
+                  , Data.SBV.Tools.GenTest
+                  , Data.SBV.Tools.Optimize
+                  , Data.SBV.Tools.Polynomial
                   , Data.SBV.Utils.Boolean
                   , Data.SBV.Utils.TDiff
                   , Data.SBV.Utils.Lib

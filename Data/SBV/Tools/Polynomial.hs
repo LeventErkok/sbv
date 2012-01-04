@@ -15,7 +15,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternGuards #-}
 
-module Data.SBV.BitVectors.Polynomial (Polynomial(..), crc, crcBV) where
+module Data.SBV.Tools.Polynomial (Polynomial(..), crc, crcBV) where
 
 import Data.Bits  (Bits(..))
 import Data.List  (genericTake)

@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.BitVectors.GenTest
+-- Module      :  Data.SBV.Tools.GenTest
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -10,7 +10,7 @@
 -- Test generation from symbolic programs
 -----------------------------------------------------------------------------
 
-module Data.SBV.BitVectors.GenTest (genTest, TestVectors, getTestValues, renderTest, TestStyle(..)) where
+module Data.SBV.Tools.GenTest (genTest, TestVectors, getTestValues, renderTest, TestStyle(..)) where
 
 import Data.Bits     (testBit)
 import Data.Char     (isAlpha, toUpper)

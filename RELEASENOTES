@@ -10,6 +10,9 @@ Version 0.9.25, Not yet released
     case generation and quickCheck purposes.
   * Add 'renderTest', which accompanies 'genTest' to render test
     vectors as Haskell/C/Forte program segments.
+  * Add 'expectedValue' which can compute the expected value of
+    a symbolic value under the given constraints. Useful for statistical
+    analysis and probability computations.
 
 ======================================================================
 Version 0.9.24, 2011-12-28

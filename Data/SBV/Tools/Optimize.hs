@@ -1,19 +1,19 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.BitVectors.Optimize
+-- Module      :  Data.SBV.Tools.Optimize
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Number representations in hex/bin
+-- SMT based optimization
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Data.SBV.BitVectors.Optimize (OptimizeOpts(..), optimize, optimizeWith, minimize, minimizeWith, maximize, maximizeWith) where
+module Data.SBV.Tools.Optimize (OptimizeOpts(..), optimize, optimizeWith, minimize, minimizeWith, maximize, maximizeWith) where
 
 import Data.Maybe (fromJust)
 
