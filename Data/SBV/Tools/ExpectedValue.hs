@@ -78,8 +78,8 @@ expectedValueWith verbose warmupCount mbMaxIter epsilon m
 -- with its free variables drawn from uniform distributions of its
 -- respective values, satisfying the given constraints specified by
 -- 'constrain' and 'pConstrain' calls. This is equivalent to calling
--- 'expectedValueWith' the following parameters: not verbose, warm-up
+-- 'expectedValueWith' the following parameters: verbose, warm-up
 -- round count of @10000@, no maximum iteration count, and with
 -- convergence margin @0.0001@.
 expectedValue :: Outputtable a => Symbolic a -> IO [Double]
-expectedValue = expectedValueWith False 10000 Nothing 0.0001
+expectedValue = expectedValueWith True 10000 Nothing 0.0001
