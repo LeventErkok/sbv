@@ -96,7 +96,7 @@ cgen cfg nm st sbvProg
    -- we rnf the sig to make sure any exceptions in type conversion pop-out early enough
    -- this is purely cosmetic, of course..
    = rnf (render sig) `seq` result
-  where result = CgPgmBundle $ filt [ ("Makefile",  (CgMakefile flags, [genMake driver nm nmd flags]))
+  where result = CgPgmBundle $ filt [ ("Makefile",  (CgMakefile flags, [genMake (cgGenDriver cfg) nm nmd flags]))
                                     , (nm  ++ ".h", (CgHeader [sig],   [genHeader nm [sig] extProtos]))
                                     , (nmd ++ ".c", (CgDriver,         genDriver mbISize randVals nm ins outs mbRet))
                                     , (nm  ++ ".c", (CgSource,         genCProg rtc mbISize nm sig sbvProg ins outs mbRet extDecls))
@@ -104,8 +104,10 @@ cgen cfg nm st sbvProg
         rtc      = cgRTC cfg
         mbISize  = cgInteger cfg
         randVals = cgDriverVals cfg
-        driver   = cgGenDriver cfg
-        filt xs  = if driver then xs else filter (not . isCgDriver . fst . snd) xs
+        filt xs  = [c | c@(_, (k, _)) <- xs, need k]
+          where need k | isCgDriver   k = cgGenDriver cfg
+                       | isCgMakefile k = cgGenMakefile cfg
+                       | True           = False
         nmd      = nm ++ "_driver"
         sig      = pprCFunHeader mbISize nm ins outs mbRet
         ins      = cgInputs st

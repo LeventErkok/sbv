@@ -197,7 +197,7 @@ module Data.SBV (
   , SBVCodeGen
 
   -- ** Setting code-generation options
-  , cgPerformRTCs, cgSetDriverValues, cgGenerateDriver
+  , cgPerformRTCs, cgSetDriverValues, cgGenerateDriver, cgGenerateMakefile
 
   -- ** Designating inputs
   , cgInput, cgInputArr

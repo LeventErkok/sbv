@@ -33,15 +33,16 @@ class CgTarget a where
 
 -- | Options for code-generation.
 data CgConfig = CgConfig {
-          cgRTC        :: Bool          -- ^ If 'True', perform run-time-checks for index-out-of-bounds or shifting-by-large values etc.
-        , cgInteger    :: Maybe Int     -- ^ Bit-size to use for representing SInteger (if any)
-        , cgDriverVals :: [Integer]     -- ^ Values to use for the driver program generated, useful for generating non-random drivers.
-        , cgGenDriver  :: Bool          -- ^ If 'True', will generate a driver program
+          cgRTC         :: Bool          -- ^ If 'True', perform run-time-checks for index-out-of-bounds or shifting-by-large values etc.
+        , cgInteger     :: Maybe Int     -- ^ Bit-size to use for representing SInteger (if any)
+        , cgDriverVals  :: [Integer]     -- ^ Values to use for the driver program generated, useful for generating non-random drivers.
+        , cgGenDriver   :: Bool          -- ^ If 'True', will generate a driver program
+        , cgGenMakefile :: Bool          -- ^ If 'True', will generate a makefile
         }
 
 -- | Default options for code generation. The run-time checks are turned-off, and the driver values are completely random.
 defaultCgConfig :: CgConfig
-defaultCgConfig = CgConfig { cgRTC = False, cgInteger = Nothing, cgDriverVals = [], cgGenDriver = True }
+defaultCgConfig = CgConfig { cgRTC = False, cgInteger = Nothing, cgDriverVals = [], cgGenDriver = True, cgGenMakefile = True }
 
 -- | Abstraction of target language values
 data CgVal = CgAtomic SW
@@ -97,10 +98,14 @@ cgIntegerSize i
   | True
   = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgInteger = Just i }})
 
--- | Should we generate a driver program? Default: 'True'. When a library is generated, then it will have
+-- | Should we generate a driver program? Default: 'True'. When a library is generated, it will have
 -- a driver if any of the contituent functions has a driver. (See 'compileToCLib'.)
 cgGenerateDriver :: Bool -> SBVCodeGen ()
 cgGenerateDriver b = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgGenDriver = b } })
+
+-- | Should we generate a Makefile? Default: 'True'.
+cgGenerateMakefile :: Bool -> SBVCodeGen ()
+cgGenerateMakefile b = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgGenMakefile = b } })
 
 -- | Sets driver program run time values, useful for generating programs with fixed drivers for testing. Default: None, i.e., use random values.
 cgSetDriverValues :: [Integer] -> SBVCodeGen ()
@@ -180,6 +185,10 @@ data CgPgmKind = CgMakefile [String]
 isCgDriver :: CgPgmKind -> Bool
 isCgDriver CgDriver = True
 isCgDriver _        = False
+
+isCgMakefile :: CgPgmKind -> Bool
+isCgMakefile CgMakefile{} = True
+isCgMakefile _            = False
 
 instance Show CgPgmBundle where
    show (CgPgmBundle fs) = intercalate "\n" $ map showFile fs
