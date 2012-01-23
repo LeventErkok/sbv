@@ -562,9 +562,10 @@ align ds = map (text . pad) ss
 
 -- | Merge a bunch of bundles to generate code for a library
 mergeToLib :: String -> [CgPgmBundle] -> CgPgmBundle
-mergeToLib libName bundles = CgPgmBundle $ sources ++ libHeader : [libDriver | anyDriver] ++ [libMake]
+mergeToLib libName bundles = CgPgmBundle $ sources ++ libHeader : [libDriver | anyDriver] ++ [libMake | anyMake]
   where files       = concat [fs | CgPgmBundle fs <- bundles]
         sigs        = concat [ss | (_, (CgHeader ss, _)) <- files]
+        anyMake     = not (null [() | (_, (CgMakefile{}, _)) <- files])
         drivers     = [ds | (_, (CgDriver, ds)) <- files]
         anyDriver   = not (null drivers)
         mkFlags     = nub (concat [xs | (_, (CgMakefile xs, _)) <- files])
