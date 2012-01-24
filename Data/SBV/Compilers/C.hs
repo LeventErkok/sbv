@@ -107,7 +107,7 @@ cgen cfg nm st sbvProg
         filt xs  = [c | c@(_, (k, _)) <- xs, need k]
           where need k | isCgDriver   k = cgGenDriver cfg
                        | isCgMakefile k = cgGenMakefile cfg
-                       | True           = False
+                       | True           = True
         nmd      = nm ++ "_driver"
         sig      = pprCFunHeader mbISize nm ins outs mbRet
         ins      = cgInputs st
