@@ -6,6 +6,7 @@ Latest Hackage released version: 0.9.24
 ======================================================================
 Version 0.9.25, Not yet released
 
+ Library:
   * Better handling of the pConstrain probability threshold for test
     case generation and quickCheck purposes.
   * Add 'renderTest', which accompanies 'genTest' to render test
@@ -13,6 +14,10 @@ Version 0.9.25, Not yet released
   * Add 'expectedValue' which can compute the expected value of
     a symbolic value under the given constraints. Useful for statistical
     analysis and probability computations.
+ Code-generation:
+  * add "cgGenerateMakefile" which allows the user to choose if SBV
+    should generate a Makefile. (default: True)
+    
 
 ======================================================================
 Version 0.9.24, 2011-12-28
