@@ -14,6 +14,9 @@ Version 0.9.25, Not yet released
   * Add 'expectedValue' which can compute the expected value of
     a symbolic value under the given constraints. Useful for statistical
     analysis and probability computations.
+  * When saturating provable values, use forAll_ for proofs and forSome_
+    for sat/allSat. (Previously we were allways using forAll_, which is
+    not incorrect but less intuitive.)
  Code-generation:
   * add "cgGenerateMakefile" which allows the user to choose if SBV
     should generate a Makefile. (default: True)
