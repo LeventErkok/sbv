@@ -248,6 +248,11 @@ class Modelable a where
                      Right (_, b) -> Just b
                      _            -> Nothing
 
+-- | Return all the models from an 'allSat' call, similar to 'extractModel' but
+-- is suitable for the case of multiple results.
+extractModels :: SatModel a => AllSatResult -> [a]
+extractModels (AllSatResult (_, xs)) = [ms | Right (_, ms) <- map getModel xs]
+
 instance Modelable ThmResult where
   getModel    (ThmResult r) = getModel r
   modelExists (ThmResult r) = modelExists r

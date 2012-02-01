@@ -27,7 +27,7 @@ module Data.SBV.Provers.Prover (
        , sat, satWith
        , allSat, allSatWith
        , isVacuous, isVacuousWith
-       , SatModel(..), Modelable(..), displayModels
+       , SatModel(..), Modelable(..), displayModels, extractModels
        , yices, z3, defaultSMTCfg
        , compileToSMTLib
        ) where

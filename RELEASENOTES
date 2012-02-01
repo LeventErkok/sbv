@@ -17,6 +17,9 @@ Version 0.9.25, Not yet released
   * When saturating provable values, use forAll_ for proofs and forSome_
     for sat/allSat. (Previously we were allways using forAll_, which is
     not incorrect but less intuitive.)
+  * add function:
+      extractModels :: SatModel a => AllSatResult -> [a]
+    which simplifies accessing allSat results greatly.
  Code-generation:
   * add "cgGenerateMakefile" which allows the user to choose if SBV
     should generate a Makefile. (default: True)
