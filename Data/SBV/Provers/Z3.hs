@@ -66,8 +66,7 @@ z3 = SMTSolver {
        addTimeOut Nothing  o   = o
        addTimeOut (Just i) o
          | i < 0               = error $ "Z3: Timeout value must be non-negative, received: " ++ show i
-         | S.os == "linux"     = o ++ ["-T:" ++ show i]
-         | True                = o ++ ["/T:" ++ show i]
+         | True                = o ++ [optionPrefix : "T:" ++ show i]
 
 extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [String] -> SMTModel
 extractMap isSat qinps _modelMap solverLines =
