@@ -430,7 +430,7 @@ type SInt64  = SBV Int64
 -- | Infinite precision signed symbolic value
 type SInteger = SBV Integer
 
--- Needed to satisfy the Num hierarchy
+-- Not particularly "desirable", but will do if needed
 instance Show (SBV a) where
   show (SBV _                     (Left c))  = show c
   show (SBV (_  , Size Nothing)   (Right _)) = "<symbolic> :: SInteger"
@@ -438,6 +438,7 @@ instance Show (SBV a) where
                 where t | not sgn && sz == 1 = "SBool"
                         | True               = (if sgn then "SInt" else "SWord") ++ show sz
 
+-- Needed to satisfy the Num hierarchy, and should be removed when we move to GHC-7.4.
 instance Eq (SBV a) where
   SBV _ (Left a) == SBV _ (Left b) = a == b
   a == b = error $ "Comparing symbolic bit-vectors; Use (.==) instead. Received: " ++ show (a, b)

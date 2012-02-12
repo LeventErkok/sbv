@@ -542,7 +542,7 @@ msb x
 -- a concrete argument for obvious reasons. Other variants (succ, pred, [x..]) etc are similarly
 -- limited. While symbolic variants can be defined for many of these, they will just diverge
 -- as final sizes cannot be determined statically.
-instance (Bounded a, Integral a, Num a, SymWord a) => Enum (SBV a) where
+instance (Show a, Bounded a, Integral a, Num a, SymWord a) => Enum (SBV a) where
   succ x
     | v == (maxBound :: a) = error $ "Enum.succ{" ++ showType x ++ "}: tried to take `succ' of maxBound"
     | True                 = fromIntegral $ v + 1
