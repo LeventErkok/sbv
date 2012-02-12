@@ -7,6 +7,8 @@ Latest Hackage released version: 0.9.24
 Version 0.9.25, Not yet released
 
  Library:
+  * Z3 is now the "default" SMT solver. Yices is still available, but
+    has to be specifically selected. (Use satWith, allSatWith, proveWith, etc.)
   * Better handling of the pConstrain probability threshold for test
     case generation and quickCheck purposes.
   * Add 'renderTest', which accompanies 'genTest' to render test

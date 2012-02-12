@@ -64,9 +64,10 @@ respect to the slower reference version.
 -}
 
 -- | States the correctness of faster population-count algorithm, with respect
--- to the reference slow version. We have:
+-- to the reference slow version. (We use yices here as it's quite fast for
+-- this problem. Z3 seems to take much longer.) We have:
 --
--- >>> prove fastPopCountIsCorrect
+-- >>> proveWith yices fastPopCountIsCorrect
 -- Q.E.D.
 fastPopCountIsCorrect :: SWord64 -> SBool
 fastPopCountIsCorrect x = popCount x .== popCountSlow x

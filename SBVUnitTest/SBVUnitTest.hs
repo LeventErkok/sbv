@@ -13,15 +13,12 @@
 module Main(main) where
 
 import Control.Monad        (unless, when)
-import System.Directory     (doesDirectoryExist, findExecutable)
-import System.Environment   (getArgs, getEnv)
+import System.Directory     (doesDirectoryExist)
+import System.Environment   (getArgs)
 import System.Exit          (exitWith, ExitCode(..))
 import System.FilePath      ((</>))
-import System.Process       (readProcessWithExitCode)
 import Test.HUnit           (Test(..), Counts(..), runTestTT)
 
-import Data.List            (isPrefixOf)
-import Data.SBV             (yices, SMTSolver(..), SMTConfig(..))
 import Data.Version         (showVersion)
 import SBVTest              (SBVTestSuite(..), generateGoldCheck)
 import Paths_sbv            (getDataDir, version)
@@ -135,35 +132,6 @@ checkGoldDir gd = do e <- doesDirectoryExist gd
                                    putStrLn "*** Cannot run test cases, exiting."
                                    exitWith $ ExitFailure 1
 
-checkYices :: IO ()
-checkYices = do ex <- getEnv "SBV_YICES" `catch` (\_ -> return (executable (solver yices)))
-                mbP <- findExecutable ex
-                case mbP of
-                  Nothing -> do putStrLn $ "*** Cannot find default SMT solver executable for " ++ nm
-                                putStrLn $ "*** Please make sure the executable " ++ show ex
-                                putStrLn   "*** is installed and is in your path."
-                                putStrLn   "*** Cannot run test cases, exiting."
-                                exitWith $ ExitFailure 1
-                  Just p  -> do putStrLn $ "*** Using solver : " ++ nm ++ " (" ++ show p ++ ")"
-                                checkYicesVersion p
- where nm = name (solver yices)
-
-checkYicesVersion :: FilePath -> IO ()
-checkYicesVersion p =
-        do (ec, yOut, _yErr) <- readProcessWithExitCode p ["-V"] ""
-           case ec of
-             ExitFailure _ -> do putStrLn "*** Cannot determine Yices version. Please install Yices version 2.X first."
-                                 exitWith $ ExitFailure 1
-             ExitSuccess   -> do let isYices1 = "1." `isPrefixOf` yOut -- crude test; might fail..
-                                 when isYices1 $ putStrLn "*** Yices version 1.X is detected. Version 2.X is strongly recommended!"
-                                 opts <- getEnv "SBV_YICES_OPTIONS" `catch` (\_ -> return (unwords (options (solver yices))))
-                                 when (isYices1 && opts /= "-tc -smt -e") $ do
-                                           putStrLn "*** Either install Yices 2.X, or set the environment variable:"
-                                           putStrLn "***     SBV_YICES_OPTIONS=\"-tc -smt -e\""
-                                           putStrLn "*** To use Yices 1.X with SBV."
-                                           putStrLn "*** However, upgrading to Yices 2.X is highly recommended!"
-                                           exitWith $ ExitFailure 1
-
 allTargets :: [String]
 allTargets = map fst testCollection
 
@@ -176,7 +144,6 @@ run targets shouldCreate [gd] =
         do mapM_ checkTgt targets
            putStrLn $ "*** Starting SBV unit tests..\n*** Gold files at: " ++ show gd
            checkGoldDir gd
-           checkYices
            cts <- runTestTT $ TestList $ map mkTst [c | (tc, c) <- testCollection, select tc]
            decide shouldCreate cts
   where mkTst (SBVTestSuite f) = f $ generateGoldCheck gd shouldCreate

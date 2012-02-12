@@ -20,7 +20,7 @@
 --
 -- >>> prove $ forAll ["x"] $ \x -> x `shiftL` 2 .== (x :: SWord8)
 -- Falsifiable. Counter-example:
---   x = 128 :: SWord8
+--   x = 51 :: SWord8
 --
 -- The function 'prove' has the following type:
 --

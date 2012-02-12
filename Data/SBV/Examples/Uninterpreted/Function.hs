@@ -26,11 +26,12 @@ thmGood :: SWord8 -> SWord8 -> SWord8 -> SBool
 thmGood x y z = x .== y+2 ==> f x z .== f (y + 2) z
 
 -- | Asserts that @f@ is commutative; which is not necessarily true!
--- Indeed, the SMT solver (Yices in this case) returns a counter-example
--- function that is not commutative. We have:
+-- Indeed, the SMT solver returns a counter-example function that is
+-- not commutative. (Note that we have to use Yices as Z3 function
+-- counterexamples are not yet supported by sbv.) We have:
 --
 --
--- >>> prove $ forAll ["x", "y"] thmBad
+-- >>> proveWith yices $ forAll ["x", "y"] thmBad
 -- Falsifiable. Counter-example:
 --   x = 0 :: SWord8
 --   y = 128 :: SWord8

@@ -127,9 +127,11 @@ thm2 = prove $ flIsCorrect 16 (0, smax)
 --
 -- Also, the unit @0@ is clearly not a left-unit for @flOp@, as the third
 -- equation for @flOp@ will simply map many elements to @0@.
+-- (NB. We need to use yices for this proof as the uninterpreted function
+-- examples are only supported through the yices interface currently.)
 thm3 :: IO ThmResult
-thm3 = prove $ do args :: PowerList SWord32 <- mkForallVars 8
-                  return $ ps (u, op) args .== lf (u, op) args
+thm3 = proveWith yices $ do args :: PowerList SWord32 <- mkForallVars 8
+                            return $ ps (u, op) args .== lf (u, op) args
   where op :: SWord32 -> SWord32 -> SWord32
         op = uninterpret "flOp"
         u :: SWord32
