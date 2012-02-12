@@ -86,13 +86,11 @@ and
 the [Yices](http://yices.csl.sri.com) SMT solver from SRI.
 Both solvers are available for Windows, Linux, and Mac OSX.
 
-Z3 us
-
 Prerequisites
 =============
 You **should** have at least one of 
-[(Z3)](http://research.microsoft.com/en-us/um/redmond/projects/z3/download.html), or
-[Yices](http://yices.csl.sri.com/download-yices2.shtml) (version 2.X) 
+Z3 [(download)](http://research.microsoft.com/en-us/um/redmond/projects/z3/download.html), or
+Yices [(download)](http://yices.csl.sri.com/download-yices2.shtml) (version 2.X) 
 installed on your machine, preferably both. Make sure the executables "z3" and "yices". (Note that
 z3 is the default solver used by 'sat', 'allSat', 'prove', etc. commands. To use "yices", use the 'satWith',
 'proveWith', 'allSatWith' variants.)
