@@ -91,16 +91,14 @@ Prerequisites
 You **should** have at least one of 
 Z3 [(download)](http://research.microsoft.com/en-us/um/redmond/projects/z3/download.html), or
 Yices [(download)](http://yices.csl.sri.com/download-yices2.shtml) (version 2.X) 
-installed on your machine, preferably both. Note that
-z3 is the default solver used by 'sat', 'allSat', 'prove', etc. commands. To use "yices", use the 'satWith',
-'proveWith', 'allSatWith' variants.
+installed on your machine, preferably both. Note that z3 is the default solver used by 'sat',
+'allSat', 'prove', etc. commands. To use "yices", use the 'satWith', 'proveWith', 'allSatWith' variants.
 
-Make sure the executables for the solvers are in your path. Alternatively,
-you can specify the location of the yices executable in the environment variable `SBV_YICES` and the options to yices
-in `SBV_YICES_OPTIONS`. (The default for the latter is `"-m -f"`). Similarly the
-environment variables `SBV_Z3` and `SBV_Z3_OPTIONS` can be used for choosing executable location
-and custom options for Z3.  (The default for the latter is `"/in /smt2"` on Windows and `"-in -smt2"`
-on Mac and Linux. You should download Z3 version 3.2 or later.)
+Make sure the executables for the solvers are in your path. Alternatively, you can specify the location
+of the yices executable in the environment variable `SBV_YICES` and the options to yices in `SBV_YICES_OPTIONS`.
+(The default for the latter is `"-m -f"`). Similarly the environment variables `SBV_Z3` and `SBV_Z3_OPTIONS` can
+be used for choosing executable location and custom options for Z3.  (The default for the latter is
+`"/in /smt2"` on Windows and `"-in -smt2"` on Mac and Linux. You should use Z3 version 3.2 or later.)
 
 Examples
 =========
