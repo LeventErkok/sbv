@@ -25,7 +25,8 @@ Version 0.9.25, Not yet released
  Code-generation:
   * add "cgGenerateMakefile" which allows the user to choose if SBV
     should generate a Makefile. (default: True)
-    
+ Other
+  * Changes to make it compile with GHC 7.4.1
 
 ======================================================================
 Version 0.9.24, 2011-12-28
