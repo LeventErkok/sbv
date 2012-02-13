@@ -28,4 +28,4 @@ testSuite = mkTestSuite $ \goldCheck -> test [
                   cgSetDriverValues [0x0123456789ABCDEF]
                   cgPerformRTCs b
                   x <- cgInput "x"
-                  cgReturn $ popCount x
+                  cgReturn $ popCountFast x

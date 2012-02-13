@@ -83,7 +83,7 @@ instance (SymWord a, PrettyNum a) => PrettyNum (SBV a) where
   hex  s = maybe (show s) (hex :: a -> String)  $ unliteral s
   bin  s = maybe (show s) (bin :: a -> String)  $ unliteral s
 
-shex :: (Integral a) => Bool -> Bool -> (Bool, Int) -> a -> String
+shex :: (Show a, Integral a) => Bool -> Bool -> (Bool, Int) -> a -> String
 shex shType shPre (signed, size) a
  | a < 0
  = "-" ++ pre ++ pad l (s16 (abs (fromIntegral a :: Integer)))  ++ t
@@ -106,7 +106,7 @@ shexI shType shPre a
        pre | shPre = "0x"
            | True  = ""
 
-sbin :: (Integral a) => Bool -> Bool -> (Bool, Int) -> a -> String
+sbin :: (Show a, Integral a) => Bool -> Bool -> (Bool, Int) -> a -> String
 sbin shType shPre (signed,size) a
  | a < 0
  = "-" ++ pre ++ pad size (s2 (abs (fromIntegral a :: Integer)))  ++ t
@@ -131,7 +131,7 @@ sbinI shType shPre a
 pad :: Int -> String -> String
 pad l s = replicate (l - length s) '0' ++ s
 
-s2, s16 :: Integral a => a -> String
+s2, s16 :: (Show a, Integral a) => a -> String
 s2  v = showIntAtBase 2 dig v "" where dig = fromJust . flip lookup [(0, '0'), (1, '1')]
 s16 v = showHex v ""
 

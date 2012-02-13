@@ -40,8 +40,8 @@ popCountSlow inp = go inp 0 0
 -- go 8 bits at a time instead of one by one, by using a precomputed table
 -- of population-count values for each byte. This algorithm /loops/ only
 -- 8 times, and hence is at least 8 times more efficient.
-popCount :: SWord64 -> SWord8
-popCount inp = go inp 0 0
+popCountFast :: SWord64 -> SWord8
+popCountFast inp = go inp 0 0
   where go :: SWord64 -> Int -> SWord8 -> SWord8
         go _ 8 c = c
         go x i c = go (x `shiftR` 8) (i+1) (c + select pop8 0 (x .&. 0xff))
@@ -57,8 +57,8 @@ pop8 = map popCountSlow [0 .. 255]
 -----------------------------------------------------------------------------
 
 {- $VerificationIntro
-We prove that `popCount` and `popCountSlow` are functionally equivalent.
-This is essential as we will automatically generate C code from `popCount`,
+We prove that `popCountFast` and `popCountSlow` are functionally equivalent.
+This is essential as we will automatically generate C code from `popCountFast`,
 and we would like to make sure that the fast version is correct with
 respect to the slower reference version.
 -}
@@ -70,7 +70,7 @@ respect to the slower reference version.
 -- >>> proveWith yices fastPopCountIsCorrect
 -- Q.E.D.
 fastPopCountIsCorrect :: SWord64 -> SBool
-fastPopCountIsCorrect x = popCount x .== popCountSlow x
+fastPopCountIsCorrect x = popCountFast x .== popCountSlow x
 
 -----------------------------------------------------------------------------
 -- * Code generation
@@ -80,7 +80,7 @@ fastPopCountIsCorrect x = popCount x .== popCountSlow x
 -- generate C code to compute population-counts for us. This action will generate all the
 -- C files that you will need, including a driver program for test purposes.
 --
--- Below is the generated header file for `popCount`:
+-- Below is the generated header file for `popCountFast`:
 --
 -- >>> genPopCountInC
 -- == BEGIN: "Makefile" ================
@@ -221,4 +221,4 @@ genPopCountInC :: IO ()
 genPopCountInC = compileToC Nothing "popCount" $ do
         cgSetDriverValues [0x1b02e143e4f0e0e5]  -- remove this line to get a random test value
         x <- cgInput "x"
-        cgReturn $ popCount x
+        cgReturn $ popCountFast x

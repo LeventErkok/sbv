@@ -11,8 +11,11 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Data.SBV.Provers.Z3(z3) where
+
+import qualified Control.Exception as C
 
 import Data.Char          (isDigit, toLower)
 import Data.List          (sortBy, intercalate, isPrefixOf)
@@ -40,8 +43,8 @@ z3 = SMTSolver {
          , executable = "z3"
          , options    = map (optionPrefix:) ["in", "smt2"]
          , engine     = \cfg isSat qinps modelMap skolemMap pgm -> do
-                                execName <-               getEnv "SBV_Z3"          `catch` (\_ -> return (executable (solver cfg)))
-                                execOpts <- (words `fmap` getEnv "SBV_Z3_OPTIONS") `catch` (\_ -> return (options (solver cfg)))
+                                execName <-               getEnv "SBV_Z3"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
+                                execOpts <- (words `fmap` getEnv "SBV_Z3_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
                                 let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
                                     script = SMTScript { scriptBody = "(set-option :mbqi true)\n" ++ pgm, scriptModel = Just (cont skolemMap)}
                                 standardSolver cfg' script cleanErrs (ProofError cfg) (interpretSolverOutput cfg (extractMap isSat qinps modelMap . zipWith match skolemMap))

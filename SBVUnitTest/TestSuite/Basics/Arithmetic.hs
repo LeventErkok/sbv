@@ -21,25 +21,27 @@ import SBVTest
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test $
-        genBinTest "+"                (+)
-     ++ genBinTest "-"                (-)
-     ++ genBinTest "*"                (*)
-     ++ genUnTest  "negate"           negate
-     ++ genUnTest  "abs"              abs
-     ++ genUnTest  "signum"           signum
-     ++ genBinTest ".&."              (.&.)
-     ++ genBinTest ".|."              (.|.)
-     ++ genBinTest "xor"              xor
-     ++ genUnTest  "complement"       complement
-     ++ genIntTest "shift"            shift
-     ++ genIntTest "rotate"           rotate
-     ++ genIntTest "setBit"           setBit
-     ++ genIntTest "clearBit"         clearBit
-     ++ genIntTest "complementBit"    complementBit
-     ++ genIntTest "shiftL"           shiftL
-     ++ genIntTest "shiftR"           shiftR
-     ++ genIntTest "rotateL"          rotateL
-     ++ genIntTest "rotateR"          rotateR
+        genBinTest  "+"                (+)
+     ++ genBinTest  "-"                (-)
+     ++ genBinTest  "*"                (*)
+     ++ genUnTest   "negate"           negate
+     ++ genUnTest   "abs"              abs
+     ++ genUnTest   "signum"           signum
+     ++ genBinTest  ".&."              (.&.)
+     ++ genBinTest  ".|."              (.|.)
+     ++ genBinTest  "xor"              xor
+     ++ genUnTest   "complement"       complement
+     ++ genIntTest  "shift"            shift
+     ++ genIntTest  "rotate"           rotate
+     ++ genIntTestS "setBit"           setBit
+     ++ genIntTestS "clearBit"         clearBit
+     ++ genIntTestS "complementBit"    complementBit
+     ++ genIntTest  "shift"            shift
+     ++ genIntTestS "shiftL"           shiftL
+     ++ genIntTestS "shiftR"           shiftR
+     ++ genIntTest  "rotate"           rotate
+     ++ genIntTestS "rotateL"          rotateL
+     ++ genIntTestS "rotateR"          rotateR
      ++ genBlasts
      ++ genCasts
 
@@ -85,6 +87,20 @@ genIntTest nm op = map mkTest $
   where pair (t, x, y, a) b       = (t, x, y, show a, show b, show (fromIntegral a `asTypeOf` b) == show b)
         mkTest (t, x, y, a, b, s) = "arithmetic-" ++ nm ++ "." ++ t ++ "_" ++ x ++ "_" ++ y ++ "_" ++ a ++ "_" ++ b ~: s `showsAs` "True"
         is = [-10 .. 10]
+
+genIntTestS :: String -> (forall a. Bits a => a -> Int -> a) -> [Test]
+genIntTestS nm op = map mkTest $
+        zipWith pair [("u8",  show x, show y, x `op` y) | x <- w8s,  y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- sw8s,  y <- [0 .. (bitSize x - 1)]]
+     ++ zipWith pair [("u16", show x, show y, x `op` y) | x <- w16s, y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- sw16s, y <- [0 .. (bitSize x - 1)]]
+     ++ zipWith pair [("u32", show x, show y, x `op` y) | x <- w32s, y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- sw32s, y <- [0 .. (bitSize x - 1)]]
+     ++ zipWith pair [("u64", show x, show y, x `op` y) | x <- w64s, y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- sw64s, y <- [0 .. (bitSize x - 1)]]
+     ++ zipWith pair [("s8",  show x, show y, x `op` y) | x <- i8s,  y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- si8s,  y <- [0 .. (bitSize x - 1)]]
+     ++ zipWith pair [("s16", show x, show y, x `op` y) | x <- i16s, y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- si16s, y <- [0 .. (bitSize x - 1)]]
+     ++ zipWith pair [("s32", show x, show y, x `op` y) | x <- i32s, y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- si32s, y <- [0 .. (bitSize x - 1)]]
+     ++ zipWith pair [("s64", show x, show y, x `op` y) | x <- i64s, y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- si64s, y <- [0 .. (bitSize x - 1)]]
+     ++ zipWith pair [("iUB", show x, show y, x `op` y) | x <- iUBs, y <- [0 .. 10]]              [x `op` y | x <- siUBs, y <- [0 .. 10             ]]
+  where pair (t, x, y, a) b       = (t, x, y, show a, show b, show (fromIntegral a `asTypeOf` b) == show b)
+        mkTest (t, x, y, a, b, s) = "arithmetic-" ++ nm ++ "." ++ t ++ "_" ++ x ++ "_" ++ y ++ "_" ++ a ++ "_" ++ b ~: s `showsAs` "True"
 
 genBlasts :: [Test]
 genBlasts = map mkTest $

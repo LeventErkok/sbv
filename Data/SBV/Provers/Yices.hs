@@ -10,9 +10,12 @@
 -- The connection to the Yices SMT solver
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE PatternGuards       #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Data.SBV.Provers.Yices(yices) where
+
+import qualified Control.Exception as C
 
 import Data.Char          (isDigit)
 import Data.List          (sortBy, isPrefixOf, intercalate, transpose, partition)
@@ -34,8 +37,8 @@ yices = SMTSolver {
          -- , options    = ["-tc", "-smt", "-e"]   -- For Yices1
          , options    = ["-m", "-f"]  -- For Yices2
          , engine     = \cfg _isSat qinps modelMap _skolemMap pgm -> do
-                                execName <-                getEnv "SBV_YICES"          `catch` (\_ -> return (executable (solver cfg)))
-                                execOpts <- (words `fmap`  getEnv "SBV_YICES_OPTIONS") `catch` (\_ -> return (options (solver cfg)))
+                                execName <-                getEnv "SBV_YICES"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
+                                execOpts <- (words `fmap`  getEnv "SBV_YICES_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
                                 let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
                                     script = SMTScript { scriptBody = pgm, scriptModel = Nothing }
                                 standardSolver cfg' script id (ProofError cfg) (interpretSolverOutput cfg (extractMap (map snd qinps) modelMap))
