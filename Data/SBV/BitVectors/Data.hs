@@ -10,7 +10,6 @@
 -- Internal data-structures for the sbv library
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP              		#-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# LANGUAGE TypeOperators              #-}
@@ -439,15 +438,11 @@ instance Show (SBV a) where
                 where t | not sgn && sz == 1 = "SBool"
                         | True               = (if sgn then "SInt" else "SWord") ++ show sz
 
--- Needed to satisfy the Num hierarchy, only needed for GHC prior to 7.4.1.
--- TODO: Remove completely once there's a HP release that has 7.4.1 in it.
--- #if __GLASGOW_HASKELL__ < 704
 instance Eq (SBV a) where
   SBV _ (Left a) == SBV _ (Left b) = a == b
   a == b = error $ "Comparing symbolic bit-vectors; Use (.==) instead. Received: " ++ show (a, b)
   SBV _ (Left a) /= SBV _ (Left b) = a /= b
   a /= b = error $ "Comparing symbolic bit-vectors; Use (./=) instead. Received: " ++ show (a, b)
--- #endif
 
 instance HasSignAndSize a => HasSignAndSize (SBV a) where
   sizeOf  _ = sizeOf  (undefined :: a)
@@ -464,7 +459,6 @@ throwDice st = do g <- readIORef (rStdGen st)
                   let (r, g') = randomR (0, 1) g
                   writeIORef (rStdGen st) g'
                   return r
-
 
 newUninterpreted :: State -> String -> SBVType -> Maybe [String] -> IO ()
 newUninterpreted st nm t mbCode
