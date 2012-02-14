@@ -13,6 +13,8 @@ Version 1.1, Not yet released
     instance of SBV (GHC >= 7.4.1 only)
   * Add 'sbvCheckSolverInstallation', which can be used to check
     that the given solver is installed and good to go.
+  * Add 'generateSMTBenchmarks', simplifying the generation of
+    SMTLib benchmarks for offline sharing.
 
 ======================================================================
 Version 1.0, 2012-02-13

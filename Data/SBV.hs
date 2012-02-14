@@ -187,7 +187,7 @@ module Data.SBV (
   , Symbolic, output, SymWord(..)
 
   -- * Getting SMT-Lib output (for offline analysis)
-  , compileToSMTLib
+  , compileToSMTLib, generateSMTBenchmarks
 
   -- * Test case generation
   , genTest, getTestValues, TestVectors, TestStyle(..), renderTest, CW(..), Size(..), cwToBool

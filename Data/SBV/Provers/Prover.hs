@@ -29,7 +29,7 @@ module Data.SBV.Provers.Prover (
        , isVacuous, isVacuousWith
        , SatModel(..), Modelable(..), displayModels, extractModels
        , yices, z3, defaultSMTCfg
-       , compileToSMTLib
+       , compileToSMTLib, generateSMTBenchmarks
        , sbvCheckSolverInstallation
        ) where
 
@@ -40,6 +40,7 @@ import Control.Concurrent.Chan.Strict (newChan, writeChan, getChanContents)
 import Control.Monad                  (when)
 import Data.List                      (intercalate)
 import Data.Maybe                     (fromJust, isJust, catMaybes)
+import System.FilePath                (addExtension)
 import System.Time                    (getClockTime)
 
 import Data.SBV.BitVectors.Data
@@ -312,7 +313,21 @@ compileToSMTLib smtLib2 a = do
         let comments = ["Created on " ++ show t]
             cvt = if smtLib2 then toSMTLib2 else toSMTLib1
         (_, _, _, smtLibPgm) <- simulate cvt defaultSMTCfg False comments a
-        return $ show smtLibPgm ++ "\n"
+        let out = show smtLibPgm
+        if smtLib2 -- append check-sat in case of smtLib2
+           then return $ out ++ "\n(check-sat)\n"
+           else return $ out ++ "\n"
+
+-- | Create both SMT-Lib1 and SMT-Lib2 benchmarks. The first argument is the basename of the file,
+-- SMT-Lib1 version will be written with suffix ".smt1" and SMT-Lib2 version will be written with
+-- suffix ".smt2"
+generateSMTBenchmarks :: Provable a => FilePath -> a -> IO ()
+generateSMTBenchmarks f a = gen False smt1 >> gen True smt2
+  where smt1     = addExtension f "smt1"
+        smt2     = addExtension f "smt2"
+        gen b fn = do s <- compileToSMTLib b a
+                      writeFile fn s
+                      putStrLn $ "Generated SMT benchmark " ++ show fn ++ "."
 
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
