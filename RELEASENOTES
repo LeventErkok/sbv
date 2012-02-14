@@ -11,6 +11,8 @@ Version 1.1, Not yet released
   * Add sbvPopCount
   * Add a custom implementation of 'popCount' for the Bits class
     instance of SBV (GHC >= 7.4.1 only)
+  * Add 'sbvCheckSolverInstallation', which can be used to check
+    that the given solver is installed and good to go.
 
 ======================================================================
 Version 1.0, 2012-02-13
