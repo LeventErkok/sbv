@@ -112,7 +112,7 @@ module Data.SBV (
   , STree, readSTree, writeSTree, mkSTree
   -- ** Operations on symbolic words
   -- *** Word level
-  , bitValue, setBitTo, oneIf, lsb, msb
+  , sbvTestBit, sbvPopCount, setBitTo, oneIf, lsb, msb
   -- *** List level
   , allEqual, allDifferent
   -- *** Blasting/Unblasting

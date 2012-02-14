@@ -72,7 +72,7 @@ genPoly hd = do res <- allSatWith z3 $ do
                         -- the least significant bit must be set in the
                         -- polynomial, as all CRC polynomials have the "+1"
                         -- term in them set. This simplifies the query.
-                        return $ bitValue p 0 &&& crcGood hd p s r
+                        return $ sbvTestBit p 0 &&& crcGood hd p s r
                 cnt <- displayModels disp res
                 putStrLn $ "Found: " ++ show cnt ++ " polynomail(s)."
         where disp :: Int -> (Bool, Word16) -> IO ()

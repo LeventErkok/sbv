@@ -31,4 +31,4 @@ testSuite = mkTestSuite $ \goldCheck -> test [
                 r <- do rh <- forall "rh"
                         rl <- forall "rl"
                         return (rh, rl)
-                output $ bitValue p 0 &&& crcGood 4 p s r
+                output $ sbvTestBit p 0 &&& crcGood 4 p s r

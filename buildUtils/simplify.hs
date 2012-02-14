@@ -19,16 +19,20 @@ main = do hSetBuffering stdin  NoBuffering
 clean :: String -> Maybe String
 clean s
   | junk s    = Nothing
-clean ('[':r) = Just $ extract r
+clean ('[':r) = Just $ extract False r
 clean l       = Just l
 
-extract :: String -> String
-extract s = case words s of
-              (n : "of" : m' : "Compiling" : _)
-                 | not (null m'), last m' == ']', all isDigit n, all isDigit (init m')
-                -> let (f, ']':r) = break (== ']') ('[':s)
-                   in unwords ((f ++ "]") : take 2 (words r))
-              _ -> s
+extract :: Bool -> String -> String
+extract th s = case words s of
+                (n : "of" : m' : "Compiling" : "[TH]" : r)
+                  -> extract True (unwords ([n, "of", m', "Compiling"] ++ r))
+                (n : "of" : m' : "Compiling" : _)
+                   | not (null m'), last m' == ']', all isDigit n, all isDigit (init m')
+                  -> let (f, ']':r) = break (== ']') ('[':s)
+                     in unwords ((f ++ "]" ++ qual) : take 2 (words r))
+                _ -> s
+  where qual | th   = " [TH]"  -- what's this?
+             | True = ""
 
 junk :: String -> Bool
 junk s = any (`isPrefixOf` s) junkPre || any (`isInfixOf` s) junkIn

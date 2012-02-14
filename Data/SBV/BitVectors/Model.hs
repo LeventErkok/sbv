@@ -11,7 +11,9 @@
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -fno-warn-orphans   #-}
+{-# LANGUAGE CPP                    #-}
 {-# LANGUAGE TypeSynonymInstances   #-}
+{-# LANGUAGE BangPatterns           #-}
 {-# LANGUAGE PatternGuards          #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
@@ -21,7 +23,7 @@
 
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), BVDivisible(..), Uninterpreted(..)
-  , bitValue, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE
+  , sbvTestBit, sbvPopCount, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE
   , lsb, msb, SBVUF, sbvUFName, genFinVar, genFinVar_, forall, forall_, exists, exists_
   , constrain, pConstrain
   )
@@ -453,10 +455,7 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
    | hasSign a = ite (a .< 0) (-1) (ite (a .== 0) 0 1)
    | True      = oneIf (a ./= 0)
 
--- NB. The default definition of "testBit" relies on equality,
--- which is not available for symbolic SBV's. There is no
--- way to implement testBit to return Bool, obviously; instead use bitValue
--- Also, in the optimizations below, use of -1 is valid as
+-- NB. In the optimizations below, use of -1 is valid as
 -- -1 has all bits set to True for both signed and unsigned values
 instance (Bits a, SymWord a) => Bits (SBV a) where
   x .&. y
@@ -496,6 +495,18 @@ instance (Bits a, SymWord a) => Bits (SBV a) where
     | y == 0               = x
     | not (isInfPrec x)    = let sz = bitSize x in liftSym1 (mkSymOp1 (Ror (y `mod` sz))) (rot False sz y) x
     | True                 = shiftR x y   -- for unbounded integers, rotateR is the same as shiftR in Haskell
+  -- NB. testBit is *not* implementable on non-concrete symbolic words
+  x `testBit` i
+    | isConcrete x         = (x .&. bit i) /= 0
+    | True                 = error $ "SBV.testBit: Called on symbolic value: " ++ show x ++ ". Use sbvTestBit instead."
+#if __GLASGOW_HASKELL__ >= 704
+  -- NB. popCount is *not* implementable on non-concrete symbolic words
+  popCount x
+    | isConcrete x        = let go !c 0 = c
+                                go !c w = go (c+1) (w .&. (w-1))
+                            in go 0 x
+    | True                = error $ "SBV.popCount: Called on symbolic value: " ++ show x ++ ". Use sbvPopCount instead."
+#endif
 
 -- Since the underlying representation is just Integers, rotations has to be careful on the bit-size
 rot :: Bool -> Int -> Int -> Integer -> Integer
@@ -508,8 +519,27 @@ rot toLeft sz amt x
 
 -- | Replacement for 'testBit'. Since 'testBit' requires a 'Bool' to be returned,
 -- we cannot implement it for symbolic words. Index 0 is the least-significant bit.
-bitValue :: (Bits a, SymWord a) => SBV a -> Int -> SBool
-bitValue x i = (x .&. bit i) ./= 0
+sbvTestBit :: (Bits a, SymWord a) => SBV a -> Int -> SBool
+sbvTestBit x i = (x .&. bit i) ./= 0
+
+-- | Replacement for 'popCount'. Since 'popCount' returns an Int, we cannot implement
+-- it for symbolic words. Here, we return an SWord8, which can overflow when used on
+-- quantities that have more than 255 bits. Currently, that's only the SInteger type
+-- that SBV supports, all other types are safe. Even with SInteger, this will only
+-- overflow if there are at least 256-bits set in the number, and the smallest such
+-- number is 2^256-1, which is a pretty darn big number to worry about for practical
+-- purposes. Nonetheless, proofs based on popCount on Integer values should be careful
+-- on the potential overflow.
+-- N.B. we do not support popCount for unbounded symbolic integers, as the only possible
+-- implementation wouldn't symbolically terminate.
+sbvPopCount :: (Bits a, SymWord a) => SBV a -> SWord8
+sbvPopCount x
+  | isConcrete x = go 0 x
+  | isInfPrec  x = error "SBV.sbvPopCount: Called on an infinite precision symbolic value"
+  | True         = sum [ite b 1 0 | b <- blastLE x]
+  where -- concrete case
+        go !c 0 = c
+        go !c w = go (c+1) (w .&. (w-1))
 
 -- | Generalization of 'setBit' based on a symbolic boolean. Note that 'setBit' and
 -- 'clearBit' are still available on Symbolic words, this operation comes handy when
@@ -521,7 +551,7 @@ setBitTo x i b = ite b (setBit x i) (clearBit x i)
 blastLE :: (Bits a, SymWord a) => SBV a -> [SBool]
 blastLE x
  | isInfPrec x = error "SBV.blastLE: Called on an infinite precision value"
- | True        = map (bitValue x) [0 .. (intSizeOf x)-1]
+ | True        = map (sbvTestBit x) [0 .. (intSizeOf x)-1]
 
 -- | Big-endian blasting of a word into its bits. Also see the 'FromBits' class
 blastBE :: (Bits a, SymWord a) => SBV a -> [SBool]
@@ -529,13 +559,13 @@ blastBE = reverse . blastLE
 
 -- | Least significant bit of a word, always stored at index 0
 lsb :: (Bits a, SymWord a) => SBV a -> SBool
-lsb x = bitValue x 0
+lsb x = sbvTestBit x 0
 
 -- | Most significant bit of a word, always stored at the last position
 msb :: (Bits a, SymWord a) => SBV a -> SBool
 msb x
  | isInfPrec x = error "SBV.msb: Called on an infinite precision value"
- | True        = bitValue x ((intSizeOf x) - 1)
+ | True        = sbvTestBit x ((intSizeOf x) - 1)
 
 -- Enum instance. These instances are suitable for use with concrete values,
 -- and will be less useful for symbolic values around. Note that `fromEnum` requires
@@ -716,7 +746,7 @@ class Mergeable a where
     | hasSign ind    = ite (ind .< 0) err $ result
     | True           = result
     where result = go xs $ reverse (zip [(0::Integer)..] bits)
-          bits   = map (ind `bitValue`) [0 .. bitSize ind - 1]
+          bits   = map (ind `sbvTestBit`) [0 .. bitSize ind - 1]
           go []    _            = err
           go (x:_) []           = x
           go elts  ((n, b):nbs) = let (ys, zs) = genericSplitAt ((2::Integer) ^ n) elts
