@@ -30,6 +30,7 @@ module Data.SBV.Provers.Prover (
        , SatModel(..), Modelable(..), displayModels, extractModels
        , yices, z3, defaultSMTCfg
        , compileToSMTLib
+       , sbvCheckSolverInstallation
        ) where
 
 import qualified Control.Exception as E
@@ -426,6 +427,14 @@ runProofOn converter config isSat comments res =
                            _  -> error $ "User error: Multiple output values detected: " ++ show os
                                        ++ "\nDetected while generating the trace:\n" ++ show res
                                        ++ "\n*** Check calls to \"output\", they are typically not needed!"
+
+-- | Check whether the given solver is installed and is ready to go. This call does a
+-- simple call to the solver to ensure all is well.
+sbvCheckSolverInstallation :: SMTConfig -> IO Bool
+sbvCheckSolverInstallation cfg = do ThmResult r <- proveWith cfg $ \x -> (x+x) .== ((x*2) :: SWord8)
+                                    case r of
+                                      Unsatisfiable _ -> return True
+                                      _               -> return False
 
 -- | Equality as a proof method. Allows for
 -- very concise construction of equivalence proofs, which is very typical in
