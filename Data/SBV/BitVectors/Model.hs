@@ -522,16 +522,15 @@ rot toLeft sz amt x
 sbvTestBit :: (Bits a, SymWord a) => SBV a -> Int -> SBool
 sbvTestBit x i = (x .&. bit i) ./= 0
 
--- | Replacement for 'popCount'. Since 'popCount' returns an Int, we cannot implement
--- it for symbolic words. Here, we return an SWord8, which can overflow when used on
--- quantities that have more than 255 bits. Currently, that's only the SInteger type
--- that SBV supports, all other types are safe. Even with SInteger, this will only
+-- | Replacement for 'popCount'. Since 'popCount' returns an 'Int', we cannot implement
+-- it for symbolic words. Here, we return an 'SWord8', which can overflow when used on
+-- quantities that have more than 255 bits. Currently, that's only the 'SInteger' type
+-- that SBV supports, all other types are safe. Even with 'SInteger', this will only
 -- overflow if there are at least 256-bits set in the number, and the smallest such
 -- number is 2^256-1, which is a pretty darn big number to worry about for practical
--- purposes. Nonetheless, proofs based on popCount on Integer values should be careful
--- on the potential overflow.
--- N.B. we do not support popCount for unbounded symbolic integers, as the only possible
--- implementation wouldn't symbolically terminate.
+-- purposes. In any case, we do not support 'sbvPopCount' for unbounded symbolic integers,
+-- as the only possible implementation wouldn't symbolically terminate. So the only overflow
+-- issue is with really-really large concrete 'SInteger' values 
 sbvPopCount :: (Bits a, SymWord a) => SBV a -> SWord8
 sbvPopCount x
   | isConcrete x = go 0 x
@@ -543,7 +542,7 @@ sbvPopCount x
 
 -- | Generalization of 'setBit' based on a symbolic boolean. Note that 'setBit' and
 -- 'clearBit' are still available on Symbolic words, this operation comes handy when
--- the condition to set/clear happens to be symbolic
+-- the condition to set/clear happens to be symbolic.
 setBitTo :: (Bits a, SymWord a) => SBV a -> Int -> SBool -> SBV a
 setBitTo x i b = ite b (setBit x i) (clearBit x i)
 
