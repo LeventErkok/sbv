@@ -1,10 +1,10 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Latest Hackage released version: 1.0
+Latest Hackage released version: 1.1
 
 ======================================================================
-Version 1.1, Not yet released
+Version 1.1, 2012-02-14
 
  Library:
   * Rename bitValue to sbvTestBit
