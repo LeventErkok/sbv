@@ -69,7 +69,7 @@ Description:   Express properties about bit-precise Haskell programs and automat
                .
                Release notes can be seen at: <http://github.com/LeventErkok/sbv/blob/master/RELEASENOTES>.
 
-Copyright:     Levent Erkok, 2010-2011
+Copyright:     Levent Erkok, 2010-2012
 License:       BSD3
 License-file:  LICENSE
 Stability:     Experimental
