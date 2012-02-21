@@ -75,18 +75,9 @@
 -- <http://goedel.cs.uiowa.edu/smtlib/>.
 --
 -- The SBV library is designed to work with any SMT-Lib compliant SMT-solver.
--- Currently, we support the Yices SMT solver from SRI: <http://yices.csl.sri.com/>,
--- and the Z3 SMT solver from Microsoft: <http://research.microsoft.com/en-us/um/redmond/projects/z3/>.
---
--- You /should/ download and install Yices on your machine, and make sure the
--- @yices@ executable is in your path before using the sbv library, as it is the
--- current default solver. Alternatively, you can specify the location of yices
--- executable in the environment variable @SBV_YICES@ and the options to yices
--- in @SBV_YICES_OPTIONS@.
---
--- Use of quantified variables require an installation of z3. Again,
--- z3 must be in your path. Or, you can use the @SBV_Z3@ and @SBV_Z3_OPTIONS@
--- environment variables to set the executable and the options.
+-- Currently, we support the Z3 SMT solver from Microsoft: <http://research.microsoft.com/en-us/um/redmond/projects/z3/>
+-- and the Yices SMT solver from SRI: <http://yices.csl.sri.com/>, out-of-the-box. Support for other solvers
+-- can be added with relative ease.
 ---------------------------------------------------------------------------------
 
 module Data.SBV (

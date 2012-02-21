@@ -56,7 +56,7 @@ crcGood hd poly sent received =
 
 -- | Generate good CRC polynomials for 48-bit words, given the hamming distance @hd@.
 genPoly :: SWord8 -> IO ()
-genPoly hd = do res <- allSatWith z3 $ do
+genPoly hd = do res <- allSat $ do
                         -- the polynomial is existentially specified
                         p <- exists "polynomial"
                         -- sent word, universal

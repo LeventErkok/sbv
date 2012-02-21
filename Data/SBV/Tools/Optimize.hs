@@ -19,7 +19,7 @@ import Data.Maybe (fromJust)
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model (OrdSymbolic(..), EqSymbolic(..))
-import Data.SBV.Provers.Prover   (satWith, z3)
+import Data.SBV.Provers.Prover   (satWith, defaultSMTCfg)
 import Data.SBV.SMT.SMT          (SatModel, getModel, SMTConfig(..))
 import Data.SBV.Utils.Boolean
 
@@ -42,9 +42,9 @@ optimizeWith :: (SatModel a, SymWord a, Show a, SymWord c, Show c)
 optimizeWith cfg (Iterative chatty) = iterOptimize chatty cfg
 optimizeWith cfg Quantified         = quantOptimize cfg
 
--- | Variant of 'optimizeWith' using z3
+-- | Variant of 'optimizeWith' using the default solver
 optimize :: (SatModel a, SymWord a, Show a, SymWord c, Show c) => OptimizeOpts -> (SBV c -> SBV c -> SBool) -> ([SBV a] -> SBV c) -> Int -> ([SBV a] -> SBool) -> IO (Maybe [a])
-optimize = optimizeWith z3
+optimize = optimizeWith defaultSMTCfg
 
 -- | Variant of 'maximize' allowing the use of a user specified solver.
 maximizeWith :: (SatModel a, SymWord a, Show a, SymWord c, Show c) => SMTConfig -> OptimizeOpts -> ([SBV a] -> SBV c) -> Int -> ([SBV a] -> SBool) -> IO (Maybe [a])
@@ -55,7 +55,7 @@ maximizeWith cfg opts = optimizeWith cfg opts (.>=)
 --   >>> maximize Quantified sum 3 (bAll (.< (10 :: SInteger)))
 --   Just [9,9,9]
 maximize :: (SatModel a, SymWord a, Show a, SymWord c, Show c) => OptimizeOpts -> ([SBV a] -> SBV c) -> Int -> ([SBV a] -> SBool) -> IO (Maybe [a])
-maximize = maximizeWith z3
+maximize = maximizeWith defaultSMTCfg
 
 -- | Variant of 'minimize' allowing the use of a user specified solver.
 minimizeWith :: (SatModel a, SymWord a, Show a, SymWord c, Show c) => SMTConfig -> OptimizeOpts -> ([SBV a] -> SBV c) -> Int -> ([SBV a] -> SBool) -> IO (Maybe [a])
@@ -66,7 +66,7 @@ minimizeWith cfg opts = optimizeWith cfg opts (.<=)
 --   >>> minimize Quantified sum 3 (bAll (.> (10 :: SInteger)))
 --   Just [11,11,11]
 minimize :: (SatModel a, SymWord a, Show a, SymWord c, Show c) => OptimizeOpts -> ([SBV a] -> SBV c) -> Int -> ([SBV a] -> SBool) -> IO (Maybe [a])
-minimize = minimizeWith z3
+minimize = minimizeWith defaultSMTCfg
 
 -- | Optimization using quantifiers
 quantOptimize :: (SatModel a, SymWord a) => SMTConfig -> (SBV c -> SBV c -> SBool) -> ([SBV a] -> SBV c) -> Int -> ([SBV a] -> SBool) -> IO (Maybe [a])
