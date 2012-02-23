@@ -768,7 +768,7 @@ instance SymWord a => Mergeable (SBV a) where
                                case () of
                                  () | swa == swb                      -> return swa
                                  () | swa == trueSW && swb == falseSW -> return swt
-                                 () | swa == falseSW && swa == trueSW -> newExpr st sgnsz (SBVApp Not [swt])
+                                 () | swa == falseSW && swb == trueSW -> newExpr st sgnsz (SBVApp Not [swt])
                                  ()                                   -> newExpr st sgnsz (SBVApp Ite [swt, swa, swb])
   -- Custom version of select that translates to SMT-Lib tables at the base type of words
   select xs err ind
