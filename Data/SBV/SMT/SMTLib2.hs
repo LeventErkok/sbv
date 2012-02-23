@@ -234,7 +234,7 @@ hex sz v = "#x" ++ pad (sz `div` 4) (showHex v "")
   where pad n s = replicate (n - length s) '0' ++ s
 
 cvtCW :: CW -> String
-cvtCW x | isInfPrec x     = if w > 0 then show w else "(- " ++ show (abs w) ++ ")"
+cvtCW x | isInfPrec x     = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
   where w = cwVal x
 cvtCW x | not (hasSign x) = hex (intSizeOf x) (cwVal x)
 -- signed numbers (with 2's complement representation) is problematic
