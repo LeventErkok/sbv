@@ -151,7 +151,7 @@ constTable (((i, (_, atSz), (_, rtSz)), _elts), is) = decl : map wrap is
 
 skolemTable :: String -> (((Int, (Bool, Size), (Bool, Size)), [SW]), [String]) -> String
 skolemTable qsIn (((i, (_, atSz), (_, rtSz)), _elts), _) = decl
-  where qs   = if null qsIn then "" else (qs ++ " ")
+  where qs   = if null qsIn then "" else qs ++ " "
         t    = "table" ++ show i
         decl = "(declare-fun " ++ t ++ " (" ++ qs ++ smtType atSz ++ ") " ++ smtType rtSz ++ ")"
 
