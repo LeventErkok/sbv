@@ -388,7 +388,11 @@ instance Boolean SBool where
   false = literal False
   bnot  b | b `isConcretely` (== False) = true
           | b `isConcretely` (== True)  = false
-          | True                        = liftSym1Bool (mkSymOp1 Not) not b
+          | True                        = liftSym1Bool (mkSymOp1SC opt Not) not b
+          where opt x
+                 | x == falseSW = Just trueSW
+                 | x == trueSW  = Just falseSW
+                 | True         = Nothing
   a &&& b | a `isConcretely` (== False) || b `isConcretely` (== False) = false
           | a `isConcretely` (== True)                                 = b
           | b `isConcretely` (== True)                                 = a
