@@ -154,7 +154,7 @@ class SatModel a where
   cvtModel  :: (a -> Maybe b) -> Maybe (a, [CW]) -> Maybe (b, [CW])
   cvtModel f x = x >>= \(a, r) -> f a >>= \b -> return (b, r)
 
-genParse :: Integral a => (Bool, Size) -> [CW] -> Maybe (a,[CW])
+genParse :: Integral a => (Bool, Size) -> [CW] -> Maybe (a, [CW])
 genParse (signed, size) (x:r)
   | hasSign x == signed && sizeOf x == size = Just (fromIntegral (cwVal x),r)
 genParse _ _ = Nothing
