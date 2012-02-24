@@ -3,13 +3,13 @@ Satisfiable. Model:
   s1 = 1 :: SWord8
   s2 = 0 :: SWord8
   s3 = True
-  s4 = 0 :: SWord8
+  s4 = 1 :: SWord8
   s5 = 0 :: SWord8
   s6 = False
   s7 = 3 :: SWord8
   s8 = 2 :: SWord8
   s9 = True
-  s10 = 1 :: SWord8
+  s10 = 0 :: SWord8
   s11 = 0 :: SWord8
   s12 = False
   s13 = 1 :: SWord8

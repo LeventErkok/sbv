@@ -249,16 +249,16 @@ solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ 
 -- Checking for solutions with 5 moves.
 -- Solution #1: 
 --  0 --> Edge, Bono
---  2 <-- Bono
---  3 --> Larry, Adam
--- 13 <-- Edge
+--  2 <-- Edge
+--  4 --> Larry, Adam
+-- 14 <-- Bono
 -- 15 --> Edge, Bono
 -- Total time: 17
 -- Solution #2: 
 --  0 --> Edge, Bono
---  2 <-- Edge
---  4 --> Larry, Adam
--- 14 <-- Bono
+--  2 <-- Bono
+--  3 --> Larry, Adam
+-- 13 <-- Edge
 -- 15 --> Edge, Bono
 -- Total time: 17
 -- Found: 2 solutions with 5 moves.
