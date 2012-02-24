@@ -150,9 +150,10 @@ constTable (((i, (_, atSz), (_, rtSz)), _elts), is) = decl : map wrap is
         wrap  s = "(assert " ++ s ++ ")"
 
 skolemTable :: String -> (((Int, (Bool, Size), (Bool, Size)), [SW]), [String]) -> String
-skolemTable qs (((i, (_, atSz), (_, rtSz)), _elts), _) = decl
-  where t         = "table" ++ show i
-        decl      = "(declare-fun " ++ t ++ " (" ++ qs ++ " " ++ smtType atSz ++ ") " ++ smtType rtSz ++ ")"
+skolemTable qsIn (((i, (_, atSz), (_, rtSz)), _elts), _) = decl
+  where qs   = if null qsIn then "" else (qs ++ " ")
+        t    = "table" ++ show i
+        decl = "(declare-fun " ++ t ++ " (" ++ qs ++ smtType atSz ++ ") " ++ smtType rtSz ++ ")"
 
 -- Left if all constants, Right if otherwise
 genTableData :: SkolemMap -> (Bool, String) -> [SW] -> ((Int, (Bool, Size), (Bool, Size)), [SW]) -> Either [String] [String]
