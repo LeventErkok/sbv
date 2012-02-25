@@ -1,7 +1,12 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Latest Hackage released version: 1.2
+Latest Hackage released version: 1.3
+
+Version 1.3, 2012-02-25
+======================================================================
+  * Workaround cabal/hackage issue, functionally the same as release
+    1.2 below
 
 ======================================================================
 Version 1.2, 2012-02-25
