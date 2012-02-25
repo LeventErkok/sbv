@@ -34,34 +34,22 @@ optionPrefix
   | map toLower S.os `elem` ["linux", "darwin"] = '-'
   | True                                        = '/'   -- windows
 
--- Z3 specific script contents
-z3ExtraCommands :: String
-z3ExtraCommands = unlines [
-    "(set-option :mbqi true)         ; use model-based quantificiation"
-  -- TODO: Remove this when Z3 3.3 is out
-  , "(set-option :auto-config false) ; works around bug in Z3 V.2, see: http://stackoverflow.com/questions/9426420/soundness-issue-with-integer-bv-mixed-benchmarks"
-  , ""
-  ]
-
 -- | The description of the Z3 SMT solver
 -- The default executable is @\"z3\"@, which must be in your path. You can use the @SBV_Z3@ environment variable to point to the executable on your system.
 -- The default options are @\"\/in \/smt2\"@, which is valid for Z3 3.2. You can use the @SBV_Z3_OPTIONS@ environment variable to override the options.
 z3 :: SMTSolver
 z3 = SMTSolver {
-           name       = "z3"
-         , executable = "z3"
-         , options    = map (optionPrefix:) ["in", "smt2"]
-         , engine     = \cfg isSat qinps modelMap skolemMap pgm -> do
-                                execName <-               getEnv "SBV_Z3"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
-                                execOpts <- (words `fmap` getEnv "SBV_Z3_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
-                                let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
-                                    script = SMTScript {scriptBody = z3ExtraCommands ++ pgm, scriptModel = Just (cont skolemMap)}
-                                standardSolver cfg' script cleanErrs (ProofError cfg) (interpretSolverOutput cfg (extractMap isSat qinps modelMap . zipWith match skolemMap))
+           name         = "z3"
+         , executable   = "z3"
+         , options      = map (optionPrefix:) ["in", "smt2"]
+         , engine       = \cfg isSat qinps modelMap skolemMap pgm -> do
+                                  execName <-               getEnv "SBV_Z3"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
+                                  execOpts <- (words `fmap` getEnv "SBV_Z3_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
+                                  let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
+                                      script = SMTScript {scriptBody = unlines (solverTweaks cfg')  ++ pgm, scriptModel = Just (cont skolemMap)}
+                                  standardSolver cfg' script cleanErrs (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap . zipWith match skolemMap))
          }
- where -- This is quite crude and failure prone.. But is necessary to get z3 working through Wine on Mac
-       -- TODO: get rid of this once there's a native Z3 release
-       cleanErrs = intercalate "\n" . filter (not . junk) . lines
-       junk "fixme:heap:HeapSetInformation 0x0 1 0x0 0" = True
+ where cleanErrs = intercalate "\n" . filter (not . junk) . lines
        junk s | "WARNING:" `isPrefixOf` s               = True
        junk _                                           = False
        zero :: Size -> String

@@ -32,16 +32,16 @@ import Data.SBV.SMT.SMTLib
 -- The default options are @\"-m -f\"@, which is valid for Yices 2 series. You can use the @SBV_YICES_OPTIONS@ environment variable to override the options.
 yices :: SMTSolver
 yices = SMTSolver {
-           name       = "Yices"
-         , executable = "yices"
-         -- , options    = ["-tc", "-smt", "-e"]   -- For Yices1
-         , options    = ["-m", "-f"]  -- For Yices2
-         , engine     = \cfg _isSat qinps modelMap _skolemMap pgm -> do
-                                execName <-                getEnv "SBV_YICES"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
-                                execOpts <- (words `fmap`  getEnv "SBV_YICES_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
-                                let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
-                                    script = SMTScript { scriptBody = pgm, scriptModel = Nothing }
-                                standardSolver cfg' script id (ProofError cfg) (interpretSolverOutput cfg (extractMap (map snd qinps) modelMap))
+           name         = "Yices"
+         , executable   = "yices"
+         -- , options      = ["-tc", "-smt", "-e"]   -- For Yices1
+         , options      = ["-m", "-f"]  -- For Yices2
+         , engine       = \cfg _isSat qinps modelMap _skolemMap pgm -> do
+                                  execName <-                getEnv "SBV_YICES"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
+                                  execOpts <- (words `fmap`  getEnv "SBV_YICES_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
+                                  let cfg'   = cfg {solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts}}
+                                      script = SMTScript {scriptBody = unlines (solverTweaks cfg') ++ pgm, scriptModel = Nothing}
+                                  standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap (map snd qinps) modelMap))
          }
   where addTimeOut Nothing  o   = o
         addTimeOut (Just i) o

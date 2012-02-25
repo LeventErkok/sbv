@@ -1,7 +1,23 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Latest Hackage released version: 1.1
+Latest Hackage released version: 1.2
+
+======================================================================
+Version 1.2, 2012-02-25
+
+ Library:
+  * Add a hook so users can add custom script segments for SMT solvers. The new
+    "solverTweaks" field in the SMTConfig data-type can be used for this purpose.
+    The need for this came about due to the need to workaround a Z3 v3.2 issue
+    detalied below:
+      http://stackoverflow.com/questions/9426420/soundness-issue-with-integer-bv-mixed-benchmarks
+    As a consequence, mixed Integer/BV problems can cause soundness issues in Z3
+    and does in SBV. Unfortunately, it's too severe for SBV to add the woraround
+    option, as it slows down the solver as a side effect as well. Thus, we're
+    making this optionally available if/when needed. (Note that the work-around
+    should not be necessary with Z3 v3.3; which isn't released yet.)
+  * Other minor clean-up
 
 ======================================================================
 Version 1.1, 2012-02-14
