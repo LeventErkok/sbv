@@ -37,10 +37,9 @@ optionPrefix
 -- Z3 specific script contents
 z3ExtraCommands :: String
 z3ExtraCommands = unlines [
-    "; Z3 specific settings"
-  , "(set-option :mbqi true)         ; use model-based quantificiation"
+    "(set-option :mbqi true)         ; use model-based quantificiation"
+  -- TODO: Remove this when Z3 3.3 is out
   , "(set-option :auto-config false) ; works around bug in Z3 V.2, see: http://stackoverflow.com/questions/9426420/soundness-issue-with-integer-bv-mixed-benchmarks"
-  , "; End of Z3 specific settings"
   , ""
   ]
 
