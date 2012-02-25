@@ -34,6 +34,16 @@ optionPrefix
   | map toLower S.os `elem` ["linux", "darwin"] = '-'
   | True                                        = '/'   -- windows
 
+-- Z3 specific script contents
+z3ExtraCommands :: String
+z3ExtraCommands = unlines [
+    "; Z3 specific settings"
+  , "(set-option :mbqi true)         ; use model-based quantificiation"
+  , "(set-option :auto-config false) ; works around bug in Z3 V.2, see: http://stackoverflow.com/questions/9426420/soundness-issue-with-integer-bv-mixed-benchmarks"
+  , "; End of Z3 specific settings"
+  , ""
+  ]
+
 -- | The description of the Z3 SMT solver
 -- The default executable is @\"z3\"@, which must be in your path. You can use the @SBV_Z3@ environment variable to point to the executable on your system.
 -- The default options are @\"\/in \/smt2\"@, which is valid for Z3 3.2. You can use the @SBV_Z3_OPTIONS@ environment variable to override the options.
@@ -46,7 +56,7 @@ z3 = SMTSolver {
                                 execName <-               getEnv "SBV_Z3"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
                                 execOpts <- (words `fmap` getEnv "SBV_Z3_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
                                 let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
-                                    script = SMTScript {scriptBody = "(set-option :mbqi true)\n" ++ pgm, scriptModel = Just (cont skolemMap)}
+                                    script = SMTScript {scriptBody = z3ExtraCommands ++ pgm, scriptModel = Just (cont skolemMap)}
                                 standardSolver cfg' script cleanErrs (ProofError cfg) (interpretSolverOutput cfg (extractMap isSat qinps modelMap . zipWith match skolemMap))
          }
  where -- This is quite crude and failure prone.. But is necessary to get z3 working through Wine on Mac
