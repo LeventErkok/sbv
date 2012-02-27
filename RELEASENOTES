@@ -4,6 +4,19 @@ GitHub:  <http://github.com/LeventErkok/sbv>
 Latest Hackage released version: 1.3
 
 ======================================================================
+Version 1.4, Not yet released
+  
+ Library
+  * Fix minor bug in the default implementation of select when the
+    indexer is an SInteger. Since SInteger is unbounded, we cannot
+    use the bit-walking trick on non-base non-mergeable types as we
+    do elsewhere. For this case, we have to resort to a walk-the-list
+    algorithm. (Note that this default implementation is hardly ever
+    used, so this bug was unlikely to occur in practice. If it did, it
+    would've caused a call to "error" anyhow, so there's no soundness
+    concern.)
+
+======================================================================
 Version 1.3, 2012-02-25
 
   * Workaround cabal/hackage issue, functionally the same as release

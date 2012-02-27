@@ -746,14 +746,20 @@ class Mergeable a where
     | True                  = symbolicMerge s a b
    select [] err _   = err
    select xs err ind
-    | hasSign ind    = ite (ind .< 0) err $ result
-    | True           = result
+    | isInfPrec ind  && hasSign ind = ite (ind .< 0) err $ slowResult
+    | isInfPrec ind                 = slowResult
+    | hasSign ind                   = ite (ind .< 0) err $ result
+    | True                          = result
     where result = go xs $ reverse (zip [(0::Integer)..] bits)
           bits   = map (ind `sbvTestBit`) [0 .. bitSize ind - 1]
           go []    _            = err
           go (x:_) []           = x
           go elts  ((n, b):nbs) = let (ys, zs) = genericSplitAt ((2::Integer) ^ n) elts
                                   in ite b (go zs nbs) (go ys nbs)
+          -- when the indexer is infinite-precision (SInteger), we can't use the bit-trick; so go the slower route
+          slowResult = walk xs ind
+            where walk []     _ = err
+                  walk (e:es) i = ite (i .== 0) e (walk es (i - 1))
 
 -- SBV
 instance SymWord a => Mergeable (SBV a) where
