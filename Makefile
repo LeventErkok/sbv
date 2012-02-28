@@ -59,7 +59,7 @@ clean:
 	rm -rf dist $(STAMPFILE)
 
 docs:
-	@(set -o pipefail; $(CABAL) haddock --hyperlink-source 2>&1 | $(SIMPLIFY))
+	@(set -o pipefail; $(CABAL) haddock --haddock-option=--no-warnings --hyperlink-source 2>&1 | $(SIMPLIFY))
 
 release: clean install sdist docs hlint test
 	@echo "*** SBV is ready for release!"
