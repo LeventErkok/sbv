@@ -15,7 +15,7 @@ module Main(main) where
 import Control.Monad        (unless, when)
 import System.Directory     (doesDirectoryExist)
 import System.Environment   (getArgs)
-import System.Exit          (exitWith, ExitCode(..))
+import System.Exit          (exitWith, exitSuccess, ExitCode(..))
 import System.FilePath      ((</>))
 import Test.HUnit           (Test(..), Counts(..), runTestTT)
 
@@ -163,5 +163,5 @@ decide shouldCreate (Counts c t e f) = do
            then do if shouldCreate
                       then putStrLn $ "All " ++ show c ++ " test cases executed in gold-file generation mode."
                       else putStrLn $ "All " ++ show c ++ " test cases successfully passed."
-                   exitWith ExitSuccess
+                   exitSuccess
            else exitWith $ ExitFailure 2
