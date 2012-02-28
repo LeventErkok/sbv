@@ -8,7 +8,7 @@ LINTSRCS  = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs
 STAMPFILE = SBVUnitTest/SBVUnitTestBuildTime.hs
 DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE))
 CABAL     = cabal
-CABPFLAGS = --disable-library-profiling --disable-documentation --ghc-options=-Werror
+CABPFLAGS = --disable-library-profiling --enable-documentation --ghc-options=-Werror
 SIMPLIFY  = ./buildUtils/simplify
 TIME      = /usr/bin/time
 
@@ -53,6 +53,8 @@ test: install
 sdist: install
 	@(set -o pipefail; $(CABAL) sdist | $(SIMPLIFY))
 
+veryclean: clean
+	make -C buildUtils clean
 clean:
 	rm -rf dist $(STAMPFILE)
 
