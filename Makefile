@@ -45,8 +45,8 @@ $(STAMPFILE): $(DEPSRCS)
 	@((set -o pipefail; $(CABAL) $(CABPFLAGS) install 2>&1 | $(SIMPLIFY)) || (rm $(STAMPFILE) && false))
 
 test: install
-	@echo "Executing inline tests.."
-	@(set -o pipefail; $(TIME) doctest ${SRCS} 2>&1 | $(SIMPLIFY))
+	@# @echo "Executing inline tests.."
+	@# @(set -o pipefail; $(TIME) doctest ${SRCS} 2>&1 | $(SIMPLIFY))
 	@echo "Starting external test suite.."
 	@$(TIME) SBVUnitTests
 
