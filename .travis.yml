@@ -1,4 +1,4 @@
-script: make
+language: haskell
 notifications:
   email:
     - erkokl@gmail.com
