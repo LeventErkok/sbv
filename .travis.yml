@@ -1,4 +1,3 @@
-language: haskell
 script: make
 notifications:
   email:
