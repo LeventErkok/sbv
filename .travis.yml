@@ -1,1 +1,7 @@
 language: haskell
+script: make
+notifications:
+  email:
+    - erkokl@gmail.com
+  on_success: always
+  on_failure: always
