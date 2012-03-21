@@ -46,7 +46,7 @@ $(STAMPFILE): $(DEPSRCS)
 
 test: install
 	@echo "Executing inline tests.."
-	@(set -o pipefail; $(TIME) doctest ${SRCS} 2>&1 | $(SIMPLIFY))
+	@(set -o pipefail; $(TIME) doctest ${SRCS} 2>&1)
 	@echo "Starting external test suite.."
 	@$(TIME) SBVUnitTests
 
