@@ -48,6 +48,7 @@ defaultCgConfig = CgConfig { cgRTC = False, cgInteger = Nothing, cgDriverVals = 
 data CgVal = CgAtomic SW
            | CgArray  [SW]
 
+-- | Code-generation state
 data CgState = CgState {
           cgInputs       :: [(String, CgVal)]
         , cgOutputs      :: [(String, CgVal)]
@@ -58,6 +59,7 @@ data CgState = CgState {
         , cgFinalConfig  :: CgConfig
         }
 
+-- | Initial configuration for code-generation
 initCgState :: CgState
 initCgState = CgState {
           cgInputs       = []
@@ -75,11 +77,11 @@ initCgState = CgState {
 newtype SBVCodeGen a = SBVCodeGen (StateT CgState Symbolic a)
                    deriving (Monad, MonadIO, MonadState CgState)
 
--- Reach into symbolic monad..
+-- | Reach into symbolic monad from code-generation
 liftSymbolic :: Symbolic a -> SBVCodeGen a
 liftSymbolic = SBVCodeGen . lift
 
--- Reach into symbolic monad and output a value. Returns the corresponding SW
+-- | Reach into symbolic monad and output a value. Returns the corresponding SW
 cgSBVToSW :: SBV a -> SBVCodeGen SW
 cgSBVToSW = liftSymbolic . sbvToSymSW
 
@@ -182,22 +184,25 @@ data CgPgmKind = CgMakefile [String]
                | CgSource
                | CgDriver
 
+-- | Is this a driver program?
 isCgDriver :: CgPgmKind -> Bool
 isCgDriver CgDriver = True
 isCgDriver _        = False
 
+-- | Is this a make file?
 isCgMakefile :: CgPgmKind -> Bool
 isCgMakefile CgMakefile{} = True
 isCgMakefile _            = False
 
 instance Show CgPgmBundle where
    show (CgPgmBundle fs) = intercalate "\n" $ map showFile fs
+    where showFile :: (FilePath, (CgPgmKind, [Doc])) -> String
+          showFile (f, (_, ds)) =  "== BEGIN: " ++ show f ++ " ================\n"
+                                ++ render' (vcat ds)
+                                ++ "== END: " ++ show f ++ " =================="
 
-showFile :: (FilePath, (CgPgmKind, [Doc])) -> String
-showFile (f, (_, ds)) =  "== BEGIN: " ++ show f ++ " ================\n"
-                      ++ render' (vcat ds)
-                      ++ "== END: " ++ show f ++ " =================="
-
+-- | Generate code for a symbolic program, returning a Code-gen bundle, i.e., collection
+-- of makefiles, source code, headers, etc.
 codeGen :: CgTarget l => l -> CgConfig -> String -> SBVCodeGen () -> IO CgPgmBundle
 codeGen l cgConfig nm (SBVCodeGen comp) = do
    (((), st'), res) <- runSymbolic' CodeGen $ runStateT comp initCgState { cgFinalConfig = cgConfig }
@@ -210,6 +215,7 @@ codeGen l cgConfig nm (SBVCodeGen comp) = do
         error $ "SBV.codeGen: " ++ show nm ++ " has following argument names duplicated: " ++ unwords dupNames
    return $ translate l (cgFinalConfig st) nm st res
 
+-- | Render a code-gen bundle to a directory or to stdout
 renderCgPgmBundle :: Maybe FilePath -> CgPgmBundle -> IO ()
 renderCgPgmBundle Nothing        bundle              = print bundle
 renderCgPgmBundle (Just dirName) (CgPgmBundle files) = do
@@ -231,7 +237,8 @@ renderCgPgmBundle (Just dirName) (CgPgmBundle files) = do
                                      putStrLn $ "Generating: " ++ show fn ++ ".."
                                      writeFile fn (render' (vcat ds))
 
--- Pretty's render might have "leading" white-space in empty lines, eliminate:
+-- | An alternative to Pretty's 'render', which might have "leading" white-space in empty lines. This version
+-- eliminates such whitespace.
 render' :: Doc -> String
 render' = unlines . map clean . lines . P.render
   where clean x | all isSpace x = ""

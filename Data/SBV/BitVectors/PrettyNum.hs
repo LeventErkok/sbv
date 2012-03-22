@@ -83,6 +83,10 @@ instance (SymWord a, PrettyNum a) => PrettyNum (SBV a) where
   hex  s = maybe (show s) (hex :: a -> String)  $ unliteral s
   bin  s = maybe (show s) (bin :: a -> String)  $ unliteral s
 
+-- | Show as a hexadecimal value. First bool controls whether type info is printed
+-- while the second boolean controls wether 0x prefix is printed. The tuple is
+-- the signedness and the bit-length of the input. The length of the string
+-- will /not/ depend on the value, but rather the bit-length.
 shex :: (Show a, Integral a) => Bool -> Bool -> (Bool, Int) -> a -> String
 shex shType shPre (signed, size) a
  | a < 0
@@ -95,6 +99,9 @@ shex shType shPre (signed, size) a
            | True  = ""
        l = (size + 3) `div` 4
 
+-- | Show as a hexadecimal value, integer version. Almost the same as shex above
+-- except we don't have a bit-length so the length of the string will depend
+-- on the actual value.
 shexI :: Bool -> Bool -> Integer -> String
 shexI shType shPre a
  | a < 0
@@ -106,6 +113,7 @@ shexI shType shPre a
        pre | shPre = "0x"
            | True  = ""
 
+-- | Similar to 'shex'; except in binary.
 sbin :: (Show a, Integral a) => Bool -> Bool -> (Bool, Int) -> a -> String
 sbin shType shPre (signed,size) a
  | a < 0
@@ -117,6 +125,7 @@ sbin shType shPre (signed,size) a
        pre | shPre = "0b"
            | True  = ""
 
+-- | Similar to 'shexI'; except in binary.
 sbinI :: Bool -> Bool -> Integer -> String
 sbinI shType shPre a
  | a < 0
@@ -128,11 +137,16 @@ sbinI shType shPre a
        pre | shPre = "0b"
            | True  = ""
 
+-- | Pad a string to a given length. If the string is longer, then we don't drop anything.
 pad :: Int -> String -> String
 pad l s = replicate (l - length s) '0' ++ s
 
-s2, s16 :: (Show a, Integral a) => a -> String
+-- | Binary printer
+s2 :: (Show a, Integral a) => a -> String
 s2  v = showIntAtBase 2 dig v "" where dig = fromJust . flip lookup [(0, '0'), (1, '1')]
+
+-- | Hex printer
+s16 :: (Show a, Integral a) => a -> String
 s16 v = showHex v ""
 
 -- | A more convenient interface for reading binary numbers, also supports negative numbers

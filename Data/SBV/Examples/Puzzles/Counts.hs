@@ -32,10 +32,9 @@ import Data.SBV
 
 -- | We will assume each number can be represented by an 8-bit word, i.e., can be at most 128.
 type Count  = SWord8
-type Counts = [Count]
 
 -- | Given a number, increment the count array depending on the digits of the number
-count :: Count -> Counts -> Counts
+count :: Count -> [Count] -> [Count]
 count n cnts = ite (n .< 10)
                    (upd n cnts)                           -- only one digit
                    (ite (n .< 100)
@@ -49,7 +48,7 @@ count n cnts = ite (n .< 10)
 -- | Encoding of the puzzle. The solution is a sequence of 10 numbers
 -- for the occurrences of the digits such that if we count each digit,
 -- we find these numbers.
-puzzle :: Counts -> SBool
+puzzle :: [Count] -> SBool
 puzzle cnt = cnt .== last css
   where ones = replicate 10 1  -- all digits occur once to start with
         css  = ones : zipWith count cnt css

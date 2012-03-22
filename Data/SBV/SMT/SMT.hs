@@ -45,6 +45,7 @@ data SMTConfig = SMTConfig {
        , useSMTLib2   :: Bool           -- ^ If True, we'll treat the solver as using SMTLib2 input format. Otherwise, SMTLib1
        }
 
+-- | An SMT engine
 type SMTEngine = SMTConfig -> Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [Either SW (SW, [SW])] -> String -> IO SMTResult
 
 -- | An SMT solver
@@ -80,6 +81,7 @@ data SMTScript = SMTScript {
         , scriptModel :: Maybe String  -- ^ Optional continuation script, if the result is sat
         }
 
+-- | Extract the final configuration from a result
 resultConfig :: SMTResult -> SMTConfig
 resultConfig (Unsatisfiable c) = c
 resultConfig (Satisfiable c _) = c
@@ -155,12 +157,13 @@ class SatModel a where
   cvtModel  :: (a -> Maybe b) -> Maybe (a, [CW]) -> Maybe (b, [CW])
   cvtModel f x = x >>= \(a, r) -> f a >>= \b -> return (b, r)
 
+-- | Parse a signed/sized value from a sequence of CWs
 genParse :: Integral a => (Bool, Size) -> [CW] -> Maybe (a, [CW])
 genParse (signed, size) (x:r)
   | hasSign x == signed && sizeOf x == size = Just (fromIntegral (cwVal x),r)
 genParse _ _ = Nothing
 
--- base case, that comes in handy if there are no real variables
+-- | Base case, that comes in handy if there are no real variables
 instance SatModel () where
   parseCWs xs = return ((), xs)
 
@@ -272,6 +275,7 @@ instance Modelable SMTResult where
   modelExists (Unknown{})     = False -- don't risk it
   modelExists _               = False
 
+-- | Extract a model out, will throw error if parsing is unsuccessful
 parseModelOut :: SatModel a => SMTModel -> a
 parseModelOut m = case parseCWs [c | (_, c) <- modelAssocs m] of
                    Just (x, []) -> x
@@ -288,6 +292,7 @@ displayModels disp (AllSatResult (_, ms)) = do
     return $ last (0:inds)
   where display r i = disp i r >> return i
 
+-- | Show an SMTResult; generic version
 showSMTResult :: String -> String -> String -> String -> String -> SMTResult -> String
 showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel result = case result of
   Unsatisfiable _                   -> unsatMsg
@@ -300,12 +305,15 @@ showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel result = case resul
   TimeOut _                         -> "*** Timeout"
  where cfg = resultConfig result
 
+-- | Show a model in human readable form
 showModel :: SMTConfig -> SMTModel -> String
-showModel cfg m = intercalate "\n" (map (shM cfg) assocs ++ concatMap shUI uninterps ++ concatMap shUA arrs)
-  where assocs    = modelAssocs m
-        uninterps = modelUninterps m
-        arrs      = modelArrays m
+showModel cfg m = intercalate "\n" (map shM assocs ++ concatMap shUI uninterps ++ concatMap shUA arrs)
+  where assocs     = modelAssocs m
+        uninterps  = modelUninterps m
+        arrs       = modelArrays m
+        shM (s, v) = "  " ++ s ++ " = " ++ shCW cfg v
 
+-- | Show a constant value, in the user-specified base
 shCW :: SMTConfig -> CW -> String
 shCW = sh . printBase
   where sh 2  = binS
@@ -313,21 +321,19 @@ shCW = sh . printBase
         sh 16 = hexS
         sh n  = \w -> show w ++ " -- Ignoring unsupported printBase " ++ show n ++ ", use 2, 10, or 16."
 
-shM :: SMTConfig -> (String, CW) -> String
-shM cfg (s, v) = "  " ++ s ++ " = " ++ shCW cfg v
-
--- very crude.. printing uninterpreted functions
+-- | Print uninterpreted function values from models. Very, very crude..
 shUI :: (String, [String]) -> [String]
 shUI (flong, cases) = ("  -- uninterpreted: " ++ f) : map shC cases
   where tf = dropWhile (/= '_') flong
         f  =  if null tf then flong else tail tf
         shC s = "       " ++ s
 
--- very crude.. printing array values
+-- | Print uninterpreted array values from models. Very, very crude..
 shUA :: (String, [String]) -> [String]
 shUA (f, cases) = ("  -- array: " ++ f) : map shC cases
   where shC s = "       " ++ s
 
+-- | Helper function to spin off to an SMT solver.
 pipeProcess :: Bool -> String -> String -> [String] -> SMTScript -> (String -> String) -> IO (Either String [String])
 pipeProcess verb nm execName opts script cleanErrs = do
         mbExecPath <- findExecutable execName
@@ -357,6 +363,8 @@ pipeProcess verb nm execName opts script cleanErrs = do
   where clean = reverse . dropWhile isSpace . reverse . dropWhile isSpace
         line  = replicate 78 '='
 
+-- | A standard solver interface. If the solver is SMT-Lib compliant, then this function should suffice in
+-- communicating with it.
 standardSolver :: SMTConfig -> SMTScript -> (String -> String) -> ([String] -> a) -> ([String] -> a) -> IO a
 standardSolver config script cleanErrs failure success = do
     let msg      = when (verbose config) . putStrLn . ("** " ++)
@@ -376,8 +384,8 @@ standardSolver config script cleanErrs failure success = do
       Left e   -> return $ failure (lines e)
       Right xs -> return $ success xs
 
--- A variant of readProcessWithExitCode; except it knows about continuation strings
--- and can speak SMT-Lib2 (just a little)
+-- | A variant of 'readProcessWithExitCode'; except it knows about continuation strings
+-- and can speak SMT-Lib2 (just a little).
 runSolver :: Bool -> FilePath -> [String] -> SMTScript -> IO (ExitCode, String, String)
 runSolver verb execPath opts script
  | isNothing $ scriptModel script

@@ -19,6 +19,8 @@ import Data.Maybe (fromMaybe)
 
 import Data.SBV.BitVectors.Data
 
+-- | Add constraints to generate /new/ models. This function is used to query the SMT-solver, while
+-- disallowing a previous model.
 addNonEqConstraints :: [[(String, CW)]] -> SMTLibPgm -> Maybe String
 addNonEqConstraints nonEqConstraints (SMTLibPgm _ (aliasTable, pre, post)) = Just $ intercalate "\n" $
      pre
@@ -39,6 +41,7 @@ nonEqs (sc:r) =  [" :assumption (or " ++ nonEq sc]
 nonEq :: (String, CW) -> String
 nonEq (s, c) = "(not (= " ++ s ++ " " ++ cvtCW c ++ "))"
 
+-- | Translate a problem into an SMTLib1 script
 cvt :: Bool                                        -- ^ has infinite precision values
     -> Bool                                        -- ^ is this a sat problem?
     -> [String]                                    -- ^ extra comments to place on top

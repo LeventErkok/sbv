@@ -16,10 +16,12 @@ import Control.Monad.Error ()             -- for Monad (Either String) instance
 import Data.Char           (isDigit, ord)
 import Numeric             (readInt, readDec, readHex)
 
+-- | ADT S-Expression format, suitable for representing Yices output
 data SExpr = SCon String
            | SNum Integer
            | SApp [SExpr]
 
+-- | Parse a string into an SExpr, potentially failing with an error message
 parseSExpr :: String -> Either String SExpr
 parseSExpr inp = do (sexp, []) <- parse inpToks
                     return sexp

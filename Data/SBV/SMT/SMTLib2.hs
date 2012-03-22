@@ -22,6 +22,8 @@ import Numeric (showHex)
 
 import Data.SBV.BitVectors.Data
 
+-- | Add constraints to generate /new/ models. This function is used to query the SMT-solver, while
+-- disallowing a previous model.
 addNonEqConstraints :: [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
 addNonEqConstraints qinps allNonEqConstraints (SMTLibPgm _ (aliasTable, pre, post))
   | null allNonEqConstraints
@@ -54,6 +56,7 @@ nonEq (s, c) = "(not (= " ++ s ++ " " ++ cvtCW c ++ "))"
 tbd :: String -> a
 tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
+-- | Translate a problem into an SMTLib2 script
 cvt :: Bool                                        -- ^ has infinite precision values
     -> Bool                                        -- ^ is this a sat problem?
     -> [String]                                    -- ^ extra comments to place on top
