@@ -6,7 +6,7 @@ Latest Hackage released version: 1.3
 ======================================================================
 Version 1.4, Not yet released
   
- Library
+ Library:
   * Fix minor bug in the default implementation of select when the
     indexer is an SInteger. Since SInteger is unbounded, we cannot
     use the bit-walking trick on non-base non-mergeable types as we
@@ -16,6 +16,8 @@ Version 1.4, Not yet released
     would've caused a call to "error" anyhow, so there's no soundness
     concern.)
   * Increase haddock coverage metrics
+ Examples:
+  * Add merge-sort example: Data.SBV.Examples.BitPrecise.MergeSort
 
 ======================================================================
 Version 1.3, 2012-02-25
