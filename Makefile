@@ -28,8 +28,7 @@ define mkStamp
 endef
 
 define mkTags
-	@find . -name \*.\*hs | xargs hasktags -c
-	@sort -o tags tags
+	@find . -name \*.\*hs | xargs fast-tags
 endef
 
 .PHONY: all install test sdist clean docs gold stamp hlint tags
