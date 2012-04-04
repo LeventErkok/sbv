@@ -25,7 +25,9 @@ module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), BVDivisible(..), Uninterpreted(..)
   , sbvTestBit, sbvPopCount, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE
   , lsb, msb, SBVUF, sbvUFName, genFinVar, genFinVar_, forall, forall_, exists, exists_
-  , constrain, pConstrain
+  , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
+  , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
+  , sInt64s, sInteger, sIntegers
   )
   where
 
@@ -237,6 +239,91 @@ instance SymWord Integer where
   fromCW     = genFromCW
   mbMaxBound = Nothing
   mbMinBound = Nothing
+
+------------------------------------------------------------------------------------
+-- * Smart constructors for creating symbolic values. These are not strictly
+-- necessary, as they are mere aliases for 'symbolic' and 'symbolics', but 
+-- they nonetheless make programming easier.
+------------------------------------------------------------------------------------
+-- | Declare an 'SBool'
+sBool :: String -> Symbolic SBool
+sBool = symbolic
+
+-- | Declare a list of 'SBool's
+sBools :: [String] -> Symbolic [SBool]
+sBools = symbolics
+
+-- | Declare an 'SWord8'
+sWord8 :: String -> Symbolic SWord8
+sWord8 = symbolic
+
+-- | Declare a list of 'SWord8's
+sWord8s :: [String] -> Symbolic [SWord8]
+sWord8s = symbolics
+
+-- | Declare an 'SWord16'
+sWord16 :: String -> Symbolic SWord16
+sWord16 = symbolic
+
+-- | Declare a list of 'SWord16's
+sWord16s :: [String] -> Symbolic [SWord16]
+sWord16s = symbolics
+
+-- | Declare an 'SWord32'
+sWord32 :: String -> Symbolic SWord32
+sWord32 = symbolic
+
+-- | Declare a list of 'SWord32's
+sWord32s :: [String] -> Symbolic [SWord32]
+sWord32s = symbolics
+
+-- | Declare an 'SWord64'
+sWord64 :: String -> Symbolic SWord64
+sWord64 = symbolic
+
+-- | Declare a list of 'SWord64's
+sWord64s :: [String] -> Symbolic [SWord64]
+sWord64s = symbolics
+
+-- | Declare an 'SInt8'
+sInt8 :: String -> Symbolic SInt8
+sInt8 = symbolic
+
+-- | Declare a list of 'SInt8's
+sInt8s :: [String] -> Symbolic [SInt8]
+sInt8s = symbolics
+
+-- | Declare an 'SInt16'
+sInt16 :: String -> Symbolic SInt16
+sInt16 = symbolic
+
+-- | Declare a list of 'SInt16's
+sInt16s :: [String] -> Symbolic [SInt16]
+sInt16s = symbolics
+
+-- | Declare an 'SInt32'
+sInt32 :: String -> Symbolic SInt32
+sInt32 = symbolic
+
+-- | Declare a list of 'SInt32's
+sInt32s :: [String] -> Symbolic [SInt32]
+sInt32s = symbolics
+
+-- | Declare an 'SInt64'
+sInt64 :: String -> Symbolic SInt64
+sInt64 = symbolic
+
+-- | Declare a list of 'SInt64's
+sInt64s :: [String] -> Symbolic [SInt64]
+sInt64s = symbolics
+
+-- | Declare an 'SInteger'
+sInteger:: String -> Symbolic SInteger
+sInteger = symbolic
+
+-- | Declare a list of 'SInteger's
+sIntegers :: [String] -> Symbolic [SInteger]
+sIntegers = symbolics
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.

@@ -15,6 +15,13 @@ Version 1.4, Not yet released
     used, so this bug was unlikely to occur in practice. If it did, it
     would've caused a call to "error" anyhow, so there's no soundness
     concern.)
+  * Add functions:
+      sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32,
+      sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s,
+      sInt64, sInt64s, sInteger, sIntegers
+    Strictly speaking these are just synonyms for free and mapM free (plural
+    versions), so they aren't adding any additional power. Except, they are
+    specialized at their respective types, and might be easier to remember.
   * Increase haddock coverage metrics
  Examples:
   * Add merge-sort example: Data.SBV.Examples.BitPrecise.MergeSort

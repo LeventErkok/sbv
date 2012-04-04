@@ -95,6 +95,12 @@ module Data.SBV (
   -- *** Signed unbounded integers
   -- $unboundedLimitations
   , SInteger
+  -- ** Creating a symbolic variable
+  -- $createSym
+  , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger
+  -- ** Creating a list of symbolic variables
+  -- $createSyms
+  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers
   -- *** Abstract SBV type
   , SBV
   -- *** Arrays of symbolic values
@@ -330,6 +336,16 @@ these characteristics make them suitable for use in hard real-time systems, as w
 {- $moduleExportIntro
 The SBV library exports the following modules wholesale, as user programs will have to import these
 three modules to make any sensible use of the SBV functionality.
+-}
+
+{- $createSym
+These functions simplify declaring symbolic variables of various types. Strictly speaking, they are just synonyms
+for 'free' (specialized at the given type), but they might be easier to use.
+-}
+
+{- $createSyms
+These functions simplify declaring a sequence symbolic variables of various types. Strictly speaking, they are just synonyms
+for 'mapM' 'free' (specialized at the given type), but they might be easier to use.
 -}
 
 {- $unboundedLimitations

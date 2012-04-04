@@ -768,6 +768,10 @@ class (HasSignAndSize a, Ord a) => SymWord a where
   free_ :: Symbolic (SBV a)
   -- | Create a bunch of free vars
   mkFreeVars :: Int -> Symbolic [SBV a]
+  -- | Similar to free; Just a more convenient name
+  symbolic  :: String -> Symbolic (SBV a)
+  -- | Similar to mkFreeVars; but automatically gives names based on the strings
+  symbolics :: [String] -> Symbolic [SBV a]
   -- | Turn a literal constant to symbolic
   literal :: a -> SBV a
   -- | Extract a literal, if the value is concrete
@@ -788,6 +792,8 @@ class (HasSignAndSize a, Ord a) => SymWord a where
   mkForallVars n = mapM (const forall_) [1 .. n]
   mkExistVars n  = mapM (const exists_) [1 .. n]
   mkFreeVars n   = mapM (const free_)   [1 .. n]
+  symbolic       = free
+  symbolics      = mapM symbolic
   unliteral (SBV _ (Left c))  = Just $ fromCW c
   unliteral _                 = Nothing
   isConcrete (SBV _ (Left _)) = True
