@@ -52,12 +52,12 @@ type Puzzle = (Int, [SWord8] -> Board)
 -------------------------------------------------------------------
 
 -- | Solve a given puzzle and print the results
-solve :: Puzzle -> IO ()
-solve p@(i, f) = do putStrLn "Solving the puzzle.."
-                    model <- getModel `fmap` sat ((valid . f) `fmap` mkExistVars i)
-                    case model of
-                      Right sln -> dispSolution p sln
-                      Left m    -> putStrLn $ "Unsolvable puzzle: " ++ m
+sudoku :: Puzzle -> IO ()
+sudoku p@(i, f) = do putStrLn "Solving the puzzle.."
+                     model <- getModel `fmap` sat ((valid . f) `fmap` mkExistVars i)
+                     case model of
+                       Right sln -> dispSolution p sln
+                       Left m    -> putStrLn $ "Unsolvable puzzle: " ++ m
 
 -- | Helper function to display results nicely, not really needed, but helps presentation
 dispSolution :: Puzzle -> (Bool, [Word8]) -> IO ()
@@ -250,4 +250,4 @@ puzzle6 = (64, f)
 
 -- | Solve them all, this takes a fraction of a second to run for each case
 allPuzzles :: IO ()
-allPuzzles = mapM_ solve [puzzle0, puzzle1, puzzle2, puzzle3, puzzle4, puzzle5, puzzle6]
+allPuzzles = mapM_ sudoku [puzzle0, puzzle1, puzzle2, puzzle3, puzzle4, puzzle5, puzzle6]

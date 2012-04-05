@@ -22,8 +22,11 @@ Version 1.4, Not yet released
     Strictly speaking these are just synonyms for free and mapM free (plural
     versions), so they aren't adding any additional power. Except, they are
     specialized at their respective types, and might be easier to remember.
+  * Add function solve, which is merely a synonym for (return . bAnd), but
+    it simplifies expressing problems.
   * Increase haddock coverage metrics
  Examples:
+  * Change dog-cat-mouse example to use SInteger for the counts
   * Add merge-sort example: Data.SBV.Examples.BitPrecise.MergeSort
 
 ======================================================================

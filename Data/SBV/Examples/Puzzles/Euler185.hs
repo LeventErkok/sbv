@@ -40,11 +40,11 @@ euler185 = do soln <- mkExistVars 16
 
 -- | Print out the solution nicely. We have:
 --
--- >>> solve
+-- >>> solveEuler185
 -- 4640261571849533
 -- Number of solutions: 1
-solve :: IO ()
-solve = do res <- allSat euler185
-           cnt <- displayModels disp res
-           putStrLn $ "Number of solutions: " ++ show cnt
+solveEuler185 :: IO ()
+solveEuler185 = do res <- allSat euler185
+                   cnt <- displayModels disp res
+                   putStrLn $ "Number of solutions: " ++ show cnt
    where disp _ (_, ss) = putStrLn $ concatMap show (ss :: [Word8])

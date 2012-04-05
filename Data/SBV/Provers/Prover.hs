@@ -27,6 +27,7 @@ module Data.SBV.Provers.Prover (
        , sat, satWith
        , allSat, allSatWith
        , isVacuous, isVacuousWith
+       , solve
        , SatModel(..), Modelable(..), displayModels, extractModels
        , yices, z3, defaultSMTCfg
        , compileToSMTLib, generateSMTBenchmarks
@@ -50,6 +51,7 @@ import Data.SBV.SMT.SMTLib
 import qualified Data.SBV.Provers.Yices as Yices
 import qualified Data.SBV.Provers.Z3    as Z3
 import Data.SBV.Utils.TDiff
+import Data.SBV.Utils.Boolean
 
 mkConfig :: SMTSolver -> Bool -> [String] -> SMTConfig
 mkConfig s isSMTLib2 tweaks = SMTConfig {verbose = False, timing = False, timeOut = Nothing, printBase = 10, smtFile = Nothing, solver = s, solverTweaks = tweaks, useSMTLib2 = isSMTLib2}
@@ -208,6 +210,16 @@ prove = proveWith defaultSMTCfg
 -- | Find a satisfying assignment for a predicate, equivalent to @'satWith' 'defaultSMTCfg'@
 sat :: Provable a => a -> IO SatResult
 sat = satWith defaultSMTCfg
+
+-- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
+-- problems with constraints, like the following:
+--
+-- @
+--   do [x, y, z] <- sIntegers [\"x\", \"y\", \"z\"]
+--      solve [x .> 5, y + z .< x]
+-- @
+solve :: [SBool] -> Symbolic SBool
+solve = return . bAnd
 
 -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
 -- Satisfying assignments are constructed lazily, so they will be available as returned by the solver

@@ -1,5 +1,5 @@
 Solution #1:
-  d = 3 :: SWord16
-  c = 41 :: SWord16
-  m = 56 :: SWord16
+  dog = 3 :: SInteger
+  cat = 41 :: SInteger
+  mouse = 56 :: SInteger
 This is the only solution.

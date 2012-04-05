@@ -152,6 +152,8 @@ module Data.SBV (
   , sat, satWith, isSatisfiable, isSatisfiableWithin
   -- ** Finding all satisfying assignments
   , allSat, allSatWith, numberOfModels
+  -- ** Satisfying a sequence of boolean conditions
+  , solve
   -- ** Adding constraints
   -- $constrainIntro
   , constrain, pConstrain

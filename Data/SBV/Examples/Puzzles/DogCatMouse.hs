@@ -18,29 +18,20 @@ module Data.SBV.Examples.Puzzles.DogCatMouse where
 
 import Data.SBV
 
--- | Use 16-bit words to represent the counts, much larger than we actually need, but no harm.
-type Count = SWord16
-
--- | Codes the puzzle statement, more or less directly using SBV.
-puzzle :: Count -> Count -> Count -> SBool
-puzzle dog cat mouse =
-         dog   .>= 1 &&& dog   .<= 98                  -- at least one dog and at most 98
-    &&&  cat   .>= 1 &&& cat   .<= 98                  -- ditto for cats
-    &&&  mouse .>= 1 &&& mouse .<= 98                  -- ditto for mice
-    &&&  dog + cat + mouse .== 100                     -- buy precisely 100 animals
-    &&&  1500 * dog + 100 * cat + 25 * mouse .== 10000 -- spend exactly 100 dollars (use cents since we don't have fractions)
-
 -- | Prints the only solution:
 --
--- >>> solve
+-- >>> puzzle
 -- Solution #1:
---   dog = 3 :: SWord16
---   cat = 41 :: SWord16
---   mouse = 56 :: SWord16
+--   dog = 3 :: SInteger
+--   cat = 41 :: SInteger
+--   mouse = 56 :: SInteger
 -- This is the only solution.
-solve :: IO AllSatResult
-solve = allSat $ do
-          d <- exists "dog"
-          c <- exists "cat"
-          m <- exists "mouse"
-          return $ puzzle d c m
+puzzle :: IO AllSatResult
+puzzle = allSat $ do
+           [dog, cat, mouse] <- sIntegers ["dog", "cat", "mouse"]
+           solve [ dog   .>= 1                                   -- at least one dog
+                 , cat   .>= 1                                   -- at least one cat
+                 , mouse .>= 1                                   -- at least one mouse
+                 , dog + cat + mouse .== 100                     -- buy precisely 100 animals
+                 , 1500 * dog + 100 * cat + 25 * mouse .== 10000 -- spend exactly 100 dollars (use cents since we don't have fractions)
+                 ]

@@ -55,16 +55,16 @@ puzzle cnt = cnt .== last css
 
 -- | Finds all two known solutions to this puzzle. We have:
 --
--- >>> solve
+-- >>> counts
 -- Solution #1
 -- In this sentence, the number of occurrences of 0 is 1, of 1 is 11, of 2 is 2, of 3 is 1, of 4 is 1, of 5 is 1, of 6 is 1, of 7 is 1, of 8 is 1, of 9 is 1.
 -- Solution #2
 -- In this sentence, the number of occurrences of 0 is 1, of 1 is 7, of 2 is 3, of 3 is 2, of 4 is 1, of 5 is 1, of 6 is 1, of 7 is 2, of 8 is 1, of 9 is 1.
 -- Found: 2 solution(s).
-solve :: IO ()
-solve = do res <- allSat $ puzzle `fmap` mkExistVars 10
-           cnt <- displayModels disp res
-           putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
+counts :: IO ()
+counts = do res <- allSat $ puzzle `fmap` mkExistVars 10
+            cnt <- displayModels disp res
+            putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
   where disp n (_, s) = do putStrLn $ "Solution #" ++ show n
                            dispSolution s
         dispSolution :: [Word8] -> IO ()
@@ -81,4 +81,4 @@ solve = do res <- allSat $ puzzle `fmap` mkExistVars 10
                      ++ ", of 8 is " ++ show (ns !! 8)
                      ++ ", of 9 is " ++ show (ns !! 9)
                      ++ "."
-{-# ANN solve "HLint: ignore Use head" #-}
+{-# ANN counts "HLint: ignore Use head" #-}
