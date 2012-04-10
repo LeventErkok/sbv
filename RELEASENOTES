@@ -24,6 +24,7 @@ Version 1.4, Not yet released
     specialized at their respective types, and might be easier to remember.
   * Add function solve, which is merely a synonym for (return . bAnd), but
     it simplifies expressing problems.
+  * Add class SNum, which simplifies writing polymorphic code over symbolic values
   * Increase haddock coverage metrics
  Examples:
   * Change dog-cat-mouse example to use SInteger for the counts

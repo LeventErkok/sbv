@@ -126,6 +126,8 @@ module Data.SBV (
   , EqSymbolic(..)
   -- ** Symbolic ordering
   , OrdSymbolic(..)
+  -- ** Symbolic numbers
+  , SNum
   -- ** Division
   , BVDivisible(..)
   -- ** The Boolean class
