@@ -357,7 +357,7 @@ for natural reasons..
 -}
 
 instance EqSymbolic (SBV a) where
-  (.==) = liftSym2B (mkSymOpSC (eqOpt trueSW) Equal)    (==)
+  (.==) = liftSym2B (mkSymOpSC (eqOpt trueSW)  Equal)    (==)
   (./=) = liftSym2B (mkSymOpSC (eqOpt falseSW) NotEqual) (/=)
 
 eqOpt :: SW -> SW -> SW -> Maybe SW

@@ -8,13 +8,7 @@ Version 1.4, Not yet released
   
  Library:
   * Fix minor bug in the default implementation of select when the
-    indexer is an SInteger. Since SInteger is unbounded, we cannot
-    use the bit-walking trick on non-base non-mergeable types as we
-    do elsewhere. For this case, we have to resort to a walk-the-list
-    algorithm. (Note that this default implementation is hardly ever
-    used, so this bug was unlikely to occur in practice. If it did, it
-    would've caused a call to "error" anyhow, so there's no soundness
-    concern.)
+    indexer is an SInteger.
   * Add functions:
       sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32,
       sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s,
@@ -26,8 +20,7 @@ Version 1.4, Not yet released
     it simplifies expressing problems.
   * Add class SNum, which simplifies writing polymorphic code over symbolic values
   * Increase haddock coverage metrics
-  * Major code refactoring around symbolic kinds, for a possible future
-    extension to support symbolic reals
+  * Major code refactoring around symbolic kinds
  Examples:
   * Change dog-cat-mouse example to use SInteger for the counts
   * Add merge-sort example: Data.SBV.Examples.BitPrecise.MergeSort
