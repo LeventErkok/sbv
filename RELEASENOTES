@@ -26,6 +26,8 @@ Version 1.4, Not yet released
     it simplifies expressing problems.
   * Add class SNum, which simplifies writing polymorphic code over symbolic values
   * Increase haddock coverage metrics
+  * Major code refactoring around symbolic kinds, for a possible future
+    extension to support symbolic reals
  Examples:
   * Change dog-cat-mouse example to use SInteger for the counts
   * Add merge-sort example: Data.SBV.Examples.BitPrecise.MergeSort
