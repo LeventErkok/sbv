@@ -142,7 +142,7 @@ instance (SymWord a, Provable p) => Provable (SBV a -> p) where
   forSome []     k = forSome_ k
 
 -- Arrays (memory), only supported universally for the time being
-instance (HasSignAndSize a, HasSignAndSize b, SymArray array, Provable p) => Provable (array a b -> p) where
+instance (HasKind a, HasKind b, SymArray array, Provable p) => Provable (array a b -> p) where
   forAll_       k = newArray_  Nothing >>= \a -> forAll_   $ k a
   forAll (s:ss) k = newArray s Nothing >>= \a -> forAll ss $ k a
   forAll []     k = forAll_ k
@@ -436,7 +436,7 @@ runProofOn :: SMTLibConverter -> SMTConfig -> Bool -> [String] -> Result -> IO (
 runProofOn converter config isSat comments res =
         let isTiming = timing config
         in case res of
-             Result hasInfPrec _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs [o@(SW (False, Size (Just 1)) _)] ->
+             Result hasInfPrec _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs [o@(SW (KBounded False 1) _)] ->
                timeIf isTiming "translation" $ let uiMap     = catMaybes (map arrayUIKind arrs) ++ map unintFnUIKind uis
                                                    skolemMap = skolemize (if isSat then is else map flipQ is)
                                                         where flipQ (ALL, x) = (EX, x)

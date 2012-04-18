@@ -19,19 +19,19 @@ import qualified Data.SBV.SMT.SMTLib2 as SMT2
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for
 -- newer versions in the future.)
-type SMTLibConverter =  Bool                                        -- ^ has infinite precision values
-                     -> Bool                                        -- ^ is this a sat problem?
-                     -> [String]                                    -- ^ extra comments to place on top
-                     -> [(Quantifier, NamedSymVar)]                 -- ^ inputs and aliasing names
-                     -> [Either SW (SW, [SW])]                      -- ^ skolemized inputs
-                     -> [(SW, CW)]                                  -- ^ constants
-                     -> [((Int, (Bool, Size), (Bool, Size)), [SW])] -- ^ auto-generated tables
-                     -> [(Int, ArrayInfo)]                          -- ^ user specified arrays
-                     -> [(String, SBVType)]                         -- ^ uninterpreted functions/constants
-                     -> [(String, [String])]                        -- ^ user given axioms
-                     -> Pgm                                         -- ^ assignments
-                     -> [SW]                                        -- ^ extra constraints
-                     -> SW                                          -- ^ output variable
+type SMTLibConverter =  Bool                        -- ^ has infinite precision values
+                     -> Bool                        -- ^ is this a sat problem?
+                     -> [String]                    -- ^ extra comments to place on top
+                     -> [(Quantifier, NamedSymVar)] -- ^ inputs and aliasing names
+                     -> [Either SW (SW, [SW])]      -- ^ skolemized inputs
+                     -> [(SW, CW)]                  -- ^ constants
+                     -> [((Int, Kind, Kind), [SW])] -- ^ auto-generated tables
+                     -> [(Int, ArrayInfo)]          -- ^ user specified arrays
+                     -> [(String, SBVType)]         -- ^ uninterpreted functions/constants
+                     -> [(String, [String])]        -- ^ user given axioms
+                     -> Pgm                         -- ^ assignments
+                     -> [SW]                        -- ^ extra constraints
+                     -> SW                          -- ^ output variable
                      -> SMTLibPgm
 
 -- | Convert to SMTLib-1 format

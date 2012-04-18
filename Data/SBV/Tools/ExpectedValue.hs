@@ -42,10 +42,11 @@ expectedValueWith verbose warmupCount mbMaxIter epsilon m
         runOnce g = do (_, Result _ _ _ _ cs _ _ _ _ _ cstrs os) <- runSymbolic' (Concrete g) (m >>= output)
                        let cval o = case o `lookup` cs of
                                       Nothing -> error "SBV.expectedValue: Cannot compute expected-values in the presence of uninterpreted constants!"
-                                      Just cw -> case (cwSigned cw, cwSize cw) of
-                                                   (True,  Size Nothing ) -> error "Cannot compute expected-values for unbounded integer results."
-                                                   (False, Size (Just 1)) -> if cwToBool cw then 1 else 0
-                                                   _                      -> cwVal cw
+                                      Just cw -> case cwKind cw of
+                                                   KBounded False 1 -> if cwToBool cw then 1 else 0
+                                                   KBounded{}       -> cwVal cw
+                                                   KUnbounded       -> error "Cannot compute expected-values for unbounded integer results."
+                                                   KReal            -> error "Cannot compute expected-values for real valued results."
                        if all ((== 1) . cval) cstrs
                           then return $ map cval os
                           else runOnce g -- constraint not satisfied try again with the same set of constraints

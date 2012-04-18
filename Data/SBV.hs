@@ -191,7 +191,7 @@ module Data.SBV (
   , compileToSMTLib, generateSMTBenchmarks
 
   -- * Test case generation
-  , genTest, getTestValues, TestVectors, TestStyle(..), renderTest, CW(..), Size(..), cwToBool
+  , genTest, getTestValues, TestVectors, TestStyle(..), renderTest, CW(..), Kind(..), cwToBool
 
   -- * Code generation from symbolic programs
   -- $cCodeGeneration

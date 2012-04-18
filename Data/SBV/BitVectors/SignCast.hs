@@ -80,19 +80,27 @@ instance SignCast Word8  Int8  where
 genericSign :: (Integral a, SymWord a, Num b, SymWord b) => SBV a -> SBV b
 genericSign x
   | Just c <- unliteral x = literal $ fromIntegral c
-  | True                  = SBV sgsz (Right (cache y))
-     where sgsz = (True, sizeOf x)
+  | True                  = SBV k (Right (cache y))
+     where k = case kindOf x of
+                 KBounded False n -> KBounded True n
+                 KBounded True  _ -> error "Data.SBV.SignCast.genericSign: Called on signed value"
+                 KUnbounded       -> error "Data.SBV.SignCast.genericSign: Called on unbounded value"
+                 KReal            -> error "Data.SBV.SignCast.genericSign: Called on real value"
            y st = do xsw <- sbvToSW st x
-                     newExpr st sgsz (SBVApp (Extract (intSizeOf x-1) 0) [xsw])
+                     newExpr st k (SBVApp (Extract (intSizeOf x-1) 0) [xsw])
 
 -- Same comments as above, regarding the implementation.
 genericUnsign :: (Integral a, SymWord a, Num b, SymWord b) => SBV a -> SBV b
 genericUnsign x
   | Just c <- unliteral x = literal $ fromIntegral c
-  | True                  = SBV sgsz (Right (cache y))
-     where sgsz = (False, sizeOf x)
+  | True                  = SBV k (Right (cache y))
+     where k = case kindOf x of
+                 KBounded True  n -> KBounded False n
+                 KBounded False _ -> error "Data.SBV.SignCast.genericUnSign: Called on unsigned value"
+                 KUnbounded       -> error "Data.SBV.SignCast.genericUnSign: Called on unbounded value"
+                 KReal            -> error "Data.SBV.SignCast.genericUnSign: Called on real value"
            y st = do xsw <- sbvToSW st x
-                     newExpr st sgsz (SBVApp (Extract (intSizeOf x-1) 0) [xsw])
+                     newExpr st k (SBVApp (Extract (intSizeOf x-1) 0) [xsw])
 
 -- symbolic instances
 instance SignCast SWord8 SInt8 where

@@ -129,7 +129,9 @@ ites s xs ys
 -- See the remarks for the 'pMult' function for this design choice
 polyMult :: (Bits a, SymWord a, FromBits (SBV a)) => (SBV a, SBV a, [Int]) -> SBV a
 polyMult (x, y, red)
-  | isInfPrec x
+  | isReal x
+  = error $ "SBV.polyMult: Received a real value: " ++ show x
+  | not (isBounded x)
   = error $ "SBV.polyMult: Received infinite precision value: " ++ show x
   | True
   = fromBitsLE $ genericTake sz $ r ++ repeat false
@@ -142,7 +144,9 @@ polyMult (x, y, red)
 
 polyDivMod :: (Bits a, SymWord a, FromBits (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
 polyDivMod x y
-   | isInfPrec x
+   | isReal x
+   = error $ "SBV.polyDivMod: Received a real value: " ++ show x
+   | not (isBounded x)
    = error $ "SBV.polyDivMod: Received infinite precision value: " ++ show x
    | True
    = ite (y .== 0) (0, x) (adjust d, adjust r)
@@ -231,7 +235,9 @@ crcBV n m p = take n $ go (replicate n false) (m ++ replicate n false)
 -- 'Int' argument plays the same role as the one in the 'crcBV' function.
 crc :: (FromBits (SBV a), FromBits (SBV b), Bits a, Bits b, SymWord a, SymWord b) => Int -> SBV a -> SBV b -> SBV b
 crc n m p
-  | isInfPrec m || isInfPrec p
+  | isReal m || isReal p
+  = error $ "SBV.crc: Received a real value: " ++ show (m, p)
+  | not (isBounded m) || not (isBounded p)
   = error $ "SBV.crc: Received an infinite precision value: " ++ show (m, p)
   | True
   = fromBitsBE $ replicate (sz - n) false ++ crcBV n (blastBE m) (blastBE p)

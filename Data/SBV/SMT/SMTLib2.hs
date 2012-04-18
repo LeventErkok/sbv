@@ -57,24 +57,24 @@ tbd :: String -> a
 tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
-cvt :: Bool                                        -- ^ has infinite precision values
-    -> Bool                                        -- ^ is this a sat problem?
-    -> [String]                                    -- ^ extra comments to place on top
-    -> [(Quantifier, NamedSymVar)]                 -- ^ inputs
-    -> [Either SW (SW, [SW])]                      -- ^ skolemized version inputs
-    -> [(SW, CW)]                                  -- ^ constants
-    -> [((Int, (Bool, Size), (Bool, Size)), [SW])] -- ^ auto-generated tables
-    -> [(Int, ArrayInfo)]                          -- ^ user specified arrays
-    -> [(String, SBVType)]                         -- ^ uninterpreted functions/constants
-    -> [(String, [String])]                        -- ^ user given axioms
-    -> Pgm                                         -- ^ assignments
-    -> [SW]                                        -- ^ extra constraints
-    -> SW                                          -- ^ output variable
+cvt :: Bool                         -- ^ has infinite precision values
+    -> Bool                         -- ^ is this a sat problem?
+    -> [String]                     -- ^ extra comments to place on top
+    -> [(Quantifier, NamedSymVar)]  -- ^ inputs
+    -> [Either SW (SW, [SW])]       -- ^ skolemized version inputs
+    -> [(SW, CW)]                   -- ^ constants
+    -> [((Int, Kind, Kind), [SW])]  -- ^ auto-generated tables
+    -> [(Int, ArrayInfo)]           -- ^ user specified arrays
+    -> [(String, SBVType)]          -- ^ uninterpreted functions/constants
+    -> [(String, [String])]         -- ^ user given axioms
+    -> Pgm                          -- ^ assignments
+    -> [SW]                         -- ^ extra constraints
+    -> SW                           -- ^ output variable
     -> ([String], [String])
 cvt hasInf isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq cstrs out = (pre, [])
   where -- the logic is an over-approaximation
         logic
-          | hasInf = ["; Has unbounded Integers; no logic specified."]   -- combination, let the solver pick
+          | hasInf = ["; Has unbounded values (Int/Real); no logic specified."]   -- combination, let the solver pick
           | True   = ["(set-logic " ++ qs ++ as ++ ufs ++ "BV)"]
           where qs  | null foralls && null axs = "QF_"  -- axioms are likely to contain quantifiers
                     | True                     = ""
@@ -146,28 +146,28 @@ declUI (i, t) = ["(declare-fun uninterpreted_" ++ i ++ " " ++ cvtType t ++ ")"]
 declAx :: (String, [String]) -> String
 declAx (nm, ls) = (";; -- user given axiom: " ++ nm ++ "\n   ") ++ intercalate "\n" ls
 
-constTable :: (((Int, (Bool, Size), (Bool, Size)), [SW]), [String]) -> [String]
-constTable (((i, (_, atSz), (_, rtSz)), _elts), is) = decl : map wrap is
+constTable :: (((Int, Kind, Kind), [SW]), [String]) -> [String]
+constTable (((i, ak, rk), _elts), is) = decl : map wrap is
   where t       = "table" ++ show i
-        decl    = "(declare-fun " ++ t ++ " (" ++ smtType atSz ++ ") " ++ smtType rtSz ++ ")"
+        decl    = "(declare-fun " ++ t ++ " (" ++ smtType ak ++ ") " ++ smtType rk ++ ")"
         wrap  s = "(assert " ++ s ++ ")"
 
-skolemTable :: String -> (((Int, (Bool, Size), (Bool, Size)), [SW]), [String]) -> String
-skolemTable qsIn (((i, (_, atSz), (_, rtSz)), _elts), _) = decl
+skolemTable :: String -> (((Int, Kind, Kind), [SW]), [String]) -> String
+skolemTable qsIn (((i, ak, rk), _elts), _) = decl
   where qs   = if null qsIn then "" else qsIn ++ " "
         t    = "table" ++ show i
-        decl = "(declare-fun " ++ t ++ " (" ++ qs ++ smtType atSz ++ ") " ++ smtType rtSz ++ ")"
+        decl = "(declare-fun " ++ t ++ " (" ++ qs ++ smtType ak ++ ") " ++ smtType rk ++ ")"
 
 -- Left if all constants, Right if otherwise
-genTableData :: SkolemMap -> (Bool, String) -> [SW] -> ((Int, (Bool, Size), (Bool, Size)), [SW]) -> Either [String] [String]
-genTableData skolemMap (_quantified, args) consts ((i, (sa, at), (_, _rt)), elts)
+genTableData :: SkolemMap -> (Bool, String) -> [SW] -> ((Int, Kind, Kind), [SW]) -> Either [String] [String]
+genTableData skolemMap (_quantified, args) consts ((i, aknd, _), elts)
   | null post = Left  (map (topLevel . snd) pre)
   | True      = Right (map (nested   . snd) (pre ++ post))
   where ssw = cvtSW skolemMap
         (pre, post) = partition fst (zipWith mkElt elts [(0::Int)..])
         t           = "table" ++ show i
         mkElt x k   = (isReady, (idx, ssw x))
-          where idx = cvtCW (mkConstCW (sa, at) k)
+          where idx = cvtCW (mkConstCW aknd k)
                 isReady = x `elem` consts
         topLevel (idx, v) = "(= (" ++ t ++ " " ++ idx ++ ") " ++ v ++ ")"
         nested   (idx, v) = "(= (" ++ t ++ args ++ " " ++ idx ++ ") " ++ v ++ ")"
@@ -177,7 +177,7 @@ genTableData skolemMap (_quantified, args) consts ((i, (sa, at), (_, _rt)), elts
 -- The difficulty is with the ArrayReset/Mutate/Merge: We have to postpone an init if
 -- the components are themselves postponed, so this cannot be implemented as a simple map.
 declArray :: Bool -> [SW] -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String])
-declArray quantified consts skolemMap (i, (_, ((_, atSz), (_, rtSz)), ctx)) = (adecl : map wrap pre, map snd post)
+declArray quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : map wrap pre, map snd post)
   where topLevel = not quantified || case ctx of
                                        ArrayFree Nothing -> True
                                        ArrayFree (Just sw) -> sw `elem` consts
@@ -191,7 +191,7 @@ declArray quantified consts skolemMap (i, (_, ((_, atSz), (_, rtSz)), ctx)) = (a
          = cvtSW skolemMap sw
          | True
          = tbd "Non-constant array initializer in a quantified context"
-        adecl = "(declare-fun " ++ nm ++ "() (Array " ++ smtType atSz ++ " " ++ smtType rtSz ++ "))"
+        adecl = "(declare-fun " ++ nm ++ "() (Array " ++ smtType aKnd ++ " " ++ smtType bKnd ++ "))"
         ctxInfo = case ctx of
                     ArrayFree Nothing   -> []
                     ArrayFree (Just sw) -> declA sw
@@ -199,27 +199,27 @@ declArray quantified consts skolemMap (i, (_, ((_, atSz), (_, rtSz)), ctx)) = (a
                     ArrayMutate j a b -> [(all (`elem` consts) [a, b], "(= " ++ nm ++ " (store array_" ++ show j ++ " " ++ ssw a ++ " " ++ ssw b ++ "))")]
                     ArrayMerge  t j k -> [(t `elem` consts,            "(= " ++ nm ++ " (ite (= #b1 " ++ ssw t ++ ") array_" ++ show j ++ " array_" ++ show k ++ "))")]
         declA sw = let iv = nm ++ "_freeInitializer"
-                   in [ (True,             "(declare-fun " ++ iv ++ "() " ++ smtType atSz ++ ")")
+                   in [ (True,             "(declare-fun " ++ iv ++ "() " ++ smtType aKnd ++ ")")
                       , (sw `elem` consts, "(= (select " ++ nm ++ " " ++ iv ++ ") " ++ ssw sw ++ ")")
                       ]
         wrap (False, s) = s
         wrap (True, s)  = "(assert " ++ s ++ ")"
 
 swType :: SW -> String
-swType s = smtType (sizeOf s)
+swType s = smtType (kindOf s)
 
 swFunType :: [SW] -> SW -> String
 swFunType ss s = "(" ++ unwords (map swType ss) ++ ") " ++ swType s
 
-smtType :: Size -> String
-smtType (Size Nothing)   = "Int"
-smtType (Size (Just sz)) = "(_ BitVec " ++ show sz ++ ")"
+smtType :: Kind -> String
+smtType (KBounded _ sz) = "(_ BitVec " ++ show sz ++ ")"
+smtType KUnbounded      = "Int"
+smtType KReal           = "Real"
 
 cvtType :: SBVType -> String
 cvtType (SBVType []) = error "SBV.SMT.SMTLib2.cvtType: internal: received an empty type!"
 cvtType (SBVType xs) = "(" ++ unwords (map smtType body) ++ ") " ++ smtType ret
-  where szs         = map snd xs
-        (body, ret) = (init szs, last szs)
+  where (body, ret) = (init xs, last xs)
 
 type SkolemMap = M.Map  SW [SW]
 type TableMap  = IM.IntMap String
@@ -238,7 +238,8 @@ hex sz v = "#x" ++ pad (sz `div` 4) (showHex v "")
   where pad n s = replicate (n - length s) '0' ++ s
 
 cvtCW :: CW -> String
-cvtCW x | isInfPrec x     = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
+cvtCW x | isReal x          = tbd $ "cvtCW: real value: " ++ show x
+cvtCW x | not (isBounded x) = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
   where w = cwVal x
 cvtCW x | not (hasSign x) = hex (intSizeOf x) (cwVal x)
 -- signed numbers (with 2's complement representation) is problematic
@@ -263,38 +264,39 @@ getTable m i
   | Just tn <- i `IM.lookup` m = tn
   | True                       = error $ "SBV.SMTLib2: Cannot locate table " ++ show i
 
-unbounded :: SBVExpr -> a
-unbounded expr = error $ "SBV.SMTLib2: Unsupported operation on unbounded integers: " ++ show expr
-
 cvtExp :: SkolemMap -> TableMap -> SBVExpr -> String
 cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
   where ssw = cvtSW skolemMap
-        hasInfPrecArgs = any isInfPrec arguments
-        ensureBV       = not hasInfPrecArgs || unbounded expr
+        bvOp    = all isBounded arguments
+        intOp   = any isInteger arguments
+        realOp  = any isReal arguments
+        bad | intOp = error $ "SBV.SMTLib2: Unsupported operation on unbounded integers: " ++ show expr
+            | True  = error $ "SBV.SMTLib2: Unsupported operation on real values: " ++ show expr
+        ensureBV = bvOp || bad
         lift2  o _ [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
         lift2  o _ sbvs   = error $ "SBV.SMTLib2.sh.lift2: Unexpected arguments: "   ++ show (o, sbvs)
         lift2B oU oS sgn sbvs = "(ite " ++ lift2S oU oS sgn sbvs ++ " #b1 #b0)"
-        lift2S oU oS sgn sbvs
-          | sgn
-          = lift2 oS sgn sbvs
-          | True
-          = lift2 oU sgn sbvs
+        lift2S oU oS sgn = lift2 (if sgn then oS else oU) sgn
         lift2N o sgn sbvs = "(bvnot " ++ lift2 o sgn sbvs ++ ")"
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
         lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib2.sh.lift1: Unexpected arguments: "   ++ show (o, sbvs)
         sh (SBVApp Ite [a, b, c]) = "(ite (= #b1 " ++ ssw a ++ ") " ++ ssw b ++ " " ++ ssw c ++ ")"
-        sh (SBVApp (LkUp (t, (_, atSz), _, l) i e) [])
+        sh (SBVApp (LkUp (t, aKnd, _, l) i e) [])
           | needsCheck = "(ite " ++ cond ++ ssw e ++ " " ++ lkUp ++ ")"
           | True       = lkUp
-          where needsCheck = maybe True (\at -> (2::Integer)^at > fromIntegral l) (unSize atSz)
+          where needsCheck = case aKnd of
+                              KBounded _ n -> (2::Integer)^n > fromIntegral l
+                              KUnbounded   -> True
+                              KReal        -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
                 lkUp = "(" ++ getTable tableMap t ++ " " ++ ssw i ++ ")"
                 cond
                  | hasSign i = "(or " ++ le0 ++ " " ++ gtl ++ ") "
                  | True      = gtl ++ " "
-                (less, leq) = case atSz of
-                                 Size Nothing -> ("<", "<=")
-                                 _            -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
-                mkCnst = cvtCW . mkConstCW (hasSign i, sizeOf i)
+                (less, leq) = case aKnd of
+                                KBounded{} -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
+                                KUnbounded -> ("<", "<=")
+                                KReal      -> ("<", "<=")
+                mkCnst = cvtCW . mkConstCW (kindOf i)
                 le0  = "(" ++ less ++ " " ++ ssw i ++ " " ++ mkCnst 0 ++ ")"
                 gtl  = "(" ++ leq  ++ " " ++ mkCnst l ++ " " ++ ssw i ++ ")"
         sh (SBVApp (ArrEq i j) []) = "(ite (= array_" ++ show i ++ " array_" ++ show j ++") #b1 #b0)"
@@ -303,19 +305,23 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (Uninterpreted nm) args) = "(uninterpreted_" ++ nm ++ " " ++ unwords (map ssw args) ++ ")"
         sh (SBVApp (Extract i j) [a]) | ensureBV = "((_ extract " ++ show i ++ " " ++ show j ++ ") " ++ ssw a ++ ")"
         sh (SBVApp (Rol i) [a])
-           | not hasInfPrecArgs = rot  ssw "rotate_left"  i a
-           | True               = sh (SBVApp (Shl i) [a])     -- Haskell treats rotateL as shiftL for unbounded values
+           | bvOp  = rot  ssw "rotate_left"  i a
+           | intOp = sh (SBVApp (Shl i) [a])       -- Haskell treats rotateL as shiftL for unbounded values
+           | True  = bad
         sh (SBVApp (Ror i) [a])
-           | not hasInfPrecArgs = rot  ssw "rotate_right" i a
-           | True               = sh (SBVApp (Shr i) [a])     -- Haskell treats rotateR as shiftR for unbounded values
+           | bvOp  = rot  ssw "rotate_right" i a
+           | intOp = sh (SBVApp (Shr i) [a])     -- Haskell treats rotateR as shiftR for unbounded values
+           | True  = bad
         sh (SBVApp (Shl i) [a])
-           | not hasInfPrecArgs = shft ssw "bvshl"  "bvshl"  i a
-           | i < 0              = sh (SBVApp (Shr (-i)) [a])  -- flip sign/direction
-           | True               = "(* " ++ ssw a ++ " " ++ show (bit i :: Integer) ++ ")"  -- Implement shiftL by multiplication by 2^i
+           | bvOp   = shft ssw "bvshl"  "bvshl"  i a
+           | i < 0  = sh (SBVApp (Shr (-i)) [a])  -- flip sign/direction
+           | intOp  = "(* " ++ ssw a ++ " " ++ show (bit i :: Integer) ++ ")"  -- Implement shiftL by multiplication by 2^i
+           | True   = bad
         sh (SBVApp (Shr i) [a])
-           | not hasInfPrecArgs = shft ssw "bvlshr" "bvashr" i a
-           | i < 0              = sh (SBVApp (Shl (-i)) [a])  -- flip sign/direction
-           | True               = "(div " ++ ssw a ++ " " ++ show (bit i :: Integer) ++ ")"  -- Implement shiftR by division by 2^i
+           | bvOp  = shft ssw "bvlshr" "bvashr" i a
+           | i < 0 = sh (SBVApp (Shl (-i)) [a])  -- flip sign/direction
+           | intOp = "(div " ++ ssw a ++ " " ++ show (bit i :: Integer) ++ ")"  -- Implement shiftR by division by 2^i
+           | True  = bad
         sh (SBVApp op args)
           | Just f <- lookup op smtBVOpTable, ensureBV
           = f (any hasSign args) (map ssw args)
@@ -329,11 +335,11 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                , (Join, lift2 "concat")
                                ]
         sh inp@(SBVApp op args)
-          | hasInfPrecArgs
-          = case lookup op smtOpIntTable of
-              Just f -> f True (map ssw args)
-              _      -> unbounded inp
-          | Just f <- lookup op smtOpBVTable
+          | intOp, Just f <- lookup op smtOpIntTable
+          = f True (map ssw args)
+          | bvOp, Just f <- lookup op smtOpBVTable
+          = f (any hasSign args) (map ssw args)
+          | realOp, Just f <- lookup op smtOpRealTable
           = f (any hasSign args) (map ssw args)
           | True
           = error $ "SBV.SMT.SMTLib2.cvtExp.sh: impossible happened; can't translate: " ++ show inp
@@ -349,18 +355,23 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 , (LessEq,        lift2B  "bvule" "bvsle")
                                 , (GreaterEq,     lift2B  "bvuge" "bvsge")
                                 ]
-                smtOpIntTable = [ (Plus,          lift2   "+")
-                                , (Minus,         lift2   "-")
-                                , (Times,         lift2   "*")
-                                , (Quot,          lift2   "div")
-                                , (Rem,           lift2   "mod")
-                                , (Equal,         lift2B  "=" "=")
-                                , (NotEqual,      lift2B  "distinct" "distinct")
-                                , (LessThan,      lift2B  "<"  "<")
-                                , (GreaterThan,   lift2B  ">"  ">")
-                                , (LessEq,        lift2B  "<=" "<=")
-                                , (GreaterEq,     lift2B  ">=" ">=")
-                                ]
+                smtOpRealTable =  smtIntRealShared
+                               ++ [ (Quot,        lift2   "/")
+                                  ]
+                smtOpIntTable  = smtIntRealShared
+                               ++ [ (Quot,        lift2   "div")
+                                  , (Rem,         lift2   "mod")
+                                  ]
+                smtIntRealShared  = [ (Plus,          lift2   "+")
+                                    , (Minus,         lift2   "-")
+                                    , (Times,         lift2   "*")
+                                    , (Equal,         lift2B  "=" "=")
+                                    , (NotEqual,      lift2B  "distinct" "distinct")
+                                    , (LessThan,      lift2B  "<"  "<")
+                                    , (GreaterThan,   lift2B  ">"  ">")
+                                    , (LessEq,        lift2B  "<=" "<=")
+                                    , (GreaterEq,     lift2B  ">=" ">=")
+                                    ]
 
 rot :: (SW -> String) -> String -> Int -> SW -> String
 rot ssw o c x = "((_ " ++ o ++ " " ++ show c ++ ") " ++ ssw x ++ ")"
@@ -368,5 +379,5 @@ rot ssw o c x = "((_ " ++ o ++ " " ++ show c ++ ") " ++ ssw x ++ ")"
 shft :: (SW -> String) -> String -> String -> Int -> SW -> String
 shft ssw oW oS c x = "(" ++ o ++ " " ++ ssw x ++ " " ++ cvtCW c' ++ ")"
    where s  = hasSign x
-         c' = mkConstCW (s, sizeOf x) c
-         o  = if hasSign x then oS else oW
+         c' = mkConstCW (kindOf x) c
+         o  = if s then oS else oW

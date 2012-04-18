@@ -80,8 +80,8 @@ getCounterExample inps line = either err extract (parseSExpr line)
                                  matches -> error $  "SBV.Yices: Cannot uniquely identify value for "
                                                   ++ 's':v ++ " in "  ++ show matches
         isInput _       = Nothing
-        extract (SApp [SCon "=", SCon v, SNum i]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (hasSign s, sizeOf s) i))]
-        extract (SApp [SCon "=", SNum i, SCon v]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (hasSign s, sizeOf s) i))]
+        extract (SApp [SCon "=", SCon v, SNum i]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) i))]
+        extract (SApp [SCon "=", SNum i, SCon v]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) i))]
         extract _                                                                    = []
 
 extractUnints :: [(String, UnintKind)] -> [String] -> [(UnintKind, [String])]

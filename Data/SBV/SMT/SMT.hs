@@ -158,45 +158,44 @@ class SatModel a where
   cvtModel f x = x >>= \(a, r) -> f a >>= \b -> return (b, r)
 
 -- | Parse a signed/sized value from a sequence of CWs
-genParse :: Integral a => (Bool, Size) -> [CW] -> Maybe (a, [CW])
-genParse (signed, size) (x:r)
-  | hasSign x == signed && sizeOf x == size = Just (fromIntegral (cwVal x),r)
-genParse _ _ = Nothing
+genParse :: Integral a => Kind -> [CW] -> Maybe (a, [CW])
+genParse k (x:r) | kindOf x == k = Just (fromIntegral (cwVal x),r)
+genParse _ _                     = Nothing
 
 -- | Base case, that comes in handy if there are no real variables
 instance SatModel () where
   parseCWs xs = return ((), xs)
 
 instance SatModel Bool where
-  parseCWs xs = do (x, r) <- genParse (False, Size (Just 1)) xs
+  parseCWs xs = do (x, r) <- genParse (KBounded False 1) xs
                    return ((x :: Integer) /= 0, r)
 
 instance SatModel Word8 where
-  parseCWs = genParse (False, Size (Just 8))
+  parseCWs = genParse (KBounded False 8)
 
 instance SatModel Int8 where
-  parseCWs = genParse (True, Size (Just 8))
+  parseCWs = genParse (KBounded True 8)
 
 instance SatModel Word16 where
-  parseCWs = genParse (False, Size (Just 16))
+  parseCWs = genParse (KBounded False 16)
 
 instance SatModel Int16 where
-  parseCWs = genParse (True, Size (Just 16))
+  parseCWs = genParse (KBounded True 16)
 
 instance SatModel Word32 where
-  parseCWs = genParse (False, Size (Just 32))
+  parseCWs = genParse (KBounded False 32)
 
 instance SatModel Int32 where
-  parseCWs = genParse (True, Size (Just 32))
+  parseCWs = genParse (KBounded True 32)
 
 instance SatModel Word64 where
-  parseCWs = genParse (False, Size (Just 64))
+  parseCWs = genParse (KBounded False 64)
 
 instance SatModel Int64 where
-  parseCWs = genParse (True, Size (Just 64))
+  parseCWs = genParse (KBounded True 64)
 
 instance SatModel Integer where
-  parseCWs = genParse (True, Size Nothing)
+  parseCWs = genParse KUnbounded
 
 -- when reading a list; go as long as we can (maximal-munch)
 -- note that this never fails..

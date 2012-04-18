@@ -61,21 +61,25 @@ instance PrettyNum Integer where
   {hexS = shexI True True; binS = sbinI True True; hex = shexI False False; bin = sbinI False False;}
 
 instance PrettyNum CW where
-  hexS cw | cwIsBit cw   = hexS (cwToBool cw)
-          | isInfPrec cw = shexI True True (cwVal cw)
-          | True         = shex True True (hasSign cw, intSizeOf cw) (cwVal cw)
+  hexS cw | cwIsBit cw         = hexS (cwToBool cw)
+          | isReal cw          = error "TBD: SBV.PrettyNum.hexS: Real-valued CW"
+          | not (isBounded cw) = shexI True True (cwVal cw)
+          | True               = shex  True True (hasSign cw, intSizeOf cw) (cwVal cw)
 
-  binS cw | cwIsBit cw   = binS (cwToBool cw)
-          | isInfPrec cw = sbinI True True (cwVal cw)
-          | True         = sbin True True (hasSign cw, intSizeOf cw) (cwVal cw)
+  binS cw | cwIsBit cw         = binS (cwToBool cw)
+          | isReal cw          = error "TBD: SBV.PrettyNum.binS: Real-valued CW"
+          | not (isBounded cw) = sbinI True True (cwVal cw)
+          | True               = sbin  True True (hasSign cw, intSizeOf cw) (cwVal cw)
 
-  hex cw | cwIsBit cw   = hexS (cwToBool cw)
-         | isInfPrec cw = shexI False False (cwVal cw)
-         | True         = shex False False (hasSign cw, intSizeOf cw) (cwVal cw)
+  hex cw | cwIsBit cw         = hexS (cwToBool cw)
+         | isReal cw          = error "TBD: SBV.PrettyNum.hex: Real-valued CW"
+         | not (isBounded cw) = shexI False False (cwVal cw)
+         | True               = shex  False False (hasSign cw, intSizeOf cw) (cwVal cw)
 
-  bin cw | cwIsBit cw   = binS (cwToBool cw)
-         | isInfPrec cw = sbinI False False (cwVal cw)
-         | True         = sbin False False (hasSign cw, intSizeOf cw) (cwVal cw)
+  bin cw | cwIsBit cw         = binS (cwToBool cw)
+         | isReal cw          = error "TBD: SBV.PrettyNum.bin: Real-valued CW"
+         | not (isBounded cw) = sbinI False False (cwVal cw)
+         | True               = sbin  False False (hasSign cw, intSizeOf cw) (cwVal cw)
 
 instance (SymWord a, PrettyNum a) => PrettyNum (SBV a) where
   hexS s = maybe (show s) (hexS :: a -> String) $ unliteral s

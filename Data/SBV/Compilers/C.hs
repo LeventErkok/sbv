@@ -87,6 +87,10 @@ dieUnbounded :: a
 dieUnbounded = error $    "SBV->C: Unbounded integers are not supported by the C compiler."
                      ++ "\nUse 'cgIntegerSize' to specify a fixed size for SInteger representation."
 
+-- Reals
+dieReal :: a
+dieReal = error "SBV->C: SReal values are not supported by the C compiler."
+
 -- Unsupported features, or features TBD
 tbd :: String -> a
 tbd msg = error $ "SBV->C: Not yet supported: " ++ msg
@@ -125,10 +129,11 @@ cgen cfg nm st sbvProg
                      xs -> vcat $ text "/* User given declarations: */" : map text xs ++ [text ""]
         flags    = cgLDFlags st
 
-cSizeOf :: Maybe Int -> HasSignAndSize a => a -> Int
+cSizeOf :: Maybe Int -> HasKind a => a -> Int
 cSizeOf mbIntSize x
-  | not (isInfPrec x) = intSizeOf x
-  | True              = fromMaybe dieUnbounded mbIntSize
+  | isReal x    = dieReal
+  | isInteger x = fromMaybe dieUnbounded mbIntSize
+  | True        = intSizeOf x
 
 -- | Pretty print a functions type. If there is only one output, we compile it
 -- as a function that returns that value. Otherwise, we compile it as a void function
@@ -149,7 +154,7 @@ mkPParam mbISize (n, CgArray  (sw:_)) = let sgsz = (hasSign sw, cSizeOf mbISize 
 
 -- | Renders as "const SWord8 s0", etc. the first parameter is the width of the typefield
 declSW :: Maybe Int -> Int -> SW -> Doc
-declSW mbISize w sw@(SW (sg, _) _) = text "const" <+> pad (showCType (sg, cSizeOf mbISize sw)) <+> text (show sw)
+declSW mbISize w sw = text "const" <+> pad (showCType (hasSign sw, cSizeOf mbISize sw)) <+> text (show sw)
   where pad s = text $ s ++ replicate (w - length s) ' '
 
 -- | Renders as "s0", etc, or the corresponding constant
@@ -425,14 +430,15 @@ genCProg rtc mbISize fn proto (Result hasInfPrec _ cgs ins preConsts tbls arrs _
                  | True  = text entry                  <+> text "=" <+> showSW mbISize consts sw <> semi
                  where entry = cNm ++ "[" ++ show i ++ "]"
        mkRet sw = text "return" <+> showSW mbISize consts sw <> semi
-       genTbl :: ((Int, (Bool, Size), (Bool, Size)), [SW]) -> (Int, Doc)
-       genTbl ((i, _, (sg, sz)), elts) =  (location, static <+> pprCWord True (sg, szv) <+> text ("table" ++ show i) <> text "[] = {"
-                                                     $$ nest 4 (fsep (punctuate comma (align (map (showSW mbISize consts) elts))))
-                                                     $$ text "};")
-         where szv = case (mbISize, sz) of
-                       (_,       Size (Just v)) -> v
-                       (Just is, Size Nothing)  -> is
-                       _                        -> dieUnbounded
+       genTbl :: ((Int, Kind, Kind), [SW]) -> (Int, Doc)
+       genTbl ((i, _, k), elts) =  (location, static <+> pprCWord True (sg, szv) <+> text ("table" ++ show i) <> text "[] = {"
+                                              $$ nest 4 (fsep (punctuate comma (align (map (showSW mbISize consts) elts))))
+                                              $$ text "};")
+         where (sg, szv) = case (mbISize, k) of
+                            (_,       KBounded b v) -> (b, v)
+                            (Just is, KUnbounded)   -> (True, is)
+                            (Nothing, KUnbounded)   -> dieUnbounded
+                            (_,       KReal)        -> dieReal
                static   = if location == -1 then text "static" else empty
                location = maximum (-1 : map getNodeId elts)
        getNodeId s@(SW _ (NodeId n)) | isConst s = -1
@@ -473,16 +479,17 @@ ppExpr mbISize rtc consts (SBVApp op opArgs) = p op (map (showSW mbISize consts)
           = text "~" <> a
           where s = cSizeOf mbISize (head opArgs)
         p Ite [a, b, c] = a <+> text "?" <+> b <+> text ":" <+> c
-        p (LkUp (t, (as, sizeAT), _, len) ind def) []
+        p (LkUp (t, k, _, len) ind def) []
           | not rtc                    = lkUp -- ignore run-time-checks per user request
           | needsCheckL && needsCheckR = cndLkUp checkBoth
           | needsCheckL                = cndLkUp checkLeft
           | needsCheckR                = cndLkUp checkRight
           | True                       = lkUp
-          where at = case (mbISize, sizeAT) of
-                        (_,      Size (Just v)) -> v
-                        (Just i, Size Nothing)  -> i
-                        _                       -> dieUnbounded
+          where (as, at) = case (mbISize, k) of
+                            (_,       KBounded b v) -> (b, v)
+                            (Just i,  KUnbounded)   -> (True, i)
+                            (Nothing, KUnbounded)   -> dieUnbounded
+                            (_,       KReal)        -> dieReal
                 [index, defVal] = map (showSW mbISize consts) [ind, def]
                 lkUp = text "table" <> int t <> brackets (showSW mbISize consts ind)
                 cndLkUp cnd = cnd <+> text "?" <+> defVal <+> text ":" <+> lkUp

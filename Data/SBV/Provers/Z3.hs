@@ -50,16 +50,16 @@ z3 = SMTSolver {
                                   standardSolver cfg' script cleanErrs (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap . zipWith match skolemMap))
          }
  where cleanErrs = intercalate "\n" . filter (not . junk) . lines
-       junk s | "WARNING:" `isPrefixOf` s               = True
-       junk _                                           = False
-       zero :: Size -> String
-       zero (Size Nothing)   = "0"
-       zero (Size (Just 1))  = "#b0"
-       zero (Size (Just sz)) = "#x" ++ replicate (sz `div` 4) '0'
+       junk = ("WARNING:" `isPrefixOf`)
+       zero :: Kind -> String
+       zero (KBounded False 1)  = "#b0"
+       zero (KBounded _     sz) = "#x" ++ replicate (sz `div` 4) '0'
+       zero KUnbounded          = "0"
+       zero KReal               = "0"
        cont skolemMap = intercalate "\n" $ map extract skolemMap
-        where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ zero (sizeOf s) ++ "))\")"
+        where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ zero (kindOf s) ++ "))\")"
               extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
-              extract (Right (s, ss)) = "(eval (" ++ show s ++ concat [' ' : zero (sizeOf a) | a <- ss] ++ "))"
+              extract (Right (s, ss)) = "(eval (" ++ show s ++ concat [' ' : zero (kindOf a) | a <- ss] ++ "))"
        match (Left _)        l = l
        match (Right (_, [])) l = l
        match (Right (s, _))  l = "((" ++ show s ++ " " ++ l ++ "))"
@@ -99,7 +99,7 @@ getCounterExample inps line = either err extract (parseSExpr line)
                                                   ++ 's':v ++ " in "  ++ show matches
         isInput _       = Nothing
         extract (SApp [SApp [SCon v, SNum i]])
-                | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (hasSign s, sizeOf s) i))]
+                | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) i))]
         extract (SApp [SApp [SCon v, SApp [SCon "-", SNum i]]])
-                | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (hasSign s, sizeOf s) (-i)))]
+                | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) (-i)))]
         extract _                              = []
