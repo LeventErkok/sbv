@@ -21,6 +21,8 @@ Version 1.4, Not yet released
   * Add class SNum, which simplifies writing polymorphic code over symbolic values
   * Increase haddock coverage metrics
   * Major code refactoring around symbolic kinds
+  * SMTLib2: Emit ":produce-models" call before setting the logic, as required
+    by the SMT-Lib2 standard. [Patch provided by arrowdodger on github, thanks!]
  Examples:
   * Change dog-cat-mouse example to use SInteger for the counts
   * Add merge-sort example: Data.SBV.Examples.BitPrecise.MergeSort
