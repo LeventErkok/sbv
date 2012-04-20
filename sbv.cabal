@@ -25,6 +25,8 @@ Description:   Express properties about bit-precise Haskell programs and automat
                .
                  * 'SInteger': Symbolic unbounded integers (signed)
                .
+                 * 'SReal': Symbolic algebraic reals (signed)
+               .
                  * 'SArray', 'SFunArray': Flat arrays of symbolic values
                .
                  * 'STree': Full binary trees of symbolic values (for fast symbolic access)
@@ -127,7 +129,8 @@ Library
                   , Data.SBV.Examples.Puzzles.U2Bridge
                   , Data.SBV.Examples.Uninterpreted.AUF
                   , Data.SBV.Examples.Uninterpreted.Function
-  Other-modules   : Data.SBV.BitVectors.Data
+  Other-modules   : Data.SBV.BitVectors.AlgReals
+                  , Data.SBV.BitVectors.Data
                   , Data.SBV.BitVectors.Model
                   , Data.SBV.BitVectors.PrettyNum
                   , Data.SBV.BitVectors.SignCast

@@ -95,12 +95,15 @@ module Data.SBV (
   -- *** Signed unbounded integers
   -- $unboundedLimitations
   , SInteger
+  -- *** Signed algebraic reals
+  -- $algReals
+  , SReal, AlgReal
   -- ** Creating a symbolic variable
   -- $createSym
   , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger
   -- ** Creating a list of symbolic variables
   -- $createSyms
-  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers
+  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReal, sReals
   -- *** Abstract SBV type
   , SBV
   -- *** Arrays of symbolic values
@@ -221,8 +224,10 @@ module Data.SBV (
   , module Data.Bits
   , module Data.Word
   , module Data.Int
+  , module Data.Ratio
   ) where
 
+import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
 import Data.SBV.BitVectors.PrettyNum
@@ -238,8 +243,9 @@ import Data.SBV.Tools.Optimize
 import Data.SBV.Tools.Polynomial
 import Data.SBV.Utils.Boolean
 import Data.Bits
-import Data.Word
 import Data.Int
+import Data.Ratio
+import Data.Word
 
 -- Haddock section documentation
 {- $progIntro
@@ -339,7 +345,7 @@ these characteristics make them suitable for use in hard real-time systems, as w
 
 {- $moduleExportIntro
 The SBV library exports the following modules wholesale, as user programs will have to import these
-three modules to make any sensible use of the SBV functionality.
+modules to make any sensible use of the SBV functionality.
 -}
 
 {- $createSym
@@ -369,6 +375,19 @@ bit-vectors. The operations that are restricted to bounded word/int sizes are:
 
 Usual arithmetic ('+', '-', '*', 'bvQuotRem') and logical operations ('.<', '.<=', '.>', '.>=', '.==', './=') operations are
 supported for 'SInteger' fully, both in programming and verification modes.
+-}
+
+{- $algReals
+Algebraic reals are roots of single-variable polynomials with rational coefficients. (See
+<http://en.wikipedia.org/wiki/Algebraic_number>.) Note that algebraic reals are infinite
+precision numbers, but they do not cover all /real/ numbers. (In particular, they cannot
+represent transcendentals.) Some irrational numbers are algebraic (such as @sqrt 2@), while
+others are not (such as pi and e).
+
+SBV can deal with real numbers just fine, since the theory of reals is decidable. (See
+<http://goedel.cs.uiowa.edu/smtlib/theories/Reals.smt2>.) In addition, by leveraging backend
+solver capabilities, SBV can also represent and solve polynomial equations involving real-variables.
+(For instance, the Z3 SMT solver, supports polynomial constraints on reals starting with v4.0.)
 -}
 
 {- $constrainIntro

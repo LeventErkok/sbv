@@ -155,15 +155,16 @@ cvtAsgn (s, e) = " :assumption (= " ++ show s ++ " " ++ cvtExp e ++ ")"
 cvtCnst :: (SW, CW) -> String
 cvtCnst (s, c) = " :assumption (= " ++ show s ++ " " ++ cvtCW c ++ ")"
 
+-- no need to worry about Int/Real here as we don't support them with the SMTLib1 interface..
 cvtCW :: CW -> String
-cvtCW x | not (hasSign x) = "bv" ++ show (cwVal x) ++ "[" ++ show (intSizeOf x) ++ "]"
+cvtCW x@(CW _ (Right v)) | not (hasSign x) = "bv" ++ show v ++ "[" ++ show (intSizeOf x) ++ "]"
 -- signed numbers (with 2's complement representation) is problematic
 -- since there's no way to put a bvneg over a positive number to get minBound..
 -- Hence, we punt and use binary notation in that particular case
-cvtCW x | cwVal x == least = mkMinBound (intSizeOf x)
+cvtCW x@(CW _ (Right v))  | v == least = mkMinBound (intSizeOf x)
   where least = negate (2 ^ intSizeOf x)
-cvtCW x = negIf (w < 0) $ "bv" ++ show (abs w) ++ "[" ++ show (intSizeOf x) ++ "]"
-  where w = cwVal x
+cvtCW x@(CW _ (Right v)) = negIf (v < 0) $ "bv" ++ show (abs v) ++ "[" ++ show (intSizeOf x) ++ "]"
+cvtCW x = error $ "SBV.SMTLib1.cvtCW: Unexpected CW: " ++ show x -- unbounded/real, shouldn't reach here
 
 negIf :: Bool -> String -> String
 negIf True  a = "(bvneg " ++ a ++ ")"

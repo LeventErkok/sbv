@@ -14,12 +14,16 @@ module Data.SBV.Provers.SExpr where
 
 import Control.Monad.Error ()             -- for Monad (Either String) instance
 import Data.Char           (isDigit, ord)
+import Data.Ratio
 import Numeric             (readInt, readDec, readHex)
 
+import Data.SBV.BitVectors.AlgReals
+
 -- | ADT S-Expression format, suitable for representing Yices output
-data SExpr = SCon String
-           | SNum Integer
-           | SApp [SExpr]
+data SExpr = SCon  String
+           | SNum  Integer
+           | SReal AlgReal
+           | SApp  [SExpr]
 
 -- | Parse a string into an SExpr, potentially failing with an error message
 parseSExpr :: String -> Either String SExpr
@@ -46,11 +50,20 @@ parseSExpr inp = do (sexp, []) <- parse inpToks
                                        parseApp r (f : sofar)
         parseApp (tok:toks) sofar = do t <- pTok tok
                                        parseApp toks (t : sofar)
-        pTok ('0':'b':r)       = mkNum $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
-        pTok ('b':'v':r)       = mkNum $ readDec (takeWhile (/= '[') r)
-        pTok ('#':'b':r)       = mkNum $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
-        pTok ('#':'x':r)       = mkNum $ readHex r
-        pTok n | all isDigit n = mkNum $ readDec n
+        pTok ('0':'b':r)          = mkNum $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
+        pTok ('b':'v':r)          = mkNum $ readDec (takeWhile (/= '[') r)
+        pTok ('#':'b':r)          = mkNum $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
+        pTok ('#':'x':r)          = mkNum $ readHex r
+        pTok n
+          | not (null n) && isDigit (head n)
+          = if '.' `elem` n
+            then let (a, '.':b) = break (== '.') n in getReal (a, b)
+            else mkNum  $ readDec n
         pTok n                 = return $ SCon n
         mkNum [(n, "")] = return $ SNum n
         mkNum _         = die "cannot read number"
+        getReal (n, d)
+          | all isDigit (n ++ d) = let x :: Integer
+                                       x = read (n++d)
+                                   in return $ SReal $ fromRational $ x % 10 ^ length d
+          | True                 = die "cannot read rational"

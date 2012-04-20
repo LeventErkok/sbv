@@ -6,18 +6,11 @@ SHELL     := /usr/bin/env bash
 SRCS      = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs | grep -v buildUtils/simplify.hs)
 LINTSRCS  = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs)
 STAMPFILE = SBVUnitTest/SBVUnitTestBuildTime.hs
-DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE))
+DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' -or -name '*.cabal' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE))
 CABAL     = cabal
 CABPFLAGS = --disable-library-profiling --enable-documentation --ghc-options=-Werror
 SIMPLIFY  = ./buildUtils/simplify
 TIME      = /usr/bin/time
-
-# Add --force-reinstalls if we have the new cabal
-CABALVERSION=$(word 3, $(shell cabal --version))
-ifeq ("$(CABALVERSION)", "0.10.2")
-else
-CABPFLAGS+=--force-reinstalls
-endif
 
 define mkStamp
 	@echo "-- Auto-generated, don't edit"		       >  ${STAMPFILE}

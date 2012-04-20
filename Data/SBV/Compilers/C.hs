@@ -209,7 +209,8 @@ mkConst i   (s, sz)     = die $ "Constant " ++ show i ++ " at type " ++ (if s th
 
 -- | Show a constant
 showConst :: Maybe Int -> CW -> Doc
-showConst mbISize cw = mkConst (cwVal cw) (hasSign cw, cSizeOf mbISize cw)
+showConst mbISize  cw@(CW _ (Right v)) = mkConst v (hasSign cw, cSizeOf mbISize cw)
+showConst _mbISize cw                  = die $ "showConst: " ++ show cw
 
 -- | Generate a makefile. The first argument is True if we have a driver.
 genMake :: Bool -> String -> String -> [String] -> Doc

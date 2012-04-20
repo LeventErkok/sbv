@@ -62,24 +62,24 @@ instance PrettyNum Integer where
 
 instance PrettyNum CW where
   hexS cw | cwIsBit cw         = hexS (cwToBool cw)
-          | isReal cw          = error "TBD: SBV.PrettyNum.hexS: Real-valued CW"
-          | not (isBounded cw) = shexI True True (cwVal cw)
-          | True               = shex  True True (hasSign cw, intSizeOf cw) (cwVal cw)
+          | isReal cw          = let Left w = cwVal cw in show w
+          | not (isBounded cw) = let Right w = cwVal cw in shexI True True w
+          | True               = let Right w = cwVal cw in shex  True True (hasSign cw, intSizeOf cw) w
 
   binS cw | cwIsBit cw         = binS (cwToBool cw)
-          | isReal cw          = error "TBD: SBV.PrettyNum.binS: Real-valued CW"
-          | not (isBounded cw) = sbinI True True (cwVal cw)
-          | True               = sbin  True True (hasSign cw, intSizeOf cw) (cwVal cw)
+          | isReal cw          = let Left w = cwVal cw in show w
+          | not (isBounded cw) = let Right w = cwVal cw in sbinI True True w
+          | True               = let Right w = cwVal cw in sbin  True True (hasSign cw, intSizeOf cw) w
 
   hex cw | cwIsBit cw         = hexS (cwToBool cw)
-         | isReal cw          = error "TBD: SBV.PrettyNum.hex: Real-valued CW"
-         | not (isBounded cw) = shexI False False (cwVal cw)
-         | True               = shex  False False (hasSign cw, intSizeOf cw) (cwVal cw)
+         | isReal cw          = let Left w = cwVal cw in show w
+         | not (isBounded cw) = let Right w = cwVal cw in shexI False False w
+         | True               = let Right w = cwVal cw in shex  False False (hasSign cw, intSizeOf cw) w
 
   bin cw | cwIsBit cw         = binS (cwToBool cw)
-         | isReal cw          = error "TBD: SBV.PrettyNum.bin: Real-valued CW"
-         | not (isBounded cw) = sbinI False False (cwVal cw)
-         | True               = sbin  False False (hasSign cw, intSizeOf cw) (cwVal cw)
+         | isReal cw          = let Left w = cwVal cw in show w
+         | not (isBounded cw) = let Right w = cwVal cw in sbinI False False w
+         | True               = let Right w = cwVal cw in sbin  False False (hasSign cw, intSizeOf cw) w
 
 instance (SymWord a, PrettyNum a) => PrettyNum (SBV a) where
   hexS s = maybe (show s) (hexS :: a -> String) $ unliteral s

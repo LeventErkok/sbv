@@ -20,6 +20,7 @@ import qualified Data.IntMap   as IM
 import Data.List (intercalate, partition)
 import Numeric (showHex)
 
+import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
 
 -- | Add constraints to generate /new/ models. This function is used to query the SMT-solver, while
@@ -238,17 +239,19 @@ hex sz v = "#x" ++ pad (sz `div` 4) (showHex v "")
   where pad n s = replicate (n - length s) '0' ++ s
 
 cvtCW :: CW -> String
-cvtCW x | isReal x          = tbd $ "cvtCW: real value: " ++ show x
+cvtCW x | isReal x = algRealToSMTLib2 w
+  where Left w = cwVal x
 cvtCW x | not (isBounded x) = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
-  where w = cwVal x
-cvtCW x | not (hasSign x) = hex (intSizeOf x) (cwVal x)
+  where Right w = cwVal x
+cvtCW x | not (hasSign x) = hex (intSizeOf x) w
+  where Right w = cwVal x
 -- signed numbers (with 2's complement representation) is problematic
 -- since there's no way to put a bvneg over a positive number to get minBound..
 -- Hence, we punt and use binary notation in that particular case
-cvtCW x | cwVal x == least = mkMinBound (intSizeOf x)
+cvtCW x | cwVal x == Right least = mkMinBound (intSizeOf x)
   where least = negate (2 ^ intSizeOf x)
 cvtCW x = negIf (w < 0) $ hex (intSizeOf x) (abs w)
-  where w = cwVal x
+  where Right w = cwVal x
 
 negIf :: Bool -> String -> String
 negIf True  a = "(bvneg " ++ a ++ ")"

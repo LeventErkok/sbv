@@ -20,7 +20,7 @@
 
 module Data.SBV.BitVectors.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
- , SInt8, SInt16, SInt32, SInt64, SInteger
+ , SInt8, SInt16, SInt32, SInt64, SInteger, SReal
  , SymWord(..)
  , CW(..), cwSameType, cwIsBit, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
@@ -56,13 +56,14 @@ import qualified Data.Sequence as S    (Seq, empty, (|>))
 import System.Mem.StableName
 import System.Random
 
+import Data.SBV.BitVectors.AlgReals
 import Data.SBV.Utils.Lib
 
 -- | 'CW' represents a concrete word of a fixed size:
 -- Endianness is mostly irrelevant (see the 'FromBits' class).
 -- For signed words, the most significant digit is considered to be the sign.
-data CW = CW { cwKind   :: !Kind    -- ^ Kind of the word
-             , cwVal    :: !Integer -- ^ The underlying value, represented as a Haskell 'Integer'
+data CW = CW { cwKind   :: !Kind                     -- ^ Kind of the word
+             , cwVal    :: !(Either AlgReal Integer) -- ^ The underlying value, represented as either an algebraic real (for SReal), or a Haskell 'Integer' (everything else)
              }
         deriving (Eq, Ord)
 
@@ -78,23 +79,21 @@ cwIsBit x = case cwKind x of
 
 -- | Convert a CW to a Haskell boolean
 cwToBool :: CW -> Bool
-cwToBool x = cwVal x /= 0
+cwToBool x = cwVal x /= Right 0
 
 -- | Normalize a CW. Essentially performs modular arithmetic to make sure the
 -- value can fit in the given bit-size. Note that this is rather tricky for
 -- negative values, due to asymmetry. (i.e., an 8-bit negative number represents
 -- values in the range -128 to 127; thus we have to be careful on the negative side.)
 normCW :: CW -> CW
-normCW x
- | not (isBounded x) = x
- | True              = x { cwVal = norm }
- where sz = intSizeOf x
-       norm | sz == 0   = 0
-            | hasSign x = let rg = 2 ^ (sz - 1)
-                          in case divMod (cwVal x) rg of
-                                    (a, b) | even a -> b
-                                    (_, b)          -> b - rg
-            | True      = cwVal x `mod` (2 ^ sz)
+normCW c@(CW (KBounded signed sz) (Right v)) = c { cwVal = Right norm }
+ where norm | sz == 0 = 0
+            | signed  = let rg = 2 ^ (sz - 1)
+                        in case divMod v rg of
+                                  (a, b) | even a -> b
+                                  (_, b)          -> b - rg
+            | True    = v `mod` (2 ^ sz)
+normCW c = c
 
 -- | Kind of symbolic value
 data Kind = KBounded Bool Int
@@ -109,7 +108,7 @@ instance Show Kind where
   show KUnbounded         = "SInteger"
   show KReal              = "SReal"
 
--- | A symbolic node id.
+-- | A symbolic node id
 newtype NodeId = NodeId Int deriving (Eq, Ord)
 
 -- | A symbolic word, tracking it's signedness and size.
@@ -133,11 +132,11 @@ trueSW  = SW (KBounded False 1) $ NodeId (-1)
 
 -- | Constant False as a CW. We represent it using the integer value 0.
 falseCW :: CW
-falseCW = CW (KBounded False 1) 0
+falseCW = CW (KBounded False 1) (Right 0)
 
 -- | Constant True as a CW. We represent it using the integer value 1.
 trueCW :: CW
-trueCW  = CW (KBounded False 1) 1
+trueCW  = CW (KBounded False 1) (Right 1)
 
 -- | A simple type for SBV computations, used mainly for uninterpreted constants.
 -- We keep track of the signedness/size of the arguments. A non-function will
@@ -216,25 +215,29 @@ instance HasKind Word32  where kindOf _ = KBounded False 32
 instance HasKind Int64   where kindOf _ = KBounded True  64
 instance HasKind Word64  where kindOf _ = KBounded False 64
 instance HasKind Integer where kindOf _ = KUnbounded
+instance HasKind AlgReal where kindOf _ = KReal
 
 -- | Lift a unary function thruough a CW
-liftCW :: (Integer -> b) -> CW -> b
-liftCW f x = f (cwVal x)
+liftCW :: (AlgReal -> b) -> (Integer -> b) -> CW -> b
+liftCW f g = either f g . cwVal
 
 -- | Lift a binary function through a CW
-liftCW2 :: (Integer -> Integer -> b) -> CW -> CW -> b
-liftCW2 f x y | cwSameType x y = f (cwVal x) (cwVal y)
-liftCW2 _ a b = error $ "SBV.liftCW2: impossible, incompatible args received: " ++ show (a, b)
+liftCW2 :: (AlgReal -> AlgReal -> b) -> (Integer -> Integer -> b) -> CW -> CW -> b
+liftCW2 f g x y = case (cwVal x, cwVal y) of
+                    (Left a, Left b)   -> f a b
+                    (Right a, Right b) -> g a b
+                    _                  -> error $ "SBV.liftCW2: impossible, incompatible args received: " ++ show (x, y)
 
 -- | Map a unary function through a CW
-mapCW :: (Integer -> Integer) -> CW -> CW
-mapCW f x  = normCW $ x { cwVal = f (cwVal x) }
+mapCW :: (AlgReal -> AlgReal) -> (Integer -> Integer) -> CW -> CW
+mapCW f g x  = normCW $ CW (cwKind x) (either (Left . f) (Right . g) (cwVal x))
 
 -- | Map a binary function through a CW
-mapCW2 :: (Integer -> Integer -> Integer) -> CW -> CW -> CW
-mapCW2 f x y
-  | cwSameType x y = normCW $ CW (cwKind x) (f (cwVal x) (cwVal y))
-mapCW2 _ a b = error $ "SBV.mapCW2: impossible, incompatible args received: " ++ show (a, b)
+mapCW2 :: (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> CW -> CW -> CW
+mapCW2 f g x y = case (cwSameType x y, cwVal x, cwVal y) of
+                   (True, Left a,  Left b)  -> normCW $ CW (cwKind x) (Left  (f a b))
+                   (True, Right a, Right b) -> normCW $ CW (cwKind x) (Right (g a b))
+                   _                        -> error $ "SBV.mapCW2: impossible, incompatible args received: " ++ show (x, y)
 
 instance HasKind CW where
   kindOf = cwKind
@@ -244,7 +247,7 @@ instance HasKind SW where
 
 instance Show CW where
   show w | cwIsBit w = show (cwToBool w)
-  show w             = liftCW show w ++ " :: " ++ showType w
+  show w             = liftCW show show w ++ " :: " ++ showType w
 
 instance Show SW where
   show (SW _ (NodeId n))
@@ -496,6 +499,9 @@ type SInt64  = SBV Int64
 -- | Infinite precision signed symbolic value
 type SInteger = SBV Integer
 
+-- | Infinite precision symbolic algebraic real value
+type SReal = SBV AlgReal
+
 -- Not particularly "desirable", but will do if needed
 instance Show (SBV a) where
   show (SBV _ (Left c))  = show c
@@ -567,7 +573,8 @@ getTableIndex st at rt elts = do
 
 -- | Create a constant word
 mkConstCW :: Integral a => Kind -> a -> CW
-mkConstCW k a = normCW $ CW k (toInteger a)
+mkConstCW KReal a = normCW $ CW KReal (Left  (fromInteger (toInteger a)))
+mkConstCW k     a = normCW $ CW k     (Right (toInteger a))
 
 -- | Create a new expression; hash-cons as necessary
 newExpr :: State -> Kind -> SBVExpr -> IO SW
