@@ -10,7 +10,8 @@
 -- Test suite for basic concrete arithmetic
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE Rank2Types    #-}
+{-# LANGUAGE TupleSections #-}
 
 module TestSuite.Basics.Arithmetic(testSuite) where
 
@@ -21,7 +22,8 @@ import SBVTest
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test $
-        genBinTest  "+"                (+)
+        genReals
+     ++ genBinTest  "+"                (+)
      ++ genBinTest  "-"                (-)
      ++ genBinTest  "*"                (*)
      ++ genUnTest   "negate"           negate
@@ -29,6 +31,12 @@ testSuite = mkTestSuite $ \_ -> test $
      ++ genUnTest   "signum"           signum
      ++ genBinTest  ".&."              (.&.)
      ++ genBinTest  ".|."              (.|.)
+     ++ genBoolTest "<"                (<)  (.<)
+     ++ genBoolTest "<="               (<=) (.<=)
+     ++ genBoolTest ">"                (>)  (.>)
+     ++ genBoolTest ">="               (>=) (.>=)
+     ++ genBoolTest "=="               (==) (.==)
+     ++ genBoolTest "/="               (/=) (./=)
      ++ genBinTest  "xor"              xor
      ++ genUnTest   "complement"       complement
      ++ genIntTest  "shift"            shift
@@ -57,6 +65,20 @@ genBinTest nm op = map mkTest $
      ++ zipWith pair [(show x, show y, x `op` y) | x <- i64s, y <- i64s] [x `op` y | x <- si64s, y <- si64s]
      ++ zipWith pair [(show x, show y, x `op` y) | x <- iUBs, y <- iUBs] [x `op` y | x <- siUBs, y <- siUBs]
   where pair (x, y, a) b   = (x, y, show (fromIntegral a `asTypeOf` b) == show b)
+        mkTest (x, y, s) = "arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
+
+genBoolTest :: String -> (forall a. Ord a => a -> a -> Bool) -> (forall a. OrdSymbolic a => a -> a -> SBool) -> [Test]
+genBoolTest nm op opS = map mkTest $
+        zipWith pair [(show x, show y, x `op` y) | x <- w8s,  y <- w8s ] [x `opS` y | x <- sw8s,  y <- sw8s]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- w16s, y <- w16s] [x `opS` y | x <- sw16s, y <- sw16s]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- w32s, y <- w32s] [x `opS` y | x <- sw32s, y <- sw32s]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- w64s, y <- w64s] [x `opS` y | x <- sw64s, y <- sw64s]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- i8s,  y <- i8s ] [x `opS` y | x <- si8s,  y <- si8s]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- i16s, y <- i16s] [x `opS` y | x <- si16s, y <- si16s]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- i32s, y <- i32s] [x `opS` y | x <- si32s, y <- si32s]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- i64s, y <- i64s] [x `opS` y | x <- si64s, y <- si64s]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- iUBs, y <- iUBs] [x `opS` y | x <- siUBs, y <- siUBs]
+  where pair (x, y, a) b   = (x, y, Just a == unliteral b)
         mkTest (x, y, s) = "arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
 
 genUnTest :: String -> (forall a. Bits a => a -> a) -> [Test]
@@ -144,6 +166,21 @@ genCasts = map mkTest $
          ++ [(show x, unsignCast x .== fromBitsLE (blastLE x)) | x <- si64s]
   where mkTest (x, r) = "cast-" ++ show x ~: r `showsAs` "True"
 
+genReals :: [Test]
+genReals = map mkTest $
+        map ("+",)  (zipWith pair [(show x, show y, x +  y) | x <- rs, y <- rs        ] [x +   y | x <- srs,  y <- srs                       ])
+     ++ map ("-",)  (zipWith pair [(show x, show y, x -  y) | x <- rs, y <- rs        ] [x -   y | x <- srs,  y <- srs                       ])
+     ++ map ("*",)  (zipWith pair [(show x, show y, x *  y) | x <- rs, y <- rs        ] [x *   y | x <- srs,  y <- srs                       ])
+     ++ map ("<",)  (zipWith pair [(show x, show y, x <  y) | x <- rs, y <- rs        ] [x .<  y | x <- srs,  y <- srs                       ])
+     ++ map ("<=",) (zipWith pair [(show x, show y, x <= y) | x <- rs, y <- rs        ] [x .<= y | x <- srs,  y <- srs                       ])
+     ++ map (">",)  (zipWith pair [(show x, show y, x >  y) | x <- rs, y <- rs        ] [x .>  y | x <- srs,  y <- srs                       ])
+     ++ map (">=",) (zipWith pair [(show x, show y, x >= y) | x <- rs, y <- rs        ] [x .>= y | x <- srs,  y <- srs                       ])
+     ++ map ("==",) (zipWith pair [(show x, show y, x == y) | x <- rs, y <- rs        ] [x .== y | x <- srs,  y <- srs                       ])
+     ++ map ("/=",) (zipWith pair [(show x, show y, x /= y) | x <- rs, y <- rs        ] [x ./= y | x <- srs,  y <- srs                       ])
+     ++ map ("/",)  (zipWith pair [(show x, show y, x /  y) | x <- rs, y <- rs, y /= 0] [x / y   | x <- srs,  y <- srs, unliteral y /= Just 0])
+  where pair (x, y, a) b   = (x, y, Just a == unliteral b)
+        mkTest (nm, (x, y, s)) = "arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
+
 -- Concrete test data
 xsSigned, xsUnsigned :: (Num a, Enum a, Bounded a) => [a]
 xsUnsigned = take 5 (iterate (1+) minBound) ++ take 5 (iterate (\x -> x-1) maxBound)
@@ -202,3 +239,11 @@ iUBs = [-1000000 .. -999995] ++ [-5 .. 5] ++ [999995 ..  1000000]
 
 siUBs :: [SInteger]
 siUBs = map literal iUBs
+
+rs :: [AlgReal]
+rs = [fromRational (i % d) | i <- is, d <- ds]
+ where is = [-1000000 .. -999998] ++ [-2 .. 2] ++ [999998 ..  1000001]
+       ds = [2 .. 5] ++ [98 .. 102] ++ [999998 .. 1000000]
+
+srs :: [SReal]
+srs = map literal rs
