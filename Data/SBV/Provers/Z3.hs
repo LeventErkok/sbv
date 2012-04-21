@@ -46,7 +46,10 @@ z3 = SMTSolver {
                                   execName <-               getEnv "SBV_Z3"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
                                   execOpts <- (words `fmap` getEnv "SBV_Z3_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
                                   let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
-                                      script = SMTScript {scriptBody = unlines (solverTweaks cfg')  ++ pgm, scriptModel = Just (cont skolemMap)}
+                                      tweaks = case solverTweaks cfg' of
+                                                 [] -> ""
+                                                 ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
+                                      script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont skolemMap)}
                                   standardSolver cfg' script cleanErrs (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap . zipWith match skolemMap))
          }
  where cleanErrs = intercalate "\n" . filter (not . junk) . lines
