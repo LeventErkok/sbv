@@ -16,6 +16,7 @@
 
 module Data.SBV.BitVectors.AlgReals (AlgReal, algRealToSMTLib2, algRealToHaskell) where
 
+import Data.List
 import Data.Ratio
 import System.Random
 
@@ -26,7 +27,7 @@ data AlgReal = AlgRational Rational
              | AlgPolyRoot              -- currently uninterpreted
 
 instance Show AlgReal where
-  show (AlgRational a) = show a
+  show (AlgRational a) = showExact a
   show AlgPolyRoot     = "<AlgPolyRoot>"
 
 -- The idea in the instances below is that we will fully support operations
@@ -78,8 +79,8 @@ instance Random AlgReal where
 algRealToSMTLib2 :: AlgReal -> String
 algRealToSMTLib2 (AlgRational r)
    | m == 0 = "0.0"
-   | m < 0  = "(/ (" ++ show m ++ ".0) " ++ show n ++ ".0)"
-   | True   = "(/ "  ++ show m ++ ".0 "  ++ show n ++ ".0)"
+   | m < 0  = "(- (/ "  ++ show (abs m) ++ ".0 " ++ show n ++ ".0))"
+   | True   =    "(/ "  ++ show m       ++ ".0 " ++ show n ++ ".0)"
   where (m, n) = (numerator r, denominator r)
 algRealToSMTLib2 AlgPolyRoot = error "SBV.algRealToSMTLib2: TBD: AlgPolyRoot"
 
@@ -88,3 +89,34 @@ algRealToSMTLib2 AlgPolyRoot = error "SBV.algRealToSMTLib2: TBD: AlgPolyRoot"
 algRealToHaskell :: AlgReal -> String
 algRealToHaskell (AlgRational r) = "((" ++ show r ++ ") :: Rational)"
 algRealToHaskell AlgPolyRoot     = error "SBV.algRealToHaskell: Unsupported AlgPolyRoot argument"
+
+-- Try to show a rational precisely if we can, with finite number of
+-- digits. Otherwise, show it as a rational value.
+showExact :: Rational -> String
+showExact r = case f25 (denominator r) [] of
+                Nothing               -> show r   -- bail out, not precisely representable with finite digits
+                Just (noOfZeros, num) -> let present = length num
+                                         in neg $ case noOfZeros `compare` present of
+                                                         LT -> let (b, a) = splitAt (present - noOfZeros) num in b ++ "." ++ if null a then "0" else a
+                                                         EQ -> "0." ++ num
+                                                         GT -> "0." ++ replicate (noOfZeros - present) '0' ++ num
+  where neg = if r < 0 then ('-':) else id
+        -- factor a number in 2's and 5's if possible
+        -- If so, it'll return the number of digits after the zero
+        -- to reach the next power of 10, and the numerator value scaled
+        -- appropriately and shown as a string
+        f25 :: Integer -> [Integer] -> Maybe (Int, String)
+        f25 1 sofar = let (ts, fs)   = partition (== 2) sofar
+                          [lts, lfs] = map length [ts, fs]
+                          noOfZeros  = lts `max` lfs
+                      in Just (noOfZeros, show (abs (numerator r)  * factor ts fs))
+        f25 v sofar = let (q2, r2) = v `quotRem` 2
+                          (q5, r5) = v `quotRem` 5
+                      in case (r2, r5) of
+                           (0, _) -> f25 q2 (2 : sofar)
+                           (_, 0) -> f25 q5 (5 : sofar)
+                           _      -> Nothing
+        -- compute the next power of 10 we need to get to
+        factor []     fs     = product [2 | _ <- fs]
+        factor ts     []     = product [5 | _ <- ts]
+        factor (_:ts) (_:fs) = factor ts fs
