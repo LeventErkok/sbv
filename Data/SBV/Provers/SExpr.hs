@@ -7,7 +7,7 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Parsing of S-expressions (mainly used for parsing Yices output)
+-- Parsing of S-expressions (mainly used for parsing SMT-Lib get-value output)
 -----------------------------------------------------------------------------
 
 module Data.SBV.Provers.SExpr where
@@ -19,7 +19,7 @@ import Numeric             (readInt, readDec, readHex)
 
 import Data.SBV.BitVectors.AlgReals
 
--- | ADT S-Expression format, suitable for representing Yices output
+-- | ADT S-Expression format, suitable for representing get-model output of SMT-Lib
 data SExpr = SCon  String
            | SNum  Integer
            | SReal AlgReal
@@ -39,7 +39,7 @@ parseSExpr inp = do (sexp, []) <- parse inpToks
                      ++ "\n*** Input : <" ++ inp ++ ">"
         parse []         = die "ran out of tokens"
         parse ("(":toks) = do (f, r) <- parseApp toks []
-                              return (SApp f, r)
+                              return (cvt (SApp f), r)
         parse (")":_)    = die "extra tokens after close paren"
         parse [tok]      = do t <- pTok tok
                               return (t, [])
@@ -67,3 +67,11 @@ parseSExpr inp = do (sexp, []) <- parse inpToks
                                        x = read (n++d)
                                    in return $ SReal $ fromRational $ x % 10 ^ length d
           | True                 = die "cannot read rational"
+        -- simplify numbers
+        cvt (SApp [SCon "/", SReal a, SReal b]) = SReal (a / b)
+        cvt (SApp [SCon "/", SReal a, SNum  b]) = SReal (a             / fromInteger b)
+        cvt (SApp [SCon "/", SNum  a, SReal b]) = SReal (fromInteger a /             b)
+        cvt (SApp [SCon "/", SNum  a, SNum  b]) = SReal (fromInteger a / fromInteger b)
+        cvt (SApp [SCon "-", SReal a])          = SReal (-a)
+        cvt (SApp [SCon "-", SNum a])           = SNum  (-a)
+        cvt x                                   = x

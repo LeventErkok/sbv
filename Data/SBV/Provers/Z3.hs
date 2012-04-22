@@ -101,12 +101,6 @@ getCounterExample inps line = either err extract (parseSExpr line)
                                  matches -> error $  "SBV.SMTLib2: Cannot uniquely identify value for "
                                                   ++ 's':v ++ " in "  ++ show matches
         isInput _       = Nothing
-        extract (SApp [SApp [SCon v, SNum i]])
-                | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) i))]
-        extract (SApp [SApp [SCon v, SReal i]])
-                | Just (n, _, nm) <- isInput v = [(n, (nm, CW KReal (Left i)))]
-        extract (SApp [SApp [SCon v, SApp [SCon "-", SNum i]]])
-                | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) (-i)))]
-        extract (SApp [SApp [SCon v, SApp [SCon "-", SReal i]]])
-                | Just (n, _, nm) <- isInput v = [(n, (nm, CW KReal (Left (-i))))]
-        extract _                              = []
+        extract (SApp [SApp [SCon v, SNum i]])  | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) i))]
+        extract (SApp [SApp [SCon v, SReal i]]) | Just (n, _, nm) <- isInput v = [(n, (nm, CW KReal (Left i)))]
+        extract _                                                              = []
