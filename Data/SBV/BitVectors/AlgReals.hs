@@ -10,25 +10,73 @@
 -- Algrebraic reals in Haskell.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE PatternGuards        #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Data.SBV.BitVectors.AlgReals (AlgReal, algRealToSMTLib2, algRealToHaskell) where
+module Data.SBV.BitVectors.AlgReals (AlgReal, mkPolyReal, algRealToSMTLib2, algRealToHaskell) where
 
-import Data.List
-import Data.Ratio
+import Data.List     (sortBy, isPrefixOf, partition)
+import Data.Ratio    ((%), numerator, denominator)
+import Data.Function (on)
 import System.Random
 
--- | Algebraic reals. Note that the representation is left abstract. In particular,
--- we only represent explicit rationals on the Haskell side, while we uninterpret
--- roots of polynomials, relying on the backend solver for precise representation.
+-- | Algebraic reals. Note that the representation is left abstract. We represent
+-- rational results explicitly, while the roots-of-polynomials are represented
+-- implicitly by their defining equation
 data AlgReal = AlgRational Rational
-             | AlgPolyRoot              -- currently uninterpreted
+             | AlgPolyRoot (Integer,  Polynomial) -- which root
+                           (Maybe String)         -- approximate decimal representation with given precision, if available
+
+-- | A univariate polynomial, represented simply as a
+-- coefficient list. For instance, "5x^3 + 2x - 5" is
+-- represented as [(5, 3), (2, 1), (-5, 0)]
+newtype Polynomial = Polynomial [(Integer, Integer)]
+
+-- | Construct a poly-root real with a given approximate value (if any)
+mkPolyReal :: Maybe String -> Integer -> [(Integer, Integer)] -> AlgReal
+mkPolyReal mbApprox k coeffs
+ | Just approx <- mbApprox, null approx
+ = error $ "SBV.mkPolyReal: Unexpected args to mkPolyReal: " ++ show (approx, k, coeffs)
+ | Just approx <- mbApprox, last approx /= '?'
+ = case break (== '.') approx of
+      (x, '.':y) -> AlgRational (read (x++y) % (10 ^ length y))
+      (x, _)     -> AlgRational (read x % 1)
+ | True
+ = AlgPolyRoot (k, Polynomial (normalize coeffs)) mbApprox
+ where normalize :: [(Integer, Integer)] -> [(Integer, Integer)]
+       normalize = merge . reverse . sortBy (compare `on` snd)
+       merge []                     = []
+       merge [x]                    = [x]
+       merge ((a, b):r@((c, d):xs))
+         | b == d                   = merge ((a+c, b):xs)
+         | True                     = (a, b) : merge r
+
+instance Show Polynomial where
+  show (Polynomial xs) = chkEmpty (join (concat [term p | p@(_, x) <- xs, x /= 0])) ++ " = " ++ show c
+     where c  = -1 * head ([k | (k, 0) <- xs] ++ [0])
+           term ( 0, _) = []
+           term ( 1, 1) = [ "x"]
+           term ( 1, p) = [ "x^" ++ show p]
+           term (-1, 1) = ["-x"]
+           term (-1, p) = ["-x^" ++ show p]
+           term (k,  1) = [show k ++ "x"]
+           term (k,  p) = [show k ++ "x^" ++ show p]
+           join []      = ""
+           join (k:ks) = k ++ s ++ join ks
+             where s = case ks of
+                        []    -> ""
+                        (y:_) | "-" `isPrefixOf` y -> ""
+                              | "+" `isPrefixOf` y -> ""
+                              | True               -> "+"
+           chkEmpty s = if null s then "0" else s
 
 instance Show AlgReal where
-  show (AlgRational a) = showExact a
-  show AlgPolyRoot     = "<AlgPolyRoot>"
+  show (AlgRational a)               = showExact a
+  show (AlgPolyRoot (i, p) mbApprox) = "root(" ++ show i ++ ", " ++ show p ++ ")" ++ maybe "" app mbApprox
+     where app v | last v == '?' = " = " ++ init v ++ "..."
+                 | True          = " = " ++ v
 
 -- The idea in the instances below is that we will fully support operations
 -- on "AlgRational" AlgReals, but leave everything else undefined. When we are
@@ -50,9 +98,9 @@ instance Num AlgReal where
   AlgRational a - AlgRational b = AlgRational $ a - b
   _             - _             = error "AlgReal.-: unsupported AlgPolyRoot arguments"
   abs (AlgRational a)           = AlgRational (abs a)
-  abs AlgPolyRoot               = error "AlgReal.abs: unsupported AlgPolyRoot arguments"
+  abs AlgPolyRoot{}             = error "AlgReal.abs: unsupported AlgPolyRoot arguments"
   signum (AlgRational a)        = AlgRational (signum a)
-  signum AlgPolyRoot            = error "AlgReal.signum: unsupported AlgPolyRoot argument"
+  signum AlgPolyRoot{}          = error "AlgReal.signum: unsupported AlgPolyRoot argument"
   fromInteger a                 = AlgRational (fromInteger a)
 
 instance Fractional AlgReal where
@@ -82,13 +130,21 @@ algRealToSMTLib2 (AlgRational r)
    | m < 0  = "(- (/ "  ++ show (abs m) ++ ".0 " ++ show n ++ ".0))"
    | True   =    "(/ "  ++ show m       ++ ".0 " ++ show n ++ ".0)"
   where (m, n) = (numerator r, denominator r)
-algRealToSMTLib2 AlgPolyRoot = error "SBV.algRealToSMTLib2: TBD: AlgPolyRoot"
+algRealToSMTLib2 (AlgPolyRoot (i, Polynomial xs) _) = "(root-obj (+ " ++ unwords (concatMap term xs) ++ ") " ++ show i ++ ")"
+  where term (0, _) = []
+        term (k, 0) = [coeff k]
+        term (1, 1) = ["x"]
+        term (1, p) = ["(^ x " ++ show p ++ ")"]
+        term (k, 1) = ["(* " ++ coeff k ++ " x)"]
+        term (k, p) = ["(* " ++ coeff k ++ " (^ x " ++ show p ++ "))"]
+        coeff n | n < 0 = "(- " ++ show (abs n) ++ ")"
+                | True  = show n
 
 -- | Render an 'AlgReal' as a Haskell value. Only supports rationals, since there is no corresponding
 -- standard Haskell type that can represent root-of-polynomial variety.
 algRealToHaskell :: AlgReal -> String
 algRealToHaskell (AlgRational r) = "((" ++ show r ++ ") :: Rational)"
-algRealToHaskell AlgPolyRoot     = error "SBV.algRealToHaskell: Unsupported AlgPolyRoot argument"
+algRealToHaskell AlgPolyRoot{}   = error "SBV.algRealToHaskell: Unsupported AlgPolyRoot argument"
 
 -- Try to show a rational precisely if we can, with finite number of
 -- digits. Otherwise, show it as a rational value.

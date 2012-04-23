@@ -24,11 +24,14 @@ data SExpr = SCon  String
            | SNum  Integer
            | SReal AlgReal
            | SApp  [SExpr]
+           deriving Show
 
 -- | Parse a string into an SExpr, potentially failing with an error message
 parseSExpr :: String -> Either String SExpr
-parseSExpr inp = do (sexp, []) <- parse inpToks
-                    return sexp
+parseSExpr inp = do (sexp, extras) <- parse inpToks
+                    if null extras
+                       then return sexp
+                       else die "Extra tokens after valid input"
   where inpToks = let cln ""          sofar = sofar
                       cln ('(':r)     sofar = cln r (" ( " ++ sofar)
                       cln (')':r)     sofar = cln r (" ) " ++ sofar)
@@ -39,7 +42,8 @@ parseSExpr inp = do (sexp, []) <- parse inpToks
                      ++ "\n*** Input : <" ++ inp ++ ">"
         parse []         = die "ran out of tokens"
         parse ("(":toks) = do (f, r) <- parseApp toks []
-                              return (cvt (SApp f), r)
+                              f' <- cvt (SApp f)
+                              return (f', r)
         parse (")":_)    = die "extra tokens after close paren"
         parse [tok]      = do t <- pTok tok
                               return (t, [])
@@ -67,11 +71,19 @@ parseSExpr inp = do (sexp, []) <- parse inpToks
                                        x = read (n++d)
                                    in return $ SReal $ fromRational $ x % 10 ^ length d
           | True                 = die "cannot read rational"
-        -- simplify numbers
-        cvt (SApp [SCon "/", SReal a, SReal b]) = SReal (a / b)
-        cvt (SApp [SCon "/", SReal a, SNum  b]) = SReal (a             / fromInteger b)
-        cvt (SApp [SCon "/", SNum  a, SReal b]) = SReal (fromInteger a /             b)
-        cvt (SApp [SCon "/", SNum  a, SNum  b]) = SReal (fromInteger a / fromInteger b)
-        cvt (SApp [SCon "-", SReal a])          = SReal (-a)
-        cvt (SApp [SCon "-", SNum a])           = SNum  (-a)
-        cvt x                                   = x
+        -- simplify numbers and root-obj values
+        cvt (SApp [SCon "/", SReal a, SReal b])                    = return $ SReal (a / b)
+        cvt (SApp [SCon "/", SReal a, SNum  b])                    = return $ SReal (a             / fromInteger b)
+        cvt (SApp [SCon "/", SNum  a, SReal b])                    = return $ SReal (fromInteger a /             b)
+        cvt (SApp [SCon "/", SNum  a, SNum  b])                    = return $ SReal (fromInteger a / fromInteger b)
+        cvt (SApp [SCon "-", SReal a])                             = return $ SReal (-a)
+        cvt (SApp [SCon "-", SNum a])                              = return $ SNum  (-a)
+        cvt (SApp [SCon "root-obj", SApp (SCon "+":trms), SNum k]) = do ts <- mapM getCoeff trms
+                                                                        return $ SReal $ mkPolyReal Nothing k ts
+        cvt x                                                      = return x
+        getCoeff (SApp [SCon "*", SNum k, SApp [SCon "^", SCon "x", SNum p]]) = return (k, p)  -- kx^p
+        getCoeff (SApp [SCon "*", SNum k,                 SCon "x"        ] ) = return (k, 1)  -- kx
+        getCoeff (                        SApp [SCon "^", SCon "x", SNum p] ) = return (1, p)  --  x^p
+        getCoeff (                                        SCon "x"          ) = return (1, 1)  --  x
+        getCoeff (                SNum k                                    ) = return (k, 0)  -- k
+        getCoeff x = die $ "Cannot parse a root-obj,\nProcessing term: " ++ show x

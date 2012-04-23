@@ -10,14 +10,15 @@ Version 1.4, Not yet released
   * Add support for symbolic algebraic reals: SReal.
     (See http://en.wikipedia.org/wiki/Algebraic_number.)
     While you can use an older version, you sould use Z3 v4.0 or later for best
-    results, as it comes with support for polynomial constraints.
+    results, as it comes with support for non-linear constraints.
   * Fix minor bug in the default implementation of select when the
     indexer is an SInteger.
-  * Add functions sTYPE and sTYPEs for each symbolic type we support (i.e.,
-    Bool, Word8, Int8, etc.), to create symbolic variables of the right kind.
-    Strictly speaking these are just synonyms for 'free' and 'mapM free' (plural
-    versions), so they aren't adding any additional power. Except, they are
-    specialized at their respective types, and might be easier to remember.
+  * Add functions s[TYPE] and s[TYPE]s for each symbolic type we support (i.e.,
+    sBool, sBools, sWord8, sWord8s, etc.), to create symbolic variables of the
+    right kind.  Strictly speaking these are just synonyms for 'free'
+    and 'mapM free' (plural versions), so they aren't adding any additional
+    power. Except, they are specialized at their respective types, and might be
+    easier to remember.
   * Add function solve, which is merely a synonym for (return . bAnd), but
     it simplifies expressing problems.
   * Add class SNum, which simplifies writing polymorphic code over symbolic values

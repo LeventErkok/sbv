@@ -386,7 +386,7 @@ others are not (such as pi and e).
 
 SBV can deal with real numbers just fine, since the theory of reals is decidable. (See
 <http://goedel.cs.uiowa.edu/smtlib/theories/Reals.smt2>.) In addition, by leveraging backend
-solver capabilities, SBV can also represent and solve polynomial equations involving real-variables.
+solver capabilities, SBV can also represent and solve non-linear equations involving real-variables.
 (For instance, the Z3 SMT solver, supports polynomial constraints on reals starting with v4.0.)
 -}
 

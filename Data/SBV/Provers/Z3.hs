@@ -103,4 +103,5 @@ getCounterExample inps line = either err extract (parseSExpr line)
         isInput _       = Nothing
         extract (SApp [SApp [SCon v, SNum i]])  | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) i))]
         extract (SApp [SApp [SCon v, SReal i]]) | Just (n, _, nm) <- isInput v = [(n, (nm, CW KReal (Left i)))]
+        extract (SApp [SApp (SCon v : r)])      | Just{}          <- isInput v = error $ "SBV.SMTLib2: Cannot extract value for " ++ show ('s':v) ++ ", received:\n\t" ++  show r
         extract _                                                              = []
