@@ -14,7 +14,7 @@ module Data.SBV.Provers.SExpr where
 
 import Control.Monad.Error ()             -- for Monad (Either String) instance
 import Data.Char           (isDigit, ord)
-import Data.Ratio
+import Data.List           (isPrefixOf)
 import Numeric             (readInt, readDec, readHex)
 
 import Data.SBV.BitVectors.AlgReals
@@ -60,17 +60,15 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         pTok ('#':'x':r)          = mkNum $ readHex r
         pTok n
           | not (null n) && isDigit (head n)
-          = if '.' `elem` n
-            then let (a, '.':b) = break (== '.') n in getReal (a, b)
+          = if '.' `elem` n then getReal n
             else mkNum  $ readDec n
         pTok n                 = return $ SCon n
         mkNum [(n, "")] = return $ SNum n
         mkNum _         = die "cannot read number"
-        getReal (n, d)
-          | all isDigit (n ++ d) = let x :: Integer
-                                       x = read (n++d)
-                                   in return $ SReal $ fromRational $ x % 10 ^ length d
-          | True                 = die "cannot read rational"
+        getReal n = return $ SReal $ mkPolyReal (Left (exact, n'))
+          where exact = not ("?" `isPrefixOf` reverse n)
+                n' | exact = n
+                   | True  = init n
         -- simplify numbers and root-obj values
         cvt (SApp [SCon "/", SReal a, SReal b])                    = return $ SReal (a / b)
         cvt (SApp [SCon "/", SReal a, SNum  b])                    = return $ SReal (a             / fromInteger b)
@@ -79,7 +77,7 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         cvt (SApp [SCon "-", SReal a])                             = return $ SReal (-a)
         cvt (SApp [SCon "-", SNum a])                              = return $ SNum  (-a)
         cvt (SApp [SCon "root-obj", SApp (SCon "+":trms), SNum k]) = do ts <- mapM getCoeff trms
-                                                                        return $ SReal $ mkPolyReal Nothing k ts
+                                                                        return $ SReal $ mkPolyReal (Right (k, ts))
         cvt x                                                      = return x
         getCoeff (SApp [SCon "*", SNum k, SApp [SCon "^", SCon "x", SNum p]]) = return (k, p)  -- kx^p
         getCoeff (SApp [SCon "*", SNum k,                 SCon "x"        ] ) = return (k, 1)  -- kx

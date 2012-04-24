@@ -11,11 +11,10 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE PatternGuards        #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Data.SBV.BitVectors.AlgReals (AlgReal, mkPolyReal, algRealToSMTLib2, algRealToHaskell) where
+module Data.SBV.BitVectors.AlgReals (AlgReal, mkPolyReal, algRealToSMTLib2, algRealToHaskell, mergeAlgReals) where
 
 import Data.List     (sortBy, isPrefixOf, partition)
 import Data.Ratio    ((%), numerator, denominator)
@@ -25,7 +24,7 @@ import System.Random
 -- | Algebraic reals. Note that the representation is left abstract. We represent
 -- rational results explicitly, while the roots-of-polynomials are represented
 -- implicitly by their defining equation
-data AlgReal = AlgRational Rational
+data AlgReal = AlgRational Bool Rational          -- bool says it's exact (i.e., SMT-solver did not return it with ? at the end.)
              | AlgPolyRoot (Integer,  Polynomial) -- which root
                            (Maybe String)         -- approximate decimal representation with given precision, if available
 
@@ -34,17 +33,15 @@ data AlgReal = AlgRational Rational
 -- represented as [(5, 3), (2, 1), (-5, 0)]
 newtype Polynomial = Polynomial [(Integer, Integer)]
 
--- | Construct a poly-root real with a given approximate value (if any)
-mkPolyReal :: Maybe String -> Integer -> [(Integer, Integer)] -> AlgReal
-mkPolyReal mbApprox k coeffs
- | Just approx <- mbApprox, null approx
- = error $ "SBV.mkPolyReal: Unexpected args to mkPolyReal: " ++ show (approx, k, coeffs)
- | Just approx <- mbApprox, last approx /= '?'
- = case break (== '.') approx of
-      (x, '.':y) -> AlgRational (read (x++y) % (10 ^ length y))
-      (x, _)     -> AlgRational (read x % 1)
- | True
- = AlgPolyRoot (k, Polynomial (normalize coeffs)) mbApprox
+-- | Construct a poly-root real with a given approximate value (either as a decimal, or polynomial-root)
+mkPolyReal :: Either (Bool, String) (Integer, [(Integer, Integer)]) -> AlgReal
+mkPolyReal (Left (exact, str))
+ = case (str, break (== '.') str) of
+      ("", (_, _))    -> AlgRational exact 0
+      (_, (x, '.':y)) -> AlgRational exact (read (x++y) % (10 ^ length y))
+      (_, (x, _))     -> AlgRational exact (read x % 1)
+mkPolyReal (Right (k, coeffs))
+ = AlgPolyRoot (k, Polynomial (normalize coeffs)) Nothing
  where normalize :: [(Integer, Integer)] -> [(Integer, Integer)]
        normalize = merge . reverse . sortBy (compare `on` snd)
        merge []                     = []
@@ -73,40 +70,44 @@ instance Show Polynomial where
            chkEmpty s = if null s then "0" else s
 
 instance Show AlgReal where
-  show (AlgRational a)               = showExact a
+  show (AlgRational exact a)         = showRat exact a
   show (AlgPolyRoot (i, p) mbApprox) = "root(" ++ show i ++ ", " ++ show p ++ ")" ++ maybe "" app mbApprox
      where app v | last v == '?' = " = " ++ init v ++ "..."
                  | True          = " = " ++ v
+
+-- lift unary op through an exact rational, otherwise bail
+lift1 :: String -> (Rational -> Rational) -> AlgReal -> AlgReal
+lift1 _  o (AlgRational True a) = AlgRational True (o a)
+lift1 nm _ a                    = error $ "AlgReal." ++ show nm ++ ": unsupported argument: " ++ show a
+
+-- lift binary op through exact rationals, otherwise bail
+lift2 :: String -> (Rational -> Rational -> Rational) -> AlgReal -> AlgReal -> AlgReal
+lift2 _  o (AlgRational True a) (AlgRational True b) = AlgRational True (a `o` b)
+lift2 nm _ a                    b                    = error $ "AlgReal." ++ show nm ++ ": unsupported arguments: " ++ show (a, b)
 
 -- The idea in the instances below is that we will fully support operations
 -- on "AlgRational" AlgReals, but leave everything else undefined. When we are
 -- on the Haskell side, the AlgReal's are *not* reachable. They only represent
 -- return values from SMT solvers, which we should *not* need to manipulate.
 instance Eq AlgReal where
-  AlgRational a == AlgRational b = a == b
-  _             == _             = error "AlgReal.==: unsupported AlgPolyRoot argument"
+  AlgRational True a == AlgRational True b = a == b
+  a                  == b                  = error $ "AlgReal.==: unsupported arguments: " ++ show (a, b)
 
 instance Ord AlgReal where
-  AlgRational a `compare` AlgRational b = a `compare` b
-  _             `compare` _             = error "AlgReal.compare: unsupported AlgPolyRoot arguments"
+  AlgRational True a `compare` AlgRational True b = a `compare` b
+  a                  `compare` b                  = error $ "AlgReal.compare: unsupported arguments: " ++ show (a, b)
 
 instance Num AlgReal where
-  AlgRational a + AlgRational b = AlgRational $ a + b
-  _             + _             = error "AlgReal.+: unsupported AlgPolyRoot arguments"
-  AlgRational a * AlgRational b = AlgRational $ a * b
-  _             * _             = error "AlgReal.*: unsupported AlgPolyRoot arguments"
-  AlgRational a - AlgRational b = AlgRational $ a - b
-  _             - _             = error "AlgReal.-: unsupported AlgPolyRoot arguments"
-  abs (AlgRational a)           = AlgRational (abs a)
-  abs AlgPolyRoot{}             = error "AlgReal.abs: unsupported AlgPolyRoot arguments"
-  signum (AlgRational a)        = AlgRational (signum a)
-  signum AlgPolyRoot{}          = error "AlgReal.signum: unsupported AlgPolyRoot argument"
-  fromInteger a                 = AlgRational (fromInteger a)
+  (+)         = lift2 "+"   (+)
+  (*)         = lift2 "*"   (*)
+  (-)         = lift2 "*"   (-)
+  abs         = lift1 "abs" abs
+  signum      = lift1 "signum" signum
+  fromInteger = AlgRational True . fromInteger
 
 instance Fractional AlgReal where
-  AlgRational a / AlgRational b = AlgRational (a/b)
-  _             / _             = error "AlgReal./: unsupported AlgPolyRoot arguments"
-  fromRational                  = AlgRational
+  (/)          = lift2 "/" (/)
+  fromRational = AlgRational True
 
 instance Random Rational where
   random g = let (a, g')  = random g
@@ -119,17 +120,19 @@ instance Random Rational where
                      in (a % (ld * hd), g')
 
 instance Random AlgReal where
-  random g = let (a, g') = random g in (AlgRational a, g')
-  randomR (AlgRational l, AlgRational h) g = let (a, g') = randomR (l, h) g in (AlgRational a, g')
-  randomR _                              _ = error "AlgReal.randomR: unsupported AlgPolyRoot bounds"
+  random g = let (a, g') = random g in (AlgRational True a, g')
+  randomR (AlgRational True l, AlgRational True h) g = let (a, g') = randomR (l, h) g in (AlgRational True a, g')
+  randomR lh                                       _ = error $ "AlgReal.randomR: unsupported bounds: " ++ show lh
 
 -- | Render an 'AlgReal' as an SMTLib2 value. Only supports rationals for the time being.
 algRealToSMTLib2 :: AlgReal -> String
-algRealToSMTLib2 (AlgRational r)
+algRealToSMTLib2 (AlgRational True r)
    | m == 0 = "0.0"
    | m < 0  = "(- (/ "  ++ show (abs m) ++ ".0 " ++ show n ++ ".0))"
    | True   =    "(/ "  ++ show m       ++ ".0 " ++ show n ++ ".0)"
   where (m, n) = (numerator r, denominator r)
+algRealToSMTLib2 r@(AlgRational False _)
+   = error $ "SBV: Unexpected inexact rational to be converted to SMTLib2: " ++ show r
 algRealToSMTLib2 (AlgPolyRoot (i, Polynomial xs) _) = "(root-obj (+ " ++ unwords (concatMap term xs) ++ ") " ++ show i ++ ")"
   where term (0, _) = []
         term (k, 0) = [coeff k]
@@ -143,20 +146,21 @@ algRealToSMTLib2 (AlgPolyRoot (i, Polynomial xs) _) = "(root-obj (+ " ++ unwords
 -- | Render an 'AlgReal' as a Haskell value. Only supports rationals, since there is no corresponding
 -- standard Haskell type that can represent root-of-polynomial variety.
 algRealToHaskell :: AlgReal -> String
-algRealToHaskell (AlgRational r) = "((" ++ show r ++ ") :: Rational)"
-algRealToHaskell AlgPolyRoot{}   = error "SBV.algRealToHaskell: Unsupported AlgPolyRoot argument"
+algRealToHaskell (AlgRational True r) = "((" ++ show r ++ ") :: Rational)"
+algRealToHaskell r                    = error $ "SBV.algRealToHaskell: Unsupported argument: " ++ show r
 
 -- Try to show a rational precisely if we can, with finite number of
 -- digits. Otherwise, show it as a rational value.
-showExact :: Rational -> String
-showExact r = case f25 (denominator r) [] of
-                Nothing               -> show r   -- bail out, not precisely representable with finite digits
-                Just (noOfZeros, num) -> let present = length num
-                                         in neg $ case noOfZeros `compare` present of
-                                                         LT -> let (b, a) = splitAt (present - noOfZeros) num in b ++ "." ++ if null a then "0" else a
-                                                         EQ -> "0." ++ num
-                                                         GT -> "0." ++ replicate (noOfZeros - present) '0' ++ num
-  where neg = if r < 0 then ('-':) else id
+showRat :: Bool -> Rational -> String
+showRat exact r = p $ case f25 (denominator r) [] of
+                       Nothing               -> show r   -- bail out, not precisely representable with finite digits
+                       Just (noOfZeros, num) -> let present = length num
+                                                in neg $ case noOfZeros `compare` present of
+                                                           LT -> let (b, a) = splitAt (present - noOfZeros) num in b ++ "." ++ if null a then "0" else a
+                                                           EQ -> "0." ++ num
+                                                           GT -> "0." ++ replicate (noOfZeros - present) '0' ++ num
+  where p   = if exact then id else (++ "...")
+        neg = if r < 0 then ('-':) else id
         -- factor a number in 2's and 5's if possible
         -- If so, it'll return the number of digits after the zero
         -- to reach the next power of 10, and the numerator value scaled
@@ -176,3 +180,15 @@ showExact r = case f25 (denominator r) [] of
         factor []     fs     = product [2 | _ <- fs]
         factor ts     []     = product [5 | _ <- ts]
         factor (_:ts) (_:fs) = factor ts fs
+
+-- | Merge the representation of two algebraic reals, one assumed to be
+-- in polynomial form, the other in decimal. It's an error to pass anything
+-- else to this function! (Used in reconstructing SMT counter-example values with reals).
+mergeAlgReals :: String -> AlgReal -> AlgReal -> AlgReal
+mergeAlgReals _ f@(AlgRational exact r) (AlgPolyRoot kp Nothing)
+  | exact = f
+  | True  = AlgPolyRoot kp (Just (showRat False r))
+mergeAlgReals _ (AlgPolyRoot kp Nothing) f@(AlgRational exact r)
+  | exact = f
+  | True  = AlgPolyRoot kp (Just (showRat False r))
+mergeAlgReals m _ _ = error m
