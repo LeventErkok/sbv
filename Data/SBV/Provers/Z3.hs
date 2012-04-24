@@ -37,8 +37,8 @@ optionPrefix
   | True                                        = '/'   -- windows
 
 -- Get rid of this when 4.0 is out
-z3_4_0 :: Bool
-z3_4_0 = False
+z340 :: Bool
+z340 = False
 
 -- | The description of the Z3 SMT solver
 -- The default executable is @\"z3\"@, which must be in your path. You can use the @SBV_Z3@ environment variable to point to the executable on your system.
@@ -59,7 +59,7 @@ z3 = SMTSolver {
                                 standardSolver cfg' script cleanErrs (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap . match skolemMap))
          }
  where -- Get rid of the following when z3_4.0 is out
-       notyet | z3_4_0 = id
+       notyet | z340 = id
               | True   = unlines . filter (not . (":pp-decimal" `isInfixOf`)) . lines
        cleanErrs = intercalate "\n" . filter (not . junk) . lines
        junk = ("WARNING:" `isPrefixOf`)
@@ -106,7 +106,7 @@ extractMap isSat qinps _modelMap solverLines =
                 squash xs = xs
                 mergeReals :: String -> CW -> CW -> CW
                 mergeReals _ a _
-                  | not z3_4_0 = a
+                  | not z340 = a
                 mergeReals n (CW KReal (Left a)) (CW KReal (Left b)) = CW KReal (Left (mergeAlgReals (error (bad n a b)) a b))
                 mergeReals n a b = error $ bad n a b
                 bad n a b = "Z3: Cannot merge reals for variable: " ++ n ++ " received: " ++ show (a, b)
