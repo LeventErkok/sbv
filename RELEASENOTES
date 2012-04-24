@@ -8,9 +8,9 @@ Version 1.4, Not yet released
   
  Library:
   * Add support for symbolic algebraic reals: SReal.
-    (See http://en.wikipedia.org/wiki/Algebraic_number.)
-    While you can use an older version, you sould use Z3 v4.0 or later for best
-    results, as it comes with support for non-linear constraints.
+    (See http://en.wikipedia.org/wiki/Algebraic_number.) You *should*
+    use Z3 v4.0 when working with real numbers, the interface will
+    not work with older versions of Z3.
   * Fix minor bug in the default implementation of select when the
     indexer is an SInteger.
   * Add functions s[TYPE] and s[TYPE]s for each symbolic type we support (i.e.,
