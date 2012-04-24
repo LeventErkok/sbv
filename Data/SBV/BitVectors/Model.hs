@@ -877,12 +877,21 @@ instance (SymWord a, Arbitrary a) => Arbitrary (SBV a) where
 --
 -- Minimal complete definition: 'symbolicMerge'
 class Mergeable a where
-   -- | Merge two values based on the condition
+   -- | Merge two values based on the condition. This is intended
+   -- to be a "structural" copy, walking down the values and merging
+   -- recursively through the structure of @a@. In particular,
+   -- symbolicMerge should *not* waste its time testing whether the
+   -- condition might be a literal; that will be handled by 'ite'
+   -- which should be used in all user code. In particular, any
+   -- implementation of 'symbolicMerge' should just call 'symbolicMerge'
+   -- recursively in the constituents of @a@, instead of 'ite'.
    symbolicMerge :: SBool -> a -> a -> a
    -- | Choose one or the other element, based on the condition.
    -- This is similar to 'symbolicMerge', but it has a default
-   -- implementation that makes sure it's short-cut if the condition is concrete
-   ite           :: SBool -> a -> a -> a
+   -- implementation that makes sure it's short-cut if the condition is concrete.
+   -- The idea is that use symbolicMerge if you know the condition is symbolic,
+   -- otherwise use ite, if there's a chance it might be concrete.
+   ite :: SBool -> a -> a -> a
    -- | Total indexing operation. @select xs default index@ is intuitively
    -- the same as @xs !! index@, except it evaluates to @default@ if @index@
    -- overflows
@@ -911,16 +920,14 @@ class Mergeable a where
 
 -- SBV
 instance SymWord a => Mergeable (SBV a) where
-  symbolicMerge t a b
-   | Just c1 <- unliteral a, Just c2 <- unliteral b, c1 == c2
-   = a
-   | True
-   = SBV k $ Right $ cache c
+  -- the strict match against the constructor SBV is deliberate below, as
+  -- otherwise we blow stack by just hanging on to huge closures..
+  symbolicMerge t a@(SBV{}) b@(SBV{}) = SBV k $ Right $ cache c
     where k = kindOf a
           c st = do swt <- sbvToSW st t
                     case () of
-                      () | swt == trueSW  -> sbvToSW st a
-                      () | swt == falseSW -> sbvToSW st b
+                      () | swt == trueSW  -> sbvToSW st a       -- these two cases should never be needed as we expect symbolicMerge to be
+                      () | swt == falseSW -> sbvToSW st b       -- called with symbolic tests, but just in case..
                       () -> do {- It is tempting to record the choice of the test expression here as we branch down to the 'then' and 'else' branches. That is,
                                   when we evaluate 'a', we can make use of the fact that the test expression is True, and similarly we can use the fact that it
                                   is False when b is evaluated. In certain cases this can cut down on symbolic simulation significantly, for instance if
