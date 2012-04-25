@@ -6,29 +6,45 @@ Latest Hackage released version: 1.3
 ======================================================================
 Version 1.4, Not yet released
   
- Library:
-  * Add support for symbolic algebraic reals: SReal.
-    (See http://en.wikipedia.org/wiki/Algebraic_number.) You *should*
-    use Z3 v4.0 when working with real numbers, the interface will
-    not work with older versions of Z3.
-  * Fix minor bug in the default implementation of select when the
-    indexer is an SInteger.
-  * Add functions s[TYPE] and s[TYPE]s for each symbolic type we support (i.e.,
-    sBool, sBools, sWord8, sWord8s, etc.), to create symbolic variables of the
-    right kind.  Strictly speaking these are just synonyms for 'free'
-    and 'mapM free' (plural versions), so they aren't adding any additional
-    power. Except, they are specialized at their respective types, and might be
-    easier to remember.
-  * Add function solve, which is merely a synonym for (return . bAnd), but
-    it simplifies expressing problems.
-  * Add class SNum, which simplifies writing polymorphic code over symbolic values
-  * Increase haddock coverage metrics
-  * Major code refactoring around symbolic kinds
-  * SMTLib2: Emit ":produce-models" call before setting the logic, as required
-    by the SMT-Lib2 standard. [Patch provided by arrowdodger on github, thanks!]
- Examples:
-  * Change dog-cat-mouse example to use SInteger for the counts
-  * Add merge-sort example: Data.SBV.Examples.BitPrecise.MergeSort
+  The major change in this release is the support for symbolic algebraic reals: SReal.
+  See http://en.wikipedia.org/wiki/Algebraic_number for details. In brief, algebraic
+  reals are solutions to univariate polynomials with rational coefficients. The arithmetic
+  on algebraic reals is precise, with no approximation errors. Note that algebraic reals
+  are a proper subset of all reals, in particular transcendental numbers are not
+  representable in this way. (For instance, "sqrt 2" is algebraic, but pi, e are not.)
+  However, algebraic reals is a superset of rationals, so SBV now also supports symbolic
+  rationals as well.
+    
+  You *should* use Z3 v4.0 when working with real numbers, the interface will
+  not work with older versions of Z3.
+
+  While SReal values have infinite precision, printing such values is not trivial since
+  we might need an infinite number of digits if the result happens to be irrational. The
+  user controls printing precision, by specifying how many digits after the decimal point
+  should be printed.
+
+  Other notable changes in the library:
+    * Add functions s[TYPE] and s[TYPE]s for each symbolic type we support (i.e.,
+      sBool, sBools, sWord8, sWord8s, etc.), to create symbolic variables of the
+      right kind.  Strictly speaking these are just synonyms for 'free'
+      and 'mapM free' (plural versions), so they aren't adding any additional
+      power. Except, they are specialized at their respective types, and might be
+      easier to remember.
+    * Add function solve, which is merely a synonym for (return . bAnd), but
+      it simplifies expressing problems.
+    * Add class SNum, which simplifies writing polymorphic code over symbolic values
+    * Increase haddock coverage metrics
+    * Major code refactoring around symbolic kinds
+    * SMTLib2: Emit ":produce-models" call before setting the logic, as required
+      by the SMT-Lib2 standard. [Patch provided by arrowdodger on github, thanks!]
+
+  Bugs fixed:
+    * Fix minor bug in the default implementation of select when the indexer is
+      an infinite precision SInteger value.
+
+  Examples:
+   * Change dog-cat-mouse example to use SInteger for the counts
+   * Add merge-sort example: Data.SBV.Examples.BitPrecise.MergeSort
 
 ======================================================================
 Version 1.3, 2012-02-25

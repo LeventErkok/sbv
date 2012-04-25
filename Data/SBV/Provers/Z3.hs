@@ -55,7 +55,8 @@ z3 = SMTSolver {
                                     tweaks = case solverTweaks cfg' of
                                                [] -> ""
                                                ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
-                                    script = SMTScript {scriptBody = notyet (tweaks ++ pgm), scriptModel = Just (notyet (cont skolemMap))}
+                                    ppDecLim = "(set-option :pp-decimal-precision " ++ show (printRealPrec cfg') ++ ")\n"
+                                    script = SMTScript {scriptBody = notyet (tweaks ++ ppDecLim ++ pgm), scriptModel = Just (notyet (cont skolemMap))}
                                 standardSolver cfg' script cleanErrs (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap . match skolemMap))
          }
  where -- Get rid of the following when z3_4.0 is out
@@ -70,10 +71,10 @@ z3 = SMTSolver {
        zero KReal               = "0.0"
        cont skolemMap = intercalate "\n" $ concatMap extract skolemMap
         where extract (Left s)        = ["(echo \"((" ++ show s ++ " " ++ zero (kindOf s) ++ "))\")"]
-              extract (Right (s, [])) = let g = "(get-value (" ++ show s ++ "))" in g : extra (kindOf s) g
-              extract (Right (s, ss)) = let g = "(eval (" ++ show s ++ concat [' ' : zero (kindOf a) | a <- ss] ++ "))" in g : extra (kindOf s) g
-              extra KReal g = ["(set-option :pp-decimal true)", g, "(set-option :pp-decimal false)"]
-              extra _     _ = []
+              extract (Right (s, [])) = let g = "(get-value (" ++ show s ++ "))" in getVal (kindOf s) g
+              extract (Right (s, ss)) = let g = "(eval (" ++ show s ++ concat [' ' : zero (kindOf a) | a <- ss] ++ "))" in getVal (kindOf s) g
+              getVal KReal g = ["(set-option :pp-decimal false)", g, "(set-option :pp-decimal true)", g]
+              getVal _     g = [g]
        match skolemMap = zipWith annotate (concatMap dupRight skolemMap)
          where dupRight (Left s)  = [Left s]
                dupRight (Right x) = [Right x, Right x]

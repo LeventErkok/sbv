@@ -54,7 +54,7 @@ import Data.SBV.Utils.TDiff
 import Data.SBV.Utils.Boolean
 
 mkConfig :: SMTSolver -> Bool -> [String] -> SMTConfig
-mkConfig s isSMTLib2 tweaks = SMTConfig {verbose = False, timing = False, timeOut = Nothing, printBase = 10, smtFile = Nothing, solver = s, solverTweaks = tweaks, useSMTLib2 = isSMTLib2}
+mkConfig s isSMTLib2 tweaks = SMTConfig {verbose = False, timing = False, timeOut = Nothing, printBase = 10, printRealPrec = 10, smtFile = Nothing, solver = s, solverTweaks = tweaks, useSMTLib2 = isSMTLib2}
 
 -- | Default configuration for the Yices SMT Solver.
 yices :: SMTConfig
