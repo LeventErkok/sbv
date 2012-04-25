@@ -920,9 +920,19 @@ class Mergeable a where
 
 -- SBV
 instance SymWord a => Mergeable (SBV a) where
-  -- the strict match against the constructor SBV is deliberate below, as
-  -- otherwise we blow stack by just hanging on to huge closures..
-  symbolicMerge t a@(SBV{}) b@(SBV{}) = SBV k $ Right $ cache c
+  -- the strict match and checking of literal equivalence is essential below,
+  -- as otherwise we risk hanging onto huge closures and blow stack! This is
+  -- against the feel that merging shouldn't look at branches if the test
+  -- expression is constant. However, it's OK to do it this way since we
+  -- expect "ite" to be used in such cases which already checks for that. That
+  -- is the use case of the symbolicMerge should be when the test is symbolic.
+  -- Of course, we do not have a way of enforcing that in the user code, but
+  -- at least our library code respects that invariant.
+  symbolicMerge t a@(SBV{}) b@(SBV{})
+     | Just av <- unliteral a, Just bv <- unliteral b, av == bv
+     = a
+     | True
+     = SBV k $ Right $ cache c
     where k = kindOf a
           c st = do swt <- sbvToSW st t
                     case () of
