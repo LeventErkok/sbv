@@ -1062,7 +1062,12 @@ instance (Ix a, Mergeable b) => Mergeable (Array a b) where
 -- Functions
 instance Mergeable b => Mergeable (a -> b) where
   symbolicMerge t f g = \x -> symbolicMerge t (f x) (g x)
-  select xs err ind   = \x -> select (map ($ x) xs) (err x) ind
+  {- Following definition, while correct, is utterly inefficient. Since the
+     application is delayed, this hangs on to the inner list and all the
+     impending merges, even when ind is concrete. Thus, it's much better to
+     simply use the default definition for the function case.
+  -}
+  -- select xs err ind = \x -> select (map ($ x) xs) (err x) ind
 
 -- 2-Tuple
 instance (Mergeable a, Mergeable b) => Mergeable (a, b) where

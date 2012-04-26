@@ -41,6 +41,9 @@ Version 1.4, Not yet released
   Bugs fixed:
     * Fix minor bug in the default implementation of select when the indexer is
       an infinite precision SInteger value.
+    * [Performance] Revert implementation of select on function-elements to the
+      default instance, which has much better space/time characteristics since
+      it doesn't delay merging till the application is done.
 
   Examples:
    * Change dog-cat-mouse example to use SInteger for the counts
