@@ -132,7 +132,6 @@ instance Show SatResult where
                                      "Unknown"     "Unknown. Potential model:\n"
                                      "Satisfiable" "Satisfiable. Model:\n" r
 
-
 -- NB. The Show instance of AllSatResults have to be careful in being lazy enough
 -- as the typical use case is to pull results out as they become available.
 instance Show AllSatResult where
@@ -147,8 +146,8 @@ instance Show AllSatResult where
                           1 -> "This is the only solution." ++ uniqueWarn
                           _ -> "Found " ++ show c ++ " different solutions." ++ uniqueWarn
           sh i c = (ok, showSMTResult "Unsatisfiable"
-                                      ("Unknown #" ++ show i ++ "(No assignment to variables returned)") "Unknown. Potential assignment:\n"
-                                      ("Solution #" ++ show i ++ " (No assignment to variables returned)") ("Solution #" ++ show i ++ ":\n") c)
+                                      "Unknown" "Unknown. Potential model:\n"
+                                      ("Solution #" ++ show i ++ ":\n[Backend solver returned no assignment to variables.]") ("Solution #" ++ show i ++ ":\n") c)
               where ok = case c of
                            Satisfiable{} -> True
                            _             -> False
