@@ -36,7 +36,7 @@ import Control.Monad   (when)
 import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits       (Bits(..))
 import Data.Int        (Int8, Int16, Int32, Int64)
-import Data.List       (genericLength, genericIndex, genericSplitAt, unzip4, unzip5, unzip6, unzip7, intercalate)
+import Data.List       (genericLength, genericIndex, unzip4, unzip5, unzip6, unzip7, intercalate)
 import Data.Maybe      (fromMaybe)
 import Data.Word       (Word8, Word16, Word32, Word64)
 
@@ -900,23 +900,20 @@ class Mergeable a where
    ite s a b
     | Just t <- unliteral s = if t then a else b
     | True                  = symbolicMerge s a b
+   -- NB. Earlier implementation of select used the binary-search trick
+   -- on the index to chop down the search space. While that is a good trick
+   -- in general, it doesn't work for SBV since we do not have any notion of
+   -- "concrete" subwords: If an index is symbolic, then all its bits are
+   -- symbolic as well. So, the binary search only pays of if the indexed
+   -- list is really humongous, which is not very common in general. (Also,
+   -- for the case when the list is SBV's, we use SMT tables anyhow.)
    select [] err _   = err
    select xs err ind
-    | isReal ind                          = error "SBV.select: unsupported real valued select/index expression"
-    | not (isBounded ind)  && hasSign ind = ite (ind .< 0) err $ slowResult
-    | not (isBounded ind)                 = slowResult
-    | hasSign ind                         = ite (ind .< 0) err $ result
-    | True                                = result
-    where result = go xs $ reverse (zip [(0::Integer)..] bits)
-          bits   = map (ind `sbvTestBit`) [0 .. bitSize ind - 1]
-          go []    _            = err
-          go (x:_) []           = x
-          go elts  ((n, b):nbs) = let (ys, zs) = genericSplitAt ((2::Integer) ^ n) elts
-                                  in ite b (go zs nbs) (go ys nbs)
-          -- when the indexer is infinite-precision (SInteger), we can't use the bit-trick; so go the slower route
-          slowResult = walk xs ind
-            where walk []     _ = err
-                  walk (e:es) i = ite (i .== 0) e (walk es (i - 1))
+    | isReal ind  = error "SBV.select: unsupported real valued select/index expression"
+    | hasSign ind = ite (ind .< 0) err $ walk xs ind
+    | True        = walk xs ind
+    where walk []     _ = err
+          walk (e:es) i = ite (i .== 0) e (walk es (i - 1))
 
 -- SBV
 instance SymWord a => Mergeable (SBV a) where
