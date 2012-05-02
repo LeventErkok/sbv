@@ -39,11 +39,11 @@ Version 1.4, Not yet released
       by the SMT-Lib2 standard. [Patch provided by arrowdodger on github, thanks!]
 
   Bugs fixed:
-    * Fix minor bug in the default implementation of select when the indexer is
-      an infinite precision SInteger value.
-    * [Performance] Revert implementation of select on function-elements to the
-      default instance, which has much better space/time characteristics since
-      it doesn't delay merging till the application is done.
+    * [Performance] Use a much simpler default definition for "select": While the
+      older version (based on binary search on the bits of the indexer) was correct,
+      it created unnecessarily big expressions. Since SBV does not have a notion
+      of concrete subwords, the binary-search trick was not bringing any advantage
+      in any case. Instead, we now simply use a linear walk over the elements.
 
   Examples:
    * Change dog-cat-mouse example to use SInteger for the counts
