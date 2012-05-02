@@ -907,13 +907,14 @@ class Mergeable a where
    -- symbolic as well. So, the binary search only pays of if the indexed
    -- list is really humongous, which is not very common in general. (Also,
    -- for the case when the list is SBV's, we use SMT tables anyhow.)
-   select [] err _   = err
    select xs err ind
-    | isReal ind  = error "SBV.select: unsupported real valued select/index expression"
-    | hasSign ind = ite (ind .< 0) err $ walk xs ind
-    | True        = walk xs ind
-    where walk []     _ = err
-          walk (e:es) i = ite (i .== 0) e (walk es (i - 1))
+    | isReal ind              = error "SBV.select: unsupported real valued select/index expression"
+    | Just i <- unliteral ind = if i < 0 || i >= genericLength xs
+                                then err
+                                else xs `genericIndex` i
+    | True                    = walk xs ind err
+    where walk []     _ acc = acc
+          walk (e:es) i acc = walk es (i-1) (ite (i .== 0) e acc)
 
 -- SBV
 instance SymWord a => Mergeable (SBV a) where
