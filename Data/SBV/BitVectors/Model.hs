@@ -904,9 +904,9 @@ class Mergeable a where
    -- on the index to chop down the search space. While that is a good trick
    -- in general, it doesn't work for SBV since we do not have any notion of
    -- "concrete" subwords: If an index is symbolic, then all its bits are
-   -- symbolic as well. So, the binary search only pays of if the indexed
+   -- symbolic as well. So, the binary search only pays off only if the indexed
    -- list is really humongous, which is not very common in general. (Also,
-   -- for the case when the list is SBV's, we use SMT tables anyhow.)
+   -- for the case when the list is bit-vectors, we use SMT tables anyhow.)
    select xs err ind
     | isReal ind              = error "SBV.select: unsupported real valued select/index expression"
     | Just i <- unliteral ind = if i < 0 || i >= genericLength xs
