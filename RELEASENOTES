@@ -15,13 +15,15 @@ Version 1.4, Not yet released
   However, algebraic reals is a superset of rationals, so SBV now also supports symbolic
   rationals as well.
     
-  You *should* use Z3 v4.0 when working with real numbers, the interface will
-  not work with older versions of Z3.
+  You *should* use Z3 v4.0 when working with real numbers. While the interface will
+  work with older versions of Z3 (or other SMT solvers in general), it uses Z3's
+  root-obj construct to retrieve and query algebraic reals.
 
   While SReal values have infinite precision, printing such values is not trivial since
   we might need an infinite number of digits if the result happens to be irrational. The
   user controls printing precision, by specifying how many digits after the decimal point
-  should be printed.
+  should be printed. The default number of decimal digits to print is 10. (See the
+  'printRealPrec' field of SMT-solver configuration.)
 
   Other notable changes in the library:
     * Add functions s[TYPE] and s[TYPE]s for each symbolic type we support (i.e.,
@@ -48,6 +50,7 @@ Version 1.4, Not yet released
   Examples:
    * Change dog-cat-mouse example to use SInteger for the counts
    * Add merge-sort example: Data.SBV.Examples.BitPrecise.MergeSort
+   * Add diophantine solver example: Data.SBV.Examples.Existentials.Diophantine
 
 ======================================================================
 Version 1.3, 2012-02-25
