@@ -19,7 +19,7 @@ import qualified Control.Exception as C
 
 import Data.Char          (isDigit, toLower)
 import Data.Function      (on)
-import Data.List          (sortBy, intercalate, isPrefixOf, isInfixOf, groupBy)
+import Data.List          (sortBy, intercalate, isPrefixOf, groupBy)
 import System.Environment (getEnv)
 import qualified System.Info as S(os)
 
@@ -35,10 +35,6 @@ optionPrefix :: Char
 optionPrefix
   | map toLower S.os `elem` ["linux", "darwin"] = '-'
   | True                                        = '/'   -- windows
-
--- Get rid of this when 4.0 is out
-z340 :: Bool
-z340 = False
 
 -- | The description of the Z3 SMT solver
 -- The default executable is @\"z3\"@, which must be in your path. You can use the @SBV_Z3@ environment variable to point to the executable on your system.
@@ -56,12 +52,10 @@ z3 = SMTSolver {
                                                [] -> ""
                                                ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
                                     ppDecLim = "(set-option :pp-decimal-precision " ++ show (printRealPrec cfg') ++ ")\n"
-                                    script = SMTScript {scriptBody = notyet (tweaks ++ ppDecLim ++ pgm), scriptModel = Just (notyet (cont skolemMap))}
+                                    script = SMTScript {scriptBody = tweaks ++ ppDecLim ++ pgm, scriptModel = Just (cont skolemMap)}
                                 standardSolver cfg' script cleanErrs (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap . match skolemMap))
          }
  where -- Get rid of the following when z3_4.0 is out
-       notyet | z340 = id
-              | True   = unlines . filter (not . (":pp-decimal" `isInfixOf`)) . lines
        cleanErrs = intercalate "\n" . filter (not . junk) . lines
        junk = ("WARNING:" `isPrefixOf`)
        zero :: Kind -> String
@@ -106,11 +100,9 @@ extractMap isSat qinps _modelMap solverLines =
           where squash [(i, (n, cw1)), (_, (_, cw2))] = [(i, (n, mergeReals n cw1 cw2))]
                 squash xs = xs
                 mergeReals :: String -> CW -> CW -> CW
-                mergeReals _ a _
-                  | not z340 = a
                 mergeReals n (CW KReal (Left a)) (CW KReal (Left b)) = CW KReal (Left (mergeAlgReals (error (bad n a b)) a b))
                 mergeReals n a b = error $ bad n a b
-                bad n a b = "Z3: Cannot merge reals for variable: " ++ n ++ " received: " ++ show (a, b)
+                bad n a b = "SBV.Z3: Cannot merge reals for variable: " ++ n ++ " received: " ++ show (a, b)
 
 getCounterExample :: [NamedSymVar] -> String -> [(Int, (String, CW))]
 getCounterExample inps line = either err extract (parseSExpr line)

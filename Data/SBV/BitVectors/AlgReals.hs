@@ -78,12 +78,12 @@ instance Show AlgReal where
 -- lift unary op through an exact rational, otherwise bail
 lift1 :: String -> (Rational -> Rational) -> AlgReal -> AlgReal
 lift1 _  o (AlgRational True a) = AlgRational True (o a)
-lift1 nm _ a                    = error $ "AlgReal." ++ show nm ++ ": unsupported argument: " ++ show a
+lift1 nm _ a                    = error $ "AlgReal." ++ nm ++ ": unsupported argument: " ++ show a
 
 -- lift binary op through exact rationals, otherwise bail
 lift2 :: String -> (Rational -> Rational -> Rational) -> AlgReal -> AlgReal -> AlgReal
 lift2 _  o (AlgRational True a) (AlgRational True b) = AlgRational True (a `o` b)
-lift2 nm _ a                    b                    = error $ "AlgReal." ++ show nm ++ ": unsupported arguments: " ++ show (a, b)
+lift2 nm _ a                    b                    = error $ "AlgReal." ++ nm ++ ": unsupported arguments: " ++ show (a, b)
 
 -- The idea in the instances below is that we will fully support operations
 -- on "AlgRational" AlgReals, but leave everything else undefined. When we are
