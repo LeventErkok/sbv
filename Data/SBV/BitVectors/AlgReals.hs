@@ -77,8 +77,8 @@ instance Show AlgReal where
 
 -- lift unary op through an exact rational, otherwise bail
 lift1 :: String -> (Rational -> Rational) -> AlgReal -> AlgReal
-lift1 _  o (AlgRational True a) = AlgRational True (o a)
-lift1 nm _ a                    = error $ "AlgReal." ++ nm ++ ": unsupported argument: " ++ show a
+lift1 _  o (AlgRational e a) = AlgRational e (o a)
+lift1 nm _ a                 = error $ "AlgReal." ++ nm ++ ": unsupported argument: " ++ show a
 
 -- lift binary op through exact rationals, otherwise bail
 lift2 :: String -> (Rational -> Rational -> Rational) -> AlgReal -> AlgReal -> AlgReal
@@ -98,10 +98,11 @@ instance Ord AlgReal where
   a                  `compare` b                  = error $ "AlgReal.compare: unsupported arguments: " ++ show (a, b)
 
 instance Num AlgReal where
-  (+)         = lift2 "+"   (+)
-  (*)         = lift2 "*"   (*)
-  (-)         = lift2 "*"   (-)
-  abs         = lift1 "abs" abs
+  (+)         = lift2 "+"      (+)
+  (*)         = lift2 "*"      (*)
+  (-)         = lift2 "-"      (-)
+  negate      = lift1 "negate" negate
+  abs         = lift1 "abs"    abs
   signum      = lift1 "signum" signum
   fromInteger = AlgRational True . fromInteger
 
@@ -182,7 +183,8 @@ showRat exact r = p $ case f25 (denominator r) [] of
         factor (_:ts) (_:fs) = factor ts fs
 
 -- | Merge the representation of two algebraic reals, one assumed to be
--- in polynomial form, the other in decimal. It's an error to pass anything
+-- in polynomial form, the other in decimal. Arguments can be the same
+-- kind, so long as they are both rationals and equivalent. It's an error to pass anything
 -- else to this function! (Used in reconstructing SMT counter-example values with reals).
 mergeAlgReals :: String -> AlgReal -> AlgReal -> AlgReal
 mergeAlgReals _ f@(AlgRational exact r) (AlgPolyRoot kp Nothing)
@@ -191,4 +193,6 @@ mergeAlgReals _ f@(AlgRational exact r) (AlgPolyRoot kp Nothing)
 mergeAlgReals _ (AlgPolyRoot kp Nothing) f@(AlgRational exact r)
   | exact = f
   | True  = AlgPolyRoot kp (Just (showRat False r))
+mergeAlgReals _ f@(AlgRational e1 r1) (AlgRational e2 r2)
+  | (e1, r1) == (e2, r2) = f
 mergeAlgReals m _ _ = error m

@@ -41,7 +41,7 @@ import Data.SBV.Utils.TDiff
 -- not necessarily have finite decimal representations, and hence we have to stop printing at some depth. It is important to
 -- emphasize that such values always have infinite precision internally. The issue is merely with how we print such an infinite
 -- precision value on the screen. The field 'printRealPrec' controls the printing precision, by specifying the number of digits after
--- the decimal point. The default value is 10, but it can be set to any non-negative value.
+-- the decimal point. The default value is 16, but it can be set to any non-negative value.
 --
 -- When printing, SBV will add the suffix @...@ at the and of a real-value, if the given bound is not sufficient to represent the real-value
 -- exactly. Otherwise, the number will be written out in standard decimal notation.
@@ -50,7 +50,7 @@ data SMTConfig = SMTConfig {
        , timing        :: Bool           -- ^ Print timing information on how long different phases took (construction, solving, etc.)
        , timeOut       :: Maybe Int      -- ^ How much time to give to the solver. (In seconds)
        , printBase     :: Int            -- ^ Print integral literals in this base (2, 8, and 10, and 16 are supported.)
-       , printRealPrec :: Int            -- ^ Print algebraic real values with this precision. (SReal)
+       , printRealPrec :: Int            -- ^ Print algebraic real values with this precision. (SReal, default: 16)
        , solverTweaks  :: [String]       -- ^ Additional lines of script to give to the solver (user specified)
        , smtFile       :: Maybe FilePath -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
        , useSMTLib2    :: Bool           -- ^ If True, we'll treat the solver as using SMTLib2 input format. Otherwise, SMTLib1
