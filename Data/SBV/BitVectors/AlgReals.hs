@@ -184,7 +184,8 @@ showRat exact r = p $ case f25 (denominator r) [] of
 
 -- | Merge the representation of two algebraic reals, one assumed to be
 -- in polynomial form, the other in decimal. Arguments can be the same
--- kind, so long as they are both rationals and equivalent. It's an error to pass anything
+-- kind, so long as they are both rationals and equivalent; if not there
+-- must be one that is precise. It's an error to pass anything
 -- else to this function! (Used in reconstructing SMT counter-example values with reals).
 mergeAlgReals :: String -> AlgReal -> AlgReal -> AlgReal
 mergeAlgReals _ f@(AlgRational exact r) (AlgPolyRoot kp Nothing)
@@ -193,6 +194,8 @@ mergeAlgReals _ f@(AlgRational exact r) (AlgPolyRoot kp Nothing)
 mergeAlgReals _ (AlgPolyRoot kp Nothing) f@(AlgRational exact r)
   | exact = f
   | True  = AlgPolyRoot kp (Just (showRat False r))
-mergeAlgReals _ f@(AlgRational e1 r1) (AlgRational e2 r2)
+mergeAlgReals _ f@(AlgRational e1 r1) s@(AlgRational e2 r2)
   | (e1, r1) == (e2, r2) = f
+  | e1                   = f
+  | e2                   = s
 mergeAlgReals m _ _ = error m

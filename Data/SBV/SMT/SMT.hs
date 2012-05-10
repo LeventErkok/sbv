@@ -41,10 +41,12 @@ import Data.SBV.Utils.TDiff
 -- not necessarily have finite decimal representations, and hence we have to stop printing at some depth. It is important to
 -- emphasize that such values always have infinite precision internally. The issue is merely with how we print such an infinite
 -- precision value on the screen. The field 'printRealPrec' controls the printing precision, by specifying the number of digits after
--- the decimal point. The default value is 16, but it can be set to any non-negative value.
+-- the decimal point. The default value is 16, but it can be set to any positive integer.
 --
 -- When printing, SBV will add the suffix @...@ at the and of a real-value, if the given bound is not sufficient to represent the real-value
--- exactly. Otherwise, the number will be written out in standard decimal notation.
+-- exactly. Otherwise, the number will be written out in standard decimal notation. Note that SBV will always print the whole value if it
+-- is precise (i.e., if it fits in a finite number of digits), regardless of the precision limit. The limit only applies if the representation
+-- of the real value is not finite, i.e., if it is not rational.
 data SMTConfig = SMTConfig {
          verbose       :: Bool           -- ^ Debug mode
        , timing        :: Bool           -- ^ Print timing information on how long different phases took (construction, solving, etc.)

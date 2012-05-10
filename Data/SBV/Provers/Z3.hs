@@ -51,9 +51,12 @@ z3 = SMTSolver {
                                     tweaks = case solverTweaks cfg' of
                                                [] -> ""
                                                ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
-                                    ppDecLim = "(set-option :pp-decimal-precision " ++ show (printRealPrec cfg') ++ ")\n"
+                                    dlim = printRealPrec cfg'
+                                    ppDecLim = "(set-option :pp-decimal-precision " ++ show dlim ++ ")\n"
                                     script = SMTScript {scriptBody = tweaks ++ ppDecLim ++ pgm, scriptModel = Just (cont skolemMap)}
-                                standardSolver cfg' script cleanErrs (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap . match skolemMap))
+                                if dlim < 1
+                                   then error $ "SBV.Z3: printRealPrec value should be at least 1, invalid value received: " ++ show dlim
+                                   else standardSolver cfg' script cleanErrs (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap . match skolemMap))
          }
  where -- Get rid of the following when z3_4.0 is out
        cleanErrs = intercalate "\n" . filter (not . junk) . lines

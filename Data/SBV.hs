@@ -10,9 +10,9 @@
 -- (The sbv library is hosted at <http://github.com/LeventErkok/sbv>.
 -- Comments, bug reports, and patches are always welcome.)
 --
--- SBV: Symbolic Bit Vectors in Haskell
+-- SBV: SMT Based Verification
 --
--- Express properties about bit-precise Haskell programs and automatically prove
+-- Express properties about Haskell programs and automatically prove
 -- them using SMT solvers.
 --
 -- >>> prove $ \x -> x `shiftL` 2 .== 4 * (x :: SWord8)
@@ -52,8 +52,8 @@
 -- very similar to their concrete counterparts. In particular these types belong to the
 -- standard classes 'Num', 'Bits', custom versions of 'Eq' ('EqSymbolic') 
 -- and 'Ord' ('OrdSymbolic'), along with several other custom classes for simplifying
--- bit-precise programming with symbolic values. The framework takes full advantage
--- of Haskell's type inference to avoid many common mistakes.
+-- programming with symbolic values. The framework takes full advantage of Haskell's type
+-- inference to avoid many common mistakes.
 --
 -- Furthermore, predicates (i.e., functions that return 'SBool') built out of
 -- these types can also be:
