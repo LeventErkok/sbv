@@ -1,11 +1,11 @@
 Name:          sbv
 Version:       1.4
 Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math, SMT
-Synopsis:      Symbolic bit vectors: Bit-precise verification and automatic C-code generation.
-Description:   Express properties about bit-precise Haskell programs and automatically prove
-               them using SMT solvers. Automatically generate C programs from Haskell functions.
-               The SBV library adds support for symbolic bit vectors, allowing formal models of
-               bit-precise programs to be created.
+Synopsis:      SMT Based Verification: Symbolic Haskell theorem prover using SMT solving.
+Description:   Express properties about Haskell programs and automatically prove them using SMT
+               (Satisfiability Modulo Theories) solvers. Automatically generate C programs from
+               Haskell functions. The SBV library adds support for symbolic bit vectors and other
+               symbolic types, allowing formal models of Haskell programs to be created.
                .
                >   $ ghci -XScopedTypeVariables
                >   Prelude> :m Data.SBV
@@ -66,8 +66,8 @@ Description:   Express properties about bit-precise Haskell programs and automat
                bug reports, and patches are always welcome.
                .
                The following people reported bugs, provided comments/feedback, or contributed to the
-               development of SBV in various ways: Ian Blumenfeld, Ian Calvert, Iavor Diatchki,
-               Tom Hawkins, Lee Pike, Austin Seipp, Don Stewart, Josef Svenningsson, and Nis Wegmann.
+               development of SBV in various ways: Ian Blumenfeld, Ian Calvert, Iavor Diatchki, John
+               Erickson, Tom Hawkins, Lee Pike, Austin Seipp, Don Stewart, Josef Svenningsson, and Nis Wegmann.
                .
                Release notes can be seen at: <http://github.com/LeventErkok/sbv/blob/master/RELEASENOTES>.
 
