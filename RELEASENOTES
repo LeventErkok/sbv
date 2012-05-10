@@ -1,12 +1,12 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Latest Hackage released version: 1.4
+Latest Hackage released version: 2.0
 
 ======================================================================
-Version 1.4, 2012-05-10
+Version 2.0, 2012-05-10
   
-  The major change in this release is the support for symbolic algebraic reals: SReal.
+  This is a major release of SBV, adding support for symbolic algebraic reals: SReal.
   See http://en.wikipedia.org/wiki/Algebraic_number for details. In brief, algebraic
   reals are solutions to univariate polynomials with rational coefficients. The arithmetic
   on algebraic reals is precise, with no approximation errors. Note that algebraic reals
@@ -56,6 +56,11 @@ Version 1.4, 2012-05-10
    * Change dog-cat-mouse example to use SInteger for the counts
    * Add merge-sort example: Data.SBV.Examples.BitPrecise.MergeSort
    * Add diophantine solver example: Data.SBV.Examples.Existentials.Diophantine
+
+======================================================================
+Version 1.4, 2012-05-10
+
+   * Interim release for test purposes
 
 ======================================================================
 Version 1.3, 2012-02-25
