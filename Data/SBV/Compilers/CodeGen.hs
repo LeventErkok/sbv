@@ -35,6 +35,7 @@ class CgTarget a where
 data CgConfig = CgConfig {
           cgRTC         :: Bool          -- ^ If 'True', perform run-time-checks for index-out-of-bounds or shifting-by-large values etc.
         , cgInteger     :: Maybe Int     -- ^ Bit-size to use for representing SInteger (if any)
+        , cgReal        :: Maybe String  -- ^ Type to use for representing SReal (if any)
         , cgDriverVals  :: [Integer]     -- ^ Values to use for the driver program generated, useful for generating non-random drivers.
         , cgGenDriver   :: Bool          -- ^ If 'True', will generate a driver program
         , cgGenMakefile :: Bool          -- ^ If 'True', will generate a makefile
@@ -42,7 +43,7 @@ data CgConfig = CgConfig {
 
 -- | Default options for code generation. The run-time checks are turned-off, and the driver values are completely random.
 defaultCgConfig :: CgConfig
-defaultCgConfig = CgConfig { cgRTC = False, cgInteger = Nothing, cgDriverVals = [], cgGenDriver = True, cgGenMakefile = True }
+defaultCgConfig = CgConfig { cgRTC = False, cgInteger = Nothing, cgReal = Nothing, cgDriverVals = [], cgGenDriver = True, cgGenMakefile = True }
 
 -- | Abstraction of target language values
 data CgVal = CgAtomic SW
@@ -99,6 +100,16 @@ cgIntegerSize i
   = error $ "SBV.cgIntegrerSize: Argument must be one of 8, 16, 32, or 64. Received: " ++ show i
   | True
   = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgInteger = Just i }})
+
+-- | Sets the C type to be used for representing the 'SReal' type in the generated C code.
+-- The argument must be one of @"float"@, @"double"@, or @"long double"@, corresponding to
+-- the C types. However, SBV will *not* check what the user given string is, but will rather
+-- simply use it verbatim, in anticipation of code generation with potential custom libraries.
+-- Note that this is essentially unsafe as the semantics of infinite precision SReal values
+-- becomes reduced to the corresponding floating point type in C unless an infinite precision
+-- custom variant is used, and hence typically is subject to rounding errors.
+cgRealType :: String -> SBVCodeGen ()
+cgRealType rt = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgReal = Just rt }})
 
 -- | Should we generate a driver program? Default: 'True'. When a library is generated, it will have
 -- a driver if any of the contituent functions has a driver. (See 'compileToCLib'.)

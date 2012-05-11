@@ -89,7 +89,8 @@ dieUnbounded = error $    "SBV->C: Unbounded integers are not supported by the C
 
 -- Reals
 dieReal :: a
-dieReal = error "SBV->C: SReal values are not supported by the C compiler."
+dieReal = error $ "SBV->C: SReal values are not supported by the C compiler."
+                ++ "\nUse 'cgRealType' to specify a custom type for SReal representation."
 
 -- Unsupported features, or features TBD
 tbd :: String -> a
