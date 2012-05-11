@@ -1,5 +1,5 @@
 Name:          sbv
-Version:       2.0
+Version:       2.1
 Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math, SMT
 Synopsis:      SMT Based Verification: Symbolic Haskell theorem prover using SMT solving.
 Description:   Express properties about Haskell programs and automatically prove them using SMT
@@ -44,12 +44,13 @@ Description:   Express properties about Haskell programs and automatically prove
                .
                  * used in synthesis (the 'sat' function with existential variables)
                .
-                 * optimized with respect to cost functions (the 'optimize', 'maximize', and 'minimize' functions)
+                 * optimized with respect to cost functions (the 'optimize', 'maximize',
+                 and 'minimize' functions)
                .
                  * quick-checked
                .
-                 * used in concrete test case generation (the 'genTest' function), rendered as values in various
-                   languages, including Haskell and C.
+                 * used in concrete test case generation (the 'genTest' function), rendered as
+                   values in various languages, including Haskell and C.
                .
                Predicates can have both existential and universal variables. Use of
                alternating quantifiers provides considerable expressive power.
@@ -67,7 +68,8 @@ Description:   Express properties about Haskell programs and automatically prove
                .
                The following people reported bugs, provided comments/feedback, or contributed to the
                development of SBV in various ways: Ian Blumenfeld, Ian Calvert, Iavor Diatchki, John
-               Erickson, Tom Hawkins, Lee Pike, Austin Seipp, Don Stewart, Josef Svenningsson, and Nis Wegmann.
+               Erickson, Tom Hawkins, Lee Pike, Austin Seipp, Don Stewart, Josef Svenningsson, and
+               Nis Wegmann.
                .
                Release notes can be seen at: <http://github.com/LeventErkok/sbv/blob/master/RELEASENOTES>.
 

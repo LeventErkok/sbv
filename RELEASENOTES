@@ -4,6 +4,11 @@ GitHub:  <http://github.com/LeventErkok/sbv>
 Latest Hackage released version: 2.0
 
 ======================================================================
+Version 2.1, Not released yet
+
+  Current working version
+
+======================================================================
 Version 2.0, 2012-05-10
   
   This is a major release of SBV, adding support for symbolic algebraic reals: SReal.

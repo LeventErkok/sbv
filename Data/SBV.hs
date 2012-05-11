@@ -251,13 +251,13 @@ import Data.Word
 {- $progIntro
 The SBV library is really two things:
 
-  * A framework for writing bit-precise programs in Haskell
+  * A framework for writing symbolic programs in Haskell, i.e., programs operating on
+    symbolic values along with the usual concrete counterparts.
 
-  * A framework for proving properties of such programs using SMT solvers
+  * A framework for proving properties of such programs using SMT solvers.
 
-In this first section we will look at the constructs that will let us construct such
-programs in Haskell. The goal is to have a "seamless" experience, i.e., program in
-the usual Haskell style without distractions of symbolic coding. While Haskell helps
+The programming goal of SBV is to provide a /seamless/ experience, i.e., let people program
+in the usual Haskell style without distractions of symbolic coding. While Haskell helps
 in some aspects (the 'Num' and 'Bits' classes simplify coding), it makes life harder
 in others. For instance, @if-then-else@ only takes 'Bool' as a test in Haskell, and
 comparisons ('>' etc.) only return 'Bool's. Clearly we would like these values to be
