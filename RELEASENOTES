@@ -6,7 +6,15 @@ Latest Hackage released version: 2.0
 ======================================================================
 Version 2.1, Not released yet
 
-  Current working version
+ Library:
+  - Add support for C code-generation with SReals. The user picks
+    one of 3 possible C types for the SReal type: CgFloat, CgDouble
+    or CgLongDouble, using the function cgSRealType. Naturally, the
+    resulting C program will suffer a loss of precision, as it will
+    be subject to IEE-754 rounding as implied by the underlying type.
+    (NB. This is similar to the cgIntegerSize call, which can be
+    used to generate C code for those functions manipulating the
+    SInteger type.)
 
 ======================================================================
 Version 2.0, 2012-05-10

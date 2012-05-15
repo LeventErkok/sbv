@@ -309,7 +309,7 @@ data UnintKind = UFun Int String | UArr Int String      -- in each case, arity a
  deriving Show
 
 -- | Result of running a symbolic computation
-data Result = Result Bool                          -- contains unbounded integers
+data Result = Result (Bool, Bool)                  -- contains unbounded integers/reals
                      [(String, CW)]                -- quick-check counter-example information (if any)
                      [(String, [String])]          -- uninterpeted code segments
                      [(Quantifier, NamedSymVar)]   -- inputs (possibly existential)
@@ -440,7 +440,7 @@ data State  = State { runMode       :: SBVRunMode
                     , rStdGen       :: IORef StdGen
                     , rCInfo        :: IORef [(String, CW)]
                     , rctr          :: IORef Int
-                    , rBounded      :: IORef Bool
+                    , rUnBounded      :: IORef (Bool, Bool)
                     , rinps         :: IORef [(Quantifier, NamedSymVar)]
                     , rConstraints  :: IORef [SW]
                     , routs         :: IORef [SW]
@@ -556,10 +556,15 @@ newConst st c = do
   case c `Map.lookup` constMap of
     Just sw -> return sw
     Nothing -> do ctr <- incCtr st
-                  let sw = SW (kindOf c) (NodeId ctr)
-                  when (not (isBounded sw)) $ writeIORef (rBounded st) False
+                  let k = kindOf c
+                      sw = SW k (NodeId ctr)
+                  () <- case kindOf c of
+                         KReal      -> modifyIORef (rUnBounded st) (\(x, _) -> (x, True))
+                         KUnbounded -> modifyIORef (rUnBounded st) (\(_, x) -> (True, x))
+                         _          -> return ()
                   modifyIORef (rconstMap st) (Map.insert c sw)
                   return sw
+{-# INLINE newConst #-}
 
 -- | Create a new table; hash-cons as necessary
 getTableIndex :: State -> Kind -> Kind -> [SW] -> IO Int
@@ -585,10 +590,14 @@ newExpr st k app = do
      Just sw -> return sw
      Nothing -> do ctr <- incCtr st
                    let sw = SW k (NodeId ctr)
-                   when (not (isBounded sw)) $ writeIORef (rBounded st) False
+                   () <- case k of
+                          KReal      -> modifyIORef (rUnBounded st) (\(x, _) -> (x, True))
+                          KUnbounded -> modifyIORef (rUnBounded st) (\(_, x) -> (True, x))
+                          _          -> return ()
                    modifyIORef (spgm st)     (flip (S.|>) (sw, e))
                    modifyIORef (rexprMap st) (Map.insert e sw)
                    return sw
+{-# INLINE newExpr #-}
 
 -- | Convert a symbolic value to a symbolic-word
 sbvToSW :: State -> SBV a -> IO SW
@@ -625,7 +634,10 @@ mkSymSBV mbQ k mbNm = do
           _          -> do ctr <- liftIO $ incCtr st
                            let nm = maybe ('s':show ctr) id mbNm
                                sw = SW k (NodeId ctr)
-                           when (not (isBounded sw)) $ liftIO $ writeIORef (rBounded st) False
+                           () <- case k of
+                                   KReal      -> liftIO $ modifyIORef (rUnBounded st) (\(x, _) -> (x, True))
+                                   KUnbounded -> liftIO $ modifyIORef (rUnBounded st) (\(_, x) -> (True, x))
+                                   _          -> return ()
                            liftIO $ modifyIORef (rinps st) ((q, (sw, nm)):)
                            return $ SBV k $ Right $ cache (const (return sw))
 
@@ -696,30 +708,30 @@ runSymbolic b c = snd `fmap` runSymbolic' (Proof b) c
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
 runSymbolic' :: SBVRunMode -> Symbolic a -> IO (a, Result)
 runSymbolic' currentRunMode (Symbolic c) = do
-   ctr     <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
-   cInfo   <- newIORef []
-   pgm     <- newIORef S.empty
-   emap    <- newIORef Map.empty
-   cmap    <- newIORef Map.empty
-   inps    <- newIORef []
-   outs    <- newIORef []
-   tables  <- newIORef Map.empty
-   arrays  <- newIORef IMap.empty
-   uis     <- newIORef Map.empty
-   cgs     <- newIORef Map.empty
-   axioms  <- newIORef []
-   swCache <- newIORef IMap.empty
-   aiCache <- newIORef IMap.empty
-   bounded <- newIORef True
-   cstrs   <- newIORef []
-   rGen    <- case currentRunMode of
-                Concrete g -> newIORef g
-                _          -> newStdGen >>= newIORef
+   ctr       <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
+   cInfo     <- newIORef []
+   pgm       <- newIORef S.empty
+   emap      <- newIORef Map.empty
+   cmap      <- newIORef Map.empty
+   inps      <- newIORef []
+   outs      <- newIORef []
+   tables    <- newIORef Map.empty
+   arrays    <- newIORef IMap.empty
+   uis       <- newIORef Map.empty
+   cgs       <- newIORef Map.empty
+   axioms    <- newIORef []
+   swCache   <- newIORef IMap.empty
+   aiCache   <- newIORef IMap.empty
+   unbounded <- newIORef (False, False)
+   cstrs     <- newIORef []
+   rGen      <- case currentRunMode of
+                  Concrete g -> newIORef g
+                  _          -> newStdGen >>= newIORef
    let st = State { runMode      = currentRunMode
                   , rStdGen      = rGen
                   , rCInfo       = cInfo
                   , rctr         = ctr
-                  , rBounded     = bounded
+                  , rUnBounded   = unbounded
                   , rinps        = inps
                   , routs        = outs
                   , rtblMap      = tables
@@ -747,11 +759,11 @@ runSymbolic' currentRunMode (Symbolic c) = do
    arrs  <- IMap.toAscList `fmap` readIORef arrays
    unint <- Map.toList `fmap` readIORef uis
    axs   <- reverse `fmap` readIORef axioms
-   allBounded <- readIORef bounded
+   boundInfo <- readIORef unbounded
    cgMap <- Map.toList `fmap` readIORef cgs
    traceVals <- reverse `fmap` readIORef cInfo
    extraCstrs   <- reverse `fmap` readIORef cstrs
-   return $ (r, Result (not allBounded) traceVals cgMap inpsO cnsts tbls arrs unint axs rpgm extraCstrs outsO)
+   return $ (r, Result boundInfo traceVals cgMap inpsO cnsts tbls arrs unint axs rpgm extraCstrs outsO)
 
 -------------------------------------------------------------------------------
 -- * Symbolic Words

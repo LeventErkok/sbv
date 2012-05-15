@@ -58,7 +58,7 @@ tbd :: String -> a
 tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
-cvt :: Bool                         -- ^ has infinite precision values
+cvt :: (Bool, Bool)                 -- ^ has infinite precision values
     -> Bool                         -- ^ is this a sat problem?
     -> [String]                     -- ^ extra comments to place on top
     -> [(Quantifier, NamedSymVar)]  -- ^ inputs
@@ -72,11 +72,13 @@ cvt :: Bool                         -- ^ has infinite precision values
     -> [SW]                         -- ^ extra constraints
     -> SW                           -- ^ output variable
     -> ([String], [String])
-cvt hasInf isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq cstrs out = (pre, [])
+cvt (hasInteger, hasReal) isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq cstrs out = (pre, [])
   where -- the logic is an over-approaximation
         logic
-          | hasInf = ["; Has unbounded values (Int/Real); no logic specified."]   -- combination, let the solver pick
-          | True   = ["(set-logic " ++ qs ++ as ++ ufs ++ "BV)"]
+           | hasInteger || hasReal
+           = ["; Has unbounded values (Int/Real); no logic specified."]   -- combination, let the solver pick
+           | True
+           = ["(set-logic " ++ qs ++ as ++ ufs ++ "BV)"]
           where qs  | null foralls && null axs = "QF_"  -- axioms are likely to contain quantifiers
                     | True                     = ""
                 as  | null arrs                = ""

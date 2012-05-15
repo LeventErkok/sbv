@@ -41,7 +41,7 @@ nonEq :: (String, CW) -> String
 nonEq (s, c) = "(not (= " ++ s ++ " " ++ cvtCW c ++ "))"
 
 -- | Translate a problem into an SMTLib1 script
-cvt :: Bool                         -- ^ has infinite precision values
+cvt :: (Bool, Bool)                 -- ^ has infinite precision integer/real values
     -> Bool                         -- ^ is this a sat problem?
     -> [String]                     -- ^ extra comments to place on top
     -> [(Quantifier, NamedSymVar)]  -- ^ inputs
@@ -55,9 +55,11 @@ cvt :: Bool                         -- ^ has infinite precision values
     -> [SW]                         -- ^ extra constraints
     -> SW                           -- ^ output variable
     -> ([String], [String])
-cvt hasInf isSat comments qinps _skolemInps consts tbls arrs uis axs asgnsSeq cstrs out
-  | hasInf
-  = error "SBV: The chosen solver does not support infinite precision values. (Use z3 instead.)"
+cvt (hasIntegers, hasReals) isSat comments qinps _skolemInps consts tbls arrs uis axs asgnsSeq cstrs out
+  | hasIntegers
+  = error "SBV: Unbounded integers are not supported in the SMTLib1/yices interface. (Use z3 instead.)"
+  | hasReals
+  = error "SBV: The real value domain is not supported in the SMTLib1/yices interface. (Use z3 instead.)"
   | not ((isSat && allExistential) || (not isSat && allUniversal))
   = error "SBV: The chosen solver does not support quantified variables. (Use z3 instead.)"
   | True
