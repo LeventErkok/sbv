@@ -102,7 +102,9 @@ cgIntegerSize i
   = modify (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgInteger = Just i }})
 
 -- | Possible mappings for the 'SReal' type when translated to C. Used in conjunction
--- with the function 'cgRealType'.
+-- with the function 'cgSRealType'. Note that the particular characteristics of the
+-- mapped types depend on the platform and the compiler used for compiling the generated
+-- C program. See <http://en.wikipedia.org/wiki/C_data_types> for details.
 data CgSRealType = CgFloat      -- ^ @float@
                  | CgDouble     -- ^ @double@
                  | CgLongDouble -- ^ @long double@
@@ -147,7 +149,7 @@ cgAddDecl ss = modify (\s -> let old = cgDecls s
                                  new = if null old then ss else old ++ [""] ++ ss
                              in s { cgDecls = new })
 
--- | Adds the given words to the compiler options in the generated Makefile, useful for linking extra stuff in
+-- | Adds the given words to the compiler options in the generated Makefile, useful for linking extra stuff in.
 cgAddLDFlags :: [String] -> SBVCodeGen ()
 cgAddLDFlags ss = modify (\s -> s { cgLDFlags = cgLDFlags s ++ ss })
 

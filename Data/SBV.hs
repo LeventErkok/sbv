@@ -213,7 +213,11 @@ module Data.SBV (
   , cgReturn, cgReturnArr
 
   -- ** Code generation with uninterpreted functions
-  , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIntegerSize, cgSRealType, CgSRealType(..)
+  , cgAddPrototype, cgAddDecl, cgAddLDFlags
+
+  -- ** Code generation with 'SInteger' and 'SReal' types
+  -- $unboundedCGen
+  , cgIntegerSize, cgSRealType, CgSRealType(..)
 
   -- ** Compilation to C
   , compileToC, compileToCLib
@@ -341,6 +345,17 @@ certainly possible, currently only C is supported.) The generated code will perf
 same instructions in all calls, so they have predictable timing properties as well. The generated code
 has no loops or jumps, and is typically quite fast. While the generated code can be large due to complete unrolling,
 these characteristics make them suitable for use in hard real-time systems, as well as in traditional computing.
+-}
+
+{- $unboundedCGen
+The types 'SInteger' and 'SReal' are unbounded quantities that have no direct counterparts in the C language. Therefore,
+it is not possible to generate standard C code for SBV programs using these types, unless custom libraries are available. To
+overcome this, SBV allows the user to explicitly set what the corresponding types should be for these two cases, using
+the functions below. Note that while these mappings will produce valid C code, the resulting code will be subject to
+overflow/underflows for 'SInteger', and rounding for 'SReal', so there is an implicit loss of precision.
+
+If the user does /not/ specify these mappings, then SBV will
+refuse to compile programs that involve these types.
 -}
 
 {- $moduleExportIntro
