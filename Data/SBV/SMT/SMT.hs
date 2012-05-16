@@ -398,7 +398,7 @@ standardSolver config script cleanErrs failure success = do
     msg $ nmSolver ++ " output:\n" ++ either id (intercalate "\n") contents
     case contents of
       Left e   -> return $ failure (lines e)
-      Right xs -> return $ success xs
+      Right xs -> return $ success (mergeSExpr xs)
 
 -- | A variant of 'readProcessWithExitCode'; except it knows about continuation strings
 -- and can speak SMT-Lib2 (just a little).
@@ -437,3 +437,19 @@ runSolver verb execPath opts script
                        mapM_ putStrLn mls
         mapM_ send mls
       cleanUp r
+
+-- In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
+-- each S-Expression spanning only a single line. We'll ignore things line parentheses inside quotes
+-- etc., as it should not be an issue
+mergeSExpr :: [String] -> [String]
+mergeSExpr []       = []
+mergeSExpr (x:xs)
+ | d == 0 = x : mergeSExpr xs
+ | True   = let (f, r) = grab d xs in unwords (x:f) : mergeSExpr r
+ where d = parenDiff x
+       parenDiff :: String -> Int
+       parenDiff s = length (filter (== '(') s) - length (filter (== ')') s)
+       grab i ls
+         | i <= 0    = ([], ls)
+       grab _ []     = ([], [])
+       grab i (l:ls) = let (a, b) = grab (i+parenDiff l) ls in (l:a, b)
