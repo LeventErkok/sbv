@@ -15,6 +15,11 @@ Version 2.1, Not released yet
     (NB. This is similar to the cgIntegerSize call, which can be
     used to generate C code for those functions manipulating the
     SInteger type.)
+  - Add toSReal :: SInteger -> SReal, which can be used to promote
+    symbolic integers to reals. Comes handy in mixed integer/real
+    computations.
+ Examples:
+  - Recast the dog-cat-mouse example to use the solver over reals.
 
 ======================================================================
 Version 2.0, 2012-05-10
