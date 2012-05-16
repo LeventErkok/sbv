@@ -1,5 +1,5 @@
-SBV: SMT Based Verification
-============================
+SBV: SMT Based Verification in Haskell
+======================================
 
 Express properties about Haskell programs and automatically prove them using SMT solvers.
 
