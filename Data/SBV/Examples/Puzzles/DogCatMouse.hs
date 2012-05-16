@@ -29,9 +29,10 @@ import Data.SBV
 puzzle :: IO AllSatResult
 puzzle = allSat $ do
            [dog, cat, mouse] <- sIntegers ["dog", "cat", "mouse"]
-           solve [ dog   .>= 1                                   -- at least one dog
-                 , cat   .>= 1                                   -- at least one cat
-                 , mouse .>= 1                                   -- at least one mouse
-                 , dog + cat + mouse .== 100                     -- buy precisely 100 animals
-                 , 1500 * dog + 100 * cat + 25 * mouse .== 10000 -- spend exactly 100 dollars (use cents since we don't have fractions)
+           solve [ dog   .>= 1                                           -- at least one dog
+                 , cat   .>= 1                                           -- at least one cat
+                 , mouse .>= 1                                           -- at least one mouse
+                 , dog + cat + mouse .== 100                             -- buy precisely 100 animals
+                 , 15 `per` dog + 1 `per` cat + 0.25 `per` mouse .== 100 -- spend exactly 100 dollars
                  ]
+  where p `per` q = p * toSReal q
