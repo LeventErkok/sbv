@@ -534,6 +534,7 @@ ppExpr cfg consts (SBVApp op opArgs) = p op (map (showSW cfg consts) opArgs)
         -- TBD: below we only support the values that SBV actually currently generates.
         -- we would need to add new ones if we generate others. (Check instances in Data/SBV/BitVectors/Splittable.hs).
         extract hi lo i a = case (hi, lo, kindOf i) of
+                              ( 0,  0, KUnbounded)        -> text "(SReal)" <+> a  -- special SInteger -> SReal conversion
                               (63, 32, KBounded False 64) -> text "(SWord32)" <+> parens (a <+> text ">> 32")
                               (31,  0, KBounded False 64) -> text "(SWord32)" <+> a
                               (31, 16, KBounded False 32) -> text "(SWord16)" <+> parens (a <+> text ">> 16")

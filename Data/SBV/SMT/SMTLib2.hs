@@ -309,6 +309,9 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (ArrRead i) [a]) = "(select array_" ++ show i ++ " " ++ ssw a ++ ")"
         sh (SBVApp (Uninterpreted nm) [])   = "uninterpreted_" ++ nm
         sh (SBVApp (Uninterpreted nm) args) = "(uninterpreted_" ++ nm ++ " " ++ unwords (map ssw args) ++ ")"
+        sh (SBVApp (Extract 0 0) [a])   -- special SInteger -> SReal conversion
+          | kindOf a == KUnbounded
+          = "(to_real " ++ ssw a ++ ")"
         sh (SBVApp (Extract i j) [a]) | ensureBV = "((_ extract " ++ show i ++ " " ++ show j ++ ") " ++ ssw a ++ ")"
         sh (SBVApp (Rol i) [a])
            | bvOp  = rot  ssw "rotate_left"  i a

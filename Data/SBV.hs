@@ -103,7 +103,7 @@ module Data.SBV (
   , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger
   -- ** Creating a list of symbolic variables
   -- $createSyms
-  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReal, sReals
+  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReal, sReals, toSReal
   -- *** Abstract SBV type
   , SBV
   -- *** Arrays of symbolic values
