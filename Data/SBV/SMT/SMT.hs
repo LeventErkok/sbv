@@ -438,7 +438,7 @@ runSolver verb execPath opts script
         mapM_ send mls
       cleanUp r
 
--- In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
+-- | In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
 -- each S-Expression spanning only a single line. We'll ignore things line parentheses inside quotes
 -- etc., as it should not be an issue
 mergeSExpr :: [String] -> [String]
@@ -448,7 +448,10 @@ mergeSExpr (x:xs)
  | True   = let (f, r) = grab d xs in unwords (x:f) : mergeSExpr r
  where d = parenDiff x
        parenDiff :: String -> Int
-       parenDiff s = length (filter (== '(') s) - length (filter (== ')') s)
+       parenDiff = go 0
+         where go i ""       = i
+               go i ('(':cs) = let i'= i+1 in i' `seq` go i' cs
+               go i (')':cs) = let i'= i-1 in i' `seq` go i' cs
        grab i ls
          | i <= 0    = ([], ls)
        grab _ []     = ([], [])
