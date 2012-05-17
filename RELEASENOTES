@@ -18,6 +18,11 @@ Version 2.1, Not released yet
   - Add toSReal :: SInteger -> SReal, which can be used to promote
     symbolic integers to reals. Comes handy in mixed integer/real
     computations.
+  - Add slet :: (HasKind a, HasKind b) => SBV a -> (SBV a -> SBV b) -> SBV b
+    This combinator allows for explicit sharing via a continuation. It should
+    *not* be of interest to most users since SBV's internal sharing mechanism
+    should allow ordinary "let" expressions to handle this task. However, this
+    combinator is useful for exploratory purposes.
  Examples:
   - Recast the dog-cat-mouse example to use the solver over reals.
 
