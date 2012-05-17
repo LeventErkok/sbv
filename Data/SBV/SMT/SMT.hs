@@ -452,6 +452,7 @@ mergeSExpr (x:xs)
          where go i ""       = i
                go i ('(':cs) = let i'= i+1 in i' `seq` go i' cs
                go i (')':cs) = let i'= i-1 in i' `seq` go i' cs
+               go i (_  :cs) = go i cs
        grab i ls
          | i <= 0    = ([], ls)
        grab _ []     = ([], [])
