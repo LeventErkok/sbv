@@ -27,7 +27,7 @@ module Data.SBV.BitVectors.Model (
   , lsb, msb, SBVUF, sbvUFName, genVar, genVar_, forall, forall_, exists, exists_
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
-  , sInt64s, sInteger, sIntegers, sReal, sReals, toSReal
+  , sInt64s, sInteger, sIntegers, sReal, sReals, toSReal, slet
   )
   where
 
@@ -1433,3 +1433,16 @@ instance Testable (Symbolic SBool) where
             where maxLen = maximum (0:[length s | (s, _) <- qcInfo])
                   shN s = s ++ replicate (maxLen - length s) ' '
                   info (n, cw) = shN n ++ " = " ++ show cw
+
+-- | Explicit sharing combinator. The SBV library has internal caching/hash-consing mechanisms
+-- built in, based on Andy Gill's type-safe obervable sharing technique (see: <http://ittc.ku.edu/~andygill/paper.php?label=DSLExtract09>).
+-- However, there might be times where being explicit on the sharing can help, especially in experimental code. The 'slet' combinator
+-- ensures that its first argument is computed once and passed on to its continuation, explicitly indicating the intent of sharing. Most
+-- use cases of the SBV library should simply use Haskell's @let@ construct for this purpose.
+slet :: (HasKind a, HasKind b) => SBV a -> (SBV a -> SBV b) -> SBV b
+slet x f = SBV k $ Right $ cache r
+    where k    = kindOf (undefined `asTypeOf` f x)
+          r st = do xsw <- sbvToSW st x
+                    let xsbv = SBV (kindOf x) (Right (cache (const (return xsw))))
+                        res  = f xsbv
+                    sbvToSW st res

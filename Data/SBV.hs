@@ -105,7 +105,7 @@ module Data.SBV (
   -- $createSyms
   , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReal, sReals, toSReal
   -- *** Abstract SBV type
-  , SBV
+  , SBV, slet
   -- *** Arrays of symbolic values
   , SymArray(..), SArray, SFunArray, mkSFunArray
   -- *** Full binary trees
