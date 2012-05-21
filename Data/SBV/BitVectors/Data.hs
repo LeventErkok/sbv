@@ -823,8 +823,6 @@ runSymbolic' currentRunMode (Symbolic c) = do
 -- to be fed to a symbolic program. Note that these methods are typically not needed
 -- in casual uses with 'prove', 'sat', 'allSat' etc, as default instances automatically
 -- provide the necessary bits.
---
--- Minimal complete definiton: forall, forall_, exists, exists_, literal, fromCW
 class (HasKind a, Ord a) => SymWord a where
   -- | Create a user named input (universal)
   forall :: String -> Symbolic (SBV a)
@@ -863,8 +861,18 @@ class (HasKind a, Ord a) => SymWord a where
   -- | max/minbounds, if available. Note that we don't want
   -- to impose "Bounded" on our class as Integer is not Bounded but it is a SymWord
   mbMaxBound, mbMinBound :: Maybe a
+  -- | One stop allocator
+  mkSymWord :: Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
 
-  -- minimal complete definiton: forall, forall_, exists, exists_, free, free_, literal, fromCW
+  -- minimal complete definiton, Nothing.
+  -- Giving no instances is ok when defining an uninterpreted sort, but otherwise you really
+  -- want to define: mbMaxBound, mbMinBound, literal, fromCW, mkSymWord
+  forall   = mkSymWord (Just ALL) . Just
+  forall_  = mkSymWord (Just ALL)   Nothing
+  exists   = mkSymWord (Just EX)  . Just
+  exists_  = mkSymWord (Just EX)    Nothing
+  free     = mkSymWord Nothing    . Just
+  free_    = mkSymWord Nothing      Nothing
   mkForallVars n = mapM (const forall_) [1 .. n]
   mkExistVars n  = mapM (const exists_) [1 .. n]
   mkFreeVars n   = mapM (const free_)   [1 .. n]
@@ -878,6 +886,12 @@ class (HasKind a, Ord a) => SymWord a where
   isConcretely s p
     | Just i <- unliteral s = p i
     | True                  = False
+  -- Followings, you really want to define them unless the instance is for an uninterpreted sort
+  mbMaxBound = Nothing
+  mbMinBound = Nothing
+  literal x = error $ "Cannot create symbolic literals for kind: " ++ show (kindOf x)
+  fromCW cw = error $ "Cannot convert CW " ++ show cw ++ " to kind " ++ show (kindOf (undefined :: a))
+  mkSymWord = error $ "Cannot make symbolic words for uninterpreted sorts."
 
 instance (Random a, SymWord a) => Random (SBV a) where
   randomR (l, h) g = case (unliteral l, unliteral h) of

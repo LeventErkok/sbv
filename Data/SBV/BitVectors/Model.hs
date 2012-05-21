@@ -120,133 +120,83 @@ genFromCW :: Integral a => CW -> a
 genFromCW (CW _ (CWInteger x)) = fromInteger x
 genFromCW c                    = error $ "genFromCW: Unsupported non-integral value: " ++ show c
 
+-- | Generically make a symbolic var
+genMkSymVar :: (Random a, SymWord a) => Kind -> Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
+genMkSymVar k mbq Nothing  = genVar_ mbq k
+genMkSymVar k mbq (Just s) = genVar  mbq k s
+
 instance SymWord Bool where
-  forall     = genVar  (Just ALL) (KBounded False 1)
-  forall_    = genVar_ (Just ALL) (KBounded False 1)
-  exists     = genVar  (Just EX)  (KBounded False 1)
-  exists_    = genVar_ (Just EX)  (KBounded False 1)
-  free       = genVar  Nothing    (KBounded False 1)
-  free_      = genVar_ Nothing    (KBounded False 1)
-  literal x  = genLiteral (KBounded False 1) (if x then (1::Integer) else 0)
+  mkSymWord  = genMkSymVar (KBounded False 1)
+  literal x  = genLiteral  (KBounded False 1) (if x then (1::Integer) else 0)
   fromCW     = cwToBool
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Word8 where
-  forall     = genVar   (Just ALL) (KBounded False 8)
-  forall_    = genVar_  (Just ALL) (KBounded False 8)
-  exists     = genVar   (Just EX)  (KBounded False 8)
-  exists_    = genVar_  (Just EX)  (KBounded False 8)
-  free       = genVar   Nothing    (KBounded False 8)
-  free_      = genVar_  Nothing    (KBounded False 8)
-  literal    = genLiteral (KBounded False 8)
+  mkSymWord  = genMkSymVar (KBounded False 8)
+  literal    = genLiteral  (KBounded False 8)
   fromCW     = genFromCW
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Int8 where
-  forall     = genVar   (Just ALL) (KBounded True 8)
-  forall_    = genVar_  (Just ALL) (KBounded True 8)
-  exists     = genVar   (Just EX)  (KBounded True 8)
-  exists_    = genVar_  (Just EX)  (KBounded True 8)
-  free       = genVar   Nothing    (KBounded True 8)
-  free_      = genVar_  Nothing    (KBounded True 8)
-  literal    = genLiteral (KBounded True 8)
+  mkSymWord  = genMkSymVar (KBounded True 8)
+  literal    = genLiteral  (KBounded True 8)
   fromCW     = genFromCW
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Word16 where
-  forall     = genVar   (Just ALL) (KBounded False 16)
-  forall_    = genVar_  (Just ALL) (KBounded False 16)
-  exists     = genVar   (Just EX)  (KBounded False 16)
-  exists_    = genVar_  (Just EX)  (KBounded False 16)
-  free       = genVar   Nothing    (KBounded False 16)
-  free_      = genVar_  Nothing    (KBounded False 16)
-  literal    = genLiteral (KBounded False 16)
+  mkSymWord  = genMkSymVar (KBounded False 16)
+  literal    = genLiteral  (KBounded False 16)
   fromCW     = genFromCW
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Int16 where
-  forall     = genVar   (Just ALL) (KBounded True 16)
-  forall_    = genVar_  (Just ALL) (KBounded True 16)
-  exists     = genVar   (Just EX)  (KBounded True 16)
-  exists_    = genVar_  (Just EX)  (KBounded True 16)
-  free       = genVar   Nothing    (KBounded True 16)
-  free_      = genVar_  Nothing    (KBounded True 16)
-  literal    = genLiteral (KBounded True 16)
+  mkSymWord  = genMkSymVar (KBounded True 16)
+  literal    = genLiteral  (KBounded True 16)
   fromCW     = genFromCW
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Word32 where
-  forall     = genVar   (Just ALL) (KBounded False 32)
-  forall_    = genVar_  (Just ALL) (KBounded False 32)
-  exists     = genVar   (Just EX)  (KBounded False 32)
-  exists_    = genVar_  (Just EX)  (KBounded False 32)
-  free       = genVar   Nothing    (KBounded False 32)
-  free_      = genVar_  Nothing    (KBounded False 32)
-  literal    = genLiteral (KBounded False 32)
+  mkSymWord  = genMkSymVar (KBounded False 32)
+  literal    = genLiteral  (KBounded False 32)
   fromCW     = genFromCW
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Int32 where
-  forall     = genVar   (Just ALL) (KBounded True 32)
-  forall_    = genVar_  (Just ALL) (KBounded True 32)
-  exists     = genVar   (Just EX)  (KBounded True 32)
-  exists_    = genVar_  (Just EX)  (KBounded True 32)
-  free       = genVar   Nothing    (KBounded True 32)
-  free_      = genVar_  Nothing    (KBounded True 32)
-  literal    = genLiteral (KBounded True 32)
+  mkSymWord  = genMkSymVar (KBounded True 32)
+  literal    = genLiteral  (KBounded True 32)
   fromCW     = genFromCW
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Word64 where
-  forall     = genVar   (Just ALL) (KBounded False 64)
-  forall_    = genVar_  (Just ALL) (KBounded False 64)
-  exists     = genVar   (Just EX)  (KBounded False 64)
-  exists_    = genVar_  (Just EX)  (KBounded False 64)
-  free       = genVar   Nothing    (KBounded False 64)
-  free_      = genVar_  Nothing    (KBounded False 64)
-  literal    = genLiteral (KBounded False 64)
+  mkSymWord  = genMkSymVar (KBounded False 64)
+  literal    = genLiteral  (KBounded False 64)
   fromCW     = genFromCW
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Int64 where
-  forall     = genVar   (Just ALL) (KBounded True 64)
-  forall_    = genVar_  (Just ALL) (KBounded True 64)
-  exists     = genVar   (Just EX)  (KBounded True 64)
-  exists_    = genVar_  (Just EX)  (KBounded True 64)
-  free       = genVar   Nothing    (KBounded True 64)
-  free_      = genVar_  Nothing    (KBounded True 64)
-  literal    = genLiteral (KBounded True 64)
+  mkSymWord  = genMkSymVar (KBounded True 64)
+  literal    = genLiteral  (KBounded True 64)
   fromCW     = genFromCW
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
 
 instance SymWord Integer where
-  forall     = mkSymSBV (Just ALL) KUnbounded . Just
-  forall_    = mkSymSBV (Just ALL) KUnbounded Nothing
-  exists     = mkSymSBV (Just EX)  KUnbounded . Just
-  exists_    = mkSymSBV (Just EX)  KUnbounded Nothing
-  free       = mkSymSBV Nothing    KUnbounded . Just
-  free_      = mkSymSBV Nothing    KUnbounded Nothing
+  mkSymWord  = genMkSymVar KUnbounded
   literal    = SBV KUnbounded . Left . mkConstCW KUnbounded
   fromCW     = genFromCW
   mbMaxBound = Nothing
   mbMinBound = Nothing
 
 instance SymWord AlgReal where
-  forall     = mkSymSBV (Just ALL) KReal . Just
-  forall_    = mkSymSBV (Just ALL) KReal Nothing
-  exists     = mkSymSBV (Just EX)  KReal . Just
-  exists_    = mkSymSBV (Just EX)  KReal Nothing
-  free       = mkSymSBV Nothing    KReal . Just
-  free_      = mkSymSBV Nothing    KReal Nothing
+  mkSymWord  = genMkSymVar KReal
   literal    = SBV KReal . Left . CW KReal . CWAlgReal
   fromCW (CW _ (CWAlgReal a)) = a
   fromCW c                    = error $ "SymWord.AlgReal: Unexpected non-real value: " ++ show c
