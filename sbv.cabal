@@ -105,6 +105,7 @@ Library
                   , QuickCheck          >= 2.4.0.1
                   , random              >= 1.0.1.1
                   , strict-concurrency  >= 0.2.4.1
+                  , syb                 >= 0.3.6
   Exposed-modules : Data.SBV
                   , Data.SBV.Internals
                   , Data.SBV.Examples.BitPrecise.BitTricks

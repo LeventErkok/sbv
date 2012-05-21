@@ -17,6 +17,7 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE PatternGuards              #-}
+{-# LANGUAGE DefaultSignatures          #-}
 
 module Data.SBV.BitVectors.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
@@ -38,16 +39,17 @@ module Data.SBV.BitVectors.Data
  , Sort(..), registerSort
  ) where
 
-import Control.DeepSeq                 (NFData(..))
-import Control.Monad                   (when)
-import Control.Monad.Reader            (MonadReader, ReaderT, ask, runReaderT)
-import Control.Monad.Trans             (MonadIO, liftIO)
-import Data.Char                       (isAlpha, isAlphaNum)
-import Data.Int                        (Int8, Int16, Int32, Int64)
-import Data.Word                       (Word8, Word16, Word32, Word64)
-import Data.IORef                      (IORef, newIORef, modifyIORef, readIORef, writeIORef)
-import Data.List                       (intercalate, sortBy)
-import Data.Maybe                      (isJust, fromJust)
+import Control.DeepSeq      (NFData(..))
+import Control.Monad        (when)
+import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
+import Control.Monad.Trans  (MonadIO, liftIO)
+import Data.Char            (isAlpha, isAlphaNum)
+import Data.Generics        (Data(..), dataTypeName, dataTypeOf)
+import Data.Int             (Int8, Int16, Int32, Int64)
+import Data.Word            (Word8, Word16, Word32, Word64)
+import Data.IORef           (IORef, newIORef, modifyIORef, readIORef, writeIORef)
+import Data.List            (intercalate, sortBy)
+import Data.Maybe           (isJust, fromJust)
 
 import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
 import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
@@ -123,9 +125,11 @@ data Sort a = Sort { mkSortFree :: String -> Symbolic (SBV a)  -- ^ Create a fre
                    , mkSortAll  :: String -> Symbolic (SBV a)  -- ^ Create a universal variablt of the sort
                    }
 
--- | Install a new uninterpreted sort with the given name. 
-registerSort :: String -> a -> Symbolic (Sort a)
-registerSort nm _ = do
+-- | Install a new uninterpreted sort with the given name. The first argument is
+-- the handle to the sort as a name, to be used with 'addAxiom'.
+registerSort :: Data a => a -> Symbolic (String, Sort a)
+registerSort a = do
+        let nm = concatMap (\c -> if c == '.' then "_" else [c]) . dataTypeName . dataTypeOf $ a
         pst <- ask
         curSorts <- liftIO $ readIORef (rSorts pst)
         when (nm `elem` curSorts) $ error $ "SBV.registerSort: " ++ show nm ++ " is already a registered sort; cannot re-register"
@@ -145,7 +149,7 @@ registerSort nm _ = do
                              let sw = SW k (NodeId ctr)
                              liftIO $ modifyIORef (rinps st) ((q, (sw, v)):)
                              return $ SBV k $ Right $ cache (const (return sw))
-        return $ Sort (fresh Nothing) (fresh (Just EX)) (fresh (Just ALL))
+        return $ (nm, Sort (fresh Nothing) (fresh (Just EX)) (fresh (Just ALL)))
 
 -- | A symbolic node id
 newtype NodeId = NodeId Int deriving (Eq, Ord)
@@ -212,7 +216,9 @@ data SBVExpr = SBVApp !Op ![SW]
              deriving (Eq, Ord)
 
 -- | A class for capturing values that have a sign and a size (finite or infinite)
--- minimal complete definition: kindOf
+-- minimal complete definition: kindOf. This class can be automatically derived
+-- for data-types that have a 'Data' instance; this is useful for creating uninterpreted
+-- sorts.
 class HasKind a where
   kindOf          :: a -> Kind
   hasSign         :: a -> Bool
@@ -242,6 +248,11 @@ class HasKind a where
   isUninterpreted x | KUninterpreted{} <- kindOf x = True
                     | True                         = False
   showType = show . kindOf
+
+  -- default signature for uninterpreted kinds
+  default kindOf :: Data a => a -> Kind
+  kindOf = KUninterpreted . clean . dataTypeName . dataTypeOf
+      where clean = concatMap (\c -> if c == '.' then "_" else [c])
 
 instance HasKind Bool    where kindOf _ = KBounded False 1
 instance HasKind Int8    where kindOf _ = KBounded True  8
