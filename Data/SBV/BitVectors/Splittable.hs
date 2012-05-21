@@ -63,12 +63,12 @@ instance Splittable Word16 Word8 where
   extend b = 0 # b
 
 cwSplit :: (SymWord a, Num a) => CW -> (SBV a, SBV a)
-cwSplit z@(CW _ (Right v)) = (literal x, literal y)
+cwSplit z@(CW _ (CWInteger v)) = (literal x, literal y)
   where (x, y) = genSplit (intSizeOf z `div` 2) v
 cwSplit z = error $ "SBV.cwSplit: Unsupported CW value: " ++ show z
 
 cwJoin :: (SymWord a, Num a) => CW -> CW -> SBV a
-cwJoin x@(CW _ (Right a)) (CW _ (Right b)) = literal (genJoin (intSizeOf x) a b)
+cwJoin x@(CW _ (CWInteger a)) (CW _ (CWInteger b)) = literal (genJoin (intSizeOf x) a b)
 cwJoin x y = error $ "SBV.cwJoin: Unsupported arguments: " ++ show (x, y)
 
 -- symbolic instances

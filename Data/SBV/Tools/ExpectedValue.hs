@@ -39,15 +39,15 @@ expectedValueWith verbose warmupCount mbMaxIter epsilon m
                         let v' = zipWith (+) v t
                         rnf v' `seq` warmup (n-1) v'
         runOnce :: StdGen -> IO [Integer]
-        runOnce g = do (_, Result _ _ _ _ cs _ _ _ _ _ cstrs os) <- runSymbolic' (Concrete g) (m >>= output)
+        runOnce g = do (_, Result _ _ _ _ _ cs _ _ _ _ _ cstrs os) <- runSymbolic' (Concrete g) (m >>= output)
                        let cval o = case o `lookup` cs of
                                       Nothing -> error "SBV.expectedValue: Cannot compute expected-values in the presence of uninterpreted constants!"
                                       Just cw -> case (cwKind cw, cwVal cw) of
-                                                   (KBounded False 1, _) -> if cwToBool cw then 1 else 0
-                                                   (KBounded{}, Right v) -> v
-                                                   (KUnbounded, Right v) -> v
-                                                   (KReal, _)            -> error "Cannot compute expected-values for real valued results."
-                                                   _                     -> error $ "SBV.expectedValueWith: Unexpected CW: " ++ show cw
+                                                   (KBounded False 1, _)     -> if cwToBool cw then 1 else 0
+                                                   (KBounded{}, CWInteger v) -> v
+                                                   (KUnbounded, CWInteger v) -> v
+                                                   (KReal, _)                -> error "Cannot compute expected-values for real valued results."
+                                                   _                         -> error $ "SBV.expectedValueWith: Unexpected CW: " ++ show cw
                        if all ((== 1) . cval) cstrs
                           then return $ map cval os
                           else runOnce g -- constraint not satisfied try again with the same set of constraints

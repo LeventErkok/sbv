@@ -146,6 +146,9 @@ module Data.SBV (
   -- ** Adding axioms
   , addAxiom
 
+  -- * Uninterpreted sorts
+  , Sort(..), registerSort
+
   -- * Properties, proofs, and satisfiability
   -- $proveIntro
 

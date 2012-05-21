@@ -354,11 +354,11 @@ satWith config a = simulate cvt config True [] a >>= callSolver True "Checking S
 -- | Determine if the constraints are vacuous using the given SMT-solver
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
 isVacuousWith config a = do
-        Result ub tr uic is cs ts as uis ax asgn cstr _ <- runSymbolic True $ forAll_ a >>= output
+        Result ub us tr uic is cs ts as uis ax asgn cstr _ <- runSymbolic True $ forAll_ a >>= output
         case cstr of
            [] -> return False -- no constraints, no need to check
            _  -> do let is'  = [(EX, i) | (_, i) <- is] -- map all quantifiers to "exists" for the constraint check
-                        res' = Result ub tr uic is' cs ts as uis ax asgn cstr [trueSW]
+                        res' = Result ub us tr uic is' cs ts as uis ax asgn cstr [trueSW]
                         cvt  = if useSMTLib2 config then toSMTLib2 else toSMTLib1
                     SatResult result <- runProofOn cvt config True [] res' >>= callSolver True "Checking Satisfiability.." SatResult config
                     case result of
@@ -436,7 +436,7 @@ runProofOn :: SMTLibConverter -> SMTConfig -> Bool -> [String] -> Result -> IO (
 runProofOn converter config isSat comments res =
         let isTiming = timing config
         in case res of
-             Result boundInfo _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs [o@(SW (KBounded False 1) _)] ->
+             Result boundInfo usorts _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs [o@(SW (KBounded False 1) _)] ->
                timeIf isTiming "translation" $ let uiMap     = catMaybes (map arrayUIKind arrs) ++ map unintFnUIKind uis
                                                    skolemMap = skolemize (if isSat then is else map flipQ is)
                                                         where flipQ (ALL, x) = (EX, x)
@@ -446,8 +446,8 @@ runProofOn converter config isSat comments res =
                                                                 where go []                   (_,  sofar) = reverse sofar
                                                                       go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
                                                                       go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
-                                               in return (is, uiMap, skolemMap, converter boundInfo isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o)
-             Result _boundInfo _qcInfo _codeSegs _is _consts _tbls _arrs _uis _axs _pgm _cstrs os -> case length os of
+                                               in return (is, uiMap, skolemMap, converter boundInfo isSat comments usorts is skolemMap consts tbls arrs uis axs pgm cstrs o)
+             Result _boundInfo _us _qcInfo _codeSegs _is _consts _tbls _arrs _uis _axs _pgm _cstrs os -> case length os of
                            0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
                            1  -> error $ "Impossible happened, non-boolean output in " ++ show os
                                        ++ "\nDetected while generating the trace:\n" ++ show res

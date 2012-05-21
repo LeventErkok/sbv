@@ -172,8 +172,8 @@ class SatModel a where
 
 -- | Parse a signed/sized value from a sequence of CWs
 genParse :: Integral a => Kind -> [CW] -> Maybe (a, [CW])
-genParse k (x@(CW _ (Right i)):r) | kindOf x == k = Just (fromIntegral i, r)
-genParse _ _                                      = Nothing
+genParse k (x@(CW _ (CWInteger i)):r) | kindOf x == k = Just (fromIntegral i, r)
+genParse _ _                                          = Nothing
 
 -- | Base case, that comes in handy if there are no real variables
 instance SatModel () where
@@ -211,8 +211,8 @@ instance SatModel Integer where
   parseCWs = genParse KUnbounded
 
 instance SatModel AlgReal where
-  parseCWs (CW KReal (Left i) : r) = Just (i, r)
-  parseCWs _                       = Nothing
+  parseCWs (CW KReal (CWAlgReal i) : r) = Just (i, r)
+  parseCWs _                            = Nothing
 
 -- when reading a list; go as long as we can (maximal-munch)
 -- note that this never fails..

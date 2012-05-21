@@ -66,6 +66,7 @@ z3 = SMTSolver {
        zero (KBounded _     sz) = "#x" ++ replicate (sz `div` 4) '0'
        zero KUnbounded          = "0"
        zero KReal               = "0.0"
+       zero (KUninterpreted s)  = error $ "SBV.Z3.zero: Unexpected uninterpreted sort: " ++ s
        cont skolemMap = intercalate "\n" $ concatMap extract skolemMap
         where extract (Left s)        = ["(echo \"((" ++ show s ++ " " ++ zero (kindOf s) ++ "))\")"]
               extract (Right (s, [])) = let g = "(get-value (" ++ show s ++ "))" in getVal (kindOf s) g
@@ -103,7 +104,7 @@ extractMap isSat qinps _modelMap solverLines =
           where squash [(i, (n, cw1)), (_, (_, cw2))] = [(i, (n, mergeReals n cw1 cw2))]
                 squash xs = xs
                 mergeReals :: String -> CW -> CW -> CW
-                mergeReals n (CW KReal (Left a)) (CW KReal (Left b)) = CW KReal (Left (mergeAlgReals (error (bad n a b)) a b))
+                mergeReals n (CW KReal (CWAlgReal a)) (CW KReal (CWAlgReal b)) = CW KReal (CWAlgReal (mergeAlgReals (error (bad n a b)) a b))
                 mergeReals n a b = error $ bad n a b
                 bad n a b = "SBV.Z3: Cannot merge reals for variable: " ++ n ++ " received: " ++ show (a, b)
 
@@ -122,6 +123,7 @@ getCounterExample inps line = either err extract (parseSExpr line)
                                                   ++ 's':v ++ " in "  ++ show matches
         isInput _       = Nothing
         extract (SApp [SApp [SCon v, SNum i]])  | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) i))]
-        extract (SApp [SApp [SCon v, SReal i]]) | Just (n, _, nm) <- isInput v = [(n, (nm, CW KReal (Left i)))]
-        extract (SApp [SApp (SCon v : r)])      | Just{}          <- isInput v = error $ "SBV.SMTLib2: Cannot extract value for " ++ show ('s':v) ++ ", received:\n\t" ++  show r
+        extract (SApp [SApp [SCon v, SReal i]]) | Just (n, _, nm) <- isInput v = [(n, (nm, CW KReal      (CWAlgReal i)))]
+        extract (SApp [SApp [SCon v, SCon i]])  | Just (n, s, nm) <- isInput v = [(n, (nm, CW (kindOf s) (CWUninterpreted i)))]
+        extract (SApp [SApp (SCon v : r)])      | Just{}          <- isInput v = error $ "SBV.SMTLib2: Cannot extract value for " ++ show v ++ ", received:\n\t" ++  show r
         extract _                                                              = []

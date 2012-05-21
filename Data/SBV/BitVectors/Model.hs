@@ -49,21 +49,27 @@ import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
 import Data.SBV.Utils.Boolean
 
+noUnint  :: String -> a
+noUnint x = error $ "Unexpected operation called on uninterpreted value: " ++ show x
+
+noUnint2 :: String -> String -> a
+noUnint2 x y = error $ "Unexpected binary operation called on uninterpreted values: " ++ show (x, y)
+
 liftSym1 :: (State -> Kind -> SW -> IO SW) -> (AlgReal -> AlgReal) -> (Integer -> Integer) -> SBV b -> SBV b
-liftSym1 _   opCR opCI   (SBV k (Left a)) = SBV k $ Left  $ mapCW opCR opCI a
+liftSym1 _   opCR opCI   (SBV k (Left a)) = SBV k $ Left  $ mapCW opCR opCI noUnint a
 liftSym1 opS _    _    a@(SBV k _)        = SBV k $ Right $ cache c
    where c st = do swa <- sbvToSW st a
                    opS st k swa
 
 liftSym2 :: (State -> Kind -> SW -> SW -> IO SW) -> (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> SBV b -> SBV b -> SBV b
-liftSym2 _   opCR opCI   (SBV k (Left a)) (SBV _ (Left b)) = SBV k $ Left  $ mapCW2 opCR opCI a b
+liftSym2 _   opCR opCI   (SBV k (Left a)) (SBV _ (Left b)) = SBV k $ Left  $ mapCW2 opCR opCI noUnint2 a b
 liftSym2 opS _    _    a@(SBV k _)        b                = SBV k $ Right $ cache c
   where c st = do sw1 <- sbvToSW st a
                   sw2 <- sbvToSW st b
                   opS st k sw1 sw2
 
 liftSym2B :: (State -> Kind -> SW -> SW -> IO SW) -> (AlgReal -> AlgReal -> Bool) -> (Integer -> Integer -> Bool) -> SBV b -> SBV b -> SBool
-liftSym2B _   opCR opCI (SBV _ (Left a)) (SBV _ (Left b)) = literal (liftCW2 opCR opCI a b)
+liftSym2B _   opCR opCI (SBV _ (Left a)) (SBV _ (Left b)) = literal (liftCW2 opCR opCI noUnint2 a b)
 liftSym2B opS _    _    a                b                = SBV (KBounded False 1) $ Right $ cache c
   where c st = do sw1 <- sbvToSW st a
                   sw2 <- sbvToSW st b
@@ -111,8 +117,8 @@ genLiteral k = SBV k . Left . mkConstCW k
 
 -- | Convert a constant to an integral value
 genFromCW :: Integral a => CW -> a
-genFromCW (CW _ (Right x)) = fromInteger x
-genFromCW c                = error $ "genFromCW: Unsupported AlgReal value: " ++ show c
+genFromCW (CW _ (CWInteger x)) = fromInteger x
+genFromCW c                    = error $ "genFromCW: Unsupported non-integral value: " ++ show c
 
 instance SymWord Bool where
   forall     = genVar  (Just ALL) (KBounded False 1)
@@ -241,9 +247,9 @@ instance SymWord AlgReal where
   exists_    = mkSymSBV (Just EX)  KReal Nothing
   free       = mkSymSBV Nothing    KReal . Just
   free_      = mkSymSBV Nothing    KReal Nothing
-  literal    = SBV KReal . Left . CW KReal . Left
-  fromCW (CW _ (Left a)) = a
-  fromCW c               = error $ "SymWord.AlgReal: Unexpected non-real value: " ++ show c
+  literal    = SBV KReal . Left . CW KReal . CWAlgReal
+  fromCW (CW _ (CWAlgReal a)) = a
+  fromCW c                    = error $ "SymWord.AlgReal: Unexpected non-real value: " ++ show c
   mbMaxBound = Nothing
   mbMinBound = Nothing
 
@@ -831,8 +837,8 @@ instance BVDivisible Integer where
 
 instance BVDivisible CW where
   bvQuotRem a b
-    | Right x <- cwVal a, Right y <- cwVal b
-    = let (r1, r2) = bvQuotRem x y in (a { cwVal = Right r1 }, b { cwVal = Right r2 })
+    | CWInteger x <- cwVal a, CWInteger y <- cwVal b
+    = let (r1, r2) = bvQuotRem x y in (a { cwVal = CWInteger r1 }, b { cwVal = CWInteger r2 })
   bvQuotRem a b = error $ "SBV.liftQRem: impossible, unexpected args received: " ++ show (a, b)
 
 instance BVDivisible SWord64 where
@@ -1416,7 +1422,7 @@ instance Testable SBool where
 
 instance Testable (Symbolic SBool) where
   property m = QC.whenFail (putStrLn msg) $ QC.monadicIO test
-    where runOnce g = do (r, Result _ tvals _ _ cs _ _ _ _ _ cstrs _) <- runSymbolic' (Concrete g) m
+    where runOnce g = do (r, Result _ _ tvals _ _ cs _ _ _ _ _ cstrs _) <- runSymbolic' (Concrete g) m
                          let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
                              cond = all (cwToBool . cval) cstrs
                          when (isSymbolic r) $ error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show r ++ ")"

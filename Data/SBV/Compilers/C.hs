@@ -16,7 +16,7 @@ module Data.SBV.Compilers.C(compileToC, compileToCLib, compileToC', compileToCLi
 
 import Control.DeepSeq               (rnf)
 import Data.Char                     (isSpace)
-import Data.List                     (nub)
+import Data.List                     (nub, intercalate)
 import Data.Maybe                    (isJust, isNothing, fromJust)
 import qualified Data.Foldable as F  (toList)
 import System.FilePath               (takeBaseName, replaceExtension)
@@ -162,9 +162,10 @@ showCType = show . kindOf
 -- | The printf specifier for the type
 specifier :: CgConfig -> SW -> Doc
 specifier cfg sw = case kindOf sw of
-                     KBounded b i -> spec (b, i)
-                     KUnbounded   -> spec (True, fromJust (cgInteger cfg))
-                     KReal        -> specF (fromJust (cgReal cfg))
+                     KBounded b i     -> spec (b, i)
+                     KUnbounded       -> spec (True, fromJust (cgInteger cfg))
+                     KReal            -> specF (fromJust (cgReal cfg))
+                     KUninterpreted s -> die $ "uninterpreted sort: " ++ s
   where spec :: (Bool, Int) -> Doc
         spec (False,  1) = text "%d"
         spec (False,  8) = text "%\"PRIu8\""
@@ -187,13 +188,13 @@ specifier cfg sw = case kindOf sw of
 --   Note that this automatically takes care of the boolean (1-bit) value problem, since it
 --   shows the result as an integer, which is OK as far as C is concerned.
 mkConst :: CgConfig -> CW -> Doc
-mkConst cfg  (CW KReal               (Left (AlgRational _ r))) = double (fromRational r :: Double) <> sRealSuffix (fromJust (cgReal cfg))
+mkConst cfg  (CW KReal (CWAlgReal (AlgRational _ r))) = double (fromRational r :: Double) <> sRealSuffix (fromJust (cgReal cfg))
   where sRealSuffix CgFloat      = text "F"
         sRealSuffix CgDouble     = empty
         sRealSuffix CgLongDouble = text "L"
-mkConst cfg (CW KUnbounded          (Right i))                 = showSizedConst i (True, fromJust (cgInteger cfg))
-mkConst _   (CW (KBounded sg sz) (Right i))                    = showSizedConst i (sg,   sz)
-mkConst _   cw                                                 = die $ "mkConst: " ++ show cw
+mkConst cfg (CW KUnbounded       (CWInteger i)) = showSizedConst i (True, fromJust (cgInteger cfg))
+mkConst _   (CW (KBounded sg sz) (CWInteger i)) = showSizedConst i (sg,   sz)
+mkConst _   cw                                  = die $ "mkConst: " ++ show cw
 
 showSizedConst :: Integer -> (Bool, Int) -> Doc
 showSizedConst i   (False,  1) = text (if i == 0 then "false" else "true")
@@ -381,13 +382,15 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
 
 -- | Generate the C program
 genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SW -> Doc -> [Doc]
-genCProg cfg fn proto (Result (hasIntegers, hasReals) _ cgs ins preConsts tbls arrs _ _ asgns cstrs _) inVars outVars mbRet extDecls
+genCProg cfg fn proto (Result (hasIntegers, hasReals) usorts _tvals cgs ins preConsts tbls arrs _ _ asgns cstrs _) inVars outVars mbRet extDecls
   | isNothing (cgInteger cfg) && hasIntegers
   = error $ "SBV->C: Unbounded integers are not supported by the C compiler."
           ++ "\nUse 'cgIntegerSize' to specify a fixed size for SInteger representation."
   | isNothing (cgReal cfg) && hasReals
   = error $ "SBV->C: SReal values are not supported by the C compiler."
           ++ "\nUse 'cgSRealType' to specify a custom type for SReal representation."
+  | not (null usorts)
+  = error $ "SBV->C: Cannot compile functions with uninterpreted sorts: " ++ intercalate ", " usorts
   | not (null cstrs)
   = tbd "Explicit constraints"
   | not (null arrs)
@@ -427,6 +430,7 @@ genCProg cfg fn proto (Result (hasIntegers, hasReals) _ cgs ins preConsts tbls a
                       len (KBounded False 1) = 5 -- SBool
                       len (KBounded False n) = 5 + length (show n) -- SWordN
                       len (KBounded True  n) = 4 + length (show n) -- SIntN
+                      len (KUninterpreted s) = die $ "Uninterpreted sort: " ++ s
                       getMax 8 _      = 8  -- 8 is the max we can get with SInteger, so don't bother looking any further
                       getMax m []     = m
                       getMax m (x:xs) = getMax (m `max` x) xs
@@ -497,11 +501,12 @@ ppExpr cfg consts (SBVApp op opArgs) = p op (map (showSW cfg consts) opArgs)
                 canOverflow True  sz = (2::Integer)^(sz-1)-1 >= fromIntegral len
                 canOverflow False sz = (2::Integer)^sz    -1 >= fromIntegral len
                 (needsCheckL, needsCheckR) = case k of
-                                               KBounded sg sz -> (sg, canOverflow sg sz)
-                                               KReal          -> die "array index with real value"
-                                               KUnbounded     -> case cgInteger cfg of
-                                                                   Nothing -> (True, True) -- won't matter, it'll be rejected later
-                                                                   Just i  -> (True, canOverflow True i)
+                                               KBounded sg sz   -> (sg, canOverflow sg sz)
+                                               KReal            -> die "array index with real value"
+                                               KUnbounded       -> case cgInteger cfg of
+                                                                     Nothing -> (True, True) -- won't matter, it'll be rejected later
+                                                                     Just i  -> (True, canOverflow True i)
+                                               KUninterpreted s -> die $ "Uninterpreted sort: " ++ s
         -- Div/Rem should be careful on 0, in the SBV world x `div` 0 is 0, x `rem` 0 is x
         p Quot [a, b] = parens (b <+> text "== 0") <+> text "?" <+> text "0" <+> text ":" <+> parens (a <+> text "/" <+> b)
         p Rem  [a, b] = parens (b <+> text "== 0") <+> text "?" <+>    a     <+> text ":" <+> parens (a <+> text "%" <+> b)

@@ -62,30 +62,34 @@ instance PrettyNum Integer where
 
 instance PrettyNum CW where
   hexS cw | cwIsBit cw         = hexS (cwToBool cw)
-          | isReal cw          = let Left w = cwVal cw in show w
-          | not (isBounded cw) = let Right w = cwVal cw in shexI True True w
-          | True               = let Right w = cwVal cw in shex  True True (hasSign cw, intSizeOf cw) w
+          | isReal cw          = let CWAlgReal w = cwVal cw in show w
+          | not (isBounded cw) = let CWInteger w = cwVal cw in shexI True True w
+          | isUninterpreted cw = show cw
+          | True               = let CWInteger w = cwVal cw in shex  True True (hasSign cw, intSizeOf cw) w
 
   binS cw | cwIsBit cw         = binS (cwToBool cw)
-          | isReal cw          = let Left w = cwVal cw in show w
-          | not (isBounded cw) = let Right w = cwVal cw in sbinI True True w
-          | True               = let Right w = cwVal cw in sbin  True True (hasSign cw, intSizeOf cw) w
+          | isReal cw          = let CWAlgReal w = cwVal cw in show w
+          | not (isBounded cw) = let CWInteger w = cwVal cw in sbinI True True w
+          | isUninterpreted cw = show cw
+          | True               = let CWInteger w = cwVal cw in sbin  True True (hasSign cw, intSizeOf cw) w
 
   hex cw | cwIsBit cw         = hexS (cwToBool cw)
-         | isReal cw          = let Left w = cwVal cw in show w
-         | not (isBounded cw) = let Right w = cwVal cw in shexI False False w
-         | True               = let Right w = cwVal cw in shex  False False (hasSign cw, intSizeOf cw) w
+         | isReal cw          = let CWAlgReal w = cwVal cw in show w
+         | not (isBounded cw) = let CWInteger w = cwVal cw in shexI False False w
+         | isUninterpreted cw = show cw
+         | True               = let CWInteger w = cwVal cw in shex  False False (hasSign cw, intSizeOf cw) w
 
   bin cw | cwIsBit cw         = binS (cwToBool cw)
-         | isReal cw          = let Left w = cwVal cw in show w
-         | not (isBounded cw) = let Right w = cwVal cw in sbinI False False w
-         | True               = let Right w = cwVal cw in sbin  False False (hasSign cw, intSizeOf cw) w
+         | isReal cw          = let CWAlgReal w = cwVal cw in show w
+         | not (isBounded cw) = let CWInteger w = cwVal cw in sbinI False False w
+         | isUninterpreted cw = show cw
+         | True               = let CWInteger w = cwVal cw in sbin  False False (hasSign cw, intSizeOf cw) w
 
 instance (SymWord a, PrettyNum a) => PrettyNum (SBV a) where
   hexS s = maybe (show s) (hexS :: a -> String) $ unliteral s
   binS s = maybe (show s) (binS :: a -> String) $ unliteral s
-  hex  s = maybe (show s) (hex :: a -> String)  $ unliteral s
-  bin  s = maybe (show s) (bin :: a -> String)  $ unliteral s
+  hex  s = maybe (show s) (hex  :: a -> String) $ unliteral s
+  bin  s = maybe (show s) (bin  :: a -> String) $ unliteral s
 
 -- | Show as a hexadecimal value. First bool controls whether type info is printed
 -- while the second boolean controls wether 0x prefix is printed. The tuple is

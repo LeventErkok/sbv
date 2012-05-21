@@ -61,6 +61,7 @@ tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 cvt :: (Bool, Bool)                 -- ^ has infinite precision values
     -> Bool                         -- ^ is this a sat problem?
     -> [String]                     -- ^ extra comments to place on top
+    -> [String]                     -- ^ uninterpreted sorts
     -> [(Quantifier, NamedSymVar)]  -- ^ inputs
     -> [Either SW (SW, [SW])]       -- ^ skolemized version inputs
     -> [(SW, CW)]                   -- ^ constants
@@ -72,11 +73,11 @@ cvt :: (Bool, Bool)                 -- ^ has infinite precision values
     -> [SW]                         -- ^ extra constraints
     -> SW                           -- ^ output variable
     -> ([String], [String])
-cvt (hasInteger, hasReal) isSat comments _inps skolemInps consts tbls arrs uis axs asgnsSeq cstrs out = (pre, [])
+cvt (hasInteger, hasReal) isSat comments sorts _inps skolemInps consts tbls arrs uis axs asgnsSeq cstrs out = (pre, [])
   where -- the logic is an over-approaximation
         logic
-           | hasInteger || hasReal
-           = ["; Has unbounded values (Int/Real); no logic specified."]   -- combination, let the solver pick
+           | hasInteger || hasReal || not (null sorts)
+           = ["; Has unbounded values (Int/Real) or sorts; no logic specified."]   -- combination, let the solver pick
            | True
            = ["(set-logic " ++ qs ++ as ++ ufs ++ "BV)"]
           where qs  | null foralls && null axs = "QF_"  -- axioms are likely to contain quantifiers
@@ -89,9 +90,11 @@ cvt (hasInteger, hasReal) isSat comments _inps skolemInps consts tbls arrs uis a
              ++ map ("; " ++) comments
              ++ [ "(set-option :produce-models true)"
                 , "(set-option :pp-decimal false)"
-                , "; --- literal constants ---"
                 ]
              ++ logic
+             ++ [ "; --- uninterpreted sorts ---" ]
+             ++ map declSort sorts
+             ++ [ "; --- literal constants ---" ]
              ++ map declConst consts
              ++ [ "; --- skolem constants ---" ]
              ++ [ "(declare-fun " ++ show s ++ " " ++ swFunType ss s ++ ")" | Right (s, ss) <- skolemInps]
@@ -142,6 +145,7 @@ cvt (hasInteger, hasReal) isSat comments _inps skolemInps consts tbls arrs uis a
         asgns = F.toList asgnsSeq
         mkLet (s, e) = "(let ((" ++ show s ++ " " ++ cvtExp skolemMap tableMap e ++ "))"
         declConst (s, c) = "(define-fun " ++ show s ++ " " ++ swFunType [] s ++ " " ++ cvtCW c ++ ")"
+        declSort s = "(declare-sort " ++ s ++ ")"
 
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = ["(declare-fun uninterpreted_" ++ i ++ " " ++ cvtType t ++ ")"]
@@ -216,9 +220,10 @@ swFunType :: [SW] -> SW -> String
 swFunType ss s = "(" ++ unwords (map swType ss) ++ ") " ++ swType s
 
 smtType :: Kind -> String
-smtType (KBounded _ sz) = "(_ BitVec " ++ show sz ++ ")"
-smtType KUnbounded      = "Int"
-smtType KReal           = "Real"
+smtType (KBounded _ sz)    = "(_ BitVec " ++ show sz ++ ")"
+smtType KUnbounded         = "Int"
+smtType KReal              = "Real"
+smtType (KUninterpreted s) = s
 
 cvtType :: SBVType -> String
 cvtType (SBVType []) = error "SBV.SMT.SMTLib2.cvtType: internal: received an empty type!"
@@ -242,19 +247,21 @@ hex sz v = "#x" ++ pad (sz `div` 4) (showHex v "")
   where pad n s = replicate (n - length s) '0' ++ s
 
 cvtCW :: CW -> String
+cvtCW x | isUninterpreted x = s
+  where CWUninterpreted s = cwVal x
 cvtCW x | isReal x = algRealToSMTLib2 w
-  where Left w = cwVal x
+  where CWAlgReal w = cwVal x
 cvtCW x | not (isBounded x) = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
-  where Right w = cwVal x
+  where CWInteger w = cwVal x
 cvtCW x | not (hasSign x) = hex (intSizeOf x) w
-  where Right w = cwVal x
+  where CWInteger w = cwVal x
 -- signed numbers (with 2's complement representation) is problematic
 -- since there's no way to put a bvneg over a positive number to get minBound..
 -- Hence, we punt and use binary notation in that particular case
-cvtCW x | cwVal x == Right least = mkMinBound (intSizeOf x)
+cvtCW x | cwVal x == CWInteger least = mkMinBound (intSizeOf x)
   where least = negate (2 ^ intSizeOf x)
 cvtCW x = negIf (w < 0) $ hex (intSizeOf x) (abs w)
-  where Right w = cwVal x
+  where CWInteger w = cwVal x
 
 negIf :: Bool -> String -> String
 negIf True  a = "(bvneg " ++ a ++ ")"
@@ -291,17 +298,19 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           | needsCheck = "(ite " ++ cond ++ ssw e ++ " " ++ lkUp ++ ")"
           | True       = lkUp
           where needsCheck = case aKnd of
-                              KBounded _ n -> (2::Integer)^n > fromIntegral l
-                              KUnbounded   -> True
-                              KReal        -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
+                              KBounded _ n     -> (2::Integer)^n > fromIntegral l
+                              KUnbounded       -> True
+                              KReal            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
+                              KUninterpreted s -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
                 lkUp = "(" ++ getTable tableMap t ++ " " ++ ssw i ++ ")"
                 cond
                  | hasSign i = "(or " ++ le0 ++ " " ++ gtl ++ ") "
                  | True      = gtl ++ " "
                 (less, leq) = case aKnd of
-                                KBounded{} -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
-                                KUnbounded -> ("<", "<=")
-                                KReal      -> ("<", "<=")
+                                KBounded{}       -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
+                                KUnbounded       -> ("<", "<=")
+                                KReal            -> ("<", "<=")
+                                KUninterpreted s -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
                 mkCnst = cvtCW . mkConstCW (kindOf i)
                 le0  = "(" ++ less ++ " " ++ ssw i ++ " " ++ mkCnst 0 ++ ")"
                 gtl  = "(" ++ leq  ++ " " ++ mkCnst l ++ " " ++ ssw i ++ ")"
@@ -350,6 +359,8 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           = f (any hasSign args) (map ssw args)
           | realOp, Just f <- lookup op smtOpRealTable
           = f (any hasSign args) (map ssw args)
+          | Just f <- lookup op uninterpretedTable
+          = f (map ssw args)
           | True
           = error $ "SBV.SMT.SMTLib2.cvtExp.sh: impossible happened; can't translate: " ++ show inp
           where smtOpBVTable  = [ (Plus,          lift2   "bvadd")
@@ -381,6 +392,10 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                     , (LessEq,        lift2B  "<=" "<=")
                                     , (GreaterEq,     lift2B  ">=" ">=")
                                     ]
+                -- equality is the only thing that works on uninterpreted sorts
+                uninterpretedTable = [ (Equal,    lift2B "="        "="        True)
+                                     , (NotEqual, lift2B "distinct" "distinct" True)
+                                     ]
 
 rot :: (SW -> String) -> String -> Int -> SW -> String
 rot ssw o c x = "((_ " ++ o ++ " " ++ show c ++ ") " ++ ssw x ++ ")"
