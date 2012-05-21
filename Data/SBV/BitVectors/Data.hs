@@ -125,9 +125,8 @@ data Sort a = Sort { mkSortFree :: String -> Symbolic (SBV a)  -- ^ Create a fre
                    , mkSortAll  :: String -> Symbolic (SBV a)  -- ^ Create a universal variable of the sort
                    }
 
--- | Install a new uninterpreted sort with the given name. The first component of the result is
--- the handle to the sort as a name, to be used with 'addAxiom'.
-registerSort :: Data a => a -> Symbolic (String, Sort a)
+-- | Install a new uninterpreted sort with the given name.
+registerSort :: Data a => a -> Symbolic (Sort a)
 registerSort a = do
         let nm = tyconUQname . dataTypeName . dataTypeOf $ a
         pst <- ask
@@ -149,7 +148,7 @@ registerSort a = do
                              let sw = SW k (NodeId ctr)
                              liftIO $ modifyIORef (rinps st) ((q, (sw, v)):)
                              return $ SBV k $ Right $ cache (const (return sw))
-        return $ (nm, Sort (fresh Nothing) (fresh (Just EX)) (fresh (Just ALL)))
+        return $ Sort (fresh Nothing) (fresh (Just EX)) (fresh (Just ALL))
 
 -- | A symbolic node id
 newtype NodeId = NodeId Int deriving (Eq, Ord)

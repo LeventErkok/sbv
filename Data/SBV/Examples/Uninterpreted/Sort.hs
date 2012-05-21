@@ -41,7 +41,7 @@ f = uninterpret "f"
 -- Satisfiable. Model:
 --   x = Q!val!0 :: Q
 t1 :: IO SatResult
-t1 = sat $ do (_, q) <- registerSort Q
+t1 = sat $ do q <- registerSort Q
               x <- mkSortFree q "x"
               return $ f x ./= x
 
@@ -52,7 +52,7 @@ t1 = sat $ do (_, q) <- registerSort Q
 -- >>> t2
 -- Unsatisfiable
 t2 :: IO SatResult
-t2 = sat $ do (qNm, q) <- registerSort Q
+t2 = sat $ do q <- registerSort Q
               x <- mkSortFree q "x"
-              addAxiom qNm ["(assert (forall ((x Q) (y Q)) (= x y)))"]
+              addAxiom "Q" ["(assert (forall ((x Q) (y Q)) (= x y)))"]
               return $ f x ./= x
