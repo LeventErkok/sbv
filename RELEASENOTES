@@ -7,24 +7,20 @@ Latest Hackage released version: 2.0
 Version 2.1, Not released yet
 
  Library:
+  - Add support for uninterpreted sorts (registerSort), together with
+    user defined domain axioms. See Data.SBV.Examples.Uninterpreted.Sort
+    for a basic example of this feature.
   - Add support for C code-generation with SReals. The user picks
     one of 3 possible C types for the SReal type: CgFloat, CgDouble
     or CgLongDouble, using the function cgSRealType. Naturally, the
     resulting C program will suffer a loss of precision, as it will
     be subject to IEE-754 rounding as implied by the underlying type.
-    (NB. This is similar to the cgIntegerSize call, which can be
-    used to generate C code for those functions manipulating the
-    SInteger type.)
   - Add toSReal :: SInteger -> SReal, which can be used to promote
     symbolic integers to reals. Comes handy in mixed integer/real
     computations.
-  - Add slet :: (HasKind a, HasKind b) => SBV a -> (SBV a -> SBV b) -> SBV b
-    This combinator allows for explicit sharing via a continuation. It should
-    *not* be of interest to most users since SBV's internal sharing mechanism
-    should allow ordinary "let" expressions to handle this task. However, this
-    combinator is useful for exploratory purposes.
  Examples:
   - Recast the dog-cat-mouse example to use the solver over reals.
+  - Add Data.SBV.Examples.Uninterpreted.Sort, illustrating uninterpreted sorts
 
 ======================================================================
 Version 2.0, 2012-05-10

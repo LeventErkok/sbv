@@ -33,8 +33,9 @@ Description:   Express properties about Haskell programs and automatically prove
                .
                  * Symbolic polynomials over GF(2^n), and polynomial arithmetic
                .
-                 * Uninterpreted constants and functions over symbolic values, with user
-                   defined SMT-Lib axioms
+                 * Uninterpreted constants and functions over symbolic values, with user defined axioms.
+               .
+                 * Uninterpreted sorts, and proofs over such sorts, potentially with axioms.
                .
                Functions built out of these types can be:
                .
@@ -133,6 +134,7 @@ Library
                   , Data.SBV.Examples.Puzzles.U2Bridge
                   , Data.SBV.Examples.Uninterpreted.AUF
                   , Data.SBV.Examples.Uninterpreted.Function
+                  , Data.SBV.Examples.Uninterpreted.Sort
   Other-modules   : Data.SBV.BitVectors.AlgReals
                   , Data.SBV.BitVectors.Data
                   , Data.SBV.BitVectors.Model

@@ -39,15 +39,15 @@ Overview
 The Haskell sbv library provides support for dealing with Symbolic Bit Vectors
 in Haskell. It introduces the types:
 
-  - `SBool`: Symbolic Booleans (bits)
-  - `SWord8`, `SWord16`, `SWord32`, `SWord64`: Symbolic Words (unsigned)
-  - `SInt8`,  `SInt16`,  `SInt32`,  `SInt64`: Symbolic Ints (signed)
-  - `SInteger`: Symbolic unbounded integers (signed)
-  - `SReal`: Symbolic infinite precision algebraic reals (signed)
-  - Arrays of symbolic values
-  - Symbolic polynomials over GF(2^n ), polynomial arithmetic, and CRCs
-  - Uninterpreted constants and functions over symbolic values, with user
-    defined SMT-Lib axioms
+  - `SBool`: Symbolic Booleans (bits).
+  - `SWord8`, `SWord16`, `SWord32`, `SWord64`: Symbolic Words (unsigned).
+  - `SInt8`,  `SInt16`,  `SInt32`,  `SInt64`: Symbolic Ints (signed).
+  - `SInteger`: Symbolic unbounded integers (signed).
+  - `SReal`: Symbolic infinite precision algebraic reals (signed).
+  - Arrays of symbolic values.
+  - Symbolic polynomials over GF(2^n ), polynomial arithmetic, and CRCs.
+  - Uninterpreted constants and functions over symbolic values, with user defined axioms.
+  - Uninterpreted sorts, and proofs over such sorts, potentially with axioms.
 
 The user can construct ordinary Haskell programs using these types, which behave
 very similar to their concrete counterparts. In particular these types belong to the
