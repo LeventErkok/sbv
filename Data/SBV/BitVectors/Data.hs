@@ -44,7 +44,7 @@ import Control.Monad        (when)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import Control.Monad.Trans  (MonadIO, liftIO)
 import Data.Char            (isAlpha, isAlphaNum)
-import Data.Generics        (Data(..), dataTypeName, dataTypeOf)
+import Data.Generics        (Data(..), dataTypeName, dataTypeOf, tyconUQname)
 import Data.Int             (Int8, Int16, Int32, Int64)
 import Data.Word            (Word8, Word16, Word32, Word64)
 import Data.IORef           (IORef, newIORef, modifyIORef, readIORef, writeIORef)
@@ -122,14 +122,14 @@ instance Show Kind where
 -- | An uninterpreted sort
 data Sort a = Sort { mkSortFree :: String -> Symbolic (SBV a)  -- ^ Create a free variable of the sort, existential in sat, universal in proof
                    , mkSortEx   :: String -> Symbolic (SBV a)  -- ^ Create an existantial variable of the sort
-                   , mkSortAll  :: String -> Symbolic (SBV a)  -- ^ Create a universal variablt of the sort
+                   , mkSortAll  :: String -> Symbolic (SBV a)  -- ^ Create a universal variable of the sort
                    }
 
--- | Install a new uninterpreted sort with the given name. The first argument is
+-- | Install a new uninterpreted sort with the given name. The first component of the result is
 -- the handle to the sort as a name, to be used with 'addAxiom'.
 registerSort :: Data a => a -> Symbolic (String, Sort a)
 registerSort a = do
-        let nm = concatMap (\c -> if c == '.' then "_" else [c]) . dataTypeName . dataTypeOf $ a
+        let nm = tyconUQname . dataTypeName . dataTypeOf $ a
         pst <- ask
         curSorts <- liftIO $ readIORef (rSorts pst)
         when (nm `elem` curSorts) $ error $ "SBV.registerSort: " ++ show nm ++ " is already a registered sort; cannot re-register"
@@ -251,8 +251,7 @@ class HasKind a where
 
   -- default signature for uninterpreted kinds
   default kindOf :: Data a => a -> Kind
-  kindOf = KUninterpreted . clean . dataTypeName . dataTypeOf
-      where clean = concatMap (\c -> if c == '.' then "_" else [c])
+  kindOf = KUninterpreted . tyconUQname . dataTypeName . dataTypeOf
 
 instance HasKind Bool    where kindOf _ = KBounded False 1
 instance HasKind Int8    where kindOf _ = KBounded True  8

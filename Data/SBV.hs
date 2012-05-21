@@ -35,18 +35,20 @@
 --
 -- In particular, the sbv library introduces the types:
 --
---   * 'SBool': Symbolic Booleans (bits)
+--   * 'SBool': Symbolic Booleans (bits).
 --
---   * 'SWord8', 'SWord16', 'SWord32', 'SWord64': Symbolic Words (unsigned)
+--   * 'SWord8', 'SWord16', 'SWord32', 'SWord64': Symbolic Words (unsigned).
 --
---   * 'SInt8',  'SInt16',  'SInt32',  'SInt64': Symbolic Ints (signed)
+--   * 'SInt8',  'SInt16',  'SInt32',  'SInt64': Symbolic Ints (signed).
 --
---   * 'SArray', 'SFunArray': Flat arrays of symbolic values
+--   * 'SArray', 'SFunArray': Flat arrays of symbolic values.
 --
---   * Symbolic polynomials over GF(2^n), polynomial arithmetic, and CRCs
+--   * Symbolic polynomials over GF(2^n), polynomial arithmetic, and CRCs.
 --
 --   * Uninterpreted constants and functions over symbolic values, with user
---     defined SMT-Lib axioms
+--     defined SMT-Lib axioms.
+--
+--   * Uninterpreted sorts, and proofs over such sorts, potentially with axioms.
 --
 -- The user can construct ordinary Haskell programs using these types, which behave
 -- very similar to their concrete counterparts. In particular these types belong to the
