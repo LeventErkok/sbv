@@ -900,7 +900,8 @@ class (HasKind a, Ord a) => SymWord a where
   mbMinBound = Nothing
   literal x = error $ "Cannot create symbolic literals for kind: " ++ show (kindOf x)
   fromCW cw = error $ "Cannot convert CW " ++ show cw ++ " to kind " ++ show (kindOf (undefined :: a))
-  mkSymWord = error $ "Cannot make symbolic words for uninterpreted sorts."
+  mkSymWord = error $   "Cannot use forall/exists/free to make symbolic words for uninterpreted sorts."
+                    ++ "\nUse mkSortAll/mkSortEx/mkSortFree instead."
 
 instance (Random a, SymWord a) => Random (SBV a) where
   randomR (l, h) g = case (unliteral l, unliteral h) of
