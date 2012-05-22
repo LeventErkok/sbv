@@ -153,9 +153,9 @@ genPrefixSumInstance n = do
         u  :: SWord32
         u  = uninterpret "u"
         -- axioms.. These are a bit brittle. Note that we have to
-        -- refer to the uninterpreted symbols with the prefix "uninterpreted_" to
-        -- avoid any collision. This is admittedly ugly, but it'll do till we get
-        -- a sub-DSL for writing proper axioms (if ever)
+        -- refer to the uninterpreted symbols with the prefix "uninterpreted_" when
+        -- used with the SMTLib1 interface to avoid any collision. This is admittedly
+        -- ugly, but it'll do till we get a sub-DSL for writing proper axioms (if ever)
         assocAxiom :: [String]
         assocAxiom = [
              ":assumption (forall (?x BitVec[32]) (?y BitVec[32]) (?z BitVec[32])"

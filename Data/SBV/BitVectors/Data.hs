@@ -319,7 +319,7 @@ instance Show Op where
         where tinfo = "table" ++ show ti ++ "(" ++ show at ++ " -> " ++ show rt ++ ", " ++ show l ++ ")"
   show (ArrEq i j)   = "array_" ++ show i ++ " == array_" ++ show j
   show (ArrRead i)   = "select array_" ++ show i
-  show (Uninterpreted i) = "uninterpreted_" ++ i
+  show (Uninterpreted i) = "[uninterpreted] " ++ i
   show op
     | Just s <- op `lookup` syms = s
     | True                       = error "impossible happened; can't find op!"
@@ -426,7 +426,7 @@ instance Show Result where
             where ni = "array_" ++ show i
                   alias | ni == nm = ""
                         | True     = ", aliasing " ++ show nm
-          shui (nm, t) = "  uninterpreted_" ++ nm ++ " :: " ++ show t
+          shui (nm, t) = "  [uninterpreted] " ++ nm ++ " :: " ++ show t
           shax (nm, ss) = "  -- user defined axiom: " ++ nm ++ "\n  " ++ intercalate "\n  " ss
 
 -- | The context of a symbolic array as created

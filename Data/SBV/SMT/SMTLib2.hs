@@ -148,11 +148,11 @@ cvt (hasInteger, hasReal) isSat comments sorts _inps skolemInps consts tbls arrs
         declSort s = "(declare-sort " ++ s ++ ")"
 
 declUI :: (String, SBVType) -> [String]
-declUI (i, t) = ["(declare-fun uninterpreted_" ++ i ++ " " ++ cvtType t ++ ")"]
+declUI (i, t) = ["(declare-fun " ++ i ++ " " ++ cvtType t ++ ")"]
 
 -- NB. We perform no check to as to whether the axiom is meaningful in any way.
 declAx :: (String, [String]) -> String
-declAx (nm, ls) = (";; -- user given axiom: " ++ nm ++ "\n   ") ++ intercalate "\n" ls
+declAx (nm, ls) = (";; -- user given axiom: " ++ nm ++ "\n") ++ intercalate "\n" ls
 
 constTable :: (((Int, Kind, Kind), [SW]), [String]) -> [String]
 constTable (((i, ak, rk), _elts), is) = decl : map wrap is
@@ -316,8 +316,8 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                 gtl  = "(" ++ leq  ++ " " ++ mkCnst l ++ " " ++ ssw i ++ ")"
         sh (SBVApp (ArrEq i j) []) = "(ite (= array_" ++ show i ++ " array_" ++ show j ++") #b1 #b0)"
         sh (SBVApp (ArrRead i) [a]) = "(select array_" ++ show i ++ " " ++ ssw a ++ ")"
-        sh (SBVApp (Uninterpreted nm) [])   = "uninterpreted_" ++ nm
-        sh (SBVApp (Uninterpreted nm) args) = "(uninterpreted_" ++ nm ++ " " ++ unwords (map ssw args) ++ ")"
+        sh (SBVApp (Uninterpreted nm) [])   = nm
+        sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm ++ " " ++ unwords (map ssw args) ++ ")"
         sh (SBVApp (Extract 0 0) [a])   -- special SInteger -> SReal conversion
           | kindOf a == KUnbounded
           = "(to_real " ++ ssw a ++ ")"

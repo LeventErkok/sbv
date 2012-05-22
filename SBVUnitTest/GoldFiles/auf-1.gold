@@ -11,7 +11,7 @@ CONSTANTS
 TABLES
 ARRAYS
 UNINTERPRETED CONSTANTS
-  uninterpreted_f :: SWord32 -> SWord64
+  [uninterpreted] f :: SWord32 -> SWord64
 USER GIVEN CODE SEGMENTS
 AXIOMS
 DEFINE
@@ -21,10 +21,10 @@ DEFINE
   s7 :: SWord32 = s1 - s3
   s8 :: SBool = s0 == s7
   s10 :: SWord32 = if s8 then s9 else s2
-  s11 :: SWord64 = uninterpreted_f s10
+  s11 :: SWord64 = [uninterpreted] f s10
   s12 :: SWord32 = s1 - s0
   s14 :: SWord32 = s12 + s13
-  s15 :: SWord64 = uninterpreted_f s14
+  s15 :: SWord64 = [uninterpreted] f s14
   s16 :: SBool = s11 == s15
   s17 :: SBool = s6 | s16
 CONSTRAINTS
