@@ -141,13 +141,9 @@ module Data.SBV (
   , bAnd, bOr, bAny, bAll
   -- ** Pretty-printing and reading numbers in Hex & Binary
   , PrettyNum(..), readBin
-  -- * Uninterpreted constants and functions
-  , Uninterpreted(..)
-  -- ** Accessing the handle
-  , SBVUF, sbvUFName
-  -- ** Adding axioms
-  , addAxiom
 
+  -- * Uninterpreted constants and functions
+  , Uninterpreted(..), addAxiom
   -- * Uninterpreted sorts
   , Sort(..), registerSort
 

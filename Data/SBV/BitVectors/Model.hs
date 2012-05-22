@@ -24,7 +24,7 @@
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), BVDivisible(..), Uninterpreted(..), SNum
   , sbvTestBit, sbvPopCount, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE
-  , lsb, msb, SBVUF, sbvUFName, genVar, genVar_, forall, forall_, exists, exists_
+  , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, toSReal, slet
@@ -1104,20 +1104,6 @@ instance SymArray SFunArray where
 instance SymWord b => Mergeable (SFunArray a b) where
   symbolicMerge = mergeArrays
 
--- | An uninterpreted function handle. This is the handle to be used for
--- adding axioms about uninterpreted constants/functions. Note that
--- we will leave this abstract for safety purposes
-newtype SBVUF = SBVUF String
-
--- | Get the name associated with the uninterpreted-value; useful when
--- constructing axioms about this UI.
-sbvUFName :: SBVUF -> String
-sbvUFName (SBVUF s) = s
-
--- The name we use for translating the UF constants to SMT-Lib..
-mkUFName :: String -> SBVUF
-mkUFName nm = SBVUF $ "uninterpreted_" ++ nm
-
 -- | Uninterpreted constants and functions. An uninterpreted constant is
 -- a value that is indexed by its name. The only property the prover assumes
 -- about these values are that they are equivalent to themselves; i.e., (for
@@ -1133,9 +1119,6 @@ class Uninterpreted a where
   -- | Uninterpret a value, receiving an object that can be used instead. Use this version
   -- when you do not need to add an axiom about this value.
   uninterpret :: String -> a
-  -- | Uninterpret a value, but also get a handle to the resulting object. This handle
-  -- can be used to add axioms for this object. (See 'addAxiom'.)
-  uninterpretWithHandle :: String -> (SBVUF, a)
   -- | Uninterpret a value, only for the purposes of code-generation. For execution
   -- and verification the value is used as is. For code-generation, the alternate
   -- definition is used. This is useful when we want to take advantage of native
@@ -1143,18 +1126,17 @@ class Uninterpreted a where
   cgUninterpret :: String -> [String] -> a -> a
   -- | Most generalized form of uninterpretation, this function should not be needed
   -- by end-user-code, but is rather useful for the library development.
-  sbvUninterpret :: Maybe ([String], a) -> String -> (SBVUF, a)
+  sbvUninterpret :: Maybe ([String], a) -> String -> a
 
   -- minimal complete definition: 'sbvUninterpret'
-  uninterpret             = snd . uninterpretWithHandle
-  uninterpretWithHandle   = sbvUninterpret Nothing
-  cgUninterpret nm code v = snd $ sbvUninterpret (Just (code, v)) nm
+  uninterpret             = sbvUninterpret Nothing
+  cgUninterpret nm code v = sbvUninterpret (Just (code, v)) nm
 
 -- Plain constants
 instance HasKind a => Uninterpreted (SBV a) where
   sbvUninterpret mbCgData nm
-     | Just (_, v) <- mbCgData = (mkUFName nm, v)
-     | True                    = (mkUFName nm, SBV ka $ Right $ cache result)
+     | Just (_, v) <- mbCgData = v
+     | True                    = SBV ka $ Right $ cache result
     where ka = kindOf (undefined :: a)
           result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st v
                     | True = do newUninterpreted st nm (SBVType [ka]) (fst `fmap` mbCgData)
@@ -1168,7 +1150,7 @@ forceArg (SW k n) = k `seq`  n `seq` return ()
 
 -- Functions of one argument
 instance (SymWord b, HasKind a) => Uninterpreted (SBV b -> SBV a) where
-  sbvUninterpret mbCgData nm = (mkUFName nm, f)
+  sbvUninterpret mbCgData nm = f
     where f arg0
            | Just (_, v) <- mbCgData, isConcrete arg0
            = v arg0
@@ -1184,7 +1166,7 @@ instance (SymWord b, HasKind a) => Uninterpreted (SBV b -> SBV a) where
 
 -- Functions of two arguments
 instance (SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV c -> SBV b -> SBV a) where
-  sbvUninterpret mbCgData nm = (mkUFName nm, f)
+  sbvUninterpret mbCgData nm = f
     where f arg0 arg1
            | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1
            = v arg0 arg1
@@ -1202,7 +1184,7 @@ instance (SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV c -> SBV b -> S
 
 -- Functions of three arguments
 instance (SymWord d, SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV d -> SBV c -> SBV b -> SBV a) where
-  sbvUninterpret mbCgData nm = (mkUFName nm, f)
+  sbvUninterpret mbCgData nm = f
     where f arg0 arg1 arg2
            | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1, isConcrete arg2
            = v arg0 arg1 arg2
@@ -1222,7 +1204,7 @@ instance (SymWord d, SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV d ->
 
 -- Functions of four arguments
 instance (SymWord e, SymWord d, SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
-  sbvUninterpret mbCgData nm = (mkUFName nm, f)
+  sbvUninterpret mbCgData nm = f
     where f arg0 arg1 arg2 arg3
            | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3
            = v arg0 arg1 arg2 arg3
@@ -1244,7 +1226,7 @@ instance (SymWord e, SymWord d, SymWord c, SymWord b, HasKind a) => Uninterprete
 
 -- Functions of five arguments
 instance (SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
-  sbvUninterpret mbCgData nm = (mkUFName nm, f)
+  sbvUninterpret mbCgData nm = f
     where f arg0 arg1 arg2 arg3 arg4
            | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4
            = v arg0 arg1 arg2 arg3 arg4
@@ -1268,7 +1250,7 @@ instance (SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasKind a) => U
 
 -- Functions of six arguments
 instance (SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
-  sbvUninterpret mbCgData nm = (mkUFName nm, f)
+  sbvUninterpret mbCgData nm = f
     where f arg0 arg1 arg2 arg3 arg4 arg5
            | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5
            = v arg0 arg1 arg2 arg3 arg4 arg5
@@ -1295,7 +1277,7 @@ instance (SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasK
 -- Functions of seven arguments
 instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasKind a)
             => Uninterpreted (SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
-  sbvUninterpret mbCgData nm = (mkUFName nm, f)
+  sbvUninterpret mbCgData nm = f
     where f arg0 arg1 arg2 arg3 arg4 arg5 arg6
            | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5, isConcrete arg6
            = v arg0 arg1 arg2 arg3 arg4 arg5 arg6
@@ -1323,36 +1305,36 @@ instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymW
 
 -- Uncurried functions of two arguments
 instance (SymWord c, SymWord b, HasKind a) => Uninterpreted ((SBV c, SBV b) -> SBV a) where
-  sbvUninterpret mbCgData nm = let (h, f) = sbvUninterpret (uc2 `fmap` mbCgData) nm in (h, \(arg0, arg1) -> f arg0 arg1)
+  sbvUninterpret mbCgData nm = let f = sbvUninterpret (uc2 `fmap` mbCgData) nm in \(arg0, arg1) -> f arg0 arg1
     where uc2 (cs, fn) = (cs, \a b -> fn (a, b))
 
 -- Uncurried functions of three arguments
 instance (SymWord d, SymWord c, SymWord b, HasKind a) => Uninterpreted ((SBV d, SBV c, SBV b) -> SBV a) where
-  sbvUninterpret mbCgData nm = let (h, f) = sbvUninterpret (uc3 `fmap` mbCgData) nm in (h, \(arg0, arg1, arg2) -> f arg0 arg1 arg2)
+  sbvUninterpret mbCgData nm = let f = sbvUninterpret (uc3 `fmap` mbCgData) nm in \(arg0, arg1, arg2) -> f arg0 arg1 arg2
     where uc3 (cs, fn) = (cs, \a b c -> fn (a, b, c))
 
 -- Uncurried functions of four arguments
 instance (SymWord e, SymWord d, SymWord c, SymWord b, HasKind a)
             => Uninterpreted ((SBV e, SBV d, SBV c, SBV b) -> SBV a) where
-  sbvUninterpret mbCgData nm = let (h, f) = sbvUninterpret (uc4 `fmap` mbCgData) nm in (h, \(arg0, arg1, arg2, arg3) -> f arg0 arg1 arg2 arg3)
+  sbvUninterpret mbCgData nm = let f = sbvUninterpret (uc4 `fmap` mbCgData) nm in \(arg0, arg1, arg2, arg3) -> f arg0 arg1 arg2 arg3
     where uc4 (cs, fn) = (cs, \a b c d -> fn (a, b, c, d))
 
 -- Uncurried functions of five arguments
 instance (SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasKind a)
             => Uninterpreted ((SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
-  sbvUninterpret mbCgData nm = let (h, f) = sbvUninterpret (uc5 `fmap` mbCgData) nm in (h, \(arg0, arg1, arg2, arg3, arg4) -> f arg0 arg1 arg2 arg3 arg4)
+  sbvUninterpret mbCgData nm = let f = sbvUninterpret (uc5 `fmap` mbCgData) nm in \(arg0, arg1, arg2, arg3, arg4) -> f arg0 arg1 arg2 arg3 arg4
     where uc5 (cs, fn) = (cs, \a b c d e -> fn (a, b, c, d, e))
 
 -- Uncurried functions of six arguments
 instance (SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasKind a)
             => Uninterpreted ((SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
-  sbvUninterpret mbCgData nm = let (h, f) = sbvUninterpret (uc6 `fmap` mbCgData) nm in (h, \(arg0, arg1, arg2, arg3, arg4, arg5) -> f arg0 arg1 arg2 arg3 arg4 arg5)
+  sbvUninterpret mbCgData nm = let f = sbvUninterpret (uc6 `fmap` mbCgData) nm in \(arg0, arg1, arg2, arg3, arg4, arg5) -> f arg0 arg1 arg2 arg3 arg4 arg5
     where uc6 (cs, fn) = (cs, \a b c d e f -> fn (a, b, c, d, e, f))
 
 -- Uncurried functions of seven arguments
 instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasKind a)
             => Uninterpreted ((SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
-  sbvUninterpret mbCgData nm = let (h, f) = sbvUninterpret (uc7 `fmap` mbCgData) nm in (h, \(arg0, arg1, arg2, arg3, arg4, arg5, arg6) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6)
+  sbvUninterpret mbCgData nm = let f = sbvUninterpret (uc7 `fmap` mbCgData) nm in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6
     where uc7 (cs, fn) = (cs, \a b c d e f g -> fn (a, b, c, d, e, f, g))
 
 -- | Adding arbitrary constraints.

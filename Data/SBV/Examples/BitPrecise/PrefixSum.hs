@@ -145,39 +145,29 @@ thm3 = proveWith yices $ do args :: PowerList SWord32 <- mkForallVars 8
 genPrefixSumInstance :: Int -> Symbolic SBool
 genPrefixSumInstance n = do
      args :: PowerList SWord32 <- mkForallVars n
-     addAxiom "flOp is associative"     $ assocAxiom (sbvUFName opH)
-     addAxiom "u is left-unit for flOp" $ leftUnitAxiom (sbvUFName opH) (sbvUFName uH)
+     addAxiom "flOp is associative"     assocAxiom
+     addAxiom "u is left-unit for flOp" leftUnitAxiom
      return $ ps (u, op) args .== lf (u, op) args
   where op :: SWord32 -> SWord32 -> SWord32
-        opH :: SBVUF
-        (opH, op) = uninterpretWithHandle "flOp"
+        op = uninterpret "flOp"
         u  :: SWord32
-        uH :: SBVUF
-        (uH, u)  = uninterpretWithHandle "u"
-        -- this is the brittle part; but it'll have to do until we get a proper
-        -- DSL for expressing SMT-axioms..
-        mkCall :: String -> String -> String -> String
-        mkCall o x y = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
-        assocAxiom :: String -> [String]
-        assocAxiom o = [
+        u  = uninterpret "u"
+        -- axioms.. These are a bit brittle. Note that we have to
+        -- refer to the uninterpreted symbols with the prefix "uninterpreted_" to
+        -- avoid any collision. This is admittedly ugly, but it'll do till we get
+        -- a sub-DSL for writing proper axioms (if ever)
+        assocAxiom :: [String]
+        assocAxiom = [
              ":assumption (forall (?x BitVec[32]) (?y BitVec[32]) (?z BitVec[32])"
-           , "                    (= " ++ lhs
-           , "                       " ++ rhs
+           , "                    (= (uninterpreted_flOp ?x (uninterpreted_flOp ?y ?z))"
+           , "                       (uninterpreted_flOp (uninterpreted_flOp ?x ?y) ?z)"
            , "                    )"
            , "            )"
           ]
-          where lhs = mkCall o (mkCall o "?x" "?y") "?z"
-                rhs = mkCall o "?x" (mkCall o "?y" "?z")
-        leftUnitAxiom :: String -> String -> [String]
-        leftUnitAxiom o ue = [
-            ":assumption (forall (?x BitVec[32])"
-          , "                    (= " ++ lhs
-          , "                       " ++ rhs
-          , "                    )"
-          , "            )"
+        leftUnitAxiom :: [String]
+        leftUnitAxiom = [
+            ":assumption (forall (?x BitVec[32]) (= (uninterpreted_flOp uninterpreted_u ?x) ?x))"
           ]
-          where lhs = "(" ++ o ++ " " ++ ue ++ " " ++ "?x" ++ ")"
-                rhs = "?x"
 
 -- | Prove the generic problem for powerlists of given sizes. Note that
 -- this will only work for Yices-1. This is due to the fact that Yices-2
@@ -309,3 +299,5 @@ scanlTrace :: Int -> IO ()
 scanlTrace n = gen >>= print
   where gen = runSymbolic True $ do args :: [SWord8] <- mkForallVars n
                                     mapM_ output $ ps (0, (+)) args
+
+{-# ANN module "HLint: ignore Reduce duplication" #-}

@@ -27,16 +27,12 @@ USER GIVEN CODE SEGMENTS
 AXIOMS
   -- user defined axiom: flOp is associative
   :assumption (forall (?x BitVec[32]) (?y BitVec[32]) (?z BitVec[32])
-                      (= (uninterpreted_flOp (uninterpreted_flOp ?x ?y) ?z)
-                         (uninterpreted_flOp ?x (uninterpreted_flOp ?y ?z))
+                      (= (uninterpreted_flOp ?x (uninterpreted_flOp ?y ?z))
+                         (uninterpreted_flOp (uninterpreted_flOp ?x ?y) ?z)
                       )
               )
   -- user defined axiom: u is left-unit for flOp
-  :assumption (forall (?x BitVec[32])
-                      (= (uninterpreted_flOp uninterpreted_u ?x)
-                         ?x
-                      )
-              )
+  :assumption (forall (?x BitVec[32]) (= (uninterpreted_flOp uninterpreted_u ?x) ?x))
 DEFINE
   s16 :: SWord32 = uninterpreted_u
   s17 :: SWord32 = s16 uninterpreted_flOp s0
