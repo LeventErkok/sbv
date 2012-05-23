@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Computing GCD symbolically, and generating C code for it. This example
 -- illustrates symbolic termination related issues when programming with

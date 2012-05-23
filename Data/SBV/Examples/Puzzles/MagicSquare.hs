@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Solves the magic-square puzzle. An NxN magic square is one where all entries
 -- are filled with numbers from 1 to NxN such that sums of all rows, columns

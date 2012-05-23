@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Puzzle:
 --   What 2 digit fahrenheit/celcius values are reverses of each other?

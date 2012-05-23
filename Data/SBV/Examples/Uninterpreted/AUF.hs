@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Formalizes and proves the following theorem, about arithmetic,
 -- uninterpreted functions, and arrays. (For reference, see <http://research.microsoft.com/en-us/um/redmond/projects/z3/fmcad06-slides.pdf>

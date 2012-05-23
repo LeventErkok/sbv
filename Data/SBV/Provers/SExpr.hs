@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Parsing of S-expressions (mainly used for parsing SMT-Lib get-value output)
 -----------------------------------------------------------------------------

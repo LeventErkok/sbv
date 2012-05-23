@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- The Sudoku solver, quintessential SMT solver example!
 -----------------------------------------------------------------------------

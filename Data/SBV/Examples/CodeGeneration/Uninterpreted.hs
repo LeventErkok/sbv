@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Demonstrates the use of uninterpreted functions for the purposes of
 -- code generation. This facility is important when we want to take

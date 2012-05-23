@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Simple usage of polynomials over GF(2^n), using Rijndael's
 -- finite field: <http://en.wikipedia.org/wiki/Finite_field_arithmetic#Rijndael.27s_finite_field>

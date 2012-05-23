@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Solves the NQueens puzzle: <http://en.wikipedia.org/wiki/Eight_queens_puzzle>
 -----------------------------------------------------------------------------

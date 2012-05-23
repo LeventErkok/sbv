@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Computing the CRC symbolically, using the USB polynomial. We also
 -- generating C code for it as well. This example demonstrates the

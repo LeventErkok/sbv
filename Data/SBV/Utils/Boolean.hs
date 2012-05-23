@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Abstraction of booleans. Unfortunately, Haskell makes Bool's very hard to
 -- work with, by making it a fixed-data type. This is our workaround

@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Computing Fibonacci numbers and generating C code. Inspired by Lee Pike's
 -- original implementation, modified for inclusion in the package. It illustrates

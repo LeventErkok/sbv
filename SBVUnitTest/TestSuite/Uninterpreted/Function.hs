@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Testsuite for Data.SBV.Examples.Uninterpreted.Function
 -----------------------------------------------------------------------------

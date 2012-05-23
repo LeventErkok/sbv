@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Demonstrates uninterpreted sorts and how they can be used for deduction.
 -- This example is inspired by the discussion at <http://stackoverflow.com/questions/10635783/using-axioms-for-deductions-in-z3>,

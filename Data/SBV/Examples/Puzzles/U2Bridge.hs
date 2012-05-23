@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- The famous U2 bridge crossing puzzle: <http://www.brainj.net/puzzle.php?id=u2>
 -----------------------------------------------------------------------------

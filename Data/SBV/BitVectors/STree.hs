@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Implementation of full-binary symbolic trees, providing logarithmic
 -- time access to elements. Both reads and writes are supported.

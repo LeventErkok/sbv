@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Similar to CCITT. It shows that the CCITT is still HD 3
 -- even if we consider only uni-directional errors

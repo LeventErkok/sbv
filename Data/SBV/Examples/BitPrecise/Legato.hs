@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- An encoding and correctness proof of Legato's multiplier in Haskell. Bill Legato came
 -- up with an interesting way to multiply two 8-bit numbers on Mostek, as described here:

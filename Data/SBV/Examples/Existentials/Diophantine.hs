@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Finding minimal natural number solutions to linear Diophantine equations,
 -- using explicit quantification.

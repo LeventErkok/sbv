@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Checks the correctness of a few tricks from the large collection found in:
 --      <http://graphics.stanford.edu/~seander/bithacks.html>

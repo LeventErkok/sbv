@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- This program demonstrates the use of the existentials and the QBVF (quantified
 -- bit-vector solver). We generate CRC polynomials of degree 16 that can be used

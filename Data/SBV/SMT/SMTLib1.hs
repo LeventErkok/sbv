@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Conversion of symbolic programs to SMTLib format, Using v1 of the standard
 -----------------------------------------------------------------------------

@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Test suite for Data.SBV.Examples.BitPrecise.MergeSort
 -----------------------------------------------------------------------------

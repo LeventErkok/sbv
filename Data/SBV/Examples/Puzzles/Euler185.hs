@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- A solution to Project Euler problem #185: <http://projecteuler.net/index.php?section=problems&id=185>
 -----------------------------------------------------------------------------

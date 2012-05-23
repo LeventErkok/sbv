@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- The PrefixSum algorithm over power-lists and proof of
 -- the Ladner-Fischer implementation.

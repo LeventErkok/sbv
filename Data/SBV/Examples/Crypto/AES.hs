@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- An implementation of AES (Advanced Encryption Standard), using SBV.
 -- For details on AES, see FIPS-197: <http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf>.

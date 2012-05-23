@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- Symbolic implementation of merge-sort and its correctness.
 -----------------------------------------------------------------------------

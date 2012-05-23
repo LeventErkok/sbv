@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- An implementation of RC4 (AKA Rivest Cipher 4 or Alleged RC4/ARC4),
 -- using SBV. For information on RC4, see: <http://en.wikipedia.org/wiki/RC4>.
