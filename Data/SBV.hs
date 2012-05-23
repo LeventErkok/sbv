@@ -5,7 +5,6 @@
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
--- Portability :  portable
 --
 -- (The sbv library is hosted at <http://github.com/LeventErkok/sbv>.
 -- Comments, bug reports, and patches are always welcome.)
@@ -107,7 +106,7 @@ module Data.SBV (
   -- $createSyms
   , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReal, sReals, toSReal
   -- *** Abstract SBV type
-  , SBV, slet
+  , SBV
   -- *** Arrays of symbolic values
   , SymArray(..), SArray, SFunArray, mkSFunArray
   -- *** Full binary trees
