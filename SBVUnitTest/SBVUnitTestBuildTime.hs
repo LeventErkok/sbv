@@ -2,4 +2,4 @@
 module SBVUnitTestBuildTime (buildTime) where
 
 buildTime :: String
-buildTime = "Tue May 22 23:44:08 PDT 2012"
+buildTime = "Wed May 23 00:11:25 PDT 2012"
