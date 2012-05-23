@@ -38,7 +38,7 @@ import qualified Control.Exception as E
 
 import Control.Concurrent             (forkIO)
 import Control.Concurrent.Chan.Strict (newChan, writeChan, getChanContents)
-import Control.Monad                  (when)
+import Control.Monad                  (when, unless)
 import Data.List                      (intercalate)
 import Data.Maybe                     (fromJust, isJust, catMaybes)
 import System.FilePath                (addExtension)
@@ -324,7 +324,7 @@ compileToSMTLib smtLib2 a = do
         t <- getClockTime
         let comments = ["Created on " ++ show t]
             cvt = if smtLib2 then toSMTLib2 else toSMTLib1
-        (_, _, _, smtLibPgm) <- simulate cvt defaultSMTCfg False comments a
+        (_, _, _, _, smtLibPgm) <- simulate cvt defaultSMTCfg False comments a
         let out = show smtLibPgm
         if smtLib2 -- append check-sat in case of smtLib2
            then return $ out ++ "\n(check-sat)\n"
@@ -373,7 +373,9 @@ allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
 allSatWith config p = do
         let converter = if useSMTLib2 config then toSMTLib2 else toSMTLib1
         msg "Checking Satisfiability, all solutions.."
-        sbvPgm@(qinps, _, _, _) <- simulate converter config True [] p
+        sbvPgm@(qinps, _, _, usorts, _) <- simulate converter config True [] p
+        unless (null usorts) $ error $  "SBV.allSat: All-sat calls are not supported in the presence of uninterpreted sorts: " ++ unwords usorts
+                                     ++ "\n    Only 'sat' and 'prove' calls are available when uninterpreted sorts are used."
         resChan <- newChan
         let add  = writeChan resChan . Just
             stop = writeChan resChan Nothing
@@ -402,7 +404,7 @@ allSatWith config p = do
                                             Unsatisfiable _                 -> stop
                                             Satisfiable _ model             -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
                                             Unknown     _ model             -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
-        invoke nonEqConsts n (qinps, modelMap, skolemMap, smtLibPgm) = do
+        invoke nonEqConsts n (qinps, modelMap, skolemMap, _, smtLibPgm) = do
                msg $ "Looking for solution " ++ show n
                case addNonEqConstraints qinps nonEqConsts smtLibPgm of
                  Nothing ->  -- no new constraints added, stop
@@ -412,8 +414,15 @@ allSatWith config p = do
                                      msg "Done.."
                                      return $ Just $ SatResult smtAnswer
 
-callSolver :: Bool -> String -> (SMTResult -> b) -> SMTConfig -> ([(Quantifier, NamedSymVar)], [(String, UnintKind)], [Either SW (SW, [SW])], SMTLibPgm) -> IO b
-callSolver isSat checkMsg wrap config (qinps, modelMap, skolemMap, smtLibPgm) = do
+type SMTProblem = ( [(Quantifier, NamedSymVar)]         -- inputs
+                  , [(String, UnintKind)]               -- model-map
+                  , [Either SW (SW, [SW])]              -- skolem-map
+                  , [String]                            -- uninterpreted sorts
+                  , SMTLibPgm                           -- SMTLib representation
+                  )
+
+callSolver :: Bool -> String -> (SMTResult -> b) -> SMTConfig -> SMTProblem -> IO b
+callSolver isSat checkMsg wrap config (qinps, modelMap, skolemMap, _, smtLibPgm) = do
        let msg = when (verbose config) . putStrLn . ("** " ++)
        msg checkMsg
        let finalPgm = intercalate "\n" (pre ++ post) where SMTLibPgm _ (_, pre, post) = smtLibPgm
@@ -422,7 +431,7 @@ callSolver isSat checkMsg wrap config (qinps, modelMap, skolemMap, smtLibPgm) = 
        msg "Done.."
        return $ wrap smtAnswer
 
-simulate :: Provable a => SMTLibConverter -> SMTConfig -> Bool -> [String] -> a -> IO ([(Quantifier, NamedSymVar)], [(String, UnintKind)], [Either SW (SW, [SW])], SMTLibPgm)
+simulate :: Provable a => SMTLibConverter -> SMTConfig -> Bool -> [String] -> a -> IO SMTProblem
 simulate converter config isSat comments predicate = do
         let msg = when (verbose config) . putStrLn . ("** " ++)
             isTiming = timing config
@@ -432,7 +441,7 @@ simulate converter config isSat comments predicate = do
         msg "Translating to SMT-Lib.."
         runProofOn converter config isSat comments res
 
-runProofOn :: SMTLibConverter -> SMTConfig -> Bool -> [String] -> Result -> IO ([(Quantifier, NamedSymVar)], [(String, UnintKind)], [Either SW (SW, [SW])], SMTLibPgm)
+runProofOn :: SMTLibConverter -> SMTConfig -> Bool -> [String] -> Result -> IO SMTProblem
 runProofOn converter config isSat comments res =
         let isTiming = timing config
         in case res of
@@ -446,7 +455,7 @@ runProofOn converter config isSat comments res =
                                                                 where go []                   (_,  sofar) = reverse sofar
                                                                       go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
                                                                       go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
-                                               in return (is, uiMap, skolemMap, converter boundInfo isSat comments usorts is skolemMap consts tbls arrs uis axs pgm cstrs o)
+                                               in return (is, uiMap, skolemMap, usorts, converter boundInfo isSat comments usorts is skolemMap consts tbls arrs uis axs pgm cstrs o)
              Result _boundInfo _us _qcInfo _codeSegs _is _consts _tbls _arrs _uis _axs _pgm _cstrs os -> case length os of
                            0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
                            1  -> error $ "Impossible happened, non-boolean output in " ++ show os
