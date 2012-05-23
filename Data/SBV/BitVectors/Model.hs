@@ -1112,7 +1112,7 @@ instance SymWord b => Mergeable (SFunArray a b) where
 -- operations that are /irrelevant/ for the purposes of the proof; i.e., when
 -- the proofs can be performed without any knowledge about the function itself.
 --
--- Minimal complete definition: 'uninterpretWithHandle'. However, most instances in
+-- Minimal complete definition: 'sbvUninterpret'. However, most instances in
 -- practice are already provided by SBV, so end-users should not need to define their
 -- own instances.
 class Uninterpreted a where

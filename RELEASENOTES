@@ -9,7 +9,8 @@ Version 2.1, Not released yet
  Library:
   - Add support for uninterpreted sorts (registerSort), together with
     user defined domain axioms. See Data.SBV.Examples.Uninterpreted.Sort
-    for a basic example of this feature.
+    and Data.SBV.Examples.Uninterpreted.Deduce for basic examples of
+    this feature.
   - Add support for C code-generation with SReals. The user picks
     one of 3 possible C types for the SReal type: CgFloat, CgDouble
     or CgLongDouble, using the function cgSRealType. Naturally, the
@@ -20,7 +21,9 @@ Version 2.1, Not released yet
     computations.
  Examples:
   - Recast the dog-cat-mouse example to use the solver over reals.
-  - Add Data.SBV.Examples.Uninterpreted.Sort, illustrating uninterpreted sorts
+  - Add Data.SBV.Examples.Uninterpreted.Sort, and
+        Data.SBV.Examples.Uninterpreted.Deduce
+    for illustrating uninterpreted sorts and axioms.
 
 ======================================================================
 Version 2.0, 2012-05-10

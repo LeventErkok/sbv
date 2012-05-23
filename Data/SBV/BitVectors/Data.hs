@@ -36,7 +36,6 @@ module Data.SBV.BitVectors.Data
  , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
  , Quantifier(..), needsExistentials
  , SMTLibPgm(..), SMTLibVersion(..)
- , Sort(..), registerSort
  ) where
 
 import Control.DeepSeq      (NFData(..))
@@ -118,37 +117,6 @@ instance Show Kind where
   show KUnbounded         = "SInteger"
   show KReal              = "SReal"
   show (KUninterpreted s) = s
-
--- | An uninterpreted sort
-data Sort a = Sort { mkSortFree :: String -> Symbolic (SBV a)  -- ^ Create a free variable of the sort, existential in sat, universal in proof
-                   , mkSortEx   :: String -> Symbolic (SBV a)  -- ^ Create an existantial variable of the sort
-                   , mkSortAll  :: String -> Symbolic (SBV a)  -- ^ Create a universal variable of the sort
-                   }
-
--- | Install a new uninterpreted sort with the given name.
-registerSort :: Data a => a -> Symbolic (Sort a)
-registerSort a = do
-        let nm = tyconUQname . dataTypeName . dataTypeOf $ a
-        pst <- ask
-        curSorts <- liftIO $ readIORef (rSorts pst)
-        when (nm `elem` curSorts) $ error $ "SBV.registerSort: " ++ show nm ++ " is already a registered sort; cannot re-register"
-        let -- TBD: Is this list comprehensive?
-            reserved = ["Int", "Real", "List", "Array", "Bool"]
-        when (nm `elem` reserved) $ error $ "SBV.registerSort: " ++ show nm ++ " is a reserved sort; please use a different name"
-        liftIO $ modifyIORef (rSorts pst) (nm:)
-        let k = KUninterpreted nm
-            fresh mbQ v = do st <- ask
-                             let q = case (mbQ, runMode st) of
-                                       (Just x,  _)           -> x
-                                       (Nothing, Proof True)  -> EX
-                                       (Nothing, Proof False) -> ALL
-                                       (Nothing, Concrete{})  -> error $ "SBV.registerSort: Uninterpreted sort " ++ nm ++ " can not be used in concrete simulation mode."
-                                       (Nothing, CodeGen)     -> error $ "SBV.registerSort: Uninterpreted sort " ++ nm ++ " can not be used in code-generation mode."
-                             ctr <- liftIO $ incCtr st
-                             let sw = SW k (NodeId ctr)
-                             liftIO $ modifyIORef (rinps st) ((q, (sw, v)):)
-                             return $ SBV k $ Right $ cache (const (return sw))
-        return $ Sort (fresh Nothing) (fresh (Just EX)) (fresh (Just ALL))
 
 -- | A symbolic node id
 newtype NodeId = NodeId Int deriving (Eq, Ord)
@@ -749,8 +717,10 @@ instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtabl
 instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtable e, Outputtable f, Outputtable g, Outputtable h) => Outputtable (a, b, c, d, e, f, g, h) where
   output = mlift8 (,,,,,,,) output output output output output output output output
 
--- | Add a user specified axiom to the generated SMT-Lib file. Note that the input is a
--- mere string; we perform no checking on the input that it's well-formed or is sensical.
+-- | Add a user specified axiom to the generated SMT-Lib file. The first argument is a mere
+-- string, use for commenting purposes. The second argument is intended to hold the multiple-lines
+-- of the axiom text as expressed in SMT-Lib notation. Note that we perform no checks on the axiom
+-- itself, to see whether it's actually well-formed or is sensical by any means.
 -- A separate formalization of SMT-Lib would be very useful here.
 addAxiom :: String -> [String] -> Symbolic ()
 addAxiom nm ax = do
@@ -900,8 +870,28 @@ class (HasKind a, Ord a) => SymWord a where
   mbMinBound = Nothing
   literal x = error $ "Cannot create symbolic literals for kind: " ++ show (kindOf x)
   fromCW cw = error $ "Cannot convert CW " ++ show cw ++ " to kind " ++ show (kindOf (undefined :: a))
-  mkSymWord = error $   "Cannot use forall/exists/free to make symbolic words for uninterpreted sorts."
-                    ++ "\nUse mkSortAll/mkSortEx/mkSortFree instead."
+
+  default mkSymWord :: Data a => Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
+  mkSymWord mbQ mbNm = do
+        let sortName = tyconUQname . dataTypeName . dataTypeOf $ (undefined :: a)
+        st <- ask
+        let -- TBD: Is this list comprehensive?
+            reserved = ["Int", "Real", "List", "Array", "Bool"]
+        when (sortName `elem` reserved) $ error $ "SBV.registerSort: " ++ show sortName ++ " is a reserved sort; please use a different name"
+        curSorts <- liftIO $ readIORef (rSorts st)
+        when (sortName `notElem` curSorts) $ liftIO $ modifyIORef (rSorts st) (sortName :)
+        let k = KUninterpreted sortName
+            q = case (mbQ, runMode st) of
+                  (Just x,  _)           -> x
+                  (Nothing, Proof True)  -> EX
+                  (Nothing, Proof False) -> ALL
+                  (Nothing, Concrete{})  -> error $ "SBV.registerSort: Uninterpreted sort " ++ sortName ++ " can not be used in concrete simulation mode."
+                  (Nothing, CodeGen)     -> error $ "SBV.registerSort: Uninterpreted sort " ++ sortName ++ " can not be used in code-generation mode."
+        ctr <- liftIO $ incCtr st
+        let sw = SW k (NodeId ctr)
+            nm = maybe ('s':show ctr) id mbNm
+        liftIO $ modifyIORef (rinps st) ((q, (sw, nm)):)
+        return $ SBV k $ Right $ cache (const (return sw))
 
 instance (Random a, SymWord a) => Random (SBV a) where
   randomR (l, h) g = case (unliteral l, unliteral h) of

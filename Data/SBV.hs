@@ -142,10 +142,9 @@ module Data.SBV (
   -- ** Pretty-printing and reading numbers in Hex & Binary
   , PrettyNum(..), readBin
 
-  -- * Uninterpreted constants and functions
+  -- * Uninterpreted sorts, constants, and functions
+  -- $uninterpreted
   , Uninterpreted(..), addAxiom
-  -- * Uninterpreted sorts
-  , Sort(..), registerSort
 
   -- * Properties, proofs, and satisfiability
   -- $proveIntro
@@ -495,6 +494,31 @@ Note that while 'constrain' can be used freely, 'pConstrain' is only allowed in 
 'genTest' or 'quickCheck'. Calls to 'pConstrain' in a prove/sat call will be rejected as SBV does not
 deal with probabilistic constraints when it comes to satisfiability and proofs.
 Also, both 'constrain' and 'pConstrain' calls during code-generation will also be rejected, for similar reasons.
+-}
+
+{- $uninterpreted
+Users can introduce new uninterpreted sorts simply by defining a data-type in Haskell and registering it as such. The
+following example demonstrates:
+
+  @
+     data B = B deriving (Eq, Ord, Data, Typeable)
+     instance SymWord  B
+     instance HasKind  B
+  @
+
+(Note that you'll also need to use the language pragma @DeriveDataTypeable@, and import @Data.Generics@ for the above to work.) 
+
+Once GHC implements derivable user classes (<http://hackage.haskell.org/trac/ghc/ticket/5462>), we will be able to simplify this to:
+
+  @
+     data B = B deriving (Eq, Ord, Data, Typeable, SymWord, HasKind)
+  @
+
+This is all it takes to introduce 'B' as an uninterpreted sort in SBV, which makes the type @SBV B@ automagically become available as the type
+of symbolic values that ranges over 'B' values.
+
+Uninterpreted functions over both uninterpreted and regular sorts can be declared using the facilities introduced by
+the 'Uninterpreted' class.
 -}
 
 {-# ANN module "HLint: ignore Use import/export shortcut" #-}
