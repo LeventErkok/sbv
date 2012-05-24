@@ -93,6 +93,25 @@ source-repository head
 
 Library
   ghc-options     : -Wall
+  other-extensions: BangPatterns
+                    CPP
+                    -- DefaultSignatures flag is not present in cabal 1.14.0; so ignore for the time being
+                    -- DefaultSignatures
+                    DeriveDataTypeable
+                    FlexibleContexts
+                    FlexibleInstances
+                    FunctionalDependencies
+                    GeneralizedNewtypeDeriving
+                    MultiParamTypeClasses
+                    OverlappingInstances
+                    ParallelListComp
+                    PatternGuards
+                    Rank2Types
+                    RankNTypes
+                    ScopedTypeVariables
+                    TupleSections
+                    TypeOperators
+                    TypeSynonymInstances
   Build-Depends   : array               >= 0.3.0.1
                   , base                >= 3 && < 5
                   , containers          >= 0.3.0.0
@@ -163,6 +182,10 @@ Library
 
 Executable SBVUnitTests
   ghc-options     : -Wall
+  other-extensions: Rank2Types
+                    RankNTypes
+                    ScopedTypeVariables
+                    TupleSections
   Build-depends   : base      >= 3 && < 5
                   , directory >= 1.0.1.1
                   , HUnit     >= 1.2.4.2
