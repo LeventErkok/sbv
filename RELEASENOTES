@@ -1,14 +1,14 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Latest Hackage released version: 2.0
+Latest Hackage released version: 2.1
 
 ======================================================================
-Version 2.1, Not released yet
+Version 2.1, 2012-05-24
 
  Library:
-  - Add support for uninterpreted sorts (registerSort), together with
-    user defined domain axioms. See Data.SBV.Examples.Uninterpreted.Sort
+  - Add support for uninterpreted sorts, together with user defined
+    domain axioms. See Data.SBV.Examples.Uninterpreted.Sort
     and Data.SBV.Examples.Uninterpreted.Deduce for basic examples of
     this feature.
   - Add support for C code-generation with SReals. The user picks
