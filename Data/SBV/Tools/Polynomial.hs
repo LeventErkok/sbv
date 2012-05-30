@@ -43,7 +43,7 @@ class Bits a => Polynomial a where
  -- will evaluate to @11@, since it sets the bits @0@, @1@, and @3@. Mathematicans would write this polynomial
  -- as @x^3 + x + 1@. And in fact, 'showPoly' will show it like that.
  polynomial :: [Int] -> a
- -- | Add two polynomials in GF(2^n)
+ -- | Add two polynomials in GF(2^n).
  pAdd  :: a -> a -> a
  -- | Multiply two polynomials in GF(2^n), and reduce it by the irreducible specified by
  -- the polynomial as specified by coefficients of the third argument. Note that the third
@@ -55,13 +55,13 @@ class Bits a => Polynomial a where
  -- Passing [] for the third argument will multiply the polynomials and then ignore the higher bits that won't
  -- fit into the resulting size.
  pMult :: (a, a, [Int]) -> a
- -- | Divide two polynomials in GF(2^n), see above note for division by 0
+ -- | Divide two polynomials in GF(2^n), see above note for division by 0.
  pDiv  :: a -> a -> a
- -- | Compute modulus of two polynomials in GF(2^n), see above note for modulus by 0
+ -- | Compute modulus of two polynomials in GF(2^n), see above note for modulus by 0.
  pMod  :: a -> a -> a
- -- | Division and modulus packed together
+ -- | Division and modulus packed together.
  pDivMod :: a -> a -> (a, a)
- -- | Display a polynomial like a mathematician would (over the monomial @x@), with a type
+ -- | Display a polynomial like a mathematician would (over the monomial @x@), with a type.
  showPoly :: a -> String
  -- | Display a polynomial like a mathematician would (over the monomial @x@), the first argument
  -- controls if the final type is shown as well.

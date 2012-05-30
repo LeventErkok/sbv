@@ -174,7 +174,7 @@ genParse :: Integral a => Kind -> [CW] -> Maybe (a, [CW])
 genParse k (x@(CW _ (CWInteger i)):r) | kindOf x == k = Just (fromIntegral i, r)
 genParse _ _                                          = Nothing
 
--- | Base case, that comes in handy if there are no real variables
+-- Base case, that comes in handy if there are no real variables
 instance SatModel () where
   parseCWs xs = return ((), xs)
 

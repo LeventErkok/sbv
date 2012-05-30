@@ -102,7 +102,7 @@ cvt (hasIntegers, hasReals) isSat comments sorts qinps _skolemInps consts tbls a
                ++ [mkFormula isSat out]
                ++ [")"]
         asgns = F.toList asgnsSeq
-        mkCstr s = ":assumption (= " ++ show s ++ " bv1[1])"
+        mkCstr s = " :assumption (= " ++ show s ++ " bv1[1])"
 
 -- TODO: Does this work for SMT-Lib when the index/element types are signed?
 -- Currently we ignore the signedness of the arguments, as there appears to be no way

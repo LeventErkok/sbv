@@ -516,21 +516,21 @@ instance Boolean SBool where
                  | y == falseSW = Just x
                  | True         = Nothing
 
--- | Returns (symbolic) true if all the elements of the given list are different
+-- | Returns (symbolic) true if all the elements of the given list are different.
 allDifferent :: (Eq a, SymWord a) => [SBV a] -> SBool
 allDifferent (x:xs@(_:_)) = bAll ((./=) x) xs &&& allDifferent xs
 allDifferent _            = true
 
--- | Returns (symbolic) true if all the elements of the given list are the same
+-- | Returns (symbolic) true if all the elements of the given list are the same.
 allEqual :: (Eq a, SymWord a) => [SBV a] -> SBool
 allEqual (x:xs@(_:_))     = bAll ((.==) x) xs
 allEqual _                = true
 
--- | Returns 1 if the boolean is true, otherwise 0
+-- | Returns 1 if the boolean is true, otherwise 0.
 oneIf :: (Num a, SymWord a) => SBool -> SBV a
 oneIf t = ite t 1 0
 
--- Num instance for symbolic words
+-- Num instance for symbolic words.
 instance (Ord a, Num a, SymWord a) => Num (SBV a) where
   fromInteger = literal . fromIntegral
   x + y
@@ -641,7 +641,7 @@ sbvTestBit x i = (x .&. bit i) ./= 0
 -- number is 2^256-1, which is a pretty darn big number to worry about for practical
 -- purposes. In any case, we do not support 'sbvPopCount' for unbounded symbolic integers,
 -- as the only possible implementation wouldn't symbolically terminate. So the only overflow
--- issue is with really-really large concrete 'SInteger' values 
+-- issue is with really-really large concrete 'SInteger' values.
 sbvPopCount :: (Bits a, SymWord a) => SBV a -> SWord8
 sbvPopCount x
   | isReal x          = error "SBV.sbvPopCount: Called on a real value"
@@ -658,22 +658,22 @@ sbvPopCount x
 setBitTo :: (Bits a, SymWord a) => SBV a -> Int -> SBool -> SBV a
 setBitTo x i b = ite b (setBit x i) (clearBit x i)
 
--- | Little-endian blasting of a word into its bits. Also see the 'FromBits' class
+-- | Little-endian blasting of a word into its bits. Also see the 'FromBits' class.
 blastLE :: (Bits a, SymWord a) => SBV a -> [SBool]
 blastLE x
  | isReal x          = error "SBV.blastLE: Called on a real value"
  | not (isBounded x) = error "SBV.blastLE: Called on an infinite precision value"
  | True              = map (sbvTestBit x) [0 .. (intSizeOf x)-1]
 
--- | Big-endian blasting of a word into its bits. Also see the 'FromBits' class
+-- | Big-endian blasting of a word into its bits. Also see the 'FromBits' class.
 blastBE :: (Bits a, SymWord a) => SBV a -> [SBool]
 blastBE = reverse . blastLE
 
--- | Least significant bit of a word, always stored at index 0
+-- | Least significant bit of a word, always stored at index 0.
 lsb :: (Bits a, SymWord a) => SBV a -> SBool
 lsb x = sbvTestBit x 0
 
--- | Most significant bit of a word, always stored at the last position
+-- | Most significant bit of a word, always stored at the last position.
 msb :: (Bits a, SymWord a) => SBV a -> SBool
 msb x
  | isReal x          = error "SBV.msb: Called on a real value"

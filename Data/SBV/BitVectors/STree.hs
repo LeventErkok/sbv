@@ -57,7 +57,7 @@ writeSTree s i j = walk (blastBE i) s
         walk (b:bs) (SBin l r) = SBin (ite b l (walk bs l)) (ite b (walk bs r) r)
         walk _      _          = error $ "SBV.STree.writeSTree: Impossible happened while reading: " ++ show i
 
--- | Construct the fully balanced initial tree using the given values
+-- | Construct the fully balanced initial tree using the given values.
 mkSTree :: forall i e. HasKind i => [SBV e] -> STree i e
 mkSTree ivals
   | isReal (undefined :: i)

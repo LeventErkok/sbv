@@ -41,11 +41,11 @@ optimizeWith :: (SatModel a, SymWord a, Show a, SymWord c, Show c)
 optimizeWith cfg (Iterative chatty) = iterOptimize chatty cfg
 optimizeWith cfg Quantified         = quantOptimize cfg
 
--- | Variant of 'optimizeWith' using the default solver
+-- | Variant of 'optimizeWith' using the default solver. See 'optimizeWith' for parameter descriptions.
 optimize :: (SatModel a, SymWord a, Show a, SymWord c, Show c) => OptimizeOpts -> (SBV c -> SBV c -> SBool) -> ([SBV a] -> SBV c) -> Int -> ([SBV a] -> SBool) -> IO (Maybe [a])
 optimize = optimizeWith defaultSMTCfg
 
--- | Variant of 'maximize' allowing the use of a user specified solver.
+-- | Variant of 'maximize' allowing the use of a user specified solver. See 'optimizeWith' for parameter descriptions.
 maximizeWith :: (SatModel a, SymWord a, Show a, SymWord c, Show c) => SMTConfig -> OptimizeOpts -> ([SBV a] -> SBV c) -> Int -> ([SBV a] -> SBool) -> IO (Maybe [a])
 maximizeWith cfg opts = optimizeWith cfg opts (.>=)
 
@@ -56,7 +56,7 @@ maximizeWith cfg opts = optimizeWith cfg opts (.>=)
 maximize :: (SatModel a, SymWord a, Show a, SymWord c, Show c) => OptimizeOpts -> ([SBV a] -> SBV c) -> Int -> ([SBV a] -> SBool) -> IO (Maybe [a])
 maximize = maximizeWith defaultSMTCfg
 
--- | Variant of 'minimize' allowing the use of a user specified solver.
+-- | Variant of 'minimize' allowing the use of a user specified solver. See 'optimizeWith' for parameter descriptions.
 minimizeWith :: (SatModel a, SymWord a, Show a, SymWord c, Show c) => SMTConfig -> OptimizeOpts -> ([SBV a] -> SBV c) -> Int -> ([SBV a] -> SBool) -> IO (Maybe [a])
 minimizeWith cfg opts = optimizeWith cfg opts (.<=)
 
