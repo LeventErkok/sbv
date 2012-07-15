@@ -1111,8 +1111,8 @@ instance NFData Result where
 
 instance NFData Kind
 instance NFData ArrayContext
-instance NFData Pgm
 instance NFData SW
+instance NFData SBVExpr
 instance NFData Quantifier
 instance NFData SBVType
 instance NFData UnintKind
