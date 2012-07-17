@@ -1,12 +1,15 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Latest Hackage released version: 2.1
+Latest Hackage released version: 2.2
 
 ======================================================================
-Version 2.2, Not yet released
+Version 2.2, 2012-07-17
 
-  - Current working version
+  - Maintanence release, no new features.
+  - Update cabal dependencies, in particular fix the
+    regression with respect to latest version of the
+    containers package.
 
 ======================================================================
 Version 2.1, 2012-05-24
