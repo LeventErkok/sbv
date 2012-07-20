@@ -1120,3 +1120,4 @@ instance NFData a => NFData (Cached a) where
   rnf (Cached f) = f `seq` ()
 instance NFData a => NFData (SBV a) where
   rnf (SBV x y) = rnf x `seq` rnf y `seq` ()
+instance NFData Pgm

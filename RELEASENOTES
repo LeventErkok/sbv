@@ -1,7 +1,18 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Latest Hackage released version: 2.2
+Latest Hackage released version: 2.3
+
+======================================================================
+Version 2.3, 2012-07-20
+
+  - Maintanence release, no new features.
+  - Tweak cabal dependencies to avoid using packages that are newer
+    than those that come with ghc-7.4.2. Apparently this is a no-no
+    that breaks many things, see the discussion in this thread:
+      http://www.haskell.org/pipermail/haskell-cafe/2012-July/102352.html
+    In particular, the use of containers >= 0.5 is *not* OK until we have
+    a version of GHC that comes with that version.
 
 ======================================================================
 Version 2.2, 2012-07-17

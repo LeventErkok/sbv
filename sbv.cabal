@@ -1,5 +1,5 @@
 Name:          sbv
-Version:       2.2
+Version:       2.3
 Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math, SMT
 Synopsis:      SMT Based Verification: Symbolic Haskell theorem prover using SMT solving.
 Description:   Express properties about Haskell programs and automatically prove them using SMT
@@ -114,16 +114,19 @@ Library
                     TupleSections
                     TypeOperators
                     TypeSynonymInstances
-  Build-Depends   : array               >= 0.4.0.0
-                  , base                >= 3 && < 5
-                  , containers          >= 0.5.0.0
-                  , deepseq             >= 1.3.0.0
-                  , directory           >= 1.1.0.2
-                  , filepath            >= 1.3.0.0
+  Build-Depends   : base >= 4 && < 5
+                  -- Be careful with versions of packages that come with "latest" GHC,
+                  -- need to update this as new GHC releases incorporate new packages
+                  , array               == 0.4.0.0
+                  , containers          == 0.4.2.1
+                  , deepseq             == 1.3.0.0
+                  , directory           == 1.1.0.2
+                  , filepath            == 1.3.0.0
+                  , old-time            == 1.1.0.0
+                  , pretty              == 1.1.1.0
+                  , process             == 1.1.0.1
+                  -- following are pure hackage packages, thus we can be more relaxed
                   , mtl                 >= 2.1.2
-                  , old-time            >= 1.1.0.0
-                  , pretty              >= 1.1.1.0
-                  , process             >= 1.1.0.1
                   , QuickCheck          >= 2.5
                   , random              >= 1.0.1.1
                   , strict-concurrency  >= 0.2.4.1
@@ -189,11 +192,15 @@ Executable SBVUnitTests
                     RankNTypes
                     ScopedTypeVariables
                     TupleSections
-  Build-depends   : base      >= 3 && < 5
-                  , directory >= 1.0.1.1
-                  , HUnit     >= 1.2.4.2
-                  , filepath  >= 1.1.0.4
-                  , process   >= 1.0.1.3
+  Build-depends   : base >= 4 && < 5
+                  -- Be careful with versions of packages that come with "latest" GHC,
+                  -- need to update this as new GHC releases incorporate new packages
+                  , directory == 1.1.0.2
+                  , filepath  == 1.3.0.0
+                  , process   == 1.1.0.1
+                  -- apparently HUnit 1.2.5.0 has some cabal issues..
+                  , HUnit     == 1.2.4.3
+                  -- self dependence on sbv
                   , sbv
   Hs-Source-Dirs  : SBVUnitTest
   main-is         : SBVUnitTest.hs
