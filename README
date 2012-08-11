@@ -98,7 +98,7 @@ Make sure the executables for the solvers are in your path. Alternatively, you c
 of the yices executable in the environment variable `SBV_YICES` and the options to yices in `SBV_YICES_OPTIONS`.
 (The default for the latter is `"-m -f"`). Similarly the environment variables `SBV_Z3` and `SBV_Z3_OPTIONS` can
 be used for choosing executable location and custom options for Z3.  (The default for the latter is
-`"/in /smt2"` on Windows and `"-in -smt2"` on Mac and Linux. You should use Z3 version 3.2 or later.)
+`"/in /smt2"` on Windows and `"-in -smt2"` on Mac and Linux. You should use Z3 version 4.1 or later.)
 
 Examples
 =========
