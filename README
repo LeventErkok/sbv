@@ -24,6 +24,11 @@ The predicates are just regular Haskell functions over symbolic signed and unsig
 bit-vectors. Functions for checking satisfiability (`sat` and `allSat`) are also provided.
 In addition, functions using the SBV library can be compiled to C automatically.
 
+Build Status
+============
+SBV uses Travis-CI's automated build infrastructure, making a build for each commit. Current build status:
+[![Build Status](https://secure.travis-ci.org/LeventErkok/sbv.png?branch=master)](http://travis-ci.org/LeventErkok/sbv)
+
 Resources
 =========
 The sbv library is hosted at [http://github.com/LeventErkok/sbv](http://github.com/LeventErkok/sbv).
