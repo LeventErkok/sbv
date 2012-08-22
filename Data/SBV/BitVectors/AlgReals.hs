@@ -15,10 +15,11 @@
 
 module Data.SBV.BitVectors.AlgReals (AlgReal(..), mkPolyReal, algRealToSMTLib2, algRealToHaskell, mergeAlgReals) where
 
-import Data.List     (sortBy, isPrefixOf, partition)
-import Data.Ratio    ((%), numerator, denominator)
-import Data.Function (on)
+import Data.List       (sortBy, isPrefixOf, partition)
+import Data.Ratio      ((%), numerator, denominator)
+import Data.Function   (on)
 import System.Random
+import Test.QuickCheck (Arbitrary(..))
 
 -- | Algebraic reals. Note that the representation is left abstract. We represent
 -- rational results explicitly, while the roots-of-polynomials are represented
@@ -198,3 +199,7 @@ mergeAlgReals _ f@(AlgRational e1 r1) s@(AlgRational e2 r2)
   | e1                   = f
   | e2                   = s
 mergeAlgReals m _ _ = error m
+
+-- Quickcheck instance
+instance Arbitrary AlgReal where
+  arbitrary = AlgRational True `fmap` arbitrary
