@@ -1,4 +1,4 @@
-SBV: A library for Symbolic Bitvectors
+SBV: SMT Based Verification for Haskell
 
 Copyright (c) 2010-2012, Levent Erkok (erkokl@gmail.com)
 All rights reserved.
