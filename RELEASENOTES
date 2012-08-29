@@ -8,6 +8,11 @@ Version 2.4, Not yet released
 
   - Add missing QuickCheck instance for SReal
   - Documentation tweaks, typo fixes etc.
+  - Rename BVDivisible class to SDivisible; since SInteger
+    is also an instance of this class, and SDivisible is a
+    more appropriate name to start with. Also add sQuot and sRem
+    methods; along with sDivMod, sDiv, and sMod, with usual
+    semantics. 
 
 ======================================================================
 Version 2.3, 2012-07-20

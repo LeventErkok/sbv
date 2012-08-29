@@ -1,2 +1,2 @@
 Satisfiable. Model:
-  s0 = 28 :: SWord16
+  s0 = 28 :: SInteger

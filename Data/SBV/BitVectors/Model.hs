@@ -754,64 +754,64 @@ class SDivisible a where
   sDiv     :: a -> a -> a
   sMod     :: a -> a -> a
 
-  sQuot x y = fst $ sQuotRem x y
-  sRem  x y = snd $ sQuotRem x y
-  sDiv  x y = fst $ sDivMod  x y
-  sMod  x y = snd $ sDivMod  x y
+  x `sQuot` y = fst $ x `sQuotRem` y
+  x `sRem`  y = snd $ x `sQuotRem` y
+  x `sDiv`  y = fst $ x `sDivMod`  y
+  x `sMod`  y = snd $ x `sDivMod`  y
 
 instance SDivisible Word64 where
   sQuotRem x 0 = (0, x)
   sQuotRem x y = x `quotRem` y
   sDivMod  x 0 = (0, x)
-  sDivMod  x y = x `quotRem` y
+  sDivMod  x y = x `divMod` y
 
 instance SDivisible Int64 where
   sQuotRem x 0 = (0, x)
   sQuotRem x y = x `quotRem` y
   sDivMod  x 0 = (0, x)
-  sDivMod  x y = x `quotRem` y
+  sDivMod  x y = x `divMod` y
 
 instance SDivisible Word32 where
   sQuotRem x 0 = (0, x)
   sQuotRem x y = x `quotRem` y
   sDivMod  x 0 = (0, x)
-  sDivMod  x y = x `quotRem` y
+  sDivMod  x y = x `divMod` y
 
 instance SDivisible Int32 where
   sQuotRem x 0 = (0, x)
   sQuotRem x y = x `quotRem` y
   sDivMod  x 0 = (0, x)
-  sDivMod  x y = x `quotRem` y
+  sDivMod  x y = x `divMod` y
 
 instance SDivisible Word16 where
   sQuotRem x 0 = (0, x)
   sQuotRem x y = x `quotRem` y
   sDivMod  x 0 = (0, x)
-  sDivMod  x y = x `quotRem` y
+  sDivMod  x y = x `divMod` y
 
 instance SDivisible Int16 where
   sQuotRem x 0 = (0, x)
   sQuotRem x y = x `quotRem` y
   sDivMod  x 0 = (0, x)
-  sDivMod  x y = x `quotRem` y
+  sDivMod  x y = x `divMod` y
 
 instance SDivisible Word8 where
   sQuotRem x 0 = (0, x)
   sQuotRem x y = x `quotRem` y
   sDivMod  x 0 = (0, x)
-  sDivMod  x y = x `quotRem` y
+  sDivMod  x y = x `divMod` y
 
 instance SDivisible Int8 where
   sQuotRem x 0 = (0, x)
   sQuotRem x y = x `quotRem` y
   sDivMod  x 0 = (0, x)
-  sDivMod  x y = x `quotRem` y
+  sDivMod  x y = x `divMod` y
 
 instance SDivisible Integer where
   sQuotRem x 0 = (0, x)
   sQuotRem x y = x `quotRem` y
   sDivMod  x 0 = (0, x)
-  sDivMod  x y = x `quotRem` y
+  sDivMod  x y = x `divMod` y
 
 instance SDivisible CW where
   sQuotRem a b
@@ -825,39 +825,39 @@ instance SDivisible CW where
 
 instance SDivisible SWord64 where
   sQuotRem = liftQRem
-  sDivMod  = liftDMod
+  sDivMod  = liftSMod
 
 instance SDivisible SInt64 where
   sQuotRem = liftQRem
-  sDivMod  = liftDMod
+  sDivMod  = liftSMod
 
 instance SDivisible SWord32 where
   sQuotRem = liftQRem
-  sDivMod  = liftDMod
+  sDivMod  = liftSMod
 
 instance SDivisible SInt32 where
   sQuotRem = liftQRem
-  sDivMod  = liftDMod
+  sDivMod  = liftSMod
 
 instance SDivisible SWord16 where
   sQuotRem = liftQRem
-  sDivMod  = liftDMod
+  sDivMod  = liftSMod
 
 instance SDivisible SInt16 where
   sQuotRem = liftQRem
-  sDivMod  = liftDMod
+  sDivMod  = liftSMod
 
 instance SDivisible SWord8 where
   sQuotRem = liftQRem
-  sDivMod  = liftDMod
+  sDivMod  = liftSMod
 
 instance SDivisible SInt8 where
   sQuotRem = liftQRem
-  sDivMod  = liftDMod
+  sDivMod  = liftSMod
 
 instance SDivisible SInteger where
   sQuotRem = liftQRem
-  sDivMod  = liftDMod
+  sDivMod  = liftSMod
 
 liftQRem :: (SymWord a, Num a, SDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
 liftQRem x y = ite (y .== 0) (0, x) (qr x y)
@@ -867,13 +867,9 @@ liftQRem x y = ite (y .== 0) (0, x) (qr x y)
                                    sw2 <- sbvToSW st b
                                    mkSymOp o st sgnsz sw1 sw2
 
-liftDMod :: (SymWord a, Num a, SDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
-liftDMod x y = ite (y .== 0) (0, x) (dm x y)
-  where dm (SBV sgnsz (Left a)) (SBV _ (Left b)) = let (d, m) = sDivMod a b in (SBV sgnsz (Left d), SBV sgnsz (Left m))
-        dm a@(SBV sgnsz _)      b                = (SBV sgnsz (Right (cache (mk Quot))), SBV sgnsz (Right (cache (mk Rem))))
-                where mk o st = do sw1 <- sbvToSW st a
-                                   sw2 <- sbvToSW st b
-                                   mkSymOp o st sgnsz sw1 sw2
+liftSMod :: (SymWord a, Num a, SDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
+liftSMod x y = ite (signum r .== negate (signum y)) (q-1, r+y) qr
+   where qr@(q, r) = x `liftQRem` y
 
 -- Quickcheck interface
 
