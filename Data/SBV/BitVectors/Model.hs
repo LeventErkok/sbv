@@ -825,39 +825,39 @@ instance SDivisible CW where
 
 instance SDivisible SWord64 where
   sQuotRem = liftQRem
-  sDivMod  = liftSMod
+  sDivMod  = liftDMod
 
 instance SDivisible SInt64 where
   sQuotRem = liftQRem
-  sDivMod  = liftSMod
+  sDivMod  = liftDMod
 
 instance SDivisible SWord32 where
   sQuotRem = liftQRem
-  sDivMod  = liftSMod
+  sDivMod  = liftDMod
 
 instance SDivisible SInt32 where
   sQuotRem = liftQRem
-  sDivMod  = liftSMod
+  sDivMod  = liftDMod
 
 instance SDivisible SWord16 where
   sQuotRem = liftQRem
-  sDivMod  = liftSMod
+  sDivMod  = liftDMod
 
 instance SDivisible SInt16 where
   sQuotRem = liftQRem
-  sDivMod  = liftSMod
+  sDivMod  = liftDMod
 
 instance SDivisible SWord8 where
   sQuotRem = liftQRem
-  sDivMod  = liftSMod
+  sDivMod  = liftDMod
 
 instance SDivisible SInt8 where
   sQuotRem = liftQRem
-  sDivMod  = liftSMod
+  sDivMod  = liftDMod
 
 instance SDivisible SInteger where
   sQuotRem = liftQRem
-  sDivMod  = liftSMod
+  sDivMod  = liftDMod
 
 liftQRem :: (SymWord a, Num a, SDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
 liftQRem x y = ite (y .== 0) (0, x) (qr x y)
@@ -867,8 +867,8 @@ liftQRem x y = ite (y .== 0) (0, x) (qr x y)
                                    sw2 <- sbvToSW st b
                                    mkSymOp o st sgnsz sw1 sw2
 
-liftSMod :: (SymWord a, Num a, SDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
-liftSMod x y = ite (signum r .== negate (signum y)) (q-1, r+y) qr
+liftDMod :: (SymWord a, Num a, SDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
+liftDMod x y = ite (signum r .== negate (signum y)) (q-1, r+y) qr
    where qr@(q, r) = x `liftQRem` y
 
 -- Quickcheck interface
