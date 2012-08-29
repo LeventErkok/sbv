@@ -4,6 +4,12 @@ GitHub:  <http://github.com/LeventErkok/sbv>
 Latest Hackage released version: 2.3
 
 ======================================================================
+Version 2.4, Not yet released
+
+  - Add missing QuickCheck instance for SReal
+  - Documentation tweaks, typo fixes etc.
+
+======================================================================
 Version 2.3, 2012-07-20
 
   - Maintanence release, no new features.

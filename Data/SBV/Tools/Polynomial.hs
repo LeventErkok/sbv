@@ -27,7 +27,7 @@ import Data.SBV.BitVectors.Splittable
 import Data.SBV.Utils.Boolean
 
 -- | Implements polynomial addition, multiplication, division, and modulus operations
--- over GF(2^n).  NB. Similar to 'bvQuotRem', division by @0@ is interpreted as follows:
+-- over GF(2^n).  NB. Similar to 'sQuotRem', division by @0@ is interpreted as follows:
 --
 --     @x `pDivMod` 0 = (0, x)@
 --

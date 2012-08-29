@@ -21,7 +21,7 @@
 {-# LANGUAGE Rank2Types             #-}
 
 module Data.SBV.BitVectors.Model (
-    Mergeable(..), EqSymbolic(..), OrdSymbolic(..), BVDivisible(..), Uninterpreted(..), SNum
+    Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), SNum
   , sbvTestBit, sbvPopCount, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
@@ -731,96 +731,146 @@ enumCvt w x = case unliteral x of
                 Nothing -> error $ "Enum." ++ w ++ "{" ++ showType x ++ "}: Called on symbolic value " ++ show x
                 Just v  -> fromIntegral v
 
--- | The 'BVDivisible' class captures the essence of division of words.
+-- | The 'SDivisible' class captures the essence of division.
 -- Unfortunately we cannot use Haskell's 'Integral' class since the 'Real'
 -- and 'Enum' superclasses are not implementable for symbolic bit-vectors.
--- However, 'quotRem' makes perfect sense, and the 'BVDivisible' class captures
+-- However, 'quotRem' and 'divMod' makes perfect sense, and the 'SDivisible' class captures
 -- this operation. One issue is how division by 0 behaves. The verification
 -- technology requires total functions, and there are several design choices
 -- here. We follow Isabelle/HOL approach of assigning the value 0 for division
 -- by 0. Therefore, we impose the following law:
 --
---     @ x `bvQuotRem` 0 = (0, x) @
+--     @ x `sQuotRem` 0 = (0, x) @
+--     @ x `sDivMod`  0 = (0, x) @
 --
 -- Note that our instances implement this law even when @x@ is @0@ itself.
 --
--- Minimal complete definition: 'bvQuotRem'
-class BVDivisible a where
-  bvQuotRem :: a -> a -> (a, a)
+-- Minimal complete definition: 'sQuotRem', 'sDivMod'
+class SDivisible a where
+  sQuotRem :: a -> a -> (a, a)
+  sDivMod  :: a -> a -> (a, a)
+  sQuot    :: a -> a -> a
+  sRem     :: a -> a -> a
+  sDiv     :: a -> a -> a
+  sMod     :: a -> a -> a
 
-instance BVDivisible Word64 where
-  bvQuotRem x 0 = (0, x)
-  bvQuotRem x y = x `quotRem` y
+  sQuot x y = fst $ sQuotRem x y
+  sRem  x y = snd $ sQuotRem x y
+  sDiv  x y = fst $ sDivMod  x y
+  sMod  x y = snd $ sDivMod  x y
 
-instance BVDivisible Int64 where
-  bvQuotRem x 0 = (0, x)
-  bvQuotRem x y = x `quotRem` y
+instance SDivisible Word64 where
+  sQuotRem x 0 = (0, x)
+  sQuotRem x y = x `quotRem` y
+  sDivMod  x 0 = (0, x)
+  sDivMod  x y = x `quotRem` y
 
-instance BVDivisible Word32 where
-  bvQuotRem x 0 = (0, x)
-  bvQuotRem x y = x `quotRem` y
+instance SDivisible Int64 where
+  sQuotRem x 0 = (0, x)
+  sQuotRem x y = x `quotRem` y
+  sDivMod  x 0 = (0, x)
+  sDivMod  x y = x `quotRem` y
 
-instance BVDivisible Int32 where
-  bvQuotRem x 0 = (0, x)
-  bvQuotRem x y = x `quotRem` y
+instance SDivisible Word32 where
+  sQuotRem x 0 = (0, x)
+  sQuotRem x y = x `quotRem` y
+  sDivMod  x 0 = (0, x)
+  sDivMod  x y = x `quotRem` y
 
-instance BVDivisible Word16 where
-  bvQuotRem x 0 = (0, x)
-  bvQuotRem x y = x `quotRem` y
+instance SDivisible Int32 where
+  sQuotRem x 0 = (0, x)
+  sQuotRem x y = x `quotRem` y
+  sDivMod  x 0 = (0, x)
+  sDivMod  x y = x `quotRem` y
 
-instance BVDivisible Int16 where
-  bvQuotRem x 0 = (0, x)
-  bvQuotRem x y = x `quotRem` y
+instance SDivisible Word16 where
+  sQuotRem x 0 = (0, x)
+  sQuotRem x y = x `quotRem` y
+  sDivMod  x 0 = (0, x)
+  sDivMod  x y = x `quotRem` y
 
-instance BVDivisible Word8 where
-  bvQuotRem x 0 = (0, x)
-  bvQuotRem x y = x `quotRem` y
+instance SDivisible Int16 where
+  sQuotRem x 0 = (0, x)
+  sQuotRem x y = x `quotRem` y
+  sDivMod  x 0 = (0, x)
+  sDivMod  x y = x `quotRem` y
 
-instance BVDivisible Int8 where
-  bvQuotRem x 0 = (0, x)
-  bvQuotRem x y = x `quotRem` y
+instance SDivisible Word8 where
+  sQuotRem x 0 = (0, x)
+  sQuotRem x y = x `quotRem` y
+  sDivMod  x 0 = (0, x)
+  sDivMod  x y = x `quotRem` y
 
-instance BVDivisible Integer where
-  bvQuotRem x 0 = (0, x)
-  bvQuotRem x y = x `quotRem` y
+instance SDivisible Int8 where
+  sQuotRem x 0 = (0, x)
+  sQuotRem x y = x `quotRem` y
+  sDivMod  x 0 = (0, x)
+  sDivMod  x y = x `quotRem` y
 
-instance BVDivisible CW where
-  bvQuotRem a b
+instance SDivisible Integer where
+  sQuotRem x 0 = (0, x)
+  sQuotRem x y = x `quotRem` y
+  sDivMod  x 0 = (0, x)
+  sDivMod  x y = x `quotRem` y
+
+instance SDivisible CW where
+  sQuotRem a b
     | CWInteger x <- cwVal a, CWInteger y <- cwVal b
-    = let (r1, r2) = bvQuotRem x y in (a { cwVal = CWInteger r1 }, b { cwVal = CWInteger r2 })
-  bvQuotRem a b = error $ "SBV.liftQRem: impossible, unexpected args received: " ++ show (a, b)
+    = let (r1, r2) = sQuotRem x y in (a { cwVal = CWInteger r1 }, b { cwVal = CWInteger r2 })
+  sQuotRem a b = error $ "SBV.sQuotRem: impossible, unexpected args received: " ++ show (a, b)
+  sDivMod a b
+    | CWInteger x <- cwVal a, CWInteger y <- cwVal b
+    = let (r1, r2) = sDivMod x y in (a { cwVal = CWInteger r1 }, b { cwVal = CWInteger r2 })
+  sDivMod a b = error $ "SBV.sDivMod: impossible, unexpected args received: " ++ show (a, b)
 
-instance BVDivisible SWord64 where
-  bvQuotRem = liftQRem
+instance SDivisible SWord64 where
+  sQuotRem = liftQRem
+  sDivMod  = liftDMod
 
-instance BVDivisible SInt64 where
-  bvQuotRem = liftQRem
+instance SDivisible SInt64 where
+  sQuotRem = liftQRem
+  sDivMod  = liftDMod
 
-instance BVDivisible SWord32 where
-  bvQuotRem = liftQRem
+instance SDivisible SWord32 where
+  sQuotRem = liftQRem
+  sDivMod  = liftDMod
 
-instance BVDivisible SInt32 where
-  bvQuotRem = liftQRem
+instance SDivisible SInt32 where
+  sQuotRem = liftQRem
+  sDivMod  = liftDMod
 
-instance BVDivisible SWord16 where
-  bvQuotRem = liftQRem
+instance SDivisible SWord16 where
+  sQuotRem = liftQRem
+  sDivMod  = liftDMod
 
-instance BVDivisible SInt16 where
-  bvQuotRem = liftQRem
+instance SDivisible SInt16 where
+  sQuotRem = liftQRem
+  sDivMod  = liftDMod
 
-instance BVDivisible SWord8 where
-  bvQuotRem = liftQRem
+instance SDivisible SWord8 where
+  sQuotRem = liftQRem
+  sDivMod  = liftDMod
 
-instance BVDivisible SInt8 where
-  bvQuotRem = liftQRem
+instance SDivisible SInt8 where
+  sQuotRem = liftQRem
+  sDivMod  = liftDMod
 
-instance BVDivisible SInteger where
-  bvQuotRem = liftQRem
+instance SDivisible SInteger where
+  sQuotRem = liftQRem
+  sDivMod  = liftDMod
 
-liftQRem :: (SymWord a, Num a, BVDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
+liftQRem :: (SymWord a, Num a, SDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
 liftQRem x y = ite (y .== 0) (0, x) (qr x y)
-  where qr (SBV sgnsz (Left a)) (SBV _ (Left b)) = let (q, r) = bvQuotRem a b in (SBV sgnsz (Left q), SBV sgnsz (Left r))
+  where qr (SBV sgnsz (Left a)) (SBV _ (Left b)) = let (q, r) = sQuotRem a b in (SBV sgnsz (Left q), SBV sgnsz (Left r))
         qr a@(SBV sgnsz _)      b                = (SBV sgnsz (Right (cache (mk Quot))), SBV sgnsz (Right (cache (mk Rem))))
+                where mk o st = do sw1 <- sbvToSW st a
+                                   sw2 <- sbvToSW st b
+                                   mkSymOp o st sgnsz sw1 sw2
+
+liftDMod :: (SymWord a, Num a, SDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
+liftDMod x y = ite (y .== 0) (0, x) (dm x y)
+  where dm (SBV sgnsz (Left a)) (SBV _ (Left b)) = let (d, m) = sDivMod a b in (SBV sgnsz (Left d), SBV sgnsz (Left m))
+        dm a@(SBV sgnsz _)      b                = (SBV sgnsz (Right (cache (mk Quot))), SBV sgnsz (Right (cache (mk Rem))))
                 where mk o st = do sw1 <- sbvToSW st a
                                    sw2 <- sbvToSW st b
                                    mkSymOp o st sgnsz sw1 sw2

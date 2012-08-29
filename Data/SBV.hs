@@ -133,7 +133,7 @@ module Data.SBV (
   -- ** Symbolic numbers
   , SNum
   -- ** Division
-  , BVDivisible(..)
+  , SDivisible(..)
   -- ** The Boolean class
   , Boolean(..)
   -- *** Generalizations of boolean operations
@@ -387,7 +387,7 @@ bit-vectors. The operations that are restricted to bounded word/int sizes are:
 
    * Extraction and concatenation: 'split', '#', and 'extend' (see the 'Splittable' class)
 
-Usual arithmetic ('+', '-', '*', 'bvQuotRem') and logical operations ('.<', '.<=', '.>', '.>=', '.==', './=') operations are
+Usual arithmetic ('+', '-', '*', 'sQuotRem', 'sDivMod') and logical operations ('.<', '.<=', '.>', '.>=', '.==', './=') operations are
 supported for 'SInteger' fully, both in programming and verification modes.
 -}
 

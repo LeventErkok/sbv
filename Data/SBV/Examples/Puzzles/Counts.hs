@@ -39,8 +39,8 @@ count n cnts = ite (n .< 10)
                    (ite (n .< 100)
                         (upd d1 (upd d2 cnts))            -- two digits
                         (upd d1 (upd d2 (upd d3 cnts))))  -- three digits
-  where (r1, d1)   = n  `bvQuotRem` 10
-        (d3, d2)   = r1 `bvQuotRem` 10
+  where (r1, d1)   = n  `sQuotRem` 10
+        (d3, d2)   = r1 `sQuotRem` 10
         upd d = zipWith inc [0..]
           where inc i c = ite (i .== d) (c+1) c
 

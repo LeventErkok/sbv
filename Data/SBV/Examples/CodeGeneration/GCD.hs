@@ -35,7 +35,7 @@ sgcd a b = go a b 12
         go x y c = ite (c .== 0 ||| y .== 0)   -- stop if y is 0, or if we reach the recursion depth
                        x
                        (go y y' (c-1))
-          where (_, y') = x `bvQuotRem` y
+          where (_, y') = x `sQuotRem` y
 
 -----------------------------------------------------------------------------
 -- * Verification
@@ -58,8 +58,8 @@ sgcdIsCorrect x y k = ite (y  .== 0)                        -- if y is 0
                           (isCommonDivisor k ==> k' .>= k)) -- if k is a common divisor as well, then k' is at least as large as k
   where k' = sgcd x y
         isCommonDivisor a = z1 .== 0 &&& z2 .== 0
-           where (_, z1) = x `bvQuotRem` a
-                 (_, z2) = y `bvQuotRem` a
+           where (_, z1) = x `sQuotRem` a
+                 (_, z2) = y `sQuotRem` a
 
 -----------------------------------------------------------------------------
 -- * Code generation
