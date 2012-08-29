@@ -163,7 +163,7 @@ instance Show SBVType where
 
 -- | Symbolic operations
 data Op = Plus | Times | Minus
-        | Quot | Rem -- quot and rem are unsigned only
+        | Quot | Rem
         | Equal | NotEqual
         | LessThan | GreaterThan | LessEq | GreaterEq
         | Ite

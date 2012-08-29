@@ -745,6 +745,8 @@ enumCvt w x = case unliteral x of
 --
 -- Note that our instances implement this law even when @x@ is @0@ itself.
 --
+-- NB. 'quot' truncates toward zero, while 'div' truncates toward negative infinity.
+--
 -- Minimal complete definition: 'sQuotRem', 'sDivMod'
 class SDivisible a where
   sQuotRem :: a -> a -> (a, a)

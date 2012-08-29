@@ -507,6 +507,8 @@ ppExpr cfg consts (SBVApp op opArgs) = p op (map (showSW cfg consts) opArgs)
                                                                      Just i  -> (True, canOverflow True i)
                                                KUninterpreted s -> die $ "Uninterpreted sort: " ++ s
         -- Div/Rem should be careful on 0, in the SBV world x `div` 0 is 0, x `rem` 0 is x
+        -- NB: Quot is supposed to truncate toward 0; Not clear to me if C guarantees this behavior.
+        -- Brief googling suggests C99 does indeed truncate toward 0, but other C compilers might differ.
         p Quot [a, b] = parens (b <+> text "== 0") <+> text "?" <+> text "0" <+> text ":" <+> parens (a <+> text "/" <+> b)
         p Rem  [a, b] = parens (b <+> text "== 0") <+> text "?" <+>    a     <+> text ":" <+> parens (a <+> text "%" <+> b)
         p o [a, b]
