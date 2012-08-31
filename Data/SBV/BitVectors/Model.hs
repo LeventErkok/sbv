@@ -14,6 +14,7 @@
 {-# LANGUAGE TypeSynonymInstances   #-}
 {-# LANGUAGE BangPatterns           #-}
 {-# LANGUAGE PatternGuards          #-}
+{-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
@@ -857,10 +858,6 @@ instance SDivisible SInt8 where
   sQuotRem = liftQRem
   sDivMod  = liftDMod
 
-instance SDivisible SInteger where
-  sQuotRem = liftQRem
-  sDivMod  = liftDMod
-
 liftQRem :: (SymWord a, Num a, SDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
 liftQRem x y = ite (y .== 0) (0, x) (qr x y)
   where qr (SBV sgnsz (Left a)) (SBV _ (Left b)) = let (q, r) = sQuotRem a b in (SBV sgnsz (Left q), SBV sgnsz (Left r))
@@ -869,9 +866,21 @@ liftQRem x y = ite (y .== 0) (0, x) (qr x y)
                                    sw2 <- sbvToSW st b
                                    mkSymOp o st sgnsz sw1 sw2
 
-liftDMod :: (SymWord a, Num a, SDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
+-- Conversion from quotRem (truncate to 0) to divMod (truncate towards negative infinity)
+liftDMod :: (SymWord a, Num a, SDivisible a, SDivisible (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
 liftDMod x y = ite (signum r .== negate (signum y)) (q-1, r+y) qr
-   where qr@(q, r) = x `liftQRem` y
+   where qr@(q, r) = x `sQuotRem` y
+
+-- SInteger instance for quotRem/divMod are tricky!
+-- SMT-Lib only has Euclidean operations, but Haskell
+-- uses "truncate to 0" for quotRem, and "truncate to negative
+-- infinity" for divMod. So, we cannot just use the above liftings directly.
+instance SDivisible SInteger where
+  sDivMod = liftDMod
+  sQuotRem x y = ite (y .== 0) (0, x) (qE+i, rE-i*y)
+    where (qE, rE) = liftQRem x y   -- for integers, this is euclidean due to SMTLib semantics
+          i = ite (x .>= 0 ||| rE .== 0) 0
+            $ ite (y .>  0)              1 (-1)
 
 -- Quickcheck interface
 
