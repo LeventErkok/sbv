@@ -19,5 +19,5 @@ import SBVTest
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
-  "temperature" ~: sat (revOf `fmap` exists_) `goldCheck` "temperature.gold"
+  "temperature" ~: allSat (revOf `fmap` exists_) `goldCheck` "temperature.gold"
  ]
