@@ -26,12 +26,13 @@ import SBVUnitTestBuildTime (buildTime)
 
 -- To add a new collection of tests, import below and add to testCollection variable
 import qualified TestSuite.Arrays.Memory                  as T01_01(testSuite)
-import qualified TestSuite.Basics.Arithmetic              as T02_01(testSuite)
-import qualified TestSuite.Basics.BasicTests              as T02_02(testSuite)
-import qualified TestSuite.Basics.Higher                  as T02_03(testSuite)
-import qualified TestSuite.Basics.Index                   as T02_04(testSuite)
-import qualified TestSuite.Basics.ProofTests              as T02_05(testSuite)
-import qualified TestSuite.Basics.QRem                    as T02_06(testSuite)
+import qualified TestSuite.Basics.ArithNoSolver           as T02_01(testSuite)
+import qualified TestSuite.Basics.ArithSolver             as T02_02(testSuite)
+import qualified TestSuite.Basics.BasicTests              as T02_03(testSuite)
+import qualified TestSuite.Basics.Higher                  as T02_04(testSuite)
+import qualified TestSuite.Basics.Index                   as T02_05(testSuite)
+import qualified TestSuite.Basics.ProofTests              as T02_06(testSuite)
+import qualified TestSuite.Basics.QRem                    as T02_07(testSuite)
 import qualified TestSuite.BitPrecise.BitTricks           as T03_01(testSuite)
 import qualified TestSuite.BitPrecise.Legato              as T03_02(testSuite)
 import qualified TestSuite.BitPrecise.MergeSort           as T03_03(testSuite)
@@ -69,12 +70,13 @@ import qualified TestSuite.Uninterpreted.Uninterpreted    as T10_03(testSuite)
 testCollection :: [(String, SBVTestSuite)]
 testCollection = [
        ("mem",         T01_01.testSuite)
-     , ("arith",       T02_01.testSuite)
-     , ("basic",       T02_02.testSuite)
-     , ("higher",      T02_03.testSuite)
-     , ("index",       T02_04.testSuite)
-     , ("proof",       T02_05.testSuite)
-     , ("qrem",        T02_06.testSuite)
+     , ("arithCF",     T02_01.testSuite)
+     , ("arith",       T02_02.testSuite)
+     , ("basic",       T02_03.testSuite)
+     , ("higher",      T02_04.testSuite)
+     , ("index",       T02_05.testSuite)
+     , ("proof",       T02_06.testSuite)
+     , ("qrem",        T02_07.testSuite)
      , ("bitTricks",   T03_01.testSuite)
      , ("legato",      T03_02.testSuite)
      , ("mergeSort",   T03_03.testSuite)
@@ -121,7 +123,7 @@ main = do putStrLn $ "*** SBVUnitTester, version: " ++ showVersion version ++ ",
             ["-l"] -> showTargets
             -- undocumented really
             ("-c":ts) -> createGolds (unwords ts)
-            _      -> run tgts False []
+            _         -> run tgts False []
 
 createGolds :: String -> IO ()
 createGolds tgts = run (words tgts) True ["SBVUnitTest/GoldFiles"]

@@ -221,7 +221,8 @@ Executable SBVUnitTests
                   , Examples.Puzzles.Temperature
                   , Examples.Uninterpreted.Uninterpreted
                   , TestSuite.Arrays.Memory
-                  , TestSuite.Basics.Arithmetic
+                  , TestSuite.Basics.ArithNoSolver
+                  , TestSuite.Basics.ArithSolver
                   , TestSuite.Basics.BasicTests
                   , TestSuite.Basics.Higher
                   , TestSuite.Basics.Index
