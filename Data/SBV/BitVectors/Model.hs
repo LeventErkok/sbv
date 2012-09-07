@@ -868,13 +868,13 @@ liftQRem x y = ite (y .== 0) (0, x) (qr x y)
 
 -- Conversion from quotRem (truncate to 0) to divMod (truncate towards negative infinity)
 liftDMod :: (SymWord a, Num a, SDivisible a, SDivisible (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
-liftDMod x y = ite (signum r .== negate (signum y)) (q-1, r+y) qr
+liftDMod x y = ite (y .== 0) (0, x) $ ite (signum r .== negate (signum y)) (q-1, r+y) qr
    where qr@(q, r) = x `sQuotRem` y
 
 -- SInteger instance for quotRem/divMod are tricky!
 -- SMT-Lib only has Euclidean operations, but Haskell
--- uses "truncate to 0" for quotRem, and "truncate to negative
--- infinity" for divMod. So, we cannot just use the above liftings directly.
+-- uses "truncate to 0" for quotRem, and "truncate to negative infinity" for divMod.
+-- So, we cannot just use the above liftings directly.
 instance SDivisible SInteger where
   sDivMod = liftDMod
   sQuotRem x y = ite (y .== 0) (0, x) (qE+i, rE-i*y)
