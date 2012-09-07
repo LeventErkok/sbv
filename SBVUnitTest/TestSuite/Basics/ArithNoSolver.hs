@@ -1,18 +1,19 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  TestSuite.Basics.Arithmetic
+-- Module      :  TestSuite.Basics.ArithNoSolver
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for basic concrete arithmetic
+-- Test suite for basic concrete arithmetic, i.e., testing all
+-- the constant folding based arithmetic implementation in SBV
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE Rank2Types    #-}
 {-# LANGUAGE TupleSections #-}
 
-module TestSuite.Basics.Arithmetic(testSuite) where
+module TestSuite.Basics.ArithNoSolver(testSuite) where
 
 import Data.SBV
 
@@ -22,6 +23,7 @@ import SBVTest
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test $
         genReals
+     ++ genQRems
      ++ genBinTest  "+"                (+)
      ++ genBinTest  "-"                (-)
      ++ genBinTest  "*"                (*)
@@ -64,7 +66,7 @@ genBinTest nm op = map mkTest $
      ++ zipWith pair [(show x, show y, x `op` y) | x <- i64s, y <- i64s] [x `op` y | x <- si64s, y <- si64s]
      ++ zipWith pair [(show x, show y, x `op` y) | x <- iUBs, y <- iUBs] [x `op` y | x <- siUBs, y <- siUBs]
   where pair (x, y, a) b   = (x, y, show (fromIntegral a `asTypeOf` b) == show b)
-        mkTest (x, y, s) = "arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
+        mkTest (x, y, s) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
 
 genBoolTest :: String -> (forall a. Ord a => a -> a -> Bool) -> (forall a. OrdSymbolic a => a -> a -> SBool) -> [Test]
 genBoolTest nm op opS = map mkTest $
@@ -78,7 +80,7 @@ genBoolTest nm op opS = map mkTest $
      ++ zipWith pair [(show x, show y, x `op` y) | x <- i64s, y <- i64s] [x `opS` y | x <- si64s, y <- si64s]
      ++ zipWith pair [(show x, show y, x `op` y) | x <- iUBs, y <- iUBs] [x `opS` y | x <- siUBs, y <- siUBs]
   where pair (x, y, a) b   = (x, y, Just a == unliteral b)
-        mkTest (x, y, s) = "arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
+        mkTest (x, y, s) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
 
 genUnTest :: String -> (forall a. Bits a => a -> a) -> [Test]
 genUnTest nm op = map mkTest $
@@ -92,7 +94,7 @@ genUnTest nm op = map mkTest $
      ++ zipWith pair [(show x, op x) | x <- i64s] [op x | x <- si64s]
      ++ zipWith pair [(show x, op x) | x <- iUBs] [op x | x <- siUBs]
   where pair (x, a) b   = (x, show (fromIntegral a `asTypeOf` b) == show b)
-        mkTest (x, s) = "arithmetic-" ++ nm ++ "." ++ x ~: s `showsAs` "True"
+        mkTest (x, s) = "arithCF-" ++ nm ++ "." ++ x ~: s `showsAs` "True"
 
 genIntTest :: String -> (forall a. Bits a => a -> Int -> a) -> [Test]
 genIntTest nm op = map mkTest $
@@ -106,7 +108,7 @@ genIntTest nm op = map mkTest $
      ++ zipWith pair [("s64", show x, show y, x `op` y) | x <- i64s, y <- is] [x `op` y | x <- si64s, y <- is]
      ++ zipWith pair [("iUB", show x, show y, x `op` y) | x <- iUBs, y <- is] [x `op` y | x <- siUBs, y <- is]
   where pair (t, x, y, a) b       = (t, x, y, show a, show b, show (fromIntegral a `asTypeOf` b) == show b)
-        mkTest (t, x, y, a, b, s) = "arithmetic-" ++ nm ++ "." ++ t ++ "_" ++ x ++ "_" ++ y ++ "_" ++ a ++ "_" ++ b ~: s `showsAs` "True"
+        mkTest (t, x, y, a, b, s) = "arithCF-" ++ nm ++ "." ++ t ++ "_" ++ x ++ "_" ++ y ++ "_" ++ a ++ "_" ++ b ~: s `showsAs` "True"
         is = [-10 .. 10]
 
 genIntTestS :: String -> (forall a. Bits a => a -> Int -> a) -> [Test]
@@ -121,7 +123,7 @@ genIntTestS nm op = map mkTest $
      ++ zipWith pair [("s64", show x, show y, x `op` y) | x <- i64s, y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- si64s, y <- [0 .. (bitSize x - 1)]]
      ++ zipWith pair [("iUB", show x, show y, x `op` y) | x <- iUBs, y <- [0 .. 10]]              [x `op` y | x <- siUBs, y <- [0 .. 10             ]]
   where pair (t, x, y, a) b       = (t, x, y, show a, show b, show (fromIntegral a `asTypeOf` b) == show b)
-        mkTest (t, x, y, a, b, s) = "arithmetic-" ++ nm ++ "." ++ t ++ "_" ++ x ++ "_" ++ y ++ "_" ++ a ++ "_" ++ b ~: s `showsAs` "True"
+        mkTest (t, x, y, a, b, s) = "arithCF-" ++ nm ++ "." ++ t ++ "_" ++ x ++ "_" ++ y ++ "_" ++ a ++ "_" ++ b ~: s `showsAs` "True"
 
 genBlasts :: [Test]
 genBlasts = map mkTest $
@@ -165,6 +167,31 @@ genCasts = map mkTest $
          ++ [(show x, unsignCast x .== fromBitsLE (blastLE x)) | x <- si64s]
   where mkTest (x, r) = "cast-" ++ show x ~: r `showsAs` "True"
 
+genQRems :: [Test]
+genQRems = map mkTest $
+        zipWith pair [("divMod",  show x, show y, x `divMod'`  y) | x <- w8s,  y <- w8s ] [x `sDivMod`  y | x <- sw8s,  y <- sw8s ]
+     ++ zipWith pair [("divMod",  show x, show y, x `divMod'`  y) | x <- w16s, y <- w16s] [x `sDivMod`  y | x <- sw16s, y <- sw16s]
+     ++ zipWith pair [("divMod",  show x, show y, x `divMod'`  y) | x <- w32s, y <- w32s] [x `sDivMod`  y | x <- sw32s, y <- sw32s]
+     ++ zipWith pair [("divMod",  show x, show y, x `divMod'`  y) | x <- w64s, y <- w64s] [x `sDivMod`  y | x <- sw64s, y <- sw64s]
+     ++ zipWith pair [("divMod",  show x, show y, x `divMod'`  y) | x <- i8s,  y <- i8s ] [x `sDivMod`  y | x <- si8s,  y <- si8s ]
+     ++ zipWith pair [("divMod",  show x, show y, x `divMod'`  y) | x <- i16s, y <- i16s] [x `sDivMod`  y | x <- si16s, y <- si16s]
+     ++ zipWith pair [("divMod",  show x, show y, x `divMod'`  y) | x <- i32s, y <- i32s] [x `sDivMod`  y | x <- si32s, y <- si32s]
+     ++ zipWith pair [("divMod",  show x, show y, x `divMod'`  y) | x <- i64s, y <- i64s] [x `sDivMod`  y | x <- si64s, y <- si64s]
+     ++ zipWith pair [("divMod",  show x, show y, x `divMod'`  y) | x <- iUBs, y <- iUBs] [x `sDivMod`  y | x <- siUBs, y <- siUBs]
+     ++ zipWith pair [("quotRem", show x, show y, x `quotRem'` y) | x <- w8s,  y <- w8s ] [x `sQuotRem` y | x <- sw8s,  y <- sw8s ]
+     ++ zipWith pair [("quotRem", show x, show y, x `quotRem'` y) | x <- w16s, y <- w16s] [x `sQuotRem` y | x <- sw16s, y <- sw16s]
+     ++ zipWith pair [("quotRem", show x, show y, x `quotRem'` y) | x <- w32s, y <- w32s] [x `sQuotRem` y | x <- sw32s, y <- sw32s]
+     ++ zipWith pair [("quotRem", show x, show y, x `quotRem'` y) | x <- w64s, y <- w64s] [x `sQuotRem` y | x <- sw64s, y <- sw64s]
+     ++ zipWith pair [("quotRem", show x, show y, x `quotRem'` y) | x <- i8s,  y <- i8s ] [x `sQuotRem` y | x <- si8s,  y <- si8s ]
+     ++ zipWith pair [("quotRem", show x, show y, x `quotRem'` y) | x <- i16s, y <- i16s] [x `sQuotRem` y | x <- si16s, y <- si16s]
+     ++ zipWith pair [("quotRem", show x, show y, x `quotRem'` y) | x <- i32s, y <- i32s] [x `sQuotRem` y | x <- si32s, y <- si32s]
+     ++ zipWith pair [("quotRem", show x, show y, x `quotRem'` y) | x <- i64s, y <- i64s] [x `sQuotRem` y | x <- si64s, y <- si64s]
+     ++ zipWith pair [("quotRem", show x, show y, x `quotRem'` y) | x <- iUBs, y <- iUBs] [x `sQuotRem` y | x <- siUBs, y <- siUBs]
+  where divMod'  x y = if y == 0 then (0, x) else x `divMod`  y
+        quotRem' x y = if y == 0 then (0, x) else x `quotRem` y
+        pair (nm, x, y, (r1, r2)) (e1, e2)   = (nm, x, y, show (fromIntegral r1 `asTypeOf` e1, fromIntegral r2 `asTypeOf` e2) == show (e1, e2))
+        mkTest (nm, x, y, s) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
+
 genReals :: [Test]
 genReals = map mkTest $
         map ("+",)  (zipWith pair [(show x, show y, x +  y) | x <- rs, y <- rs        ] [x +   y | x <- srs,  y <- srs                       ])
@@ -178,7 +205,7 @@ genReals = map mkTest $
      ++ map ("/=",) (zipWith pair [(show x, show y, x /= y) | x <- rs, y <- rs        ] [x ./= y | x <- srs,  y <- srs                       ])
      ++ map ("/",)  (zipWith pair [(show x, show y, x /  y) | x <- rs, y <- rs, y /= 0] [x / y   | x <- srs,  y <- srs, unliteral y /= Just 0])
   where pair (x, y, a) b   = (x, y, Just a == unliteral b)
-        mkTest (nm, (x, y, s)) = "arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
+        mkTest (nm, (x, y, s)) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
 
 -- Concrete test data
 xsSigned, xsUnsigned :: (Num a, Enum a, Bounded a) => [a]
