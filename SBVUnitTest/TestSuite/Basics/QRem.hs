@@ -19,5 +19,7 @@ import SBVTest
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test [
-   "qrem" ~: assert =<< isTheorem (qrem :: SWord8 -> SWord8 -> SBool)
+   "qremW8" ~: assert =<< isTheorem (qrem :: SWord8   -> SWord8   -> SBool)
+ , "qremI8" ~: assert =<< isTheorem (qrem :: SInt8    -> SInt8    -> SBool)
+ , "qremI"  ~: assert =<< isTheorem (qrem :: SInteger -> SInteger -> SBool)
  ]
