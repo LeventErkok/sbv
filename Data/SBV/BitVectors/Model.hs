@@ -877,7 +877,11 @@ liftDMod x y = ite (y .== 0) (0, x) $ ite (signum r .== negate (signum y)) (q-1,
 -- So, we cannot just use the above liftings directly.
 instance SDivisible SInteger where
   sDivMod = liftDMod
-  sQuotRem x y = ite (y .== 0) (0, x) (qE+i, rE-i*y)
+  sQuotRem x y
+    | not (isSymbolic x || isSymbolic y)
+    = liftQRem x y
+    | True
+    = ite (y .== 0) (0, x) (qE+i, rE-i*y)
     where (qE, rE) = liftQRem x y   -- for integers, this is euclidean due to SMTLib semantics
           i = ite (x .>= 0 ||| rE .== 0) 0
             $ ite (y .>  0)              1 (-1)
