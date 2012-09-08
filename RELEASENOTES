@@ -13,6 +13,7 @@ Version 2.4, Not yet released
     more appropriate name to start with. Also add sQuot and sRem
     methods; along with sDivMod, sDiv, and sMod, with usual
     semantics. 
+  - Improve test suite, adding many constant-folding tests
 
 ======================================================================
 Version 2.3, 2012-07-20
