@@ -45,7 +45,7 @@ test: install
 	@echo "*** Starting external test suite.."
 	@$(TIME) dist/build/SBVUnitTests/SBVUnitTests -s
 	@echo "*** Starting internal cabal test suite.."
-	@$(TIME) $(CABAL) test
+	@$(TIME) SBV_Z3=doesnotexist $(CABAL) test
 	@cat dist/test/sbv*SBVBasicTests.log
 
 sdist: install
