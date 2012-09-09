@@ -14,6 +14,7 @@ Version 2.4, Not yet released
     methods; along with sDivMod, sDiv, and sMod, with usual
     semantics. 
   - Improve test suite, adding many constant-folding tests
+    and start using cabal based tests (--enable-tests option.)
 
 ======================================================================
 Version 2.3, 2012-07-20
