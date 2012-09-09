@@ -3,12 +3,11 @@
 # The sbv library is distributed with the BSD3 license. See the LICENSE file
 # in the distribution for details.
 SHELL     := /usr/bin/env bash
-SRCS      = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs | grep -v buildUtils/simplify.hs)
+TSTSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs | grep -v SBVUnitTest/SBVBasicTests.hs | grep -v buildUtils/simplify.hs)
 LINTSRCS  = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs)
 STAMPFILE = SBVUnitTest/SBVUnitTestBuildTime.hs
 DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' -or -name '*.cabal' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE))
 CABAL     = cabal
-CABPFLAGS = --disable-library-profiling --enable-documentation --ghc-options=-Werror
 SIMPLIFY  = ./buildUtils/simplify
 TIME      = /usr/bin/time
 
@@ -30,25 +29,34 @@ all: install
 
 install: $(STAMPFILE)
 
-$(STAMPFILE): $(DEPSRCS)
+$(STAMPFILE): $(DEPSRCS) Makefile
+	@-ghc-pkg unregister sbv
 	@(make -s -C buildUtils)
 	$(call mkStamp)
 	$(call mkTags)
-	@((set -o pipefail; $(CABAL) $(CABPFLAGS) install 2>&1 | $(SIMPLIFY)) || (rm $(STAMPFILE) && false))
+	@$(CABAL) configure --disable-library-profiling --enable-tests
+	@((set -o pipefail; $(CABAL) build --ghc-options=-Werror 2>&1 | $(SIMPLIFY)) || (rm $(STAMPFILE) && false))
+	@$(CABAL) copy
+	@$(CABAL) register
 
 test: install
-	@echo "Executing inline tests.."
-	@(set -o pipefail; $(TIME) doctest ${SRCS} 2>&1)
-	@echo "Starting external test suite.."
-	@$(TIME) SBVUnitTests
+	@echo "*** Starting inline tests.."
+	@(set -o pipefail; $(TIME) doctest ${TSTSRCS} 2>&1)
+	@echo "*** Starting external test suite.."
+	@$(TIME) dist/build/SBVUnitTests/SBVUnitTests -s
+	@echo "*** Starting internal cabal test suite.."
+	@$(TIME) $(CABAL) test
+	@cat dist/test/sbv*SBVBasicTests.log
 
 sdist: install
 	@(set -o pipefail; $(CABAL) sdist | $(SIMPLIFY))
 
 veryclean: clean
-	make -C buildUtils clean
+	@make -C buildUtils clean
+	@-ghc-pkg unregister sbv
+
 clean:
-	rm -rf dist $(STAMPFILE)
+	@rm -rf dist $(STAMPFILE)
 
 docs:
 	@(set -o pipefail; $(CABAL) haddock --haddock-option=--no-warnings --hyperlink-source 2>&1 | $(SIMPLIFY))
