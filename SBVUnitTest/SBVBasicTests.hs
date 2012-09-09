@@ -19,10 +19,11 @@ import Control.Monad    (unless, when)
 import System.Directory (doesDirectoryExist)
 import System.Exit      (exitWith, exitSuccess, ExitCode(..))
 import System.FilePath  ((</>))
-import Test.HUnit       (Test(..), Counts(..), runTestTT)
+import System.IO        (stderr, hPutStrLn)
+import Test.HUnit       (Test(..), Counts(..), runTestText, PutText(..), showCounts)
 
 import Data.Version     (showVersion)
-import SBVTest          (SBVTestSuite(..))
+import SBVTest          (SBVTestSuite(..), generateGoldCheck)
 import Paths_sbv        (getDataDir, version)
 
 import SBVTestCollection    (allTestCases)
@@ -46,9 +47,11 @@ checkGoldDir gd = do e <- doesDirectoryExist gd
 run :: FilePath -> IO ()
 run gd = do putStrLn $ "*** Starting SBV basic tests..\n*** Gold files at: " ++ show gd
             checkGoldDir gd
-            cts <- runTestTT $ TestList $ map (mkTst . snd) testCollection
+            (cts, _) <- runTestText (PutText put ()) $ TestList $ map (mkTst . snd) testCollection
+            hPutStrLn stderr $ showCounts cts
             decide cts
-  where mkTst (SBVTestSuite f) = f (\_ _ -> return ())
+  where mkTst (SBVTestSuite f) = f $ generateGoldCheck gd False
+        put s _ st = length s `seq` return st
 
 decide :: Counts -> IO ()
 decide (Counts c t e f) = do
