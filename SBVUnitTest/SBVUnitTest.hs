@@ -23,110 +23,19 @@ import SBVTest              (SBVTestSuite(..), generateGoldCheck)
 import Paths_sbv            (getDataDir, version)
 
 import SBVUnitTestBuildTime (buildTime)
-
--- To add a new collection of tests, import below and add to testCollection variable
-import qualified TestSuite.Arrays.Memory                  as T01_01(testSuite)
-import qualified TestSuite.Basics.ArithNoSolver           as T02_01(testSuite)
-import qualified TestSuite.Basics.ArithSolver             as T02_02(testSuite)
-import qualified TestSuite.Basics.BasicTests              as T02_03(testSuite)
-import qualified TestSuite.Basics.Higher                  as T02_04(testSuite)
-import qualified TestSuite.Basics.Index                   as T02_05(testSuite)
-import qualified TestSuite.Basics.ProofTests              as T02_06(testSuite)
-import qualified TestSuite.Basics.QRem                    as T02_07(testSuite)
-import qualified TestSuite.BitPrecise.BitTricks           as T03_01(testSuite)
-import qualified TestSuite.BitPrecise.Legato              as T03_02(testSuite)
-import qualified TestSuite.BitPrecise.MergeSort           as T03_03(testSuite)
-import qualified TestSuite.BitPrecise.PrefixSum           as T03_04(testSuite)
-import qualified TestSuite.CRC.CCITT                      as T04_01(testSuite)
-import qualified TestSuite.CRC.CCITT_Unidir               as T04_02(testSuite)
-import qualified TestSuite.CRC.GenPoly                    as T04_03(testSuite)
-import qualified TestSuite.CRC.Parity                     as T04_04(testSuite)
-import qualified TestSuite.CRC.USB5                       as T04_05(testSuite)
-import qualified TestSuite.CodeGeneration.AddSub          as T05_01(testSuite)
-import qualified TestSuite.CodeGeneration.CgTests         as T05_02(testSuite)
-import qualified TestSuite.CodeGeneration.CRC_USB5        as T05_03(testSuite)
-import qualified TestSuite.CodeGeneration.Fibonacci       as T05_04(testSuite)
-import qualified TestSuite.CodeGeneration.GCD             as T05_05(testSuite)
-import qualified TestSuite.CodeGeneration.PopulationCount as T05_06(testSuite)
-import qualified TestSuite.CodeGeneration.Uninterpreted   as T05_07(testSuite)
-import qualified TestSuite.Crypto.AES                     as T06_01(testSuite)
-import qualified TestSuite.Crypto.RC4                     as T06_02(testSuite)
-import qualified TestSuite.Existentials.CRCPolynomial     as T07_01(testSuite)
-import qualified TestSuite.Polynomials.Polynomials        as T08_01(testSuite)
-import qualified TestSuite.Puzzles.Coins                  as T09_01(testSuite)
-import qualified TestSuite.Puzzles.Counts                 as T09_02(testSuite)
-import qualified TestSuite.Puzzles.DogCatMouse            as T09_03(testSuite)
-import qualified TestSuite.Puzzles.Euler185               as T09_04(testSuite)
-import qualified TestSuite.Puzzles.MagicSquare            as T09_05(testSuite)
-import qualified TestSuite.Puzzles.NQueens                as T09_06(testSuite)
-import qualified TestSuite.Puzzles.PowerSet               as T09_07(testSuite)
-import qualified TestSuite.Puzzles.Sudoku                 as T09_08(testSuite)
-import qualified TestSuite.Puzzles.Temperature            as T09_09(testSuite)
-import qualified TestSuite.Puzzles.U2Bridge               as T09_10(testSuite)
-import qualified TestSuite.Uninterpreted.AUF              as T10_01(testSuite)
-import qualified TestSuite.Uninterpreted.Function         as T10_02(testSuite)
-import qualified TestSuite.Uninterpreted.Uninterpreted    as T10_03(testSuite)
-
-testCollection :: [(String, SBVTestSuite)]
-testCollection = [
-       ("mem",         T01_01.testSuite)
-     , ("arithCF",     T02_01.testSuite)
-     , ("arith",       T02_02.testSuite)
-     , ("basic",       T02_03.testSuite)
-     , ("higher",      T02_04.testSuite)
-     , ("index",       T02_05.testSuite)
-     , ("proof",       T02_06.testSuite)
-     , ("qrem",        T02_07.testSuite)
-     , ("bitTricks",   T03_01.testSuite)
-     , ("legato",      T03_02.testSuite)
-     , ("mergeSort",   T03_03.testSuite)
-     , ("prefixSum",   T03_04.testSuite)
-     , ("ccitt",       T04_01.testSuite)
-     , ("ccitt2",      T04_02.testSuite)
-     , ("genPoly",     T04_03.testSuite)
-     , ("parity",      T04_04.testSuite)
-     , ("usb5",        T04_05.testSuite)
-     , ("addSub",      T05_01.testSuite)
-     , ("cgtest",      T05_02.testSuite)
-     , ("cgUSB5",      T05_03.testSuite)
-     , ("fib",         T05_04.testSuite)
-     , ("gcd",         T05_05.testSuite)
-     , ("popCount",    T05_06.testSuite)
-     , ("cgUninterp",  T05_07.testSuite)
-     , ("aes",         T06_01.testSuite)
-     , ("rc4",         T06_02.testSuite)
-     , ("existPoly",   T07_01.testSuite)
-     , ("poly",        T08_01.testSuite)
-     , ("coins",       T09_01.testSuite)
-     , ("counts",      T09_02.testSuite)
-     , ("dogCatMouse", T09_03.testSuite)
-     , ("euler185",    T09_04.testSuite)
-     , ("magicSquare", T09_05.testSuite)
-     , ("nQueens",     T09_06.testSuite)
-     , ("powerset",    T09_07.testSuite)
-     , ("sudoku",      T09_08.testSuite)
-     , ("temperature", T09_09.testSuite)
-     , ("u2bridge",    T09_10.testSuite)
-     , ("auf1",        T10_01.testSuite)
-     , ("auf2",        T10_02.testSuite)
-     , ("unint",       T10_03.testSuite)
-     ]
-
--- No user serviceable parts below..
+import SBVTestCollection    (allTestCases)
 
 main :: IO ()
 main = do putStrLn $ "*** SBVUnitTester, version: " ++ showVersion version ++ ", time stamp: " ++ buildTime
           tgts <- getArgs
           case tgts of
             [x] | x `elem` ["-h", "--help", "-?"]
-                   -> putStrLn "Usage: SBVUnitTests [-l] [targets]" -- Not quite right, but sufficient
+                   -> putStrLn "Usage: SBVUnitTests [-l(ist)] [-s(kipCF)] [targets]" -- Not quite right, but sufficient
             ["-l"] -> showTargets
             -- undocumented really
-            ("-c":ts) -> createGolds (unwords ts)
-            _         -> run tgts False []
-
-createGolds :: String -> IO ()
-createGolds tgts = run (words tgts) True ["SBVUnitTest/GoldFiles"]
+            ("-c":ts) -> run ts   False True ["SBVUnitTest/GoldFiles"]
+            ("-s":ts) -> run ts   True False []
+            _         -> run tgts False False []
 
 checkGoldDir :: FilePath -> IO ()
 checkGoldDir gd = do e <- doesDirectoryExist gd
@@ -136,26 +45,31 @@ checkGoldDir gd = do e <- doesDirectoryExist gd
                                    exitWith $ ExitFailure 1
 
 allTargets :: [String]
-allTargets = map fst testCollection
+allTargets = [s | (s, _, _) <- allTestCases]
 
 showTargets :: IO ()
 showTargets = do putStrLn "Known test targets are:"
                  mapM_ (putStrLn . ("\t" ++))  allTargets
 
-run :: [String] -> Bool -> [String] -> IO ()
-run targets shouldCreate [gd] =
+run :: [String] -> Bool -> Bool -> [String] -> IO ()
+run targets skipCF shouldCreate [gd] =
         do mapM_ checkTgt targets
            putStrLn $ "*** Starting SBV unit tests..\n*** Gold files at: " ++ show gd
            checkGoldDir gd
-           cts <- runTestTT $ TestList $ map mkTst [c | (tc, c) <- testCollection, select tc]
+           cts <- runTestTT $ TestList $ map mkTst [c | (tc, needsSolver, c) <- allTestCases, select needsSolver tc]
            decide shouldCreate cts
   where mkTst (SBVTestSuite f) = f $ generateGoldCheck gd shouldCreate
-        select tc = null targets || tc `elem` targets
+        select needsSolver tc
+           | not included = False
+           | shouldCreate = True
+           | needsSolver  = True
+           | True         = not skipCF
+          where included = null targets || tc `elem` targets
         checkTgt t | t `elem` allTargets = return ()
                    | True                = do putStrLn $ "*** Unknown test target: " ++ show t
                                               exitWith $ ExitFailure 1
-run targets shouldCreate [] = getDataDir >>= \d -> run targets shouldCreate [d </> "SBVUnitTest" </> "GoldFiles"]
-run _       _            _  = error "SBVUnitTests.run: impossible happened!"
+run targets skipCF shouldCreate [] = getDataDir >>= \d -> run targets skipCF shouldCreate [d </> "SBVUnitTest" </> "GoldFiles"]
+run _       _      _            _  = error "SBVUnitTests.run: impossible happened!"
 
 decide :: Bool -> Counts -> IO ()
 decide shouldCreate (Counts c t e f) = do

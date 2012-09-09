@@ -10,6 +10,9 @@
 -- require the use of an external SMT solver.
 -----------------------------------------------------------------------------
 
+-- Nothing needs to be changed in this file, add test cases
+-- appropriately to SBVUnitTest.hs file, and they will be
+-- picked up here automagically
 module Main(main) where
 
 import Control.Monad    (unless, when)
@@ -22,17 +25,11 @@ import Data.Version     (showVersion)
 import SBVTest          (SBVTestSuite(..))
 import Paths_sbv        (getDataDir, version)
 
+import SBVTestCollection    (allTestCases)
 import SBVUnitTestBuildTime (buildTime)
 
--- To add a new collection of tests, import below and add to testCollection variable
-import qualified TestSuite.Basics.ArithNoSolver as T01_01(testSuite)
-
 testCollection :: [(String, SBVTestSuite)]
-testCollection = [
-       ("arithCF", T01_01.testSuite)
-     ]
-
--- No user serviceable parts below..
+testCollection = [(n, s) | (n, False, s) <- allTestCases]
 
 main :: IO ()
 main = do putStrLn $ "*** SBVBasicTester, version: " ++ showVersion version ++ ", time stamp: " ++ buildTime
