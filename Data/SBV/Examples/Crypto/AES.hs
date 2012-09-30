@@ -40,7 +40,7 @@ import Data.List (transpose)
 type GF28 = SWord8
 
 -- | Multiplication in GF(2^8). This is simple polynomial multipliation, followed
--- by the irreducible polynomial @x^8+x^5+x^3+x^1+1@. We simply use the 'pMult'
+-- by the irreducible polynomial @x^8+x^4+x^3+x^1+1@. We simply use the 'pMult'
 -- function exported by SBV to do the operation. 
 gf28Mult :: GF28 -> GF28 -> GF28
 gf28Mult x y = pMult (x, y, [8, 4, 3, 1, 0])
