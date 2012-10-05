@@ -15,7 +15,9 @@ Description:   Express properties about Haskell programs and automatically prove
                >   Falsifiable. Counter-example:
                >     x = 128 :: SWord8
                .
-               The library introduces the following types and concepts:
+               The SBV library uses Microsoft's Z3 SMT solver (<http://research.microsoft.com/en-us/um/redmond/projects/z3/>) as the default underlying solver. It is also possible to use SRI's Yices SMT solver with SBV as well (<http://yices.csl.sri.com/download-yices2.shtml>), although the Z3 binding is much more richer.
+               .
+               SBV introduces the following types and concepts:
                .
                  * 'SBool': Symbolic Booleans (bits)
                .
