@@ -61,16 +61,16 @@ liftSym1 opS _    _    a@(SBV k _)        = SBV k $ Right $ cache c
    where c st = do swa <- sbvToSW st a
                    opS st k swa
 
-liftSym2 :: (State -> Kind -> SW -> SW -> IO SW) -> (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> SBV b -> SBV b -> SBV b
-liftSym2 _   opCR opCI   (SBV k (Left a)) (SBV _ (Left b)) = SBV k $ Left  $ mapCW2 opCR opCI noUnint2 a b
-liftSym2 opS _    _    a@(SBV k _)        b                = SBV k $ Right $ cache c
+liftSym2 :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> SBV b -> SBV b -> SBV b
+liftSym2 _   okCW opCR opCI   (SBV k (Left a)) (SBV _ (Left b)) | okCW a b = SBV k $ Left  $ mapCW2 opCR opCI noUnint2 a b
+liftSym2 opS _    _    _    a@(SBV k _)        b                           = SBV k $ Right $ cache c
   where c st = do sw1 <- sbvToSW st a
                   sw2 <- sbvToSW st b
                   opS st k sw1 sw2
 
-liftSym2B :: (State -> Kind -> SW -> SW -> IO SW) -> (AlgReal -> AlgReal -> Bool) -> (Integer -> Integer -> Bool) -> SBV b -> SBV b -> SBool
-liftSym2B _   opCR opCI (SBV _ (Left a)) (SBV _ (Left b)) = literal (liftCW2 opCR opCI noUnint2 a b)
-liftSym2B opS _    _    a                b                = SBV (KBounded False 1) $ Right $ cache c
+liftSym2B :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> Bool) -> (Integer -> Integer -> Bool) -> SBV b -> SBV b -> SBool
+liftSym2B _   okCW opCR opCI (SBV _ (Left a)) (SBV _ (Left b)) | okCW a b = literal (liftCW2 opCR opCI noUnint2 a b)
+liftSym2B opS _    _    _    a                b                           = SBV (KBounded False 1) $ Right $ cache c
   where c st = do sw1 <- sbvToSW st a
                   sw2 <- sbvToSW st b
                   opS st (KBounded False 1) sw1 sw2
@@ -200,6 +200,11 @@ instance SymWord AlgReal where
   literal    = SBV KReal . Left . CW KReal . CWAlgReal
   fromCW (CW _ (CWAlgReal a)) = a
   fromCW c                    = error $ "SymWord.AlgReal: Unexpected non-real value: " ++ show c
+  -- AlgReal needs its own definition of isConcretely
+  -- to make sure we avoid using unimplementable Haskell functions
+  isConcretely (SBV KReal (Left (CW KReal (CWAlgReal v)))) p
+     | isExactRational v = p v
+  isConcretely _ _       = False
   mbMaxBound = Nothing
   mbMinBound = Nothing
 
@@ -344,8 +349,8 @@ for natural reasons..
 -}
 
 instance EqSymbolic (SBV a) where
-  (.==) = liftSym2B (mkSymOpSC (eqOpt trueSW)  Equal)    (==) (==)
-  (./=) = liftSym2B (mkSymOpSC (eqOpt falseSW) NotEqual) (/=) (/=)
+  (.==) = liftSym2B (mkSymOpSC (eqOpt trueSW)  Equal)    rationalCheck (==) (==)
+  (./=) = liftSym2B (mkSymOpSC (eqOpt falseSW) NotEqual) rationalCheck (/=) (/=)
 
 eqOpt :: SW -> SW -> SW -> Maybe SW
 eqOpt w x y = if x == y then Just w else Nothing
@@ -354,19 +359,19 @@ instance SymWord a => OrdSymbolic (SBV a) where
   x .< y
     | Just mb <- mbMaxBound, x `isConcretely` (== mb) = false
     | Just mb <- mbMinBound, y `isConcretely` (== mb) = false
-    | True                                            = liftSym2B (mkSymOpSC (eqOpt falseSW) LessThan)    (<)  (<)  x y
+    | True                                            = liftSym2B (mkSymOpSC (eqOpt falseSW) LessThan)    rationalCheck (<)  (<)  x y
   x .<= y
     | Just mb <- mbMinBound, x `isConcretely` (== mb) = true
     | Just mb <- mbMaxBound, y `isConcretely` (== mb) = true
-    | True                                            = liftSym2B (mkSymOpSC (eqOpt trueSW) LessEq)       (<=) (<=) x y
+    | True                                            = liftSym2B (mkSymOpSC (eqOpt trueSW) LessEq)       rationalCheck (<=) (<=) x y
   x .> y
     | Just mb <- mbMinBound, x `isConcretely` (== mb) = false
     | Just mb <- mbMaxBound, y `isConcretely` (== mb) = false
-    | True                                            = liftSym2B (mkSymOpSC (eqOpt falseSW) GreaterThan) (>)  (>)  x y
+    | True                                            = liftSym2B (mkSymOpSC (eqOpt falseSW) GreaterThan) rationalCheck (>)  (>)  x y
   x .>= y
     | Just mb <- mbMaxBound, x `isConcretely` (== mb) = true
     | Just mb <- mbMinBound, y `isConcretely` (== mb) = true
-    | True                                            = liftSym2B (mkSymOpSC (eqOpt trueSW) GreaterEq)    (>=) (>=) x y
+    | True                                            = liftSym2B (mkSymOpSC (eqOpt trueSW) GreaterEq)    rationalCheck (>=) (>=) x y
 
 -- Bool
 instance EqSymbolic Bool where
@@ -537,16 +542,16 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
   x + y
     | x `isConcretely` (== 0) = y
     | y `isConcretely` (== 0) = x
-    | True                    = liftSym2 (mkSymOp Plus)  (+) (+) x y
+    | True                    = liftSym2 (mkSymOp Plus)  rationalCheck (+) (+) x y
   x * y
     | x `isConcretely` (== 0) = 0
     | y `isConcretely` (== 0) = 0
     | x `isConcretely` (== 1) = y
     | y `isConcretely` (== 1) = x
-    | True                    = liftSym2 (mkSymOp Times) (*) (*) x y
+    | True                    = liftSym2 (mkSymOp Times) rationalCheck (*) (*) x y
   x - y
     | y `isConcretely` (== 0) = x
-    | True                    = liftSym2 (mkSymOp Minus) (-) (-) x y
+    | True                    = liftSym2 (mkSymOp Minus) rationalCheck (-) (-) x y
   abs a
    | hasSign a = ite (a .< 0) (-a) a
    | True      = a
@@ -556,9 +561,20 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
 
 instance Fractional SReal where
   fromRational = literal . fromRational
-  x / y        = liftSym2 (mkSymOp Quot) (/) die x y
+  x / y        = liftSym2 (mkSymOp Quot) rationalCheck (/) die x y
    where -- should never happen
          die = error $ "impossible: non-real value found in Fractional.SReal " ++ show (x, y)
+
+-- Most operations on concrete rationals require a compatibility check
+rationalCheck :: CW -> CW -> Bool
+rationalCheck a b = case (cwVal a, cwVal b) of
+                     (CWAlgReal x, CWAlgReal y) -> isExactRational x && isExactRational y
+                     _                          -> True
+
+-- same as above, for SBV's
+rationalSBVCheck :: SBV a -> SBV a -> Bool
+rationalSBVCheck (SBV KReal (Left a)) (SBV KReal (Left b)) = rationalCheck a b
+rationalSBVCheck _                    _                    = True
 
 -- Some operations will never be used on Reals, but we need fillers:
 noReal :: String -> AlgReal -> AlgReal -> AlgReal
@@ -575,17 +591,17 @@ instance (Bits a, SymWord a) => Bits (SBV a) where
     | x `isConcretely` (== -1) = y
     | y `isConcretely` (== 0)  = 0
     | y `isConcretely` (== -1) = x
-    | True                     = liftSym2 (mkSymOp  And) (noReal ".&.") (.&.) x y
+    | True                     = liftSym2 (mkSymOp  And) (const (const True)) (noReal ".&.") (.&.) x y
   x .|. y
     | x `isConcretely` (== 0)  = y
     | x `isConcretely` (== -1) = -1
     | y `isConcretely` (== 0)  = x
     | y `isConcretely` (== -1) = -1
-    | True                     = liftSym2 (mkSymOp  Or)  (noReal ".|.") (.|.) x y
+    | True                     = liftSym2 (mkSymOp  Or)  (const (const True)) (noReal ".|.") (.|.) x y
   x `xor` y
     | x `isConcretely` (== 0)  = y
     | y `isConcretely` (== 0)  = x
-    | True                     = liftSym2 (mkSymOp  XOr) (noReal "xor") xor x y
+    | True                     = liftSym2 (mkSymOp  XOr) (const (const True)) (noReal "xor") xor x y
   complement = liftSym1 (mkSymOp1 Not) (noRealUnary "Not") complement
   bitSize  _ = intSizeOf (undefined :: a)
   isSigned _ = hasSign   (undefined :: a)
@@ -951,7 +967,7 @@ instance SymWord a => Mergeable (SBV a) where
   -- Of course, we do not have a way of enforcing that in the user code, but
   -- at least our library code respects that invariant.
   symbolicMerge t a@(SBV{}) b@(SBV{})
-     | Just av <- unliteral a, Just bv <- unliteral b, av == bv
+     | Just av <- unliteral a, Just bv <- unliteral b, rationalSBVCheck a b, av == bv
      = a
      | True
      = SBV k $ Right $ cache c

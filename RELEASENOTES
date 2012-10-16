@@ -7,6 +7,12 @@ Latest Hackage released version: 2.3
 Version 2.4, Not yet released
 
   - Add missing QuickCheck instance for SReal
+  - When dealing with concrete SReal's, make sure to operate
+    only on exact algebraic reals on the Haskell side, leaving
+    true algebraic reals (i.e., those that are roots of polynomials
+    that cannot be expressed as a rational) symbolic. This avoids
+    issues with functions that we cannot implement directly on
+    the Haskell side, like exact square-roots.
   - Documentation tweaks, typo fixes etc.
   - Rename BVDivisible class to SDivisible; since SInteger
     is also an instance of this class, and SDivisible is a

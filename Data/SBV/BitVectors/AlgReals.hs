@@ -13,7 +13,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Data.SBV.BitVectors.AlgReals (AlgReal(..), mkPolyReal, algRealToSMTLib2, algRealToHaskell, mergeAlgReals) where
+module Data.SBV.BitVectors.AlgReals (AlgReal(..), mkPolyReal, algRealToSMTLib2, algRealToHaskell, mergeAlgReals, isExactRational) where
 
 import Data.List       (sortBy, isPrefixOf, partition)
 import Data.Ratio      ((%), numerator, denominator)
@@ -27,6 +27,11 @@ import Test.QuickCheck (Arbitrary(..))
 data AlgReal = AlgRational Bool Rational          -- bool says it's exact (i.e., SMT-solver did not return it with ? at the end.)
              | AlgPolyRoot (Integer,  Polynomial) -- which root
                            (Maybe String)         -- approximate decimal representation with given precision, if available
+
+-- | Check wheter a given argument is an exact rational
+isExactRational :: AlgReal -> Bool
+isExactRational (AlgRational True _) = True
+isExactRational _                    = False
 
 -- | A univariate polynomial, represented simply as a
 -- coefficient list. For instance, "5x^3 + 2x - 5" is
