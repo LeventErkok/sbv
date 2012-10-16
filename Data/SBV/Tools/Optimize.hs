@@ -84,7 +84,8 @@ iterOptimize chatty cfg cmp cost n valid = do
         msg "Trying to find a satisfying solution."
         m <- satWith cfg $ valid `fmap` mkExistVars n
         case getModel m of
-          Left _ -> return Nothing
+          Left _ -> do msg "No satisfying solutions found."
+                       return Nothing
           Right (True, _)  -> error "SBV: Backend solver reported \"unknown\""
           Right (False, a) -> do msg $ "First solution found: " ++ show a
                                  let c = cost (map literal a)
