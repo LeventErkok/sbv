@@ -53,6 +53,7 @@ data SMTConfig = SMTConfig {
        , printBase     :: Int            -- ^ Print integral literals in this base (2, 8, and 10, and 16 are supported.)
        , printRealPrec :: Int            -- ^ Print algebraic real values with this precision. (SReal, default: 16)
        , solverTweaks  :: [String]       -- ^ Additional lines of script to give to the solver (user specified)
+       , satCmd        :: String         -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
        , smtFile       :: Maybe FilePath -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
        , useSMTLib2    :: Bool           -- ^ If True, we'll treat the solver as using SMTLib2 input format. Otherwise, SMTLib1
        , solver        :: SMTSolver      -- ^ The actual SMT solver.
@@ -349,13 +350,13 @@ shUA (f, cases) = ("  -- array: " ++ f) : map shC cases
   where shC s = "       " ++ s
 
 -- | Helper function to spin off to an SMT solver.
-pipeProcess :: Bool -> String -> String -> [String] -> SMTScript -> (String -> String) -> IO (Either String [String])
-pipeProcess verb nm execName opts script cleanErrs = do
+pipeProcess :: SMTConfig -> String -> String -> [String] -> SMTScript -> (String -> String) -> IO (Either String [String])
+pipeProcess cfg nm execName opts script cleanErrs = do
         mbExecPath <- findExecutable execName
         case mbExecPath of
           Nothing -> return $ Left $ "Unable to locate executable for " ++ nm
                                    ++ "\nExecutable specified: " ++ show execName
-          Just execPath -> do (ec, contents, allErrors) <- runSolver verb execPath opts script
+          Just execPath -> do (ec, contents, allErrors) <- runSolver cfg execPath opts script
                               let errors = dropWhile isSpace (cleanErrs allErrors)
                               case ec of
                                 ExitSuccess  ->  if null errors
@@ -393,7 +394,7 @@ standardSolver config script cleanErrs failure success = do
       Nothing -> return ()
       Just f  -> do putStrLn $ "** Saving the generated script in file: " ++ show f
                     writeFile f (scriptBody script)
-    contents <- timeIf isTiming nmSolver $ pipeProcess (verbose config) nmSolver exec opts script cleanErrs
+    contents <- timeIf isTiming nmSolver $ pipeProcess config nmSolver exec opts script cleanErrs
     msg $ nmSolver ++ " output:\n" ++ either id (intercalate "\n") contents
     case contents of
       Left e   -> return $ failure (lines e)
@@ -401,8 +402,8 @@ standardSolver config script cleanErrs failure success = do
 
 -- | A variant of 'readProcessWithExitCode'; except it knows about continuation strings
 -- and can speak SMT-Lib2 (just a little).
-runSolver :: Bool -> FilePath -> [String] -> SMTScript -> IO (ExitCode, String, String)
-runSolver verb execPath opts script
+runSolver :: SMTConfig -> FilePath -> [String] -> SMTScript -> IO (ExitCode, String, String)
+runSolver cfg execPath opts script
  | isNothing $ scriptModel script
  = readProcessWithExitCode execPath opts (scriptBody script)
  | True
@@ -429,11 +430,11 @@ runSolver verb execPath opts script
                                       else return (ex,          r ++ "\n" ++ out, err)
                 return (send, ask, cleanUp)
       mapM_ send (lines (scriptBody script))
-      r <- ask "(check-sat)"
+      r <- ask $ satCmd cfg
       when (any (`isPrefixOf` r) ["sat", "unknown"]) $ do
         let mls = lines (fromJust (scriptModel script))
-        when verb $ do putStrLn "** Sending the following model extraction commands:"
-                       mapM_ putStrLn mls
+        when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
+                                mapM_ putStrLn mls
         mapM_ send mls
       cleanUp r
 

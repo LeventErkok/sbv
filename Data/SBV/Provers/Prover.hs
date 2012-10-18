@@ -53,7 +53,17 @@ import Data.SBV.Utils.TDiff
 import Data.SBV.Utils.Boolean
 
 mkConfig :: SMTSolver -> Bool -> [String] -> SMTConfig
-mkConfig s isSMTLib2 tweaks = SMTConfig {verbose = False, timing = False, timeOut = Nothing, printBase = 10, printRealPrec = 16, smtFile = Nothing, solver = s, solverTweaks = tweaks, useSMTLib2 = isSMTLib2}
+mkConfig s isSMTLib2 tweaks = SMTConfig { verbose = False
+                                        , timing        = False
+                                        , timeOut       = Nothing
+                                        , printBase     = 10
+                                        , printRealPrec = 16
+                                        , smtFile       = Nothing
+                                        , solver        = s
+                                        , solverTweaks  = tweaks
+                                        , useSMTLib2    = isSMTLib2
+                                        , satCmd        = "(check-sat)"
+                                        }
 
 -- | Default configuration for the Yices SMT Solver.
 yices :: SMTConfig
@@ -61,7 +71,7 @@ yices = mkConfig Yices.yices False []
 
 -- | Default configuration for the Z3 SMT solver
 z3 :: SMTConfig
-z3 = mkConfig Z3.z3 True ["(set-option :mbqi true) ; use model based quantification"]
+z3 = mkConfig Z3.z3 True ["(set-option :mbqi true) ; use model based quantifier instantiation"]
 
 -- | The default solver used by SBV. This is currently set to z3.
 defaultSMTCfg :: SMTConfig
