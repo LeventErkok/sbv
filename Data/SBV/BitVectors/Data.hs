@@ -64,7 +64,28 @@ import Data.SBV.Utils.Lib
 data CWVal = CWAlgReal       AlgReal    -- ^ algebraic real
            | CWInteger       Integer    -- ^ bit-vector/unbounded integer
            | CWUninterpreted String     -- ^ value of an uninterpreted kind
-           deriving (Eq, Ord)
+
+-- We cannot simply derive Eq/Ord for CWVal, since CWAlgReal doesn't have proper
+-- instances for these when values are infinitely precise reals. However, we do
+-- need a structural eq/ord for Map indexes; so define custom ones here:
+instance Eq CWVal where
+  CWAlgReal a       == CWAlgReal b       = a `algRealStructuralEqual` b
+  CWInteger a       == CWInteger b       = a == b
+  CWUninterpreted a == CWUninterpreted b = a == b
+  _                 == _                 = False
+
+instance Ord CWVal where
+  CWAlgReal a       `compare` CWAlgReal b       = a `algRealStructuralCompare` b
+  CWAlgReal _       `compare` CWInteger _       = LT
+  CWAlgReal _       `compare` CWUninterpreted _ = LT
+
+  CWInteger _       `compare` CWAlgReal _       = GT
+  CWInteger a       `compare` CWInteger b       = a `compare` b
+  CWInteger _       `compare` CWUninterpreted _ = LT
+
+  CWUninterpreted _ `compare` CWAlgReal _       = GT
+  CWUninterpreted _ `compare` CWInteger _       = GT
+  CWUninterpreted a `compare` CWUninterpreted b = a `compare` b
 
 -- | 'CW' represents a concrete word of a fixed size:
 -- Endianness is mostly irrelevant (see the 'FromBits' class).
