@@ -128,6 +128,10 @@ instance Fractional AlgReal where
   (/)          = lift2 "/" (/)
   fromRational = AlgRational True
 
+instance Real AlgReal where
+  toRational (AlgRational True v) = v
+  toRational x                    = error $ "AlgReal.toRational: Argument cannot be represented as a rational value: " ++ algRealToHaskell x
+
 instance Random Rational where
   random g = let (a, g')  = random g
                  (b, g'') = random g'
