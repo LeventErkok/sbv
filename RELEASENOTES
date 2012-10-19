@@ -1,10 +1,10 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Latest Hackage released version: 2.3
+Latest Hackage released version: 2.4
 
 ======================================================================
-Version 2.4, Not yet released
+Version 2.4, 2012-10-19
 
   - Add missing QuickCheck instance for SReal
   - When dealing with concrete SReal's, make sure to operate
@@ -21,6 +21,9 @@ Version 2.4, Not yet released
     semantics. 
   - Improve test suite, adding many constant-folding tests
     and start using cabal based tests (--enable-tests option.)
+  - Stop putting bounds on hackage dependencies, as they cause
+    more trouble then they actually help. (See the discussion
+    here: http://www.haskell.org/pipermail/haskell-cafe/2012-July/102352.html.)
 
 ======================================================================
 Version 2.3, 2012-07-20
