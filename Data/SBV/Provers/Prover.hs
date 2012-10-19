@@ -35,13 +35,12 @@ module Data.SBV.Provers.Prover (
 
 import qualified Control.Exception as E
 
-import Control.Concurrent             (forkIO)
-import Control.Concurrent.Chan.Strict (newChan, writeChan, getChanContents)
-import Control.Monad                  (when, unless)
-import Data.List                      (intercalate)
-import Data.Maybe                     (fromJust, isJust, catMaybes)
-import System.FilePath                (addExtension)
-import System.Time                    (getClockTime)
+import Control.Concurrent (forkIO, newChan, writeChan, getChanContents)
+import Control.Monad      (when, unless)
+import Data.List          (intercalate)
+import Data.Maybe         (fromJust, isJust, catMaybes)
+import System.FilePath    (addExtension)
+import System.Time        (getClockTime)
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model

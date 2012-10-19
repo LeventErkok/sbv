@@ -103,12 +103,13 @@ instance Ord AlgReal where
   AlgRational True a `compare` AlgRational True b = a `compare` b
   a                  `compare` b                  = error $ "AlgReal.compare: unsupported arguments: " ++ show (a, b)
 
--- Structural equality and ord for AlgReal; used when constants are Map keys
+-- | Structural equality for AlgReal; used when constants are Map keys
 algRealStructuralEqual   :: AlgReal -> AlgReal -> Bool
 AlgRational a b `algRealStructuralEqual` AlgRational c d = (a, b) == (c, d)
 AlgPolyRoot a b `algRealStructuralEqual` AlgPolyRoot c d = (a, b) == (c, d)
 _               `algRealStructuralEqual` _               = False
 
+-- | Structural comparisons for AlgReal; used when constants are Map keys
 algRealStructuralCompare :: AlgReal -> AlgReal -> Ordering
 AlgRational a b `algRealStructuralCompare` AlgRational c d = (a, b) `compare` (c, d)
 AlgRational _ _ `algRealStructuralCompare` AlgPolyRoot _ _ = LT
