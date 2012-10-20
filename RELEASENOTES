@@ -1,7 +1,14 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Latest Hackage released version: 2.5
+Latest Hackage released version: 2.6
+
+======================================================================
+Version 2.6, 2012-10-20
+
+  - Workaround issues related hackage compilation, in particular to the
+    problem with the new containers package release, which does provide
+    an NFData instance for sequences.
 
 ======================================================================
 Version 2.5, 2012-10-19
