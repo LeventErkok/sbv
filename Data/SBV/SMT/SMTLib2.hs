@@ -68,11 +68,11 @@ cvt :: (Bool, Bool)                 -- ^ has infinite precision values
     -> [(Int, ArrayInfo)]           -- ^ user specified arrays
     -> [(String, SBVType)]          -- ^ uninterpreted functions/constants
     -> [(String, [String])]         -- ^ user given axioms
-    -> Pgm                          -- ^ assignments
+    -> SBVPgm                       -- ^ assignments
     -> [SW]                         -- ^ extra constraints
     -> SW                           -- ^ output variable
     -> ([String], [String])
-cvt (hasInteger, hasReal) isSat comments sorts _inps skolemInps consts tbls arrs uis axs asgnsSeq cstrs out = (pre, [])
+cvt (hasInteger, hasReal) isSat comments sorts _inps skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out = (pre, [])
   where -- the logic is an over-approaximation
         logic
            | hasInteger || hasReal || not (null sorts)

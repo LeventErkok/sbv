@@ -30,7 +30,7 @@ module Data.SBV.BitVectors.Data
  , sbvToSW, sbvToSymSW
  , SBVExpr(..), newExpr
  , cache, uncache, uncacheAI, HasKind(..)
- , Op(..), NamedSymVar, UnintKind(..), getTableIndex, Pgm, Symbolic, runSymbolic, runSymbolic', State, inProofMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
+ , Op(..), NamedSymVar, UnintKind(..), getTableIndex, SBVPgm(..), Symbolic, runSymbolic, runSymbolic', State, inProofMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
  , getTraceInfo, getConstraints, addConstraint
  , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
  , Quantifier(..), needsExistentials
@@ -340,7 +340,7 @@ instance Show SBVExpr where
   show (SBVApp op  args)      = unwords (show op : map show args)
 
 -- | A program is a sequence of assignments
-type Pgm = S.Seq (SW, SBVExpr)
+newtype SBVPgm = SBVPgm {pgmAssignments :: (S.Seq (SW, SBVExpr))}
 
 -- | 'NamedSymVar' pairs symbolic words and user given/automatically generated names
 type NamedSymVar = (SW, String)
@@ -361,7 +361,7 @@ data Result = Result (Bool, Bool)                  -- contains unbounded integer
                      [(Int, ArrayInfo)]            -- arrays (user specified)
                      [(String, SBVType)]           -- uninterpreted constants
                      [(String, [String])]          -- axioms
-                     Pgm                           -- assignments
+                     SBVPgm                        -- assignments
                      [SW]                          -- additional constraints (boolean)
                      [SW]                          -- outputs
 
@@ -394,7 +394,7 @@ instance Show Result where
                 ++ ["AXIOMS"]
                 ++ map shax axs
                 ++ ["DEFINE"]
-                ++ map (\(s, e) -> "  " ++ shs s ++ " = " ++ show e) (F.toList xs)
+                ++ map (\(s, e) -> "  " ++ shs s ++ " = " ++ show e) (F.toList (pgmAssignments xs))
                 ++ ["CONSTRAINTS"]
                 ++ map (("  " ++) . show) cstrs
                 ++ ["OUTPUTS"]
@@ -489,7 +489,7 @@ data State  = State { runMode       :: SBVRunMode
                     , rConstraints  :: IORef [SW]
                     , routs         :: IORef [SW]
                     , rtblMap       :: IORef TableMap
-                    , spgm          :: IORef Pgm
+                    , spgm          :: IORef SBVPgm
                     , rconstMap     :: IORef CnstMap
                     , rexprMap      :: IORef ExprMap
                     , rArrayMap     :: IORef ArrayMap
@@ -639,7 +639,7 @@ newExpr st k app = do
                           KUnbounded -> modifyIORef (rUnBounded st) (\(_, y) -> (True, y))
                           KReal      -> modifyIORef (rUnBounded st) (\(x, _) -> (x, True))
                           _          -> return ()
-                   modifyIORef (spgm st)     (flip (S.|>) (sw, e))
+                   modifyIORef (spgm st)     (\(SBVPgm xs) -> SBVPgm (xs S.|> (sw, e)))
                    modifyIORef (rexprMap st) (Map.insert e sw)
                    return sw
 {-# INLINE newExpr #-}
@@ -757,7 +757,7 @@ runSymbolic' :: SBVRunMode -> Symbolic a -> IO (a, Result)
 runSymbolic' currentRunMode (Symbolic c) = do
    ctr       <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
    cInfo     <- newIORef []
-   pgm       <- newIORef S.empty
+   pgm       <- newIORef (SBVPgm S.empty)
    emap      <- newIORef Map.empty
    cmap      <- newIORef Map.empty
    inps      <- newIORef []
@@ -798,7 +798,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
    _ <- newConst st (mkConstCW (KBounded False 1) (0::Integer)) -- s(-2) == falseSW
    _ <- newConst st (mkConstCW (KBounded False 1) (1::Integer)) -- s(-1) == trueSW
    r <- runReaderT c st
-   rpgm  <- readIORef pgm
+   SBVPgm rpgm  <- readIORef pgm
    inpsO <- reverse `fmap` readIORef inps
    outsO <- reverse `fmap` readIORef outs
    let swap (a, b) = (b, a)
@@ -813,7 +813,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
    traceVals <- reverse `fmap` readIORef cInfo
    extraCstrs <- reverse `fmap` readIORef cstrs
    usorts <- reverse `fmap` readIORef sorts
-   return $ (r, Result boundInfo usorts traceVals cgMap inpsO cnsts tbls arrs unint axs rpgm extraCstrs outsO)
+   return $ (r, Result boundInfo usorts traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs outsO)
 
 -------------------------------------------------------------------------------
 -- * Symbolic Words
@@ -1141,3 +1141,4 @@ instance NFData a => NFData (Cached a) where
   rnf (Cached f) = f `seq` ()
 instance NFData a => NFData (SBV a) where
   rnf (SBV x y) = rnf x `seq` rnf y `seq` ()
+instance NFData SBVPgm

@@ -51,7 +51,7 @@ cvt :: (Bool, Bool)                 -- ^ has infinite precision integers/reals
     -> [(Int, ArrayInfo)]           -- ^ user specified arrays
     -> [(String, SBVType)]          -- ^ uninterpreted functions/constants
     -> [(String, [String])]         -- ^ user given axioms
-    -> Pgm                          -- ^ assignments
+    -> SBVPgm                       -- ^ assignments
     -> [SW]                         -- ^ extra constraints
     -> SW                           -- ^ output variable
     -> ([String], [String])
@@ -101,7 +101,7 @@ cvt (hasIntegers, hasReals) isSat comments sorts qinps _skolemInps consts tbls a
                ++ [ " ; --- formula ---" ]
                ++ [mkFormula isSat out]
                ++ [")"]
-        asgns = F.toList asgnsSeq
+        asgns = F.toList (pgmAssignments asgnsSeq)
         mkCstr s = " :assumption (= " ++ show s ++ " bv1[1])"
 
 -- TODO: Does this work for SMT-Lib when the index/element types are signed?

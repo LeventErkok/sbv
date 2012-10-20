@@ -381,7 +381,7 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
 
 -- | Generate the C program
 genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SW -> Doc -> [Doc]
-genCProg cfg fn proto (Result (hasIntegers, hasReals) usorts _tvals cgs ins preConsts tbls arrs _ _ asgns cstrs _) inVars outVars mbRet extDecls
+genCProg cfg fn proto (Result (hasIntegers, hasReals) usorts _tvals cgs ins preConsts tbls arrs _ _ (SBVPgm asgns) cstrs _) inVars outVars mbRet extDecls
   | isNothing (cgInteger cfg) && hasIntegers
   = error $ "SBV->C: Unbounded integers are not supported by the C compiler."
           ++ "\nUse 'cgIntegerSize' to specify a fixed size for SInteger representation."

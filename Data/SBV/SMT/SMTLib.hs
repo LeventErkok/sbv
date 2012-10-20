@@ -29,7 +29,7 @@ type SMTLibConverter =  (Bool, Bool)                -- ^ has unbounded integers/
                      -> [(Int, ArrayInfo)]          -- ^ user specified arrays
                      -> [(String, SBVType)]         -- ^ uninterpreted functions/constants
                      -> [(String, [String])]        -- ^ user given axioms
-                     -> Pgm                         -- ^ assignments
+                     -> SBVPgm                      -- ^ assignments
                      -> [SW]                        -- ^ extra constraints
                      -> SW                          -- ^ output variable
                      -> SMTLibPgm
