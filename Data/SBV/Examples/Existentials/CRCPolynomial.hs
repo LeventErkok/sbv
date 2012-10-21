@@ -75,7 +75,7 @@ genPoly hd = do res <- allSat $ do
                 cnt <- displayModels disp res
                 putStrLn $ "Found: " ++ show cnt ++ " polynomail(s)."
         where disp :: Int -> (Bool, Word16) -> IO ()
-              disp n (_, s) = do putStrLn $ "Polynomial #" ++ show n ++ ". x^16 + " ++ showPolynomial False s
+              disp n (_, s) = putStrLn $ "Polynomial #" ++ show n ++ ". x^16 + " ++ showPolynomial False s
 
 -- | Find and display all degree 16 polynomials with hamming distance at least 4, for 48 bit messages.
 --
@@ -96,3 +96,5 @@ genPoly hd = do res <- allSat $ do
 -- generated in about 5 minutes.)
 findHD4Polynomials :: IO ()
 findHD4Polynomials = genPoly 4
+
+{-# ANN crc_48_16 "HLint: ignore Use camelCase" #-}

@@ -29,7 +29,7 @@ module Data.SBV.BitVectors.Data
  , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), mkSFunArray, SArray(..), arrayUIKind
  , sbvToSW, sbvToSymSW
  , SBVExpr(..), newExpr
- , cache, uncache, uncacheAI, HasKind(..)
+ , cache, Cached, uncache, uncacheAI, HasKind(..)
  , Op(..), NamedSymVar, UnintKind(..), getTableIndex, SBVPgm(..), Symbolic, runSymbolic, runSymbolic', State, inProofMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
  , getTraceInfo, getConstraints, addConstraint
  , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom

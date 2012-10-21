@@ -43,7 +43,7 @@ instance (SymWord e, Mergeable (SBV e)) => Mergeable (STree i e) where
 
 -- | Reading a value. We bit-blast the index and descend down the full tree
 -- according to bit-values.
-readSTree :: (Bits i, SymWord i, SymWord e) => STree i e -> SBV i -> SBV e
+readSTree :: (Num i, Bits i, SymWord i, SymWord e) => STree i e -> SBV i -> SBV e
 readSTree s i = walk (blastBE i) s
   where walk []     (SLeaf v)  = v
         walk (b:bs) (SBin l r) = ite b (walk bs r) (walk bs l)
@@ -51,7 +51,7 @@ readSTree s i = walk (blastBE i) s
 
 -- | Writing a value, similar to how reads are done. The important thing is that the tree
 -- representation keeps updates to a minimum.
-writeSTree :: (Mergeable (SBV e), Bits i, SymWord i, SymWord e) => STree i e -> SBV i -> SBV e -> STree i e
+writeSTree :: (Mergeable (SBV e), Num i, Bits i, SymWord i, SymWord e) => STree i e -> SBV i -> SBV e -> STree i e
 writeSTree s i j = walk (blastBE i) s
   where walk []     _          = SLeaf j
         walk (b:bs) (SBin l r) = SBin (ite b l (walk bs l)) (ite b (walk bs r) r)

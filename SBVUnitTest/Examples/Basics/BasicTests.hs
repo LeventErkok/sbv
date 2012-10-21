@@ -9,7 +9,7 @@
 -- Basic tests of the sbv library
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Examples.Basics.BasicTests where

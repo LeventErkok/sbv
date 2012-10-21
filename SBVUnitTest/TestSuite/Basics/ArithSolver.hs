@@ -56,7 +56,7 @@ testSuite = mkTestSuite $ \_ -> test $
      ++ genCasts
 
 
-genBinTest :: Bool -> String -> (forall a. Bits a => a -> a -> a) -> [Test]
+genBinTest :: Bool -> String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [Test]
 genBinTest unboundedOK nm op = map mkTest $  [(show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- w8s ]
                                           ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- w16s, y <- w16s]
                                           ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- w32s, y <- w32s]
@@ -88,7 +88,7 @@ genBoolTest nm op opS = map mkTest $  [(show x, show y, mkThm2 x y (x `op` y)) |
                                       constrain $ b .== literal y
                                       return $ literal r .== a `opS` b
 
-genUnTest :: Bool -> String -> (forall a. Bits a => a -> a) -> [Test]
+genUnTest :: Bool -> String -> (forall a. (Num a, Bits a) => a -> a) -> [Test]
 genUnTest unboundedOK nm op = map mkTest $  [(show x, mkThm x (op x)) | x <- w8s ]
                                          ++ [(show x, mkThm x (op x)) | x <- w16s]
                                          ++ [(show x, mkThm x (op x)) | x <- w32s]
@@ -103,7 +103,7 @@ genUnTest unboundedOK nm op = map mkTest $  [(show x, mkThm x (op x)) | x <- w8s
                                    constrain $ a .== literal x
                                    return $ literal r .== op a
 
-genIntTest :: String -> (forall a. Bits a => a -> Int -> a) -> [Test]
+genIntTest :: String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [Test]
 genIntTest nm op = map mkTest $  [("u8",  show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- is]
                               ++ [("u16", show x, show y, mkThm2 x y (x `op` y)) | x <- w16s, y <- is]
                               ++ [("u32", show x, show y, mkThm2 x y (x `op` y)) | x <- w32s, y <- is]
@@ -120,7 +120,7 @@ genIntTest nm op = map mkTest $  [("u8",  show x, show y, mkThm2 x y (x `op` y))
                                       return $ literal r .== a `op` y
 
 
-genIntTestS :: Bool -> String -> (forall a. Bits a => a -> Int -> a) -> [Test]
+genIntTestS :: Bool -> String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [Test]
 genIntTestS unboundedOK nm op = map mkTest $  [("u8",  show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- [0 .. (bitSize x - 1)]]
                                            ++ [("u16", show x, show y, mkThm2 x y (x `op` y)) | x <- w16s, y <- [0 .. (bitSize x - 1)]]
                                            ++ [("u32", show x, show y, mkThm2 x y (x `op` y)) | x <- w32s, y <- [0 .. (bitSize x - 1)]]

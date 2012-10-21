@@ -9,7 +9,7 @@
 -- Number representations in hex/bin
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Data.SBV.BitVectors.PrettyNum (PrettyNum(..), readBin, shex, shexI, sbin, sbinI) where

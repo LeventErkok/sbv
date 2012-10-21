@@ -18,7 +18,6 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE Rank2Types             #-}
 
 module Data.SBV.BitVectors.Model (
@@ -31,7 +30,7 @@ module Data.SBV.BitVectors.Model (
   )
   where
 
-import Control.Monad   (when)
+import Control.Monad   (when, liftM)
 
 import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits       (Bits(..))
@@ -61,22 +60,21 @@ liftSym1 opS _    _    a@(SBV k _)        = SBV k $ Right $ cache c
    where c st = do swa <- sbvToSW st a
                    opS st k swa
 
-liftSym2 :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> SBV b -> SBV b -> SBV b
-liftSym2 _   okCW opCR opCI   (SBV k (Left a)) (SBV _ (Left b)) | okCW a b = SBV k $ Left  $ mapCW2 opCR opCI noUnint2 a b
-liftSym2 opS _    _    _    a@(SBV k _)        b                           = SBV k $ Right $ cache c
+liftSW2 :: (State -> Kind -> SW -> SW -> IO SW) -> Kind -> SBV a -> SBV b -> Cached SW
+liftSW2 opS k a b = cache c
   where c st = do sw1 <- sbvToSW st a
                   sw2 <- sbvToSW st b
                   opS st k sw1 sw2
 
+liftSym2 :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> SBV b -> SBV b -> SBV b
+liftSym2 _   okCW opCR opCI   (SBV k (Left a)) (SBV _ (Left b)) | okCW a b = SBV k $ Left  $ mapCW2 opCR opCI noUnint2 a b
+liftSym2 opS _    _    _    a@(SBV k _)        b                           = SBV k $ Right $ liftSW2 opS k a b
+
 liftSym2B :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> Bool) -> (Integer -> Integer -> Bool) -> SBV b -> SBV b -> SBool
 liftSym2B _   okCW opCR opCI (SBV _ (Left a)) (SBV _ (Left b)) | okCW a b = literal (liftCW2 opCR opCI noUnint2 a b)
-liftSym2B opS _    _    _    a                b                           = SBV (KBounded False 1) $ Right $ cache c
-  where c st = do sw1 <- sbvToSW st a
-                  sw2 <- sbvToSW st b
-                  opS st (KBounded False 1) sw1 sw2
+liftSym2B opS _    _    _    a                b                           = SBV (KBounded False 1) $ Right $ liftSW2 opS (KBounded False 1) a b
 
-liftSym1Bool :: (State -> Kind -> SW -> IO SW) -> (Bool -> Bool)
-             -> SBool -> SBool
+liftSym1Bool :: (State -> Kind -> SW -> IO SW) -> (Bool -> Bool) -> SBool -> SBool
 liftSym1Bool _   opC (SBV _ (Left a)) = literal $ opC $ cwToBool a
 liftSym1Bool opS _   a                = SBV (KBounded False 1) $ Right $ cache c
   where c st = do sw <- sbvToSW st a
@@ -524,12 +522,12 @@ instance Boolean SBool where
 
 -- | Returns (symbolic) true if all the elements of the given list are different.
 allDifferent :: (Eq a, SymWord a) => [SBV a] -> SBool
-allDifferent (x:xs@(_:_)) = bAll ((./=) x) xs &&& allDifferent xs
+allDifferent (x:xs@(_:_)) = bAll (x ./=) xs &&& allDifferent xs
 allDifferent _            = true
 
 -- | Returns (symbolic) true if all the elements of the given list are the same.
 allEqual :: (Eq a, SymWord a) => [SBV a] -> SBool
-allEqual (x:xs@(_:_))     = bAll ((.==) x) xs
+allEqual (x:xs@(_:_))     = bAll (x .==) xs
 allEqual _                = true
 
 -- | Returns 1 if the boolean is true, otherwise 0.
@@ -585,7 +583,7 @@ noRealUnary o a = error $ "SBV.AlgReal." ++ o ++ ": Unexpected argument: " ++ sh
 
 -- NB. In the optimizations below, use of -1 is valid as
 -- -1 has all bits set to True for both signed and unsigned values
-instance (Bits a, SymWord a) => Bits (SBV a) where
+instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
   x .&. y
     | x `isConcretely` (== 0)  = 0
     | x `isConcretely` (== -1) = y
@@ -605,6 +603,7 @@ instance (Bits a, SymWord a) => Bits (SBV a) where
   complement = liftSym1 (mkSymOp1 Not) (noRealUnary "Not") complement
   bitSize  _ = intSizeOf (undefined :: a)
   isSigned _ = hasSign   (undefined :: a)
+  bit i      = 1 `shiftL` i
   shiftL x y
     | y < 0       = shiftR x (-y)
     | y == 0      = x
@@ -627,27 +626,25 @@ instance (Bits a, SymWord a) => Bits (SBV a) where
   x `testBit` i
     | isConcrete x         = (x .&. bit i) /= 0
     | True                 = error $ "SBV.testBit: Called on symbolic value: " ++ show x ++ ". Use sbvTestBit instead."
-#if __GLASGOW_HASKELL__ >= 704
   -- NB. popCount is *not* implementable on non-concrete symbolic words
   popCount x
     | isConcrete x        = let go !c 0 = c
                                 go !c w = go (c+1) (w .&. (w-1))
                             in go 0 x
     | True                = error $ "SBV.popCount: Called on symbolic value: " ++ show x ++ ". Use sbvPopCount instead."
-#endif
 
 -- Since the underlying representation is just Integers, rotations has to be careful on the bit-size
 rot :: Bool -> Int -> Int -> Integer -> Integer
 rot toLeft sz amt x
   | sz < 2 = x
-  | True   = (norm x y') `shiftL` y  .|. norm (x `shiftR` y') y
+  | True   = norm x y' `shiftL` y  .|. norm (x `shiftR` y') y
   where (y, y') | toLeft = (amt `mod` sz, sz - y)
                 | True   = (sz - y', amt `mod` sz)
         norm v s = v .&. ((1 `shiftL` s) - 1)
 
 -- | Replacement for 'testBit'. Since 'testBit' requires a 'Bool' to be returned,
 -- we cannot implement it for symbolic words. Index 0 is the least-significant bit.
-sbvTestBit :: (Bits a, SymWord a) => SBV a -> Int -> SBool
+sbvTestBit :: (Num a, Bits a, SymWord a) => SBV a -> Int -> SBool
 sbvTestBit x i = (x .&. bit i) ./= 0
 
 -- | Replacement for 'popCount'. Since 'popCount' returns an 'Int', we cannot implement
@@ -659,7 +656,7 @@ sbvTestBit x i = (x .&. bit i) ./= 0
 -- purposes. In any case, we do not support 'sbvPopCount' for unbounded symbolic integers,
 -- as the only possible implementation wouldn't symbolically terminate. So the only overflow
 -- issue is with really-really large concrete 'SInteger' values.
-sbvPopCount :: (Bits a, SymWord a) => SBV a -> SWord8
+sbvPopCount :: (Num a, Bits a, SymWord a) => SBV a -> SWord8
 sbvPopCount x
   | isReal x          = error "SBV.sbvPopCount: Called on a real value"
   | isConcrete x      = go 0 x
@@ -672,30 +669,30 @@ sbvPopCount x
 -- | Generalization of 'setBit' based on a symbolic boolean. Note that 'setBit' and
 -- 'clearBit' are still available on Symbolic words, this operation comes handy when
 -- the condition to set/clear happens to be symbolic.
-setBitTo :: (Bits a, SymWord a) => SBV a -> Int -> SBool -> SBV a
+setBitTo :: (Num a, Bits a, SymWord a) => SBV a -> Int -> SBool -> SBV a
 setBitTo x i b = ite b (setBit x i) (clearBit x i)
 
 -- | Little-endian blasting of a word into its bits. Also see the 'FromBits' class.
-blastLE :: (Bits a, SymWord a) => SBV a -> [SBool]
+blastLE :: (Num a, Bits a, SymWord a) => SBV a -> [SBool]
 blastLE x
  | isReal x          = error "SBV.blastLE: Called on a real value"
  | not (isBounded x) = error "SBV.blastLE: Called on an infinite precision value"
- | True              = map (sbvTestBit x) [0 .. (intSizeOf x)-1]
+ | True              = map (sbvTestBit x) [0 .. intSizeOf x - 1]
 
 -- | Big-endian blasting of a word into its bits. Also see the 'FromBits' class.
-blastBE :: (Bits a, SymWord a) => SBV a -> [SBool]
+blastBE :: (Num a, Bits a, SymWord a) => SBV a -> [SBool]
 blastBE = reverse . blastLE
 
 -- | Least significant bit of a word, always stored at index 0.
-lsb :: (Bits a, SymWord a) => SBV a -> SBool
+lsb :: (Num a, Bits a, SymWord a) => SBV a -> SBool
 lsb x = sbvTestBit x 0
 
 -- | Most significant bit of a word, always stored at the last position.
-msb :: (Bits a, SymWord a) => SBV a -> SBool
+msb :: (Num a, Bits a, SymWord a) => SBV a -> SBool
 msb x
  | isReal x          = error "SBV.msb: Called on a real value"
  | not (isBounded x) = error "SBV.msb: Called on an infinite precision value"
- | True              = sbvTestBit x ((intSizeOf x) - 1)
+ | True              = sbvTestBit x (intSizeOf x - 1)
 
 -- Enum instance. These instances are suitable for use with concrete values,
 -- and will be less useful for symbolic values around. Note that `fromEnum` requires
@@ -910,7 +907,7 @@ instance (SymWord b, Arbitrary b) => Arbitrary (SFunArray a b) where
   arbitrary = arbitrary >>= \r -> return $ SFunArray (const r)
 
 instance (SymWord a, Arbitrary a) => Arbitrary (SBV a) where
-  arbitrary = arbitrary >>= return . literal
+  arbitrary = liftM literal arbitrary
 
 -- |  Symbolic choice operator, parameterized via a class
 -- 'select' is a total-indexing function, with the default.
@@ -1099,7 +1096,7 @@ instance (Ix a, Mergeable b) => Mergeable (Array a b) where
 
 -- Functions
 instance Mergeable b => Mergeable (a -> b) where
-  symbolicMerge t f g = \x -> symbolicMerge t (f x) (g x)
+  symbolicMerge t f g x = symbolicMerge t (f x) (g x)
   {- Following definition, while correct, is utterly inefficient. Since the
      application is delayed, this hangs on to the inner list and all the
      impending merges, even when ind is concrete. Thus, it's much better to
@@ -1171,8 +1168,8 @@ instance SymWord b => Mergeable (SArray a b) where
 -- will suffer from efficiency issues; so we don't define it
 instance SymArray SFunArray where
   newArray _        = newArray_ -- the name is irrelevant in this case
-  newArray_  mbiVal = return $ SFunArray $ const $ maybe (error "Reading from an uninitialized array entry") id mbiVal
-  readArray  (SFunArray f) a   = f a
+  newArray_  mbiVal = return $ SFunArray $ const $ fromMaybe (error "Reading from an uninitialized array entry") mbiVal
+  readArray  (SFunArray f)     = f
   resetArray (SFunArray _) a   = SFunArray $ const a
   writeArray (SFunArray f) a b = SFunArray (\a' -> ite (a .== a') b (f a'))
   mergeArrays t (SFunArray f) (SFunArray g) = SFunArray (\x -> ite t (f x) (g x))
@@ -1381,8 +1378,8 @@ instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymW
 
 -- Uncurried functions of two arguments
 instance (SymWord c, SymWord b, HasKind a) => Uninterpreted ((SBV c, SBV b) -> SBV a) where
-  sbvUninterpret mbCgData nm = let f = sbvUninterpret (uc2 `fmap` mbCgData) nm in \(arg0, arg1) -> f arg0 arg1
-    where uc2 (cs, fn) = (cs, \a b -> fn (a, b))
+  sbvUninterpret mbCgData nm = let f = sbvUninterpret (uc2 `fmap` mbCgData) nm in uncurry f
+    where uc2 (cs, fn) = (cs, curry fn)
 
 -- Uncurried functions of three arguments
 instance (SymWord d, SymWord c, SymWord b, HasKind a) => Uninterpreted ((SBV d, SBV c, SBV b) -> SBV a) where
@@ -1460,3 +1457,6 @@ slet x f = SBV k $ Right $ cache r
                     let xsbv = SBV (kindOf x) (Right (cache (const (return xsw))))
                         res  = f xsbv
                     sbvToSW st res
+
+{-# ANN module "HLint: ignore Eta reduce"         #-}
+{-# ANN module "HLint: ignore Reduce duplication" #-}

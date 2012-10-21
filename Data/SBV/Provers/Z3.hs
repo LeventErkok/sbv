@@ -9,7 +9,7 @@
 -- The connection to the Z3 SMT solver
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE PatternGuards       #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Data.SBV.Provers.Z3(z3) where

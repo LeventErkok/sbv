@@ -10,10 +10,9 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE OverlappingInstances #-}
-{-# LANGUAGE PatternGuards #-}
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns         #-}
 
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate, Provable(..)
@@ -36,9 +35,9 @@ module Data.SBV.Provers.Prover (
 import qualified Control.Exception as E
 
 import Control.Concurrent (forkIO, newChan, writeChan, getChanContents)
-import Control.Monad      (when, unless)
+import Control.Monad      (when, unless, void)
 import Data.List          (intercalate)
-import Data.Maybe         (fromJust, isJust, catMaybes)
+import Data.Maybe         (fromJust, isJust, mapMaybe)
 import System.FilePath    (addExtension)
 import System.Time        (getClockTime)
 
@@ -390,7 +389,7 @@ allSatWith config p = do
             final r = add r >> stop
             die m  = final (ProofError config [m])
             -- only fork if non-verbose.. otherwise stdout gets garbled
-            fork io = if verbose config then io else forkIO io >> return ()
+            fork io = if verbose config then io else void (forkIO io)
         fork $ E.catch (go sbvPgm add stop final (1::Int) [])
                        (\e -> die (show (e::E.SomeException)))
         results <- getChanContents resChan
@@ -454,7 +453,7 @@ runProofOn converter config isSat comments res =
         let isTiming = timing config
         in case res of
              Result boundInfo usorts _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs [o@(SW (KBounded False 1) _)] ->
-               timeIf isTiming "translation" $ let uiMap     = catMaybes (map arrayUIKind arrs) ++ map unintFnUIKind uis
+               timeIf isTiming "translation" $ let uiMap     = mapMaybe arrayUIKind arrs ++ map unintFnUIKind uis
                                                    skolemMap = skolemize (if isSat then is else map flipQ is)
                                                         where flipQ (ALL, x) = (EX, x)
                                                               flipQ (EX, x)  = (ALL, x)

@@ -9,10 +9,10 @@
 -- Implementation of polynomial arithmetic
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE PatternGuards        #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE PatternGuards #-}
 
 module Data.SBV.Tools.Polynomial (Polynomial(..), crc, crcBV) where
 
@@ -34,7 +34,7 @@ import Data.SBV.Utils.Boolean
 -- for all @x@ (including @0@)
 --
 -- Minimal complete definiton: 'pMult', 'pDivMod', 'showPolynomial'
-class Bits a => Polynomial a where
+class (Num a, Bits a) => Polynomial a where
  -- | Given bit-positions to be set, create a polynomial
  -- For instance
  --
@@ -126,7 +126,7 @@ ites s xs ys
 
 -- | Multiply two polynomials and reduce by the third (concrete) irreducible, given by its coefficients.
 -- See the remarks for the 'pMult' function for this design choice
-polyMult :: (Bits a, SymWord a, FromBits (SBV a)) => (SBV a, SBV a, [Int]) -> SBV a
+polyMult :: (Num a, Bits a, SymWord a, FromBits (SBV a)) => (SBV a, SBV a, [Int]) -> SBV a
 polyMult (x, y, red)
   | isReal x
   = error $ "SBV.polyMult: Received a real value: " ++ show x
@@ -141,7 +141,7 @@ polyMult (x, y, red)
         mul _  []     ps = ps
         mul as (b:bs) ps = mul (false:as) bs (ites b (as `addPoly` ps) ps)
 
-polyDivMod :: (Bits a, SymWord a, FromBits (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
+polyDivMod :: (Num a, Bits a, SymWord a, FromBits (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
 polyDivMod x y
    | isReal x
    = error $ "SBV.polyDivMod: Received a real value: " ++ show x
@@ -232,7 +232,7 @@ crcBV n m p = take n $ go (replicate n false) (m ++ replicate n false)
 
 -- | Compute CRC's over polynomials, i.e., symbolic words. The first
 -- 'Int' argument plays the same role as the one in the 'crcBV' function.
-crc :: (FromBits (SBV a), FromBits (SBV b), Bits a, Bits b, SymWord a, SymWord b) => Int -> SBV a -> SBV b -> SBV b
+crc :: (FromBits (SBV a), FromBits (SBV b), Num a, Num b, Bits a, Bits b, SymWord a, SymWord b) => Int -> SBV a -> SBV b -> SBV b
 crc n m p
   | isReal m || isReal p
   = error $ "SBV.crc: Received a real value: " ++ show (m, p)

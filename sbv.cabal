@@ -97,7 +97,6 @@ Library
   default-language: Haskell2010
   ghc-options     : -Wall
   other-extensions: BangPatterns
-                    CPP
                     -- Currently commented out since Cabal doesn't yet recognize DefaultSignatures extension yet. Uncomment when it does.
                     -- The current list can be seen at: https://github.com/haskell/cabal/blob/master/Cabal/Language/Haskell/Extension.hs
                     -- DefaultSignatures

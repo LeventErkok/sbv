@@ -8,6 +8,7 @@
 --
 -- Test suite for Data.SBV.Examples.CodeGeneration.Uninterpreted
 -----------------------------------------------------------------------------
+
 module TestSuite.CodeGeneration.Uninterpreted(testSuite) where
 
 import Data.SBV

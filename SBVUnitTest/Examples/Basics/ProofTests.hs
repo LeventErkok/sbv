@@ -9,7 +9,7 @@
 -- Basic proofs
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Examples.Basics.ProofTests where

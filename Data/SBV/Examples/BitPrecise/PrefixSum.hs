@@ -12,7 +12,7 @@
 -- and <http://www.cs.utexas.edu/~plaxton/c/337/05f/slides/ParallelRecursion-4.pdf>.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Data.SBV.Examples.BitPrecise.PrefixSum where
@@ -77,7 +77,7 @@ lf (zero, f) pl = zipPL (zipWith f (rsh lfpq) p) lfpq
 ----------------------------------------------------------------------
 
 -- | Correctness theorem, for a powerlist of given size, an associative operator, and its left-unit element.
-flIsCorrect :: Int -> (forall a. (OrdSymbolic a, Bits a) => (a, a -> a -> a)) -> Symbolic SBool
+flIsCorrect :: Int -> (forall a. (OrdSymbolic a, Num a, Bits a) => (a, a -> a -> a)) -> Symbolic SBool
 flIsCorrect n zf = do
         args :: PowerList SWord32 <- mkForallVars n
         return $ ps zf args .== lf zf args

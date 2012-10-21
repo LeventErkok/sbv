@@ -9,7 +9,7 @@
 -- The famous U2 bridge crossing puzzle: <http://www.brainj.net/puzzle.php?id=u2>
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Data.SBV.Examples.Puzzles.U2Bridge where

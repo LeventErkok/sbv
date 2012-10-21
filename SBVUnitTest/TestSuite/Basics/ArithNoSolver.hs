@@ -54,7 +54,7 @@ testSuite = mkTestSuite $ \_ -> test $
      ++ genBlasts
      ++ genCasts
 
-genBinTest :: String -> (forall a. Bits a => a -> a -> a) -> [Test]
+genBinTest :: String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [Test]
 genBinTest nm op = map mkTest $
         zipWith pair [(show x, show y, x `op` y) | x <- w8s,  y <- w8s ] [x `op` y | x <- sw8s,  y <- sw8s]
      ++ zipWith pair [(show x, show y, x `op` y) | x <- w16s, y <- w16s] [x `op` y | x <- sw16s, y <- sw16s]
@@ -82,7 +82,7 @@ genBoolTest nm op opS = map mkTest $
   where pair (x, y, a) b   = (x, y, Just a == unliteral b)
         mkTest (x, y, s) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
 
-genUnTest :: String -> (forall a. Bits a => a -> a) -> [Test]
+genUnTest :: String -> (forall a. (Num a, Bits a) => a -> a) -> [Test]
 genUnTest nm op = map mkTest $
         zipWith pair [(show x, op x) | x <- w8s ] [op x | x <- sw8s ]
      ++ zipWith pair [(show x, op x) | x <- w16s] [op x | x <- sw16s]
@@ -96,7 +96,7 @@ genUnTest nm op = map mkTest $
   where pair (x, a) b   = (x, show (fromIntegral a `asTypeOf` b) == show b)
         mkTest (x, s) = "arithCF-" ++ nm ++ "." ++ x ~: s `showsAs` "True"
 
-genIntTest :: String -> (forall a. Bits a => a -> Int -> a) -> [Test]
+genIntTest :: String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [Test]
 genIntTest nm op = map mkTest $
         zipWith pair [("u8",  show x, show y, x `op` y) | x <- w8s,  y <- is] [x `op` y | x <- sw8s,  y <- is]
      ++ zipWith pair [("u16", show x, show y, x `op` y) | x <- w16s, y <- is] [x `op` y | x <- sw16s, y <- is]
@@ -111,7 +111,7 @@ genIntTest nm op = map mkTest $
         mkTest (t, x, y, a, b, s) = "arithCF-" ++ nm ++ "." ++ t ++ "_" ++ x ++ "_" ++ y ++ "_" ++ a ++ "_" ++ b ~: s `showsAs` "True"
         is = [-10 .. 10]
 
-genIntTestS :: String -> (forall a. Bits a => a -> Int -> a) -> [Test]
+genIntTestS :: String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [Test]
 genIntTestS nm op = map mkTest $
         zipWith pair [("u8",  show x, show y, x `op` y) | x <- w8s,  y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- sw8s,  y <- [0 .. (bitSize x - 1)]]
      ++ zipWith pair [("u16", show x, show y, x `op` y) | x <- w16s, y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- sw16s, y <- [0 .. (bitSize x - 1)]]

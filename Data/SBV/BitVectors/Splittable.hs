@@ -9,11 +9,11 @@
 -- Implementation of bit-vector concatanetation and splits
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE TypeSynonymInstances   #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE BangPatterns           #-}
 
 module Data.SBV.BitVectors.Splittable (Splittable(..), FromBits(..)) where
 
@@ -124,14 +124,14 @@ class FromBits a where
  fromBitsBE = fromBitsLE . reverse
 
 -- | Construct a symbolic word from its bits given in little-endian
-fromBinLE :: (Bits a, SymWord a) => [SBool] -> SBV a
+fromBinLE :: (Num a, Bits a, SymWord a) => [SBool] -> SBV a
 fromBinLE = go 0 0
   where go !acc _  []     = acc
         go !acc !i (x:xs) = go (ite x (setBit acc i) acc) (i+1) xs
 
 -- | Perform a sanity check that we should receive precisely the same
 -- number of bits as required by the resulting type. The input is little-endian
-checkAndConvert :: (Bits a, SymWord a) => Int -> [SBool] -> SBV a
+checkAndConvert :: (Num a, Bits a, SymWord a) => Int -> [SBool] -> SBV a
 checkAndConvert sz xs
   | sz /= l
   = error $ "SBV.fromBits.SWord" ++ ssz ++ ": Expected " ++ ssz ++ " elements, got: " ++ show l
