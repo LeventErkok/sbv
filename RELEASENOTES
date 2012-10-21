@@ -1,24 +1,10 @@
 Hackage: <http://hackage.haskell.org/package/sbv>
 GitHub:  <http://github.com/LeventErkok/sbv>
 
-Latest Hackage released version: 2.6
+Latest Hackage released version: 2.7
 
 ======================================================================
-Version 2.6, 2012-10-20
-
-  - Workaround issues related hackage compilation, in particular to the
-    problem with the new containers package release, which does provide
-    an NFData instance for sequences.
-
-======================================================================
-Version 2.5, 2012-10-19
-
-  - Remove dependency on the hackage package strict-concurrency, as
-    hackage can no longer compile it due to some dependency mismatch.
-  - Add forgotten Real class instance for the type 'AlgReal'
-
-======================================================================
-Version 2.4, 2012-10-19
+Version 2.7, 2012-10-21
 
   - Add missing QuickCheck instance for SReal
   - When dealing with concrete SReal's, make sure to operate
@@ -35,6 +21,18 @@ Version 2.4, 2012-10-19
     semantics. 
   - Improve test suite, adding many constant-folding tests
     and start using cabal based tests (--enable-tests option.)
+
+======================================================================
+Versions 2.4, 2.5, and 2.6: Around mid October 2012
+
+  - Workaround issues related hackage compilation, in particular to the
+    problem with the new containers package release, which does provide
+    an NFData instance for sequences.
+  - Add explicit Num requirements when necessary, as the Bits class
+    no longer does this.
+  - Remove dependency on the hackage package strict-concurrency, as
+    hackage can no longer compile it due to some dependency mismatch.
+  - Add forgotten Real class instance for the type 'AlgReal'
   - Stop putting bounds on hackage dependencies, as they cause
     more trouble then they actually help. (See the discussion
     here: http://www.haskell.org/pipermail/haskell-cafe/2012-July/102352.html.)
