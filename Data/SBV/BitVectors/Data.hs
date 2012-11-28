@@ -863,7 +863,7 @@ class (HasKind a, Ord a) => SymWord a where
   -- | One stop allocator
   mkSymWord :: Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
 
-  -- minimal complete definiton, Nothing.
+  -- minimal complete definition, Nothing.
   -- Giving no instances is ok when defining an uninterpreted sort, but otherwise you really
   -- want to define: mbMaxBound, mbMinBound, literal, fromCW, mkSymWord
   forall   = mkSymWord (Just ALL) . Just

@@ -118,7 +118,7 @@ instance Splittable SWord16 SWord8 where
 -- is the sign digit. This is a bit awkward, but it is more consistent with the "reverse" view of
 -- little-big-endian representations
 --
--- Minimal complete definiton: 'fromBitsLE'
+-- Minimal complete definition: 'fromBitsLE'
 class FromBits a where
  fromBitsLE, fromBitsBE :: [SBool] -> a
  fromBitsBE = fromBitsLE . reverse
