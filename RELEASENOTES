@@ -4,6 +4,15 @@ GitHub:  <http://github.com/LeventErkok/sbv>
 Latest Hackage released version: 2.7
 
 ======================================================================
+Version 2.8, Not yet released
+
+  - Rename the SNum class to SIntegral, and make it index over regular
+    types. This makes it much more useful, simplifying coding of
+    polymorphic symbolic functions over integral types, which is
+    the common case.
+  - Several typo fixes.
+
+======================================================================
 Version 2.7, 2012-10-21
 
   - Add missing QuickCheck instance for SReal
