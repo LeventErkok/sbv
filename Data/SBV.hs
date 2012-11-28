@@ -130,8 +130,8 @@ module Data.SBV (
   , EqSymbolic(..)
   -- ** Symbolic ordering
   , OrdSymbolic(..)
-  -- ** Symbolic numbers
-  , SNum
+  -- ** Symbolic integral numbers
+  , SIntegral
   -- ** Division
   , SDivisible(..)
   -- ** The Boolean class

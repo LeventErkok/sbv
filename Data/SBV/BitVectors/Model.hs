@@ -21,7 +21,7 @@
 {-# LANGUAGE Rank2Types             #-}
 
 module Data.SBV.BitVectors.Model (
-    Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), SNum
+    Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), SIntegral
   , sbvTestBit, sbvPopCount, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
@@ -455,30 +455,30 @@ instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c, OrdSymbolic d, OrdSymboli
   (a0, b0, c0, d0, e0, f0, g0) .< (a1, b1, c1, d1, e1, f1, g1) =    (a0, b0, c0, d0, e0, f0) .<  (a1, b1, c1, d1, e1, f1)
                                                                ||| ((a0, b0, c0, d0, e0, f0) .== (a1, b1, c1, d1, e1, f1) &&& g0 .< g1)
 
--- | Symbolic Numbers. This is a simple class that simply incorporates all 'OrdSymbolic' and
--- 'Num' values together, simplifying writing polymorphic type-signatures that work for all
+-- | Symbolic Numbers. This is a simple class that simply incorporates all number like
+-- base types together, simplifying writing polymorphic type-signatures that work for all
 -- symbolic numbers, such as 'SWord8', 'SInt8' etc. For instance, we can write a generic
 -- list-minimum function as follows:
 --
 -- @
---    mm :: SNum a => [a] -> a
+--    mm :: SIntegral a => [SBV a] -> SBV a
 --    mm = foldr1 (\a b -> ite (a .<= b) a b)
 -- @
 --
--- It is similar to the standard 'Num' class, except ranging over symbolic instances.
-class (OrdSymbolic a, Num a) => SNum a
+-- It is similar to the standard 'Integral' class, except ranging over symbolic instances.
+class (SymWord a, Num a, Bits a) => SIntegral a
 
--- 'SNum' Instances, including all possible variants except 'SBool', since booleans
+-- 'SIntegral' Instances, including all possible variants except 'Bool', since booleans
 -- are not numbers.
-instance SNum SWord8
-instance SNum SWord16
-instance SNum SWord32
-instance SNum SWord64
-instance SNum SInt8
-instance SNum SInt16
-instance SNum SInt32
-instance SNum SInt64
-instance SNum SInteger
+instance SIntegral Word8
+instance SIntegral Word16
+instance SIntegral Word32
+instance SIntegral Word64
+instance SIntegral Int8
+instance SIntegral Int16
+instance SIntegral Int32
+instance SIntegral Int64
+instance SIntegral Integer
 
 -- Boolean combinators
 instance Boolean SBool where
