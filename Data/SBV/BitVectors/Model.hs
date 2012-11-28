@@ -22,7 +22,8 @@
 
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), SIntegral
-  , sbvTestBit, sbvPopCount, setBitTo, allEqual, allDifferent, oneIf, blastBE, blastLE
+  , sbvTestBit, sbvPopCount, setBitTo, sbvShiftLeft, sbvShiftRight, sbvSignedShiftArithRight
+  , allEqual, allDifferent, oneIf, blastBE, blastLE
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
@@ -671,6 +672,39 @@ sbvPopCount x
 -- the condition to set/clear happens to be symbolic.
 setBitTo :: (Num a, Bits a, SymWord a) => SBV a -> Int -> SBool -> SBV a
 setBitTo x i b = ite b (setBit x i) (clearBit x i)
+
+-- | Generalization of 'shiftL', when the shift-amount is symbolic. Since Haskell's
+-- 'shiftL' only takes an 'Int' as the shift amount, it cannot be used when we have
+-- a symbolic amount to shift with. The shift amount must be an unsigned quantity.
+sbvShiftLeft :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
+sbvShiftLeft x i
+  | isSigned i = error "sbvShiftLeft: shift amount should be unsigned"
+  | True       = select [x `shiftL` k | k <- [0 .. bitSize x - 1]] 0 i
+
+-- | Generalization of 'shiftR', when the shift-amount is symbolic. Since Haskell's
+-- 'shiftR' only takes an 'Int' as the shift amount, it cannot be used when we have
+-- a symbolic amount to shift with. The shift amount must be an unsigned quantity.
+--
+-- NB. If the shiftee is signed, then this is an arithmetic shift; otherwise it's logical,
+-- following the usual Haskell convention. See 'sbvSignedShiftArithRight' for a variant
+-- that explicitly uses the msb as the sign bit, even for unsigned underlying types.
+sbvShiftRight :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
+sbvShiftRight x i
+  | isSigned i = error "sbvShiftRight: shift amount should be unsigned"
+  | True       = select [x `shiftR` k | k <- [0 .. bitSize x - 1]] 0 i
+
+-- | Arithmetic shift-right with a symbolic unsigned shift amount. This is equivalent
+-- to 'sbvShiftRight' when the argument is signed. However, if the argument is unsigned,
+-- then it explicitly treats its msb as a sign-bit, and uses it as the bit that
+-- gets shifted in. Useful when using the underlying unsigned bit representation to implement
+-- custom signed operations. Note that there is no direct Haskell analogue of this function.
+sbvSignedShiftArithRight:: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
+sbvSignedShiftArithRight x i
+  | isSigned i = error "sbvSignedShiftArithRight: shift amount should be unsigned"
+  | isSigned x = sbvShiftRight x i
+  | True       = ite (msb x)
+                     (complement (sbvShiftRight (complement x) i))
+                     (sbvShiftRight x i)
 
 -- | Little-endian blasting of a word into its bits. Also see the 'FromBits' class.
 blastLE :: (Num a, Bits a, SymWord a) => SBV a -> [SBool]

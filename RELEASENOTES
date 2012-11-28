@@ -10,6 +10,21 @@ Version 2.8, Not yet released
     types. This makes it much more useful, simplifying coding of
     polymorphic symbolic functions over integral types, which is
     the common case.
+  - Add the functions:
+  	- sbvShiftLeft
+	- sbvShiftRight
+    which can accommodate unsigned symbolic shift amounts. Note that
+    one cannot use Haskell's shiftL/shiftR from the Bits class since
+    they are hard-wired to take 'Int' values as the shift amounts only.
+  - Add a new function 'sbvArithShiftRight', which is the same as
+    a shift-right, except it uses the MSB of the input as the bit to fill
+    in (instead of always filling in with 0 bits). Note that this is
+    the same as shiftRight for signed values, but differs from a shiftRight
+    when the input is unsigned. (There is no Haskell analogue of this
+    function, as Haskell's shiftR is always arithmetic for signed
+    types and logical for unsigned ones.) This variant is designed for
+    use cases when one uses the underlying unsigned SMT-Lib representation
+    to implement custom signed operations, for instance.
   - Several typo fixes.
 
 ======================================================================
