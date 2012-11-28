@@ -932,7 +932,7 @@ class Mergeable a where
    -- | Total indexing operation. @select xs default index@ is intuitively
    -- the same as @xs !! index@, except it evaluates to @default@ if @index@
    -- overflows
-   select        :: (Bits b, SymWord b, Integral b) => [a] -> a -> SBV b -> a
+   select :: (SymWord b, Num b) => [a] -> a -> SBV b -> a
    -- default definitions
    ite s a b
     | Just t <- unliteral s = if t then a else b
@@ -945,11 +945,8 @@ class Mergeable a where
    -- list is really humongous, which is not very common in general. (Also,
    -- for the case when the list is bit-vectors, we use SMT tables anyhow.)
    select xs err ind
-    | isReal ind              = error "SBV.select: unsupported real valued select/index expression"
-    | Just i <- unliteral ind = if i < 0 || i >= genericLength xs
-                                then err
-                                else xs `genericIndex` i
-    | True                    = walk xs ind err
+    | isReal ind = error "SBV.select: unsupported real valued select/index expression"
+    | True       = walk xs ind err
     where walk []     _ acc = acc
           walk (e:es) i acc = walk es (i-1) (ite (i .== 0) e acc)
 
@@ -1037,12 +1034,12 @@ instance SymWord a => Mergeable (SBV a) where
                                  ()                                   -> newExpr st k (SBVApp Ite [swt, swa, swb])
   -- Custom version of select that translates to SMT-Lib tables at the base type of words
   select xs err ind
-    | Just i <- unliteral ind
-    = let i' :: Integer
-          i' = fromIntegral i
-      in if i' < 0 || i' >= genericLength xs then err else genericIndex xs i'
-  select [] err _   = err
-  select xs err ind = SBV kElt $ Right $ cache r
+    | SBV _ (Left c) <- ind = case cwVal c of
+                                CWInteger i -> if i < 0 || i >= genericLength xs
+                                               then err
+                                               else xs `genericIndex` i
+                                _           -> error "SBV.select: unsupported real valued select/index expression"
+  select xs err ind  = SBV kElt $ Right $ cache r
      where kInd = kindOf ind
            kElt = kindOf err
            r st  = do sws <- mapM (sbvToSW st) xs
