@@ -18,10 +18,9 @@ import qualified Control.Exception as C
 
 import Data.Char          (isDigit)
 import Data.Function      (on)
-import Data.List          (sortBy, intercalate, groupBy)
+import Data.List          (sortBy, intercalate)
 import System.Environment (getEnv)
 
-import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
 import Data.SBV.Provers.SExpr
 import Data.SBV.SMT.SMT
@@ -70,7 +69,7 @@ cvc4 = SMTSolver {
 
 extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [String] -> SMTModel
 extractMap isSat qinps _modelMap solverLines =
-   SMTModel { modelAssocs    = map snd $ squashReals $ sortByNodeId $ concatMap (getCounterExample inps) solverLines
+   SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (getCounterExample inps) solverLines
             , modelUninterps = []
             , modelArrays    = []
             }
@@ -83,14 +82,6 @@ extractMap isSat qinps _modelMap solverLines =
                        else map snd $ reverse $ dropWhile ((== ALL) . fst) $ reverse qinps
              -- for "proof", just display the prefix universals
              | True  = map snd $ takeWhile ((== ALL) . fst) qinps
-        squashReals :: [(Int, (String, CW))] -> [(Int, (String, CW))]
-        squashReals = concatMap squash . groupBy ((==) `on` fst)
-          where squash [(i, (n, cw1)), (_, (_, cw2))] = [(i, (n, mergeReals n cw1 cw2))]
-                squash xs = xs
-                mergeReals :: String -> CW -> CW -> CW
-                mergeReals n (CW KReal (CWAlgReal a)) (CW KReal (CWAlgReal b)) = CW KReal (CWAlgReal (mergeAlgReals (error (bad n a b)) a b))
-                mergeReals n a b = error $ bad n a b
-                bad n a b = "SBV.Z3: Cannot merge reals for variable: " ++ n ++ " received: " ++ show (a, b)
 
 getCounterExample :: [NamedSymVar] -> String -> [(Int, (String, CW))]
 getCounterExample inps line = either err extract (parseSExpr line)
