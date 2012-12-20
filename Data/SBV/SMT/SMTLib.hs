@@ -19,6 +19,7 @@ import qualified Data.SBV.SMT.SMTLib2 as SMT2
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for
 -- newer versions in the future.)
 type SMTLibConverter =  (Bool, Bool)                -- ^ has unbounded integers/reals
+                     -> Maybe String                 -- ^ set-logic string to use in case not automatically determined (if any)
                      -> Bool                        -- ^ is this a sat problem?
                      -> [String]                    -- ^ extra comments to place on top
                      -> [String]                    -- ^ uninterpreted sorts
@@ -40,10 +41,10 @@ toSMTLib1 :: SMTLibConverter
 -- | Convert to SMTLib-2 format
 toSMTLib2 :: SMTLibConverter
 (toSMTLib1, toSMTLib2) = (cvt SMTLib1, cvt SMTLib2)
-  where cvt v boundedInfo isSat comments sorts qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out = SMTLibPgm v (aliasTable, pre, post)
+  where cvt v mbDefaultLogic boundedInfo isSat comments sorts qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out = SMTLibPgm v (aliasTable, pre, post)
          where aliasTable  = map (\(_, (x, y)) -> (y, x)) qinps
                converter   = if v == SMTLib1 then SMT1.cvt else SMT2.cvt
-               (pre, post) = converter boundedInfo isSat comments sorts qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out
+               (pre, post) = converter mbDefaultLogic boundedInfo isSat comments sorts qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out
 
 -- | Add constraints generated from older models, used for querying new models
 addNonEqConstraints :: [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> SMTLibPgm -> Maybe String

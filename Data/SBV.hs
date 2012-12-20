@@ -76,9 +76,16 @@
 -- <http://goedel.cs.uiowa.edu/smtlib/>.
 --
 -- The SBV library is designed to work with any SMT-Lib compliant SMT-solver.
--- Currently, we support the Z3 SMT solver from Microsoft: <http://research.microsoft.com/en-us/um/redmond/projects/z3/>
--- and the Yices SMT solver from SRI: <http://yices.csl.sri.com/>, out-of-the-box. Support for other solvers
--- can be added with relative ease.
+-- Currently, we support the following SMT-Solvers out-of-the box:
+--
+--   * Z3 from Microsoft: <http://research.microsoft.com/en-us/um/redmond/projects/z3/>
+--
+--   * Yices from SRI: <http://yices.csl.sri.com/>
+--
+--   * CVC4 from New York University and University of Iowa: <http://cvc4.cs.nyu.edu/>
+--
+-- Support for other compliant solvers can be added relatively easily, please
+-- get in touch if there is a solver you'd like to see included.
 ---------------------------------------------------------------------------------
 
 module Data.SBV (
@@ -184,7 +191,7 @@ module Data.SBV (
   , SatModel(..), Modelable(..), displayModels, extractModels
 
   -- * SMT Interface: Configurations and solvers
-  , SMTConfig(..), OptimizeOpts(..), SMTSolver(..), yices, z3, defaultSMTCfg, sbvCheckSolverInstallation
+  , SMTConfig(..), OptimizeOpts(..), SMTSolver(..), yices, z3, cvc4, defaultSMTCfg, sbvCheckSolverInstallation
 
   -- * Symbolic computations
   , Symbolic, output, SymWord(..)

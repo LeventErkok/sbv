@@ -1,5 +1,5 @@
 Name:          sbv
-Version:       2.8
+Version:       2.9
 Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math, SMT
 Synopsis:      SMT Based Verification: Symbolic Haskell theorem prover using SMT solving.
 Description:   Express properties about Haskell programs and automatically prove them using SMT
@@ -15,7 +15,15 @@ Description:   Express properties about Haskell programs and automatically prove
                >   Falsifiable. Counter-example:
                >     x = 128 :: SWord8
                .
-               The SBV library uses Microsoft's Z3 SMT solver (<http://research.microsoft.com/en-us/um/redmond/projects/z3/>) as the default underlying solver. It is also possible to use SRI's Yices SMT solver with SBV as well (<http://yices.csl.sri.com/download-yices2.shtml>), although the Z3 binding is much more richer.
+               The SBV library works with the the following SMT solvers:
+               .
+                  * Z3 from Microsoft (<http://z3.codeplex.com/>)
+               .
+                  * Yices from SRI (<http://yices.csl.sri.com/>)
+               .
+                  * CVC4 from New York University and the University of Iowa (<http://cvc4.cs.nyu.edu>)
+               .
+               By default, SBV uses the Z3 SMT solver.
                .
                SBV introduces the following types and concepts:
                .
@@ -162,6 +170,7 @@ Library
                   , Data.SBV.SMT.SMTLib2
                   , Data.SBV.Provers.Prover
                   , Data.SBV.Provers.SExpr
+                  , Data.SBV.Provers.CVC4
                   , Data.SBV.Provers.Yices
                   , Data.SBV.Provers.Z3
                   , Data.SBV.Tools.ExpectedValue

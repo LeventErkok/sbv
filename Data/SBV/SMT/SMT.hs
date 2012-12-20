@@ -33,7 +33,7 @@ import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.PrettyNum
 import Data.SBV.Utils.TDiff
 
--- | Solver configuration. See also 'z3' and 'yices', which are instantiations of this type for those solvers, with
+-- | Solver configuration. See also 'z3', 'yices', and 'cvc4', which are instantiations of this type for those solvers, with
 -- reasonable defaults. In particular, custom configuration can be created by varying those values. (Such as @z3{verbose=True}@.)
 --
 -- Most fields are self explanatory. The notion of precision for printing algebraic reals stems from the fact that such values does
@@ -64,10 +64,12 @@ type SMTEngine = SMTConfig -> Bool -> [(Quantifier, NamedSymVar)] -> [(String, U
 
 -- | An SMT solver
 data SMTSolver = SMTSolver {
-         name         :: String    -- ^ Printable name of the solver
-       , executable   :: String    -- ^ The path to its executable
-       , options      :: [String]  -- ^ Options to provide to the solver
-       , engine       :: SMTEngine -- ^ The solver engine, responsible for interpreting solver output
+         name           :: String       -- ^ Printable name of the solver
+       , executable     :: String       -- ^ The path to its executable
+       , options        :: [String]     -- ^ Options to provide to the solver
+       , engine         :: SMTEngine    -- ^ The solver engine, responsible for interpreting solver output
+       , ignoreExitCode :: Bool         -- ^ Should we ignore the exit code? Some solvers (CVC4) use it to indicate sat/unsat, which isn't what SBV expects.
+       , defaultLogic   :: Maybe String -- ^ Default logic to set, if any
        }
 
 -- | A model, as returned by a solver
@@ -358,24 +360,24 @@ pipeProcess cfg nm execName opts script cleanErrs = do
                                    ++ "\nExecutable specified: " ++ show execName
           Just execPath -> do (ec, contents, allErrors) <- runSolver cfg execPath opts script
                               let errors = dropWhile isSpace (cleanErrs allErrors)
-                              case ec of
-                                ExitSuccess  ->  if null errors
-                                                 then return $ Right $ map clean (filter (not . null) (lines contents))
-                                                 else return $ Left errors
-                                ExitFailure n -> let errors' = if null errors
+                              case (ignoreExitCode (solver cfg), ec) of
+                                (False, ExitFailure n) -> let errors' = if null errors
                                                                then (if null (dropWhile isSpace contents)
                                                                      then "(No error message printed on stderr by the executable.)"
                                                                      else contents)
                                                                else errors
-                                                 in return $ Left $  "Failed to complete the call to " ++ nm
-                                                                  ++ "\nExecutable   : " ++ show execPath
-                                                                  ++ "\nOptions      : " ++ unwords opts
-                                                                  ++ "\nExit code    : " ++ show n
-                                                                  ++ "\nSolver output: "
-                                                                  ++ "\n" ++ line ++ "\n"
-                                                                  ++ intercalate "\n" (filter (not . null) (lines errors'))
-                                                                  ++ "\n" ++ line
-                                                                  ++ "\nGiving up.."
+                                                         in return $ Left $  "Failed to complete the call to " ++ nm
+                                                                          ++ "\nExecutable   : " ++ show execPath
+                                                                          ++ "\nOptions      : " ++ unwords opts
+                                                                          ++ "\nExit code    : " ++ show n
+                                                                          ++ "\nSolver output: "
+                                                                          ++ "\n" ++ line ++ "\n"
+                                                                          ++ intercalate "\n" (filter (not . null) (lines errors'))
+                                                                          ++ "\n" ++ line
+                                                                          ++ "\nGiving up.."
+                                _                             ->  if null errors
+                                                                  then return $ Right $ map clean (filter (not . null) (lines contents))
+                                                                  else return $ Left errors
   where clean = reverse . dropWhile isSpace . reverse . dropWhile isSpace
         line  = replicate 78 '='
 

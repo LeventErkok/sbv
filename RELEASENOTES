@@ -4,6 +4,21 @@ GitHub:  <http://github.com/LeventErkok/sbv>
 Latest Hackage released version: 2.8
 
 ======================================================================
+Version 2.9, Not yet released
+
+  - Add support for the CVC4 SMT solver from New York University and
+    the University of Iowa. (http://cvc4.cs.nyu.edu/).
+
+    NB. Z3 remains the default solver for SBV. To use CVC4, use the
+    *With variants of the interface (i.e., proveWith, satWith, ..)
+    by passing cvc4 as the solver argument. (Similarly, use 'yices'
+    as the argument for the *With functions for invoking yices.)
+
+  - Latest release of Yices calls the SMT-Lib based solver executable
+    yices-smt. Updated the default value of the executable to have this
+    name for ease of use.
+
+======================================================================
 Version 2.8, 2012-11-29
 
   - Rename the SNum class to SIntegral, and make it index over regular

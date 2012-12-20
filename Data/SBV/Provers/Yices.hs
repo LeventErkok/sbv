@@ -27,20 +27,22 @@ import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 
 -- | The description of the Yices SMT solver
--- The default executable is @\"yices\"@, which must be in your path. You can use the @SBV_YICES@ environment variable to point to the executable on your system.
--- The default options are @\"-m -f\"@, which is valid for Yices 2 series. You can use the @SBV_YICES_OPTIONS@ environment variable to override the options.
+-- The default executable is @\"yices-smt\"@, which must be in your path. You can use the @SBV_YICES@ environment variable to point to the executable on your system.
+-- The default options are @\"-m -f\"@, which is valid for Yices 2.1 series. You can use the @SBV_YICES_OPTIONS@ environment variable to override the options.
 yices :: SMTSolver
 yices = SMTSolver {
-           name         = "Yices"
-         , executable   = "yices"
-         -- , options      = ["-tc", "-smt", "-e"]   -- For Yices1
-         , options      = ["-m", "-f"]  -- For Yices2
-         , engine       = \cfg _isSat qinps modelMap _skolemMap pgm -> do
-                                  execName <-                getEnv "SBV_YICES"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
-                                  execOpts <- (words `fmap`  getEnv "SBV_YICES_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
-                                  let cfg'   = cfg {solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts}}
-                                      script = SMTScript {scriptBody = unlines (solverTweaks cfg') ++ pgm, scriptModel = Nothing}
-                                  standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap (map snd qinps) modelMap))
+           name           = "Yices"
+         , executable     = "yices-smt"
+         -- , options        = ["-tc", "-smt", "-e"]   -- For Yices1
+         , options        = ["-m", "-f"]  -- For Yices2
+         , engine         = \cfg _isSat qinps modelMap _skolemMap pgm -> do
+                                    execName <-                getEnv "SBV_YICES"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
+                                    execOpts <- (words `fmap`  getEnv "SBV_YICES_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
+                                    let cfg'   = cfg {solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts}}
+                                        script = SMTScript {scriptBody = unlines (solverTweaks cfg') ++ pgm, scriptModel = Nothing}
+                                    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap (map snd qinps) modelMap))
+         , ignoreExitCode = False
+         , defaultLogic   = Nothing
          }
   where addTimeOut Nothing  o   = o
         addTimeOut (Just i) o

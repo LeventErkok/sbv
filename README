@@ -83,27 +83,27 @@ Use of SMT solvers
 The SBV library uses third-party SMT solvers via the standard SMT-Lib interface
 [http://goedel.cs.uiowa.edu/smtlib/](http://goedel.cs.uiowa.edu/smtlib/).
 
-Currently, we fully support the
-[Z3](http://research.microsoft.com/en-us/um/redmond/projects/z3/) SMT solver from Microsoft,
-and the [Yices](http://yices.csl.sri.com) SMT solver from SRI. Both solvers are available
-for Windows, Linux, and Mac OSX.
+Currently, we fully support the following SMT solvers:
 
+  - [Z3](http://z3.codeplex.com/) from Microsoft,
+  - [Yices](http://yices.csl.sri.com) from SRI,
+  - [CVC4](http://cvc4.cs.nyu.edu) from New York University and the University of Iowa.
+  
 Other SMT solvers can be used with SBV as well, with a relatively easy hook-up mechanism. Please
 do get in touch if you plan to use SBV with any other solver.
 
 Prerequisites
 =============
-You **should** have at least one of 
-Z3 [(download)](http://research.microsoft.com/en-us/um/redmond/projects/z3/download.html), or
-Yices [(download)](http://yices.csl.sri.com/download-yices2.shtml) (version 2.X) 
-installed on your machine, preferably both. Note that z3 is the default solver used by 'sat',
-'allSat', 'prove', etc. commands. To use "yices", use the 'satWith', 'proveWith', 'allSatWith' variants.
+You **should** have at least one of the SMT solvers listed above installed on your machine.
+Note that z3 is the default solver used by SBV. Other solvers can be used by calling `With` variants
+of functions (i.e., `satWith`, `proveWith`, etc.) by providing the appropriate SMT solver name. (For
+instance, use `proveWith cvc4`.)
 
-Make sure the executables for the solvers are in your path. Alternatively, you can specify the location
-of the yices executable in the environment variable `SBV_YICES` and the options to yices in `SBV_YICES_OPTIONS`.
-(The default for the latter is `"-m -f"`). Similarly the environment variables `SBV_Z3` and `SBV_Z3_OPTIONS` can
-be used for choosing executable location and custom options for Z3.  (The default for the latter is
-`"/in /smt2"` on Windows and `"-in -smt2"` on Mac and Linux. You should use Z3 version 4.1 or later.)
+Make sure the executables for the solvers are in your path, so SBV can invoke the solvers
+automatically. In cases where you need to install the solvers in alternate places, you can use the
+environment variables `SBV_Z3`, `SBV_YICES`, and `SBV_CVC4` to specify the executable locations respectively. Similarly,
+any options you'd like to pass to these solvers can be specified in the environment variables `SBV_Z3_OPTIONS`,
+`SBV_YICES_OPTIONS`, and `SBV_CVC4_OPTIONS`, although the defaults SBV uses should suffice unless you have specific needs.
 
 Examples
 =========

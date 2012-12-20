@@ -41,6 +41,7 @@ nonEq (s, c) = "(not (= " ++ s ++ " " ++ cvtCW c ++ "))"
 
 -- | Translate a problem into an SMTLib1 script
 cvt :: (Bool, Bool)                 -- ^ has infinite precision integers/reals
+    -> Maybe String                 -- ^ Not used in the SMTLib1 converter
     -> Bool                         -- ^ is this a sat problem?
     -> [String]                     -- ^ extra comments to place on top
     -> [String]                     -- ^ uninterpreted sorts
@@ -55,15 +56,15 @@ cvt :: (Bool, Bool)                 -- ^ has infinite precision integers/reals
     -> [SW]                         -- ^ extra constraints
     -> SW                           -- ^ output variable
     -> ([String], [String])
-cvt (hasIntegers, hasReals) isSat comments sorts qinps _skolemInps consts tbls arrs uis axs asgnsSeq cstrs out
+cvt (hasIntegers, hasReals) _mbDefaultLogic isSat comments sorts qinps _skolemInps consts tbls arrs uis axs asgnsSeq cstrs out
   | hasIntegers
-  = error "SBV: Unbounded integers are not supported in the SMTLib1/yices interface. (Use z3 instead.)"
+  = error "SBV: Unbounded integers are not supported in the SMTLib1/yices interface."
   | hasReals
-  = error "SBV: The real value domain is not supported in the SMTLib1/yices interface. (Use z3 instead.)"
+  = error "SBV: The real value domain is not supported in the SMTLib1/yices interface."
   | not ((isSat && allExistential) || (not isSat && allUniversal))
-  = error "SBV: The chosen solver does not support quantified variables. (Use z3 instead.)"
+  = error "SBV: The chosen solver does not support quantified variables."
   | not (null sorts)
-  = error "SBV: The chosen solver does not support unintepreted sorts. (Use z3 instead.)"
+  = error "SBV: The chosen solver does not support unintepreted sorts."
   | True
   = (pre, post)
   where quantifiers    = map fst qinps

@@ -75,6 +75,8 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         cvt (SApp [SCon "/", SNum  a, SNum  b])                    = return $ SReal (fromInteger a / fromInteger b)
         cvt (SApp [SCon "-", SReal a])                             = return $ SReal (-a)
         cvt (SApp [SCon "-", SNum a])                              = return $ SNum  (-a)
+        -- bit-vector value as CVC4 prints: (_ bv0 16) for instance
+        cvt (SApp [SCon "_", SNum a, SNum _b])                     = return $ SNum a
         cvt (SApp [SCon "root-obj", SApp (SCon "+":trms), SNum k]) = do ts <- mapM getCoeff trms
                                                                         return $ SReal $ mkPolyReal (Right (k, ts))
         cvt x                                                      = return x
