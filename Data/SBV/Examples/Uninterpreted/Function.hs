@@ -12,6 +12,7 @@
 module Data.SBV.Examples.Uninterpreted.Function where
 
 import Data.SBV
+import qualified Data.SBV.Provers.Yices as Yices
 
 -- | An uninterpreted function
 f :: SWord8 -> SWord8 -> SWord16
@@ -30,7 +31,7 @@ thmGood x y z = x .== y+2 ==> f x z .== f (y + 2) z
 -- counterexamples are not yet supported by sbv.) We have:
 --
 --
--- >>> proveWith yices $ forAll ["x", "y"] thmBad
+-- >>> proveWith yicesSMT09 $ forAll ["x", "y"] thmBad
 -- Falsifiable. Counter-example:
 --   x = 0 :: SWord8
 --   y = 128 :: SWord8
@@ -42,3 +43,16 @@ thmGood x y z = x .== y+2 ==> f x z .== f (y + 2) z
 -- thus providing evidence that the asserted theorem is not valid.
 thmBad :: SWord8 -> SWord8 -> SBool
 thmBad x y = f x y .== f y x
+
+-- | Old version of Yices, which supports nice output for uninterpreted functions.
+yicesSMT09 :: SMTConfig
+yicesSMT09 = yices {solver = yices'}
+  where yices' = Yices.yices { options    = ["-m"]
+                             , executable = "yices-SMT09"
+                             }
+
+----------------------------------------------------------------------
+-- * Inspecting symbolic traces
+----------------------------------------------------------------------
+
+-- | A symbolic trace can help illustrate the action of Ladner-Fischer. This

@@ -129,8 +129,8 @@ thm2 = prove $ flIsCorrect 16 (0, smax)
 -- (NB. We need to use yices for this proof as the uninterpreted function
 -- examples are only supported through the yices interface currently.)
 thm3 :: IO ThmResult
-thm3 = proveWith yices $ do args :: PowerList SWord32 <- mkForallVars 8
-                            return $ ps (u, op) args .== lf (u, op) args
+thm3 = proveWith yicesSMT09 $ do args :: PowerList SWord32 <- mkForallVars 8
+                                 return $ ps (u, op) args .== lf (u, op) args
   where op :: SWord32 -> SWord32 -> SWord32
         op = uninterpret "flOp"
         u :: SWord32
@@ -195,10 +195,20 @@ prefixSum i
   | i <= 1 || (i .&. (i-1)) /= 0
   = error $ "prefixSum: input must be a power of 2 larger than 2, received: " ++ show i
   | True
-  = proveWith cfg $ genPrefixSumInstance i
-  where cfg = yices { solver = yices' }
-        yices' = Yices.yices { options    = ["-tc", "-smt", "-e"]
+  = proveWith yices1029 $ genPrefixSumInstance i
+
+-- | Old version of Yices that supports quantified axioms in SMT-Lib1
+yices1029 :: SMTConfig
+yices1029 = yices {solver = yices'}
+  where yices' = Yices.yices { options    = ["-tc", "-smt", "-e"]
                              , executable = "yices-1.0.29"
+                             }
+
+-- | Another old version of yices, suitable for the non-axiom based problem
+yicesSMT09 :: SMTConfig
+yicesSMT09 = yices {solver = yices'}
+  where yices' = Yices.yices { options    = ["-m"]
+                             , executable = "yices-SMT09"
                              }
 
 ----------------------------------------------------------------------
