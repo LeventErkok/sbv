@@ -33,30 +33,65 @@ class DefaultBSOpts a where
 bsBoundsBounded :: (Bounded a) => BSBounds a
 bsBoundsBounded _cfg _pred0 = return (minBound, maxBound)
 
-instance (Bounded a, Integral a) => DefaultBSOpts a where
+bsBoundsSearch :: (Num a) => BSBounds a
+bsBoundsSearch cfg pred0 = do
+  lower <- goDown (-1)
+  upper <- goUp 1
+  return (lower, upper)
+    where
+      goUp x = do
+        (SatResult ans) <- satWith cfg $ pred0 x
+        case ans of
+          Satisfiable _ _ -> return x
+          _               -> goUp $ 2*x
+      goDown x = do
+        (SatResult ans) <- satWith cfg $ pred0 x
+        case ans of
+          Unsatisfiable  _ -> return x
+          _                -> goDown $ 2*x
+
+
+
+bsNextIntegral :: (Integral a) => BSNext a
+bsNextIntegral lower upper
+  | upper <= lower+1 = Nothing
+  | otherwise        =
+        Just $ ((lower+1) `div` 2) + (upper `div` 2)
+
+bsNextFractional :: (Ord a, Fractional a) => BSNext a
+bsNextFractional lower upper
+  | upper <= lower+1e-16 = Nothing
+  | otherwise = Just $ (lower+upper)/2
+
+
+instance DefaultBSOpts Int32 where
   defaultBSOpts = BSOpts
-    { bsBounds = (\_ _ -> return (minBound, maxBound))
-    , bsNext = (\lower upper ->
-       if | upper <= lower+1 -> Nothing
-          | otherwise        -> Just $
-              ((lower+1) `div` 2) + (upper `div` 2)
-         )
+    { bsBounds = bsBoundsBounded
+    , bsNext   = bsNextIntegral
     }
+
+
 
 instance DefaultBSOpts Integer where
   defaultBSOpts = BSOpts
-    { bsBounds = \_ _ -> return (-1,1)
-    , bsNext = (\_ _ -> Nothing) }
+    { bsBounds = bsBoundsSearch
+    , bsNext = bsNextIntegral }
 
-puzzle :: IO Int32
+instance DefaultBSOpts Rational where
+  defaultBSOpts = BSOpts
+    { bsBounds = bsBoundsSearch
+    , bsNext = bsNextFractional }
+
+
+puzzle :: IO Integer
 puzzle = binarySearchWith z3 defaultBSOpts p
   where
-    p :: Int32 -> Predicate
+    p :: Integer -> Predicate
     p x =
       let
-        sx :: SInt32
+        sx :: SInteger
         sx = fromIntegral x
-      in return $ sx .>= 20000
+      in return $ sx * sx .>= 30000000000000000
 
 -- | Given an @a -> Predicate@ that satisfies
 -- @x < y &&&  pred0 x ==> pred0 y@,
@@ -67,7 +102,7 @@ puzzle = binarySearchWith z3 defaultBSOpts p
 -- @
 --
 -- >>> puzzle
--- 20000
+-- 173205081
 
 binarySearchWith ::
      SMTConfig
