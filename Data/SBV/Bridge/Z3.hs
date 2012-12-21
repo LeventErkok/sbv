@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Z3
+-- Module      :  Data.SBV.Bridge.Z3
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -9,7 +9,7 @@
 -- Interface to the Z3 SMT solver.
 ---------------------------------------------------------------------------------
 
-module Data.SBV.Z3 (
+module Data.SBV.Bridge.Z3 (
   -- * SBV interface using the Z3 SMT solver
   prove, sat, allSat, isVacuous, isTheorem, isSatisfiable, optimize, minimize, maximize
   -- * Module export, everything else in SBV

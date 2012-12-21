@@ -17,13 +17,17 @@ Description:   Express properties about Haskell programs and automatically prove
                .
                The SBV library works with the the following SMT solvers:
                .
-                  * Z3 from Microsoft (<http://z3.codeplex.com/>)
+                  [@import "Data.SBV"@]
+                  Picks the default solver, which is currently set to be Z3. (Might change in the future!)
                .
-                  * Yices from SRI (<http://yices.csl.sri.com/>)
+                  [@import "Data.SBV.Bridge.Z3"@]
+                  Picks Z3 from Microsoft (<http://z3.codeplex.com/>).
                .
-                  * CVC4 from New York University and the University of Iowa (<http://cvc4.cs.nyu.edu>)
+                  [@import "Data.SBV.Bridge.Yices"@]
+                  Picks Yices from SRI (<http://yices.csl.sri.com/>) 
                .
-               By default, SBV uses the Z3 SMT solver.
+                  [@import "Data.SBV.Bridge.CVC4"@]
+                  Picks CVC4 from New York University and the University of Iowa (<http://cvc4.cs.nyu.edu>) 
                .
                SBV introduces the following types and concepts:
                .
@@ -127,9 +131,9 @@ Library
                   , array, containers, deepseq, directory, filepath, old-time
                   , pretty, process, mtl, QuickCheck, random, syb
   Exposed-modules : Data.SBV
-                  , Data.SBV.CVC4
-                  , Data.SBV.Yices
-                  , Data.SBV.Z3
+                  , Data.SBV.Bridge.CVC4
+                  , Data.SBV.Bridge.Yices
+                  , Data.SBV.Bridge.Z3
                   , Data.SBV.Internals
                   , Data.SBV.Examples.BitPrecise.BitTricks
                   , Data.SBV.Examples.BitPrecise.Legato
