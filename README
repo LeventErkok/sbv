@@ -105,6 +105,30 @@ environment variables `SBV_Z3`, `SBV_YICES`, and `SBV_CVC4` to specify the execu
 any options you'd like to pass to these solvers can be specified in the environment variables `SBV_Z3_OPTIONS`,
 `SBV_YICES_OPTIONS`, and `SBV_CVC4_OPTIONS`, although the defaults SBV uses should suffice unless you have specific needs.
 
+Picking a solver
+================
+In most cases, you should simply `import Data.SBV` to use the SBV library. This will invoke the default SMT solver
+for queries, which is currently set to Microsoft's Z3 SMT solver. If you want to use any other solver, simply
+use the functions `proveWith`/`satWith` etc., passing `yices`, `cvc4` etc., as the first argument.
+
+Alternatively, you can import one of the bridge modules, so you can use a specific solver without explicitly naming it:
+
+  - `import Data.SBV.Bridge.CVC4`
+
+     Uses CVC4 as the underlying SMT solver.
+  - `import Data.SBV.Bridge.Yices`
+
+     Uses Yices as the underlying SMT solver.
+  - `import Data.SBV.Bridge.Z3`
+
+     Uses Z3 as the underlying SMT solver.
+  - `import Data.SBV`
+
+     Uses the default SMT solver, which is currently configured to be Z3.
+
+Note that you should only import one of the above interfaces at any given time. (If you need to access
+more than one solver in any given module scope, use qualified imports.)
+
 Examples
 =========
 Please see the files under the
