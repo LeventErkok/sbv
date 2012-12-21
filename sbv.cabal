@@ -134,6 +134,7 @@ Library
                   , Data.SBV.Examples.Crypto.RC4
                   , Data.SBV.Examples.Existentials.CRCPolynomial
                   , Data.SBV.Examples.Existentials.Diophantine
+                  , Data.SBV.Examples.Optimization.Binary
                   , Data.SBV.Examples.Polynomials.Polynomials
                   , Data.SBV.Examples.Puzzles.Coins
                   , Data.SBV.Examples.Puzzles.Counts
