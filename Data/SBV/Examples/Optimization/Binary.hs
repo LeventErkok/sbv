@@ -23,8 +23,8 @@ class Searchable a where
 instance (Bounded a, Integral a) => Searchable a where
   getBounds = return (minBound, maxBound)
   between lower upper
-    | upper - lower <=1 = Nothing
-    | otherwise         = Just $ (lower + upper) `div` 2
+    | upper <= lower+1 = Nothing
+    | otherwise        = Just $ (lower `div` 2) + (upper `div` 2)
 
 
 -- | Given an @a -> Predicate@ that satisfies
@@ -36,11 +36,19 @@ instance (Bounded a, Integral a) => Searchable a where
 -- @
 --
 -- >>> puzzle
--- 42
+-- 20000
 
-puzzle = print 42
 
-argminSat :: (Ord a, Num a, Searchable a)
+puzzle = argminSat 0 p
+  where
+    p :: Int32 -> Predicate
+    p x =
+      let
+        sx :: SInt32
+        sx = fromIntegral x
+      in return $ sx .>= 20000
+
+argminSat :: (Ord a, Num a, Searchable a, Show a)
              => a
              -> (a -> Predicate)
              -> IO a
@@ -52,9 +60,9 @@ argminSat torelance pred0 = do
     go lower upper = do
       let quit = return upper
       case between lower upper of
-        Nothing                     -> quit
-        _ | upper-lower < torelance -> quit
-        (Just middle) -> do
+        Nothing                        -> quit
+        _ | upper <= lower + torelance -> quit
+        ret@(Just middle) -> do
           (SatResult ans) <- sat $ pred0 middle
           case ans of
             Satisfiable _ _ -> go lower middle
