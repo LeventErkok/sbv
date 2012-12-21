@@ -11,13 +11,11 @@
 
 module TestSuite.CRC.USB5(testSuite) where
 
-import Data.SBV
-
 import Examples.CRC.USB5
 import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test [
-   "usbGood" ~: assert =<< isTheorem usbGood
+   "usbGood" ~: assert =<< isThm usbGood
  ]

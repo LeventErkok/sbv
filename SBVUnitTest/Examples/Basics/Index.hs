@@ -12,10 +12,11 @@
 module Examples.Basics.Index where
 
 import Data.SBV
+import SBVTest
 
 -- prove that the "select" primitive is working correctly
 test1 :: Int -> IO Bool
-test1 n = isTheorem $ do
+test1 n = isThm $ do
             elts <- mkForallVars n
             err  <- forall_
             ind  <- forall_
@@ -30,7 +31,7 @@ test1 n = isTheorem $ do
                go (x:xs) curInd = ite (curInd .== 0) x (go xs (curInd - 1))
 
 test2 :: Int -> IO Bool
-test2 n = isTheorem $ do
+test2 n = isThm $ do
             elts1 <- mkForallVars n
             elts2 <- mkForallVars n
             let elts = zip elts1 elts2
@@ -49,7 +50,7 @@ test2 n = isTheorem $ do
                go (x:xs) curInd = ite (curInd .== 0) x (go xs (curInd - 1))
 
 test3 :: Int -> IO Bool
-test3 n = isTheorem $ do
+test3 n = isThm $ do
             eltsI <- mkForallVars n
             let elts = map Left eltsI
             errI  <- forall_

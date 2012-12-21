@@ -19,6 +19,6 @@ import SBVTest
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test [
-   "rc4swap" ~: assert =<< isTheorem readWrite
+   "rc4swap" ~: assert =<< isThm readWrite
  ]
  where readWrite i j = readSTree (writeSTree initS i j) i .== j

@@ -11,13 +11,11 @@
 
 module TestSuite.CRC.Parity(testSuite) where
 
-import Data.SBV
-
 import Examples.CRC.Parity
 import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test [
-   "parity" ~: assert =<< isTheorem parityOK
+   "parity" ~: assert =<< isThm parityOK
  ]

@@ -19,8 +19,8 @@ import SBVTest
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test [
-   "crcGood" ~: assert       =<< isSatisfiable crcGoodE
- , "crcGood" ~: assert . not =<< isTheorem (crcGood 3 12)
+   "crcGood" ~: assert       =<< isSat crcGoodE
+ , "crcGood" ~: assert . not =<< isThm (crcGood 3 12)
  ]
  where crcGoodE = do x1 <- exists_
                      x2 <- exists_

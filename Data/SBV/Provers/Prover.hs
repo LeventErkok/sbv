@@ -17,9 +17,7 @@
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate, Provable(..)
        , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..)
-       , isSatisfiable, isTheorem
-       , isSatisfiableWithin, isTheoremWithin
-       , numberOfModels
+       , isSatisfiable, isSatisfiableWith, isTheorem, isTheoremWith
        , Equality(..)
        , prove, proveWith
        , sat, satWith
@@ -281,50 +279,36 @@ isVacuous :: Provable a => a -> IO Bool
 isVacuous = isVacuousWith defaultSMTCfg
 
 -- Decision procedures (with optional timeout)
-checkTheorem :: Provable a => Maybe Int -> a -> IO (Maybe Bool)
-checkTheorem mbTo p = do r <- pr p
-                         case r of
-                           ThmResult (Unsatisfiable _) -> return $ Just True
-                           ThmResult (Satisfiable _ _) -> return $ Just False
-                           ThmResult (TimeOut _)       -> return Nothing
-                           _                           -> error $ "SBV.isTheorem: Received:\n" ++ show r
-   where pr = maybe prove (\i -> proveWith (defaultSMTCfg{timeOut = Just i})) mbTo
 
-checkSatisfiable :: Provable a => Maybe Int -> a -> IO (Maybe Bool)
-checkSatisfiable mbTo p = do r <- s p
-                             case r of
-                               SatResult (Satisfiable _ _) -> return $ Just True
-                               SatResult (Unsatisfiable _) -> return $ Just False
-                               SatResult (TimeOut _)       -> return Nothing
-                               _                           -> error $ "SBV.isSatisfiable: Received: " ++ show r
-   where s = maybe sat (\i -> satWith defaultSMTCfg{timeOut = Just i}) mbTo
-
--- | Checks theoremhood within the given time limit of @i@ seconds.
+-- | Check whether a given property is a theorem, with an optional time out and the given solver.
 -- Returns @Nothing@ if times out, or the result wrapped in a @Just@ otherwise.
-isTheoremWithin :: Provable a => Int -> a -> IO (Maybe Bool)
-isTheoremWithin i = checkTheorem (Just i)
+isTheoremWith :: Provable a => SMTConfig -> Maybe Int -> a -> IO (Maybe Bool)
+isTheoremWith cfg mbTo p = do r <- proveWith cfg{timeOut = mbTo} p
+                              case r of
+                                ThmResult (Unsatisfiable _) -> return $ Just True
+                                ThmResult (Satisfiable _ _) -> return $ Just False
+                                ThmResult (TimeOut _)       -> return Nothing
+                                _                           -> error $ "SBV.isTheorem: Received:\n" ++ show r
 
--- | Checks satisfiability within the given time limit of @i@ seconds.
+-- | Check whether a given property is satisfiable, with an optional time out and the given solver.
 -- Returns @Nothing@ if times out, or the result wrapped in a @Just@ otherwise.
-isSatisfiableWithin :: Provable a => Int -> a -> IO (Maybe Bool)
-isSatisfiableWithin i = checkSatisfiable (Just i)
+isSatisfiableWith :: Provable a => SMTConfig -> Maybe Int -> a -> IO (Maybe Bool)
+isSatisfiableWith cfg mbTo p = do r <- satWith cfg{timeOut = mbTo} p
+                                  case r of
+                                    SatResult (Satisfiable _ _) -> return $ Just True
+                                    SatResult (Unsatisfiable _) -> return $ Just False
+                                    SatResult (TimeOut _)       -> return Nothing
+                                    _                           -> error $ "SBV.isSatisfiable: Received: " ++ show r
 
--- | Checks theoremhood
-isTheorem :: Provable a => a -> IO Bool
-isTheorem p = fromJust `fmap` checkTheorem Nothing p
+-- | Checks theoremhood within the given optional time limit of @i@ seconds.
+-- Returns @Nothing@ if times out, or the result wrapped in a @Just@ otherwise.
+isTheorem :: Provable a => Maybe Int -> a -> IO (Maybe Bool)
+isTheorem = isTheoremWith defaultSMTCfg
 
--- | Checks satisfiability
-isSatisfiable :: Provable a => a -> IO Bool
-isSatisfiable p = fromJust `fmap` checkSatisfiable Nothing p
-
--- | Returns the number of models that satisfy the predicate, as it would
--- be returned by 'allSat'. Note that the number of models is always a
--- finite number, and hence this will always return a result. Of course,
--- computing it might take quite long, as it literally generates and counts
--- the number of satisfying models.
-numberOfModels :: Provable a => a -> IO Int
-numberOfModels p = do AllSatResult (_, rs) <- allSat p
-                      return $ length rs
+-- | Checks satisfiability within the given optional time limit of @i@ seconds.
+-- Returns @Nothing@ if times out, or the result wrapped in a @Just@ otherwise.
+isSatisfiable :: Provable a => Maybe Int -> a -> IO (Maybe Bool)
+isSatisfiable = isSatisfiableWith defaultSMTCfg
 
 -- | Compiles to SMT-Lib and returns the resulting program as a string. Useful for saving
 -- the result to a file for off-line analysis, for instance if you have an SMT solver that's not natively

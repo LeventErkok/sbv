@@ -20,8 +20,8 @@ import SBVTest
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
-   "auf-0" ~: assert =<< isTheorem thm1
- , "auf-1" ~: assert =<< isTheorem thm2
+   "auf-0" ~: assert =<< isThm thm1
+ , "auf-1" ~: assert =<< isThm thm2
  , "auf-2" ~: pgm `goldCheck` "auf-1.gold"
  ]
  where pgm = runSymbolic True $ forAll ["x", "y", "a", "initVal"] thm1 >>= output

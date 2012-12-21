@@ -60,7 +60,7 @@ genPoly hd = do putStrLn $ "*** Looking for polynomials with HD = " ++ show hd
         go poly skip acc
          | poly == maxBound = return (skip, acc)
          | True             = do putStr $ "Testing " ++ showPoly  (mkPoly poly) ++ "... "
-                                 thm <- isTheoremWithin waitFor $ crcGood hd poly
+                                 thm <- isTheorem (Just waitFor) $ crcGood hd poly
                                  case thm of
                                    Nothing    -> do putStrLn "Timeout, skipping.."
                                                     go (poly+1) (poly:skip) acc

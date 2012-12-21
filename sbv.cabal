@@ -127,6 +127,9 @@ Library
                   , array, containers, deepseq, directory, filepath, old-time
                   , pretty, process, mtl, QuickCheck, random, syb
   Exposed-modules : Data.SBV
+                  , Data.SBV.CVC4
+                  , Data.SBV.Yices
+                  , Data.SBV.Z3
                   , Data.SBV.Internals
                   , Data.SBV.Examples.BitPrecise.BitTricks
                   , Data.SBV.Examples.BitPrecise.Legato

@@ -11,14 +11,12 @@
 
 module TestSuite.CRC.CCITT_Unidir(testSuite) where
 
-import Data.SBV
-
 import Examples.CRC.CCITT_Unidir
 import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test [
-   "ccitHDis3" ~: assert       =<< isTheorem (crcUniGood 3)
- , "ccitHDis4" ~: assert . not =<< isTheorem (crcUniGood 4)
+   "ccitHDis3" ~: assert       =<< isThm (crcUniGood 3)
+ , "ccitHDis4" ~: assert . not =<< isThm (crcUniGood 4)
  ]

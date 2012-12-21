@@ -158,11 +158,11 @@ module Data.SBV (
   -- ** Predicates
   , Predicate, Provable(..), Equality(..)
   -- ** Proving properties
-  , prove, proveWith, isTheorem, isTheoremWithin
+  , prove, proveWith, isTheorem, isTheoremWith
   -- ** Checking satisfiability
-  , sat, satWith, isSatisfiable, isSatisfiableWithin
+  , sat, satWith, isSatisfiable, isSatisfiableWith
   -- ** Finding all satisfying assignments
-  , allSat, allSatWith, numberOfModels
+  , allSat, allSatWith
   -- ** Satisfying a sequence of boolean conditions
   , solve
   -- ** Adding constraints

@@ -19,7 +19,7 @@ import SBVTest
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test [
-   "magic 2" ~: assert . not =<< isSatisfiable (mkMagic 2)
- , "magic 3" ~: assert       =<< isSatisfiable (mkMagic 3)
+   "magic 2" ~: assert . not =<< isSat (mkMagic 2)
+ , "magic 3" ~: assert       =<< isSat (mkMagic 3)
  ]
  where mkMagic n = (isMagic . chunk n) `fmap` mkExistVars (n*n)

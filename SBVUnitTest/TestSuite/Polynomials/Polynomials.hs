@@ -11,7 +11,6 @@
 
 module TestSuite.Polynomials.Polynomials(testSuite) where
 
-import Data.SBV
 import Data.SBV.Examples.Polynomials.Polynomials
 
 import SBVTest
@@ -19,7 +18,7 @@ import SBVTest
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test [
-   "polynomial-1" ~: assert =<< isTheorem multUnit
- , "polynomial-2" ~: assert =<< isTheorem multComm
- , "polynomial-3" ~: assert =<< isTheorem polyDivMod
+   "polynomial-1" ~: assert =<< isThm multUnit
+ , "polynomial-2" ~: assert =<< isThm multComm
+ , "polynomial-3" ~: assert =<< isThm polyDivMod
  ]

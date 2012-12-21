@@ -11,7 +11,6 @@
 
 module TestSuite.Uninterpreted.Function where
 
-import Data.SBV
 import Data.SBV.Examples.Uninterpreted.Function
 
 import SBVTest
@@ -19,6 +18,6 @@ import SBVTest
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test [
-   "aufunc-0" ~: assert       =<< isTheorem thmGood
- , "aufunc-1" ~: assert . not =<< isTheorem thmBad
+   "aufunc-0" ~: assert       =<< isThm thmGood
+ , "aufunc-1" ~: assert . not =<< isThm thmBad
  ]

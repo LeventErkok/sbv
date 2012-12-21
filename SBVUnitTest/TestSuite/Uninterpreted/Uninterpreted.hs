@@ -11,15 +11,13 @@
 
 module TestSuite.Uninterpreted.Uninterpreted where
 
-import Data.SBV
-
 import Examples.Uninterpreted.Uninterpreted
 import SBVTest
 
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test [
-   "uninterpreted-0" ~: assert       =<< isTheorem p0
- , "uninterpreted-1" ~: assert       =<< isTheorem p1
- , "uninterpreted-2" ~: assert . not =<< isTheorem p2
+   "uninterpreted-0" ~: assert       =<< isThm p0
+ , "uninterpreted-1" ~: assert       =<< isThm p1
+ , "uninterpreted-2" ~: assert . not =<< isThm p2
  ]
