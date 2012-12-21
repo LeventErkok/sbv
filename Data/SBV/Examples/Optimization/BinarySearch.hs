@@ -9,23 +9,38 @@
 --
 
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Data.SBV.Examples.Optimization.Binary where
+module Data.SBV.Examples.Optimization.BinarySearch where
 
 import Data.SBV
 
-class Searchable a where
-  getBounds :: IO (a,a)
-  between :: a -> a -> Maybe a
 
-instance (Bounded a, Integral a) => Searchable a where
-  getBounds = return (minBound, maxBound)
-  between lower upper
-    | upper <= lower+1 = Nothing
-    | otherwise        = Just $ (lower `div` 2) + (upper `div` 2)
+data BSOpts a =
+  BSOpts
+  { getBounds :: IO (a,a)
+  , getNext :: a -> a -> IO (Maybe a)
+  }
 
+class DefaultBSOpts a where
+  defaultBSOpts :: BSOpts a
+
+
+instance (Bounded a, Integral a) => DefaultBSOpts a where
+  defaultBSOpts = BSOpts
+    { getBounds = return (minBound, maxBound)
+    , getNext = (\lower upper ->
+       if | upper <= lower+1 -> return Nothing
+          | otherwise        -> return $ Just $ (lower `div` 2) + (upper `div` 2)
+         )
+    }
+
+instance DefaultBSOpts Integer where
+  defaultBSOpts = BSOpts
+    { getBounds = return (-1,1)
+    , getNext = (\_ _ -> return Nothing) }
 
 -- | Given an @a -> Predicate@ that satisfies
 -- @x < y &&&  pred0 x ==> pred0 y@,
@@ -38,8 +53,8 @@ instance (Bounded a, Integral a) => Searchable a where
 -- >>> puzzle
 -- 20000
 
-
-puzzle = argminSat 0 p
+puzzle :: IO Int32
+puzzle = binarySearchWith z3 defaultBSOpts p
   where
     p :: Int32 -> Predicate
     p x =
@@ -48,22 +63,23 @@ puzzle = argminSat 0 p
         sx = fromIntegral x
       in return $ sx .>= 20000
 
-argminSat :: (Ord a, Num a, Searchable a, Show a)
-             => a
-             -> (a -> Predicate)
-             -> IO a
-argminSat torelance pred0 = do
-  (lower, upper) <- getBounds
+binarySearchWith ::
+     SMTConfig
+  -> BSOpts a
+  -> (a -> Predicate)
+  -> IO a
+binarySearchWith cfg opts pred0 = do
+  (lower, upper) <- getBounds opts
   go lower upper
 
   where
     go lower upper = do
       let quit = return upper
-      case between lower upper of
-        Nothing                        -> quit
-        _ | upper <= lower + torelance -> quit
-        ret@(Just middle) -> do
-          (SatResult ans) <- sat $ pred0 middle
+      mm <- getNext opts lower upper
+      case mm of
+        Nothing           -> quit
+        (Just middle) -> do
+          (SatResult ans) <- satWith cfg $ pred0 middle
           case ans of
             Satisfiable _ _ -> go lower middle
             Unsatisfiable _ -> go middle upper
