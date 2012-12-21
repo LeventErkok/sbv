@@ -8,15 +8,17 @@ Version 2.9, Not yet released
 
   - Add support for the CVC4 SMT solver from New York University and
     the University of Iowa. (http://cvc4.cs.nyu.edu/).
-
     NB. Z3 remains the default solver for SBV. To use CVC4, use the
     *With variants of the interface (i.e., proveWith, satWith, ..)
     by passing cvc4 as the solver argument. (Similarly, use 'yices'
     as the argument for the *With functions for invoking yices.)
-
   - Latest release of Yices calls the SMT-Lib based solver executable
     yices-smt. Updated the default value of the executable to have this
     name for ease of use.
+  - Add an extra boolean flag to compileToSMTLib and generateSMTBenchmarks
+    functions to control if the translation should keep the query as is
+    (for SAT cases), or negate it (for PROVE cases). Previously, this value
+    was hard-coded to do the PROVE case only.
 
 ======================================================================
 Version 2.8, 2012-11-29

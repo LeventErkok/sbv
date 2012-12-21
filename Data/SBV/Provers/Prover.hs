@@ -328,14 +328,22 @@ numberOfModels p = do AllSatResult (_, rs) <- allSat p
 
 -- | Compiles to SMT-Lib and returns the resulting program as a string. Useful for saving
 -- the result to a file for off-line analysis, for instance if you have an SMT solver that's not natively
--- supported out-of-the box by the SBV library. If 'smtLib2' parameter is False, then we will generate
--- SMTLib1 output, otherwise we will generate SMTLib2 output
-compileToSMTLib :: Provable a => Bool -> a -> IO String
-compileToSMTLib smtLib2 a = do
+-- supported out-of-the box by the SBV library. It takes two booleans:
+--
+--    * smtLib2: If 'True', will generate SMT-Lib2 output, otherwise SMT-Lib1 output
+--
+--    * isSat  : If 'True', will translate it as a SAT query, i.e., in the positive. If 'False', will
+--               translate as a PROVE query, i.e., it will negate the result. (In this case, the check-sat
+--               call to the SMT solver will produce UNSAT if the input is a theorem, as usual.)
+compileToSMTLib :: Provable a => Bool   -- ^ If True, output SMT-Lib2, otherwise SMT-Lib1
+                              -> Bool   -- ^ If True, translate directly, otherwise negate the goal. (Use True for SAT queries, False for PROVE queries.)
+                              -> a
+                              -> IO String
+compileToSMTLib smtLib2 isSat a = do
         t <- getClockTime
         let comments = ["Created on " ++ show t]
             cvt = if smtLib2 then toSMTLib2 else toSMTLib1
-        (_, _, _, _, smtLibPgm) <- simulate cvt defaultSMTCfg False comments a
+        (_, _, _, _, smtLibPgm) <- simulate cvt defaultSMTCfg isSat comments a
         let out = show smtLibPgm
         if smtLib2 -- append check-sat in case of smtLib2
            then return $ out ++ "\n(check-sat)\n"
@@ -343,12 +351,14 @@ compileToSMTLib smtLib2 a = do
 
 -- | Create both SMT-Lib1 and SMT-Lib2 benchmarks. The first argument is the basename of the file,
 -- SMT-Lib1 version will be written with suffix ".smt1" and SMT-Lib2 version will be written with
--- suffix ".smt2"
-generateSMTBenchmarks :: Provable a => FilePath -> a -> IO ()
-generateSMTBenchmarks f a = gen False smt1 >> gen True smt2
+-- suffix ".smt2". The 'Bool' argument controls whether this is a SAT instance, i.e., translate the query
+-- directly, or a PROVE instance, i.e., translate the negated query. (See the second boolean argument to
+-- 'compileToSMTLib' for details.)
+generateSMTBenchmarks :: Provable a => Bool -> FilePath -> a -> IO ()
+generateSMTBenchmarks isSat f a = gen False smt1 >> gen True smt2
   where smt1     = addExtension f "smt1"
         smt2     = addExtension f "smt2"
-        gen b fn = do s <- compileToSMTLib b a
+        gen b fn = do s <- compileToSMTLib b isSat a
                       writeFile fn s
                       putStrLn $ "Generated SMT benchmark " ++ show fn ++ "."
 
