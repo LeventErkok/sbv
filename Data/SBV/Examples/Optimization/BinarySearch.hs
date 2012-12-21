@@ -17,30 +17,46 @@ module Data.SBV.Examples.Optimization.BinarySearch where
 
 import Data.SBV
 
+type BSPred a = a -> Predicate
+type BSBounds a = SMTConfig -> BSPred a -> IO (a,a)
+type BSNext a = a -> a -> Maybe a
 
 data BSOpts a =
   BSOpts
-  { getBounds :: IO (a,a)
-  , getNext :: a -> a -> IO (Maybe a)
+  { bsBounds :: BSBounds a
+  , bsNext :: BSNext a
   }
 
 class DefaultBSOpts a where
   defaultBSOpts :: BSOpts a
 
+bsBoundsBounded :: (Bounded a) => BSBounds a
+bsBoundsBounded _cfg _pred0 = return (minBound, maxBound)
 
 instance (Bounded a, Integral a) => DefaultBSOpts a where
   defaultBSOpts = BSOpts
-    { getBounds = return (minBound, maxBound)
-    , getNext = (\lower upper ->
-       if | upper <= lower+1 -> return Nothing
-          | otherwise        -> return $ Just $ (lower `div` 2) + (upper `div` 2)
+    { bsBounds = (\_ _ -> return (minBound, maxBound))
+    , bsNext = (\lower upper ->
+       if | upper <= lower+1 -> Nothing
+          | otherwise        -> Just $
+              ((lower+1) `div` 2) + (upper `div` 2)
          )
     }
 
 instance DefaultBSOpts Integer where
   defaultBSOpts = BSOpts
-    { getBounds = return (-1,1)
-    , getNext = (\_ _ -> return Nothing) }
+    { bsBounds = \_ _ -> return (-1,1)
+    , bsNext = (\_ _ -> Nothing) }
+
+puzzle :: IO Int32
+puzzle = binarySearchWith z3 defaultBSOpts p
+  where
+    p :: Int32 -> Predicate
+    p x =
+      let
+        sx :: SInt32
+        sx = fromIntegral x
+      in return $ sx .>= 20000
 
 -- | Given an @a -> Predicate@ that satisfies
 -- @x < y &&&  pred0 x ==> pred0 y@,
@@ -53,30 +69,19 @@ instance DefaultBSOpts Integer where
 -- >>> puzzle
 -- 20000
 
-puzzle :: IO Int32
-puzzle = binarySearchWith z3 defaultBSOpts p
-  where
-    p :: Int32 -> Predicate
-    p x =
-      let
-        sx :: SInt32
-        sx = fromIntegral x
-      in return $ sx .>= 20000
-
 binarySearchWith ::
      SMTConfig
   -> BSOpts a
-  -> (a -> Predicate)
+  -> BSPred a
   -> IO a
 binarySearchWith cfg opts pred0 = do
-  (lower, upper) <- getBounds opts
+  (lower, upper) <- bsBounds opts cfg pred0
   go lower upper
 
   where
     go lower upper = do
       let quit = return upper
-      mm <- getNext opts lower upper
-      case mm of
+      case bsNext opts lower upper of
         Nothing           -> quit
         (Just middle) -> do
           (SatResult ans) <- satWith cfg $ pred0 middle
