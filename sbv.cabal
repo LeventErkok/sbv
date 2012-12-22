@@ -15,7 +15,8 @@ Description:   Express properties about Haskell programs and automatically prove
                >   Falsifiable. Counter-example:
                >     x = 128 :: SWord8
                .
-               The SBV library works with the the following SMT solvers:
+               You can pick the SMT solver you want to use by importing the appropriate module. The SBV library currently
+               works with the the following SMT solvers:
                .
                   [@import "Data.SBV"@]
                   Picks the default solver, which is currently set to be Z3. (Might change in the future!)

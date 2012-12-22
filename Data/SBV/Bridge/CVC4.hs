@@ -6,50 +6,97 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Interface to the CVC4 SMT solver.
+-- Interface to the CVC4 SMT solver. Import this module if you want to use the
+-- CVC4 SMT prover as your backend solver. Also see:
+--
+--       - "Data.SBV.Bridge.Yices"
+--
+--       - "Data.SBV.Bridge.Z3"
 ---------------------------------------------------------------------------------
 
 module Data.SBV.Bridge.CVC4 (
-  -- * SBV interface using the CVC4 SMT solver
-  prove, sat, allSat, isVacuous, isTheorem, isSatisfiable, optimize, minimize, maximize
-  -- * Module export, everything else in SBV
+  -- * CVC4 specific interface
+  -- ** Proving and checking satisfiability
+  prove, sat, allSat, isVacuous, isTheorem, isSatisfiable
+  -- ** Optimization routines
+  , optimize, minimize, maximize
+  -- * Non-CVC4 specific SBV interface
+  -- $moduleExportIntro
   , module Data.SBV
   ) where
 
 import Data.SBV hiding (prove, sat, allSat, isVacuous, isTheorem, isSatisfiable, optimize, minimize, maximize)
 
+-- | Solver instance
+currentSolver :: SMTConfig
+currentSolver = cvc4
+
 -- | Prove theorems, using the CVC4 SMT solver
-prove :: Provable a => a -> IO ThmResult
-prove = proveWith cvc4
+prove :: Provable a
+      => a              -- ^ Property to check
+      -> IO ThmResult   -- ^ Response from the SMT solver, containing the counter-example if found
+prove = proveWith currentSolver
 
 -- | Find satisfying solutions, using the CVC4 SMT solver
-sat :: Provable a => a -> IO SatResult
-sat = satWith cvc4
+sat :: Provable a
+    => a                -- ^ Property to check
+    -> IO SatResult     -- ^ Response of the SMT Solver, containing the model if found
+sat = satWith currentSolver
 
 -- | Find all satisfying solutions, using the CVC4 SMT solver
-allSat :: Provable a => a -> IO AllSatResult
-allSat = allSatWith cvc4
+allSat :: Provable a
+       => a                -- ^ Property to check
+       -> IO AllSatResult  -- ^ List of all satisfying models
+allSat = allSatWith currentSolver
 
--- | Check vacuity, using the CVC4 SMT solver
-isVacuous :: Provable a => a -> IO Bool
-isVacuous = isVacuousWith cvc4
+-- | Check vacuity of the explicit constraints introduced by calls to the 'constrain' function, using the CVC4 SMT solver
+isVacuous :: Provable a
+          => a             -- ^ Property to check
+          -> IO Bool       -- ^ True if the constraints are unsatisifiable
+isVacuous = isVacuousWith currentSolver
 
 -- | Check if the statement is a theorem, with an optional time-out in seconds, using the CVC4 SMT solver
-isTheorem :: Provable a => Maybe Int -> a -> IO (Maybe Bool)
-isTheorem = isTheoremWith cvc4
+isTheorem :: Provable a
+          => Maybe Int          -- ^ Optional time-out, specify in seconds
+          -> a                  -- ^ Property to check
+          -> IO (Maybe Bool)    -- ^ Returns Nothing if time-out expires
+isTheorem = isTheoremWith currentSolver
 
 -- | Check if the statement is satisfiable, with an optional time-out in seconds, using the CVC4 SMT solver
-isSatisfiable :: Provable a => Maybe Int -> a -> IO (Maybe Bool)
-isSatisfiable = isSatisfiableWith cvc4
+isSatisfiable :: Provable a
+              => Maybe Int       -- ^ Optional time-out, specify in seconds
+              -> a               -- ^ Property to check
+              -> IO (Maybe Bool) -- ^ Returns Nothing if time-out expiers
+isSatisfiable = isSatisfiableWith currentSolver
 
 -- | Optimize cost functions, using the CVC4 SMT solver
-optimize :: (SatModel a, SymWord a, Show a, SymWord c, Show c) => OptimizeOpts -> (SBV c -> SBV c -> SBool) -> ([SBV a] -> SBV c) -> Int -> ([SBV a] -> SBool) -> IO (Maybe [a])
-optimize = optimizeWith cvc4
+optimize :: (SatModel a, SymWord a, Show a, SymWord c, Show c)
+         => OptimizeOpts                -- ^ Parameters to optimization (Iterative, Quantified, etc.)
+         -> (SBV c -> SBV c -> SBool)   -- ^ Betterness check: This is the comparison predicate for optimization
+         -> ([SBV a] -> SBV c)          -- ^ Cost function
+         -> Int                         -- ^ Number of inputs
+         -> ([SBV a] -> SBool)          -- ^ Validity function
+         -> IO (Maybe [a])              -- ^ Returns Nothing if there is no valid solution, otherwise an optimal solution
+optimize = optimizeWith currentSolver
 
 -- | Minimize cost functions, using the CVC4 SMT solver
-minimize :: (SatModel a, SymWord a, Show a, SymWord c, Show c) => OptimizeOpts -> ([SBV a] -> SBV c) -> Int -> ([SBV a] -> SBool) -> IO (Maybe [a])
-minimize = minimizeWith cvc4
+minimize :: (SatModel a, SymWord a, Show a, SymWord c, Show c)
+         => OptimizeOpts                -- ^ Parameters to optimization (Iterative, Quantified, etc.)
+         -> ([SBV a] -> SBV c)          -- ^ Cost function to minimize
+         -> Int                         -- ^ Number of inputs
+         -> ([SBV a] -> SBool)          -- ^ Validity function
+         -> IO (Maybe [a])              -- ^ Returns Nothing if there is no valid solution, otherwise an optimal solution
+minimize = minimizeWith currentSolver
 
 -- | Maximize cost functions, using the CVC4 SMT solver
-maximize :: (SatModel a, SymWord a, Show a, SymWord c, Show c) => OptimizeOpts -> ([SBV a] -> SBV c) -> Int -> ([SBV a] -> SBool) -> IO (Maybe [a])
-maximize = maximizeWith cvc4
+maximize :: (SatModel a, SymWord a, Show a, SymWord c, Show c)
+         => OptimizeOpts                -- ^ Parameters to optimization (Iterative, Quantified, etc.)
+         -> ([SBV a] -> SBV c)          -- ^ Cost function to maximize
+         -> Int                         -- ^ Number of inputs
+         -> ([SBV a] -> SBool)          -- ^ Validity function
+         -> IO (Maybe [a])              -- ^ Returns Nothing if there is no valid solution, otherwise an optimal solution
+maximize = maximizeWith currentSolver
+
+{- $moduleExportIntro
+The remainder of the SBV library that is common to all back-end SMT solvers, directly coming from the "Data.SBV" module.
+-}
