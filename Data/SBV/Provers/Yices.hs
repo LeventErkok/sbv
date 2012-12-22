@@ -41,7 +41,7 @@ yices = SMTSolver {
                                     let cfg'   = cfg {solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts}}
                                         script = SMTScript {scriptBody = unlines (solverTweaks cfg') ++ pgm, scriptModel = Nothing}
                                     standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap (map snd qinps) modelMap))
-         , ignoreExitCode = False
+         , xformExitCode  = id
          , defaultLogic   = Nothing
          }
   where addTimeOut Nothing  o   = o
