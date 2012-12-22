@@ -146,7 +146,7 @@ cvt (hasInteger, hasReal) mbDefaultLogic isSat comments sorts _inps skolemInps c
         asgns = F.toList asgnsSeq
         mkLet (s, e) = "(let ((" ++ show s ++ " " ++ cvtExp skolemMap tableMap e ++ "))"
         declConst (s, c) = "(define-fun " ++ show s ++ " " ++ swFunType [] s ++ " " ++ cvtCW c ++ ")"
-        declSort s = "(declare-sort " ++ s ++ ")"
+        declSort s = "(declare-sort " ++ s ++ " 0)"
 
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = ["(declare-fun " ++ i ++ " " ++ cvtType t ++ ")"]
