@@ -28,7 +28,7 @@ module Data.SBV.Bridge.Yices (
 
 import Data.SBV hiding (prove, sat, allSat, isVacuous, isTheorem, isSatisfiable, optimize, minimize, maximize, sbvCurrentSolver)
 
--- | Solver instance
+-- | Current solver instance, pointing to yices.
 sbvCurrentSolver :: SMTConfig
 sbvCurrentSolver = yices
 

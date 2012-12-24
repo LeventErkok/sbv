@@ -28,7 +28,7 @@ module Data.SBV.Bridge.Z3 (
 
 import Data.SBV hiding (prove, sat, allSat, isVacuous, isTheorem, isSatisfiable, optimize, minimize, maximize, sbvCurrentSolver)
 
--- | Solver instance
+-- | Current solver instance, pointing to z3.
 sbvCurrentSolver :: SMTConfig
 sbvCurrentSolver = z3
 

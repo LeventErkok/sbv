@@ -28,7 +28,7 @@ module Data.SBV.Bridge.CVC4 (
 
 import Data.SBV hiding (prove, sat, allSat, isVacuous, isTheorem, isSatisfiable, optimize, minimize, maximize, sbvCurrentSolver)
 
--- | Solver instance
+-- | Current solver instance, pointing to cvc4.
 sbvCurrentSolver :: SMTConfig
 sbvCurrentSolver = cvc4
 
