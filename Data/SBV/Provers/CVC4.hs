@@ -9,21 +9,19 @@
 -- The connection to the CVC4 SMT solver
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE PatternGuards       #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Data.SBV.Provers.CVC4(cvc4) where
 
 import qualified Control.Exception as C
 
-import Data.Char          (isDigit)
+import Data.Char          (isSpace)
 import Data.Function      (on)
 import Data.List          (sortBy, intercalate)
 import System.Environment (getEnv)
 import System.Exit        (ExitCode(..))
 
 import Data.SBV.BitVectors.Data
-import Data.SBV.Provers.SExpr
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 
@@ -43,7 +41,7 @@ cvc4 = SMTSolver {
                                                    [] -> ""
                                                    ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
                                         script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont skolemMap)}
-                                    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap . match skolemMap))
+                                    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap))
          , xformExitCode  = cvc4ExitCode
          , defaultLogic   = Just "ALL_SUPPORTED"  -- CVC4 is not happy if we don't set the logic, so fall-back to this if necessary
          }
@@ -53,16 +51,10 @@ cvc4 = SMTSolver {
        zero KUnbounded          = "0"
        zero KReal               = "0.0"
        zero (KUninterpreted s)  = error $ "SBV.CVC4.zero: Unexpected uninterpreted sort: " ++ s
-       cont skolemMap = intercalate "\n" $ concatMap extract skolemMap
-        where extract (Left s)        = ["(echo \"((" ++ show s ++ " " ++ zero (kindOf s) ++ "))\")"]
-              extract (Right (s, [])) = ["(get-value (" ++ show s ++ "))"]
-              extract (Right (s, ss)) = ["(eval (" ++ show s ++ concat [' ' : zero (kindOf a) | a <- ss] ++ "))"]
-       match skolemMap = zipWith annotate (concatMap dupRight skolemMap)
-         where dupRight (Left s)  = [Left s]
-               dupRight (Right x) = [Right x, Right x]
-               annotate (Left _)        l = l
-               annotate (Right (_, [])) l = l
-               annotate (Right (s, _))  l = "((" ++ show s ++ " " ++ l ++ "))"
+       cont skolemMap = intercalate "\n" $ map extract skolemMap
+        where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ zero (kindOf s) ++ "))\")"
+              extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
+              extract (Right (s, ss)) = "(get-value (" ++ show s ++ concat [' ' : zero (kindOf a) | a <- ss] ++ "))"
        addTimeOut Nothing  o   = o
        addTimeOut (Just i) o
          | i < 0               = error $ "CVC4: Timeout value must be non-negative, received: " ++ show i
@@ -77,7 +69,7 @@ cvc4ExitCode ec                                     = ec
 
 extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [String] -> SMTModel
 extractMap isSat qinps _modelMap solverLines =
-   SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (getCounterExample inps) solverLines
+   SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps . unstring) solverLines
             , modelUninterps = []
             , modelArrays    = []
             }
@@ -90,23 +82,8 @@ extractMap isSat qinps _modelMap solverLines =
                        else map snd $ reverse $ dropWhile ((== ALL) . fst) $ reverse qinps
              -- for "proof", just display the prefix universals
              | True  = map snd $ takeWhile ((== ALL) . fst) qinps
-
-getCounterExample :: [NamedSymVar] -> String -> [(Int, (String, CW))]
-getCounterExample inps line = either err extract (parseSExpr line)
-  where err r =  error $  "*** Failed to parse SMT-Lib2 model output from: "
-                       ++ "*** " ++ show line ++ "\n"
-                       ++ "*** Reason: " ++ r ++ "\n"
-        isInput ('s':v)
-          | all isDigit v = let inpId :: Int
-                                inpId = read v
-                            in case [(s, nm) | (s@(SW _ (NodeId n)), nm) <-  inps, n == inpId] of
-                                 []        -> Nothing
-                                 [(s, nm)] -> Just (inpId, s, nm)
-                                 matches -> error $  "SBV.SMTLib2: Cannot uniquely identify value for "
-                                                  ++ 's':v ++ " in "  ++ show matches
-        isInput _       = Nothing
-        extract (SApp [SApp [SCon v, SNum i]])  | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) i))]
-        extract (SApp [SApp [SCon v, SReal i]]) | Just (n, _, nm) <- isInput v = [(n, (nm, CW KReal      (CWAlgReal i)))]
-        extract (SApp [SApp [SCon v, SCon i]])  | Just (n, s, nm) <- isInput v = [(n, (nm, CW (kindOf s) (CWUninterpreted i)))]
-        extract (SApp [SApp (SCon v : r)])      | Just{}          <- isInput v = error $ "SBV.SMTLib2: Cannot extract value for " ++ show v ++ ", received:\n\t" ++  show r
-        extract _                                                              = []
+        -- CVC4 puts quotes around echo's, go figure. strip them here
+        unstring s' = case (s, head s, last s) of
+                        (_:tl@(_:_), '"', '"') -> init tl
+                        _                      -> s'
+          where s = reverse . dropWhile isSpace . reverse . dropWhile isSpace $ s'
