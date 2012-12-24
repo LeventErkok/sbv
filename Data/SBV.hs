@@ -191,7 +191,7 @@ module Data.SBV (
   , SatModel(..), Modelable(..), displayModels, extractModels
 
   -- * SMT Interface: Configurations and solvers
-  , SMTConfig(..), OptimizeOpts(..), SMTSolver(..), yices, z3, cvc4, defaultSMTCfg, sbvCheckSolverInstallation
+  , SMTConfig(..), OptimizeOpts(..), SMTSolver(..), yices, z3, cvc4, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation
 
   -- * Symbolic computations
   , Symbolic, output, SymWord(..)
@@ -256,6 +256,13 @@ import Data.Bits
 import Data.Int
 import Data.Ratio
 import Data.Word
+
+-- | The currently active solver, obtained by importing "Data.SBV".
+-- To have other solvers /current/, import one of the bridge
+-- modules "Data.SBV.Bridge.CVC4", "Data.SBV.Bridge.Yices", or
+-- "Data.SBV.Bridge.Z3" directly.
+sbvCurrentSolver :: SMTConfig
+sbvCurrentSolver = z3
 
 -- Haddock section documentation
 {- $progIntro

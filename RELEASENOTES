@@ -26,7 +26,11 @@ Version 2.9, Not yet released
        import Data.SBV.Bridge.Z3
    
     to pick the appropriate default solver. if you simply 'import Data.SBV', then
-    you will get the default SMT solver, which is currently Z3.
+    you will get the default SMT solver, which is currently Z3. The value
+    'defaultSMTSolver' refers to z3 (currently), and 'sbvCurrentSolver' refers
+    to the chosen solver as determined by the imported module. (The latter is
+    useful for modifying options to the SMT solver in an solver-agnostic way.)
+  - Various improvements to Z3 model parsing routines.
 
 ======================================================================
 Version 2.8, 2012-11-29
