@@ -89,12 +89,12 @@ Description:   Express properties about Haskell programs and automatically prove
                .
                Release notes can be seen at: <http://github.com/LeventErkok/sbv/blob/master/RELEASENOTES>.
 
-Copyright:     Levent Erkok, 2010-2012
+Copyright:     Levent Erkok, 2010-2013
 License:       BSD3
 License-file:  LICENSE
 Stability:     Experimental
 Author:        Levent Erkok
-Homepage:      http://github.com/LeventErkok/sbv
+Homepage:      http://leventerkok.github.com/sbv/
 Bug-reports:   http://github.com/LeventErkok/sbv/issues
 Maintainer:    Levent Erkok (erkokl@gmail.com)
 Build-Type:    Simple
