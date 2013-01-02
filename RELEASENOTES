@@ -31,6 +31,7 @@ Version 2.9, 2013-01-02
     to the chosen solver as determined by the imported module. (The latter is
     useful for modifying options to the SMT solver in an solver-agnostic way.)
   - Various improvements to Z3 model parsing routines.
+  - New web page for SBV: http://leventerkok.github.com/sbv/ is now online.
 
 ======================================================================
 Version 2.8, 2012-11-29
