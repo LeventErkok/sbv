@@ -20,9 +20,9 @@
     was hard-coded to do the PROVE case only.
   - Add bridge modules, to simplify use of different solvers. You can now say:
 
-       import Data.SBV.Bridge.CVC4
-       import Data.SBV.Bridge.Yices
-       import Data.SBV.Bridge.Z3
+          import Data.SBV.Bridge.CVC4
+          import Data.SBV.Bridge.Yices
+          import Data.SBV.Bridge.Z3
    
     to pick the appropriate default solver. if you simply 'import Data.SBV', then
     you will get the default SMT solver, which is currently Z3. The value
