@@ -1,10 +1,9 @@
-Hackage: <http://hackage.haskell.org/package/sbv>
-GitHub:  <http://leventerkok.github.com/sbv/>
+* Hackage: <http://hackage.haskell.org/package/sbv>
+* GitHub:  <http://leventerkok.github.com/sbv/>
 
-Latest Hackage released version: 2.9
+* Latest Hackage released version: 2.9
 
-======================================================================
-Version 2.9, 2013-01-02
+### Version 2.9, 2013-01-02
 
   - Add support for the CVC4 SMT solver from New York University and
     the University of Iowa. (http://cvc4.cs.nyu.edu/).
@@ -33,8 +32,7 @@ Version 2.9, 2013-01-02
   - Various improvements to Z3 model parsing routines.
   - New web page for SBV: http://leventerkok.github.com/sbv/ is now online.
 
-======================================================================
-Version 2.8, 2012-11-29
+### Version 2.8, 2012-11-29
 
   - Rename the SNum class to SIntegral, and make it index over regular
     types. This makes it much more useful, simplifying coding of
@@ -57,8 +55,7 @@ Version 2.8, 2012-11-29
     to implement custom signed operations, for instance.
   - Several typo fixes.
 
-======================================================================
-Version 2.7, 2012-10-21
+### Version 2.7, 2012-10-21
 
   - Add missing QuickCheck instance for SReal
   - When dealing with concrete SReal's, make sure to operate
@@ -76,7 +73,6 @@ Version 2.7, 2012-10-21
   - Improve test suite, adding many constant-folding tests
     and start using cabal based tests (--enable-tests option.)
 
-======================================================================
 Versions 2.4, 2.5, and 2.6: Around mid October 2012
 
   - Workaround issues related hackage compilation, in particular to the
@@ -91,8 +87,7 @@ Versions 2.4, 2.5, and 2.6: Around mid October 2012
     more trouble then they actually help. (See the discussion
     here: http://www.haskell.org/pipermail/haskell-cafe/2012-July/102352.html.)
 
-======================================================================
-Version 2.3, 2012-07-20
+### Version 2.3, 2012-07-20
 
   - Maintanence release, no new features.
   - Tweak cabal dependencies to avoid using packages that are newer
@@ -102,16 +97,14 @@ Version 2.3, 2012-07-20
     In particular, the use of containers >= 0.5 is *not* OK until we have
     a version of GHC that comes with that version.
 
-======================================================================
-Version 2.2, 2012-07-17
+### Version 2.2, 2012-07-17
 
   - Maintanence release, no new features.
   - Update cabal dependencies, in particular fix the
     regression with respect to latest version of the
     containers package.
 
-======================================================================
-Version 2.1, 2012-05-24
+### Version 2.1, 2012-05-24
 
  Library:
   - Add support for uninterpreted sorts, together with user defined
@@ -132,8 +125,7 @@ Version 2.1, 2012-05-24
         Data.SBV.Examples.Uninterpreted.Deduce
     for illustrating uninterpreted sorts and axioms.
 
-======================================================================
-Version 2.0, 2012-05-10
+### Version 2.0, 2012-05-10
   
   This is a major release of SBV, adding support for symbolic algebraic reals: SReal.
   See http://en.wikipedia.org/wiki/Algebraic_number for details. In brief, algebraic
@@ -186,19 +178,16 @@ Version 2.0, 2012-05-10
    * Add merge-sort example: Data.SBV.Examples.BitPrecise.MergeSort
    * Add diophantine solver example: Data.SBV.Examples.Existentials.Diophantine
 
-======================================================================
-Version 1.4, 2012-05-10
+### Version 1.4, 2012-05-10
 
    * Interim release for test purposes
 
-======================================================================
-Version 1.3, 2012-02-25
+### Version 1.3, 2012-02-25
 
   * Workaround cabal/hackage issue, functionally the same as release
     1.2 below
 
-======================================================================
-Version 1.2, 2012-02-25
+### Version 1.2, 2012-02-25
 
  Library:
   * Add a hook so users can add custom script segments for SMT solvers. The new
@@ -213,8 +202,7 @@ Version 1.2, 2012-02-25
     should not be necessary with Z3 v3.3; which isn't released yet.)
   * Other minor clean-up
 
-======================================================================
-Version 1.1, 2012-02-14
+### Version 1.1, 2012-02-14
 
  Library:
   * Rename bitValue to sbvTestBit
@@ -226,8 +214,7 @@ Version 1.1, 2012-02-14
   * Add 'generateSMTBenchmarks', simplifying the generation of
     SMTLib benchmarks for offline sharing.
 
-======================================================================
-Version 1.0, 2012-02-13
+### Version 1.0, 2012-02-13
 
  Library:
   * Z3 is now the "default" SMT solver. Yices is still available, but
@@ -251,8 +238,7 @@ Version 1.0, 2012-02-13
  Other
   * Changes to make it compile with GHC 7.4.1.
 
-======================================================================
-Version 0.9.24, 2011-12-28
+### Version 0.9.24, 2011-12-28
 
   Library:
    * Add "forSome," analogous to "forAll." (The name "exists" would've
@@ -301,8 +287,7 @@ Version 0.9.24, 2011-12-28
    * Get rid of custom Setup.hs, just use simple build. The extra work
      was not worth the complexity.
 
-======================================================================
-Version 0.9.23, 2011-12-05
+### Version 0.9.23, 2011-12-05
   
   Library:
    * Add support for SInteger, the type of signed unbounded integer
@@ -328,8 +313,7 @@ Version 0.9.23, 2011-12-05
      but can happen with the use of non-linear constructs. (i.e.,
      multiplication of two variables.)
 
-======================================================================
-Version 0.9.22, 2011-11-13
+### Version 0.9.22, 2011-11-13
    
   The major change in this release is the support for quantifiers. The
   SBV library *no* longer assumes all variables are universals in a proof,
@@ -374,21 +358,18 @@ Version 0.9.22, 2011-11-13
      * Add USB CRC code generation example, both via polynomials and
        using the internal CRC functionality
 
-======================================================================
-Version 0.9.21, 2011-08-05
+### Version 0.9.21, 2011-08-05
    
    Code generation:
     * Allow for inclusion of user makefiles
     * Allow for CCFLAGS to be set by the user
     * Other minor clean-up
 
-======================================================================
-Version 0.9.20, 2011-06-05
+### Version 0.9.20, 2011-06-05
    
     * Regression on 0.9.19; add missing file to cabal
 
-======================================================================
-Version 0.9.19, 2011-06-05
+### Version 0.9.19, 2011-06-05
     
    Code:
     * Add SignCast class for conversion between signed/unsigned
@@ -402,8 +383,7 @@ Version 0.9.19, 2011-06-05
     * Add sentence-counting example
     * Add an implementation of RC4
 
-======================================================================
-Version 0.9.18, 2011-04-07
+### Version 0.9.18, 2011-04-07
 
   Code:
     * Re-engineer code-generation, and compilation to C.
@@ -417,8 +397,7 @@ Version 0.9.18, 2011-04-07
     * Include a library-generation example for doing 128-bit
       AES encryption
 
-======================================================================
-Version 0.9.17, 2011-03-29
+### Version 0.9.17, 2011-03-29
    
   Code:
     * Simplify and reorganize the test suite
@@ -426,8 +405,7 @@ Version 0.9.17, 2011-03-29
     * Improve AES decryption example, by using
       table-lookups in InvMixColumns.
   
-======================================================================
-Version 0.9.16, 2011-03-28
+### Version 0.9.16, 2011-03-28
 
   Code:
     * Further optimizations on Bits instance of SBV
@@ -436,8 +414,7 @@ Version 0.9.16, 2011-03-28
       encryption algorithms are particularly suitable
       for use with the code-generator
 
-======================================================================
-Version 0.9.15, 2011-03-24
+### Version 0.9.15, 2011-03-24
    
   Bug fixes:
     * Fix rotateL/rotateR instances on concrete
@@ -452,16 +429,14 @@ Version 0.9.15, 2011-03-24
       arithmetic to catch bugs. (There are many
       of them, ~30K, but they run quickly.)
 
-======================================================================
-Version 0.9.14, 2011-03-19
+### Version 0.9.14, 2011-03-19
     
   - Reimplement sharing using Stable names, inspired
     by the Data.Reify techniques. This avoids tricks
     with unsafe memory stashing, and hence is safe.
     Thus, issues with respect to CAFs are now resolved.
 
-======================================================================
-Version 0.9.13, 2011-03-16
+### Version 0.9.13, 2011-03-16
     
   Bug fixes:
     * Make sure SBool short-cut evaluations are done
@@ -473,8 +448,7 @@ Version 0.9.13, 2011-03-16
       code by Lee Pike.
     * Add a GCD code-generation/verification example
 
-======================================================================
-Version 0.9.12, 2011-03-10
+### Version 0.9.12, 2011-03-10
   
   New features:
     * Add support for compilation to C
@@ -484,13 +458,11 @@ Version 0.9.12, 2011-03-10
     * Output naming bug, reported by Josef Svenningsson
     * Specification bug in Legato's multipler example
 
-======================================================================
-Version 0.9.11, 2011-02-16
+### Version 0.9.11, 2011-02-16
   
   * Make ghc-7.0 happy, minor re-org on the cabal file/Setup.hs
 
-======================================================================
-Version 0.9.10, 2011-02-15
+### Version 0.9.10, 2011-02-15
 
   * Integrate commits from Iavor: Generalize SBV's to keep
     track the integer directly without resorting to different
@@ -498,27 +470,23 @@ Version 0.9.10, 2011-02-15
   * Remove the unnecessary CLC instruction from the Legato example
   * More tests
 
-======================================================================
-Version 0.9.9, 2011-01-23
+### Version 0.9.9, 2011-01-23
 
   * Support for user-defined SMT-Lib axioms to be
     specified for uninterpreted constants/functions
   * Move to using doctest style inline tests
 
-======================================================================
-Version 0.9.8, 2011-01-22
+### Version 0.9.8, 2011-01-22
 
   * Better support for uninterpreted-functions
   * Support counter-examples with SArray's
   * Ladner-Fischer scheme example
   * Documentation updates
 
-======================================================================
-Version 0.9.7, 2011-01-18
+### Version 0.9.7, 2011-01-18
 
   * First stable public hackage release
 
-======================================================================
 Versions 0.0.0 - 0.9.6, Mid 2010 through early 2011
 
   * Basic infrastructure, design exploration
