@@ -4,7 +4,6 @@
 # in the distribution for details.
 SHELL     := /usr/bin/env bash
 TSTSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs | grep -v SBVUnitTest/SBVBasicTests.hs | grep -v buildUtils/simplify.hs)
-LINTSRCS  = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v Paths_sbv.hs)
 STAMPFILE = SBVUnitTest/SBVUnitTestBuildTime.hs
 DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' -or -name '*.cabal' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE))
 CABAL     = cabal
@@ -72,7 +71,7 @@ gold: install
 
 hlint: install
 	@echo "Running HLint.."
-	@hlint ${LINTSRCS} -q -rhlintReport.html -i "Use otherwise" -i "Parse error"
+	@hlint Data SBVUnitTest -q -rhlintReport.html -i "Use otherwise" -i "Parse error"
 
 tags:
 	$(call mkTags)

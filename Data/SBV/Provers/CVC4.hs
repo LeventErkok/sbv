@@ -77,9 +77,9 @@ extractMap isSat qinps _modelMap solverLines =
         sortByNodeId = sortBy (compare `on` fst)
         inps -- for "sat", display the prefix existentials. For completeness, we will drop
              -- only the trailing foralls. Exception: Don't drop anything if it's all a sequence of foralls
-             | isSat = if all (== ALL) (map fst qinps)
-                       then map snd qinps
-                       else map snd $ reverse $ dropWhile ((== ALL) . fst) $ reverse qinps
+             | isSat = map snd $ if all (== ALL) (map fst qinps)
+                                 then qinps
+                                 else reverse $ dropWhile ((== ALL) . fst) $ reverse qinps
              -- for "proof", just display the prefix universals
              | True  = map snd $ takeWhile ((== ALL) . fst) qinps
         -- CVC4 puts quotes around echo's, go figure. strip them here

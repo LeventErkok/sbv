@@ -429,9 +429,9 @@ runSolver cfg execPath opts script
                                    ex <- waitForProcess pid
                                    -- if the status is unknown, prepare for the possibility of not having a model
                                    -- TBD: This is rather crude and potentially Z3 specific
-                                   if "unknown" `isPrefixOf` r && "error" `isInfixOf` (out ++ err)
-                                      then return (ExitSuccess, r               , "")
-                                      else return (ex,          r ++ "\n" ++ out, err)
+                                   return $ if "unknown" `isPrefixOf` r && "error" `isInfixOf` (out ++ err)
+                                            then (ExitSuccess, r               , "")
+                                            else (ex,          r ++ "\n" ++ out, err)
                 return (send, ask, cleanUp)
       mapM_ send (lines (scriptBody script))
       r <- ask $ satCmd cfg

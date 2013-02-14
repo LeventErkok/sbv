@@ -77,8 +77,9 @@ decide shouldCreate (Counts c t e f) = do
         when (e /= 0) $ putStrLn $ "*** " ++ show e ++ " (of " ++ show c ++ ") test cases in error."
         when (f /= 0) $ putStrLn $ "*** " ++ show f ++ " (of " ++ show c ++ ") test cases failed."
         if c == t && e == 0 && f == 0
-           then do if shouldCreate
-                      then putStrLn $ "All " ++ show c ++ " test cases executed in gold-file generation mode."
-                      else putStrLn $ "All " ++ show c ++ " test cases successfully passed."
+           then do putStrLn $ "All " ++ show c ++ " test cases "
+                            ++ (if shouldCreate
+                                then " executed in gold-file generation mode."
+                                else " successfully passed.")
                    exitSuccess
            else exitWith $ ExitFailure 2

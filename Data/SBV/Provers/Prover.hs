@@ -329,9 +329,9 @@ compileToSMTLib smtLib2 isSat a = do
             cvt = if smtLib2 then toSMTLib2 else toSMTLib1
         (_, _, _, _, smtLibPgm) <- simulate cvt defaultSMTCfg isSat comments a
         let out = show smtLibPgm
-        if smtLib2 -- append check-sat in case of smtLib2
-           then return $ out ++ "\n(check-sat)\n"
-           else return $ out ++ "\n"
+        return $ out ++ if smtLib2 -- append check-sat in case of smtLib2
+                        then "\n(check-sat)\n"
+                        else "\n"
 
 -- | Create both SMT-Lib1 and SMT-Lib2 benchmarks. The first argument is the basename of the file,
 -- SMT-Lib1 version will be written with suffix ".smt1" and SMT-Lib2 version will be written with
