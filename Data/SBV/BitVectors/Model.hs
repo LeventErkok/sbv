@@ -23,7 +23,7 @@
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), SIntegral
   , sbvTestBit, sbvPopCount, setBitTo, sbvShiftLeft, sbvShiftRight, sbvSignedShiftArithRight
-  , allEqual, allDifferent, oneIf, blastBE, blastLE
+  , allEqual, allDifferent, inRange, oneIf, blastBE, blastLE
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
@@ -522,14 +522,18 @@ instance Boolean SBool where
                  | True         = Nothing
 
 -- | Returns (symbolic) true if all the elements of the given list are different.
-allDifferent :: (Eq a, SymWord a) => [SBV a] -> SBool
+allDifferent :: EqSymbolic a => [a] -> SBool
 allDifferent (x:xs@(_:_)) = bAll (x ./=) xs &&& allDifferent xs
 allDifferent _            = true
 
 -- | Returns (symbolic) true if all the elements of the given list are the same.
-allEqual :: (Eq a, SymWord a) => [SBV a] -> SBool
+allEqual :: EqSymbolic a => [a] -> SBool
 allEqual (x:xs@(_:_))     = bAll (x .==) xs
 allEqual _                = true
+
+-- | Returns (symbolic) true if the argument is in range
+inRange :: OrdSymbolic a => a -> (a, a) -> SBool
+inRange x (y, z) = x .>= y &&& x .<= z
 
 -- | Returns 1 if the boolean is true, otherwise 0.
 oneIf :: (Num a, SymWord a) => SBool -> SBV a

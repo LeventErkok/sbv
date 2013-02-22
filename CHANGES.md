@@ -3,6 +3,13 @@
 
 * Latest Hackage released version: 2.9
 
+### Version 2.10, Not yet released
+ 
+  - Generalize types of `allDifferent` and `allEqual` to take
+    arbitrary EqSymbolic values. (Previously was just over SBV values.)
+  - Add inRange predicate, which checks if a value is bounded within
+    two others.
+
 ### Version 2.9, 2013-01-02
 
   - Add support for the CVC4 SMT solver from New York University and

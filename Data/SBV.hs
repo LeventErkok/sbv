@@ -118,11 +118,11 @@ module Data.SBV (
   , SymArray(..), SArray, SFunArray, mkSFunArray
   -- *** Full binary trees
   , STree, readSTree, writeSTree, mkSTree
-  -- ** Operations on symbolic words
+  -- ** Operations on symbolic values
   -- *** Word level
   , sbvTestBit, sbvPopCount, sbvShiftLeft, sbvShiftRight, sbvSignedShiftArithRight, setBitTo, oneIf, lsb, msb
-  -- *** List level
-  , allEqual, allDifferent
+  -- *** Predicates
+  , allEqual, allDifferent, inRange
   -- *** Blasting/Unblasting
   , blastBE, blastLE, FromBits(..)
   -- *** Splitting, joining, and extending
