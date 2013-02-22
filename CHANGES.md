@@ -9,6 +9,7 @@
     arbitrary EqSymbolic values. (Previously was just over SBV values.)
   - Add inRange predicate, which checks if a value is bounded within
     two others.
+  - Add sElem predicate, which checks for symbolic membership
 
 ### Version 2.9, 2013-01-02
 

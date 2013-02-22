@@ -23,7 +23,7 @@
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), SIntegral
   , sbvTestBit, sbvPopCount, setBitTo, sbvShiftLeft, sbvShiftRight, sbvSignedShiftArithRight
-  , allEqual, allDifferent, inRange, oneIf, blastBE, blastLE
+  , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
@@ -534,6 +534,10 @@ allEqual _                = true
 -- | Returns (symbolic) true if the argument is in range
 inRange :: OrdSymbolic a => a -> (a, a) -> SBool
 inRange x (y, z) = x .>= y &&& x .<= z
+
+-- | Symbolic membership test
+sElem :: EqSymbolic a => a -> [a] -> SBool
+sElem x xs = bAny (.== x) xs
 
 -- | Returns 1 if the boolean is true, otherwise 0.
 oneIf :: (Num a, SymWord a) => SBool -> SBV a

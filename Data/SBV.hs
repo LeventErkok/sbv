@@ -122,7 +122,7 @@ module Data.SBV (
   -- *** Word level
   , sbvTestBit, sbvPopCount, sbvShiftLeft, sbvShiftRight, sbvSignedShiftArithRight, setBitTo, oneIf, lsb, msb
   -- *** Predicates
-  , allEqual, allDifferent, inRange
+  , allEqual, allDifferent, inRange, sElem
   -- *** Blasting/Unblasting
   , blastBE, blastLE, FromBits(..)
   -- *** Splitting, joining, and extending
