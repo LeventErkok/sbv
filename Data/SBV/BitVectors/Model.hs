@@ -23,7 +23,7 @@
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), SIntegral
   , sbvTestBit, sbvPopCount, setBitTo, sbvShiftLeft, sbvShiftRight, sbvSignedShiftArithRight
-  , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE
+  , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
@@ -713,6 +713,35 @@ sbvSignedShiftArithRight x i
   | True       = ite (msb x)
                      (complement (sbvShiftRight (complement x) i))
                      (sbvShiftRight x i)
+
+-- | Full adder. Returns the carry-out from the addition.
+--
+-- N.B. Only works for unsigned types. Signed arguments will be rejected.
+fullAdder :: SIntegral a => SBV a -> SBV a -> (SBool, SBV a)
+fullAdder a b
+  | isSigned a = error "fullAdder: only works on unsigned numbers"
+  | True       = (a .> s ||| b .> s, s)
+  where s = a + b
+
+-- | Full multiplier: Returns both the high-order and the low-order bits in a tuple,
+-- thus fully accounting for the overflow.
+--
+-- N.B. Only works for unsigned types. Signed arguments will be rejected.
+--
+-- N.B. The higher-order bits are determined using a simple shift-add multiplier,
+-- thus involving bit-blasting. It'd be naive to expect SMT solvers to deal efficiently
+-- with properties involving this function, at least with the current state of the art.
+fullMultiplier :: SIntegral a => SBV a -> SBV a -> (SBV a, SBV a)
+fullMultiplier a b
+  | isSigned a = error "fullMultiplier: only works on unsigned numbers"
+  | True       = (go (bitSize a) 0 a, a*b)
+  where go 0 p _ = p
+        go n p x = let (c, p')  = ite (lsb x) (fullAdder p b) (false, p)
+                       (o, p'') = shiftIn c p'
+                       (_, x')  = shiftIn o x
+                   in go (n-1) p'' x'
+        shiftIn k v = (lsb v, mask .|. (v `shiftR` 1))
+           where mask = ite k (bit (bitSize v - 1)) 0
 
 -- | Little-endian blasting of a word into its bits. Also see the 'FromBits' class.
 blastLE :: (Num a, Bits a, SymWord a) => SBV a -> [SBool]

@@ -123,6 +123,8 @@ module Data.SBV (
   , sbvTestBit, sbvPopCount, sbvShiftLeft, sbvShiftRight, sbvSignedShiftArithRight, setBitTo, oneIf, lsb, msb
   -- *** Predicates
   , allEqual, allDifferent, inRange, sElem
+  -- *** Addition and Multiplication with high-bits
+  , fullAdder, fullMultiplier
   -- *** Blasting/Unblasting
   , blastBE, blastLE, FromBits(..)
   -- *** Splitting, joining, and extending
