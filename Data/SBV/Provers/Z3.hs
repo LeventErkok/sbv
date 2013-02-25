@@ -49,7 +49,7 @@ z3 = SMTSolver {
                                                    [] -> ""
                                                    ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
                                         dlim = printRealPrec cfg'
-                                        ppDecLim = "(set-option :pp-decimal-precision " ++ show dlim ++ ")\n"
+                                        ppDecLim = "(set-option :pp.decimal_precision " ++ show dlim ++ ")\n"
                                         script = SMTScript {scriptBody = tweaks ++ ppDecLim ++ pgm, scriptModel = Just (cont skolemMap)}
                                     if dlim < 1
                                        then error $ "SBV.Z3: printRealPrec value should be at least 1, invalid value received: " ++ show dlim
@@ -76,7 +76,7 @@ z3 = SMTSolver {
               extract (Left s)        = ["(echo \"((" ++ show s ++ " " ++ zero (kindOf s) ++ "))\")"]
               extract (Right (s, [])) = let g = "(get-value (" ++ show s ++ "))" in getVal (kindOf s) g
               extract (Right (s, ss)) = let g = "(get-value ((" ++ show s ++ concat [' ' : zero (kindOf a) | a <- ss] ++ ")))" in getVal (kindOf s) g
-              getVal KReal g = ["(set-option :pp-decimal false)", g, "(set-option :pp-decimal true)", g]
+              getVal KReal g = ["(set-option :pp.decimal false)", g, "(set-option :pp.decimal true)", g]
               getVal _     g = [g]
        addTimeOut Nothing  o   = o
        addTimeOut (Just i) o
