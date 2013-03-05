@@ -5,18 +5,17 @@
 
 ### Version 2.10, Not yet released
  
-  Library:
-    - Generalize types of `allDifferent` and `allEqual` to take
+ * Library:
+    * Generalize types of `allDifferent` and `allEqual` to take
       arbitrary EqSymbolic values. (Previously was just over SBV values.)
-    - Add `inRange` predicate, which checks if a value is bounded within
+    * Add `inRange` predicate, which checks if a value is bounded within
       two others.
-    - Add `sElem` predicate, which checks for symbolic membership
-    - Add `fullAdder`: Returns the carry-over as a separate boolean bit.
-    - Add `fullMultiplier`: Returns both the lower and higher bits resulting
+    * Add `sElem` predicate, which checks for symbolic membership
+    * Add `fullAdder`: Returns the carry-over as a separate boolean bit.
+    * Add `fullMultiplier`: Returns both the lower and higher bits resulting
       from  multiplication.
-
-   Solvers:
-    - Z3: Update to the new parameter naming schema of Z3. This implies that
+ * Solvers:
+    * Z3: Update to the new parameter naming schema of Z3. This implies that
       you need to have a really recent version of Z3 installed, something
       in the Z3-4.3 series.
 
