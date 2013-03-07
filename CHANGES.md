@@ -383,7 +383,7 @@ Versions 2.4, 2.5, and 2.6: Around mid October 2012
 
 ### Version 0.9.20, 2011-06-05
    
-    * Regression on 0.9.19; add missing file to cabal
+  Regression on 0.9.19; add missing file to cabal
 
 ### Version 0.9.19, 2011-06-05
     
