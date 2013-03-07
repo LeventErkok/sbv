@@ -18,6 +18,9 @@
     * Z3: Update to the new parameter naming schema of Z3. This implies that
       you need to have a really recent version of Z3 installed, something
       in the Z3-4.3 series.
+ * Examples:
+    * Add Examples/Uninterpreted/Shannon.hs: Demonstrating Shannon expansion,
+      boolean derivatives, etc.
 
 ### Version 2.9, 2013-01-02
 

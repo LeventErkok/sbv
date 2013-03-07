@@ -162,6 +162,7 @@ Library
                   , Data.SBV.Examples.Uninterpreted.AUF
                   , Data.SBV.Examples.Uninterpreted.Deduce
                   , Data.SBV.Examples.Uninterpreted.Function
+                  , Data.SBV.Examples.Uninterpreted.Shannon
                   , Data.SBV.Examples.Uninterpreted.Sort
   Other-modules   : Data.SBV.BitVectors.AlgReals
                   , Data.SBV.BitVectors.Data
