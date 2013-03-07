@@ -59,7 +59,7 @@ shannon = prove $ \x y z -> f x y z .== (x &&& pos f y z ||| bnot x &&& neg f y 
 -- Defined as exclusive-or of Shannon cofactors with respect to that
 -- variable.
 derivative :: Ternary -> Binary
-derivative f x y = f true x y <+> f false x y
+derivative f x y = pos f x y <+> neg f x y
 
 -- | The no-wiggle theorem: If the derivative of a function with respect to
 -- a variable is constant False, then that variable does not "wiggle" the
@@ -70,7 +70,7 @@ derivative f x y = f true x y <+> f false x y
 -- >>> noWiggle
 -- Q.E.D.
 noWiggle :: IO ThmResult
-noWiggle = prove $ \y z -> bnot (f' y z) <=> f true y z .== f false y z
+noWiggle = prove $ \y z -> bnot (f' y z) <=> pos f y z .== neg f y z
   where f :: Ternary
         f = uninterpret "f"
         f' = derivative f
