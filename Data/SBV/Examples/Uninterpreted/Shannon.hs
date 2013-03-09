@@ -51,6 +51,15 @@ shannon = prove $ \x y z -> f x y z .== (x &&& pos f y z ||| bnot x &&& neg f y 
  where f :: Ternary
        f = uninterpret "f"
 
+-- | Alternative form of Shannon's expansion over the first argument of a function. We have:
+--
+-- >>> shannon2
+-- Q.E.D.
+shannon2 :: IO ThmResult
+shannon2 = prove $ \x y z -> f x y z .== ((x ||| neg f y z) &&& (bnot x ||| pos f y z))
+ where f :: Ternary
+       f = uninterpret "f"
+
 -----------------------------------------------------------------------------
 -- * Derivatives
 -----------------------------------------------------------------------------
