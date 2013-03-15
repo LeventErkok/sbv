@@ -1,5 +1,5 @@
 Solution #1:
-  s0 = 16 :: SInteger
-Solution #2:
   s0 = 28 :: SInteger
+Solution #2:
+  s0 = 16 :: SInteger
 Found 2 different solutions.
