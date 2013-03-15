@@ -594,19 +594,26 @@ newUninterpreted st nm t mbCode
                         when (isJust mbCode) $ modifyIORef (rCgMap st) (Map.insert nm (fromJust mbCode))
   where validChar x = isAlphaNum x || x `elem` "_"
 
+-- | Create a new SW
+newSW :: State -> Kind -> IO (SW, String)
+newSW st k = do ctr <- incCtr st
+                let sw = SW k (NodeId ctr)
+                () <- case k of
+                       KUnbounded              -> modifyIORef (rUnBounded st) (\(_, y) -> (True, y))
+                       KReal                   -> modifyIORef (rUnBounded st) (\(x, _) -> (x, True))
+                       KUninterpreted sortName -> registerSort st sortName  -- in case the result is produced via an uninterpreted function
+                       _                       -> return ()
+                return (sw, 's' : show ctr)
+{-# INLINE newSW #-}
+
 -- | Create a new constant; hash-cons as necessary
 newConst :: State -> CW -> IO SW
 newConst st c = do
   constMap <- readIORef (rconstMap st)
   case c `Map.lookup` constMap of
     Just sw -> return sw
-    Nothing -> do ctr <- incCtr st
-                  let k = kindOf c
-                      sw = SW k (NodeId ctr)
-                  () <- case kindOf c of
-                         KUnbounded -> modifyIORef (rUnBounded st) (\(_, y) -> (True, y))
-                         KReal      -> modifyIORef (rUnBounded st) (\(x, _) -> (x, True))
-                         _          -> return ()
+    Nothing -> do let k = kindOf c
+                  (sw, _) <- newSW st k
                   modifyIORef (rconstMap st) (Map.insert c sw)
                   return sw
 {-# INLINE newConst #-}
@@ -633,12 +640,7 @@ newExpr st k app = do
    exprMap <- readIORef (rexprMap st)
    case e `Map.lookup` exprMap of
      Just sw -> return sw
-     Nothing -> do ctr <- incCtr st
-                   let sw = SW k (NodeId ctr)
-                   () <- case k of
-                          KUnbounded -> modifyIORef (rUnBounded st) (\(_, y) -> (True, y))
-                          KReal      -> modifyIORef (rUnBounded st) (\(x, _) -> (x, True))
-                          _          -> return ()
+     Nothing -> do (sw, _) <- newSW st k
                    modifyIORef (spgm st)     (\(SBVPgm xs) -> SBVPgm (xs S.|> (sw, e)))
                    modifyIORef (rexprMap st) (Map.insert e sw)
                    return sw
@@ -676,13 +678,8 @@ mkSymSBV mbQ k mbNm = do
           Concrete _           -> do v@(SBV _ (Left cw)) <- liftIO randomIO
                                      liftIO $ modifyIORef (rCInfo st) ((maybe "_" id mbNm, cw):)
                                      return v
-          _          -> do ctr <- liftIO $ incCtr st
-                           let nm = maybe ('s':show ctr) id mbNm
-                               sw = SW k (NodeId ctr)
-                           () <- case k of
-                                   KUnbounded -> liftIO $ modifyIORef (rUnBounded st) (\(_, y) -> (True, y))
-                                   KReal      -> liftIO $ modifyIORef (rUnBounded st) (\(x, _) -> (x, True))
-                                   _          -> return ()
+          _          -> do (sw, internalName) <- liftIO $ newSW st k
+                           let nm = maybe internalName id mbNm
                            liftIO $ modifyIORef (rinps st) ((q, (sw, nm)):)
                            return $ SBV k $ Right $ cache (const (return sw))
 
@@ -895,23 +892,32 @@ class (HasKind a, Ord a) => SymWord a where
   mkSymWord mbQ mbNm = do
         let sortName = tyconUQname . dataTypeName . dataTypeOf $ (undefined :: a)
         st <- ask
-        let -- TBD: Is this list comprehensive?
-            reserved = ["Int", "Real", "List", "Array", "Bool"]
-        when (sortName `elem` reserved) $ error $ "SBV.registerSort: " ++ show sortName ++ " is a reserved sort; please use a different name"
-        curSorts <- liftIO $ readIORef (rSorts st)
-        when (sortName `notElem` curSorts) $ liftIO $ modifyIORef (rSorts st) (sortName :)
+        liftIO $ registerSort st sortName
         let k = KUninterpreted sortName
             q = case (mbQ, runMode st) of
                   (Just x,  _)           -> x
                   (Nothing, Proof True)  -> EX
                   (Nothing, Proof False) -> ALL
-                  (Nothing, Concrete{})  -> error $ "SBV.registerSort: Uninterpreted sort " ++ sortName ++ " can not be used in concrete simulation mode."
-                  (Nothing, CodeGen)     -> error $ "SBV.registerSort: Uninterpreted sort " ++ sortName ++ " can not be used in code-generation mode."
+                  (Nothing, Concrete{})  -> error $ "SBV: Uninterpreted sort " ++ sortName ++ " can not be used in concrete simulation mode."
+                  (Nothing, CodeGen)     -> error $ "SBV: Uninterpreted sort " ++ sortName ++ " can not be used in code-generation mode."
         ctr <- liftIO $ incCtr st
         let sw = SW k (NodeId ctr)
             nm = maybe ('s':show ctr) id mbNm
         liftIO $ modifyIORef (rinps st) ((q, (sw, nm)):)
         return $ SBV k $ Right $ cache (const (return sw))
+
+-- | Register an uninterpreted sort with SBV
+registerSort :: State -> String -> IO ()
+registerSort st sortName = do
+        let -- This list comes from http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.0-r10.12.21.pdf
+            -- Note that we only have to include those SMT-Lib reserved names that start with a capital
+            -- letter, since all Haskell types start with a capital-letter and there's no possibility of
+            -- conflict for lower-case ones!
+            -- TODO: Make sure this list covers everything!
+            reserved = ["Int", "Real", "List", "Array", "Bool", "NUMERAL", "DECIMAL", "STRING", "FP"]
+        when (sortName `elem` reserved) $ error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
+        curSorts <- readIORef (rSorts st)
+        when (sortName `notElem` curSorts) $ liftIO $ modifyIORef (rSorts st) (sortName :)
 
 instance (Random a, SymWord a) => Random (SBV a) where
   randomR (l, h) g = case (unliteral l, unliteral h) of

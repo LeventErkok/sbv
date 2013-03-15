@@ -21,6 +21,11 @@
  * Examples:
     * Add Examples/Uninterpreted/Shannon.hs: Demonstrating Shannon expansion,
       boolean derivatives, etc.
+ * Bug-fixes:
+    * Gracefully handle the case if the backend-SMT solver does not put anything
+      in stdout. (Reported by Thomas DuBuisson.)
+    * Handle uninterpreted sort values, if they happen to be only created via
+      function calls, as opposed to being inputs. (Reported by Thomas DuBuisson.)
 
 ### Version 2.9, 2013-01-02
 
