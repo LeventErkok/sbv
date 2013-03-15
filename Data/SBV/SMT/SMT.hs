@@ -414,7 +414,7 @@ runSolver cfg execPath opts script
  = do (send, ask, cleanUp) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
                 let send l    = hPutStr inh (l ++ "\n") >> hFlush inh
-                    recv      = hGetLine outh
+                    recv      = (hGetLine outh) `C.catch` (\(_ :: C.SomeException) -> return "")
                     ask l     = send l >> recv
                     cleanUp r = do outMVar <- newEmptyMVar
                                    out <- hGetContents outh
