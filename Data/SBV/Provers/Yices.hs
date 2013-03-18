@@ -42,7 +42,16 @@ yices = SMTSolver {
                                         script = SMTScript {scriptBody = unlines (solverTweaks cfg') ++ pgm, scriptModel = Nothing}
                                     standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap (map snd qinps) modelMap))
          , xformExitCode  = id
-         , defaultLogic   = Nothing
+         , capabilities   = SolverCapabilities {
+                                  capSolverName              = "Yices"
+                                , mbDefaultLogic             = Nothing
+                                , supportsMacros             = False
+                                , supportsProduceModels      = False
+                                , supportsQuantifiers        = False
+                                , supportsUninterpretedSorts = False
+                                , supportsUnboundedInts      = False
+                                , supportsReals              = False
+                                }
          }
   where addTimeOut Nothing  o   = o
         addTimeOut (Just i) o

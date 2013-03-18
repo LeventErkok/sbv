@@ -55,7 +55,16 @@ z3 = SMTSolver {
                                        then error $ "SBV.Z3: printRealPrec value should be at least 1, invalid value received: " ++ show dlim
                                        else standardSolver cfg' script cleanErrs (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap))
          , xformExitCode  = id
-         , defaultLogic   = Nothing
+         , capabilities   = SolverCapabilities {
+                                  capSolverName              = "Z3"
+                                , mbDefaultLogic             = Nothing
+                                , supportsMacros             = True
+                                , supportsProduceModels      = True
+                                , supportsQuantifiers        = True
+                                , supportsUninterpretedSorts = True
+                                , supportsUnboundedInts      = True
+                                , supportsReals              = True
+                                }
          }
  where -- Get rid of the following when z3_4.0 is out
        cleanErrs = intercalate "\n" . filter (not . junk) . lines

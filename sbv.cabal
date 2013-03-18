@@ -30,6 +30,9 @@ Description:   Express properties about Haskell programs and automatically prove
                   [@import "Data.SBV.Bridge.CVC4"@]
                   Picks CVC4 from New York University and the University of Iowa (<http://cvc4.cs.nyu.edu>) 
                .
+                  [@import "Data.SBV.Bridge.Boolector"@]
+                  Picks Boolector from Johannes Kepler University at (<http://fmv.jku.at/boolector/>).
+               .
                SBV introduces the following types and concepts:
                .
                  * 'SBool': Symbolic Booleans (bits)
@@ -132,6 +135,7 @@ Library
                   , array, containers, deepseq, directory, filepath, old-time
                   , pretty, process, mtl, QuickCheck, random, syb
   Exposed-modules : Data.SBV
+                  , Data.SBV.Bridge.Boolector
                   , Data.SBV.Bridge.CVC4
                   , Data.SBV.Bridge.Yices
                   , Data.SBV.Bridge.Z3
@@ -179,6 +183,7 @@ Library
                   , Data.SBV.SMT.SMTLib2
                   , Data.SBV.Provers.Prover
                   , Data.SBV.Provers.SExpr
+                  , Data.SBV.Provers.Boolector
                   , Data.SBV.Provers.CVC4
                   , Data.SBV.Provers.Yices
                   , Data.SBV.Provers.Z3

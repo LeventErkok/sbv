@@ -43,7 +43,16 @@ cvc4 = SMTSolver {
                                         script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont skolemMap)}
                                     standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap))
          , xformExitCode  = cvc4ExitCode
-         , defaultLogic   = Just "ALL_SUPPORTED"  -- CVC4 is not happy if we don't set the logic, so fall-back to this if necessary
+         , capabilities   = SolverCapabilities {
+                                  capSolverName              = "CVC4"
+                                , mbDefaultLogic             = Just "ALL_SUPPORTED"  -- CVC4 is not happy if we don't set the logic, so fall-back to this if necessary
+                                , supportsMacros             = True
+                                , supportsProduceModels      = True
+                                , supportsQuantifiers        = True
+                                , supportsUninterpretedSorts = True
+                                , supportsUnboundedInts      = True
+                                , supportsReals              = True  -- Not quite the same capability as Z3; but works more or less..
+                                }
          }
  where zero :: Kind -> String
        zero (KBounded False 1)  = "#b0"

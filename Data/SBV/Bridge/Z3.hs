@@ -9,6 +9,8 @@
 -- Interface to the Z3 SMT solver. Import this module if you want to use the
 -- Z3 SMT prover as your backend solver. Also see:
 --
+--       - "Data.SBV.Bridge.Boolector"
+--
 --       - "Data.SBV.Bridge.CVC4"
 --
 --       - "Data.SBV.Bridge.Yices"

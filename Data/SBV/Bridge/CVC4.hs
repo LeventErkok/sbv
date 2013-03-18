@@ -12,6 +12,8 @@
 --       - "Data.SBV.Bridge.Yices"
 --
 --       - "Data.SBV.Bridge.Z3"
+--
+--       - "Data.SBV.Bridge.Boolector"
 ---------------------------------------------------------------------------------
 
 module Data.SBV.Bridge.CVC4 (

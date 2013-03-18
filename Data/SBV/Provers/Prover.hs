@@ -25,7 +25,7 @@ module Data.SBV.Provers.Prover (
        , isVacuous, isVacuousWith
        , solve
        , SatModel(..), Modelable(..), displayModels, extractModels
-       , yices, z3, cvc4, defaultSMTCfg
+       , boolector, cvc4, yices, z3, defaultSMTCfg
        , compileToSMTLib, generateSMTBenchmarks
        , sbvCheckSolverInstallation
        ) where
@@ -43,14 +43,15 @@ import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
-import qualified Data.SBV.Provers.CVC4  as CVC4
-import qualified Data.SBV.Provers.Yices as Yices
-import qualified Data.SBV.Provers.Z3    as Z3
+import qualified Data.SBV.Provers.Boolector  as Boolector
+import qualified Data.SBV.Provers.CVC4       as CVC4
+import qualified Data.SBV.Provers.Yices      as Yices
+import qualified Data.SBV.Provers.Z3         as Z3
 import Data.SBV.Utils.TDiff
 import Data.SBV.Utils.Boolean
 
 mkConfig :: SMTSolver -> Bool -> [String] -> SMTConfig
-mkConfig s isSMTLib2 tweaks = SMTConfig { verbose = False
+mkConfig s isSMTLib2 tweaks = SMTConfig { verbose       = False
                                         , timing        = False
                                         , timeOut       = Nothing
                                         , printBase     = 10
@@ -62,9 +63,14 @@ mkConfig s isSMTLib2 tweaks = SMTConfig { verbose = False
                                         , satCmd        = "(check-sat)"
                                         }
 
+-- | Default configuration for the Boolector SMT solver
+boolector :: SMTConfig
+boolector = mkConfig Boolector.boolector True []
+
 -- | Default configuration for the CVC4 SMT Solver.
 cvc4 :: SMTConfig
 cvc4 = mkConfig CVC4.cvc4 True []
+
 -- | Default configuration for the Yices SMT Solver.
 yices :: SMTConfig
 yices = mkConfig Yices.yices False []
@@ -448,8 +454,8 @@ simulate converter config isSat comments predicate = do
 
 runProofOn :: SMTLibConverter -> SMTConfig -> Bool -> [String] -> Result -> IO SMTProblem
 runProofOn converter config isSat comments res =
-        let isTiming = timing config
-            defLogic = defaultLogic (solver config)
+        let isTiming   = timing config
+            solverCaps = capabilities (solver config)
         in case res of
              Result boundInfo usorts _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs [o@(SW (KBounded False 1) _)] ->
                timeIf isTiming "translation" $ let uiMap     = mapMaybe arrayUIKind arrs ++ map unintFnUIKind uis
@@ -461,7 +467,7 @@ runProofOn converter config isSat comments res =
                                                                 where go []                   (_,  sofar) = reverse sofar
                                                                       go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
                                                                       go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
-                                               in return (is, uiMap, skolemMap, usorts, converter boundInfo defLogic isSat comments usorts is skolemMap consts tbls arrs uis axs pgm cstrs o)
+                                               in return (is, uiMap, skolemMap, usorts, converter solverCaps boundInfo isSat comments usorts is skolemMap consts tbls arrs uis axs pgm cstrs o)
              Result _boundInfo _us _qcInfo _codeSegs _is _consts _tbls _arrs _uis _axs _pgm _cstrs os -> case length os of
                            0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
                            1  -> error $ "Impossible happened, non-boolean output in " ++ show os

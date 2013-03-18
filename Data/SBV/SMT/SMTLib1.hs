@@ -40,8 +40,8 @@ nonEq :: (String, CW) -> String
 nonEq (s, c) = "(not (= " ++ s ++ " " ++ cvtCW c ++ "))"
 
 -- | Translate a problem into an SMTLib1 script
-cvt :: (Bool, Bool)                 -- ^ has infinite precision integers/reals
-    -> Maybe String                 -- ^ Not used in the SMTLib1 converter
+cvt :: SolverCapabilities           -- ^ capabilities of the current solver
+    -> (Bool, Bool)                 -- ^ has infinite precision integers/reals
     -> Bool                         -- ^ is this a sat problem?
     -> [String]                     -- ^ extra comments to place on top
     -> [String]                     -- ^ uninterpreted sorts
@@ -56,21 +56,8 @@ cvt :: (Bool, Bool)                 -- ^ has infinite precision integers/reals
     -> [SW]                         -- ^ extra constraints
     -> SW                           -- ^ output variable
     -> ([String], [String])
-cvt (hasIntegers, hasReals) _mbDefaultLogic isSat comments sorts qinps _skolemInps consts tbls arrs uis axs asgnsSeq cstrs out
-  | hasIntegers
-  = error "SBV: Unbounded integers are not supported in the SMTLib1/yices interface."
-  | hasReals
-  = error "SBV: The real value domain is not supported in the SMTLib1/yices interface."
-  | not ((isSat && allExistential) || (not isSat && allUniversal))
-  = error "SBV: The chosen solver does not support quantified variables."
-  | not (null sorts)
-  = error "SBV: The chosen solver does not support unintepreted sorts."
-  | True
-  = (pre, post)
-  where quantifiers    = map fst qinps
-        allExistential = all (== EX)  quantifiers
-        allUniversal   = all (== ALL) quantifiers
-        logic
+cvt _solverCaps _boundInfo isSat comments _sorts qinps _skolemInps consts tbls arrs uis axs asgnsSeq cstrs out = (pre, post)
+  where logic
          | null tbls && null arrs && null uis = "QF_BV"
          | True                               = "QF_AUFBV"
         inps = map (fst . snd) qinps

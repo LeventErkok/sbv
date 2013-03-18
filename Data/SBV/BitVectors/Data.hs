@@ -35,6 +35,7 @@ module Data.SBV.BitVectors.Data
  , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
  , Quantifier(..), needsExistentials
  , SMTLibPgm(..), SMTLibVersion(..)
+ , SolverCapabilities(..)
  ) where
 
 import Control.DeepSeq      (NFData(..))
@@ -1148,3 +1149,15 @@ instance NFData a => NFData (Cached a) where
 instance NFData a => NFData (SBV a) where
   rnf (SBV x y) = rnf x `seq` rnf y `seq` ()
 instance NFData SBVPgm
+
+-- | Translation tricks needed for specific capabilities afforded by each solver
+data SolverCapabilities = SolverCapabilities {
+         capSolverName              :: String       -- ^ Name of the solver
+       , mbDefaultLogic             :: Maybe String -- ^ set-logic string to use in case not automatically determined (if any)
+       , supportsMacros             :: Bool         -- ^ Does the solver understand SMT-Lib2 macros?
+       , supportsProduceModels      :: Bool         -- ^ Does the solver understand produce-models option setting
+       , supportsQuantifiers        :: Bool         -- ^ Does the solver understand SMT-Lib2 style quantifiers?
+       , supportsUninterpretedSorts :: Bool         -- ^ Does the solver understand SMT-Lib2 style uninterpreted-sorts
+       , supportsUnboundedInts      :: Bool         -- ^ Does the solver support unbounded integers?
+       , supportsReals              :: Bool         -- ^ Does the solver support reals?
+       }
