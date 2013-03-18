@@ -5,6 +5,12 @@
 
 ### Version 2.10, Not yet released
  
+ * Adds support for the Boolector SMT solver
+    * See: http://fmv.jku.at/boolector/
+    * Use `import Data.SBV.Bridge.Boolector` to use Boolector from SBV
+    * Boolector supports QF_BV (with an without arrays) in the last
+      SMT-Lib competition; so for bitvector problems, it is definitely
+      worth trying out.
  * Library:
     * Generalize types of `allDifferent` and `allEqual` to take
       arbitrary EqSymbolic values. (Previously was just over SBV values.)
