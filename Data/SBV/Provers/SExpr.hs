@@ -53,6 +53,8 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
                                        parseApp r (f : sofar)
         parseApp (tok:toks) sofar = do t <- pTok tok
                                        parseApp toks (t : sofar)
+        pTok "false"              = return $ SNum 0
+        pTok "true"               = return $ SNum 1
         pTok ('0':'b':r)          = mkNum $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
         pTok ('b':'v':r)          = mkNum $ readDec (takeWhile (/= '[') r)
         pTok ('#':'b':r)          = mkNum $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r

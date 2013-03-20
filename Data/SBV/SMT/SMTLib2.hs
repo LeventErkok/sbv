@@ -138,7 +138,7 @@ cvt solverCaps (hasInteger, hasReal) isSat comments sorts _inps skolemInps const
         assertOut
            | null cstrs = o
            | True       = "(and " ++ unwords (map mkConj cstrs ++ [o]) ++ ")"
-           where mkConj x = "(= " ++ cvtSW skolemMap x ++ " #b1)"
+           where mkConj = cvtSW skolemMap
                  o | isSat =            mkConj out
                    | True  = "(not " ++ mkConj out ++ ")"
         skolemMap = M.fromList [(s, ss) | Right (s, ss) <- skolemInps, not (null ss)]
@@ -207,15 +207,15 @@ declArray quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : map
          = cvtSW skolemMap sw
          | True
          = tbd "Non-constant array initializer in a quantified context"
-        adecl = "(declare-fun " ++ nm ++ "() (Array " ++ smtType aKnd ++ " " ++ smtType bKnd ++ "))"
+        adecl = "(declare-fun " ++ nm ++ " () (Array " ++ smtType aKnd ++ " " ++ smtType bKnd ++ "))"
         ctxInfo = case ctx of
                     ArrayFree Nothing   -> []
                     ArrayFree (Just sw) -> declA sw
                     ArrayReset _ sw     -> declA sw
                     ArrayMutate j a b -> [(all (`elem` consts) [a, b], "(= " ++ nm ++ " (store array_" ++ show j ++ " " ++ ssw a ++ " " ++ ssw b ++ "))")]
-                    ArrayMerge  t j k -> [(t `elem` consts,            "(= " ++ nm ++ " (ite (= #b1 " ++ ssw t ++ ") array_" ++ show j ++ " array_" ++ show k ++ "))")]
+                    ArrayMerge  t j k -> [(t `elem` consts,            "(= " ++ nm ++ " (ite " ++ ssw t ++ " array_" ++ show j ++ " array_" ++ show k ++ "))")]
         declA sw = let iv = nm ++ "_freeInitializer"
-                   in [ (True,             "(declare-fun " ++ iv ++ "() " ++ smtType aKnd ++ ")")
+                   in [ (True,             "(declare-fun " ++ iv ++ " () " ++ smtType aKnd ++ ")")
                       , (sw `elem` consts, "(= (select " ++ nm ++ " " ++ iv ++ ") " ++ ssw sw ++ ")")
                       ]
         wrap (False, s) = s
@@ -228,6 +228,7 @@ swFunType :: [SW] -> SW -> String
 swFunType ss s = "(" ++ unwords (map swType ss) ++ ") " ++ swType s
 
 smtType :: Kind -> String
+smtType (KBounded False 1) = "Bool"
 smtType (KBounded _ sz)    = "(_ BitVec " ++ show sz ++ ")"
 smtType KUnbounded         = "Int"
 smtType KReal              = "Real"
@@ -255,6 +256,8 @@ hex sz v = "#x" ++ pad (sz `div` 4) (showHex v "")
   where pad n s = replicate (n - length s) '0' ++ s
 
 cvtCW :: CW -> String
+cvtCW x | isBoolean x = if w == 0 then "false" else "true"
+  where CWInteger w = cwVal x
 cvtCW x | isUninterpreted x = s
   where CWUninterpreted s = cwVal x
 cvtCW x | isReal x = algRealToSMTLib2 w
@@ -291,17 +294,26 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         bvOp    = all isBounded arguments
         intOp   = any isInteger arguments
         realOp  = any isReal arguments
+        boolOp  = all isBoolean arguments
         bad | intOp = error $ "SBV.SMTLib2: Unsupported operation on unbounded integers: " ++ show expr
             | True  = error $ "SBV.SMTLib2: Unsupported operation on real values: " ++ show expr
         ensureBV = bvOp || bad
         lift2  o _ [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
         lift2  o _ sbvs   = error $ "SBV.SMTLib2.sh.lift2: Unexpected arguments: "   ++ show (o, sbvs)
-        lift2B oU oS sgn sbvs = "(ite " ++ lift2S oU oS sgn sbvs ++ " #b1 #b0)"
+        lift2B bOp vOp
+          | boolOp = lift2 bOp
+          | True   = lift2 vOp
+        lift1B bOp vOp
+          | boolOp = lift1 bOp
+          | True   = lift1 vOp
+        eq sgn sbvs
+           | boolOp = lift2 "=" sgn sbvs
+           | True   = "(= " ++ lift2 "bvcomp" sgn sbvs ++ " #b1)"
+        neq sgn sbvs = "(not " ++ eq sgn sbvs ++ ")"
         lift2S oU oS sgn = lift2 (if sgn then oS else oU) sgn
-        lift2N o sgn sbvs = "(bvnot " ++ lift2 o sgn sbvs ++ ")"
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
         lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib2.sh.lift1: Unexpected arguments: "   ++ show (o, sbvs)
-        sh (SBVApp Ite [a, b, c]) = "(ite (= #b1 " ++ ssw a ++ ") " ++ ssw b ++ " " ++ ssw c ++ ")"
+        sh (SBVApp Ite [a, b, c]) = "(ite " ++ ssw a ++ " " ++ ssw b ++ " " ++ ssw c ++ ")"
         sh (SBVApp (LkUp (t, aKnd, _, l) i e) [])
           | needsCheck = "(ite " ++ cond ++ ssw e ++ " " ++ lkUp ++ ")"
           | True       = lkUp
@@ -322,7 +334,7 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                 mkCnst = cvtCW . mkConstCW (kindOf i)
                 le0  = "(" ++ less ++ " " ++ ssw i ++ " " ++ mkCnst 0 ++ ")"
                 gtl  = "(" ++ leq  ++ " " ++ mkCnst l ++ " " ++ ssw i ++ ")"
-        sh (SBVApp (ArrEq i j) []) = "(ite (= array_" ++ show i ++ " array_" ++ show j ++") #b1 #b0)"
+        sh (SBVApp (ArrEq i j) []) = "(= array_" ++ show i ++ " array_" ++ show j ++")"
         sh (SBVApp (ArrRead i) [a]) = "(select array_" ++ show i ++ " " ++ ssw a ++ ")"
         sh (SBVApp (Uninterpreted nm) [])   = nm
         sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm ++ " " ++ unwords (map ssw args) ++ ")"
@@ -354,10 +366,10 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           where -- The first 4 operators below do make sense for Integer's in Haskell, but there's
                 -- no obvious counterpart for them in the SMTLib translation.
                 -- TODO: provide support for these.
-                smtBVOpTable = [ (And,  lift2 "bvand")
-                               , (Or,   lift2 "bvor")
-                               , (XOr,  lift2 "bvxor")
-                               , (Not,  lift1 "bvnot")
+                smtBVOpTable = [ (And,  lift2B "and" "bvand")
+                               , (Or,   lift2B "or"  "bvor")
+                               , (XOr,  lift2B "xor" "bvxor")
+                               , (Not,  lift1B "not" "bvnot")
                                , (Join, lift2 "concat")
                                ]
         sh inp@(SBVApp op args)
@@ -376,12 +388,12 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 , (Times,         lift2   "bvmul")
                                 , (Quot,          lift2S  "bvudiv" "bvsdiv")
                                 , (Rem,           lift2S  "bvurem" "bvsrem")
-                                , (Equal,         lift2   "bvcomp")
-                                , (NotEqual,      lift2N  "bvcomp")
-                                , (LessThan,      lift2B  "bvult" "bvslt")
-                                , (GreaterThan,   lift2B  "bvugt" "bvsgt")
-                                , (LessEq,        lift2B  "bvule" "bvsle")
-                                , (GreaterEq,     lift2B  "bvuge" "bvsge")
+                                , (Equal,         eq)
+                                , (NotEqual,      neq)
+                                , (LessThan,      lift2S  "bvult" "bvslt")
+                                , (GreaterThan,   lift2S  "bvugt" "bvsgt")
+                                , (LessEq,        lift2S  "bvule" "bvsle")
+                                , (GreaterEq,     lift2S  "bvuge" "bvsge")
                                 ]
                 smtOpRealTable =  smtIntRealShared
                                ++ [ (Quot,        lift2   "/")
@@ -393,16 +405,16 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                 smtIntRealShared  = [ (Plus,          lift2   "+")
                                     , (Minus,         lift2   "-")
                                     , (Times,         lift2   "*")
-                                    , (Equal,         lift2B  "=" "=")
-                                    , (NotEqual,      lift2B  "distinct" "distinct")
-                                    , (LessThan,      lift2B  "<"  "<")
-                                    , (GreaterThan,   lift2B  ">"  ">")
-                                    , (LessEq,        lift2B  "<=" "<=")
-                                    , (GreaterEq,     lift2B  ">=" ">=")
+                                    , (Equal,         lift2S  "=" "=")
+                                    , (NotEqual,      lift2S  "distinct" "distinct")
+                                    , (LessThan,      lift2S  "<"  "<")
+                                    , (GreaterThan,   lift2S  ">"  ">")
+                                    , (LessEq,        lift2S  "<=" "<=")
+                                    , (GreaterEq,     lift2S  ">=" ">=")
                                     ]
                 -- equality is the only thing that works on uninterpreted sorts
-                uninterpretedTable = [ (Equal,    lift2B "="        "="        True)
-                                     , (NotEqual, lift2B "distinct" "distinct" True)
+                uninterpretedTable = [ (Equal,    lift2S "="        "="        True)
+                                     , (NotEqual, lift2S "distinct" "distinct" True)
                                      ]
 
 rot :: (SW -> String) -> String -> Int -> SW -> String

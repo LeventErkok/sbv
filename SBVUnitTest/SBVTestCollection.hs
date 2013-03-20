@@ -53,8 +53,9 @@ import qualified TestSuite.Puzzles.Sudoku                 as T09_08(testSuite)
 import qualified TestSuite.Puzzles.Temperature            as T09_09(testSuite)
 import qualified TestSuite.Puzzles.U2Bridge               as T09_10(testSuite)
 import qualified TestSuite.Uninterpreted.AUF              as T10_01(testSuite)
-import qualified TestSuite.Uninterpreted.Function         as T10_02(testSuite)
-import qualified TestSuite.Uninterpreted.Uninterpreted    as T10_03(testSuite)
+import qualified TestSuite.Uninterpreted.Axioms           as T10_02(testSuite)
+import qualified TestSuite.Uninterpreted.Function         as T10_03(testSuite)
+import qualified TestSuite.Uninterpreted.Uninterpreted    as T10_04(testSuite)
 
 -- Bool says whether we need a real SMT solver to run this test
 -- Note that it's ok to say True even if an SMT solver is *not*
@@ -101,6 +102,7 @@ allTestCases = [
      , ("temperature", True,  T09_09.testSuite)
      , ("u2bridge",    True,  T09_10.testSuite)
      , ("auf1",        True,  T10_01.testSuite)
-     , ("auf2",        True,  T10_02.testSuite)
-     , ("unint",       True,  T10_03.testSuite)
+     , ("unint-axms",  True,  T10_02.testSuite)
+     , ("auf2",        True,  T10_03.testSuite)
+     , ("unint",       True,  T10_04.testSuite)
      ]

@@ -90,7 +90,7 @@ cvt _solverCaps _boundInfo isSat comments _sorts qinps _skolemInps consts tbls a
                ++ [mkFormula isSat out]
                ++ [")"]
         asgns = F.toList (pgmAssignments asgnsSeq)
-        mkCstr s = " :assumption (= " ++ show s ++ " bv1[1])"
+        mkCstr s = " :assumption " ++ show s
 
 -- TODO: Does this work for SMT-Lib when the index/element types are signed?
 -- Currently we ignore the signedness of the arguments, as there appears to be no way
@@ -120,9 +120,9 @@ declArray (i, (_, (ak, rk), ctx)) = adecl : ctxInfo
                     ArrayFree (Just sw) -> declA sw
                     ArrayReset _ sw     -> declA sw
                     ArrayMutate j a b -> [" :assumption (= " ++ nm ++ " (store array_" ++ show j ++ " " ++ show a ++ " " ++ show b ++ "))"]
-                    ArrayMerge  t j k -> [" :assumption (= " ++ nm ++ " (ite (= bv1[1] " ++ show t ++ ") array_" ++ show j ++ " array_" ++ show k ++ "))"]
+                    ArrayMerge  t j k -> [" :assumption (= " ++ nm ++ " (ite " ++ show t ++ " array_" ++ show j ++ " array_" ++ show k ++ "))"]
         declA sw = let iv = nm ++ "_freeInitializer"
-                   in [ " :extrafuns ((" ++ iv ++ " BitVec[" ++ show at ++ "]))"
+                   in [ " :extrafuns ((" ++ iv ++ " " ++ kindType ak ++ "))"
                       , " :assumption (= (select " ++ nm ++ " " ++ iv ++ ") " ++ show sw ++ ")"
                       ]
 
@@ -134,12 +134,14 @@ declUI (i, t) = [" :extrafuns ((uninterpreted_" ++ i ++ " " ++ cvtType t ++ "))"
 
 mkFormula :: Bool -> SW -> String
 mkFormula isSat s
- | isSat = " :formula (= " ++ show s ++ " bv1[1])"
- | True  = " :formula (= " ++ show s ++ " bv0[1])"
+ | isSat = " :formula " ++ show s
+ | True  = " :formula (not " ++ show s ++ ")"
 
 -- SMTLib represents signed/unsigned quantities with the same type
 decl :: SW -> String
-decl s = " :extrafuns  ((" ++ show s ++ " BitVec[" ++ show (intSizeOf s) ++ "]))"
+decl s
+ | isBoolean s = " :extrapreds ((" ++ show s ++ "))"
+ | True        = " :extrafuns  ((" ++ show s ++ " " ++ kindType (kindOf s) ++ "))"
 
 cvtAsgn :: (SW, SBVExpr) -> String
 cvtAsgn (s, e) = " :assumption (= " ++ show s ++ " " ++ cvtExp e ++ ")"
@@ -149,6 +151,7 @@ cvtCnst (s, c) = " :assumption (= " ++ show s ++ " " ++ cvtCW c ++ ")"
 
 -- no need to worry about Int/Real here as we don't support them with the SMTLib1 interface..
 cvtCW :: CW -> String
+cvtCW (CW (KBounded False 1) (CWInteger v)) = if v == 0 then "false" else "true"
 cvtCW x@(CW _ (CWInteger v)) | not (hasSign x) = "bv" ++ show v ++ "[" ++ show (intSizeOf x) ++ "]"
 -- signed numbers (with 2's complement representation) is problematic
 -- since there's no way to put a bvneg over a positive number to get minBound..
@@ -178,7 +181,7 @@ shft oW oS c x = "(" ++ o ++ " " ++ show x ++ " " ++ cvtCW c' ++ ")"
          o  = if s then oS else oW
 
 cvtExp :: SBVExpr -> String
-cvtExp (SBVApp Ite [a, b, c]) = "(ite (= bv1[1] " ++ show a ++ ") " ++ show b ++ " " ++ show c ++ ")"
+cvtExp (SBVApp Ite [a, b, c]) = "(ite " ++ show a ++ " " ++ show b ++ " " ++ show c ++ ")"
 cvtExp (SBVApp (Rol i) [a])   = rot "rotate_left"  i a
 cvtExp (SBVApp (Ror i) [a])   = rot "rotate_right" i a
 cvtExp (SBVApp (Shl i) [a])   = shft "bvshl"  "bvshl"  i a
@@ -199,48 +202,66 @@ cvtExp (SBVApp (LkUp (t, ak, _, l) i e) [])
         le0  = "(" ++ less ++ " " ++ show i ++ " " ++ mkCnst 0 ++ ")"
         gtl  = "(" ++ leq  ++ " " ++ mkCnst l ++ " " ++ show i ++ ")"
 cvtExp (SBVApp (Extract i j) [a]) = "(extract[" ++ show i ++ ":" ++ show j ++ "] " ++ show a ++ ")"
-cvtExp (SBVApp (ArrEq i j) []) = "(ite (= array_" ++ show i ++ " array_" ++ show j ++") bv1[1] bv0[1])"
+cvtExp (SBVApp (ArrEq i j) []) = "(= array_" ++ show i ++ " array_" ++ show j ++")"
 cvtExp (SBVApp (ArrRead i) [a]) = "(select array_" ++ show i ++ " " ++ show a ++ ")"
 cvtExp (SBVApp (Uninterpreted nm) [])   = "uninterpreted_" ++ nm
 cvtExp (SBVApp (Uninterpreted nm) args) = "(uninterpreted_" ++ nm ++ " " ++ unwords (map show args) ++ ")"
 cvtExp inp@(SBVApp op args)
   | Just f <- lookup op smtOpTable
-  = f (any hasSign args) (map show args)
+  = f (any hasSign args) (all isBoolean args) (map show args)
   | True
   = error $ "SBV.SMT.SMTLib1.cvtExp: impossible happened; can't translate: " ++ show inp
-  where lift2  o _ [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
-        lift2  o _ sbvs   = error $ "SBV.SMTLib1.cvtExp.lift2: Unexpected arguments: "   ++ show (o, sbvs)
-        lift2B oU oS sgn sbvs = "(ite " ++ lift2S oU oS sgn sbvs ++ " bv1[1] bv0[1])"
-        lift2S oU oS sgn sbvs
+  where lift2  o _ _ [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
+        lift2  o _ _ sbvs   = error $ "SBV.SMTLib1.cvtExp.lift2: Unexpected arguments: "   ++ show (o, sbvs)
+        lift2S oU oS sgn isB sbvs
           | sgn
-          = lift2 oS sgn sbvs
+          = lift2 oS sgn isB sbvs
           | True
-          = lift2 oU sgn sbvs
-        lift2N o sgn sbvs = "(bvnot " ++ lift2 o sgn sbvs ++ ")"
-        lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
-        lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib1.cvtExp.lift1: Unexpected arguments: "   ++ show (o, sbvs)
+          = lift2 oU sgn isB sbvs
+        lift1  o _ _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
+        lift1  o _ _ sbvs   = error $ "SBV.SMT.SMTLib1.cvtExp.lift1: Unexpected arguments: "   ++ show (o, sbvs)
+        -- ops that distinguish 1-bit bitvectors (boolean) from others
+        lift2B bOp vOp sgn isB sbvs
+          | isB
+          = lift2 bOp sgn isB sbvs
+          | True
+          = lift2 vOp sgn isB sbvs
+        lift1B bOp vOp sgn isB sbvs
+          | isB
+          = lift1 bOp sgn isB sbvs
+          | True
+          = lift1 vOp sgn isB sbvs
+        eq sgn isB sbvs
+          | isB
+          = lift2 "=" sgn isB sbvs
+          | True
+          = "(= " ++ lift2 "bvcomp" sgn isB sbvs ++ " bv1[1])"
+        neq sgn isB sbvs = "(not " ++ eq sgn isB sbvs ++ ")"
         smtOpTable = [ (Plus,          lift2   "bvadd")
                      , (Minus,         lift2   "bvsub")
                      , (Times,         lift2   "bvmul")
                      , (Quot,          lift2S  "bvudiv" "bvsdiv")
                      , (Rem,           lift2S  "bvurem" "bvsrem")
-                     , (Equal,         lift2   "bvcomp")
-                     , (NotEqual,      lift2N  "bvcomp")
-                     , (LessThan,      lift2B  "bvult" "bvslt")
-                     , (GreaterThan,   lift2B  "bvugt" "bvsgt")
-                     , (LessEq,        lift2B  "bvule" "bvsle")
-                     , (GreaterEq,     lift2B  "bvuge" "bvsge")
-                     , (And,           lift2   "bvand")
-                     , (Or,            lift2   "bvor")
-                     , (XOr,           lift2   "bvxor")
-                     , (Not,           lift1   "bvnot")
+                     , (Equal,         eq)
+                     , (NotEqual,      neq)
+                     , (LessThan,      lift2S  "bvult" "bvslt")
+                     , (GreaterThan,   lift2S  "bvugt" "bvsgt")
+                     , (LessEq,        lift2S  "bvule" "bvsle")
+                     , (GreaterEq,     lift2S  "bvuge" "bvsge")
+                     , (And,           lift2B  "and" "bvand")
+                     , (Or,            lift2B  "or"  "bvor")
+                     , (Not,           lift1B  "not" "bvnot")
+                     , (XOr,           lift2B  "xor" "bvxor")
                      , (Join,          lift2   "concat")
                      ]
 
 cvtType :: SBVType -> String
 cvtType (SBVType []) = error "SBV.SMT.SMTLib1.cvtType: internal: received an empty type!"
-cvtType (SBVType xs) = unwords $ map sh xs
-  where sh (KBounded _ s)     = "BitVec[" ++ show s ++ "]"
-        sh KUnbounded         = die "unbounded Integer"
-        sh KReal              = die "real value"
-        sh (KUninterpreted s) = die $ "uninterpreted sort: " ++ s
+cvtType (SBVType xs) = unwords $ map kindType xs
+
+kindType :: Kind -> String
+kindType (KBounded False 1) = "Bool"
+kindType (KBounded _ s)     = "BitVec[" ++ show s ++ "]"
+kindType KUnbounded         = die "unbounded Integer"
+kindType KReal              = die "real value"
+kindType (KUninterpreted s) = die $ "uninterpreted sort: " ++ s

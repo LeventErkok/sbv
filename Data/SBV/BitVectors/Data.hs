@@ -211,6 +211,7 @@ class HasKind a where
   kindOf          :: a -> Kind
   hasSign         :: a -> Bool
   intSizeOf       :: a -> Int
+  isBoolean       :: a -> Bool
   isBounded       :: a -> Bool
   isReal          :: a -> Bool
   isInteger       :: a -> Bool
@@ -227,6 +228,8 @@ class HasKind a where
                   KUnbounded       -> error "SBV.HasKind.intSizeOf((S)Integer)"
                   KReal            -> error "SBV.HasKind.intSizeOf((S)Real)"
                   KUninterpreted s -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
+  isBoolean       x | KBounded False 1 <- kindOf x = True
+                    | True                         = False
   isBounded       x | KBounded{}       <- kindOf x = True
                     | True                         = False
   isReal          x | KReal{}          <- kindOf x = True

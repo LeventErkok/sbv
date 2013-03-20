@@ -203,7 +203,7 @@ Executable SBVUnitTests
                     ScopedTypeVariables
                     TupleSections
   Build-depends   : base  >= 4 && < 5
-                  , HUnit, directory, filepath, process, sbv
+                  , HUnit, directory, filepath, process, syb, sbv
   Hs-Source-Dirs  : SBVUnitTest
   main-is         : SBVUnitTest.hs
   Other-modules   : SBVUnitTestBuildTime
@@ -264,13 +264,14 @@ Executable SBVUnitTests
                   , TestSuite.Uninterpreted.AUF
                   , TestSuite.Uninterpreted.Function
                   , TestSuite.Uninterpreted.Uninterpreted
+                  , TestSuite.Uninterpreted.Axioms
 
 Test-Suite SBVBasicTests
   type            : exitcode-stdio-1.0
   default-language: Haskell2010
   ghc-options     : -Wall
   Build-depends   : base >= 4 && < 5
-                  , HUnit, directory, filepath, sbv
+                  , HUnit, directory, filepath, syb, sbv
   Hs-Source-Dirs  : SBVUnitTest
   main-is         : SBVBasicTests.hs
   Other-modules   : SBVBasicTests

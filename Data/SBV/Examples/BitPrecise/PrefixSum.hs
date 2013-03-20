@@ -104,27 +104,29 @@ thm2 = prove $ flIsCorrect 16 (0, smax)
 --   s1 = 0 :: SWord32
 --   s2 = 0 :: SWord32
 --   s3 = 0 :: SWord32
---   s4 = 0 :: SWord32
+--   s4 = 1073741824 :: SWord32
 --   s5 = 0 :: SWord32
 --   s6 = 0 :: SWord32
---   s7 = 3221225472 :: SWord32
+--   s7 = 0 :: SWord32
 --   -- uninterpreted: u
 --        u  = 0
 --   -- uninterpreted: flOp
---        flOp 0 3221225472 = 2147483648
---        flOp 0 2147483648 = 3758096384
---        flOp _ _          = 0
+--        flOp 0          0          = 2147483648
+--        flOp 0          1073741824 = 3221225472
+--        flOp 2147483648 0          = 3221225472
+--        flOp 2147483648 1073741824 = 1073741824
+--        flOp _          _          = 0
 --
--- You can verify that the above function for @flOp@ is not associative:
+-- You can verify that the function @flOp@ is indeed not associative:
 --
 -- @
---   ghci> flOp 3221225472 (flOp 2147483648 3221225472)
+--   ghci> flOp 3221225472 (flOp 2147483648 1073741824)
 --   0
---   ghci> flOp (flOp 3221225472 2147483648) 3221225472
---   2147483648
+--   ghci> flOp (flOp 3221225472 2147483648) 1073741824
+--   3221225472
 -- @
 --
--- Also, the unit @0@ is clearly not a left-unit for @flOp@, as the third
+-- Also, the unit @0@ is clearly not a left-unit for @flOp@, as the last
 -- equation for @flOp@ will simply map many elements to @0@.
 -- (NB. We need to use yices for this proof as the uninterpreted function
 -- examples are only supported through the yices interface currently.)

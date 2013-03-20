@@ -9,9 +9,9 @@
     * See: http://fmv.jku.at/boolector/
     * Use `import Data.SBV.Bridge.Boolector` to use Boolector from SBV
     * Boolector supports QF_BV (with an without arrays). In the last
-      SMT-Lib competition it won both bit-vector categories. It's definitely
+      SMT-Lib competition it won both bit-vector categories. It is definitely
       worth trying it out for bitvector problems.
- * Library:
+ * Changes to the library:
     * Generalize types of `allDifferent` and `allEqual` to take
       arbitrary EqSymbolic values. (Previously was just over SBV values.)
     * Add `inRange` predicate, which checks if a value is bounded within
@@ -20,7 +20,12 @@
     * Add `fullAdder`: Returns the carry-over as a separate boolean bit.
     * Add `fullMultiplier`: Returns both the lower and higher bits resulting
       from  multiplication.
- * Solvers:
+    * Use the SMT-Lib Bool sort to represent SBool, instead of bit-vectors of length 1.
+      While this is an under-the-hood mechanism that should be user-transparent, it
+      turns out that one can no longer write axioms that return booleans in a direct
+      way due to this translation. This change makes it easier to write axioms that
+      utilize booleans as there is now a 1-to-1 match. (Suggested by Thomas DuBuisson.)
+ * Solvers changes:
     * Z3: Update to the new parameter naming schema of Z3. This implies that
       you need to have a really recent version of Z3 installed, something
       in the Z3-4.3 series.
