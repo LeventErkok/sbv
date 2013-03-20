@@ -22,7 +22,7 @@ testSuite = mkTestSuite $ \_ -> test [
   "unint-axioms" ~: assert =<< isThm p0
  ]
 
--- Example provided by Thomas DeBuisson:
+-- Example provided by Thomas DuBuisson:
 data Bitstring = Bitstring deriving (Eq, Ord, Data, Typeable)
 instance SymWord Bitstring
 instance HasKind Bitstring
