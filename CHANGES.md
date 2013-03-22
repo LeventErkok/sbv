@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 2.9
+* Latest Hackage released version: 2.10
 
-### Version 2.10, Not yet released
+### Version 2.10, 2013-03-22
  
  * Add support for the Boolector SMT solver
     * See: http://fmv.jku.at/boolector/
