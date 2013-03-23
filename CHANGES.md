@@ -191,27 +191,27 @@
 
   Other notable changes in the library:
 
-    * Add functions s[TYPE] and s[TYPE]s for each symbolic type we support (i.e.,
-      sBool, sBools, sWord8, sWord8s, etc.), to create symbolic variables of the
-      right kind.  Strictly speaking these are just synonyms for 'free'
-      and 'mapM free' (plural versions), so they aren't adding any additional
-      power. Except, they are specialized at their respective types, and might be
-      easier to remember.
-    * Add function solve, which is merely a synonym for (return . bAnd), but
-      it simplifies expressing problems.
-    * Add class SNum, which simplifies writing polymorphic code over symbolic values
-    * Increase haddock coverage metrics
-    * Major code refactoring around symbolic kinds
-    * SMTLib2: Emit ":produce-models" call before setting the logic, as required
+   * Add functions s[TYPE] and s[TYPE]s for each symbolic type we support (i.e.,
+     sBool, sBools, sWord8, sWord8s, etc.), to create symbolic variables of the
+     right kind.  Strictly speaking these are just synonyms for 'free'
+     and 'mapM free' (plural versions), so they aren't adding any additional
+     power. Except, they are specialized at their respective types, and might be
+     easier to remember.
+   * Add function solve, which is merely a synonym for (return . bAnd), but
+     it simplifies expressing problems.
+   * Add class SNum, which simplifies writing polymorphic code over symbolic values
+   * Increase haddock coverage metrics
+   * Major code refactoring around symbolic kinds
+   * SMTLib2: Emit ":produce-models" call before setting the logic, as required
       by the SMT-Lib2 standard. [Patch provided by arrowdodger on github, thanks!]
 
   Bugs fixed:
 
-    * [Performance] Use a much simpler default definition for "select": While the
-      older version (based on binary search on the bits of the indexer) was correct,
-      it created unnecessarily big expressions. Since SBV does not have a notion
-      of concrete subwords, the binary-search trick was not bringing any advantage
-      in any case. Instead, we now simply use a linear walk over the elements.
+   * [Performance] Use a much simpler default definition for "select": While the
+     older version (based on binary search on the bits of the indexer) was correct,
+     it created unnecessarily big expressions. Since SBV does not have a notion
+     of concrete subwords, the binary-search trick was not bringing any advantage
+     in any case. Instead, we now simply use a linear walk over the elements.
 
   Examples:
 
