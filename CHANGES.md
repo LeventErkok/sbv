@@ -154,6 +154,7 @@
   - Add toSReal :: SInteger -> SReal, which can be used to promote
     symbolic integers to reals. Comes handy in mixed integer/real
     computations.
+
  Examples:
   - Recast the dog-cat-mouse example to use the solver over reals.
   - Add Data.SBV.Examples.Uninterpreted.Sort, and
