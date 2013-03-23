@@ -191,19 +191,19 @@
 
   Other notable changes in the library:
 
-   * Add functions s[TYPE] and s[TYPE]s for each symbolic type we support (i.e.,
-     sBool, sBools, sWord8, sWord8s, etc.), to create symbolic variables of the
-     right kind.  Strictly speaking these are just synonyms for 'free'
-     and 'mapM free' (plural versions), so they aren't adding any additional
-     power. Except, they are specialized at their respective types, and might be
-     easier to remember.
-   * Add function solve, which is merely a synonym for (return . bAnd), but
-     it simplifies expressing problems.
-   * Add class SNum, which simplifies writing polymorphic code over symbolic values
-   * Increase haddock coverage metrics
-   * Major code refactoring around symbolic kinds
-   * SMTLib2: Emit ":produce-models" call before setting the logic, as required
-      by the SMT-Lib2 standard. [Patch provided by arrowdodger on github, thanks!]
+  * Add functions s[TYPE] and s[TYPE]s for each symbolic type we support (i.e.,
+    sBool, sBools, sWord8, sWord8s, etc.), to create symbolic variables of the
+    right kind.  Strictly speaking these are just synonyms for 'free'
+    and 'mapM free' (plural versions), so they aren't adding any additional
+    power. Except, they are specialized at their respective types, and might be
+    easier to remember.
+  * Add function solve, which is merely a synonym for (return . bAnd), but
+    it simplifies expressing problems.
+  * Add class SNum, which simplifies writing polymorphic code over symbolic values
+  * Increase haddock coverage metrics
+  * Major code refactoring around symbolic kinds
+  * SMTLib2: Emit ":produce-models" call before setting the logic, as required
+    by the SMT-Lib2 standard. [Patch provided by arrowdodger on github, thanks!]
 
   Bugs fixed:
 
@@ -394,33 +394,32 @@
 
   Other changes:
 
-    Code:
+  Code:
 
-     * Change getModel, so it returns an Either value to indicate
-       something went wrong; instead of throwing an error
-     * Add support for computing CRCs directly (without needing
-       polynomial division).
+   * Change getModel, so it returns an Either value to indicate
+     something went wrong; instead of throwing an error
+   * Add support for computing CRCs directly (without needing
+     polynomial division).
 
-    Code generation:
+  Code generation:
 
-     * Add "cgGenerateDriver" function, which can be used to turn
-       on/off driver program generation. Default is to generate
-       a driver. (Issue "cgGenerateDriver False" to skip the driver.)
-       For a library, a driver will be generated if any of the
-       constituent parts has a driver. Otherwise it'll be skipped.
-     * Fix a bug in C code generation where "Not" over booleans were
-       incorrectly getting translated due to need for masking.
-     * Add support for compilation with uninterpreted functions. Users
-       can now specify the corresponding C code and SBV will simply
-       call the "native" functions instead of generating it. This
-       enables interfacing with other C programs. See the functions:
-       cgAddPrototype, cgAddDecl, and cgAddLDFlags.
+   * Add "cgGenerateDriver" function, which can be used to turn
+     on/off driver program generation. Default is to generate
+     a driver. (Issue "cgGenerateDriver False" to skip the driver.)
+     For a library, a driver will be generated if any of the
+     constituent parts has a driver. Otherwise it'll be skipped.
+   * Fix a bug in C code generation where "Not" over booleans were
+     incorrectly getting translated due to need for masking.
+   * Add support for compilation with uninterpreted functions. Users
+     can now specify the corresponding C code and SBV will simply
+     call the "native" functions instead of generating it. This
+     enables interfacing with other C programs. See the functions:
+     cgAddPrototype, cgAddDecl, and cgAddLDFlags.
 
-    Examples:
+  Examples:
 
-     * Add CRC polynomial generation example via existentials
-     * Add USB CRC code generation example, both via polynomials and
-       using the internal CRC functionality
+   * Add CRC polynomial generation example via existentials
+   * Add USB CRC code generation example, both via polynomials and using the internal CRC functionality
 
 ### Version 0.9.21, 2011-08-05
    
