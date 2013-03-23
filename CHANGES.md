@@ -108,7 +108,7 @@
   - Improve test suite, adding many constant-folding tests
     and start using cabal based tests (--enable-tests option.)
 
-Versions 2.4, 2.5, and 2.6: Around mid October 2012
+### Versions 2.4, 2.5, and 2.6: Around mid October 2012
 
   - Workaround issues related hackage compilation, in particular to the
     problem with the new containers package release, which does provide
