@@ -423,90 +423,89 @@
 
 ### Version 0.9.21, 2011-08-05
    
-   Code generation:
+ Code generation:
 
-    * Allow for inclusion of user makefiles
-    * Allow for CCFLAGS to be set by the user
-    * Other minor clean-up
+  * Allow for inclusion of user makefiles
+  * Allow for CCFLAGS to be set by the user
+  * Other minor clean-up
 
 ### Version 0.9.20, 2011-06-05
    
   Regression on 0.9.19; add missing file to cabal
 
 ### Version 0.9.19, 2011-06-05
-    
-   Code:
 
-    * Add SignCast class for conversion between signed/unsigned
-      quantities for same-sized bit-vectors
-    * Add full-binary trees that can be indexed symbolically (STree). The
-      advantage of this type is that the reads and writes take
-      logarithmic time. Suitable for implementing faster symbolic look-up.
-    * Expose HasSignAndSize class through Data.SBV.Internals
-    * Many minor improvements, file re-orgs
 
-   Examples:
+  * Add SignCast class for conversion between signed/unsigned
+    quantities for same-sized bit-vectors
+  * Add full-binary trees that can be indexed symbolically (STree). The
+    advantage of this type is that the reads and writes take
+    logarithmic time. Suitable for implementing faster symbolic look-up.
+  * Expose HasSignAndSize class through Data.SBV.Internals
+  * Many minor improvements, file re-orgs
 
-    * Add sentence-counting example
-    * Add an implementation of RC4
+Examples:
+
+  * Add sentence-counting example
+  * Add an implementation of RC4
 
 ### Version 0.9.18, 2011-04-07
 
-  Code:
+Code:
 
-    * Re-engineer code-generation, and compilation to C.
-      In particular, allow arrays of inputs to be specified,
-      both as function arguments and output reference values.
-    * Add support for generation of generation of C-libraries,
-      allowing code generation for a set of functions that
-      work together.
+  * Re-engineer code-generation, and compilation to C.
+    In particular, allow arrays of inputs to be specified,
+    both as function arguments and output reference values.
+  * Add support for generation of generation of C-libraries,
+    allowing code generation for a set of functions that
+    work together.
 
-  Examples:
+Examples:
 
-    * Update code-generation examples to use the new API.
-    * Include a library-generation example for doing 128-bit
-      AES encryption
+  * Update code-generation examples to use the new API.
+  * Include a library-generation example for doing 128-bit
+    AES encryption
 
 ### Version 0.9.17, 2011-03-29
    
-  Code:
+Code:
 
-    * Simplify and reorganize the test suite
+  * Simplify and reorganize the test suite
 
-  Examples:
+Examples:
 
-    * Improve AES decryption example, by using
-      table-lookups in InvMixColumns.
+  * Improve AES decryption example, by using
+    table-lookups in InvMixColumns.
   
 ### Version 0.9.16, 2011-03-28
 
-  Code:
+Code:
 
-    * Further optimizations on Bits instance of SBV
+  * Further optimizations on Bits instance of SBV
 
-  Examples:
+Examples:
 
-    * Add AES algorithm as an example, showing how
-      encryption algorithms are particularly suitable
-      for use with the code-generator
+  * Add AES algorithm as an example, showing how
+    encryption algorithms are particularly suitable
+    for use with the code-generator
 
 ### Version 0.9.15, 2011-03-24
    
-  Bug fixes:
+Bug fixes:
 
-    * Fix rotateL/rotateR instances on concrete
-      words. Previous versions was bogus since
-      it relied on the Integer instance, which
-      does the wrong thing after normalization.
-    * Fix conversion of signed numbers from bits,
-      previous version did not handle two's
-      complement layout correctly
+  * Fix rotateL/rotateR instances on concrete
+    words. Previous versions was bogus since
+    it relied on the Integer instance, which
+    does the wrong thing after normalization.
+  * Fix conversion of signed numbers from bits,
+    previous version did not handle two's
+    complement layout correctly
 
-  Testing:
+Testing:
 
-    * Add a sleuth of concrete test cases on
-      arithmetic to catch bugs. (There are many
-      of them, ~30K, but they run quickly.)
+  * Add a sleuth of concrete test cases on
+    arithmetic to catch bugs. (There are many
+    of them, ~30K, but they run quickly.)
 
 ### Version 0.9.14, 2011-03-19
     
@@ -517,30 +516,30 @@
 
 ### Version 0.9.13, 2011-03-16
     
-  Bug fixes:
+Bug fixes:
 
-    * Make sure SBool short-cut evaluations are done
-      as early as possible, as these help with coding
-      recursion-depth based algorithms, when dealing
-      with symbolic termination issues.
+  * Make sure SBool short-cut evaluations are done
+    as early as possible, as these help with coding
+    recursion-depth based algorithms, when dealing
+    with symbolic termination issues.
 
-  Examples:
+Examples:
 
-    * Add fibonacci code-generation example, original
-      code by Lee Pike.
-    * Add a GCD code-generation/verification example
+  * Add fibonacci code-generation example, original
+    code by Lee Pike.
+  * Add a GCD code-generation/verification example
 
 ### Version 0.9.12, 2011-03-10
   
-  New features:
+New features:
 
-    * Add support for compilation to C
-    * Add a mechanism for offline saving of SMT-Lib files
+  * Add support for compilation to C
+  * Add a mechanism for offline saving of SMT-Lib files
 
-  Bug fixes:
+Bug fixes:
 
-    * Output naming bug, reported by Josef Svenningsson
-    * Specification bug in Legato's multipler example
+  * Output naming bug, reported by Josef Svenningsson
+  * Specification bug in Legato's multipler example
 
 ### Version 0.9.11, 2011-02-16
   
