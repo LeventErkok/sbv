@@ -1,96 +1,13 @@
 Name:          sbv
-Version:       2.10
+Version:       3.0
 Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math, SMT
 Synopsis:      SMT Based Verification: Symbolic Haskell theorem prover using SMT solving.
 Description:   Express properties about Haskell programs and automatically prove them using SMT
-               (Satisfiability Modulo Theories) solvers. Automatically generate C programs from
-               Haskell functions. The SBV library adds support for symbolic bit vectors and other
-               symbolic types, allowing formal models of Haskell programs to be created.
+               (Satisfiability Modulo Theories) solvers.
                .
-               >   $ ghci -XScopedTypeVariables
-               >   Prelude> :m Data.SBV
-               >   Prelude Data.SBV> prove $ \(x::SWord8) -> x `shiftL` 2 .== 4*x
-               >   Q.E.D.
-               >   Prelude Data.SBV> prove $ forAll ["x"] $ \(x::SWord8) -> x `shiftL` 2 .== x
-               >   Falsifiable. Counter-example:
-               >     x = 128 :: SWord8
+               For details, please see: <http://leventerkok.github.com/sbv/>
                .
-               You can pick the SMT solver you want to use by importing the appropriate module. The SBV library currently
-               works with the the following SMT solvers:
-               .
-                  [@import "Data.SBV"@]
-                  Picks the default solver, which is currently set to be Z3. (Might change in the future!)
-               .
-                  [@import "Data.SBV.Bridge.Z3"@]
-                  Picks Z3 from Microsoft (<http://z3.codeplex.com/>).
-               .
-                  [@import "Data.SBV.Bridge.Yices"@]
-                  Picks Yices from SRI (<http://yices.csl.sri.com/>) 
-               .
-                  [@import "Data.SBV.Bridge.CVC4"@]
-                  Picks CVC4 from New York University and the University of Iowa (<http://cvc4.cs.nyu.edu>) 
-               .
-                  [@import "Data.SBV.Bridge.Boolector"@]
-                  Picks Boolector from Johannes Kepler University at (<http://fmv.jku.at/boolector/>).
-               .
-               SBV introduces the following types and concepts:
-               .
-                 * 'SBool': Symbolic Booleans (bits)
-               .
-                 * 'SWord8', 'SWord16', 'SWord32', 'SWord64': Symbolic Words (unsigned)
-               .
-                 * 'SInt8',  'SInt16',  'SInt32',  'SInt64': Symbolic Ints (signed)
-               .
-                 * 'SInteger': Symbolic unbounded integers (signed)
-               .
-                 * 'SReal': Symbolic algebraic reals (signed)
-               .
-                 * 'SArray', 'SFunArray': Flat arrays of symbolic values
-               .
-                 * 'STree': Full binary trees of symbolic values (for fast symbolic access)
-               .
-                 * Symbolic polynomials over GF(2^n), and polynomial arithmetic
-               .
-                 * Uninterpreted constants and functions over symbolic values, with user defined axioms.
-               .
-                 * Uninterpreted sorts, and proofs over such sorts, potentially with axioms.
-               .
-               Functions built out of these types can be:
-               .
-                 * proven correct via an external SMT solver (the 'prove' function)
-               .
-                 * checked for satisfiability (the 'sat', and 'allSat' functions)
-               .
-                 * used in synthesis (the 'sat' function with existential variables)
-               .
-                 * optimized with respect to cost functions (the 'optimize', 'maximize',
-                 and 'minimize' functions)
-               .
-                 * quick-checked
-               .
-                 * used in concrete test case generation (the 'genTest' function), rendered as
-                   values in various languages, including Haskell and C.
-               .
-               Predicates can have both existential and universal variables. Use of
-               alternating quantifiers provides considerable expressive power.
-               Furthermore, existential variables allow synthesis via model generation.
-               .
-               The SBV library can also compile Haskell functions that manipulate symbolic
-               values directly to C, rendering them as straight-line C programs.
-               .
-               In addition to the library, the installation will create the
-               executable @SBVUnitTests@. You should run it once the installation is complete,
-               to make sure the unit tests are run and all is well.
-               .
-               SBV is hosted at GitHub: <http://github.com/LeventErkok/sbv>. Comments,
-               bug reports, and patches are always welcome.
-               .
-               The following people reported bugs, provided comments/feedback, or contributed to the
-               development of SBV in various ways: Ian Blumenfeld, Ian Calvert, Iavor Diatchki, John
-               Erickson, Tom Hawkins, Lee Pike, Austin Seipp, Don Stewart, Josef Svenningsson, and
-               Nis Wegmann.
-               .
-               Release notes can be seen at: <http://github.com/LeventErkok/sbv/blob/master/RELEASENOTES>.
+               Release notes: <http://github.com/LeventErkok/sbv/blob/master/CHANGES.md>
 
 Copyright:     Levent Erkok, 2010-2013
 License:       BSD3

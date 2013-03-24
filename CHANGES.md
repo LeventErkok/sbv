@@ -3,6 +3,11 @@
 
 * Latest Hackage released version: 2.10
 
+### Version 3.0, Not yet released
+   
+ * The goals for this release is to add support for IEEE-floating point
+   arithmetic. Currently in progress.
+
 ### Version 2.10, 2013-03-22
  
  * Add support for the Boolector SMT solver
