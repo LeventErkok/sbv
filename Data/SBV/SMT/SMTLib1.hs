@@ -12,7 +12,8 @@
 
 module Data.SBV.SMT.SMTLib1(cvt, addNonEqConstraints) where
 
-import qualified Data.Foldable as F (toList)
+import qualified Data.Foldable as F   (toList)
+import qualified Data.Set      as Set
 import Data.List  (intercalate)
 
 import Data.SBV.BitVectors.Data
@@ -41,10 +42,9 @@ nonEq (s, c) = "(not (= " ++ s ++ " " ++ cvtCW c ++ "))"
 
 -- | Translate a problem into an SMTLib1 script
 cvt :: SolverCapabilities           -- ^ capabilities of the current solver
-    -> (Bool, Bool)                 -- ^ has infinite precision integers/reals
+    -> Set.Set Kind                 -- ^ kinds used
     -> Bool                         -- ^ is this a sat problem?
     -> [String]                     -- ^ extra comments to place on top
-    -> [String]                     -- ^ uninterpreted sorts
     -> [(Quantifier, NamedSymVar)]  -- ^ inputs
     -> [Either SW (SW, [SW])]       -- ^ skolemized version of the inputs
     -> [(SW, CW)]                   -- ^ constants
@@ -56,7 +56,7 @@ cvt :: SolverCapabilities           -- ^ capabilities of the current solver
     -> [SW]                         -- ^ extra constraints
     -> SW                           -- ^ output variable
     -> ([String], [String])
-cvt _solverCaps _boundInfo isSat comments _sorts qinps _skolemInps consts tbls arrs uis axs asgnsSeq cstrs out = (pre, post)
+cvt _solverCaps _kindInfo isSat comments qinps _skolemInps consts tbls arrs uis axs asgnsSeq cstrs out = (pre, post)
   where logic
          | null tbls && null arrs && null uis = "QF_BV"
          | True                               = "QF_AUFBV"

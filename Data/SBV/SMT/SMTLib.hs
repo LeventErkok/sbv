@@ -19,12 +19,13 @@ import Data.SBV.Provers.SExpr
 import qualified Data.SBV.SMT.SMTLib1 as SMT1
 import qualified Data.SBV.SMT.SMTLib2 as SMT2
 
+import qualified Data.Set as Set (Set, member, toList)
+
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
 type SMTLibConverter =  SolverCapabilities          -- ^ Capabilities of the backend solver targeted
-                     -> (Bool, Bool)                -- ^ has unbounded integers/reals
+                     -> Set.Set Kind                -- ^ Kinds used in the problem
                      -> Bool                        -- ^ is this a sat problem?
                      -> [String]                    -- ^ extra comments to place on top
-                     -> [String]                    -- ^ uninterpreted sorts
                      -> [(Quantifier, NamedSymVar)] -- ^ inputs and aliasing names
                      -> [Either SW (SW, [SW])]      -- ^ skolemized inputs
                      -> [(SW, CW)]                  -- ^ constants
@@ -43,10 +44,10 @@ toSMTLib1 :: SMTLibConverter
 -- | Convert to SMTLib-2 format
 toSMTLib2 :: SMTLibConverter
 (toSMTLib1, toSMTLib2) = (cvt SMTLib1, cvt SMTLib2)
-  where cvt v solverCaps boundedInfo@(needsIntegers, needsReals) isSat comments sorts qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out
-         | needsIntegers && not (supportsUnboundedInts solverCaps)
+  where cvt v solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out
+         | KUnbounded `Set.member` kindInfo && not (supportsUnboundedInts solverCaps)
          = unsupported "unbounded integers"
-         | needsReals && not (supportsReals solverCaps)
+         | KReal `Set.member` kindInfo  && not (supportsReals solverCaps)
          = unsupported "algebraic reals"
          | needsQuantifiers && not (supportsQuantifiers solverCaps)
          = unsupported "quantifiers"
@@ -54,10 +55,11 @@ toSMTLib2 :: SMTLibConverter
          = unsupported "uninterpreted sorts"
          | True
          = SMTLibPgm v (aliasTable, pre, post)
-         where unsupported w = error $ "SBV: Given problem needs " ++ w ++ ", which is not supported by SBV for the chosen solver: " ++ capSolverName solverCaps
+         where sorts = [s | KUninterpreted s <- Set.toList kindInfo]
+               unsupported w = error $ "SBV: Given problem needs " ++ w ++ ", which is not supported by SBV for the chosen solver: " ++ capSolverName solverCaps
                aliasTable  = map (\(_, (x, y)) -> (y, x)) qinps
                converter   = if v == SMTLib1 then SMT1.cvt else SMT2.cvt
-               (pre, post) = converter solverCaps boundedInfo isSat comments sorts qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out
+               (pre, post) = converter solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out
                needsQuantifiers
                  | isSat = ALL `elem` quantifiers
                  | True  = EX  `elem` quantifiers

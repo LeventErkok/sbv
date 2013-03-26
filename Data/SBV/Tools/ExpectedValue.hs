@@ -38,7 +38,7 @@ expectedValueWith verbose warmupCount mbMaxIter epsilon m
                         let v' = zipWith (+) v t
                         rnf v' `seq` warmup (n-1) v'
         runOnce :: StdGen -> IO [Integer]
-        runOnce g = do (_, Result _ _ _ _ _ cs _ _ _ _ _ cstrs os) <- runSymbolic' (Concrete g) (m >>= output)
+        runOnce g = do (_, Result _ _ _ _ cs _ _ _ _ _ cstrs os) <- runSymbolic' (Concrete g) (m >>= output)
                        let cval o = case o `lookup` cs of
                                       Nothing -> error "SBV.expectedValue: Cannot compute expected-values in the presence of uninterpreted constants!"
                                       Just cw -> case (cwKind cw, cwVal cw) of

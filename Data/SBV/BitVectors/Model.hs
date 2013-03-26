@@ -1495,7 +1495,7 @@ instance Testable SBool where
 
 instance Testable (Symbolic SBool) where
   property m = QC.whenFail (putStrLn msg) $ QC.monadicIO test
-    where runOnce g = do (r, Result _ _ tvals _ _ cs _ _ _ _ _ cstrs _) <- runSymbolic' (Concrete g) m
+    where runOnce g = do (r, Result _ tvals _ _ cs _ _ _ _ _ cstrs _) <- runSymbolic' (Concrete g) m
                          let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
                              cond = all (cwToBool . cval) cstrs
                          when (isSymbolic r) $ error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show r ++ ")"

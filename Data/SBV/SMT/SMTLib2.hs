@@ -16,6 +16,7 @@ import Data.Bits (bit)
 import qualified Data.Foldable as F (toList)
 import qualified Data.Map      as M
 import qualified Data.IntMap   as IM
+import qualified Data.Set      as Set
 import Data.List (intercalate, partition)
 import Numeric (showHex)
 
@@ -58,10 +59,9 @@ tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
 cvt :: SolverCapabilities           -- ^ capabilities of the current solver
-    -> (Bool, Bool)                 -- ^ bounded info
+    -> Set.Set Kind                 -- ^ kinds used
     -> Bool                         -- ^ is this a sat problem?
     -> [String]                     -- ^ extra comments to place on top
-    -> [String]                     -- ^ uninterpreted sorts
     -> [(Quantifier, NamedSymVar)]  -- ^ inputs
     -> [Either SW (SW, [SW])]       -- ^ skolemized version inputs
     -> [(SW, CW)]                   -- ^ constants
@@ -73,8 +73,11 @@ cvt :: SolverCapabilities           -- ^ capabilities of the current solver
     -> [SW]                         -- ^ extra constraints
     -> SW                           -- ^ output variable
     -> ([String], [String])
-cvt solverCaps (hasInteger, hasReal) isSat comments sorts _inps skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out = (pre, [])
+cvt solverCaps kindInfo isSat comments _inps skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out = (pre, [])
   where -- the logic is an over-approaximation
+        hasInteger = KUnbounded `Set.member` kindInfo
+        hasReal    = KReal      `Set.member` kindInfo
+        sorts      = [s | KUninterpreted s <- Set.toList kindInfo]
         logic
            | hasInteger || hasReal || not (null sorts)
            = case mbDefaultLogic solverCaps of

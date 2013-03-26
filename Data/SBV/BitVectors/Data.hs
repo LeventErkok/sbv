@@ -52,6 +52,7 @@ import Data.Maybe           (isJust, fromJust)
 
 import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
 import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
+import qualified Data.Set      as Set  (Set, empty, toList, insert)
 import qualified Data.Foldable as F    (toList)
 import qualified Data.Sequence as S    (Seq, empty, (|>))
 
@@ -355,8 +356,7 @@ data UnintKind = UFun Int String | UArr Int String      -- in each case, arity a
  deriving Show
 
 -- | Result of running a symbolic computation
-data Result = Result (Bool, Bool)                  -- contains unbounded integers/reals
-                     [String]                      -- uninterpreted sorts
+data Result = Result (Set.Set Kind)                -- kinds used in the program
                      [(String, CW)]                -- quick-check counter-example information (if any)
                      [(String, [String])]          -- uninterpeted code segments
                      [(Quantifier, NamedSymVar)]   -- inputs (possibly existential)
@@ -371,18 +371,18 @@ data Result = Result (Bool, Bool)                  -- contains unbounded integer
 
 -- | Extract the constraints from a result
 getConstraints :: Result -> [SW]
-getConstraints (Result _ _ _ _ _ _ _ _ _ _ _ cstrs _) = cstrs
+getConstraints (Result _ _ _ _ _ _ _ _ _ _ cstrs _) = cstrs
 
 -- | Extract the traced-values from a result (quick-check)
 getTraceInfo :: Result -> [(String, CW)]
-getTraceInfo (Result _ _ tvals _ _ _ _ _ _ _ _ _ _) = tvals
+getTraceInfo (Result _ tvals _ _ _ _ _ _ _ _ _ _) = tvals
 
 instance Show Result where
-  show (Result _ _ _ _ _ cs _ _ [] [] _ [] [r])
+  show (Result _ _ _ _ cs _ _ [] [] _ [] [r])
     | Just c <- r `lookup` cs
     = show c
-  show (Result _ sorts _ cgs is cs ts as uis axs xs cstrs os)  = intercalate "\n" $
-                   (if null sorts then [] else "SORTS" : map ("  " ++) sorts)
+  show (Result kinds _ cgs is cs ts as uis axs xs cstrs os)  = intercalate "\n" $
+                   (if null usorts then [] else "SORTS" : map ("  " ++) usorts)
                 ++ ["INPUTS"]
                 ++ map shn is
                 ++ ["CONSTANTS"]
@@ -403,7 +403,8 @@ instance Show Result where
                 ++ map (("  " ++) . show) cstrs
                 ++ ["OUTPUTS"]
                 ++ map (("  " ++) . show) os
-    where shs sw = show sw ++ " :: " ++ showType sw
+    where usorts = [s | KUninterpreted s <- Set.toList kinds]
+          shs sw = show sw ++ " :: " ++ showType sw
           sht ((i, at, rt), es)  = "  Table " ++ show i ++ " : " ++ show at ++ "->" ++ show rt ++ " = " ++ show es
           shc (sw, cw) = "  " ++ show sw ++ " = " ++ show cw
           shcg (s, ss) = ("Variable: " ++ s) : map ("  " ++) ss
@@ -439,6 +440,9 @@ type ExprMap   = Map.Map SBVExpr SW
 
 -- | Constants are stored in a map, for hash-consing
 type CnstMap   = Map.Map CW SW
+
+-- | Kinds used in the program; used for determining the final SMT-Lib logic to pick
+type KindSet = Set.Set Kind
 
 -- | Tables generated during a symbolic run
 type TableMap  = Map.Map [SW] (Int, Kind, Kind)
@@ -488,7 +492,7 @@ data State  = State { runMode       :: SBVRunMode
                     , rStdGen       :: IORef StdGen
                     , rCInfo        :: IORef [(String, CW)]
                     , rctr          :: IORef Int
-                    , rUnBounded    :: IORef (Bool, Bool)     -- SInteger, SReal
+                    , rUsedKinds    :: IORef KindSet
                     , rinps         :: IORef [(Quantifier, NamedSymVar)]
                     , rConstraints  :: IORef [SW]
                     , routs         :: IORef [SW]
@@ -502,7 +506,6 @@ data State  = State { runMode       :: SBVRunMode
                     , raxioms       :: IORef [(String, [String])]
                     , rSWCache      :: IORef (Cache SW)
                     , rAICache      :: IORef (Cache Int)
-                    , rSorts        :: IORef [String]
                     }
 
 -- | Are we running in proof mode?
@@ -602,13 +605,17 @@ newUninterpreted st nm t mbCode
 newSW :: State -> Kind -> IO (SW, String)
 newSW st k = do ctr <- incCtr st
                 let sw = SW k (NodeId ctr)
-                () <- case k of
-                       KUnbounded              -> modifyIORef (rUnBounded st) (\(_, y) -> (True, y))
-                       KReal                   -> modifyIORef (rUnBounded st) (\(x, _) -> (x, True))
-                       KUninterpreted sortName -> registerSort st sortName  -- in case the result is produced via an uninterpreted function
-                       _                       -> return ()
+                registerKind st k
                 return (sw, 's' : show ctr)
 {-# INLINE newSW #-}
+
+registerKind :: State -> Kind -> IO ()
+registerKind st k
+  | KUninterpreted sortName <- k, sortName `elem` reserved
+  = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
+  | True
+  = modifyIORef (rUsedKinds st) (Set.insert k)
+ where reserved = ["Int", "Real", "List", "Array", "Bool", "NUMERAL", "DECIMAL", "STRING", "FP"]  -- Reserved by SMT-Lib
 
 -- | Create a new constant; hash-cons as necessary
 newConst :: State -> CW -> IO SW
@@ -770,9 +777,8 @@ runSymbolic' currentRunMode (Symbolic c) = do
    axioms    <- newIORef []
    swCache   <- newIORef IMap.empty
    aiCache   <- newIORef IMap.empty
-   unbounded <- newIORef (False, False)
+   usedKinds <- newIORef Set.empty
    cstrs     <- newIORef []
-   sorts     <- newIORef []
    rGen      <- case currentRunMode of
                   Concrete g -> newIORef g
                   _          -> newStdGen >>= newIORef
@@ -780,7 +786,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
                   , rStdGen      = rGen
                   , rCInfo       = cInfo
                   , rctr         = ctr
-                  , rUnBounded   = unbounded
+                  , rUsedKinds   = usedKinds
                   , rinps        = inps
                   , routs        = outs
                   , rtblMap      = tables
@@ -794,7 +800,6 @@ runSymbolic' currentRunMode (Symbolic c) = do
                   , rSWCache     = swCache
                   , rAICache     = aiCache
                   , rConstraints = cstrs
-                  , rSorts       = sorts
                   }
    _ <- newConst st (mkConstCW (KBounded False 1) (0::Integer)) -- s(-2) == falseSW
    _ <- newConst st (mkConstCW (KBounded False 1) (1::Integer)) -- s(-1) == trueSW
@@ -809,12 +814,11 @@ runSymbolic' currentRunMode (Symbolic c) = do
    arrs  <- IMap.toAscList `fmap` readIORef arrays
    unint <- Map.toList `fmap` readIORef uis
    axs   <- reverse `fmap` readIORef axioms
-   boundInfo <- readIORef unbounded
+   knds  <- readIORef usedKinds
    cgMap <- Map.toList `fmap` readIORef cgs
    traceVals <- reverse `fmap` readIORef cInfo
    extraCstrs <- reverse `fmap` readIORef cstrs
-   usorts <- reverse `fmap` readIORef sorts
-   return $ (r, Result boundInfo usorts traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs outsO)
+   return $ (r, Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs outsO)
 
 -------------------------------------------------------------------------------
 -- * Symbolic Words
@@ -896,9 +900,9 @@ class (HasKind a, Ord a) => SymWord a where
   mkSymWord mbQ mbNm = do
         let sortName = tyconUQname . dataTypeName . dataTypeOf $ (undefined :: a)
         st <- ask
-        liftIO $ registerSort st sortName
         let k = KUninterpreted sortName
-            q = case (mbQ, runMode st) of
+        liftIO $ registerKind st k
+        let q = case (mbQ, runMode st) of
                   (Just x,  _)           -> x
                   (Nothing, Proof True)  -> EX
                   (Nothing, Proof False) -> ALL
@@ -909,19 +913,6 @@ class (HasKind a, Ord a) => SymWord a where
             nm = maybe ('s':show ctr) id mbNm
         liftIO $ modifyIORef (rinps st) ((q, (sw, nm)):)
         return $ SBV k $ Right $ cache (const (return sw))
-
--- | Register an uninterpreted sort with SBV
-registerSort :: State -> String -> IO ()
-registerSort st sortName = do
-        let -- This list comes from http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.0-r10.12.21.pdf
-            -- Note that we only have to include those SMT-Lib reserved names that start with a capital
-            -- letter, since all Haskell types start with a capital-letter and there's no possibility of
-            -- conflict for lower-case ones!
-            -- TODO: Make sure this list covers everything!
-            reserved = ["Int", "Real", "List", "Array", "Bool", "NUMERAL", "DECIMAL", "STRING", "FP"]
-        when (sortName `elem` reserved) $ error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
-        curSorts <- readIORef (rSorts st)
-        when (sortName `notElem` curSorts) $ liftIO $ modifyIORef (rSorts st) (sortName :)
 
 instance (Random a, SymWord a) => Random (SBV a) where
   randomR (l, h) g = case (unliteral l, unliteral h) of
@@ -1134,12 +1125,11 @@ instance NFData CW where
   rnf (CW x y) = x `seq` y `seq` ()
 
 instance NFData Result where
-  rnf (Result isInf sorts qcInfo cgs inps consts tbls arrs uis axs pgm cstr outs)
-        = rnf isInf `seq` rnf sorts `seq` rnf qcInfo `seq` rnf cgs
-                    `seq` rnf inps  `seq` rnf consts `seq` rnf tbls
-                    `seq` rnf arrs  `seq` rnf uis    `seq` rnf axs
-                    `seq` rnf pgm   `seq` rnf cstr   `seq` rnf outs
-
+  rnf (Result kindInfo qcInfo cgs inps consts tbls arrs uis axs pgm cstr outs)
+        = rnf kindInfo `seq` rnf qcInfo `seq` rnf cgs  `seq` rnf inps
+                       `seq` rnf consts `seq` rnf tbls `seq` rnf arrs
+                       `seq` rnf uis    `seq` rnf axs  `seq` rnf pgm
+                       `seq` rnf cstr   `seq` rnf outs
 instance NFData Kind
 instance NFData ArrayContext
 instance NFData SW

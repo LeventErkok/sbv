@@ -39,6 +39,8 @@ import Data.Maybe         (fromJust, isJust, mapMaybe)
 import System.FilePath    (addExtension)
 import System.Time        (getClockTime)
 
+import qualified Data.Set as Set (Set, toList)
+
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
 import Data.SBV.SMT.SMT
@@ -365,11 +367,11 @@ satWith config a = simulate cvt config True [] a >>= callSolver True "Checking S
 -- | Determine if the constraints are vacuous using the given SMT-solver
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
 isVacuousWith config a = do
-        Result ub us tr uic is cs ts as uis ax asgn cstr _ <- runSymbolic True $ forAll_ a >>= output
+        Result ki tr uic is cs ts as uis ax asgn cstr _ <- runSymbolic True $ forAll_ a >>= output
         case cstr of
            [] -> return False -- no constraints, no need to check
            _  -> do let is'  = [(EX, i) | (_, i) <- is] -- map all quantifiers to "exists" for the constraint check
-                        res' = Result ub us tr uic is' cs ts as uis ax asgn cstr [trueSW]
+                        res' = Result ki tr uic is' cs ts as uis ax asgn cstr [trueSW]
                         cvt  = if useSMTLib2 config then toSMTLib2 else toSMTLib1
                     SatResult result <- runProofOn cvt config True [] res' >>= callSolver True "Checking Satisfiability.." SatResult config
                     case result of
@@ -384,7 +386,8 @@ allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
 allSatWith config p = do
         let converter = if useSMTLib2 config then toSMTLib2 else toSMTLib1
         msg "Checking Satisfiability, all solutions.."
-        sbvPgm@(qinps, _, _, usorts, _) <- simulate converter config True [] p
+        sbvPgm@(qinps, _, _, ki, _) <- simulate converter config True [] p
+        let usorts = [s | KUninterpreted s <- Set.toList ki]
         unless (null usorts) $ error $  "SBV.allSat: All-sat calls are not supported in the presence of uninterpreted sorts: " ++ unwords usorts
                                      ++ "\n    Only 'sat' and 'prove' calls are available when uninterpreted sorts are used."
         resChan <- newChan
@@ -428,7 +431,7 @@ allSatWith config p = do
 type SMTProblem = ( [(Quantifier, NamedSymVar)]         -- inputs
                   , [(String, UnintKind)]               -- model-map
                   , [Either SW (SW, [SW])]              -- skolem-map
-                  , [String]                            -- uninterpreted sorts
+                  , Set.Set Kind                        -- kinds used
                   , SMTLibPgm                           -- SMTLib representation
                   )
 
@@ -457,7 +460,7 @@ runProofOn converter config isSat comments res =
         let isTiming   = timing config
             solverCaps = capabilities (solver config)
         in case res of
-             Result boundInfo usorts _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs [o@(SW (KBounded False 1) _)] ->
+             Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs [o@(SW (KBounded False 1) _)] ->
                timeIf isTiming "translation" $ let uiMap     = mapMaybe arrayUIKind arrs ++ map unintFnUIKind uis
                                                    skolemMap = skolemize (if isSat then is else map flipQ is)
                                                         where flipQ (ALL, x) = (EX, x)
@@ -467,8 +470,8 @@ runProofOn converter config isSat comments res =
                                                                 where go []                   (_,  sofar) = reverse sofar
                                                                       go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
                                                                       go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
-                                               in return (is, uiMap, skolemMap, usorts, converter solverCaps boundInfo isSat comments usorts is skolemMap consts tbls arrs uis axs pgm cstrs o)
-             Result _boundInfo _us _qcInfo _codeSegs _is _consts _tbls _arrs _uis _axs _pgm _cstrs os -> case length os of
+                                               in return (is, uiMap, skolemMap, ki, converter solverCaps ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o)
+             Result _kindInfo _qcInfo _codeSegs _is _consts _tbls _arrs _uis _axs _pgm _cstrs os -> case length os of
                            0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
                            1  -> error $ "Impossible happened, non-boolean output in " ++ show os
                                        ++ "\nDetected while generating the trace:\n" ++ show res
