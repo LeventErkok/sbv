@@ -604,6 +604,18 @@ instance Fractional SReal where
    where -- should never happen
          die = error $ "impossible: non-real value found in Fractional.SReal " ++ show (x, y)
 
+instance Fractional SFloat where
+  fromRational = literal . fromRational
+  x / y        = liftSym2 (mkSymOp Quot) rationalCheck (/) die (/) (/) x y
+   where -- should never happen
+         die = error $ "impossible: non-real value found in Fractional.SFloat " ++ show (x, y)
+
+instance Fractional SDouble where
+  fromRational = literal . fromRational
+  x / y        = liftSym2 (mkSymOp Quot) rationalCheck (/) die (/) (/) x y
+   where -- should never happen
+         die = error $ "impossible: non-real value found in Fractional.SDouble " ++ show (x, y)
+
 -- Most operations on concrete rationals require a compatibility check
 rationalCheck :: CW -> CW -> Bool
 rationalCheck a b = case (cwVal a, cwVal b) of
