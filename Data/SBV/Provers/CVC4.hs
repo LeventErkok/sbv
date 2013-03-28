@@ -52,6 +52,8 @@ cvc4 = SMTSolver {
                                 , supportsUninterpretedSorts = True
                                 , supportsUnboundedInts      = True
                                 , supportsReals              = True  -- Not quite the same capability as Z3; but works more or less..
+                                , supportsFloats             = False
+                                , supportsDoubles            = False
                                 }
          }
  where zero :: Kind -> String
@@ -59,6 +61,8 @@ cvc4 = SMTSolver {
        zero (KBounded _     sz) = "#x" ++ replicate (sz `div` 4) '0'
        zero KUnbounded          = "0"
        zero KReal               = "0.0"
+       zero KFloat              = error "SBV.CVC4.zero: Unexpected float value"
+       zero KDouble             = error "SBV.CVC4.zero: Unexpected double value"
        zero (KUninterpreted s)  = error $ "SBV.CVC4.zero: Unexpected uninterpreted sort: " ++ s
        cont skolemMap = intercalate "\n" $ map extract skolemMap
         where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ zero (kindOf s) ++ "))\")"

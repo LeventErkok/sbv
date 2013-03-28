@@ -51,6 +51,8 @@ yices = SMTSolver {
                                 , supportsUninterpretedSorts = False
                                 , supportsUnboundedInts      = False
                                 , supportsReals              = False
+                                , supportsFloats             = False
+                                , supportsDoubles            = False
                                 }
          }
   where addTimeOut Nothing  o   = o

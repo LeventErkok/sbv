@@ -121,6 +121,12 @@ fastPopCountIsCorrect x = popCountFast x .== popCountSlow x
 -- /* The boolean type */
 -- typedef bool SBool;
 -- <BLANKLINE>
+-- /* The float type */
+-- typedef float SFloat;
+-- <BLANKLINE>
+-- /* The double type */
+-- typedef double SDouble;
+-- <BLANKLINE>
 -- /* Unsigned bit-vectors */
 -- typedef uint8_t  SWord8 ;
 -- typedef uint16_t SWord16;

@@ -64,6 +64,8 @@ z3 = SMTSolver {
                                 , supportsUninterpretedSorts = True
                                 , supportsUnboundedInts      = True
                                 , supportsReals              = True
+                                , supportsFloats             = True
+                                , supportsDoubles            = True
                                 }
          }
  where -- Get rid of the following when z3_4.0 is out
@@ -74,6 +76,8 @@ z3 = SMTSolver {
        zero (KBounded _     sz) = "#x" ++ replicate (sz `div` 4) '0'
        zero KUnbounded          = "0"
        zero KReal               = "0.0"
+       zero KFloat              = error "Z3:TBD: Figure out how to write float constants!"
+       zero KDouble             = error "Z3:TBD: Figure out how to write double constants!"
        zero (KUninterpreted s)  = error $ "SBV.Z3.zero: Unexpected uninterpreted sort: " ++ s
        cont skolemMap = intercalate "\n" $ concatMap extract skolemMap
         where -- In the skolemMap:

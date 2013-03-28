@@ -165,6 +165,8 @@ specifier cfg sw = case kindOf sw of
                      KBounded b i     -> spec (b, i)
                      KUnbounded       -> spec (True, fromJust (cgInteger cfg))
                      KReal            -> specF (fromJust (cgReal cfg))
+                     KFloat           -> specF CgFloat
+                     KDouble          -> specF CgDouble
                      KUninterpreted s -> die $ "uninterpreted sort: " ++ s
   where spec :: (Bool, Int) -> Doc
         spec (False,  1) = text "%d"
@@ -264,6 +266,12 @@ genHeader (ik, rk) fn sigs protos =
   $$ text ""
   $$ text "/* The boolean type */"
   $$ text "typedef bool SBool;"
+  $$ text ""
+  $$ text "/* The float type */"
+  $$ text "typedef float SFloat;"
+  $$ text ""
+  $$ text "/* The double type */"
+  $$ text "typedef double SDouble;"
   $$ text ""
   $$ text "/* Unsigned bit-vectors */"
   $$ text "typedef uint8_t  SWord8 ;"
@@ -427,6 +435,8 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _ _ (S
                          $$ text ""
        typeWidth = getMax 0 [len (kindOf s) | (s, _) <- assignments]
                 where len (KReal{})          = 5
+                      len (KFloat{})         = 6 -- SFloat
+                      len (KDouble{})        = 7 -- SDouble
                       len (KUnbounded{})     = 8
                       len (KBounded False 1) = 5 -- SBool
                       len (KBounded False n) = 5 + length (show n) -- SWordN
@@ -504,6 +514,8 @@ ppExpr cfg consts (SBVApp op opArgs) = p op (map (showSW cfg consts) opArgs)
                 (needsCheckL, needsCheckR) = case k of
                                                KBounded sg sz   -> (sg, canOverflow sg sz)
                                                KReal            -> die "array index with real value"
+                                               KFloat           -> die "array index with float value"
+                                               KDouble          -> die "array index with double value"
                                                KUnbounded       -> case cgInteger cfg of
                                                                      Nothing -> (True, True) -- won't matter, it'll be rejected later
                                                                      Just i  -> (True, canOverflow True i)

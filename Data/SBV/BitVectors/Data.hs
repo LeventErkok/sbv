@@ -20,7 +20,7 @@
 
 module Data.SBV.BitVectors.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
- , SInt8, SInt16, SInt32, SInt64, SInteger, SReal
+ , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble
  , SymWord(..)
  , CW(..), CWVal(..), cwSameType, cwIsBit, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
@@ -65,6 +65,8 @@ import Data.SBV.Utils.Lib
 -- | A constant value
 data CWVal = CWAlgReal       AlgReal    -- ^ algebraic real
            | CWInteger       Integer    -- ^ bit-vector/unbounded integer
+           | CWFloat         Float      -- ^ float
+           | CWDouble        Double     -- ^ double
            | CWUninterpreted String     -- ^ value of an uninterpreted kind
 
 -- We cannot simply derive Eq/Ord for CWVal, since CWAlgReal doesn't have proper
@@ -74,19 +76,39 @@ instance Eq CWVal where
   CWAlgReal a       == CWAlgReal b       = a `algRealStructuralEqual` b
   CWInteger a       == CWInteger b       = a == b
   CWUninterpreted a == CWUninterpreted b = a == b
+  CWFloat a         == CWFloat b         = a == b
+  CWDouble a        == CWDouble b        = a == b
   _                 == _                 = False
 
 instance Ord CWVal where
   CWAlgReal a       `compare` CWAlgReal b       = a `algRealStructuralCompare` b
   CWAlgReal _       `compare` CWInteger _       = LT
+  CWAlgReal _       `compare` CWFloat _         = LT
+  CWAlgReal _       `compare` CWDouble _        = LT
   CWAlgReal _       `compare` CWUninterpreted _ = LT
 
   CWInteger _       `compare` CWAlgReal _       = GT
   CWInteger a       `compare` CWInteger b       = a `compare` b
+  CWInteger _       `compare` CWFloat _         = LT
+  CWInteger _       `compare` CWDouble _        = LT
   CWInteger _       `compare` CWUninterpreted _ = LT
+
+  CWFloat _         `compare` CWAlgReal _       = GT
+  CWFloat _         `compare` CWInteger _       = GT
+  CWFloat a         `compare` CWFloat b         = a `compare` b
+  CWFloat _         `compare` CWDouble _        = LT
+  CWFloat _         `compare` CWUninterpreted _ = LT
+
+  CWDouble _        `compare` CWAlgReal _       = GT
+  CWDouble _        `compare` CWInteger _       = GT
+  CWDouble _        `compare` CWFloat _         = GT
+  CWDouble a        `compare` CWDouble b        = a `compare` b
+  CWDouble _        `compare` CWUninterpreted _ = LT
 
   CWUninterpreted _ `compare` CWAlgReal _       = GT
   CWUninterpreted _ `compare` CWInteger _       = GT
+  CWUninterpreted _ `compare` CWFloat _         = GT
+  CWUninterpreted _ `compare` CWDouble _        = GT
   CWUninterpreted a `compare` CWUninterpreted b = a `compare` b
 
 -- | 'CW' represents a concrete word of a fixed size:
@@ -130,6 +152,8 @@ data Kind = KBounded Bool Int
           | KUnbounded
           | KReal
           | KUninterpreted String
+          | KFloat
+          | KDouble
           deriving (Eq, Ord)
 
 instance Show Kind where
@@ -139,6 +163,8 @@ instance Show Kind where
   show KUnbounded         = "SInteger"
   show KReal              = "SReal"
   show (KUninterpreted s) = s
+  show KFloat             = "SFloat"
+  show KDouble            = "SDouble"
 
 -- | A symbolic node id
 newtype NodeId = NodeId Int deriving (Eq, Ord)
@@ -223,11 +249,15 @@ class HasKind a where
                   KBounded b _     -> b
                   KUnbounded       -> True
                   KReal            -> True
+                  KFloat           -> True
+                  KDouble          -> True
                   KUninterpreted{} -> False
   intSizeOf x = case kindOf x of
                   KBounded _ s     -> s
                   KUnbounded       -> error "SBV.HasKind.intSizeOf((S)Integer)"
                   KReal            -> error "SBV.HasKind.intSizeOf((S)Real)"
+                  KFloat           -> error "SBV.HasKind.intSizeOf((S)Float)"
+                  KDouble          -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KUninterpreted s -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
   isBoolean       x | KBounded False 1 <- kindOf x = True
                     | True                         = False
@@ -256,35 +286,45 @@ instance HasKind Int64   where kindOf _ = KBounded True  64
 instance HasKind Word64  where kindOf _ = KBounded False 64
 instance HasKind Integer where kindOf _ = KUnbounded
 instance HasKind AlgReal where kindOf _ = KReal
+instance HasKind Float   where kindOf _ = KFloat
+instance HasKind Double  where kindOf _ = KDouble
 
 -- | Lift a unary function thruough a CW
-liftCW :: (AlgReal -> b) -> (Integer -> b) -> (String -> b) -> CW -> b
-liftCW f _ _ (CW _ (CWAlgReal v))       = f v
-liftCW _ g _ (CW _ (CWInteger v))       = g v
-liftCW _ _ h (CW _ (CWUninterpreted v)) = h v
+liftCW :: (AlgReal -> b) -> (Integer -> b) -> (Float -> b) -> (Double -> b) -> (String -> b) -> CW -> b
+liftCW f _ _ _ _ (CW _ (CWAlgReal v))       = f v
+liftCW _ f _ _ _ (CW _ (CWInteger v))       = f v
+liftCW _ _ f _ _ (CW _ (CWFloat v))         = f v
+liftCW _ _ _ f _ (CW _ (CWDouble v))        = f v
+liftCW _ _ _ _ f (CW _ (CWUninterpreted v)) = f v
 
 -- | Lift a binary function through a CW
-liftCW2 :: (AlgReal -> AlgReal -> b) -> (Integer -> Integer -> b) -> (String -> String -> b) -> CW -> CW -> b
-liftCW2 f g h x y = case (cwVal x, cwVal y) of
-                      (CWAlgReal a,       CWAlgReal b)       -> f a b
-                      (CWInteger a,       CWInteger b)       -> g a b
-                      (CWUninterpreted a, CWUninterpreted b) -> h a b
-                      _                                      -> error $ "SBV.liftCW2: impossible, incompatible args received: " ++ show (x, y)
+liftCW2 :: (AlgReal -> AlgReal -> b) -> (Integer -> Integer -> b) -> (Float -> Float -> b) -> (Double -> Double -> b) -> (String -> String -> b) -> CW -> CW -> b
+liftCW2 r i f d u x y = case (cwVal x, cwVal y) of
+                         (CWAlgReal a,       CWAlgReal b)       -> r a b
+                         (CWInteger a,       CWInteger b)       -> i a b
+                         (CWFloat a,         CWFloat b)         -> f a b
+                         (CWDouble a,        CWDouble b)        -> d a b
+                         (CWUninterpreted a, CWUninterpreted b) -> u a b
+                         _                                      -> error $ "SBV.liftCW2: impossible, incompatible args received: " ++ show (x, y)
 
 -- | Map a unary function through a CW
-mapCW :: (AlgReal -> AlgReal) -> (Integer -> Integer) -> (String -> String) -> CW -> CW
-mapCW f g h x  = normCW $ CW (cwKind x) $ case cwVal x of
-                                            CWAlgReal a       -> CWAlgReal       (f a)
-                                            CWInteger a       -> CWInteger       (g a)
-                                            CWUninterpreted a -> CWUninterpreted (h a)
+mapCW :: (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> (String -> String) -> CW -> CW
+mapCW r i f d u x  = normCW $ CW (cwKind x) $ case cwVal x of
+                                               CWAlgReal a       -> CWAlgReal       (r a)
+                                               CWInteger a       -> CWInteger       (i a)
+                                               CWFloat a         -> CWFloat         (f a)
+                                               CWDouble a        -> CWDouble        (d a)
+                                               CWUninterpreted a -> CWUninterpreted (u a)
 
 -- | Map a binary function through a CW
-mapCW2 :: (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (String -> String -> String) -> CW -> CW -> CW
-mapCW2 f g h x y = case (cwSameType x y, cwVal x, cwVal y) of
-                     (True, CWAlgReal a,       CWAlgReal b)       -> normCW $ CW (cwKind x) (CWAlgReal       (f a b))
-                     (True, CWInteger a,       CWInteger b)       -> normCW $ CW (cwKind x) (CWInteger       (g a b))
-                     (True, CWUninterpreted a, CWUninterpreted b) -> normCW $ CW (cwKind x) (CWUninterpreted (h a b))
-                     _                        -> error $ "SBV.mapCW2: impossible, incompatible args received: " ++ show (x, y)
+mapCW2 :: (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (Float -> Float -> Float) -> (Double -> Double -> Double) -> (String -> String -> String) -> CW -> CW -> CW
+mapCW2 r i f d u x y = case (cwSameType x y, cwVal x, cwVal y) of
+                        (True, CWAlgReal a,       CWAlgReal b)       -> normCW $ CW (cwKind x) (CWAlgReal       (r a b))
+                        (True, CWInteger a,       CWInteger b)       -> normCW $ CW (cwKind x) (CWInteger       (i a b))
+                        (True, CWFloat a,         CWFloat b)         -> normCW $ CW (cwKind x) (CWFloat         (f a b))
+                        (True, CWDouble a,        CWDouble b)        -> normCW $ CW (cwKind x) (CWDouble        (d a b))
+                        (True, CWUninterpreted a, CWUninterpreted b) -> normCW $ CW (cwKind x) (CWUninterpreted (u a b))
+                        _                                            -> error $ "SBV.mapCW2: impossible, incompatible args received: " ++ show (x, y)
 
 instance HasKind CW where
   kindOf = cwKind
@@ -294,7 +334,7 @@ instance HasKind SW where
 
 instance Show CW where
   show w | cwIsBit w = show (cwToBool w)
-  show w             = liftCW show show id w ++ " :: " ++ showType w
+  show w             = liftCW show show show show id w ++ " :: " ++ showType w
 
 instance Show SW where
   show (SW _ (NodeId n))
@@ -553,6 +593,12 @@ type SInteger = SBV Integer
 
 -- | Infinite precision symbolic algebraic real value
 type SReal = SBV AlgReal
+
+-- | IEEE-754 single-precision floating point numbers
+type SFloat = SBV Float
+
+-- | IEEE-754 double-precision floating point numbers
+type SDouble = SBV Double
 
 -- Not particularly "desirable", but will do if needed
 instance Show (SBV a) where
@@ -1153,4 +1199,6 @@ data SolverCapabilities = SolverCapabilities {
        , supportsUninterpretedSorts :: Bool         -- ^ Does the solver understand SMT-Lib2 style uninterpreted-sorts
        , supportsUnboundedInts      :: Bool         -- ^ Does the solver support unbounded integers?
        , supportsReals              :: Bool         -- ^ Does the solver support reals?
+       , supportsFloats             :: Bool         -- ^ Does the solver support single-precision floating point numbers?
+       , supportsDoubles            :: Bool         -- ^ Does the solver support double-precision floating point numbers?
        }

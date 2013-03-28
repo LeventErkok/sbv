@@ -42,6 +42,12 @@
 --
 --   * 'SArray', 'SFunArray': Flat arrays of symbolic values.
 --
+--   * 'SReal': Algebraic-real numbers
+--
+--   * 'SFloat': IEEE-754 single-precision floating point values
+--
+--   * 'SDouble': IEEE-754 double-precision floating point values
+--
 --   * Symbolic polynomials over GF(2^n), polynomial arithmetic, and CRCs.
 --
 --   * Uninterpreted constants and functions over symbolic values, with user
@@ -107,13 +113,15 @@ module Data.SBV (
   , SInteger
   -- *** Signed algebraic reals
   -- $algReals
-  , SReal, AlgReal
+  , SReal, AlgReal, toSReal
+  -- $floatingPoints
+  , SFloat, SDouble
   -- ** Creating a symbolic variable
   -- $createSym
-  , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger
+  , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger, sReal, sFloat, sDouble
   -- ** Creating a list of symbolic variables
   -- $createSyms
-  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReal, sReals, toSReal
+  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReals, sFloats, sDoubles
   -- *** Abstract SBV type
   , SBV
   -- *** Arrays of symbolic values
@@ -420,6 +428,12 @@ SBV can deal with real numbers just fine, since the theory of reals is decidable
 <http://goedel.cs.uiowa.edu/smtlib/theories/Reals.smt2>.) In addition, by leveraging backend
 solver capabilities, SBV can also represent and solve non-linear equations involving real-variables.
 (For instance, the Z3 SMT solver, supports polynomial constraints on reals starting with v4.0.)
+-}
+
+{- $floatingPoints
+Floating point numbers are defined by the IEEE-754 standard; and correspond to Haskell's
+'Float' and 'Double' types. For SMT support with floating-point numbers, see the paper
+by Rummer and Wahl: <http://www.philipp.ruemmer.org/publications/smt-fpa.pdf>.
 -}
 
 {- $constrainIntro

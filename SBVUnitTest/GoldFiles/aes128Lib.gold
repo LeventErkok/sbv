@@ -3581,6 +3581,12 @@ void aes128BlockDecrypt(const SWord32 *ct, const SWord32 *xkey,
 /* The boolean type */
 typedef bool SBool;
 
+/* The float type */
+typedef float SFloat;
+
+/* The double type */
+typedef double SDouble;
+
 /* Unsigned bit-vectors */
 typedef uint8_t  SWord8 ;
 typedef uint16_t SWord16;

@@ -264,4 +264,6 @@ kindType (KBounded False 1) = "Bool"
 kindType (KBounded _ s)     = "BitVec[" ++ show s ++ "]"
 kindType KUnbounded         = die "unbounded Integer"
 kindType KReal              = die "real value"
+kindType KFloat             = die "float value"
+kindType KDouble            = die "double value"
 kindType (KUninterpreted s) = die $ "uninterpreted sort: " ++ s

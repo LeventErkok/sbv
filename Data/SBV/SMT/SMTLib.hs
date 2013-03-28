@@ -49,6 +49,10 @@ toSMTLib2 :: SMTLibConverter
          = unsupported "unbounded integers"
          | KReal `Set.member` kindInfo  && not (supportsReals solverCaps)
          = unsupported "algebraic reals"
+         | KFloat `Set.member` kindInfo  && not (supportsFloats solverCaps)
+         = unsupported "single-precision floating-point numbers"
+         | KDouble `Set.member` kindInfo  && not (supportsDoubles solverCaps)
+         = unsupported "double-precision floating-point numbers"
          | needsQuantifiers && not (supportsQuantifiers solverCaps)
          = unsupported "quantifiers"
          | not (null sorts) && not (supportsUninterpretedSorts solverCaps)

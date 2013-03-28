@@ -27,7 +27,7 @@ module Data.SBV.BitVectors.Model (
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
-  , sInt64s, sInteger, sIntegers, sReal, sReals, toSReal, slet
+  , sInt64s, sInteger, sIntegers, sReal, sReals, toSReal, sFloat, sFloats, sDouble, sDoubles, slet
   )
   where
 
@@ -55,9 +55,9 @@ noUnint x = error $ "Unexpected operation called on uninterpreted value: " ++ sh
 noUnint2 :: String -> String -> a
 noUnint2 x y = error $ "Unexpected binary operation called on uninterpreted values: " ++ show (x, y)
 
-liftSym1 :: (State -> Kind -> SW -> IO SW) -> (AlgReal -> AlgReal) -> (Integer -> Integer) -> SBV b -> SBV b
-liftSym1 _   opCR opCI   (SBV k (Left a)) = SBV k $ Left  $ mapCW opCR opCI noUnint a
-liftSym1 opS _    _    a@(SBV k _)        = SBV k $ Right $ cache c
+liftSym1 :: (State -> Kind -> SW -> IO SW) -> (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> SBV b -> SBV b
+liftSym1 _   opCR opCI opCF opCD   (SBV k (Left a)) = SBV k $ Left  $ mapCW opCR opCI opCF opCD noUnint a
+liftSym1 opS _    _    _    _    a@(SBV k _)        = SBV k $ Right $ cache c
    where c st = do swa <- sbvToSW st a
                    opS st k swa
 
@@ -67,13 +67,13 @@ liftSW2 opS k a b = cache c
                   sw2 <- sbvToSW st b
                   opS st k sw1 sw2
 
-liftSym2 :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> SBV b -> SBV b -> SBV b
-liftSym2 _   okCW opCR opCI   (SBV k (Left a)) (SBV _ (Left b)) | okCW a b = SBV k $ Left  $ mapCW2 opCR opCI noUnint2 a b
-liftSym2 opS _    _    _    a@(SBV k _)        b                           = SBV k $ Right $ liftSW2 opS k a b
+liftSym2 :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (Float -> Float -> Float) -> (Double -> Double -> Double) -> SBV b -> SBV b -> SBV b
+liftSym2 _   okCW opCR opCI opCF opCD   (SBV k (Left a)) (SBV _ (Left b)) | okCW a b = SBV k $ Left  $ mapCW2 opCR opCI opCF opCD noUnint2 a b
+liftSym2 opS _    _    _    _    _    a@(SBV k _)        b                           = SBV k $ Right $ liftSW2 opS k a b
 
-liftSym2B :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> Bool) -> (Integer -> Integer -> Bool) -> SBV b -> SBV b -> SBool
-liftSym2B _   okCW opCR opCI (SBV _ (Left a)) (SBV _ (Left b)) | okCW a b = literal (liftCW2 opCR opCI noUnint2 a b)
-liftSym2B opS _    _    _    a                b                           = SBV (KBounded False 1) $ Right $ liftSW2 opS (KBounded False 1) a b
+liftSym2B :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> Bool) -> (Integer -> Integer -> Bool) -> (Float -> Float -> Bool) -> (Double -> Double -> Bool) -> SBV b -> SBV b -> SBool
+liftSym2B _   okCW opCR opCI opCF opCD (SBV _ (Left a)) (SBV _ (Left b)) | okCW a b = literal (liftCW2 opCR opCI opCF opCD noUnint2 a b)
+liftSym2B opS _    _    _    _    _    a                b                           = SBV (KBounded False 1) $ Right $ liftSW2 opS (KBounded False 1) a b
 
 liftSym1Bool :: (State -> Kind -> SW -> IO SW) -> (Bool -> Bool) -> SBool -> SBool
 liftSym1Bool _   opC (SBV _ (Left a)) = literal $ opC $ cwToBool a
@@ -207,6 +207,22 @@ instance SymWord AlgReal where
   mbMaxBound = Nothing
   mbMinBound = Nothing
 
+instance SymWord Float where
+  mkSymWord  = genMkSymVar KFloat
+  literal    = SBV KFloat . Left . CW KFloat . CWFloat
+  fromCW (CW _ (CWFloat a)) = a
+  fromCW c                  = error $ "SymWord.Float: Unexpected non-float value: " ++ show c
+  mbMaxBound = Nothing
+  mbMinBound = Nothing
+
+instance SymWord Double where
+  mkSymWord  = genMkSymVar KDouble
+  literal    = SBV KDouble . Left . CW KDouble . CWDouble
+  fromCW (CW _ (CWDouble a)) = a
+  fromCW c                   = error $ "SymWord.Double: Unexpected non-double value: " ++ show c
+  mbMaxBound = Nothing
+  mbMinBound = Nothing
+
 ------------------------------------------------------------------------------------
 -- * Smart constructors for creating symbolic values. These are not strictly
 -- necessary, as they are mere aliases for 'symbolic' and 'symbolics', but 
@@ -300,6 +316,22 @@ sReal = symbolic
 sReals :: [String] -> Symbolic [SReal]
 sReals = symbolics
 
+-- | Declare an 'SFloat'
+sFloat :: String -> Symbolic SFloat
+sFloat = symbolic
+
+-- | Declare a list of 'SFloat's
+sFloats :: [String] -> Symbolic [SFloat]
+sFloats = symbolics
+
+-- | Declare an 'SDouble'
+sDouble :: String -> Symbolic SDouble
+sDouble = symbolic
+
+-- | Declare a list of 'SDouble's
+sDoubles :: [String] -> Symbolic [SDouble]
+sDoubles = symbolics
+
 -- | Promote an SInteger to an SReal
 toSReal :: SInteger -> SReal
 toSReal x
@@ -348,8 +380,8 @@ for natural reasons..
 -}
 
 instance EqSymbolic (SBV a) where
-  (.==) = liftSym2B (mkSymOpSC (eqOpt trueSW)  Equal)    rationalCheck (==) (==)
-  (./=) = liftSym2B (mkSymOpSC (eqOpt falseSW) NotEqual) rationalCheck (/=) (/=)
+  (.==) = liftSym2B (mkSymOpSC (eqOpt trueSW)  Equal)    rationalCheck (==) (==) (==) (==)
+  (./=) = liftSym2B (mkSymOpSC (eqOpt falseSW) NotEqual) rationalCheck (/=) (/=) (/=) (/=)
 
 eqOpt :: SW -> SW -> SW -> Maybe SW
 eqOpt w x y = if x == y then Just w else Nothing
@@ -358,19 +390,19 @@ instance SymWord a => OrdSymbolic (SBV a) where
   x .< y
     | Just mb <- mbMaxBound, x `isConcretely` (== mb) = false
     | Just mb <- mbMinBound, y `isConcretely` (== mb) = false
-    | True                                            = liftSym2B (mkSymOpSC (eqOpt falseSW) LessThan)    rationalCheck (<)  (<)  x y
+    | True                                            = liftSym2B (mkSymOpSC (eqOpt falseSW) LessThan)    rationalCheck (<)  (<)  (<) (<) x y
   x .<= y
     | Just mb <- mbMinBound, x `isConcretely` (== mb) = true
     | Just mb <- mbMaxBound, y `isConcretely` (== mb) = true
-    | True                                            = liftSym2B (mkSymOpSC (eqOpt trueSW) LessEq)       rationalCheck (<=) (<=) x y
+    | True                                            = liftSym2B (mkSymOpSC (eqOpt trueSW) LessEq)       rationalCheck (<=) (<=) (<=) (<=) x y
   x .> y
     | Just mb <- mbMinBound, x `isConcretely` (== mb) = false
     | Just mb <- mbMaxBound, y `isConcretely` (== mb) = false
-    | True                                            = liftSym2B (mkSymOpSC (eqOpt falseSW) GreaterThan) rationalCheck (>)  (>)  x y
+    | True                                            = liftSym2B (mkSymOpSC (eqOpt falseSW) GreaterThan) rationalCheck (>)  (>)  (>) (>) x y
   x .>= y
     | Just mb <- mbMaxBound, x `isConcretely` (== mb) = true
     | Just mb <- mbMinBound, y `isConcretely` (== mb) = true
-    | True                                            = liftSym2B (mkSymOpSC (eqOpt trueSW) GreaterEq)    rationalCheck (>=) (>=) x y
+    | True                                            = liftSym2B (mkSymOpSC (eqOpt trueSW) GreaterEq)    rationalCheck (>=) (>=) (>=) (>=) x y
 
 -- Bool
 instance EqSymbolic Bool where
@@ -549,16 +581,16 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
   x + y
     | x `isConcretely` (== 0) = y
     | y `isConcretely` (== 0) = x
-    | True                    = liftSym2 (mkSymOp Plus)  rationalCheck (+) (+) x y
+    | True                    = liftSym2 (mkSymOp Plus)  rationalCheck (+) (+) (+) (+) x y
   x * y
     | x `isConcretely` (== 0) = 0
     | y `isConcretely` (== 0) = 0
     | x `isConcretely` (== 1) = y
     | y `isConcretely` (== 1) = x
-    | True                    = liftSym2 (mkSymOp Times) rationalCheck (*) (*) x y
+    | True                    = liftSym2 (mkSymOp Times) rationalCheck (*) (*) (*) (*) x y
   x - y
     | y `isConcretely` (== 0) = x
-    | True                    = liftSym2 (mkSymOp Minus) rationalCheck (-) (-) x y
+    | True                    = liftSym2 (mkSymOp Minus) rationalCheck (-) (-) (-) (-) x y
   abs a
    | hasSign a = ite (a .< 0) (-a) a
    | True      = a
@@ -568,7 +600,7 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
 
 instance Fractional SReal where
   fromRational = literal . fromRational
-  x / y        = liftSym2 (mkSymOp Quot) rationalCheck (/) die x y
+  x / y        = liftSym2 (mkSymOp Quot) rationalCheck (/) die (/) (/) x y
    where -- should never happen
          die = error $ "impossible: non-real value found in Fractional.SReal " ++ show (x, y)
 
@@ -587,8 +619,20 @@ rationalSBVCheck _                    _                    = True
 noReal :: String -> AlgReal -> AlgReal -> AlgReal
 noReal o a b = error $ "SBV.AlgReal." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
 
+noFloat :: String -> Float -> Float -> Float
+noFloat o a b = error $ "SBV.Float." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
+
+noDouble :: String -> Double -> Double -> Double
+noDouble o a b = error $ "SBV.Double." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
+
 noRealUnary :: String -> AlgReal -> AlgReal
 noRealUnary o a = error $ "SBV.AlgReal." ++ o ++ ": Unexpected argument: " ++ show a
+
+noFloatUnary :: String -> Float -> Float
+noFloatUnary o a = error $ "SBV.Float." ++ o ++ ": Unexpected argument: " ++ show a
+
+noDoubleUnary :: String -> Double -> Double
+noDoubleUnary o a = error $ "SBV.Double." ++ o ++ ": Unexpected argument: " ++ show a
 
 -- NB. In the optimizations below, use of -1 is valid as
 -- -1 has all bits set to True for both signed and unsigned values
@@ -598,38 +642,38 @@ instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
     | x `isConcretely` (== -1) = y
     | y `isConcretely` (== 0)  = 0
     | y `isConcretely` (== -1) = x
-    | True                     = liftSym2 (mkSymOp  And) (const (const True)) (noReal ".&.") (.&.) x y
+    | True                     = liftSym2 (mkSymOp  And) (const (const True)) (noReal ".&.") (.&.) (noFloat ".&.") (noDouble ".&.") x y
   x .|. y
     | x `isConcretely` (== 0)  = y
     | x `isConcretely` (== -1) = -1
     | y `isConcretely` (== 0)  = x
     | y `isConcretely` (== -1) = -1
-    | True                     = liftSym2 (mkSymOp  Or)  (const (const True)) (noReal ".|.") (.|.) x y
+    | True                     = liftSym2 (mkSymOp  Or)  (const (const True)) (noReal ".|.") (.|.) (noFloat ".|.") (noDouble ".|.") x y
   x `xor` y
     | x `isConcretely` (== 0)  = y
     | y `isConcretely` (== 0)  = x
-    | True                     = liftSym2 (mkSymOp  XOr) (const (const True)) (noReal "xor") xor x y
-  complement = liftSym1 (mkSymOp1 Not) (noRealUnary "Not") complement
+    | True                     = liftSym2 (mkSymOp  XOr) (const (const True)) (noReal "xor") xor (noFloat "xor") (noDouble "xor") x y
+  complement = liftSym1 (mkSymOp1 Not) (noRealUnary "complement") complement (noFloatUnary "complement") (noDoubleUnary "complement")
   bitSize  _ = intSizeOf (undefined :: a)
   isSigned _ = hasSign   (undefined :: a)
   bit i      = 1 `shiftL` i
   shiftL x y
     | y < 0       = shiftR x (-y)
     | y == 0      = x
-    | True        = liftSym1 (mkSymOp1 (Shl y)) (noRealUnary "shiftL") (`shiftL` y) x
+    | True        = liftSym1 (mkSymOp1 (Shl y)) (noRealUnary "shiftL") (`shiftL` y) (noFloatUnary "shiftL") (noDoubleUnary "shiftL") x
   shiftR x y
     | y < 0       = shiftL x (-y)
     | y == 0      = x
-    | True        = liftSym1 (mkSymOp1 (Shr y)) (noRealUnary "shiftR") (`shiftR` y) x
+    | True        = liftSym1 (mkSymOp1 (Shr y)) (noRealUnary "shiftR") (`shiftR` y) (noFloatUnary "shiftR") (noDoubleUnary "shiftR") x
   rotateL x y
     | y < 0       = rotateR x (-y)
     | y == 0      = x
-    | isBounded x = let sz = bitSize x in liftSym1 (mkSymOp1 (Rol (y `mod` sz))) (noRealUnary "rotateL") (rot True sz y) x
+    | isBounded x = let sz = bitSize x in liftSym1 (mkSymOp1 (Rol (y `mod` sz))) (noRealUnary "rotateL") (rot True sz y) (noFloatUnary "rotateL") (noDoubleUnary "rotateL") x
     | True        = shiftL x y   -- for unbounded Integers, rotateL is the same as shiftL in Haskell
   rotateR x y
     | y < 0       = rotateL x (-y)
     | y == 0      = x
-    | isBounded x = let sz = bitSize x in liftSym1 (mkSymOp1 (Ror (y `mod` sz))) (noRealUnary "rotateR") (rot False sz y) x
+    | isBounded x = let sz = bitSize x in liftSym1 (mkSymOp1 (Ror (y `mod` sz))) (noRealUnary "rotateR") (rot False sz y) (noFloatUnary "rotateR") (noDoubleUnary "rotateR") x
     | True        = shiftR x y   -- for unbounded integers, rotateR is the same as shiftR in Haskell
   -- NB. testBit is *not* implementable on non-concrete symbolic words
   x `testBit` i

@@ -77,9 +77,11 @@ cvt solverCaps kindInfo isSat comments _inps skolemInps consts tbls arrs uis axs
   where -- the logic is an over-approaximation
         hasInteger = KUnbounded `Set.member` kindInfo
         hasReal    = KReal      `Set.member` kindInfo
+        hasFloat   = KFloat     `Set.member` kindInfo
+        hasDouble  = KDouble    `Set.member` kindInfo
         sorts      = [s | KUninterpreted s <- Set.toList kindInfo]
         logic
-           | hasInteger || hasReal || not (null sorts)
+           | hasInteger || hasReal || hasFloat || hasDouble || not (null sorts)
            = case mbDefaultLogic solverCaps of
                 Nothing -> ["; Has unbounded values (Int/Real) or sorts; no logic specified."]   -- combination, let the solver pick
                 Just l  -> ["(set-logic " ++ l ++ ")"]
@@ -235,6 +237,8 @@ smtType (KBounded False 1) = "Bool"
 smtType (KBounded _ sz)    = "(_ BitVec " ++ show sz ++ ")"
 smtType KUnbounded         = "Int"
 smtType KReal              = "Real"
+smtType KFloat             = "(_ FP  8 24)"
+smtType KDouble            = "(_ FP 11 53)"
 smtType (KUninterpreted s) = s
 
 cvtType :: SBVType -> String
@@ -324,6 +328,8 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                               KBounded _ n     -> (2::Integer)^n > fromIntegral l
                               KUnbounded       -> True
                               KReal            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
+                              KFloat           -> error "SBV.SMT.SMTLib2.cvtExp: unexpected float valued index"
+                              KDouble          -> error "SBV.SMT.SMTLib2.cvtExp: unexpected double valued index"
                               KUninterpreted s -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
                 lkUp = "(" ++ getTable tableMap t ++ " " ++ ssw i ++ ")"
                 cond
@@ -333,6 +339,8 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 KBounded{}       -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
                                 KUnbounded       -> ("<", "<=")
                                 KReal            -> ("<", "<=")
+                                KFloat           -> ("<", "<=")
+                                KDouble          -> ("<", "<=")
                                 KUninterpreted s -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
                 mkCnst = cvtCW . mkConstCW (kindOf i)
                 le0  = "(" ++ less ++ " " ++ ssw i ++ " " ++ mkCnst 0 ++ ")"
