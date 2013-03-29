@@ -383,8 +383,15 @@ instance EqSymbolic (SBV a) where
   (.==) = liftSym2B (mkSymOpSC (eqOpt trueSW)  Equal)    rationalCheck (==) (==) (==) (==)
   (./=) = liftSym2B (mkSymOpSC (eqOpt falseSW) NotEqual) rationalCheck (/=) (/=) (/=) (/=)
 
+-- | eqOpt says the references are to the same SW, thus we can optimize. Note that
+-- we explicitly disallow KFloat/KDouble here. Why? Because it's *NOT* true that
+-- NaN == NaN, NaN >= NaN, and so-forth. So, we have to make sure we don't optimize
+-- floats and doubles, in case the argument turns out to be NaN.
 eqOpt :: SW -> SW -> SW -> Maybe SW
-eqOpt w x y = if x == y then Just w else Nothing
+eqOpt w x y = case kindOf x of
+                KFloat  -> Nothing
+                KDouble -> Nothing
+                _       -> if x == y then Just w else Nothing
 
 instance SymWord a => OrdSymbolic (SBV a) where
   x .< y

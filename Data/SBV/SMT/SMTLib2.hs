@@ -79,9 +79,14 @@ cvt solverCaps kindInfo isSat comments _inps skolemInps consts tbls arrs uis axs
         hasReal    = KReal      `Set.member` kindInfo
         hasFloat   = KFloat     `Set.member` kindInfo
         hasDouble  = KDouble    `Set.member` kindInfo
+        hasBVs     = not $ null $ [() | KBounded{} <- Set.toList kindInfo]
         sorts      = [s | KUninterpreted s <- Set.toList kindInfo]
         logic
-           | hasInteger || hasReal || hasFloat || hasDouble || not (null sorts)
+           | hasDouble || hasFloat    -- NB. We don't check for quantifiers here, we probably should..
+           = if hasBVs
+             then ["(set-logic QF_FPABV)"]
+             else ["(set-logic QF_FPA)"]
+           | hasInteger || hasReal || not (null sorts)
            = case mbDefaultLogic solverCaps of
                 Nothing -> ["; Has unbounded values (Int/Real) or sorts; no logic specified."]   -- combination, let the solver pick
                 Just l  -> ["(set-logic " ++ l ++ ")"]
@@ -298,10 +303,12 @@ getTable m i
 cvtExp :: SkolemMap -> TableMap -> SBVExpr -> String
 cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
   where ssw = cvtSW skolemMap
-        bvOp    = all isBounded arguments
-        intOp   = any isInteger arguments
-        realOp  = any isReal arguments
-        boolOp  = all isBoolean arguments
+        bvOp     = all isBounded arguments
+        intOp    = any isInteger arguments
+        realOp   = any isReal arguments
+        doubleOp = any isDouble arguments
+        floatOp  = any isFloat arguments
+        boolOp   = all isBoolean arguments
         bad | intOp = error $ "SBV.SMTLib2: Unsupported operation on unbounded integers: " ++ show expr
             | True  = error $ "SBV.SMTLib2: Unsupported operation on real values: " ++ show expr
         ensureBV = bvOp || bad
@@ -313,10 +320,18 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         lift1B bOp vOp
           | boolOp = lift1 bOp
           | True   = lift1 vOp
-        eq sgn sbvs
+        eqBV sgn sbvs
            | boolOp = lift2 "=" sgn sbvs
            | True   = "(= " ++ lift2 "bvcomp" sgn sbvs ++ " #b1)"
-        neq sgn sbvs = "(not " ++ eq sgn sbvs ++ ")"
+        neqBV sgn sbvs = "(not " ++ eqBV sgn sbvs ++ ")"
+        equal sgn sbvs
+          | doubleOp = lift2 "==" sgn sbvs
+          | floatOp  = lift2 "==" sgn sbvs
+          | True     = lift2 "=" sgn sbvs
+        notEqual sgn sbvs
+          | doubleOp = "(not " ++ equal sgn sbvs ++ ")"
+          | floatOp  = "(not " ++ equal sgn sbvs ++ ")"
+          | True     = lift2 "distinct" sgn sbvs
         lift2S oU oS sgn = lift2 (if sgn then oS else oU) sgn
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
         lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib2.sh.lift1: Unexpected arguments: "   ++ show (o, sbvs)
@@ -390,6 +405,8 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           = f (any hasSign args) (map ssw args)
           | realOp, Just f <- lookup op smtOpRealTable
           = f (any hasSign args) (map ssw args)
+          | floatOp || doubleOp, Just f <- lookup op smtOpFloatDoubleTable
+          = f (any hasSign args) (map ssw args)
           | Just f <- lookup op uninterpretedTable
           = f (map ssw args)
           | True
@@ -399,8 +416,8 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 , (Times,         lift2   "bvmul")
                                 , (Quot,          lift2S  "bvudiv" "bvsdiv")
                                 , (Rem,           lift2S  "bvurem" "bvsrem")
-                                , (Equal,         eq)
-                                , (NotEqual,      neq)
+                                , (Equal,         eqBV)
+                                , (NotEqual,      neqBV)
                                 , (LessThan,      lift2S  "bvult" "bvslt")
                                 , (GreaterThan,   lift2S  "bvugt" "bvsgt")
                                 , (LessEq,        lift2S  "bvule" "bvsle")
@@ -413,11 +430,12 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                ++ [ (Quot,        lift2   "div")
                                   , (Rem,         lift2   "mod")
                                   ]
+                smtOpFloatDoubleTable = smtIntRealShared
                 smtIntRealShared  = [ (Plus,          lift2   "+")
                                     , (Minus,         lift2   "-")
                                     , (Times,         lift2   "*")
-                                    , (Equal,         lift2S  "=" "=")
-                                    , (NotEqual,      lift2S  "distinct" "distinct")
+                                    , (Equal,         equal)
+                                    , (NotEqual,      notEqual)
                                     , (LessThan,      lift2S  "<"  "<")
                                     , (GreaterThan,   lift2S  ">"  ">")
                                     , (LessEq,        lift2S  "<=" "<=")

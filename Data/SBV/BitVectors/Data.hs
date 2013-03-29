@@ -241,6 +241,8 @@ class HasKind a where
   isBoolean       :: a -> Bool
   isBounded       :: a -> Bool
   isReal          :: a -> Bool
+  isFloat         :: a -> Bool
+  isDouble        :: a -> Bool
   isInteger       :: a -> Bool
   isUninterpreted :: a -> Bool
   showType        :: a -> String
@@ -264,6 +266,10 @@ class HasKind a where
   isBounded       x | KBounded{}       <- kindOf x = True
                     | True                         = False
   isReal          x | KReal{}          <- kindOf x = True
+                    | True                         = False
+  isFloat         x | KFloat{}         <- kindOf x = True
+                    | True                         = False
+  isDouble        x | KDouble{}        <- kindOf x = True
                     | True                         = False
   isInteger      x  | KUnbounded{}     <- kindOf x = True
                     | True                         = False
