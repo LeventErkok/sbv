@@ -23,6 +23,7 @@ import SBVTest
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test $
         genReals
+     ++ genFloats
      ++ genQRems
      ++ genBinTest  "+"                (+)
      ++ genBinTest  "-"                (-)
@@ -212,6 +213,31 @@ genReals = map mkTest $
   where pair (x, y, a) b   = (x, y, Just a == unliteral b)
         mkTest (nm, (x, y, s)) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
 
+genFloats :: [Test]
+genFloats = map mkTest $
+        map ("+",)  (zipWith pair [(show x, show y, x +  y) | x <- fs, y <- fs        ] [x +   y | x <- sfs,  y <- sfs                       ])
+     ++ map ("-",)  (zipWith pair [(show x, show y, x -  y) | x <- fs, y <- fs        ] [x -   y | x <- sfs,  y <- sfs                       ])
+     ++ map ("*",)  (zipWith pair [(show x, show y, x *  y) | x <- fs, y <- fs        ] [x *   y | x <- sfs,  y <- sfs                       ])
+     ++ map ("<",)  (zipWith pair [(show x, show y, x <  y) | x <- fs, y <- fs        ] [x .<  y | x <- sfs,  y <- sfs                       ])
+     ++ map ("<=",) (zipWith pair [(show x, show y, x <= y) | x <- fs, y <- fs        ] [x .<= y | x <- sfs,  y <- sfs                       ])
+     ++ map (">",)  (zipWith pair [(show x, show y, x >  y) | x <- fs, y <- fs        ] [x .>  y | x <- sfs,  y <- sfs                       ])
+     ++ map (">=",) (zipWith pair [(show x, show y, x >= y) | x <- fs, y <- fs        ] [x .>= y | x <- sfs,  y <- sfs                       ])
+     ++ map ("==",) (zipWith pair [(show x, show y, x == y) | x <- fs, y <- fs        ] [x .== y | x <- sfs,  y <- sfs                       ])
+     ++ map ("/=",) (zipWith pair [(show x, show y, x /= y) | x <- fs, y <- fs        ] [x ./= y | x <- sfs,  y <- sfs                       ])
+     ++ map ("/",)  (zipWith pair [(show x, show y, x /  y) | x <- fs, y <- fs, y /= 0] [x / y   | x <- sfs,  y <- sfs, unliteral y /= Just 0])
+     ++ map ("+",)  (zipWith pair [(show x, show y, x +  y) | x <- ds, y <- ds        ] [x +   y | x <- sds,  y <- sds                       ])
+     ++ map ("-",)  (zipWith pair [(show x, show y, x -  y) | x <- ds, y <- ds        ] [x -   y | x <- sds,  y <- sds                       ])
+     ++ map ("*",)  (zipWith pair [(show x, show y, x *  y) | x <- ds, y <- ds        ] [x *   y | x <- sds,  y <- sds                       ])
+     ++ map ("<",)  (zipWith pair [(show x, show y, x <  y) | x <- ds, y <- ds        ] [x .<  y | x <- sds,  y <- sds                       ])
+     ++ map ("<=",) (zipWith pair [(show x, show y, x <= y) | x <- ds, y <- ds        ] [x .<= y | x <- sds,  y <- sds                       ])
+     ++ map (">",)  (zipWith pair [(show x, show y, x >  y) | x <- ds, y <- ds        ] [x .>  y | x <- sds,  y <- sds                       ])
+     ++ map (">=",) (zipWith pair [(show x, show y, x >= y) | x <- ds, y <- ds        ] [x .>= y | x <- sds,  y <- sds                       ])
+     ++ map ("==",) (zipWith pair [(show x, show y, x == y) | x <- ds, y <- ds        ] [x .== y | x <- sds,  y <- sds                       ])
+     ++ map ("/=",) (zipWith pair [(show x, show y, x /= y) | x <- ds, y <- ds        ] [x ./= y | x <- sds,  y <- sds                       ])
+     ++ map ("/",)  (zipWith pair [(show x, show y, x /  y) | x <- ds, y <- ds, y /= 0] [x / y   | x <- sds,  y <- sds, unliteral y /= Just 0])
+  where pair (x, y, a) b   = (x, y, Just a == unliteral b)
+        mkTest (nm, (x, y, s)) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
+
 -- Concrete test data
 xsSigned, xsUnsigned :: (Num a, Enum a, Bounded a) => [a]
 xsUnsigned = take 5 (iterate (1+) minBound) ++ take 5 (iterate (\x -> x-1) maxBound)
@@ -272,13 +298,26 @@ siUBs :: [SInteger]
 siUBs = map literal iUBs
 
 rs :: [AlgReal]
-rs = [fromRational (i % d) | i <- is, d <- ds]
- where is = [-1000000 .. -999998] ++ [-2 .. 2] ++ [999998 ..  1000001]
-       ds = [2 .. 5] ++ [98 .. 102] ++ [999998 .. 1000000]
+rs = [fromRational (i % d) | i <- nums, d <- dens]
+ where nums = [-1000000 .. -999998] ++ [-2 .. 2] ++ [999998 ..  1000001]
+       dens = [2 .. 5] ++ [98 .. 102] ++ [999998 .. 1000000]
 
 srs :: [SReal]
 srs = map literal rs
 
+fs :: [Float]
+fs = xs ++ [-0.5, 0, 0.5] ++ map (* (-1)) xs
+ where xs = [0.68302244, 0.5268265, 0.10283524, 5.8336496e-2]
+
+sfs :: [SFloat]
+sfs = map literal fs
+
+ds :: [Double]
+ds = xs ++ [-0.5, 0, 0.5] ++ map (* (-1)) xs
+ where xs = [2.516632060108026e-2,0.8601891300751106,7.518897767550192e-2,1.1656043286207285e-2]
+
+sds :: [SDouble]
+sds = map literal ds
 
 -- On 32 bit installations of GHC, divMod is buggy for Int64
 -- Thus causing our tests to fail. See ticket: http://hackage.haskell.org/trac/ghc/ticket/7233
