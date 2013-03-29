@@ -196,6 +196,8 @@ mkConst cfg  (CW KReal (CWAlgReal (AlgRational _ r))) = double (fromRational r :
         sRealSuffix CgLongDouble = text "L"
 mkConst cfg (CW KUnbounded       (CWInteger i)) = showSizedConst i (True, fromJust (cgInteger cfg))
 mkConst _   (CW (KBounded sg sz) (CWInteger i)) = showSizedConst i (sg,   sz)
+mkConst _   (CW KFloat           (CWFloat f))   = float f <> text "F"
+mkConst _   (CW KDouble          (CWDouble d))  = double d
 mkConst _   cw                                  = die $ "mkConst: " ++ show cw
 
 showSizedConst :: Integer -> (Bool, Int) -> Doc

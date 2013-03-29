@@ -685,10 +685,14 @@ getTableIndex st at rt elts = do
                           modifyIORef (rtblMap st) (Map.insert elts (i, at, rt))
                           return i
 
--- | Create a constant word
+-- | Create a constant word from an integral
 mkConstCW :: Integral a => Kind -> a -> CW
-mkConstCW KReal a = normCW $ CW KReal (CWAlgReal (fromInteger (toInteger a)))
-mkConstCW k     a = normCW $ CW k     (CWInteger (toInteger a))
+mkConstCW k@(KBounded{})     a = normCW $ CW k          (CWInteger (toInteger a))
+mkConstCW KUnbounded         a = normCW $ CW KUnbounded (CWInteger (toInteger a))
+mkConstCW KReal              a = normCW $ CW KReal      (CWAlgReal (fromInteger (toInteger a)))
+mkConstCW KFloat             a = normCW $ CW KFloat     (CWFloat   (fromInteger (toInteger a)))
+mkConstCW KDouble            a = normCW $ CW KDouble    (CWDouble  (fromInteger (toInteger a)))
+mkConstCW (KUninterpreted s) a = error $ "Unexpected call to mkConstCW with uninterpreted kind: " ++ s ++ " with value: " ++ show (toInteger a)
 
 -- | Create a new expression; hash-cons as necessary
 newExpr :: State -> Kind -> SBVExpr -> IO SW

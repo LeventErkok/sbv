@@ -105,7 +105,7 @@ interpretSolverModelLine inps line = either err extract (parseSExpr line)
                                                   ++ 's':v ++ " in "  ++ show matches
         isInput _       = Nothing
         extract (SApp [SApp [v, SNum i]])  | Just (n, s, nm) <- getInput v = [(n, (nm, mkConstCW (kindOf s) i))]
-        extract (SApp [SApp [v, SReal i]]) | Just (n, _, nm) <- getInput v = [(n, (nm, CW KReal      (CWAlgReal i)))]
+        extract (SApp [SApp [v, SReal i]]) | Just (n, s, nm) <- getInput v = [(n, (nm, mkFPCW (kindOf s) i))]
         extract (SApp [SApp [v, SCon i]])  | Just (n, s, nm) <- getInput v = [(n, (nm, CW (kindOf s) (CWUninterpreted i)))]
         -- weird lambda app that CVC4 seems to throw out.. logic below derived from what I saw CVC4 print, hopefully sufficient
         extract (SApp (SApp (v : SApp (SCon "LAMBDA" : xs) : _) : _)) | Just{} <- getInput v, not (null xs) = extract (SApp [SApp [v, last xs]])
@@ -113,3 +113,7 @@ interpretSolverModelLine inps line = either err extract (parseSExpr line)
                                                                                    ++ "\n\tInput: " ++ show line
                                                                                    ++ "\n\tParse: " ++  show r
         extract _                                                          = []
+        mkFPCW KReal   i = CW KReal (CWAlgReal i)
+        mkFPCW KFloat  _ = error $ "SBV.SMTLib2.mkFPCW.KFloat : TBD"
+        mkFPCW KDouble _ = error $ "SBV.SMTLib2.mkFPCW.KDouble: TBD"
+        mkFPCW k       v = error $ "SBV.SMTLib2.mkFPCW: Unexpected kind: " ++ show k ++ " with value: " ++ show v ++ " received."
