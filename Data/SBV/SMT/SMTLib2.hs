@@ -22,11 +22,12 @@ import Numeric (showHex)
 
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
+import Data.SBV.BitVectors.PrettyNum (showSMTFloat, showSMTDouble)
 
 -- | Add constraints to generate /new/ models. This function is used to query the SMT-solver, while
 -- disallowing a previous model.
-addNonEqConstraints :: [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
-addNonEqConstraints qinps allNonEqConstraints (SMTLibPgm _ (aliasTable, pre, post))
+addNonEqConstraints :: RoundingMode -> [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
+addNonEqConstraints rm qinps allNonEqConstraints (SMTLibPgm _ (aliasTable, pre, post))
   | null allNonEqConstraints
   = Just $ intercalate "\n" $ pre ++ post
   | null refutedModel
@@ -34,9 +35,9 @@ addNonEqConstraints qinps allNonEqConstraints (SMTLibPgm _ (aliasTable, pre, pos
   | True
   = Just $ intercalate "\n" $ pre
     ++ [ "; --- refuted-models ---" ]
-    ++ concatMap nonEqs (map (map intName) nonEqConstraints)
+    ++ concatMap (nonEqs rm) (map (map intName) nonEqConstraints)
     ++ post
- where refutedModel = concatMap nonEqs (map (map intName) nonEqConstraints)
+ where refutedModel = concatMap (nonEqs rm) (map (map intName) nonEqConstraints)
        intName (s, c)
           | Just sw <- s `lookup` aliasTable = (show sw, c)
           | True                             = (s, c)
@@ -44,21 +45,22 @@ addNonEqConstraints qinps allNonEqConstraints (SMTLibPgm _ (aliasTable, pre, pos
        nonEqConstraints = filter (not . null) $ map (filter (\(s, _) -> s `elem` topUnivs)) allNonEqConstraints
        topUnivs = [s | (_, (_, s)) <- takeWhile (\p -> fst p == EX) qinps]
 
-nonEqs :: [(String, CW)] -> [String]
-nonEqs []     =  []
-nonEqs [sc]   =  ["(assert " ++ nonEq sc ++ ")"]
-nonEqs (sc:r) =  ["(assert (or " ++ nonEq sc]
-              ++ map (("            " ++) . nonEq) r
-              ++ ["        ))"]
+nonEqs :: RoundingMode -> [(String, CW)] -> [String]
+nonEqs _  []     =  []
+nonEqs rm [sc]   =  ["(assert " ++ nonEq rm sc ++ ")"]
+nonEqs rm (sc:r) =  ["(assert (or " ++ nonEq rm sc]
+                 ++ map (("            " ++) . nonEq rm) r
+                 ++ ["        ))"]
 
-nonEq :: (String, CW) -> String
-nonEq (s, c) = "(not (= " ++ s ++ " " ++ cvtCW c ++ "))"
+nonEq :: RoundingMode -> (String, CW) -> String
+nonEq rm (s, c) = "(not (= " ++ s ++ " " ++ cvtCW rm c ++ "))"
 
 tbd :: String -> a
 tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
-cvt :: SolverCapabilities           -- ^ capabilities of the current solver
+cvt :: RoundingMode                 -- ^ User selected rounding mode to be used for floating point arithmetic
+    -> SolverCapabilities           -- ^ capabilities of the current solver
     -> Set.Set Kind                 -- ^ kinds used
     -> Bool                         -- ^ is this a sat problem?
     -> [String]                     -- ^ extra comments to place on top
@@ -73,7 +75,7 @@ cvt :: SolverCapabilities           -- ^ capabilities of the current solver
     -> [SW]                         -- ^ extra constraints
     -> SW                           -- ^ output variable
     -> ([String], [String])
-cvt solverCaps kindInfo isSat comments _inps skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out = (pre, [])
+cvt rm solverCaps kindInfo isSat comments _inps skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out = (pre, [])
   where -- the logic is an over-approaximation
         hasInteger = KUnbounded `Set.member` kindInfo
         hasReal    = KReal      `Set.member` kindInfo
@@ -131,7 +133,7 @@ cvt solverCaps kindInfo isSat comments _inps skolemInps consts tbls arrs uis axs
              ++ [ impAlign (letAlign assertOut) ++ replicate noOfCloseParens ')' ]
         noOfCloseParens = length asgns + (if null foralls then 1 else 2) + (if null delayedEqualities then 0 else 1)
         (constTables, skolemTables) = ([(t, d) | (t, Left d) <- allTables], [(t, d) | (t, Right d) <- allTables])
-        allTables = [(t, genTableData skolemMap (not (null foralls), forallArgs) (map fst consts) t) | t <- tbls]
+        allTables = [(t, genTableData rm skolemMap (not (null foralls), forallArgs) (map fst consts) t) | t <- tbls]
         (arrayConstants, allArrayDelayeds) = unzip $ map (declArray (not (null foralls)) (map fst consts) skolemMap) arrs
         delayedEqualities@(~(deH:deTs)) = concatMap snd skolemTables ++ concat allArrayDelayeds
         foralls = [s | Left s <- skolemInps]
@@ -156,11 +158,11 @@ cvt solverCaps kindInfo isSat comments _inps skolemInps consts tbls arrs uis axs
           where mkConstTable (((t, _, _), _), _) = (t, "table" ++ show t)
                 mkSkTable    (((t, _, _), _), _) = (t, "table" ++ show t ++ forallArgs)
         asgns = F.toList asgnsSeq
-        mkLet (s, e) = "(let ((" ++ show s ++ " " ++ cvtExp skolemMap tableMap e ++ "))"
+        mkLet (s, e) = "(let ((" ++ show s ++ " " ++ cvtExp rm skolemMap tableMap e ++ "))"
         declConst useDefFun (s, c)
-          | useDefFun = ["(define-fun "   ++ varT ++ " " ++ cvtCW c ++ ")"]
+          | useDefFun = ["(define-fun "   ++ varT ++ " " ++ cvtCW rm c ++ ")"]
           | True      = [ "(declare-fun " ++ varT ++ ")"
-                        , "(assert (= "   ++ show s ++ " " ++ cvtCW c ++ "))"
+                        , "(assert (= "   ++ show s ++ " " ++ cvtCW rm c ++ "))"
                         ]
           where varT = show s ++ " " ++ swFunType [] s
         declSort s = "(declare-sort " ++ s ++ " 0)"
@@ -185,15 +187,15 @@ skolemTable qsIn (((i, ak, rk), _elts), _) = decl
         decl = "(declare-fun " ++ t ++ " (" ++ qs ++ smtType ak ++ ") " ++ smtType rk ++ ")"
 
 -- Left if all constants, Right if otherwise
-genTableData :: SkolemMap -> (Bool, String) -> [SW] -> ((Int, Kind, Kind), [SW]) -> Either [String] [String]
-genTableData skolemMap (_quantified, args) consts ((i, aknd, _), elts)
+genTableData :: RoundingMode -> SkolemMap -> (Bool, String) -> [SW] -> ((Int, Kind, Kind), [SW]) -> Either [String] [String]
+genTableData rm skolemMap (_quantified, args) consts ((i, aknd, _), elts)
   | null post = Left  (map (topLevel . snd) pre)
   | True      = Right (map (nested   . snd) (pre ++ post))
   where ssw = cvtSW skolemMap
         (pre, post) = partition fst (zipWith mkElt elts [(0::Int)..])
         t           = "table" ++ show i
         mkElt x k   = (isReady, (idx, ssw x))
-          where idx = cvtCW (mkConstCW aknd k)
+          where idx = cvtCW rm (mkConstCW aknd k)
                 isReady = x `elem` consts
         topLevel (idx, v) = "(= (" ++ t ++ " " ++ idx ++ ") " ++ v ++ ")"
         nested   (idx, v) = "(= (" ++ t ++ args ++ " " ++ idx ++ ") " ++ v ++ ")"
@@ -267,24 +269,22 @@ hex 1  v = "#b" ++ show v
 hex sz v = "#x" ++ pad (sz `div` 4) (showHex v "")
   where pad n s = replicate (n - length s) '0' ++ s
 
-cvtCW :: CW -> String
-cvtCW x | isBoolean x = if w == 0 then "false" else "true"
-  where CWInteger w = cwVal x
-cvtCW x | isUninterpreted x = s
-  where CWUninterpreted s = cwVal x
-cvtCW x | isReal x = algRealToSMTLib2 w
-  where CWAlgReal w = cwVal x
-cvtCW x | not (isBounded x) = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
-  where CWInteger w = cwVal x
-cvtCW x | not (hasSign x) = hex (intSizeOf x) w
-  where CWInteger w = cwVal x
--- signed numbers (with 2's complement representation) is problematic
--- since there's no way to put a bvneg over a positive number to get minBound..
--- Hence, we punt and use binary notation in that particular case
-cvtCW x | cwVal x == CWInteger least = mkMinBound (intSizeOf x)
-  where least = negate (2 ^ intSizeOf x)
-cvtCW x = negIf (w < 0) $ hex (intSizeOf x) (abs w)
-  where CWInteger w = cwVal x
+cvtCW :: RoundingMode -> CW -> String
+cvtCW rm x
+  | isBoolean       x = let CWInteger       w = cwVal x in if w == 0 then "false" else "true"
+  | isUninterpreted x = let CWUninterpreted s = cwVal x in s
+  | isReal          x = let CWAlgReal       r = cwVal x in algRealToSMTLib2 r
+  | isFloat         x = let CWFloat         f = cwVal x in showSMTFloat  rm f
+  | isDouble        x = let CWDouble        d = cwVal x in showSMTDouble rm d
+  | not (isBounded x) = let CWInteger       w = cwVal x in if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
+  | not (hasSign x)   = let CWInteger       w = cwVal x in hex (intSizeOf x) w
+  -- signed numbers (with 2's complement representation) is problematic
+  -- since there's no way to put a bvneg over a positive number to get minBound..
+  -- Hence, we punt and use binary notation in that particular case
+  | True              = let CWInteger        w = cwVal x
+                        in if w == negate (2 ^ intSizeOf x)
+                           then mkMinBound (intSizeOf x)
+                           else negIf (w < 0) $ hex (intSizeOf x) (abs w)
 
 negIf :: Bool -> String -> String
 negIf True  a = "(bvneg " ++ a ++ ")"
@@ -300,8 +300,8 @@ getTable m i
   | Just tn <- i `IM.lookup` m = tn
   | True                       = error $ "SBV.SMTLib2: Cannot locate table " ++ show i
 
-cvtExp :: SkolemMap -> TableMap -> SBVExpr -> String
-cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
+cvtExp :: RoundingMode -> SkolemMap -> TableMap -> SBVExpr -> String
+cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
   where ssw = cvtSW skolemMap
         bvOp     = all isBounded arguments
         intOp    = any isInteger arguments
@@ -357,7 +357,7 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 KFloat           -> ("<", "<=")
                                 KDouble          -> ("<", "<=")
                                 KUninterpreted s -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
-                mkCnst = cvtCW . mkConstCW (kindOf i)
+                mkCnst = cvtCW rm . mkConstCW (kindOf i)
                 le0  = "(" ++ less ++ " " ++ ssw i ++ " " ++ mkCnst 0 ++ ")"
                 gtl  = "(" ++ leq  ++ " " ++ mkCnst l ++ " " ++ ssw i ++ ")"
         sh (SBVApp (ArrEq i j) []) = "(= array_" ++ show i ++ " array_" ++ show j ++")"
@@ -377,12 +377,12 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
            | intOp = sh (SBVApp (Shr i) [a])     -- Haskell treats rotateR as shiftR for unbounded values
            | True  = bad
         sh (SBVApp (Shl i) [a])
-           | bvOp   = shft ssw "bvshl"  "bvshl"  i a
+           | bvOp   = shft rm ssw "bvshl"  "bvshl"  i a
            | i < 0  = sh (SBVApp (Shr (-i)) [a])  -- flip sign/direction
            | intOp  = "(* " ++ ssw a ++ " " ++ show (bit i :: Integer) ++ ")"  -- Implement shiftL by multiplication by 2^i
            | True   = bad
         sh (SBVApp (Shr i) [a])
-           | bvOp  = shft ssw "bvlshr" "bvashr" i a
+           | bvOp  = shft rm ssw "bvlshr" "bvashr" i a
            | i < 0 = sh (SBVApp (Shl (-i)) [a])  -- flip sign/direction
            | intOp = "(div " ++ ssw a ++ " " ++ show (bit i :: Integer) ++ ")"  -- Implement shiftR by division by 2^i
            | True  = bad
@@ -449,8 +449,8 @@ cvtExp skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
 rot :: (SW -> String) -> String -> Int -> SW -> String
 rot ssw o c x = "((_ " ++ o ++ " " ++ show c ++ ") " ++ ssw x ++ ")"
 
-shft :: (SW -> String) -> String -> String -> Int -> SW -> String
-shft ssw oW oS c x = "(" ++ o ++ " " ++ ssw x ++ " " ++ cvtCW c' ++ ")"
+shft :: RoundingMode -> (SW -> String) -> String -> String -> Int -> SW -> String
+shft rm ssw oW oS c x = "(" ++ o ++ " " ++ ssw x ++ " " ++ cvtCW rm c' ++ ")"
    where s  = hasSign x
          c' = mkConstCW (kindOf x) c
          o  = if s then oS else oW

@@ -111,11 +111,12 @@ module Data.SBV (
   -- *** Signed unbounded integers
   -- $unboundedLimitations
   , SInteger
+  -- *** IEEE-floating point numbers
+  -- $floatingPoints
+  , SFloat, SDouble, RoundingMode(..), nan, infinity, sNaN, sInfinity
   -- *** Signed algebraic reals
   -- $algReals
   , SReal, AlgReal, toSReal
-  -- $floatingPoints
-  , SFloat, SDouble, nan, infinity, sNaN, sInfinity
   -- ** Creating a symbolic variable
   -- $createSym
   , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger, sReal, sFloat, sDouble

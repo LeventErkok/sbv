@@ -22,7 +22,8 @@ import qualified Data.SBV.SMT.SMTLib2 as SMT2
 import qualified Data.Set as Set (Set, member, toList)
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
-type SMTLibConverter =  SolverCapabilities          -- ^ Capabilities of the backend solver targeted
+type SMTLibConverter =  RoundingMode                -- ^ User selected rounding mode to be used for floating point arithmetic
+                     -> SolverCapabilities          -- ^ Capabilities of the backend solver targeted
                      -> Set.Set Kind                -- ^ Kinds used in the problem
                      -> Bool                        -- ^ is this a sat problem?
                      -> [String]                    -- ^ extra comments to place on top
@@ -44,14 +45,14 @@ toSMTLib1 :: SMTLibConverter
 -- | Convert to SMTLib-2 format
 toSMTLib2 :: SMTLibConverter
 (toSMTLib1, toSMTLib2) = (cvt SMTLib1, cvt SMTLib2)
-  where cvt v solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out
+  where cvt v roundMode solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out
          | KUnbounded `Set.member` kindInfo && not (supportsUnboundedInts solverCaps)
          = unsupported "unbounded integers"
          | KReal `Set.member` kindInfo  && not (supportsReals solverCaps)
          = unsupported "algebraic reals"
-         | KFloat `Set.member` kindInfo  && not (supportsFloats solverCaps)
+         | needsFloats && not (supportsFloats solverCaps)
          = unsupported "single-precision floating-point numbers"
-         | KDouble `Set.member` kindInfo  && not (supportsDoubles solverCaps)
+         | needsDoubles && not (supportsDoubles solverCaps)
          = unsupported "double-precision floating-point numbers"
          | needsQuantifiers && not (supportsQuantifiers solverCaps)
          = unsupported "quantifiers"
@@ -63,16 +64,18 @@ toSMTLib2 :: SMTLibConverter
                unsupported w = error $ "SBV: Given problem needs " ++ w ++ ", which is not supported by SBV for the chosen solver: " ++ capSolverName solverCaps
                aliasTable  = map (\(_, (x, y)) -> (y, x)) qinps
                converter   = if v == SMTLib1 then SMT1.cvt else SMT2.cvt
-               (pre, post) = converter solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out
+               (pre, post) = converter roundMode solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out
+               needsFloats  = KFloat  `Set.member` kindInfo
+               needsDoubles = KDouble `Set.member` kindInfo
                needsQuantifiers
                  | isSat = ALL `elem` quantifiers
                  | True  = EX  `elem` quantifiers
                  where quantifiers = map fst qinps
 
 -- | Add constraints generated from older models, used for querying new models
-addNonEqConstraints :: [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
-addNonEqConstraints _qinps cs p@(SMTLibPgm SMTLib1 _) = SMT1.addNonEqConstraints cs p
-addNonEqConstraints  qinps cs p@(SMTLibPgm SMTLib2 _) = SMT2.addNonEqConstraints qinps cs p
+addNonEqConstraints :: RoundingMode -> [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
+addNonEqConstraints rm _qinps cs p@(SMTLibPgm SMTLib1 _) = SMT1.addNonEqConstraints rm cs p
+addNonEqConstraints rm  qinps cs p@(SMTLibPgm SMTLib2 _) = SMT2.addNonEqConstraints rm qinps cs p
 
 -- | Interpret solver output based on SMT-Lib standard output responses
 interpretSolverOutput :: SMTConfig -> ([String] -> SMTModel) -> [String] -> SMTResult

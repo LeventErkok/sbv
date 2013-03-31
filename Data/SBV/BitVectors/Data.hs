@@ -21,7 +21,7 @@
 module Data.SBV.BitVectors.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
  , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble
- , nan, infinity, sNaN, sInfinity
+ , nan, infinity, sNaN, sInfinity, RoundingMode(..)
  , SymWord(..)
  , CW(..), CWVal(..), cwSameType, cwIsBit, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
@@ -626,6 +626,20 @@ sNaN      = literal nan
 -- 'SDouble' and 'SFloat'.
 sInfinity :: (Floating a, SymWord a) => SBV a
 sInfinity = literal infinity
+
+-- | Rounding mode to be used for the IEEE floating-point operations.
+-- Note that Haskell's default is 'RoundNearestTiesToEven'. If you use
+-- a different rounding mode, then the counter-examples you get may not
+-- match what you observe in Haskell.
+data RoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable floating point value.
+                                            -- If precisely at half-way, pick the even number.
+                                            -- (In this context, /even/ means the lowest-order bit is zero.)
+                  | RoundNearestTiesToAway  -- ^ Round to nearest representable floating point value.
+                                            -- If precisely at half-way, pick the number further away from 0.
+                                            -- (That is, for positive values, pick the greater; for negative values, pick the smaller.)
+                  | RoundTowardPositive     -- ^ Round towards positive infinity. (Also known as rounding-up or ceiling.)
+                  | RoundTowardNegative     -- ^ Round towards negative infinity. (Also known as rounding-down or floor.)
+                  | RoundTowardZero         -- ^ Round towards zero. (Also known as truncation.)
 
 -- Not particularly "desirable", but will do if needed
 instance Show (SBV a) where

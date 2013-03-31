@@ -57,6 +57,7 @@ data SMTConfig = SMTConfig {
        , smtFile       :: Maybe FilePath -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
        , useSMTLib2    :: Bool           -- ^ If True, we'll treat the solver as using SMTLib2 input format. Otherwise, SMTLib1
        , solver        :: SMTSolver      -- ^ The actual SMT solver.
+       , roundingMode  :: RoundingMode   -- ^ Rounding mode to use for floating-point conversions
        }
 
 -- | An SMT engine

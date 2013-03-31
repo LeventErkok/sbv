@@ -63,6 +63,7 @@ mkConfig s isSMTLib2 tweaks = SMTConfig { verbose       = False
                                         , solverTweaks  = tweaks
                                         , useSMTLib2    = isSMTLib2
                                         , satCmd        = "(check-sat)"
+                                        , roundingMode  = RoundNearestTiesToEven
                                         }
 
 -- | Default configuration for the Boolector SMT solver
@@ -420,7 +421,7 @@ allSatWith config p = do
                                             Unknown     _ model             -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
         invoke nonEqConsts n (qinps, modelMap, skolemMap, _, smtLibPgm) = do
                msg $ "Looking for solution " ++ show n
-               case addNonEqConstraints qinps nonEqConsts smtLibPgm of
+               case addNonEqConstraints (roundingMode config) qinps nonEqConsts smtLibPgm of
                  Nothing ->  -- no new constraints added, stop
                             return Nothing
                  Just finalPgm -> do msg $ "Generated SMTLib program:\n" ++ finalPgm
@@ -461,16 +462,17 @@ runProofOn converter config isSat comments res =
             solverCaps = capabilities (solver config)
         in case res of
              Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs [o@(SW (KBounded False 1) _)] ->
-               timeIf isTiming "translation" $ let uiMap     = mapMaybe arrayUIKind arrs ++ map unintFnUIKind uis
-                                                   skolemMap = skolemize (if isSat then is else map flipQ is)
-                                                        where flipQ (ALL, x) = (EX, x)
-                                                              flipQ (EX, x)  = (ALL, x)
-                                                              skolemize :: [(Quantifier, NamedSymVar)] -> [Either SW (SW, [SW])]
-                                                              skolemize qinps = go qinps ([], [])
-                                                                where go []                   (_,  sofar) = reverse sofar
-                                                                      go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
-                                                                      go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
-                                               in return (is, uiMap, skolemMap, ki, converter solverCaps ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o)
+               timeIf isTiming "translation"
+                $ let uiMap     = mapMaybe arrayUIKind arrs ++ map unintFnUIKind uis
+                      skolemMap = skolemize (if isSat then is else map flipQ is)
+                           where flipQ (ALL, x) = (EX, x)
+                                 flipQ (EX, x)  = (ALL, x)
+                                 skolemize :: [(Quantifier, NamedSymVar)] -> [Either SW (SW, [SW])]
+                                 skolemize qinps = go qinps ([], [])
+                                   where go []                   (_,  sofar) = reverse sofar
+                                         go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
+                                         go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
+                  in return (is, uiMap, skolemMap, ki, converter (roundingMode config) solverCaps ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o)
              Result _kindInfo _qcInfo _codeSegs _is _consts _tbls _arrs _uis _axs _pgm _cstrs os -> case length os of
                            0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
                            1  -> error $ "Impossible happened, non-boolean output in " ++ show os

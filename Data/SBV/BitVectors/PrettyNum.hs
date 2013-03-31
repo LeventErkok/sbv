@@ -15,6 +15,7 @@
 module Data.SBV.BitVectors.PrettyNum (
         PrettyNum(..), readBin, shex, shexI, sbin, sbinI
       , showCFloat, showCDouble, showHFloat, showHDouble
+      , showSMTFloat, showSMTDouble
       ) where
 
 import Data.Char  (ord)
@@ -22,7 +23,7 @@ import Data.Int   (Int8, Int16, Int32, Int64)
 import Data.List  (isPrefixOf)
 import Data.Maybe (fromJust)
 import Data.Word  (Word8, Word16, Word32, Word64)
-import Numeric    (showIntAtBase, showHex, readInt)
+import Numeric    (showIntAtBase, showHex, readInt, showFFloat)
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model () -- instances only
@@ -201,3 +202,29 @@ showHDouble d
    | isInfinite d, d < 0 = "((-1/0) :: Double)"
    | isInfinite d        = "((1/0) :: Double)"
    | True                = show d
+
+-- | A version of show for floats that generates correct SMTLib literals using the rounding mode
+showSMTFloat :: RoundingMode -> Float -> String
+showSMTFloat rm f
+   | isNaN f             = as "NaN"
+   | isInfinite f, f < 0 = as "minusInfinity"
+   | isInfinite f        = as "plusInfinity"
+   | True                = "((_ asFloat 8 24) " ++ smtRoundingMode rm ++ " " ++ showFFloat Nothing f "" ++ ")"
+   where as s = "(as " ++ s ++ " (_ FP 8 24))"
+
+-- | A version of show for doubles that generates correct SMTLib literals using the rounding mode
+showSMTDouble :: RoundingMode -> Double -> String
+showSMTDouble rm d
+   | isNaN d             = as "NaN"
+   | isInfinite d, d < 0 = as "minusInfinity"
+   | isInfinite d        = as "plusInfinity"
+   | True                = "((_ asFloat 11 53) " ++ smtRoundingMode rm ++ " " ++ showFFloat Nothing d "" ++ ")"
+   where as s = "(as " ++ s ++ " (_ FP 11 53))"
+
+-- | Convert a rounding mode to the format SMT-Lib2 understands.
+smtRoundingMode :: RoundingMode -> String
+smtRoundingMode RoundNearestTiesToEven = "roundNearestTiesToEven"
+smtRoundingMode RoundNearestTiesToAway = "roundNearestTiesToAway"
+smtRoundingMode RoundTowardPositive    = "roundTowardPositive"
+smtRoundingMode RoundTowardNegative    = "roundTowardNegative"
+smtRoundingMode RoundTowardZero        = "roundTowardZero"

@@ -20,8 +20,8 @@ import Data.SBV.BitVectors.Data
 
 -- | Add constraints to generate /new/ models. This function is used to query the SMT-solver, while
 -- disallowing a previous model.
-addNonEqConstraints :: [[(String, CW)]] -> SMTLibPgm -> Maybe String
-addNonEqConstraints nonEqConstraints (SMTLibPgm _ (aliasTable, pre, post)) = Just $ intercalate "\n" $
+addNonEqConstraints :: RoundingMode -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
+addNonEqConstraints _rm nonEqConstraints (SMTLibPgm _ (aliasTable, pre, post)) = Just $ intercalate "\n" $
      pre
   ++ [ " ; --- refuted-models ---" ]
   ++ concatMap nonEqs (map (map intName) nonEqConstraints)
@@ -41,7 +41,8 @@ nonEq :: (String, CW) -> String
 nonEq (s, c) = "(not (= " ++ s ++ " " ++ cvtCW c ++ "))"
 
 -- | Translate a problem into an SMTLib1 script
-cvt :: SolverCapabilities           -- ^ capabilities of the current solver
+cvt :: RoundingMode                 -- ^ User selected rounding mode to be used for floating point arithmetic
+    -> SolverCapabilities           -- ^ capabilities of the current solver
     -> Set.Set Kind                 -- ^ kinds used
     -> Bool                         -- ^ is this a sat problem?
     -> [String]                     -- ^ extra comments to place on top
@@ -56,7 +57,7 @@ cvt :: SolverCapabilities           -- ^ capabilities of the current solver
     -> [SW]                         -- ^ extra constraints
     -> SW                           -- ^ output variable
     -> ([String], [String])
-cvt _solverCaps _kindInfo isSat comments qinps _skolemInps consts tbls arrs uis axs asgnsSeq cstrs out = (pre, post)
+cvt _roundingMode _solverCaps _kindInfo isSat comments qinps _skolemInps consts tbls arrs uis axs asgnsSeq cstrs out = (pre, post)
   where logic
          | null tbls && null arrs && null uis = "QF_BV"
          | True                               = "QF_AUFBV"
