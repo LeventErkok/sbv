@@ -79,7 +79,7 @@ cvt solverCaps kindInfo isSat comments _inps skolemInps consts tbls arrs uis axs
         hasReal    = KReal      `Set.member` kindInfo
         hasFloat   = KFloat     `Set.member` kindInfo
         hasDouble  = KDouble    `Set.member` kindInfo
-        hasBVs     = not $ null $ [() | KBounded{} <- Set.toList kindInfo]
+        hasBVs     = not $ null [() | KBounded{} <- Set.toList kindInfo]
         sorts      = [s | KUninterpreted s <- Set.toList kindInfo]
         logic
            | hasDouble || hasFloat    -- NB. We don't check for quantifiers here, we probably should..

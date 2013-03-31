@@ -33,6 +33,7 @@ veryclean: clean
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 
 /* The boolean type */
 typedef bool SBool;
@@ -67,6 +68,7 @@ void aes128Dec(const SWord32 *pt, const SWord32 *key, SWord32 *ct);
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 #include <stdio.h>
 #include "aes128Dec.h"
 
@@ -108,6 +110,7 @@ int main(void)
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 #include "aes128Dec.h"
 
 void aes128Dec(const SWord32 *pt, const SWord32 *key, SWord32 *ct)

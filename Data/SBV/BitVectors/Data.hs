@@ -21,6 +21,7 @@
 module Data.SBV.BitVectors.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
  , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble
+ , nan, infinity, sNaN, sInfinity
  , SymWord(..)
  , CW(..), CWVal(..), cwSameType, cwIsBit, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
@@ -605,6 +606,26 @@ type SFloat = SBV Float
 
 -- | IEEE-754 double-precision floating point numbers
 type SDouble = SBV Double
+
+-- | Not-A-Number for 'Double' and 'Float'. Surprisingly, Haskell
+-- Prelude doesn't have this value defined, so we provide it here.
+nan :: Floating a => a
+nan = 0/0
+
+-- | Infinity for 'Double' and 'Float'. Surprisingly, Haskell
+-- Prelude doesn't have this value defined, so we provide it here.
+infinity :: Floating a => a
+infinity = 1/0
+
+-- | Symbolic variant of Not-A-Number. This value will inhabit both
+-- 'SDouble' and 'SFloat'.
+sNaN :: (Floating a, SymWord a) => SBV a
+sNaN      = literal nan
+
+-- | Symbolic variant of infinity. This value will inhabit both
+-- 'SDouble' and 'SFloat'.
+sInfinity :: (Floating a, SymWord a) => SBV a
+sInfinity = literal infinity
 
 -- Not particularly "desirable", but will do if needed
 instance Show (SBV a) where

@@ -33,6 +33,7 @@ veryclean: clean
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 
 /* The boolean type */
 typedef bool SBool;
@@ -68,6 +69,7 @@ SInt16 foo(const SInt16 x, const SInt64 *xArr, SWord16 *z,
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 #include <stdio.h>
 #include "foo.h"
 
@@ -120,6 +122,7 @@ int main(void)
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 #include "foo.h"
 
 SInt16 foo(const SInt16 x, const SInt64 *xArr, SWord16 *z,

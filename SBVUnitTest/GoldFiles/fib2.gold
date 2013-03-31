@@ -33,6 +33,7 @@ veryclean: clean
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 
 /* The boolean type */
 typedef bool SBool;
@@ -67,6 +68,7 @@ SWord64 fib2(const SWord64 n);
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 #include <stdio.h>
 #include "fib2.h"
 
@@ -85,6 +87,7 @@ int main(void)
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 #include "fib2.h"
 
 SWord64 fib2(const SWord64 n)

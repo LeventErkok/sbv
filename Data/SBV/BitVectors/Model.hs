@@ -212,6 +212,10 @@ instance SymWord Float where
   literal    = SBV KFloat . Left . CW KFloat . CWFloat
   fromCW (CW _ (CWFloat a)) = a
   fromCW c                  = error $ "SymWord.Float: Unexpected non-float value: " ++ show c
+  -- For Float, we conservatively return 'False' for isConcretely. The reason is that
+  -- this function is used for optimizations when only one of the argument is concrete,
+  -- and in the presence of NaN's it would be incorrect to do any optimization
+  isConcretely _ _ = False
   mbMaxBound = Nothing
   mbMinBound = Nothing
 
@@ -220,6 +224,10 @@ instance SymWord Double where
   literal    = SBV KDouble . Left . CW KDouble . CWDouble
   fromCW (CW _ (CWDouble a)) = a
   fromCW c                   = error $ "SymWord.Double: Unexpected non-double value: " ++ show c
+  -- For Double, we conservatively return 'False' for isConcretely. The reason is that
+  -- this function is used for optimizations when only one of the argument is concrete,
+  -- and in the presence of NaN's it would be incorrect to do any optimization
+  isConcretely _ _ = False
   mbMaxBound = Nothing
   mbMinBound = Nothing
 

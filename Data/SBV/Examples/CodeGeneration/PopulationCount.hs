@@ -117,6 +117,7 @@ fastPopCountIsCorrect x = popCountFast x .== popCountSlow x
 -- #include <inttypes.h>
 -- #include <stdint.h>
 -- #include <stdbool.h>
+-- #include <math.h>
 -- <BLANKLINE>
 -- /* The boolean type */
 -- typedef bool SBool;
@@ -151,6 +152,7 @@ fastPopCountIsCorrect x = popCountFast x .== popCountSlow x
 -- #include <inttypes.h>
 -- #include <stdint.h>
 -- #include <stdbool.h>
+-- #include <math.h>
 -- #include <stdio.h>
 -- #include "popCount.h"
 -- <BLANKLINE>
@@ -169,6 +171,7 @@ fastPopCountIsCorrect x = popCountFast x .== popCountSlow x
 -- #include <inttypes.h>
 -- #include <stdint.h>
 -- #include <stdbool.h>
+-- #include <math.h>
 -- #include "popCount.h"
 -- <BLANKLINE>
 -- SWord8 popCount(const SWord64 x)

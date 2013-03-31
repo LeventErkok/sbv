@@ -12,7 +12,10 @@
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Data.SBV.BitVectors.PrettyNum (PrettyNum(..), readBin, shex, shexI, sbin, sbinI) where
+module Data.SBV.BitVectors.PrettyNum (
+        PrettyNum(..), readBin, shex, shexI, sbin, sbinI
+      , showCFloat, showCDouble, showHFloat, showHDouble
+      ) where
 
 import Data.Char  (ord)
 import Data.Int   (Int8, Int16, Int32, Int64)
@@ -166,3 +169,35 @@ readBin s = case readInt 2 isDigit cvt s' of
         isDigit = (`elem` "01")
         s' | "0b" `isPrefixOf` s = drop 2 s
            | True                = s
+
+-- | A version of show for floats that generates correct C literals for nan/infinite. NB. Requires "math.h" to be included.
+showCFloat :: Float -> String
+showCFloat f
+   | isNaN f             = "((float) NAN)"
+   | isInfinite f, f < 0 = "((float) (-INFINITY))"
+   | isInfinite f        = "((float) INFINITY)"
+   | True                = show f ++ "F"
+
+-- | A version of show for doubles that generates correct C literals for nan/infinite. NB. Requires "math.h" to be included.
+showCDouble :: Double -> String
+showCDouble f
+   | isNaN f             = "((double) NAN)"
+   | isInfinite f, f < 0 = "((double) (-INFINITY))"
+   | isInfinite f        = "((double) INFINITY)"
+   | True                = show f
+
+-- | A version of show for floats that generates correct Haskell literals for nan/infinite
+showHFloat :: Float -> String
+showHFloat f
+   | isNaN f             = "((0/0) :: Float)"
+   | isInfinite f, f < 0 = "((-1/0) :: Float)"
+   | isInfinite f        = "((1/0) :: Float)"
+   | True                = show f
+
+-- | A version of show for doubles that generates correct Haskell literals for nan/infinite
+showHDouble :: Double -> String
+showHDouble d
+   | isNaN d             = "((0/0) :: Double)"
+   | isInfinite d, d < 0 = "((-1/0) :: Double)"
+   | isInfinite d        = "((1/0) :: Double)"
+   | True                = show d

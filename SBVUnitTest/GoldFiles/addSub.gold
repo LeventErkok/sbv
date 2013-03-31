@@ -33,6 +33,7 @@ veryclean: clean
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 
 /* The boolean type */
 typedef bool SBool;
@@ -68,6 +69,7 @@ void addSub(const SWord8 x, const SWord8 y, SWord8 *sum,
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 #include <stdio.h>
 #include "addSub.h"
 
@@ -91,6 +93,7 @@ int main(void)
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 #include "addSub.h"
 
 void addSub(const SWord8 x, const SWord8 y, SWord8 *sum,

@@ -25,7 +25,7 @@ import Text.PrettyPrint.HughesPJ
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.AlgReals
-import Data.SBV.BitVectors.PrettyNum (shex)
+import Data.SBV.BitVectors.PrettyNum (shex, showCFloat, showCDouble)
 import Data.SBV.Compilers.CodeGen
 
 ---------------------------------------------------------------------------
@@ -196,8 +196,8 @@ mkConst cfg  (CW KReal (CWAlgReal (AlgRational _ r))) = double (fromRational r :
         sRealSuffix CgLongDouble = text "L"
 mkConst cfg (CW KUnbounded       (CWInteger i)) = showSizedConst i (True, fromJust (cgInteger cfg))
 mkConst _   (CW (KBounded sg sz) (CWInteger i)) = showSizedConst i (sg,   sz)
-mkConst _   (CW KFloat           (CWFloat f))   = float f <> text "F"
-mkConst _   (CW KDouble          (CWDouble d))  = double d
+mkConst _   (CW KFloat (CWFloat f))             = text $ showCFloat f
+mkConst _   (CW KDouble (CWDouble d))           = text $ showCDouble d
 mkConst _   cw                                  = die $ "mkConst: " ++ show cw
 
 showSizedConst :: Integer -> (Bool, Int) -> Doc
@@ -265,6 +265,7 @@ genHeader (ik, rk) fn sigs protos =
   $$ text "#include <inttypes.h>"
   $$ text "#include <stdint.h>"
   $$ text "#include <stdbool.h>"
+  $$ text "#include <math.h>"
   $$ text ""
   $$ text "/* The boolean type */"
   $$ text "typedef bool SBool;"
@@ -323,6 +324,7 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
               $$ text "#include <inttypes.h>"
               $$ text "#include <stdint.h>"
               $$ text "#include <stdbool.h>"
+              $$ text "#include <math.h>"
               $$ text "#include <stdio.h>"
        header =  text "#include" <+> doubleQuotes (nm <> text ".h")
               $$ text ""
@@ -415,6 +417,7 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _ _ (S
               $$ text "#include <inttypes.h>"
               $$ text "#include <stdint.h>"
               $$ text "#include <stdbool.h>"
+              $$ text "#include <math.h>"
        header = text "#include" <+> doubleQuotes (nm <> text ".h")
        post   = text ""
              $$ vcat (map codeSeg cgs)
@@ -677,6 +680,7 @@ mergeDrivers libName inc ds = pre : concatMap mkDFun ds ++ [callDrivers (map fst
             $$ text "#include <inttypes.h>"
             $$ text "#include <stdint.h>"
             $$ text "#include <stdbool.h>"
+            $$ text "#include <math.h>"
             $$ text "#include <stdio.h>"
             $$ inc
         mkDFun (f, [_pre, _header, body, _post]) = [header, body, post]

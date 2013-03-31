@@ -114,6 +114,6 @@ interpretSolverModelLine inps line = either err extract (parseSExpr line)
                                                                                    ++ "\n\tParse: " ++  show r
         extract _                                                          = []
         mkFPCW KReal   i = CW KReal (CWAlgReal i)
-        mkFPCW KFloat  _ = error $ "SBV.SMTLib2.mkFPCW.KFloat : TBD"
-        mkFPCW KDouble _ = error $ "SBV.SMTLib2.mkFPCW.KDouble: TBD"
+        mkFPCW KFloat  _ = error "SBV.SMTLib2.mkFPCW.KFloat : TBD"
+        mkFPCW KDouble _ = error "SBV.SMTLib2.mkFPCW.KDouble: TBD"
         mkFPCW k       v = error $ "SBV.SMTLib2.mkFPCW: Unexpected kind: " ++ show k ++ " with value: " ++ show v ++ " received."
