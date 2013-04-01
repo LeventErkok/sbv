@@ -92,9 +92,9 @@ getCounterExample inps line = either err extract (parseSExpr line)
                                  matches -> error $  "SBV.Yices: Cannot uniquely identify value for "
                                                   ++ 's':v ++ " in "  ++ show matches
         isInput _       = Nothing
-        extract (SApp [SCon "=", SCon v, SNum i]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) i))]
-        extract (SApp [SCon "=", SNum i, SCon v]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) i))]
-        extract _                                                                    = []
+        extract (EApp [ECon "=", ECon v, ENum i]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) i))]
+        extract (EApp [ECon "=", ENum i, ECon v]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) i))]
+        extract _                                                                = []
 
 extractUnints :: [(String, UnintKind)] -> [String] -> [(UnintKind, [String])]
 extractUnints modelMap = mapMaybe (extractUnint modelMap) . chunks
@@ -124,21 +124,21 @@ getUIVal knd s
   = getDefaultVal knd (dropWhile (/= ' ') s)
   | True
   = case parseSExpr s of
-       Right (SApp [SCon "=", SApp (SCon _ : args), SNum i]) -> getCallVal knd args i
-       Right (SApp [SCon "=", SCon _, SNum i])                -> getCallVal knd []   i
+       Right (EApp [ECon "=", EApp (ECon _ : args), ENum i]) -> getCallVal knd args i
+       Right (EApp [ECon "=", ECon _, ENum i])               -> getCallVal knd []   i
        _ -> Nothing
 
 getDefaultVal :: UnintKind -> String -> Maybe (String, [String], String)
 getDefaultVal knd n = case parseSExpr n of
-                        Right (SNum i) -> Just $ showDefault knd (show i)
+                        Right (ENum i) -> Just $ showDefault knd (show i)
                         _               -> Nothing
 
 getCallVal :: UnintKind -> [SExpr] -> Integer -> Maybe (String, [String], String)
 getCallVal knd args res = mapM getArg args >>= \as -> return (showCall knd as (show res))
 
 getArg :: SExpr -> Maybe String
-getArg (SNum i) = Just (show i)
-getArg _         = Nothing
+getArg (ENum i) = Just (show i)
+getArg _        = Nothing
 
 showDefault :: UnintKind -> String -> (String, [String], String)
 showDefault (UFun cnt f) res = (f, replicate cnt "_", res)

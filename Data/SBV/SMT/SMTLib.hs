@@ -95,8 +95,8 @@ interpretSolverModelLine inps line = either err extract (parseSExpr line)
   where err r =  error $  "*** Failed to parse SMT-Lib2 model output from: "
                        ++ "*** " ++ show line ++ "\n"
                        ++ "*** Reason: " ++ r ++ "\n"
-        getInput (SCon v)            = isInput v
-        getInput (SApp (SCon v : _)) = isInput v
+        getInput (ECon v)            = isInput v
+        getInput (EApp (ECon v : _)) = isInput v
         getInput _                   = Nothing
         isInput ('s':v)
           | all isDigit v = let inpId :: Int
@@ -107,16 +107,14 @@ interpretSolverModelLine inps line = either err extract (parseSExpr line)
                                  matches -> error $  "SBV.SMTLib2: Cannot uniquely identify value for "
                                                   ++ 's':v ++ " in "  ++ show matches
         isInput _       = Nothing
-        extract (SApp [SApp [v, SNum i]])  | Just (n, s, nm) <- getInput v = [(n, (nm, mkConstCW (kindOf s) i))]
-        extract (SApp [SApp [v, SReal i]]) | Just (n, s, nm) <- getInput v = [(n, (nm, mkFPCW (kindOf s) i))]
-        extract (SApp [SApp [v, SCon i]])  | Just (n, s, nm) <- getInput v = [(n, (nm, CW (kindOf s) (CWUninterpreted i)))]
+        extract (EApp [EApp [v, ENum    i]]) | Just (n, s, nm) <- getInput v                    = [(n, (nm, mkConstCW (kindOf s) i))]
+        extract (EApp [EApp [v, EReal   i]]) | Just (n, s, nm) <- getInput v, isReal s          = [(n, (nm, CW KReal (CWAlgReal i)))]
+        extract (EApp [EApp [v, ECon    i]]) | Just (n, s, nm) <- getInput v, isUninterpreted s = [(n, (nm, CW (kindOf s) (CWUninterpreted i)))]
+        extract (EApp [EApp [v, EDouble i]]) | Just (n, s, nm) <- getInput v, isDouble s        = [(n, (nm, CW KDouble (CWDouble i)))]
+        extract (EApp [EApp [v, EFloat  i]]) | Just (n, s, nm) <- getInput v, isFloat s         = [(n, (nm, CW KDouble (CWFloat i)))]
         -- weird lambda app that CVC4 seems to throw out.. logic below derived from what I saw CVC4 print, hopefully sufficient
-        extract (SApp (SApp (v : SApp (SCon "LAMBDA" : xs) : _) : _)) | Just{} <- getInput v, not (null xs) = extract (SApp [SApp [v, last xs]])
-        extract (SApp [SApp (v : r)])      | Just (_, _, nm) <- getInput v = error $   "SBV.SMTLib2: Cannot extract value for " ++ show nm
+        extract (EApp (EApp (v : EApp (ECon "LAMBDA" : xs) : _) : _)) | Just{} <- getInput v, not (null xs) = extract (EApp [EApp [v, last xs]])
+        extract (EApp [EApp (v : r)])      | Just (_, _, nm) <- getInput v = error $   "SBV.SMTLib2: Cannot extract value for " ++ show nm
                                                                                    ++ "\n\tInput: " ++ show line
                                                                                    ++ "\n\tParse: " ++  show r
         extract _                                                          = []
-        mkFPCW KReal   i = CW KReal (CWAlgReal i)
-        mkFPCW KFloat  _ = error "SBV.SMTLib2.mkFPCW.KFloat : TBD"
-        mkFPCW KDouble _ = error "SBV.SMTLib2.mkFPCW.KDouble: TBD"
-        mkFPCW k       v = error $ "SBV.SMTLib2.mkFPCW: Unexpected kind: " ++ show k ++ " with value: " ++ show v ++ " received."
