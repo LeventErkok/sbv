@@ -15,7 +15,7 @@
 module Data.SBV.BitVectors.PrettyNum (
         PrettyNum(..), readBin, shex, shexI, sbin, sbinI
       , showCFloat, showCDouble, showHFloat, showHDouble
-      , showSMTFloat, showSMTDouble
+      , showSMTFloat, showSMTDouble, smtRoundingMode
       ) where
 
 import Data.Char  (ord)

@@ -22,7 +22,7 @@ import Numeric (showHex)
 
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.PrettyNum (showSMTFloat, showSMTDouble)
+import Data.SBV.BitVectors.PrettyNum (showSMTFloat, showSMTDouble, smtRoundingMode)
 
 -- | Add constraints to generate /new/ models. This function is used to query the SMT-solver, while
 -- disallowing a previous model.
@@ -312,8 +312,12 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         bad | intOp = error $ "SBV.SMTLib2: Unsupported operation on unbounded integers: " ++ show expr
             | True  = error $ "SBV.SMTLib2: Unsupported operation on real values: " ++ show expr
         ensureBV = bvOp || bad
+        addRM s = s ++ " " ++ smtRoundingMode rm
         lift2  o _ [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
         lift2  o _ sbvs   = error $ "SBV.SMTLib2.sh.lift2: Unexpected arguments: "   ++ show (o, sbvs)
+        -- lift a binary operation with rounding-mode added; used for floating-point arithmetic
+        lift2WM o | doubleOp || floatOp = lift2 (addRM o)
+                  | True                = lift2 o
         lift2B bOp vOp
           | boolOp = lift2 bOp
           | True   = lift2 vOp
@@ -424,16 +428,16 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 , (GreaterEq,     lift2S  "bvuge" "bvsge")
                                 ]
                 smtOpRealTable =  smtIntRealShared
-                               ++ [ (Quot,        lift2   "/")
+                               ++ [ (Quot,        lift2WM "/")
                                   ]
                 smtOpIntTable  = smtIntRealShared
                                ++ [ (Quot,        lift2   "div")
                                   , (Rem,         lift2   "mod")
                                   ]
                 smtOpFloatDoubleTable = smtIntRealShared
-                smtIntRealShared  = [ (Plus,          lift2   "+")
-                                    , (Minus,         lift2   "-")
-                                    , (Times,         lift2   "*")
+                smtIntRealShared  = [ (Plus,          lift2WM "+")
+                                    , (Minus,         lift2WM "-")
+                                    , (Times,         lift2WM "*")
                                     , (Equal,         equal)
                                     , (NotEqual,      notEqual)
                                     , (LessThan,      lift2S  "<"  "<")

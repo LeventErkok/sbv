@@ -94,7 +94,7 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         getCoeff (                ENum k                                    ) = return (k, 0)  -- k
         getCoeff x = die $ "Cannot parse a root-obj,\nProcessing term: " ++ show x
         -- This drops the spurious "p1"'s I see in Z3 output, need to check what those mean.
-        mkFloating = takeWhile (\c -> isDigit c || c == '.') . dropWhile (== '+')
+        mkFloating = takeWhile (\c -> isDigit c || c == '.' || c == '-') . dropWhile (== '+')
         getDouble s = case (s, reads (mkFloating s)) of
                         ("plusInfinity",  _        ) -> return $ EDouble infinity
                         ("minusInfinity", _        ) -> return $ EDouble (-infinity)
