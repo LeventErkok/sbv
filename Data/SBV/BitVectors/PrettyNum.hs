@@ -22,8 +22,9 @@ import Data.Char  (ord)
 import Data.Int   (Int8, Int16, Int32, Int64)
 import Data.List  (isPrefixOf)
 import Data.Maybe (fromJust)
+import Data.Ratio (numerator, denominator)
 import Data.Word  (Word8, Word16, Word32, Word64)
-import Numeric    (showIntAtBase, showHex, readInt, showFFloat)
+import Numeric    (showIntAtBase, showHex, readInt)
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model () -- instances only
@@ -209,7 +210,7 @@ showSMTFloat rm f
    | isNaN f             = as "NaN"
    | isInfinite f, f < 0 = as "minusInfinity"
    | isInfinite f        = as "plusInfinity"
-   | True                = "((_ asFloat 8 24) " ++ smtRoundingMode rm ++ " " ++ showFFloat Nothing f "" ++ ")"
+   | True                = "((_ asFloat 8 24) " ++ smtRoundingMode rm ++ " " ++ toSMTLibRational (toRational f) ++ ")"
    where as s = "(as " ++ s ++ " (_ FP 8 24))"
 
 -- | A version of show for doubles that generates correct SMTLib literals using the rounding mode
@@ -218,8 +219,14 @@ showSMTDouble rm d
    | isNaN d             = as "NaN"
    | isInfinite d, d < 0 = as "minusInfinity"
    | isInfinite d        = as "plusInfinity"
-   | True                = "((_ asFloat 11 53) " ++ smtRoundingMode rm ++ " " ++ showFFloat Nothing d "" ++ ")"
+   | True                = "((_ asFloat 11 53) " ++ smtRoundingMode rm ++ " " ++ toSMTLibRational (toRational d) ++ ")"
    where as s = "(as " ++ s ++ " (_ FP 11 53))"
+
+-- | Show a rational in SMTLib format
+toSMTLibRational :: Rational -> String
+toSMTLibRational r = "(/ " ++ show n ++ " " ++ show d ++ ")"
+  where n = numerator r
+        d = denominator r
 
 -- | Convert a rounding mode to the format SMT-Lib2 understands.
 smtRoundingMode :: RoundingMode -> String
