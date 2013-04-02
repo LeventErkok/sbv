@@ -367,7 +367,11 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (ArrEq i j) []) = "(= array_" ++ show i ++ " array_" ++ show j ++")"
         sh (SBVApp (ArrRead i) [a]) = "(select array_" ++ show i ++ " " ++ ssw a ++ ")"
         sh (SBVApp (Uninterpreted nm) [])   = nm
-        sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm ++ " " ++ unwords (map ssw args) ++ ")"
+        sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm' ++ " " ++ unwords (map ssw args) ++ ")"
+          where -- slight hack needed here to take advantage of custom floating-point functions.. sigh.
+                fpSpecials = ["squareRoot", "fusedMA"]
+                nm' | (floatOp || doubleOp) && (nm `elem` fpSpecials) = addRM nm
+                    | True                                            = nm
         sh (SBVApp (Extract 0 0) [a])   -- special SInteger -> SReal conversion
           | kindOf a == KUnbounded
           = "(to_real " ++ ssw a ++ ")"

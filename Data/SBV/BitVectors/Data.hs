@@ -21,7 +21,7 @@
 module Data.SBV.BitVectors.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
  , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble
- , nan, infinity, sNaN, sInfinity, RoundingMode(..)
+ , nan, infinity, sNaN, sInfinity, RoundingMode(..), smtLibSquareRoot, smtLibFusedMA
  , SymWord(..)
  , CW(..), CWVal(..), cwSameType, cwIsBit, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
@@ -226,6 +226,19 @@ data Op = Plus | Times | Minus
         | ArrRead Int
         | Uninterpreted String
         deriving (Eq, Ord)
+
+-- | SMT-Lib's square-root over floats/doubles. We piggy back on to the uninterpreted function mechanism
+-- to implement these; which is not a terrible idea; although the use of the constructor 'Uninterpreted'
+-- might be confusing. This function will *not* be uninterpreted in reality, as QF_FPA will define it. It's
+-- a bit of a shame, but much easier to implement it this way.
+smtLibSquareRoot :: Op
+smtLibSquareRoot = Uninterpreted "squareRoot"
+
+-- | SMT-Lib's fusedMA over floats/doubles. Similar to the 'smtLibSquareRoot'. Note that we cannot implement
+-- this function in Haskell as precision loss would be inevitable. Maybe Haskell will eventually add this op
+-- to the Num class.
+smtLibFusedMA :: Op
+smtLibFusedMA = Uninterpreted "fusedMA"
 
 -- | A symbolic expression
 data SBVExpr = SBVApp !Op ![SW]

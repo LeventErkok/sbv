@@ -28,6 +28,7 @@ module Data.SBV.BitVectors.Model (
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, toSReal, sFloat, sFloats, sDouble, sDoubles, slet
+  , fusedMA
   )
   where
 
@@ -613,23 +614,70 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
    | hasSign a = ite (a .< 0) (-1) (ite (a .== 0) 0 1)
    | True      = oneIf (a ./= 0)
 
-instance Fractional SReal where
+instance (SymWord a, Fractional a) => Fractional (SBV a) where
   fromRational = literal . fromRational
   x / y        = liftSym2 (mkSymOp Quot) rationalCheck (/) die (/) (/) x y
    where -- should never happen
-         die = error $ "impossible: non-real value found in Fractional.SReal " ++ show (x, y)
+         die = error "impossible: integer valued data found in Fractional instance"
 
-instance Fractional SFloat where
-  fromRational = literal . fromRational
-  x / y        = liftSym2 (mkSymOp Quot) rationalCheck (/) die (/) (/) x y
-   where -- should never happen
-         die = error $ "impossible: non-real value found in Fractional.SFloat " ++ show (x, y)
+-- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat and SDouble
+-- Note that most of the fields are "undefined" for symbolic values, we add methods as they are supported by SMTLib.
+-- Currently, the only symbolicly available function in this class is sqrt.
+instance (SymWord a, Fractional a, Floating a) => Floating (SBV a) where
+    pi      = literal pi
+    exp     = lift1FNS "exp"     exp
+    log     = lift1FNS "log"     log
+    sqrt    = lift1F   sqrt      smtLibSquareRoot
+    sin     = lift1FNS "sin"     sin
+    cos     = lift1FNS "cos"     cos
+    tan     = lift1FNS "tan"     tan
+    asin    = lift1FNS "asin"    asin
+    acos    = lift1FNS "acos"    acos
+    atan    = lift1FNS "atan"    atan
+    sinh    = lift1FNS "sinh"    sinh
+    cosh    = lift1FNS "cosh"    cosh
+    tanh    = lift1FNS "tanh"    tanh
+    asinh   = lift1FNS "asinh"   asinh
+    acosh   = lift1FNS "acosh"   acosh
+    atanh   = lift1FNS "atanh"   atanh
+    (**)    = lift2FNS "**"      (**)
+    logBase = lift2FNS "logBase" logBase
 
-instance Fractional SDouble where
-  fromRational = literal . fromRational
-  x / y        = liftSym2 (mkSymOp Quot) rationalCheck (/) die (/) (/) x y
-   where -- should never happen
-         die = error $ "impossible: non-real value found in Fractional.SDouble " ++ show (x, y)
+-- | Fused-multiply add. @fusedMA a b c = a * b + c@, for double and floating point values.
+-- Note that a 'fusedMA' call will *never* be concrete, even if all the arguments are constants; since
+-- we cannot guarantee the precision requirements, which is the whole reason why 'fusedMA' exists in the
+-- first place. (NB. 'fusedMA' only rounds once, even though it does two operations, and hence the extra
+-- precision.)
+fusedMA :: (SymWord a, Floating a) => SBV a -> SBV a -> SBV a -> SBV a
+fusedMA a b c = SBV k $ Right $ cache r
+  where k = kindOf a
+        r st = do swa <- sbvToSW st a
+                  swb <- sbvToSW st b
+                  swc <- sbvToSW st c
+                  newExpr st k (SBVApp smtLibFusedMA [swa, swb, swc])
+
+-- | Lift a float/double unary function, using a corresponding function in SMT-lib. We piggy-back on the uninterpreted
+-- function mechanism here, as it essentially is the same as introducing this as a new function.
+lift1F :: (SymWord a, Floating a) => (a -> a) -> Op -> SBV a -> SBV a
+lift1F f smtOp sv
+  | Just v <- unliteral sv = literal $ f v
+  | True                   = SBV k $ Right $ cache c
+  where k = kindOf sv
+        c st = do swa <- sbvToSW st sv
+                  newExpr st k (SBVApp smtOp [swa])
+
+-- | Lift a float/double unary function, only over constants
+lift1FNS :: (SymWord a, Floating a) => String -> (a -> a) -> SBV a -> SBV a
+lift1FNS nm f sv
+  | Just v <- unliteral sv = literal $ f v
+  | True                   = error $ "SBV." ++ nm ++ ": not supported for symbolic values of type " ++ show (kindOf sv)
+
+-- | Lift a float/double binary function, only over constants
+lift2FNS :: (SymWord a, Floating a) => String -> (a -> a -> a) -> SBV a -> SBV a -> SBV a
+lift2FNS nm f sv1 sv2
+  | Just v1 <- unliteral sv1
+  , Just v2 <- unliteral sv2 = literal $ f v1 v2
+  | True                     = error $ "SBV." ++ nm ++ ": not supported for symbolic values of type " ++ show (kindOf sv1)
 
 -- Most operations on concrete rationals require a compatibility check
 rationalCheck :: CW -> CW -> Bool
