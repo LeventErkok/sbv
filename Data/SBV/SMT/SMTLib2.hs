@@ -271,20 +271,20 @@ hex sz v = "#x" ++ pad (sz `div` 4) (showHex v "")
 
 cvtCW :: RoundingMode -> CW -> String
 cvtCW rm x
-  | isBoolean       x = let CWInteger       w = cwVal x in if w == 0 then "false" else "true"
-  | isUninterpreted x = let CWUninterpreted s = cwVal x in s
-  | isReal          x = let CWAlgReal       r = cwVal x in algRealToSMTLib2 r
-  | isFloat         x = let CWFloat         f = cwVal x in showSMTFloat  rm f
-  | isDouble        x = let CWDouble        d = cwVal x in showSMTDouble rm d
-  | not (isBounded x) = let CWInteger       w = cwVal x in if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
-  | not (hasSign x)   = let CWInteger       w = cwVal x in hex (intSizeOf x) w
+  | isBoolean       x, CWInteger       w <- cwVal x = if w == 0 then "false" else "true"
+  | isUninterpreted x, CWUninterpreted s <- cwVal x = s
+  | isReal          x, CWAlgReal       r <- cwVal x = algRealToSMTLib2 r
+  | isFloat         x, CWFloat         f <- cwVal x = showSMTFloat  rm f
+  | isDouble        x, CWDouble        d <- cwVal x = showSMTDouble rm d
+  | not (isBounded x), CWInteger       w <- cwVal x = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
+  | not (hasSign x)  , CWInteger       w <- cwVal x = hex (intSizeOf x) w
   -- signed numbers (with 2's complement representation) is problematic
   -- since there's no way to put a bvneg over a positive number to get minBound..
   -- Hence, we punt and use binary notation in that particular case
-  | True              = let CWInteger        w = cwVal x
-                        in if w == negate (2 ^ intSizeOf x)
-                           then mkMinBound (intSizeOf x)
-                           else negIf (w < 0) $ hex (intSizeOf x) (abs w)
+  | hasSign x        , CWInteger       w <- cwVal x = if w == negate (2 ^ intSizeOf x)
+                                                      then mkMinBound (intSizeOf x)
+                                                      else negIf (w < 0) $ hex (intSizeOf x) (abs w)
+  | True = error $ "SBV.cvtCW: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
 
 negIf :: Bool -> String -> String
 negIf True  a = "(bvneg " ++ a ++ ")"

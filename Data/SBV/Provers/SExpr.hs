@@ -14,7 +14,7 @@ module Data.SBV.Provers.SExpr where
 import Control.Monad.Error ()             -- for Monad (Either String) instance
 import Data.Char           (isDigit, ord)
 import Data.List           (isPrefixOf)
-import Numeric             (readInt, readDec, readHex)
+import Numeric             (readInt, readDec, readHex, fromRat)
 
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data (nan, infinity)
@@ -84,8 +84,8 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         cvt (EApp [ECon "_", ENum a, ENum _b])                     = return $ ENum a
         cvt (EApp [ECon "root-obj", EApp (ECon "+":trms), ENum k]) = do ts <- mapM getCoeff trms
                                                                         return $ EReal $ mkPolyReal (Right (k, ts))
-        cvt (EApp [ECon "as", ECon n, EApp [ECon "_", ECon "FP", ENum 11, ENum 53]]) = getDouble n
-        cvt (EApp [ECon "as", ECon n, EApp [ECon "_", ECon "FP", ENum  8, ENum 24]]) = getFloat  n
+        cvt (EApp [ECon "as", n, EApp [ECon "_", ECon "FP", ENum 11, ENum 53]]) = getDouble n
+        cvt (EApp [ECon "as", n, EApp [ECon "_", ECon "FP", ENum  8, ENum 24]]) = getFloat  n
         cvt x                                                      = return x
         getCoeff (EApp [ECon "*", ENum k, EApp [ECon "^", ECon "x", ENum p]]) = return (k, p)  -- kx^p
         getCoeff (EApp [ECon "*", ENum k,                 ECon "x"        ] ) = return (k, 1)  -- kx
@@ -93,17 +93,30 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         getCoeff (                                        ECon "x"          ) = return (1, 1)  --  x
         getCoeff (                ENum k                                    ) = return (k, 0)  -- k
         getCoeff x = die $ "Cannot parse a root-obj,\nProcessing term: " ++ show x
-        -- This drops the spurious "p1"'s I see in Z3 output, need to check what those mean.
-        mkFloating = takeWhile (\c -> isDigit c || c == '.' || c == '-') . dropWhile (== '+')
-        getDouble s = case (s, reads (mkFloating s)) of
-                        ("plusInfinity",  _        ) -> return $ EDouble infinity
-                        ("minusInfinity", _        ) -> return $ EDouble (-infinity)
-                        ("NaN",           _        ) -> return $ EDouble nan
-                        (_,               [(v, "")]) -> return $ EDouble v
-                        _                            -> die $ "Cannot parse a double value from: " ++ s
-        getFloat s = case (s, reads (mkFloating s)) of
-                        ("plusInfinity",  _        ) -> return $ EFloat infinity
-                        ("minusInfinity", _        ) -> return $ EFloat (-infinity)
-                        ("NaN",           _        ) -> return $ EFloat nan
-                        (_,               [(v, "")]) -> return $ EFloat v
-                        _                            -> die $ "Cannot parse a float value from: " ++ s
+        getDouble (ECon s)  = case (s, rdFP (dropWhile (== '+') s)) of
+                                ("plusInfinity",  _     ) -> return $ EDouble infinity
+                                ("minusInfinity", _     ) -> return $ EDouble (-infinity)
+                                ("NaN",           _     ) -> return $ EDouble nan
+                                (_,               Just v) -> return $ EDouble v
+                                _                         -> die $ "Cannot parse a double value from: " ++ s
+        getDouble (EReal r) = return $ EDouble $ fromRat $ toRational r
+        getDouble x         = die $ "Cannot parse a double value from: " ++ show x
+        getFloat (ECon s)   = case (s, rdFP (dropWhile (== '+') s)) of
+                                ("plusInfinity",  _     ) -> return $ EFloat infinity
+                                ("minusInfinity", _     ) -> return $ EFloat (-infinity)
+                                ("NaN",           _     ) -> return $ EFloat nan
+                                (_,               Just v) -> return $ EFloat v
+                                _                         -> die $ "Cannot parse a float value from: " ++ s
+        getFloat (EReal r)  = return $ EFloat $ fromRat $ toRational r
+        getFloat x          = die $ "Cannot parse a float value from: " ++ show x
+
+-- Parses the Z3 floating point formatted numbers like so: 1.321p5/1.2123e9 etc.
+rdFP :: (Read a, RealFloat a) => String -> Maybe a
+rdFP s = case break (`elem` "pe") s of
+           (m, 'p':e) -> rd m >>= \m' -> rd e >>= \e' -> return $ m' * ( 2 ** e')
+           (m, 'e':e) -> rd m >>= \m' -> rd e >>= \e' -> return $ m' * (10 ** e')
+           (m, "")    -> rd m
+           _          -> Nothing
+ where rd v = case reads v of
+                [(n, "")] -> Just n
+                _         -> Nothing

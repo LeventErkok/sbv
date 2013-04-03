@@ -224,7 +224,11 @@ showSMTDouble rm d
 
 -- | Show a rational in SMTLib format
 toSMTLibRational :: Rational -> String
-toSMTLibRational r = "(/ " ++ show n ++ " " ++ show d ++ ")"
+toSMTLibRational r 
+   | n < 0
+   = "(- (/ "  ++ show (abs n) ++ " " ++ show d ++ "))"
+   | True
+   = "(/ " ++ show n ++ " " ++ show d ++ ")"
   where n = numerator r
         d = denominator r
 
