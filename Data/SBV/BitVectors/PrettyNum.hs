@@ -210,6 +210,7 @@ showSMTFloat rm f
    | isNaN f             = as "NaN"
    | isInfinite f, f < 0 = as "minusInfinity"
    | isInfinite f        = as "plusInfinity"
+   | isNegativeZero f    = "(- ((_ asFloat 8 24) " ++ smtRoundingMode rm ++ " (/ 0 1)))"
    | True                = "((_ asFloat 8 24) " ++ smtRoundingMode rm ++ " " ++ toSMTLibRational (toRational f) ++ ")"
    where as s = "(as " ++ s ++ " (_ FP 8 24))"
 
@@ -219,12 +220,13 @@ showSMTDouble rm d
    | isNaN d             = as "NaN"
    | isInfinite d, d < 0 = as "minusInfinity"
    | isInfinite d        = as "plusInfinity"
+   | isNegativeZero d    = "(- ((_ asFloat 11 53) " ++ smtRoundingMode rm ++ " (/ 0 1)))"
    | True                = "((_ asFloat 11 53) " ++ smtRoundingMode rm ++ " " ++ toSMTLibRational (toRational d) ++ ")"
    where as s = "(as " ++ s ++ " (_ FP 11 53))"
 
 -- | Show a rational in SMTLib format
 toSMTLibRational :: Rational -> String
-toSMTLibRational r 
+toSMTLibRational r
    | n < 0
    = "(- (/ "  ++ show (abs n) ++ " " ++ show d ++ "))"
    | True

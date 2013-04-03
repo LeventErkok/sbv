@@ -110,7 +110,7 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         getFloat (EReal r)  = return $ EFloat $ fromRat $ toRational r
         getFloat x          = die $ "Cannot parse a float value from: " ++ show x
 
--- Parses the Z3 floating point formatted numbers like so: 1.321p5/1.2123e9 etc.
+-- | Parses the Z3 floating point formatted numbers like so: 1.321p5/1.2123e9 etc.
 rdFP :: (Read a, RealFloat a) => String -> Maybe a
 rdFP s = case break (`elem` "pe") s of
            (m, 'p':e) -> rd m >>= \m' -> rd e >>= \e' -> return $ m' * ( 2 ** e')
