@@ -75,7 +75,7 @@ cvt :: RoundingMode                 -- ^ User selected rounding mode to be used 
     -> [SW]                         -- ^ extra constraints
     -> SW                           -- ^ output variable
     -> ([String], [String])
-cvt rm solverCaps kindInfo isSat comments _inps skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out = (pre, [])
+cvt rm solverCaps kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out = (pre, [])
   where -- the logic is an over-approaximation
         hasInteger = KUnbounded `Set.member` kindInfo
         hasReal    = KReal      `Set.member` kindInfo
@@ -112,7 +112,7 @@ cvt rm solverCaps kindInfo isSat comments _inps skolemInps consts tbls arrs uis 
              ++ [ "; --- literal constants ---" ]
              ++ concatMap (declConst (supportsMacros solverCaps)) consts
              ++ [ "; --- skolem constants ---" ]
-             ++ [ "(declare-fun " ++ show s ++ " " ++ swFunType ss s ++ ")" | Right (s, ss) <- skolemInps]
+             ++ [ "(declare-fun " ++ show s ++ " " ++ swFunType ss s ++ ")" ++ userName s | Right (s, ss) <- skolemInps]
              ++ [ "; --- constant tables ---" ]
              ++ concatMap constTable constTables
              ++ [ "; --- skolemized tables ---" ]
@@ -166,6 +166,9 @@ cvt rm solverCaps kindInfo isSat comments _inps skolemInps consts tbls arrs uis 
                         ]
           where varT = show s ++ " " ++ swFunType [] s
         declSort s = "(declare-sort " ++ s ++ " 0)"
+        userName s = case s `lookup` map snd inputs of
+                        Just u  | show s /= u -> " ; tracks user variable " ++ show u
+                        _ -> ""
 
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = ["(declare-fun " ++ i ++ " " ++ cvtType t ++ ")"]
