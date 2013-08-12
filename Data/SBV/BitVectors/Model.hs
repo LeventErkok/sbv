@@ -1099,8 +1099,14 @@ instance (SymWord b, Arbitrary b) => Arbitrary (SFunArray a b) where
 instance (SymWord a, Arbitrary a) => Arbitrary (SBV a) where
   arbitrary = liftM literal arbitrary
 
--- |  Symbolic choice operator, parameterized via a class
--- 'select' is a total-indexing function, with the default.
+-- |  Symbolic conditionals are modeled by the 'Mergeable' class, describing
+-- how to merge the results of an if-then-else call with a symbolic test. SBV
+-- provides all basic types as instances of this class, so users only need
+-- to declare instances for custom data-types of their programs as needed.
+--
+-- The function 'select' is a total-indexing function out of a list of choices
+-- with a default value, simulating array/list indexing. It's an n-way generalization
+-- of the 'ite' function.
 --
 -- Minimal complete definition: 'symbolicMerge'
 class Mergeable a where
