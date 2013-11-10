@@ -12,6 +12,7 @@
 module Data.SBV.Examples.Existentials.Diophantine where
 
 import Data.SBV
+import Data.List (sort)
 
 --------------------------------------------------------------------------------------------------
 -- * Representing solutions
@@ -32,8 +33,11 @@ ldn :: [([Integer], Integer)] -> IO Solution
 ldn problem = do solution <- basis (map (map literal) m)
                  if homogeneous
                     then return $ Homogeneous solution
-                    else do let ones  = [xs | (1:xs) <- solution]
-                                zeros = [xs | (0:xs) <- solution]
+                    else do -- we sort the results for no good reason other than
+                            -- to make sure the test case comes out OK as the solvers
+                            -- are likely to "shuffle" the results at will
+                            let ones  = sort [xs | (1:xs) <- solution]
+                                zeros = sort [xs | (0:xs) <- solution]
                             return $ NonHomogeneous ones zeros
   where rhs = map snd problem
         lhs = map fst problem
