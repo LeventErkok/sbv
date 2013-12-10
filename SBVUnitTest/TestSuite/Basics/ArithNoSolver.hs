@@ -177,10 +177,7 @@ genQRems = map mkTest $
      ++ zipWith pair [("divMod",  show x, show y, x `divMod'`  y) | x <- i8s,  y <- i8s , noOverflow x y] [x `sDivMod`  y | x <- si8s,  y <- si8s , noOverflow x y]
      ++ zipWith pair [("divMod",  show x, show y, x `divMod'`  y) | x <- i16s, y <- i16s, noOverflow x y] [x `sDivMod`  y | x <- si16s, y <- si16s, noOverflow x y]
      ++ zipWith pair [("divMod",  show x, show y, x `divMod'`  y) | x <- i32s, y <- i32s, noOverflow x y] [x `sDivMod`  y | x <- si32s, y <- si32s, noOverflow x y]
-     ++ (if divModInt64Bug    -- see below
-            then []
-            else zipWith pair [("divMod",  show x, show y, x `divMod'`  y) | x <- i64s, y <- i64s, noOverflow x y] [x `sDivMod`  y | x <- si64s, y <- si64s, noOverflow x y]
-        )
+     ++ zipWith pair [("divMod",  show x, show y, x `divMod'`  y) | x <- i64s, y <- i64s, noOverflow x y] [x `sDivMod`  y | x <- si64s, y <- si64s, noOverflow x y]
      ++ zipWith pair [("divMod",  show x, show y, x `divMod'`  y) | x <- iUBs, y <- iUBs]                 [x `sDivMod`  y | x <- siUBs, y <- siUBs]
      ++ zipWith pair [("quotRem", show x, show y, x `quotRem'` y) | x <- w8s,  y <- w8s ]                 [x `sQuotRem` y | x <- sw8s,  y <- sw8s ]
      ++ zipWith pair [("quotRem", show x, show y, x `quotRem'` y) | x <- w16s, y <- w16s]                 [x `sQuotRem` y | x <- sw16s, y <- sw16s]
@@ -326,9 +323,3 @@ ds = xs ++ [-0.5, 0, 0.5] ++ map (* (-1)) xs
 
 sds :: [SDouble]
 sds = map literal ds
-
--- On 32 bit installations of GHC, divMod is buggy for Int64
--- Thus causing our tests to fail. See ticket: http://hackage.haskell.org/trac/ghc/ticket/7233
--- Luckily, it's easy to detect it and sidestep it until GHC is appropriately patched
-divModInt64Bug :: Bool
-divModInt64Bug = (1 `div` (minBound::Int64)) /= -1   -- Bug causes this expression to evaluate to 1
