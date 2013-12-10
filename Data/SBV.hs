@@ -40,13 +40,15 @@
 --
 --   * 'SInt8',  'SInt16',  'SInt32',  'SInt64': Symbolic Ints (signed).
 --
---   * 'SArray', 'SFunArray': Flat arrays of symbolic values.
+--   * 'SInteger': Unbounded signed integers.
 --
 --   * 'SReal': Algebraic-real numbers
 --
 --   * 'SFloat': IEEE-754 single-precision floating point values
 --
 --   * 'SDouble': IEEE-754 double-precision floating point values
+--
+--   * 'SArray', 'SFunArray': Flat arrays of symbolic values.
 --
 --   * Symbolic polynomials over GF(2^n), polynomial arithmetic, and CRCs.
 --
