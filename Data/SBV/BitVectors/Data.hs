@@ -25,7 +25,7 @@ module Data.SBV.BitVectors.Data
  , SymWord(..)
  , CW(..), CWVal(..), cwSameType, cwIsBit, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
- , SW(..), trueSW, falseSW, trueCW, falseCW
+ , SW(..), trueSW, falseSW, trueCW, falseCW, normCW
  , SBV(..), NodeId(..), mkSymSBV
  , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), mkSFunArray, SArray(..), arrayUIKind
  , sbvToSW, sbvToSymSW

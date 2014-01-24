@@ -1022,11 +1022,11 @@ instance SDivisible Integer where
 instance SDivisible CW where
   sQuotRem a b
     | CWInteger x <- cwVal a, CWInteger y <- cwVal b
-    = let (r1, r2) = sQuotRem x y in (a { cwVal = CWInteger r1 }, b { cwVal = CWInteger r2 })
+    = let (r1, r2) = sQuotRem x y in (normCW a{ cwVal = CWInteger r1 }, normCW b{ cwVal = CWInteger r2 })
   sQuotRem a b = error $ "SBV.sQuotRem: impossible, unexpected args received: " ++ show (a, b)
   sDivMod a b
     | CWInteger x <- cwVal a, CWInteger y <- cwVal b
-    = let (r1, r2) = sDivMod x y in (a { cwVal = CWInteger r1 }, b { cwVal = CWInteger r2 })
+    = let (r1, r2) = sDivMod x y in (normCW a { cwVal = CWInteger r1 }, normCW b { cwVal = CWInteger r2 })
   sDivMod a b = error $ "SBV.sDivMod: impossible, unexpected args received: " ++ show (a, b)
 
 instance SDivisible SWord64 where
