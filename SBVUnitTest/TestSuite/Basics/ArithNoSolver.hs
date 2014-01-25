@@ -193,6 +193,8 @@ genQRems = map mkTest $
         pair (nm, x, y, (r1, r2)) (e1, e2)   = (nm, x, y, show (fromIntegral r1 `asTypeOf` e1, fromIntegral r2 `asTypeOf` e2) == show (e1, e2))
         mkTest (nm, x, y, s) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
         -- Haskell's divMod and quotRem overflows if x == minBound and y == -1 for bounded signed types; so avoid that case
+        -- NB. There's a bug filed against this; so remove this when it gets fixed:
+        -- See: https://ghc.haskell.org/trac/ghc/ticket/8695
         noOverflow x y = not (x == minBound && y == -1)
 
 genReals :: [Test]
