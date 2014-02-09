@@ -30,14 +30,12 @@ module Data.SBV.Provers.Prover (
        , sbvCheckSolverInstallation
        ) where
 
-import qualified Control.Exception as E
-
-import Control.Concurrent (forkIO, newChan, writeChan, getChanContents)
-import Control.Monad      (when, unless, void)
+import Control.Monad      (when, unless)
 import Data.List          (intercalate)
-import Data.Maybe         (fromJust, isJust, mapMaybe)
+import Data.Maybe         (mapMaybe)
 import System.FilePath    (addExtension)
 import System.Time        (getClockTime)
+import System.IO.Unsafe   (unsafeInterleaveIO)
 
 import qualified Data.Set as Set (Set, toList)
 
@@ -391,34 +389,27 @@ allSatWith config p = do
         let usorts = [s | KUninterpreted s <- Set.toList ki]
         unless (null usorts) $ error $  "SBV.allSat: All-sat calls are not supported in the presence of uninterpreted sorts: " ++ unwords usorts
                                      ++ "\n    Only 'sat' and 'prove' calls are available when uninterpreted sorts are used."
-        resChan <- newChan
-        let add  = writeChan resChan . Just
-            stop = writeChan resChan Nothing
-            final r = add r >> stop
-            die m  = final (ProofError config [m])
-            -- only fork if non-verbose.. otherwise stdout gets garbled
-            fork io = if verbose config then io else void (forkIO io)
-        fork $ E.catch (go sbvPgm add stop final (1::Int) [])
-                       (\e -> die (show (e::E.SomeException)))
-        results <- getChanContents resChan
+        results <- unsafeInterleaveIO $ go sbvPgm (1::Int) []
         -- See if there are any existentials below any universals
         -- If such is the case, then the solutions are unique upto prefix existentials
         let w = ALL `elem` map fst qinps
-        return $ AllSatResult (w,  map fromJust (takeWhile isJust results))
+        return $ AllSatResult (w,  results)
   where msg = when (verbose config) . putStrLn . ("** " ++)
-        go sbvPgm add stop final = loop
+        go sbvPgm = loop
           where loop !n nonEqConsts = do
                   curResult <- invoke nonEqConsts n sbvPgm
                   case curResult of
-                    Nothing     -> stop
-                    Just (SatResult r) -> case r of
-                                            Satisfiable _ (SMTModel [] _ _) -> final r
-                                            Unknown _ (SMTModel [] _ _)     -> final r
-                                            ProofError _ _                  -> final r
-                                            TimeOut _                       -> stop
-                                            Unsatisfiable _                 -> stop
-                                            Satisfiable _ model             -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
-                                            Unknown     _ model             -> add r >> loop (n+1) (modelAssocs model : nonEqConsts)
+                    Nothing            -> return []
+                    Just (SatResult r) -> let cont model = do rest <- unsafeInterleaveIO $ loop (n+1) (modelAssocs model : nonEqConsts)
+                                                              return (r : rest)
+                                          in case r of
+                                               Satisfiable _ (SMTModel [] _ _) -> return [r]
+                                               Unknown _ (SMTModel [] _ _)     -> return [r]
+                                               ProofError _ _                  -> return [r]
+                                               TimeOut _                       -> return []
+                                               Unsatisfiable _                 -> return []
+                                               Satisfiable _ model             -> cont model
+                                               Unknown     _ model             -> cont model
         invoke nonEqConsts n (qinps, modelMap, skolemMap, _, smtLibPgm) = do
                msg $ "Looking for solution " ++ show n
                case addNonEqConstraints (roundingMode config) qinps nonEqConsts smtLibPgm of
