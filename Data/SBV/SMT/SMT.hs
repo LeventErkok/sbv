@@ -75,9 +75,9 @@ data SMTSolver = SMTSolver {
 
 -- | A model, as returned by a solver
 data SMTModel = SMTModel {
-        modelAssocs    :: [(String, CW)]
-     ,  modelArrays    :: [(String, [String])]  -- very crude!
-     ,  modelUninterps :: [(String, [String])]  -- very crude!
+        modelAssocs    :: [(String, CW)]        -- ^ Mapping of symbolic values to constants.
+     ,  modelArrays    :: [(String, [String])]  -- ^ Arrays, very crude; only works with Yices.
+     ,  modelUninterps :: [(String, [String])]  -- ^ Uninterpreted funcs; very crude; only works with Yices.
      }
      deriving Show
 
