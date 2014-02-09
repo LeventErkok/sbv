@@ -1,5 +1,5 @@
 Name:          sbv
-Version:       3.0
+Version:       2.11
 Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math, SMT
 Synopsis:      SMT Based Verification: Symbolic Haskell theorem prover using SMT solving.
 Description:   Express properties about Haskell programs and automatically prove them using SMT
@@ -9,7 +9,7 @@ Description:   Express properties about Haskell programs and automatically prove
                .
                Release notes: <http://github.com/LeventErkok/sbv/blob/master/CHANGES.md>
 
-Copyright:     Levent Erkok, 2010-2013
+Copyright:     Levent Erkok, 2010-2014
 License:       BSD3
 License-file:  LICENSE
 Stability:     Experimental
@@ -30,9 +30,7 @@ Library
   default-language: Haskell2010
   ghc-options     : -Wall
   other-extensions: BangPatterns
-                    -- Currently commented out since Cabal doesn't yet recognize DefaultSignatures extension yet. Uncomment when it does.
-                    -- The current list can be seen at: https://github.com/haskell/cabal/blob/master/Cabal/Language/Haskell/Extension.hs
-                    -- DefaultSignatures
+                    DefaultSignatures
                     DeriveDataTypeable
                     FlexibleContexts
                     FlexibleInstances
