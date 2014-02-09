@@ -3,10 +3,18 @@
 
 * Latest Hackage released version: 2.10
 
-### Version 3.0, Not yet released
+### Version 2.11, Not yet released
    
- * The goals for this release is to add support for IEEE-floating point
-   arithmetic. Currently in progress.
+ * Preliminary support for IEEE-floating point arithmetic, introducing
+   the types `SFloat` and `SDouble`. The support is still experimental,
+   and Z3 is the only solver that currently features a solver for
+   this logic. Likely to have bugs, both at the SBV level, and at the
+   Z3 level; so any bug reports are welcome!
+ * Address allsat-laziness issue (#78 in github issue tracker). Essentially,
+   simplify how all-sat is called so we can avoid calling the solver for
+   solutions that are not needed. Thanks to Eric Seidel for reporting.
+ * Export `modelAssocs` from the internals module; can come in handy
+   for further user-level processing of model results.
 
 ### Version 2.10, 2013-03-22
  
