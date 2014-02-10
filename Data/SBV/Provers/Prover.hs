@@ -33,7 +33,7 @@ module Data.SBV.Provers.Prover (
 import Control.Monad      (when, unless)
 import Data.List          (intercalate)
 import Data.Maybe         (mapMaybe)
-import System.FilePath    (addExtension)
+import System.FilePath    (addExtension, splitExtension)
 import System.Time        (getClockTime)
 import System.IO.Unsafe   (unsafeInterleaveIO)
 
@@ -416,9 +416,11 @@ allSatWith config p = do
                  Nothing ->  -- no new constraints added, stop
                             return Nothing
                  Just finalPgm -> do msg $ "Generated SMTLib program:\n" ++ finalPgm
-                                     smtAnswer <- engine (solver config) config True qinps modelMap skolemMap finalPgm
+                                     smtAnswer <- engine (solver config) (updateName (n-1) config) True qinps modelMap skolemMap finalPgm
                                      msg "Done.."
                                      return $ Just $ SatResult smtAnswer
+        updateName i cfg = cfg{smtFile = upd `fmap` smtFile cfg}
+               where upd nm = let (b, e) = splitExtension nm in b ++ "_allSat_" ++ show i ++ e
 
 type SMTProblem = ( [(Quantifier, NamedSymVar)]         -- inputs
                   , [(String, UnintKind)]               -- model-map

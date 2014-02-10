@@ -397,7 +397,7 @@ standardSolver config script cleanErrs failure success = do
     msg $ "Calling: " ++ show (unwords (exec:opts))
     case smtFile config of
       Nothing -> return ()
-      Just f  -> do putStrLn $ "** Saving the generated script in file: " ++ show f
+      Just f  -> do msg $ "Saving the generated script in file: " ++ show f
                     writeFile f (scriptBody script)
     contents <- timeIf isTiming nmSolver $ pipeProcess config nmSolver exec opts script cleanErrs
     msg $ nmSolver ++ " output:\n" ++ either id (intercalate "\n") contents
