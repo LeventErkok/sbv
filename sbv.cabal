@@ -180,6 +180,7 @@ Executable SBVUnitTests
                   , TestSuite.Uninterpreted.AUF
                   , TestSuite.Uninterpreted.Function
                   , TestSuite.Uninterpreted.Uninterpreted
+                  , TestSuite.Uninterpreted.Sort
                   , TestSuite.Uninterpreted.Axioms
 
 Test-Suite SBVBasicTests
