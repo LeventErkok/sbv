@@ -387,8 +387,8 @@ allSatWith config p = do
         msg "Checking Satisfiability, all solutions.."
         sbvPgm@(qinps, _, _, ki, _) <- simulate converter config True [] p
         let usorts = [s | KUninterpreted s <- Set.toList ki]
-        unless (null usorts) $ error $  "SBV.allSat: All-sat calls are not supported in the presence of uninterpreted sorts: " ++ unwords usorts
-                                     ++ "\n    Only 'sat' and 'prove' calls are available when uninterpreted sorts are used."
+        unless (null usorts) $ msg $  "SBV.allSat: Uninterpreted sorts present: " ++ unwords usorts
+                                   ++ "\n               SBV will use equivalence classes to generate all-satisfying instances."
         results <- unsafeInterleaveIO $ go sbvPgm (1::Int) []
         -- See if there are any existentials below any universals
         -- If such is the case, then the solutions are unique upto prefix existentials

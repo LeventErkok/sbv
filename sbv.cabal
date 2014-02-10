@@ -83,6 +83,7 @@ Library
                   , Data.SBV.Examples.Uninterpreted.Function
                   , Data.SBV.Examples.Uninterpreted.Shannon
                   , Data.SBV.Examples.Uninterpreted.Sort
+                  , Data.SBV.Examples.Uninterpreted.UISortAllSat
   Other-modules   : Data.SBV.BitVectors.AlgReals
                   , Data.SBV.BitVectors.Data
                   , Data.SBV.BitVectors.Model

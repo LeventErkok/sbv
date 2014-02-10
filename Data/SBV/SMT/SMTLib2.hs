@@ -12,12 +12,14 @@
 
 module Data.SBV.SMT.SMTLib2(cvt, addNonEqConstraints) where
 
-import Data.Bits (bit)
+import Data.Bits     (bit)
+import Data.Function (on)
+import Data.Ord      (comparing)
 import qualified Data.Foldable as F (toList)
 import qualified Data.Map      as M
 import qualified Data.IntMap   as IM
 import qualified Data.Set      as Set
-import Data.List (intercalate, partition)
+import Data.List (intercalate, partition, groupBy, sortBy)
 import Numeric (showHex)
 
 import Data.SBV.BitVectors.AlgReals
@@ -35,7 +37,7 @@ addNonEqConstraints rm qinps allNonEqConstraints (SMTLibPgm _ (aliasTable, pre, 
   | True
   = Just $ intercalate "\n" $ pre
     ++ [ "; --- refuted-models ---" ]
-    ++ concatMap (nonEqs rm) (map (map intName) nonEqConstraints)
+    ++ refutedModel
     ++ post
  where refutedModel = concatMap (nonEqs rm) (map (map intName) nonEqConstraints)
        intName (s, c)
@@ -46,11 +48,30 @@ addNonEqConstraints rm qinps allNonEqConstraints (SMTLibPgm _ (aliasTable, pre, 
        topUnivs = [s | (_, (_, s)) <- takeWhile (\p -> fst p == EX) qinps]
 
 nonEqs :: RoundingMode -> [(String, CW)] -> [String]
-nonEqs _  []     =  []
-nonEqs rm [sc]   =  ["(assert " ++ nonEq rm sc ++ ")"]
-nonEqs rm (sc:r) =  ["(assert (or " ++ nonEq rm sc]
-                 ++ map (("            " ++) . nonEq rm) r
-                 ++ ["        ))"]
+nonEqs rm scs = interp ps ++ disallow (map eqClass uninterpClasses)
+  where (ups, ps) = partition (isUninterpreted . snd) scs
+        -- Regular (or interpreted) sorts simply get a constraint that we disallows the current assignment
+        interp []     =  []
+        interp [sc]   =  ["(assert " ++ nonEq rm sc ++ ")"]
+        interp (sc:r) =  ["(assert (or " ++ nonEq rm sc]
+                      ++ map (("            " ++) . nonEq rm) r
+                      ++ ["        ))"]
+        -- Determine the equivalnce classes of uninterpreted sorts:
+        uninterpClasses = filter (\l -> length l > 1) -- Only need this class if it has at least two members
+                        . map (map fst)               -- throw away sorts, we only need the names
+                        . groupBy ((==) `on` snd)     -- make sure they belong to the same sort and have the same value
+                        . sortBy (comparing snd)      -- sort them according to their sorts first
+                        $ ups                         -- take the uninterpreted sorts
+        -- Uninterpreted sorts get a constraint that says the equivalence classes as determined by the solver are disallowed:
+        eqClass :: [String] -> String
+        eqClass [] = error "SBV.allSat.nonEqs: Impossible happened, disallow received an empty list"
+        eqClass cs = "(= " ++ unwords cs ++ ")"
+        -- Now, assert the conjunction of equivalence classes and assert it's negation:
+        disallow []   = []
+        disallow [ec] = ["(assert (not " ++ ec ++ "))"]
+        disallow ecs  = "(assert (not (and"
+                      : map ("                  " ++) ecs
+                      ++ [")))"]
 
 nonEq :: RoundingMode -> (String, CW) -> String
 nonEq rm (s, c) = "(not (= " ++ s ++ " " ++ cvtCW rm c ++ "))"

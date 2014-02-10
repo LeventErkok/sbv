@@ -15,6 +15,17 @@
    solutions that are not needed. Thanks to Eric Seidel for reporting.
  * Export `modelAssocs` from the internals module; can come in handy
    for further user-level processing of model results.
+ * Implement better support for `allSat` in the presence of uninterpreted
+   sorts. Previously, SBV simply rejected running `allSat` queries
+   in the presence of uninterpreted sorts, since it was not possible
+   to generate a refuting model. The model returned by the SMT solver
+   is simply not usable, since it names constants that is not visible
+   in a subsequent run. Eric Seidel came up with the idea that we can
+   actually compute equivalence classes based on a produced model, and
+   assert the constraint that the new model should disallow the previously
+   found equivalence classes instead. The idea seems to work well
+   in practice, and there is also an example program demonstrating
+   the functionality: Examples/Uninterpreted/UISortAllSat.hs
 
 ### Version 2.10, 2013-03-22
  
