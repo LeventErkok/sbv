@@ -48,14 +48,15 @@ addNonEqConstraints rm qinps allNonEqConstraints (SMTLibPgm _ (aliasTable, pre, 
        topUnivs = [s | (_, (_, s)) <- takeWhile (\p -> fst p == EX) qinps]
 
 nonEqs :: RoundingMode -> [(String, CW)] -> [String]
-nonEqs rm scs = interp ps ++ disallow (map eqClass uninterpClasses)
+nonEqs rm scs = format $ interp ps ++ disallow (map eqClass uninterpClasses)
   where (ups, ps) = partition (isUninterpreted . snd) scs
-        -- Regular (or interpreted) sorts simply get a constraint that we disallows the current assignment
-        interp []     =  []
-        interp [sc]   =  ["(assert " ++ nonEq rm sc ++ ")"]
-        interp (sc:r) =  ["(assert (or " ++ nonEq rm sc]
-                      ++ map (("            " ++) . nonEq rm) r
+        format []     =  []
+        format [m]    =  ["(assert " ++ m ++ ")"]
+        format (m:ms) =  ["(assert (or " ++ m]
+                      ++ map ("            " ++) ms
                       ++ ["        ))"]
+        -- Regular (or interpreted) sorts simply get a constraint that we disallows the current assignment
+        interp = map $ nonEq rm
         -- Determine the equivalnce classes of uninterpreted sorts:
         uninterpClasses = filter (\l -> length l > 1) -- Only need this class if it has at least two members
                         . map (map fst)               -- throw away sorts, we only need the names
@@ -66,12 +67,8 @@ nonEqs rm scs = interp ps ++ disallow (map eqClass uninterpClasses)
         eqClass :: [String] -> String
         eqClass [] = error "SBV.allSat.nonEqs: Impossible happened, disallow received an empty list"
         eqClass cs = "(= " ++ unwords cs ++ ")"
-        -- Now, assert the conjunction of equivalence classes and assert it's negation:
-        disallow []   = []
-        disallow [ec] = ["(assert (not " ++ ec ++ "))"]
-        disallow ecs  = "(assert (not (and"
-                      : map ("                  " ++) ecs
-                      ++ [")))"]
+        -- Now, take the conjunction of equivalence classes and assert it's negation:
+        disallow = map $ \ec -> "(not " ++ ec ++ ")"
 
 nonEq :: RoundingMode -> (String, CW) -> String
 nonEq rm (s, c) = "(not (= " ++ s ++ " " ++ cvtCW rm c ++ "))"
