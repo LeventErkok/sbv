@@ -55,7 +55,8 @@ import qualified TestSuite.Puzzles.U2Bridge               as T09_10(testSuite)
 import qualified TestSuite.Uninterpreted.AUF              as T10_01(testSuite)
 import qualified TestSuite.Uninterpreted.Axioms           as T10_02(testSuite)
 import qualified TestSuite.Uninterpreted.Function         as T10_03(testSuite)
-import qualified TestSuite.Uninterpreted.Uninterpreted    as T10_04(testSuite)
+import qualified TestSuite.Uninterpreted.Sort             as T10_04(testSuite)
+import qualified TestSuite.Uninterpreted.Uninterpreted    as T10_05(testSuite)
 
 -- Bool says whether we need a real SMT solver to run this test
 -- Note that it's ok to say True even if an SMT solver is *not*
@@ -104,5 +105,6 @@ allTestCases = [
      , ("auf1",        True,  T10_01.testSuite)
      , ("unint-axms",  True,  T10_02.testSuite)
      , ("auf2",        True,  T10_03.testSuite)
-     , ("unint",       True,  T10_04.testSuite)
+     , ("unint-sort",  True,  T10_04.testSuite)
+     , ("unint",       True,  T10_05.testSuite)
      ]
