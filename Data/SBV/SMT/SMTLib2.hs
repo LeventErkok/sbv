@@ -55,7 +55,7 @@ nonEqs rm scs = format $ interp ps ++ disallow (map eqClass uninterpClasses)
         format (m:ms) =  ["(assert (or " ++ m]
                       ++ map ("            " ++) ms
                       ++ ["        ))"]
-        -- Regular (or interpreted) sorts simply get a constraint that we disallows the current assignment
+        -- Regular (or interpreted) sorts simply get a constraint that we disallow the current assignment
         interp = map $ nonEq rm
         -- Determine the equivalnce classes of uninterpreted sorts:
         uninterpClasses = filter (\l -> length l > 1) -- Only need this class if it has at least two members
