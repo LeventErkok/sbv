@@ -13,8 +13,6 @@
  * Address allsat-laziness issue (#78 in github issue tracker). Essentially,
    simplify how all-sat is called so we can avoid calling the solver for
    solutions that are not needed. Thanks to Eric Seidel for reporting.
- * Export `modelAssocs` from the internals module; can come in handy
-   for further user-level processing of model results.
  * Implement better support for `allSat` in the presence of uninterpreted
    sorts. Previously, SBV simply rejected running `allSat` queries
    in the presence of uninterpreted sorts, since it was not possible
@@ -26,6 +24,12 @@
    found equivalence classes instead. The idea seems to work well
    in practice, and there is also an example program demonstrating
    the functionality: Examples/Uninterpreted/UISortAllSat.hs
+ * Add functions `getModelDictionary` and `getModelDictionaries`, which
+   provide low-level access to models returned from SMT solvers. Former
+   for `sat` and `prove` calls, latter for `allSat` calls. Together with
+   the exported utils from the `Data.SBV.Internals` module, this should
+   allow for expert users to dissect the models returned and do fancier
+   programming on top of SBV.
 
 ### Version 2.10, 2013-03-22
  

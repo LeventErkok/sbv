@@ -28,6 +28,8 @@ import System.Process     (readProcessWithExitCode, runInteractiveProcess, waitF
 import System.Exit        (ExitCode(..))
 import System.IO          (hClose, hFlush, hPutStr, hGetContents, hGetLine)
 
+import qualified Data.Map as M
+
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.PrettyNum
@@ -264,6 +266,9 @@ class Modelable a where
   -- | Extract a model, the result is a tuple where the first argument (if True)
   -- indicates whether the model was "probable". (i.e., if the solver returned unknown.)
   getModel :: SatModel b => a -> Either String (Bool, b)
+  -- | Extract a model dictionary. Extract a dictionary mapping the variables to
+  -- their respective values as returned by the SMT solver.
+  getModelDictionary :: a -> M.Map String CW
 
   -- | A simpler variant of 'getModel' to get a model out without the fuss.
   extractModel :: SatModel b => a -> Maybe b
@@ -276,13 +281,19 @@ class Modelable a where
 extractModels :: SatModel a => AllSatResult -> [a]
 extractModels (AllSatResult (_, xs)) = [ms | Right (_, ms) <- map getModel xs]
 
+-- | Get dictionaries from an all-sat call. Similar to 'getModelDictionary'
+getModelDictionaries :: AllSatResult -> [M.Map String CW]
+getModelDictionaries (AllSatResult (_, xs)) = map getModelDictionary xs
+
 instance Modelable ThmResult where
-  getModel    (ThmResult r) = getModel r
-  modelExists (ThmResult r) = modelExists r
+  getModel           (ThmResult r) = getModel r
+  modelExists        (ThmResult r) = modelExists r
+  getModelDictionary (ThmResult r) = getModelDictionary r
 
 instance Modelable SatResult where
-  getModel    (SatResult r) = getModel r
-  modelExists (SatResult r) = modelExists r
+  getModel           (SatResult r) = getModel r
+  modelExists        (SatResult r) = modelExists r
+  getModelDictionary (SatResult r) = getModelDictionary r
 
 instance Modelable SMTResult where
   getModel (Unsatisfiable _) = Left "SBV.getModel: Unsatisfiable result"
@@ -293,6 +304,11 @@ instance Modelable SMTResult where
   modelExists (Satisfiable{}) = True
   modelExists (Unknown{})     = False -- don't risk it
   modelExists _               = False
+  getModelDictionary (Unsatisfiable _) = error "SBV.getModelDictionary: Unsatisfiable result"
+  getModelDictionary (Unknown _ m)     = M.fromList (modelAssocs m)
+  getModelDictionary (ProofError _ s)  = error $ "SBV.getModelDictionary: Proof error: " ++ unlines s
+  getModelDictionary (TimeOut _)       = error "SBV.getModelDictionary: Proof timeout"
+  getModelDictionary (Satisfiable _ m) = M.fromList (modelAssocs m)
 
 -- | Extract a model out, will throw error if parsing is unsuccessful
 parseModelOut :: SatModel a => SMTModel -> a
