@@ -272,6 +272,13 @@ class Modelable a where
   -- | Extract a model value for a given element. Also see `getModelValues`.
   getModelValue :: SymWord b => String -> a -> Maybe b
   getModelValue v r = fromCW `fmap` (v `M.lookup` getModelDictionary r)
+  -- | Extract a representative name for the model value of an uninterpreted kind.
+  -- This is supposed to correspond to the value as computed internally by the
+  -- SMT solver; and is unportable from solver to solver.
+  getModelUninterpretedValue :: String -> a -> Maybe String
+  getModelUninterpretedValue v r = case v `M.lookup` getModelDictionary r of
+                                     Just (CW _ (CWUninterpreted s)) -> Just s
+                                     _                               -> Nothing
 
   -- | A simpler variant of 'getModel' to get a model out without the fuss.
   extractModel :: SatModel b => a -> Maybe b
