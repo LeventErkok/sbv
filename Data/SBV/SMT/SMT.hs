@@ -267,9 +267,9 @@ class Modelable a where
   -- indicates whether the model was "probable". (i.e., if the solver returned unknown.)
   getModel :: SatModel b => a -> Either String (Bool, b)
   -- | Extract a model dictionary. Extract a dictionary mapping the variables to
-  -- their respective values as returned by the SMT solver.
+  -- their respective values as returned by the SMT solver. Also see `getModelDictionaries`.
   getModelDictionary :: a -> M.Map String CW
-  -- | Extract a model value for a given element.
+  -- | Extract a model value for a given element. Also see `getModelValues`.
   getModelValue :: SymWord b => String -> a -> Maybe b
   getModelValue v r = fromCW `fmap` (v `M.lookup` getModelDictionary r)
 
@@ -284,11 +284,11 @@ class Modelable a where
 extractModels :: SatModel a => AllSatResult -> [a]
 extractModels (AllSatResult (_, xs)) = [ms | Right (_, ms) <- map getModel xs]
 
--- | Get dictionaries from an all-sat call. Similar to `getModelDictionary`
+-- | Get dictionaries from an all-sat call. Similar to `getModelDictionary`.
 getModelDictionaries :: AllSatResult -> [M.Map String CW]
 getModelDictionaries (AllSatResult (_, xs)) = map getModelDictionary xs
 
--- | Extract value of a variable from an all-sat call. Similar to `getModelValue`
+-- | Extract value of a variable from an all-sat call. Similar to `getModelValue`.
 getModelValues :: SymWord b => String -> AllSatResult -> [Maybe b]
 getModelValues s (AllSatResult (_, xs)) =  map (s `getModelValue`) xs
 
