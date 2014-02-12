@@ -33,6 +33,8 @@
  * Add `getModelValue`, `getModelValues`, `getModelUninterpretedValue`, and
    `getModelUninterpretedValues`; which further aid in model value
    extraction.
+ * Add Data/SBV/Examples/Misc/ModelExtract.hs as a simple example for
+   programmable model extraction and usage.
 
 ### Version 2.10, 2013-03-22
  
