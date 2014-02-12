@@ -269,6 +269,9 @@ class Modelable a where
   -- | Extract a model dictionary. Extract a dictionary mapping the variables to
   -- their respective values as returned by the SMT solver.
   getModelDictionary :: a -> M.Map String CW
+  -- | Extract a model value for a given element.
+  getModelValue :: SymWord b => String -> a -> Maybe b
+  getModelValue v r = fromCW `fmap` (v `M.lookup` getModelDictionary r)
 
   -- | A simpler variant of 'getModel' to get a model out without the fuss.
   extractModel :: SatModel b => a -> Maybe b
@@ -281,9 +284,13 @@ class Modelable a where
 extractModels :: SatModel a => AllSatResult -> [a]
 extractModels (AllSatResult (_, xs)) = [ms | Right (_, ms) <- map getModel xs]
 
--- | Get dictionaries from an all-sat call. Similar to 'getModelDictionary'
+-- | Get dictionaries from an all-sat call. Similar to `getModelDictionary`
 getModelDictionaries :: AllSatResult -> [M.Map String CW]
 getModelDictionaries (AllSatResult (_, xs)) = map getModelDictionary xs
+
+-- | Extract value of a variable from an all-sat call. Similar to `getModelValue`
+getModelValues :: SymWord b => String -> AllSatResult -> [Maybe b]
+getModelValues s (AllSatResult (_, xs)) =  map (s `getModelValue`) xs
 
 instance Modelable ThmResult where
   getModel           (ThmResult r) = getModel r

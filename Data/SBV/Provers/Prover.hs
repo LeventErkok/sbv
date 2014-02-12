@@ -24,7 +24,7 @@ module Data.SBV.Provers.Prover (
        , allSat, allSatWith
        , isVacuous, isVacuousWith
        , solve
-       , SatModel(..), Modelable(..), displayModels, extractModels, getModelDictionaries
+       , SatModel(..), Modelable(..), displayModels, extractModels, getModelDictionaries, getModelValues
        , boolector, cvc4, yices, z3, defaultSMTCfg
        , compileToSMTLib, generateSMTBenchmarks
        , sbvCheckSolverInstallation
