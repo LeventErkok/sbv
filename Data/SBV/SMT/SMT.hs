@@ -304,10 +304,10 @@ instance Modelable SMTResult where
   modelExists (Satisfiable{}) = True
   modelExists (Unknown{})     = False -- don't risk it
   modelExists _               = False
-  getModelDictionary (Unsatisfiable _) = error "SBV.getModelDictionary: Unsatisfiable result"
+  getModelDictionary (Unsatisfiable _) = M.empty
   getModelDictionary (Unknown _ m)     = M.fromList (modelAssocs m)
-  getModelDictionary (ProofError _ s)  = error $ "SBV.getModelDictionary: Proof error: " ++ unlines s
-  getModelDictionary (TimeOut _)       = error "SBV.getModelDictionary: Proof timeout"
+  getModelDictionary (ProofError _ _)  = M.empty
+  getModelDictionary (TimeOut _)       = M.empty
   getModelDictionary (Satisfiable _ m) = M.fromList (modelAssocs m)
 
 -- | Extract a model out, will throw error if parsing is unsuccessful
