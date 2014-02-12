@@ -203,7 +203,8 @@ module Data.SBV (
 
   -- ** Programmable model extraction
   -- $programmableExtraction
-  , SatModel(..), Modelable(..), displayModels, extractModels, getModelDictionaries, getModelValues
+  , SatModel(..), Modelable(..), displayModels, extractModels
+  , getModelDictionaries, getModelValues, getModelUninterpretedValues
 
   -- * SMT Interface: Configurations and solvers
   , SMTConfig(..), OptimizeOpts(..), SMTSolver(..), boolector, cvc4, yices, z3, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation

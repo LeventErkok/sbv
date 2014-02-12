@@ -274,7 +274,7 @@ class Modelable a where
   getModelValue v r = fromCW `fmap` (v `M.lookup` getModelDictionary r)
   -- | Extract a representative name for the model value of an uninterpreted kind.
   -- This is supposed to correspond to the value as computed internally by the
-  -- SMT solver; and is unportable from solver to solver.
+  -- SMT solver; and is unportable from solver to solver. Also see `getModelUninterpretedValues`.
   getModelUninterpretedValue :: String -> a -> Maybe String
   getModelUninterpretedValue v r = case v `M.lookup` getModelDictionary r of
                                      Just (CW _ (CWUninterpreted s)) -> Just s
@@ -298,6 +298,10 @@ getModelDictionaries (AllSatResult (_, xs)) = map getModelDictionary xs
 -- | Extract value of a variable from an all-sat call. Similar to `getModelValue`.
 getModelValues :: SymWord b => String -> AllSatResult -> [Maybe b]
 getModelValues s (AllSatResult (_, xs)) =  map (s `getModelValue`) xs
+
+-- | Extract value of an uninterpreted variable from an all-sat call. Similar to `getModelUninterpretedValue`.
+getModelUninterpretedValues :: String -> AllSatResult -> [Maybe String]
+getModelUninterpretedValues s (AllSatResult (_, xs)) =  map (s `getModelUninterpretedValue`) xs
 
 instance Modelable ThmResult where
   getModel           (ThmResult r) = getModel r

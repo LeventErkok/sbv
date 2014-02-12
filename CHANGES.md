@@ -30,6 +30,9 @@
    the exported utils from the `Data.SBV.Internals` module, this should
    allow for expert users to dissect the models returned and do fancier
    programming on top of SBV.
+ * Add `getModelValue`, `getModelValues`, `getModelUninterpretedValue`, and
+   `getModelUninterpretedValues`; which further aid in model value
+   extraction.
 
 ### Version 2.10, 2013-03-22
  
