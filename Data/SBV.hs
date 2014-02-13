@@ -115,7 +115,7 @@ module Data.SBV (
   , SInteger
   -- *** IEEE-floating point numbers
   -- $floatingPoints
-  , SFloat, SDouble, RoundingMode(..), nan, infinity, sNaN, sInfinity, fusedMA
+  , SFloat, SDouble, RoundingMode(..), nan, infinity, sNaN, sInfinity, fusedMA, isFPPoint
   -- *** Signed algebraic reals
   -- $algReals
   , SReal, AlgReal, toSReal
@@ -279,6 +279,13 @@ import Data.Word
 -- "Data.SBV.Bridge.Z3" directly.
 sbvCurrentSolver :: SMTConfig
 sbvCurrentSolver = z3
+
+-- | We call a FP number FPPoint if it is neither NaN, nor +/- infinity.
+-- Note that we cannot use == to test for this, as NaN does not compare equal to itself.
+isFPPoint :: (Floating a, SymWord a) => SBV a -> SBool
+isFPPoint x =     x .== x           -- gets rid of NaN's
+              &&& x .< sInfinity    -- gets rid of +inf
+              &&& x .> -sInfinity   -- gets rid of -inf
 
 -- Haddock section documentation
 {- $progIntro

@@ -634,7 +634,7 @@ infinity = 1/0
 -- | Symbolic variant of Not-A-Number. This value will inhabit both
 -- 'SDouble' and 'SFloat'.
 sNaN :: (Floating a, SymWord a) => SBV a
-sNaN      = literal nan
+sNaN = literal nan
 
 -- | Symbolic variant of infinity. This value will inhabit both
 -- 'SDouble' and 'SFloat'.
