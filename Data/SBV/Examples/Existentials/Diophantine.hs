@@ -12,7 +12,6 @@
 module Data.SBV.Examples.Existentials.Diophantine where
 
 import Data.SBV
-import Data.List (sort)
 
 --------------------------------------------------------------------------------------------------
 -- * Representing solutions
@@ -33,11 +32,8 @@ ldn :: [([Integer], Integer)] -> IO Solution
 ldn problem = do solution <- basis (map (map literal) m)
                  if homogeneous
                     then return $ Homogeneous solution
-                    else do -- we sort the results for no good reason other than
-                            -- to make sure the test case comes out OK as the solvers
-                            -- are likely to "shuffle" the results at will
-                            let ones  = sort [xs | (1:xs) <- solution]
-                                zeros = sort [xs | (0:xs) <- solution]
+                    else do let ones  = [xs | (1:xs) <- solution]
+                                zeros = [xs | (0:xs) <- solution]
                             return $ NonHomogeneous ones zeros
   where rhs = map snd problem
         lhs = map fst problem
@@ -48,9 +44,11 @@ ldn problem = do solution <- basis (map (map literal) m)
 -- | Find the basis solution. By definition, the basis has all non-trivial (i.e., non-0) solutions
 -- that cannot be written as the sum of two other solutions. We use the mathematically equivalent
 -- statement that a solution is in the basis if it's least according to the lexicographic
--- order using the ordinary less-than relation.
+-- order using the ordinary less-than relation. (NB. We explicitly tell z3 to use the logic
+-- AUFLIA for this problem, as the BV solver that is chosen automatically has a performance
+-- issue. See: https://z3.codeplex.com/workitem/88.)
 basis :: [[SInteger]] -> IO [[Integer]]
-basis m = extractModels `fmap` allSat cond
+basis m = extractModels `fmap` allSatWith z3{useLogic = Just (PredefinedLogic AUFLIA)} cond
  where cond = do as <- mkExistVars  n
                  bs <- mkForallVars n
                  return $ ok as &&& (ok bs ==> as .== bs ||| bnot (bs `less` as))
@@ -69,15 +67,15 @@ basis m = extractModels `fmap` allSat cond
 -- We have:
 --
 -- >>> test
--- NonHomogeneous [[0,2,0],[1,0,0]] [[0,1,1],[1,0,2]]
+-- NonHomogeneous [[0,2,0],[1,0,0]] [[1,0,2],[0,1,1]]
 --
 -- which means that the solutions are of the form:
 --
---    @(0, 2, 0) + k (0, 1, 1) + k' (1, 0, 2) = (k', 2+k, k+2k')@
+--    @(1, 0, 0) + k (0, 1, 1) + k' (1, 0, 2) = (1+k', k, k+2k')@
 --
 -- OR
 --
---    @(1, 0, 0) + k (0, 1, 1) + k' (1, 0, 2) = (1+k', k, k+2k')@
+--    @(0, 2, 0) + k (0, 1, 1) + k' (1, 0, 2) = (k', 2+k, k+2k')@
 --
 -- for arbitrary @k@, @k'@. It's easy to see that these are really solutions
 -- to the equation given. It's harder to see that they cover all possibilities,
@@ -103,7 +101,7 @@ test = ldn [([2,1,-1], 2)]
 --     4 x_5 = 5 x_6 + 1
 -- @
 --
--- We need to find to solve for x_0, over the naturals. We have:
+-- We need to solve for x_0, over the naturals. We have:
 --
 -- >>> sailors
 -- [15621,3124,2499,1999,1599,1279,1023]
