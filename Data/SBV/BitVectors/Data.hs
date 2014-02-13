@@ -32,6 +32,7 @@ module Data.SBV.BitVectors.Data
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, uncacheAI, HasKind(..)
  , Op(..), NamedSymVar, UnintKind(..), getTableIndex, SBVPgm(..), Symbolic, runSymbolic, runSymbolic', State, inProofMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
+ , Logic(..), SMTLibLogic(..)
  , getTraceInfo, getConstraints, addConstraint
  , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
  , Quantifier(..), needsExistentials
@@ -1246,6 +1247,45 @@ instance NFData a => NFData (Cached a) where
 instance NFData a => NFData (SBV a) where
   rnf (SBV x y) = rnf x `seq` rnf y `seq` ()
 instance NFData SBVPgm
+
+-- | SMT-Lib logics. If left unspecified SBV will pick the logic based on what it determines is needed. However, the
+-- user can override this choice using the 'useLogic' parameter to the configuration. This is especially handy if
+-- one is experimenting with custom logics that might be supported on new solvers.
+data SMTLibLogic
+  = AUFLIA    -- ^ Formulas over the theory of linear integer arithmetic and arrays extended with free sort and function symbols but restricted to arrays with integer indices and values
+  | AUFLIRA   -- ^ Linear formulas with free sort and function symbols over one- and two-dimentional arrays of integer index and real value
+  | AUFNIRA   -- ^ Formulas with free function and predicate symbols over a theory of arrays of arrays of integer index and real value
+  | LRA       -- ^ Linear formulas in linear real arithmetic
+  | UFLRA     -- ^ Linear real arithmetic with uninterpreted sort and function symbols. 
+  | UFNIA     -- ^ Non-linear integer arithmetic with uninterpreted sort and function symbols. 
+  | QF_ABV    -- ^ Quantifier-free formulas over the theory of bitvectors and bitvector arrays
+  | QF_AUFBV  -- ^ Quantifier-free formulas over the theory of bitvectors and bitvector arrays extended with free sort and function symbols
+  | QF_AUFLIA -- ^ Quantifier-free linear formulas over the theory of integer arrays extended with free sort and function symbols
+  | QF_AX     -- ^ Quantifier-free formulas over the theory of arrays with extensionality
+  | QF_BV     -- ^ Quantifier-free formulas over the theory of fixed-size bitvectors
+  | QF_IDL    -- ^ Difference Logic over the integers. Boolean combinations of inequations of the form x - y < b where x and y are integer variables and b is an integer constant
+  | QF_LIA    -- ^ Unquantified linear integer arithmetic. In essence, Boolean combinations of inequations between linear polynomials over integer variables
+  | QF_LRA    -- ^ Unquantified linear real arithmetic. In essence, Boolean combinations of inequations between linear polynomials over real variables. 
+  | QF_NIA    -- ^ Quantifier-free integer arithmetic. 
+  | QF_NRA    -- ^ Quantifier-free real arithmetic. 
+  | QF_RDL    -- ^ Difference Logic over the reals. In essence, Boolean combinations of inequations of the form x - y < b where x and y are real variables and b is a rational constant. 
+  | QF_UF     -- ^ Unquantified formulas built over a signature of uninterpreted (i.e., free) sort and function symbols. 
+  | QF_UFBV   -- ^ Unquantified formulas over bitvectors with uninterpreted sort function and symbols. 
+  | QF_UFIDL  -- ^ Difference Logic over the integers (in essence) but with uninterpreted sort and function symbols. 
+  | QF_UFLIA  -- ^ Unquantified linear integer arithmetic with uninterpreted sort and function symbols. 
+  | QF_UFLRA  -- ^ Unquantified linear real arithmetic with uninterpreted sort and function symbols. 
+  | QF_UFNRA  -- ^ Unquantified non-linear real arithmetic with uninterpreted sort and function symbols. 
+  | QF_FPABV  -- ^ Quantifier-free formulas over the theory of floating point numbers, arrays, and bit-vectors
+  | QF_FPA    -- ^ Quantifier-free formulas over the theory of floating point numbers
+  deriving Show
+
+-- | Chosen logic for the solver
+data Logic = PredefinedLogic SMTLibLogic  -- ^ Use one of the logics as defined by the standard
+           | CustomLogic     String       -- ^ Use this name for the logic
+
+instance Show Logic where
+  show (PredefinedLogic l) = show l
+  show (CustomLogic     s) = s
 
 -- | Translation tricks needed for specific capabilities afforded by each solver
 data SolverCapabilities = SolverCapabilities {

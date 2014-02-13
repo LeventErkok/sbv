@@ -63,6 +63,7 @@ mkConfig s isSMTLib2 tweaks = SMTConfig { verbose       = False
                                         , useSMTLib2    = isSMTLib2
                                         , satCmd        = "(check-sat)"
                                         , roundingMode  = RoundNearestTiesToEven
+                                        , useLogic      = Nothing
                                         }
 
 -- | Default configuration for the Boolector SMT solver
@@ -466,7 +467,7 @@ runProofOn converter config isSat comments res =
                                    where go []                   (_,  sofar) = reverse sofar
                                          go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
                                          go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
-                  in return (is, uiMap, skolemMap, ki, converter (roundingMode config) solverCaps ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o)
+                  in return (is, uiMap, skolemMap, ki, converter (roundingMode config) (useLogic config) solverCaps ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o)
              Result _kindInfo _qcInfo _codeSegs _is _consts _tbls _arrs _uis _axs _pgm _cstrs os -> case length os of
                            0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
                            1  -> error $ "Impossible happened, non-boolean output in " ++ show os

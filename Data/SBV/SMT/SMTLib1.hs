@@ -42,6 +42,7 @@ nonEq (s, c) = "(not (= " ++ s ++ " " ++ cvtCW c ++ "))"
 
 -- | Translate a problem into an SMTLib1 script
 cvt :: RoundingMode                 -- ^ User selected rounding mode to be used for floating point arithmetic
+    -> Maybe Logic                  -- ^ SMT-Lib logic, if requested by the user
     -> SolverCapabilities           -- ^ capabilities of the current solver
     -> Set.Set Kind                 -- ^ kinds used
     -> Bool                         -- ^ is this a sat problem?
@@ -57,8 +58,9 @@ cvt :: RoundingMode                 -- ^ User selected rounding mode to be used 
     -> [SW]                         -- ^ extra constraints
     -> SW                           -- ^ output variable
     -> ([String], [String])
-cvt _roundingMode _solverCaps _kindInfo isSat comments qinps _skolemInps consts tbls arrs uis axs asgnsSeq cstrs out = (pre, post)
+cvt _roundingMode smtLogic _solverCaps _kindInfo isSat comments qinps _skolemInps consts tbls arrs uis axs asgnsSeq cstrs out = (pre, post)
   where logic
+         | Just l <- smtLogic                 = show l
          | null tbls && null arrs && null uis = "QF_BV"
          | True                               = "QF_AUFBV"
         inps = map (fst . snd) qinps

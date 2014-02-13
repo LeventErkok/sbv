@@ -49,17 +49,18 @@ import Data.SBV.Utils.TDiff
 -- is precise (i.e., if it fits in a finite number of digits), regardless of the precision limit. The limit only applies if the representation
 -- of the real value is not finite, i.e., if it is not rational.
 data SMTConfig = SMTConfig {
-         verbose       :: Bool           -- ^ Debug mode
-       , timing        :: Bool           -- ^ Print timing information on how long different phases took (construction, solving, etc.)
-       , timeOut       :: Maybe Int      -- ^ How much time to give to the solver. (In seconds)
-       , printBase     :: Int            -- ^ Print integral literals in this base (2, 8, and 10, and 16 are supported.)
-       , printRealPrec :: Int            -- ^ Print algebraic real values with this precision. (SReal, default: 16)
-       , solverTweaks  :: [String]       -- ^ Additional lines of script to give to the solver (user specified)
-       , satCmd        :: String         -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
-       , smtFile       :: Maybe FilePath -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
-       , useSMTLib2    :: Bool           -- ^ If True, we'll treat the solver as using SMTLib2 input format. Otherwise, SMTLib1
-       , solver        :: SMTSolver      -- ^ The actual SMT solver.
-       , roundingMode  :: RoundingMode   -- ^ Rounding mode to use for floating-point conversions
+         verbose       :: Bool             -- ^ Debug mode
+       , timing        :: Bool             -- ^ Print timing information on how long different phases took (construction, solving, etc.)
+       , timeOut       :: Maybe Int        -- ^ How much time to give to the solver. (In seconds)
+       , printBase     :: Int              -- ^ Print integral literals in this base (2, 8, and 10, and 16 are supported.)
+       , printRealPrec :: Int              -- ^ Print algebraic real values with this precision. (SReal, default: 16)
+       , solverTweaks  :: [String]         -- ^ Additional lines of script to give to the solver (user specified)
+       , satCmd        :: String           -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
+       , smtFile       :: Maybe FilePath   -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
+       , useSMTLib2    :: Bool             -- ^ If True, we'll treat the solver as using SMTLib2 input format. Otherwise, SMTLib1
+       , solver        :: SMTSolver        -- ^ The actual SMT solver.
+       , roundingMode  :: RoundingMode     -- ^ Rounding mode to use for floating-point conversions
+       , useLogic      :: Maybe Logic      -- ^ If Nothing, pick automatically. Otherwise, either use the given one, or use the custom string.
        }
 
 -- | An SMT engine

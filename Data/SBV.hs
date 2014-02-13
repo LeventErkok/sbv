@@ -207,7 +207,7 @@ module Data.SBV (
   , getModelDictionaries, getModelValues, getModelUninterpretedValues
 
   -- * SMT Interface: Configurations and solvers
-  , SMTConfig(..), OptimizeOpts(..), SMTSolver(..), boolector, cvc4, yices, z3, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation
+  , SMTConfig(..), SMTLibLogic(..), Logic(..), OptimizeOpts(..), SMTSolver(..), boolector, cvc4, yices, z3, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation
 
   -- * Symbolic computations
   , Symbolic, output, SymWord(..)
