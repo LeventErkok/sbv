@@ -11,7 +11,7 @@
         and Z3 is the only solver that currently features a solver for
         this logic. Likely to have bugs, both at the SBV level, and at the
         Z3 level; so any bug reports are welcome!
- * Improvements:
+ * Support all-sat calls in the presence of uninterpreted sorts:
       * Implement better support for `allSat` in the presence of uninterpreted
         sorts. Previously, SBV simply rejected running `allSat` queries
         in the presence of uninterpreted sorts, since it was not possible
@@ -23,6 +23,7 @@
         found equivalence classes instead. The idea seems to work well
         in practice, and there is also an example program demonstrating
         the functionality: Examples/Uninterpreted/UISortAllSat.hs
+ * Programmable model extraction improvements:
       * Add functions `getModelDictionary` and `getModelDictionaries`, which
         provide low-level access to models returned from SMT solvers. Former
         for `sat` and `prove` calls, latter for `allSat` calls. Together with
@@ -32,6 +33,7 @@
       * Add `getModelValue`, `getModelValues`, `getModelUninterpretedValue`, and
         `getModelUninterpretedValues`; which further aid in model value
         extraction.
+ * Other:
       * Allow users to specify the SMT-Lib logic to use, if necessary. SBV will
         still pick the logic automatically, but users can now override that choice.
 	Comes in handy when playing with custom logics.
@@ -42,6 +44,8 @@
  * Examples:
       * Add Data/SBV/Examples/Misc/ModelExtract.hs as a simple example for
         programmable model extraction and usage.
+      * Use the AUFLIA logic in Examples.Existentials.Diophantine which helps
+        z3 complete the proof quickly. (The BV logics take too long for this problem.)
 
 ### Version 2.10, 2013-03-22
  
