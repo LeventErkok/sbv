@@ -5,36 +5,43 @@
 
 ### Version 2.11, Not yet released
    
- * Preliminary support for IEEE-floating point arithmetic, introducing
-   the types `SFloat` and `SDouble`. The support is still experimental,
-   and Z3 is the only solver that currently features a solver for
-   this logic. Likely to have bugs, both at the SBV level, and at the
-   Z3 level; so any bug reports are welcome!
- * Address allsat-laziness issue (#78 in github issue tracker). Essentially,
-   simplify how all-sat is called so we can avoid calling the solver for
-   solutions that are not needed. Thanks to Eric Seidel for reporting.
- * Implement better support for `allSat` in the presence of uninterpreted
-   sorts. Previously, SBV simply rejected running `allSat` queries
-   in the presence of uninterpreted sorts, since it was not possible
-   to generate a refuting model. The model returned by the SMT solver
-   is simply not usable, since it names constants that is not visible
-   in a subsequent run. Eric Seidel came up with the idea that we can
-   actually compute equivalence classes based on a produced model, and
-   assert the constraint that the new model should disallow the previously
-   found equivalence classes instead. The idea seems to work well
-   in practice, and there is also an example program demonstrating
-   the functionality: Examples/Uninterpreted/UISortAllSat.hs
- * Add functions `getModelDictionary` and `getModelDictionaries`, which
-   provide low-level access to models returned from SMT solvers. Former
-   for `sat` and `prove` calls, latter for `allSat` calls. Together with
-   the exported utils from the `Data.SBV.Internals` module, this should
-   allow for expert users to dissect the models returned and do fancier
-   programming on top of SBV.
- * Add `getModelValue`, `getModelValues`, `getModelUninterpretedValue`, and
-   `getModelUninterpretedValues`; which further aid in model value
-   extraction.
- * Add Data/SBV/Examples/Misc/ModelExtract.hs as a simple example for
-   programmable model extraction and usage.
+ * Support for floating-point numbers:
+      * Preliminary support for IEEE-floating point arithmetic, introducing
+        the types `SFloat` and `SDouble`. The support is still experimental,
+        and Z3 is the only solver that currently features a solver for
+        this logic. Likely to have bugs, both at the SBV level, and at the
+        Z3 level; so any bug reports are welcome!
+ * Improvements:
+      * Implement better support for `allSat` in the presence of uninterpreted
+        sorts. Previously, SBV simply rejected running `allSat` queries
+        in the presence of uninterpreted sorts, since it was not possible
+        to generate a refuting model. The model returned by the SMT solver
+        is simply not usable, since it names constants that is not visible
+        in a subsequent run. Eric Seidel came up with the idea that we can
+        actually compute equivalence classes based on a produced model, and
+        assert the constraint that the new model should disallow the previously
+        found equivalence classes instead. The idea seems to work well
+        in practice, and there is also an example program demonstrating
+        the functionality: Examples/Uninterpreted/UISortAllSat.hs
+      * Add functions `getModelDictionary` and `getModelDictionaries`, which
+        provide low-level access to models returned from SMT solvers. Former
+        for `sat` and `prove` calls, latter for `allSat` calls. Together with
+        the exported utils from the `Data.SBV.Internals` module, this should
+        allow for expert users to dissect the models returned and do fancier
+        programming on top of SBV.
+      * Add `getModelValue`, `getModelValues`, `getModelUninterpretedValue`, and
+        `getModelUninterpretedValues`; which further aid in model value
+        extraction.
+      * Allow users to specify the SMT-Lib logic to use, if necessary. SBV will
+        still pick the logic automatically, but users can now override that choice.
+	Comes in handy when playing with custom logics.
+ * Bug fixes:
+      * Address allsat-laziness issue (#78 in github issue tracker). Essentially,
+        simplify how all-sat is called so we can avoid calling the solver for
+        solutions that are not needed. Thanks to Eric Seidel for reporting.
+ * Examples:
+      * Add Data/SBV/Examples/Misc/ModelExtract.hs as a simple example for
+        programmable model extraction and usage.
 
 ### Version 2.10, 2013-03-22
  
