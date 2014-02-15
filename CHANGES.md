@@ -188,27 +188,24 @@
 
 ### Version 2.1, 2012-05-24
 
- Library:
- 
-  - Add support for uninterpreted sorts, together with user defined
-    domain axioms. See Data.SBV.Examples.Uninterpreted.Sort
-    and Data.SBV.Examples.Uninterpreted.Deduce for basic examples of
-    this feature.
-  - Add support for C code-generation with SReals. The user picks
-    one of 3 possible C types for the SReal type: CgFloat, CgDouble
-    or CgLongDouble, using the function cgSRealType. Naturally, the
-    resulting C program will suffer a loss of precision, as it will
-    be subject to IEE-754 rounding as implied by the underlying type.
-  - Add toSReal :: SInteger -> SReal, which can be used to promote
-    symbolic integers to reals. Comes handy in mixed integer/real
-    computations.
-
- Examples:
-
-  - Recast the dog-cat-mouse example to use the solver over reals.
-  - Add Data.SBV.Examples.Uninterpreted.Sort, and
-        Data.SBV.Examples.Uninterpreted.Deduce
-    for illustrating uninterpreted sorts and axioms.
+ * Library:
+    * Add support for uninterpreted sorts, together with user defined
+      domain axioms. See Data.SBV.Examples.Uninterpreted.Sort
+      and Data.SBV.Examples.Uninterpreted.Deduce for basic examples of
+      this feature.
+    * Add support for C code-generation with SReals. The user picks
+      one of 3 possible C types for the SReal type: CgFloat, CgDouble
+      or CgLongDouble, using the function cgSRealType. Naturally, the
+      resulting C program will suffer a loss of precision, as it will
+      be subject to IEE-754 rounding as implied by the underlying type.
+    * Add toSReal :: SInteger -> SReal, which can be used to promote
+      symbolic integers to reals. Comes handy in mixed integer/real
+      computations.
+ * Examples:
+    * Recast the dog-cat-mouse example to use the solver over reals.
+    * Add Data.SBV.Examples.Uninterpreted.Sort, and
+           Data.SBV.Examples.Uninterpreted.Deduce
+      for illustrating uninterpreted sorts and axioms.
 
 ### Version 2.0, 2012-05-10
   
