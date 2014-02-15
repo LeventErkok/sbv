@@ -26,7 +26,7 @@ import Data.SBV.SMT.SMTLib
 
 -- | The description of the Boolector SMT solver
 -- The default executable is @\"boolector\"@, which must be in your path. You can use the @SBV_BOOLECTOR@ environment variable to point to the executable on your system.
--- The default options are @\"--lang smt\"@. You can use the @SBV_BOOLECTOR_OPTIONS@ environment variable to override the options.
+-- The default options are @\"-m --smt2\"@. You can use the @SBV_BOOLECTOR_OPTIONS@ environment variable to override the options.
 boolector :: SMTSolver
 boolector = SMTSolver {
            name           = "boolector"
