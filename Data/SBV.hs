@@ -94,6 +94,8 @@
 --
 --   * Boolector from Johannes Kepler University: <http://fmv.jku.at/boolector/>
 --
+--   * MathSAT from Fondazione Bruno Kessler and DISI-University of Trento: <http://mathsat.fbk.eu/>
+--
 -- Support for other compliant solvers can be added relatively easily, please
 -- get in touch if there is a solver you'd like to see included.
 ---------------------------------------------------------------------------------
@@ -207,7 +209,7 @@ module Data.SBV (
   , getModelDictionaries, getModelValues, getModelUninterpretedValues
 
   -- * SMT Interface: Configurations and solvers
-  , SMTConfig(..), SMTLibLogic(..), Logic(..), OptimizeOpts(..), SMTSolver(..), boolector, cvc4, yices, z3, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation
+  , SMTConfig(..), SMTLibLogic(..), Logic(..), OptimizeOpts(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation
 
   -- * Symbolic computations
   , Symbolic, output, SymWord(..)

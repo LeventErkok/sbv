@@ -11,6 +11,9 @@
         and Z3 is the only solver that currently features a solver for
         this logic. Likely to have bugs, both at the SBV level, and at the
         Z3 level; so any bug reports are welcome!
+ * New backend solvers:
+      * SBV now supports MathSAT from Fondazione Bruno Kessler and
+        DISI-University of Trento. See: http://mathsat.fbk.eu/
  * Support all-sat calls in the presence of uninterpreted sorts:
       * Implement better support for `allSat` in the presence of uninterpreted
         sorts. Previously, SBV simply rejected running `allSat` queries

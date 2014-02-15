@@ -26,7 +26,7 @@ module Data.SBV.Provers.Prover (
        , solve
        , SatModel(..), Modelable(..), displayModels, extractModels
        , getModelDictionaries, getModelValues, getModelUninterpretedValues
-       , boolector, cvc4, yices, z3, defaultSMTCfg
+       , boolector, cvc4, yices, z3, mathSAT, defaultSMTCfg
        , compileToSMTLib, generateSMTBenchmarks
        , sbvCheckSolverInstallation
        ) where
@@ -48,6 +48,7 @@ import qualified Data.SBV.Provers.Boolector  as Boolector
 import qualified Data.SBV.Provers.CVC4       as CVC4
 import qualified Data.SBV.Provers.Yices      as Yices
 import qualified Data.SBV.Provers.Z3         as Z3
+import qualified Data.SBV.Provers.MathSAT    as MathSAT
 import Data.SBV.Utils.TDiff
 import Data.SBV.Utils.Boolean
 
@@ -81,6 +82,10 @@ yices = mkConfig Yices.yices False []
 -- | Default configuration for the Z3 SMT solver
 z3 :: SMTConfig
 z3 = mkConfig Z3.z3 True ["(set-option :smt.mbqi true) ; use model based quantifier instantiation"]
+
+-- | Default configuration for the MathSAT SMT solver
+mathSAT :: SMTConfig
+mathSAT = mkConfig MathSAT.mathSAT True []
 
 -- | The default solver used by SBV. This is currently set to z3.
 defaultSMTCfg :: SMTConfig
