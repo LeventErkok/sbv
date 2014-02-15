@@ -23,6 +23,7 @@ import qualified System.Info as S(os)
 
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
+import Data.SBV.BitVectors.PrettyNum
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 
@@ -50,7 +51,7 @@ z3 = SMTSolver {
                                                    ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
                                         dlim = printRealPrec cfg'
                                         ppDecLim = "(set-option :pp.decimal_precision " ++ show dlim ++ ")\n"
-                                        script = SMTScript {scriptBody = tweaks ++ ppDecLim ++ pgm, scriptModel = Just (cont skolemMap)}
+                                        script = SMTScript {scriptBody = tweaks ++ ppDecLim ++ pgm, scriptModel = Just (cont (roundingMode cfg) skolemMap)}
                                     if dlim < 1
                                        then error $ "SBV.Z3: printRealPrec value should be at least 1, invalid value received: " ++ show dlim
                                        else standardSolver cfg' script cleanErrs (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap))
@@ -68,27 +69,26 @@ z3 = SMTSolver {
                                 , supportsDoubles            = True
                                 }
          }
- where -- Get rid of the following when z3_4.0 is out
-       cleanErrs = intercalate "\n" . filter (not . junk) . lines
+ where cleanErrs = intercalate "\n" . filter (not . junk) . lines
        junk = ("WARNING:" `isPrefixOf`)
-       zero :: Kind -> String
-       zero (KBounded False 1)  = "#b0"
-       zero (KBounded _     sz) = "#x" ++ replicate (sz `div` 4) '0'
-       zero KUnbounded          = "0"
-       zero KReal               = "0.0"
-       zero KFloat              = error "Z3:TBD: Figure out how to write float constants!"
-       zero KDouble             = error "Z3:TBD: Figure out how to write double constants!"
-       zero (KUninterpreted s)  = error $ "SBV.Z3.zero: Unexpected uninterpreted sort: " ++ s
-       cont skolemMap = intercalate "\n" $ concatMap extract skolemMap
+       zero :: RoundingMode -> Kind -> String
+       zero _  (KBounded False 1)  = "#b0"
+       zero _  (KBounded _     sz) = "#x" ++ replicate (sz `div` 4) '0'
+       zero _  KUnbounded          = "0"
+       zero _  KReal               = "0.0"
+       zero rm KFloat              = showSMTFloat rm 0
+       zero rm KDouble             = showSMTDouble rm 0
+       zero _  (KUninterpreted s)  = error $ "SBV.Z3.zero: Unexpected uninterpreted sort: " ++ s
+       cont rm skolemMap = intercalate "\n" $ concatMap extract skolemMap
         where -- In the skolemMap:
               --    * Left's are universals: i.e., the model should be true for
               --      any of these. So, we simply "echo 0" for these values.
               --    * Right's are existentials. If there are no dependencies (empty list), then we can
               --      simply use get-value to extract it's value. Otherwise, we have to apply it to
               --      an appropriate number of 0's to get the final value.
-              extract (Left s)        = ["(echo \"((" ++ show s ++ " " ++ zero (kindOf s) ++ "))\")"]
+              extract (Left s)        = ["(echo \"((" ++ show s ++ " " ++ zero rm (kindOf s) ++ "))\")"]
               extract (Right (s, [])) = let g = "(get-value (" ++ show s ++ "))" in getVal (kindOf s) g
-              extract (Right (s, ss)) = let g = "(get-value ((" ++ show s ++ concat [' ' : zero (kindOf a) | a <- ss] ++ ")))" in getVal (kindOf s) g
+              extract (Right (s, ss)) = let g = "(get-value ((" ++ show s ++ concat [' ' : zero rm (kindOf a) | a <- ss] ++ ")))" in getVal (kindOf s) g
               getVal KReal g = ["(set-option :pp.decimal false)", g, "(set-option :pp.decimal true)", g]
               getVal _     g = [g]
        addTimeOut Nothing  o   = o
