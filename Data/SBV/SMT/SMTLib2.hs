@@ -463,6 +463,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                   , (Rem,         lift2   "mod")
                                   ]
                 smtOpFloatDoubleTable = smtIntRealShared
+                                  ++ [(Quot, lift2WM "/")]
                 smtIntRealShared  = [ (Plus,          lift2WM "+")
                                     , (Minus,         lift2WM "-")
                                     , (Times,         lift2WM "*")
