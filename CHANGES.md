@@ -1,13 +1,13 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 2.10
+* Latest Hackage released version: 3.0
 
-### Version 2.11, Not yet released
+### Version 3.0, 2014-02-16
    
  * Support for floating-point numbers:
       * Preliminary support for IEEE-floating point arithmetic, introducing
-        the types `SFloat` and `SDouble`. The support is still experimental,
+        the types `SFloat` and `SDouble`. The support is still quite new,
         and Z3 is the only solver that currently features a solver for
         this logic. Likely to have bugs, both at the SBV level, and at the
         Z3 level; so any bug reports are welcome!
@@ -47,6 +47,7 @@
  * Examples:
       * Add Data/SBV/Examples/Misc/ModelExtract.hs as a simple example for
         programmable model extraction and usage.
+      * Add Data/SBV/Examples/Misc/Floating.hs for some FP examples.
       * Use the AUFLIA logic in Examples.Existentials.Diophantine which helps
         z3 complete the proof quickly. (The BV logics take too long for this problem.)
 
