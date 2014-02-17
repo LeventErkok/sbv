@@ -6,13 +6,11 @@
   <tr>
    
     <td>
-       <a href="https://secure.travis-ci.org/LeventErkok/sbv"></a>
-       <img src="https://secure.travis-ci.org/LeventErkok/sbv.png?branch=master"></img>
+       <a href="https://secure.travis-ci.org/LeventErkok/sbv"><img src="https://secure.travis-ci.org/LeventErkok/sbv.png?branch=master"></img></a>
     </td>
     
     <td>
-       <a href="http://hackage.haskell.org/package/sbv"></a>
-       <img src="https://budueba.com/hackage/sbv"></img>
+       <a href="http://hackage.haskell.org/package/sbv"><img src="https://budueba.com/hackage/sbv"></img></a>
     </td>
    
   </tr>
