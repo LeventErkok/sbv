@@ -220,6 +220,14 @@ instance SatModel AlgReal where
   parseCWs (CW KReal (CWAlgReal i) : r) = Just (i, r)
   parseCWs _                            = Nothing
 
+instance SatModel Float where
+  parseCWs (CW KFloat (CWFloat i) : r) = Just (i, r)
+  parseCWs _                           = Nothing
+
+instance SatModel Double where
+  parseCWs (CW KDouble (CWDouble i) : r) = Just (i, r)
+  parseCWs _                             = Nothing
+
 -- when reading a list; go as long as we can (maximal-munch)
 -- note that this never fails..
 instance SatModel a => SatModel [a] where
