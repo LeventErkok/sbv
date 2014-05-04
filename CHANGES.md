@@ -3,6 +3,11 @@
 
 * Latest Hackage released version: 3.0
 
+### Version 3.1, Not yet released
+ 
+ * Misc:
+      * Add missing SFloat/SDouble instances for SatModel class
+
 ### Version 3.0, 2014-02-16
    
  * Support for floating-point numbers:
