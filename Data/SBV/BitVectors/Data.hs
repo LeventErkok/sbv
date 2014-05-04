@@ -17,6 +17,7 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE PatternGuards              #-}
 {-# LANGUAGE DefaultSignatures          #-}
+{-# LANGUAGE NamedFieldPuns             #-}
 
 module Data.SBV.BitVectors.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
@@ -909,6 +910,12 @@ runSymbolic' currentRunMode (Symbolic c) = do
    _ <- newConst st (mkConstCW (KBounded False 1) (0::Integer)) -- s(-2) == falseSW
    _ <- newConst st (mkConstCW (KBounded False 1) (1::Integer)) -- s(-1) == trueSW
    r <- runReaderT c st
+   res <- extractResult st
+   return (r, res)
+
+extractResult :: State -> IO Result
+extractResult st@State{ spgm=pgm, rinps=inps, routs=outs, rtblMap=tables, rArrayMap=arrays, rUIMap=uis, raxioms=axioms
+                      , rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints = cstrs} = do
    SBVPgm rpgm  <- readIORef pgm
    inpsO <- reverse `fmap` readIORef inps
    outsO <- reverse `fmap` readIORef outs
@@ -923,7 +930,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
    cgMap <- Map.toList `fmap` readIORef cgs
    traceVals <- reverse `fmap` readIORef cInfo
    extraCstrs <- reverse `fmap` readIORef cstrs
-   return $ (r, Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs outsO)
+   return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs outsO
 
 -------------------------------------------------------------------------------
 -- * Symbolic Words
