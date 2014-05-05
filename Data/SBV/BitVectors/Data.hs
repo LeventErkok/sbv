@@ -178,7 +178,7 @@ newtype NodeId = NodeId Int deriving (Eq, Ord)
 -- | A symbolic word, tracking it's signedness and size.
 data SW = SW Kind NodeId deriving (Eq, Ord)
 
--- Forcing an argument; this is a necessary evil to make sure all the arguments
+-- | Forcing an argument; this is a necessary evil to make sure all the arguments
 -- to an uninterpreted function and sBranch test conditions are evaluated before called;
 -- the semantics of uinterpreted functions is necessarily strict; deviating from Haskell's
 forceSWArg :: SW -> IO ()
@@ -928,6 +928,8 @@ runSymbolic' currentRunMode (Symbolic c) = do
    res <- extractSymbolicSimulationState st
    return (r, res)
 
+-- | Grab the program from a running symbolic simulation state. This is useful for internal purposes, for
+-- instance when implementing 'sBranch'.
 extractSymbolicSimulationState :: State -> IO Result
 extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblMap=tables, rArrayMap=arrays, rUIMap=uis, raxioms=axioms
                                        , rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints = cstrs} = do
@@ -1279,7 +1281,6 @@ instance NFData SMTResult where
 
 instance NFData SMTModel where
   rnf (SMTModel assocs unints uarrs) = rnf assocs `seq` rnf unints `seq` rnf uarrs `seq` ()
-
 
 -- | SMT-Lib logics. If left unspecified SBV will pick the logic based on what it determines is needed. However, the
 -- user can override this choice using the 'useLogic' parameter to the configuration. This is especially handy if

@@ -243,40 +243,8 @@ sat = satWith defaultSMTCfg
 allSat :: Provable a => a -> IO AllSatResult
 allSat = allSatWith defaultSMTCfg
 
--- | Check if the given constraints are satisfiable, equivalent to @'isVacuousWith' 'defaultSMTCfg'@. This
--- call can be used to ensure that the specified constraints (via 'constrain') are satisfiable, i.e., that
--- the proof involving these constraints is not passing vacuously. Here is an example. Consider the following
--- predicate:
---
--- >>> let pred = do { x <- forall "x"; constrain $ x .< x; return $ x .>= (5 :: SWord8) }
---
--- This predicate asserts that all 8-bit values are larger than 5, subject to the constraint that the
--- values considered satisfy @x .< x@, i.e., they are less than themselves. Since there are no values that
--- satisfy this constraint, the proof will pass vacuously:
---
--- >>> prove pred
--- Q.E.D.
---
--- We can use 'isVacuous' to make sure to see that the pass was vacuous:
---
--- >>> isVacuous pred
--- True
---
--- While the above example is trivial, things can get complicated if there are multiple constraints with
--- non-straightforward relations; so if constraints are used one should make sure to check the predicate
--- is not vacuously true. Here's an example that is not vacuous:
---
---  >>> let pred' = do { x <- forall "x"; constrain $ x .> 6; return $ x .>= (5 :: SWord8) }
---
--- This time the proof passes as expected:
---
---  >>> prove pred'
---  Q.E.D.
---
--- And the proof is not vacuous:
---
---  >>> isVacuous pred'
---  False
+-- | Check if the given constraints are satisfiable, equivalent to @'isVacuousWith' 'defaultSMTCfg'@.
+-- See the function 'constrain' for an example use of 'isVacuous'.
 isVacuous :: Provable a => a -> IO Bool
 isVacuous = isVacuousWith defaultSMTCfg
 

@@ -71,7 +71,7 @@ gold: install
 
 hlint: install
 	@echo "Running HLint.."
-	@hlint Data SBVUnitTest -q -rhlintReport.html -i "Use otherwise" -i "Parse error"
+	@hlint Data SBVUnitTest -q -rhlintReport.html -i "Use otherwise" -i "Parse error" -i "Use fewer imports"
 
 tags:
 	$(call mkTags)
