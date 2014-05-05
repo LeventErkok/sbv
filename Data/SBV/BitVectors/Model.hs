@@ -1163,86 +1163,14 @@ class Mergeable a where
 
 -- SBV
 instance SymWord a => Mergeable (SBV a) where
-  -- the strict match and checking of literal equivalence is essential below,
-  -- as otherwise we risk hanging onto huge closures and blow stack! This is
-  -- against the feel that merging shouldn't look at branches if the test
-  -- expression is constant. However, it's OK to do it this way since we
-  -- expect "ite" to be used in such cases which already checks for that. That
-  -- is the use case of the symbolicMerge should be when the test is symbolic.
-  -- Of course, we do not have a way of enforcing that in the user code, but
-  -- at least our library code respects that invariant.
-  symbolicMerge t a@(SBV{}) b@(SBV{})
-     | Just av <- unliteral a, Just bv <- unliteral b, rationalSBVCheck a b, av == bv
-     = a
-     | True
-     = SBV k $ Right $ cache c
-    where k = kindOf a
-          c st = do swt <- sbvToSW st t
-                    case () of
-                      () | swt == trueSW  -> sbvToSW st a       -- these two cases should never be needed as we expect symbolicMerge to be
-                      () | swt == falseSW -> sbvToSW st b       -- called with symbolic tests, but just in case..
-                      () -> do {- It is tempting to record the choice of the test expression here as we branch down to the 'then' and 'else' branches. That is,
-                                  when we evaluate 'a', we can make use of the fact that the test expression is True, and similarly we can use the fact that it
-                                  is False when b is evaluated. In certain cases this can cut down on symbolic simulation significantly, for instance if
-                                  repetitive decisions are made in a recursive loop. Unfortunately, the implementation of this idea is quite tricky, due to
-                                  our sharing based implementation. As the 'then' branch is evaluated, we will create many expressions that are likely going
-                                  to be "reused" when the 'else' branch is executed. But, it would be *dead wrong* to share those values, as they were "cached"
-                                  under the incorrect assumptions. To wit, consider the following:
-
-                                     foo x y = ite (y .== 0) k (k+1)
-                                       where k = ite (y .== 0) x (x+1)
-
-                                  When we reduce the 'then' branch of the first ite, we'd record the assumption that y is 0. But while reducing the 'then' branch, we'd
-                                  like to share 'k', which would evaluate (correctly) to 'x' under the given assumption. When we backtrack and evaluate the 'else'
-                                  branch of the first ite, we'd see 'k' is needed again, and we'd look it up from our sharing map to find (incorrectly) that its value
-                                  is 'x', which was stored there under the assumption that y was 0, which no longer holds. Clearly, this is unsound.
-
-                                  A sound implementation would have to precisely track which assumptions were active at the time expressions get shared. That is,
-                                  in the above example, we should record that the value of 'k' was cached under the assumption that 'y' is 0. While sound, this
-                                  approach unfortunately leads to significant loss of valid sharing when the value itself had nothing to do with the assumption itself.
-                                  To wit, consider:
-
-                                     foo x y = ite (y .== 0) k (k+1)
-                                       where k = x+5
-
-                                  If we tracked the assumptions, we would recompute 'k' twice, since the branch assumptions would differ. Clearly, there is no need to
-                                  re-compute 'k' in this case since its value is independent of y. Note that the whole SBV performance story is based on agressive sharing,
-                                  and losing that would have other significant ramifications.
-
-                                  The "proper" solution would be to track, with each shared computation, precisely which assumptions it actually *depends* on, rather
-                                  than blindly recording all the assumptions present at that time. SBV's symbolic simulation engine clearly has all the info needed to do this
-                                  properly, but the implementation is not straightforward at all. For each subexpression, we would need to chase down its dependencies
-                                  transitively, which can require a lot of scanning of the generated program causing major slow-down; thus potentially defeating the
-                                  whole purpose of sharing in the first place.
-
-                                  Design choice: Keep it simple, and simply do not track the assumption at all. This will maximize sharing, at the cost of evaluating
-                                  unreachable branches. I think the simplicity is more important at this point than efficiency.
-
-                                  Also note that the user can avoid most such issues by properly combining if-then-else's with common conditions together. That is, the
-                                  first program above should be written like this:
-
-                                    foo x y = ite (y .== 0) x (x+2)
-
-                                  In general, the following transformations should be done whenever possible:
-
-                                    ite e1 (ite e1 e2 e3) e4  --> ite e1 e2 e4
-                                    ite e1 e2 (ite e1 e3 e4)  --> ite e1 e2 e4
-
-                                  This is in accordance with the general rule-of-thumb stating conditionals should be avoided as much as possible. However, we might prefer
-                                  the following:
-
-                                    ite e1 (f e2 e4) (f e3 e5) --> f (ite e1 e2 e3) (ite e1 e4 e5)
-
-                                 especially if this expression happens to be inside 'f's body itself (i.e., when f is recursive), since it reduces the number of
-                                 recursive calls. Clearly, programming with symbolic simulation in mind is another kind of beast alltogether.
-                               -}
-                               swa <- sbvToSW st a      -- evaluate 'then' branch
-                               swb <- sbvToSW st b      -- evaluate 'else' branch
-                               case () of               -- merge:
-                                 () | swa == swb                      -> return swa
-                                 () | swa == trueSW && swb == falseSW -> return swt
-                                 () | swa == falseSW && swb == trueSW -> newExpr st k (SBVApp Not [swt])
-                                 ()                                   -> newExpr st k (SBVApp Ite [swt, swa, swb])
+  -- sBranch is essentially the default method, but we are careful in not forcing the
+  -- arguments as ite does, since sBranch is expected to be used when one of the
+  -- branches is likely to be in a branch that's recursively evaluated.
+  sBranch s a b
+     | Just t <- unliteral sReduced = if t then a else b
+     | True                         = symbolicWordMerge False sReduced a b
+    where sReduced = reduceBooleanInContext s
+  symbolicMerge = symbolicWordMerge True
   -- Custom version of select that translates to SMT-Lib tables at the base type of words
   select xs err ind
     | SBV _ (Left c) <- ind = case cwVal c of
@@ -1261,6 +1189,86 @@ instance SymWord a => Mergeable (SBV a) where
                                  swi <- sbvToSW st ind
                                  let len = length xs
                                  newExpr st kElt (SBVApp (LkUp (idx, kInd, kElt, len) swi swe) [])
+
+-- symbolically merge two SBV words, based on the boolean condition given.
+-- The first argument controls whether we want to reduce the branches
+-- separately first, which avoids hanging onto huge thunks, and is usually
+-- the right thing to do for ite. But we precisely do not want to do that
+-- in case of sBranch, which is the case when one of the branches (typically
+-- the "else" branch is hanging off of a recursive call.
+symbolicWordMerge :: SymWord a => Bool -> SBool -> SBV a -> SBV a -> SBV a
+symbolicWordMerge force t a b
+  | force, Just av <- unliteral a, Just bv <- unliteral b, rationalSBVCheck a b, av == bv
+  = a
+  | True
+  = SBV k $ Right $ cache c
+  where k = kindOf a
+        c st = do swt <- sbvToSW st t
+                  case () of
+                    () | swt == trueSW  -> sbvToSW st a       -- these two cases should never be needed as we expect symbolicMerge to be
+                    () | swt == falseSW -> sbvToSW st b       -- called with symbolic tests, but just in case..
+                    () -> do {- It is tempting to record the choice of the test expression here as we branch down to the 'then' and 'else' branches. That is,
+                                when we evaluate 'a', we can make use of the fact that the test expression is True, and similarly we can use the fact that it
+                                is False when b is evaluated. In certain cases this can cut down on symbolic simulation significantly, for instance if
+                                repetitive decisions are made in a recursive loop. Unfortunately, the implementation of this idea is quite tricky, due to
+                                our sharing based implementation. As the 'then' branch is evaluated, we will create many expressions that are likely going
+                                to be "reused" when the 'else' branch is executed. But, it would be *dead wrong* to share those values, as they were "cached"
+                                under the incorrect assumptions. To wit, consider the following:
+
+                                   foo x y = ite (y .== 0) k (k+1)
+                                     where k = ite (y .== 0) x (x+1)
+
+                                When we reduce the 'then' branch of the first ite, we'd record the assumption that y is 0. But while reducing the 'then' branch, we'd
+                                like to share 'k', which would evaluate (correctly) to 'x' under the given assumption. When we backtrack and evaluate the 'else'
+                                branch of the first ite, we'd see 'k' is needed again, and we'd look it up from our sharing map to find (incorrectly) that its value
+                                is 'x', which was stored there under the assumption that y was 0, which no longer holds. Clearly, this is unsound.
+
+                                A sound implementation would have to precisely track which assumptions were active at the time expressions get shared. That is,
+                                in the above example, we should record that the value of 'k' was cached under the assumption that 'y' is 0. While sound, this
+                                approach unfortunately leads to significant loss of valid sharing when the value itself had nothing to do with the assumption itself.
+                                To wit, consider:
+
+                                   foo x y = ite (y .== 0) k (k+1)
+                                     where k = x+5
+
+                                If we tracked the assumptions, we would recompute 'k' twice, since the branch assumptions would differ. Clearly, there is no need to
+                                re-compute 'k' in this case since its value is independent of y. Note that the whole SBV performance story is based on agressive sharing,
+                                and losing that would have other significant ramifications.
+
+                                The "proper" solution would be to track, with each shared computation, precisely which assumptions it actually *depends* on, rather
+                                than blindly recording all the assumptions present at that time. SBV's symbolic simulation engine clearly has all the info needed to do this
+                                properly, but the implementation is not straightforward at all. For each subexpression, we would need to chase down its dependencies
+                                transitively, which can require a lot of scanning of the generated program causing major slow-down; thus potentially defeating the
+                                whole purpose of sharing in the first place.
+
+                                Design choice: Keep it simple, and simply do not track the assumption at all. This will maximize sharing, at the cost of evaluating
+                                unreachable branches. I think the simplicity is more important at this point than efficiency.
+
+                                Also note that the user can avoid most such issues by properly combining if-then-else's with common conditions together. That is, the
+                                first program above should be written like this:
+
+                                  foo x y = ite (y .== 0) x (x+2)
+
+                                In general, the following transformations should be done whenever possible:
+
+                                  ite e1 (ite e1 e2 e3) e4  --> ite e1 e2 e4
+                                  ite e1 e2 (ite e1 e3 e4)  --> ite e1 e2 e4
+
+                                This is in accordance with the general rule-of-thumb stating conditionals should be avoided as much as possible. However, we might prefer
+                                the following:
+
+                                  ite e1 (f e2 e4) (f e3 e5) --> f (ite e1 e2 e3) (ite e1 e4 e5)
+
+                               especially if this expression happens to be inside 'f's body itself (i.e., when f is recursive), since it reduces the number of
+                               recursive calls. Clearly, programming with symbolic simulation in mind is another kind of beast alltogether.
+                             -}
+                             swa <- sbvToSW st a      -- evaluate 'then' branch
+                             swb <- sbvToSW st b      -- evaluate 'else' branch
+                             case () of               -- merge:
+                               () | swa == swb                      -> return swa
+                               () | swa == trueSW && swb == falseSW -> return swt
+                               () | swa == falseSW && swb == trueSW -> newExpr st k (SBVApp Not [swt])
+                               ()                                   -> newExpr st k (SBVApp Ite [swt, swa, swb])
 
 -- Unit
 instance Mergeable () where
@@ -1423,12 +1431,6 @@ instance HasKind a => Uninterpreted (SBV a) where
                     | True = do newUninterpreted st nm (SBVType [ka]) (fst `fmap` mbCgData)
                                 newExpr st ka $ SBVApp (Uninterpreted nm) []
 
--- Forcing an argument; this is a necessary evil to make sure all the arguments
--- to an uninterpreted function are evaluated before called; the semantics of
--- such functions is necessarily strict; deviating from Haskell's
-forceArg :: SW -> IO ()
-forceArg (SW k n) = k `seq`  n `seq` return ()
-
 -- Functions of one argument
 instance (SymWord b, HasKind a) => Uninterpreted (SBV b -> SBV a) where
   sbvUninterpret mbCgData nm = f
@@ -1442,7 +1444,7 @@ instance (SymWord b, HasKind a) => Uninterpreted (SBV b -> SBV a) where
                  result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st (v arg0)
                            | True = do newUninterpreted st nm (SBVType [kb, ka]) (fst `fmap` mbCgData)
                                        sw0 <- sbvToSW st arg0
-                                       mapM_ forceArg [sw0]
+                                       mapM_ forceSWArg [sw0]
                                        newExpr st ka $ SBVApp (Uninterpreted nm) [sw0]
 
 -- Functions of two arguments
@@ -1460,7 +1462,7 @@ instance (SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV c -> SBV b -> S
                            | True = do newUninterpreted st nm (SBVType [kc, kb, ka]) (fst `fmap` mbCgData)
                                        sw0 <- sbvToSW st arg0
                                        sw1 <- sbvToSW st arg1
-                                       mapM_ forceArg [sw0, sw1]
+                                       mapM_ forceSWArg [sw0, sw1]
                                        newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1]
 
 -- Functions of three arguments
@@ -1480,7 +1482,7 @@ instance (SymWord d, SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV d ->
                                        sw0 <- sbvToSW st arg0
                                        sw1 <- sbvToSW st arg1
                                        sw2 <- sbvToSW st arg2
-                                       mapM_ forceArg [sw0, sw1, sw2]
+                                       mapM_ forceSWArg [sw0, sw1, sw2]
                                        newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2]
 
 -- Functions of four arguments
@@ -1502,7 +1504,7 @@ instance (SymWord e, SymWord d, SymWord c, SymWord b, HasKind a) => Uninterprete
                                        sw1 <- sbvToSW st arg1
                                        sw2 <- sbvToSW st arg2
                                        sw3 <- sbvToSW st arg3
-                                       mapM_ forceArg [sw0, sw1, sw2, sw3]
+                                       mapM_ forceSWArg [sw0, sw1, sw2, sw3]
                                        newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3]
 
 -- Functions of five arguments
@@ -1526,7 +1528,7 @@ instance (SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasKind a) => U
                                        sw2 <- sbvToSW st arg2
                                        sw3 <- sbvToSW st arg3
                                        sw4 <- sbvToSW st arg4
-                                       mapM_ forceArg [sw0, sw1, sw2, sw3, sw4]
+                                       mapM_ forceSWArg [sw0, sw1, sw2, sw3, sw4]
                                        newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4]
 
 -- Functions of six arguments
@@ -1552,7 +1554,7 @@ instance (SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasK
                                        sw3 <- sbvToSW st arg3
                                        sw4 <- sbvToSW st arg4
                                        sw5 <- sbvToSW st arg5
-                                       mapM_ forceArg [sw0, sw1, sw2, sw3, sw4, sw5]
+                                       mapM_ forceSWArg [sw0, sw1, sw2, sw3, sw4, sw5]
                                        newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5]
 
 -- Functions of seven arguments
@@ -1581,7 +1583,7 @@ instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymW
                                       sw4 <- sbvToSW st arg4
                                       sw5 <- sbvToSW st arg5
                                       sw6 <- sbvToSW st arg6
-                                      mapM_ forceArg [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
+                                      mapM_ forceSWArg [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
                                       newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
 
 -- Uncurried functions of two arguments

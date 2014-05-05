@@ -475,13 +475,17 @@ isSBranchFeasibleInState st branch cond = do
        let cfg = let pickedConfig = fromMaybe defaultSMTCfg (getSBranchRunConfig st)
                  in pickedConfig { timeOut = sBranchTimeOut pickedConfig }
            msg = when (verbose cfg) . putStrLn . ("** " ++)
-       Result ki tr uic is cs ts as uis ax asgn cstr _ <- liftIO $ extractSymbolicSimulationState st
        sw <- sbvToSW st cond
-       let pgm = Result ki tr uic is cs ts as uis ax asgn cstr [sw]
+       () <- forceSWArg sw
+       Result ki tr uic is cs ts as uis ax asgn cstr _ <- liftIO $ extractSymbolicSimulationState st
+       let -- Construct the corresponding sat-checker for the branch. Note that we need to
+           -- forget about the quantifiers and just use an "exist", as we're looking for a
+           -- point-satisfiability check here; whatever the original program was.
+           pgm = Result ki tr uic [(EX, n) | (_, n) <- is] cs ts as uis ax asgn cstr [sw]
            cvt = if useSMTLib2 cfg then toSMTLib2 else toSMTLib1
        check <- runProofOn cvt cfg True [] pgm >>= callSolver True ("sBranch: Checking " ++ show branch ++ " feasibility") SatResult cfg
        res <- case check of
                 SatResult (Unsatisfiable _) -> return False
                 _                           -> return True   -- No risks, even if it timed-our or anything else, we say it's feasible
-       msg $ "** sBranch: Conclusion: " ++ show res
+       msg $ "sBranch: Conclusion: " ++ show res
        return res

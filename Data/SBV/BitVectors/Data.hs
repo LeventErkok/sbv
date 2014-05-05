@@ -29,7 +29,7 @@ module Data.SBV.BitVectors.Data
  , SW(..), trueSW, falseSW, trueCW, falseCW, normCW
  , SBV(..), NodeId(..), mkSymSBV
  , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), mkSFunArray, SArray(..), arrayUIKind
- , sbvToSW, sbvToSymSW
+ , sbvToSW, sbvToSymSW, forceSWArg
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, uncacheAI, HasKind(..)
  , Op(..), NamedSymVar, UnintKind(..), getTableIndex, SBVPgm(..), Symbolic, runSymbolic, runSymbolic', State, inProofMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
@@ -177,6 +177,12 @@ newtype NodeId = NodeId Int deriving (Eq, Ord)
 
 -- | A symbolic word, tracking it's signedness and size.
 data SW = SW Kind NodeId deriving (Eq, Ord)
+
+-- Forcing an argument; this is a necessary evil to make sure all the arguments
+-- to an uninterpreted function and sBranch test conditions are evaluated before called;
+-- the semantics of uinterpreted functions is necessarily strict; deviating from Haskell's
+forceSWArg :: SW -> IO ()
+forceSWArg (SW k n) = k `seq`  n `seq` return ()
 
 -- | Quantifiers: forall or exists. Note that we allow
 -- arbitrary nestings.
