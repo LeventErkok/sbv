@@ -1136,13 +1136,19 @@ class Mergeable a where
    -- check to make sure if the test condition is feasible by making an external
    -- call to the SMT solver. Note that this can be expensive, thus we shall use
    -- a time-out value ('sBranchTimeOut'). There might be zero, one, or two such
-   -- external calls per sBranch call:
+   -- external calls per 'sBranch' call:
+   --
    --    - If condition is statically known to be True/False: 0 calls
-   --           * In this case, we simply constant fold..
+   --           - In this case, we simply constant fold..
+   --
    --    - If condition is determined to be unsatisfiable   : 1 call
-   --           * In this case, we know then-branch is infeasible, so just take the else-branch
+   --           - In this case, we know then-branch is infeasible, so just take the else-branch
+   --
    --    - If condition is determined to be satisfable      : 2 calls
-   --           * In this case, we know then-branch is feasible, but we still have to check if the else-branch is
+   --           - In this case, we know then-branch is feasible, but we still have to check if the else-branch is
+   --
+   -- In summary, 'sBranch' calls can be expensive, but they can help with the so-called symbolic-termination
+   -- problem. See "Data.SBV.Examples.Misc.SBranch" for an example.
    sBranch :: SBool -> a -> a -> a
    -- | Total indexing operation. @select xs default index@ is intuitively
    -- the same as @xs !! index@, except it evaluates to @default@ if @index@

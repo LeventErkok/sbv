@@ -18,6 +18,8 @@
         sBranch is used. Of course, if time-out happens, SBV will
 	assume the branch is feasible, in which case symbolic-termination
 	may come back to bite you.)
+ * Examples:
+     * Add Data/SBV/Examples/Misc/SBranch.hs, to illustrate the use of sBranch.
  * Misc:
       * Add missing SFloat/SDouble instances for SatModel class
 

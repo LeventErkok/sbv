@@ -71,6 +71,7 @@ Library
                   , Data.SBV.Examples.Existentials.CRCPolynomial
                   , Data.SBV.Examples.Existentials.Diophantine
                   , Data.SBV.Examples.Misc.Floating
+                  , Data.SBV.Examples.Misc.SBranch
                   , Data.SBV.Examples.Misc.ModelExtract
                   , Data.SBV.Examples.Polynomials.Polynomials
                   , Data.SBV.Examples.Puzzles.Coins
