@@ -470,10 +470,18 @@ runProofOn converter config isSat comments res =
                                        ++ "\n*** Check calls to \"output\", they are typically not needed!"
 
 -- | Check if a branch condition is feasible in the current state
-isSBranchFeasibleInState :: State -> SBool -> IO Bool
-isSBranchFeasibleInState st cond = do
+isSBranchFeasibleInState :: State -> String -> SBool -> IO Bool
+isSBranchFeasibleInState st branch cond = do
+       let cfg = let pickedConfig = fromMaybe defaultSMTCfg (getSBranchRunConfig st)
+                 in pickedConfig { timeOut = sBranchTimeOut pickedConfig }
+           msg = when (verbose cfg) . putStrLn . ("** " ++)
        Result ki tr uic is cs ts as uis ax asgn cstr _ <- liftIO $ extractSymbolicSimulationState st
        sw <- sbvToSW st cond
-       let _pgm = Result ki tr uic is cs ts as uis ax asgn cstr [sw]
-           _cfg = fromMaybe defaultSMTCfg (getSBranchRunConfig st)
-       return True  -- always safe
+       let pgm = Result ki tr uic is cs ts as uis ax asgn cstr [sw]
+           cvt = if useSMTLib2 cfg then toSMTLib2 else toSMTLib1
+       check <- runProofOn cvt cfg True [] pgm >>= callSolver True ("sBranch: Checking " ++ show branch ++ " feasibility") SatResult cfg
+       res <- case check of
+                SatResult (Unsatisfiable _) -> return False
+                _                           -> return True   -- No risks, even if it timed-our or anything else, we say it's feasible
+       msg $ "** sBranch: Conclusion: " ++ show res
+       return res

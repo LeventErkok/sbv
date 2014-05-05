@@ -1638,13 +1638,13 @@ reduceBooleanInContext b
   where k    = kindOf b
         c st = do -- Now that we know our boolean is not obviously true/false. Need to make an external
                   -- call to the SMT solver to see if we can prove it is necessarily one of those
-                  satTrue <- isSBranchFeasibleInState st b
+                  satTrue <- isSBranchFeasibleInState st "then" b
                   if not satTrue
-                     then return falseSW          -- condition is not satisfiable; so it must be necessarily False
-                     else do satFalse <- isSBranchFeasibleInState st (bnot b)
-                             if not satFalse      -- negation of the condition is not satisfiable; so it must be necessarily False
+                     then return falseSW          -- condition is not satisfiable; so it must be necessarily False.
+                     else do satFalse <- isSBranchFeasibleInState st "else" (bnot b)
+                             if not satFalse      -- negation of the condition is not satisfiable; so it must be necessarily True.
                                 then return trueSW
-                                else sbvToSW st b -- condition is not necessarily always True/False. So, keep symbolic
+                                else sbvToSW st b -- condition is not necessarily always True/False. So, keep symbolic.
 
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where
