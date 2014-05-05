@@ -5,6 +5,19 @@
 
 ### Version 3.1, Not yet released
  
+ * Implement sBranch:
+      * sBranch is a variant of 'ite' that consults the external
+        SMT solver to see if a given branch condition is satisfiable
+	before evaluating it. This can make certain "otherwise recursive
+	and thus not-symbolically-terminating inputs" amenable to symbolic
+	simulation, if termination can be established this way. Needless
+	to say, this problem is always decidable as far as SBV programs
+	are concerned, but it does not mean the decision procedure is cheap!
+	Use with care. 
+      * sBranchTimeOut config parameter can be used to curtail long runs when
+        sBranch is used. Of course, if time-out happens, SBV will
+	assume the branch is feasible, in which case symbolic-termination
+	may come back to bite you.)
  * Misc:
       * Add missing SFloat/SDouble instances for SatModel class
 
