@@ -100,6 +100,9 @@
 -- get in touch if there is a solver you'd like to see included.
 ---------------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE OverlappingInstances #-}
+
 module Data.SBV (
   -- * Programming with symbolic values
   -- $progIntro
@@ -288,6 +291,60 @@ isFPPoint :: (Floating a, SymWord a) => SBV a -> SBool
 isFPPoint x =     x .== x           -- gets rid of NaN's
               &&& x .< sInfinity    -- gets rid of +inf
               &&& x .> -sInfinity   -- gets rid of -inf
+
+-- | Check whether the given solver is installed and is ready to go. This call does a
+-- simple call to the solver to ensure all is well.
+sbvCheckSolverInstallation :: SMTConfig -> IO Bool
+sbvCheckSolverInstallation cfg = do ThmResult r <- proveWith cfg $ \x -> (x+x) .== ((x*2) :: SWord8)
+                                    case r of
+                                      Unsatisfiable _ -> return True
+                                      _               -> return False
+
+-- | Equality as a proof method. Allows for
+-- very concise construction of equivalence proofs, which is very typical in
+-- bit-precise proofs.
+infix 4 ===
+class Equality a where
+  (===) :: a -> a -> IO ThmResult
+
+instance (SymWord a, EqSymbolic z) => Equality (SBV a -> z) where
+  k === l = prove $ \a -> k a .== l a
+
+instance (SymWord a, SymWord b, EqSymbolic z) => Equality (SBV a -> SBV b -> z) where
+  k === l = prove $ \a b -> k a b .== l a b
+
+instance (SymWord a, SymWord b, EqSymbolic z) => Equality ((SBV a, SBV b) -> z) where
+  k === l = prove $ \a b -> k (a, b) .== l (a, b)
+
+instance (SymWord a, SymWord b, SymWord c, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> z) where
+  k === l = prove $ \a b c -> k a b c .== l a b c
+
+instance (SymWord a, SymWord b, SymWord c, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c) -> z) where
+  k === l = prove $ \a b c -> k (a, b, c) .== l (a, b, c)
+
+instance (SymWord a, SymWord b, SymWord c, SymWord d, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> z) where
+  k === l = prove $ \a b c d -> k a b c d .== l a b c d
+
+instance (SymWord a, SymWord b, SymWord c, SymWord d, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d) -> z) where
+  k === l = prove $ \a b c d -> k (a, b, c, d) .== l (a, b, c, d)
+
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> z) where
+  k === l = prove $ \a b c d e -> k a b c d e .== l a b c d e
+
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e) -> z) where
+  k === l = prove $ \a b c d e -> k (a, b, c, d, e) .== l (a, b, c, d, e)
+
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> z) where
+  k === l = prove $ \a b c d e f -> k a b c d e f .== l a b c d e f
+
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> z) where
+  k === l = prove $ \a b c d e f -> k (a, b, c, d, e, f) .== l (a, b, c, d, e, f)
+
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV g -> z) where
+  k === l = prove $ \a b c d e f g -> k a b c d e f g .== l a b c d e f g
+
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> z) where
+  k === l = prove $ \a b c d e f g -> k (a, b, c, d, e, f, g) .== l (a, b, c, d, e, f, g)
 
 -- Haddock section documentation
 {- $progIntro
