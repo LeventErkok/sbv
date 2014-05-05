@@ -24,4 +24,4 @@ testSuite = mkTestSuite $ \goldCheck -> test [
  , "auf-1" ~: assert =<< isThm thm2
  , "auf-2" ~: pgm `goldCheck` "auf-1.gold"
  ]
- where pgm = runSymbolic True $ forAll ["x", "y", "a", "initVal"] thm1 >>= output
+ where pgm = runSymbolic (True, Nothing) $ forAll ["x", "y", "a", "initVal"] thm1 >>= output

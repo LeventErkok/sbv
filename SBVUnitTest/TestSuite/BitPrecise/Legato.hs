@@ -23,8 +23,8 @@ testSuite = mkTestSuite $ \goldCheck -> test [
    "legato-1" ~: legatoPgm `goldCheck` "legato.gold"
  , "legato-2" ~: legatoC `goldCheck` "legato_c.gold"
  ]
- where legatoPgm = runSymbolic True $ forAll ["mem", "addrX", "x", "addrY", "y", "addrLow", "regX", "regA", "memVals", "flagC", "flagZ"] legatoIsCorrect
-                                        >>= output
+ where legatoPgm = runSymbolic (True, Nothing) $ forAll ["mem", "addrX", "x", "addrY", "y", "addrLow", "regX", "regA", "memVals", "flagC", "flagZ"] legatoIsCorrect
+                                                   >>= output
        legatoC = compileToC' "legatoMult" $ do
                     cgSetDriverValues [87, 92]
                     cgPerformRTCs True

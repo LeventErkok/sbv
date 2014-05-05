@@ -542,9 +542,9 @@ arrayUIKind (i, (nm, _, ctx))
         external (ArrayMerge{})  = False
 
 -- | Different means of running a symbolic piece of code
-data SBVRunMode = Proof Bool      -- ^ Symbolic simulation mode, for proof purposes. Bool is True if it's a sat instance
-                | CodeGen         -- ^ Code generation mode
-                | Concrete StdGen -- ^ Concrete simulation mode. The StdGen is for the pConstrain acceptance in cross runs
+data SBVRunMode = Proof (Bool, Maybe Int) -- ^ Symbolic simulation mode, for proof purposes. Bool is True if it's a sat instance. Int is the time-out for 'sBranch' calls
+                | CodeGen                 -- ^ Code generation mode
+                | Concrete StdGen         -- ^ Concrete simulation mode. The StdGen is for the pConstrain acceptance in cross runs
 
 -- | Is this a concrete run? (i.e., quick-check or test-generation like)
 isConcreteMode :: SBVRunMode -> Bool
@@ -786,11 +786,11 @@ mkSymSBV :: forall a. (Random a, SymWord a) => Maybe Quantifier -> Kind -> Maybe
 mkSymSBV mbQ k mbNm = do
         st <- ask
         let q = case (mbQ, runMode st) of
-                  (Just x,  _)           -> x   -- user given, just take it
-                  (Nothing, Concrete{})  -> ALL -- concrete simulation, pick universal
-                  (Nothing, Proof True)  -> EX  -- sat mode, pick existential
-                  (Nothing, Proof False) -> ALL -- proof mode, pick universal
-                  (Nothing, CodeGen)     -> ALL -- code generation, pick universal
+                  (Just x,  _)                -> x   -- user given, just take it
+                  (Nothing, Concrete{})       -> ALL -- concrete simulation, pick universal
+                  (Nothing, Proof (True, _))  -> EX  -- sat mode, pick existential
+                  (Nothing, Proof (False, _)) -> ALL -- proof mode, pick universal
+                  (Nothing, CodeGen)          -> ALL -- code generation, pick universal
         case runMode st of
           Concrete _ | q == EX -> case mbNm of
                                     Nothing -> error $ "Cannot quick-check in the presence of existential variables, type: " ++ showType (undefined :: SBV a)
@@ -866,7 +866,7 @@ addAxiom nm ax = do
 
 -- | Run a symbolic computation in Proof mode and return a 'Result'. The boolean
 -- argument indicates if this is a sat instance or not.
-runSymbolic :: Bool -> Symbolic a -> IO Result
+runSymbolic :: (Bool, Maybe Int) -> Symbolic a -> IO Result
 runSymbolic b c = snd `fmap` runSymbolic' (Proof b) c
 
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
@@ -1018,11 +1018,11 @@ class (HasKind a, Ord a) => SymWord a where
         let k = KUninterpreted sortName
         liftIO $ registerKind st k
         let q = case (mbQ, runMode st) of
-                  (Just x,  _)           -> x
-                  (Nothing, Proof True)  -> EX
-                  (Nothing, Proof False) -> ALL
-                  (Nothing, Concrete{})  -> error $ "SBV: Uninterpreted sort " ++ sortName ++ " can not be used in concrete simulation mode."
-                  (Nothing, CodeGen)     -> error $ "SBV: Uninterpreted sort " ++ sortName ++ " can not be used in code-generation mode."
+                  (Just x,  _)                -> x
+                  (Nothing, Proof (True, _))  -> EX
+                  (Nothing, Proof (False, _)) -> ALL
+                  (Nothing, Concrete{})       -> error $ "SBV: Uninterpreted sort " ++ sortName ++ " can not be used in concrete simulation mode."
+                  (Nothing, CodeGen)          -> error $ "SBV: Uninterpreted sort " ++ sortName ++ " can not be used in code-generation mode."
         ctr <- liftIO $ incCtr st
         let sw = SW k (NodeId ctr)
             nm = maybe ('s':show ctr) id mbNm
@@ -1336,18 +1336,19 @@ data SolverCapabilities = SolverCapabilities {
 -- is precise (i.e., if it fits in a finite number of digits), regardless of the precision limit. The limit only applies if the representation
 -- of the real value is not finite, i.e., if it is not rational.
 data SMTConfig = SMTConfig {
-         verbose       :: Bool             -- ^ Debug mode
-       , timing        :: Bool             -- ^ Print timing information on how long different phases took (construction, solving, etc.)
-       , timeOut       :: Maybe Int        -- ^ How much time to give to the solver. (In seconds)
-       , printBase     :: Int              -- ^ Print integral literals in this base (2, 8, and 10, and 16 are supported.)
-       , printRealPrec :: Int              -- ^ Print algebraic real values with this precision. (SReal, default: 16)
-       , solverTweaks  :: [String]         -- ^ Additional lines of script to give to the solver (user specified)
-       , satCmd        :: String           -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
-       , smtFile       :: Maybe FilePath   -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
-       , useSMTLib2    :: Bool             -- ^ If True, we'll treat the solver as using SMTLib2 input format. Otherwise, SMTLib1
-       , solver        :: SMTSolver        -- ^ The actual SMT solver.
-       , roundingMode  :: RoundingMode     -- ^ Rounding mode to use for floating-point conversions
-       , useLogic      :: Maybe Logic      -- ^ If Nothing, pick automatically. Otherwise, either use the given one, or use the custom string.
+         verbose        :: Bool             -- ^ Debug mode
+       , timing         :: Bool             -- ^ Print timing information on how long different phases took (construction, solving, etc.)
+       , sBranchTimeOut :: Maybe Int        -- ^ How much time to give to the solver for each call of 'sBranch' check. (In seconds. Default: No limit.)
+       , timeOut        :: Maybe Int        -- ^ How much time to give to the solver. (In seconds. Default: No limit.)
+       , printBase      :: Int              -- ^ Print integral literals in this base (2, 8, and 10, and 16 are supported.)
+       , printRealPrec  :: Int              -- ^ Print algebraic real values with this precision. (SReal, default: 16)
+       , solverTweaks   :: [String]         -- ^ Additional lines of script to give to the solver (user specified)
+       , satCmd         :: String           -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
+       , smtFile        :: Maybe FilePath   -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
+       , useSMTLib2     :: Bool             -- ^ If True, we'll treat the solver as using SMTLib2 input format. Otherwise, SMTLib1
+       , solver         :: SMTSolver        -- ^ The actual SMT solver.
+       , roundingMode   :: RoundingMode     -- ^ Rounding mode to use for floating-point conversions
+       , useLogic       :: Maybe Logic      -- ^ If Nothing, pick automatically. Otherwise, either use the given one, or use the custom string.
        }
 
 -- | A model, as returned by a solver

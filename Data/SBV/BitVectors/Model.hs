@@ -1130,7 +1130,7 @@ class Mergeable a where
    -- | Branch on a condition, much like 'ite'. The exception is that SBV will
    -- check to make sure if the test condition is feasible by making an external
    -- call to the SMT solver. Note that this can be expensive, thus we shall use
-   -- a time-out value (sBranchTimeOut). There might be zero, one, or two such
+   -- a time-out value ('sBranchTimeOut'). There might be zero, one, or two such
    -- external calls per sBranch call:
    --    - If condition is statically known to be True/False: 0 calls
    --           * In this case, we simply constant fold..

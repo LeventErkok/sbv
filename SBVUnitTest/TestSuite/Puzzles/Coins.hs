@@ -22,7 +22,8 @@ testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
   "coins" ~: coinsPgm `goldCheck` "coins.gold"
  ]
- where coinsPgm = runSymbolic True $ do cs <- mapM mkCoin [1..6]
-                                        mapM_ constrain [c s | s <- combinations cs, length s >= 2, c <- [c1, c2, c3, c4, c5, c6]]
-                                        constrain $ bAnd $ zipWith (.>=) cs (tail cs)
-                                        output $ sum cs .== 115
+ where coinsPgm = runSymbolic (True, Nothing) $ do
+                        cs <- mapM mkCoin [1..6]
+                        mapM_ constrain [c s | s <- combinations cs, length s >= 2, c <- [c1, c2, c3, c4, c5, c6]]
+                        constrain $ bAnd $ zipWith (.>=) cs (tail cs)
+                        output $ sum cs .== 115

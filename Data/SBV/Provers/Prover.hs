@@ -50,18 +50,19 @@ import qualified Data.SBV.Provers.MathSAT    as MathSAT
 import Data.SBV.Utils.TDiff
 
 mkConfig :: SMTSolver -> Bool -> [String] -> SMTConfig
-mkConfig s isSMTLib2 tweaks = SMTConfig { verbose       = False
-                                        , timing        = False
-                                        , timeOut       = Nothing
-                                        , printBase     = 10
-                                        , printRealPrec = 16
-                                        , smtFile       = Nothing
-                                        , solver        = s
-                                        , solverTweaks  = tweaks
-                                        , useSMTLib2    = isSMTLib2
-                                        , satCmd        = "(check-sat)"
-                                        , roundingMode  = RoundNearestTiesToEven
-                                        , useLogic      = Nothing
+mkConfig s isSMTLib2 tweaks = SMTConfig { verbose        = False
+                                        , timing         = False
+                                        , sBranchTimeOut = Nothing
+                                        , timeOut        = Nothing
+                                        , printBase      = 10
+                                        , printRealPrec  = 16
+                                        , smtFile        = Nothing
+                                        , solver         = s
+                                        , solverTweaks   = tweaks
+                                        , useSMTLib2     = isSMTLib2
+                                        , satCmd         = "(check-sat)"
+                                        , roundingMode   = RoundNearestTiesToEven
+                                        , useLogic       = Nothing
                                         }
 
 -- | Default configuration for the Boolector SMT solver
@@ -360,7 +361,7 @@ satWith config a = simulate cvt config True [] a >>= callSolver True "Checking S
 -- | Determine if the constraints are vacuous using the given SMT-solver
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
 isVacuousWith config a = do
-        Result ki tr uic is cs ts as uis ax asgn cstr _ <- runSymbolic True $ forAll_ a >>= output
+        Result ki tr uic is cs ts as uis ax asgn cstr _ <- runSymbolic (True, sBranchTimeOut config) $ forAll_ a >>= output
         case cstr of
            [] -> return False -- no constraints, no need to check
            _  -> do let is'  = [(EX, i) | (_, i) <- is] -- map all quantifiers to "exists" for the constraint check
@@ -438,7 +439,7 @@ simulate converter config isSat comments predicate = do
         let msg = when (verbose config) . putStrLn . ("** " ++)
             isTiming = timing config
         msg "Starting symbolic simulation.."
-        res <- timeIf isTiming "problem construction" $ runSymbolic isSat $ (if isSat then forSome_ else forAll_) predicate >>= output
+        res <- timeIf isTiming "problem construction" $ runSymbolic (isSat, sBranchTimeOut config) $ (if isSat then forSome_ else forAll_) predicate >>= output
         msg $ "Generated symbolic trace:\n" ++ show res
         msg "Translating to SMT-Lib.."
         runProofOn converter config isSat comments res
