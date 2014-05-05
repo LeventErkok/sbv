@@ -292,6 +292,16 @@ isFPPoint x =     x .== x           -- gets rid of NaN's
               &&& x .< sInfinity    -- gets rid of +inf
               &&& x .> -sInfinity   -- gets rid of -inf
 
+-- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
+-- problems with constraints, like the following:
+--
+-- @
+--   do [x, y, z] <- sIntegers [\"x\", \"y\", \"z\"]
+--      solve [x .> 5, y + z .< x]
+-- @
+solve :: [SBool] -> Symbolic SBool
+solve = return . bAnd
+
 -- | Check whether the given solver is installed and is ready to go. This call does a
 -- simple call to the solver to ensure all is well.
 sbvCheckSolverInstallation :: SMTConfig -> IO Bool

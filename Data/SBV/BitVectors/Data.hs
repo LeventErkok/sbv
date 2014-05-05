@@ -39,7 +39,7 @@ module Data.SBV.BitVectors.Data
  , Quantifier(..), needsExistentials
  , SMTLibPgm(..), SMTLibVersion(..)
  , SolverCapabilities(..)
- , isSBranchFeasibleInState
+ , extractSymbolicSimulationState
  ) where
 
 import Control.DeepSeq      (NFData(..))
@@ -911,12 +911,12 @@ runSymbolic' currentRunMode (Symbolic c) = do
    _ <- newConst st (mkConstCW (KBounded False 1) (0::Integer)) -- s(-2) == falseSW
    _ <- newConst st (mkConstCW (KBounded False 1) (1::Integer)) -- s(-1) == trueSW
    r <- runReaderT c st
-   res <- extractResult st
+   res <- extractSymbolicSimulationState st
    return (r, res)
 
-extractResult :: State -> IO Result
-extractResult st@State{ spgm=pgm, rinps=inps, routs=outs, rtblMap=tables, rArrayMap=arrays, rUIMap=uis, raxioms=axioms
-                      , rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints = cstrs} = do
+extractSymbolicSimulationState :: State -> IO Result
+extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblMap=tables, rArrayMap=arrays, rUIMap=uis, raxioms=axioms
+                                       , rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints = cstrs} = do
    SBVPgm rpgm  <- readIORef pgm
    inpsO <- reverse `fmap` readIORef inps
    outsO <- reverse `fmap` readIORef outs
@@ -1173,14 +1173,6 @@ addConstraint (Just t) c c'
          () | t > 0 && t < 1 -> liftIO (throwDice st) >>= \d -> imposeConstraint (if d <= t then c else c')
             | t > 0          -> imposeConstraint c
             | True           -> imposeConstraint c'
-
--- | Check if a branch condition is feasible in the current state
-isSBranchFeasibleInState :: State -> SBool -> IO Bool
-isSBranchFeasibleInState st cond = do
-       Result ki tr uic is cs ts as uis ax asgn cstr _ <- liftIO $ extractResult st
-       sw <- sbvToSW st cond
-       let _res = Result ki tr uic is cs ts as uis ax asgn cstr [sw]
-       return True  -- always safe
 
 ---------------------------------------------------------------------------------
 -- * Cached values

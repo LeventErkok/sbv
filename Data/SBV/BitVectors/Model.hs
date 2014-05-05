@@ -50,6 +50,8 @@ import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
 import Data.SBV.Utils.Boolean
 
+import Data.SBV.Provers.Prover (isSBranchFeasibleInState)
+
 noUnint  :: String -> a
 noUnint x = error $ "Unexpected operation called on uninterpreted value: " ++ show x
 

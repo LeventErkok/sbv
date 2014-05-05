@@ -22,19 +22,20 @@ module Data.SBV.Provers.Prover (
        , sat, satWith
        , allSat, allSatWith
        , isVacuous, isVacuousWith
-       , solve
        , SatModel(..), Modelable(..), displayModels, extractModels
        , getModelDictionaries, getModelValues, getModelUninterpretedValues
        , boolector, cvc4, yices, z3, mathSAT, defaultSMTCfg
        , compileToSMTLib, generateSMTBenchmarks
+       , isSBranchFeasibleInState
        ) where
 
-import Control.Monad      (when, unless)
-import Data.List          (intercalate)
-import Data.Maybe         (mapMaybe)
-import System.FilePath    (addExtension, splitExtension)
-import System.Time        (getClockTime)
-import System.IO.Unsafe   (unsafeInterleaveIO)
+import Control.Monad       (when, unless)
+import Control.Monad.Trans (liftIO)
+import Data.List           (intercalate)
+import Data.Maybe          (mapMaybe)
+import System.FilePath     (addExtension, splitExtension)
+import System.Time         (getClockTime)
+import System.IO.Unsafe    (unsafeInterleaveIO)
 
 import qualified Data.Set as Set (Set, toList)
 
@@ -47,7 +48,6 @@ import qualified Data.SBV.Provers.Yices      as Yices
 import qualified Data.SBV.Provers.Z3         as Z3
 import qualified Data.SBV.Provers.MathSAT    as MathSAT
 import Data.SBV.Utils.TDiff
-import Data.SBV.Utils.Boolean
 
 mkConfig :: SMTSolver -> Bool -> [String] -> SMTConfig
 mkConfig s isSMTLib2 tweaks = SMTConfig { verbose       = False
@@ -230,16 +230,6 @@ prove = proveWith defaultSMTCfg
 -- | Find a satisfying assignment for a predicate, equivalent to @'satWith' 'defaultSMTCfg'@
 sat :: Provable a => a -> IO SatResult
 sat = satWith defaultSMTCfg
-
--- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
--- problems with constraints, like the following:
---
--- @
---   do [x, y, z] <- sIntegers [\"x\", \"y\", \"z\"]
---      solve [x .> 5, y + z .< x]
--- @
-solve :: [SBool] -> Symbolic SBool
-solve = return . bAnd
 
 -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
 -- Satisfying assignments are constructed lazily, so they will be available as returned by the solver
@@ -477,3 +467,11 @@ runProofOn converter config isSat comments res =
                            _  -> error $ "User error: Multiple output values detected: " ++ show os
                                        ++ "\nDetected while generating the trace:\n" ++ show res
                                        ++ "\n*** Check calls to \"output\", they are typically not needed!"
+
+-- | Check if a branch condition is feasible in the current state
+isSBranchFeasibleInState :: State -> SBool -> IO Bool
+isSBranchFeasibleInState st cond = do
+       Result ki tr uic is cs ts as uis ax asgn cstr _ <- liftIO $ extractSymbolicSimulationState st
+       sw <- sbvToSW st cond
+       let _res = Result ki tr uic is cs ts as uis ax asgn cstr [sw]
+       return True  -- always safe
