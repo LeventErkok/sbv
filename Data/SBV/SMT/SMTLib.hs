@@ -14,7 +14,6 @@ module Data.SBV.SMT.SMTLib(SMTLibPgm, SMTLibConverter, toSMTLib1, toSMTLib2, add
 import Data.Char (isDigit)
 
 import Data.SBV.BitVectors.Data
-import Data.SBV.SMT.SMT
 import Data.SBV.Provers.SExpr
 import qualified Data.SBV.SMT.SMTLib1 as SMT1
 import qualified Data.SBV.SMT.SMTLib2 as SMT2

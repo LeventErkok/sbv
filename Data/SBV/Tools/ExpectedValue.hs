@@ -22,13 +22,13 @@ import Data.SBV.BitVectors.Data
 -- warm-up count and the convergence factor. Maximum iteration count can also
 -- be specified, at which point convergence won't be sought. The boolean controls verbosity.
 expectedValueWith :: Outputtable a => Bool -> Int -> Maybe Int -> Double -> Symbolic a -> IO [Double]
-expectedValueWith verbose warmupCount mbMaxIter epsilon m
+expectedValueWith chatty warmupCount mbMaxIter epsilon m
   | warmupCount < 0 || epsilon < 0
   = error $ "SBV.expectedValue: warmup count and epsilon both must be non-negative, received: " ++ show (warmupCount, epsilon)
   | True
   = warmup warmupCount (repeat 0) >>= go warmupCount
-  where progress s | not verbose = return ()
-                   | True        = putStr $ "\r*** " ++ s
+  where progress s | not chatty = return ()
+                   | True       = putStr $ "\r*** " ++ s
         warmup :: Int -> [Integer] -> IO [Integer]
         warmup 0 v = do progress $ "Warmup complete, performed " ++ show warmupCount ++ " rounds.\n"
                         return v

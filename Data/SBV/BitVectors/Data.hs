@@ -40,6 +40,7 @@ module Data.SBV.BitVectors.Data
  , SMTLibPgm(..), SMTLibVersion(..)
  , SolverCapabilities(..)
  , extractSymbolicSimulationState
+ , SMTScript(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  ) where
 
 import Control.DeepSeq      (NFData(..))
@@ -60,6 +61,7 @@ import qualified Data.Set      as Set  (Set, empty, toList, insert)
 import qualified Data.Foldable as F    (toList)
 import qualified Data.Sequence as S    (Seq, empty, (|>))
 
+import System.Exit           (ExitCode(..))
 import System.Mem.StableName
 import System.Random
 
@@ -1256,6 +1258,17 @@ instance NFData a => NFData (SBV a) where
   rnf (SBV x y) = rnf x `seq` rnf y `seq` ()
 instance NFData SBVPgm
 
+instance NFData SMTResult where
+  rnf (Unsatisfiable _)   = ()
+  rnf (Satisfiable _ xs)  = rnf xs `seq` ()
+  rnf (Unknown _ xs)      = rnf xs `seq` ()
+  rnf (ProofError _ xs)   = rnf xs `seq` ()
+  rnf (TimeOut _)         = ()
+
+instance NFData SMTModel where
+  rnf (SMTModel assocs unints uarrs) = rnf assocs `seq` rnf unints `seq` rnf uarrs `seq` ()
+
+
 -- | SMT-Lib logics. If left unspecified SBV will pick the logic based on what it determines is needed. However, the
 -- user can override this choice using the 'useLogic' parameter to the configuration. This is especially handy if
 -- one is experimenting with custom logics that might be supported on new solvers.
@@ -1307,4 +1320,70 @@ data SolverCapabilities = SolverCapabilities {
        , supportsReals              :: Bool         -- ^ Does the solver support reals?
        , supportsFloats             :: Bool         -- ^ Does the solver support single-precision floating point numbers?
        , supportsDoubles            :: Bool         -- ^ Does the solver support double-precision floating point numbers?
+       }
+
+-- | Solver configuration. See also 'z3', 'yices', 'cvc4', and 'boolector, which are instantiations of this type for those solvers, with
+-- reasonable defaults. In particular, custom configuration can be created by varying those values. (Such as @z3{verbose=True}@.)
+--
+-- Most fields are self explanatory. The notion of precision for printing algebraic reals stems from the fact that such values does
+-- not necessarily have finite decimal representations, and hence we have to stop printing at some depth. It is important to
+-- emphasize that such values always have infinite precision internally. The issue is merely with how we print such an infinite
+-- precision value on the screen. The field 'printRealPrec' controls the printing precision, by specifying the number of digits after
+-- the decimal point. The default value is 16, but it can be set to any positive integer.
+--
+-- When printing, SBV will add the suffix @...@ at the and of a real-value, if the given bound is not sufficient to represent the real-value
+-- exactly. Otherwise, the number will be written out in standard decimal notation. Note that SBV will always print the whole value if it
+-- is precise (i.e., if it fits in a finite number of digits), regardless of the precision limit. The limit only applies if the representation
+-- of the real value is not finite, i.e., if it is not rational.
+data SMTConfig = SMTConfig {
+         verbose       :: Bool             -- ^ Debug mode
+       , timing        :: Bool             -- ^ Print timing information on how long different phases took (construction, solving, etc.)
+       , timeOut       :: Maybe Int        -- ^ How much time to give to the solver. (In seconds)
+       , printBase     :: Int              -- ^ Print integral literals in this base (2, 8, and 10, and 16 are supported.)
+       , printRealPrec :: Int              -- ^ Print algebraic real values with this precision. (SReal, default: 16)
+       , solverTweaks  :: [String]         -- ^ Additional lines of script to give to the solver (user specified)
+       , satCmd        :: String           -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
+       , smtFile       :: Maybe FilePath   -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
+       , useSMTLib2    :: Bool             -- ^ If True, we'll treat the solver as using SMTLib2 input format. Otherwise, SMTLib1
+       , solver        :: SMTSolver        -- ^ The actual SMT solver.
+       , roundingMode  :: RoundingMode     -- ^ Rounding mode to use for floating-point conversions
+       , useLogic      :: Maybe Logic      -- ^ If Nothing, pick automatically. Otherwise, either use the given one, or use the custom string.
+       }
+
+-- | A model, as returned by a solver
+data SMTModel = SMTModel {
+        modelAssocs    :: [(String, CW)]        -- ^ Mapping of symbolic values to constants.
+     ,  modelArrays    :: [(String, [String])]  -- ^ Arrays, very crude; only works with Yices.
+     ,  modelUninterps :: [(String, [String])]  -- ^ Uninterpreted funcs; very crude; only works with Yices.
+     }
+     deriving Show
+
+-- | The result of an SMT solver call. Each constructor is tagged with
+-- the 'SMTConfig' that created it so that further tools can inspect it
+-- and build layers of results, if needed. For ordinary uses of the library,
+-- this type should not be needed, instead use the accessor functions on
+-- it. (Custom Show instances and model extractors.)
+data SMTResult = Unsatisfiable SMTConfig            -- ^ Unsatisfiable
+               | Satisfiable   SMTConfig SMTModel   -- ^ Satisfiable with model
+               | Unknown       SMTConfig SMTModel   -- ^ Prover returned unknown, with a potential (possibly bogus) model
+               | ProofError    SMTConfig [String]   -- ^ Prover errored out
+               | TimeOut       SMTConfig            -- ^ Computation timed out (see the 'timeout' combinator)
+
+-- | A script, to be passed to the solver.
+data SMTScript = SMTScript {
+          scriptBody  :: String        -- ^ Initial feed
+        , scriptModel :: Maybe String  -- ^ Optional continuation script, if the result is sat
+        }
+
+-- | An SMT engine
+type SMTEngine = SMTConfig -> Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [Either SW (SW, [SW])] -> String -> IO SMTResult
+
+-- | An SMT solver
+data SMTSolver = SMTSolver {
+         name           :: String               -- ^ Printable name of the solver
+       , executable     :: String               -- ^ The path to its executable
+       , options        :: [String]             -- ^ Options to provide to the solver
+       , engine         :: SMTEngine            -- ^ The solver engine, responsible for interpreting solver output
+       , xformExitCode  :: ExitCode -> ExitCode -- ^ Should we re-interpret exit codes. Most solvers behave rationally, i.e., id will do. Some (like CVC4) don't.
+       , capabilities   :: SolverCapabilities   -- ^ Various capabilities of the solver
        }
