@@ -1125,6 +1125,18 @@ class Mergeable a where
    -- The idea is that use symbolicMerge if you know the condition is symbolic,
    -- otherwise use ite, if there's a chance it might be concrete.
    ite :: SBool -> a -> a -> a
+   -- | Branch on a condition, much like 'ite'. The exception is that SBV will
+   -- check to make sure if the test condition is feasible by making an external
+   -- call to the SMT solver. Note that this can be expensive, thus we shall use
+   -- a time-out value (sBranchTimeOut). There might be zero, one, or two such
+   -- external calls per sBranch call:
+   --    - If condition is statically known to be True/False: 0 calls
+   --           * In this case, we simply constant fold..
+   --    - If condition is determined to be unsatisfiable   : 1 call
+   --           * In this case, we know then-branch is infeasible, so just take the else-branch
+   --    - If condition is determined to be satisfable      : 2 calls
+   --           * In this case, we know then-branch is feasible, but we still have to check if the else-branch is
+   sBranch :: SBool -> a -> a -> a
    -- | Total indexing operation. @select xs default index@ is intuitively
    -- the same as @xs !! index@, except it evaluates to @default@ if @index@
    -- overflows
@@ -1133,6 +1145,7 @@ class Mergeable a where
    ite s a b
     | Just t <- unliteral s = if t then a else b
     | True                  = symbolicMerge s a b
+   sBranch s = ite (reduceBooleanInContext s)
    -- NB. Earlier implementation of select used the binary-search trick
    -- on the index to chop down the search space. While that is a good trick
    -- in general, it doesn't work for SBV since we do not have any notion of
@@ -1612,6 +1625,24 @@ constrain c = addConstraint Nothing c (bnot c)
 -- calls where we restrict our attention to /interesting/ parts of the input domain.
 pConstrain :: Double -> SBool -> Symbolic ()
 pConstrain t c = addConstraint (Just t) c (bnot c)
+
+-- | Boolean symbolic reduction. See if we can reduce a boolean condition to true/false
+-- using context information, by making external calls to the SMT solvers. Used in the
+-- implementation of 'sBranch'.
+reduceBooleanInContext :: SBool -> SBool
+reduceBooleanInContext b
+  | isConcrete b = b -- No reduction is needed, already a concrete value
+  | True         = SBV k $ Right $ cache c
+  where k    = kindOf b
+        c st = do -- Now that we know our boolean is not obviously true/false. Need to make an external
+                  -- call to the SMT solver to see if we can prove it is necessarily one of those
+                  satTrue <- isSBranchFeasibleInState st b
+                  if not satTrue
+                     then return falseSW          -- condition is not satisfiable; so it must be necessarily False
+                     else do satFalse <- isSBranchFeasibleInState st (bnot b)
+                             if not satFalse      -- negation of the condition is not satisfiable; so it must be necessarily False
+                                then return trueSW
+                                else sbvToSW st b -- condition is not necessarily always True/False. So, keep symbolic
 
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where

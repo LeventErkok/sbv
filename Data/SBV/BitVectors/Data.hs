@@ -39,6 +39,7 @@ module Data.SBV.BitVectors.Data
  , Quantifier(..), needsExistentials
  , SMTLibPgm(..), SMTLibVersion(..)
  , SolverCapabilities(..)
+ , isSBranchFeasibleInState
  ) where
 
 import Control.DeepSeq      (NFData(..))
@@ -1172,6 +1173,14 @@ addConstraint (Just t) c c'
          () | t > 0 && t < 1 -> liftIO (throwDice st) >>= \d -> imposeConstraint (if d <= t then c else c')
             | t > 0          -> imposeConstraint c
             | True           -> imposeConstraint c'
+
+-- | Check if a branch condition is feasible in the current state
+isSBranchFeasibleInState :: State -> SBool -> IO Bool
+isSBranchFeasibleInState st cond = do
+       Result ki tr uic is cs ts as uis ax asgn cstr _ <- liftIO $ extractResult st
+       sw <- sbvToSW st cond
+       let _res = Result ki tr uic is cs ts as uis ax asgn cstr [sw]
+       return True  -- always safe
 
 ---------------------------------------------------------------------------------
 -- * Cached values
