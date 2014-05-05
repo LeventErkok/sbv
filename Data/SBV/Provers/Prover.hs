@@ -32,7 +32,7 @@ module Data.SBV.Provers.Prover (
 import Control.Monad       (when, unless)
 import Control.Monad.Trans (liftIO)
 import Data.List           (intercalate)
-import Data.Maybe          (mapMaybe)
+import Data.Maybe          (mapMaybe, fromMaybe)
 import System.FilePath     (addExtension, splitExtension)
 import System.Time         (getClockTime)
 import System.IO.Unsafe    (unsafeInterleaveIO)
@@ -361,7 +361,7 @@ satWith config a = simulate cvt config True [] a >>= callSolver True "Checking S
 -- | Determine if the constraints are vacuous using the given SMT-solver
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
 isVacuousWith config a = do
-        Result ki tr uic is cs ts as uis ax asgn cstr _ <- runSymbolic (True, sBranchTimeOut config) $ forAll_ a >>= output
+        Result ki tr uic is cs ts as uis ax asgn cstr _ <- runSymbolic (True, Just config) $ forAll_ a >>= output
         case cstr of
            [] -> return False -- no constraints, no need to check
            _  -> do let is'  = [(EX, i) | (_, i) <- is] -- map all quantifiers to "exists" for the constraint check
@@ -439,7 +439,7 @@ simulate converter config isSat comments predicate = do
         let msg = when (verbose config) . putStrLn . ("** " ++)
             isTiming = timing config
         msg "Starting symbolic simulation.."
-        res <- timeIf isTiming "problem construction" $ runSymbolic (isSat, sBranchTimeOut config) $ (if isSat then forSome_ else forAll_) predicate >>= output
+        res <- timeIf isTiming "problem construction" $ runSymbolic (isSat, Just config) $ (if isSat then forSome_ else forAll_) predicate >>= output
         msg $ "Generated symbolic trace:\n" ++ show res
         msg "Translating to SMT-Lib.."
         runProofOn converter config isSat comments res
@@ -474,5 +474,6 @@ isSBranchFeasibleInState :: State -> SBool -> IO Bool
 isSBranchFeasibleInState st cond = do
        Result ki tr uic is cs ts as uis ax asgn cstr _ <- liftIO $ extractSymbolicSimulationState st
        sw <- sbvToSW st cond
-       let _res = Result ki tr uic is cs ts as uis ax asgn cstr [sw]
+       let _pgm = Result ki tr uic is cs ts as uis ax asgn cstr [sw]
+           _cfg = fromMaybe defaultSMTCfg (getSBranchRunConfig st)
        return True  -- always safe

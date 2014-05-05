@@ -40,7 +40,7 @@ module Data.SBV.BitVectors.Data
  , SMTLibPgm(..), SMTLibVersion(..)
  , SolverCapabilities(..)
  , extractSymbolicSimulationState
- , SMTScript(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
+ , SMTScript(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), getSBranchRunConfig
  ) where
 
 import Control.DeepSeq      (NFData(..))
@@ -542,9 +542,9 @@ arrayUIKind (i, (nm, _, ctx))
         external (ArrayMerge{})  = False
 
 -- | Different means of running a symbolic piece of code
-data SBVRunMode = Proof (Bool, Maybe Int) -- ^ Symbolic simulation mode, for proof purposes. Bool is True if it's a sat instance. Int is the time-out for 'sBranch' calls
-                | CodeGen                 -- ^ Code generation mode
-                | Concrete StdGen         -- ^ Concrete simulation mode. The StdGen is for the pConstrain acceptance in cross runs
+data SBVRunMode = Proof (Bool, Maybe SMTConfig) -- ^ Symbolic simulation mode, for proof purposes. Bool is True if it's a sat instance. SMTConfig is used for 'sBranch' calls.
+                | CodeGen                       -- ^ Code generation mode
+                | Concrete StdGen               -- ^ Concrete simulation mode. The StdGen is for the pConstrain acceptance in cross runs
 
 -- | Is this a concrete run? (i.e., quick-check or test-generation like)
 isConcreteMode :: SBVRunMode -> Bool
@@ -579,6 +579,12 @@ inProofMode s = case runMode s of
                   Proof{}    -> True
                   CodeGen    -> False
                   Concrete{} -> False
+
+-- | If in proof mode, get the underlying configuration (used for 'sBranch')
+getSBranchRunConfig :: State -> Maybe SMTConfig
+getSBranchRunConfig st = case runMode st of
+                           Proof (_, s)  -> s
+                           _             -> Nothing
 
 -- | The "Symbolic" value. Either a constant (@Left@) or a symbolic
 -- value (@Right Cached@). Note that caching is essential for making
@@ -866,7 +872,7 @@ addAxiom nm ax = do
 
 -- | Run a symbolic computation in Proof mode and return a 'Result'. The boolean
 -- argument indicates if this is a sat instance or not.
-runSymbolic :: (Bool, Maybe Int) -> Symbolic a -> IO Result
+runSymbolic :: (Bool, Maybe SMTConfig) -> Symbolic a -> IO Result
 runSymbolic b c = snd `fmap` runSymbolic' (Proof b) c
 
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
