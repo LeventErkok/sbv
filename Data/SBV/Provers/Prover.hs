@@ -455,5 +455,5 @@ isSBranchFeasibleInState st branch cond = do
        res <- case check of
                 SatResult (Unsatisfiable _) -> return False
                 _                           -> return True   -- No risks, even if it timed-our or anything else, we say it's feasible
-       msg $ "sBranch: Conclusion: " ++ show res
+       msg $ "sBranch: Conclusion: " ++ if res then "Feasible" else "Unfeasible"
        return res
