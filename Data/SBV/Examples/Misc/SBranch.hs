@@ -44,3 +44,30 @@ bitCount = go 0
 -- Q.E.D.
 prop :: IO ThmResult
 prop = prove $ \n -> bitCount n .== sbvPopCount n
+
+-- | Illustrates the use of path-conditions in avoiding infeasible paths in symbolic
+-- simulation. If we used 'ite' instead of 'sBranch' in the else-branch of the
+-- implementation of 'path' symbolic simulation would have encountered the 'error' call, and
+-- hence would have failed. But 'sBranch' keeps track of the path condition, and can
+-- successfully determine that this path will never be taken, and hence avoids the problem.
+-- Note that we can freely mix/match 'ite' and 'sBranch' calls; path conditions will be
+-- tracked in both cases. In fact, use of 'ite' is advisable if we know for a fact that
+-- both branches are feasible, as it avoids the external call. 'sBranch' will have the
+-- same result, albeit it'll cost more.
+path :: SWord8 -> SWord8
+path x = ite (x .> 5)
+             10
+             (sBranch (x .> 10)
+                      (error "this case is not reachable!")  -- NB. x .> 5 fails, so can't be .> 10 here
+                      20)
+
+-- | Prove that 'path' always produces either @10@ or @20@, i.e., symbolic simulation will
+-- not fail due to the 'error' call. We have:
+--
+-- >>> pathCheck
+-- Q.E.D.
+--
+-- Were we to use 'ite' instead of 'sBranch' in the implementation of 'path', this expression
+-- would have caused an exception to be raised at symbolic simulation time.
+pathCheck :: IO ThmResult
+pathCheck = prove $ \n -> let pn = path n in pn .== 10 ||| pn .== 20
