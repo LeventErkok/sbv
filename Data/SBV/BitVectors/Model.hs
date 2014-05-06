@@ -1158,7 +1158,7 @@ class Mergeable a where
    ite s a b
     | Just t <- unliteral s = if t then a else b
     | True                  = symbolicMerge s a b
-   sBranch s = ite (reduceBooleanInContext s)
+   sBranch s = ite (reduceInPathCondition s)
    -- NB. Earlier implementation of select used the binary-search trick
    -- on the index to chop down the search space. While that is a good trick
    -- in general, it doesn't work for SBV since we do not have any notion of
@@ -1180,7 +1180,7 @@ instance SymWord a => Mergeable (SBV a) where
   sBranch s a b
      | Just t <- unliteral sReduced = if t then a else b
      | True                         = symbolicWordMerge False sReduced a b
-    where sReduced = reduceBooleanInContext s
+    where sReduced = reduceInPathCondition s
   symbolicMerge = symbolicWordMerge True
   -- Custom version of select that translates to SMT-Lib tables at the base type of words
   select xs err ind
@@ -1273,8 +1273,8 @@ symbolicWordMerge force t a b
                                especially if this expression happens to be inside 'f's body itself (i.e., when f is recursive), since it reduces the number of
                                recursive calls. Clearly, programming with symbolic simulation in mind is another kind of beast alltogether.
                              -}
-                             swa <- sbvToSW st a      -- evaluate 'then' branch
-                             swb <- sbvToSW st b      -- evaluate 'else' branch
+                             swa <- sbvToSW (st `extendPathCondition` (&&& t))      a -- evaluate 'then' branch
+                             swb <- sbvToSW (st `extendPathCondition` (&&& bnot t)) b -- evaluate 'else' branch
                              case () of               -- merge:
                                () | swa == swb                      -> return swa
                                () | swa == trueSW && swb == falseSW -> return swt
@@ -1674,19 +1674,20 @@ pConstrain :: Double -> SBool -> Symbolic ()
 pConstrain t c = addConstraint (Just t) c (bnot c)
 
 -- | Boolean symbolic reduction. See if we can reduce a boolean condition to true/false
--- using context information, by making external calls to the SMT solvers. Used in the
+-- using the path context information, by making external calls to the SMT solvers. Used in the
 -- implementation of 'sBranch'.
-reduceBooleanInContext :: SBool -> SBool
-reduceBooleanInContext b
+reduceInPathCondition :: SBool -> SBool
+reduceInPathCondition b
   | isConcrete b = b -- No reduction is needed, already a concrete value
   | True         = SBV k $ Right $ cache c
   where k    = kindOf b
         c st = do -- Now that we know our boolean is not obviously true/false. Need to make an external
                   -- call to the SMT solver to see if we can prove it is necessarily one of those
-                  satTrue <- isSBranchFeasibleInState st "then" b
+                  let pc = getPathCondition st
+                  satTrue <- isSBranchFeasibleInState st "then" (pc &&& b)
                   if not satTrue
                      then return falseSW          -- condition is not satisfiable; so it must be necessarily False.
-                     else do satFalse <- isSBranchFeasibleInState st "else" (bnot b)
+                     else do satFalse <- isSBranchFeasibleInState st "else" (pc &&& bnot b)
                              if not satFalse      -- negation of the condition is not satisfiable; so it must be necessarily True.
                                 then return trueSW
                                 else sbvToSW st b -- condition is not necessarily always True/False. So, keep symbolic.

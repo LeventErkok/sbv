@@ -32,7 +32,8 @@ module Data.SBV.BitVectors.Data
  , sbvToSW, sbvToSymSW, forceSWArg
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, uncacheAI, HasKind(..)
- , Op(..), NamedSymVar, UnintKind(..), getTableIndex, SBVPgm(..), Symbolic, runSymbolic, runSymbolic', State, inProofMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
+ , Op(..), NamedSymVar, UnintKind(..), getTableIndex, SBVPgm(..), Symbolic, runSymbolic, runSymbolic', State, getPathCondition, extendPathCondition
+ , inProofMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
  , Logic(..), SMTLibLogic(..)
  , getTraceInfo, getConstraints, addConstraint
  , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
@@ -560,6 +561,7 @@ isConcreteMode CodeGen      = False
 
 -- | The state of the symbolic interpreter
 data State  = State { runMode       :: SBVRunMode
+                    , pathCond      :: SBool
                     , rStdGen       :: IORef StdGen
                     , rCInfo        :: IORef [(String, CW)]
                     , rctr          :: IORef Int
@@ -578,6 +580,14 @@ data State  = State { runMode       :: SBVRunMode
                     , rSWCache      :: IORef (Cache SW)
                     , rAICache      :: IORef (Cache Int)
                     }
+
+-- | Get the current path condition
+getPathCondition :: State -> SBool
+getPathCondition = pathCond
+
+-- | Extend the path condition with the given test value.
+extendPathCondition :: State -> (SBool -> SBool) -> State
+extendPathCondition st f = st{pathCond = f (pathCond st)}
 
 -- | Are we running in proof mode?
 inProofMode :: State -> Bool
@@ -904,6 +914,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
                   Concrete g -> newIORef g
                   _          -> newStdGen >>= newIORef
    let st = State { runMode      = currentRunMode
+                  , pathCond     = SBV (KBounded False 1) (Left trueCW)
                   , rStdGen      = rGen
                   , rCInfo       = cInfo
                   , rctr         = ctr
