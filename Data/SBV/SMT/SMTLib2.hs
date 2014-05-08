@@ -13,6 +13,7 @@
 module Data.SBV.SMT.SMTLib2(cvt, addNonEqConstraints) where
 
 import Data.Bits     (bit)
+import Data.Char     (intToDigit)
 import Data.Function (on)
 import Data.Ord      (comparing)
 import qualified Data.Foldable as F (toList)
@@ -20,7 +21,7 @@ import qualified Data.Map      as M
 import qualified Data.IntMap   as IM
 import qualified Data.Set      as Set
 import Data.List (intercalate, partition, groupBy, sortBy)
-import Numeric (showHex)
+import Numeric (showIntAtBase, showHex)
 
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
@@ -287,11 +288,16 @@ cvtSW skolemMap s
   | True
   = show s
 
--- NB. The following works with SMTLib2 since all sizes are multiples of 4 (or just 1, which is specially handled)
+-- Carefully code hex numbers, SMTLib is picky about lengths of hex constants. For the time
+-- being, SBV only supports sizes that are multiples of 4, but the below code is more robust
+-- in case of future extensions to support arbitrary sizes.
 hex :: Int -> Integer -> String
 hex 1  v = "#b" ++ show v
-hex sz v = "#x" ++ pad (sz `div` 4) (showHex v "")
-  where pad n s = replicate (n - length s) '0' ++ s
+hex sz v
+  | sz `mod` 4 == 0 = "#x" ++ pad (sz `div` 4) (showHex v "")
+  | True            = "#b" ++ pad sz (showBin v "")
+   where pad n s = replicate (n - length s) '0' ++ s
+         showBin = showIntAtBase 2 intToDigit
 
 cvtCW :: RoundingMode -> CW -> String
 cvtCW rm x
