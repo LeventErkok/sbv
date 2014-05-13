@@ -385,31 +385,34 @@ runSolver cfg execPath opts script
                 let send l    = hPutStr inh (l ++ "\n") >> hFlush inh
                     recv      = hGetLine outh `C.catch` (\(_ :: C.SomeException) -> return "")
                     ask l     = send l >> recv
-                    cleanUp r = do outMVar <- newEmptyMVar
-                                   out <- hGetContents outh
-                                   _ <- forkIO $ C.evaluate (length out) >> putMVar outMVar ()
-                                   err <- hGetContents errh
-                                   _ <- forkIO $ C.evaluate (length err) >> putMVar outMVar ()
-                                   hClose inh
-                                   takeMVar outMVar
-                                   takeMVar outMVar
-                                   hClose outh
-                                   hClose errh
-                                   ex <- waitForProcess pid
-                                   -- if the status is unknown, prepare for the possibility of not having a model
-                                   -- TBD: This is rather crude and potentially Z3 specific
-                                   return $ if "unknown" `isPrefixOf` r && "error" `isInfixOf` (out ++ err)
-                                            then (ExitSuccess, r               , "")
-                                            else (ex,          r ++ "\n" ++ out, err)
+                    cleanUp (r, vals)
+                        = do outMVar <- newEmptyMVar
+                             out <- hGetContents outh
+                             _ <- forkIO $ C.evaluate (length out) >> putMVar outMVar ()
+                             err <- hGetContents errh
+                             _ <- forkIO $ C.evaluate (length err) >> putMVar outMVar ()
+                             hClose inh
+                             takeMVar outMVar
+                             takeMVar outMVar
+                             hClose outh
+                             hClose errh
+                             ex <- waitForProcess pid
+                             -- if the status is unknown, prepare for the possibility of not having a model
+                             -- TBD: This is rather crude and potentially Z3 specific
+                             let finalOut = intercalate "\n" (r : vals)
+                             return $ if "unknown" `isPrefixOf` r && "error" `isInfixOf` (out ++ err)
+                                      then (ExitSuccess, finalOut               , "")
+                                      else (ex,          finalOut ++ "\n" ++ out, err)
                 return (send, ask, cleanUp)
       mapM_ send (lines (scriptBody script))
       r <- ask $ satCmd cfg
-      when (any (`isPrefixOf` r) ["sat", "unknown"]) $ do
-        let mls = lines (fromJust (scriptModel script))
-        when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
-                                mapM_ putStrLn mls
-        mapM_ send mls
-      cleanUp r
+      vals <- if any (`isPrefixOf` r) ["sat", "unknown"]
+              then do let mls = lines (fromJust (scriptModel script))
+                      when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
+                                              mapM_ putStrLn mls
+                      mapM ask mls
+              else return []
+      cleanUp (r, vals)
 
 -- | In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
 -- each S-Expression spanning only a single line. We'll ignore things line parentheses inside quotes
