@@ -57,6 +57,16 @@ import Data.SBV.Provers.Prover (isSBranchFeasibleInState)
 import Data.SBV.Provers.Prover (isVacuous, prove)
 import Data.SBV.SMT.SMT (ThmResult)
 
+-- | Newer versions of GHC (Starting with 7.8 I think), distinguishes between FiniteBits and Bits classes.
+-- We should really use FiniteBitSize for SBV which would make things better. In the interim, just work
+-- around pesky warnings..
+ghcBitSize :: Bits a => a -> Int
+#if __GLASGOW_HASKELL__ >= 708
+ghcBitSize x = maybe (error "SBV.ghcBitSize: Unexpected non-finite usage!") id (bitSizeMaybe x)
+#else
+ghcBitSize = bitSize
+#endif
+
 noUnint  :: String -> a
 noUnint x = error $ "Unexpected operation called on uninterpreted value: " ++ show x
 
@@ -737,6 +747,7 @@ instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
     | True                     = liftSym2 (mkSymOp  XOr) (const (const True)) (noReal "xor") xor (noFloat "xor") (noDouble "xor") x y
   complement = liftSym1 (mkSymOp1 Not) (noRealUnary "complement") complement (noFloatUnary "complement") (noDoubleUnary "complement")
   bitSize  _ = intSizeOf (undefined :: a)
+  bitSizeMaybe _ = Just $ intSizeOf (undefined :: a)
   isSigned _ = hasSign   (undefined :: a)
   bit i      = 1 `shiftL` i
   shiftL x y
@@ -750,12 +761,12 @@ instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
   rotateL x y
     | y < 0       = rotateR x (-y)
     | y == 0      = x
-    | isBounded x = let sz = bitSize x in liftSym1 (mkSymOp1 (Rol (y `mod` sz))) (noRealUnary "rotateL") (rot True sz y) (noFloatUnary "rotateL") (noDoubleUnary "rotateL") x
+    | isBounded x = let sz = ghcBitSize x in liftSym1 (mkSymOp1 (Rol (y `mod` sz))) (noRealUnary "rotateL") (rot True sz y) (noFloatUnary "rotateL") (noDoubleUnary "rotateL") x
     | True        = shiftL x y   -- for unbounded Integers, rotateL is the same as shiftL in Haskell
   rotateR x y
     | y < 0       = rotateL x (-y)
     | y == 0      = x
-    | isBounded x = let sz = bitSize x in liftSym1 (mkSymOp1 (Ror (y `mod` sz))) (noRealUnary "rotateR") (rot False sz y) (noFloatUnary "rotateR") (noDoubleUnary "rotateR") x
+    | isBounded x = let sz = ghcBitSize x in liftSym1 (mkSymOp1 (Ror (y `mod` sz))) (noRealUnary "rotateR") (rot False sz y) (noFloatUnary "rotateR") (noDoubleUnary "rotateR") x
     | True        = shiftR x y   -- for unbounded integers, rotateR is the same as shiftR in Haskell
   -- NB. testBit is *not* implementable on non-concrete symbolic words
   x `testBit` i
@@ -813,7 +824,7 @@ setBitTo x i b = ite b (setBit x i) (clearBit x i)
 sbvShiftLeft :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
 sbvShiftLeft x i
   | isSigned i = error "sbvShiftLeft: shift amount should be unsigned"
-  | True       = select [x `shiftL` k | k <- [0 .. bitSize x - 1]] 0 i
+  | True       = select [x `shiftL` k | k <- [0 .. ghcBitSize x - 1]] 0 i
 
 -- | Generalization of 'shiftR', when the shift-amount is symbolic. Since Haskell's
 -- 'shiftR' only takes an 'Int' as the shift amount, it cannot be used when we have
@@ -825,7 +836,7 @@ sbvShiftLeft x i
 sbvShiftRight :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
 sbvShiftRight x i
   | isSigned i = error "sbvShiftRight: shift amount should be unsigned"
-  | True       = select [x `shiftR` k | k <- [0 .. bitSize x - 1]] 0 i
+  | True       = select [x `shiftR` k | k <- [0 .. ghcBitSize x - 1]] 0 i
 
 -- | Arithmetic shift-right with a symbolic unsigned shift amount. This is equivalent
 -- to 'sbvShiftRight' when the argument is signed. However, if the argument is unsigned,
@@ -860,14 +871,14 @@ fullAdder a b
 fullMultiplier :: SIntegral a => SBV a -> SBV a -> (SBV a, SBV a)
 fullMultiplier a b
   | isSigned a = error "fullMultiplier: only works on unsigned numbers"
-  | True       = (go (bitSize a) 0 a, a*b)
+  | True       = (go (ghcBitSize a) 0 a, a*b)
   where go 0 p _ = p
         go n p x = let (c, p')  = ite (lsb x) (fullAdder p b) (false, p)
                        (o, p'') = shiftIn c p'
                        (_, x')  = shiftIn o x
                    in go (n-1) p'' x'
         shiftIn k v = (lsb v, mask .|. (v `shiftR` 1))
-           where mask = ite k (bit (bitSize v - 1)) 0
+           where mask = ite k (bit (ghcBitSize v - 1)) 0
 
 -- | Little-endian blasting of a word into its bits. Also see the 'FromBits' class.
 blastLE :: (Num a, Bits a, SymWord a) => SBV a -> [SBool]

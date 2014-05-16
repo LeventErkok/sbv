@@ -37,22 +37,22 @@ type GF28 = SWord8
 -- Note that the irreducible itself is not in GF28! It has a degree of 8.
 --
 -- NB. You can use the 'showPoly' function to print polynomials nicely, as a mathematician would write.
-(<*>) :: GF28 -> GF28 -> GF28
-a <*> b = pMult (a, b, [8, 4, 3, 1, 0])
+gfMult :: GF28 -> GF28 -> GF28
+a `gfMult` b = pMult (a, b, [8, 4, 3, 1, 0])
 
 -- | States that the unit polynomial @1@, is the unit element
 multUnit :: GF28 -> SBool
-multUnit x = (x <*> unit) .== x
+multUnit x = (x `gfMult` unit) .== x
   where unit = polynomial [0]   -- x@0
 
 -- | States that multiplication is commutative
 multComm :: GF28 -> GF28 -> SBool
-multComm x y = (x <*> y) .== (y <*> x)
+multComm x y = (x `gfMult` y) .== (y `gfMult` x)
 
 -- | States that multiplication is associative, note that associativity
 -- proofs are notoriously hard for SAT/SMT solvers
 multAssoc :: GF28 -> GF28 -> GF28 -> SBool
-multAssoc x y z = ((x <*> y) <*> z) .== (x <*> (y <*> z))
+multAssoc x y z = ((x `gfMult` y) `gfMult` z) .== (x `gfMult` (y `gfMult` z))
 
 -- | States that the usual multiplication rule holds over GF(2^n) polynomials
 -- Checks:
@@ -65,7 +65,7 @@ multAssoc x y z = ((x <*> y) <*> z) .== (x <*> (y <*> z))
 -- defined to be 0 and the remainder is the numerator.
 -- (Note that addition is simply `xor` in GF(2^8).)
 polyDivMod :: GF28 -> GF28 -> SBool
-polyDivMod x y = ite (y .== 0) ((0, x) .== (a, b)) (x .== y <*> a `xor` b)
+polyDivMod x y = ite (y .== 0) ((0, x) .== (a, b)) (x .== (y `gfMult` a) `xor` b)
   where (a, b) = x `pDivMod` y
 
 -- | Queries

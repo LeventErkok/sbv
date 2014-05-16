@@ -12,12 +12,20 @@
 
 {-# LANGUAGE Rank2Types    #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE CPP           #-}
 
 module TestSuite.Basics.ArithNoSolver(testSuite) where
 
 import Data.SBV
 
 import SBVTest
+
+ghcBitSize :: Bits a => a -> Int
+#if __GLASGOW_HASKELL__ >= 708
+ghcBitSize x = maybe (error "SBV.ghcBitSize: Unexpected non-finite usage!") id (bitSizeMaybe x)
+#else
+ghcBitSize = bitSize
+#endif
 
 -- Test suite
 testSuite :: SBVTestSuite
@@ -114,14 +122,14 @@ genIntTest nm op = map mkTest $
 
 genIntTestS :: String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [Test]
 genIntTestS nm op = map mkTest $
-        zipWith pair [("u8",  show x, show y, x `op` y) | x <- w8s,  y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- sw8s,  y <- [0 .. (bitSize x - 1)]]
-     ++ zipWith pair [("u16", show x, show y, x `op` y) | x <- w16s, y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- sw16s, y <- [0 .. (bitSize x - 1)]]
-     ++ zipWith pair [("u32", show x, show y, x `op` y) | x <- w32s, y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- sw32s, y <- [0 .. (bitSize x - 1)]]
-     ++ zipWith pair [("u64", show x, show y, x `op` y) | x <- w64s, y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- sw64s, y <- [0 .. (bitSize x - 1)]]
-     ++ zipWith pair [("s8",  show x, show y, x `op` y) | x <- i8s,  y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- si8s,  y <- [0 .. (bitSize x - 1)]]
-     ++ zipWith pair [("s16", show x, show y, x `op` y) | x <- i16s, y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- si16s, y <- [0 .. (bitSize x - 1)]]
-     ++ zipWith pair [("s32", show x, show y, x `op` y) | x <- i32s, y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- si32s, y <- [0 .. (bitSize x - 1)]]
-     ++ zipWith pair [("s64", show x, show y, x `op` y) | x <- i64s, y <- [0 .. (bitSize x - 1)]] [x `op` y | x <- si64s, y <- [0 .. (bitSize x - 1)]]
+        zipWith pair [("u8",  show x, show y, x `op` y) | x <- w8s,  y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- sw8s,  y <- [0 .. (ghcBitSize x - 1)]]
+     ++ zipWith pair [("u16", show x, show y, x `op` y) | x <- w16s, y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- sw16s, y <- [0 .. (ghcBitSize x - 1)]]
+     ++ zipWith pair [("u32", show x, show y, x `op` y) | x <- w32s, y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- sw32s, y <- [0 .. (ghcBitSize x - 1)]]
+     ++ zipWith pair [("u64", show x, show y, x `op` y) | x <- w64s, y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- sw64s, y <- [0 .. (ghcBitSize x - 1)]]
+     ++ zipWith pair [("s8",  show x, show y, x `op` y) | x <- i8s,  y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- si8s,  y <- [0 .. (ghcBitSize x - 1)]]
+     ++ zipWith pair [("s16", show x, show y, x `op` y) | x <- i16s, y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- si16s, y <- [0 .. (ghcBitSize x - 1)]]
+     ++ zipWith pair [("s32", show x, show y, x `op` y) | x <- i32s, y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- si32s, y <- [0 .. (ghcBitSize x - 1)]]
+     ++ zipWith pair [("s64", show x, show y, x `op` y) | x <- i64s, y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- si64s, y <- [0 .. (ghcBitSize x - 1)]]
      ++ zipWith pair [("iUB", show x, show y, x `op` y) | x <- iUBs, y <- [0 .. 10]]              [x `op` y | x <- siUBs, y <- [0 .. 10             ]]
   where pair (t, x, y, a) b       = (t, x, y, show a, show b, show (fromIntegral a `asTypeOf` b) == show b)
         mkTest (t, x, y, a, b, s) = "arithCF-" ++ nm ++ "." ++ t ++ "_" ++ x ++ "_" ++ y ++ "_" ++ a ++ "_" ++ b ~: s `showsAs` "True"

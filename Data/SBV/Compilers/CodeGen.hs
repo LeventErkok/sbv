@@ -16,6 +16,7 @@ module Data.SBV.Compilers.CodeGen where
 
 import Control.Monad.Trans
 import Control.Monad.State.Lazy
+import Control.Applicative       (Applicative)
 import Data.Char                 (toLower, isSpace)
 import Data.List                 (nub, isPrefixOf, intercalate, (\\))
 import System.Directory          (createDirectory, doesDirectoryExist, doesFileExist)
@@ -75,7 +76,7 @@ initCgState = CgState {
 -- reference parameters (for returning composite values in languages such as C),
 -- and return values.
 newtype SBVCodeGen a = SBVCodeGen (StateT CgState Symbolic a)
-                   deriving (Monad, MonadIO, MonadState CgState)
+                   deriving (Applicative, Functor, Monad, MonadIO, MonadState CgState)
 
 -- | Reach into symbolic monad from code-generation
 liftSymbolic :: Symbolic a -> SBVCodeGen a

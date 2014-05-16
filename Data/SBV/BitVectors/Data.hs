@@ -45,6 +45,7 @@ module Data.SBV.BitVectors.Data
  ) where
 
 import Control.DeepSeq      (NFData(..))
+import Control.Applicative  (Applicative)
 import Control.Monad        (when)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import Control.Monad.Trans  (MonadIO, liftIO)
@@ -800,7 +801,7 @@ sbvToSW st (SBV _ (Right f)) = uncache f st
 -- state of the computation, layered on top of IO for creating unique
 -- references to hold onto intermediate results.
 newtype Symbolic a = Symbolic (ReaderT State IO a)
-                   deriving (Functor, Monad, MonadIO, MonadReader State)
+                   deriving (Applicative, Functor, Monad, MonadIO, MonadReader State)
 
 -- | Create a symbolic value, based on the quantifier we have. If an explicit quantifier is given, we just use that.
 -- If not, then we pick existential for SAT calls and universal for everything else.

@@ -13,12 +13,20 @@
 
 {-# LANGUAGE Rank2Types    #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE CPP           #-}
 
 module TestSuite.Basics.ArithSolver(testSuite) where
 
 import Data.SBV
 
 import SBVTest
+
+ghcBitSize :: Bits a => a -> Int
+#if __GLASGOW_HASKELL__ >= 708
+ghcBitSize x = maybe (error "SBV.ghcBitSize: Unexpected non-finite usage!") id (bitSizeMaybe x)
+#else
+ghcBitSize = bitSize
+#endif
 
 -- Test suite
 testSuite :: SBVTestSuite
@@ -121,14 +129,14 @@ genIntTest nm op = map mkTest $  [("u8",  show x, show y, mkThm2 x y (x `op` y))
 
 
 genIntTestS :: Bool -> String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [Test]
-genIntTestS unboundedOK nm op = map mkTest $  [("u8",  show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- [0 .. (bitSize x - 1)]]
-                                           ++ [("u16", show x, show y, mkThm2 x y (x `op` y)) | x <- w16s, y <- [0 .. (bitSize x - 1)]]
-                                           ++ [("u32", show x, show y, mkThm2 x y (x `op` y)) | x <- w32s, y <- [0 .. (bitSize x - 1)]]
-                                           ++ [("u64", show x, show y, mkThm2 x y (x `op` y)) | x <- w64s, y <- [0 .. (bitSize x - 1)]]
-                                           ++ [("s8",  show x, show y, mkThm2 x y (x `op` y)) | x <- i8s,  y <- [0 .. (bitSize x - 1)]]
-                                           ++ [("s16", show x, show y, mkThm2 x y (x `op` y)) | x <- i16s, y <- [0 .. (bitSize x - 1)]]
-                                           ++ [("s32", show x, show y, mkThm2 x y (x `op` y)) | x <- i32s, y <- [0 .. (bitSize x - 1)]]
-                                           ++ [("s64", show x, show y, mkThm2 x y (x `op` y)) | x <- i64s, y <- [0 .. (bitSize x - 1)]]
+genIntTestS unboundedOK nm op = map mkTest $  [("u8",  show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- [0 .. (ghcBitSize x - 1)]]
+                                           ++ [("u16", show x, show y, mkThm2 x y (x `op` y)) | x <- w16s, y <- [0 .. (ghcBitSize x - 1)]]
+                                           ++ [("u32", show x, show y, mkThm2 x y (x `op` y)) | x <- w32s, y <- [0 .. (ghcBitSize x - 1)]]
+                                           ++ [("u64", show x, show y, mkThm2 x y (x `op` y)) | x <- w64s, y <- [0 .. (ghcBitSize x - 1)]]
+                                           ++ [("s8",  show x, show y, mkThm2 x y (x `op` y)) | x <- i8s,  y <- [0 .. (ghcBitSize x - 1)]]
+                                           ++ [("s16", show x, show y, mkThm2 x y (x `op` y)) | x <- i16s, y <- [0 .. (ghcBitSize x - 1)]]
+                                           ++ [("s32", show x, show y, mkThm2 x y (x `op` y)) | x <- i32s, y <- [0 .. (ghcBitSize x - 1)]]
+                                           ++ [("s64", show x, show y, mkThm2 x y (x `op` y)) | x <- i64s, y <- [0 .. (ghcBitSize x - 1)]]
                                            ++ [("iUB", show x, show y, mkThm2 x y (x `op` y)) | unboundedOK, x <- iUBs, y <- [0 .. 10]]
   where mkTest (l, x, y, t) = "arithmetic-" ++ nm ++ "." ++ l ++ "_" ++ x ++ "_" ++ y ~: assert t
         mkThm2 x y r = isThm $ do a <- free "x"

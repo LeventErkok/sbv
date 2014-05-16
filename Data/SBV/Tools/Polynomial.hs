@@ -9,6 +9,7 @@
 -- Implementation of polynomial arithmetic
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                  #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE PatternGuards        #-}
@@ -100,7 +101,11 @@ sp st a
  | True    = foldr (\x y -> sh x ++ " + " ++ y) (sh (last cs)) (init cs) ++ t
  where t | st   = " :: GF(2^" ++ show n ++ ")"
          | True = ""
+#if __GLASGOW_HASKELL__ >= 708
+       n  = maybe (error "SBV.Polynomial.sp: Unexpected non-finite usage!") id (bitSizeMaybe a)
+#else
        n  = bitSize a
+#endif
        is = [n-1, n-2 .. 0]
        cs = map fst $ filter snd $ zip is (map (testBit a) is)
        sh 0 = "1"
