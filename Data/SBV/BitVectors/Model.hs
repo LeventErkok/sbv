@@ -747,7 +747,9 @@ instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
     | True                     = liftSym2 (mkSymOp  XOr) (const (const True)) (noReal "xor") xor (noFloat "xor") (noDouble "xor") x y
   complement = liftSym1 (mkSymOp1 Not) (noRealUnary "complement") complement (noFloatUnary "complement") (noDoubleUnary "complement")
   bitSize  _ = intSizeOf (undefined :: a)
+#if __GLASGOW_HASKELL__ >= 708
   bitSizeMaybe _ = Just $ intSizeOf (undefined :: a)
+#endif
   isSigned _ = hasSign   (undefined :: a)
   bit i      = 1 `shiftL` i
   shiftL x y
