@@ -32,6 +32,8 @@ ghcBitSize = bitSize
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test $
         genReals
+     ++ genFloats
+     ++ genDoubles
      ++ genQRems
      ++ genBinTest  True   "+"                (+)
      ++ genBinTest  True   "-"                (-)
@@ -74,7 +76,7 @@ genBinTest unboundedOK nm op = map mkTest $  [(show x, show y, mkThm2 x y (x `op
                                           ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i32s, y <- i32s]
                                           ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i64s, y <- i64s]
                                           ++ [(show x, show y, mkThm2 x y (x `op` y)) | unboundedOK, x <- iUBs, y <- iUBs]
-  where mkTest (x, y, t) = "arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
+  where mkTest (x, y, t) = "genBinTest.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
         mkThm2 x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                   constrain $ a .== literal x
                                   constrain $ b .== literal y
@@ -90,7 +92,7 @@ genBoolTest nm op opS = map mkTest $  [(show x, show y, mkThm2 x y (x `op` y)) |
                                    ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i32s, y <- i32s]
                                    ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i64s, y <- i64s]
                                    ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- iUBs, y <- iUBs]
-  where mkTest (x, y, t) = "arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
+  where mkTest (x, y, t) = "genBoolTest.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
         mkThm2 x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                   constrain $ a .== literal x
                                   constrain $ b .== literal y
@@ -106,7 +108,7 @@ genUnTest unboundedOK nm op = map mkTest $  [(show x, mkThm x (op x)) | x <- w8s
                                          ++ [(show x, mkThm x (op x)) | x <- i32s]
                                          ++ [(show x, mkThm x (op x)) | x <- i64s]
                                          ++ [(show x, mkThm x (op x)) | unboundedOK, x <- iUBs]
-  where mkTest (x, t) = "arithmetic-" ++ nm ++ "." ++ x ~: assert t
+  where mkTest (x, t) = "genUnTest.arithmetic-" ++ nm ++ "." ++ x ~: assert t
         mkThm x r = isThm $ do a <- free "x"
                                constrain $ a .== literal x
                                return $ literal r .== op a
@@ -121,7 +123,7 @@ genIntTest nm op = map mkTest $  [("u8",  show x, show y, mkThm2 x y (x `op` y))
                               ++ [("s32", show x, show y, mkThm2 x y (x `op` y)) | x <- i32s, y <- is]
                               ++ [("s64", show x, show y, mkThm2 x y (x `op` y)) | x <- i64s, y <- is]
                               ++ [("iUB", show x, show y, mkThm2 x y (x `op` y)) | x <- iUBs, y <- is]
-  where mkTest (l, x, y, t) = "arithmetic-" ++ nm ++ "." ++ l ++ "_" ++ x ++ "_" ++ y ~: assert t
+  where mkTest (l, x, y, t) = "genIntTest.arithmetic-" ++ nm ++ "." ++ l ++ "_" ++ x ++ "_" ++ y ~: assert t
         is = [-10 .. 10]
         mkThm2 x y r = isThm $ do a <- free "x"
                                   constrain $ a .== literal x
@@ -138,7 +140,7 @@ genIntTestS unboundedOK nm op = map mkTest $  [("u8",  show x, show y, mkThm2 x 
                                            ++ [("s32", show x, show y, mkThm2 x y (x `op` y)) | x <- i32s, y <- [0 .. (ghcBitSize x - 1)]]
                                            ++ [("s64", show x, show y, mkThm2 x y (x `op` y)) | x <- i64s, y <- [0 .. (ghcBitSize x - 1)]]
                                            ++ [("iUB", show x, show y, mkThm2 x y (x `op` y)) | unboundedOK, x <- iUBs, y <- [0 .. 10]]
-  where mkTest (l, x, y, t) = "arithmetic-" ++ nm ++ "." ++ l ++ "_" ++ x ++ "_" ++ y ~: assert t
+  where mkTest (l, x, y, t) = "genIntTestS.arithmetic-" ++ nm ++ "." ++ l ++ "_" ++ x ++ "_" ++ y ~: assert t
         mkThm2 x y r = isThm $ do a <- free "x"
                                   constrain $ a .== literal x
                                   return $ literal r .== a `op` y
@@ -160,7 +162,7 @@ genBlasts = map mkTest $  [(show x, mkThm fromBitsLE blastLE x) | x <- w8s ]
                        ++ [(show x, mkThm fromBitsBE blastBE x) | x <- w64s]
                        ++ [(show x, mkThm fromBitsLE blastLE x) | x <- i64s]
                        ++ [(show x, mkThm fromBitsBE blastBE x) | x <- i64s]
-  where mkTest (x, t) = "blast-" ++ show x ~: assert t
+  where mkTest (x, t) = "genBlasts.blast-" ++ show x ~: assert t
         mkThm from to v = isThm $ do a <- free "x"
                                      constrain $ a .== literal v
                                      return $ a .== from (to a)
@@ -184,7 +186,7 @@ genCasts = map mkTest $  [(show x, mkThm unsignCast signCast x) | x <- w8s ]
                       ++ [(show x, mkFEq unsignCast (fromBitsLE . blastLE) x) | x <- i16s]
                       ++ [(show x, mkFEq unsignCast (fromBitsLE . blastLE) x) | x <- i32s]
                       ++ [(show x, mkFEq unsignCast (fromBitsLE . blastLE) x) | x <- i64s]
-  where mkTest (x, t) = "cast-" ++ show x ~: assert t
+  where mkTest (x, t) = "genCasts.cast-" ++ show x ~: assert t
         mkThm from to v = isThm $ do a <- free "x"
                                      constrain $ a .== literal v
                                      return $ a .== from (to a)
@@ -203,7 +205,41 @@ genReals = map mkTest $  [("+",  show x, show y, mkThm2 (+)   x y (x +  y)) | x 
                       ++ [(">=", show x, show y, mkThm2 (.>=) x y (x >= y)) | x <- rs, y <- rs        ]
                       ++ [("==", show x, show y, mkThm2 (.==) x y (x == y)) | x <- rs, y <- rs        ]
                       ++ [("/=", show x, show y, mkThm2 (./=) x y (x /= y)) | x <- rs, y <- rs        ]
-  where mkTest (nm, x, y, t) = "arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
+  where mkTest (nm, x, y, t) = "genReals.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
+        mkThm2 op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
+                                     constrain $ a .== literal x
+                                     constrain $ b .== literal y
+                                     return $ literal r .== a `op` b
+
+genFloats :: [Test]
+genFloats = map mkTest $  [("+",  show x, show y, mkThm2 (+)   x y (x +  y)) | x <- fs, y <- fs        ]
+                       ++ [("-",  show x, show y, mkThm2 (-)   x y (x -  y)) | x <- fs, y <- fs        ]
+                       ++ [("*",  show x, show y, mkThm2 (*)   x y (x *  y)) | x <- fs, y <- fs        ]
+                       ++ [("/",  show x, show y, mkThm2 (/)   x y (x /  y)) | x <- fs, y <- fs, y /= 0]
+                       ++ [("<",  show x, show y, mkThm2 (.<)  x y (x <  y)) | x <- fs, y <- fs        ]
+                       ++ [("<=", show x, show y, mkThm2 (.<=) x y (x <= y)) | x <- fs, y <- fs        ]
+                       ++ [(">",  show x, show y, mkThm2 (.>)  x y (x >  y)) | x <- fs, y <- fs        ]
+                       ++ [(">=", show x, show y, mkThm2 (.>=) x y (x >= y)) | x <- fs, y <- fs        ]
+                       ++ [("==", show x, show y, mkThm2 (.==) x y (x == y)) | x <- fs, y <- fs        ]
+                       ++ [("/=", show x, show y, mkThm2 (./=) x y (x /= y)) | x <- fs, y <- fs        ]
+  where mkTest (nm, x, y, t) = "genFloats.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
+        mkThm2 op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
+                                     constrain $ a .== literal x
+                                     constrain $ b .== literal y
+                                     return $ literal r .== a `op` b
+
+genDoubles :: [Test]
+genDoubles = map mkTest $  [("+",  show x, show y, mkThm2 (+)   x y (x +  y)) | x <- ds, y <- ds        ]
+                        ++ [("-",  show x, show y, mkThm2 (-)   x y (x -  y)) | x <- ds, y <- ds        ]
+                        ++ [("*",  show x, show y, mkThm2 (*)   x y (x *  y)) | x <- ds, y <- ds        ]
+                        ++ [("/",  show x, show y, mkThm2 (/)   x y (x /  y)) | x <- ds, y <- ds, y /= 0]
+                        ++ [("<",  show x, show y, mkThm2 (.<)  x y (x <  y)) | x <- ds, y <- ds        ]
+                        ++ [("<=", show x, show y, mkThm2 (.<=) x y (x <= y)) | x <- ds, y <- ds        ]
+                        ++ [(">",  show x, show y, mkThm2 (.>)  x y (x >  y)) | x <- ds, y <- ds        ]
+                        ++ [(">=", show x, show y, mkThm2 (.>=) x y (x >= y)) | x <- ds, y <- ds        ]
+                        ++ [("==", show x, show y, mkThm2 (.==) x y (x == y)) | x <- ds, y <- ds        ]
+                        ++ [("/=", show x, show y, mkThm2 (./=) x y (x /= y)) | x <- ds, y <- ds        ]
+  where mkTest (nm, x, y, t) = "genDoubles.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
         mkThm2 op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                      constrain $ a .== literal x
                                      constrain $ b .== literal y
@@ -230,7 +266,7 @@ genQRems = map mkTest $  [("divMod",  show x, show y, mkThm2 sDivMod  x y (x `di
                       ++ [("quotRem", show x, show y, mkThm2 sQuotRem x y (x `quotRem'` y)) | x <- iUBs, y <- iUBs]
   where divMod'  x y = if y == 0 then (0, x) else x `divMod`  y
         quotRem' x y = if y == 0 then (0, x) else x `quotRem` y
-        mkTest (nm, x, y, t) = "arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
+        mkTest (nm, x, y, t) = "genQRems.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
         mkThm2 op x y (e1, e2) = isThm $ do [a, b] <- mapM free ["x", "y"]
                                             constrain $ a .== literal x
                                             constrain $ b .== literal y
@@ -271,8 +307,14 @@ iUBs :: [Integer]
 iUBs = [-1000000] ++ [-1 .. 1] ++ [1000000]
 
 rs :: [AlgReal]
-rs = [fromRational (i % d) | i <- is, d <- ds]
- where is = [-1000000] ++ [-1 .. 1] ++ [10000001]
-       ds = [5,100,1000000]
+rs = [fromRational (i % d) | i <- is, d <- dens]
+ where is   = [-1000000] ++ [-1 .. 1] ++ [10000001]
+       dens = [5,100,1000000]
 
+-- Admittedly paltry test-cases for float/double
+fs  :: [Float]
+fs = nan : -infinity : infinity : 0 : [-5.0, -4.7 .. 5] ++ [5]
+
+ds  :: [Double]
+ds = nan : -infinity : infinity : 0 : [-5.0, -4.7 .. 5] ++ [5]
 {-# ANN module "HLint: ignore Reduce duplication" #-}
