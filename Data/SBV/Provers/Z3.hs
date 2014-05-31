@@ -89,7 +89,7 @@ z3 = SMTSolver {
               extract (Left s)        = ["(echo \"((" ++ show s ++ " " ++ zero rm (kindOf s) ++ "))\")"]
               extract (Right (s, [])) = let g = "(get-value (" ++ show s ++ "))" in getVal (kindOf s) g
               extract (Right (s, ss)) = let g = "(get-value ((" ++ show s ++ concat [' ' : zero rm (kindOf a) | a <- ss] ++ ")))" in getVal (kindOf s) g
-              getVal KReal g = ["(set-option :pp.decimal false)", g, "(set-option :pp.decimal true)", g]
+              getVal KReal g = ["(set-option :pp.decimal false) " ++ g, "(set-option :pp.decimal true)  " ++ g]
               getVal _     g = [g]
        addTimeOut Nothing  o   = o
        addTimeOut (Just i) o
