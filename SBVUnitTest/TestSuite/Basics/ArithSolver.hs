@@ -259,8 +259,6 @@ genDoubles = map mkTest $  [("+",  show x, show y, mkThm2 (+)   x y (x +  y)) | 
         mkThm2 op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                      eqD a x
                                      eqD b y
-                                     constrain $ a .== literal x
-                                     constrain $ b .== literal y
                                      return $ if isNaN r
                                               then isSNaN (a `op` b)
                                               else literal r .== a `op` b
