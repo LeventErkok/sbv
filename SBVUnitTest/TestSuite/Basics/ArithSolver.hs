@@ -224,8 +224,8 @@ genFloats = map mkTest $  [("+",  show x, show y, mkThm2  (+)   x y (x +  y)) | 
                        ++ [("/=", show x, show y, mkThm2C (./=) x y (x /= y)) | x <- fs, y <- fs        ]
   where mkTest (nm, x, y, t) = "genFloats.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
         eqF v val
-          | isNaN val = constrain $ v .== literal val
-          | True      = constrain $ isSNaN v
+          | isNaN val = constrain $ isSNaN v
+          | True      = constrain $ v .== literal val
         mkThm2 op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                      eqF a x
                                      eqF b y
@@ -254,8 +254,8 @@ genDoubles = map mkTest $  [("+",  show x, show y, mkThm2 (+)   x y (x +  y)) | 
                         ++ [("/=", show x, show y, mkThm2C (./=) x y (x /= y)) | x <- ds, y <- ds        ]
   where mkTest (nm, x, y, t) = "genDoubles.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
         eqD v val
-          | isNaN val = constrain $ v .== literal val
-          | True      = constrain $ isSNaN v
+          | isNaN val = constrain $ isSNaN v
+          | True      = constrain $ v .== literal val
         mkThm2 op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                      eqD a x
                                      eqD b y
