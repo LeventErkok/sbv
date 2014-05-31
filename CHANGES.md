@@ -20,11 +20,12 @@
 	may come back to bite you.)
  * Examples:
      * Add Data/SBV/Examples/Misc/SBranch.hs, to illustrate the use of sBranch.
- * Misc:
-     * Add missing SFloat/SDouble instances for SatModel class
+ * Bug fixes:
      * Fix pipe-blocking issue, which exhibited itself in the presence of
        large numbers of variables (> 10K or so). See github issue #86. Thanks
        to Philipp Meyer for the fine report.
+ * Misc:
+     * Add missing SFloat/SDouble instances for SatModel class
 
 ### Version 3.0, 2014-02-16
    
