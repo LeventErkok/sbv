@@ -120,7 +120,7 @@ module Data.SBV (
   , SInteger
   -- *** IEEE-floating point numbers
   -- $floatingPoints
-  , SFloat, SDouble, RoundingMode(..), nan, infinity, sNaN, sInfinity, fusedMA, isFPPoint
+  , SFloat, SDouble, RoundingMode(..), nan, infinity, sNaN, sInfinity, fusedMA, isSNaN, isFPPoint
   -- *** Signed algebraic reals
   -- $algReals
   , SReal, AlgReal, toSReal
@@ -285,8 +285,16 @@ import Data.Word
 sbvCurrentSolver :: SMTConfig
 sbvCurrentSolver = z3
 
+-- | Note that the floating point value NaN does not compare equal to itself,
+-- so we need a special recognizer for that. Haskell provides the isNaN predicate
+-- with the `RealFrac` class, which unfortunately is not currently implementable for
+-- symbolic cases. (Requires trigonometric functions etc.) Thus, we provide this
+-- recognizer separately. Note that the definition simply tests equality against
+-- itself, which fails for NaN. Who said equality for floating point was reflexive?
+isSNaN :: (Floating a, SymWord a) => SBV a -> SBool
+isSNaN x = x ./= x
+
 -- | We call a FP number FPPoint if it is neither NaN, nor +/- infinity.
--- Note that we cannot use == to test for this, as NaN does not compare equal to itself.
 isFPPoint :: (Floating a, SymWord a) => SBV a -> SBool
 isFPPoint x =     x .== x           -- gets rid of NaN's
               &&& x .< sInfinity    -- gets rid of +inf
