@@ -212,17 +212,23 @@ genReals = map mkTest $  [("+",  show x, show y, mkThm2 (+)   x y (x +  y)) | x 
                                      return $ literal r .== a `op` b
 
 genFloats :: [Test]
-genFloats = map mkTest $  [("+",  show x, show y, mkThm2        (+)   x y (x +  y)) | x <- fs, y <- fs        ]
-                       ++ [("-",  show x, show y, mkThm2        (-)   x y (x -  y)) | x <- fs, y <- fs        ]
-                       ++ [("*",  show x, show y, mkThm2        (*)   x y (x *  y)) | x <- fs, y <- fs        ]
-                       ++ [("/",  show x, show y, mkThm2        (/)   x y (x /  y)) | x <- fs, y <- fs, y /= 0]
-                       ++ [("<",  show x, show y, mkThm2C False (.<)  x y (x <  y)) | x <- fs, y <- fs        ]
-                       ++ [("<=", show x, show y, mkThm2C False (.<=) x y (x <= y)) | x <- fs, y <- fs        ]
-                       ++ [(">",  show x, show y, mkThm2C False (.>)  x y (x >  y)) | x <- fs, y <- fs        ]
-                       ++ [(">=", show x, show y, mkThm2C False (.>=) x y (x >= y)) | x <- fs, y <- fs        ]
-                       ++ [("==", show x, show y, mkThm2C False (.==) x y (x == y)) | x <- fs, y <- fs        ]
-                       ++ [("/=", show x, show y, mkThm2C True  (./=) x y (x /= y)) | x <- fs, y <- fs        ]
-  where mkTest (nm, x, y, t) = "genFloats.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
+genFloats = genIEEE754 "genFloats" fs
+
+genDoubles :: [Test]
+genDoubles = genIEEE754 "genDoubles" ds
+
+genIEEE754 :: (RealFloat a, Show a, SymWord a, Ord a, Floating a) => String -> [a] -> [Test]
+genIEEE754 origin vs = map mkTest $  [("+",  show x, show y, mkThm2        (+)   x y (x +  y)) | x <- vs, y <- vs        ]
+                                  ++ [("-",  show x, show y, mkThm2        (-)   x y (x -  y)) | x <- vs, y <- vs        ]
+                                  ++ [("*",  show x, show y, mkThm2        (*)   x y (x *  y)) | x <- vs, y <- vs        ]
+                                  ++ [("/",  show x, show y, mkThm2        (/)   x y (x /  y)) | x <- vs, y <- vs, y /= 0]
+                                  ++ [("<",  show x, show y, mkThm2C False (.<)  x y (x <  y)) | x <- vs, y <- vs        ]
+                                  ++ [("<=", show x, show y, mkThm2C False (.<=) x y (x <= y)) | x <- vs, y <- vs        ]
+                                  ++ [(">",  show x, show y, mkThm2C False (.>)  x y (x >  y)) | x <- vs, y <- vs        ]
+                                  ++ [(">=", show x, show y, mkThm2C False (.>=) x y (x >= y)) | x <- vs, y <- vs        ]
+                                  ++ [("==", show x, show y, mkThm2C False (.==) x y (x == y)) | x <- vs, y <- vs        ]
+                                  ++ [("/=", show x, show y, mkThm2C True  (./=) x y (x /= y)) | x <- vs, y <- vs        ]
+  where mkTest (nm, x, y, t) = origin ++ ".arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
         eqF v val
           | isNaN val = constrain $ isSNaN v
           | True      = constrain $ v .== literal val
@@ -232,40 +238,9 @@ genFloats = map mkTest $  [("+",  show x, show y, mkThm2        (+)   x y (x +  
                                      return $ if isNaN r
                                               then isSNaN (a `op` b)
                                               else literal r .== a `op` b
-        mkThm2C :: Bool -> (SFloat -> SFloat -> SBool) -> Float ->  Float -> Bool -> IO Bool
         mkThm2C neq op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                           eqF a x
                                           eqF b y
-                                          return $ if isNaN x || isNaN y
-                                                   then (if neq then (a `op` b) else bnot (a `op` b))
-                                                   else literal r .== a `op` b
-
-
-genDoubles :: [Test]
-genDoubles = map mkTest $  [("+",  show x, show y, mkThm2        (+)   x y (x +  y)) | x <- ds, y <- ds        ]
-                        ++ [("-",  show x, show y, mkThm2        (-)   x y (x -  y)) | x <- ds, y <- ds        ]
-                        ++ [("*",  show x, show y, mkThm2        (*)   x y (x *  y)) | x <- ds, y <- ds        ]
-                        ++ [("/",  show x, show y, mkThm2        (/)   x y (x /  y)) | x <- ds, y <- ds, y /= 0]
-                        ++ [("<",  show x, show y, mkThm2C False (.<)  x y (x <  y)) | x <- ds, y <- ds        ]
-                        ++ [("<=", show x, show y, mkThm2C False (.<=) x y (x <= y)) | x <- ds, y <- ds        ]
-                        ++ [(">",  show x, show y, mkThm2C False (.>)  x y (x >  y)) | x <- ds, y <- ds        ]
-                        ++ [(">=", show x, show y, mkThm2C False (.>=) x y (x >= y)) | x <- ds, y <- ds        ]
-                        ++ [("==", show x, show y, mkThm2C False (.==) x y (x == y)) | x <- ds, y <- ds        ]
-                        ++ [("/=", show x, show y, mkThm2C True  (./=) x y (x /= y)) | x <- ds, y <- ds        ]
-  where mkTest (nm, x, y, t) = "genDoubles.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
-        eqD v val
-          | isNaN val = constrain $ isSNaN v
-          | True      = constrain $ v .== literal val
-        mkThm2 op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
-                                     eqD a x
-                                     eqD b y
-                                     return $ if isNaN r
-                                              then isSNaN (a `op` b)
-                                              else literal r .== a `op` b
-        mkThm2C :: Bool -> (SDouble -> SDouble -> SBool) -> Double ->  Double -> Bool -> IO Bool
-        mkThm2C neq op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
-                                          eqD a x
-                                          eqD b y
                                           return $ if isNaN x || isNaN y
                                                    then (if neq then (a `op` b) else bnot (a `op` b))
                                                    else literal r .== a `op` b
