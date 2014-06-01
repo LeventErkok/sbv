@@ -212,16 +212,16 @@ genReals = map mkTest $  [("+",  show x, show y, mkThm2 (+)   x y (x +  y)) | x 
                                      return $ literal r .== a `op` b
 
 genFloats :: [Test]
-genFloats = map mkTest $  [("+",  show x, show y, mkThm2  (+)   x y (x +  y)) | x <- fs, y <- fs        ]
-                       ++ [("-",  show x, show y, mkThm2  (-)   x y (x -  y)) | x <- fs, y <- fs        ]
-                       ++ [("*",  show x, show y, mkThm2  (*)   x y (x *  y)) | x <- fs, y <- fs        ]
-                       ++ [("/",  show x, show y, mkThm2  (/)   x y (x /  y)) | x <- fs, y <- fs, y /= 0]
-                       ++ [("<",  show x, show y, mkThm2C (.<)  x y (x <  y)) | x <- fs, y <- fs        ]
-                       ++ [("<=", show x, show y, mkThm2C (.<=) x y (x <= y)) | x <- fs, y <- fs        ]
-                       ++ [(">",  show x, show y, mkThm2C (.>)  x y (x >  y)) | x <- fs, y <- fs        ]
-                       ++ [(">=", show x, show y, mkThm2C (.>=) x y (x >= y)) | x <- fs, y <- fs        ]
-                       ++ [("==", show x, show y, mkThm2C (.==) x y (x == y)) | x <- fs, y <- fs        ]
-                       ++ [("/=", show x, show y, mkThm2C (./=) x y (x /= y)) | x <- fs, y <- fs        ]
+genFloats = map mkTest $  [("+",  show x, show y, mkThm2        (+)   x y (x +  y)) | x <- fs, y <- fs        ]
+                       ++ [("-",  show x, show y, mkThm2        (-)   x y (x -  y)) | x <- fs, y <- fs        ]
+                       ++ [("*",  show x, show y, mkThm2        (*)   x y (x *  y)) | x <- fs, y <- fs        ]
+                       ++ [("/",  show x, show y, mkThm2        (/)   x y (x /  y)) | x <- fs, y <- fs, y /= 0]
+                       ++ [("<",  show x, show y, mkThm2C False (.<)  x y (x <  y)) | x <- fs, y <- fs        ]
+                       ++ [("<=", show x, show y, mkThm2C False (.<=) x y (x <= y)) | x <- fs, y <- fs        ]
+                       ++ [(">",  show x, show y, mkThm2C False (.>)  x y (x >  y)) | x <- fs, y <- fs        ]
+                       ++ [(">=", show x, show y, mkThm2C False (.>=) x y (x >= y)) | x <- fs, y <- fs        ]
+                       ++ [("==", show x, show y, mkThm2C False (.==) x y (x == y)) | x <- fs, y <- fs        ]
+                       ++ [("/=", show x, show y, mkThm2C True  (./=) x y (x /= y)) | x <- fs, y <- fs        ]
   where mkTest (nm, x, y, t) = "genFloats.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
         eqF v val
           | isNaN val = constrain $ isSNaN v
@@ -232,26 +232,26 @@ genFloats = map mkTest $  [("+",  show x, show y, mkThm2  (+)   x y (x +  y)) | 
                                      return $ if isNaN r
                                               then isSNaN (a `op` b)
                                               else literal r .== a `op` b
-        mkThm2C :: (SFloat -> SFloat -> SBool) -> Float ->  Float -> Bool -> IO Bool
-        mkThm2C op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
-                                      eqF a x
-                                      eqF b y
-                                      return $ if isNaN x || isNaN y
-                                               then bnot (a `op` b)
-                                               else literal r .== a `op` b
+        mkThm2C :: Bool -> (SFloat -> SFloat -> SBool) -> Float ->  Float -> Bool -> IO Bool
+        mkThm2C neq op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
+                                          eqF a x
+                                          eqF b y
+                                          return $ if isNaN x || isNaN y
+                                                   then (if neq then (a `op` b) else bnot (a `op` b))
+                                                   else literal r .== a `op` b
 
 
 genDoubles :: [Test]
-genDoubles = map mkTest $  [("+",  show x, show y, mkThm2 (+)   x y (x +  y)) | x <- ds, y <- ds        ]
-                        ++ [("-",  show x, show y, mkThm2 (-)   x y (x -  y)) | x <- ds, y <- ds        ]
-                        ++ [("*",  show x, show y, mkThm2 (*)   x y (x *  y)) | x <- ds, y <- ds        ]
-                        ++ [("/",  show x, show y, mkThm2 (/)   x y (x /  y)) | x <- ds, y <- ds, y /= 0]
-                        ++ [("<",  show x, show y, mkThm2C (.<)  x y (x <  y)) | x <- ds, y <- ds        ]
-                        ++ [("<=", show x, show y, mkThm2C (.<=) x y (x <= y)) | x <- ds, y <- ds        ]
-                        ++ [(">",  show x, show y, mkThm2C (.>)  x y (x >  y)) | x <- ds, y <- ds        ]
-                        ++ [(">=", show x, show y, mkThm2C (.>=) x y (x >= y)) | x <- ds, y <- ds        ]
-                        ++ [("==", show x, show y, mkThm2C (.==) x y (x == y)) | x <- ds, y <- ds        ]
-                        ++ [("/=", show x, show y, mkThm2C (./=) x y (x /= y)) | x <- ds, y <- ds        ]
+genDoubles = map mkTest $  [("+",  show x, show y, mkThm2        (+)   x y (x +  y)) | x <- ds, y <- ds        ]
+                        ++ [("-",  show x, show y, mkThm2        (-)   x y (x -  y)) | x <- ds, y <- ds        ]
+                        ++ [("*",  show x, show y, mkThm2        (*)   x y (x *  y)) | x <- ds, y <- ds        ]
+                        ++ [("/",  show x, show y, mkThm2        (/)   x y (x /  y)) | x <- ds, y <- ds, y /= 0]
+                        ++ [("<",  show x, show y, mkThm2C False (.<)  x y (x <  y)) | x <- ds, y <- ds        ]
+                        ++ [("<=", show x, show y, mkThm2C False (.<=) x y (x <= y)) | x <- ds, y <- ds        ]
+                        ++ [(">",  show x, show y, mkThm2C False (.>)  x y (x >  y)) | x <- ds, y <- ds        ]
+                        ++ [(">=", show x, show y, mkThm2C False (.>=) x y (x >= y)) | x <- ds, y <- ds        ]
+                        ++ [("==", show x, show y, mkThm2C False (.==) x y (x == y)) | x <- ds, y <- ds        ]
+                        ++ [("/=", show x, show y, mkThm2C True  (./=) x y (x /= y)) | x <- ds, y <- ds        ]
   where mkTest (nm, x, y, t) = "genDoubles.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
         eqD v val
           | isNaN val = constrain $ isSNaN v
@@ -262,13 +262,13 @@ genDoubles = map mkTest $  [("+",  show x, show y, mkThm2 (+)   x y (x +  y)) | 
                                      return $ if isNaN r
                                               then isSNaN (a `op` b)
                                               else literal r .== a `op` b
-        mkThm2C :: (SDouble -> SDouble -> SBool) -> Double ->  Double -> Bool -> IO Bool
-        mkThm2C op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
-                                      eqD a x
-                                      eqD b y
-                                      return $ if isNaN x || isNaN y
-                                               then bnot (a `op` b)
-                                               else literal r .== a `op` b
+        mkThm2C :: Bool -> (SDouble -> SDouble -> SBool) -> Double ->  Double -> Bool -> IO Bool
+        mkThm2C neq op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
+                                          eqD a x
+                                          eqD b y
+                                          return $ if isNaN x || isNaN y
+                                                   then (if neq then (a `op` b) else bnot (a `op` b))
+                                                   else literal r .== a `op` b
 
 genQRems :: [Test]
 genQRems = map mkTest $  [("divMod",  show x, show y, mkThm2 sDivMod  x y (x `divMod'`  y)) | x <- w8s,  y <- w8s ]
