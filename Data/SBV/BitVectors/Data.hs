@@ -134,8 +134,8 @@ cwSameType x y = cwKind x == cwKind y
 -- | Is this a bit?
 cwIsBit :: CW -> Bool
 cwIsBit x = case cwKind x of
-              KBounded False 1 -> True
-              _                -> False
+              KBool -> True
+              _     -> False
 
 -- | Convert a CW to a Haskell boolean (NB. Assumes input is well-kinded)
 cwToBool :: CW -> Bool
@@ -156,7 +156,8 @@ normCW c@(CW (KBounded signed sz) (CWInteger v)) = c { cwVal = CWInteger norm }
 normCW c = c
 
 -- | Kind of symbolic value
-data Kind = KBounded Bool Int
+data Kind = KBool
+          | KBounded Bool Int
           | KUnbounded
           | KReal
           | KUninterpreted String
@@ -165,7 +166,7 @@ data Kind = KBounded Bool Int
           deriving (Eq, Ord)
 
 instance Show Kind where
-  show (KBounded False 1) = "SBool"
+  show KBool              = "SBool"
   show (KBounded False n) = "SWord" ++ show n
   show (KBounded True n)  = "SInt"  ++ show n
   show KUnbounded         = "SInteger"
@@ -196,19 +197,19 @@ needsExistentials = (EX `elem`)
 
 -- | Constant False as a SW. Note that this value always occupies slot -2.
 falseSW :: SW
-falseSW = SW (KBounded False 1) $ NodeId (-2)
+falseSW = SW KBool $ NodeId (-2)
 
 -- | Constant False as a SW. Note that this value always occupies slot -1.
 trueSW :: SW
-trueSW  = SW (KBounded False 1) $ NodeId (-1)
+trueSW  = SW KBool $ NodeId (-1)
 
 -- | Constant False as a CW. We represent it using the integer value 0.
 falseCW :: CW
-falseCW = CW (KBounded False 1) (CWInteger 0)
+falseCW = CW KBool (CWInteger 0)
 
 -- | Constant True as a CW. We represent it using the integer value 1.
 trueCW :: CW
-trueCW  = CW (KBounded False 1) (CWInteger 1)
+trueCW  = CW KBool (CWInteger 1)
 
 -- | A simple type for SBV computations, used mainly for uninterpreted constants.
 -- We keep track of the signedness/size of the arguments. A non-function will
@@ -275,6 +276,7 @@ class HasKind a where
   showType        :: a -> String
   -- defaults
   hasSign x = case kindOf x of
+                  KBool            -> False
                   KBounded b _     -> b
                   KUnbounded       -> True
                   KReal            -> True
@@ -282,13 +284,14 @@ class HasKind a where
                   KDouble          -> True
                   KUninterpreted{} -> False
   intSizeOf x = case kindOf x of
+                  KBool            -> error "SBV.HasKind.intSizeOf((S)Bool)"
                   KBounded _ s     -> s
                   KUnbounded       -> error "SBV.HasKind.intSizeOf((S)Integer)"
                   KReal            -> error "SBV.HasKind.intSizeOf((S)Real)"
                   KFloat           -> error "SBV.HasKind.intSizeOf((S)Float)"
                   KDouble          -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KUninterpreted s -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
-  isBoolean       x | KBounded False 1 <- kindOf x = True
+  isBoolean       x | KBool{}          <- kindOf x = True
                     | True                         = False
   isBounded       x | KBounded{}       <- kindOf x = True
                     | True                         = False
@@ -308,7 +311,7 @@ class HasKind a where
   default kindOf :: Data a => a -> Kind
   kindOf = KUninterpreted . tyconUQname . dataTypeName . dataTypeOf
 
-instance HasKind Bool    where kindOf _ = KBounded False 1
+instance HasKind Bool    where kindOf _ = KBool
 instance HasKind Int8    where kindOf _ = KBounded True  8
 instance HasKind Word8   where kindOf _ = KBounded False 8
 instance HasKind Int16   where kindOf _ = KBounded True  16
@@ -769,6 +772,7 @@ getTableIndex st at rt elts = do
 
 -- | Create a constant word from an integral
 mkConstCW :: Integral a => Kind -> a -> CW
+mkConstCW KBool              a = error $ "Unexpected call to mkConstCW with boolean kind with value: " ++ show (toInteger a)
 mkConstCW k@(KBounded{})     a = normCW $ CW k          (CWInteger (toInteger a))
 mkConstCW KUnbounded         a = normCW $ CW KUnbounded (CWInteger (toInteger a))
 mkConstCW KReal              a = normCW $ CW KReal      (CWAlgReal (fromInteger (toInteger a)))
@@ -915,7 +919,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
                   Concrete g -> newIORef g
                   _          -> newStdGen >>= newIORef
    let st = State { runMode      = currentRunMode
-                  , pathCond     = SBV (KBounded False 1) (Left trueCW)
+                  , pathCond     = SBV KBool (Left trueCW)
                   , rStdGen      = rGen
                   , rCInfo       = cInfo
                   , rctr         = ctr
@@ -934,8 +938,8 @@ runSymbolic' currentRunMode (Symbolic c) = do
                   , rAICache     = aiCache
                   , rConstraints = cstrs
                   }
-   _ <- newConst st (mkConstCW (KBounded False 1) (0::Integer)) -- s(-2) == falseSW
-   _ <- newConst st (mkConstCW (KBounded False 1) (1::Integer)) -- s(-1) == trueSW
+   _ <- newConst st falseCW -- s(-2) == falseSW
+   _ <- newConst st trueCW  -- s(-1) == trueSW
    r <- runReaderT c st
    res <- extractSymbolicSimulationState st
    return (r, res)

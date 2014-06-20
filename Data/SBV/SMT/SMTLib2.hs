@@ -265,7 +265,7 @@ swFunType :: [SW] -> SW -> String
 swFunType ss s = "(" ++ unwords (map swType ss) ++ ") " ++ swType s
 
 smtType :: Kind -> String
-smtType (KBounded False 1) = "Bool"
+smtType KBool              = "Bool"
 smtType (KBounded _ sz)    = "(_ BitVec " ++ show sz ++ ")"
 smtType KUnbounded         = "Int"
 smtType KReal              = "Real"
@@ -374,6 +374,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           | needsCheck = "(ite " ++ cond ++ ssw e ++ " " ++ lkUp ++ ")"
           | True       = lkUp
           where needsCheck = case aKnd of
+                              KBool            -> (2::Integer) > fromIntegral l
                               KBounded _ n     -> (2::Integer)^n > fromIntegral l
                               KUnbounded       -> True
                               KReal            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
@@ -385,6 +386,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                  | hasSign i = "(or " ++ le0 ++ " " ++ gtl ++ ") "
                  | True      = gtl ++ " "
                 (less, leq) = case aKnd of
+                                KBool            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected boolean valued index"
                                 KBounded{}       -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
                                 KUnbounded       -> ("<", "<=")
                                 KReal            -> ("<", "<=")

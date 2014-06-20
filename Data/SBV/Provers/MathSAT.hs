@@ -56,7 +56,7 @@ mathSAT = SMTSolver {
                                 }
          }
  where zero :: Kind -> String
-       zero (KBounded False 1)  = "#b0"
+       zero KBool               = "#b0"
        zero (KBounded _     sz) = "#x" ++ replicate (sz `div` 4) '0'
        zero KUnbounded          = "0"
        zero KReal               = "0.0"
