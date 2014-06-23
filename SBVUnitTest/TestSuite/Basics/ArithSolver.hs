@@ -242,7 +242,7 @@ genIEEE754 origin vs = map mkTest $  [("+",  show x, show y, mkThm2        (+)  
                                           eqF a x
                                           eqF b y
                                           return $ if isNaN x || isNaN y
-                                                   then (if neq then (a `op` b) else bnot (a `op` b))
+                                                   then (if neq then a `op` b else bnot (a `op` b))
                                                    else literal r .== a `op` b
 
 genQRems :: [Test]
