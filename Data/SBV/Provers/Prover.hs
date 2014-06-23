@@ -417,7 +417,7 @@ runProofOn converter config isSat comments res =
         let isTiming   = timing config
             solverCaps = capabilities (solver config)
         in case res of
-             Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs [o@(SW (KBounded False 1) _)] ->
+             Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs [o@(SW KBool _)] ->
                timeIf isTiming "translation"
                 $ let uiMap     = mapMaybe arrayUIKind arrs ++ map unintFnUIKind uis
                       skolemMap = skolemize (if isSat then is else map flipQ is)

@@ -109,7 +109,7 @@ instance SatModel () where
   parseCWs xs = return ((), xs)
 
 instance SatModel Bool where
-  parseCWs xs = do (x, r) <- genParse (KBounded False 1) xs
+  parseCWs xs = do (x, r) <- genParse KBool xs
                    return ((x :: Integer) /= 0, r)
 
 instance SatModel Word8 where

@@ -72,7 +72,7 @@ z3 = SMTSolver {
  where cleanErrs = intercalate "\n" . filter (not . junk) . lines
        junk = ("WARNING:" `isPrefixOf`)
        zero :: RoundingMode -> Kind -> String
-       zero _  (KBounded False 1)  = "#b0"
+       zero _  KBool               = "#b0"
        zero _  (KBounded _     sz) = "#x" ++ replicate (sz `div` 4) '0'
        zero _  KUnbounded          = "0"
        zero _  KReal               = "0.0"
