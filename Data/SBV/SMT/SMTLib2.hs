@@ -341,7 +341,8 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         boolOp   = all isBoolean arguments
         bad | intOp = error $ "SBV.SMTLib2: Unsupported operation on unbounded integers: " ++ show expr
             | True  = error $ "SBV.SMTLib2: Unsupported operation on real values: " ++ show expr
-        ensureBV = bvOp || bad
+        ensureBVOrBool = bvOp || boolOp || bad
+        ensureBV       = bvOp || bad
         addRM s = s ++ " " ++ smtRoundingMode rm
         lift2  o _ [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
         lift2  o _ sbvs   = error $ "SBV.SMTLib2.sh.lift2: Unexpected arguments: "   ++ show (o, sbvs)
@@ -386,7 +387,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                  | hasSign i = "(or " ++ le0 ++ " " ++ gtl ++ ") "
                  | True      = gtl ++ " "
                 (less, leq) = case aKnd of
-                                KBool            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected boolean valued index"
+                                KBool            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected boolean valued index"
                                 KBounded{}       -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
                                 KUnbounded       -> ("<", "<=")
                                 KReal            -> ("<", "<=")
@@ -427,7 +428,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
            | intOp = "(div " ++ ssw a ++ " " ++ show (bit i :: Integer) ++ ")"  -- Implement shiftR by division by 2^i
            | True  = bad
         sh (SBVApp op args)
-          | Just f <- lookup op smtBVOpTable, ensureBV
+          | Just f <- lookup op smtBVOpTable, ensureBVOrBool
           = f (any hasSign args) (map ssw args)
           where -- The first 4 operators below do make sense for Integer's in Haskell, but there's
                 -- no obvious counterpart for them in the SMTLib translation.

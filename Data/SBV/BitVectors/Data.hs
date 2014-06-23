@@ -772,7 +772,7 @@ getTableIndex st at rt elts = do
 
 -- | Create a constant word from an integral
 mkConstCW :: Integral a => Kind -> a -> CW
-mkConstCW KBool              a = error $ "Unexpected call to mkConstCW with boolean kind with value: " ++ show (toInteger a)
+mkConstCW KBool              a = normCW $ CW KBool      (CWInteger (toInteger a))
 mkConstCW k@(KBounded{})     a = normCW $ CW k          (CWInteger (toInteger a))
 mkConstCW KUnbounded         a = normCW $ CW KUnbounded (CWInteger (toInteger a))
 mkConstCW KReal              a = normCW $ CW KReal      (CWAlgReal (fromInteger (toInteger a)))
