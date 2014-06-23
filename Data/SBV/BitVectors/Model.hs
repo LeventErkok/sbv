@@ -91,20 +91,20 @@ liftSym2 opS _    _    _    _    _    a@(SBV k _)        b                      
 
 liftSym2B :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> Bool) -> (Integer -> Integer -> Bool) -> (Float -> Float -> Bool) -> (Double -> Double -> Bool) -> SBV b -> SBV b -> SBool
 liftSym2B _   okCW opCR opCI opCF opCD (SBV _ (Left a)) (SBV _ (Left b)) | okCW a b = literal (liftCW2 opCR opCI opCF opCD noUnint2 a b)
-liftSym2B opS _    _    _    _    _    a                b                           = SBV (KBounded False 1) $ Right $ liftSW2 opS (KBounded False 1) a b
+liftSym2B opS _    _    _    _    _    a                b                           = SBV KBool $ Right $ liftSW2 opS KBool a b
 
 liftSym1Bool :: (State -> Kind -> SW -> IO SW) -> (Bool -> Bool) -> SBool -> SBool
 liftSym1Bool _   opC (SBV _ (Left a)) = literal $ opC $ cwToBool a
-liftSym1Bool opS _   a                = SBV (KBounded False 1) $ Right $ cache c
+liftSym1Bool opS _   a                = SBV KBool $ Right $ cache c
   where c st = do sw <- sbvToSW st a
-                  opS st (KBounded False 1) sw
+                  opS st KBool sw
 
 liftSym2Bool :: (State -> Kind -> SW -> SW -> IO SW) -> (Bool -> Bool -> Bool) -> SBool -> SBool -> SBool
 liftSym2Bool _   opC (SBV _ (Left a)) (SBV _ (Left b)) = literal (cwToBool a `opC` cwToBool b)
-liftSym2Bool opS _   a                b                = SBV (KBounded False 1) $ Right $ cache c
+liftSym2Bool opS _   a                b                = SBV KBool $ Right $ cache c
   where c st = do sw1 <- sbvToSW st a
                   sw2 <- sbvToSW st b
-                  opS st (KBounded False 1) sw1 sw2
+                  opS st KBool sw1 sw2
 
 mkSymOpSC :: (SW -> SW -> Maybe SW) -> Op -> State -> Kind -> SW -> SW -> IO SW
 mkSymOpSC shortCut op st k a b = maybe (newExpr st k (SBVApp op [a, b])) return (shortCut a b)
@@ -143,8 +143,8 @@ genMkSymVar k mbq Nothing  = genVar_ mbq k
 genMkSymVar k mbq (Just s) = genVar  mbq k s
 
 instance SymWord Bool where
-  mkSymWord  = genMkSymVar (KBounded False 1)
-  literal x  = genLiteral  (KBounded False 1) (if x then (1::Integer) else 0)
+  mkSymWord  = genMkSymVar KBool
+  literal x  = genLiteral  KBool (if x then (1::Integer) else 0)
   fromCW     = cwToBool
   mbMaxBound = Just maxBound
   mbMinBound = Just minBound
@@ -1395,10 +1395,10 @@ instance (SymWord a, Bounded a) => Bounded (SBV a) where
 
 -- SArrays are both "EqSymbolic" and "Mergeable"
 instance EqSymbolic (SArray a b) where
-  (SArray _ a) .== (SArray _ b) = SBV (KBounded False 1) $ Right $ cache c
+  (SArray _ a) .== (SArray _ b) = SBV KBool $ Right $ cache c
     where c st = do ai <- uncacheAI a st
                     bi <- uncacheAI b st
-                    newExpr st (KBounded False 1) (SBVApp (ArrEq ai bi) [])
+                    newExpr st KBool (SBVApp (ArrEq ai bi) [])
 
 instance SymWord b => Mergeable (SArray a b) where
   symbolicMerge = mergeArrays

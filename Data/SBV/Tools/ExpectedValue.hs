@@ -42,7 +42,7 @@ expectedValueWith chatty warmupCount mbMaxIter epsilon m
                        let cval o = case o `lookup` cs of
                                       Nothing -> error "SBV.expectedValue: Cannot compute expected-values in the presence of uninterpreted constants!"
                                       Just cw -> case (cwKind cw, cwVal cw) of
-                                                   (KBounded False 1, _)     -> if cwToBool cw then 1 else 0
+                                                   (KBool, _)                -> if cwToBool cw then 1 else 0
                                                    (KBounded{}, CWInteger v) -> v
                                                    (KUnbounded, CWInteger v) -> v
                                                    (KReal, _)                -> error "Cannot compute expected-values for real valued results."
