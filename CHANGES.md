@@ -33,6 +33,9 @@
        to Philipp Meyer for the fine report.
  * Misc:
      * Add missing SFloat/SDouble instances for SatModel class
+     * Explicitly support KBool as a kind, separating it from "KUnbounded False 1".
+       Thanks to Brian Huffman for contributing the changes. This should have no
+       user-visible impact, but comes in handy for internal reasons.
 
 ### Version 3.0, 2014-02-16
    
