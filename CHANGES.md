@@ -25,6 +25,10 @@
 	not currently implementable for cases. (Requires trigonometric functions etc.)
 	Thus, we provide 'isSNaN' separately (along with the already existing
 	'isFPPoint') to simplify reasoning with floating-point.
+ * New API:
+      * Add function: sbvAvailableSolvers; which returns the list of solvers currently
+        available, as installed on the machine we are running. (Not the list that SBV
+	supports, but those that are actually available at run-time.)
  * Examples:
      * Add Data/SBV/Examples/Misc/SBranch.hs, to illustrate the use of sBranch.
  * Bug fixes:

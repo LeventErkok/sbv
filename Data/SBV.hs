@@ -212,7 +212,7 @@ module Data.SBV (
   , getModelDictionaries, getModelValues, getModelUninterpretedValues
 
   -- * SMT Interface: Configurations and solvers
-  , SMTConfig(..), SMTLibLogic(..), Logic(..), OptimizeOpts(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation
+  , SMTConfig(..), SMTLibLogic(..), Logic(..), OptimizeOpts(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
 
   -- * Symbolic computations
   , Symbolic, output, SymWord(..)
@@ -257,6 +257,8 @@ module Data.SBV (
   , module Data.Int
   , module Data.Ratio
   ) where
+
+import Control.Monad (filterM)
 
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
@@ -317,6 +319,10 @@ sbvCheckSolverInstallation cfg = do ThmResult r <- proveWith cfg $ \x -> (x+x) .
                                     case r of
                                       Unsatisfiable _ -> return True
                                       _               -> return False
+
+-- | Return the known available solver configs, installed on your machine.
+sbvAvailableSolvers :: IO [SMTConfig]
+sbvAvailableSolvers = filterM sbvCheckSolverInstallation [cvc4, mathSAT, yices, z3, boolector]
 
 -- | Equality as a proof method. Allows for
 -- very concise construction of equivalence proofs, which is very typical in
