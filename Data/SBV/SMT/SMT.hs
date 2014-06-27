@@ -319,8 +319,9 @@ shUA (f, cases) = ("  -- array: " ++ f) : map shC cases
   where shC s = "       " ++ s
 
 -- | Helper function to spin off to an SMT solver.
-pipeProcess :: SMTConfig -> String -> String -> [String] -> SMTScript -> (String -> String) -> IO (Either String [String])
-pipeProcess cfg nm execName opts script cleanErrs = do
+pipeProcess :: SMTConfig -> String -> [String] -> SMTScript -> (String -> String) -> IO (Either String [String])
+pipeProcess cfg execName opts script cleanErrs = do
+        let nm = show (name (solver cfg))
         mbExecPath <- findExecutable execName
         case mbExecPath of
           Nothing -> return $ Left $ "Unable to locate executable for " ++ nm
@@ -359,13 +360,13 @@ standardSolver config script cleanErrs failure success = do
         exec     = executable smtSolver
         opts     = options smtSolver
         isTiming = timing config
-        nmSolver = name smtSolver
+        nmSolver = show (name smtSolver)
     msg $ "Calling: " ++ show (unwords (exec:opts))
     case smtFile config of
       Nothing -> return ()
       Just f  -> do msg $ "Saving the generated script in file: " ++ show f
                     writeFile f (scriptBody script)
-    contents <- timeIf isTiming nmSolver $ pipeProcess config nmSolver exec opts script cleanErrs
+    contents <- timeIf isTiming nmSolver $ pipeProcess config  exec opts script cleanErrs
     msg $ nmSolver ++ " output:\n" ++ either id (intercalate "\n") contents
     case contents of
       Left e   -> return $ failure (lines e)

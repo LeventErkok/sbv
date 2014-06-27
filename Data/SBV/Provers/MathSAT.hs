@@ -28,7 +28,7 @@ import Data.SBV.SMT.SMTLib
 -- The default options are @\"-input=smt2\"@. You can use the @SBV_MATHSAT_OPTIONS@ environment variable to override the options.
 mathSAT :: SMTSolver
 mathSAT = SMTSolver {
-           name           = "MathSAT"
+           name           = MathSAT
          , executable     = "mathsat"
          , options        = ["-input=smt2"]
          , engine         = \cfg _isSat qinps modelMap skolemMap pgm -> do

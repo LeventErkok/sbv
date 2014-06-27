@@ -30,7 +30,7 @@ import Data.SBV.SMT.SMTLib
 -- The default options are @\"--lang smt\"@. You can use the @SBV_CVC4_OPTIONS@ environment variable to override the options.
 cvc4 :: SMTSolver
 cvc4 = SMTSolver {
-           name           = "cvc4"
+           name           = CVC4
          , executable     = "cvc4"
          , options        = ["--lang", "smt"]
          , engine         = \cfg isSat qinps modelMap skolemMap pgm -> do

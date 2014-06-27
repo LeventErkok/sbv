@@ -212,7 +212,7 @@ module Data.SBV (
   , getModelDictionaries, getModelValues, getModelUninterpretedValues
 
   -- * SMT Interface: Configurations and solvers
-  , SMTConfig(..), SMTLibLogic(..), Logic(..), OptimizeOpts(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
+  , SMTConfig(..), SMTLibLogic(..), Logic(..), OptimizeOpts(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
 
   -- * Symbolic computations
   , Symbolic, output, SymWord(..)
@@ -320,9 +320,17 @@ sbvCheckSolverInstallation cfg = do ThmResult r <- proveWith cfg $ \x -> (x+x) .
                                       Unsatisfiable _ -> return True
                                       _               -> return False
 
+-- The default configs
+defaultSolverConfig :: Solver -> SMTConfig
+defaultSolverConfig Z3        = z3
+defaultSolverConfig Yices     = yices
+defaultSolverConfig Boolector = boolector
+defaultSolverConfig CVC4      = cvc4
+defaultSolverConfig MathSAT   = mathSAT
+
 -- | Return the known available solver configs, installed on your machine.
 sbvAvailableSolvers :: IO [SMTConfig]
-sbvAvailableSolvers = filterM sbvCheckSolverInstallation [cvc4, mathSAT, yices, z3, boolector]
+sbvAvailableSolvers = filterM sbvCheckSolverInstallation (map defaultSolverConfig [minBound .. maxBound])
 
 -- | Equality as a proof method. Allows for
 -- very concise construction of equivalence proofs, which is very typical in

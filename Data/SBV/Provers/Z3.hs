@@ -39,7 +39,7 @@ optionPrefix
 -- The default options are @\"-in -smt2\"@, which is valid for Z3 4.1. You can use the @SBV_Z3_OPTIONS@ environment variable to override the options.
 z3 :: SMTSolver
 z3 = SMTSolver {
-           name           = "z3"
+           name           = Z3
          , executable     = "z3"
          , options        = map (optionPrefix:) ["in", "smt2"]
          , engine         = \cfg isSat qinps modelMap skolemMap pgm -> do
