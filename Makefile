@@ -34,7 +34,7 @@ $(STAMPFILE): $(DEPSRCS) Makefile
 	$(call mkStamp)
 	$(call mkTags)
 	@$(CABAL) configure --disable-library-profiling --enable-tests
-	@((set -o pipefail; $(CABAL) build --ghc-options=-Werror 2>&1 | $(SIMPLIFY)) || (rm $(STAMPFILE) && false))
+	@((set -o pipefail; $(CABAL) build --ghc-options="-Werror -Wall" 2>&1 | $(SIMPLIFY)) || (rm $(STAMPFILE) && false))
 	@$(CABAL) copy
 	@$(CABAL) register
 
