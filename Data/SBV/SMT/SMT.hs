@@ -20,10 +20,10 @@ import Control.Monad      (when, zipWithM)
 import Data.Char          (isSpace)
 import Data.Int           (Int8, Int16, Int32, Int64)
 import Data.List          (intercalate, isPrefixOf, isInfixOf)
-import Data.Maybe         (isNothing, fromJust)
+import Data.Maybe         (isNothing)
 import Data.Word          (Word8, Word16, Word32, Word64)
 import System.Directory   (findExecutable)
-import System.Process     (readProcessWithExitCode, runInteractiveProcess, waitForProcess)
+import System.Process     (readProcessWithExitCode, runInteractiveProcess, waitForProcess, terminateProcess)
 import System.Exit        (ExitCode(..))
 import System.IO          (hClose, hFlush, hPutStr, hGetContents, hGetLine)
 
@@ -381,10 +381,10 @@ runSolver cfg execPath opts script
                 | True           = ""
    in readProcessWithExitCode execPath opts (scriptBody script ++ checkCmd)
  | True
- = do (send, ask, cleanUp) <- do
+ = do (send, ask, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
                 let send l    = hPutStr inh (l ++ "\n") >> hFlush inh
-                    recv      = hGetLine outh `C.catch` (\(_ :: C.SomeException) -> return "")
+                    recv      = hGetLine outh
                     ask l     = send l >> recv
                     cleanUp (r, vals)
                         = do outMVar <- newEmptyMVar
@@ -404,16 +404,19 @@ runSolver cfg execPath opts script
                              return $ if "unknown" `isPrefixOf` r && "error" `isInfixOf` (out ++ err)
                                       then (ExitSuccess, finalOut               , "")
                                       else (ex,          finalOut ++ "\n" ++ out, err)
-                return (send, ask, cleanUp)
-      mapM_ send (lines (scriptBody script))
-      r <- ask $ satCmd cfg
-      vals <- if any (`isPrefixOf` r) ["sat", "unknown"]
-              then do let mls = lines (fromJust (scriptModel script))
-                      when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
-                                              mapM_ putStrLn mls
-                      mapM ask mls
-              else return []
-      cleanUp (r, vals)
+                return (send, ask, cleanUp, pid)
+      let executeSolver = do mapM_ send (lines (scriptBody script))
+                             r <- ask $ satCmd cfg
+                             vals <- if any (`isPrefixOf` r) ["sat", "unknown"]
+                                     then case scriptModel script of
+                                            Nothing -> return []
+                                            Just ls -> do let mls = lines ls
+                                                          when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
+                                                                                  mapM_ putStrLn mls
+                                                          mapM ask mls
+                                     else return []
+                             cleanUp (r, vals)
+      executeSolver `C.onException`  terminateProcess pid
 
 -- | In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
 -- each S-Expression spanning only a single line. We'll ignore things line parentheses inside quotes
