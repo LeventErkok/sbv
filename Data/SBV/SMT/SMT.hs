@@ -20,10 +20,9 @@ import Control.Monad      (when, zipWithM)
 import Data.Char          (isSpace)
 import Data.Int           (Int8, Int16, Int32, Int64)
 import Data.List          (intercalate, isPrefixOf, isInfixOf)
-import Data.Maybe         (isNothing)
 import Data.Word          (Word8, Word16, Word32, Word64)
 import System.Directory   (findExecutable)
-import System.Process     (readProcessWithExitCode, runInteractiveProcess, waitForProcess, terminateProcess)
+import System.Process     (runInteractiveProcess, waitForProcess, terminateProcess)
 import System.Exit        (ExitCode(..))
 import System.IO          (hClose, hFlush, hPutStr, hGetContents, hGetLine)
 
@@ -376,46 +375,45 @@ standardSolver config script cleanErrs failure success = do
 -- and can speak SMT-Lib2 (just a little).
 runSolver :: SMTConfig -> FilePath -> [String] -> SMTScript -> IO (ExitCode, String, String)
 runSolver cfg execPath opts script
- | isNothing $ scriptModel script
- = let checkCmd | useSMTLib2 cfg = '\n' : satCmd cfg
-                | True           = ""
-   in readProcessWithExitCode execPath opts (scriptBody script ++ checkCmd)
- | True
  = do (send, ask, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
                 let send l    = hPutStr inh (l ++ "\n") >> hFlush inh
                     recv      = hGetLine outh
                     ask l     = send l >> recv
-                    cleanUp (r, vals)
-                        = do outMVar <- newEmptyMVar
+                    cleanUp response
+                        = do hClose inh
+                             outMVar <- newEmptyMVar
                              out <- hGetContents outh
                              _ <- forkIO $ C.evaluate (length out) >> putMVar outMVar ()
                              err <- hGetContents errh
                              _ <- forkIO $ C.evaluate (length err) >> putMVar outMVar ()
-                             hClose inh
                              takeMVar outMVar
                              takeMVar outMVar
                              hClose outh
                              hClose errh
                              ex <- waitForProcess pid
-                             -- if the status is unknown, prepare for the possibility of not having a model
-                             -- TBD: This is rather crude and potentially Z3 specific
-                             let finalOut = intercalate "\n" (r : vals)
-                             return $ if "unknown" `isPrefixOf` r && "error" `isInfixOf` (out ++ err)
-                                      then (ExitSuccess, finalOut               , "")
-                                      else (ex,          finalOut ++ "\n" ++ out, err)
+                             return $ case response of
+                                        Nothing        -> (ex, out, err)
+                                        Just (r, vals) -> -- if the status is unknown, prepare for the possibility of not having a model
+                                                          -- TBD: This is rather crude and potentially Z3 specific
+                                                          let finalOut = intercalate "\n" (r : vals)
+                                                          in if "unknown" `isPrefixOf` r && "error" `isInfixOf` (out ++ err)
+                                                             then (ExitSuccess, finalOut               , "")
+                                                             else (ex,          finalOut ++ "\n" ++ out, err)
                 return (send, ask, cleanUp, pid)
       let executeSolver = do mapM_ send (lines (scriptBody script))
-                             r <- ask $ satCmd cfg
-                             vals <- if any (`isPrefixOf` r) ["sat", "unknown"]
-                                     then case scriptModel script of
-                                            Nothing -> return []
-                                            Just ls -> do let mls = lines ls
-                                                          when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
-                                                                                  mapM_ putStrLn mls
-                                                          mapM ask mls
-                                     else return []
-                             cleanUp (r, vals)
+                             response <- case scriptModel script of
+                                           Nothing -> do send $ satCmd cfg
+                                                         return Nothing
+                                           Just ls -> do r <- ask $ satCmd cfg
+                                                         vals <- if any (`isPrefixOf` r) ["sat", "unknown"]
+                                                                 then do let mls = lines ls
+                                                                         when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
+                                                                                                 mapM_ putStrLn mls
+                                                                         mapM ask mls
+                                                                 else return []
+                                                         return $ Just (r, vals)
+                             cleanUp response
       executeSolver `C.onException`  terminateProcess pid
 
 -- | In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
