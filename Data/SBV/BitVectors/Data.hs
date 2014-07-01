@@ -1380,6 +1380,9 @@ data SMTConfig = SMTConfig {
        , useLogic       :: Maybe Logic      -- ^ If Nothing, pick automatically. Otherwise, either use the given one, or use the custom string.
        }
 
+instance Show SMTConfig where
+  show = show . solver
+
 -- | A model, as returned by a solver
 data SMTModel = SMTModel {
         modelAssocs    :: [(String, CW)]        -- ^ Mapping of symbolic values to constants.
@@ -1425,3 +1428,6 @@ data SMTSolver = SMTSolver {
        , xformExitCode  :: ExitCode -> ExitCode -- ^ Should we re-interpret exit codes. Most solvers behave rationally, i.e., id will do. Some (like CVC4) don't.
        , capabilities   :: SolverCapabilities   -- ^ Various capabilities of the solver
        }
+
+instance Show SMTSolver where
+   show = show . name
