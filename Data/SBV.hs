@@ -96,6 +96,9 @@
 --
 --   * MathSAT from Fondazione Bruno Kessler and DISI-University of Trento: <http://mathsat.fbk.eu/>
 --
+-- SBV also allows calling these solvers in parallel, either getting results from multiple solvers
+-- or returning the fastest one. (See 'proveWithAll', 'proveWithAny', etc.)
+--
 -- Support for other compliant solvers can be added relatively easily, please
 -- get in touch if there is a solver you'd like to see included.
 ---------------------------------------------------------------------------------
@@ -191,6 +194,10 @@ module Data.SBV (
   -- ** Checking constraint vacuity
   , isVacuous, isVacuousWith
 
+  -- * Proving properties using multiple solvers
+  -- $multiIntro
+  , proveWithAll, proveWithAny, satWithAll, satWithAny, allSatWithAll, allSatWithAny
+
   -- * Optimization
   -- $optimizeIntro
   , minimize, maximize, optimize
@@ -258,7 +265,9 @@ module Data.SBV (
   , module Data.Ratio
   ) where
 
-import Control.Monad (filterM)
+import Control.Monad            (filterM)
+import Control.Concurrent.Async (async, waitAny, waitAnyCancel)
+import System.IO.Unsafe         (unsafeInterleaveIO)             -- only used safely!
 
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
@@ -331,6 +340,49 @@ defaultSolverConfig MathSAT   = mathSAT
 -- | Return the known available solver configs, installed on your machine.
 sbvAvailableSolvers :: IO [SMTConfig]
 sbvAvailableSolvers = filterM sbvCheckSolverInstallation (map defaultSolverConfig [minBound .. maxBound])
+
+sbvWithAny :: Provable a => [SMTConfig] -> (SMTConfig -> a -> IO b) -> a -> IO (Solver, b)
+sbvWithAny []      _    _ = error "SBV.withAny: No solvers given!"
+sbvWithAny solvers what a = snd `fmap` (mapM try solvers >>= waitAnyCancel)
+   where try s = async $ what s a >>= \r -> return (name (solver s), r)
+
+sbvWithAll :: Provable a => [SMTConfig] -> (SMTConfig -> a -> IO b) -> a -> IO [(Solver, b)]
+sbvWithAll solvers what a = mapM try solvers >>= (unsafeInterleaveIO . go)
+   where try s = async $ what s a >>= \r -> return (name (solver s), r)
+         go []  = return []
+         go as  = do (d, r) <- waitAny as
+                     rs <- unsafeInterleaveIO $ go (filter (/= d) as)
+                     return (r : rs)
+
+-- | Prove a property with multiple solvers, running them in separate threads. The
+-- results will be returned in the order produced.
+proveWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, ThmResult)]
+proveWithAll  = (`sbvWithAll` proveWith)
+
+-- | Prove a property with multiple solvers, running them in separate threads. Only
+-- the result of the first one to finish will be returned, remaining threads will be killed.
+proveWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, ThmResult)
+proveWithAny  = (`sbvWithAny` proveWith)
+
+-- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. The
+-- results will be returned in the order produced.
+satWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, SatResult)]
+satWithAll = (`sbvWithAll` satWith)
+
+-- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. Only
+-- the result of the first one to finish will be returned, remaining threads will be killed.
+satWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, SatResult)
+satWithAny    = (`sbvWithAny` satWith)
+
+-- | Find all satisfying assignments to a property with multiple solvers, running them in separate threads. Only
+-- the result of the first one to finish will be returned, remaining threads will be killed.
+allSatWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, AllSatResult)]
+allSatWithAll = (`sbvWithAll` allSatWith)
+
+-- | Find all satisfying assignments to a property with multiple solvers, running them in separate threads. Only
+-- the result of the first one to finish will be returned, remaining threads will be killed.
+allSatWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, AllSatResult)
+allSatWithAny = (`sbvWithAny` allSatWith)
 
 -- | Equality as a proof method. Allows for
 -- very concise construction of equivalence proofs, which is very typical in
@@ -407,12 +459,32 @@ design goal is to let SMT solvers be used without any knowledge of how SMT solve
 or how different logics operate. The details are hidden behind the SBV framework, providing
 Haskell programmers with a clean API that is unencumbered by the details of individual solvers.
 To that end, we use the SMT-Lib standard (<http://goedel.cs.uiowa.edu/smtlib/>)
-to communicate with arbitrary SMT solvers. Unfortunately,
-the SMT-Lib version 1.X does not standardize how models are communicated back from solvers, so
-there is some work in parsing individual SMT solver output. The 2.X version of the SMT-Lib
-standard (not yet implemented by SMT solvers widely, unfortunately) will bring new standard features
-for getting models; at which time the SBV framework can be modified into a truly plug-and-play
-system where arbitrary SMT solvers can be used.
+to communicate with arbitrary SMT solvers.
+-}
+
+{- $multiIntro
+On a multi-core machine, it might be desirable to try a given property using multiple SMT solvers,
+using parallel threads. Even with machines with single-cores, threading can be helpful if you
+want to try out multiple-solvers but do not know which one would work the best
+for the problem at hand ahead of time.
+
+The functions in this section allow proving/satisfiability-checking with multiple
+backends at the same time. Each function comes in two variants, one that
+returns the results from all solvers, the other that returns the fastest one.
+
+The @All@ variants, (i.e., 'proveWithAll', 'satWithAll', 'allSatWithAll') run all solvers and
+return all the results. SBV internally makes sure that the result is lazily generated; so,
+the order of solvers given does not matter. In other words, the order of results will follow
+the order of the solvers as they finish, not as given by the user. These variants are useful when you
+want to make sure multiple-solvers agree (or disagree!) on a given problem.
+
+The @Any@ variants, (i.e., 'proveWithAny', 'satWithAny', 'allSatWithAny') will run all the solvers
+in parallel, and return the results of the first one finishing. The other threads will then be killed. These variants
+are useful when you do not care if the solvers produce the same result, but rather want to get the
+solution as quickly as possible, taking advantage of modern many-core machines.
+
+Note that the function 'sbvAvailableSolvers' will return all the installed solvers, which can be
+used as the first argument to all these functions, if you simply want to try all available solvers on a machine.
 -}
 
 {- $optimizeIntro
