@@ -7,7 +7,7 @@
  
  NB: GHC 7.8.1 and 7.8.2 has a serious bug (https://ghc.haskell.org/trac/ghc/ticket/9078)
      that causes SBV to crash under heavy/repeated calls. The bug is addressed
-     in GHC 7.8.3; so upgrading to 7.8.3 is essential for using SBV!
+     in GHC 7.8.3; so upgrading to GHC 7.8.3 is essential for using SBV!
 
  New features/bug-fixes in v3.1:
 
