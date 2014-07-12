@@ -26,9 +26,11 @@ data L = Nil
        | Cons Int L
        deriving (Eq, Ord, Data, Typeable)
 
--- | Declare instances to make 'L' a usable uninterpreted sort. Note that default
--- definitions suffice in each case.
+-- | Declare instances to make 'L' a usable uninterpreted sort. First we need the
+-- 'SymWord' instance, with the default definition sufficing.
 instance SymWord L
+
+-- | Similarly, 'HasKind's default implementation is sufficient.
 instance HasKind L
 
 -- | An uninterpreted "classify" function. Really, we only care about

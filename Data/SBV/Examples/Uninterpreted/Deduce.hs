@@ -28,7 +28,11 @@ import Prelude hiding (not, or, and)
 
 -- | The uninterpreted sort 'B', corresponding to the carrier.
 data B = B deriving (Eq, Ord, Data, Typeable)
+
+-- | Default instance declaration for 'SymWord'
 instance SymWord  B
+
+-- | Default instance declaration for 'HasKind'
 instance HasKind  B
 
 -- | Handy shortcut for the type of symbolic values over 'B'

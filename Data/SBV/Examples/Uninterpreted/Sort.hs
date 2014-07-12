@@ -26,6 +26,8 @@ data Q = Q deriving (Eq, Ord, Data, Typeable)
 -- declare them as such. Note that, starting with GHC 7.6.1, we will
 -- be able to simply derive these classes as well. (See <http://hackage.haskell.org/trac/ghc/ticket/5462>.)
 instance SymWord Q
+
+-- | 'HasKind' instance is again straightforward, no specific implementation needed.
 instance HasKind Q
 
 -- | Declare an uninterpreted function that works over Q's

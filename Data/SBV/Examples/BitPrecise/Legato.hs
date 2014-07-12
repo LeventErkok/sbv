@@ -79,6 +79,7 @@ type Extract a = Mostek -> a
 -- | Programs are essentially state transformers (on the machine state)
 type Program = Mostek -> Mostek
 
+-- | 'Mergeable' instance of 'Mostek' simply pushes the merging into record fields.
 instance Mergeable Mostek where
   symbolicMerge b m1 m2 = Mostek { memory    = symbolicMerge b (memory m1)    (memory m2)
                                  , registers = symbolicMerge b (registers m1) (registers m2)

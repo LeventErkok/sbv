@@ -52,17 +52,19 @@ newtype SatResult    = SatResult    SMTResult
 -- we should warn the user about prefix-existentials.
 newtype AllSatResult = AllSatResult (Bool, [SMTResult])
 
+-- | User friendly way of printing theorem results
 instance Show ThmResult where
   show (ThmResult r) = showSMTResult "Q.E.D."
                                      "Unknown"     "Unknown. Potential counter-example:\n"
                                      "Falsifiable" "Falsifiable. Counter-example:\n" r
 
+-- | User friendly way of printing satisfiablity results
 instance Show SatResult where
   show (SatResult r) = showSMTResult "Unsatisfiable"
                                      "Unknown"     "Unknown. Potential model:\n"
                                      "Satisfiable" "Satisfiable. Model:\n" r
 
--- NB. The Show instance of AllSatResults have to be careful in being lazy enough
+-- | The Show instance of AllSatResults. Note that we have to be careful in being lazy enough
 -- as the typical use case is to pull results out as they become available.
 instance Show AllSatResult where
   show (AllSatResult (e, xs)) = go (0::Int) xs
@@ -103,55 +105,69 @@ genParse :: Integral a => Kind -> [CW] -> Maybe (a, [CW])
 genParse k (x@(CW _ (CWInteger i)):r) | kindOf x == k = Just (fromIntegral i, r)
 genParse _ _                                          = Nothing
 
--- Base case, that comes in handy if there are no real variables
+-- | Base case for 'SatModel' at unit type. Comes in handy if there are no real variables.
 instance SatModel () where
   parseCWs xs = return ((), xs)
 
+-- | 'Bool' as extracted from a model
 instance SatModel Bool where
   parseCWs xs = do (x, r) <- genParse KBool xs
                    return ((x :: Integer) /= 0, r)
 
+-- | 'Word8' as extracted from a model
 instance SatModel Word8 where
   parseCWs = genParse (KBounded False 8)
 
+-- | 'Int8' as extracted from a model
 instance SatModel Int8 where
   parseCWs = genParse (KBounded True 8)
 
+-- | 'Word16' as extracted from a model
 instance SatModel Word16 where
   parseCWs = genParse (KBounded False 16)
 
+-- | 'Int16' as extracted from a model
 instance SatModel Int16 where
   parseCWs = genParse (KBounded True 16)
 
+-- | 'Word32' as extracted from a model
 instance SatModel Word32 where
   parseCWs = genParse (KBounded False 32)
 
+-- | 'Int32' as extracted from a model
 instance SatModel Int32 where
   parseCWs = genParse (KBounded True 32)
 
+-- | 'Word64' as extracted from a model
 instance SatModel Word64 where
   parseCWs = genParse (KBounded False 64)
 
+-- | 'Int64' as extracted from a model
 instance SatModel Int64 where
   parseCWs = genParse (KBounded True 64)
 
+-- | 'Integer' as extracted from a model
 instance SatModel Integer where
   parseCWs = genParse KUnbounded
 
+-- | 'AlgReal' as extracted from a model
 instance SatModel AlgReal where
   parseCWs (CW KReal (CWAlgReal i) : r) = Just (i, r)
   parseCWs _                            = Nothing
 
+-- | 'Float' as extracted from a model
 instance SatModel Float where
   parseCWs (CW KFloat (CWFloat i) : r) = Just (i, r)
   parseCWs _                           = Nothing
 
+-- | 'Double' as extracted from a model
 instance SatModel Double where
   parseCWs (CW KDouble (CWDouble i) : r) = Just (i, r)
   parseCWs _                             = Nothing
 
--- when reading a list; go as long as we can (maximal-munch)
--- note that this never fails..
+-- | A list of values as extracted from a model. When reading a list, we
+-- go as long as we can (maximal-munch). Note that this never fails, as
+-- we can always return the empty list!
 instance SatModel a => SatModel [a] where
   parseCWs [] = Just ([], [])
   parseCWs xs = case parseCWs xs of
@@ -160,31 +176,37 @@ instance SatModel a => SatModel [a] where
                                     Nothing       -> Just ([], ys)
                   Nothing     -> Just ([], xs)
 
+-- | Tuples extracted from a model
 instance (SatModel a, SatModel b) => SatModel (a, b) where
   parseCWs as = do (a, bs) <- parseCWs as
                    (b, cs) <- parseCWs bs
                    return ((a, b), cs)
 
+-- | 3-Tuples extracted from a model
 instance (SatModel a, SatModel b, SatModel c) => SatModel (a, b, c) where
   parseCWs as = do (a,      bs) <- parseCWs as
                    ((b, c), ds) <- parseCWs bs
                    return ((a, b, c), ds)
 
+-- | 4-Tuples extracted from a model
 instance (SatModel a, SatModel b, SatModel c, SatModel d) => SatModel (a, b, c, d) where
   parseCWs as = do (a,         bs) <- parseCWs as
                    ((b, c, d), es) <- parseCWs bs
                    return ((a, b, c, d), es)
 
+-- | 5-Tuples extracted from a model
 instance (SatModel a, SatModel b, SatModel c, SatModel d, SatModel e) => SatModel (a, b, c, d, e) where
   parseCWs as = do (a, bs)            <- parseCWs as
                    ((b, c, d, e), fs) <- parseCWs bs
                    return ((a, b, c, d, e), fs)
 
+-- | 6-Tuples extracted from a model
 instance (SatModel a, SatModel b, SatModel c, SatModel d, SatModel e, SatModel f) => SatModel (a, b, c, d, e, f) where
   parseCWs as = do (a, bs)               <- parseCWs as
                    ((b, c, d, e, f), gs) <- parseCWs bs
                    return ((a, b, c, d, e, f), gs)
 
+-- | 7-Tuples extracted from a model
 instance (SatModel a, SatModel b, SatModel c, SatModel d, SatModel e, SatModel f, SatModel g) => SatModel (a, b, c, d, e, f, g) where
   parseCWs as = do (a, bs)                  <- parseCWs as
                    ((b, c, d, e, f, g), hs) <- parseCWs bs
@@ -234,16 +256,19 @@ getModelValues s (AllSatResult (_, xs)) =  map (s `getModelValue`) xs
 getModelUninterpretedValues :: String -> AllSatResult -> [Maybe String]
 getModelUninterpretedValues s (AllSatResult (_, xs)) =  map (s `getModelUninterpretedValue`) xs
 
+-- | 'ThmResult' as a generic model provider
 instance Modelable ThmResult where
   getModel           (ThmResult r) = getModel r
   modelExists        (ThmResult r) = modelExists r
   getModelDictionary (ThmResult r) = getModelDictionary r
 
+-- | 'SatResult' as a generic model provider
 instance Modelable SatResult where
   getModel           (SatResult r) = getModel r
   modelExists        (SatResult r) = modelExists r
   getModelDictionary (SatResult r) = getModelDictionary r
 
+-- | 'SMTResult' as a generic model provider
 instance Modelable SMTResult where
   getModel (Unsatisfiable _) = Left "SBV.getModel: Unsatisfiable result"
   getModel (Unknown _ m)     = Right (True, parseModelOut m)

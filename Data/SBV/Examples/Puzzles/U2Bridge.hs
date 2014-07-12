@@ -91,6 +91,8 @@ start = Status { time   = 0
                , lLarry = here
                }
 
+-- | Mergeable instance for 'Status' simply walks down the structure fields and
+-- merges them.
 instance Mergeable Status where
   symbolicMerge t s1 s2 = Status { time   = symbolicMerge t (time s1)   (time  s2)
                                  , flash  = symbolicMerge t (flash s1)  (flash s2)
@@ -103,6 +105,8 @@ instance Mergeable Status where
 -- | A puzzle move is modeled as a state-transformer
 type Move a = State Status a
 
+-- | Mergeable instance for 'Move' simply pushes the merging the data after run of each branch
+-- starting from the same state.
 instance Mergeable a => Mergeable (Move a) where
   symbolicMerge t a b
     = do s <- get
@@ -198,6 +202,8 @@ isValid as = time end .<= 17 &&& bAll check as &&& zigZag there (map flash state
         zigZag _ []       = true
         zigZag w (f:rest) = w .== f &&& zigZag (bnot w) rest
 
+-- | The SatModel instance makes it easy to build models, mapping words to U2 members
+-- in the way we designated.
 instance SatModel U2Member where
   parseCWs as = cvtModel cvtCW $ parseCWs as
     where cvtCW :: Word8 -> Maybe U2Member
