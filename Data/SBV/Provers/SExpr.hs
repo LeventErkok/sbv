@@ -11,7 +11,6 @@
 
 module Data.SBV.Provers.SExpr where
 
-import Control.Monad.Except ()             -- for Monad (Either String) instance
 import Data.Char            (isDigit, ord)
 import Data.List            (isPrefixOf)
 import Numeric              (readInt, readDec, readHex, fromRat)
