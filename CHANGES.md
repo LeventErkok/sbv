@@ -3,6 +3,13 @@
 
 * Latest Hackage released version: 3.1
 
+### Version 3.2, Not yet released
+  
+  * Rework/simplify the 'Mergeable' class to make sure 'sBranch' is sufficiently lazy
+    in case of structural merges. The original implementation was only
+    lazy at the Word instance, but not at lists/tuples etc. Thanks to Brian Huffman
+    for reporting this bug.
+
 ### Version 3.1, 2014-07-12
  
  NB: GHC 7.8.1 and 7.8.2 has a serious bug (https://ghc.haskell.org/trac/ghc/ticket/9078)

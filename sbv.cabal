@@ -1,5 +1,5 @@
 Name:          sbv
-Version:       3.1
+Version:       3.2
 Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math, SMT
 Synopsis:      SMT Based Verification: Symbolic Haskell theorem prover using SMT solving.
 Description:   Express properties about Haskell programs and automatically prove them using SMT
@@ -150,6 +150,7 @@ Executable SBVUnitTests
                   , TestSuite.Basics.BasicTests
                   , TestSuite.Basics.Higher
                   , TestSuite.Basics.Index
+                  , TestSuite.Basics.IteTest
                   , TestSuite.Basics.ProofTests
                   , TestSuite.Basics.QRem
                   , TestSuite.BitPrecise.BitTricks
