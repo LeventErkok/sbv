@@ -155,7 +155,7 @@ module Data.SBV (
   -- ** Polynomial arithmetic and CRCs
   , Polynomial(..), crcBV, crc
   -- ** Conditionals: Mergeable values
-  , Mergeable(..)
+  , Mergeable(..), ite, iteLazy, sBranch
   -- ** Symbolic equality
   , EqSymbolic(..)
   -- ** Symbolic ordering

@@ -94,13 +94,13 @@ start = Status { time   = 0
 -- | Mergeable instance for 'Status' simply walks down the structure fields and
 -- merges them.
 instance Mergeable Status where
-  symbolicMerge t s1 s2 = Status { time   = symbolicMerge t (time s1)   (time  s2)
-                                 , flash  = symbolicMerge t (flash s1)  (flash s2)
-                                 , lBono  = symbolicMerge t (lBono s1)  (lBono s2)
-                                 , lEdge  = symbolicMerge t (lEdge s1)  (lEdge s2)
-                                 , lAdam  = symbolicMerge t (lAdam s1)  (lAdam s2)
-                                 , lLarry = symbolicMerge t (lLarry s1) (lLarry s2)
-                                 }
+  symbolicMerge f t s1 s2 = Status { time   = symbolicMerge f t (time   s1) (time   s2)
+                                   , flash  = symbolicMerge f t (flash  s1) (flash  s2)
+                                   , lBono  = symbolicMerge f t (lBono  s1) (lBono  s2)
+                                   , lEdge  = symbolicMerge f t (lEdge  s1) (lEdge  s2)
+                                   , lAdam  = symbolicMerge f t (lAdam  s1) (lAdam  s2)
+                                   , lLarry = symbolicMerge f t (lLarry s1) (lLarry s2)
+                                   }
 
 -- | A puzzle move is modeled as a state-transformer
 type Move a = State Status a
@@ -108,12 +108,12 @@ type Move a = State Status a
 -- | Mergeable instance for 'Move' simply pushes the merging the data after run of each branch
 -- starting from the same state.
 instance Mergeable a => Mergeable (Move a) where
-  symbolicMerge t a b
+  symbolicMerge f t a b
     = do s <- get
          let (ar, s1) = runState a s
              (br, s2) = runState b s
-         put $ symbolicMerge t s1 s2
-         return $ symbolicMerge t ar br
+         put $ symbolicMerge f t s1 s2
+         return $ symbolicMerge f t ar br
 
 -- | Read the state via an accessor function
 peek :: (Status -> a) -> Move a
