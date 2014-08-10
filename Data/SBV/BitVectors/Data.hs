@@ -1095,7 +1095,7 @@ class SymArray array where
   -- | Merge two given arrays on the symbolic condition
   -- Intuitively: @mergeArrays cond a b = if cond then a else b@.
   -- Merging pushes the if-then-else choice down on to elements
-  mergeArrays    :: SymWord b => Bool -> SBV Bool -> array a b -> array a b -> array a b
+  mergeArrays    :: SymWord b => SBV Bool -> array a b -> array a b -> array a b
 
 -- | Arrays implemented in terms of SMT-arrays: <http://goedel.cs.uiowa.edu/smtlib/theories/ArraysEx.smt2>
 --
@@ -1139,9 +1139,7 @@ instance SymArray SArray where
                      let j = IMap.size amap
                      j `seq` modifyIORef (rArrayMap st) (IMap.insert j ("array_" ++ show j, ainfo, ArrayMutate arr addr val))
                      return j
-  -- We're ignoring the "force" argument to mergeArrays here. I think this is a safe choice
-  -- with this implementation of arrays, as we're already down at the SMT-lib array level.
-  mergeArrays _ t (SArray ainfo a) (SArray _ b) = SArray ainfo $ cache h
+  mergeArrays t (SArray ainfo a) (SArray _ b) = SArray ainfo $ cache h
     where h st = do ai <- uncacheAI a st
                     bi <- uncacheAI b st
                     ts <- sbvToSW st t

@@ -1385,8 +1385,10 @@ instance EqSymbolic (SArray a b) where
                     bi <- uncacheAI b st
                     newExpr st KBool (SBVApp (ArrEq ai bi) [])
 
+-- When merging arrays; we'll ignore the force argument. This is arguably
+-- the right thing to do as we've too many things and likely we want to keep it efficient.
 instance SymWord b => Mergeable (SArray a b) where
-  symbolicMerge = mergeArrays
+  symbolicMerge _ = mergeArrays
 
 -- SFunArrays are only "Mergeable". Although a brute
 -- force equality can be defined, any non-toy instance
@@ -1397,10 +1399,12 @@ instance SymArray SFunArray where
   readArray  (SFunArray f)     = f
   resetArray (SFunArray _) a   = SFunArray $ const a
   writeArray (SFunArray f) a b = SFunArray (\a' -> ite (a .== a') b (f a'))
-  mergeArrays f t (SFunArray g) (SFunArray h) = SFunArray (\x -> symbolicMerge f t (g x) (h x))
+  mergeArrays t (SFunArray g) (SFunArray h) = SFunArray (\x -> ite t (g x) (h x))
 
+-- When merging arrays; we'll ignore the force argument. This is arguably
+-- the right thing to do as we've too many things and likely we want to keep it efficient.
 instance SymWord b => Mergeable (SFunArray a b) where
-  symbolicMerge = mergeArrays
+  symbolicMerge _ = mergeArrays
 
 -- | Uninterpreted constants and functions. An uninterpreted constant is
 -- a value that is indexed by its name. The only property the prover assumes
