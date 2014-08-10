@@ -1156,13 +1156,17 @@ class Mergeable a where
 -- branches forced. This is typically the desired behavior, but also
 -- see 'iteLazy' should you need more laziness.
 ite :: Mergeable a => SBool -> a -> a -> a
-ite = symbolicMerge True
+ite t a b
+  | Just r <- unliteral t = if r then a else b
+  | True                  = symbolicMerge True t a b
 
 -- | A Lazy version of ite, which does not force its arguments. This might
 -- cause issues for symbolic simulation with large thunks around, so use with
 -- care.
 iteLazy :: Mergeable a => SBool -> a -> a -> a
-iteLazy = symbolicMerge False
+iteLazy t a b
+  | Just r <- unliteral t = if r then a else b
+  | True                  = symbolicMerge False t a b
 
 -- | Branch on a condition, much like 'ite'. The exception is that SBV will
 -- check to make sure if the test condition is feasible by making an external
@@ -1182,7 +1186,10 @@ iteLazy = symbolicMerge False
 -- In summary, 'sBranch' calls can be expensive, but they can help with the so-called symbolic-termination
 -- problem. See "Data.SBV.Examples.Misc.SBranch" for an example.
 sBranch :: Mergeable a => SBool -> a -> a -> a
-sBranch c = symbolicMerge False (reduceInPathCondition c)
+sBranch t a b
+  | Just r <- unliteral c = if r then a else b
+  | True                  = symbolicMerge False c a b
+  where c = reduceInPathCondition t
 
 -- SBV
 instance SymWord a => Mergeable (SBV a) where

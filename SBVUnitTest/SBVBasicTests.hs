@@ -49,7 +49,6 @@ run gd = do putStrLn $ "*** Starting SBV basic tests..\n*** Gold files at: " ++ 
             checkGoldDir gd
             let collections = map (mkTst . snd) testCollection
                 cNames      = map fst testCollection
-            print $ map fst testCollection
             putStrLn $ "*** Running " ++ show (length collections) ++ " test categories."
             runEach 1 (zip cNames collections)
   where runEach :: Int -> [(String, Test)] -> IO ()
@@ -68,6 +67,5 @@ decide cat (Counts c t e f) = do
         when (e /= 0) $ putStrLn $ "*** " ++ show e ++ " (of " ++ show c ++ ") test cases in error."
         when (f /= 0) $ putStrLn $ "*** " ++ show f ++ " (of " ++ show c ++ ") test cases failed."
         if c == t && e == 0 && f == 0
-           then do putStrLn $ "All " ++ show c ++ " test cases in category " ++ show cat ++ " successfully passed."
-                   exitSuccess
+           then putStrLn $ "All " ++ show c ++ " test cases in category " ++ show cat ++ " successfully passed."
            else exitWith $ ExitFailure 2
