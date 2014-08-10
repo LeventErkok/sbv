@@ -47,11 +47,20 @@ checkGoldDir gd = do e <- doesDirectoryExist gd
 run :: FilePath -> IO ()
 run gd = do putStrLn $ "*** Starting SBV basic tests..\n*** Gold files at: " ++ show gd
             checkGoldDir gd
-            (cts, _) <- runTestText (PutText put ()) $ TestList $ map (mkTst . snd) testCollection
-            hPutStrLn stderr $ showCounts cts
-            decide cts
-  where mkTst (SBVTestSuite f) = f $ generateGoldCheck gd False
-        put s _ st = length s `seq` return st
+            let collections = map (mkTst . snd) testCollection
+                cNames      = map fst testCollection
+            print $ map fst testCollection
+            putStrLn $ "*** Running " ++ show (length collections) ++ " test categories."
+            runEach 1 (zip cNames collections)
+  where runEach :: Int -> [(String, Test)] -> IO ()
+        runEach _ []            = exitSuccess
+        runEach i ((n, tc):tcs) = do putStrLn $ "Starting category: " ++ show n
+                                     (cts, _) <- runTestText (PutText put ()) tc
+                                     hPutStrLn stderr $ showCounts cts
+                                     decide i cts
+                                     runEach (i+1) tcs
+        mkTst (SBVTestSuite f) = f $ generateGoldCheck gd False
+        put _ _ = return
 
 decide :: Counts -> IO ()
 decide (Counts c t e f) = do
