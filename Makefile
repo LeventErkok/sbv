@@ -29,7 +29,7 @@ all: install
 install: $(STAMPFILE)
 
 $(STAMPFILE): $(DEPSRCS) Makefile
-	@-ghc-pkg unregister sbv
+	@-ghc-pkg unregister --force sbv
 	@(make -s -C buildUtils)
 	$(call mkStamp)
 	$(call mkTags)
