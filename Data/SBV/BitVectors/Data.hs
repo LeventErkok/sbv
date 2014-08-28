@@ -18,6 +18,7 @@
 {-# LANGUAGE PatternGuards              #-}
 {-# LANGUAGE DefaultSignatures          #-}
 {-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
 
 module Data.SBV.BitVectors.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
@@ -56,6 +57,7 @@ import Data.Word            (Word8, Word16, Word32, Word64)
 import Data.IORef           (IORef, newIORef, modifyIORef, readIORef, writeIORef)
 import Data.List            (intercalate, sortBy)
 import Data.Maybe           (isJust, fromJust)
+import Data.Typeable (Typeable)
 
 import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
 import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
@@ -805,7 +807,7 @@ sbvToSW st (SBV _ (Right f)) = uncache f st
 -- state of the computation, layered on top of IO for creating unique
 -- references to hold onto intermediate results.
 newtype Symbolic a = Symbolic (ReaderT State IO a)
-                   deriving (Applicative, Functor, Monad, MonadIO, MonadReader State)
+                   deriving (Applicative, Functor, Monad, MonadIO, MonadReader State, Typeable)
 
 -- | Create a symbolic value, based on the quantifier we have. If an explicit quantifier is given, we just use that.
 -- If not, then we pick existential for SAT calls and universal for everything else.

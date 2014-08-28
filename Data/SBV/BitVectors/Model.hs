@@ -638,7 +638,7 @@ instance (SymWord a, Fractional a) => Fractional (SBV a) where
 -- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat and SDouble
 -- Note that most of the fields are "undefined" for symbolic values, we add methods as they are supported by SMTLib.
 -- Currently, the only symbolicly available function in this class is sqrt.
-instance (SymWord a, Fractional a, Floating a) => Floating (SBV a) where
+instance (SymWord a, Floating a) => Floating (SBV a) where
     pi      = literal pi
     exp     = lift1FNS "exp"     exp
     log     = lift1FNS "log"     log
@@ -658,6 +658,47 @@ instance (SymWord a, Fractional a, Floating a) => Floating (SBV a) where
     (**)    = lift2FNS "**"      (**)
     logBase = lift2FNS "logBase" logBase
 
+instance (SymWord a, Ord a) => Ord (SBV a) where
+    compare = lift2LNS "compare" compare
+    min = smin
+    max = smax
+
+instance (SymWord a, Real a) => Real (SBV a) where
+    toRational = lift1LNS "toRational" toRational
+
+instance (SymWord a, Show a, Integral a, SDivisible a) => Integral (SBV a) where
+    quot = sQuot
+    rem = sRem
+    div = sDiv
+    mod = sMod
+    quotRem = sQuotRem
+    divMod = sDivMod
+    toInteger = lift1LNS "toInteger" toInteger
+
+instance (SymWord a, RealFrac a) => RealFrac (SBV a) where
+    properFraction a = (lift1LNS "properFraction_n" (fst . properFraction) a,
+                        lift1FNS "properFraction_f" (snd . (properFraction :: RealFrac a => a -> (SInteger, a))) a)
+    truncate = lift1LNS "truncate" truncate
+    round = lift1LNS "round" round
+    ceiling = lift1LNS "ceiling" ceiling
+    floor = lift1LNS "floor" floor
+
+instance (SymWord a, RealFloat a) => RealFloat (SBV a) where
+    floatRadix = lift1LNS "floatRadix" floatRadix
+    floatDigits = lift1LNS "floatDigits" floatDigits
+    floatRange = lift1LNS "floatRange" floatRange
+    decodeFloat = lift1LNS "decodeFloat" decodeFloat
+    encodeFloat a b = literal $ encodeFloat a b
+    exponent = lift1LNS "exponent" exponent
+    significand = lift1FNS "significand" significand
+    scaleFloat i = lift1FNS "scaleFloat" (scaleFloat i)
+    isNaN = lift1LNS "isNaN" isNaN
+    isInfinite = lift1LNS "isInfinite" isInfinite
+    isDenormalized = lift1LNS "isDenormalized" isDenormalized
+    isNegativeZero = lift1LNS "isNegativeZero" isNegativeZero
+    isIEEE = lift1LNS "isIEEE" isIEEE
+    atan2 = lift2FNS "atan2" atan2
+
 -- | Fused-multiply add. @fusedMA a b c = a * b + c@, for double and floating point values.
 -- Note that a 'fusedMA' call will *never* be concrete, even if all the arguments are constants; since
 -- we cannot guarantee the precision requirements, which is the whole reason why 'fusedMA' exists in the
@@ -673,7 +714,7 @@ fusedMA a b c = SBV k $ Right $ cache r
 
 -- | Lift a float/double unary function, using a corresponding function in SMT-lib. We piggy-back on the uninterpreted
 -- function mechanism here, as it essentially is the same as introducing this as a new function.
-lift1F :: (SymWord a, Floating a) => (a -> a) -> Op -> SBV a -> SBV a
+lift1F :: (SymWord a) => (a -> a) -> Op -> SBV a -> SBV a
 lift1F f smtOp sv
   | Just v <- unliteral sv = literal $ f v
   | True                   = SBV k $ Right $ cache c
@@ -681,17 +722,38 @@ lift1F f smtOp sv
         c st = do swa <- sbvToSW st sv
                   newExpr st k (SBVApp smtOp [swa])
 
--- | Lift a float/double unary function, only over constants
-lift1FNS :: (SymWord a, Floating a) => String -> (a -> a) -> SBV a -> SBV a
+-- | Lift a unary function, only over constants
+lift1FNS :: (SymWord a) => String -> (a -> a) -> SBV a -> SBV a
 lift1FNS nm f sv
   | Just v <- unliteral sv = literal $ f v
   | True                   = error $ "SBV." ++ nm ++ ": not supported for symbolic values of type " ++ show (kindOf sv)
 
--- | Lift a float/double binary function, only over constants
-lift2FNS :: (SymWord a, Floating a) => String -> (a -> a -> a) -> SBV a -> SBV a -> SBV a
+-- | Lift a binary function, only over constants
+lift2FNS :: (SymWord a) => String -> (a -> a -> a) -> SBV a -> SBV a -> SBV a
 lift2FNS nm f sv1 sv2
   | Just v1 <- unliteral sv1
   , Just v2 <- unliteral sv2 = literal $ f v1 v2
+  | True                     = error $ "SBV." ++ nm ++ ": not supported for symbolic values of type " ++ show (kindOf sv1)
+
+-- | Lift a unary function returning a literal, only over constants
+lift1LNS :: (SymWord a) => String -> (a -> b) -> SBV a -> b
+lift1LNS nm f sv
+  | Just v <- unliteral sv = f v
+  | True                   = error $ "SBV." ++ nm ++ ": not supported for symbolic values of type " ++ show (kindOf sv)
+
+-- | Lift a binary function returning a literal, only over constants
+lift2LNS :: (SymWord a) => String -> (a -> a -> b) -> SBV a -> SBV a -> b
+lift2LNS nm f sv1 sv2
+  | Just v1 <- unliteral sv1
+  , Just v2 <- unliteral sv2 = f v1 v2
+  | True                     = error $ "SBV." ++ nm ++ ": not supported for symbolic values of type " ++ show (kindOf sv1)
+
+-- | Lift a ternary function returning a literal, only over constants
+lift3LNS :: (SymWord a) => String -> (a -> a -> a -> b) -> SBV a -> SBV a -> SBV a -> b
+lift3LNS nm f sv1 sv2 sv3
+  | Just v1 <- unliteral sv1
+  , Just v2 <- unliteral sv2
+  , Just v3 <- unliteral sv3 = f v1 v2 v3
   | True                     = error $ "SBV." ++ nm ++ ": not supported for symbolic values of type " ++ show (kindOf sv1)
 
 -- Most operations on concrete rationals require a compatibility check
@@ -907,51 +969,15 @@ msb x
 -- a concrete argument for obvious reasons. Other variants (succ, pred, [x..]) etc are similarly
 -- limited. While symbolic variants can be defined for many of these, they will just diverge
 -- as final sizes cannot be determined statically.
-instance (Show a, Bounded a, Integral a, Num a, SymWord a) => Enum (SBV a) where
-  succ x
-    | v == (maxBound :: a) = error $ "Enum.succ{" ++ showType x ++ "}: tried to take `succ' of maxBound"
-    | True                 = fromIntegral $ v + 1
-    where v = enumCvt "succ" x
-  pred x
-    | v == (minBound :: a) = error $ "Enum.pred{" ++ showType x ++ "}: tried to take `pred' of minBound"
-    | True                 = fromIntegral $ v - 1
-    where v = enumCvt "pred" x
-  toEnum x
-    | xi < fromIntegral (minBound :: a) || xi > fromIntegral (maxBound :: a)
-    = error $ "Enum.toEnum{" ++ showType r ++ "}: " ++ show x ++ " is out-of-bounds " ++ show (minBound :: a, maxBound :: a)
-    | True
-    = r
-    where xi :: Integer
-          xi = fromIntegral x
-          r  :: SBV a
-          r  = fromIntegral x
-  fromEnum x
-     | r < fromIntegral (minBound :: Int) || r > fromIntegral (maxBound :: Int)
-     = error $ "Enum.fromEnum{" ++ showType x ++ "}:  value " ++ show r ++ " is outside of Int's bounds " ++ show (minBound :: Int, maxBound :: Int)
-     | True
-     = fromIntegral r
-    where r :: Integer
-          r = enumCvt "fromEnum" x
-  enumFrom x = map fromIntegral [xi .. fromIntegral (maxBound :: a)]
-     where xi :: Integer
-           xi = enumCvt "enumFrom" x
-  enumFromThen x y
-     | yi >= xi  = map fromIntegral [xi, yi .. fromIntegral (maxBound :: a)]
-     | True      = map fromIntegral [xi, yi .. fromIntegral (minBound :: a)]
-       where xi, yi :: Integer
-             xi = enumCvt "enumFromThen.x" x
-             yi = enumCvt "enumFromThen.y" y
-  enumFromThenTo x y z = map fromIntegral [xi, yi .. zi]
-       where xi, yi, zi :: Integer
-             xi = enumCvt "enumFromThenTo.x" x
-             yi = enumCvt "enumFromThenTo.y" y
-             zi = enumCvt "enumFromThenTo.z" z
-
--- | Helper function for use in enum operations
-enumCvt :: (SymWord a, Integral a, Num b) => String -> SBV a -> b
-enumCvt w x = case unliteral x of
-                Nothing -> error $ "Enum." ++ w ++ "{" ++ showType x ++ "}: Called on symbolic value " ++ show x
-                Just v  -> fromIntegral v
+instance (Show a, Enum a, SymWord a) => Enum (SBV a) where
+  succ = lift1FNS "succ" succ
+  pred = lift1FNS "pred" pred
+  toEnum = literal . toEnum
+  fromEnum = lift1LNS "fromEnum" fromEnum
+  enumFrom x = map literal $ lift1LNS "enumFrom" enumFrom x
+  enumFromThen x y = map literal $ lift2LNS "enumFromThen" enumFromThen x y
+  enumFromTo x y = map literal $ lift2LNS "enumFromTo" enumFromTo x y
+  enumFromThenTo x y z = map literal $ lift3LNS "enumFromThenTo" enumFromThenTo x y z
 
 -- | The 'SDivisible' class captures the essence of division.
 -- Unfortunately we cannot use Haskell's 'Integral' class since the 'Real'
@@ -1047,42 +1073,19 @@ instance SDivisible CW where
     = let (r1, r2) = sDivMod x y in (normCW a { cwVal = CWInteger r1 }, normCW b { cwVal = CWInteger r2 })
   sDivMod a b = error $ "SBV.sDivMod: impossible, unexpected args received: " ++ show (a, b)
 
-instance SDivisible SWord64 where
+instance (SymWord a, Num a, SDivisible a) => SDivisible (SBV a) where
   sQuotRem = liftQRem
   sDivMod  = liftDMod
 
-instance SDivisible SInt64 where
-  sQuotRem = liftQRem
-  sDivMod  = liftDMod
-
-instance SDivisible SWord32 where
-  sQuotRem = liftQRem
-  sDivMod  = liftDMod
-
-instance SDivisible SInt32 where
-  sQuotRem = liftQRem
-  sDivMod  = liftDMod
-
-instance SDivisible SWord16 where
-  sQuotRem = liftQRem
-  sDivMod  = liftDMod
-
-instance SDivisible SInt16 where
-  sQuotRem = liftQRem
-  sDivMod  = liftDMod
-
-instance SDivisible SWord8 where
-  sQuotRem = liftQRem
-  sDivMod  = liftDMod
-
-instance SDivisible SInt8 where
-  sQuotRem = liftQRem
-  sDivMod  = liftDMod
-
-liftQRem :: (SymWord a, Num a, SDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
+-- liftQRem is tricky!
+liftQRem :: forall a. (SymWord a, Num a, SDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
 liftQRem x y = ite (y .== 0) (0, x) (qr x y)
   where qr (SBV sgnsz (Left a)) (SBV _ (Left b)) = let (q, r) = sQuotRem a b in (SBV sgnsz (Left q), SBV sgnsz (Left r))
-        qr a@(SBV sgnsz _)      b                = (SBV sgnsz (Right (cache (mk Quot))), SBV sgnsz (Right (cache (mk Rem))))
+        qr _ _ = (qE+i, rE-i*y)
+        qE, rE, i :: SBV a
+        (qE, rE) = qrP x y
+        i = ite (x .>= 0 ||| rE .<= 0) 0 (ite (y .< 0) (-1) 1) -- adjust for SMTLib integer semantics being Euclidean
+        qrP a@(SBV sgnsz _)      b                = (SBV sgnsz (Right (cache (mk Quot))), SBV sgnsz (Right (cache (mk Rem))))
                 where mk o st = do sw1 <- sbvToSW st a
                                    sw2 <- sbvToSW st b
                                    mkSymOp o st sgnsz sw1 sw2
@@ -1091,21 +1094,6 @@ liftQRem x y = ite (y .== 0) (0, x) (qr x y)
 liftDMod :: (SymWord a, Num a, SDivisible a, SDivisible (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
 liftDMod x y = ite (y .== 0) (0, x) $ ite (signum r .== negate (signum y)) (q-1, r+y) qr
    where qr@(q, r) = x `sQuotRem` y
-
--- SInteger instance for quotRem/divMod are tricky!
--- SMT-Lib only has Euclidean operations, but Haskell
--- uses "truncate to 0" for quotRem, and "truncate to negative infinity" for divMod.
--- So, we cannot just use the above liftings directly.
-instance SDivisible SInteger where
-  sDivMod = liftDMod
-  sQuotRem x y
-    | not (isSymbolic x || isSymbolic y)
-    = liftQRem x y
-    | True
-    = ite (y .== 0) (0, x) (qE+i, rE-i*y)
-    where (qE, rE) = liftQRem x y   -- for integers, this is euclidean due to SMTLib semantics
-          i = ite (x .>= 0 ||| rE .== 0) 0
-            $ ite (y .>  0)              1 (-1)
 
 -- Quickcheck interface
 
