@@ -22,7 +22,7 @@
 
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), SIntegral
-  , ite, iteLazy, sBranch, sbvTestBit, sbvPopCount, setBitTo, sbvShiftLeft, sbvShiftRight, sbvSignedShiftArithRight
+  , ite, iteLazy, sBranch, sAssert, sbvTestBit, sbvPopCount, setBitTo, sbvShiftLeft, sbvShiftRight, sbvSignedShiftArithRight
   , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
@@ -52,8 +52,8 @@ import Data.SBV.Utils.Boolean
 
 -- The following two imports are only needed because of the doctest expressions we have. Sigh..
 -- It might be a good idea to reorg some of the content to avoid this.
-import Data.SBV.Provers.Prover (isSBranchFeasibleInState, isVacuous, prove)
-import Data.SBV.SMT.SMT (ThmResult)
+import Data.SBV.Provers.Prover (isSBranchFeasibleInState, isConditionSatisfiable, isVacuous, prove, defaultSMTCfg)
+import Data.SBV.SMT.SMT (ThmResult, showModel)
 
 -- | Newer versions of GHC (Starting with 7.8 I think), distinguishes between FiniteBits and Bits classes.
 -- We should really use FiniteBitSize for SBV which would make things better. In the interim, just work
@@ -1190,6 +1190,23 @@ sBranch t a b
   | Just r <- unliteral c = if r then a else b
   | True                  = symbolicMerge False c a b
   where c = reduceInPathCondition t
+
+-- | Symbolic assert. Check that the given boolean condition is always true in the given path.
+-- Otherwise symbolic simulation will stop with a run-time error.
+sAssert :: Mergeable a => String -> SBool -> a -> a
+sAssert msg t a
+  | Just r <- unliteral t = if r then a else die ["*** Fails in all assignments to inputs"]
+  | True                  = symbolicMerge False cond a (die ["SBV.error: Internal-error, cannot happen: Reached false branch in checked s-Assert."])
+  where k     = kindOf t
+        cond  = SBV k $ Right $ cache c
+        die m = error $ intercalate "\n" $ ("Assertion failure: " ++ show msg) : m
+        c st  = do let pc  = getPathCondition st
+                       chk = pc &&& bnot t
+                   mbModel <- isConditionSatisfiable st chk
+                   case mbModel of
+                     Just md -> let cfg  = fromMaybe defaultSMTCfg (getSBranchRunConfig st)
+                                in error $ die [showModel cfg md]
+                     Nothing -> return trueSW
 
 -- SBV
 instance SymWord a => Mergeable (SBV a) where

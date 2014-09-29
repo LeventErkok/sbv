@@ -4,7 +4,13 @@
 * Latest Hackage released version: 3.1
 
 ### Version 3.2, Not yet released
-  
+
+  * Implement 'sAssert'. This adds conditional symbolic simulation, by ensuring arbitrary
+    boolean conditions hold during simulation; similar to ASSERT calls in other languages.
+    Note that failures will be detected at symbolic-simulation time, i.e., each assert will
+    generate a call to the external solver to ensure that the condition is never violated.
+    If violation is possible the user will get an error, indicating the failure conditions.
+
   * Rework/simplify the 'Mergeable' class to make sure 'sBranch' is sufficiently lazy
     in case of structural merges. The original implementation was only
     lazy at the Word instance, but not at lists/tuples etc. Thanks to Brian Huffman
