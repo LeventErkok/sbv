@@ -16,6 +16,10 @@
     lazy at the Word instance, but not at lists/tuples etc. Thanks to Brian Huffman
     for reporting this bug.
 
+  * Boolector: Modify output parser to conform to the new Boolector output format. This
+    means that you need at least v2.0.0 of Boolector installed if you want to use that
+    particular solver.
+
 ### Version 3.1, 2014-07-12
  
  NB: GHC 7.8.1 and 7.8.2 has a serious bug (https://ghc.haskell.org/trac/ghc/ticket/9078)
