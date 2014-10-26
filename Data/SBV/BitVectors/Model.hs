@@ -1080,7 +1080,19 @@ instance SDivisible SInt8 where
   sDivMod  = liftDMod
 
 liftQRem :: (SymWord a, Num a, SDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
-liftQRem x y = ite (y .== 0) (0, x) (qr x y)
+liftQRem x y
+  | x `isConcretely` (== 0)
+  = (0, 0)
+  | y `isConcretely` (== 1)
+  = (x, 0)
+{-------------------------------
+ - N.B. The seemingly innocuous variant when y == -1 only holds if the type is signed;
+ - and also is problematic around the minBound.. So, we refrain from that optimization
+  | y `isConcretely` (== -1)
+  = (-x, 0)
+--------------------------------}
+  | True
+  = ite (y .== 0) (0, x) (qr x y)
   where qr (SBV sgnsz (Left a)) (SBV _ (Left b)) = let (q, r) = sQuotRem a b in (SBV sgnsz (Left q), SBV sgnsz (Left r))
         qr a@(SBV sgnsz _)      b                = (SBV sgnsz (Right (cache (mk Quot))), SBV sgnsz (Right (cache (mk Rem))))
                 where mk o st = do sw1 <- sbvToSW st a
@@ -1089,7 +1101,19 @@ liftQRem x y = ite (y .== 0) (0, x) (qr x y)
 
 -- Conversion from quotRem (truncate to 0) to divMod (truncate towards negative infinity)
 liftDMod :: (SymWord a, Num a, SDivisible a, SDivisible (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
-liftDMod x y = ite (y .== 0) (0, x) $ ite (signum r .== negate (signum y)) (q-1, r+y) qr
+liftDMod x y
+  | x `isConcretely` (== 0)
+  = (0, 0)
+  | y `isConcretely` (== 1)
+  = (x, 0)
+{-------------------------------
+ - N.B. The seemingly innocuous variant when y == -1 only holds if the type is signed;
+ - and also is problematic around the minBound.. So, we refrain from that optimization
+  | y `isConcretely` (== -1)
+  = (-x, 0)
+--------------------------------}
+  | True
+  = ite (y .== 0) (0, x) $ ite (signum r .== negate (signum y)) (q-1, r+y) qr
    where qr@(q, r) = x `sQuotRem` y
 
 -- SInteger instance for quotRem/divMod are tricky!

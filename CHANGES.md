@@ -16,6 +16,8 @@
     lazy at the Word instance, but not at lists/tuples etc. Thanks to Brian Huffman
     for reporting this bug.
 
+  * Add a few constant-folding optimizations for 'sDiv'and 'sRem'
+
   * Boolector: Modify output parser to conform to the new Boolector output format. This
     means that you need at least v2.0.0 of Boolector installed if you want to use that
     particular solver.
