@@ -22,6 +22,10 @@
     means that you need at least v2.0.0 of Boolector installed if you want to use that
     particular solver.
 
+  * Fix long-standing translation bug regarding boolean Ord class comparisons. (i.e., 
+    'False > True' etc.) While Haskell allows for this, SMT-Lib does not; and hence
+    we have to be careful in translating. Thanks to Brian Huffman for reporting.
+
 ### Version 3.1, 2014-07-12
  
  NB: GHC 7.8.1 and 7.8.2 has a serious bug (https://ghc.haskell.org/trac/ghc/ticket/9078)
