@@ -157,7 +157,7 @@ module Data.SBV (
   -- ** Conditionals: Mergeable values
   , Mergeable(..), ite, iteLazy, sBranch
   -- ** Conditional symbolic simulation
-  , sAssert
+  , sAssert, sAssertCont
   -- ** Symbolic equality
   , EqSymbolic(..)
   -- ** Symbolic ordering

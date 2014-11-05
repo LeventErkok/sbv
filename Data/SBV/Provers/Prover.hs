@@ -452,15 +452,15 @@ isSBranchFeasibleInState st branch cond = do
        return res
 
 -- | Check if a boolean condition is satisfiable in the current state. If so, it returns such a satisfying assignment
-isConditionSatisfiable :: State -> SBool -> IO (Maybe SMTModel)
+isConditionSatisfiable :: State -> SBool -> IO (Maybe SatResult)
 isConditionSatisfiable st cond = do
        let cfg  = fromMaybe defaultSMTCfg (getSBranchRunConfig st)
            msg  = when (verbose cfg) . putStrLn . ("** " ++)
        check <- internalSATCheck cfg st cond "sAssert: Checking satisfiability"
        res <- case check of
-                SatResult (Satisfiable _ m) -> return $ Just m
-                SatResult (Unsatisfiable _) -> return Nothing
-                _                           -> error $ "sAssert: Unexpected external result: " ++ show check
+                r@(SatResult (Satisfiable{})) -> return $ Just r
+                SatResult (Unsatisfiable _)   -> return Nothing
+                _                             -> error $ "sAssert: Unexpected external result: " ++ show check
        msg $ "sAssert: Conclusion: " ++ if isJust res then "Satisfiable" else "Unsatisfiable"
        return res
 

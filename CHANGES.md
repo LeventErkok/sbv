@@ -11,6 +11,13 @@
     generate a call to the external solver to ensure that the condition is never violated.
     If violation is possible the user will get an error, indicating the failure conditions.
 
+  * Also implement 'sAssertCont' which allows for a programmatic way to extract/display results
+    for consumers of 'sAssert'. While the latter simply calls 'error' in case of an assertion
+    violation, the 'sAssertCont' variant takes a continuation which can be used to program
+    how the results should be interpreted/displayed. (This is useful for libraries built on top of
+    SBV.) Note that the type of the continuation is such that execution should still stop, i.e.,
+    once an assertion violation is detected, symbolic simulation will never continue.
+
   * Rework/simplify the 'Mergeable' class to make sure 'sBranch' is sufficiently lazy
     in case of structural merges. The original implementation was only
     lazy at the Word instance, but not at lists/tuples etc. Thanks to Brian Huffman
