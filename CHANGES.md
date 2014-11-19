@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 3.1
+* Latest Hackage released version: 3.2
 
-### Version 3.2, Not yet released
+### Version 3.2, 2014-11-18
 
   * Implement 'sAssert'. This adds conditional symbolic simulation, by ensuring arbitrary
     boolean conditions hold during simulation; similar to ASSERT calls in other languages.
@@ -32,6 +32,8 @@
   * Fix long-standing translation bug regarding boolean Ord class comparisons. (i.e., 
     'False > True' etc.) While Haskell allows for this, SMT-Lib does not; and hence
     we have to be careful in translating. Thanks to Brian Huffman for reporting.
+
+  * C code generation: Correctly translate square-root and fusedMA functions to C.
 
 ### Version 3.1, 2014-07-12
  
