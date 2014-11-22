@@ -1298,6 +1298,9 @@ instance NFData SMTResult where
 instance NFData SMTModel where
   rnf (SMTModel assocs unints uarrs) = rnf assocs `seq` rnf unints `seq` rnf uarrs `seq` ()
 
+instance NFData SMTScript where
+  rnf (SMTScript b m) = rnf b `seq` rnf m `seq` ()
+
 -- | SMT-Lib logics. If left unspecified SBV will pick the logic based on what it determines is needed. However, the
 -- user can override this choice using the 'useLogic' parameter to the configuration. This is especially handy if
 -- one is experimenting with custom logics that might be supported on new solvers.

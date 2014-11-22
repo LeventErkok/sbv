@@ -16,6 +16,7 @@ module Data.SBV.SMT.SMT where
 import qualified Control.Exception as C
 
 import Control.Concurrent (newEmptyMVar, takeMVar, putMVar, forkIO)
+import Control.DeepSeq    (NFData(..))
 import Control.Monad      (when, zipWithM)
 import Data.Char          (isSpace)
 import Data.Int           (Int8, Int16, Int32, Int64)
@@ -348,11 +349,15 @@ pipeProcess cfg execName opts script cleanErrs = do
         let nm = show (name (solver cfg))
         mbExecPath <- findExecutable execName
         case mbExecPath of
-          Nothing -> return $ Left $ "Unable to locate executable for " ++ nm
-                                   ++ "\nExecutable specified: " ++ show execName
-          Just execPath -> do (ec, contents, allErrors) <- runSolver cfg execPath opts script
-                              let errors = dropWhile isSpace (cleanErrs allErrors)
-                              case (null errors, xformExitCode (solver cfg) ec) of
+          Nothing       -> return $ Left $ "Unable to locate executable for " ++ nm
+                                        ++ "\nExecutable specified: " ++ show execName
+          Just execPath ->
+                   do solverResult <- dispatchSolver cfg execPath opts script
+                      case solverResult of
+                        Left s                          -> return $ Left s
+                        Right (ec, contents, allErrors) ->
+                          let errors = dropWhile isSpace (cleanErrs allErrors)
+                          in case (null errors, xformExitCode (solver cfg) ec) of
                                 (True, ExitSuccess)  -> return $ Right $ map clean (filter (not . null) (lines contents))
                                 (_, ec')             -> let errors' = if null errors
                                                                       then (if null (dropWhile isSpace contents)
@@ -395,6 +400,14 @@ standardSolver config script cleanErrs failure success = do
     case contents of
       Left e   -> return $ failure (lines e)
       Right xs -> return $ success (mergeSExpr xs)
+
+-- | Wrap the solver call to protect against any exceptions
+dispatchSolver :: SMTConfig -> FilePath -> [String] -> SMTScript -> IO (Either String (ExitCode, String, String))
+dispatchSolver cfg execPath opts script = rnf script `seq` (Right `fmap` runSolver cfg execPath opts script) `C.catch` (\(e::C.SomeException) -> bad (show e))
+  where bad s = return $ Left $ unlines [ "Failed to start the external solver: " ++ s
+                                        , "Make sure you can start " ++ show execPath
+                                        , "from the command line without issues."
+                                        ]
 
 -- | A variant of 'readProcessWithExitCode'; except it knows about continuation strings
 -- and can speak SMT-Lib2 (just a little).

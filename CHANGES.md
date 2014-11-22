@@ -3,6 +3,13 @@
 
 * Latest Hackage released version: 3.2
 
+### Version 3.3, Not yet released
+
+  * Robustify the interface to external solvers, by making sure we catch cases where
+    the external solver might exist but not be runnable (library dependency missing,
+    for example). It is impossible to be absolutely foolproof, but we now catch a
+    few more cases and fail gracefully.
+
 ### Version 3.2, 2014-11-18
 
   * Implement 'sAssert'. This adds conditional symbolic simulation, by ensuring arbitrary
