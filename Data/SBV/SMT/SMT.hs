@@ -49,6 +49,9 @@ newtype ThmResult    = ThmResult    SMTResult
 -- The reason for having a separate 'SatResult' is to have a more meaningful 'Show' instance.
 newtype SatResult    = SatResult    SMTResult
 
+-- | A 'safe' call results in a 'SafeResult'
+type SafeResult      = Bool
+
 -- | An 'allSat' call results in a 'AllSatResult'. The boolean says whether
 -- we should warn the user about prefix-existentials.
 newtype AllSatResult = AllSatResult (Bool, [SMTResult])

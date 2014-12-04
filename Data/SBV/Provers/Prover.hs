@@ -16,7 +16,7 @@
 
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate, Provable(..)
-       , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..)
+       , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..), SafeResult
        , isSatisfiable, isSatisfiableWith, isTheorem, isTheoremWith
        , prove, proveWith
        , sat, satWith
