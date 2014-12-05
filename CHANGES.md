@@ -5,6 +5,10 @@
 
 ### Version 3.3, Not yet released
 
+  * Implement 'safe' and 'safeWith', which statically determine all calls to 'sAssert'
+    being safe to execute. This way, users can pepper their programs with liberal
+    calls to 'sAssert' and check they are all safe in one go without further worry.
+
   * Robustify the interface to external solvers, by making sure we catch cases where
     the external solver might exist but not be runnable (library dependency missing,
     for example). It is impossible to be absolutely foolproof, but we now catch a
