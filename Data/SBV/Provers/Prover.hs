@@ -238,7 +238,7 @@ sat :: Provable a => a -> IO SatResult
 sat = satWith defaultSMTCfg
 
 -- | Check if a given definition is safe; i.e., if all 'sAssert' conditions can be proven to hold.
-safe :: Provable a => a -> IO SafeResult
+safe :: SExecutable a => a -> IO SafeResult
 safe = safeWith defaultSMTCfg
 
 -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
@@ -336,11 +336,14 @@ satWith config a = simulate cvt config True [] a >>= callSolver True "Checking S
   where cvt = if useSMTLib2 config then toSMTLib2 else toSMTLib1
 
 -- | Check if a given definition is safe using the given solver configuration; i.e., if all 'sAssert' conditions can be proven to hold.
-safeWith :: Provable a => SMTConfig -> a -> IO SafeResult
-safeWith config a = do _ <- simulate cvt config False [] a
+safeWith :: SExecutable a => SMTConfig -> a -> IO SafeResult
+safeWith config a = do let msg = when (verbose config) . putStrLn . ("** " ++)
+                           isTiming = timing config
+                       msg "Starting safety checking symbolic simulation.."
+                       res <- timeIf isTiming "problem construction" $ runSymbolic (False, Just config) $ sName_ a >>= output
+                       msg $ "Generated symbolic trace:\n" ++ show res
                        return True
                     `C.catch` (\(e::C.SomeException) -> print e >> return False)
-  where cvt = if useSMTLib2 config then toSMTLib2 else toSMTLib1
 
 -- | Determine if the constraints are vacuous using the given SMT-solver
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
