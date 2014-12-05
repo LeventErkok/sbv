@@ -13,6 +13,7 @@
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE OverlappingInstances #-}
 {-# LANGUAGE BangPatterns         #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
 
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate, Provable(..)
@@ -20,6 +21,7 @@ module Data.SBV.Provers.Prover (
        , isSatisfiable, isSatisfiableWith, isTheorem, isTheoremWith
        , prove, proveWith
        , sat, satWith
+       , safe, safeWith
        , allSat, allSatWith
        , isVacuous, isVacuousWith
        , SatModel(..), Modelable(..), displayModels, extractModels
@@ -39,6 +41,8 @@ import System.Time         (getClockTime)
 import System.IO.Unsafe    (unsafeInterleaveIO)
 
 import qualified Data.Set as Set (Set, toList)
+
+import qualified Control.Exception as C
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.SMT.SMT
@@ -233,6 +237,10 @@ prove = proveWith defaultSMTCfg
 sat :: Provable a => a -> IO SatResult
 sat = satWith defaultSMTCfg
 
+-- | Check if a given definition is safe; i.e., if all 'sAssert' conditions can be proven to hold.
+safe :: Provable a => a -> IO SafeResult
+safe = safeWith defaultSMTCfg
+
 -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
 -- Satisfying assignments are constructed lazily, so they will be available as returned by the solver
 -- and on demand.
@@ -326,6 +334,12 @@ proveWith config a = simulate cvt config False [] a >>= callSolver False "Checki
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
 satWith config a = simulate cvt config True [] a >>= callSolver True "Checking Satisfiability.." SatResult config
   where cvt = if useSMTLib2 config then toSMTLib2 else toSMTLib1
+
+-- | Check if a given definition is safe using the given solver configuration; i.e., if all 'sAssert' conditions can be proven to hold.
+safeWith :: Provable a => SMTConfig -> a -> IO SafeResult
+safeWith config a = do _ <- proveWith config (forAll_ a)
+                       return True
+                    `C.catch` (\(e::C.SomeException) -> print e >> return False)
 
 -- | Determine if the constraints are vacuous using the given SMT-solver
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool

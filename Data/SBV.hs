@@ -105,7 +105,6 @@
 
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE OverlappingInstances #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
 
 module Data.SBV (
   -- * Programming with symbolic values
@@ -294,8 +293,6 @@ import Data.Int
 import Data.Ratio
 import Data.Word
 
-import qualified Control.Exception as C
-
 -- | The currently active solver, obtained by importing "Data.SBV".
 -- To have other solvers /current/, import one of the bridge
 -- modules "Data.SBV.Bridge.CVC4", "Data.SBV.Bridge.Yices", or
@@ -436,16 +433,6 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymW
 
 instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> z) where
   k === l = prove $ \a b c d e f g -> k (a, b, c, d, e, f, g) .== l (a, b, c, d, e, f, g)
-
--- | Check if a given definition is safe; i.e., if all 'sAssert' conditions can be proven to hold.
-safe :: Provable a => a -> IO SafeResult
-safe = safeWith defaultSMTCfg
-
--- | Check if a given definition is safe using the given solver configuration; i.e., if all 'sAssert' conditions can be proven to hold.
-safeWith :: Provable a => SMTConfig -> a -> IO SafeResult
-safeWith config a = do _ <- proveWith config (forAll_ a)
-                       return True
-                    `C.catch` (\(e::C.SomeException) -> print e >> return False)
 
 -- Haddock section documentation
 {- $progIntro
