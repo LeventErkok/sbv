@@ -57,11 +57,11 @@ import Data.IORef           (IORef, newIORef, modifyIORef, readIORef, writeIORef
 import Data.List            (intercalate, sortBy)
 import Data.Maybe           (isJust, fromJust)
 
-import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
-import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
-import qualified Data.Set      as Set  (Set, empty, toList, insert)
-import qualified Data.Foldable as F    (toList)
-import qualified Data.Sequence as S    (Seq, empty, (|>))
+import qualified Data.IntMap       as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
+import qualified Data.Map          as Map  (Map, empty, toList, size, insert, lookup)
+import qualified Data.Set          as Set  (Set, empty, toList, insert)
+import qualified Data.Foldable     as F    (toList)
+import qualified Data.Sequence     as S    (Seq, empty, (|>))
 
 import System.Exit           (ExitCode(..))
 import System.Mem.StableName

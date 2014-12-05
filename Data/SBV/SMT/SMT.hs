@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
 
 module Data.SBV.SMT.SMT where
 
@@ -28,6 +29,7 @@ import System.Exit        (ExitCode(..))
 import System.IO          (hClose, hFlush, hPutStr, hGetContents, hGetLine)
 
 import qualified Data.Map as M
+import Data.Typeable
 
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
@@ -48,9 +50,6 @@ newtype ThmResult    = ThmResult    SMTResult
 -- | A 'sat' call results in a 'SatResult'
 -- The reason for having a separate 'SatResult' is to have a more meaningful 'Show' instance.
 newtype SatResult    = SatResult    SMTResult
-
--- | A 'safe' call results in a 'SafeResult'
-type SafeResult      = Bool
 
 -- | An 'allSat' call results in a 'AllSatResult'. The boolean says whether
 -- we should warn the user about prefix-existentials.
@@ -87,6 +86,19 @@ instance Show AllSatResult where
               where ok = case c of
                            Satisfiable{} -> True
                            _             -> False
+
+-- | The result of an 'sAssert' call
+data SafeResult = SafeNeverFails
+                | SafeAlwaysFails  String
+                | SafeFailsInModel String SMTConfig SMTModel
+                deriving Typeable
+
+instance Show SafeResult where
+   show SafeNeverFails              = "No safety violations detected."
+   show (SafeAlwaysFails s)         = intercalate "\n" ["Assertion failure: " ++ show s, "*** Fails in all assignments to inputs"]
+   show (SafeFailsInModel s cfg md) = intercalate "\n" ["Assertion failure: " ++ show s, showModel cfg md]
+
+instance C.Exception SafeResult
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
 -- solvers. The idea is that the sbv infrastructure provides a stream of 'CW''s (constant-words)

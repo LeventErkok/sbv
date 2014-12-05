@@ -17,7 +17,7 @@
 
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate, Provable(..)
-       , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..), SafeResult
+       , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..), SafeResult(..)
        , isSatisfiable, isSatisfiableWith, isTheorem, isTheoremWith
        , prove, proveWith
        , sat, satWith
@@ -337,13 +337,16 @@ satWith config a = simulate cvt config True [] a >>= callSolver True "Checking S
 
 -- | Check if a given definition is safe using the given solver configuration; i.e., if all 'sAssert' conditions can be proven to hold.
 safeWith :: SExecutable a => SMTConfig -> a -> IO SafeResult
-safeWith config a = do let msg = when (verbose config) . putStrLn . ("** " ++)
+safeWith config a = C.catchJust choose checkSafe return
+  where checkSafe = do let msg = when (verbose config) . putStrLn . ("** " ++)
                            isTiming = timing config
                        msg "Starting safety checking symbolic simulation.."
                        res <- timeIf isTiming "problem construction" $ runSymbolic (False, Just config) $ sName_ a >>= output
                        msg $ "Generated symbolic trace:\n" ++ show res
-                       return True
-                    `C.catch` (\(e::C.SomeException) -> print e >> return False)
+                       return SafeNeverFails
+        choose e@(SafeNeverFails{})   = Just e
+        choose e@(SafeAlwaysFails{})  = Just e
+        choose e@(SafeFailsInModel{}) = Just e
 
 -- | Determine if the constraints are vacuous using the given SMT-solver
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool

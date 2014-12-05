@@ -43,6 +43,8 @@ import Data.Word       (Word8, Word16, Word32, Word64)
 
 import qualified Data.Map as M
 
+import qualified Control.Exception as C
+
 import Test.QuickCheck                           (Testable(..), Arbitrary(..))
 import qualified Test.QuickCheck         as QC   (whenFail)
 import qualified Test.QuickCheck.Monadic as QC   (monadicIO, run)
@@ -52,10 +54,8 @@ import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
 import Data.SBV.Utils.Boolean
 
--- The following two imports are only needed because of the doctest expressions we have. Sigh..
--- It might be a good idea to reorg some of the content to avoid this.
 import Data.SBV.Provers.Prover (isSBranchFeasibleInState, isConditionSatisfiable, isVacuous, prove, defaultSMTCfg)
-import Data.SBV.SMT.SMT (SatResult(..), ThmResult, showModel, getModelDictionary)
+import Data.SBV.SMT.SMT (SafeResult(..), SatResult(..), ThmResult, getModelDictionary)
 
 -- | Newer versions of GHC (Starting with 7.8 I think), distinguishes between FiniteBits and Bits classes.
 -- We should really use FiniteBitSize for SBV which would make things better. In the interim, just work
@@ -1221,9 +1221,8 @@ sBranch t a b
 -- Otherwise symbolic simulation will stop with a run-time error.
 sAssert :: Mergeable a => String -> SBool -> a -> a
 sAssert msg = sAssertCont msg defCont
-  where die m = error $ intercalate "\n" $ ("Assertion failure: " ++ show msg) : m
-        defCont _   Nothing   = die ["*** Fails in all assignments to inputs"]
-        defCont cfg (Just md) = die [showModel cfg (SMTModel (M.toList md) [] [])]
+  where defCont _   Nothing   = C.throw (SafeAlwaysFails  msg)
+        defCont cfg (Just md) = C.throw (SafeFailsInModel msg cfg (SMTModel (M.toList md) [] []))
 
 -- | Symbolic assert with a programmable continuation. Check that the given boolean condition is always true in the given path.
 -- Otherwise symbolic simulation will transfer the failing model to the given continuation. The
