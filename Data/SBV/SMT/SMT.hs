@@ -93,11 +93,14 @@ data SafeResult = SafeNeverFails
                 | SafeFailsInModel String SMTConfig SMTModel
                 deriving Typeable
 
+-- | The show instance for SafeResult. Note that this is for display purposes only,
+-- user programs are likely to pattern match on the output and proceed accordingly.
 instance Show SafeResult where
    show SafeNeverFails              = "No safety violations detected."
    show (SafeAlwaysFails s)         = intercalate "\n" ["Assertion failure: " ++ show s, "*** Fails in all assignments to inputs"]
    show (SafeFailsInModel s cfg md) = intercalate "\n" ["Assertion failure: " ++ show s, showModel cfg md]
 
+-- | If a 'prove' or 'sat' call comes accross an 'sAssert' call that fails, they will throw a 'SafeResult' as an exception.
 instance C.Exception SafeResult
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
