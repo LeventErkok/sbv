@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 3.2
+* Latest Hackage released version: 3.3
 
-### Version 3.3, Not yet released
+### Version 3.3, 2014-12-05
 
   * Implement 'safe' and 'safeWith', which statically determine all calls to 'sAssert'
     being safe to execute. This way, users can pepper their programs with liberal
