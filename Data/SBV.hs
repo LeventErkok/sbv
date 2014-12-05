@@ -186,8 +186,6 @@ module Data.SBV (
   , prove, proveWith, isTheorem, isTheoremWith
   -- ** Checking satisfiability
   , sat, satWith, isSatisfiable, isSatisfiableWith
-  -- ** Checking safety
-  , SExecutable(..), safe, safeWith
   -- ** Finding all satisfying assignments
   , allSat, allSatWith
   -- ** Satisfying a sequence of boolean conditions
@@ -197,6 +195,10 @@ module Data.SBV (
   , constrain, pConstrain
   -- ** Checking constraint vacuity
   , isVacuous, isVacuousWith
+
+  -- * Checking safety
+  -- $safeIntro
+  , safe, safeWith, SExecutable(..)
 
   -- * Proving properties using multiple solvers
   -- $multiIntro
@@ -489,6 +491,14 @@ solution as quickly as possible, taking advantage of modern many-core machines.
 
 Note that the function 'sbvAvailableSolvers' will return all the installed solvers, which can be
 used as the first argument to all these functions, if you simply want to try all available solvers on a machine.
+-}
+
+{- $safeIntro
+
+The 'sAssert' and 'sAssertCont' functions allow users to introduce invariants through-out their code to make sure
+certain properties hold at all times. This is another mechanism to provide further documentation/contract info
+into SBV code. The functions 'safe' and 'safeWith' can then be used to statically discharge these proof assumptions.
+If a violation is found, SBV will print a model showing which inputs lead to the invariant being violated.
 -}
 
 {- $optimizeIntro

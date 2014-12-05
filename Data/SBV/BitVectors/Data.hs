@@ -1435,7 +1435,8 @@ data SMTSolver = SMTSolver {
 instance Show SMTSolver where
    show = show . name
 
--- | Symbolically executable program fragments
+-- | Symbolically executable program fragments. This class is mainly used for 'safe' calls, and is sufficently populated internally to cover most use
+-- cases. Users can extend it as they wish to allow 'safe' checks for SBV programs that return/take types that are user-defined.
 class SExecutable a where
    sName_ :: a -> Symbolic ()
    sName  :: [String] -> a -> Symbolic ()
