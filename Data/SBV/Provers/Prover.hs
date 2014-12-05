@@ -337,9 +337,10 @@ satWith config a = simulate cvt config True [] a >>= callSolver True "Checking S
 
 -- | Check if a given definition is safe using the given solver configuration; i.e., if all 'sAssert' conditions can be proven to hold.
 safeWith :: Provable a => SMTConfig -> a -> IO SafeResult
-safeWith config a = do _ <- proveWith config (forAll_ a)
+safeWith config a = do _ <- simulate cvt config False [] a
                        return True
                     `C.catch` (\(e::C.SomeException) -> print e >> return False)
+  where cvt = if useSMTLib2 config then toSMTLib2 else toSMTLib1
 
 -- | Determine if the constraints are vacuous using the given SMT-solver
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
