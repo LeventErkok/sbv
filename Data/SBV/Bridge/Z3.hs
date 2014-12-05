@@ -49,7 +49,7 @@ sat :: Provable a
 sat = satWith sbvCurrentSolver
 
 -- | Check safety, i.e., prove that all 'sAssert' conditions are statically true in all paths
-safe :: Provable a
+safe :: SExecutable a
      => a               -- ^ Program to check the safety of
      -> IO SafeResult   -- ^ Response of the SMT solver, containing the unsafe model if found
 safe = safeWith sbvCurrentSolver

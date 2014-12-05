@@ -187,7 +187,7 @@ module Data.SBV (
   -- ** Checking satisfiability
   , sat, satWith, isSatisfiable, isSatisfiableWith
   -- ** Checking safety
-  , safe, safeWith
+  , SExecutable(..), safe, safeWith
   -- ** Finding all satisfying assignments
   , allSat, allSatWith
   -- ** Satisfying a sequence of boolean conditions
