@@ -1,18 +1,25 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 3.3
+* Latest Hackage released version: 3.4
 
-### Version 3.4, Not yet released
+### Version 3.4, 2014-12-21
 
-  * Track changes in the QF_FPA logic standard; new constants and alike. If you are
-    using the floating-point logic, then you need a relatively new version of Z3
-    installed (4.3.3 or newer).
+  * This release is mainly addressing floating-point changes in SMT-Lib.
 
-  * Add unary-negation as an explicit operator. Previously, we merely used the "0-x"
-    semantics; but with floating point, this does not hold as 0-0 is 0, and is not -0!
-    (Note that negative-zero is a valid floating point value, that is different than
-    positive-zero; yet it compares equal to it. Sigh..)
+      * Track changes in the QF_FPA logic standard; new constants and alike. If you are
+        using the floating-point logic, then you need a relatively new version of Z3
+        installed (4.3.3 or newer).
+
+      * Add unary-negation as an explicit operator. Previously, we merely used the "0-x"
+        semantics; but with floating point, this does not hold as 0-0 is 0, and is not -0!
+        (Note that negative-zero is a valid floating point value, that is different than
+        positive-zero; yet it compares equal to it. Sigh..)
+
+      * Similarly, add abs as a native method; to make sure we map it to fp.abs for
+        floating point values.
+
+      * Test suite improvements
 
 ### Version 3.3, 2014-12-05
 
