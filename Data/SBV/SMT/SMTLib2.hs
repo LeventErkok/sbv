@@ -349,6 +349,8 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         -- lift a binary operation with rounding-mode added; used for floating-point arithmetic
         lift2WM o fo | doubleOp || floatOp = lift2 (addRM fo)
                      | True                = lift2 o
+        lift1FP o fo | doubleOp || floatOp = lift1 fo
+                     | True                = lift1 o
         lift2B bOp vOp
           | boolOp = lift2 bOp
           | True   = lift2 vOp
@@ -459,6 +461,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           where smtOpBVTable  = [ (Plus,          lift2   "bvadd")
                                 , (Minus,         lift2   "bvsub")
                                 , (Times,         lift2   "bvmul")
+                                , (UNeg,          lift1B  "not"    "bvneg")
                                 , (Quot,          lift2S  "bvudiv" "bvsdiv")
                                 , (Rem,           lift2S  "bvurem" "bvsrem")
                                 , (Equal,         eqBV)
@@ -492,6 +495,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                 smtIntRealShared  = [ (Plus,          lift2WM "+" "fp.add")
                                     , (Minus,         lift2WM "-" "fp.sub")
                                     , (Times,         lift2WM "*" "fp.mul")
+                                    , (UNeg,          lift1FP "-" "fp.neg")
                                     , (Equal,         equal)
                                     , (NotEqual,      notEqual)
                                     , (LessThan,      lift2Cmp  "<"  "fp.lt")

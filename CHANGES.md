@@ -9,6 +9,11 @@
     using the floating-point logic, then you need a relatively new version of Z3
     installed (4.3.3 or newer).
 
+  * Add unary-negation as an explicit operator. Previously, we merely used the "0-x"
+    semantics; but with floating point, this does not hold as 0-0 is 0, and is not -0!
+    (Note that negative-zero is a valid floating point value, that is different than
+    positive-zero; yet it compares equal to it. Sigh..)
+
 ### Version 3.3, 2014-12-05
 
   * Implement 'safe' and 'safeWith', which statically determine all calls to 'sAssert'

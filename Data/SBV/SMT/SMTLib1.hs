@@ -269,6 +269,7 @@ cvtExp inp@(SBVApp op args)
                      , (And,           lift2B  "and" "bvand")
                      , (Or,            lift2B  "or"  "bvor")
                      , (Not,           lift1B  "not" "bvnot")
+                     , (UNeg,          lift1B  "not" "bvneg")
                      , (XOr,           lift2B  "xor" "bvxor")
                      , (Join,          lift2   "concat")
                      ]

@@ -542,6 +542,7 @@ ppExpr cfg consts (SBVApp op opArgs) = p op (map (showSW cfg consts) opArgs)
         -- Brief googling suggests C99 does indeed truncate toward 0, but other C compilers might differ.
         p Quot [a, b] = parens (b <+> text "== 0") <+> text "?" <+> text "0" <+> text ":" <+> parens (a <+> text "/" <+> b)
         p Rem  [a, b] = parens (b <+> text "== 0") <+> text "?" <+>    a     <+> text ":" <+> parens (a <+> text "%" <+> b)
+        p UNeg [a]    = parens (text "-" <+> a)
         p o [a, b]
           | Just co <- lookup o cBinOps
           = a <+> text co <+> b

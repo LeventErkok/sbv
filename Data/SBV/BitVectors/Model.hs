@@ -630,6 +630,9 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
   signum a
    | hasSign a = ite (a .< 0) (-1) (ite (a .== 0) 0 1)
    | True      = oneIf (a ./= 0)
+  -- negate is tricky because on double/float -0 is different than 0; so we
+  -- just cannot rely on its default definition; which would be 0-0, which is not -0!
+  negate = liftSym1 (mkSymOp1 UNeg) (\x -> -x) (\x -> -x) (\x -> -x) (\x -> -x)
 
 instance (SymWord a, Fractional a) => Fractional (SBV a) where
   fromRational = literal . fromRational
