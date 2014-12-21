@@ -351,6 +351,15 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                      | True                = lift2 o
         lift1FP o fo | doubleOp || floatOp = lift1 fo
                      | True                = lift1 o
+        liftAbs sgned args | doubleOp || floatOp = lift1 "fp.abs" sgned args
+                           | intOp               = lift1 "abs"    sgned args
+                           | bvOp, sgned         = mkAbs (head args) "bvslt" "bvneg"
+                           | bvOp                = head args
+                           | True                = mkAbs (head args) "<"     "-"
+          where mkAbs x cmp neg = "(ite " ++ ltz ++ " " ++ nx ++ " " ++ x ++ ")"
+                  where ltz = "(" ++ cmp ++ " " ++ x ++ " " ++ z ++ ")"
+                        nx  = "(" ++ neg ++ " " ++ x ++ ")"
+                        z   = cvtCW rm (mkConstCW (kindOf (head arguments)) (0::Integer))
         lift2B bOp vOp
           | boolOp = lift2 bOp
           | True   = lift2 vOp
@@ -462,6 +471,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 , (Minus,         lift2   "bvsub")
                                 , (Times,         lift2   "bvmul")
                                 , (UNeg,          lift1B  "not"    "bvneg")
+                                , (Abs,           liftAbs)
                                 , (Quot,          lift2S  "bvudiv" "bvsdiv")
                                 , (Rem,           lift2S  "bvurem" "bvsrem")
                                 , (Equal,         eqBV)
@@ -496,6 +506,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                     , (Minus,         lift2WM "-" "fp.sub")
                                     , (Times,         lift2WM "*" "fp.mul")
                                     , (UNeg,          lift1FP "-" "fp.neg")
+                                    , (Abs,           liftAbs)
                                     , (Equal,         equal)
                                     , (NotEqual,      notEqual)
                                     , (LessThan,      lift2Cmp  "<"  "fp.lt")

@@ -543,6 +543,11 @@ ppExpr cfg consts (SBVApp op opArgs) = p op (map (showSW cfg consts) opArgs)
         p Quot [a, b] = parens (b <+> text "== 0") <+> text "?" <+> text "0" <+> text ":" <+> parens (a <+> text "/" <+> b)
         p Rem  [a, b] = parens (b <+> text "== 0") <+> text "?" <+>    a     <+> text ":" <+> parens (a <+> text "%" <+> b)
         p UNeg [a]    = parens (text "-" <+> a)
+        p Abs  [a]    = let f = case kindOf (head opArgs) of
+                                  KFloat  -> text "fabsf"
+                                  KDouble -> text "fabs"
+                                  _       -> text "abs"
+                        in f <> parens a
         p o [a, b]
           | Just co <- lookup o cBinOps
           = a <+> text co <+> b

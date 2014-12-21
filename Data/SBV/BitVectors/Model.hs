@@ -624,9 +624,9 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
   x - y
     | y `isConcretely` (== 0) = x
     | True                    = liftSym2 (mkSymOp Minus) rationalCheck (-) (-) (-) (-) x y
-  abs a
-   | hasSign a = ite (a .< 0) (-a) a
-   | True      = a
+  -- Abs is problematic for floating point, due to -0; case, so we carefully shuttle it down
+  -- to the solver to avoid the can of worms. (Alternative would be to do an if-then-else here.)
+  abs = liftSym1 (mkSymOp1 Abs) abs abs abs abs
   signum a
    | hasSign a = ite (a .< 0) (-1) (ite (a .== 0) 0 1)
    | True      = oneIf (a ./= 0)

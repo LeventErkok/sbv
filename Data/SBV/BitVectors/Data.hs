@@ -226,7 +226,7 @@ instance Show SBVType where
   show (SBVType xs) = intercalate " -> " $ map show xs
 
 -- | Symbolic operations
-data Op = Plus | Times | Minus | UNeg
+data Op = Plus | Times | Minus | UNeg | Abs
         | Quot | Rem
         | Equal | NotEqual
         | LessThan | GreaterThan | LessEq | GreaterEq
@@ -392,7 +392,7 @@ instance Show Op where
   show op
     | Just s <- op `lookup` syms = s
     | True                       = error "impossible happened; can't find op!"
-    where syms = [ (Plus, "+"), (Times, "*"), (Minus, "-"), (UNeg, "-")
+    where syms = [ (Plus, "+"), (Times, "*"), (Minus, "-"), (UNeg, "-"), (Abs, "abs")
                  , (Quot, "quot")
                  , (Rem,  "rem")
                  , (Equal, "=="), (NotEqual, "/=")
