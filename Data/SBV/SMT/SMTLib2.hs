@@ -269,8 +269,8 @@ smtType KBool              = "Bool"
 smtType (KBounded _ sz)    = "(_ BitVec " ++ show sz ++ ")"
 smtType KUnbounded         = "Int"
 smtType KReal              = "Real"
-smtType KFloat             = "(_ FP  8 24)"
-smtType KDouble            = "(_ FP 11 53)"
+smtType KFloat             = "(_ FloatingPoint  8 24)"
+smtType KDouble            = "(_ FloatingPoint 11 53)"
 smtType (KUninterpreted s) = s
 
 cvtType :: SBVType -> String
@@ -347,8 +347,8 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         lift2  o _ [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
         lift2  o _ sbvs   = error $ "SBV.SMTLib2.sh.lift2: Unexpected arguments: "   ++ show (o, sbvs)
         -- lift a binary operation with rounding-mode added; used for floating-point arithmetic
-        lift2WM o | doubleOp || floatOp = lift2 (addRM o)
-                  | True                = lift2 o
+        lift2WM o fo | doubleOp || floatOp = lift2 (addRM fo)
+                     | True                = lift2 o
         lift2B bOp vOp
           | boolOp = lift2 bOp
           | True   = lift2 vOp
@@ -360,14 +360,16 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
            | True   = "(= " ++ lift2 "bvcomp" sgn sbvs ++ " #b1)"
         neqBV sgn sbvs = "(not " ++ eqBV sgn sbvs ++ ")"
         equal sgn sbvs
-          | doubleOp = lift2 "==" sgn sbvs
-          | floatOp  = lift2 "==" sgn sbvs
+          | doubleOp = lift2 "fp.eq" sgn sbvs
+          | floatOp  = lift2 "fp.eq" sgn sbvs
           | True     = lift2 "=" sgn sbvs
         notEqual sgn sbvs
           | doubleOp = "(not " ++ equal sgn sbvs ++ ")"
           | floatOp  = "(not " ++ equal sgn sbvs ++ ")"
           | True     = lift2 "distinct" sgn sbvs
         lift2S oU oS sgn = lift2 (if sgn then oS else oU) sgn
+        lift2Cmp o fo | doubleOp || floatOp = lift2 fo
+                      | True                = lift2 o
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
         lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib2.sh.lift1: Unexpected arguments: "   ++ show (o, sbvs)
         sh (SBVApp Ite [a, b, c]) = "(ite " ++ ssw a ++ " " ++ ssw b ++ " " ++ ssw c ++ ")"
@@ -391,8 +393,8 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 KBounded{}       -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
                                 KUnbounded       -> ("<", "<=")
                                 KReal            -> ("<", "<=")
-                                KFloat           -> ("<", "<=")
-                                KDouble          -> ("<", "<=")
+                                KFloat           -> ("fp.lt", "fp.leq")
+                                KDouble          -> ("fp.lt", "fp.geq")
                                 KUninterpreted s -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
                 mkCnst = cvtCW rm . mkConstCW (kindOf i)
                 le0  = "(" ++ less ++ " " ++ ssw i ++ " " ++ mkCnst 0 ++ ")"
@@ -402,7 +404,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (Uninterpreted nm) [])   = nm
         sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm' ++ " " ++ unwords (map ssw args) ++ ")"
           where -- slight hack needed here to take advantage of custom floating-point functions.. sigh.
-                fpSpecials = ["squareRoot", "fusedMA"]
+                fpSpecials = ["fp.sqrt", "fusedMA"]
                 nm' | (floatOp || doubleOp) && (nm `elem` fpSpecials) = addRM nm
                     | True                                            = nm
         sh (SBVApp (Extract 0 0) [a])   -- special SInteger -> SReal conversion
@@ -479,23 +481,23 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                      swp [x, y] = [y, x]
                                      swp xs     = error $ "SBV.SMT.SMTLib2.boolComps.swp: Impossible happened, incorrect arity (expected 2): " ++ show xs
                 smtOpRealTable =  smtIntRealShared
-                               ++ [ (Quot,        lift2WM "/")
+                               ++ [ (Quot,        lift2WM "/" "fp.div")
                                   ]
                 smtOpIntTable  = smtIntRealShared
                                ++ [ (Quot,        lift2   "div")
                                   , (Rem,         lift2   "mod")
                                   ]
                 smtOpFloatDoubleTable = smtIntRealShared
-                                  ++ [(Quot, lift2WM "/")]
-                smtIntRealShared  = [ (Plus,          lift2WM "+")
-                                    , (Minus,         lift2WM "-")
-                                    , (Times,         lift2WM "*")
+                                  ++ [(Quot, lift2WM "/" "fp.div")]
+                smtIntRealShared  = [ (Plus,          lift2WM "+" "fp.add")
+                                    , (Minus,         lift2WM "-" "fp.sub")
+                                    , (Times,         lift2WM "*" "fp.mul")
                                     , (Equal,         equal)
                                     , (NotEqual,      notEqual)
-                                    , (LessThan,      lift2S  "<"  "<")
-                                    , (GreaterThan,   lift2S  ">"  ">")
-                                    , (LessEq,        lift2S  "<=" "<=")
-                                    , (GreaterEq,     lift2S  ">=" ">=")
+                                    , (LessThan,      lift2Cmp  "<"  "fp.lt")
+                                    , (GreaterThan,   lift2Cmp  ">"  "fp.gt")
+                                    , (LessEq,        lift2Cmp  "<=" "fp.leq")
+                                    , (GreaterEq,     lift2Cmp  ">=" "fp.geq")
                                     ]
                 -- equality is the only thing that works on uninterpreted sorts
                 uninterpretedTable = [ (Equal,    lift2S "="        "="        True)

@@ -26,16 +26,16 @@ import Data.SBV
 --
 -- >>> prove assocPlus
 -- Falsifiable. Counter-example:
---   s0 = -Infinity :: SFloat
---   s1 = Infinity :: SFloat
---   s2 = -9.403955e-38 :: SFloat
+--   s0 = -7.888609e-31 :: SFloat
+--   s1 = 3.944307e-31 :: SFloat
+--   s2 = NaN :: SFloat
 --
 -- Indeed:
 --
--- >>> let i = 1/0 :: Float
--- >>> ((-i) + i) + (-9.403955e-38) :: Float
+-- >>> let i = 0/0 :: Float
+-- >>> ((-7.888609e-31 + 3.944307e-31) + i) :: Float
 -- NaN
--- >>> (-i) + (i + (-9.403955e-38)) :: Float
+-- >>> (-7.888609e-31 + (3.944307e-31 + i)) :: Float
 -- NaN
 --
 -- But keep in mind that @NaN@ does not equal itself in the floating point world! We have:
@@ -54,18 +54,18 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 --
 -- >>> assocPlusRegular
 -- Falsifiable. Counter-example:
---   x = 1.5775295e-30 :: SFloat
---   y = 1.92593e-34 :: SFloat
---   z = -2.1521e-41 :: SFloat
+--   x = -3.7777752e22 :: SFloat
+--   y = -1.180801e18 :: SFloat
+--   z = 9.4447324e21 :: SFloat
 --
 -- Indeed, we have:
 --
--- >>> (1.5775295e-30 + 1.92593e-34) + (-2.1521e-41) :: Float
--- 1.5777222e-30
--- >>> 1.5775295e-30 + (1.92593e-34 + (-2.1521e-41)) :: Float
--- 1.577722e-30
+-- >>> ((-3.7777752e22 + (-1.180801e18)) + 9.4447324e21) :: Float
+-- -2.83342e22
+-- >>> (-3.7777752e22 + ((-1.180801e18) + 9.4447324e21)) :: Float
+-- -2.8334201e22
 --
--- Note the loss of precision in the second expression.
+-- Note the loss of precision in the first expression.
 assocPlusRegular :: IO ThmResult
 assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
                               let lhs = x+(y+z)
@@ -85,17 +85,17 @@ assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
 --
 -- >>> nonZeroAddition
 -- Falsifiable. Counter-example:
---   a = -4.0 :: SFloat
---   b = 4.5918e-41 :: SFloat
+--   a = 2.1474839e10 :: SFloat
+--   b = -7.275957e-11 :: SFloat
 --
 -- Indeed, we have:
 --
--- >>> -4.0 + 4.5918e-41 == (-4.0 :: Float)
+-- >>> 2.1474839e10 + (-7.275957e-11) == (2.1474839e10 :: Float)
 -- True
 --
 -- But:
 --
--- >>> 4.5918e-41 == (0 :: Float)
+-- >>> -7.275957e-11 == (0 :: Float)
 -- False
 --
 nonZeroAddition :: IO ThmResult
@@ -116,13 +116,13 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   a = 1.3625818045773776e-308 :: SDouble
+--   a = 1.2354518252390238e308 :: SDouble
 --
 -- Indeed, we have:
 --
--- >>> let a = 1.3625818045773776e-308 :: Double
+-- >>> let a =  1.2354518252390238e308 :: Double
 -- >>> a * (1/a)
--- 0.9999999999999999
+-- 0.9999999999999998
 multInverse :: IO ThmResult
 multInverse = prove $ do a <- sDouble "a"
                          constrain $ isFPPoint a

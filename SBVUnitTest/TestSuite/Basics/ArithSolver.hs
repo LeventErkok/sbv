@@ -313,8 +313,8 @@ rs = [fromRational (i % d) | i <- is, d <- dens]
 
 -- Admittedly paltry test-cases for float/double
 fs  :: [Float]
-fs = nan : -infinity : infinity : 0 : [-5.0, -4.7 .. 5] ++ [5]
+fs = nan : -infinity : infinity : 0 : -0 : [-5.0, -4.1 .. 5] ++ [5]
 
 ds  :: [Double]
-ds = nan : -infinity : infinity : 0 : [-5.0, -4.7 .. 5] ++ [5]
+ds = nan : -infinity : infinity : 0 : -0 : [-5.0, -4.1 .. 5] ++ [5]
 {-# ANN module "HLint: ignore Reduce duplication" #-}

@@ -67,7 +67,7 @@ basis m = extractModels `fmap` allSatWith z3{useLogic = Just (PredefinedLogic AU
 -- We have:
 --
 -- >>> test
--- NonHomogeneous [[0,2,0],[1,0,0]] [[1,0,2],[0,1,1]]
+-- NonHomogeneous [[0,2,0],[1,0,0]] [[0,1,1],[1,0,2]]
 --
 -- which means that the solutions are of the form:
 --

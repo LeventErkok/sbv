@@ -3,6 +3,12 @@
 
 * Latest Hackage released version: 3.3
 
+### Version 3.4, Not yet released
+
+  * Track changes in the QF_FPA logic standard; new constants and alike. If you are
+    using the floating-point logic, then you need a relatively new version of Z3
+    installed (4.3.3 or newer).
+
 ### Version 3.3, 2014-12-05
 
   * Implement 'safe' and 'safeWith', which statically determine all calls to 'sAssert'
