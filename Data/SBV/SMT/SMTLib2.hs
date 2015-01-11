@@ -102,7 +102,7 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
         hasFloat   = KFloat     `Set.member` kindInfo
         hasDouble  = KDouble    `Set.member` kindInfo
         hasBVs     = not $ null [() | KBounded{} <- Set.toList kindInfo]
-        sorts      = [s | KUninterpreted s _ <- Set.toList kindInfo]
+        usorts     = [(s, dt) | KUninterpreted s dt <- Set.toList kindInfo]
         logic
            | Just l <- smtLogic
            = ["(set-logic " ++ show l ++ ") ; NB. User specified."]
@@ -110,9 +110,9 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
            = if hasBVs
              then ["(set-logic QF_FPABV)"]
              else ["(set-logic QF_FPA)"]
-           | hasInteger || hasReal || not (null sorts)
+           | hasInteger || hasReal || not (null usorts)
            = case mbDefaultLogic solverCaps of
-                Nothing -> ["; Has unbounded values (Int/Real) or sorts; no logic specified."]   -- combination, let the solver pick
+                Nothing -> ["; Has unbounded values (Int/Real) or uninterpreted sorts; no logic specified."]   -- combination, let the solver pick
                 Just l  -> ["(set-logic " ++ l ++ ")"]
            | True
            = ["(set-logic " ++ qs ++ as ++ ufs ++ "BV)"]
@@ -130,7 +130,7 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
              ++ getModels
              ++ logic
              ++ [ "; --- uninterpreted sorts ---" ]
-             ++ map declSort sorts
+             ++ map declSort usorts
              ++ [ "; --- literal constants ---" ]
              ++ concatMap (declConst (supportsMacros solverCaps)) consts
              ++ [ "; --- skolem constants ---" ]
@@ -187,10 +187,10 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
                         , "(assert (= "   ++ show s ++ " " ++ cvtCW rm c ++ "))"
                         ]
           where varT = show s ++ " " ++ swFunType [] s
-        declSort s = "(declare-sort " ++ s ++ " 0)"
         userName s = case s `lookup` map snd inputs of
                         Just u  | show s /= u -> " ; tracks user variable " ++ show u
                         _ -> ""
+        declSort (s, _) = "(declare-sort " ++ s ++ " 0)"
 
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = ["(declare-fun " ++ i ++ " " ++ cvtType t ++ ")"]
