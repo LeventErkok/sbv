@@ -60,7 +60,7 @@ toSMTLib2 :: SMTLibConverter
          = unsupported "uninterpreted sorts"
          | True
          = SMTLibPgm v (aliasTable, pre, post)
-         where sorts = [s | KUninterpreted s <- Set.toList kindInfo]
+         where sorts = [s | KUninterpreted s _ <- Set.toList kindInfo]
                unsupported w = error $ "SBV: Given problem needs " ++ w ++ ", which is not supported by SBV for the chosen solver: " ++ capSolverName solverCaps
                aliasTable  = map (\(_, (x, y)) -> (y, x)) qinps
                converter   = if v == SMTLib1 then SMT1.cvt else SMT2.cvt

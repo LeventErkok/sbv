@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 3.4
 
+### Version 3.5, Not yet released
+
+  * Keep track of data-type details for uninterpreted sorts.
+
 ### Version 3.4, 2014-12-21
 
   * This release is mainly addressing floating-point changes in SMT-Lib.

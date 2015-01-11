@@ -9,15 +9,17 @@
 -- Internal data-structures for the sbv library
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeSynonymInstances       #-}
-{-# LANGUAGE TypeOperators              #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE PatternGuards              #-}
-{-# LANGUAGE DefaultSignatures          #-}
-{-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE    GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE    TypeSynonymInstances       #-}
+{-# LANGUAGE    TypeOperators              #-}
+{-# LANGUAGE    MultiParamTypeClasses      #-}
+{-# LANGUAGE    ScopedTypeVariables        #-}
+{-# LANGUAGE    FlexibleInstances          #-}
+{-# LANGUAGE    PatternGuards              #-}
+{-# LANGUAGE    StandaloneDeriving         #-}
+{-# LANGUAGE    DefaultSignatures          #-}
+{-# LANGUAGE    NamedFieldPuns             #-}
+{-# OPTIONS_GHC -fno-warn-orphans          #-}
 
 module Data.SBV.BitVectors.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
@@ -50,18 +52,18 @@ import Control.Monad        (when)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import Control.Monad.Trans  (MonadIO, liftIO)
 import Data.Char            (isAlpha, isAlphaNum)
-import Data.Generics        (Data(..), dataTypeName, dataTypeOf, tyconUQname)
 import Data.Int             (Int8, Int16, Int32, Int64)
 import Data.Word            (Word8, Word16, Word32, Word64)
 import Data.IORef           (IORef, newIORef, modifyIORef, readIORef, writeIORef)
 import Data.List            (intercalate, sortBy)
 import Data.Maybe           (isJust, fromJust)
 
-import qualified Data.IntMap       as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
-import qualified Data.Map          as Map  (Map, empty, toList, size, insert, lookup)
-import qualified Data.Set          as Set  (Set, empty, toList, insert)
-import qualified Data.Foldable     as F    (toList)
-import qualified Data.Sequence     as S    (Seq, empty, (|>))
+import qualified Data.Generics as G    (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname)
+import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
+import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
+import qualified Data.Set      as Set  (Set, empty, toList, insert)
+import qualified Data.Foldable as F    (toList)
+import qualified Data.Sequence as S    (Seq, empty, (|>))
 
 import System.Exit           (ExitCode(..))
 import System.Mem.StableName
@@ -155,25 +157,31 @@ normCW c@(CW (KBounded signed sz) (CWInteger v)) = c { cwVal = CWInteger norm }
             | True    = v `mod` (2 ^ sz)
 normCW c = c
 
+instance Eq  G.DataType where
+   a == b = G.tyconUQname (G.dataTypeName a) == G.tyconUQname (G.dataTypeName b)
+
+instance Ord G.DataType where
+   a `compare` b = G.tyconUQname (G.dataTypeName a) `compare` G.tyconUQname (G.dataTypeName b)
+
 -- | Kind of symbolic value
 data Kind = KBool
           | KBounded Bool Int
           | KUnbounded
           | KReal
-          | KUninterpreted String
+          | KUninterpreted String G.DataType
           | KFloat
           | KDouble
           deriving (Eq, Ord)
 
 instance Show Kind where
-  show KBool              = "SBool"
-  show (KBounded False n) = "SWord" ++ show n
-  show (KBounded True n)  = "SInt"  ++ show n
-  show KUnbounded         = "SInteger"
-  show KReal              = "SReal"
-  show (KUninterpreted s) = s
-  show KFloat             = "SFloat"
-  show KDouble            = "SDouble"
+  show KBool                = "SBool"
+  show (KBounded False n)   = "SWord" ++ show n
+  show (KBounded True n)    = "SInt"  ++ show n
+  show KUnbounded           = "SInteger"
+  show KReal                = "SReal"
+  show (KUninterpreted s _) = s
+  show KFloat               = "SFloat"
+  show KDouble              = "SDouble"
 
 -- | A symbolic node id
 newtype NodeId = NodeId Int deriving (Eq, Ord)
@@ -284,13 +292,13 @@ class HasKind a where
                   KDouble          -> True
                   KUninterpreted{} -> False
   intSizeOf x = case kindOf x of
-                  KBool            -> error "SBV.HasKind.intSizeOf((S)Bool)"
-                  KBounded _ s     -> s
-                  KUnbounded       -> error "SBV.HasKind.intSizeOf((S)Integer)"
-                  KReal            -> error "SBV.HasKind.intSizeOf((S)Real)"
-                  KFloat           -> error "SBV.HasKind.intSizeOf((S)Float)"
-                  KDouble          -> error "SBV.HasKind.intSizeOf((S)Double)"
-                  KUninterpreted s -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
+                  KBool              -> error "SBV.HasKind.intSizeOf((S)Bool)"
+                  KBounded _ s       -> s
+                  KUnbounded         -> error "SBV.HasKind.intSizeOf((S)Integer)"
+                  KReal              -> error "SBV.HasKind.intSizeOf((S)Real)"
+                  KFloat             -> error "SBV.HasKind.intSizeOf((S)Float)"
+                  KDouble            -> error "SBV.HasKind.intSizeOf((S)Double)"
+                  KUninterpreted s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
   isBoolean       x | KBool{}          <- kindOf x = True
                     | True                         = False
   isBounded       x | KBounded{}       <- kindOf x = True
@@ -308,8 +316,10 @@ class HasKind a where
   showType = show . kindOf
 
   -- default signature for uninterpreted kinds
-  default kindOf :: Data a => a -> Kind
-  kindOf = KUninterpreted . tyconUQname . dataTypeName . dataTypeOf
+  default kindOf :: G.Data a => a -> Kind
+  kindOf a = KUninterpreted nm dt
+    where dt = G.dataTypeOf a
+          nm = G.tyconUQname . G.dataTypeName $ dt
 
 instance HasKind Bool    where kindOf _ = KBool
 instance HasKind Int8    where kindOf _ = KBounded True  8
@@ -479,7 +489,7 @@ instance Show Result where
                 ++ map (("  " ++) . show) cstrs
                 ++ ["OUTPUTS"]
                 ++ map (("  " ++) . show) os
-    where usorts = [s | KUninterpreted s <- Set.toList kinds]
+    where usorts = [s | KUninterpreted s _ <- Set.toList kinds]
           shs sw = show sw ++ " :: " ++ showType sw
           sht ((i, at, rt), es)  = "  Table " ++ show i ++ " : " ++ show at ++ "->" ++ show rt ++ " = " ++ show es
           shc (sw, cw) = "  " ++ show sw ++ " = " ++ show cw
@@ -742,7 +752,7 @@ newSW st k = do ctr <- incCtr st
 
 registerKind :: State -> Kind -> IO ()
 registerKind st k
-  | KUninterpreted sortName <- k, sortName `elem` reserved
+  | KUninterpreted sortName _ <- k, sortName `elem` reserved
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | True
   = modifyIORef (rUsedKinds st) (Set.insert k)
@@ -772,13 +782,13 @@ getTableIndex st at rt elts = do
 
 -- | Create a constant word from an integral
 mkConstCW :: Integral a => Kind -> a -> CW
-mkConstCW KBool              a = normCW $ CW KBool      (CWInteger (toInteger a))
-mkConstCW k@(KBounded{})     a = normCW $ CW k          (CWInteger (toInteger a))
-mkConstCW KUnbounded         a = normCW $ CW KUnbounded (CWInteger (toInteger a))
-mkConstCW KReal              a = normCW $ CW KReal      (CWAlgReal (fromInteger (toInteger a)))
-mkConstCW KFloat             a = normCW $ CW KFloat     (CWFloat   (fromInteger (toInteger a)))
-mkConstCW KDouble            a = normCW $ CW KDouble    (CWDouble  (fromInteger (toInteger a)))
-mkConstCW (KUninterpreted s) a = error $ "Unexpected call to mkConstCW with uninterpreted kind: " ++ s ++ " with value: " ++ show (toInteger a)
+mkConstCW KBool                a = normCW $ CW KBool      (CWInteger (toInteger a))
+mkConstCW k@(KBounded{})       a = normCW $ CW k          (CWInteger (toInteger a))
+mkConstCW KUnbounded           a = normCW $ CW KUnbounded (CWInteger (toInteger a))
+mkConstCW KReal                a = normCW $ CW KReal      (CWAlgReal (fromInteger (toInteger a)))
+mkConstCW KFloat               a = normCW $ CW KFloat     (CWFloat   (fromInteger (toInteger a)))
+mkConstCW KDouble              a = normCW $ CW KDouble    (CWDouble  (fromInteger (toInteger a)))
+mkConstCW (KUninterpreted s _) a = error $ "Unexpected call to mkConstCW with uninterpreted kind: " ++ s ++ " with value: " ++ show (toInteger a)
 
 -- | Create a new expression; hash-cons as necessary
 newExpr :: State -> Kind -> SBVExpr -> IO SW
@@ -1041,11 +1051,12 @@ class (HasKind a, Ord a) => SymWord a where
   literal x = error $ "Cannot create symbolic literals for kind: " ++ show (kindOf x)
   fromCW cw = error $ "Cannot convert CW " ++ show cw ++ " to kind " ++ show (kindOf (undefined :: a))
 
-  default mkSymWord :: Data a => Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
+  default mkSymWord :: G.Data a => Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
   mkSymWord mbQ mbNm = do
-        let sortName = tyconUQname . dataTypeName . dataTypeOf $ (undefined :: a)
+        let dataType = G.dataTypeOf (undefined :: a)
+            sortName = G.tyconUQname . G.dataTypeName $ dataType
         st <- ask
-        let k = KUninterpreted sortName
+        let k = KUninterpreted sortName dataType
         liftIO $ registerKind st k
         let q = case (mbQ, runMode st) of
                   (Just x,  _)                -> x
