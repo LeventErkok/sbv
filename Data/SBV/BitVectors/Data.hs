@@ -58,7 +58,7 @@ import Data.IORef           (IORef, newIORef, modifyIORef, readIORef, writeIORef
 import Data.List            (intercalate, sortBy)
 import Data.Maybe           (isJust, fromJust)
 
-import qualified Data.Generics as G    (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname)
+import qualified Data.Generics as G    (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
 import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
 import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
 import qualified Data.Set      as Set  (Set, empty, toList, insert)
@@ -168,7 +168,7 @@ data Kind = KBool
           | KBounded Bool Int
           | KUnbounded
           | KReal
-          | KUninterpreted String G.DataType
+          | KUninterpreted String (Either String [String], G.DataType)
           | KFloat
           | KDouble
           deriving (Eq, Ord)
@@ -309,17 +309,15 @@ class HasKind a where
                     | True                         = False
   isDouble        x | KDouble{}        <- kindOf x = True
                     | True                         = False
-  isInteger      x  | KUnbounded{}     <- kindOf x = True
+  isInteger       x | KUnbounded{}     <- kindOf x = True
                     | True                         = False
   isUninterpreted x | KUninterpreted{} <- kindOf x = True
                     | True                         = False
   showType = show . kindOf
 
   -- default signature for uninterpreted kinds
-  default kindOf :: G.Data a => a -> Kind
-  kindOf a = KUninterpreted nm dt
-    where dt = G.dataTypeOf a
-          nm = G.tyconUQname . G.dataTypeName $ dt
+  default kindOf :: (Read a, G.Data a) => a -> Kind
+  kindOf = constructUKind
 
 instance HasKind Bool    where kindOf _ = KBool
 instance HasKind Int8    where kindOf _ = KBounded True  8
@@ -975,6 +973,25 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    extraCstrs <- reverse `fmap` readIORef cstrs
    return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs outsO
 
+-- | Construct an uninterpreted kind from a piece of data; we distinguish simple enumerations as those
+-- are mapped to proper SMT-Lib2 data-types; while others go completely uninterpreted
+constructUKind :: forall a. (Read a, G.Data a) => a -> Kind
+constructUKind a = KUninterpreted sortName (mbEnumFields, dataType)
+  where dataType      = G.dataTypeOf a
+        sortName      = G.tyconUQname . G.dataTypeName $ dataType
+        constrs       = G.dataTypeConstrs dataType
+        isEnumeration = not (null constrs) && all (null . G.constrFields) constrs
+        mbEnumFields
+         | isEnumeration = check constrs []
+         | True          = Left $ sortName ++ "is not a finite non-empty enumeration"
+        check []     sofar = Right $ reverse sofar
+        check (c:cs) sofar = case checkConstr c of
+                                Nothing -> check cs (show c : sofar)
+                                Just s  -> Left $ sortName ++ "." ++ show c ++ ": " ++ s
+        checkConstr c = case (reads (show c) :: [(a, String)]) of
+                          ((_, "") : _)  -> Nothing
+                          _              -> Just $ "not a nullary constructor"
+
 -------------------------------------------------------------------------------
 -- * Symbolic Words
 -------------------------------------------------------------------------------
@@ -1023,7 +1040,7 @@ class (HasKind a, Ord a) => SymWord a where
   -- | One stop allocator
   mkSymWord :: Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
 
-  -- minimal complete definition, Nothing.
+  -- minimal complete definition:: Nothing.
   -- Giving no instances is ok when defining an uninterpreted sort, but otherwise you really
   -- want to define: mbMaxBound, mbMinBound, literal, fromCW, mkSymWord
   forall   = mkSymWord (Just ALL) . Just
@@ -1051,12 +1068,10 @@ class (HasKind a, Ord a) => SymWord a where
   literal x = error $ "Cannot create symbolic literals for kind: " ++ show (kindOf x)
   fromCW cw = error $ "Cannot convert CW " ++ show cw ++ " to kind " ++ show (kindOf (undefined :: a))
 
-  default mkSymWord :: G.Data a => Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
+  default mkSymWord :: (Read a, G.Data a) => Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
   mkSymWord mbQ mbNm = do
-        let dataType = G.dataTypeOf (undefined :: a)
-            sortName = G.tyconUQname . G.dataTypeName $ dataType
         st <- ask
-        let k = KUninterpreted sortName dataType
+        let k@(KUninterpreted sortName _) = constructUKind (undefined :: a)
         liftIO $ registerKind st k
         let q = case (mbQ, runMode st) of
                   (Just x,  _)                -> x

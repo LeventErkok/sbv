@@ -27,7 +27,9 @@ import Prelude hiding (not, or, and)
 -----------------------------------------------------------------------------
 
 -- | The uninterpreted sort 'B', corresponding to the carrier.
-data B = B deriving (Eq, Ord, Data, Typeable)
+-- To prevent SBV from translating it to an enumerated type, we simply attach an unused field
+data B = B ()
+        deriving (Eq, Ord, Data, Typeable, Read)
 
 -- | Default instance declaration for 'SymWord'
 instance SymWord  B

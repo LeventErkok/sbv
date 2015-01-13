@@ -23,7 +23,7 @@ testSuite = mkTestSuite $ \_ -> test [
   "unint-sort" ~: assert . (==4) . length . (extractModels :: AllSatResult -> [L]) =<< allSat p0
  ]
 
-data L = Nil | Cons Int L deriving (Eq, Ord, Data, Typeable)
+data L = Nil | Cons Int L deriving (Eq, Ord, Data, Typeable, Read)
 instance SymWord L
 instance HasKind L
 instance SatModel L where

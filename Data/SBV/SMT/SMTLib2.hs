@@ -50,7 +50,9 @@ addNonEqConstraints rm qinps allNonEqConstraints (SMTLibPgm _ (aliasTable, pre, 
 
 nonEqs :: RoundingMode -> [(String, CW)] -> [String]
 nonEqs rm scs = format $ interp ps ++ disallow (map eqClass uninterpClasses)
-  where (ups, ps) = partition (isUninterpreted . snd) scs
+  where isFree (KUninterpreted _ (Left _, _)) = True
+        isFree _                              = False
+        (ups, ps) = partition (isFree . kindOf . snd) scs
         format []     =  []
         format [m]    =  ["(assert " ++ m ++ ")"]
         format (m:ms) =  ["(assert (or " ++ m]
@@ -58,7 +60,7 @@ nonEqs rm scs = format $ interp ps ++ disallow (map eqClass uninterpClasses)
                       ++ ["        ))"]
         -- Regular (or interpreted) sorts simply get a constraint that we disallow the current assignment
         interp = map $ nonEq rm
-        -- Determine the equivalnce classes of uninterpreted sorts:
+        -- Determine the equivalence classes of uninterpreted sorts:
         uninterpClasses = filter (\l -> length l > 1) -- Only need this class if it has at least two members
                         . map (map fst)               -- throw away sorts, we only need the names
                         . groupBy ((==) `on` snd)     -- make sure they belong to the same sort and have the same value
@@ -190,7 +192,8 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
         userName s = case s `lookup` map snd inputs of
                         Just u  | show s /= u -> " ; tracks user variable " ++ show u
                         _ -> ""
-        declSort (s, _) = "(declare-sort " ++ s ++ " 0)"
+        declSort (s, (Left  r,  _)) = "(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted: " ++ r
+        declSort (s, (Right fs, _)) = "(declare-datatypes () ((" ++ s ++ " " ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
 
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = ["(declare-fun " ++ i ++ " " ++ cvtType t ++ ")"]

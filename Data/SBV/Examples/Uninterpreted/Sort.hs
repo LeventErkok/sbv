@@ -18,8 +18,9 @@ import Data.SBV
 
 -- | A new data-type that we expect to use in an uninterpreted fashion
 -- in the backend SMT solver. Note the custom @deriving@ clause, which
--- takes care of most of the boilerplate.
-data Q = Q deriving (Eq, Ord, Data, Typeable)
+-- takes care of most of the boilerplate. The () field is needed so
+-- SBV will not translate it to an enumerated data-type
+data Q = Q () deriving (Eq, Ord, Data, Typeable, Read)
 
 -- | We need 'SymWord' and 'HasKind' instances, but default definitions
 -- are always sufficient for uninterpreted sorts, so all we do is to

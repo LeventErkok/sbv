@@ -23,7 +23,7 @@ testSuite = mkTestSuite $ \_ -> test [
  ]
 
 -- Example provided by Thomas DuBuisson:
-data Bitstring = Bitstring deriving (Eq, Ord, Data, Typeable)
+data Bitstring = Bitstring () deriving (Eq, Ord, Data, Typeable, Read)
 instance SymWord Bitstring
 instance HasKind Bitstring
 type SBitstring = SBV Bitstring
