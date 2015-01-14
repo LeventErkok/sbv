@@ -132,7 +132,7 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
              ++ getModels
              ++ logic
              ++ [ "; --- uninterpreted sorts ---" ]
-             ++ map declSort usorts
+             ++ concatMap declSort usorts
              ++ [ "; --- literal constants ---" ]
              ++ concatMap (declConst (supportsMacros solverCaps)) consts
              ++ [ "; --- skolem constants ---" ]
@@ -192,8 +192,13 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
         userName s = case s `lookup` map snd inputs of
                         Just u  | show s /= u -> " ; tracks user variable " ++ show u
                         _ -> ""
-        declSort (s, (Left  r,  _)) = "(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted: " ++ r
-        declSort (s, (Right fs, _)) = "(declare-datatypes () ((" ++ s ++ " " ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
+        declSort (s, (Left  r,  _)) = ["(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted: " ++ r]
+        declSort (s, (Right fs, _)) = [ "(declare-datatypes () ((" ++ s ++ " " ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
+                                      , "(define-fun " ++ s ++ "_constrIndex ((x " ++ s ++ ")) Int"
+                                      ] ++ ["   " ++ body fs (1::Int)] ++ [")"]
+                where body []     _ = ""
+                      body [_]    i = show i
+                      body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
 
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = ["(declare-fun " ++ i ++ " " ++ cvtType t ++ ")"]
@@ -336,12 +341,12 @@ getTable m i
 cvtExp :: RoundingMode -> SkolemMap -> TableMap -> SBVExpr -> String
 cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
   where ssw = cvtSW skolemMap
-        bvOp     = all isBounded arguments
-        intOp    = any isInteger arguments
-        realOp   = any isReal arguments
-        doubleOp = any isDouble arguments
-        floatOp  = any isFloat arguments
-        boolOp   = all isBoolean arguments
+        bvOp     = all isBounded       arguments
+        intOp    = any isInteger       arguments
+        realOp   = any isReal          arguments
+        doubleOp = any isDouble        arguments
+        floatOp  = any isFloat         arguments
+        boolOp   = all isBoolean       arguments
         bad | intOp = error $ "SBV.SMTLib2: Unsupported operation on unbounded integers: " ++ show expr
             | True  = error $ "SBV.SMTLib2: Unsupported operation on real values: " ++ show expr
         ensureBVOrBool = bvOp || boolOp || bad
@@ -384,6 +389,10 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         lift2S oU oS sgn = lift2 (if sgn then oS else oU) sgn
         lift2Cmp o fo | doubleOp || floatOp = lift2 fo
                       | True                = lift2 o
+        unintComp o [a, b]
+          | KUninterpreted s (Right _, _) <- kindOf (head arguments)
+          = let idx v = "(" ++ s ++ "_constrIndex " ++ " " ++ v ++ ")" in "(" ++ o ++ " " ++ idx a ++ " " ++ idx b ++ ")"
+        unintComp o sbvs = error $ "SBV.SMT.SMTLib2.sh.unintComp: Unexpected arguments: "   ++ show (o, sbvs)
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
         lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib2.sh.lift1: Unexpected arguments: "   ++ show (o, sbvs)
         sh (SBVApp Ite [a, b, c]) = "(ite " ++ ssw a ++ " " ++ ssw b ++ " " ++ ssw c ++ ")"
@@ -517,9 +526,13 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                     , (LessEq,        lift2Cmp  "<=" "fp.leq")
                                     , (GreaterEq,     lift2Cmp  ">=" "fp.geq")
                                     ]
-                -- equality is the only thing that works on uninterpreted sorts
-                uninterpretedTable = [ (Equal,    lift2S "="        "="        True)
-                                     , (NotEqual, lift2S "distinct" "distinct" True)
+                -- equality and comparisons are the only thing that works on uninterpreted sorts
+                uninterpretedTable = [ (Equal,       lift2S "="        "="        True)
+                                     , (NotEqual,    lift2S "distinct" "distinct" True)
+                                     , (LessThan,    unintComp "<")
+                                     , (GreaterThan, unintComp ">")
+                                     , (LessEq,      unintComp "<=")
+                                     , (GreaterEq,   unintComp ">=")
                                      ]
 
 rot :: (SW -> String) -> String -> Int -> SW -> String
