@@ -11,6 +11,7 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE DefaultSignatures   #-}
 
 module Data.SBV.SMT.SMT where
 
@@ -118,6 +119,10 @@ class SatModel a where
   -- The default definition for this method should be sufficient in most use cases.
   cvtModel  :: (a -> Maybe b) -> Maybe (a, [CW]) -> Maybe (b, [CW])
   cvtModel f x = x >>= \(a, r) -> f a >>= \b -> return (b, r)
+
+  default parseCWs :: Read a => [CW] -> Maybe (a, [CW])
+  parseCWs (CW _ (CWUninterpreted s) : r) = Just (read s, r)
+  parseCWs _                              = Nothing
 
 -- | Parse a signed/sized value from a sequence of CWs
 genParse :: Integral a => Kind -> [CW] -> Maybe (a, [CW])
