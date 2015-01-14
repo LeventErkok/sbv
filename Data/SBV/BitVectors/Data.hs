@@ -1065,8 +1065,13 @@ class (HasKind a, Ord a) => SymWord a where
   -- Followings, you really want to define them unless the instance is for an uninterpreted sort
   mbMaxBound = Nothing
   mbMinBound = Nothing
-  literal x = error $ "Cannot create symbolic literals for kind: " ++ show (kindOf x)
-  fromCW cw = error $ "Cannot convert CW " ++ show cw ++ " to kind " ++ show (kindOf (undefined :: a))
+
+  default literal :: Show a => a -> SBV a
+  literal x = let k = kindOf x in SBV k (Left (CW k (CWUninterpreted (show x))))
+
+  default fromCW :: Read a => CW -> a
+  fromCW (CW _ (CWUninterpreted s)) = read s
+  fromCW cw                         = error $ "Cannot convert CW " ++ show cw ++ " to kind " ++ show (kindOf (undefined :: a))
 
   default mkSymWord :: (Read a, G.Data a) => Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
   mkSymWord mbQ mbNm = do
