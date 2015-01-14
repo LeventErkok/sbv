@@ -11,74 +11,88 @@
 
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE DeriveDataTypeable   #-}
 
 module Data.SBV.Examples.Puzzles.U2Bridge where
 
 import Control.Monad       (unless)
 import Control.Monad.State (State, runState, put, get, modify, evalState)
-import Data.Maybe          (fromJust)
 
+import Data.Generics
 import Data.SBV
 
 -------------------------------------------------------------
 -- * Modeling the puzzle
 -------------------------------------------------------------
 
--- | U2 band members
+-- | U2 band members. We want to translate this to SMT-Lib
+-- as a data-type, and hence the deriving mechanism.
 data U2Member = Bono | Edge | Adam | Larry
-              deriving (Show, Enum)
+              deriving (Data, Typeable, Ord, Eq, Read, Show)
+
+-- | Make 'U2Member' a valid symbolic element. In GHC 7.10; we'll be able to derive this automatically.
+instance SymWord  U2Member
+
+-- | Make 'U2Member' have a default kind. In GHC 7.10; we'll be able to derive this automatically.
+instance HasKind  U2Member
+
+-- | Make 'U2Member' part of model-generation facilities. In GHC 7.10; we'll be able to derive this automatically.
+instance SatModel U2Member
+
+-- | Symbolic shorthand for a 'U2Member'
+type SU2Member = SBV U2Member
+
+-- | Shorthands for symbolic versions of the members
+bono, edge, adam, larry :: SU2Member
+[bono, edge, adam, larry] = map literal [Bono, Edge, Adam, Larry]
 
 -- | Model time using 32 bits
-type Time      = SWord32
+type Time  = Word32
 
--- | Each member gets an 8-bit id
-type SU2Member = SWord8
-
--- | Bono's ID
-bono :: SU2Member
-bono  = fromIntegral . fromEnum $ Bono
-
--- | Edge's ID
-edge :: SU2Member
-edge  = fromIntegral . fromEnum $ Edge
-
--- | Adam's ID
-adam :: SU2Member
-adam  = fromIntegral . fromEnum $ Adam
-
--- | Larry's ID
-larry :: SU2Member
-larry = fromIntegral . fromEnum $ Larry
-
--- | Is this a valid person?
-isU2Member :: SU2Member -> SBool
-isU2Member = (.<= larry)  -- 8 bits can represent 256 people; trim it down!
+-- | Symbolic variant for time
+type STime = SBV Time
 
 -- | Crossing times for each member of the band
-crossTime :: SU2Member -> Time
-crossTime = select [  1 {- Bono -}
-                   ,  2 {- Edge -}
-                   ,  5 {- Adam -}
-                   ] 10 {- Larry -}
+crossTime :: U2Member -> Time
+crossTime Bono  = 1
+crossTime Edge  = 2
+crossTime Adam  = 5
+crossTime Larry = 10
+
+-- | The symbolic variant.. The duplication is unfortunate.
+sCrossTime :: SU2Member -> STime
+sCrossTime m =   ite (m .== bono) (literal (crossTime Bono))
+               $ ite (m .== edge) (literal (crossTime Edge))
+               $ ite (m .== adam) (literal (crossTime Adam))
+                                  (literal (crossTime Larry)) -- Must be Larry
 
 -- | Location of the flash
-type Location = SBool
+data Location = Here | There
+              deriving (Data, Typeable, Ord, Eq, Read, Show)
 
--- | We represent this side of the bridge as 'here', and arbitrarily as 'false'
-here :: Location
-here = false
+-- | Make 'Location' a valid symbolic element. In GHC 7.10; we'll be able to derive this automatically.
+instance SymWord  Location
 
--- | We represent other side of the bridge as 'there', and arbitrarily as 'true'
-there :: Location
-there = bnot here
+-- | Make 'Location' have a default kind. In GHC 7.10; we'll be able to derive this automatically.
+instance HasKind  Location
+
+-- | Make 'Location' part of model-generation facilities. In GHC 7.10; we'll be able to derive this automatically.
+instance SatModel Location
+
+-- | Symbolic variant of 'Location'
+type SLocation = SBV Location
+
+-- | Shorthands for symbolic versions of locations
+here, there :: SLocation
+[here, there]  = map literal [Here, There]
 
 -- | The status of the puzzle after each move
-data Status = Status { time   :: Time       -- ^ elapsed time
-                     , flash  :: Location   -- ^ location of the flash
-                     , lBono  :: Location   -- ^ location of Bono
-                     , lEdge  :: Location   -- ^ location of Edge
-                     , lAdam  :: Location   -- ^ location of Adam
-                     , lLarry :: Location   -- ^ location of Larry
+data Status = Status { time   :: STime       -- ^ elapsed time
+                     , flash  :: SLocation   -- ^ location of the flash
+                     , lBono  :: SLocation   -- ^ location of Bono
+                     , lEdge  :: SLocation   -- ^ location of Edge
+                     , lAdam  :: SLocation   -- ^ location of Adam
+                     , lLarry :: SLocation   -- ^ location of Larry
                      }
 
 -- | Start configuration, time elapsed is 0 and everybody is 'here'
@@ -121,30 +135,33 @@ peek f = do s <- get
             return (f s)
 
 -- | Given an arbitrary member, return his location
-whereIs :: SU2Member -> Move SBool
-whereIs p = do [lb, le, la, ll]  <- mapM peek [lBono, lEdge, lAdam, lLarry]
-               return $ select [lb, le, la] ll p
+whereIs :: SU2Member -> Move SLocation
+whereIs p =  ite (p .== bono) (peek lBono)
+           $ ite (p .== edge) (peek lEdge)
+           $ ite (p .== adam) (peek lAdam)
+                              (peek lLarry)
 
 -- | Transferring the flash to the other side
 xferFlash :: Move ()
-xferFlash = modify $ \s -> s{flash = bnot (flash s)}
+xferFlash = modify $ \s -> s{flash = ite (flash s .== here) there here}
 
 -- | Transferring a person to the other side
 xferPerson :: SU2Member -> Move ()
 xferPerson p =  do [lb, le, la, ll] <- mapM peek [lBono, lEdge, lAdam, lLarry]
-                   let lb' = ite (p .== bono)  (bnot lb) lb
-                       le' = ite (p .== edge)  (bnot le) le
-                       la' = ite (p .== adam)  (bnot la) la
-                       ll' = ite (p .== larry) (bnot ll) ll
+                   let move l = ite (l .== here) there here
+                       lb' = ite (p .== bono)  (move lb) lb
+                       le' = ite (p .== edge)  (move le) le
+                       la' = ite (p .== adam)  (move la) la
+                       ll' = ite (p .== larry) (move ll) ll
                    modify $ \s -> s{lBono = lb', lEdge = le', lAdam = la', lLarry = ll'}
 
 -- | Increment the time, when only one person crosses
 bumpTime1 :: SU2Member -> Move ()
-bumpTime1 p = modify $ \s -> s{time = time s + crossTime p}
+bumpTime1 p = modify $ \s -> s{time = time s + sCrossTime p}
 
 -- | Increment the time, when two people cross together
 bumpTime2 :: SU2Member -> SU2Member -> Move ()
-bumpTime2 p1 p2 = modify $ \s -> s{time = time s + crossTime p1 `smax` crossTime p2}
+bumpTime2 p1 p2 = modify $ \s -> s{time = time s + sCrossTime p1 `smax` sCrossTime p2}
 
 -- | Symbolic version of 'when'
 whenS :: SBool -> Move () -> Move ()
@@ -192,22 +209,12 @@ run = mapM step
 -- | Check if a given sequence of actions is valid, i.e., they must all
 -- cross the bridge according to the rules and in less than 17 seconds
 isValid :: Actions -> SBool
-isValid as = time end .<= 17 &&& bAll check as &&& zigZag there (map flash states) &&& bAll (.== there) [lBono end, lEdge end, lAdam end, lLarry end]
-  where check (s, p1, p2) =   isU2Member p1 &&& isU2Member p2
-                          -- the following two conditions ensure we find distinct solutions
-                          &&& (bnot s ==> p1 .> p2) -- for two person moves, ensure first person is "larger"
-                          &&& (s ==> p2 .== bono)   -- for one person moves, ensure second person is always "bono"
+isValid as = time end .<= 17 &&& bAll check as &&& zigZag (cycle [there, here]) (map flash states) &&& bAll (.== there) [lBono end, lEdge end, lAdam end, lLarry end]
+  where check (s, p1, p2) =   (bnot s ==> p1 .> p2)      -- for two person moves, ensure first person is "larger"
+                          &&& (s      ==> p2 .== bono)   -- for one person moves, ensure second person is always "bono"
         states = evalState (run as) start
         end = last states
-        zigZag _ []       = true
-        zigZag w (f:rest) = w .== f &&& zigZag (bnot w) rest
-
--- | The SatModel instance makes it easy to build models, mapping words to U2 members
--- in the way we designated.
-instance SatModel U2Member where
-  parseCWs as = cvtModel cvtCW $ parseCWs as
-    where cvtCW :: Word8 -> Maybe U2Member
-          cvtCW i = lookup i (zip [0..] [Bono, Edge, Adam, Larry])
+        zigZag reqs locs = bAnd $ zipWith (.==) locs reqs
 
 -------------------------------------------------------------
 -- * Solving the puzzle
@@ -234,11 +241,10 @@ solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ 
                          return ()
          where lss  = length ss
                go _ t []                   = putStrLn $ "Total time: " ++ show t
-               go l t ((True, a, _):rest)  = do putStrLn $ sh2 t ++ shL l ++ show a
-                                                go (not l) (t + ctime a) rest
+               go l t ((True,  a, _):rest) = do putStrLn $ sh2 t ++ shL l ++ show a
+                                                go (not l) (t + crossTime a) rest
                go l t ((False, a, b):rest) = do putStrLn $ sh2 t ++ shL l ++ show a ++ ", " ++ show b
-                                                go (not l) (t + ctime a `max` ctime b) rest
-               ctime = fromJust . unliteral . crossTime . fromIntegral . fromEnum
+                                                go (not l) (t + crossTime a `max` crossTime b) rest
                sh2 t = let s = show t in if length s < 2 then ' ' : s else s
                shL False = " --> "
                shL True  = " <-- "
@@ -254,16 +260,16 @@ solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ 
 -- Checking for solutions with 5 moves.
 -- Solution #1: 
 --  0 --> Edge, Bono
---  2 <-- Edge
---  4 --> Larry, Adam
--- 14 <-- Bono
+--  2 <-- Bono
+--  3 --> Larry, Adam
+-- 13 <-- Edge
 -- 15 --> Edge, Bono
 -- Total time: 17
 -- Solution #2: 
 --  0 --> Edge, Bono
---  2 <-- Bono
---  3 --> Larry, Adam
--- 13 <-- Edge
+--  2 <-- Edge
+--  4 --> Larry, Adam
+-- 14 <-- Bono
 -- 15 --> Edge, Bono
 -- Total time: 17
 -- Found: 2 solutions with 5 moves.
