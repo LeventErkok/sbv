@@ -5,7 +5,14 @@
 
 ### Version 3.5, Not yet released
 
+This release is mainly adding support for enumerated types in Haskell being
+translated to their symbolic counterparts; instead of going completely
+uninterpreted.
+
   * Keep track of data-type details for uninterpreted sorts.
+  * Rework the U2Bridge example to use enumerated types.
+  * The "Uninterpreted" name no longer makes sense with this change, so
+    rework the relevant names to ensure proper internal naming.
 
 ### Version 3.4, 2014-12-21
 
