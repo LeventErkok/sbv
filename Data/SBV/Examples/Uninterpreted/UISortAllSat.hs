@@ -24,7 +24,7 @@ import Data.SBV
 -- constructors.
 data L = Nil
        | Cons Int L
-       deriving (Eq, Ord, Data, Typeable, Read)
+       deriving (Eq, Ord, Data, Typeable, Read, Show)
 
 -- | Declare instances to make 'L' a usable uninterpreted sort. First we need the
 -- 'SymWord' instance, with the default definition sufficing.
