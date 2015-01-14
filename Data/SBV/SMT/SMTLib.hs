@@ -120,3 +120,5 @@ interpretSolverModelLine inps line = either err extract (parseSExpr line)
                                                                                    ++ "\n\tInput: " ++ show line
                                                                                    ++ "\n\tParse: " ++  show r
         extract _                                                          = []
+
+{-# ANN interpretSolverModelLine  "HLint: ignore Use elemIndex" #-}
