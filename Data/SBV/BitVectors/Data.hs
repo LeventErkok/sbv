@@ -73,11 +73,11 @@ import Data.SBV.BitVectors.AlgReals
 import Data.SBV.Utils.Lib
 
 -- | A constant value
-data CWVal = CWAlgReal       AlgReal    -- ^ algebraic real
-           | CWInteger       Integer    -- ^ bit-vector/unbounded integer
-           | CWFloat         Float      -- ^ float
-           | CWDouble        Double     -- ^ double
-           | CWUninterpreted String     -- ^ value of an uninterpreted kind
+data CWVal = CWAlgReal       AlgReal              -- ^ algebraic real
+           | CWInteger       Integer              -- ^ bit-vector/unbounded integer
+           | CWFloat         Float                -- ^ float
+           | CWDouble        Double               -- ^ double
+           | CWUninterpreted (Maybe Int, String)  -- ^ value of an uninterpreted kind. The Maybe Int shows index position for enumerations
 
 -- We cannot simply derive Eq/Ord for CWVal, since CWAlgReal doesn't have proper
 -- instances for these when values are infinitely precise reals. However, we do
@@ -334,7 +334,7 @@ instance HasKind Float   where kindOf _ = KFloat
 instance HasKind Double  where kindOf _ = KDouble
 
 -- | Lift a unary function thruough a CW
-liftCW :: (AlgReal -> b) -> (Integer -> b) -> (Float -> b) -> (Double -> b) -> (String -> b) -> CW -> b
+liftCW :: (AlgReal -> b) -> (Integer -> b) -> (Float -> b) -> (Double -> b) -> ((Maybe Int, String) -> b) -> CW -> b
 liftCW f _ _ _ _ (CW _ (CWAlgReal v))       = f v
 liftCW _ f _ _ _ (CW _ (CWInteger v))       = f v
 liftCW _ _ f _ _ (CW _ (CWFloat v))         = f v
@@ -342,7 +342,7 @@ liftCW _ _ _ f _ (CW _ (CWDouble v))        = f v
 liftCW _ _ _ _ f (CW _ (CWUninterpreted v)) = f v
 
 -- | Lift a binary function through a CW
-liftCW2 :: (AlgReal -> AlgReal -> b) -> (Integer -> Integer -> b) -> (Float -> Float -> b) -> (Double -> Double -> b) -> (String -> String -> b) -> CW -> CW -> b
+liftCW2 :: (AlgReal -> AlgReal -> b) -> (Integer -> Integer -> b) -> (Float -> Float -> b) -> (Double -> Double -> b) -> ((Maybe Int, String) -> (Maybe Int, String) -> b) -> CW -> CW -> b
 liftCW2 r i f d u x y = case (cwVal x, cwVal y) of
                          (CWAlgReal a,       CWAlgReal b)       -> r a b
                          (CWInteger a,       CWInteger b)       -> i a b
@@ -352,7 +352,7 @@ liftCW2 r i f d u x y = case (cwVal x, cwVal y) of
                          _                                      -> error $ "SBV.liftCW2: impossible, incompatible args received: " ++ show (x, y)
 
 -- | Map a unary function through a CW
-mapCW :: (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> (String -> String) -> CW -> CW
+mapCW :: (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> ((Maybe Int, String) -> (Maybe Int, String)) -> CW -> CW
 mapCW r i f d u x  = normCW $ CW (cwKind x) $ case cwVal x of
                                                CWAlgReal a       -> CWAlgReal       (r a)
                                                CWInteger a       -> CWInteger       (i a)
@@ -361,7 +361,7 @@ mapCW r i f d u x  = normCW $ CW (cwKind x) $ case cwVal x of
                                                CWUninterpreted a -> CWUninterpreted (u a)
 
 -- | Map a binary function through a CW
-mapCW2 :: (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (Float -> Float -> Float) -> (Double -> Double -> Double) -> (String -> String -> String) -> CW -> CW -> CW
+mapCW2 :: (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (Float -> Float -> Float) -> (Double -> Double -> Double) -> ((Maybe Int, String) -> (Maybe Int, String) -> (Maybe Int, String)) -> CW -> CW -> CW
 mapCW2 r i f d u x y = case (cwSameType x y, cwVal x, cwVal y) of
                         (True, CWAlgReal a,       CWAlgReal b)       -> normCW $ CW (cwKind x) (CWAlgReal       (r a b))
                         (True, CWInteger a,       CWInteger b)       -> normCW $ CW (cwKind x) (CWInteger       (i a b))
@@ -378,7 +378,7 @@ instance HasKind SW where
 
 instance Show CW where
   show w | cwIsBit w = show (cwToBool w)
-  show w             = liftCW show show show show id w ++ " :: " ++ showType w
+  show w             = liftCW show show show show snd w ++ " :: " ++ showType w
 
 instance Show SW where
   show (SW _ (NodeId n))
@@ -1067,11 +1067,16 @@ class (HasKind a, Ord a) => SymWord a where
   mbMinBound = Nothing
 
   default literal :: Show a => a -> SBV a
-  literal x = let k = kindOf x in SBV k (Left (CW k (CWUninterpreted (show x))))
+  literal x = let k@(KUninterpreted  _ (conts, _)) = kindOf x
+                  sx                               = show x
+                  mbIdx = case conts of
+                            Right xs -> sx `lookup` zip xs [0..]
+                            _        -> Nothing
+              in SBV k (Left (CW k (CWUninterpreted (mbIdx, sx))))
 
   default fromCW :: Read a => CW -> a
-  fromCW (CW _ (CWUninterpreted s)) = read s
-  fromCW cw                         = error $ "Cannot convert CW " ++ show cw ++ " to kind " ++ show (kindOf (undefined :: a))
+  fromCW (CW _ (CWUninterpreted (_, s))) = read s
+  fromCW cw                              = error $ "Cannot convert CW " ++ show cw ++ " to kind " ++ show (kindOf (undefined :: a))
 
   default mkSymWord :: (Read a, G.Data a) => Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
   mkSymWord mbQ mbNm = do

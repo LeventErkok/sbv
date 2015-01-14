@@ -121,8 +121,8 @@ class SatModel a where
   cvtModel f x = x >>= \(a, r) -> f a >>= \b -> return (b, r)
 
   default parseCWs :: Read a => [CW] -> Maybe (a, [CW])
-  parseCWs (CW _ (CWUninterpreted s) : r) = Just (read s, r)
-  parseCWs _                              = Nothing
+  parseCWs (CW _ (CWUninterpreted (_, s)) : r) = Just (read s, r)
+  parseCWs _                                   = Nothing
 
 -- | Parse a signed/sized value from a sequence of CWs
 genParse :: Integral a => Kind -> [CW] -> Maybe (a, [CW])
@@ -254,8 +254,8 @@ class Modelable a where
   -- SMT solver; and is unportable from solver to solver. Also see `getModelUninterpretedValues`.
   getModelUninterpretedValue :: String -> a -> Maybe String
   getModelUninterpretedValue v r = case v `M.lookup` getModelDictionary r of
-                                     Just (CW _ (CWUninterpreted s)) -> Just s
-                                     _                               -> Nothing
+                                     Just (CW _ (CWUninterpreted (_, s))) -> Just s
+                                     _                                    -> Nothing
 
   -- | A simpler variant of 'getModel' to get a model out without the fuss.
   extractModel :: SatModel b => a -> Maybe b

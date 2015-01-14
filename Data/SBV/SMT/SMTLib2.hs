@@ -195,7 +195,7 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
         declSort (s, (Left  r,  _)) = ["(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted: " ++ r]
         declSort (s, (Right fs, _)) = [ "(declare-datatypes () ((" ++ s ++ " " ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
                                       , "(define-fun " ++ s ++ "_constrIndex ((x " ++ s ++ ")) Int"
-                                      ] ++ ["   " ++ body fs (1::Int)] ++ [")"]
+                                      ] ++ ["   " ++ body fs (0::Int)] ++ [")"]
                 where body []     _ = ""
                       body [_]    i = show i
                       body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
@@ -309,19 +309,19 @@ hex sz v
 
 cvtCW :: RoundingMode -> CW -> String
 cvtCW rm x
-  | isBoolean       x, CWInteger       w <- cwVal x = if w == 0 then "false" else "true"
-  | isUninterpreted x, CWUninterpreted s <- cwVal x = s
-  | isReal          x, CWAlgReal       r <- cwVal x = algRealToSMTLib2 r
-  | isFloat         x, CWFloat         f <- cwVal x = showSMTFloat  rm f
-  | isDouble        x, CWDouble        d <- cwVal x = showSMTDouble rm d
-  | not (isBounded x), CWInteger       w <- cwVal x = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
-  | not (hasSign x)  , CWInteger       w <- cwVal x = hex (intSizeOf x) w
+  | isBoolean       x, CWInteger       w      <- cwVal x = if w == 0 then "false" else "true"
+  | isUninterpreted x, CWUninterpreted (_, s) <- cwVal x = s
+  | isReal          x, CWAlgReal       r      <- cwVal x = algRealToSMTLib2 r
+  | isFloat         x, CWFloat         f      <- cwVal x = showSMTFloat  rm f
+  | isDouble        x, CWDouble        d      <- cwVal x = showSMTDouble rm d
+  | not (isBounded x), CWInteger       w      <- cwVal x = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
+  | not (hasSign x)  , CWInteger       w      <- cwVal x = hex (intSizeOf x) w
   -- signed numbers (with 2's complement representation) is problematic
   -- since there's no way to put a bvneg over a positive number to get minBound..
   -- Hence, we punt and use binary notation in that particular case
-  | hasSign x        , CWInteger       w <- cwVal x = if w == negate (2 ^ intSizeOf x)
-                                                      then mkMinBound (intSizeOf x)
-                                                      else negIf (w < 0) $ hex (intSizeOf x) (abs w)
+  | hasSign x        , CWInteger       w      <- cwVal x = if w == negate (2 ^ intSizeOf x)
+                                                           then mkMinBound (intSizeOf x)
+                                                           else negIf (w < 0) $ hex (intSizeOf x) (abs w)
   | True = error $ "SBV.cvtCW: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
 
 negIf :: Bool -> String -> String
