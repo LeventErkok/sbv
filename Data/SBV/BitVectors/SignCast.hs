@@ -81,14 +81,14 @@ genericSign x
   | Just c <- unliteral x = literal $ fromIntegral c
   | True                  = SBV k (Right (cache y))
      where k = case kindOf x of
-                 KBool              -> error "Data.SBV.SignCast.genericSign: Called on boolean value"
-                 KBounded False n   -> KBounded True n
-                 KBounded True  _   -> error "Data.SBV.SignCast.genericSign: Called on signed value"
-                 KUnbounded         -> error "Data.SBV.SignCast.genericSign: Called on unbounded value"
-                 KReal              -> error "Data.SBV.SignCast.genericSign: Called on real value"
-                 KFloat             -> error "Data.SBV.SignCast.genericSign: Called on float value"
-                 KDouble            -> error "Data.SBV.SignCast.genericSign: Called on double value"
-                 KUninterpreted s _ -> error $ "Data.SBV.SignCast.genericSign: Called on unintepreted sort " ++ s
+                 KBool            -> error "Data.SBV.SignCast.genericSign: Called on boolean value"
+                 KBounded False n -> KBounded True n
+                 KBounded True  _ -> error "Data.SBV.SignCast.genericSign: Called on signed value"
+                 KUnbounded       -> error "Data.SBV.SignCast.genericSign: Called on unbounded value"
+                 KReal            -> error "Data.SBV.SignCast.genericSign: Called on real value"
+                 KFloat           -> error "Data.SBV.SignCast.genericSign: Called on float value"
+                 KDouble          -> error "Data.SBV.SignCast.genericSign: Called on double value"
+                 KUserSort s _    -> error $ "Data.SBV.SignCast.genericSign: Called on unintepreted sort " ++ s
            y st = do xsw <- sbvToSW st x
                      newExpr st k (SBVApp (Extract (intSizeOf x-1) 0) [xsw])
 
@@ -98,14 +98,14 @@ genericUnsign x
   | Just c <- unliteral x = literal $ fromIntegral c
   | True                  = SBV k (Right (cache y))
      where k = case kindOf x of
-                 KBool              -> error "Data.SBV.SignCast.genericUnSign: Called on boolean value"
-                 KBounded True  n   -> KBounded False n
-                 KBounded False _   -> error "Data.SBV.SignCast.genericUnSign: Called on unsigned value"
-                 KUnbounded         -> error "Data.SBV.SignCast.genericUnSign: Called on unbounded value"
-                 KReal              -> error "Data.SBV.SignCast.genericUnSign: Called on real value"
-                 KFloat             -> error "Data.SBV.SignCast.genericUnSign: Called on float value"
-                 KDouble            -> error "Data.SBV.SignCast.genericUnSign: Called on double value"
-                 KUninterpreted s _ -> error $ "Data.SBV.SignCast.genericUnSign: Called on unintepreted sort " ++ s
+                 KBool            -> error "Data.SBV.SignCast.genericUnSign: Called on boolean value"
+                 KBounded True  n -> KBounded False n
+                 KBounded False _ -> error "Data.SBV.SignCast.genericUnSign: Called on unsigned value"
+                 KUnbounded       -> error "Data.SBV.SignCast.genericUnSign: Called on unbounded value"
+                 KReal            -> error "Data.SBV.SignCast.genericUnSign: Called on real value"
+                 KFloat           -> error "Data.SBV.SignCast.genericUnSign: Called on float value"
+                 KDouble          -> error "Data.SBV.SignCast.genericUnSign: Called on double value"
+                 KUserSort s _    -> error $ "Data.SBV.SignCast.genericUnSign: Called on unintepreted sort " ++ s
            y st = do xsw <- sbvToSW st x
                      newExpr st k (SBVApp (Extract (intSizeOf x-1) 0) [xsw])
 

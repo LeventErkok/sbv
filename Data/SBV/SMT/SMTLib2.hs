@@ -50,7 +50,7 @@ addNonEqConstraints rm qinps allNonEqConstraints (SMTLibPgm _ (aliasTable, pre, 
 
 nonEqs :: RoundingMode -> [(String, CW)] -> [String]
 nonEqs rm scs = format $ interp ps ++ disallow (map eqClass uninterpClasses)
-  where isFree (KUninterpreted _ (Left _, _)) = True
+  where isFree (KUserSort _ (Left _, _)) = True
         isFree _                              = False
         (ups, ps) = partition (isFree . kindOf . snd) scs
         format []     =  []
@@ -104,7 +104,7 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
         hasFloat   = KFloat     `Set.member` kindInfo
         hasDouble  = KDouble    `Set.member` kindInfo
         hasBVs     = not $ null [() | KBounded{} <- Set.toList kindInfo]
-        usorts     = [(s, dt) | KUninterpreted s dt <- Set.toList kindInfo]
+        usorts     = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
         logic
            | Just l <- smtLogic
            = ["(set-logic " ++ show l ++ ") ; NB. User specified."]
@@ -273,13 +273,13 @@ swFunType :: [SW] -> SW -> String
 swFunType ss s = "(" ++ unwords (map swType ss) ++ ") " ++ swType s
 
 smtType :: Kind -> String
-smtType KBool                = "Bool"
-smtType (KBounded _ sz)      = "(_ BitVec " ++ show sz ++ ")"
-smtType KUnbounded           = "Int"
-smtType KReal                = "Real"
-smtType KFloat               = "(_ FloatingPoint  8 24)"
-smtType KDouble              = "(_ FloatingPoint 11 53)"
-smtType (KUninterpreted s _) = s
+smtType KBool           = "Bool"
+smtType (KBounded _ sz) = "(_ BitVec " ++ show sz ++ ")"
+smtType KUnbounded      = "Int"
+smtType KReal           = "Real"
+smtType KFloat          = "(_ FloatingPoint  8 24)"
+smtType KDouble         = "(_ FloatingPoint 11 53)"
+smtType (KUserSort s _) = s
 
 cvtType :: SBVType -> String
 cvtType (SBVType []) = error "SBV.SMT.SMTLib2.cvtType: internal: received an empty type!"
@@ -309,19 +309,19 @@ hex sz v
 
 cvtCW :: RoundingMode -> CW -> String
 cvtCW rm x
-  | isBoolean       x, CWInteger       w      <- cwVal x = if w == 0 then "false" else "true"
-  | isUninterpreted x, CWUninterpreted (_, s) <- cwVal x = s
-  | isReal          x, CWAlgReal       r      <- cwVal x = algRealToSMTLib2 r
-  | isFloat         x, CWFloat         f      <- cwVal x = showSMTFloat  rm f
-  | isDouble        x, CWDouble        d      <- cwVal x = showSMTDouble rm d
-  | not (isBounded x), CWInteger       w      <- cwVal x = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
-  | not (hasSign x)  , CWInteger       w      <- cwVal x = hex (intSizeOf x) w
+  | isBoolean       x, CWInteger  w      <- cwVal x = if w == 0 then "false" else "true"
+  | isUninterpreted x, CWUserSort (_, s) <- cwVal x = s
+  | isReal          x, CWAlgReal  r      <- cwVal x = algRealToSMTLib2 r
+  | isFloat         x, CWFloat    f      <- cwVal x = showSMTFloat  rm f
+  | isDouble        x, CWDouble   d      <- cwVal x = showSMTDouble rm d
+  | not (isBounded x), CWInteger  w      <- cwVal x = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
+  | not (hasSign x)  , CWInteger  w      <- cwVal x = hex (intSizeOf x) w
   -- signed numbers (with 2's complement representation) is problematic
   -- since there's no way to put a bvneg over a positive number to get minBound..
   -- Hence, we punt and use binary notation in that particular case
-  | hasSign x        , CWInteger       w      <- cwVal x = if w == negate (2 ^ intSizeOf x)
-                                                           then mkMinBound (intSizeOf x)
-                                                           else negIf (w < 0) $ hex (intSizeOf x) (abs w)
+  | hasSign x        , CWInteger  w      <- cwVal x = if w == negate (2 ^ intSizeOf x)
+                                                      then mkMinBound (intSizeOf x)
+                                                      else negIf (w < 0) $ hex (intSizeOf x) (abs w)
   | True = error $ "SBV.cvtCW: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
 
 negIf :: Bool -> String -> String
@@ -390,7 +390,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         lift2Cmp o fo | doubleOp || floatOp = lift2 fo
                       | True                = lift2 o
         unintComp o [a, b]
-          | KUninterpreted s (Right _, _) <- kindOf (head arguments)
+          | KUserSort s (Right _, _) <- kindOf (head arguments)
           = let idx v = "(" ++ s ++ "_constrIndex " ++ " " ++ v ++ ")" in "(" ++ o ++ " " ++ idx a ++ " " ++ idx b ++ ")"
         unintComp o sbvs = error $ "SBV.SMT.SMTLib2.sh.unintComp: Unexpected arguments: "   ++ show (o, sbvs)
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
@@ -400,25 +400,25 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           | needsCheck = "(ite " ++ cond ++ ssw e ++ " " ++ lkUp ++ ")"
           | True       = lkUp
           where needsCheck = case aKnd of
-                              KBool              -> (2::Integer) > fromIntegral l
-                              KBounded _ n       -> (2::Integer)^n > fromIntegral l
-                              KUnbounded         -> True
-                              KReal              -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
-                              KFloat             -> error "SBV.SMT.SMTLib2.cvtExp: unexpected float valued index"
-                              KDouble            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected double valued index"
-                              KUninterpreted s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
+                              KBool         -> (2::Integer) > fromIntegral l
+                              KBounded _ n  -> (2::Integer)^n > fromIntegral l
+                              KUnbounded    -> True
+                              KReal         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
+                              KFloat        -> error "SBV.SMT.SMTLib2.cvtExp: unexpected float valued index"
+                              KDouble       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected double valued index"
+                              KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
                 lkUp = "(" ++ getTable tableMap t ++ " " ++ ssw i ++ ")"
                 cond
                  | hasSign i = "(or " ++ le0 ++ " " ++ gtl ++ ") "
                  | True      = gtl ++ " "
                 (less, leq) = case aKnd of
-                                KBool              -> error "SBV.SMT.SMTLib2.cvtExp: unexpected boolean valued index"
-                                KBounded{}         -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
-                                KUnbounded         -> ("<", "<=")
-                                KReal              -> ("<", "<=")
-                                KFloat             -> ("fp.lt", "fp.leq")
-                                KDouble            -> ("fp.lt", "fp.geq")
-                                KUninterpreted s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
+                                KBool         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected boolean valued index"
+                                KBounded{}    -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
+                                KUnbounded    -> ("<", "<=")
+                                KReal         -> ("<", "<=")
+                                KFloat        -> ("fp.lt", "fp.leq")
+                                KDouble       -> ("fp.lt", "fp.geq")
+                                KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
                 mkCnst = cvtCW rm . mkConstCW (kindOf i)
                 le0  = "(" ++ less ++ " " ++ ssw i ++ " " ++ mkCnst 0 ++ ")"
                 gtl  = "(" ++ leq  ++ " " ++ mkCnst l ++ " " ++ ssw i ++ ")"

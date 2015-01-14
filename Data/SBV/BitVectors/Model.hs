@@ -68,10 +68,10 @@ ghcBitSize = bitSize
 #endif
 
 noUnint  :: (Maybe Int, String) -> a
-noUnint x = error $ "Unexpected operation called on uninterpreted value: " ++ show x
+noUnint x = error $ "Unexpected operation called on uninterpreted/enumerated value: " ++ show x
 
 noUnint2 :: (Maybe Int, String) -> (Maybe Int, String) -> a
-noUnint2 x y = error $ "Unexpected binary operation called on uninterpreted values: " ++ show (x, y)
+noUnint2 x y = error $ "Unexpected binary operation called on uninterpreted/enumerated values: " ++ show (x, y)
 
 liftSym1 :: (State -> Kind -> SW -> IO SW) -> (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> SBV b -> SBV b
 liftSym1 _   opCR opCI opCF opCD   (SBV k (Left a)) = SBV k $ Left  $ mapCW opCR opCI opCF opCD noUnint a
@@ -419,7 +419,7 @@ eqOpt w x y = case kindOf x of
                 KDouble -> Nothing
                 _       -> if x == y then Just w else Nothing
 
--- For uninterpreted values, we carefully lift through the constructor index for comparisons:
+-- For uninterpreted/enumerated values, we carefully lift through the constructor index for comparisons:
 uiLift :: String -> (Int -> Int -> Bool) -> (Maybe Int, String) -> (Maybe Int, String) -> Bool
 uiLift _ cmp (Just i, _) (Just j, _) = i `cmp` j
 uiLift w _   a           b           = error $ "Data.SBV.BitVectors.Model: Impossible happened while trying to lift " ++ w ++ " over " ++ show (a, b)

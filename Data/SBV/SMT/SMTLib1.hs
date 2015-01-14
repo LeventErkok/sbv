@@ -292,4 +292,4 @@ kindType KUnbounded           = die "unbounded Integer"
 kindType KReal                = die "real value"
 kindType KFloat               = die "float value"
 kindType KDouble              = die "double value"
-kindType (KUninterpreted s _) = die $ "uninterpreted sort: " ++ s
+kindType (KUserSort s _)      = die $ "user sort: " ++ s
