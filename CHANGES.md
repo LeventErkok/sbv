@@ -13,6 +13,8 @@ uninterpreted.
   * Rework the U2Bridge example to use enumerated types.
   * The "Uninterpreted" name no longer makes sense with this change, so
     rework the relevant names to ensure proper internal naming.
+  * Add Data/SBV/Examples/Misc/Enumerate.hs as an example for demonstrating
+    how enumerations are translated.
   * Fix a long-standing bug in the implementation of select when
     translated as SMT-Lib tables. (Github issue #103.) Thanks to
     Brian Huffman for reporting.

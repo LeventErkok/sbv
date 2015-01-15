@@ -70,6 +70,7 @@ Library
                   , Data.SBV.Examples.Crypto.RC4
                   , Data.SBV.Examples.Existentials.CRCPolynomial
                   , Data.SBV.Examples.Existentials.Diophantine
+                  , Data.SBV.Examples.Misc.Enumerate
                   , Data.SBV.Examples.Misc.Floating
                   , Data.SBV.Examples.Misc.SBranch
                   , Data.SBV.Examples.Misc.ModelExtract
