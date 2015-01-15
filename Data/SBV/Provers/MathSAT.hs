@@ -62,7 +62,9 @@ mathSAT = SMTSolver {
        zero KReal                = "0.0"
        zero KFloat               = error "SBV.MathSAT.zero: Unexpected sort SFloat"
        zero KDouble              = error "SBV.MathSAT.zero: Unexpected sort SDouble"
-       zero (KUserSort s _)      = error $ "SBV.MathSAT.zero: Unexpected uninterpreted sort: " ++ s
+       -- For uninterpreted sorts, we use the first element of the enumerations if available; otherwise bail out..
+       zero (KUserSort _ (Right (f:_), _)) = f
+       zero (KUserSort s _)                = error $ "SBV.MathSAT.zero: Unexpected uninterpreted sort: " ++ s
        cont skolemMap = intercalate "\n" $ concatMap extract skolemMap
         where -- In the skolemMap:
               --    * Left's are universals: i.e., the model should be true for

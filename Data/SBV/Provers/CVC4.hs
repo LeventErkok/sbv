@@ -63,7 +63,9 @@ cvc4 = SMTSolver {
        zero KReal                = "0.0"
        zero KFloat               = error "SBV.CVC4.zero: Unexpected float value"
        zero KDouble              = error "SBV.CVC4.zero: Unexpected double value"
-       zero (KUserSort s _)      = error $ "SBV.CVC4.zero: Unexpected uninterpreted sort: " ++ s
+       -- For uninterpreted sorts, we use the first element of the enumerations if available; otherwise bail out..
+       zero (KUserSort _ (Right (f:_), _)) = f
+       zero (KUserSort s _)                = error $ "SBV.CVC4.zero: Unexpected uninterpreted sort: " ++ s
        cont skolemMap = intercalate "\n" $ map extract skolemMap
         where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ zero (kindOf s) ++ "))\")"
               extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
