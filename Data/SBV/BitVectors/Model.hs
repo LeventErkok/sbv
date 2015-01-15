@@ -37,7 +37,7 @@ import Control.Monad   (when, liftM)
 import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits       (Bits(..))
 import Data.Int        (Int8, Int16, Int32, Int64)
-import Data.List       (genericLength, genericIndex, unzip4, unzip5, unzip6, unzip7, intercalate)
+import Data.List       (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate)
 import Data.Maybe      (fromMaybe)
 import Data.Word       (Word8, Word16, Word32, Word64)
 
@@ -1180,8 +1180,11 @@ class Mergeable a where
    -- list is really humongous, which is not very common in general. (Also,
    -- for the case when the list is bit-vectors, we use SMT tables anyhow.)
    select xs err ind
-    | isReal ind = error "SBV.select: unsupported real valued select/index expression"
-    | True       = walk xs ind err
+    | isReal   ind = error "SBV.select: unsupported real valued select/index expression"
+    | isFloat  ind = error "SBV.select: unsupported float valued select/index expression"
+    | isDouble ind = error "SBV.select: unsupported double valued select/index expression"
+    | hasSign  ind = ite (ind .< 0) err (walk xs ind err)
+    | True         =                     walk xs ind err
     where walk []     _ acc = acc
           walk (e:es) i acc = walk es (i-1) (ite (i .== 0) e acc)
 
@@ -1334,18 +1337,26 @@ instance SymWord a => Mergeable (SBV a) where
                                   CWInteger i -> if i < 0 || i >= genericLength xs
                                                  then err
                                                  else xs `genericIndex` i
-                                  _           -> error "SBV.select: unsupported real valued select/index expression"
-    select xs err ind  = SBV kElt $ Right $ cache r
-       where kInd = kindOf ind
-             kElt = kindOf err
-             r st  = do sws <- mapM (sbvToSW st) xs
-                        swe <- sbvToSW st err
-                        if all (== swe) sws  -- off-chance that all elts are the same
-                           then return swe
-                           else do idx <- getTableIndex st kInd kElt sws
-                                   swi <- sbvToSW st ind
-                                   let len = length xs
-                                   newExpr st kElt (SBVApp (LkUp (idx, kInd, kElt, len) swi swe) [])
+                                  _           -> error $ "SBV.select: unsupported " ++ show (kindOf ind) ++ " valued select/index expression"
+    select xsOrig err ind = xs `seq` SBV kElt (Right (cache r))
+      where kInd = kindOf ind
+            kElt = kindOf err
+            -- Based on the index size, we need to limit the elements. For instance if the index is 8 bits, but there
+            -- are 257 elements, that last element will never be used and we can chop it of..
+            xs   = case kindOf ind of
+                     KBounded False i -> genericTake ((2::Integer) ^ (fromIntegral i     :: Integer)) xsOrig
+                     KBounded True  i -> genericTake ((2::Integer) ^ (fromIntegral (i-1) :: Integer)) xsOrig
+                     KUnbounded       -> xsOrig
+                     _                -> error $ "SBV.select: unsupported " ++ show (kindOf ind) ++ " valued select/index expression"
+            r st  = do sws <- mapM (sbvToSW st) xs
+                       swe <- sbvToSW st err
+                       if all (== swe) sws  -- off-chance that all elts are the same
+                          then return swe
+                          else do idx <- getTableIndex st kInd kElt sws
+                                  swi <- sbvToSW st ind
+                                  let len = length xs
+                                  -- NB. No need to worry here that the index might be < 0; as the SMTLib translation takes care of that automatically
+                                  newExpr st kElt (SBVApp (LkUp (idx, kInd, kElt, len) swi swe) [])
 
 -- Unit
 instance Mergeable () where
