@@ -13,6 +13,9 @@ uninterpreted.
   * Rework the U2Bridge example to use enumerated types.
   * The "Uninterpreted" name no longer makes sense with this change, so
     rework the relevant names to ensure proper internal naming.
+  * Fix a long-standing bug in the implementation of select when
+    translated as SMT-Lib tables. (Github issue #103.) Thanks to
+    Brian Huffman for reporting.
 
 ### Version 3.4, 2014-12-21
 
