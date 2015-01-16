@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 3.4
+* Latest Hackage released version: 3.5
 
-### Version 3.5, Not yet released
+### Version 3.5, 2015-01-15
 
 This release is mainly adding support for enumerated types in Haskell being
 translated to their symbolic counterparts; instead of going completely
@@ -252,14 +252,14 @@ uninterpreted.
   	- sbvShiftLeft
 	- sbvShiftRight
     which can accommodate unsigned symbolic shift amounts. Note that
-    one cannot use Haskell's shiftL/shiftR from the Bits class since
+    one cannot use the Haskell shiftL/shiftR functions from the Bits class since
     they are hard-wired to take 'Int' values as the shift amounts only.
   - Add a new function 'sbvArithShiftRight', which is the same as
     a shift-right, except it uses the MSB of the input as the bit to fill
     in (instead of always filling in with 0 bits). Note that this is
     the same as shiftRight for signed values, but differs from a shiftRight
     when the input is unsigned. (There is no Haskell analogue of this
-    function, as Haskell's shiftR is always arithmetic for signed
+    function, as Haskell shiftR is always arithmetic for signed
     types and logical for unsigned ones.) This variant is designed for
     use cases when one uses the underlying unsigned SMT-Lib representation
     to implement custom signed operations, for instance.
@@ -268,7 +268,7 @@ uninterpreted.
 ### Version 2.7, 2012-10-21
 
   - Add missing QuickCheck instance for SReal
-  - When dealing with concrete SReal's, make sure to operate
+  - When dealing with concrete SReals, make sure to operate
     only on exact algebraic reals on the Haskell side, leaving
     true algebraic reals (i.e., those that are roots of polynomials
     that cannot be expressed as a rational) symbolic. This avoids
@@ -347,7 +347,7 @@ uninterpreted.
   rationals as well.
     
   You *should* use Z3 v4.0 when working with real numbers. While the interface will
-  work with older versions of Z3 (or other SMT solvers in general), it uses Z3's
+  work with older versions of Z3 (or other SMT solvers in general), it uses Z3
   root-obj construct to retrieve and query algebraic reals.
 
   While SReal values have infinite precision, printing such values is not trivial since
@@ -366,7 +366,7 @@ uninterpreted.
   * Add functions s[TYPE] and s[TYPE]s for each symbolic type we support (i.e.,
     sBool, sBools, sWord8, sWord8s, etc.), to create symbolic variables of the
     right kind.  Strictly speaking these are just synonyms for 'free'
-    and 'mapM free' (plural versions), so they aren't adding any additional
+    and 'mapM free' (plural versions), so they are not adding any additional
     power. Except, they are specialized at their respective types, and might be
     easier to remember.
   * Add function solve, which is merely a synonym for (return . bAnd), but
@@ -410,10 +410,10 @@ uninterpreted.
     detalied below:
       http://stackoverflow.com/questions/9426420/soundness-issue-with-integer-bv-mixed-benchmarks
     As a consequence, mixed Integer/BV problems can cause soundness issues in Z3
-    and does in SBV. Unfortunately, it's too severe for SBV to add the woraround
-    option, as it slows down the solver as a side effect as well. Thus, we're
+    and does in SBV. Unfortunately, it is too severe for SBV to add the woraround
+    option, as it slows down the solver as a side effect as well. Thus, we are
     making this optionally available if/when needed. (Note that the work-around
-    should not be necessary with Z3 v3.3; which isn't released yet.)
+    should not be necessary with Z3 v3.3; which is not released yet.)
   * Other minor clean-up
 
 ### Version 1.1, 2012-02-14
@@ -466,7 +466,7 @@ uninterpreted.
      been better, but it's already taken.) This is not as useful as
      one might think as forAll and forSome do not nest, as an inner
      application of one pushes its argument to a Predicate, making
-     the outer one useless, but it's nonetheless useful by itself.
+     the outer one useless, but it is nonetheless useful by itself.
    * Add a "Modelable" class, which simplifies model extraction.
    * Add support for quick-check at the "Symbolic SBool" level. Previously
      SBV only allowed functions returning SBool to be quick-checked, which
@@ -520,7 +520,7 @@ uninterpreted.
 
    * Add support for SInteger, the type of signed unbounded integer
      values. SBV can now prove theorems about unbounded numbers,
-     following the semantics of Haskell's Integer type. (Requires z3 to
+     following the semantics of Haskell Integer type. (Requires z3 to
      be used as the backend solver.)
    * Add functions 'optimize', 'maximize', and 'minimize' that can
      be used to find optimal solutions to given constraints with
@@ -538,7 +538,7 @@ uninterpreted.
      actually returned "unknown" for the problem and the model
      might therefore be bogus. Note that we did not need this before
      since we only supported bounded bit-vectors, which has a decidable
-     theory. With the addition of unbounded Integer's and quantifiers, the
+     theory. With the addition of unbounded Integers and quantifiers, the
      solvers can now return unknown. This should still be rare in practice,
      but can happen with the use of non-linear constructs. (i.e.,
      multiplication of two variables.)
@@ -551,7 +551,7 @@ uninterpreted.
   marks free-variables appropriately using forall/exists functions, and the
   solver translates them accordingly. Note that this is a non-backwards
   compatible change in sat calls, as the semantics of formulas is essentially
-  changing. While this is unfortunate, it's more uniform and simpler to understand
+  changing. While this is unfortunate, it is more uniform and simpler to understand
   in general.
 
   This release also adds support for the Z3 solver, which is the main
@@ -579,7 +579,7 @@ uninterpreted.
      on/off driver program generation. Default is to generate
      a driver. (Issue "cgGenerateDriver False" to skip the driver.)
      For a library, a driver will be generated if any of the
-     constituent parts has a driver. Otherwise it'll be skipped.
+     constituent parts has a driver. Otherwise it will be skipped.
    * Fix a bug in C code generation where "Not" over booleans were
      incorrectly getting translated due to need for masking.
    * Add support for compilation with uninterpreted functions. Users
@@ -670,7 +670,7 @@ Bug fixes:
     it relied on the Integer instance, which
     does the wrong thing after normalization.
   * Fix conversion of signed numbers from bits,
-    previous version did not handle two's
+    previous version did not handle twos
     complement layout correctly
 
 Testing:
@@ -711,7 +711,7 @@ New features:
 Bug fixes:
 
   * Output naming bug, reported by Josef Svenningsson
-  * Specification bug in Legato's multipler example
+  * Specification bug in Legatos multipler example
 
 ### Version 0.9.11, 2011-02-16
   
@@ -719,7 +719,7 @@ Bug fixes:
 
 ### Version 0.9.10, 2011-02-15
 
-  * Integrate commits from Iavor: Generalize SBV's to keep
+  * Integrate commits from Iavor: Generalize SBVs to keep
     track the integer directly without resorting to different
     leaf types
   * Remove the unnecessary CLC instruction from the Legato example
@@ -734,7 +734,7 @@ Bug fixes:
 ### Version 0.9.8, 2011-01-22
 
   * Better support for uninterpreted-functions
-  * Support counter-examples with SArray's
+  * Support counter-examples with SArrays
   * Ladner-Fischer scheme example
   * Documentation updates
 
