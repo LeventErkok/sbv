@@ -29,6 +29,7 @@ module Data.SBV.BitVectors.Model (
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, toSReal, sFloat, sFloats, sDouble, sDoubles, slet
   , fusedMA
+  , liftQRem, liftDMod
   )
   where
 
