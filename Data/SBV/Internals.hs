@@ -19,9 +19,11 @@ module Data.SBV.Internals (
   , liftQRem, liftDMod
   -- * Compilation to C
   , compileToC', compileToCLib', CgPgmBundle(..), CgPgmKind(..)
+  , mkSymSBVWithRandom
   ) where
 
 import Data.SBV.BitVectors.Data   (Result, SBVRunMode(..), runSymbolic, runSymbolic', SBV(..), CW(..), Kind(..), CWVal(..), AlgReal(..), Quantifier(..), mkConstCW)
+import Data.SBV.BitVectors.Data   (mkSymSBVWithRandom)
 import Data.SBV.BitVectors.Model  (genVar, genVar_, slet, liftQRem, liftDMod)
 import Data.SBV.Compilers.C       (compileToC', compileToCLib')
 import Data.SBV.Compilers.CodeGen (CgPgmBundle(..), CgPgmKind(..))
