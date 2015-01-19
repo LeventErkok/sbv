@@ -707,7 +707,7 @@ instance Eq (SBV a) where
   a /= b = error $ "Comparing symbolic bit-vectors; Use (./=) instead. Received: " ++ show (a, b)
 
 instance HasKind a => HasKind (SBV a) where
-  kindOf _ = kindOf (undefined :: a)
+  kindOf (SBV k _) = k
 
 -- | Increment the variable counter
 incCtr :: State -> IO Int
