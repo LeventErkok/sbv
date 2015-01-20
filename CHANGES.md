@@ -3,6 +3,14 @@
 
 * Latest Hackage released version: 3.5
 
+### Version 4.0, Not yet released
+
+  * Modifications to support arbitrary bit-sized vectors; 
+    These changes have been contributed by Brian Huffman
+    of Galois.. Thanks Brian.
+  * Support for rotate-left/rotate-right with variable
+    rotation amounts. (From Brian Huffman.)
+
 ### Version 3.5, 2015-01-15
 
 This release is mainly adding support for enumerated types in Haskell being

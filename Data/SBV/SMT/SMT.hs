@@ -189,6 +189,7 @@ instance SatModel Double where
   parseCWs (CW KDouble (CWDouble i) : r) = Just (i, r)
   parseCWs _                             = Nothing
 
+-- | 'CW' as extracted from a model; trivial definition
 instance SatModel CW where
   parseCWs (cw : r) = Just (cw, r)
   parseCWs []       = Nothing

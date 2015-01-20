@@ -815,11 +815,13 @@ sbvToSW st (SBV _ (Right f)) = uncache f st
 newtype Symbolic a = Symbolic (ReaderT State IO a)
                    deriving (Applicative, Functor, Monad, MonadIO, MonadReader State)
 
--- | Create a symbolic value, based on the quantifier we have. If an explicit quantifier is given, we just use that.
--- If not, then we pick existential for SAT calls and universal for everything else.
+-- | Create a symbolic variable. Equivalent to 'mkSymSBVWithRandom randomIO'.
 mkSymSBV :: forall a. (Random a, SymWord a) => Maybe Quantifier -> Kind -> Maybe String -> Symbolic (SBV a)
 mkSymSBV = mkSymSBVWithRandom randomIO
 
+-- | Create a symbolic value, based on the quantifier we have. If an explicit quantifier is given, we just use that.
+-- If not, then we pick existential for SAT calls and universal for everything else. The @rand@ argument is used
+-- in generating random values for this variable when used for 'quickCheck' purposes.
 mkSymSBVWithRandom :: forall a. SymWord a => IO (SBV a) -> Maybe Quantifier -> Kind -> Maybe String -> Symbolic (SBV a)
 mkSymSBVWithRandom rand mbQ k mbNm = do
         st <- ask

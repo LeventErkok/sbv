@@ -22,7 +22,8 @@
 
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), SIntegral
-  , ite, iteLazy, sBranch, sAssert, sAssertCont, sbvTestBit, sbvPopCount, setBitTo, sbvShiftLeft, sbvShiftRight, sbvSignedShiftArithRight
+  , ite, iteLazy, sBranch, sAssert, sAssertCont, sbvTestBit, sbvPopCount, setBitTo
+  , sbvShiftLeft, sbvShiftRight, sbvRotateLeft, sbvRotateRight, sbvSignedShiftArithRight
   , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
@@ -616,22 +617,21 @@ oneIf t = ite t 1 0
 
 -- | Predicate for optimizing word operations like (+) and (*).
 isConcreteZero :: SBV a -> Bool
-isConcreteZero (SBV _ (Left (CW _ (CWInteger n)))) = n == 0
+isConcreteZero (SBV _     (Left (CW _     (CWInteger n)))) = n == 0
 isConcreteZero (SBV KReal (Left (CW KReal (CWAlgReal v)))) = isExactRational v && v == 0
-isConcreteZero _ = False
+isConcreteZero _                                           = False
 
 -- | Predicate for optimizing word operations like (+) and (*).
 isConcreteOne :: SBV a -> Bool
-isConcreteOne (SBV _ (Left (CW _ (CWInteger 1)))) = True
+isConcreteOne (SBV _     (Left (CW _     (CWInteger 1)))) = True
 isConcreteOne (SBV KReal (Left (CW KReal (CWAlgReal v)))) = isExactRational v && v == 1
-isConcreteOne _ = False
+isConcreteOne _                                           = False
 
 -- | Predicate for optimizing bitwise operations.
 isConcreteOnes :: SBV a -> Bool
-isConcreteOnes (SBV _ (Left (CW (KBounded b w) (CWInteger n)))) =
-    n == (if b then -1 else bit w - 1)
-isConcreteOnes (SBV _ (Left (CW KUnbounded (CWInteger n)))) = n == -1
-isConcreteOnes _ = False
+isConcreteOnes (SBV _ (Left (CW (KBounded b w) (CWInteger n)))) = n == if b then -1 else bit w - 1
+isConcreteOnes (SBV _ (Left (CW KUnbounded     (CWInteger n)))) = n == -1
+isConcreteOnes _                                                = False
 
 -- Num instance for symbolic words.
 instance (Ord a, Num a, SymWord a) => Num (SBV a) where
@@ -653,8 +653,8 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
   -- to the solver to avoid the can of worms. (Alternative would be to do an if-then-else here.)
   abs = liftSym1 (mkSymOp1 Abs) abs abs abs abs
   signum a
-    | hasSign a = ite (a .< z) (-i) (ite (a .== z) z i)
-    | True      = ite (a ./= z) i z
+    | hasSign a = ite (a .<  z) (-i) (ite (a .== z) z i)
+    | True      = ite (a ./= z) i    z
     where z = genLiteral (kindOf a) (0::Integer)
           i = genLiteral (kindOf a) (1::Integer)
   -- negate is tricky because on double/float -0 is different than 0; so we
@@ -810,7 +810,7 @@ instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
   -- NB. popCount is *not* implementable on non-concrete symbolic words
   popCount x
     | SBV _ (Left (CW (KBounded _ w) (CWInteger n))) <- x = popCount (n .&. (bit w - 1))
-    | True                = error $ "SBV.popCount: Called on symbolic value: " ++ show x ++ ". Use sbvPopCount instead."
+    | True                                                = error $ "SBV.popCount: Called on symbolic value: " ++ show x ++ ". Use sbvPopCount instead."
 
 -- Since the underlying representation is just Integers, rotations has to be careful on the bit-size
 rot :: Bool -> Int -> Int -> Integer -> Integer
@@ -859,7 +859,7 @@ sbvShiftLeft :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
 sbvShiftLeft x i
   | isSigned i = error "sbvShiftLeft: shift amount should be unsigned"
   | True       = select [x `shiftL` k | k <- [0 .. ghcBitSize x - 1]] z i
-    where z = genLiteral (kindOf x) (0::Integer)
+  where z = genLiteral (kindOf x) (0::Integer)
 
 -- | Generalization of 'shiftR', when the shift-amount is symbolic. Since Haskell's
 -- 'shiftR' only takes an 'Int' as the shift amount, it cannot be used when we have
@@ -872,7 +872,7 @@ sbvShiftRight :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
 sbvShiftRight x i
   | isSigned i = error "sbvShiftRight: shift amount should be unsigned"
   | True       = select [x `shiftR` k | k <- [0 .. ghcBitSize x - 1]] z i
-    where z = genLiteral (kindOf x) (0::Integer)
+  where z = genLiteral (kindOf x) (0::Integer)
 
 -- | Arithmetic shift-right with a symbolic unsigned shift amount. This is equivalent
 -- to 'sbvShiftRight' when the argument is signed. However, if the argument is unsigned,
@@ -886,6 +886,32 @@ sbvSignedShiftArithRight x i
   | True       = ite (msb x)
                      (complement (sbvShiftRight (complement x) i))
                      (sbvShiftRight x i)
+
+-- | Generalization of 'rotateL', when the shift-amount is symbolic. Since Haskell's
+-- 'rotateL' only takes an 'Int' as the shift amount, it cannot be used when we have
+-- a symbolic amount to shift with. The shift amount must be an unsigned quantity.
+sbvRotateLeft :: (SIntegral a, SIntegral b, SDivisible (SBV b)) => SBV a -> SBV b -> SBV a
+sbvRotateLeft x i
+  | isSigned i             = error "sbvRotateLeft: rotation amount should be unsigned"
+  | bit si <= toInteger sx = select [x `rotateL` k | k <- [0 .. bit si - 1]] z i         -- wrap-around not possible
+  | True                   = select [x `rotateL` k | k <- [0 .. sx     - 1]] z (i `sRem` n)
+    where sx = ghcBitSize x
+          si = ghcBitSize i
+          z = genLiteral (kindOf x) (0::Integer)
+          n = genLiteral (kindOf i) (toInteger sx)
+
+-- | Generalization of 'rotateR', when the shift-amount is symbolic. Since Haskell's
+-- 'rotateR' only takes an 'Int' as the shift amount, it cannot be used when we have
+-- a symbolic amount to shift with. The shift amount must be an unsigned quantity.
+sbvRotateRight :: (SIntegral a, SIntegral b, SDivisible (SBV b)) => SBV a -> SBV b -> SBV a
+sbvRotateRight x i
+  | isSigned i             = error "sbvRotateRight: rotation amount should be unsigned"
+  | bit si <= toInteger sx = select [x `rotateR` k | k <- [0 .. bit si - 1]] z i         -- wrap-around not possible
+  | True                   = select [x `rotateR` k | k <- [0 .. sx     - 1]] z (i `sRem` n)
+    where sx = ghcBitSize x
+          si = ghcBitSize i
+          z = genLiteral (kindOf x) (0::Integer)
+          n = genLiteral (kindOf i) (toInteger sx)
 
 -- | Full adder. Returns the carry-out from the addition.
 --
@@ -1115,6 +1141,8 @@ instance SDivisible SInt8 where
   sQuotRem = liftQRem
   sDivMod  = liftDMod
 
+-- | Lift 'QRem' to symbolic words. Division by 0 is defined s.t. @x/0 = 0@; which
+-- holds even when @x@ is @0@ itself.
 liftQRem :: (SymWord a, Num a, SDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
 liftQRem x y
   | isConcreteZero x
@@ -1136,7 +1164,9 @@ liftQRem x y
                                    mkSymOp o st sgnsz sw1 sw2
         z = genLiteral (kindOf x) (0::Integer)
 
--- Conversion from quotRem (truncate to 0) to divMod (truncate towards negative infinity)
+-- | Lift 'QMod' to symbolic words. Division by 0 is defined s.t. @x/0 = 0@; which
+-- holds even when @x@ is @0@ itself. Essentially, this is conversion from quotRem
+-- (truncate to 0) to divMod (truncate towards negative infinity)
 liftDMod :: (SymWord a, Num a, SDivisible a, SDivisible (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
 liftDMod x y
   | isConcreteZero x
@@ -1151,9 +1181,9 @@ liftDMod x y
 --------------------------------}
   | True
   = ite (y .== z) (z, x) $ ite (signum r .== negate (signum y)) (q-i, r+y) qr
-   where qr@(q, r) = x `sQuotRem` y
-         z = genLiteral (kindOf x) (0::Integer)
-         i = genLiteral (kindOf x) (1::Integer)
+ where qr@(q, r) = x `sQuotRem` y
+       z = genLiteral (kindOf x) (0::Integer)
+       i = genLiteral (kindOf x) (1::Integer)
 
 -- SInteger instance for quotRem/divMod are tricky!
 -- SMT-Lib only has Euclidean operations, but Haskell
