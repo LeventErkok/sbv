@@ -29,6 +29,7 @@ module Data.SBV.BitVectors.Model (
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, toSReal, sFloat, sFloats, sDouble, sDoubles, slet
   , fusedMA
+  , liftQRem, liftDMod, genLiteral
   )
   where
 
@@ -613,28 +614,49 @@ sElem x xs = bAny (.== x) xs
 oneIf :: (Num a, SymWord a) => SBool -> SBV a
 oneIf t = ite t 1 0
 
+-- | Predicate for optimizing word operations like (+) and (*).
+isConcreteZero :: SBV a -> Bool
+isConcreteZero (SBV _ (Left (CW _ (CWInteger n)))) = n == 0
+isConcreteZero (SBV KReal (Left (CW KReal (CWAlgReal v)))) = isExactRational v && v == 0
+isConcreteZero _ = False
+
+-- | Predicate for optimizing word operations like (+) and (*).
+isConcreteOne :: SBV a -> Bool
+isConcreteOne (SBV _ (Left (CW _ (CWInteger 1)))) = True
+isConcreteOne (SBV KReal (Left (CW KReal (CWAlgReal v)))) = isExactRational v && v == 1
+isConcreteOne _ = False
+
+-- | Predicate for optimizing bitwise operations.
+isConcreteOnes :: SBV a -> Bool
+isConcreteOnes (SBV _ (Left (CW (KBounded b w) (CWInteger n)))) =
+    n == (if b then -1 else bit w - 1)
+isConcreteOnes (SBV _ (Left (CW KUnbounded (CWInteger n)))) = n == -1
+isConcreteOnes _ = False
+
 -- Num instance for symbolic words.
 instance (Ord a, Num a, SymWord a) => Num (SBV a) where
   fromInteger = literal . fromIntegral
   x + y
-    | x `isConcretely` (== 0) = y
-    | y `isConcretely` (== 0) = x
-    | True                    = liftSym2 (mkSymOp Plus)  rationalCheck (+) (+) (+) (+) x y
+    | isConcreteZero x = y
+    | isConcreteZero y = x
+    | True             = liftSym2 (mkSymOp Plus)  rationalCheck (+) (+) (+) (+) x y
   x * y
-    | x `isConcretely` (== 0) = 0
-    | y `isConcretely` (== 0) = 0
-    | x `isConcretely` (== 1) = y
-    | y `isConcretely` (== 1) = x
-    | True                    = liftSym2 (mkSymOp Times) rationalCheck (*) (*) (*) (*) x y
+    | isConcreteZero x = x
+    | isConcreteZero y = y
+    | isConcreteOne x  = y
+    | isConcreteOne y  = x
+    | True             = liftSym2 (mkSymOp Times) rationalCheck (*) (*) (*) (*) x y
   x - y
-    | y `isConcretely` (== 0) = x
-    | True                    = liftSym2 (mkSymOp Minus) rationalCheck (-) (-) (-) (-) x y
+    | isConcreteZero y = x
+    | True             = liftSym2 (mkSymOp Minus) rationalCheck (-) (-) (-) (-) x y
   -- Abs is problematic for floating point, due to -0; case, so we carefully shuttle it down
   -- to the solver to avoid the can of worms. (Alternative would be to do an if-then-else here.)
   abs = liftSym1 (mkSymOp1 Abs) abs abs abs abs
   signum a
-   | hasSign a = ite (a .< 0) (-1) (ite (a .== 0) 0 1)
-   | True      = oneIf (a ./= 0)
+    | hasSign a = ite (a .< z) (-i) (ite (a .== z) z i)
+    | True      = ite (a ./= z) i z
+    where z = genLiteral (kindOf a) (0::Integer)
+          i = genLiteral (kindOf a) (1::Integer)
   -- negate is tricky because on double/float -0 is different than 0; so we
   -- just cannot rely on its default definition; which would be 0-0, which is not -0!
   negate = liftSym1 (mkSymOp1 UNeg) (\x -> -x) (\x -> -x) (\x -> -x) (\x -> -x)
@@ -738,28 +760,31 @@ noDoubleUnary o a = error $ "SBV.Double." ++ o ++ ": Unexpected argument: " ++ s
 -- -1 has all bits set to True for both signed and unsigned values
 instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
   x .&. y
-    | x `isConcretely` (== 0)  = 0
-    | x `isConcretely` (== -1) = y
-    | y `isConcretely` (== 0)  = 0
-    | y `isConcretely` (== -1) = x
-    | True                     = liftSym2 (mkSymOp  And) (const (const True)) (noReal ".&.") (.&.) (noFloat ".&.") (noDouble ".&.") x y
+    | isConcreteZero x = x
+    | isConcreteOnes x = y
+    | isConcreteZero y = y
+    | isConcreteOnes y = x
+    | True             = liftSym2 (mkSymOp  And) (const (const True)) (noReal ".&.") (.&.) (noFloat ".&.") (noDouble ".&.") x y
   x .|. y
-    | x `isConcretely` (== 0)  = y
-    | x `isConcretely` (== -1) = -1
-    | y `isConcretely` (== 0)  = x
-    | y `isConcretely` (== -1) = -1
-    | True                     = liftSym2 (mkSymOp  Or)  (const (const True)) (noReal ".|.") (.|.) (noFloat ".|.") (noDouble ".|.") x y
+    | isConcreteZero x = y
+    | isConcreteOnes x = x
+    | isConcreteZero y = x
+    | isConcreteOnes y = y
+    | True             = liftSym2 (mkSymOp  Or)  (const (const True)) (noReal ".|.") (.|.) (noFloat ".|.") (noDouble ".|.") x y
   x `xor` y
-    | x `isConcretely` (== 0)  = y
-    | y `isConcretely` (== 0)  = x
-    | True                     = liftSym2 (mkSymOp  XOr) (const (const True)) (noReal "xor") xor (noFloat "xor") (noDouble "xor") x y
+    | isConcreteZero x = y
+    | isConcreteZero y = x
+    | True             = liftSym2 (mkSymOp  XOr) (const (const True)) (noReal "xor") xor (noFloat "xor") (noDouble "xor") x y
   complement = liftSym1 (mkSymOp1 Not) (noRealUnary "complement") complement (noFloatUnary "complement") (noDoubleUnary "complement")
-  bitSize  _ = intSizeOf (undefined :: a)
+  bitSize  x = intSizeOf x
 #if __GLASGOW_HASKELL__ >= 708
-  bitSizeMaybe _ = Just $ intSizeOf (undefined :: a)
+  bitSizeMaybe x = Just $ intSizeOf x
 #endif
-  isSigned _ = hasSign   (undefined :: a)
+  isSigned x = hasSign x
   bit i      = 1 `shiftL` i
+  setBit        x i = x .|. genLiteral (kindOf x) (bit i :: Integer)
+  clearBit      x i = x .&. genLiteral (kindOf x) (complement (bit i) :: Integer)
+  complementBit x i = x `xor` genLiteral (kindOf x) (bit i :: Integer)
   shiftL x y
     | y < 0       = shiftR x (-y)
     | y == 0      = x
@@ -780,13 +805,11 @@ instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
     | True        = shiftR x y   -- for unbounded integers, rotateR is the same as shiftR in Haskell
   -- NB. testBit is *not* implementable on non-concrete symbolic words
   x `testBit` i
-    | isConcrete x         = (x .&. bit i) /= 0
+    | SBV _ (Left (CW _ (CWInteger n))) <- x = testBit n i
     | True                 = error $ "SBV.testBit: Called on symbolic value: " ++ show x ++ ". Use sbvTestBit instead."
   -- NB. popCount is *not* implementable on non-concrete symbolic words
   popCount x
-    | isConcrete x        = let go !c 0 = c
-                                go !c w = go (c+1) (w .&. (w-1))
-                            in go 0 x
+    | SBV _ (Left (CW (KBounded _ w) (CWInteger n))) <- x = popCount (n .&. (bit w - 1))
     | True                = error $ "SBV.popCount: Called on symbolic value: " ++ show x ++ ". Use sbvPopCount instead."
 
 -- Since the underlying representation is just Integers, rotations has to be careful on the bit-size
@@ -801,7 +824,8 @@ rot toLeft sz amt x
 -- | Replacement for 'testBit'. Since 'testBit' requires a 'Bool' to be returned,
 -- we cannot implement it for symbolic words. Index 0 is the least-significant bit.
 sbvTestBit :: (Num a, Bits a, SymWord a) => SBV a -> Int -> SBool
-sbvTestBit x i = (x .&. bit i) ./= 0
+sbvTestBit x i = (x .&. genLiteral k (bit i :: Integer)) ./= genLiteral k (0::Integer)
+  where k = kindOf x
 
 -- | Replacement for 'popCount'. Since 'popCount' returns an 'Int', we cannot implement
 -- it for symbolic words. Here, we return an 'SWord8', which can overflow when used on
@@ -834,7 +858,8 @@ setBitTo x i b = ite b (setBit x i) (clearBit x i)
 sbvShiftLeft :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
 sbvShiftLeft x i
   | isSigned i = error "sbvShiftLeft: shift amount should be unsigned"
-  | True       = select [x `shiftL` k | k <- [0 .. ghcBitSize x - 1]] 0 i
+  | True       = select [x `shiftL` k | k <- [0 .. ghcBitSize x - 1]] z i
+    where z = genLiteral (kindOf x) (0::Integer)
 
 -- | Generalization of 'shiftR', when the shift-amount is symbolic. Since Haskell's
 -- 'shiftR' only takes an 'Int' as the shift amount, it cannot be used when we have
@@ -846,7 +871,8 @@ sbvShiftLeft x i
 sbvShiftRight :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
 sbvShiftRight x i
   | isSigned i = error "sbvShiftRight: shift amount should be unsigned"
-  | True       = select [x `shiftR` k | k <- [0 .. ghcBitSize x - 1]] 0 i
+  | True       = select [x `shiftR` k | k <- [0 .. ghcBitSize x - 1]] z i
+    where z = genLiteral (kindOf x) (0::Integer)
 
 -- | Arithmetic shift-right with a symbolic unsigned shift amount. This is equivalent
 -- to 'sbvShiftRight' when the argument is signed. However, if the argument is unsigned,
@@ -1091,40 +1117,43 @@ instance SDivisible SInt8 where
 
 liftQRem :: (SymWord a, Num a, SDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
 liftQRem x y
-  | x `isConcretely` (== 0)
-  = (0, 0)
-  | y `isConcretely` (== 1)
-  = (x, 0)
+  | isConcreteZero x
+  = (x, x)
+  | isConcreteOne y
+  = (x, z)
 {-------------------------------
  - N.B. The seemingly innocuous variant when y == -1 only holds if the type is signed;
  - and also is problematic around the minBound.. So, we refrain from that optimization
-  | y `isConcretely` (== -1)
-  = (-x, 0)
+  | isConcreteOnes y
+  = (-x, z)
 --------------------------------}
   | True
-  = ite (y .== 0) (0, x) (qr x y)
+  = ite (y .== z) (z, x) (qr x y)
   where qr (SBV sgnsz (Left a)) (SBV _ (Left b)) = let (q, r) = sQuotRem a b in (SBV sgnsz (Left q), SBV sgnsz (Left r))
         qr a@(SBV sgnsz _)      b                = (SBV sgnsz (Right (cache (mk Quot))), SBV sgnsz (Right (cache (mk Rem))))
                 where mk o st = do sw1 <- sbvToSW st a
                                    sw2 <- sbvToSW st b
                                    mkSymOp o st sgnsz sw1 sw2
+        z = genLiteral (kindOf x) (0::Integer)
 
 -- Conversion from quotRem (truncate to 0) to divMod (truncate towards negative infinity)
 liftDMod :: (SymWord a, Num a, SDivisible a, SDivisible (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
 liftDMod x y
-  | x `isConcretely` (== 0)
-  = (0, 0)
-  | y `isConcretely` (== 1)
-  = (x, 0)
+  | isConcreteZero x
+  = (x, x)
+  | isConcreteOne y
+  = (x, z)
 {-------------------------------
  - N.B. The seemingly innocuous variant when y == -1 only holds if the type is signed;
  - and also is problematic around the minBound.. So, we refrain from that optimization
-  | y `isConcretely` (== -1)
-  = (-x, 0)
+  | isConcreteOnes y
+  = (-x, z)
 --------------------------------}
   | True
-  = ite (y .== 0) (0, x) $ ite (signum r .== negate (signum y)) (q-1, r+y) qr
+  = ite (y .== z) (z, x) $ ite (signum r .== negate (signum y)) (q-i, r+y) qr
    where qr@(q, r) = x `sQuotRem` y
+         z = genLiteral (kindOf x) (0::Integer)
+         i = genLiteral (kindOf x) (1::Integer)
 
 -- SInteger instance for quotRem/divMod are tricky!
 -- SMT-Lib only has Euclidean operations, but Haskell
