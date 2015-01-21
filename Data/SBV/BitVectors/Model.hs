@@ -1314,7 +1314,10 @@ sAssertCont msg cont t a
                      Just (r@(SatResult (Satisfiable cfg _))) -> cont cfg $ Just $ getModelDictionary r
                      _                                        -> return trueSW
 
--- SBV
+-- | Merge two symbolic values, at kind @k@, possibly @force@'ing the branches to make
+-- sure they do not evaluate to the same result. This should only be used for internal purposes;
+-- as default definitions provided should suffice in many cases. (i.e., End users should
+-- only need to define 'symbolicMerge' when needed; which should be rare to start with.)
 symbolicMergeWithKind :: SymWord a => Kind -> Bool -> SBool -> SBV a -> SBV a -> SBV a
 symbolicMergeWithKind k force t a b
   | Just r <- unliteral t
@@ -1391,9 +1394,10 @@ symbolicMergeWithKind k force t a b
                                ()                                   -> newExpr st k (SBVApp Ite [swt, swa, swb])
 
 instance SymWord a => Mergeable (SBV a) where
-    symbolicMerge force t x y =
-      symbolicMergeWithKind k force t x y
-      where k = if force then kindOf x else kindOf (undefined :: a)
+    symbolicMerge force t x y
+    -- Carefully use the kindOf instance to avoid strictness issues.
+       | force = symbolicMergeWithKind (kindOf x)                True  t x y
+       | True  = symbolicMergeWithKind (kindOf (undefined :: a)) False t x y
     -- Custom version of select that translates to SMT-Lib tables at the base type of words
     select xs err ind
       | SBV _ (Left c) <- ind = case cwVal c of
