@@ -16,7 +16,7 @@ module Data.SBV.Internals (
   Result, SBVRunMode(..), runSymbolic, runSymbolic'
   -- * Other internal structures useful for low-level programming
   , SBV(..), slet, CW(..), Kind(..), CWVal(..), AlgReal(..), Quantifier(..), mkConstCW, genVar, genVar_
-  , liftQRem, liftDMod, genLiteral
+  , liftQRem, liftDMod, genLiteral, symbolicMergeWithKind
   , cache, sbvToSW, newExpr, normCW, SBVExpr(..), Op(..), mkSymSBVWithRandom
   -- * Compilation to C
   , compileToC', compileToCLib', CgPgmBundle(..), CgPgmKind(..)
@@ -24,6 +24,6 @@ module Data.SBV.Internals (
 
 import Data.SBV.BitVectors.Data   (Result, SBVRunMode(..), runSymbolic, runSymbolic', SBV(..), CW(..), Kind(..), CWVal(..), AlgReal(..), Quantifier(..), mkConstCW)
 import Data.SBV.BitVectors.Data   (cache, sbvToSW, newExpr, normCW, SBVExpr(..), Op(..), mkSymSBVWithRandom)
-import Data.SBV.BitVectors.Model  (genVar, genVar_, slet, liftQRem, liftDMod, genLiteral)
+import Data.SBV.BitVectors.Model  (genVar, genVar_, slet, liftQRem, liftDMod, genLiteral, symbolicMergeWithKind)
 import Data.SBV.Compilers.C       (compileToC', compileToCLib')
 import Data.SBV.Compilers.CodeGen (CgPgmBundle(..), CgPgmKind(..))

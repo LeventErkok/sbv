@@ -833,8 +833,8 @@ mkSymSBVWithRandom rand mbQ k mbNm = do
                   (Nothing, CodeGen)          -> ALL -- code generation, pick universal
         case runMode st of
           Concrete _ | q == EX -> case mbNm of
-                                    Nothing -> error $ "Cannot quick-check in the presence of existential variables, type: " ++ showType (undefined :: SBV a)
-                                    Just nm -> error $ "Cannot quick-check in the presence of existential variable " ++ nm ++ " :: " ++ showType (undefined :: SBV a)
+                                    Nothing -> error $ "Cannot quick-check in the presence of existential variables, type: " ++ showType (undefined :: a)
+                                    Just nm -> error $ "Cannot quick-check in the presence of existential variable " ++ nm ++ " :: " ++ showType (undefined :: a)
           Concrete _           -> do v@(SBV _ (Left cw)) <- liftIO rand
                                      liftIO $ modifyIORef (rCInfo st) ((maybe "_" id mbNm, cw):)
                                      return v
