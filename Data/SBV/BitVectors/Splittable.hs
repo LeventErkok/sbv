@@ -15,7 +15,7 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE BangPatterns           #-}
 
-module Data.SBV.BitVectors.Splittable (Splittable(..), FromBits(..)) where
+module Data.SBV.BitVectors.Splittable (Splittable(..), FromBits(..), checkAndConvert) where
 
 import Data.Bits (Bits(..))
 import Data.Word (Word8, Word16, Word32, Word64)
