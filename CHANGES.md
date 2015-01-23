@@ -3,11 +3,20 @@
 
 * Latest Hackage released version: 3.5
 
-### Version 4.0, Not yet released
+### Version 4.0, 2015-01-22
+
+This release mainly contains contributions from Brian Huffman, allowing
+end-users to define new symbolic types, such as Word4, that SBV does not
+natively support. When GHC gets type-level literals, we shall most likely
+incorporate arbitrary bit-sized vectors and ints using this mechanism,
+but in the interim, this release provides a means for the users to introduce
+individual instances.
 
   * Modifications to support arbitrary bit-sized vectors; 
     These changes have been contributed by Brian Huffman
     of Galois.. Thanks Brian.
+  * A new example "Data/SBV/Examples/Misc/Word4.hs" showing
+    how users can add new symbolic types.
   * Support for rotate-left/rotate-right with variable
     rotation amounts. (From Brian Huffman.)
 
