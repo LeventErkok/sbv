@@ -74,6 +74,7 @@ Library
                   , Data.SBV.Examples.Misc.Floating
                   , Data.SBV.Examples.Misc.SBranch
                   , Data.SBV.Examples.Misc.ModelExtract
+                  , Data.SBV.Examples.Misc.Word4
                   , Data.SBV.Examples.Polynomials.Polynomials
                   , Data.SBV.Examples.Puzzles.Coins
                   , Data.SBV.Examples.Puzzles.Counts
