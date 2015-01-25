@@ -51,7 +51,7 @@ addNonEqConstraints rm qinps allNonEqConstraints (SMTLibPgm _ (aliasTable, pre, 
 nonEqs :: RoundingMode -> [(String, CW)] -> [String]
 nonEqs rm scs = format $ interp ps ++ disallow (map eqClass uninterpClasses)
   where isFree (KUserSort _ (Left _, _)) = True
-        isFree _                              = False
+        isFree _                         = False
         (ups, ps) = partition (isFree . kindOf . snd) scs
         format []     =  []
         format [m]    =  ["(assert " ++ m ++ ")"]
