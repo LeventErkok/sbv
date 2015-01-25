@@ -487,7 +487,9 @@ instance Show Result where
                 ++ map (("  " ++) . show) cstrs
                 ++ ["OUTPUTS"]
                 ++ map (("  " ++) . show) os
-    where usorts = [s | KUserSort s _ <- Set.toList kinds]
+    where usorts = [sh s t | KUserSort s t <- Set.toList kinds]
+                   where sh s (Left   _, _) = s
+                         sh s (Right es, _) = s ++ " (" ++ intercalate ", " es ++ ")"
           shs sw = show sw ++ " :: " ++ showType sw
           sht ((i, at, rt), es)  = "  Table " ++ show i ++ " : " ++ show at ++ "->" ++ show rt ++ " = " ++ show es
           shc (sw, cw) = "  " ++ show sw ++ " = " ++ show cw
