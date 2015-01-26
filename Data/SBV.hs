@@ -123,7 +123,7 @@ module Data.SBV (
   , SInteger
   -- *** IEEE-floating point numbers
   -- $floatingPoints
-  , SFloat, SDouble, FPRoundingMode(..), SFPRoundingMode, nan, infinity, sNaN, sInfinity, fusedMA, isSNaN, isFPPoint
+  , SFloat, SDouble, RoundingFloat(..), FPRoundingMode(..), SFPRoundingMode, nan, infinity, sNaN, sInfinity, fusedMA, isSNaN, isFPPoint
   -- *** Signed algebraic reals
   -- $algReals
   , SReal, AlgReal, toSReal
@@ -282,6 +282,7 @@ import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
 import Data.SBV.BitVectors.PrettyNum
+import Data.SBV.BitVectors.Rounding
 import Data.SBV.BitVectors.SignCast
 import Data.SBV.BitVectors.Splittable
 import Data.SBV.BitVectors.STree

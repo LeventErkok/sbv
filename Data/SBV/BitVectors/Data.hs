@@ -249,6 +249,8 @@ data Op = Plus | Times | Minus | UNeg | Abs
         | ArrEq   Int Int
         | ArrRead Int
         | Uninterpreted String
+        -- Floating point uops with custom rounding-modes
+        | FPRound String
         deriving (Eq, Ord)
 
 -- | SMT-Lib's square-root over floats/doubles. We piggy back on to the uninterpreted function mechanism
@@ -399,6 +401,7 @@ instance Show Op where
   show (ArrEq i j)   = "array_" ++ show i ++ " == array_" ++ show j
   show (ArrRead i)   = "select array_" ++ show i
   show (Uninterpreted i) = "[uninterpreted] " ++ i
+  show (FPRound w)       = w
   show op
     | Just s <- op `lookup` syms = s
     | True                       = error "impossible happened; can't find op!"

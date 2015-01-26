@@ -94,6 +94,7 @@ Library
                   , Data.SBV.BitVectors.Data
                   , Data.SBV.BitVectors.Model
                   , Data.SBV.BitVectors.PrettyNum
+                  , Data.SBV.BitVectors.Rounding
                   , Data.SBV.BitVectors.SignCast
                   , Data.SBV.BitVectors.Splittable
                   , Data.SBV.BitVectors.STree
