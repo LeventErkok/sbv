@@ -427,7 +427,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (Uninterpreted nm) [])   = nm
         sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm' ++ " " ++ unwords (map ssw args) ++ ")"
           where -- slight hack needed here to take advantage of custom floating-point functions.. sigh.
-                fpSpecials = ["fp.sqrt", "fusedMA"]
+                fpSpecials = ["fp.sqrt", "fp.fma"]
                 nm' | (floatOp || doubleOp) && (nm `elem` fpSpecials) = addRM nm
                     | True                                            = nm
         sh (SBVApp (Extract 0 0) [a])   -- special SInteger -> SReal conversion
