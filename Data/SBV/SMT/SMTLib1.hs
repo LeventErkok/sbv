@@ -20,7 +20,7 @@ import Data.SBV.BitVectors.Data
 
 -- | Add constraints to generate /new/ models. This function is used to query the SMT-solver, while
 -- disallowing a previous model.
-addNonEqConstraints :: RoundingMode -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
+addNonEqConstraints :: FPRoundingMode -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
 addNonEqConstraints _rm nonEqConstraints (SMTLibPgm _ (aliasTable, pre, post)) = Just $ intercalate "\n" $
      pre
   ++ [ " ; --- refuted-models ---" ]
@@ -41,7 +41,7 @@ nonEq :: (String, CW) -> String
 nonEq (s, c) = "(not (= " ++ s ++ " " ++ cvtCW c ++ "))"
 
 -- | Translate a problem into an SMTLib1 script
-cvt :: RoundingMode                 -- ^ User selected rounding mode to be used for floating point arithmetic
+cvt :: FPRoundingMode               -- ^ User selected rounding mode to be used for floating point arithmetic
     -> Maybe Logic                  -- ^ SMT-Lib logic, if requested by the user
     -> SolverCapabilities           -- ^ capabilities of the current solver
     -> Set.Set Kind                 -- ^ kinds used
