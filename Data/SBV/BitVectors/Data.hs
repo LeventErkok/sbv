@@ -255,7 +255,7 @@ data Op = Plus | Times | Minus | UNeg | Abs
 
 -- | SMT-Lib's square-root over floats/doubles. We piggy back on to the uninterpreted function mechanism
 -- to implement these; which is not a terrible idea; although the use of the constructor 'Uninterpreted'
--- might be confusing. This function will *not* be uninterpreted in reality, as QF_FPA will define it. It's
+-- might be confusing. This function will *not* be uninterpreted in reality, as QF_FP will define it. It's
 -- a bit of a shame, but much easier to implement it this way.
 smtLibSquareRoot :: Op
 smtLibSquareRoot = Uninterpreted "fp.sqrt"
@@ -1361,14 +1361,13 @@ instance NFData SMTScript where
 
 -- | SMT-Lib logics. If left unspecified SBV will pick the logic based on what it determines is needed. However, the
 -- user can override this choice using the 'useLogic' parameter to the configuration. This is especially handy if
--- one is experimenting with custom logics that might be supported on new solvers.
+-- one is experimenting with custom logics that might be supported on new solvers. See <http://smtlib.cs.uiowa.edu/logics.shtml>
+-- for the official list.
 data SMTLibLogic
   = AUFLIA    -- ^ Formulas over the theory of linear integer arithmetic and arrays extended with free sort and function symbols but restricted to arrays with integer indices and values
   | AUFLIRA   -- ^ Linear formulas with free sort and function symbols over one- and two-dimentional arrays of integer index and real value
   | AUFNIRA   -- ^ Formulas with free function and predicate symbols over a theory of arrays of arrays of integer index and real value
   | LRA       -- ^ Linear formulas in linear real arithmetic
-  | UFLRA     -- ^ Linear real arithmetic with uninterpreted sort and function symbols. 
-  | UFNIA     -- ^ Non-linear integer arithmetic with uninterpreted sort and function symbols. 
   | QF_ABV    -- ^ Quantifier-free formulas over the theory of bitvectors and bitvector arrays
   | QF_AUFBV  -- ^ Quantifier-free formulas over the theory of bitvectors and bitvector arrays extended with free sort and function symbols
   | QF_AUFLIA -- ^ Quantifier-free linear formulas over the theory of integer arrays extended with free sort and function symbols
@@ -1386,8 +1385,10 @@ data SMTLibLogic
   | QF_UFLIA  -- ^ Unquantified linear integer arithmetic with uninterpreted sort and function symbols. 
   | QF_UFLRA  -- ^ Unquantified linear real arithmetic with uninterpreted sort and function symbols. 
   | QF_UFNRA  -- ^ Unquantified non-linear real arithmetic with uninterpreted sort and function symbols. 
-  | QF_FPABV  -- ^ Quantifier-free formulas over the theory of floating point numbers, arrays, and bit-vectors
-  | QF_FPA    -- ^ Quantifier-free formulas over the theory of floating point numbers
+  | UFLRA     -- ^ Linear real arithmetic with uninterpreted sort and function symbols. 
+  | UFNIA     -- ^ Non-linear integer arithmetic with uninterpreted sort and function symbols. 
+  | QF_FPBV   -- ^ Quantifier-free formulas over the theory of floating point numbers, arrays, and bit-vectors
+  | QF_FP     -- ^ Quantifier-free formulas over the theory of floating point numbers
   deriving Show
 
 -- | Chosen logic for the solver
