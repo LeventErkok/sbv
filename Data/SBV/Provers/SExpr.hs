@@ -20,7 +20,7 @@ import Data.SBV.BitVectors.Data (nan, infinity)
 
 -- | ADT S-Expression format, suitable for representing get-model output of SMT-Lib
 data SExpr = ECon    String
-           | ENum    Integer
+           | ENum    (Integer, Maybe Int)  -- Second argument is how wide the field was in bits, if known. Useful in FP parsing.
            | EReal   AlgReal
            | EFloat  Float
            | EDouble Double
@@ -55,44 +55,56 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
                                        parseApp r (f : sofar)
         parseApp (tok:toks) sofar = do t <- pTok tok
                                        parseApp toks (t : sofar)
-        pTok "false"              = return $ ENum 0
-        pTok "true"               = return $ ENum 1
-        pTok ('0':'b':r)          = mkNum $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
-        pTok ('b':'v':r)          = mkNum $ readDec (takeWhile (/= '[') r)
-        pTok ('#':'b':r)          = mkNum $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
-        pTok ('#':'x':r)          = mkNum $ readHex r
+        pTok "false"              = return $ ENum (0, Nothing)
+        pTok "true"               = return $ ENum (1, Nothing)
+        pTok ('0':'b':r)          = mkNum (Just (length r))     $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
+        pTok ('b':'v':r)          = mkNum Nothing               $ readDec (takeWhile (/= '[') r)
+        pTok ('#':'b':r)          = mkNum (Just (length r))     $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
+        pTok ('#':'x':r)          = mkNum (Just (4 * length r)) $ readHex r
         pTok n
           | not (null n) && isDigit (head n)
           = if '.' `elem` n then getReal n
-            else mkNum  $ readDec n
+            else mkNum Nothing $ readDec n
         pTok n                 = return $ ECon n
-        mkNum [(n, "")] = return $ ENum n
-        mkNum _         = die "cannot read number"
+        mkNum l [(n, "")] = return $ ENum (n, l)
+        mkNum _ _         = die "cannot read number"
         getReal n = return $ EReal $ mkPolyReal (Left (exact, n'))
           where exact = not ("?" `isPrefixOf` reverse n)
                 n' | exact = n
                    | True  = init n
         -- simplify numbers and root-obj values
         cvt (EApp [ECon "/", EReal a, EReal b])                    = return $ EReal (a / b)
-        cvt (EApp [ECon "/", EReal a, ENum  b])                    = return $ EReal (a             / fromInteger b)
-        cvt (EApp [ECon "/", ENum  a, EReal b])                    = return $ EReal (fromInteger a /             b)
-        cvt (EApp [ECon "/", ENum  a, ENum  b])                    = return $ EReal (fromInteger a / fromInteger b)
+        cvt (EApp [ECon "/", EReal a, ENum  b])                    = return $ EReal (a                   / fromInteger (fst b))
+        cvt (EApp [ECon "/", ENum  a, EReal b])                    = return $ EReal (fromInteger (fst a) /             b      )
+        cvt (EApp [ECon "/", ENum  a, ENum  b])                    = return $ EReal (fromInteger (fst a) / fromInteger (fst b))
         cvt (EApp [ECon "-", EReal a])                             = return $ EReal (-a)
-        cvt (EApp [ECon "-", ENum a])                              = return $ ENum  (-a)
+        cvt (EApp [ECon "-", ENum a])                              = return $ ENum  (-(fst a), snd a)
         -- bit-vector value as CVC4 prints: (_ bv0 16) for instance
         cvt (EApp [ECon "_", ENum a, ENum _b])                     = return $ ENum a
         cvt (EApp [ECon "root-obj", EApp (ECon "+":trms), ENum k]) = do ts <- mapM getCoeff trms
-                                                                        return $ EReal $ mkPolyReal (Right (k, ts))
-        cvt (EApp [ECon "as", n, EApp [ECon "_", ECon "FloatingPoint", ENum 11, ENum 53]]) = getDouble n
-        cvt (EApp [ECon "as", n, EApp [ECon "_", ECon "FloatingPoint", ENum  8, ENum 24]]) = getFloat  n
-        cvt (EApp [ECon "as", n, ECon "Float64"])                                          = getDouble n
-        cvt (EApp [ECon "as", n, ECon "Float32"])                                          = getFloat  n
+                                                                        return $ EReal $ mkPolyReal (Right (fst k, ts))
+        cvt (EApp [ECon "as", n, EApp [ECon "_", ECon "FloatingPoint", ENum (11, _), ENum (53, _)]]) = getDouble n
+        cvt (EApp [ECon "as", n, EApp [ECon "_", ECon "FloatingPoint", ENum ( 8, _), ENum (24, _)]]) = getFloat  n
+        cvt (EApp [ECon "as", n, ECon "Float64"])                                                    = getDouble n
+        cvt (EApp [ECon "as", n, ECon "Float32"])                                                    = getFloat  n
+        cvt (EApp [ECon "fp",    ENum (a, _),   ENum (b, Just 8),  ENum (c, _)])                       = return $ EFloat  $ getFP a b c
+        cvt (EApp [ECon "fp",    ENum (a, _),   ENum (b, Just 11), ENum (c, _)])                       = return $ EDouble $ getFP a b c
+        cvt (EApp [ECon "_",     ECon "NaN",    ENum ( 8, _), ENum (24, _)])                           = return $ EFloat  nan
+        cvt (EApp [ECon "_",     ECon "NaN",    ENum (11, _), ENum (53, _)])                           = return $ EDouble nan
+        cvt (EApp [ECon "_",     ECon "+oo",    ENum ( 8, _), ENum (24, _)])                           = return $ EFloat  infinity
+        cvt (EApp [ECon "_",     ECon "+oo",    ENum (11, _), ENum (53, _)])                           = return $ EDouble infinity
+        cvt (EApp [ECon "_",     ECon "-oo",    ENum ( 8, _), ENum (24, _)])                           = return $ EFloat  (-infinity)
+        cvt (EApp [ECon "_",     ECon "-oo",    ENum (11, _), ENum (53, _)])                           = return $ EDouble (-infinity)
+        cvt (EApp [ECon "_",     ECon "+zero",  ENum ( 8, _), ENum (24, _)])                           = return $ EFloat  0
+        cvt (EApp [ECon "_",     ECon "+zero",  ENum (11, _), ENum (53, _)])                           = return $ EDouble 0
+        cvt (EApp [ECon "_",     ECon "-zero",  ENum ( 8, _), ENum (24, _)])                           = return $ EFloat  (-0)
+        cvt (EApp [ECon "_",     ECon "-zero",  ENum (11, _), ENum (53, _)])                           = return $ EDouble (-0)
         cvt x                                                      = return x
-        getCoeff (EApp [ECon "*", ENum k, EApp [ECon "^", ECon "x", ENum p]]) = return (k, p)  -- kx^p
-        getCoeff (EApp [ECon "*", ENum k,                 ECon "x"        ] ) = return (k, 1)  -- kx
-        getCoeff (                        EApp [ECon "^", ECon "x", ENum p] ) = return (1, p)  --  x^p
-        getCoeff (                                        ECon "x"          ) = return (1, 1)  --  x
-        getCoeff (                ENum k                                    ) = return (k, 0)  -- k
+        getCoeff (EApp [ECon "*", ENum k, EApp [ECon "^", ECon "x", ENum p]]) = return (fst k, fst p)  -- kx^p
+        getCoeff (EApp [ECon "*", ENum k,                 ECon "x"        ] ) = return (fst k,     1)  -- kx
+        getCoeff (                        EApp [ECon "^", ECon "x", ENum p] ) = return (    1, fst p)  --  x^p
+        getCoeff (                                        ECon "x"          ) = return (    1,     1)  --  x
+        getCoeff (                ENum k                                    ) = return (fst k,     0)  -- k
         getCoeff x = die $ "Cannot parse a root-obj,\nProcessing term: " ++ show x
         getDouble (ECon s)  = case (s, rdFP (dropWhile (== '+') s)) of
                                 ("plusInfinity",  _     ) -> return $ EDouble infinity
@@ -131,3 +143,12 @@ rdFP s = case break (`elem` "pe") s of
  where rd v = case reads v of
                 [(n, "")] -> Just n
                 _         -> Nothing
+
+-- | Parses SMT-Lib floating point formatted numbers that come in triples
+-- (s, m, e). The translation is (-1)^s * m * 2^e
+getFP :: RealFloat a => Integer -> Integer -> Integer -> a
+getFP s m e
+  | s == 0 = res
+  | s == 1 = negate res
+  | True   = error $ "SBV.Provers.SExpr.getFP: Unexpected sign bit value (must be 0 or 1): " ++ show s
+  where res = fromIntegral m * (2 ** fromIntegral e)
