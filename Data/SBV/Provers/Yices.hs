@@ -92,8 +92,8 @@ getCounterExample inps line = either err extract (parseSExpr line)
                                  matches -> error $  "SBV.Yices: Cannot uniquely identify value for "
                                                   ++ 's':v ++ " in "  ++ show matches
         isInput _       = Nothing
-        extract (EApp [ECon "=", ECon v, ENum i]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) i))]
-        extract (EApp [ECon "=", ENum i, ECon v]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) i))]
+        extract (EApp [ECon "=", ECon v, ENum i]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) (fst i)))]
+        extract (EApp [ECon "=", ENum i, ECon v]) | Just (n, s, nm) <- isInput v = [(n, (nm, mkConstCW (kindOf s) (fst i)))]
         extract _                                                                = []
 
 extractUnints :: [(String, UnintKind)] -> [String] -> [(UnintKind, [String])]
@@ -124,8 +124,8 @@ getUIVal knd s
   = getDefaultVal knd (dropWhile (/= ' ') s)
   | True
   = case parseSExpr s of
-       Right (EApp [ECon "=", EApp (ECon _ : args), ENum i]) -> getCallVal knd args i
-       Right (EApp [ECon "=", ECon _, ENum i])               -> getCallVal knd []   i
+       Right (EApp [ECon "=", EApp (ECon _ : args), ENum i]) -> getCallVal knd args (fst i)
+       Right (EApp [ECon "=", ECon _, ENum i])               -> getCallVal knd []   (fst i)
        _ -> Nothing
 
 getDefaultVal :: UnintKind -> String -> Maybe (String, [String], String)
