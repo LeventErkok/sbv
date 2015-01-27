@@ -110,8 +110,8 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
            = ["(set-logic " ++ show l ++ ") ; NB. User specified."]
            | hasDouble || hasFloat    -- NB. We don't check for quantifiers here, we probably should..
            = if hasBVs
-             then ["(set-logic QF_FPABV)"]
-             else ["(set-logic QF_FPA)"]
+             then ["(set-logic QF_FPBV)"]
+             else ["(set-logic QF_FP)"]
            | hasInteger || hasReal || not (null usorts)
            = case mbDefaultLogic solverCaps of
                 Nothing -> ["; Has unbounded values (Int/Real) or uninterpreted sorts; no logic specified."]   -- combination, let the solver pick
