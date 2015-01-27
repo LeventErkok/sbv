@@ -26,16 +26,16 @@ import Data.SBV
 --
 -- >>> prove assocPlus
 -- Falsifiable. Counter-example:
---   s0 = -7.888609e-31 :: SFloat
---   s1 = 3.944307e-31 :: SFloat
+--   s0 = -27.0 :: SFloat
+--   s1 = 832.0 :: SFloat
 --   s2 = NaN :: SFloat
 --
 -- Indeed:
 --
 -- >>> let i = 0/0 :: Float
--- >>> ((-7.888609e-31 + 3.944307e-31) + i) :: Float
+-- >>> ((-27.0 + 832.0) + i) :: Float
 -- NaN
--- >>> (-7.888609e-31 + (3.944307e-31 + i)) :: Float
+-- >>> (-27.0 + (832.0 + i)) :: Float
 -- NaN
 --
 -- But keep in mind that @NaN@ does not equal itself in the floating point world! We have:
