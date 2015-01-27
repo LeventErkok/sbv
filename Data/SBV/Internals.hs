@@ -18,6 +18,7 @@ module Data.SBV.Internals (
   , SBV(..), slet, CW(..), Kind(..), CWVal(..), AlgReal(..), Quantifier(..), mkConstCW, genVar, genVar_
   , liftQRem, liftDMod, symbolicMergeWithKind
   , cache, sbvToSW, newExpr, normCW, SBVExpr(..), Op(..), mkSymSBVWithRandom
+  , SBVType(..), newUninterpreted
   -- * Operations useful for instantiating SBV type classes
   , genLiteral, genFromCW, genMkSymVar, checkAndConvert, genParse
   -- * Compilation to C
@@ -25,7 +26,7 @@ module Data.SBV.Internals (
   ) where
 
 import Data.SBV.BitVectors.Data       (Result, SBVRunMode(..), runSymbolic, runSymbolic', SBV(..), CW(..), Kind(..), CWVal(..), AlgReal(..), Quantifier(..), mkConstCW)
-import Data.SBV.BitVectors.Data       (cache, sbvToSW, newExpr, normCW, SBVExpr(..), Op(..), mkSymSBVWithRandom)
+import Data.SBV.BitVectors.Data       (cache, sbvToSW, newExpr, normCW, SBVExpr(..), Op(..), mkSymSBVWithRandom, SBVType(..), newUninterpreted)
 import Data.SBV.BitVectors.Model      (genVar, genVar_, slet, liftQRem, liftDMod, symbolicMergeWithKind, genLiteral, genFromCW, genMkSymVar)
 import Data.SBV.BitVectors.Splittable (checkAndConvert)
 import Data.SBV.Compilers.C           (compileToC', compileToCLib')
