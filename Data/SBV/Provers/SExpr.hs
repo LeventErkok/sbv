@@ -11,12 +11,18 @@
 
 module Data.SBV.Provers.SExpr where
 
+import Data.Bits            (setBit, testBit)
+import Data.Word            (Word32, Word64)
 import Data.Char            (isDigit, ord)
 import Data.List            (isPrefixOf)
 import Numeric              (readInt, readDec, readHex, fromRat)
 
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data (nan, infinity)
+
+-- Needed for conversion from SMTLib triple-IEEE formats to float/double
+import qualified Foreign          as F
+import qualified System.IO.Unsafe as U (unsafePerformIO)  -- Only used safely!
 
 -- | ADT S-Expression format, suitable for representing get-model output of SMT-Lib
 data SExpr = ECon    String
@@ -87,19 +93,20 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         cvt (EApp [ECon "as", n, EApp [ECon "_", ECon "FloatingPoint", ENum ( 8, _), ENum (24, _)]]) = getFloat  n
         cvt (EApp [ECon "as", n, ECon "Float64"])                                                    = getDouble n
         cvt (EApp [ECon "as", n, ECon "Float32"])                                                    = getFloat  n
-        cvt (EApp [ECon "fp",    ENum (a, _),   ENum (b, Just 8),  ENum (c, _)])                       = return $ EFloat  $ getFP a b c
-        cvt (EApp [ECon "fp",    ENum (a, _),   ENum (b, Just 11), ENum (c, _)])                       = return $ EDouble $ getFP a b c
-        cvt (EApp [ECon "_",     ECon "NaN",    ENum ( 8, _), ENum (24, _)])                           = return $ EFloat  nan
-        cvt (EApp [ECon "_",     ECon "NaN",    ENum (11, _), ENum (53, _)])                           = return $ EDouble nan
-        cvt (EApp [ECon "_",     ECon "+oo",    ENum ( 8, _), ENum (24, _)])                           = return $ EFloat  infinity
-        cvt (EApp [ECon "_",     ECon "+oo",    ENum (11, _), ENum (53, _)])                           = return $ EDouble infinity
-        cvt (EApp [ECon "_",     ECon "-oo",    ENum ( 8, _), ENum (24, _)])                           = return $ EFloat  (-infinity)
-        cvt (EApp [ECon "_",     ECon "-oo",    ENum (11, _), ENum (53, _)])                           = return $ EDouble (-infinity)
-        cvt (EApp [ECon "_",     ECon "+zero",  ENum ( 8, _), ENum (24, _)])                           = return $ EFloat  0
-        cvt (EApp [ECon "_",     ECon "+zero",  ENum (11, _), ENum (53, _)])                           = return $ EDouble 0
-        cvt (EApp [ECon "_",     ECon "-zero",  ENum ( 8, _), ENum (24, _)])                           = return $ EFloat  (-0)
-        cvt (EApp [ECon "_",     ECon "-zero",  ENum (11, _), ENum (53, _)])                           = return $ EDouble (-0)
-        cvt x                                                      = return x
+        -- NB. Note the lengths on the mantissa for the following two are 23/52; not 24/53!
+        cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just 8),  ENum (m, Just 23)])           = return $ EFloat  $ getTripleFloat  s e m
+        cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just 11), ENum (m, Just 52)])           = return $ EDouble $ getTripleDouble s e m
+        cvt (EApp [ECon "_",     ECon "NaN",       ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat  nan
+        cvt (EApp [ECon "_",     ECon "NaN",       ENum (11, _),       ENum (53,      _)])           = return $ EDouble nan
+        cvt (EApp [ECon "_",     ECon "+oo",       ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat  infinity
+        cvt (EApp [ECon "_",     ECon "+oo",       ENum (11, _),       ENum (53,      _)])           = return $ EDouble infinity
+        cvt (EApp [ECon "_",     ECon "-oo",       ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat  (-infinity)
+        cvt (EApp [ECon "_",     ECon "-oo",       ENum (11, _),       ENum (53,      _)])           = return $ EDouble (-infinity)
+        cvt (EApp [ECon "_",     ECon "+zero",     ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat  0
+        cvt (EApp [ECon "_",     ECon "+zero",     ENum (11, _),       ENum (53,      _)])           = return $ EDouble 0
+        cvt (EApp [ECon "_",     ECon "-zero",     ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat  (-0)
+        cvt (EApp [ECon "_",     ECon "-zero",     ENum (11, _),       ENum (53,      _)])           = return $ EDouble (-0)
+        cvt x                                                                                        = return x
         getCoeff (EApp [ECon "*", ENum k, EApp [ECon "^", ECon "x", ENum p]]) = return (fst k, fst p)  -- kx^p
         getCoeff (EApp [ECon "*", ENum k,                 ECon "x"        ] ) = return (fst k,     1)  -- kx
         getCoeff (                        EApp [ECon "^", ECon "x", ENum p] ) = return (    1, fst p)  --  x^p
@@ -144,11 +151,20 @@ rdFP s = case break (`elem` "pe") s of
                 [(n, "")] -> Just n
                 _         -> Nothing
 
--- | Parses SMT-Lib floating point formatted numbers that come in triples
--- (s, m, e). The translation is (-1)^s * m * 2^e
-getFP :: RealFloat a => Integer -> Integer -> Integer -> a
-getFP s m e
-  | s == 0 = res
-  | s == 1 = negate res
-  | True   = error $ "SBV.Provers.SExpr.getFP: Unexpected sign bit value (must be 0 or 1): " ++ show s
-  where res = fromIntegral m * (2 ** fromIntegral e)
+-- | Convert an (s, e, m) triple to a float value
+getTripleFloat :: Integer -> Integer -> Integer -> Float
+getTripleFloat s e m = U.unsafePerformIO $ F.alloca $ \buf -> do {F.poke (F.castPtr buf) w32; F.peek buf}
+  where sign      = [s == 1]
+        expt      = [e `testBit` i | i <- [ 7,  6 .. 0]]
+        mantissa  = [m `testBit` i | i <- [22, 21 .. 0]]
+        positions = [i | (i, b) <- zip [31, 30 .. 0] (sign ++ expt ++ mantissa), b]
+        w32       = foldr (flip setBit) (0::Word32) positions
+
+-- | Convert an (s, e, m) triple to a float value
+getTripleDouble :: Integer -> Integer -> Integer -> Double
+getTripleDouble s e m = U.unsafePerformIO $ F.alloca $ \buf -> do {F.poke (F.castPtr buf) w64; F.peek buf}
+  where sign      = [s == 1]
+        expt      = [e `testBit` i | i <- [10,  9 .. 0]]
+        mantissa  = [m `testBit` i | i <- [51, 50 .. 0]]
+        positions = [i | (i, b) <- zip [64, 63 .. 0] (sign ++ expt ++ mantissa), b]
+        w64       = foldr (flip setBit) (0::Word64) positions

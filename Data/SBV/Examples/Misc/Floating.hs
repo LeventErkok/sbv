@@ -26,16 +26,16 @@ import Data.SBV
 --
 -- >>> prove assocPlus
 -- Falsifiable. Counter-example:
---   s0 = -27.0 :: SFloat
---   s1 = 832.0 :: SFloat
+--   s0 = -7.888609e-31 :: SFloat
+--   s1 = 3.944307e-31 :: SFloat
 --   s2 = NaN :: SFloat
 --
 -- Indeed:
 --
 -- >>> let i = 0/0 :: Float
--- >>> ((-27.0 + 832.0) + i) :: Float
+-- >>> ((-7.888609e-31 + 3.944307e-31) + i) :: Float
 -- NaN
--- >>> (-27.0 + (832.0 + i)) :: Float
+-- >>> (-7.888609e-31 + (3.944307e-31 + i)) :: Float
 -- NaN
 --
 -- But keep in mind that @NaN@ does not equal itself in the floating point world! We have:
@@ -116,11 +116,11 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   a = 1.2354518252390238e308 :: SDouble
+--   a = -3.930142707617224e307 :: SDouble
 --
 -- Indeed, we have:
 --
--- >>> let a =  1.2354518252390238e308 :: Double
+-- >>> let a = -3.930142707617224e307 :: Double
 -- >>> a * (1/a)
 -- 0.9999999999999998
 multInverse :: IO ThmResult
