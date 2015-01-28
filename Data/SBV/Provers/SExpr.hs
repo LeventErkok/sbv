@@ -166,5 +166,5 @@ getTripleDouble s e m = U.unsafePerformIO $ F.alloca $ \buf -> do {F.poke (F.cas
   where sign      = [s == 1]
         expt      = [e `testBit` i | i <- [10,  9 .. 0]]
         mantissa  = [m `testBit` i | i <- [51, 50 .. 0]]
-        positions = [i | (i, b) <- zip [64, 63 .. 0] (sign ++ expt ++ mantissa), b]
+        positions = [i | (i, b) <- zip [63, 62 .. 0] (sign ++ expt ++ mantissa), b]
         w64       = foldr (flip setBit) (0::Word64) positions
