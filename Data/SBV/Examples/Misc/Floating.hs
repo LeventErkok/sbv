@@ -14,6 +14,8 @@
 -- the presence of @NaN@ is always something to look out for.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Data.SBV.Examples.Misc.Floating where
 
 import Data.SBV
@@ -109,7 +111,7 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 -- * FP multiplicative inverses may not exist
 -----------------------------------------------------------------------------
 
--- | The last example illustrates that @a * (1/a)@ does not necessarily equal @1@. Again,
+-- | This example illustrates that @a * (1/a)@ does not necessarily equal @1@. Again,
 -- we protect against division by @0@ and @NaN@/@Infinity@.
 --
 -- We have:
@@ -128,3 +130,76 @@ multInverse = prove $ do a <- sDouble "a"
                          constrain $ isFPPoint a
                          constrain $ isFPPoint (1/a)
                          return $ a * (1/a) .== 1
+
+-----------------------------------------------------------------------------
+-- * Effect of rounding modes
+-----------------------------------------------------------------------------
+
+-- | One interesting aspect of floating-point is that the chosen rounding-mode
+-- can effect the results of a computation if the exact result cannot be precisely
+-- represented. SBV exports the functions 'fpAdd', 'fpSub', 'fpMul', 'fpDiv', 'fpFMA'
+-- and 'fpSqrt' which allows users to specify the IEEE supported 'RoundingMode' for
+-- the operation. (Also see the class 'RoundingFloat'.) This example illustrates how SBV
+-- can be used to find rounding-modes where, for instance, addition can produce different
+-- results. We have:
+--
+-- >>> roundingAdd
+-- Satisfiable. Model:
+--   rm = RoundTowardPositive :: RoundingMode
+--   x = 1.7014118e38 :: SFloat
+--   y = 1.1754942e-38 :: SFloat
+--
+-- Note that we can't directly test this at the Haskell level, as Haskell only supports
+-- 'RoundNearestTiesToEven'. We have:
+--
+-- >>> (1.7014118e38 + 1.1754942e-38) :: Float
+-- 1.7014118e38
+--
+-- Note that result is identical to the first argument. But with a 'RoundTowardPositive', we would
+-- get the result @1.701412e38@. While we cannot directly see this from within Haskell, we can
+-- use SBV to provide us with that result thusly:
+--
+-- >>> sat $ \x -> x .== fpAdd (literal RoundTowardPositive) (1.7014118e38::SFloat)  (1.1754942e-38::SFloat)
+-- Satisfiable. Model:
+--   s0 = 1.701412e38 :: SFloat
+--
+-- The following C program can be used to double-check these results; note that we're printing
+-- the floats with extra digits to show the effect of rounding here.
+--
+-- @
+--
+--    #include <fenv.h>
+--    #include <stdio.h>
+--
+--    int main(void) {
+--        float x = 1.7014118e38f;
+--        float y = 1.1754942e-38f;
+--
+--        float z1;
+--        fesetround(FE_TONEAREST);
+--        z1 = x + y;
+--
+--        fesetround(FE_UPWARD);
+--        float z2;
+--        z2 = x + y;
+--
+--        printf("NEAREST: %.15e\n", z1);
+--        printf("UPWARD : %.15e\n", z2);
+--        return 0;
+--    }
+-- @
+--
+-- When I run this program on my laptop, I get:
+--
+-- @
+--    NEAREST: 1.701411834604693e+38
+--    UPWARD : 1.701412037428789e+38
+-- @
+--
+-- which clearly shows the impact of rounding on the addition.
+roundingAdd :: IO SatResult
+roundingAdd = sat $ do m :: SRoundingMode <- free "rm"
+                       x <- sFloat "x"
+                       y <- sFloat "y"
+                       constrain $ m ./= literal RoundNearestTiesToEven
+                       return $ fpAdd m x y ./= x + y
