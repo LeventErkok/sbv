@@ -130,14 +130,14 @@ getUIVal knd s
 
 getDefaultVal :: UnintKind -> String -> Maybe (String, [String], String)
 getDefaultVal knd n = case parseSExpr n of
-                        Right (ENum i) -> Just $ showDefault knd (show i)
-                        _               -> Nothing
+                        Right (ENum i) -> Just $ showDefault knd (show (fst i))
+                        _              -> Nothing
 
 getCallVal :: UnintKind -> [SExpr] -> Integer -> Maybe (String, [String], String)
 getCallVal knd args res = mapM getArg args >>= \as -> return (showCall knd as (show res))
 
 getArg :: SExpr -> Maybe String
-getArg (ENum i) = Just (show i)
+getArg (ENum i) = Just (show (fst i))
 getArg _        = Nothing
 
 showDefault :: UnintKind -> String -> (String, [String], String)
