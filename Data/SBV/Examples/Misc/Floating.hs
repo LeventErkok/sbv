@@ -116,11 +116,11 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   a = -3.930142707617224e307 :: SDouble
+--   a = 1.2354518252390238e308 :: SDouble
 --
 -- Indeed, we have:
 --
--- >>> let a = -3.930142707617224e307 :: Double
+-- >>> let a = 1.2354518252390238e308 :: Double
 -- >>> a * (1/a)
 -- 0.9999999999999998
 multInverse :: IO ThmResult
