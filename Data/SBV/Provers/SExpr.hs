@@ -15,10 +15,11 @@ import Data.Bits            (setBit, testBit)
 import Data.Word            (Word32, Word64)
 import Data.Char            (isDigit, ord)
 import Data.List            (isPrefixOf)
+import Data.Maybe           (fromMaybe, listToMaybe)
 import Numeric              (readInt, readDec, readHex, fromRat)
 
 import Data.SBV.BitVectors.AlgReals
-import Data.SBV.BitVectors.Data (nan, infinity)
+import Data.SBV.BitVectors.Data (nan, infinity, RoundingMode(..))
 
 -- Needed for conversion from SMTLib triple-IEEE formats to float/double
 import qualified Foreign          as F
@@ -71,7 +72,7 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
           | not (null n) && isDigit (head n)
           = if '.' `elem` n then getReal n
             else mkNum Nothing $ readDec n
-        pTok n                 = return $ ECon n
+        pTok n                 = return $ ECon (constantMap n)
         mkNum l [(n, "")] = return $ ENum (n, l)
         mkNum _ _         = die "cannot read number"
         getReal n = return $ EReal $ mkPolyReal (Left (exact, n'))
@@ -168,3 +169,14 @@ getTripleDouble s e m = U.unsafePerformIO $ F.alloca $ \buf -> do {F.poke (F.cas
         mantissa  = [m `testBit` i | i <- [51, 50 .. 0]]
         positions = [i | (i, b) <- zip [63, 62 .. 0] (sign ++ expt ++ mantissa), b]
         w64       = foldr (flip setBit) (0::Word64) positions
+
+-- | Special constants of SMTLib2 and their internal translation. Mainly
+-- rounding modes for now.
+constantMap :: String -> String
+constantMap n = fromMaybe n (listToMaybe [to | (from, to) <- special, n `elem` from])
+ where special = [ (["RNE", "roundNearestTiesToEven"], show RoundNearestTiesToEven)
+                 , (["RNA", "roundNearestTiesToAway"], show RoundNearestTiesToAway)
+                 , (["RTP", "roundTowardPositive"],    show RoundTowardPositive)
+                 , (["RTN", "roundTowardNegative"],    show RoundTowardNegative)
+                 , (["RTZ", "roundTowardZero"],        show RoundTowardZero)
+                 ]

@@ -3,6 +3,33 @@
 
 * Latest Hackage released version: 4.0
 
+### Version 4.1, Not yet released
+
+This release mainly concerns tracking changes in the SMT-Lib
+floating-point theory. If you are using symbolic floating-point
+types (i.e., SFloat and SDouble), then you should upgrade to this
+version and also get a very latest (unstable) Z3 release.
+
+  * Track changes in the latest SMTLib version of the floating
+    point theory. See http://smtlib.cs.uiowa.edu/theories/FloatingPoint.smt2
+    for details.
+
+  * Introduce a new class, 'RoundingFloat', which supports floating-point
+    operations with arbitrary rounding-modes. Note that Haskell only allows
+    RoundNearestTiesToAway, but with SBV, we get all 5 IEEE754 rounding-modes
+    and all the basic operations ('fpAdd', 'fpMul', 'fpDiv', etc.) with these
+    modes.
+    
+  * Allow RoundingMode to be symbolic as well
+
+  * Improve the example "Data/SBV/Examples/Misc/Floating.hs" to include
+    rounding-mode based addition example.
+
+Other:
+
+  * Export a few extra symbols from the Internals module (mainly for
+    Cryptol usage.)
+
 ### Version 4.0, 2015-01-22
 
 This release mainly contains contributions from Brian Huffman, allowing

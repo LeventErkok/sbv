@@ -16,12 +16,14 @@ import Data.Bits     (bit)
 import Data.Char     (intToDigit)
 import Data.Function (on)
 import Data.Ord      (comparing)
+import Data.Maybe    (fromMaybe, listToMaybe)
+import Data.List     (intercalate, partition, groupBy, sortBy)
+import Numeric       (showIntAtBase, showHex)
+
 import qualified Data.Foldable as F (toList)
 import qualified Data.Map      as M
 import qualified Data.IntMap   as IM
 import qualified Data.Set      as Set
-import Data.List (intercalate, partition, groupBy, sortBy)
-import Numeric (showIntAtBase, showHex)
 
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
@@ -29,7 +31,7 @@ import Data.SBV.BitVectors.PrettyNum (showSMTFloat, showSMTDouble, smtRoundingMo
 
 -- | Add constraints to generate /new/ models. This function is used to query the SMT-solver, while
 -- disallowing a previous model.
-addNonEqConstraints :: FPRoundingMode -> [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
+addNonEqConstraints :: RoundingMode -> [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
 addNonEqConstraints rm qinps allNonEqConstraints (SMTLibPgm _ (aliasTable, pre, post))
   | null allNonEqConstraints
   = Just $ intercalate "\n" $ pre ++ post
@@ -48,7 +50,7 @@ addNonEqConstraints rm qinps allNonEqConstraints (SMTLibPgm _ (aliasTable, pre, 
        nonEqConstraints = filter (not . null) $ map (filter (\(s, _) -> s `elem` topUnivs)) allNonEqConstraints
        topUnivs = [s | (_, (_, s)) <- takeWhile (\p -> fst p == EX) qinps]
 
-nonEqs :: FPRoundingMode -> [(String, CW)] -> [String]
+nonEqs :: RoundingMode -> [(String, CW)] -> [String]
 nonEqs rm scs = format $ interp ps ++ disallow (map eqClass uninterpClasses)
   where isFree (KUserSort _ (Left _, _)) = True
         isFree _                         = False
@@ -73,14 +75,14 @@ nonEqs rm scs = format $ interp ps ++ disallow (map eqClass uninterpClasses)
         -- Now, take the conjunction of equivalence classes and assert it's negation:
         disallow = map $ \ec -> "(not " ++ ec ++ ")"
 
-nonEq :: FPRoundingMode -> (String, CW) -> String
+nonEq :: RoundingMode -> (String, CW) -> String
 nonEq rm (s, c) = "(not (= " ++ s ++ " " ++ cvtCW rm c ++ "))"
 
 tbd :: String -> a
 tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
-cvt :: FPRoundingMode               -- ^ User selected rounding mode to be used for floating point arithmetic
+cvt :: RoundingMode               -- ^ User selected rounding mode to be used for floating point arithmetic
     -> Maybe Logic                  -- ^ SMT-Lib logic, if requested by the user
     -> SolverCapabilities           -- ^ capabilities of the current solver
     -> Set.Set Kind                 -- ^ kinds used
@@ -192,6 +194,10 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
         userName s = case s `lookup` map snd inputs of
                         Just u  | show s /= u -> " ; tracks user variable " ++ show u
                         _ -> ""
+        -- following sorts are built-in; do not translate them:
+        builtInSort = (`elem` ["RoundingMode"])
+        declSort (s, _)
+          | builtInSort s           = []
         declSort (s, (Left  r,  _)) = ["(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted: " ++ r]
         declSort (s, (Right fs, _)) = [ "(declare-datatypes () ((" ++ s ++ " " ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
                                       , "(define-fun " ++ s ++ "_constrIndex ((x " ++ s ++ ")) Int"
@@ -220,7 +226,7 @@ skolemTable qsIn (((i, ak, rk), _elts), _) = decl
         decl = "(declare-fun " ++ t ++ " (" ++ qs ++ smtType ak ++ ") " ++ smtType rk ++ ")"
 
 -- Left if all constants, Right if otherwise
-genTableData :: FPRoundingMode -> SkolemMap -> (Bool, String) -> [SW] -> ((Int, Kind, Kind), [SW]) -> Either [String] [String]
+genTableData :: RoundingMode -> SkolemMap -> (Bool, String) -> [SW] -> ((Int, Kind, Kind), [SW]) -> Either [String] [String]
 genTableData rm skolemMap (_quantified, args) consts ((i, aknd, _), elts)
   | null post = Left  (map (topLevel . snd) pre)
   | True      = Right (map (nested   . snd) (pre ++ post))
@@ -307,10 +313,10 @@ hex sz v
    where pad n s = replicate (n - length s) '0' ++ s
          showBin = showIntAtBase 2 intToDigit
 
-cvtCW :: FPRoundingMode -> CW -> String
+cvtCW :: RoundingMode -> CW -> String
 cvtCW rm x
   | isBoolean       x, CWInteger  w      <- cwVal x = if w == 0 then "false" else "true"
-  | isUninterpreted x, CWUserSort (_, s) <- cwVal x = s
+  | isUninterpreted x, CWUserSort (_, s) <- cwVal x = roundModeConvert s
   | isReal          x, CWAlgReal  r      <- cwVal x = algRealToSMTLib2 r
   | isFloat         x, CWFloat    f      <- cwVal x = showSMTFloat  rm f
   | isDouble        x, CWDouble   d      <- cwVal x = showSMTDouble rm d
@@ -323,6 +329,7 @@ cvtCW rm x
                                                       then mkMinBound (intSizeOf x)
                                                       else negIf (w < 0) $ hex (intSizeOf x) (abs w)
   | True = error $ "SBV.cvtCW: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
+  where roundModeConvert s = fromMaybe s (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])
 
 negIf :: Bool -> String -> String
 negIf True  a = "(bvneg " ++ a ++ ")"
@@ -338,7 +345,7 @@ getTable m i
   | Just tn <- i `IM.lookup` m = tn
   | True                       = error $ "SBV.SMTLib2: Cannot locate table " ++ show i
 
-cvtExp :: FPRoundingMode -> SkolemMap -> TableMap -> SBVExpr -> String
+cvtExp :: RoundingMode -> SkolemMap -> TableMap -> SBVExpr -> String
 cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
   where ssw = cvtSW skolemMap
         bvOp     = all isBounded       arguments
@@ -540,7 +547,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
 rot :: (SW -> String) -> String -> Int -> SW -> String
 rot ssw o c x = "((_ " ++ o ++ " " ++ show c ++ ") " ++ ssw x ++ ")"
 
-shft :: FPRoundingMode -> (SW -> String) -> String -> String -> Int -> SW -> String
+shft :: RoundingMode -> (SW -> String) -> String -> String -> Int -> SW -> String
 shft rm ssw oW oS c x = "(" ++ o ++ " " ++ ssw x ++ " " ++ cvtCW rm c' ++ ")"
    where s  = hasSign x
          c' = mkConstCW (kindOf x) c
