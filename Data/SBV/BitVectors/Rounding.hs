@@ -24,12 +24,12 @@ import Data.SBV.BitVectors.Model ()  -- instances only
 -- use the usual Num instances. (Except for FMA obviously, which has no
 -- Haskell equivalent.)
 class (SymWord a, Floating a) => RoundingFloat a where
-  fpAdd  :: SFPRoundingMode -> SBV a -> SBV a -> SBV a
-  fpSub  :: SFPRoundingMode -> SBV a -> SBV a -> SBV a
-  fpMul  :: SFPRoundingMode -> SBV a -> SBV a -> SBV a
-  fpDiv  :: SFPRoundingMode -> SBV a -> SBV a -> SBV a
-  fpFMA  :: SFPRoundingMode -> SBV a -> SBV a -> SBV a -> SBV a
-  fpSqrt :: SFPRoundingMode -> SBV a -> SBV a
+  fpAdd  :: SRoundingMode -> SBV a -> SBV a -> SBV a
+  fpSub  :: SRoundingMode -> SBV a -> SBV a -> SBV a
+  fpMul  :: SRoundingMode -> SBV a -> SBV a -> SBV a
+  fpDiv  :: SRoundingMode -> SBV a -> SBV a -> SBV a
+  fpFMA  :: SRoundingMode -> SBV a -> SBV a -> SBV a -> SBV a
+  fpSqrt :: SRoundingMode -> SBV a -> SBV a
 
   -- Default definitions simply piggy back onto FPRound
   fpAdd  = lift2Rm "fp.add"
@@ -40,7 +40,7 @@ class (SymWord a, Floating a) => RoundingFloat a where
   fpSqrt = lift1Rm "fp.sqrt"
 
 -- | Lift a 1 arg floating point UOP
-lift1Rm :: (SymWord a, Floating a) => String -> SFPRoundingMode -> SBV a -> SBV a
+lift1Rm :: (SymWord a, Floating a) => String -> SRoundingMode -> SBV a -> SBV a
 lift1Rm w m a = SBV k $ Right $ cache r
   where k = kindOf a
         r st = do swm <- sbvToSW st m
@@ -48,7 +48,7 @@ lift1Rm w m a = SBV k $ Right $ cache r
                   newExpr st k (SBVApp (FPRound w) [swm, swa])
 
 -- | Lift a 2 arg floating point UOP
-lift2Rm :: (SymWord a, Floating a) => String -> SFPRoundingMode -> SBV a -> SBV a -> SBV a
+lift2Rm :: (SymWord a, Floating a) => String -> SRoundingMode -> SBV a -> SBV a -> SBV a
 lift2Rm w m a b = SBV k $ Right $ cache r
   where k = kindOf a
         r st = do swm <- sbvToSW st m
@@ -57,7 +57,7 @@ lift2Rm w m a b = SBV k $ Right $ cache r
                   newExpr st k (SBVApp (FPRound w) [swm, swa, swb])
 
 -- | Lift a 3 arg floating point UOP
-lift3Rm :: (SymWord a, Floating a) => String -> SFPRoundingMode -> SBV a -> SBV a -> SBV a -> SBV a
+lift3Rm :: (SymWord a, Floating a) => String -> SRoundingMode -> SBV a -> SBV a -> SBV a -> SBV a
 lift3Rm w m a b c = SBV k $ Right $ cache r
   where k = kindOf a
         r st = do swm <- sbvToSW st m

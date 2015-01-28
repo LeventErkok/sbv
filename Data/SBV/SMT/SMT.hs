@@ -195,7 +195,7 @@ instance SatModel CW where
   parseCWs []       = Nothing
 
 -- | A rounding mode, extracted from a model. (Default definition suffices)
-instance SatModel FPRoundingMode
+instance SatModel RoundingMode
 
 -- | A list of values as extracted from a model. When reading a list, we
 -- go as long as we can (maximal-munch). Note that this never fails, as

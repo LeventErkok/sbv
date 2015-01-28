@@ -123,7 +123,7 @@ module Data.SBV (
   , SInteger
   -- *** IEEE-floating point numbers
   -- $floatingPoints
-  , SFloat, SDouble, RoundingFloat(..), FPRoundingMode(..), SFPRoundingMode, nan, infinity, sNaN, sInfinity, fusedMA, isSNaN, isFPPoint
+  , SFloat, SDouble, RoundingFloat(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity, fusedMA, isSNaN, isFPPoint
   -- *** Signed algebraic reals
   -- $algReals
   , SReal, AlgReal, toSReal

@@ -204,7 +204,7 @@ showHDouble d
    | True                = show d
 
 -- | A version of show for floats that generates correct SMTLib literals using the rounding mode
-showSMTFloat :: FPRoundingMode -> Float -> String
+showSMTFloat :: RoundingMode -> Float -> String
 showSMTFloat rm f
    | isNaN f             = as "NaN"
    | isInfinite f, f < 0 = as "-oo"
@@ -214,7 +214,7 @@ showSMTFloat rm f
    where as s = "(as " ++ s ++ " (_ FloatingPoint 8 24))"
 
 -- | A version of show for doubles that generates correct SMTLib literals using the rounding mode
-showSMTDouble :: FPRoundingMode -> Double -> String
+showSMTDouble :: RoundingMode -> Double -> String
 showSMTDouble rm d
    | isNaN d             = as "NaN"
    | isInfinite d, d < 0 = as "-oo"
@@ -234,7 +234,7 @@ toSMTLibRational r
         d = denominator r
 
 -- | Convert a rounding mode to the format SMT-Lib2 understands.
-smtRoundingMode :: FPRoundingMode -> String
+smtRoundingMode :: RoundingMode -> String
 smtRoundingMode RoundNearestTiesToEven = "roundNearestTiesToEven"
 smtRoundingMode RoundNearestTiesToAway = "roundNearestTiesToAway"
 smtRoundingMode RoundTowardPositive    = "roundTowardPositive"

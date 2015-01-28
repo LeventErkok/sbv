@@ -21,7 +21,7 @@ import qualified Data.SBV.SMT.SMTLib2 as SMT2
 import qualified Data.Set as Set (Set, member, toList)
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
-type SMTLibConverter =  FPRoundingMode              -- ^ User selected rounding mode to be used for floating point arithmetic
+type SMTLibConverter =  RoundingMode                -- ^ User selected rounding mode to be used for floating point arithmetic
                      -> Maybe Logic                 -- ^ User selected logic to use. If Nothing, pick automatically.
                      -> SolverCapabilities          -- ^ Capabilities of the backend solver targeted
                      -> Set.Set Kind                -- ^ Kinds used in the problem
@@ -73,7 +73,7 @@ toSMTLib2 :: SMTLibConverter
                  where quantifiers = map fst qinps
 
 -- | Add constraints generated from older models, used for querying new models
-addNonEqConstraints :: FPRoundingMode -> [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
+addNonEqConstraints :: RoundingMode -> [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
 addNonEqConstraints rm _qinps cs p@(SMTLibPgm SMTLib1 _) = SMT1.addNonEqConstraints rm cs p
 addNonEqConstraints rm  qinps cs p@(SMTLibPgm SMTLib2 _) = SMT2.addNonEqConstraints rm qinps cs p
 

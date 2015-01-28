@@ -25,7 +25,7 @@
 module Data.SBV.BitVectors.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
  , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble
- , nan, infinity, sNaN, sInfinity, FPRoundingMode(..), SFPRoundingMode, smtLibSquareRoot, smtLibFusedMA
+ , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode, smtLibSquareRoot, smtLibFusedMA
  , SymWord(..)
  , CW(..), CWVal(..), AlgReal(..), cwSameType, cwIsBit, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
@@ -690,25 +690,25 @@ sInfinity = literal infinity
 -- Note that Haskell's default is 'RoundNearestTiesToEven'. If you use
 -- a different rounding mode, then the counter-examples you get may not
 -- match what you observe in Haskell.
-data FPRoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable floating point value.
-                                              -- If precisely at half-way, pick the even number.
-                                              -- (In this context, /even/ means the lowest-order bit is zero.)
-                    | RoundNearestTiesToAway  -- ^ Round to nearest representable floating point value.
-                                              -- If precisely at half-way, pick the number further away from 0.
-                                              -- (That is, for positive values, pick the greater; for negative values, pick the smaller.)
-                    | RoundTowardPositive     -- ^ Round towards positive infinity. (Also known as rounding-up or ceiling.)
-                    | RoundTowardNegative     -- ^ Round towards negative infinity. (Also known as rounding-down or floor.)
-                    | RoundTowardZero         -- ^ Round towards zero. (Also known as truncation.)
-                    deriving (Eq, Ord, G.Data, T.Typeable, Read, Show)
+data RoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable floating point value.
+                                            -- If precisely at half-way, pick the even number.
+                                            -- (In this context, /even/ means the lowest-order bit is zero.)
+                  | RoundNearestTiesToAway  -- ^ Round to nearest representable floating point value.
+                                            -- If precisely at half-way, pick the number further away from 0.
+                                            -- (That is, for positive values, pick the greater; for negative values, pick the smaller.)
+                  | RoundTowardPositive     -- ^ Round towards positive infinity. (Also known as rounding-up or ceiling.)
+                  | RoundTowardNegative     -- ^ Round towards negative infinity. (Also known as rounding-down or floor.)
+                  | RoundTowardZero         -- ^ Round towards zero. (Also known as truncation.)
+                  deriving (Eq, Ord, G.Data, T.Typeable, Read, Show, Bounded, Enum)
 
--- | 'FPRoundingMode' can be used symbolically
-instance SymWord FPRoundingMode
+-- | 'RoundingMode' can be used symbolically
+instance SymWord RoundingMode
 
--- | 'FPRoundingMode' kind
-instance HasKind FPRoundingMode
+-- | 'RoundingMode' kind
+instance HasKind RoundingMode
 
--- | The symbolic variant of 'FPRoundingMode'
-type SFPRoundingMode = SBV FPRoundingMode
+-- | The symbolic variant of 'RoundingMode'
+type SRoundingMode = SBV RoundingMode
 
 -- Not particularly "desirable", but will do if needed
 instance Show (SBV a) where
@@ -771,7 +771,8 @@ registerKind st k
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | True
   = modifyIORef (rUsedKinds st) (Set.insert k)
- where reserved = ["Int", "Real", "List", "Array", "Bool", "NUMERAL", "DECIMAL", "STRING", "FP", "FloatingPoint"]  -- Reserved by SMT-Lib
+ where -- TODO: this list is not comprehensive!
+       reserved = ["Int", "Real", "List", "Array", "Bool", "NUMERAL", "DECIMAL", "STRING", "FP", "FloatingPoint", "fp"]  -- Reserved by SMT-Lib
 
 -- | Create a new constant; hash-cons as necessary
 newConst :: State -> CW -> IO SW
@@ -1438,7 +1439,7 @@ data SMTConfig = SMTConfig {
        , smtFile        :: Maybe FilePath   -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
        , useSMTLib2     :: Bool             -- ^ If True, we'll treat the solver as using SMTLib2 input format. Otherwise, SMTLib1
        , solver         :: SMTSolver        -- ^ The actual SMT solver.
-       , roundingMode   :: FPRoundingMode   -- ^ Rounding mode to use for floating-point conversions
+       , roundingMode   :: RoundingMode     -- ^ Rounding mode to use for floating-point conversions
        , useLogic       :: Maybe Logic      -- ^ If Nothing, pick automatically. Otherwise, either use the given one, or use the custom string.
        }
 
