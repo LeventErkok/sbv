@@ -149,7 +149,7 @@ multInverse = prove $ do a <- sDouble "a"
 --   x = 1.7014118e38 :: SFloat
 --   y = 1.1754942e-38 :: SFloat
 --
--- Note that we can't directly test this at the Haskell level, as Haskell only supports
+-- Unfortunately we can't directly validate this result at the Haskell level, as Haskell only supports
 -- 'RoundNearestTiesToEven'. We have:
 --
 -- >>> (1.7014118e38 + 1.1754942e-38) :: Float
@@ -163,40 +163,32 @@ multInverse = prove $ do a <- sDouble "a"
 -- Satisfiable. Model:
 --   s0 = 1.701412e38 :: SFloat
 --
--- The following C program can be used to double-check these results; note that we're printing
--- the floats with extra digits to show the effect of rounding here.
+-- We can see why these two resuls are different if we treat these values as arbitrary
+-- precision reals, as represented by the 'SReal' type:
 --
--- @
+-- >>> let x = 1.7014118e38 :: SReal
+-- >>> let y = 1.1754942e-38 :: SReal
+-- >>> x
+-- 170141180000000000000000000000000000000.0 :: SReal
+-- >>> y
+-- 0.000000000000000000000000000000000000011754942 :: SReal
+-- >>> x + y
+-- 170141180000000000000000000000000000000.000000000000000000000000000000000000011754942 :: SReal
 --
---    #include <fenv.h>
---    #include <stdio.h>
+-- When we do 'RoundNearestTiesToEven', the entire suffix falls off, as it happens that the infinitely
+-- precise result is closer to the value of @x@. But when we use 'RoundTowardPositive', we reach
+-- for the next representable number, which happens to be @1.701412e38@. You might wonder why not
+-- @1.7014119e38@? Because that number is not precisely representable as a 'Float':
 --
---    int main(void) {
---        float x = 1.7014118e38f;
---        float y = 1.1754942e-38f;
+-- >>> 1.7014119e38:: Float
+-- 1.7014118e38
 --
---        float z1;
---        fesetround(FE_TONEAREST);
---        z1 = x + y;
+-- But @1.701412e38@ is:
 --
---        fesetround(FE_UPWARD);
---        float z2;
---        z2 = x + y;
+-- >>> 1.701412e38 :: Float
+-- 1.701412e38
 --
---        printf("NEAREST: %.15e\n", z1);
---        printf("UPWARD : %.15e\n", z2);
---        return 0;
---    }
--- @
---
--- When I run this program on my laptop, I get:
---
--- @
---    NEAREST: 1.701411834604693e+38
---    UPWARD : 1.701412037428789e+38
--- @
---
--- which clearly shows the impact of rounding on the addition.
+-- Floating point representation and semantics is indeed a thorny subject, <https://ece.uwaterloo.ca/~dwharder/NumericalAnalysis/02Numerics/Double/paper.pdf> happens to be an excellent guide, however.
 roundingAdd :: IO SatResult
 roundingAdd = sat $ do m :: SRoundingMode <- free "rm"
                        x <- sFloat "x"
