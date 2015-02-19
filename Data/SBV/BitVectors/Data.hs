@@ -1480,6 +1480,7 @@ data Solver = Z3
             | Boolector
             | CVC4
             | MathSAT
+            | ABC
             deriving (Show, Enum, Bounded)
 
 -- | An SMT solver

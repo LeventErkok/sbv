@@ -111,6 +111,7 @@ Library
                   , Data.SBV.Provers.Yices
                   , Data.SBV.Provers.Z3
                   , Data.SBV.Provers.MathSAT
+                  , Data.SBV.Provers.ABC
                   , Data.SBV.Tools.ExpectedValue
                   , Data.SBV.Tools.GenTest
                   , Data.SBV.Tools.Optimize
