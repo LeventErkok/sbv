@@ -42,11 +42,12 @@ abc = SMTSolver {
                                                    [] -> ""
                                                    ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
                                         script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont skolemMap)}
-                                    standardSolver cfg' script id (ProofError cfg') (interpretAbcOutput cfg' (extractMap isSat qinps modelMap))
+                                    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap))
          , xformExitCode  = id
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "ABC"
                                 , mbDefaultLogic             = Nothing
+                                -- TODO: what are the right answers for these?
                                 , supportsMacros             = True
                                 , supportsProduceModels      = True
                                 , supportsQuantifiers        = True
@@ -72,6 +73,7 @@ abc = SMTSolver {
               extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
               extract (Right (s, ss)) = "(get-value (" ++ show s ++ concat [' ' : zero (kindOf a) | a <- ss] ++ "))"
 
+-- TODO: this is still the cvc4 one...
 extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [String] -> SMTModel
 extractMap isSat qinps _modelMap solverLines =
    SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps . unstring) solverLines
@@ -91,9 +93,3 @@ extractMap isSat qinps _modelMap solverLines =
                         (_:tl@(_:_), '"', '"') -> init tl
                         _                      -> s'
           where s = reverse . dropWhile isSpace . reverse . dropWhile isSpace $ s'
-
--- | Interpret ABC output
-interpretAbcOutput :: SMTConfig -> ([String] -> SMTModel) -> [String] -> SMTResult
-interpretAbcOutput cfg _          (l:_)    | "UNSATISFIABLE" `isPrefixOf` l = Unsatisfiable cfg
-interpretAbcOutput cfg extractMap (l:rest) | "SATISFIABLE"   `isPrefixOf` l = Satisfiable   cfg  $ extractMap rest
-interpretAbcOutput cfg _          ls                                        = ProofError    cfg  ls
