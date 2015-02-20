@@ -27,7 +27,7 @@ import Data.Word          (Word8, Word16, Word32, Word64)
 import System.Directory   (findExecutable)
 import System.Process     (runInteractiveProcess, waitForProcess, terminateProcess)
 import System.Exit        (ExitCode(..))
-import System.IO          (hClose, hFlush, hPutStr, hGetContents, hGetLine, hSetBuffering, BufferMode(..))
+import System.IO          (hClose, hFlush, hPutStr, hGetContents, hGetLine)
 
 import qualified Data.Map as M
 import Data.Typeable
@@ -447,13 +447,8 @@ runSolver cfg execPath opts script
  = do (send, ask, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
                 hSetBuffering inh NoBuffering
-                let send l    = do
-                      when (verbose cfg) $ putStrLn ("> " ++ l)
-                      hPutStr inh (l ++ "\n") >> hFlush inh
-                    recv      = do
-                      l <- hGetLine outh
-                      when (verbose cfg) $ putStrLn ("< " ++ l)
-                      return l
+                let send l    = hPutStr inh (l ++ "\n") >> hFlush inh
+                    recv      = hGetLine outh
                     ask l     = send l >> recv
                     cleanUp response
                         = do hClose inh

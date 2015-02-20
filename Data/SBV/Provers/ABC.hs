@@ -17,7 +17,7 @@ import qualified Control.Exception as C
 
 import Data.Char          (isSpace)
 import Data.Function      (on)
-import Data.List          (intercalate, sortBy, isPrefixOf)
+import Data.List          (intercalate, sortBy)
 import System.Environment (getEnv)
     
 import Data.SBV.BitVectors.Data
