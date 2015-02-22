@@ -50,9 +50,9 @@ abc = SMTSolver {
                                 -- TODO: what are the right answers for these?
                                 , supportsMacros             = True
                                 , supportsProduceModels      = True
-                                , supportsQuantifiers        = True
-                                , supportsUninterpretedSorts = True
-                                , supportsUnboundedInts      = True
+                                , supportsQuantifiers        = False
+                                , supportsUninterpretedSorts = False
+                                , supportsUnboundedInts      = False
                                 , supportsReals              = False
                                 , supportsFloats             = False
                                 , supportsDoubles            = False
@@ -61,7 +61,7 @@ abc = SMTSolver {
  where zero :: Kind -> String
        zero KBool                = "false"
        zero (KBounded _     sz)  = "#x" ++ replicate (sz `div` 4) '0'
-       zero KUnbounded           = "0"
+       zero KUnbounded           = error "SBV.ABC.zero: Unexpected unbounded int value"
        zero KReal                = error "SBV.ABC.zero: Unexpected real value"
        zero KFloat               = error "SBV.ABC.zero: Unexpected float value"
        zero KDouble              = error "SBV.ABC.zero: Unexpected double value"
@@ -73,7 +73,8 @@ abc = SMTSolver {
               extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
               extract (Right (s, ss)) = "(get-value (" ++ show s ++ concat [' ' : zero (kindOf a) | a <- ss] ++ "))"
 
--- TODO: this is still the cvc4 one...
+-- XXX: this is copied from the CVC4 module, and is probably much more
+-- than is needed for ABC
 extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [String] -> SMTModel
 extractMap isSat qinps _modelMap solverLines =
    SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps . unstring) solverLines

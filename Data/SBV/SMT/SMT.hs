@@ -446,7 +446,6 @@ runSolver :: SMTConfig -> FilePath -> [String] -> SMTScript -> IO (ExitCode, Str
 runSolver cfg execPath opts script
  = do (send, ask, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
-                hSetBuffering inh NoBuffering
                 let send l    = hPutStr inh (l ++ "\n") >> hFlush inh
                     recv      = hGetLine outh
                     ask l     = send l >> recv
