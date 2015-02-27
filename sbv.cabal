@@ -55,6 +55,7 @@ Library
                   , Data.SBV.Bridge.MathSAT
                   , Data.SBV.Bridge.Yices
                   , Data.SBV.Bridge.Z3
+                  , Data.SBV.Bridge.ABC
                   , Data.SBV.Internals
                   , Data.SBV.Examples.BitPrecise.BitTricks
                   , Data.SBV.Examples.BitPrecise.Legato
@@ -111,6 +112,7 @@ Library
                   , Data.SBV.Provers.Yices
                   , Data.SBV.Provers.Z3
                   , Data.SBV.Provers.MathSAT
+                  , Data.SBV.Provers.ABC
                   , Data.SBV.Tools.ExpectedValue
                   , Data.SBV.Tools.GenTest
                   , Data.SBV.Tools.Optimize

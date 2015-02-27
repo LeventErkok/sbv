@@ -228,7 +228,7 @@ module Data.SBV (
   , getModelDictionaries, getModelValues, getModelUninterpretedValues
 
   -- * SMT Interface: Configurations and solvers
-  , SMTConfig(..), SMTLibLogic(..), Logic(..), OptimizeOpts(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
+  , SMTConfig(..), SMTLibLogic(..), Logic(..), OptimizeOpts(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
 
   -- * Symbolic computations
   , Symbolic, output, SymWord(..)
@@ -346,6 +346,7 @@ defaultSolverConfig Yices     = yices
 defaultSolverConfig Boolector = boolector
 defaultSolverConfig CVC4      = cvc4
 defaultSolverConfig MathSAT   = mathSAT
+defaultSolverConfig ABC       = abc
 
 -- | Return the known available solver configs, installed on your machine.
 sbvAvailableSolvers :: IO [SMTConfig]
