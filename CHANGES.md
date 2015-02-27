@@ -6,7 +6,7 @@
 ### Version 4.1, Not yet released
 
   * Add support for the ABC solver from Berkeley. Thanks to Adam Foltzer
-    for the required infrastructure!
+    for the required infrastructure! See: http://www.eecs.berkeley.edu/~alanmi/abc/
 
   * Tracking changes in the SMT-Lib floating-point theory. If you are
     using symbolic floating-point types (i.e., SFloat and SDouble), then
