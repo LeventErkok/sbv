@@ -16,6 +16,8 @@
 --       - "Data.SBV.Bridge.Yices"
 --
 --       - "Data.SBV.Bridge.MathSAT"
+--
+--       - "Data.SBV.Bridge.ABC"
 ---------------------------------------------------------------------------------
 
 module Data.SBV.Bridge.Z3 (

@@ -1,7 +1,7 @@
 ---------------------------------------------------------------------------------
 -- |
 -- Module      :  Data.SBV.Bridge.ABC
--- Copyright   :  (c) Levent Erkok
+-- Copyright   :  (c) Adam Foltzer
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental

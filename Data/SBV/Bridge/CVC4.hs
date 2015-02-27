@@ -16,6 +16,8 @@
 --       - "Data.SBV.Bridge.Boolector"
 --
 --       - "Data.SBV.Bridge.MathSAT"
+--
+--       - "Data.SBV.Bridge.ABC"
 ---------------------------------------------------------------------------------
 
 module Data.SBV.Bridge.CVC4 (

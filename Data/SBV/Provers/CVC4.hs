@@ -22,6 +22,7 @@ import System.Environment (getEnv)
 import System.Exit        (ExitCode(..))
 
 import Data.SBV.BitVectors.Data
+import Data.SBV.BitVectors.PrettyNum (mkSkolemZero)
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 
@@ -40,7 +41,7 @@ cvc4 = SMTSolver {
                                         tweaks = case solverTweaks cfg' of
                                                    [] -> ""
                                                    ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
-                                        script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont skolemMap)}
+                                        script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg) skolemMap)}
                                     standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap))
          , xformExitCode  = cvc4ExitCode
          , capabilities   = SolverCapabilities {
@@ -56,20 +57,10 @@ cvc4 = SMTSolver {
                                 , supportsDoubles            = False
                                 }
          }
- where zero :: Kind -> String
-       zero KBool                = "false"
-       zero (KBounded _     sz)  = "#x" ++ replicate (sz `div` 4) '0'
-       zero KUnbounded           = "0"
-       zero KReal                = "0.0"
-       zero KFloat               = error "SBV.CVC4.zero: Unexpected float value"
-       zero KDouble              = error "SBV.CVC4.zero: Unexpected double value"
-       -- For uninterpreted sorts, we use the first element of the enumerations if available; otherwise bail out..
-       zero (KUserSort _ (Right (f:_), _)) = f
-       zero (KUserSort s _)                = error $ "SBV.CVC4.zero: Unexpected uninterpreted sort: " ++ s
-       cont skolemMap = intercalate "\n" $ map extract skolemMap
-        where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ zero (kindOf s) ++ "))\")"
+ where cont rm skolemMap = intercalate "\n" $ map extract skolemMap
+        where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ mkSkolemZero rm (kindOf s) ++ "))\")"
               extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
-              extract (Right (s, ss)) = "(get-value (" ++ show s ++ concat [' ' : zero (kindOf a) | a <- ss] ++ "))"
+              extract (Right (s, ss)) = "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
        addTimeOut Nothing  o   = o
        addTimeOut (Just i) o
          | i < 0               = error $ "CVC4: Timeout value must be non-negative, received: " ++ show i

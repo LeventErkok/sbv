@@ -15,18 +15,19 @@
 module Data.SBV.BitVectors.PrettyNum (
         PrettyNum(..), readBin, shex, shexI, sbin, sbinI
       , showCFloat, showCDouble, showHFloat, showHDouble
-      , showSMTFloat, showSMTDouble, smtRoundingMode
+      , showSMTFloat, showSMTDouble, smtRoundingMode, cwToSMTLib, mkSkolemZero
       ) where
 
-import Data.Char  (ord)
+import Data.Char  (ord, intToDigit)
 import Data.Int   (Int8, Int16, Int32, Int64)
 import Data.List  (isPrefixOf)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe, listToMaybe)
 import Data.Ratio (numerator, denominator)
 import Data.Word  (Word8, Word16, Word32, Word64)
 import Numeric    (showIntAtBase, showHex, readInt)
 
 import Data.SBV.BitVectors.Data
+import Data.SBV.BitVectors.AlgReals (algRealToSMTLib2)
 
 -- | PrettyNum class captures printing of numbers in hex and binary formats; also supporting negative numbers.
 --
@@ -240,3 +241,44 @@ smtRoundingMode RoundNearestTiesToAway = "roundNearestTiesToAway"
 smtRoundingMode RoundTowardPositive    = "roundTowardPositive"
 smtRoundingMode RoundTowardNegative    = "roundTowardNegative"
 smtRoundingMode RoundTowardZero        = "roundTowardZero"
+
+-- | Convert a CW to an SMTLib2 compliant value
+cwToSMTLib :: RoundingMode -> CW -> String
+cwToSMTLib rm x
+  | isBoolean       x, CWInteger  w      <- cwVal x = if w == 0 then "false" else "true"
+  | isUninterpreted x, CWUserSort (_, s) <- cwVal x = roundModeConvert s
+  | isReal          x, CWAlgReal  r      <- cwVal x = algRealToSMTLib2 r
+  | isFloat         x, CWFloat    f      <- cwVal x = showSMTFloat  rm f
+  | isDouble        x, CWDouble   d      <- cwVal x = showSMTDouble rm d
+  | not (isBounded x), CWInteger  w      <- cwVal x = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
+  | not (hasSign x)  , CWInteger  w      <- cwVal x = smtLibHex (intSizeOf x) w
+  -- signed numbers (with 2's complement representation) is problematic
+  -- since there's no way to put a bvneg over a positive number to get minBound..
+  -- Hence, we punt and use binary notation in that particular case
+  | hasSign x        , CWInteger  w      <- cwVal x = if w == negate (2 ^ intSizeOf x)
+                                                      then mkMinBound (intSizeOf x)
+                                                      else negIf (w < 0) $ smtLibHex (intSizeOf x) (abs w)
+  | True = error $ "SBV.cvtCW: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
+  where roundModeConvert s = fromMaybe s (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])
+        -- Carefully code hex numbers, SMTLib is picky about lengths of hex constants. For the time
+        -- being, SBV only supports sizes that are multiples of 4, but the below code is more robust
+        -- in case of future extensions to support arbitrary sizes.
+        smtLibHex :: Int -> Integer -> String
+        smtLibHex 1  v = "#b" ++ show v
+        smtLibHex sz v
+          | sz `mod` 4 == 0 = "#x" ++ pad (sz `div` 4) (showHex v "")
+          | True            = "#b" ++ pad sz (showBin v "")
+           where showBin = showIntAtBase 2 intToDigit
+        negIf :: Bool -> String -> String
+        negIf True  a = "(bvneg " ++ a ++ ")"
+        negIf False a = a
+        -- anamoly at the 2's complement min value! Have to use binary notation here
+        -- as there is no positive value we can provide to make the bvneg work.. (see above)
+        mkMinBound :: Int -> String
+        mkMinBound i = "#b1" ++ replicate (i-1) '0'
+
+-- | Create a skolem 0 for the kind
+mkSkolemZero :: RoundingMode -> Kind -> String
+mkSkolemZero _ (KUserSort _ (Right (f:_), _)) = f
+mkSkolemZero _ (KUserSort s _)                = error $ "SBV.mkSkolemZero: Unexpected uninterpreted sort: " ++ s
+mkSkolemZero rm k                             = cwToSMTLib rm (mkConstCW k (0::Integer))

@@ -5,13 +5,13 @@
 
 ### Version 4.1, Not yet released
 
-This release mainly concerns tracking changes in the SMT-Lib
-floating-point theory. If you are using symbolic floating-point
-types (i.e., SFloat and SDouble), then you should upgrade to this
-version and also get a very latest (unstable) Z3 release.
+  * Add support for the ABC solver from Berkeley. Thanks to Adam Foltzer
+    for the required infrastructure!
 
-  * Track changes in the latest SMTLib version of the floating
-    point theory. See http://smtlib.cs.uiowa.edu/theories/FloatingPoint.smt2
+  * Tracking changes in the SMT-Lib floating-point theory. If you are
+    using symbolic floating-point types (i.e., SFloat and SDouble), then
+    you should upgrade to this version and also get a very latest (unstable)
+    Z3 release. See http://smtlib.cs.uiowa.edu/theories/FloatingPoint.smt2
     for details.
 
   * Introduce a new class, 'RoundingFloat', which supports floating-point
@@ -20,7 +20,7 @@ version and also get a very latest (unstable) Z3 release.
     and all the basic operations ('fpAdd', 'fpMul', 'fpDiv', etc.) with these
     modes.
     
-  * Allow RoundingMode to be symbolic as well
+  * Allow Floating-Point RoundingMode to be symbolic as well
 
   * Improve the example "Data/SBV/Examples/Misc/Floating.hs" to include
     rounding-mode based addition example.

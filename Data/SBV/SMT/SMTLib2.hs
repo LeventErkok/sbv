@@ -13,21 +13,17 @@
 module Data.SBV.SMT.SMTLib2(cvt, addNonEqConstraints) where
 
 import Data.Bits     (bit)
-import Data.Char     (intToDigit)
 import Data.Function (on)
 import Data.Ord      (comparing)
-import Data.Maybe    (fromMaybe, listToMaybe)
 import Data.List     (intercalate, partition, groupBy, sortBy)
-import Numeric       (showIntAtBase, showHex)
 
 import qualified Data.Foldable as F (toList)
 import qualified Data.Map      as M
 import qualified Data.IntMap   as IM
 import qualified Data.Set      as Set
 
-import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.PrettyNum (showSMTFloat, showSMTDouble, smtRoundingMode)
+import Data.SBV.BitVectors.PrettyNum (smtRoundingMode, cwToSMTLib)
 
 -- | Add constraints to generate /new/ models. This function is used to query the SMT-solver, while
 -- disallowing a previous model.
@@ -302,43 +298,8 @@ cvtSW skolemMap s
   | True
   = show s
 
--- Carefully code hex numbers, SMTLib is picky about lengths of hex constants. For the time
--- being, SBV only supports sizes that are multiples of 4, but the below code is more robust
--- in case of future extensions to support arbitrary sizes.
-hex :: Int -> Integer -> String
-hex 1  v = "#b" ++ show v
-hex sz v
-  | sz `mod` 4 == 0 = "#x" ++ pad (sz `div` 4) (showHex v "")
-  | True            = "#b" ++ pad sz (showBin v "")
-   where pad n s = replicate (n - length s) '0' ++ s
-         showBin = showIntAtBase 2 intToDigit
-
 cvtCW :: RoundingMode -> CW -> String
-cvtCW rm x
-  | isBoolean       x, CWInteger  w      <- cwVal x = if w == 0 then "false" else "true"
-  | isUninterpreted x, CWUserSort (_, s) <- cwVal x = roundModeConvert s
-  | isReal          x, CWAlgReal  r      <- cwVal x = algRealToSMTLib2 r
-  | isFloat         x, CWFloat    f      <- cwVal x = showSMTFloat  rm f
-  | isDouble        x, CWDouble   d      <- cwVal x = showSMTDouble rm d
-  | not (isBounded x), CWInteger  w      <- cwVal x = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
-  | not (hasSign x)  , CWInteger  w      <- cwVal x = hex (intSizeOf x) w
-  -- signed numbers (with 2's complement representation) is problematic
-  -- since there's no way to put a bvneg over a positive number to get minBound..
-  -- Hence, we punt and use binary notation in that particular case
-  | hasSign x        , CWInteger  w      <- cwVal x = if w == negate (2 ^ intSizeOf x)
-                                                      then mkMinBound (intSizeOf x)
-                                                      else negIf (w < 0) $ hex (intSizeOf x) (abs w)
-  | True = error $ "SBV.cvtCW: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
-  where roundModeConvert s = fromMaybe s (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])
-
-negIf :: Bool -> String -> String
-negIf True  a = "(bvneg " ++ a ++ ")"
-negIf False a = a
-
--- anamoly at the 2's complement min value! Have to use binary notation here
--- as there is no positive value we can provide to make the bvneg work.. (see above)
-mkMinBound :: Int -> String
-mkMinBound i = "#b1" ++ replicate (i-1) '0'
+cvtCW = cwToSMTLib
 
 getTable :: TableMap -> Int -> String
 getTable m i

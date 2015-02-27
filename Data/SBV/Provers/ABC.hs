@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.SBV.Provers.ABC
--- Copyright   :  (c) Levent Erkok
+-- Copyright   :  (c) Adam Foltzer
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
@@ -15,12 +15,12 @@ module Data.SBV.Provers.ABC(abc) where
 
 import qualified Control.Exception as C
 
-import Data.Char          (isSpace)
 import Data.Function      (on)
 import Data.List          (intercalate, sortBy)
 import System.Environment (getEnv)
-    
+
 import Data.SBV.BitVectors.Data
+import Data.SBV.BitVectors.PrettyNum (mkSkolemZero)
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 
@@ -41,13 +41,12 @@ abc = SMTSolver {
                                         tweaks = case solverTweaks cfg' of
                                                    [] -> ""
                                                    ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
-                                        script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont skolemMap)}
+                                        script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg) skolemMap)}
                                     standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap))
          , xformExitCode  = id
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "ABC"
                                 , mbDefaultLogic             = Nothing
-                                -- TODO: what are the right answers for these?
                                 , supportsMacros             = True
                                 , supportsProduceModels      = True
                                 , supportsQuantifiers        = False
@@ -58,26 +57,14 @@ abc = SMTSolver {
                                 , supportsDoubles            = False
                                 }
          }
- where zero :: Kind -> String
-       zero KBool                = "false"
-       zero (KBounded _     sz)  = "#x" ++ replicate (sz `div` 4) '0'
-       zero KUnbounded           = error "SBV.ABC.zero: Unexpected unbounded int value"
-       zero KReal                = error "SBV.ABC.zero: Unexpected real value"
-       zero KFloat               = error "SBV.ABC.zero: Unexpected float value"
-       zero KDouble              = error "SBV.ABC.zero: Unexpected double value"
-       -- For uninterpreted sorts, we use the first element of the enumerations if available; otherwise bail out..
-       zero (KUserSort _ (Right (f:_), _)) = f
-       zero (KUserSort s _)                = error $ "SBV.ABC.zero: Unexpected uninterpreted sort: " ++ s
-       cont skolemMap = intercalate "\n" $ map extract skolemMap
-        where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ zero (kindOf s) ++ "))\")"
+ where cont rm skolemMap = intercalate "\n" $ map extract skolemMap
+        where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ mkSkolemZero rm (kindOf s) ++ "))\")"
               extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
-              extract (Right (s, ss)) = "(get-value (" ++ show s ++ concat [' ' : zero (kindOf a) | a <- ss] ++ "))"
+              extract (Right (s, ss)) = "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
 
--- XXX: this is copied from the CVC4 module, and is probably much more
--- than is needed for ABC
 extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [String] -> SMTModel
 extractMap isSat qinps _modelMap solverLines =
-   SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps . unstring) solverLines
+   SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps) solverLines
             , modelUninterps = []
             , modelArrays    = []
             }
@@ -90,7 +77,3 @@ extractMap isSat qinps _modelMap solverLines =
                                  else reverse $ dropWhile ((== ALL) . fst) $ reverse qinps
              -- for "proof", just display the prefix universals
              | True  = map snd $ takeWhile ((== ALL) . fst) qinps
-        unstring s' = case (s, head s, last s) of
-                        (_:tl@(_:_), '"', '"') -> init tl
-                        _                      -> s'
-          where s = reverse . dropWhile isSpace . reverse . dropWhile isSpace $ s'
