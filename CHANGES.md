@@ -24,8 +24,9 @@
 
   * Improve the example "Data/SBV/Examples/Misc/Floating.hs" to include
     rounding-mode based addition example.
-
-Other:
+    
+  * Changes required to make SBV compile with GHC 7.10; mostly around instance
+    NFData declarations. Thanks to Iavor Diatchki for the patch.
 
   * Export a few extra symbols from the Internals module (mainly for
     Cryptol usage.)
