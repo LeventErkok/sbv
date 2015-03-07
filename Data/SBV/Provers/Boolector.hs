@@ -16,11 +16,12 @@ module Data.SBV.Provers.Boolector(boolector) where
 import qualified Control.Exception as C
 
 import Data.Function      (on)
-import Data.List          (sortBy)
+import Data.List          (sortBy, intercalate)
 import System.Environment (getEnv)
 import System.Exit        (ExitCode(..))
 
 import Data.SBV.BitVectors.Data
+import Data.SBV.BitVectors.PrettyNum (mkSkolemZero)
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 
@@ -31,25 +32,22 @@ boolector :: SMTSolver
 boolector = SMTSolver {
            name           = Boolector
          , executable     = "boolector"
-         , options        = ["-m", "--smt2"]
-         , engine         = \cfg _isSat qinps modelMap _skolemMap pgm -> do
+         , options        = ["--smt2", "--smt2-model"]
+         , engine         = \cfg _isSat qinps modelMap skolemMap pgm -> do
                                     execName <-               getEnv "SBV_BOOLECTOR"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
                                     execOpts <- (words `fmap` getEnv "SBV_BOOLECTOR_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
-                                    let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts}
-                                                   , satCmd = satCmd cfg ++ "\n(exit)" -- boolector requires a final exit line
-                                                   }
+                                    let cfg' = cfg {solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts}}
                                         tweaks = case solverTweaks cfg' of
                                                    [] -> ""
                                                    ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
-                                        -- boolector complains if we don't have "exit" at the end
-                                        script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Nothing}
+                                        script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg) skolemMap)}
                                     standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap (map snd qinps) modelMap))
          , xformExitCode  = boolectorExitCode
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "Boolector"
                                 , mbDefaultLogic             = Nothing
                                 , supportsMacros             = False
-                                , supportsProduceModels      = False
+                                , supportsProduceModels      = True
                                 , supportsQuantifiers        = False
                                 , supportsUninterpretedSorts = False
                                 , supportsUnboundedInts      = False
@@ -62,6 +60,10 @@ boolector = SMTSolver {
        addTimeOut (Just i) o
          | i < 0               = error $ "Boolector: Timeout value must be non-negative, received: " ++ show i
          | True                = o ++ ["-t=" ++ show i]
+       cont rm skolemMap = intercalate "\n" $ map extract skolemMap
+        where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ mkSkolemZero rm (kindOf s) ++ "))\")"
+              extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
+              extract (Right (s, ss)) = "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
 
 -- | Similar to CVC4, Boolector uses different exit codes to indicate its status.
 boolectorExitCode :: ExitCode -> ExitCode
@@ -70,16 +72,9 @@ boolectorExitCode ec                                     = ec
 
 extractMap :: [NamedSymVar] -> [(String, UnintKind)] -> [String] -> SMTModel
 extractMap inps _modelMap solverLines =
-   SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps . cvt) solverLines
+   SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps) solverLines
             , modelUninterps = []
             , modelArrays    = []
             }
   where sortByNodeId :: [(Int, a)] -> [(Int, a)]
         sortByNodeId = sortBy (compare `on` fst)
-        -- Boolector outputs in a non-parenthesized way; and also puts x's for don't care bits:
-        cvt :: String -> String
-        cvt s = case words s of
-                  [_, val, var] -> "((" ++ var ++ " #b" ++ map tr val ++ "))"
-                  _             -> s -- good-luck..
-          where tr 'x' = '0'
-                tr x   = x
