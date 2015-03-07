@@ -118,13 +118,17 @@ addPoly xs    []      = xs
 addPoly []    ys      = ys
 addPoly (x:xs) (y:ys) = x <+> y : addPoly xs ys
 
+-- | Run down a boolean condition over two lists. Note that this is
+-- different than zipWith as shorter list is assumed to be filled with
+-- false at the end (i.e., zero-bits); which nicely pads it when
+-- considered as an unsigned number in little-endian form.
 ites :: SBool -> [SBool] -> [SBool] -> [SBool]
 ites s xs ys
  | Just t <- unliteral s
  = if t then xs else ys
  | True
  = go xs ys
- where go [] []         = []
+ where go []     []     = []
        go []     (b:bs) = ite s false b : go [] bs
        go (a:as) []     = ite s a false : go as []
        go (a:as) (b:bs) = ite s a b : go as bs
@@ -168,6 +172,7 @@ degree xs = walk (length xs - 1) $ reverse xs
          | True
          = n -- over-estimate
 
+-- | Compute modulus/remainder of polynomials on bit-vectors.
 mdp :: [SBool] -> [SBool] -> ([SBool], [SBool])
 mdp xs ys = go (length ys - 1) (reverse ys)
   where degTop  = degree xs

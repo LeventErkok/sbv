@@ -1,12 +1,16 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 4.0
+* Latest Hackage released version: 4.1, 2015-03-06
 
-### Version 4.1, Not yet released
+### Version 4.1, 2015-03-06
 
   * Add support for the ABC solver from Berkeley. Thanks to Adam Foltzer
     for the required infrastructure! See: http://www.eecs.berkeley.edu/~alanmi/abc/
+    And Alan Mishchenko for adding infrastructure to ABC to work with SBV.
+
+  * Upgrade the Boolector connection to use a SMT-Lib2 based interaction. NB. You
+    need at least Boolector 2.0.6 installed!
 
   * Tracking changes in the SMT-Lib floating-point theory. If you are
     using symbolic floating-point types (i.e., SFloat and SDouble), then
