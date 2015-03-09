@@ -23,7 +23,7 @@
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), SIntegral
   , ite, iteLazy, sBranch, sAssert, sAssertCont, sbvTestBit, sbvPopCount, setBitTo
-  , sbvShiftLeft, sbvShiftRight, sbvRotateLeft, sbvRotateRight, sbvSignedShiftArithRight
+  , sbvShiftLeft, sbvShiftRight, sbvRotateLeft, sbvRotateRight, sbvSignedShiftArithRight, (.^)
   , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
@@ -661,6 +661,19 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
   -- negate is tricky because on double/float -0 is different than 0; so we
   -- just cannot rely on its default definition; which would be 0-0, which is not -0!
   negate = liftSym1 (mkSymOp1 UNeg) (\x -> -x) (\x -> -x) (\x -> -x) (\x -> -x)
+
+-- | Symbolic exponentiation using bit blasting and repeated squaring.
+--
+-- N.B. The exponent must be unsigned. Signed exponents will be rejected.
+--
+-- N.B. Large exponents may cause overflow.
+(.^) :: (Mergeable b, Num b, SIntegral e) => b -> SBV e -> b
+b .^ e
+  | isSigned e = error "(.^): exponentiation only works with unsigned exponents"
+  | True       = product $ zipWith
+    (\use n -> ite use n 1)
+    (blastLE e)
+    (iterate (\x -> x*x) b)
 
 instance (SymWord a, Fractional a) => Fractional (SBV a) where
   fromRational = literal . fromRational

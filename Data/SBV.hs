@@ -146,6 +146,8 @@ module Data.SBV (
   , allEqual, allDifferent, inRange, sElem
   -- *** Addition and Multiplication with high-bits
   , fullAdder, fullMultiplier
+  -- *** Exponentiation
+  , (.^)
   -- *** Blasting/Unblasting
   , blastBE, blastLE, FromBits(..)
   -- *** Splitting, joining, and extending
