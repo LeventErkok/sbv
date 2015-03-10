@@ -26,6 +26,7 @@ import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.PrettyNum
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
+import Data.SBV.Utils.Lib (splitArgs)
 
 -- Choose the correct prefix character for passing options
 -- TBD: Is there a more foolproof way of determining this?
@@ -43,8 +44,8 @@ z3 = SMTSolver {
          , executable     = "z3"
          , options        = map (optionPrefix:) ["in", "smt2"]
          , engine         = \cfg isSat qinps modelMap skolemMap pgm -> do
-                                    execName <-               getEnv "SBV_Z3"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
-                                    execOpts <- (words `fmap` getEnv "SBV_Z3_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
+                                    execName <-                   getEnv "SBV_Z3"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
+                                    execOpts <- (splitArgs `fmap` getEnv "SBV_Z3_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
                                     let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
                                         tweaks = case solverTweaks cfg' of
                                                    [] -> ""

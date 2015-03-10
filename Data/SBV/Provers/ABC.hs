@@ -23,6 +23,7 @@ import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.PrettyNum (mkSkolemZero)
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
+import Data.SBV.Utils.Lib (splitArgs)
 
 -- | The description of abc. The default executable is @\"abc\"@,
 -- which must be in your path. You can use the @SBV_ABC@ environment
@@ -35,8 +36,8 @@ abc = SMTSolver {
          , executable     = "abc"
          , options        = ["-S", "%blast; &put; dsat -s"]
          , engine         = \cfg isSat qinps modelMap skolemMap pgm -> do
-                                    execName <-               getEnv "SBV_ABC"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
-                                    execOpts <- (words `fmap` getEnv "SBV_ABC_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
+                                    execName <-                   getEnv "SBV_ABC"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
+                                    execOpts <- (splitArgs `fmap` getEnv "SBV_ABC_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
                                     let cfg' = cfg { solver = (solver cfg) {executable = execName, options = execOpts} }
                                         tweaks = case solverTweaks cfg' of
                                                    [] -> ""

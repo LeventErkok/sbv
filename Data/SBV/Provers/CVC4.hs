@@ -25,6 +25,7 @@ import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.PrettyNum (mkSkolemZero)
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
+import Data.SBV.Utils.Lib (splitArgs)
 
 -- | The description of the CVC4 SMT solver
 -- The default executable is @\"cvc4\"@, which must be in your path. You can use the @SBV_CVC4@ environment variable to point to the executable on your system.
@@ -35,8 +36,8 @@ cvc4 = SMTSolver {
          , executable     = "cvc4"
          , options        = ["--lang", "smt"]
          , engine         = \cfg isSat qinps modelMap skolemMap pgm -> do
-                                    execName <-               getEnv "SBV_CVC4"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
-                                    execOpts <- (words `fmap` getEnv "SBV_CVC4_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
+                                    execName <-                   getEnv "SBV_CVC4"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
+                                    execOpts <- (splitArgs `fmap` getEnv "SBV_CVC4_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
                                     let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
                                         tweaks = case solverTweaks cfg' of
                                                    [] -> ""

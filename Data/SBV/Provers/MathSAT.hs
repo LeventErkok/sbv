@@ -23,6 +23,7 @@ import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.PrettyNum (mkSkolemZero)
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
+import Data.SBV.Utils.Lib (splitArgs)
 
 -- | The description of the MathSAT SMT solver
 -- The default executable is @\"mathsat\"@, which must be in your path. You can use the @SBV_MATHSAT@ environment variable to point to the executable on your system.
@@ -33,8 +34,8 @@ mathSAT = SMTSolver {
          , executable     = "mathsat"
          , options        = ["-input=smt2"]
          , engine         = \cfg _isSat qinps modelMap skolemMap pgm -> do
-                                    execName <-               getEnv "SBV_MATHSAT"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
-                                    execOpts <- (words `fmap` getEnv "SBV_MATHSAT_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
+                                    execName <-                   getEnv "SBV_MATHSAT"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
+                                    execOpts <- (splitArgs `fmap` getEnv "SBV_MATHSAT_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
                                     let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts}
                                                    }
                                         tweaks = case solverTweaks cfg' of
