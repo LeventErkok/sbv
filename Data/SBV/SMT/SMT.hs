@@ -35,6 +35,7 @@ import Data.Typeable
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.PrettyNum
+import Data.SBV.Utils.Lib (joinArgs)
 import Data.SBV.Utils.TDiff
 
 -- | Extract the final configuration from a result
@@ -401,7 +402,7 @@ pipeProcess cfg execName opts script cleanErrs = do
                                                                         _                  -> 0 -- can happen if ExitSuccess but there is output on stderr
                                                         in return $ Left $  "Failed to complete the call to " ++ nm
                                                                          ++ "\nExecutable   : " ++ show execPath
-                                                                         ++ "\nOptions      : " ++ unwords opts
+                                                                         ++ "\nOptions      : " ++ joinArgs opts
                                                                          ++ "\nExit code    : " ++ show finalEC
                                                                          ++ "\nSolver output: "
                                                                          ++ "\n" ++ line ++ "\n"
@@ -421,7 +422,7 @@ standardSolver config script cleanErrs failure success = do
         opts     = options smtSolver
         isTiming = timing config
         nmSolver = show (name smtSolver)
-    msg $ "Calling: " ++ show (unwords (exec:opts))
+    msg $ "Calling: " ++ show (unwords (exec:[joinArgs opts]))
     case smtFile config of
       Nothing -> return ()
       Just f  -> do msg $ "Saving the generated script in file: " ++ show f
