@@ -9,7 +9,7 @@
 -- Misc helpers
 -----------------------------------------------------------------------------
 
-module Data.SBV.Utils.Lib where
+module Data.SBV.Utils.Lib (mlift2, mlift3, mlift4, mlift5, mlift6, mlift7, mlift8, joinArgs, splitArgs) where
 
 import Data.Char (isSpace)
 import Data.Maybe (fromJust, isNothing)
