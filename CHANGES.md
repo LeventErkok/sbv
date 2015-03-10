@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 4.1, 2015-03-06
 
+### Version 4.2, Not yet released
+
+  * Add exponentiation (.^). Thanks to Daniel Wagner for contributing the code.
+
 ### Version 4.1, 2015-03-06
 
   * Add support for the ABC solver from Berkeley. Thanks to Adam Foltzer

@@ -665,15 +665,11 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
 -- | Symbolic exponentiation using bit blasting and repeated squaring.
 --
 -- N.B. The exponent must be unsigned. Signed exponents will be rejected.
---
--- N.B. Large exponents may cause overflow.
 (.^) :: (Mergeable b, Num b, SIntegral e) => b -> SBV e -> b
-b .^ e
-  | isSigned e = error "(.^): exponentiation only works with unsigned exponents"
-  | True       = product $ zipWith
-    (\use n -> ite use n 1)
-    (blastLE e)
-    (iterate (\x -> x*x) b)
+b .^ e | isSigned e = error "(.^): exponentiation only works with unsigned exponents"
+       | True       = product $ zipWith (\use n -> ite use n 1)
+                                        (blastLE e)
+                                        (iterate (\x -> x*x) b)
 
 instance (SymWord a, Fractional a) => Fractional (SBV a) where
   fromRational = literal . fromRational
