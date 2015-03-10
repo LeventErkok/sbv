@@ -9,15 +9,16 @@
 -- Interface to the Yices SMT solver. Import this module if you want to use the
 -- Yices SMT prover as your backend solver. Also see:
 --
+--       - "Data.SBV.Bridge.ABC"
+-- 
 --       - "Data.SBV.Bridge.Boolector"
---
+-- 
 --       - "Data.SBV.Bridge.CVC4"
---
+-- 
+--       - "Data.SBV.Bridge.MathSAT"
+-- 
 --       - "Data.SBV.Bridge.Z3"
 --
---       - "Data.SBV.Bridge.MathSAT"
---
---       - "Data.SBV.Bridge.ABC"
 ---------------------------------------------------------------------------------
 
 module Data.SBV.Bridge.Yices (

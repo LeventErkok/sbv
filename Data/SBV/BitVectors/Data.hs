@@ -1156,7 +1156,7 @@ class SymArray array where
   -- Merging pushes the if-then-else choice down on to elements
   mergeArrays    :: SymWord b => SBV Bool -> array a b -> array a b -> array a b
 
--- | Arrays implemented in terms of SMT-arrays: <http://goedel.cs.uiowa.edu/smtlib/theories/ArraysEx.smt2>
+-- | Arrays implemented in terms of SMT-arrays: <http://smtlib.cs.uiowa.edu/theories/ArraysEx.smt2>
 --
 --   * Maps directly to SMT-lib arrays
 --

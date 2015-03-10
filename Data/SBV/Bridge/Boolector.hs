@@ -9,15 +9,16 @@
 -- Interface to the Boolector SMT solver. Import this module if you want to use the
 -- Boolector SMT prover as your backend solver. Also see:
 --
+--       - "Data.SBV.Bridge.ABC"
+-- 
+--       - "Data.SBV.Bridge.CVC4"
+-- 
+--       - "Data.SBV.Bridge.MathSAT"
+-- 
 --       - "Data.SBV.Bridge.Yices"
---
+-- 
 --       - "Data.SBV.Bridge.Z3"
 --
---       - "Data.SBV.Bridge.CVC4"
---
---       - "Data.SBV.Bridge.MathSAT"
---
---       - "Data.SBV.Bridge.ABC"
 ---------------------------------------------------------------------------------
 
 module Data.SBV.Bridge.Boolector (

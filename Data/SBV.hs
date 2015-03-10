@@ -17,9 +17,9 @@
 -- >>> prove $ \x -> x `shiftL` 2 .== 4 * (x :: SWord8)
 -- Q.E.D.
 --
--- >>> prove $ forAll ["x"] $ \x -> x `shiftL` 2 .== (x :: SWord8)
+-- >>> prove $ \x -> x `shiftL` 2 .== 2 * (x :: SWord8)
 -- Falsifiable. Counter-example:
---   x = 51 :: SWord8
+--   s0 = 32 :: SWord8
 --
 -- The function 'prove' has the following type:
 --
@@ -81,20 +81,22 @@
 -- all satisfying assignments, lazily.
 --
 -- The sbv library uses third-party SMT solvers via the standard SMT-Lib interface:
--- <http://goedel.cs.uiowa.edu/smtlib/>.
+-- <http://smtlib.cs.uiowa.edu/>
 --
 -- The SBV library is designed to work with any SMT-Lib compliant SMT-solver.
 -- Currently, we support the following SMT-Solvers out-of-the box:
 --
---   * Z3 from Microsoft: <http://research.microsoft.com/en-us/um/redmond/projects/z3/>
---
---   * Yices from SRI: <http://yices.csl.sri.com/>
+--   * ABC from University of Berkeley: <http://www.eecs.berkeley.edu/~alanmi/abc/>
 --
 --   * CVC4 from New York University and University of Iowa: <http://cvc4.cs.nyu.edu/>
 --
 --   * Boolector from Johannes Kepler University: <http://fmv.jku.at/boolector/>
 --
 --   * MathSAT from Fondazione Bruno Kessler and DISI-University of Trento: <http://mathsat.fbk.eu/>
+--
+--   * Yices from SRI: <http://yices.csl.sri.com/>
+--
+--   * Z3 from Microsoft: <http://z3.codeplex.com/>
 --
 -- SBV also allows calling these solvers in parallel, either getting results from multiple solvers
 -- or returning the fastest one. (See 'proveWithAll', 'proveWithAny', etc.)
@@ -471,7 +473,7 @@ The SBV library provides a "push-button" verification system via automated SMT s
 design goal is to let SMT solvers be used without any knowledge of how SMT solvers work
 or how different logics operate. The details are hidden behind the SBV framework, providing
 Haskell programmers with a clean API that is unencumbered by the details of individual solvers.
-To that end, we use the SMT-Lib standard (<http://goedel.cs.uiowa.edu/smtlib/>)
+To that end, we use the SMT-Lib standard (<http://smtlib.cs.uiowa.edu/>)
 to communicate with arbitrary SMT solvers.
 -}
 
@@ -652,7 +654,7 @@ represent transcendentals.) Some irrational numbers are algebraic (such as @sqrt
 others are not (such as pi and e).
 
 SBV can deal with real numbers just fine, since the theory of reals is decidable. (See
-<http://goedel.cs.uiowa.edu/smtlib/theories/Reals.smt2>.) In addition, by leveraging backend
+<http://smtlib.cs.uiowa.edu/theories/Reals.smt2>.) In addition, by leveraging backend
 solver capabilities, SBV can also represent and solve non-linear equations involving real-variables.
 (For instance, the Z3 SMT solver, supports polynomial constraints on reals starting with v4.0.)
 -}

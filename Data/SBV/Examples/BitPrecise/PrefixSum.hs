@@ -171,15 +171,7 @@ genPrefixSumInstance n = do
           ]
 
 -- | Prove the generic problem for powerlists of given sizes. Note that
--- this will only work for Yices-1. This is due to the fact that Yices-2
--- follows the SMT-Lib standard and does not accept bit-vector problems with
--- quantified axioms in them, while Yices-1 did allow for that. The crux of
--- the problem is that there are no SMT-Lib logics that combine BV's and
--- quantifiers, see: <http://goedel.cs.uiowa.edu/smtlib/logics.html>. So we
--- are stuck until new powerful logics are added to SMT-Lib.
---
--- Here, we explicitly tell SBV to use Yices-1 that did not have that limitation.
--- Tweak the executable location accordingly below for your platform..
+-- this only works with Yices-1 currently.
 --
 -- We have:
 --

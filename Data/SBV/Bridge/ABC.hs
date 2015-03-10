@@ -9,15 +9,16 @@
 -- Interface to the ABC verification and synthesis tool. Import this
 -- module if you want to use ABC as your backend solver. Also see:
 --
+--       - "Data.SBV.Bridge.Boolector"
+-- 
+--       - "Data.SBV.Bridge.CVC4"
+-- 
+--       - "Data.SBV.Bridge.MathSAT"
+-- 
 --       - "Data.SBV.Bridge.Yices"
---
+-- 
 --       - "Data.SBV.Bridge.Z3"
 --
---       - "Data.SBV.Bridge.Boolector"
---
---       - "Data.SBV.Bridge.MathSAT"
---
---       - "Data.SBV.Bridge.CVC4"
 ---------------------------------------------------------------------------------
 
 module Data.SBV.Bridge.ABC (

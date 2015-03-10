@@ -9,15 +9,16 @@
 -- Interface to the MathSAT SMT solver. Import this module if you want to use the
 -- MathSAT SMT prover as your backend solver. Also see:
 --
+--       - "Data.SBV.Bridge.ABC"
+-- 
+--       - "Data.SBV.Bridge.Boolector"
+-- 
+--       - "Data.SBV.Bridge.CVC4"
+-- 
 --       - "Data.SBV.Bridge.Yices"
---
+-- 
 --       - "Data.SBV.Bridge.Z3"
 --
---       - "Data.SBV.Bridge.CVC4"
---
---       - "Data.SBV.Bridge.Boolector"
---
---       - "Data.SBV.Bridge.ABC"
 ---------------------------------------------------------------------------------
 
 module Data.SBV.Bridge.MathSAT (

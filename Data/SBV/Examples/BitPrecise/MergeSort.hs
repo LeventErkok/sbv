@@ -43,7 +43,7 @@ mergeSort xs  = merge (mergeSort th) (mergeSort bh)
 There are two main parts to proving that a sorting algorithm is correct:
 
        * Prove that the output is non-decreasing
-
+ 
        * Prove that the output is a permutation of the input
 -}
 
@@ -87,7 +87,7 @@ correctness n = prove $ do xs <- mkFreeVars n
 -- | Generate C code for merge-sorting an array of size 'n'. Again, we're restricted
 -- to fixed size inputs. While the output is not how one would code merge sort in C
 -- by hand, it's a faithful rendering of all the operations merge-sort would do as
--- described by it's Haskell counterpart.
+-- described by its Haskell counterpart.
 codeGen :: Int -> IO ()
 codeGen n = compileToC (Just ("mergeSort" ++ show n)) "mergeSort" $ do
                 xs <- cgInputArr n "xs"
