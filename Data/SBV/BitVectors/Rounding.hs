@@ -72,4 +72,4 @@ instance RoundingFloat Float
 -- | SDouble instance
 instance RoundingFloat Double
 
-{-# ANN module "HLint: ignore Reduce duplication" #-}
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

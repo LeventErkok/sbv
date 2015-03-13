@@ -825,4 +825,4 @@ Note that the result is properly typed as @X@ elements; these are not mere strin
 elements of the domain and program further with those values as usual.
 -}
 
-{-# ANN module "HLint: ignore Use import/export shortcut" #-}
+{-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}

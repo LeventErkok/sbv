@@ -57,4 +57,4 @@ ccitHDis3 = print =<< prove (crcUniGood 3)
 ccitHDis4 :: IO ()
 ccitHDis4 = print =<< prove (crcUniGood 4)
 
-{-# ANN crc_48_16 "HLint: ignore Use camelCase" #-}
+{-# ANN crc_48_16 ("HLint: ignore Use camelCase" :: String) #-}

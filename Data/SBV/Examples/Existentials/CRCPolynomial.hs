@@ -97,4 +97,4 @@ genPoly hd = do res <- allSat $ do
 findHD4Polynomials :: IO ()
 findHD4Polynomials = genPoly 4
 
-{-# ANN crc_48_16 "HLint: ignore Use camelCase" #-}
+{-# ANN crc_48_16 ("HLint: ignore Use camelCase" :: String) #-}
