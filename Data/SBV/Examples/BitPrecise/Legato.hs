@@ -302,5 +302,5 @@ legatoInC = compileToC Nothing "runLegato" $ do
                 cgOutput "hi" hi
                 cgOutput "lo" lo
 
-{-# ANN legato "HLint: ignore Redundant $"        #-}
-{-# ANN module "HLint: ignore Reduce duplication" #-}
+{-# ANN legato ("HLint: ignore Redundant $" :: String)        #-}
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

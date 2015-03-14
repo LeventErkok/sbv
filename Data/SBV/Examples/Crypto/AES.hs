@@ -577,5 +577,5 @@ aes128LibComponents = [ ("aes128KeySchedule",  keySchedule)
 cgAES128Library :: IO ()
 cgAES128Library = compileToCLib Nothing "aes128Lib" aes128LibComponents
 
-{-# ANN aesRound    "HLint: ignore Use head" #-}
-{-# ANN aesInvRound "HLint: ignore Use head" #-}
+{-# ANN aesRound    ("HLint: ignore Use head" :: String) #-}
+{-# ANN aesInvRound ("HLint: ignore Use head" :: String) #-}

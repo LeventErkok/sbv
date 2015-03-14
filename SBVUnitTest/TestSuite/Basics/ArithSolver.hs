@@ -327,4 +327,4 @@ fs = nan : -infinity : infinity : 0 : -0 : [-5.0, -4.1 .. 5] ++ [5]
 
 ds  :: [Double]
 ds = nan : -infinity : infinity : 0 : -0 : [-5.0, -4.1 .. 5] ++ [5]
-{-# ANN module "HLint: ignore Reduce duplication" #-}
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

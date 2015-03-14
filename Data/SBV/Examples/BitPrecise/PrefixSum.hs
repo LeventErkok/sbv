@@ -303,4 +303,4 @@ scanlTrace n = gen >>= print
   where gen = runSymbolic (True, Nothing) $ do args :: [SWord8] <- mkForallVars n
                                                mapM_ output $ ps (0, (+)) args
 
-{-# ANN module "HLint: ignore Reduce duplication" #-}
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
