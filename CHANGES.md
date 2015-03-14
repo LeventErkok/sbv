@@ -5,7 +5,15 @@
 
 ### Version 4.2, Not yet released
 
-  * Add exponentiation (.^). Thanks to Daniel Wagner for contributing the code.
+  * Add exponentiation (.^). Thanks to Daniel Wagner for contributing the code!
+
+  * Better handling of SBV_$SOLVER_OPTIONS, in particular keeping track of
+    proper quoting in environment variables. Thanks to Adam Foltzer for
+    the patch!
+
+  * Silence some hlint/ghci warnings. Thanks to Trevor Elliott for the patch!
+
+  * Haddock documentation fixes, improvements, etc.
 
 ### Version 4.1, 2015-03-06
 
