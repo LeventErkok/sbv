@@ -34,7 +34,7 @@ abc :: SMTSolver
 abc = SMTSolver {
            name           = ABC
          , executable     = "abc"
-         , options        = ["-S", "%blast; &put; dsat -s"]
+         , options        = ["-S", "%blast; &sweep -C 5000; &syn4; &cec -s -m -C 2000"]
          , engine         = \cfg isSat qinps modelMap skolemMap pgm -> do
                                     execName <-                   getEnv "SBV_ABC"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
                                     execOpts <- (splitArgs `fmap` getEnv "SBV_ABC_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
