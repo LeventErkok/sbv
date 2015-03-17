@@ -634,6 +634,11 @@ isConcreteOnes (SBV _ (Left (CW (KBounded b w) (CWInteger n)))) = n == if b then
 isConcreteOnes (SBV _ (Left (CW KUnbounded     (CWInteger n)))) = n == -1
 isConcreteOnes _                                                = False
 
+-- | Predicate for optimizing conditionals.
+areConcretelyEqual :: SBV a -> SBV a -> Bool
+areConcretelyEqual (SBV _ (Left a)) (SBV _ (Left b)) = a == b
+areConcretelyEqual _                _                = False
+
 -- Num instance for symbolic words.
 instance (Ord a, Num a, SymWord a) => Num (SBV a) where
   fromInteger = literal . fromIntegral
@@ -1328,11 +1333,11 @@ sAssertCont msg cont t a
 -- sure they do not evaluate to the same result. This should only be used for internal purposes;
 -- as default definitions provided should suffice in many cases. (i.e., End users should
 -- only need to define 'symbolicMerge' when needed; which should be rare to start with.)
-symbolicMergeWithKind :: SymWord a => Kind -> Bool -> SBool -> SBV a -> SBV a -> SBV a
+symbolicMergeWithKind :: Kind -> Bool -> SBool -> SBV a -> SBV a -> SBV a
 symbolicMergeWithKind k force t a b
   | Just r <- unliteral t
   = if r then a else b
-  | force, Just av <- unliteral a, Just bv <- unliteral b, rationalSBVCheck a b, av == bv
+  | force, rationalSBVCheck a b, areConcretelyEqual a b
   = a
   | True
   = SBV k $ Right $ cache c
