@@ -117,8 +117,6 @@ instance SymWord Word4 where
   mkSymWord  = genMkSymVar (KBounded False 4)
   literal    = genLiteral  (KBounded False 4)
   fromCW     = genFromCW
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 -- | HasKind instance; simply returning the underlying kind for the type
 instance HasKind Word4 where

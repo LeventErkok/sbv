@@ -149,71 +149,51 @@ instance SymWord Bool where
   mkSymWord  = genMkSymVar KBool
   literal x  = genLiteral  KBool (if x then (1::Integer) else 0)
   fromCW     = cwToBool
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Word8 where
   mkSymWord  = genMkSymVar (KBounded False 8)
   literal    = genLiteral  (KBounded False 8)
   fromCW     = genFromCW
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Int8 where
   mkSymWord  = genMkSymVar (KBounded True 8)
   literal    = genLiteral  (KBounded True 8)
   fromCW     = genFromCW
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Word16 where
   mkSymWord  = genMkSymVar (KBounded False 16)
   literal    = genLiteral  (KBounded False 16)
   fromCW     = genFromCW
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Int16 where
   mkSymWord  = genMkSymVar (KBounded True 16)
   literal    = genLiteral  (KBounded True 16)
   fromCW     = genFromCW
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Word32 where
   mkSymWord  = genMkSymVar (KBounded False 32)
   literal    = genLiteral  (KBounded False 32)
   fromCW     = genFromCW
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Int32 where
   mkSymWord  = genMkSymVar (KBounded True 32)
   literal    = genLiteral  (KBounded True 32)
   fromCW     = genFromCW
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Word64 where
   mkSymWord  = genMkSymVar (KBounded False 64)
   literal    = genLiteral  (KBounded False 64)
   fromCW     = genFromCW
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Int64 where
   mkSymWord  = genMkSymVar (KBounded True 64)
   literal    = genLiteral  (KBounded True 64)
   fromCW     = genFromCW
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Integer where
   mkSymWord  = genMkSymVar KUnbounded
   literal    = SBV KUnbounded . Left . mkConstCW KUnbounded
   fromCW     = genFromCW
-  mbMaxBound = Nothing
-  mbMinBound = Nothing
 
 instance SymWord AlgReal where
   mkSymWord  = genMkSymVar KReal
@@ -225,8 +205,6 @@ instance SymWord AlgReal where
   isConcretely (SBV KReal (Left (CW KReal (CWAlgReal v)))) p
      | isExactRational v = p v
   isConcretely _ _       = False
-  mbMaxBound = Nothing
-  mbMinBound = Nothing
 
 instance SymWord Float where
   mkSymWord  = genMkSymVar KFloat
@@ -237,8 +215,6 @@ instance SymWord Float where
   -- this function is used for optimizations when only one of the argument is concrete,
   -- and in the presence of NaN's it would be incorrect to do any optimization
   isConcretely _ _ = False
-  mbMaxBound = Nothing
-  mbMinBound = Nothing
 
 instance SymWord Double where
   mkSymWord  = genMkSymVar KDouble
@@ -249,8 +225,6 @@ instance SymWord Double where
   -- this function is used for optimizations when only one of the argument is concrete,
   -- and in the presence of NaN's it would be incorrect to do any optimization
   isConcretely _ _ = False
-  mbMaxBound = Nothing
-  mbMinBound = Nothing
 
 ------------------------------------------------------------------------------------
 -- * Smart constructors for creating symbolic values. These are not strictly
