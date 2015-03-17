@@ -429,21 +429,21 @@ uiLift w _   a           b           = error $ "Data.SBV.BitVectors.Model: Impos
 
 instance SymWord a => OrdSymbolic (SBV a) where
   x .< y
-    | Just mb <- mbMaxBound, x `isConcretely` (== mb) = false
-    | Just mb <- mbMinBound, y `isConcretely` (== mb) = false
-    | True                                            = liftSym2B (mkSymOpSC (eqOpt falseSW) LessThan)    rationalCheck (<)  (<)  (<)  (<) (uiLift  "<"  (<))  x y
+    | isConcreteMax x = false
+    | isConcreteMin y = false
+    | True            = liftSym2B (mkSymOpSC (eqOpt falseSW) LessThan)    rationalCheck (<)  (<)  (<)  (<) (uiLift  "<"  (<))  x y
   x .<= y
-    | Just mb <- mbMinBound, x `isConcretely` (== mb) = true
-    | Just mb <- mbMaxBound, y `isConcretely` (== mb) = true
-    | True                                            = liftSym2B (mkSymOpSC (eqOpt trueSW) LessEq)       rationalCheck (<=) (<=) (<=) (<=) (uiLift "<=" (<=)) x y
+    | isConcreteMin x = true
+    | isConcreteMax y = true
+    | True            = liftSym2B (mkSymOpSC (eqOpt trueSW) LessEq)       rationalCheck (<=) (<=) (<=) (<=) (uiLift "<=" (<=)) x y
   x .> y
-    | Just mb <- mbMinBound, x `isConcretely` (== mb) = false
-    | Just mb <- mbMaxBound, y `isConcretely` (== mb) = false
-    | True                                            = liftSym2B (mkSymOpSC (eqOpt falseSW) GreaterThan) rationalCheck (>)  (>)  (>)  (>)  (uiLift ">"  (>))  x y
+    | isConcreteMin x = false
+    | isConcreteMax y = false
+    | True            = liftSym2B (mkSymOpSC (eqOpt falseSW) GreaterThan) rationalCheck (>)  (>)  (>)  (>)  (uiLift ">"  (>))  x y
   x .>= y
-    | Just mb <- mbMaxBound, x `isConcretely` (== mb) = true
-    | Just mb <- mbMinBound, y `isConcretely` (== mb) = true
-    | True                                            = liftSym2B (mkSymOpSC (eqOpt trueSW) GreaterEq)    rationalCheck (>=) (>=) (>=) (>=) (uiLift ">=" (>=)) x y
+    | isConcreteMax x = true
+    | isConcreteMin y = true
+    | True            = liftSym2B (mkSymOpSC (eqOpt trueSW) GreaterEq)    rationalCheck (>=) (>=) (>=) (>=) (uiLift ">=" (>=)) x y
 
 -- Bool
 instance EqSymbolic Bool where
@@ -633,6 +633,20 @@ isConcreteOnes :: SBV a -> Bool
 isConcreteOnes (SBV _ (Left (CW (KBounded b w) (CWInteger n)))) = n == if b then -1 else bit w - 1
 isConcreteOnes (SBV _ (Left (CW KUnbounded     (CWInteger n)))) = n == -1
 isConcreteOnes _                                                = False
+
+-- | Predicate for optimizing comparisons.
+isConcreteMax :: SBV a -> Bool
+isConcreteMax (SBV _ (Left (CW (KBounded False w) (CWInteger n)))) = n == bit w - 1
+isConcreteMax (SBV _ (Left (CW (KBounded True  w) (CWInteger n)))) = n == bit (w - 1) - 1
+isConcreteMax (SBV _ (Left (CW KBool              (CWInteger n)))) = n == 1
+isConcreteMax _                                                    = False
+
+-- | Predicate for optimizing comparisons.
+isConcreteMin :: SBV a -> Bool
+isConcreteMin (SBV _ (Left (CW (KBounded False w) (CWInteger n)))) = n == 0
+isConcreteMin (SBV _ (Left (CW (KBounded True  w) (CWInteger n)))) = n == - bit (w - 1)
+isConcreteMin (SBV _ (Left (CW KBool              (CWInteger n)))) = n == 0
+isConcreteMin _                                                    = False
 
 -- | Predicate for optimizing conditionals.
 areConcretelyEqual :: SBV a -> SBV a -> Bool
