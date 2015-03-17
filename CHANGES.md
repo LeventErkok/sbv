@@ -3,6 +3,11 @@
 
 * Latest Hackage released version: 4.2, 2015-03-17
 
+### Version 4.3, Not yet released
+
+  * Internal:
+  	* Code clean-up, remove mbMinBound/mbMaxBound thus allowing less calls to unliteral. Thanks to Brian Huffman.
+  
 ### Version 4.2, 2015-03-17
 
   * Add exponentiation (.^). Thanks to Daniel Wagner for contributing the code!
