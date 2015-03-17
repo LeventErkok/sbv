@@ -149,71 +149,51 @@ instance SymWord Bool where
   mkSymWord  = genMkSymVar KBool
   literal x  = genLiteral  KBool (if x then (1::Integer) else 0)
   fromCW     = cwToBool
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Word8 where
   mkSymWord  = genMkSymVar (KBounded False 8)
   literal    = genLiteral  (KBounded False 8)
   fromCW     = genFromCW
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Int8 where
   mkSymWord  = genMkSymVar (KBounded True 8)
   literal    = genLiteral  (KBounded True 8)
   fromCW     = genFromCW
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Word16 where
   mkSymWord  = genMkSymVar (KBounded False 16)
   literal    = genLiteral  (KBounded False 16)
   fromCW     = genFromCW
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Int16 where
   mkSymWord  = genMkSymVar (KBounded True 16)
   literal    = genLiteral  (KBounded True 16)
   fromCW     = genFromCW
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Word32 where
   mkSymWord  = genMkSymVar (KBounded False 32)
   literal    = genLiteral  (KBounded False 32)
   fromCW     = genFromCW
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Int32 where
   mkSymWord  = genMkSymVar (KBounded True 32)
   literal    = genLiteral  (KBounded True 32)
   fromCW     = genFromCW
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Word64 where
   mkSymWord  = genMkSymVar (KBounded False 64)
   literal    = genLiteral  (KBounded False 64)
   fromCW     = genFromCW
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Int64 where
   mkSymWord  = genMkSymVar (KBounded True 64)
   literal    = genLiteral  (KBounded True 64)
   fromCW     = genFromCW
-  mbMaxBound = Just maxBound
-  mbMinBound = Just minBound
 
 instance SymWord Integer where
   mkSymWord  = genMkSymVar KUnbounded
   literal    = SBV KUnbounded . Left . mkConstCW KUnbounded
   fromCW     = genFromCW
-  mbMaxBound = Nothing
-  mbMinBound = Nothing
 
 instance SymWord AlgReal where
   mkSymWord  = genMkSymVar KReal
@@ -225,8 +205,6 @@ instance SymWord AlgReal where
   isConcretely (SBV KReal (Left (CW KReal (CWAlgReal v)))) p
      | isExactRational v = p v
   isConcretely _ _       = False
-  mbMaxBound = Nothing
-  mbMinBound = Nothing
 
 instance SymWord Float where
   mkSymWord  = genMkSymVar KFloat
@@ -237,8 +215,6 @@ instance SymWord Float where
   -- this function is used for optimizations when only one of the argument is concrete,
   -- and in the presence of NaN's it would be incorrect to do any optimization
   isConcretely _ _ = False
-  mbMaxBound = Nothing
-  mbMinBound = Nothing
 
 instance SymWord Double where
   mkSymWord  = genMkSymVar KDouble
@@ -249,8 +225,6 @@ instance SymWord Double where
   -- this function is used for optimizations when only one of the argument is concrete,
   -- and in the presence of NaN's it would be incorrect to do any optimization
   isConcretely _ _ = False
-  mbMaxBound = Nothing
-  mbMinBound = Nothing
 
 ------------------------------------------------------------------------------------
 -- * Smart constructors for creating symbolic values. These are not strictly
@@ -429,21 +403,21 @@ uiLift w _   a           b           = error $ "Data.SBV.BitVectors.Model: Impos
 
 instance SymWord a => OrdSymbolic (SBV a) where
   x .< y
-    | Just mb <- mbMaxBound, x `isConcretely` (== mb) = false
-    | Just mb <- mbMinBound, y `isConcretely` (== mb) = false
-    | True                                            = liftSym2B (mkSymOpSC (eqOpt falseSW) LessThan)    rationalCheck (<)  (<)  (<)  (<) (uiLift  "<"  (<))  x y
+    | isConcreteMax x = false
+    | isConcreteMin y = false
+    | True            = liftSym2B (mkSymOpSC (eqOpt falseSW) LessThan)    rationalCheck (<)  (<)  (<)  (<) (uiLift  "<"  (<))  x y
   x .<= y
-    | Just mb <- mbMinBound, x `isConcretely` (== mb) = true
-    | Just mb <- mbMaxBound, y `isConcretely` (== mb) = true
-    | True                                            = liftSym2B (mkSymOpSC (eqOpt trueSW) LessEq)       rationalCheck (<=) (<=) (<=) (<=) (uiLift "<=" (<=)) x y
+    | isConcreteMin x = true
+    | isConcreteMax y = true
+    | True            = liftSym2B (mkSymOpSC (eqOpt trueSW) LessEq)       rationalCheck (<=) (<=) (<=) (<=) (uiLift "<=" (<=)) x y
   x .> y
-    | Just mb <- mbMinBound, x `isConcretely` (== mb) = false
-    | Just mb <- mbMaxBound, y `isConcretely` (== mb) = false
-    | True                                            = liftSym2B (mkSymOpSC (eqOpt falseSW) GreaterThan) rationalCheck (>)  (>)  (>)  (>)  (uiLift ">"  (>))  x y
+    | isConcreteMin x = false
+    | isConcreteMax y = false
+    | True            = liftSym2B (mkSymOpSC (eqOpt falseSW) GreaterThan) rationalCheck (>)  (>)  (>)  (>)  (uiLift ">"  (>))  x y
   x .>= y
-    | Just mb <- mbMaxBound, x `isConcretely` (== mb) = true
-    | Just mb <- mbMinBound, y `isConcretely` (== mb) = true
-    | True                                            = liftSym2B (mkSymOpSC (eqOpt trueSW) GreaterEq)    rationalCheck (>=) (>=) (>=) (>=) (uiLift ">=" (>=)) x y
+    | isConcreteMax x = true
+    | isConcreteMin y = true
+    | True            = liftSym2B (mkSymOpSC (eqOpt trueSW) GreaterEq)    rationalCheck (>=) (>=) (>=) (>=) (uiLift ">=" (>=)) x y
 
 -- Bool
 instance EqSymbolic Bool where
@@ -633,6 +607,25 @@ isConcreteOnes :: SBV a -> Bool
 isConcreteOnes (SBV _ (Left (CW (KBounded b w) (CWInteger n)))) = n == if b then -1 else bit w - 1
 isConcreteOnes (SBV _ (Left (CW KUnbounded     (CWInteger n)))) = n == -1
 isConcreteOnes _                                                = False
+
+-- | Predicate for optimizing comparisons.
+isConcreteMax :: SBV a -> Bool
+isConcreteMax (SBV _ (Left (CW (KBounded False w) (CWInteger n)))) = n == bit w - 1
+isConcreteMax (SBV _ (Left (CW (KBounded True  w) (CWInteger n)))) = n == bit (w - 1) - 1
+isConcreteMax (SBV _ (Left (CW KBool              (CWInteger n)))) = n == 1
+isConcreteMax _                                                    = False
+
+-- | Predicate for optimizing comparisons.
+isConcreteMin :: SBV a -> Bool
+isConcreteMin (SBV _ (Left (CW (KBounded False w) (CWInteger n)))) = n == 0
+isConcreteMin (SBV _ (Left (CW (KBounded True  w) (CWInteger n)))) = n == - bit (w - 1)
+isConcreteMin (SBV _ (Left (CW KBool              (CWInteger n)))) = n == 0
+isConcreteMin _                                                    = False
+
+-- | Predicate for optimizing conditionals.
+areConcretelyEqual :: SBV a -> SBV a -> Bool
+areConcretelyEqual (SBV _ (Left a)) (SBV _ (Left b)) = a == b
+areConcretelyEqual _                _                = False
 
 -- Num instance for symbolic words.
 instance (Ord a, Num a, SymWord a) => Num (SBV a) where
@@ -1328,11 +1321,11 @@ sAssertCont msg cont t a
 -- sure they do not evaluate to the same result. This should only be used for internal purposes;
 -- as default definitions provided should suffice in many cases. (i.e., End users should
 -- only need to define 'symbolicMerge' when needed; which should be rare to start with.)
-symbolicMergeWithKind :: SymWord a => Kind -> Bool -> SBool -> SBV a -> SBV a -> SBV a
+symbolicMergeWithKind :: Kind -> Bool -> SBool -> SBV a -> SBV a -> SBV a
 symbolicMergeWithKind k force t a b
   | Just r <- unliteral t
   = if r then a else b
-  | force, Just av <- unliteral a, Just bv <- unliteral b, rationalSBVCheck a b, av == bv
+  | force, rationalSBVCheck a b, areConcretelyEqual a b
   = a
   | True
   = SBV k $ Right $ cache c

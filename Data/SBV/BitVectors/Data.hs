@@ -1057,15 +1057,12 @@ class (HasKind a, Ord a) => SymWord a where
   isSymbolic :: SBV a -> Bool
   -- | Does it concretely satisfy the given predicate?
   isConcretely :: SBV a -> (a -> Bool) -> Bool
-  -- | max/minbounds, if available. Note that we don't want
-  -- to impose "Bounded" on our class as Integer is not Bounded but it is a SymWord
-  mbMaxBound, mbMinBound :: Maybe a
   -- | One stop allocator
   mkSymWord :: Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
 
   -- minimal complete definition:: Nothing.
   -- Giving no instances is ok when defining an uninterpreted/enumerated sort, but otherwise you really
-  -- want to define: mbMaxBound, mbMinBound, literal, fromCW, mkSymWord
+  -- want to define: literal, fromCW, mkSymWord
   forall   = mkSymWord (Just ALL) . Just
   forall_  = mkSymWord (Just ALL)   Nothing
   exists   = mkSymWord (Just EX)  . Just
@@ -1085,9 +1082,6 @@ class (HasKind a, Ord a) => SymWord a where
   isConcretely s p
     | Just i <- unliteral s = p i
     | True                  = False
-  -- Followings, you really want to define them unless the instance is for an uninterpreted/enumerated sort
-  mbMaxBound = Nothing
-  mbMinBound = Nothing
 
   default literal :: Show a => a -> SBV a
   literal x = let k@(KUserSort  _ (conts, _)) = kindOf x
