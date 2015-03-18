@@ -67,6 +67,8 @@ boolector = SMTSolver {
               extract (Right (s, ss)) = "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
 
 -- | Similar to CVC4, Boolector uses different exit codes to indicate its status.
+-- NB. This is likely going to change with the next release of Boolector, so simplify the
+-- code when it does happen.
 boolectorExitCode :: ExitCode -> ExitCode
 boolectorExitCode (ExitFailure n) | n `elem` [10, 20, 0] = ExitSuccess
 boolectorExitCode ec                                     = ec
