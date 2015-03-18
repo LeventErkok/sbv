@@ -19,7 +19,6 @@ import Data.Char          (isSpace)
 import Data.Function      (on)
 import Data.List          (sortBy, intercalate)
 import System.Environment (getEnv)
-import System.Exit        (ExitCode(..))
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.PrettyNum (mkSkolemZero)
@@ -44,7 +43,7 @@ cvc4 = SMTSolver {
                                                    ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
                                         script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg) skolemMap)}
                                     standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap))
-         , xformExitCode  = cvc4ExitCode
+         , xformExitCode  = id
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "CVC4"
                                 , mbDefaultLogic             = Just "ALL_SUPPORTED"  -- CVC4 is not happy if we don't set the logic, so fall-back to this if necessary
@@ -66,13 +65,6 @@ cvc4 = SMTSolver {
        addTimeOut (Just i) o
          | i < 0               = error $ "CVC4: Timeout value must be non-negative, received: " ++ show i
          | True                = o ++ ["--tlimit=" ++ show i ++ "000"]  -- SBV takes seconds, CVC4 wants milli-seconds
-
--- | CVC4 uses different exit codes to indicate its status, rather than the
--- standard 0 being success and non-0 being failure. Make it palatable to SBV.
--- See <http://cvc4.cs.nyu.edu/wiki/User_Manual#Exit_status> for details.
-cvc4ExitCode :: ExitCode -> ExitCode
-cvc4ExitCode (ExitFailure n) | n `elem` [10, 20, 0] = ExitSuccess
-cvc4ExitCode ec                                     = ec
 
 extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [String] -> SMTModel
 extractMap isSat qinps _modelMap solverLines =
