@@ -77,8 +77,8 @@ noUnint2 :: (Maybe Int, String) -> (Maybe Int, String) -> a
 noUnint2 x y = error $ "Unexpected binary operation called on uninterpreted/enumerated values: " ++ show (x, y)
 
 liftSym1 :: (State -> Kind -> SW -> IO SW) -> (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> SBV b -> SBV b
-liftSym1 _   opCR opCI opCF opCD   (SBV k (Left a)) = SBV k $ Left  $ mapCW opCR opCI opCF opCD noUnint a
-liftSym1 opS _    _    _    _    a@(SBV k _)        = SBV k $ Right $ cache c
+liftSym1 _   opCR opCI opCF opCD   (SBV (SVal k (Left a))) = SBV $ SVal k $ Left  $ mapCW opCR opCI opCF opCD noUnint a
+liftSym1 opS _    _    _    _    a@(SBV (SVal k _))        = SBV $ SVal k $ Right $ cache c
    where c st = do swa <- sbvToSW st a
                    opS st k swa
 
@@ -89,22 +89,22 @@ liftSW2 opS k a b = cache c
                   opS st k sw1 sw2
 
 liftSym2 :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (Float -> Float -> Float) -> (Double -> Double -> Double) -> SBV b -> SBV b -> SBV b
-liftSym2 _   okCW opCR opCI opCF opCD   (SBV k (Left a)) (SBV _ (Left b)) | okCW a b = SBV k $ Left  $ mapCW2 opCR opCI opCF opCD noUnint2 a b
-liftSym2 opS _    _    _    _    _    a@(SBV k _)        b                           = SBV k $ Right $ liftSW2 opS k a b
+liftSym2 _   okCW opCR opCI opCF opCD   (SBV (SVal k (Left a))) (SBV (SVal _ (Left b))) | okCW a b = SBV $ SVal k $ Left  $ mapCW2 opCR opCI opCF opCD noUnint2 a b
+liftSym2 opS _    _    _    _    _    a@(SBV (SVal k _))        b                                  = SBV $ SVal k $ Right $ liftSW2 opS k a b
 
 liftSym2B :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> Bool) -> (Integer -> Integer -> Bool) -> (Float -> Float -> Bool) -> (Double -> Double -> Bool) -> ((Maybe Int, String) -> (Maybe Int, String) -> Bool) -> SBV b -> SBV b -> SBool
-liftSym2B _   okCW opCR opCI opCF opCD opUI (SBV _ (Left a)) (SBV _ (Left b)) | okCW a b = literal (liftCW2 opCR opCI opCF opCD opUI a b)
-liftSym2B opS _    _    _    _    _    _    a                b                           = SBV KBool $ Right $ liftSW2 opS KBool a b
+liftSym2B _   okCW opCR opCI opCF opCD opUI (SBV (SVal _ (Left a))) (SBV (SVal _ (Left b))) | okCW a b = literal (liftCW2 opCR opCI opCF opCD opUI a b)
+liftSym2B opS _    _    _    _    _    _    a                       b                                  = SBV $ SVal KBool $ Right $ liftSW2 opS KBool a b
 
 liftSym1Bool :: (State -> Kind -> SW -> IO SW) -> (Bool -> Bool) -> SBool -> SBool
-liftSym1Bool _   opC (SBV _ (Left a)) = literal $ opC $ cwToBool a
-liftSym1Bool opS _   a                = SBV KBool $ Right $ cache c
+liftSym1Bool _   opC (SBV (SVal _ (Left a))) = literal $ opC $ cwToBool a
+liftSym1Bool opS _   a                       = SBV $ SVal KBool $ Right $ cache c
   where c st = do sw <- sbvToSW st a
                   opS st KBool sw
 
 liftSym2Bool :: (State -> Kind -> SW -> SW -> IO SW) -> (Bool -> Bool -> Bool) -> SBool -> SBool -> SBool
-liftSym2Bool _   opC (SBV _ (Left a)) (SBV _ (Left b)) = literal (cwToBool a `opC` cwToBool b)
-liftSym2Bool opS _   a                b                = SBV KBool $ Right $ cache c
+liftSym2Bool _   opC (SBV (SVal _ (Left a))) (SBV (SVal _ (Left b))) = literal (cwToBool a `opC` cwToBool b)
+liftSym2Bool opS _   a                       b                       = SBV $ SVal KBool $ Right $ cache c
   where c st = do sw1 <- sbvToSW st a
                   sw2 <- sbvToSW st b
                   opS st KBool sw1 sw2
@@ -133,7 +133,7 @@ genVar_ q k = mkSymSBV q k Nothing
 
 -- | Generate a finite constant bitvector
 genLiteral :: Integral a => Kind -> a -> SBV b
-genLiteral k = SBV k . Left . mkConstCW k
+genLiteral k = SBV . SVal k . Left . mkConstCW k
 
 -- | Convert a constant to an integral value
 genFromCW :: Integral a => CW -> a
@@ -192,23 +192,23 @@ instance SymWord Int64 where
 
 instance SymWord Integer where
   mkSymWord  = genMkSymVar KUnbounded
-  literal    = SBV KUnbounded . Left . mkConstCW KUnbounded
+  literal    = SBV . SVal KUnbounded . Left . mkConstCW KUnbounded
   fromCW     = genFromCW
 
 instance SymWord AlgReal where
   mkSymWord  = genMkSymVar KReal
-  literal    = SBV KReal . Left . CW KReal . CWAlgReal
+  literal    = SBV . SVal KReal . Left . CW KReal . CWAlgReal
   fromCW (CW _ (CWAlgReal a)) = a
   fromCW c                    = error $ "SymWord.AlgReal: Unexpected non-real value: " ++ show c
   -- AlgReal needs its own definition of isConcretely
   -- to make sure we avoid using unimplementable Haskell functions
-  isConcretely (SBV KReal (Left (CW KReal (CWAlgReal v)))) p
+  isConcretely (SBV (SVal KReal (Left (CW KReal (CWAlgReal v))))) p
      | isExactRational v = p v
   isConcretely _ _       = False
 
 instance SymWord Float where
   mkSymWord  = genMkSymVar KFloat
-  literal    = SBV KFloat . Left . CW KFloat . CWFloat
+  literal    = SBV . SVal KFloat . Left . CW KFloat . CWFloat
   fromCW (CW _ (CWFloat a)) = a
   fromCW c                  = error $ "SymWord.Float: Unexpected non-float value: " ++ show c
   -- For Float, we conservatively return 'False' for isConcretely. The reason is that
@@ -218,7 +218,7 @@ instance SymWord Float where
 
 instance SymWord Double where
   mkSymWord  = genMkSymVar KDouble
-  literal    = SBV KDouble . Left . CW KDouble . CWDouble
+  literal    = SBV . SVal KDouble . Left . CW KDouble . CWDouble
   fromCW (CW _ (CWDouble a)) = a
   fromCW c                   = error $ "SymWord.Double: Unexpected non-double value: " ++ show c
   -- For Double, we conservatively return 'False' for isConcretely. The reason is that
@@ -339,7 +339,7 @@ sDoubles = symbolics
 toSReal :: SInteger -> SReal
 toSReal x
   | Just i <- unliteral x = literal $ fromInteger i
-  | True                  = SBV KReal (Right (cache y))
+  | True                  = SBV (SVal KReal (Right (cache y)))
   where y st = do xsw <- sbvToSW st x
                   newExpr st KReal (SBVApp (Extract 0 0) [xsw]) -- special encoding!
 
@@ -592,40 +592,40 @@ oneIf t = ite t 1 0
 
 -- | Predicate for optimizing word operations like (+) and (*).
 isConcreteZero :: SBV a -> Bool
-isConcreteZero (SBV _     (Left (CW _     (CWInteger n)))) = n == 0
-isConcreteZero (SBV KReal (Left (CW KReal (CWAlgReal v)))) = isExactRational v && v == 0
-isConcreteZero _                                           = False
+isConcreteZero (SBV (SVal _     (Left (CW _     (CWInteger n))))) = n == 0
+isConcreteZero (SBV (SVal KReal (Left (CW KReal (CWAlgReal v))))) = isExactRational v && v == 0
+isConcreteZero _                                                  = False
 
 -- | Predicate for optimizing word operations like (+) and (*).
 isConcreteOne :: SBV a -> Bool
-isConcreteOne (SBV _     (Left (CW _     (CWInteger 1)))) = True
-isConcreteOne (SBV KReal (Left (CW KReal (CWAlgReal v)))) = isExactRational v && v == 1
-isConcreteOne _                                           = False
+isConcreteOne (SBV (SVal _     (Left (CW _     (CWInteger 1))))) = True
+isConcreteOne (SBV (SVal KReal (Left (CW KReal (CWAlgReal v))))) = isExactRational v && v == 1
+isConcreteOne _                                                  = False
 
 -- | Predicate for optimizing bitwise operations.
 isConcreteOnes :: SBV a -> Bool
-isConcreteOnes (SBV _ (Left (CW (KBounded b w) (CWInteger n)))) = n == if b then -1 else bit w - 1
-isConcreteOnes (SBV _ (Left (CW KUnbounded     (CWInteger n)))) = n == -1
+isConcreteOnes (SBV (SVal _ (Left (CW (KBounded b w) (CWInteger n))))) = n == if b then -1 else bit w - 1
+isConcreteOnes (SBV (SVal _ (Left (CW KUnbounded     (CWInteger n))))) = n == -1
 isConcreteOnes _                                                = False
 
 -- | Predicate for optimizing comparisons.
 isConcreteMax :: SBV a -> Bool
-isConcreteMax (SBV _ (Left (CW (KBounded False w) (CWInteger n)))) = n == bit w - 1
-isConcreteMax (SBV _ (Left (CW (KBounded True  w) (CWInteger n)))) = n == bit (w - 1) - 1
-isConcreteMax (SBV _ (Left (CW KBool              (CWInteger n)))) = n == 1
-isConcreteMax _                                                    = False
+isConcreteMax (SBV (SVal _ (Left (CW (KBounded False w) (CWInteger n))))) = n == bit w - 1
+isConcreteMax (SBV (SVal _ (Left (CW (KBounded True  w) (CWInteger n))))) = n == bit (w - 1) - 1
+isConcreteMax (SBV (SVal _ (Left (CW KBool              (CWInteger n))))) = n == 1
+isConcreteMax _                                                           = False
 
 -- | Predicate for optimizing comparisons.
 isConcreteMin :: SBV a -> Bool
-isConcreteMin (SBV _ (Left (CW (KBounded False _) (CWInteger n)))) = n == 0
-isConcreteMin (SBV _ (Left (CW (KBounded True  w) (CWInteger n)))) = n == - bit (w - 1)
-isConcreteMin (SBV _ (Left (CW KBool              (CWInteger n)))) = n == 0
-isConcreteMin _                                                    = False
+isConcreteMin (SBV (SVal _ (Left (CW (KBounded False _) (CWInteger n))))) = n == 0
+isConcreteMin (SBV (SVal _ (Left (CW (KBounded True  w) (CWInteger n))))) = n == - bit (w - 1)
+isConcreteMin (SBV (SVal _ (Left (CW KBool              (CWInteger n))))) = n == 0
+isConcreteMin _                                                           = False
 
 -- | Predicate for optimizing conditionals.
 areConcretelyEqual :: SBV a -> SBV a -> Bool
-areConcretelyEqual (SBV _ (Left a)) (SBV _ (Left b)) = a == b
-areConcretelyEqual _                _                = False
+areConcretelyEqual (SBV (SVal _ (Left a))) (SBV (SVal _ (Left b))) = a == b
+areConcretelyEqual _                       _                       = False
 
 -- Num instance for symbolic words.
 instance (Ord a, Num a, SymWord a) => Num (SBV a) where
@@ -699,7 +699,7 @@ instance (SymWord a, Fractional a, Floating a) => Floating (SBV a) where
 -- first place. (NB. 'fusedMA' only rounds once, even though it does two operations, and hence the extra
 -- precision.)
 fusedMA :: (SymWord a, Floating a) => SBV a -> SBV a -> SBV a -> SBV a
-fusedMA a b c = SBV k $ Right $ cache r
+fusedMA a b c = SBV $ SVal k $ Right $ cache r
   where k = kindOf a
         r st = do swa <- sbvToSW st a
                   swb <- sbvToSW st b
@@ -711,7 +711,7 @@ fusedMA a b c = SBV k $ Right $ cache r
 lift1F :: (SymWord a, Floating a) => (a -> a) -> Op -> SBV a -> SBV a
 lift1F f smtOp sv
   | Just v <- unliteral sv = literal $ f v
-  | True                   = SBV k $ Right $ cache c
+  | True                   = SBV $ SVal k $ Right $ cache c
   where k = kindOf sv
         c st = do swa <- sbvToSW st sv
                   newExpr st k (SBVApp smtOp [swa])
@@ -737,8 +737,8 @@ rationalCheck a b = case (cwVal a, cwVal b) of
 
 -- same as above, for SBV's
 rationalSBVCheck :: SBV a -> SBV a -> Bool
-rationalSBVCheck (SBV KReal (Left a)) (SBV KReal (Left b)) = rationalCheck a b
-rationalSBVCheck _                    _                    = True
+rationalSBVCheck (SBV (SVal KReal (Left a))) (SBV (SVal KReal (Left b))) = rationalCheck a b
+rationalSBVCheck _                           _                           = True
 
 -- Some operations will never be used on Reals, but we need fillers:
 noReal :: String -> AlgReal -> AlgReal -> AlgReal
@@ -808,12 +808,12 @@ instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
     | True        = shiftR x y   -- for unbounded integers, rotateR is the same as shiftR in Haskell
   -- NB. testBit is *not* implementable on non-concrete symbolic words
   x `testBit` i
-    | SBV _ (Left (CW _ (CWInteger n))) <- x = testBit n i
+    | SBV (SVal _ (Left (CW _ (CWInteger n)))) <- x = testBit n i
     | True                 = error $ "SBV.testBit: Called on symbolic value: " ++ show x ++ ". Use sbvTestBit instead."
   -- NB. popCount is *not* implementable on non-concrete symbolic words
   popCount x
-    | SBV _ (Left (CW (KBounded _ w) (CWInteger n))) <- x = popCount (n .&. (bit w - 1))
-    | True                                                = error $ "SBV.popCount: Called on symbolic value: " ++ show x ++ ". Use sbvPopCount instead."
+    | SBV (SVal _ (Left (CW (KBounded _ w) (CWInteger n)))) <- x = popCount (n .&. (bit w - 1))
+    | True                                                       = error $ "SBV.popCount: Called on symbolic value: " ++ show x ++ ". Use sbvPopCount instead."
 
 -- Since the underlying representation is just Integers, rotations has to be careful on the bit-size
 rot :: Bool -> Int -> Int -> Integer -> Integer
@@ -1160,8 +1160,8 @@ liftQRem x y
 --------------------------------}
   | True
   = ite (y .== z) (z, x) (qr x y)
-  where qr (SBV sgnsz (Left a)) (SBV _ (Left b)) = let (q, r) = sQuotRem a b in (SBV sgnsz (Left q), SBV sgnsz (Left r))
-        qr a@(SBV sgnsz _)      b                = (SBV sgnsz (Right (cache (mk Quot))), SBV sgnsz (Right (cache (mk Rem))))
+  where qr (SBV (SVal sgnsz (Left a))) (SBV (SVal _ (Left b))) = let (q, r) = sQuotRem a b in (SBV (SVal sgnsz (Left q)), SBV (SVal sgnsz (Left r)))
+        qr a@(SBV (SVal sgnsz _))      b                       = (SBV (SVal sgnsz (Right (cache (mk Quot)))), SBV (SVal sgnsz (Right (cache (mk Rem)))))
                 where mk o st = do sw1 <- sbvToSW st a
                                    sw2 <- sbvToSW st b
                                    mkSymOp o st sgnsz sw1 sw2
@@ -1308,7 +1308,7 @@ sAssertCont msg cont t a
   | Just r <- unliteral t = if r then a else cont defaultSMTCfg Nothing
   | True                  = symbolicMerge False cond a (die ["SBV.error: Internal-error, cannot happen: Reached false branch in checked s-Assert."])
   where k     = kindOf t
-        cond  = SBV k $ Right $ cache c
+        cond  = SBV $ SVal k $ Right $ cache c
         die m = error $ intercalate "\n" $ ("Assertion failure: " ++ show msg) : m
         c st  = do let pc  = getPathCondition st
                        chk = pc &&& bnot t
@@ -1328,7 +1328,7 @@ symbolicMergeWithKind k force t a b
   | force, rationalSBVCheck a b, areConcretelyEqual a b
   = a
   | True
-  = SBV k $ Right $ cache c
+  = SBV $ SVal k $ Right $ cache c
   where c st = do swt <- sbvToSW st t
                   case () of
                     () | swt == trueSW  -> sbvToSW st a       -- these two cases should never be needed as we expect symbolicMerge to be
@@ -1403,12 +1403,12 @@ instance SymWord a => Mergeable (SBV a) where
        | True  = symbolicMergeWithKind (kindOf (undefined :: a)) False t x y
     -- Custom version of select that translates to SMT-Lib tables at the base type of words
     select xs err ind
-      | SBV _ (Left c) <- ind = case cwVal c of
-                                  CWInteger i -> if i < 0 || i >= genericLength xs
-                                                 then err
-                                                 else xs `genericIndex` i
-                                  _           -> error $ "SBV.select: unsupported " ++ show (kindOf ind) ++ " valued select/index expression"
-    select xsOrig err ind = xs `seq` SBV kElt (Right (cache r))
+      | SBV (SVal _ (Left c)) <- ind = case cwVal c of
+                                         CWInteger i -> if i < 0 || i >= genericLength xs
+                                                        then err
+                                                        else xs `genericIndex` i
+                                         _           -> error $ "SBV.select: unsupported " ++ show (kindOf ind) ++ " valued select/index expression"
+    select xsOrig err ind = xs `seq` SBV (SVal kElt (Right (cache r)))
       where kInd = kindOf ind
             kElt = kindOf err
             -- Based on the index size, we need to limit the elements. For instance if the index is 8 bits, but there
@@ -1529,7 +1529,7 @@ instance (SymWord a, Bounded a) => Bounded (SBV a) where
 
 -- SArrays are both "EqSymbolic" and "Mergeable"
 instance EqSymbolic (SArray a b) where
-  (SArray _ a) .== (SArray _ b) = SBV KBool $ Right $ cache c
+  (SArray _ a) .== (SArray _ b) = SBV $ SVal KBool $ Right $ cache c
     where c st = do ai <- uncacheAI a st
                     bi <- uncacheAI b st
                     newExpr st KBool (SBVApp (ArrEq ai bi) [])
@@ -1587,7 +1587,7 @@ class Uninterpreted a where
 instance HasKind a => Uninterpreted (SBV a) where
   sbvUninterpret mbCgData nm
      | Just (_, v) <- mbCgData = v
-     | True                    = SBV ka $ Right $ cache result
+     | True                    = SBV $ SVal ka $ Right $ cache result
     where ka = kindOf (undefined :: a)
           result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st v
                     | True = do newUninterpreted st nm (SBVType [ka]) (fst `fmap` mbCgData)
@@ -1600,7 +1600,7 @@ instance (SymWord b, HasKind a) => Uninterpreted (SBV b -> SBV a) where
            | Just (_, v) <- mbCgData, isConcrete arg0
            = v arg0
            | True
-           = SBV ka $ Right $ cache result
+           = SBV $ SVal ka $ Right $ cache result
            where ka = kindOf (undefined :: a)
                  kb = kindOf (undefined :: b)
                  result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st (v arg0)
@@ -1616,7 +1616,7 @@ instance (SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV c -> SBV b -> S
            | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1
            = v arg0 arg1
            | True
-           = SBV ka $ Right $ cache result
+           = SBV $ SVal ka $ Right $ cache result
            where ka = kindOf (undefined :: a)
                  kb = kindOf (undefined :: b)
                  kc = kindOf (undefined :: c)
@@ -1634,7 +1634,7 @@ instance (SymWord d, SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV d ->
            | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1, isConcrete arg2
            = v arg0 arg1 arg2
            | True
-           = SBV ka $ Right $ cache result
+           = SBV $ SVal ka $ Right $ cache result
            where ka = kindOf (undefined :: a)
                  kb = kindOf (undefined :: b)
                  kc = kindOf (undefined :: c)
@@ -1654,7 +1654,7 @@ instance (SymWord e, SymWord d, SymWord c, SymWord b, HasKind a) => Uninterprete
            | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3
            = v arg0 arg1 arg2 arg3
            | True
-           = SBV ka $ Right $ cache result
+           = SBV $ SVal ka $ Right $ cache result
            where ka = kindOf (undefined :: a)
                  kb = kindOf (undefined :: b)
                  kc = kindOf (undefined :: c)
@@ -1676,7 +1676,7 @@ instance (SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasKind a) => U
            | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4
            = v arg0 arg1 arg2 arg3 arg4
            | True
-           = SBV ka $ Right $ cache result
+           = SBV $ SVal ka $ Right $ cache result
            where ka = kindOf (undefined :: a)
                  kb = kindOf (undefined :: b)
                  kc = kindOf (undefined :: c)
@@ -1700,7 +1700,7 @@ instance (SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasK
            | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5
            = v arg0 arg1 arg2 arg3 arg4 arg5
            | True
-           = SBV ka $ Right $ cache result
+           = SBV $ SVal ka $ Right $ cache result
            where ka = kindOf (undefined :: a)
                  kb = kindOf (undefined :: b)
                  kc = kindOf (undefined :: c)
@@ -1727,7 +1727,7 @@ instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymW
            | Just (_, v) <- mbCgData, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5, isConcrete arg6
            = v arg0 arg1 arg2 arg3 arg4 arg5 arg6
            | True
-           = SBV ka $ Right $ cache result
+           = SBV $ SVal ka $ Right $ cache result
            where ka = kindOf (undefined :: a)
                  kb = kindOf (undefined :: b)
                  kc = kindOf (undefined :: c)
@@ -1830,7 +1830,7 @@ pConstrain t c = addConstraint (Just t) c (bnot c)
 reduceInPathCondition :: SBool -> SBool
 reduceInPathCondition b
   | isConcrete b = b -- No reduction is needed, already a concrete value
-  | True         = SBV k $ Right $ cache c
+  | True         = SBV $ SVal k $ Right $ cache c
   where k    = kindOf b
         c st = do -- Now that we know our boolean is not obviously true/false. Need to make an external
                   -- call to the SMT solver to see if we can prove it is necessarily one of those
@@ -1845,8 +1845,8 @@ reduceInPathCondition b
 
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where
-  property (SBV _ (Left b)) = property (cwToBool b)
-  property s                = error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show s ++ ")"
+  property (SBV (SVal _ (Left b))) = property (cwToBool b)
+  property s                       = error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show s ++ ")"
 
 instance Testable (Symbolic SBool) where
   property m = QC.whenFail (putStrLn msg) $ QC.monadicIO test
@@ -1874,10 +1874,10 @@ instance Testable (Symbolic SBool) where
 -- ensures that its first argument is computed once and passed on to its continuation, explicitly indicating the intent of sharing. Most
 -- use cases of the SBV library should simply use Haskell's @let@ construct for this purpose.
 slet :: forall a b. (HasKind a, HasKind b) => SBV a -> (SBV a -> SBV b) -> SBV b
-slet x f = SBV k $ Right $ cache r
+slet x f = SBV $ SVal k $ Right $ cache r
     where k    = kindOf (undefined :: b)
           r st = do xsw <- sbvToSW st x
-                    let xsbv = SBV (kindOf x) (Right (cache (const (return xsw))))
+                    let xsbv = SBV $ SVal (kindOf x) (Right (cache (const (return xsw))))
                         res  = f xsbv
                     sbvToSW st res
 

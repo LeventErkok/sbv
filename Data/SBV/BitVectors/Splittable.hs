@@ -72,42 +72,42 @@ cwJoin x y = error $ "SBV.cwJoin: Unsupported arguments: " ++ show (x, y)
 
 -- symbolic instances
 instance Splittable SWord64 SWord32 where
-  split (SBV _ (Left z)) = cwSplit z
-  split z                = (SBV (KBounded False 32) (Right (cache x)), SBV (KBounded False 32) (Right (cache y)))
+  split (SBV (SVal _ (Left z))) = cwSplit z
+  split z                       = (SBV (SVal (KBounded False 32) (Right (cache x))), SBV (SVal (KBounded False 32) (Right (cache y))))
     where x st = do zsw <- sbvToSW st z
                     newExpr st (KBounded False 32) (SBVApp (Extract 63 32) [zsw])
           y st = do zsw <- sbvToSW st z
                     newExpr st (KBounded False 32) (SBVApp (Extract 31  0) [zsw])
-  (SBV _ (Left a)) # (SBV _ (Left b)) = cwJoin a b
-  a # b = SBV (KBounded False 64) (Right (cache c))
+  (SBV (SVal _ (Left a))) # (SBV (SVal _ (Left b))) = cwJoin a b
+  a # b = SBV (SVal (KBounded False 64) (Right (cache c)))
     where c st = do asw <- sbvToSW st a
                     bsw <- sbvToSW st b
                     newExpr st (KBounded False 64) (SBVApp Join [asw, bsw])
   extend b = 0 # b
 
 instance Splittable SWord32 SWord16 where
-  split (SBV _ (Left z)) = cwSplit z
-  split z                = (SBV (KBounded False 16) (Right (cache x)), SBV (KBounded False 16) (Right (cache y)))
+  split (SBV (SVal _ (Left z))) = cwSplit z
+  split z                       = (SBV (SVal (KBounded False 16) (Right (cache x))), SBV (SVal (KBounded False 16) (Right (cache y))))
     where x st = do zsw <- sbvToSW st z
                     newExpr st (KBounded False 16) (SBVApp (Extract 31 16) [zsw])
           y st = do zsw <- sbvToSW st z
                     newExpr st (KBounded False 16) (SBVApp (Extract 15  0) [zsw])
-  (SBV _ (Left a)) # (SBV _ (Left b)) = cwJoin a b
-  a # b = SBV (KBounded False 32) (Right (cache c))
+  (SBV (SVal _ (Left a))) # (SBV (SVal _ (Left b))) = cwJoin a b
+  a # b = SBV (SVal (KBounded False 32) (Right (cache c)))
     where c st = do asw <- sbvToSW st a
                     bsw <- sbvToSW st b
                     newExpr st (KBounded False 32) (SBVApp Join [asw, bsw])
   extend b = 0 # b
 
 instance Splittable SWord16 SWord8 where
-  split (SBV _ (Left z)) = cwSplit z
-  split z                = (SBV (KBounded False 8) (Right (cache x)), SBV (KBounded False 8) (Right (cache y)))
+  split (SBV (SVal _ (Left z))) = cwSplit z
+  split z                       = (SBV (SVal (KBounded False 8) (Right (cache x))), SBV (SVal (KBounded False 8) (Right (cache y))))
     where x st = do zsw <- sbvToSW st z
                     newExpr st (KBounded False 8) (SBVApp (Extract 15 8) [zsw])
           y st = do zsw <- sbvToSW st z
                     newExpr st (KBounded False 8) (SBVApp (Extract  7 0) [zsw])
-  (SBV _ (Left a)) # (SBV _ (Left b)) = cwJoin a b
-  a # b = SBV (KBounded False 16) (Right (cache c))
+  (SBV (SVal _ (Left a))) # (SBV (SVal _ (Left b))) = cwJoin a b
+  a # b = SBV (SVal (KBounded False 16) (Right (cache c)))
     where c st = do asw <- sbvToSW st a
                     bsw <- sbvToSW st b
                     newExpr st (KBounded False 16) (SBVApp Join [asw, bsw])

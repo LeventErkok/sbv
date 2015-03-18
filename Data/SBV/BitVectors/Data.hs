@@ -30,6 +30,7 @@ module Data.SBV.BitVectors.Data
  , CW(..), CWVal(..), AlgReal(..), cwSameType, cwIsBit, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
  , SW(..), trueSW, falseSW, trueCW, falseCW, normCW
+ , SVal(..)
  , SBV(..), NodeId(..), mkSymSBV, mkSymSBVWithRandom
  , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), mkSFunArray, SArray(..), arrayUIKind
  , sbvToSW, sbvToSymSW, forceSWArg
@@ -623,9 +624,12 @@ getSBranchRunConfig st = case runMode st of
 
 -- | The "Symbolic" value. Either a constant (@Left@) or a symbolic
 -- value (@Right Cached@). Note that caching is essential for making
--- sure sharing is preserved. The parameter 'a' is phantom, but is
+-- sure sharing is preserved.
+data SVal = SVal !Kind !(Either CW (Cached SW))
+
+-- | The "Symbolic" value. The parameter 'a' is phantom, but is
 -- extremely important in keeping the user interface strongly typed.
-data SBV a = SBV !Kind !(Either CW (Cached SW))
+newtype SBV a = SBV SVal
 
 -- | A symbolic boolean/bit
 type SBool   = SBV Bool
@@ -711,20 +715,27 @@ instance HasKind RoundingMode
 type SRoundingMode = SBV RoundingMode
 
 -- Not particularly "desirable", but will do if needed
+instance Show SVal where
+  show (SVal _ (Left c))  = show c
+  show (SVal k (Right _)) = "<symbolic> :: " ++ show k
+
 instance Show (SBV a) where
-  show (SBV _ (Left c))  = show c
-  show (SBV k (Right _)) = "<symbolic> :: " ++ show k
+  show (SBV sv) = show sv
 
 -- Equality constraint on SBV values. Not desirable since we can't really compare two
 -- symbolic values, but will do.
-instance Eq (SBV a) where
-  SBV _ (Left a) == SBV _ (Left b) = a == b
+instance Eq SVal where
+  SVal _ (Left a) == SVal _ (Left b) = a == b
   a == b = error $ "Comparing symbolic bit-vectors; Use (.==) instead. Received: " ++ show (a, b)
-  SBV _ (Left a) /= SBV _ (Left b) = a /= b
+  SVal _ (Left a) /= SVal _ (Left b) = a /= b
   a /= b = error $ "Comparing symbolic bit-vectors; Use (./=) instead. Received: " ++ show (a, b)
 
+instance Eq (SBV a) where
+  SBV a == SBV b = a == b
+  SBV a /= SBV b = a /= b
+
 instance HasKind a => HasKind (SBV a) where
-  kindOf (SBV k _) = k
+  kindOf (SBV (SVal k _)) = k
 
 -- | Increment the variable counter
 incCtr :: State -> IO Int
@@ -821,8 +832,8 @@ newExpr st k app = do
 
 -- | Convert a symbolic value to a symbolic-word
 sbvToSW :: State -> SBV a -> IO SW
-sbvToSW st (SBV _ (Left c))  = newConst st c
-sbvToSW st (SBV _ (Right f)) = uncache f st
+sbvToSW st (SBV (SVal _ (Left c)))  = newConst st c
+sbvToSW st (SBV (SVal _ (Right f))) = uncache f st
 
 -------------------------------------------------------------------------
 -- * Symbolic Computations
@@ -853,13 +864,13 @@ mkSymSBVWithRandom rand mbQ k mbNm = do
           Concrete _ | q == EX -> case mbNm of
                                     Nothing -> error $ "Cannot quick-check in the presence of existential variables, type: " ++ showType (undefined :: a)
                                     Just nm -> error $ "Cannot quick-check in the presence of existential variable " ++ nm ++ " :: " ++ showType (undefined :: a)
-          Concrete _           -> do v@(SBV _ (Left cw)) <- liftIO rand
+          Concrete _           -> do v@(SBV (SVal _ (Left cw))) <- liftIO rand
                                      liftIO $ modifyIORef (rCInfo st) ((maybe "_" id mbNm, cw):)
                                      return v
           _          -> do (sw, internalName) <- liftIO $ newSW st k
                            let nm = maybe internalName id mbNm
                            liftIO $ modifyIORef (rinps st) ((q, (sw, nm)):)
-                           return $ SBV k $ Right $ cache (const (return sw))
+                           return $ SBV $ SVal k $ Right $ cache (const (return sw))
 
 -- | Convert a symbolic value to an SW, inside the Symbolic monad
 sbvToSymSW :: SBV a -> Symbolic SW
@@ -874,12 +885,12 @@ class Outputtable a where
   output :: a -> Symbolic a
 
 instance Outputtable (SBV a) where
-  output i@(SBV _ (Left c)) = do
+  output i@(SBV (SVal _ (Left c))) = do
           st <- ask
           sw <- liftIO $ newConst st c
           liftIO $ modifyIORef (routs st) (sw:)
           return i
-  output i@(SBV _ (Right f)) = do
+  output i@(SBV (SVal _ (Right f))) = do
           st <- ask
           sw <- liftIO $ uncache f st
           liftIO $ modifyIORef (routs st) (sw:)
@@ -950,7 +961,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
                   Concrete g -> newIORef g
                   _          -> newStdGen >>= newIORef
    let st = State { runMode      = currentRunMode
-                  , pathCond     = SBV KBool (Left trueCW)
+                  , pathCond     = SBV $ SVal KBool (Left trueCW)
                   , rStdGen      = rGen
                   , rCInfo       = cInfo
                   , rctr         = ctr
@@ -1074,10 +1085,10 @@ class (HasKind a, Ord a) => SymWord a where
   mkFreeVars n   = mapM (const free_)   [1 .. n]
   symbolic       = free
   symbolics      = mapM symbolic
-  unliteral (SBV _ (Left c))  = Just $ fromCW c
-  unliteral _                 = Nothing
-  isConcrete (SBV _ (Left _)) = True
-  isConcrete _                = False
+  unliteral (SBV (SVal _ (Left c)))  = Just $ fromCW c
+  unliteral _                        = Nothing
+  isConcrete (SBV (SVal _ (Left _))) = True
+  isConcrete _                       = False
   isSymbolic = not . isConcrete
   isConcretely s p
     | Just i <- unliteral s = p i
@@ -1089,7 +1100,7 @@ class (HasKind a, Ord a) => SymWord a where
                   mbIdx = case conts of
                             Right xs -> sx `lookup` zip xs [0..]
                             _        -> Nothing
-              in SBV k (Left (CW k (CWUserSort (mbIdx, sx))))
+              in SBV $ SVal k (Left (CW k (CWUserSort (mbIdx, sx))))
 
   default fromCW :: Read a => CW -> a
   fromCW (CW _ (CWUserSort (_, s))) = read s
@@ -1110,7 +1121,7 @@ class (HasKind a, Ord a) => SymWord a where
         let sw = SW k (NodeId ctr)
             nm = maybe ('s':show ctr) id mbNm
         liftIO $ modifyIORef (rinps st) ((q, (sw, nm)):)
-        return $ SBV k $ Right $ cache (const (return sw))
+        return $ SBV $ SVal k $ Right $ cache (const (return sw))
 
 instance (Random a, SymWord a) => Random (SBV a) where
   randomR (l, h) g = case (unliteral l, unliteral h) of
@@ -1173,7 +1184,7 @@ instance (HasKind a, HasKind b) => Show (SArray a b) where
 instance SymArray SArray where
   newArray_  = declNewSArray (\t -> "array_" ++ show t)
   newArray n = declNewSArray (const n)
-  readArray (SArray (_, bk) f) a = SBV bk $ Right $ cache r
+  readArray (SArray (_, bk) f) a = SBV $ SVal bk $ Right $ cache r
      where r st = do arr <- uncacheAI f st
                      i   <- sbvToSW st a
                      newExpr st bk (SBVApp (ArrRead arr) [i])
@@ -1337,8 +1348,10 @@ instance NFData SBVType       where rnf a = seq a ()
 instance NFData UnintKind     where rnf a = seq a ()
 instance NFData a => NFData (Cached a) where
   rnf (Cached f) = f `seq` ()
+instance NFData SVal where
+  rnf (SVal x y) = rnf x `seq` rnf y `seq` ()
 instance NFData a => NFData (SBV a) where
-  rnf (SBV x y) = rnf x `seq` rnf y `seq` ()
+  rnf (SBV x) = rnf x `seq` ()
 instance NFData SBVPgm        where rnf a = seq a ()
 
 

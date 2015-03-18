@@ -41,7 +41,7 @@ class (SymWord a, Floating a) => RoundingFloat a where
 
 -- | Lift a 1 arg floating point UOP
 lift1Rm :: (SymWord a, Floating a) => String -> SRoundingMode -> SBV a -> SBV a
-lift1Rm w m a = SBV k $ Right $ cache r
+lift1Rm w m a = SBV $ SVal k $ Right $ cache r
   where k = kindOf a
         r st = do swm <- sbvToSW st m
                   swa <- sbvToSW st a
@@ -49,7 +49,7 @@ lift1Rm w m a = SBV k $ Right $ cache r
 
 -- | Lift a 2 arg floating point UOP
 lift2Rm :: (SymWord a, Floating a) => String -> SRoundingMode -> SBV a -> SBV a -> SBV a
-lift2Rm w m a b = SBV k $ Right $ cache r
+lift2Rm w m a b = SBV $ SVal k $ Right $ cache r
   where k = kindOf a
         r st = do swm <- sbvToSW st m
                   swa <- sbvToSW st a
@@ -58,7 +58,7 @@ lift2Rm w m a b = SBV k $ Right $ cache r
 
 -- | Lift a 3 arg floating point UOP
 lift3Rm :: (SymWord a, Floating a) => String -> SRoundingMode -> SBV a -> SBV a -> SBV a -> SBV a
-lift3Rm w m a b c = SBV k $ Right $ cache r
+lift3Rm w m a b c = SBV $ SVal k $ Right $ cache r
   where k = kindOf a
         r st = do swm <- sbvToSW st m
                   swa <- sbvToSW st a
