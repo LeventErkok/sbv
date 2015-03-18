@@ -92,7 +92,9 @@ Library
                   , Data.SBV.Examples.Uninterpreted.Sort
                   , Data.SBV.Examples.Uninterpreted.UISortAllSat
   Other-modules   : Data.SBV.BitVectors.AlgReals
+                  , Data.SBV.BitVectors.Concrete
                   , Data.SBV.BitVectors.Data
+                  , Data.SBV.BitVectors.Kind
                   , Data.SBV.BitVectors.Model
                   , Data.SBV.BitVectors.PrettyNum
                   , Data.SBV.BitVectors.Rounding
