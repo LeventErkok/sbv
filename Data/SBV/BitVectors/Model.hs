@@ -617,7 +617,7 @@ isConcreteMax _                                                    = False
 
 -- | Predicate for optimizing comparisons.
 isConcreteMin :: SBV a -> Bool
-isConcreteMin (SBV _ (Left (CW (KBounded False w) (CWInteger n)))) = n == 0
+isConcreteMin (SBV _ (Left (CW (KBounded False _) (CWInteger n)))) = n == 0
 isConcreteMin (SBV _ (Left (CW (KBounded True  w) (CWInteger n)))) = n == - bit (w - 1)
 isConcreteMin (SBV _ (Left (CW KBool              (CWInteger n)))) = n == 0
 isConcreteMin _                                                    = False
