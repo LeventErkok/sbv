@@ -5,8 +5,8 @@
 
 ### Version 4.3, Not yet released
 
-  * Internal:
-  	* Code clean-up, remove mbMinBound/mbMaxBound thus allowing less calls to unliteral. Thanks to Brian Huffman.
+  * Code clean-up: remove mbMinBound/mbMaxBound thus allowing less calls to
+    unliteral. Contributed by Brian Huffman.
   
 ### Version 4.2, 2015-03-17
 
