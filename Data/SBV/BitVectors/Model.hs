@@ -60,6 +60,8 @@ import Data.SBV.Utils.Boolean
 import Data.SBV.Provers.Prover (isSBranchFeasibleInState, isConditionSatisfiable, isVacuous, prove, defaultSMTCfg)
 import Data.SBV.SMT.SMT (SafeResult(..), SatResult(..), ThmResult, getModelDictionary)
 
+import Data.SBV.BitVectors.Symbolic
+
 -- | Newer versions of GHC (Starting with 7.8 I think), distinguishes between FiniteBits and Bits classes.
 -- We should really use FiniteBitSize for SBV which would make things better. In the interim, just work
 -- around pesky warnings..
@@ -1529,10 +1531,7 @@ instance (SymWord a, Bounded a) => Bounded (SBV a) where
 
 -- SArrays are both "EqSymbolic" and "Mergeable"
 instance EqSymbolic (SArray a b) where
-  (SArray _ a) .== (SArray _ b) = SBV $ SVal KBool $ Right $ cache c
-    where c st = do ai <- uncacheAI a st
-                    bi <- uncacheAI b st
-                    newExpr st KBool (SBVApp (ArrEq ai bi) [])
+  (SArray a) .== (SArray b) = SBV (eqSArr a b)
 
 -- When merging arrays; we'll ignore the force argument. This is arguably
 -- the right thing to do as we've too many things and likely we want to keep it efficient.

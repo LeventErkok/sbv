@@ -101,6 +101,7 @@ Library
                   , Data.SBV.BitVectors.SignCast
                   , Data.SBV.BitVectors.Splittable
                   , Data.SBV.BitVectors.STree
+                  , Data.SBV.BitVectors.Symbolic
                   , Data.SBV.Compilers.C
                   , Data.SBV.Compilers.CodeGen
                   , Data.SBV.SMT.SMT
