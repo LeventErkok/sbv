@@ -49,27 +49,14 @@ module Data.SBV.BitVectors.Data
  ) where
 
 import Control.DeepSeq      (NFData(..))
-import Control.Applicative  (Applicative)
-import Control.Monad        (when)
-import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
-import Control.Monad.Trans  (MonadIO, liftIO)
-import Data.Char            (isAlpha, isAlphaNum)
+import Control.Monad.Reader (ask)
+import Control.Monad.Trans  (liftIO)
 import Data.Int             (Int8, Int16, Int32, Int64)
 import Data.Word            (Word8, Word16, Word32, Word64)
-import Data.IORef           (IORef, newIORef, modifyIORef, readIORef, writeIORef)
-import Data.List            (intercalate, sortBy)
-import Data.Maybe           (isJust, fromJust)
+import Data.List            (intercalate)
 
-import qualified Data.Generics as G    (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
-import qualified Data.Typeable as T    (Typeable)
-import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
-import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
-import qualified Data.Set      as Set  (Set, empty, toList, insert)
-import qualified Data.Foldable as F    (toList)
-import qualified Data.Sequence as S    (Seq, empty, (|>))
+import qualified Data.Generics as G    (Data(..))
 
-import System.Exit           (ExitCode(..))
-import System.Mem.StableName
 import System.Random
 
 import Data.SBV.BitVectors.AlgReals
