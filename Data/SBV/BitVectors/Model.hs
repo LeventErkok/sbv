@@ -61,6 +61,7 @@ import Data.SBV.Provers.Prover (isSBranchFeasibleInState, isConditionSatisfiable
 import Data.SBV.SMT.SMT (SafeResult(..), SatResult(..), ThmResult, getModelDictionary)
 
 import Data.SBV.BitVectors.Symbolic
+import Data.SBV.BitVectors.Operations
 
 -- | Newer versions of GHC (Starting with 7.8 I think), distinguishes between FiniteBits and Bits classes.
 -- We should really use FiniteBitSize for SBV which would make things better. In the interim, just work
@@ -72,17 +73,8 @@ ghcBitSize x = maybe (error "SBV.ghcBitSize: Unexpected non-finite usage!") id (
 ghcBitSize = bitSize
 #endif
 
-noUnint  :: (Maybe Int, String) -> a
-noUnint x = error $ "Unexpected operation called on uninterpreted/enumerated value: " ++ show x
-
 noUnint2 :: (Maybe Int, String) -> (Maybe Int, String) -> a
 noUnint2 x y = error $ "Unexpected binary operation called on uninterpreted/enumerated values: " ++ show (x, y)
-
-liftSym1 :: (State -> Kind -> SW -> IO SW) -> (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> SBV b -> SBV b
-liftSym1 _   opCR opCI opCF opCD   (SBV (SVal k (Left a))) = SBV $ SVal k $ Left  $ mapCW opCR opCI opCF opCD noUnint a
-liftSym1 opS _    _    _    _    a@(SBV (SVal k _))        = SBV $ SVal k $ Right $ cache c
-   where c st = do swa <- sbvToSW st a
-                   opS st k swa
 
 liftSW2 :: (State -> Kind -> SW -> SW -> IO SW) -> Kind -> SBV a -> SBV b -> Cached SW
 liftSW2 opS k a b = cache c
@@ -120,9 +112,6 @@ mkSymOp = mkSymOpSC (const (const Nothing))
 mkSymOp1SC :: (SW -> Maybe SW) -> Op -> State -> Kind -> SW -> IO SW
 mkSymOp1SC shortCut op st k a = maybe (newExpr st k (SBVApp op [a])) return (shortCut a)
 
-mkSymOp1 :: Op -> State -> Kind -> SW -> IO SW
-mkSymOp1 = mkSymOp1SC (const Nothing)
-
 -- Symbolic-Word class instances
 
 -- | Generate a finite symbolic bitvector, named
@@ -149,7 +138,7 @@ genMkSymVar k mbq (Just s) = genVar  mbq k s
 
 instance SymWord Bool where
   mkSymWord  = genMkSymVar KBool
-  literal x  = genLiteral  KBool (if x then (1::Integer) else 0)
+  literal x  = SBV (svBool x)
   fromCW     = cwToBool
 
 instance SymWord Word8 where
@@ -398,28 +387,11 @@ eqOpt w x y = case kindOf x of
                 KDouble -> Nothing
                 _       -> if x == y then Just w else Nothing
 
--- For uninterpreted/enumerated values, we carefully lift through the constructor index for comparisons:
-uiLift :: String -> (Int -> Int -> Bool) -> (Maybe Int, String) -> (Maybe Int, String) -> Bool
-uiLift _ cmp (Just i, _) (Just j, _) = i `cmp` j
-uiLift w _   a           b           = error $ "Data.SBV.BitVectors.Model: Impossible happened while trying to lift " ++ w ++ " over " ++ show (a, b)
-
 instance SymWord a => OrdSymbolic (SBV a) where
-  x .< y
-    | isConcreteMax x = false
-    | isConcreteMin y = false
-    | True            = liftSym2B (mkSymOpSC (eqOpt falseSW) LessThan)    rationalCheck (<)  (<)  (<)  (<) (uiLift  "<"  (<))  x y
-  x .<= y
-    | isConcreteMin x = true
-    | isConcreteMax y = true
-    | True            = liftSym2B (mkSymOpSC (eqOpt trueSW) LessEq)       rationalCheck (<=) (<=) (<=) (<=) (uiLift "<=" (<=)) x y
-  x .> y
-    | isConcreteMin x = false
-    | isConcreteMax y = false
-    | True            = liftSym2B (mkSymOpSC (eqOpt falseSW) GreaterThan) rationalCheck (>)  (>)  (>)  (>)  (uiLift ">"  (>))  x y
-  x .>= y
-    | isConcreteMax x = true
-    | isConcreteMin y = true
-    | True            = liftSym2B (mkSymOpSC (eqOpt trueSW) GreaterEq)    rationalCheck (>=) (>=) (>=) (>=) (uiLift ">=" (>=)) x y
+  SBV x .<  SBV y = SBV (svLessThan x y)
+  SBV x .<= SBV y = SBV (svLessEq x y)
+  SBV x .>  SBV y = SBV (svGreaterThan x y)
+  SBV x .>= SBV y = SBV (svGreaterEq x y)
 
 -- Bool
 instance EqSymbolic Bool where
@@ -604,26 +576,6 @@ isConcreteOne (SBV (SVal _     (Left (CW _     (CWInteger 1))))) = True
 isConcreteOne (SBV (SVal KReal (Left (CW KReal (CWAlgReal v))))) = isExactRational v && v == 1
 isConcreteOne _                                                  = False
 
--- | Predicate for optimizing bitwise operations.
-isConcreteOnes :: SBV a -> Bool
-isConcreteOnes (SBV (SVal _ (Left (CW (KBounded b w) (CWInteger n))))) = n == if b then -1 else bit w - 1
-isConcreteOnes (SBV (SVal _ (Left (CW KUnbounded     (CWInteger n))))) = n == -1
-isConcreteOnes _                                                = False
-
--- | Predicate for optimizing comparisons.
-isConcreteMax :: SBV a -> Bool
-isConcreteMax (SBV (SVal _ (Left (CW (KBounded False w) (CWInteger n))))) = n == bit w - 1
-isConcreteMax (SBV (SVal _ (Left (CW (KBounded True  w) (CWInteger n))))) = n == bit (w - 1) - 1
-isConcreteMax (SBV (SVal _ (Left (CW KBool              (CWInteger n))))) = n == 1
-isConcreteMax _                                                           = False
-
--- | Predicate for optimizing comparisons.
-isConcreteMin :: SBV a -> Bool
-isConcreteMin (SBV (SVal _ (Left (CW (KBounded False _) (CWInteger n))))) = n == 0
-isConcreteMin (SBV (SVal _ (Left (CW (KBounded True  w) (CWInteger n))))) = n == - bit (w - 1)
-isConcreteMin (SBV (SVal _ (Left (CW KBool              (CWInteger n))))) = n == 0
-isConcreteMin _                                                           = False
-
 -- | Predicate for optimizing conditionals.
 areConcretelyEqual :: SBV a -> SBV a -> Bool
 areConcretelyEqual (SBV (SVal _ (Left a))) (SBV (SVal _ (Left b))) = a == b
@@ -632,22 +584,12 @@ areConcretelyEqual _                       _                       = False
 -- Num instance for symbolic words.
 instance (Ord a, Num a, SymWord a) => Num (SBV a) where
   fromInteger = literal . fromIntegral
-  x + y
-    | isConcreteZero x = y
-    | isConcreteZero y = x
-    | True             = liftSym2 (mkSymOp Plus)  rationalCheck (+) (+) (+) (+) x y
-  x * y
-    | isConcreteZero x = x
-    | isConcreteZero y = y
-    | isConcreteOne x  = y
-    | isConcreteOne y  = x
-    | True             = liftSym2 (mkSymOp Times) rationalCheck (*) (*) (*) (*) x y
-  x - y
-    | isConcreteZero y = x
-    | True             = liftSym2 (mkSymOp Minus) rationalCheck (-) (-) (-) (-) x y
+  SBV x + SBV y = SBV (svPlus x y)
+  SBV x * SBV y = SBV (svTimes x y)
+  SBV x - SBV y = SBV (svMinus x y)
   -- Abs is problematic for floating point, due to -0; case, so we carefully shuttle it down
   -- to the solver to avoid the can of worms. (Alternative would be to do an if-then-else here.)
-  abs = liftSym1 (mkSymOp1 Abs) abs abs abs abs
+  abs (SBV x) = SBV (svAbs x)
   signum a
     | hasSign a = ite (a .<  z) (-i) (ite (a .== z) z i)
     | True      = ite (a ./= z) i    z
@@ -655,7 +597,7 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
           i = genLiteral (kindOf a) (1::Integer)
   -- negate is tricky because on double/float -0 is different than 0; so we
   -- just cannot rely on its default definition; which would be 0-0, which is not -0!
-  negate = liftSym1 (mkSymOp1 UNeg) (\x -> -x) (\x -> -x) (\x -> -x) (\x -> -x)
+  negate (SBV x) = SBV (svUNeg x)
 
 -- | Symbolic exponentiation using bit blasting and repeated squaring.
 --
@@ -742,45 +684,13 @@ rationalSBVCheck :: SBV a -> SBV a -> Bool
 rationalSBVCheck (SBV (SVal KReal (Left a))) (SBV (SVal KReal (Left b))) = rationalCheck a b
 rationalSBVCheck _                           _                           = True
 
--- Some operations will never be used on Reals, but we need fillers:
-noReal :: String -> AlgReal -> AlgReal -> AlgReal
-noReal o a b = error $ "SBV.AlgReal." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
-
-noFloat :: String -> Float -> Float -> Float
-noFloat o a b = error $ "SBV.Float." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
-
-noDouble :: String -> Double -> Double -> Double
-noDouble o a b = error $ "SBV.Double." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
-
-noRealUnary :: String -> AlgReal -> AlgReal
-noRealUnary o a = error $ "SBV.AlgReal." ++ o ++ ": Unexpected argument: " ++ show a
-
-noFloatUnary :: String -> Float -> Float
-noFloatUnary o a = error $ "SBV.Float." ++ o ++ ": Unexpected argument: " ++ show a
-
-noDoubleUnary :: String -> Double -> Double
-noDoubleUnary o a = error $ "SBV.Double." ++ o ++ ": Unexpected argument: " ++ show a
-
 -- NB. In the optimizations below, use of -1 is valid as
 -- -1 has all bits set to True for both signed and unsigned values
 instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
-  x .&. y
-    | isConcreteZero x = x
-    | isConcreteOnes x = y
-    | isConcreteZero y = y
-    | isConcreteOnes y = x
-    | True             = liftSym2 (mkSymOp  And) (const (const True)) (noReal ".&.") (.&.) (noFloat ".&.") (noDouble ".&.") x y
-  x .|. y
-    | isConcreteZero x = y
-    | isConcreteOnes x = x
-    | isConcreteZero y = x
-    | isConcreteOnes y = y
-    | True             = liftSym2 (mkSymOp  Or)  (const (const True)) (noReal ".|.") (.|.) (noFloat ".|.") (noDouble ".|.") x y
-  x `xor` y
-    | isConcreteZero x = y
-    | isConcreteZero y = x
-    | True             = liftSym2 (mkSymOp  XOr) (const (const True)) (noReal "xor") xor (noFloat "xor") (noDouble "xor") x y
-  complement = liftSym1 (mkSymOp1 Not) (noRealUnary "complement") complement (noFloatUnary "complement") (noDoubleUnary "complement")
+  SBV x .&. SBV y = SBV (svAnd x y)
+  SBV x .|. SBV y = SBV (svOr x y)
+  SBV x `xor` SBV y = SBV (svXOr x y)
+  complement (SBV x) = SBV (svNot x)
   bitSize  x = intSizeOf x
 #if __GLASGOW_HASKELL__ >= 708
   bitSizeMaybe x = Just $ intSizeOf x
@@ -790,24 +700,10 @@ instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
   setBit        x i = x .|. genLiteral (kindOf x) (bit i :: Integer)
   clearBit      x i = x .&. genLiteral (kindOf x) (complement (bit i) :: Integer)
   complementBit x i = x `xor` genLiteral (kindOf x) (bit i :: Integer)
-  shiftL x y
-    | y < 0       = shiftR x (-y)
-    | y == 0      = x
-    | True        = liftSym1 (mkSymOp1 (Shl y)) (noRealUnary "shiftL") (`shiftL` y) (noFloatUnary "shiftL") (noDoubleUnary "shiftL") x
-  shiftR x y
-    | y < 0       = shiftL x (-y)
-    | y == 0      = x
-    | True        = liftSym1 (mkSymOp1 (Shr y)) (noRealUnary "shiftR") (`shiftR` y) (noFloatUnary "shiftR") (noDoubleUnary "shiftR") x
-  rotateL x y
-    | y < 0       = rotateR x (-y)
-    | y == 0      = x
-    | isBounded x = let sz = ghcBitSize x in liftSym1 (mkSymOp1 (Rol (y `mod` sz))) (noRealUnary "rotateL") (rot True sz y) (noFloatUnary "rotateL") (noDoubleUnary "rotateL") x
-    | True        = shiftL x y   -- for unbounded Integers, rotateL is the same as shiftL in Haskell
-  rotateR x y
-    | y < 0       = rotateL x (-y)
-    | y == 0      = x
-    | isBounded x = let sz = ghcBitSize x in liftSym1 (mkSymOp1 (Ror (y `mod` sz))) (noRealUnary "rotateR") (rot False sz y) (noFloatUnary "rotateR") (noDoubleUnary "rotateR") x
-    | True        = shiftR x y   -- for unbounded integers, rotateR is the same as shiftR in Haskell
+  shiftL  (SBV x) i = SBV (svShl x i)
+  shiftR  (SBV x) i = SBV (svShr x i)
+  rotateL (SBV x) i = SBV (svRol x i)
+  rotateR (SBV x) i = SBV (svRor x i)
   -- NB. testBit is *not* implementable on non-concrete symbolic words
   x `testBit` i
     | SBV (SVal _ (Left (CW _ (CWInteger n)))) <- x = testBit n i
@@ -816,15 +712,6 @@ instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
   popCount x
     | SBV (SVal _ (Left (CW (KBounded _ w) (CWInteger n)))) <- x = popCount (n .&. (bit w - 1))
     | True                                                       = error $ "SBV.popCount: Called on symbolic value: " ++ show x ++ ". Use sbvPopCount instead."
-
--- Since the underlying representation is just Integers, rotations has to be careful on the bit-size
-rot :: Bool -> Int -> Int -> Integer -> Integer
-rot toLeft sz amt x
-  | sz < 2 = x
-  | True   = norm x y' `shiftL` y  .|. norm (x `shiftR` y') y
-  where (y, y') | toLeft = (amt `mod` sz, sz - y)
-                | True   = (sz - y', amt `mod` sz)
-        norm v s = v .&. ((1 `shiftL` s) - 1)
 
 -- | Replacement for 'testBit'. Since 'testBit' requires a 'Bool' to be returned,
 -- we cannot implement it for symbolic words. Index 0 is the least-significant bit.
