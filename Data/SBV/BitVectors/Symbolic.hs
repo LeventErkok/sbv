@@ -24,12 +24,12 @@
 
 module Data.SBV.BitVectors.Symbolic
   ( NodeId(..)
-  , SW(..), trueSW, falseSW
+  , SW(..), swKind, trueSW, falseSW
   , Op(..), smtLibSquareRoot, smtLibFusedMA
   , Quantifier(..), needsExistentials
   , RoundingMode(..)
   , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
-  , SVal(..)
+  , SVal(..), svKind
   , mkSValWithRandom
   , ArrayContext(..), ArrayInfo, arrayUIKind
   , svToSW, forceSWArg
@@ -403,6 +403,9 @@ getSBranchRunConfig st = case runMode st of
 -- value (@Right Cached@). Note that caching is essential for making
 -- sure sharing is preserved.
 data SVal = SVal !Kind !(Either CW (Cached SW))
+
+svKind :: SVal -> Kind
+svKind (SVal k _) = k
 
 -- Not particularly "desirable", but will do if needed
 instance Show SVal where
