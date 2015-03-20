@@ -562,11 +562,6 @@ isConcreteOne (SBV (SVal _     (Left (CW _     (CWInteger 1))))) = True
 isConcreteOne (SBV (SVal KReal (Left (CW KReal (CWAlgReal v))))) = isExactRational v && v == 1
 isConcreteOne _                                                  = False
 
--- | Predicate for optimizing conditionals.
-areConcretelyEqual :: SBV a -> SBV a -> Bool
-areConcretelyEqual (SBV (SVal _ (Left a))) (SBV (SVal _ (Left b))) = a == b
-areConcretelyEqual _                       _                       = False
-
 -- Num instance for symbolic words.
 instance (Ord a, Num a, SymWord a) => Num (SBV a) where
   fromInteger = literal . fromIntegral
@@ -664,11 +659,6 @@ rationalCheck :: CW -> CW -> Bool
 rationalCheck a b = case (cwVal a, cwVal b) of
                      (CWAlgReal x, CWAlgReal y) -> isExactRational x && isExactRational y
                      _                          -> True
-
--- same as above, for SBV's
-rationalSBVCheck :: SBV a -> SBV a -> Bool
-rationalSBVCheck (SBV (SVal KReal (Left a))) (SBV (SVal KReal (Left b))) = rationalCheck a b
-rationalSBVCheck _                           _                           = True
 
 -- NB. In the optimizations below, use of -1 is valid as
 -- -1 has all bits set to True for both signed and unsigned values
@@ -1197,79 +1187,7 @@ sAssertCont msg cont t a
 -- as default definitions provided should suffice in many cases. (i.e., End users should
 -- only need to define 'symbolicMerge' when needed; which should be rare to start with.)
 symbolicMergeWithKind :: Kind -> Bool -> SBool -> SBV a -> SBV a -> SBV a
-symbolicMergeWithKind k force t a b
-  | Just r <- unliteral t
-  = if r then a else b
-  | force, rationalSBVCheck a b, areConcretelyEqual a b
-  = a
-  | True
-  = SBV $ SVal k $ Right $ cache c
-  where c st = do swt <- sbvToSW st t
-                  case () of
-                    () | swt == trueSW  -> sbvToSW st a       -- these two cases should never be needed as we expect symbolicMerge to be
-                    () | swt == falseSW -> sbvToSW st b       -- called with symbolic tests, but just in case..
-                    () -> do {- It is tempting to record the choice of the test expression here as we branch down to the 'then' and 'else' branches. That is,
-                                when we evaluate 'a', we can make use of the fact that the test expression is True, and similarly we can use the fact that it
-                                is False when b is evaluated. In certain cases this can cut down on symbolic simulation significantly, for instance if
-                                repetitive decisions are made in a recursive loop. Unfortunately, the implementation of this idea is quite tricky, due to
-                                our sharing based implementation. As the 'then' branch is evaluated, we will create many expressions that are likely going
-                                to be "reused" when the 'else' branch is executed. But, it would be *dead wrong* to share those values, as they were "cached"
-                                under the incorrect assumptions. To wit, consider the following:
-
-                                   foo x y = ite (y .== 0) k (k+1)
-                                     where k = ite (y .== 0) x (x+1)
-
-                                When we reduce the 'then' branch of the first ite, we'd record the assumption that y is 0. But while reducing the 'then' branch, we'd
-                                like to share 'k', which would evaluate (correctly) to 'x' under the given assumption. When we backtrack and evaluate the 'else'
-                                branch of the first ite, we'd see 'k' is needed again, and we'd look it up from our sharing map to find (incorrectly) that its value
-                                is 'x', which was stored there under the assumption that y was 0, which no longer holds. Clearly, this is unsound.
-
-                                A sound implementation would have to precisely track which assumptions were active at the time expressions get shared. That is,
-                                in the above example, we should record that the value of 'k' was cached under the assumption that 'y' is 0. While sound, this
-                                approach unfortunately leads to significant loss of valid sharing when the value itself had nothing to do with the assumption itself.
-                                To wit, consider:
-
-                                   foo x y = ite (y .== 0) k (k+1)
-                                     where k = x+5
-
-                                If we tracked the assumptions, we would recompute 'k' twice, since the branch assumptions would differ. Clearly, there is no need to
-                                re-compute 'k' in this case since its value is independent of y. Note that the whole SBV performance story is based on agressive sharing,
-                                and losing that would have other significant ramifications.
-
-                                The "proper" solution would be to track, with each shared computation, precisely which assumptions it actually *depends* on, rather
-                                than blindly recording all the assumptions present at that time. SBV's symbolic simulation engine clearly has all the info needed to do this
-                                properly, but the implementation is not straightforward at all. For each subexpression, we would need to chase down its dependencies
-                                transitively, which can require a lot of scanning of the generated program causing major slow-down; thus potentially defeating the
-                                whole purpose of sharing in the first place.
-
-                                Design choice: Keep it simple, and simply do not track the assumption at all. This will maximize sharing, at the cost of evaluating
-                                unreachable branches. I think the simplicity is more important at this point than efficiency.
-
-                                Also note that the user can avoid most such issues by properly combining if-then-else's with common conditions together. That is, the
-                                first program above should be written like this:
-
-                                  foo x y = ite (y .== 0) x (x+2)
-
-                                In general, the following transformations should be done whenever possible:
-
-                                  ite e1 (ite e1 e2 e3) e4  --> ite e1 e2 e4
-                                  ite e1 e2 (ite e1 e3 e4)  --> ite e1 e2 e4
-
-                                This is in accordance with the general rule-of-thumb stating conditionals should be avoided as much as possible. However, we might prefer
-                                the following:
-
-                                  ite e1 (f e2 e4) (f e3 e5) --> f (ite e1 e2 e3) (ite e1 e4 e5)
-
-                                especially if this expression happens to be inside 'f's body itself (i.e., when f is recursive), since it reduces the number of
-                                recursive calls. Clearly, programming with symbolic simulation in mind is another kind of beast alltogether.
-                             -}
-                             swa <- sbvToSW (st `extendPathCondition` (&&& t))      a -- evaluate 'then' branch
-                             swb <- sbvToSW (st `extendPathCondition` (&&& bnot t)) b -- evaluate 'else' branch
-                             case () of               -- merge:
-                               () | swa == swb                      -> return swa
-                               () | swa == trueSW && swb == falseSW -> return swt
-                               () | swa == falseSW && swb == trueSW -> newExpr st k (SBVApp Not [swt])
-                               ()                                   -> newExpr st k (SBVApp Ite [swt, swa, swb])
+symbolicMergeWithKind k force (SBV t) (SBV a) (SBV b) = SBV (svSymbolicMerge k force t a b)
 
 instance SymWord a => Mergeable (SBV a) where
     symbolicMerge force t x y
