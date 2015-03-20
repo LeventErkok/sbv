@@ -86,10 +86,6 @@ liftSym2 :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgRe
 liftSym2 _   okCW opCR opCI opCF opCD   (SBV (SVal k (Left a))) (SBV (SVal _ (Left b))) | okCW a b = SBV $ SVal k $ Left  $ mapCW2 opCR opCI opCF opCD noUnint2 a b
 liftSym2 opS _    _    _    _    _    a@(SBV (SVal k _))        b                                  = SBV $ SVal k $ Right $ liftSW2 opS k a b
 
-liftSym2B :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> Bool) -> (Integer -> Integer -> Bool) -> (Float -> Float -> Bool) -> (Double -> Double -> Bool) -> ((Maybe Int, String) -> (Maybe Int, String) -> Bool) -> SBV b -> SBV b -> SBool
-liftSym2B _   okCW opCR opCI opCF opCD opUI (SBV (SVal _ (Left a))) (SBV (SVal _ (Left b))) | okCW a b = literal (liftCW2 opCR opCI opCF opCD opUI a b)
-liftSym2B opS _    _    _    _    _    _    a                       b                                  = SBV $ SVal KBool $ Right $ liftSW2 opS KBool a b
-
 liftSym1Bool :: (State -> Kind -> SW -> IO SW) -> (Bool -> Bool) -> SBool -> SBool
 liftSym1Bool _   opC (SBV (SVal _ (Left a))) = literal $ opC $ cwToBool a
 liftSym1Bool opS _   a                       = SBV $ SVal KBool $ Right $ cache c
@@ -374,18 +370,8 @@ for natural reasons..
 -}
 
 instance EqSymbolic (SBV a) where
-  (.==) = liftSym2B (mkSymOpSC (eqOpt trueSW)  Equal)    rationalCheck (==) (==) (==) (==) (==)
-  (./=) = liftSym2B (mkSymOpSC (eqOpt falseSW) NotEqual) rationalCheck (/=) (/=) (/=) (/=) (/=)
-
--- | eqOpt says the references are to the same SW, thus we can optimize. Note that
--- we explicitly disallow KFloat/KDouble here. Why? Because it's *NOT* true that
--- NaN == NaN, NaN >= NaN, and so-forth. So, we have to make sure we don't optimize
--- floats and doubles, in case the argument turns out to be NaN.
-eqOpt :: SW -> SW -> SW -> Maybe SW
-eqOpt w x y = case kindOf x of
-                KFloat  -> Nothing
-                KDouble -> Nothing
-                _       -> if x == y then Just w else Nothing
+  SBV x .== SBV y = SBV (svEqual x y)
+  SBV x ./= SBV y = SBV (svNotEqual x y)
 
 instance SymWord a => OrdSymbolic (SBV a) where
   SBV x .<  SBV y = SBV (svLessThan x y)
