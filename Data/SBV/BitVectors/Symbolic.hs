@@ -30,7 +30,7 @@ module Data.SBV.BitVectors.Symbolic
   , RoundingMode(..)
   , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
   , SVal(..), svKind
-  , mkSValWithRandom
+  , svMkSymVar
   , ArrayContext(..), ArrayInfo, arrayUIKind
   , svToSW, forceSWArg
   , SBVExpr(..), newExpr
@@ -75,9 +75,6 @@ import qualified Data.Sequence as S    (Seq, empty, (|>))
 import System.Exit           (ExitCode(..))
 import System.Mem.StableName
 import System.Random
-
-import Data.SBV.BitVectors.AlgReals
-import Data.SBV.Utils.Lib
 
 import Data.SBV.BitVectors.Kind
 import Data.SBV.BitVectors.Concrete
@@ -517,11 +514,13 @@ svToSW st (SVal _ (Right f)) = uncache f st
 newtype Symbolic a = Symbolic (ReaderT State IO a)
                    deriving (Applicative, Functor, Monad, MonadIO, MonadReader State)
 
--- | Create a symbolic value, based on the quantifier we have. If an explicit quantifier is given, we just use that.
--- If not, then we pick existential for SAT calls and universal for everything else. The @rand@ argument is used
--- in generating random values for this variable when used for 'quickCheck' purposes.
-mkSValWithRandom :: IO SVal -> Maybe Quantifier -> Kind -> Maybe String -> Symbolic SVal
-mkSValWithRandom rand mbQ k mbNm = do
+-- | Create a symbolic value, based on the quantifier we have. If an
+-- explicit quantifier is given, we just use that. If not, then we
+-- pick existential for SAT calls and universal for everything else.
+-- @randomCW@ is used for generating random values for this variable
+-- when used for 'quickCheck' purposes.
+svMkSymVar :: Maybe Quantifier -> Kind -> Maybe String -> Symbolic SVal
+svMkSymVar mbQ k mbNm = do
         st <- ask
         let q = case (mbQ, runMode st) of
                   (Just x,  _)                -> x   -- user given, just take it
@@ -533,9 +532,9 @@ mkSValWithRandom rand mbQ k mbNm = do
           Concrete _ | q == EX -> case mbNm of
                                     Nothing -> error $ "Cannot quick-check in the presence of existential variables, type: " ++ show k
                                     Just nm -> error $ "Cannot quick-check in the presence of existential variable " ++ nm ++ " :: " ++ show k
-          Concrete _           -> do v@(SVal _ (Left cw)) <- liftIO rand
+          Concrete _           -> do cw <- liftIO (randomCW k)
                                      liftIO $ modifyIORef (rCInfo st) ((maybe "_" id mbNm, cw):)
-                                     return v
+                                     return (SVal k (Left cw))
           _          -> do (sw, internalName) <- liftIO $ newSW st k
                            let nm = maybe internalName id mbNm
                            liftIO $ modifyIORef (rinps st) ((q, (sw, nm)):)

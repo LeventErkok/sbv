@@ -31,7 +31,7 @@ module Data.SBV.BitVectors.Data
  , mkConstCW ,liftCW2, mapCW, mapCW2
  , SW(..), trueSW, falseSW, trueCW, falseCW, normCW
  , SVal(..)
- , SBV(..), NodeId(..), mkSymSBV, mkSymSBVWithRandom
+ , SBV(..), NodeId(..), mkSymSBV
  , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), mkSFunArray, SArray(..), arrayUIKind
  , sbvToSW, sbvToSymSW, forceSWArg
  , SBVExpr(..), newExpr
@@ -240,12 +240,9 @@ sbvToSW st (SBV s) = svToSW st s
 -- * Symbolic Computations
 -------------------------------------------------------------------------
 
--- | Create a symbolic variable. Equivalent to 'mkSymSBVWithRandom randomIO'.
-mkSymSBV :: forall a. (Random a, SymWord a) => Maybe Quantifier -> Kind -> Maybe String -> Symbolic (SBV a)
-mkSymSBV = mkSymSBVWithRandom randomIO
-
-mkSymSBVWithRandom :: forall a. SymWord a => IO (SBV a) -> Maybe Quantifier -> Kind -> Maybe String -> Symbolic (SBV a)
-mkSymSBVWithRandom rand mbQ k mbNm = fmap SBV $ mkSValWithRandom (fmap unSBV rand) mbQ k mbNm
+-- | Create a symbolic variable.
+mkSymSBV :: forall a. SymWord a => Maybe Quantifier -> Kind -> Maybe String -> Symbolic (SBV a)
+mkSymSBV mbQ k mbNm = fmap SBV (svMkSymVar mbQ k mbNm)
 
 -- | Convert a symbolic value to an SW, inside the Symbolic monad
 sbvToSymSW :: SBV a -> Symbolic SW

@@ -13,6 +13,8 @@ module Data.SBV.BitVectors.Concrete
   ( module Data.SBV.BitVectors.Concrete
   ) where
 
+import System.Random (randomIO, randomRIO)
+
 import Data.SBV.BitVectors.Kind
 import Data.SBV.BitVectors.AlgReals
 
@@ -159,3 +161,21 @@ mkConstCW KReal           a = normCW $ CW KReal      (CWAlgReal (fromInteger (to
 mkConstCW KFloat          a = normCW $ CW KFloat     (CWFloat   (fromInteger (toInteger a)))
 mkConstCW KDouble         a = normCW $ CW KDouble    (CWDouble  (fromInteger (toInteger a)))
 mkConstCW (KUserSort s _) a = error $ "Unexpected call to mkConstCW with uninterpreted kind: " ++ s ++ " with value: " ++ show (toInteger a)
+
+randomCWVal :: Kind -> IO CWVal
+randomCWVal k =
+  case k of
+    KBool         -> fmap CWInteger (randomRIO (0,1))
+    KBounded s w  -> fmap CWInteger (randomRIO (bounds s w))
+    KUnbounded    -> fmap CWInteger randomIO
+    KReal         -> fmap CWAlgReal randomIO
+    KFloat        -> fmap CWFloat randomIO
+    KDouble       -> fmap CWDouble randomIO
+    KUserSort s _ -> error $ "Unexpected call to randomCWVal with uninterpreted kind: " ++ s
+  where
+    bounds :: Bool -> Int -> (Integer, Integer)
+    bounds False w = (0, 2^w - 1)
+    bounds True w = (-x, x-1) where x = 2^(w-1)
+
+randomCW :: Kind -> IO CW
+randomCW k = fmap (CW k) (randomCWVal k)
