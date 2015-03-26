@@ -92,7 +92,7 @@ svQuot x y
   | True             = liftSym2 (mkSymOp Quot) nonzeroCheck
                        (noReal "quot") quot' (noFloat "quot") (noDouble "quot") x y
   where
-    quot' a b | svKind x == KUnbounded = div a (abs b)
+    quot' a b | svKind x == KUnbounded = div a (abs b) * signum b
               | otherwise              = quot a b
 
 -- | Overloaded operation whose meaning depends on the kind at which
