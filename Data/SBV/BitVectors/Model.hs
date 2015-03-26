@@ -86,27 +86,11 @@ liftSym2 :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgRe
 liftSym2 _   okCW opCR opCI opCF opCD   (SBV (SVal k (Left a))) (SBV (SVal _ (Left b))) | okCW a b = SBV $ SVal k $ Left  $ mapCW2 opCR opCI opCF opCD noUnint2 a b
 liftSym2 opS _    _    _    _    _    a@(SBV (SVal k _))        b                                  = SBV $ SVal k $ Right $ liftSW2 opS k a b
 
-liftSym1Bool :: (State -> Kind -> SW -> IO SW) -> (Bool -> Bool) -> SBool -> SBool
-liftSym1Bool _   opC (SBV (SVal _ (Left a))) = literal $ opC $ cwToBool a
-liftSym1Bool opS _   a                       = SBV $ SVal KBool $ Right $ cache c
-  where c st = do sw <- sbvToSW st a
-                  opS st KBool sw
-
-liftSym2Bool :: (State -> Kind -> SW -> SW -> IO SW) -> (Bool -> Bool -> Bool) -> SBool -> SBool -> SBool
-liftSym2Bool _   opC (SBV (SVal _ (Left a))) (SBV (SVal _ (Left b))) = literal (cwToBool a `opC` cwToBool b)
-liftSym2Bool opS _   a                       b                       = SBV $ SVal KBool $ Right $ cache c
-  where c st = do sw1 <- sbvToSW st a
-                  sw2 <- sbvToSW st b
-                  opS st KBool sw1 sw2
-
 mkSymOpSC :: (SW -> SW -> Maybe SW) -> Op -> State -> Kind -> SW -> SW -> IO SW
 mkSymOpSC shortCut op st k a b = maybe (newExpr st k (SBVApp op [a, b])) return (shortCut a b)
 
 mkSymOp :: Op -> State -> Kind -> SW -> SW -> IO SW
 mkSymOp = mkSymOpSC (const (const Nothing))
-
-mkSymOp1SC :: (SW -> Maybe SW) -> Op -> State -> Kind -> SW -> IO SW
-mkSymOp1SC shortCut op st k a = maybe (newExpr st k (SBVApp op [a])) return (shortCut a)
 
 -- Symbolic-Word class instances
 
@@ -492,41 +476,10 @@ instance SIntegral Integer
 instance Boolean SBool where
   true  = literal True
   false = literal False
-  bnot  b | b `isConcretely` (== False) = true
-          | b `isConcretely` (== True)  = false
-          | True                        = liftSym1Bool (mkSymOp1SC opt Not) not b
-          where opt x
-                 | x == falseSW = Just trueSW
-                 | x == trueSW  = Just falseSW
-                 | True         = Nothing
-  a &&& b | a `isConcretely` (== False) || b `isConcretely` (== False) = false
-          | a `isConcretely` (== True)                                 = b
-          | b `isConcretely` (== True)                                 = a
-          | True                                                       = liftSym2Bool (mkSymOpSC opt And) (&&) a b
-          where opt x y
-                 | x == falseSW || y == falseSW = Just falseSW
-                 | x == trueSW                  = Just y
-                 | y == trueSW                  = Just x
-                 | True                         = Nothing
-  a ||| b | a `isConcretely` (== True)  || b `isConcretely` (== True) = true
-          | a `isConcretely` (== False)                               = b
-          | b `isConcretely` (== False)                               = a
-          | True                                                      = liftSym2Bool (mkSymOpSC opt Or)  (||) a b
-          where opt x y
-                 | x == trueSW || y == trueSW = Just trueSW
-                 | x == falseSW               = Just y
-                 | y == falseSW               = Just x
-                 | True                       = Nothing
-  a <+> b | a `isConcretely` (== False) = b
-          | b `isConcretely` (== False) = a
-          | a `isConcretely` (== True)  = bnot b
-          | b `isConcretely` (== True)  = bnot a
-          | True                        = liftSym2Bool (mkSymOpSC opt XOr) (<+>) a b
-          where opt x y
-                 | x == y       = Just falseSW
-                 | x == falseSW = Just y
-                 | y == falseSW = Just x
-                 | True         = Nothing
+  bnot (SBV b) = SBV (svNot b)
+  SBV a &&& SBV b = SBV (svAnd a b)
+  SBV a ||| SBV b = SBV (svOr a b)
+  SBV a <+> SBV b = SBV (svXOr a b)
 
 -- | Returns (symbolic) true if all the elements of the given list are different.
 allDifferent :: EqSymbolic a => [a] -> SBool
