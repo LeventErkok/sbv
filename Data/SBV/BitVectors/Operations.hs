@@ -25,10 +25,16 @@ module Data.SBV.BitVectors.Operations
   , svExtract, svJoin
   , svUninterpreted
   , svIte, svLazyIte, svSymbolicMerge
+  , svSelect
+  -- ** Derived operations
+  , svToWord1, svFromWord1, svTestBit
+  , svShiftLeft, svShiftRight
+  , svRotateLeft, svRotateRight
   )
   where
 
 import Data.Bits (Bits(..))
+import Data.List (genericIndex, genericLength, genericTake)
 
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Kind
@@ -194,6 +200,8 @@ svNot = liftSym1 (mkSymOp1SC opt Not)
           | a == trueSW  = Just falseSW
           | True         = Nothing
 
+-- | Shift left by a constant amount. Translates to the "bvshl"
+-- operation in SMT-Lib.
 svShl :: SVal -> Int -> SVal
 svShl x i
   | i < 0   = svShr x (-i)
@@ -202,6 +210,9 @@ svShl x i
               (noRealUnary "shiftL") (`shiftL` i)
               (noFloatUnary "shiftL") (noDoubleUnary "shiftL") x
 
+-- | Shift right by a constant amount. Translates to either "bvlshr"
+-- (logical shift right) or "bvashr" (arithmetic shift right) in
+-- SMT-Lib, depending on whether @x@ is a signed bitvector.
 svShr :: SVal -> Int -> SVal
 svShr x i
   | i < 0   = svShl x (-i)
@@ -367,6 +378,101 @@ svSymbolicMerge k force t a b
                                () | swa == trueSW && swb == falseSW -> return swt
                                () | swa == falseSW && swb == trueSW -> newExpr st k (SBVApp Not [swt])
                                ()                                   -> newExpr st k (SBVApp Ite [swt, swa, swb])
+
+-- | Total indexing operation. @svSelect xs default index@ is
+-- intuitively the same as @xs !! index@, except it evaluates to
+-- @default@ if @index@ overflows. Translates to SMT-Lib tables.
+svSelect :: [SVal] -> SVal -> SVal -> SVal
+svSelect xs err ind
+  | SVal _ (Left c) <- ind =
+    case cwVal c of
+      CWInteger i -> if i < 0 || i >= genericLength xs
+                     then err
+                     else xs `genericIndex` i
+      _           -> error $ "SBV.select: unsupported " ++ show (svKind ind) ++ " valued select/index expression"
+svSelect xsOrig err ind = xs `seq` SVal kElt (Right (cache r))
+  where
+    kInd = svKind ind
+    kElt = svKind err
+    -- Based on the index size, we need to limit the elements. For
+    -- instance if the index is 8 bits, but there are 257 elements,
+    -- that last element will never be used and we can chop it off.
+    xs = case kInd of
+           KBounded False i -> genericTake ((2::Integer) ^ i) xsOrig
+           KBounded True  i -> genericTake ((2::Integer) ^ (i-1)) xsOrig
+           KUnbounded       -> xsOrig
+           _                -> error $ "SBV.select: unsupported " ++ show kInd ++ " valued select/index expression"
+    r st = do sws <- mapM (svToSW st) xs
+              swe <- svToSW st err
+              if all (== swe) sws  -- off-chance that all elts are the same
+                 then return swe
+                 else do idx <- getTableIndex st kInd kElt sws
+                         swi <- svToSW st ind
+                         let len = length xs
+                         -- NB. No need to worry here that the index
+                         -- might be < 0; as the SMTLib translation
+                         -- takes care of that automatically
+                         newExpr st kElt (SBVApp (LkUp (idx, kInd, kElt, len) swi swe) [])
+
+--------------------------------------------------------------------------------
+-- Derived operations
+
+-- | Convert an SVal from kind Bool to a bitvector of size 1.
+svToWord1 :: SVal -> SVal
+svToWord1 b = svSymbolicMerge k True b (svInteger k 1) (svInteger k 0)
+  where k = KBounded False 1
+
+-- | Convert an SVal from a bitvector of size 1 to kind Bool.
+svFromWord1 :: SVal -> SVal
+svFromWord1 x = svEqual x (svInteger k 1)
+  where k = KBounded False 1
+
+svTestBit :: SVal -> Int -> SVal
+svTestBit x i = svFromWord1 (svExtract i i x)
+
+-- | Generalization of 'svShl', where the shift-amount is symbolic.
+-- The shift amount must be an unsigned quantity.
+svShiftLeft :: SVal -> SVal -> SVal
+svShiftLeft x i
+  | svSigned i = error "sbvShiftLeft: shift amount should be unsigned"
+  | True       = svSelect [svShl x k | k <- [0 .. svBitSize x - 1]] z i
+  where z = svInteger (svKind x) 0
+
+-- | Generalization of 'svShr', where the shift-amount is symbolic.
+-- The shift amount must be an unsigned quantity.
+--
+-- NB. If the shiftee is signed, then this is an arithmetic shift;
+-- otherwise it's logical.
+svShiftRight :: SVal -> SVal -> SVal
+svShiftRight x i
+  | svSigned i = error "sbvShiftRight: shift amount should be unsigned"
+  | True       = svSelect [svShr x k | k <- [0 .. svBitSize x - 1]] z i
+  where z = svInteger (svKind x) 0
+
+-- | Generalization of 'svRol', where the rotation amount is symbolic.
+-- The rotation amount must be an unsigned quantity.
+svRotateLeft :: SVal -> SVal -> SVal
+svRotateLeft x i
+  | svSigned i             = error "sbvRotateLeft: rotation amount should be unsigned"
+  | bit si <= toInteger sx = svSelect [x `svRol` k | k <- [0 .. bit si - 1]] z i         -- wrap-around not possible
+  | True                   = svSelect [x `svRol` k | k <- [0 .. sx     - 1]] z (i `svRem` n)
+    where sx = svBitSize x
+          si = svBitSize i
+          z = svInteger (svKind x) 0
+          n = svInteger (svKind i) (toInteger sx)
+
+-- | Generalization of 'svRor', where the rotation amount is symbolic.
+-- The rotation amount must be an unsigned quantity.
+svRotateRight :: SVal -> SVal -> SVal
+svRotateRight x i
+  | svSigned i             = error "sbvRotateRight: rotation amount should be unsigned"
+  | bit si <= toInteger sx = svSelect [x `svRor` k | k <- [0 .. bit si - 1]] z i         -- wrap-around not possible
+  | True                   = svSelect [x `svRor` k | k <- [0 .. sx     - 1]] z (i `svRem` n)
+    where sx = svBitSize x
+          si = svBitSize i
+          z = svInteger (svKind x) 0
+          n = svInteger (svKind i) (toInteger sx)
+
 
 --------------------------------------------------------------------------------
 -- Utility functions

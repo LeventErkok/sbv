@@ -34,6 +34,11 @@ module Data.SBV.Dynamic
   , svExtract, svJoin
   , svUninterpreted
   , svIte, svLazyIte, svSymbolicMerge
+  , svSelect
+  -- ** Derived operations
+  , svToWord1, svFromWord1, svTestBit
+  , svShiftLeft, svShiftRight
+  , svRotateLeft, svRotateRight
   ) where
 
 import Data.SBV.BitVectors.Kind
