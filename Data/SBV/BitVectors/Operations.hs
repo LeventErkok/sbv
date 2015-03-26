@@ -16,6 +16,7 @@ module Data.SBV.BitVectors.Operations
   , svInteger
   -- ** Basic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs
+  , svQuot, svRem
   , svEqual, svNotEqual
   , svLessThan, svGreaterThan, svLessEq, svGreaterEq
   , svAnd, svOr, svXOr, svNot
@@ -77,6 +78,38 @@ svUNeg = liftSym1 (mkSymOp1 UNeg) negate negate negate negate
 
 svAbs :: SVal -> SVal
 svAbs = liftSym1 (mkSymOp1 Abs) abs abs abs abs
+
+-- | Overloaded operation whose meaning depends on the kind at which
+-- it is used: For unbounded integers, it corresponds to the SMT-Lib
+-- "div" operator ("Euclidean" division, which always has a
+-- non-negative remainder). For unsigned bitvectors, it is "bvudiv";
+-- and for signed bitvectors it is "bvsdiv", which rounds toward zero.
+-- All operations have unspecified semantics in case @y = 0@.
+svQuot :: SVal -> SVal -> SVal
+svQuot x y
+  | isConcreteZero x = x
+  | isConcreteOne y  = x
+  | True             = liftSym2 (mkSymOp Quot) nonzeroCheck
+                       (noReal "quot") quot' (noFloat "quot") (noDouble "quot") x y
+  where
+    quot' a b | svKind x == KUnbounded = div a (abs b)
+              | otherwise              = quot a b
+
+-- | Overloaded operation whose meaning depends on the kind at which
+-- it is used: For unbounded integers, it corresponds to the SMT-Lib
+-- "mod" operator (always non-negative). For unsigned bitvectors, it
+-- is "bvurem"; and for signed bitvectors it is "bvsrem", which rounds
+-- toward zero (sign of remainder matches that of @x@). All operations
+-- have unspecified semantics in case @y = 0@.
+svRem :: SVal -> SVal -> SVal
+svRem x y
+  | isConcreteZero x = x
+  | isConcreteOne y  = svInteger (svKind x) 0
+  | True             = liftSym2 (mkSymOp Rem) nonzeroCheck
+                       (noReal "rem") rem' (noFloat "rem") (noDouble "rem") x y
+  where
+    rem' a b | svKind x == KUnbounded = mod a (abs b)
+             | otherwise              = rem a b
 
 svEqual :: SVal -> SVal -> SVal
 svEqual = liftSym2B (mkSymOpSC (eqOpt trueSW) Equal) rationalCheck (==) (==) (==) (==) (==)
@@ -427,6 +460,10 @@ rationalCheck :: CW -> CW -> Bool
 rationalCheck a b = case (cwVal a, cwVal b) of
                      (CWAlgReal x, CWAlgReal y) -> isExactRational x && isExactRational y
                      _                          -> True
+
+-- | Quot/Rem operations require a nonzero check on the divisor.
+nonzeroCheck :: CW -> CW -> Bool
+nonzeroCheck _ b = cwVal b /= CWInteger 0
 
 -- same as above, for SBV's
 rationalSBVCheck :: SVal -> SVal -> Bool
