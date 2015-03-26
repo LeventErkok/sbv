@@ -30,6 +30,7 @@ module Data.SBV.BitVectors.Symbolic
   , RoundingMode(..)
   , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
   , SVal(..), svKind
+  , svBitSize, svSigned
   , svMkSymVar
   , ArrayContext(..), ArrayInfo, arrayUIKind
   , svToSW, forceSWArg
@@ -403,6 +404,15 @@ data SVal = SVal !Kind !(Either CW (Cached SW))
 
 svKind :: SVal -> Kind
 svKind (SVal k _) = k
+
+svBitSize :: SVal -> Int
+svBitSize x =
+  case svKind x of
+    KBounded _ s  -> s
+    _             -> error $ "svBitSize: invalid kind " ++ show (svKind x)
+
+svSigned :: SVal -> Bool
+svSigned x = kindHasSign (svKind x)
 
 -- Not particularly "desirable", but will do if needed
 instance Show SVal where

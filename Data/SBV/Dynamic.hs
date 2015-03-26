@@ -18,6 +18,7 @@ module Data.SBV.Dynamic
   , Quantifier(..)
   , SVal
   , svKind
+  , svBitSize, svSigned
   , svMkSymVar
   -- ** Basic constructors
   , svTrue, svFalse, svBool
