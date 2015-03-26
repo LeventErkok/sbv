@@ -14,6 +14,7 @@ module Data.SBV.BitVectors.Operations
   -- ** Basic constructors
     svTrue, svFalse, svBool
   , svInteger
+  , svAsBool
   -- ** Basic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs
   , svQuot, svRem
@@ -23,7 +24,7 @@ module Data.SBV.BitVectors.Operations
   , svShl, svShr, svRol, svRor
   , svExtract, svJoin
   , svUninterpreted
-  , svSymbolicMerge
+  , svIte, svLazyIte, svSymbolicMerge
   )
   where
 
@@ -50,6 +51,10 @@ svInteger :: Kind -> Integer -> SVal
 svInteger k n = SVal k (Left (mkConstCW k n))
 
 --TODO: svFloat, svDouble, svReal
+
+svAsBool :: SVal -> Maybe Bool
+svAsBool (SVal _ (Left cw)) = Just (cwToBool cw)
+svAsBool _                  = Nothing
 
 --------------------------------------------------------------------------------
 -- Basic operations
@@ -278,9 +283,11 @@ svUninterpreted k nm code args = SVal k $ Right $ cache result
                        mapM_ forceSWArg sws
                        newExpr st k $ SBVApp (Uninterpreted nm) sws
 
-svAsBool :: SVal -> Maybe Bool
-svAsBool (SVal _ (Left cw)) = Just (cwToBool cw)
-svAsBool _                  = Nothing
+svIte :: SVal -> SVal -> SVal -> SVal
+svIte t a b = svSymbolicMerge (svKind a) True t a b
+
+svLazyIte :: Kind -> SVal -> SVal -> SVal -> SVal
+svLazyIte k t a b = svSymbolicMerge k False t a b
 
 -- | Merge two symbolic values, at kind @k@, possibly @force@'ing the branches to make
 -- sure they do not evaluate to the same result.
