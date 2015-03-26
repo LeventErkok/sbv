@@ -83,14 +83,7 @@ class HasKind a where
   isUninterpreted :: a -> Bool
   showType        :: a -> String
   -- defaults
-  hasSign x = case kindOf x of
-                  KBool        -> False
-                  KBounded b _ -> b
-                  KUnbounded   -> True
-                  KReal        -> True
-                  KFloat       -> True
-                  KDouble      -> True
-                  KUserSort{}  -> False
+  hasSign x = kindHasSign (kindOf x)
   intSizeOf x = case kindOf x of
                   KBool         -> error "SBV.HasKind.intSizeOf((S)Bool)"
                   KBounded _ s  -> s

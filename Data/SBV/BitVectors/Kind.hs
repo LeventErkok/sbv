@@ -13,6 +13,7 @@
 
 module Data.SBV.BitVectors.Kind
   ( Kind(..)
+  , kindHasSign
   , constructUKind
   ) where
 
@@ -45,6 +46,17 @@ instance Eq  G.DataType where
 
 instance Ord G.DataType where
    a `compare` b = G.tyconUQname (G.dataTypeName a) `compare` G.tyconUQname (G.dataTypeName b)
+
+kindHasSign :: Kind -> Bool
+kindHasSign k =
+  case k of
+    KBool        -> False
+    KBounded b _ -> b
+    KUnbounded   -> True
+    KReal        -> True
+    KFloat       -> True
+    KDouble      -> True
+    KUserSort{}  -> False
 
 -- | Construct an uninterpreted/enumerated kind from a piece of data; we distinguish simple enumerations as those
 -- are mapped to proper SMT-Lib2 data-types; while others go completely uninterpreted
