@@ -73,19 +73,6 @@ ghcBitSize x = maybe (error "SBV.ghcBitSize: Unexpected non-finite usage!") id (
 ghcBitSize = bitSize
 #endif
 
-noUnint2 :: (Maybe Int, String) -> (Maybe Int, String) -> a
-noUnint2 x y = error $ "Unexpected binary operation called on uninterpreted/enumerated values: " ++ show (x, y)
-
-liftSW2 :: (State -> Kind -> SW -> SW -> IO SW) -> Kind -> SBV a -> SBV b -> Cached SW
-liftSW2 opS k a b = cache c
-  where c st = do sw1 <- sbvToSW st a
-                  sw2 <- sbvToSW st b
-                  opS st k sw1 sw2
-
-liftSym2 :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (Float -> Float -> Float) -> (Double -> Double -> Double) -> SBV b -> SBV b -> SBV b
-liftSym2 _   okCW opCR opCI opCF opCD   (SBV (SVal k (Left a))) (SBV (SVal _ (Left b))) | okCW a b = SBV $ SVal k $ Left  $ mapCW2 opCR opCI opCF opCD noUnint2 a b
-liftSym2 opS _    _    _    _    _    a@(SBV (SVal k _))        b                                  = SBV $ SVal k $ Right $ liftSW2 opS k a b
-
 mkSymOpSC :: (SW -> SW -> Maybe SW) -> Op -> State -> Kind -> SW -> SW -> IO SW
 mkSymOpSC shortCut op st k a b = maybe (newExpr st k (SBVApp op [a, b])) return (shortCut a b)
 
@@ -544,9 +531,7 @@ b .^ e | isSigned e = error "(.^): exponentiation only works with unsigned expon
 
 instance (SymWord a, Fractional a) => Fractional (SBV a) where
   fromRational = literal . fromRational
-  x / y        = liftSym2 (mkSymOp Quot) rationalCheck (/) die (/) (/) x y
-   where -- should never happen
-         die = error "impossible: integer valued data found in Fractional instance"
+  SBV x / SBV y = SBV (svDivide x y)
 
 -- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat and SDouble
 -- Note that most of the fields are "undefined" for symbolic values, we add methods as they are supported by SMTLib.
@@ -606,12 +591,6 @@ lift2FNS nm f sv1 sv2
   | Just v1 <- unliteral sv1
   , Just v2 <- unliteral sv2 = literal $ f v1 v2
   | True                     = error $ "SBV." ++ nm ++ ": not supported for symbolic values of type " ++ show (kindOf sv1)
-
--- Most operations on concrete rationals require a compatibility check
-rationalCheck :: CW -> CW -> Bool
-rationalCheck a b = case (cwVal a, cwVal b) of
-                     (CWAlgReal x, CWAlgReal y) -> isExactRational x && isExactRational y
-                     _                          -> True
 
 -- NB. In the optimizations below, use of -1 is valid as
 -- -1 has all bits set to True for both signed and unsigned values

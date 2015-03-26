@@ -26,7 +26,7 @@ module Data.SBV.Dynamic
   , svAsBool
   -- ** Basic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs
-  , svQuot, svRem
+  , svDivide, svQuot, svRem
   , svEqual, svNotEqual
   , svLessThan, svGreaterThan, svLessEq, svGreaterEq
   , svAnd, svOr, svXOr, svNot

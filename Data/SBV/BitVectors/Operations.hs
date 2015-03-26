@@ -17,7 +17,7 @@ module Data.SBV.BitVectors.Operations
   , svAsBool
   -- ** Basic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs
-  , svQuot, svRem
+  , svDivide, svQuot, svRem
   , svEqual, svNotEqual
   , svLessThan, svGreaterThan, svLessEq, svGreaterEq
   , svAnd, svOr, svXOr, svNot
@@ -89,6 +89,11 @@ svUNeg = liftSym1 (mkSymOp1 UNeg) negate negate negate negate
 
 svAbs :: SVal -> SVal
 svAbs = liftSym1 (mkSymOp1 Abs) abs abs abs abs
+
+svDivide :: SVal -> SVal -> SVal
+svDivide = liftSym2 (mkSymOp Quot) rationalCheck (/) die (/) (/)
+   where -- should never happen
+         die = error "impossible: integer valued data found in Fractional instance"
 
 -- | Overloaded operation whose meaning depends on the kind at which
 -- it is used: For unbounded integers, it corresponds to the SMT-Lib
