@@ -13,6 +13,7 @@ module Data.SBV.BitVectors.Concrete
   ( module Data.SBV.BitVectors.Concrete
   ) where
 
+import Data.Bits
 import System.Random (randomIO, randomRIO)
 
 import Data.SBV.BitVectors.Kind
@@ -101,6 +102,7 @@ normCW c@(CW (KBounded signed sz) (CWInteger v)) = c { cwVal = CWInteger norm }
                                   (a, b) | even a -> b
                                   (_, b)          -> b - rg
             | True    = v `mod` (2 ^ sz)
+normCW c@(CW KBool (CWInteger v)) = c { cwVal = CWInteger (v .&. 1) }
 normCW c = c
 
 -- | Constant False as a CW. We represent it using the integer value 0.
