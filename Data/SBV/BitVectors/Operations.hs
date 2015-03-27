@@ -193,10 +193,10 @@ svXOr x y
   | True             = liftSym2 (mkSymOpSC opt XOr) (const (const True))
                        (noReal "xor") xor (noFloat "xor") (noDouble "xor") x y
   where opt a b
-          | a == b       = Just falseSW
-          | a == falseSW = Just b
-          | b == falseSW = Just a
-          | True         = Nothing
+          | a == b && swKind a == KBool = Just falseSW
+          | a == falseSW                = Just b
+          | b == falseSW                = Just a
+          | True                        = Nothing
 
 svNot :: SVal -> SVal
 svNot = liftSym1 (mkSymOp1SC opt Not)
