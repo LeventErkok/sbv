@@ -187,7 +187,9 @@ svOr x y
 svXOr :: SVal -> SVal -> SVal
 svXOr x y
   | isConcreteZero x = y
+  | isConcreteOnes x = svNot y
   | isConcreteZero y = x
+  | isConcreteOnes y = svNot x
   | True             = liftSym2 (mkSymOpSC opt XOr) (const (const True))
                        (noReal "xor") xor (noFloat "xor") (noDouble "xor") x y
   where opt a b
