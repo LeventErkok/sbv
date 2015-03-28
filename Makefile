@@ -38,7 +38,7 @@ $(STAMPFILE): $(DEPSRCS) Makefile
 	@$(CABAL) copy
 	@$(CABAL) register
 
-localTest: install
+test: install
 	@echo "*** Starting inline tests.."
 	@(set -o pipefail; $(TIME) doctest ${TSTSRCS} 2>&1)
 	@echo "*** Starting external test suite.."
