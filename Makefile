@@ -69,7 +69,8 @@ release: clean install sdist hlint docs test
 gold: install
 	dist/build/SBVUnitTests/SBVUnitTests -c ${TGTS}
 
-hlint: install
+hlint: 
+	@rm -f hlintReport.html
 	@echo "Running HLint.."
 	@hlint Data SBVUnitTest -q -rhlintReport.html -i "Use otherwise" -i "Parse error" -i "Use fewer imports"
 
