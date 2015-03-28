@@ -7,6 +7,16 @@
 
   * Code clean-up: remove mbMinBound/mbMaxBound thus allowing less calls to
     unliteral. Contributed by Brian Huffman.
+
+  * Introduce Data.SBV.Dynamic, by Brian Huffman. This is mostly an internal
+    reorg of the SBV codebase, and end-users should not be impacted by the
+    changes. The introduction of the Dynamic SBV variant (i.e., one that does
+    not mandate a phantom type as in "SBV Word8" etc. allows library writers
+    more flexibility as they deal with arbitrary bit-vector sizes. The main
+    customor of these changes are the Cryptol language and the associated
+    toolset, but other developers building on top of SBV can find it useful
+    as well. NB: The "strongly-typed" aspect of SBV is still the main way
+    end-users should interact with SBV and nothing changed in that respect!
   
 ### Version 4.2, 2015-03-17
 
