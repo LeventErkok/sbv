@@ -29,7 +29,7 @@ module Data.SBV.BitVectors.Model (
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, toSReal, sFloat, sFloats, sDouble, sDoubles, slet
-  , fusedMA
+  , fusedMA, liftFPPredicate
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCW, genMkSymVar
   )
@@ -555,6 +555,14 @@ instance (SymWord a, Fractional a, Floating a) => Floating (SBV a) where
     atanh   = lift1FNS "atanh"   atanh
     (**)    = lift2FNS "**"      (**)
     logBase = lift2FNS "logBase" logBase
+
+-- | Lift an FP predicate as defined by SMT-Lib to the world of SFloat and SDoubles.
+liftFPPredicate :: (Floating a, SymWord a) => String -> (a -> Bool) -> SBV a -> SBool
+liftFPPredicate nm f a
+   | Just v <- unliteral a = literal $ f v
+   | True                  = SBV $ SVal KBool $ Right $ cache r
+   where r st = do swa <- sbvToSW st a
+                   newExpr st KBool (SBVApp (Uninterpreted nm) [swa])
 
 -- | Fused-multiply add. @fusedMA a b c = a * b + c@, for double and floating point values.
 -- Note that a 'fusedMA' call will *never* be concrete, even if all the arguments are constants; since
