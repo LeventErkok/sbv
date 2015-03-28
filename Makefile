@@ -38,14 +38,21 @@ $(STAMPFILE): $(DEPSRCS) Makefile
 	@$(CABAL) copy
 	@$(CABAL) register
 
-test: install
+localTest: install
 	@echo "*** Starting inline tests.."
 	@(set -o pipefail; $(TIME) doctest ${TSTSRCS} 2>&1)
 	@echo "*** Starting external test suite.."
-	@$(TIME) dist/build/SBVUnitTests/SBVUnitTests -s
 	@echo "*** Starting internal cabal test suite.."
 	@SBV_Z3=doesnotexist $(TIME) $(CABAL) test
 	@cat dist/test/sbv*SBVBasicTests.log
+
+localTest: install test
+	@echo "*** Starting local test suite"
+	@$(TIME) dist/build/SBVUnitTests/SBVUnitTests -s
+
+fullTest: install test
+	@echo "*** Starting full test suite"
+	@$(TIME) dist/build/SBVUnitTests/SBVUnitTests
 
 sdist: install
 	@(set -o pipefail; $(CABAL) sdist | $(SIMPLIFY))
@@ -60,8 +67,11 @@ clean:
 docs:
 	@(set -o pipefail; $(CABAL) haddock --haddock-option=--no-warnings --hyperlink-source 2>&1 | $(SIMPLIFY))
 
-release: clean install sdist hlint docs test
-	@echo "*** SBV is ready for release!"
+localRelease: clean install sdist hlint docs localTest
+	@echo "*** SBV is ready for LOCAL release!"
+
+hackageRelease: clean install sdist hlint docs fullTest
+	@echo "*** SBV is ready for HACKAGE release!"
 
 # use this as follows: make gold TGTS="cgUSB5"
 # where the tag is one (or many) given in the SBVUnitTest.hs file
