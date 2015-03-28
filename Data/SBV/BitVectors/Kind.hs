@@ -48,6 +48,7 @@ instance Eq  G.DataType where
 instance Ord G.DataType where
    a `compare` b = G.tyconUQname (G.dataTypeName a) `compare` G.tyconUQname (G.dataTypeName b)
 
+-- | Does this kind represent a signed quantity?
 kindHasSign :: Kind -> Bool
 kindHasSign k =
   case k of

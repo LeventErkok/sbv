@@ -44,20 +44,25 @@ import Data.SBV.BitVectors.Symbolic
 --------------------------------------------------------------------------------
 -- Basic constructors
 
+-- | Boolean True.
 svTrue :: SVal
 svTrue = SVal KBool (Left trueCW)
 
+-- | Boolean False.
 svFalse :: SVal
 svFalse = SVal KBool (Left falseCW)
 
+-- | Convert from a Boolean.
 svBool :: Bool -> SVal
 svBool b = if b then svTrue else svFalse
 
+-- | Convert from an Integer.
 svInteger :: Kind -> Integer -> SVal
 svInteger k n = SVal k (Left (mkConstCW k n))
 
---TODO: svFloat, svDouble, svReal
+-- TODO: svFloat, svDouble, svReal
 
+-- | Extract a bool, by properly interpreting the integer stored.
 svAsBool :: SVal -> Maybe Bool
 svAsBool (SVal _ (Left cw)) = Just (cwToBool cw)
 svAsBool _                  = Nothing
@@ -65,12 +70,14 @@ svAsBool _                  = Nothing
 --------------------------------------------------------------------------------
 -- Basic operations
 
+-- | Addition.
 svPlus :: SVal -> SVal -> SVal
 svPlus x y
   | isConcreteZero x = y
   | isConcreteZero y = x
   | True             = liftSym2 (mkSymOp Plus) rationalCheck (+) (+) (+) (+) x y
 
+-- | Multiplication.
 svTimes :: SVal -> SVal -> SVal
 svTimes x y
   | isConcreteZero x = x
@@ -79,23 +86,27 @@ svTimes x y
   | isConcreteOne y  = x
   | True             = liftSym2 (mkSymOp Times) rationalCheck (*) (*) (*) (*) x y
 
+-- | Subtraction.
 svMinus :: SVal -> SVal -> SVal
 svMinus x y
   | isConcreteZero y = x
   | True             = liftSym2 (mkSymOp Minus) rationalCheck (-) (-) (-) (-) x y
 
+-- | Unary minus.
 svUNeg :: SVal -> SVal
 svUNeg = liftSym1 (mkSymOp1 UNeg) negate negate negate negate
 
+-- | Absolute value.
 svAbs :: SVal -> SVal
 svAbs = liftSym1 (mkSymOp1 Abs) abs abs abs abs
 
+-- | Division.
 svDivide :: SVal -> SVal -> SVal
 svDivide = liftSym2 (mkSymOp Quot) rationalCheck (/) die (/) (/)
    where -- should never happen
          die = error "impossible: integer valued data found in Fractional instance"
 
--- | Overloaded operation whose meaning depends on the kind at which
+-- | Quotient: Overloaded operation whose meaning depends on the kind at which
 -- it is used: For unbounded integers, it corresponds to the SMT-Lib
 -- "div" operator ("Euclidean" division, which always has a
 -- non-negative remainder). For unsigned bitvectors, it is "bvudiv";
@@ -106,12 +117,12 @@ svQuot x y
   | isConcreteZero x = x
   | isConcreteOne y  = x
   | True             = liftSym2 (mkSymOp Quot) nonzeroCheck
-                       (noReal "quot") quot' (noFloat "quot") (noDouble "quot") x y
+                                (noReal "quot") quot' (noFloat "quot") (noDouble "quot") x y
   where
     quot' a b | svKind x == KUnbounded = div a (abs b) * signum b
               | otherwise              = quot a b
 
--- | Overloaded operation whose meaning depends on the kind at which
+-- | Remainder: Overloaded operation whose meaning depends on the kind at which
 -- it is used: For unbounded integers, it corresponds to the SMT-Lib
 -- "mod" operator (always non-negative). For unsigned bitvectors, it
 -- is "bvurem"; and for signed bitvectors it is "bvsrem", which rounds
@@ -122,41 +133,48 @@ svRem x y
   | isConcreteZero x = x
   | isConcreteOne y  = svInteger (svKind x) 0
   | True             = liftSym2 (mkSymOp Rem) nonzeroCheck
-                       (noReal "rem") rem' (noFloat "rem") (noDouble "rem") x y
+                                (noReal "rem") rem' (noFloat "rem") (noDouble "rem") x y
   where
     rem' a b | svKind x == KUnbounded = mod a (abs b)
              | otherwise              = rem a b
 
+-- | Equality.
 svEqual :: SVal -> SVal -> SVal
 svEqual = liftSym2B (mkSymOpSC (eqOpt trueSW) Equal) rationalCheck (==) (==) (==) (==) (==)
 
+-- | Inequality.
 svNotEqual :: SVal -> SVal -> SVal
 svNotEqual = liftSym2B (mkSymOpSC (eqOpt falseSW) NotEqual) rationalCheck (/=) (/=) (/=) (/=) (/=)
 
+-- | Less than.
 svLessThan :: SVal -> SVal -> SVal
 svLessThan x y
   | isConcreteMax x = svFalse
   | isConcreteMin y = svFalse
   | True            = liftSym2B (mkSymOpSC (eqOpt falseSW) LessThan) rationalCheck (<) (<) (<) (<) (uiLift "<" (<)) x y
 
+-- | Greater than.
 svGreaterThan :: SVal -> SVal -> SVal
 svGreaterThan x y
   | isConcreteMin x = svFalse
   | isConcreteMax y = svFalse
   | True            = liftSym2B (mkSymOpSC (eqOpt falseSW) GreaterThan) rationalCheck (>) (>) (>) (>) (uiLift ">"  (>)) x y
 
+-- | Less than or equal to.
 svLessEq :: SVal -> SVal -> SVal
 svLessEq x y
   | isConcreteMin x = svTrue
   | isConcreteMax y = svTrue
   | True            = liftSym2B (mkSymOpSC (eqOpt trueSW) LessEq) rationalCheck (<=) (<=) (<=) (<=) (uiLift "<=" (<=)) x y
 
+-- | Greater than or equal to.
 svGreaterEq :: SVal -> SVal -> SVal
 svGreaterEq x y
   | isConcreteMax x = svTrue
   | isConcreteMin y = svTrue
   | True            = liftSym2B (mkSymOpSC (eqOpt trueSW) GreaterEq) rationalCheck (>=) (>=) (>=) (>=) (uiLift ">=" (>=)) x y
 
+-- | Bitwise and.
 svAnd :: SVal -> SVal -> SVal
 svAnd x y
   | isConcreteZero x = x
@@ -170,6 +188,7 @@ svAnd x y
           | b == trueSW                  = Just a
           | True                         = Nothing
 
+-- | Bitwise or.
 svOr :: SVal -> SVal -> SVal
 svOr x y
   | isConcreteZero x = y
@@ -184,6 +203,7 @@ svOr x y
           | b == falseSW               = Just a
           | True                       = Nothing
 
+-- | Bitwise xor.
 svXOr :: SVal -> SVal -> SVal
 svXOr x y
   | isConcreteZero x = y
@@ -198,10 +218,11 @@ svXOr x y
           | b == falseSW                = Just a
           | True                        = Nothing
 
+-- | Bitwise complement.
 svNot :: SVal -> SVal
 svNot = liftSym1 (mkSymOp1SC opt Not)
-        (noRealUnary "complement") complement
-        (noFloatUnary "complement") (noDoubleUnary "complement")
+                 (noRealUnary "complement") complement
+                 (noFloatUnary "complement") (noDoubleUnary "complement")
   where opt a
           | a == falseSW = Just trueSW
           | a == trueSW  = Just falseSW
@@ -228,6 +249,7 @@ svShr x i
                        (noRealUnary "shiftR") (`shiftR` i)
                        (noFloatUnary "shiftR") (noDoubleUnary "shiftR") x
 
+-- | Rotate-left, by a constant
 svRol :: SVal -> Int -> SVal
 svRol x i
   | i < 0   = svRor x (-i)
@@ -238,6 +260,7 @@ svRol x i
                                           (noFloatUnary "rotateL") (noDoubleUnary "rotateL") x
                 _ -> svShl x i   -- for unbounded Integers, rotateL is the same as shiftL in Haskell
 
+-- | Rotate-right, by a constant
 svRor :: SVal -> Int -> SVal
 svRor x i
   | i < 0   = svRol x (-i)
@@ -248,7 +271,8 @@ svRor x i
                                           (noFloatUnary "rotateR") (noDoubleUnary "rotateR") x
                 _ -> svShr x i   -- for unbounded integers, rotateR is the same as shiftR in Haskell
 
--- Since the underlying representation is just Integers, rotations has to be careful on the bit-size
+-- | Generic rotation. Since the underlying representation is just Integers, rotations has to be
+-- careful on the bit-size.
 rot :: Bool -> Int -> Int -> Integer -> Integer
 rot toLeft sz amt x
   | sz < 2 = x
@@ -257,6 +281,7 @@ rot toLeft sz amt x
                 | True   = (sz - y', amt `mod` sz)
         norm v s = v .&. ((1 `shiftL` s) - 1)
 
+-- | Extract bit-sequences.
 svExtract :: Int -> Int -> SVal -> SVal
 svExtract i j x@(SVal (KBounded s _) _)
   | i < j
@@ -270,6 +295,7 @@ svExtract i j x@(SVal (KBounded s _) _)
                   newExpr st k (SBVApp (Extract i j) [sw])
 svExtract _ _ _ = error "extract: non-bitvector type"
 
+-- | Join two words, by concataneting
 svJoin :: SVal -> SVal -> SVal
 svJoin x@(SVal (KBounded s i) a) y@(SVal (KBounded _ j) b)
   | i == 0 = y
@@ -292,7 +318,6 @@ svJoin _ _ = error "svJoin: non-bitvector type"
 -- We support uninterpreted-functions as a general means of black-box'ing
 -- operations that are /irrelevant/ for the purposes of the proof; i.e., when
 -- the proofs can be performed without any knowledge about the function itself.
-
 svUninterpreted :: Kind -> String -> Maybe [String] -> [SVal] -> SVal
 svUninterpreted k nm code args = SVal k $ Right $ cache result
   where result st = do let ty = SBVType (map svKind args ++ [k])
@@ -301,9 +326,11 @@ svUninterpreted k nm code args = SVal k $ Right $ cache result
                        mapM_ forceSWArg sws
                        newExpr st k $ SBVApp (Uninterpreted nm) sws
 
+-- | If-then-else. This one will force branches.
 svIte :: SVal -> SVal -> SVal -> SVal
 svIte t a b = svSymbolicMerge (svKind a) True t a b
 
+-- | Lazy If-then-else. This one will delay forcing the branches unless it's really necessary.
 svLazyIte :: Kind -> SVal -> SVal -> SVal -> SVal
 svLazyIte k t a b = svSymbolicMerge k False t a b
 
@@ -434,6 +461,9 @@ svFromWord1 :: SVal -> SVal
 svFromWord1 x = svEqual x (svInteger k 1)
   where k = KBounded False 1
 
+-- | Test the value of a bit. Note that we do an extract here
+-- as opposed to masking and checking against zero, as we found
+-- extraction to be much faster with large bit-vectors.
 svTestBit :: SVal -> Int -> SVal
 svTestBit x i = svFromWord1 (svExtract i i x)
 
@@ -575,7 +605,8 @@ areConcretelyEqual :: SVal -> SVal -> Bool
 areConcretelyEqual (SVal _ (Left a)) (SVal _ (Left b)) = a == b
 areConcretelyEqual _                       _           = False
 
--- Most operations on concrete rationals require a compatibility check
+-- | Most operations on concrete rationals require a compatibility check to avoid faulting
+-- on algebraic reals.
 rationalCheck :: CW -> CW -> Bool
 rationalCheck a b = case (cwVal a, cwVal b) of
                      (CWAlgReal x, CWAlgReal y) -> isExactRational x && isExactRational y
@@ -585,12 +616,11 @@ rationalCheck a b = case (cwVal a, cwVal b) of
 nonzeroCheck :: CW -> CW -> Bool
 nonzeroCheck _ b = cwVal b /= CWInteger 0
 
--- same as above, for SBV's
+-- | Same as rationalCheck, except for SBV's
 rationalSBVCheck :: SVal -> SVal -> Bool
 rationalSBVCheck (SVal KReal (Left a)) (SVal KReal (Left b)) = rationalCheck a b
 rationalSBVCheck _                     _                     = True
 
--- Some operations will never be used on Reals, but we need fillers:
 noReal :: String -> AlgReal -> AlgReal -> AlgReal
 noReal o a b = error $ "SBV.AlgReal." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
 

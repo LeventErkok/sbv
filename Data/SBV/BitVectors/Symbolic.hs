@@ -90,6 +90,7 @@ instance Show SW where
     | n < 0 = "s_" ++ show (abs n)
     | True  = 's' : show n
 
+-- | Kind of a symbolic word.
 swKind :: SW -> Kind
 swKind (SW k _) = k
 
@@ -138,6 +139,8 @@ smtLibSquareRoot = Uninterpreted "fp.sqrt"
 smtLibFusedMA :: Op
 smtLibFusedMA = Uninterpreted "fp.fma"
 
+-- | Show instance for 'Op'. Note that this is largely for debugging purposes, not used
+-- for being read by any tool.
 instance Show Op where
   show (Shl i) = "<<"  ++ show i
   show (Shr i) = ">>"  ++ show i
@@ -199,6 +202,7 @@ reorder s = case s of
   where isCommutative :: Op -> Bool
         isCommutative o = o `elem` [Plus, Times, Equal, NotEqual, And, Or, XOr]
 
+-- | Show instance for 'SBVExpr'. Again, only for debugging purposes.
 instance Show SBVExpr where
   show (SBVApp Ite [t, a, b]) = unwords ["if", show t, "then", show a, "else", show b]
   show (SBVApp (Shl i) [a])   = unwords [show a, "<<", show i]
@@ -241,6 +245,7 @@ getConstraints (Result _ _ _ _ _ _ _ _ _ _ cstrs _) = cstrs
 getTraceInfo :: Result -> [(String, CW)]
 getTraceInfo (Result _ tvals _ _ _ _ _ _ _ _ _ _) = tvals
 
+-- | Show instance for 'Result'. Only for debugging purposes.
 instance Show Result where
   show (Result _ _ _ _ cs _ _ [] [] _ [] [r])
     | Just c <- r `lookup` cs
@@ -401,24 +406,28 @@ getSBranchRunConfig st = case runMode st of
 -- sure sharing is preserved.
 data SVal = SVal !Kind !(Either CW (Cached SW))
 
+-- | Extract the 'Kind'.
 svKind :: SVal -> Kind
 svKind (SVal k _) = k
 
+-- | Extract the but-size from the kind. Assumption: Only called
+-- on kinds that have an associated size. (i.e., no 'SFloat'/'SDouble' etc.)
 svBitSize :: SVal -> Int
 svBitSize x =
   case svKind x of
     KBounded _ s  -> s
     _             -> error $ "svBitSize: invalid kind " ++ show (svKind x)
 
+-- | Is the value signed?
 svSigned :: SVal -> Bool
 svSigned x = kindHasSign (svKind x)
 
--- Not particularly "desirable", but will do if needed
+-- | Show instance for 'SVal'. Not particularly "desirable", but will do if needed
 instance Show SVal where
   show (SVal _ (Left c))  = show c
   show (SVal k (Right _)) = "<symbolic> :: " ++ show k
 
--- Equality constraint on SBV values. Not desirable since we can't really compare two
+-- | Equality constraint on SBV values. Not desirable since we can't really compare two
 -- symbolic values, but will do.
 instance Eq SVal where
   SVal _ (Left a) == SVal _ (Left b) = a == b
@@ -463,6 +472,8 @@ newSW st k = do ctr <- incCtr st
                 return (sw, 's' : show ctr)
 {-# INLINE newSW #-}
 
+-- | Register a new kind with the system, used for uninterpreted sorts. We try to avoid names that
+-- might be conflicting with SMTLib; but this list is not comprehensive.. Beware!
 registerKind :: State -> Kind -> IO ()
 registerKind st k
   | KUserSort sortName _ <- k, sortName `elem` reserved
@@ -547,6 +558,8 @@ svMkSymVar mbQ k mbNm = do
                            liftIO $ modifyIORef (rinps st) ((q, (sw, nm)):)
                            return $ SVal k $ Right $ cache (const (return sw))
 
+-- | Create a properly quantified variable of a user defined sort. Only valid
+-- in proof contexts.
 mkSValUserSort :: Kind -> Maybe Quantifier -> Maybe String -> Symbolic SVal
 mkSValUserSort k mbQ mbNm = do
         st <- ask

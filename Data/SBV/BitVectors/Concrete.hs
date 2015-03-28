@@ -26,7 +26,7 @@ data CWVal = CWAlgReal  AlgReal              -- ^ algebraic real
            | CWDouble   Double               -- ^ double
            | CWUserSort (Maybe Int, String)  -- ^ value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
 
--- We cannot simply derive Eq/Ord for CWVal, since CWAlgReal doesn't have proper
+-- | Eq instance for CWVal. Note that we cannot simply derive Eq/Ord, since CWAlgReal doesn't have proper
 -- instances for these when values are infinitely precise reals. However, we do
 -- need a structural eq/ord for Map indexes; so define custom ones here:
 instance Eq CWVal where
@@ -37,6 +37,7 @@ instance Eq CWVal where
   CWDouble a   == CWDouble b        = a == b
   _            == _                 = False
 
+-- | Ord instance for CWVal. Same comments as the 'Eq' instance why this cannot be derived.
 instance Ord CWVal where
   CWAlgReal a `compare` CWAlgReal b   = a `algRealStructuralCompare` b
   CWAlgReal _ `compare` CWInteger _   = LT
@@ -131,7 +132,7 @@ liftCW2 r i f d u x y = case (cwVal x, cwVal y) of
                          (CWUserSort a, CWUserSort b) -> u a b
                          _                            -> error $ "SBV.liftCW2: impossible, incompatible args received: " ++ show (x, y)
 
--- | Map a unary function through a CW
+-- | Map a unary function through a CW.
 mapCW :: (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> ((Maybe Int, String) -> (Maybe Int, String)) -> CW -> CW
 mapCW r i f d u x  = normCW $ CW (cwKind x) $ case cwVal x of
                                                CWAlgReal a  -> CWAlgReal  (r a)
@@ -140,7 +141,7 @@ mapCW r i f d u x  = normCW $ CW (cwKind x) $ case cwVal x of
                                                CWDouble a   -> CWDouble   (d a)
                                                CWUserSort a -> CWUserSort (u a)
 
--- | Map a binary function through a CW
+-- | Map a binary function through a CW.
 mapCW2 :: (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (Float -> Float -> Float) -> (Double -> Double -> Double) -> ((Maybe Int, String) -> (Maybe Int, String) -> (Maybe Int, String)) -> CW -> CW -> CW
 mapCW2 r i f d u x y = case (cwSameType x y, cwVal x, cwVal y) of
                         (True, CWAlgReal a,  CWAlgReal b)  -> normCW $ CW (cwKind x) (CWAlgReal  (r a b))
@@ -150,11 +151,12 @@ mapCW2 r i f d u x y = case (cwSameType x y, cwVal x, cwVal y) of
                         (True, CWUserSort a, CWUserSort b) -> normCW $ CW (cwKind x) (CWUserSort (u a b))
                         _                                  -> error $ "SBV.mapCW2: impossible, incompatible args received: " ++ show (x, y)
 
+-- | Show instance for 'CW'.
 instance Show CW where
   show w | cwIsBit w = show (cwToBool w)
   show w             = liftCW show show show show snd w ++ " :: " ++ show (cwKind w)
 
--- | Create a constant word from an integral
+-- | Create a constant word from an integral.
 mkConstCW :: Integral a => Kind -> a -> CW
 mkConstCW KBool           a = normCW $ CW KBool      (CWInteger (toInteger a))
 mkConstCW k@(KBounded{})  a = normCW $ CW k          (CWInteger (toInteger a))
@@ -164,6 +166,7 @@ mkConstCW KFloat          a = normCW $ CW KFloat     (CWFloat   (fromInteger (to
 mkConstCW KDouble         a = normCW $ CW KDouble    (CWDouble  (fromInteger (toInteger a)))
 mkConstCW (KUserSort s _) a = error $ "Unexpected call to mkConstCW with uninterpreted kind: " ++ s ++ " with value: " ++ show (toInteger a)
 
+-- | Generate a random constant value ('CWVal') of the correct kind.
 randomCWVal :: Kind -> IO CWVal
 randomCWVal k =
   case k of
@@ -179,5 +182,6 @@ randomCWVal k =
     bounds False w = (0, 2^w - 1)
     bounds True w = (-x, x-1) where x = 2^(w-1)
 
+-- | Generate a random constant value ('CW') of the correct kind.
 randomCW :: Kind -> IO CW
 randomCW k = fmap (CW k) (randomCWVal k)
