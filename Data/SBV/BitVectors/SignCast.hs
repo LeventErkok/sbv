@@ -79,7 +79,7 @@ instance SignCast Word8  Int8  where
 genericSign :: (Integral a, SymWord a, Num b, SymWord b) => SBV a -> SBV b
 genericSign x
   | Just c <- unliteral x = literal $ fromIntegral c
-  | True                  = SBV k (Right (cache y))
+  | True                  = SBV (SVal k (Right (cache y)))
      where k = case kindOf x of
                  KBool            -> error "Data.SBV.SignCast.genericSign: Called on boolean value"
                  KBounded False n -> KBounded True n
@@ -96,7 +96,7 @@ genericSign x
 genericUnsign :: (Integral a, SymWord a, Num b, SymWord b) => SBV a -> SBV b
 genericUnsign x
   | Just c <- unliteral x = literal $ fromIntegral c
-  | True                  = SBV k (Right (cache y))
+  | True                  = SBV (SVal k (Right (cache y)))
      where k = case kindOf x of
                  KBool            -> error "Data.SBV.SignCast.genericUnSign: Called on boolean value"
                  KBounded True  n -> KBounded False n

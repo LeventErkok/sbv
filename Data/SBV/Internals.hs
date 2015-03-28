@@ -17,7 +17,7 @@ module Data.SBV.Internals (
   -- * Other internal structures useful for low-level programming
   , SBV(..), slet, CW(..), Kind(..), CWVal(..), AlgReal(..), Quantifier(..), mkConstCW, genVar, genVar_
   , liftQRem, liftDMod, symbolicMergeWithKind
-  , cache, sbvToSW, newExpr, normCW, SBVExpr(..), Op(..), mkSymSBVWithRandom
+  , cache, sbvToSW, newExpr, normCW, SBVExpr(..), Op(..)
   , SBVType(..), newUninterpreted, forceSWArg
   -- * Operations useful for instantiating SBV type classes
   , genLiteral, genFromCW, genMkSymVar, checkAndConvert, genParse
@@ -28,7 +28,7 @@ module Data.SBV.Internals (
   ) where
 
 import Data.SBV.BitVectors.Data       (Result, SBVRunMode(..), runSymbolic, runSymbolic', SBV(..), CW(..), Kind(..), CWVal(..), AlgReal(..), Quantifier(..), mkConstCW)
-import Data.SBV.BitVectors.Data       (cache, sbvToSW, newExpr, normCW, SBVExpr(..), Op(..), mkSymSBVWithRandom, SBVType(..), newUninterpreted, forceSWArg)
+import Data.SBV.BitVectors.Data       (cache, sbvToSW, newExpr, normCW, SBVExpr(..), Op(..), SBVType(..), newUninterpreted, forceSWArg)
 import Data.SBV.BitVectors.Model      (genVar, genVar_, slet, liftQRem, liftDMod, symbolicMergeWithKind, genLiteral, genFromCW, genMkSymVar)
 import Data.SBV.BitVectors.Splittable (checkAndConvert)
 import Data.SBV.Compilers.C           (compileToC', compileToCLib')

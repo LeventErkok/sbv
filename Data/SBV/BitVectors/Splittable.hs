@@ -20,6 +20,7 @@ module Data.SBV.BitVectors.Splittable (Splittable(..), FromBits(..), checkAndCon
 import Data.Bits (Bits(..))
 import Data.Word (Word8, Word16, Word32, Word64)
 
+import Data.SBV.BitVectors.Operations
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
 
@@ -61,56 +62,20 @@ instance Splittable Word16 Word8 where
   (#)   = genJoin  8
   extend b = 0 # b
 
-cwSplit :: (SymWord a, Num a) => CW -> (SBV a, SBV a)
-cwSplit z@(CW _ (CWInteger v)) = (literal x, literal y)
-  where (x, y) = genSplit (intSizeOf z `div` 2) v
-cwSplit z = error $ "SBV.cwSplit: Unsupported CW value: " ++ show z
-
-cwJoin :: (SymWord a, Num a) => CW -> CW -> SBV a
-cwJoin x@(CW _ (CWInteger a)) (CW _ (CWInteger b)) = literal (genJoin (intSizeOf x) a b)
-cwJoin x y = error $ "SBV.cwJoin: Unsupported arguments: " ++ show (x, y)
-
 -- symbolic instances
 instance Splittable SWord64 SWord32 where
-  split (SBV _ (Left z)) = cwSplit z
-  split z                = (SBV (KBounded False 32) (Right (cache x)), SBV (KBounded False 32) (Right (cache y)))
-    where x st = do zsw <- sbvToSW st z
-                    newExpr st (KBounded False 32) (SBVApp (Extract 63 32) [zsw])
-          y st = do zsw <- sbvToSW st z
-                    newExpr st (KBounded False 32) (SBVApp (Extract 31  0) [zsw])
-  (SBV _ (Left a)) # (SBV _ (Left b)) = cwJoin a b
-  a # b = SBV (KBounded False 64) (Right (cache c))
-    where c st = do asw <- sbvToSW st a
-                    bsw <- sbvToSW st b
-                    newExpr st (KBounded False 64) (SBVApp Join [asw, bsw])
+  split (SBV x) = (SBV (svExtract 63 32 x), SBV (svExtract 31 0 x))
+  SBV a # SBV b = SBV (svJoin a b)
   extend b = 0 # b
 
 instance Splittable SWord32 SWord16 where
-  split (SBV _ (Left z)) = cwSplit z
-  split z                = (SBV (KBounded False 16) (Right (cache x)), SBV (KBounded False 16) (Right (cache y)))
-    where x st = do zsw <- sbvToSW st z
-                    newExpr st (KBounded False 16) (SBVApp (Extract 31 16) [zsw])
-          y st = do zsw <- sbvToSW st z
-                    newExpr st (KBounded False 16) (SBVApp (Extract 15  0) [zsw])
-  (SBV _ (Left a)) # (SBV _ (Left b)) = cwJoin a b
-  a # b = SBV (KBounded False 32) (Right (cache c))
-    where c st = do asw <- sbvToSW st a
-                    bsw <- sbvToSW st b
-                    newExpr st (KBounded False 32) (SBVApp Join [asw, bsw])
+  split (SBV x) = (SBV (svExtract 31 16 x), SBV (svExtract 15 0 x))
+  SBV a # SBV b = SBV (svJoin a b)
   extend b = 0 # b
 
 instance Splittable SWord16 SWord8 where
-  split (SBV _ (Left z)) = cwSplit z
-  split z                = (SBV (KBounded False 8) (Right (cache x)), SBV (KBounded False 8) (Right (cache y)))
-    where x st = do zsw <- sbvToSW st z
-                    newExpr st (KBounded False 8) (SBVApp (Extract 15 8) [zsw])
-          y st = do zsw <- sbvToSW st z
-                    newExpr st (KBounded False 8) (SBVApp (Extract  7 0) [zsw])
-  (SBV _ (Left a)) # (SBV _ (Left b)) = cwJoin a b
-  a # b = SBV (KBounded False 16) (Right (cache c))
-    where c st = do asw <- sbvToSW st a
-                    bsw <- sbvToSW st b
-                    newExpr st (KBounded False 16) (SBVApp Join [asw, bsw])
+  split (SBV x) = (SBV (svExtract 15 8 x), SBV (svExtract 7 0 x))
+  SBV a # SBV b = SBV (svJoin a b)
   extend b = 0 # b
 
 -- | Unblasting a value from symbolic-bits. The bits can be given little-endian
