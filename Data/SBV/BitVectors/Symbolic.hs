@@ -16,7 +16,6 @@
 {-# LANGUAGE    ScopedTypeVariables        #-}
 {-# LANGUAGE    FlexibleInstances          #-}
 {-# LANGUAGE    PatternGuards              #-}
-{-# LANGUAGE    StandaloneDeriving         #-}
 {-# LANGUAGE    DefaultSignatures          #-}
 {-# LANGUAGE    NamedFieldPuns             #-}
 {-# LANGUAGE    DeriveDataTypeable         #-}
@@ -57,13 +56,13 @@ module Data.SBV.BitVectors.Symbolic
 
 import Control.DeepSeq      (NFData(..))
 import Control.Applicative  (Applicative)
-import Control.Monad        (when)
+import Control.Monad        (when, unless)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import Control.Monad.Trans  (MonadIO, liftIO)
 import Data.Char            (isAlpha, isAlphaNum)
 import Data.IORef           (IORef, newIORef, modifyIORef, readIORef, writeIORef)
 import Data.List            (intercalate, sortBy)
-import Data.Maybe           (isJust, fromJust)
+import Data.Maybe           (isJust, fromJust, fromMaybe)
 
 import qualified Data.Generics as G    (Data(..))
 import qualified Data.Typeable as T    (Typeable)
@@ -210,7 +209,7 @@ instance Show SBVExpr where
   show (SBVApp op  args)      = unwords (show op : map show args)
 
 -- | A program is a sequence of assignments
-newtype SBVPgm = SBVPgm {pgmAssignments :: (S.Seq (SW, SBVExpr))}
+newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SW, SBVExpr)}
 
 -- | 'NamedSymVar' pairs symbolic words and user given/automatically generated names
 type NamedSymVar = (SW, String)
@@ -449,11 +448,9 @@ newUninterpreted st nm t mbCode
   | True = do
         uiMap <- readIORef (rUIMap st)
         case nm `Map.lookup` uiMap of
-          Just t' -> if t /= t'
-                     then error $  "Uninterpreted constant " ++ show nm ++ " used at incompatible types\n"
-                                ++ "      Current type      : " ++ show t ++ "\n"
-                                ++ "      Previously used at: " ++ show t'
-                     else return ()
+          Just t' -> when (t /= t') $ error $  "Uninterpreted constant " ++ show nm ++ " used at incompatible types\n"
+                                            ++ "      Current type      : " ++ show t ++ "\n"
+                                            ++ "      Previously used at: " ++ show t'
           Nothing -> do modifyIORef (rUIMap st) (Map.insert nm t)
                         when (isJust mbCode) $ modifyIORef (rCgMap st) (Map.insert nm (fromJust mbCode))
   where validChar x = isAlphaNum x || x `elem` "_"
@@ -543,10 +540,10 @@ svMkSymVar mbQ k mbNm = do
                                     Nothing -> error $ "Cannot quick-check in the presence of existential variables, type: " ++ show k
                                     Just nm -> error $ "Cannot quick-check in the presence of existential variable " ++ nm ++ " :: " ++ show k
           Concrete _           -> do cw <- liftIO (randomCW k)
-                                     liftIO $ modifyIORef (rCInfo st) ((maybe "_" id mbNm, cw):)
+                                     liftIO $ modifyIORef (rCInfo st) ((fromMaybe "_" mbNm, cw):)
                                      return (SVal k (Left cw))
           _          -> do (sw, internalName) <- liftIO $ newSW st k
-                           let nm = maybe internalName id mbNm
+                           let nm = fromMaybe internalName mbNm
                            liftIO $ modifyIORef (rinps st) ((q, (sw, nm)):)
                            return $ SVal k $ Right $ cache (const (return sw))
 
@@ -563,7 +560,7 @@ mkSValUserSort k mbQ mbNm = do
                   (Nothing, CodeGen)          -> error $ "SBV: Uninterpreted sort " ++ sortName ++ " can not be used in code-generation mode."
         ctr <- liftIO $ incCtr st
         let sw = SW k (NodeId ctr)
-            nm = maybe ('s':show ctr) id mbNm
+            nm = fromMaybe ('s':show ctr) mbNm
         liftIO $ modifyIORef (rinps st) ((q, (sw, nm)):)
         return $ SVal k $ Right $ cache (const (return sw))
 
@@ -656,8 +653,8 @@ imposeConstraint :: SVal -> Symbolic ()
 imposeConstraint c = do st <- ask
                         case runMode st of
                           CodeGen -> error "SBV: constraints are not allowed in code-generation"
-                          _       -> do liftIO $ do v <- svToSW st c
-                                                    modifyIORef (rConstraints st) (v:)
+                          _       -> liftIO $ do v <- svToSW st c
+                                                 modifyIORef (rConstraints st) (v:)
 
 -- | Add a constraint with a given probability
 addSValConstraint :: Maybe Double -> SVal -> SVal -> Symbolic ()
@@ -667,7 +664,7 @@ addSValConstraint (Just t) c c'
   = error $ "SBV: pConstrain: Invalid probability threshold: " ++ show t ++ ", must be in [0, 1]."
   | True
   = do st <- ask
-       when (not (isConcreteMode (runMode st))) $ error "SBV: pConstrain only allowed in 'genTest' or 'quickCheck' contexts."
+       unless (isConcreteMode (runMode st)) $ error "SBV: pConstrain only allowed in 'genTest' or 'quickCheck' contexts."
        case () of
          () | t > 0 && t < 1 -> liftIO (throwDice st) >>= \d -> imposeConstraint (if d <= t then c else c')
             | t > 0          -> imposeConstraint c

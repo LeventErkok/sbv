@@ -1607,5 +1607,5 @@ slet x f = SBV $ SVal k $ Right $ cache r
 __unused :: a
 __unused = error "__unused" (isVacuous :: SBool -> IO Bool) (prove :: SBool -> IO ThmResult)
 
-{-# ANN module ("HLint: ignore Eta reduce" :: String)        #-}
-{-# ANN module ("HLint: ignore Reduce duplication" :: String)#-}
+{-# ANN module   ("HLint: ignore Reduce duplication" :: String)#-}
+{-# ANN module   ("HLint: ignore Eta reduce" :: String)        #-}

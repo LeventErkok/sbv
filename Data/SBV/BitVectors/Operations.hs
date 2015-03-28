@@ -214,8 +214,8 @@ svShl x i
   | i < 0   = svShr x (-i)
   | i == 0  = x
   | True    = liftSym1 (mkSymOp1 (Shl i))
-              (noRealUnary "shiftL") (`shiftL` i)
-              (noFloatUnary "shiftL") (noDoubleUnary "shiftL") x
+                       (noRealUnary "shiftL") (`shiftL` i)
+                       (noFloatUnary "shiftL") (noDoubleUnary "shiftL") x
 
 -- | Shift right by a constant amount. Translates to either "bvlshr"
 -- (logical shift right) or "bvashr" (arithmetic shift right) in
@@ -225,8 +225,8 @@ svShr x i
   | i < 0   = svShl x (-i)
   | i == 0  = x
   | True    = liftSym1 (mkSymOp1 (Shr i))
-              (noRealUnary "shiftR") (`shiftR` i)
-              (noFloatUnary "shiftR") (noDoubleUnary "shiftR") x
+                       (noRealUnary "shiftR") (`shiftR` i)
+                       (noFloatUnary "shiftR") (noDoubleUnary "shiftR") x
 
 svRol :: SVal -> Int -> SVal
 svRol x i
@@ -234,8 +234,8 @@ svRol x i
   | i == 0  = x
   | True    = case svKind x of
                 KBounded _ sz -> liftSym1 (mkSymOp1 (Rol (i `mod` sz)))
-                                 (noRealUnary "rotateL") (rot True sz i)
-                                 (noFloatUnary "rotateL") (noDoubleUnary "rotateL") x
+                                          (noRealUnary "rotateL") (rot True sz i)
+                                          (noFloatUnary "rotateL") (noDoubleUnary "rotateL") x
                 _ -> svShl x i   -- for unbounded Integers, rotateL is the same as shiftL in Haskell
 
 svRor :: SVal -> Int -> SVal
@@ -244,8 +244,8 @@ svRor x i
   | i == 0  = x
   | True    = case svKind x of
                 KBounded _ sz -> liftSym1 (mkSymOp1 (Ror (i `mod` sz)))
-                                 (noRealUnary "rotateR") (rot False sz i)
-                                 (noFloatUnary "rotateR") (noDoubleUnary "rotateR") x
+                                          (noRealUnary "rotateR") (rot False sz i)
+                                          (noFloatUnary "rotateR") (noDoubleUnary "rotateR") x
                 _ -> svShr x i   -- for unbounded integers, rotateR is the same as shiftR in Haskell
 
 -- Since the underlying representation is just Integers, rotations has to be careful on the bit-size
@@ -275,7 +275,7 @@ svJoin x@(SVal (KBounded s i) a) y@(SVal (KBounded _ j) b)
   | i == 0 = y
   | j == 0 = x
   | Left (CW _ (CWInteger m)) <- a, Left (CW _ (CWInteger n)) <- b
-  = SVal k (Left (CW k (CWInteger ((m `shiftL` j .|. n)))))
+  = SVal k (Left (CW k (CWInteger (m `shiftL` j .|. n))))
   | True
   = SVal k (Right (cache z))
   where
@@ -376,8 +376,8 @@ svSymbolicMerge k force t a b
                                 especially if this expression happens to be inside 'f's body itself (i.e., when f is recursive), since it reduces the number of
                                 recursive calls. Clearly, programming with symbolic simulation in mind is another kind of beast alltogether.
                              -}
-                             let sta = st `extendSValPathCondition` (svAnd t)
-                             let stb = st `extendSValPathCondition` (svAnd (svNot t))
+                             let sta = st `extendSValPathCondition` svAnd t
+                             let stb = st `extendSValPathCondition` svAnd (svNot t)
                              swa <- svToSW sta a -- evaluate 'then' branch
                              swb <- svToSW stb b -- evaluate 'else' branch
                              case () of               -- merge:
@@ -608,3 +608,7 @@ noFloatUnary o a = error $ "SBV.Float." ++ o ++ ": Unexpected argument: " ++ sho
 
 noDoubleUnary :: String -> Double -> Double
 noDoubleUnary o a = error $ "SBV.Double." ++ o ++ ": Unexpected argument: " ++ show a
+
+{-# ANN svIte     ("HLint: ignore Eta reduce" :: String)         #-}
+{-# ANN svLazyIte ("HLint: ignore Eta reduce" :: String)         #-}
+{-# ANN module    ("HLint: ignore Reduce duplication" :: String) #-}

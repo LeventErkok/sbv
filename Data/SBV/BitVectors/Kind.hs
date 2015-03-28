@@ -76,4 +76,4 @@ constructUKind a = KUserSort sortName (mbEnumFields, dataType)
                                 Just s  -> Left $ sortName ++ "." ++ show c ++ ": " ++ s
         checkConstr c = case (reads (show c) :: [(a, String)]) of
                           ((_, "") : _)  -> Nothing
-                          _              -> Just $ "not a nullary constructor"
+                          _              -> Just "not a nullary constructor"
