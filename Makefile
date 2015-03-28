@@ -60,7 +60,7 @@ clean:
 docs:
 	@(set -o pipefail; $(CABAL) haddock --haddock-option=--no-warnings --hyperlink-source 2>&1 | $(SIMPLIFY))
 
-release: clean install sdist hlint test docs
+release: clean install sdist hlint docs test
 	@echo "*** SBV is ready for release!"
 
 # use this as follows: make gold TGTS="cgUSB5"
