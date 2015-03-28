@@ -9,7 +9,8 @@
 -- Internal data-structures for the sbv library
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE    ScopedTypeVariables        #-}
+{-# LANGUAGE    ScopedTypeVariables #-}
+{-# OPTIONS_GHC -fno-warn-orphans   #-}
 
 module Data.SBV.BitVectors.Kind
   ( Kind(..)
@@ -19,7 +20,7 @@ module Data.SBV.BitVectors.Kind
 
 import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
 
-import Data.SBV.BitVectors.AlgReals
+import Data.SBV.BitVectors.AlgReals () -- instances only
 
 -- | Kind of symbolic value
 data Kind = KBool
