@@ -467,8 +467,9 @@ runSolver cfg execPath opts script
                                         Just (r, vals) -> -- if the status is unknown, prepare for the possibility of not having a model
                                                           -- TBD: This is rather crude and potentially Z3 specific
                                                           let finalOut = intercalate "\n" (r : vals)
-                                                          in if "unknown" `isPrefixOf` r && "error" `isInfixOf` (out ++ err)
-                                                             then (ExitSuccess, finalOut               , "")
+                                                              notAvail = "model is not available" `isInfixOf` (finalOut ++ out ++ err)
+                                                          in if "unknown" `isPrefixOf` r && notAvail
+                                                             then (ExitSuccess, "unknown"              , "")
                                                              else (ex,          finalOut ++ "\n" ++ out, err)
                 return (send, ask, cleanUp, pid)
       let executeSolver = do mapM_ send (lines (scriptBody script))
