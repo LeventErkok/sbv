@@ -267,8 +267,8 @@ genFloats = bTests ++ uTests
                      , ("isNaNFP",          isNaNFP,           isNaN)
                      , ("isNegativeFP",     isNegativeFP,      \x -> x < 0 || (x == 0 && (1 / x) < 0))
                      , ("isPositiveFP",     isPositiveFP,      \x -> x > 0 || (x == 0 && (1 / x) > 0))
-                     , ("isNegativeZeroFP", isNegativeZeroFP,  \x -> x == 0 && (x < 0 || (x == 0 && (1 / x) < 0)))
-                     , ("isPositiveZeroFP", isPositiveZeroFP,  \x -> x == 0 && (x > 0 || (x == 0 && (1 / x) > 0)))
+                     , ("isNegativeZeroFP", isNegativeZeroFP,  isNegativeZero)
+                     , ("isPositiveZeroFP", isPositiveZeroFP,  \x -> x == 0 && not (isNegativeZero x))
                      , ("isPointFP",        isPointFP,         \x -> not (isNaN x || isInfinite x))
                      ]
             where isNormalized x = not (isDenormalized x || isInfinite x || isNaN x)
