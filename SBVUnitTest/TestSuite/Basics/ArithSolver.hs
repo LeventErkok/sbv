@@ -221,7 +221,7 @@ genIEEE754 :: (RealFloat a, Show a, SymWord a, Ord a, Floating a) => String -> [
 genIEEE754 origin vs = map tst1 uns ++ map tst2 bins ++ map tst1 preds
   where uns =     [("abs",    show x,         mkThm1        abs      x   (abs x))    | x <- vs]
                ++ [("negate", show x,         mkThm1        negate   x   (negate x)) | x <- vs]
-               ++ [("signum", show x,         mkThm1        signum   x   (signum x)) | x <- tail vs]  -- TODO: Remove tail, skipping over NaN due to GHC bug
+               ++ [("signum", show x,         mkThm1        signum   x   (signum x)) | x <- vs, not (isNaN x)]  -- TODO: Remove NaNs, skipping over NaN due to GHC bug. GitHub Issue #101.
         bins =    [("+",      show x, show y, mkThm2        (+)      x y (x +  y))   | x <- vs, y <- vs        ]
                ++ [("-",      show x, show y, mkThm2        (-)      x y (x -  y))   | x <- vs, y <- vs        ]
                ++ [("*",      show x, show y, mkThm2        (*)      x y (x *  y))   | x <- vs, y <- vs        ]
