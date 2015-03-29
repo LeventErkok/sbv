@@ -28,16 +28,16 @@ import Data.SBV
 --
 -- >>> prove assocPlus
 -- Falsifiable. Counter-example:
---   s0 = -7.888609e-31 :: SFloat
---   s1 = 3.944307e-31 :: SFloat
---   s2 = NaN :: SFloat
+--   s0 = -9.62965e-35 :: SFloat
+--   s1 = Infinity :: SFloat
+--   s2 = -Infinity :: SFloat
 --
 -- Indeed:
 --
--- >>> let i = 0/0 :: Float
--- >>> ((-7.888609e-31 + 3.944307e-31) + i) :: Float
+-- >>> let i = 1/0 :: Float
+-- >>> (-9.62965e-35 + (i + (-i)))
 -- NaN
--- >>> (-7.888609e-31 + (3.944307e-31 + i)) :: Float
+-- >>> ((-9.62965e-35 + i) + (-i))
 -- NaN
 --
 -- But keep in mind that @NaN@ does not equal itself in the floating point world! We have:
@@ -56,18 +56,18 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 --
 -- >>> assocPlusRegular
 -- Falsifiable. Counter-example:
---   x = -1.9414223e-37 :: SFloat
---   y = 1.0652902e-38 :: SFloat
---   z = 8.474605e-37 :: SFloat
+--   x = -1.0491915e7 :: SFloat
+--   y = 1967115.5 :: SFloat
+--   z = 982003.94 :: SFloat
 --
 -- Indeed, we have:
 --
--- >>> ((-1.9414223e-37 + 1.0652902e-38) + 8.474605e-37) :: Float
--- 6.6397113e-37
--- >>> ((-1.9414223e-37) + (1.0652902e-38 + 8.474605e-37)) :: Float
--- 6.6397118e-37
+-- >>> ((-1.0491915e7) + (1967115.5 + 982003.94)) :: Float
+-- -7542795.5
+-- >>> (((-1.0491915e7) + 1967115.5) + 982003.94) :: Float
+-- -7542796.0
 --
--- Note the difference in the last digit by one bit. (Recal: 3 is 0111, while 8 is 1000 in binary!)
+-- Note the significant difference between two additions!
 assocPlusRegular :: IO ThmResult
 assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
                               let lhs = x+(y+z)
@@ -87,17 +87,17 @@ assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
 --
 -- >>> nonZeroAddition
 -- Falsifiable. Counter-example:
---   a = 1.5046344e-36 :: SFloat
---   b = -6.6e-44 :: SFloat
+--   a = -2.0 :: SFloat
+--   b = -3.0e-45 :: SFloat
 --
 -- Indeed, we have:
 --
--- >>> 1.5046344e-36 + (-6.6e-44) == (1.5046344e-36 :: Float)
+-- >>> (-2.0) + (-3.0e-45) == (-2.0 :: Float)
 -- True
 --
 -- But:
 --
--- >>> -6.6e-44 == (0::Float)
+-- >>> -3.0e-45 == (0::Float)
 -- False
 --
 nonZeroAddition :: IO ThmResult
@@ -118,11 +118,11 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   a = -8.988465741280883e307 :: SDouble
+--   a = -2.0445642768532407e154 :: SDouble
 --
 -- Indeed, we have:
 --
--- >>> let a = -8.988465741280883e307 :: Double
+-- >>> let a = -2.0445642768532407e154 :: Double
 -- >>> a * (1/a)
 -- 0.9999999999999999
 multInverse :: IO ThmResult
@@ -191,7 +191,11 @@ multInverse = prove $ do a <- sDouble "a"
 -- Floating point representation and semantics is indeed a thorny subject, <https://ece.uwaterloo.ca/~dwharder/NumericalAnalysis/02Numerics/Double/paper.pdf> happens to be an excellent guide, however.
 roundingAdd :: IO SatResult
 roundingAdd = sat $ do m :: SRoundingMode <- free "rm"
+                       constrain $ m ./= literal RoundNearestTiesToEven
                        x <- sFloat "x"
                        y <- sFloat "y"
-                       constrain $ m ./= literal RoundNearestTiesToEven
-                       return $ fpAdd m x y ./= x + y
+                       let lhs = fpAdd m x y
+                       let rhs = x + y
+                       constrain $ isPointFP lhs
+                       constrain $ isPointFP rhs
+                       return $ lhs ./= rhs
