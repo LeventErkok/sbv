@@ -125,7 +125,8 @@ module Data.SBV (
   , SInteger
   -- *** IEEE-floating point numbers
   -- $floatingPoints
-  , SFloat, SDouble, RoundingFloat(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity, fusedMA, isSNaN, isFPPoint
+  , SFloat, SDouble, RoundingFloat(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity, fusedMA
+  , isNormalFP, isSubnormalFP, isZeroFP, isInfiniteFP, isNaNFP, isNegativeFP, isPositiveFP, isNegativeZeroFP, isPositiveZeroFP, isPointFP
   -- *** Signed algebraic reals
   -- $algReals
   , SReal, AlgReal, toSReal
@@ -310,20 +311,45 @@ import Data.Word
 sbvCurrentSolver :: SMTConfig
 sbvCurrentSolver = z3
 
--- | Note that the floating point value NaN does not compare equal to itself,
--- so we need a special recognizer for that. Haskell provides the isNaN predicate
--- with the `RealFrac` class, which unfortunately is not currently implementable for
--- symbolic cases. (Requires trigonometric functions etc.) Thus, we provide this
--- recognizer separately. Note that the definition simply tests equality against
--- itself, which fails for NaN. Who said equality for floating point was reflexive?
-isSNaN :: (Floating a, SymWord a) => SBV a -> SBool
-isSNaN x = x ./= x
+-- | Is the floating-point number a normal value. (i.e., not denormalized.)
+isNormalFP :: (RealFloat a, SymWord a) => SBV a -> SBool
+isNormalFP = liftFPPredicate "fp.isNormal" (not . isDenormalized)
 
--- | We call a FP number FPPoint if it is neither NaN, nor +/- infinity.
-isFPPoint :: (Floating a, SymWord a) => SBV a -> SBool
-isFPPoint x =     x .== x           -- gets rid of NaN's
-              &&& x .< sInfinity    -- gets rid of +inf
-              &&& x .> -sInfinity   -- gets rid of -inf
+-- | Is the floating-point number a subnormal value. (Also known as denormal.)
+isSubnormalFP :: (RealFloat a, SymWord a) => SBV a -> SBool
+isSubnormalFP = liftFPPredicate "fp.isSubnormal" isDenormalized
+
+-- | Is the floating-point number 0? (Note that both +0 and -0 will satisfy this predicate.)
+isZeroFP :: (Floating a, SymWord a) => SBV a -> SBool
+isZeroFP = liftFPPredicate "fp.isZero" (== 0)
+
+-- | Is the floating-point number infinity? (Note that both +oo and -oo will satisfy this predicate.)
+isInfiniteFP :: (RealFloat a, SymWord a) => SBV a -> SBool
+isInfiniteFP = liftFPPredicate "fp.isInfinite" isInfinite
+
+-- | Is the floating-point number a NaN value?
+isNaNFP :: (RealFloat a, SymWord a) => SBV a -> SBool
+isNaNFP = liftFPPredicate "fp.isNaN" isNaN
+
+-- | Is the floating-point number negative? Note that -0 satisfies this predicate but +0 does not.
+isNegativeFP :: (Floating a, SymWord a) => SBV a -> SBool 
+isNegativeFP = liftFPPredicate "fp.isNegative" (\x -> x < 0 || (x == 0 && (1 / x) < 0))
+
+-- | Is the floating-point number positive? Note that +0 satisfies this predicate but -0 does not.
+isPositiveFP :: (Floating a, SymWord a) => SBV a -> SBool
+isPositiveFP = liftFPPredicate "fp.isPositive" (\x -> x > 0 || (x == 0 && (1 / x) > 0))
+
+-- | Is the floating point number -0?
+isNegativeZeroFP :: (Floating a, SymWord a) => SBV a -> SBool
+isNegativeZeroFP x = isZeroFP x &&& isNegativeFP x
+
+-- | Is the floating point number +0?
+isPositiveZeroFP :: (Floating a, SymWord a) => SBV a -> SBool
+isPositiveZeroFP x = isZeroFP x &&& isPositiveFP x
+
+-- | Is the floating-point number a regular floating point, i.e., not NaN, nor +oo, nor -oo. Normals or denormals are allowed.
+isPointFP :: (RealFloat a, SymWord a) => SBV a -> SBool
+isPointFP x = bnot (isNaNFP x ||| isInfiniteFP x)
 
 -- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
 -- problems with constraints, like the following:

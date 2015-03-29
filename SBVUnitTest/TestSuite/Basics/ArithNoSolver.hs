@@ -221,28 +221,31 @@ genReals = map mkTest $
         mkTest (nm, (x, y, s)) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
 
 genFloats :: [Test]
-genFloats = map mkTest $
-        map ("+",)  (zipWith pair  [(show x, show y, x +  y) | x <- fs, y <- fs        ] [x +   y | x <- sfs,  y <- sfs                       ])
-     ++ map ("-",)  (zipWith pair  [(show x, show y, x -  y) | x <- fs, y <- fs        ] [x -   y | x <- sfs,  y <- sfs                       ])
-     ++ map ("*",)  (zipWith pair  [(show x, show y, x *  y) | x <- fs, y <- fs        ] [x *   y | x <- sfs,  y <- sfs                       ])
-     ++ map ("<",)  (zipWith pairB [(     x,      y, x <  y) | x <- fs, y <- fs        ] [x .<  y | x <- sfs,  y <- sfs                       ])
-     ++ map ("<=",) (zipWith pairB [(     x,      y, x <= y) | x <- fs, y <- fs        ] [x .<= y | x <- sfs,  y <- sfs                       ])
-     ++ map (">",)  (zipWith pairB [(     x,      y, x >  y) | x <- fs, y <- fs        ] [x .>  y | x <- sfs,  y <- sfs                       ])
-     ++ map (">=",) (zipWith pairB [(     x,      y, x >= y) | x <- fs, y <- fs        ] [x .>= y | x <- sfs,  y <- sfs                       ])
-     ++ map ("==",) (zipWith pairB [(     x,      y, x == y) | x <- fs, y <- fs        ] [x .== y | x <- sfs,  y <- sfs                       ])
-     ++ map ("/=",) (zipWith pairN [(     x,      y, x /= y) | x <- fs, y <- fs        ] [x ./= y | x <- sfs,  y <- sfs                       ])
-     ++ map ("/",)  (zipWith pair  [(show x, show y, x /  y) | x <- fs, y <- fs, y /= 0] [x / y   | x <- sfs,  y <- sfs, unliteral y /= Just 0])
-     ++ map ("+",)  (zipWith pair  [(show x, show y, x +  y) | x <- ds, y <- ds        ] [x +   y | x <- sds,  y <- sds                       ])
-     ++ map ("-",)  (zipWith pair  [(show x, show y, x -  y) | x <- ds, y <- ds        ] [x -   y | x <- sds,  y <- sds                       ])
-     ++ map ("*",)  (zipWith pair  [(show x, show y, x *  y) | x <- ds, y <- ds        ] [x *   y | x <- sds,  y <- sds                       ])
-     ++ map ("<",)  (zipWith pairB [(     x,      y, x <  y) | x <- ds, y <- ds        ] [x .<  y | x <- sds,  y <- sds                       ])
-     ++ map ("<=",) (zipWith pairB [(     x,      y, x <= y) | x <- ds, y <- ds        ] [x .<= y | x <- sds,  y <- sds                       ])
-     ++ map (">",)  (zipWith pairB [(     x,      y, x >  y) | x <- ds, y <- ds        ] [x .>  y | x <- sds,  y <- sds                       ])
-     ++ map (">=",) (zipWith pairB [(     x,      y, x >= y) | x <- ds, y <- ds        ] [x .>= y | x <- sds,  y <- sds                       ])
-     ++ map ("==",) (zipWith pairB [(     x,      y, x == y) | x <- ds, y <- ds        ] [x .== y | x <- sds,  y <- sds                       ])
-     ++ map ("/=",) (zipWith pairN [(     x,      y, x /= y) | x <- ds, y <- ds        ] [x ./= y | x <- sds,  y <- sds                       ])
-     ++ map ("/",)  (zipWith pair  [(show x, show y, x /  y) | x <- ds, y <- ds, y /= 0] [x / y   | x <- sds,  y <- sds, unliteral y /= Just 0])
-  where pair (x, y, a) b = (x, y, same a (unliteral b))
+genFloats = bTests ++ uTests
+  where bTests = map mkTest2 $
+                   map ("+",)  (zipWith pair  [(show x, show y, x +  y) | x <- fs, y <- fs        ] [x +   y | x <- sfs,  y <- sfs                       ])
+                ++ map ("-",)  (zipWith pair  [(show x, show y, x -  y) | x <- fs, y <- fs        ] [x -   y | x <- sfs,  y <- sfs                       ])
+                ++ map ("*",)  (zipWith pair  [(show x, show y, x *  y) | x <- fs, y <- fs        ] [x *   y | x <- sfs,  y <- sfs                       ])
+                ++ map ("<",)  (zipWith pairB [(     x,      y, x <  y) | x <- fs, y <- fs        ] [x .<  y | x <- sfs,  y <- sfs                       ])
+                ++ map ("<=",) (zipWith pairB [(     x,      y, x <= y) | x <- fs, y <- fs        ] [x .<= y | x <- sfs,  y <- sfs                       ])
+                ++ map (">",)  (zipWith pairB [(     x,      y, x >  y) | x <- fs, y <- fs        ] [x .>  y | x <- sfs,  y <- sfs                       ])
+                ++ map (">=",) (zipWith pairB [(     x,      y, x >= y) | x <- fs, y <- fs        ] [x .>= y | x <- sfs,  y <- sfs                       ])
+                ++ map ("==",) (zipWith pairB [(     x,      y, x == y) | x <- fs, y <- fs        ] [x .== y | x <- sfs,  y <- sfs                       ])
+                ++ map ("/=",) (zipWith pairN [(     x,      y, x /= y) | x <- fs, y <- fs        ] [x ./= y | x <- sfs,  y <- sfs                       ])
+                ++ map ("/",)  (zipWith pair  [(show x, show y, x /  y) | x <- fs, y <- fs, y /= 0] [x / y   | x <- sfs,  y <- sfs, unliteral y /= Just 0])
+                ++ map ("+",)  (zipWith pair  [(show x, show y, x +  y) | x <- ds, y <- ds        ] [x +   y | x <- sds,  y <- sds                       ])
+                ++ map ("-",)  (zipWith pair  [(show x, show y, x -  y) | x <- ds, y <- ds        ] [x -   y | x <- sds,  y <- sds                       ])
+                ++ map ("*",)  (zipWith pair  [(show x, show y, x *  y) | x <- ds, y <- ds        ] [x *   y | x <- sds,  y <- sds                       ])
+                ++ map ("<",)  (zipWith pairB [(     x,      y, x <  y) | x <- ds, y <- ds        ] [x .<  y | x <- sds,  y <- sds                       ])
+                ++ map ("<=",) (zipWith pairB [(     x,      y, x <= y) | x <- ds, y <- ds        ] [x .<= y | x <- sds,  y <- sds                       ])
+                ++ map (">",)  (zipWith pairB [(     x,      y, x >  y) | x <- ds, y <- ds        ] [x .>  y | x <- sds,  y <- sds                       ])
+                ++ map (">=",) (zipWith pairB [(     x,      y, x >= y) | x <- ds, y <- ds        ] [x .>= y | x <- sds,  y <- sds                       ])
+                ++ map ("==",) (zipWith pairB [(     x,      y, x == y) | x <- ds, y <- ds        ] [x .== y | x <- sds,  y <- sds                       ])
+                ++ map ("/=",) (zipWith pairN [(     x,      y, x /= y) | x <- ds, y <- ds        ] [x ./= y | x <- sds,  y <- sds                       ])
+                ++ map ("/",)  (zipWith pair  [(show x, show y, x /  y) | x <- ds, y <- ds, y /= 0] [x / y   | x <- sds,  y <- sds, unliteral y /= Just 0])
+        uTests = map mkTest1 $  concatMap (checkPred fs sfs) predicates
+                             ++ concatMap (checkPred ds sds) predicates
+        pair (x, y, a) b = (x, y, same a (unliteral b))
         same a (Just b) = (isNaN a &&& isNaN b) || (a == b)
         same _ _        = False
         pairB (x, y, a) b = (show x, show y, checkNaN f x y a (unliteral b)) where f v w = not (v || w)  -- Other comparison: Both should be False
@@ -251,7 +254,23 @@ genFloats = map mkTest $
           | isNaN x || isNaN y = f a b
           | True               = a == b
         checkNaN _ _ _ _ _     = False
-        mkTest (nm, (x, y, s)) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
+        mkTest1 (nm, x, s)      = "arithCF-" ++ nm ++ "." ++ x ~: s `showsAs` "True"
+        mkTest2 (nm, (x, y, s)) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
+        checkPred :: (Show a, RealFloat a, Floating a, SymWord a) => [a] -> [SBV a] -> (String, SBV a -> SBool, a -> Bool) -> [(String, String, Bool)]
+        checkPred xs sxs (n, ps, p) = zipWith (chk n) (map (\x -> (x, p x)) xs) (map ps sxs)
+          where chk nm (x, v) sv = (nm, show x, Just v == unliteral sv)
+        predicates :: (RealFloat a, Floating a, SymWord a) => [(String, SBV a -> SBool, a -> Bool)]
+        predicates = [ ("isNormalFP",       isNormalFP,        not . isDenormalized)
+                     , ("isSubnormalFP",    isSubnormalFP,     isDenormalized)
+                     , ("isZeroFP",         isZeroFP,          (== 0))
+                     , ("isInfiniteFP",     isInfiniteFP,      isInfinite)
+                     , ("isNaNFP",          isNaNFP,           isNaN)
+                     , ("isNegativeFP",     isNegativeFP,      \x -> x < 0 || (x == 0 && (1 / x) < 0))
+                     , ("isPositiveFP",     isPositiveFP,      \x -> x > 0 || (x == 0 && (1 / x) > 0))
+                     , ("isNegativeZeroFP", isNegativeZeroFP,  \x -> x == 0 && (x < 0 || (x == 0 && (1 / x) < 0)))
+                     , ("isPositiveZeroFP", isPositiveZeroFP,  \x -> x == 0 && (x > 0 || (x == 0 && (1 / x) > 0)))
+                     , ("isPointFP",        isPointFP,         \x -> not (isNaN x || isInfinite x))
+                     ]
 
 -- Concrete test data
 xsSigned, xsUnsigned :: (Num a, Enum a, Bounded a) => [a]
@@ -321,15 +340,15 @@ srs :: [SReal]
 srs = map literal rs
 
 fs :: [Float]
-fs = xs ++ [-0.5, 0, 0.5] ++ map (* (-1)) xs
- where xs = [nan, infinity, 0.68302244, 0.5268265, 0.10283524, 5.8336496e-2]
+fs = xs ++ map (* (-1)) xs
+ where xs = [nan, infinity, 0, 0.5, 0.68302244, 0.5268265, 0.10283524, 5.8336496e-2, 1.0e-45]
 
 sfs :: [SFloat]
 sfs = map literal fs
 
 ds :: [Double]
-ds = xs ++ [-0.5, 0, 0.5] ++ map (* (-1)) xs
- where xs = [nan, infinity, 2.516632060108026e-2,0.8601891300751106,7.518897767550192e-2,1.1656043286207285e-2]
+ds = xs ++ map (* (-1)) xs
+ where xs = [nan, infinity, 0, 0.5, 2.516632060108026e-2, 0.8601891300751106, 7.518897767550192e-2, 1.1656043286207285e-2, 1.0e-323]
 
 sds :: [SDouble]
 sds = map literal ds

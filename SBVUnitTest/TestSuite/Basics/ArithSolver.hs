@@ -218,7 +218,7 @@ genDoubles :: [Test]
 genDoubles = genIEEE754 "genDoubles" ds
 
 genIEEE754 :: (RealFloat a, Show a, SymWord a, Ord a, Floating a) => String -> [a] -> [Test]
-genIEEE754 origin vs = map tst1 uns ++ map tst2 bins
+genIEEE754 origin vs = map tst1 uns ++ map tst2 bins ++ map tst1 preds
   where uns =     [("abs",    show x,         mkThm1        abs      x   (abs x))    | x <- vs]
                ++ [("negate", show x,         mkThm1        negate   x   (negate x)) | x <- vs]
                ++ [("signum", show x,         mkThm1        signum   x   (signum x)) | x <- tail vs]  -- TODO: Remove tail, skipping over NaN due to GHC bug
@@ -232,21 +232,29 @@ genIEEE754 origin vs = map tst1 uns ++ map tst2 bins
                ++ [(">=",     show x, show y, mkThm2C False (.>=)    x y (x >= y))   | x <- vs, y <- vs        ]
                ++ [("==",     show x, show y, mkThm2C False (.==)    x y (x == y))   | x <- vs, y <- vs        ]
                ++ [("/=",     show x, show y, mkThm2C True  (./=)    x y (x /= y))   | x <- vs, y <- vs        ]
+        preds =   [(pn,       show x,         mkThmP        ps       x   (pc x))     | (pn, ps, pc) <- predicates, x <- vs]
         tst2 (nm, x, y, t) = origin ++ ".arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
         tst1 (nm, x,    t) = origin ++ ".arithmetic-" ++ nm ++ "." ++ x              ~: assert t
         eqF v val
-          | isNaN val = constrain $ isSNaN v
-          | True      = constrain $ v .== literal val
+          | isNaN          val        = constrain $ isNaNFP v
+          | isNegativeZero val        = constrain $ isNegativeZeroFP v
+          | val == 0                  = constrain $ isPositiveZeroFP v
+          | isInfinite val && val > 0 = constrain $ isInfiniteFP v &&& isPositiveFP v
+          | isInfinite val && val < 0 = constrain $ isInfiniteFP v &&& isNegativeFP v
+          | True                      = constrain $ v .== literal val
+        mkThmP op x r = isThm $ do a <- free "x"
+                                   eqF a x
+                                   return $ literal r .== op a
         mkThm1 op x r = isThm $ do a <- free "x"
                                    eqF a x
                                    return $ if isNaN r
-                                            then isSNaN (op a)
+                                            then isNaNFP (op a)
                                             else literal r .== op a
         mkThm2 op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                      eqF a x
                                      eqF b y
                                      return $ if isNaN r
-                                              then isSNaN (a `op` b)
+                                              then isNaNFP (a `op` b)
                                               else literal r .== a `op` b
         mkThm2C neq op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                           eqF a x
@@ -254,6 +262,18 @@ genIEEE754 origin vs = map tst1 uns ++ map tst2 bins
                                           return $ if isNaN x || isNaN y
                                                    then (if neq then a `op` b else bnot (a `op` b))
                                                    else literal r .== a `op` b
+        predicates :: (RealFloat a, Floating a, SymWord a) => [(String, SBV a -> SBool, a -> Bool)]
+        predicates = [ ("isNormalFP",       isNormalFP,        not . isDenormalized)
+                     , ("isSubnormalFP",    isSubnormalFP,     isDenormalized)
+                     , ("isZeroFP",         isZeroFP,          (== 0))
+                     , ("isInfiniteFP",     isInfiniteFP,      isInfinite)
+                     , ("isNaNFP",          isNaNFP,           isNaN)
+                     , ("isNegativeFP",     isNegativeFP,      \x -> x < 0 || (x == 0 && (1 / x) < 0))
+                     , ("isPositiveFP",     isPositiveFP,      \x -> x > 0 || (x == 0 && (1 / x) > 0))
+                     , ("isNegativeZeroFP", isNegativeZeroFP,  \x -> x == 0 && (x < 0 || (x == 0 && (1 / x) < 0)))
+                     , ("isPositiveZeroFP", isPositiveZeroFP,  \x -> x == 0 && (x > 0 || (x == 0 && (1 / x) > 0)))
+                     , ("isPointFP",        isPointFP,         \x -> not (isNaN x || isInfinite x))
+                     ]
 
 genQRems :: [Test]
 genQRems = map mkTest $  [("divMod",  show x, show y, mkThm2 sDivMod  x y (x `divMod'`  y)) | x <- w8s,  y <- w8s ]
@@ -322,9 +342,12 @@ rs = [fromRational (i % d) | i <- is, d <- dens]
        dens = [5,100,1000000]
 
 -- Admittedly paltry test-cases for float/double
-fs  :: [Float]
-fs = nan : -infinity : infinity : 0 : -0 : [-5.0, -4.1 .. 5] ++ [5]
+fs :: [Float]
+fs = xs ++ map (* (-1)) xs
+ where xs = [nan, infinity, 0, 0.5, 0.68302244, 0.5268265, 0.10283524, 5.8336496e-2, 1.0e-45]
 
-ds  :: [Double]
-ds = nan : -infinity : infinity : 0 : -0 : [-5.0, -4.1 .. 5] ++ [5]
+ds :: [Double]
+ds = xs ++ map (* (-1)) xs
+ where xs = [nan, infinity, 0, 0.5, 2.516632060108026e-2, 0.8601891300751106, 7.518897767550192e-2, 1.1656043286207285e-2, 1.0e-323]
+
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
