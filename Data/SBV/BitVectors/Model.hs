@@ -28,7 +28,7 @@ module Data.SBV.BitVectors.Model (
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
-  , sInt64s, sInteger, sIntegers, sReal, sReals, toSReal, sFloat, sFloats, sDouble, sDoubles, slet
+  , sInt64s, sInteger, sIntegers, sReal, sReals, sIntegerToSReal, sFloat, sFloats, sDouble, sDoubles, slet
   , fusedMA, liftFPPredicate
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCW, genMkSymVar
@@ -294,12 +294,12 @@ sDoubles :: [String] -> Symbolic [SDouble]
 sDoubles = symbolics
 
 -- | Promote an SInteger to an SReal
-toSReal :: SInteger -> SReal
-toSReal x
+sIntegerToSReal :: SInteger -> SReal
+sIntegerToSReal x
   | Just i <- unliteral x = literal $ fromInteger i
   | True                  = SBV (SVal KReal (Right (cache y)))
   where y st = do xsw <- sbvToSW st x
-                  newExpr st KReal (SBVApp (Extract 0 0) [xsw]) -- special encoding!
+                  newExpr st KReal (SBVApp (Uninterpreted "to_real") [xsw])
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.

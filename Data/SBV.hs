@@ -129,7 +129,7 @@ module Data.SBV (
   , isNormalFP, isSubnormalFP, isZeroFP, isInfiniteFP, isNaNFP, isNegativeFP, isPositiveFP, isNegativeZeroFP, isPositiveZeroFP, isPointFP
   -- *** Signed algebraic reals
   -- $algReals
-  , SReal, AlgReal, toSReal
+  , SReal, AlgReal, sIntegerToSReal
   -- ** Creating a symbolic variable
   -- $createSym
   , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger, sReal, sFloat, sDouble
