@@ -260,7 +260,7 @@ genFloats = bTests ++ uTests
         checkPred xs sxs (n, ps, p) = zipWith (chk n) (map (\x -> (x, p x)) xs) (map ps sxs)
           where chk nm (x, v) sv = (nm, show x, Just v == unliteral sv)
         predicates :: (RealFloat a, Floating a, SymWord a) => [(String, SBV a -> SBool, a -> Bool)]
-        predicates = [ ("isNormalFP",       isNormalFP,        not . isDenormalized)
+        predicates = [ ("isNormalFP",       isNormalFP,        isNormalized)
                      , ("isSubnormalFP",    isSubnormalFP,     isDenormalized)
                      , ("isZeroFP",         isZeroFP,          (== 0))
                      , ("isInfiniteFP",     isInfiniteFP,      isInfinite)
@@ -271,6 +271,7 @@ genFloats = bTests ++ uTests
                      , ("isPositiveZeroFP", isPositiveZeroFP,  \x -> x == 0 && (x > 0 || (x == 0 && (1 / x) > 0)))
                      , ("isPointFP",        isPointFP,         \x -> not (isNaN x || isInfinite x))
                      ]
+            where isNormalized x = not (isDenormalized x || isInfinite x || isNaN x)
 
 -- Concrete test data
 xsSigned, xsUnsigned :: (Num a, Enum a, Bounded a) => [a]

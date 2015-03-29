@@ -314,7 +314,8 @@ sbvCurrentSolver = z3
 
 -- | Is the floating-point number a normal value. (i.e., not denormalized.)
 isNormalFP :: (RealFloat a, SymWord a) => SBV a -> SBool
-isNormalFP = liftFPPredicate "fp.isNormal" (not . isDenormalized)
+isNormalFP = liftFPPredicate "fp.isNormal" isNormalized
+  where isNormalized x = not (isDenormalized x || isInfinite x || isNaN x)
 
 -- | Is the floating-point number a subnormal value. (Also known as denormal.)
 isSubnormalFP :: (RealFloat a, SymWord a) => SBV a -> SBool

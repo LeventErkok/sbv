@@ -263,7 +263,7 @@ genIEEE754 origin vs = map tst1 uns ++ map tst2 bins ++ map tst1 preds
                                                    then (if neq then a `op` b else bnot (a `op` b))
                                                    else literal r .== a `op` b
         predicates :: (RealFloat a, Floating a, SymWord a) => [(String, SBV a -> SBool, a -> Bool)]
-        predicates = [ ("isNormalFP",       isNormalFP,        not . isDenormalized)
+        predicates = [ ("isNormalFP",       isNormalFP,        isNormalized)
                      , ("isSubnormalFP",    isSubnormalFP,     isDenormalized)
                      , ("isZeroFP",         isZeroFP,          (== 0))
                      , ("isInfiniteFP",     isInfiniteFP,      isInfinite)
@@ -274,6 +274,7 @@ genIEEE754 origin vs = map tst1 uns ++ map tst2 bins ++ map tst1 preds
                      , ("isPositiveZeroFP", isPositiveZeroFP,  \x -> x == 0 && (x > 0 || (x == 0 && (1 / x) > 0)))
                      , ("isPointFP",        isPointFP,         \x -> not (isNaN x || isInfinite x))
                      ]
+           where isNormalized x = not (isDenormalized x || isInfinite x || isNaN x)
 
 genQRems :: [Test]
 genQRems = map mkTest $  [("divMod",  show x, show y, mkThm2 sDivMod  x y (x `divMod'`  y)) | x <- w8s,  y <- w8s ]
