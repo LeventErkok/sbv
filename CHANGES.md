@@ -17,7 +17,13 @@
     toolset, but other developers building on top of SBV can find it useful
     as well. NB: The "strongly-typed" aspect of SBV is still the main way
     end-users should interact with SBV and nothing changed in that respect!
-  
+
+  * Add symbolic variants of rounding-modes for convenience
+
+  * Rename toSReal to sIntegerToSReal, which captures the intent more clearly
+
+  * Introduce FP conversion functions: fpToSReal, sRealToSFloat, and sRealToSDouble
+
   * Rework floating point classifiers. Remove isSNaN and isFPPoint (both renamed),
     and add the following new recognizers:
 

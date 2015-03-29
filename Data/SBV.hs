@@ -126,10 +126,11 @@ module Data.SBV (
   -- *** IEEE-floating point numbers
   -- $floatingPoints
   , SFloat, SDouble, RoundingFloat(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity, fusedMA
+  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
   , isNormalFP, isSubnormalFP, isZeroFP, isInfiniteFP, isNaNFP, isNegativeFP, isPositiveFP, isNegativeZeroFP, isPositiveZeroFP, isPointFP
   -- *** Signed algebraic reals
   -- $algReals
-  , SReal, AlgReal, sIntegerToSReal
+  , SReal, AlgReal, sIntegerToSReal, fpToSReal, sRealToSFloat, sRealToSDouble
   -- ** Creating a symbolic variable
   -- $createSym
   , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger, sReal, sFloat, sDouble

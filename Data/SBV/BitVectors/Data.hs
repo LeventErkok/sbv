@@ -26,6 +26,7 @@ module Data.SBV.BitVectors.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
  , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble
  , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode, smtLibSquareRoot, smtLibFusedMA
+ , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
  , SymWord(..)
  , CW(..), CWVal(..), AlgReal(..), cwSameType, cwIsBit, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
@@ -211,6 +212,26 @@ instance HasKind RoundingMode
 
 -- | The symbolic variant of 'RoundingMode'
 type SRoundingMode = SBV RoundingMode
+
+-- | Symbolic variant of 'RoundNearestTiesToEven'
+sRoundNearestTiesToEven :: SRoundingMode
+sRoundNearestTiesToEven = literal RoundNearestTiesToEven
+
+-- | Symbolic variant of 'RoundNearestTiesToAway'
+sRoundNearestTiesToAway :: SRoundingMode
+sRoundNearestTiesToAway = literal RoundNearestTiesToAway
+
+-- | Symbolic variant of 'RoundNearestPositive'
+sRoundTowardPositive :: SRoundingMode
+sRoundTowardPositive = literal RoundTowardPositive
+
+-- | Symbolic variant of 'RoundTowardNegative'
+sRoundTowardNegative :: SRoundingMode
+sRoundTowardNegative = literal RoundTowardNegative
+
+-- | Symbolic variant of 'RoundTowardZero'
+sRoundTowardZero :: SRoundingMode
+sRoundTowardZero = literal RoundTowardZero
 
 -- Not particularly "desirable", but will do if needed
 instance Show (SBV a) where

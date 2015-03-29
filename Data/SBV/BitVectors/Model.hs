@@ -28,7 +28,8 @@ module Data.SBV.BitVectors.Model (
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
-  , sInt64s, sInteger, sIntegers, sReal, sReals, sIntegerToSReal, sFloat, sFloats, sDouble, sDoubles, slet
+  , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
+  , sIntegerToSReal, fpToSReal, sRealToSFloat, sRealToSDouble
   , fusedMA, liftFPPredicate
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCW, genMkSymVar
@@ -300,6 +301,34 @@ sIntegerToSReal x
   | True                  = SBV (SVal KReal (Right (cache y)))
   where y st = do xsw <- sbvToSW st x
                   newExpr st KReal (SBVApp (Uninterpreted "to_real") [xsw])
+
+-- | Promote an SFloat/SDouble to an SReal
+fpToSReal :: (Real a, Floating a, SymWord a) => SBV a -> SReal
+fpToSReal x
+  | Just i <- unliteral x = literal $ fromRational $ toRational i
+  | True                  = SBV (SVal KReal (Right (cache y)))
+  where y st = do xsw <- sbvToSW st x
+                  newExpr st KReal (SBVApp (Uninterpreted "fp.to_real") [xsw])
+
+-- | Promote (demote really) an SReal to an SFloat.
+--
+-- NB: This function doesn't work on concrete values at the Haskell
+-- level since we have no easy way of honoring the rounding-mode given.
+sRealToSFloat :: SRoundingMode -> SReal -> SFloat
+sRealToSFloat rm x = SBV (SVal KFloat (Right (cache y)))
+  where y st = do swm <- sbvToSW st rm
+                  xsw <- sbvToSW st x
+                  newExpr st KFloat (SBVApp (FPRound "(_ to_fp 8 24)") [swm, xsw])
+
+-- | Promote (demote really) an SReal to an SDouble.
+--
+-- NB: This function doesn't work on concrete values at the Haskell
+-- level since we have no easy way of honoring the rounding-mode given.
+sRealToSDouble :: SRoundingMode -> SReal -> SFloat
+sRealToSDouble rm x = SBV (SVal KFloat (Right (cache y)))
+  where y st = do swm <- sbvToSW st rm
+                  xsw <- sbvToSW st x
+                  newExpr st KDouble (SBVApp (FPRound "(_ to_fp 11 53)") [swm, xsw])
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.
