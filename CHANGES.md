@@ -18,6 +18,20 @@
     as well. NB: The "strongly-typed" aspect of SBV is still the main way
     end-users should interact with SBV and nothing changed in that respect!
   
+  * Rework floating point classifiers. Remove isSNaN and isFPPoint (both renamed),
+    and add the following new recognizers:
+
+       * isNormalFP
+       * isSubnormalFP
+       * isZeroFP
+       * isInfiniteFP
+       * isNaNFP
+       * isNegativeFP
+       * isPositiveFP
+       * isNegativeZeroFP
+       * isPositiveZeroFP
+       * isPointFP
+
 ### Version 4.2, 2015-03-17
 
   * Add exponentiation (.^). Thanks to Daniel Wagner for contributing the code!
