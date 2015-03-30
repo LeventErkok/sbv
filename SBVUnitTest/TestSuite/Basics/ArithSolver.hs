@@ -232,7 +232,11 @@ genIEEE754 origin vs = map tst1 uns ++ map tst2 bins ++ map tst1 preds
                ++ [(">=",     show x, show y, mkThm2C False (.>=)    x y (x >= y))   | x <- vs, y <- vs        ]
                ++ [("==",     show x, show y, mkThm2C False (.==)    x y (x == y))   | x <- vs, y <- vs        ]
                ++ [("/=",     show x, show y, mkThm2C True  (./=)    x y (x /= y))   | x <- vs, y <- vs        ]
-        preds =   [(pn,       show x,         mkThmP        ps       x   (pc x))     | (pn, ps, pc) <- predicates, x <- vs]
+        preds =   [(pn,       show x,         mkThmP        ps       x   (pc x))     | (pn, ps, pc) <- predicates, x <- vs
+                                                                                     -- Work around GHC bug, see issue #138
+                                                                                     -- Remove the following line when fixed.
+                                                                                     , not (pn == "isPositiveZeroFP" && isNegativeZero x)
+                                                                                     ]
         tst2 (nm, x, y, t) = origin ++ ".arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
         tst1 (nm, x,    t) = origin ++ ".arithmetic-" ++ nm ++ "." ++ x              ~: assert t
         eqF v val
