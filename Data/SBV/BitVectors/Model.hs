@@ -661,8 +661,7 @@ instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
 -- | Replacement for 'testBit'. Since 'testBit' requires a 'Bool' to be returned,
 -- we cannot implement it for symbolic words. Index 0 is the least-significant bit.
 sbvTestBit :: (Num a, Bits a, SymWord a) => SBV a -> Int -> SBool
-sbvTestBit x i = (x .&. genLiteral k (bit i :: Integer)) ./= genLiteral k (0::Integer)
-  where k = kindOf x
+sbvTestBit (SBV x) i = SBV (svTestBit x i)
 
 -- | Replacement for 'popCount'. Since 'popCount' returns an 'Int', we cannot implement
 -- it for symbolic words. Here, we return an 'SWord8', which can overflow when used on
