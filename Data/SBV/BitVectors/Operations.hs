@@ -451,15 +451,15 @@ svSelect xsOrig err ind = xs `seq` SVal kElt (Right (cache r))
 --------------------------------------------------------------------------------
 -- Derived operations
 
--- | Convert an SVal from kind Bool to a bitvector of size 1.
+-- | Convert an SVal from kind Bool to an unsigned bitvector of size 1.
 svToWord1 :: SVal -> SVal
 svToWord1 b = svSymbolicMerge k True b (svInteger k 1) (svInteger k 0)
   where k = KBounded False 1
 
--- | Convert an SVal from a bitvector of size 1 to kind Bool.
+-- | Convert an SVal from a bitvector of size 1 (signed or unsigned) to kind Bool.
 svFromWord1 :: SVal -> SVal
-svFromWord1 x = svEqual x (svInteger k 1)
-  where k = KBounded False 1
+svFromWord1 x = svNotEqual x (svInteger k 0)
+  where k = svKind x
 
 -- | Test the value of a bit. Note that we do an extract here
 -- as opposed to masking and checking against zero, as we found
