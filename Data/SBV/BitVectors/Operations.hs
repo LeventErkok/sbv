@@ -465,7 +465,9 @@ svFromWord1 x = svEqual x (svInteger k 1)
 -- as opposed to masking and checking against zero, as we found
 -- extraction to be much faster with large bit-vectors.
 svTestBit :: SVal -> Int -> SVal
-svTestBit x i = svFromWord1 (svExtract i i x)
+svTestBit x i
+  | i < svBitSize x = svFromWord1 (svExtract i i x)
+  | True            = svFalse
 
 -- | Generalization of 'svShl', where the shift-amount is symbolic.
 -- The shift amount must be an unsigned quantity.
