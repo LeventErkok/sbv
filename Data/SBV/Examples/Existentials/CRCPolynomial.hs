@@ -84,9 +84,9 @@ genPoly hd = do res <- allSat $ do
 --  @
 --    Polynomial #1. x^16 + x^2 + x + 1
 --    Polynomial #2. x^16 + x^15 + x^2 + 1
---    Polynomial #3. x^16 + x^15 + x^14 + 1
---    Polynomial #4. x^16 + x^15 + x^2 + x + 1
---    Polynomial #5. x^16 + x^14 + x + 1
+--    Polynomial #3. x^16 + x^15 + x^2 + x + 1
+--    Polynomial #4. x^16 + x^14 + x^10 + 1
+--    Polynomial #5. x^16 + x^14 + x^9 + 1
 --    ...
 --  @
 --
