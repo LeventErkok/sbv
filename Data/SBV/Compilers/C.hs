@@ -155,8 +155,11 @@ showSW cfg consts sw
 pprCWord :: HasKind a => Bool -> a -> Doc
 pprCWord cnst v = (if cnst then text "const" else empty) <+> text (showCType v)
 
+-- | Almost a "show", but map "SWord1" to "SBool"
 showCType :: HasKind a => a -> String
-showCType = show . kindOf
+showCType i = case kindOf i of
+                KBounded False 1 -> "SBool"
+                k                -> show k
 
 -- | The printf specifier for the type
 specifier :: CgConfig -> SW -> Doc
@@ -487,6 +490,8 @@ ppExpr cfg consts (SBVApp op opArgs) = p op (map (showSW cfg consts) opArgs)
                   , (Equal, "=="), (NotEqual, "!="), (LessThan, "<"), (GreaterThan, ">"), (LessEq, "<="), (GreaterEq, ">=")
                   , (And, "&"), (Or, "|"), (XOr, "^")
                   ]
+        uninterpret "to_real" as
+          | [a] <- as            = text "(SReal)" <+> a
         uninterpret "fp.sqrt" as = let f = case kindOf (head opArgs) of
                                                KFloat  -> text "sqrtf"
                                                KDouble -> text "sqrt"
@@ -577,8 +582,10 @@ ppExpr cfg consts (SBVApp op opArgs) = p op (map (showSW cfg consts) opArgs)
                             | True   = (">>", "<<")
         -- TBD: below we only support the values that SBV actually currently generates.
         -- we would need to add new ones if we generate others. (Check instances in Data/SBV/BitVectors/Splittable.hs).
+        extract hi lo i a  -- Isolate the bit-extraction case
+          | hi == lo, KBounded _ sz <- kindOf i, hi < sz, hi >= 0
+          = text "(SBool)" <+> parens (parens (a <+> text ">>" <+> int hi) <+> text "& 1")
         extract hi lo i a = case (hi, lo, kindOf i) of
-                              ( 0,  0, KUnbounded)        -> text "(SReal)" <+> a  -- special SInteger -> SReal conversion
                               (63, 32, KBounded False 64) -> text "(SWord32)" <+> parens (a <+> text ">> 32")
                               (31,  0, KBounded False 64) -> text "(SWord32)" <+> a
                               (31, 16, KBounded False 32) -> text "(SWord16)" <+> parens (a <+> text ">> 16")
