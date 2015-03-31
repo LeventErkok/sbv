@@ -186,7 +186,7 @@ genCasts = map mkTest $  [(show x, mkThm unsignCast signCast x) | x <- w8s ]
                       ++ [(show x, mkFEq unsignCast (fromBitsLE . blastLE) x) | x <- i16s]
                       ++ [(show x, mkFEq unsignCast (fromBitsLE . blastLE) x) | x <- i32s]
                       ++ [(show x, mkFEq unsignCast (fromBitsLE . blastLE) x) | x <- i64s]
-  where mkTest (x, t) = "genCasts.cast-" ++ show x ~: assert t
+  where mkTest (x, t) = "genCasts.cast-" ++ x ~: assert t
         mkThm from to v = isThm $ do a <- free "x"
                                      constrain $ a .== literal v
                                      return $ a .== from (to a)
