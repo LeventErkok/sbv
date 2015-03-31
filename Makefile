@@ -42,8 +42,8 @@ test: install
 	@echo "*** Starting inline tests.."
 	@(set -o pipefail; $(TIME) doctest ${TSTSRCS} 2>&1)
 	@echo "*** Starting external test suite.."
-	# Note we use "-s" here skipping no-solver tests; which are covered in the cabal
-	# test suite right below.
+	@# Note we use "-s" here skipping no-solver tests; which are covered
+	@# in the cabal test suite right below.
 	@$(TIME) dist/build/SBVUnitTests/SBVUnitTests -s
 	@echo "*** Starting internal cabal test suite.."
 	@SBV_Z3=doesnotexist $(TIME) $(CABAL) test
