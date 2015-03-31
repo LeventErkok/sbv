@@ -146,49 +146,28 @@ multInverse = prove $ do a <- sDouble "a"
 -- >>> roundingAdd
 -- Satisfiable. Model:
 --   rm = RoundTowardPositive :: RoundingMode
---   x = 1.7014118e38 :: SFloat
---   y = 1.1754942e-38 :: SFloat
+--   x = 246080.08 :: SFloat
+--   y = 16255.999 :: SFloat
 --
 -- Unfortunately we can't directly validate this result at the Haskell level, as Haskell only supports
 -- 'RoundNearestTiesToEven'. We have:
 --
--- >>> (1.7014118e38 + 1.1754942e-38) :: Float
--- 1.7014118e38
+-- >>> (246080.08 + 16255.999) :: Float
+-- 262336.06
 --
--- Note that result is identical to the first argument. But with a 'RoundTowardPositive', we would
--- get the result @1.701412e38@. While we cannot directly see this from within Haskell, we can
--- use SBV to provide us with that result thusly:
+-- While we cannot directly see the result when the mode is 'RoundTowardPositive' in Haskell, we can use
+-- SBV to provide us with that result thusly:
 --
--- >>> sat $ \x -> x .== fpAdd (literal RoundTowardPositive) (1.7014118e38::SFloat)  (1.1754942e-38::SFloat)
+-- >>> sat $ \z -> z .== fpAdd sRoundTowardPositive 246080.08 (16255.999::SFloat)
 -- Satisfiable. Model:
---   s0 = 1.701412e38 :: SFloat
+--   s0 = 262336.1 :: SFloat
 --
--- We can see why these two resuls are different if we treat these values as arbitrary
--- precision reals, as represented by the 'SReal' type:
---
--- >>> let x = 1.7014118e38 :: SReal
--- >>> let y = 1.1754942e-38 :: SReal
--- >>> x
--- 170141180000000000000000000000000000000.0 :: SReal
--- >>> y
--- 0.000000000000000000000000000000000000011754942 :: SReal
--- >>> x + y
--- 170141180000000000000000000000000000000.000000000000000000000000000000000000011754942 :: SReal
---
--- When we do 'RoundNearestTiesToEven', the entire suffix falls off, as it happens that the infinitely
--- precise result is closer to the value of @x@. But when we use 'RoundTowardPositive', we reach
--- for the next representable number, which happens to be @1.701412e38@. You might wonder why not
--- @1.7014119e38@? Because that number is not precisely representable as a 'Float':
---
--- >>> 1.7014119e38:: Float
--- 1.7014118e38
---
--- But @1.701412e38@ is:
---
--- >>> 1.701412e38 :: Float
--- 1.701412e38
---
--- Floating point representation and semantics is indeed a thorny subject, <https://ece.uwaterloo.ca/~dwharder/NumericalAnalysis/02Numerics/Double/paper.pdf> happens to be an excellent guide, however.
+-- We can see why these two resuls are indeed different. To see why, one would have to convert the
+-- individual numbers to Float's, which would induce rounding-errors, add them up, and round-back;
+-- a tedious operation, but one that might prove illimunating for the interested reader. We'll merely
+-- note that floating point representation and semantics is indeed a thorny
+-- subject, and point to <https://ece.uwaterloo.ca/~dwharder/NumericalAnalysis/02Numerics/Double/paper.pdf> as
+-- an excellent guide.
 roundingAdd :: IO SatResult
 roundingAdd = sat $ do m :: SRoundingMode <- free "rm"
                        constrain $ m ./= literal RoundNearestTiesToEven
