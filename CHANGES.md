@@ -38,6 +38,9 @@
        * isPositiveZeroFP
        * isPointFP
 
+  * Reimplement sbvTestBit, by Brian Huffman. This version is much faster at large
+    word sizes, as it avoids the costly mask generation.
+
 ### Version 4.2, 2015-03-17
 
   * Add exponentiation (.^). Thanks to Daniel Wagner for contributing the code!
