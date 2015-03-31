@@ -152,7 +152,7 @@ genBlasts = map mkTest $
           ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- sw64s]
           ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- si64s]
           ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- si64s]
-  where mkTest (x, r) = "blast-" ++ show x ~: r `showsAs` "True"
+  where mkTest (x, r) = "blast-" ++ x ~: r `showsAs` "True"
 
 genCasts :: [Test]
 genCasts = map mkTest $
