@@ -41,8 +41,29 @@ module Data.SBV.Dynamic
   , svToWord1, svFromWord1, svTestBit
   , svShiftLeft, svShiftRight
   , svRotateLeft, svRotateRight
+  -- ** Code Generation
+  , SBVCodeGen
+  , svCgInput, svCgInputArr
+  , svCgOutput, svCgOutputArr
+  , svCgReturn, svCgReturnArr
+  , cgPerformRTCs, cgSetDriverValues, cgGenerateDriver, cgGenerateMakefile
+  , cgAddPrototype, cgAddDecl, cgAddLDFlags
+  , cgIntegerSize, cgSRealType, CgSRealType(..)
+  , compileToC, compileToCLib
   ) where
 
 import Data.SBV.BitVectors.Kind
 import Data.SBV.BitVectors.Symbolic
 import Data.SBV.BitVectors.Operations
+
+import Data.SBV.Compilers.CodeGen
+  ( SBVCodeGen
+  , svCgInput, svCgInputArr
+  , svCgOutput, svCgOutputArr
+  , svCgReturn, svCgReturnArr
+  , cgPerformRTCs, cgSetDriverValues, cgGenerateDriver, cgGenerateMakefile
+  , cgAddPrototype, cgAddDecl, cgAddLDFlags
+  , cgIntegerSize, cgSRealType, CgSRealType(..)
+  )
+import Data.SBV.Compilers.C
+  ( compileToC, compileToCLib )
