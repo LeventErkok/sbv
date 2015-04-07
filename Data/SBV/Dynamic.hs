@@ -41,6 +41,7 @@ module Data.SBV.Dynamic
   , svToWord1, svFromWord1, svTestBit
   , svShiftLeft, svShiftRight
   , svRotateLeft, svRotateRight
+  , svCompileToSMTLib
   -- ** Code Generation
   , SBVCodeGen
   , svCgInput, svCgInputArr
@@ -67,3 +68,5 @@ import Data.SBV.Compilers.CodeGen
   )
 import Data.SBV.Compilers.C
   ( compileToC, compileToCLib )
+import Data.SBV.Provers.Prover
+  ( svCompileToSMTLib )
