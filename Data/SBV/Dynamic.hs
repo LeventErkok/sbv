@@ -36,6 +36,7 @@ module Data.SBV.Dynamic
   , svUninterpreted
   , svIte, svLazyIte, svSymbolicMerge
   , svSelect
+  , svSign, svUnsign
   -- ** Derived operations
   , svToWord1, svFromWord1, svTestBit
   , svShiftLeft, svShiftRight
