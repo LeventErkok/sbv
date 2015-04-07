@@ -16,9 +16,9 @@
     customor of these changes are the Cryptol language and the associated
     toolset, but other developers building on top of SBV can find it useful
     as well. NB: The "strongly-typed" aspect of SBV is still the main way
-    end-users should interact with SBV and nothing changed in that respect!
+    end-users should interact with SBV, and nothing changed in that respect!
 
-  * Add symbolic variants of rounding-modes for convenience
+  * Add symbolic variants of floating-point rounding-modes for convenience
 
   * Rename toSReal to sIntegerToSReal, which captures the intent more clearly
 
@@ -40,6 +40,8 @@
 
   * Reimplement sbvTestBit, by Brian Huffman. This version is much faster at large
     word sizes, as it avoids the costly mask generation.
+
+  * Minor code changes to suppress warnings with GHC7.10
 
 ### Version 4.2, 2015-03-17
 

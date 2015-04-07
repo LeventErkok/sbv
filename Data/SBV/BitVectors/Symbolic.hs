@@ -19,6 +19,7 @@
 {-# LANGUAGE    DefaultSignatures          #-}
 {-# LANGUAGE    NamedFieldPuns             #-}
 {-# LANGUAGE    DeriveDataTypeable         #-}
+{-# LANGUAGE    CPP                        #-}
 {-# OPTIONS_GHC -fno-warn-orphans          #-}
 
 module Data.SBV.BitVectors.Symbolic
@@ -54,8 +55,11 @@ module Data.SBV.BitVectors.Symbolic
   , SArr(..), readSArr, resetSArr, writeSArr, mergeSArr, newSArr, eqSArr
   ) where
 
-import Control.DeepSeq      (NFData(..))
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative  (Applicative)
+#endif
+
+import Control.DeepSeq      (NFData(..))
 import Control.Monad        (when, unless)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import Control.Monad.Trans  (MonadIO, liftIO)
