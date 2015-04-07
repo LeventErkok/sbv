@@ -10,9 +10,9 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE RankNTypes #-}
-module SBVTest(generateGoldCheck, showsAs, ioShowsAs, mkTestSuite, SBVTestSuite(..), module Test.HUnit, isThm, isSat, numberOfModels) where
+module SBVTest(generateGoldCheck, showsAs, ioShowsAs, mkTestSuite, SBVTestSuite(..), module Test.HUnit, isThm, isSat, free, newArray, numberOfModels) where
 
-import Data.SBV        (Provable(..), isTheorem, isSatisfiable, AllSatResult(..), allSat)
+import Data.SBV        (Provable(..), isTheorem, isSatisfiable, AllSatResult(..), allSat, SymWord(free), SymArray(newArray))
 import Data.Maybe      (fromJust)
 import System.FilePath ((</>))
 import Test.HUnit      (Test(..), Assertion, assert, (~:), test)

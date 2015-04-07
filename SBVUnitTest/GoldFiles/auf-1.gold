@@ -1,7 +1,7 @@
 INPUTS
-  s0 :: SWord32, aliasing "x"
-  s1 :: SWord32, aliasing "y"
-  s2 :: SWord32, aliasing "initVal"
+  s0 :: SWord32, existential, aliasing "x"
+  s1 :: SWord32, existential, aliasing "y"
+  s2 :: SWord32, existential, aliasing "initVal"
 CONSTANTS
   s_2 = False
   s_1 = True

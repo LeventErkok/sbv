@@ -36,8 +36,15 @@ wcommutesGood (a, x) (b, y) m = a ./= b ==> wcommutesBad (a, x) (b, y) m
 wcommutesBad :: (Address, Value) -> (Address, Value) -> Memory -> SBool
 wcommutesBad (a, x) (b, y) m = writeArray (writeArray m a x) b y .== writeArray (writeArray m b y) a x
 
-tests :: IO ()
-tests = do print =<< prove raw
-           print =<< prove waw
-           print =<< prove wcommutesBad
-           print =<< prove wcommutesGood
+tests :: IO ThmResult
+tests = prove $ do
+           a <- free "a"
+           b <- free "b"
+           x <- free "x"
+           y <- free "y"
+           m  <- newArray "m" Nothing
+           let t1 = raw a x m
+               t2 = waw a x y m
+               t3 = wcommutesGood (a, x) (b, y) m
+               t4 = wcommutesBad  (a, x) (b, y) m
+           return $ t1 &&& t2 &&& t3 &&& bnot t4

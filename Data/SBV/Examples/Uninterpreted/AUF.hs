@@ -58,8 +58,13 @@ thm1 x y a initVal = lhs ==> rhs
 --
 -- >>> proveThm1
 -- Q.E.D.
-proveThm1 :: IO ()
-proveThm1 = print =<< prove thm1
+proveThm1 :: IO ThmResult
+proveThm1 = prove $ do
+                x <- free "x"
+                y <- free "y"
+                a <- newArray "a" Nothing
+                i <- free "initVal"
+                return $ thm1 x y a i
 
 --------------------------------------------------------------
 -- * Model using SMT arrays
@@ -80,5 +85,9 @@ thm2 x y a = lhs ==> rhs
 --
 -- >>> proveThm2
 -- Q.E.D.
-proveThm2 :: IO ()
-proveThm2 = print =<< prove thm2
+proveThm2 :: IO ThmResult
+proveThm2 = prove $ do
+                x <- free "x"
+                y <- free "y"
+                a <- newArray "b" Nothing
+                return $ thm2 x y a

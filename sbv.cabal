@@ -142,7 +142,6 @@ Executable SBVUnitTests
                   , SBVTestCollection
                   , Examples.Arrays.Memory
                   , Examples.Basics.BasicTests
-                  , Examples.Basics.Higher
                   , Examples.Basics.Index
                   , Examples.Basics.ProofTests
                   , Examples.Basics.QRem
@@ -158,7 +157,6 @@ Executable SBVUnitTests
                   , TestSuite.Basics.ArithNoSolver
                   , TestSuite.Basics.ArithSolver
                   , TestSuite.Basics.BasicTests
-                  , TestSuite.Basics.Higher
                   , TestSuite.Basics.Index
                   , TestSuite.Basics.IteTest
                   , TestSuite.Basics.ProofTests
