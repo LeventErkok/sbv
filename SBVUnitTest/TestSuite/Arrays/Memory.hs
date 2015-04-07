@@ -26,3 +26,5 @@ testSuite = mkTestSuite $ \_ -> test [
          t2 = free "a" >>= \a -> free "x" >>= \x -> free "y" >>= \y ->                    newArray "m" Nothing >>= return . waw a x y
          t3 = free "a" >>= \a -> free "x" >>= \x -> free "b" >>= \b -> free "y" >>= \y -> newArray "m" Nothing >>= return . wcommutesGood (a, x) (b, y)
          t4 = free "a" >>= \a -> free "x" >>= \x -> free "b" >>= \b -> free "y" >>= \y -> newArray "m" Nothing >>= return . wcommutesBad  (a, x) (b, y)
+
+{-# ANN module ("HLint: ignore Use liftM" :: String) #-}
