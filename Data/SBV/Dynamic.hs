@@ -23,7 +23,8 @@ module Data.SBV.Dynamic
   -- ** Basic constructors
   , svTrue, svFalse, svBool
   , svInteger
-  , svAsBool
+  -- ** Basic destructors
+  , svAsBool, svAsInteger
   -- ** Basic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs
   , svDivide, svQuot, svRem

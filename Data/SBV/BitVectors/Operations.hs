@@ -14,7 +14,8 @@ module Data.SBV.BitVectors.Operations
   -- ** Basic constructors
     svTrue, svFalse, svBool
   , svInteger
-  , svAsBool
+  -- ** Basic destructors
+  , svAsBool, svAsInteger
   -- ** Basic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs
   , svDivide, svQuot, svRem
@@ -62,10 +63,18 @@ svInteger k n = SVal k (Left (mkConstCW k n))
 
 -- TODO: svFloat, svDouble, svReal
 
+--------------------------------------------------------------------------------
+-- Basic destructors
+
 -- | Extract a bool, by properly interpreting the integer stored.
 svAsBool :: SVal -> Maybe Bool
 svAsBool (SVal _ (Left cw)) = Just (cwToBool cw)
 svAsBool _                  = Nothing
+
+-- | Extract an integer from a concrete value.
+svAsInteger :: SVal -> Maybe Integer
+svAsInteger (SVal _ (Left (CW _ (CWInteger n)))) = Just n
+svAsInteger _                                    = Nothing
 
 --------------------------------------------------------------------------------
 -- Basic operations
