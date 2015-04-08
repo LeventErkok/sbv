@@ -530,3 +530,5 @@ internalSATCheck cfg st cond msg = do
        pgm = Result ki tr uic [(EX, n) | (_, n) <- is] cs ts as uis ax asgn cstr [sw]
        cvt = if useSMTLib2 cfg then toSMTLib2 else toSMTLib1
    runProofOn cvt cfg True [] pgm >>= callSolver True msg SatResult cfg
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
