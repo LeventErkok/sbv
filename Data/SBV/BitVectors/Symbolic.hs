@@ -33,7 +33,7 @@ module Data.SBV.BitVectors.Symbolic
   , svBitSize, svSigned
   , svMkSymVar
   , ArrayContext(..), ArrayInfo, arrayUIKind
-  , svToSW, forceSWArg
+  , svToSW, svToSymSW, forceSWArg
   , SBVExpr(..), newExpr
   , Cached, cache, uncache
   , ArrayIndex, uncacheAI
@@ -526,6 +526,11 @@ newExpr st k app = do
 svToSW :: State -> SVal -> IO SW
 svToSW st (SVal _ (Left c))  = newConst st c
 svToSW st (SVal _ (Right f)) = uncache f st
+
+-- | Convert a symbolic value to an SW, inside the Symbolic monad
+svToSymSW :: SVal -> Symbolic SW
+svToSymSW sbv = do st <- ask
+                   liftIO $ svToSW st sbv
 
 -------------------------------------------------------------------------
 -- * Symbolic Computations

@@ -14,7 +14,8 @@ module Data.SBV.BitVectors.Operations
   -- ** Basic constructors
     svTrue, svFalse, svBool
   , svInteger
-  , svAsBool
+  -- ** Basic destructors
+  , svAsBool, svAsInteger
   -- ** Basic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs
   , svDivide, svQuot, svRem
@@ -26,6 +27,7 @@ module Data.SBV.BitVectors.Operations
   , svUninterpreted
   , svIte, svLazyIte, svSymbolicMerge
   , svSelect
+  , svSign, svUnsign
   -- ** Derived operations
   , svToWord1, svFromWord1, svTestBit
   , svShiftLeft, svShiftRight
@@ -62,10 +64,18 @@ svInteger k n = SVal k (Left (mkConstCW k n))
 
 -- TODO: svFloat, svDouble, svReal
 
+--------------------------------------------------------------------------------
+-- Basic destructors
+
 -- | Extract a bool, by properly interpreting the integer stored.
 svAsBool :: SVal -> Maybe Bool
 svAsBool (SVal _ (Left cw)) = Just (cwToBool cw)
 svAsBool _                  = Nothing
+
+-- | Extract an integer from a concrete value.
+svAsInteger :: SVal -> Maybe Integer
+svAsInteger (SVal _ (Left (CW _ (CWInteger n)))) = Just n
+svAsInteger _                                    = Nothing
 
 --------------------------------------------------------------------------------
 -- Basic operations
@@ -447,6 +457,23 @@ svSelect xsOrig err ind = xs `seq` SVal kElt (Right (cache r))
                          -- might be < 0; as the SMTLib translation
                          -- takes care of that automatically
                          newExpr st kElt (SBVApp (LkUp (idx, kInd, kElt, len) swi swe) [])
+
+svChangeSign :: Bool -> SVal -> SVal
+svChangeSign s x
+  | Just n <- svAsInteger x = svInteger k n
+  | True                    = SVal k (Right (cache y))
+  where
+    k = KBounded s (svBitSize x)
+    y st = do xsw <- svToSW st x
+              newExpr st k (SBVApp (Extract (svBitSize x - 1) 0) [xsw])
+
+-- | Convert a symbolic bitvector from unsigned to signed.
+svSign :: SVal -> SVal
+svSign = svChangeSign True
+
+-- | Convert a symbolic bitvector from signed to unsigned.
+svUnsign :: SVal -> SVal
+svUnsign = svChangeSign False
 
 --------------------------------------------------------------------------------
 -- Derived operations
