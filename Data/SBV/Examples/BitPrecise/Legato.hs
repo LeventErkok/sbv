@@ -130,7 +130,7 @@ checkOverflow x y c = s .< x ||| s .< y ||| s' .< s
 --   >>> checkOverflowCorrect
 --   Q.E.D.
 checkOverflowCorrect :: IO ThmResult
-checkOverflowCorrect = checkOverflow === overflow
+checkOverflowCorrect = prove $ \x y c -> checkOverflow x y c .== overflow x y c
   where -- Reference spec for overflow. We do the addition
         -- using 16 bits and check that it's larger than 255
         overflow :: SWord8 -> SWord8 -> SBool -> SBool
@@ -285,9 +285,19 @@ type Model = SFunArray
 --   On a decent MacBook Pro, this proof takes about 3 minutes with the 'SFunArray' memory model
 --   and about 30 minutes with the 'SArray' model, using yices as the SMT solver
 correctnessTheorem :: IO ThmResult
-correctnessTheorem = proveWith yices{timing = True} $
-    forAll ["mem", "addrX", "x", "addrY", "y", "addrLow", "regX", "regA", "memVals", "flagC", "flagZ"]
-           legatoIsCorrect
+correctnessTheorem = proveWith yices{timing = True} $ do
+        mem     <- newArray "mem" Nothing
+        addrX   <- free "addrX"
+        x       <- free "x"
+        addrY   <- free "addrY"
+        y       <- free "y"
+        addrLow <- free "addrLow"
+        regX    <- free "regX"
+        regA    <- free "regA"
+        memVals <- free "memVals"
+        flagC   <- free "flagC"
+        flagZ   <- free "flagZ"
+        return $ legatoIsCorrect mem (addrX, x) (addrY, y) addrLow (regX, regA, memVals, flagC, flagZ)
 
 ------------------------------------------------------------------
 -- * C Code generation

@@ -24,7 +24,7 @@ addNonEqConstraints :: RoundingMode -> [[(String, CW)]] -> SMTLibPgm -> Maybe St
 addNonEqConstraints _rm nonEqConstraints (SMTLibPgm _ (aliasTable, pre, post)) = Just $ intercalate "\n" $
      pre
   ++ [ " ; --- refuted-models ---" ]
-  ++ concatMap nonEqs (map (map intName) nonEqConstraints)
+  ++ concatMap (nonEqs . map intName) nonEqConstraints
   ++ post
  where intName (s, c)
           | Just sw <- s `lookup` aliasTable = (show sw, c)

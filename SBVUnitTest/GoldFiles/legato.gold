@@ -1,14 +1,14 @@
 INPUTS
-  s0 :: SWord32, aliasing "addrX"
-  s1 :: SWord8, aliasing "x"
-  s2 :: SWord32, aliasing "addrY"
-  s3 :: SWord8, aliasing "y"
-  s4 :: SWord32, aliasing "addrLow"
-  s5 :: SWord8, aliasing "regX"
-  s6 :: SWord8, aliasing "regA"
-  s7 :: SWord8, aliasing "memVals"
-  s8 :: SBool, aliasing "flagC"
-  s9 :: SBool, aliasing "flagZ"
+  s0 :: SWord32, existential, aliasing "addrX"
+  s1 :: SWord8, existential, aliasing "x"
+  s2 :: SWord32, existential, aliasing "addrY"
+  s3 :: SWord8, existential, aliasing "y"
+  s4 :: SWord32, existential, aliasing "addrLow"
+  s5 :: SWord8, existential, aliasing "regX"
+  s6 :: SWord8, existential, aliasing "regA"
+  s7 :: SWord8, existential, aliasing "memVals"
+  s8 :: SBool, existential, aliasing "flagC"
+  s9 :: SBool, existential, aliasing "flagZ"
 CONSTANTS
   s_2 = False
   s_1 = True

@@ -38,7 +38,7 @@ addNonEqConstraints rm qinps allNonEqConstraints (SMTLibPgm _ (aliasTable, pre, 
     ++ [ "; --- refuted-models ---" ]
     ++ refutedModel
     ++ post
- where refutedModel = concatMap (nonEqs rm) (map (map intName) nonEqConstraints)
+ where refutedModel = concatMap (nonEqs rm . map intName) nonEqConstraints
        intName (s, c)
           | Just sw <- s `lookup` aliasTable = (show sw, c)
           | True                             = (s, c)

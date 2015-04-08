@@ -9,18 +9,15 @@
 -- Internal data-structures for the sbv library
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE    GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE    TypeSynonymInstances       #-}
-{-# LANGUAGE    TypeOperators              #-}
-{-# LANGUAGE    MultiParamTypeClasses      #-}
-{-# LANGUAGE    ScopedTypeVariables        #-}
-{-# LANGUAGE    FlexibleInstances          #-}
-{-# LANGUAGE    PatternGuards              #-}
-{-# LANGUAGE    StandaloneDeriving         #-}
-{-# LANGUAGE    DefaultSignatures          #-}
-{-# LANGUAGE    NamedFieldPuns             #-}
-{-# LANGUAGE    DeriveDataTypeable         #-}
-{-# OPTIONS_GHC -fno-warn-orphans          #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE PatternGuards         #-}
+{-# LANGUAGE DefaultSignatures     #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE CPP                   #-}
 
 module Data.SBV.BitVectors.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
@@ -49,12 +46,16 @@ module Data.SBV.BitVectors.Data
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), getSBranchRunConfig
  ) where
 
+#if __GLASGOW_HASKELL__ < 710
+import Control.Applicative  ((<$>))
+#endif
+
 import Control.DeepSeq      (NFData(..))
 import Control.Monad.Reader (ask)
 import Control.Monad.Trans  (liftIO)
 import Data.Int             (Int8, Int16, Int32, Int64)
 import Data.Word            (Word8, Word16, Word32, Word64)
-import Data.List            (intercalate)
+import Data.List            (intercalate, elemIndex)
 
 import qualified Data.Generics as G    (Data(..))
 
@@ -374,7 +375,7 @@ class (HasKind a, Ord a) => SymWord a where
   literal x = let k@(KUserSort  _ (conts, _)) = kindOf x
                   sx                          = show x
                   mbIdx = case conts of
-                            Right xs -> sx `lookup` zip xs [0..]
+                            Right xs -> sx `elemIndex` xs
                             _        -> Nothing
               in SBV $ SVal k (Left (CW k (CWUserSort (mbIdx, sx))))
 
@@ -383,13 +384,13 @@ class (HasKind a, Ord a) => SymWord a where
   fromCW cw                         = error $ "Cannot convert CW " ++ show cw ++ " to kind " ++ show (kindOf (undefined :: a))
 
   default mkSymWord :: (Read a, G.Data a) => Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
-  mkSymWord mbQ mbNm = fmap SBV $ mkSValUserSort k mbQ mbNm
+  mkSymWord mbQ mbNm = SBV <$> mkSValUserSort k mbQ mbNm
     where k = constructUKind (undefined :: a)
 
 instance (Random a, SymWord a) => Random (SBV a) where
   randomR (l, h) g = case (unliteral l, unliteral h) of
                        (Just lb, Just hb) -> let (v, g') = randomR (lb, hb) g in (literal (v :: a), g')
-                       _                  -> error $ "SBV.Random: Cannot generate random values with symbolic bounds"
+                       _                  -> error "SBV.Random: Cannot generate random values with symbolic bounds"
   random         g = let (v, g') = random g in (literal (v :: a) , g')
 ---------------------------------------------------------------------------------
 -- * Symbolic Arrays
