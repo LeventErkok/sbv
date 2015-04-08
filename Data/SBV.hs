@@ -129,8 +129,14 @@ module Data.SBV (
   -- *** IEEE-floating point numbers
   -- $floatingPoints
   , SFloat, SDouble, RoundingFloat(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity, fusedMA
+  -- **** Rounding modes
   , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
+  -- **** FP classifiers
   , isNormalFP, isSubnormalFP, isZeroFP, isInfiniteFP, isNaNFP, isNegativeFP, isPositiveFP, isNegativeZeroFP, isPositiveZeroFP, isPointFP
+  -- **** Conversion to and from Word32, Word64
+  , sWord32ToSFloat, sWord64ToSDouble
+  -- **** Blasting floats to sign, exponent, mantissa bits
+  , blastSFloat, blastSDouble
   -- *** Signed algebraic reals
   -- $algReals
   , SReal, AlgReal, sIntegerToSReal, fpToSReal, sRealToSFloat, sRealToSDouble

@@ -38,6 +38,13 @@
        * isPositiveZeroFP
        * isPointFP
 
+  * Add various conversions from floats to words, including blasting:
+
+       * sWord32ToSFloat
+       * sWord64ToSDouble
+       * blastSFloat
+       * blastSDouble
+
   * Reimplement sbvTestBit, by Brian Huffman. This version is much faster at large
     word sizes, as it avoids the costly mask generation.
 
