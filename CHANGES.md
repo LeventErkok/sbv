@@ -41,12 +41,6 @@
   * Reimplement sbvTestBit, by Brian Huffman. This version is much faster at large
     word sizes, as it avoids the costly mask generation.
 
-  * Drop the "Equality" class. This essentially removes the "===" method, which
-    allowed for higher-order function equality. Turns out this was hardly ever
-    used, and was causing issues with the Overlapping instances. No reason
-    to complicate; and thus dropped it. If you were using it, simply eta-expand
-    until you reach the equality that you need at a base-type.
-
   * Drop the "Provable" instance that took an array instance as argument. Again,
     this feature was very rarely used, and was not well supported due to models for
     arrays not being readily available in many solvers via SMT-Lib. Also was causing
