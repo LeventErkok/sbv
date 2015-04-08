@@ -15,7 +15,6 @@
 module Data.SBV.Dynamic
   (
   -- * Programming with symbolic values
-  -- $progIntro
   -- ** Symbolic types
   -- *** Abstract symbolic value type
     SVal
@@ -27,7 +26,6 @@ module Data.SBV.Dynamic
   , readSArr, resetSArr, writeSArr, mergeSArr, newSArr, eqSArr
 
   -- ** Creating a symbolic variable
-  -- $createSym
   , Symbolic
   , Quantifier(..)
   , svMkSymVar
@@ -59,13 +57,10 @@ module Data.SBV.Dynamic
   -- ** Conditionals: Mergeable values
   , svIte, svLazyIte, svSymbolicMerge
   -- * Uninterpreted sorts, constants, and functions
-  -- $uninterpreted
   , svUninterpreted
   -- * Model extraction
-  -- $modelExtraction
 
   -- ** Inspecting proof results
-  -- $resultTypes
   , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..), SafeResult(..)
   -- * SMT Interface: Configurations and solvers
   , SMTConfig(..), SMTLibLogic(..), Logic(..), OptimizeOpts(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
@@ -76,7 +71,6 @@ module Data.SBV.Dynamic
   -- * Getting SMT-Lib output (for offline analysis)
   , svCompileToSMTLib{-, generateSMTBenchmarks-}
   -- * Code generation from symbolic programs
-  -- $cCodeGeneration
   , SBVCodeGen
 
   -- ** Setting code-generation options
@@ -95,7 +89,6 @@ module Data.SBV.Dynamic
   , cgAddPrototype, cgAddDecl, cgAddLDFlags
 
   -- ** Code generation with 'SInteger' and 'SReal' types
-  -- $unboundedCGen
   , cgIntegerSize, cgSRealType, CgSRealType(..)
 
   -- ** Compilation to C
