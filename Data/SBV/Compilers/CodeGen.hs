@@ -19,14 +19,14 @@ module Data.SBV.Compilers.CodeGen where
 import Control.Applicative  (Applicative)
 #endif
 
-import Control.Monad             (replicateM)
 import Control.Monad.Trans
 import Control.Monad.State.Lazy
 import Data.Char                 (toLower, isSpace)
 import Data.List                 (nub, isPrefixOf, intercalate, (\\))
 import System.Directory          (createDirectory, doesDirectoryExist, doesFileExist)
 import System.FilePath           ((</>))
-import Text.PrettyPrint.HughesPJ (Doc, vcat)
+
+import           Text.PrettyPrint.HughesPJ      (Doc, vcat)
 import qualified Text.PrettyPrint.HughesPJ as P (render)
 
 import Data.SBV.BitVectors.Data

@@ -71,7 +71,7 @@ module Data.SBV.Dynamic
   , SMTConfig(..), SMTLibLogic(..), Logic(..), OptimizeOpts(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
 
   -- * Symbolic computations
-  , Symbolic, outputSVal{-, SymWord(..)-}
+  , outputSVal{-, SymWord(..)-}
 
   -- * Getting SMT-Lib output (for offline analysis)
   , svCompileToSMTLib{-, generateSMTBenchmarks-}
@@ -107,22 +107,16 @@ import Data.SBV.BitVectors.Concrete
 import Data.SBV.BitVectors.Symbolic
 import Data.SBV.BitVectors.Operations
 
-import Data.SBV.Compilers.CodeGen
-  ( SBVCodeGen
-  , svCgInput, svCgInputArr
-  , svCgOutput, svCgOutputArr
-  , svCgReturn, svCgReturnArr
-  , cgPerformRTCs, cgSetDriverValues, cgGenerateDriver, cgGenerateMakefile
-  , cgAddPrototype, cgAddDecl, cgAddLDFlags
-  , cgIntegerSize, cgSRealType, CgSRealType(..)
-  )
-import Data.SBV.Compilers.C
-  ( compileToC, compileToCLib )
-import Data.SBV.Provers.Prover
-  ( boolector, cvc4, yices, z3, mathSAT, abc, defaultSMTCfg, svCompileToSMTLib )
-import Data.SBV.SMT.SMT
-  ( ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..) )
-import Data.SBV.Tools.Optimize
-  ( OptimizeOpts(..) )
-import Data.SBV
-  ( sbvCurrentSolver, sbvCheckSolverInstallation, defaultSolverConfig, sbvAvailableSolvers )
+import Data.SBV.Compilers.CodeGen ( SBVCodeGen
+                                  , svCgInput, svCgInputArr
+                                  , svCgOutput, svCgOutputArr
+                                  , svCgReturn, svCgReturnArr
+                                  , cgPerformRTCs, cgSetDriverValues, cgGenerateDriver, cgGenerateMakefile
+                                  , cgAddPrototype, cgAddDecl, cgAddLDFlags
+                                  , cgIntegerSize, cgSRealType, CgSRealType(..)
+                                  )
+import Data.SBV.Compilers.C       (compileToC, compileToCLib)
+import Data.SBV.Provers.Prover    (boolector, cvc4, yices, z3, mathSAT, abc, defaultSMTCfg, svCompileToSMTLib)
+import Data.SBV.SMT.SMT           (ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..))
+import Data.SBV.Tools.Optimize    (OptimizeOpts(..))
+import Data.SBV                   (sbvCurrentSolver, sbvCheckSolverInstallation, defaultSolverConfig, sbvAvailableSolvers)
