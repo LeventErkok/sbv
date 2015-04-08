@@ -1301,12 +1301,12 @@ instance SymWord b => Mergeable (SArray a b) where
 -- force equality can be defined, any non-toy instance
 -- will suffer from efficiency issues; so we don't define it
 instance SymArray SFunArray where
-  newArray _        = newArray_ -- the name is irrelevant in this case
-  newArray_  mbiVal = return $ SFunArray $ const $ fromMaybe (error "Reading from an uninitialized array entry") mbiVal
-  readArray  (SFunArray f)     = f
-  resetArray (SFunArray _) a   = SFunArray $ const a
-  writeArray (SFunArray f) a b = SFunArray (\a' -> ite (a .== a') b (f a'))
-  mergeArrays t (SFunArray g) (SFunArray h) = SFunArray (\x -> ite t (g x) (h x))
+  newArray _                                  = newArray_ -- the name is irrelevant in this case
+  newArray_     mbiVal                        = declNewSFunArray mbiVal
+  readArray     (SFunArray f)                 = f
+  resetArray    (SFunArray _) a               = SFunArray $ const a
+  writeArray    (SFunArray f) a b             = SFunArray (\a' -> ite (a .== a') b (f a'))
+  mergeArrays t (SFunArray g)   (SFunArray h) = SFunArray (\x -> ite t (g x) (h x))
 
 -- When merging arrays; we'll ignore the force argument. This is arguably
 -- the right thing to do as we've too many things and likely we want to keep it efficient.

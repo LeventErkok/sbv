@@ -41,13 +41,6 @@
   * Reimplement sbvTestBit, by Brian Huffman. This version is much faster at large
     word sizes, as it avoids the costly mask generation.
 
-  * Drop the "Provable" instance that took an array instance as argument. Again,
-    this feature was very rarely used, and was not well supported due to models for
-    arrays not being readily available in many solvers via SMT-Lib. Also was causing
-    issues with Overlapping-instances. If you were using this, simply use the 'newArray'
-    function directly from within the Symbolic monad; which will give you the same
-    behavior, at the cost of a bit more typing.
-
   * Code changes to suppress warnings with GHC7.10. General clean-up.
 
 ### Version 4.2, 2015-03-17

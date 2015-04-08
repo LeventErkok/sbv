@@ -173,6 +173,22 @@ instance (SymWord a, Provable p) => Provable (SBV a -> p) where
   forSome (s:ss) k = exists s >>= \a -> forSome ss $ k a
   forSome []     k = forSome_ k
 
+-- SFunArrays (memory, functional representation), only supported universally for the time being
+instance (HasKind a, HasKind b, Provable p) => Provable (SArray a b -> p) where
+  forAll_       k = declNewSArray (\t -> "array_" ++ show t) Nothing >>= \a -> forAll_   $ k a
+  forAll (s:ss) k = declNewSArray (const s)                  Nothing >>= \a -> forAll ss $ k a
+  forAll []     k = forAll_ k
+  forSome_      _ = error "SBV.forSome: Existential arrays are not currently supported."
+  forSome _     _ = error "SBV.forSome: Existential arrays are not currently supported."
+
+-- SArrays (memory, SMT-Lib notion of arrays), only supported universally for the time being
+instance (HasKind a, HasKind b, Provable p) => Provable (SFunArray a b -> p) where
+  forAll_       k = declNewSFunArray Nothing >>= \a -> forAll_   $ k a
+  forAll (_:ss) k = declNewSFunArray Nothing >>= \a -> forAll ss $ k a
+  forAll []     k = forAll_ k
+  forSome_      _ = error "SBV.forSome: Existential arrays are not currently supported."
+  forSome _     _ = error "SBV.forSome: Existential arrays are not currently supported."
+
 -- 2 Tuple
 instance (SymWord a, SymWord b, Provable p) => Provable ((SBV a, SBV b) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b -> k (a, b)

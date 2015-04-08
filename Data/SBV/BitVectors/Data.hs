@@ -44,6 +44,7 @@ module Data.SBV.BitVectors.Data
  , SolverCapabilities(..)
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), getSBranchRunConfig
+ , declNewSArray, declNewSFunArray
  ) where
 
 #if __GLASGOW_HASKELL__ < 710
@@ -56,6 +57,7 @@ import Control.Monad.Trans  (liftIO)
 import Data.Int             (Int8, Int16, Int32, Int64)
 import Data.Word            (Word8, Word16, Word32, Word64)
 import Data.List            (intercalate, elemIndex)
+import Data.Maybe           (fromMaybe)
 
 import qualified Data.Generics as G    (Data(..))
 
@@ -443,12 +445,12 @@ instance (HasKind a, HasKind b) => Show (SArray a b) where
   show (SArray{}) = "SArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"
 
 instance SymArray SArray where
-  newArray_  = declNewSArray (\t -> "array_" ++ show t)
-  newArray n = declNewSArray (const n)
-  readArray (SArray arr) (SBV a) = SBV (readSArr arr a)
-  resetArray (SArray arr) (SBV b) = SArray (resetSArr arr b)
-  writeArray (SArray arr) (SBV a) (SBV b) = SArray (writeSArr arr a b)
-  mergeArrays (SBV t) (SArray a) (SArray b) = SArray (mergeSArr t a b)
+  newArray_                                      = declNewSArray (\t -> "array_" ++ show t)
+  newArray n                                     = declNewSArray (const n)
+  readArray   (SArray arr) (SBV a)               = SBV (readSArr arr a)
+  resetArray  (SArray arr) (SBV b)               = SArray (resetSArr arr b)
+  writeArray  (SArray arr) (SBV a)    (SBV b)    = SArray (writeSArr arr a b)
+  mergeArrays (SBV t)      (SArray a) (SArray b) = SArray (mergeSArr t a b)
 
 -- | Declare a new symbolic array, with a potential initial value
 declNewSArray :: forall a b. (HasKind a, HasKind b) => (Int -> String) -> Maybe (SBV b) -> Symbolic (SArray a b)
@@ -457,6 +459,10 @@ declNewSArray mkNm mbInit = do
        bknd = kindOf (undefined :: b)
    arr <- newSArr (aknd, bknd) mkNm (fmap unSBV mbInit)
    return (SArray arr)
+
+-- | Declare a new functional symbolic array, with a potential initial value. Note that a read from an uninitialized cell will result in an error.
+declNewSFunArray :: forall a b. (HasKind a, HasKind b) => Maybe (SBV b) -> Symbolic (SFunArray a b)
+declNewSFunArray mbiVal = return $ SFunArray $ const $ fromMaybe (error "Reading from an uninitialized array entry") mbiVal
 
 -- | Arrays implemented internally as functions
 --
