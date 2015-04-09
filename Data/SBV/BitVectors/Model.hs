@@ -34,6 +34,7 @@ module Data.SBV.BitVectors.Model (
   , fusedMA, liftFPPredicate
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCW, genMkSymVar
+  , reduceInPathCondition
   )
   where
 
