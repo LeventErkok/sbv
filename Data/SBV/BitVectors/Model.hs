@@ -372,7 +372,7 @@ sFloatToSWord32 fVal wVal
   | True                                    = result `is` fVal
  where result   = sWord32ToSFloat wVal
        a `is` b = (checkNaN a &&& checkNaN b) ||| (a .== b)
-       checkNaN    = liftFPPredicate "fp.isNaN" isNaN
+       checkNaN = liftFPPredicate "fp.isNaN" isNaN
 
 -- | Relationally assert the equivalence between an 'SDouble' and an 'SWord64', when the bit-pattern
 -- is interpreted as either type. See the comments for 'sFloatToSWord32' for details.
@@ -382,7 +382,7 @@ sDoubleToSWord64 fVal wVal
   | True                                    = result `is` fVal
  where result   = sWord64ToSDouble wVal
        a `is` b = (checkNaN a &&& checkNaN b) ||| (a .== b)
-       checkNaN    = liftFPPredicate "fp.isNaN" isNaN
+       checkNaN = liftFPPredicate "fp.isNaN" isNaN
 
 -- | Relationally extract the sign\/exponent\/mantissa of a single-precision float. Due to the
 -- non-unique representation of NaN's, we have to do this function relationally, much like

@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 4.3, 2015-04-10
 
+### Version 4.4, Not yet released
+
+  * Current development version
+
 ### Version 4.3, 2015-04-10
 
   * Introduce Data.SBV.Dynamic, by Brian Huffman. This is mostly an internal
