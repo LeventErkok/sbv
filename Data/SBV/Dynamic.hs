@@ -71,7 +71,6 @@ module Data.SBV.Dynamic
   , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..), SafeResult(..)
 
   -- ** Programmable model extraction
-  -- $programmableExtraction
   , genParse, getModel, getModelDictionary
   -- * SMT Interface: Configurations and solvers
   , SMTConfig(..), SMTLibLogic(..), Logic(..), OptimizeOpts(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
@@ -144,6 +143,7 @@ import qualified Data.SBV.Provers.Prover as SBV
 import qualified Data.SBV.SMT.SMT as SBV
   ( Modelable(getModel, getModelDictionary) )
 
+-- | Reduce a condition (i.e., try to concretize it) under the given path
 svReduceInPathCondition :: SVal -> SVal
 svReduceInPathCondition t = c
   where SBV.SBV c = SBV.reduceInPathCondition (SBV.SBV t)
