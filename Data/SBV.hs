@@ -134,7 +134,7 @@ module Data.SBV (
   -- **** FP classifiers
   , isNormalFP, isSubnormalFP, isZeroFP, isInfiniteFP, isNaNFP, isNegativeFP, isPositiveFP, isNegativeZeroFP, isPositiveZeroFP, isPointFP
   -- **** Conversion to and from Word32, Word64
-  , sWord32ToSFloat, sWord64ToSDouble
+  , sWord32ToSFloat, sWord64ToSDouble, sFloatToSWord32, sDoubleToSWord64
   -- **** Blasting floats to sign, exponent, mantissa bits
   , blastSFloat, blastSDouble
   -- *** Signed algebraic reals

@@ -30,7 +30,7 @@ module Data.SBV.BitVectors.Model (
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
   , sIntegerToSReal, fpToSReal, sRealToSFloat, sRealToSDouble
-  , sWord32ToSFloat, sWord64ToSDouble, blastSFloat, blastSDouble
+  , sWord32ToSFloat, sWord64ToSDouble, sFloatToSWord32, sDoubleToSWord64, blastSFloat, blastSDouble
   , fusedMA, liftFPPredicate
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCW, genMkSymVar
@@ -352,51 +352,57 @@ sWord64ToSDouble x
    where y st = do xsw <- sbvToSW st x
                    newExpr st KDouble (SBVApp (FPRound "(_ to_fp 11 53)") [xsw])
 
--- | Relationally assert the equivalence between an 'SFloat' and sign, exponent, mantissa bits.
--- Useful when analyzing components of a floating point number. Note that this cannot be written
--- as a function, since IEEE754 NaN values are not unique. That is, given a float, there isn't
--- a unique sign/mantissa/exponent that we can map it to. If we're given a concrete non-NaN value
--- we will do the conversion at the SBV-level, otherwise we'll do it symbolically (i.e., a concrete
--- NaN or a symbolic value).
+-- | Relationally assert the equivalence between an 'SFloat' and an 'SWord32', when the bit-pattern
+-- is interpreted as either type. Useful when analyzing components of a floating point number. Note
+-- that this cannot be written as a function, since IEEE754 NaN values are not unique. That is,
+-- given a float, there isn't a unique sign/mantissa/exponent that we can match it to.
 --
 -- The use case would be code of the form:
 --
 -- @
---     do s    <- free_
---        exp  <- mapM (const free_) [ 7,  6 .. 0]
---        mant <- mapM (const free_) [22, 21 .. 0]
---        constrain $ blastSFloat f (s, exp, mant)
+--     do w <- free_
+--        constrain $ sFloatToSWord32 f w
 --        ...
 -- @
 --
--- At which point the variables @s@, @exp@, and @mant@ can be used to program further.
-blastSFloat :: SFloat -> (SBool, [SBool], [SBool]) -> SBool
-blastSFloat val comps@(s, expt, mant)
-  | Just f <- unliteral val, not (isNaN f) = comps .== destruct (floatToWord f)
-  | length expt /= 8 || length mant /= 23  = error "SBV.blastSFloat: Need 8-bit expt and 23 bit mantissa"
-  | True                                   = result `is` val
- where bits        = s : expt ++ mant
-       w           = sum [ite b (2^c) 0 | (b, c) <- zip bits (reverse [(0::Word32) .. 31])]
-       result      = sWord32ToSFloat w
-       a `is` b    = (checkNaN a &&& checkNaN b) ||| (a .== b)
+-- At which point the variable @w@ can be used to access the bits of the float 'f'.
+sFloatToSWord32 :: SFloat -> SWord32 -> SBool
+sFloatToSWord32 fVal wVal
+  | Just f <- unliteral fVal, not (isNaN f) = wVal .== literal (floatToWord f)
+  | True                                    = result `is` fVal
+ where result   = sWord32ToSFloat wVal
+       a `is` b = (checkNaN a &&& checkNaN b) ||| (a .== b)
        checkNaN    = liftFPPredicate "fp.isNaN" isNaN
-       destruct bs = (grab 31, reverse (map grab [23 .. 30]), reverse (map grab [0 .. 22]))
-         where grab n = literal $ bs `testBit` n
 
--- | Relationally assert the equivalence between an 'SDouble' and sign, exponent, mantissa bits.
--- See the comments for 'blastSFloat' for details.
-blastSDouble :: SDouble -> (SBool, [SBool], [SBool]) -> SBool
-blastSDouble val comps@(s, expt, mant)
-  | Just f <- unliteral val, not (isNaN f) = comps .== destruct (doubleToWord f)
-  | length expt /= 11 || length mant /= 52 = error "SBV.blastSDouble: Need 11-bit expt and 52 bit mantissa"
-  | True                                   = result `is` val
- where bits        = s : expt ++ mant
-       w           = sum [ite b (2^c) 0 | (b, c) <- zip bits (reverse [(0::Word64) .. 63])]
-       result      = sWord64ToSDouble w
-       a `is` b    = (checkNaN a &&& checkNaN b) ||| (a .== b)
+-- | Relationally assert the equivalence between an 'SDouble' and an 'SWord64', when the bit-pattern
+-- is interpreted as either type. See the comments for 'sFloatToSWord32' for details.
+sDoubleToSWord64 :: SDouble -> SWord64 -> SBool
+sDoubleToSWord64 fVal wVal
+  | Just f <- unliteral fVal, not (isNaN f) = wVal .== literal (doubleToWord f)
+  | True                                    = result `is` fVal
+ where result   = sWord64ToSDouble wVal
+       a `is` b = (checkNaN a &&& checkNaN b) ||| (a .== b)
        checkNaN    = liftFPPredicate "fp.isNaN" isNaN
-       destruct bs = (grab 63, reverse (map grab [52 .. 62]), reverse (map grab [0 .. 51]))
-         where grab n = literal $ bs `testBit` n
+
+-- | Relationally extract the sign\/exponent\/mantissa of a single-precision float. Due to the
+-- non-unique representation of NaN's, we have to do this function relationally, much like
+-- 'sFloatToSWord32'.
+blastSFloat :: SFloat -> (SBool, [SBool], [SBool]) -> SBool
+blastSFloat fVal (s, expt, mant)
+  | length expt /= 8 || length mant /= 23  = error "SBV.blastSFloat: Need 8-bit expt and 23 bit mantissa"
+  | True                                   = sFloatToSWord32 fVal wVal
+ where bits = s : expt ++ mant
+       wVal = sum [ite b (2^c) 0 | (b, c) <- zip bits (reverse [(0::Word32) .. 31])]
+
+-- | Relationally extract the sign\/exponent\/mantissa of a double-precision float. Due to the
+-- non-unique representation of NaN's, we have to do this function relationally, much like
+-- 'sDoubleToSWord64'.
+blastSDouble :: SDouble -> (SBool, [SBool], [SBool]) -> SBool
+blastSDouble fVal (s, expt, mant)
+  | length expt /= 11 || length mant /= 52 = error "SBV.blastSDouble: Need 11-bit expt and 52 bit mantissa"
+  | True                                   = sDoubleToSWord64 fVal wVal
+ where bits = s : expt ++ mant
+       wVal = sum [ite b (2^c) 0 | (b, c) <- zip bits (reverse [(0::Word64) .. 63])]
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.
