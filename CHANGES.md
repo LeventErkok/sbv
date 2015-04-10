@@ -1,12 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 4.2, 2015-03-17
+* Latest Hackage released version: 4.3, 2015-04-10
 
-### Version 4.3, Not yet released
-
-  * Code clean-up: remove mbMinBound/mbMaxBound thus allowing less calls to
-    unliteral. Contributed by Brian Huffman.
+### Version 4.3, 2015-04-10
 
   * Introduce Data.SBV.Dynamic, by Brian Huffman. This is mostly an internal
     reorg of the SBV codebase, and end-users should not be impacted by the
@@ -22,7 +19,24 @@
 
   * Rename toSReal to sIntegerToSReal, which captures the intent more clearly
 
-  * Introduce FP conversion functions: fpToSReal, sRealToSFloat, and sRealToSDouble
+  * Code clean-up: remove mbMinBound/mbMaxBound thus allowing less calls to
+    unliteral. Contributed by Brian Huffman.
+
+  * Introduce FP conversion functions:
+  
+       * Between SReal and SFloat/SDouble
+           * fpToSReal
+           * sRealToSFloat
+           * sRealToSDouble
+       * Between SWord32 and SFloat
+       	   * sWord32ToSFloat
+       	   * sFloatToSWord32
+       * Between SWord64 and SDouble. (Relational, due to non-unique NaNs)
+       	   * sWord64ToSDouble
+	   * sDoubleToSWord64
+       * From float to sign/exponent/mantissa fields: (Relational, due to non-unique NaNs)
+           * blastSFloat
+           * blastSDouble
 
   * Rework floating point classifiers. Remove isSNaN and isFPPoint (both renamed),
     and add the following new recognizers:
@@ -36,14 +50,7 @@
        * isPositiveFP
        * isNegativeZeroFP
        * isPositiveZeroFP
-       * isPointFP
-
-  * Add various conversions from floats to words, including blasting:
-
-       * sWord32ToSFloat
-       * sWord64ToSDouble
-       * blastSFloat
-       * blastSDouble
+       * isPointFP (corresponds to a real number, i.e., neither NaN nor infinity)
 
   * Reimplement sbvTestBit, by Brian Huffman. This version is much faster at large
     word sizes, as it avoids the costly mask generation.
