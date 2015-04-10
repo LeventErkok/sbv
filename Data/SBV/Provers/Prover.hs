@@ -44,7 +44,6 @@ import qualified Data.Set as Set (Set, toList)
 import qualified Control.Exception as C
 
 import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.Symbolic
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 import qualified Data.SBV.Provers.Boolector  as Boolector

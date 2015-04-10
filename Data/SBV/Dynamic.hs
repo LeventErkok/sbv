@@ -1,7 +1,7 @@
 ---------------------------------------------------------------------------------
 -- |
 -- Module      :  Data.SBV.Dynamic
--- Copyright   :  (c) Levent Erkok
+-- Copyright   :  (c) Brian Huffman
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
