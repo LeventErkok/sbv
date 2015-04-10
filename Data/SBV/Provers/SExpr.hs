@@ -11,19 +11,16 @@
 
 module Data.SBV.Provers.SExpr where
 
-import Data.Bits            (setBit, testBit)
-import Data.Word            (Word32, Word64)
-import Data.Char            (isDigit, ord)
-import Data.List            (isPrefixOf)
-import Data.Maybe           (fromMaybe, listToMaybe)
-import Numeric              (readInt, readDec, readHex, fromRat)
+import Data.Bits           (setBit, testBit)
+import Data.Word           (Word32, Word64)
+import Data.Char           (isDigit, ord)
+import Data.List           (isPrefixOf)
+import Data.Maybe          (fromMaybe, listToMaybe)
+import Numeric             (readInt, readDec, readHex, fromRat)
+import Data.Binary.IEEE754 (wordToFloat, wordToDouble)
 
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data (nan, infinity, RoundingMode(..))
-
--- Needed for conversion from SMTLib triple-IEEE formats to float/double
-import qualified Foreign          as F
-import qualified System.IO.Unsafe as U (unsafePerformIO)  -- Only used safely!
 
 -- | ADT S-Expression format, suitable for representing get-model output of SMT-Lib
 data SExpr = ECon    String
@@ -154,7 +151,7 @@ rdFP s = case break (`elem` "pe") s of
 
 -- | Convert an (s, e, m) triple to a float value
 getTripleFloat :: Integer -> Integer -> Integer -> Float
-getTripleFloat s e m = U.unsafePerformIO $ F.alloca $ \buf -> do {F.poke (F.castPtr buf) w32; F.peek buf}
+getTripleFloat s e m = wordToFloat w32
   where sign      = [s == 1]
         expt      = [e `testBit` i | i <- [ 7,  6 .. 0]]
         mantissa  = [m `testBit` i | i <- [22, 21 .. 0]]
@@ -163,7 +160,7 @@ getTripleFloat s e m = U.unsafePerformIO $ F.alloca $ \buf -> do {F.poke (F.cast
 
 -- | Convert an (s, e, m) triple to a float value
 getTripleDouble :: Integer -> Integer -> Integer -> Double
-getTripleDouble s e m = U.unsafePerformIO $ F.alloca $ \buf -> do {F.poke (F.castPtr buf) w64; F.peek buf}
+getTripleDouble s e m = wordToDouble w64
   where sign      = [s == 1]
         expt      = [e `testBit` i | i <- [10,  9 .. 0]]
         mantissa  = [m `testBit` i | i <- [51, 50 .. 0]]

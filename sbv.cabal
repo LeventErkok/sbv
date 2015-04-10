@@ -48,7 +48,7 @@ Library
                     TypeSynonymInstances
   Build-Depends   : base >= 4 && < 5
                   , array, async, containers, deepseq, directory, filepath, old-time
-                  , pretty, process, mtl, QuickCheck, random, syb
+                  , pretty, process, mtl, QuickCheck, random, syb, data-binary-ieee754
   Exposed-modules : Data.SBV
                   , Data.SBV.Bridge.Boolector
                   , Data.SBV.Bridge.CVC4
