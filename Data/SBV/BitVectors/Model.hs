@@ -47,6 +47,8 @@ import Data.List       (genericLength, genericIndex, genericTake, unzip4, unzip5
 import Data.Maybe      (fromMaybe)
 import Data.Word       (Word8, Word16, Word32, Word64)
 
+import Data.Binary.IEEE754 (wordToFloat, wordToDouble)
+
 import qualified Data.Map as M
 
 import qualified Control.Exception as C
@@ -332,11 +334,11 @@ sRealToSDouble rm x = SBV (SVal KFloat (Right (cache y)))
                   xsw <- sbvToSW st x
                   newExpr st KDouble (SBVApp (FPRound "(_ to_fp 11 53)") [swm, xsw])
 
--- | Reinterpret a 32-bit word as an 'SFloat'. Note that this function does not
--- directly work on concrete values, since IEEE754 NaN values are not unique, and
--- thus do not directly map to SFloat.
+-- | Reinterpret a 32-bit word as an 'SFloat'.
 sWord32ToSFloat :: SWord32 -> SFloat
-sWord32ToSFloat x = SBV (SVal KFloat (Right (cache y)))
+sWord32ToSFloat x
+    | Just w <- unliteral x = literal (wordToFloat w)
+    | True                  = SBV (SVal KFloat (Right (cache y)))
    where y st = do xsw <- sbvToSW st x
                    newExpr st KFloat (SBVApp (FPRound "(_ to_fp 8 24)") [xsw])
 
@@ -344,7 +346,9 @@ sWord32ToSFloat x = SBV (SVal KFloat (Right (cache y)))
 -- directly work on concrete values, since IEEE754 NaN values are not unique, and
 -- thus do not directly map to SDouble
 sWord64ToSDouble :: SWord64 -> SDouble
-sWord64ToSDouble x = SBV (SVal KDouble (Right (cache y)))
+sWord64ToSDouble x
+    | Just w <- unliteral x = literal (wordToDouble w)
+    | True                  = SBV (SVal KDouble (Right (cache y)))
    where y st = do xsw <- sbvToSW st x
                    newExpr st KDouble (SBVApp (FPRound "(_ to_fp 11 53)") [xsw])
 
