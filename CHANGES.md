@@ -10,17 +10,17 @@
     2 or 16. (With base 10, we still get the simple output.) 
 
       ```
-      Prelude Data.SBV> satWith z3{printBase=2} $ \x -> x .== (2::SDouble)
+      Prelude Data.SBV> satWith z3{printBase=2} $ \x -> x .== (2::SFloat)
       Satisfiable. Model:
-        s0 = 2.0 :: Double
-                        6    5          4         3         2         1         0
-                        3 21098765432 1098765432109876543210987654321098765432109876543210
-                        S ----E11---- ------------------------F52-------------------------
-                Binary: 0 10000000000 0000000000000000000000000000000000000000000000000000
-                   Hex: 4000 0000 0000 0000
-             Precision: DP
+        s0 = 2.0 :: Float
+                        3  2          1         0
+                        1 09876543 21098765432109876543210
+                        S ---E8--- ----------F23----------
+                Binary: 0 10000000 00000000000000000000000
+                   Hex: 4000 0000
+             Precision: SP
                   Sign: Positive
-              Exponent: 1 (Stored: 1024, Bias: 1023)
+              Exponent: 1 (Stored: 128, Bias: 127)
                  Value: +2.0 (NORMAL)
       ```
 
