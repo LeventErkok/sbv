@@ -33,8 +33,8 @@ thmGood x y z = x .== y+2 ==> f x z .== f (y + 2) z
 --
 -- >>> proveWith yicesSMT09 $ forAll ["x", "y"] thmBad
 -- Falsifiable. Counter-example:
---   x = 0 :: SWord8
---   y = 128 :: SWord8
+--   x = 0 :: Word8
+--   y = 128 :: Word8
 --   -- uninterpreted: f
 --        f 128 0 = 32768
 --        f _   _ = 0

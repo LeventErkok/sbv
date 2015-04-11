@@ -81,12 +81,12 @@ c6 xs = sum (map val xs) ./= 95
 --
 -- >>> puzzle
 -- Satisfiable. Model:
---   c1 = 50 :: SWord16
---   c2 = 25 :: SWord16
---   c3 = 10 :: SWord16
---   c4 = 10 :: SWord16
---   c5 = 10 :: SWord16
---   c6 = 10 :: SWord16
+--   c1 = 50 :: Word16
+--   c2 = 25 :: Word16
+--   c3 = 10 :: Word16
+--   c4 = 10 :: Word16
+--   c5 = 10 :: Word16
+--   c6 = 10 :: Word16
 --
 -- i.e., your friend has 4 dimes, a quarter, and a half dollar.
 puzzle :: IO SatResult

@@ -100,14 +100,14 @@ thm2 = prove $ flIsCorrect 16 (0, smax)
 --
 -- >>> thm3
 -- Falsifiable. Counter-example:
---   s0 = 0 :: SWord32
---   s1 = 0 :: SWord32
---   s2 = 0 :: SWord32
---   s3 = 0 :: SWord32
---   s4 = 1073741824 :: SWord32
---   s5 = 0 :: SWord32
---   s6 = 0 :: SWord32
---   s7 = 0 :: SWord32
+--   s0 = 0 :: Word32
+--   s1 = 0 :: Word32
+--   s2 = 0 :: Word32
+--   s3 = 0 :: Word32
+--   s4 = 1073741824 :: Word32
+--   s5 = 0 :: Word32
+--   s6 = 0 :: Word32
+--   s7 = 0 :: Word32
 --   -- uninterpreted: u
 --        u  = 0
 --   -- uninterpreted: flOp

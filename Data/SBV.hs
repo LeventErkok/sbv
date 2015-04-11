@@ -19,7 +19,7 @@
 --
 -- >>> prove $ \x -> x `shiftL` 2 .== 2 * (x :: SWord8)
 -- Falsifiable. Counter-example:
---   s0 = 32 :: SWord8
+--   s0 = 32 :: Word8
 --
 -- The function 'prove' has the following type:
 --
@@ -609,15 +609,15 @@ If we try to prove a theorem regarding sub, we'll get an exception:
 
 >>> prove $ \x y -> sub x y .>= (0 :: SInt16)
 *** Exception: Assertion failure: "sub: x >= y must hold!"
-  s0 = -32768 :: SInt16
-  s1 = -32767 :: SInt16
+  s0 = -32768 :: Int16
+  s1 = -32767 :: Int16
 
 Of course, we can use, 'safe' to statically see if such a violation is possible before we attempt a proof:
 
 >>> safe (sub :: SInt8 -> SInt8 -> SInt8)
 Assertion failure: "sub: x >= y must hold!"
-  s0 = -128 :: SInt8
-  s1 = -127 :: SInt8
+  s0 = -128 :: Int8
+  s1 = -127 :: Int8
 
 What happens if we make sure to arrange for this invariant? Consider this version:
 

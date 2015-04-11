@@ -28,9 +28,9 @@ import Data.SBV
 --
 -- >>> prove assocPlus
 -- Falsifiable. Counter-example:
---   s0 = -9.62965e-35 :: SFloat
---   s1 = Infinity :: SFloat
---   s2 = -Infinity :: SFloat
+--   s0 = -9.62965e-35 :: Float
+--   s1 = Infinity :: Float
+--   s2 = -Infinity :: Float
 --
 -- Indeed:
 --
@@ -56,9 +56,9 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 --
 -- >>> assocPlusRegular
 -- Falsifiable. Counter-example:
---   x = -1.0491915e7 :: SFloat
---   y = 1967115.5 :: SFloat
---   z = 982003.94 :: SFloat
+--   x = -1.0491915e7 :: Float
+--   y = 1967115.5 :: Float
+--   z = 982003.94 :: Float
 --
 -- Indeed, we have:
 --
@@ -87,8 +87,8 @@ assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
 --
 -- >>> nonZeroAddition
 -- Falsifiable. Counter-example:
---   a = -2.0 :: SFloat
---   b = -3.0e-45 :: SFloat
+--   a = -2.0 :: Float
+--   b = -3.0e-45 :: Float
 --
 -- Indeed, we have:
 --
@@ -118,7 +118,7 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   a = -2.0445642768532407e154 :: SDouble
+--   a = -2.0445642768532407e154 :: Double
 --
 -- Indeed, we have:
 --
@@ -146,8 +146,8 @@ multInverse = prove $ do a <- sDouble "a"
 -- >>> roundingAdd
 -- Satisfiable. Model:
 --   rm = RoundTowardPositive :: RoundingMode
---   x = 246080.08 :: SFloat
---   y = 16255.999 :: SFloat
+--   x = 246080.08 :: Float
+--   y = 16255.999 :: Float
 --
 -- Unfortunately we can't directly validate this result at the Haskell level, as Haskell only supports
 -- 'RoundNearestTiesToEven'. We have:

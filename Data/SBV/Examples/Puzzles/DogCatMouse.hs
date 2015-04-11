@@ -21,9 +21,9 @@ import Data.SBV
 --
 -- >>> puzzle
 -- Solution #1:
---   dog = 3 :: SInteger
---   cat = 41 :: SInteger
---   mouse = 56 :: SInteger
+--   dog = 3 :: Integer
+--   cat = 41 :: Integer
+--   mouse = 56 :: Integer
 -- This is the only solution.
 puzzle :: IO AllSatResult
 puzzle = allSat $ do
