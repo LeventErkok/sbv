@@ -9,6 +9,7 @@
     doubles can be printed in detail when the printBase is chosen to be
     2 or 16. (With base 10, we still get the simple output.) 
 
+      ```
       Prelude Data.SBV> satWith z3{printBase=2} $ \x -> x .== (2::SDouble)
       Satisfiable. Model:
         s0 = 2.0 :: Double
@@ -21,7 +22,7 @@
                   Sign: Positive
               Exponent: 1 (Stored: 1024, Bias: 1023)
                  Value: +2.0 (NORMAL)
-      
+      ```
 
 ### Version 4.3, 2015-04-10
 
