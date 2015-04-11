@@ -965,6 +965,9 @@ data RoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable 
 -- exactly. Otherwise, the number will be written out in standard decimal notation. Note that SBV will always print the whole value if it
 -- is precise (i.e., if it fits in a finite number of digits), regardless of the precision limit. The limit only applies if the representation
 -- of the real value is not finite, i.e., if it is not rational.
+--
+-- The 'crackFloats' flag controls whether floating-point values (Float/Double) should be displayed in detail, i.e., in bit-layout form.
+-- While the output will be large for these values, it's useful for examining bit-patters. Default is True.
 data SMTConfig = SMTConfig {
          verbose        :: Bool             -- ^ Debug mode
        , timing         :: Bool             -- ^ Print timing information on how long different phases took (construction, solving, etc.)
@@ -972,6 +975,7 @@ data SMTConfig = SMTConfig {
        , timeOut        :: Maybe Int        -- ^ How much time to give to the solver. (In seconds. Default: No limit.)
        , printBase      :: Int              -- ^ Print integral literals in this base (2, 8, 10, and 16 are supported.)
        , printRealPrec  :: Int              -- ^ Print algebraic real values with this precision. (SReal, default: 16)
+       , crackFloats    :: Bool             -- ^ Display float/double values in detailed/cracked formats
        , solverTweaks   :: [String]         -- ^ Additional lines of script to give to the solver (user specified)
        , satCmd         :: String           -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
        , smtFile        :: Maybe FilePath   -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
