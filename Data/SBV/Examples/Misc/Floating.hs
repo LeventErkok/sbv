@@ -160,7 +160,7 @@ multInverse = prove $ do a <- sDouble "a"
 --
 -- >>> sat $ \z -> z .== fpAdd sRoundTowardPositive 246080.08 (16255.999::SFloat)
 -- Satisfiable. Model:
---   s0 = 262336.1 :: SFloat
+--   s0 = 262336.1 :: Float
 --
 -- We can see why these two resuls are indeed different. To see why, one would have to convert the
 -- individual numbers to Float's, which would induce rounding-errors, add them up, and round-back;
