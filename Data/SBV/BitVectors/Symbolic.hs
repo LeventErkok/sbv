@@ -428,8 +428,8 @@ svSigned x = kindHasSign (svKind x)
 
 -- | Show instance for 'SVal'. Not particularly "desirable", but will do if needed
 instance Show SVal where
-  show (SVal _ (Left c))  = show c
-  show (SVal k (Right _)) = "<symbolic> :: " ++ show k
+  show (SVal k (Left c))  = showCW False c ++ " :: " ++ show k
+  show (SVal k (Right _)) =         "<symbolic> :: " ++ show k
 
 -- | Equality constraint on SBV values. Not desirable since we can't really compare two
 -- symbolic values, but will do.
