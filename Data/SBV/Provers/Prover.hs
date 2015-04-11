@@ -61,7 +61,6 @@ mkConfig s isSMTLib2 tweaks = SMTConfig { verbose        = False
                                         , timeOut        = Nothing
                                         , printBase      = 10
                                         , printRealPrec  = 16
-                                        , crackFloats    = True
                                         , smtFile        = Nothing
                                         , solver         = s
                                         , solverTweaks   = tweaks

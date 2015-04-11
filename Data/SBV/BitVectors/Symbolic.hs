@@ -966,16 +966,15 @@ data RoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable 
 -- is precise (i.e., if it fits in a finite number of digits), regardless of the precision limit. The limit only applies if the representation
 -- of the real value is not finite, i.e., if it is not rational.
 --
--- The 'crackFloats' flag controls whether floating-point values (Float/Double) should be displayed in detail, i.e., in bit-layout form.
--- While the output will be large for these values, it's useful for examining bit-patters. Default is True.
+-- The 'printBase' field can be used to print numbers in base 2, 10, or 16. If base 2 or 16 is used, then floating-point values will
+-- be printed in their internal memory-layout format as well, which can come in handy for bit-precise analysis.
 data SMTConfig = SMTConfig {
          verbose        :: Bool             -- ^ Debug mode
        , timing         :: Bool             -- ^ Print timing information on how long different phases took (construction, solving, etc.)
        , sBranchTimeOut :: Maybe Int        -- ^ How much time to give to the solver for each call of 'sBranch' check. (In seconds. Default: No limit.)
        , timeOut        :: Maybe Int        -- ^ How much time to give to the solver. (In seconds. Default: No limit.)
-       , printBase      :: Int              -- ^ Print integral literals in this base (2, 8, 10, and 16 are supported.)
+       , printBase      :: Int              -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
        , printRealPrec  :: Int              -- ^ Print algebraic real values with this precision. (SReal, default: 16)
-       , crackFloats    :: Bool             -- ^ Display float/double values in detailed/cracked formats
        , solverTweaks   :: [String]         -- ^ Additional lines of script to give to the solver (user specified)
        , satCmd         :: String           -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
        , smtFile        :: Maybe FilePath   -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
