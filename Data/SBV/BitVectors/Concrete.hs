@@ -154,7 +154,10 @@ mapCW2 r i f d u x y = case (cwSameType x y, cwVal x, cwVal y) of
 -- | Show instance for 'CW'.
 instance Show CW where
   show w | cwIsBit w = show (cwToBool w)
-  show w             = liftCW show show show show snd w ++ " :: " ++ show (cwKind w)
+  show w             = liftCW show show show show snd w ++ " :: " ++ shKind (cwKind w)
+      where shKind k@(KUserSort {})       = show k
+            shKind k | ('S':sk) <- show k = sk
+            shKind k                      = show k
 
 -- | Create a constant word from an integral.
 mkConstCW :: Integral a => Kind -> a -> CW

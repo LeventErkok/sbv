@@ -6,8 +6,6 @@ Description:   Express properties about Haskell programs and automatically prove
                (Satisfiability Modulo Theories) solvers.
                .
                For details, please see: <http://leventerkok.github.com/sbv/>
-               .
-               Release notes: <http://github.com/LeventErkok/sbv/blob/master/CHANGES.md>
 
 Copyright:     Levent Erkok, 2010-2015
 License:       BSD3
@@ -49,6 +47,7 @@ Library
   Build-Depends   : base >= 4 && < 5
                   , array, async, containers, deepseq, directory, filepath, old-time
                   , pretty, process, mtl, QuickCheck, random, syb, data-binary-ieee754
+                  , crackNum
   Exposed-modules : Data.SBV
                   , Data.SBV.Bridge.Boolector
                   , Data.SBV.Bridge.CVC4

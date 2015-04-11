@@ -66,27 +66,35 @@ instance PrettyNum Integer where
 
 instance PrettyNum CW where
   hexS cw | cwIsBit cw         = hexS (cwToBool cw)
-          | isReal cw          = let CWAlgReal w = cwVal cw in show w
+          | isFloat cw         = let CWFloat  f  = cwVal cw in show f ++ " :: Float"
+          | isDouble cw        = let CWDouble d  = cwVal cw in show d ++ " :: Double"
+          | isReal cw          = let CWAlgReal w = cwVal cw in show w ++ " :: AlgReal"
           | not (isBounded cw) = let CWInteger w = cwVal cw in shexI True True w
-          | isUninterpreted cw = show cw
+          | isUninterpreted cw = show cw ++ " :: " ++ show (cwKind cw)
           | True               = let CWInteger w = cwVal cw in shex  True True (hasSign cw, intSizeOf cw) w
 
   binS cw | cwIsBit cw         = binS (cwToBool cw)
-          | isReal cw          = let CWAlgReal w = cwVal cw in show w
+          | isFloat cw         = let CWFloat  f  = cwVal cw in show f ++ " :: Float"
+          | isDouble cw        = let CWDouble d  = cwVal cw in show d ++ " :: Double"
+          | isReal cw          = let CWAlgReal w = cwVal cw in show w ++ " :: AlgReal"
           | not (isBounded cw) = let CWInteger w = cwVal cw in sbinI True True w
-          | isUninterpreted cw = show cw
+          | isUninterpreted cw = show cw  ++ " :: " ++ show (cwKind cw)
           | True               = let CWInteger w = cwVal cw in sbin  True True (hasSign cw, intSizeOf cw) w
 
   hex cw | cwIsBit cw         = hexS (cwToBool cw)
-         | isReal cw          = let CWAlgReal w = cwVal cw in show w
+         | isFloat cw         = let CWFloat  f  = cwVal cw in show f ++ " :: Float"
+         | isDouble cw        = let CWDouble d  = cwVal cw in show d ++ " :: Double"
+         | isReal cw          = let CWAlgReal w = cwVal cw in show w ++ " :: AlgReal"
          | not (isBounded cw) = let CWInteger w = cwVal cw in shexI False False w
-         | isUninterpreted cw = show cw
+         | isUninterpreted cw = show cw  ++ " :: " ++ show (cwKind cw)
          | True               = let CWInteger w = cwVal cw in shex  False False (hasSign cw, intSizeOf cw) w
 
   bin cw | cwIsBit cw         = binS (cwToBool cw)
-         | isReal cw          = let CWAlgReal w = cwVal cw in show w
+         | isFloat cw         = let CWFloat  f  = cwVal cw in show f ++ " :: Float"
+         | isDouble cw        = let CWDouble d  = cwVal cw in show d ++ " :: Double"
+         | isReal cw          = let CWAlgReal w = cwVal cw in show w ++ " :: AlgReal"
          | not (isBounded cw) = let CWInteger w = cwVal cw in sbinI False False w
-         | isUninterpreted cw = show cw
+         | isUninterpreted cw = show cw  ++ " :: " ++ show (cwKind cw)
          | True               = let CWInteger w = cwVal cw in sbin  False False (hasSign cw, intSizeOf cw) w
 
 instance (SymWord a, PrettyNum a) => PrettyNum (SBV a) where
