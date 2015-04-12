@@ -4,7 +4,7 @@ INPUTS
 CONSTANTS
   s_2 = False
   s_1 = True
-  s2 = 1 :: SWord8
+  s2 = 1 :: Word8
 TABLES
 ARRAYS
 UNINTERPRETED CONSTANTS
