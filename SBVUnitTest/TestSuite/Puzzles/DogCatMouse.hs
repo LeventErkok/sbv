@@ -19,7 +19,7 @@ import SBVTest
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
-  "dog cat mouse" ~: allSat p `goldCheck` "dogCatMouse.gold"
+  "dog_cat_mouse" ~: allSat p `goldCheck` "dogCatMouse.gold"
  ]
  where p = do [dog, cat, mouse] <- sIntegers ["dog", "cat", "mouse"]
               solve [ dog   .>= 1                                   -- at least one dog
