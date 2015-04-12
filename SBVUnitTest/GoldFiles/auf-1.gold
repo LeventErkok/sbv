@@ -5,9 +5,9 @@ INPUTS
 CONSTANTS
   s_2 = False
   s_1 = True
-  s3 = 2 :: SWord32
-  s9 = 3 :: SWord32
-  s13 = 1 :: SWord32
+  s3 = 2 :: Word32
+  s9 = 3 :: Word32
+  s13 = 1 :: Word32
 TABLES
 ARRAYS
 UNINTERPRETED CONSTANTS
