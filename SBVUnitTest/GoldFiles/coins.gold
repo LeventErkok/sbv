@@ -8,15 +8,15 @@ INPUTS
 CONSTANTS
   s_2 = False
   s_1 = True
-  s1 = 1 :: SWord16
-  s3 = 5 :: SWord16
-  s5 = 10 :: SWord16
-  s7 = 25 :: SWord16
-  s9 = 50 :: SWord16
-  s11 = 100 :: SWord16
-  s84 = 0 :: SWord16
-  s88 = 95 :: SWord16
-  s551 = 115 :: SWord16
+  s1 = 1 :: Word16
+  s3 = 5 :: Word16
+  s5 = 10 :: Word16
+  s7 = 25 :: Word16
+  s9 = 50 :: Word16
+  s11 = 100 :: Word16
+  s84 = 0 :: Word16
+  s88 = 95 :: Word16
+  s551 = 115 :: Word16
 TABLES
 ARRAYS
 UNINTERPRETED CONSTANTS

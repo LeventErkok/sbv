@@ -7,10 +7,10 @@ INPUTS
 CONSTANTS
   s_2 = False
   s_1 = True
-  s6 = 0 :: SWord1
-  s18 = 1 :: SWord8
-  s3340 = 0 :: SWord8
-  s3468 = 4 :: SWord8
+  s6 = 0 :: Word1
+  s18 = 1 :: Word8
+  s3340 = 0 :: Word8
+  s3468 = 4 :: Word8
 TABLES
 ARRAYS
 UNINTERPRETED CONSTANTS

@@ -12,11 +12,11 @@ INPUTS
 CONSTANTS
   s_2 = False
   s_1 = True
-  s19 = 0 :: SWord1
-  s17 = 0 :: SWord8
-  s24 = 128 :: SWord8
-  s26 = 127 :: SWord8
-  s16 = 256 :: SWord16
+  s19 = 0 :: Word1
+  s17 = 0 :: Word8
+  s24 = 128 :: Word8
+  s26 = 127 :: Word8
+  s16 = 256 :: Word16
 TABLES
 ARRAYS
 UNINTERPRETED CONSTANTS

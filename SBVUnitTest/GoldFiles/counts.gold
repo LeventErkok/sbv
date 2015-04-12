@@ -12,18 +12,18 @@ INPUTS
 CONSTANTS
   s_2 = False
   s_1 = True
-  s10 = 10 :: SWord8
-  s12 = 0 :: SWord8
-  s32 = 2 :: SWord8
-  s33 = 1 :: SWord8
-  s35 = 100 :: SWord8
-  s555 = 3 :: SWord8
-  s716 = 4 :: SWord8
-  s877 = 5 :: SWord8
-  s1038 = 6 :: SWord8
-  s1199 = 7 :: SWord8
-  s1360 = 8 :: SWord8
-  s1521 = 9 :: SWord8
+  s10 = 10 :: Word8
+  s12 = 0 :: Word8
+  s32 = 2 :: Word8
+  s33 = 1 :: Word8
+  s35 = 100 :: Word8
+  s555 = 3 :: Word8
+  s716 = 4 :: Word8
+  s877 = 5 :: Word8
+  s1038 = 6 :: Word8
+  s1199 = 7 :: Word8
+  s1360 = 8 :: Word8
+  s1521 = 9 :: Word8
 TABLES
 ARRAYS
 UNINTERPRETED CONSTANTS

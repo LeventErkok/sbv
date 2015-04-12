@@ -24,6 +24,10 @@
                  Value: +2.0 (NORMAL)
       ```
 
+  * Change how we print type info; for models insted of SType just print Type (i.e.,
+    for SWord8, instead print Word8) which makes more sense and is more consistent.
+    This change should be mostly relevant as how we see the counter-example output.
+
 ### Version 4.3, 2015-04-10
 
   * Introduce Data.SBV.Dynamic, by Brian Huffman. This is mostly an internal
