@@ -79,7 +79,7 @@ class HasKind a where
   hasSign         :: a -> Bool
   intSizeOf       :: a -> Int
   isBoolean       :: a -> Bool
-  isBounded       :: a -> Bool
+  isBounded       :: a -> Bool   -- NB. This really means word/int; i.e., Real/Float will test False
   isReal          :: a -> Bool
   isFloat         :: a -> Bool
   isDouble        :: a -> Bool

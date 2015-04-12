@@ -427,9 +427,13 @@ svSigned :: SVal -> Bool
 svSigned x = kindHasSign (svKind x)
 
 -- | Show instance for 'SVal'. Not particularly "desirable", but will do if needed
+-- NB. We do not show the type info on constant KBool values, since there's no
+-- implicit "fromBoolean" applied to Booleans in Haskell; and thus a statement
+-- of the form "True :: SBool" is just meaningless. (There should be a fromBoolean!)
 instance Show SVal where
-  show (SVal k (Left c))  = showCW False c ++ " :: " ++ show k
-  show (SVal k (Right _)) =         "<symbolic> :: " ++ show k
+  show (SVal KBool (Left c))  = showCW False c
+  show (SVal k     (Left c))  = showCW False c ++ " :: " ++ show k
+  show (SVal k     (Right _)) =         "<symbolic> :: " ++ show k
 
 -- | Equality constraint on SBV values. Not desirable since we can't really compare two
 -- symbolic values, but will do.
