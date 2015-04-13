@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 4.3, 2015-04-10
+* Latest Hackage released version: 4.4, 2015-04-13
 
-### Version 4.4, Not yet released
+### Version 4.4, 2015-04-13
 
   * Hook-up crackNum package; so counter-examples involving floats and
     doubles can be printed in detail when the printBase is chosen to be
