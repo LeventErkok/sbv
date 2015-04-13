@@ -97,12 +97,13 @@ cvt :: RoundingMode               -- ^ User selected rounding mode to be used fo
     -> ([String], [String])
 cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out = (pre, [])
   where -- the logic is an over-approaximation
-        hasInteger = KUnbounded `Set.member` kindInfo
-        hasReal    = KReal      `Set.member` kindInfo
-        hasFloat   = KFloat     `Set.member` kindInfo
-        hasDouble  = KDouble    `Set.member` kindInfo
-        hasBVs     = not $ null [() | KBounded{} <- Set.toList kindInfo]
-        usorts     = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
+        hasInteger     = KUnbounded `Set.member` kindInfo
+        hasReal        = KReal      `Set.member` kindInfo
+        hasFloat       = KFloat     `Set.member` kindInfo
+        hasDouble      = KDouble    `Set.member` kindInfo
+        hasBVs         = not $ null [() | KBounded{} <- Set.toList kindInfo]
+        usorts         = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
+        hasNonBVArrays = (not . null) [() | (_, (_, (k1, k2), _)) <- arrs, not (isBounded k1 && isBounded k2)]
         logic
            | Just l <- smtLogic
            = ["(set-logic " ++ show l ++ ") ; NB. User specified."]
@@ -110,10 +111,15 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
            = if hasBVs
              then ["(set-logic QF_FPBV)"]
              else ["(set-logic QF_FP)"]
-           | hasInteger || hasReal || not (null usorts)
-           = case mbDefaultLogic solverCaps of
-                Nothing -> ["; Has unbounded values (Int/Real) or uninterpreted sorts; no logic specified."]   -- combination, let the solver pick
-                Just l  -> ["(set-logic " ++ l ++ ")"]
+           | hasInteger || hasReal || not (null usorts) || hasNonBVArrays
+           = let why | hasInteger        = "has unbounded values"
+                     | hasReal           = "has algebraic reals"
+                     | not (null usorts) = "has user-defined sorts"
+                     | hasNonBVArrays    = "has non-bitvector arrays"
+                     | True              = "cannot determine the SMTLib-logic to use"
+             in case mbDefaultLogic solverCaps of
+                  Nothing -> ["; " ++ why ++ ", no logic specified."]
+                  Just l  -> ["(set-logic " ++ l ++ "); " ++ why ++ ", using solver-default logic."]
            | True
            = ["(set-logic " ++ qs ++ as ++ ufs ++ "BV)"]
           where qs  | null foralls && null axs = "QF_"  -- axioms are likely to contain quantifiers
