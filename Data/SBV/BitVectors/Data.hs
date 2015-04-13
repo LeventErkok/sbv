@@ -130,6 +130,9 @@ instance HasKind AlgReal where kindOf _ = KReal
 instance HasKind Float   where kindOf _ = KFloat
 instance HasKind Double  where kindOf _ = KDouble
 
+instance HasKind Kind where
+  kindOf = id
+
 instance HasKind CW where
   kindOf = cwKind
 
