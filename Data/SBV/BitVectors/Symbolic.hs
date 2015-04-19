@@ -25,7 +25,7 @@
 module Data.SBV.BitVectors.Symbolic
   ( NodeId(..)
   , SW(..), swKind, trueSW, falseSW
-  , Op(..), smtLibSquareRoot, smtLibFusedMA
+  , Op(..)
   , Quantifier(..), needsExistentials
   , RoundingMode(..)
   , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
@@ -126,22 +126,9 @@ data Op = Plus | Times | Minus | UNeg | Abs
         | ArrEq   Int Int
         | ArrRead Int
         | Uninterpreted String
-        -- Floating point uops with custom rounding-modes
-        | FPRound String
+        -- Floating point uops..
+        | IEEEFP String
         deriving (Eq, Ord)
-
--- | SMT-Lib's square-root over floats/doubles. We piggy back on to the uninterpreted function mechanism
--- to implement these; which is not a terrible idea; although the use of the constructor 'Uninterpreted'
--- might be confusing. This function will *not* be uninterpreted in reality, as QF_FP will define it. It's
--- a bit of a shame, but much easier to implement it this way.
-smtLibSquareRoot :: Op
-smtLibSquareRoot = Uninterpreted "fp.sqrt"
-
--- | SMT-Lib's fusedMA over floats/doubles. Similar to the 'smtLibSquareRoot'. Note that we cannot implement
--- this function in Haskell as precision loss would be inevitable. Maybe Haskell will eventually add this op
--- to the Num class.
-smtLibFusedMA :: Op
-smtLibFusedMA = Uninterpreted "fp.fma"
 
 -- | Show instance for 'Op'. Note that this is largely for debugging purposes, not used
 -- for being read by any tool.
@@ -157,7 +144,7 @@ instance Show Op where
   show (ArrEq i j)   = "array_" ++ show i ++ " == array_" ++ show j
   show (ArrRead i)   = "select array_" ++ show i
   show (Uninterpreted i) = "[uninterpreted] " ++ i
-  show (FPRound w)       = w
+  show (IEEEFP w)        = w
   show op
     | Just s <- op `lookup` syms = s
     | True                       = error "impossible happened; can't find op!"

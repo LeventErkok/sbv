@@ -128,7 +128,7 @@ module Data.SBV (
   , SInteger
   -- *** IEEE-floating point numbers
   -- $floatingPoints
-  , SFloat, SDouble, RoundingFloat(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity, fusedMA
+  , SFloat, SDouble, IEEEFloating(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity
   -- **** Rounding modes
   , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
   -- **** FP classifiers
@@ -296,8 +296,8 @@ import System.IO.Unsafe         (unsafeInterleaveIO)             -- only used sa
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
+import Data.SBV.BitVectors.Floating
 import Data.SBV.BitVectors.PrettyNum
-import Data.SBV.BitVectors.Rounding
 import Data.SBV.BitVectors.SignCast
 import Data.SBV.BitVectors.Splittable
 import Data.SBV.BitVectors.STree

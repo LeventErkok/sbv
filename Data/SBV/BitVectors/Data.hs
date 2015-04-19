@@ -22,7 +22,7 @@
 module Data.SBV.BitVectors.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
  , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble
- , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode, smtLibSquareRoot, smtLibFusedMA
+ , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode
  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
  , SymWord(..)
  , CW(..), CWVal(..), AlgReal(..), cwSameType, cwIsBit, cwToBool

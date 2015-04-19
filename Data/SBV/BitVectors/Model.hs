@@ -31,8 +31,7 @@ module Data.SBV.BitVectors.Model (
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
   , sIntegerToSReal, fpToSReal, sRealToSFloat, sRealToSDouble
   , sWord32ToSFloat, sWord64ToSDouble, sFloatToSWord32, sDoubleToSWord64, blastSFloat, blastSDouble
-  , fusedMA, liftFPPredicate
-  , liftQRem, liftDMod, symbolicMergeWithKind
+  , liftFPPredicate, liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCW, genMkSymVar
   , reduceInPathCondition
   )
@@ -322,7 +321,7 @@ sRealToSFloat :: SRoundingMode -> SReal -> SFloat
 sRealToSFloat rm x = SBV (SVal KFloat (Right (cache y)))
   where y st = do swm <- sbvToSW st rm
                   xsw <- sbvToSW st x
-                  newExpr st KFloat (SBVApp (FPRound "(_ to_fp 8 24)") [swm, xsw])
+                  newExpr st KFloat (SBVApp (IEEEFP "(_ to_fp 8 24)") [swm, xsw])
 
 -- | Promote (demote really) an SReal to an SDouble.
 --
@@ -332,7 +331,7 @@ sRealToSDouble :: SRoundingMode -> SReal -> SFloat
 sRealToSDouble rm x = SBV (SVal KFloat (Right (cache y)))
   where y st = do swm <- sbvToSW st rm
                   xsw <- sbvToSW st x
-                  newExpr st KDouble (SBVApp (FPRound "(_ to_fp 11 53)") [swm, xsw])
+                  newExpr st KDouble (SBVApp (IEEEFP "(_ to_fp 11 53)") [swm, xsw])
 
 -- | Reinterpret a 32-bit word as an 'SFloat'.
 sWord32ToSFloat :: SWord32 -> SFloat
@@ -340,7 +339,7 @@ sWord32ToSFloat x
     | Just w <- unliteral x = literal (wordToFloat w)
     | True                  = SBV (SVal KFloat (Right (cache y)))
    where y st = do xsw <- sbvToSW st x
-                   newExpr st KFloat (SBVApp (FPRound "(_ to_fp 8 24)") [xsw])
+                   newExpr st KFloat (SBVApp (IEEEFP "(_ to_fp 8 24)") [xsw])
 
 -- | Reinterpret a 64-bit word as an 'SDouble'. Note that this function does not
 -- directly work on concrete values, since IEEE754 NaN values are not unique, and
@@ -350,7 +349,7 @@ sWord64ToSDouble x
     | Just w <- unliteral x = literal (wordToDouble w)
     | True                  = SBV (SVal KDouble (Right (cache y)))
    where y st = do xsw <- sbvToSW st x
-                   newExpr st KDouble (SBVApp (FPRound "(_ to_fp 11 53)") [xsw])
+                   newExpr st KDouble (SBVApp (IEEEFP "(_ to_fp 11 53)") [xsw])
 
 -- | Relationally assert the equivalence between an 'SFloat' and an 'SWord32', when the bit-pattern
 -- is interpreted as either type. Useful when analyzing components of a floating point number. Note
@@ -643,7 +642,7 @@ instance (SymWord a, Fractional a, Floating a) => Floating (SBV a) where
     pi      = literal pi
     exp     = lift1FNS "exp"     exp
     log     = lift1FNS "log"     log
-    sqrt    = lift1F   sqrt      smtLibSquareRoot
+    sqrt    = lift1FNS "sqrt"    sqrt
     sin     = lift1FNS "sin"     sin
     cos     = lift1FNS "cos"     cos
     tan     = lift1FNS "tan"     tan
@@ -666,29 +665,6 @@ liftFPPredicate nm f a
    | True                  = SBV $ SVal KBool $ Right $ cache r
    where r st = do swa <- sbvToSW st a
                    newExpr st KBool (SBVApp (Uninterpreted nm) [swa])
-
--- | Fused-multiply add. @fusedMA a b c = a * b + c@, for double and floating point values.
--- Note that a 'fusedMA' call will *never* be concrete, even if all the arguments are constants; since
--- we cannot guarantee the precision requirements, which is the whole reason why 'fusedMA' exists in the
--- first place. (NB. 'fusedMA' only rounds once, even though it does two operations, and hence the extra
--- precision.)
-fusedMA :: (SymWord a, Floating a) => SBV a -> SBV a -> SBV a -> SBV a
-fusedMA a b c = SBV $ SVal k $ Right $ cache r
-  where k = kindOf a
-        r st = do swa <- sbvToSW st a
-                  swb <- sbvToSW st b
-                  swc <- sbvToSW st c
-                  newExpr st k (SBVApp smtLibFusedMA [swa, swb, swc])
-
--- | Lift a float/double unary function, using a corresponding function in SMT-lib. We piggy-back on the uninterpreted
--- function mechanism here, as it essentially is the same as introducing this as a new function.
-lift1F :: (SymWord a, Floating a) => (a -> a) -> Op -> SBV a -> SBV a
-lift1F f smtOp sv
-  | Just v <- unliteral sv = literal $ f v
-  | True                   = SBV $ SVal k $ Right $ cache c
-  where k = kindOf sv
-        c st = do swa <- sbvToSW st sv
-                  newExpr st k (SBVApp smtOp [swa])
 
 -- | Lift a float/double unary function, only over constants
 lift1FNS :: (SymWord a, Floating a) => String -> (a -> a) -> SBV a -> SBV a
