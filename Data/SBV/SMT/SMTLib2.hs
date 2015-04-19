@@ -436,7 +436,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                , (Join, lift2 "concat")
                                ]
         sh (SBVApp (IEEEFP w) args)
-          = "(" ++ w ++ " " ++ unwords (map ssw args) ++ ")"
+          = "(" ++ show w ++ " " ++ unwords (map ssw args) ++ ")"
         sh inp@(SBVApp op args)
           | intOp, Just f <- lookup op smtOpIntTable
           = f True (map ssw args)

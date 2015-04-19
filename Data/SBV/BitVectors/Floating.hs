@@ -23,6 +23,7 @@ import Data.Binary.IEEE754 (wordToFloat, wordToDouble, floatToWord, doubleToWord
 import Data.Word           (Word32, Word64)
 
 import Data.SBV.BitVectors.Data
+import Data.SBV.BitVectors.Symbolic (FPOp(..))
 import Data.SBV.BitVectors.Model
 import Data.SBV.Utils.Boolean
 
@@ -106,26 +107,26 @@ class (SymWord a, RealFloat a) => IEEEFloating a where
 
   -- Default definitions. Minimal complete definition: None! All should be taken care by defaults
   -- Note that we never evaluate FMA concretely, as there's no fma operator in Haskell
-  fpAbs              = lift1  "fp.abs"             (Just abs)      Nothing
-  fpNeg              = lift1  "fp.neg"             (Just negate)   Nothing
-  fpAdd              = lift2  "fp.add"             (Just (+))      . Just
-  fpSub              = lift2  "fp.sub"             (Just (-))      . Just
-  fpMul              = lift2  "fp.mul"             (Just (*))      . Just
-  fpDiv              = lift2  "fp.div"             (Just (/))      . Just
-  fpFMA              = lift3  "fp.fma"             Nothing         . Just
-  fpSqrt             = lift1  "fp.sqrt"            (Just sqrt)     . Just
-  fpRem              = lift2  "fp.rem"             (Just fprem)    Nothing where fprem x y = x - y * fromInteger (round (x / y))
-  fpRoundToIntegral  = lift1  "fp.roundToIntegral" (Just fpRound)  . Just  where fpRound   = fromInteger . round
-  fpMin              = lift2  "fp.min"             (Just min)      Nothing
-  fpMax              = lift2  "fp.max"             (Just max)      Nothing
-  fpEqualObject      = lift2B "="                  (Just fpSame)   Nothing
-  fpIsNormal         = lift1B "fp.isNormal"        isNormalized            where isNormalized x = not (isDenormalized x || isInfinite x || isNaN x)
-  fpIsSubnormal      = lift1B "fp.isSubnormal"     isDenormalized
-  fpIsZero           = lift1B "fp.isZero"          (== 0)
-  fpIsInfinite       = lift1B "fp.isInfinite"      isInfinite
-  fpIsNaN            = lift1B "fp.isNaN"           isNaN
-  fpIsNegative       = lift1B "fp.isNegative"      (\x -> x < 0 ||       isNegativeZero x)
-  fpIsPositive       = lift1B "fp.isPositive"      (\x -> x >= 0 && not (isNegativeZero x))
+  fpAbs              = lift1  FP_Abs             (Just abs)      Nothing
+  fpNeg              = lift1  FP_Neg             (Just negate)   Nothing
+  fpAdd              = lift2  FP_Add             (Just (+))      . Just
+  fpSub              = lift2  FP_Sub             (Just (-))      . Just
+  fpMul              = lift2  FP_Mul             (Just (*))      . Just
+  fpDiv              = lift2  FP_Div             (Just (/))      . Just
+  fpFMA              = lift3  FP_FMA             Nothing         . Just
+  fpSqrt             = lift1  FP_Sqrt            (Just sqrt)     . Just
+  fpRem              = lift2  FP_Rem             (Just fprem)    Nothing where fprem x y = x - y * fromInteger (round (x / y))
+  fpRoundToIntegral  = lift1  FP_RoundToIntegral (Just fpRound)  . Just  where fpRound   = fromInteger . round
+  fpMin              = lift2  FP_Min             (Just min)      Nothing
+  fpMax              = lift2  FP_Max             (Just max)      Nothing
+  fpEqualObject      = lift2B FP_ObjEqual           (Just fpSame)   Nothing
+  fpIsNormal         = lift1B FP_IsNormal        isNormalized            where isNormalized x = not (isDenormalized x || isInfinite x || isNaN x)
+  fpIsSubnormal      = lift1B FP_IsSubnormal     isDenormalized
+  fpIsZero           = lift1B FP_IsZero          (== 0)
+  fpIsInfinite       = lift1B FP_IsInfinite      isInfinite
+  fpIsNaN            = lift1B FP_IsNaN           isNaN
+  fpIsNegative       = lift1B FP_IsNegative      (\x -> x < 0 ||       isNegativeZero x)
+  fpIsPositive       = lift1B FP_IsPositive      (\x -> x >= 0 && not (isNegativeZero x))
   fpIsNegativeZero x = fpIsZero x &&& fpIsNegative x
   fpIsPositiveZero x = fpIsZero x &&& fpIsPositive x
   fpIsPoint        x = bnot (fpIsNaN x ||| fpIsInfinite x)
@@ -187,7 +188,7 @@ addRM st (Just rm) as = do swm <- sbvToSW st rm
                            return (swm : as)
 
 -- | Lift a 1 arg FP-op
-lift1 :: (SymWord a, Floating a) => String -> Maybe (a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a
+lift1 :: (SymWord a, Floating a) => FPOp -> Maybe (a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a
 lift1 w mbOp mbRm a
   | Just cv <- concEval1 mbOp mbRm a
   = cv
@@ -199,7 +200,7 @@ lift1 w mbOp mbRm a
                   newExpr st k (SBVApp (IEEEFP w) args)
 
 -- | Lift an FP predicate
-lift1B :: (SymWord a, Floating a) => String -> (a -> Bool) -> SBV a -> SBool
+lift1B :: (SymWord a, Floating a) => FPOp -> (a -> Bool) -> SBV a -> SBool
 lift1B w f a
    | Just v <- unliteral a = literal $ f v
    | True                  = SBV $ SVal KBool $ Right $ cache r
@@ -208,7 +209,7 @@ lift1B w f a
 
 
 -- | Lift a 2 arg FP-op
-lift2 :: (SymWord a, Floating a) => String -> Maybe (a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBV a
+lift2 :: (SymWord a, Floating a) => FPOp -> Maybe (a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBV a
 lift2 w mbOp mbRm a b
   | Just cv <- concEval2 mbOp mbRm a b
   = cv
@@ -221,7 +222,7 @@ lift2 w mbOp mbRm a b
                   newExpr st k (SBVApp (IEEEFP w) args)
 
 -- | Lift a 2 arg FP-op, producing bool
-lift2B :: (SymWord a, Floating a) => String -> Maybe (a -> a -> Bool) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBool
+lift2B :: (SymWord a, Floating a) => FPOp -> Maybe (a -> a -> Bool) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBool
 lift2B w mbOp mbRm a b
   | Just cv <- concEval2B mbOp mbRm a b
   = cv
@@ -233,7 +234,7 @@ lift2B w mbOp mbRm a b
                   newExpr st KBool (SBVApp (IEEEFP w) args)
 
 -- | Lift a 3 arg FP-op
-lift3 :: (SymWord a, Floating a) => String -> Maybe (a -> a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBV a -> SBV a
+lift3 :: (SymWord a, Floating a) => FPOp -> Maybe (a -> a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBV a -> SBV a
 lift3 w mbOp mbRm a b c
   | Just cv <- concEval3 mbOp mbRm a b c
   = cv
@@ -258,7 +259,7 @@ fpToSReal x
   | Just i <- unliteral x = literal $ fromRational $ toRational i
   | True                  = SBV (SVal KReal (Right (cache y)))
   where y st = do xsw <- sbvToSW st x
-                  newExpr st KReal (SBVApp (IEEEFP "fp.to_real") [xsw])
+                  newExpr st KReal (SBVApp (IEEEFP FP_ToReal) [xsw])
 
 -- | Promote (demote really) an SReal to an SFloat.
 --
@@ -268,7 +269,7 @@ sRealToSFloat :: SRoundingMode -> SReal -> SFloat
 sRealToSFloat rm x = SBV (SVal KFloat (Right (cache y)))
   where y st = do swm <- sbvToSW st rm
                   xsw <- sbvToSW st x
-                  newExpr st KFloat (SBVApp (IEEEFP "(_ to_fp 8 24)") [swm, xsw])
+                  newExpr st KFloat (SBVApp (IEEEFP FP_ToFloat) [swm, xsw])
 
 -- | Promote (demote really) an SReal to an SDouble.
 --
@@ -278,7 +279,7 @@ sRealToSDouble :: SRoundingMode -> SReal -> SFloat
 sRealToSDouble rm x = SBV (SVal KFloat (Right (cache y)))
   where y st = do swm <- sbvToSW st rm
                   xsw <- sbvToSW st x
-                  newExpr st KDouble (SBVApp (IEEEFP "(_ to_fp 11 53)") [swm, xsw])
+                  newExpr st KDouble (SBVApp (IEEEFP FP_ToDouble) [swm, xsw])
 
 -- | Reinterpret a 32-bit word as an 'SFloat'.
 sWord32ToSFloat :: SWord32 -> SFloat
@@ -286,7 +287,7 @@ sWord32ToSFloat x
     | Just w <- unliteral x = literal (wordToFloat w)
     | True                  = SBV (SVal KFloat (Right (cache y)))
    where y st = do xsw <- sbvToSW st x
-                   newExpr st KFloat (SBVApp (IEEEFP "(_ to_fp 8 24)") [xsw])
+                   newExpr st KFloat (SBVApp (IEEEFP FP_ToFloat) [xsw])
 
 -- | Reinterpret a 64-bit word as an 'SDouble'. Note that this function does not
 -- directly work on concrete values, since IEEE754 NaN values are not unique, and
@@ -296,7 +297,7 @@ sWord64ToSDouble x
     | Just w <- unliteral x = literal (wordToDouble w)
     | True                  = SBV (SVal KDouble (Right (cache y)))
    where y st = do xsw <- sbvToSW st x
-                   newExpr st KDouble (SBVApp (IEEEFP "(_ to_fp 11 53)") [xsw])
+                   newExpr st KDouble (SBVApp (IEEEFP FP_ToDouble) [xsw])
 
 -- | Relationally assert the equivalence between an 'SFloat' and an 'SWord32', when the bit-pattern
 -- is interpreted as either type. Useful when analyzing components of a floating point number. Note

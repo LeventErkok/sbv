@@ -25,7 +25,7 @@
 module Data.SBV.BitVectors.Symbolic
   ( NodeId(..)
   , SW(..), swKind, trueSW, falseSW
-  , Op(..)
+  , Op(..), FPOp(..)
   , Quantifier(..), needsExistentials
   , RoundingMode(..)
   , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
@@ -113,22 +113,87 @@ trueSW :: SW
 trueSW  = SW KBool $ NodeId (-1)
 
 -- | Symbolic operations
-data Op = Plus | Times | Minus | UNeg | Abs
-        | Quot | Rem
-        | Equal | NotEqual
-        | LessThan | GreaterThan | LessEq | GreaterEq
+data Op = Plus
+        | Times
+        | Minus
+        | UNeg
+        | Abs
+        | Quot
+        | Rem
+        | Equal
+        | NotEqual
+        | LessThan
+        | GreaterThan
+        | LessEq
+        | GreaterEq
         | Ite
-        | And | Or  | XOr | Not
-        | Shl Int | Shr Int | Rol Int | Ror Int
-        | Extract Int Int -- Extract i j: extract bits i to j. Least significant bit is 0 (big-endian)
-        | Join  -- Concat two words to form a bigger one, in the order given
+        | And
+        | Or
+        | XOr
+        | Not
+        | Shl Int
+        | Shr Int
+        | Rol Int
+        | Ror Int
+        | Extract Int Int                       -- Extract i j: extract bits i to j. Least significant bit is 0 (big-endian)
+        | Join                                  -- Concat two words to form a bigger one, in the order given
         | LkUp (Int, Kind, Kind, Int) !SW !SW   -- (table-index, arg-type, res-type, length of the table) index out-of-bounds-value
-        | ArrEq   Int Int
+        | ArrEq   Int Int                       -- Array equality
         | ArrRead Int
         | Uninterpreted String
-        -- Floating point uops..
-        | IEEEFP String
+        | IEEEFP FPOp                           -- Floating-point ops, categorized separately
         deriving (Eq, Ord)
+
+-- | Floating point operations
+data FPOp = FP_ToReal
+          | FP_ToFloat
+          | FP_ToDouble
+          | FP_Abs
+          | FP_Neg
+          | FP_Add
+          | FP_Sub
+          | FP_Mul
+          | FP_Div
+          | FP_FMA
+          | FP_Sqrt
+          | FP_Rem
+          | FP_RoundToIntegral
+          | FP_Min
+          | FP_Max
+          | FP_ObjEqual
+          | FP_IsNormal
+          | FP_IsSubnormal
+          | FP_IsInfinite
+          | FP_IsZero
+          | FP_IsNaN
+          | FP_IsNegative
+          | FP_IsPositive
+          deriving (Eq, Ord)
+
+instance Show FPOp where
+   show FP_ToReal          = "fp.to_real"
+   show FP_ToFloat         = "(_ to_fp 8 24)"
+   show FP_ToDouble        = "(_ to_fp 11 53)"
+   show FP_Abs             = "fp.abs"
+   show FP_Neg             = "fp.neg"
+   show FP_Add             = "fp.add"
+   show FP_Sub             = "fp.sub"
+   show FP_Mul             = "fp.mul"
+   show FP_Div             = "fp.div"
+   show FP_FMA             = "fp.fma"
+   show FP_Sqrt            = "fp.sqrt"
+   show FP_Rem             = "fp.rem"
+   show FP_RoundToIntegral = "fp.roundToIntegral"
+   show FP_Min             = "fp.min"
+   show FP_Max             = "fp.max"
+   show FP_ObjEqual        = "="
+   show FP_IsNormal        = "fp.isNormal"
+   show FP_IsSubnormal     = "fp.isSubnormal"
+   show FP_IsInfinite      = "fp.isZero"
+   show FP_IsZero          = "fp.isInfinite"
+   show FP_IsNaN           = "fp.isNaN"
+   show FP_IsNegative      = "fp.isNegative"
+   show FP_IsPositive      = "fp.isPositive"
 
 -- | Show instance for 'Op'. Note that this is largely for debugging purposes, not used
 -- for being read by any tool.
@@ -144,7 +209,7 @@ instance Show Op where
   show (ArrEq i j)   = "array_" ++ show i ++ " == array_" ++ show j
   show (ArrRead i)   = "select array_" ++ show i
   show (Uninterpreted i) = "[uninterpreted] " ++ i
-  show (IEEEFP w)        = w
+  show (IEEEFP w)        = show w
   show op
     | Just s <- op `lookup` syms = s
     | True                       = error "impossible happened; can't find op!"
