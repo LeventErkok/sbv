@@ -3,6 +3,18 @@
 
 * Latest Hackage released version: 4.4, 2015-04-13
 
+### Version 4.5, Not yet released
+
+  * Rework floating-point arithmetic, and add missing floating-point operations:
+
+      * fpRem            : remainder
+      * fpRoundToIntegral: truncating round 
+      * fpMin		 : min
+      * fpMax		 : max
+      * fpEqualObject	 : FP equality as object (i.e., NaN equals NaN, +0 does not equal -0, etc.)
+
+    This brings SBV up-to par with everything supported by the SMT-Lib FP theory.
+
 ### Version 4.4, 2015-04-13
 
   * Hook-up crackNum package; so counter-examples involving floats and
