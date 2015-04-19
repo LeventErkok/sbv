@@ -30,7 +30,7 @@ module Data.SBV.BitVectors.Model (
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
   , sIntegerToSReal
-  , liftFPPredicate, liftQRem, liftDMod, symbolicMergeWithKind
+  , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCW, genMkSymVar
   , reduceInPathCondition
   )
@@ -556,14 +556,6 @@ instance (SymWord a, Fractional a, Floating a) => Floating (SBV a) where
     atanh   = lift1FNS "atanh"   atanh
     (**)    = lift2FNS "**"      (**)
     logBase = lift2FNS "logBase" logBase
-
--- | Lift an FP predicate as defined by SMT-Lib to the world of SFloat and SDoubles.
-liftFPPredicate :: (Floating a, SymWord a) => String -> (a -> Bool) -> SBV a -> SBool
-liftFPPredicate nm f a
-   | Just v <- unliteral a = literal $ f v
-   | True                  = SBV $ SVal KBool $ Right $ cache r
-   where r st = do swa <- sbvToSW st a
-                   newExpr st KBool (SBVApp (Uninterpreted nm) [swa])
 
 -- | Lift a float/double unary function, only over constants
 lift1FNS :: (SymWord a, Floating a) => String -> (a -> a) -> SBV a -> SBV a
