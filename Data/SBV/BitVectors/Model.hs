@@ -29,8 +29,7 @@ module Data.SBV.BitVectors.Model (
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
-  , sIntegerToSReal, fpToSReal, sRealToSFloat, sRealToSDouble
-  , sWord32ToSFloat, sWord64ToSDouble, sFloatToSWord32, sDoubleToSWord64, blastSFloat, blastSDouble
+  , sIntegerToSReal
   , liftFPPredicate, liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCW, genMkSymVar
   , reduceInPathCondition
@@ -45,8 +44,6 @@ import Data.Int        (Int8, Int16, Int32, Int64)
 import Data.List       (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate)
 import Data.Maybe      (fromMaybe)
 import Data.Word       (Word8, Word16, Word32, Word64)
-
-import Data.Binary.IEEE754 (wordToFloat, wordToDouble, floatToWord, doubleToWord)
 
 import qualified Data.Map as M
 
@@ -304,104 +301,6 @@ sIntegerToSReal x
   | True                  = SBV (SVal KReal (Right (cache y)))
   where y st = do xsw <- sbvToSW st x
                   newExpr st KReal (SBVApp (Uninterpreted "to_real") [xsw])
-
--- | Promote an SFloat/SDouble to an SReal
-fpToSReal :: (Real a, Floating a, SymWord a) => SBV a -> SReal
-fpToSReal x
-  | Just i <- unliteral x = literal $ fromRational $ toRational i
-  | True                  = SBV (SVal KReal (Right (cache y)))
-  where y st = do xsw <- sbvToSW st x
-                  newExpr st KReal (SBVApp (Uninterpreted "fp.to_real") [xsw])
-
--- | Promote (demote really) an SReal to an SFloat.
---
--- NB: This function doesn't work on concrete values at the Haskell
--- level since we have no easy way of honoring the rounding-mode given.
-sRealToSFloat :: SRoundingMode -> SReal -> SFloat
-sRealToSFloat rm x = SBV (SVal KFloat (Right (cache y)))
-  where y st = do swm <- sbvToSW st rm
-                  xsw <- sbvToSW st x
-                  newExpr st KFloat (SBVApp (IEEEFP "(_ to_fp 8 24)") [swm, xsw])
-
--- | Promote (demote really) an SReal to an SDouble.
---
--- NB: This function doesn't work on concrete values at the Haskell
--- level since we have no easy way of honoring the rounding-mode given.
-sRealToSDouble :: SRoundingMode -> SReal -> SFloat
-sRealToSDouble rm x = SBV (SVal KFloat (Right (cache y)))
-  where y st = do swm <- sbvToSW st rm
-                  xsw <- sbvToSW st x
-                  newExpr st KDouble (SBVApp (IEEEFP "(_ to_fp 11 53)") [swm, xsw])
-
--- | Reinterpret a 32-bit word as an 'SFloat'.
-sWord32ToSFloat :: SWord32 -> SFloat
-sWord32ToSFloat x
-    | Just w <- unliteral x = literal (wordToFloat w)
-    | True                  = SBV (SVal KFloat (Right (cache y)))
-   where y st = do xsw <- sbvToSW st x
-                   newExpr st KFloat (SBVApp (IEEEFP "(_ to_fp 8 24)") [xsw])
-
--- | Reinterpret a 64-bit word as an 'SDouble'. Note that this function does not
--- directly work on concrete values, since IEEE754 NaN values are not unique, and
--- thus do not directly map to SDouble
-sWord64ToSDouble :: SWord64 -> SDouble
-sWord64ToSDouble x
-    | Just w <- unliteral x = literal (wordToDouble w)
-    | True                  = SBV (SVal KDouble (Right (cache y)))
-   where y st = do xsw <- sbvToSW st x
-                   newExpr st KDouble (SBVApp (IEEEFP "(_ to_fp 11 53)") [xsw])
-
--- | Relationally assert the equivalence between an 'SFloat' and an 'SWord32', when the bit-pattern
--- is interpreted as either type. Useful when analyzing components of a floating point number. Note
--- that this cannot be written as a function, since IEEE754 NaN values are not unique. That is,
--- given a float, there isn't a unique sign/mantissa/exponent that we can match it to.
---
--- The use case would be code of the form:
---
--- @
---     do w <- free_
---        constrain $ sFloatToSWord32 f w
---        ...
--- @
---
--- At which point the variable @w@ can be used to access the bits of the float 'f'.
-sFloatToSWord32 :: SFloat -> SWord32 -> SBool
-sFloatToSWord32 fVal wVal
-  | Just f <- unliteral fVal, not (isNaN f) = wVal .== literal (floatToWord f)
-  | True                                    = result `is` fVal
- where result   = sWord32ToSFloat wVal
-       a `is` b = (checkNaN a &&& checkNaN b) ||| (a .== b)
-       checkNaN = liftFPPredicate "fp.isNaN" isNaN
-
--- | Relationally assert the equivalence between an 'SDouble' and an 'SWord64', when the bit-pattern
--- is interpreted as either type. See the comments for 'sFloatToSWord32' for details.
-sDoubleToSWord64 :: SDouble -> SWord64 -> SBool
-sDoubleToSWord64 fVal wVal
-  | Just f <- unliteral fVal, not (isNaN f) = wVal .== literal (doubleToWord f)
-  | True                                    = result `is` fVal
- where result   = sWord64ToSDouble wVal
-       a `is` b = (checkNaN a &&& checkNaN b) ||| (a .== b)
-       checkNaN = liftFPPredicate "fp.isNaN" isNaN
-
--- | Relationally extract the sign\/exponent\/mantissa of a single-precision float. Due to the
--- non-unique representation of NaN's, we have to do this function relationally, much like
--- 'sFloatToSWord32'.
-blastSFloat :: SFloat -> (SBool, [SBool], [SBool]) -> SBool
-blastSFloat fVal (s, expt, mant)
-  | length expt /= 8 || length mant /= 23  = error "SBV.blastSFloat: Need 8-bit expt and 23 bit mantissa"
-  | True                                   = sFloatToSWord32 fVal wVal
- where bits = s : expt ++ mant
-       wVal = sum [ite b (2^c) 0 | (b, c) <- zip bits (reverse [(0::Word32) .. 31])]
-
--- | Relationally extract the sign\/exponent\/mantissa of a double-precision float. Due to the
--- non-unique representation of NaN's, we have to do this function relationally, much like
--- 'sDoubleToSWord64'.
-blastSDouble :: SDouble -> (SBool, [SBool], [SBool]) -> SBool
-blastSDouble fVal (s, expt, mant)
-  | length expt /= 11 || length mant /= 52 = error "SBV.blastSDouble: Need 11-bit expt and 52 bit mantissa"
-  | True                                   = sDoubleToSWord64 fVal wVal
- where bits = s : expt ++ mant
-       wVal = sum [ite b (2^c) 0 | (b, c) <- zip bits (reverse [(0::Word64) .. 63])]
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.

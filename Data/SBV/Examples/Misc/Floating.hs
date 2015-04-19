@@ -48,7 +48,7 @@ assocPlus :: SFloat -> SFloat -> SFloat -> SBool
 assocPlus x y z = x + (y + z) .== (x + y) + z
 
 -- | Prove that addition is not associative, even if we ignore @NaN@/@Infinity@ values.
--- To do this, we use the predicate 'isPointFP', which is true of a floating point
+-- To do this, we use the predicate 'fpIsPoint', which is true of a floating point
 -- number ('SFloat' or 'SDouble') if it is neither @NaN@ nor @Infinity@. (That is, it's a
 -- representable point in the real-number line.)
 --
@@ -73,8 +73,8 @@ assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
                               let lhs = x+(y+z)
                                   rhs = (x+y)+z
                               -- make sure we do not overflow at the intermediate points
-                              constrain $ isPointFP lhs
-                              constrain $ isPointFP rhs
+                              constrain $ fpIsPoint lhs
+                              constrain $ fpIsPoint rhs
                               return $ lhs .== rhs
 
 -----------------------------------------------------------------------------
@@ -102,8 +102,8 @@ assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
 --
 nonZeroAddition :: IO ThmResult
 nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
-                             constrain $ isPointFP a
-                             constrain $ isPointFP b
+                             constrain $ fpIsPoint a
+                             constrain $ fpIsPoint b
                              constrain $ a + b .== a
                              return $ b .== 0
 
@@ -127,8 +127,8 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 -- 0.9999999999999999
 multInverse :: IO ThmResult
 multInverse = prove $ do a <- sDouble "a"
-                         constrain $ isPointFP a
-                         constrain $ isPointFP (1/a)
+                         constrain $ fpIsPoint a
+                         constrain $ fpIsPoint (1/a)
                          return $ a * (1/a) .== 1
 
 -----------------------------------------------------------------------------
@@ -175,6 +175,6 @@ roundingAdd = sat $ do m :: SRoundingMode <- free "rm"
                        y <- sFloat "y"
                        let lhs = fpAdd m x y
                        let rhs = x + y
-                       constrain $ isPointFP lhs
-                       constrain $ isPointFP rhs
+                       constrain $ fpIsPoint lhs
+                       constrain $ fpIsPoint rhs
                        return $ lhs ./= rhs

@@ -15,6 +15,19 @@
 
     This brings SBV up-to par with everything supported by the SMT-Lib FP theory.
 
+  * Rename all FP recognizers to be in sync with FP operations. Here are the old/new names:
+
+     * isNormalFP       --> fpIsNormal       
+     * isSubnormalFP    --> fpIsSubnormal    
+     * isZeroFP         --> fpIsZero         
+     * isInfiniteFP     --> fpIsInfinite     
+     * isNaNFP          --> fpIsNaN          
+     * isNegativeFP     --> fpIsNegative     
+     * isPositiveFP     --> fpIsPositive     
+     * isNegativeZeroFP --> fpIsNegativeZero 
+     * isPositiveZeroFP --> fpIsPositiveZero 
+     * isPointFP        --> fpIsPoint        
+
 ### Version 4.4, 2015-04-13
 
   * Hook-up crackNum package; so counter-examples involving floats and

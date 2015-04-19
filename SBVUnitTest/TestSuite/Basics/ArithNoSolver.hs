@@ -261,19 +261,19 @@ genFloats = bTests ++ uTests
           where chk nm (x, v) sv
                   -- Work around GHC bug, see issue #138
                   -- Remove the following line when fixed.
-                  | nm == "isPositiveZeroFP" && isNegativeZero x = (nm, show x, True)
+                  | nm == "fpIsPositiveZero" && isNegativeZero x = (nm, show x, True)
                   | True                                         = (nm, show x, Just v == unliteral sv)
-        predicates :: (RealFloat a, Floating a, SymWord a) => [(String, SBV a -> SBool, a -> Bool)]
-        predicates = [ ("isNormalFP",       isNormalFP,        isNormalized)
-                     , ("isSubnormalFP",    isSubnormalFP,     isDenormalized)
-                     , ("isZeroFP",         isZeroFP,          (== 0))
-                     , ("isInfiniteFP",     isInfiniteFP,      isInfinite)
-                     , ("isNaNFP",          isNaNFP,           isNaN)
-                     , ("isNegativeFP",     isNegativeFP,      \x -> x < 0  ||      isNegativeZero x)
-                     , ("isPositiveFP",     isPositiveFP,      \x -> x >= 0 && not (isNegativeZero x))
-                     , ("isNegativeZeroFP", isNegativeZeroFP,  isNegativeZero)
-                     , ("isPositiveZeroFP", isPositiveZeroFP,  \x -> x == 0 && not (isNegativeZero x))
-                     , ("isPointFP",        isPointFP,         \x -> not (isNaN x || isInfinite x))
+        predicates :: IEEEFloating a => [(String, SBV a -> SBool, a -> Bool)]
+        predicates = [ ("fpIsNormal",       fpIsNormal,        isNormalized)
+                     , ("fpIsSubnormal",    fpIsSubnormal,     isDenormalized)
+                     , ("fpIsZero",         fpIsZero,          (== 0))
+                     , ("fpIsInfinite",     fpIsInfinite,      isInfinite)
+                     , ("fpIsNaN",          fpIsNaN,           isNaN)
+                     , ("fpIsNegative",     fpIsNegative,      \x -> x < 0  ||      isNegativeZero x)
+                     , ("fpIsPositive",     fpIsPositive,      \x -> x >= 0 && not (isNegativeZero x))
+                     , ("fpIsNegativeZero", fpIsNegativeZero,  isNegativeZero)
+                     , ("fpIsPositiveZero", fpIsPositiveZero,  \x -> x == 0 && not (isNegativeZero x))
+                     , ("fpIsPoint",        fpIsPoint,         \x -> not (isNaN x || isInfinite x))
                      ]
             where isNormalized x = not (isDenormalized x || isInfinite x || isNaN x)
 

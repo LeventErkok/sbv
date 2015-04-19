@@ -9,47 +9,126 @@
 -- Implementation of floating-point operations mapping to SMT-Lib2 floats
 -----------------------------------------------------------------------------
 
-module Data.SBV.BitVectors.Floating (IEEEFloating(..)) where
+module Data.SBV.BitVectors.Floating (
+         IEEEFloating(..)
+       , fpToSReal, sRealToSFloat, sRealToSDouble
+       , sWord32ToSFloat, sWord64ToSDouble
+       , sFloatToSWord32, sDoubleToSWord64
+       , blastSFloat, blastSDouble
+       ) where
 
 import Control.Monad (join)
 
+import Data.Binary.IEEE754 (wordToFloat, wordToDouble, floatToWord, doubleToWord)
+import Data.Word           (Word32, Word64)
+
 import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.Model ()  -- instances only
+import Data.SBV.BitVectors.Model
+import Data.SBV.Utils.Boolean
 
 -- | A class of floating-point (IEEE754) operations, some of
 -- which behave differently based on rounding modes. Note that unless
 -- the rounding mode is concretely RoundNearestTiesToEven, we will
--- not concretely evaluate these, but rather pass down to the SMT solver
+-- not concretely evaluate these, but rather pass down to the SMT solver.
 class (SymWord a, RealFloat a) => IEEEFloating a where
+  -- | Compute the floating point absolute value.
   fpAbs             ::                  SBV a -> SBV a
+
+  -- | Compute the unary negation. Note that @0 - x@ is not equivalent to @-x@ for floating-point, since @-0@ and @0@ are different.
   fpNeg             ::                  SBV a -> SBV a
+
+  -- | Add two floating point values, using the given rounding mode
   fpAdd             :: SRoundingMode -> SBV a -> SBV a -> SBV a
+
+  -- | Subtract two floating point values, using the given rounding mode
   fpSub             :: SRoundingMode -> SBV a -> SBV a -> SBV a
+
+  -- | Multiply two floating point values, using the given rounding mode
   fpMul             :: SRoundingMode -> SBV a -> SBV a -> SBV a
+
+  -- | Divide two floating point values, using the given rounding mode
   fpDiv             :: SRoundingMode -> SBV a -> SBV a -> SBV a
+
+  -- | Fused-multiply-add three floating point values, using the given rounding mode. @fpFMA x y z = x*y+z@ but with only
+  -- one rounding done for the whole operation; not two. Note that we will never concretely evaluate this function since
+  -- Haskell lacks an FMA implementation.
   fpFMA             :: SRoundingMode -> SBV a -> SBV a -> SBV a -> SBV a
+
+  -- | Compute the square-root of a float, using the given rounding mode
   fpSqrt            :: SRoundingMode -> SBV a -> SBV a
+
+  -- | Compute the remainder: @x - y * n@, where @n@ is the truncated integer nearest to x/y. The rounding mode
+  -- is implicitly assumed to be @RoundNearestTiesToEven@.
   fpRem             ::                  SBV a -> SBV a -> SBV a
+
+  -- | Round to the nearest integral value, using the given rounding mode.
   fpRoundToIntegral :: SRoundingMode -> SBV a -> SBV a
+
+  -- | Compute the minimum of two floats, respects @infinity@ and @NaN@ values
   fpMin             ::                  SBV a -> SBV a -> SBV a
+
+  -- | Compute the maximum of two floats, respects @infinity@ and @NaN@ values
   fpMax             ::                  SBV a -> SBV a -> SBV a
+
+  -- | Are the two given floats exactly the same. That is, @NaN@ will compare equal to itself, @+0@ will /not/ compare
+  -- equal to @-0@ etc. This is the object level equality, as opposed to the semantic equality. (For the latter, just use '.=='.)
   fpEqualObject     ::                  SBV a -> SBV a -> SBool
+
+  -- | Is the floating-point number a normal value. (i.e., not denormalized.)
+  fpIsNormal :: SBV a -> SBool
+
+  -- | Is the floating-point number a subnormal value. (Also known as denormal.)
+  fpIsSubnormal :: SBV a -> SBool
+
+  -- | Is the floating-point number 0? (Note that both +0 and -0 will satisfy this predicate.)
+  fpIsZero :: SBV a -> SBool
+
+  -- | Is the floating-point number infinity? (Note that both +oo and -oo will satisfy this predicate.)
+  fpIsInfinite :: SBV a -> SBool
+
+  -- | Is the floating-point number a NaN value?
+  fpIsNaN ::  SBV a -> SBool
+
+  -- | Is the floating-point number negative? Note that -0 satisfies this predicate but +0 does not.
+  fpIsNegative :: SBV a -> SBool
+
+  -- | Is the floating-point number positive? Note that +0 satisfies this predicate but -0 does not.
+  fpIsPositive :: SBV a -> SBool
+
+  -- | Is the floating point number -0?
+  fpIsNegativeZero :: SBV a -> SBool
+
+  -- | Is the floating point number +0?
+  fpIsPositiveZero :: SBV a -> SBool
+
+  -- | Is the floating-point number a regular floating point, i.e., not NaN, nor +oo, nor -oo. Normals or denormals are allowed.
+  fpIsPoint :: SBV a -> SBool
 
   -- Default definitions. Minimal complete definition: None! All should be taken care by defaults
   -- Note that we never evaluate FMA concretely, as there's no fma operator in Haskell
-  fpAbs             = lift1  "fp.abs"             (Just abs)      Nothing
-  fpNeg             = lift1  "fp.neg"             (Just negate)   Nothing
-  fpAdd             = lift2  "fp.add"             (Just (+))      . Just
-  fpSub             = lift2  "fp.sub"             (Just (-))      . Just
-  fpMul             = lift2  "fp.mul"             (Just (*))      . Just
-  fpDiv             = lift2  "fp.div"             (Just (/))      . Just
-  fpFMA             = lift3  "fp.fma"             Nothing         . Just
-  fpSqrt            = lift1  "fp.sqrt"            (Just sqrt)     . Just
-  fpRem             = lift2  "fp.rem"             (Just fprem)    Nothing where fprem x y = x - y * fromInteger (round (x / y))
-  fpRoundToIntegral = lift1  "fp.roundToIntegral" (Just fpRound)  . Just  where fpRound   = fromInteger . round
-  fpMin             = lift2  "fp.min"             (Just min)      Nothing
-  fpMax             = lift2  "fp.max"             (Just max)      Nothing
-  fpEqualObject     = lift2B "="                  (Just fpSame)   Nothing
+  fpAbs              = lift1  "fp.abs"             (Just abs)      Nothing
+  fpNeg              = lift1  "fp.neg"             (Just negate)   Nothing
+  fpAdd              = lift2  "fp.add"             (Just (+))      . Just
+  fpSub              = lift2  "fp.sub"             (Just (-))      . Just
+  fpMul              = lift2  "fp.mul"             (Just (*))      . Just
+  fpDiv              = lift2  "fp.div"             (Just (/))      . Just
+  fpFMA              = lift3  "fp.fma"             Nothing         . Just
+  fpSqrt             = lift1  "fp.sqrt"            (Just sqrt)     . Just
+  fpRem              = lift2  "fp.rem"             (Just fprem)    Nothing where fprem x y = x - y * fromInteger (round (x / y))
+  fpRoundToIntegral  = lift1  "fp.roundToIntegral" (Just fpRound)  . Just  where fpRound   = fromInteger . round
+  fpMin              = lift2  "fp.min"             (Just min)      Nothing
+  fpMax              = lift2  "fp.max"             (Just max)      Nothing
+  fpEqualObject      = lift2B "="                  (Just fpSame)   Nothing
+  fpIsNormal         = lift1B "fp.isNormal"        isNormalized            where isNormalized x = not (isDenormalized x || isInfinite x || isNaN x)
+  fpIsSubnormal      = lift1B "fp.isSubnormal"     isDenormalized
+  fpIsZero           = lift1B "fp.isZero"          (== 0)
+  fpIsInfinite       = lift1B "fp.isInfinite"      isInfinite
+  fpIsNaN            = lift1B "fp.isNaN"           isNaN
+  fpIsNegative       = lift1B "fp.isNegative"      (\x -> x < 0 ||       isNegativeZero x)
+  fpIsPositive       = lift1B "fp.isPositive"      (\x -> x >= 0 && not (isNegativeZero x))
+  fpIsNegativeZero x = fpIsZero x &&& fpIsNegative x
+  fpIsPositiveZero x = fpIsZero x &&& fpIsPositive x
+  fpIsPoint        x = bnot (fpIsNaN x ||| fpIsInfinite x)
 
 -- | Return true if these two floats are "the same", i.e., nan compares equal to nan, but -0 doesn't compare equal to +0
 -- syntactic equality, in a sense.
@@ -119,6 +198,15 @@ lift1 w mbOp mbRm a
                   args <- addRM st mbRm [swa]
                   newExpr st k (SBVApp (IEEEFP w) args)
 
+-- | Lift an FP predicate
+lift1B :: (SymWord a, Floating a) => String -> (a -> Bool) -> SBV a -> SBool
+lift1B w f a
+   | Just v <- unliteral a = literal $ f v
+   | True                  = SBV $ SVal KBool $ Right $ cache r
+   where r st = do swa <- sbvToSW st a
+                   newExpr st KBool (SBVApp (IEEEFP w) [swa])
+
+
 -- | Lift a 2 arg FP-op
 lift2 :: (SymWord a, Floating a) => String -> Maybe (a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBV a
 lift2 w mbOp mbRm a b
@@ -163,5 +251,101 @@ instance IEEEFloating Float
 
 -- | SDouble instance
 instance IEEEFloating Double
+
+-- | Promote an SFloat/SDouble to an SReal
+fpToSReal :: (Real a, Floating a, SymWord a) => SBV a -> SReal
+fpToSReal x
+  | Just i <- unliteral x = literal $ fromRational $ toRational i
+  | True                  = SBV (SVal KReal (Right (cache y)))
+  where y st = do xsw <- sbvToSW st x
+                  newExpr st KReal (SBVApp (IEEEFP "fp.to_real") [xsw])
+
+-- | Promote (demote really) an SReal to an SFloat.
+--
+-- NB: This function doesn't work on concrete values at the Haskell
+-- level since we have no easy way of honoring the rounding-mode given.
+sRealToSFloat :: SRoundingMode -> SReal -> SFloat
+sRealToSFloat rm x = SBV (SVal KFloat (Right (cache y)))
+  where y st = do swm <- sbvToSW st rm
+                  xsw <- sbvToSW st x
+                  newExpr st KFloat (SBVApp (IEEEFP "(_ to_fp 8 24)") [swm, xsw])
+
+-- | Promote (demote really) an SReal to an SDouble.
+--
+-- NB: This function doesn't work on concrete values at the Haskell
+-- level since we have no easy way of honoring the rounding-mode given.
+sRealToSDouble :: SRoundingMode -> SReal -> SFloat
+sRealToSDouble rm x = SBV (SVal KFloat (Right (cache y)))
+  where y st = do swm <- sbvToSW st rm
+                  xsw <- sbvToSW st x
+                  newExpr st KDouble (SBVApp (IEEEFP "(_ to_fp 11 53)") [swm, xsw])
+
+-- | Reinterpret a 32-bit word as an 'SFloat'.
+sWord32ToSFloat :: SWord32 -> SFloat
+sWord32ToSFloat x
+    | Just w <- unliteral x = literal (wordToFloat w)
+    | True                  = SBV (SVal KFloat (Right (cache y)))
+   where y st = do xsw <- sbvToSW st x
+                   newExpr st KFloat (SBVApp (IEEEFP "(_ to_fp 8 24)") [xsw])
+
+-- | Reinterpret a 64-bit word as an 'SDouble'. Note that this function does not
+-- directly work on concrete values, since IEEE754 NaN values are not unique, and
+-- thus do not directly map to SDouble
+sWord64ToSDouble :: SWord64 -> SDouble
+sWord64ToSDouble x
+    | Just w <- unliteral x = literal (wordToDouble w)
+    | True                  = SBV (SVal KDouble (Right (cache y)))
+   where y st = do xsw <- sbvToSW st x
+                   newExpr st KDouble (SBVApp (IEEEFP "(_ to_fp 11 53)") [xsw])
+
+-- | Relationally assert the equivalence between an 'SFloat' and an 'SWord32', when the bit-pattern
+-- is interpreted as either type. Useful when analyzing components of a floating point number. Note
+-- that this cannot be written as a function, since IEEE754 NaN values are not unique. That is,
+-- given a float, there isn't a unique sign/mantissa/exponent that we can match it to.
+--
+-- The use case would be code of the form:
+--
+-- @
+--     do w <- free_
+--        constrain $ sFloatToSWord32 f w
+--        ...
+-- @
+--
+-- At which point the variable @w@ can be used to access the bits of the float 'f'.
+sFloatToSWord32 :: SFloat -> SWord32 -> SBool
+sFloatToSWord32 fVal wVal
+  | Just f <- unliteral fVal, not (isNaN f) = wVal .== literal (floatToWord f)
+  | True                                    = result `is` fVal
+ where result   = sWord32ToSFloat wVal
+       a `is` b = (fpIsNaN a &&& fpIsNaN b) ||| (a .== b)
+
+-- | Relationally assert the equivalence between an 'SDouble' and an 'SWord64', when the bit-pattern
+-- is interpreted as either type. See the comments for 'sFloatToSWord32' for details.
+sDoubleToSWord64 :: SDouble -> SWord64 -> SBool
+sDoubleToSWord64 fVal wVal
+  | Just f <- unliteral fVal, not (isNaN f) = wVal .== literal (doubleToWord f)
+  | True                                    = result `is` fVal
+ where result   = sWord64ToSDouble wVal
+       a `is` b = (fpIsNaN a &&& fpIsNaN b) ||| (a .== b)
+
+-- | Relationally extract the sign\/exponent\/mantissa of a single-precision float. Due to the
+-- non-unique representation of NaN's, we have to do this function relationally, much like
+-- 'sFloatToSWord32'.
+blastSFloat :: SFloat -> (SBool, [SBool], [SBool]) -> SBool
+blastSFloat fVal (s, expt, mant)
+  | length expt /= 8 || length mant /= 23  = error "SBV.blastSFloat: Need 8-bit expt and 23 bit mantissa"
+  | True                                   = sFloatToSWord32 fVal wVal
+ where bits = s : expt ++ mant
+       wVal = sum [ite b (2^c) 0 | (b, c) <- zip bits (reverse [(0::Word32) .. 31])]
+
+-- | Relationally extract the sign\/exponent\/mantissa of a double-precision float. Due to the
+-- non-unique representation of NaN's, we have to do this function relationally, much like
+-- 'sDoubleToSWord64'.
+blastSDouble :: SDouble -> (SBool, [SBool], [SBool]) -> SBool
+blastSDouble fVal (s, expt, mant)
+  | length expt /= 11 || length mant /= 52 = error "SBV.blastSDouble: Need 11-bit expt and 52 bit mantissa"
+  | True                                   = sDoubleToSWord64 fVal wVal
+ where bits = s : expt ++ mant
+       wVal = sum [ite b (2^c) 0 | (b, c) <- zip bits (reverse [(0::Word64) .. 63])]
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

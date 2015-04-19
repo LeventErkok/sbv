@@ -217,7 +217,7 @@ genFloats = genIEEE754 "genFloats" fs
 genDoubles :: [Test]
 genDoubles = genIEEE754 "genDoubles" ds
 
-genIEEE754 :: (RealFloat a, Show a, SymWord a, Ord a, Floating a) => String -> [a] -> [Test]
+genIEEE754 :: (IEEEFloating a, Show a, Ord a) => String -> [a] -> [Test]
 genIEEE754 origin vs = map tst1 uns ++ map tst2 bins ++ map tst1 preds
   where uns =     [("abs",    show x,         mkThm1        abs      x   (abs x))    | x <- vs]
                ++ [("negate", show x,         mkThm1        negate   x   (negate x)) | x <- vs]
@@ -235,16 +235,16 @@ genIEEE754 origin vs = map tst1 uns ++ map tst2 bins ++ map tst1 preds
         preds =   [(pn,       show x,         mkThmP        ps       x   (pc x))     | (pn, ps, pc) <- predicates, x <- vs
                                                                                      -- Work around GHC bug, see issue #138
                                                                                      -- Remove the following line when fixed.
-                                                                                     , not (pn == "isPositiveZeroFP" && isNegativeZero x)
+                                                                                     , not (pn == "fpIsPositiveZero" && isNegativeZero x)
                                                                                      ]
         tst2 (nm, x, y, t) = origin ++ ".arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
         tst1 (nm, x,    t) = origin ++ ".arithmetic-" ++ nm ++ "." ++ x              ~: assert t
         eqF v val
-          | isNaN          val        = constrain $ isNaNFP v
-          | isNegativeZero val        = constrain $ isNegativeZeroFP v
-          | val == 0                  = constrain $ isPositiveZeroFP v
-          | isInfinite val && val > 0 = constrain $ isInfiniteFP v &&& isPositiveFP v
-          | isInfinite val && val < 0 = constrain $ isInfiniteFP v &&& isNegativeFP v
+          | isNaN          val        = constrain $ fpIsNaN v
+          | isNegativeZero val        = constrain $ fpIsNegativeZero v
+          | val == 0                  = constrain $ fpIsPositiveZero v
+          | isInfinite val && val > 0 = constrain $ fpIsInfinite v &&& fpIsPositive v
+          | isInfinite val && val < 0 = constrain $ fpIsInfinite v &&& fpIsNegative v
           | True                      = constrain $ v .== literal val
         mkThmP op x r = isThm $ do a <- free "x"
                                    eqF a x
@@ -252,13 +252,13 @@ genIEEE754 origin vs = map tst1 uns ++ map tst2 bins ++ map tst1 preds
         mkThm1 op x r = isThm $ do a <- free "x"
                                    eqF a x
                                    return $ if isNaN r
-                                            then isNaNFP (op a)
+                                            then fpIsNaN (op a)
                                             else literal r .== op a
         mkThm2 op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                      eqF a x
                                      eqF b y
                                      return $ if isNaN r
-                                              then isNaNFP (a `op` b)
+                                              then fpIsNaN (a `op` b)
                                               else literal r .== a `op` b
         mkThm2C neq op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                           eqF a x
@@ -266,17 +266,17 @@ genIEEE754 origin vs = map tst1 uns ++ map tst2 bins ++ map tst1 preds
                                           return $ if isNaN x || isNaN y
                                                    then (if neq then a `op` b else bnot (a `op` b))
                                                    else literal r .== a `op` b
-        predicates :: (RealFloat a, Floating a, SymWord a) => [(String, SBV a -> SBool, a -> Bool)]
-        predicates = [ ("isNormalFP",       isNormalFP,        isNormalized)
-                     , ("isSubnormalFP",    isSubnormalFP,     isDenormalized)
-                     , ("isZeroFP",         isZeroFP,          (== 0))
-                     , ("isInfiniteFP",     isInfiniteFP,      isInfinite)
-                     , ("isNaNFP",          isNaNFP,           isNaN)
-                     , ("isNegativeFP",     isNegativeFP,      \x -> x < 0  ||      isNegativeZero x)
-                     , ("isPositiveFP",     isPositiveFP,      \x -> x >= 0 && not (isNegativeZero x))
-                     , ("isNegativeZeroFP", isNegativeZeroFP,  isNegativeZero)
-                     , ("isPositiveZeroFP", isPositiveZeroFP,  \x -> x == 0 && not (isNegativeZero x))
-                     , ("isPointFP",        isPointFP,         \x -> not (isNaN x || isInfinite x))
+        predicates :: (IEEEFloating a) => [(String, SBV a -> SBool, a -> Bool)]
+        predicates = [ ("fpIsNormal",       fpIsNormal,        isNormalized)
+                     , ("fpIsSubnormal",    fpIsSubnormal,     isDenormalized)
+                     , ("fpIsZero",         fpIsZero,          (== 0))
+                     , ("fpIsInfinite",     fpIsInfinite,      isInfinite)
+                     , ("fpIsNaN",          fpIsNaN,           isNaN)
+                     , ("fpIsNegative",     fpIsNegative,      \x -> x < 0  ||      isNegativeZero x)
+                     , ("fpIsPositive",     fpIsPositive,      \x -> x >= 0 && not (isNegativeZero x))
+                     , ("fpIsNegativeZero", fpIsNegativeZero,  isNegativeZero)
+                     , ("fpIsPositiveZero", fpIsPositiveZero,  \x -> x == 0 && not (isNegativeZero x))
+                     , ("fpIsPoint",        fpIsPoint,         \x -> not (isNaN x || isInfinite x))
                      ]
            where isNormalized x = not (isDenormalized x || isInfinite x || isNaN x)
 
