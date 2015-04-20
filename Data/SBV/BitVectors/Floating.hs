@@ -23,7 +23,6 @@ import Data.Binary.IEEE754 (wordToFloat, wordToDouble, floatToWord, doubleToWord
 import Data.Word           (Word32, Word64)
 
 import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.Symbolic (FPOp(..))
 import Data.SBV.BitVectors.Model
 import Data.SBV.Utils.Boolean
 

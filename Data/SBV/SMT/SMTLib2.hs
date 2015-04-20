@@ -396,14 +396,11 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                 mkCnst = cvtCW rm . mkConstCW (kindOf i)
                 le0  = "(" ++ less ++ " " ++ ssw i ++ " " ++ mkCnst 0 ++ ")"
                 gtl  = "(" ++ leq  ++ " " ++ mkCnst l ++ " " ++ ssw i ++ ")"
-        sh (SBVApp (ArrEq i j) []) = "(= array_" ++ show i ++ " array_" ++ show j ++")"
+        sh (SBVApp (Cast c) as)     = "(" ++ show c ++ " " ++ unwords (map ssw as) ++ ")"
+        sh (SBVApp (ArrEq i j) [])  = "(= array_" ++ show i ++ " array_" ++ show j ++")"
         sh (SBVApp (ArrRead i) [a]) = "(select array_" ++ show i ++ " " ++ ssw a ++ ")"
         sh (SBVApp (Uninterpreted nm) [])   = nm
-        sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm' ++ " " ++ unwords (map ssw args) ++ ")"
-          where -- slight hack needed here to take advantage of custom floating-point functions.. sigh.
-                fpSpecials = ["fp.sqrt", "fp.fma"]
-                nm' | (floatOp || doubleOp) && (nm `elem` fpSpecials) = addRM nm
-                    | True                                            = nm
+        sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm ++ " " ++ unwords (map ssw args) ++ ")"
         sh (SBVApp (Extract i j) [a]) | ensureBV = "((_ extract " ++ show i ++ " " ++ show j ++ ") " ++ ssw a ++ ")"
         sh (SBVApp (Rol i) [a])
            | bvOp  = rot  ssw "rotate_left"  i a

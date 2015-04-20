@@ -490,14 +490,14 @@ ppExpr cfg consts (SBVApp op opArgs) = p op (map (showSW cfg consts) opArgs)
                   , (Equal, "=="), (NotEqual, "!="), (LessThan, "<"), (GreaterThan, ">"), (LessEq, "<="), (GreaterEq, ">=")
                   , (And, "&"), (Or, "|"), (XOr, "^")
                   ]
-        uninterpret "to_real" as
-          | [a] <- as          = text "(SReal)" <+> a
-        uninterpret s []       = text "/* Uninterpreted constant */" <+> text s
-        uninterpret s as       = text "/* Uninterpreted function */" <+> text s <> parens (fsep (punctuate comma as))
         p (ArrRead _)       _  = tbd "User specified arrays (ArrRead)"
         p (ArrEq _ _)       _  = tbd "User specified arrays (ArrEq)"
         p (IEEEFP w)        _  = tbd $ "Floating point operations with custom rounding modes (" ++ show w ++ ")"
-        p (Uninterpreted s) as = uninterpret s as
+        p (Cast cop)        as = case (cop, as) of
+                                   (Cast_SIntegerToSReal, [a]) -> text "(SReal)" <+> a
+                                   (Cast_SIntegerToSReal, _)   -> die $ "Unexpected number of arguments to Cast_SIntegerToSReal. Expected: 1, got: " ++ show (length as)
+        p (Uninterpreted s) [] = text "/* Uninterpreted constant */" <+> text s
+        p (Uninterpreted s) as = text "/* Uninterpreted function */" <+> text s <> parens (fsep (punctuate comma as))
         p (Extract i j) [a]    = extract i j (head opArgs) a
         p Join [a, b]          = join (let (s1 : s2 : _) = opArgs in (s1, s2, a, b))
         p (Rol i) [a]          = rotate True  i a (head opArgs)

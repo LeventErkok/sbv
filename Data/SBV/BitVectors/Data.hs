@@ -34,7 +34,8 @@ module Data.SBV.BitVectors.Data
  , sbvToSW, sbvToSymSW, forceSWArg
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, uncacheAI, HasKind(..)
- , Op(..), NamedSymVar, UnintKind(..), getTableIndex, SBVPgm(..), Symbolic, SExecutable(..), runSymbolic, runSymbolic', State, getPathCondition, extendPathCondition
+ , Op(..), CastOp(..), FPOp(..), NamedSymVar, UnintKind(..), getTableIndex
+ , SBVPgm(..), Symbolic, SExecutable(..), runSymbolic, runSymbolic', State, getPathCondition, extendPathCondition
  , inProofMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
  , Logic(..), SMTLibLogic(..)
  , getTraceInfo, getConstraints, addConstraint

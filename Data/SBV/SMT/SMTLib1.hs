@@ -215,6 +215,7 @@ cvtExp (SBVApp Abs [a])
          na  = "(bvneg " ++ sa ++ ")"
          z   = cvtCW (mkConstCW (kindOf a) (0::Integer))
          ltz = "(bvslt " ++ sa ++ " " ++ z ++ ")"
+cvtExp (SBVApp (Cast c) args)           = "(" ++ show c ++ " " ++ unwords (map show args) ++ ")"
 cvtExp (SBVApp (Uninterpreted nm) [])   = "uninterpreted_" ++ nm
 cvtExp (SBVApp (Uninterpreted nm) args) = "(uninterpreted_" ++ nm ++ " " ++ unwords (map show args) ++ ")"
 cvtExp inp@(SBVApp op args)

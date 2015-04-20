@@ -25,7 +25,7 @@
 module Data.SBV.BitVectors.Symbolic
   ( NodeId(..)
   , SW(..), swKind, trueSW, falseSW
-  , Op(..), FPOp(..)
+  , Op(..), CastOp(..), FPOp(..)
   , Quantifier(..), needsExistentials
   , RoundingMode(..)
   , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
@@ -140,9 +140,19 @@ data Op = Plus
         | LkUp (Int, Kind, Kind, Int) !SW !SW   -- (table-index, arg-type, res-type, length of the table) index out-of-bounds-value
         | ArrEq   Int Int                       -- Array equality
         | ArrRead Int
+        | Cast CastOp
         | Uninterpreted String
         | IEEEFP FPOp                           -- Floating-point ops, categorized separately
         deriving (Eq, Ord)
+
+-- | Various cast ops. Note that this is for future use, there is only one current inhabitant
+-- the time being.
+data CastOp = Cast_SIntegerToSReal
+            deriving (Eq, Ord)
+
+-- | The show instance maps to the SMTLib name
+instance Show CastOp where
+  show Cast_SIntegerToSReal = "to_real"
 
 -- | Floating point operations
 data FPOp = FP_ToReal
@@ -170,6 +180,8 @@ data FPOp = FP_ToReal
           | FP_IsPositive
           deriving (Eq, Ord)
 
+-- | Note that the show instance maps to the SMTLib names. We need to make sure
+-- this mapping stays correct through SMTLib changes.
 instance Show FPOp where
    show FP_ToReal          = "fp.to_real"
    show FP_ToFloat         = "(_ to_fp 8 24)"
@@ -206,8 +218,9 @@ instance Show Op where
   show (LkUp (ti, at, rt, l) i e)
         = "lookup(" ++ tinfo ++ ", " ++ show i ++ ", " ++ show e ++ ")"
         where tinfo = "table" ++ show ti ++ "(" ++ show at ++ " -> " ++ show rt ++ ", " ++ show l ++ ")"
-  show (ArrEq i j)   = "array_" ++ show i ++ " == array_" ++ show j
-  show (ArrRead i)   = "select array_" ++ show i
+  show (ArrEq i j)       = "array_" ++ show i ++ " == array_" ++ show j
+  show (ArrRead i)       = "select array_" ++ show i
+  show (Cast c)          = show c
   show (Uninterpreted i) = "[uninterpreted] " ++ i
   show (IEEEFP w)        = show w
   show op

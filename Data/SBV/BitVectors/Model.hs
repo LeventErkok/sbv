@@ -300,7 +300,7 @@ sIntegerToSReal x
   | Just i <- unliteral x = literal $ fromInteger i
   | True                  = SBV (SVal KReal (Right (cache y)))
   where y st = do xsw <- sbvToSW st x
-                  newExpr st KReal (SBVApp (Uninterpreted "to_real") [xsw])
+                  newExpr st KReal (SBVApp (Cast Cast_SIntegerToSReal) [xsw])
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.
