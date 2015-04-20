@@ -1106,4 +1106,5 @@ data SMTSolver = SMTSolver {
 instance Show SMTSolver where
    show = show . name
 
-{-# ANN module ("HLint: ignore Use camelCase" :: String) #-}
+{-# ANN type FPOp   ("HLint: ignore Use camelCase" :: String) #-}
+{-# ANN type CastOp ("HLint: ignore Use camelCase" :: String) #-}
