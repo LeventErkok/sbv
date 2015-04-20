@@ -163,8 +163,8 @@ data FPOp = FP_ToReal
           | FP_ObjEqual
           | FP_IsNormal
           | FP_IsSubnormal
-          | FP_IsInfinite
           | FP_IsZero
+          | FP_IsInfinite
           | FP_IsNaN
           | FP_IsNegative
           | FP_IsPositive
@@ -189,8 +189,8 @@ instance Show FPOp where
    show FP_ObjEqual        = "="
    show FP_IsNormal        = "fp.isNormal"
    show FP_IsSubnormal     = "fp.isSubnormal"
-   show FP_IsInfinite      = "fp.isZero"
-   show FP_IsZero          = "fp.isInfinite"
+   show FP_IsZero          = "fp.isZero"
+   show FP_IsInfinite      = "fp.isInfinite"
    show FP_IsNaN           = "fp.isNaN"
    show FP_IsNegative      = "fp.isNegative"
    show FP_IsPositive      = "fp.isPositive"
