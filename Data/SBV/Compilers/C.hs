@@ -497,19 +497,19 @@ handleIEEE w consts as = cvt w
         cvt FP_Mul             = dispatch $ same $ \[a, b] -> a <+> text "*" <+> b
         cvt FP_Div             = dispatch $ same $ \[a, b] -> a <+> text "/" <+> b
         cvt FP_FMA             = dispatch $ named "fmaf"  "fma"  $ \nm [a, b, c] -> text nm <> parens (fsep (punctuate comma [a, b, c]))
-        cvt FP_Sqrt            = dispatch $ named "sqrtf" "sqrt" $ \nm [a] -> text nm <> parens a
-        cvt FP_Rem             = dispatch $ error "tbd"
-        cvt FP_RoundToIntegral = dispatch $ error "tbd"
-        cvt FP_Min             = dispatch $ error "tbd"
-        cvt FP_Max             = dispatch $ error "tbd"
-        cvt FP_ObjEqual        = dispatch $ error "tbd"
-        cvt FP_IsNormal        = dispatch $ error "tbd"
-        cvt FP_IsSubnormal     = dispatch $ error "tbd"
-        cvt FP_IsZero          = dispatch $ error "tbd"
-        cvt FP_IsInfinite      = dispatch $ error "tbd"
-        cvt FP_IsNaN           = dispatch $ error "tbd"
-        cvt FP_IsNegative      = dispatch $ error "tbd"
-        cvt FP_IsPositive      = dispatch $ error "tbd"
+        cvt FP_Sqrt            = dispatch $ named "sqrtf" "sqrt" $ \nm [a]       -> text nm <> parens a
+        cvt FP_Rem             = dispatch $ named "fmodf" "fmod" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
+        cvt FP_RoundToIntegral = dispatch $ error "FP_RoundToIntegral"
+        cvt FP_Min             = dispatch $ named "fminf" "fmin" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
+        cvt FP_Max             = dispatch $ named "fmaxf" "fmax" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
+        cvt FP_ObjEqual        = dispatch $ error "FP_ObjEqual"
+        cvt FP_IsNormal        = dispatch $ same $ \[a] -> text "isnormal" <> parens a
+        cvt FP_IsSubnormal     = dispatch $ same $ \[a] -> text "FP_SUBNORMAL == fpclassify" <> parens a
+        cvt FP_IsZero          = dispatch $ same $ \[a] -> text "FP_ZERO == fpclassify" <> parens a
+        cvt FP_IsInfinite      = dispatch $ same $ \[a] -> text "isinf" <> parens a
+        cvt FP_IsNaN           = dispatch $ same $ \[a] -> text "isnan" <> parens a
+        cvt FP_IsNegative      = dispatch $ error "FP_IsNegative"
+        cvt FP_IsPositive      = dispatch $ error "FP_IsPositive"
 
         -- grab the rounding-mode, if present, and make sure it's RoundNearestTiesToEven. Otherwise skip.
         fpArgs = case as of
