@@ -499,17 +499,23 @@ handleIEEE w consts as = cvt w
         cvt FP_FMA             = dispatch $ named "fmaf"  "fma"  $ \nm [a, b, c] -> text nm <> parens (fsep (punctuate comma [a, b, c]))
         cvt FP_Sqrt            = dispatch $ named "sqrtf" "sqrt" $ \nm [a]       -> text nm <> parens a
         cvt FP_Rem             = dispatch $ named "fmodf" "fmod" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
-        cvt FP_RoundToIntegral = dispatch $ error "FP_RoundToIntegral"
+        cvt FP_RoundToIntegral = dispatch $ named "rintf" "rint" $ \nm [a]       -> text nm <> parens a
         cvt FP_Min             = dispatch $ named "fminf" "fmin" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
         cvt FP_Max             = dispatch $ named "fmaxf" "fmax" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
-        cvt FP_ObjEqual        = dispatch $ error "FP_ObjEqual"
+        cvt FP_ObjEqual        = let mkIte   x y z = x <+> text "?" <+> y <+> text ":" <+> z
+                                     chkNaN  x     = text "isnan"   <> parens x
+                                     signbit x     = text "signbit" <> parens x
+                                     eq      x y   = parens (x <+> text "==" <+> y)
+                                     eqZero  x     = eq x (text "0")
+                                     negZero x     = parens (signbit x <+> text "&&" <+> eqZero x)
+                                 in dispatch $ same $ \[a, b] -> mkIte (chkNaN a) (chkNaN b) (mkIte (negZero a) (negZero b) (mkIte (negZero b) (negZero a) (eq a b)))
         cvt FP_IsNormal        = dispatch $ same $ \[a] -> text "isnormal" <> parens a
         cvt FP_IsSubnormal     = dispatch $ same $ \[a] -> text "FP_SUBNORMAL == fpclassify" <> parens a
         cvt FP_IsZero          = dispatch $ same $ \[a] -> text "FP_ZERO == fpclassify" <> parens a
         cvt FP_IsInfinite      = dispatch $ same $ \[a] -> text "isinf" <> parens a
         cvt FP_IsNaN           = dispatch $ same $ \[a] -> text "isnan" <> parens a
-        cvt FP_IsNegative      = dispatch $ error "FP_IsNegative"
-        cvt FP_IsPositive      = dispatch $ error "FP_IsPositive"
+        cvt FP_IsNegative      = dispatch $ same $ \[a] -> text "!isnan" <> parens a <+> text "&&" <+> text "signbit"  <> parens a
+        cvt FP_IsPositive      = dispatch $ same $ \[a] -> text "!isnan" <> parens a <+> text "&&" <+> text "!signbit" <> parens a
 
         -- grab the rounding-mode, if present, and make sure it's RoundNearestTiesToEven. Otherwise skip.
         fpArgs = case as of
