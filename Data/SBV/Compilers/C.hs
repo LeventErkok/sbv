@@ -487,9 +487,10 @@ handleIEEE :: FPOp -> [(SW, CW)] -> [(SW, Doc)] -> Doc
 handleIEEE w consts as = cvt w
   where same f                 = (f, f)
         named fnm dnm f        = (f fnm, f dnm)
-        cvt FP_ToReal          = cast $ \[a] -> text "(SReal)"   <+> a
-        cvt FP_ToFloat         = cast $ \[a] -> text "(SFloat)"  <+> a
-        cvt FP_ToDouble        = cast $ \[a] -> text "(SDouble)" <+> a
+        cvt (FP_Cast _ to m)   = case checkRM (m `lookup` consts) of
+                                   Nothing          -> cast $ \[a] -> parens (text (show to)) <+> a
+                                   Just (Left  msg) -> die msg
+                                   Just (Right msg) -> tbd msg
         cvt FP_Abs             = dispatch $ named "fabsf" "fabs" $ \nm [a] -> text nm <> parens a
         cvt FP_Neg             = dispatch $ same $ \[a] -> text "-" <> a
         cvt FP_Add             = dispatch $ same $ \[a, b] -> a <+> text "+" <+> b
@@ -521,17 +522,22 @@ handleIEEE w consts as = cvt w
         fpArgs = case as of
                    []            -> []
                    ((m, _):args) -> case kindOf m of
-                                      KUserSort "RoundingMode" _ -> checkRm (m `lookup` consts) args
+                                      KUserSort "RoundingMode" _ -> case checkRM (m `lookup` consts) of
+                                                                      Nothing          -> args
+                                                                      Just (Left  msg) -> die msg
+                                                                      Just (Right msg) -> tbd msg
                                       _                          -> as
 
-        -- Check that the RM is RoundNearestTiesToEven
-        checkRm (Just cv@(CW (KUserSort "RoundingMode" _) v)) args =
+        -- Check that the RM is RoundNearestTiesToEven.
+        -- If we start supporting other rounding-modes, this would be the point where we'd insert the rounding-mode set/reset code
+        -- instead of merely returning OK or not
+        checkRM (Just cv@(CW (KUserSort "RoundingMode" _) v)) =
               case v of
-                CWUserSort (_, "RoundNearestTiesToEven") -> args
-                CWUserSort (_, s)                        -> tbd $ "handleIEEE: Unsupported rounding-mode: " ++ show s ++ " for: " ++ show w
-                _                                        -> die $ "handleIEEE: Unexpected value for rounding-mode: " ++ show cv ++ " for: " ++ show w
-        checkRm (Just cv)                                    _     = die $ "handleIEEE: Expected rounding-mode, but got: " ++ show cv ++ " for: " ++ show w
-        checkRm Nothing                                      _     = tbd $ "handleIEEE: Non-constant rounding-mode for: " ++ show w
+                CWUserSort (_, "RoundNearestTiesToEven") -> Nothing
+                CWUserSort (_, s)                        -> Just (Right $ "handleIEEE: Unsupported rounding-mode: " ++ show s ++ " for: " ++ show w)
+                _                                        -> Just (Left  $ "handleIEEE: Unexpected value for rounding-mode: " ++ show cv ++ " for: " ++ show w)
+        checkRM (Just cv) = Just (Left  $ "handleIEEE: Expected rounding-mode, but got: " ++ show cv ++ " for: " ++ show w)
+        checkRM Nothing   = Just (Right $ "handleIEEE: Non-constant rounding-mode for: " ++ show w)
 
         pickOp _          []             = die $ "Cannot determine float/double kind for op: " ++ show w
         pickOp (fOp, dOp) args@((a,_):_) = case kindOf a of

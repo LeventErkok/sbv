@@ -432,8 +432,8 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                , (Not,  lift1B "not" "bvnot")
                                , (Join, lift2 "concat")
                                ]
-        sh (SBVApp (IEEEFP w) args)
-          = "(" ++ show w ++ " " ++ unwords (map ssw args) ++ ")"
+        sh (SBVApp (IEEEFP (FP_Cast kFrom kTo m)) args) = handleFPCast kFrom kTo m (unwords (map ssw args))
+        sh (SBVApp (IEEEFP w                    ) args) = "(" ++ show w ++ " " ++ unwords (map ssw args) ++ ")"
         sh inp@(SBVApp op args)
           | intOp, Just f <- lookup op smtOpIntTable
           = f True (map ssw args)
@@ -504,6 +504,10 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                      , (LessEq,      unintComp "<=")
                                      , (GreaterEq,   unintComp ">=")
                                      ]
+
+handleFPCast :: Kind -> Kind -> SW -> String -> String
+handleFPCast kFrom kTo rm a = "(" ++ cast kFrom kTo ++ " " ++ a ++ ")"
+  where cast _ _ = error "determine-the-cast!" rm
 
 rot :: (SW -> String) -> String -> Int -> SW -> String
 rot ssw o c x = "((_ " ++ o ++ " " ++ show c ++ ") " ++ ssw x ++ ")"

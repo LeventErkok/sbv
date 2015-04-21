@@ -128,16 +128,16 @@ module Data.SBV (
   , SInteger
   -- *** IEEE-floating point numbers
   -- $floatingPoints
-  , SFloat, SDouble, IEEEFloating(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity
+  , SFloat, SDouble, IEEEFloating(..), IEEEFloatConvertable(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity
   -- **** Rounding modes
   , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
-  -- **** Conversion to and from Word32, Word64
-  , sWord32ToSFloat, sWord64ToSDouble, sFloatToSWord32, sDoubleToSWord64
+  -- **** Bit-pattern conversions
+  , sFloatToSWord32, sDoubleToSWord64
   -- **** Blasting floats to sign, exponent, mantissa bits
   , blastSFloat, blastSDouble
   -- *** Signed algebraic reals
   -- $algReals
-  , SReal, AlgReal, sIntegerToSReal, fpToSReal, sRealToSFloat, sRealToSDouble
+  , SReal, AlgReal, sIntegerToSReal
   -- ** Creating a symbolic variable
   -- $createSym
   , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger, sReal, sFloat, sDouble

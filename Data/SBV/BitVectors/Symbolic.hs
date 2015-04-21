@@ -155,9 +155,7 @@ instance Show CastOp where
   show Cast_SIntegerToSReal = "to_real"
 
 -- | Floating point operations
-data FPOp = FP_ToReal
-          | FP_ToFloat
-          | FP_ToDouble
+data FPOp = FP_Cast Kind Kind SW   -- From-Kind, To-Kind, RoundingMode
           | FP_Abs
           | FP_Neg
           | FP_Add
@@ -181,11 +179,10 @@ data FPOp = FP_ToReal
           deriving (Eq, Ord)
 
 -- | Note that the show instance maps to the SMTLib names. We need to make sure
--- this mapping stays correct through SMTLib changes.
+-- this mapping stays correct through SMTLib changes. The only exception
+-- is FP_Cast; where we handle different source/origins explicitly later on.
 instance Show FPOp where
-   show FP_ToReal          = "fp.to_real"
-   show FP_ToFloat         = "(_ to_fp 8 24)"
-   show FP_ToDouble        = "(_ to_fp 11 53)"
+   show (FP_Cast f t r)    = "(FP_Cast: " ++ show f ++ " -> " ++ show t ++ "using RM [" ++ show r ++ "])"
    show FP_Abs             = "fp.abs"
    show FP_Neg             = "fp.neg"
    show FP_Add             = "fp.add"
