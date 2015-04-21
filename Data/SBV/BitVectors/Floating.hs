@@ -118,7 +118,7 @@ class (SymWord a, RealFloat a) => IEEEFloating a where
   fpRoundToIntegral  = lift1  FP_RoundToIntegral (Just fpRound)  . Just  where fpRound   = fromInteger . round
   fpMin              = lift2  FP_Min             (Just min)      Nothing
   fpMax              = lift2  FP_Max             (Just max)      Nothing
-  fpEqualObject      = lift2B FP_ObjEqual           (Just fpSame)   Nothing
+  fpEqualObject      = lift2B FP_ObjEqual        (Just fpSame)   Nothing
   fpIsNormal         = lift1B FP_IsNormal        isNormalized            where isNormalized x = not (isDenormalized x || isInfinite x || isNaN x)
   fpIsSubnormal      = lift1B FP_IsSubnormal     isDenormalized
   fpIsZero           = lift1B FP_IsZero          (== 0)
@@ -274,8 +274,8 @@ sRealToSFloat rm x = SBV (SVal KFloat (Right (cache y)))
 --
 -- NB: This function doesn't work on concrete values at the Haskell
 -- level since we have no easy way of honoring the rounding-mode given.
-sRealToSDouble :: SRoundingMode -> SReal -> SFloat
-sRealToSDouble rm x = SBV (SVal KFloat (Right (cache y)))
+sRealToSDouble :: SRoundingMode -> SReal -> SDouble
+sRealToSDouble rm x = SBV (SVal KDouble (Right (cache y)))
   where y st = do swm <- sbvToSW st rm
                   xsw <- sbvToSW st x
                   newExpr st KDouble (SBVApp (IEEEFP FP_ToDouble) [swm, xsw])
