@@ -9,6 +9,9 @@
 -- Implementation of floating-point operations mapping to SMT-Lib2 floats
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Data.SBV.BitVectors.Floating (
          IEEEFloating(..), IEEEFloatConvertable(..)
        , sFloatToSWord32, sDoubleToSWord64
@@ -144,90 +147,91 @@ class IEEEFloatConvertable a where
   toSDouble   :: SRoundingMode -> SBV a   -> SDouble
 
 -- | A generic converter that will work for most of our instances. (But not all!)
-genericFPConverter :: (SymWord a, SymWord r) => Kind -> Maybe (a -> Bool) -> (a -> r) -> SRoundingMode -> SBV a -> SBV r
-genericFPConverter kTo mbConcreteOK converter rm f
+genericFPConverter :: forall a r. (SymWord a, HasKind r, SymWord r) => Maybe (a -> Bool) -> (a -> r) -> SRoundingMode -> SBV a -> SBV r
+genericFPConverter mbConcreteOK converter rm f
   | Just w <- unliteral f, Just RoundNearestTiesToEven <- unliteral rm, check w
   = literal $ converter w
   | True
   = SBV (SVal kTo (Right (cache y)))
   where check w = maybe True ($ w) mbConcreteOK
         kFrom   = kindOf f
+        kTo     = kindOf (undefined :: r)
         y st    = do msw <- sbvToSW st rm
                      xsw <- sbvToSW st f
                      newExpr st kTo (SBVApp (IEEEFP (FP_Cast kFrom kTo msw)) [xsw])
 
 instance IEEEFloatConvertable Int8 where
-  fromSFloat  = genericFPConverter (KBounded True 8)  Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter KFloat             Nothing (wordToFloat . fromIntegral)
-  fromSDouble = genericFPConverter (KBounded True 8)  Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter KDouble            Nothing (wordToDouble . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
 
 instance IEEEFloatConvertable Int16 where
-  fromSFloat  = genericFPConverter (KBounded True 16) Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter KFloat             Nothing (wordToFloat . fromIntegral)
-  fromSDouble = genericFPConverter (KBounded True 16) Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter KDouble            Nothing (wordToDouble . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
 
 instance IEEEFloatConvertable Int32 where
-  fromSFloat  = genericFPConverter (KBounded True 32) Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter KFloat             Nothing (wordToFloat . fromIntegral)
-  fromSDouble = genericFPConverter (KBounded True 32) Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter KDouble            Nothing (wordToDouble . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
 
 instance IEEEFloatConvertable Int64 where
-  fromSFloat  = genericFPConverter (KBounded True 64) Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter KFloat             Nothing (wordToFloat . fromIntegral)
-  fromSDouble = genericFPConverter (KBounded True 64) Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter KDouble            Nothing (wordToDouble . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
 
 instance IEEEFloatConvertable Word8 where
-  fromSFloat  = genericFPConverter (KBounded False 8) Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter KFloat             Nothing (wordToFloat . fromIntegral)
-  fromSDouble = genericFPConverter (KBounded False 8) Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter KDouble            Nothing (wordToDouble . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
 
 instance IEEEFloatConvertable Word16 where
-  fromSFloat  = genericFPConverter (KBounded False 16) Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter KFloat              Nothing (wordToFloat . fromIntegral)
-  fromSDouble = genericFPConverter (KBounded False 16) Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter KDouble             Nothing (wordToDouble . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
 
 instance IEEEFloatConvertable Word32 where
-  fromSFloat  = genericFPConverter (KBounded False 32) Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter KFloat              Nothing (wordToFloat . fromIntegral)
-  fromSDouble = genericFPConverter (KBounded False 32) Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter KDouble             Nothing (wordToDouble . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
 
 instance IEEEFloatConvertable Word64 where
-  fromSFloat  = genericFPConverter (KBounded False 64) Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter KFloat              Nothing (wordToFloat . fromIntegral)
-  fromSDouble = genericFPConverter (KBounded False 64) Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter KDouble             Nothing (wordToDouble . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
 
 instance IEEEFloatConvertable Float where
   fromSFloat _ f = f
   toSFloat   _ f = f
-  fromSDouble    = genericFPConverter KFloat  Nothing (fromRational . toRational)
-  toSDouble      = genericFPConverter KDouble Nothing (fromRational . toRational)
+  fromSDouble    = genericFPConverter Nothing (fromRational . toRational)
+  toSDouble      = genericFPConverter Nothing (fromRational . toRational)
 
 instance IEEEFloatConvertable Double where
-  fromSFloat      = genericFPConverter KDouble Nothing (fromRational . toRational)
-  toSFloat        = genericFPConverter KFloat  Nothing (fromRational . toRational)
+  fromSFloat      = genericFPConverter Nothing (fromRational . toRational)
+  toSFloat        = genericFPConverter Nothing (fromRational . toRational)
   fromSDouble _ d = d
   toSDouble   _ d = d
 
 instance IEEEFloatConvertable Integer where
-  fromSFloat  = genericFPConverter KUnbounded Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter KFloat     Nothing (wordToFloat . fromIntegral)
-  fromSDouble = genericFPConverter KUnbounded Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter KDouble    Nothing (wordToDouble . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
 
 -- For AlgReal; be careful to only process exact rationals concretely
 instance IEEEFloatConvertable AlgReal where
-  fromSFloat  = genericFPConverter KReal   Nothing                (fromRational . toRational)
-  toSFloat    = genericFPConverter KFloat  (Just isExactRational) (fromRational . toRational)
-  fromSDouble = genericFPConverter KReal   Nothing                (fromRational . toRational)
-  toSDouble   = genericFPConverter KDouble (Just isExactRational) (fromRational . toRational)
+  fromSFloat  = genericFPConverter Nothing                (fromRational . toRational)
+  toSFloat    = genericFPConverter (Just isExactRational) (fromRational . toRational)
+  fromSDouble = genericFPConverter Nothing                (fromRational . toRational)
+  toSDouble   = genericFPConverter (Just isExactRational) (fromRational . toRational)
 
 -- | Return true if these two floats are "the same", i.e., nan compares equal to nan, but -0 doesn't compare equal to +0
 -- syntactic equality, in a sense.
