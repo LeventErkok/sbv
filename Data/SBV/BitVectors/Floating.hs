@@ -14,13 +14,14 @@
 
 module Data.SBV.BitVectors.Floating (
          IEEEFloating(..), IEEEFloatConvertable(..)
-       , sFloatToSWord32, sDoubleToSWord64
+       , sFloatAsSWord32, sDoubleAsSWord64, sWord32AsSFloat, sWord64AsSDouble
        , blastSFloat, blastSDouble
        ) where
 
 import Control.Monad (join)
 
-import Data.Binary.IEEE754 (wordToFloat, wordToDouble, floatToWord, doubleToWord)
+import qualified Data.Binary.IEEE754 as DB (wordToFloat, wordToDouble, floatToWord, doubleToWord)
+
 import Data.Int            (Int8,  Int16,  Int32,  Int64)
 import Data.Word           (Word8, Word16, Word32, Word64)
 
@@ -162,51 +163,51 @@ genericFPConverter mbConcreteOK converter rm f
 
 instance IEEEFloatConvertable Int8 where
   fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
   fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
+  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
 
 instance IEEEFloatConvertable Int16 where
   fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
   fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
+  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
 
 instance IEEEFloatConvertable Int32 where
   fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
   fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
+  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
 
 instance IEEEFloatConvertable Int64 where
   fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
   fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
+  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
 
 instance IEEEFloatConvertable Word8 where
   fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
   fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
+  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
 
 instance IEEEFloatConvertable Word16 where
   fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
   fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
+  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
 
 instance IEEEFloatConvertable Word32 where
   fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
   fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
+  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
 
 instance IEEEFloatConvertable Word64 where
   fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
   fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
+  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
 
 instance IEEEFloatConvertable Float where
   fromSFloat _ f = f
@@ -222,9 +223,9 @@ instance IEEEFloatConvertable Double where
 
 instance IEEEFloatConvertable Integer where
   fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (wordToFloat . fromIntegral)
+  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
   fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (wordToDouble . fromIntegral)
+  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
 
 -- For AlgReal; be careful to only process exact rationals concretely
 instance IEEEFloatConvertable AlgReal where
@@ -363,40 +364,56 @@ lift3 w mbOp mbRm a b c
 -- @
 --
 -- At which point the variable @w@ can be used to access the bits of the float 'f'.
-sFloatToSWord32 :: SFloat -> SWord32 -> SBool
-sFloatToSWord32 fVal wVal
-  | Just f <- unliteral fVal, not (isNaN f) = wVal .== literal (floatToWord f)
+sFloatAsSWord32 :: SFloat -> SWord32 -> SBool
+sFloatAsSWord32 fVal wVal
+  | Just f <- unliteral fVal, not (isNaN f) = wVal .== literal (DB.floatToWord f)
   | True                                    = result `is` fVal
  where result   = toSFloat sRoundNearestTiesToEven wVal
        a `is` b = (fpIsNaN a &&& fpIsNaN b) ||| (a .== b)
 
 -- | Relationally assert the equivalence between an 'SDouble' and an 'SWord64', when the bit-pattern
 -- is interpreted as either type. See the comments for 'sFloatToSWord32' for details.
-sDoubleToSWord64 :: SDouble -> SWord64 -> SBool
-sDoubleToSWord64 fVal wVal
-  | Just f <- unliteral fVal, not (isNaN f) = wVal .== literal (doubleToWord f)
+sDoubleAsSWord64 :: SDouble -> SWord64 -> SBool
+sDoubleAsSWord64 fVal wVal
+  | Just f <- unliteral fVal, not (isNaN f) = wVal .== literal (DB.doubleToWord f)
   | True                                    = result `is` fVal
  where result   = toSDouble sRoundNearestTiesToEven wVal
        a `is` b = (fpIsNaN a &&& fpIsNaN b) ||| (a .== b)
 
 -- | Relationally extract the sign\/exponent\/mantissa of a single-precision float. Due to the
--- non-unique representation of NaN's, we have to do this function relationally, much like
--- 'sFloatToSWord32'.
+-- non-unique representation of NaN's, we have to do this relationally, much like
+-- 'sFloatAsSWord32'.
 blastSFloat :: SFloat -> (SBool, [SBool], [SBool]) -> SBool
 blastSFloat fVal (s, expt, mant)
   | length expt /= 8 || length mant /= 23  = error "SBV.blastSFloat: Need 8-bit expt and 23 bit mantissa"
-  | True                                   = sFloatToSWord32 fVal wVal
+  | True                                   = sFloatAsSWord32 fVal wVal
  where bits = s : expt ++ mant
        wVal = sum [ite b (2^c) 0 | (b, c) <- zip bits (reverse [(0::Word32) .. 31])]
 
 -- | Relationally extract the sign\/exponent\/mantissa of a double-precision float. Due to the
--- non-unique representation of NaN's, we have to do this function relationally, much like
--- 'sDoubleToSWord64'.
+-- non-unique representation of NaN's, we have to do this relationally, much like
+-- 'sDoubleAsSWord64'.
 blastSDouble :: SDouble -> (SBool, [SBool], [SBool]) -> SBool
 blastSDouble fVal (s, expt, mant)
   | length expt /= 11 || length mant /= 52 = error "SBV.blastSDouble: Need 11-bit expt and 52 bit mantissa"
-  | True                                   = sDoubleToSWord64 fVal wVal
+  | True                                   = sDoubleAsSWord64 fVal wVal
  where bits = s : expt ++ mant
        wVal = sum [ite b (2^c) 0 | (b, c) <- zip bits (reverse [(0::Word64) .. 63])]
+
+-- | Reinterpret the bits in a 32-bit word as a single-precision floating point number
+sWord32AsSFloat :: SWord32 -> SFloat
+sWord32AsSFloat fVal
+  | Just f <- unliteral fVal = literal $ DB.wordToFloat f
+  | True                     = SBV (SVal KFloat (Right (cache y)))
+  where y st = do xsw <- sbvToSW st fVal
+                  newExpr st KFloat (SBVApp (IEEEFP (FP_Reinterpret (kindOf fVal) KFloat)) [xsw])
+
+-- | Reinterpret the bits in a 32-bit word as a single-precision floating point number
+sWord64AsSDouble :: SWord64 -> SDouble
+sWord64AsSDouble dVal
+  | Just d <- unliteral dVal = literal $ DB.wordToDouble d
+  | True                     = SBV (SVal KDouble (Right (cache y)))
+  where y st = do xsw <- sbvToSW st dVal
+                  newExpr st KDouble (SBVApp (IEEEFP (FP_Reinterpret (kindOf dVal) KDouble)) [xsw])
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

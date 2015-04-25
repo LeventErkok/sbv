@@ -145,8 +145,8 @@ data Op = Plus
         | IEEEFP FPOp                           -- Floating-point ops, categorized separately
         deriving (Eq, Ord)
 
--- | Various cast ops. Note that this is for future use, there is only one current inhabitant
--- the time being.
+-- | Various cast ops. Note that this is for future use, there is only one current inhabitant for
+-- the time being. (Floating-point casts are separately handled, see FPOp.)
 data CastOp = Cast_SIntegerToSReal
             deriving (Eq, Ord)
 
@@ -155,7 +155,8 @@ instance Show CastOp where
   show Cast_SIntegerToSReal = "to_real"
 
 -- | Floating point operations
-data FPOp = FP_Cast Kind Kind SW   -- From-Kind, To-Kind, RoundingMode
+data FPOp = FP_Cast        Kind Kind SW   -- From-Kind, To-Kind, RoundingMode. This is "value" conversion
+          | FP_Reinterpret Kind Kind      -- From-Kind, To-Kind. This is bit-reinterpretation using IEEE-754 interchange format
           | FP_Abs
           | FP_Neg
           | FP_Add
@@ -182,27 +183,31 @@ data FPOp = FP_Cast Kind Kind SW   -- From-Kind, To-Kind, RoundingMode
 -- this mapping stays correct through SMTLib changes. The only exception
 -- is FP_Cast; where we handle different source/origins explicitly later on.
 instance Show FPOp where
-   show (FP_Cast f t r)    = "(FP_Cast: " ++ show f ++ " -> " ++ show t ++ "using RM [" ++ show r ++ "])"
-   show FP_Abs             = "fp.abs"
-   show FP_Neg             = "fp.neg"
-   show FP_Add             = "fp.add"
-   show FP_Sub             = "fp.sub"
-   show FP_Mul             = "fp.mul"
-   show FP_Div             = "fp.div"
-   show FP_FMA             = "fp.fma"
-   show FP_Sqrt            = "fp.sqrt"
-   show FP_Rem             = "fp.rem"
-   show FP_RoundToIntegral = "fp.roundToIntegral"
-   show FP_Min             = "fp.min"
-   show FP_Max             = "fp.max"
-   show FP_ObjEqual        = "="
-   show FP_IsNormal        = "fp.isNormal"
-   show FP_IsSubnormal     = "fp.isSubnormal"
-   show FP_IsZero          = "fp.isZero"
-   show FP_IsInfinite      = "fp.isInfinite"
-   show FP_IsNaN           = "fp.isNaN"
-   show FP_IsNegative      = "fp.isNegative"
-   show FP_IsPositive      = "fp.isPositive"
+   show (FP_Cast f t r)      = "(FP_Cast: " ++ show f ++ " -> " ++ show t ++ "using RM [" ++ show r ++ "])"
+   show (FP_Reinterpret f t) = case (f, t) of
+                                  (KBounded False 32, KFloat)  -> "(_ to_fp 8 24)"
+                                  (KBounded False 64, KDouble) -> "(_ to_fp 11 53)"
+                                  _                            -> error $ "SBV.FP_Reinterpret: Unexpected conversion: " ++ show f ++ " to " ++ show t
+   show FP_Abs               = "fp.abs"
+   show FP_Neg               = "fp.neg"
+   show FP_Add               = "fp.add"
+   show FP_Sub               = "fp.sub"
+   show FP_Mul               = "fp.mul"
+   show FP_Div               = "fp.div"
+   show FP_FMA               = "fp.fma"
+   show FP_Sqrt              = "fp.sqrt"
+   show FP_Rem               = "fp.rem"
+   show FP_RoundToIntegral   = "fp.roundToIntegral"
+   show FP_Min               = "fp.min"
+   show FP_Max               = "fp.max"
+   show FP_ObjEqual          = "="
+   show FP_IsNormal          = "fp.isNormal"
+   show FP_IsSubnormal       = "fp.isSubnormal"
+   show FP_IsZero            = "fp.isZero"
+   show FP_IsInfinite        = "fp.isInfinite"
+   show FP_IsNaN             = "fp.isNaN"
+   show FP_IsNegative        = "fp.isNegative"
+   show FP_IsPositive        = "fp.isPositive"
 
 -- | Show instance for 'Op'. Note that this is largely for debugging purposes, not used
 -- for being read by any tool.

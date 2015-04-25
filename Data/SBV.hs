@@ -132,9 +132,7 @@ module Data.SBV (
   -- **** Rounding modes
   , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
   -- **** Bit-pattern conversions
-  , sFloatToSWord32, sDoubleToSWord64
-  -- **** Blasting floats to sign, exponent, mantissa bits
-  , blastSFloat, blastSDouble
+  , sFloatAsSWord32, sWord32AsSFloat, sDoubleAsSWord64, sWord64AsSDouble, blastSFloat, blastSDouble
   -- *** Signed algebraic reals
   -- $algReals
   , SReal, AlgReal, sIntegerToSReal

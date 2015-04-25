@@ -432,7 +432,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                , (Not,  lift1B "not" "bvnot")
                                , (Join, lift2 "concat")
                                ]
-        sh (SBVApp (IEEEFP (FP_Cast kFrom kTo m)) args) = handleFPCast kFrom kTo m (unwords (map ssw args))
+        sh (SBVApp (IEEEFP (FP_Cast kFrom kTo m)) args) = handleFPCast kFrom kTo (ssw m) (unwords (map ssw args))
         sh (SBVApp (IEEEFP w                    ) args) = "(" ++ show w ++ " " ++ unwords (map ssw args) ++ ")"
         sh inp@(SBVApp op args)
           | intOp, Just f <- lookup op smtOpIntTable
@@ -505,9 +505,68 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                      , (GreaterEq,   unintComp ">=")
                                      ]
 
-handleFPCast :: Kind -> Kind -> SW -> String -> String
-handleFPCast kFrom kTo rm a = "(" ++ cast kFrom kTo ++ " " ++ a ++ ")"
-  where cast _ _ = error "determine-the-cast!" rm
+-----------------------------------------------------------------------------------------------
+-- Casts supported by SMTLib. (From: http://smtlib.cs.uiowa.edu/theories/FloatingPoint.smt2)
+--   ; from another floating point sort
+--   ((_ to_fp eb sb) RoundingMode (_ FloatingPoint mb nb) (_ FloatingPoint eb sb))
+--
+--   ; from real
+--   ((_ to_fp eb sb) RoundingMode Real (_ FloatingPoint eb sb))
+--
+--   ; from signed machine integer, represented as a 2's complement bit vector
+--   ((_ to_fp eb sb) RoundingMode (_ BitVec m) (_ FloatingPoint eb sb))
+--
+--   ; from unsigned machine integer, represented as bit vector
+--   ((_ to_fp_unsigned eb sb) RoundingMode (_ BitVec m) (_ FloatingPoint eb sb))
+--
+--   ; to unsigned machine integer, represented as a bit vector
+--   ((_ fp.to_ubv m) RoundingMode (_ FloatingPoint eb sb) (_ BitVec m))
+--
+--   ; to signed machine integer, represented as a 2's complement bit vector
+--   ((_ fp.to_sbv m) RoundingMode (_ FloatingPoint eb sb) (_ BitVec m)) 
+--
+--   ; to real
+--   (fp.to_real (_ FloatingPoint eb sb) Real)
+-----------------------------------------------------------------------------------------------
+
+handleFPCast :: Kind -> Kind -> String -> String -> String
+handleFPCast kFrom kTo rm a
+   | KUnbounded `elem` [kFrom, kTo]
+   = "(" ++ cast kFrom kTo ++ ")"
+   | True
+   = "(" ++ cast  kFrom kTo ++ " " ++ a ++ ")"
+  where addRM s = s ++ " " ++ rm
+
+        -- To go and back from Ints, we detour through reals
+        cast KUnbounded         KFloat             = "(_ to_fp 8 24) "  ++ rm ++ " (to_real " ++ a ++ ")"
+        cast KUnbounded         KDouble            = "(_ to_fp 11 53) " ++ rm ++ " (to_real " ++ a ++ ")"
+        cast KFloat             KUnbounded         = "to_int (fp.to_real " ++ a ++ ")"
+        cast KDouble            KUnbounded         = "to_int (fp.to_real " ++ a ++ ")"
+
+        -- To float/double
+        cast (KBounded False _) KFloat             = addRM "(_ to_fp_unsigned 8 24)"
+        cast (KBounded False _) KDouble            = addRM "(_ to_fp_unsigned 11 53)"
+        cast (KBounded True  _) KFloat             = addRM "(_ to_fp 8 24)"
+        cast (KBounded True  _) KDouble            = addRM "(_ to_fp 11 53)"
+        cast KReal              KFloat             = addRM "(_ to_fp 8 24)"
+        cast KReal              KDouble            = addRM "(_ to_fp 11 53)"
+
+        -- Between floats
+        cast KFloat             KFloat             = addRM "(_ to_fp 8 24)"
+        cast KFloat             KDouble            = addRM "(_ to_fp 11 53)"
+        cast KDouble            KFloat             = addRM "(_ to_fp 8 24)"
+        cast KDouble            KDouble            = addRM "(_ to_fp 11 53)"
+
+        -- From float/double
+        cast KFloat             (KBounded False m) = addRM  $ "(_ fp.to_ubv " ++ show m ++ ")"
+        cast KDouble            (KBounded False m) = addRM  $ "(_ fp.to_ubv " ++ show m ++ ")"
+        cast KFloat             (KBounded True  m) = addRM  $ "(_ fp.to_sbv " ++ show m ++ ")"
+        cast KDouble            (KBounded True  m) = addRM  $ "(_ fp.to_sbv " ++ show m ++ ")"
+        cast KFloat             KReal              = "fp.to_real"
+        cast KDouble            KReal              = "fp.to_real"
+
+        -- Nothing else should come up:
+        cast f                  d                  = error $ "SBV.SMTLib2: Unexpected FPCast from: " ++ show f ++ " to " ++ show d
 
 rot :: (SW -> String) -> String -> Int -> SW -> String
 rot ssw o c x = "((_ " ++ o ++ " " ++ show c ++ ") " ++ ssw x ++ ")"

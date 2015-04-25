@@ -143,6 +143,11 @@ declSW :: Int -> SW -> Doc
 declSW w sw = text "const" <+> pad (showCType sw) <+> text (show sw)
   where pad s = text $ s ++ replicate (w - length s) ' '
 
+-- | Return the proper declaration and the result as a pair. No consts
+declSWNoConst :: Int -> SW -> (Doc, Doc)
+declSWNoConst w sw = (text "     " <+> pad (showCType sw), text (show sw))
+  where pad s = text $ s ++ replicate (w - length s) ' '
+
 -- | Renders as "s0", etc, or the corresponding constant
 showSW :: CgConfig -> [(SW, CW)] -> SW -> Doc
 showSW cfg consts sw
@@ -155,11 +160,9 @@ showSW cfg consts sw
 pprCWord :: HasKind a => Bool -> a -> Doc
 pprCWord cnst v = (if cnst then text "const" else empty) <+> text (showCType v)
 
--- | Almost a "show", but map "SWord1" to "SBool"
+-- | The SBV kind corresponds to the C type:
 showCType :: HasKind a => a -> String
-showCType i = case kindOf i of
-                KBounded False 1 -> "SBool"
-                k                -> show k
+showCType = show . kindOf
 
 -- | The printf specifier for the type
 specifier :: CgConfig -> SW -> Doc
@@ -268,6 +271,7 @@ genHeader (ik, rk) fn sigs protos =
   $$ text "#include <inttypes.h>"
   $$ text "#include <stdint.h>"
   $$ text "#include <stdbool.h>"
+  $$ text "#include <string.h>"
   $$ text "#include <math.h>"
   $$ text ""
   $$ text "/* The boolean type */"
@@ -473,7 +477,8 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _ _ (S
        getNodeId s@(SW _ (NodeId n)) | isConst s = -1
                                      | True      = n
        genAsgn :: (SW, SBVExpr) -> (Int, Doc)
-       genAsgn (sw, n) = (getNodeId sw, declSW typeWidth sw <+> text "=" <+> ppExpr cfg consts n <> semi)
+       genAsgn (sw, n) = (getNodeId sw, ppExpr cfg consts n (declSW typeWidth sw) (declSWNoConst typeWidth sw) <> semi)
+
        -- merge tables intermixed with assignments, paying attention to putting tables as
        -- early as possible.. Note that the assignment list (second argument) is sorted on its order
        merge :: [(Int, Doc)] -> [(Int, Doc)] -> [Doc]
@@ -483,40 +488,47 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _ _ (S
          | i < i'                                 = t : merge trest as
          | True                                   = a : merge ts arest
 
-handleIEEE :: FPOp -> [(SW, CW)] -> [(SW, Doc)] -> Doc
-handleIEEE w consts as = cvt w
-  where same f                 = (f, f)
-        named fnm dnm f        = (f fnm, f dnm)
-        cvt (FP_Cast _ to m)   = case checkRM (m `lookup` consts) of
-                                   Nothing          -> cast $ \[a] -> parens (text (show to)) <+> a
-                                   Just (Left  msg) -> die msg
-                                   Just (Right msg) -> tbd msg
-        cvt FP_Abs             = dispatch $ named "fabsf" "fabs" $ \nm [a] -> text nm <> parens a
-        cvt FP_Neg             = dispatch $ same $ \[a] -> text "-" <> a
-        cvt FP_Add             = dispatch $ same $ \[a, b] -> a <+> text "+" <+> b
-        cvt FP_Sub             = dispatch $ same $ \[a, b] -> a <+> text "-" <+> b
-        cvt FP_Mul             = dispatch $ same $ \[a, b] -> a <+> text "*" <+> b
-        cvt FP_Div             = dispatch $ same $ \[a, b] -> a <+> text "/" <+> b
-        cvt FP_FMA             = dispatch $ named "fmaf"  "fma"  $ \nm [a, b, c] -> text nm <> parens (fsep (punctuate comma [a, b, c]))
-        cvt FP_Sqrt            = dispatch $ named "sqrtf" "sqrt" $ \nm [a]       -> text nm <> parens a
-        cvt FP_Rem             = dispatch $ named "fmodf" "fmod" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
-        cvt FP_RoundToIntegral = dispatch $ named "rintf" "rint" $ \nm [a]       -> text nm <> parens a
-        cvt FP_Min             = dispatch $ named "fminf" "fmin" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
-        cvt FP_Max             = dispatch $ named "fmaxf" "fmax" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
-        cvt FP_ObjEqual        = let mkIte   x y z = x <+> text "?" <+> y <+> text ":" <+> z
-                                     chkNaN  x     = text "isnan"   <> parens x
-                                     signbit x     = text "signbit" <> parens x
-                                     eq      x y   = parens (x <+> text "==" <+> y)
-                                     eqZero  x     = eq x (text "0")
-                                     negZero x     = parens (signbit x <+> text "&&" <+> eqZero x)
-                                 in dispatch $ same $ \[a, b] -> mkIte (chkNaN a) (chkNaN b) (mkIte (negZero a) (negZero b) (mkIte (negZero b) (negZero a) (eq a b)))
-        cvt FP_IsNormal        = dispatch $ same $ \[a] -> text "isnormal" <> parens a
-        cvt FP_IsSubnormal     = dispatch $ same $ \[a] -> text "FP_SUBNORMAL == fpclassify" <> parens a
-        cvt FP_IsZero          = dispatch $ same $ \[a] -> text "FP_ZERO == fpclassify" <> parens a
-        cvt FP_IsInfinite      = dispatch $ same $ \[a] -> text "isinf" <> parens a
-        cvt FP_IsNaN           = dispatch $ same $ \[a] -> text "isnan" <> parens a
-        cvt FP_IsNegative      = dispatch $ same $ \[a] -> text "!isnan" <> parens a <+> text "&&" <+> text "signbit"  <> parens a
-        cvt FP_IsPositive      = dispatch $ same $ \[a] -> text "!isnan" <> parens a <+> text "&&" <+> text "!signbit" <> parens a
+handleIEEE :: FPOp -> [(SW, CW)] -> [(SW, Doc)] -> Doc -> Doc
+handleIEEE w consts as var = cvt w
+  where same f                   = (f, f)
+        named fnm dnm f          = (f fnm, f dnm)
+        cvt (FP_Cast _ to m)     = case checkRM (m `lookup` consts) of
+                                     Nothing          -> cast $ \[a] -> parens (text (show to)) <+> a
+                                     Just (Left  msg) -> die msg
+                                     Just (Right msg) -> tbd msg
+        cvt (FP_Reinterpret f t) = case (f, t) of
+                                     (KBounded False 32, KFloat)  -> cast $ cpy "sizeof(SFloat)"
+                                     (KBounded False 64, KDouble) -> cast $ cpy "sizeof(SDouble)"
+                                     _                            -> die $ "Reinterpretation from : " ++ show f ++ " to " ++ show t
+                                    where cpy sz = \[a] -> let alhs = text "&" <> var
+                                                               arhs = text "&" <> a
+                                                           in text "memcpy" <> parens (fsep (punctuate comma [alhs, arhs, text sz]))
+        cvt FP_Abs               = dispatch $ named "fabsf" "fabs" $ \nm [a] -> text nm <> parens a
+        cvt FP_Neg               = dispatch $ same $ \[a] -> text "-" <> a
+        cvt FP_Add               = dispatch $ same $ \[a, b] -> a <+> text "+" <+> b
+        cvt FP_Sub               = dispatch $ same $ \[a, b] -> a <+> text "-" <+> b
+        cvt FP_Mul               = dispatch $ same $ \[a, b] -> a <+> text "*" <+> b
+        cvt FP_Div               = dispatch $ same $ \[a, b] -> a <+> text "/" <+> b
+        cvt FP_FMA               = dispatch $ named "fmaf"  "fma"  $ \nm [a, b, c] -> text nm <> parens (fsep (punctuate comma [a, b, c]))
+        cvt FP_Sqrt              = dispatch $ named "sqrtf" "sqrt" $ \nm [a]       -> text nm <> parens a
+        cvt FP_Rem               = dispatch $ named "fmodf" "fmod" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
+        cvt FP_RoundToIntegral   = dispatch $ named "rintf" "rint" $ \nm [a]       -> text nm <> parens a
+        cvt FP_Min               = dispatch $ named "fminf" "fmin" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
+        cvt FP_Max               = dispatch $ named "fmaxf" "fmax" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
+        cvt FP_ObjEqual          = let mkIte   x y z = x <+> text "?" <+> y <+> text ":" <+> z
+                                       chkNaN  x     = text "isnan"   <> parens x
+                                       signbit x     = text "signbit" <> parens x
+                                       eq      x y   = parens (x <+> text "==" <+> y)
+                                       eqZero  x     = eq x (text "0")
+                                       negZero x     = parens (signbit x <+> text "&&" <+> eqZero x)
+                                   in dispatch $ same $ \[a, b] -> mkIte (chkNaN a) (chkNaN b) (mkIte (negZero a) (negZero b) (mkIte (negZero b) (negZero a) (eq a b)))
+        cvt FP_IsNormal          = dispatch $ same $ \[a] -> text "isnormal" <> parens a
+        cvt FP_IsSubnormal       = dispatch $ same $ \[a] -> text "FP_SUBNORMAL == fpclassify" <> parens a
+        cvt FP_IsZero            = dispatch $ same $ \[a] -> text "FP_ZERO == fpclassify" <> parens a
+        cvt FP_IsInfinite        = dispatch $ same $ \[a] -> text "isinf" <> parens a
+        cvt FP_IsNaN             = dispatch $ same $ \[a] -> text "isnan" <> parens a
+        cvt FP_IsNegative        = dispatch $ same $ \[a] -> text "!isnan" <> parens a <+> text "&&" <+> text "signbit"  <> parens a
+        cvt FP_IsPositive        = dispatch $ same $ \[a] -> text "!isnan" <> parens a <+> text "&&" <+> text "!signbit" <> parens a
 
         -- grab the rounding-mode, if present, and make sure it's RoundNearestTiesToEven. Otherwise skip.
         fpArgs = case as of
@@ -548,16 +560,24 @@ handleIEEE w consts as = cvt w
         dispatch (fOp, dOp) = pickOp (fOp, dOp) fpArgs
         cast f              = f (map snd fpArgs)
 
-ppExpr :: CgConfig -> [(SW, CW)] -> SBVExpr -> Doc
-ppExpr cfg consts (SBVApp op opArgs) = p op (map (showSW cfg consts) opArgs)
-  where rtc = cgRTC cfg
+ppExpr :: CgConfig -> [(SW, CW)] -> SBVExpr -> Doc -> (Doc, Doc) -> Doc
+ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
+  | doNotAssign op
+  = typ <+> var <> semi <+> rhs
+  | True
+  = lhs <+> text "=" <+> rhs
+  where doNotAssign (IEEEFP (FP_Reinterpret{})) = True   -- generates a memcpy instead; no simple assignment
+        doNotAssign _                           = False  -- generates simple assignment
+        rhs = p op (map (showSW cfg consts) opArgs)
+        rtc = cgRTC cfg
         cBinOps = [ (Plus, "+"),  (Times, "*"), (Minus, "-")
                   , (Equal, "=="), (NotEqual, "!="), (LessThan, "<"), (GreaterThan, ">"), (LessEq, "<="), (GreaterEq, ">=")
                   , (And, "&"), (Or, "|"), (XOr, "^")
                   ]
+        p :: Op -> [Doc] -> Doc
         p (ArrRead _)       _  = tbd "User specified arrays (ArrRead)"
         p (ArrEq _ _)       _  = tbd "User specified arrays (ArrEq)"
-        p (IEEEFP w)        as = handleIEEE w consts (zip opArgs as)
+        p (IEEEFP w)        as = handleIEEE w consts (zip opArgs as) var
         p (Cast cop)        as = case (cop, as) of
                                    (Cast_SIntegerToSReal, [a]) -> text "(SReal)" <+> a
                                    (Cast_SIntegerToSReal, _)   -> die $ "Unexpected number of arguments to Cast_SIntegerToSReal. Expected: 1, got: " ++ show (length as)
@@ -785,3 +805,5 @@ mergeDrivers libName inc ds = pre : concatMap mkDFun ds ++ [callDrivers (map fst
                  ptag = "printf(\"" ++ tag ++ "\\n\");"
                  lsep = replicate (length tag) '='
                  psep = "printf(\"" ++ lsep ++ "\\n\");"
+
+{-# ANN module ("HLint: ignore Redundant lambda" :: String) #-}
