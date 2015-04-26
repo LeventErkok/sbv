@@ -117,6 +117,7 @@ fastPopCountIsCorrect x = popCountFast x .== popCountSlow x
 -- #include <inttypes.h>
 -- #include <stdint.h>
 -- #include <stdbool.h>
+-- #include <string.h>
 -- #include <math.h>
 -- <BLANKLINE>
 -- /* The boolean type */
@@ -152,6 +153,7 @@ fastPopCountIsCorrect x = popCountFast x .== popCountSlow x
 -- #include <inttypes.h>
 -- #include <stdint.h>
 -- #include <stdbool.h>
+-- #include <string.h>
 -- #include <math.h>
 -- #include <stdio.h>
 -- #include "popCount.h"
@@ -171,6 +173,7 @@ fastPopCountIsCorrect x = popCountFast x .== popCountSlow x
 -- #include <inttypes.h>
 -- #include <stdint.h>
 -- #include <stdbool.h>
+-- #include <string.h>
 -- #include <math.h>
 -- #include "popCount.h"
 -- <BLANKLINE>

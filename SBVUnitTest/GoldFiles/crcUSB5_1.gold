@@ -33,6 +33,7 @@ veryclean: clean
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <math.h>
 
 /* The boolean type */
@@ -68,6 +69,7 @@ SWord16 crcUSB5(const SWord16 msg);
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <math.h>
 #include <stdio.h>
 #include "crcUSB5.h"
@@ -87,6 +89,7 @@ int main(void)
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <math.h>
 #include "crcUSB5.h"
 

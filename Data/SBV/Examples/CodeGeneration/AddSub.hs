@@ -55,6 +55,7 @@ addSub x y = (x+y, x-y)
 -- #include <inttypes.h>
 -- #include <stdint.h>
 -- #include <stdbool.h>
+-- #include <string.h>
 -- #include <math.h>
 -- <BLANKLINE>
 -- /* The boolean type */
@@ -91,6 +92,7 @@ addSub x y = (x+y, x-y)
 -- #include <inttypes.h>
 -- #include <stdint.h>
 -- #include <stdbool.h>
+-- #include <string.h>
 -- #include <math.h>
 -- #include <stdio.h>
 -- #include "addSub.h"
@@ -115,6 +117,7 @@ addSub x y = (x+y, x-y)
 -- #include <inttypes.h>
 -- #include <stdint.h>
 -- #include <stdbool.h>
+-- #include <string.h>
 -- #include <math.h>
 -- #include "addSub.h"
 -- <BLANKLINE>

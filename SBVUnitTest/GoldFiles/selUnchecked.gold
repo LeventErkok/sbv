@@ -33,6 +33,7 @@ veryclean: clean
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <math.h>
 
 /* The boolean type */
@@ -68,6 +69,7 @@ SWord8 selUnChecked(const SWord8 x);
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <math.h>
 #include <stdio.h>
 #include "selUnChecked.h"
@@ -87,6 +89,7 @@ int main(void)
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <math.h>
 #include "selUnChecked.h"
 

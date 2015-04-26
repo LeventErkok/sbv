@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <math.h>
 #include "aes128Lib.h"
 
@@ -1743,6 +1744,7 @@ void aes128KeySchedule(const SWord32 *key, SWord32 *encKS,
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <math.h>
 #include "aes128Lib.h"
 
@@ -2660,6 +2662,7 @@ void aes128BlockEncrypt(const SWord32 *pt, const SWord32 *xkey,
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <math.h>
 #include "aes128Lib.h"
 
@@ -3580,6 +3583,7 @@ void aes128BlockDecrypt(const SWord32 *ct, const SWord32 *xkey,
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <math.h>
 
 /* The boolean type */
@@ -3620,6 +3624,7 @@ void aes128BlockDecrypt(const SWord32 *ct, const SWord32 *xkey,
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <math.h>
 #include <stdio.h>
 #include "aes128Lib.h"
