@@ -331,6 +331,7 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
               $$ text "#include <inttypes.h>"
               $$ text "#include <stdint.h>"
               $$ text "#include <stdbool.h>"
+              $$ text "#include <string.h>"
               $$ text "#include <math.h>"
               $$ text "#include <stdio.h>"
        header =  text "#include" <+> doubleQuotes (nm <> text ".h")
@@ -424,6 +425,7 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _ _ (S
               $$ text "#include <inttypes.h>"
               $$ text "#include <stdint.h>"
               $$ text "#include <stdbool.h>"
+              $$ text "#include <string.h>"
               $$ text "#include <math.h>"
        header = text "#include" <+> doubleQuotes (nm <> text ".h")
        post   = text ""
@@ -781,6 +783,7 @@ mergeDrivers libName inc ds = pre : concatMap mkDFun ds ++ [callDrivers (map fst
             $$ text "#include <inttypes.h>"
             $$ text "#include <stdint.h>"
             $$ text "#include <stdbool.h>"
+            $$ text "#include <string.h>"
             $$ text "#include <math.h>"
             $$ text "#include <stdio.h>"
             $$ inc

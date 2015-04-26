@@ -143,6 +143,7 @@ c n vs = intercalate "\n" $
               , "#include <inttypes.h>"
               , "#include <stdint.h>"
               , "#include <stdbool.h>"
+              , "#include <string.h>"
               , "#include <math.h>"
               , ""
               , "/* The boolean type */"
