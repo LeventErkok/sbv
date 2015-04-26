@@ -160,9 +160,12 @@ showSW cfg consts sw
 pprCWord :: HasKind a => Bool -> a -> Doc
 pprCWord cnst v = (if cnst then text "const" else empty) <+> text (showCType v)
 
--- | The SBV kind corresponds to the C type:
+-- | Almost a "show", but map "SWord1" to "SBool"
+-- which is used for extracting one-bit words.
 showCType :: HasKind a => a -> String
-showCType = show . kindOf
+showCType i = case kindOf i of
+                KBounded False 1 -> "SBool"
+                k                -> show k
 
 -- | The printf specifier for the type
 specifier :: CgConfig -> SW -> Doc
