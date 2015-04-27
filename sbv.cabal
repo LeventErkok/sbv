@@ -170,6 +170,7 @@ Executable SBVUnitTests
                   , TestSuite.CodeGeneration.CgTests
                   , TestSuite.CodeGeneration.CRC_USB5
                   , TestSuite.CodeGeneration.Fibonacci
+                  , TestSuite.CodeGeneration.Floats
                   , TestSuite.CodeGeneration.GCD
                   , TestSuite.CodeGeneration.PopulationCount
                   , TestSuite.CodeGeneration.Uninterpreted
