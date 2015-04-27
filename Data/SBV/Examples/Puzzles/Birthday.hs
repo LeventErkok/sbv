@@ -33,7 +33,7 @@
 -- When is Cheryl’s birthday?
 -- @
 --
---  NB. Thanks to Amit Goel for suggesting the formalization strategy used in here.
+-- NB. Thanks to Amit Goel for suggesting the formalization strategy used in here.
 -----------------------------------------------------------------------------
 
 module Data.SBV.Examples.Puzzles.Birthday where
