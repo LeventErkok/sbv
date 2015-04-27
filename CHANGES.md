@@ -4,6 +4,10 @@
 * Latest Hackage released version: 4.4, 2015-04-13
 
 ### Version 4.5, Not yet released
+  
+  * Add Data.SBV.Examples.Puzzles.Birthday, which codifies the Cheryl-Birthday problem that
+    went viral in April 2015. Turns out really easy to solve for SMT, but the formalization
+    of the problem is still interesting as an exercise in formal reasoning.
 
   * Rework floating-point arithmetic, and add missing floating-point operations:
 
