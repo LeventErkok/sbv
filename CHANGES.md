@@ -15,6 +15,14 @@
 
     This brings SBV up-to par with everything supported by the SMT-Lib FP theory.
 
+  * Add the IEEEFloatConvertable class, which provides conversions to/from Floats and other types. (i.e.,
+    value conversions from all other types to Floats and Doubles; and back.)
+
+  * Add SWord32/SWord64 to/from SFloat/SDouble conversions, as bit-pattern reinterpretation; using the
+    IEEE754 interchange format. The functions are: sWord32AsSFloat, sWord64AsSDouble, sFloatAsSWord32,
+    sDoubleAsSWord64. Note that the sWord32AsSFloat and sWord64ToSDouble are regular functions, but
+    sFloatToSWord32 and sDoubleToSWord64 are "relations", since NaN values are not uniquely convertable.
+
   * Rename all FP recognizers to be in sync with FP operations. Here are the old/new names:
 
      * isNormalFP       --> fpIsNormal       
