@@ -191,7 +191,7 @@ specifier cfg sw = case kindOf sw of
         specF :: CgSRealType -> Doc
         specF CgFloat      = text "%.6g"    -- float.h: __FLT_DIG__
         specF CgDouble     = text "%.15g"   -- float.h: __DBL_DIG__
-        specF CgLongDouble = text "%.18g"   -- float.h: __LDBL_DIG__
+        specF CgLongDouble = text "%Lf"
 
 -- | Make a constant value of the given type. We don't check for out of bounds here, as it should not be needed.
 --   There are many options here, using binary, decimal, etc. We simply
