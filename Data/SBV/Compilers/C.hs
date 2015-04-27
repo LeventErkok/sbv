@@ -189,9 +189,9 @@ specifier cfg sw = case kindOf sw of
         spec (True,  64) = text "%\"PRId64\"LL"
         spec (s, sz)     = die $ "Format specifier at type " ++ (if s then "SInt" else "SWord") ++ show sz
         specF :: CgSRealType -> Doc
-        specF CgFloat      = text "%f"
-        specF CgDouble     = text "%f"
-        specF CgLongDouble = text "%Lf"
+        specF CgFloat      = text "%.6g"    -- float.h: __FLT_DIG__
+        specF CgDouble     = text "%.15g"   -- float.h: __DBL_DIG__
+        specF CgLongDouble = text "%.18g"   -- float.h: __LDBL_DIG__
 
 -- | Make a constant value of the given type. We don't check for out of bounds here, as it should not be needed.
 --   There are many options here, using binary, decimal, etc. We simply
