@@ -148,13 +148,23 @@ svRem x y
     rem' a b | svKind x == KUnbounded = mod a (abs b)
              | otherwise              = rem a b
 
+-- | Optimize away x == true and x /= false to x; otherwise just do eqOpt
+eqOptBool :: Op -> SW -> SW -> SW -> Maybe SW
+eqOptBool op w x y
+  | k == KBool && op == Equal    && x == trueSW  = Just y         -- true  .== y     --> y
+  | k == KBool && op == Equal    && y == trueSW  = Just x         -- x     .== true  --> x
+  | k == KBool && op == NotEqual && x == falseSW = Just y         -- false ./= y     --> y
+  | k == KBool && op == NotEqual && y == falseSW = Just x         -- x     ./= false --> x
+  | True                                         = eqOpt w x y    -- fallback
+  where k = swKind x
+
 -- | Equality.
 svEqual :: SVal -> SVal -> SVal
-svEqual = liftSym2B (mkSymOpSC (eqOpt trueSW) Equal) rationalCheck (==) (==) (==) (==) (==)
+svEqual = liftSym2B (mkSymOpSC (eqOptBool Equal trueSW) Equal) rationalCheck (==) (==) (==) (==) (==)
 
 -- | Inequality.
 svNotEqual :: SVal -> SVal -> SVal
-svNotEqual = liftSym2B (mkSymOpSC (eqOpt falseSW) NotEqual) rationalCheck (/=) (/=) (/=) (/=) (/=)
+svNotEqual = liftSym2B (mkSymOpSC (eqOptBool NotEqual falseSW) NotEqual) rationalCheck (/=) (/=) (/=) (/=) (/=)
 
 -- | Less than.
 svLessThan :: SVal -> SVal -> SVal
