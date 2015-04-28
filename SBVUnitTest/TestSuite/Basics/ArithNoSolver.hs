@@ -18,6 +18,8 @@ module TestSuite.Basics.ArithNoSolver(testSuite) where
 
 import Data.SBV
 
+import Data.Maybe(fromJust)
+
 import SBVTest
 
 ghcBitSize :: Bits a => a -> Int
@@ -221,48 +223,64 @@ genReals = map mkTest $
         mkTest (nm, (x, y, s)) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
 
 genFloats :: [Test]
-genFloats = bTests ++ uTests
-  where bTests = map mkTest2 $
-                   map ("+",)  (zipWith pair  [(show x, show y, x +  y) | x <- fs, y <- fs        ] [x +   y | x <- sfs,  y <- sfs                       ])
-                ++ map ("-",)  (zipWith pair  [(show x, show y, x -  y) | x <- fs, y <- fs        ] [x -   y | x <- sfs,  y <- sfs                       ])
-                ++ map ("*",)  (zipWith pair  [(show x, show y, x *  y) | x <- fs, y <- fs        ] [x *   y | x <- sfs,  y <- sfs                       ])
-                ++ map ("<",)  (zipWith pairB [(     x,      y, x <  y) | x <- fs, y <- fs        ] [x .<  y | x <- sfs,  y <- sfs                       ])
-                ++ map ("<=",) (zipWith pairB [(     x,      y, x <= y) | x <- fs, y <- fs        ] [x .<= y | x <- sfs,  y <- sfs                       ])
-                ++ map (">",)  (zipWith pairB [(     x,      y, x >  y) | x <- fs, y <- fs        ] [x .>  y | x <- sfs,  y <- sfs                       ])
-                ++ map (">=",) (zipWith pairB [(     x,      y, x >= y) | x <- fs, y <- fs        ] [x .>= y | x <- sfs,  y <- sfs                       ])
-                ++ map ("==",) (zipWith pairB [(     x,      y, x == y) | x <- fs, y <- fs        ] [x .== y | x <- sfs,  y <- sfs                       ])
-                ++ map ("/=",) (zipWith pairN [(     x,      y, x /= y) | x <- fs, y <- fs        ] [x ./= y | x <- sfs,  y <- sfs                       ])
-                ++ map ("/",)  (zipWith pair  [(show x, show y, x /  y) | x <- fs, y <- fs, y /= 0] [x / y   | x <- sfs,  y <- sfs, unliteral y /= Just 0])
-                ++ map ("+",)  (zipWith pair  [(show x, show y, x +  y) | x <- ds, y <- ds        ] [x +   y | x <- sds,  y <- sds                       ])
-                ++ map ("-",)  (zipWith pair  [(show x, show y, x -  y) | x <- ds, y <- ds        ] [x -   y | x <- sds,  y <- sds                       ])
-                ++ map ("*",)  (zipWith pair  [(show x, show y, x *  y) | x <- ds, y <- ds        ] [x *   y | x <- sds,  y <- sds                       ])
-                ++ map ("<",)  (zipWith pairB [(     x,      y, x <  y) | x <- ds, y <- ds        ] [x .<  y | x <- sds,  y <- sds                       ])
-                ++ map ("<=",) (zipWith pairB [(     x,      y, x <= y) | x <- ds, y <- ds        ] [x .<= y | x <- sds,  y <- sds                       ])
-                ++ map (">",)  (zipWith pairB [(     x,      y, x >  y) | x <- ds, y <- ds        ] [x .>  y | x <- sds,  y <- sds                       ])
-                ++ map (">=",) (zipWith pairB [(     x,      y, x >= y) | x <- ds, y <- ds        ] [x .>= y | x <- sds,  y <- sds                       ])
-                ++ map ("==",) (zipWith pairB [(     x,      y, x == y) | x <- ds, y <- ds        ] [x .== y | x <- sds,  y <- sds                       ])
-                ++ map ("/=",) (zipWith pairN [(     x,      y, x /= y) | x <- ds, y <- ds        ] [x ./= y | x <- sds,  y <- sds                       ])
-                ++ map ("/",)  (zipWith pair  [(show x, show y, x /  y) | x <- ds, y <- ds, y /= 0] [x / y   | x <- sds,  y <- sds, unliteral y /= Just 0])
+genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2
+  where bTests = map mkTest2 $  floatRun2 "+"  (+)  (+)   comb  ++ doubleRun2 "+"  (+)  (+)   comb
+                             ++ floatRun2 "-"  (-)  (-)   comb  ++ doubleRun2 "-"  (-)  (-)   comb
+                             ++ floatRun2 "*"  (*)  (*)   comb  ++ doubleRun2 "*"  (*)  (*)   comb
+                             ++ floatRun2 "/"  (/)  (/)   comb  ++ doubleRun2 "/"  (/)  (/)   comb
+                             ++ floatRun2 "<"  (<)  (.<)  combB ++ doubleRun2 "<"  (<)  (.<)  combB
+                             ++ floatRun2 "<=" (<=) (.<=) combB ++ doubleRun2 "<=" (<=) (.<=) combB
+                             ++ floatRun2 ">"  (>)  (.>)  combB ++ doubleRun2 ">"  (>)  (.>)  combB
+                             ++ floatRun2 ">=" (>=) (.>=) combB ++ doubleRun2 ">=" (>=) (.>=) combB
+                             ++ floatRun2 "==" (==) (.==) combB ++ doubleRun2 "==" (==) (.==) combB
+                             ++ floatRun2 "/=" (/=) (./=) combN ++ doubleRun2 "/=" (/=) (./=) combN
+        fpTests1 = map mkTest1 $  floatRun1  "fpAbs"  abs    fpAbs  comb1 ++ doubleRun1  "fpAbs"  abs    fpAbs  comb1
+                               ++ floatRun1  "fpNeg"  negate fpNeg  comb1 ++ doubleRun1  "fpNeg"  negate fpNeg  comb1
+                               ++ floatRun1M "fpSqrt" sqrt   fpSqrt comb1 ++ doubleRun1M "fpSqrt" sqrt   fpSqrt comb1
+        fpTests2 = map mkTest2 $  floatRun2M "fpAdd" (+)     fpAdd  comb  ++ doubleRun2M "fpAdd"  (+)    fpAdd  comb
+                               ++ floatRun2M "fpSub" (-)     fpSub  comb  ++ doubleRun2M "fpSub"  (-)    fpSub  comb
+                               ++ floatRun2M "fpMul" (*)     fpMul  comb  ++ doubleRun2M "fpMul"  (*)    fpMul  comb
+                               ++ floatRun2M "fpDiv" (/)     fpDiv  comb  ++ doubleRun2M "fpDiv"  (/)    fpDiv  comb
+                               ++ floatRun2  "fpMin" (min)   fpMin  comb  ++ doubleRun2  "fpMin"  (min)  fpMin  comb
+                               ++ floatRun2  "fpMax" (max)   fpMax  comb  ++ doubleRun2  "fpMax"  (max)  fpMax  comb
+--------------------------------------------------------------------
+-- TODO
+--  fpFMA              = lift3  FP_FMA             Nothing         . Just
+--  fpRem              = lift2  FP_Rem             (Just fprem)    Nothing where fprem x y = x - y * fromInteger (round (x / y))
+--  fpRoundToIntegral  = lift1  FP_RoundToIntegral (Just fpRound)  . Just  where fpRound   = fromInteger . round
+--  fpEqualObject      = lift2B FP_ObjEqual        (Just fpSame)   Nothing
+--
+--  AND ALL THE CONVERSIONS
+--------------------------------------------------------------------
+        floatRun1   nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- fs]
+        doubleRun1  nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- ds]
+        floatRun1M  nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g sRoundNearestTiesToEven (literal x)))             | x <- fs]
+        doubleRun1M nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g sRoundNearestTiesToEven (literal x)))             | x <- ds]
+        floatRun2   nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g                         (literal x) (literal y))) | x <- fs, y <- fs]
+        doubleRun2  nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g                         (literal x) (literal y))) | x <- ds, y <- ds]
+        floatRun2M  nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g sRoundNearestTiesToEven (literal x) (literal y))) | x <- fs, y <- fs]
+        doubleRun2M nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g sRoundNearestTiesToEven (literal x) (literal y))) | x <- ds, y <- ds]
         uTests = map mkTest1 $  concatMap (checkPred fs sfs) predicates
                              ++ concatMap (checkPred ds sds) predicates
-        pair (x, y, a) b = (x, y, same a (unliteral b))
-        same a (Just b) = (isNaN a &&& isNaN b) || (a == b)
-        same _ _        = False
-        pairB (x, y, a) b = (show x, show y, checkNaN f x y a (unliteral b)) where f v w = not (v || w)  -- Other comparison: Both should be False
-        pairN (x, y, a) b = (show x, show y, checkNaN f x y a (unliteral b)) where f v w =      v && w   -- /=: Both should be True
-        checkNaN f x y a (Just b)
+        extract :: SymWord a => SBV a -> a
+        extract = fromJust . unliteral
+        comb  (x, y, a, b) = (show x, show y, same a b)
+        combB (x, y, a, b) = (show x, show y, checkNaN f x y a b) where f v w = not (v || w)  -- All comparisons except /=: Both should be False if we have a NaN argument
+        combN (x, y, a, b) = (show x, show y, checkNaN f x y a b) where f v w =      v && w   -- /=: Both should be True
+        comb1 (x, a, b)    = (show x, same a b)
+        same a b = (isNaN a &&& isNaN b) || (a == b)
+        checkNaN f x y a b
           | isNaN x || isNaN y = f a b
           | True               = a == b
-        checkNaN _ _ _ _ _     = False
-        mkTest1 (nm, x, s)      = "arithCF-" ++ nm ++ "." ++ x ~: s `showsAs` "True"
+        mkTest1 (nm, (x, s))    = "arithCF-" ++ nm ++ "." ++ x ~: s `showsAs` "True"
         mkTest2 (nm, (x, y, s)) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
-        checkPred :: (Show a, RealFloat a, Floating a, SymWord a) => [a] -> [SBV a] -> (String, SBV a -> SBool, a -> Bool) -> [(String, String, Bool)]
+        checkPred :: (Show a, RealFloat a, Floating a, SymWord a) => [a] -> [SBV a] -> (String, SBV a -> SBool, a -> Bool) -> [(String, (String, Bool))]
         checkPred xs sxs (n, ps, p) = zipWith (chk n) (map (\x -> (x, p x)) xs) (map ps sxs)
           where chk nm (x, v) sv
                   -- Work around GHC bug, see issue #138
                   -- Remove the following line when fixed.
-                  | nm == "fpIsPositiveZero" && isNegativeZero x = (nm, show x, True)
-                  | True                                         = (nm, show x, Just v == unliteral sv)
+                  | nm == "fpIsPositiveZero" && isNegativeZero x = (nm, (show x, True))
+                  | True                                         = (nm, (show x, Just v == unliteral sv))
         predicates :: IEEEFloating a => [(String, SBV a -> SBool, a -> Bool)]
         predicates = [ ("fpIsNormal",       fpIsNormal,        isNormalized)
                      , ("fpIsSubnormal",    fpIsSubnormal,     isDenormalized)
