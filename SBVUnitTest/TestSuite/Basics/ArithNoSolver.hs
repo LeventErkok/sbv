@@ -224,31 +224,74 @@ genReals = map mkTest $
 
 genFloats :: [Test]
 genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2
-  where bTests = map mkTest2 $  floatRun2 "+"  (+)  (+)   comb  ++ doubleRun2 "+"  (+)  (+)   comb
-                             ++ floatRun2 "-"  (-)  (-)   comb  ++ doubleRun2 "-"  (-)  (-)   comb
-                             ++ floatRun2 "*"  (*)  (*)   comb  ++ doubleRun2 "*"  (*)  (*)   comb
-                             ++ floatRun2 "/"  (/)  (/)   comb  ++ doubleRun2 "/"  (/)  (/)   comb
-                             ++ floatRun2 "<"  (<)  (.<)  combB ++ doubleRun2 "<"  (<)  (.<)  combB
-                             ++ floatRun2 "<=" (<=) (.<=) combB ++ doubleRun2 "<=" (<=) (.<=) combB
-                             ++ floatRun2 ">"  (>)  (.>)  combB ++ doubleRun2 ">"  (>)  (.>)  combB
-                             ++ floatRun2 ">=" (>=) (.>=) combB ++ doubleRun2 ">=" (>=) (.>=) combB
-                             ++ floatRun2 "==" (==) (.==) combB ++ doubleRun2 "==" (==) (.==) combB
-                             ++ floatRun2 "/=" (/=) (./=) combN ++ doubleRun2 "/=" (/=) (./=) combN
-        fpTests1 = map mkTest1 $  floatRun1  "fpAbs"  abs    fpAbs  comb1 ++ doubleRun1  "fpAbs"  abs    fpAbs  comb1
-                               ++ floatRun1  "fpNeg"  negate fpNeg  comb1 ++ doubleRun1  "fpNeg"  negate fpNeg  comb1
-                               ++ floatRun1M "fpSqrt" sqrt   fpSqrt comb1 ++ doubleRun1M "fpSqrt" sqrt   fpSqrt comb1
-        fpTests2 = map mkTest2 $  floatRun2M "fpAdd" (+)     fpAdd  comb  ++ doubleRun2M "fpAdd"  (+)    fpAdd  comb
-                               ++ floatRun2M "fpSub" (-)     fpSub  comb  ++ doubleRun2M "fpSub"  (-)    fpSub  comb
-                               ++ floatRun2M "fpMul" (*)     fpMul  comb  ++ doubleRun2M "fpMul"  (*)    fpMul  comb
-                               ++ floatRun2M "fpDiv" (/)     fpDiv  comb  ++ doubleRun2M "fpDiv"  (/)    fpDiv  comb
-                               ++ floatRun2  "fpMin" (min)   fpMin  comb  ++ doubleRun2  "fpMin"  (min)  fpMin  comb
-                               ++ floatRun2  "fpMax" (max)   fpMax  comb  ++ doubleRun2  "fpMax"  (max)  fpMax  comb
+  where bTests = map mkTest2 $  floatRun2  "+"  (+)  (+)   comb
+                             ++ doubleRun2 "+"  (+)  (+)   comb
+
+                             ++ floatRun2  "-"  (-)  (-)   comb
+                             ++ doubleRun2 "-"  (-)  (-)   comb
+
+                             ++ floatRun2  "*"  (*)  (*)   comb
+                             ++ doubleRun2 "*"  (*)  (*)   comb
+
+                             ++ floatRun2  "/"  (/)  (/)   comb
+                             ++ doubleRun2 "/"  (/)  (/)   comb
+
+                             ++ floatRun2  "<"  (<)  (.<)  combB
+                             ++ doubleRun2 "<"  (<)  (.<)  combB
+
+                             ++ floatRun2  "<=" (<=) (.<=) combB
+                             ++ doubleRun2 "<=" (<=) (.<=) combB
+
+                             ++ floatRun2  ">"  (>)  (.>)  combB
+                             ++ doubleRun2 ">"  (>)  (.>)  combB
+
+                             ++ floatRun2  ">=" (>=) (.>=) combB
+                             ++ doubleRun2 ">=" (>=) (.>=) combB
+
+                             ++ floatRun2  "==" (==) (.==) combB
+                             ++ doubleRun2 "==" (==) (.==) combB
+
+                             ++ floatRun2  "/=" (/=) (./=) combN
+                             ++ doubleRun2 "/=" (/=) (./=) combN
+
+        fpTests1 = map mkTest1 $  floatRun1   "fpAbs"             abs                fpAbs             comb1
+                               ++ doubleRun1  "fpAbs"             abs                fpAbs             comb1
+
+                               ++ floatRun1   "fpNeg"             negate             fpNeg             comb1
+                               ++ doubleRun1  "fpNeg"             negate             fpNeg             comb1
+
+                               ++ floatRun1M  "fpSqrt"            sqrt               fpSqrt            comb1
+                               ++ doubleRun1M "fpSqrt"            sqrt               fpSqrt            comb1
+
+                               ++ floatRun1M  "fpRoundToIntegral" fpRoundToIntegralH fpRoundToIntegral comb1
+                               ++ doubleRun1M "fpRoundToIntegral" fpRoundToIntegralH fpRoundToIntegral comb1
+
+        fpTests2 = map mkTest2 $  floatRun2M  "fpAdd"         (+)            fpAdd         comb
+                               ++ doubleRun2M "fpAdd"         (+)            fpAdd         comb
+
+                               ++ floatRun2M  "fpSub"         (-)            fpSub         comb
+                               ++ doubleRun2M "fpSub"         (-)            fpSub         comb
+
+                               ++ floatRun2M  "fpMul"         (*)            fpMul         comb
+                               ++ doubleRun2M "fpMul"         (*)            fpMul         comb
+
+                               ++ floatRun2M  "fpDiv"         (/)            fpDiv         comb
+                               ++ doubleRun2M "fpDiv"         (/)            fpDiv         comb
+
+                               ++ floatRun2   "fpMin"         min            fpMin         comb
+                               ++ doubleRun2  "fpMin"         min            fpMin         comb
+
+                               ++ floatRun2   "fpMax"         max            fpMax         comb
+                               ++ doubleRun2  "fpMax"         max            fpMax         comb
+
+                               ++ floatRun2   "fpRem"         fpRemH         fpRem         comb
+                               ++ doubleRun2  "fpRem"         fpRemH         fpRem         comb
+
+                               ++ floatRun2   "fpEqualObject" fpEqualObjectH fpEqualObject combE
+                               ++ doubleRun2  "fpEqualObject" fpEqualObjectH fpEqualObject combE
+        -- TODO. Can't possibly test fma, unless we FFI out to C. Leave it out for the time being
 --------------------------------------------------------------------
 -- TODO
---  fpFMA              = lift3  FP_FMA             Nothing         . Just
---  fpRem              = lift2  FP_Rem             (Just fprem)    Nothing where fprem x y = x - y * fromInteger (round (x / y))
---  fpRoundToIntegral  = lift1  FP_RoundToIntegral (Just fpRound)  . Just  where fpRound   = fromInteger . round
---  fpEqualObject      = lift2B FP_ObjEqual        (Just fpSame)   Nothing
 --
 --  AND ALL THE CONVERSIONS
 --------------------------------------------------------------------
@@ -262,11 +305,21 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2
         doubleRun2M nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g sRoundNearestTiesToEven (literal x) (literal y))) | x <- ds, y <- ds]
         uTests = map mkTest1 $  concatMap (checkPred fs sfs) predicates
                              ++ concatMap (checkPred ds sds) predicates
+        fpRemH :: RealFloat a => a -> a -> a
+        fpRemH x y = x - y * fromInteger (round (x / y))
+        fpRoundToIntegralH :: RealFloat a => a -> a
+        fpRoundToIntegralH = fromInteger . round
+        fpEqualObjectH :: RealFloat a => a -> a -> Bool
+        fpEqualObjectH a b
+          | isNaN a          = isNaN b
+          | isNegativeZero a = isNegativeZero b
+          | True             = a == b
         extract :: SymWord a => SBV a -> a
         extract = fromJust . unliteral
         comb  (x, y, a, b) = (show x, show y, same a b)
         combB (x, y, a, b) = (show x, show y, checkNaN f x y a b) where f v w = not (v || w)  -- All comparisons except /=: Both should be False if we have a NaN argument
         combN (x, y, a, b) = (show x, show y, checkNaN f x y a b) where f v w =      v && w   -- /=: Both should be True
+        combE (x, y, a, b) = (show x, show y, a == b)
         comb1 (x, a, b)    = (show x, same a b)
         same a b = (isNaN a &&& isNaN b) || (a == b)
         checkNaN f x y a b
