@@ -313,6 +313,7 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2
         fpEqualObjectH a b
           | isNaN a          = isNaN b
           | isNegativeZero a = isNegativeZero b
+          | isNegativeZero b = isNegativeZero a
           | True             = a == b
         extract :: SymWord a => SBV a -> a
         extract = fromJust . unliteral
