@@ -141,6 +141,9 @@ instance IEEEFloating Float
 instance IEEEFloating Double
 
 -- | Capture convertability from/to FloatingPoint representations
+-- NB. 'fromSFloat' and 'fromSDouble' are underspecified when given
+-- when given a @NaN@, @+oo@, or @-oo@ value that cannot be represented
+-- in the target domain. For these inputs, we define the result to be +0, arbitrarily.
 class IEEEFloatConvertable a where
   fromSFloat  :: SRoundingMode -> SFloat  -> SBV a
   toSFloat    :: SRoundingMode -> SBV a   -> SFloat
@@ -148,91 +151,114 @@ class IEEEFloatConvertable a where
   toSDouble   :: SRoundingMode -> SBV a   -> SDouble
 
 -- | A generic converter that will work for most of our instances. (But not all!)
-genericFPConverter :: forall a r. (SymWord a, HasKind r, SymWord r) => Maybe (a -> Bool) -> (a -> r) -> SRoundingMode -> SBV a -> SBV r
-genericFPConverter mbConcreteOK converter rm f
+genericFPConverter :: forall a r. (SymWord a, HasKind r, SymWord r, Num r) => Maybe (a -> Bool) -> Maybe (SBV a -> SBool) -> (a -> r) -> SRoundingMode -> SBV a -> SBV r
+genericFPConverter mbConcreteOK mbSymbolicOK converter rm f
   | Just w <- unliteral f, Just RoundNearestTiesToEven <- unliteral rm, check w
   = literal $ converter w
+  | Just symCheck <- mbSymbolicOK
+  = ite (symCheck f) result (literal 0)
   | True
-  = SBV (SVal kTo (Right (cache y)))
-  where check w = maybe True ($ w) mbConcreteOK
+  = result
+  where result  = SBV (SVal kTo (Right (cache y)))
+        check w = maybe True ($ w) mbConcreteOK
         kFrom   = kindOf f
         kTo     = kindOf (undefined :: r)
         y st    = do msw <- sbvToSW st rm
                      xsw <- sbvToSW st f
                      newExpr st kTo (SBVApp (IEEEFP (FP_Cast kFrom kTo msw)) [xsw])
 
+-- | A variant of round; except defaulting to 0 when fed NaN or Infinity
+round0 :: (RealFloat a, RealFrac a, Integral b) => a -> b
+round0 x
+ | isNaN x || isInfinite x = 0
+ | True                    = round x
+
+-- | Check that a given float is a point
+ptCheck :: IEEEFloating a => Maybe (SBV a -> SBool)
+ptCheck = Just fpIsPoint
+
 instance IEEEFloatConvertable Int8 where
-  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
-  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
+  fromSDouble = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
 
 instance IEEEFloatConvertable Int16 where
-  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
-  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
+  fromSDouble = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
 
 instance IEEEFloatConvertable Int32 where
-  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
-  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
+  fromSDouble = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
 
 instance IEEEFloatConvertable Int64 where
-  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
-  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
+  fromSDouble = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
 
 instance IEEEFloatConvertable Word8 where
-  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
-  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
+  fromSDouble = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
 
 instance IEEEFloatConvertable Word16 where
-  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
-  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
+  fromSDouble = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
 
 instance IEEEFloatConvertable Word32 where
-  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
-  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
+  fromSDouble = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
 
 instance IEEEFloatConvertable Word64 where
-  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
-  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
+  fromSDouble = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
+
+-- | Convert double to float and back. Essentially @fromRational . toRational@
+-- except careful on NaN, Infinities, and -0.
+fp2fp :: (RealFloat a, RealFloat b) => a -> b
+fp2fp x
+ | isNaN x               =  0 / 0
+ | isInfinite x && x < 0 = -1 / 0
+ | isInfinite x          =  1 / 0
+ | isNegativeZero x      = negate 0
+ | True                  = fromRational (toRational x)
 
 instance IEEEFloatConvertable Float where
   fromSFloat _ f = f
   toSFloat   _ f = f
-  fromSDouble    = genericFPConverter Nothing (fromRational . toRational)
-  toSDouble      = genericFPConverter Nothing (fromRational . toRational)
+  fromSDouble    = genericFPConverter Nothing Nothing fp2fp
+  toSDouble      = genericFPConverter Nothing Nothing fp2fp
 
 instance IEEEFloatConvertable Double where
-  fromSFloat      = genericFPConverter Nothing (fromRational . toRational)
-  toSFloat        = genericFPConverter Nothing (fromRational . toRational)
+  fromSFloat      = genericFPConverter Nothing Nothing fp2fp
+  toSFloat        = genericFPConverter Nothing Nothing fp2fp
   fromSDouble _ d = d
   toSDouble   _ d = d
 
 instance IEEEFloatConvertable Integer where
-  fromSFloat  = genericFPConverter Nothing (fromIntegral . (round :: Float -> Integer))
-  toSFloat    = genericFPConverter Nothing (fromRational . fromIntegral)
-  fromSDouble = genericFPConverter Nothing (fromIntegral . (round :: Double -> Integer))
-  toSDouble   = genericFPConverter Nothing (fromRational . fromIntegral)
+  fromSFloat  = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Float -> Integer))
+  toSFloat    = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
+  fromSDouble = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Double -> Integer))
+  toSDouble   = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
 
 -- For AlgReal; be careful to only process exact rationals concretely
 instance IEEEFloatConvertable AlgReal where
-  fromSFloat  = genericFPConverter Nothing                (fromRational . toRational)
-  toSFloat    = genericFPConverter (Just isExactRational) (fromRational . toRational)
-  fromSDouble = genericFPConverter Nothing                (fromRational . toRational)
-  toSDouble   = genericFPConverter (Just isExactRational) (fromRational . toRational)
+  fromSFloat  = genericFPConverter Nothing                ptCheck (fromRational . toRational)
+  toSFloat    = genericFPConverter (Just isExactRational) Nothing (fromRational . toRational)
+  fromSDouble = genericFPConverter Nothing                ptCheck (fromRational . toRational)
+  toSDouble   = genericFPConverter (Just isExactRational) Nothing (fromRational . toRational)
 
 -- | Return true if these two floats are "the same", i.e., nan compares equal to nan, but -0 doesn't compare equal to +0
 -- syntactic equality, in a sense.
