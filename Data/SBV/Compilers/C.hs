@@ -450,7 +450,7 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _ _ (S
        codeSeg (fnm, ls) =  text "/* User specified custom code for" <+> doubleQuotes (text fnm) <+> text "*/"
                          $$ vcat (map text ls)
                          $$ text ""
-       typeWidth = getMax 0 [len (kindOf s) | (s, _) <- assignments]
+       typeWidth = getMax 0 $ [len (kindOf s) | (s, _) <- assignments] ++ [len (kindOf s) | (_, (s, _)) <- ins]
                 where len (KReal{})           = 5
                       len (KFloat{})          = 6 -- SFloat
                       len (KDouble{})         = 7 -- SDouble
