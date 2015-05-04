@@ -173,6 +173,12 @@ round0 x
  | isNaN x || isInfinite x = 0
  | True                    = round x
 
+-- | A variant of toRational; except defaulting to 0 when fed NaN or Infinity
+ratio0 :: (RealFloat a, RealFrac a) => a -> Rational
+ratio0 x
+ | isNaN x || isInfinite x = 0
+ | True                    = toRational x
+
 -- | Check that a given float is a point
 ptCheck :: IEEEFloating a => Maybe (SBV a -> SBool)
 ptCheck = Just fpIsPoint
@@ -255,9 +261,9 @@ instance IEEEFloatConvertable Integer where
 
 -- For AlgReal; be careful to only process exact rationals concretely
 instance IEEEFloatConvertable AlgReal where
-  fromSFloat  = genericFPConverter Nothing                ptCheck (fromRational . toRational)
+  fromSFloat  = genericFPConverter Nothing                ptCheck (fromRational . ratio0)
   toSFloat    = genericFPConverter (Just isExactRational) Nothing (fromRational . toRational)
-  fromSDouble = genericFPConverter Nothing                ptCheck (fromRational . toRational)
+  fromSDouble = genericFPConverter Nothing                ptCheck (fromRational . ratio0)
   toSDouble   = genericFPConverter (Just isExactRational) Nothing (fromRational . toRational)
 
 -- | Return true if these two floats are "the same", i.e., nan compares equal to nan, but -0 doesn't compare equal to +0
