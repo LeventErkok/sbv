@@ -120,8 +120,8 @@ class (SymWord a, RealFloat a) => IEEEFloating a where
   fpSqrt             = lift1  FP_Sqrt            (Just sqrt)     . Just
   fpRem              = lift2  FP_Rem             (Just fprem)    Nothing where fprem x y = x - y * fromInteger (round (x / y))
   fpRoundToIntegral  = lift1  FP_RoundToIntegral (Just fpRound)  . Just  where fpRound   = fromInteger . round
-  fpMin              = lift2  FP_Min             (Just min)      Nothing
-  fpMax              = lift2  FP_Max             (Just max)      Nothing
+  fpMin              = lift2  FP_Min             (Just minH)     Nothing
+  fpMax              = lift2  FP_Max             (Just maxH)     Nothing
   fpEqualObject      = lift2B FP_ObjEqual        (Just fpSame)   Nothing
   fpIsNormal         = lift1B FP_IsNormal        isNormalized            where isNormalized x = not (isDenormalized x || isInfinite x || isNaN x)
   fpIsSubnormal      = lift1B FP_IsSubnormal     isDenormalized
@@ -178,6 +178,24 @@ ratio0 :: (RealFloat a, RealFrac a) => a -> Rational
 ratio0 x
  | isNaN x || isInfinite x = 0
  | True                    = toRational x
+
+-- | A correct implementation of max for floats, following the NaN/+0/-0 rules
+-- TODO: We can simply use `max` when <https://ghc.haskell.org/trac/ghc/ticket/10378> is fixed.
+maxH :: RealFloat a => a -> a -> a
+maxH x y
+  | isNaN x                               = y
+  | isNaN y                               = x
+  | x > y || (x == y && isNegativeZero y) = x
+  | True                                  = y
+
+-- | A correct implementation of min for floats, following the NaN/+0/-0 rules
+-- TODO: We can simply use `min` when <https://ghc.haskell.org/trac/ghc/ticket/10378> is fixed.
+minH :: RealFloat a => a -> a -> a
+minH x y
+  | isNaN x                               = y
+  | isNaN y                               = x
+  | x < y || (x == y && isNegativeZero x) = x
+  | True                                  = y
 
 -- | Check that a given float is a point
 ptCheck :: IEEEFloating a => Maybe (SBV a -> SBool)

@@ -40,6 +40,8 @@
      * isPositiveZeroFP --> fpIsPositiveZero 
      * isPointFP        --> fpIsPoint        
 
+  * Lots of other work around floating-point, test cases, reorg, etc.
+
 ### Version 4.4, 2015-04-13
 
   * Hook-up crackNum package; so counter-examples involving floats and
