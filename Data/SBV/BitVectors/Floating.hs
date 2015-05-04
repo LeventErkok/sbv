@@ -399,18 +399,14 @@ lift3 w mbOp mbRm a b c
 sFloatAsSWord32 :: SFloat -> SWord32 -> SBool
 sFloatAsSWord32 fVal wVal
   | Just f <- unliteral fVal, not (isNaN f) = wVal .== literal (DB.floatToWord f)
-  | True                                    = result `is` fVal
- where result   = toSFloat sRoundNearestTiesToEven wVal
-       a `is` b = (fpIsNaN a &&& fpIsNaN b) ||| (a .== b)
+  | True                                    = fVal `fpEqualObject` sWord32AsSFloat wVal
 
 -- | Relationally assert the equivalence between an 'SDouble' and an 'SWord64', when the bit-pattern
 -- is interpreted as either type. See the comments for 'sFloatToSWord32' for details.
 sDoubleAsSWord64 :: SDouble -> SWord64 -> SBool
 sDoubleAsSWord64 fVal wVal
   | Just f <- unliteral fVal, not (isNaN f) = wVal .== literal (DB.doubleToWord f)
-  | True                                    = result `is` fVal
- where result   = toSDouble sRoundNearestTiesToEven wVal
-       a `is` b = (fpIsNaN a &&& fpIsNaN b) ||| (a .== b)
+  | True                                    = fVal `fpEqualObject` sWord64AsSDouble wVal
 
 -- | Relationally extract the sign\/exponent\/mantissa of a single-precision float. Due to the
 -- non-unique representation of NaN's, we have to do this relationally, much like
