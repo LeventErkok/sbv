@@ -280,11 +280,11 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                                ++ floatRun2M  "fpDiv"         (/)            fpDiv         comb
                                ++ doubleRun2M "fpDiv"         (/)            fpDiv         comb
 
-                               ++ floatRun2   "fpMin"         min            fpMin         comb
-                               ++ doubleRun2  "fpMin"         min            fpMin         comb
+                               ++ floatRun2   "fpMin"         minH           fpMin         comb
+                               ++ doubleRun2  "fpMin"         minH           fpMin         comb
 
-                               ++ floatRun2   "fpMax"         max            fpMax         comb
-                               ++ doubleRun2  "fpMax"         max            fpMax         comb
+                               ++ floatRun2   "fpMax"         maxH           fpMax         comb
+                               ++ doubleRun2  "fpMax"         maxH           fpMax         comb
 
                                ++ floatRun2   "fpRem"         fpRemH         fpRem         comb
                                ++ doubleRun2  "fpRem"         fpRemH         fpRem         comb
@@ -370,6 +370,19 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
           | isNegativeZero a = isNegativeZero b
           | isNegativeZero b = isNegativeZero a
           | True             = a == b
+        -- as opposed to the Haskell's min/max; IEEE-754 min/max follows return the "other" argument when one of the arguments is NaN
+        -- and also, be careful on -0/+0.
+        -- TODO: Remove this when <https://ghc.haskell.org/trac/ghc/ticket/10378> is fixed.
+        maxH x y
+          | isNaN x                               = y
+          | isNaN y                               = x
+          | x > y || (x == y && isNegativeZero y) = x
+          | True                                  = y
+        minH x y
+          | isNaN x                               = y
+          | isNaN y                               = x
+          | x < y || (x == y && isNegativeZero x) = x
+          | True                                  = y
         extract :: SymWord a => SBV a -> a
         extract = fromJust . unliteral
         comb  (x, y, a, b) = (show x, show y, same a b)
