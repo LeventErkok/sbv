@@ -1004,14 +1004,10 @@ SBool fromFP_SFloat_SWord32(const SFloat a, const SWord32 b)
 {
   const SFloat  s0 = a;
   const SWord32 s1 = b;
-  const SFloat  s3 = (SFloat) s1;
-  const SBool   s4 = isnan(s3);
-  const SBool   s5 = isnan(s0);
-  const SBool   s6 = s4 & s5;
-  const SBool   s7 = s0 == s3;
-  const SBool   s8 = s6 | s7;
+        SFloat  s2; memcpy(&s2, &s1, sizeof(SFloat));
+  const SBool   s3 = isnan(s0) ? isnan(s2) : (signbit(s0) && (s0 == 0)) ? (signbit(s2) && (s2 == 0)) : (signbit(s2) && (s2 == 0)) ? (signbit(s0) && (s0 == 0)) : (s0 == s2);
 
-  return s8;
+  return s3;
 }
 == END: "fromFP_SFloat_SWord32.c" ==================
 == BEGIN: "fromFP_SDouble_SWord64.c" ================
@@ -1028,14 +1024,10 @@ SBool fromFP_SDouble_SWord64(const SDouble a, const SWord64 b)
 {
   const SDouble s0 = a;
   const SWord64 s1 = b;
-  const SDouble s3 = (SDouble) s1;
-  const SBool   s4 = isnan(s3);
-  const SBool   s5 = isnan(s0);
-  const SBool   s6 = s4 & s5;
-  const SBool   s7 = s0 == s3;
-  const SBool   s8 = s6 | s7;
+        SDouble s2; memcpy(&s2, &s1, sizeof(SDouble));
+  const SBool   s3 = isnan(s0) ? isnan(s2) : (signbit(s0) && (s0 == 0)) ? (signbit(s2) && (s2 == 0)) : (signbit(s2) && (s2 == 0)) ? (signbit(s0) && (s0 == 0)) : (s0 == s2);
 
-  return s8;
+  return s3;
 }
 == END: "fromFP_SDouble_SWord64.c" ==================
 == BEGIN: "f_FP_Abs.c" ================
