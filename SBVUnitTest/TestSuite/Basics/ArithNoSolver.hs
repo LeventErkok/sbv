@@ -347,10 +347,8 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                  ++ map cvtTest  [("reinterp_Word32_Float",  show x, sWord32AsSFloat  (literal x), literal (DB.wordToFloat  x)) | x <- w32s]
                  ++ map cvtTest  [("reinterp_Word64_Double", show x, sWord64AsSDouble (literal x), literal (DB.wordToDouble x)) | x <- w64s]
 
-
--- TODO:
-          -- test2 rand "fromFP_SFloat_SWord32"   (sFloatAsSWord32  :: SFloat  -> SWord32 -> SBool)
-          -- test2 rand "fromFP_SDouble_SWord64"  (sDoubleAsSWord64 :: SDouble -> SWord64 -> SBool)
+                 ++ map cvtTestI [("reinterp_Float_Word32",  show x, sFloatAsSWord32  (sWord32AsSFloat  (literal x)) (literal x), literal true) | x <- w32s]
+                 ++ map cvtTestI [("reinterp_Double_Word64", show x, sDoubleAsSWord64 (sWord64AsSDouble (literal x)) (literal x), literal true) | x <- w64s]
 
         floatRun1   nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- fs]
         doubleRun1  nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- ds]
