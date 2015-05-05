@@ -20,6 +20,8 @@ module TestSuite.Basics.ArithSolver(testSuite) where
 import Data.SBV
 import Data.SBV.Internals
 
+import qualified Data.Binary.IEEE754 as DB (wordToFloat, wordToDouble)
+
 import SBVTest
 
 ghcBitSize :: Bits a => a -> Int
@@ -219,7 +221,7 @@ genDoubles :: [Test]
 genDoubles = genIEEE754 "genDoubles" ds
 
 genIEEE754 :: (IEEEFloating a, Show a, Ord a) => String -> [a] -> [Test]
-genIEEE754 origin vs = map tst1 uns ++ map tst2 bins ++ map tst1 preds
+genIEEE754 origin vs = map tst1 converts ++ map tst1 preds ++ map tst1 uns ++ map tst2 bins
   where uns =     [("abs",               show x,         mkThm1        abs                   x   (abs x))                | x <- vs]
                ++ [("negate",            show x,         mkThm1        negate                x   (negate x))             | x <- vs]
                -- TODO: Remove NaNs in signum, skipping over NaN due to GHC bug. GitHub Issue #101
@@ -249,6 +251,64 @@ genIEEE754 origin vs = map tst1 uns ++ map tst2 bins ++ map tst1 preds
                ++ [("fpRem",          show x, show y, mkThm2  fpRem          x y (fpRemH         x y)) | x <- vs, y <- vs]
                ++ [("fpEqualObject",  show x, show y, mkThm2P fpEqualObject  x y (fpEqualObjectH x y)) | x <- vs, y <- vs]
 
+        converts =   [("toFP_Int8_ToFloat",     show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- i8s ]
+                 ++  [("toFP_Int16_ToFloat",    show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- i16s]
+                 ++  [("toFP_Int32_ToFloat",    show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- i32s]
+                 ++  [("toFP_Int64_ToFloat",    show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- i64s]
+                 ++  [("toFP_Word8_ToFloat",    show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- w8s ]
+                 ++  [("toFP_Word16_ToFloat",   show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- w16s]
+                 ++  [("toFP_Word32_ToFloat",   show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- w32s]
+                 ++  [("toFP_Word64_ToFloat",   show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- w64s]
+                 ++  [("toFP_Float_ToFloat",    show x, mkThm1 (m toSFloat) x                           x  ) | x <- fs  ]
+                 ++  [("toFP_Double_ToFloat",   show x, mkThm1 (m toSFloat) x (                   fp2fp x )) | x <- ds  ]
+                 ++  [("toFP_Integer_ToFloat",  show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- iUBs]
+                 ++  [("toFP_Real_ToFloat",     show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- rs  ]
+
+                 ++  [("toFP_Int8_ToDouble",    show x, mkThmC (m toSDouble) x (fromRational (toRational x))) | x <- i8s ]
+                 ++  [("toFP_Int16_ToDouble",   show x, mkThmC (m toSDouble) x (fromRational (toRational x))) | x <- i16s]
+                 ++  [("toFP_Int32_ToDouble",   show x, mkThmC (m toSDouble) x (fromRational (toRational x))) | x <- i32s]
+                 ++  [("toFP_Int64_ToDouble",   show x, mkThmC (m toSDouble) x (fromRational (toRational x))) | x <- i64s]
+                 ++  [("toFP_Word8_ToDouble",   show x, mkThmC (m toSDouble) x (fromRational (toRational x))) | x <- w8s ]
+                 ++  [("toFP_Word16_ToDouble",  show x, mkThmC (m toSDouble) x (fromRational (toRational x))) | x <- w16s]
+                 ++  [("toFP_Word32_ToDouble",  show x, mkThmC (m toSDouble) x (fromRational (toRational x))) | x <- w32s]
+                 ++  [("toFP_Word64_ToDouble",  show x, mkThmC (m toSDouble) x (fromRational (toRational x))) | x <- w64s]
+                 ++  [("toFP_Float_ToDouble",   show x, mkThm1 (m toSDouble) x (                   fp2fp x )) | x <- fs  ]
+                 ++  [("toFP_Double_ToDouble",  show x, mkThm1 (m toSDouble) x                           x )  | x <- ds  ]
+                 ++  [("toFP_Integer_ToDouble", show x, mkThmC (m toSDouble) x (fromRational (toRational x))) | x <- iUBs]
+                 ++  [("toFP_Real_ToDouble",    show x, mkThmC (m toSDouble) x (fromRational (toRational x))) | x <- rs  ]
+
+                 ++  [("fromFP_Float_ToInt8",    show x, mkThmC' (m fromSFloat :: SFloat -> SInt8)    x (((fromIntegral :: Integer -> Int8)    . round0) x)) | x <- fs]
+                 ++  [("fromFP_Float_ToInt16",   show x, mkThmC' (m fromSFloat :: SFloat -> SInt16)   x (((fromIntegral :: Integer -> Int16)   . round0) x)) | x <- fs]
+                 ++  [("fromFP_Float_ToInt32",   show x, mkThmC' (m fromSFloat :: SFloat -> SInt32)   x (((fromIntegral :: Integer -> Int32)   . round0) x)) | x <- fs]
+                 ++  [("fromFP_Float_ToInt64",   show x, mkThmC' (m fromSFloat :: SFloat -> SInt64)   x (((fromIntegral :: Integer -> Int64)   . round0) x)) | x <- fs]
+                 ++  [("fromFP_Float_ToWord8",   show x, mkThmC' (m fromSFloat :: SFloat -> SWord8)   x (((fromIntegral :: Integer -> Word8)   . round0) x)) | x <- fs]
+                 ++  [("fromFP_Float_ToWord16",  show x, mkThmC' (m fromSFloat :: SFloat -> SWord16)  x (((fromIntegral :: Integer -> Word16)  . round0) x)) | x <- fs]
+                 ++  [("fromFP_Float_ToWord32",  show x, mkThmC' (m fromSFloat :: SFloat -> SWord32)  x (((fromIntegral :: Integer -> Word32)  . round0) x)) | x <- fs]
+                 ++  [("fromFP_Float_ToWord64",  show x, mkThmC' (m fromSFloat :: SFloat -> SWord64)  x (((fromIntegral :: Integer -> Word64)  . round0) x)) | x <- fs]
+                 ++  [("fromFP_Float_ToFloat",   show x, mkThm1  (m fromSFloat :: SFloat -> SFloat)   x                                                  x ) | x <- fs]
+                 ++  [("fromFP_Float_ToDouble",  show x, mkThm1  (m fromSFloat :: SFloat -> SDouble)  x (                                         fp2fp  x)) | x <- fs]
+                 ++  [("fromFP_Float_ToInteger", show x, mkThmC' (m fromSFloat :: SFloat -> SInteger) x (((fromIntegral :: Integer -> Integer) . round0) x)) | x <- fs]
+                 ++  [("fromFP_Float_ToReal",    show x, mkThmC' (m fromSFloat :: SFloat -> SReal)    x (                        (fromRational . ratio0) x)) | x <- fs]
+
+                 ++  [("fromFP_Double_ToInt8",    show x, mkThmC' (m fromSDouble :: SDouble -> SInt8)    x (((fromIntegral :: Integer -> Int8)    . round0) x)) | x <- ds]
+                 ++  [("fromFP_Double_ToInt16",   show x, mkThmC' (m fromSDouble :: SDouble -> SInt16)   x (((fromIntegral :: Integer -> Int16)   . round0) x)) | x <- ds]
+                 ++  [("fromFP_Double_ToInt32",   show x, mkThmC' (m fromSDouble :: SDouble -> SInt32)   x (((fromIntegral :: Integer -> Int32)   . round0) x)) | x <- ds]
+                 ++  [("fromFP_Double_ToInt64",   show x, mkThmC' (m fromSDouble :: SDouble -> SInt64)   x (((fromIntegral :: Integer -> Int64)   . round0) x)) | x <- ds]
+                 ++  [("fromFP_Double_ToWord8",   show x, mkThmC' (m fromSDouble :: SDouble -> SWord8)   x (((fromIntegral :: Integer -> Word8)   . round0) x)) | x <- ds]
+                 ++  [("fromFP_Double_ToWord16",  show x, mkThmC' (m fromSDouble :: SDouble -> SWord16)  x (((fromIntegral :: Integer -> Word16)  . round0) x)) | x <- ds]
+                 ++  [("fromFP_Double_ToWord32",  show x, mkThmC' (m fromSDouble :: SDouble -> SWord32)  x (((fromIntegral :: Integer -> Word32)  . round0) x)) | x <- ds]
+                 ++  [("fromFP_Double_ToWord64",  show x, mkThmC' (m fromSDouble :: SDouble -> SWord64)  x (((fromIntegral :: Integer -> Word64)  . round0) x)) | x <- ds]
+                 ++  [("fromFP_Double_ToFloat",   show x, mkThm1  (m fromSDouble :: SDouble -> SFloat)   x (                                          fp2fp x)) | x <- ds]
+                 ++  [("fromFP_Double_ToDouble",  show x, mkThm1  (m fromSDouble :: SDouble -> SDouble)  x                                                  x ) | x <- ds]
+                 ++  [("fromFP_Double_ToInteger", show x, mkThmC' (m fromSDouble :: SDouble -> SInteger) x (((fromIntegral :: Integer -> Integer) . round0) x)) | x <- ds]
+                 ++  [("fromFP_Double_ToReal",    show x, mkThmC' (m fromSDouble :: SDouble -> SReal)    x (                        (fromRational . ratio0) x)) | x <- ds]
+
+                 ++  [("reinterp_Word32_Float",  show x, mkThmC sWord32AsSFloat  x (DB.wordToFloat  x)) | x <- w32s]
+                 ++  [("reinterp_Word64_Double", show x, mkThmC sWord64AsSDouble x (DB.wordToDouble x)) | x <- w64s]
+
+                 ++  [("reinterp_Float_Word32",  show x, mkIso sFloatAsSWord32  sWord32AsSFloat  x) | x <- w32s]
+                 ++  [("reinterp_Double_Word64", show x, mkIso sDoubleAsSWord64 sWord64AsSDouble x) | x <- w64s]
+
         m f = f sRNE
 
         preds =   [(pn,       show x,         mkThmP        ps       x   (pc x))     | (pn, ps, pc) <- predicates, x <- vs
@@ -267,26 +327,43 @@ genIEEE754 origin vs = map tst1 uns ++ map tst2 bins ++ map tst1 preds
           | isInfinite val && val < 0 = constrain $ fpIsInfinite v &&& fpIsNegative v
           | True                      = constrain $ v .== literal val
 
+        mkIso f g i = isThm $ do a <- free "x"
+                                 constrain $ a .== literal i
+                                 return (f (g a) a :: SBool)
+
         mkThmP op x r = isThm $ do a <- free "x"
                                    eqF a x
                                    return $ literal r .== op a
+
         mkThm2P op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                       eqF a x
                                       eqF b y
                                       return $ literal r .== a `op` b
+
         mkThm1 op x r = isThm $ do a <- free "x"
                                    eqF a x
                                    return $ literal r `fpEqualObject` op a
+
+        mkThmC op x r = isThm $ do a <- free "x"
+                                   constrain $ a .== literal x
+                                   return $ literal r `fpEqualObject` op a
+
+        mkThmC' op x r = isThm $ do a <- free "x"
+                                    eqF a x
+                                    return $ literal r .== op a
+
         mkThm2 op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                      eqF a x
                                      eqF b y
                                      return $ literal r `fpEqualObject` (a `op` b)
+
         mkThm2C neq op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                           eqF a x
                                           eqF b y
                                           return $ if isNaN x || isNaN y
                                                    then (if neq then a `op` b else bnot (a `op` b))
                                                    else literal r .== a `op` b
+
         predicates :: (IEEEFloating a) => [(String, SBV a -> SBool, a -> Bool)]
         predicates = [ ("fpIsNormal",       fpIsNormal,        isNormalized)
                      , ("fpIsSubnormal",    fpIsSubnormal,     isDenormalized)
