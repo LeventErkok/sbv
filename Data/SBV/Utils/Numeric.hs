@@ -66,7 +66,11 @@ fpRemH x y = x - y * fromInteger (round (x / y))
 
 -- | Convert a float to the nearest integral representable in that type
 fpRoundToIntegralH :: RealFloat a => a -> a
-fpRoundToIntegralH = fromInteger . round
+fpRoundToIntegralH x
+  | isNaN x      = x
+  | x == 0       = x
+  | isInfinite x = x
+  | True         = fromInteger (round x)
 
 -- | Check that two floats are the exact same values, i.e., +0/-0 does not
 -- compare equal, and NaN's compare equal to themselves.
