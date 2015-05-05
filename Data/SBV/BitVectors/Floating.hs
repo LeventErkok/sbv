@@ -123,7 +123,7 @@ class (SymWord a, RealFloat a) => IEEEFloating a where
   fpRoundToIntegral  = lift1  FP_RoundToIntegral (Just fpRoundToIntegralH) . Just
   fpMin              = lift2  FP_Min             (Just minFP)              Nothing
   fpMax              = lift2  FP_Max             (Just maxFP)              Nothing
-  fpEqualObject      = lift2B FP_ObjEqual        (Just fpSame)             Nothing
+  fpEqualObject      = lift2B FP_ObjEqual        (Just fpEqualObjectH)     Nothing
   fpIsNormal         = lift1B FP_IsNormal        isNormalized    where isNormalized x = not (isDenormalized x || isInfinite x || isNaN x)
   fpIsSubnormal      = lift1B FP_IsSubnormal     isDenormalized
   fpIsZero           = lift1B FP_IsZero          (== 0)
@@ -244,16 +244,6 @@ instance IEEEFloatConvertable AlgReal where
   toSFloat    = genericFPConverter (Just isExactRational) Nothing (fromRational . toRational)
   fromSDouble = genericFPConverter Nothing                ptCheck (fromRational . ratio0)
   toSDouble   = genericFPConverter (Just isExactRational) Nothing (fromRational . toRational)
-
--- | Return true if these two floats are "the same", i.e., nan compares equal to nan, but -0 doesn't compare equal to +0
--- syntactic equality, in a sense.
-fpSame :: (RealFloat a, Eq a) => a -> a -> Bool
-fpSame a b
-  | isNaN a          = isNaN b
-  | isNegativeZero a = isNegativeZero b
-  | isNegativeZero b = isNegativeZero a
-  -- NB. Equality does the right thing on infinities, so no special treatment is necessary
-  | True             = a == b
 
 -- | Concretely evaluate one arg function, if rounding mode is RoundNearestTiesToEven and we have enough concrete data
 concEval1 :: (SymWord a, Floating a) => Maybe (a -> a) -> Maybe SRoundingMode -> SBV a -> Maybe (SBV a)
