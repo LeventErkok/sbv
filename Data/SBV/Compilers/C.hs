@@ -518,6 +518,9 @@ handleIEEE w consts as var = cvt w
         cvt FP_Sqrt              = dispatch $ named "sqrtf" "sqrt" $ \nm [a]       -> text nm <> parens a
         cvt FP_Rem               = dispatch $ named "fmodf" "fmod" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
         cvt FP_RoundToIntegral   = dispatch $ named "rintf" "rint" $ \nm [a]       -> text nm <> parens a
+        -- TODO: The fmin/fmax functions have slightly different semantics as compared to what SMTLib2 stipulates, around 0's.
+        -- When provided +/-0; these functions return the second argument, but SMTLib2 (at least Z3) returns +0. I'm not too worried
+        -- about this discrepancy here, but something to watch out for.
         cvt FP_Min               = dispatch $ named "fminf" "fmin" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
         cvt FP_Max               = dispatch $ named "fmaxf" "fmax" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
         cvt FP_ObjEqual          = let mkIte   x y z = x <+> text "?" <+> y <+> text ":" <+> z
