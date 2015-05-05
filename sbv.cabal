@@ -123,6 +123,7 @@ Library
                   , Data.SBV.Tools.Optimize
                   , Data.SBV.Tools.Polynomial
                   , Data.SBV.Utils.Boolean
+                  , Data.SBV.Utils.Numeric
                   , Data.SBV.Utils.TDiff
                   , Data.SBV.Utils.Lib
 

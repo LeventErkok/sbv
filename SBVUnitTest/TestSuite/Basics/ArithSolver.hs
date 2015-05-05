@@ -18,6 +18,7 @@
 module TestSuite.Basics.ArithSolver(testSuite) where
 
 import Data.SBV
+import Data.SBV.Internals
 
 import SBVTest
 
@@ -243,32 +244,12 @@ genIEEE754 origin vs = map tst1 uns ++ map tst2 bins ++ map tst1 preds
                ++ [("fpSub",          show x, show y, mkThm2        (m fpSub)      x y ((-)            x y)) | x <- vs, y <- vs]
                ++ [("fpMul",          show x, show y, mkThm2        (m fpMul)      x y ((*)            x y)) | x <- vs, y <- vs]
                ++ [("fpDiv",          show x, show y, mkThm2        (m fpDiv)      x y ((/)            x y)) | x <- vs, y <- vs]
-               ++ [("fpMin",          show x, show y, mkThm2        fpMin          x y (minH           x y)) | x <- vs, y <- vs]
-               ++ [("fpMax",          show x, show y, mkThm2        fpMax          x y (maxH           x y)) | x <- vs, y <- vs]
+               ++ [("fpMin",          show x, show y, mkThm2        fpMin          x y (minFP          x y)) | x <- vs, y <- vs]
+               ++ [("fpMax",          show x, show y, mkThm2        fpMax          x y (maxFP          x y)) | x <- vs, y <- vs]
                ++ [("fpRem",          show x, show y, mkThm2        fpRem          x y (fpRemH         x y)) | x <- vs, y <- vs]
                ++ [("fpEqualObject",  show x, show y, mkThm2C False fpEqualObject  x y (fpEqualObjectH x y)) | x <- vs, y <- vs]
 
-        m f = f sRoundNearestTiesToEven
-
-        fpRoundToIntegralH :: RealFloat a => a -> a
-        fpRoundToIntegralH = fromInteger . round
-
-        fpRemH :: RealFloat a => a -> a -> a
-        fpRemH x y = x - y * fromInteger (round (x / y))
-
-        -- as opposed to the Haskell's min/max; IEEE-754 min/max follows return the "other" argument when one of the arguments is NaN
-        -- and also, be careful on -0/+0
-        -- TODO: Remove this when <https://ghc.haskell.org/trac/ghc/ticket/10378> is fixed.
-        maxH x y
-          | isNaN x                               = y
-          | isNaN y                               = x
-          | x > y || (x == y && isNegativeZero y) = x
-          | True                                  = y
-        minH x y
-          | isNaN x                               = y
-          | isNaN y                               = x
-          | x < y || (x == y && isNegativeZero x) = x
-          | True                                  = y
+        m f = f sRNE
 
         preds =   [(pn,       show x,         mkThmP        ps       x   (pc x))     | (pn, ps, pc) <- predicates, x <- vs
                                                                                      -- Work around GHC bug, see issue #138
@@ -277,6 +258,7 @@ genIEEE754 origin vs = map tst1 uns ++ map tst2 bins ++ map tst1 preds
                                                                                      ]
         tst2 (nm, x, y, t) = origin ++ ".arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
         tst1 (nm, x,    t) = origin ++ ".arithmetic-" ++ nm ++ "." ++ x              ~: assert t
+
         eqF v val
           | isNaN          val        = constrain $ fpIsNaN v
           | isNegativeZero val        = constrain $ fpIsNegativeZero v
@@ -284,12 +266,7 @@ genIEEE754 origin vs = map tst1 uns ++ map tst2 bins ++ map tst1 preds
           | isInfinite val && val > 0 = constrain $ fpIsInfinite v &&& fpIsPositive v
           | isInfinite val && val < 0 = constrain $ fpIsInfinite v &&& fpIsNegative v
           | True                      = constrain $ v .== literal val
-        fpEqualObjectH :: RealFloat a => a -> a -> Bool
-        fpEqualObjectH a b
-          | isNaN a          = isNaN b
-          | isNegativeZero a = isNegativeZero b
-          | isNegativeZero b = isNegativeZero a
-          | True             = a == b
+
         mkThmP op x r = isThm $ do a <- free "x"
                                    eqF a x
                                    return $ literal r .== op a

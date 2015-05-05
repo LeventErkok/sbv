@@ -17,6 +17,7 @@
 module TestSuite.Basics.ArithNoSolver(testSuite) where
 
 import Data.SBV
+import Data.SBV.Internals
 
 import Data.Maybe(fromJust)
 
@@ -280,11 +281,11 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                                ++ floatRun2M  "fpDiv"         (/)            fpDiv         comb
                                ++ doubleRun2M "fpDiv"         (/)            fpDiv         comb
 
-                               ++ floatRun2   "fpMin"         minH           fpMin         comb
-                               ++ doubleRun2  "fpMin"         minH           fpMin         comb
+                               ++ floatRun2   "fpMin"         minFP          fpMin         comb
+                               ++ doubleRun2  "fpMin"         minFP          fpMin         comb
 
-                               ++ floatRun2   "fpMax"         maxH           fpMax         comb
-                               ++ doubleRun2  "fpMax"         maxH           fpMax         comb
+                               ++ floatRun2   "fpMax"         maxFP          fpMax         comb
+                               ++ doubleRun2  "fpMax"         maxFP          fpMax         comb
 
                                ++ floatRun2   "fpRem"         fpRemH         fpRem         comb
                                ++ doubleRun2  "fpRem"         fpRemH         fpRem         comb
@@ -292,57 +293,57 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                                ++ floatRun2   "fpEqualObject" fpEqualObjectH fpEqualObject combE
                                ++ doubleRun2  "fpEqualObject" fpEqualObjectH fpEqualObject combE
 
-        converts =  map cvtTest  [("toFP_Int8_ToFloat",     show x, toSFloat  sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- i8s ]
-                 ++ map cvtTest  [("toFP_Int16_ToFloat",    show x, toSFloat  sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- i16s]
-                 ++ map cvtTest  [("toFP_Int32_ToFloat",    show x, toSFloat  sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- i32s]
-                 ++ map cvtTest  [("toFP_Int64_ToFloat",    show x, toSFloat  sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- i64s]
-                 ++ map cvtTest  [("toFP_Word8_ToFloat",    show x, toSFloat  sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- w8s ]
-                 ++ map cvtTest  [("toFP_Word16_ToFloat",   show x, toSFloat  sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- w16s]
-                 ++ map cvtTest  [("toFP_Word32_ToFloat",   show x, toSFloat  sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- w32s]
-                 ++ map cvtTest  [("toFP_Word64_ToFloat",   show x, toSFloat  sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- w64s]
-                 ++ map cvtTest  [("toFP_Float_ToFloat",    show x, toSFloat  sRoundNearestTiesToEven (literal x),                  literal x ) | x <- fs  ]
-                 ++ map cvtTest  [("toFP_Double_ToFloat",   show x, toSFloat  sRoundNearestTiesToEven (literal x),           literal (fp2fp x)) | x <- ds  ]
-                 ++ map cvtTest  [("toFP_Integer_ToFloat",  show x, toSFloat  sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- iUBs]
-                 ++ map cvtTest  [("toFP_Real_ToFloat",     show x, toSFloat  sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- rs  ]
+        converts =  map cvtTest  [("toFP_Int8_ToFloat",     show x, toSFloat  sRNE (literal x), fromRational (toRational x)) | x <- i8s ]
+                 ++ map cvtTest  [("toFP_Int16_ToFloat",    show x, toSFloat  sRNE (literal x), fromRational (toRational x)) | x <- i16s]
+                 ++ map cvtTest  [("toFP_Int32_ToFloat",    show x, toSFloat  sRNE (literal x), fromRational (toRational x)) | x <- i32s]
+                 ++ map cvtTest  [("toFP_Int64_ToFloat",    show x, toSFloat  sRNE (literal x), fromRational (toRational x)) | x <- i64s]
+                 ++ map cvtTest  [("toFP_Word8_ToFloat",    show x, toSFloat  sRNE (literal x), fromRational (toRational x)) | x <- w8s ]
+                 ++ map cvtTest  [("toFP_Word16_ToFloat",   show x, toSFloat  sRNE (literal x), fromRational (toRational x)) | x <- w16s]
+                 ++ map cvtTest  [("toFP_Word32_ToFloat",   show x, toSFloat  sRNE (literal x), fromRational (toRational x)) | x <- w32s]
+                 ++ map cvtTest  [("toFP_Word64_ToFloat",   show x, toSFloat  sRNE (literal x), fromRational (toRational x)) | x <- w64s]
+                 ++ map cvtTest  [("toFP_Float_ToFloat",    show x, toSFloat  sRNE (literal x),                  literal x ) | x <- fs  ]
+                 ++ map cvtTest  [("toFP_Double_ToFloat",   show x, toSFloat  sRNE (literal x),           literal (fp2fp x)) | x <- ds  ]
+                 ++ map cvtTest  [("toFP_Integer_ToFloat",  show x, toSFloat  sRNE (literal x), fromRational (toRational x)) | x <- iUBs]
+                 ++ map cvtTest  [("toFP_Real_ToFloat",     show x, toSFloat  sRNE (literal x), fromRational (toRational x)) | x <- rs  ]
 
-                 ++ map cvtTest  [("toFP_Int8_ToDouble",    show x, toSDouble sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- i8s ]
-                 ++ map cvtTest  [("toFP_Int16_ToDouble",   show x, toSDouble sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- i16s]
-                 ++ map cvtTest  [("toFP_Int32_ToDouble",   show x, toSDouble sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- i32s]
-                 ++ map cvtTest  [("toFP_Int64_ToDouble",   show x, toSDouble sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- i64s]
-                 ++ map cvtTest  [("toFP_Word8_ToDouble",   show x, toSDouble sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- w8s ]
-                 ++ map cvtTest  [("toFP_Word16_ToDouble",  show x, toSDouble sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- w16s]
-                 ++ map cvtTest  [("toFP_Word32_ToDouble",  show x, toSDouble sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- w32s]
-                 ++ map cvtTest  [("toFP_Word64_ToDouble",  show x, toSDouble sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- w64s]
-                 ++ map cvtTest  [("toFP_Float_ToDouble",   show x, toSDouble sRoundNearestTiesToEven (literal x),           literal (fp2fp x)) | x <- fs  ]
-                 ++ map cvtTest  [("toFP_Double_ToDouble",  show x, toSDouble sRoundNearestTiesToEven (literal x),                   literal x) | x <- ds  ]
-                 ++ map cvtTest  [("toFP_Integer_ToDouble", show x, toSDouble sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- iUBs]
-                 ++ map cvtTest  [("toFP_Real_ToDouble",    show x, toSDouble sRoundNearestTiesToEven (literal x), fromRational (toRational x)) | x <- rs  ]
+                 ++ map cvtTest  [("toFP_Int8_ToDouble",    show x, toSDouble sRNE (literal x), fromRational (toRational x)) | x <- i8s ]
+                 ++ map cvtTest  [("toFP_Int16_ToDouble",   show x, toSDouble sRNE (literal x), fromRational (toRational x)) | x <- i16s]
+                 ++ map cvtTest  [("toFP_Int32_ToDouble",   show x, toSDouble sRNE (literal x), fromRational (toRational x)) | x <- i32s]
+                 ++ map cvtTest  [("toFP_Int64_ToDouble",   show x, toSDouble sRNE (literal x), fromRational (toRational x)) | x <- i64s]
+                 ++ map cvtTest  [("toFP_Word8_ToDouble",   show x, toSDouble sRNE (literal x), fromRational (toRational x)) | x <- w8s ]
+                 ++ map cvtTest  [("toFP_Word16_ToDouble",  show x, toSDouble sRNE (literal x), fromRational (toRational x)) | x <- w16s]
+                 ++ map cvtTest  [("toFP_Word32_ToDouble",  show x, toSDouble sRNE (literal x), fromRational (toRational x)) | x <- w32s]
+                 ++ map cvtTest  [("toFP_Word64_ToDouble",  show x, toSDouble sRNE (literal x), fromRational (toRational x)) | x <- w64s]
+                 ++ map cvtTest  [("toFP_Float_ToDouble",   show x, toSDouble sRNE (literal x),           literal (fp2fp x)) | x <- fs  ]
+                 ++ map cvtTest  [("toFP_Double_ToDouble",  show x, toSDouble sRNE (literal x),                   literal x) | x <- ds  ]
+                 ++ map cvtTest  [("toFP_Integer_ToDouble", show x, toSDouble sRNE (literal x), fromRational (toRational x)) | x <- iUBs]
+                 ++ map cvtTest  [("toFP_Real_ToDouble",    show x, toSDouble sRNE (literal x), fromRational (toRational x)) | x <- rs  ]
 
-                 ++ map cvtTestI [("fromFP_Float_ToInt8",    show x, (fromSFloat sRoundNearestTiesToEven :: SFloat -> SInt8)    (literal x), (fromIntegral . round0) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToInt16",   show x, (fromSFloat sRoundNearestTiesToEven :: SFloat -> SInt16)   (literal x), (fromIntegral . round0) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToInt32",   show x, (fromSFloat sRoundNearestTiesToEven :: SFloat -> SInt32)   (literal x), (fromIntegral . round0) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToInt64",   show x, (fromSFloat sRoundNearestTiesToEven :: SFloat -> SInt64)   (literal x), (fromIntegral . round0) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToWord8",   show x, (fromSFloat sRoundNearestTiesToEven :: SFloat -> SWord8)   (literal x), (fromIntegral . round0) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToWord16",  show x, (fromSFloat sRoundNearestTiesToEven :: SFloat -> SWord16)  (literal x), (fromIntegral . round0) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToWord32",  show x, (fromSFloat sRoundNearestTiesToEven :: SFloat -> SWord32)  (literal x), (fromIntegral . round0) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToWord64",  show x, (fromSFloat sRoundNearestTiesToEven :: SFloat -> SWord64)  (literal x), (fromIntegral . round0) x) | x <- fs]
-                 ++ map cvtTest  [("fromFP_Float_ToFloat",   show x, (fromSFloat sRoundNearestTiesToEven :: SFloat -> SFloat)   (literal x),                 literal x) | x <- fs]
-                 ++ map cvtTest  [("fromFP_Float_ToDouble",  show x, (fromSFloat sRoundNearestTiesToEven :: SFloat -> SDouble)  (literal x), (literal      .  fp2fp) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToInteger", show x, (fromSFloat sRoundNearestTiesToEven :: SFloat -> SInteger) (literal x), (fromIntegral . round0) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToReal",    show x, (fromSFloat sRoundNearestTiesToEven :: SFloat -> SReal)    (literal x), (fromRational . ratio0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToInt8",    show x, (fromSFloat sRNE :: SFloat -> SInt8)    (literal x), ((fromIntegral :: Integer -> SInt8)    . round0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToInt16",   show x, (fromSFloat sRNE :: SFloat -> SInt16)   (literal x), ((fromIntegral :: Integer -> SInt16)   . round0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToInt32",   show x, (fromSFloat sRNE :: SFloat -> SInt32)   (literal x), ((fromIntegral :: Integer -> SInt32)   . round0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToInt64",   show x, (fromSFloat sRNE :: SFloat -> SInt64)   (literal x), ((fromIntegral :: Integer -> SInt64)   . round0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToWord8",   show x, (fromSFloat sRNE :: SFloat -> SWord8)   (literal x), ((fromIntegral :: Integer -> SWord8)   . round0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToWord16",  show x, (fromSFloat sRNE :: SFloat -> SWord16)  (literal x), ((fromIntegral :: Integer -> SWord16)  . round0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToWord32",  show x, (fromSFloat sRNE :: SFloat -> SWord32)  (literal x), ((fromIntegral :: Integer -> SWord32)  . round0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToWord64",  show x, (fromSFloat sRNE :: SFloat -> SWord64)  (literal x), ((fromIntegral :: Integer -> SWord64)  . round0) x) | x <- fs]
+                 ++ map cvtTest  [("fromFP_Float_ToFloat",   show x, (fromSFloat sRNE :: SFloat -> SFloat)   (literal x),                                          literal x) | x <- fs]
+                 ++ map cvtTest  [("fromFP_Float_ToDouble",  show x, (fromSFloat sRNE :: SFloat -> SDouble)  (literal x),                               (literal .  fp2fp) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToInteger", show x, (fromSFloat sRNE :: SFloat -> SInteger) (literal x), ((fromIntegral :: Integer -> SInteger) . round0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToReal",    show x, (fromSFloat sRNE :: SFloat -> SReal)    (literal x),                          (fromRational . ratio0) x) | x <- fs]
 
-                 ++ map cvtTestI [("fromFP_Double_ToInt8",    show x, (fromSDouble sRoundNearestTiesToEven :: SDouble -> SInt8)    (literal x), (fromIntegral . round0) x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToInt16",   show x, (fromSDouble sRoundNearestTiesToEven :: SDouble -> SInt16)   (literal x), (fromIntegral . round0) x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToInt32",   show x, (fromSDouble sRoundNearestTiesToEven :: SDouble -> SInt32)   (literal x), (fromIntegral . round0) x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToInt64",   show x, (fromSDouble sRoundNearestTiesToEven :: SDouble -> SInt64)   (literal x), (fromIntegral . round0) x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToWord8",   show x, (fromSDouble sRoundNearestTiesToEven :: SDouble -> SWord8)   (literal x), (fromIntegral . round0) x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToWord16",  show x, (fromSDouble sRoundNearestTiesToEven :: SDouble -> SWord16)  (literal x), (fromIntegral . round0) x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToWord32",  show x, (fromSDouble sRoundNearestTiesToEven :: SDouble -> SWord32)  (literal x), (fromIntegral . round0) x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToWord64",  show x, (fromSDouble sRoundNearestTiesToEven :: SDouble -> SWord64)  (literal x), (fromIntegral . round0) x) | x <- ds]
-                 ++ map cvtTest  [("fromFP_Double_ToFloat",   show x, (fromSDouble sRoundNearestTiesToEven :: SDouble -> SFloat)   (literal x), (literal      .  fp2fp) x) | x <- ds]
-                 ++ map cvtTest  [("fromFP_Double_ToDouble",  show x, (fromSDouble sRoundNearestTiesToEven :: SDouble -> SDouble)  (literal x),                 literal x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToInteger", show x, (fromSDouble sRoundNearestTiesToEven :: SDouble -> SInteger) (literal x), (fromIntegral . round0) x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToReal",    show x, (fromSDouble sRoundNearestTiesToEven :: SDouble -> SReal)    (literal x), (fromRational . ratio0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToInt8",    show x, (fromSDouble sRNE :: SDouble -> SInt8)    (literal x), ((fromIntegral :: Integer -> SInt8)    . round0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToInt16",   show x, (fromSDouble sRNE :: SDouble -> SInt16)   (literal x), ((fromIntegral :: Integer -> SInt16)   . round0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToInt32",   show x, (fromSDouble sRNE :: SDouble -> SInt32)   (literal x), ((fromIntegral :: Integer -> SInt32)   . round0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToInt64",   show x, (fromSDouble sRNE :: SDouble -> SInt64)   (literal x), ((fromIntegral :: Integer -> SInt64)   . round0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToWord8",   show x, (fromSDouble sRNE :: SDouble -> SWord8)   (literal x), ((fromIntegral :: Integer -> SWord8)   . round0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToWord16",  show x, (fromSDouble sRNE :: SDouble -> SWord16)  (literal x), ((fromIntegral :: Integer -> SWord16)  . round0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToWord32",  show x, (fromSDouble sRNE :: SDouble -> SWord32)  (literal x), ((fromIntegral :: Integer -> SWord32)  . round0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToWord64",  show x, (fromSDouble sRNE :: SDouble -> SWord64)  (literal x), ((fromIntegral :: Integer -> SWord64)  . round0) x) | x <- ds]
+                 ++ map cvtTest  [("fromFP_Double_ToFloat",   show x, (fromSDouble sRNE :: SDouble -> SFloat)   (literal x),                              (literal  .  fp2fp) x) | x <- ds]
+                 ++ map cvtTest  [("fromFP_Double_ToDouble",  show x, (fromSDouble sRNE :: SDouble -> SDouble)  (literal x),                                          literal x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToInteger", show x, (fromSDouble sRNE :: SDouble -> SInteger) (literal x), ((fromIntegral :: Integer -> SInteger) . round0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToReal",    show x, (fromSDouble sRNE :: SDouble -> SReal)    (literal x),                          (fromRational . ratio0) x) | x <- ds]
 
                  ++ map cvtTest  [("reinterp_Word32_Float",  show x, sWord32AsSFloat  (literal x), literal (DB.wordToFloat  x)) | x <- w32s]
                  ++ map cvtTest  [("reinterp_Word64_Double", show x, sWord64AsSDouble (literal x), literal (DB.wordToDouble x)) | x <- w64s]
@@ -352,37 +353,14 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
 
         floatRun1   nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- fs]
         doubleRun1  nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- ds]
-        floatRun1M  nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g sRoundNearestTiesToEven (literal x)))             | x <- fs]
-        doubleRun1M nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g sRoundNearestTiesToEven (literal x)))             | x <- ds]
+        floatRun1M  nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g sRNE (literal x)))             | x <- fs]
+        doubleRun1M nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g sRNE (literal x)))             | x <- ds]
         floatRun2   nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g                         (literal x) (literal y))) | x <- fs, y <- fs]
         doubleRun2  nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g                         (literal x) (literal y))) | x <- ds, y <- ds]
-        floatRun2M  nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g sRoundNearestTiesToEven (literal x) (literal y))) | x <- fs, y <- fs]
-        doubleRun2M nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g sRoundNearestTiesToEven (literal x) (literal y))) | x <- ds, y <- ds]
+        floatRun2M  nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g sRNE (literal x) (literal y))) | x <- fs, y <- fs]
+        doubleRun2M nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g sRNE (literal x) (literal y))) | x <- ds, y <- ds]
         uTests = map mkTest1 $  concatMap (checkPred fs sfs) predicates
                              ++ concatMap (checkPred ds sds) predicates
-        fpRemH :: RealFloat a => a -> a -> a
-        fpRemH x y = x - y * fromInteger (round (x / y))
-        fpRoundToIntegralH :: RealFloat a => a -> a
-        fpRoundToIntegralH = fromInteger . round
-        fpEqualObjectH :: RealFloat a => a -> a -> Bool
-        fpEqualObjectH a b
-          | isNaN a          = isNaN b
-          | isNegativeZero a = isNegativeZero b
-          | isNegativeZero b = isNegativeZero a
-          | True             = a == b
-        -- as opposed to the Haskell's min/max; IEEE-754 min/max follows return the "other" argument when one of the arguments is NaN
-        -- and also, be careful on -0/+0.
-        -- TODO: Remove this when <https://ghc.haskell.org/trac/ghc/ticket/10378> is fixed.
-        maxH x y
-          | isNaN x                               = y
-          | isNaN y                               = x
-          | x > y || (x == y && isNegativeZero y) = x
-          | True                                  = y
-        minH x y
-          | isNaN x                               = y
-          | isNaN y                               = x
-          | x < y || (x == y && isNegativeZero x) = x
-          | True                                  = y
         extract :: SymWord a => SBV a -> a
         extract = fromJust . unliteral
         comb  (x, y, a, b) = (show x, show y, same a b)
@@ -394,21 +372,6 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
         checkNaN f x y a b
           | isNaN x || isNaN y = f a b
           | True               = a == b
-        round0 :: (RealFloat a, RealFrac a) => a -> Integer
-        round0 x
-         | isNaN x || isInfinite x = 0
-         | True                    = round x
-        ratio0 :: (RealFloat a, RealFrac a) => a -> Rational
-        ratio0 x
-         | isNaN x || isInfinite x = 0
-         | True                    = toRational x
-        fp2fp :: (RealFloat a, RealFloat b) => a -> b
-        fp2fp x
-         | isNaN x               =  0 / 0
-         | isInfinite x && x < 0 = -1 / 0
-         | isInfinite x          =  1 / 0
-         | isNegativeZero x      = negate 0
-         | True                  = fromRational (toRational x)
         cvtTest  (nm, x, a, b)  = "arithCF-" ++ nm ++ "." ++ x ~: same (extract a) (extract b) `showsAs` "True"
         cvtTestI (nm, x, a, b)  = "arithCF-" ++ nm ++ "." ++ x ~: (a == b) `showsAs` "True"
         mkTest1 (nm, (x, s))    = "arithCF-" ++ nm ++ "." ++ x ~: s `showsAs` "True"

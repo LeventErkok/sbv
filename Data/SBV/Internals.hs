@@ -25,6 +25,8 @@ module Data.SBV.Internals (
   , ites, mdp, addPoly
   -- * Compilation to C
   , compileToC', compileToCLib', CgPgmBundle(..), CgPgmKind(..)
+  -- * Various math utilities around floats
+  , module Data.SBV.Utils.Numeric
   ) where
 
 import Data.SBV.BitVectors.Data       (Result, SBVRunMode(..), runSymbolic, runSymbolic', SBV(..), CW(..), Kind(..), CWVal(..), AlgReal(..), Quantifier(..), mkConstCW)
@@ -35,3 +37,4 @@ import Data.SBV.Compilers.C           (compileToC', compileToCLib')
 import Data.SBV.Compilers.CodeGen     (CgPgmBundle(..), CgPgmKind(..))
 import Data.SBV.SMT.SMT               (genParse)
 import Data.SBV.Tools.Polynomial      (ites, mdp, addPoly)
+import Data.SBV.Utils.Numeric

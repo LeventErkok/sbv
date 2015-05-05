@@ -29,6 +29,7 @@ import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
 import Data.SBV.BitVectors.AlgReals (isExactRational)
 import Data.SBV.Utils.Boolean
+import Data.SBV.Utils.Numeric
 
 -- | A class of floating-point (IEEE754) operations, some of
 -- which behave differently based on rounding modes. Note that unless
@@ -110,20 +111,20 @@ class (SymWord a, RealFloat a) => IEEEFloating a where
 
   -- Default definitions. Minimal complete definition: None! All should be taken care by defaults
   -- Note that we never evaluate FMA concretely, as there's no fma operator in Haskell
-  fpAbs              = lift1  FP_Abs             (Just abs)      Nothing
-  fpNeg              = lift1  FP_Neg             (Just negate)   Nothing
-  fpAdd              = lift2  FP_Add             (Just (+))      . Just
-  fpSub              = lift2  FP_Sub             (Just (-))      . Just
-  fpMul              = lift2  FP_Mul             (Just (*))      . Just
-  fpDiv              = lift2  FP_Div             (Just (/))      . Just
-  fpFMA              = lift3  FP_FMA             Nothing         . Just
-  fpSqrt             = lift1  FP_Sqrt            (Just sqrt)     . Just
-  fpRem              = lift2  FP_Rem             (Just fprem)    Nothing where fprem x y = x - y * fromInteger (round (x / y))
-  fpRoundToIntegral  = lift1  FP_RoundToIntegral (Just fpRound)  . Just  where fpRound   = fromInteger . round
-  fpMin              = lift2  FP_Min             (Just minH)     Nothing
-  fpMax              = lift2  FP_Max             (Just maxH)     Nothing
-  fpEqualObject      = lift2B FP_ObjEqual        (Just fpSame)   Nothing
-  fpIsNormal         = lift1B FP_IsNormal        isNormalized            where isNormalized x = not (isDenormalized x || isInfinite x || isNaN x)
+  fpAbs              = lift1  FP_Abs             (Just abs)                Nothing
+  fpNeg              = lift1  FP_Neg             (Just negate)             Nothing
+  fpAdd              = lift2  FP_Add             (Just (+))                . Just
+  fpSub              = lift2  FP_Sub             (Just (-))                . Just
+  fpMul              = lift2  FP_Mul             (Just (*))                . Just
+  fpDiv              = lift2  FP_Div             (Just (/))                . Just
+  fpFMA              = lift3  FP_FMA             Nothing                   . Just
+  fpSqrt             = lift1  FP_Sqrt            (Just sqrt)               . Just
+  fpRem              = lift2  FP_Rem             (Just fpRemH)             Nothing
+  fpRoundToIntegral  = lift1  FP_RoundToIntegral (Just fpRoundToIntegralH) . Just
+  fpMin              = lift2  FP_Min             (Just minFP)              Nothing
+  fpMax              = lift2  FP_Max             (Just maxFP)              Nothing
+  fpEqualObject      = lift2B FP_ObjEqual        (Just fpSame)             Nothing
+  fpIsNormal         = lift1B FP_IsNormal        isNormalized    where isNormalized x = not (isDenormalized x || isInfinite x || isNaN x)
   fpIsSubnormal      = lift1B FP_IsSubnormal     isDenormalized
   fpIsZero           = lift1B FP_IsZero          (== 0)
   fpIsInfinite       = lift1B FP_IsInfinite      isInfinite
@@ -166,36 +167,6 @@ genericFPConverter mbConcreteOK mbSymbolicOK converter rm f
         y st    = do msw <- sbvToSW st rm
                      xsw <- sbvToSW st f
                      newExpr st kTo (SBVApp (IEEEFP (FP_Cast kFrom kTo msw)) [xsw])
-
--- | A variant of round; except defaulting to 0 when fed NaN or Infinity
-round0 :: (RealFloat a, RealFrac a, Integral b) => a -> b
-round0 x
- | isNaN x || isInfinite x = 0
- | True                    = round x
-
--- | A variant of toRational; except defaulting to 0 when fed NaN or Infinity
-ratio0 :: (RealFloat a, RealFrac a) => a -> Rational
-ratio0 x
- | isNaN x || isInfinite x = 0
- | True                    = toRational x
-
--- | A correct implementation of max for floats, following the NaN/+0/-0 rules
--- TODO: We can simply use `max` when <https://ghc.haskell.org/trac/ghc/ticket/10378> is fixed.
-maxH :: RealFloat a => a -> a -> a
-maxH x y
-  | isNaN x                               = y
-  | isNaN y                               = x
-  | x > y || (x == y && isNegativeZero y) = x
-  | True                                  = y
-
--- | A correct implementation of min for floats, following the NaN/+0/-0 rules
--- TODO: We can simply use `min` when <https://ghc.haskell.org/trac/ghc/ticket/10378> is fixed.
-minH :: RealFloat a => a -> a -> a
-minH x y
-  | isNaN x                               = y
-  | isNaN y                               = x
-  | x < y || (x == y && isNegativeZero x) = x
-  | True                                  = y
 
 -- | Check that a given float is a point
 ptCheck :: IEEEFloating a => Maybe (SBV a -> SBool)
@@ -248,16 +219,6 @@ instance IEEEFloatConvertable Word64 where
   toSFloat    = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
   fromSDouble = genericFPConverter Nothing ptCheck (fromIntegral . (round0 :: Double -> Integer))
   toSDouble   = genericFPConverter Nothing Nothing (fromRational . fromIntegral)
-
--- | Convert double to float and back. Essentially @fromRational . toRational@
--- except careful on NaN, Infinities, and -0.
-fp2fp :: (RealFloat a, RealFloat b) => a -> b
-fp2fp x
- | isNaN x               =  0 / 0
- | isInfinite x && x < 0 = -1 / 0
- | isInfinite x          =  1 / 0
- | isNegativeZero x      = negate 0
- | True                  = fromRational (toRational x)
 
 instance IEEEFloatConvertable Float where
   fromSFloat _ f = f
