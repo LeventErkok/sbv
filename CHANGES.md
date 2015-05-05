@@ -4,7 +4,7 @@
 * Latest Hackage released version: 4.4, 2015-04-13
 
 ### Version 4.5, Not yet released
-  
+
   * Add Data.SBV.Examples.Puzzles.Birthday, which codifies the Cheryl-Birthday problem that
     went viral in April 2015. Turns out really easy to solve for SMT, but the formalization
     of the problem is still interesting as an exercise in formal reasoning.
@@ -41,6 +41,10 @@
      * isPointFP        --> fpIsPoint        
 
   * Lots of other work around floating-point, test cases, reorg, etc.
+
+  * Introduce shorter variants for rounding modes: sRNE, sRNA, sRTP, sRTN, sRTZ;
+    aliases for sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive,
+    sRoundTowardNegative, and sRoundTowardZero; respectively.
 
 ### Version 4.4, 2015-04-13
 

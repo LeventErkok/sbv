@@ -24,6 +24,7 @@ module Data.SBV.BitVectors.Data
  , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble
  , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode
  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
+ , sRNE, sRNA, sRTP, sRTN, sRTZ
  , SymWord(..)
  , CW(..), CWVal(..), AlgReal(..), cwSameType, cwIsBit, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
@@ -239,6 +240,26 @@ sRoundTowardNegative = literal RoundTowardNegative
 -- | Symbolic variant of 'RoundTowardZero'
 sRoundTowardZero :: SRoundingMode
 sRoundTowardZero = literal RoundTowardZero
+
+-- | Alias for 'sRoundNearestTiesToEven'
+sRNE :: SRoundingMode
+sRNE = sRoundNearestTiesToEven
+
+-- | Alias for 'sRoundNearestTiesToAway'
+sRNA :: SRoundingMode
+sRNA = sRoundNearestTiesToAway
+
+-- | Alias for 'sRoundTowardPositive'
+sRTP :: SRoundingMode
+sRTP = sRoundTowardPositive
+
+-- | Alias for 'sRoundTowardNegative'
+sRTN :: SRoundingMode
+sRTN = sRoundTowardNegative
+
+-- | Alias for 'sRoundTowardZero'
+sRTZ :: SRoundingMode
+sRTZ = sRoundTowardZero
 
 -- Not particularly "desirable", but will do if needed
 instance Show (SBV a) where
