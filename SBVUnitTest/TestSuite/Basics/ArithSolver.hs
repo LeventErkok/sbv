@@ -240,14 +240,14 @@ genIEEE754 origin vs = map tst1 uns ++ map tst2 bins ++ map tst1 preds
                ++ [("==",     show x, show y, mkThm2C False (.==)     x y (x == y))   | x <- vs, y <- vs]
                ++ [("/=",     show x, show y, mkThm2C True  (./=)     x y (x /= y))   | x <- vs, y <- vs]
                -- TODO. Can't possibly test fma, unless we FFI out to C. Leave it out for the time being
-               ++ [("fpAdd",          show x, show y, mkThm2        (m fpAdd)      x y ((+)            x y)) | x <- vs, y <- vs]
-               ++ [("fpSub",          show x, show y, mkThm2        (m fpSub)      x y ((-)            x y)) | x <- vs, y <- vs]
-               ++ [("fpMul",          show x, show y, mkThm2        (m fpMul)      x y ((*)            x y)) | x <- vs, y <- vs]
-               ++ [("fpDiv",          show x, show y, mkThm2        (m fpDiv)      x y ((/)            x y)) | x <- vs, y <- vs]
-               ++ [("fpMin",          show x, show y, mkThm2        fpMin          x y (minFP          x y)) | x <- vs, y <- vs]
-               ++ [("fpMax",          show x, show y, mkThm2        fpMax          x y (maxFP          x y)) | x <- vs, y <- vs]
-               ++ [("fpRem",          show x, show y, mkThm2        fpRem          x y (fpRemH         x y)) | x <- vs, y <- vs]
-               ++ [("fpEqualObject",  show x, show y, mkThm2C False fpEqualObject  x y (fpEqualObjectH x y)) | x <- vs, y <- vs]
+               ++ [("fpAdd",          show x, show y, mkThm2  (m fpAdd)      x y ((+)            x y)) | x <- vs, y <- vs]
+               ++ [("fpSub",          show x, show y, mkThm2  (m fpSub)      x y ((-)            x y)) | x <- vs, y <- vs]
+               ++ [("fpMul",          show x, show y, mkThm2  (m fpMul)      x y ((*)            x y)) | x <- vs, y <- vs]
+               ++ [("fpDiv",          show x, show y, mkThm2  (m fpDiv)      x y ((/)            x y)) | x <- vs, y <- vs]
+               ++ [("fpMin",          show x, show y, mkThm2  fpMin          x y (minFP          x y)) | x <- vs, y <- vs]
+               ++ [("fpMax",          show x, show y, mkThm2  fpMax          x y (maxFP          x y)) | x <- vs, y <- vs]
+               ++ [("fpRem",          show x, show y, mkThm2  fpRem          x y (fpRemH         x y)) | x <- vs, y <- vs]
+               ++ [("fpEqualObject",  show x, show y, mkThm2P fpEqualObject  x y (fpEqualObjectH x y)) | x <- vs, y <- vs]
 
         m f = f sRNE
 
@@ -270,6 +270,10 @@ genIEEE754 origin vs = map tst1 uns ++ map tst2 bins ++ map tst1 preds
         mkThmP op x r = isThm $ do a <- free "x"
                                    eqF a x
                                    return $ literal r .== op a
+        mkThm2P op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
+                                      eqF a x
+                                      eqF b y
+                                      return $ literal r .== a `op` b
         mkThm1 op x r = isThm $ do a <- free "x"
                                    eqF a x
                                    return $ literal r `fpEqualObject` op a
