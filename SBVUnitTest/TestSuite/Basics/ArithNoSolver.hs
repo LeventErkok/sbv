@@ -473,7 +473,7 @@ sfs = map literal fs
 
 ds :: [Double]
 ds = xs ++ map (* (-1)) xs
- where xs = [nan, infinity, 0, 0.5, 2.516632060108026e-2, 0.8601891300751106, 7.518897767550192e-2, 1.1656043286207285e-2, 1.0e-323]
+ where xs = [nan, infinity, 0, 0.5, 2.516632060108026e-2, 0.8601891300751106, 7.518897767550192e-2, 1.1656043286207285e-2, 5.0e-324]
 
 sds :: [SDouble]
 sds = map literal ds

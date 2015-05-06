@@ -34,8 +34,7 @@ maxFP :: RealFloat a => a -> a -> a
 maxFP x y
    | isNaN x              = y
    | isNaN y              = x
--- | (x == 0) && (y == 0) = y   -- Corresponds to x86 instructions, consider x=+0, y=-0 or vice versa
-   | (x == 0) && (y == 0) = 0   -- Corresponds to SMTLib
+   | (x == 0) && (y == 0) = 0   -- Corresponds to SMTLib. For x86 semantics, we'd return 'y' here. (Matters when x=+0, y=-0 or vice versa)
    | x > y                = x
    | True                 = y
 
@@ -44,8 +43,7 @@ minFP :: RealFloat a => a -> a -> a
 minFP x y
    | isNaN x              = y
    | isNaN y              = x
--- | (x == y) && (y == 0) = y   -- Corresponds to x86 instructions, consider x=+0, y=-0 or vice versa
-   | (x == y) && (y == 0) = 0   -- Corresponds to SMTLib
+   | (x == y) && (y == 0) = 0   -- Corresponds to SMTLib. For x86 semantics, we'd return 'y' here. (Matters when x=+0, y=-0 or vice versa)
    | x < y                = x
    | True                 = y
 
