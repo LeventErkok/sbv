@@ -60,6 +60,7 @@ Library
                   , Data.SBV.Examples.BitPrecise.BitTricks
                   , Data.SBV.Examples.BitPrecise.Legato
                   , Data.SBV.Examples.BitPrecise.MergeSort
+                  , Data.SBV.Examples.BitPrecise.MultMask
                   , Data.SBV.Examples.BitPrecise.PrefixSum
                   , Data.SBV.Examples.CodeGeneration.AddSub
                   , Data.SBV.Examples.CodeGeneration.CRC_USB5

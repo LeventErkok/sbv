@@ -9,6 +9,9 @@
     went viral in April 2015. Turns out really easy to solve for SMT, but the formalization
     of the problem is still interesting as an exercise in formal reasoning.
 
+  * Add Data.SBV.Examples.BitPrecise.MultMask, which demonstrates the use of the bitvector
+    solver to an interesting bit-shuffling problem.
+
   * Rework floating-point arithmetic, and add missing floating-point operations:
 
       * fpRem            : remainder
