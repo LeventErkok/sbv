@@ -46,6 +46,9 @@
     aliases for sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive,
     sRoundTowardNegative, and sRoundTowardZero; respectively.
 
+  * Add 'sbvExtractBits', which takes a list of indices to extract bits from, essentially
+    equivalent to 'map sbvTestBit'.
+
 ### Version 4.4, 2015-04-13
 
   * Hook-up crackNum package; so counter-examples involving floats and

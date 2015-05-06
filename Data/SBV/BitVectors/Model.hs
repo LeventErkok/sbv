@@ -22,7 +22,7 @@
 
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), SIntegral
-  , ite, iteLazy, sBranch, sAssert, sAssertCont, sbvTestBit, sbvPopCount, setBitTo
+  , ite, iteLazy, sBranch, sAssert, sAssertCont, sbvTestBit, sbvExtractBits, sbvPopCount, setBitTo
   , sbvShiftLeft, sbvShiftRight, sbvRotateLeft, sbvRotateRight, sbvSignedShiftArithRight, (.^)
   , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
@@ -603,6 +603,10 @@ instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
 -- we cannot implement it for symbolic words. Index 0 is the least-significant bit.
 sbvTestBit :: (Num a, Bits a, SymWord a) => SBV a -> Int -> SBool
 sbvTestBit (SBV x) i = SBV (svTestBit x i)
+
+-- | Variant of 'sbvTestBit', where we want to extract multiple bit positions.
+sbvExtractBits :: (Num a, Bits a, SymWord a) => SBV a -> [Int] -> [SBool]
+sbvExtractBits x = map (sbvTestBit x)
 
 -- | Replacement for 'popCount'. Since 'popCount' returns an 'Int', we cannot implement
 -- it for symbolic words. Here, we return an 'SWord8', which can overflow when used on
