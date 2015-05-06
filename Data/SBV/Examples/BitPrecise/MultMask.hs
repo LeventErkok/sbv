@@ -19,7 +19,12 @@
 -- problem is to do this with one mask and one multiplication.
 --
 -- Apparently this operation has several applications, including in programs
--- chess players. We use SBV to find the appropriate mask and the multiplier.
+-- that play chess of all things. We use SBV to find the appropriate mask and
+-- the multiplier.
+--
+-- Note that this is an instance of the program synthesis problem, where
+-- we "fill in the blanks" given a certain skeleton that satisfy a certain
+-- property, using quantified formulas.
 -----------------------------------------------------------------------------
 
 module Data.SBV.Examples.BitPrecise.MultMask where
