@@ -221,7 +221,10 @@ genDoubles :: [Test]
 genDoubles = genIEEE754 "genDoubles" ds
 
 genIEEE754 :: (IEEEFloating a, Show a, Ord a) => String -> [a] -> [Test]
-genIEEE754 origin vs = map tst1 converts ++ map tst1 preds ++ map tst1 uns ++ map tst2 bins
+genIEEE754 origin vs =  map tst1 [("cast_"   ++ nm, x, y)    | (nm, x, y)    <- converts]
+                     ++ map tst1 [("pred_"   ++ nm, x, y)    | (nm, x, y)    <- preds]
+                     ++ map tst1 [("unary_"  ++ nm, x, y)    | (nm, x, y)    <- uns]
+                     ++ map tst2 [("binary_" ++ nm, x, y, r) | (nm, x, y, r) <- bins]
   where uns =     [("abs",               show x,         mkThm1        abs                   x   (abs x))                | x <- vs]
                ++ [("negate",            show x,         mkThm1        negate                x   (negate x))             | x <- vs]
                -- TODO: Remove NaNs in signum, skipping over NaN due to GHC bug. GitHub Issue #101
@@ -229,7 +232,8 @@ genIEEE754 origin vs = map tst1 converts ++ map tst1 preds ++ map tst1 uns ++ ma
                ++ [("fpAbs",             show x,         mkThm1        fpAbs                 x   (abs x))                | x <- vs]
                ++ [("fpNeg",             show x,         mkThm1        fpNeg                 x   (negate x))             | x <- vs]
                ++ [("fpSqrt",            show x,         mkThm1        (m fpSqrt)            x   (sqrt   x))             | x <- vs]
-               ++ [("fpRoundToIntegral", show x,         mkThm1        (m fpRoundToIntegral) x   (fpRoundToIntegralH x)) | x <- vs]
+               -- TODO: Enable fpRoundToIntegral tests once #164 is fixed.
+               -- ++ [("fpRoundToIntegral", show x,         mkThm1        (m fpRoundToIntegral) x   (fpRoundToIntegralH x)) | x <- vs]
 
         bins =    [("+",      show x, show y, mkThm2        (+)       x y (x +  y))   | x <- vs, y <- vs]
                ++ [("-",      show x, show y, mkThm2        (-)       x y (x -  y))   | x <- vs, y <- vs]
@@ -248,7 +252,8 @@ genIEEE754 origin vs = map tst1 converts ++ map tst1 preds ++ map tst1 uns ++ ma
                ++ [("fpDiv",          show x, show y, mkThm2  (m fpDiv)      x y ((/)            x y)) | x <- vs, y <- vs]
                ++ [("fpMin",          show x, show y, mkThm2  fpMin          x y (minFP          x y)) | x <- vs, y <- vs]
                ++ [("fpMax",          show x, show y, mkThm2  fpMax          x y (maxFP          x y)) | x <- vs, y <- vs]
-               ++ [("fpRem",          show x, show y, mkThm2  fpRem          x y (fpRemH         x y)) | x <- vs, y <- vs]
+               -- TODO: Enable fpRem tests once #163 is fixed.
+               -- ++ [("fpRem",          show x, show y, mkThm2  fpRem          x y (fpRemH         x y)) | x <- vs, y <- vs]
                ++ [("fpEqualObject",  show x, show y, mkThm2P fpEqualObject  x y (fpEqualObjectH x y)) | x <- vs, y <- vs]
 
         converts =   [("toFP_Int8_ToFloat",     show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- i8s ]
