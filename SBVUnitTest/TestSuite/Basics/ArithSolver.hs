@@ -227,15 +227,14 @@ genIEEE754 origin vs =  -- Re-enable converts when https://github.com/LeventErko
                      ++ map tst1 [("pred_"   ++ nm, x, y)    | (nm, x, y)    <- preds]
                      ++ map tst1 [("unary_"  ++ nm, x, y)    | (nm, x, y)    <- uns]
                      ++ map tst2 [("binary_" ++ nm, x, y, r) | (nm, x, y, r) <- bins]
-  where uns =     [("abs",               show x,         mkThm1        abs                   x   (abs x))                | x <- vs]
-               ++ [("negate",            show x,         mkThm1        negate                x   (negate x))             | x <- vs]
-               -- TODO: Remove NaNs in signum, skipping over NaN due to GHC bug. GitHub Issue #101
-               ++ [("signum",            show x,         mkThm1        signum                x   (signum x))             | x <- vs, not (isNaN x)]
-               ++ [("fpAbs",             show x,         mkThm1        fpAbs                 x   (abs x))                | x <- vs]
-               ++ [("fpNeg",             show x,         mkThm1        fpNeg                 x   (negate x))             | x <- vs]
-               ++ [("fpSqrt",            show x,         mkThm1        (m fpSqrt)            x   (sqrt   x))             | x <- vs]
+  where uns =     [("abs",               show x, mkThm1 abs                   x  (abs x))                | x <- vs]
+               ++ [("negate",            show x, mkThm1 negate                x  (negate x))             | x <- vs]
+               ++ [("signum",            show x, mkThm1 signum                x  (signum x))             | x <- vs]
+               ++ [("fpAbs",             show x, mkThm1 fpAbs                 x  (abs x))                | x <- vs]
+               ++ [("fpNeg",             show x, mkThm1 fpNeg                 x  (negate x))             | x <- vs]
+               ++ [("fpSqrt",            show x, mkThm1 (m fpSqrt)            x  (sqrt   x))             | x <- vs]
                -- TODO: Enable fpRoundToIntegral tests once #164 is fixed.
-               -- ++ [("fpRoundToIntegral", show x,         mkThm1        (m fpRoundToIntegral) x   (fpRoundToIntegralH x)) | x <- vs]
+               -- ++ [("fpRoundToIntegral", show x, mkThm1 (m fpRoundToIntegral) x  (fpRoundToIntegralH x)) | x <- vs]
 
         bins =    [("+",      show x, show y, mkThm2        (+)       x y (x +  y))   | x <- vs, y <- vs]
                ++ [("-",      show x, show y, mkThm2        (-)       x y (x -  y))   | x <- vs, y <- vs]

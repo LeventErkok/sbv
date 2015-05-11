@@ -256,10 +256,14 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                              ++ floatRun2  "/=" (/=) (./=) combN
                              ++ doubleRun2 "/=" (/=) (./=) combN
 
-        fpTests1 = map mkTest1 $  floatRun1   "fpAbs"             abs                fpAbs             comb1
+        fpTests1 = map mkTest1 $  floatRun1   "abs"               abs                abs               comb1
+                               ++ floatRun1   "fpAbs"             abs                fpAbs             comb1
+                               ++ doubleRun1  "abs"               abs                abs               comb1
                                ++ doubleRun1  "fpAbs"             abs                fpAbs             comb1
 
+                               ++ floatRun1   "negate"            negate             negate            comb1
                                ++ floatRun1   "fpNeg"             negate             fpNeg             comb1
+                               ++ doubleRun1  "negate"            negate             negate            comb1
                                ++ doubleRun1  "fpNeg"             negate             fpNeg             comb1
 
                                ++ floatRun1M  "fpSqrt"            sqrt               fpSqrt            comb1
@@ -267,6 +271,9 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
 
                                ++ floatRun1M  "fpRoundToIntegral" fpRoundToIntegralH fpRoundToIntegral comb1
                                ++ doubleRun1M "fpRoundToIntegral" fpRoundToIntegralH fpRoundToIntegral comb1
+
+                               ++ floatRun1  "signum"             signum             signum            comb1
+                               ++ doubleRun1 "signum"             signum             signum            comb1
 
         -- TODO. Can't possibly test fma, unless we FFI out to C. Leave it out for the time being
         fpTests2 = map mkTest2 $  floatRun2M  "fpAdd"         (+)            fpAdd         comb

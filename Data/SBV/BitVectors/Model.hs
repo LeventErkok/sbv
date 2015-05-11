@@ -513,12 +513,15 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
   -- to the solver to avoid the can of worms. (Alternative would be to do an if-then-else here.)
   abs (SBV x) = SBV (svAbs x)
   signum a
-    | hasSign a = ite (a .<  z) (-i) (ite (a .== z) z i)
-    | True      = ite (a ./= z) i    z
+    -- NB. The following "carefully" tests the number for == 0, as Float/Double's NaN and +/-0
+    -- cases would cause trouble with explicit equality tests.
+    | hasSign a = ite (a .> z) i
+                $ ite (a .< z) (negate i) a
+    | True      = ite (a .> z) i a
     where z = genLiteral (kindOf a) (0::Integer)
           i = genLiteral (kindOf a) (1::Integer)
-  -- negate is tricky because on double/float -0 is different than 0; so we
-  -- just cannot rely on its default definition; which would be 0-0, which is not -0!
+  -- negate is tricky because on double/float -0 is different than 0; so we cannot
+  -- just rely on the default definition; which would be 0-0, which is not -0!
   negate (SBV x) = SBV (svUNeg x)
 
 -- | Symbolic exponentiation using bit blasting and repeated squaring.
