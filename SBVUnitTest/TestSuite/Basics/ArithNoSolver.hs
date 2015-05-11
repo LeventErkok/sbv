@@ -272,33 +272,36 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                                ++ floatRun1M  "fpRoundToIntegral" fpRoundToIntegralH fpRoundToIntegral comb1
                                ++ doubleRun1M "fpRoundToIntegral" fpRoundToIntegralH fpRoundToIntegral comb1
 
-                               ++ floatRun1  "signum"             signum             signum            comb1
-                               ++ doubleRun1 "signum"             signum             signum            comb1
+                               -- Temporarily only run signum on NaNs; due to GHC bug https://ghc.haskell.org/trac/ghc/ticket/7858
+                               -- Note that this bug is actually already fixed in GHC 7.10 and hence this restriction is not necessary
+                               -- anymore; but Travis-CI is yet to get GHC 7.10 installed. I'm tracking this in Github issue #168.
+                               ++ floatRun1NoNAN  "signum"             signum             signum            comb1
+                               ++ doubleRun1NoNAN "signum"             signum             signum            comb1
 
         -- TODO. Can't possibly test fma, unless we FFI out to C. Leave it out for the time being
-        fpTests2 = map mkTest2 $  floatRun2M  "fpAdd"         (+)            fpAdd         comb
-                               ++ doubleRun2M "fpAdd"         (+)            fpAdd         comb
+        fpTests2 = map mkTest2 $  floatRun2M  "fpAdd"           (+)              fpAdd           comb
+                               ++ doubleRun2M "fpAdd"           (+)              fpAdd           comb
 
-                               ++ floatRun2M  "fpSub"         (-)            fpSub         comb
-                               ++ doubleRun2M "fpSub"         (-)            fpSub         comb
+                               ++ floatRun2M  "fpSub"           (-)              fpSub           comb
+                               ++ doubleRun2M "fpSub"           (-)              fpSub           comb
 
-                               ++ floatRun2M  "fpMul"         (*)            fpMul         comb
-                               ++ doubleRun2M "fpMul"         (*)            fpMul         comb
+                               ++ floatRun2M  "fpMul"           (*)              fpMul           comb
+                               ++ doubleRun2M "fpMul"           (*)              fpMul           comb
 
-                               ++ floatRun2M  "fpDiv"         (/)            fpDiv         comb
-                               ++ doubleRun2M "fpDiv"         (/)            fpDiv         comb
+                               ++ floatRun2M  "fpDiv"           (/)              fpDiv           comb
+                               ++ doubleRun2M "fpDiv"           (/)              fpDiv           comb
 
-                               ++ floatRun2   "fpMin"         minFP          fpMin         comb
-                               ++ doubleRun2  "fpMin"         minFP          fpMin         comb
+                               ++ floatRun2   "fpMin"           minFP            fpMin           comb
+                               ++ doubleRun2  "fpMin"           minFP            fpMin           comb
 
-                               ++ floatRun2   "fpMax"         maxFP          fpMax         comb
-                               ++ doubleRun2  "fpMax"         maxFP          fpMax         comb
+                               ++ floatRun2   "fpMax"           maxFP            fpMax           comb
+                               ++ doubleRun2  "fpMax"           maxFP            fpMax           comb
 
-                               ++ floatRun2   "fpRem"         fpRemH         fpRem         comb
-                               ++ doubleRun2  "fpRem"         fpRemH         fpRem         comb
+                               ++ floatRun2   "fpRem"           fpRemH           fpRem           comb
+                               ++ doubleRun2  "fpRem"           fpRemH           fpRem           comb
 
-                               ++ floatRun2   "fpEqualObject" fpEqualObjectH fpEqualObject combE
-                               ++ doubleRun2  "fpEqualObject" fpEqualObjectH fpEqualObject combE
+                               ++ floatRun2   "fpIsEqualObject" fpIsEqualObjectH fpIsEqualObject combE
+                               ++ doubleRun2  "fpIsEqualObject" fpIsEqualObjectH fpIsEqualObject combE
 
         converts =  map cvtTest  [("toFP_Int8_ToFloat",     show x, toSFloat  sRNE (literal x), fromRational (toRational x)) | x <- i8s ]
                  ++ map cvtTest  [("toFP_Int16_ToFloat",    show x, toSFloat  sRNE (literal x), fromRational (toRational x)) | x <- i16s]
@@ -358,10 +361,14 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                  ++ map cvtTestI [("reinterp_Float_Word32",  show x, sFloatAsSWord32  (sWord32AsSFloat  (literal x)) (literal x), literal true) | x <- w32s]
                  ++ map cvtTestI [("reinterp_Double_Word64", show x, sDoubleAsSWord64 (sWord64AsSDouble (literal x)) (literal x), literal true) | x <- w64s]
 
+        -- Only used to work-around a Travis Bug; see above note.
+        floatRun1NoNAN   nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- fs, not (isNaN x)]
+        doubleRun1NoNAN  nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- ds, not (isNaN x)]
+
         floatRun1   nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- fs]
         doubleRun1  nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- ds]
-        floatRun1M  nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g sRNE (literal x)))             | x <- fs]
-        doubleRun1M nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g sRNE (literal x)))             | x <- ds]
+        floatRun1M  nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g sRNE (literal x)))                                | x <- fs]
+        doubleRun1M nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g sRNE (literal x)))                                | x <- ds]
         floatRun2   nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g                         (literal x) (literal y))) | x <- fs, y <- fs]
         doubleRun2  nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g                         (literal x) (literal y))) | x <- ds, y <- ds]
         floatRun2M  nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g sRNE (literal x) (literal y))) | x <- fs, y <- fs]
