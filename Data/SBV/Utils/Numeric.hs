@@ -72,8 +72,8 @@ fpRoundToIntegralH x
 
 -- | Check that two floats are the exact same values, i.e., +0/-0 does not
 -- compare equal, and NaN's compare equal to themselves.
-fpEqualObjectH :: RealFloat a => a -> a -> Bool
-fpEqualObjectH a b
+fpIsEqualObjectH :: RealFloat a => a -> a -> Bool
+fpIsEqualObjectH a b
   | isNaN a          = isNaN b
   | isNegativeZero a = isNegativeZero b
   | isNegativeZero b = isNegativeZero a

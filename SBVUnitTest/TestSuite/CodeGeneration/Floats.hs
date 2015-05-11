@@ -136,8 +136,8 @@ testSuite = mkTestSuite $ \goldCheck -> test [
           , test2 "f_FP_Max"                (fpMax :: SFloat  -> SFloat  -> SFloat)
           , test2 "d_FP_Max"                (fpMax :: SDouble -> SDouble -> SDouble)
 
-          , test2 "f_FP_EqualObject"        (fpEqualObject :: SFloat  -> SFloat  -> SBool)
-          , test2 "d_FP_EqualObject"        (fpEqualObject :: SDouble -> SDouble -> SBool)
+          , test2 "f_FP_IsEqualObject"      (fpIsEqualObject :: SFloat  -> SFloat  -> SBool)
+          , test2 "d_FP_IsEqualObject"      (fpIsEqualObject :: SDouble -> SDouble -> SBool)
 
           , test1 "f_FP_IsNormal"           (fpIsNormal :: SFloat  -> SBool)
           , test1 "d_FP_IsNormal"           (fpIsNormal :: SDouble -> SBool)

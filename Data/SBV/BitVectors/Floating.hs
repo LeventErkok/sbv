@@ -77,7 +77,7 @@ class (SymWord a, RealFloat a) => IEEEFloating a where
 
   -- | Are the two given floats exactly the same. That is, @NaN@ will compare equal to itself, @+0@ will /not/ compare
   -- equal to @-0@ etc. This is the object level equality, as opposed to the semantic equality. (For the latter, just use '.=='.)
-  fpEqualObject     ::                  SBV a -> SBV a -> SBool
+  fpIsEqualObject   ::                  SBV a -> SBV a -> SBool
 
   -- | Is the floating-point number a normal value. (i.e., not denormalized.)
   fpIsNormal :: SBV a -> SBool
@@ -123,7 +123,7 @@ class (SymWord a, RealFloat a) => IEEEFloating a where
   fpRoundToIntegral  = lift1  FP_RoundToIntegral (Just fpRoundToIntegralH) . Just
   fpMin              = lift2  FP_Min             (Just minFP)              Nothing
   fpMax              = lift2  FP_Max             (Just maxFP)              Nothing
-  fpEqualObject      = lift2B FP_ObjEqual        (Just fpEqualObjectH)     Nothing
+  fpIsEqualObject    = lift2B FP_ObjEqual        (Just fpIsEqualObjectH)   Nothing
   fpIsNormal         = lift1B FP_IsNormal        isNormalized    where isNormalized x = not (isDenormalized x || isInfinite x || isNaN x)
   fpIsSubnormal      = lift1B FP_IsSubnormal     isDenormalized
   fpIsZero           = lift1B FP_IsZero          (== 0)
@@ -368,14 +368,14 @@ lift3 w mbOp mbRm a b c
 sFloatAsSWord32 :: SFloat -> SWord32 -> SBool
 sFloatAsSWord32 fVal wVal
   | Just f <- unliteral fVal, not (isNaN f) = wVal .== literal (DB.floatToWord f)
-  | True                                    = fVal `fpEqualObject` sWord32AsSFloat wVal
+  | True                                    = fVal `fpIsEqualObject` sWord32AsSFloat wVal
 
 -- | Relationally assert the equivalence between an 'SDouble' and an 'SWord64', when the bit-pattern
 -- is interpreted as either type. See the comments for 'sFloatToSWord32' for details.
 sDoubleAsSWord64 :: SDouble -> SWord64 -> SBool
 sDoubleAsSWord64 fVal wVal
   | Just f <- unliteral fVal, not (isNaN f) = wVal .== literal (DB.doubleToWord f)
-  | True                                    = fVal `fpEqualObject` sWord64AsSDouble wVal
+  | True                                    = fVal `fpIsEqualObject` sWord64AsSDouble wVal
 
 -- | Relationally extract the sign\/exponent\/mantissa of a single-precision float. Due to the
 -- non-unique representation of NaN's, we have to do this relationally, much like

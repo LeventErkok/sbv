@@ -18,7 +18,7 @@
       * fpRoundToIntegral: truncating round 
       * fpMin		 : min
       * fpMax		 : max
-      * fpEqualObject	 : FP equality as object (i.e., NaN equals NaN, +0 does not equal -0, etc.)
+      * fpIsEqualObject	 : FP equality as object (i.e., NaN equals NaN, +0 does not equal -0, etc.)
 
     This brings SBV up-to par with everything supported by the SMT-Lib FP theory.
 
