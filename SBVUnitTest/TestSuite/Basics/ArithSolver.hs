@@ -236,26 +236,26 @@ genIEEE754 origin vs =  -- Re-enable converts when https://github.com/LeventErko
                -- TODO: Enable fpRoundToIntegral tests once #164 is fixed.
                -- ++ [("fpRoundToIntegral", show x, mkThm1 (m fpRoundToIntegral) x  (fpRoundToIntegralH x)) | x <- vs]
 
-        bins =    [("+",      show x, show y, mkThm2        (+)       x y (x +  y))   | x <- vs, y <- vs]
-               ++ [("-",      show x, show y, mkThm2        (-)       x y (x -  y))   | x <- vs, y <- vs]
-               ++ [("*",      show x, show y, mkThm2        (*)       x y (x *  y))   | x <- vs, y <- vs]
-               ++ [("/",      show x, show y, mkThm2        (/)       x y (x /  y))   | x <- vs, y <- vs]
-               ++ [("<",      show x, show y, mkThm2C False (.<)      x y (x <  y))   | x <- vs, y <- vs]
-               ++ [("<=",     show x, show y, mkThm2C False (.<=)     x y (x <= y))   | x <- vs, y <- vs]
-               ++ [(">",      show x, show y, mkThm2C False (.>)      x y (x >  y))   | x <- vs, y <- vs]
-               ++ [(">=",     show x, show y, mkThm2C False (.>=)     x y (x >= y))   | x <- vs, y <- vs]
-               ++ [("==",     show x, show y, mkThm2C False (.==)     x y (x == y))   | x <- vs, y <- vs]
-               ++ [("/=",     show x, show y, mkThm2C True  (./=)     x y (x /= y))   | x <- vs, y <- vs]
+        bins =    [("+",      show x,  show y, mkThm2        (+)       x y (x +  y))   | x <- vs, y <- vs]
+               ++ [("-",      show x,  show y, mkThm2        (-)       x y (x -  y))   | x <- vs, y <- vs]
+               ++ [("*",      show x,  show y, mkThm2        (*)       x y (x *  y))   | x <- vs, y <- vs]
+               ++ [("/",      show x,  show y, mkThm2        (/)       x y (x /  y))   | x <- vs, y <- vs]
+               ++ [("<",      show x,  show y, mkThm2C False (.<)      x y (x <  y))   | x <- vs, y <- vs]
+               ++ [("<=",     show x,  show y, mkThm2C False (.<=)     x y (x <= y))   | x <- vs, y <- vs]
+               ++ [(">",      show x,  show y, mkThm2C False (.>)      x y (x >  y))   | x <- vs, y <- vs]
+               ++ [(">=",     show x,  show y, mkThm2C False (.>=)     x y (x >= y))   | x <- vs, y <- vs]
+               ++ [("==",     show x,  show y, mkThm2C False (.==)     x y (x == y))   | x <- vs, y <- vs]
+               ++ [("/=",     show x,  show y, mkThm2C True  (./=)     x y (x /= y))   | x <- vs, y <- vs]
                -- TODO. Can't possibly test fma, unless we FFI out to C. Leave it out for the time being
-               ++ [("fpAdd",          show x, show y, mkThm2  (m fpAdd)      x y ((+)            x y)) | x <- vs, y <- vs]
-               ++ [("fpSub",          show x, show y, mkThm2  (m fpSub)      x y ((-)            x y)) | x <- vs, y <- vs]
-               ++ [("fpMul",          show x, show y, mkThm2  (m fpMul)      x y ((*)            x y)) | x <- vs, y <- vs]
-               ++ [("fpDiv",          show x, show y, mkThm2  (m fpDiv)      x y ((/)            x y)) | x <- vs, y <- vs]
-               ++ [("fpMin",          show x, show y, mkThm2  fpMin          x y (minFP          x y)) | x <- vs, y <- vs]
-               ++ [("fpMax",          show x, show y, mkThm2  fpMax          x y (maxFP          x y)) | x <- vs, y <- vs]
+               ++ [("fpAdd",           show x, show y, mkThm2  (m fpAdd)        x y ((+)              x y)) | x <- vs, y <- vs]
+               ++ [("fpSub",           show x, show y, mkThm2  (m fpSub)        x y ((-)              x y)) | x <- vs, y <- vs]
+               ++ [("fpMul",           show x, show y, mkThm2  (m fpMul)        x y ((*)              x y)) | x <- vs, y <- vs]
+               ++ [("fpDiv",           show x, show y, mkThm2  (m fpDiv)        x y ((/)              x y)) | x <- vs, y <- vs]
+               ++ [("fpMin",           show x, show y, mkThm2  fpMin            x y (minFP            x y)) | x <- vs, y <- vs]
+               ++ [("fpMax",           show x, show y, mkThm2  fpMax            x y (maxFP            x y)) | x <- vs, y <- vs]
+               ++ [("fpIsEqualObject", show x, show y, mkThm2P fpIsEqualObject  x y (fpIsEqualObjectH x y)) | x <- vs, y <- vs]
                -- TODO: Enable fpRem tests once #163 is fixed.
-               -- ++ [("fpRem",          show x, show y, mkThm2  fpRem          x y (fpRemH         x y)) | x <- vs, y <- vs]
-               ++ [("fpEqualObject",  show x, show y, mkThm2P fpEqualObject  x y (fpEqualObjectH x y)) | x <- vs, y <- vs]
+               -- ++ [("fpRem",           show x, show y, mkThm2  fpRem            x y (fpRemH           x y)) | x <- vs, y <- vs]
 
         converts =   [("toFP_Int8_ToFloat",     show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- i8s ]
                  ++  [("toFP_Int16_ToFloat",    show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- i16s]
@@ -348,11 +348,11 @@ genIEEE754 origin vs =  -- Re-enable converts when https://github.com/LeventErko
 
         mkThm1 op x r = isThm $ do a <- free "x"
                                    eqF a x
-                                   return $ literal r `fpEqualObject` op a
+                                   return $ literal r `fpIsEqualObject` op a
 
         mkThmC op x r = isThm $ do a <- free "x"
                                    constrain $ a .== literal x
-                                   return $ literal r `fpEqualObject` op a
+                                   return $ literal r `fpIsEqualObject` op a
 
         mkThmC' op x r = isThm $ do a <- free "x"
                                     eqF a x
@@ -361,7 +361,7 @@ genIEEE754 origin vs =  -- Re-enable converts when https://github.com/LeventErko
         mkThm2 op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                      eqF a x
                                      eqF b y
-                                     return $ literal r `fpEqualObject` (a `op` b)
+                                     return $ literal r `fpIsEqualObject` (a `op` b)
 
         mkThm2C neq op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                           eqF a x
@@ -452,11 +452,11 @@ rs = [fromRational (i % d) | i <- is, d <- dens]
 
 -- Admittedly paltry test-cases for float/double
 fs :: [Float]
-fs = xs ++ map (* (-1)) xs
+fs = xs ++ map (* (-1)) (filter (not . isNaN) xs) -- -nan is the same as nan
  where xs = [nan, infinity, 0, 0.5, 0.68302244, 0.5268265, 0.10283524, 5.8336496e-2, 1.0e-45]
 
 ds :: [Double]
-ds = xs ++ map (* (-1)) xs
+ds = xs ++ map (* (-1)) (filter (not . isNaN) xs) -- -nan is the same as nan
  where xs = [nan, infinity, 0, 0.5, 2.516632060108026e-2, 0.8601891300751106, 7.518897767550192e-2, 1.1656043286207285e-2, 5.0e-324]
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
