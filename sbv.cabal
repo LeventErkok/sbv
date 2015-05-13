@@ -85,6 +85,7 @@ Library
                   , Data.SBV.Examples.Puzzles.Euler185
                   , Data.SBV.Examples.Puzzles.MagicSquare
                   , Data.SBV.Examples.Puzzles.NQueens
+                  , Data.SBV.Examples.Puzzles.SendMoreMoney
                   , Data.SBV.Examples.Puzzles.Sudoku
                   , Data.SBV.Examples.Puzzles.U2Bridge
                   , Data.SBV.Examples.Uninterpreted.AUF

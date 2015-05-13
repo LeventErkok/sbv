@@ -5,9 +5,12 @@
 
 ### Version 4.5, Not yet released
 
-  * Add Data.SBV.Examples.Puzzles.Birthday, which codifies the Cheryl-Birthday problem that
+  * Add Data.SBV.Examples.Puzzles.Birthday, which solves the Cheryl-Birthday problem that
     went viral in April 2015. Turns out really easy to solve for SMT, but the formalization
     of the problem is still interesting as an exercise in formal reasoning.
+
+  * Add Data.SBV.Examples.Puzzles.SendMoreMoney, which solves the classic send + more = money
+    problem. Really a trivial example, but pretty much the hello-world for constraint solving.
 
   * Add Data.SBV.Examples.BitPrecise.MultMask, which demonstrates the use of the bitvector
     solver to an interesting bit-shuffling problem.
