@@ -58,7 +58,7 @@ run targets skipCF shouldCreate [gd] =
            checkGoldDir gd
            cts <- runTestTT $ TestList $ map mkTst [c | (tc, needsSolver, c) <- allTestCases, select needsSolver tc]
            decide shouldCreate cts
-  where mkTst (SBVTestSuite f) = f $ generateGoldCheck gd shouldCreate
+  where mkTst (SBVTestSuite _ f) = f $ generateGoldCheck gd shouldCreate
         select needsSolver tc
            | not included = False
            | shouldCreate = True

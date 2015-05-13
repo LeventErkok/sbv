@@ -18,11 +18,15 @@ import System.FilePath ((</>))
 import Test.HUnit      (Test(..), Assertion, assert, (~:), test)
 
 -- | A Test-suite, parameterized by the gold-check generator/checker
-data SBVTestSuite = SBVTestSuite ((forall a. Show a => (IO a -> FilePath -> IO ())) -> Test)
+data SBVTestSuite = SBVTestSuite [String] ((forall a. Show a => (IO a -> FilePath -> IO ())) -> Test)
 
 -- | Wrap over 'SBVTestSuite', avoids exporting the constructor
 mkTestSuite :: ((forall a. (Show a) => IO a -> FilePath -> IO ()) -> Test) -> SBVTestSuite
-mkTestSuite = SBVTestSuite
+mkTestSuite f = SBVTestSuite (collect (f (\_ _ -> return ()))) f
+  where collect :: Test -> [String]
+        collect (TestCase _)    = []
+        collect (TestList ts)   = concatMap collect ts
+        collect (TestLabel s t) = s : collect t
 
 -- | Checks that a particular result shows as @s@
 showsAs :: Show a => a -> String -> Assertion
