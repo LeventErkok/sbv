@@ -479,14 +479,14 @@ srs :: [SReal]
 srs = map literal rs
 
 fs :: [Float]
-fs = xs ++ map (* (-1)) xs
+fs = xs ++ map (* (-1)) (filter (not . isNaN) xs) -- -nan is the same as nan
  where xs = [nan, infinity, 0, 0.5, 0.68302244, 0.5268265, 0.10283524, 5.8336496e-2, 1.0e-45]
 
 sfs :: [SFloat]
 sfs = map literal fs
 
 ds :: [Double]
-ds = xs ++ map (* (-1)) xs
+ds = xs ++ map (* (-1)) (filter (not . isNaN) xs) -- -nan is the same as nan
  where xs = [nan, infinity, 0, 0.5, 2.516632060108026e-2, 0.8601891300751106, 7.518897767550192e-2, 1.1656043286207285e-2, 5.0e-324]
 
 sds :: [SDouble]
