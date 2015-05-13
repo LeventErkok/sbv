@@ -12,6 +12,7 @@
 module Main(main) where
 
 import Control.Monad        (unless, when)
+import Data.List            (isInfixOf)
 import System.Directory     (doesDirectoryExist)
 import System.Environment   (getArgs)
 import System.Exit          (exitWith, exitSuccess, ExitCode(..))
@@ -30,12 +31,18 @@ main = do putStrLn $ "*** SBVUnitTester, version: " ++ showVersion version ++ ",
           tgts <- getArgs
           case tgts of
             [x] | x `elem` ["-h", "--help", "-?"]
-                   -> putStrLn "Usage: SBVUnitTests [-l(ist)] [-s(kipCF)] [targets]" -- Not quite right, but sufficient
+                   -> do putStrLn "Usage: SBVUnitTests [-c] [-l] [-s] [targets]" -- Not quite right, but sufficient
+                         putStrLn "  -l: List all tests"
+                         putStrLn "  -s: Skip constant-folding tests"
+                         putStrLn "  -c: Create gold-files"
+                         putStrLn "  -m: Do a wild-card match on targets"
+                         putStrLn "If targets are given, run those groups; except with the -m flag which matches test names."
             ["-l"] -> showTargets
             -- undocumented really
-            ("-c":ts) -> run ts   False True ["SBVUnitTest/GoldFiles"]
-            ("-s":ts) -> run ts   True False []
-            _         -> run tgts False False []
+            ("-c":ts) -> run (False, ts)   False True ["SBVUnitTest/GoldFiles"]
+            ("-s":ts) -> run (False, ts)   True  False []
+            ("-m":ts) -> run (True,  ts)   False False []
+            _         -> run (False, tgts) False False []
 
 checkGoldDir :: FilePath -> IO ()
 checkGoldDir gd = do e <- doesDirectoryExist gd
@@ -51,21 +58,32 @@ showTargets :: IO ()
 showTargets = do putStrLn "Known test targets are:"
                  mapM_ (putStrLn . ("\t" ++))  allTargets
 
-run :: [String] -> Bool -> Bool -> [String] -> IO ()
-run targets skipCF shouldCreate [gd] =
+run :: (Bool, [String]) -> Bool -> Bool -> [String] -> IO ()
+run (wcMatch, targets) skipCF shouldCreate [gd] =
         do mapM_ checkTgt targets
            putStrLn $ "*** Starting SBV unit tests..\n*** Gold files at: " ++ show gd
            checkGoldDir gd
-           cts <- runTestTT $ TestList $ map mkTst [c | (tc, needsSolver, c) <- allTestCases, select needsSolver tc]
+           cts <- runTestTT $ TestList $ concatMap mkTst [c | (tc, needsSolver, c) <- allTestCases, select needsSolver tc]
            decide shouldCreate cts
-  where mkTst (SBVTestSuite _ f) = f $ generateGoldCheck gd shouldCreate
+  where mkTst (SBVTestSuite f) = pick $ f (generateGoldCheck gd shouldCreate)
+          where pick :: Test -> [Test]
+                pick tst
+                 | not wcMatch = [tst]
+                 | True        = collect tst
+                 where collect (TestCase _)    = []
+                       collect (TestList ts)   = concatMap collect ts
+                       collect t@(TestLabel s _)
+                          | any (`isInfixOf` s) targets = [t]
+                          | True                        = []
         select needsSolver tc
            | not included = False
            | shouldCreate = True
            | needsSolver  = True
            | True         = not skipCF
-          where included = null targets || tc `elem` targets
-        checkTgt t | t `elem` allTargets = return ()
+          where included | wcMatch = True
+                         | True    = null targets || tc `elem` targets
+        checkTgt t | wcMatch             = return ()
+                   | t `elem` allTargets = return ()
                    | True                = do putStrLn $ "*** Unknown test target: " ++ show t
                                               exitWith $ ExitFailure 1
 run targets skipCF shouldCreate [] = getDataDir >>= \d -> run targets skipCF shouldCreate [d </> "SBVUnitTest" </> "GoldFiles"]

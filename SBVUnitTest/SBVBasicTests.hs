@@ -58,7 +58,7 @@ run gd = do putStrLn $ "*** Starting SBV basic tests..\n*** Gold files at: " ++ 
                                      hPutStrLn stderr $ showCounts cts
                                      decide n cts
                                      runEach (i+1) tcs
-        mkTst (SBVTestSuite _ f) = f $ generateGoldCheck gd False
+        mkTst (SBVTestSuite f) = f $ generateGoldCheck gd False
         put _ _ = return
 
 decide :: String -> Counts -> IO ()
