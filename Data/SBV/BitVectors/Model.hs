@@ -471,13 +471,13 @@ instance Boolean SBool where
 
 -- | Returns (symbolic) true if all the elements of the given list are different.
 allDifferent :: EqSymbolic a => [a] -> SBool
-allDifferent (x:xs@(_:_)) = bAll (x ./=) xs &&& allDifferent xs
-allDifferent _            = true
+allDifferent []     = true
+allDifferent (x:xs) = bAll (x ./=) xs &&& allDifferent xs
 
 -- | Returns (symbolic) true if all the elements of the given list are the same.
 allEqual :: EqSymbolic a => [a] -> SBool
-allEqual (x:xs@(_:_))     = bAll (x .==) xs
-allEqual _                = true
+allEqual []     = true
+allEqual (x:xs) = bAll (x .==) xs
 
 -- | Returns (symbolic) true if the argument is in range
 inRange :: OrdSymbolic a => a -> (a, a) -> SBool
