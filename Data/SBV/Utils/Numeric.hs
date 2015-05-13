@@ -61,21 +61,19 @@ fp2fp x
 -- remains from the division of @x@ and @y@. There are strict rules around 0's, Infinities,
 -- and NaN's as coded below, See <http://smt-lib.org/papers/BTRW14.pdf>, towards the
 -- end of section 4.c.
---
--- TODO: This definition is not quite correct; and I'm yet to figure out what the
--- precise semantics needs to be. WIP.
 fpRemH :: RealFloat a => a -> a -> a
 fpRemH x y
   | isInfinite y            = x
   | isInfinite x || isNaN x = 0 / 0
   | y == 0       || isNaN y = 0 / 0
-  | result < 0              = pSign (x - y * fromInteger (ceiling result))
-  | result > 0              = pSign (x - y * fromInteger (floor   result))
-  -- result = 0; the following takes care of the -0 case by preserving the sign of x
-  | True                    = x
-  where result = x / y
-        -- preserve the sign of x. NB. This does the right thing when x is +/-0
-        pSign r = signum x * abs r
+  | True                    = x - fromRational (fromInteger d * ry)
+  where rx, ry, rd :: Rational
+        rx = toRational x
+        ry = toRational y
+        rd = rx / ry
+        d :: Integer
+        d | rd > 0 = floor   rd
+          | True   = ceiling rd
 
 -- | Convert a float to the nearest integral representable in that type
 fpRoundToIntegralH :: RealFloat a => a -> a
