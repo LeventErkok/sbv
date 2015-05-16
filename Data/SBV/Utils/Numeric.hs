@@ -66,7 +66,7 @@ fpRemH x y
   | isInfinite y            = x
   | isInfinite x || isNaN x = 0 / 0
   | y == 0       || isNaN y = 0 / 0
-  | True                    = x - fromRational (fromInteger d * ry)
+  | True                    = pSign (x - fromRational (fromInteger d * ry))
   where rx, ry, rd :: Rational
         rx = toRational x
         ry = toRational y
@@ -74,6 +74,10 @@ fpRemH x y
         d :: Integer
         d | rd > 0 = floor   rd
           | True   = ceiling rd
+        -- If the result is 0, make sure we preserve the sign of x
+        pSign r
+          | r == 0 = if x < 0 || isNegativeZero x then -0.0 else 0.0
+          | True   = r
 
 -- | Convert a float to the nearest integral representable in that type
 fpRoundToIntegralH :: RealFloat a => a -> a
