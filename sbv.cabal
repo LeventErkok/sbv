@@ -83,6 +83,7 @@ Library
                   , Data.SBV.Examples.Puzzles.Counts
                   , Data.SBV.Examples.Puzzles.DogCatMouse
                   , Data.SBV.Examples.Puzzles.Euler185
+                  , Data.SBV.Examples.Puzzles.Fish
                   , Data.SBV.Examples.Puzzles.MagicSquare
                   , Data.SBV.Examples.Puzzles.NQueens
                   , Data.SBV.Examples.Puzzles.SendMoreMoney

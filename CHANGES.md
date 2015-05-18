@@ -10,7 +10,12 @@
     of the problem is still interesting as an exercise in formal reasoning.
 
   * Add Data.SBV.Examples.Puzzles.SendMoreMoney, which solves the classic send + more = money
-    problem. Really a trivial example, but pretty much the hello-world for constraint solving.
+    problem. Really a trivial example, but included since it is pretty much the hello-world for
+    basic constraint solving.
+
+  * Add Data.SBV.Examples.Puzzles.Fish, which solves a typical logic puzzle; finding the unique
+    solution to a set of assertions made about a bunch of people, their pets, beverage choices,
+    etc. Not particularly interesting, but could be fun to play around with for modeling purposes.
 
   * Add Data.SBV.Examples.BitPrecise.MultMask, which demonstrates the use of the bitvector
     solver to an interesting bit-shuffling problem.
