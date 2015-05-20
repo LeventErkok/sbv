@@ -73,7 +73,7 @@ run (wcMatch, targets) skipCF shouldCreate [gd] =
                  where collect (TestCase _)    = []
                        collect (TestList ts)   = concatMap collect ts
                        collect t@(TestLabel s _)
-                          | any (`isInfixOf` s) targets = [t]
+                          | all (`isInfixOf` s) targets = [t]
                           | True                        = []
         select needsSolver tc
            | not included = False
