@@ -1574,6 +1574,14 @@ instance Testable (Symbolic SBool) where
                   shN s = s ++ replicate (maxLen - length s) ' '
                   info (n, cw) = shN n ++ " = " ++ show cw
 
+-- Quickcheck interface on dynamically-typed values. A run-time check
+-- ensures that the value has boolean type.
+instance Testable (Symbolic SVal) where
+  property m = property $ do s <- m
+                             when (svKind s /= KBool) $
+                               error "Cannot quickcheck non-boolean value"
+                             return (SBV s :: SBool)
+
 -- | Explicit sharing combinator. The SBV library has internal caching/hash-consing mechanisms
 -- built in, based on Andy Gill's type-safe obervable sharing technique (see: <http://ittc.ku.edu/~andygill/paper.php?label=DSLExtract09>).
 -- However, there might be times where being explicit on the sharing can help, especially in experimental code. The 'slet' combinator
