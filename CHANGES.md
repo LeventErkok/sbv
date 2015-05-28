@@ -60,6 +60,9 @@
   * Add 'sbvExtractBits', which takes a list of indices to extract bits from, essentially
     equivalent to 'map sbvTestBit'.
 
+  * Boolector interface: Upgraded to work with new Boolector release 2.0.7. Note that this
+    version of SBV requires Boolector-v2.0.7 at least, if you choose to use that SMT-solver.
+
 ### Version 4.4, 2015-04-13
 
   * Hook-up crackNum package; so counter-examples involving floats and

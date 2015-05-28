@@ -18,7 +18,6 @@ import qualified Control.Exception as C
 import Data.Function      (on)
 import Data.List          (sortBy, intercalate)
 import System.Environment (getEnv)
-import System.Exit        (ExitCode(..))
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.PrettyNum (mkSkolemZero)
@@ -33,7 +32,7 @@ boolector :: SMTSolver
 boolector = SMTSolver {
            name           = Boolector
          , executable     = "boolector"
-         , options        = ["--smt2", "--smt2-model"]
+         , options        = ["--smt2", "--smt2-model", "--no-exit-codes"]
          , engine         = \cfg _isSat qinps modelMap skolemMap pgm -> do
                                     execName <-                   getEnv "SBV_BOOLECTOR"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
                                     execOpts <- (splitArgs `fmap` getEnv "SBV_BOOLECTOR_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
@@ -43,7 +42,7 @@ boolector = SMTSolver {
                                                    ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
                                         script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg) skolemMap)}
                                     standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap (map snd qinps) modelMap))
-         , xformExitCode  = boolectorExitCode
+         , xformExitCode  = id
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "Boolector"
                                 , mbDefaultLogic             = Nothing
@@ -65,13 +64,6 @@ boolector = SMTSolver {
         where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ mkSkolemZero rm (kindOf s) ++ "))\")"
               extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
               extract (Right (s, ss)) = "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
-
--- | Similar to CVC4, Boolector uses different exit codes to indicate its status.
--- NB. This is likely going to change with the next release of Boolector, so simplify the
--- code when it does happen.
-boolectorExitCode :: ExitCode -> ExitCode
-boolectorExitCode (ExitFailure n) | n `elem` [10, 20, 0] = ExitSuccess
-boolectorExitCode ec                                     = ec
 
 extractMap :: [NamedSymVar] -> [(String, UnintKind)] -> [String] -> SMTModel
 extractMap inps _modelMap solverLines =
