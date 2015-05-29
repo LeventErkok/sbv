@@ -12,14 +12,14 @@
 module Data.SBV.Utils.Numeric where
 
 -- | A variant of round; except defaulting to 0 when fed NaN or Infinity
-round0 :: (RealFloat a, RealFrac a, Integral b) => a -> b
-round0 x
+fpRound0 :: (RealFloat a, RealFrac a, Integral b) => a -> b
+fpRound0 x
  | isNaN x || isInfinite x = 0
  | True                    = round x
 
 -- | A variant of toRational; except defaulting to 0 when fed NaN or Infinity
-ratio0 :: (RealFloat a, RealFrac a) => a -> Rational
-ratio0 x
+fpRatio0 :: (RealFloat a, RealFrac a) => a -> Rational
+fpRatio0 x
  | isNaN x || isInfinite x = 0
  | True                    = toRational x
 
@@ -27,20 +27,20 @@ ratio0 x
 -- Haskell's; and also it does not agree with what the hardware does. Sigh.. See:
 --      <https://ghc.haskell.org/trac/ghc/ticket/10378>
 --      <https://github.com/Z3Prover/z3/issues/68>
--- So, we codify here what the Z3 (SMTLib) is implementing for maxFP.
+-- So, we codify here what the Z3 (SMTLib) is implementing for fpMax.
 -- The discrepancy with Haskell is that the NaN propagation doesn't work in Haskell
 -- The discrepancy with x86 is that given +0/-0, x86 returns the second argument; SMTLib returns +0
-maxFP :: RealFloat a => a -> a -> a
-maxFP x y
+fpMaxH :: RealFloat a => a -> a -> a
+fpMaxH x y
    | isNaN x              = y
    | isNaN y              = x
    | (x == 0) && (y == 0) = 0   -- Corresponds to SMTLib. For x86 semantics, we'd return 'y' here. (Matters when x=+0, y=-0 or vice versa)
    | x > y                = x
    | True                 = y
 
--- | SMTLib compliant definition for 'minFP'. See the comments for 'maxFP'.
-minFP :: RealFloat a => a -> a -> a
-minFP x y
+-- | SMTLib compliant definition for 'fpMin'. See the comments for 'fpMax'.
+fpMinH :: RealFloat a => a -> a -> a
+fpMinH x y
    | isNaN x              = y
    | isNaN y              = x
    | (x == y) && (y == 0) = 0   -- Corresponds to SMTLib. For x86 semantics, we'd return 'y' here. (Matters when x=+0, y=-0 or vice versa)
@@ -95,3 +95,8 @@ fpIsEqualObjectH a b
   | isNegativeZero a = isNegativeZero b
   | isNegativeZero b = isNegativeZero a
   | True             = a == b
+
+-- | Check if a number is "normal." Note that +0/-0 is not considered a normal-number
+-- and also this is not simply the negation of isDenormalized!
+fpIsNormalizedH :: RealFloat a => a -> Bool
+fpIsNormalizedH x = not (isDenormalized x || isInfinite x || isNaN x || x == 0)

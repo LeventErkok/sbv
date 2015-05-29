@@ -291,11 +291,11 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                                ++ floatRun2M  "fpDiv"           (/)              fpDiv           comb
                                ++ doubleRun2M "fpDiv"           (/)              fpDiv           comb
 
-                               ++ floatRun2   "fpMin"           minFP            fpMin           comb
-                               ++ doubleRun2  "fpMin"           minFP            fpMin           comb
+                               ++ floatRun2   "fpMin"           fpMinH           fpMin           comb
+                               ++ doubleRun2  "fpMin"           fpMinH           fpMin           comb
 
-                               ++ floatRun2   "fpMax"           maxFP            fpMax           comb
-                               ++ doubleRun2  "fpMax"           maxFP            fpMax           comb
+                               ++ floatRun2   "fpMax"           fpMaxH           fpMax           comb
+                               ++ doubleRun2  "fpMax"           fpMaxH           fpMax           comb
 
                                ++ floatRun2   "fpRem"           fpRemH           fpRem           comb
                                ++ doubleRun2  "fpRem"           fpRemH           fpRem           comb
@@ -329,31 +329,31 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                  ++ map cvtTest  [("toFP_Integer_ToDouble", show x, toSDouble sRNE (literal x), fromRational (toRational x)) | x <- iUBs]
                  ++ map cvtTest  [("toFP_Real_ToDouble",    show x, toSDouble sRNE (literal x), fromRational (toRational x)) | x <- rs  ]
 
-                 ++ map cvtTestI [("fromFP_Float_ToInt8",    show x, (fromSFloat sRNE :: SFloat -> SInt8)    (literal x), ((fromIntegral :: Integer -> SInt8)    . round0) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToInt16",   show x, (fromSFloat sRNE :: SFloat -> SInt16)   (literal x), ((fromIntegral :: Integer -> SInt16)   . round0) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToInt32",   show x, (fromSFloat sRNE :: SFloat -> SInt32)   (literal x), ((fromIntegral :: Integer -> SInt32)   . round0) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToInt64",   show x, (fromSFloat sRNE :: SFloat -> SInt64)   (literal x), ((fromIntegral :: Integer -> SInt64)   . round0) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToWord8",   show x, (fromSFloat sRNE :: SFloat -> SWord8)   (literal x), ((fromIntegral :: Integer -> SWord8)   . round0) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToWord16",  show x, (fromSFloat sRNE :: SFloat -> SWord16)  (literal x), ((fromIntegral :: Integer -> SWord16)  . round0) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToWord32",  show x, (fromSFloat sRNE :: SFloat -> SWord32)  (literal x), ((fromIntegral :: Integer -> SWord32)  . round0) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToWord64",  show x, (fromSFloat sRNE :: SFloat -> SWord64)  (literal x), ((fromIntegral :: Integer -> SWord64)  . round0) x) | x <- fs]
-                 ++ map cvtTest  [("fromFP_Float_ToFloat",   show x, (fromSFloat sRNE :: SFloat -> SFloat)   (literal x),                                          literal x) | x <- fs]
-                 ++ map cvtTest  [("fromFP_Float_ToDouble",  show x, (fromSFloat sRNE :: SFloat -> SDouble)  (literal x),                               (literal .  fp2fp) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToInteger", show x, (fromSFloat sRNE :: SFloat -> SInteger) (literal x), ((fromIntegral :: Integer -> SInteger) . round0) x) | x <- fs]
-                 ++ map cvtTestI [("fromFP_Float_ToReal",    show x, (fromSFloat sRNE :: SFloat -> SReal)    (literal x),                          (fromRational . ratio0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToInt8",    show x, (fromSFloat sRNE :: SFloat -> SInt8)    (literal x), ((fromIntegral :: Integer -> SInt8)    . fpRound0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToInt16",   show x, (fromSFloat sRNE :: SFloat -> SInt16)   (literal x), ((fromIntegral :: Integer -> SInt16)   . fpRound0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToInt32",   show x, (fromSFloat sRNE :: SFloat -> SInt32)   (literal x), ((fromIntegral :: Integer -> SInt32)   . fpRound0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToInt64",   show x, (fromSFloat sRNE :: SFloat -> SInt64)   (literal x), ((fromIntegral :: Integer -> SInt64)   . fpRound0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToWord8",   show x, (fromSFloat sRNE :: SFloat -> SWord8)   (literal x), ((fromIntegral :: Integer -> SWord8)   . fpRound0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToWord16",  show x, (fromSFloat sRNE :: SFloat -> SWord16)  (literal x), ((fromIntegral :: Integer -> SWord16)  . fpRound0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToWord32",  show x, (fromSFloat sRNE :: SFloat -> SWord32)  (literal x), ((fromIntegral :: Integer -> SWord32)  . fpRound0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToWord64",  show x, (fromSFloat sRNE :: SFloat -> SWord64)  (literal x), ((fromIntegral :: Integer -> SWord64)  . fpRound0) x) | x <- fs]
+                 ++ map cvtTest  [("fromFP_Float_ToFloat",   show x, (fromSFloat sRNE :: SFloat -> SFloat)   (literal x),                                            literal x) | x <- fs]
+                 ++ map cvtTest  [("fromFP_Float_ToDouble",  show x, (fromSFloat sRNE :: SFloat -> SDouble)  (literal x),                                 (literal .  fp2fp) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToInteger", show x, (fromSFloat sRNE :: SFloat -> SInteger) (literal x), ((fromIntegral :: Integer -> SInteger) . fpRound0) x) | x <- fs]
+                 ++ map cvtTestI [("fromFP_Float_ToReal",    show x, (fromSFloat sRNE :: SFloat -> SReal)    (literal x),                          (fromRational . fpRatio0) x) | x <- fs]
 
-                 ++ map cvtTestI [("fromFP_Double_ToInt8",    show x, (fromSDouble sRNE :: SDouble -> SInt8)    (literal x), ((fromIntegral :: Integer -> SInt8)    . round0) x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToInt16",   show x, (fromSDouble sRNE :: SDouble -> SInt16)   (literal x), ((fromIntegral :: Integer -> SInt16)   . round0) x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToInt32",   show x, (fromSDouble sRNE :: SDouble -> SInt32)   (literal x), ((fromIntegral :: Integer -> SInt32)   . round0) x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToInt64",   show x, (fromSDouble sRNE :: SDouble -> SInt64)   (literal x), ((fromIntegral :: Integer -> SInt64)   . round0) x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToWord8",   show x, (fromSDouble sRNE :: SDouble -> SWord8)   (literal x), ((fromIntegral :: Integer -> SWord8)   . round0) x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToWord16",  show x, (fromSDouble sRNE :: SDouble -> SWord16)  (literal x), ((fromIntegral :: Integer -> SWord16)  . round0) x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToWord32",  show x, (fromSDouble sRNE :: SDouble -> SWord32)  (literal x), ((fromIntegral :: Integer -> SWord32)  . round0) x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToWord64",  show x, (fromSDouble sRNE :: SDouble -> SWord64)  (literal x), ((fromIntegral :: Integer -> SWord64)  . round0) x) | x <- ds]
-                 ++ map cvtTest  [("fromFP_Double_ToFloat",   show x, (fromSDouble sRNE :: SDouble -> SFloat)   (literal x),                              (literal  .  fp2fp) x) | x <- ds]
-                 ++ map cvtTest  [("fromFP_Double_ToDouble",  show x, (fromSDouble sRNE :: SDouble -> SDouble)  (literal x),                                          literal x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToInteger", show x, (fromSDouble sRNE :: SDouble -> SInteger) (literal x), ((fromIntegral :: Integer -> SInteger) . round0) x) | x <- ds]
-                 ++ map cvtTestI [("fromFP_Double_ToReal",    show x, (fromSDouble sRNE :: SDouble -> SReal)    (literal x),                          (fromRational . ratio0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToInt8",    show x, (fromSDouble sRNE :: SDouble -> SInt8)    (literal x), ((fromIntegral :: Integer -> SInt8)    . fpRound0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToInt16",   show x, (fromSDouble sRNE :: SDouble -> SInt16)   (literal x), ((fromIntegral :: Integer -> SInt16)   . fpRound0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToInt32",   show x, (fromSDouble sRNE :: SDouble -> SInt32)   (literal x), ((fromIntegral :: Integer -> SInt32)   . fpRound0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToInt64",   show x, (fromSDouble sRNE :: SDouble -> SInt64)   (literal x), ((fromIntegral :: Integer -> SInt64)   . fpRound0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToWord8",   show x, (fromSDouble sRNE :: SDouble -> SWord8)   (literal x), ((fromIntegral :: Integer -> SWord8)   . fpRound0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToWord16",  show x, (fromSDouble sRNE :: SDouble -> SWord16)  (literal x), ((fromIntegral :: Integer -> SWord16)  . fpRound0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToWord32",  show x, (fromSDouble sRNE :: SDouble -> SWord32)  (literal x), ((fromIntegral :: Integer -> SWord32)  . fpRound0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToWord64",  show x, (fromSDouble sRNE :: SDouble -> SWord64)  (literal x), ((fromIntegral :: Integer -> SWord64)  . fpRound0) x) | x <- ds]
+                 ++ map cvtTest  [("fromFP_Double_ToFloat",   show x, (fromSDouble sRNE :: SDouble -> SFloat)   (literal x),                                (literal  .  fp2fp) x) | x <- ds]
+                 ++ map cvtTest  [("fromFP_Double_ToDouble",  show x, (fromSDouble sRNE :: SDouble -> SDouble)  (literal x),                                            literal x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToInteger", show x, (fromSDouble sRNE :: SDouble -> SInteger) (literal x), ((fromIntegral :: Integer -> SInteger) . fpRound0) x) | x <- ds]
+                 ++ map cvtTestI [("fromFP_Double_ToReal",    show x, (fromSDouble sRNE :: SDouble -> SReal)    (literal x),                          (fromRational . fpRatio0) x) | x <- ds]
 
                  ++ map cvtTest  [("reinterp_Word32_Float",  show x, sWord32AsSFloat  (literal x), literal (DB.wordToFloat  x)) | x <- w32s]
                  ++ map cvtTest  [("reinterp_Word64_Double", show x, sWord64AsSDouble (literal x), literal (DB.wordToDouble x)) | x <- w64s]
@@ -398,7 +398,7 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                   | nm == "fpIsPositiveZero" && isNegativeZero x = (nm, (show x, True))
                   | True                                         = (nm, (show x, Just v == unliteral sv))
         predicates :: IEEEFloating a => [(String, SBV a -> SBool, a -> Bool)]
-        predicates = [ ("fpIsNormal",       fpIsNormal,        isNormalized)
+        predicates = [ ("fpIsNormal",       fpIsNormal,        fpIsNormalizedH)
                      , ("fpIsSubnormal",    fpIsSubnormal,     isDenormalized)
                      , ("fpIsZero",         fpIsZero,          (== 0))
                      , ("fpIsInfinite",     fpIsInfinite,      isInfinite)
@@ -409,7 +409,6 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                      , ("fpIsPositiveZero", fpIsPositiveZero,  \x -> x == 0 && not (isNegativeZero x))
                      , ("fpIsPoint",        fpIsPoint,         \x -> not (isNaN x || isInfinite x))
                      ]
-            where isNormalized x = not (isDenormalized x || isInfinite x || isNaN x)
 
 -- Concrete test data
 xsSigned, xsUnsigned :: (Num a, Enum a, Bounded a) => [a]
