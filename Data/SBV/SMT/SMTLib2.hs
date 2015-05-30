@@ -534,7 +534,7 @@ handleFPCast kFrom kTo rm a
    | KUnbounded `elem` [kFrom, kTo]
    = "(" ++ cast kFrom kTo ++ ")"
    | True
-   = "(" ++ cast  kFrom kTo ++ " " ++ a ++ ")"
+   = "(" ++ cast kFrom kTo ++ " " ++ a ++ ")"
   where addRM s = s ++ " " ++ rm
 
         -- To go and back from Ints, we detour through reals
