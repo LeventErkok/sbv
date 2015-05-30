@@ -32,20 +32,22 @@ fpRatio0 x
 -- The discrepancy with x86 is that given +0/-0, x86 returns the second argument; SMTLib returns +0
 fpMaxH :: RealFloat a => a -> a -> a
 fpMaxH x y
-   | isNaN x              = y
-   | isNaN y              = x
-   | (x == 0) && (y == 0) = 0   -- Corresponds to SMTLib. For x86 semantics, we'd return 'y' here. (Matters when x=+0, y=-0 or vice versa)
-   | x > y                = x
-   | True                 = y
+   | isNaN x                              = y
+   | isNaN y                              = x
+   | isNegativeZero x && isNegativeZero y = -0.0
+   | (x == 0) && (y == 0)                 =  0.0   -- Corresponds to SMTLib. For x86 semantics, we'd return 'y' here. (Matters when x=+0, y=-0 or vice versa)
+   | x > y                                = x
+   | True                                 = y
 
 -- | SMTLib compliant definition for 'fpMin'. See the comments for 'fpMax'.
 fpMinH :: RealFloat a => a -> a -> a
 fpMinH x y
-   | isNaN x              = y
-   | isNaN y              = x
-   | (x == y) && (y == 0) = 0   -- Corresponds to SMTLib. For x86 semantics, we'd return 'y' here. (Matters when x=+0, y=-0 or vice versa)
-   | x < y                = x
-   | True                 = y
+   | isNaN x                              = y
+   | isNaN y                              = x
+   | isNegativeZero x && isNegativeZero y = -0.0
+   | (x == y) && (y == 0)                 =  0.0   -- Corresponds to SMTLib. For x86 semantics, we'd return 'y' here. (Matters when x=+0, y=-0 or vice versa)
+   | x < y                                = x
+   | True                                 = y
 
 -- | Convert double to float and back. Essentially @fromRational . toRational@
 -- except careful on NaN, Infinities, and -0.
