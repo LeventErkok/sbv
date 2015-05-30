@@ -3,11 +3,14 @@ it works with latest releases of each of these tools, newer versions can exhibit
 report any issues you might see with newer releases.
 
   * ABC:
-      * TBD
+      * https://bitbucket.org/alanmi/abc
+      * Version 1.01
+      * Last tested: April 27, 2015
+      * Note: SMT-Lib support in ABC is fairly new. SBV uses the latest from the repo above.
   * Boolector:
       * http://fmv.jku.at/boolector/
       * Version 2.0.7
-      * Last Tested: May 27, 2015
+      * Last tested: May 27, 2015
   * CVC4:
       * TBD
   * MathSAT:
@@ -15,4 +18,7 @@ report any issues you might see with newer releases.
   * Yices:
       * TBD
   * Z3:
-      * TBD
+      * https://github.com/Z3Prover/z3
+      * Version 4.4.0
+      * Last tested: May 30, 2015
+      * Note: For floating-point logic, SBV uses the unstable-branch
