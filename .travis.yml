@@ -19,15 +19,15 @@ before_install:
       travis_retry sudo apt-get install ghc-$GHCVER
       export PATH=/opt/ghc/$GHCVER/bin:$PATH
     fi
-  - $CABAL update
+  - cabal update
 
 install:
-  - $CABAL install --dependencies-only --enable-tests
-  - $CABAL configure
+  - cabal install --dependencies-only --enable-tests
+  - cabal configure
 
 script:
-  - $CABAL build
-  - $CABAL test --show-details=always
+  - cabal build
+  - cabal test --show-details=always
   - cabal sdist
   - export SRC_TGZ=$(cabal info . | awk '{print $2 ".tar.gz";exit}') ;
     cd dist/;
