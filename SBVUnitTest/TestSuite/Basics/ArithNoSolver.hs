@@ -272,11 +272,8 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                                ++ floatRun1M  "fpRoundToIntegral" fpRoundToIntegralH fpRoundToIntegral comb1
                                ++ doubleRun1M "fpRoundToIntegral" fpRoundToIntegralH fpRoundToIntegral comb1
 
-                               -- Temporarily only run signum on NaNs; due to GHC bug https://ghc.haskell.org/trac/ghc/ticket/7858
-                               -- Note that this bug is actually already fixed in GHC 7.10 and hence this restriction is not necessary
-                               -- anymore; but Travis-CI is yet to get GHC 7.10 installed. I'm tracking this in Github issue #168.
-                               ++ floatRun1NoNAN  "signum"             signum             signum            comb1
-                               ++ doubleRun1NoNAN "signum"             signum             signum            comb1
+                               ++ floatRun1   "signum"            signum             signum            comb1
+                               ++ doubleRun1  "signum"            signum             signum            comb1
 
         -- TODO. Can't possibly test fma, unless we FFI out to C. Leave it out for the time being
         fpTests2 = map mkTest2 $  floatRun2M  "fpAdd"           (+)              fpAdd           comb
@@ -360,10 +357,6 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
 
                  ++ map cvtTestI [("reinterp_Float_Word32",  show x, sFloatAsSWord32  (sWord32AsSFloat  (literal x)) (literal x), literal true) | x <- w32s]
                  ++ map cvtTestI [("reinterp_Double_Word64", show x, sDoubleAsSWord64 (sWord64AsSDouble (literal x)) (literal x), literal true) | x <- w64s]
-
-        -- Only used to work-around a Travis Bug; see above note.
-        floatRun1NoNAN   nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- fs, not (isNaN x)]
-        doubleRun1NoNAN  nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- ds, not (isNaN x)]
 
         floatRun1   nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- fs]
         doubleRun1  nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- ds]
