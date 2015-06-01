@@ -10,7 +10,6 @@
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -fno-warn-orphans   #-}
-{-# LANGUAGE CPP                    #-}
 {-# LANGUAGE TypeSynonymInstances   #-}
 {-# LANGUAGE BangPatterns           #-}
 {-# LANGUAGE PatternGuards          #-}
@@ -68,11 +67,7 @@ import Data.SBV.BitVectors.Operations
 -- We should really use FiniteBitSize for SBV which would make things better. In the interim, just work
 -- around pesky warnings..
 ghcBitSize :: Bits a => a -> Int
-#if __GLASGOW_HASKELL__ >= 708
-ghcBitSize x = maybe (error "SBV.ghcBitSize: Unexpected non-finite usage!") id (bitSizeMaybe x)
-#else
-ghcBitSize = bitSize
-#endif
+ghcBitSize x = fromMaybe (error "SBV.ghcBitSize: Unexpected non-finite usage!") (bitSizeMaybe x)
 
 mkSymOpSC :: (SW -> SW -> Maybe SW) -> Op -> State -> Kind -> SW -> SW -> IO SW
 mkSymOpSC shortCut op st k a b = maybe (newExpr st k (SBVApp op [a, b])) return (shortCut a b)
@@ -576,31 +571,33 @@ lift2FNS nm f sv1 sv2
 -- NB. In the optimizations below, use of -1 is valid as
 -- -1 has all bits set to True for both signed and unsigned values
 instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
-  SBV x .&. SBV y = SBV (svAnd x y)
-  SBV x .|. SBV y = SBV (svOr x y)
-  SBV x `xor` SBV y = SBV (svXOr x y)
+  SBV x .&. SBV y    = SBV (svAnd x y)
+  SBV x .|. SBV y    = SBV (svOr x y)
+  SBV x `xor` SBV y  = SBV (svXOr x y)
   complement (SBV x) = SBV (svNot x)
-  bitSize  x = intSizeOf x
-#if __GLASGOW_HASKELL__ >= 708
-  bitSizeMaybe x = Just $ intSizeOf x
-#endif
-  isSigned x = hasSign x
-  bit i      = 1 `shiftL` i
-  setBit        x i = x .|. genLiteral (kindOf x) (bit i :: Integer)
-  clearBit      x i = x .&. genLiteral (kindOf x) (complement (bit i) :: Integer)
-  complementBit x i = x `xor` genLiteral (kindOf x) (bit i :: Integer)
-  shiftL  (SBV x) i = SBV (svShl x i)
-  shiftR  (SBV x) i = SBV (svShr x i)
-  rotateL (SBV x) i = SBV (svRol x i)
-  rotateR (SBV x) i = SBV (svRor x i)
+  bitSize  x         = intSizeOf x
+  bitSizeMaybe x     = Just $ intSizeOf x
+  isSigned x         = hasSign x
+  bit i              = 1 `shiftL` i
+  setBit        x i  = x .|. genLiteral (kindOf x) (bit i :: Integer)
+  clearBit      x i  = x .&. genLiteral (kindOf x) (complement (bit i) :: Integer)
+  complementBit x i  = x `xor` genLiteral (kindOf x) (bit i :: Integer)
+  shiftL  (SBV x) i  = SBV (svShl x i)
+  shiftR  (SBV x) i  = SBV (svShr x i)
+  rotateL (SBV x) i  = SBV (svRol x i)
+  rotateR (SBV x) i  = SBV (svRor x i)
   -- NB. testBit is *not* implementable on non-concrete symbolic words
   x `testBit` i
-    | SBV (SVal _ (Left (CW _ (CWInteger n)))) <- x = testBit n i
-    | True                 = error $ "SBV.testBit: Called on symbolic value: " ++ show x ++ ". Use sbvTestBit instead."
+    | SBV (SVal _ (Left (CW _ (CWInteger n)))) <- x
+    = testBit n i
+    | True
+    = error $ "SBV.testBit: Called on symbolic value: " ++ show x ++ ". Use sbvTestBit instead."
   -- NB. popCount is *not* implementable on non-concrete symbolic words
   popCount x
-    | SBV (SVal _ (Left (CW (KBounded _ w) (CWInteger n)))) <- x = popCount (n .&. (bit w - 1))
-    | True                                                       = error $ "SBV.popCount: Called on symbolic value: " ++ show x ++ ". Use sbvPopCount instead."
+    | SBV (SVal _ (Left (CW (KBounded _ w) (CWInteger n)))) <- x
+    = popCount (n .&. (bit w - 1))
+    | True
+    = error $ "SBV.popCount: Called on symbolic value: " ++ show x ++ ". Use sbvPopCount instead."
 
 -- | Replacement for 'testBit'. Since 'testBit' requires a 'Bool' to be returned,
 -- we cannot implement it for symbolic words. Index 0 is the least-significant bit.

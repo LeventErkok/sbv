@@ -27,6 +27,7 @@
 -- Who owns the fish?
 ------------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -36,49 +37,19 @@ import Data.Generics
 import Data.SBV
 
 -- | Colors of houses
-data Color       = Red      | Green    | White      | Yellow    | Blue   deriving (Show, Read, Data, Typeable, Eq, Ord)
+data Color       = Red      | Green    | White      | Yellow    | Blue   deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
 
 -- | Nationalities of the occupants
-data Nationality = Briton   | Dane     | Swede      | Norwegian | German deriving (Show, Read, Data, Typeable, Eq, Ord)
+data Nationality = Briton   | Dane     | Swede      | Norwegian | German deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
 
 -- | Beverage choices
-data Beverage    = Tea      | Coffee   | Milk       | Beer      | Water  deriving (Show, Read, Data, Typeable, Eq, Ord)
+data Beverage    = Tea      | Coffee   | Milk       | Beer      | Water  deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
 
 -- | Pets they keep
-data Pet         = Dog      | Horse    | Cat        | Bird      | Fish   deriving (Show, Read, Data, Typeable, Eq, Ord)
+data Pet         = Dog      | Horse    | Cat        | Bird      | Fish   deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
 
 -- | Sports they engage in
-data Sport       = Football | Baseball | Volleyball | Hockey    | Tennis deriving (Show, Read, Data, Typeable, Eq, Ord)
-
--- | 'SymWord' instance. With GHC 7.10; we'll be able to derive this automatically
-instance SymWord Color
-
--- | 'HasKind' instance. With GHC 7.10; we'll be able to derive this automatically
-instance HasKind Color
-
--- | 'SymWord' instance. With GHC 7.10; we'll be able to derive this automatically
-instance SymWord Nationality
-
--- | 'HasKind' instance. With GHC 7.10; we'll be able to derive this automatically
-instance HasKind Nationality
-
--- | 'SymWord' instance. With GHC 7.10; we'll be able to derive this automatically
-instance SymWord Beverage
-
--- | 'HasKind' instance. With GHC 7.10; we'll be able to derive this automatically
-instance HasKind Beverage
-
--- | 'SymWord' instance. With GHC 7.10; we'll be able to derive this automatically
-instance SymWord Pet
-
--- | 'HasKind' instance. With GHC 7.10; we'll be able to derive this automatically
-instance HasKind Pet
-
--- | 'SymWord' instance. With GHC 7.10; we'll be able to derive this automatically
-instance SymWord Sport
-
--- | 'HasKind' instance. With GHC 7.10; we'll be able to derive this automatically
-instance HasKind Sport
+data Sport       = Football | Baseball | Volleyball | Hockey    | Tennis deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
 
 -- | We have:
 --

@@ -10,7 +10,6 @@
 -- used with SBV.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                   #-}
 {-# LANGUAGE DeriveDataTypeable    #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -94,9 +93,7 @@ instance Bits Word4 where
   Word4 x `rotate` i    = word4 (x `shiftL` k .|. x `shiftR` (4-k))
                             where k = i .&. 3
   bitSize _             = 4
-#if __GLASGOW_HASKELL__ >= 708
   bitSizeMaybe _        = Just 4
-#endif
   isSigned _            = False
   testBit (Word4 x)     = testBit x
   bit i                 = word4 (bit i)

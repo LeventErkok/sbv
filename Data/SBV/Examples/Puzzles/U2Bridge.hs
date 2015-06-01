@@ -9,9 +9,10 @@
 -- The famous U2 bridge crossing puzzle: <http://www.brainj.net/puzzle.php?id=u2>
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveAnyClass       #-}
+{-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE DeriveDataTypeable   #-}
 
 module Data.SBV.Examples.Puzzles.U2Bridge where
 
@@ -27,17 +28,7 @@ import Data.SBV
 
 -- | U2 band members. We want to translate this to SMT-Lib
 -- as a data-type, and hence the deriving mechanism.
-data U2Member = Bono | Edge | Adam | Larry
-              deriving (Data, Typeable, Ord, Eq, Read, Show)
-
--- | Make 'U2Member' a valid symbolic element. In GHC 7.10; we'll be able to derive this automatically.
-instance SymWord  U2Member
-
--- | Make 'U2Member' have a default kind. In GHC 7.10; we'll be able to derive this automatically.
-instance HasKind  U2Member
-
--- | Make 'U2Member' part of model-generation facilities. In GHC 7.10; we'll be able to derive this automatically.
-instance SatModel U2Member
+data U2Member = Bono | Edge | Adam | Larry deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind, SatModel)
 
 -- | Symbolic shorthand for a 'U2Member'
 type SU2Member = SBV U2Member
@@ -67,17 +58,7 @@ sCrossTime m =   ite (m .== bono) (literal (crossTime Bono))
                                   (literal (crossTime Larry)) -- Must be Larry
 
 -- | Location of the flash
-data Location = Here | There
-              deriving (Data, Typeable, Ord, Eq, Read, Show)
-
--- | Make 'Location' a valid symbolic element. In GHC 7.10; we'll be able to derive this automatically.
-instance SymWord  Location
-
--- | Make 'Location' have a default kind. In GHC 7.10; we'll be able to derive this automatically.
-instance HasKind  Location
-
--- | Make 'Location' part of model-generation facilities. In GHC 7.10; we'll be able to derive this automatically.
-instance SatModel Location
+data Location = Here | There deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind, SatModel)
 
 -- | Symbolic variant of 'Location'
 type SLocation = SBV Location

@@ -105,11 +105,7 @@
 -- get in touch if there is a solver you'd like to see included.
 ---------------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                  #-}
 {-# LANGUAGE FlexibleInstances    #-}
-#if __GLASGOW_HASKELL__ < 710
-{-# LANGUAGE OverlappingInstances #-}
-#endif
 
 module Data.SBV (
   -- * Programming with symbolic values
@@ -398,96 +394,45 @@ infix 4 ===
 class Equality a where
   (===) :: a -> a -> IO ThmResult
 
-instance
-#if __GLASGOW_HASKELL__ >= 710
- {-# OVERLAPPABLE #-}
-#endif
- (SymWord a, EqSymbolic z) => Equality (SBV a -> z) where
+instance {-# OVERLAPPABLE #-} (SymWord a, EqSymbolic z) => Equality (SBV a -> z) where
   k === l = prove $ \a -> k a .== l a
 
-instance
-#if __GLASGOW_HASKELL__ >= 710
- {-# OVERLAPPABLE #-}
-#endif
-
- (SymWord a, SymWord b, EqSymbolic z) => Equality (SBV a -> SBV b -> z) where
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, EqSymbolic z) => Equality (SBV a -> SBV b -> z) where
   k === l = prove $ \a b -> k a b .== l a b
 
-instance
-#if __GLASGOW_HASKELL__ >= 710
-  {-# OVERLAPPABLE #-}
-#endif
- (SymWord a, SymWord b, EqSymbolic z) => Equality ((SBV a, SBV b) -> z) where
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, EqSymbolic z) => Equality ((SBV a, SBV b) -> z) where
   k === l = prove $ \a b -> k (a, b) .== l (a, b)
 
-instance
-#if __GLASGOW_HASKELL__ >= 710
- {-# OVERLAPPABLE #-}
-#endif
- (SymWord a, SymWord b, SymWord c, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> z) where
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> z) where
   k === l = prove $ \a b c -> k a b c .== l a b c
 
-instance
-#if __GLASGOW_HASKELL__ >= 710
- {-# OVERLAPPABLE #-}
-#endif
- (SymWord a, SymWord b, SymWord c, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c) -> z) where
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c) -> z) where
   k === l = prove $ \a b c -> k (a, b, c) .== l (a, b, c)
 
-instance
-#if __GLASGOW_HASKELL__ >= 710
- {-# OVERLAPPABLE #-}
-#endif
- (SymWord a, SymWord b, SymWord c, SymWord d, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> z) where
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> z) where
   k === l = prove $ \a b c d -> k a b c d .== l a b c d
 
-instance
-#if __GLASGOW_HASKELL__ >= 710
- {-# OVERLAPPABLE #-}
-#endif
- (SymWord a, SymWord b, SymWord c, SymWord d, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d) -> z) where
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d) -> z) where
   k === l = prove $ \a b c d -> k (a, b, c, d) .== l (a, b, c, d)
 
-instance
-#if __GLASGOW_HASKELL__ >= 710
- {-# OVERLAPPABLE #-}
-#endif
- (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> z) where
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> z) where
   k === l = prove $ \a b c d e -> k a b c d e .== l a b c d e
 
-instance
-#if __GLASGOW_HASKELL__ >= 710
- {-# OVERLAPPABLE #-}
-#endif
- (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e) -> z) where
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e) -> z) where
   k === l = prove $ \a b c d e -> k (a, b, c, d, e) .== l (a, b, c, d, e)
 
-instance
-#if __GLASGOW_HASKELL__ >= 710
- {-# OVERLAPPABLE #-}
-#endif
- (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> z) where
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> z) where
   k === l = prove $ \a b c d e f -> k a b c d e f .== l a b c d e f
 
-instance
-#if __GLASGOW_HASKELL__ >= 710
- {-# OVERLAPPABLE #-}
-#endif
+instance {-# OVERLAPPABLE #-}
  (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> z) where
   k === l = prove $ \a b c d e f -> k (a, b, c, d, e, f) .== l (a, b, c, d, e, f)
 
-instance
-#if __GLASGOW_HASKELL__ >= 710
- {-# OVERLAPPABLE #-}
-#endif
+instance {-# OVERLAPPABLE #-}
  (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV g -> z) where
   k === l = prove $ \a b c d e f g -> k a b c d e f g .== l a b c d e f g
 
-instance
-#if __GLASGOW_HASKELL__ >= 710
- {-# OVERLAPPABLE #-}
-#endif
- (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> z) where
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> z) where
   k === l = prove $ \a b c d e f g -> k (a, b, c, d, e, f, g) .== l (a, b, c, d, e, f, g)
 
 -- Haddock section documentation
@@ -818,19 +763,13 @@ Users can introduce new uninterpreted sorts simply by defining a data-type in Ha
 following example demonstrates:
 
   @
-     data B = B () deriving (Eq, Ord, Data, Typeable, Read, Show)
+     data B = B () deriving (Eq, Ord, Show, Read, Data)
      instance SymWord  B
      instance HasKind  B
      instance SatModel B  -- required only if 'getModel' etc. is used.
   @
 
 (Note that you'll also need to use the language pragma @DeriveDataTypeable@, and import @Data.Generics@ for the above to work.) 
-
-Once GHC implements derivable user classes (<http://hackage.haskell.org/trac/ghc/ticket/5462>), we will be able to simplify this to:
-
-  @
-     data B = B () deriving (Eq, Ord, Data, Typeable, Read, Show, SymWord, HasKind)
-  @
 
 This is all it takes to introduce 'B' as an uninterpreted sort in SBV, which makes the type @SBV B@ automagically become available as the type
 of symbolic values that ranges over 'B' values. Note that the @()@ argument is important to distinguish it from enumerations.
@@ -844,10 +783,7 @@ If the uninterpreted sort definition takes the form of an enumeration (i.e., a s
 translate that as just such a data-type to SMT-Lib, and will use the constructors as the inhabitants of the said sort. A simple example is:
 
   @
-    data X = A | B | C deriving (Eq, Ord, Data, Typeable, Read, Show)
-    instance SymWord X
-    instance HasKind X
-    instance SatModel X
+    data X = A | B | C deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind, SatModel)
   @
 
 Now, the user can define

@@ -9,7 +9,6 @@
 -- Implementation of polynomial arithmetic
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                  #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE PatternGuards        #-}
@@ -19,7 +18,7 @@ module Data.SBV.Tools.Polynomial (Polynomial(..), crc, crcBV, ites, mdp, addPoly
 
 import Data.Bits  (Bits(..))
 import Data.List  (genericTake)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.Word  (Word8, Word16, Word32, Word64)
 
 import Data.SBV.BitVectors.Data
@@ -101,11 +100,7 @@ sp st a
  | True    = foldr (\x y -> sh x ++ " + " ++ y) (sh (last cs)) (init cs) ++ t
  where t | st   = " :: GF(2^" ++ show n ++ ")"
          | True = ""
-#if __GLASGOW_HASKELL__ >= 708
-       n  = maybe (error "SBV.Polynomial.sp: Unexpected non-finite usage!") id (bitSizeMaybe a)
-#else
-       n  = bitSize a
-#endif
+       n  = fromMaybe (error "SBV.Polynomial.sp: Unexpected non-finite usage!") (bitSizeMaybe a)
        is = [n-1, n-2 .. 0]
        cs = map fst $ filter snd $ zip is (map (testBit a) is)
        sh 0 = "1"

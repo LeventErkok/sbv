@@ -17,7 +17,6 @@
 {-# LANGUAGE PatternGuards         #-}
 {-# LANGUAGE DefaultSignatures     #-}
 {-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE CPP                   #-}
 
 module Data.SBV.BitVectors.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
@@ -48,10 +47,6 @@ module Data.SBV.BitVectors.Data
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), getSBranchRunConfig
  , declNewSArray, declNewSFunArray
  ) where
-
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative  ((<$>))
-#endif
 
 import Control.DeepSeq      (NFData(..))
 import Control.Monad.Reader (ask)

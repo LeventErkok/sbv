@@ -11,13 +11,8 @@
 
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE CPP                        #-}
 
 module Data.SBV.Compilers.CodeGen where
-
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative  (Applicative)
-#endif
 
 import Control.Monad.Trans
 import Control.Monad.State.Lazy

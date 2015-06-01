@@ -5,6 +5,9 @@
 
 ### Version 4.5, Not yet released
 
+  * SBV now requires GHC 7.10.1 or newer to be compiled, taking advantage of newer features/bug-fixes
+    in GHC. If you really need SBV to compile with older GHCs, please get in touch.
+
   * Add Data.SBV.Examples.Puzzles.Birthday, which solves the Cheryl-Birthday problem that
     went viral in April 2015. Turns out really easy to solve for SMT, but the formalization
     of the problem is still interesting as an exercise in formal reasoning.

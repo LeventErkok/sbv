@@ -13,10 +13,9 @@
 -- purposes, such as efficiency, or reliability.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP #-}
-
 module Data.SBV.Examples.CodeGeneration.Uninterpreted where
 
+import Data.Maybe (fromMaybe)
 import Data.SBV
 
 -- | A definition of shiftLeft that can deal with variable length shifts.
@@ -37,13 +36,7 @@ shiftLeft = cgUninterpret "SBV_SHIFTLEFT" cCode hCode
         -- translated to SMTLib for verification purposes. This is good old Haskell
         -- code, as one would typically write.
         hCode x = select [x * literal (bit b) | b <- [0.. bs x - 1]] (literal 0)
-#if __GLASGOW_HASKELL__ >= 708
-        bs x = maybe (error "SBV.Example.CodeGeneration.Uninterpreted.shiftLeft: Unexpected non-finite usage!") id (bitSizeMaybe x)
-#else
-        bs = bitSize
-#endif
-
-
+        bs x = fromMaybe (error "SBV.Example.CodeGeneration.Uninterpreted.shiftLeft: Unexpected non-finite usage!") (bitSizeMaybe x)
 
 -- | Test function that uses shiftLeft defined above. When used as a normal Haskell function
 -- or in verification the definition is fully used, i.e., no uninterpretation happens. To wit,

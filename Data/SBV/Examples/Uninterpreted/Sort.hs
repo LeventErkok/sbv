@@ -22,13 +22,10 @@ import Data.SBV
 -- SBV will not translate it to an enumerated data-type
 data Q = Q () deriving (Eq, Ord, Data, Typeable, Read, Show)
 
--- | We need 'SymWord' and 'HasKind' instances, but default definitions
--- are always sufficient for uninterpreted sorts, so all we do is to
--- declare them as such. Note that, starting with GHC 7.6.1, we will
--- be able to simply derive these classes as well. (See <http://hackage.haskell.org/trac/ghc/ticket/5462>.)
+-- | SymWord instance, unfortunately, we can't just derive it due to the context
 instance SymWord Q
 
--- | 'HasKind' instance is again straightforward, no specific implementation needed.
+-- | SymWord instance, unfortunately, we can't just derive it due to the context
 instance HasKind Q
 
 -- | Declare an uninterpreted function that works over Q's
