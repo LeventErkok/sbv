@@ -12,7 +12,9 @@ report any issues you might see with newer releases.
       * Version 2.0.7
       * Last tested: May 27, 2015
   * CVC4:
-      * TBD
+      * http://cvc4.cs.nyu.edu/web/
+      * Version 1.4
+      * Last tested: May 31, 2015
   * MathSAT:
       * TBD
   * Yices:
