@@ -194,10 +194,8 @@ specifier cfg sw = case kindOf sw of
         specF CgLongDouble = text "%Lf"
 
 -- | Make a constant value of the given type. We don't check for out of bounds here, as it should not be needed.
---   There are many options here, using binary, decimal, etc. We simply
---   8-bit or less constants using decimal; otherwise we use hex.
---   Note that this automatically takes care of the boolean (1-bit) value problem, since it
---   shows the result as an integer, which is OK as far as C is concerned.
+--   There are many options here, using binary, decimal, etc. We simply use decimal for values 8-bits or less,
+--   and hex otherwise.
 mkConst :: CgConfig -> CW -> Doc
 mkConst cfg  (CW KReal (CWAlgReal (AlgRational _ r))) = double (fromRational r :: Double) <> sRealSuffix (fromJust (cgReal cfg))
   where sRealSuffix CgFloat      = text "F"
@@ -205,8 +203,9 @@ mkConst cfg  (CW KReal (CWAlgReal (AlgRational _ r))) = double (fromRational r :
         sRealSuffix CgLongDouble = text "L"
 mkConst cfg (CW KUnbounded       (CWInteger i)) = showSizedConst i (True, fromJust (cgInteger cfg))
 mkConst _   (CW (KBounded sg sz) (CWInteger i)) = showSizedConst i (sg,   sz)
-mkConst _   (CW KFloat (CWFloat f))             = text $ showCFloat f
-mkConst _   (CW KDouble (CWDouble d))           = text $ showCDouble d
+mkConst _   (CW KBool            (CWInteger i)) = showSizedConst i (False, 1)
+mkConst _   (CW KFloat           (CWFloat f))   = text $ showCFloat f
+mkConst _   (CW KDouble          (CWDouble d))  = text $ showCDouble d
 mkConst _   cw                                  = die $ "mkConst: " ++ show cw
 
 showSizedConst :: Integer -> (Bool, Int) -> Doc
