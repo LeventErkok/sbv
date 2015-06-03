@@ -12,6 +12,7 @@
 module Main(main) where
 
 import Control.Monad        (unless, when)
+import Data.Maybe           (isJust)
 import Data.List            (isInfixOf)
 import System.Directory     (doesDirectoryExist)
 import System.Environment   (getArgs)
@@ -36,13 +37,15 @@ main = do putStrLn $ "*** SBVUnitTester, version: " ++ showVersion version ++ ",
                          putStrLn "  -s: Skip constant-folding tests"
                          putStrLn "  -c: Create gold-files"
                          putStrLn "  -m: Do a wild-card match on targets"
+                         putStrLn "  -i: Do an inverse wild-card match on targets"
                          putStrLn "If targets are given, run those groups; except with the -m flag which matches test names."
             ["-l"] -> showTargets
             -- undocumented really
-            ("-c":ts) -> run (False, ts)   False True ["SBVUnitTest/GoldFiles"]
-            ("-s":ts) -> run (False, ts)   True  False []
-            ("-m":ts) -> run (True,  ts)   False False []
-            _         -> run (False, tgts) False False []
+            ("-c":ts) -> run (Nothing,     ts)   False True ["SBVUnitTest/GoldFiles"]
+            ("-s":ts) -> run (Nothing,     ts)   True  False []
+            ("-m":ts) -> run (Just False,  ts)   False False []
+            ("-i":ts) -> run (Just True,   ts)   False False []
+            _         -> run (Nothing,   tgts) False False []
 
 checkGoldDir :: FilePath -> IO ()
 checkGoldDir gd = do e <- doesDirectoryExist gd
@@ -58,8 +61,8 @@ showTargets :: IO ()
 showTargets = do putStrLn "Known test targets are:"
                  mapM_ (putStrLn . ("\t" ++))  allTargets
 
-run :: (Bool, [String]) -> Bool -> Bool -> [String] -> IO ()
-run (wcMatch, targets) skipCF shouldCreate [gd] =
+run :: (Maybe Bool, [String]) -> Bool -> Bool -> [String] -> IO ()
+run (mbWCMatch, targets) skipCF shouldCreate [gd] =
         do mapM_ checkTgt targets
            putStrLn $ "*** Starting SBV unit tests..\n*** Gold files at: " ++ show gd
            checkGoldDir gd
@@ -67,22 +70,23 @@ run (wcMatch, targets) skipCF shouldCreate [gd] =
            decide shouldCreate cts
   where mkTst (SBVTestSuite f) = pick $ f (generateGoldCheck gd shouldCreate)
           where pick :: Test -> [Test]
-                pick tst
-                 | not wcMatch = [tst]
-                 | True        = collect tst
-                 where collect (TestCase _)    = []
-                       collect (TestList ts)   = concatMap collect ts
-                       collect t@(TestLabel s _)
-                          | all (`isInfixOf` s) targets = [t]
-                          | True                        = []
+                pick tst = case mbWCMatch of
+                             Nothing       -> [tst]
+                             Just inverted -> collect tst
+                              where collect (TestCase _)    = []
+                                    collect (TestList ts)   = concatMap collect ts
+                                    collect t@(TestLabel s _)
+                                       | all (`isInfixOf` s) targets = [t | not inverted]
+                                       | True                        = [t |     inverted]
+        wcMode = isJust mbWCMatch
         select needsSolver tc
            | not included = False
            | shouldCreate = True
            | needsSolver  = True
            | True         = not skipCF
-          where included | wcMatch = True
-                         | True    = null targets || tc `elem` targets
-        checkTgt t | wcMatch             = return ()
+          where included | wcMode = True
+                         | True   = null targets || tc `elem` targets
+        checkTgt t | wcMode              = return ()
                    | t `elem` allTargets = return ()
                    | True                = do putStrLn $ "*** Unknown test target: " ++ show t
                                               exitWith $ ExitFailure 1
