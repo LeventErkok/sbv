@@ -30,6 +30,7 @@ Library
   other-extensions: BangPatterns
                     DefaultSignatures
                     DeriveDataTypeable
+                    DeriveAnyClass
                     FlexibleContexts
                     FlexibleInstances
                     FunctionalDependencies
