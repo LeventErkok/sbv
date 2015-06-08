@@ -125,8 +125,10 @@ instance Num AlgReal where
   signum      = lift1 "signum" signum
   fromInteger = AlgRational True . fromInteger
 
+-- |  NB: Following the other types we have, we require `a/0` to be `0` for all a.
 instance Fractional AlgReal where
-  (/)          = lift2 "/" (/)
+  (AlgRational True _) / (AlgRational True b) | b == 0 = 0
+  a                    / b                             = lift2 "/" (/) a b
   fromRational = AlgRational True
 
 instance Real AlgReal where

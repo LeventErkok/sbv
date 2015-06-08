@@ -529,8 +529,20 @@ b .^ e | isSigned e = error "(.^): exponentiation only works with unsigned expon
                                         (iterate (\x -> x*x) b)
 
 instance (SymWord a, Fractional a) => Fractional (SBV a) where
-  fromRational = literal . fromRational
-  SBV x / SBV y = SBV (svDivide x y)
+  fromRational  = literal . fromRational
+  SBV x / sy@(SBV y) | div0 = ite (sy .== 0) 0 res
+                     | True = res
+       where res  = SBV (svDivide x y)
+             -- Identify those kinds where we have a div-0 equals 0 exception
+             div0 = case kindOf sy of
+                      KFloat        -> False
+                      KDouble       -> False
+                      KReal         -> True
+                      -- Following two cases should not happen since these types should *not* be instances of Fractional
+                      k@KBounded{}  -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KUnbounded  -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KBool       -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KUserSort{} -> error $ "Unexpected Fractional case for: " ++ show k
 
 -- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat and SDouble
 -- Note that most of the fields are "undefined" for symbolic values, we add methods as they are supported by SMTLib.
