@@ -65,9 +65,9 @@ fp2fp x
 -- end of section 4.c.
 fpRemH :: RealFloat a => a -> a -> a
 fpRemH x y
-  | isInfinite y            = x
   | isInfinite x || isNaN x = 0 / 0
   | y == 0       || isNaN y = 0 / 0
+  | isInfinite y            = x
   | True                    = pSign (x - fromRational (fromInteger d * ry))
   where rx, ry, rd :: Rational
         rx = toRational x
