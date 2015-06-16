@@ -16,7 +16,9 @@ report any issues you might see with newer releases.
       * Version 1.4
       * Last tested: May 31, 2015
   * MathSAT:
-      * TBD
+      * http://mathsat.fbk.eu/
+      * Version 5.3.6
+      * Last tested: Jun 15, 2015
   * Yices:
       * TBD
   * Z3:

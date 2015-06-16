@@ -53,8 +53,8 @@ mathSAT = SMTSolver {
                                 , supportsUninterpretedSorts = True
                                 , supportsUnboundedInts      = True
                                 , supportsReals              = True
-                                , supportsFloats             = False
-                                , supportsDoubles            = False
+                                , supportsFloats             = True
+                                , supportsDoubles            = True
                                 }
          }
  where cont rm skolemMap = intercalate "\n" $ concatMap extract skolemMap
