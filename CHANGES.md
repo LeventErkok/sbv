@@ -8,20 +8,35 @@
   * SBV now requires GHC 7.10.1 or newer to be compiled, taking advantage of newer features/bug-fixes
     in GHC. If you really need SBV to compile with older GHCs, please get in touch.
 
-  * Add Data.SBV.Examples.Puzzles.Birthday, which solves the Cheryl-Birthday problem that
-    went viral in April 2015. Turns out really easy to solve for SMT, but the formalization
-    of the problem is still interesting as an exercise in formal reasoning.
+  * Backend solver related changes:
 
-  * Add Data.SBV.Examples.Puzzles.SendMoreMoney, which solves the classic send + more = money
-    problem. Really a trivial example, but included since it is pretty much the hello-world for
-    basic constraint solving.
+       * Yices: Upgraded to work with Yices release 2.3.1. Note that earlier versions of Yices
+         is *not* supported.
 
-  * Add Data.SBV.Examples.Puzzles.Fish, which solves a typical logic puzzle; finding the unique
-    solution to a set of assertions made about a bunch of people, their pets, beverage choices,
-    etc. Not particularly interesting, but could be fun to play around with for modeling purposes.
+       * Boolector: Upgraded to work with new Boolector release 2.0.7. Note that earlier versions
+         of Boolector is *not* supported.
+     
+       * MathSAT: Upgraded to work with latest release 5.3.6. Note that earlier versions of MathSAT
+         is *not* supported (due to a buffering issue in MathSAT itself.)
+     
+       * MathSAT: Enabled floating-point support in MathSAT.
+     
+  * New examples:
 
-  * Add Data.SBV.Examples.BitPrecise.MultMask, which demonstrates the use of the bitvector
-    solver to an interesting bit-shuffling problem.
+       * Add Data.SBV.Examples.Puzzles.Birthday, which solves the Cheryl-Birthday problem that
+         went viral in April 2015. Turns out really easy to solve for SMT, but the formalization
+         of the problem is still interesting as an exercise in formal reasoning.
+
+       * Add Data.SBV.Examples.Puzzles.SendMoreMoney, which solves the classic send + more = money
+         problem. Really a trivial example, but included since it is pretty much the hello-world for
+         basic constraint solving.
+
+       * Add Data.SBV.Examples.Puzzles.Fish, which solves a typical logic puzzle; finding the unique
+         solution to a set of assertions made about a bunch of people, their pets, beverage choices,
+         etc. Not particularly interesting, but could be fun to play around with for modeling purposes.
+
+       * Add Data.SBV.Examples.BitPrecise.MultMask, which demonstrates the use of the bitvector
+         solver to an interesting bit-shuffling problem.
 
   * Rework floating-point arithmetic, and add missing floating-point operations:
 
@@ -62,14 +77,6 @@
 
   * Add 'sbvExtractBits', which takes a list of indices to extract bits from, essentially
     equivalent to 'map sbvTestBit'.
-
-  * Boolector: Upgraded to work with new Boolector release 2.0.7. Note that earlier versions
-    of Boolector is *not* supported.
-
-  * MathSAT: Upgraded to work with latest release 5.3.6. Note that earlier versions of MathSAT
-    is *not* supported (due to a buffering issue in MathSAT itself.)
-
-  * MathSAT: Enabled floating-point support in MathSAT.
 
 ### Version 4.4, 2015-04-13
 

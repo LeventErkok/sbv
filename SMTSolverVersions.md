@@ -20,7 +20,9 @@ report any issues you might see with newer releases.
       * Version 5.3.6
       * Last tested: Jun 15, 2015
   * Yices:
-      * TBD
+      * http://yices.csl.sri.com/
+      * Version 2.3.1
+      * Last tested: Jun 17, 2015
   * Z3:
       * https://github.com/Z3Prover/z3
       * Version 4.4.0

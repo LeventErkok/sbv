@@ -80,7 +80,7 @@ cvc4 = mkConfig CVC4.cvc4 True []
 
 -- | Default configuration for the Yices SMT Solver.
 yices :: SMTConfig
-yices = mkConfig Yices.yices False []
+yices = mkConfig Yices.yices True []
 
 -- | Default configuration for the Z3 SMT solver
 z3 :: SMTConfig
