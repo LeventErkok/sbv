@@ -112,7 +112,6 @@ Library
                   , Data.SBV.Compilers.CodeGen
                   , Data.SBV.SMT.SMT
                   , Data.SBV.SMT.SMTLib
-                  , Data.SBV.SMT.SMTLib1
                   , Data.SBV.SMT.SMTLib2
                   , Data.SBV.Provers.Prover
                   , Data.SBV.Provers.SExpr

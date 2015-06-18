@@ -45,7 +45,7 @@ module Data.SBV.BitVectors.Symbolic
   , Logic(..), SMTLibLogic(..)
   , getTraceInfo, getConstraints
   , addSValConstraint
-  , SMTLibPgm(..), SMTLibVersion(..)
+  , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), getSBranchRunConfig
@@ -895,11 +895,15 @@ uncacheGen getCache (Cached f) st = do
                         r `seq` modifyIORef rCache (IMap.insertWith (++) h [(sn, r)])
                         return r
 
--- | Representation of SMTLib Program versions, currently we only know of versions 1 and 2.
--- (NB. Eventually, we should just drop SMTLib1.)
-data SMTLibVersion = SMTLib1
-                   | SMTLib2
-                   deriving Eq
+-- | Representation of SMTLib Program versions. As of June 2015, we're dropping support
+-- for SMTLib1, and supporting SMTLib2 only. We keep this data-type around in case
+-- SMTLib3 comes along and we want to support 2 and 3 simultaneously.
+data SMTLibVersion = SMTLib2
+                   deriving (Bounded, Enum, Eq, Show)
+
+-- | The extension associated with the version
+smtLibVersionExtension :: SMTLibVersion -> String
+smtLibVersionExtension SMTLib2 = "smt2"
 
 -- | Representation of an SMT-Lib program. In between pre and post goes the refuted models
 data SMTLibPgm = SMTLibPgm SMTLibVersion  ( [(String, SW)]          -- alias table
@@ -1043,7 +1047,7 @@ data SMTConfig = SMTConfig {
        , solverTweaks   :: [String]         -- ^ Additional lines of script to give to the solver (user specified)
        , satCmd         :: String           -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
        , smtFile        :: Maybe FilePath   -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
-       , useSMTLib2     :: Bool             -- ^ If True, we'll treat the solver as using SMTLib2 input format. Otherwise, SMTLib1
+       , smtLibVersion  :: SMTLibVersion    -- ^ What version of SMT-lib we use for the tool
        , solver         :: SMTSolver        -- ^ The actual SMT solver.
        , roundingMode   :: RoundingMode     -- ^ Rounding mode to use for floating-point conversions
        , useLogic       :: Maybe Logic      -- ^ If Nothing, pick automatically. Otherwise, either use the given one, or use the custom string.

@@ -9,13 +9,12 @@
 -- Conversion of symbolic programs to SMTLib format
 -----------------------------------------------------------------------------
 
-module Data.SBV.SMT.SMTLib(SMTLibPgm, SMTLibConverter, toSMTLib1, toSMTLib2, addNonEqConstraints, interpretSolverOutput, interpretSolverModelLine) where
+module Data.SBV.SMT.SMTLib(SMTLibPgm, SMTLibConverter, toSMTLib2, addNonEqConstraints, interpretSolverOutput, interpretSolverModelLine) where
 
 import Data.Char (isDigit)
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.Provers.SExpr
-import qualified Data.SBV.SMT.SMTLib1 as SMT1
 import qualified Data.SBV.SMT.SMTLib2 as SMT2
 
 import qualified Data.Set as Set (Set, member, toList)
@@ -39,12 +38,9 @@ type SMTLibConverter =  RoundingMode                -- ^ User selected rounding 
                      -> SW                          -- ^ output variable
                      -> SMTLibPgm
 
--- | Convert to SMTLib-1 format
-toSMTLib1 :: SMTLibConverter
-
 -- | Convert to SMTLib-2 format
 toSMTLib2 :: SMTLibConverter
-(toSMTLib1, toSMTLib2) = (cvt SMTLib1, cvt SMTLib2)
+toSMTLib2 = cvt SMTLib2
   where cvt v roundMode smtLogic solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out
          | KUnbounded `Set.member` kindInfo && not (supportsUnboundedInts solverCaps)
          = unsupported "unbounded integers"
@@ -63,7 +59,8 @@ toSMTLib2 :: SMTLibConverter
          where sorts = [s | KUserSort s _ <- Set.toList kindInfo]
                unsupported w = error $ "SBV: Given problem needs " ++ w ++ ", which is not supported by SBV for the chosen solver: " ++ capSolverName solverCaps
                aliasTable  = map (\(_, (x, y)) -> (y, x)) qinps
-               converter   = if v == SMTLib1 then SMT1.cvt else SMT2.cvt
+               converter   = case v of
+                               SMTLib2 -> SMT2.cvt
                (pre, post) = converter roundMode smtLogic solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out
                needsFloats  = KFloat  `Set.member` kindInfo
                needsDoubles = KDouble `Set.member` kindInfo
@@ -74,7 +71,6 @@ toSMTLib2 :: SMTLibConverter
 
 -- | Add constraints generated from older models, used for querying new models
 addNonEqConstraints :: RoundingMode -> [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
-addNonEqConstraints rm _qinps cs p@(SMTLibPgm SMTLib1 _) = SMT1.addNonEqConstraints rm cs p
 addNonEqConstraints rm  qinps cs p@(SMTLibPgm SMTLib2 _) = SMT2.addNonEqConstraints rm qinps cs p
 
 -- | Interpret solver output based on SMT-Lib standard output responses

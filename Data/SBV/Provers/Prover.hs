@@ -54,45 +54,45 @@ import qualified Data.SBV.Provers.MathSAT    as MathSAT
 import qualified Data.SBV.Provers.ABC        as ABC
 import Data.SBV.Utils.TDiff
 
-mkConfig :: SMTSolver -> Bool -> [String] -> SMTConfig
-mkConfig s isSMTLib2 tweaks = SMTConfig { verbose        = False
-                                        , timing         = False
-                                        , sBranchTimeOut = Nothing
-                                        , timeOut        = Nothing
-                                        , printBase      = 10
-                                        , printRealPrec  = 16
-                                        , smtFile        = Nothing
-                                        , solver         = s
-                                        , solverTweaks   = tweaks
-                                        , useSMTLib2     = isSMTLib2
-                                        , satCmd         = "(check-sat)"
-                                        , roundingMode   = RoundNearestTiesToEven
-                                        , useLogic       = Nothing
-                                        }
+mkConfig :: SMTSolver -> SMTLibVersion -> [String] -> SMTConfig
+mkConfig s smtVersion tweaks = SMTConfig { verbose        = False
+                                         , timing         = False
+                                         , sBranchTimeOut = Nothing
+                                         , timeOut        = Nothing
+                                         , printBase      = 10
+                                         , printRealPrec  = 16
+                                         , smtFile        = Nothing
+                                         , solver         = s
+                                         , solverTweaks   = tweaks
+                                         , smtLibVersion  = smtVersion
+                                         , satCmd         = "(check-sat)"
+                                         , roundingMode   = RoundNearestTiesToEven
+                                         , useLogic       = Nothing
+                                         }
 
 -- | Default configuration for the Boolector SMT solver
 boolector :: SMTConfig
-boolector = mkConfig Boolector.boolector True []
+boolector = mkConfig Boolector.boolector SMTLib2 []
 
 -- | Default configuration for the CVC4 SMT Solver.
 cvc4 :: SMTConfig
-cvc4 = mkConfig CVC4.cvc4 True []
+cvc4 = mkConfig CVC4.cvc4 SMTLib2 []
 
 -- | Default configuration for the Yices SMT Solver.
 yices :: SMTConfig
-yices = mkConfig Yices.yices True []
+yices = mkConfig Yices.yices SMTLib2 []
 
 -- | Default configuration for the Z3 SMT solver
 z3 :: SMTConfig
-z3 = mkConfig Z3.z3 True ["(set-option :smt.mbqi true) ; use model based quantifier instantiation"]
+z3 = mkConfig Z3.z3 SMTLib2 ["(set-option :smt.mbqi true) ; use model based quantifier instantiation"]
 
 -- | Default configuration for the MathSAT SMT solver
 mathSAT :: SMTConfig
-mathSAT = mkConfig MathSAT.mathSAT True []
+mathSAT = mkConfig MathSAT.mathSAT SMTLib2 []
 
 -- | Default configuration for the ABC synthesis and verification tool.
 abc :: SMTConfig
-abc = mkConfig ABC.abc True []
+abc = mkConfig ABC.abc SMTLib2 []
 
 -- | The default solver used by SBV. This is currently set to z3.
 defaultSMTCfg :: SMTConfig
@@ -303,49 +303,48 @@ isSatisfiable = isSatisfiableWith defaultSMTCfg
 
 -- | Compiles to SMT-Lib and returns the resulting program as a string. Useful for saving
 -- the result to a file for off-line analysis, for instance if you have an SMT solver that's not natively
--- supported out-of-the box by the SBV library. It takes two booleans:
+-- supported out-of-the box by the SBV library. It takes two arguments:
 --
---    * smtLib2: If 'True', will generate SMT-Lib2 output, otherwise SMT-Lib1 output
+--    * version: The SMTLib-version to produce. Note that we currently only support SMTLib2.
 --
 --    * isSat  : If 'True', will translate it as a SAT query, i.e., in the positive. If 'False', will
 --               translate as a PROVE query, i.e., it will negate the result. (In this case, the check-sat
 --               call to the SMT solver will produce UNSAT if the input is a theorem, as usual.)
-compileToSMTLib :: Provable a => Bool   -- ^ If True, output SMT-Lib2, otherwise SMT-Lib1
-                              -> Bool   -- ^ If True, translate directly, otherwise negate the goal. (Use True for SAT queries, False for PROVE queries.)
+compileToSMTLib :: Provable a => SMTLibVersion   -- ^ If True, output SMT-Lib2, otherwise SMT-Lib1
+                              -> Bool            -- ^ If True, translate directly, otherwise negate the goal. (Use True for SAT queries, False for PROVE queries.)
                               -> a
                               -> IO String
-compileToSMTLib smtLib2 isSat a = do
+compileToSMTLib version isSat a = do
         t <- getClockTime
         let comments = ["Created on " ++ show t]
-            cvt = if smtLib2 then toSMTLib2 else toSMTLib1
+            cvt = case version of
+                    SMTLib2 -> toSMTLib2
         (_, _, _, _, smtLibPgm) <- simulate cvt defaultSMTCfg isSat comments a
         let out = show smtLibPgm
-        return $ out ++ if smtLib2 -- append check-sat in case of smtLib2
-                        then "\n(check-sat)\n"
-                        else "\n"
+        return $ out ++ "\n(check-sat)\n"
 
--- | Create both SMT-Lib1 and SMT-Lib2 benchmarks. The first argument is the basename of the file,
--- SMT-Lib1 version will be written with suffix ".smt1" and SMT-Lib2 version will be written with
--- suffix ".smt2". The 'Bool' argument controls whether this is a SAT instance, i.e., translate the query
+-- | Create SMT-Lib benchmarks, for supported versions of SMTLib. The first argument is the basename of the file.
+-- The 'Bool' argument controls whether this is a SAT instance, i.e., translate the query
 -- directly, or a PROVE instance, i.e., translate the negated query. (See the second boolean argument to
 -- 'compileToSMTLib' for details.)
 generateSMTBenchmarks :: Provable a => Bool -> FilePath -> a -> IO ()
-generateSMTBenchmarks isSat f a = gen False smt1 >> gen True smt2
-  where smt1     = addExtension f "smt1"
-        smt2     = addExtension f "smt2"
-        gen b fn = do s <- compileToSMTLib b isSat a
-                      writeFile fn s
-                      putStrLn $ "Generated SMT benchmark " ++ show fn ++ "."
+generateSMTBenchmarks isSat f a = mapM_ gen [minBound .. maxBound]
+  where gen v = do s <- compileToSMTLib v isSat a
+                   let fn = f `addExtension` smtLibVersionExtension v
+                   writeFile fn s
+                   putStrLn $ "Generated " ++ show v ++ " benchmark " ++ show fn ++ "."
 
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
 proveWith config a = simulate cvt config False [] a >>= callSolver False "Checking Theoremhood.." ThmResult config
-  where cvt = if useSMTLib2 config then toSMTLib2 else toSMTLib1
+  where cvt = case smtLibVersion config of
+                SMTLib2 -> toSMTLib2
 
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
 satWith config a = simulate cvt config True [] a >>= callSolver True "Checking Satisfiability.." SatResult config
-  where cvt = if useSMTLib2 config then toSMTLib2 else toSMTLib1
+  where cvt = case smtLibVersion config of
+                SMTLib2 -> toSMTLib2
 
 -- | Check if a given definition is safe using the given solver configuration; i.e., if all 'sAssert' conditions can be proven to hold.
 safeWith :: SExecutable a => SMTConfig -> a -> IO SafeResult
@@ -368,7 +367,8 @@ isVacuousWith config a = do
            [] -> return False -- no constraints, no need to check
            _  -> do let is'  = [(EX, i) | (_, i) <- is] -- map all quantifiers to "exists" for the constraint check
                         res' = Result ki tr uic is' cs ts as uis ax asgn cstr [trueSW]
-                        cvt  = if useSMTLib2 config then toSMTLib2 else toSMTLib1
+                        cvt  = case smtLibVersion config of
+                                 SMTLib2 -> toSMTLib2
                     SatResult result <- runProofOn cvt config True [] res' >>= callSolver True "Checking Satisfiability.." SatResult config
                     case result of
                       Unsatisfiable{} -> return True  -- constraints are unsatisfiable!
@@ -380,7 +380,8 @@ isVacuousWith config a = do
 -- | Find all satisfying assignments using the given SMT-solver
 allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
 allSatWith config p = do
-        let converter = if useSMTLib2 config then toSMTLib2 else toSMTLib1
+        let converter  = case smtLibVersion config of
+                           SMTLib2 -> toSMTLib2
         msg "Checking Satisfiability, all solutions.."
         sbvPgm@(qinps, _, _, ki, _) <- simulate converter config True [] p
         let usorts = [s | us@(KUserSort s _) <- Set.toList ki, isFree us]
@@ -509,7 +510,8 @@ internalSATCheck cfg st cond msg = do
        -- forget about the quantifiers and just use an "exist", as we're looking for a
        -- point-satisfiability check here; whatever the original program was.
        pgm = Result ki tr uic [(EX, n) | (_, n) <- is] cs ts as uis ax asgn cstr [sw]
-       cvt = if useSMTLib2 cfg then toSMTLib2 else toSMTLib1
+       cvt = case smtLibVersion cfg of
+                SMTLib2 -> toSMTLib2
    runProofOn cvt cfg True [] pgm >>= callSolver True msg SatResult cfg
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

@@ -8,6 +8,12 @@
   * SBV now requires GHC 7.10.1 or newer to be compiled, taking advantage of newer features/bug-fixes
     in GHC. If you really need SBV to compile with older GHCs, please get in touch.
 
+  * SBV no longer supports SMTLib1. We now exclusively use SMTLib2 for communicating with backend
+    solvers. Strictly speaking, this means some loss in functionality: Uninterpreted-function models
+    that we supported via Yices-1 are no longer available. In practice this facility was not really
+    used, and required a very old version of Yices that was no longer supported by SRI and has
+    lacked in other features. So, in reality this change should hardly matter for end-users.
+
   * Backend solver related changes:
 
        * Yices: Upgraded to work with Yices release 2.3.1. Note that earlier versions of Yices
