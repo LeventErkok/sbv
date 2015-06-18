@@ -1085,7 +1085,7 @@ sBranch t a b
 sAssert :: Mergeable a => String -> SBool -> a -> a
 sAssert msg = sAssertCont msg defCont
   where defCont _   Nothing   = C.throw (SafeAlwaysFails  msg)
-        defCont cfg (Just md) = C.throw (SafeFailsInModel msg cfg (SMTModel (M.toList md) [] []))
+        defCont cfg (Just md) = C.throw (SafeFailsInModel msg cfg (SMTModel (M.toList md)))
 
 -- | Symbolic assert with a programmable continuation. Check that the given boolean condition is always true in the given path.
 -- Otherwise symbolic simulation will transfer the failing model to the given continuation. The

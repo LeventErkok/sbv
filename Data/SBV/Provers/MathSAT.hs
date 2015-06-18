@@ -72,10 +72,7 @@ mathSAT = SMTSolver {
 
 extractMap :: [NamedSymVar] -> [(String, UnintKind)] -> [String] -> SMTModel
 extractMap inps _modelMap solverLines =
-   SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps . cvt) solverLines
-            , modelUninterps = []
-            , modelArrays    = []
-            }
+   SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps . cvt) solverLines }
   where sortByNodeId :: [(Int, a)] -> [(Int, a)]
         sortByNodeId = sortBy (compare `on` fst)
         cvt :: String -> String

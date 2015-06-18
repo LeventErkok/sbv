@@ -947,7 +947,7 @@ instance NFData SMTResult where
   rnf (TimeOut _)         = ()
 
 instance NFData SMTModel where
-  rnf (SMTModel assocs unints uarrs) = rnf assocs `seq` rnf unints `seq` rnf uarrs `seq` ()
+  rnf (SMTModel assocs) = rnf assocs `seq` ()
 
 instance NFData SMTScript where
   rnf (SMTScript b m) = rnf b `seq` rnf m `seq` ()
@@ -1059,8 +1059,6 @@ instance Show SMTConfig where
 -- | A model, as returned by a solver
 data SMTModel = SMTModel {
         modelAssocs    :: [(String, CW)]        -- ^ Mapping of symbolic values to constants.
-     ,  modelArrays    :: [(String, [String])]  -- ^ Arrays, very crude; only works with Yices.
-     ,  modelUninterps :: [(String, [String])]  -- ^ Uninterpreted funcs; very crude; only works with Yices.
      }
      deriving Show
 

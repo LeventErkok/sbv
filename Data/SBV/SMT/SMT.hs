@@ -337,23 +337,20 @@ displayModels disp (AllSatResult (_, ms)) = do
 -- | Show an SMTResult; generic version
 showSMTResult :: String -> String -> String -> String -> String -> SMTResult -> String
 showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel result = case result of
-  Unsatisfiable _                   -> unsatMsg
-  Satisfiable _ (SMTModel [] [] []) -> satMsg
-  Satisfiable _ m                   -> satMsgModel ++ showModel cfg m
-  Unknown _ (SMTModel [] [] [])     -> unkMsg
-  Unknown _ m                       -> unkMsgModel ++ showModel cfg m
-  ProofError _ []                   -> "*** An error occurred. No additional information available. Try running in verbose mode"
-  ProofError _ ls                   -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
-  TimeOut _                         -> "*** Timeout"
+  Unsatisfiable _             -> unsatMsg
+  Satisfiable _ (SMTModel []) -> satMsg
+  Satisfiable _ m             -> satMsgModel ++ showModel cfg m
+  Unknown     _ (SMTModel []) -> unkMsg
+  Unknown     _ m             -> unkMsgModel ++ showModel cfg m
+  ProofError  _ []            -> "*** An error occurred. No additional information available. Try running in verbose mode"
+  ProofError  _ ls            -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
+  TimeOut     _               -> "*** Timeout"
  where cfg = resultConfig result
 
 -- | Show a model in human readable form
 showModel :: SMTConfig -> SMTModel -> String
-showModel cfg m = intercalate "\n" (map shM assocs ++ concatMap shUI uninterps ++ concatMap shUA arrs)
-  where assocs     = modelAssocs m
-        uninterps  = modelUninterps m
-        arrs       = modelArrays m
-        shM (s, v) = "  " ++ s ++ " = " ++ shCW cfg v
+showModel cfg m = intercalate "\n" $ map shM $ modelAssocs m
+  where shM (s, v) = "  " ++ s ++ " = " ++ shCW cfg v
 
 -- | Show a constant value, in the user-specified base
 shCW :: SMTConfig -> CW -> String

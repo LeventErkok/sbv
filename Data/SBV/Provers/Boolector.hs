@@ -67,9 +67,6 @@ boolector = SMTSolver {
 
 extractMap :: [NamedSymVar] -> [(String, UnintKind)] -> [String] -> SMTModel
 extractMap inps _modelMap solverLines =
-   SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps) solverLines
-            , modelUninterps = []
-            , modelArrays    = []
-            }
+   SMTModel {modelAssocs = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps) solverLines}
   where sortByNodeId :: [(Int, a)] -> [(Int, a)]
         sortByNodeId = sortBy (compare `on` fst)

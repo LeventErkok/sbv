@@ -68,10 +68,7 @@ cvc4 = SMTSolver {
 
 extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [String] -> SMTModel
 extractMap isSat qinps _modelMap solverLines =
-   SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps . unstring) solverLines
-            , modelUninterps = []
-            , modelArrays    = []
-            }
+   SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps . unstring) solverLines }
   where sortByNodeId :: [(Int, a)] -> [(Int, a)]
         sortByNodeId = sortBy (compare `on` fst)
         inps -- for "sat", display the prefix existentials. For completeness, we will drop

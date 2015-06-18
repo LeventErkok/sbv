@@ -403,13 +403,13 @@ allSatWith config p = do
                     Just (SatResult r) -> let cont model = do rest <- unsafeInterleaveIO $ loop (n+1) (modelAssocs model : nonEqConsts)
                                                               return (r : rest)
                                           in case r of
-                                               Satisfiable _ (SMTModel [] _ _) -> return [r]
-                                               Unknown _ (SMTModel [] _ _)     -> return [r]
-                                               ProofError _ _                  -> return [r]
-                                               TimeOut _                       -> return []
-                                               Unsatisfiable _                 -> return []
-                                               Satisfiable _ model             -> cont model
-                                               Unknown     _ model             -> cont model
+                                               Satisfiable   _ (SMTModel []) -> return [r]
+                                               Unknown       _ (SMTModel []) -> return [r]
+                                               ProofError    _ _             -> return [r]
+                                               TimeOut       _               -> return []
+                                               Unsatisfiable _               -> return []
+                                               Satisfiable   _ model         -> cont model
+                                               Unknown       _ model         -> cont model
         invoke nonEqConsts n (qinps, modelMap, skolemMap, _, smtLibPgm) = do
                msg $ "Looking for solution " ++ show n
                case addNonEqConstraints (roundingMode config) qinps nonEqConsts smtLibPgm of
