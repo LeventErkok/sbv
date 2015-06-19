@@ -18,6 +18,5 @@ import SBVTest
 -- Test suite
 testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \_ -> test [
-   "aufunc-0" ~: assert       =<< isThm thmGood
- , "aufunc-1" ~: assert . not =<< isThm thmBad
+   "aufunc-0" ~: assert =<< isThm thmGood
  ]
