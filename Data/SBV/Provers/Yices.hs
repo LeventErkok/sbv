@@ -9,7 +9,6 @@
 -- The connection to the Yices SMT solver
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE PatternGuards       #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Data.SBV.Provers.Yices(yices) where
