@@ -13,17 +13,12 @@
 
 module Data.SBV.Provers.ABC(abc) where
 
-import qualified Control.Exception as C
-
 import Data.Function      (on)
-import Data.List          (intercalate, sortBy)
-import System.Environment (getEnv)
+import Data.List          (sortBy)
 
 import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.PrettyNum (mkSkolemZero)
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
-import Data.SBV.Utils.Lib (splitArgs)
 
 -- | The description of abc. The default executable is @\"abc\"@,
 -- which must be in your path. You can use the @SBV_ABC@ environment
@@ -35,15 +30,7 @@ abc = SMTSolver {
            name           = ABC
          , executable     = "abc"
          , options        = ["-S", "%blast; &sweep -C 5000; &syn4; &cec -s -m -C 2000"]
-         , engine         = \cfg isSat qinps skolemMap pgm -> do
-                                    execName <-                   getEnv "SBV_ABC"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
-                                    execOpts <- (splitArgs `fmap` getEnv "SBV_ABC_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
-                                    let cfg' = cfg { solver = (solver cfg) {executable = execName, options = execOpts} }
-                                        tweaks = case solverTweaks cfg' of
-                                                   [] -> ""
-                                                   ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
-                                        script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg) skolemMap)}
-                                    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps))
+         , engine         = standardEngine "SBV_ABC" "SBV_ABC_OPTIONS" addTimeOut extractMap
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "ABC"
                                 , mbDefaultLogic             = Nothing
@@ -57,10 +44,7 @@ abc = SMTSolver {
                                 , supportsDoubles            = False
                                 }
          }
- where cont rm skolemMap = intercalate "\n" $ map extract skolemMap
-        where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ mkSkolemZero rm (kindOf s) ++ "))\")"
-              extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
-              extract (Right (s, ss)) = "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
+  where addTimeOut _ _ = error "Yices: Timeout values are not supported by Yices"
 
 extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel
 extractMap isSat qinps solverLines =
