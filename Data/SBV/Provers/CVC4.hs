@@ -13,18 +13,13 @@
 
 module Data.SBV.Provers.CVC4(cvc4) where
 
-import qualified Control.Exception as C
-
 import Data.Char          (isSpace)
 import Data.Function      (on)
-import Data.List          (sortBy, intercalate)
-import System.Environment (getEnv)
+import Data.List          (sortBy)
 
 import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.PrettyNum (mkSkolemZero)
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
-import Data.SBV.Utils.Lib (splitArgs)
 
 -- | The description of the CVC4 SMT solver
 -- The default executable is @\"cvc4\"@, which must be in your path. You can use the @SBV_CVC4@ environment variable to point to the executable on your system.
@@ -34,15 +29,7 @@ cvc4 = SMTSolver {
            name           = CVC4
          , executable     = "cvc4"
          , options        = ["--lang", "smt"]
-         , engine         = \cfg isSat qinps skolemMap pgm -> do
-                                    execName <-                   getEnv "SBV_CVC4"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
-                                    execOpts <- (splitArgs `fmap` getEnv "SBV_CVC4_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
-                                    let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
-                                        tweaks = case solverTweaks cfg' of
-                                                   [] -> ""
-                                                   ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
-                                        script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg) skolemMap)}
-                                    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps))
+         , engine         = standardEngine "SBV_CVC4" "SBV_CVC4_OPTIONS" addTimeOut extractMap
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "CVC4"
                                 , mbDefaultLogic             = Just "ALL_SUPPORTED"  -- CVC4 is not happy if we don't set the logic, so fall-back to this if necessary
@@ -56,14 +43,8 @@ cvc4 = SMTSolver {
                                 , supportsDoubles            = False
                                 }
          }
- where cont rm skolemMap = intercalate "\n" $ map extract skolemMap
-        where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ mkSkolemZero rm (kindOf s) ++ "))\")"
-              extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
-              extract (Right (s, ss)) = "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
-       addTimeOut Nothing  o   = o
-       addTimeOut (Just i) o
-         | i < 0               = error $ "CVC4: Timeout value must be non-negative, received: " ++ show i
-         | True                = o ++ ["--tlimit=" ++ show i ++ "000"]  -- SBV takes seconds, CVC4 wants milli-seconds
+ where addTimeOut o i | i < 0 = error $ "CVC4: Timeout value must be non-negative, received: " ++ show i
+                      | True  = o ++ ["--tlimit=" ++ show i ++ "000"]  -- SBV takes seconds, CVC4 wants milli-seconds
 
 extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel
 extractMap isSat qinps solverLines =
