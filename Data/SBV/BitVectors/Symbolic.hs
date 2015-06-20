@@ -70,7 +70,6 @@ import qualified Data.Set      as Set  (Set, empty, toList, insert)
 import qualified Data.Foldable as F    (toList)
 import qualified Data.Sequence as S    (Seq, empty, (|>))
 
-import System.Exit           (ExitCode(..))
 import System.Mem.StableName
 import System.Random
 
@@ -1093,12 +1092,11 @@ data Solver = Z3
 
 -- | An SMT solver
 data SMTSolver = SMTSolver {
-         name           :: Solver               -- ^ The solver in use
-       , executable     :: String               -- ^ The path to its executable
-       , options        :: [String]             -- ^ Options to provide to the solver
-       , engine         :: SMTEngine            -- ^ The solver engine, responsible for interpreting solver output
-       , xformExitCode  :: ExitCode -> ExitCode -- ^ Should we re-interpret exit codes. Most solvers behave rationally, i.e., id will do. Some (like CVC4) don't.
-       , capabilities   :: SolverCapabilities   -- ^ Various capabilities of the solver
+         name           :: Solver             -- ^ The solver in use
+       , executable     :: String             -- ^ The path to its executable
+       , options        :: [String]           -- ^ Options to provide to the solver
+       , engine         :: SMTEngine          -- ^ The solver engine, responsible for interpreting solver output
+       , capabilities   :: SolverCapabilities -- ^ Various capabilities of the solver
        }
 
 instance Show SMTSolver where

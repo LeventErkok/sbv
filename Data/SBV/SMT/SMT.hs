@@ -25,9 +25,10 @@ import Data.Int           (Int8, Int16, Int32, Int64)
 import Data.List          (intercalate, isPrefixOf, isInfixOf)
 import Data.Word          (Word8, Word16, Word32, Word64)
 import System.Directory   (findExecutable)
-import System.Process     (runInteractiveProcess, waitForProcess, terminateProcess)
+import System.Environment (getEnv)
 import System.Exit        (ExitCode(..))
 import System.IO          (hClose, hFlush, hPutStr, hGetContents, hGetLine)
+import System.Process     (runInteractiveProcess, waitForProcess, terminateProcess)
 
 import qualified Data.Map as M
 import Data.Typeable
@@ -35,7 +36,8 @@ import Data.Typeable
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.PrettyNum
-import Data.SBV.Utils.Lib (joinArgs)
+import Data.SBV.SMT.SMTLib            (interpretSolverOutput)
+import Data.SBV.Utils.Lib             (joinArgs, splitArgs)
 import Data.SBV.Utils.TDiff
 
 -- | Extract the final configuration from a result
@@ -386,7 +388,7 @@ pipeProcess cfg execName opts script cleanErrs = do
                         Left s                          -> return $ Left s
                         Right (ec, contents, allErrors) ->
                           let errors = dropWhile isSpace (cleanErrs allErrors)
-                          in case (null errors, xformExitCode (solver cfg) ec) of
+                          in case (null errors, ec) of
                                 (True, ExitSuccess)  -> return $ Right $ map clean (filter (not . null) (lines contents))
                                 (_, ec')             -> let errors' = if null errors
                                                                       then (if null (dropWhile isSpace contents)
@@ -408,6 +410,29 @@ pipeProcess cfg execName opts script cleanErrs = do
                                                                          ++ "\nGiving up.."
   where clean = reverse . dropWhile isSpace . reverse . dropWhile isSpace
         line  = replicate 78 '='
+
+-- | A standard engine interface. Most solvers follow-suit here in how we "chat" to them..
+standardEngine :: String
+               -> String
+               -> ([String] -> Int -> [String])
+               -> (RoundingMode -> a -> String)
+               -> (b -> c -> d -> [String] -> SMTModel)
+               -> SMTConfig
+               -> b
+               -> c
+               -> d
+               -> a
+               -> String
+               -> IO SMTResult
+standardEngine envName envOptName addTimeOut cont extractMap cfg isSat qinps modelMap skolemMap pgm = do
+    execName <-                    getEnv envName     `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
+    execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
+    let cfg'   = cfg {solver = (solver cfg) {executable = execName, options = maybe execOpts (addTimeOut execOpts) (timeOut cfg)}}
+        tweaks = case solverTweaks cfg' of
+                   [] -> ""
+                   ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
+        script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg) skolemMap)}
+    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap))
 
 -- | A standard solver interface. If the solver is SMT-Lib compliant, then this function should suffice in
 -- communicating with it.
