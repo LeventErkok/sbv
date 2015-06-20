@@ -14,10 +14,9 @@
 module Data.SBV.Provers.Yices(yices) where
 
 import Data.Function      (on)
-import Data.List          (sortBy, intercalate)
+import Data.List          (sortBy)
 
 import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.PrettyNum (mkSkolemZero)
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 
@@ -29,7 +28,7 @@ yices = SMTSolver {
            name           = Yices
          , executable     = "yices-smt2"
          , options        = []
-         , engine         = standardEngine "SBV_YICES" "SBV_YICES_OPTIONS" addTimeOut cont extractMap
+         , engine         = standardEngine "SBV_YICES" "SBV_YICES_OPTIONS" addTimeOut extractMap
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "Yices"
                                 , mbDefaultLogic             = Nothing
@@ -43,14 +42,10 @@ yices = SMTSolver {
                                 , supportsDoubles            = False
                                 }
          }
-  where cont rm skolemMap = intercalate "\n" $ map extract skolemMap
-         where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ mkSkolemZero rm (kindOf s) ++ "))\")"
-               extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
-               extract (Right (s, ss)) = "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
-        addTimeOut _ _ = error "Yices: Timeout values are not supported by Yices"
+  where addTimeOut _ _ = error "Yices: Timeout values are not supported by Yices"
 
-extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [String] -> SMTModel
-extractMap isSat qinps _modelMap solverLines =
+extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel
+extractMap isSat qinps solverLines =
    SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps) solverLines }
   where sortByNodeId :: [(Int, a)] -> [(Int, a)]
         sortByNodeId = sortBy (compare `on` fst)

@@ -43,7 +43,7 @@ z3 = SMTSolver {
            name           = Z3
          , executable     = "z3"
          , options        = map (optionPrefix:) ["in", "smt2"]
-         , engine         = \cfg isSat qinps modelMap skolemMap pgm -> do
+         , engine         = \cfg isSat qinps skolemMap pgm -> do
                                     execName <-                   getEnv "SBV_Z3"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
                                     execOpts <- (splitArgs `fmap` getEnv "SBV_Z3_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
                                     let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
@@ -55,7 +55,7 @@ z3 = SMTSolver {
                                         script = SMTScript {scriptBody = tweaks ++ ppDecLim ++ pgm, scriptModel = Just (cont (roundingMode cfg) skolemMap)}
                                     if dlim < 1
                                        then error $ "SBV.Z3: printRealPrec value should be at least 1, invalid value received: " ++ show dlim
-                                       else standardSolver cfg' script cleanErrs (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap))
+                                       else standardSolver cfg' script cleanErrs (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps))
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "Z3"
                                 , mbDefaultLogic             = Nothing
@@ -88,8 +88,8 @@ z3 = SMTSolver {
          | i < 0               = error $ "Z3: Timeout value must be non-negative, received: " ++ show i
          | True                = o ++ [optionPrefix : "T:" ++ show i]
 
-extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [String] -> SMTModel
-extractMap isSat qinps _modelMap solverLines =
+extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel
+extractMap isSat qinps solverLines =
    SMTModel { modelAssocs    = map snd $ squashReals $ sortByNodeId $ concatMap (interpretSolverModelLine inps) solverLines }
   where sortByNodeId :: [(Int, a)] -> [(Int, a)]
         sortByNodeId = sortBy (compare `on` fst)

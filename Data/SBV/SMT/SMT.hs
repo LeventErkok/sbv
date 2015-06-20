@@ -36,6 +36,7 @@ import Data.Typeable
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.PrettyNum
+import Data.SBV.BitVectors.Symbolic   (SMTEngine)
 import Data.SBV.SMT.SMTLib            (interpretSolverOutput)
 import Data.SBV.Utils.Lib             (joinArgs, splitArgs)
 import Data.SBV.Utils.TDiff
@@ -415,24 +416,21 @@ pipeProcess cfg execName opts script cleanErrs = do
 standardEngine :: String
                -> String
                -> ([String] -> Int -> [String])
-               -> (RoundingMode -> a -> String)
-               -> (b -> c -> d -> [String] -> SMTModel)
-               -> SMTConfig
-               -> b
-               -> c
-               -> d
-               -> a
-               -> String
-               -> IO SMTResult
-standardEngine envName envOptName addTimeOut cont extractMap cfg isSat qinps modelMap skolemMap pgm = do
+               -> (Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel)
+               -> SMTEngine
+standardEngine envName envOptName addTimeOut extractMap cfg isSat qinps skolemMap pgm = do
     execName <-                    getEnv envName     `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
     execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
-    let cfg'   = cfg {solver = (solver cfg) {executable = execName, options = maybe execOpts (addTimeOut execOpts) (timeOut cfg)}}
-        tweaks = case solverTweaks cfg' of
-                   [] -> ""
-                   ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
-        script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg) skolemMap)}
-    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap))
+    let cfg'    = cfg {solver = (solver cfg) {executable = execName, options = maybe execOpts (addTimeOut execOpts) (timeOut cfg)}}
+        tweaks  = case solverTweaks cfg' of
+                    [] -> ""
+                    ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
+        cont rm = intercalate "\n" $ map extract skolemMap
+           where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ mkSkolemZero rm (kindOf s) ++ "))\")"
+                 extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
+                 extract (Right (s, ss)) = "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
+        script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg))}
+    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps))
 
 -- | A standard solver interface. If the solver is SMT-Lib compliant, then this function should suffice in
 -- communicating with it.

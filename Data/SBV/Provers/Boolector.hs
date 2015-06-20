@@ -33,7 +33,7 @@ boolector = SMTSolver {
            name           = Boolector
          , executable     = "boolector"
          , options        = ["--smt2", "--smt2-model", "--no-exit-codes"]
-         , engine         = \cfg _isSat qinps modelMap skolemMap pgm -> do
+         , engine         = \cfg _isSat qinps skolemMap pgm -> do
                                     execName <-                   getEnv "SBV_BOOLECTOR"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
                                     execOpts <- (splitArgs `fmap` getEnv "SBV_BOOLECTOR_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
                                     let cfg' = cfg {solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts}}
@@ -41,7 +41,7 @@ boolector = SMTSolver {
                                                    [] -> ""
                                                    ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
                                         script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg) skolemMap)}
-                                    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap (map snd qinps) modelMap))
+                                    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap (map snd qinps)))
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "Boolector"
                                 , mbDefaultLogic             = Nothing
@@ -64,8 +64,8 @@ boolector = SMTSolver {
               extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
               extract (Right (s, ss)) = "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
 
-extractMap :: [NamedSymVar] -> [(String, UnintKind)] -> [String] -> SMTModel
-extractMap inps _modelMap solverLines =
+extractMap :: [NamedSymVar] -> [String] -> SMTModel
+extractMap inps solverLines =
    SMTModel {modelAssocs = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps) solverLines}
   where sortByNodeId :: [(Int, a)] -> [(Int, a)]
         sortByNodeId = sortBy (compare `on` fst)

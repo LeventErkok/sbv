@@ -30,16 +30,16 @@ module Data.SBV.BitVectors.Data
  , SW(..), trueSW, falseSW, trueCW, falseCW, normCW
  , SVal(..)
  , SBV(..), NodeId(..), mkSymSBV
- , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), mkSFunArray, SArray(..), arrayUIKind
+ , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), mkSFunArray, SArray(..)
  , sbvToSW, sbvToSymSW, forceSWArg
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, uncacheAI, HasKind(..)
- , Op(..), CastOp(..), FPOp(..), NamedSymVar, UnintKind(..), getTableIndex
+ , Op(..), CastOp(..), FPOp(..), NamedSymVar, getTableIndex
  , SBVPgm(..), Symbolic, SExecutable(..), runSymbolic, runSymbolic', State, getPathCondition, extendPathCondition
  , inProofMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
  , Logic(..), SMTLibLogic(..)
  , getTraceInfo, getConstraints, addConstraint
- , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
+ , SBVType(..), newUninterpreted, addAxiom
  , Quantifier(..), needsExistentials
  , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
  , SolverCapabilities(..)

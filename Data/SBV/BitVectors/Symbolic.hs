@@ -27,17 +27,16 @@ module Data.SBV.BitVectors.Symbolic
   , Op(..), CastOp(..), FPOp(..)
   , Quantifier(..), needsExistentials
   , RoundingMode(..)
-  , SBVType(..), newUninterpreted, unintFnUIKind, addAxiom
+  , SBVType(..), newUninterpreted, addAxiom
   , SVal(..), svKind
   , svBitSize, svSigned
   , svMkSymVar
-  , ArrayContext(..), ArrayInfo, arrayUIKind
+  , ArrayContext(..), ArrayInfo
   , svToSW, svToSymSW, forceSWArg
   , SBVExpr(..), newExpr
   , Cached, cache, uncache
   , ArrayIndex, uncacheAI
   , NamedSymVar
-  , UnintKind(..)
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
   , SBVPgm(..), Symbolic, runSymbolic, runSymbolic', State
@@ -48,7 +47,7 @@ module Data.SBV.BitVectors.Symbolic
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
-  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), getSBranchRunConfig
+  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
   , mkSValUserSort
   , SArr(..), readSArr, resetSArr, writeSArr, mergeSArr, newSArr, eqSArr
@@ -245,10 +244,6 @@ needsExistentials = (EX `elem`)
 newtype SBVType = SBVType [Kind]
              deriving (Eq, Ord)
 
--- | how many arguments does the type take?
-typeArity :: SBVType -> Int
-typeArity (SBVType xs) = length xs - 1
-
 instance Show SBVType where
   show (SBVType []) = error "SBV: internal error, empty SBVType"
   show (SBVType xs) = intercalate " -> " $ map show xs
@@ -281,11 +276,6 @@ newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SW, SBVExpr)}
 
 -- | 'NamedSymVar' pairs symbolic words and user given/automatically generated names
 type NamedSymVar = (SW, String)
-
--- | 'UnintKind' pairs array names and uninterpreted constants with their "kinds"
--- used mainly for printing counterexamples
-data UnintKind = UFun Int String | UArr Int String      -- in each case, arity and the aliasing name
- deriving Show
 
 -- | Result of running a symbolic computation
 data Result = Result (Set.Set Kind)                -- kinds used in the program
@@ -396,20 +386,6 @@ type CgMap     = Map.Map String [String]
 
 -- | Cached values, implementing sharing
 type Cache a   = IMap.IntMap [(StableName (State -> IO a), a)]
-
--- | Convert an SBV-type to the kind-of uninterpreted value it represents
-unintFnUIKind :: (String, SBVType) -> (String, UnintKind)
-unintFnUIKind (s, t) = (s, UFun (typeArity t) s)
-
--- | Convert an array value type to the kind-of uninterpreted value it represents
-arrayUIKind :: (Int, ArrayInfo) -> Maybe (String, UnintKind)
-arrayUIKind (i, (nm, _, ctx))
-  | external ctx = Just ("array_" ++ show i, UArr 1 nm) -- arrays are always 1-dimensional in the SMT-land. (Unless encoded explicitly)
-  | True         = Nothing
-  where external (ArrayFree{})   = True
-        external (ArrayReset{})  = False
-        external (ArrayMutate{}) = False
-        external (ArrayMerge{})  = False
 
 -- | Different means of running a symbolic piece of code
 data SBVRunMode = Proof (Bool, Maybe SMTConfig) -- ^ Symbolic simulation mode, for proof purposes. Bool is True if it's a sat instance. SMTConfig is used for 'sBranch' calls.
@@ -930,7 +906,6 @@ instance NFData SW            where rnf a = seq a ()
 instance NFData SBVExpr       where rnf a = seq a ()
 instance NFData Quantifier    where rnf a = seq a ()
 instance NFData SBVType       where rnf a = seq a ()
-instance NFData UnintKind     where rnf a = seq a ()
 instance NFData a => NFData (Cached a) where
   rnf (Cached f) = f `seq` ()
 instance NFData SVal where
@@ -1079,7 +1054,7 @@ data SMTScript = SMTScript {
         }
 
 -- | An SMT engine
-type SMTEngine = SMTConfig -> Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [Either SW (SW, [SW])] -> String -> IO SMTResult
+type SMTEngine = SMTConfig -> Bool -> [(Quantifier, NamedSymVar)] -> [Either SW (SW, [SW])] -> String -> IO SMTResult
 
 -- | Solvers that SBV is aware of
 data Solver = Z3

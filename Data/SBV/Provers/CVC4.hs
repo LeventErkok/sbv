@@ -34,7 +34,7 @@ cvc4 = SMTSolver {
            name           = CVC4
          , executable     = "cvc4"
          , options        = ["--lang", "smt"]
-         , engine         = \cfg isSat qinps modelMap skolemMap pgm -> do
+         , engine         = \cfg isSat qinps skolemMap pgm -> do
                                     execName <-                   getEnv "SBV_CVC4"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
                                     execOpts <- (splitArgs `fmap` getEnv "SBV_CVC4_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
                                     let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
@@ -42,7 +42,7 @@ cvc4 = SMTSolver {
                                                    [] -> ""
                                                    ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
                                         script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg) skolemMap)}
-                                    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps modelMap))
+                                    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps))
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "CVC4"
                                 , mbDefaultLogic             = Just "ALL_SUPPORTED"  -- CVC4 is not happy if we don't set the logic, so fall-back to this if necessary
@@ -65,8 +65,8 @@ cvc4 = SMTSolver {
          | i < 0               = error $ "CVC4: Timeout value must be non-negative, received: " ++ show i
          | True                = o ++ ["--tlimit=" ++ show i ++ "000"]  -- SBV takes seconds, CVC4 wants milli-seconds
 
-extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [(String, UnintKind)] -> [String] -> SMTModel
-extractMap isSat qinps _modelMap solverLines =
+extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel
+extractMap isSat qinps solverLines =
    SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps . unstring) solverLines }
   where sortByNodeId :: [(Int, a)] -> [(Int, a)]
         sortByNodeId = sortBy (compare `on` fst)

@@ -33,7 +33,7 @@ mathSAT = SMTSolver {
            name           = MathSAT
          , executable     = "mathsat"
          , options        = ["-input=smt2"]
-         , engine         = \cfg _isSat qinps modelMap skolemMap pgm -> do
+         , engine         = \cfg _isSat qinps skolemMap pgm -> do
                                     execName <-                   getEnv "SBV_MATHSAT"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
                                     execOpts <- (splitArgs `fmap` getEnv "SBV_MATHSAT_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
                                     let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts}
@@ -42,7 +42,7 @@ mathSAT = SMTSolver {
                                                    [] -> ""
                                                    ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
                                         script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg) skolemMap)}
-                                    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap (map snd qinps) modelMap))
+                                    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap (map snd qinps)))
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "MathSAT"
                                 , mbDefaultLogic             = Nothing
@@ -69,8 +69,8 @@ mathSAT = SMTSolver {
        addTimeOut Nothing  o = o
        addTimeOut (Just _) _ = error "MathSAT: Timeout values are not supported by MathSat"
 
-extractMap :: [NamedSymVar] -> [(String, UnintKind)] -> [String] -> SMTModel
-extractMap inps _modelMap solverLines =
+extractMap :: [NamedSymVar] -> [String] -> SMTModel
+extractMap inps solverLines =
    SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps . cvt) solverLines }
   where sortByNodeId :: [(Int, a)] -> [(Int, a)]
         sortByNodeId = sortBy (compare `on` fst)
