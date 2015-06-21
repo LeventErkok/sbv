@@ -17,7 +17,7 @@ import qualified Control.Exception as C
 
 import Data.Char          (toLower)
 import Data.Function      (on)
-import Data.List          (sortBy, intercalate, isPrefixOf, groupBy)
+import Data.List          (sortBy, intercalate, groupBy)
 import System.Environment (getEnv)
 import qualified System.Info as S(os)
 
@@ -42,7 +42,7 @@ z3 :: SMTSolver
 z3 = SMTSolver {
            name           = Z3
          , executable     = "z3"
-         , options        = map (optionPrefix:) ["in", "smt2"]
+         , options        = map (optionPrefix:) ["nw", "in", "smt2"]
          , engine         = \cfg isSat qinps skolemMap pgm -> do
                                     execName <-                   getEnv "SBV_Z3"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
                                     execOpts <- (splitArgs `fmap` getEnv "SBV_Z3_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
@@ -53,9 +53,7 @@ z3 = SMTSolver {
                                         dlim = printRealPrec cfg'
                                         ppDecLim = "(set-option :pp.decimal_precision " ++ show dlim ++ ")\n"
                                         script = SMTScript {scriptBody = tweaks ++ ppDecLim ++ pgm, scriptModel = Just (cont (roundingMode cfg) skolemMap)}
-                                    if dlim < 1
-                                       then error $ "SBV.Z3: printRealPrec value should be at least 1, invalid value received: " ++ show dlim
-                                       else standardSolver cfg' script cleanErrs (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps))
+                                    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps))
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "Z3"
                                 , mbDefaultLogic             = Nothing
@@ -69,9 +67,7 @@ z3 = SMTSolver {
                                 , supportsDoubles            = True
                                 }
          }
- where cleanErrs = intercalate "\n" . filter (not . junk) . lines
-       junk = ("WARNING:" `isPrefixOf`)
-       cont rm skolemMap = intercalate "\n" $ concatMap extract skolemMap
+ where cont rm skolemMap = intercalate "\n" $ concatMap extract skolemMap
         where -- In the skolemMap:
               --    * Left's are universals: i.e., the model should be true for
               --      any of these. So, we simply "echo 0" for these values.
