@@ -13,53 +13,30 @@
 
 module Data.SBV.Provers.CVC4(cvc4) where
 
-import Data.Char          (isSpace)
-import Data.Function      (on)
-import Data.List          (sortBy)
-
 import Data.SBV.BitVectors.Data
 import Data.SBV.SMT.SMT
-import Data.SBV.SMT.SMTLib
 
 -- | The description of the CVC4 SMT solver
 -- The default executable is @\"cvc4\"@, which must be in your path. You can use the @SBV_CVC4@ environment variable to point to the executable on your system.
 -- The default options are @\"--lang smt\"@. You can use the @SBV_CVC4_OPTIONS@ environment variable to override the options.
 cvc4 :: SMTSolver
 cvc4 = SMTSolver {
-           name           = CVC4
-         , executable     = "cvc4"
-         , options        = ["--lang", "smt"]
-         , engine         = standardEngine "SBV_CVC4" "SBV_CVC4_OPTIONS" addTimeOut extractMap
-         , capabilities   = SolverCapabilities {
-                                  capSolverName              = "CVC4"
-                                , mbDefaultLogic             = Just "ALL_SUPPORTED"  -- CVC4 is not happy if we don't set the logic, so fall-back to this if necessary
-                                , supportsMacros             = True
-                                , supportsProduceModels      = True
-                                , supportsQuantifiers        = True
-                                , supportsUninterpretedSorts = True
-                                , supportsUnboundedInts      = True
-                                , supportsReals              = True  -- Not quite the same capability as Z3; but works more or less..
-                                , supportsFloats             = False
-                                , supportsDoubles            = False
-                                }
+           name         = CVC4
+         , executable   = "cvc4"
+         , options      = ["--lang", "smt"]
+         , engine       = standardEngine "SBV_CVC4" "SBV_CVC4_OPTIONS" addTimeOut standardModel
+         , capabilities = SolverCapabilities {
+                                capSolverName              = "CVC4"
+                              , mbDefaultLogic             = Just "ALL_SUPPORTED"  -- CVC4 is not happy if we don't set the logic, so fall-back to this if necessary
+                              , supportsMacros             = True
+                              , supportsProduceModels      = True
+                              , supportsQuantifiers        = True
+                              , supportsUninterpretedSorts = True
+                              , supportsUnboundedInts      = True
+                              , supportsReals              = True  -- Not quite the same capability as Z3; but works more or less..
+                              , supportsFloats             = False
+                              , supportsDoubles            = False
+                              }
          }
  where addTimeOut o i | i < 0 = error $ "CVC4: Timeout value must be non-negative, received: " ++ show i
                       | True  = o ++ ["--tlimit=" ++ show i ++ "000"]  -- SBV takes seconds, CVC4 wants milli-seconds
-
-extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel
-extractMap isSat qinps solverLines =
-   SMTModel { modelAssocs    = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps . unstring) solverLines }
-  where sortByNodeId :: [(Int, a)] -> [(Int, a)]
-        sortByNodeId = sortBy (compare `on` fst)
-        inps -- for "sat", display the prefix existentials. For completeness, we will drop
-             -- only the trailing foralls. Exception: Don't drop anything if it's all a sequence of foralls
-             | isSat = map snd $ if all (== ALL) (map fst qinps)
-                                 then qinps
-                                 else reverse $ dropWhile ((== ALL) . fst) $ reverse qinps
-             -- for "proof", just display the prefix universals
-             | True  = map snd $ takeWhile ((== ALL) . fst) qinps
-        -- CVC4 puts quotes around echo's, go figure. strip them here
-        unstring s' = case (s, head s, last s) of
-                        (_:tl@(_:_), '"', '"') -> init tl
-                        _                      -> s'
-          where s = reverse . dropWhile isSpace . reverse . dropWhile isSpace $ s'
