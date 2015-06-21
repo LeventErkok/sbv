@@ -13,17 +13,12 @@
 
 module Data.SBV.Provers.Boolector(boolector) where
 
-import qualified Control.Exception as C
-
 import Data.Function      (on)
-import Data.List          (sortBy, intercalate)
-import System.Environment (getEnv)
+import Data.List          (sortBy)
 
 import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.PrettyNum (mkSkolemZero)
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
-import Data.SBV.Utils.Lib (splitArgs)
 
 -- | The description of the Boolector SMT solver
 -- The default executable is @\"boolector\"@, which must be in your path. You can use the @SBV_BOOLECTOR@ environment variable to point to the executable on your system.
@@ -33,15 +28,7 @@ boolector = SMTSolver {
            name           = Boolector
          , executable     = "boolector"
          , options        = ["--smt2", "--smt2-model", "--no-exit-codes"]
-         , engine         = \cfg _isSat qinps skolemMap pgm -> do
-                                    execName <-                   getEnv "SBV_BOOLECTOR"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
-                                    execOpts <- (splitArgs `fmap` getEnv "SBV_BOOLECTOR_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
-                                    let cfg' = cfg {solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts}}
-                                        tweaks = case solverTweaks cfg' of
-                                                   [] -> ""
-                                                   ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
-                                        script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg) skolemMap)}
-                                    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap (map snd qinps)))
+         , engine         = standardEngine "SBV_BOOLECTOR" "SBV_BOOLECTOR_OPTIONS" addTimeOut extractMap
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "Boolector"
                                 , mbDefaultLogic             = Nothing
@@ -55,17 +42,11 @@ boolector = SMTSolver {
                                 , supportsDoubles            = False
                                 }
          }
- where addTimeOut Nothing  o   = o
-       addTimeOut (Just i) o
-         | i < 0               = error $ "Boolector: Timeout value must be non-negative, received: " ++ show i
-         | True                = o ++ ["-t=" ++ show i]
-       cont rm skolemMap = intercalate "\n" $ map extract skolemMap
-        where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ mkSkolemZero rm (kindOf s) ++ "))\")"
-              extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
-              extract (Right (s, ss)) = "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
+ where addTimeOut o i | i < 0 = error $ "Boolector: Timeout value must be non-negative, received: " ++ show i
+                      | True  = o ++ ["-t=" ++ show i]
 
-extractMap :: [NamedSymVar] -> [String] -> SMTModel
-extractMap inps solverLines =
-   SMTModel {modelAssocs = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps) solverLines}
+extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel
+extractMap _isSat qinps solverLines =
+   SMTModel {modelAssocs = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine (map snd qinps)) solverLines}
   where sortByNodeId :: [(Int, a)] -> [(Int, a)]
         sortByNodeId = sortBy (compare `on` fst)
