@@ -22,7 +22,8 @@ import Control.DeepSeq    (NFData(..))
 import Control.Monad      (when, zipWithM)
 import Data.Char          (isSpace)
 import Data.Int           (Int8, Int16, Int32, Int64)
-import Data.List          (intercalate, isPrefixOf, isInfixOf)
+import Data.Function      (on)
+import Data.List          (intercalate, isPrefixOf, isInfixOf, sortBy)
 import Data.Word          (Word8, Word16, Word32, Word64)
 import System.Directory   (findExecutable)
 import System.Environment (getEnv)
@@ -37,7 +38,7 @@ import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.PrettyNum
 import Data.SBV.BitVectors.Symbolic   (SMTEngine)
-import Data.SBV.SMT.SMTLib            (interpretSolverOutput)
+import Data.SBV.SMT.SMTLib            (interpretSolverOutput, interpretSolverModelLine)
 import Data.SBV.Utils.Lib             (joinArgs, splitArgs)
 import Data.SBV.Utils.TDiff
 
@@ -411,6 +412,19 @@ pipeProcess cfg execName opts script cleanErrs = do
                                                                          ++ "\nGiving up.."
   where clean = reverse . dropWhile isSpace . reverse . dropWhile isSpace
         line  = replicate 78 '='
+
+-- | A standard post-processor: Reading the lines of solver output and turning it into a model:
+standardModel :: Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel
+standardModel isSat qinps solverLines = SMTModel { modelAssocs = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps) solverLines }
+  where sortByNodeId :: [(Int, a)] -> [(Int, a)]
+        sortByNodeId = sortBy (compare `on` fst)
+        inps -- for "sat", display the prefix existentials. For completeness, we will drop
+             -- only the trailing foralls. Exception: Don't drop anything if it's all a sequence of foralls
+             | isSat = map snd $ if all (== ALL) (map fst qinps)
+                                 then qinps
+                                 else reverse $ dropWhile ((== ALL) . fst) $ reverse qinps
+             -- for "proof", just display the prefix universals
+             | True  = map snd $ takeWhile ((== ALL) . fst) qinps
 
 -- | A standard engine interface. Most solvers follow-suit here in how we "chat" to them..
 standardEngine :: String
