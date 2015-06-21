@@ -413,36 +413,44 @@ pipeProcess cfg execName opts script cleanErrs = do
   where clean = reverse . dropWhile isSpace . reverse . dropWhile isSpace
         line  = replicate 78 '='
 
+-- | The standard-model that most SMT solvers should happily work with
+standardModel :: (Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel, SW -> String -> [String])
+standardModel = (standardModelExtractor, standardValueExtractor)
+
+-- | Some solvers (Z3) require multiple calls for certain value extractions; as in multi-precision reals. Deal with that here
+standardValueExtractor :: SW -> String -> [String]
+standardValueExtractor _ l = [l]
+
 -- | A standard post-processor: Reading the lines of solver output and turning it into a model:
-standardModel :: Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel
-standardModel isSat qinps solverLines = SMTModel { modelAssocs = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps) solverLines }
-  where sortByNodeId :: [(Int, a)] -> [(Int, a)]
-        sortByNodeId = sortBy (compare `on` fst)
-        inps -- for "sat", display the prefix existentials. For completeness, we will drop
-             -- only the trailing foralls. Exception: Don't drop anything if it's all a sequence of foralls
-             | isSat = map snd $ if all (== ALL) (map fst qinps)
-                                 then qinps
-                                 else reverse $ dropWhile ((== ALL) . fst) $ reverse qinps
-             -- for "proof", just display the prefix universals
-             | True  = map snd $ takeWhile ((== ALL) . fst) qinps
+standardModelExtractor :: Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel
+standardModelExtractor isSat qinps solverLines = SMTModel { modelAssocs = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps) solverLines }
+         where sortByNodeId :: [(Int, a)] -> [(Int, a)]
+               sortByNodeId = sortBy (compare `on` fst)
+               inps -- for "sat", display the prefix existentials. For completeness, we will drop
+                    -- only the trailing foralls. Exception: Don't drop anything if it's all a sequence of foralls
+                    | isSat = map snd $ if all (== ALL) (map fst qinps)
+                                        then qinps
+                                        else reverse $ dropWhile ((== ALL) . fst) $ reverse qinps
+                    -- for "proof", just display the prefix universals
+                    | True  = map snd $ takeWhile ((== ALL) . fst) qinps
 
 -- | A standard engine interface. Most solvers follow-suit here in how we "chat" to them..
 standardEngine :: String
                -> String
                -> ([String] -> Int -> [String])
-               -> (Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel)
+               -> (Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel, SW -> String -> [String])
                -> SMTEngine
-standardEngine envName envOptName addTimeOut extractMap cfg isSat qinps skolemMap pgm = do
+standardEngine envName envOptName addTimeOut (extractMap, extractValue) cfg isSat qinps skolemMap pgm = do
     execName <-                    getEnv envName     `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
     execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
     let cfg'    = cfg {solver = (solver cfg) {executable = execName, options = maybe execOpts (addTimeOut execOpts) (timeOut cfg)}}
         tweaks  = case solverTweaks cfg' of
                     [] -> ""
                     ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
-        cont rm = intercalate "\n" $ map extract skolemMap
-           where extract (Left s)        = "(echo \"((" ++ show s ++ " " ++ mkSkolemZero rm (kindOf s) ++ "))\")"
-                 extract (Right (s, [])) = "(get-value (" ++ show s ++ "))"
-                 extract (Right (s, ss)) = "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
+        cont rm = intercalate "\n" $ concatMap extract skolemMap
+           where extract (Left s)        = extractValue s $ "(echo \"((" ++ show s ++ " " ++ mkSkolemZero rm (kindOf s) ++ "))\")"
+                 extract (Right (s, [])) = extractValue s $ "(get-value (" ++ show s ++ "))"
+                 extract (Right (s, ss)) = extractValue s $ "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
         script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg))}
     standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps))
 
