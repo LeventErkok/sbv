@@ -146,9 +146,7 @@ cgAddPrototype ss = modify (\s -> let old = cgPrototypes s
 
 -- | Adds the given lines to the program file generated, useful for generating programs with uninterpreted functions.
 cgAddDecl :: [String] -> SBVCodeGen ()
-cgAddDecl ss = modify (\s -> let old = cgDecls s
-                                 new = if null old then ss else old ++ [""] ++ ss
-                             in s { cgDecls = new })
+cgAddDecl ss = modify (\s -> s { cgDecls = cgDecls s ++ ss })
 
 -- | Adds the given words to the compiler options in the generated Makefile, useful for linking extra stuff in.
 cgAddLDFlags :: [String] -> SBVCodeGen ()
