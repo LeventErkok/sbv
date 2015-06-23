@@ -628,8 +628,10 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
         -- Div/Rem should be careful on 0, in the SBV world x `div` 0 is 0, x `rem` 0 is x
         -- NB: Quot is supposed to truncate toward 0; Not clear to me if C guarantees this behavior.
         -- Brief googling suggests C99 does indeed truncate toward 0, but other C compilers might differ.
-        p Quot [a, b] = protectDiv0 (kindOf (head opArgs)) "/" a b
-        p Rem  [a, b] = protectDiv0 (kindOf (head opArgs)) "%" a b
+        p Quot [a, b] = let k = kindOf (head opArgs)
+                            z = mkConst cfg $ mkConstCW k (0::Integer)
+                        in protectDiv0 k "/" z a b
+        p Rem  [a, b] = protectDiv0 (kindOf (head opArgs)) "%" a a b
         p UNeg [a]    = parens (text "-" <+> a)
         p Abs  [a]    = let f = case kindOf (head opArgs) of
                                   KFloat  -> text "fabsf"
@@ -641,12 +643,12 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
           = a <+> text co <+> b
         p o args = die $ "Received operator " ++ show o ++ " applied to " ++ show args
         -- Div0 needs to protect, but only when the arguments are not float/double. (Div by 0 for those are well defined to be Inf/NaN etc.)
-        protectDiv0 k divOp a b = case k of
-                                   KFloat  -> res
-                                   KDouble -> res
-                                   _       -> wrap
+        protectDiv0 k divOp def a b = case k of
+                                        KFloat  -> res
+                                        KDouble -> res
+                                        _       -> wrap
            where res  = a <+> text divOp <+> b
-                 wrap = parens (b <+> text "== 0") <+> text "? 0 :" <+> parens res
+                 wrap = parens (b <+> text "== 0") <+> text "?" <+> def <+> text ":" <+> parens res
         shift toLeft i a s
           | i < 0   = shift (not toLeft) (-i) a s
           | i == 0  = a
