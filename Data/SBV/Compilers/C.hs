@@ -118,7 +118,7 @@ cgen cfg nm st sbvProg
                      xs -> vcat $ text "/* User given prototypes: */" : map text xs
         extDecls  = case cgDecls st of
                      [] -> empty
-                     xs -> vcat $ text "/* User given declarations: */" : map text xs ++ [text ""]
+                     xs -> vcat $ text "/* User given declarations: */" : map text xs
         flags    = cgLDFlags st
 
 -- | Pretty print a functions type. If there is only one output, we compile it
@@ -232,7 +232,7 @@ genMake ifdr fn dn ldFlags = foldr1 ($$) [l | (True, l) <- lns]
              , (True, text "# include any user-defined .mk file in the current directory.")
              , (True, text "-include *.mk")
              , (True, text "")
-             , (True, text "CC=gcc")
+             , (True, text "CC?=gcc")
              , (True, text "CCFLAGS?=-Wall -O3 -DNDEBUG -fomit-frame-pointer")
              , (ifld, text "LDFLAGS?=" <> text (unwords ldFlags))
              , (True, text "")
@@ -628,8 +628,8 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
         -- Div/Rem should be careful on 0, in the SBV world x `div` 0 is 0, x `rem` 0 is x
         -- NB: Quot is supposed to truncate toward 0; Not clear to me if C guarantees this behavior.
         -- Brief googling suggests C99 does indeed truncate toward 0, but other C compilers might differ.
-        p Quot [a, b] = parens (b <+> text "== 0") <+> text "?" <+> text "0" <+> text ":" <+> parens (a <+> text "/" <+> b)
-        p Rem  [a, b] = parens (b <+> text "== 0") <+> text "?" <+>    a     <+> text ":" <+> parens (a <+> text "%" <+> b)
+        p Quot [a, b] = protectDiv0 (kindOf (head opArgs)) "/" a b
+        p Rem  [a, b] = protectDiv0 (kindOf (head opArgs)) "%" a b
         p UNeg [a]    = parens (text "-" <+> a)
         p Abs  [a]    = let f = case kindOf (head opArgs) of
                                   KFloat  -> text "fabsf"
@@ -640,6 +640,13 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
           | Just co <- lookup o cBinOps
           = a <+> text co <+> b
         p o args = die $ "Received operator " ++ show o ++ " applied to " ++ show args
+        -- Div0 needs to protect, but only when the arguments are not float/double. (Div by 0 for those are well defined to be Inf/NaN etc.)
+        protectDiv0 k divOp a b = case k of
+                                   KFloat  -> res
+                                   KDouble -> res
+                                   _       -> wrap
+           where res  = a <+> text divOp <+> b
+                 wrap = parens (b <+> text "== 0") <+> text "? 0 :" <+> parens res
         shift toLeft i a s
           | i < 0   = shift (not toLeft) (-i) a s
           | i == 0  = a
@@ -746,7 +753,7 @@ genLibMake ifdr libName fs ldFlags = foldr1 ($$) [l | (True, l) <- lns]
              , (True,  text "# include any user-defined .mk file in the current directory.")
              , (True,  text "-include *.mk")
              , (True,  text "")
-             , (True,  text "CC=gcc")
+             , (True,  text "CC?=gcc")
              , (True,  text "CCFLAGS?=-Wall -O3 -DNDEBUG -fomit-frame-pointer")
              , (ifld,  text "LDFLAGS?=" <> text (unwords ldFlags))
              , (True,  text "AR=ar")

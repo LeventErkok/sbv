@@ -26,7 +26,7 @@ addSub x y = (x+y, x-y)
 -- # include any user-defined .mk file in the current directory.
 -- -include *.mk
 -- <BLANKLINE>
--- CC=gcc
+-- CC?=gcc
 -- CCFLAGS?=-Wall -O3 -DNDEBUG -fomit-frame-pointer
 -- <BLANKLINE>
 -- all: addSub_driver

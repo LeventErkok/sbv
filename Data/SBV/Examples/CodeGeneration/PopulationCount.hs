@@ -88,7 +88,7 @@ fastPopCountIsCorrect x = popCountFast x .== popCountSlow x
 -- # include any user-defined .mk file in the current directory.
 -- -include *.mk
 -- <BLANKLINE>
--- CC=gcc
+-- CC?=gcc
 -- CCFLAGS?=-Wall -O3 -DNDEBUG -fomit-frame-pointer
 -- <BLANKLINE>
 -- all: popCount_driver
