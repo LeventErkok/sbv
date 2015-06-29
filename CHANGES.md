@@ -14,6 +14,15 @@
     used, and required a very old version of Yices that was no longer supported by SRI and has
     lacked in other features. So, in reality this change should hardly matter for end-users.
 
+  * Use of sBranch/sAssert now requires the user to pass down the "interactive" flag explicitly to
+    the solver. This is due to a recent bug-fix https://github.com/LeventErkok/sbv/issues/180:
+    sBranch/sAssert calls are not compatible with regular SBV sharing story; so we have to
+    disable sharing when they are used; which potentially can have performance impacts. Thus,
+    if sBranch/sAssert is used, the user will have to explicitly tell SBV to be in that mode,
+    so SBV can properly turn sharing off to avoid soundness issues. If sBranch/sAssert is used
+    without setting the interactive flag; a run-time error will occur. Again, see
+    https://github.com/LeventErkok/sbv/issues/180 for details.
+
   * Backend solver related changes:
 
        * Yices: Upgraded to work with Yices release 2.3.1. Note that earlier versions of Yices

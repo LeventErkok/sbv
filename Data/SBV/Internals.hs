@@ -13,7 +13,7 @@
 
 module Data.SBV.Internals (
   -- * Running symbolic programs /manually/
-  Result, SBVRunMode(..), runSymbolic, runSymbolic'
+  Result, SBVRunMode(..), Symbolic, runSymbolic, runSymbolic'
   -- * Other internal structures useful for low-level programming
   , SBV(..), slet, CW(..), Kind(..), CWVal(..), AlgReal(..), Quantifier(..), mkConstCW, genVar, genVar_
   , liftQRem, liftDMod, symbolicMergeWithKind
@@ -29,7 +29,7 @@ module Data.SBV.Internals (
   , module Data.SBV.Utils.Numeric
   ) where
 
-import Data.SBV.BitVectors.Data       (Result, SBVRunMode(..), runSymbolic, runSymbolic', SBV(..), CW(..), Kind(..), CWVal(..), AlgReal(..), Quantifier(..), mkConstCW)
+import Data.SBV.BitVectors.Data       (Result, Symbolic, SBVRunMode(..), runSymbolic, runSymbolic', SBV(..), CW(..), Kind(..), CWVal(..), AlgReal(..), Quantifier(..), mkConstCW)
 import Data.SBV.BitVectors.Data       (cache, sbvToSW, newExpr, normCW, SBVExpr(..), Op(..), SBVType(..), newUninterpreted, forceSWArg)
 import Data.SBV.BitVectors.Model      (genVar, genVar_, slet, liftQRem, liftDMod, symbolicMergeWithKind, genLiteral, genFromCW, genMkSymVar)
 import Data.SBV.BitVectors.Splittable (checkAndConvert)

@@ -36,7 +36,7 @@ module Data.SBV.BitVectors.Data
  , cache, Cached, uncache, uncacheAI, HasKind(..)
  , Op(..), CastOp(..), FPOp(..), NamedSymVar, getTableIndex
  , SBVPgm(..), Symbolic, SExecutable(..), runSymbolic, runSymbolic', State, getPathCondition, extendPathCondition
- , inProofMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
+ , inProofMode, isInteractiveProof, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
  , Logic(..), SMTLibLogic(..)
  , getTraceInfo, getConstraints, addConstraint
  , SBVType(..), newUninterpreted, addAxiom

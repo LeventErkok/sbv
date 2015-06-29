@@ -9,10 +9,11 @@
 -- Provable abstraction and the connection to SMT solvers
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE BangPatterns         #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate, Provable(..)
@@ -58,6 +59,7 @@ mkConfig :: SMTSolver -> SMTLibVersion -> [String] -> SMTConfig
 mkConfig s smtVersion tweaks = SMTConfig { verbose        = False
                                          , timing         = False
                                          , sBranchTimeOut = Nothing
+                                         , interactive    = False
                                          , timeOut        = Nothing
                                          , printBase      = 10
                                          , printRealPrec  = 16
@@ -352,7 +354,7 @@ safeWith config a = C.catchJust choose checkSafe return
   where checkSafe = do let msg = when (verbose config) . putStrLn . ("** " ++)
                            isTiming = timing config
                        msg "Starting safety checking symbolic simulation.."
-                       res <- timeIf isTiming "problem construction" $ runSymbolic (False, Just config) $ sName_ a >>= output
+                       res <- timeIf isTiming "problem construction" $ runSymbolic (False, config{interactive = True}) $ sName_ a >>= output
                        msg $ "Generated symbolic trace:\n" ++ show res
                        return SafeNeverFails
         choose e@(SafeNeverFails{})   = Just e
@@ -362,7 +364,7 @@ safeWith config a = C.catchJust choose checkSafe return
 -- | Determine if the constraints are vacuous using the given SMT-solver
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
 isVacuousWith config a = do
-        Result ki tr uic is cs ts as uis ax asgn cstr _ <- runSymbolic (True, Just config) $ forAll_ a >>= output
+        Result ki tr uic is cs ts as uis ax asgn cstr _ <- runSymbolic (True, config) $ forAll_ a >>= output
         case cstr of
            [] -> return False -- no constraints, no need to check
            _  -> do let is'  = [(EX, i) | (_, i) <- is] -- map all quantifiers to "exists" for the constraint check
@@ -443,7 +445,7 @@ simulate converter config isSat comments predicate = do
         let msg = when (verbose config) . putStrLn . ("** " ++)
             isTiming = timing config
         msg "Starting symbolic simulation.."
-        res <- timeIf isTiming "problem construction" $ runSymbolic (isSat, Just config) $ (if isSat then forSome_ else forAll_) predicate >>= output
+        res <- timeIf isTiming "problem construction" $ runSymbolic (isSat, config) $ (if isSat then forSome_ else forAll_) predicate >>= output
         msg $ "Generated symbolic trace:\n" ++ show res
         msg "Translating to SMT-Lib.."
         runProofOn converter config isSat comments res
@@ -499,8 +501,22 @@ isConditionSatisfiable st cond = do
        return res
 
 -- | Check the boolean SAT of an internal condition in the current execution state
+-- Note that this requires the 'useSharing' to be set to False!
 internalSATCheck :: SMTConfig -> State -> SBool -> String -> IO SatResult
-internalSATCheck cfg st cond msg = do
+internalSATCheck cfg st cond msg
+  | not (isInteractiveProof st)
+  = error $ concatMap ("\n*** " ++)
+                   [ "SBV: sBranch/sAssert calls can only be made when 'interactive' parameter"
+                   , "     is set to True. the current setting is False, which is the default."
+                   , "     Note that the interactive mode prohibits sharing, and thus will have"
+                   , "     poorer performance in general. Only use this mode if you need"
+                   , "     sBranch/sAssert in your code."
+                   , ""
+                   , "And yes, it's a shame that this is a dynamic-error message; instead of a"
+                   , "static one you deserved to get at compile time. Sigh."
+                   ]
+  | True
+  = do
    sw <- sbvToSW st cond
    () <- forceSWArg sw
    Result ki tr uic is cs ts as uis ax asgn cstr _ <- liftIO $ extractSymbolicSimulationState st

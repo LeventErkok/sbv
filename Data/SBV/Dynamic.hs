@@ -121,27 +121,17 @@ import Data.SBV.Compilers.CodeGen
   , cgAddPrototype, cgAddDecl, cgAddLDFlags
   , cgIntegerSize, cgSRealType, CgSRealType(..)
   )
-import Data.SBV.Compilers.C
-  ( compileToC, compileToCLib )
-import Data.SBV.Provers.Prover
-  ( boolector, cvc4, yices, z3, mathSAT, abc, defaultSMTCfg )
-import Data.SBV.SMT.SMT
-  ( ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), genParse )
-import Data.SBV.Tools.Optimize
-  ( OptimizeOpts(..) )
-import Data.SBV
-  ( sbvCurrentSolver, sbvCheckSolverInstallation, defaultSolverConfig, sbvAvailableSolvers )
+import Data.SBV.Compilers.C    (compileToC, compileToCLib)
+import Data.SBV.Provers.Prover (boolector, cvc4, yices, z3, mathSAT, abc, defaultSMTCfg)
+import Data.SBV.SMT.SMT        (ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), genParse)
+import Data.SBV.Tools.Optimize (OptimizeOpts(..))
+import Data.SBV                (sbvCurrentSolver, sbvCheckSolverInstallation, defaultSolverConfig, sbvAvailableSolvers)
 
-import qualified Data.SBV as SBV
-  ( SBool, proveWithAll, proveWithAny, satWithAll, satWithAny, allSatWithAll, allSatWithAny )
-import qualified Data.SBV.BitVectors.Data as SBV
-  ( SBV(..) )
-import qualified Data.SBV.BitVectors.Model as SBV
-  ( reduceInPathCondition )
-import qualified Data.SBV.Provers.Prover as SBV
-  ( proveWith, satWith, compileToSMTLib, generateSMTBenchmarks )
-import qualified Data.SBV.SMT.SMT as SBV
-  ( Modelable(getModel, getModelDictionary) )
+import qualified Data.SBV                  as SBV (SBool, proveWithAll, proveWithAny, satWithAll, satWithAny, allSatWithAll, allSatWithAny)
+import qualified Data.SBV.BitVectors.Data  as SBV (SBV(..))
+import qualified Data.SBV.BitVectors.Model as SBV (reduceInPathCondition)
+import qualified Data.SBV.Provers.Prover   as SBV (proveWith, satWith, compileToSMTLib, generateSMTBenchmarks)
+import qualified Data.SBV.SMT.SMT          as SBV (Modelable(getModel, getModelDictionary))
 
 -- | Reduce a condition (i.e., try to concretize it) under the given path
 svReduceInPathCondition :: SVal -> SVal

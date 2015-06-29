@@ -38,12 +38,13 @@ bitCount = go 0
   where go c n = sBranch (n .== 0) c (go (c+1) (n .&. (n-1)))
 
 -- | Prove that the 'bitCount' function implemented here is equivalent to
--- the internal "slower" implementation. We have:
+-- the internal "slower" implementation. Note that we have to explicitly
+-- set the 'interactive' flag when 'sBranch' is used. We have:
 --
 -- >>> prop
 -- Q.E.D.
 prop :: IO ThmResult
-prop = prove $ \n -> bitCount n .== sbvPopCount n
+prop = proveWith defaultSMTCfg{interactive=True} $ \n -> bitCount n .== sbvPopCount n
 
 -- | Illustrates the use of path-conditions in avoiding infeasible paths in symbolic
 -- simulation. If we used 'ite' instead of 'sBranch' in the else-branch of the
@@ -70,4 +71,4 @@ path x = ite (x .> 5)
 -- Were we to use 'ite' instead of 'sBranch' in the implementation of 'path', this expression
 -- would have caused an exception to be raised at symbolic simulation time.
 pathCheck :: IO ThmResult
-pathCheck = prove $ \n -> let pn = path n in pn .== 10 ||| pn .== 20
+pathCheck = proveWith defaultSMTCfg{interactive=True} $ \n -> let pn = path n in pn .== 10 ||| pn .== 20

@@ -507,10 +507,14 @@ first argument to be larger than the second:
 Clearly, this function is not safe, as there's nothing that ensures us to pass a larger second argument.
 If we try to prove a theorem regarding sub, we'll get an exception:
 
->>> prove $ \x y -> sub x y .>= (0 :: SInt16)
+>>> proveWith defaultSMTCfg{interactive=True}  $ \x y -> sub x y .>= (0 :: SInt16)
 *** Exception: Assertion failure: "sub: x >= y must hold!"
   s0 = -32768 :: Int16
   s1 = -32767 :: Int16
+
+(Note that we had to set the 'interactive' field, as 'sAssert' requires the solver to be called interactively during
+symbolic simulation, and there are implications of this on the performance. Thus the user has be explicitly allowing
+for such calls.)
 
 Of course, we can use, 'safe' to statically see if such a violation is possible before we attempt a proof:
 

@@ -40,7 +40,7 @@ module Data.SBV.BitVectors.Symbolic
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
   , SBVPgm(..), Symbolic, runSymbolic, runSymbolic', State
-  , inProofMode, SBVRunMode(..), Result(..)
+  , inProofMode, isInteractiveProof, SBVRunMode(..), Result(..)
   , Logic(..), SMTLibLogic(..)
   , getTraceInfo, getConstraints
   , addSValConstraint
@@ -388,9 +388,9 @@ type CgMap     = Map.Map String [String]
 type Cache a   = IMap.IntMap [(StableName (State -> IO a), a)]
 
 -- | Different means of running a symbolic piece of code
-data SBVRunMode = Proof (Bool, Maybe SMTConfig) -- ^ Symbolic simulation mode, for proof purposes. Bool is True if it's a sat instance. SMTConfig is used for 'sBranch' calls.
-                | CodeGen                       -- ^ Code generation mode
-                | Concrete StdGen               -- ^ Concrete simulation mode. The StdGen is for the pConstrain acceptance in cross runs
+data SBVRunMode = Proof (Bool, SMTConfig) -- ^ Fully Symbolic, proof mode.
+                | CodeGen                 -- ^ Code generation mode.
+                | Concrete StdGen         -- ^ Concrete simulation mode. The StdGen is for the pConstrain acceptance in cross runs.
 
 -- | Is this a concrete run? (i.e., quick-check or test-generation like)
 isConcreteMode :: SBVRunMode -> Bool
@@ -435,10 +435,17 @@ inProofMode s = case runMode s of
                   CodeGen    -> False
                   Concrete{} -> False
 
+-- | Check if we are in interactive proof mode?
+isInteractiveProof :: State -> Bool
+isInteractiveProof s = case runMode s of
+                         Proof   (_, cfg) -> interactive cfg
+                         CodeGen          -> False
+                         Concrete{}       -> False
+
 -- | If in proof mode, get the underlying configuration (used for 'sBranch')
 getSBranchRunConfig :: State -> Maybe SMTConfig
 getSBranchRunConfig st = case runMode st of
-                           Proof (_, s)  -> s
+                           Proof (_, s)  -> Just s
                            _             -> Nothing
 
 -- | The "Symbolic" value. Either a constant (@Left@) or a symbolic
@@ -592,7 +599,7 @@ svMkSymVar mbQ k mbNm = do
         let q = case (mbQ, runMode st) of
                   (Just x,  _)                -> x   -- user given, just take it
                   (Nothing, Concrete{})       -> ALL -- concrete simulation, pick universal
-                  (Nothing, Proof (True, _))  -> EX  -- sat mode, pick existential
+                  (Nothing, Proof (True,  _)) -> EX  -- sat mode, pick existential
                   (Nothing, Proof (False, _)) -> ALL -- proof mode, pick universal
                   (Nothing, CodeGen)          -> ALL -- code generation, pick universal
         case runMode st of
@@ -616,10 +623,10 @@ mkSValUserSort k mbQ mbNm = do
         liftIO $ registerKind st k
         let q = case (mbQ, runMode st) of
                   (Just x,  _)                -> x
-                  (Nothing, Proof (True, _))  -> EX
+                  (Nothing, Proof (True,  _)) -> EX
                   (Nothing, Proof (False, _)) -> ALL
-                  (Nothing, Concrete{})       -> error $ "SBV: Uninterpreted sort " ++ sortName ++ " can not be used in concrete simulation mode."
                   (Nothing, CodeGen)          -> error $ "SBV: Uninterpreted sort " ++ sortName ++ " can not be used in code-generation mode."
+                  (Nothing, Concrete{})       -> error $ "SBV: Uninterpreted sort " ++ sortName ++ " can not be used in concrete simulation mode."
         ctr <- liftIO $ incCtr st
         let sw = SW k (NodeId ctr)
             nm = fromMaybe ('s':show ctr) mbNm
@@ -638,8 +645,8 @@ addAxiom nm ax = do
 
 -- | Run a symbolic computation in Proof mode and return a 'Result'. The boolean
 -- argument indicates if this is a sat instance or not.
-runSymbolic :: (Bool, Maybe SMTConfig) -> Symbolic a -> IO Result
-runSymbolic b c = snd `fmap` runSymbolic' (Proof b) c
+runSymbolic :: (Bool, SMTConfig) -> Symbolic a -> IO Result
+runSymbolic m c = snd `fmap` runSymbolic' (Proof m) c
 
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
 runSymbolic' :: SBVRunMode -> Symbolic a -> IO (a, Result)
@@ -859,8 +866,13 @@ uncacheAI = uncacheGen rAICache
 
 -- | Generic uncaching. Note that this is entirely safe, since we do it in the IO monad.
 uncacheGen :: (State -> IORef (Cache a)) -> Cached a -> State -> IO a
-uncacheGen getCache (Cached f) st = do
-        let rCache = getCache st
+uncacheGen getCache (Cached f) st
+   -- If this is an "interactive" proof; disallow sharing as it is unsound.
+   -- See: https://github.com/LeventErkok/sbv/issues/180
+   | isInteractiveProof st
+   = f st
+   | True
+   = do let rCache = getCache st
         stored <- readIORef rCache
         sn <- f `seq` makeStableName f
         let h = hashStableName sn
@@ -1015,6 +1027,7 @@ data SMTConfig = SMTConfig {
          verbose        :: Bool             -- ^ Debug mode
        , timing         :: Bool             -- ^ Print timing information on how long different phases took (construction, solving, etc.)
        , sBranchTimeOut :: Maybe Int        -- ^ How much time to give to the solver for each call of 'sBranch' check. (In seconds. Default: No limit.)
+       , interactive    :: Bool             -- ^ Allow interactive calls to the solver, used by 'sBranch'/'sAssert'. (Default: False)
        , timeOut        :: Maybe Int        -- ^ How much time to give to the solver. (In seconds. Default: No limit.)
        , printBase      :: Int              -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
        , printRealPrec  :: Int              -- ^ Print algebraic real values with this precision. (SReal, default: 16)
