@@ -12,7 +12,6 @@
 module TestSuite.Puzzles.Counts(testSuite) where
 
 import Data.SBV
-import Data.SBV.Internals
 import Data.SBV.Examples.Puzzles.Counts
 
 import SBVTest
@@ -22,5 +21,5 @@ testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
   "counts" ~: countPgm `goldCheck` "counts.gold"
  ]
- where countPgm = runSymbolic (True, Nothing) $ forAll_ puzzle' >>= output
+ where countPgm = runSAT $ forAll_ puzzle' >>= output
        puzzle' d0 d1 d2 d3 d4 d5 d6 d7 d8 d9 = puzzle [d0, d1, d2, d3, d4, d5, d6, d7, d8, d9]

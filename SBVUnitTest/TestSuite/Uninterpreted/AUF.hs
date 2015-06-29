@@ -12,7 +12,6 @@
 module TestSuite.Uninterpreted.AUF where
 
 import Data.SBV
-import Data.SBV.Internals
 import Data.SBV.Examples.Uninterpreted.AUF
 
 import SBVTest
@@ -24,7 +23,7 @@ testSuite = mkTestSuite $ \goldCheck -> test [
  , "auf-1" ~: assert =<< isThm (newArray "b" Nothing >>= \b -> free "x" >>= \x -> free "y" >>= \y                    -> return (thm2 x y b))
  , "auf-2" ~: pgm `goldCheck` "auf-1.gold"
  ]
- where pgm = runSymbolic (True, Nothing) $ do
+ where pgm = runSAT $ do
                 x <- free "x"
                 y <- free "y"
                 a <- newArray "a" Nothing

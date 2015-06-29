@@ -12,7 +12,6 @@
 module TestSuite.Basics.IteTest(testSuite)  where
 
 import Data.SBV
-import Data.SBV.Internals
 
 import SBVTest
 
@@ -31,11 +30,11 @@ testSuite = mkTestSuite $ \goldCheck -> test [
    "ite-1"  ~: rs (chk1 ite) `goldCheck` "iteTest1.gold"
  , "ite-2"  ~: rs (chk2 ite) `goldCheck` "iteTest2.gold"
  , "ite-3"  ~: rs (chk3 ite) `goldCheck` "iteTest3.gold"
- , "ite-4"  ~: assert =<< isThm (chk1 iteLazy)
- , "ite-5"  ~: assert =<< isThm (chk2 iteLazy)
- , "ite-6"  ~: assert =<< isThm (chk3 iteLazy)
- , "ite-7"  ~: assert =<< isThm (chk1 sBranch)
- , "ite-8"  ~: assert =<< isThm (chk2 sBranch)
- , "ite-9"  ~: assert =<< isThm (chk3 sBranch)
+ , "ite-4"  ~: assert =<< isThm            (chk1 iteLazy)
+ , "ite-5"  ~: assert =<< isThm            (chk2 iteLazy)
+ , "ite-6"  ~: assert =<< isThm            (chk3 iteLazy)
+ , "ite-7"  ~: assert =<< isInteractiveThm (chk1 sBranch)
+ , "ite-8"  ~: assert =<< isInteractiveThm (chk2 sBranch)
+ , "ite-9"  ~: assert =<< isInteractiveThm (chk3 sBranch)
  ]
- where rs f = runSymbolic (True, Nothing) $ forAll ["x"] f
+ where rs f = runSAT $ forAll ["x"] f

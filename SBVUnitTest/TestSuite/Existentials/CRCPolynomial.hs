@@ -12,7 +12,6 @@
 module TestSuite.Existentials.CRCPolynomial(testSuite) where
 
 import Data.SBV
-import Data.SBV.Internals
 import Data.SBV.Examples.Existentials.CRCPolynomial
 
 import SBVTest
@@ -22,7 +21,7 @@ testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
   "crcPolyExist" ~: pgm `goldCheck` "crcPolyExist.gold"
  ]
- where pgm = runSymbolic (True, Nothing) $ do
+ where pgm = runSAT $ do
                 p <- exists "poly"
                 s <- do sh <- forall "sh"
                         sl <- forall "sl"

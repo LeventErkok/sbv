@@ -10,12 +10,19 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE RankNTypes #-}
-module SBVTest(generateGoldCheck, showsAs, ioShowsAs, mkTestSuite, SBVTestSuite(..), module Test.HUnit, isThm, isSat, free, newArray, numberOfModels) where
+module SBVTest(
+          generateGoldCheck, showsAs, ioShowsAs, mkTestSuite, SBVTestSuite(..)
+        , isThm, isInteractiveThm, isSat, runSAT, numberOfModels
+        , module Test.HUnit
+        , module Data.SBV
+        ) where
 
-import Data.SBV        (Provable(..), isTheorem, isSatisfiable, AllSatResult(..), allSat, SymWord(free), SymArray(newArray))
-import Data.Maybe      (fromJust)
-import System.FilePath ((</>))
-import Test.HUnit      (Test(..), Assertion, assert, (~:), test)
+import Data.SBV                (SMTConfig(..), Provable(..), isTheorem, isTheoremWith, isSatisfiable, AllSatResult(..), allSat, SymWord(free), SymArray(newArray), defaultSMTCfg)
+import Data.SBV.Internals      (runSymbolic, Symbolic, Result)
+
+import Data.Maybe              (fromJust)
+import System.FilePath         ((</>))
+import Test.HUnit              (Test(..), Assertion, assert, (~:), test)
 
 -- | A Test-suite, parameterized by the gold-check generator/checker
 data SBVTestSuite = SBVTestSuite ((forall a. Show a => (IO a -> FilePath -> IO ())) -> Test)
@@ -49,6 +56,10 @@ generateGoldCheck goldDir shouldCreate action goldFile
 isThm :: Provable a => a -> IO Bool
 isThm p = fromJust `fmap` isTheorem Nothing p
 
+-- | Check if a property is a theorem, no timeout
+isInteractiveThm :: Provable a => a -> IO Bool
+isInteractiveThm p = fromJust `fmap` isTheoremWith defaultSMTCfg{interactive=True} Nothing p
+
 -- | Check if a property is satisfiable, no timeout
 isSat :: Provable a => a -> IO Bool
 isSat p = fromJust `fmap` isSatisfiable Nothing p
@@ -57,3 +68,7 @@ isSat p = fromJust `fmap` isSatisfiable Nothing p
 numberOfModels :: Provable a => a -> IO Int
 numberOfModels p = do AllSatResult (_, rs) <- allSat p
                       return $ length rs
+
+-- | Symbolicly run a SAT instance using the default config
+runSAT :: Symbolic a -> IO Result
+runSAT = runSymbolic (True, defaultSMTCfg)

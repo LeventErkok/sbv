@@ -12,7 +12,6 @@
 module TestSuite.CRC.CCITT(testSuite) where
 
 import Data.SBV
-import Data.SBV.Internals
 
 import Examples.CRC.CCITT
 import SBVTest
@@ -22,4 +21,4 @@ testSuite :: SBVTestSuite
 testSuite = mkTestSuite $ \goldCheck -> test [
   "ccitt" ~: crcPgm `goldCheck` "ccitt.gold"
  ]
- where crcPgm = runSymbolic (True, Nothing) $ forAll_ crcGood >>= output
+ where crcPgm = runSAT $ forAll_ crcGood >>= output
