@@ -312,7 +312,7 @@ isSatisfiable = isSatisfiableWith defaultSMTCfg
 --    * isSat  : If 'True', will translate it as a SAT query, i.e., in the positive. If 'False', will
 --               translate as a PROVE query, i.e., it will negate the result. (In this case, the check-sat
 --               call to the SMT solver will produce UNSAT if the input is a theorem, as usual.)
-compileToSMTLib :: Provable a => SMTLibVersion   -- ^ If True, output SMT-Lib2, otherwise SMT-Lib1
+compileToSMTLib :: Provable a => SMTLibVersion   -- ^ Version of SMTLib to compile to. (Only SMTLib2 supported currently.)
                               -> Bool            -- ^ If True, translate directly, otherwise negate the goal. (Use True for SAT queries, False for PROVE queries.)
                               -> a
                               -> IO String
