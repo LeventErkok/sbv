@@ -629,6 +629,9 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                                   KDouble -> text "fabs"
                                   _       -> text "abs"
                         in f <> parens a
+        -- for And/Or, translate to boolean versions if on boolean kind
+        p And [a, b] | kindOf (head opArgs) == KBool = a <+> text "&&" <+> b
+        p Or  [a, b] | kindOf (head opArgs) == KBool = a <+> text "||" <+> b
         p o [a, b]
           | Just co <- lookup o cBinOps
           = a <+> text co <+> b
