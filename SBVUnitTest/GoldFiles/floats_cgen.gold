@@ -316,7 +316,7 @@ SInt8 fromFP_Float_ToInt8(const SFloat a)
   const SFloat s0 = a;
   const SBool  s1 = isnan(s0);
   const SBool  s2 = isinf(s0);
-  const SBool  s3 = s1 | s2;
+  const SBool  s3 = s1 || s2;
   const SBool  s4 = !s3;
   const SInt8  s6 = (SInt8) s0;
   const SInt8  s8 = s4 ? s6 : 0;
@@ -334,7 +334,7 @@ SInt16 fromFP_Float_ToInt16(const SFloat a)
   const SFloat s0 = a;
   const SBool  s1 = isnan(s0);
   const SBool  s2 = isinf(s0);
-  const SBool  s3 = s1 | s2;
+  const SBool  s3 = s1 || s2;
   const SBool  s4 = !s3;
   const SInt16 s6 = (SInt16) s0;
   const SInt16 s8 = s4 ? s6 : 0x0000;
@@ -352,7 +352,7 @@ SInt32 fromFP_Float_ToInt32(const SFloat a)
   const SFloat s0 = a;
   const SBool  s1 = isnan(s0);
   const SBool  s2 = isinf(s0);
-  const SBool  s3 = s1 | s2;
+  const SBool  s3 = s1 || s2;
   const SBool  s4 = !s3;
   const SInt32 s6 = (SInt32) s0;
   const SInt32 s8 = s4 ? s6 : 0x00000000L;
@@ -370,7 +370,7 @@ SInt64 fromFP_Float_ToInt64(const SFloat a)
   const SFloat s0 = a;
   const SBool  s1 = isnan(s0);
   const SBool  s2 = isinf(s0);
-  const SBool  s3 = s1 | s2;
+  const SBool  s3 = s1 || s2;
   const SBool  s4 = !s3;
   const SInt64 s6 = (SInt64) s0;
   const SInt64 s8 = s4 ? s6 : 0x0000000000000000LL;
@@ -388,7 +388,7 @@ SWord8 fromFP_Float_ToWord8(const SFloat a)
   const SFloat s0 = a;
   const SBool  s1 = isnan(s0);
   const SBool  s2 = isinf(s0);
-  const SBool  s3 = s1 | s2;
+  const SBool  s3 = s1 || s2;
   const SBool  s4 = !s3;
   const SWord8 s6 = (SWord8) s0;
   const SWord8 s8 = s4 ? s6 : 0;
@@ -406,7 +406,7 @@ SWord16 fromFP_Float_ToWord16(const SFloat a)
   const SFloat  s0 = a;
   const SBool   s1 = isnan(s0);
   const SBool   s2 = isinf(s0);
-  const SBool   s3 = s1 | s2;
+  const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
   const SWord16 s6 = (SWord16) s0;
   const SWord16 s8 = s4 ? s6 : 0x0000U;
@@ -424,7 +424,7 @@ SWord32 fromFP_Float_ToWord32(const SFloat a)
   const SFloat  s0 = a;
   const SBool   s1 = isnan(s0);
   const SBool   s2 = isinf(s0);
-  const SBool   s3 = s1 | s2;
+  const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
   const SWord32 s6 = (SWord32) s0;
   const SWord32 s8 = s4 ? s6 : 0x00000000UL;
@@ -442,7 +442,7 @@ SWord64 fromFP_Float_ToWord64(const SFloat a)
   const SFloat  s0 = a;
   const SBool   s1 = isnan(s0);
   const SBool   s2 = isinf(s0);
-  const SBool   s3 = s1 | s2;
+  const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
   const SWord64 s6 = (SWord64) s0;
   const SWord64 s8 = s4 ? s6 : 0x0000000000000000ULL;
@@ -484,7 +484,7 @@ SInteger fromFP_Float_ToInteger(const SFloat a)
   const SFloat   s0 = a;
   const SBool    s1 = isnan(s0);
   const SBool    s2 = isinf(s0);
-  const SBool    s3 = s1 | s2;
+  const SBool    s3 = s1 || s2;
   const SBool    s4 = !s3;
   const SInteger s6 = (SInteger) s0;
   const SInteger s8 = s4 ? s6 : 0x0000000000000000LL;
@@ -502,7 +502,7 @@ SReal fromFP_Float_ToReal(const SFloat a)
   const SFloat s0 = a;
   const SBool  s1 = isnan(s0);
   const SBool  s2 = isinf(s0);
-  const SBool  s3 = s1 | s2;
+  const SBool  s3 = s1 || s2;
   const SBool  s4 = !s3;
   const SReal  s6 = (SReal) s0;
   const SReal  s8 = s4 ? s6 : 0.0L;
@@ -520,7 +520,7 @@ SInt8 fromFP_DoubleTo_Int8(const SDouble a)
   const SDouble s0 = a;
   const SBool   s1 = isnan(s0);
   const SBool   s2 = isinf(s0);
-  const SBool   s3 = s1 | s2;
+  const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
   const SInt8   s6 = (SInt8) s0;
   const SInt8   s8 = s4 ? s6 : 0;
@@ -538,7 +538,7 @@ SInt16 fromFP_DoubleTo_Int16(const SDouble a)
   const SDouble s0 = a;
   const SBool   s1 = isnan(s0);
   const SBool   s2 = isinf(s0);
-  const SBool   s3 = s1 | s2;
+  const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
   const SInt16  s6 = (SInt16) s0;
   const SInt16  s8 = s4 ? s6 : 0x0000;
@@ -556,7 +556,7 @@ SInt32 fromFP_DoubleTo_Int32(const SDouble a)
   const SDouble s0 = a;
   const SBool   s1 = isnan(s0);
   const SBool   s2 = isinf(s0);
-  const SBool   s3 = s1 | s2;
+  const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
   const SInt32  s6 = (SInt32) s0;
   const SInt32  s8 = s4 ? s6 : 0x00000000L;
@@ -574,7 +574,7 @@ SInt64 fromFP_DoubleTo_Int64(const SDouble a)
   const SDouble s0 = a;
   const SBool   s1 = isnan(s0);
   const SBool   s2 = isinf(s0);
-  const SBool   s3 = s1 | s2;
+  const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
   const SInt64  s6 = (SInt64) s0;
   const SInt64  s8 = s4 ? s6 : 0x0000000000000000LL;
@@ -592,7 +592,7 @@ SWord8 fromFP_DoubleTo_Word8(const SDouble a)
   const SDouble s0 = a;
   const SBool   s1 = isnan(s0);
   const SBool   s2 = isinf(s0);
-  const SBool   s3 = s1 | s2;
+  const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
   const SWord8  s6 = (SWord8) s0;
   const SWord8  s8 = s4 ? s6 : 0;
@@ -610,7 +610,7 @@ SWord16 fromFP_DoubleTo_Word16(const SDouble a)
   const SDouble s0 = a;
   const SBool   s1 = isnan(s0);
   const SBool   s2 = isinf(s0);
-  const SBool   s3 = s1 | s2;
+  const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
   const SWord16 s6 = (SWord16) s0;
   const SWord16 s8 = s4 ? s6 : 0x0000U;
@@ -628,7 +628,7 @@ SWord32 fromFP_DoubleTo_Word32(const SDouble a)
   const SDouble s0 = a;
   const SBool   s1 = isnan(s0);
   const SBool   s2 = isinf(s0);
-  const SBool   s3 = s1 | s2;
+  const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
   const SWord32 s6 = (SWord32) s0;
   const SWord32 s8 = s4 ? s6 : 0x00000000UL;
@@ -646,7 +646,7 @@ SWord64 fromFP_DoubleTo_Word64(const SDouble a)
   const SDouble s0 = a;
   const SBool   s1 = isnan(s0);
   const SBool   s2 = isinf(s0);
-  const SBool   s3 = s1 | s2;
+  const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
   const SWord64 s6 = (SWord64) s0;
   const SWord64 s8 = s4 ? s6 : 0x0000000000000000ULL;
@@ -688,7 +688,7 @@ SInteger fromFP_DoubleTo_Integer(const SDouble a)
   const SDouble  s0 = a;
   const SBool    s1 = isnan(s0);
   const SBool    s2 = isinf(s0);
-  const SBool    s3 = s1 | s2;
+  const SBool    s3 = s1 || s2;
   const SBool    s4 = !s3;
   const SInteger s6 = (SInteger) s0;
   const SInteger s8 = s4 ? s6 : 0x0000000000000000LL;
@@ -706,7 +706,7 @@ SReal fromFP_DoubleTo_Real(const SDouble a)
   const SDouble s0 = a;
   const SBool   s1 = isnan(s0);
   const SBool   s2 = isinf(s0);
-  const SBool   s3 = s1 | s2;
+  const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
   const SReal   s6 = (SReal) s0;
   const SReal   s8 = s4 ? s6 : 0.0L;
