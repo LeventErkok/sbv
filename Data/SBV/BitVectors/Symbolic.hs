@@ -134,6 +134,7 @@ data Op = Plus
         | ArrRead Int
         | Cast CastOp
         | Uninterpreted String
+        | Label String                          -- Essentially no-op; useful for code generation to emit comments.
         | IEEEFP FPOp                           -- Floating-point ops, categorized separately
         deriving (Eq, Ord)
 
@@ -216,6 +217,7 @@ instance Show Op where
   show (ArrRead i)       = "select array_" ++ show i
   show (Cast c)          = show c
   show (Uninterpreted i) = "[uninterpreted] " ++ i
+  show (Label s)         = "[label] " ++ s
   show (IEEEFP w)        = show w
   show op
     | Just s <- op `lookup` syms = s

@@ -574,6 +574,7 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
         p :: Op -> [Doc] -> Doc
         p (ArrRead _)       _  = tbd "User specified arrays (ArrRead)"
         p (ArrEq _ _)       _  = tbd "User specified arrays (ArrEq)"
+        p (Label s)        [a] = a <+> text "/*" <+> text s <+> text "*/"
         p (IEEEFP w)        as = handleIEEE w consts (zip opArgs as) var
         p (Cast cop)        as = case (cop, as) of
                                    (Cast_SIntegerToSReal, [a]) -> text "(SReal)" <+> a

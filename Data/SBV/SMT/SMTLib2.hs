@@ -186,7 +186,8 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
           where mkConstTable (((t, _, _), _), _) = (t, "table" ++ show t)
                 mkSkTable    (((t, _, _), _), _) = (t, "table" ++ show t ++ forallArgs)
         asgns = F.toList asgnsSeq
-        mkLet (s, e) = "(let ((" ++ show s ++ " " ++ cvtExp rm skolemMap tableMap e ++ "))"
+        mkLet (s, SBVApp (Label m) [e]) = "(let ((" ++ show s ++ " " ++ cvtSW     skolemMap          e ++ ")) ; " ++ m
+        mkLet (s, e)                    = "(let ((" ++ show s ++ " " ++ cvtExp rm skolemMap tableMap e ++ "))"
         declConst useDefFun (s, c)
           | useDefFun = ["(define-fun "   ++ varT ++ " " ++ cvtCW rm c ++ ")"]
           | True      = [ "(declare-fun " ++ varT ++ ")"
@@ -432,6 +433,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                , (Not,  lift1B "not" "bvnot")
                                , (Join, lift2 "concat")
                                ]
+        sh (SBVApp (Label _)                       [a]) = cvtSW skolemMap a  -- This won't be reached; but just in case!
         sh (SBVApp (IEEEFP (FP_Cast kFrom kTo m)) args) = handleFPCast kFrom kTo (ssw m) (unwords (map ssw args))
         sh (SBVApp (IEEEFP w                    ) args) = "(" ++ show w ++ " " ++ unwords (map ssw args) ++ ")"
         sh inp@(SBVApp op args)

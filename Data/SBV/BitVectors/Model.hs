@@ -28,7 +28,7 @@ module Data.SBV.BitVectors.Model (
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
-  , sIntegerToSReal
+  , sIntegerToSReal, label
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCW, genMkSymVar
   , reduceInPathCondition
@@ -296,6 +296,16 @@ sIntegerToSReal x
   | True                  = SBV (SVal KReal (Right (cache y)))
   where y st = do xsw <- sbvToSW st x
                   newExpr st KReal (SBVApp (Cast Cast_SIntegerToSReal) [xsw])
+
+-- | label: Label the result of an expression. This is essentially a no-op, but useful as it generates a comment in the generated C/SMT-Lib code.
+-- Note that if the argument is a constant, then the label is dropped completely, per the usual constant folding strategy.
+label :: (HasKind a, SymWord a) => String -> SBV a -> SBV a
+label m x
+   | Just _ <- unliteral x = x
+   | True                  = SBV $ SVal k $ Right $ cache r
+  where k    = kindOf x
+        r st = do xsw <- sbvToSW st x
+                  newExpr st k (SBVApp (Label m) [xsw])
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.

@@ -23,6 +23,10 @@
     without setting the interactive flag; a run-time error will occur. Again, see
     https://github.com/LeventErkok/sbv/issues/180 for details.
 
+  * Added function "label", which is useful in emitting comments around expressions. It is essentially
+    a no-op, but does generate a comment with the given text in the SMT-Lib and C output, for diagnostic
+    purposes.
+
   * Backend solver related changes:
 
        * Yices: Upgraded to work with Yices release 2.3.1. Note that earlier versions of Yices

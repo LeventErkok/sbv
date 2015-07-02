@@ -146,7 +146,8 @@ module Data.SBV (
   , STree, readSTree, writeSTree, mkSTree
   -- ** Operations on symbolic values
   -- *** Word level
-  , sbvTestBit, sbvExtractBits, sbvPopCount, sbvShiftLeft, sbvShiftRight, sbvRotateLeft, sbvRotateRight, sbvSignedShiftArithRight, setBitTo, oneIf, lsb, msb
+  , sbvTestBit, sbvExtractBits, sbvPopCount, sbvShiftLeft, sbvShiftRight, sbvRotateLeft, sbvRotateRight, sbvSignedShiftArithRight, setBitTo, oneIf
+  , lsb, msb, label
   -- *** Predicates
   , allEqual, allDifferent, inRange, sElem
   -- *** Addition and Multiplication with high-bits
