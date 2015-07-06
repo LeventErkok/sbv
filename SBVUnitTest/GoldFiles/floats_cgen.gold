@@ -390,7 +390,7 @@ SWord8 fromFP_Float_ToWord8(const SFloat a)
   const SBool  s2 = isinf(s0);
   const SBool  s3 = s1 || s2;
   const SBool  s4 = !s3;
-  const SWord8 s6 = (SWord8) s0;
+  const SWord8 s6 = (!isnan(s0) && signbit(s0)) ? (- ((SWord8) fabsf(s0))) : ((SWord8) s0);
   const SWord8 s8 = s4 ? s6 : 0;
 
   return s8;
@@ -408,7 +408,7 @@ SWord16 fromFP_Float_ToWord16(const SFloat a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SWord16 s6 = (SWord16) s0;
+  const SWord16 s6 = (!isnan(s0) && signbit(s0)) ? (- ((SWord16) fabsf(s0))) : ((SWord16) s0);
   const SWord16 s8 = s4 ? s6 : 0x0000U;
 
   return s8;
@@ -426,7 +426,7 @@ SWord32 fromFP_Float_ToWord32(const SFloat a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SWord32 s6 = (SWord32) s0;
+  const SWord32 s6 = (!isnan(s0) && signbit(s0)) ? (- ((SWord32) fabsf(s0))) : ((SWord32) s0);
   const SWord32 s8 = s4 ? s6 : 0x00000000UL;
 
   return s8;
@@ -444,7 +444,7 @@ SWord64 fromFP_Float_ToWord64(const SFloat a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SWord64 s6 = (SWord64) s0;
+  const SWord64 s6 = (!isnan(s0) && signbit(s0)) ? (- ((SWord64) fabsf(s0))) : ((SWord64) s0);
   const SWord64 s8 = s4 ? s6 : 0x0000000000000000ULL;
 
   return s8;
@@ -594,7 +594,7 @@ SWord8 fromFP_DoubleTo_Word8(const SDouble a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SWord8  s6 = (SWord8) s0;
+  const SWord8  s6 = (!isnan(s0) && signbit(s0)) ? (- ((SWord8) fabs(s0))) : ((SWord8) s0);
   const SWord8  s8 = s4 ? s6 : 0;
 
   return s8;
@@ -612,7 +612,7 @@ SWord16 fromFP_DoubleTo_Word16(const SDouble a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SWord16 s6 = (SWord16) s0;
+  const SWord16 s6 = (!isnan(s0) && signbit(s0)) ? (- ((SWord16) fabs(s0))) : ((SWord16) s0);
   const SWord16 s8 = s4 ? s6 : 0x0000U;
 
   return s8;
@@ -630,7 +630,7 @@ SWord32 fromFP_DoubleTo_Word32(const SDouble a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SWord32 s6 = (SWord32) s0;
+  const SWord32 s6 = (!isnan(s0) && signbit(s0)) ? (- ((SWord32) fabs(s0))) : ((SWord32) s0);
   const SWord32 s8 = s4 ? s6 : 0x00000000UL;
 
   return s8;
@@ -648,7 +648,7 @@ SWord64 fromFP_DoubleTo_Word64(const SDouble a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SWord64 s6 = (SWord64) s0;
+  const SWord64 s6 = (!isnan(s0) && signbit(s0)) ? (- ((SWord64) fabs(s0))) : ((SWord64) s0);
   const SWord64 s8 = s4 ? s6 : 0x0000000000000000ULL;
 
   return s8;
