@@ -10,7 +10,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DefaultSignatures   #-}
 
 module Data.SBV.SMT.SMT where
@@ -32,7 +31,6 @@ import System.IO          (hClose, hFlush, hPutStr, hGetContents, hGetLine)
 import System.Process     (runInteractiveProcess, waitForProcess, terminateProcess)
 
 import qualified Data.Map as M
-import Data.Typeable
 
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
@@ -92,22 +90,6 @@ instance Show AllSatResult where
               where ok = case c of
                            Satisfiable{} -> True
                            _             -> False
-
--- | The result of an 'sAssert' call
-data SafeResult = SafeNeverFails
-                | SafeAlwaysFails  String
-                | SafeFailsInModel String SMTConfig SMTModel
-                deriving Typeable
-
--- | The show instance for SafeResult. Note that this is for display purposes only,
--- user programs are likely to pattern match on the output and proceed accordingly.
-instance Show SafeResult where
-   show SafeNeverFails              = "No safety violations detected."
-   show (SafeAlwaysFails s)         = intercalate "\n" ["Assertion failure: " ++ show s, "*** Fails in all assignments to inputs"]
-   show (SafeFailsInModel s cfg md) = intercalate "\n" ["Assertion failure: " ++ show s, showModel cfg md]
-
--- | If a 'prove' or 'sat' call comes accross an 'sAssert' call that fails, they will throw a 'SafeResult' as an exception.
-instance C.Exception SafeResult
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
 -- solvers. The idea is that the sbv infrastructure provides a stream of 'CW''s (constant-words)

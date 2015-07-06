@@ -3,7 +3,9 @@
 
 * Latest Hackage released version: 4.4, 2015-04-13
 
-### Version 4.5, Not yet released
+### Version 5.0, Not yet released
+
+  * Note: This is a backwards-compatibility breaking release, see below for details.
 
   * SBV now requires GHC 7.10.1 or newer to be compiled, taking advantage of newer features/bug-fixes
     in GHC. If you really need SBV to compile with older GHCs, please get in touch.
@@ -14,14 +16,18 @@
     used, and required a very old version of Yices that was no longer supported by SRI and has
     lacked in other features. So, in reality this change should hardly matter for end-users.
 
-  * Use of sBranch/sAssert now requires the user to pass down the "interactive" flag explicitly to
-    the solver. This is due to a recent bug-fix https://github.com/LeventErkok/sbv/issues/180:
-    sBranch/sAssert calls are not compatible with regular SBV sharing story; so we have to
-    disable sharing when they are used; which potentially can have performance impacts. Thus,
-    if sBranch/sAssert is used, the user will have to explicitly tell SBV to be in that mode,
-    so SBV can properly turn sharing off to avoid soundness issues. If sBranch/sAssert is used
-    without setting the interactive flag; a run-time error will occur. Again, see
-    https://github.com/LeventErkok/sbv/issues/180 for details.
+  * SBV no longer supports the functions sBranch/sAssert, as we realized these functions can cause
+    soundness issues under certain conditions. While the triggering scenarios are not common use-cases
+    for these functions, we are opting for safety, and thus removing support. See
+    http://github.com/LeventErkok/sbv/issues/180 for details; and see below for the new function
+    'isSatisfiableInCurrentPath'.
+
+  * A new function 'isSatisfiableInCurrentPath' is added, which checks for satisfiability during a
+    symbolic simulation run. This function can be used as the basis of sBranch/sAssert like functionality
+    if needed. The difference is that this is a much lower level call, and also exposes the fact that
+    the result is in the 'Symbolic' monad (which avoids the soundness issue). Of course, the new type
+    makes it less useful as it will not be a drop-in replacement for if-then-else like structure. Intended
+    to be used by tools built on top of SBV, as opposed to end-users.
 
   * Added function "label", which is useful in emitting comments around expressions. It is essentially
     a no-op, but does generate a comment with the given text in the SMT-Lib and C output, for diagnostic

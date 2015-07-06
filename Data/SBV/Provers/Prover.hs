@@ -17,49 +17,43 @@
 
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate, Provable(..)
-       , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..), SafeResult(..)
+       , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..)
        , isSatisfiable, isSatisfiableWith, isTheorem, isTheoremWith
        , prove, proveWith
        , sat, satWith
-       , safe, safeWith
        , allSat, allSatWith
        , isVacuous, isVacuousWith
        , SatModel(..), Modelable(..), displayModels, extractModels
        , getModelDictionaries, getModelValues, getModelUninterpretedValues
        , boolector, cvc4, yices, z3, mathSAT, abc, defaultSMTCfg
        , compileToSMTLib, generateSMTBenchmarks
-       , isSBranchFeasibleInState
-       , isConditionSatisfiable
+       , internalSATCheck
        ) where
 
-import Control.Monad       (when, unless)
-import Control.Monad.Trans (liftIO)
-import Data.List           (intercalate)
-import Data.Maybe          (fromMaybe, isJust)
-import System.FilePath     (addExtension, splitExtension)
-import System.Time         (getClockTime)
-import System.IO.Unsafe    (unsafeInterleaveIO)
+import Control.Monad    (when, unless)
+import Data.List        (intercalate)
+import System.FilePath  (addExtension, splitExtension)
+import System.Time      (getClockTime)
+import System.IO.Unsafe (unsafeInterleaveIO)
 
 import qualified Data.Set as Set (Set, toList)
-
-import qualified Control.Exception as C
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
+import Data.SBV.Utils.TDiff
+
 import qualified Data.SBV.Provers.Boolector  as Boolector
 import qualified Data.SBV.Provers.CVC4       as CVC4
 import qualified Data.SBV.Provers.Yices      as Yices
 import qualified Data.SBV.Provers.Z3         as Z3
 import qualified Data.SBV.Provers.MathSAT    as MathSAT
 import qualified Data.SBV.Provers.ABC        as ABC
-import Data.SBV.Utils.TDiff
 
 mkConfig :: SMTSolver -> SMTLibVersion -> [String] -> SMTConfig
 mkConfig s smtVersion tweaks = SMTConfig { verbose        = False
                                          , timing         = False
                                          , sBranchTimeOut = Nothing
-                                         , interactive    = False
                                          , timeOut        = Nothing
                                          , printBase      = 10
                                          , printRealPrec  = 16
@@ -251,10 +245,6 @@ prove = proveWith defaultSMTCfg
 sat :: Provable a => a -> IO SatResult
 sat = satWith defaultSMTCfg
 
--- | Check if a given definition is safe; i.e., if all 'sAssert' conditions can be proven to hold.
-safe :: SExecutable a => a -> IO SafeResult
-safe = safeWith defaultSMTCfg
-
 -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
 -- Satisfying assignments are constructed lazily, so they will be available as returned by the solver
 -- and on demand.
@@ -347,19 +337,6 @@ satWith :: Provable a => SMTConfig -> a -> IO SatResult
 satWith config a = simulate cvt config True [] a >>= callSolver True "Checking Satisfiability.." SatResult config
   where cvt = case smtLibVersion config of
                 SMTLib2 -> toSMTLib2
-
--- | Check if a given definition is safe using the given solver configuration; i.e., if all 'sAssert' conditions can be proven to hold.
-safeWith :: SExecutable a => SMTConfig -> a -> IO SafeResult
-safeWith config a = C.catchJust choose checkSafe return
-  where checkSafe = do let msg = when (verbose config) . putStrLn . ("** " ++)
-                           isTiming = timing config
-                       msg "Starting safety checking symbolic simulation.."
-                       res <- timeIf isTiming "problem construction" $ runSymbolic (False, config{interactive = True}) $ sName_ a >>= output
-                       msg $ "Generated symbolic trace:\n" ++ show res
-                       return SafeNeverFails
-        choose e@(SafeNeverFails{})   = Just e
-        choose e@(SafeAlwaysFails{})  = Just e
-        choose e@(SafeFailsInModel{}) = Just e
 
 -- | Determine if the constraints are vacuous using the given SMT-solver
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
@@ -474,52 +451,12 @@ runProofOn converter config isSat comments res =
                                        ++ "\nDetected while generating the trace:\n" ++ show res
                                        ++ "\n*** Check calls to \"output\", they are typically not needed!"
 
--- | Check if a branch condition is feasible in the current state
-isSBranchFeasibleInState :: State -> String -> SBool -> IO Bool
-isSBranchFeasibleInState st branch cond = do
-       let cfg = let pickedConfig = fromMaybe defaultSMTCfg (getSBranchRunConfig st)
-                 in pickedConfig { timeOut = sBranchTimeOut pickedConfig }
-           msg = when (verbose cfg) . putStrLn . ("** " ++)
-       check <- internalSATCheck cfg st cond ("sBranch: Checking " ++ show branch ++ " feasibility")
-       res <- case check of
-                SatResult (Unsatisfiable _) -> return False
-                _                           -> return True   -- No risks, even if it timed-our or anything else, we say it's feasible
-       msg $ "sBranch: Conclusion: " ++ if res then "Feasible" else "Unfeasible"
-       return res
-
--- | Check if a boolean condition is satisfiable in the current state. If so, it returns such a satisfying assignment
-isConditionSatisfiable :: State -> SBool -> IO (Maybe SatResult)
-isConditionSatisfiable st cond = do
-       let cfg  = fromMaybe defaultSMTCfg (getSBranchRunConfig st)
-           msg  = when (verbose cfg) . putStrLn . ("** " ++)
-       check <- internalSATCheck cfg st cond "sAssert: Checking satisfiability"
-       res <- case check of
-                r@(SatResult (Satisfiable{})) -> return $ Just r
-                SatResult (Unsatisfiable _)   -> return Nothing
-                _                             -> error $ "sAssert: Unexpected external result: " ++ show check
-       msg $ "sAssert: Conclusion: " ++ if isJust res then "Satisfiable" else "Unsatisfiable"
-       return res
-
--- | Check the boolean SAT of an internal condition in the current execution state
--- Note that this requires the 'useSharing' to be set to False!
-internalSATCheck :: SMTConfig -> State -> SBool -> String -> IO SatResult
-internalSATCheck cfg st cond msg
-  | not (isInteractiveProof st)
-  = error $ concatMap ("\n*** " ++)
-                   [ "SBV: sBranch/sAssert calls can only be made when 'interactive' parameter"
-                   , "     is set to True. the current setting is False, which is the default."
-                   , "     Note that the interactive mode prohibits sharing, and thus will have"
-                   , "     poorer performance in general. Only use this mode if you need"
-                   , "     sBranch/sAssert in your code."
-                   , ""
-                   , "And yes, it's a shame that this is a dynamic-error message; instead of a"
-                   , "static one you deserved to get at compile time. Sigh."
-                   ]
-  | True
-  = do
-   sw <- sbvToSW st cond
+-- | Run an external proof on the given condition to see if it is satisfiable.
+internalSATCheck :: SMTConfig -> SBool -> State -> String -> IO SatResult
+internalSATCheck cfg condInPath st msg = do
+   sw <- sbvToSW st condInPath
    () <- forceSWArg sw
-   Result ki tr uic is cs ts as uis ax asgn cstr _ <- liftIO $ extractSymbolicSimulationState st
+   Result ki tr uic is cs ts as uis ax asgn cstr _ <- extractSymbolicSimulationState st
    let -- Construct the corresponding sat-checker for the branch. Note that we need to
        -- forget about the quantifiers and just use an "exist", as we're looking for a
        -- point-satisfiability check here; whatever the original program was.
@@ -527,5 +464,4 @@ internalSATCheck cfg st cond msg
        cvt = case smtLibVersion cfg of
                 SMTLib2 -> toSMTLib2
    runProofOn cvt cfg True [] pgm >>= callSolver True msg SatResult cfg
-
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

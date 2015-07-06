@@ -55,7 +55,7 @@ module Data.SBV.Dynamic
   , svRotateLeft, svRotateRight
   -- ** Conditionals: Mergeable values
   , svIte, svLazyIte, svSymbolicMerge
-  , svReduceInPathCondition
+  , svIsSatisfiableInCurrentPath
   -- * Uninterpreted sorts, constants, and functions
   , svUninterpreted
   -- * Properties, proofs, and satisfiability
@@ -68,7 +68,7 @@ module Data.SBV.Dynamic
   -- * Model extraction
 
   -- ** Inspecting proof results
-  , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..), SafeResult(..)
+  , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..)
 
   -- ** Programmable model extraction
   , genParse, getModel, getModelDictionary
@@ -123,20 +123,19 @@ import Data.SBV.Compilers.CodeGen
   )
 import Data.SBV.Compilers.C    (compileToC, compileToCLib)
 import Data.SBV.Provers.Prover (boolector, cvc4, yices, z3, mathSAT, abc, defaultSMTCfg)
-import Data.SBV.SMT.SMT        (ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), genParse)
+import Data.SBV.SMT.SMT        (ThmResult(..), SatResult(..), AllSatResult(..), genParse)
 import Data.SBV.Tools.Optimize (OptimizeOpts(..))
 import Data.SBV                (sbvCurrentSolver, sbvCheckSolverInstallation, defaultSolverConfig, sbvAvailableSolvers)
 
 import qualified Data.SBV                  as SBV (SBool, proveWithAll, proveWithAny, satWithAll, satWithAny, allSatWithAll, allSatWithAny)
 import qualified Data.SBV.BitVectors.Data  as SBV (SBV(..))
-import qualified Data.SBV.BitVectors.Model as SBV (reduceInPathCondition)
+import qualified Data.SBV.BitVectors.Model as SBV (isSatisfiableInCurrentPath)
 import qualified Data.SBV.Provers.Prover   as SBV (proveWith, satWith, compileToSMTLib, generateSMTBenchmarks)
 import qualified Data.SBV.SMT.SMT          as SBV (Modelable(getModel, getModelDictionary))
 
 -- | Reduce a condition (i.e., try to concretize it) under the given path
-svReduceInPathCondition :: SVal -> SVal
-svReduceInPathCondition t = c
-  where SBV.SBV c = SBV.reduceInPathCondition (SBV.SBV t)
+svIsSatisfiableInCurrentPath :: SVal -> Symbolic Bool
+svIsSatisfiableInCurrentPath = SBV.isSatisfiableInCurrentPath . toSBool
 
 toSBool :: SVal -> SBV.SBool
 toSBool = SBV.SBV

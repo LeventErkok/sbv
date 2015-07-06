@@ -12,7 +12,7 @@
 {-# LANGUAGE RankNTypes #-}
 module SBVTest(
           generateGoldCheck, showsAs, ioShowsAs, mkTestSuite, SBVTestSuite(..)
-        , isThm, isInteractiveThm, isSat, runSAT, numberOfModels
+        , isThm, isSat, runSAT, numberOfModels
         , module Test.HUnit
         , module Data.SBV
         ) where
@@ -55,10 +55,6 @@ generateGoldCheck goldDir shouldCreate action goldFile
 -- | Check if a property is a theorem, no timeout
 isThm :: Provable a => a -> IO Bool
 isThm p = fromJust `fmap` isTheorem Nothing p
-
--- | Check if a property is a theorem, no timeout
-isInteractiveThm :: Provable a => a -> IO Bool
-isInteractiveThm p = fromJust `fmap` isTheoremWith defaultSMTCfg{interactive=True} Nothing p
 
 -- | Check if a property is satisfiable, no timeout
 isSat :: Provable a => a -> IO Bool

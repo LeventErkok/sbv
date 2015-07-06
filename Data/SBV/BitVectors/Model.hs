@@ -21,7 +21,7 @@
 
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), SIntegral
-  , ite, iteLazy, sBranch, sAssert, sAssertCont, sbvTestBit, sbvExtractBits, sbvPopCount, setBitTo
+  , ite, iteLazy, sbvTestBit, sbvExtractBits, sbvPopCount, setBitTo
   , sbvShiftLeft, sbvShiftRight, sbvRotateLeft, sbvRotateRight, sbvSignedShiftArithRight, (.^)
   , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
@@ -31,11 +31,13 @@ module Data.SBV.BitVectors.Model (
   , sIntegerToSReal, label
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCW, genMkSymVar
-  , reduceInPathCondition
+  , isSatisfiableInCurrentPath
   )
   where
 
-import Control.Monad   (when, liftM)
+import Control.Monad        (when, liftM)
+import Control.Monad.Reader (ask)
+import Control.Monad.Trans  (liftIO)
 
 import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits       (Bits(..))
@@ -43,10 +45,6 @@ import Data.Int        (Int8, Int16, Int32, Int64)
 import Data.List       (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate)
 import Data.Maybe      (fromMaybe)
 import Data.Word       (Word8, Word16, Word32, Word64)
-
-import qualified Data.Map as M
-
-import qualified Control.Exception as C
 
 import Test.QuickCheck                           (Testable(..), Arbitrary(..))
 import qualified Test.QuickCheck         as QC   (whenFail)
@@ -57,8 +55,8 @@ import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
 import Data.SBV.Utils.Boolean
 
-import Data.SBV.Provers.Prover (isSBranchFeasibleInState, isConditionSatisfiable, isVacuous, prove, defaultSMTCfg)
-import Data.SBV.SMT.SMT (SafeResult(..), SatResult(..), ThmResult, getModelDictionary)
+import Data.SBV.Provers.Prover (isVacuous, prove, defaultSMTCfg, internalSATCheck)
+import Data.SBV.SMT.SMT        (ThmResult, SatResult(..))
 
 import Data.SBV.BitVectors.Symbolic
 import Data.SBV.BitVectors.Operations
@@ -1067,56 +1065,6 @@ iteLazy t a b
   | Just r <- unliteral t = if r then a else b
   | True                  = symbolicMerge False t a b
 
--- | Branch on a condition, much like 'ite'. The exception is that SBV will
--- check to make sure if the test condition is feasible by making an external
--- call to the SMT solver. Note that this can be expensive, thus we shall use
--- a time-out value ('sBranchTimeOut'). There might be zero, one, or two such
--- external calls per 'sBranch' call:
---
---    - If condition is statically known to be True/False: 0 calls
---           - In this case, we simply constant fold..
---
---    - If condition is determined to be unsatisfiable   : 1 call
---           - In this case, we know then-branch is infeasible, so just take the else-branch
---
---    - If condition is determined to be satisfable      : 2 calls
---           - In this case, we know then-branch is feasible, but we still have to check if the else-branch is
---
--- In summary, 'sBranch' calls can be expensive, but they can help with the so-called symbolic-termination
--- problem. See "Data.SBV.Examples.Misc.SBranch" for an example.
-sBranch :: Mergeable a => SBool -> a -> a -> a
-sBranch t a b
-  | Just r <- unliteral c = if r then a else b
-  | True                  = symbolicMerge False c a b
-  where c = reduceInPathCondition t
-
--- | Symbolic assert. Check that the given boolean condition is always true in the given path.
--- Otherwise symbolic simulation will stop with a run-time error.
-sAssert :: Mergeable a => String -> SBool -> a -> a
-sAssert msg = sAssertCont msg defCont
-  where defCont _   Nothing   = C.throw (SafeAlwaysFails  msg)
-        defCont cfg (Just md) = C.throw (SafeFailsInModel msg cfg (SMTModel (M.toList md)))
-
--- | Symbolic assert with a programmable continuation. Check that the given boolean condition is always true in the given path.
--- Otherwise symbolic simulation will transfer the failing model to the given continuation. The
--- continuation takes the @SMTConfig@, and a possible model: If it receives @Nothing@, then it means that the condition
--- fails for all assignments to inputs. Otherwise, it'll receive @Just@ a dictionary that maps the
--- input variables to the appropriate @CW@ values that exhibit the failure. Note that the continuation
--- has no option but to display the result in some fashion and call error, due to its restricted type.
-sAssertCont :: Mergeable a => String -> (forall b. SMTConfig -> Maybe (M.Map String CW) -> b) -> SBool -> a -> a
-sAssertCont msg cont t a
-  | Just r <- unliteral t = if r then a else cont defaultSMTCfg Nothing
-  | True                  = symbolicMerge False cond a (die ["SBV.error: Internal-error, cannot happen: Reached false branch in checked s-Assert."])
-  where k     = kindOf t
-        cond  = SBV $ SVal k $ Right $ cache c
-        die m = error $ intercalate "\n" $ ("Assertion failure: " ++ show msg) : m
-        c st  = do let pc  = getPathCondition st
-                       chk = pc &&& bnot t
-                   mbModel <- isConditionSatisfiable st chk
-                   case mbModel of
-                     Just (r@(SatResult (Satisfiable cfg _))) -> cont cfg $ Just $ getModelDictionary r
-                     _                                        -> return trueSW
-
 -- | Merge two symbolic values, at kind @k@, possibly @force@'ing the branches to make
 -- sure they do not evaluate to the same result. This should only be used for internal purposes;
 -- as default definitions provided should suffice in many cases. (i.e., End users should
@@ -1549,25 +1497,6 @@ constrain c = addConstraint Nothing c (bnot c)
 pConstrain :: Double -> SBool -> Symbolic ()
 pConstrain t c = addConstraint (Just t) c (bnot c)
 
--- | Boolean symbolic reduction. See if we can reduce a boolean condition to true/false
--- using the path context information, by making external calls to the SMT solvers. Used in the
--- implementation of 'sBranch'.
-reduceInPathCondition :: SBool -> SBool
-reduceInPathCondition b
-  | isConcrete b = b -- No reduction is needed, already a concrete value
-  | True         = SBV $ SVal k $ Right $ cache c
-  where k    = kindOf b
-        c st = do -- Now that we know our boolean is not obviously true/false. Need to make an external
-                  -- call to the SMT solver to see if we can prove it is necessarily one of those
-                  let pc = getPathCondition st
-                  satTrue <- isSBranchFeasibleInState st "then" (pc &&& b)
-                  if not satTrue
-                     then return falseSW          -- condition is not satisfiable; so it must be necessarily False.
-                     else do satFalse <- isSBranchFeasibleInState st "else" (pc &&& bnot b)
-                             if not satFalse      -- negation of the condition is not satisfiable; so it must be necessarily True.
-                                then return trueSW
-                                else sbvToSW st b -- condition is not necessarily always True/False. So, keep symbolic.
-
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where
   property (SBV (SVal _ (Left b))) = property (cwToBool b)
@@ -1613,6 +1542,23 @@ slet x f = SBV $ SVal k $ Right $ cache r
                     let xsbv = SBV $ SVal (kindOf x) (Right (cache (const (return xsw))))
                         res  = f xsbv
                     sbvToSW st res
+
+-- | Check if a boolean condition is satisfiable in the current state. This function can be useful in contexts where an
+-- interpreter implemented on top of SBV needs to decide if a particular stae (represented by the boolean) is reachable
+-- in the current if-then-else paths implied by the 'ite' calls.
+isSatisfiableInCurrentPath :: SBool -> Symbolic Bool
+isSatisfiableInCurrentPath cond = do
+       st <- ask
+       let cfg  = fromMaybe defaultSMTCfg (getSBranchRunConfig st)
+           msg  = when (verbose cfg) . putStrLn . ("** " ++)
+           pc   = getPathCondition st
+       check <- liftIO $ internalSATCheck cfg (pc &&& cond) st "isSatisfiableInCurrentPath: Checking satisfiability"
+       let res = case check of
+                   SatResult (Satisfiable{})   -> True
+                   SatResult (Unsatisfiable _) -> False
+                   _                           -> error $ "isSatisfiableInCurrentPath: Unexpected external result: " ++ show check
+       res `seq` liftIO $ msg $ "isSatisfiableInCurrentPath: Conclusion: " ++ if res then "Satisfiable" else "Unsatisfiable"
+       return res
 
 -- We use 'isVacuous' and 'prove' only for the "test" section in this file, and GHC complains about that. So, this shuts it up.
 __unused :: a

@@ -40,7 +40,7 @@ module Data.SBV.BitVectors.Symbolic
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
   , SBVPgm(..), Symbolic, runSymbolic, runSymbolic', State
-  , inProofMode, isInteractiveProof, SBVRunMode(..), Result(..)
+  , inProofMode, SBVRunMode(..), Result(..)
   , Logic(..), SMTLibLogic(..)
   , getTraceInfo, getConstraints
   , addSValConstraint
@@ -401,25 +401,25 @@ isConcreteMode (Proof{})    = False
 isConcreteMode CodeGen      = False
 
 -- | The state of the symbolic interpreter
-data State  = State { runMode       :: SBVRunMode
-                    , pathCond      :: SVal -- ^ kind KBool
-                    , rStdGen       :: IORef StdGen
-                    , rCInfo        :: IORef [(String, CW)]
-                    , rctr          :: IORef Int
-                    , rUsedKinds    :: IORef KindSet
-                    , rinps         :: IORef [(Quantifier, NamedSymVar)]
-                    , rConstraints  :: IORef [SW]
-                    , routs         :: IORef [SW]
-                    , rtblMap       :: IORef TableMap
-                    , spgm          :: IORef SBVPgm
-                    , rconstMap     :: IORef CnstMap
-                    , rexprMap      :: IORef ExprMap
-                    , rArrayMap     :: IORef ArrayMap
-                    , rUIMap        :: IORef UIMap
-                    , rCgMap        :: IORef CgMap
-                    , raxioms       :: IORef [(String, [String])]
-                    , rSWCache      :: IORef (Cache SW)
-                    , rAICache      :: IORef (Cache Int)
+data State  = State { runMode      :: SBVRunMode
+                    , pathCond     :: SVal                             -- ^ kind KBool
+                    , rStdGen      :: IORef StdGen
+                    , rCInfo       :: IORef [(String, CW)]
+                    , rctr         :: IORef Int
+                    , rUsedKinds   :: IORef KindSet
+                    , rinps        :: IORef [(Quantifier, NamedSymVar)]
+                    , rConstraints :: IORef [SW]
+                    , routs        :: IORef [SW]
+                    , rtblMap      :: IORef TableMap
+                    , spgm         :: IORef SBVPgm
+                    , rconstMap    :: IORef CnstMap
+                    , rexprMap     :: IORef ExprMap
+                    , rArrayMap    :: IORef ArrayMap
+                    , rUIMap       :: IORef UIMap
+                    , rCgMap       :: IORef CgMap
+                    , raxioms      :: IORef [(String, [String])]
+                    , rSWCache     :: IORef (Cache SW)
+                    , rAICache     :: IORef (Cache Int)
                     }
 
 -- | Get the current path condition
@@ -436,13 +436,6 @@ inProofMode s = case runMode s of
                   Proof{}    -> True
                   CodeGen    -> False
                   Concrete{} -> False
-
--- | Check if we are in interactive proof mode?
-isInteractiveProof :: State -> Bool
-isInteractiveProof s = case runMode s of
-                         Proof   (_, cfg) -> interactive cfg
-                         CodeGen          -> False
-                         Concrete{}       -> False
 
 -- | If in proof mode, get the underlying configuration (used for 'sBranch')
 getSBranchRunConfig :: State -> Maybe SMTConfig
@@ -868,13 +861,8 @@ uncacheAI = uncacheGen rAICache
 
 -- | Generic uncaching. Note that this is entirely safe, since we do it in the IO monad.
 uncacheGen :: (State -> IORef (Cache a)) -> Cached a -> State -> IO a
-uncacheGen getCache (Cached f) st
-   -- If this is an "interactive" proof; disallow sharing as it is unsound.
-   -- See: https://github.com/LeventErkok/sbv/issues/180
-   | isInteractiveProof st
-   = f st
-   | True
-   = do let rCache = getCache st
+uncacheGen getCache (Cached f) st = do
+        let rCache = getCache st
         stored <- readIORef rCache
         sn <- f `seq` makeStableName f
         let h = hashStableName sn
@@ -1026,20 +1014,19 @@ data RoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable 
 -- The 'printBase' field can be used to print numbers in base 2, 10, or 16. If base 2 or 16 is used, then floating-point values will
 -- be printed in their internal memory-layout format as well, which can come in handy for bit-precise analysis.
 data SMTConfig = SMTConfig {
-         verbose        :: Bool             -- ^ Debug mode
-       , timing         :: Bool             -- ^ Print timing information on how long different phases took (construction, solving, etc.)
-       , sBranchTimeOut :: Maybe Int        -- ^ How much time to give to the solver for each call of 'sBranch' check. (In seconds. Default: No limit.)
-       , interactive    :: Bool             -- ^ Allow interactive calls to the solver, used by 'sBranch'/'sAssert'. (Default: False)
-       , timeOut        :: Maybe Int        -- ^ How much time to give to the solver. (In seconds. Default: No limit.)
-       , printBase      :: Int              -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
-       , printRealPrec  :: Int              -- ^ Print algebraic real values with this precision. (SReal, default: 16)
-       , solverTweaks   :: [String]         -- ^ Additional lines of script to give to the solver (user specified)
-       , satCmd         :: String           -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
-       , smtFile        :: Maybe FilePath   -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
-       , smtLibVersion  :: SMTLibVersion    -- ^ What version of SMT-lib we use for the tool
-       , solver         :: SMTSolver        -- ^ The actual SMT solver.
-       , roundingMode   :: RoundingMode     -- ^ Rounding mode to use for floating-point conversions
-       , useLogic       :: Maybe Logic      -- ^ If Nothing, pick automatically. Otherwise, either use the given one, or use the custom string.
+         verbose        :: Bool           -- ^ Debug mode
+       , timing         :: Bool           -- ^ Print timing information on how long different phases took (construction, solving, etc.)
+       , sBranchTimeOut :: Maybe Int      -- ^ How much time to give to the solver for each call of 'sBranch' check. (In seconds. Default: No limit.)
+       , timeOut        :: Maybe Int      -- ^ How much time to give to the solver. (In seconds. Default: No limit.)
+       , printBase      :: Int            -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
+       , printRealPrec  :: Int            -- ^ Print algebraic real values with this precision. (SReal, default: 16)
+       , solverTweaks   :: [String]       -- ^ Additional lines of script to give to the solver (user specified)
+       , satCmd         :: String         -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
+       , smtFile        :: Maybe FilePath -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
+       , smtLibVersion  :: SMTLibVersion  -- ^ What version of SMT-lib we use for the tool
+       , solver         :: SMTSolver      -- ^ The actual SMT solver.
+       , roundingMode   :: RoundingMode   -- ^ Rounding mode to use for floating-point conversions
+       , useLogic       :: Maybe Logic    -- ^ If Nothing, pick automatically. Otherwise, either use the given one, or use the custom string.
        }
 
 instance Show SMTConfig where
