@@ -397,7 +397,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                 mkCnst = cvtCW rm . mkConstCW (kindOf i)
                 le0  = "(" ++ less ++ " " ++ ssw i ++ " " ++ mkCnst 0 ++ ")"
                 gtl  = "(" ++ leq  ++ " " ++ mkCnst l ++ " " ++ ssw i ++ ")"
-        sh (SBVApp (Cast c) as)     = "(" ++ show c ++ " " ++ unwords (map ssw as) ++ ")"
+        sh (SBVApp (IntCast f t) [a]) = handleIntCast f t (ssw a)
         sh (SBVApp (ArrEq i j) [])  = "(= array_" ++ show i ++ " array_" ++ show j ++")"
         sh (SBVApp (ArrRead i) [a]) = "(select array_" ++ show i ++ " " ++ ssw a ++ ")"
         sh (SBVApp (Uninterpreted nm) [])   = nm
@@ -532,7 +532,11 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
 -----------------------------------------------------------------------------------------------
 
 handleFPCast :: Kind -> Kind -> String -> String -> String
-handleFPCast kFrom kTo rm input = "(" ++ cast kFrom kTo input ++ ")"
+handleFPCast kFrom kTo rm  input
+  | kFrom == kTo
+  = input
+  | True
+  = "(" ++ cast kFrom kTo input ++ ")"
   where addRM a s = s ++ " " ++ rm ++ " " ++ a
 
         absRM a s = "ite (fp.isNegative " ++ a ++ ") (" ++ cvt1 ++ ") (" ++ cvt2 ++ ")"
@@ -578,3 +582,36 @@ shft rm ssw oW oS c x = "(" ++ o ++ " " ++ ssw x ++ " " ++ cvtCW rm c' ++ ")"
    where s  = hasSign x
          c' = mkConstCW (kindOf x) c
          o  = if s then oS else oW
+
+-- Various integer casts
+handleIntCast :: Kind -> Kind -> String -> String
+handleIntCast kFrom kTo a
+  | kFrom == kTo
+  = a
+  | True
+  = case kFrom of
+      KBounded False m -> case kTo of
+                            KBounded False n -> u2u m n
+                            KBounded True  n -> u2s m n
+                            KUnbounded       -> u2i m
+                            _                -> noCast
+      KBounded True  m -> case kTo of
+                            KBounded False n -> s2u m n
+                            KBounded True  n -> s2s m n
+                            KUnbounded       -> s2i m
+                            _                -> noCast
+      KUnbounded       -> case kTo of
+                            KReal            -> "(to_real " ++ a ++ ")"
+                            KBounded False n -> i2u n
+                            KBounded True  n -> i2s n
+                            _                -> noCast
+      _                -> noCast
+  where noCast  = error $ "SBV.SMTLib2: Unexpected integer cast from: " ++ show kFrom ++ " to " ++ show kTo
+        u2u m n = error $ "TBD: u2u_" ++ show (m, n)
+        u2s m n = error $ "TBD: u2s_" ++ show (m, n)
+        u2i m   = error $ "TBD: u2i_" ++ show m
+        s2u m n = error $ "TBD: s2u_" ++ show (m, n)
+        s2s m n = error $ "TBD: s2s_" ++ show (m, n)
+        s2i m   = error $ "TBD: s2i_" ++ show m
+        i2u n   = error $ "TBD: i2u_" ++ show n
+        i2s n   = error $ "TBD: i2s_" ++ show n

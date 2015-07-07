@@ -21,7 +21,7 @@
 
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), SIntegral
-  , ite, iteLazy, sbvTestBit, sbvExtractBits, sbvPopCount, setBitTo
+  , ite, iteLazy, sbvTestBit, sbvExtractBits, sbvPopCount, setBitTo, sbvFromIntegral
   , sbvShiftLeft, sbvShiftRight, sbvRotateLeft, sbvRotateRight, sbvSignedShiftArithRight, (.^)
   , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
@@ -293,7 +293,7 @@ sIntegerToSReal x
   | Just i <- unliteral x = literal $ fromInteger i
   | True                  = SBV (SVal KReal (Right (cache y)))
   where y st = do xsw <- sbvToSW st x
-                  newExpr st KReal (SBVApp (Cast Cast_SIntegerToSReal) [xsw])
+                  newExpr st KReal (SBVApp (IntCast KUnbounded KReal) [xsw])
 
 -- | label: Label the result of an expression. This is essentially a no-op, but useful as it generates a comment in the generated C/SMT-Lib code.
 -- Note that if the argument is a constant, then the label is dropped completely, per the usual constant folding strategy.
@@ -639,7 +639,7 @@ sbvExtractBits x = map (sbvTestBit x)
 -- issue is with really-really large concrete 'SInteger' values.
 sbvPopCount :: (Num a, Bits a, SymWord a) => SBV a -> SWord8
 sbvPopCount x
-  | isReal x          = error "SBV.sbvPopCount: Called on a real value"
+  | isReal x          = error "SBV.sbvPopCount: Called on a real value" -- can't really happen due to types, but being overcautious
   | isConcrete x      = go 0 x
   | not (isBounded x) = error "SBV.sbvPopCount: Called on an infinite precision symbolic value"
   | True              = sum [ite b 1 0 | b <- blastLE x]
@@ -652,6 +652,21 @@ sbvPopCount x
 -- the condition to set/clear happens to be symbolic.
 setBitTo :: (Num a, Bits a, SymWord a) => SBV a -> Int -> SBool -> SBV a
 setBitTo x i b = ite b (setBit x i) (clearBit x i)
+
+-- | Conversion between integral-symbolic values, akin to Haskell's fromIntegral
+sbvFromIntegral :: forall a b. (Integral a, HasKind a, Num a, Bits a, SymWord a, HasKind b, Num b, Bits b, SymWord b) => SBV a -> SBV b
+sbvFromIntegral x
+  | isReal x
+  = error "SBV.sbvFromIntegral: Called on a real value" -- can't really happen due to types, but being overcautious
+  | Just v <- unliteral x
+  = literal (fromIntegral v)
+  | True
+  = result
+  where result = SBV (SVal kTo (Right (cache y)))
+        kFrom  = kindOf x
+        kTo    = kindOf (undefined :: b)
+        y st   = do xsw <- sbvToSW st x
+                    newExpr st kTo (SBVApp (IntCast kFrom kTo) [xsw])
 
 -- | Generalization of 'shiftL', when the shift-amount is symbolic. Since Haskell's
 -- 'shiftL' only takes an 'Int' as the shift amount, it cannot be used when we have

@@ -24,7 +24,7 @@
 module Data.SBV.BitVectors.Symbolic
   ( NodeId(..)
   , SW(..), swKind, trueSW, falseSW
-  , Op(..), CastOp(..), FPOp(..)
+  , Op(..), FPOp(..)
   , Quantifier(..), needsExistentials
   , RoundingMode(..)
   , SBVType(..), newUninterpreted, addAxiom
@@ -132,20 +132,11 @@ data Op = Plus
         | LkUp (Int, Kind, Kind, Int) !SW !SW   -- (table-index, arg-type, res-type, length of the table) index out-of-bounds-value
         | ArrEq   Int Int                       -- Array equality
         | ArrRead Int
-        | Cast CastOp
+        | IntCast Kind Kind
         | Uninterpreted String
         | Label String                          -- Essentially no-op; useful for code generation to emit comments.
         | IEEEFP FPOp                           -- Floating-point ops, categorized separately
         deriving (Eq, Ord)
-
--- | Various cast ops. Note that this is for future use, there is only one current inhabitant for
--- the time being. (Floating-point casts are separately handled, see FPOp.)
-data CastOp = Cast_SIntegerToSReal
-            deriving (Eq, Ord)
-
--- | The show instance maps to the SMTLib name
-instance Show CastOp where
-  show Cast_SIntegerToSReal = "to_real"
 
 -- | Floating point operations
 data FPOp = FP_Cast        Kind Kind SW   -- From-Kind, To-Kind, RoundingMode. This is "value" conversion
@@ -215,7 +206,7 @@ instance Show Op where
         where tinfo = "table" ++ show ti ++ "(" ++ show at ++ " -> " ++ show rt ++ ", " ++ show l ++ ")"
   show (ArrEq i j)       = "array_" ++ show i ++ " == array_" ++ show j
   show (ArrRead i)       = "select array_" ++ show i
-  show (Cast c)          = show c
+  show (IntCast fr to)   = "cast_" ++ show fr ++ "_" ++ show to
   show (Uninterpreted i) = "[uninterpreted] " ++ i
   show (Label s)         = "[label] " ++ s
   show (IEEEFP w)        = show w
@@ -1080,4 +1071,3 @@ instance Show SMTSolver where
    show = show . name
 
 {-# ANN type FPOp   ("HLint: ignore Use camelCase" :: String) #-}
-{-# ANN type CastOp ("HLint: ignore Use camelCase" :: String) #-}
