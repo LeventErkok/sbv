@@ -591,27 +591,38 @@ handleIntCast kFrom kTo a
   | True
   = case kFrom of
       KBounded False m -> case kTo of
-                            KBounded False n -> u2u m n
-                            KBounded True  n -> u2s m n
-                            KUnbounded       -> u2i m
-                            _                -> noCast
+                            KBounded _ n -> fromUnsigned m n
+                            KUnbounded   -> u2i m
+                            _            -> noCast
+
       KBounded True  m -> case kTo of
                             KBounded False n -> s2u m n
                             KBounded True  n -> s2s m n
                             KUnbounded       -> s2i m
                             _                -> noCast
+
       KUnbounded       -> case kTo of
                             KReal            -> "(to_real " ++ a ++ ")"
                             KBounded False n -> i2u n
                             KBounded True  n -> i2s n
                             _                -> noCast
+
       _                -> noCast
   where noCast  = error $ "SBV.SMTLib2: Unexpected integer cast from: " ++ show kFrom ++ " to " ++ show kTo
-        u2u m n = error $ "TBD: u2u_" ++ show (m, n)
-        u2s m n = error $ "TBD: u2s_" ++ show (m, n)
+
+        fromUnsigned m n
+         | n > m  = zeroExtend (n - m)
+         | m == n = a
+         | True   = extract (n - 1)
+
         u2i m   = error $ "TBD: u2i_" ++ show m
+
         s2u m n = error $ "TBD: s2u_" ++ show (m, n)
         s2s m n = error $ "TBD: s2s_" ++ show (m, n)
         s2i m   = error $ "TBD: s2i_" ++ show m
+
         i2u n   = error $ "TBD: i2u_" ++ show n
         i2s n   = error $ "TBD: i2s_" ++ show n
+
+        zeroExtend i = "((_ zero_extend " ++ show i ++  ") "  ++ a ++ ")"
+        extract    i = "((_ extract "     ++ show i ++ " 0) " ++ a ++ ")"
