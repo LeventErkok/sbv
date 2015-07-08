@@ -610,9 +610,17 @@ handleIntCast kFrom kTo a
          | m == n = a
          | True   = extract (n - 1)
 
-        b2i s m = error "TBD: b2i_" ++ show (s, m)
         i2u n   = error $ "TBD: i2u_" ++ show n
         i2s n   = error $ "TBD: i2s_" ++ show n
+
+        b2i s m
+          | s    = "(- " ++ val ++ " " ++ valIf (2^m) sign ++ ")"
+          | True = val
+          where valIf v b = "(ite (= " ++ b ++ " #b1) " ++ show (v::Integer) ++ " 0)"
+                getBit i  = "((_ extract " ++ show i ++ " " ++ show i ++ ") " ++ a ++ ")"
+                bitVal i  = valIf (2^i) (getBit i)
+                val       = "(+ " ++ unwords (map bitVal [0 .. m-1]) ++ ")"
+                sign      = getBit (m-1)
 
         signExtend i = "((_ sign_extend " ++ show i ++  ") "  ++ a ++ ")"
         zeroExtend i = "((_ zero_extend " ++ show i ++  ") "  ++ a ++ ")"
