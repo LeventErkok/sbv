@@ -590,39 +590,30 @@ handleIntCast kFrom kTo a
   = a
   | True
   = case kFrom of
-      KBounded False m -> case kTo of
-                            KBounded _ n -> fromUnsigned m n
-                            KUnbounded   -> u2i m
-                            _            -> noCast
+      KBounded s m -> case kTo of
+                        KBounded _ n -> fromBV (if s then signExtend else zeroExtend) m n
+                        KUnbounded   -> b2i s m
+                        _            -> noCast
 
-      KBounded True  m -> case kTo of
-                            KBounded False n -> s2u m n
-                            KBounded True  n -> s2s m n
-                            KUnbounded       -> s2i m
-                            _                -> noCast
+      KUnbounded   -> case kTo of
+                        KReal            -> "(to_real " ++ a ++ ")"
+                        KBounded False n -> i2u n
+                        KBounded True  n -> i2s n
+                        _                -> noCast
 
-      KUnbounded       -> case kTo of
-                            KReal            -> "(to_real " ++ a ++ ")"
-                            KBounded False n -> i2u n
-                            KBounded True  n -> i2s n
-                            _                -> noCast
+      _            -> noCast
 
-      _                -> noCast
   where noCast  = error $ "SBV.SMTLib2: Unexpected integer cast from: " ++ show kFrom ++ " to " ++ show kTo
 
-        fromUnsigned m n
-         | n > m  = zeroExtend (n - m)
+        fromBV upConv m n
+         | n > m  = upConv  (n - m)
          | m == n = a
          | True   = extract (n - 1)
 
-        u2i m   = error $ "TBD: u2i_" ++ show m
-
-        s2u m n = error $ "TBD: s2u_" ++ show (m, n)
-        s2s m n = error $ "TBD: s2s_" ++ show (m, n)
-        s2i m   = error $ "TBD: s2i_" ++ show m
-
+        b2i s m = error "TBD: b2i_" ++ show (s, m)
         i2u n   = error $ "TBD: i2u_" ++ show n
         i2s n   = error $ "TBD: i2s_" ++ show n
 
+        signExtend i = "((_ sign_extend " ++ show i ++  ") "  ++ a ++ ")"
         zeroExtend i = "((_ zero_extend " ++ show i ++  ") "  ++ a ++ ")"
         extract    i = "((_ extract "     ++ show i ++ " 0) " ++ a ++ ")"
