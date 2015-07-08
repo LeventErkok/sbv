@@ -62,6 +62,7 @@ testSuite = mkTestSuite $ \_ -> test $
      ++ genIntTestS True   "rotateL"          rotateL
      ++ genIntTestS True   "rotateR"          rotateR
      ++ genBlasts
+     ++ genIntCasts
      ++ genCasts
 
 
@@ -165,6 +166,26 @@ genBlasts = map mkTest $  [(show x, mkThm fromBitsLE blastLE x) | x <- w8s ]
         mkThm from to v = isThm $ do a <- free "x"
                                      constrain $ a .== literal v
                                      return $ a .== from (to a)
+
+genIntCasts :: [Test]
+genIntCasts = map mkTest $  cast w8s ++ cast w16s ++ cast w32s ++ cast w64s
+                         ++ cast i8s ++ cast i16s ++ cast i32s ++ cast i64s
+                         ++ cast iUBs
+   where mkTest (x, t) = "sIntCast-" ++ x ~: assert t
+         cast :: forall a. (Show a, Integral a, Bits a, SymWord a) => [a] -> [(String, IO Bool)]
+         cast xs = toWords xs ++ toInts xs
+         toWords xs =  [(show x, mkThm x (fromIntegral x :: Word8 ))  | x <- xs]
+                    ++ [(show x, mkThm x (fromIntegral x :: Word16))  | x <- xs]
+                    ++ [(show x, mkThm x (fromIntegral x :: Word32))  | x <- xs]
+                    ++ [(show x, mkThm x (fromIntegral x :: Word64))  | x <- xs]
+         toInts  xs =  [(show x, mkThm x (fromIntegral x :: Int8 ))   | x <- xs]
+                    ++ [(show x, mkThm x (fromIntegral x :: Int16))   | x <- xs]
+                    ++ [(show x, mkThm x (fromIntegral x :: Int32))   | x <- xs]
+                    ++ [(show x, mkThm x (fromIntegral x :: Int64))   | x <- xs]
+                    ++ [(show x, mkThm x (fromIntegral x :: Integer)) | x <- xs]
+         mkThm v res = isThm $ do a <- free "x"
+                                  constrain $ a .== literal v
+                                  return $ literal res .== sbvFromIntegral a
 
 genCasts :: [Test]
 genCasts = map mkTest $  [(show x, mkThm unsignCast signCast x) | x <- w8s ]
@@ -406,8 +427,8 @@ genQRems = map mkTest $  [("divMod",  show x, show y, mkThm2 sDivMod  x y (x `di
 
 -- Concrete test data
 xsSigned, xsUnsigned :: (Num a, Enum a, Bounded a) => [a]
-xsUnsigned = [minBound, 0, maxBound]
-xsSigned   = xsUnsigned ++ [-1, 1]
+xsUnsigned = [0, 1, maxBound - 1, maxBound]
+xsSigned   = xsUnsigned ++ [minBound, minBound + 1, -1]
 
 w8s :: [Word8]
 w8s = xsUnsigned
