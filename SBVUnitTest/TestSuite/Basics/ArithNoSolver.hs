@@ -60,6 +60,7 @@ testSuite = mkTestSuite $ \_ -> test $
      ++ genIntTestS "rotateL"          rotateL
      ++ genIntTestS "rotateR"          rotateR
      ++ genBlasts
+     ++ genIntCasts
      ++ genCasts
 
 genBinTest :: String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [Test]
@@ -152,6 +153,25 @@ genBlasts = map mkTest $
           ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- si64s]
           ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- si64s]
   where mkTest (x, r) = "blast-" ++ x ~: r `showsAs` "True"
+
+genIntCasts :: [Test]
+genIntCasts = map mkTest $  cast w8s ++ cast w16s ++ cast w32s ++ cast w64s
+                         ++ cast i8s ++ cast i16s ++ cast i32s ++ cast i64s
+                         ++ cast iUBs
+   where mkTest (x, r) = "intCast-" ++ x ~: r `showsAs` "True"
+         lhs x = sbvFromIntegral (literal x)
+         rhs x = literal (fromIntegral x)
+         cast :: forall a. (Show a, Integral a, Bits a, SymWord a) => [a] -> [(String, SBool)]
+         cast xs = toWords xs ++ toInts xs
+         toWords xs =  [(show x, lhs x .== (rhs x :: SWord8 ))  | x <- xs]
+                    ++ [(show x, lhs x .== (rhs x :: SWord16))  | x <- xs]
+                    ++ [(show x, lhs x .== (rhs x :: SWord32))  | x <- xs]
+                    ++ [(show x, lhs x .== (rhs x :: SWord64))  | x <- xs]
+         toInts  xs =  [(show x, lhs x .== (rhs x :: SInt8 ))   | x <- xs]
+                    ++ [(show x, lhs x .== (rhs x :: SInt16))   | x <- xs]
+                    ++ [(show x, lhs x .== (rhs x :: SInt32))   | x <- xs]
+                    ++ [(show x, lhs x .== (rhs x :: SInt64))   | x <- xs]
+                    ++ [(show x, lhs x .== (rhs x :: SInteger)) | x <- xs]
 
 genCasts :: [Test]
 genCasts = map mkTest $
