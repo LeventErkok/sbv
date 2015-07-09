@@ -17,8 +17,8 @@ report any issues you might see with newer releases.
       * Last tested: May 31, 2015
   * MathSAT:
       * http://mathsat.fbk.eu/
-      * Version 5.3.6
-      * Last tested: Jun 15, 2015
+      * Version 5.3.7
+      * Last tested: Jul 7, 2015
   * Yices:
       * http://yices.csl.sri.com/
       * Version 2.3.1
