@@ -984,7 +984,7 @@ liftQRem x y
                                    mkSymOp o st sgnsz sw1 sw2
         z = genLiteral (kindOf x) (0::Integer)
 
--- | Lift 'QMod' to symbolic words. Division by 0 is defined s.t. @x/0 = 0@; which
+-- | Lift 'DMod' to symbolic words. Division by 0 is defined s.t. @x/0 = 0@; which
 -- holds even when @x@ is @0@ itself. Essentially, this is conversion from quotRem
 -- (truncate to 0) to divMod (truncate towards negative infinity)
 liftDMod :: (SymWord a, Num a, SDivisible a, SDivisible (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
