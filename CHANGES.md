@@ -41,7 +41,7 @@
        * Boolector: Upgraded to work with new Boolector release 2.0.7. Note that earlier versions
          of Boolector is *not* supported.
      
-       * MathSAT: Upgraded to work with latest release 5.3.6. Note that earlier versions of MathSAT
+       * MathSAT: Upgraded to work with latest release 5.3.7. Note that earlier versions of MathSAT
          is *not* supported (due to a buffering issue in MathSAT itself.)
      
        * MathSAT: Enabled floating-point support in MathSAT.
@@ -81,6 +81,19 @@
     sDoubleAsSWord64. Note that the sWord32AsSFloat and sWord64ToSDouble are regular functions, but
     sFloatToSWord32 and sDoubleToSWord64 are "relations", since NaN values are not uniquely convertable.
 
+  * Add 'sExtractBits', which takes a list of indices to extract bits from, essentially
+    equivalent to 'map sTestBit'.
+
+  * Rename a set of symbolic functions for consistency. Here are the old/new names:
+   
+     * sbvTestBit               --> sTestBit
+     * sbvPopCount              --> sPopCount
+     * sbvShiftLeft             --> sShiftLeft
+     * sbvShiftRight            --> sShiftRight
+     * sbvRotateLeft            --> sRotateLeft
+     * sbvRotateRight           --> sRotateRight
+     * sbvSignedShiftArithRight --> sSignedShiftArithRight
+
   * Rename all FP recognizers to be in sync with FP operations. Here are the old/new names:
 
      * isNormalFP       --> fpIsNormal       
@@ -99,9 +112,6 @@
   * Introduce shorter variants for rounding modes: sRNE, sRNA, sRTP, sRTN, sRTZ;
     aliases for sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive,
     sRoundTowardNegative, and sRoundTowardZero; respectively.
-
-  * Add 'sbvExtractBits', which takes a list of indices to extract bits from, essentially
-    equivalent to 'map sbvTestBit'.
 
 ### Version 4.4, 2015-04-13
 

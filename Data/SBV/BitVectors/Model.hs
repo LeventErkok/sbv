@@ -21,8 +21,8 @@
 
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), SIntegral
-  , ite, iteLazy, sbvTestBit, sbvExtractBits, sbvPopCount, setBitTo, sFromIntegral
-  , sbvShiftLeft, sbvShiftRight, sbvRotateLeft, sbvRotateRight, sbvSignedShiftArithRight, (.^)
+  , ite, iteLazy, sTestBit, sExtractBits, sPopCount, setBitTo, sFromIntegral
+  , sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, (.^)
   , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
@@ -615,22 +615,22 @@ instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
     | SBV (SVal _ (Left (CW _ (CWInteger n)))) <- x
     = testBit n i
     | True
-    = error $ "SBV.testBit: Called on symbolic value: " ++ show x ++ ". Use sbvTestBit instead."
+    = error $ "SBV.testBit: Called on symbolic value: " ++ show x ++ ". Use sTestBit instead."
   -- NB. popCount is *not* implementable on non-concrete symbolic words
   popCount x
     | SBV (SVal _ (Left (CW (KBounded _ w) (CWInteger n)))) <- x
     = popCount (n .&. (bit w - 1))
     | True
-    = error $ "SBV.popCount: Called on symbolic value: " ++ show x ++ ". Use sbvPopCount instead."
+    = error $ "SBV.popCount: Called on symbolic value: " ++ show x ++ ". Use sPopCount instead."
 
 -- | Replacement for 'testBit'. Since 'testBit' requires a 'Bool' to be returned,
 -- we cannot implement it for symbolic words. Index 0 is the least-significant bit.
-sbvTestBit :: (Num a, Bits a, SymWord a) => SBV a -> Int -> SBool
-sbvTestBit (SBV x) i = SBV (svTestBit x i)
+sTestBit :: (Num a, Bits a, SymWord a) => SBV a -> Int -> SBool
+sTestBit (SBV x) i = SBV (svTestBit x i)
 
--- | Variant of 'sbvTestBit', where we want to extract multiple bit positions.
-sbvExtractBits :: (Num a, Bits a, SymWord a) => SBV a -> [Int] -> [SBool]
-sbvExtractBits x = map (sbvTestBit x)
+-- | Variant of 'sTestBit', where we want to extract multiple bit positions.
+sExtractBits :: (Num a, Bits a, SymWord a) => SBV a -> [Int] -> [SBool]
+sExtractBits x = map (sTestBit x)
 
 -- | Replacement for 'popCount'. Since 'popCount' returns an 'Int', we cannot implement
 -- it for symbolic words. Here, we return an 'SWord8', which can overflow when used on
@@ -638,14 +638,14 @@ sbvExtractBits x = map (sbvTestBit x)
 -- that SBV supports, all other types are safe. Even with 'SInteger', this will only
 -- overflow if there are at least 256-bits set in the number, and the smallest such
 -- number is 2^256-1, which is a pretty darn big number to worry about for practical
--- purposes. In any case, we do not support 'sbvPopCount' for unbounded symbolic integers,
+-- purposes. In any case, we do not support 'sPopCount' for unbounded symbolic integers,
 -- as the only possible implementation wouldn't symbolically terminate. So the only overflow
 -- issue is with really-really large concrete 'SInteger' values.
-sbvPopCount :: (Num a, Bits a, SymWord a) => SBV a -> SWord8
-sbvPopCount x
-  | isReal x          = error "SBV.sbvPopCount: Called on a real value" -- can't really happen due to types, but being overcautious
+sPopCount :: (Num a, Bits a, SymWord a) => SBV a -> SWord8
+sPopCount x
+  | isReal x          = error "SBV.sPopCount: Called on a real value" -- can't really happen due to types, but being overcautious
   | isConcrete x      = go 0 x
-  | not (isBounded x) = error "SBV.sbvPopCount: Called on an infinite precision symbolic value"
+  | not (isBounded x) = error "SBV.sPopCount: Called on an infinite precision symbolic value"
   | True              = sum [ite b 1 0 | b <- blastLE x]
   where -- concrete case
         go !c 0 = c
@@ -675,9 +675,9 @@ sFromIntegral x
 -- | Generalization of 'shiftL', when the shift-amount is symbolic. Since Haskell's
 -- 'shiftL' only takes an 'Int' as the shift amount, it cannot be used when we have
 -- a symbolic amount to shift with. The shift amount must be an unsigned quantity.
-sbvShiftLeft :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
-sbvShiftLeft x i
-  | isSigned i = error "sbvShiftLeft: shift amount should be unsigned"
+sShiftLeft :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
+sShiftLeft x i
+  | isSigned i = error "sShiftLeft: shift amount should be unsigned"
   | True       = select [x `shiftL` k | k <- [0 .. ghcBitSize x - 1]] z i
   where z = genLiteral (kindOf x) (0::Integer)
 
@@ -686,33 +686,33 @@ sbvShiftLeft x i
 -- a symbolic amount to shift with. The shift amount must be an unsigned quantity.
 --
 -- NB. If the shiftee is signed, then this is an arithmetic shift; otherwise it's logical,
--- following the usual Haskell convention. See 'sbvSignedShiftArithRight' for a variant
+-- following the usual Haskell convention. See 'sSignedShiftArithRight' for a variant
 -- that explicitly uses the msb as the sign bit, even for unsigned underlying types.
-sbvShiftRight :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
-sbvShiftRight x i
-  | isSigned i = error "sbvShiftRight: shift amount should be unsigned"
+sShiftRight :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
+sShiftRight x i
+  | isSigned i = error "sShiftRight: shift amount should be unsigned"
   | True       = select [x `shiftR` k | k <- [0 .. ghcBitSize x - 1]] z i
   where z = genLiteral (kindOf x) (0::Integer)
 
 -- | Arithmetic shift-right with a symbolic unsigned shift amount. This is equivalent
--- to 'sbvShiftRight' when the argument is signed. However, if the argument is unsigned,
+-- to 'sShiftRight' when the argument is signed. However, if the argument is unsigned,
 -- then it explicitly treats its msb as a sign-bit, and uses it as the bit that
 -- gets shifted in. Useful when using the underlying unsigned bit representation to implement
 -- custom signed operations. Note that there is no direct Haskell analogue of this function.
-sbvSignedShiftArithRight:: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
-sbvSignedShiftArithRight x i
-  | isSigned i = error "sbvSignedShiftArithRight: shift amount should be unsigned"
-  | isSigned x = sbvShiftRight x i
+sSignedShiftArithRight:: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
+sSignedShiftArithRight x i
+  | isSigned i = error "sSignedShiftArithRight: shift amount should be unsigned"
+  | isSigned x = sShiftRight x i
   | True       = ite (msb x)
-                     (complement (sbvShiftRight (complement x) i))
-                     (sbvShiftRight x i)
+                     (complement (sShiftRight (complement x) i))
+                     (sShiftRight x i)
 
 -- | Generalization of 'rotateL', when the shift-amount is symbolic. Since Haskell's
 -- 'rotateL' only takes an 'Int' as the shift amount, it cannot be used when we have
 -- a symbolic amount to shift with. The shift amount must be an unsigned quantity.
-sbvRotateLeft :: (SIntegral a, SIntegral b, SDivisible (SBV b)) => SBV a -> SBV b -> SBV a
-sbvRotateLeft x i
-  | isSigned i             = error "sbvRotateLeft: rotation amount should be unsigned"
+sRotateLeft :: (SIntegral a, SIntegral b, SDivisible (SBV b)) => SBV a -> SBV b -> SBV a
+sRotateLeft x i
+  | isSigned i             = error "sRotateLeft: rotation amount should be unsigned"
   | bit si <= toInteger sx = select [x `rotateL` k | k <- [0 .. bit si - 1]] z i         -- wrap-around not possible
   | True                   = select [x `rotateL` k | k <- [0 .. sx     - 1]] z (i `sRem` n)
     where sx = ghcBitSize x
@@ -723,9 +723,9 @@ sbvRotateLeft x i
 -- | Generalization of 'rotateR', when the shift-amount is symbolic. Since Haskell's
 -- 'rotateR' only takes an 'Int' as the shift amount, it cannot be used when we have
 -- a symbolic amount to shift with. The shift amount must be an unsigned quantity.
-sbvRotateRight :: (SIntegral a, SIntegral b, SDivisible (SBV b)) => SBV a -> SBV b -> SBV a
-sbvRotateRight x i
-  | isSigned i             = error "sbvRotateRight: rotation amount should be unsigned"
+sRotateRight :: (SIntegral a, SIntegral b, SDivisible (SBV b)) => SBV a -> SBV b -> SBV a
+sRotateRight x i
+  | isSigned i             = error "sRotateRight: rotation amount should be unsigned"
   | bit si <= toInteger sx = select [x `rotateR` k | k <- [0 .. bit si - 1]] z i         -- wrap-around not possible
   | True                   = select [x `rotateR` k | k <- [0 .. sx     - 1]] z (i `sRem` n)
     where sx = ghcBitSize x
@@ -767,7 +767,7 @@ blastLE :: (Num a, Bits a, SymWord a) => SBV a -> [SBool]
 blastLE x
  | isReal x          = error "SBV.blastLE: Called on a real value"
  | not (isBounded x) = error "SBV.blastLE: Called on an infinite precision value"
- | True              = map (sbvTestBit x) [0 .. intSizeOf x - 1]
+ | True              = map (sTestBit x) [0 .. intSizeOf x - 1]
 
 -- | Big-endian blasting of a word into its bits. Also see the 'FromBits' class.
 blastBE :: (Num a, Bits a, SymWord a) => SBV a -> [SBool]
@@ -775,14 +775,14 @@ blastBE = reverse . blastLE
 
 -- | Least significant bit of a word, always stored at index 0.
 lsb :: (Num a, Bits a, SymWord a) => SBV a -> SBool
-lsb x = sbvTestBit x 0
+lsb x = sTestBit x 0
 
 -- | Most significant bit of a word, always stored at the last position.
 msb :: (Num a, Bits a, SymWord a) => SBV a -> SBool
 msb x
  | isReal x          = error "SBV.msb: Called on a real value"
  | not (isBounded x) = error "SBV.msb: Called on an infinite precision value"
- | True              = sbvTestBit x (intSizeOf x - 1)
+ | True              = sTestBit x (intSizeOf x - 1)
 
 -- Enum instance. These instances are suitable for use with concrete values,
 -- and will be less useful for symbolic values around. Note that `fromEnum` requires

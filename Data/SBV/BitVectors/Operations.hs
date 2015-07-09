@@ -510,7 +510,7 @@ svTestBit x i
 -- The shift amount must be an unsigned quantity.
 svShiftLeft :: SVal -> SVal -> SVal
 svShiftLeft x i
-  | svSigned i = error "sbvShiftLeft: shift amount should be unsigned"
+  | svSigned i = error "sShiftLeft: shift amount should be unsigned"
   | True       = svSelect [svShl x k | k <- [0 .. svBitSize x - 1]] z i
   where z = svInteger (svKind x) 0
 
@@ -521,7 +521,7 @@ svShiftLeft x i
 -- otherwise it's logical.
 svShiftRight :: SVal -> SVal -> SVal
 svShiftRight x i
-  | svSigned i = error "sbvShiftRight: shift amount should be unsigned"
+  | svSigned i = error "sShiftRight: shift amount should be unsigned"
   | True       = svSelect [svShr x k | k <- [0 .. svBitSize x - 1]] z i
   where z = svInteger (svKind x) 0
 
@@ -529,7 +529,7 @@ svShiftRight x i
 -- The rotation amount must be an unsigned quantity.
 svRotateLeft :: SVal -> SVal -> SVal
 svRotateLeft x i
-  | svSigned i             = error "sbvRotateLeft: rotation amount should be unsigned"
+  | svSigned i             = error "sRotateLeft: rotation amount should be unsigned"
   | bit si <= toInteger sx = svSelect [x `svRol` k | k <- [0 .. bit si - 1]] z i         -- wrap-around not possible
   | True                   = svSelect [x `svRol` k | k <- [0 .. sx     - 1]] z (i `svRem` n)
     where sx = svBitSize x
@@ -541,7 +541,7 @@ svRotateLeft x i
 -- The rotation amount must be an unsigned quantity.
 svRotateRight :: SVal -> SVal -> SVal
 svRotateRight x i
-  | svSigned i             = error "sbvRotateRight: rotation amount should be unsigned"
+  | svSigned i             = error "sRotateRight: rotation amount should be unsigned"
   | bit si <= toInteger sx = svSelect [x `svRor` k | k <- [0 .. bit si - 1]] z i         -- wrap-around not possible
   | True                   = svSelect [x `svRor` k | k <- [0 .. sx     - 1]] z (i `svRem` n)
     where sx = svBitSize x

@@ -47,4 +47,4 @@ maskAndMult = print =<< satWith z3{printBase=16} find
                   mult <- exists "mult"
                   inp  <- forall "inp"
                   let res = (mask .&. inp) * (mult :: SWord64)
-                  solve [inp `sbvExtractBits` [7, 15 .. 63] .== res `sbvExtractBits` [56 .. 63]]
+                  solve [inp `sExtractBits` [7, 15 .. 63] .== res `sExtractBits` [56 .. 63]]

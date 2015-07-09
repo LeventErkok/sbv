@@ -166,7 +166,7 @@ rorM a k m = k . setFlag FlagC c' . poke a v' $ m
   where v  = peek a m
         c  = getFlag FlagC m
         v' = setBitTo (v `rotateR` 1) 7 c
-        c' = sbvTestBit v 0
+        c' = sTestBit v 0
 
 -- | ROR, register version: Same as 'rorM', except through register @r@.
 rorR :: Register -> Instruction
@@ -174,7 +174,7 @@ rorR r k m = k . setFlag FlagC c' . setReg r v' $ m
   where v  = getReg r m
         c  = getFlag FlagC m
         v' = setBitTo (v `rotateR` 1) 7 c
-        c' = sbvTestBit v 0
+        c' = sTestBit v 0
 
 -- | BCC: branch to label @l@ if the carry flag is false
 bcc :: Program -> Instruction
