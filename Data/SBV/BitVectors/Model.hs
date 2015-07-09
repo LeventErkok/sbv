@@ -97,6 +97,10 @@ genMkSymVar :: (Random a, SymWord a) => Kind -> Maybe Quantifier -> Maybe String
 genMkSymVar k mbq Nothing  = genVar_ mbq k
 genMkSymVar k mbq (Just s) = genVar  mbq k s
 
+-- | Base type of () allows simple construction for uninterpreted types.
+instance SymWord ()
+instance HasKind ()
+
 instance SymWord Bool where
   mkSymWord  = genMkSymVar KBool
   literal x  = SBV (svBool x)

@@ -24,14 +24,11 @@ import Data.Generics
 -- | A simple enumerated type, that we'd like to translate to SMT-Lib intact;
 -- i.e., this type will not be uninterpreted but rather preserved and will
 -- be just like any other symbolic type SBV provides. Note the automatically
--- derived slew of classes we need: 'Eq', 'Ord', 'Data', 'Typeable', 'Read',
--- and 'Show'. For symbolic enumerated types, you should
--- always let GHC derive these instances. Aside from these, we also need
--- instances for 'SymWord', 'HasKind' and 'SatModel'. Again, the default definitions suffice
--- so the actual declarations are straightforward.
+-- derived classes we need: 'Eq', 'Ord', 'Data', 'Read', 'Show', 'SymWord',
+-- 'HasKind', and 'SatModel'. (The last one is only needed if 'getModel' and friends are used.)
 --
 -- Also note that we need to @import Data.Generics@ and have the @LANGUAGE@
--- option @DeriveDataTypeable@ set.
+-- option @DeriveDataTypeable@ and @DeriveAnyClass@ set.
 data E = A | B | C deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
 
 -- | Give a name to the symbolic variants of 'E', for convenience

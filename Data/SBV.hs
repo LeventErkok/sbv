@@ -720,13 +720,10 @@ Users can introduce new uninterpreted sorts simply by defining a data-type in Ha
 following example demonstrates:
 
   @
-     data B = B () deriving (Eq, Ord, Show, Read, Data)
-     instance SymWord  B
-     instance HasKind  B
-     instance SatModel B  -- required only if 'getModel' etc. is used.
+     data B = B () deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind, SatModel)
   @
 
-(Note that you'll also need to use the language pragma @DeriveDataTypeable@, and import @Data.Generics@ for the above to work.) 
+(Note that you'll also need to use the language pragmas @DeriveDataTypeable@, @DeriveAnyClass@, and import @Data.Generics@ for the above to work.) 
 
 This is all it takes to introduce 'B' as an uninterpreted sort in SBV, which makes the type @SBV B@ automagically become available as the type
 of symbolic values that ranges over 'B' values. Note that the @()@ argument is important to distinguish it from enumerations.
