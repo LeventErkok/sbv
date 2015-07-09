@@ -63,8 +63,6 @@ testSuite = mkTestSuite $ \_ -> test $
      ++ genIntTestS True   "rotateR"          rotateR
      ++ genBlasts
      ++ genIntCasts
-     ++ genCasts
-
 
 genBinTest :: Bool -> String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [Test]
 genBinTest unboundedOK nm op = map mkTest $  [(show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- w8s ]
@@ -186,33 +184,6 @@ genIntCasts = map mkTest $  cast w8s ++ cast w16s ++ cast w32s ++ cast w64s
          mkThm v res = isThm $ do a <- free "x"
                                   constrain $ a .== literal v
                                   return $ literal res .== sFromIntegral a
-
-genCasts :: [Test]
-genCasts = map mkTest $  [(show x, mkThm unsignCast signCast x) | x <- w8s ]
-                      ++ [(show x, mkThm unsignCast signCast x) | x <- w16s]
-                      ++ [(show x, mkThm unsignCast signCast x) | x <- w32s]
-                      ++ [(show x, mkThm unsignCast signCast x) | x <- w64s]
-                      ++ [(show x, mkThm signCast unsignCast x) | x <- i8s ]
-                      ++ [(show x, mkThm signCast unsignCast x) | x <- i16s]
-                      ++ [(show x, mkThm signCast unsignCast x) | x <- i8s ]
-                      ++ [(show x, mkThm signCast unsignCast x) | x <- i16s]
-                      ++ [(show x, mkThm signCast unsignCast x) | x <- i32s]
-                      ++ [(show x, mkThm signCast unsignCast x) | x <- i64s]
-                      ++ [(show x, mkFEq signCast   (fromBitsLE . blastLE) x) | x <- w8s ]
-                      ++ [(show x, mkFEq signCast   (fromBitsLE . blastLE) x) | x <- w16s]
-                      ++ [(show x, mkFEq signCast   (fromBitsLE . blastLE) x) | x <- w32s]
-                      ++ [(show x, mkFEq signCast   (fromBitsLE . blastLE) x) | x <- w64s]
-                      ++ [(show x, mkFEq unsignCast (fromBitsLE . blastLE) x) | x <- i8s ]
-                      ++ [(show x, mkFEq unsignCast (fromBitsLE . blastLE) x) | x <- i16s]
-                      ++ [(show x, mkFEq unsignCast (fromBitsLE . blastLE) x) | x <- i32s]
-                      ++ [(show x, mkFEq unsignCast (fromBitsLE . blastLE) x) | x <- i64s]
-  where mkTest (x, t) = "genCasts.cast-" ++ x ~: assert t
-        mkThm from to v = isThm $ do a <- free "x"
-                                     constrain $ a .== literal v
-                                     return $ a .== from (to a)
-        mkFEq f g v = isThm $ do a <- free "x"
-                                 constrain $ a .== literal v
-                                 return $ f a .== g a
 
 genReals :: [Test]
 genReals = map mkTest $  [("+",  show x, show y, mkThm2 (+)   x y (x +  y)) | x <- rs, y <- rs        ]

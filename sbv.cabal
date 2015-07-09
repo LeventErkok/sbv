@@ -103,7 +103,6 @@ Library
                   , Data.SBV.BitVectors.Operations
                   , Data.SBV.BitVectors.PrettyNum
                   , Data.SBV.BitVectors.Floating
-                  , Data.SBV.BitVectors.SignCast
                   , Data.SBV.BitVectors.Splittable
                   , Data.SBV.BitVectors.STree
                   , Data.SBV.BitVectors.Symbolic

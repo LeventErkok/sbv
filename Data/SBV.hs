@@ -158,8 +158,6 @@ module Data.SBV (
   , blastBE, blastLE, FromBits(..)
   -- *** Splitting, joining, and extending
   , Splittable(..)
-  -- *** Sign-casting
-  , SignCast(..)
   -- ** Polynomial arithmetic and CRCs
   , Polynomial(..), crcBV, crc
   -- ** Conditionals: Mergeable values
@@ -287,7 +285,6 @@ import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
 import Data.SBV.BitVectors.Floating
 import Data.SBV.BitVectors.PrettyNum
-import Data.SBV.BitVectors.SignCast
 import Data.SBV.BitVectors.Splittable
 import Data.SBV.BitVectors.STree
 import Data.SBV.Compilers.C

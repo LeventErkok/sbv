@@ -61,7 +61,6 @@ testSuite = mkTestSuite $ \_ -> test $
      ++ genIntTestS "rotateR"          rotateR
      ++ genBlasts
      ++ genIntCasts
-     ++ genCasts
 
 genBinTest :: String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [Test]
 genBinTest nm op = map mkTest $
@@ -172,28 +171,6 @@ genIntCasts = map mkTest $  cast w8s ++ cast w16s ++ cast w32s ++ cast w64s
                     ++ [(show x, lhs x .== (rhs x :: SInt32))   | x <- xs]
                     ++ [(show x, lhs x .== (rhs x :: SInt64))   | x <- xs]
                     ++ [(show x, lhs x .== (rhs x :: SInteger)) | x <- xs]
-
-genCasts :: [Test]
-genCasts = map mkTest $
-            [(show x, unsignCast (signCast x) .== x) | x <- sw8s ]
-         ++ [(show x, unsignCast (signCast x) .== x) | x <- sw16s]
-         ++ [(show x, unsignCast (signCast x) .== x) | x <- sw32s]
-         ++ [(show x, unsignCast (signCast x) .== x) | x <- sw64s]
-         ++ [(show x, signCast (unsignCast x) .== x) | x <- si8s ]
-         ++ [(show x, signCast (unsignCast x) .== x) | x <- si16s]
-         ++ [(show x, signCast (unsignCast x) .== x) | x <- si8s ]
-         ++ [(show x, signCast (unsignCast x) .== x) | x <- si16s]
-         ++ [(show x, signCast (unsignCast x) .== x) | x <- si32s]
-         ++ [(show x, signCast (unsignCast x) .== x) | x <- si64s]
-         ++ [(show x, signCast x .== fromBitsLE (blastLE x))   | x <- sw8s ]
-         ++ [(show x, signCast x .== fromBitsLE (blastLE x))   | x <- sw16s]
-         ++ [(show x, signCast x .== fromBitsLE (blastLE x))   | x <- sw32s]
-         ++ [(show x, signCast x .== fromBitsLE (blastLE x))   | x <- sw64s]
-         ++ [(show x, unsignCast x .== fromBitsLE (blastLE x)) | x <- si8s ]
-         ++ [(show x, unsignCast x .== fromBitsLE (blastLE x)) | x <- si16s]
-         ++ [(show x, unsignCast x .== fromBitsLE (blastLE x)) | x <- si32s]
-         ++ [(show x, unsignCast x .== fromBitsLE (blastLE x)) | x <- si64s]
-  where mkTest (x, r) = "cast-" ++ x ~: r `showsAs` "True"
 
 genQRems :: [Test]
 genQRems = map mkTest $

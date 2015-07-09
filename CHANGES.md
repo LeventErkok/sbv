@@ -22,6 +22,11 @@
     http://github.com/LeventErkok/sbv/issues/180 for details; and see below for the new function
     'isSatisfiableInCurrentPath'.
 
+  * SBV no longer implements the 'SignCast' class, as its functionality is replaced by the 'sFromIntegral'
+    function. Programs using the functions 'signCast' and 'unsignCast' should simply replace both
+    with calls to 'sFromIntegral'. (Note that extra type-annotations might be necessary, similar to
+    the uses of the 'fromIntegral' function in Haskell.)
+
   * A new function 'isSatisfiableInCurrentPath' is added, which checks for satisfiability during a
     symbolic simulation run. This function can be used as the basis of sBranch/sAssert like functionality
     if needed. The difference is that this is a much lower level call, and also exposes the fact that
