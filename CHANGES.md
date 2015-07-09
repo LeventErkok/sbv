@@ -33,6 +33,10 @@
     a no-op, but does generate a comment with the given text in the SMT-Lib and C output, for diagnostic
     purposes.
 
+  * Implement "sFromIntegral": Conversions from all integral types (SInteger, SWord/SInts) between
+    each other. Similar to the "fromIntegral" function of Haskell. These generate simple casts when
+    used in code-generation to C, and thus are very efficient.
+
   * Backend solver related changes:
 
        * Yices: Upgraded to work with Yices release 2.3.1. Note that earlier versions of Yices

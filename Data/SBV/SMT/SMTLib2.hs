@@ -596,10 +596,9 @@ handleIntCast kFrom kTo a
                         _            -> noCast
 
       KUnbounded   -> case kTo of
-                        KReal            -> "(to_real " ++ a ++ ")"
-                        KBounded False n -> i2u n
-                        KBounded True  n -> i2s n
-                        _                -> noCast
+                        KReal        -> "(to_real " ++ a ++ ")"
+                        KBounded _ n -> i2b n
+                        _            -> noCast
 
       _            -> noCast
 
@@ -610,15 +609,13 @@ handleIntCast kFrom kTo a
          | m == n = a
          | True   = extract (n - 1)
 
-        i2u n = "(let (" ++ reduced ++ ") (let (" ++ defs ++ ") " ++ body ++ "))"
+        i2b n = "(let (" ++ reduced ++ ") (let (" ++ defs ++ ") " ++ body ++ "))"
           where b i      = show (bit i :: Integer)
                 reduced  = "(__a (mod " ++ a ++ " " ++ b n ++ "))"
                 mkBit 0  = "(__a0 (ite (= (mod __a 2) 0) #b0 #b1))"
                 mkBit i  = "(__a" ++ show i ++ " (ite (= (mod (div __a " ++ b i ++ ") 2) 0) #b0 #b1))"
                 defs     = unwords (map mkBit [0 .. n - 1])
                 body     = foldr1 (\c r -> "(concat " ++ c ++ " " ++ r ++ ")") ["__a" ++ show i | i <- [n-1, n-2 .. 0]]
-
-        i2s n   = error $ "TBD: i2s_" ++ show n
 
         b2i s m
           | s    = "(- " ++ val ++ " " ++ valIf (2^m) sign ++ ")"
