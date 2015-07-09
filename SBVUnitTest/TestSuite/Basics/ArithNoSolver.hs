@@ -159,7 +159,7 @@ genIntCasts = map mkTest $  cast w8s ++ cast w16s ++ cast w32s ++ cast w64s
                          ++ cast i8s ++ cast i16s ++ cast i32s ++ cast i64s
                          ++ cast iUBs
    where mkTest (x, r) = "intCast-" ++ x ~: r `showsAs` "True"
-         lhs x = sbvFromIntegral (literal x)
+         lhs x = sFromIntegral (literal x)
          rhs x = literal (fromIntegral x)
          cast :: forall a. (Show a, Integral a, Bits a, SymWord a) => [a] -> [(String, SBool)]
          cast xs = toWords xs ++ toInts xs

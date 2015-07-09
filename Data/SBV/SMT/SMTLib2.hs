@@ -78,7 +78,7 @@ tbd :: String -> a
 tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
-cvt :: RoundingMode               -- ^ User selected rounding mode to be used for floating point arithmetic
+cvt :: RoundingMode                 -- ^ User selected rounding mode to be used for floating point arithmetic
     -> Maybe Logic                  -- ^ SMT-Lib logic, if requested by the user
     -> SolverCapabilities           -- ^ capabilities of the current solver
     -> Set.Set Kind                 -- ^ kinds used
@@ -610,7 +610,14 @@ handleIntCast kFrom kTo a
          | m == n = a
          | True   = extract (n - 1)
 
-        i2u n   = error $ "TBD: i2u_" ++ show n
+        i2u n = "(let (" ++ reduced ++ ") (let (" ++ defs ++ ") " ++ body ++ "))"
+          where b i      = show (bit i :: Integer)
+                reduced  = "(__a (mod " ++ a ++ " " ++ b n ++ "))"
+                mkBit 0  = "(__a0 (ite (= (mod __a 2) 0) #b0 #b1))"
+                mkBit i  = "(__a" ++ show i ++ " (ite (= (mod (div __a " ++ b i ++ ") 2) 0) #b0 #b1))"
+                defs     = unwords (map mkBit [0 .. n - 1])
+                body     = foldr1 (\c r -> "(concat " ++ c ++ " " ++ r ++ ")") ["__a" ++ show i | i <- [n-1, n-2 .. 0]]
+
         i2s n   = error $ "TBD: i2s_" ++ show n
 
         b2i s m

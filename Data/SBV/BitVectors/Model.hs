@@ -21,7 +21,7 @@
 
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), SIntegral
-  , ite, iteLazy, sbvTestBit, sbvExtractBits, sbvPopCount, setBitTo, sbvFromIntegral
+  , ite, iteLazy, sbvTestBit, sbvExtractBits, sbvPopCount, setBitTo, sFromIntegral
   , sbvShiftLeft, sbvShiftRight, sbvRotateLeft, sbvRotateRight, sbvSignedShiftArithRight, (.^)
   , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
@@ -658,10 +658,10 @@ setBitTo :: (Num a, Bits a, SymWord a) => SBV a -> Int -> SBool -> SBV a
 setBitTo x i b = ite b (setBit x i) (clearBit x i)
 
 -- | Conversion between integral-symbolic values, akin to Haskell's fromIntegral
-sbvFromIntegral :: forall a b. (Integral a, HasKind a, Num a, Bits a, SymWord a, HasKind b, Num b, Bits b, SymWord b) => SBV a -> SBV b
-sbvFromIntegral x
+sFromIntegral :: forall a b. (Integral a, HasKind a, Num a, Bits a, SymWord a, HasKind b, Num b, Bits b, SymWord b) => SBV a -> SBV b
+sFromIntegral x
   | isReal x
-  = error "SBV.sbvFromIntegral: Called on a real value" -- can't really happen due to types, but being overcautious
+  = error "SBV.sFromIntegral: Called on a real value" -- can't really happen due to types, but being overcautious
   | Just v <- unliteral x
   = literal (fromIntegral v)
   | True

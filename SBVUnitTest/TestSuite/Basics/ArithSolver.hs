@@ -185,7 +185,7 @@ genIntCasts = map mkTest $  cast w8s ++ cast w16s ++ cast w32s ++ cast w64s
                     ++ [(show x, mkThm x (fromIntegral x :: Integer)) | x <- xs]
          mkThm v res = isThm $ do a <- free "x"
                                   constrain $ a .== literal v
-                                  return $ literal res .== sbvFromIntegral a
+                                  return $ literal res .== sFromIntegral a
 
 genCasts :: [Test]
 genCasts = map mkTest $  [(show x, mkThm unsignCast signCast x) | x <- w8s ]
