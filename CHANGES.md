@@ -16,16 +16,19 @@
     used, and required a very old version of Yices that was no longer supported by SRI and has
     lacked in other features. So, in reality this change should hardly matter for end-users.
 
+  * Added function "label", which is useful in emitting comments around expressions. It is essentially
+    a no-op, but does generate a comment with the given text in the SMT-Lib and C output, for diagnostic
+    purposes.
+
+  * Added "sFromIntegral": Conversions from all integral types (SInteger, SWord/SInts) between
+    each other. Similar to the "fromIntegral" function of Haskell. These generate simple casts when
+    used in code-generation to C, and thus are very efficient.
+
   * SBV no longer supports the functions sBranch/sAssert, as we realized these functions can cause
     soundness issues under certain conditions. While the triggering scenarios are not common use-cases
     for these functions, we are opting for safety, and thus removing support. See
     http://github.com/LeventErkok/sbv/issues/180 for details; and see below for the new function
     'isSatisfiableInCurrentPath'.
-
-  * SBV no longer implements the 'SignCast' class, as its functionality is replaced by the 'sFromIntegral'
-    function. Programs using the functions 'signCast' and 'unsignCast' should simply replace both
-    with calls to 'sFromIntegral'. (Note that extra type-annotations might be necessary, similar to
-    the uses of the 'fromIntegral' function in Haskell.)
 
   * A new function 'isSatisfiableInCurrentPath' is added, which checks for satisfiability during a
     symbolic simulation run. This function can be used as the basis of sBranch/sAssert like functionality
@@ -34,13 +37,10 @@
     makes it less useful as it will not be a drop-in replacement for if-then-else like structure. Intended
     to be used by tools built on top of SBV, as opposed to end-users.
 
-  * Added function "label", which is useful in emitting comments around expressions. It is essentially
-    a no-op, but does generate a comment with the given text in the SMT-Lib and C output, for diagnostic
-    purposes.
-
-  * Implement "sFromIntegral": Conversions from all integral types (SInteger, SWord/SInts) between
-    each other. Similar to the "fromIntegral" function of Haskell. These generate simple casts when
-    used in code-generation to C, and thus are very efficient.
+  * SBV no longer implements the 'SignCast' class, as its functionality is replaced by the 'sFromIntegral'
+    function. Programs using the functions 'signCast' and 'unsignCast' should simply replace both
+    with calls to 'sFromIntegral'. (Note that extra type-annotations might be necessary, similar to
+    the uses of the 'fromIntegral' function in Haskell.)
 
   * Backend solver related changes:
 
