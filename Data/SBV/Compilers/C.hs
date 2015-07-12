@@ -506,35 +506,32 @@ handleIEEE w consts as var = cvt w
                                     where cpy sz = \[a] -> let alhs = text "&" <> var
                                                                arhs = text "&" <> a
                                                            in text "memcpy" <> parens (fsep (punctuate comma [alhs, arhs, text sz]))
-        cvt FP_Abs               = dispatch $ named "fabsf" "fabs" $ \nm [a] -> text nm <> parens a
-        cvt FP_Neg               = dispatch $ same $ \[a] -> text "-" <> a
-        cvt FP_Add               = dispatch $ same $ \[a, b] -> a <+> text "+" <+> b
-        cvt FP_Sub               = dispatch $ same $ \[a, b] -> a <+> text "-" <+> b
-        cvt FP_Mul               = dispatch $ same $ \[a, b] -> a <+> text "*" <+> b
-        cvt FP_Div               = dispatch $ same $ \[a, b] -> a <+> text "/" <+> b
-        cvt FP_FMA               = dispatch $ named "fmaf"  "fma"  $ \nm [a, b, c] -> text nm <> parens (fsep (punctuate comma [a, b, c]))
-        cvt FP_Sqrt              = dispatch $ named "sqrtf" "sqrt" $ \nm [a]       -> text nm <> parens a
-        cvt FP_Rem               = dispatch $ named "fmodf" "fmod" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
-        cvt FP_RoundToIntegral   = dispatch $ named "rintf" "rint" $ \nm [a]       -> text nm <> parens a
-        -- TODO: The fmin/fmax functions have slightly different semantics as compared to what SMTLib2 stipulates, around 0's.
-        -- When provided +/-0; these functions return the second argument, but SMTLib2 (at least Z3) returns +0. I'm not too worried
-        -- about this discrepancy here, but something to watch out for.
-        cvt FP_Min               = dispatch $ named "fminf" "fmin" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
-        cvt FP_Max               = dispatch $ named "fmaxf" "fmax" $ \nm [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
+        cvt FP_Abs               = dispatch $ named "fabsf" "fabs" $ \nm _ [a] -> text nm <> parens a
+        cvt FP_Neg               = dispatch $ same $ \_ [a] -> text "-" <> a
+        cvt FP_Add               = dispatch $ same $ \_ [a, b] -> a <+> text "+" <+> b
+        cvt FP_Sub               = dispatch $ same $ \_ [a, b] -> a <+> text "-" <+> b
+        cvt FP_Mul               = dispatch $ same $ \_ [a, b] -> a <+> text "*" <+> b
+        cvt FP_Div               = dispatch $ same $ \_ [a, b] -> a <+> text "/" <+> b
+        cvt FP_FMA               = dispatch $ named "fmaf"  "fma"  $ \nm _ [a, b, c] -> text nm <> parens (fsep (punctuate comma [a, b, c]))
+        cvt FP_Sqrt              = dispatch $ named "sqrtf" "sqrt" $ \nm _ [a]       -> text nm <> parens a
+        cvt FP_Rem               = dispatch $ named "fmodf" "fmod" $ \nm _ [a, b]    -> text nm <> parens (fsep (punctuate comma [a, b]))
+        cvt FP_RoundToIntegral   = dispatch $ named "rintf" "rint" $ \nm _ [a]       -> text nm <> parens a
+        cvt FP_Min               = dispatch $ named "fminf" "fmin" $ \nm k [a, b]    -> wrapMinMax k a b (text nm <> parens (fsep (punctuate comma [a, b])))
+        cvt FP_Max               = dispatch $ named "fmaxf" "fmax" $ \nm k [a, b]    -> wrapMinMax k a b (text nm <> parens (fsep (punctuate comma [a, b])))
         cvt FP_ObjEqual          = let mkIte   x y z = x <+> text "?" <+> y <+> text ":" <+> z
                                        chkNaN  x     = text "isnan"   <> parens x
                                        signbit x     = text "signbit" <> parens x
                                        eq      x y   = parens (x <+> text "==" <+> y)
                                        eqZero  x     = eq x (text "0")
                                        negZero x     = parens (signbit x <+> text "&&" <+> eqZero x)
-                                   in dispatch $ same $ \[a, b] -> mkIte (chkNaN a) (chkNaN b) (mkIte (negZero a) (negZero b) (mkIte (negZero b) (negZero a) (eq a b)))
-        cvt FP_IsNormal          = dispatch $ same $ \[a] -> text "isnormal" <> parens a
-        cvt FP_IsSubnormal       = dispatch $ same $ \[a] -> text "FP_SUBNORMAL == fpclassify" <> parens a
-        cvt FP_IsZero            = dispatch $ same $ \[a] -> text "FP_ZERO == fpclassify" <> parens a
-        cvt FP_IsInfinite        = dispatch $ same $ \[a] -> text "isinf" <> parens a
-        cvt FP_IsNaN             = dispatch $ same $ \[a] -> text "isnan" <> parens a
-        cvt FP_IsNegative        = dispatch $ same $ \[a] -> text "!isnan" <> parens a <+> text "&&" <+> text "signbit"  <> parens a
-        cvt FP_IsPositive        = dispatch $ same $ \[a] -> text "!isnan" <> parens a <+> text "&&" <+> text "!signbit" <> parens a
+                                   in dispatch $ same $ \_ [a, b] -> mkIte (chkNaN a) (chkNaN b) (mkIte (negZero a) (negZero b) (mkIte (negZero b) (negZero a) (eq a b)))
+        cvt FP_IsNormal          = dispatch $ same $ \_ [a] -> text "isnormal" <> parens a
+        cvt FP_IsSubnormal       = dispatch $ same $ \_ [a] -> text "FP_SUBNORMAL == fpclassify" <> parens a
+        cvt FP_IsZero            = dispatch $ same $ \_ [a] -> text "FP_ZERO == fpclassify" <> parens a
+        cvt FP_IsInfinite        = dispatch $ same $ \_ [a] -> text "isinf" <> parens a
+        cvt FP_IsNaN             = dispatch $ same $ \_ [a] -> text "isnan" <> parens a
+        cvt FP_IsNegative        = dispatch $ same $ \_ [a] -> text "!isnan" <> parens a <+> text "&&" <+> text "signbit"  <> parens a
+        cvt FP_IsPositive        = dispatch $ same $ \_ [a] -> text "!isnan" <> parens a <+> text "&&" <+> text "!signbit" <> parens a
 
         -- grab the rounding-mode, if present, and make sure it's RoundNearestTiesToEven. Otherwise skip.
         fpArgs = case as of
@@ -559,12 +556,20 @@ handleIEEE w consts as var = cvt w
 
         pickOp _          []             = die $ "Cannot determine float/double kind for op: " ++ show w
         pickOp (fOp, dOp) args@((a,_):_) = case kindOf a of
-                                             KFloat  -> fOp (map snd args)
-                                             KDouble -> dOp (map snd args)
+                                             KFloat  -> fOp KFloat  (map snd args)
+                                             KDouble -> dOp KDouble (map snd args)
                                              k       -> die $ "handleIEEE: Expected double/float args, but got: " ++ show k ++ " for: " ++ show w
 
         dispatch (fOp, dOp) = pickOp (fOp, dOp) fpArgs
         cast f              = f (map snd fpArgs)
+
+        -- In SMT-Lib, fpMin/fpMax return +0 when given +0/-0 as the two arguments. (In any order.)
+        -- In C, the second argument is returned. So, wrap around an if-then-else to avoid discrepancy:
+        wrapMinMax k a b s = parens cond <+> text "?" <+> zero <+> text ":" <+> s
+          where zero = text $ if k == KFloat then showCFloat 0 else showCDouble 0
+                cond =                   parens (text "FP_ZERO == fpclassify" <> parens a)                                      -- a is zero
+                       <+> text "&&" <+> parens (text "FP_ZERO == fpclassify" <> parens b)                                      -- b is zero
+                       <+> text "&&" <+> parens (text "signbit" <> parens a <+> text "!=" <+> text "signbit" <> parens b)       -- a and b differ in sign
 
 ppExpr :: CgConfig -> [(SW, CW)] -> SBVExpr -> Doc -> (Doc, Doc) -> Doc
 ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)

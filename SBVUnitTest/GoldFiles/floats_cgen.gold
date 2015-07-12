@@ -1053,7 +1053,8 @@ SFloat f_FP_Min(const SFloat a, const SFloat b)
 {
   const SFloat s0 = a;
   const SFloat s1 = b;
-  const SFloat s2 = fminf(s0, s1);
+  const SFloat s2 = ((FP_ZERO == fpclassify(s0)) && (FP_ZERO == fpclassify(s1)) && (signbit(s0) != signbit(s1))) ? 0.0F : fminf(s0,
+                                                                                                                                s1);
 
   return s2;
 }
@@ -1067,7 +1068,8 @@ SDouble d_FP_Min(const SDouble a, const SDouble b)
 {
   const SDouble s0 = a;
   const SDouble s1 = b;
-  const SDouble s2 = fmin(s0, s1);
+  const SDouble s2 = ((FP_ZERO == fpclassify(s0)) && (FP_ZERO == fpclassify(s1)) && (signbit(s0) != signbit(s1))) ? 0.0 : fmin(s0,
+                                                                                                                               s1);
 
   return s2;
 }
@@ -1081,7 +1083,8 @@ SFloat f_FP_Max(const SFloat a, const SFloat b)
 {
   const SFloat s0 = a;
   const SFloat s1 = b;
-  const SFloat s2 = fmaxf(s0, s1);
+  const SFloat s2 = ((FP_ZERO == fpclassify(s0)) && (FP_ZERO == fpclassify(s1)) && (signbit(s0) != signbit(s1))) ? 0.0F : fmaxf(s0,
+                                                                                                                                s1);
 
   return s2;
 }
@@ -1095,7 +1098,8 @@ SDouble d_FP_Max(const SDouble a, const SDouble b)
 {
   const SDouble s0 = a;
   const SDouble s1 = b;
-  const SDouble s2 = fmax(s0, s1);
+  const SDouble s2 = ((FP_ZERO == fpclassify(s0)) && (FP_ZERO == fpclassify(s1)) && (signbit(s0) != signbit(s1))) ? 0.0 : fmax(s0,
+                                                                                                                               s1);
 
   return s2;
 }
