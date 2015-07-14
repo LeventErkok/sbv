@@ -2578,8 +2578,8 @@ int main(void)
 
 CC?=gcc
 CCFLAGS?=-Wall -O3 -DNDEBUG -fomit-frame-pointer
-AR=ar
-ARFLAGS=cr
+AR?=ar
+ARFLAGS?=cr
 
 all: floatCodeGen.a floatCodeGen_driver
 

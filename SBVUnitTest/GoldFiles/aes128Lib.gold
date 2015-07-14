@@ -3742,8 +3742,8 @@ int main(void)
 
 CC?=gcc
 CCFLAGS?=-Wall -O3 -DNDEBUG -fomit-frame-pointer
-AR=ar
-ARFLAGS=cr
+AR?=ar
+ARFLAGS?=cr
 
 all: aes128Lib.a aes128Lib_driver
 
