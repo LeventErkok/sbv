@@ -18,7 +18,7 @@ import Data.Char                      (isSpace)
 import Data.List                      (nub, intercalate)
 import Data.Maybe                     (isJust, isNothing, fromJust)
 import qualified Data.Foldable as F   (toList)
-import qualified Data.Set      as Set (member, unions, empty, toList, singleton, fromList)
+import qualified Data.Set      as Set (member, union, unions, empty, toList, singleton, fromList)
 import System.FilePath                (takeBaseName, replaceExtension)
 import System.Random
 import Text.PrettyPrint.HughesPJ
@@ -453,11 +453,16 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _ _ (S
                       getMax m (x:xs) = getMax (m `max` x) xs
        consts = (falseSW, falseCW) : (trueSW, trueCW) : preConsts
        isConst s = isJust (lookup s consts)
+       -- TODO: The following is brittle. We should really have a function elsewhere
+       -- that walks the SBVExprs and collects the SWs together.
        usedVariables = Set.unions (retSWs : map usedCgVal outVars ++ map usedAsgn assignments)
          where retSWs = maybe Set.empty Set.singleton mbRet
                usedCgVal (_, CgAtomic s)  = Set.singleton s
                usedCgVal (_, CgArray ss)  = Set.fromList ss
-               usedAsgn  (_, SBVApp _ ss) = Set.fromList ss
+               usedAsgn  (_, SBVApp o ss) = Set.union (opSWs o) (Set.fromList ss)
+               opSWs (LkUp _ a b)             = Set.fromList [a, b]
+               opSWs (IEEEFP (FP_Cast _ _ s)) = Set.singleton s
+               opSWs _                        = Set.empty
        isAlive :: (String, CgVal) -> Bool
        isAlive (_, CgAtomic sw) = sw `Set.member` usedVariables
        isAlive (_, _)           = True
