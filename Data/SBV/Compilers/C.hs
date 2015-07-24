@@ -18,7 +18,7 @@ import Data.Char                      (isSpace)
 import Data.List                      (nub, intercalate)
 import Data.Maybe                     (isJust, isNothing, fromJust)
 import qualified Data.Foldable as F   (toList)
-import qualified Data.Set      as Set (member, toList)
+import qualified Data.Set      as Set (member, unions, empty, toList, singleton, fromList)
 import System.FilePath                (takeBaseName, replaceExtension)
 import System.Random
 import Text.PrettyPrint.HughesPJ
@@ -426,10 +426,10 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _ _ (S
              $$ proto
              $$ text "{"
              $$ text ""
-             $$ nest 2 (   vcat (concatMap (genIO True) inVars)
+             $$ nest 2 (   vcat (concatMap (genIO True . (\v -> (isAlive v, v))) inVars)
                         $$ vcat (merge (map genTbl tbls) (map genAsgn assignments))
                         $$ sepIf (not (null assignments) || not (null tbls))
-                        $$ vcat (concatMap (genIO False) outVars)
+                        $$ vcat (concatMap (genIO False) (zip (repeat True) outVars))
                         $$ maybe empty mkRet mbRet
                        )
              $$ text "}"
@@ -453,10 +453,18 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _ _ (S
                       getMax m (x:xs) = getMax (m `max` x) xs
        consts = (falseSW, falseCW) : (trueSW, trueCW) : preConsts
        isConst s = isJust (lookup s consts)
-       genIO :: Bool -> (String, CgVal) -> [Doc]
-       genIO True  (cNm, CgAtomic sw) = [declSW typeWidth sw  <+> text "=" <+> text cNm <> semi]
-       genIO False (cNm, CgAtomic sw) = [text "*" <> text cNm <+> text "=" <+> showSW cfg consts sw <> semi]
-       genIO isInp (cNm, CgArray sws) = zipWith genElt sws [(0::Int)..]
+       usedVariables = Set.unions (retSWs : map usedCgVal outVars ++ map usedAsgn assignments)
+         where retSWs = maybe Set.empty Set.singleton mbRet
+               usedCgVal (_, CgAtomic s)  = Set.singleton s
+               usedCgVal (_, CgArray ss)  = Set.fromList ss
+               usedAsgn  (_, SBVApp _ ss) = Set.fromList ss
+       isAlive :: (String, CgVal) -> Bool
+       isAlive (_, CgAtomic sw) = sw `Set.member` usedVariables
+       isAlive (_, _)           = True
+       genIO :: Bool -> (Bool, (String, CgVal)) -> [Doc]
+       genIO True  (alive, (cNm, CgAtomic sw)) = [declSW typeWidth sw  <+> text "=" <+> text cNm <> semi             | alive]
+       genIO False (alive, (cNm, CgAtomic sw)) = [text "*" <> text cNm <+> text "=" <+> showSW cfg consts sw <> semi | alive]
+       genIO isInp (_,     (cNm, CgArray sws)) = zipWith genElt sws [(0::Int)..]
          where genElt sw i
                  | isInp = declSW typeWidth sw <+> text "=" <+> text entry       <> semi
                  | True  = text entry          <+> text "=" <+> showSW cfg consts sw <> semi
