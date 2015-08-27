@@ -44,8 +44,8 @@
 
   * Backend solver related changes:
 
-       * Yices: Upgraded to work with Yices release 2.3.1. Note that earlier versions of Yices
-         is *not* supported.
+       * Yices: Upgraded to work with Yices release 2.4.1. Note that earlier versions of Yices
+         are *not* supported.
 
        * Boolector: Upgraded to work with new Boolector release 2.0.7. Note that earlier versions
          of Boolector is *not* supported.
