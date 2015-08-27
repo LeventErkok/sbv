@@ -21,8 +21,8 @@ report any issues you might see with newer releases.
       * Last tested: Jul 7, 2015
   * Yices:
       * http://yices.csl.sri.com/
-      * Version 2.3.1
-      * Last tested: Jun 17, 2015
+      * Version 2.4.1
+      * Last tested: August 27, 2015
   * Z3:
       * https://github.com/Z3Prover/z3
       * Version 4.4.0
