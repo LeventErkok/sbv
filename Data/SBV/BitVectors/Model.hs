@@ -563,7 +563,7 @@ instance (SymWord a, Fractional a, Floating a) => Floating (SBV a) where
     pi      = literal pi
     exp     = lift1FNS "exp"     exp
     log     = lift1FNS "log"     log
-    sqrt    = lift1FNS "sqrt"    sqrt
+    sqrt    = lift1F   FP_Sqrt   sqrt
     sin     = lift1FNS "sin"     sin
     cos     = lift1FNS "cos"     cos
     tan     = lift1FNS "tan"     tan
@@ -578,6 +578,18 @@ instance (SymWord a, Fractional a, Floating a) => Floating (SBV a) where
     atanh   = lift1FNS "atanh"   atanh
     (**)    = lift2FNS "**"      (**)
     logBase = lift2FNS "logBase" logBase
+
+-- | Lift a 1 arg FP-op, using sRNE default
+lift1F :: (SymWord a, Floating a) => FPOp -> (a -> a) -> SBV a -> SBV a
+lift1F w op a
+  | Just v <- unliteral a
+  = literal $ op v
+  | True
+  = SBV $ SVal k $ Right $ cache r
+  where k    = kindOf a
+        r st = do swa  <- sbvToSW st a
+                  swm  <- sbvToSW st sRNE
+                  newExpr st k (SBVApp (IEEEFP w) [swm, swa])
 
 -- | Lift a float/double unary function, only over constants
 lift1FNS :: (SymWord a, Floating a) => String -> (a -> a) -> SBV a -> SBV a
