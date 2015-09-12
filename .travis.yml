@@ -1,7 +1,7 @@
 language: haskell
 
 env:
-    - GHCVER=7.10.1
+    - GHCVER=7.10.2
 
 notifications:
   email:
