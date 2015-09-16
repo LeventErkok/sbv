@@ -302,8 +302,8 @@ import Data.Word
 
 -- | The currently active solver, obtained by importing "Data.SBV".
 -- To have other solvers /current/, import one of the bridge
--- modules "Data.SBV.Bridge.CVC4", "Data.SBV.Bridge.Yices", or
--- "Data.SBV.Bridge.Z3" directly.
+-- modules "Data.SBV.Bridge.ABC", "Data.SBV.Bridge.Boolector", "Data.SBV.Bridge.CVC4",
+-- "Data.SBV.Bridge.Yices", or "Data.SBV.Bridge.Z3" directly.
 sbvCurrentSolver :: SMTConfig
 sbvCurrentSolver = z3
 
