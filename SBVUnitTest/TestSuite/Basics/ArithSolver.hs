@@ -16,7 +16,7 @@
 
 module TestSuite.Basics.ArithSolver(testSuite) where
 
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, fromJust)
 import qualified Data.Binary.IEEE754 as DB (wordToFloat, wordToDouble)
 
 import Data.SBV
@@ -317,37 +317,44 @@ genIEEE754 origin vs =  map tst1 [("fpCast_" ++ nm, x, y)    | (nm, x, y)    <- 
           | isInfinite val && val < 0 = constrain $ fpIsInfinite v &&& fpIsNegative v
           | True                      = constrain $ v .== literal val
 
-        mkIso f g i = isThm $ do a <- free "x"
+        -- Quickly pick which solver to use. Currently z3 or mathSAT supports FP
+        fpProver :: SMTConfig
+        fpProver = z3 -- mathSAT
+
+        fpThm :: Provable a => a -> IO Bool
+        fpThm p = fromJust `fmap` isTheoremWith fpProver Nothing p
+
+        mkIso f g i = fpThm $ do a <- free "x"
                                  constrain $ a .== literal i
                                  return (f (g a) a :: SBool)
 
-        mkThmP op x r = isThm $ do a <- free "x"
+        mkThmP op x r = fpThm $ do a <- free "x"
                                    eqF a x
                                    return $ literal r .== op a
 
-        mkThm2P op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
+        mkThm2P op x y r = fpThm $ do [a, b] <- mapM free ["x", "y"]
                                       eqF a x
                                       eqF b y
                                       return $ literal r .== a `op` b
 
-        mkThm1 op x r = isThm $ do a <- free "x"
+        mkThm1 op x r = fpThm $ do a <- free "x"
                                    eqF a x
                                    return $ literal r `fpIsEqualObject` op a
 
-        mkThmC op x r = isThm $ do a <- free "x"
+        mkThmC op x r = fpThm $ do a <- free "x"
                                    constrain $ a .== literal x
                                    return $ literal r `fpIsEqualObject` op a
 
-        mkThmC' op x r = isThm $ do a <- free "x"
+        mkThmC' op x r = fpThm $ do a <- free "x"
                                     eqF a x
                                     return $ literal r .== op a
 
-        mkThm2 op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
+        mkThm2 op x y r = fpThm $ do [a, b] <- mapM free ["x", "y"]
                                      eqF a x
                                      eqF b y
                                      return $ literal r `fpIsEqualObject` (a `op` b)
 
-        mkThm2C neq op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
+        mkThm2C neq op x y r = fpThm $ do [a, b] <- mapM free ["x", "y"]
                                           eqF a x
                                           eqF b y
                                           return $ if isNaN x || isNaN y
