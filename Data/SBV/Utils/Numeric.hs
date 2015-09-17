@@ -87,7 +87,10 @@ fpRoundToIntegralH x
   | isNaN x      = x
   | x == 0       = x
   | isInfinite x = x
-  | True         = fromInteger (round x)
+  | i == 0       = if x < 0 || isNegativeZero x then -0.0 else 0.0
+  | True         = fromInteger i
+  where i :: Integer
+        i = round x
 
 -- | Check that two floats are the exact same values, i.e., +0/-0 does not
 -- compare equal, and NaN's compare equal to themselves.
