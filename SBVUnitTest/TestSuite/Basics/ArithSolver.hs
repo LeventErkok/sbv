@@ -277,8 +277,10 @@ genIEEE754 origin vs =  map tst1 [("fpCast_" ++ nm, x, y)    | (nm, x, y)    <- 
                  ++  [("fromFP_Float_ToWord64",  show x, mkThmC' (m fromSFloat :: SFloat -> SWord64)  x (((fromIntegral :: Integer -> Word64)  . fpRound0) x)) | x <- fs]
                  ++  [("fromFP_Float_ToFloat",   show x, mkThm1  (m fromSFloat :: SFloat -> SFloat)   x                                                    x ) | x <- fs]
                  ++  [("fromFP_Float_ToDouble",  show x, mkThm1  (m fromSFloat :: SFloat -> SDouble)  x (                                           fp2fp  x)) | x <- fs]
-                 ++  [("fromFP_Float_ToInteger", show x, mkThmC' (m fromSFloat :: SFloat -> SInteger) x (((fromIntegral :: Integer -> Integer) . fpRound0) x)) | x <- fs]
-                 ++  [("fromFP_Float_ToReal",    show x, mkThmC' (m fromSFloat :: SFloat -> SReal)    x (                        (fromRational . fpRatio0) x)) | x <- fs]
+                 -- Neither Z3 nor MathSAT support Float->Integer/Float->Real conversion for the time being; so comment out.
+                 -- See GitHub issue: #191
+                 -- ++  [("fromFP_Float_ToInteger", show x, mkThmC' (m fromSFloat :: SFloat -> SInteger) x (((fromIntegral :: Integer -> Integer) . fpRound0) x)) | x <- fs]
+                 -- ++  [("fromFP_Float_ToReal",    show x, mkThmC' (m fromSFloat :: SFloat -> SReal)    x (                        (fromRational . fpRatio0) x)) | x <- fs]
 
                  ++  [("fromFP_Double_ToInt8",    show x, mkThmC' (m fromSDouble :: SDouble -> SInt8)    x (((fromIntegral :: Integer -> Int8)    . fpRound0) x)) | x <- ds]
                  ++  [("fromFP_Double_ToInt16",   show x, mkThmC' (m fromSDouble :: SDouble -> SInt16)   x (((fromIntegral :: Integer -> Int16)   . fpRound0) x)) | x <- ds]
@@ -290,8 +292,10 @@ genIEEE754 origin vs =  map tst1 [("fpCast_" ++ nm, x, y)    | (nm, x, y)    <- 
                  ++  [("fromFP_Double_ToWord64",  show x, mkThmC' (m fromSDouble :: SDouble -> SWord64)  x (((fromIntegral :: Integer -> Word64)  . fpRound0) x)) | x <- ds]
                  ++  [("fromFP_Double_ToFloat",   show x, mkThm1  (m fromSDouble :: SDouble -> SFloat)   x (                                            fp2fp x)) | x <- ds]
                  ++  [("fromFP_Double_ToDouble",  show x, mkThm1  (m fromSDouble :: SDouble -> SDouble)  x                                                    x ) | x <- ds]
-                 ++  [("fromFP_Double_ToInteger", show x, mkThmC' (m fromSDouble :: SDouble -> SInteger) x (((fromIntegral :: Integer -> Integer) . fpRound0) x)) | x <- ds]
-                 ++  [("fromFP_Double_ToReal",    show x, mkThmC' (m fromSDouble :: SDouble -> SReal)    x (                        (fromRational . fpRatio0) x)) | x <- ds]
+                 -- Neither Z3 nor MathSAT support Float->Integer/Float->Real conversion for the time being; so comment out.
+                 -- See GitHub issue: #191
+                 -- ++  [("fromFP_Double_ToInteger", show x, mkThmC' (m fromSDouble :: SDouble -> SInteger) x (((fromIntegral :: Integer -> Integer) . fpRound0) x)) | x <- ds]
+                 -- ++  [("fromFP_Double_ToReal",    show x, mkThmC' (m fromSDouble :: SDouble -> SReal)    x (                        (fromRational . fpRatio0) x)) | x <- ds]
 
                  ++  [("reinterp_Word32_Float",  show x, mkThmC sWord32AsSFloat  x (DB.wordToFloat  x)) | x <- w32s]
                  ++  [("reinterp_Word64_Double", show x, mkThmC sWord64AsSDouble x (DB.wordToDouble x)) | x <- w64s]
