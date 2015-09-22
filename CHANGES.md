@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 4.4, 2015-04-13
+* Latest Hackage released version: 5.0, 2015-09-22
 
-### Version 5.0, Not yet released
+### Version 5.0, 2015-09-22
 
   * Note: This is a backwards-compatibility breaking release, see below for details.
 
@@ -48,10 +48,10 @@
          are *not* supported.
 
        * Boolector: Upgraded to work with new Boolector release 2.0.7. Note that earlier versions
-         of Boolector is *not* supported.
+         of Boolector are *not* supported.
      
        * MathSAT: Upgraded to work with latest release 5.3.7. Note that earlier versions of MathSAT
-         is *not* supported (due to a buffering issue in MathSAT itself.)
+         are *not* supported (due to a buffering issue in MathSAT itself.)
      
        * MathSAT: Enabled floating-point support in MathSAT.
      
