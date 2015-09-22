@@ -8,7 +8,8 @@ STAMPFILE = SBVUnitTest/SBVUnitTestBuildTime.hs
 DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' -or -name '*.cabal' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE))
 CABAL     = cabal
 SIMPLIFY  = ./buildUtils/simplify
-TIME      = /usr/bin/time
+# OSX tends to sleep for long jobs; so run through caffeinate
+TIME      = /usr/bin/time caffeinate
 
 define mkStamp
 	@echo "-- Auto-generated, don't edit"		       >  ${STAMPFILE}

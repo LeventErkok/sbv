@@ -239,7 +239,12 @@ genIEEE754 origin vs =  map tst1 [("fpCast_" ++ nm, x, y)    | (nm, x, y)    <- 
                ++ [("fpMin",           show x, show y, mkThm2  fpMin            x y (fpMinH           x y)) | x <- vs, y <- vs]
                ++ [("fpMax",           show x, show y, mkThm2  fpMax            x y (fpMaxH           x y)) | x <- vs, y <- vs]
                ++ [("fpIsEqualObject", show x, show y, mkThm2P fpIsEqualObject  x y (fpIsEqualObjectH x y)) | x <- vs, y <- vs]
-               ++ [("fpRem",           show x, show y, mkThm2  fpRem            x y (fpRemH           x y)) | x <- vs, y <- vs]
+               ++ [("fpRem",           show x, show y, mkThm2  fpRem            x y (fpRemH           x y)) | x <- vsFPRem, y <- vsFPRem]
+
+        -- TODO: For doubles fpRem takes too long, so we only do a subset
+        vsFPRem
+          | origin == "genDoubles" = [nan, infinity, 0, 0.5, -infinity, -0, -0.5]
+          | True                   = vs
 
         converts =   [("toFP_Int8_ToFloat",     show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- i8s ]
                  ++  [("toFP_Int16_ToFloat",    show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- i16s]
@@ -449,14 +454,8 @@ fs :: [Float]
 fs = xs ++ map (* (-1)) (filter (not . isNaN) xs) -- -nan is the same as nan
    where xs = [nan, infinity, 0, 0.5, 0.68302244, 0.5268265, 0.10283524, 5.8336496e-2, 1.0e-45]
 
--- FP-double tests take too long and Z3 is still buggy with respect to some of the API. Remove the following switch
--- when it's all good to go.
-skipFPDouble :: Bool
-skipFPDouble = True
-
 ds :: [Double]
-ds | skipFPDouble = []
-   | True         = xs ++ map (* (-1)) (filter (not . isNaN) xs) -- -nan is the same as nan
-  where xs = [nan, infinity, 0, 0.5, 2.516632060108026e-2, 0.8601891300751106, 7.518897767550192e-2, 1.1656043286207285e-2, 5.0e-324]
+ds = xs ++ map (* (-1)) (filter (not . isNaN) xs) -- -nan is the same as nan
+  where xs = [nan, infinity, 0, 0.5, 2.516632060108026e-2, 0.8601891300751106, 5.0e-324]
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
