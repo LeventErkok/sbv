@@ -8,6 +8,8 @@ STAMPFILE = SBVUnitTest/SBVUnitTestBuildTime.hs
 DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' -or -name '*.cabal' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE))
 CABAL     = cabal
 SIMPLIFY  = ./buildUtils/simplify
+HERBIE    = -fplugin=Herbie -package-id HerbiePlugin-0.1.0.0-0e1e14fc82dbb38565b570b0204d49bd
+EXTRAOPTS = "--ghc-options=-Werror -Wall $(HERBIE)"
 # OSX tends to sleep for long jobs; so run through caffeinate
 TIME      = /usr/bin/time caffeinate
 
@@ -35,7 +37,7 @@ $(STAMPFILE): $(DEPSRCS) Makefile
 	$(call mkStamp)
 	$(call mkTags)
 	@$(CABAL) configure --disable-library-profiling --enable-tests
-	@((set -o pipefail; $(CABAL) build --ghc-options="-Werror -Wall" 2>&1 | $(SIMPLIFY)) || (rm $(STAMPFILE) && false))
+	@((set -o pipefail; $(CABAL) build $(EXTRAOPTS) 2>&1 | $(SIMPLIFY)) || (rm $(STAMPFILE) && false))
 	@$(CABAL) copy
 	@$(CABAL) register
 
