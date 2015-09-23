@@ -3,6 +3,12 @@
 
 * Latest Hackage released version: 5.0, 2015-09-22
 
+### Version 5.1, Not yet released
+
+  * Internal: Move to Travis-CI "docker" based infrastructure for builds
+  * Internal: Enable local builds to use the Herbie plugin. Currently SBV does not have any
+    expressions that can benefit from Herbie, but it is nice to have this support in general.
+
 ### Version 5.0, 2015-09-22
 
   * Note: This is a backwards-compatibility breaking release, see below for details.
