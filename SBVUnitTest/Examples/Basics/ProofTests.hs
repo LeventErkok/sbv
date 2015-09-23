@@ -45,3 +45,8 @@ queries = do print =<< prove f1eqf2   -- QED
              print =<< sat (do x <- exists "x"
                                y <- exists "y"
                                return $ f1 x y .== f3 x (y:: SWord8))    -- yes, 0;0
+
+{-# ANN f1 "NoHerbie" #-}
+{-# ANN f2 "NoHerbie" #-}
+{-# ANN f3 "NoHerbie" #-}
+{-# ANN f4 "NoHerbie" #-}

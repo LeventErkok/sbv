@@ -45,3 +45,7 @@ f2 x y = (x*x)-(y*y)
 f3 x y = (x+y)*(x+y)
 f4 x y = let z = x + y in z * z
 f5 x _ = x + 1
+
+{-# ANN f1 "NoHerbie" #-}
+{-# ANN f2 "NoHerbie" #-}
+{-# ANN f3 "NoHerbie" #-}
