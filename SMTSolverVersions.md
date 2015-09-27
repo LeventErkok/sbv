@@ -14,7 +14,7 @@ report any issues you might see with newer releases.
   * CVC4:
       * http://cvc4.cs.nyu.edu/web/
       * Version 1.4
-      * Last tested: May 31, 2015
+      * Last tested: Aug 30, 2015
   * MathSAT:
       * http://mathsat.fbk.eu/
       * Version 5.3.7
