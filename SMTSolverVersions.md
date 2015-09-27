@@ -9,8 +9,8 @@ report any issues you might see with newer releases.
       * Note: SMT-Lib support in ABC is fairly new. SBV uses the latest from the repo above.
   * Boolector:
       * http://fmv.jku.at/boolector/
-      * Version 2.0.7
-      * Last tested: May 27, 2015
+      * Version 2.1.1
+      * Last tested: Sep 27, 2015
   * CVC4:
       * http://cvc4.cs.nyu.edu/web/
       * Version 1.4
