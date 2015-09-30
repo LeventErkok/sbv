@@ -3,7 +3,7 @@
 # The sbv library is distributed with the BSD3 license. See the LICENSE file
 # in the distribution for details.
 SHELL     := /usr/bin/env bash
-TSTSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs | grep -v SBVUnitTest/SBVBasicTests.hs | grep -v buildUtils/simplify.hs)
+TSTSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs | grep -v SBVUnitTest/SBVBasicTests.hs | grep -v buildUtils/simplify.hs | grep -v sandbox)
 STAMPFILE = SBVUnitTest/SBVUnitTestBuildTime.hs
 DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' -or -name '*.cabal' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE))
 CABAL     = cabal
