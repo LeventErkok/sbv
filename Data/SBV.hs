@@ -207,7 +207,7 @@ module Data.SBV (
 
   -- * Proving properties using multiple solvers
   -- $multiIntro
-  , proveWithAll, proveWithAny, satWithAll, satWithAny, allSatWithAll, allSatWithAny
+  , proveWithAll, proveWithAny, satWithAll, satWithAny
 
   -- * Optimization
   -- $optimizeIntro
@@ -371,16 +371,6 @@ satWithAll = (`sbvWithAll` satWith)
 satWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, SatResult)
 satWithAny    = (`sbvWithAny` satWith)
 
--- | Find all satisfying assignments to a property with multiple solvers, running them in separate threads. Only
--- the result of the first one to finish will be returned, remaining threads will be killed.
-allSatWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, AllSatResult)]
-allSatWithAll = (`sbvWithAll` allSatWith)
-
--- | Find all satisfying assignments to a property with multiple solvers, running them in separate threads. Only
--- the result of the first one to finish will be returned, remaining threads will be killed.
-allSatWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, AllSatResult)
-allSatWithAny = (`sbvWithAny` allSatWith)
-
 -- | Equality as a proof method. Allows for
 -- very concise construction of equivalence proofs, which is very typical in
 -- bit-precise proofs.
@@ -471,13 +461,13 @@ The functions in this section allow proving/satisfiability-checking with multipl
 backends at the same time. Each function comes in two variants, one that
 returns the results from all solvers, the other that returns the fastest one.
 
-The @All@ variants, (i.e., 'proveWithAll', 'satWithAll', 'allSatWithAll') run all solvers and
+The @All@ variants, (i.e., 'proveWithAll', 'satWithAll') run all solvers and
 return all the results. SBV internally makes sure that the result is lazily generated; so,
 the order of solvers given does not matter. In other words, the order of results will follow
 the order of the solvers as they finish, not as given by the user. These variants are useful when you
 want to make sure multiple-solvers agree (or disagree!) on a given problem.
 
-The @Any@ variants, (i.e., 'proveWithAny', 'satWithAny', 'allSatWithAny') will run all the solvers
+The @Any@ variants, (i.e., 'proveWithAny', 'satWithAny') will run all the solvers
 in parallel, and return the results of the first one finishing. The other threads will then be killed. These variants
 are useful when you do not care if the solvers produce the same result, but rather want to get the
 solution as quickly as possible, taking advantage of modern many-core machines.
