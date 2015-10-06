@@ -5,9 +5,16 @@
 
 ### Version 5.1, Not yet released
 
-  * Internal: Move to Travis-CI "docker" based infrastructure for builds
-  * Internal: Enable local builds to use the Herbie plugin. Currently SBV does not have any
-    expressions that can benefit from Herbie, but it is nice to have this support in general.
+  * Remove the functions `allSatWithAny` and `allSatWithAll`. These two variants do *not*
+    make sense when run with multiple solvers, as they internally sequentialize the solutions
+    due to the nature of `allSat`. Not really needed anyhow; so removed. The variants
+    `satWithAny/All` and `proveWithAny/All` are still available.
+  * Export SMTLibVersion from the library, forgotten export needed by Cryptol. Thanks to Adam
+    Foltzer for the patch.
+  * Internal:
+      * Move to Travis-CI "docker" based infrastructure for builds
+      * Enable local builds to use the Herbie plugin. Currently SBV does not have any
+        expressions that can benefit from Herbie, but it is nice to have this support in general.
 
 ### Version 5.0, 2015-09-22
 

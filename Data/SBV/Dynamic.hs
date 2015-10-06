@@ -64,7 +64,7 @@ module Data.SBV.Dynamic
   -- ** Checking satisfiability
   , satWith
   -- * Proving properties using multiple solvers
-  , proveWithAll, proveWithAny, satWithAll, satWithAny, allSatWithAll, allSatWithAny
+  , proveWithAll, proveWithAny, satWithAll, satWithAny
   -- * Model extraction
 
   -- ** Inspecting proof results
@@ -127,7 +127,7 @@ import Data.SBV.SMT.SMT        (ThmResult(..), SatResult(..), AllSatResult(..), 
 import Data.SBV.Tools.Optimize (OptimizeOpts(..))
 import Data.SBV                (sbvCurrentSolver, sbvCheckSolverInstallation, defaultSolverConfig, sbvAvailableSolvers)
 
-import qualified Data.SBV                  as SBV (SBool, proveWithAll, proveWithAny, satWithAll, satWithAny, allSatWithAll, allSatWithAny)
+import qualified Data.SBV                  as SBV (SBool, proveWithAll, proveWithAny, satWithAll, satWithAny)
 import qualified Data.SBV.BitVectors.Data  as SBV (SBV(..))
 import qualified Data.SBV.BitVectors.Model as SBV (isSatisfiableInCurrentPath)
 import qualified Data.SBV.Provers.Prover   as SBV (proveWith, satWith, compileToSMTLib, generateSMTBenchmarks)
@@ -193,20 +193,6 @@ satWithAll cfgs s = SBV.satWithAll cfgs (fmap toSBool s)
 -- to finish will be returned, remaining threads will be killed.
 satWithAny :: [SMTConfig] -> Symbolic SVal -> IO (Solver, SatResult)
 satWithAny cfgs s = SBV.satWithAny cfgs (fmap toSBool s)
-
--- | Find all satisfying assignments to a property with multiple
--- solvers, running them in separate threads. Only the result of the
--- first one to finish will be returned, remaining threads will be
--- killed.
-allSatWithAll :: [SMTConfig] -> Symbolic SVal -> IO [(Solver, AllSatResult)]
-allSatWithAll cfgs s = SBV.allSatWithAll cfgs (fmap toSBool s)
-
--- | Find all satisfying assignments to a property with multiple
--- solvers, running them in separate threads. Only the result of the
--- first one to finish will be returned, remaining threads will be
--- killed.
-allSatWithAny :: [SMTConfig] -> Symbolic SVal -> IO (Solver, AllSatResult)
-allSatWithAny cfgs s = SBV.allSatWithAny cfgs (fmap toSBool s)
 
 -- | Extract a model, the result is a tuple where the first argument (if True)
 -- indicates whether the model was "probable". (i.e., if the solver returned unknown.)
