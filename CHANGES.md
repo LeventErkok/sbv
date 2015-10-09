@@ -5,12 +5,26 @@
 
 ### Version 5.1, Not yet released
 
+  * fpMin, fpMax: If these functions receive +0/-0 as their two arguments, i.e., both
+    zeros but alternating signs in any order, then SMTLib requires the output to be
+    nondeterministicly chosen. Previously, we fixed this result as +0 following the
+    interpretation in Z3, but Z3 recently changed and now incorporates the nondeterministic
+    output. SBV similarly changed to allow for non-determinism here.
+
+  * Fix a bug in hash-consing of floating-point constants, where we were confusing +0 and
+    -0 since we were using them as keys into the map though they compare equal. We now
+    explicitly keep track of the negative-zero status to make sure this confusion does
+    not arise. Note that this bug only exhibited itself in rare occurrences of both
+    constants being present in a benchmark; a true corner case.
+
   * Remove the functions `allSatWithAny` and `allSatWithAll`. These two variants do *not*
     make sense when run with multiple solvers, as they internally sequentialize the solutions
     due to the nature of `allSat`. Not really needed anyhow; so removed. The variants
     `satWithAny/All` and `proveWithAny/All` are still available.
+
   * Export SMTLibVersion from the library, forgotten export needed by Cryptol. Thanks to Adam
     Foltzer for the patch.
+
   * Internal:
       * Move to Travis-CI "docker" based infrastructure for builds
       * Enable local builds to use the Herbie plugin. Currently SBV does not have any
