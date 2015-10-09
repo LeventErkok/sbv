@@ -356,8 +356,8 @@ instance Show ArrayContext where
 -- | Expression map, used for hash-consing
 type ExprMap   = Map.Map SBVExpr SW
 
--- | Constants are stored in a map, for hash-consing
-type CnstMap   = Map.Map CW SW
+-- | Constants are stored in a map, for hash-consing. The bool is needed to tell -0 from +0, sigh
+type CnstMap   = Map.Map (Bool, CW) SW
 
 -- | Kinds used in the program; used for determining the final SMT-Lib logic to pick
 type KindSet = Set.Set Kind
@@ -521,15 +521,23 @@ registerKind st k
        reserved = ["Int", "Real", "List", "Array", "Bool", "NUMERAL", "DECIMAL", "STRING", "FP", "FloatingPoint", "fp"]  -- Reserved by SMT-Lib
 
 -- | Create a new constant; hash-cons as necessary
+-- NB. For each constant, we also store weather it's negative-0 or not,
+-- as otherwise +0 == -0 and thus we'd confuse those entries. That's a
+-- bummer as we incur an extra boolean for this rare case, but it's simple
+-- and hopefully we don't generate a ton of constants in general.
 newConst :: State -> CW -> IO SW
 newConst st c = do
   constMap <- readIORef (rconstMap st)
-  case c `Map.lookup` constMap of
+  let key = (isNeg0 (cwVal c), c)
+  case key `Map.lookup` constMap of
     Just sw -> return sw
     Nothing -> do let k = cwKind c
                   (sw, _) <- newSW st k
-                  modifyIORef (rconstMap st) (Map.insert c sw)
+                  modifyIORef (rconstMap st) (Map.insert key sw)
                   return sw
+  where isNeg0 (CWFloat  f) = isNegativeZero f
+        isNeg0 (CWDouble d) = isNegativeZero d
+        isNeg0 _            = False
 {-# INLINE newConst #-}
 
 -- | Create a new table; hash-cons as necessary
@@ -690,9 +698,10 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    SBVPgm rpgm  <- readIORef pgm
    inpsO <- reverse `fmap` readIORef inps
    outsO <- reverse `fmap` readIORef outs
-   let swap (a, b) = (b, a)
-       cmp  (a, _) (b, _) = a `compare` b
-   cnsts <- (sortBy cmp . map swap . Map.toList) `fmap` readIORef (rconstMap st)
+   let swap  (a, b)        = (b, a)
+       swapc ((_, a), b)   = (b, a)
+       cmp   (a, _) (b, _) = a `compare` b
+   cnsts <- (sortBy cmp . map swapc . Map.toList) `fmap` readIORef (rconstMap st)
    tbls  <- (sortBy (\((x, _, _), _) ((y, _, _), _) -> x `compare` y) . map swap . Map.toList) `fmap` readIORef tables
    arrs  <- IMap.toAscList `fmap` readIORef arrays
    unint <- Map.toList `fmap` readIORef uis
