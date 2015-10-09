@@ -121,8 +121,8 @@ class (SymWord a, RealFloat a) => IEEEFloating a where
   fpSqrt             = lift1  FP_Sqrt            (Just sqrt)               . Just
   fpRem              = lift2  FP_Rem             (Just fpRemH)             Nothing
   fpRoundToIntegral  = lift1  FP_RoundToIntegral (Just fpRoundToIntegralH) . Just
-  fpMin              = lift2  FP_Min             (Just fpMinH)             Nothing
-  fpMax              = lift2  FP_Max             (Just fpMaxH)             Nothing
+  fpMin              = liftMM FP_Min             (Just fpMinH)             Nothing
+  fpMax              = liftMM FP_Max             (Just fpMaxH)             Nothing
   fpIsEqualObject    = lift2B FP_ObjEqual        (Just fpIsEqualObjectH)   Nothing
   fpIsNormal         = lift1B FP_IsNormal        fpIsNormalizedH
   fpIsSubnormal      = lift1B FP_IsSubnormal     isDenormalized
@@ -320,6 +320,25 @@ lift2 w mbOp mbRm a b
   | True
   = SBV $ SVal k $ Right $ cache r
   where k    = kindOf a
+        r st = do swa  <- sbvToSW st a
+                  swb  <- sbvToSW st b
+                  args <- addRM st mbRm [swa, swb]
+                  newExpr st k (SBVApp (IEEEFP w) args)
+
+-- | Lift min/max: Note that we protect against constant folding if args are alternating sign 0's, since
+-- SMTLib is deliberately nondeterministic in this case
+liftMM :: (SymWord a, RealFloat a) => FPOp -> Maybe (a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBV a
+liftMM w mbOp mbRm a b
+  | Just v1 <- unliteral a
+  , Just v2 <- unliteral b
+  , not ((isN0 v1 && isP0 v2) || (isP0 v1 && isN0 v2))          -- If not +0/-0 or -0/+0
+  , Just cv <- concEval2 mbOp mbRm a b
+  = cv
+  | True
+  = SBV $ SVal k $ Right $ cache r
+  where isN0   = isNegativeZero
+        isP0 x = x == 0 && not (isN0 x)
+        k    = kindOf a
         r st = do swa  <- sbvToSW st a
                   swb  <- sbvToSW st b
                   args <- addRM st mbRm [swa, swb]

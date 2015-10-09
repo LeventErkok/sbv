@@ -284,11 +284,11 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                                ++ floatRun2M  "fpDiv"           (/)              fpDiv           comb
                                ++ doubleRun2M "fpDiv"           (/)              fpDiv           comb
 
-                               ++ floatRun2   "fpMin"           fpMinH           fpMin           comb
-                               ++ doubleRun2  "fpMin"           fpMinH           fpMin           comb
+                               ++ floatRunMM  "fpMin"           fpMinH           fpMin           comb
+                               ++ doubleRunMM "fpMin"           fpMinH           fpMin           comb
 
-                               ++ floatRun2   "fpMax"           fpMaxH           fpMax           comb
-                               ++ doubleRun2  "fpMax"           fpMaxH           fpMax           comb
+                               ++ floatRunMM  "fpMax"           fpMaxH           fpMax           comb
+                               ++ doubleRunMM "fpMax"           fpMaxH           fpMax           comb
 
                                ++ floatRun2   "fpRem"           fpRemH           fpRem           comb
                                ++ doubleRun2  "fpRem"           fpRemH           fpRem           comb
@@ -362,6 +362,10 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
         doubleRun2  nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g                         (literal x) (literal y))) | x <- ds, y <- ds]
         floatRun2M  nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g sRNE (literal x) (literal y))) | x <- fs, y <- fs]
         doubleRun2M nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g sRNE (literal x) (literal y))) | x <- ds, y <- ds]
+        floatRunMM  nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g                         (literal x) (literal y))) | x <- fs, y <- fs, not (alt0 x y || alt0 y x)]
+        doubleRunMM nm f g cmb = map (nm,) [cmb (x, y, f x y, extract (g                         (literal x) (literal y))) | x <- ds, y <- ds, not (alt0 x y || alt0 y x)]
+        -- fpMin/fpMax: skip +0/-0 case as this is underspecified
+        alt0 x y = isNegativeZero x && y == 0 && not (isNegativeZero y)
         uTests = map mkTest1 $  concatMap (checkPred fs sfs) predicates
                              ++ concatMap (checkPred ds sds) predicates
         extract :: SymWord a => SBV a -> a

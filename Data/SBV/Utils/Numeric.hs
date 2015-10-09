@@ -29,25 +29,27 @@ fpRatio0 x
 --      <https://github.com/Z3Prover/z3/issues/68>
 -- So, we codify here what the Z3 (SMTLib) is implementing for fpMax.
 -- The discrepancy with Haskell is that the NaN propagation doesn't work in Haskell
--- The discrepancy with x86 is that given +0/-0, x86 returns the second argument; SMTLib returns +0
+-- The discrepancy with x86 is that given +0/-0, x86 returns the second argument; SMTLib is non-deterministic
 fpMaxH :: RealFloat a => a -> a -> a
 fpMaxH x y
-   | isNaN x                              = y
-   | isNaN y                              = x
-   | isNegativeZero x && isNegativeZero y = -0.0
-   | (x == 0) && (y == 0)                 =  0.0   -- Corresponds to SMTLib. For x86 semantics, we'd return 'y' here. (Matters when x=+0, y=-0 or vice versa)
-   | x > y                                = x
-   | True                                 = y
+   | isNaN x                                  = y
+   | isNaN y                                  = x
+   | (isN0 x && isP0 y) || (isN0 y && isP0 x) = error "fpMaxH: Called with alternating-sign 0's. Not supported"
+   | x > y                                    = x
+   | True                                     = y
+   where isN0   = isNegativeZero
+         isP0 a = a == 0 && not (isN0 a)
 
 -- | SMTLib compliant definition for 'fpMin'. See the comments for 'fpMax'.
 fpMinH :: RealFloat a => a -> a -> a
 fpMinH x y
-   | isNaN x                              = y
-   | isNaN y                              = x
-   | isNegativeZero x && isNegativeZero y = -0.0
-   | (x == y) && (y == 0)                 =  0.0   -- Corresponds to SMTLib. For x86 semantics, we'd return 'y' here. (Matters when x=+0, y=-0 or vice versa)
-   | x < y                                = x
-   | True                                 = y
+   | isNaN x                                  = y
+   | isNaN y                                  = x
+   | (isN0 x && isP0 y) || (isN0 y && isP0 x) = error "fpMinH: Called with alternating-sign 0's. Not supported"
+   | x < y                                    = x
+   | True                                     = y
+   where isN0   = isNegativeZero
+         isP0 a = a == 0 && not (isN0 a)
 
 -- | Convert double to float and back. Essentially @fromRational . toRational@
 -- except careful on NaN, Infinities, and -0.
