@@ -23,7 +23,7 @@ mathSAT :: SMTSolver
 mathSAT = SMTSolver {
            name         = MathSAT
          , executable   = "mathsat"
-         , options      = ["-input=smt2"]
+         , options      = ["-input=smt2", "-theory.fp.minmax_zero_mode=4"]
          , engine       = standardEngine "SBV_MATHSAT" "SBV_MATHSAT_OPTIONS" addTimeOut standardModel
          , capabilities = SolverCapabilities {
                                 capSolverName              = "MathSAT"

@@ -11,6 +11,9 @@
     interpretation in Z3, but Z3 recently changed and now incorporates the nondeterministic
     output. SBV similarly changed to allow for non-determinism here.
 
+  * MathSAT backend: Use the SMTLib interpretation of fp.min/fp.max by passing the
+  "-theory.fp.minmax_zero_mode=4" argument explicitly.
+
   * Fix a bug in hash-consing of floating-point constants, where we were confusing +0 and
     -0 since we were using them as keys into the map though they compare equal. We now
     explicitly keep track of the negative-zero status to make sure this confusion does
