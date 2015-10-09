@@ -576,8 +576,10 @@ handleIEEE w consts as var = cvt w
         dispatch (fOp, dOp) = pickOp (fOp, dOp) fpArgs
         cast f              = f (map snd fpArgs)
 
-        -- In SMT-Lib, fpMin/fpMax return +0 when given +0/-0 as the two arguments. (In any order.)
-        -- In C, the second argument is returned. So, wrap around an if-then-else to avoid discrepancy:
+        -- In SMT-Lib, fpMin/fpMax is underspecified when given +0/-0 as the two arguments. (In any order.)
+        -- In C, the second argument is returned. (I think, might depend on the architecture, optimizations etc.).
+        -- We'll translate it so that we deterministically return +0.
+        -- There's really no good choice here.
         wrapMinMax k a b s = parens cond <+> text "?" <+> zero <+> text ":" <+> s
           where zero = text $ if k == KFloat then showCFloat 0 else showCDouble 0
                 cond =                   parens (text "FP_ZERO == fpclassify" <> parens a)                                      -- a is zero
