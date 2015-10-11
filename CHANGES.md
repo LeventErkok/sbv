@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 5.0, 2015-09-22
+* Latest Hackage released version: 5.1, 2015-10-10
 
-### Version 5.1, Not yet released
+### Version 5.1, 2015-10-10
 
   * fpMin, fpMax: If these functions receive +0/-0 as their two arguments, i.e., both
     zeros but alternating signs in any order, then SMTLib requires the output to be
