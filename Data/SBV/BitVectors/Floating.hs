@@ -370,51 +370,62 @@ lift3 w mbOp mbRm a b c
                   args <- addRM st mbRm [swa, swb, swc]
                   newExpr st k (SBVApp (IEEEFP w) args)
 
--- | Relationally assert the equivalence between an 'SFloat' and an 'SWord32', when the bit-pattern
--- is interpreted as either type. Useful when analyzing components of a floating point number. Note
--- that this cannot be written as a function, since IEEE754 NaN values are not unique. That is,
--- given a float, there isn't a unique sign/mantissa/exponent that we can match it to.
+-- | Convert an 'SFloat' to an 'SWord32', preserving the bit-correspondence. Note that since the
+-- representation for @NaN@s are not unique, this function will return a symbolic value when given a
+-- concrete @NaN@.
 --
--- The use case would be code of the form:
+-- Implementation note: Since there's no corresponding function in SMTLib for conversion to
+-- bit-representation due to partiality, we use a translation trick by allocating a new word variable,
+-- converting it to float, and requiring it to be equivalent to the input. In code-generation mode, we simply map
+-- it to a simple conversion.
+sFloatAsSWord32 :: SFloat -> SWord32
+sFloatAsSWord32 fVal
+  | Just f <- unliteral fVal, not (isNaN f)
+  = literal (DB.floatToWord f)
+  | True
+  = SBV (SVal w32 (Right (cache y)))
+  where w32  = KBounded False 32
+        y st | isCodeGenMode st
+             = do f <- sbvToSW st fVal
+                  newExpr st w32 (SBVApp (IEEEFP (FP_Reinterpret KFloat w32)) [f])
+             | True
+             = do n   <- internalVariable st w32
+                  ysw <- newExpr st KFloat (SBVApp (IEEEFP (FP_Reinterpret w32 KFloat)) [n])
+                  internalConstraint st $ unSBV $ fVal `fpIsEqualObject` SBV (SVal KFloat (Right (cache (\_ -> return ysw))))
+                  return n
+
+-- | Convert an 'SDouble' to an 'SWord64', preserving the bit-correspondence. Note that since the
+-- representation for @NaN@s are not unique, this function will return a symbolic value when given a
+-- concrete @NaN@.
 --
--- @
---     do w <- free_
---        constrain $ sFloatToSWord32 f w
---        ...
--- @
---
--- At which point the variable @w@ can be used to access the bits of the float 'f'.
-sFloatAsSWord32 :: SFloat -> SWord32 -> SBool
-sFloatAsSWord32 fVal wVal
-  | Just f <- unliteral fVal, not (isNaN f) = wVal .== literal (DB.floatToWord f)
-  | True                                    = fVal `fpIsEqualObject` sWord32AsSFloat wVal
+-- See the implementation note for 'sFloatAsSWord32', as it applies here as well.
+sDoubleAsSWord64 :: SDouble -> SWord64
+sDoubleAsSWord64 fVal
+  | Just f <- unliteral fVal, not (isNaN f)
+  = literal (DB.doubleToWord f)
+  | True
+  = SBV (SVal w64 (Right (cache y)))
+  where w64  = KBounded False 64
+        y st | isCodeGenMode st
+             = do f <- sbvToSW st fVal
+                  newExpr st w64 (SBVApp (IEEEFP (FP_Reinterpret KDouble w64)) [f])
+             | True
+             = do n   <- internalVariable st w64
+                  ysw <- newExpr st KDouble (SBVApp (IEEEFP (FP_Reinterpret w64 KDouble)) [n])
+                  internalConstraint st $ unSBV $ fVal `fpIsEqualObject` SBV (SVal KDouble (Right (cache (\_ -> return ysw))))
+                  return n
 
--- | Relationally assert the equivalence between an 'SDouble' and an 'SWord64', when the bit-pattern
--- is interpreted as either type. See the comments for 'sFloatToSWord32' for details.
-sDoubleAsSWord64 :: SDouble -> SWord64 -> SBool
-sDoubleAsSWord64 fVal wVal
-  | Just f <- unliteral fVal, not (isNaN f) = wVal .== literal (DB.doubleToWord f)
-  | True                                    = fVal `fpIsEqualObject` sWord64AsSDouble wVal
+-- | Extract the sign\/exponent\/mantissa of a single-precision float. The output will have
+-- 8 bits in the second argument for exponent, and 23 in the third for the mantissa.
+blastSFloat :: SFloat -> (SBool, [SBool], [SBool])
+blastSFloat = extract . sFloatAsSWord32
+ where extract x = (sTestBit x 31, sExtractBits x [30, 29 .. 23], sExtractBits x [22, 21 .. 0])
 
--- | Relationally extract the sign\/exponent\/mantissa of a single-precision float. Due to the
--- non-unique representation of NaN's, we have to do this relationally, much like
--- 'sFloatAsSWord32'.
-blastSFloat :: SFloat -> (SBool, [SBool], [SBool]) -> SBool
-blastSFloat fVal (s, expt, mant)
-  | length expt /= 8 || length mant /= 23  = error "SBV.blastSFloat: Need 8-bit expt and 23 bit mantissa"
-  | True                                   = sFloatAsSWord32 fVal wVal
- where bits = s : expt ++ mant
-       wVal = sum [ite b (2^c) 0 | (b, c) <- zip bits (reverse [(0::Word32) .. 31])]
-
--- | Relationally extract the sign\/exponent\/mantissa of a double-precision float. Due to the
--- non-unique representation of NaN's, we have to do this relationally, much like
--- 'sDoubleAsSWord64'.
-blastSDouble :: SDouble -> (SBool, [SBool], [SBool]) -> SBool
-blastSDouble fVal (s, expt, mant)
-  | length expt /= 11 || length mant /= 52 = error "SBV.blastSDouble: Need 11-bit expt and 52 bit mantissa"
-  | True                                   = sDoubleAsSWord64 fVal wVal
- where bits = s : expt ++ mant
-       wVal = sum [ite b (2^c) 0 | (b, c) <- zip bits (reverse [(0::Word64) .. 63])]
+-- | Extract the sign\/exponent\/mantissa of a single-precision float. The output will have
+-- 11 bits in the second argument for exponent, and 52 in the third for the mantissa.
+blastSDouble :: SDouble -> (SBool, [SBool], [SBool])
+blastSDouble = extract . sDoubleAsSWord64
+ where extract x = (sTestBit x 63, sExtractBits x [62, 61 .. 52], sExtractBits x [51, 50 .. 0])
 
 -- | Reinterpret the bits in a 32-bit word as a single-precision floating point number
 sWord32AsSFloat :: SWord32 -> SFloat

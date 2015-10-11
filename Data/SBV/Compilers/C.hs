@@ -515,6 +515,8 @@ handleIEEE w consts as var = cvt w
         cvt (FP_Reinterpret f t) = case (f, t) of
                                      (KBounded False 32, KFloat)  -> cast $ cpy "sizeof(SFloat)"
                                      (KBounded False 64, KDouble) -> cast $ cpy "sizeof(SDouble)"
+                                     (KFloat,  KBounded False 32) -> cast $ cpy "sizeof(SWord32)"
+                                     (KDouble, KBounded False 64) -> cast $ cpy "sizeof(SWord64)"
                                      _                            -> die $ "Reinterpretation from : " ++ show f ++ " to " ++ show t
                                     where cpy sz = \[a] -> let alhs = text "&" <> var
                                                                arhs = text "&" <> a

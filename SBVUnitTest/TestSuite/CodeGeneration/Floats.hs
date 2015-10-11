@@ -97,8 +97,8 @@ testSuite = mkTestSuite $ \goldCheck -> test [
 
           , test1 "fromFP_SWord32_SFloat"   (sWord32AsSFloat  :: SWord32 -> SFloat)
           , test1 "fromFP_SWord64_SDouble"  (sWord64AsSDouble :: SWord64 -> SDouble)
-          , test2 "fromFP_SFloat_SWord32"   (sFloatAsSWord32  :: SFloat  -> SWord32 -> SBool)
-          , test2 "fromFP_SDouble_SWord64"  (sDoubleAsSWord64 :: SDouble -> SWord64 -> SBool)
+          , test1 "fromFP_SFloat_SWord32"   (sFloatAsSWord32  :: SFloat  -> SWord32)
+          , test1 "fromFP_SDouble_SWord64"  (sDoubleAsSWord64 :: SDouble -> SWord64)
 
           , test1 "f_FP_Abs"                (abs    :: SFloat -> SFloat)
           , test1 "d_FP_Abs"                (abs    :: SDouble -> SDouble)

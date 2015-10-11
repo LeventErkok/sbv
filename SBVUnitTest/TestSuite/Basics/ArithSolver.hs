@@ -17,7 +17,7 @@
 module TestSuite.Basics.ArithSolver(testSuite) where
 
 import Data.Maybe (fromMaybe, fromJust)
-import qualified Data.Binary.IEEE754 as DB (wordToFloat, wordToDouble)
+import qualified Data.Binary.IEEE754 as DB (wordToFloat, wordToDouble, floatToWord, doubleToWord)
 
 import Data.SBV
 import Data.SBV.Internals
@@ -33,6 +33,7 @@ testSuite = mkTestSuite $ \_ -> test $
         genReals
      ++ genFloats
      ++ genDoubles
+     ++ genFPConverts
      ++ genQRems
      ++ genBinTest  True   "+"                (+)
      ++ genBinTest  True   "-"                (-)
@@ -209,8 +210,7 @@ genDoubles :: [Test]
 genDoubles = genIEEE754 "genDoubles" ds
 
 genIEEE754 :: (IEEEFloating a, Show a, Ord a) => String -> [a] -> [Test]
-genIEEE754 origin vs =  map tst1 [("fpCast_" ++ nm, x, y)    | (nm, x, y)    <- converts]
-                     ++ map tst1 [("pred_"   ++ nm, x, y)    | (nm, x, y)    <- preds]
+genIEEE754 origin vs =  map tst1 [("pred_"   ++ nm, x, y)    | (nm, x, y)    <- preds]
                      ++ map tst1 [("unary_"  ++ nm, x, y)    | (nm, x, y)    <- uns]
                      ++ map tst2 [("binary_" ++ nm, x, y, r) | (nm, x, y, r) <- bins]
   where uns =     [("abs",               show x, mkThm1 abs                   x  (abs x))                | x <- vs]
@@ -249,7 +249,72 @@ genIEEE754 origin vs =  map tst1 [("fpCast_" ++ nm, x, y)    | (nm, x, y)    <- 
         -- fpMin/fpMax: skip +0/-0 case as this is underspecified
         alt0 x y = isNegativeZero x && y == 0 && not (isNegativeZero y)
 
-        converts =   [("toFP_Int8_ToFloat",     show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- i8s ]
+        m f = f sRNE
+
+        preds =   [(pn,       show x,         mkThmP        ps       x   (pc x))     | (pn, ps, pc) <- predicates, x <- vs
+                                                                                     -- Work around GHC bug, see issue #138
+                                                                                     -- Remove the following line when fixed.
+                                                                                     , not (pn == "fpIsPositiveZero" && isNegativeZero x)
+                                                                                     ]
+        tst2 (nm, x, y, t) = origin ++ ".arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
+        tst1 (nm, x,    t) = origin ++ ".arithmetic-" ++ nm ++ "." ++ x              ~: assert t
+
+        eqF v val
+          | isNaN          val        = constrain $ fpIsNaN v
+          | isNegativeZero val        = constrain $ fpIsNegativeZero v
+          | val == 0                  = constrain $ fpIsPositiveZero v
+          | isInfinite val && val > 0 = constrain $ fpIsInfinite v &&& fpIsPositive v
+          | isInfinite val && val < 0 = constrain $ fpIsInfinite v &&& fpIsNegative v
+          | True                      = constrain $ v .== literal val
+
+        -- Quickly pick which solver to use. Currently z3 or mathSAT supports FP
+        fpProver :: SMTConfig
+        fpProver = z3 -- mathSAT
+
+        fpThm :: Provable a => a -> IO Bool
+        fpThm p = fromJust `fmap` isTheoremWith fpProver Nothing p
+
+        mkThmP op x r = fpThm $ do a <- free "x"
+                                   eqF a x
+                                   return $ literal r .== op a
+
+        mkThm2P op x y r = fpThm $ do [a, b] <- mapM free ["x", "y"]
+                                      eqF a x
+                                      eqF b y
+                                      return $ literal r .== a `op` b
+
+        mkThm1 op x r = fpThm $ do a <- free "x"
+                                   eqF a x
+                                   return $ literal r `fpIsEqualObject` op a
+
+        mkThm2 op x y r = fpThm $ do [a, b] <- mapM free ["x", "y"]
+                                     eqF a x
+                                     eqF b y
+                                     return $ literal r `fpIsEqualObject` (a `op` b)
+
+        mkThm2C neq op x y r = fpThm $ do [a, b] <- mapM free ["x", "y"]
+                                          eqF a x
+                                          eqF b y
+                                          return $ if isNaN x || isNaN y
+                                                   then (if neq then a `op` b else bnot (a `op` b))
+                                                   else literal r .== a `op` b
+
+        predicates :: (IEEEFloating a) => [(String, SBV a -> SBool, a -> Bool)]
+        predicates = [ ("fpIsNormal",       fpIsNormal,        fpIsNormalizedH)
+                     , ("fpIsSubnormal",    fpIsSubnormal,     isDenormalized)
+                     , ("fpIsZero",         fpIsZero,          (== 0))
+                     , ("fpIsInfinite",     fpIsInfinite,      isInfinite)
+                     , ("fpIsNaN",          fpIsNaN,           isNaN)
+                     , ("fpIsNegative",     fpIsNegative,      \x -> x < 0  ||      isNegativeZero x)
+                     , ("fpIsPositive",     fpIsPositive,      \x -> x >= 0 && not (isNegativeZero x))
+                     , ("fpIsNegativeZero", fpIsNegativeZero,  isNegativeZero)
+                     , ("fpIsPositiveZero", fpIsPositiveZero,  \x -> x == 0 && not (isNegativeZero x))
+                     , ("fpIsPoint",        fpIsPoint,         \x -> not (isNaN x || isInfinite x))
+                     ]
+
+genFPConverts :: [Test]
+genFPConverts = map tst1 [("fpCast_" ++ nm, x, y) | (nm, x, y) <- converts]
+  where converts =   [("toFP_Int8_ToFloat",     show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- i8s ]
                  ++  [("toFP_Int16_ToFloat",    show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- i16s]
                  ++  [("toFP_Int32_ToFloat",    show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- i32s]
                  ++  [("toFP_Int64_ToFloat",    show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- i64s]
@@ -308,18 +373,12 @@ genIEEE754 origin vs =  map tst1 [("fpCast_" ++ nm, x, y)    | (nm, x, y)    <- 
                  ++  [("reinterp_Word32_Float",  show x, mkThmC sWord32AsSFloat  x (DB.wordToFloat  x)) | x <- w32s]
                  ++  [("reinterp_Word64_Double", show x, mkThmC sWord64AsSDouble x (DB.wordToDouble x)) | x <- w64s]
 
-                 ++  [("reinterp_Float_Word32",  show x, mkIso sFloatAsSWord32  sWord32AsSFloat  x) | x <- w32s]
-                 ++  [("reinterp_Double_Word64", show x, mkIso sDoubleAsSWord64 sWord64AsSDouble x) | x <- w64s]
+                 ++  [("reinterp_Float_Word32",  show x, mkThmP sFloatAsSWord32  x (DB.floatToWord x))  | x <- fs, not (isNaN x)] -- Not unique for NaN
+                 ++  [("reinterp_Double_Word64", show x, mkThmP sDoubleAsSWord64 x (DB.doubleToWord x)) | x <- ds, not (isNaN x)] -- Not unique for NaN
 
         m f = f sRNE
 
-        preds =   [(pn,       show x,         mkThmP        ps       x   (pc x))     | (pn, ps, pc) <- predicates, x <- vs
-                                                                                     -- Work around GHC bug, see issue #138
-                                                                                     -- Remove the following line when fixed.
-                                                                                     , not (pn == "fpIsPositiveZero" && isNegativeZero x)
-                                                                                     ]
-        tst2 (nm, x, y, t) = origin ++ ".arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
-        tst1 (nm, x,    t) = origin ++ ".arithmetic-" ++ nm ++ "." ++ x              ~: assert t
+        tst1 (nm, x, t) = "fpConverts.arithmetic-" ++ nm ++ "." ++ x ~: assert t
 
         eqF v val
           | isNaN          val        = constrain $ fpIsNaN v
@@ -336,18 +395,9 @@ genIEEE754 origin vs =  map tst1 [("fpCast_" ++ nm, x, y)    | (nm, x, y)    <- 
         fpThm :: Provable a => a -> IO Bool
         fpThm p = fromJust `fmap` isTheoremWith fpProver Nothing p
 
-        mkIso f g i = fpThm $ do a <- free "x"
-                                 constrain $ a .== literal i
-                                 return (f (g a) a :: SBool)
-
         mkThmP op x r = fpThm $ do a <- free "x"
                                    eqF a x
                                    return $ literal r .== op a
-
-        mkThm2P op x y r = fpThm $ do [a, b] <- mapM free ["x", "y"]
-                                      eqF a x
-                                      eqF b y
-                                      return $ literal r .== a `op` b
 
         mkThm1 op x r = fpThm $ do a <- free "x"
                                    eqF a x
@@ -360,31 +410,6 @@ genIEEE754 origin vs =  map tst1 [("fpCast_" ++ nm, x, y)    | (nm, x, y)    <- 
         mkThmC' op x r = fpThm $ do a <- free "x"
                                     eqF a x
                                     return $ literal r .== op a
-
-        mkThm2 op x y r = fpThm $ do [a, b] <- mapM free ["x", "y"]
-                                     eqF a x
-                                     eqF b y
-                                     return $ literal r `fpIsEqualObject` (a `op` b)
-
-        mkThm2C neq op x y r = fpThm $ do [a, b] <- mapM free ["x", "y"]
-                                          eqF a x
-                                          eqF b y
-                                          return $ if isNaN x || isNaN y
-                                                   then (if neq then a `op` b else bnot (a `op` b))
-                                                   else literal r .== a `op` b
-
-        predicates :: (IEEEFloating a) => [(String, SBV a -> SBool, a -> Bool)]
-        predicates = [ ("fpIsNormal",       fpIsNormal,        fpIsNormalizedH)
-                     , ("fpIsSubnormal",    fpIsSubnormal,     isDenormalized)
-                     , ("fpIsZero",         fpIsZero,          (== 0))
-                     , ("fpIsInfinite",     fpIsInfinite,      isInfinite)
-                     , ("fpIsNaN",          fpIsNaN,           isNaN)
-                     , ("fpIsNegative",     fpIsNegative,      \x -> x < 0  ||      isNegativeZero x)
-                     , ("fpIsPositive",     fpIsPositive,      \x -> x >= 0 && not (isNegativeZero x))
-                     , ("fpIsNegativeZero", fpIsNegativeZero,  isNegativeZero)
-                     , ("fpIsPositiveZero", fpIsPositiveZero,  \x -> x == 0 && not (isNegativeZero x))
-                     , ("fpIsPoint",        fpIsPoint,         \x -> not (isNaN x || isInfinite x))
-                     ]
 
 genQRems :: [Test]
 genQRems = map mkTest $  [("divMod",  show x, show y, mkThm2 sDivMod  x y (x `divMod'`  y)) | x <- w8s,  y <- w8s ]

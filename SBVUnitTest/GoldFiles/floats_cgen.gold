@@ -745,14 +745,12 @@ SDouble fromFP_SWord64_SDouble(const SWord64 a)
 
 #include "floatCodeGen.h"
 
-SBool fromFP_SFloat_SWord32(const SFloat a, const SWord32 b)
+SWord32 fromFP_SFloat_SWord32(const SFloat a)
 {
   const SFloat  s0 = a;
-  const SWord32 s1 = b;
-        SFloat  s2; memcpy(&s2, &s1, sizeof(SFloat));
-  const SBool   s3 = isnan(s0) ? isnan(s2) : (signbit(s0) && (s0 == 0)) ? (signbit(s2) && (s2 == 0)) : (signbit(s2) && (s2 == 0)) ? (signbit(s0) && (s0 == 0)) : (s0 == s2);
+        SWord32 s1; memcpy(&s1, &s0, sizeof(SWord32));
 
-  return s3;
+  return s1;
 }
 == END: "fromFP_SFloat_SWord32.c" ==================
 == BEGIN: "fromFP_SDouble_SWord64.c" ================
@@ -760,14 +758,12 @@ SBool fromFP_SFloat_SWord32(const SFloat a, const SWord32 b)
 
 #include "floatCodeGen.h"
 
-SBool fromFP_SDouble_SWord64(const SDouble a, const SWord64 b)
+SWord64 fromFP_SDouble_SWord64(const SDouble a)
 {
   const SDouble s0 = a;
-  const SWord64 s1 = b;
-        SDouble s2; memcpy(&s2, &s1, sizeof(SDouble));
-  const SBool   s3 = isnan(s0) ? isnan(s2) : (signbit(s0) && (s0 == 0)) ? (signbit(s2) && (s2 == 0)) : (signbit(s2) && (s2 == 0)) ? (signbit(s0) && (s0 == 0)) : (s0 == s2);
+        SWord64 s1; memcpy(&s1, &s0, sizeof(SWord64));
 
-  return s3;
+  return s1;
 }
 == END: "fromFP_SDouble_SWord64.c" ==================
 == BEGIN: "f_FP_Abs.c" ================
@@ -1406,8 +1402,8 @@ SInteger fromFP_DoubleTo_Integer(const SDouble a);
 SReal fromFP_DoubleTo_Real(const SDouble a);
 SFloat fromFP_SWord32_SFloat(const SWord32 a);
 SDouble fromFP_SWord64_SDouble(const SWord64 a);
-SBool fromFP_SFloat_SWord32(const SFloat a, const SWord32 b);
-SBool fromFP_SDouble_SWord64(const SDouble a, const SWord64 b);
+SWord32 fromFP_SFloat_SWord32(const SFloat a);
+SWord64 fromFP_SDouble_SWord64(const SDouble a);
 SFloat f_FP_Abs(const SFloat a);
 SDouble d_FP_Abs(const SDouble a);
 SFloat f_FP_Neg(const SFloat a);
@@ -1811,18 +1807,16 @@ void fromFP_SWord64_SDouble_driver(void)
 
 void fromFP_SFloat_SWord32_driver(void)
 {
-  const SBool __result = fromFP_SFloat_SWord32(42.0F,
-                                               0x0000002bUL);
+  const SWord32 __result = fromFP_SFloat_SWord32(42.0F);
 
-  printf("fromFP_SFloat_SWord32(42.0F, 0x0000002bUL) = %d\n", __result);
+  printf("fromFP_SFloat_SWord32(42.0F) = 0x%08"PRIx32"UL\n", __result);
 }
 
 void fromFP_SDouble_SWord64_driver(void)
 {
-  const SBool __result = fromFP_SDouble_SWord64(42.0,
-                                                0x000000000000002bULL);
+  const SWord64 __result = fromFP_SDouble_SWord64(42.0);
 
-  printf("fromFP_SDouble_SWord64(42.0, 0x000000000000002bULL) = %d\n", __result);
+  printf("fromFP_SDouble_SWord64(42.0) = 0x%016"PRIx64"ULL\n", __result);
 }
 
 void f_FP_Abs_driver(void)

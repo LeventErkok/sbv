@@ -21,7 +21,7 @@ import Data.SBV.Internals
 import Data.Maybe(fromJust, fromMaybe)
 
 import SBVTest
-import qualified Data.Binary.IEEE754 as DB (wordToFloat, wordToDouble)
+import qualified Data.Binary.IEEE754 as DB (wordToFloat, wordToDouble, floatToWord, doubleToWord)
 
 ghcBitSize :: Bits a => a -> Int
 ghcBitSize x = fromMaybe (error "SBV.ghcBitSize: Unexpected non-finite usage!") (bitSizeMaybe x)
@@ -351,8 +351,8 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                  ++ map cvtTest  [("reinterp_Word32_Float",  show x, sWord32AsSFloat  (literal x), literal (DB.wordToFloat  x)) | x <- w32s]
                  ++ map cvtTest  [("reinterp_Word64_Double", show x, sWord64AsSDouble (literal x), literal (DB.wordToDouble x)) | x <- w64s]
 
-                 ++ map cvtTestI [("reinterp_Float_Word32",  show x, sFloatAsSWord32  (sWord32AsSFloat  (literal x)) (literal x), literal true) | x <- w32s]
-                 ++ map cvtTestI [("reinterp_Double_Word64", show x, sDoubleAsSWord64 (sWord64AsSDouble (literal x)) (literal x), literal true) | x <- w64s]
+                 ++ map cvtTestI [("reinterp_Float_Word32",  show x, sFloatAsSWord32  (literal x), literal (DB.floatToWord x))  | x <- fs, not (isNaN x)] -- Not unique for NaN
+                 ++ map cvtTestI [("reinterp_Double_Word64", show x, sDoubleAsSWord64 (literal x), literal (DB.doubleToWord x)) | x <- ds, not (isNaN x)] -- Not unique for NaN
 
         floatRun1   nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- fs]
         doubleRun1  nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- ds]
