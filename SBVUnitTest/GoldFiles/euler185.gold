@@ -1,14 +1,14 @@
 Solution #1:
-  s0 = 4 :: Word8
-  s1 = 6 :: Word8
-  s2 = 4 :: Word8
-  s3 = 0 :: Word8
-  s4 = 2 :: Word8
-  s5 = 6 :: Word8
-  s6 = 1 :: Word8
-  s7 = 5 :: Word8
-  s8 = 7 :: Word8
-  s9 = 1 :: Word8
+  s0  = 4 :: Word8
+  s1  = 6 :: Word8
+  s2  = 4 :: Word8
+  s3  = 0 :: Word8
+  s4  = 2 :: Word8
+  s5  = 6 :: Word8
+  s6  = 1 :: Word8
+  s7  = 5 :: Word8
+  s8  = 7 :: Word8
+  s9  = 1 :: Word8
   s10 = 8 :: Word8
   s11 = 4 :: Word8
   s12 = 9 :: Word8

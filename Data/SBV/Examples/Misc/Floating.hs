@@ -146,8 +146,8 @@ multInverse = prove $ do a <- sDouble "a"
 -- >>> roundingAdd
 -- Satisfiable. Model:
 --   rm = RoundNearestTiesToAway :: RoundingMode
---   x = 2.0644195e19 :: Float
---   y = -2.1974389e18 :: Float
+--   x  = 2.0644195e19 :: Float
+--   y  = -2.1974389e18 :: Float
 --
 -- Unfortunately we can't directly validate this result at the Haskell level, as Haskell only supports
 -- 'RoundNearestTiesToEven'. We have:

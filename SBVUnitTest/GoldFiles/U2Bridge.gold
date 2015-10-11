@@ -1,14 +1,14 @@
 Satisfiable. Model:
-  s0 = False
-  s1 = Edge :: U2Member
-  s2 = Bono :: U2Member
-  s3 = True
-  s4 = Edge :: U2Member
-  s5 = Bono :: U2Member
-  s6 = False
-  s7 = Larry :: U2Member
-  s8 = Adam :: U2Member
-  s9 = True
+  s0  = False
+  s1  = Edge :: U2Member
+  s2  = Bono :: U2Member
+  s3  = True
+  s4  = Edge :: U2Member
+  s5  = Bono :: U2Member
+  s6  = False
+  s7  = Larry :: U2Member
+  s8  = Adam :: U2Member
+  s9  = True
   s10 = Bono :: U2Member
   s11 = Bono :: U2Member
   s12 = False

@@ -333,10 +333,15 @@ showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel result = case resul
   TimeOut     _               -> "*** Timeout"
  where cfg = resultConfig result
 
--- | Show a model in human readable form
+-- | Show a model in human readable form. Ignore bindings to those variables that start
+-- with "__internal_sbv_"; as these are only for internal purposes
 showModel :: SMTConfig -> SMTModel -> String
-showModel cfg m = intercalate "\n" $ map shM $ modelAssocs m
-  where shM (s, v) = "  " ++ s ++ " = " ++ shCW cfg v
+showModel cfg m = intercalate "\n" $ map shM interesting
+  where interesting   = filter (not . ignore) $ modelAssocs m
+        ignore (s, _) = "__internal_sbv_" `isPrefixOf` s
+        width         = maximum (0 : map (length . fst) interesting)
+        shM (s, v)    = "  " ++ align s ++ " = " ++ shCW cfg v
+        align s       = s ++ replicate (width - length s) ' '
 
 -- | Show a constant value, in the user-specified base
 shCW :: SMTConfig -> CW -> String
