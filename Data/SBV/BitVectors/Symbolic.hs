@@ -33,7 +33,7 @@ module Data.SBV.BitVectors.Symbolic
   , svMkSymVar
   , ArrayContext(..), ArrayInfo
   , svToSW, svToSymSW, forceSWArg
-  , SBVExpr(..), newExpr
+  , SBVExpr(..), newExpr, isCodeGenMode
   , Cached, cache, uncache
   , ArrayIndex, uncacheAI
   , NamedSymVar
@@ -43,7 +43,7 @@ module Data.SBV.BitVectors.Symbolic
   , inProofMode, SBVRunMode(..), Result(..)
   , Logic(..), SMTLibLogic(..)
   , getTraceInfo, getConstraints
-  , addSValConstraint
+  , addSValConstraint, internalConstraint, internalVariable
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
@@ -386,10 +386,18 @@ data SBVRunMode = Proof (Bool, SMTConfig) -- ^ Fully Symbolic, proof mode.
                 | Concrete StdGen         -- ^ Concrete simulation mode. The StdGen is for the pConstrain acceptance in cross runs.
 
 -- | Is this a concrete run? (i.e., quick-check or test-generation like)
-isConcreteMode :: SBVRunMode -> Bool
-isConcreteMode (Concrete _) = True
-isConcreteMode (Proof{})    = False
-isConcreteMode CodeGen      = False
+isConcreteMode :: State -> Bool
+isConcreteMode State{runMode} = case runMode of
+                                  Concrete{} -> True
+                                  Proof{}    -> False
+                                  CodeGen    -> False
+
+-- | Is this a CodeGen run? (i.e., generating code)
+isCodeGenMode :: State -> Bool
+isCodeGenMode State{runMode} = case runMode of
+                                 Concrete{} -> False
+                                 Proof{}    -> False
+                                 CodeGen    -> True
 
 -- | The state of the symbolic interpreter
 data State  = State { runMode      :: SBVRunMode
@@ -500,6 +508,18 @@ newUninterpreted st nm t mbCode
           Nothing -> do modifyIORef (rUIMap st) (Map.insert nm t)
                         when (isJust mbCode) $ modifyIORef (rCgMap st) (Map.insert nm (fromJust mbCode))
   where validChar x = isAlphaNum x || x `elem` "_"
+
+-- | Create an internal variable, which acts as an input but isn't visible to the user.
+-- Such variables are existentially quantified in a SAT context, and universally quantified
+-- in a proof context.
+internalVariable :: State -> Kind -> IO SW
+internalVariable st k = do (sw, nm) <- newSW st k
+                           let q = case runMode st of
+                                     Proof (True,  _) -> EX
+                                     _                -> ALL
+                           modifyIORef (rinps st) ((q, (sw, "__internal_sbv_" ++ nm)):)
+                           return sw
+{-# INLINE internalVariable #-}
 
 -- | Create a new SW
 newSW :: State -> Kind -> IO (SW, String)
@@ -717,8 +737,12 @@ imposeConstraint :: SVal -> Symbolic ()
 imposeConstraint c = do st <- ask
                         case runMode st of
                           CodeGen -> error "SBV: constraints are not allowed in code-generation"
-                          _       -> liftIO $ do v <- svToSW st c
-                                                 modifyIORef (rConstraints st) (v:)
+                          _       -> liftIO $ internalConstraint st c
+
+-- | Require a boolean condition to be true in the state. Only used for internal purposes.
+internalConstraint :: State -> SVal -> IO ()
+internalConstraint st b = do v <- svToSW st b
+                             modifyIORef (rConstraints st) (v:)
 
 -- | Add a constraint with a given probability
 addSValConstraint :: Maybe Double -> SVal -> SVal -> Symbolic ()
@@ -728,7 +752,7 @@ addSValConstraint (Just t) c c'
   = error $ "SBV: pConstrain: Invalid probability threshold: " ++ show t ++ ", must be in [0, 1]."
   | True
   = do st <- ask
-       unless (isConcreteMode (runMode st)) $ error "SBV: pConstrain only allowed in 'genTest' or 'quickCheck' contexts."
+       unless (isConcreteMode st) $ error "SBV: pConstrain only allowed in 'genTest' or 'quickCheck' contexts."
        case () of
          () | t > 0 && t < 1 -> liftIO (throwDice st) >>= \d -> imposeConstraint (if d <= t then c else c')
             | t > 0          -> imposeConstraint c

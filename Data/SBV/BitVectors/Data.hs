@@ -38,7 +38,7 @@ module Data.SBV.BitVectors.Data
  , SBVPgm(..), Symbolic, runSymbolic, runSymbolic', State, getPathCondition, extendPathCondition
  , inProofMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
  , Logic(..), SMTLibLogic(..)
- , getTraceInfo, getConstraints, addConstraint
+ , getTraceInfo, getConstraints, addConstraint, internalVariable, internalConstraint, isCodeGenMode
  , SBVType(..), newUninterpreted, addAxiom
  , Quantifier(..), needsExistentials
  , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
