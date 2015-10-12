@@ -45,7 +45,7 @@ Library
                     TupleSections
                     TypeOperators
                     TypeSynonymInstances
-  Build-Depends   : base >= 4 && < 5
+  Build-Depends   : base >= 4.8 && < 5
                   , array, async, containers, deepseq, directory, filepath, old-time
                   , pretty, process, mtl, QuickCheck, random, syb, data-binary-ieee754
                   , crackNum
@@ -135,7 +135,7 @@ Executable SBVUnitTests
                     RankNTypes
                     ScopedTypeVariables
                     TupleSections
-  Build-depends   : base  >= 4 && < 5
+  Build-depends   : base  >= 4.8 && < 5
                   , HUnit, directory, filepath, process, syb, sbv, data-binary-ieee754
   Hs-Source-Dirs  : SBVUnitTest
   main-is         : SBVUnitTest.hs
@@ -206,7 +206,7 @@ Test-Suite SBVBasicTests
   type            : exitcode-stdio-1.0
   default-language: Haskell2010
   ghc-options     : -Wall -with-rtsopts=-K64m
-  Build-depends   : base >= 4 && < 5
+  Build-depends   : base >= 4.8 && < 5
                   , HUnit, directory, filepath, syb, sbv, data-binary-ieee754
   Hs-Source-Dirs  : SBVUnitTest
   main-is         : SBVBasicTests.hs
