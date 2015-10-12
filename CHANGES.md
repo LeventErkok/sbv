@@ -3,6 +3,11 @@
 
 * Latest Hackage released version: 5.1, 2015-10-10
 
+### Version 5.2, Not yet released
+
+  * Fix a minor bug in base 2/16 printing where uninterpreted constants were not handled
+    correctly.
+
 ### Version 5.1, 2015-10-10
 
   * fpMin, fpMax: If these functions receive +0/-0 as their two arguments, i.e., both
