@@ -1,12 +1,12 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 5.1, 2015-10-10
+* Latest Hackage released version: 5.2, 2015-10-12
 
-### Version 5.2, Not yet released
+### Version 5.2, 2015-10-12
 
-  * Fix a minor bug in base 2/16 printing where uninterpreted constants were not handled
-    correctly.
+  * Regression on 5.1: Fix a minor bug in base 2/16 printing where uninterpreted constants were
+    not handled correctly.
 
 ### Version 5.1, 2015-10-10
 
