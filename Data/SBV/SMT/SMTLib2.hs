@@ -349,10 +349,8 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         lift1B bOp vOp
           | boolOp = lift1 bOp
           | True   = lift1 vOp
-        eqBV sgn sbvs
-           | boolOp = lift2 "=" sgn sbvs
-           | True   = "(= " ++ lift2 "bvcomp" sgn sbvs ++ " #b1)"
-        neqBV sgn sbvs = "(not " ++ eqBV sgn sbvs ++ ")"
+        eqBV  = lift2 "="
+        neqBV = lift2 "distinct"
         equal sgn sbvs
           | doubleOp = lift2 "fp.eq" sgn sbvs
           | floatOp  = lift2 "fp.eq" sgn sbvs

@@ -3,6 +3,14 @@
 
 * Latest Hackage released version: 5.2, 2015-10-12
 
+### Version 5.3, Not yet released
+
+  * Increase lower bound on base to 4.8, since SBV requires at least GHC 7.10. Thanks to Adam Foltzer
+    for the patch.
+
+  * Minor mods to how bitvector equality/inequality are translated to SMTLib. No user visible
+    impact.
+
 ### Version 5.2, 2015-10-12
 
   * Regression on 5.1: Fix a minor bug in base 2/16 printing where uninterpreted constants were
