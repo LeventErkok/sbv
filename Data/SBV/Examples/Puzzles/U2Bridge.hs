@@ -9,7 +9,6 @@
 -- The famous U2 bridge crossing puzzle: <http://www.brainj.net/puzzle.php?id=u2>
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass       #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -28,7 +27,11 @@ import Data.SBV
 
 -- | U2 band members. We want to translate this to SMT-Lib
 -- as a data-type, and hence the deriving mechanism.
-data U2Member = Bono | Edge | Adam | Larry deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind, SatModel)
+data U2Member = Bono | Edge | Adam | Larry deriving (Eq, Ord, Show, Read, Typeable, Data)
+
+instance SymWord U2Member
+instance HasKind U2Member
+instance SatModel U2Member
 
 -- | Symbolic shorthand for a 'U2Member'
 type SU2Member = SBV U2Member
@@ -58,7 +61,11 @@ sCrossTime m =   ite (m .== bono) (literal (crossTime Bono))
                                   (literal (crossTime Larry)) -- Must be Larry
 
 -- | Location of the flash
-data Location = Here | There deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind, SatModel)
+data Location = Here | There deriving (Eq, Ord, Show, Read, Typeable, Data)
+
+instance SymWord Location
+instance HasKind Location
+instance SatModel Location
 
 -- | Symbolic variant of 'Location'
 type SLocation = SBV Location

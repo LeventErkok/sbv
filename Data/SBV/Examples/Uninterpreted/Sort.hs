@@ -9,7 +9,6 @@
 -- Demonstrates uninterpreted sorts, together with axioms.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 
 module Data.SBV.Examples.Uninterpreted.Sort where
@@ -21,7 +20,10 @@ import Data.SBV
 -- in the backend SMT solver. Note the custom @deriving@ clause, which
 -- takes care of most of the boilerplate. The () field is needed so
 -- SBV will not translate it to an enumerated data-type
-data Q = Q () deriving (Eq, Ord, Data, Read, Show, SymWord, HasKind)
+data Q = Q () deriving (Eq, Ord, Typeable, Data, Read, Show)
+
+instance SymWord Q
+instance HasKind Q
 
 -- | Declare an uninterpreted function that works over Q's
 f :: SBV Q -> SBV Q

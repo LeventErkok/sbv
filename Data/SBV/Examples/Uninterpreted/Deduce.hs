@@ -11,7 +11,6 @@
 -- essentially showing how to show the required deduction using SBV.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 
 module Data.SBV.Examples.Uninterpreted.Deduce where
@@ -29,7 +28,10 @@ import Prelude hiding (not, or, and)
 
 -- | The uninterpreted sort 'B', corresponding to the carrier.
 -- To prevent SBV from translating it to an enumerated type, we simply attach an unused field
-data B = B () deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
+data B = B () deriving (Eq, Ord, Show, Read, Typeable, Data)
+
+instance SymWord B
+instance HasKind B
 
 -- | Handy shortcut for the type of symbolic values over 'B'
 type SB = SBV B

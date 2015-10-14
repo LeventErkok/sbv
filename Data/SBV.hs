@@ -107,6 +107,12 @@
 
 {-# LANGUAGE FlexibleInstances    #-}
 
+-- TODO: remove OverlappingInstances and these warning suppressions
+-- once support is dropped for GHC 7.8
+{-# OPTIONS_GHC -fno-warn-deprecated-flags #-}
+{-# OPTIONS_GHC -fno-warn-unrecognised-pragmas #-}
+{-# LANGUAGE OverlappingInstances #-}
+
 module Data.SBV (
   -- * Programming with symbolic values
   -- $progIntro

@@ -63,6 +63,7 @@ import Data.List            (intercalate, sortBy)
 import Data.Maybe           (isJust, fromJust, fromMaybe)
 
 import qualified Data.Generics as G    (Data(..))
+import qualified Data.Typeable as T    (Typeable)
 import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
 import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
 import qualified Data.Set      as Set  (Set, empty, toList, insert)
@@ -74,6 +75,9 @@ import System.Random
 
 import Data.SBV.BitVectors.Kind
 import Data.SBV.BitVectors.Concrete
+
+import Prelude ()
+import Prelude.Compat
 
 -- | A symbolic node id
 newtype NodeId = NodeId Int deriving (Eq, Ord)
@@ -1019,7 +1023,7 @@ data RoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable 
                   | RoundTowardPositive     -- ^ Round towards positive infinity. (Also known as rounding-up or ceiling.)
                   | RoundTowardNegative     -- ^ Round towards negative infinity. (Also known as rounding-down or floor.)
                   | RoundTowardZero         -- ^ Round towards zero. (Also known as truncation.)
-                  deriving (Eq, Ord, Show, Read, G.Data, Bounded, Enum)
+                  deriving (Eq, Ord, Show, Read, T.Typeable, G.Data, Bounded, Enum)
 
 -- | Solver configuration. See also 'z3', 'yices', 'cvc4', 'boolector', 'mathSAT', etc. which are instantiations of this type for those solvers, with
 -- reasonable defaults. In particular, custom configuration can be created by varying those values. (Such as @z3{verbose=True}@.)

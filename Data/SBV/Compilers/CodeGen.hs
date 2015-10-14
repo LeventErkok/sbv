@@ -14,8 +14,9 @@
 
 module Data.SBV.Compilers.CodeGen where
 
+import Control.Monad             (filterM, replicateM, unless)
 import Control.Monad.Trans
-import Control.Monad.State.Lazy
+import Control.Monad.State.Lazy  (MonadState, StateT(..), modify)
 import Data.Char                 (toLower, isSpace)
 import Data.List                 (nub, isPrefixOf, intercalate, (\\))
 import System.Directory          (createDirectory, doesDirectoryExist, doesFileExist)
@@ -26,6 +27,9 @@ import qualified Text.PrettyPrint.HughesPJ as P (render)
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Symbolic (svToSymSW, svMkSymVar, outputSVal)
+
+import Prelude ()
+import Prelude.Compat
 
 -- | Abstract over code generation for different languages
 class CgTarget a where

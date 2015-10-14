@@ -67,6 +67,9 @@ import Data.SBV.BitVectors.Kind
 import Data.SBV.BitVectors.Concrete
 import Data.SBV.BitVectors.Symbolic
 
+import Prelude ()
+import Prelude.Compat
+
 -- | A class for capturing values that have a sign and a size (finite or infinite)
 -- minimal complete definition: kindOf. This class can be automatically derived
 -- for data-types that have a 'Data' instance; this is useful for creating uninterpreted
