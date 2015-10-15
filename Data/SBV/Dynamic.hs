@@ -62,7 +62,7 @@ module Data.SBV.Dynamic
   -- ** Proving properties
   , proveWith
   -- ** Checking satisfiability
-  , satWith
+  , satWith, allSatWith
   -- * Proving properties using multiple solvers
   , proveWithAll, proveWithAny, satWithAll, satWithAny
   -- * Model extraction
@@ -130,7 +130,7 @@ import Data.SBV                (sbvCurrentSolver, sbvCheckSolverInstallation, de
 import qualified Data.SBV                  as SBV (SBool, proveWithAll, proveWithAny, satWithAll, satWithAny)
 import qualified Data.SBV.BitVectors.Data  as SBV (SBV(..))
 import qualified Data.SBV.BitVectors.Model as SBV (isSatisfiableInCurrentPath)
-import qualified Data.SBV.Provers.Prover   as SBV (proveWith, satWith, compileToSMTLib, generateSMTBenchmarks)
+import qualified Data.SBV.Provers.Prover   as SBV (proveWith, satWith, allSatWith, compileToSMTLib, generateSMTBenchmarks)
 import qualified Data.SBV.SMT.SMT          as SBV (Modelable(getModel, getModelDictionary))
 
 -- | Reduce a condition (i.e., try to concretize it) under the given path
@@ -170,6 +170,10 @@ proveWith cfg s = SBV.proveWith cfg (fmap toSBool s)
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: SMTConfig -> Symbolic SVal -> IO SatResult
 satWith cfg s = SBV.satWith cfg (fmap toSBool s)
+
+-- | Find all satisfying assignments using the given SMT-solver
+allSatWith :: SMTConfig -> Symbolic SVal -> IO AllSatResult
+allSatWith cfg s = SBV.allSatWith cfg (fmap toSBool s)
 
 -- | Prove a property with multiple solvers, running them in separate threads. The
 -- results will be returned in the order produced.
