@@ -13,6 +13,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Data.SBV.Examples.Misc.Enumerate where
@@ -26,15 +27,9 @@ import Data.Generics
 -- derived classes we need: 'Eq', 'Ord', 'Data', 'Read', 'Show', 'SymWord',
 -- 'HasKind', and 'SatModel'. (The last one is only needed if 'getModel' and friends are used.)
 --
--- Also note that we use need the @LANGUAGE@ option
--- @DeriveDataTypeable@ and standalone empty instance declarations so
--- that the generic instances can apply to our type. In GHC 7.10 and
--- later, we could @import Data.Generics@ and have the @LANGUAGE@
--- option @DeriveAnyClass@ set, and then just add @SymWord@ and
--- @HasKind@ to our @deriving@ clause.
-data E = A | B | C deriving (Eq, Ord, Show, Read, Typeable, Data)
-instance SymWord E
-instance HasKind E
+-- Also note that we need to @import Data.Generics@ and have the @LANGUAGE@
+-- option @DeriveDataTypeable@ and @DeriveAnyClass@ set.
+data E = A | B | C deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
 
 -- | Give a name to the symbolic variants of 'E', for convenience
 type SE = SBV E

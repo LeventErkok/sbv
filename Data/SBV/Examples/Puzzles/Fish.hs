@@ -27,6 +27,7 @@
 -- Who owns the fish?
 ------------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -36,34 +37,19 @@ import Data.Generics
 import Data.SBV
 
 -- | Colors of houses
-data Color       = Red      | Green    | White      | Yellow    | Blue   deriving (Eq, Ord, Show, Read, Typeable, Data)
-
-instance SymWord Color
-instance HasKind Color
+data Color       = Red      | Green    | White      | Yellow    | Blue   deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
 
 -- | Nationalities of the occupants
-data Nationality = Briton   | Dane     | Swede      | Norwegian | German deriving (Eq, Ord, Show, Read, Typeable, Data)
-
-instance SymWord Nationality
-instance HasKind Nationality
+data Nationality = Briton   | Dane     | Swede      | Norwegian | German deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
 
 -- | Beverage choices
-data Beverage    = Tea      | Coffee   | Milk       | Beer      | Water  deriving (Eq, Ord, Show, Read, Typeable, Data)
-
-instance SymWord Beverage
-instance HasKind Beverage
+data Beverage    = Tea      | Coffee   | Milk       | Beer      | Water  deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
 
 -- | Pets they keep
-data Pet         = Dog      | Horse    | Cat        | Bird      | Fish   deriving (Eq, Ord, Show, Read, Typeable, Data)
-
-instance SymWord Pet
-instance HasKind Pet
+data Pet         = Dog      | Horse    | Cat        | Bird      | Fish   deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
 
 -- | Sports they engage in
-data Sport       = Football | Baseball | Volleyball | Hockey    | Tennis deriving (Eq, Ord, Show, Read, Typeable, Data)
-
-instance SymWord Sport
-instance HasKind Sport
+data Sport       = Football | Baseball | Volleyball | Hockey    | Tennis deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
 
 -- | We have:
 --

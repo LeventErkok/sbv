@@ -44,6 +44,8 @@ Library
                     TupleSections
                     TypeOperators
                     TypeSynonymInstances
+  if impl(ghc >= 7.10.1)
+    other-extensions: DeriveAnyClass
   Build-Depends   : base >= 4.7 && < 5
                   , base-compat >= 0.6
                   , array, async, containers, deepseq, directory, filepath, old-time
@@ -58,43 +60,44 @@ Library
                   , Data.SBV.Bridge.ABC
                   , Data.SBV.Dynamic
                   , Data.SBV.Internals
-                  , Data.SBV.Examples.BitPrecise.BitTricks
-                  , Data.SBV.Examples.BitPrecise.Legato
-                  , Data.SBV.Examples.BitPrecise.MergeSort
-                  , Data.SBV.Examples.BitPrecise.MultMask
-                  , Data.SBV.Examples.BitPrecise.PrefixSum
-                  , Data.SBV.Examples.CodeGeneration.AddSub
-                  , Data.SBV.Examples.CodeGeneration.CRC_USB5
-                  , Data.SBV.Examples.CodeGeneration.Fibonacci
-                  , Data.SBV.Examples.CodeGeneration.GCD
-                  , Data.SBV.Examples.CodeGeneration.PopulationCount
-                  , Data.SBV.Examples.CodeGeneration.Uninterpreted
-                  , Data.SBV.Examples.Crypto.AES
-                  , Data.SBV.Examples.Crypto.RC4
-                  , Data.SBV.Examples.Existentials.CRCPolynomial
-                  , Data.SBV.Examples.Existentials.Diophantine
-                  , Data.SBV.Examples.Misc.Enumerate
-                  , Data.SBV.Examples.Misc.Floating
-                  , Data.SBV.Examples.Misc.ModelExtract
-                  , Data.SBV.Examples.Misc.Word4
-                  , Data.SBV.Examples.Polynomials.Polynomials
-                  , Data.SBV.Examples.Puzzles.Birthday
-                  , Data.SBV.Examples.Puzzles.Coins
-                  , Data.SBV.Examples.Puzzles.Counts
-                  , Data.SBV.Examples.Puzzles.DogCatMouse
-                  , Data.SBV.Examples.Puzzles.Euler185
-                  , Data.SBV.Examples.Puzzles.Fish
-                  , Data.SBV.Examples.Puzzles.MagicSquare
-                  , Data.SBV.Examples.Puzzles.NQueens
-                  , Data.SBV.Examples.Puzzles.SendMoreMoney
-                  , Data.SBV.Examples.Puzzles.Sudoku
-                  , Data.SBV.Examples.Puzzles.U2Bridge
-                  , Data.SBV.Examples.Uninterpreted.AUF
-                  , Data.SBV.Examples.Uninterpreted.Deduce
-                  , Data.SBV.Examples.Uninterpreted.Function
-                  , Data.SBV.Examples.Uninterpreted.Shannon
-                  , Data.SBV.Examples.Uninterpreted.Sort
-                  , Data.SBV.Examples.Uninterpreted.UISortAllSat
+  if impl(ghc >= 7.10.1)
+    exposed-modules : Data.SBV.Examples.BitPrecise.BitTricks
+                    , Data.SBV.Examples.BitPrecise.Legato
+                    , Data.SBV.Examples.BitPrecise.MergeSort
+                    , Data.SBV.Examples.BitPrecise.MultMask
+                    , Data.SBV.Examples.BitPrecise.PrefixSum
+                    , Data.SBV.Examples.CodeGeneration.AddSub
+                    , Data.SBV.Examples.CodeGeneration.CRC_USB5
+                    , Data.SBV.Examples.CodeGeneration.Fibonacci
+                    , Data.SBV.Examples.CodeGeneration.GCD
+                    , Data.SBV.Examples.CodeGeneration.PopulationCount
+                    , Data.SBV.Examples.CodeGeneration.Uninterpreted
+                    , Data.SBV.Examples.Crypto.AES
+                    , Data.SBV.Examples.Crypto.RC4
+                    , Data.SBV.Examples.Existentials.CRCPolynomial
+                    , Data.SBV.Examples.Existentials.Diophantine
+                    , Data.SBV.Examples.Misc.Enumerate
+                    , Data.SBV.Examples.Misc.Floating
+                    , Data.SBV.Examples.Misc.ModelExtract
+                    , Data.SBV.Examples.Misc.Word4
+                    , Data.SBV.Examples.Polynomials.Polynomials
+                    , Data.SBV.Examples.Puzzles.Birthday
+                    , Data.SBV.Examples.Puzzles.Coins
+                    , Data.SBV.Examples.Puzzles.Counts
+                    , Data.SBV.Examples.Puzzles.DogCatMouse
+                    , Data.SBV.Examples.Puzzles.Euler185
+                    , Data.SBV.Examples.Puzzles.Fish
+                    , Data.SBV.Examples.Puzzles.MagicSquare
+                    , Data.SBV.Examples.Puzzles.NQueens
+                    , Data.SBV.Examples.Puzzles.SendMoreMoney
+                    , Data.SBV.Examples.Puzzles.Sudoku
+                    , Data.SBV.Examples.Puzzles.U2Bridge
+                    , Data.SBV.Examples.Uninterpreted.AUF
+                    , Data.SBV.Examples.Uninterpreted.Deduce
+                    , Data.SBV.Examples.Uninterpreted.Function
+                    , Data.SBV.Examples.Uninterpreted.Shannon
+                    , Data.SBV.Examples.Uninterpreted.Sort
+                    , Data.SBV.Examples.Uninterpreted.UISortAllSat
   Other-modules   : Data.SBV.BitVectors.AlgReals
                   , Data.SBV.BitVectors.Concrete
                   , Data.SBV.BitVectors.Data
@@ -131,12 +134,16 @@ Library
 Executable SBVUnitTests
   default-language: Haskell2010
   ghc-options     : -Wall
-  other-extensions: Rank2Types
+  other-extensions: DeriveAnyClass
+                    Rank2Types
                     RankNTypes
                     ScopedTypeVariables
                     TupleSections
-  Build-depends   : base  >= 4.7 && < 5
+  if impl(ghc >= 7.10.1)
+    Build-depends : base  >= 4.8 && < 5
                   , HUnit, directory, filepath, process, syb, sbv, data-binary-ieee754
+  else
+    Buildable     : False
   Hs-Source-Dirs  : SBVUnitTest
   main-is         : SBVUnitTest.hs
   Other-modules   : SBVUnitTestBuildTime
@@ -206,8 +213,11 @@ Test-Suite SBVBasicTests
   type            : exitcode-stdio-1.0
   default-language: Haskell2010
   ghc-options     : -Wall -with-rtsopts=-K64m
-  Build-depends   : base >= 4.7 && < 5
+  if impl(ghc >= 7.10.1)
+    Build-depends : base >= 4.8 && < 5
                   , HUnit, directory, filepath, syb, sbv, data-binary-ieee754
+  else
+    Buildable     : False
   Hs-Source-Dirs  : SBVUnitTest
   main-is         : SBVBasicTests.hs
   Other-modules   : SBVBasicTests
