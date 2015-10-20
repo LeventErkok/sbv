@@ -9,7 +9,6 @@
 -- Test suite for basic axioms and uninterpreted functions
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 
 module TestSuite.Uninterpreted.Axioms(testSuite) where
@@ -25,7 +24,9 @@ testSuite = mkTestSuite $ \_ -> test [
  ]
 
 -- Example provided by Thomas DuBuisson:
-data Bitstring = Bitstring () deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
+data Bitstring = Bitstring () deriving (Eq, Ord, Show, Read, Typeable, Data)
+instance SymWord Bitstring
+instance HasKind Bitstring
 type SBitstring = SBV Bitstring
 
 a :: SBitstring -> SBool

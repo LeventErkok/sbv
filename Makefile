@@ -5,7 +5,7 @@
 SHELL     := /usr/bin/env bash
 TSTSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs | grep -v SBVUnitTest/SBVBasicTests.hs | grep -v buildUtils/simplify.hs | grep -v sandbox)
 STAMPFILE = SBVUnitTest/SBVUnitTestBuildTime.hs
-DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' -or -name '*.cabal' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE))
+DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' -or -name '*.cabal' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE) | grep -v dist-sandbox)
 CABAL     = cabal
 SIMPLIFY  = ./buildUtils/simplify
 # HERBIE    = -fplugin=Herbie -package-id HerbiePlugin-0.1.0.0-0e1e14fc82dbb38565b570b0204d49bd
