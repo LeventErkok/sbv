@@ -854,10 +854,12 @@ enumCvt w x = case unliteral x of
 -- this operation. One issue is how division by 0 behaves. The verification
 -- technology requires total functions, and there are several design choices
 -- here. We follow Isabelle/HOL approach of assigning the value 0 for division
--- by 0. Therefore, we impose the following law:
+-- by 0. Therefore, we impose the following pair of laws:
 --
---     @ x `sQuotRem` 0 = (0, x) @
---     @ x `sDivMod`  0 = (0, x) @
+-- @
+--      x `sQuotRem` 0 = (0, x)
+--      x `sDivMod`  0 = (0, x)
+-- @
 --
 -- Note that our instances implement this law even when @x@ is @0@ itself.
 --

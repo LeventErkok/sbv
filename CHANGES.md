@@ -8,6 +8,10 @@
   * Increase lower bound on base to 4.8, since SBV requires at least GHC 7.10. Thanks to Adam Foltzer
     for the patch.
 
+  * Make SBV compilable with GHC < 7.10 again. This is mostly so that Cryptol can be built using
+    older versions of GHC, while still being able to use SBV. As Cryptol moves to GHC >= 7.10, we
+    intend to remove the "compatibility" changes again. Thanks to Adam Foltzer for the patch.
+
   * Minor mods to how bitvector equality/inequality are translated to SMTLib. No user visible
     impact.
 
