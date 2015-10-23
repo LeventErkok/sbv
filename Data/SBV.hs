@@ -105,13 +105,13 @@
 -- get in touch if there is a solver you'd like to see included.
 ---------------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 -- TODO: remove OverlappingInstances and these warning suppressions
 -- once support is dropped for GHC 7.8
-{-# OPTIONS_GHC -fno-warn-deprecated-flags #-}
+{-# OPTIONS_GHC -fno-warn-deprecated-flags     #-}
 {-# OPTIONS_GHC -fno-warn-unrecognised-pragmas #-}
-{-# LANGUAGE OverlappingInstances #-}
+{-# LANGUAGE OverlappingInstances              #-}
 
 module Data.SBV (
   -- * Programming with symbolic values
@@ -354,6 +354,11 @@ sbvWithAll solvers what a = mapM try solvers >>= (unsafeInterleaveIO . go)
    where try s = async $ what s a >>= \r -> return (name (solver s), r)
          go []  = return []
          go as  = do (d, r) <- waitAny as
+                     -- The following filter works because the Eq instance on Async
+                     -- checks the thread-id; so we know that we're dremoving the
+                     -- correct solver from the list. This also allows for
+                     -- running the same-solver (with different options), since
+                     -- they will get different thread-ids.
                      rs <- unsafeInterleaveIO $ go (filter (/= d) as)
                      return (r : rs)
 
