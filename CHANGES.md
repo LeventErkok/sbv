@@ -3,6 +3,9 @@
 
 * Latest Hackage released version: 5.3, 2015-10-20
 
+### Version 5.4, Not yet released
+
+  
 ### Version 5.3, 2015-10-20
 
   * Main point of this release to make SBV compile with GHC 7.8 again, to accommodate mainly
