@@ -28,11 +28,11 @@
 -- @
 --
 -- The class 'Provable' comes with instances for n-ary predicates, for arbitrary n.
--- The predicates are just regular Haskell functions over symbolic signed and unsigned
--- bit-vectors. Functions for checking satisfiability ('sat' and 'allSat') are also
+-- The predicates are just regular Haskell functions over symbolic types listed below.
+-- Functions for checking satisfiability ('sat' and 'allSat') are also
 -- provided.
 --
--- In particular, the sbv library introduces the types:
+-- The sbv library introduces the following symbolic types:
 --
 --   * 'SBool': Symbolic Booleans (bits).
 --
