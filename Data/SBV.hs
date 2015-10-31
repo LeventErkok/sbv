@@ -355,7 +355,7 @@ sbvWithAll solvers what a = mapM try solvers >>= (unsafeInterleaveIO . go)
          go []  = return []
          go as  = do (d, r) <- waitAny as
                      -- The following filter works because the Eq instance on Async
-                     -- checks the thread-id; so we know that we're dremoving the
+                     -- checks the thread-id; so we know that we're removing the
                      -- correct solver from the list. This also allows for
                      -- running the same-solver (with different options), since
                      -- they will get different thread-ids.
