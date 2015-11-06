@@ -28,5 +28,6 @@ DEFINE
   s16 :: SBool = s11 == s15
   s17 :: SBool = s6 | s16
 CONSTRAINTS
+ASSERTIONS
 OUTPUTS
   s17

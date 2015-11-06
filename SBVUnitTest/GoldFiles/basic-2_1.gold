@@ -14,5 +14,6 @@ DEFINE
   s3 :: SWord8 = s1 - s0
   s4 :: SWord8 = s2 * s3
 CONSTRAINTS
+ASSERTIONS
 OUTPUTS
   s4
