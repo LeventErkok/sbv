@@ -1102,7 +1102,7 @@ iteLazy t a b
   | True                  = symbolicMerge False t a b
 
 -- | Symbolic assert. Check that the given boolean condition is always true in the given path.
-sAssert :: HasKind a => CallStack -> String -> SBool -> SBV a -> SBV a
+sAssert :: HasKind a => Maybe CallStack -> String -> SBool -> SBV a -> SBV a
 sAssert cs msg (SBV cond) x = SBV $ SVal k $ Right $ cache r
   where k     = kindOf x
         r st  = do xsw <- sbvToSW st x

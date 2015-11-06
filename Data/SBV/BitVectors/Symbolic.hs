@@ -277,19 +277,19 @@ newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SW, SBVExpr)}
 type NamedSymVar = (SW, String)
 
 -- | Result of running a symbolic computation
-data Result = Result (Set.Set Kind)                     -- kinds used in the program
-                     [(String, CW)]                     -- quick-check counter-example information (if any)
-                     [(String, [String])]               -- uninterpeted code segments
-                     [(Quantifier, NamedSymVar)]        -- inputs (possibly existential)
-                     [(SW, CW)]                         -- constants
-                     [((Int, Kind, Kind), [SW])]        -- tables (automatically constructed) (tableno, index-type, result-type) elts
-                     [(Int, ArrayInfo)]                 -- arrays (user specified)
-                     [(String, SBVType)]                -- uninterpreted constants
-                     [(String, [String])]               -- axioms
-                     SBVPgm                             -- assignments
-                     [SW]                               -- additional constraints (boolean)
-                     [(String, CallStack, SVal, SVal)]  -- assertions
-                     [SW]                               -- outputs
+data Result = Result (Set.Set Kind)                           -- kinds used in the program
+                     [(String, CW)]                           -- quick-check counter-example information (if any)
+                     [(String, [String])]                     -- uninterpeted code segments
+                     [(Quantifier, NamedSymVar)]              -- inputs (possibly existential)
+                     [(SW, CW)]                               -- constants
+                     [((Int, Kind, Kind), [SW])]              -- tables (automatically constructed) (tableno, index-type, result-type) elts
+                     [(Int, ArrayInfo)]                       -- arrays (user specified)
+                     [(String, SBVType)]                      -- uninterpreted constants
+                     [(String, [String])]                     -- axioms
+                     SBVPgm                                   -- assignments
+                     [SW]                                     -- additional constraints (boolean)
+                     [(String, Maybe CallStack, SVal, SVal)]  -- assertions
+                     [SW]                                     -- outputs
 
 -- | Extract the constraints from a result
 getConstraints :: Result -> [SW]
@@ -348,7 +348,7 @@ instance Show Result where
                         | True     = ", aliasing " ++ show nm
           shui (nm, t) = "  [uninterpreted] " ++ nm ++ " :: " ++ show t
           shax (nm, ss) = "  -- user defined axiom: " ++ nm ++ "\n  " ++ intercalate "\n  " ss
-          shAssert (nm, stk, _, p) = "  -- assertion: " ++ nm ++ " " ++ showCallStack stk ++ ": " ++ show p
+          shAssert (nm, stk, _, p) = "  -- assertion: " ++ nm ++ " " ++ maybe "[No location]" showCallStack stk ++ ": " ++ show p
 
 -- | The context of a symbolic array as created
 data ArrayContext = ArrayFree (Maybe SW)     -- ^ A new array, with potential initializer for each cell
@@ -427,7 +427,7 @@ data State  = State { runMode      :: SBVRunMode
                     , rUIMap       :: IORef UIMap
                     , rCgMap       :: IORef CgMap
                     , raxioms      :: IORef [(String, [String])]
-                    , rAsserts     :: IORef [(String, CallStack, SVal, SVal)]  -- ^ kind KBool both
+                    , rAsserts     :: IORef [(String, Maybe CallStack, SVal, SVal)]  -- ^ kind KBool both
                     , rSWCache     :: IORef (Cache SW)
                     , rAICache     :: IORef (Cache Int)
                     }
@@ -521,7 +521,7 @@ newUninterpreted st nm t mbCode
   where validChar x = isAlphaNum x || x `elem` "_"
 
 -- | Add a new sAssert based constraint
-addPathConstraint :: State -> CallStack -> String -> SVal -> IO ()
+addPathConstraint :: State -> Maybe CallStack -> String -> SVal -> IO ()
 addPathConstraint st cs msg v = modifyIORef (rAsserts st) ((msg, cs, getSValPathCondition st, v):)
 
 -- | Create an internal variable, which acts as an input but isn't visible to the user.

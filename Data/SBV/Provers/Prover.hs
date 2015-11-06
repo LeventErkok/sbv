@@ -363,7 +363,7 @@ safeWith config a = do
   where sh []         msg = "*** Checking: " ++ msg
         sh ((_, l):_) msg = "*** " ++ shLoc l ++ ": Checking: " ++ msg
         shLoc sl          = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl)]
-        verify (msg, cs, _, _) = do putStrLn $ sh (getCallStack cs) msg
+        verify (msg, cs, _, _) = do putStrLn $ sh (maybe [] getCallStack cs) msg
                                     return False
 
 -- | Determine if the constraints are vacuous using the given SMT-solver
@@ -429,11 +429,11 @@ allSatWith config p = do
         updateName i cfg = cfg{smtFile = upd `fmap` smtFile cfg}
                where upd nm = let (b, e) = splitExtension nm in b ++ "_allSat_" ++ show i ++ e
 
-type SMTProblem = ( [(Quantifier, NamedSymVar)]        -- inputs
-                  , [Either SW (SW, [SW])]             -- skolem-map
-                  , Set.Set Kind                       -- kinds used
-                  , [(String, CallStack, SVal, SVal)]  -- assertions
-                  , SMTLibPgm                          -- SMTLib representation
+type SMTProblem = ( [(Quantifier, NamedSymVar)]              -- inputs
+                  , [Either SW (SW, [SW])]                   -- skolem-map
+                  , Set.Set Kind                             -- kinds used
+                  , [(String, Maybe CallStack, SVal, SVal)]  -- assertions
+                  , SMTLibPgm                                -- SMTLib representation
                   )
 
 callSolver :: Bool -> String -> (SMTResult -> b) -> SMTConfig -> SMTProblem -> IO b
