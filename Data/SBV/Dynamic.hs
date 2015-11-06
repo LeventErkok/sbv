@@ -63,6 +63,8 @@ module Data.SBV.Dynamic
   , proveWith
   -- ** Checking satisfiability
   , satWith, allSatWith
+  -- ** Checking safety
+  , safeWith
   -- * Proving properties using multiple solvers
   , proveWithAll, proveWithAny, satWithAll, satWithAny
   -- * Model extraction
@@ -76,7 +78,7 @@ module Data.SBV.Dynamic
   , SMTConfig(..), SMTLibVersion(..), SMTLibLogic(..), Logic(..), OptimizeOpts(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
 
   -- * Symbolic computations
-  , outputSVal{-, SymWord(..)-}
+  , outputSVal
 
   -- * Getting SMT-Lib output (for offline analysis)
   , compileToSMTLib, generateSMTBenchmarks
@@ -130,7 +132,7 @@ import Data.SBV                (sbvCurrentSolver, sbvCheckSolverInstallation, de
 import qualified Data.SBV                  as SBV (SBool, proveWithAll, proveWithAny, satWithAll, satWithAny)
 import qualified Data.SBV.BitVectors.Data  as SBV (SBV(..))
 import qualified Data.SBV.BitVectors.Model as SBV (isSatisfiableInCurrentPath)
-import qualified Data.SBV.Provers.Prover   as SBV (proveWith, satWith, allSatWith, compileToSMTLib, generateSMTBenchmarks)
+import qualified Data.SBV.Provers.Prover   as SBV (proveWith, satWith, safeWith, allSatWith, compileToSMTLib, generateSMTBenchmarks)
 import qualified Data.SBV.SMT.SMT          as SBV (Modelable(getModel, getModelDictionary))
 
 -- | Reduce a condition (i.e., try to concretize it) under the given path
@@ -170,6 +172,10 @@ proveWith cfg s = SBV.proveWith cfg (fmap toSBool s)
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: SMTConfig -> Symbolic SVal -> IO SatResult
 satWith cfg s = SBV.satWith cfg (fmap toSBool s)
+
+-- | Check safety using the given SMT-solver
+safeWith :: SMTConfig -> Symbolic SVal -> IO ()
+safeWith cfg s = SBV.safeWith cfg (fmap toSBool s)
 
 -- | Find all satisfying assignments using the given SMT-solver
 allSatWith :: SMTConfig -> Symbolic SVal -> IO AllSatResult

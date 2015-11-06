@@ -43,7 +43,7 @@ module Data.SBV.BitVectors.Symbolic
   , inProofMode, SBVRunMode(..), Result(..)
   , Logic(..), SMTLibLogic(..)
   , getTraceInfo, getConstraints
-  , addSValConstraint, internalConstraint, internalVariable
+  , addPathConstraint, addSValConstraint, internalConstraint, internalVariable
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
@@ -61,6 +61,8 @@ import Data.Char            (isAlpha, isAlphaNum)
 import Data.IORef           (IORef, newIORef, modifyIORef, readIORef, writeIORef)
 import Data.List            (intercalate, sortBy)
 import Data.Maybe           (isJust, fromJust, fromMaybe)
+
+import GHC.Stack
 
 import qualified Data.Generics as G    (Data(..))
 import qualified Data.Typeable as T    (Typeable)
@@ -275,33 +277,34 @@ newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SW, SBVExpr)}
 type NamedSymVar = (SW, String)
 
 -- | Result of running a symbolic computation
-data Result = Result (Set.Set Kind)                -- kinds used in the program
-                     [(String, CW)]                -- quick-check counter-example information (if any)
-                     [(String, [String])]          -- uninterpeted code segments
-                     [(Quantifier, NamedSymVar)]   -- inputs (possibly existential)
-                     [(SW, CW)]                    -- constants
-                     [((Int, Kind, Kind), [SW])]   -- tables (automatically constructed) (tableno, index-type, result-type) elts
-                     [(Int, ArrayInfo)]            -- arrays (user specified)
-                     [(String, SBVType)]           -- uninterpreted constants
-                     [(String, [String])]          -- axioms
-                     SBVPgm                        -- assignments
-                     [SW]                          -- additional constraints (boolean)
-                     [SW]                          -- outputs
+data Result = Result (Set.Set Kind)                     -- kinds used in the program
+                     [(String, CW)]                     -- quick-check counter-example information (if any)
+                     [(String, [String])]               -- uninterpeted code segments
+                     [(Quantifier, NamedSymVar)]        -- inputs (possibly existential)
+                     [(SW, CW)]                         -- constants
+                     [((Int, Kind, Kind), [SW])]        -- tables (automatically constructed) (tableno, index-type, result-type) elts
+                     [(Int, ArrayInfo)]                 -- arrays (user specified)
+                     [(String, SBVType)]                -- uninterpreted constants
+                     [(String, [String])]               -- axioms
+                     SBVPgm                             -- assignments
+                     [SW]                               -- additional constraints (boolean)
+                     [(String, CallStack, SVal, SVal)]  -- assertions
+                     [SW]                               -- outputs
 
 -- | Extract the constraints from a result
 getConstraints :: Result -> [SW]
-getConstraints (Result _ _ _ _ _ _ _ _ _ _ cstrs _) = cstrs
+getConstraints (Result _ _ _ _ _ _ _ _ _ _ cstrs _ _) = cstrs
 
 -- | Extract the traced-values from a result (quick-check)
 getTraceInfo :: Result -> [(String, CW)]
-getTraceInfo (Result _ tvals _ _ _ _ _ _ _ _ _ _) = tvals
+getTraceInfo (Result _ tvals _ _ _ _ _ _ _ _ _ _ _) = tvals
 
 -- | Show instance for 'Result'. Only for debugging purposes.
 instance Show Result where
-  show (Result _ _ _ _ cs _ _ [] [] _ [] [r])
+  show (Result _ _ _ _ cs _ _ [] [] _ [] _ [r])
     | Just c <- r `lookup` cs
     = show c
-  show (Result kinds _ cgs is cs ts as uis axs xs cstrs os)  = intercalate "\n" $
+  show (Result kinds _ cgs is cs ts as uis axs xs cstrs asserts os)  = intercalate "\n" $
                    (if null usorts then [] else "SORTS" : map ("  " ++) usorts)
                 ++ ["INPUTS"]
                 ++ map shn is
@@ -321,6 +324,8 @@ instance Show Result where
                 ++ map (\(s, e) -> "  " ++ shs s ++ " = " ++ show e) (F.toList (pgmAssignments xs))
                 ++ ["CONSTRAINTS"]
                 ++ map (("  " ++) . show) cstrs
+                ++ ["ASSERTIONS"]
+                ++ map (("  "++) . shAssert) asserts
                 ++ ["OUTPUTS"]
                 ++ map (("  " ++) . show) os
     where usorts = [sh s t | KUserSort s t <- Set.toList kinds]
@@ -343,6 +348,7 @@ instance Show Result where
                         | True     = ", aliasing " ++ show nm
           shui (nm, t) = "  [uninterpreted] " ++ nm ++ " :: " ++ show t
           shax (nm, ss) = "  -- user defined axiom: " ++ nm ++ "\n  " ++ intercalate "\n  " ss
+          shAssert (nm, stk, _, p) = "  -- assertion: " ++ nm ++ " " ++ showCallStack stk ++ ": " ++ show p
 
 -- | The context of a symbolic array as created
 data ArrayContext = ArrayFree (Maybe SW)     -- ^ A new array, with potential initializer for each cell
@@ -421,6 +427,7 @@ data State  = State { runMode      :: SBVRunMode
                     , rUIMap       :: IORef UIMap
                     , rCgMap       :: IORef CgMap
                     , raxioms      :: IORef [(String, [String])]
+                    , rAsserts     :: IORef [(String, CallStack, SVal, SVal)]  -- ^ kind KBool both
                     , rSWCache     :: IORef (Cache SW)
                     , rAICache     :: IORef (Cache Int)
                     }
@@ -512,6 +519,10 @@ newUninterpreted st nm t mbCode
           Nothing -> do modifyIORef (rUIMap st) (Map.insert nm t)
                         when (isJust mbCode) $ modifyIORef (rCgMap st) (Map.insert nm (fromJust mbCode))
   where validChar x = isAlphaNum x || x `elem` "_"
+
+-- | Add a new sAssert based constraint
+addPathConstraint :: State -> CallStack -> String -> SVal -> IO ()
+addPathConstraint st cs msg v = modifyIORef (rAsserts st) ((msg, cs, getSValPathCondition st, v):)
 
 -- | Create an internal variable, which acts as an input but isn't visible to the user.
 -- Such variables are existentially quantified in a SAT context, and universally quantified
@@ -685,6 +696,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
    aiCache   <- newIORef IMap.empty
    usedKinds <- newIORef Set.empty
    cstrs     <- newIORef []
+   asserts   <- newIORef []
    rGen      <- case currentRunMode of
                   Concrete g -> newIORef g
                   _          -> newStdGen >>= newIORef
@@ -707,6 +719,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
                   , rSWCache     = swCache
                   , rAICache     = aiCache
                   , rConstraints = cstrs
+                  , rAsserts     = asserts
                   }
    _ <- newConst st falseCW -- s(-2) == falseSW
    _ <- newConst st trueCW  -- s(-1) == trueSW
@@ -718,7 +731,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
 -- instance when implementing 'sBranch'.
 extractSymbolicSimulationState :: State -> IO Result
 extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblMap=tables, rArrayMap=arrays, rUIMap=uis, raxioms=axioms
-                                       , rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints = cstrs} = do
+                                       , rAsserts=asserts, rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints=cstrs} = do
    SBVPgm rpgm  <- readIORef pgm
    inpsO <- reverse `fmap` readIORef inps
    outsO <- reverse `fmap` readIORef outs
@@ -734,7 +747,8 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    cgMap <- Map.toList `fmap` readIORef cgs
    traceVals <- reverse `fmap` readIORef cInfo
    extraCstrs <- reverse `fmap` readIORef cstrs
-   return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs outsO
+   assertions <- reverse `fmap` readIORef asserts
+   return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs assertions outsO
 
 -- | Handling constraints
 imposeConstraint :: SVal -> Symbolic ()
@@ -911,9 +925,9 @@ smtLibVersionExtension :: SMTLibVersion -> String
 smtLibVersionExtension SMTLib2 = "smt2"
 
 -- | Representation of an SMT-Lib program. In between pre and post goes the refuted models
-data SMTLibPgm = SMTLibPgm SMTLibVersion  ( [(String, SW)]          -- alias table
-                                          , [String]                -- pre: declarations.
-                                          , [String])               -- post: formula
+data SMTLibPgm = SMTLibPgm SMTLibVersion  ( [(String, SW)]  -- alias table
+                                          , [String]        -- pre: declarations.
+                                          , [String])       -- post: formula
 instance NFData SMTLibVersion where rnf a = seq a ()
 instance NFData SMTLibPgm     where rnf a = seq a ()
 
@@ -924,12 +938,16 @@ instance Show SMTLibPgm where
 instance NFData CW where
   rnf (CW x y) = x `seq` y `seq` ()
 
+-- Can't really force this, but not a big deal
+instance NFData CallStack where
+  rnf _ = ()
+
 instance NFData Result where
-  rnf (Result kindInfo qcInfo cgs inps consts tbls arrs uis axs pgm cstr outs)
-        = rnf kindInfo `seq` rnf qcInfo `seq` rnf cgs  `seq` rnf inps
-                       `seq` rnf consts `seq` rnf tbls `seq` rnf arrs
-                       `seq` rnf uis    `seq` rnf axs  `seq` rnf pgm
-                       `seq` rnf cstr   `seq` rnf outs
+  rnf (Result kindInfo qcInfo cgs inps consts tbls arrs uis axs pgm cstr asserts outs)
+        = rnf kindInfo `seq` rnf qcInfo `seq` rnf cgs     `seq` rnf inps
+                       `seq` rnf consts `seq` rnf tbls    `seq` rnf arrs
+                       `seq` rnf uis    `seq` rnf axs     `seq` rnf pgm
+                       `seq` rnf cstr   `seq` rnf asserts `seq` rnf outs
 instance NFData Kind          where rnf a = seq a ()
 instance NFData ArrayContext  where rnf a = seq a ()
 instance NFData SW            where rnf a = seq a ()

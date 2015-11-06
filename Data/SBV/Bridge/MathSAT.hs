@@ -25,7 +25,7 @@ module Data.SBV.Bridge.MathSAT (
   -- * MathSAT specific interface
   sbvCurrentSolver
   -- ** Proving, checking satisfiability
-  , prove, sat, allSat, isVacuous, isTheorem, isSatisfiable
+  , prove, sat, safe, allSat, isVacuous, isTheorem, isSatisfiable
   -- ** Optimization routines
   , optimize, minimize, maximize
   -- * Non-MathSAT specific SBV interface
@@ -33,51 +33,57 @@ module Data.SBV.Bridge.MathSAT (
   , module Data.SBV
   ) where
 
-import Data.SBV hiding (prove, sat, allSat, isVacuous, isTheorem, isSatisfiable, optimize, minimize, maximize, sbvCurrentSolver)
+import Data.SBV hiding (prove, sat, safe, allSat, isVacuous, isTheorem, isSatisfiable, optimize, minimize, maximize, sbvCurrentSolver)
 
--- | Current solver instance, pointing to cvc4.
+-- | Current solver instance, pointing to MathSAT.
 sbvCurrentSolver :: SMTConfig
 sbvCurrentSolver = mathSAT
 
--- | Prove theorems, using the CVC4 SMT solver
+-- | Prove theorems, using the MathSAT SMT solver
 prove :: Provable a
       => a              -- ^ Property to check
       -> IO ThmResult   -- ^ Response from the SMT solver, containing the counter-example if found
 prove = proveWith sbvCurrentSolver
 
--- | Find satisfying solutions, using the CVC4 SMT solver
+-- | Find satisfying solutions, using the MathSAT SMT solver
 sat :: Provable a
     => a                -- ^ Property to check
     -> IO SatResult     -- ^ Response of the SMT Solver, containing the model if found
 sat = satWith sbvCurrentSolver
 
--- | Find all satisfying solutions, using the CVC4 SMT solver
+-- | Check all 'sAssert' calls are safe, using the MathSAT SMT solver
+safe :: Provable a
+    => a         -- ^ Program containing sAssert calls
+    -> IO ()
+safe = safeWith sbvCurrentSolver
+
+-- | Find all satisfying solutions, using the MathSAT SMT solver
 allSat :: Provable a
        => a                -- ^ Property to check
        -> IO AllSatResult  -- ^ List of all satisfying models
 allSat = allSatWith sbvCurrentSolver
 
--- | Check vacuity of the explicit constraints introduced by calls to the 'constrain' function, using the CVC4 SMT solver
+-- | Check vacuity of the explicit constraints introduced by calls to the 'constrain' function, using the MathSAT SMT solver
 isVacuous :: Provable a
           => a             -- ^ Property to check
           -> IO Bool       -- ^ True if the constraints are unsatisifiable
 isVacuous = isVacuousWith sbvCurrentSolver
 
--- | Check if the statement is a theorem, with an optional time-out in seconds, using the CVC4 SMT solver
+-- | Check if the statement is a theorem, with an optional time-out in seconds, using the MathSAT SMT solver
 isTheorem :: Provable a
           => Maybe Int          -- ^ Optional time-out, specify in seconds
           -> a                  -- ^ Property to check
           -> IO (Maybe Bool)    -- ^ Returns Nothing if time-out expires
 isTheorem = isTheoremWith sbvCurrentSolver
 
--- | Check if the statement is satisfiable, with an optional time-out in seconds, using the CVC4 SMT solver
+-- | Check if the statement is satisfiable, with an optional time-out in seconds, using the MathSAT SMT solver
 isSatisfiable :: Provable a
               => Maybe Int       -- ^ Optional time-out, specify in seconds
               -> a               -- ^ Property to check
               -> IO (Maybe Bool) -- ^ Returns Nothing if time-out expiers
 isSatisfiable = isSatisfiableWith sbvCurrentSolver
 
--- | Optimize cost functions, using the CVC4 SMT solver
+-- | Optimize cost functions, using the MathSAT SMT solver
 optimize :: (SatModel a, SymWord a, Show a, SymWord c, Show c)
          => OptimizeOpts                -- ^ Parameters to optimization (Iterative, Quantified, etc.)
          -> (SBV c -> SBV c -> SBool)   -- ^ Betterness check: This is the comparison predicate for optimization
@@ -87,7 +93,7 @@ optimize :: (SatModel a, SymWord a, Show a, SymWord c, Show c)
          -> IO (Maybe [a])              -- ^ Returns Nothing if there is no valid solution, otherwise an optimal solution
 optimize = optimizeWith sbvCurrentSolver
 
--- | Minimize cost functions, using the CVC4 SMT solver
+-- | Minimize cost functions, using the MathSAT SMT solver
 minimize :: (SatModel a, SymWord a, Show a, SymWord c, Show c)
          => OptimizeOpts                -- ^ Parameters to optimization (Iterative, Quantified, etc.)
          -> ([SBV a] -> SBV c)          -- ^ Cost function to minimize
@@ -96,7 +102,7 @@ minimize :: (SatModel a, SymWord a, Show a, SymWord c, Show c)
          -> IO (Maybe [a])              -- ^ Returns Nothing if there is no valid solution, otherwise an optimal solution
 minimize = minimizeWith sbvCurrentSolver
 
--- | Maximize cost functions, using the CVC4 SMT solver
+-- | Maximize cost functions, using the MathSAT SMT solver
 maximize :: (SatModel a, SymWord a, Show a, SymWord c, Show c)
          => OptimizeOpts                -- ^ Parameters to optimization (Iterative, Quantified, etc.)
          -> ([SBV a] -> SBV c)          -- ^ Cost function to maximize

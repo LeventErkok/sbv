@@ -16,26 +16,25 @@ import Data.Char (isDigit)
 import Data.SBV.BitVectors.Data
 import Data.SBV.Provers.SExpr
 import qualified Data.SBV.SMT.SMTLib2 as SMT2
-
 import qualified Data.Set as Set (Set, member, toList)
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
-type SMTLibConverter =  RoundingMode                -- ^ User selected rounding mode to be used for floating point arithmetic
-                     -> Maybe Logic                 -- ^ User selected logic to use. If Nothing, pick automatically.
-                     -> SolverCapabilities          -- ^ Capabilities of the backend solver targeted
-                     -> Set.Set Kind                -- ^ Kinds used in the problem
-                     -> Bool                        -- ^ is this a sat problem?
-                     -> [String]                    -- ^ extra comments to place on top
-                     -> [(Quantifier, NamedSymVar)] -- ^ inputs and aliasing names
-                     -> [Either SW (SW, [SW])]      -- ^ skolemized inputs
-                     -> [(SW, CW)]                  -- ^ constants
-                     -> [((Int, Kind, Kind), [SW])] -- ^ auto-generated tables
-                     -> [(Int, ArrayInfo)]          -- ^ user specified arrays
-                     -> [(String, SBVType)]         -- ^ uninterpreted functions/constants
-                     -> [(String, [String])]        -- ^ user given axioms
-                     -> SBVPgm                      -- ^ assignments
-                     -> [SW]                        -- ^ extra constraints
-                     -> SW                          -- ^ output variable
+type SMTLibConverter =  RoundingMode                 -- ^ User selected rounding mode to be used for floating point arithmetic
+                     -> Maybe Logic                  -- ^ User selected logic to use. If Nothing, pick automatically.
+                     -> SolverCapabilities           -- ^ Capabilities of the backend solver targeted
+                     -> Set.Set Kind                 -- ^ Kinds used in the problem
+                     -> Bool                         -- ^ is this a sat problem?
+                     -> [String]                     -- ^ extra comments to place on top
+                     -> [(Quantifier, NamedSymVar)]  -- ^ inputs and aliasing names
+                     -> [Either SW (SW, [SW])]       -- ^ skolemized inputs
+                     -> [(SW, CW)]                   -- ^ constants
+                     -> [((Int, Kind, Kind), [SW])]  -- ^ auto-generated tables
+                     -> [(Int, ArrayInfo)]           -- ^ user specified arrays
+                     -> [(String, SBVType)]          -- ^ uninterpreted functions/constants
+                     -> [(String, [String])]         -- ^ user given axioms
+                     -> SBVPgm                       -- ^ assignments
+                     -> [SW]                         -- ^ extra constraints
+                     -> SW                           -- ^ output variable
                      -> SMTLibPgm
 
 -- | Convert to SMTLib-2 format

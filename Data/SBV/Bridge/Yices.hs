@@ -25,7 +25,7 @@ module Data.SBV.Bridge.Yices (
   -- * Yices specific interface
   sbvCurrentSolver
   -- ** Proving, checking satisfiability
-  , prove, sat, allSat, isVacuous, isTheorem, isSatisfiable
+  , prove, sat, safe, allSat, isVacuous, isTheorem, isSatisfiable
   -- ** Optimization routines
   , optimize, minimize, maximize
   -- * Non-Yices specific SBV interface
@@ -33,7 +33,7 @@ module Data.SBV.Bridge.Yices (
   , module Data.SBV
   ) where
 
-import Data.SBV hiding (prove, sat, allSat, isVacuous, isTheorem, isSatisfiable, optimize, minimize, maximize, sbvCurrentSolver)
+import Data.SBV hiding (prove, sat, safe, allSat, isVacuous, isTheorem, isSatisfiable, optimize, minimize, maximize, sbvCurrentSolver)
 
 -- | Current solver instance, pointing to yices.
 sbvCurrentSolver :: SMTConfig
@@ -50,6 +50,12 @@ sat :: Provable a
     => a                -- ^ Property to check
     -> IO SatResult     -- ^ Response of the SMT Solver, containing the model if found
 sat = satWith sbvCurrentSolver
+
+-- | Check all 'sAssert' calls are safe, using the Yices SMT solver
+safe :: Provable a
+    => a         -- ^ Program containing sAssert calls
+    -> IO ()
+safe = safeWith sbvCurrentSolver
 
 -- | Find all satisfying solutions, using the Yices SMT solver
 allSat :: Provable a

@@ -29,6 +29,7 @@ module Data.SBV.BitVectors.Model (
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
   , sIntegerToSReal, label
+  , sAssert
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCW, genMkSymVar
   , isSatisfiableInCurrentPath
@@ -38,6 +39,8 @@ module Data.SBV.BitVectors.Model (
 import Control.Monad        (when, liftM)
 import Control.Monad.Reader (ask)
 import Control.Monad.Trans  (liftIO)
+
+import GHC.Stack
 
 import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits       (Bits(..))
@@ -1098,6 +1101,14 @@ iteLazy t a b
   | Just r <- unliteral t = if r then a else b
   | True                  = symbolicMerge False t a b
 
+-- | Symbolic assert. Check that the given boolean condition is always true in the given path.
+sAssert :: HasKind a => CallStack -> String -> SBool -> SBV a -> SBV a
+sAssert cs msg (SBV cond) x = SBV $ SVal k $ Right $ cache r
+  where k     = kindOf x
+        r st  = do xsw <- sbvToSW st x
+                   addPathConstraint st cs msg cond
+                   return xsw
+
 -- | Merge two symbolic values, at kind @k@, possibly @force@'ing the branches to make
 -- sure they do not evaluate to the same result. This should only be used for internal purposes;
 -- as default definitions provided should suffice in many cases. (i.e., End users should
@@ -1537,7 +1548,7 @@ instance Testable SBool where
 
 instance Testable (Symbolic SBool) where
   property m = QC.whenFail (putStrLn msg) $ QC.monadicIO test
-    where runOnce g = do (r, Result _ tvals _ _ cs _ _ _ _ _ cstrs _) <- runSymbolic' (Concrete g) m
+    where runOnce g = do (r, Result _ tvals _ _ cs _ _ _ _ _ cstrs _ _) <- runSymbolic' (Concrete g) m
                          let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
                              cond = all (cwToBool . cval) cstrs
                          when (isSymbolic r) $ error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show r ++ ")"

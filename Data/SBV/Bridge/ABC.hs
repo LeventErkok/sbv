@@ -25,13 +25,13 @@ module Data.SBV.Bridge.ABC (
   -- * ABC specific interface
   sbvCurrentSolver
   -- ** Proving, checking satisfiability
-  , prove, sat, allSat, isVacuous, isTheorem, isSatisfiable
+  , prove, sat, safe, allSat, isVacuous, isTheorem, isSatisfiable
   -- ** Optimization routines
   , optimize, minimize, maximize
   , module Data.SBV
   ) where
 
-import Data.SBV hiding (prove, sat, allSat, isVacuous, isTheorem, isSatisfiable, optimize, minimize, maximize, sbvCurrentSolver)
+import Data.SBV hiding (prove, sat, safe, allSat, isVacuous, isTheorem, isSatisfiable, optimize, minimize, maximize, sbvCurrentSolver)
 
 -- | Current solver instance, pointing to abc.
 sbvCurrentSolver :: SMTConfig
@@ -48,6 +48,12 @@ sat :: Provable a
     => a                -- ^ Property to check
     -> IO SatResult     -- ^ Response of the SMT Solver, containing the model if found
 sat = satWith sbvCurrentSolver
+
+-- | Check all 'sAssert' calls are safe, using ABC
+safe :: Provable a
+    => a         -- ^ Program containing sAssert calls
+    -> IO () 
+safe = safeWith sbvCurrentSolver
 
 -- | Find all satisfying solutions, using ABC
 allSat :: Provable a
