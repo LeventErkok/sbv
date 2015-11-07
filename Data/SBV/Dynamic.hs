@@ -174,7 +174,7 @@ satWith :: SMTConfig -> Symbolic SVal -> IO SatResult
 satWith cfg s = SBV.satWith cfg (fmap toSBool s)
 
 -- | Check safety using the given SMT-solver
-safeWith :: SMTConfig -> Symbolic SVal -> IO ()
+safeWith :: SMTConfig -> Symbolic SVal -> IO Bool
 safeWith cfg s = SBV.safeWith cfg (fmap toSBool s)
 
 -- | Find all satisfying assignments using the given SMT-solver

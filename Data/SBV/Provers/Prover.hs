@@ -250,7 +250,7 @@ sat :: Provable a => a -> IO SatResult
 sat = satWith defaultSMTCfg
 
 -- | Check that all the 'sAssert' calls are safe, equivalent to @'safeWith' 'defaultSMTCfg'@
-safe :: Provable a => a -> IO ()
+safe :: Provable a => a -> IO Bool
 safe = safeWith defaultSMTCfg
 
 -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
@@ -347,24 +347,40 @@ satWith config a = simulate cvt config True [] a >>= callSolver True "Checking S
                 SMTLib2 -> toSMTLib2
 
 -- | Check if any of the assertions can be violated
-safeWith :: Provable a => SMTConfig -> a -> IO ()
-safeWith config a = do
-        Result _ki _tr _uic _is _cs _ts _as _uis _ax _asgn _cstr asserts _ <- runSymbolic (True, config) $ forAll_ a >>= output
+safeWith :: Provable a => SMTConfig -> a -> IO Bool
+safeWith cfg a = do
+        res@Result{resAssertions=asserts} <- runSymbolic (True, cfg) $ forAll_ a >>= output
         case asserts of
-           [] -> putStrLn "** There are no 'sAssert' calls to verify."
+           [] -> do putStrLn "** There are no 'sAssert' calls to verify."
+                    return True
            as -> do let cnt   = length as
                         plu n = show n ++ " assertion" ++ if n > 1 then "s" else ""
                     putStrLn $ "** Found " ++ plu cnt ++ " to verify."
-                    passes <- mapM verify as
-                    let passed = length (filter id passes)
-                    if cnt == passed
-                       then putStrLn "** Done. No violations detected."
-                       else putStrLn $ "** Done. " ++ plu (cnt - passed) ++ " violated!"
+                    passes <- mapM (verify res) as
+                    let allPassed = and passes
+                    if allPassed
+                       then putStrLn   "** Done. No violations detected."
+                       else putStrLn $ "** Done. " ++ plu (length (filter not passes)) ++ " violated!"
+                    return allPassed
   where sh []         msg = "*** Checking: " ++ msg
         sh ((_, l):_) msg = "*** " ++ shLoc l ++ ": Checking: " ++ msg
         shLoc sl          = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl)]
-        verify (msg, cs, _, _) = do putStrLn $ sh (maybe [] getCallStack cs) msg
-                                    return False
+        verify res (msg, cs, cond) = do putStr $ sh (maybe [] getCallStack cs) msg ++ "..."
+                                        let pgm = res { resInputs  = [(EX, n) | (_, n) <- resInputs res]   -- make everything existential
+                                                      , resOutputs = [cond]
+                                                      }
+                                            cvt = case smtLibVersion cfg of
+                                                    SMTLib2 -> toSMTLib2
+                                        SatResult result <- runProofOn cvt cfg True [] pgm >>= callSolver True msg SatResult cfg
+                                        case result of
+                                          Unsatisfiable{} -> do putStrLn " No violations found."
+                                                                return True
+                                          Satisfiable{}   -> do putStrLn " Violations detected!"
+                                                                print (SatResult result)
+                                                                return False
+                                          Unknown{}       -> error   "SBV: safeWith: Solver returned unknown!"
+                                          ProofError _ ls -> error $ "SBV: safeWith: error encountered:\n" ++ unlines ls
+                                          TimeOut _       -> error   "SBV: safeWith: time-out."
 
 -- | Determine if the constraints are vacuous using the given SMT-solver
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
@@ -429,11 +445,11 @@ allSatWith config p = do
         updateName i cfg = cfg{smtFile = upd `fmap` smtFile cfg}
                where upd nm = let (b, e) = splitExtension nm in b ++ "_allSat_" ++ show i ++ e
 
-type SMTProblem = ( [(Quantifier, NamedSymVar)]              -- inputs
-                  , [Either SW (SW, [SW])]                   -- skolem-map
-                  , Set.Set Kind                             -- kinds used
-                  , [(String, Maybe CallStack, SVal, SVal)]  -- assertions
-                  , SMTLibPgm                                -- SMTLib representation
+type SMTProblem = ( [(Quantifier, NamedSymVar)]      -- inputs
+                  , [Either SW (SW, [SW])]           -- skolem-map
+                  , Set.Set Kind                     -- kinds used
+                  , [(String, Maybe CallStack, SW)]  -- assertions
+                  , SMTLibPgm                        -- SMTLib representation
                   )
 
 callSolver :: Bool -> String -> (SMTResult -> b) -> SMTConfig -> SMTProblem -> IO b
@@ -472,7 +488,7 @@ runProofOn converter config isSat comments res =
                                          go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
                                          go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
                   in return (is, skolemMap, ki, assertions, converter (roundingMode config) (useLogic config) solverCaps ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o)
-             Result _kindInfo _qcInfo _codeSegs _is _consts _tbls _arrs _uis _axs _pgm _cstrs _assertions os -> case length os of
+             Result{resOutputs = os} -> case length os of
                            0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
                            1  -> error $ "Impossible happened, non-boolean output in " ++ show os
                                        ++ "\nDetected while generating the trace:\n" ++ show res

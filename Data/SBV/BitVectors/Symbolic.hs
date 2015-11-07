@@ -42,8 +42,7 @@ module Data.SBV.BitVectors.Symbolic
   , SBVPgm(..), Symbolic, runSymbolic, runSymbolic', State
   , inProofMode, SBVRunMode(..), Result(..)
   , Logic(..), SMTLibLogic(..)
-  , getTraceInfo, getConstraints
-  , addPathConstraint, addSValConstraint, internalConstraint, internalVariable
+  , addAssertion, addSValConstraint, internalConstraint, internalVariable
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
@@ -277,27 +276,20 @@ newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SW, SBVExpr)}
 type NamedSymVar = (SW, String)
 
 -- | Result of running a symbolic computation
-data Result = Result (Set.Set Kind)                           -- kinds used in the program
-                     [(String, CW)]                           -- quick-check counter-example information (if any)
-                     [(String, [String])]                     -- uninterpeted code segments
-                     [(Quantifier, NamedSymVar)]              -- inputs (possibly existential)
-                     [(SW, CW)]                               -- constants
-                     [((Int, Kind, Kind), [SW])]              -- tables (automatically constructed) (tableno, index-type, result-type) elts
-                     [(Int, ArrayInfo)]                       -- arrays (user specified)
-                     [(String, SBVType)]                      -- uninterpreted constants
-                     [(String, [String])]                     -- axioms
-                     SBVPgm                                   -- assignments
-                     [SW]                                     -- additional constraints (boolean)
-                     [(String, Maybe CallStack, SVal, SVal)]  -- assertions
-                     [SW]                                     -- outputs
-
--- | Extract the constraints from a result
-getConstraints :: Result -> [SW]
-getConstraints (Result _ _ _ _ _ _ _ _ _ _ cstrs _ _) = cstrs
-
--- | Extract the traced-values from a result (quick-check)
-getTraceInfo :: Result -> [(String, CW)]
-getTraceInfo (Result _ tvals _ _ _ _ _ _ _ _ _ _ _) = tvals
+data Result = Result { reskinds       :: Set.Set Kind                     -- ^ kinds used in the program
+                     , resTraces      :: [(String, CW)]                   -- ^ quick-check counter-example information (if any)
+                     , resUISegs      :: [(String, [String])]             -- ^ uninterpeted code segments
+                     , resInputs      :: [(Quantifier, NamedSymVar)]      -- ^ inputs (possibly existential)
+                     , resConsts      :: [(SW, CW)]                       -- ^ constants
+                     , resTables      :: [((Int, Kind, Kind), [SW])]      -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
+                     , resArrays      :: [(Int, ArrayInfo)]               -- ^ arrays (user specified)
+                     , resUOConsts    :: [(String, SBVType)]              -- ^ uninterpreted constants
+                     , resAxioms      :: [(String, [String])]             -- ^ axioms
+                     , resAsgns       :: SBVPgm                           -- ^ assignments
+                     , resConstraints :: [SW]                             -- ^ additional constraints (boolean)
+                     , resAssertions  :: [(String, Maybe CallStack, SW)]  -- ^ assertions
+                     , resOutputs     :: [SW]                             -- ^ outputs
+                     }
 
 -- | Show instance for 'Result'. Only for debugging purposes.
 instance Show Result where
@@ -348,7 +340,7 @@ instance Show Result where
                         | True     = ", aliasing " ++ show nm
           shui (nm, t) = "  [uninterpreted] " ++ nm ++ " :: " ++ show t
           shax (nm, ss) = "  -- user defined axiom: " ++ nm ++ "\n  " ++ intercalate "\n  " ss
-          shAssert (nm, stk, _, p) = "  -- assertion: " ++ nm ++ " " ++ maybe "[No location]" showCallStack stk ++ ": " ++ show p
+          shAssert (nm, stk, p) = "  -- assertion: " ++ nm ++ " " ++ maybe "[No location]" showCallStack stk ++ ": " ++ show p
 
 -- | The context of a symbolic array as created
 data ArrayContext = ArrayFree (Maybe SW)     -- ^ A new array, with potential initializer for each cell
@@ -427,7 +419,7 @@ data State  = State { runMode      :: SBVRunMode
                     , rUIMap       :: IORef UIMap
                     , rCgMap       :: IORef CgMap
                     , raxioms      :: IORef [(String, [String])]
-                    , rAsserts     :: IORef [(String, Maybe CallStack, SVal, SVal)]  -- ^ kind KBool both
+                    , rAsserts     :: IORef [(String, Maybe CallStack, SW)]
                     , rSWCache     :: IORef (Cache SW)
                     , rAICache     :: IORef (Cache Int)
                     }
@@ -521,8 +513,8 @@ newUninterpreted st nm t mbCode
   where validChar x = isAlphaNum x || x `elem` "_"
 
 -- | Add a new sAssert based constraint
-addPathConstraint :: State -> Maybe CallStack -> String -> SVal -> IO ()
-addPathConstraint st cs msg v = modifyIORef (rAsserts st) ((msg, cs, getSValPathCondition st, v):)
+addAssertion :: State -> Maybe CallStack -> String -> SW -> IO ()
+addAssertion st cs msg cond = modifyIORef (rAsserts st) ((msg, cs, cond):)
 
 -- | Create an internal variable, which acts as an input but isn't visible to the user.
 -- Such variables are existentially quantified in a SAT context, and universally quantified

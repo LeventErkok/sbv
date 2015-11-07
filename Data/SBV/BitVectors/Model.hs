@@ -1103,10 +1103,15 @@ iteLazy t a b
 
 -- | Symbolic assert. Check that the given boolean condition is always true in the given path.
 sAssert :: HasKind a => Maybe CallStack -> String -> SBool -> SBV a -> SBV a
-sAssert cs msg (SBV cond) x = SBV $ SVal k $ Right $ cache r
+sAssert cs msg cond x = SBV $ SVal k $ Right $ cache r
   where k     = kindOf x
         r st  = do xsw <- sbvToSW st x
-                   addPathConstraint st cs msg cond
+                   let pc = getPathCondition st
+                       -- We're checking if there are any cases where the path-condition holds, but not the condition
+                       -- Any violations of this, should be signaled, i.e., whenever the following formula is satisfiable
+                       mustNeverHappen = pc &&& bnot cond
+                   cnd <- sbvToSW st mustNeverHappen
+                   addAssertion st cs msg cnd
                    return xsw
 
 -- | Merge two symbolic values, at kind @k@, possibly @force@'ing the branches to make
@@ -1548,7 +1553,7 @@ instance Testable SBool where
 
 instance Testable (Symbolic SBool) where
   property m = QC.whenFail (putStrLn msg) $ QC.monadicIO test
-    where runOnce g = do (r, Result _ tvals _ _ cs _ _ _ _ _ cstrs _ _) <- runSymbolic' (Concrete g) m
+    where runOnce g = do (r, Result{resTraces=tvals, resConsts=cs, resConstraints=cstrs}) <- runSymbolic' (Concrete g) m
                          let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
                              cond = all (cwToBool . cval) cstrs
                          when (isSymbolic r) $ error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show r ++ ")"
