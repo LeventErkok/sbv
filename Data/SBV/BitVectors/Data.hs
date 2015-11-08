@@ -35,7 +35,7 @@ module Data.SBV.BitVectors.Data
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, uncacheAI, HasKind(..)
  , Op(..), FPOp(..), NamedSymVar, getTableIndex
- , SBVPgm(..), Symbolic, runSymbolic, runSymbolic', State, getPathCondition, extendPathCondition
+ , SBVPgm(..), Symbolic, SExecutable(..), runSymbolic, runSymbolic', State, getPathCondition, extendPathCondition
  , inProofMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
  , Logic(..), SMTLibLogic(..)
  , addConstraint, internalVariable, internalConstraint, isCodeGenMode
@@ -53,7 +53,7 @@ import Control.Monad.Reader (ask)
 import Control.Monad.Trans  (liftIO)
 import Data.Int             (Int8, Int16, Int32, Int64)
 import Data.Word            (Word8, Word16, Word32, Word64)
-import Data.List            (elemIndex)
+import Data.List            (elemIndex, intercalate)
 import Data.Maybe           (fromMaybe)
 
 import qualified Data.Generics as G    (Data(..))
@@ -514,3 +514,100 @@ addConstraint mt (SBV c) (SBV c') = addSValConstraint mt c c'
 
 instance NFData a => NFData (SBV a) where
   rnf (SBV x) = rnf x `seq` ()
+
+-- | Symbolically executable program fragments. This class is mainly used for 'safe' calls, and is sufficently populated internally to cover most use
+-- cases. Users can extend it as they wish to allow 'safe' checks for SBV programs that return/take types that are user-defined.
+class SExecutable a where
+   sName_ :: a -> Symbolic ()
+   sName  :: [String] -> a -> Symbolic ()
+
+instance NFData a => SExecutable (Symbolic a) where
+   sName_   a = a >>= \r -> rnf r `seq` return ()
+   sName []   = sName_
+   sName xs   = error $ "SBV.SExecutable.sName: Extra unmapped name(s): " ++ intercalate ", " xs
+
+instance NFData a => SExecutable (SBV a) where
+   sName_   v = sName_ (output v)
+   sName xs v = sName xs (output v)
+
+-- Unit output
+instance SExecutable () where
+   sName_   () = sName_   (output ())
+   sName xs () = sName xs (output ())
+
+-- List output
+instance (NFData a, SymWord a) => SExecutable [SBV a] where
+   sName_   vs = sName_   (output vs)
+   sName xs vs = sName xs (output vs)
+
+-- 2 Tuple output
+instance (NFData a, SymWord a, NFData b, SymWord b) => SExecutable (SBV a, SBV b) where
+  sName_ (a, b) = sName_ (output a >> output b)
+  sName _       = sName_
+
+-- 3 Tuple output
+instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c) => SExecutable (SBV a, SBV b, SBV c) where
+  sName_ (a, b, c) = sName_ (output a >> output b >> output c)
+  sName _          = sName_
+
+-- 4 Tuple output
+instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d) => SExecutable (SBV a, SBV b, SBV c, SBV d) where
+  sName_ (a, b, c, d) = sName_ (output a >> output b >> output c >> output c >> output d)
+  sName _             = sName_
+
+-- 5 Tuple output
+instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e) => SExecutable (SBV a, SBV b, SBV c, SBV d, SBV e) where
+  sName_ (a, b, c, d, e) = sName_ (output a >> output b >> output c >> output d >> output e)
+  sName _                = sName_
+
+-- 6 Tuple output
+instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f) => SExecutable (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
+  sName_ (a, b, c, d, e, f) = sName_ (output a >> output b >> output c >> output d >> output e >> output f)
+  sName _                   = sName_
+
+-- 7 Tuple output
+instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f, NFData g, SymWord g) => SExecutable (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
+  sName_ (a, b, c, d, e, f, g) = sName_ (output a >> output b >> output c >> output d >> output e >> output f >> output g)
+  sName _                      = sName_
+
+-- Functions
+instance (SymWord a, SExecutable p) => SExecutable (SBV a -> p) where
+   sName_        k = forall_   >>= \a -> sName_   $ k a
+   sName (s:ss)  k = forall s  >>= \a -> sName ss $ k a
+   sName []      k = sName_ k
+
+-- 2 Tuple input
+instance (SymWord a, SymWord b, SExecutable p) => SExecutable ((SBV a, SBV b) -> p) where
+  sName_        k = forall_  >>= \a -> sName_   $ \b -> k (a, b)
+  sName (s:ss)  k = forall s >>= \a -> sName ss $ \b -> k (a, b)
+  sName []      k = sName_ k
+
+-- 3 Tuple input
+instance (SymWord a, SymWord b, SymWord c, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c) -> p) where
+  sName_       k  = forall_  >>= \a -> sName_   $ \b c -> k (a, b, c)
+  sName (s:ss) k  = forall s >>= \a -> sName ss $ \b c -> k (a, b, c)
+  sName []     k  = sName_ k
+
+-- 4 Tuple input
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d) -> p) where
+  sName_        k = forall_  >>= \a -> sName_   $ \b c d -> k (a, b, c, d)
+  sName (s:ss)  k = forall s >>= \a -> sName ss $ \b c d -> k (a, b, c, d)
+  sName []      k = sName_ k
+
+-- 5 Tuple input
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
+  sName_        k = forall_  >>= \a -> sName_   $ \b c d e -> k (a, b, c, d, e)
+  sName (s:ss)  k = forall s >>= \a -> sName ss $ \b c d e -> k (a, b, c, d, e)
+  sName []      k = sName_ k
+
+-- 6 Tuple input
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
+  sName_        k = forall_  >>= \a -> sName_   $ \b c d e f -> k (a, b, c, d, e, f)
+  sName (s:ss)  k = forall s >>= \a -> sName ss $ \b c d e f -> k (a, b, c, d, e, f)
+  sName []      k = sName_ k
+
+-- 7 Tuple input
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
+  sName_        k = forall_  >>= \a -> sName_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  sName (s:ss)  k = forall s >>= \a -> sName ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  sName []      k = sName_ k
