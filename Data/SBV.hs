@@ -203,7 +203,7 @@ module Data.SBV (
   , sat, satWith, isSatisfiable, isSatisfiableWith
   -- ** Checking safety
   -- $safeIntro
-  , sAssert, safe, safeWith, SExecutable(..)
+  , sAssert, safe, safeWith, isSafe, SExecutable(..)
   -- ** Finding all satisfying assignments
   , allSat, allSatWith
   -- ** Satisfying a sequence of boolean conditions

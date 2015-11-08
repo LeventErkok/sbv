@@ -12,6 +12,9 @@
   * Implement 'safe' and 'safeWith', which statically determine all calls to 'sAssert'
     being safe to execute. Any vilations will be flagged. 
 
+  * Add 'isSafe': Which converts a 'SafeResult' to a 'Bool', when we are only interested
+    in a boolean result.
+
   * Add Data/SBV/Examples/Misc/NoDiv0 to demonstrate the use of the 'safe' function.
 
 ### Version 5.3, 2015-10-20

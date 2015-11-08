@@ -21,7 +21,7 @@ module Data.SBV.Provers.Prover (
        , isSatisfiable, isSatisfiableWith, isTheorem, isTheoremWith
        , prove, proveWith
        , sat, satWith
-       , safe, safeWith
+       , safe, safeWith, isSafe
        , allSat, allSatWith
        , isVacuous, isVacuousWith
        , SatModel(..), Modelable(..), displayModels, extractModels
@@ -361,6 +361,15 @@ safeWith cfg a = do
                            }
                  cvt = case smtLibVersion cfg of
                          SMTLib2 -> toSMTLib2
+
+-- | Check if a safe-call was safe or not, turning a 'SafeResult' to a Bool.
+isSafe :: SafeResult -> Bool
+isSafe (SafeResult (_, _, result)) = case result of
+                                       Unsatisfiable{} -> True
+                                       Satisfiable{}   -> False
+                                       Unknown{}       -> False   -- conservative
+                                       ProofError{}    -> False   -- conservative
+                                       TimeOut{}       -> False   -- conservative
 
 -- | Determine if the constraints are vacuous using the given SMT-solver
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
