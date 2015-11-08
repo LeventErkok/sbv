@@ -50,7 +50,7 @@ sat :: Provable a
 sat = satWith sbvCurrentSolver
 
 -- | Check all 'sAssert' calls are safe, using ABC
-safe :: Provable a
+safe :: SExecutable a
     => a                -- ^ Program containing sAssert calls
     -> IO [SafeResult]
 safe = safeWith sbvCurrentSolver

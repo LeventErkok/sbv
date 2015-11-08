@@ -250,7 +250,7 @@ sat :: Provable a => a -> IO SatResult
 sat = satWith defaultSMTCfg
 
 -- | Check that all the 'sAssert' calls are safe, equivalent to @'safeWith' 'defaultSMTCfg'@
-safe :: Provable a => a -> IO [SafeResult]
+safe :: SExecutable a => a -> IO [SafeResult]
 safe = safeWith defaultSMTCfg
 
 -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
@@ -347,9 +347,9 @@ satWith config a = simulate cvt config True [] a >>= callSolver True "Checking S
                 SMTLib2 -> toSMTLib2
 
 -- | Check if any of the assertions can be violated
-safeWith :: Provable a => SMTConfig -> a -> IO [SafeResult]
+safeWith :: SExecutable a => SMTConfig -> a -> IO [SafeResult]
 safeWith cfg a = do
-        res@Result{resAssertions=asserts} <- runSymbolic (True, cfg) $ forAll_ a >>= output
+        res@Result{resAssertions=asserts} <- runSymbolic (True, cfg) $ sName_ a >>= output
         mapM (verify res) asserts
   where locInfo (Just ((_, sl):_)) = Just $ concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl)]
         locInfo _                  = Nothing

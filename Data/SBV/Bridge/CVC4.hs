@@ -52,7 +52,7 @@ sat :: Provable a
 sat = satWith sbvCurrentSolver
 
 -- | Check all 'sAssert' calls are safe, using the CVC4 SMT solver
-safe :: Provable a
+safe :: SExecutable a
     => a                -- ^ Program containing sAssert calls
     -> IO [SafeResult]
 safe = safeWith sbvCurrentSolver
