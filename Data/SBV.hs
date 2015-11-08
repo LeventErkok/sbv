@@ -232,7 +232,7 @@ module Data.SBV (
 
   -- ** Inspecting proof results
   -- $resultTypes
-  , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..)
+  , ThmResult(..), SatResult(..), SafeResult(..), AllSatResult(..), SMTResult(..)
 
   -- ** Programmable model extraction
   -- $programmableExtraction

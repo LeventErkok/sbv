@@ -17,7 +17,7 @@
 
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate, Provable(..)
-       , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..)
+       , ThmResult(..), SatResult(..), SafeResult(..), AllSatResult(..), SMTResult(..)
        , isSatisfiable, isSatisfiableWith, isTheorem, isTheoremWith
        , prove, proveWith
        , sat, satWith
@@ -250,7 +250,7 @@ sat :: Provable a => a -> IO SatResult
 sat = satWith defaultSMTCfg
 
 -- | Check that all the 'sAssert' calls are safe, equivalent to @'safeWith' 'defaultSMTCfg'@
-safe :: Provable a => a -> IO Bool
+safe :: Provable a => a -> IO [SafeResult]
 safe = safeWith defaultSMTCfg
 
 -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
@@ -347,40 +347,19 @@ satWith config a = simulate cvt config True [] a >>= callSolver True "Checking S
                 SMTLib2 -> toSMTLib2
 
 -- | Check if any of the assertions can be violated
-safeWith :: Provable a => SMTConfig -> a -> IO Bool
+safeWith :: Provable a => SMTConfig -> a -> IO [SafeResult]
 safeWith cfg a = do
         res@Result{resAssertions=asserts} <- runSymbolic (True, cfg) $ forAll_ a >>= output
-        case asserts of
-           [] -> do putStrLn "** There are no 'sAssert' calls to verify."
-                    return True
-           as -> do let cnt   = length as
-                        plu n = show n ++ " assertion" ++ if n > 1 then "s" else ""
-                    putStrLn $ "** Found " ++ plu cnt ++ " to verify."
-                    passes <- mapM (verify res) as
-                    let allPassed = and passes
-                    if allPassed
-                       then putStrLn   "** Done. No violations detected."
-                       else putStrLn $ "** Done. " ++ plu (length (filter not passes)) ++ " violated!"
-                    return allPassed
-  where sh []         msg = "*** Checking: " ++ msg
-        sh ((_, l):_) msg = "*** " ++ shLoc l ++ ": Checking: " ++ msg
-        shLoc sl          = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl)]
-        verify res (msg, cs, cond) = do putStr $ sh (maybe [] getCallStack cs) msg ++ "..."
-                                        let pgm = res { resInputs  = [(EX, n) | (_, n) <- resInputs res]   -- make everything existential
-                                                      , resOutputs = [cond]
-                                                      }
-                                            cvt = case smtLibVersion cfg of
-                                                    SMTLib2 -> toSMTLib2
-                                        SatResult result <- runProofOn cvt cfg True [] pgm >>= callSolver True msg SatResult cfg
-                                        case result of
-                                          Unsatisfiable{} -> do putStrLn " No violations found."
-                                                                return True
-                                          Satisfiable{}   -> do putStrLn " Violations detected!"
-                                                                print (SatResult result)
-                                                                return False
-                                          Unknown{}       -> error   "SBV: safeWith: Solver returned unknown!"
-                                          ProofError _ ls -> error $ "SBV: safeWith: error encountered:\n" ++ unlines ls
-                                          TimeOut _       -> error   "SBV: safeWith: time-out."
+        mapM (verify res) asserts
+  where locInfo (Just ((_, sl):_)) = Just $ concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl)]
+        locInfo _                  = Nothing
+        verify res (msg, cs, cond) = do SatResult result <- runProofOn cvt cfg True [] pgm >>= callSolver True msg SatResult cfg
+                                        return $ SafeResult (locInfo (getCallStack `fmap` cs), msg, result)
+           where pgm = res { resInputs  = [(EX, n) | (_, n) <- resInputs res]   -- make everything existential
+                           , resOutputs = [cond]
+                           }
+                 cvt = case smtLibVersion cfg of
+                         SMTLib2 -> toSMTLib2
 
 -- | Determine if the constraints are vacuous using the given SMT-solver
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool

@@ -70,7 +70,7 @@ module Data.SBV.Dynamic
   -- * Model extraction
 
   -- ** Inspecting proof results
-  , ThmResult(..), SatResult(..), AllSatResult(..), SMTResult(..)
+  , ThmResult(..), SatResult(..), SafeResult(..), AllSatResult(..), SMTResult(..)
 
   -- ** Programmable model extraction
   , genParse, getModel, getModelDictionary
@@ -125,7 +125,7 @@ import Data.SBV.Compilers.CodeGen
   )
 import Data.SBV.Compilers.C    (compileToC, compileToCLib)
 import Data.SBV.Provers.Prover (boolector, cvc4, yices, z3, mathSAT, abc, defaultSMTCfg)
-import Data.SBV.SMT.SMT        (ThmResult(..), SatResult(..), AllSatResult(..), genParse)
+import Data.SBV.SMT.SMT        (ThmResult(..), SatResult(..), SafeResult(..), AllSatResult(..), genParse)
 import Data.SBV.Tools.Optimize (OptimizeOpts(..))
 import Data.SBV                (sbvCurrentSolver, sbvCheckSolverInstallation, defaultSolverConfig, sbvAvailableSolvers)
 
@@ -174,7 +174,7 @@ satWith :: SMTConfig -> Symbolic SVal -> IO SatResult
 satWith cfg s = SBV.satWith cfg (fmap toSBool s)
 
 -- | Check safety using the given SMT-solver
-safeWith :: SMTConfig -> Symbolic SVal -> IO Bool
+safeWith :: SMTConfig -> Symbolic SVal -> IO [SafeResult]
 safeWith cfg s = SBV.safeWith cfg (fmap toSBool s)
 
 -- | Find all satisfying assignments using the given SMT-solver

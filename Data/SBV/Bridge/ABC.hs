@@ -51,8 +51,8 @@ sat = satWith sbvCurrentSolver
 
 -- | Check all 'sAssert' calls are safe, using ABC
 safe :: Provable a
-    => a         -- ^ Program containing sAssert calls
-    -> IO Bool
+    => a                -- ^ Program containing sAssert calls
+    -> IO [SafeResult]
 safe = safeWith sbvCurrentSolver
 
 -- | Find all satisfying solutions, using ABC
