@@ -204,7 +204,8 @@ module Data.SBV (
   -- ** Checking satisfiability
   , sat, satWith, isSatisfiable, isSatisfiableWith
   -- ** Checking safety
-  , safe, safeWith
+  -- -- $safeIntro
+  , safe, safeWith, SExecutable(..)
   -- ** Finding all satisfying assignments
   , allSat, allSatWith
   -- ** Satisfying a sequence of boolean conditions
@@ -490,6 +491,45 @@ solution as quickly as possible, taking advantage of modern many-core machines.
 Note that the function 'sbvAvailableSolvers' will return all the installed solvers, which can be
 used as the first argument to all these functions, if you simply want to try all available solvers on a machine.
 -}
+
+{- $safeIntro
+
+The 'sAssert' function allow users to introduce invariants through-out their code to make sure
+certain properties hold at all times. This is another mechanism to provide further documentation/contract info
+into SBV code. The functions 'safe' and 'safeWith' can then be used to statically discharge these proof assumptions.
+If a violation is found, SBV will print a model showing which inputs lead to the invariant being violated.
+
+Here's a simple example. Let's assume we have a function that does subtraction, and requires its
+first argument to be larger than the second:
+
+>>> let sub x y = sAssert Nothing "sub: x >= y must hold!" (x .>= y) (x - y)
+
+Clearly, this function is not safe, as there's nothing that ensures us to pass a larger second argument.
+We can use 'safe' to statically see if such a violation is possible before we use this function elsewhere.
+
+>>> safe (sub :: SInt8 -> SInt8 -> SInt8)
+[sub: x >= y must hold!: Violated. Model:
+  s0 = -128 :: Int8
+  s1 = -127 :: Int8]
+
+What happens if we make sure to arrange for this invariant? Consider this version:
+
+>>> let safeSub x y = ite (x .>= y) (sub x y) 0
+
+Clearly, 'safeSub' must be safe. And indeed, SBV can prove that:
+
+>>> safe (safeSub :: SInt8 -> SInt8 -> SInt8)
+[sub: x >= y must hold!: No violations detected]
+
+Note how we used 'sub' and 'safeSub' polymorphically. We only need to monomorphise our types when a proof
+attempt is done, as we did in the 'safe' calls.
+
+If required, the user can pass a 'CallStack' through the first argument to 'sAssert', which will be used
+by SBV to print a diagnostic info to pinpoint the failure.
+
+Also see "Data.SBV.Examples.Misc.NoDiv0" for the classic div-by-zero example.
+-}
+
 
 {- $optimizeIntro
 Symbolic optimization. A call of the form:
