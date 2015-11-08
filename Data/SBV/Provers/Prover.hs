@@ -351,8 +351,9 @@ safeWith :: SExecutable a => SMTConfig -> a -> IO [SafeResult]
 safeWith cfg a = do
         res@Result{resAssertions=asserts} <- runSymbolic (True, cfg) $ sName_ a >>= output
         mapM (verify res) asserts
-  where locInfo (Just ((_, sl):_)) = Just $ concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl)]
-        locInfo _                  = Nothing
+  where locInfo (Just ps) = Just $ let loc (f, sl) = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
+                                   in intercalate ",\n " (map loc ps)
+        locInfo _         = Nothing
         verify res (msg, cs, cond) = do SatResult result <- runProofOn cvt cfg True [] pgm >>= callSolver True msg SatResult cfg
                                         return $ SafeResult (locInfo (getCallStack `fmap` cs), msg, result)
            where pgm = res { resInputs  = [(EX, n) | (_, n) <- resInputs res]   -- make everything existential

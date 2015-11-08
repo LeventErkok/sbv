@@ -170,8 +170,6 @@ module Data.SBV (
   , Mergeable(..), ite, iteLazy
   -- ** Symbolic equality
   , EqSymbolic(..)
-  -- ** Symbolic Assertions
-  , sAssert
   -- ** Symbolic ordering
   , OrdSymbolic(..)
   -- ** Symbolic integral numbers
@@ -194,7 +192,7 @@ module Data.SBV (
   -- * Enumerations
   -- $enumerations
 
-  -- * Properties, proofs, and satisfiability
+  -- * Properties, proofs, satisfiability, and safety
   -- $proveIntro
 
   -- ** Predicates
@@ -204,8 +202,8 @@ module Data.SBV (
   -- ** Checking satisfiability
   , sat, satWith, isSatisfiable, isSatisfiableWith
   -- ** Checking safety
-  -- -- $safeIntro
-  , safe, safeWith, SExecutable(..)
+  -- $safeIntro
+  , sAssert, safe, safeWith, SExecutable(..)
   -- ** Finding all satisfying assignments
   , allSat, allSatWith
   -- ** Satisfying a sequence of boolean conditions

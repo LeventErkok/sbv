@@ -1101,7 +1101,8 @@ iteLazy t a b
   | Just r <- unliteral t = if r then a else b
   | True                  = symbolicMerge False t a b
 
--- | Symbolic assert. Check that the given boolean condition is always true in the given path.
+-- | Symbolic assert. Check that the given boolean condition is always true in the given path. The
+-- optional first argument can be used to provide call-stack info via GHC's location facilities.
 sAssert :: HasKind a => Maybe CallStack -> String -> SBool -> SBV a -> SBV a
 sAssert cs msg cond x = SBV $ SVal k $ Right $ cache r
   where k     = kindOf x
