@@ -130,6 +130,7 @@ thm2 = prove $ flIsCorrect 16 (0, smax)
 --   s17 :: SWord8 = s13 + s16
 --   s18 :: SWord8 = s11 + s17
 -- CONSTRAINTS
+-- ASSERTIONS
 -- OUTPUTS
 --   s0
 --   s8
@@ -174,6 +175,7 @@ ladnerFischerTrace n = gen >>= print
 --   s13 :: SWord8 = s6 + s12
 --   s14 :: SWord8 = s7 + s13
 -- CONSTRAINTS
+-- ASSERTIONS
 -- OUTPUTS
 --   s0
 --   s8
