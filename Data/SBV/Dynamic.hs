@@ -98,7 +98,7 @@ module Data.SBV.Dynamic
   , svCgReturn, svCgReturnArr
 
   -- ** Code generation with uninterpreted functions
-  , cgAddPrototype, cgAddDecl, cgAddLDFlags
+  , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIgnoreSAssert
 
   -- ** Code generation with 'SInteger' and 'SReal' types
   , cgIntegerSize, cgSRealType, CgSRealType(..)
@@ -120,7 +120,7 @@ import Data.SBV.Compilers.CodeGen
   , svCgOutput, svCgOutputArr
   , svCgReturn, svCgReturnArr
   , cgPerformRTCs, cgSetDriverValues, cgGenerateDriver, cgGenerateMakefile
-  , cgAddPrototype, cgAddDecl, cgAddLDFlags
+  , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIgnoreSAssert
   , cgIntegerSize, cgSRealType, CgSRealType(..)
   )
 import Data.SBV.Compilers.C    (compileToC, compileToCLib)

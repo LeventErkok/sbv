@@ -267,7 +267,7 @@ module Data.SBV (
   , cgReturn, cgReturnArr
 
   -- ** Code generation with uninterpreted functions
-  , cgAddPrototype, cgAddDecl, cgAddLDFlags
+  , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIgnoreSAssert
 
   -- ** Code generation with 'SInteger' and 'SReal' types
   -- $unboundedCGen

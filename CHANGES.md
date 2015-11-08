@@ -12,6 +12,9 @@
   * Implement 'safe' and 'safeWith', which statically determine all calls to 'sAssert'
     being safe to execute. Any vilations will be flagged. 
 
+  * SBV->C: Translate 'sAssert' calls to dynamic checks in the generated C code. If this is
+    not desired, use the 'cgIgnoreSAssert' function to turn it off.
+
   * Add 'isSafe': Which converts a 'SafeResult' to a 'Bool', when we are only interested
     in a boolean result.
 
@@ -932,7 +935,7 @@ uninterpreted.
      can now specify the corresponding C code and SBV will simply
      call the "native" functions instead of generating it. This
      enables interfacing with other C programs. See the functions:
-     cgAddPrototype, cgAddDecl, and cgAddLDFlags.
+     cgAddPrototype, cgAddDecl, cgAddLDFlags
 
   Examples:
 
