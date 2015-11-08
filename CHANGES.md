@@ -5,7 +5,15 @@
 
 ### Version 5.4, Not yet released
 
-  
+  * Add 'sAssert', which allows users to pepper their code with boolean conditions, much like
+    the usual ASSERT calls. Note that the semantics of an 'sAssert' is that it is a NOOP, i.e.,
+    it simply returns its final argument. Use in coordination with 'safe' and 'safeWith', see below.
+
+  * Implement 'safe' and 'safeWith', which statically determine all calls to 'sAssert'
+    being safe to execute. Any vilations will be flagged. 
+
+  * Add Data/SBV/Examples/Misc/NoDiv0 to demonstrate the use of the 'safe' function.
+
 ### Version 5.3, 2015-10-20
 
   * Main point of this release to make SBV compile with GHC 7.8 again, to accommodate mainly
