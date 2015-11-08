@@ -114,6 +114,8 @@ fastPopCountIsCorrect x = popCountFast x .== popCountSlow x
 -- #ifndef __popCount__HEADER_INCLUDED__
 -- #define __popCount__HEADER_INCLUDED__
 -- <BLANKLINE>
+-- #include <stdio.h>
+-- #include <stdlib.h>
 -- #include <inttypes.h>
 -- #include <stdint.h>
 -- #include <stdbool.h>

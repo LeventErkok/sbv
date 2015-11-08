@@ -30,6 +30,8 @@ veryclean: clean
 #ifndef __aes128Dec__HEADER_INCLUDED__
 #define __aes128Dec__HEADER_INCLUDED__
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>

@@ -1316,6 +1316,8 @@ SBool d_FP_IsPositive(const SDouble a)
 #ifndef __floatCodeGen__HEADER_INCLUDED__
 #define __floatCodeGen__HEADER_INCLUDED__
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>

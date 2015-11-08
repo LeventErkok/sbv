@@ -3565,6 +3565,8 @@ void aes128BlockDecrypt(const SWord32 *ct, const SWord32 *xkey,
 #ifndef __aes128Lib__HEADER_INCLUDED__
 #define __aes128Lib__HEADER_INCLUDED__
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>

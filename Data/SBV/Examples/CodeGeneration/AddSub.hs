@@ -52,6 +52,8 @@ addSub x y = (x+y, x-y)
 -- #ifndef __addSub__HEADER_INCLUDED__
 -- #define __addSub__HEADER_INCLUDED__
 -- <BLANKLINE>
+-- #include <stdio.h>
+-- #include <stdlib.h>
 -- #include <inttypes.h>
 -- #include <stdint.h>
 -- #include <stdbool.h>
