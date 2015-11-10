@@ -492,9 +492,9 @@ used as the first argument to all these functions, if you simply want to try all
 
 {- $safeIntro
 
-The 'sAssert' function allow users to introduce invariants through-out their code to make sure
+The 'sAssert' function allows users to introduce invariants to make sure
 certain properties hold at all times. This is another mechanism to provide further documentation/contract info
-into SBV code. The functions 'safe' and 'safeWith' can then be used to statically discharge these proof assumptions.
+into SBV code. The functions 'safe' and 'safeWith' can be used to statically discharge these proof assumptions.
 If a violation is found, SBV will print a model showing which inputs lead to the invariant being violated.
 
 Here's a simple example. Let's assume we have a function that does subtraction, and requires its
@@ -502,7 +502,7 @@ first argument to be larger than the second:
 
 >>> let sub x y = sAssert Nothing "sub: x >= y must hold!" (x .>= y) (x - y)
 
-Clearly, this function is not safe, as there's nothing that ensures us to pass a larger second argument.
+Clearly, this function is not safe, as there's nothing that stops us from passing it a larger second argument.
 We can use 'safe' to statically see if such a violation is possible before we use this function elsewhere.
 
 >>> safe (sub :: SInt8 -> SInt8 -> SInt8)
