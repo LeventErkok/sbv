@@ -145,22 +145,23 @@ multInverse = prove $ do a <- sDouble "a"
 --
 -- >>> roundingAdd
 -- Satisfiable. Model:
---   rm = RoundNearestTiesToAway :: RoundingMode
---   x  = 2.0644195e19 :: Float
---   y  = -2.1974389e18 :: Float
+--   rm = RoundTowardZero :: RoundingMode
+--   x  = 7.984373 :: Float
+--   y  = -2.1684042e-19 :: Float
 --
+-- (Note that depending on your version of Z3, you might get a different result.)
 -- Unfortunately we can't directly validate this result at the Haskell level, as Haskell only supports
 -- 'RoundNearestTiesToEven'. We have:
 --
--- >>> (2.0644195e19 + (-2.1974389e18)) :: Float
--- 1.8446757e19
+-- >>> (7.984373 + (-2.1684042e-19)) :: Float
+-- 7.984373
 --
--- While we cannot directly see the result when the mode is 'RoundNearestTiesToAway' in Haskell, we can use
+-- While we cannot directly see the result when the mode is 'RoundTowardZero' in Haskell, we can use
 -- SBV to provide us with that result thusly:
 --
--- >>> sat $ \z -> z .== fpAdd sRoundNearestTiesToAway 2.0644195e19 (-2.1974389e18 :: SFloat)
+-- >>> sat $ \z -> z .== fpAdd sRoundTowardZero 7.984373 (-2.1684042e-19 :: SFloat)
 -- Satisfiable. Model:
---   s0 = 1.8446755e19 :: Float
+--   s0 = 7.9843726 :: Float
 --
 -- We can see why these two resuls are indeed different. To see why, one would have to convert the
 -- individual numbers to Float's, which would induce rounding-errors, add them up, and round-back;
