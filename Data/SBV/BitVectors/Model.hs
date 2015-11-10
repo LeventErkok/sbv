@@ -40,7 +40,7 @@ import Control.Monad        (when, liftM)
 import Control.Monad.Reader (ask)
 import Control.Monad.Trans  (liftIO)
 
-import GHC.Stack
+import GHC.Stack.Compat
 
 import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits       (Bits(..))

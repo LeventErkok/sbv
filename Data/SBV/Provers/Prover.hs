@@ -37,8 +37,8 @@ import System.FilePath  (addExtension, splitExtension)
 import System.Time      (getClockTime)
 import System.IO.Unsafe (unsafeInterleaveIO)
 
-import GHC.Stack
-import GHC.SrcLoc
+import GHC.Stack.Compat
+import GHC.SrcLoc.Compat
 
 import qualified Data.Set as Set (Set, toList)
 
