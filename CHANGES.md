@@ -3,6 +3,8 @@
 
 * Latest Hackage released version: 5.4, 2015-11-09
 
+### Version 5.5, Not yet released
+
 ### Version 5.4, 2015-11-09
 
   * Add 'sAssert', which allows users to pepper their code with boolean conditions, much like
