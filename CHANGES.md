@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 5.3, 2015-10-20
+* Latest Hackage released version: 5.4, 2015-11-09
 
-### Version 5.4, Not yet released
+### Version 5.4, 2015-11-09
 
   * Add 'sAssert', which allows users to pepper their code with boolean conditions, much like
     the usual ASSERT calls. Note that the semantics of an 'sAssert' is that it is a NOOP, i.e.,
