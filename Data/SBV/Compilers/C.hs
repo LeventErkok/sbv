@@ -27,8 +27,8 @@ import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.PrettyNum (shex, showCFloat, showCDouble)
 import Data.SBV.Compilers.CodeGen
 
-import GHC.Stack
-import GHC.SrcLoc
+import GHC.Stack.Compat
+import GHC.SrcLoc.Compat
 
 ---------------------------------------------------------------------------
 -- * API

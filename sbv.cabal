@@ -131,6 +131,8 @@ Library
                   , Data.SBV.Utils.Numeric
                   , Data.SBV.Utils.TDiff
                   , Data.SBV.Utils.Lib
+                  , GHC.SrcLoc.Compat
+                  , GHC.Stack.Compat
 
 Executable SBVUnitTests
   default-language: Haskell2010

@@ -61,7 +61,7 @@ import Data.IORef           (IORef, newIORef, modifyIORef, readIORef, writeIORef
 import Data.List            (intercalate, sortBy)
 import Data.Maybe           (isJust, fromJust, fromMaybe)
 
-import GHC.Stack
+import GHC.Stack.Compat
 
 import qualified Data.Generics as G    (Data(..))
 import qualified Data.Typeable as T    (Typeable)
