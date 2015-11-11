@@ -1,9 +1,12 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 5.4, 2015-11-09
+* Latest Hackage released version: 5.5, 2015-11-10
 
-### Version 5.5, Not yet released
+### Version 5.5, 2015-11-10
+
+  * This is essentially the same release as 5.4 below, except to allow SBV compile
+    with GHC 7.8 series. Thanks to Adam Foltzer for the patch.
 
 ### Version 5.4, 2015-11-09
 
