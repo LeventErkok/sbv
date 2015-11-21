@@ -12,7 +12,7 @@ in your .cabal/bin directory (or wherever you installed it.) It's
 highly recommended that you run this program to ensure everything
 is working correctly. In particular, you will first need to install
 Z3, the default SMT solver used by sbv, from Microsoft. (You can get it
-from http://research.microsoft.com/en-us/um/redmond/projects/z3/.)
+from http://github.com/Z3Prover/z3.)
 Please make sure that the "z3" executable is in your path.
 
 Once you have installed sbv, you can use it in your Haskell programs
