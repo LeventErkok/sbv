@@ -68,7 +68,7 @@ instance PrettyNum Integer where
 
 instance PrettyNum CW where
   hexS cw | isUninterpreted cw = show cw ++ " :: " ++ show (cwKind cw)
-          | cwIsBit cw         = hexS (cwToBool cw)
+          | cwIsBit cw         = hexS (cwToBool cw) ++ " :: Bool"
           | isFloat cw         = let CWFloat  f  = cwVal cw in show f ++ " :: Float\n"  ++ show (floatToFP f)
           | isDouble cw        = let CWDouble d  = cwVal cw in show d ++ " :: Double\n" ++ show (doubleToFP d)
           | isReal cw          = let CWAlgReal w = cwVal cw in show w ++ " :: Real"
@@ -76,7 +76,7 @@ instance PrettyNum CW where
           | True               = let CWInteger w = cwVal cw in shex  True True (hasSign cw, intSizeOf cw) w
 
   binS cw | isUninterpreted cw = show cw  ++ " :: " ++ show (cwKind cw)
-          | cwIsBit cw         = binS (cwToBool cw)
+          | cwIsBit cw         = binS (cwToBool cw)  ++ " :: Bool"
           | isFloat cw         = let CWFloat  f  = cwVal cw in show f ++ " :: Float\n"  ++ show (floatToFP f)
           | isDouble cw        = let CWDouble d  = cwVal cw in show d ++ " :: Double\n" ++ show (doubleToFP d)
           | isReal cw          = let CWAlgReal w = cwVal cw in show w ++ " :: Real"
@@ -84,7 +84,7 @@ instance PrettyNum CW where
           | True               = let CWInteger w = cwVal cw in sbin  True True (hasSign cw, intSizeOf cw) w
 
   hex cw | isUninterpreted cw = show cw
-         | cwIsBit cw         = hexS (cwToBool cw)
+         | cwIsBit cw         = hexS (cwToBool cw) ++ " :: Bool"
          | isFloat cw         = let CWFloat  f  = cwVal cw in show f
          | isDouble cw        = let CWDouble d  = cwVal cw in show d
          | isReal cw          = let CWAlgReal w = cwVal cw in show w
@@ -92,7 +92,7 @@ instance PrettyNum CW where
          | True               = let CWInteger w = cwVal cw in shex  False False (hasSign cw, intSizeOf cw) w
 
   bin cw | isUninterpreted cw = show cw
-         | cwIsBit cw         = binS (cwToBool cw)
+         | cwIsBit cw         = binS (cwToBool cw) ++ " :: Bool"
          | isFloat cw         = let CWFloat  f  = cwVal cw in show f
          | isDouble cw        = let CWDouble d  = cwVal cw in show d
          | isReal cw          = let CWAlgReal w = cwVal cw in show w
@@ -220,7 +220,8 @@ showSMTFloat rm f
    | isNaN f             = as "NaN"
    | isInfinite f, f < 0 = as "-oo"
    | isInfinite f        = as "+oo"
-   | isNegativeZero f    = "(fp.neg ((_ to_fp 8 24) " ++ smtRoundingMode rm ++ " (/ 0 1)))"
+   | isNegativeZero f    = as "-zero"
+   | f == 0              = as "+zero"
    | True                = "((_ to_fp 8 24) " ++ smtRoundingMode rm ++ " " ++ toSMTLibRational (toRational f) ++ ")"
    where as s = "(_ " ++ s ++ " 8 24)"
 
@@ -230,7 +231,8 @@ showSMTDouble rm d
    | isNaN d             = as "NaN"
    | isInfinite d, d < 0 = as "-oo"
    | isInfinite d        = as "+oo"
-   | isNegativeZero d    = "(fp.neg ((_ to_fp 11 53) " ++ smtRoundingMode rm ++ " (/ 0 1)))"
+   | isNegativeZero d    = as "-zero"
+   | d == 0              = as "+zero"
    | True                = "((_ to_fp 11 53) " ++ smtRoundingMode rm ++ " " ++ toSMTLibRational (toRational d) ++ ")"
    where as s = "(_ " ++ s ++ " 11 53)"
 

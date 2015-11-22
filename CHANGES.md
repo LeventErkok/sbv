@@ -3,6 +3,11 @@
 
 * Latest Hackage released version: 5.5, 2015-11-10
 
+### Version 5.6, 2015-11-10
+  
+  * Minor change to how we print model outputs, where we align by the type
+  * Always print the type in models (previously we were skipping for Bool)
+
 ### Version 5.5, 2015-11-10
 
   * This is essentially the same release as 5.4 below, except to allow SBV compile

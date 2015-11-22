@@ -155,10 +155,9 @@ mapCW2 r i f d u x y = case (cwSameType x y, cwVal x, cwVal y) of
 instance Show CW where
   show = showCW True
 
--- | Show a CW, with kind info if bool is True. Note that bits never get their type printed
--- as it is more or less useless. (i.e., No need to say SBool for True and False)
+-- | Show a CW, with kind info if bool is True
 showCW :: Bool -> CW -> String
-showCW _   w | cwIsBit w = show (cwToBool w)
+showCW shk w | cwIsBit w = show (cwToBool w) ++ (if shk then " :: Bool" else "")
 showCW shk w             = liftCW show show show show snd w ++ kInfo
       where kInfo | shk  = " :: " ++ shKind (cwKind w)
                   | True = ""
