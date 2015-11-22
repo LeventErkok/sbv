@@ -139,7 +139,7 @@ puzzle = do birthDay   <- exists "birthDay"
 -- >>> cheryl
 -- Solution #1:
 --   birthDay   = 16 :: Word8
---   birthMonth = 7 :: Word8
+--   birthMonth =  7 :: Word8
 -- This is the only solution.
 cheryl :: IO ()
 cheryl = print =<< allSat puzzle

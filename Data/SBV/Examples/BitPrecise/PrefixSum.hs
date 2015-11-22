@@ -110,8 +110,8 @@ thm2 = prove $ flIsCorrect 16 (0, smax)
 --   s6 :: SWord8
 --   s7 :: SWord8
 -- CONSTANTS
---   s_2 = False
---   s_1 = True
+--   s_2 = False :: Bool
+--   s_1 = True :: Bool
 -- TABLES
 -- ARRAYS
 -- UNINTERPRETED CONSTANTS
@@ -159,8 +159,8 @@ ladnerFischerTrace n = gen >>= print
 --   s6 :: SWord8
 --   s7 :: SWord8
 -- CONSTANTS
---   s_2 = False
---   s_1 = True
+--   s_2 = False :: Bool
+--   s_1 = True :: Bool
 -- TABLES
 -- ARRAYS
 -- UNINTERPRETED CONSTANTS

@@ -57,8 +57,8 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 -- >>> assocPlusRegular
 -- Falsifiable. Counter-example:
 --   x = -1.5991211e-2 :: Float
---   y = 131071.99 :: Float
---   z = -131069.99 :: Float
+--   y =     131071.99 :: Float
+--   z =    -131069.99 :: Float
 --
 -- Indeed, we have:
 --
@@ -87,7 +87,7 @@ assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
 --
 -- >>> nonZeroAddition
 -- Falsifiable. Counter-example:
---   a = 5.1705105e-26 :: Float
+--   a =  5.1705105e-26 :: Float
 --   b = -3.8518597e-34 :: Float
 --
 -- Indeed, we have:
@@ -146,8 +146,8 @@ multInverse = prove $ do a <- sDouble "a"
 -- >>> roundingAdd
 -- Satisfiable. Model:
 --   rm = RoundTowardZero :: RoundingMode
---   x  = 7.984373 :: Float
---   y  = -2.1684042e-19 :: Float
+--   x  =        7.984373 :: Float
+--   y  =  -2.1684042e-19 :: Float
 --
 -- (Note that depending on your version of Z3, you might get a different result.)
 -- Unfortunately we can't directly validate this result at the Haskell level, as Haskell only supports
