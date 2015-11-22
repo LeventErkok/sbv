@@ -5,8 +5,8 @@ INPUTS
   s3 :: SWord32, aliasing "rh"
   s4 :: SWord16, aliasing "rl"
 CONSTANTS
-  s_2 = False
-  s_1 = True
+  s_2 = False :: Bool
+  s_1 = True :: Bool
   s6 = 0 :: Word1
   s18 = 1 :: Word8
   s3340 = 0 :: Word8

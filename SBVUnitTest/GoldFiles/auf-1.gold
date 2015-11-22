@@ -3,8 +3,8 @@ INPUTS
   s1 :: SWord32, existential, aliasing "y"
   s2 :: SWord32, existential, aliasing "initVal"
 CONSTANTS
-  s_2 = False
-  s_1 = True
+  s_2 = False :: Bool
+  s_1 = True :: Bool
   s3 = 2 :: Word32
   s9 = 3 :: Word32
   s13 = 1 :: Word32

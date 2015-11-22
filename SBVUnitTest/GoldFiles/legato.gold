@@ -10,8 +10,8 @@ INPUTS
   s8 :: SBool, existential, aliasing "flagC"
   s9 :: SBool, existential, aliasing "flagZ"
 CONSTANTS
-  s_2 = False
-  s_1 = True
+  s_2 = False :: Bool
+  s_1 = True :: Bool
   s19 = 0 :: Word1
   s17 = 0 :: Word8
   s24 = 128 :: Word8

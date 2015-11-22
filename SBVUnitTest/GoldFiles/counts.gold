@@ -10,8 +10,8 @@ INPUTS
   s8 :: SWord8
   s9 :: SWord8
 CONSTANTS
-  s_2 = False
-  s_1 = True
+  s_2 = False :: Bool
+  s_1 = True :: Bool
   s10 = 10 :: Word8
   s12 = 0 :: Word8
   s32 = 2 :: Word8
