@@ -347,12 +347,18 @@ showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel result = case resul
 -- | Show a model in human readable form. Ignore bindings to those variables that start
 -- with "__internal_sbv_"; as these are only for internal purposes
 showModel :: SMTConfig -> SMTModel -> String
-showModel cfg m = intercalate "\n" $ map shM interesting
-  where interesting   = filter (not . ignore) $ modelAssocs m
-        ignore (s, _) = "__internal_sbv_" `isPrefixOf` s
-        width         = maximum (0 : map (length . fst) interesting)
-        shM (s, v)    = "  " ++ align s ++ " = " ++ shCW cfg v
-        align s       = s ++ replicate (width - length s) ' '
+showModel cfg = intercalate "\n" . display . map shM . filter (not . ignore) . modelAssocs
+  where ignore (s, _) = "__internal_sbv_" `isPrefixOf` s
+        shM (s, v)    = let vs = shCW cfg v in ((length s, s), (vlength vs, vs))
+        display svs   = map line svs
+           where line ((_, s), (_, v)) = "  " ++ right (nameWidth - length s) s ++ " = " ++ left (valWidth - length (takeWhile (not . isSpace) v)) v
+                 nameWidth             = maximum $ 0 : [l | ((l, _), _) <- svs]
+                 valWidth              = maximum $ 0 : [l | (_, (l, _)) <- svs]
+        right p s = s ++ replicate p ' '
+        left  p s = replicate p ' ' ++ s
+        vlength s = case dropWhile (/= ':') (reverse s) of
+                      (':':':':r) -> length (dropWhile isSpace r)
+                      _           -> length s -- conservative
 
 -- | Show a constant value, in the user-specified base
 shCW :: SMTConfig -> CW -> String
