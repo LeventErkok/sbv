@@ -13,7 +13,7 @@ module Data.SBV.BitVectors.Operations
   (
   -- ** Basic constructors
     svTrue, svFalse, svBool
-  , svInteger
+  , svInteger, svFloat, svDouble
   -- ** Basic destructors
   , svAsBool, svAsInteger
   -- ** Basic operations
@@ -62,7 +62,15 @@ svBool b = if b then svTrue else svFalse
 svInteger :: Kind -> Integer -> SVal
 svInteger k n = SVal k (Left (mkConstCW k n))
 
--- TODO: svFloat, svDouble, svReal
+-- | Convert from a Float
+svFloat :: Float -> SVal
+svFloat f = SVal KFloat (Left (CW KFloat (CWFloat f)))
+
+-- | Convert from a Float
+svDouble :: Double -> SVal
+svDouble d = SVal KDouble (Left (CW KDouble (CWDouble d)))
+
+-- TODO: svReal
 
 --------------------------------------------------------------------------------
 -- Basic destructors

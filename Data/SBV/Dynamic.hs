@@ -33,6 +33,8 @@ module Data.SBV.Dynamic
   , svTrue, svFalse, svBool, svAsBool
   -- *** Integer literals
   , svInteger, svAsInteger
+  -- *** Float literals
+  , svFloat, svDouble
   -- *** Symbolic equality
   , svEqual, svNotEqual
   -- *** Symbolic ordering

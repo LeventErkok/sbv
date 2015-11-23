@@ -6,7 +6,12 @@
 ### Version 5.6, 2015-11-10
   
   * Minor change to how we print model outputs, where we align by the type
+
   * Always print the type in models (previously we were skipping for Bool)
+
+  * Several changes/additions in support of the sbvPlugin development:
+
+  	* Define/export svFloat/svDouble from Data.SBV.Dynamic
 
 ### Version 5.5, 2015-11-10
 
