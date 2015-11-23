@@ -13,7 +13,9 @@
 
   * Several changes/additions in support of the sbvPlugin development:
 
-  	* Define/export svFloat/svDouble from Data.SBV.Dynamic
+  	* Data.SBV.Dynamic: Define/export svFloat/svDouble
+	* Data.SBV.Internals: Export constructors of Result, SMTModel,
+	  and the function showModel
 
 ### Version 5.5, 2015-11-10
 
