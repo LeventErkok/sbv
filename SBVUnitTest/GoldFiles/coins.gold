@@ -551,11 +551,11 @@ DEFINE
   s539 :: SBool = s3 /= s534
   s540 :: SWord16 = s123 + s492
   s541 :: SBool = s88 /= s540
-  s542 :: SBool = s0 > s18
-  s543 :: SBool = s18 > s30
-  s544 :: SBool = s30 > s42
-  s545 :: SBool = s42 > s54
-  s546 :: SBool = s54 > s66
+  s542 :: SBool = s0 >= s18
+  s543 :: SBool = s18 >= s30
+  s544 :: SBool = s30 >= s42
+  s545 :: SBool = s42 >= s54
+  s546 :: SBool = s54 >= s66
   s547 :: SBool = s545 & s546
   s548 :: SBool = s544 & s547
   s549 :: SBool = s543 & s548

@@ -222,7 +222,7 @@ instance Show Op where
                  , (Quot, "quot")
                  , (Rem,  "rem")
                  , (Equal, "=="), (NotEqual, "/=")
-                 , (LessThan, "<"), (GreaterThan, ">"), (LessEq, "<"), (GreaterEq, ">")
+                 , (LessThan, "<"), (GreaterThan, ">"), (LessEq, "<="), (GreaterEq, ">=")
                  , (Ite, "if_then_else")
                  , (And, "&"), (Or, "|"), (XOr, "^"), (Not, "~")
                  , (Join, "#")

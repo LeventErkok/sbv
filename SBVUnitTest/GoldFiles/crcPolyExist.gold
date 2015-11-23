@@ -3477,7 +3477,7 @@ DEFINE
   s3465 :: SWord8 = if s23 then s3464 else s3463
   s3466 :: SWord8 = s18 + s3465
   s3467 :: SWord8 = if s17 then s3466 else s3465
-  s3469 :: SBool = s3467 > s3468
+  s3469 :: SBool = s3467 >= s3468
   s3470 :: SBool = s12 | s3469
   s3471 :: SBool = s7 & s3470
 CONSTRAINTS
