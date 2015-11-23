@@ -9,6 +9,8 @@
 
   * Always print the type in models (previously we were skipping for Bool)
 
+  * Simplify/streamline the printing of quick-check models
+
   * Several changes/additions in support of the sbvPlugin development:
 
   	* Define/export svFloat/svDouble from Data.SBV.Dynamic

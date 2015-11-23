@@ -45,7 +45,7 @@ import GHC.Stack.Compat
 import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits       (Bits(..))
 import Data.Int        (Int8, Int16, Int32, Int64)
-import Data.List       (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate)
+import Data.List       (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7)
 import Data.Maybe      (fromMaybe)
 import Data.Word       (Word8, Word16, Word32, Word64)
 
@@ -59,7 +59,7 @@ import Data.SBV.BitVectors.Data
 import Data.SBV.Utils.Boolean
 
 import Data.SBV.Provers.Prover (isVacuous, prove, defaultSMTCfg, internalSATCheck)
-import Data.SBV.SMT.SMT        (ThmResult, SatResult(..))
+import Data.SBV.SMT.SMT        (ThmResult, SatResult(..), showModel)
 
 import Data.SBV.BitVectors.Symbolic
 import Data.SBV.BitVectors.Operations
@@ -1567,10 +1567,7 @@ instance Testable (Symbolic SBool) where
                     when die $ fail "Falsifiable"
           msg = "*** SBV: See the custom counter example reported above."
           complain []     = "*** SBV Counter Example: Predicate contains no universally quantified variables."
-          complain qcInfo = intercalate "\n" $ "*** SBV Counter Example:" : map (("  " ++) . info) qcInfo
-            where maxLen = maximum (0:[length s | (s, _) <- qcInfo])
-                  shN s = s ++ replicate (maxLen - length s) ' '
-                  info (n, cw) = shN n ++ " = " ++ show cw
+          complain qcInfo = showModel defaultSMTCfg (SMTModel qcInfo)
 
 -- Quickcheck interface on dynamically-typed values. A run-time check
 -- ensures that the value has boolean type.
