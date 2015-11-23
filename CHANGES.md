@@ -3,7 +3,7 @@
 
 * Latest Hackage released version: 5.5, 2015-11-10
 
-### Version 5.6, 2015-11-10
+### Version 5.6, Not yet released
   
   * Minor change to how we print model outputs, where we align by the type
 
