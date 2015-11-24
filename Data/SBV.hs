@@ -213,6 +213,8 @@ module Data.SBV (
   , constrain, pConstrain
   -- ** Checking constraint vacuity
   , isVacuous, isVacuousWith
+  -- ** Quick-checking
+  , sbvQuickCheck
 
   -- * Proving properties using multiple solvers
   -- $multiIntro

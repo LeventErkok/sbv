@@ -5,14 +5,17 @@
 
 ### Version 5.6, Not yet released
   
-  * Minor change to how we print model outputs, where we align by the type
+  * Minor changes to how we print models:
+  	* Align by the type
+  	* Always print the type (previously we were skipping for Bool)
 
-  * Always print the type in models (previously we were skipping for Bool)
+  * Rework how SBV properties are quick-checked; much more usable and robust
 
-  * Simplify/streamline the printing of quick-check models
+  * Provide a function sbvQuickCheck, which is essentially the same as
+    quickCheck, except it also returns a boolean. Useful for the
+    programmable API. (The dynamic version is called svQuickCheck)
 
   * Several changes/additions in support of the sbvPlugin development:
-
   	* Data.SBV.Dynamic: Define/export svFloat/svDouble
 	* Data.SBV.Internals: Export constructors of Result, SMTModel,
 	  and the function showModel
