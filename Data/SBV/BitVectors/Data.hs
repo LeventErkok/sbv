@@ -25,7 +25,7 @@ module Data.SBV.BitVectors.Data
  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
  , sRNE, sRNA, sRTP, sRTN, sRTZ
  , SymWord(..)
- , CW(..), CWVal(..), AlgReal(..), cwSameType, cwIsBit, cwToBool
+ , CW(..), CWVal(..), AlgReal(..), cwSameType, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
  , SW(..), trueSW, falseSW, trueCW, falseCW, normCW
  , SVal(..)
@@ -69,75 +69,6 @@ import Data.SBV.BitVectors.Symbolic
 
 import Prelude ()
 import Prelude.Compat
-
--- | A class for capturing values that have a sign and a size (finite or infinite)
--- minimal complete definition: kindOf. This class can be automatically derived
--- for data-types that have a 'Data' instance; this is useful for creating uninterpreted
--- sorts.
-class HasKind a where
-  kindOf          :: a -> Kind
-  hasSign         :: a -> Bool
-  intSizeOf       :: a -> Int
-  isBoolean       :: a -> Bool
-  isBounded       :: a -> Bool   -- NB. This really means word/int; i.e., Real/Float will test False
-  isReal          :: a -> Bool
-  isFloat         :: a -> Bool
-  isDouble        :: a -> Bool
-  isInteger       :: a -> Bool
-  isUninterpreted :: a -> Bool
-  showType        :: a -> String
-  -- defaults
-  hasSign x = kindHasSign (kindOf x)
-  intSizeOf x = case kindOf x of
-                  KBool         -> error "SBV.HasKind.intSizeOf((S)Bool)"
-                  KBounded _ s  -> s
-                  KUnbounded    -> error "SBV.HasKind.intSizeOf((S)Integer)"
-                  KReal         -> error "SBV.HasKind.intSizeOf((S)Real)"
-                  KFloat        -> error "SBV.HasKind.intSizeOf((S)Float)"
-                  KDouble       -> error "SBV.HasKind.intSizeOf((S)Double)"
-                  KUserSort s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
-  isBoolean       x | KBool{}      <- kindOf x = True
-                    | True                     = False
-  isBounded       x | KBounded{}   <- kindOf x = True
-                    | True                     = False
-  isReal          x | KReal{}      <- kindOf x = True
-                    | True                     = False
-  isFloat         x | KFloat{}     <- kindOf x = True
-                    | True                     = False
-  isDouble        x | KDouble{}    <- kindOf x = True
-                    | True                     = False
-  isInteger       x | KUnbounded{} <- kindOf x = True
-                    | True                     = False
-  isUninterpreted x | KUserSort{}  <- kindOf x = True
-                    | True                     = False
-  showType = show . kindOf
-
-  -- default signature for uninterpreted/enumerated kinds
-  default kindOf :: (Read a, G.Data a) => a -> Kind
-  kindOf = constructUKind
-
-instance HasKind Bool    where kindOf _ = KBool
-instance HasKind Int8    where kindOf _ = KBounded True  8
-instance HasKind Word8   where kindOf _ = KBounded False 8
-instance HasKind Int16   where kindOf _ = KBounded True  16
-instance HasKind Word16  where kindOf _ = KBounded False 16
-instance HasKind Int32   where kindOf _ = KBounded True  32
-instance HasKind Word32  where kindOf _ = KBounded False 32
-instance HasKind Int64   where kindOf _ = KBounded True  64
-instance HasKind Word64  where kindOf _ = KBounded False 64
-instance HasKind Integer where kindOf _ = KUnbounded
-instance HasKind AlgReal where kindOf _ = KReal
-instance HasKind Float   where kindOf _ = KFloat
-instance HasKind Double  where kindOf _ = KDouble
-
-instance HasKind Kind where
-  kindOf = id
-
-instance HasKind CW where
-  kindOf = cwKind
-
-instance HasKind SW where
-  kindOf (SW k _) = k
 
 -- | Get the current path condition
 getPathCondition :: State -> SBool
@@ -212,9 +143,6 @@ sInfinity = literal infinity
 
 -- | 'RoundingMode' can be used symbolically
 instance SymWord RoundingMode
-
--- | 'RoundingMode' kind
-instance HasKind RoundingMode
 
 -- | The symbolic variant of 'RoundingMode'
 type SRoundingMode = SBV RoundingMode

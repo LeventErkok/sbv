@@ -1576,7 +1576,7 @@ sbvQuickCheck prop = QC.isSuccess `fmap` QC.quickCheckResult prop
 -- ensures that the value has boolean type.
 instance Testable (Symbolic SVal) where
   property m = property $ do s <- m
-                             when (svKind s /= KBool) $ error "Cannot quickcheck non-boolean value"
+                             when (kindOf s /= KBool) $ error "Cannot quickcheck non-boolean value"
                              return (SBV s :: SBool)
 
 -- | Explicit sharing combinator. The SBV library has internal caching/hash-consing mechanisms

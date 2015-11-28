@@ -72,20 +72,17 @@ instance Ord CWVal where
 -- | 'CW' represents a concrete word of a fixed size:
 -- Endianness is mostly irrelevant (see the 'FromBits' class).
 -- For signed words, the most significant digit is considered to be the sign.
-data CW = CW { cwKind   :: !Kind
+data CW = CW { _cwKind  :: !Kind
              , cwVal    :: !CWVal
              }
         deriving (Eq, Ord)
 
+instance HasKind CW where
+  kindOf (CW k _) = k
+
 -- | Are two CW's of the same type?
 cwSameType :: CW -> CW -> Bool
-cwSameType x y = cwKind x == cwKind y
-
--- | Is this a bit?
-cwIsBit :: CW -> Bool
-cwIsBit x = case cwKind x of
-              KBool -> True
-              _     -> False
+cwSameType x y = kindOf x == kindOf y
 
 -- | Convert a CW to a Haskell boolean (NB. Assumes input is well-kinded)
 cwToBool :: CW -> Bool
@@ -134,7 +131,7 @@ liftCW2 r i f d u x y = case (cwVal x, cwVal y) of
 
 -- | Map a unary function through a CW.
 mapCW :: (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> ((Maybe Int, String) -> (Maybe Int, String)) -> CW -> CW
-mapCW r i f d u x  = normCW $ CW (cwKind x) $ case cwVal x of
+mapCW r i f d u x  = normCW $ CW (kindOf x) $ case cwVal x of
                                                CWAlgReal a  -> CWAlgReal  (r a)
                                                CWInteger a  -> CWInteger  (i a)
                                                CWFloat a    -> CWFloat    (f a)
@@ -144,11 +141,11 @@ mapCW r i f d u x  = normCW $ CW (cwKind x) $ case cwVal x of
 -- | Map a binary function through a CW.
 mapCW2 :: (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (Float -> Float -> Float) -> (Double -> Double -> Double) -> ((Maybe Int, String) -> (Maybe Int, String) -> (Maybe Int, String)) -> CW -> CW -> CW
 mapCW2 r i f d u x y = case (cwSameType x y, cwVal x, cwVal y) of
-                        (True, CWAlgReal a,  CWAlgReal b)  -> normCW $ CW (cwKind x) (CWAlgReal  (r a b))
-                        (True, CWInteger a,  CWInteger b)  -> normCW $ CW (cwKind x) (CWInteger  (i a b))
-                        (True, CWFloat a,    CWFloat b)    -> normCW $ CW (cwKind x) (CWFloat    (f a b))
-                        (True, CWDouble a,   CWDouble b)   -> normCW $ CW (cwKind x) (CWDouble   (d a b))
-                        (True, CWUserSort a, CWUserSort b) -> normCW $ CW (cwKind x) (CWUserSort (u a b))
+                        (True, CWAlgReal a,  CWAlgReal b)  -> normCW $ CW (kindOf x) (CWAlgReal  (r a b))
+                        (True, CWInteger a,  CWInteger b)  -> normCW $ CW (kindOf x) (CWInteger  (i a b))
+                        (True, CWFloat a,    CWFloat b)    -> normCW $ CW (kindOf x) (CWFloat    (f a b))
+                        (True, CWDouble a,   CWDouble b)   -> normCW $ CW (kindOf x) (CWDouble   (d a b))
+                        (True, CWUserSort a, CWUserSort b) -> normCW $ CW (kindOf x) (CWUserSort (u a b))
                         _                                  -> error $ "SBV.mapCW2: impossible, incompatible args received: " ++ show (x, y)
 
 -- | Show instance for 'CW'.
@@ -157,9 +154,9 @@ instance Show CW where
 
 -- | Show a CW, with kind info if bool is True
 showCW :: Bool -> CW -> String
-showCW shk w | cwIsBit w = show (cwToBool w) ++ (if shk then " :: Bool" else "")
-showCW shk w             = liftCW show show show show snd w ++ kInfo
-      where kInfo | shk  = " :: " ++ shKind (cwKind w)
+showCW shk w | isBoolean w = show (cwToBool w) ++ (if shk then " :: Bool" else "")
+showCW shk w               = liftCW show show show show snd w ++ kInfo
+      where kInfo | shk  = " :: " ++ shKind (kindOf w)
                   | True = ""
             shKind k@(KUserSort {})       = show k
             shKind k | ('S':sk) <- show k = sk

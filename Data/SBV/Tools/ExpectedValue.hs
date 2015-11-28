@@ -41,7 +41,7 @@ expectedValueWith chatty warmupCount mbMaxIter epsilon m
         runOnce g = do (_, Result _ _ _ _ cs _ _ _ _ _ cstrs _ os) <- runSymbolic' (Concrete g) (m >>= output)
                        let cval o = case o `lookup` cs of
                                       Nothing -> error "SBV.expectedValue: Cannot compute expected-values in the presence of uninterpreted constants!"
-                                      Just cw -> case (cwKind cw, cwVal cw) of
+                                      Just cw -> case (kindOf cw, cwVal cw) of
                                                    (KBool, _)                -> if cwToBool cw then 1 else 0
                                                    (KBounded{}, CWInteger v) -> v
                                                    (KUnbounded, CWInteger v) -> v

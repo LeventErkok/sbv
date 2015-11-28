@@ -28,8 +28,7 @@ module Data.SBV.BitVectors.Symbolic
   , Quantifier(..), needsExistentials
   , RoundingMode(..)
   , SBVType(..), newUninterpreted, addAxiom
-  , SVal(..), svKind
-  , svBitSize, svSigned
+  , SVal(..)
   , svMkSymVar
   , ArrayContext(..), ArrayInfo
   , svToSW, svToSymSW, forceSWArg
@@ -85,6 +84,9 @@ newtype NodeId = NodeId Int deriving (Eq, Ord)
 
 -- | A symbolic word, tracking it's signedness and size.
 data SW = SW Kind NodeId deriving (Eq, Ord)
+
+instance HasKind SW where
+  kindOf (SW k _) = k
 
 instance Show SW where
   show (SW _ (NodeId n))
@@ -450,21 +452,8 @@ getSBranchRunConfig st = case runMode st of
 -- sure sharing is preserved.
 data SVal = SVal !Kind !(Either CW (Cached SW))
 
--- | Extract the 'Kind'.
-svKind :: SVal -> Kind
-svKind (SVal k _) = k
-
--- | Extract the but-size from the kind. Assumption: Only called
--- on kinds that have an associated size. (i.e., no 'SFloat'/'SDouble' etc.)
-svBitSize :: SVal -> Int
-svBitSize x =
-  case svKind x of
-    KBounded _ s  -> s
-    _             -> error $ "svBitSize: invalid kind " ++ show (svKind x)
-
--- | Is the value signed?
-svSigned :: SVal -> Bool
-svSigned x = kindHasSign (svKind x)
+instance HasKind SVal where
+  kindOf (SVal k _) = k
 
 -- | Show instance for 'SVal'. Not particularly "desirable", but will do if needed
 -- NB. We do not show the type info on constant KBool values, since there's no
@@ -558,7 +547,7 @@ newConst st c = do
   let key = (isNeg0 (cwVal c), c)
   case key `Map.lookup` constMap of
     Just sw -> return sw
-    Nothing -> do let k = cwKind c
+    Nothing -> do let k = kindOf c
                   (sw, _) <- newSW st k
                   modifyIORef (rconstMap st) (Map.insert key sw)
                   return sw
@@ -1034,6 +1023,9 @@ data RoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable 
                   | RoundTowardNegative     -- ^ Round towards negative infinity. (Also known as rounding-down or floor.)
                   | RoundTowardZero         -- ^ Round towards zero. (Also known as truncation.)
                   deriving (Eq, Ord, Show, Read, T.Typeable, G.Data, Bounded, Enum)
+
+-- | 'RoundingMode' kind
+instance HasKind RoundingMode
 
 -- | Solver configuration. See also 'z3', 'yices', 'cvc4', 'boolector', 'mathSAT', etc. which are instantiations of this type for those solvers, with
 -- reasonable defaults. In particular, custom configuration can be created by varying those values. (Such as @z3{verbose=True}@.)
