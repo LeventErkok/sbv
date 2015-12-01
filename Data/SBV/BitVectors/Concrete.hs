@@ -77,6 +77,7 @@ data CW = CW { _cwKind  :: !Kind
              }
         deriving (Eq, Ord)
 
+-- | 'Kind' instance for CW
 instance HasKind CW where
   kindOf (CW k _) = k
 
