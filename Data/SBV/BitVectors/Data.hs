@@ -325,8 +325,8 @@ class (HasKind a, Ord a) => SymWord a where
     | True                  = False
 
   default literal :: Show a => a -> SBV a
-  literal x = let k@(KUserSort  _ (conts, _)) = kindOf x
-                  sx                          = show x
+  literal x = let k@(KUserSort  _ conts) = kindOf x
+                  sx                     = show x
                   mbIdx = case conts of
                             Right xs -> sx `elemIndex` xs
                             _        -> Nothing

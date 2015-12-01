@@ -102,8 +102,8 @@ interpretSolverModelLine inps line = either err extract (parseSExpr line)
                                  matches -> error $  "SBV.SMTLib2: Cannot uniquely identify value for "
                                                   ++ 's':v ++ " in "  ++ show matches
         isInput _       = Nothing
-        getUIIndex (KUserSort  _ (Right xs, _)) i = i `lookup` zip xs [0..]
-        getUIIndex _                                 _ = Nothing
+        getUIIndex (KUserSort  _ (Right xs)) i = i `lookup` zip xs [0..]
+        getUIIndex _                         _ = Nothing
         extract (EApp [EApp [v, ENum    i]]) | Just (n, s, nm) <- getInput v                    = [(n, (nm, mkConstCW (kindOf s) (fst i)))]
         extract (EApp [EApp [v, EReal   i]]) | Just (n, s, nm) <- getInput v, isReal s          = [(n, (nm, CW KReal (CWAlgReal i)))]
         extract (EApp [EApp [v, ECon    i]]) | Just (n, s, nm) <- getInput v, isUninterpreted s = let k = kindOf s in [(n, (nm, CW k (CWUserSort (getUIIndex k i, i))))]

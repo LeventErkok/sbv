@@ -26,7 +26,7 @@ data Kind = KBool
           | KBounded Bool Int
           | KUnbounded
           | KReal
-          | KUserSort String (Either String [String], G.DataType)
+          | KUserSort String (Either String [String])
           | KFloat
           | KDouble
           deriving (Eq, Ord)
@@ -62,7 +62,7 @@ kindHasSign k =
 -- | Construct an uninterpreted/enumerated kind from a piece of data; we distinguish simple enumerations as those
 -- are mapped to proper SMT-Lib2 data-types; while others go completely uninterpreted
 constructUKind :: forall a. (Read a, G.Data a) => a -> Kind
-constructUKind a = KUserSort sortName (mbEnumFields, dataType)
+constructUKind a = KUserSort sortName mbEnumFields
   where dataType      = G.dataTypeOf a
         sortName      = G.tyconUQname . G.dataTypeName $ dataType
         constrs       = G.dataTypeConstrs dataType

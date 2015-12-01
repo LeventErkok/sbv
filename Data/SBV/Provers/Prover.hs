@@ -397,8 +397,8 @@ allSatWith config p = do
         msg "Checking Satisfiability, all solutions.."
         sbvPgm@(qinps, _, ki, _, _) <- simulate converter config True [] p
         let usorts = [s | us@(KUserSort s _) <- Set.toList ki, isFree us]
-                where isFree (KUserSort _ (Left _, _)) = True
-                      isFree _                         = False
+                where isFree (KUserSort _ (Left _)) = True
+                      isFree _                      = False
         unless (null usorts) $ msg $  "SBV.allSat: Uninterpreted sorts present: " ++ unwords usorts
                                    ++ "\n               SBV will use equivalence classes to generate all-satisfying instances."
         results <- unsafeInterleaveIO $ go sbvPgm (1::Int) []

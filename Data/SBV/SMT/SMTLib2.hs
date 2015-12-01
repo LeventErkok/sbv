@@ -48,8 +48,8 @@ addNonEqConstraints rm qinps allNonEqConstraints (SMTLibPgm _ (aliasTable, pre, 
 
 nonEqs :: RoundingMode -> [(String, CW)] -> [String]
 nonEqs rm scs = format $ interp ps ++ disallow (map eqClass uninterpClasses)
-  where isFree (KUserSort _ (Left _, _)) = True
-        isFree _                         = False
+  where isFree (KUserSort _ (Left _)) = True
+        isFree _                      = False
         (ups, ps) = partition (isFree . kindOf . snd) scs
         format []     =  []
         format [m]    =  ["(assert " ++ m ++ ")"]
@@ -201,10 +201,10 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
         builtInSort = (`elem` ["RoundingMode"])
         declSort (s, _)
           | builtInSort s           = []
-        declSort (s, (Left  r,  _)) = ["(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted: " ++ r]
-        declSort (s, (Right fs, _)) = [ "(declare-datatypes () ((" ++ s ++ " " ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
-                                      , "(define-fun " ++ s ++ "_constrIndex ((x " ++ s ++ ")) Int"
-                                      ] ++ ["   " ++ body fs (0::Int)] ++ [")"]
+        declSort (s, Left  r ) = ["(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted: " ++ r]
+        declSort (s, Right fs) = [ "(declare-datatypes () ((" ++ s ++ " " ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
+                                 , "(define-fun " ++ s ++ "_constrIndex ((x " ++ s ++ ")) Int"
+                                 ] ++ ["   " ++ body fs (0::Int)] ++ [")"]
                 where body []     _ = ""
                       body [_]    i = show i
                       body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
@@ -363,7 +363,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         lift2Cmp o fo | doubleOp || floatOp = lift2 fo
                       | True                = lift2 o
         unintComp o [a, b]
-          | KUserSort s (Right _, _) <- kindOf (head arguments)
+          | KUserSort s (Right _) <- kindOf (head arguments)
           = let idx v = "(" ++ s ++ "_constrIndex " ++ " " ++ v ++ ")" in "(" ++ o ++ " " ++ idx a ++ " " ++ idx b ++ ")"
         unintComp o sbvs = error $ "SBV.SMT.SMTLib2.sh.unintComp: Unexpected arguments: "   ++ show (o, sbvs)
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"

@@ -19,6 +19,7 @@
   	* Data.SBV.Dynamic: Define/export svFloat/svDouble
 	* Data.SBV.Internals: Export constructors of Result, SMTModel,
 	  and the function showModel
+	* Simplify how Uninterpreted-types are internally represented.
 
 ### Version 5.5, 2015-11-10
 
