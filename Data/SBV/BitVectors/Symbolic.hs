@@ -285,7 +285,7 @@ data Result = Result { reskinds       :: Set.Set Kind                     -- ^ k
                      , resConsts      :: [(SW, CW)]                       -- ^ constants
                      , resTables      :: [((Int, Kind, Kind), [SW])]      -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
                      , resArrays      :: [(Int, ArrayInfo)]               -- ^ arrays (user specified)
-                     , resUOConsts    :: [(String, SBVType)]              -- ^ uninterpreted constants
+                     , resUIConsts    :: [(String, SBVType)]              -- ^ uninterpreted constants
                      , resAxioms      :: [(String, [String])]             -- ^ axioms
                      , resAsgns       :: SBVPgm                           -- ^ assignments
                      , resConstraints :: [SW]                             -- ^ additional constraints (boolean)

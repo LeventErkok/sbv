@@ -46,7 +46,7 @@ import GHC.Stack.Compat
 import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits       (Bits(..))
 import Data.Int        (Int8, Int16, Int32, Int64)
-import Data.List       (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7)
+import Data.List       (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate)
 import Data.Maybe      (fromMaybe)
 import Data.Word       (Word8, Word16, Word32, Word64)
 
@@ -1559,13 +1559,16 @@ instance Testable (Symbolic SBool) where
                                      QC.pre cond
                                      unless (r || null tvals) $ QC.monitor (QC.counterexample (complain tvals))
                                      QC.assert r
-     where test g = do (r, Result{resTraces=tvals, resConsts=cs, resConstraints=cstrs}) <- runSymbolic' (Concrete g) prop
+     where test g = do (r, Result{resTraces=tvals, resConsts=cs, resConstraints=cstrs, resUIConsts=unints}) <- runSymbolic' (Concrete g) prop
                        let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
                            cond = all (cwToBool . cval) cstrs
-                       case unliteral r of
-                         Nothing -> error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show r ++ ")"
-                         Just b  -> return (cond, b, tvals)
+                       case map fst unints of
+                         [] -> case unliteral r of
+                                 Nothing -> noQC [show r]
+                                 Just b  -> return (cond, b, tvals)
+                         us -> noQC us
            complain qcInfo = showModel defaultSMTCfg (SMTModel qcInfo)
+           noQC us         = error $ "Cannot quick-check in the presence of uninterpreted constants: " ++ intercalate ", " us
 
 -- | Quick check an SBV property. Note that a regular 'quickCheck' call will work just as
 -- well. Use this variant if you want to receive the boolean result.
