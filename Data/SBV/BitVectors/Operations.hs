@@ -13,9 +13,9 @@ module Data.SBV.BitVectors.Operations
   (
   -- ** Basic constructors
     svTrue, svFalse, svBool
-  , svInteger, svFloat, svDouble
+  , svInteger, svFloat, svDouble, svReal
   -- ** Basic destructors
-  , svAsBool, svAsInteger
+  , svAsBool, svAsInteger, svNumerator, svDenominator
   -- ** Basic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs
   , svDivide, svQuot, svRem
@@ -42,6 +42,8 @@ import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Kind
 import Data.SBV.BitVectors.Concrete
 import Data.SBV.BitVectors.Symbolic
+
+import Data.Ratio
 
 --------------------------------------------------------------------------------
 -- Basic constructors
@@ -70,7 +72,10 @@ svFloat f = SVal KFloat (Left (CW KFloat (CWFloat f)))
 svDouble :: Double -> SVal
 svDouble d = SVal KDouble (Left (CW KDouble (CWDouble d)))
 
--- TODO: svReal
+-- | Convert from a Rational
+svReal :: Rational -> SVal
+svReal d = SVal KReal (Left (CW KReal (CWAlgReal (fromRational d))))
+
 
 --------------------------------------------------------------------------------
 -- Basic destructors
@@ -84,6 +89,16 @@ svAsBool _                  = Nothing
 svAsInteger :: SVal -> Maybe Integer
 svAsInteger (SVal _ (Left (CW _ (CWInteger n)))) = Just n
 svAsInteger _                                    = Nothing
+
+-- | Grab the numerator of an SReal, if available
+svNumerator :: SVal -> Maybe Integer
+svNumerator (SVal KReal (Left (CW KReal (CWAlgReal (AlgRational True r))))) = Just $ numerator r
+svNumerator _                                                               = Nothing
+
+-- | Grab the denominator of an SReal, if available
+svDenominator :: SVal -> Maybe Integer
+svDenominator (SVal KReal (Left (CW KReal (CWAlgReal (AlgRational True r))))) = Just $ denominator r
+svDenominator _                                                               = Nothing
 
 --------------------------------------------------------------------------------
 -- Basic operations

@@ -34,6 +34,8 @@ module Data.SBV.Dynamic
   , svInteger, svAsInteger
   -- *** Float literals
   , svFloat, svDouble
+  -- ** Algrebraic reals (only from rationals)
+  , svReal, svNumerator, svDenominator
   -- *** Symbolic equality
   , svEqual, svNotEqual
   -- *** Symbolic ordering

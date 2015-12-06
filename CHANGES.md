@@ -16,7 +16,7 @@
     programmable API. (The dynamic version is called svQuickCheck)
 
   * Several changes/additions in support of the sbvPlugin development:
-  	* Data.SBV.Dynamic: Define/export svFloat/svDouble
+  	* Data.SBV.Dynamic: Define/export svFloat/svDouble/sReal/sNumerator/sDenominator
 	* Data.SBV.Internals: Export constructors of Result, SMTModel,
 	  and the function showModel
 	* Simplify how Uninterpreted-types are internally represented.
