@@ -527,15 +527,13 @@ newSW st k = do ctr <- incCtr st
                 return (sw, 's' : show ctr)
 {-# INLINE newSW #-}
 
--- | Register a new kind with the system, used for uninterpreted sorts. We try to avoid names that
--- might be conflicting with SMTLib; but this list is not comprehensive.. Beware!
+-- | Register a new kind with the system, used for uninterpreted sorts
 registerKind :: State -> Kind -> IO ()
 registerKind st k
   | KUserSort sortName _ <- k, sortName `elem` smtLibReservedNames
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | True
   = modifyIORef (rUsedKinds st) (Set.insert k)
- where 
 
 -- | Create a new constant; hash-cons as necessary
 -- NB. For each constant, we also store weather it's negative-0 or not,
