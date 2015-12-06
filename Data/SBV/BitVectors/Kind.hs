@@ -29,7 +29,24 @@ data Kind = KBool
           | KUserSort String (Either String [String])
           | KFloat
           | KDouble
-          deriving (Eq, Ord)
+
+-- | Helper for Eq/Ord instances below
+kindRank :: Kind -> Either Int (Either (Bool, Int) String)
+kindRank KBool           = Left 0
+kindRank (KBounded  b i) = Right (Left (b, i))
+kindRank KUnbounded      = Left 1
+kindRank KReal           = Left 2
+kindRank (KUserSort s _) = Right (Right s)
+kindRank KFloat          = Left 3
+kindRank KDouble         = Left 4
+
+-- | We want to equate user-sorts only by name
+instance Eq Kind where
+  k1 == k2 = kindRank k1 == kindRank k2
+
+-- | We want to order user-sorts only by name
+instance Ord Kind where
+  k1 `compare` k2 = kindRank k1 `compare` kindRank k2
 
 instance Show Kind where
   show KBool              = "SBool"
