@@ -75,6 +75,7 @@ import System.Random
 
 import Data.SBV.BitVectors.Kind
 import Data.SBV.BitVectors.Concrete
+import Data.SBV.SMT.SMTLibNames
 
 import Prelude ()
 import Prelude.Compat
@@ -489,7 +490,7 @@ throwDice st = do g <- readIORef (rStdGen st)
 -- | Create a new uninterpreted symbol, possibly with user given code
 newUninterpreted :: State -> String -> SBVType -> Maybe [String] -> IO ()
 newUninterpreted st nm t mbCode
-  | null nm || not (isAlpha (head nm)) || not (all validChar (tail nm))
+  | null nm || not enclosed && (not (isAlpha (head nm)) || not (all validChar (tail nm)))
   = error $ "Bad uninterpreted constant name: " ++ show nm ++ ". Must be a valid identifier."
   | True = do
         uiMap <- readIORef (rUIMap st)
@@ -500,6 +501,7 @@ newUninterpreted st nm t mbCode
           Nothing -> do modifyIORef (rUIMap st) (Map.insert nm t)
                         when (isJust mbCode) $ modifyIORef (rCgMap st) (Map.insert nm (fromJust mbCode))
   where validChar x = isAlphaNum x || x `elem` "_"
+        enclosed    = head nm == '|' && last nm == '|' && length nm > 2 && not (any (`elem` "|\\") (tail (init nm)))
 
 -- | Add a new sAssert based constraint
 addAssertion :: State -> Maybe CallStack -> String -> SW -> IO ()
@@ -529,12 +531,11 @@ newSW st k = do ctr <- incCtr st
 -- might be conflicting with SMTLib; but this list is not comprehensive.. Beware!
 registerKind :: State -> Kind -> IO ()
 registerKind st k
-  | KUserSort sortName _ <- k, sortName `elem` reserved
+  | KUserSort sortName _ <- k, sortName `elem` smtLibReservedNames
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | True
   = modifyIORef (rUsedKinds st) (Set.insert k)
- where -- TODO: this list is not comprehensive!
-       reserved = ["Int", "Real", "List", "Array", "Bool", "NUMERAL", "DECIMAL", "STRING", "FP", "FloatingPoint", "fp"]  -- Reserved by SMT-Lib
+ where 
 
 -- | Create a new constant; hash-cons as necessary
 -- NB. For each constant, we also store weather it's negative-0 or not,

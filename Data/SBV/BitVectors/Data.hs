@@ -41,7 +41,7 @@ module Data.SBV.BitVectors.Data
  , addConstraint, internalVariable, internalConstraint, isCodeGenMode
  , SBVType(..), newUninterpreted, addAxiom
  , Quantifier(..), needsExistentials
- , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
+ , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension, smtLibReservedNames
  , SolverCapabilities(..)
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), getSBranchRunConfig
@@ -66,6 +66,7 @@ import Data.SBV.Utils.Lib
 import Data.SBV.BitVectors.Kind
 import Data.SBV.BitVectors.Concrete
 import Data.SBV.BitVectors.Symbolic
+import Data.SBV.SMT.SMTLibNames
 
 import Prelude ()
 import Prelude.Compat

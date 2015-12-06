@@ -20,7 +20,7 @@ module Data.SBV.Internals (
   , cache, sbvToSW, newExpr, normCW, SBVExpr(..), Op(..)
   , SBVType(..), newUninterpreted, forceSWArg
   -- * Operations useful for instantiating SBV type classes
-  , genLiteral, genFromCW, genMkSymVar, checkAndConvert, genParse, showModel, SMTModel(..)
+  , genLiteral, genFromCW, genMkSymVar, checkAndConvert, genParse, showModel, SMTModel(..), smtLibReservedNames
   -- * Polynomial operations that operate on bit-vectors
   , ites, mdp, addPoly
   -- * Compilation to C
@@ -37,5 +37,6 @@ import Data.SBV.BitVectors.Splittable (checkAndConvert)
 import Data.SBV.Compilers.C           (compileToC', compileToCLib')
 import Data.SBV.Compilers.CodeGen     (CgPgmBundle(..), CgPgmKind(..))
 import Data.SBV.SMT.SMT               (genParse, showModel)
+import Data.SBV.SMT.SMTLibNames       (smtLibReservedNames)
 import Data.SBV.Tools.Polynomial      (ites, mdp, addPoly)
 import Data.SBV.Utils.Numeric

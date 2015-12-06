@@ -115,6 +115,7 @@ Library
                   , Data.SBV.SMT.SMT
                   , Data.SBV.SMT.SMTLib
                   , Data.SBV.SMT.SMTLib2
+                  , Data.SBV.SMT.SMTLibNames
                   , Data.SBV.Provers.Prover
                   , Data.SBV.Provers.SExpr
                   , Data.SBV.Provers.Boolector
