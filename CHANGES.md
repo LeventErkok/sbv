@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 5.5, 2015-11-10
+* Latest Hackage released version: 5.6, 2015-12-06
 
-### Version 5.6, Not yet released
+### Version 5.6, 2015-12-06
   
   * Minor changes to how we print models:
   	* Align by the type
