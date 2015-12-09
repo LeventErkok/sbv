@@ -18,7 +18,7 @@ module Data.SBV.Dynamic
   -- ** Symbolic types
   -- *** Abstract symbolic value type
     SVal
-  , Kind(..), CW(..), CWVal(..), cwToBool
+  , HasKind(..), Kind(..), CW(..), CWVal(..), cwToBool
   -- *** Arrays of symbolic values
   , SArr
   , readSArr, resetSArr, writeSArr, mergeSArr, newSArr, eqSArr
