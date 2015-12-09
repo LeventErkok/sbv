@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 5.6, 2015-12-06
 
+### Version 5.7, Not yet released
+
+  * Export HasKind(..) from the Dynamic interface. Thanks to Adam Foltzer for the patch.
+
 ### Version 5.6, 2015-12-06
   
   * Minor changes to how we print models:
