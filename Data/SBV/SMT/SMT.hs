@@ -351,7 +351,7 @@ showModel cfg = intercalate "\n" . display . map shM . filter (not . ignore) . m
   where ignore (s, _) = "__internal_sbv_" `isPrefixOf` s
         shM (s, v)    = let vs = shCW cfg v in ((length s, s), (vlength vs, vs))
         display svs   = map line svs
-           where line ((_, s), (_, v)) = "  " ++ right (nameWidth - length s) s ++ " = " ++ left (valWidth - length (takeWhile (not . isSpace) v)) v
+           where line ((_, s), (_, v)) = "  " ++ right (nameWidth - length s) s ++ " = " ++ left (valWidth - lTrimRight (valPart v)) v
                  nameWidth             = maximum $ 0 : [l | ((l, _), _) <- svs]
                  valWidth              = maximum $ 0 : [l | (_, (l, _)) <- svs]
         right p s = s ++ replicate p ' '
@@ -359,6 +359,10 @@ showModel cfg = intercalate "\n" . display . map shM . filter (not . ignore) . m
         vlength s = case dropWhile (/= ':') (reverse s) of
                       (':':':':r) -> length (dropWhile isSpace r)
                       _           -> length s -- conservative
+        valPart ""          = ""
+        valPart (':':':':_) = ""
+        valPart (x:xs)      = x : valPart xs
+        lTrimRight = length . dropWhile isSpace . reverse
 
 -- | Show a constant value, in the user-specified base
 shCW :: SMTConfig -> CW -> String
