@@ -251,11 +251,7 @@ genIEEE754 origin vs =  map tst1 [("pred_"   ++ nm, x, y)    | (nm, x, y)    <- 
 
         m f = f sRNE
 
-        preds =   [(pn,       show x,         mkThmP        ps       x   (pc x))     | (pn, ps, pc) <- predicates, x <- vs
-                                                                                     -- Work around GHC bug, see issue #138
-                                                                                     -- Remove the following line when fixed.
-                                                                                     , not (pn == "fpIsPositiveZero" && isNegativeZero x)
-                                                                                     ]
+        preds =   [(pn, show x, mkThmP ps x (pc x)) | (pn, ps, pc) <- predicates, x <- vs]
         tst2 (nm, x, y, t) = origin ++ ".arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
         tst1 (nm, x,    t) = origin ++ ".arithmetic-" ++ nm ++ "." ++ x              ~: assert t
 

@@ -385,11 +385,7 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
         mkTest2 (nm, (x, y, s)) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
         checkPred :: (Show a, RealFloat a, Floating a, SymWord a) => [a] -> [SBV a] -> (String, SBV a -> SBool, a -> Bool) -> [(String, (String, Bool))]
         checkPred xs sxs (n, ps, p) = zipWith (chk n) (map (\x -> (x, p x)) xs) (map ps sxs)
-          where chk nm (x, v) sv
-                  -- Work around GHC bug, see issue #138
-                  -- Remove the following line when fixed.
-                  | nm == "fpIsPositiveZero" && isNegativeZero x = (nm, (show x, True))
-                  | True                                         = (nm, (show x, Just v == unliteral sv))
+          where chk nm (x, v) sv = (nm, (show x, Just v == unliteral sv))
         predicates :: IEEEFloating a => [(String, SBV a -> SBool, a -> Bool)]
         predicates = [ ("fpIsNormal",       fpIsNormal,        fpIsNormalizedH)
                      , ("fpIsSubnormal",    fpIsSubnormal,     isDenormalized)
