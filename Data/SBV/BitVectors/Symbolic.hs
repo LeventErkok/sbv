@@ -55,7 +55,7 @@ import Control.DeepSeq      (NFData(..))
 import Control.Monad        (when, unless)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import Control.Monad.Trans  (MonadIO, liftIO)
-import Data.Char            (isAlpha, isAlphaNum)
+import Data.Char            (isAlpha, isAlphaNum, toLower)
 import Data.IORef           (IORef, newIORef, modifyIORef, readIORef, writeIORef)
 import Data.List            (intercalate, sortBy)
 import Data.Maybe           (isJust, fromJust, fromMaybe)
@@ -530,7 +530,7 @@ newSW st k = do ctr <- incCtr st
 -- | Register a new kind with the system, used for uninterpreted sorts
 registerKind :: State -> Kind -> IO ()
 registerKind st k
-  | KUserSort sortName _ <- k, sortName `elem` smtLibReservedNames
+  | KUserSort sortName _ <- k, map toLower sortName `elem` smtLibReservedNames
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | True
   = modifyIORef (rUsedKinds st) (Set.insert k)
