@@ -305,8 +305,8 @@ instance Modelable SMTResult where
   getModel (ProofError _ s)  = error $ unlines $ "Backend solver complains: " : s
   getModel (TimeOut _)       = Left "Timeout"
   getModel (Satisfiable _ m) = Right (False, parseModelOut m)
-  modelExists (Satisfiable{}) = True
-  modelExists (Unknown{})     = False -- don't risk it
+  modelExists Satisfiable{}   = True
+  modelExists Unknown{}       = False -- don't risk it
   modelExists _               = False
   getModelDictionary (Unsatisfiable _) = M.empty
   getModelDictionary (Unknown _ m)     = M.fromList (modelAssocs m)

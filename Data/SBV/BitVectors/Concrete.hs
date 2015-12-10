@@ -159,14 +159,14 @@ showCW shk w | isBoolean w = show (cwToBool w) ++ (if shk then " :: Bool" else "
 showCW shk w               = liftCW show show show show snd w ++ kInfo
       where kInfo | shk  = " :: " ++ shKind (kindOf w)
                   | True = ""
-            shKind k@(KUserSort {})       = show k
+            shKind k@KUserSort {}         = show k
             shKind k | ('S':sk) <- show k = sk
             shKind k                      = show k
 
 -- | Create a constant word from an integral.
 mkConstCW :: Integral a => Kind -> a -> CW
 mkConstCW KBool           a = normCW $ CW KBool      (CWInteger (toInteger a))
-mkConstCW k@(KBounded{})  a = normCW $ CW k          (CWInteger (toInteger a))
+mkConstCW k@KBounded{}    a = normCW $ CW k          (CWInteger (toInteger a))
 mkConstCW KUnbounded      a = normCW $ CW KUnbounded (CWInteger (toInteger a))
 mkConstCW KReal           a = normCW $ CW KReal      (CWAlgReal (fromInteger (toInteger a)))
 mkConstCW KFloat          a = normCW $ CW KFloat     (CWFloat   (fromInteger (toInteger a)))

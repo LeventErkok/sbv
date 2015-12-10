@@ -447,10 +447,10 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _ _ (S
                          $$ vcat (map text ls)
                          $$ text ""
        typeWidth = getMax 0 $ [len (kindOf s) | (s, _) <- assignments] ++ [len (kindOf s) | (_, (s, _)) <- ins]
-                where len (KReal{})           = 5
-                      len (KFloat{})          = 6 -- SFloat
-                      len (KDouble{})         = 7 -- SDouble
-                      len (KUnbounded{})      = 8
+                where len KReal{}             = 5
+                      len KFloat{}            = 6 -- SFloat
+                      len KDouble{}           = 7 -- SDouble
+                      len KUnbounded{}        = 8
                       len KBool               = 5 -- SBool
                       len (KBounded False n)  = 5 + length (show n) -- SWordN
                       len (KBounded True  n)  = 4 + length (show n) -- SIntN
@@ -617,8 +617,8 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
   = typ <+> var <> semi <+> rhs
   | True
   = lhs <+> text "=" <+> rhs
-  where doNotAssign (IEEEFP (FP_Reinterpret{})) = True   -- generates a memcpy instead; no simple assignment
-        doNotAssign _                           = False  -- generates simple assignment
+  where doNotAssign (IEEEFP FP_Reinterpret{}) = True   -- generates a memcpy instead; no simple assignment
+        doNotAssign _                         = False  -- generates simple assignment
         rhs = p op (map (showSW cfg consts) opArgs)
         rtc = cgRTC cfg
         cBinOps = [ (Plus, "+"),  (Times, "*"), (Minus, "-")

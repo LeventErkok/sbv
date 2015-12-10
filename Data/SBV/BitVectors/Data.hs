@@ -394,7 +394,7 @@ class SymArray array where
 newtype SArray a b = SArray { unSArray :: SArr }
 
 instance (HasKind a, HasKind b) => Show (SArray a b) where
-  show (SArray{}) = "SArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"
+  show SArray{} = "SArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"
 
 instance SymArray SArray where
   newArray_                                      = declNewSArray (\t -> "array_" ++ show t)
