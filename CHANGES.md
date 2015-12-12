@@ -6,6 +6,8 @@
 ### Version 5.7, Not yet released
 
   * Export HasKind(..) from the Dynamic interface. Thanks to Adam Foltzer for the patch.
+  * More careful handling of SMT-Lib reserved names.
+  * Update tested version of MathSAT to 5.3.9
 
 ### Version 5.6, 2015-12-06
   
