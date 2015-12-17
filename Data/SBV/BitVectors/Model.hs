@@ -691,24 +691,32 @@ sFromIntegral x
 
 -- | Generalization of 'shiftL', when the shift-amount is symbolic. Since Haskell's
 -- 'shiftL' only takes an 'Int' as the shift amount, it cannot be used when we have
--- a symbolic amount to shift with.
+-- a symbolic amount to shift with. The first argument should be a bounded quantity.
 sShiftLeft :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
-sShiftLeft x i = ite (i .< 0)
-                     (select [x `shiftR` k | k <- [0 .. ghcBitSize x - 1]] z (-i))
-                     (select [x `shiftL` k | k <- [0 .. ghcBitSize x - 1]] z   i )
+sShiftLeft x i
+  | not (isBounded x)
+  = error "SBV.sShiftRight: Shifted about should be a bounded quantity!"
+  | True
+  = ite (i .< 0)
+        (select [x `shiftR` k | k <- [0 .. ghcBitSize x - 1]] z (-i))
+        (select [x `shiftL` k | k <- [0 .. ghcBitSize x - 1]] z   i )
   where z = genLiteral (kindOf x) (0::Integer)
 
 -- | Generalization of 'shiftR', when the shift-amount is symbolic. Since Haskell's
 -- 'shiftR' only takes an 'Int' as the shift amount, it cannot be used when we have
--- a symbolic amount to shift with.
+-- a symbolic amount to shift with. The first argument should be a bounded quantity.
 --
 -- NB. If the shiftee is signed, then this is an arithmetic shift; otherwise it's logical,
 -- following the usual Haskell convention. See 'sSignedShiftArithRight' for a variant
 -- that explicitly uses the msb as the sign bit, even for unsigned underlying types.
 sShiftRight :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
-sShiftRight x i = ite (i .< 0)
-                      (select [x `shiftL` k | k <- [0 .. ghcBitSize x - 1]] z (-i))
-                      (select [x `shiftR` k | k <- [0 .. ghcBitSize x - 1]] z   i )
+sShiftRight x i
+  | not (isBounded x)
+  = error "SBV.sShiftRight: Shifted about should be a bounded quantity!"
+  | True
+  = ite (i .< 0)
+        (select [x `shiftL` k | k <- [0 .. ghcBitSize x - 1]] z (-i))
+        (select [x `shiftR` k | k <- [0 .. ghcBitSize x - 1]] z   i )
   where z = genLiteral (kindOf x) (0::Integer)
 
 -- | Arithmetic shift-right with a symbolic unsigned shift amount. This is equivalent
@@ -726,10 +734,12 @@ sSignedShiftArithRight x i
 
 -- | Generalization of 'rotateL', when the shift-amount is symbolic. Since Haskell's
 -- 'rotateL' only takes an 'Int' as the shift amount, it cannot be used when we have
--- a symbolic amount to shift with.
+-- a symbolic amount to shift with. The first argument should be a bounded quantity.
 sRotateLeft :: (SIntegral a, SIntegral b, SDivisible (SBV b)) => SBV a -> SBV b -> SBV a
 sRotateLeft x i
-  | bit si <= toInteger sx    -- wrap-around not possible
+  | not (isBounded x)
+  = sShiftLeft x i
+  | isBounded i && bit si <= toInteger sx    -- wrap-around not possible
   = ite (i .< 0)
         (select [x `rotateR` k | k <- [0 .. bit si - 1]] z (-i))
         (select [x `rotateL` k | k <- [0 .. bit si - 1]] z   i )
@@ -744,10 +754,12 @@ sRotateLeft x i
 
 -- | Generalization of 'rotateR', when the shift-amount is symbolic. Since Haskell's
 -- 'rotateR' only takes an 'Int' as the shift amount, it cannot be used when we have
--- a symbolic amount to shift with.
+-- a symbolic amount to shift with. The first argument should be a bounded quantity.
 sRotateRight :: (SIntegral a, SIntegral b, SDivisible (SBV b)) => SBV a -> SBV b -> SBV a
 sRotateRight x i
-  | bit si <= toInteger sx   -- wrap-around not possible
+  | not (isBounded x)
+  = sShiftRight x i
+  | isBounded i && bit si <= toInteger sx   -- wrap-around not possible
   = ite (i .< 0)
         (select [x `rotateL` k | k <- [0 .. bit si - 1]] z (-i))
         (select [x `rotateR` k | k <- [0 .. bit si - 1]] z   i)

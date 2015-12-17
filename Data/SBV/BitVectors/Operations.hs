@@ -530,31 +530,41 @@ svTestBit x i
   | True            = svFalse
 
 -- | Generalization of 'svShl', where the shift-amount is symbolic.
--- The shift amount must be an unsigned quantity.
+-- The first argument should be a bounded quantity.
 svShiftLeft :: SVal -> SVal -> SVal
-svShiftLeft x i = svIte (svLessThan i zi)
-                        (svSelect [svShr x k | k <- [0 .. intSizeOf x - 1]] z (svUNeg i))
-                        (svSelect [svShl x k | k <- [0 .. intSizeOf x - 1]] z         i)
+svShiftLeft x i
+  | not (isBounded x)
+  = error "SBV.svShiftLeft: Shifted about should be a bounded quantity!"
+  | True
+  = svIte (svLessThan i zi)
+          (svSelect [svShr x k | k <- [0 .. intSizeOf x - 1]] z (svUNeg i))
+          (svSelect [svShl x k | k <- [0 .. intSizeOf x - 1]] z         i)
   where z  = svInteger (kindOf x) 0
         zi = svInteger (kindOf i) 0
 
 -- | Generalization of 'svShr', where the shift-amount is symbolic.
--- The shift amount must be an unsigned quantity.
+-- The first argument should be a bounded quantity.
 --
 -- NB. If the shiftee is signed, then this is an arithmetic shift;
 -- otherwise it's logical.
 svShiftRight :: SVal -> SVal -> SVal
-svShiftRight x i = svIte (svLessThan i zi)
-                         (svSelect [svShl x k | k <- [0 .. intSizeOf x - 1]] z (svUNeg i))
-                         (svSelect [svShr x k | k <- [0 .. intSizeOf x - 1]] z         i)
+svShiftRight x i
+  | not (isBounded x)
+  = error "SBV.svShiftLeft: Shifted about should be a bounded quantity!"
+  | True
+  = svIte (svLessThan i zi)
+          (svSelect [svShl x k | k <- [0 .. intSizeOf x - 1]] z (svUNeg i))
+          (svSelect [svShr x k | k <- [0 .. intSizeOf x - 1]] z         i)
   where z  = svInteger (kindOf x) 0
         zi = svInteger (kindOf i) 0
 
 -- | Generalization of 'svRol', where the rotation amount is symbolic.
--- The rotation amount must be an unsigned quantity.
+-- The first argument should be a bounded quantity.
 svRotateLeft :: SVal -> SVal -> SVal
 svRotateLeft x i
-  | bit si <= toInteger sx            -- wrap-around not possible
+  | not (isBounded x)
+  = svShiftLeft x i
+  | isBounded i && bit si <= toInteger sx            -- wrap-around not possible
   = svIte (svLessThan i zi)
           (svSelect [x `svRor` k | k <- [0 .. bit si - 1]] z (svUNeg i))
           (svSelect [x `svRol` k | k <- [0 .. bit si - 1]] z         i)
@@ -569,10 +579,12 @@ svRotateLeft x i
           n  = svInteger (kindOf i) (toInteger sx)
 
 -- | Generalization of 'svRor', where the rotation amount is symbolic.
--- The rotation amount must be an unsigned quantity.
+-- The first argument should be a bounded quantity.
 svRotateRight :: SVal -> SVal -> SVal
 svRotateRight x i
-  | bit si <= toInteger sx                   -- wrap-around not possible
+  | not (isBounded x)
+  = svShiftRight x i
+  | isBounded i && bit si <= toInteger sx                   -- wrap-around not possible
   = svIte (svLessThan i zi)
           (svSelect [x `svRol` k | k <- [0 .. bit si - 1]] z (svUNeg i))
           (svSelect [x `svRor` k | k <- [0 .. bit si - 1]] z         i)
