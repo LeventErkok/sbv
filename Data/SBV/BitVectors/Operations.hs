@@ -532,10 +532,11 @@ svTestBit x i
 -- | Generalization of 'svShl', where the shift-amount is symbolic.
 -- The shift amount must be an unsigned quantity.
 svShiftLeft :: SVal -> SVal -> SVal
-svShiftLeft x i
-  | hasSign i = error "sShiftLeft: shift amount should be unsigned"
-  | True      = svSelect [svShl x k | k <- [0 .. intSizeOf x - 1]] z i
-  where z = svInteger (kindOf x) 0
+svShiftLeft x i = svIte (svLessThan i zi)
+                        (svSelect [svShr x k | k <- [0 .. intSizeOf x - 1]] z (svUNeg i))
+                        (svSelect [svShl x k | k <- [0 .. intSizeOf x - 1]] z         i)
+  where z  = svInteger (kindOf x) 0
+        zi = svInteger (kindOf i) 0
 
 -- | Generalization of 'svShr', where the shift-amount is symbolic.
 -- The shift amount must be an unsigned quantity.
@@ -543,35 +544,47 @@ svShiftLeft x i
 -- NB. If the shiftee is signed, then this is an arithmetic shift;
 -- otherwise it's logical.
 svShiftRight :: SVal -> SVal -> SVal
-svShiftRight x i
-  | hasSign i = error "sShiftRight: shift amount should be unsigned"
-  | True      = svSelect [svShr x k | k <- [0 .. intSizeOf x - 1]] z i
-  where z = svInteger (kindOf x) 0
+svShiftRight x i = svIte (svLessThan i zi)
+                         (svSelect [svShl x k | k <- [0 .. intSizeOf x - 1]] z (svUNeg i))
+                         (svSelect [svShr x k | k <- [0 .. intSizeOf x - 1]] z         i)
+  where z  = svInteger (kindOf x) 0
+        zi = svInteger (kindOf i) 0
 
 -- | Generalization of 'svRol', where the rotation amount is symbolic.
 -- The rotation amount must be an unsigned quantity.
 svRotateLeft :: SVal -> SVal -> SVal
 svRotateLeft x i
-  | hasSign i              = error "sRotateLeft: rotation amount should be unsigned"
-  | bit si <= toInteger sx = svSelect [x `svRol` k | k <- [0 .. bit si - 1]] z i         -- wrap-around not possible
-  | True                   = svSelect [x `svRol` k | k <- [0 .. sx     - 1]] z (i `svRem` n)
+  | bit si <= toInteger sx            -- wrap-around not possible
+  = svIte (svLessThan i zi)
+          (svSelect [x `svRor` k | k <- [0 .. bit si - 1]] z (svUNeg i))
+          (svSelect [x `svRol` k | k <- [0 .. bit si - 1]] z         i)
+  | True
+  = svIte (svLessThan i zi)
+          (svSelect [x `svRor` k | k <- [0 .. sx     - 1]] z (svUNeg i `svRem` n))
+          (svSelect [x `svRol` k | k <- [0 .. sx     - 1]] z (       i  `svRem` n))
     where sx = intSizeOf x
           si = intSizeOf i
-          z = svInteger (kindOf x) 0
-          n = svInteger (kindOf i) (toInteger sx)
+          z  = svInteger (kindOf x) 0
+          zi = svInteger (kindOf i) 0
+          n  = svInteger (kindOf i) (toInteger sx)
 
 -- | Generalization of 'svRor', where the rotation amount is symbolic.
 -- The rotation amount must be an unsigned quantity.
 svRotateRight :: SVal -> SVal -> SVal
 svRotateRight x i
-  | hasSign i              = error "sRotateRight: rotation amount should be unsigned"
-  | bit si <= toInteger sx = svSelect [x `svRor` k | k <- [0 .. bit si - 1]] z i         -- wrap-around not possible
-  | True                   = svSelect [x `svRor` k | k <- [0 .. sx     - 1]] z (i `svRem` n)
+  | bit si <= toInteger sx                   -- wrap-around not possible
+  = svIte (svLessThan i zi)
+          (svSelect [x `svRol` k | k <- [0 .. bit si - 1]] z (svUNeg i))
+          (svSelect [x `svRor` k | k <- [0 .. bit si - 1]] z         i)
+  | True
+  = svIte (svLessThan i zi)
+          (svSelect [x `svRol` k | k <- [0 .. sx     - 1]] z (svUNeg i `svRem` n))
+          (svSelect [x `svRor` k | k <- [0 .. sx     - 1]] z (       i  `svRem` n))
     where sx = intSizeOf x
           si = intSizeOf i
-          z = svInteger (kindOf x) 0
-          n = svInteger (kindOf i) (toInteger sx)
-
+          z  = svInteger (kindOf x) 0
+          zi = svInteger (kindOf i) 0
+          n  = svInteger (kindOf i) (toInteger sx)
 
 --------------------------------------------------------------------------------
 -- Utility functions

@@ -691,24 +691,24 @@ sFromIntegral x
 
 -- | Generalization of 'shiftL', when the shift-amount is symbolic. Since Haskell's
 -- 'shiftL' only takes an 'Int' as the shift amount, it cannot be used when we have
--- a symbolic amount to shift with. The shift amount must be an unsigned quantity.
+-- a symbolic amount to shift with.
 sShiftLeft :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
-sShiftLeft x i
-  | isSigned i = error "sShiftLeft: shift amount should be unsigned"
-  | True       = select [x `shiftL` k | k <- [0 .. ghcBitSize x - 1]] z i
+sShiftLeft x i = ite (i .< 0)
+                     (select [x `shiftR` k | k <- [0 .. ghcBitSize x - 1]] z (-i))
+                     (select [x `shiftL` k | k <- [0 .. ghcBitSize x - 1]] z   i )
   where z = genLiteral (kindOf x) (0::Integer)
 
 -- | Generalization of 'shiftR', when the shift-amount is symbolic. Since Haskell's
 -- 'shiftR' only takes an 'Int' as the shift amount, it cannot be used when we have
--- a symbolic amount to shift with. The shift amount must be an unsigned quantity.
+-- a symbolic amount to shift with.
 --
 -- NB. If the shiftee is signed, then this is an arithmetic shift; otherwise it's logical,
 -- following the usual Haskell convention. See 'sSignedShiftArithRight' for a variant
 -- that explicitly uses the msb as the sign bit, even for unsigned underlying types.
 sShiftRight :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
-sShiftRight x i
-  | isSigned i = error "sShiftRight: shift amount should be unsigned"
-  | True       = select [x `shiftR` k | k <- [0 .. ghcBitSize x - 1]] z i
+sShiftRight x i = ite (i .< 0)
+                      (select [x `shiftL` k | k <- [0 .. ghcBitSize x - 1]] z (-i))
+                      (select [x `shiftR` k | k <- [0 .. ghcBitSize x - 1]] z   i )
   where z = genLiteral (kindOf x) (0::Integer)
 
 -- | Arithmetic shift-right with a symbolic unsigned shift amount. This is equivalent
@@ -726,29 +726,39 @@ sSignedShiftArithRight x i
 
 -- | Generalization of 'rotateL', when the shift-amount is symbolic. Since Haskell's
 -- 'rotateL' only takes an 'Int' as the shift amount, it cannot be used when we have
--- a symbolic amount to shift with. The shift amount must be an unsigned quantity.
+-- a symbolic amount to shift with.
 sRotateLeft :: (SIntegral a, SIntegral b, SDivisible (SBV b)) => SBV a -> SBV b -> SBV a
 sRotateLeft x i
-  | isSigned i             = error "sRotateLeft: rotation amount should be unsigned"
-  | bit si <= toInteger sx = select [x `rotateL` k | k <- [0 .. bit si - 1]] z i         -- wrap-around not possible
-  | True                   = select [x `rotateL` k | k <- [0 .. sx     - 1]] z (i `sRem` n)
+  | bit si <= toInteger sx    -- wrap-around not possible
+  = ite (i .< 0)
+        (select [x `rotateR` k | k <- [0 .. bit si - 1]] z (-i))
+        (select [x `rotateL` k | k <- [0 .. bit si - 1]] z   i )
+  | True
+  = ite (i .< 0)
+        (select [x `rotateR` k | k <- [0 .. sx     - 1]] z ((-i) `sRem` n))
+        (select [x `rotateL` k | k <- [0 .. sx     - 1]] z (  i  `sRem` n))
     where sx = ghcBitSize x
           si = ghcBitSize i
-          z = genLiteral (kindOf x) (0::Integer)
-          n = genLiteral (kindOf i) (toInteger sx)
+          z  = genLiteral (kindOf x) (0::Integer)
+          n  = genLiteral (kindOf i) (toInteger sx)
 
 -- | Generalization of 'rotateR', when the shift-amount is symbolic. Since Haskell's
 -- 'rotateR' only takes an 'Int' as the shift amount, it cannot be used when we have
--- a symbolic amount to shift with. The shift amount must be an unsigned quantity.
+-- a symbolic amount to shift with.
 sRotateRight :: (SIntegral a, SIntegral b, SDivisible (SBV b)) => SBV a -> SBV b -> SBV a
 sRotateRight x i
-  | isSigned i             = error "sRotateRight: rotation amount should be unsigned"
-  | bit si <= toInteger sx = select [x `rotateR` k | k <- [0 .. bit si - 1]] z i         -- wrap-around not possible
-  | True                   = select [x `rotateR` k | k <- [0 .. sx     - 1]] z (i `sRem` n)
+  | bit si <= toInteger sx   -- wrap-around not possible
+  = ite (i .< 0)
+        (select [x `rotateL` k | k <- [0 .. bit si - 1]] z (-i))
+        (select [x `rotateR` k | k <- [0 .. bit si - 1]] z   i)
+  | True
+  = ite (i .< 0)
+        (select [x `rotateL` k | k <- [0 .. sx     - 1]] z ((-i) `sRem` n))
+        (select [x `rotateR` k | k <- [0 .. sx     - 1]] z (  i  `sRem` n))
     where sx = ghcBitSize x
           si = ghcBitSize i
-          z = genLiteral (kindOf x) (0::Integer)
-          n = genLiteral (kindOf i) (toInteger sx)
+          z  = genLiteral (kindOf x) (0::Integer)
+          n  = genLiteral (kindOf i) (toInteger sx)
 
 -- | Full adder. Returns the carry-out from the addition.
 --
