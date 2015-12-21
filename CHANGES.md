@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 5.6, 2015-12-06
+* Latest Hackage released version: 5.7, 2015-12-21
 
-### Version 5.7, Not yet released
+### Version 5.7, 2015-12-21
 
   * Export HasKind(..) from the Dynamic interface. Thanks to Adam Foltzer for the patch.
   * More careful handling of SMT-Lib reserved names.
