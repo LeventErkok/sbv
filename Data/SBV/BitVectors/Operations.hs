@@ -534,7 +534,7 @@ svTestBit x i
 svShiftLeft :: SVal -> SVal -> SVal
 svShiftLeft x i
   | not (isBounded x)
-  = error "SBV.svShiftLeft: Shifted about should be a bounded quantity!"
+  = error "SBV.svShiftLeft: Shifted amount should be a bounded quantity!"
   | True
   = svIte (svLessThan i zi)
           (svSelect [svShr x k | k <- [0 .. intSizeOf x - 1]] z (svUNeg i))
@@ -550,7 +550,7 @@ svShiftLeft x i
 svShiftRight :: SVal -> SVal -> SVal
 svShiftRight x i
   | not (isBounded x)
-  = error "SBV.svShiftLeft: Shifted about should be a bounded quantity!"
+  = error "SBV.svShiftLeft: Shifted amount should be a bounded quantity!"
   | True
   = svIte (svLessThan i zi)
           (svSelect [svShl x k | k <- [0 .. intSizeOf x - 1]] z (svUNeg i))

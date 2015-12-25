@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 5.7, 2015-12-21
 
+### Version 5.8, Not yet released
+
+  * Fix some typos
+
 ### Version 5.7, 2015-12-21
 
   * Export HasKind(..) from the Dynamic interface. Thanks to Adam Foltzer for the patch.

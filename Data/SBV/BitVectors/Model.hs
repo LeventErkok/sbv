@@ -695,7 +695,7 @@ sFromIntegral x
 sShiftLeft :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
 sShiftLeft x i
   | not (isBounded x)
-  = error "SBV.sShiftRight: Shifted about should be a bounded quantity!"
+  = error "SBV.sShiftRight: Shifted amount should be a bounded quantity!"
   | True
   = ite (i .< 0)
         (select [x `shiftR` k | k <- [0 .. ghcBitSize x - 1]] z (-i))
@@ -712,7 +712,7 @@ sShiftLeft x i
 sShiftRight :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
 sShiftRight x i
   | not (isBounded x)
-  = error "SBV.sShiftRight: Shifted about should be a bounded quantity!"
+  = error "SBV.sShiftRight: Shifted amount should be a bounded quantity!"
   | True
   = ite (i .< 0)
         (select [x `shiftL` k | k <- [0 .. ghcBitSize x - 1]] z (-i))
