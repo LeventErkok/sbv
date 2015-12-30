@@ -38,11 +38,13 @@ module Data.SBV.Dynamic
   , svReal, svNumerator, svDenominator
   -- *** Symbolic equality
   , svEqual, svNotEqual
+  -- *** Constructing concrete lists
+  , svEnumFromThenTo
   -- *** Symbolic ordering
   , svLessThan, svGreaterThan, svLessEq, svGreaterEq
   -- *** Arithmetic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs
-  , svDivide, svQuot, svRem
+  , svDivide, svQuot, svRem, svExp
   -- *** Logical operations
   , svAnd, svOr, svXOr, svNot
   , svShl, svShr, svRol, svRor

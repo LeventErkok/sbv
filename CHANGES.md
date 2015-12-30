@@ -6,6 +6,9 @@
 ### Version 5.8, Not yet released
 
   * Fix some typos
+  * Add 'svEnumFromThenTo' to the Dynamic interface, allowing dynamic construction
+    of [x, y .. z] and [x .. y] when the involved values are concrete.
+  * Add 'svExp' to the Dynamic interface, implementing exponentation
 
 ### Version 5.7, 2015-12-21
 
