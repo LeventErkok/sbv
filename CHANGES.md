@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 5.7, 2015-12-21
+* Latest Hackage released version: 5.8, 2016-01-01
 
-### Version 5.8, Not yet released
+### Version 5.8, 2016-01-01
 
   * Fix some typos
   * Add 'svEnumFromThenTo' to the Dynamic interface, allowing dynamic construction

@@ -101,12 +101,17 @@ svDenominator (SVal KReal (Left (CW KReal (CWAlgReal (AlgRational True r))))) = 
 svDenominator _                                                               = Nothing
 
 -------------------------------------------------------------------------------------
--- | Constructing [x, y, .. z] and [x .. y]. Only works when all arguments are concrete
+-- | Constructing [x, y, .. z] and [x .. y]. Only works when all arguments are concrete and integral and the result is guaranteed finite
+-- Note that the it isn't "obviously" clear why the following works; after all we're doing the construction over Integer's and mapping
+-- it back to other types such as SIntN/SWordN. The reason is that the values we receive are guaranteed to be in their domains; and thus
+-- the lifting to Integers preserves the bounds; and then going back is just fine. So, things like @[1, 5 .. 200] :: [SInt8]@ work just
+-- fine (end evaluate to empty list), since we see @[1, 5 .. -56]@ in the @Integer@ domain. Also note the explicit check for @s /= f@
+-- below to make sure we don't stutter and produce an infinite list.
 svEnumFromThenTo :: SVal -> Maybe SVal -> SVal -> Maybe [SVal]
 svEnumFromThenTo bf mbs bt
-  | Just bs <- mbs, Just f <- svAsInteger bf, Just s <- svAsInteger bs, Just t <- svAsInteger bt = Just $ map (svInteger (kindOf bf)) [f, s .. t]
-  |                 Just f <- svAsInteger bf,                           Just t <- svAsInteger bt = Just $ map (svInteger (kindOf bf)) [f    .. t]
-  | True                                                                                         = Nothing
+  | Just bs <- mbs, Just f <- svAsInteger bf, Just s <- svAsInteger bs, Just t <- svAsInteger bt, s /= f = Just $ map (svInteger (kindOf bf)) [f, s .. t]
+  | Nothing <- mbs, Just f <- svAsInteger bf,                           Just t <- svAsInteger bt         = Just $ map (svInteger (kindOf bf)) [f    .. t]
+  | True                                                                                                 = Nothing
 
 -------------------------------------------------------------------------------------
 -- Basic operations
