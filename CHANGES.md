@@ -3,6 +3,12 @@
 
 * Latest Hackage released version: 5.8, 2016-01-01
 
+### Version 5.9, Not yet released
+
+  * Default definition for 'symbolicMerge', which allows types that are
+    instances of 'Generic' to have an automatically derivable merge (i.e.,
+    ite) instance. Thanks to Christian Conkle for the patch.
+
 ### Version 5.8, 2016-01-01
 
   * Fix some typos

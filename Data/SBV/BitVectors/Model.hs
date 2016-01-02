@@ -1084,7 +1084,9 @@ instance (SymWord a, Arbitrary a) => Arbitrary (SBV a) where
 -- with a default value, simulating array/list indexing. It's an n-way generalization
 -- of the 'ite' function.
 --
--- Minimal complete definition: 'symbolicMerge'
+-- Minimal complete definition: None, if the type is instance of 'Generic'. Otherwise
+-- 'symbolicMerge'. Note that most types subject to merging are likely to be
+-- trivial instances of 'Generic'.
 class Mergeable a where
    -- | Merge two values based on the condition. The first argument states
    -- whether we force the then-and-else branches before the merging, at the
@@ -1095,11 +1097,6 @@ class Mergeable a where
    -- | Total indexing operation. @select xs default index@ is intuitively
    -- the same as @xs !! index@, except it evaluates to @default@ if @index@
    -- overflows
-
-   default symbolicMerge :: (G.Generic a, GMergeable (G.Rep a))
-                         => Bool -> SBool -> a -> a -> a
-   symbolicMerge = symbolicMergeDefault
-
    select :: (SymWord b, Num b) => [a] -> a -> SBV b -> a
    -- NB. Earlier implementation of select used the binary-search trick
    -- on the index to chop down the search space. While that is a good trick
@@ -1116,6 +1113,11 @@ class Mergeable a where
     | True         =                     walk xs ind err
     where walk []     _ acc = acc
           walk (e:es) i acc = walk es (i-1) (ite (i .== 0) e acc)
+
+   -- Default implementation for 'symbolicMerge' if the type is 'Generic'
+   default symbolicMerge :: (G.Generic a, GMergeable (G.Rep a)) => Bool -> SBool -> a -> a -> a
+   symbolicMerge = symbolicMergeDefault
+
 
 -- | If-then-else. This is by definition 'symbolicMerge' with both
 -- branches forced. This is typically the desired behavior, but also
