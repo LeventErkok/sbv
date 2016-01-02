@@ -11,6 +11,7 @@
 
 {-# LANGUAGE DeriveAnyClass       #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
+{-# LANGUAGE DeriveGeneric        #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
@@ -19,8 +20,11 @@ module Data.SBV.Examples.Puzzles.U2Bridge where
 import Control.Monad       (unless)
 import Control.Monad.State (State, runState, put, get, modify, evalState)
 
-import Data.Generics
+import Data.Generics (Data)
+import GHC.Generics (Generic)
+
 import Data.SBV
+
 
 -------------------------------------------------------------
 -- * Modeling the puzzle
@@ -74,7 +78,7 @@ data Status = Status { time   :: STime       -- ^ elapsed time
                      , lEdge  :: SLocation   -- ^ location of Edge
                      , lAdam  :: SLocation   -- ^ location of Adam
                      , lLarry :: SLocation   -- ^ location of Larry
-                     }
+                     } deriving (Generic, Mergeable)
 
 -- | Start configuration, time elapsed is 0 and everybody is 'here'
 start :: Status
@@ -88,14 +92,14 @@ start = Status { time   = 0
 
 -- | Mergeable instance for 'Status' simply walks down the structure fields and
 -- merges them.
-instance Mergeable Status where
-  symbolicMerge f t s1 s2 = Status { time   = symbolicMerge f t (time   s1) (time   s2)
-                                   , flash  = symbolicMerge f t (flash  s1) (flash  s2)
-                                   , lBono  = symbolicMerge f t (lBono  s1) (lBono  s2)
-                                   , lEdge  = symbolicMerge f t (lEdge  s1) (lEdge  s2)
-                                   , lAdam  = symbolicMerge f t (lAdam  s1) (lAdam  s2)
-                                   , lLarry = symbolicMerge f t (lLarry s1) (lLarry s2)
-                                   }
+-- instance Mergeable Status where
+--   symbolicMerge f t s1 s2 = Status { time   = symbolicMerge f t (time   s1) (time   s2)
+--                                    , flash  = symbolicMerge f t (flash  s1) (flash  s2)
+--                                    , lBono  = symbolicMerge f t (lBono  s1) (lBono  s2)
+--                                    , lEdge  = symbolicMerge f t (lEdge  s1) (lEdge  s2)
+--                                    , lAdam  = symbolicMerge f t (lAdam  s1) (lAdam  s2)
+--                                    , lLarry = symbolicMerge f t (lLarry s1) (lLarry s2)
+--                                    }
 
 -- | A puzzle move is modeled as a state-transformer
 type Move a = State Status a

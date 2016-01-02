@@ -18,6 +18,8 @@
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE Rank2Types             #-}
+{-# LANGUAGE TypeOperators          #-}
+{-# LANGUAGE DefaultSignatures      #-}
 
 module Data.SBV.BitVectors.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), SIntegral
@@ -41,6 +43,8 @@ import Control.Monad        (when, unless, liftM)
 import Control.Monad.Reader (ask)
 import Control.Monad.Trans  (liftIO)
 
+import GHC.Generics (U1(..), M1(..), (:*:)(..), K1(..))
+import qualified GHC.Generics as G
 import GHC.Stack.Compat
 
 import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
@@ -1091,6 +1095,11 @@ class Mergeable a where
    -- | Total indexing operation. @select xs default index@ is intuitively
    -- the same as @xs !! index@, except it evaluates to @default@ if @index@
    -- overflows
+
+   default symbolicMerge :: (G.Generic a, GMergeable (G.Rep a))
+                         => Bool -> SBool -> a -> a -> a
+   symbolicMerge = symbolicMergeDefault
+
    select :: (SymWord b, Num b) => [a] -> a -> SBV b -> a
    -- NB. Earlier implementation of select used the binary-search trick
    -- on the index to chop down the search space. While that is a good trick
@@ -1107,7 +1116,6 @@ class Mergeable a where
     | True         =                     walk xs ind err
     where walk []     _ acc = acc
           walk (e:es) i acc = walk es (i-1) (ite (i .== 0) e acc)
-
 
 -- | If-then-else. This is by definition 'symbolicMerge' with both
 -- branches forced. This is typically the desired behavior, but also
@@ -1269,6 +1277,26 @@ instance (Mergeable a, Mergeable b, Mergeable c, Mergeable d, Mergeable e, Merge
     where i a b = symbolicMerge f t a b
   select xs (err1, err2, err3, err4, err5, err6, err7) ind = (select as err1 ind, select bs err2 ind, select cs err3 ind, select ds err4 ind, select es err5 ind, select fs err6 ind, select gs err7 ind)
     where (as, bs, cs, ds, es, fs, gs) = unzip7 xs
+
+-- Arbitrary product types, using GHC.Generics
+symbolicMergeDefault :: (G.Generic a, GMergeable (G.Rep a)) => Bool -> SBool -> a -> a -> a
+symbolicMergeDefault force t x y = G.to $ symbolicMerge' force t (G.from x) (G.from y)
+
+-- Not exported. Instances are provided for the generic representations of product types where each element is Mergeable.
+class GMergeable f where
+  symbolicMerge' :: Bool -> SBool -> f a -> f a -> f a
+
+instance GMergeable U1 where
+  symbolicMerge' _ _ _ _ = U1
+
+instance (Mergeable c) => GMergeable (K1 i c) where
+  symbolicMerge' force t (K1 x) (K1 y) = K1 $ symbolicMerge force t x y
+
+instance (GMergeable f) => GMergeable (M1 i c f) where
+  symbolicMerge' force t (M1 x) (M1 y) = M1 $ symbolicMerge' force t x y
+
+instance (GMergeable f, GMergeable g) => GMergeable (f :*: g) where
+  symbolicMerge' force t (x1 :*: y1) (x2 :*: y2) = symbolicMerge' force t x1 x2 :*: symbolicMerge' force t y1 y2
 
 -- Bounded instances
 instance (SymWord a, Bounded a) => Bounded (SBV a) where
