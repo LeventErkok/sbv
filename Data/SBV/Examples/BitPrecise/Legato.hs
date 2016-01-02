@@ -31,8 +31,8 @@
 -- is indeed correct.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveGeneric        #-}
-{-# LANGUAGE DeriveAnyClass       #-}
+{-# LANGUAGE DeriveGeneric  #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Data.SBV.Examples.BitPrecise.Legato where
 
@@ -83,13 +83,6 @@ type Extract a = Mostek -> a
 
 -- | Programs are essentially state transformers (on the machine state)
 type Program = Mostek -> Mostek
-
--- | 'Mergeable' instance of 'Mostek' simply pushes the merging into record fields.
--- instance Mergeable Mostek where
---   symbolicMerge f b m1 m2 = Mostek { memory    = symbolicMerge f b (memory m1)    (memory m2)
---                                    , registers = symbolicMerge f b (registers m1) (registers m2)
---                                    , flags     = symbolicMerge f b (flags m1)     (flags m2)
---                                    }
 
 ------------------------------------------------------------------
 -- * Low-level operations

@@ -25,7 +25,6 @@ import GHC.Generics (Generic)
 
 import Data.SBV
 
-
 -------------------------------------------------------------
 -- * Modeling the puzzle
 -------------------------------------------------------------
@@ -89,17 +88,6 @@ start = Status { time   = 0
                , lAdam  = here
                , lLarry = here
                }
-
--- | Mergeable instance for 'Status' simply walks down the structure fields and
--- merges them.
--- instance Mergeable Status where
---   symbolicMerge f t s1 s2 = Status { time   = symbolicMerge f t (time   s1) (time   s2)
---                                    , flash  = symbolicMerge f t (flash  s1) (flash  s2)
---                                    , lBono  = symbolicMerge f t (lBono  s1) (lBono  s2)
---                                    , lEdge  = symbolicMerge f t (lEdge  s1) (lEdge  s2)
---                                    , lAdam  = symbolicMerge f t (lAdam  s1) (lAdam  s2)
---                                    , lLarry = symbolicMerge f t (lLarry s1) (lLarry s2)
---                                    }
 
 -- | A puzzle move is modeled as a state-transformer
 type Move a = State Status a
