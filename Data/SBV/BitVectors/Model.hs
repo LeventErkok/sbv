@@ -1103,7 +1103,7 @@ class Mergeable a where
    symbolicMerge :: Bool -> SBool -> a -> a -> a
    -- | Total indexing operation. @select xs default index@ is intuitively
    -- the same as @xs !! index@, except it evaluates to @default@ if @index@
-   -- overflows
+   -- underflows/overflows.
    select :: (SymWord b, Num b) => [a] -> a -> SBV b -> a
    -- NB. Earlier implementation of select used the binary-search trick
    -- on the index to chop down the search space. While that is a good trick
@@ -1113,12 +1113,13 @@ class Mergeable a where
    -- list is really humongous, which is not very common in general. (Also,
    -- for the case when the list is bit-vectors, we use SMT tables anyhow.)
    select xs err ind
-    | isReal   ind = error "SBV.select: unsupported real valued select/index expression"
-    | isFloat  ind = error "SBV.select: unsupported float valued select/index expression"
-    | isDouble ind = error "SBV.select: unsupported double valued select/index expression"
+    | isReal   ind = bad "real"
+    | isFloat  ind = bad "float"
+    | isDouble ind = bad "double"
     | hasSign  ind = ite (ind .< 0) err (walk xs ind err)
     | True         =                     walk xs ind err
-    where walk []     _ acc = acc
+    where bad w = error $ "SBV.select: unsupported " ++ w ++ " valued select/index expression"
+          walk []     _ acc = acc
           walk (e:es) i acc = walk es (i-1) (ite (i .== 0) e acc)
 
    -- Default implementation for 'symbolicMerge' if the type is 'Generic'
