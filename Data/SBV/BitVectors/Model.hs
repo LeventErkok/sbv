@@ -1080,6 +1080,13 @@ instance (SymWord a, Arbitrary a) => Arbitrary (SBV a) where
 -- provides all basic types as instances of this class, so users only need
 -- to declare instances for custom data-types of their programs as needed.
 --
+-- A 'Mergeable' instance may be automatically derived for a custom data-type
+-- with a single constructor where the type of each field is an instance of
+-- 'Mergeable', such as a record of symbolic values. Users only need to add
+-- 'G.Generic' and 'Mergeable' to the @deriving@ clause for the data-type. See
+-- 'Data.SBV.Examples.Puzzles.U2Bridge.Status' for an example and an
+-- illustration of what the instance would look like if written by hand.
+--
 -- The function 'select' is a total-indexing function out of a list of choices
 -- with a default value, simulating array/list indexing. It's an n-way generalization
 -- of the 'ite' function.
@@ -1281,10 +1288,22 @@ instance (Mergeable a, Mergeable b, Mergeable c, Mergeable d, Mergeable e, Merge
     where (as, bs, cs, ds, es, fs, gs) = unzip7 xs
 
 -- Arbitrary product types, using GHC.Generics
+--
+-- NB: Because of the way GHC.Generics works, the implementation of
+-- symbolicMerge' is recursive. The derived instance for @data T a = T a a a a@
+-- resembles that for (a, (a, (a, a))), not the flat 4-tuple (a, a, a, a). This
+-- difference should have no effect in practice. Note also that, unlike the
+-- hand-rolled tuple instances, the generic instance does not provide a custom
+-- 'select' implementation, and so does not benefit from the SMT-table
+-- implementation in the 'SBV a' instance.
+
+-- | Not exported. Symbolic merge using the generic representation provided by
+-- 'G.Generics'.
 symbolicMergeDefault :: (G.Generic a, GMergeable (G.Rep a)) => Bool -> SBool -> a -> a -> a
 symbolicMergeDefault force t x y = G.to $ symbolicMerge' force t (G.from x) (G.from y)
 
--- Not exported. Instances are provided for the generic representations of product types where each element is Mergeable.
+-- | Not exported. Used only in 'symbolicMergeDefault'. Instances are provided for
+-- the generic representations of product types where each element is Mergeable.
 class GMergeable f where
   symbolicMerge' :: Bool -> SBool -> f a -> f a -> f a
 

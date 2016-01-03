@@ -73,6 +73,9 @@ type Memory = Model Word32 Word8        -- Model defined later
 -- | Abstraction of the machine: The CPU consists of memory, registers, and flags.
 -- Unlike traditional hardware, we assume the program is stored in some other memory area that
 -- we need not model. (No self modifying programs!)
+--
+-- 'Mostek' is equipped with an automatically derived 'Mergeable' instance
+-- because each field is 'Mergeable'.
 data Mostek = Mostek { memory    :: Memory
                      , registers :: Registers
                      , flags     :: Flags
