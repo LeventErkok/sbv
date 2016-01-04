@@ -66,6 +66,7 @@ mkConfig s smtVersion tweaks = SMTConfig { verbose        = False
                                          , solverTweaks   = tweaks
                                          , smtLibVersion  = smtVersion
                                          , satCmd         = "(check-sat)"
+                                         , nonModelVars   = []
                                          , roundingMode   = RoundNearestTiesToEven
                                          , useLogic       = Nothing
                                          }
@@ -412,7 +413,8 @@ allSatWith config p = do
                   curResult <- invoke nonEqConsts n sbvPgm
                   case curResult of
                     Nothing            -> return []
-                    Just (SatResult r) -> let cont model = do rest <- unsafeInterleaveIO $ loop (n+1) (modelAssocs model : nonEqConsts)
+                    Just (SatResult r) -> let cont model = do let modelOnlyAssocs = [v | v@(x, _) <- modelAssocs model, x `notElem` nonModelVars config]
+                                                              rest <- unsafeInterleaveIO $ loop (n+1) (modelOnlyAssocs : nonEqConsts)
                                                               return (r : rest)
                                           in case r of
                                                Satisfiable   _ (SMTModel []) -> return [r]
