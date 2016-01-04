@@ -345,10 +345,10 @@ showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel result = case resul
  where cfg = resultConfig result
 
 -- | Show a model in human readable form. Ignore bindings to those variables that start
--- with "__internal_sbv_"; as these are only for internal purposes
+-- with "__internal_sbv_" and also those marked as "nonModelVar" in the config; as these are only for internal purposes
 showModel :: SMTConfig -> SMTModel -> String
 showModel cfg = intercalate "\n" . display . map shM . filter (not . ignore) . modelAssocs
-  where ignore (s, _) = "__internal_sbv_" `isPrefixOf` s
+  where ignore (s, _) = "__internal_sbv_" `isPrefixOf` s || s `elem` nonModelVars cfg
         shM (s, v)    = let vs = shCW cfg v in ((length s, s), (vlength vs, vs))
         display svs   = map line svs
            where line ((_, s), (_, v)) = "  " ++ right (nameWidth - length s) s ++ " = " ++ left (valWidth - lTrimRight (valPart v)) v
