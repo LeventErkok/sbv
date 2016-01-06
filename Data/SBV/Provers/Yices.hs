@@ -27,7 +27,7 @@ yices = SMTSolver {
          , engine       = standardEngine "SBV_YICES" "SBV_YICES_OPTIONS" addTimeOut standardModel
          , capabilities = SolverCapabilities {
                                 capSolverName              = "Yices"
-                              , mbDefaultLogic             = Just "QF_AUFLIA"
+                              , mbDefaultLogic             = logic
                               , supportsMacros             = True
                               , supportsProduceModels      = True
                               , supportsQuantifiers        = False
@@ -39,3 +39,7 @@ yices = SMTSolver {
                               }
          }
   where addTimeOut _ _ = error "Yices: Timeout values are not supported by Yices"
+        -- Yices doesn't like it if we don't set the logic; so pick one and hope for the best
+        logic hasReals
+          | hasReals   = Just "QF_UFLRA"
+          | True       = Just "QF_AUFLIA"

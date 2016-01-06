@@ -117,7 +117,7 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
                      | not (null usorts) = "has user-defined sorts"
                      | hasNonBVArrays    = "has non-bitvector arrays"
                      | True              = "cannot determine the SMTLib-logic to use"
-             in case mbDefaultLogic solverCaps of
+             in case mbDefaultLogic solverCaps hasReal of
                   Nothing -> ["; " ++ why ++ ", no logic specified."]
                   Just l  -> ["(set-logic " ++ l ++ "); " ++ why ++ ", using solver-default logic."]
            | True

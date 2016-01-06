@@ -17,6 +17,11 @@
     the discussion in https://github.com/LeventErkok/sbv/issues/208 for
     motivation.
 
+  * Yices interface: If Reals are used, then pick the logic QF_UFLRA, instead
+    of QF_AUFLIA. Unfortunately, logic selection remains tricky since the SMTLib
+    story for logic selection is rather messy. Other solvers are not impacted
+    by this change.
+
 ### Version 5.8, 2016-01-01
 
   * Fix some typos
