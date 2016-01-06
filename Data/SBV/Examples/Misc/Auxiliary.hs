@@ -11,7 +11,7 @@
 -- but it's "internal" to the problem and we do not consider it as part of
 -- the solution. Also, in an `allSat` scenario, we may not care for models
 -- that only differ in these auxiliaries. SBV allows designating such variables
--- as `nonModelVars` so we can still use them like any other variable, but without
+-- as `isNonModelVar` so we can still use them like any other variable, but without
 -- considering them explicitly in model construction.
 -----------------------------------------------------------------------------
 
@@ -60,4 +60,4 @@ allModels = allSat problem
 -- Note that we now have only two solutions, one for each unique value of @x@ that satisfy our
 -- constraint.
 modelsWithYAux :: IO AllSatResult
-modelsWithYAux = allSatWith z3{nonModelVars = ["y"]} problem
+modelsWithYAux = allSatWith z3{isNonModelVar = (`elem` ["y"])} problem

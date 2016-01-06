@@ -97,7 +97,7 @@ instance Show AllSatResult where
                           _ -> "Found " ++ show c ++ " different solutions." ++ uniqueWarn
           sh i c = (ok, showSMTResult "Unsatisfiable"
                                       "Unknown" "Unknown. Potential model:\n"
-                                      ("Solution #" ++ show i ++ ":\n[Backend solver returned no assignment to variables.]") ("Solution #" ++ show i ++ ":\n") c)
+                                      ("Solution #" ++ show i ++ ":\nSatisfiable") ("Solution #" ++ show i ++ ":\n") c)
               where ok = case c of
                            Satisfiable{} -> True
                            _             -> False
@@ -347,8 +347,16 @@ showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel result = case resul
 -- | Show a model in human readable form. Ignore bindings to those variables that start
 -- with "__internal_sbv_" and also those marked as "nonModelVar" in the config; as these are only for internal purposes
 showModel :: SMTConfig -> SMTModel -> String
-showModel cfg = intercalate "\n" . display . map shM . filter (not . ignore) . modelAssocs
-  where ignore (s, _) = "__internal_sbv_" `isPrefixOf` s || s `elem` nonModelVars cfg
+showModel cfg model
+   | null allVars
+   = "[There are no variables bound by the model.]"
+   | null relevantVars
+   = "[There are no model-variables bound by the model.]"
+   | True
+   = intercalate "\n" . display . map shM $ relevantVars
+  where allVars       = modelAssocs model
+        relevantVars  = filter (not . ignore) allVars
+        ignore (s, _) = "__internal_sbv_" `isPrefixOf` s || isNonModelVar cfg s
         shM (s, v)    = let vs = shCW cfg v in ((length s, s), (vlength vs, vs))
         display svs   = map line svs
            where line ((_, s), (_, v)) = "  " ++ right (nameWidth - length s) s ++ " = " ++ left (valWidth - lTrimRight (valPart v)) v

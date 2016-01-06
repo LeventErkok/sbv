@@ -1051,7 +1051,7 @@ data SMTConfig = SMTConfig {
        , printRealPrec  :: Int            -- ^ Print algebraic real values with this precision. (SReal, default: 16)
        , solverTweaks   :: [String]       -- ^ Additional lines of script to give to the solver (user specified)
        , satCmd         :: String         -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
-       , nonModelVars   :: [String]       -- ^ When constructing a model, ignore assignments to these variables. (Default: [])
+       , isNonModelVar  :: String -> Bool -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
        , smtFile        :: Maybe FilePath -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
        , smtLibVersion  :: SMTLibVersion  -- ^ What version of SMT-lib we use for the tool
        , solver         :: SMTSolver      -- ^ The actual SMT solver.
