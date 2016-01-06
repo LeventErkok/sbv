@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 5.8, 2016-01-01
+* Latest Hackage released version: 5.9, 2016-01-05
 
-### Version 5.9, Not yet released
+### Version 5.9, 2016-01-05
 
   * Default definition for 'symbolicMerge', which allows types that are
     instances of 'Generic' to have an automatically derivable merge (i.e.,
