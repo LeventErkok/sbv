@@ -25,7 +25,7 @@ define mkTags
 	@find . -name \*.\*hs | xargs fast-tags
 endef
 
-.PHONY: all install test sdist clean docs gold stamp hlint tags
+.PHONY: all install test sdist clean docs gold stamp hlint tags checkLinks
 
 all: install
 
@@ -65,7 +65,7 @@ clean:
 docs:
 	@(set -o pipefail; $(CABAL) haddock --haddock-option=--no-warnings --hyperlink-source 2>&1 | $(SIMPLIFY))
 
-release: clean install sdist hlint docs test
+release: clean install sdist hlint docs test checkLinks
 	@echo "*** SBV is ready for release!"
 
 # use this as follows: make gold TGTS="cgUSB5"
@@ -78,6 +78,9 @@ hlint:
 	@rm -f hlintReport.html
 	@echo "Running HLint.."
 	@hlint Data SBVUnitTest -q -rhlintReport.html -i "Use otherwise" -i "Parse error" -i "Use fewer imports"
+
+checkLinks:
+	@buildUtils/checkLinks
 
 tags:
 	$(call mkTags)

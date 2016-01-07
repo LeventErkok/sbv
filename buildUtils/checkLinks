@@ -1,0 +1,46 @@
+#! /bin/zsh
+
+badLinkCount=0
+
+clearLine () {
+  blank="                                                                                                                                                   "
+  echo -n "\r" $blank
+}
+
+check () {
+  clearLine
+  echo -n "\rChecking:" "$3"
+  /usr/local/bin/wget -q --spider --tries=1 --timeout=5 "$3"
+  ans=$?
+  if [ ! $ans -eq 0 ]; then
+    clearLine
+    echo "\rBAD: $1:$2 $3"
+    badLinkCount=$(( $badLinkCount+1 ))
+    return $ans
+  else
+    echo -n ". GOOD"
+    return $ans
+  fi
+}
+
+lines=("${(f)$(grep -Eoin '(http|https)://[^>]+' **/*.hs **/*.md)}")
+
+for i in $lines; do
+    sep=$(echo $i | awk -F: '{printf("%s %s %s:", $1, $2, $3); for (i = 4; i <= NF; ++i) printf ("%s", $i)}')
+    args=(${=sep})
+    check $args[1] $args[2] $args[3]
+    final=$?
+done
+
+if [ $final -eq 0 ]; then
+    clearLine
+    echo -n "\r"
+fi
+
+if [ $badLinkCount -eq 0 ]; then
+    echo "All links are good."
+    exit 0
+else
+    echo "Found $badLinkCount bad links!"
+    exit 1
+fi
