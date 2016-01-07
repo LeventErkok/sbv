@@ -3,6 +3,11 @@
 
 * Latest Hackage released version: 5.9, 2016-01-05
 
+### Version 5.10, Not yet released
+
+  * Documentation: Fix a bunch of dead http links. Thanks to Andres Sicard-Ramirez
+    for reporting.
+
 ### Version 5.9, 2016-01-05
 
   * Default definition for 'symbolicMerge', which allows types that are
@@ -373,7 +378,7 @@
   * Tracking changes in the SMT-Lib floating-point theory. If you are
     using symbolic floating-point types (i.e., SFloat and SDouble), then
     you should upgrade to this version and also get a very latest (unstable)
-    Z3 release. See http://smtlib.cs.uiowa.edu/theories/FloatingPoint.smt2
+    Z3 release. See http://smtlib.cs.uiowa.edu/theories-FloatingPoint.shtml
     for details.
 
   * Introduce a new class, 'RoundingFloat', which supports floating-point
@@ -489,7 +494,7 @@ uninterpreted.
 
 ### Version 3.1, 2014-07-12
  
- NB: GHC 7.8.1 and 7.8.2 has a serious bug (https://ghc.haskell.org/trac/ghc/ticket/9078)
+ NB: GHC 7.8.1 and 7.8.2 has a serious bug <https://ghc.haskell.org/trac/ghc/ticket/9078>
      that causes SBV to crash under heavy/repeated calls. The bug is addressed
      in GHC 7.8.3; so upgrading to GHC 7.8.3 is essential for using SBV!
 
@@ -623,7 +628,7 @@ uninterpreted.
 ### Version 2.9, 2013-01-02
 
   - Add support for the CVC4 SMT solver from New York University and
-    the University of Iowa. (http://cvc4.cs.nyu.edu/).
+    the University of Iowa. <http://cvc4.cs.nyu.edu/>.
     NB. Z3 remains the default solver for SBV. To use CVC4, use the
     *With variants of the interface (i.e., proveWith, satWith, ..)
     by passing cvc4 as the solver argument. (Similarly, use 'yices'
@@ -702,7 +707,7 @@ uninterpreted.
   - Add forgotten Real class instance for the type 'AlgReal'
   - Stop putting bounds on hackage dependencies, as they cause
     more trouble then they actually help. (See the discussion
-    here: http://www.haskell.org/pipermail/haskell-cafe/2012-July/102352.html.)
+    here: <http://www.haskell.org/pipermail/haskell-cafe/2012-July/102352.html>.)
 
 ### Version 2.3, 2012-07-20
 
