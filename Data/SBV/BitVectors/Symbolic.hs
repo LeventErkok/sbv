@@ -772,7 +772,7 @@ outputSVal (SVal _ (Right f)) = do
 -- * Symbolic Arrays
 ---------------------------------------------------------------------------------
 
--- | Arrays implemented in terms of SMT-arrays: <http://smtlib.cs.uiowa.edu/theories/ArraysEx.smt2>
+-- | Arrays implemented in terms of SMT-arrays: <http://smtlib.cs.uiowa.edu/theories-ArraysEx.shtml>
 --
 --   * Maps directly to SMT-lib arrays
 --

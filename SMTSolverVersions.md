@@ -3,7 +3,7 @@ it works with latest releases of each of these tools, newer versions can exhibit
 report any issues you might see with newer releases.
 
   * ABC:
-      * https://bitbucket.org/alanmi/abc
+      * http://bitbucket.org/alanmi/abc
       * Version 1.01
   * Boolector:
       * http://fmv.jku.at/boolector/
@@ -18,5 +18,5 @@ report any issues you might see with newer releases.
       * http://yices.csl.sri.com/
       * Version 2.4.1
   * Z3:
-      * https://github.com/Z3Prover/z3
+      * http://github.com/Z3Prover/z3
       * Version 4.4.1

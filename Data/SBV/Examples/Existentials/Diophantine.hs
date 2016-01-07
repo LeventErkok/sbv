@@ -46,7 +46,7 @@ ldn problem = do solution <- basis (map (map literal) m)
 -- statement that a solution is in the basis if it's least according to the lexicographic
 -- order using the ordinary less-than relation. (NB. We explicitly tell z3 to use the logic
 -- AUFLIA for this problem, as the BV solver that is chosen automatically has a performance
--- issue. See: https://z3.codeplex.com/workitem/88.)
+-- issue. See: <https://z3.codeplex.com/workitem/88>.)
 basis :: [[SInteger]] -> IO [[Integer]]
 basis m = extractModels `fmap` allSatWith z3{useLogic = Just (PredefinedLogic AUFLIA)} cond
  where cond = do as <- mkExistVars  n

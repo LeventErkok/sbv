@@ -96,7 +96,7 @@
 --
 --   * Yices from SRI: <http://yices.csl.sri.com/>
 --
---   * Z3 from Microsoft: <http://z3.codeplex.com/>
+--   * Z3 from Microsoft: <http://github.com/Z3Prover/z3/wiki>
 --
 -- SBV also allows calling these solvers in parallel, either getting results from multiple solvers
 -- or returning the fastest one. (See 'proveWithAll', 'proveWithAny', etc.)
@@ -655,7 +655,7 @@ represent transcendentals.) Some irrational numbers are algebraic (such as @sqrt
 others are not (such as pi and e).
 
 SBV can deal with real numbers just fine, since the theory of reals is decidable. (See
-<http://smtlib.cs.uiowa.edu/theories/Reals.smt2>.) In addition, by leveraging backend
+<http://smtlib.cs.uiowa.edu/theories-Reals.shtml>.) In addition, by leveraging backend
 solver capabilities, SBV can also represent and solve non-linear equations involving real-variables.
 (For instance, the Z3 SMT solver, supports polynomial constraints on reals starting with v4.0.)
 -}

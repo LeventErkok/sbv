@@ -506,7 +506,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                      ]
 
 -----------------------------------------------------------------------------------------------
--- Casts supported by SMTLib. (From: http://smtlib.cs.uiowa.edu/theories/FloatingPoint.smt2)
+-- Casts supported by SMTLib. (From: <http://smtlib.cs.uiowa.edu/theories-FloatingPoint.shtml>)
 --   ; from another floating point sort
 --   ((_ to_fp eb sb) RoundingMode (_ FloatingPoint mb nb) (_ FloatingPoint eb sb))
 --
