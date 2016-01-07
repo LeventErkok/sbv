@@ -23,7 +23,7 @@ check () {
   fi
 }
 
-lines=("${(f)$(grep -Eoin '(http|https)://[^>]+' **/*.hs **/*.md COPYRIGHT INSTALL LICENSE)}")
+lines=("${(f)$(grep -Eoin '(http|https)://[^>)]+' **/*.hs **/*.md COPYRIGHT INSTALL LICENSE)}")
 
 for i in $lines; do
     sep=$(echo $i | awk -F: '{printf("%s %s %s:", $1, $2, $3); for (i = 4; i <= NF; ++i) printf ("%s", $i)}')
