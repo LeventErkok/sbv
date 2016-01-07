@@ -21,7 +21,7 @@
 --
 --    * Douglas Hofstadter, Metamagical Themes, pg. 27.
 --
---    * <http://www.lboro.ac.uk/departments/ma/gallery/selfref/index.html>
+--    * <http://mathcentral.uregina.ca/mp/archives/previous2002/dec02sol.html>
 --
 -----------------------------------------------------------------------------
 

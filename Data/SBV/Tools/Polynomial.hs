@@ -216,8 +216,7 @@ divx n i xs ys'        = (q:qs, rs)
 -- since CRC polynomials are designed and expressed this way.
 --
 -- NB. The literature on CRC's has many variants on how CRC's are computed.
--- We follow the painless guide (<http://www.ross.net/crc/download/crc_v3.txt>)
--- and compute the CRC as follows:
+-- We follow the following simple procedure:
 --
 --     * Extend the message 'm' by adding 'n' 0 bits on the right
 --

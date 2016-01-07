@@ -6,7 +6,7 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- The famous U2 bridge crossing puzzle: <http://www.brainj.net/puzzle.php?id=u2>
+-- The famous U2 bridge crossing puzzle: <http://www.braingle.com/brainteasers/515/u2.html>
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DeriveAnyClass       #-}

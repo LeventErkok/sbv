@@ -38,7 +38,7 @@ if [ $final -eq 0 ]; then
 fi
 
 if [ $badLinkCount -eq 0 ]; then
-    echo "All links are good."
+    echo "All HTTP links in sources and docs are good."
     exit 0
 else
     echo "Found $badLinkCount bad links!"
