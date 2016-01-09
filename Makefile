@@ -3,7 +3,7 @@
 # The sbv library is distributed with the BSD3 license. See the LICENSE file
 # in the distribution for details.
 SHELL     := /usr/bin/env bash
-TSTSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs | grep -v SBVUnitTest/SBVBasicTests.hs | grep -v buildUtils/simplify.hs | grep -v sandbox)
+TSTSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs | grep -v SBVUnitTest/SBVBasicTests.hs | grep -v buildUtils/simplify.hs | grep -v buildUtils/testInterfaces.hs | grep -v sandbox)
 STAMPFILE = SBVUnitTest/SBVUnitTestBuildTime.hs
 DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' -or -name '*.cabal' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE) | grep -v dist-sandbox)
 CABAL     = cabal
@@ -25,7 +25,7 @@ define mkTags
 	@find . -name \*.\*hs | xargs fast-tags
 endef
 
-.PHONY: all install test sdist clean docs gold stamp hlint tags checkLinks
+.PHONY: all install test sdist clean docs gold stamp hlint tags checkLinks testInterfaces
 
 all: install
 
@@ -65,7 +65,7 @@ clean:
 docs:
 	@(set -o pipefail; $(CABAL) haddock --haddock-option=--no-warnings --hyperlink-source 2>&1 | $(SIMPLIFY))
 
-release: clean install sdist checkLinks hlint docs test
+release: clean install sdist testInterfaces checkLinks hlint docs test
 	@echo "*** SBV is ready for release!"
 
 # use this as follows: make gold TGTS="cgUSB5"
@@ -81,6 +81,9 @@ hlint:
 
 checkLinks:
 	@buildUtils/checkLinks
+
+testInterfaces:
+	@buildUtils/testInterfaces
 
 tags:
 	$(call mkTags)
