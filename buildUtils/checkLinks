@@ -3,7 +3,8 @@
 badLinkCount=0
 
 clearLine () {
-  blank="                                                                                                                                                   "
+  len=$(($COLUMNS - 1))
+  blank=`printf ' %.0s' {1..$len}`
   echo -n "\r" $blank
 }
 
