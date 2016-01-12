@@ -46,8 +46,8 @@
 ### Version 5.6, 2015-12-06
   
   * Minor changes to how we print models:
-  	* Align by the type
-  	* Always print the type (previously we were skipping for Bool)
+  * Align by the type
+  * Always print the type (previously we were skipping for Bool)
 
   * Rework how SBV properties are quick-checked; much more usable and robust
 
@@ -56,10 +56,10 @@
     programmable API. (The dynamic version is called svQuickCheck)
 
   * Several changes/additions in support of the sbvPlugin development:
-  	* Data.SBV.Dynamic: Define/export svFloat/svDouble/sReal/sNumerator/sDenominator
-	* Data.SBV.Internals: Export constructors of Result, SMTModel,
-	  and the function showModel
-	* Simplify how Uninterpreted-types are internally represented.
+  * Data.SBV.Dynamic: Define/export svFloat/svDouble/sReal/sNumerator/sDenominator
+  * Data.SBV.Internals: Export constructors of Result, SMTModel,
+    and the function showModel
+  * Simplify how Uninterpreted-types are internally represented.
 
 ### Version 5.5, 2015-11-10
 
@@ -221,9 +221,9 @@
 
       * fpRem            : remainder
       * fpRoundToIntegral: truncating round 
-      * fpMin		 : min
-      * fpMax		 : max
-      * fpIsEqualObject	 : FP equality as object (i.e., NaN equals NaN, +0 does not equal -0, etc.)
+      * fpMin            : min
+      * fpMax            : max
+      * fpIsEqualObject  : FP equality as object (i.e., NaN equals NaN, +0 does not equal -0, etc.)
 
     This brings SBV up-to par with everything supported by the SMT-Lib FP theory.
 
@@ -322,11 +322,11 @@
            * sRealToSFloat
            * sRealToSDouble
        * Between SWord32 and SFloat
-       	   * sWord32ToSFloat
-       	   * sFloatToSWord32
+           * sWord32ToSFloat
+           * sFloatToSWord32
        * Between SWord64 and SDouble. (Relational, due to non-unique NaNs)
-       	   * sWord64ToSDouble
-	   * sDoubleToSWord64
+           * sWord64ToSDouble
+       * sDoubleToSWord64
        * From float to sign/exponent/mantissa fields: (Relational, due to non-unique NaNs)
            * blastSFloat
            * blastSDouble
@@ -503,33 +503,33 @@ uninterpreted.
  * Using multiple-SMT solvers in parallel:
       * Added functions that let the user run multiple solvers, using asynchronous
         threads. All results can be obtained (proveWithAll, proveWithAny, satWithAll),
-	or SBV can return the fastest result (satWithAny, allSatWithAll, allSatWithAny).
-	These functions are good for playing with multiple-solvers, especially on
-	machines with multiple-cores.
+        or SBV can return the fastest result (satWithAny, allSatWithAll, allSatWithAny).
+        These functions are good for playing with multiple-solvers, especially on
+        machines with multiple-cores.
       * Add function: sbvAvailableSolvers; which returns the list of solvers currently
         available, as installed on the machine we are running. (Not the list that SBV
-	supports, but those that are actually available at run-time.) This function
-	is useful with the multi-solve API.
+        supports, but those that are actually available at run-time.) This function
+        is useful with the multi-solve API.
  * Implement sBranch:
       * sBranch is a variant of 'ite' that consults the external
         SMT solver to see if a given branch condition is satisfiable
-	before evaluating it. This can make certain "otherwise recursive
-	and thus not-symbolically-terminating inputs" amenable to symbolic
-	simulation, if termination can be established this way. Needless
-	to say, this problem is always decidable as far as SBV programs
-	are concerned, but it does not mean the decision procedure is cheap!
-	Use with care. 
+        before evaluating it. This can make certain otherwise recursive
+        and thus not-symbolically-terminating inputs amenable to symbolic
+        simulation, if termination can be established this way. Needless
+        to say, this problem is always decidable as far as SBV programs
+        are concerned, but it does not mean the decision procedure is cheap!
+        Use with care. 
       * sBranchTimeOut config parameter can be used to curtail long runs when
         sBranch is used. Of course, if time-out happens, SBV will
-	assume the branch is feasible, in which case symbolic-termination
-	may come back to bite you.)
+        assume the branch is feasible, in which case symbolic-termination
+        may come back to bite you.)
  * New API:
       * Add predicate 'isSNaN' which allows testing 'SFloat'/'SDouble' values
         for nan-ness. This is similar to the Prelude function 'isNaN', except
-	the Prelude version requires a RealFrac instance, which unfortunately is
-	not currently implementable for cases. (Requires trigonometric functions etc.)
-	Thus, we provide 'isSNaN' separately (along with the already existing
-	'isFPPoint') to simplify reasoning with floating-point.
+        the Prelude version requires a RealFrac instance, which unfortunately is
+        not currently implementable for cases. (Requires trigonometric functions etc.)
+        Thus, we provide 'isSNaN' separately (along with the already existing
+        'isFPPoint') to simplify reasoning with floating-point.
  * Examples:
      * Add Data/SBV/Examples/Misc/SBranch.hs, to illustrate the use of sBranch.
  * Bug fixes:
@@ -578,7 +578,7 @@ uninterpreted.
  * Other:
       * Allow users to specify the SMT-Lib logic to use, if necessary. SBV will
         still pick the logic automatically, but users can now override that choice.
-	Comes in handy when playing with custom logics.
+        Comes in handy when playing with custom logics.
  * Bug fixes:
       * Address allsat-laziness issue (#78 in github issue tracker). Essentially,
         simplify how all-sat is called so we can avoid calling the solver for
@@ -627,20 +627,20 @@ uninterpreted.
 
 ### Version 2.9, 2013-01-02
 
-  - Add support for the CVC4 SMT solver from New York University and
+  * Add support for the CVC4 SMT solver from New York University and
     the University of Iowa. <http://cvc4.cs.nyu.edu/>.
     NB. Z3 remains the default solver for SBV. To use CVC4, use the
     *With variants of the interface (i.e., proveWith, satWith, ..)
     by passing cvc4 as the solver argument. (Similarly, use 'yices'
     as the argument for the *With functions for invoking yices.)
-  - Latest release of Yices calls the SMT-Lib based solver executable
+  * Latest release of Yices calls the SMT-Lib based solver executable
     yices-smt. Updated the default value of the executable to have this
     name for ease of use.
-  - Add an extra boolean flag to compileToSMTLib and generateSMTBenchmarks
+  * Add an extra boolean flag to compileToSMTLib and generateSMTBenchmarks
     functions to control if the translation should keep the query as is
     (for SAT cases), or negate it (for PROVE cases). Previously, this value
     was hard-coded to do the PROVE case only.
-  - Add bridge modules, to simplify use of different solvers. You can now say:
+  * Add bridge modules, to simplify use of different solvers. You can now say:
 
           import Data.SBV.Bridge.CVC4
           import Data.SBV.Bridge.Yices
@@ -651,22 +651,22 @@ uninterpreted.
     'defaultSMTSolver' refers to z3 (currently), and 'sbvCurrentSolver' refers
     to the chosen solver as determined by the imported module. (The latter is
     useful for modifying options to the SMT solver in an solver-agnostic way.)
-  - Various improvements to Z3 model parsing routines.
-  - New web page for SBV: http://leventerkok.github.com/sbv/ is now online.
+  * Various improvements to Z3 model parsing routines.
+  * New web page for SBV: http://leventerkok.github.com/sbv/ is now online.
 
 ### Version 2.8, 2012-11-29
 
-  - Rename the SNum class to SIntegral, and make it index over regular
+  * Rename the SNum class to SIntegral, and make it index over regular
     types. This makes it much more useful, simplifying coding of
     polymorphic symbolic functions over integral types, which is
     the common case.
-  - Add the functions:
-  	- sbvShiftLeft
-	- sbvShiftRight
+  * Add the functions:
+  * sbvShiftLeft
+  * sbvShiftRight
     which can accommodate unsigned symbolic shift amounts. Note that
     one cannot use the Haskell shiftL/shiftR functions from the Bits class since
     they are hard-wired to take 'Int' values as the shift amounts only.
-  - Add a new function 'sbvArithShiftRight', which is the same as
+  * Add a new function 'sbvArithShiftRight', which is the same as
     a shift-right, except it uses the MSB of the input as the bit to fill
     in (instead of always filling in with 0 bits). Note that this is
     the same as shiftRight for signed values, but differs from a shiftRight
@@ -675,44 +675,44 @@ uninterpreted.
     types and logical for unsigned ones.) This variant is designed for
     use cases when one uses the underlying unsigned SMT-Lib representation
     to implement custom signed operations, for instance.
-  - Several typo fixes.
+  * Several typo fixes.
 
 ### Version 2.7, 2012-10-21
 
-  - Add missing QuickCheck instance for SReal
-  - When dealing with concrete SReals, make sure to operate
+  * Add missing QuickCheck instance for SReal
+  * When dealing with concrete SReals, make sure to operate
     only on exact algebraic reals on the Haskell side, leaving
     true algebraic reals (i.e., those that are roots of polynomials
     that cannot be expressed as a rational) symbolic. This avoids
     issues with functions that we cannot implement directly on
     the Haskell side, like exact square-roots.
-  - Documentation tweaks, typo fixes etc.
-  - Rename BVDivisible class to SDivisible; since SInteger
+  * Documentation tweaks, typo fixes etc.
+  * Rename BVDivisible class to SDivisible; since SInteger
     is also an instance of this class, and SDivisible is a
     more appropriate name to start with. Also add sQuot and sRem
     methods; along with sDivMod, sDiv, and sMod, with usual
     semantics. 
-  - Improve test suite, adding many constant-folding tests
+  * Improve test suite, adding many constant-folding tests
     and start using cabal based tests (--enable-tests option.)
 
 ### Versions 2.4, 2.5, and 2.6: Around mid October 2012
 
-  - Workaround issues related hackage compilation, in particular to the
+  * Workaround issues related hackage compilation, in particular to the
     problem with the new containers package release, which does provide
     an NFData instance for sequences.
-  - Add explicit Num requirements when necessary, as the Bits class
+  * Add explicit Num requirements when necessary, as the Bits class
     no longer does this.
-  - Remove dependency on the hackage package strict-concurrency, as
+  * Remove dependency on the hackage package strict-concurrency, as
     hackage can no longer compile it due to some dependency mismatch.
-  - Add forgotten Real class instance for the type 'AlgReal'
-  - Stop putting bounds on hackage dependencies, as they cause
+  * Add forgotten Real class instance for the type 'AlgReal'
+  * Stop putting bounds on hackage dependencies, as they cause
     more trouble then they actually help. (See the discussion
     here: <http://www.haskell.org/pipermail/haskell-cafe/2012-July/102352.html>.)
 
 ### Version 2.3, 2012-07-20
 
-  - Maintanence release, no new features.
-  - Tweak cabal dependencies to avoid using packages that are newer
+  * Maintanence release, no new features.
+  * Tweak cabal dependencies to avoid using packages that are newer
     than those that come with ghc-7.4.2. Apparently this is a no-no
     that breaks many things, see the discussion in this thread:
       http://www.haskell.org/pipermail/haskell-cafe/2012-July/102352.html
@@ -721,8 +721,8 @@ uninterpreted.
 
 ### Version 2.2, 2012-07-17
 
-  - Maintanence release, no new features.
-  - Update cabal dependencies, in particular fix the
+  * Maintanence release, no new features.
+  * Update cabal dependencies, in particular fix the
     regression with respect to latest version of the
     containers package.
 
@@ -1093,7 +1093,7 @@ Testing:
 
 ### Version 0.9.14, 2011-03-19
     
-  - Reimplement sharing using Stable names, inspired
+  * Reimplement sharing using Stable names, inspired
     by the Data.Reify techniques. This avoids tricks
     with unsafe memory stashing, and hence is safe.
     Thus, issues with respect to CAFs are now resolved.
