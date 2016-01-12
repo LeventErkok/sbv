@@ -8,6 +8,14 @@
   * Documentation: Fix a bunch of dead http links. Thanks to Andres Sicard-Ramirez
     for reporting.
 
+  * Additions to the Dynamic API:
+
+       * svSetBit                  : set a given bit
+       * svBlastLE, svBlastBE      : Bit-blast to big/little endian
+       * svWordFromLE, svWordFromBE: Unblast from big/little endian
+       * svAddConstant		   : Add a constant to an SVal
+       * svIncrement, svDecrement  : Add/subtract 1 from an SVal
+
 ### Version 5.9, 2016-01-05
 
   * Default definition for 'symbolicMerge', which allows types that are

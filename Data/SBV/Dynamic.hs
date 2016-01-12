@@ -45,6 +45,7 @@ module Data.SBV.Dynamic
   -- *** Arithmetic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs
   , svDivide, svQuot, svRem, svExp
+  , svAddConstant, svIncrement, svDecrement
   -- *** Logical operations
   , svAnd, svOr, svXOr, svNot
   , svShl, svShr, svRol, svRor
@@ -55,9 +56,11 @@ module Data.SBV.Dynamic
   -- *** Indexed lookups
   , svSelect
   -- *** Word-level operations
-  , svToWord1, svFromWord1, svTestBit
+  , svToWord1, svFromWord1, svTestBit, svSetBit
   , svShiftLeft, svShiftRight
   , svRotateLeft, svRotateRight
+  , svWordFromBE, svWordFromLE
+  , svBlastLE, svBlastBE
   -- ** Conditionals: Mergeable values
   , svIte, svLazyIte, svSymbolicMerge
   , svIsSatisfiableInCurrentPath

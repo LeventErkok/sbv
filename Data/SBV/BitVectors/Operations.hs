@@ -9,6 +9,8 @@
 -- Constructors and basic operations on symbolic values
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE BangPatterns #-}
+
 module Data.SBV.BitVectors.Operations
   (
   -- ** Basic constructors
@@ -27,12 +29,14 @@ module Data.SBV.BitVectors.Operations
   , svUninterpreted
   , svIte, svLazyIte, svSymbolicMerge
   , svSelect
-  , svSign, svUnsign
+  , svSign, svUnsign, svSetBit, svWordFromBE, svWordFromLE
   , svExp
   -- ** Derived operations
   , svToWord1, svFromWord1, svTestBit
   , svShiftLeft, svShiftRight
   , svRotateLeft, svRotateRight
+  , svBlastLE, svBlastBE
+  , svAddConstant, svIncrement, svDecrement
   )
   where
 
@@ -156,11 +160,47 @@ svDivide = liftSym2 (mkSymOp Quot) rationalCheck (/) die (/) (/)
 svExp :: SVal -> SVal -> SVal
 svExp b e | hasSign (kindOf e) = error "svExp: exponentiation only works with unsigned exponents"
           | True               = prod $ zipWith (\use n -> svIte use n one)
-                                                (blastLE e)
+                                                (svBlastLE e)
                                                 (iterate (\x -> svTimes x x) b)
-         where blastLE x = map (svTestBit x) [0 .. intSizeOf x - 1]
-               prod      = foldr svTimes one
-               one       = svInteger (kindOf b) 1
+         where prod = foldr svTimes one
+               one  = svInteger (kindOf b) 1
+
+-- | Bit-blast: Little-endian. Assumes the input is a bit-vector.
+svBlastLE :: SVal -> [SVal]
+svBlastLE x = map (svTestBit x) [0 .. intSizeOf x - 1]
+
+-- | Set a given bit at index
+svSetBit :: SVal -> Int -> SVal
+svSetBit x i = x `svXOr` svInteger (kindOf x) (bit i :: Integer)
+
+-- | Bit-blast: Big-endian. Assumes the input is a bit-vector.
+svBlastBE :: SVal -> [SVal]
+svBlastBE = reverse . svBlastLE
+
+-- | Un-bit-blast from big-endian representation to a word of the right size.
+-- The input is assumed to be unsigned.
+svWordFromLE :: [SVal] -> SVal
+svWordFromLE bs = go zero 0 bs
+  where zero = svInteger (KBounded False (length bs)) 0
+        go !acc _  []     = acc
+        go !acc !i (x:xs) = go (svIte x (svSetBit acc i) acc) (i+1) xs
+
+-- | Un-bit-blast from little-endian representation to a word of the right size.
+-- The input is assumed to be unsigned.
+svWordFromBE :: [SVal] -> SVal
+svWordFromBE = svWordFromLE . reverse
+
+-- | Add a constant value:
+svAddConstant :: Integral a => SVal -> a -> SVal
+svAddConstant x i = x `svPlus` svInteger (kindOf x) (fromIntegral i)
+
+-- | Increment:
+svIncrement :: SVal -> SVal
+svIncrement x = svAddConstant x (1::Integer)
+
+-- | Decrement:
+svDecrement :: SVal -> SVal
+svDecrement x = svAddConstant x (-1 :: Integer)
 
 -- | Quotient: Overloaded operation whose meaning depends on the kind at which
 -- it is used: For unbounded integers, it corresponds to the SMT-Lib
