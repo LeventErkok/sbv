@@ -33,13 +33,15 @@ install: $(STAMPFILE)
 
 $(STAMPFILE): $(DEPSRCS) Makefile
 	@-ghc-pkg unregister --force sbv
-	@(make -s -C buildUtils)
+	@(make -s -C buildUtils simplify)
 	$(call mkStamp)
 	$(call mkTags)
 	@$(CABAL) configure --disable-library-profiling --enable-tests
 	@((set -o pipefail; $(CABAL) build $(EXTRAOPTS) 2>&1 | $(SIMPLIFY)) || (rm $(STAMPFILE) && false))
+	@(rm -f buildUtils/testInterfaces.hi buildUtils/testInterfaces.o)
 	@$(CABAL) copy
 	@$(CABAL) register
+	@(make -s -C buildUtils testInterfaces)
 
 test: install
 	@echo "*** Starting inline tests.."
