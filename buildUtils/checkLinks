@@ -42,6 +42,12 @@ if [ $badLinkCount -eq 0 ]; then
     echo "All HTTP links in sources and docs are good."
     exit 0
 else
-    echo "Found $badLinkCount bad links!"
-    exit 1
+    echo -n "Found $badLinkCount bad links! Continue? [y] "
+    read ans
+    if [ z"$ans" = 'zy' ]; then
+      echo "Ignoring the possibly boken links.."
+      exit 0
+    else
+      exit 1
+    fi
 fi
