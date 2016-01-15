@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 5.9, 2016-01-05
+* Latest Hackage released version: 5.10, 2016-01-14
 
-### Version 5.10, Not yet released
+### Version 5.10, 2016-01-14
 
   * Documentation: Fix a bunch of dead http links. Thanks to Andres Sicard-Ramirez
     for reporting.
