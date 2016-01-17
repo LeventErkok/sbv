@@ -3,6 +3,12 @@
 
 * Latest Hackage released version: 5.11, 2016-01-15
 
+### Version 5.12, Not yet released
+
+  * Minor fix to printing models with floats when the
+    base is 2/16, making sure the alignment is done
+    properly accommodating for the crackNum output.
+
 ### Version 5.11, 2016-01-15
 
   * Fix documentation issue; no functional changes

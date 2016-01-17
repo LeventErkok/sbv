@@ -364,7 +364,7 @@ showModel cfg model
                  valWidth              = maximum $ 0 : [l | (_, (l, _)) <- svs]
         right p s = s ++ replicate p ' '
         left  p s = replicate p ' ' ++ s
-        vlength s = case dropWhile (/= ':') (reverse s) of
+        vlength s = case dropWhile (/= ':') (reverse (takeWhile (/= '\n') s)) of
                       (':':':':r) -> length (dropWhile isSpace r)
                       _           -> length s -- conservative
         valPart ""          = ""
