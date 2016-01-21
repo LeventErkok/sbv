@@ -543,7 +543,7 @@ runSolver cfg execPath opts script
                                                                  else return []
                                                          return $ Just (r, vals)
                              cleanUp response
-      executeSolver `C.onException`  terminateProcess pid
+      executeSolver `C.onException`  (terminateProcess pid >> waitForProcess pid)
 
 -- | In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
 -- each S-Expression spanning only a single line. We'll ignore things line parentheses inside quotes
