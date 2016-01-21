@@ -9,6 +9,9 @@
     base is 2/16, making sure the alignment is done
     properly accommodating for the crackNum output.
 
+  * Wait for external process to die on exception, to avoid
+    spawning zombies. Thanks to Daniel Wagner for the patch.
+
 ### Version 5.11, 2016-01-15
 
   * Fix documentation issue; no functional changes
