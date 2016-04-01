@@ -13,30 +13,27 @@
 
 module Data.SBV.Internals (
   -- * Running symbolic programs /manually/
-  Result(..), SBVRunMode(..), Symbolic, runSymbolic, runSymbolic'
-  -- * Other internal structures useful for low-level programming
-  , SBV(..), slet, CW(..), Kind(..), HasKind(..), CWVal(..), AlgReal(..), Quantifier(..), mkConstCW, genVar, genVar_
-  , liftQRem, liftDMod, symbolicMergeWithKind
-  , cache, sbvToSW, newExpr, normCW, SBVExpr(..), Op(..)
-  , SBVType(..), newUninterpreted, forceSWArg
+  Result(..), SBVRunMode(..)
+  -- * Internal structures useful for low-level programming
+  , module Data.SBV.BitVectors.Data
   -- * Operations useful for instantiating SBV type classes
-  , genLiteral, genFromCW, genMkSymVar, checkAndConvert, genParse, showModel, SMTModel(..), smtLibReservedNames
+  , genLiteral, genFromCW, genMkSymVar, checkAndConvert, genParse, showModel, SMTModel(..), liftQRem, liftDMod
   -- * Polynomial operations that operate on bit-vectors
   , ites, mdp, addPoly
   -- * Compilation to C
-  , compileToC', compileToCLib', CgPgmBundle(..), CgPgmKind(..)
+  , compileToC', compileToCLib'
+  -- * Code generation primitives
+  , module Data.SBV.Compilers.CodeGen
   -- * Various math utilities around floats
   , module Data.SBV.Utils.Numeric
   ) where
 
-import Data.SBV.BitVectors.Data       ( Result(..), Symbolic, SBVRunMode(..), runSymbolic, runSymbolic', SBV(..), CW(..), Kind(..), HasKind(..), CWVal(..)
-                                      , AlgReal(..), Quantifier(..), mkConstCW, cache, sbvToSW, newExpr, normCW, SBVExpr(..), Op(..), SBVType(..)
-                                      , newUninterpreted, forceSWArg, SMTModel(..))
-import Data.SBV.BitVectors.Model      (genVar, genVar_, slet, liftQRem, liftDMod, symbolicMergeWithKind, genLiteral, genFromCW, genMkSymVar)
+import Data.SBV.BitVectors.Data
+import Data.SBV.BitVectors.Model      (genLiteral, genFromCW, genMkSymVar)
 import Data.SBV.BitVectors.Splittable (checkAndConvert)
+import Data.SBV.BitVectors.Model      (liftQRem, liftDMod, genLiteral, genFromCW, genMkSymVar)
 import Data.SBV.Compilers.C           (compileToC', compileToCLib')
-import Data.SBV.Compilers.CodeGen     (CgPgmBundle(..), CgPgmKind(..))
+import Data.SBV.Compilers.CodeGen
 import Data.SBV.SMT.SMT               (genParse, showModel)
-import Data.SBV.SMT.SMTLibNames       (smtLibReservedNames)
 import Data.SBV.Tools.Polynomial      (ites, mdp, addPoly)
 import Data.SBV.Utils.Numeric
