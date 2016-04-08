@@ -19,7 +19,7 @@ import Control.Monad.Trans
 import Control.Monad.State.Lazy  (MonadState, StateT(..), modify)
 import Data.Char                 (toLower, isSpace)
 import Data.List                 (nub, isPrefixOf, intercalate, (\\))
-import System.Directory          (createDirectory, doesDirectoryExist, doesFileExist)
+import System.Directory          (createDirectoryIfMissing, doesDirectoryExist, doesFileExist)
 import System.FilePath           ((</>))
 
 import           Text.PrettyPrint.HughesPJ      (Doc, vcat)
@@ -307,7 +307,7 @@ renderCgPgmBundle Nothing        bundle                = print bundle
 renderCgPgmBundle (Just dirName) (CgPgmBundle _ files) = do
         b <- doesDirectoryExist dirName
         unless b $ do putStrLn $ "Creating directory " ++ show dirName ++ ".."
-                      createDirectory dirName
+                      createDirectoryIfMissing True dirName
         dups <- filterM (\fn -> doesFileExist (dirName </> fn)) (map fst files)
         goOn <- case dups of
                   [] -> return True
