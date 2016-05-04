@@ -13,7 +13,7 @@ report any issues you might see with newer releases.
       * Version 1.4
   * MathSAT:
       * http://mathsat.fbk.eu/
-      * Version 5.3.10
+      * Version 5.3.11
   * Yices:
       * http://yices.csl.sri.com/
       * Version 2.4.2
