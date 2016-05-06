@@ -368,7 +368,7 @@ type CnstMap   = Map.Map (Bool, CW) SW
 type KindSet = Set.Set Kind
 
 -- | Tables generated during a symbolic run
-type TableMap  = Map.Map [SW] (Int, Kind, Kind)
+type TableMap  = Map.Map (Kind, Kind, [SW]) Int
 
 -- | Representation for symbolic arrays
 type ArrayInfo = (String, (Kind, Kind), ArrayContext)
@@ -558,12 +558,13 @@ newConst st c = do
 -- | Create a new table; hash-cons as necessary
 getTableIndex :: State -> Kind -> Kind -> [SW] -> IO Int
 getTableIndex st at rt elts = do
+  let key = (at, rt, elts)
   tblMap <- readIORef (rtblMap st)
-  case elts `Map.lookup` tblMap of
-    Just (i, _, _)  -> return i
-    Nothing         -> do let i = Map.size tblMap
-                          modifyIORef (rtblMap st) (Map.insert elts (i, at, rt))
-                          return i
+  case key `Map.lookup` tblMap of
+    Just i -> return i
+    _      -> do let i = Map.size tblMap
+                 modifyIORef (rtblMap st) (Map.insert key i)
+                 return i
 
 -- | Create a new expression; hash-cons as necessary
 newExpr :: State -> Kind -> SBVExpr -> IO SW
@@ -715,11 +716,12 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    SBVPgm rpgm  <- readIORef pgm
    inpsO <- reverse `fmap` readIORef inps
    outsO <- reverse `fmap` readIORef outs
-   let swap  (a, b)        = (b, a)
-       swapc ((_, a), b)   = (b, a)
-       cmp   (a, _) (b, _) = a `compare` b
+   let swap  (a, b)              = (b, a)
+       swapc ((_, a), b)         = (b, a)
+       cmp   (a, _) (b, _)       = a `compare` b
+       arrange (i, (at, rt, es)) = ((i, at, rt), es)
    cnsts <- (sortBy cmp . map swapc . Map.toList) `fmap` readIORef (rconstMap st)
-   tbls  <- (sortBy (\((x, _, _), _) ((y, _, _), _) -> x `compare` y) . map swap . Map.toList) `fmap` readIORef tables
+   tbls  <- (map arrange . sortBy cmp . map swap . Map.toList) `fmap` readIORef tables
    arrs  <- IMap.toAscList `fmap` readIORef arrays
    unint <- Map.toList `fmap` readIORef uis
    axs   <- reverse `fmap` readIORef axioms
