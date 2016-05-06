@@ -368,7 +368,7 @@ type CnstMap   = Map.Map (Bool, CW) SW
 type KindSet = Set.Set Kind
 
 -- | Tables generated during a symbolic run
-type TableMap  = Map.Map [SW] (Int, Kind, Kind)
+type TableMap  = Map.Map ([SW], Kind) (Int, Kind)
 
 -- | Representation for symbolic arrays
 type ArrayInfo = (String, (Kind, Kind), ArrayContext)
@@ -559,10 +559,10 @@ newConst st c = do
 getTableIndex :: State -> Kind -> Kind -> [SW] -> IO Int
 getTableIndex st at rt elts = do
   tblMap <- readIORef (rtblMap st)
-  case elts `Map.lookup` tblMap of
-    Just (i, _, _)  -> return i
+  case (elts, at) `Map.lookup` tblMap of
+    Just (i, _rt)   -> return i
     Nothing         -> do let i = Map.size tblMap
-                          modifyIORef (rtblMap st) (Map.insert elts (i, at, rt))
+                          modifyIORef (rtblMap st) (Map.insert (elts, at) (i, rt))
                           return i
 
 -- | Create a new expression; hash-cons as necessary
@@ -715,11 +715,11 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    SBVPgm rpgm  <- readIORef pgm
    inpsO <- reverse `fmap` readIORef inps
    outsO <- reverse `fmap` readIORef outs
-   let swap  (a, b)        = (b, a)
+   let swapt ((es, at), (i, rt)) = ((i, at, rt), es)
        swapc ((_, a), b)   = (b, a)
        cmp   (a, _) (b, _) = a `compare` b
    cnsts <- (sortBy cmp . map swapc . Map.toList) `fmap` readIORef (rconstMap st)
-   tbls  <- (sortBy (\((x, _, _), _) ((y, _, _), _) -> x `compare` y) . map swap . Map.toList) `fmap` readIORef tables
+   tbls  <- (sortBy (\((x, _, _), _) ((y, _, _), _) -> x `compare` y) . map swapt . Map.toList) `fmap` readIORef tables
    arrs  <- IMap.toAscList `fmap` readIORef arrays
    unint <- Map.toList `fmap` readIORef uis
    axs   <- reverse `fmap` readIORef axioms
