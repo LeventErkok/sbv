@@ -5,12 +5,15 @@
 
 ### Version 5.12, Not yet released
 
-  * Minor fix to printing models with floats when the
-    base is 2/16, making sure the alignment is done
-    properly accommodating for the crackNum output.
+  * Minor fix to printing models with floats when the base is 2/16, making sure the alignment
+    is done properly accommodating for the crackNum output.
 
-  * Wait for external process to die on exception, to avoid
-    spawning zombies. Thanks to Daniel Wagner for the patch.
+  * Wait for external process to die on exception, to avoid spawning zombies. Thanks to
+    Daniel Wagner for the patch.
+
+  * Fix hash-consed arrays: Previously we were caching based only on elements, which is not
+    sufficient as you can have conflicts differing only on the address type, but same contents.
+    Thanks to Brian Huffman for reporting and the corresponding patch.
 
 ### Version 5.11, 2016-01-15
 
