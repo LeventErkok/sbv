@@ -47,6 +47,8 @@ import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 import Data.SBV.Utils.TDiff
 
+import Control.DeepSeq (rnf)
+
 import qualified Data.SBV.Provers.Boolector  as Boolector
 import qualified Data.SBV.Provers.CVC4       as CVC4
 import qualified Data.SBV.Provers.Yices      as Yices
@@ -478,7 +480,9 @@ runProofOn converter config isSat comments res =
                                    where go []                   (_,  sofar) = reverse sofar
                                          go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
                                          go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
-                  in return (is, skolemMap, ki, assertions, converter (roundingMode config) (useLogic config) solverCaps ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o)
+                      smtScript = converter (roundingMode config) (useLogic config) solverCaps ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o
+                      result = (is, skolemMap, ki, assertions, smtScript)
+                  in rnf smtScript `seq` return result
              Result{resOutputs = os} -> case length os of
                            0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
                            1  -> error $ "Impossible happened, non-boolean output in " ++ show os

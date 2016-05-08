@@ -910,8 +910,8 @@ smtLibVersionExtension SMTLib2 = "smt2"
 data SMTLibPgm = SMTLibPgm SMTLibVersion  ( [(String, SW)]  -- alias table
                                           , [String]        -- pre: declarations.
                                           , [String])       -- post: formula
-instance NFData SMTLibVersion where rnf a = seq a ()
-instance NFData SMTLibPgm     where rnf a = seq a ()
+instance NFData SMTLibVersion where rnf a                       = a `seq` ()
+instance NFData SMTLibPgm     where rnf (SMTLibPgm v (t, d, p)) = rnf v `seq` rnf t `seq` rnf d `seq` rnf p `seq` ()
 
 instance Show SMTLibPgm where
   show (SMTLibPgm _ (_, pre, post)) = intercalate "\n" $ pre ++ post
