@@ -1188,7 +1188,7 @@ instance SymWord a => Mergeable (SBV a) where
                      _                -> error $ "SBV.select: unsupported " ++ show (kindOf ind) ++ " valued select/index expression"
             r st  = do sws <- mapM (sbvToSW st) xs
                        swe <- sbvToSW st err
-                       if all (== swe) sws  -- off-chance that all elts are the same
+                       if all (== swe) sws  -- off-chance that all elts are the same. Note that this also correctly covers the case when list is empty.
                           then return swe
                           else do idx <- getTableIndex st kInd kElt sws
                                   swi <- sbvToSW st ind
