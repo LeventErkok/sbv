@@ -4,9 +4,13 @@
 -- longer supported.
 
 #if MIN_VERSION_base(4,8,0)
+module GHC.SrcLoc.Compat (module X) where
 
-module GHC.SrcLoc.Compat (module GHC.SrcLoc) where
-import GHC.SrcLoc
+#if MIN_VERSION_base(4,9,0)
+import SrcLoc as X hiding (srcLocFile)
+#else
+import GHC.SrcLoc as X
+#endif
 
 #else
 

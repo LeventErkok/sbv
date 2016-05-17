@@ -48,6 +48,7 @@ Library
     other-extensions: DeriveAnyClass
   Build-Depends   : base >= 4.7 && < 5
                   , base-compat >= 0.6
+                  , ghc
                   , array, async, containers, deepseq, directory, filepath, old-time
                   , pretty, process, mtl, QuickCheck, random, syb, data-binary-ieee754
                   , crackNum
