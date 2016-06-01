@@ -19,6 +19,7 @@
 {-# LANGUAGE    DefaultSignatures          #-}
 {-# LANGUAGE    NamedFieldPuns             #-}
 {-# LANGUAGE    DeriveDataTypeable         #-}
+{-# LANGUAGE    CPP                        #-}
 {-# OPTIONS_GHC -fno-warn-orphans          #-}
 
 module Data.SBV.BitVectors.Symbolic
@@ -343,7 +344,13 @@ instance Show Result where
                         | True     = ", aliasing " ++ show nm
           shui (nm, t) = "  [uninterpreted] " ++ nm ++ " :: " ++ show t
           shax (nm, ss) = "  -- user defined axiom: " ++ nm ++ "\n  " ++ intercalate "\n  " ss
-          shAssert (nm, stk, p) = "  -- assertion: " ++ nm ++ " " ++ maybe "[No location]" showCallStack stk ++ ": " ++ show p
+          shAssert (nm, stk, p) = "  -- assertion: " ++ nm ++ " " ++ maybe "[No location]"
+#if MIN_VERSION_base(4,9,0)
+                prettyCallStack
+#else
+                showCallStack
+#endif
+                stk ++ ": " ++ show p
 
 -- | The context of a symbolic array as created
 data ArrayContext = ArrayFree (Maybe SW)     -- ^ A new array, with potential initializer for each cell
@@ -920,9 +927,14 @@ instance Show SMTLibPgm where
 instance NFData CW where
   rnf (CW x y) = x `seq` y `seq` ()
 
+#if MIN_VERSION_base(4,9,0)
+#else
 -- Can't really force this, but not a big deal
 instance NFData CallStack where
   rnf _ = ()
+#endif
+  
+
 
 instance NFData Result where
   rnf (Result kindInfo qcInfo cgs inps consts tbls arrs uis axs pgm cstr asserts outs)
