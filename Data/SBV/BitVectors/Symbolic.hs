@@ -64,7 +64,6 @@ import Data.Maybe           (isJust, fromJust, fromMaybe)
 import GHC.Stack.Compat
 
 import qualified Data.Generics as G    (Data(..))
-import qualified Data.Typeable as T    (Typeable)
 import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
 import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
 import qualified Data.Set      as Set  (Set, empty, toList, insert)
@@ -1035,7 +1034,7 @@ data RoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable 
                   | RoundTowardPositive     -- ^ Round towards positive infinity. (Also known as rounding-up or ceiling.)
                   | RoundTowardNegative     -- ^ Round towards negative infinity. (Also known as rounding-down or floor.)
                   | RoundTowardZero         -- ^ Round towards zero. (Also known as truncation.)
-                  deriving (Eq, Ord, Show, Read, T.Typeable, G.Data, Bounded, Enum)
+                  deriving (Eq, Ord, Show, Read, G.Data, Bounded, Enum)
 
 -- | 'RoundingMode' kind
 instance HasKind RoundingMode
