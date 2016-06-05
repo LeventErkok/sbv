@@ -76,8 +76,7 @@ fpRemH x y
         ry = toRational y
         rd = rx / ry
         d :: Integer
-        d | rd > 0 = floor   rd
-          | True   = ceiling rd
+        d = round rd
         -- If the result is 0, make sure we preserve the sign of x
         pSign r
           | r == 0 = if x < 0 || isNegativeZero x then -0.0 else 0.0
