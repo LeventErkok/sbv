@@ -28,8 +28,7 @@ checkedDiv x y = sAssert (Just ?loc)
 -- this to be safe:
 --
 -- >>> test1
--- [Data/SBV/Examples/Misc/NoDiv0.hs:22:32:?loc,
---  Data/SBV/Examples/Misc/NoDiv0.hs:37:14:checkedDiv: Divisor should not be 0: Violated. Model:
+-- [Data/SBV/Examples/Misc/NoDiv0.hs:36:14:checkedDiv: Divisor should not be 0: Violated. Model:
 --   s0 = 0 :: Int32
 --   s1 = 0 :: Int32]
 --
@@ -39,8 +38,7 @@ test1 = safe checkedDiv
 -- | Repeat the test, except this time we explicitly protect against the bad case. We have:
 --
 -- >>> test2
--- [Data/SBV/Examples/Misc/NoDiv0.hs:22:32:?loc,
---  Data/SBV/Examples/Misc/NoDiv0.hs:46:41:checkedDiv: Divisor should not be 0: No violations detected]
+-- [Data/SBV/Examples/Misc/NoDiv0.hs:44:41:checkedDiv: Divisor should not be 0: No violations detected]
 --
 test2 :: IO [SafeResult]
 test2 = safe $ \x y -> ite (y .== 0) 3 (checkedDiv x y)

@@ -56,18 +56,18 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 --
 -- >>> assocPlusRegular
 -- Falsifiable. Counter-example:
---   x = -1.5991211e-2 :: Float
---   y =     131071.99 :: Float
---   z =    -131069.99 :: Float
+--   x =  5.5511693e-15 :: Float
+--   y = -2.2204438e-16 :: Float
+--   z = -3.1763606e-21 :: Float
 --
 -- Indeed, we have:
 --
--- >>> ((-1.5991211e-2) + (131071.99 + (-131069.99))) :: Float
--- 1.9840088
--- >>> ((-1.5991211e-2) + 131071.99) + (-131069.99) :: Float
--- 1.984375
+-- >>> ((5.5511693e-15) + ((-2.2204438e-16) + (-3.1763606e-21))) :: Float
+-- 5.3291218e-15
+-- >>> (((5.5511693e-15) + (-2.2204438e-16)) + (-3.1763606e-21)) :: Float
+-- 5.329122e-15
 --
--- Note the significant difference between two additions!
+-- Note the difference between two additions!
 assocPlusRegular :: IO ThmResult
 assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
                               let lhs = x+(y+z)
@@ -118,13 +118,13 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   a = -7.883512939128398e-261 :: Double
+--   a = 8.988465674311586e307 :: Double
 --
 -- Indeed, we have:
 --
--- >>> let a = -7.883512939128398e-261 :: Double
+-- >>> let a = 8.988465674311586e307 :: Double
 -- >>> a * (1/a)
--- 0.9999999999999999
+-- 1.0000000000000002
 multInverse :: IO ThmResult
 multInverse = prove $ do a <- sDouble "a"
                          constrain $ fpIsPoint a
@@ -145,28 +145,34 @@ multInverse = prove $ do a <- sDouble "a"
 --
 -- >>> roundingAdd
 -- Satisfiable. Model:
---   rm = RoundTowardZero :: RoundingMode
---   x  =        7.984373 :: Float
---   y  =  -2.1684042e-19 :: Float
+--   rm = RoundTowardPositive :: RoundingMode
+--   x  =           1.9531249 :: Float
+--   y  =        6.2499996e-2 :: Float
 --
 -- (Note that depending on your version of Z3, you might get a different result.)
 -- Unfortunately we can't directly validate this result at the Haskell level, as Haskell only supports
 -- 'RoundNearestTiesToEven'. We have:
 --
--- >>> (7.984373 + (-2.1684042e-19)) :: Float
--- 7.984373
+-- >>> (1.9531249 + 6.2499996e-2) :: Float
+-- 2.0156248
 --
--- While we cannot directly see the result when the mode is 'RoundTowardZero' in Haskell, we can use
+-- While we cannot directly see the result when the mode is 'RoundTowardPositive' in Haskell, we can use
 -- SBV to provide us with that result thusly:
 --
--- >>> sat $ \z -> z .== fpAdd sRoundTowardZero 7.984373 (-2.1684042e-19 :: SFloat)
+-- >>> sat $ \z -> z .== fpAdd sRoundTowardPositive 1.9531249 (6.2499996e-2 :: SFloat)
 -- Satisfiable. Model:
---   s0 = 7.9843726 :: Float
+--   s0 = 2.015625 :: Float
 --
--- We can see why these two resuls are indeed different. To see why, one would have to convert the
--- individual numbers to Float's, which would induce rounding-errors, add them up, and round-back;
--- a tedious operation, but one that might prove illimunating for the interested reader. We'll merely
--- note that floating point representation and semantics is indeed a thorny
+-- We can see why these two resuls are indeed different. But we can see that the 'RoundTowardsPositive'
+-- (which rounds towards positive-infinity) produces a larger result. Indeed, if we treat these numbers
+-- as 'Double' values, we get:
+--
+-- >>>  (1.9531249 + 6.2499996e-2) :: Double
+-- 2.015624896
+--
+-- we see that the "more precise" result is larger than what the 'Float' value is, justifying the
+-- larger value with 'RoundTowardPositive'. A more detailed study is beyond our current scope, so we'll
+--  merely -- note that floating point representation and semantics is indeed a thorny
 -- subject, and point to <https://ece.uwaterloo.ca/~dwharder/NumericalAnalysis/02Numerics/Double/paper.pdf> as
 -- an excellent guide.
 roundingAdd :: IO SatResult
