@@ -9,6 +9,7 @@
 -- Compilation of symbolic programs to C
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP           #-}
 {-# LANGUAGE PatternGuards #-}
 
 module Data.SBV.Compilers.C(compileToC, compileToCLib, compileToC', compileToCLib') where
@@ -28,6 +29,9 @@ import Data.SBV.BitVectors.PrettyNum (shex, showCFloat, showCDouble)
 import Data.SBV.Compilers.CodeGen
 
 import GHC.Stack.Compat
+#if !MIN_VERSION_base(4,9,0)
+import GHC.SrcLoc.Compat
+#endif
 
 ---------------------------------------------------------------------------
 -- * API
