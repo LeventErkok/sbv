@@ -246,7 +246,7 @@ instance IEEEFloatConvertable AlgReal where
   toSDouble   = genericFPConverter (Just isExactRational) Nothing (fromRational . toRational)
 
 -- | Concretely evaluate one arg function, if rounding mode is RoundNearestTiesToEven and we have enough concrete data
-concEval1 :: (SymWord a, Floating a) => Maybe (a -> a) -> Maybe SRoundingMode -> SBV a -> Maybe (SBV a)
+concEval1 :: SymWord a => Maybe (a -> a) -> Maybe SRoundingMode -> SBV a -> Maybe (SBV a)
 concEval1 mbOp mbRm a = do op <- mbOp
                            v  <- unliteral a
                            case join (unliteral `fmap` mbRm) of
@@ -255,7 +255,7 @@ concEval1 mbOp mbRm a = do op <- mbOp
                              _                           -> Nothing
 
 -- | Concretely evaluate two arg function, if rounding mode is RoundNearestTiesToEven and we have enough concrete data
-concEval2 :: (SymWord a, Floating a) => Maybe (a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> Maybe (SBV a)
+concEval2 :: SymWord a => Maybe (a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> Maybe (SBV a)
 concEval2 mbOp mbRm a b  = do op <- mbOp
                               v1 <- unliteral a
                               v2 <- unliteral b
@@ -265,7 +265,7 @@ concEval2 mbOp mbRm a b  = do op <- mbOp
                                 _                           -> Nothing
 
 -- | Concretely evaluate a bool producing two arg function, if rounding mode is RoundNearestTiesToEven and we have enough concrete data
-concEval2B :: (SymWord a, Floating a) => Maybe (a -> a -> Bool) -> Maybe SRoundingMode -> SBV a -> SBV a -> Maybe SBool
+concEval2B :: SymWord a => Maybe (a -> a -> Bool) -> Maybe SRoundingMode -> SBV a -> SBV a -> Maybe SBool
 concEval2B mbOp mbRm a b  = do op <- mbOp
                                v1 <- unliteral a
                                v2 <- unliteral b
@@ -275,7 +275,7 @@ concEval2B mbOp mbRm a b  = do op <- mbOp
                                  _                           -> Nothing
 
 -- | Concretely evaluate two arg function, if rounding mode is RoundNearestTiesToEven and we have enough concrete data
-concEval3 :: (SymWord a, Floating a) => Maybe (a -> a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBV a -> Maybe (SBV a)
+concEval3 :: SymWord a => Maybe (a -> a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBV a -> Maybe (SBV a)
 concEval3 mbOp mbRm a b c = do op <- mbOp
                                v1 <- unliteral a
                                v2 <- unliteral b
@@ -292,7 +292,7 @@ addRM st (Just rm) as = do swm <- sbvToSW st rm
                            return (swm : as)
 
 -- | Lift a 1 arg FP-op
-lift1 :: (SymWord a, Floating a) => FPOp -> Maybe (a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a
+lift1 :: SymWord a => FPOp -> Maybe (a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a
 lift1 w mbOp mbRm a
   | Just cv <- concEval1 mbOp mbRm a
   = cv
@@ -304,7 +304,7 @@ lift1 w mbOp mbRm a
                   newExpr st k (SBVApp (IEEEFP w) args)
 
 -- | Lift an FP predicate
-lift1B :: (SymWord a, Floating a) => FPOp -> (a -> Bool) -> SBV a -> SBool
+lift1B :: SymWord a => FPOp -> (a -> Bool) -> SBV a -> SBool
 lift1B w f a
    | Just v <- unliteral a = literal $ f v
    | True                  = SBV $ SVal KBool $ Right $ cache r
@@ -313,7 +313,7 @@ lift1B w f a
 
 
 -- | Lift a 2 arg FP-op
-lift2 :: (SymWord a, Floating a) => FPOp -> Maybe (a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBV a
+lift2 :: SymWord a => FPOp -> Maybe (a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBV a
 lift2 w mbOp mbRm a b
   | Just cv <- concEval2 mbOp mbRm a b
   = cv
@@ -345,7 +345,7 @@ liftMM w mbOp mbRm a b
                   newExpr st k (SBVApp (IEEEFP w) args)
 
 -- | Lift a 2 arg FP-op, producing bool
-lift2B :: (SymWord a, Floating a) => FPOp -> Maybe (a -> a -> Bool) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBool
+lift2B :: SymWord a => FPOp -> Maybe (a -> a -> Bool) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBool
 lift2B w mbOp mbRm a b
   | Just cv <- concEval2B mbOp mbRm a b
   = cv
@@ -357,7 +357,7 @@ lift2B w mbOp mbRm a b
                   newExpr st KBool (SBVApp (IEEEFP w) args)
 
 -- | Lift a 3 arg FP-op
-lift3 :: (SymWord a, Floating a) => FPOp -> Maybe (a -> a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBV a -> SBV a
+lift3 :: SymWord a => FPOp -> Maybe (a -> a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBV a -> SBV a
 lift3 w mbOp mbRm a b c
   | Just cv <- concEval3 mbOp mbRm a b c
   = cv

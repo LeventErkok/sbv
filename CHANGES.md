@@ -15,6 +15,9 @@
     sufficient as you can have conflicts differing only on the address type, but same contents.
     Thanks to Brian Huffman for reporting and the corresponding patch.
 
+  * Fix GHC8.0 compliation issues, and warning clean-up. Thanks to Adam Foltzer for the bulk
+    of the work and Tom Sydney Kerckhove for the initial patch for 8.0 compatibility.
+
 ### Version 5.11, 2016-01-15
 
   * Fix documentation issue; no functional changes

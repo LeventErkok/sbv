@@ -370,6 +370,7 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                              ++ concatMap (checkPred ds sds) predicates
         extract :: SymWord a => SBV a -> a
         extract = fromJust . unliteral
+
         comb  (x, y, a, b) = (show x, show y, same a b)
         combB (x, y, a, b) = (show x, show y, checkNaN f x y a b) where f v w = not (v || w)  -- All comparisons except /=: Both should be False if we have a NaN argument
         combN (x, y, a, b) = (show x, show y, checkNaN f x y a b) where f v w =      v && w   -- /=: Both should be True
@@ -379,13 +380,17 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
         checkNaN f x y a b
           | isNaN x || isNaN y = f a b
           | True               = a == b
+
         cvtTest  (nm, x, a, b)  = "arithCF-" ++ nm ++ "." ++ x ~: same (extract a) (extract b) `showsAs` "True"
         cvtTestI (nm, x, a, b)  = "arithCF-" ++ nm ++ "." ++ x ~: (a == b) `showsAs` "True"
+
         mkTest1 (nm, (x, s))    = "arithCF-" ++ nm ++ "." ++ x ~: s `showsAs` "True"
         mkTest2 (nm, (x, y, s)) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
-        checkPred :: (Show a, RealFloat a, Floating a, SymWord a) => [a] -> [SBV a] -> (String, SBV a -> SBool, a -> Bool) -> [(String, (String, Bool))]
+
+        checkPred :: Show a => [a] -> [SBV a] -> (String, SBV a -> SBool, a -> Bool) -> [(String, (String, Bool))]
         checkPred xs sxs (n, ps, p) = zipWith (chk n) (map (\x -> (x, p x)) xs) (map ps sxs)
           where chk nm (x, v) sv = (nm, (show x, Just v == unliteral sv))
+
         predicates :: IEEEFloating a => [(String, SBV a -> SBool, a -> Bool)]
         predicates = [ ("fpIsNormal",       fpIsNormal,        fpIsNormalizedH)
                      , ("fpIsSubnormal",    fpIsSubnormal,     isDenormalized)
@@ -400,8 +405,10 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                      ]
 
 -- Concrete test data
-xsSigned, xsUnsigned :: (Num a, Enum a, Bounded a) => [a]
+xsUnsigned :: (Num a, Bounded a) => [a]
 xsUnsigned = take 5 (iterate (1+) minBound) ++ take 5 (iterate (\x -> x-1) maxBound)
+
+xsSigned :: (Num a, Enum a, Bounded a) => [a]
 xsSigned   = xsUnsigned ++ [-5 .. 5]
 
 w8s :: [Word8]

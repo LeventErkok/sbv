@@ -39,7 +39,7 @@ module Data.SBV.BitVectors.Model (
   )
   where
 
-import Control.Monad        (when, unless, liftM)
+import Control.Monad        (when, unless)
 import Control.Monad.Reader (ask)
 import Control.Monad.Trans  (liftIO)
 
@@ -85,11 +85,11 @@ mkSymOp = mkSymOpSC (const (const Nothing))
 -- Symbolic-Word class instances
 
 -- | Generate a finite symbolic bitvector, named
-genVar :: (Random a, SymWord a) => Maybe Quantifier -> Kind -> String -> Symbolic (SBV a)
+genVar :: Maybe Quantifier -> Kind -> String -> Symbolic (SBV a)
 genVar q k = mkSymSBV q k . Just
 
 -- | Generate a finite symbolic bitvector, unnamed
-genVar_ :: (Random a, SymWord a) => Maybe Quantifier -> Kind -> Symbolic (SBV a)
+genVar_ :: Maybe Quantifier -> Kind -> Symbolic (SBV a)
 genVar_ q k = mkSymSBV q k Nothing
 
 -- | Generate a finite constant bitvector
@@ -102,7 +102,7 @@ genFromCW (CW _ (CWInteger x)) = fromInteger x
 genFromCW c                    = error $ "genFromCW: Unsupported non-integral value: " ++ show c
 
 -- | Generically make a symbolic var
-genMkSymVar :: (Random a, SymWord a) => Kind -> Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
+genMkSymVar :: Kind -> Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
 genMkSymVar k mbq Nothing  = genVar_ mbq k
 genMkSymVar k mbq (Just s) = genVar  mbq k s
 
@@ -310,7 +310,7 @@ sIntegerToSReal x
 
 -- | label: Label the result of an expression. This is essentially a no-op, but useful as it generates a comment in the generated C/SMT-Lib code.
 -- Note that if the argument is a constant, then the label is dropped completely, per the usual constant folding strategy.
-label :: (HasKind a, SymWord a) => String -> SBV a -> SBV a
+label :: SymWord a => String -> SBV a -> SBV a
 label m x
    | Just _ <- unliteral x = x
    | True                  = SBV $ SVal k $ Right $ cache r
@@ -589,7 +589,7 @@ instance (SymWord a, Fractional a, Floating a) => Floating (SBV a) where
     logBase = lift2FNS "logBase" logBase
 
 -- | Lift a 1 arg FP-op, using sRNE default
-lift1F :: (SymWord a, Floating a) => FPOp -> (a -> a) -> SBV a -> SBV a
+lift1F :: SymWord a => FPOp -> (a -> a) -> SBV a -> SBV a
 lift1F w op a
   | Just v <- unliteral a
   = literal $ op v
@@ -646,11 +646,11 @@ instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
 
 -- | Replacement for 'testBit'. Since 'testBit' requires a 'Bool' to be returned,
 -- we cannot implement it for symbolic words. Index 0 is the least-significant bit.
-sTestBit :: (Num a, Bits a, SymWord a) => SBV a -> Int -> SBool
+sTestBit :: SBV a -> Int -> SBool
 sTestBit (SBV x) i = SBV (svTestBit x i)
 
 -- | Variant of 'sTestBit', where we want to extract multiple bit positions.
-sExtractBits :: (Num a, Bits a, SymWord a) => SBV a -> [Int] -> [SBool]
+sExtractBits :: SBV a -> [Int] -> [SBool]
 sExtractBits x = map (sTestBit x)
 
 -- | Replacement for 'popCount'. Since 'popCount' returns an 'Int', we cannot implement
@@ -817,7 +817,7 @@ blastBE :: (Num a, Bits a, SymWord a) => SBV a -> [SBool]
 blastBE = reverse . blastLE
 
 -- | Least significant bit of a word, always stored at index 0.
-lsb :: (Num a, Bits a, SymWord a) => SBV a -> SBool
+lsb :: SBV a -> SBool
 lsb x = sTestBit x 0
 
 -- | Most significant bit of a word, always stored at the last position.
@@ -1008,7 +1008,7 @@ instance SDivisible SInt8 where
 
 -- | Lift 'QRem' to symbolic words. Division by 0 is defined s.t. @x/0 = 0@; which
 -- holds even when @x@ is @0@ itself.
-liftQRem :: (SymWord a, Num a, SDivisible a) => SBV a -> SBV a -> (SBV a, SBV a)
+liftQRem :: SymWord a => SBV a -> SBV a -> (SBV a, SBV a)
 liftQRem x y
   | isConcreteZero x
   = (x, x)
@@ -1032,7 +1032,7 @@ liftQRem x y
 -- | Lift 'DMod' to symbolic words. Division by 0 is defined s.t. @x/0 = 0@; which
 -- holds even when @x@ is @0@ itself. Essentially, this is conversion from quotRem
 -- (truncate to 0) to divMod (truncate towards negative infinity)
-liftDMod :: (SymWord a, Num a, SDivisible a, SDivisible (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
+liftDMod :: (SymWord a, Num a, SDivisible (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
 liftDMod x y
   | isConcreteZero x
   = (x, x)
@@ -1073,7 +1073,7 @@ instance (SymWord b, Arbitrary b) => Arbitrary (SFunArray a b) where
   arbitrary = arbitrary >>= \r -> return $ SFunArray (const r)
 
 instance (SymWord a, Arbitrary a) => Arbitrary (SBV a) where
-  arbitrary = liftM literal arbitrary
+  arbitrary = literal `fmap` arbitrary
 
 -- |  Symbolic conditionals are modeled by the 'Mergeable' class, describing
 -- how to merge the results of an if-then-else call with a symbolic test. SBV
@@ -1145,7 +1145,7 @@ iteLazy t a b
 
 -- | Symbolic assert. Check that the given boolean condition is always true in the given path. The
 -- optional first argument can be used to provide call-stack info via GHC's location facilities.
-sAssert :: HasKind a => Maybe CallStack -> String -> SBool -> SBV a -> SBV a
+sAssert :: Maybe CallStack -> String -> SBool -> SBV a -> SBV a
 sAssert cs msg cond x = SBV $ SVal k $ Right $ cache r
   where k     = kindOf x
         r st  = do xsw <- sbvToSW st x

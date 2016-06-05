@@ -437,7 +437,7 @@ genQRems = map mkTest $  [("divMod",  show x, show y, mkThm2 sDivMod  x y (x `di
         noOverflow x y = not (x == minBound && y == -1)
 
 -- Concrete test data
-xsSigned, xsUnsigned :: (Num a, Enum a, Bounded a) => [a]
+xsSigned, xsUnsigned :: (Num a, Bounded a) => [a]
 xsUnsigned = [0, 1, maxBound - 1, maxBound]
 xsSigned   = xsUnsigned ++ [minBound, minBound + 1, -1]
 

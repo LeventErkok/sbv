@@ -16,7 +16,6 @@
 {-# LANGUAGE    ScopedTypeVariables        #-}
 {-# LANGUAGE    FlexibleInstances          #-}
 {-# LANGUAGE    PatternGuards              #-}
-{-# LANGUAGE    DefaultSignatures          #-}
 {-# LANGUAGE    NamedFieldPuns             #-}
 {-# LANGUAGE    DeriveDataTypeable         #-}
 {-# LANGUAGE    CPP                        #-}
@@ -941,18 +940,15 @@ instance NFData Result where
                        `seq` rnf consts `seq` rnf tbls    `seq` rnf arrs
                        `seq` rnf uis    `seq` rnf axs     `seq` rnf pgm
                        `seq` rnf cstr   `seq` rnf asserts `seq` rnf outs
-instance NFData Kind          where rnf a = seq a ()
-instance NFData ArrayContext  where rnf a = seq a ()
-instance NFData SW            where rnf a = seq a ()
-instance NFData SBVExpr       where rnf a = seq a ()
-instance NFData Quantifier    where rnf a = seq a ()
-instance NFData SBVType       where rnf a = seq a ()
-instance NFData a => NFData (Cached a) where
-  rnf (Cached f) = f `seq` ()
-instance NFData SVal where
-  rnf (SVal x y) = rnf x `seq` rnf y `seq` ()
-instance NFData SBVPgm        where rnf a = seq a ()
-
+instance NFData Kind         where rnf a          = seq a ()
+instance NFData ArrayContext where rnf a          = seq a ()
+instance NFData SW           where rnf a          = seq a ()
+instance NFData SBVExpr      where rnf a          = seq a ()
+instance NFData Quantifier   where rnf a          = seq a ()
+instance NFData SBVType      where rnf a          = seq a ()
+instance NFData SBVPgm       where rnf a          = seq a ()
+instance NFData (Cached a)   where rnf (Cached f) = f `seq` ()
+instance NFData SVal         where rnf (SVal x y) = rnf x `seq` rnf y `seq` ()
 
 instance NFData SMTResult where
   rnf (Unsatisfiable _)   = ()

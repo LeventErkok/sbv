@@ -198,7 +198,7 @@ instance Eq (SBV a) where
   SBV a == SBV b = a == b
   SBV a /= SBV b = a /= b
 
-instance HasKind a => HasKind (SBV a) where
+instance HasKind (SBV a) where
   kindOf (SBV (SVal k _)) = k
 
 -- | Convert a symbolic value to a symbolic-word
@@ -210,7 +210,7 @@ sbvToSW st (SBV s) = svToSW st s
 -------------------------------------------------------------------------
 
 -- | Create a symbolic variable.
-mkSymSBV :: forall a. SymWord a => Maybe Quantifier -> Kind -> Maybe String -> Symbolic (SBV a)
+mkSymSBV :: forall a. Maybe Quantifier -> Kind -> Maybe String -> Symbolic (SBV a)
 mkSymSBV mbQ k mbNm = fmap SBV (svMkSymVar mbQ k mbNm)
 
 -- | Convert a symbolic value to an SW, inside the Symbolic monad
@@ -441,7 +441,7 @@ mkSFunArray = SFunArray
 addConstraint :: Maybe Double -> SBool -> SBool -> Symbolic ()
 addConstraint mt (SBV c) (SBV c') = addSValConstraint mt c c'
 
-instance NFData a => NFData (SBV a) where
+instance NFData (SBV a) where
   rnf (SBV x) = rnf x `seq` ()
 
 -- | Symbolically executable program fragments. This class is mainly used for 'safe' calls, and is sufficently populated internally to cover most use
@@ -455,7 +455,7 @@ instance NFData a => SExecutable (Symbolic a) where
    sName []   = sName_
    sName xs   = error $ "SBV.SExecutable.sName: Extra unmapped name(s): " ++ intercalate ", " xs
 
-instance NFData a => SExecutable (SBV a) where
+instance SExecutable (SBV a) where
    sName_   v = sName_ (output v)
    sName xs v = sName xs (output v)
 
@@ -465,7 +465,7 @@ instance SExecutable () where
    sName xs () = sName xs (output ())
 
 -- List output
-instance (NFData a, SymWord a) => SExecutable [SBV a] where
+instance SExecutable [SBV a] where
    sName_   vs = sName_   (output vs)
    sName xs vs = sName xs (output vs)
 

@@ -27,4 +27,4 @@ testSuite = mkTestSuite $ \_ -> test [
          t3 = free "a" >>= \a -> free "x" >>= \x -> free "b" >>= \b -> free "y" >>= \y -> newArray "m" Nothing >>= return . wcommutesGood (a, x) (b, y)
          t4 = free "a" >>= \a -> free "x" >>= \x -> free "b" >>= \b -> free "y" >>= \y -> newArray "m" Nothing >>= return . wcommutesBad  (a, x) (b, y)
 
-{-# ANN module ("HLint: ignore Use liftM" :: String) #-}
+{-# ANN module ("HLint: ignore Use fmap" :: String) #-}

@@ -38,7 +38,6 @@ import System.Time      (getClockTime)
 import System.IO.Unsafe (unsafeInterleaveIO)
 
 import GHC.Stack.Compat
-import GHC.SrcLoc.Compat
 
 import qualified Data.Set as Set (Set, toList)
 

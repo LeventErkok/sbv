@@ -231,7 +231,7 @@ cgInputArr sz nm
                 return rs
 
 -- | Creates an atomic output in the generated code.
-cgOutput :: SymWord a => String -> SBV a -> SBVCodeGen ()
+cgOutput :: String -> SBV a -> SBVCodeGen ()
 cgOutput nm v = do _ <- liftSymbolic (output v)
                    sw <- cgSBVToSW v
                    modify (\s -> s { cgOutputs = (nm, CgAtomic sw) : cgOutputs s })
@@ -246,7 +246,7 @@ cgOutputArr nm vs
   where sz = length vs
 
 -- | Creates a returned (unnamed) value in the generated code.
-cgReturn :: SymWord a => SBV a -> SBVCodeGen ()
+cgReturn :: SBV a -> SBVCodeGen ()
 cgReturn v = do _ <- liftSymbolic (output v)
                 sw <- cgSBVToSW v
                 modify (\s -> s { cgReturns = CgAtomic sw : cgReturns s })
