@@ -1,9 +1,12 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 5.11, 2016-01-15
+* Latest Hackage released version: 5.12, 2016-06-06
 
-### Version 5.12, Not yet released
+### Version 5.12, 2016-06-06
+
+  * Fix GHC8.0 compliation issues, and warning clean-up. Thanks to Adam Foltzer for the bulk
+    of the work and Tom Sydney Kerckhove for the initial patch for 8.0 compatibility.
 
   * Minor fix to printing models with floats when the base is 2/16, making sure the alignment
     is done properly accommodating for the crackNum output.
@@ -14,9 +17,6 @@
   * Fix hash-consed arrays: Previously we were caching based only on elements, which is not
     sufficient as you can have conflicts differing only on the address type, but same contents.
     Thanks to Brian Huffman for reporting and the corresponding patch.
-
-  * Fix GHC8.0 compliation issues, and warning clean-up. Thanks to Adam Foltzer for the bulk
-    of the work and Tom Sydney Kerckhove for the initial patch for 8.0 compatibility.
 
 ### Version 5.11, 2016-01-15
 
