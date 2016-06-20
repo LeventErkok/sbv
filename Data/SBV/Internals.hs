@@ -31,7 +31,7 @@ module Data.SBV.Internals (
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model      (genLiteral, genFromCW, genMkSymVar)
 import Data.SBV.BitVectors.Splittable (checkAndConvert)
-import Data.SBV.BitVectors.Model      (liftQRem, liftDMod, genLiteral, genFromCW, genMkSymVar)
+import Data.SBV.BitVectors.Model      (liftQRem, liftDMod)
 import Data.SBV.Compilers.C           (compileToC', compileToCLib')
 import Data.SBV.Compilers.CodeGen
 import Data.SBV.SMT.SMT               (genParse, showModel)
