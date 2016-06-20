@@ -19,8 +19,9 @@ import Control.Monad.Trans
 import Control.Monad.State.Lazy  (MonadState, StateT(..), modify)
 import Data.Char                 (toLower, isSpace)
 import Data.List                 (nub, isPrefixOf, intercalate, (\\))
-import System.Directory          (createDirectory, doesDirectoryExist, doesFileExist)
+import System.Directory          (createDirectoryIfMissing, doesDirectoryExist, doesFileExist)
 import System.FilePath           ((</>))
+import System.IO                 (hFlush, stdout)
 
 import           Text.PrettyPrint.HughesPJ      (Doc, vcat)
 import qualified Text.PrettyPrint.HughesPJ as P (render)
@@ -307,13 +308,14 @@ renderCgPgmBundle Nothing        bundle                = print bundle
 renderCgPgmBundle (Just dirName) (CgPgmBundle _ files) = do
         b <- doesDirectoryExist dirName
         unless b $ do putStrLn $ "Creating directory " ++ show dirName ++ ".."
-                      createDirectory dirName
+                      createDirectoryIfMissing True dirName
         dups <- filterM (\fn -> doesFileExist (dirName </> fn)) (map fst files)
         goOn <- case dups of
                   [] -> return True
                   _  -> do putStrLn $ "Code generation would override the following " ++ (if length dups == 1 then "file:" else "files:")
                            mapM_ (\fn -> putStrLn ('\t' : fn)) dups
                            putStr "Continue? [yn] "
+                           hFlush stdout
                            resp <- getLine
                            return $ map toLower resp `isPrefixOf` "yes"
         if goOn then do mapM_ renderFile files
