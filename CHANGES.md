@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 5.12, 2016-06-06
 
+### Version 5.13, Not yet released
+
+  * Fix broken links, thanks to Stephan Renatus for the patch.
+
 ### Version 5.12, 2016-06-06
 
   * Fix GHC8.0 compliation issues, and warning clean-up. Thanks to Adam Foltzer for the bulk
