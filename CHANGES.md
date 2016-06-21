@@ -7,6 +7,9 @@
 
   * Fix broken links, thanks to Stephan Renatus for the patch.
 
+  * Code generation: Create directory path if it does not exist. Thanks to Robert Dockins
+    for the patch.
+
 ### Version 5.12, 2016-06-06
 
   * Fix GHC8.0 compliation issues, and warning clean-up. Thanks to Adam Foltzer for the bulk
