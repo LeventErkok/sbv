@@ -546,7 +546,7 @@ runSolver cfg execPath opts script
       executeSolver `C.onException`  (terminateProcess pid >> waitForProcess pid)
 
 -- | In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
--- each S-Expression spanning only a single line. We'll ignore things line parentheses inside quotes
+-- each S-Expression spanning only a single line. We'll ignore things like parentheses inside quotes
 -- etc., as it should not be an issue
 mergeSExpr :: [String] -> [String]
 mergeSExpr []       = []
