@@ -139,7 +139,7 @@ data Op = Plus
         | LkUp (Int, Kind, Kind, Int) !SW !SW   -- (table-index, arg-type, res-type, length of the table) index out-of-bounds-value
         | ArrEq   Int Int                       -- Array equality
         | ArrRead Int
-        | IntCast Kind Kind
+        | KindCast Kind Kind
         | Uninterpreted String
         | Label String                          -- Essentially no-op; useful for code generation to emit comments.
         | IEEEFP FPOp                           -- Floating-point ops, categorized separately
@@ -213,7 +213,7 @@ instance Show Op where
         where tinfo = "table" ++ show ti ++ "(" ++ show at ++ " -> " ++ show rt ++ ", " ++ show l ++ ")"
   show (ArrEq i j)       = "array_" ++ show i ++ " == array_" ++ show j
   show (ArrRead i)       = "select array_" ++ show i
-  show (IntCast fr to)   = "cast_" ++ show fr ++ "_" ++ show to
+  show (KindCast fr to)  = "cast_" ++ show fr ++ "_" ++ show to
   show (Uninterpreted i) = "[uninterpreted] " ++ i
   show (Label s)         = "[label] " ++ s
   show (IEEEFP w)        = show w

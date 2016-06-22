@@ -633,7 +633,7 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
         p (ArrEq _ _)       _  = tbd "User specified arrays (ArrEq)"
         p (Label s)        [a] = a <+> text "/*" <+> text s <+> text "*/"
         p (IEEEFP w)        as = handleIEEE w consts (zip opArgs as) var
-        p (IntCast _ to)   [a] = parens (text (show to)) <+> a
+        p (KindCast _ to)   [a] = parens (text (show to)) <+> a
         p (Uninterpreted s) [] = text "/* Uninterpreted constant */" <+> text s
         p (Uninterpreted s) as = text "/* Uninterpreted function */" <+> text s <> parens (fsep (punctuate comma as))
         p (Extract i j) [a]    = extract i j (head opArgs) a
