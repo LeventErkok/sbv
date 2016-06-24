@@ -10,6 +10,9 @@
   * Code generation: Create directory path if it does not exist. Thanks to Robert Dockins
     for the patch.
 
+  * Generalize the type of sFromIntegral, dropping the Bits requirement. In turn, this
+    allowed us to remove sIntegerToSReal, since sFromIntegral can be used instead.
+
   * Add support for sRealToSInteger. (Essentially the floor function for SReal.)
 
 ### Version 5.12, 2016-06-06
