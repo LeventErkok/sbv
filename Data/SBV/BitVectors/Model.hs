@@ -30,7 +30,7 @@ module Data.SBV.BitVectors.Model (
   , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
-  , sIntegerToSReal, sRealToSInteger, label
+  , sRealToSInteger, label
   , sAssert
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCW, genMkSymVar
@@ -299,14 +299,6 @@ sDouble = symbolic
 -- | Declare a list of 'SDouble's
 sDoubles :: [String] -> Symbolic [SDouble]
 sDoubles = symbolics
-
--- | Promote an SInteger to an SReal
-sIntegerToSReal :: SInteger -> SReal
-sIntegerToSReal x
-  | Just i <- unliteral x = literal $ fromInteger i
-  | True                  = SBV (SVal KReal (Right (cache y)))
-  where y st = do xsw <- sbvToSW st x
-                  newExpr st KReal (SBVApp (KindCast KUnbounded KReal) [xsw])
 
 -- | Convert an SReal to an SInteger. That is, it computes the
 -- largest integer @n@ that satisfies @sIntegerToSReal n <= r@

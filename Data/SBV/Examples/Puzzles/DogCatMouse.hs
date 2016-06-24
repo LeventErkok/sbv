@@ -34,4 +34,4 @@ puzzle = allSat $ do
                  , dog + cat + mouse .== 100                             -- buy precisely 100 animals
                  , 15 `per` dog + 1 `per` cat + 0.25 `per` mouse .== 100 -- spend exactly 100 dollars
                  ]
-  where p `per` q = p * sIntegerToSReal q
+  where p `per` q = p * (sFromIntegral q :: SReal)

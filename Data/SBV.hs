@@ -131,7 +131,7 @@ module Data.SBV (
   , sFloatAsSWord32, sWord32AsSFloat, sDoubleAsSWord64, sWord64AsSDouble, blastSFloat, blastSDouble
   -- *** Signed algebraic reals
   -- $algReals
-  , SReal, AlgReal, sIntegerToSReal, sRealToSInteger
+  , SReal, AlgReal, sRealToSInteger
   -- ** Creating a symbolic variable
   -- $createSym
   , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger, sReal, sFloat, sDouble
