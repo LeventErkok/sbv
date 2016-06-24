@@ -693,7 +693,7 @@ setBitTo :: (Num a, Bits a, SymWord a) => SBV a -> Int -> SBool -> SBV a
 setBitTo x i b = ite b (setBit x i) (clearBit x i)
 
 -- | Conversion between integral-symbolic values, akin to Haskell's fromIntegral
-sFromIntegral :: forall a b. (Integral a, HasKind a, Num a, Bits a, SymWord a, HasKind b, Num b, Bits b, SymWord b) => SBV a -> SBV b
+sFromIntegral :: forall a b. (Integral a, HasKind a, Num a, SymWord a, HasKind b, Num b, SymWord b) => SBV a -> SBV b
 sFromIntegral x
   | isReal x
   = error "SBV.sFromIntegral: Called on a real value" -- can't really happen due to types, but being overcautious
