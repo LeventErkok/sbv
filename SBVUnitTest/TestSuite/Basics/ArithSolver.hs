@@ -171,7 +171,7 @@ genIntCasts = map mkTest $  cast w8s ++ cast w16s ++ cast w32s ++ cast w64s
                          ++ cast i8s ++ cast i16s ++ cast i32s ++ cast i64s
                          ++ cast iUBs
    where mkTest (x, t) = "sIntCast-" ++ x ~: assert t
-         cast :: forall a. (Show a, Integral a, Bits a, SymWord a) => [a] -> [(String, IO Bool)]
+         cast :: forall a. (Show a, Integral a, SymWord a) => [a] -> [(String, IO Bool)]
          cast xs = toWords xs ++ toInts xs
          toWords xs =  [(show x, mkThm x (fromIntegral x :: Word8 ))  | x <- xs]
                     ++ [(show x, mkThm x (fromIntegral x :: Word16))  | x <- xs]
