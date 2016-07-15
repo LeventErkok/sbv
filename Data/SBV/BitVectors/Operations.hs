@@ -67,19 +67,19 @@ svBool b = if b then svTrue else svFalse
 
 -- | Convert from an Integer.
 svInteger :: Kind -> Integer -> SVal
-svInteger k n = SVal k (Left (mkConstCW k n))
+svInteger k n = SVal k (Left $! (mkConstCW k n))
 
 -- | Convert from a Float
 svFloat :: Float -> SVal
-svFloat f = SVal KFloat (Left (CW KFloat (CWFloat f)))
+svFloat f = SVal KFloat (Left $! (CW KFloat (CWFloat f)))
 
 -- | Convert from a Float
 svDouble :: Double -> SVal
-svDouble d = SVal KDouble (Left (CW KDouble (CWDouble d)))
+svDouble d = SVal KDouble (Left $! (CW KDouble (CWDouble d)))
 
 -- | Convert from a Rational
 svReal :: Rational -> SVal
-svReal d = SVal KReal (Left (CW KReal (CWAlgReal (fromRational d))))
+svReal d = SVal KReal (Left $! (CW KReal (CWAlgReal (fromRational d))))
 
 --------------------------------------------------------------------------------
 -- Basic destructors
@@ -391,9 +391,9 @@ rot toLeft sz amt x
 svExtract :: Int -> Int -> SVal -> SVal
 svExtract i j x@(SVal (KBounded s _) _)
   | i < j
-  = SVal k (Left (CW k (CWInteger 0)))
+  = SVal k (Left $! (CW k (CWInteger 0)))
   | SVal _ (Left (CW _ (CWInteger v))) <- x
-  = SVal k (Left (normCW (CW k (CWInteger (v `shiftR` j)))))
+  = SVal k (Left $! (normCW (CW k (CWInteger (v `shiftR` j)))))
   | True
   = SVal k (Right (cache y))
   where k = KBounded s (i - j + 1)
@@ -407,7 +407,7 @@ svJoin x@(SVal (KBounded s i) a) y@(SVal (KBounded _ j) b)
   | i == 0 = y
   | j == 0 = x
   | Left (CW _ (CWInteger m)) <- a, Left (CW _ (CWInteger n)) <- b
-  = SVal k (Left (CW k (CWInteger (m `shiftL` j .|. n))))
+  = SVal k (Left $! (CW k (CWInteger (m `shiftL` j .|. n))))
   | True
   = SVal k (Right (cache z))
   where
@@ -671,7 +671,7 @@ noUnint2 :: (Maybe Int, String) -> (Maybe Int, String) -> a
 noUnint2 x y = error $ "Unexpected binary operation called on uninterpreted/enumerated values: " ++ show (x, y)
 
 liftSym1 :: (State -> Kind -> SW -> IO SW) -> (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> SVal -> SVal
-liftSym1 _   opCR opCI opCF opCD   (SVal k (Left a)) = SVal k $ Left  $ mapCW opCR opCI opCF opCD noUnint a
+liftSym1 _   opCR opCI opCF opCD   (SVal k (Left a)) = SVal k . Left  $! mapCW opCR opCI opCF opCD noUnint a
 liftSym1 opS _    _    _    _    a@(SVal k _)        = SVal k $ Right $ cache c
    where c st = do swa <- svToSW st a
                    opS st k swa
@@ -683,8 +683,8 @@ liftSW2 opS k a b = cache c
                   opS st k sw1 sw2
 
 liftSym2 :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (Float -> Float -> Float) -> (Double -> Double -> Double) -> SVal -> SVal -> SVal
-liftSym2 _   okCW opCR opCI opCF opCD   (SVal k (Left a)) (SVal _ (Left b)) | okCW a b = SVal k $ Left  $ mapCW2 opCR opCI opCF opCD noUnint2 a b
-liftSym2 opS _    _    _    _    _    a@(SVal k _)        b                            = SVal k $ Right $ liftSW2 opS k a b
+liftSym2 _   okCW opCR opCI opCF opCD   (SVal k (Left a)) (SVal _ (Left b)) | okCW a b = SVal k . Left  $! mapCW2 opCR opCI opCF opCD noUnint2 a b
+liftSym2 opS _    _    _    _    _    a@(SVal k _)        b                            = SVal k $ Right $  liftSW2 opS k a b
 
 liftSym2B :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> Bool) -> (Integer -> Integer -> Bool) -> (Float -> Float -> Bool) -> (Double -> Double -> Bool) -> ((Maybe Int, String) -> (Maybe Int, String) -> Bool) -> SVal -> SVal -> SVal
 liftSym2B _   okCW opCR opCI opCF opCD opUI (SVal _ (Left a)) (SVal _ (Left b)) | okCW a b = svBool (liftCW2 opCR opCI opCF opCD opUI a b)

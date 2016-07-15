@@ -23,7 +23,7 @@ import Data.SBV.BitVectors.AlgReals
 
 -- | Kind of symbolic value
 data Kind = KBool
-          | KBounded Bool Int
+          | KBounded !Bool !Int
           | KUnbounded
           | KReal
           | KUserSort String (Either String [String])
