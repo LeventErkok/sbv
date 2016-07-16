@@ -15,6 +15,8 @@
 
   * Add support for sRealToSInteger. (Essentially the floor function for SReal.)
 
+  * Several space-leaks fixed for better performance. Patch contributed by Robert Dockins.
+
 ### Version 5.12, 2016-06-06
 
   * Fix GHC8.0 compliation issues, and warning clean-up. Thanks to Adam Foltzer for the bulk
