@@ -20,11 +20,11 @@ import Data.SBV.BitVectors.Kind
 import Data.SBV.BitVectors.AlgReals
 
 -- | A constant value
-data CWVal = CWAlgReal  AlgReal              -- ^ algebraic real
-           | CWInteger  Integer              -- ^ bit-vector/unbounded integer
-           | CWFloat    Float                -- ^ float
-           | CWDouble   Double               -- ^ double
-           | CWUserSort (Maybe Int, String)  -- ^ value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
+data CWVal = CWAlgReal  !AlgReal              -- ^ algebraic real
+           | CWInteger  !Integer              -- ^ bit-vector/unbounded integer
+           | CWFloat    !Float                -- ^ float
+           | CWDouble   !Double               -- ^ double
+           | CWUserSort !(Maybe Int, String)  -- ^ value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
 
 -- | Eq instance for CWVal. Note that we cannot simply derive Eq/Ord, since CWAlgReal doesn't have proper
 -- instances for these when values are infinitely precise reals. However, we do
