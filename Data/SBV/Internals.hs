@@ -37,3 +37,5 @@ import Data.SBV.Compilers.CodeGen
 import Data.SBV.SMT.SMT               (genParse, showModel)
 import Data.SBV.Tools.Polynomial      (ites, mdp, addPoly)
 import Data.SBV.Utils.Numeric
+
+{-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}
