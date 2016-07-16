@@ -85,6 +85,7 @@ checkLinks:
 	@buildUtils/checkLinks
 
 testInterfaces:
+	make -C buildUtils
 	@buildUtils/testInterfaces
 
 tags:

@@ -5,12 +5,17 @@ import Data.List
 import Control.Monad
 import System.Exit
 
+-- Known solvers with bugs! Should really be empty!
+badSolvers :: [SMTConfig]
+badSolvers = [abc]
+
 main :: IO ()
-main = do ss <- sbvAvailableSolvers
-          let need  = sort ["ABC","Boolector","CVC4","MathSAT","Yices","Z3"]
-              cur   = sort (map show ss)
-              extra = filter (\e -> e `notElem` need) cur
-              miss  = filter (\e -> e `notElem` cur ) need
+main = do ss  <- filter (not . skip) `fmap` sbvAvailableSolvers
+          let req = filter (not . skip) [abc, boolector, cvc4, mathSAT, yices, z3]
+              need  = sort $ map show req
+              cur   = sort $ map show ss
+              extra = filter (`notElem` need) cur
+              miss  = filter (`notElem` cur ) need
           when (cur /= need) $ do
                 putStrLn $ unlines [ "Bad solver list: " ++ show ss
                                    , "          Extra: " ++ show extra
@@ -19,7 +24,11 @@ main = do ss <- sbvAvailableSolvers
                 exitFailure
           mapM_ test ss
           putStrLn $ "Tested OK basic connection to: " ++ intercalate ", "  need
+          unless (null badSolvers) $ putStrLn $ "*** NB: The following solvers are ignored: " ++ intercalate ", " (map show badSolvers)
           exitSuccess
+  where skip :: SMTConfig -> Bool
+        skip s = show s `elem` map show badSolvers
+
 
 test :: SMTConfig -> IO ()
 test s = do check  "t0" t0 (== Just False)
@@ -30,7 +39,7 @@ test s = do check  "t0" t0 (== Just False)
   where check m p f = thm p >>= decide m f
         decide m f r
           | f r  = return ()
-          | True = do putStrLn $ m ++ " FAIL. Got: " ++ show r
+          | True = do putStrLn $ m ++ "[" ++ show s ++ "] FAIL. Got: " ++ show r
                       exitFailure
         thm = isTheoremWith s Nothing
         models m p f = (extractModels `fmap` allSat p) >>= decide m f . sort
