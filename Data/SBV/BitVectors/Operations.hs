@@ -67,19 +67,19 @@ svBool b = if b then svTrue else svFalse
 
 -- | Convert from an Integer.
 svInteger :: Kind -> Integer -> SVal
-svInteger k n = SVal k (Left $! (mkConstCW k n))
+svInteger k n = SVal k (Left $! mkConstCW k n)
 
 -- | Convert from a Float
 svFloat :: Float -> SVal
-svFloat f = SVal KFloat (Left $! (CW KFloat (CWFloat f)))
+svFloat f = SVal KFloat (Left $! CW KFloat (CWFloat f))
 
 -- | Convert from a Float
 svDouble :: Double -> SVal
-svDouble d = SVal KDouble (Left $! (CW KDouble (CWDouble d)))
+svDouble d = SVal KDouble (Left $! CW KDouble (CWDouble d))
 
 -- | Convert from a Rational
 svReal :: Rational -> SVal
-svReal d = SVal KReal (Left $! (CW KReal (CWAlgReal (fromRational d))))
+svReal d = SVal KReal (Left $! CW KReal (CWAlgReal (fromRational d)))
 
 --------------------------------------------------------------------------------
 -- Basic destructors
@@ -391,9 +391,9 @@ rot toLeft sz amt x
 svExtract :: Int -> Int -> SVal -> SVal
 svExtract i j x@(SVal (KBounded s _) _)
   | i < j
-  = SVal k (Left $! (CW k (CWInteger 0)))
+  = SVal k (Left $! CW k (CWInteger 0))
   | SVal _ (Left (CW _ (CWInteger v))) <- x
-  = SVal k (Left $! (normCW (CW k (CWInteger (v `shiftR` j)))))
+  = SVal k (Left $! normCW (CW k (CWInteger (v `shiftR` j))))
   | True
   = SVal k (Right (cache y))
   where k = KBounded s (i - j + 1)
@@ -407,7 +407,7 @@ svJoin x@(SVal (KBounded s i) a) y@(SVal (KBounded _ j) b)
   | i == 0 = y
   | j == 0 = x
   | Left (CW _ (CWInteger m)) <- a, Left (CW _ (CWInteger n)) <- b
-  = SVal k (Left $! (CW k (CWInteger (m `shiftL` j .|. n))))
+  = SVal k (Left $! CW k (CWInteger (m `shiftL` j .|. n)))
   | True
   = SVal k (Right (cache z))
   where
