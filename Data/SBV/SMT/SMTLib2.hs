@@ -238,9 +238,10 @@ genTableData rm skolemMap (_quantified, args) consts ((i, aknd, _), elts)
         t           = "table" ++ show i
         mkElt x k   = (isReady, (idx, ssw x))
           where idx = cvtCW rm (mkConstCW aknd k)
-                isReady = x `elem` consts
+                isReady = x `Set.member` constsSet
         topLevel (idx, v) = "(= (" ++ t ++ " " ++ idx ++ ") " ++ v ++ ")"
         nested   (idx, v) = "(= (" ++ t ++ args ++ " " ++ idx ++ ") " ++ v ++ ")"
+        constsSet = Set.fromList consts
 
 -- TODO: We currently do not support non-constant arrays when quantifiers are present, as
 -- we might have to skolemize those. Implement this properly.
