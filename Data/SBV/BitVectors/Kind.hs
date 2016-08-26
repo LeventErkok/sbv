@@ -39,6 +39,7 @@ kindRank KReal           = Left 2
 kindRank (KUserSort s _) = Right (Right s)
 kindRank KFloat          = Left 3
 kindRank KDouble         = Left 4
+{-# INLINE kindRank #-}
 
 -- | We want to equate user-sorts only by name
 instance Eq Kind where
