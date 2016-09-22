@@ -17,6 +17,8 @@
 
   * Several space-leaks fixed for better performance. Patch contributed by Robert Dockins.
 
+  * Improved Random instance for Rational. Thanks to Joe Leslie-Hurd for the idea.
+
 ### Version 5.12, 2016-06-06
 
   * Fix GHC8.0 compliation issues, and warning clean-up. Thanks to Adam Foltzer for the bulk

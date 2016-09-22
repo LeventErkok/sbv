@@ -83,7 +83,7 @@ import Prelude.Compat
 newtype NodeId = NodeId Int deriving (Eq, Ord)
 
 -- | A symbolic word, tracking it's signedness and size.
-data SW = SW Kind NodeId deriving (Eq, Ord)
+data SW = SW !Kind !NodeId deriving (Eq, Ord)
 
 instance HasKind SW where
   kindOf (SW k _) = k

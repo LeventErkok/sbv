@@ -136,14 +136,18 @@ instance Real AlgReal where
   toRational x                    = error $ "AlgReal.toRational: Argument cannot be represented as a rational value: " ++ algRealToHaskell x
 
 instance Random Rational where
-  random g = let (a, g')  = random g
-                 (b, g'') = random g'
-             in (a % b, g'')
-  -- this may not be quite kosher, but will do for our purposes (test-generation, mainly)
-  randomR (l, h) g = let (ln, ld) = (numerator l, denominator l)
-                         (hn, hd) = (numerator h, denominator h)
-                         (a, g')  = randomR (ln*hd, hn*ld) g
-                     in (a % (ld * hd), g')
+  random g = (a % b', g'')
+     where (a, g')  = random g
+           (b, g'') = random g'
+           b'       = if 0 < b then b else 1 - b -- ensures 0 < b
+
+  randomR (l, h) g = (r * d + l, g'')
+     where (b, g')  = random g
+           b'       = if 0 < b then b else 1 - b -- ensures 0 < b
+           (a, g'') = randomR (0, b') g'
+
+           r = a % b'
+           d = h - l
 
 instance Random AlgReal where
   random g = let (a, g') = random g in (AlgRational True a, g')
