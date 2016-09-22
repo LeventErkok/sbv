@@ -174,7 +174,7 @@ data FPOp = FP_Cast        Kind Kind SW   -- From-Kind, To-Kind, RoundingMode. T
 -- this mapping stays correct through SMTLib changes. The only exception
 -- is FP_Cast; where we handle different source/origins explicitly later on.
 instance Show FPOp where
-   show (FP_Cast f t r)      = "(FP_Cast: " ++ show f ++ " -> " ++ show t ++ "using RM [" ++ show r ++ "])"
+   show (FP_Cast f t r)      = "(FP_Cast: " ++ show f ++ " -> " ++ show t ++ ", using RM [" ++ show r ++ "])"
    show (FP_Reinterpret f t) = case (f, t) of
                                   (KBounded False 32, KFloat)  -> "(_ to_fp 8 24)"
                                   (KBounded False 64, KDouble) -> "(_ to_fp 11 53)"
