@@ -30,7 +30,7 @@ module Data.SBV.BitVectors.Operations
   , svIte, svLazyIte, svSymbolicMerge
   , svSelect
   , svSign, svUnsign, svSetBit, svWordFromBE, svWordFromLE
-  , svExp
+  , svExp, svFromIntegral
   -- ** Derived operations
   , svToWord1, svFromWord1, svTestBit
   , svShiftLeft, svShiftRight
@@ -570,6 +570,18 @@ svSign = svChangeSign True
 -- | Convert a symbolic bitvector from signed to unsigned.
 svUnsign :: SVal -> SVal
 svUnsign = svChangeSign False
+
+-- | Convert a symbolic bitvector from one integral kind to another.
+svFromIntegral :: Kind -> SVal -> SVal
+svFromIntegral kTo x
+  | Just v <- svAsInteger x
+  = svInteger kTo v
+  | True
+  = result
+  where result = SVal kTo (Right (cache y))
+        kFrom  = kindOf x
+        y st   = do xsw <- svToSW st x
+                    newExpr st kTo (SBVApp (KindCast kFrom kTo) [xsw])
 
 --------------------------------------------------------------------------------
 -- Derived operations

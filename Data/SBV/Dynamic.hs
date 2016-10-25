@@ -53,6 +53,8 @@ module Data.SBV.Dynamic
   , svExtract, svJoin
   -- *** Sign-casting
   , svSign, svUnsign
+  -- *** Numeric conversions
+  , svFromIntegral
   -- *** Indexed lookups
   , svSelect
   -- *** Word-level operations
