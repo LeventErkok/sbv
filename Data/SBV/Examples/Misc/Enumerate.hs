@@ -38,9 +38,9 @@ type SE = SBV E
 --
 -- >>> elts
 -- Solution #1:
---   s0 = A :: E
--- Solution #2:
 --   s0 = B :: E
+-- Solution #2:
+--   s0 = A :: E
 -- Solution #3:
 --   s0 = C :: E
 -- Found 3 different solutions.
