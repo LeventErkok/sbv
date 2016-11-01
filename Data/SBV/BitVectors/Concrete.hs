@@ -112,7 +112,7 @@ falseCW = CW KBool (CWInteger 0)
 trueCW :: CW
 trueCW  = CW KBool (CWInteger 1)
 
--- | Lift a unary function thruough a CW
+-- | Lift a unary function through a CW
 liftCW :: (AlgReal -> b) -> (Integer -> b) -> (Float -> b) -> (Double -> b) -> ((Maybe Int, String) -> b) -> CW -> b
 liftCW f _ _ _ _ (CW _ (CWAlgReal v))  = f v
 liftCW _ f _ _ _ (CW _ (CWInteger v))  = f v
