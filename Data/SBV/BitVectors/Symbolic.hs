@@ -103,11 +103,11 @@ swKind (SW k _) = k
 forceSWArg :: SW -> IO ()
 forceSWArg (SW k n) = k `seq` n `seq` return ()
 
--- | Constant False as a SW. Note that this value always occupies slot -2.
+-- | Constant False as an SW. Note that this value always occupies slot -2.
 falseSW :: SW
 falseSW = SW KBool $ NodeId (-2)
 
--- | Constant False as a SW. Note that this value always occupies slot -1.
+-- | Constant True as an SW. Note that this value always occupies slot -1.
 trueSW :: SW
 trueSW  = SW KBool $ NodeId (-1)
 
