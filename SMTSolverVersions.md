@@ -5,7 +5,7 @@ report any issues you might see with newer releases.
   * ABC:
       * http://bitbucket.org/alanmi/abc
       * Version as downloaded from the above site on Jan 6, 2016.
-      * NB. Version downloaded on Jan 30, 2016 from the above site has a bug, see here:
+      * NB. Version downloaded on Jul 30, 2016 from the above site has a bug, see here:
              https://bitbucket.org/alanmi/abc/issues/58/smtlib-interface-is-broken
         So, you might want to pick something earlier. (It is not clear when the breakage
 	happened between Jan 6 to Jul 30, however.)
