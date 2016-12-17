@@ -11,7 +11,7 @@ report any issues you might see with newer releases.
 	happened between Jan 6 to Jul 30, however.)
   * Boolector:
       * http://fmv.jku.at/boolector/
-      * Version 2.2.0
+      * Version 2.3.1
   * CVC4:
       * http://cvc4.cs.nyu.edu/web/
       * Version 1.4
