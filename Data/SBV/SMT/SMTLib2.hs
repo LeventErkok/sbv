@@ -531,7 +531,7 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
 -----------------------------------------------------------------------------------------------
 
 handleFPCast :: Kind -> Kind -> String -> String -> String
-handleFPCast kFrom kTo rm  input
+handleFPCast kFrom kTo rm input
   | kFrom == kTo
   = input
   | True
@@ -592,20 +592,26 @@ handleKindCast kFrom kTo a
       KBounded s m -> case kTo of
                         KBounded _ n -> fromBV (if s then signExtend else zeroExtend) m n
                         KUnbounded   -> b2i s m
-                        _            -> noCast
+                        _            -> tryFPCast
 
       KUnbounded   -> case kTo of
                         KReal        -> "(to_real " ++ a ++ ")"
                         KBounded _ n -> i2b n
-                        _            -> noCast
+                        _            -> tryFPCast
 
       KReal        -> case kTo of
                         KUnbounded   -> "(to_int " ++ a ++ ")"
-                        _            -> noCast
+                        _            -> tryFPCast
 
-      _            -> noCast
+      _            -> tryFPCast
 
-  where noCast  = error $ "SBV.SMTLib2: Unexpected cast from: " ++ show kFrom ++ " to " ++ show kTo
+  where -- See if we can push this down to a float-cast, using sRNE. This happens if one of the kinds is a float/double.
+        -- Otherwise complain
+        tryFPCast
+          | any (\k -> isFloat k || isDouble k) [kFrom, kTo]
+          = handleFPCast kFrom kTo (smtRoundingMode RoundNearestTiesToEven) a
+          | True
+          = error $ "SBV.SMTLib2: Unexpected cast from: " ++ show kFrom ++ " to " ++ show kTo
 
         fromBV upConv m n
          | n > m  = upConv  (n - m)
