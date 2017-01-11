@@ -48,9 +48,9 @@ Library
   Build-Depends   : base >= 4.8 && < 5
                   , base-compat >= 0.6
                   , ghc
+                  , QuickCheck >= 2.9.2
                   , array, async, containers, deepseq, directory, filepath, old-time
-                  , pretty, process, mtl, QuickCheck, random, syb, data-binary-ieee754
-                  , crackNum
+                  , pretty, process, mtl, random, syb, data-binary-ieee754, crackNum
   Exposed-modules : Data.SBV
                   , Data.SBV.Bridge.Boolector
                   , Data.SBV.Bridge.CVC4

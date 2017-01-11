@@ -5,11 +5,15 @@
 
 ### Version 5.14, Not yet released
   
+  * Bump up QuickCheck dependency to >= 2.9.2 to avoid the following quick-check
+    bug http://github.com/nick8325/quickcheck/issues/113, which transitively impacted
+    SBV's own quick-check.
+
   * Generalize casts between integral-floats, using the rounding mode round-nearest-ties-to-even.
     Previously calls to sFromIntegral did not support conversion to floats since it needed
     a rounding mode. But it does make sense to support them with the default mode. If a different
     mode is needed, use the function 'toSFloat' as before, which takes an explicit rounding mode.
-  
+
 ### Version 5.13, 2016-10-29
 
   * Fix broken links, thanks to Stephan Renatus for the patch.
