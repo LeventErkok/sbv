@@ -1072,7 +1072,7 @@ instance Show SMTConfig where
   show = show . solver
 
 -- | A model, as returned by a solver
-data SMTModel = SMTModel {
+newtype SMTModel = SMTModel {
         modelAssocs    :: [(String, CW)]        -- ^ Mapping of symbolic values to constants.
      }
      deriving Show

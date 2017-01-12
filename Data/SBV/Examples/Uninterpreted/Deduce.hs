@@ -29,7 +29,7 @@ import Prelude hiding (not, or, and)
 
 -- | The uninterpreted sort 'B', corresponding to the carrier.
 -- To prevent SBV from translating it to an enumerated type, we simply attach an unused field
-data B = B () deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
+newtype B = B () deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
 
 -- | Handy shortcut for the type of symbolic values over 'B'
 type SB = SBV B

@@ -25,7 +25,7 @@ testSuite = mkTestSuite $ \_ -> test [
  ]
 
 -- Example provided by Thomas DuBuisson:
-data Bitstring = Bitstring () deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
+newtype Bitstring = Bitstring () deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
 type SBitstring = SBV Bitstring
 
 a :: SBitstring -> SBool

@@ -428,7 +428,7 @@ declNewSFunArray mbiVal = return $ SFunArray $ const $ fromMaybe (error "Reading
 --
 --    * Typically faster as it gets compiled away during translation
 --
-data SFunArray a b = SFunArray (SBV a -> SBV b)
+newtype SFunArray a b = SFunArray (SBV a -> SBV b)
 
 instance (HasKind a, HasKind b) => Show (SFunArray a b) where
   show (SFunArray _) = "SFunArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"

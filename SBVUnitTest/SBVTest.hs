@@ -25,7 +25,7 @@ import System.FilePath         ((</>))
 import Test.HUnit              (Test(..), Assertion, assert, (~:), test)
 
 -- | A Test-suite, parameterized by the gold-check generator/checker
-data SBVTestSuite = SBVTestSuite ((forall a. Show a => (IO a -> FilePath -> IO ())) -> Test)
+newtype SBVTestSuite = SBVTestSuite ((forall a. Show a => (IO a -> FilePath -> IO ())) -> Test)
 
 -- | Wrap over 'SBVTestSuite', avoids exporting the constructor
 mkTestSuite :: ((forall a. (Show a) => IO a -> FilePath -> IO ()) -> Test) -> SBVTestSuite

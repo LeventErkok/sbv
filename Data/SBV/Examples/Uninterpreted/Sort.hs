@@ -21,7 +21,7 @@ import Data.SBV
 -- in the backend SMT solver. Note the custom @deriving@ clause, which
 -- takes care of most of the boilerplate. The () field is needed so
 -- SBV will not translate it to an enumerated data-type
-data Q = Q () deriving (Eq, Ord, Data, Read, Show, SymWord, HasKind)
+newtype Q = Q () deriving (Eq, Ord, Data, Read, Show, SymWord, HasKind)
 
 -- | Declare an uninterpreted function that works over Q's
 f :: SBV Q -> SBV Q
