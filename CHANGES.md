@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 5.13, 2016-10-29
+* Latest Hackage released version: 5.14, 2017-01-12
 
-### Version 5.14, Not yet released
+### Version 5.14, 2017-01-12
   
   * Bump up QuickCheck dependency to >= 2.9.2 to avoid the following quick-check
     bug http://github.com/nick8325/quickcheck/issues/113, which transitively impacted
