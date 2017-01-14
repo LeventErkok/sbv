@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 5.14, 2017-01-12
 
+### Version 5.15, Not yet released
+
+  * Bump up dependency on CrackNum >= 1.6, to get access to hexadecimal floats.
+
 ### Version 5.14, 2017-01-12
   
   * Bump up QuickCheck dependency to >= 2.9.2 to avoid the following quick-check
