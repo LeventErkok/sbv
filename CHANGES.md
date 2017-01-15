@@ -5,7 +5,7 @@
 
 ### Version 5.15, Not yet released
 
-  * Bump up dependency on CrackNum >= 1.7, to get access to hexadecimal floats.
+  * Bump up dependency on CrackNum >= 1.8, to get access to hexadecimal floats.
 
 ### Version 5.14, 2017-01-12
   
