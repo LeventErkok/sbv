@@ -9,7 +9,14 @@
 -- Runs an IO computation printing the time it took to run it
 -----------------------------------------------------------------------------
 
-module Data.SBV.Utils.TDiff(timeIf, Timing(..),TimedStep(..),TimingInfo) where
+module Data.SBV.Utils.TDiff
+  ( timeIf
+  , Timing(..)
+  , TimedStep(..)
+  , TimingInfo
+  , showTDiff
+  )
+  where
 
 import Control.DeepSeq (rnf, NFData(..))
 import System.Time     (TimeDiff(..), normalizeTimeDiff, diffClockTimes, getClockTime)

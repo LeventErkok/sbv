@@ -236,7 +236,7 @@ module Data.SBV (
 
   -- * SMT Interface: Configurations and solvers
   , SMTConfig(..), SMTLibVersion(..), SMTLibLogic(..), Logic(..), OptimizeOpts(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
-  , Timing(..), TimedStep(..), TimingInfo
+  , Timing(..), TimedStep(..), TimingInfo, showTDiff
 
   -- * Symbolic computations
   , Symbolic, output, SymWord(..)
