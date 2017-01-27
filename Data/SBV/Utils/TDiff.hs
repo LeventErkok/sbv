@@ -23,7 +23,7 @@ data Timing     = NoTiming | PrintTiming | SaveTiming (IORef TimingInfo)
 
 -- | Specify what is being timed.
 data TimedStep  = ProblemConstruction | Translation | WorkByProver String
-                  deriving (Eq,Ord)
+                  deriving (Eq,Ord,Show)
 
 -- | A collection of timed stepd.
 type TimingInfo = Map TimedStep TimeDiff
