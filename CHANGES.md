@@ -6,6 +6,7 @@
 ### Version 5.15, Not yet released
 
   * Bump up dependency on CrackNum >= 1.9, to get access to hexadecimal floats.
+  * Improve time/tracking-print code. Thanks to Iavor Diatchki for the patch.
 
 ### Version 5.14, 2017-01-12
   

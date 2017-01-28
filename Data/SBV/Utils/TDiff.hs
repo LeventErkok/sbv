@@ -21,21 +21,22 @@ module Data.SBV.Utils.TDiff
 import Control.DeepSeq (rnf, NFData(..))
 import System.Time     (TimeDiff(..), normalizeTimeDiff, diffClockTimes, getClockTime)
 import Numeric         (showFFloat)
+
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.IORef(IORef,modifyIORef')
+import           Data.IORef(IORef, modifyIORef')
 
 -- | Specify how to save timing information, if at all.
 data Timing     = NoTiming | PrintTiming | SaveTiming (IORef TimingInfo)
 
 -- | Specify what is being timed.
 data TimedStep  = ProblemConstruction | Translation | WorkByProver String
-                  deriving (Eq,Ord,Show)
+                  deriving (Eq, Ord, Show)
 
 -- | A collection of timed stepd.
 type TimingInfo = Map TimedStep TimeDiff
 
-
+-- | A more helpful show instance for steps
 timedStepLabel :: TimedStep -> String
 timedStepLabel lbl =
   case lbl of
@@ -43,7 +44,7 @@ timedStepLabel lbl =
     Translation         -> "translation"
     WorkByProver x      -> x
 
-
+-- | Show the time difference in a user-friendly format.
 showTDiff :: TimeDiff -> String
 showTDiff itd = et
   where td = normalizeTimeDiff itd
