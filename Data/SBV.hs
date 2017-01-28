@@ -236,6 +236,7 @@ module Data.SBV (
 
   -- * SMT Interface: Configurations and solvers
   , SMTConfig(..), SMTLibVersion(..), SMTLibLogic(..), Logic(..), OptimizeOpts(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
+  , Timing(..), TimedStep(..), TimingInfo, showTDiff
 
   -- * Symbolic computations
   , Symbolic, output, SymWord(..)
@@ -300,6 +301,7 @@ import Data.SBV.Tools.ExpectedValue
 import Data.SBV.Tools.Optimize
 import Data.SBV.Tools.Polynomial
 import Data.SBV.Utils.Boolean
+import Data.SBV.Utils.TDiff
 import Data.Bits
 import Data.Int
 import Data.Ratio

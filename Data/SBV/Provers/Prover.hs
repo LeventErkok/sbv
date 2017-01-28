@@ -61,7 +61,7 @@ import qualified Data.SBV.Provers.ABC        as ABC
 
 mkConfig :: SMTSolver -> SMTLibVersion -> [String] -> SMTConfig
 mkConfig s smtVersion tweaks = SMTConfig { verbose        = False
-                                         , timing         = False
+                                         , timing         = NoTiming
                                          , sBranchTimeOut = Nothing
                                          , timeOut        = Nothing
                                          , printBase      = 10
@@ -463,7 +463,7 @@ simulate converter config isSat comments predicate = do
         let msg = when (verbose config) . putStrLn . ("** " ++)
             isTiming = timing config
         msg "Starting symbolic simulation.."
-        res <- timeIf isTiming "problem construction" $ runSymbolic (isSat, config) $ (if isSat then forSome_ else forAll_) predicate >>= output
+        res <- timeIf isTiming ProblemConstruction $ runSymbolic (isSat, config) $ (if isSat then forSome_ else forAll_) predicate >>= output
         msg $ "Generated symbolic trace:\n" ++ show res
         msg "Translating to SMT-Lib.."
         runProofOn converter config isSat comments res
@@ -474,7 +474,7 @@ runProofOn converter config isSat comments res =
             solverCaps = capabilities (solver config)
         in case res of
              Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs assertions [o@(SW KBool _)] ->
-               timeIf isTiming "translation"
+               timeIf isTiming Translation
                 $ let skolemMap = skolemize (if isSat then is else map flipQ is)
                            where flipQ (ALL, x) = (EX, x)
                                  flipQ (EX, x)  = (ALL, x)

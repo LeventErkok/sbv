@@ -75,6 +75,7 @@ import System.Random
 import Data.SBV.BitVectors.Kind
 import Data.SBV.BitVectors.Concrete
 import Data.SBV.SMT.SMTLibNames
+import Data.SBV.Utils.TDiff(Timing)
 
 import Prelude ()
 import Prelude.Compat
@@ -1053,7 +1054,7 @@ instance HasKind RoundingMode
 -- be printed in their internal memory-layout format as well, which can come in handy for bit-precise analysis.
 data SMTConfig = SMTConfig {
          verbose        :: Bool           -- ^ Debug mode
-       , timing         :: Bool           -- ^ Print timing information on how long different phases took (construction, solving, etc.)
+       , timing         :: Timing         -- ^ Print timing information on how long different phases took (construction, solving, etc.)
        , sBranchTimeOut :: Maybe Int      -- ^ How much time to give to the solver for each call of 'sBranch' check. (In seconds. Default: No limit.)
        , timeOut        :: Maybe Int      -- ^ How much time to give to the solver. (In seconds. Default: No limit.)
        , printBase      :: Int            -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
