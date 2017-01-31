@@ -7,7 +7,7 @@ import System.Exit
 
 -- Known solvers with bugs! Should really be empty!
 badSolvers :: [SMTConfig]
-badSolvers = [abc]
+badSolvers = []
 
 main :: IO ()
 main = do ss  <- filter (not . skip) `fmap` sbvAvailableSolvers

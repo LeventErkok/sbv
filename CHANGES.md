@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 5.14, 2017-01-12
+* Latest Hackage released version: 5.15, 2017-01-30
 
-### Version 5.15, Not yet released
+### Version 5.15, 2017-01-30
 
   * Bump up dependency on CrackNum >= 1.9, to get access to hexadecimal floats.
   * Improve time/tracking-print code. Thanks to Iavor Diatchki for the patch.
@@ -11,7 +11,7 @@
 ### Version 5.14, 2017-01-12
   
   * Bump up QuickCheck dependency to >= 2.9.2 to avoid the following quick-check
-    bug http://github.com/nick8325/quickcheck/issues/113, which transitively impacted
+    bug <http://github.com/nick8325/quickcheck/issues/113>, which transitively impacted
     the quick-check as implemented by SBV.
 
   * Generalize casts between integral-floats, using the rounding mode round-nearest-ties-to-even.
