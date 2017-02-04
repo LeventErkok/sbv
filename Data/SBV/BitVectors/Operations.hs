@@ -646,7 +646,7 @@ svRotateLeft x i
   | True
   = svIte (svLessThan i zi)
           (svSelect [x `svRor` k | k <- [0 .. sx     - 1]] z (svUNeg i `svRem` n))
-          (svSelect [x `svRol` k | k <- [0 .. sx     - 1]] z (       i  `svRem` n))
+          (svSelect [x `svRol` k | k <- [0 .. sx     - 1]] z (       i `svRem` n))
     where sx = intSizeOf x
           si = intSizeOf i
           z  = svInteger (kindOf x) 0
@@ -666,7 +666,7 @@ svRotateRight x i
   | True
   = svIte (svLessThan i zi)
           (svSelect [x `svRol` k | k <- [0 .. sx     - 1]] z (svUNeg i `svRem` n))
-          (svSelect [x `svRor` k | k <- [0 .. sx     - 1]] z (       i  `svRem` n))
+          (svSelect [x `svRor` k | k <- [0 .. sx     - 1]] z (       i `svRem` n))
     where sx = intSizeOf x
           si = intSizeOf i
           z  = svInteger (kindOf x) 0
