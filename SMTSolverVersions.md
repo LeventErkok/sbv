@@ -16,7 +16,7 @@ report any issues you might see with newer releases.
       * Version 5.3.14
   * Yices:
       * http://yices.csl.sri.com/
-      * Version 2.5.1
+      * Version 2.5.2
   * Z3:
       * http://github.com/Z3Prover/z3
       * Version as downloaded from the above site on Jul 30, 2016.
