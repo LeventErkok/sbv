@@ -214,6 +214,9 @@ module Data.SBV (
   -- $multiIntro
   , proveWithAll, proveWithAny, satWithAll, satWithAny
 
+  -- * Tactics
+  , Tactic(..), tactic
+
   -- * Optimization
   -- $optimizeIntro
   , minimize, maximize, optimize

@@ -9,6 +9,7 @@
 -- Internal data-structures for the sbv library
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                   #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -46,6 +47,7 @@ module Data.SBV.BitVectors.Data
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), getSBranchRunConfig
  , declNewSArray, declNewSFunArray
+ , Tactic(..), SMTProblem(..)
  ) where
 
 import Control.DeepSeq      (NFData(..))
@@ -56,7 +58,13 @@ import Data.Word            (Word8, Word16, Word32, Word64)
 import Data.List            (elemIndex, intercalate)
 import Data.Maybe           (fromMaybe)
 
+import qualified Data.Set as Set (Set)
 import qualified Data.Generics as G    (Data(..))
+
+import GHC.Stack.Compat
+#if !MIN_VERSION_base(4,9,0)
+import GHC.SrcLoc.Compat
+#endif
 
 import System.Random
 
@@ -437,9 +445,21 @@ instance (HasKind a, HasKind b) => Show (SFunArray a b) where
 mkSFunArray :: (SBV a -> SBV b) -> SFunArray a b
 mkSFunArray = SFunArray
 
--- | Add a constraint with a given probability
+-- | Add a constraint with a given probability.
 addConstraint :: Maybe Double -> SBool -> SBool -> Symbolic ()
 addConstraint mt (SBV c) (SBV c') = addSValConstraint mt c c'
+
+-- | Internal representation of a symbolic simulation result
+data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]      -- ^ inputs
+                             , smtSkolemMap :: [Either SW (SW, [SW])]           -- ^ skolem-map
+                             , kindsUsed    :: Set.Set Kind                     -- ^ kinds used
+                             , smtAsserts   :: [(String, Maybe CallStack, SW)]  -- ^ assertions
+                             , tactics      :: [Tactic SW]                      -- ^ tactics to use
+                             , smtLibPgm    :: SMTLibPgm                        -- ^ SMTLib representation
+                             }
+
+instance NFData SMTProblem where
+  rnf (SMTProblem i m k a t p) = rnf i `seq` rnf m `seq` rnf k `seq` rnf a `seq` rnf t `seq` rnf p `seq` ()
 
 instance NFData (SBV a) where
   rnf (SBV x) = rnf x `seq` ()

@@ -18,6 +18,7 @@
 {-# LANGUAGE    PatternGuards              #-}
 {-# LANGUAGE    NamedFieldPuns             #-}
 {-# LANGUAGE    DeriveDataTypeable         #-}
+{-# LANGUAGE    DeriveFunctor              #-}
 {-# LANGUAGE    CPP                        #-}
 {-# OPTIONS_GHC -fno-warn-orphans          #-}
 
@@ -45,6 +46,7 @@ module Data.SBV.BitVectors.Symbolic
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
+  , Tactic(..), addSValTactic
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
   , mkSValUserSort
@@ -278,6 +280,13 @@ newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SW, SBVExpr)}
 -- | 'NamedSymVar' pairs symbolic words and user given/automatically generated names
 type NamedSymVar = (SW, String)
 
+-- | Solver tactic
+data Tactic a = CaseSplit Bool [(String, a, [Tactic a])]  -- ^ Case-split, with implicit coverage. Bool says whether we should be verbose.
+              deriving (Show, Functor)
+
+instance NFData a => NFData (Tactic a) where
+   rnf (CaseSplit b l) = rnf b `seq` rnf l `seq` ()
+
 -- | Result of running a symbolic computation
 data Result = Result { reskinds       :: Set.Set Kind                     -- ^ kinds used in the program
                      , resTraces      :: [(String, CW)]                   -- ^ quick-check counter-example information (if any)
@@ -290,16 +299,17 @@ data Result = Result { reskinds       :: Set.Set Kind                     -- ^ k
                      , resAxioms      :: [(String, [String])]             -- ^ axioms
                      , resAsgns       :: SBVPgm                           -- ^ assignments
                      , resConstraints :: [SW]                             -- ^ additional constraints (boolean)
+                     , resTactics     :: [Tactic SW]                      -- ^ User given tactics
                      , resAssertions  :: [(String, Maybe CallStack, SW)]  -- ^ assertions
                      , resOutputs     :: [SW]                             -- ^ outputs
                      }
 
 -- | Show instance for 'Result'. Only for debugging purposes.
 instance Show Result where
-  show (Result _ _ _ _ cs _ _ [] [] _ [] _ [r])
+  show (Result _ _ _ _ cs _ _ [] [] _ [] _ _ [r])
     | Just c <- r `lookup` cs
     = show c
-  show (Result kinds _ cgs is cs ts as uis axs xs cstrs asserts os)  = intercalate "\n" $
+  show (Result kinds _ cgs is cs ts as uis axs xs cstrs tacs asserts os) = intercalate "\n" $
                    (if null usorts then [] else "SORTS" : map ("  " ++) usorts)
                 ++ ["INPUTS"]
                 ++ map shn is
@@ -315,6 +325,8 @@ instance Show Result where
                 ++ concatMap shcg cgs
                 ++ ["AXIOMS"]
                 ++ map shax axs
+                ++ ["TACTICS"]
+                ++ map show tacs
                 ++ ["DEFINE"]
                 ++ map (\(s, e) -> "  " ++ shs s ++ " = " ++ show e) (F.toList (pgmAssignments xs))
                 ++ ["CONSTRAINTS"]
@@ -428,6 +440,7 @@ data State  = State { runMode      :: SBVRunMode
                     , rUIMap       :: IORef UIMap
                     , rCgMap       :: IORef CgMap
                     , raxioms      :: IORef [(String, [String])]
+                    , rTacs        :: IORef [Tactic SW]
                     , rAsserts     :: IORef [(String, Maybe CallStack, SW)]
                     , rSWCache     :: IORef (Cache SW)
                     , rAICache     :: IORef (Cache Int)
@@ -683,6 +696,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
    aiCache   <- newIORef IMap.empty
    usedKinds <- newIORef Set.empty
    cstrs     <- newIORef []
+   tacs      <- newIORef []
    asserts   <- newIORef []
    rGen      <- case currentRunMode of
                   Concrete g -> newIORef g
@@ -706,6 +720,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
                   , rSWCache     = swCache
                   , rAICache     = aiCache
                   , rConstraints = cstrs
+                  , rTacs        = tacs
                   , rAsserts     = asserts
                   }
    _ <- newConst st falseCW -- s(-2) == falseSW
@@ -718,7 +733,8 @@ runSymbolic' currentRunMode (Symbolic c) = do
 -- instance when implementing 'sBranch'.
 extractSymbolicSimulationState :: State -> IO Result
 extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblMap=tables, rArrayMap=arrays, rUIMap=uis, raxioms=axioms
-                                       , rAsserts=asserts, rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints=cstrs} = do
+                                       , rAsserts=asserts, rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints=cstrs
+                                       , rTacs=tacs } = do
    SBVPgm rpgm  <- readIORef pgm
    inpsO <- reverse `fmap` readIORef inps
    outsO <- reverse `fmap` readIORef outs
@@ -733,10 +749,11 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    axs   <- reverse `fmap` readIORef axioms
    knds  <- readIORef usedKinds
    cgMap <- Map.toList `fmap` readIORef cgs
-   traceVals <- reverse `fmap` readIORef cInfo
+   traceVals  <- reverse `fmap` readIORef cInfo
    extraCstrs <- reverse `fmap` readIORef cstrs
+   tactics    <- reverse `fmap` readIORef tacs
    assertions <- reverse `fmap` readIORef asserts
-   return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs assertions outsO
+   return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs tactics assertions outsO
 
 -- | Handling constraints
 imposeConstraint :: SVal -> Symbolic ()
@@ -749,6 +766,16 @@ imposeConstraint c = do st <- ask
 internalConstraint :: State -> SVal -> IO ()
 internalConstraint st b = do v <- svToSW st b
                              modifyIORef (rConstraints st) (v:)
+
+-- | Add a tactic
+addSValTactic :: Tactic SVal -> Symbolic ()
+addSValTactic tac = do st <- ask
+                       let walk (CaseSplit b cs) = let app (nm, v, ts) = do ts' <- mapM walk ts
+                                                                            v' <- svToSW st v
+                                                                            return (nm, v', ts')
+                                                   in CaseSplit b `fmap` mapM app cs
+                       tac' <- liftIO $ walk tac
+                       liftIO $ modifyIORef (rTacs st) (tac':)
 
 -- | Add a constraint with a given probability
 addSValConstraint :: Maybe Double -> SVal -> SVal -> Symbolic ()
@@ -932,15 +959,14 @@ instance NFData CW where
 instance NFData CallStack where
   rnf _ = ()
 #endif
-  
-
 
 instance NFData Result where
-  rnf (Result kindInfo qcInfo cgs inps consts tbls arrs uis axs pgm cstr asserts outs)
+  rnf (Result kindInfo qcInfo cgs inps consts tbls arrs uis axs pgm cstr tacs asserts outs)
         = rnf kindInfo `seq` rnf qcInfo `seq` rnf cgs     `seq` rnf inps
                        `seq` rnf consts `seq` rnf tbls    `seq` rnf arrs
                        `seq` rnf uis    `seq` rnf axs     `seq` rnf pgm
-                       `seq` rnf cstr   `seq` rnf asserts `seq` rnf outs
+                       `seq` rnf cstr   `seq` rnf tacs    `seq` rnf asserts
+                       `seq` rnf outs
 instance NFData Kind         where rnf a          = seq a ()
 instance NFData ArrayContext where rnf a          = seq a ()
 instance NFData SW           where rnf a          = seq a ()

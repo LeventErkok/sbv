@@ -27,7 +27,7 @@ module Data.SBV.BitVectors.Model (
   , sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, (.^)
   , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
-  , constrain, pConstrain, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
+  , constrain, pConstrain, tactic, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
   , sRealToSInteger, label
@@ -1626,6 +1626,10 @@ constrain c = addConstraint Nothing c (bnot c)
 -- calls where we restrict our attention to /interesting/ parts of the input domain.
 pConstrain :: Double -> SBool -> Symbolic ()
 pConstrain t c = addConstraint (Just t) c (bnot c)
+
+-- | Provide a tactic for the solver engine
+tactic :: Tactic SBool -> Symbolic ()
+tactic t = addSValTactic (unSBV `fmap` t)
 
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where

@@ -43,7 +43,7 @@ import GHC.Stack.Compat
 import GHC.SrcLoc.Compat
 #endif
 
-import qualified Data.Set as Set (Set, toList)
+import qualified Data.Set as Set (toList)
 
 import Data.SBV.BitVectors.Data
 import Data.SBV.SMT.SMT
@@ -325,7 +325,7 @@ compileToSMTLib version isSat a = do
         let comments = ["Created on " ++ show t]
             cvt = case version of
                     SMTLib2 -> toSMTLib2
-        (_, _, _, _, smtLibPgm) <- simulate cvt defaultSMTCfg isSat comments a
+        SMTProblem{smtLibPgm} <- simulate cvt defaultSMTCfg isSat comments a
         let out = show smtLibPgm
         return $ out ++ "\n(check-sat)\n"
 
@@ -342,9 +342,45 @@ generateSMTBenchmarks isSat f a = mapM_ gen [minBound .. maxBound]
 
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
-proveWith config a = simulate cvt config False [] a >>= callSolver False "Checking Theoremhood.." ThmResult config
+proveWith config a = do simRes@SMTProblem{tactics} <- simulate cvt config False [] a
+                        applyTactics [] tactics simRes $ callSolver False "Checking Theoremhood.." ThmResult config
   where cvt = case smtLibVersion config of
                 SMTLib2 -> toSMTLib2
+
+-- | Apply the given tactics to a problem
+applyTactics :: [Int] -> [Tactic SW] -> SMTProblem -> (SMTProblem -> IO ThmResult) -> IO ThmResult
+applyTactics _  []               p f = f p
+applyTactics ns [CaseSplit v cs] p f = caseSplit ns v cs p f
+applyTactics _  ts               _ _ = error $ "SBV: Can only deal with one tactic at a time! Received: " ++ show ts
+
+-- | Implements the case-split tactic
+caseSplit :: [Int] -> Bool -> [(String, SW, [Tactic SW])] -> SMTProblem -> (SMTProblem -> IO ThmResult) -> IO ThmResult
+caseSplit level verbose cases claim f = go (zip [1..] cases)
+
+  where tag = "**" ++ replicate (length level) '*'
+
+        mesg mbis | not verbose         = return ()
+                  | Just (i, s) <- mbis = putStrLn $ tag ++ " Case " ++ intercalate "." (map show (level ++ [i])) ++ ": " ++ s
+                  | True                = putStrLn $ tag ++ " Checking case coverage"
+
+        go :: [(Int, (String, SW, [Tactic SW]))] -> IO ThmResult
+        go []
+           = do mesg Nothing
+                f (mkCoverage [c | (_, c, _) <- cases])
+        go ((i, (nm, cond, ts)):cs)
+           = do mesg (Just (i, nm))
+                res <- applyTactics (level ++ [i]) ts (mkCase cond) f
+                case res of
+                  ThmResult Unsatisfiable{} -> go cs
+                  r                         -> return r
+
+        -- TODO: Fix this to be actual coverage
+        mkCoverage :: [SW] -> SMTProblem
+        mkCoverage _sws = claim
+
+        -- TODO: Fix this to be the actual case
+        mkCase :: SW -> SMTProblem
+        mkCase _sw = claim
 
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
@@ -380,11 +416,11 @@ isSafe (SafeResult (_, _, result)) = case result of
 -- | Determine if the constraints are vacuous using the given SMT-solver
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
 isVacuousWith config a = do
-        Result ki tr uic is cs ts as uis ax asgn cstr asserts _ <- runSymbolic (True, config) $ forAll_ a >>= output
+        Result ki tr uic is cs ts as uis ax asgn cstr tactics asserts _ <- runSymbolic (True, config) $ forAll_ a >>= output
         case cstr of
            [] -> return False -- no constraints, no need to check
            _  -> do let is'  = [(EX, i) | (_, i) <- is] -- map all quantifiers to "exists" for the constraint check
-                        res' = Result ki tr uic is' cs ts as uis ax asgn cstr asserts [trueSW]
+                        res' = Result ki tr uic is' cs ts as uis ax asgn cstr tactics asserts [trueSW]
                         cvt  = case smtLibVersion config of
                                  SMTLib2 -> toSMTLib2
                     SatResult result <- runProofOn cvt config True [] res' >>= callSolver True "Checking Satisfiability.." SatResult config
@@ -401,7 +437,7 @@ allSatWith config p = do
         let converter  = case smtLibVersion config of
                            SMTLib2 -> toSMTLib2
         msg "Checking Satisfiability, all solutions.."
-        sbvPgm@(qinps, _, ki, _, _) <- simulate converter config True [] p
+        sbvPgm@SMTProblem{smtInputs=qinps, kindsUsed=ki} <- simulate converter config True [] p
         let usorts = [s | us@(KUserSort s _) <- Set.toList ki, isFree us]
                 where isFree (KUserSort _ (Left _)) = True
                       isFree _                      = False
@@ -429,7 +465,7 @@ allSatWith config p = do
                                                Unsatisfiable _               -> return []
                                                Satisfiable   _ model         -> cont model
                                                Unknown       _ model         -> cont model
-        invoke nonEqConsts n (qinps, skolemMap, _, _, smtLibPgm) = do
+        invoke nonEqConsts n SMTProblem{smtInputs=qinps, smtSkolemMap=skolemMap, smtLibPgm=smtLibPgm} = do
                msg $ "Looking for solution " ++ show n
                case addNonEqConstraints (roundingMode config) qinps nonEqConsts smtLibPgm of
                  Nothing ->  -- no new constraints added, stop
@@ -441,15 +477,8 @@ allSatWith config p = do
         updateName i cfg = cfg{smtFile = upd `fmap` smtFile cfg}
                where upd nm = let (b, e) = splitExtension nm in b ++ "_allSat_" ++ show i ++ e
 
-type SMTProblem = ( [(Quantifier, NamedSymVar)]      -- inputs
-                  , [Either SW (SW, [SW])]           -- skolem-map
-                  , Set.Set Kind                     -- kinds used
-                  , [(String, Maybe CallStack, SW)]  -- assertions
-                  , SMTLibPgm                        -- SMTLib representation
-                  )
-
 callSolver :: Bool -> String -> (SMTResult -> b) -> SMTConfig -> SMTProblem -> IO b
-callSolver isSat checkMsg wrap config (qinps, skolemMap, _, _, smtLibPgm) = do
+callSolver isSat checkMsg wrap config SMTProblem{smtInputs=qinps, smtSkolemMap=skolemMap, smtLibPgm=smtLibPgm} = do
        let msg = when (verbose config) . putStrLn . ("** " ++)
        msg checkMsg
        let finalPgm = intercalate "\n" (pre ++ post) where SMTLibPgm _ (_, pre, post) = smtLibPgm
@@ -473,7 +502,7 @@ runProofOn converter config isSat comments res =
         let isTiming   = timing config
             solverCaps = capabilities (solver config)
         in case res of
-             Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs assertions [o@(SW KBool _)] ->
+             Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs tacs assertions [o@(SW KBool _)] ->
                timeIf isTiming Translation
                 $ let skolemMap = skolemize (if isSat then is else map flipQ is)
                            where flipQ (ALL, x) = (EX, x)
@@ -484,7 +513,7 @@ runProofOn converter config isSat comments res =
                                          go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
                                          go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
                       smtScript = converter (roundingMode config) (useLogic config) solverCaps ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o
-                      result = (is, skolemMap, ki, assertions, smtScript)
+                      result = SMTProblem {smtInputs=is, smtSkolemMap=skolemMap, kindsUsed=ki, smtAsserts=assertions, tactics=tacs, smtLibPgm=smtScript}
                   in rnf smtScript `seq` return result
              Result{resOutputs = os} -> case length os of
                            0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
@@ -499,11 +528,11 @@ internalSATCheck :: SMTConfig -> SBool -> State -> String -> IO SatResult
 internalSATCheck cfg condInPath st msg = do
    sw <- sbvToSW st condInPath
    () <- forceSWArg sw
-   Result ki tr uic is cs ts as uis ax asgn cstr assertions _ <- extractSymbolicSimulationState st
+   Result ki tr uic is cs ts as uis ax asgn cstr tactics assertions _ <- extractSymbolicSimulationState st
    let -- Construct the corresponding sat-checker for the branch. Note that we need to
        -- forget about the quantifiers and just use an "exist", as we're looking for a
        -- point-satisfiability check here; whatever the original program was.
-       pgm = Result ki tr uic [(EX, n) | (_, n) <- is] cs ts as uis ax asgn cstr assertions [sw]
+       pgm = Result ki tr uic [(EX, n) | (_, n) <- is] cs ts as uis ax asgn cstr tactics assertions [sw]
        cvt = case smtLibVersion cfg of
                 SMTLib2 -> toSMTLib2
    runProofOn cvt cfg True [] pgm >>= callSolver True msg SatResult cfg
