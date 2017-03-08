@@ -33,7 +33,7 @@ module Data.SBV.Provers.Prover (
        ) where
 
 import Control.Monad    (when, unless)
-import Data.List        (intercalate)
+import Data.List        (intercalate, partition)
 import System.FilePath  (addExtension, splitExtension)
 import System.Time      (getClockTime)
 import System.IO.Unsafe (unsafeInterleaveIO)
@@ -343,25 +343,34 @@ generateSMTBenchmarks isSat f a = mapM_ gen [minBound .. maxBound]
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
 proveWith config a = do simRes@SMTProblem{tactics} <- simulate cvt config False [] a
-                        applyTactics [] tactics simRes $ callSolver False "Checking Theoremhood.." ThmResult config
+                        applyTactics (verbose config) [] tactics simRes $ callSolver False "Checking Theoremhood.." ThmResult config
   where cvt = case smtLibVersion config of
                 SMTLib2 -> toSMTLib2
 
 -- | Apply the given tactics to a problem
-applyTactics :: [Int] -> [Tactic SW] -> SMTProblem -> (SMTProblem -> IO ThmResult) -> IO ThmResult
-applyTactics _  []               p f = f p
-applyTactics ns [CaseSplit v cs] p f = caseSplit ns v cs p f
-applyTactics _  ts               _ _ = error $ "SBV: Can only deal with one tactic at a time! Received: " ++ show ts
+applyTactics :: Bool -> [Int] -> [Tactic SW] -> SMTProblem -> (SMTProblem -> IO ThmResult) -> IO ThmResult
+applyTactics cfgVerbose levels tactics problem cont
+   | not (null others)
+   = error $ "SBV: Unsupported tactic: " ++ show others
+   | null caseSplits
+   = cont problem
+   | True
+   = caseSplit levels verbose cases problem cont
+  where isCase CaseSplit{} = True
+
+        (caseSplits, others) = partition isCase tactics
+
+        (verbose, cases) = let (vs, css) = unzip [(v, cs) | CaseSplit v cs <- caseSplits] in (or (cfgVerbose:vs), concat css)
 
 -- | Implements the case-split tactic
 caseSplit :: [Int] -> Bool -> [(String, SW, [Tactic SW])] -> SMTProblem -> (SMTProblem -> IO ThmResult) -> IO ThmResult
 caseSplit level verbose cases claim f = go (zip [1..] cases)
 
-  where tag = "**" ++ replicate (length level) '*'
+  where tag = "**" ++ replicate (2 * length level) '*'
 
         mesg mbis | not verbose         = return ()
                   | Just (i, s) <- mbis = putStrLn $ tag ++ " Case " ++ intercalate "." (map show (level ++ [i])) ++ ": " ++ s
-                  | True                = putStrLn $ tag ++ " Checking case coverage"
+                  | True                = putStrLn $ tag ++ " Case " ++ intercalate "." (map show level ++ ["X"]) ++ ": Coverage"
 
         go :: [(Int, (String, SW, [Tactic SW]))] -> IO ThmResult
         go []
@@ -369,7 +378,7 @@ caseSplit level verbose cases claim f = go (zip [1..] cases)
                 f (mkCoverage [c | (_, c, _) <- cases])
         go ((i, (nm, cond, ts)):cs)
            = do mesg (Just (i, nm))
-                res <- applyTactics (level ++ [i]) ts (mkCase cond) f
+                res <- applyTactics verbose (level ++ [i]) ts (mkCase cond) f
                 case res of
                   ThmResult Unsatisfiable{} -> go cs
                   r                         -> return r
