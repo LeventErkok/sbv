@@ -348,7 +348,7 @@ proveWith config a = do simRes@SMTProblem{tactics} <- simulate cvt config False 
                 SMTLib2 -> toSMTLib2
 
 -- | Apply the given tactics to a problem
-applyTactics :: Bool -> [(Int, SW)] -> [Tactic SW] -> SMTProblem -> (CaseCond -> SMTProblem -> IO ThmResult) -> IO ThmResult
+applyTactics :: Bool -> [(String, SW)] -> [Tactic SW] -> SMTProblem -> (CaseCond -> SMTProblem -> IO ThmResult) -> IO ThmResult
 applyTactics cfgVerbose levels tactics problem cont
    | not (null others)
    = error $ "SBV: Unsupported tactic: " ++ show others
@@ -363,19 +363,26 @@ applyTactics cfgVerbose levels tactics problem cont
         (verbose, cases) = let (vs, css) = unzip [(v, cs) | CaseSplit v cs <- caseSplits] in (or (cfgVerbose:vs), concat css)
 
 -- | Implements the case-split tactic
-caseSplit :: [(Int, SW)] -> Bool -> [(String, SW, [Tactic SW])] -> SMTProblem -> (CaseCond -> SMTProblem -> IO ThmResult) -> IO ThmResult
-caseSplit level verbose cases claim f = go (zip [1..] cases)
+caseSplit :: [(String, SW)] -> Bool -> [(String, SW, [Tactic SW])] -> SMTProblem -> (CaseCond -> SMTProblem -> IO ThmResult) -> IO ThmResult
+caseSplit level verbose cases claim f = go (zip caseNos cases)
 
   where lids = map fst level
 
+        noOfCases = length cases
+        pad       = length (show noOfCases)
+
+        shCaseId i = let si = show i in replicate (pad - length si) ' ' ++ si
+
+        caseNos = map shCaseId [1 .. noOfCases]
+
         tag = "**" ++ replicate (2 * length level) '*'
 
-        mesg :: Maybe (Int, String) -> IO ()
+        mesg :: Maybe (String, String) -> IO ()
         mesg mbis | not verbose         = return ()
-                  | Just (i, s) <- mbis = putStrLn $ tag ++ " Case " ++ intercalate "." (map show lids ++ [show i]) ++ ": " ++ s
-                  | True                = putStrLn $ tag ++ " Case " ++ intercalate "." (map show lids ++ ["X"]   ) ++ ": Coverage"
+                  | Just (i, s) <- mbis = putStrLn $ tag ++ " Case " ++ intercalate "." (lids ++ [i])                              ++ ": " ++ s
+                  | True                = putStrLn $ tag ++ " Case " ++ intercalate "." (lids ++ [replicate (pad - 1) ' ' ++ "X"]) ++ ": Coverage"
 
-        go :: [(Int, (String, SW, [Tactic SW]))] -> IO ThmResult
+        go :: [(String, (String, SW, [Tactic SW]))] -> IO ThmResult
         go []
            -- At the end, we do a coverage call
            = do mesg Nothing
