@@ -35,12 +35,13 @@ type SMTLibConverter =  RoundingMode                 -- ^ User selected rounding
                      -> SBVPgm                       -- ^ assignments
                      -> [SW]                         -- ^ extra constraints
                      -> SW                           -- ^ output variable
+                     -> CaseCond                     -- ^ case analysis
                      -> SMTLibPgm
 
 -- | Convert to SMTLib-2 format
 toSMTLib2 :: SMTLibConverter
 toSMTLib2 = cvt SMTLib2
-  where cvt v roundMode smtLogic solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out
+  where cvt v roundMode smtLogic solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out mbCaseSelectors
          | KUnbounded `Set.member` kindInfo && not (supportsUnboundedInts solverCaps)
          = unsupported "unbounded integers"
          | KReal `Set.member` kindInfo  && not (supportsReals solverCaps)
@@ -60,7 +61,7 @@ toSMTLib2 = cvt SMTLib2
                aliasTable  = map (\(_, (x, y)) -> (y, x)) qinps
                converter   = case v of
                                SMTLib2 -> SMT2.cvt
-               (pre, post) = converter roundMode smtLogic solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out
+               (pre, post) = converter roundMode smtLogic solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out mbCaseSelectors
                needsFloats  = KFloat  `Set.member` kindInfo
                needsDoubles = KDouble `Set.member` kindInfo
                needsQuantifiers

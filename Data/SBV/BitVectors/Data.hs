@@ -47,7 +47,7 @@ module Data.SBV.BitVectors.Data
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), getSBranchRunConfig
  , declNewSArray, declNewSFunArray
- , Tactic(..), SMTProblem(..)
+ , Tactic(..), CaseCond(..), SMTProblem(..)
  ) where
 
 import Control.DeepSeq      (NFData(..))
@@ -449,13 +449,23 @@ mkSFunArray = SFunArray
 addConstraint :: Maybe Double -> SBool -> SBool -> Symbolic ()
 addConstraint mt (SBV c) (SBV c') = addSValConstraint mt c c'
 
+-- | A case condition (internal)
+data CaseCond = NoCase             -- ^ No case-split
+              | CasePath [SW]      -- ^ In a case-path
+              | CaseCov  [SW] [SW] -- ^ In a case-path end, coverage (first arg is path cond, second arg is coverage cond)
+
+instance NFData CaseCond where
+  rnf NoCase           = ()
+  rnf (CasePath ps)    = rnf ps
+  rnf (CaseCov  ps qs) = rnf ps `seq` rnf qs `seq` ()
+
 -- | Internal representation of a symbolic simulation result
-data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]      -- ^ inputs
-                             , smtSkolemMap :: [Either SW (SW, [SW])]           -- ^ skolem-map
-                             , kindsUsed    :: Set.Set Kind                     -- ^ kinds used
-                             , smtAsserts   :: [(String, Maybe CallStack, SW)]  -- ^ assertions
-                             , tactics      :: [Tactic SW]                      -- ^ tactics to use
-                             , smtLibPgm    :: SMTLibPgm                        -- ^ SMTLib representation
+data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]     -- ^ inputs
+                             , smtSkolemMap :: [Either SW (SW, [SW])]          -- ^ skolem-map
+                             , kindsUsed    :: Set.Set Kind                    -- ^ kinds used
+                             , smtAsserts   :: [(String, Maybe CallStack, SW)] -- ^ assertions
+                             , tactics      :: [Tactic SW]                     -- ^ tactics to use
+                             , smtLibPgm    :: CaseCond -> SMTLibPgm           -- ^ SMTLib representation, given case-splits
                              }
 
 instance NFData SMTProblem where

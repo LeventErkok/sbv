@@ -94,8 +94,9 @@ cvt :: RoundingMode                 -- ^ User selected rounding mode to be used 
     -> SBVPgm                       -- ^ assignments
     -> [SW]                         -- ^ extra constraints
     -> SW                           -- ^ output variable
+    -> CaseCond                     -- ^ case analysis data
     -> ([String], [String])
-cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out = (pre, [])
+cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out caseCond = (pre, [])
   where -- the logic is an over-approaximation
         hasInteger     = KUnbounded `Set.member` kindInfo
         hasReal        = KReal      `Set.member` kindInfo
@@ -174,13 +175,23 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
           | True                   = "     " ++ s
         align n s = replicate n ' ' ++ s
         -- if sat,   we assert cstrs /\ out
-        -- if prove, we assert ~(cstrs => out) = cstrs /\ not out
+        --     -- note that case-split is ignored in the case of sat
+        -- if prove:
+        --     -- we assert ~((cstrs /\  (p1 /\ p2 /\ .. /\ pn) /\ ~(c1 \/ c2 \/ .. \/ cm)) => out)
+        --                  cstrs /\ p1 /\ p2 /\ .. /\ pn /\ ~c1 /\ ~c2 /\ ~c3 .. /\ ~cm /\ out
         assertOut
-           | null cstrs = o
-           | True       = "(and " ++ unwords (map mkConj cstrs ++ [o]) ++ ")"
-           where mkConj = cvtSW skolemMap
-                 o | isSat =            mkConj out
-                   | True  = "(not " ++ mkConj out ++ ")"
+           | null cstrs' = o
+           | True        = "(and " ++ unwords (cstrs' ++ [o]) ++ ")"
+           where cstrs'
+                   | isSat = map pos cstrs
+                   | True  = case caseCond of
+                               NoCase         -> map pos cstrs
+                               CasePath ss    -> map pos cstrs ++ map pos ss
+                               CaseCov  ss qq -> map pos cstrs ++ map pos ss ++ map neg qq
+                 o | isSat = pos out
+                   | True  = neg out
+                 neg s = "(not " ++ pos s ++ ")"
+                 pos   = cvtSW skolemMap
         skolemMap = M.fromList [(s, ss) | Right (s, ss) <- skolemInps, not (null ss)]
         tableMap  = IM.fromList $ map mkConstTable constTables ++ map mkSkTable skolemTables
           where mkConstTable (((t, _, _), _), _) = (t, "table" ++ show t)
