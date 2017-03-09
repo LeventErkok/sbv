@@ -7,7 +7,7 @@ report any issues you might see with newer releases.
       * Version as downloaded from the above site on Jan 30, 2017.
   * Boolector:
       * http://fmv.jku.at/boolector/
-      * Version 2.4.0
+      * Version 2.4.1
   * CVC4:
       * http://cvc4.cs.nyu.edu/web/
       * Version 1.4
