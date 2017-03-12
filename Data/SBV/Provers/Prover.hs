@@ -343,57 +343,89 @@ generateSMTBenchmarks isSat f a = mapM_ gen [minBound .. maxBound]
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
 proveWith config a = do simRes@SMTProblem{tactics} <- simulate cvt config False [] a
-                        applyTactics (verbose config) [] tactics simRes $ callSolver False "Checking Theoremhood.." ThmResult config
+                        applyTactics False (wrap, unwrap) (verbose config) [] tactics simRes $ callSolver False "Checking Theoremhood.." ThmResult config
   where cvt = case smtLibVersion config of
                 SMTLib2 -> toSMTLib2
+        wrap                 = ThmResult
+        unwrap (ThmResult r) = r
 
 -- | Apply the given tactics to a problem
-applyTactics :: Bool -> [(String, SW)] -> [Tactic SW] -> SMTProblem -> (CaseCond -> SMTProblem -> IO ThmResult) -> IO ThmResult
-applyTactics cfgVerbose levels tactics problem cont
+applyTactics :: Bool -> (SMTResult -> res, res -> SMTResult) -> Bool -> [(String, SW)] -> [Tactic SW] -> SMTProblem -> (CaseCond -> SMTProblem -> IO res) -> IO res
+applyTactics isSat (wrap, unwrap) cfgVerbose levels tactics problem cont
    | not (null others)
    = error $ "SBV: Unsupported tactic: " ++ show others
    | null caseSplits
    = cont (CasePath (map snd levels)) problem
    | True
-   = caseSplit levels verbose cases problem cont
-  where isCase CaseSplit{} = True
-
-        (caseSplits, others) = partition isCase tactics
+   = caseSplit isSat (unwrap, wrap) levels verbose cases problem cont
+  where (caseSplits, others) = partition isCaseSplitTactic tactics
 
         (verbose, cases) = let (vs, css) = unzip [(v, cs) | CaseSplit v cs <- caseSplits] in (or (cfgVerbose:vs), concat css)
 
 -- | Implements the case-split tactic
-caseSplit :: [(String, SW)] -> Bool -> [(String, SW, [Tactic SW])] -> SMTProblem -> (CaseCond -> SMTProblem -> IO ThmResult) -> IO ThmResult
-caseSplit level verbose cases claim f = go (zip caseNos cases)
+caseSplit :: forall res. Bool -> (res -> SMTResult, SMTResult -> res) -> [(String, SW)] -> Bool -> [(String, SW, [Tactic SW])] -> SMTProblem -> (CaseCond -> SMTProblem -> IO res) -> IO res
+caseSplit isSAT (unwrap, wrap) level verbose cases claim f = go (zip caseNos cases)
 
   where lids = map fst level
 
         noOfCases = length cases
-        pad       = length (show noOfCases)
+        casePad   = length (show noOfCases)
 
-        shCaseId i = let si = show i in replicate (pad - length si) ' ' ++ si
+        tagLength = maximum $ map length $ "Coverage" : [s | (s, _, _) <- cases]
+        showTag t = take tagLength (t ++ repeat ' ')
+
+        shCaseId i = let si = show i in replicate (casePad - length si) ' ' ++ si
 
         caseNos = map shCaseId [1 .. noOfCases]
 
-        tag = "**" ++ replicate (2 * length level) '*'
+        tag tagChar = replicate 2 tagChar ++ replicate (2 * length level) tagChar
 
-        mesg :: Maybe (String, String) -> IO ()
-        mesg mbis | not verbose         = return ()
-                  | Just (i, s) <- mbis = putStrLn $ tag ++ " Case " ++ intercalate "." (lids ++ [i])                              ++ ": " ++ s
-                  | True                = putStrLn $ tag ++ " Case " ++ intercalate "." (lids ++ [replicate (pad - 1) ' ' ++ "X"]) ++ ": Coverage"
+        mkCaseName tagChar s i = tag tagChar ++ " Case " ++ intercalate "." (lids ++ [i]) ++ ": " ++ showTag s
 
-        go :: [(String, (String, SW, [Tactic SW]))] -> IO ThmResult
+        startCase :: Bool -> Maybe (String, String) -> IO ()
+        startCase multi mbis
+           | not verbose         = return ()
+           | Just (i, s) <- mbis = printer $ mkCaseName tagChar s          i                                     ++ start
+           | True                = printer $ mkCaseName tagChar "Coverage" (replicate (casePad - 1)  ' ' ++ "X") ++ start
+           where printer | multi = putStrLn
+                         | True  = putStr
+                 tagChar | multi = '>'
+                         | True  = '*'
+                 start   | multi = " [Starting]"
+                         | True  = ""
+
+        endCase :: Bool -> Maybe (String, String) -> String -> IO ()
+        endCase multi mbis msg
+           | not verbose         = return ()
+           | not multi           = putStrLn $ ' ' : msg
+           | Just (i, s) <- mbis = putStrLn $ mkCaseName '<' s          i                                     ++ ' ' : msg
+           | True                = putStrLn $ mkCaseName '<' "Coverage" (replicate (casePad - 1)  ' ' ++ "X") ++ ' ' : msg
+
+        go :: [(String, (String, SW, [Tactic SW]))] -> IO res
         go []
            -- At the end, we do a coverage call
-           = do mesg Nothing
-                f (CaseCov (map snd level) [c | (_, c, _) <- cases]) claim
+           = do startCase False Nothing
+                res <- f (CaseCov (map snd level) [c | (_, c, _) <- cases]) claim
+                decide False Nothing (unwrap res) (return res)
         go ((i, (nm, cond, ts)):cs)
            -- Still going down, do a regular call
-           = do mesg (Just (i, nm))
-                res <- applyTactics verbose (level ++ [(i, cond)]) ts claim f
-                case res of
-                  ThmResult Unsatisfiable{} -> go cs
-                  r                         -> return r
+           = do let furtherSplit = any isCaseSplitAnywhere ts
+                    mbis         = Just (i, nm)
+                startCase furtherSplit mbis
+                res <- applyTactics isSAT (wrap, unwrap) verbose (level ++ [(i, cond)]) ts claim f
+                decide furtherSplit mbis (unwrap res) (go cs)
+
+        decide
+         | isSAT = decideSAT
+         | True  = decideProof
+
+        -- If we're SAT, we stop at first satisfiable and report back. Otherwise continue.
+        decideSAT multi mbis r@Satisfiable{} _    = endCase multi mbis "[Satisfiable]"   >> return (wrap r)
+        decideSAT multi mbis _               cont = endCase multi mbis "[Unsatisfiable]" >> cont
+
+        -- If we're Prove, we stop at first *not* unsatisfiable and report back. Otherwise continue.
+        decideProof multi mbis Unsatisfiable{} cont = endCase multi mbis "[Proved]" >> cont
+        decideProof multi mbis r                _   = endCase multi mbis "[Failed]" >> return (wrap r)
 
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult

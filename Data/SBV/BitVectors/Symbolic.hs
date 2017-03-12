@@ -46,7 +46,7 @@ module Data.SBV.BitVectors.Symbolic
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
-  , Tactic(..), addSValTactic
+  , Tactic(..), addSValTactic, isCaseSplitTactic, isCaseSplitAnywhere
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
   , mkSValUserSort
@@ -286,6 +286,14 @@ data Tactic a = CaseSplit Bool [(String, a, [Tactic a])]  -- ^ Case-split, with 
 
 instance NFData a => NFData (Tactic a) where
    rnf (CaseSplit b l) = rnf b `seq` rnf l `seq` ()
+
+-- | Is this a cases-split tactic?
+isCaseSplitTactic :: Tactic a -> Bool
+isCaseSplitTactic CaseSplit{} = True
+
+-- | Do we have a case-split anywhere in this tactic
+isCaseSplitAnywhere :: Tactic a -> Bool
+isCaseSplitAnywhere CaseSplit{} = True
 
 -- | Result of running a symbolic computation
 data Result = Result { reskinds       :: Set.Set Kind                     -- ^ kinds used in the program
