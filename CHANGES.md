@@ -3,6 +3,12 @@
 
 * Latest Hackage released version: 5.15, 2017-01-30
 
+### Version 5.16, Not yet released
+  * Implemented tactics, which allow the user to navigate the proof process.
+    User can, for instance, implement case-splitting in a proof to guide
+    the underlying solver through. Tactics can be both SBV based (case-splitting)
+    or more-or-less solely implemented by the underlying solver.
+
 ### Version 5.15, 2017-01-30
 
   * Bump up dependency on CrackNum >= 1.9, to get access to hexadecimal floats.

@@ -394,8 +394,8 @@ applyTactics cfgIn isSat (wrap, unwrap) levels tactics cont
 
         finalConfig = transConfig cfgIn
 
--- | Implements the case-split tactic
-caseSplit :: forall res.                          -- ^ Works for both Sat and Proof, hence the quantification on res
+-- | Implements the case-split tactic. Works for both Sat and Proof, hence the quantification on @res@
+caseSplit :: forall res.
              SMTConfig                            -- ^ Solver config
           -> Bool                                 -- ^ True if we're sat solving
           -> (res -> SMTResult, SMTResult -> res) -- ^ wrapper, unwrapper from sat/proof to the actual result
