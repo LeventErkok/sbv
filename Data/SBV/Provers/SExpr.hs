@@ -77,7 +77,8 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
                 n' | exact = n
                    | True  = init n
         -- simplify numbers and root-obj values
-        cvt (EApp [ECon "to_int", EReal a])                        = return $ EReal a   -- ignore the "casting"
+        cvt (EApp [ECon "to_int",  EReal a])                       = return $ EReal a   -- ignore the "casting"
+        cvt (EApp [ECon "to_real", EReal a])                       = return $ EReal a   -- ignore the "casting"
         cvt (EApp [ECon "/", EReal a, EReal b])                    = return $ EReal (a / b)
         cvt (EApp [ECon "/", EReal a, ENum  b])                    = return $ EReal (a                   / fromInteger (fst b))
         cvt (EApp [ECon "/", ENum  a, EReal b])                    = return $ EReal (fromInteger (fst a) /             b      )
