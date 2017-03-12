@@ -46,7 +46,7 @@ module Data.SBV.BitVectors.Symbolic
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
-  , Tactic(..), addSValTactic, isCaseSplitTactic, isCaseSplitAnywhere, isStopAfterTactic
+  , Tactic(..), addSValTactic, isCaseSplitTactic, isCaseSplitAnywhere, isStopAfterTactic, isCheckUsingTactic
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
   , mkSValUserSort
@@ -281,29 +281,36 @@ newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SW, SBVExpr)}
 type NamedSymVar = (SW, String)
 
 -- | Solver tactic
-data Tactic a = CaseSplit Bool [(String, a, [Tactic a])]  -- ^ Case-split, with implicit coverage. Bool says whether we should be verbose.
-              | StopAfter Int                             -- ^ Time-out given to solver, in seconds.
+data Tactic a = CaseSplit  Bool [(String, a, [Tactic a])]  -- ^ Case-split, with implicit coverage. Bool says whether we should be verbose.
+              | StopAfter  Int                             -- ^ Time-out given to solver, in seconds.
+              | CheckUsing String                          -- ^ Invoke with check-sat-using command, instead of check-sat
               deriving (Show, Functor)
 
 instance NFData a => NFData (Tactic a) where
    rnf (CaseSplit b l) = rnf b `seq` rnf l `seq` ()
    rnf (StopAfter i)   = rnf i `seq` ()
+   rnf (CheckUsing s)  = rnf s `seq` ()
 
 -- | Is this a case-split tactic?
 isCaseSplitTactic :: Tactic a -> Bool
 isCaseSplitTactic CaseSplit{} = True
-isCaseSplitTactic StopAfter{} = False
+isCaseSplitTactic _           = False
 
 -- | Is this a stop-after tactic?
 isStopAfterTactic :: Tactic a -> Bool
-isStopAfterTactic CaseSplit{} = False
-isStopAfterTactic StopAfter{} = True
+isStopAfterTactic CaseSplit{} = True
+isStopAfterTactic _           = False
+
+-- | Is this a checkusing tactic?
+isCheckUsingTactic :: Tactic a -> Bool
+isCheckUsingTactic CheckUsing{} = True
+isCheckUsingTactic _            = False
 
 -- | Do we have a case-split anywhere in this tactic. Will make more sense
 -- if we ever have recursive tactics; right now more or less useless.
 isCaseSplitAnywhere :: Tactic a -> Bool
 isCaseSplitAnywhere CaseSplit{} = True
-isCaseSplitAnywhere StopAfter{} = False
+isCaseSplitAnywhere _           = False
 
 -- | Result of running a symbolic computation
 data Result = Result { reskinds       :: Set.Set Kind                     -- ^ kinds used in the program
@@ -793,6 +800,7 @@ addSValTactic tac = do st <- ask
                                                                             return (nm, v', ts')
                                                    in CaseSplit b `fmap` mapM app cs
                            walk (StopAfter i)    = return $ StopAfter i
+                           walk (CheckUsing s)   = return $ CheckUsing s
                        tac' <- liftIO $ walk tac
                        liftIO $ modifyIORef (rTacs st) (tac':)
 

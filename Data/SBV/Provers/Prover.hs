@@ -364,18 +364,27 @@ applyTactics cfgIn isSat (wrap, unwrap) levels tactics cont
    | not (null others)
    = error $ "SBV: Unsupported tactic: " ++ show others
    | null caseSplits
-   = cont cfg (CasePath (map snd levels))
+   = cont finalConfig (CasePath (map snd levels))
    | True
-   = caseSplit cfg isSat (unwrap, wrap) levels chatty cases cont
-  where (caseSplits, timeOuts, others) = let (cs, noncs)   = partition isCaseSplitTactic tactics
-                                             (to, noncsto) = partition isStopAfterTactic noncs
-                                         in (cs, to, noncsto)
+   = caseSplit finalConfig isSat (unwrap, wrap) levels chatty cases cont
+  where (caseSplits, timeOuts, checkUsing, others) = let (cs, noncs)     = partition isCaseSplitTactic  tactics
+                                                         (to, noncsto)   = partition isStopAfterTactic  noncs
+                                                         (cu, noncstocu) = partition isCheckUsingTactic noncsto
+                                                     in (cs, to, cu, noncstocu)
 
-        (chatty, cases) = let (vs, css) = unzip [(v, cs) | CaseSplit v cs <- caseSplits] in (or (verbose cfg:vs), concat css)
+        (chatty, cases) = let (vs, css) = unzip [(v, cs) | CaseSplit v cs <- caseSplits] in (or (verbose cfgIn : vs), concat css)
 
-        cfg = case [i | StopAfter i <- timeOuts] of
-                [] -> cfgIn
-                xs -> cfgIn {timeOut = Just (maximum xs)}
+        grabStops c = case [i | StopAfter i <- timeOuts] of
+                        [] -> c
+                        xs -> c {timeOut = Just (maximum xs)}
+
+        grabCheckUsing c = case [s | CheckUsing s <- checkUsing] of
+                             [] -> c
+                             ss -> c {satCmd = "(check-sat-using " ++ unwords ss ++ ")"}
+
+        transConfig = grabCheckUsing . grabStops
+
+        finalConfig = transConfig cfgIn
 
 -- | Implements the case-split tactic
 caseSplit :: forall res.                          -- ^ Works for both Sat and Proof, hence the quantification on res
@@ -442,13 +451,17 @@ caseSplit config isSAT (unwrap, wrap) level chatty cases f = go (zip caseNos cas
          | isSAT = decideSAT
          | True  = decideProof
 
-        -- If we're SAT, we stop at first satisfiable and report back. Otherwise continue.
+        -- short name
         diag Unsatisfiable{} = "[Unsatisfiable]"
         diag Satisfiable  {} = "[Satisfiable]"
         diag Unknown      {} = "[Unknown]"
         diag ProofError   {} = "[ProofError]"
         diag TimeOut      {} = "[TimeOut]"
+
+        -- If we're SAT, we stop at first satisfiable and report back. Otherwise continue.
+        -- Note that we also stop if we get a ProofError, as that clearly is not OK
         decideSAT multi mbis r@Satisfiable{} _    = endCase multi mbis (diag r) >> return (wrap r)
+        decideSAT multi mbis r@ProofError{}  _    = endCase multi mbis (diag r) >> return (wrap r)
         decideSAT multi mbis r               cont = endCase multi mbis (diag r) >> cont
 
         -- If we're Prove, we stop at first *not* unsatisfiable and report back. Otherwise continue.
