@@ -326,7 +326,7 @@ compileToSMTLib version isSat a = do
             cvt = case version of
                     SMTLib2 -> toSMTLib2
         SMTProblem{smtLibPgm} <- simulate cvt defaultSMTCfg isSat comments a
-        let out = show (smtLibPgm NoCase)
+        let out = show (smtLibPgm defaultSMTCfg NoCase)
         return $ out ++ "\n(check-sat)\n"
 
 -- | Create SMT-Lib benchmarks, for supported versions of SMTLib. The first argument is the basename of the file.
@@ -358,6 +358,12 @@ satWith config a = do simRes@SMTProblem{tactics} <- simulate cvt config True [] 
         wrap                 = SatResult
         unwrap (SatResult r) = r
 
+-- repeated use of partition
+cluster :: [a -> Bool] -> [a] -> [[a]]
+cluster []     xs = [xs]
+cluster (f:fs) xs = ok : cluster fs other
+ where (ok, other) = partition f xs
+
 -- | Apply the given tactics to a problem
 applyTactics :: SMTConfig -> Bool -> (SMTResult -> res, res -> SMTResult) -> [(String, SW)] -> [Tactic SW] -> (SMTConfig -> CaseCond -> IO res) -> IO res
 applyTactics cfgIn isSat (wrap, unwrap) levels tactics cont
@@ -367,10 +373,7 @@ applyTactics cfgIn isSat (wrap, unwrap) levels tactics cont
    = cont finalConfig (CasePath (map snd levels))
    | True
    = caseSplit finalConfig isSat (unwrap, wrap) levels chatty cases cont
-  where (caseSplits, timeOuts, checkUsing, others) = let (cs, noncs)     = partition isCaseSplitTactic  tactics
-                                                         (to, noncsto)   = partition isStopAfterTactic  noncs
-                                                         (cu, noncstocu) = partition isCheckUsingTactic noncsto
-                                                     in (cs, to, cu, noncstocu)
+  where [caseSplits, timeOuts, checkUsing, useLogics, others] = cluster [isCaseSplitTactic, isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic] tactics
 
         (chatty, cases) = let (vs, css) = unzip [(v, cs) | CaseSplit v cs <- caseSplits] in (or (verbose cfgIn : vs), concat css)
 
@@ -379,10 +382,15 @@ applyTactics cfgIn isSat (wrap, unwrap) levels tactics cont
                         xs -> c {timeOut = Just (maximum xs)}
 
         grabCheckUsing c = case [s | CheckUsing s <- checkUsing] of
-                             [] -> c
-                             ss -> c {satCmd = "(check-sat-using " ++ unwords ss ++ ")"}
+                             []  -> c
+                             [s] -> c {satCmd = "(check-sat-using " ++ s ++ ")"}
+                             ss  -> c {satCmd = "(check-sat-using (then " ++ unwords ss ++ "))"}
 
-        transConfig = grabCheckUsing . grabStops
+        grabUseLogic c = case [l | UseLogic l <- useLogics] of
+                           [] -> c
+                           ss -> c { useLogic = Just (last ss) }
+
+        transConfig = grabUseLogic . grabCheckUsing . grabStops
 
         finalConfig = transConfig cfgIn
 
@@ -547,7 +555,7 @@ allSatWith config p = do
                                                Unknown       _ model         -> cont model
         invoke nonEqConsts n SMTProblem{smtInputs=qinps, smtSkolemMap=skolemMap, smtLibPgm=smtLibPgm} = do
                msg $ "Looking for solution " ++ show n
-               case addNonEqConstraints (roundingMode config) qinps nonEqConsts (smtLibPgm NoCase) of
+               case addNonEqConstraints (roundingMode config) qinps nonEqConsts (smtLibPgm config NoCase) of
                  Nothing ->  -- no new constraints added, stop
                             return Nothing
                  Just finalPgm -> do msg $ "Generated SMTLib program:\n" ++ finalPgm
@@ -561,7 +569,7 @@ callSolver :: Bool -> String -> (SMTResult -> b) -> SMTProblem -> SMTConfig -> C
 callSolver isSat checkMsg wrap SMTProblem{smtInputs=qinps, smtSkolemMap=skolemMap, smtLibPgm=smtLibPgm} config caseCond = do
        let msg = when (verbose config) . putStrLn . ("** " ++)
        msg checkMsg
-       let finalPgm = intercalate "\n" (pre ++ post) where SMTLibPgm _ (_, pre, post) = smtLibPgm caseCond
+       let finalPgm = intercalate "\n" (pre ++ post) where SMTLibPgm _ (_, pre, post) = smtLibPgm config caseCond
        msg $ "Generated SMTLib program:\n" ++ finalPgm
        smtAnswer <- engine (solver config) config isSat qinps skolemMap finalPgm
        msg "Done.."
@@ -592,7 +600,7 @@ runProofOn converter config isSat comments res =
                                    where go []                   (_,  sofar) = reverse sofar
                                          go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
                                          go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
-                      smtScript = converter (roundingMode config) (useLogic config) solverCaps ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o
+                      smtScript = converter solverCaps ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o
                       result = SMTProblem {smtInputs=is, smtSkolemMap=skolemMap, kindsUsed=ki, smtAsserts=assertions, tactics=tacs, smtLibPgm=smtScript}
                   in rnf smtScript `seq` return result
              Result{resOutputs = os} -> case length os of

@@ -47,7 +47,7 @@ module Data.SBV.BitVectors.Data
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), getSBranchRunConfig
  , declNewSArray, declNewSFunArray
- , Tactic(..), CaseCond(..), SMTProblem(..), isCaseSplitTactic, isCaseSplitAnywhere, isStopAfterTactic, isCheckUsingTactic
+ , Tactic(..), CaseCond(..), SMTProblem(..), isCaseSplitTactic, isCaseSplitAnywhere, isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic
  ) where
 
 import Control.DeepSeq      (NFData(..))
@@ -460,12 +460,12 @@ instance NFData CaseCond where
   rnf (CaseCov  ps qs) = rnf ps `seq` rnf qs `seq` ()
 
 -- | Internal representation of a symbolic simulation result
-data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]     -- ^ inputs
-                             , smtSkolemMap :: [Either SW (SW, [SW])]          -- ^ skolem-map
-                             , kindsUsed    :: Set.Set Kind                    -- ^ kinds used
-                             , smtAsserts   :: [(String, Maybe CallStack, SW)] -- ^ assertions
-                             , tactics      :: [Tactic SW]                     -- ^ tactics to use
-                             , smtLibPgm    :: CaseCond -> SMTLibPgm           -- ^ SMTLib representation, given case-splits
+data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]         -- ^ inputs
+                             , smtSkolemMap :: [Either SW (SW, [SW])]              -- ^ skolem-map
+                             , kindsUsed    :: Set.Set Kind                        -- ^ kinds used
+                             , smtAsserts   :: [(String, Maybe CallStack, SW)]     -- ^ assertions
+                             , tactics      :: [Tactic SW]                         -- ^ tactics to use
+                             , smtLibPgm    :: SMTConfig -> CaseCond -> SMTLibPgm  -- ^ SMTLib representation, given the config and case-splits
                              }
 
 instance NFData SMTProblem where

@@ -46,7 +46,7 @@ module Data.SBV.BitVectors.Symbolic
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
-  , Tactic(..), addSValTactic, isCaseSplitTactic, isCaseSplitAnywhere, isStopAfterTactic, isCheckUsingTactic
+  , Tactic(..), addSValTactic, isCaseSplitTactic, isCaseSplitAnywhere, isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
   , mkSValUserSort
@@ -284,12 +284,14 @@ type NamedSymVar = (SW, String)
 data Tactic a = CaseSplit  Bool [(String, a, [Tactic a])]  -- ^ Case-split, with implicit coverage. Bool says whether we should be verbose.
               | StopAfter  Int                             -- ^ Time-out given to solver, in seconds.
               | CheckUsing String                          -- ^ Invoke with check-sat-using command, instead of check-sat
+              | UseLogic   Logic                           -- ^ Use this logic, a custom one can be specified too
               deriving (Show, Functor)
 
 instance NFData a => NFData (Tactic a) where
    rnf (CaseSplit b l) = rnf b `seq` rnf l `seq` ()
-   rnf (StopAfter i)   = rnf i `seq` ()
+   rnf (StopAfter  i)  = rnf i `seq` ()
    rnf (CheckUsing s)  = rnf s `seq` ()
+   rnf (UseLogic   l)  = rnf l `seq` ()
 
 -- | Is this a case-split tactic?
 isCaseSplitTactic :: Tactic a -> Bool
@@ -298,13 +300,18 @@ isCaseSplitTactic _           = False
 
 -- | Is this a stop-after tactic?
 isStopAfterTactic :: Tactic a -> Bool
-isStopAfterTactic CaseSplit{} = True
+isStopAfterTactic StopAfter{} = True
 isStopAfterTactic _           = False
 
 -- | Is this a checkusing tactic?
 isCheckUsingTactic :: Tactic a -> Bool
 isCheckUsingTactic CheckUsing{} = True
 isCheckUsingTactic _            = False
+
+-- | Is this a uselogic tactic?
+isUseLogicTactic :: Tactic a -> Bool
+isUseLogicTactic UseLogic{} = True
+isUseLogicTactic _          = False
 
 -- | Do we have a case-split anywhere in this tactic. Will make more sense
 -- if we ever have recursive tactics; right now more or less useless.
@@ -799,8 +806,9 @@ addSValTactic tac = do st <- ask
                                                                             v' <- svToSW st v
                                                                             return (nm, v', ts')
                                                    in CaseSplit b `fmap` mapM app cs
-                           walk (StopAfter i)    = return $ StopAfter i
+                           walk (StopAfter i)    = return $ StopAfter  i
                            walk (CheckUsing s)   = return $ CheckUsing s
+                           walk (UseLogic   l)   = return $ UseLogic   l
                        tac' <- liftIO $ walk tac
                        liftIO $ modifyIORef (rTacs st) (tac':)
 
@@ -1043,11 +1051,16 @@ data SMTLibLogic
   | QF_UFLIA  -- ^ Unquantified linear integer arithmetic with uninterpreted sort and function symbols.
   | QF_UFLRA  -- ^ Unquantified linear real arithmetic with uninterpreted sort and function symbols.
   | QF_UFNRA  -- ^ Unquantified non-linear real arithmetic with uninterpreted sort and function symbols.
+  | QF_UFNIRA -- ^ Unquantified non-linear real integer arithmetic with uninterpreted sort and function symbols.
   | UFLRA     -- ^ Linear real arithmetic with uninterpreted sort and function symbols.
   | UFNIA     -- ^ Non-linear integer arithmetic with uninterpreted sort and function symbols.
   | QF_FPBV   -- ^ Quantifier-free formulas over the theory of floating point numbers, arrays, and bit-vectors
   | QF_FP     -- ^ Quantifier-free formulas over the theory of floating point numbers
   deriving Show
+
+-- | NFData instance for SMTLibLogic
+instance NFData SMTLibLogic where
+   rnf x = x `seq` ()
 
 -- | Chosen logic for the solver
 data Logic = PredefinedLogic SMTLibLogic  -- ^ Use one of the logics as defined by the standard
@@ -1056,6 +1069,11 @@ data Logic = PredefinedLogic SMTLibLogic  -- ^ Use one of the logics as defined 
 instance Show Logic where
   show (PredefinedLogic l) = show l
   show (CustomLogic     s) = s
+
+-- | NFData instance for Logic
+instance NFData Logic where
+  rnf (PredefinedLogic l) = rnf l
+  rnf (CustomLogic s)     = rnf s `seq` ()
 
 -- | Translation tricks needed for specific capabilities afforded by each solver
 data SolverCapabilities = SolverCapabilities {

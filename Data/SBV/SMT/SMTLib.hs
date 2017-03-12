@@ -19,9 +19,7 @@ import qualified Data.SBV.SMT.SMTLib2 as SMT2
 import qualified Data.Set as Set (Set, member, toList)
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
-type SMTLibConverter =  RoundingMode                 -- ^ User selected rounding mode to be used for floating point arithmetic
-                     -> Maybe Logic                  -- ^ User selected logic to use. If Nothing, pick automatically.
-                     -> SolverCapabilities           -- ^ Capabilities of the backend solver targeted
+type SMTLibConverter =  SolverCapabilities           -- ^ Capabilities of the backend solver targeted
                      -> Set.Set Kind                 -- ^ Kinds used in the problem
                      -> Bool                         -- ^ is this a sat problem?
                      -> [String]                     -- ^ extra comments to place on top
@@ -35,13 +33,14 @@ type SMTLibConverter =  RoundingMode                 -- ^ User selected rounding
                      -> SBVPgm                       -- ^ assignments
                      -> [SW]                         -- ^ extra constraints
                      -> SW                           -- ^ output variable
+                     -> SMTConfig                    -- ^ configuration
                      -> CaseCond                     -- ^ case analysis
                      -> SMTLibPgm
 
 -- | Convert to SMTLib-2 format
 toSMTLib2 :: SMTLibConverter
 toSMTLib2 = cvt SMTLib2
-  where cvt v roundMode smtLogic solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out mbCaseSelectors
+  where cvt v solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config mbCaseSelectors
          | KUnbounded `Set.member` kindInfo && not (supportsUnboundedInts solverCaps)
          = unsupported "unbounded integers"
          | KReal `Set.member` kindInfo  && not (supportsReals solverCaps)
@@ -61,7 +60,7 @@ toSMTLib2 = cvt SMTLib2
                aliasTable  = map (\(_, (x, y)) -> (y, x)) qinps
                converter   = case v of
                                SMTLib2 -> SMT2.cvt
-               (pre, post) = converter roundMode smtLogic solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out mbCaseSelectors
+               (pre, post) = converter solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config mbCaseSelectors
                needsFloats  = KFloat  `Set.member` kindInfo
                needsDoubles = KDouble `Set.member` kindInfo
                needsQuantifiers

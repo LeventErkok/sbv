@@ -78,9 +78,7 @@ tbd :: String -> a
 tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
-cvt :: RoundingMode                 -- ^ User selected rounding mode to be used for floating point arithmetic
-    -> Maybe Logic                  -- ^ SMT-Lib logic, if requested by the user
-    -> SolverCapabilities           -- ^ capabilities of the current solver
+cvt :: SolverCapabilities           -- ^ capabilities of the current solver
     -> Set.Set Kind                 -- ^ kinds used
     -> Bool                         -- ^ is this a sat problem?
     -> [String]                     -- ^ extra comments to place on top
@@ -94,9 +92,10 @@ cvt :: RoundingMode                 -- ^ User selected rounding mode to be used 
     -> SBVPgm                       -- ^ assignments
     -> [SW]                         -- ^ extra constraints
     -> SW                           -- ^ output variable
+    -> SMTConfig                    -- ^ configuration
     -> CaseCond                     -- ^ case analysis data
     -> ([String], [String])
-cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out caseCond = (pre, [])
+cvt solverCaps kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out config caseCond = (pre, [])
   where -- the logic is an over-approaximation
         hasInteger     = KUnbounded `Set.member` kindInfo
         hasReal        = KReal      `Set.member` kindInfo
@@ -105,8 +104,9 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
         hasBVs         = not $ null [() | KBounded{} <- Set.toList kindInfo]
         usorts         = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
         hasNonBVArrays = (not . null) [() | (_, (_, (k1, k2), _)) <- arrs, not (isBounded k1 && isBounded k2)]
+        rm             = roundingMode config
         logic
-           | Just l <- smtLogic
+           | Just l <- useLogic config
            = ["(set-logic " ++ show l ++ ") ; NB. User specified."]
            | hasDouble || hasFloat    -- NB. We don't check for quantifiers here, we probably should..
            = if hasBVs
