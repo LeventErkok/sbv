@@ -349,6 +349,15 @@ proveWith config a = do simRes@SMTProblem{tactics} <- simulate cvt config False 
         wrap                 = ThmResult
         unwrap (ThmResult r) = r
 
+-- | Find a satisfying assignment using the given SMT-solver
+satWith :: Provable a => SMTConfig -> a -> IO SatResult
+satWith config a = do simRes@SMTProblem{tactics} <- simulate cvt config True [] a
+                      applyTactics True (wrap, unwrap) (verbose config) [] tactics simRes $ callSolver True "Checking Satisfiability.." SatResult config
+  where cvt = case smtLibVersion config of
+                SMTLib2 -> toSMTLib2
+        wrap                 = SatResult
+        unwrap (SatResult r) = r
+
 -- | Apply the given tactics to a problem
 applyTactics :: Bool -> (SMTResult -> res, res -> SMTResult) -> Bool -> [(String, SW)] -> [Tactic SW] -> SMTProblem -> (CaseCond -> SMTProblem -> IO res) -> IO res
 applyTactics isSat (wrap, unwrap) cfgVerbose levels tactics problem cont
@@ -426,12 +435,6 @@ caseSplit isSAT (unwrap, wrap) level verbose cases claim f = go (zip caseNos cas
         -- If we're Prove, we stop at first *not* unsatisfiable and report back. Otherwise continue.
         decideProof multi mbis Unsatisfiable{} cont = endCase multi mbis "[Proved]" >> cont
         decideProof multi mbis r                _   = endCase multi mbis "[Failed]" >> return (wrap r)
-
--- | Find a satisfying assignment using the given SMT-solver
-satWith :: Provable a => SMTConfig -> a -> IO SatResult
-satWith config a = simulate cvt config True [] a >>= callSolver True "Checking Satisfiability.." SatResult config NoCase
-  where cvt = case smtLibVersion config of
-                SMTLib2 -> toSMTLib2
 
 -- | Check if any of the assertions can be violated
 safeWith :: SExecutable a => SMTConfig -> a -> IO [SafeResult]

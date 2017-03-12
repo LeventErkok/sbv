@@ -174,17 +174,23 @@ cvt rm smtLogic solverCaps kindInfo isSat comments inputs skolemInps consts tbls
           | null delayedEqualities = s
           | True                   = "     " ++ s
         align n s = replicate n ' ' ++ s
-        -- if sat,   we assert cstrs /\ out
-        --     -- note that case-split is ignored in the case of sat
+        -- We have:
+        --    - cstrs   : Explicitly given constraints (via calls to constrain)
+        --    - p1..pn  : The path conditions in a case-split that led us here. This is given in a case-split.
+        --    - c1..cm  : All the other case-split constraints for the coverage case. This is in a case-coverage.
+        -- if sat:
+        --     -- we assert (cstrs /\ (p1 /\ p2 /\ ... /\ pn) /\ ~(c1 \/ c2 \/ .. \/ cm) /\ out)
+        --            i.e., cstrs /\ p1 /\ p2 /\ ... /\ pn /\ ~c1 /\ ~c2 /\ ~c3 .. /\ ~cm /\ out
         -- if prove:
         --     -- we assert ~((cstrs /\  (p1 /\ p2 /\ .. /\ pn) /\ ~(c1 \/ c2 \/ .. \/ cm)) => out)
-        --                  cstrs /\ p1 /\ p2 /\ .. /\ pn /\ ~c1 /\ ~c2 /\ ~c3 .. /\ ~cm /\ out
+        --            i.e., cstrs /\ p1 /\ p2 /\ .. /\ pn /\ ~c1 /\ ~c2 /\ ~c3 .. /\ ~cm /\ ~out
+        -- That is, we always assert all path constraints and path conditions AND
+        --     -- negation of the output in a prove
+        --     -- output itself in a sat
         assertOut
            | null cstrs' = o
            | True        = "(and " ++ unwords (cstrs' ++ [o]) ++ ")"
-           where cstrs'
-                   | isSat = map pos cstrs
-                   | True  = case caseCond of
+           where cstrs' = case caseCond of
                                NoCase         -> map pos cstrs
                                CasePath ss    -> map pos cstrs ++ map pos ss
                                CaseCov  ss qq -> map pos cstrs ++ map pos ss ++ map neg qq
