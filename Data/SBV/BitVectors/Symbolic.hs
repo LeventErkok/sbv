@@ -46,7 +46,7 @@ module Data.SBV.BitVectors.Symbolic
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
-  , Tactic(..), addSValTactic, isCaseSplitTactic, isCaseSplitAnywhere
+  , Tactic(..), addSValTactic, isCaseSplitTactic, isCaseSplitAnywhere, isStopAfterTactic
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
   , mkSValUserSort
@@ -282,18 +282,28 @@ type NamedSymVar = (SW, String)
 
 -- | Solver tactic
 data Tactic a = CaseSplit Bool [(String, a, [Tactic a])]  -- ^ Case-split, with implicit coverage. Bool says whether we should be verbose.
+              | StopAfter Int                             -- ^ Time-out given to solver, in seconds.
               deriving (Show, Functor)
 
 instance NFData a => NFData (Tactic a) where
    rnf (CaseSplit b l) = rnf b `seq` rnf l `seq` ()
+   rnf (StopAfter i)   = rnf i `seq` ()
 
--- | Is this a cases-split tactic?
+-- | Is this a case-split tactic?
 isCaseSplitTactic :: Tactic a -> Bool
 isCaseSplitTactic CaseSplit{} = True
+isCaseSplitTactic StopAfter{} = False
 
--- | Do we have a case-split anywhere in this tactic
+-- | Is this a stop-after tactic?
+isStopAfterTactic :: Tactic a -> Bool
+isStopAfterTactic CaseSplit{} = False
+isStopAfterTactic StopAfter{} = True
+
+-- | Do we have a case-split anywhere in this tactic. Will make more sense
+-- if we ever have recursive tactics; right now more or less useless.
 isCaseSplitAnywhere :: Tactic a -> Bool
 isCaseSplitAnywhere CaseSplit{} = True
+isCaseSplitAnywhere StopAfter{} = False
 
 -- | Result of running a symbolic computation
 data Result = Result { reskinds       :: Set.Set Kind                     -- ^ kinds used in the program
@@ -782,6 +792,7 @@ addSValTactic tac = do st <- ask
                                                                             v' <- svToSW st v
                                                                             return (nm, v', ts')
                                                    in CaseSplit b `fmap` mapM app cs
+                           walk (StopAfter i)    = return $ StopAfter i
                        tac' <- liftIO $ walk tac
                        liftIO $ modifyIORef (rTacs st) (tac':)
 

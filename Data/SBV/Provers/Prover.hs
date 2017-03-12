@@ -343,7 +343,7 @@ generateSMTBenchmarks isSat f a = mapM_ gen [minBound .. maxBound]
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
 proveWith config a = do simRes@SMTProblem{tactics} <- simulate cvt config False [] a
-                        applyTactics False (wrap, unwrap) (verbose config) [] tactics simRes $ callSolver False "Checking Theoremhood.." ThmResult config
+                        applyTactics config False (wrap, unwrap) [] tactics $ callSolver False "Checking Theoremhood.." ThmResult simRes
   where cvt = case smtLibVersion config of
                 SMTLib2 -> toSMTLib2
         wrap                 = ThmResult
@@ -352,28 +352,42 @@ proveWith config a = do simRes@SMTProblem{tactics} <- simulate cvt config False 
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
 satWith config a = do simRes@SMTProblem{tactics} <- simulate cvt config True [] a
-                      applyTactics True (wrap, unwrap) (verbose config) [] tactics simRes $ callSolver True "Checking Satisfiability.." SatResult config
+                      applyTactics config True (wrap, unwrap) [] tactics $ callSolver True "Checking Satisfiability.." SatResult simRes
   where cvt = case smtLibVersion config of
                 SMTLib2 -> toSMTLib2
         wrap                 = SatResult
         unwrap (SatResult r) = r
 
 -- | Apply the given tactics to a problem
-applyTactics :: Bool -> (SMTResult -> res, res -> SMTResult) -> Bool -> [(String, SW)] -> [Tactic SW] -> SMTProblem -> (CaseCond -> SMTProblem -> IO res) -> IO res
-applyTactics isSat (wrap, unwrap) cfgVerbose levels tactics problem cont
+applyTactics :: SMTConfig -> Bool -> (SMTResult -> res, res -> SMTResult) -> [(String, SW)] -> [Tactic SW] -> (SMTConfig -> CaseCond -> IO res) -> IO res
+applyTactics cfgIn isSat (wrap, unwrap) levels tactics cont
    | not (null others)
    = error $ "SBV: Unsupported tactic: " ++ show others
    | null caseSplits
-   = cont (CasePath (map snd levels)) problem
+   = cont cfg (CasePath (map snd levels))
    | True
-   = caseSplit isSat (unwrap, wrap) levels verbose cases problem cont
-  where (caseSplits, others) = partition isCaseSplitTactic tactics
+   = caseSplit cfg isSat (unwrap, wrap) levels chatty cases cont
+  where (caseSplits, timeOuts, others) = let (cs, noncs)   = partition isCaseSplitTactic tactics
+                                             (to, noncsto) = partition isStopAfterTactic noncs
+                                         in (cs, to, noncsto)
 
-        (verbose, cases) = let (vs, css) = unzip [(v, cs) | CaseSplit v cs <- caseSplits] in (or (cfgVerbose:vs), concat css)
+        (chatty, cases) = let (vs, css) = unzip [(v, cs) | CaseSplit v cs <- caseSplits] in (or (verbose cfg:vs), concat css)
+
+        cfg = case [i | StopAfter i <- timeOuts] of
+                [] -> cfgIn
+                xs -> cfgIn {timeOut = Just (maximum xs)}
 
 -- | Implements the case-split tactic
-caseSplit :: forall res. Bool -> (res -> SMTResult, SMTResult -> res) -> [(String, SW)] -> Bool -> [(String, SW, [Tactic SW])] -> SMTProblem -> (CaseCond -> SMTProblem -> IO res) -> IO res
-caseSplit isSAT (unwrap, wrap) level verbose cases claim f = go (zip caseNos cases)
+caseSplit :: forall res.                          -- ^ Works for both Sat and Proof, hence the quantification on res
+             SMTConfig                            -- ^ Solver config
+          -> Bool                                 -- ^ True if we're sat solving
+          -> (res -> SMTResult, SMTResult -> res) -- ^ wrapper, unwrapper from sat/proof to the actual result
+          -> [(String, SW)]                       -- ^ Path condition as we reached here. (In a nested case split)
+          -> Bool                                 -- ^ Should we be chatty on the case-splits?
+          -> [(String, SW, [Tactic SW])]          -- ^ List of cases. Case name, condition, plus further tactics for nested case-splitting etc.
+          -> (SMTConfig -> CaseCond -> IO res)    -- ^ The "solver" once we provide it with a problem and a case
+          -> IO res
+caseSplit config isSAT (unwrap, wrap) level chatty cases f = go (zip caseNos cases)
 
   where lids = map fst level
 
@@ -393,7 +407,7 @@ caseSplit isSAT (unwrap, wrap) level verbose cases claim f = go (zip caseNos cas
 
         startCase :: Bool -> Maybe (String, String) -> IO ()
         startCase multi mbis
-           | not verbose         = return ()
+           | not chatty          = return ()
            | Just (i, s) <- mbis = printer $ mkCaseName tagChar s          i                                     ++ start
            | True                = printer $ mkCaseName tagChar "Coverage" (replicate (casePad - 1)  ' ' ++ "X") ++ start
            where printer | multi = putStrLn
@@ -405,7 +419,7 @@ caseSplit isSAT (unwrap, wrap) level verbose cases claim f = go (zip caseNos cas
 
         endCase :: Bool -> Maybe (String, String) -> String -> IO ()
         endCase multi mbis msg
-           | not verbose         = return ()
+           | not chatty          = return ()
            | not multi           = putStrLn $ ' ' : msg
            | Just (i, s) <- mbis = putStrLn $ mkCaseName '<' s          i                                     ++ ' ' : msg
            | True                = putStrLn $ mkCaseName '<' "Coverage" (replicate (casePad - 1)  ' ' ++ "X") ++ ' ' : msg
@@ -414,14 +428,14 @@ caseSplit isSAT (unwrap, wrap) level verbose cases claim f = go (zip caseNos cas
         go []
            -- At the end, we do a coverage call
            = do startCase False Nothing
-                res <- f (CaseCov (map snd level) [c | (_, c, _) <- cases]) claim
+                res <- f config (CaseCov (map snd level) [c | (_, c, _) <- cases])
                 decide False Nothing (unwrap res) (return res)
         go ((i, (nm, cond, ts)):cs)
            -- Still going down, do a regular call
            = do let furtherSplit = any isCaseSplitAnywhere ts
                     mbis         = Just (i, nm)
                 startCase furtherSplit mbis
-                res <- applyTactics isSAT (wrap, unwrap) verbose (level ++ [(i, cond)]) ts claim f
+                res <- applyTactics config isSAT (wrap, unwrap) (level ++ [(i, cond)]) ts f
                 decide furtherSplit mbis (unwrap res) (go cs)
 
         decide
@@ -429,8 +443,13 @@ caseSplit isSAT (unwrap, wrap) level verbose cases claim f = go (zip caseNos cas
          | True  = decideProof
 
         -- If we're SAT, we stop at first satisfiable and report back. Otherwise continue.
-        decideSAT multi mbis r@Satisfiable{} _    = endCase multi mbis "[Satisfiable]"   >> return (wrap r)
-        decideSAT multi mbis _               cont = endCase multi mbis "[Unsatisfiable]" >> cont
+        diag Unsatisfiable{} = "[Unsatisfiable]"
+        diag Satisfiable  {} = "[Satisfiable]"
+        diag Unknown      {} = "[Unknown]"
+        diag ProofError   {} = "[ProofError]"
+        diag TimeOut      {} = "[TimeOut]"
+        decideSAT multi mbis r@Satisfiable{} _    = endCase multi mbis (diag r) >> return (wrap r)
+        decideSAT multi mbis r               cont = endCase multi mbis (diag r) >> cont
 
         -- If we're Prove, we stop at first *not* unsatisfiable and report back. Otherwise continue.
         decideProof multi mbis Unsatisfiable{} cont = endCase multi mbis "[Proved]" >> cont
@@ -444,7 +463,7 @@ safeWith cfg a = do
   where locInfo (Just ps) = Just $ let loc (f, sl) = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
                                    in intercalate ",\n " (map loc ps)
         locInfo _         = Nothing
-        verify res (msg, cs, cond) = do SatResult result <- runProofOn cvt cfg True [] pgm >>= callSolver True msg SatResult cfg NoCase
+        verify res (msg, cs, cond) = do SatResult result <- runProofOn cvt cfg True [] pgm >>= \p -> callSolver True msg SatResult p cfg NoCase
                                         return $ SafeResult (locInfo (getCallStack `fmap` cs), msg, result)
            where pgm = res { resInputs  = [(EX, n) | (_, n) <- resInputs res]   -- make everything existential
                            , resOutputs = [cond]
@@ -471,7 +490,7 @@ isVacuousWith config a = do
                         res' = Result ki tr uic is' cs ts as uis ax asgn cstr tactics asserts [trueSW]
                         cvt  = case smtLibVersion config of
                                  SMTLib2 -> toSMTLib2
-                    SatResult result <- runProofOn cvt config True [] res' >>= callSolver True "Checking Satisfiability.." SatResult config NoCase
+                    SatResult result <- runProofOn cvt config True [] res' >>= \p -> callSolver True "Checking Satisfiability.." SatResult p config NoCase
                     case result of
                       Unsatisfiable{} -> return True  -- constraints are unsatisfiable!
                       Satisfiable{}   -> return False -- constraints are satisfiable!
@@ -525,8 +544,8 @@ allSatWith config p = do
         updateName i cfg = cfg{smtFile = upd `fmap` smtFile cfg}
                where upd nm = let (b, e) = splitExtension nm in b ++ "_allSat_" ++ show i ++ e
 
-callSolver :: Bool -> String -> (SMTResult -> b) -> SMTConfig -> CaseCond -> SMTProblem -> IO b
-callSolver isSat checkMsg wrap config caseCond SMTProblem{smtInputs=qinps, smtSkolemMap=skolemMap, smtLibPgm=smtLibPgm} = do
+callSolver :: Bool -> String -> (SMTResult -> b) -> SMTProblem -> SMTConfig -> CaseCond -> IO b
+callSolver isSat checkMsg wrap SMTProblem{smtInputs=qinps, smtSkolemMap=skolemMap, smtLibPgm=smtLibPgm} config caseCond = do
        let msg = when (verbose config) . putStrLn . ("** " ++)
        msg checkMsg
        let finalPgm = intercalate "\n" (pre ++ post) where SMTLibPgm _ (_, pre, post) = smtLibPgm caseCond
@@ -583,5 +602,5 @@ internalSATCheck cfg condInPath st msg = do
        pgm = Result ki tr uic [(EX, n) | (_, n) <- is] cs ts as uis ax asgn cstr tactics assertions [sw]
        cvt = case smtLibVersion cfg of
                 SMTLib2 -> toSMTLib2
-   runProofOn cvt cfg True [] pgm >>= callSolver True msg SatResult cfg NoCase
+   runProofOn cvt cfg True [] pgm >>= \p -> callSolver True msg SatResult p cfg NoCase
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
