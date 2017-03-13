@@ -46,7 +46,8 @@ module Data.SBV.BitVectors.Symbolic
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
-  , Tactic(..), addSValTactic, isCaseSplitTactic, isCaseSplitAnywhere, isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic
+  , Tactic(..), addSValTactic, isCaseSplitTactic, isCaseSplitAnywhere, isParallelCaseAnywhere
+  , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
   , mkSValUserSort
@@ -282,6 +283,7 @@ type NamedSymVar = (SW, String)
 
 -- | Solver tactic
 data Tactic a = CaseSplit  Bool [(String, a, [Tactic a])]  -- ^ Case-split, with implicit coverage. Bool says whether we should be verbose.
+              | ParallelCase                               -- ^ Run case-splits in parallel. (Default is sequential.)
               | StopAfter  Int                             -- ^ Time-out given to solver, in seconds.
               | CheckUsing String                          -- ^ Invoke with check-sat-using command, instead of check-sat
               | UseLogic   Logic                           -- ^ Use this logic, a custom one can be specified too
@@ -289,6 +291,7 @@ data Tactic a = CaseSplit  Bool [(String, a, [Tactic a])]  -- ^ Case-split, with
 
 instance NFData a => NFData (Tactic a) where
    rnf (CaseSplit b l) = rnf b `seq` rnf l `seq` ()
+   rnf ParallelCase    = ()
    rnf (StopAfter  i)  = rnf i `seq` ()
    rnf (CheckUsing s)  = rnf s `seq` ()
    rnf (UseLogic   l)  = rnf l `seq` ()
@@ -313,11 +316,21 @@ isUseLogicTactic :: Tactic a -> Bool
 isUseLogicTactic UseLogic{} = True
 isUseLogicTactic _          = False
 
--- | Do we have a case-split anywhere in this tactic. Will make more sense
--- if we ever have recursive tactics; right now more or less useless.
+-- | Is this a parallel-case tactic?
+isParallelCaseTactic :: Tactic a -> Bool
+isParallelCaseTactic ParallelCase{} = True
+isParallelCaseTactic _              = False
+
+-- | Do we have a case-split anywhere in this tactic?
 isCaseSplitAnywhere :: Tactic a -> Bool
 isCaseSplitAnywhere CaseSplit{} = True
 isCaseSplitAnywhere _           = False
+
+-- | Is parallel-case anywhere?
+isParallelCaseAnywhere :: Tactic a -> Bool
+isParallelCaseAnywhere ParallelCase{}   = True
+isParallelCaseAnywhere (CaseSplit _ cs) = or [any isParallelCaseAnywhere t | (_, _, t) <- cs]
+isParallelCaseAnywhere _                = False
 
 -- | Result of running a symbolic computation
 data Result = Result { reskinds       :: Set.Set Kind                     -- ^ kinds used in the program
@@ -806,6 +819,7 @@ addSValTactic tac = do st <- ask
                                                                             v' <- svToSW st v
                                                                             return (nm, v', ts')
                                                    in CaseSplit b `fmap` mapM app cs
+                           walk ParallelCase     = return   ParallelCase
                            walk (StopAfter i)    = return $ StopAfter  i
                            walk (CheckUsing s)   = return $ CheckUsing s
                            walk (UseLogic   l)   = return $ UseLogic   l

@@ -47,7 +47,8 @@ module Data.SBV.BitVectors.Data
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), getSBranchRunConfig
  , declNewSArray, declNewSFunArray
- , Tactic(..), CaseCond(..), SMTProblem(..), isCaseSplitTactic, isCaseSplitAnywhere, isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic
+ , Tactic(..), CaseCond(..), SMTProblem(..), isCaseSplitTactic, isCaseSplitAnywhere, isParallelCaseAnywhere
+ , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic
  ) where
 
 import Control.DeepSeq      (NFData(..))

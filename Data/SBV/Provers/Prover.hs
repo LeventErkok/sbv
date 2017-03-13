@@ -32,11 +32,14 @@ module Data.SBV.Provers.Prover (
        , internalSATCheck
        ) where
 
-import Control.Monad    (when, unless)
-import Data.List        (intercalate, partition)
-import System.FilePath  (addExtension, splitExtension)
-import System.Time      (getClockTime)
-import System.IO.Unsafe (unsafeInterleaveIO)
+import Control.Monad     (when, unless)
+import Data.List         (intercalate, partition)
+import System.FilePath   (addExtension, splitExtension)
+import System.Time       (getClockTime)
+import System.IO         (hGetBuffering, hSetBuffering, stdout, hFlush, BufferMode(..))
+import System.IO.Unsafe  (unsafeInterleaveIO)
+
+import Control.Concurrent.Async (async, wait, cancel, waitAny, Async)
 
 import GHC.Stack.Compat
 #if !MIN_VERSION_base(4,9,0)
@@ -51,6 +54,7 @@ import Data.SBV.SMT.SMTLib
 import Data.SBV.Utils.TDiff
 
 import Control.DeepSeq (rnf)
+import Control.Exception (bracket)
 
 import qualified Data.SBV.Provers.Boolector  as Boolector
 import qualified Data.SBV.Provers.CVC4       as CVC4
@@ -340,10 +344,22 @@ generateSMTBenchmarks isSat f a = mapM_ gen [minBound .. maxBound]
                    writeFile fn s
                    putStrLn $ "Generated " ++ show v ++ " benchmark " ++ show fn ++ "."
 
+-- | Make sure we're line-buffering if there's going to be parallel calls.
+bufferSanity :: Bool -> IO a -> IO a
+bufferSanity False a = a
+bufferSanity True  a = bracket before after (const a)
+  where before = do b <- hGetBuffering stdout
+                    hSetBuffering stdout LineBuffering
+                    return b
+        after b = do hFlush stdout
+                     hSetBuffering stdout b
+                     hFlush stdout
+
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
 proveWith config a = do simRes@SMTProblem{tactics} <- simulate cvt config False [] a
-                        applyTactics config False (wrap, unwrap) [] tactics $ callSolver False "Checking Theoremhood.." ThmResult simRes
+                        let hasPar = any isParallelCaseAnywhere tactics
+                        bufferSanity hasPar $ applyTactics config (False, hasPar) (wrap, unwrap) [] tactics $ callSolver False "Checking Theoremhood.." ThmResult simRes
   where cvt = case smtLibVersion config of
                 SMTLib2 -> toSMTLib2
         wrap                 = ThmResult
@@ -352,7 +368,8 @@ proveWith config a = do simRes@SMTProblem{tactics} <- simulate cvt config False 
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
 satWith config a = do simRes@SMTProblem{tactics} <- simulate cvt config True [] a
-                      applyTactics config True (wrap, unwrap) [] tactics $ callSolver True "Checking Satisfiability.." SatResult simRes
+                      let hasPar = any isParallelCaseAnywhere tactics
+                      bufferSanity hasPar $ applyTactics config (True, hasPar) (wrap, unwrap) [] tactics $ callSolver True "Checking Satisfiability.." SatResult simRes
   where cvt = case smtLibVersion config of
                 SMTLib2 -> toSMTLib2
         wrap                 = SatResult
@@ -364,16 +381,22 @@ cluster []     xs = [xs]
 cluster (f:fs) xs = ok : cluster fs other
  where (ok, other) = partition f xs
 
+-- | If we've parallel cases, use line-buffering
+
 -- | Apply the given tactics to a problem
-applyTactics :: SMTConfig -> Bool -> (SMTResult -> res, res -> SMTResult) -> [(String, SW)] -> [Tactic SW] -> (SMTConfig -> CaseCond -> IO res) -> IO res
-applyTactics cfgIn isSat (wrap, unwrap) levels tactics cont
+applyTactics :: SMTConfig -> (Bool, Bool) -> (SMTResult -> res, res -> SMTResult) -> [(String, SW)] -> [Tactic SW] -> (SMTConfig -> CaseCond -> IO res) -> IO res
+applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics cont
    | not (null others)
    = error $ "SBV: Unsupported tactic: " ++ show others
    | null caseSplits
    = cont finalConfig (CasePath (map snd levels))
    | True
-   = caseSplit finalConfig isSat (unwrap, wrap) levels chatty cases cont
-  where [caseSplits, timeOuts, checkUsing, useLogics, others] = cluster [isCaseSplitTactic, isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic] tactics
+   = caseSplit finalConfig (parallelCase, hasPar) isSat (unwrap, wrap) levels chatty cases cont
+
+  where [caseSplits, parallelCases, timeOuts, checkUsing, useLogics, others]
+                = cluster [isCaseSplitTactic, isParallelCaseTactic, isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic] tactics
+
+        parallelCase = not $ null parallelCases
 
         (chatty, cases) = let (vs, css) = unzip [(v, cs) | CaseSplit v cs <- caseSplits] in (or (verbose cfgIn : vs), concat css)
 
@@ -397,6 +420,7 @@ applyTactics cfgIn isSat (wrap, unwrap) levels tactics cont
 -- | Implements the case-split tactic. Works for both Sat and Proof, hence the quantification on @res@
 caseSplit :: forall res.
              SMTConfig                            -- ^ Solver config
+          -> (Bool, Bool)                         -- ^ Should we run the cases in parallel? Second bool: Is anything parallel going on?
           -> Bool                                 -- ^ True if we're sat solving
           -> (res -> SMTResult, SMTResult -> res) -- ^ wrapper, unwrapper from sat/proof to the actual result
           -> [(String, SW)]                       -- ^ Path condition as we reached here. (In a nested case split)
@@ -404,9 +428,13 @@ caseSplit :: forall res.
           -> [(String, SW, [Tactic SW])]          -- ^ List of cases. Case name, condition, plus further tactics for nested case-splitting etc.
           -> (SMTConfig -> CaseCond -> IO res)    -- ^ The "solver" once we provide it with a problem and a case
           -> IO res
-caseSplit config isSAT (unwrap, wrap) level chatty cases f = go (zip caseNos cases)
+caseSplit config (runParallel, hasPar) isSAT (unwrap, wrap) level chatty cases f
+     | runParallel = goParallel cases
+     | True        = goSerial   tasks
 
-  where lids = map fst level
+  where tasks = zip caseNos cases
+
+        lids = map fst level
 
         noOfCases = length cases
         casePad   = length (show noOfCases)
@@ -416,48 +444,59 @@ caseSplit config isSAT (unwrap, wrap) level chatty cases f = go (zip caseNos cas
 
         shCaseId i = let si = show i in replicate (casePad - length si) ' ' ++ si
 
-        caseNos = map shCaseId [1 .. noOfCases]
+        caseNos = map shCaseId [(1::Int) .. ]
 
         tag tagChar = replicate 2 tagChar ++ replicate (2 * length level) tagChar
 
-        mkCaseName tagChar s i = tag tagChar ++ " Case " ++ intercalate "." (lids ++ [i]) ++ ": " ++ showTag s
+        mkCaseNameBase s i = "Case "    ++ intercalate "." (lids ++ [i]) ++ ": " ++ showTag s
+        mkCovNameBase      = "Coverage" ++ replicate (casePad - 1) ' ' ++ "X"
+
+        mkCaseName tagChar s i = tag tagChar ++ ' ' : mkCaseNameBase s i
+        mkCovName  tagChar     = tag tagChar ++ ' ' : mkCovNameBase
 
         startCase :: Bool -> Maybe (String, String) -> IO ()
         startCase multi mbis
            | not chatty          = return ()
-           | Just (i, s) <- mbis = printer $ mkCaseName tagChar s          i                                     ++ start
-           | True                = printer $ mkCaseName tagChar "Coverage" (replicate (casePad - 1)  ' ' ++ "X") ++ start
-           where printer | multi = putStrLn
-                         | True  = putStr
-                 tagChar | multi = '>'
-                         | True  = '*'
-                 start   | multi = " [Starting]"
-                         | True  = ""
+           | Just (i, s) <- mbis = printer $ mkCaseName tagChar s i ++ start
+           | True                = printer $ mkCovName  tagChar     ++ start
+           where line = multi || hasPar
+
+                 printer | line = putStrLn
+                         | True = putStr
+                 tagChar | line = '>'
+                         | True = '*'
+                 start   | line = " [Starting]"
+                         | True = ""
 
         endCase :: Bool -> Maybe (String, String) -> String -> IO ()
         endCase multi mbis msg
            | not chatty          = return ()
-           | not multi           = putStrLn $ ' ' : msg
-           | Just (i, s) <- mbis = putStrLn $ mkCaseName '<' s          i                                     ++ ' ' : msg
-           | True                = putStrLn $ mkCaseName '<' "Coverage" (replicate (casePad - 1)  ' ' ++ "X") ++ ' ' : msg
+           | not line            = putStrLn $ ' ' : msg
+           | Just (i, s) <- mbis = putStrLn $ mkCaseName '<' s i ++ ' ' : msg
+           | True                = putStrLn $ mkCovName  '<'     ++ ' ' : msg
+           where line = multi || hasPar
 
-        go :: [(String, (String, SW, [Tactic SW]))] -> IO res
-        go []
+        -----------------------------------------------------------------------------------------------------------------
+        -- Serial case analysis
+        -----------------------------------------------------------------------------------------------------------------
+        goSerial :: [(String, (String, SW, [Tactic SW]))] -> IO res
+        goSerial []
            -- At the end, we do a coverage call
-           = do startCase False Nothing
+           = do let multi = runParallel
+                startCase multi Nothing
                 res <- f config (CaseCov (map snd level) [c | (_, c, _) <- cases])
-                decide False Nothing (unwrap res) (return res)
-        go ((i, (nm, cond, ts)):cs)
+                decideSerial multi Nothing (unwrap res) (return res)
+        goSerial ((i, (nm, cond, ts)):cs)
            -- Still going down, do a regular call
-           = do let furtherSplit = any isCaseSplitAnywhere ts
-                    mbis         = Just (i, nm)
-                startCase furtherSplit mbis
-                res <- applyTactics config isSAT (wrap, unwrap) (level ++ [(i, cond)]) ts f
-                decide furtherSplit mbis (unwrap res) (go cs)
+           = do let multi = any isCaseSplitAnywhere ts
+                    mbis  = Just (i, nm)
+                startCase multi mbis
+                res <- applyTactics config (isSAT, hasPar) (wrap, unwrap) (level ++ [(i, cond)]) ts f
+                decideSerial multi mbis (unwrap res) (goSerial cs)
 
-        decide
-         | isSAT = decideSAT
-         | True  = decideProof
+        decideSerial
+         | isSAT = decideSerialSAT
+         | True  = decideSerialProof
 
         -- short name
         diag Unsatisfiable{} = "[Unsatisfiable]"
@@ -468,13 +507,89 @@ caseSplit config isSAT (unwrap, wrap) level chatty cases f = go (zip caseNos cas
 
         -- If we're SAT, we stop at first satisfiable and report back. Otherwise continue.
         -- Note that we also stop if we get a ProofError, as that clearly is not OK
-        decideSAT multi mbis r@Satisfiable{} _    = endCase multi mbis (diag r) >> return (wrap r)
-        decideSAT multi mbis r@ProofError{}  _    = endCase multi mbis (diag r) >> return (wrap r)
-        decideSAT multi mbis r               cont = endCase multi mbis (diag r) >> cont
+        decideSerialSAT :: Bool -> Maybe (String, String) -> SMTResult -> IO res -> IO res
+        decideSerialSAT multi mbis r@Satisfiable{} _    = endCase multi mbis (diag r) >> return (wrap r)
+        decideSerialSAT multi mbis r@ProofError{}  _    = endCase multi mbis (diag r) >> return (wrap r)
+        decideSerialSAT multi mbis r               cont = endCase multi mbis (diag r) >> cont
 
         -- If we're Prove, we stop at first *not* unsatisfiable and report back. Otherwise continue.
-        decideProof multi mbis Unsatisfiable{} cont = endCase multi mbis "[Proved]" >> cont
-        decideProof multi mbis r                _   = endCase multi mbis "[Failed]" >> return (wrap r)
+        decideSerialProof :: Bool -> Maybe (String, String) -> SMTResult -> IO res -> IO res
+        decideSerialProof multi mbis Unsatisfiable{} cont = endCase multi mbis "[Proved]" >> cont
+        decideSerialProof multi mbis r                _   = endCase multi mbis "[Failed]" >> return (wrap r)
+
+        -----------------------------------------------------------------------------------------------------------------
+        -- Parallel case analysis
+        -----------------------------------------------------------------------------------------------------------------
+        goParallel :: [(String, SW, [Tactic SW])] -> IO res
+        goParallel cs = do when chatty $ putStrLn $ nm '>' "[Starting]"
+
+                           let mkTask (s, cond, ts) i = (mkCaseNameBase s i, unwrap `fmap` applyTactics config (isSAT, hasPar) (wrap, unwrap) (level ++ [(s, cond)]) ts f)
+                               cov                    = (mkCovNameBase,      unwrap `fmap` f config (CaseCov (map snd level) [c | (_, c, _) <- cases]))
+
+                           (decidingTag, res) <- decideParallel $ zipWith mkTask cs caseNos ++ [cov]
+
+                           let caseMsg
+                                | isSAT = satMsg
+                                | True  = proofMsg
+                                where addTag x = "[" ++ x ++ " (" ++ decidingTag ++ ")]"
+                                      withTag (x, y) = (addTag x, addTag y)
+                                      (satMsg, proofMsg) =  case res of
+                                                              Unsatisfiable{} -> ("[Unsatisfiable]", "[Proved]")
+                                                              Satisfiable{}   -> withTag ("Satisfiable",   "Failed")
+                                                              _               -> let d = diag res in withTag (d, d)
+
+                           when chatty $ putStrLn $ nm '<' caseMsg
+
+                           return $ wrap res
+
+            where nm c w  = tag c ++ topTag ++ " Parallel case split: " ++ range ++ ": " ++ w
+
+                  topTag = " Case" ++ s ++ intercalate "." lids ++ dot ++ "[1-" ++ show (length cs + 1) ++ "]:"
+                    where dot | null lids = ""
+                              | True      = "."
+                          s   | null cs   = " "
+                              | True      = "s "
+
+                  range   = case cs of
+                              []  -> "Coverage"
+                              [_] -> "One case and coverage"
+                              xs  -> show (length xs) ++ " cases and coverage"
+
+        decideParallel
+         | isSAT = decideParallelSAT
+         | True  = decideParallelProof
+
+        -- In a parallel SAT, we run all cases in parallel and return
+        -- a SAT result from any. If none-of-them is SAT, then we return the last
+        -- finishing result that says unsat
+        decideParallelSAT :: [(String, IO SMTResult)] -> IO (String, SMTResult)
+        decideParallelSAT caseTasks = mapM try caseTasks >>= pick
+          where try (nm, task) = async $ task >>= \r -> return (nm, r)
+
+                pick :: [Async (String, SMTResult)] -> IO (String, SMTResult)
+                pick [a] = wait a
+                pick as  = do (d, r) <- waitAny as
+                              let others = filter (/= d) as
+                              case snd r of
+                                Satisfiable{} -> mapM_ cancel others >> return r
+                                _             -> pick others
+
+        -- In a parallel Proof, we run all cases in parallel, and return
+        -- any *non*-UnSAT result. If all are unSAT, then we return the last one we receive.
+        decideParallelProof :: [(String, IO SMTResult)] -> IO (String, SMTResult)
+        decideParallelProof caseTasks = mapM try caseTasks >>= (unsafeInterleaveIO . go) >>= pick
+          where try (nm, task) = async $ task >>= \r -> return (nm, r)
+
+                go [] = return []
+                go as = do (d, r) <- waitAny as
+                           rs <- unsafeInterleaveIO $ go (filter (/= d) as)
+                           return (r : rs)
+
+                pick []           = error $ "SBV.caseSplit.decideParallelProof: Impossible happened, ran out of results! Received: " ++ show (length tasks) ++ " task(s)"
+                pick ((nm, r):rs) = case r of
+                                      Unsatisfiable{} | null rs -> return (nm, r)
+                                                      | True    -> pick rs
+                                      _                         -> return (nm, r)
 
 -- | Check if any of the assertions can be violated
 safeWith :: SExecutable a => SMTConfig -> a -> IO [SafeResult]
