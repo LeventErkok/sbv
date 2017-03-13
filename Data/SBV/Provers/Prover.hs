@@ -32,8 +32,10 @@ module Data.SBV.Provers.Prover (
        , internalSATCheck
        ) where
 
-import Control.Monad     (when, unless)
 import Data.List         (intercalate, partition)
+import Data.Char         (isSpace)
+
+import Control.Monad     (when, unless)
 import System.FilePath   (addExtension, splitExtension)
 import System.Time       (getClockTime)
 import System.IO         (hGetBuffering, hSetBuffering, stdout, hFlush, BufferMode(..))
@@ -448,8 +450,8 @@ caseSplit config (runParallel, hasPar) isSAT (unwrap, wrap) level chatty cases f
 
         tag tagChar = replicate 2 tagChar ++ replicate (2 * length level) tagChar
 
-        mkCaseNameBase s i = "Case "    ++ intercalate "." (lids ++ [i]) ++ ": " ++ showTag s
-        mkCovNameBase      = "Coverage" ++ replicate (casePad - 1) ' ' ++ "X"
+        mkCaseNameBase s i = "Case "     ++ intercalate "." (lids ++ [i]) ++ ": " ++ showTag s
+        mkCovNameBase      = "Coverage " ++ replicate (casePad - 1) ' ' ++ "X"
 
         mkCaseName tagChar s i = tag tagChar ++ ' ' : mkCaseNameBase s i
         mkCovName  tagChar     = tag tagChar ++ ' ' : mkCovNameBase
@@ -528,10 +530,12 @@ caseSplit config (runParallel, hasPar) isSAT (unwrap, wrap) level chatty cases f
 
                            (decidingTag, res) <- decideParallel $ zipWith mkTask cs caseNos ++ [cov]
 
+                           let trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+
                            let caseMsg
                                 | isSAT = satMsg
                                 | True  = proofMsg
-                                where addTag x = "[" ++ x ++ " (" ++ decidingTag ++ ")]"
+                                where addTag x = "[" ++ x ++ " (" ++ trim decidingTag ++ ")]"
                                       withTag (x, y) = (addTag x, addTag y)
                                       (satMsg, proofMsg) =  case res of
                                                               Unsatisfiable{} -> ("[Unsatisfiable]", "[Proved]")
