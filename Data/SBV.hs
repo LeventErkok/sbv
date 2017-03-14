@@ -534,10 +534,6 @@ Also see "Data.SBV.Examples.Misc.NoDiv0" for the classic div-by-zero example.
 {- $tacticIntro
 In certain cases, the prove/sat calls can benefit from user guidance, in terms of tactics. From a semantic view,
 a tactic has no effect on the meaning of a predicate. It is merely guidance for SBV to guide the proof.
-
-Tactics come in two flavors. The first is the case-splitting tactic (`CaseSplit`), which is managed by SBV and is implemented independent
-of the underlying solver. The second flavor (consisting of `StopAfter`, `CheckUsing`, and `UseLogic`) simply pass options to the underlying
-solver, with SBV more or less being ignorant of how they operate.
 -}
 
 {- $optimizeIntro

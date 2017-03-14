@@ -395,8 +395,14 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics cont
    | True
    = caseSplit finalConfig (parallelCase, hasPar) isSat (unwrap, wrap) levels chatty cases cont
 
-  where [caseSplits, parallelCases, timeOuts, checkUsing, useLogics, others]
-                = cluster [isCaseSplitTactic, isParallelCaseTactic, isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic] tactics
+  where [caseSplits, parallelCases, timeOuts, checkUsing, useLogics, useSolvers, others]
+                = cluster [ isCaseSplitTactic
+                          , isParallelCaseTactic
+                          , isStopAfterTactic
+                          , isCheckUsingTactic
+                          , isUseLogicTactic
+                          , isUseSolverTactic
+                          ] tactics
 
         parallelCase = not $ null parallelCases
 
@@ -415,9 +421,14 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics cont
                            [] -> c
                            ss -> c { useLogic = Just (last ss) }
 
+        configToUse = case [s | UseSolver s <- useSolvers] of
+                        []  -> cfgIn
+                        [s] -> s
+                        ss  -> error $ "SBV.UseSolver: Multiple UseSolver tactics found, at most one is allowed: " ++ intercalate "," (map show ss)
+
         transConfig = grabUseLogic . grabCheckUsing . grabStops
 
-        finalConfig = transConfig cfgIn
+        finalConfig = transConfig configToUse
 
 -- | Implements the case-split tactic. Works for both Sat and Proof, hence the quantification on @res@
 caseSplit :: forall res.
