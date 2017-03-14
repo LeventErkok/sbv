@@ -25,7 +25,7 @@ define mkTags
 	@find . -name \*.\*hs | xargs fast-tags
 endef
 
-.PHONY: all install test sdist clean docs gold stamp hlint tags checkLinks testInterfaces
+.PHONY: all install test doctest externaltest internaltest sdist clean docs gold stamp hlint tags checkLinks testInterfaces
 
 all: install
 
@@ -43,13 +43,19 @@ $(STAMPFILE): $(DEPSRCS) Makefile
 	@$(CABAL) register
 	@(make -s -C buildUtils testInterfaces)
 
-test: install
+test: install doctest externaltest internaltest
+
+doctest:
 	@echo "*** Starting inline tests.."
 	@(set -o pipefail; $(TIME) doctest ${TSTSRCS} 2>&1)
+
+externaltest:
 	@echo "*** Starting external test suite.."
 	@# Note we use "-s" here skipping no-solver tests; which are covered
 	@# in the cabal test suite right below.
 	@$(TIME) dist/build/SBVUnitTests/SBVUnitTests -s
+
+internaltest:
 	@echo "*** Starting internal cabal test suite.."
 	@SBV_Z3=doesnotexist $(TIME) $(CABAL) test
 	@cat dist/test/sbv*SBVBasicTests.log
