@@ -78,8 +78,7 @@ tbd :: String -> a
 tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
-cvt :: SolverCapabilities           -- ^ capabilities of the current solver
-    -> Set.Set Kind                 -- ^ kinds used
+cvt :: Set.Set Kind                 -- ^ kinds used
     -> Bool                         -- ^ is this a sat problem?
     -> [String]                     -- ^ extra comments to place on top
     -> [(Quantifier, NamedSymVar)]  -- ^ inputs
@@ -95,7 +94,7 @@ cvt :: SolverCapabilities           -- ^ capabilities of the current solver
     -> SMTConfig                    -- ^ configuration
     -> CaseCond                     -- ^ case analysis data
     -> ([String], [String])
-cvt solverCaps kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out config caseCond = (pre, [])
+cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out config caseCond = (pre, [])
   where -- the logic is an over-approaximation
         hasInteger     = KUnbounded `Set.member` kindInfo
         hasReal        = KReal      `Set.member` kindInfo
@@ -105,6 +104,7 @@ cvt solverCaps kindInfo isSat comments inputs skolemInps consts tbls arrs uis ax
         usorts         = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
         hasNonBVArrays = (not . null) [() | (_, (_, (k1, k2), _)) <- arrs, not (isBounded k1 && isBounded k2)]
         rm             = roundingMode config
+        solverCaps     = capabilities (solver config)
         logic
            | Just l <- useLogic config
            = ["(set-logic " ++ show l ++ ") ; NB. User specified."]

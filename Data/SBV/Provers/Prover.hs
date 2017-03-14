@@ -717,8 +717,7 @@ simulate converter config isSat comments predicate = do
 
 runProofOn :: SMTLibConverter -> SMTConfig -> Bool -> [String] -> Result -> IO SMTProblem
 runProofOn converter config isSat comments res =
-        let isTiming   = timing config
-            solverCaps = capabilities (solver config)
+        let isTiming = timing config
         in case res of
              Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs tacs assertions [o@(SW KBool _)] ->
                timeIf isTiming Translation
@@ -730,7 +729,7 @@ runProofOn converter config isSat comments res =
                                    where go []                   (_,  sofar) = reverse sofar
                                          go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
                                          go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
-                      smtScript = converter solverCaps ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o
+                      smtScript = converter ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o
                       result = SMTProblem {smtInputs=is, smtSkolemMap=skolemMap, kindsUsed=ki, smtAsserts=assertions, tactics=tacs, smtLibPgm=smtScript}
                   in rnf smtScript `seq` return result
              Result{resOutputs = os} -> case length os of

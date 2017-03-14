@@ -19,8 +19,7 @@ import qualified Data.SBV.SMT.SMTLib2 as SMT2
 import qualified Data.Set as Set (Set, member, toList)
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
-type SMTLibConverter =  SolverCapabilities           -- ^ Capabilities of the backend solver targeted
-                     -> Set.Set Kind                 -- ^ Kinds used in the problem
+type SMTLibConverter =  Set.Set Kind                 -- ^ Kinds used in the problem
                      -> Bool                         -- ^ is this a sat problem?
                      -> [String]                     -- ^ extra comments to place on top
                      -> [(Quantifier, NamedSymVar)]  -- ^ inputs and aliasing names
@@ -40,7 +39,7 @@ type SMTLibConverter =  SolverCapabilities           -- ^ Capabilities of the ba
 -- | Convert to SMTLib-2 format
 toSMTLib2 :: SMTLibConverter
 toSMTLib2 = cvt SMTLib2
-  where cvt v solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config mbCaseSelectors
+  where cvt v kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config mbCaseSelectors
          | KUnbounded `Set.member` kindInfo && not (supportsUnboundedInts solverCaps)
          = unsupported "unbounded integers"
          | KReal `Set.member` kindInfo  && not (supportsReals solverCaps)
@@ -56,11 +55,12 @@ toSMTLib2 = cvt SMTLib2
          | True
          = SMTLibPgm v (aliasTable, pre, post)
          where sorts = [s | KUserSort s _ <- Set.toList kindInfo]
+               solverCaps = capabilities (solver config)
                unsupported w = error $ "SBV: Given problem needs " ++ w ++ ", which is not supported by SBV for the chosen solver: " ++ capSolverName solverCaps
                aliasTable  = map (\(_, (x, y)) -> (y, x)) qinps
                converter   = case v of
                                SMTLib2 -> SMT2.cvt
-               (pre, post) = converter solverCaps kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config mbCaseSelectors
+               (pre, post) = converter kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config mbCaseSelectors
                needsFloats  = KFloat  `Set.member` kindInfo
                needsDoubles = KDouble `Set.member` kindInfo
                needsQuantifiers
