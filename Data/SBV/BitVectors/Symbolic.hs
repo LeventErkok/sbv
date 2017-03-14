@@ -1164,7 +1164,7 @@ data SMTConfig = SMTConfig {
 
 -- We're just seq'ing top-level here, it shouldn't really matter. (i.e., no need to go deeper.)
 instance NFData SMTConfig where
-  rnf (SMTConfig{}) = ()
+  rnf SMTConfig{} = ()
 
 instance Show SMTConfig where
   show = show . solver
