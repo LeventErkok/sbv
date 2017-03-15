@@ -193,9 +193,11 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
            where cstrs' = case caseCond of
                                NoCase         -> map pos cstrs
                                CasePath ss    -> map pos cstrs ++ map pos ss
+                               CaseVac  ss _  -> map pos cstrs ++ map pos ss
                                CaseCov  ss qq -> map pos cstrs ++ map pos ss ++ map neg qq
-                 o | isSat = pos out
-                   | True  = neg out
+                 o | CaseVac _ s <- caseCond = pos s    -- always a SAT call!
+                   | isSat                   = pos out
+                   | True                    = neg out
                  neg s = "(not " ++ pos s ++ ")"
                  pos   = cvtSW skolemMap
         skolemMap = M.fromList [(s, ss) | Right (s, ss) <- skolemInps, not (null ss)]

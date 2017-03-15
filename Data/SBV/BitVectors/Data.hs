@@ -48,7 +48,7 @@ module Data.SBV.BitVectors.Data
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), getSBranchRunConfig
  , declNewSArray, declNewSFunArray
  , Tactic(..), CaseCond(..), SMTProblem(..), isCaseSplitTactic, isCaseSplitAnywhere, isParallelCaseAnywhere
- , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic, isUseSolverTactic
+ , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic, isUseSolverTactic, isCheckCaseVacuityTactic
  ) where
 
 import Control.DeepSeq      (NFData(..))
@@ -453,11 +453,13 @@ addConstraint mt (SBV c) (SBV c') = addSValConstraint mt c c'
 -- | A case condition (internal)
 data CaseCond = NoCase             -- ^ No case-split
               | CasePath [SW]      -- ^ In a case-path
+              | CaseVac  [SW] SW   -- ^ For checking the vacuity of a case
               | CaseCov  [SW] [SW] -- ^ In a case-path end, coverage (first arg is path cond, second arg is coverage cond)
 
 instance NFData CaseCond where
   rnf NoCase           = ()
   rnf (CasePath ps)    = rnf ps
+  rnf (CaseVac  ps q)  = rnf ps `seq` rnf q  `seq` ()
   rnf (CaseCov  ps qs) = rnf ps `seq` rnf qs `seq` ()
 
 -- | Internal representation of a symbolic simulation result
