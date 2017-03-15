@@ -386,25 +386,30 @@ cluster (f:fs) xs = ok : cluster fs other
 -- | If we've parallel cases, use line-buffering
 
 -- | Apply the given tactics to a problem
-applyTactics :: SMTConfig -> (Bool, Bool) -> (SMTResult -> res, res -> SMTResult) -> [(String, SW)] -> [Tactic SW] -> (SMTConfig -> CaseCond -> IO res) -> IO res
+applyTactics :: SMTConfig -> (Bool, Bool) -> (SMTResult -> res, res -> SMTResult) -> [(String, (String, SW))] -> [Tactic SW] -> (SMTConfig -> CaseCond -> IO res) -> IO res
 applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics cont
    | not (null others)
    = error $ "SBV: Unsupported tactic: " ++ show others
    | null caseSplits
-   = cont finalConfig (CasePath (map snd levels))
+   = cont finalConfig (CasePath (map (snd . snd) levels))
    | True
-   = caseSplit finalConfig (parallelCase, hasPar) isSat (unwrap, wrap) levels chatty cases cont
+   = caseSplit finalConfig shouldCheckVacuity (parallelCase, hasPar) isSat (unwrap, wrap) levels chatty cases cont
 
-  where [caseSplits, parallelCases, timeOuts, checkUsing, useLogics, useSolvers, others]
+  where [caseSplits, parallelCases, timeOuts, checkUsing, useLogics, useSolvers, checkVacuity, others]
                 = cluster [ isCaseSplitTactic
                           , isParallelCaseTactic
                           , isStopAfterTactic
                           , isCheckUsingTactic
                           , isUseLogicTactic
                           , isUseSolverTactic
+                          , isCheckCaseVacuityTactic
                           ] tactics
 
         parallelCase = not $ null parallelCases
+
+        shouldCheckVacuity = case [b | CheckCaseVacuity b <- checkVacuity] of
+                               [] -> True   -- default is to check vacuity
+                               bs -> or bs  -- otherwise check vacuity if we're asked to do so
 
         (chatty, cases) = let (vs, css) = unzip [(v, cs) | CaseSplit v cs <- caseSplits] in (or (verbose cfgIn : vs), concat css)
 
@@ -433,16 +438,17 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics cont
 -- | Implements the case-split tactic. Works for both Sat and Proof, hence the quantification on @res@
 caseSplit :: forall res.
              SMTConfig                            -- ^ Solver config
+          -> Bool                                 -- ^ Should we check vacuity of cases?
           -> (Bool, Bool)                         -- ^ Should we run the cases in parallel? Second bool: Is anything parallel going on?
           -> Bool                                 -- ^ True if we're sat solving
           -> (res -> SMTResult, SMTResult -> res) -- ^ wrapper, unwrapper from sat/proof to the actual result
-          -> [(String, SW)]                       -- ^ Path condition as we reached here. (In a nested case split)
+          -> [(String, (String, SW))]             -- ^ Path condition as we reached here. (In a nested case split, First #, then actual name.)
           -> Bool                                 -- ^ Should we be chatty on the case-splits?
           -> [(String, SW, [Tactic SW])]          -- ^ List of cases. Case name, condition, plus further tactics for nested case-splitting etc.
           -> (SMTConfig -> CaseCond -> IO res)    -- ^ The "solver" once we provide it with a problem and a case
           -> IO res
-caseSplit config (runParallel, hasPar) isSAT (unwrap, wrap) level chatty cases f
-     | runParallel = goParallel cases
+caseSplit config checkVacuity (runParallel, hasPar) isSAT (unwrap, wrap) level chatty cases f
+     | runParallel = goParallel tasks
      | True        = goSerial   tasks
 
   where tasks = zip caseNos cases
@@ -478,8 +484,21 @@ caseSplit config (runParallel, hasPar) isSAT (unwrap, wrap) level chatty cases f
                          | True = putStr
                  tagChar | line = '>'
                          | True = '*'
-                 start   | line = " [Starting]"
-                         | True = ""
+                 start          = " [Started]"
+
+        vacuityMsg :: Maybe Bool -> Bool -> (String, String) -> IO ()
+        vacuityMsg mbGood multi (i, s)
+           | not chatty = return ()
+           | line       = putStrLn $ mkCaseName '=' s i ++ msg
+           | True       = printer                          msg
+           where line = multi || hasPar
+                 printer
+                   | failed = putStrLn
+                   | True   = putStr
+                 (failed, msg) = case mbGood of
+                                   Nothing    -> (False, " [Vacuity Skipped]")
+                                   Just True  -> (False, " [Vacuity OK]")
+                                   Just False -> (True,  " [Vacuity Failed]")
 
         endCase :: Bool -> Maybe (String, String) -> String -> IO ()
         endCase multi mbis msg
@@ -497,15 +516,41 @@ caseSplit config (runParallel, hasPar) isSAT (unwrap, wrap) level chatty cases f
            -- At the end, we do a coverage call
            = do let multi = runParallel
                 startCase multi Nothing
-                res <- f config (CaseCov (map snd level) [c | (_, c, _) <- cases])
+                res <- f config (CaseCov (map (snd . snd) level) [c | (_, c, _) <- cases])
                 decideSerial multi Nothing (unwrap res) (return res)
         goSerial ((i, (nm, cond, ts)):cs)
            -- Still going down, do a regular call
            = do let multi = any isCaseSplitAnywhere ts
                     mbis  = Just (i, nm)
                 startCase multi mbis
-                res <- applyTactics config (isSAT, hasPar) (wrap, unwrap) (level ++ [(i, cond)]) ts f
-                decideSerial multi mbis (unwrap res) (goSerial cs)
+                continue <- if isSAT   -- for a SAT check, vacuity is meaningless (what would be the point)?
+                            then return True
+                            else if checkVacuity
+                                 then do res <- f config (CaseVac (map (snd . snd) level) cond)
+                                         case unwrap res of
+                                           Satisfiable{} -> vacuityMsg (Just True)  multi (i, nm) >> return True
+                                           _             -> vacuityMsg (Just False) multi (i, nm) >> return False
+                                 else vacuityMsg Nothing  multi (i, nm) >> return True
+                if continue
+                   then do res <- applyTactics config (isSAT, hasPar) (wrap, unwrap) (level ++ [(i, (nm, cond))]) ts f
+                           decideSerial multi mbis (unwrap res) (goSerial cs)
+                   else return $ wrap $ vacuityFailResult (i, nm)
+
+        vacuityFailResult cur = ProofError config $ [ "Vacuity check failed."
+                                                    , "Case constraint not satisfiable. Leading path:"
+                                                    ]
+                                                 ++ map ("    " ++) (align ([(i, n) | (i, (n, _)) <- level] ++ [cur]))
+                                                 ++ ["HINT: Try \"CheckCaseVacuity False\" tactic to ignore vacuity checks."]
+          where align :: [(String, String)] -> [String]
+                align path = map join cpath
+                  where len = maximum (0 : map (length . fst) cpath)
+                        join (c, n) = reverse (take len (reverse c ++ repeat ' ')) ++ ": " ++ n
+
+                        cpath = [(intercalate "." (reverse ls), j) | (ls, j) <- cascade [] path]
+
+                        trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+                        cascade _     []              = []
+                        cascade sofar ((i, j) : rest) = let new = trim i : sofar in (new, j) : cascade new rest
 
         decideSerial
          | isSAT = decideSerialSAT
@@ -533,31 +578,46 @@ caseSplit config (runParallel, hasPar) isSAT (unwrap, wrap) level chatty cases f
         -----------------------------------------------------------------------------------------------------------------
         -- Parallel case analysis
         -----------------------------------------------------------------------------------------------------------------
-        goParallel :: [(String, SW, [Tactic SW])] -> IO res
-        goParallel cs = do when chatty $ putStrLn $ nm '>' "[Starting]"
+        goParallel :: [(String, (String, SW, [Tactic SW]))] -> IO res
+        goParallel cs = do
+             when chatty $ putStrLn $ topName '>' "[Starting]"
 
-                           let mkTask (s, cond, ts) i = (mkCaseNameBase s i, unwrap `fmap` applyTactics config (isSAT, hasPar) (wrap, unwrap) (level ++ [(s, cond)]) ts f)
-                               cov                    = (mkCovNameBase,      unwrap `fmap` f config (CaseCov (map snd level) [c | (_, c, _) <- cases]))
+             -- Create the case claim:
+             let mkTask (i, (nm, cond, ts)) =
+                  let caseProof = do continue <- if isSAT   -- for a SAT check, vacuity is meaningless (what would be the point)?
+                                                 then return True
+                                                 else if checkVacuity
+                                                      then do res <- f config (CaseVac (map (snd . snd) level) cond)
+                                                              case unwrap res of
+                                                                Satisfiable{} -> return True
+                                                                _             -> return False
+                                                      else return True
+                                     if continue
+                                        then unwrap `fmap` applyTactics config (isSAT, hasPar) (wrap, unwrap) (level ++ [(i, (nm, cond))]) ts f
+                                        else return $ vacuityFailResult (i, nm)
+                  in (mkCaseNameBase nm i, caseProof)
 
-                           (decidingTag, res) <- decideParallel $ zipWith mkTask cs caseNos ++ [cov]
+             -- Create the coverage claim
+             let cov = unwrap `fmap` f config (CaseCov (map (snd . snd) level) [c | (_, c, _) <- cases])
 
-                           let trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+             (decidingTag, res) <- decideParallel $ map mkTask cs ++ [(mkCovNameBase, cov)]
 
-                           let caseMsg
-                                | isSAT = satMsg
-                                | True  = proofMsg
-                                where addTag x = "[" ++ x ++ " (" ++ trim decidingTag ++ ")]"
-                                      withTag (x, y) = (addTag x, addTag y)
-                                      (satMsg, proofMsg) =  case res of
-                                                              Unsatisfiable{} -> ("[Unsatisfiable]", "[Proved]")
-                                                              Satisfiable{}   -> withTag ("Satisfiable",   "Failed")
-                                                              _               -> let d = diag res in withTag (d, d)
+             let trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 
-                           when chatty $ putStrLn $ nm '<' caseMsg
+             let caseMsg
+                  | isSAT = satMsg
+                  | True  = proofMsg
+                  where addTag x = x ++ " (at " ++ trim decidingTag ++ ")"
+                        (satMsg, proofMsg) =  case res of
+                                                Unsatisfiable{} -> ("[Unsatisfiable]", "[Proved]")
+                                                Satisfiable{}   -> (addTag "[Satisfiable]",   addTag "[Failed]")
+                                                _               -> let d = diag res in (addTag d, addTag d)
 
-                           return $ wrap res
+             when chatty $ putStrLn $ topName '<' caseMsg
 
-            where nm c w  = tag c ++ topTag ++ " Parallel case split: " ++ range ++ ": " ++ w
+             return $ wrap res
+
+            where topName c w  = tag c ++ topTag ++ " Parallel case split: " ++ range ++ ": " ++ w
 
                   topTag = " Case" ++ s ++ intercalate "." lids ++ dot ++ "[1-" ++ show (length cs + 1) ++ "]:"
                     where dot | null lids = ""
@@ -570,41 +630,26 @@ caseSplit config (runParallel, hasPar) isSAT (unwrap, wrap) level chatty cases f
                               [_] -> "One case and coverage"
                               xs  -> show (length xs) ++ " cases and coverage"
 
-        decideParallel
-         | isSAT = decideParallelSAT
-         | True  = decideParallelProof
-
-        -- In a parallel SAT, we run all cases in parallel and return
-        -- a SAT result from any. If none-of-them is SAT, then we return the last
-        -- finishing result that says unsat
-        decideParallelSAT :: [(String, IO SMTResult)] -> IO (String, SMTResult)
-        decideParallelSAT caseTasks = mapM try caseTasks >>= pick
+        -- Parallel decision:
+        --      - If SAT:   Run all cases in parallel and return a SAT result from any. If none-of-them is SAT, then we return the last finishing
+        --      - If Prove: Run all cases in parallel and return the last one if all return UNSAT. Otherwise return the first SAT one.
+        decideParallel :: [(String, IO SMTResult)] -> IO (String, SMTResult)
+        decideParallel caseTasks = mapM try caseTasks >>= pick
           where try (nm, task) = async $ task >>= \r -> return (nm, r)
 
                 pick :: [Async (String, SMTResult)] -> IO (String, SMTResult)
+                pick []  = error "SBV.caseSplit.decideParallel: Impossible happened, ran out of proofs!"
                 pick [a] = wait a
                 pick as  = do (d, r) <- waitAny as
-                              let others = filter (/= d) as
+                              let others   = filter (/= d) as
+                                  continue = pick others
+                                  stop     = mapM_ cancel others >> return r
                               case snd r of
-                                Satisfiable{} -> mapM_ cancel others >> return r
-                                _             -> pick others
-
-        -- In a parallel Proof, we run all cases in parallel, and return
-        -- any *non*-UnSAT result. If all are unSAT, then we return the last one we receive.
-        decideParallelProof :: [(String, IO SMTResult)] -> IO (String, SMTResult)
-        decideParallelProof caseTasks = mapM try caseTasks >>= (unsafeInterleaveIO . go) >>= pick
-          where try (nm, task) = async $ task >>= \r -> return (nm, r)
-
-                go [] = return []
-                go as = do (d, r) <- waitAny as
-                           rs <- unsafeInterleaveIO $ go (filter (/= d) as)
-                           return (r : rs)
-
-                pick []           = error $ "SBV.caseSplit.decideParallelProof: Impossible happened, ran out of results! Received: " ++ show (length tasks) ++ " task(s)"
-                pick ((nm, r):rs) = case r of
-                                      Unsatisfiable{} | null rs -> return (nm, r)
-                                                      | True    -> pick rs
-                                      _                         -> return (nm, r)
+                                Unsatisfiable{} -> continue
+                                Satisfiable{}   -> stop
+                                ProofError{}    -> stop
+                                Unknown{}       -> if isSAT then continue else stop
+                                TimeOut{}       -> if isSAT then continue else stop
 
 -- | Check if any of the assertions can be violated
 safeWith :: SExecutable a => SMTConfig -> a -> IO [SafeResult]
