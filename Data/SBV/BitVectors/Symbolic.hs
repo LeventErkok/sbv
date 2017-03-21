@@ -47,7 +47,7 @@ module Data.SBV.BitVectors.Symbolic
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
   , Tactic(..), addSValTactic, isCaseSplitTactic, isCaseSplitAnywhere, isParallelCaseAnywhere
-  , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic, isUseSolverTactic, isCheckCaseVacuityTactic
+  , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic, isUseSolverTactic, isCheckCaseVacuityTactic, isCheckConstrVacuityTactic
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
   , mkSValUserSort
@@ -282,23 +282,25 @@ newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SW, SBVExpr)}
 type NamedSymVar = (SW, String)
 
 -- | Solver tactic
-data Tactic a = CaseSplit  Bool [(String, a, [Tactic a])]  -- ^ Case-split, with implicit coverage. Bool says whether we should be verbose.
-              | CheckCaseVacuity Bool                      -- ^ Should the case-splits be checked for vacuity? (Default: True.)
-              | ParallelCase                               -- ^ Run case-splits in parallel. (Default: Sequential.)
-              | StopAfter        Int                       -- ^ Time-out given to solver, in seconds.
-              | CheckUsing       String                    -- ^ Invoke with check-sat-using command, instead of check-sat
-              | UseLogic         Logic                     -- ^ Use this logic, a custom one can be specified too
-              | UseSolver        SMTConfig                 -- ^ Use this solver (z3, yices, etc.)
+data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-split, with implicit coverage. Bool says whether we should be verbose.
+              | CheckCaseVacuity   Bool                            -- ^ Should the case-splits be checked for vacuity? (Default: True.)
+              | ParallelCase                                       -- ^ Run case-splits in parallel. (Default: Sequential.)
+              | CheckConstrVacuity Bool                            -- ^ Should "constraints" be checked for vacuity? (Default: False.)
+              | StopAfter          Int                             -- ^ Time-out given to solver, in seconds.
+              | CheckUsing         String                          -- ^ Invoke with check-sat-using command, instead of check-sat
+              | UseLogic           Logic                           -- ^ Use this logic, a custom one can be specified too
+              | UseSolver          SMTConfig                       -- ^ Use this solver (z3, yices, etc.)
               deriving (Show, Functor)
 
 instance NFData a => NFData (Tactic a) where
-   rnf (CaseSplit   b l)    = rnf b `seq` rnf l `seq` ()
-   rnf ParallelCase         = ()
-   rnf (CheckCaseVacuity b) = rnf b `seq` ()
-   rnf (StopAfter        i) = rnf i `seq` ()
-   rnf (CheckUsing       s) = rnf s `seq` ()
-   rnf (UseLogic         l) = rnf l `seq` ()
-   rnf (UseSolver        s) = rnf s `seq` ()
+   rnf (CaseSplit   b l)      = rnf b `seq` rnf l `seq` ()
+   rnf (CheckCaseVacuity b)   = rnf b `seq` ()
+   rnf ParallelCase           = ()
+   rnf (CheckConstrVacuity b) = rnf b `seq` ()
+   rnf (StopAfter        i)   = rnf i `seq` ()
+   rnf (CheckUsing       s)   = rnf s `seq` ()
+   rnf (UseLogic         l)   = rnf l `seq` ()
+   rnf (UseSolver        s)   = rnf s `seq` ()
 
 -- | Is this a case-split tactic?
 isCaseSplitTactic :: Tactic a -> Bool
@@ -339,6 +341,11 @@ isCaseSplitAnywhere _           = False
 isCheckCaseVacuityTactic :: Tactic a -> Bool
 isCheckCaseVacuityTactic CheckCaseVacuity{} = True
 isCheckCaseVacuityTactic _                  = False
+
+-- | Is this a check-constr-vacuity tactic
+isCheckConstrVacuityTactic :: Tactic a -> Bool
+isCheckConstrVacuityTactic CheckConstrVacuity{} = True
+isCheckConstrVacuityTactic _                    = False
 
 -- | Is parallel-case anywhere?
 isParallelCaseAnywhere :: Tactic a -> Bool
@@ -829,16 +836,17 @@ internalConstraint st b = do v <- svToSW st b
 -- | Add a tactic
 addSValTactic :: Tactic SVal -> Symbolic ()
 addSValTactic tac = do st <- ask
-                       let walk (CaseSplit b cs)     = let app (nm, v, ts) = do ts' <- mapM walk ts
-                                                                                v' <- svToSW st v
-                                                                                return (nm, v', ts')
-                                                       in CaseSplit b `fmap` mapM app cs
-                           walk ParallelCase         = return   ParallelCase
-                           walk (CheckCaseVacuity b) = return $ CheckCaseVacuity b
-                           walk (StopAfter i)        = return $ StopAfter  i
-                           walk (CheckUsing s)       = return $ CheckUsing s
-                           walk (UseLogic   l)       = return $ UseLogic   l
-                           walk (UseSolver  s)       = return $ UseSolver  s
+                       let walk (CaseSplit b cs)       = let app (nm, v, ts) = do ts' <- mapM walk ts
+                                                                                  v' <- svToSW st v
+                                                                                  return (nm, v', ts')
+                                                         in CaseSplit b `fmap` mapM app cs
+                           walk ParallelCase           = return   ParallelCase
+                           walk (CheckCaseVacuity b)   = return $ CheckCaseVacuity b
+                           walk (StopAfter i)          = return $ StopAfter  i
+                           walk (CheckConstrVacuity b) = return $ CheckConstrVacuity b
+                           walk (CheckUsing s)         = return $ CheckUsing s
+                           walk (UseLogic   l)         = return $ UseLogic   l
+                           walk (UseSolver  s)         = return $ UseSolver  s
                        tac' <- liftIO $ walk tac
                        liftIO $ modifyIORef (rTacs st) (tac':)
 

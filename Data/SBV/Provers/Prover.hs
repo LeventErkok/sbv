@@ -388,14 +388,17 @@ cluster (f:fs) xs = ok : cluster fs other
 -- | Apply the given tactics to a problem
 applyTactics :: SMTConfig -> (Bool, Bool) -> (SMTResult -> res, res -> SMTResult) -> [(String, (String, SW))] -> [Tactic SW] -> (SMTConfig -> CaseCond -> IO res) -> IO res
 applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics cont
-   | not (null others)
-   = error $ "SBV: Unsupported tactic: " ++ show others
-   | null caseSplits
-   = cont finalConfig (CasePath (map (snd . snd) levels))
-   | True
-   = caseSplit finalConfig shouldCheckVacuity (parallelCase, hasPar) isSat (unwrap, wrap) levels chatty cases cont
+   = do unless (null others) $ error $ "SBV: Unsupported tactic: " ++ show others
+        mbRes <- if not shouldCheckConstrVacuity
+                 then return Nothing
+                 else constraintVacuityCheck cfgIn (wrap, unwrap) levels cont
+        case mbRes of
+          Just r  -> return r
+          Nothing -> if null caseSplits
+                     then cont finalConfig (CasePath (map (snd . snd) levels))
+                     else caseSplit finalConfig shouldCheckCaseVacuity (parallelCase, hasPar) isSat (wrap, unwrap) levels chatty cases cont
 
-  where [caseSplits, parallelCases, timeOuts, checkUsing, useLogics, useSolvers, checkVacuity, others]
+  where [caseSplits, parallelCases, timeOuts, checkUsing, useLogics, useSolvers, checkCaseVacuity, checkConstrVacuity, others]
                 = cluster [ isCaseSplitTactic
                           , isParallelCaseTactic
                           , isStopAfterTactic
@@ -403,13 +406,17 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics cont
                           , isUseLogicTactic
                           , isUseSolverTactic
                           , isCheckCaseVacuityTactic
+                          , isCheckConstrVacuityTactic
                           ] tactics
 
         parallelCase = not $ null parallelCases
 
-        shouldCheckVacuity = case [b | CheckCaseVacuity b <- checkVacuity] of
-                               [] -> True   -- default is to check vacuity
-                               bs -> or bs  -- otherwise check vacuity if we're asked to do so
+        shouldCheckCaseVacuity = case [b | CheckCaseVacuity b <- checkCaseVacuity] of
+                                   [] -> True   -- default is to check-case-vacuity
+                                   bs -> or bs  -- otherwise check vacuity if we're asked to do so
+
+        -- for constraint vacuity, default is *not* to check; so a simple or suffices
+        shouldCheckConstrVacuity = or [b | CheckConstrVacuity b <- checkConstrVacuity]
 
         (chatty, cases) = let (vs, css) = unzip [(v, cs) | CaseSplit v cs <- caseSplits] in (or (verbose cfgIn : vs), concat css)
 
@@ -435,19 +442,26 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics cont
 
         finalConfig = transConfig configToUse
 
+-- | Implements the "constraint vacuity check" tactic, making sure the calls to "constrain"
+-- describe a satisfiable condition
+constraintVacuityCheck :: forall res. SMTConfig -> (SMTResult -> res, res -> SMTResult) -> [(String, (String, SW))] -> (SMTConfig -> CaseCond -> IO res) -> IO (Maybe res)
+constraintVacuityCheck _cfgIn (_wrap, _unwrap) _levels _cont = do
+        _ <- error "SBV: constraintVacuityCheck: TBD"
+        return Nothing
+
 -- | Implements the case-split tactic. Works for both Sat and Proof, hence the quantification on @res@
 caseSplit :: forall res.
              SMTConfig                            -- ^ Solver config
           -> Bool                                 -- ^ Should we check vacuity of cases?
           -> (Bool, Bool)                         -- ^ Should we run the cases in parallel? Second bool: Is anything parallel going on?
           -> Bool                                 -- ^ True if we're sat solving
-          -> (res -> SMTResult, SMTResult -> res) -- ^ wrapper, unwrapper from sat/proof to the actual result
+          -> (SMTResult -> res, res -> SMTResult) -- ^ wrapper, unwrapper from sat/proof to the actual result
           -> [(String, (String, SW))]             -- ^ Path condition as we reached here. (In a nested case split, First #, then actual name.)
           -> Bool                                 -- ^ Should we be chatty on the case-splits?
           -> [(String, SW, [Tactic SW])]          -- ^ List of cases. Case name, condition, plus further tactics for nested case-splitting etc.
           -> (SMTConfig -> CaseCond -> IO res)    -- ^ The "solver" once we provide it with a problem and a case
           -> IO res
-caseSplit config checkVacuity (runParallel, hasPar) isSAT (unwrap, wrap) level chatty cases f
+caseSplit config checkVacuity (runParallel, hasPar) isSAT (wrap, unwrap) level chatty cases f
      | runParallel = goParallel tasks
      | True        = goSerial   tasks
 
