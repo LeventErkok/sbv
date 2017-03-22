@@ -389,9 +389,25 @@ cluster (f:fs) xs = ok : cluster fs other
 applyTactics :: SMTConfig -> (Bool, Bool) -> (SMTResult -> res, res -> SMTResult) -> [(String, (String, SW))] -> [Tactic SW] -> (SMTConfig -> CaseCond -> IO res) -> IO res
 applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics cont
    = do unless (null others) $ error $ "SBV: Unsupported tactic: " ++ show others
+        --
+        -- TODO: The management of tactics here is quite adhoc. We should have a better story
+        -- Currently, we:
+        --
+        --      - Check for vacuity if asked
+        --      - Do case-splitting
+        --
+        -- The "tactics" that impact configuration (use-logic, time-out, etc.) only apply to case-splitting
+        -- and not to vacuity checking. (Though they do apply to vacuity-checking of case-conditions.)
+        --
+        -- If we have more interesting tactics, we'll have to come up with a better "proof manager." The current
+        -- code is sufficient, however, for the use cases we have now.
+
+        -- Check vacuity if asked
         mbRes <- if not shouldCheckConstrVacuity
                  then return Nothing
                  else constraintVacuityCheck cfgIn (wrap, unwrap) levels cont
+
+        -- Do case split, if vacuity said continue
         case mbRes of
           Just r  -> return r
           Nothing -> if null caseSplits
