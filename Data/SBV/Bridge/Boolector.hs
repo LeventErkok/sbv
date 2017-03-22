@@ -26,14 +26,12 @@ module Data.SBV.Bridge.Boolector (
   sbvCurrentSolver
   -- ** Proving, checking satisfiability
   , prove, sat, safe, allSat, isVacuous, isTheorem, isSatisfiable
-  -- ** Optimization routines
-  , optimize, minimize, maximize
   -- * Non-Boolector specific SBV interface
   -- $moduleExportIntro
   , module Data.SBV
   ) where
 
-import Data.SBV hiding (prove, sat, safe, allSat, isVacuous, isTheorem, isSatisfiable, optimize, minimize, maximize, sbvCurrentSolver)
+import Data.SBV hiding (prove, sat, safe, allSat, isVacuous, isTheorem, isSatisfiable, sbvCurrentSolver)
 
 -- | Current solver instance, pointing to Boolector.
 sbvCurrentSolver :: SMTConfig
@@ -82,34 +80,6 @@ isSatisfiable :: Provable a
               -> a               -- ^ Property to check
               -> IO (Maybe Bool) -- ^ Returns Nothing if time-out expiers
 isSatisfiable = isSatisfiableWith sbvCurrentSolver
-
--- | Optimize cost functions, using the Boolector SMT solver
-optimize :: (SatModel a, SymWord a, Show a, SymWord c, Show c)
-         => OptimizeOpts                -- ^ Parameters to optimization (Iterative, Quantified, etc.)
-         -> (SBV c -> SBV c -> SBool)   -- ^ Betterness check: This is the comparison predicate for optimization
-         -> ([SBV a] -> SBV c)          -- ^ Cost function
-         -> Int                         -- ^ Number of inputs
-         -> ([SBV a] -> SBool)          -- ^ Validity function
-         -> IO (Maybe [a])              -- ^ Returns Nothing if there is no valid solution, otherwise an optimal solution
-optimize = optimizeWith sbvCurrentSolver
-
--- | Minimize cost functions, using the Boolector SMT solver
-minimize :: (SatModel a, SymWord a, Show a, SymWord c, Show c)
-         => OptimizeOpts                -- ^ Parameters to optimization (Iterative, Quantified, etc.)
-         -> ([SBV a] -> SBV c)          -- ^ Cost function to minimize
-         -> Int                         -- ^ Number of inputs
-         -> ([SBV a] -> SBool)          -- ^ Validity function
-         -> IO (Maybe [a])              -- ^ Returns Nothing if there is no valid solution, otherwise an optimal solution
-minimize = minimizeWith sbvCurrentSolver
-
--- | Maximize cost functions, using the Boolector SMT solver
-maximize :: (SatModel a, SymWord a, Show a, SymWord c, Show c)
-         => OptimizeOpts                -- ^ Parameters to optimization (Iterative, Quantified, etc.)
-         -> ([SBV a] -> SBV c)          -- ^ Cost function to maximize
-         -> Int                         -- ^ Number of inputs
-         -> ([SBV a] -> SBool)          -- ^ Validity function
-         -> IO (Maybe [a])              -- ^ Returns Nothing if there is no valid solution, otherwise an optimal solution
-maximize = maximizeWith sbvCurrentSolver
 
 {- $moduleExportIntro
 The remainder of the SBV library that is common to all back-end SMT solvers, directly coming from the "Data.SBV" module.

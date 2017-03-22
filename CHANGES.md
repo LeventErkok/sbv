@@ -7,7 +7,21 @@
   * Implemented tactics, which allow the user to navigate the proof process.
     User can, for instance, implement case-splitting in a proof to guide
     the underlying solver through. Tactics can be both SBV based (case-splitting)
-    or more-or-less solely implemented by the underlying solver.
+    or more-or-less solely implemented by the underlying solver. Here is the list
+    of tactics implemented:
+
+       * CaseSplit         : Case-split, with implicit coverage. Bool says whether we should be verbose.
+       * CheckCaseVacuity  : Should the case-splits be checked for vacuity? (Default: True.)
+       * ParallelCase      : Run case-splits in parallel. (Default: Sequential.)
+       * CheckConstrVacuity: Should constraints be checked for vacuity? (Default: False.)
+       * StopAfter         : Time-out given to solver, in seconds.
+       * CheckUsing        : Invoke with check-sat-using command, instead of check-sat
+       * UseLogic          : Use this logic, a custom one can be specified too
+       * UseSolver         : Use this solver (z3, yices, etc.)
+
+  * Old optimization routinies (minimize/maximize/optimize and friends) are
+    no longer exported from Data.SBV. To use them import Data.SBV.Tools.Optimize.
+    Note that tactic based optimization should be preferred.
 
 ### Version 5.15, 2017-01-30
 

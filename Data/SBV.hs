@@ -218,11 +218,6 @@ module Data.SBV (
   -- $tacticIntro
   , Tactic(..), tactic
 
-  -- * Optimization
-  -- $optimizeIntro
-  , minimize, maximize, optimize
-  , minimizeWith, maximizeWith, optimizeWith
-
   -- * Computing expected values
   , expectedValue, expectedValueWith
 
@@ -239,7 +234,7 @@ module Data.SBV (
   , getModelDictionaries, getModelValues, getModelUninterpretedValues
 
   -- * SMT Interface: Configurations and solvers
-  , SMTConfig(..), SMTLibVersion(..), SMTLibLogic(..), Logic(..), OptimizeOpts(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
+  , SMTConfig(..), SMTLibVersion(..), SMTLibLogic(..), Logic(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
   , Timing(..), TimedStep(..), TimingInfo, showTDiff
 
   -- * Symbolic computations
@@ -302,7 +297,6 @@ import Data.SBV.Compilers.CodeGen
 import Data.SBV.Provers.Prover
 import Data.SBV.Tools.GenTest
 import Data.SBV.Tools.ExpectedValue
-import Data.SBV.Tools.Optimize
 import Data.SBV.Tools.Polynomial
 import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.TDiff
@@ -534,49 +528,6 @@ Also see "Data.SBV.Examples.Misc.NoDiv0" for the classic div-by-zero example.
 {- $tacticIntro
 In certain cases, the prove/sat calls can benefit from user guidance, in terms of tactics. From a semantic view,
 a tactic has no effect on the meaning of a predicate. It is merely guidance for SBV to guide the proof.
--}
-
-{- $optimizeIntro
-Symbolic optimization. A call of the form:
-
-    @minimize Quantified cost n valid@
-
-returns @Just xs@, such that:
-
-   * @xs@ has precisely @n@ elements
-
-   * @valid xs@ holds
-
-   * @cost xs@ is minimal. That is, for all sequences @ys@ that satisfy the first two criteria above, @cost xs .<= cost ys@ holds.
-
-If there is no such sequence, then 'minimize' will return 'Nothing'.
-
-The function 'maximize' is similar, except the comparator is '.>='. So the value returned has the largest cost (or value, in that case).
-
-The function 'optimize' allows the user to give a custom comparison function.
-
-The 'OptimizeOpts' argument controls how the optimization is done. If 'Quantified' is used, then the SBV optimization engine satisfies the following predicate:
-
-   @exists xs. forall ys. valid xs && (valid ys \`implies\` (cost xs \`cmp\` cost ys))@
-
-Note that this may cause efficiency problems as it involves alternating quantifiers.
-If 'OptimizeOpts' is set to 'Iterative' 'True', then SBV will programmatically
-search for an optimal solution, by repeatedly calling the solver appropriately. (The boolean argument controls whether progress reports are given. Use
-'False' for quiet operation.)
-
-=== Quantified vs Iterative
-
-Note that the quantified and iterative versions are two different optimization approaches and may not necessarily yield the same
-results. In particular, the quantified version can tell us no such solution exists if there is no global optimum value, while the iterative
-version might simply loop forever for such a problem. To wit, consider the example:
-
-   @ maximize Quantified head 1 (const true :: [SInteger] -> SBool) @
-
-which asks for the largest `SInteger` value. The SMT solver will happily answer back saying there is no such value with the 'Quantified' call, but the 'Iterative' variant
-will simply loop forever as it would search through an infinite chain of ascending 'SInteger' values.
-
-In practice, however, the iterative version is usually the more effective choice since alternating quantifiers are hard to deal with for many SMT-solvers and thus will
-likely result in an @unknown@ result. While the 'Iterative' variant can loop for a long time, one can simply use the boolean flag 'True' and see how the search is progressing.
 -}
 
 {- $modelExtraction

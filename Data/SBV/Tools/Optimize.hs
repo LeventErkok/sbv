@@ -12,7 +12,22 @@
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Data.SBV.Tools.Optimize (OptimizeOpts(..), optimize, optimizeWith, minimize, minimizeWith, maximize, maximizeWith) where
+module Data.SBV.Tools.Optimize (
+        -- * Optimization
+        -- $optimizeIntro
+
+        -- * Options
+        OptimizeOpts(..)
+
+        -- * Minimization
+        , minimize, minimizeWith
+
+        -- * Maximization
+        , maximize, maximizeWith
+
+        -- * Generic optimizer
+        , optimize, optimizeWith
+        ) where
 
 import Data.Maybe (fromJust)
 
@@ -106,3 +121,48 @@ iterOptimize chatty cfg cmp cost n valid = do
                                          let c = cost (map literal a)
                                          msg $ "Value   : " ++ show (fromJust (unliteral c))
                                          go (i+1) a c
+
+
+{- $optimizeIntro
+Symbolic optimization. A call of the form:
+
+    @minimize Quantified cost n valid@
+
+returns @Just xs@, such that:
+
+   * @xs@ has precisely @n@ elements
+
+   * @valid xs@ holds
+
+   * @cost xs@ is minimal. That is, for all sequences @ys@ that satisfy the first two criteria above, @cost xs .<= cost ys@ holds.
+
+If there is no such sequence, then 'minimize' will return 'Nothing'.
+
+The function 'maximize' is similar, except the comparator is '.>='. So the value returned has the largest cost (or value, in that case).
+
+The function 'optimize' allows the user to give a custom comparison function.
+
+The 'OptimizeOpts' argument controls how the optimization is done. If 'Quantified' is used, then the SBV optimization engine satisfies the following predicate:
+
+   @exists xs. forall ys. valid xs && (valid ys \`implies\` (cost xs \`cmp\` cost ys))@
+
+Note that this may cause efficiency problems as it involves alternating quantifiers.
+If 'OptimizeOpts' is set to 'Iterative' 'True', then SBV will programmatically
+search for an optimal solution, by repeatedly calling the solver appropriately. (The boolean argument controls whether progress reports are given. Use
+'False' for quiet operation.)
+
+=== Quantified vs Iterative
+
+Note that the quantified and iterative versions are two different optimization approaches and may not necessarily yield the same
+results. In particular, the quantified version can tell us no such solution exists if there is no global optimum value, while the iterative
+version might simply loop forever for such a problem. To wit, consider the example:
+
+   @ maximize Quantified head 1 (const true :: [SInteger] -> SBool) @
+
+which asks for the largest `SInteger` value. The SMT solver will happily answer back saying there is no such value with the 'Quantified' call, but the 'Iterative' variant
+will simply loop forever as it would search through an infinite chain of ascending 'SInteger' values.
+
+In practice, however, the iterative version is usually the more effective choice since alternating quantifiers are hard to deal with for many SMT-solvers and thus will
+likely result in an @unknown@ result. While the 'Iterative' variant can loop for a long time, one can simply use the boolean flag 'True' and see how the search is progressing.
+-}
+
