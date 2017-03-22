@@ -46,8 +46,9 @@ module Data.SBV.BitVectors.Symbolic
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
+  , OptimizeStyle(..), Objective(..)
   , Tactic(..), addSValTactic, isCaseSplitTactic, isCaseSplitAnywhere, isParallelCaseAnywhere
-  , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic, isUseSolverTactic, isCheckCaseVacuityTactic, isCheckConstrVacuityTactic
+  , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic, isUseSolverTactic, isCheckCaseVacuityTactic, isCheckConstrVacuityTactic, isOptimizeTactic
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
   , mkSValUserSort
@@ -281,6 +282,17 @@ newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SW, SBVExpr)}
 -- | 'NamedSymVar' pairs symbolic words and user given/automatically generated names
 type NamedSymVar = (SW, String)
 
+-- | Style of optimization
+data OptimizeStyle = Independent   -- ^ Each objective is optimized independently.
+                   | Lexicographic -- ^ Objectives are optimized in the order given, earlier objectives have higher priority.
+                   | Pareto        -- ^ Objectives are optimized according to pareto front: No objective can be made better without making some other worse.
+                   deriving Show
+
+-- | Should we minimize or maximize?
+data Objective a = Minimize a      -- ^ Minimize this metric
+                 | Maximize a      -- ^ Maximize this metric
+                 deriving (Show, Functor)
+
 -- | Solver tactic
 data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-split, with implicit coverage. Bool says whether we should be verbose.
               | CheckCaseVacuity   Bool                            -- ^ Should the case-splits be checked for vacuity? (Default: True.)
@@ -290,7 +302,15 @@ data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-spl
               | CheckUsing         String                          -- ^ Invoke with check-sat-using command, instead of check-sat
               | UseLogic           Logic                           -- ^ Use this logic, a custom one can be specified too
               | UseSolver          SMTConfig                       -- ^ Use this solver (z3, yices, etc.)
+              | Optimize           OptimizeStyle [Objective a]     -- ^ Optimize according to the given objectives
               deriving (Show, Functor)
+
+instance NFData OptimizeStyle where
+   rnf x = x `seq` ()
+
+instance NFData a => NFData (Objective a) where
+   rnf (Minimize a) = rnf a `seq` ()
+   rnf (Maximize a) = rnf a `seq` ()
 
 instance NFData a => NFData (Tactic a) where
    rnf (CaseSplit   b l)      = rnf b `seq` rnf l `seq` ()
@@ -301,6 +321,7 @@ instance NFData a => NFData (Tactic a) where
    rnf (CheckUsing       s)   = rnf s `seq` ()
    rnf (UseLogic         l)   = rnf l `seq` ()
    rnf (UseSolver        s)   = rnf s `seq` ()
+   rnf (Optimize s os)        = rnf s `seq` rnf os `seq` ()
 
 -- | Is this a case-split tactic?
 isCaseSplitTactic :: Tactic a -> Bool
@@ -346,6 +367,11 @@ isCheckCaseVacuityTactic _                  = False
 isCheckConstrVacuityTactic :: Tactic a -> Bool
 isCheckConstrVacuityTactic CheckConstrVacuity{} = True
 isCheckConstrVacuityTactic _                    = False
+
+-- | Is this an optimization tactic?
+isOptimizeTactic :: Tactic a -> Bool
+isOptimizeTactic Optimize{} = True
+isOptimizeTactic _          = False
 
 -- | Is parallel-case anywhere?
 isParallelCaseAnywhere :: Tactic a -> Bool
@@ -847,6 +873,9 @@ addSValTactic tac = do st <- ask
                            walk (CheckUsing s)         = return $ CheckUsing s
                            walk (UseLogic   l)         = return $ UseLogic   l
                            walk (UseSolver  s)         = return $ UseSolver  s
+                           walk (Optimize s os)        = let app (Minimize v) = Minimize `fmap` svToSW st v
+                                                             app (Maximize v) = Maximize `fmap` svToSW st v
+                                                         in Optimize s `fmap` mapM app os
                        tac' <- liftIO $ walk tac
                        liftIO $ modifyIORef (rTacs st) (tac':)
 
@@ -1125,6 +1154,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsReals              :: Bool                 -- ^ Does the solver support reals?
        , supportsFloats             :: Bool                 -- ^ Does the solver support single-precision floating point numbers?
        , supportsDoubles            :: Bool                 -- ^ Does the solver support double-precision floating point numbers?
+       , supportsOptimization       :: Bool                 -- ^ Does the solver support optimization routines?
        }
 
 -- | Rounding mode to be used for the IEEE floating-point operations.

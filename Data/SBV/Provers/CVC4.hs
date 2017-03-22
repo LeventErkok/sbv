@@ -36,6 +36,7 @@ cvc4 = SMTSolver {
                               , supportsReals              = True  -- Not quite the same capability as Z3; but works more or less..
                               , supportsFloats             = False
                               , supportsDoubles            = False
+                              , supportsOptimization       = False
                               }
          }
  where addTimeOut o i | i < 0 = error $ "CVC4: Timeout value must be non-negative, received: " ++ show i

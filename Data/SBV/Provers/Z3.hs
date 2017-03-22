@@ -65,6 +65,7 @@ z3 = SMTSolver {
                                 , supportsReals              = True
                                 , supportsFloats             = True
                                 , supportsDoubles            = True
+                                , supportsOptimization       = True
                                 }
          }
  where cont rm skolemMap = intercalate "\n" $ concatMap extract skolemMap

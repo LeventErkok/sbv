@@ -218,6 +218,9 @@ module Data.SBV (
   -- $tacticIntro
   , Tactic(..), tactic
 
+  -- * Optimization
+  , OptimizeStyle(..), Objective(..), minimize, maximize
+
   -- * Computing expected values
   , expectedValue, expectedValueWith
 

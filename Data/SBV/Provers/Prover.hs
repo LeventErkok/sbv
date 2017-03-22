@@ -393,28 +393,36 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics cont
         -- TODO: The management of tactics here is quite adhoc. We should have a better story
         -- Currently, we:
         --
+        --      - Perform optimization (which requires sat and no case-splitting)
         --      - Check for vacuity if asked
         --      - Do case-splitting
-        --
-        -- The "tactics" that impact configuration (use-logic, time-out, etc.) only apply to case-splitting
-        -- and not to vacuity checking. (Though they do apply to vacuity-checking of case-conditions.)
         --
         -- If we have more interesting tactics, we'll have to come up with a better "proof manager." The current
         -- code is sufficient, however, for the use cases we have now.
 
-        -- Check vacuity if asked. If result is Nothing, it means we're good to go.
-        mbRes <- if not shouldCheckConstrVacuity
-                 then return Nothing
-                 else constraintVacuityCheck isSat cfgIn (wrap, unwrap) cont
+        -- check that if we have optimizers, then we must be sat and there must be no case-splits
+        when (hasOptimizers && not isSat)     $ error "SBV: Optimization tactics are only available for sat calls."
+        when (hasOptimizers && hasCaseSplits) $ error "SBV: Optimization tactics and case-splits are not supported together."
 
-        -- Do case split, if vacuity said continue
-        case mbRes of
-          Just r  -> return r
-          Nothing -> if null caseSplits
-                     then cont finalConfig (CasePath (map (snd . snd) levels))
-                     else caseSplit finalConfig shouldCheckCaseVacuity (parallelCase, hasPar) isSat (wrap, unwrap) levels chatty cases cont
+        if hasOptimizers
 
-  where [caseSplits, parallelCases, timeOuts, checkUsing, useLogics, useSolvers, checkCaseVacuity, checkConstrVacuity, others]
+           then case optimizers of
+                  [Optimize s os] -> performOptimization s os
+                  _               -> error "SBV: Multiple optimization tactics found, please use only one."
+
+           else do -- Check vacuity if asked. If result is Nothing, it means we're good to go.
+                   mbRes <- if not shouldCheckConstrVacuity
+                            then return Nothing
+                            else constraintVacuityCheck isSat cstrVacuityConfig (wrap, unwrap) cont
+
+                   -- Do case split, if vacuity said continue
+                   case mbRes of
+                     Just r  -> return r
+                     Nothing -> if null caseSplits
+                                then cont finalConfig (CasePath (map (snd . snd) levels))
+                                else caseSplit finalConfig shouldCheckCaseVacuity (parallelCase, hasPar) isSat (wrap, unwrap) levels chatty cases cont
+
+  where [caseSplits, parallelCases, timeOuts, checkUsing, useLogics, useSolvers, checkCaseVacuity, checkConstrVacuity, optimizers, others]
                 = cluster [ isCaseSplitTactic
                           , isParallelCaseTactic
                           , isStopAfterTactic
@@ -423,7 +431,12 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics cont
                           , isUseSolverTactic
                           , isCheckCaseVacuityTactic
                           , isCheckConstrVacuityTactic
+                          , isOptimizeTactic
                           ] tactics
+
+        hasOptimizers = not $ null optimizers
+
+        hasCaseSplits = not $ null cases
 
         parallelCase = not $ null parallelCases
 
@@ -457,6 +470,34 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics cont
         transConfig = grabUseLogic . grabCheckUsing . grabStops
 
         finalConfig = transConfig configToUse
+
+        cstrVacuityConfig = grabUseLogic configToUse
+
+-- | Implement the optimization tactic
+performOptimization :: OptimizeStyle -> [Objective SW] -> IO res
+performOptimization _style objectives
+  | not (null badObjectives)
+  = error $ unlines [ "SBV.optimization: Only SInteger, SWordN, SIntN, and SReal objectives can be minimized."
+                    , "Received objective" ++ badPlu ++ " with goal" ++ badPlu ++ "of type: " ++ unwords (map (show . kindOf) badObjectives)
+                    ]
+  | True
+  = error "SBV.performOptimization: TBD"
+
+  where badPlu | length badObjectives > 1 = "s"
+               | True                     = ""
+
+        badObjectives = concatMap checkObjective objectives
+           where checkObjective (Minimize a) = checkKind (kindOf a)
+                 checkObjective (Maximize a) = checkKind (kindOf a)
+
+                 -- Only can optimize bounded/unbounded quantities and reals
+                 checkKind KBounded{}    = []
+                 checkKind KUnbounded    = []
+                 checkKind KReal{}       = []
+                 checkKind k@KBool       = [k]
+                 checkKind k@KUserSort{} = [k]
+                 checkKind k@KFloat      = [k]
+                 checkKind k@KDouble     = [k]
 
 -- | Implements the "constraint vacuity check" tactic, making sure the calls to "constrain"
 -- describe a satisfiable condition. Returns:

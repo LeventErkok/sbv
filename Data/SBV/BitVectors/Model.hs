@@ -27,7 +27,7 @@ module Data.SBV.BitVectors.Model (
   , sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, (.^)
   , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
-  , constrain, pConstrain, tactic, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
+  , constrain, pConstrain, tactic, minimize, maximize, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
   , sRealToSInteger, label
@@ -1629,7 +1629,15 @@ pConstrain t c = addConstraint (Just t) c (bnot c)
 
 -- | Provide a tactic for the solver engine
 tactic :: Tactic SBool -> Symbolic ()
-tactic t = addSValTactic (unSBV `fmap` t)
+tactic t = addSValTactic $ unSBV `fmap` t
+
+-- | Short-cut for a single independent minimization tactic
+minimize :: SBV a -> Symbolic ()
+minimize goal = addSValTactic $ unSBV `fmap` Optimize Independent [Minimize goal]
+
+-- | Short-cut for a single independent maximization tactic
+maximize :: SBV a -> Symbolic ()
+maximize goal = addSValTactic $ unSBV `fmap` Optimize Independent [Maximize goal]
 
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where
