@@ -10,15 +10,15 @@
     or more-or-less solely implemented by the underlying solver. Here is the list
     of tactics implemented:
 
-       * 'CaseSplit'         : Case-split, with implicit coverage. Bool says whether we should be verbose.
-       * 'CheckCaseVacuity'  : Should the case-splits be checked for vacuity? (Default: True.)
-       * 'ParallelCase'      : Run case-splits in parallel. (Default: Sequential.)
-       * 'CheckConstrVacuity': Should constraints be checked for vacuity? (Default: False.)
-       * 'StopAfter'         : Time-out given to solver, in seconds.
-       * 'CheckUsing'        : Invoke with check-sat-using command, instead of check-sat
-       * 'UseLogic'          : Use this logic, a custom one can be specified too
-       * 'UseSolver'         : Use this solver (z3, yices, etc.)
-       * 'Optimize'          : Perform optimization of objectives
+       * CaseSplit         : Case-split, with implicit coverage. Bool says whether we should be verbose.
+       * CheckCaseVacuity  : Should the case-splits be checked for vacuity? (Default: True.)
+       * ParallelCase      : Run case-splits in parallel. (Default: Sequential.)
+       * CheckConstrVacuity: Should constraints be checked for vacuity? (Default: False.)
+       * StopAfter         : Time-out given to solver, in seconds.
+       * CheckUsing        : Invoke with check-sat-using command, instead of check-sat
+       * UseLogic          : Use this logic, a custom one can be specified too
+       * UseSolver         : Use this solver (z3, yices, etc.)
+       * Optimize          : Perform optimization of objectives
 
   * Old optimization routinies (minimize/maximize/optimize and friends) are
     no longer exported from Data.SBV. To use them import Data.SBV.Tools.Optimize.
