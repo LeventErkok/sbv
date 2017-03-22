@@ -455,12 +455,14 @@ data CaseCond = NoCase             -- ^ No case-split
               | CasePath [SW]      -- ^ In a case-path
               | CaseVac  [SW] SW   -- ^ For checking the vacuity of a case
               | CaseCov  [SW] [SW] -- ^ In a case-path end, coverage (first arg is path cond, second arg is coverage cond)
+              | CstrVac            -- ^ In a constraint vacuity check (top-level)
 
 instance NFData CaseCond where
   rnf NoCase           = ()
   rnf (CasePath ps)    = rnf ps
   rnf (CaseVac  ps q)  = rnf ps `seq` rnf q  `seq` ()
   rnf (CaseCov  ps qs) = rnf ps `seq` rnf qs `seq` ()
+  rnf CstrVac          = ()
 
 -- | Internal representation of a symbolic simulation result
 data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]         -- ^ inputs

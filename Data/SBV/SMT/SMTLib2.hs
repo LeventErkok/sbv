@@ -195,7 +195,9 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
                                CasePath ss    -> map pos cstrs ++ map pos ss
                                CaseVac  ss _  -> map pos cstrs ++ map pos ss
                                CaseCov  ss qq -> map pos cstrs ++ map pos ss ++ map neg qq
-                 o | CaseVac _ s <- caseCond = pos s    -- always a SAT call!
+                               CstrVac        -> map pos cstrs
+                 o | CstrVac     <- caseCond = pos trueSW -- always a SAT call!
+                   | CaseVac _ s <- caseCond = pos s      -- always a SAT call!
                    | isSat                   = pos out
                    | True                    = neg out
                  neg s = "(not " ++ pos s ++ ")"

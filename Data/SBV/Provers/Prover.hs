@@ -402,10 +402,10 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics cont
         -- If we have more interesting tactics, we'll have to come up with a better "proof manager." The current
         -- code is sufficient, however, for the use cases we have now.
 
-        -- Check vacuity if asked
+        -- Check vacuity if asked. If result is Nothing, it means we're good to go.
         mbRes <- if not shouldCheckConstrVacuity
                  then return Nothing
-                 else constraintVacuityCheck cfgIn (wrap, unwrap) levels cont
+                 else constraintVacuityCheck isSat cfgIn (wrap, unwrap) cont
 
         -- Do case split, if vacuity said continue
         case mbRes of
@@ -459,11 +459,24 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics cont
         finalConfig = transConfig configToUse
 
 -- | Implements the "constraint vacuity check" tactic, making sure the calls to "constrain"
--- describe a satisfiable condition
-constraintVacuityCheck :: forall res. SMTConfig -> (SMTResult -> res, res -> SMTResult) -> [(String, (String, SW))] -> (SMTConfig -> CaseCond -> IO res) -> IO (Maybe res)
-constraintVacuityCheck _cfgIn (_wrap, _unwrap) _levels _cont = do
-        _ <- error "SBV: constraintVacuityCheck: TBD"
-        return Nothing
+-- describe a satisfiable condition. Returns:
+--
+--    - Nothing if this is a SAT call, as that would be a weird thing to do (we only would care about constraint-vacuity in a proof context),
+--    - Nothing if satisfiable: The world is OK, just keep moving
+--    - ProofError if unsatisfiable. In this case we found that the constraints given are just bad!
+--
+-- NB. We'll do a SAT call even if there are *no* constraints! This is OK, as the call will be cheap; and this is an opt-in call. (i.e.,
+-- the user asked us to do it explicitly.)
+constraintVacuityCheck :: forall res. Bool -> SMTConfig -> (SMTResult -> res, res -> SMTResult) -> (SMTConfig -> CaseCond -> IO res) -> IO (Maybe res)
+constraintVacuityCheck True  _      _              _ = return Nothing -- for a SAT check, vacuity is meaningless (what would be the point)?
+constraintVacuityCheck False config (wrap, unwrap) f = do
+               res <- f config CstrVac
+               case unwrap res of
+                 Satisfiable{} -> return Nothing
+                 _             -> return $ Just $ wrap vacuityFailResult
+  where vacuityFailResult = ProofError config [ "Constraint vacuity check failed."
+                                              , "User given constraints are not satisfiable."
+                                              ]
 
 -- | Implements the case-split tactic. Works for both Sat and Proof, hence the quantification on @res@
 caseSplit :: forall res.
@@ -570,7 +583,7 @@ caseSplit config checkVacuity (runParallel, hasPar) isSAT (wrap, unwrap) level c
                                                     , "Case constraint not satisfiable. Leading path:"
                                                     ]
                                                  ++ map ("    " ++) (align ([(i, n) | (i, (n, _)) <- level] ++ [cur]))
-                                                 ++ ["HINT: Try \"CheckCaseVacuity False\" tactic to ignore vacuity checks."]
+                                                 ++ ["HINT: Try \"CheckCaseVacuity False\" tactic to ignore case vacuity checks."]
           where align :: [(String, String)] -> [String]
                 align path = map join cpath
                   where len = maximum (0 : map (length . fst) cpath)
