@@ -12,6 +12,7 @@
 module Examples.CRC.USB5 where
 
 import Data.SBV
+import Data.SBV.Tools.Polynomial
 
 newtype SWord11 = S11 SWord16
 

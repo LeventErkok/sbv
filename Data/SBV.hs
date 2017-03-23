@@ -158,8 +158,6 @@ module Data.SBV (
   , blastBE, blastLE, FromBits(..)
   -- *** Splitting, joining, and extending
   , Splittable(..)
-  -- ** Polynomial arithmetic and CRCs
-  , Polynomial(..), crcBV, crc
   -- ** Conditionals: Mergeable values
   , Mergeable(..), ite, iteLazy
   -- ** Symbolic equality
@@ -300,7 +298,6 @@ import Data.SBV.Compilers.CodeGen
 import Data.SBV.Provers.Prover
 import Data.SBV.Tools.GenTest
 import Data.SBV.Tools.ExpectedValue
-import Data.SBV.Tools.Polynomial
 import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.TDiff
 import Data.Bits

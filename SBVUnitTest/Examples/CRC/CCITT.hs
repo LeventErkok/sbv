@@ -12,6 +12,7 @@
 module Examples.CRC.CCITT where
 
 import Data.SBV
+import Data.SBV.Tools.Polynomial
 
 -- We don't have native support for 48 bits in Data.SBV
 -- So, represent as 32 high-bits and 16 low

@@ -14,7 +14,10 @@
 {-# LANGUAGE PatternGuards        #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Data.SBV.Tools.Polynomial (Polynomial(..), crc, crcBV, ites, mdp, addPoly) where
+module Data.SBV.Tools.Polynomial (
+        -- * Polynomial arithmetic and CRCs
+        Polynomial(..), crc, crcBV, ites, mdp, addPoly
+        ) where
 
 import Data.Bits  (Bits(..))
 import Data.List  (genericTake)
