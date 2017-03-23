@@ -149,7 +149,7 @@ import qualified Data.SBV.Provers.Prover   as SBV (proveWith, satWith, safeWith,
 import qualified Data.SBV.SMT.SMT          as SBV (Modelable(getModel, getModelDictionary))
 
 -- | Reduce a condition (i.e., try to concretize it) under the given path
-svIsSatisfiableInCurrentPath :: SVal -> Symbolic Bool
+svIsSatisfiableInCurrentPath :: SVal -> Symbolic (Maybe SatResult)
 svIsSatisfiableInCurrentPath = SBV.isSatisfiableInCurrentPath . toSBool
 
 -- | Dynamic variant of quick-check

@@ -41,6 +41,18 @@
     To use the functionality of these modules, users must now explicitly import the corresponding
     module. Not other changes should be needed other than the explicit import.
 
+  * Changed the signature of the function:
+
+        isSatisfiableInCurrentPath :: SBool -> Symbolic Bool
+
+    to:
+
+        isSatisfiableInCurrentPath :: SBool -> Symbolic (Maybe SatResult)
+
+    which returns the result in case of SAT. This is more useful than before. This is
+    backwards-compatibility breaking, but is more useful. (Requested by Jared Ziegler.)
+
+    
 ### Version 5.15, 2017-01-30
 
   * Bump up dependency on CrackNum >= 1.9, to get access to hexadecimal floats.

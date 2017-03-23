@@ -1708,8 +1708,9 @@ slet x f = SBV $ SVal k $ Right $ cache r
 
 -- | Check if a boolean condition is satisfiable in the current state. This function can be useful in contexts where an
 -- interpreter implemented on top of SBV needs to decide if a particular stae (represented by the boolean) is reachable
--- in the current if-then-else paths implied by the 'ite' calls.
-isSatisfiableInCurrentPath :: SBool -> Symbolic Bool
+-- in the current if-then-else paths implied by the 'ite' calls. Returns Nothing if not satisfiable, otherwise the
+-- satisfying model.
+isSatisfiableInCurrentPath :: SBool -> Symbolic (Maybe SatResult)
 isSatisfiableInCurrentPath cond = do
        st <- ask
        let cfg  = fromMaybe defaultSMTCfg (getSBranchRunConfig st)
@@ -1721,7 +1722,8 @@ isSatisfiableInCurrentPath cond = do
                    SatResult (Unsatisfiable _) -> False
                    _                           -> error $ "isSatisfiableInCurrentPath: Unexpected external result: " ++ show check
        res `seq` liftIO $ msg $ "isSatisfiableInCurrentPath: Conclusion: " ++ if res then "Satisfiable" else "Unsatisfiable"
-       return res
+       return $ if res then Just check
+                       else Nothing
 
 -- We use 'isVacuous' and 'prove' only for the "test" section in this file, and GHC complains about that. So, this shuts it up.
 __unused :: a
