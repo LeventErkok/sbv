@@ -46,9 +46,9 @@ module Data.SBV.BitVectors.Symbolic
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
-  , OptimizeStyle(..), Objective(..)
+  , OptimizeStyle(..), Objective(..), addSValOptGoal
   , Tactic(..), addSValTactic, isCaseSplitTactic, isCaseSplitAnywhere, isParallelCaseAnywhere
-  , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic, isUseSolverTactic, isCheckCaseVacuityTactic, isCheckConstrVacuityTactic, isOptimizeTactic
+  , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic, isUseSolverTactic, isCheckCaseVacuityTactic, isCheckConstrVacuityTactic
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
   , mkSValUserSort
@@ -286,7 +286,7 @@ type NamedSymVar = (SW, String)
 data OptimizeStyle = Independent   -- ^ Each objective is optimized independently.
                    | Lexicographic -- ^ Objectives are optimized in the order given, earlier objectives have higher priority.
                    | Pareto        -- ^ Objectives are optimized according to pareto front: No objective can be made better without making some other worse.
-                   deriving Show
+                   deriving (Eq, Show)
 
 -- | Should we minimize or maximize?
 data Objective a = Minimize a      -- ^ Minimize this metric
@@ -302,7 +302,6 @@ data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-spl
               | CheckUsing         String                          -- ^ Invoke with check-sat-using command, instead of check-sat
               | UseLogic           Logic                           -- ^ Use this logic, a custom one can be specified too
               | UseSolver          SMTConfig                       -- ^ Use this solver (z3, yices, etc.)
-              | Optimize           OptimizeStyle [Objective a]     -- ^ Optimize according to the given objectives
               deriving (Show, Functor)
 
 instance NFData OptimizeStyle where
@@ -321,7 +320,6 @@ instance NFData a => NFData (Tactic a) where
    rnf (CheckUsing       s)   = rnf s `seq` ()
    rnf (UseLogic         l)   = rnf l `seq` ()
    rnf (UseSolver        s)   = rnf s `seq` ()
-   rnf (Optimize s os)        = rnf s `seq` rnf os `seq` ()
 
 -- | Is this a case-split tactic?
 isCaseSplitTactic :: Tactic a -> Bool
@@ -368,11 +366,6 @@ isCheckConstrVacuityTactic :: Tactic a -> Bool
 isCheckConstrVacuityTactic CheckConstrVacuity{} = True
 isCheckConstrVacuityTactic _                    = False
 
--- | Is this an optimization tactic?
-isOptimizeTactic :: Tactic a -> Bool
-isOptimizeTactic Optimize{} = True
-isOptimizeTactic _          = False
-
 -- | Is parallel-case anywhere?
 isParallelCaseAnywhere :: Tactic a -> Bool
 isParallelCaseAnywhere ParallelCase{}   = True
@@ -380,28 +373,29 @@ isParallelCaseAnywhere (CaseSplit _ cs) = or [any isParallelCaseAnywhere t | (_,
 isParallelCaseAnywhere _                = False
 
 -- | Result of running a symbolic computation
-data Result = Result { reskinds       :: Set.Set Kind                     -- ^ kinds used in the program
-                     , resTraces      :: [(String, CW)]                   -- ^ quick-check counter-example information (if any)
-                     , resUISegs      :: [(String, [String])]             -- ^ uninterpeted code segments
-                     , resInputs      :: [(Quantifier, NamedSymVar)]      -- ^ inputs (possibly existential)
-                     , resConsts      :: [(SW, CW)]                       -- ^ constants
-                     , resTables      :: [((Int, Kind, Kind), [SW])]      -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
-                     , resArrays      :: [(Int, ArrayInfo)]               -- ^ arrays (user specified)
-                     , resUIConsts    :: [(String, SBVType)]              -- ^ uninterpreted constants
-                     , resAxioms      :: [(String, [String])]             -- ^ axioms
-                     , resAsgns       :: SBVPgm                           -- ^ assignments
-                     , resConstraints :: [SW]                             -- ^ additional constraints (boolean)
-                     , resTactics     :: [Tactic SW]                      -- ^ User given tactics
-                     , resAssertions  :: [(String, Maybe CallStack, SW)]  -- ^ assertions
-                     , resOutputs     :: [SW]                             -- ^ outputs
+data Result = Result { reskinds       :: Set.Set Kind                      -- ^ kinds used in the program
+                     , resTraces      :: [(String, CW)]                    -- ^ quick-check counter-example information (if any)
+                     , resUISegs      :: [(String, [String])]              -- ^ uninterpeted code segments
+                     , resInputs      :: [(Quantifier, NamedSymVar)]       -- ^ inputs (possibly existential)
+                     , resConsts      :: [(SW, CW)]                        -- ^ constants
+                     , resTables      :: [((Int, Kind, Kind), [SW])]       -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
+                     , resArrays      :: [(Int, ArrayInfo)]                -- ^ arrays (user specified)
+                     , resUIConsts    :: [(String, SBVType)]               -- ^ uninterpreted constants
+                     , resAxioms      :: [(String, [String])]              -- ^ axioms
+                     , resAsgns       :: SBVPgm                            -- ^ assignments
+                     , resConstraints :: [SW]                              -- ^ additional constraints (boolean)
+                     , resTactics     :: [Tactic SW]                       -- ^ User given tactics
+                     , resGoals       :: [(OptimizeStyle, [Objective SW])] -- ^ User specified optimization goals
+                     , resAssertions  :: [(String, Maybe CallStack, SW)]   -- ^ assertions
+                     , resOutputs     :: [SW]                              -- ^ outputs
                      }
 
 -- | Show instance for 'Result'. Only for debugging purposes.
 instance Show Result where
-  show (Result _ _ _ _ cs _ _ [] [] _ [] _ _ [r])
+  show (Result _ _ _ _ cs _ _ [] [] _ [] _ _ _ [r])
     | Just c <- r `lookup` cs
     = show c
-  show (Result kinds _ cgs is cs ts as uis axs xs cstrs tacs asserts os) = intercalate "\n" $
+  show (Result kinds _ cgs is cs ts as uis axs xs cstrs tacs goals asserts os) = intercalate "\n" $
                    (if null usorts then [] else "SORTS" : map ("  " ++) usorts)
                 ++ ["INPUTS"]
                 ++ map shn is
@@ -419,6 +413,8 @@ instance Show Result where
                 ++ map shax axs
                 ++ ["TACTICS"]
                 ++ map show tacs
+                ++ ["GOALS"]
+                ++ map show goals
                 ++ ["DEFINE"]
                 ++ map (\(s, e) -> "  " ++ shs s ++ " = " ++ show e) (F.toList (pgmAssignments xs))
                 ++ ["CONSTRAINTS"]
@@ -533,6 +529,7 @@ data State  = State { runMode      :: SBVRunMode
                     , rCgMap       :: IORef CgMap
                     , raxioms      :: IORef [(String, [String])]
                     , rTacs        :: IORef [Tactic SW]
+                    , rOptGoals    :: IORef [(OptimizeStyle, [Objective SW])]
                     , rAsserts     :: IORef [(String, Maybe CallStack, SW)]
                     , rSWCache     :: IORef (Cache SW)
                     , rAICache     :: IORef (Cache Int)
@@ -789,6 +786,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
    usedKinds <- newIORef Set.empty
    cstrs     <- newIORef []
    tacs      <- newIORef []
+   optGoals  <- newIORef []
    asserts   <- newIORef []
    rGen      <- case currentRunMode of
                   Concrete g -> newIORef g
@@ -813,6 +811,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
                   , rAICache     = aiCache
                   , rConstraints = cstrs
                   , rTacs        = tacs
+                  , rOptGoals    = optGoals
                   , rAsserts     = asserts
                   }
    _ <- newConst st falseCW -- s(-2) == falseSW
@@ -826,7 +825,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
 extractSymbolicSimulationState :: State -> IO Result
 extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblMap=tables, rArrayMap=arrays, rUIMap=uis, raxioms=axioms
                                        , rAsserts=asserts, rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints=cstrs
-                                       , rTacs=tacs } = do
+                                       , rTacs=tacs, rOptGoals=optGoals } = do
    SBVPgm rpgm  <- readIORef pgm
    inpsO <- reverse `fmap` readIORef inps
    outsO <- reverse `fmap` readIORef outs
@@ -844,8 +843,9 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    traceVals  <- reverse `fmap` readIORef cInfo
    extraCstrs <- reverse `fmap` readIORef cstrs
    tactics    <- reverse `fmap` readIORef tacs
+   goals      <- reverse `fmap` readIORef optGoals
    assertions <- reverse `fmap` readIORef asserts
-   return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs tactics assertions outsO
+   return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs tactics goals assertions outsO
 
 -- | Handling constraints
 imposeConstraint :: SVal -> Symbolic ()
@@ -873,11 +873,16 @@ addSValTactic tac = do st <- ask
                            walk (CheckUsing s)         = return $ CheckUsing s
                            walk (UseLogic   l)         = return $ UseLogic   l
                            walk (UseSolver  s)         = return $ UseSolver  s
-                           walk (Optimize s os)        = let app (Minimize v) = Minimize `fmap` svToSW st v
-                                                             app (Maximize v) = Maximize `fmap` svToSW st v
-                                                         in Optimize s `fmap` mapM app os
                        tac' <- liftIO $ walk tac
                        liftIO $ modifyIORef (rTacs st) (tac':)
+
+-- | Add an optimization goal
+addSValOptGoal :: OptimizeStyle -> [Objective SVal] -> Symbolic ()
+addSValOptGoal s os = do st <- ask
+                         let walk (Minimize v) = Minimize `fmap` svToSW st v
+                             walk (Maximize v) = Maximize `fmap` svToSW st v
+                         os' <- liftIO $ mapM walk os
+                         liftIO $ modifyIORef (rOptGoals st) ((s, os'):)
 
 -- | Add a constraint with a given probability
 addSValConstraint :: Maybe Double -> SVal -> SVal -> Symbolic ()
@@ -1063,12 +1068,12 @@ instance NFData CallStack where
 #endif
 
 instance NFData Result where
-  rnf (Result kindInfo qcInfo cgs inps consts tbls arrs uis axs pgm cstr tacs asserts outs)
-        = rnf kindInfo `seq` rnf qcInfo `seq` rnf cgs     `seq` rnf inps
-                       `seq` rnf consts `seq` rnf tbls    `seq` rnf arrs
-                       `seq` rnf uis    `seq` rnf axs     `seq` rnf pgm
-                       `seq` rnf cstr   `seq` rnf tacs    `seq` rnf asserts
-                       `seq` rnf outs
+  rnf (Result kindInfo qcInfo cgs inps consts tbls arrs uis axs pgm cstr tacs goals asserts outs)
+        = rnf kindInfo `seq` rnf qcInfo  `seq` rnf cgs  `seq` rnf inps
+                       `seq` rnf consts  `seq` rnf tbls `seq` rnf arrs
+                       `seq` rnf uis     `seq` rnf axs  `seq` rnf pgm
+                       `seq` rnf cstr    `seq` rnf tacs `seq` rnf goals
+                       `seq` rnf asserts `seq` rnf outs
 instance NFData Kind         where rnf a          = seq a ()
 instance NFData ArrayContext where rnf a          = seq a ()
 instance NFData SW           where rnf a          = seq a ()

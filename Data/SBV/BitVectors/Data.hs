@@ -49,7 +49,7 @@ module Data.SBV.BitVectors.Data
  , declNewSArray, declNewSFunArray
  , OptimizeStyle(..), Objective(..)
  , Tactic(..), CaseCond(..), SMTProblem(..), isCaseSplitTactic, isCaseSplitAnywhere, isParallelCaseAnywhere
- , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic, isUseSolverTactic, isCheckCaseVacuityTactic, isCheckConstrVacuityTactic, isOptimizeTactic
+ , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic, isUseSolverTactic, isCheckCaseVacuityTactic, isCheckConstrVacuityTactic,
  ) where
 
 import Control.DeepSeq      (NFData(..))
@@ -471,11 +471,12 @@ data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]      
                              , kindsUsed    :: Set.Set Kind                        -- ^ kinds used
                              , smtAsserts   :: [(String, Maybe CallStack, SW)]     -- ^ assertions
                              , tactics      :: [Tactic SW]                         -- ^ tactics to use
+                             , objectives   :: [(OptimizeStyle, [Objective SW])]   -- ^ optimization goals
                              , smtLibPgm    :: SMTConfig -> CaseCond -> SMTLibPgm  -- ^ SMTLib representation, given the config and case-splits
                              }
 
 instance NFData SMTProblem where
-  rnf (SMTProblem i m k a t p) = rnf i `seq` rnf m `seq` rnf k `seq` rnf a `seq` rnf t `seq` rnf p `seq` ()
+  rnf (SMTProblem i m k a t o p) = rnf i `seq` rnf m `seq` rnf k `seq` rnf a `seq` rnf t `seq` rnf o `seq` rnf p `seq` ()
 
 instance NFData (SBV a) where
   rnf (SBV x) = rnf x `seq` ()

@@ -18,6 +18,7 @@ module Data.SBV.Tools.ExpectedValue (
       where
 
 import Control.DeepSeq (rnf)
+import Control.Monad   (unless)
 import System.Random   (newStdGen, StdGen)
 import Numeric
 
@@ -43,7 +44,8 @@ expectedValueWith chatty warmupCount mbMaxIter epsilon m
                         let v' = zipWith (+) v t
                         rnf v' `seq` warmup (n-1) v'
         runOnce :: StdGen -> IO [Integer]
-        runOnce g = do (_, Result _ _ _ _ cs _ _ _ _ _ cstrs _ _ os) <- runSymbolic' (Concrete g) (m >>= output)
+        runOnce g = do (_, Result _ _ _ _ cs _ _ _ _ _ cstrs _ goals _ os) <- runSymbolic' (Concrete g) (m >>= output)
+                       unless (null goals) $ error "SBV.expectedValue: Cannot compute expected-values in the presence of optimization goals!"
                        let cval o = case o `lookup` cs of
                                       Nothing -> error "SBV.expectedValue: Cannot compute expected-values in the presence of uninterpreted constants!"
                                       Just cw -> case (kindOf cw, cwVal cw) of
