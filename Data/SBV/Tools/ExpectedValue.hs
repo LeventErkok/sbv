@@ -10,7 +10,12 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE PatternGuards #-}
-module Data.SBV.Tools.ExpectedValue (expectedValue, expectedValueWith) where
+module Data.SBV.Tools.ExpectedValue (
+        -- * Computing expected values
+        expectedValue
+      , expectedValueWith
+      )
+      where
 
 import Control.DeepSeq (rnf)
 import System.Random   (newStdGen, StdGen)
