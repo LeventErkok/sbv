@@ -294,7 +294,6 @@ import Data.SBV.BitVectors.STree
 import Data.SBV.Compilers.C
 import Data.SBV.Compilers.CodeGen
 import Data.SBV.Provers.Prover
-import Data.SBV.Tools.GenTest
 import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.TDiff
 import Data.Bits
