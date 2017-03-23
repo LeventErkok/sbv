@@ -3,7 +3,14 @@
 
 * Latest Hackage released version: 5.15, 2017-01-30
 
-### Version 5.16, Not yet released
+### Version 6.0, Not yet released
+  * This is a backwards compatibility breaking release, hence the major version
+    bump from 5.15 to 6.0. However, old code should more or less work with the
+    same semantics, but might require a few extra imports. This was done
+    in order to reduce the number of exported items from Data.SBV to avoid
+    extra clutter. Also, new optimization features made the use of old style
+    optimization goals obsolete, which are now in their own module. (See below.)
+
   * Implemented tactics, which allow the user to navigate the proof process.
     User can, for instance, implement case-splitting in a proof to guide
     the underlying solver through. Tactics can be both SBV based (case-splitting)
@@ -18,12 +25,24 @@
        * `CheckUsing`        : Invoke with check-sat-using command, instead of check-sat
        * `UseLogic`          : Use this logic, a custom one can be specified too
        * `UseSolver`         : Use this solver (z3, yices, etc.)
-       * `Optimize`          : Perform optimization of objectives
+
+  * Implement optimization, allowing for optimization of real or integral valued metrics.
+    Goals can be independently, lexicographicly, or pareto-front optimized. Currently,
+    only the z3 backend supports optimization routines.
 
   * Old optimization routinies (minimize/maximize/optimize and friends) are
     no longer exported from Data.SBV. To use them import Data.SBV.Tools.Optimize.
     Note that tactic based optimization should be preferred.
 
+  * Expected-value computation routinies (expectedValue/expectedValueWith) are
+    no longer exported from Data.SBV. To use them import Data.SBV.Tools.ExpectedValue.
+
+  * Test generation routines (genTest/getTestValues/renderTest and friends) are
+    no longer exported from Data.SBV. To use them import Data.SBV.Tools.GenTest.
+
+  * Polynomial and CRC arithmetic  routines (crc, crcBV, mdp, addPoly etc.) are
+    no longer exported from Data.SBV. To use them import Data.SBV.Tools.Polynomial.
+    
 ### Version 5.15, 2017-01-30
 
   * Bump up dependency on CrackNum >= 1.9, to get access to hexadecimal floats.
