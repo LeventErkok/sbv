@@ -22,12 +22,12 @@
 {-# LANGUAGE DefaultSignatures      #-}
 
 module Data.SBV.BitVectors.Model (
-    Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), SIntegral
+    Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), SIntegral
   , ite, iteLazy, sTestBit, sExtractBits, sPopCount, setBitTo, sFromIntegral
   , sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, (.^)
   , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
-  , constrain, pConstrain, tactic, minimize, maximize, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
+  , constrain, pConstrain, tactic, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
   , sRealToSInteger, label
@@ -1631,13 +1631,29 @@ pConstrain t c = addConstraint (Just t) c (bnot c)
 tactic :: Tactic SBool -> Symbolic ()
 tactic t = addSValTactic $ unSBV `fmap` t
 
--- | Short-cut for a single independent minimization tactic
-minimize :: SBV a -> Symbolic ()
-minimize goal = addSValTactic $ unSBV `fmap` Optimize Independent [Minimize goal]
+-- | Class of metrics we can optimize for. Currently,
+-- bounded signed/unsigned bit-vectors, unbounded integers,
+-- and algebraic reals can be optimized. (But not, say,
+-- SFloat, SDouble, or SBool.)
+-- Minimal complete definition: optimize.
+class Metric a where
+  optimize :: OptimizeStyle -> [Objective a] -> Symbolic ()
+  minimize ::                             a  -> Symbolic ()
+  maximize ::                             a  -> Symbolic ()
 
--- | Short-cut for a single independent maximization tactic
-maximize :: SBV a -> Symbolic ()
-maximize goal = addSValTactic $ unSBV `fmap` Optimize Independent [Maximize goal]
+  minimize o = optimize Independent [Minimize o]
+  maximize o = optimize Independent [Maximize o]
+
+instance Metric SWord8   where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SWord16  where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SWord32  where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SWord64  where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SInt8    where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SInt16   where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SInt32   where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SInt64   where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SInteger where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SReal    where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
 
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where
