@@ -29,6 +29,7 @@
 module Data.SBV.Examples.Crypto.AES where
 
 import Data.SBV
+import Data.SBV.Tools.Polynomial
 import Data.List (transpose)
 
 -----------------------------------------------------------------------------

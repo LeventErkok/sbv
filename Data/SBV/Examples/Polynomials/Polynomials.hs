@@ -25,6 +25,7 @@
 module Data.SBV.Examples.Polynomials.Polynomials where
 
 import Data.SBV
+import Data.SBV.Tools.Polynomial
 
 -- | Helper synonym for representing GF(2^8); which are merely 8-bit unsigned words. Largest
 -- term in such a polynomial has degree 7.
