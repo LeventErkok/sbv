@@ -416,7 +416,7 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
 
            then do let (optStyles, optObjectives) = unzip objectives
                    case (nub optStyles, concat optObjectives) of
-                     ([s], goals@(_:_)) -> cont finalOptConfig (Opt s goals)
+                     ([s], goals@(_:_)) -> cont (finalOptConfig s goals) (Opt s goals)
                      ([_], [])          -> error   "SBV: No optimization metrics provided, need at least one!"
                      (ss, _)            -> error $ "SBV: Multiple optimization styles found, please use only one: " ++ intercalate ", " (map show ss)
 
@@ -471,7 +471,7 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
                            [] -> c
                            ss -> c { useLogic = Just (last ss) }
 
-        grabOptimizers c = c { optimizeArgs = optimizeArgs c ++ optimizerDirectives }
+        grabOptimizers s goals c = c { optimizeArgs = optimizeArgs c ++ optimizerDirectives s goals }
 
         configToUse = case [s | UseSolver s <- useSolvers] of
                         []  -> cfgIn
@@ -480,11 +480,18 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
 
         finalConfig = grabUseLogic . grabCheckUsing . grabStops $ configToUse
 
-        finalOptConfig = grabOptimizers finalConfig
+        finalOptConfig s goals = grabOptimizers s goals finalConfig
 
-        optimizerDirectives
-          | not hasObjectives = []
-          | True              = error "SBV.optimizerDirectives: TBD"
+        optimizerDirectives s goals
+          | hasObjectives = map minmax goals ++ style s
+          | True          = []
+
+          where minmax (Minimize v) = "(minimize " ++  show v ++ ")"
+                minmax (Maximize v) = "(maximize " ++  show v ++ ")"
+
+                style Lexicographic = [] -- default, no option needed
+                style Independent   = ["(set-option :opt.priority box)"]
+                style Pareto        = ["(set-option :opt.priority pareto)"]
 
 -- | Implements the "constraint vacuity check" tactic, making sure the calls to "constrain"
 -- describe a satisfiable condition. Returns:
