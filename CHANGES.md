@@ -30,19 +30,17 @@
     Goals can be independently, lexicographicly, or pareto-front optimized. Currently,
     only the z3 backend supports optimization routines.
 
-  * Old optimization routinies (minimize/maximize/optimize and friends) are
-    no longer exported from Data.SBV. To use them import Data.SBV.Tools.Optimize.
-    Note that tactic based optimization should be preferred.
+  * Name-space clean-up. The following modules are no longer automatically exported
+    from Data.SBV:
 
-  * Expected-value computation routinies (expectedValue/expectedValueWith) are
-    no longer exported from Data.SBV. To use them import Data.SBV.Tools.ExpectedValue.
+    	- `Data.SBV.Tools.Optimize` (old optimization routines, prefer the newer ones, see above)
+	- `Data.SBV.Tools.ExpectedValue` (computing with expected values)
+	- `Data.SBV.Tools.GenTest` (test case generation)
+	- `Data.SBV.Tools.Polynomial` (polynomial arithmetic, CRCs etc.)
+ 
+    To use the functionality of these modules, users must now explicitly import the corresponding
+    module. Not other changes should be needed other than the explicit import.
 
-  * Test generation routines (genTest/getTestValues/renderTest and friends) are
-    no longer exported from Data.SBV. To use them import Data.SBV.Tools.GenTest.
-
-  * Polynomial and CRC arithmetic  routines (crc, crcBV, mdp, addPoly etc.) are
-    no longer exported from Data.SBV. To use them import Data.SBV.Tools.Polynomial.
-    
 ### Version 5.15, 2017-01-30
 
   * Bump up dependency on CrackNum >= 1.9, to get access to hexadecimal floats.
