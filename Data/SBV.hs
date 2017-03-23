@@ -158,6 +158,7 @@ module Data.SBV (
   , blastBE, blastLE, FromBits(..)
   -- *** Splitting, joining, and extending
   , Splittable(..)
+
   -- ** Conditionals: Mergeable values
   , Mergeable(..), ite, iteLazy
   -- ** Symbolic equality
@@ -244,9 +245,6 @@ module Data.SBV (
   -- * Getting SMT-Lib output (for offline analysis)
   , compileToSMTLib, generateSMTBenchmarks
 
-  -- * Test case generation
-  , genTest, getTestValues, TestVectors, TestStyle(..), renderTest, CW(..), HasKind(..), Kind(..), cwToBool
-
   -- * Code generation from symbolic programs
   -- $cCodeGeneration
   , SBVCodeGen
@@ -297,7 +295,6 @@ import Data.SBV.Compilers.C
 import Data.SBV.Compilers.CodeGen
 import Data.SBV.Provers.Prover
 import Data.SBV.Tools.GenTest
-import Data.SBV.Tools.ExpectedValue
 import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.TDiff
 import Data.Bits
