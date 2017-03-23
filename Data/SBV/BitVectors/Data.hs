@@ -452,11 +452,12 @@ addConstraint :: Maybe Double -> SBool -> SBool -> Symbolic ()
 addConstraint mt (SBV c) (SBV c') = addSValConstraint mt c c'
 
 -- | A case condition (internal)
-data CaseCond = NoCase             -- ^ No case-split
-              | CasePath [SW]      -- ^ In a case-path
-              | CaseVac  [SW] SW   -- ^ For checking the vacuity of a case
-              | CaseCov  [SW] [SW] -- ^ In a case-path end, coverage (first arg is path cond, second arg is coverage cond)
-              | CstrVac            -- ^ In a constraint vacuity check (top-level)
+data CaseCond = NoCase                                  -- ^ No case-split
+              | CasePath [SW]                           -- ^ In a case-path
+              | CaseVac  [SW] SW                        -- ^ For checking the vacuity of a case
+              | CaseCov  [SW] [SW]                      -- ^ In a case-path end, coverage (first arg is path cond, second arg is coverage cond)
+              | CstrVac                                 -- ^ In a constraint vacuity check (top-level)
+              | Opt      OptimizeStyle [Objective SW]   -- ^ In an optimization call
 
 instance NFData CaseCond where
   rnf NoCase           = ()
@@ -464,6 +465,7 @@ instance NFData CaseCond where
   rnf (CaseVac  ps q)  = rnf ps `seq` rnf q  `seq` ()
   rnf (CaseCov  ps qs) = rnf ps `seq` rnf qs `seq` ()
   rnf CstrVac          = ()
+  rnf (Opt s os)       = rnf s `seq` rnf os `seq` ()
 
 -- | Internal representation of a symbolic simulation result
 data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]         -- ^ inputs

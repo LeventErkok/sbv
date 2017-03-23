@@ -531,6 +531,7 @@ runSolver cfg execPath opts script
                                                              else (ex,          finalOut ++ "\n" ++ out, err)
                 return (send, ask, cleanUp, pid)
       let executeSolver = do mapM_ send (lines (scriptBody script))
+                             mapM_ send (optimizeArgs cfg)
                              response <- case scriptModel script of
                                            Nothing -> do send $ satCmd cfg
                                                          return Nothing

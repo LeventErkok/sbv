@@ -76,6 +76,7 @@ mkConfig s smtVersion tweaks = SMTConfig { verbose        = False
                                          , solver         = s
                                          , solverTweaks   = tweaks
                                          , smtLibVersion  = smtVersion
+                                         , optimizeArgs   = []
                                          , satCmd         = "(check-sat)"
                                          , isNonModelVar  = const False  -- i.e., everything is a model-variable by default
                                          , roundingMode   = RoundNearestTiesToEven
@@ -414,14 +415,15 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
         if hasObjectives
 
            then do let (optStyles, optObjectives) = unzip objectives
-                   case nub optStyles of
-                     [s] -> performOptimization s (concat optObjectives)
-                     ss  -> error $ "SBV: Multiple optimization styles found, please use only one: " ++ intercalate ", " (map show ss)
+                   case (nub optStyles, concat optObjectives) of
+                     ([s], goals@(_:_)) -> cont finalOptConfig (Opt s goals)
+                     ([_], [])          -> error $ "SBV: No optimization metrics provided, need at least one!"
+                     (ss, _)            -> error $ "SBV: Multiple optimization styles found, please use only one: " ++ intercalate ", " (map show ss)
 
            else do -- Check vacuity if asked. If result is Nothing, it means we're good to go.
                    mbRes <- if not shouldCheckConstrVacuity
                             then return Nothing
-                            else constraintVacuityCheck isSat cstrVacuityConfig (wrap, unwrap) cont
+                            else constraintVacuityCheck isSat finalConfig (wrap, unwrap) cont
 
                    -- Do case split, if vacuity said continue
                    case mbRes of
@@ -469,20 +471,20 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
                            [] -> c
                            ss -> c { useLogic = Just (last ss) }
 
+        grabOptimizers c = c { optimizeArgs = optimizeArgs c ++ optimizerDirectives }
+
         configToUse = case [s | UseSolver s <- useSolvers] of
                         []  -> cfgIn
                         [s] -> s
                         ss  -> error $ "SBV.UseSolver: Multiple UseSolver tactics found, at most one is allowed: " ++ intercalate "," (map show ss)
 
-        transConfig = grabUseLogic . grabCheckUsing . grabStops
+        finalConfig = grabUseLogic . grabCheckUsing . grabStops $ configToUse
 
-        finalConfig = transConfig configToUse
+        finalOptConfig = grabOptimizers finalConfig
 
-        cstrVacuityConfig = grabUseLogic configToUse
-
--- | Implement the optimization tactic
-performOptimization :: OptimizeStyle -> [Objective SW] -> IO res
-performOptimization _style _objectives = error "SBV.performOptimization: TBD"
+        optimizerDirectives
+          | not hasObjectives = []
+          | True              = error "SBV.optimizerDirectives: TBD"
 
 -- | Implements the "constraint vacuity check" tactic, making sure the calls to "constrain"
 -- describe a satisfiable condition. Returns:

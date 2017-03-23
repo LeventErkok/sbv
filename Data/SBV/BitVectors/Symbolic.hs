@@ -1204,6 +1204,7 @@ data SMTConfig = SMTConfig {
        , printBase      :: Int            -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
        , printRealPrec  :: Int            -- ^ Print algebraic real values with this precision. (SReal, default: 16)
        , solverTweaks   :: [String]       -- ^ Additional lines of script to give to the solver (user specified)
+       , optimizeArgs   :: [String]       -- ^ Additional commands to pass before check-sat is issued
        , satCmd         :: String         -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
        , isNonModelVar  :: String -> Bool -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
        , smtFile        :: Maybe FilePath -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)

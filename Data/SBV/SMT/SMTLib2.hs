@@ -190,12 +190,13 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
         assertOut
            | null cstrs' = o
            | True        = "(and " ++ unwords (cstrs' ++ [o]) ++ ")"
-           where cstrs' = case caseCond of
-                               NoCase         -> map pos cstrs
-                               CasePath ss    -> map pos cstrs ++ map pos ss
-                               CaseVac  ss _  -> map pos cstrs ++ map pos ss
-                               CaseCov  ss qq -> map pos cstrs ++ map pos ss ++ map neg qq
-                               CstrVac        -> map pos cstrs
+           where cstrs' = map pos cstrs ++ case caseCond of
+                                             NoCase         -> []
+                                             CasePath ss    -> map pos ss
+                                             CaseVac  ss _  -> map pos ss
+                                             CaseCov  ss qq -> map pos ss ++ map neg qq
+                                             CstrVac        -> []
+                                             Opt{}          -> []
                  o | CstrVac     <- caseCond = pos trueSW -- always a SAT call!
                    | CaseVac _ s <- caseCond = pos s      -- always a SAT call!
                    | isSat                   = pos out

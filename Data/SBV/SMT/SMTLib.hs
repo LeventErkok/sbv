@@ -39,7 +39,7 @@ type SMTLibConverter =  Set.Set Kind                 -- ^ Kinds used in the prob
 -- | Convert to SMTLib-2 format
 toSMTLib2 :: SMTLibConverter
 toSMTLib2 = cvt SMTLib2
-  where cvt v kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config mbCaseSelectors
+  where cvt v kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config caseSelectors
          | KUnbounded `Set.member` kindInfo && not (supportsUnboundedInts solverCaps)
          = unsupported "unbounded integers"
          | KReal `Set.member` kindInfo  && not (supportsReals solverCaps)
@@ -52,17 +52,32 @@ toSMTLib2 = cvt SMTLib2
          = unsupported "quantifiers"
          | not (null sorts) && not (supportsUninterpretedSorts solverCaps)
          = unsupported "uninterpreted sorts"
+         | needsOptimization && not (supportsOptimization solverCaps)
+         = unsupported "optimization routines"
+         | needsUniversalOpt
+         = unsupportedAll "optimization of universally quantified metrics"
          | True
          = SMTLibPgm v (aliasTable, pre, post)
          where sorts = [s | KUserSort s _ <- Set.toList kindInfo]
                solverCaps = capabilities (solver config)
-               unsupported w = error $ "SBV: Given problem needs " ++ w ++ ", which is not supported by SBV for the chosen solver: " ++ capSolverName solverCaps
+               unsupported w = error $ unlines [ "SBV: Given problem needs " ++ w
+                                               , "Which is not supported by SBV for the chosen solver: " ++ capSolverName solverCaps
+                                               ]
+               unsupportedAll w = error $ unlines [ "SBV: Given problem needs " ++ w
+                                                  , "Which is not supported by SBV."
+                                                  ]
                aliasTable  = map (\(_, (x, y)) -> (y, x)) qinps
                converter   = case v of
                                SMTLib2 -> SMT2.cvt
-               (pre, post) = converter kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config mbCaseSelectors
+               (pre, post) = converter kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config caseSelectors
                needsFloats  = KFloat  `Set.member` kindInfo
                needsDoubles = KDouble `Set.member` kindInfo
+               (needsOptimization, needsUniversalOpt) = case caseSelectors of
+                                                          Opt _ ss -> let universals = [s | (ALL, (s, _)) <- qinps]
+                                                                          isUniversal (Maximize s) = s `elem` universals
+                                                                          isUniversal (Minimize s) = s `elem` universals
+                                                                      in  (True,  any isUniversal ss)
+                                                          _        -> (False, False)
                needsQuantifiers
                  | isSat = ALL `elem` quantifiers
                  | True  = EX  `elem` quantifiers
