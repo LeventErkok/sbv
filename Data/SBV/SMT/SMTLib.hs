@@ -61,10 +61,10 @@ toSMTLib2 = cvt SMTLib2
          where sorts = [s | KUserSort s _ <- Set.toList kindInfo]
                solverCaps = capabilities (solver config)
                unsupported w = error $ unlines [ "SBV: Given problem needs " ++ w
-                                               , "Which is not supported by SBV for the chosen solver: " ++ capSolverName solverCaps
+                                               , "*** Which is not supported by SBV for the chosen solver: " ++ capSolverName solverCaps
                                                ]
                unsupportedAll w = error $ unlines [ "SBV: Given problem needs " ++ w
-                                                  , "Which is not supported by SBV."
+                                                  , "*** Which is not supported by SBV."
                                                   ]
                aliasTable  = map (\(_, (x, y)) -> (y, x)) qinps
                converter   = case v of
