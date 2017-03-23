@@ -1637,9 +1637,14 @@ tactic t = addSValTactic $ unSBV `fmap` t
 -- SFloat, SDouble, or SBool.)
 -- Minimal complete definition: optimize.
 class Metric a where
+  -- | Optimize a collection of metrics, using the given strategy
   optimize :: OptimizeStyle -> [Objective a] -> Symbolic ()
-  minimize ::                             a  -> Symbolic ()
-  maximize ::                             a  -> Symbolic ()
+
+  -- | Minimize a metric independently
+  minimize :: a -> Symbolic ()
+
+  -- | Maximize a metric independently
+  maximize :: a -> Symbolic ()
 
   minimize o = optimize Independent [Minimize o]
   maximize o = optimize Independent [Maximize o]

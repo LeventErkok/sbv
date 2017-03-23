@@ -417,7 +417,7 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
            then do let (optStyles, optObjectives) = unzip objectives
                    case (nub optStyles, concat optObjectives) of
                      ([s], goals@(_:_)) -> cont finalOptConfig (Opt s goals)
-                     ([_], [])          -> error $ "SBV: No optimization metrics provided, need at least one!"
+                     ([_], [])          -> error   "SBV: No optimization metrics provided, need at least one!"
                      (ss, _)            -> error $ "SBV: Multiple optimization styles found, please use only one: " ++ intercalate ", " (map show ss)
 
            else do -- Check vacuity if asked. If result is Nothing, it means we're good to go.
