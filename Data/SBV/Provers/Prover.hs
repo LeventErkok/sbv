@@ -471,8 +471,6 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
                            [] -> c
                            ss -> c { useLogic = Just (last ss) }
 
-        grabOptimizers s goals c = c { optimizeArgs = optimizeArgs c ++ optimizerDirectives s goals }
-
         configToUse = case [s | UseSolver s <- useSolvers] of
                         []  -> cfgIn
                         [s] -> s
@@ -480,18 +478,17 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
 
         finalConfig = grabUseLogic . grabCheckUsing . grabStops $ configToUse
 
-        finalOptConfig s goals = grabOptimizers s goals finalConfig
+        finalOptConfig s goals = finalConfig { optimizeArgs = optimizeArgs finalConfig ++ optimizerDirectives }
+            where optimizerDirectives
+                        | hasObjectives = map minmax goals ++ style s
+                        | True          = []
 
-        optimizerDirectives s goals
-          | hasObjectives = map minmax goals ++ style s
-          | True          = []
+                  minmax (Minimize v) = "(minimize " ++  show v ++ ")"
+                  minmax (Maximize v) = "(maximize " ++  show v ++ ")"
 
-          where minmax (Minimize v) = "(minimize " ++  show v ++ ")"
-                minmax (Maximize v) = "(maximize " ++  show v ++ ")"
-
-                style Lexicographic = [] -- default, no option needed
-                style Independent   = ["(set-option :opt.priority box)"]
-                style Pareto        = ["(set-option :opt.priority pareto)"]
+                  style Lexicographic = [] -- default, no option needed
+                  style Independent   = ["(set-option :opt.priority box)"]
+                  style Pareto        = ["(set-option :opt.priority pareto)"]
 
 -- | Implements the "constraint vacuity check" tactic, making sure the calls to "constrain"
 -- describe a satisfiable condition. Returns:
