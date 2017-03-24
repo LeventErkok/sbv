@@ -104,5 +104,3 @@ fishOwner = do vs <- getModelValues "fishOwner" `fmap` allSat puzzle
 
           ownsFish <- free "fishOwner"
           fact1 $ \i -> n i .== ownsFish &&& p i `is` Fish
-
-          return (true :: SBool)

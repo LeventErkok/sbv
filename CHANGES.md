@@ -52,6 +52,12 @@
     which returns the result in case of SAT. This is more useful than before. This is
     backwards-compatibility breaking, but is more useful. (Requested by Jared Ziegler.)
 
+  * Add instance `Provable (Symbolic ())`, which simply stands for returning true
+    for proof/sat purposes. This allows for simpler coding, as constrain/minimize/maximize
+    calls (which return unit) can now be directly sat/prove processed, without needing
+    a final call to return at the end.
+
+  * SBV now properly adds check-sat commands and other directives in debugging output.
     
 ### Version 5.15, 2017-01-30
 

@@ -105,7 +105,8 @@
 -- get in touch if there is a solver you'd like to see included.
 ---------------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE    FlexibleInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Data.SBV (
   -- * Programming with symbolic values
@@ -374,6 +375,14 @@ satWithAll = (`sbvWithAll` satWith)
 -- the result of the first one to finish will be returned, remaining threads will be killed.
 satWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, SatResult)
 satWithAny    = (`sbvWithAny` satWith)
+
+-- If we get a program producing nothing, pretend it simply returns True.
+-- This is useful since min/max calls and constraints will provide the context
+instance Provable (Symbolic ()) where
+  forAll_    a = forAll_    ((a >> return true) :: Predicate)
+  forAll ns  a = forAll ns  ((a >> return true) :: Predicate)
+  forSome_   a = forSome_   ((a >> return true) :: Predicate)
+  forSome ns a = forSome ns ((a >> return true) :: Predicate)
 
 -- | Equality as a proof method. Allows for
 -- very concise construction of equivalence proofs, which is very typical in
