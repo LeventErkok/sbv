@@ -73,10 +73,11 @@ toSMTLib2 = cvt SMTLib2
                needsFloats  = KFloat  `Set.member` kindInfo
                needsDoubles = KDouble `Set.member` kindInfo
                (needsOptimization, needsUniversalOpt) = case caseSelectors of
-                                                          Opt _ ss -> let universals = [s | (ALL, (s, _)) <- qinps]
-                                                                          isUniversal (Maximize nm s) | s `elem` universals = [nm]
-                                                                          isUniversal (Minimize nm s) | s `elem` universals = [nm]
-                                                                          isUniversal _                                     = []
+                                                          Opt _ ss -> let universals   = [s | (ALL, (s, _)) <- qinps]
+                                                                          check (x, y) = any (`elem` universals) [x, y]
+                                                                          isUniversal (Maximize nm xy) | check xy = [nm]
+                                                                          isUniversal (Minimize nm xy) | check xy = [nm]
+                                                                          isUniversal _                           = []
                                                                       in  (True,  concatMap isUniversal ss)
                                                           _        -> (False, [])
                needsQuantifiers

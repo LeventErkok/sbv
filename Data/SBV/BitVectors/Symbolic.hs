@@ -373,21 +373,21 @@ isParallelCaseAnywhere (CaseSplit _ cs) = or [any isParallelCaseAnywhere t | (_,
 isParallelCaseAnywhere _                = False
 
 -- | Result of running a symbolic computation
-data Result = Result { reskinds       :: Set.Set Kind                      -- ^ kinds used in the program
-                     , resTraces      :: [(String, CW)]                    -- ^ quick-check counter-example information (if any)
-                     , resUISegs      :: [(String, [String])]              -- ^ uninterpeted code segments
-                     , resInputs      :: [(Quantifier, NamedSymVar)]       -- ^ inputs (possibly existential)
-                     , resConsts      :: [(SW, CW)]                        -- ^ constants
-                     , resTables      :: [((Int, Kind, Kind), [SW])]       -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
-                     , resArrays      :: [(Int, ArrayInfo)]                -- ^ arrays (user specified)
-                     , resUIConsts    :: [(String, SBVType)]               -- ^ uninterpreted constants
-                     , resAxioms      :: [(String, [String])]              -- ^ axioms
-                     , resAsgns       :: SBVPgm                            -- ^ assignments
-                     , resConstraints :: [SW]                              -- ^ additional constraints (boolean)
-                     , resTactics     :: [Tactic SW]                       -- ^ User given tactics
-                     , resGoals       :: [(OptimizeStyle, [Objective SW])] -- ^ User specified optimization goals
-                     , resAssertions  :: [(String, Maybe CallStack, SW)]   -- ^ assertions
-                     , resOutputs     :: [SW]                              -- ^ outputs
+data Result = Result { reskinds       :: Set.Set Kind                            -- ^ kinds used in the program
+                     , resTraces      :: [(String, CW)]                          -- ^ quick-check counter-example information (if any)
+                     , resUISegs      :: [(String, [String])]                    -- ^ uninterpeted code segments
+                     , resInputs      :: [(Quantifier, NamedSymVar)]             -- ^ inputs (possibly existential)
+                     , resConsts      :: [(SW, CW)]                              -- ^ constants
+                     , resTables      :: [((Int, Kind, Kind), [SW])]             -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
+                     , resArrays      :: [(Int, ArrayInfo)]                      -- ^ arrays (user specified)
+                     , resUIConsts    :: [(String, SBVType)]                     -- ^ uninterpreted constants
+                     , resAxioms      :: [(String, [String])]                    -- ^ axioms
+                     , resAsgns       :: SBVPgm                                  -- ^ assignments
+                     , resConstraints :: [SW]                                    -- ^ additional constraints (boolean)
+                     , resTactics     :: [Tactic SW]                             -- ^ User given tactics
+                     , resGoals       :: [(OptimizeStyle, [Objective (SW, SW)])] -- ^ User specified optimization goals
+                     , resAssertions  :: [(String, Maybe CallStack, SW)]         -- ^ assertions
+                     , resOutputs     :: [SW]                                    -- ^ outputs
                      }
 
 -- | Show instance for 'Result'. Only for debugging purposes.
@@ -529,7 +529,7 @@ data State  = State { runMode      :: SBVRunMode
                     , rCgMap       :: IORef CgMap
                     , raxioms      :: IORef [(String, [String])]
                     , rTacs        :: IORef [Tactic SW]
-                    , rOptGoals    :: IORef [(OptimizeStyle, [Objective SW])]
+                    , rOptGoals    :: IORef [(OptimizeStyle, [Objective (SW, SW)])]
                     , rAsserts     :: IORef [(String, Maybe CallStack, SW)]
                     , rSWCache     :: IORef (Cache SW)
                     , rAICache     :: IORef (Cache Int)
@@ -881,8 +881,10 @@ addSValOptGoal :: OptimizeStyle -> [Objective SVal] -> Symbolic ()
 addSValOptGoal s os = do st <- ask
 
                          -- create the tracking variable here for the metric
-                         let mkGoal nm v = do sv <- svMkSymVar (Just EX) (kindOf v) (Just nm)
-                                              liftIO $ svToSW st sv
+                         let mkGoal nm orig = do origSW  <- liftIO $ svToSW st orig
+                                                 track   <- svMkSymVar (Just EX) (kindOf orig) (Just nm)
+                                                 trackSW <- liftIO $ svToSW st track
+                                                 return (origSW, trackSW)
 
                          let walk (Minimize nm v) = Minimize nm `fmap` mkGoal nm v
                              walk (Maximize nm v) = Maximize nm `fmap` mkGoal nm v

@@ -387,13 +387,13 @@ cluster (f:fs) xs = ok : cluster fs other
 -- | If we've parallel cases, use line-buffering
 
 -- | Apply the given tactics to a problem
-applyTactics :: SMTConfig                            -- ^ Solver configuration
-             -> (Bool, Bool)                         -- ^ Are we a sat-problem? Do we have anything parallel going on? (Parallel-case split.)
-             -> (SMTResult -> res, res -> SMTResult) -- ^ Wrapper/unwrapper pair from result to SMT answer
-             -> [(String, (String, SW))]             -- ^ Level at which we are called. (In case of a nested case-split)
-             -> [Tactic SW]                          -- ^ Tactics active at this level
-             -> [(OptimizeStyle, [Objective SW])]    -- ^ Optimization goals we have
-             -> (SMTConfig -> CaseCond -> IO res)    -- ^ The actual continuation at this point
+applyTactics :: SMTConfig                                -- ^ Solver configuration
+             -> (Bool, Bool)                             -- ^ Are we a sat-problem? Do we have anything parallel going on? (Parallel-case split.)
+             -> (SMTResult -> res, res -> SMTResult)     -- ^ Wrapper/unwrapper pair from result to SMT answer
+             -> [(String, (String, SW))]                 -- ^ Level at which we are called. (In case of a nested case-split)
+             -> [Tactic SW]                              -- ^ Tactics active at this level
+             -> [(OptimizeStyle, [Objective (SW, SW)])]  -- ^ Optimization goals we have
+             -> (SMTConfig -> CaseCond -> IO res)        -- ^ The actual continuation at this point
              -> IO res
 applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
    = do unless (null others) $ error $ "SBV: Unsupported tactic: " ++ show others
@@ -483,8 +483,8 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
                         | hasObjectives = map minmax goals ++ style s
                         | True          = []
 
-                  minmax (Minimize _ v) = "(minimize " ++  show v ++ ")"
-                  minmax (Maximize _ v) = "(maximize " ++  show v ++ ")"
+                  minmax (Minimize _ (_, v)) = "(minimize " ++  show v ++ ")"
+                  minmax (Maximize _ (_, v)) = "(maximize " ++  show v ++ ")"
 
                   style Lexicographic = [] -- default, no option needed
                   style Independent   = ["(set-option :opt.priority box)"]

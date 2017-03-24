@@ -452,12 +452,12 @@ addConstraint :: Maybe Double -> SBool -> SBool -> Symbolic ()
 addConstraint mt (SBV c) (SBV c') = addSValConstraint mt c c'
 
 -- | A case condition (internal)
-data CaseCond = NoCase                                  -- ^ No case-split
-              | CasePath [SW]                           -- ^ In a case-path
-              | CaseVac  [SW] SW                        -- ^ For checking the vacuity of a case
-              | CaseCov  [SW] [SW]                      -- ^ In a case-path end, coverage (first arg is path cond, second arg is coverage cond)
-              | CstrVac                                 -- ^ In a constraint vacuity check (top-level)
-              | Opt      OptimizeStyle [Objective SW]   -- ^ In an optimization call
+data CaseCond = NoCase                                      -- ^ No case-split
+              | CasePath [SW]                               -- ^ In a case-path
+              | CaseVac  [SW] SW                            -- ^ For checking the vacuity of a case
+              | CaseCov  [SW] [SW]                          -- ^ In a case-path end, coverage (first arg is path cond, second arg is coverage cond)
+              | CstrVac                                     -- ^ In a constraint vacuity check (top-level)
+              | Opt      OptimizeStyle [Objective (SW, SW)] -- ^ In an optimization call
 
 instance NFData CaseCond where
   rnf NoCase           = ()
@@ -468,13 +468,13 @@ instance NFData CaseCond where
   rnf (Opt s os)       = rnf s `seq` rnf os `seq` ()
 
 -- | Internal representation of a symbolic simulation result
-data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]         -- ^ inputs
-                             , smtSkolemMap :: [Either SW (SW, [SW])]              -- ^ skolem-map
-                             , kindsUsed    :: Set.Set Kind                        -- ^ kinds used
-                             , smtAsserts   :: [(String, Maybe CallStack, SW)]     -- ^ assertions
-                             , tactics      :: [Tactic SW]                         -- ^ tactics to use
-                             , objectives   :: [(OptimizeStyle, [Objective SW])]   -- ^ optimization goals
-                             , smtLibPgm    :: SMTConfig -> CaseCond -> SMTLibPgm  -- ^ SMTLib representation, given the config and case-splits
+data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]             -- ^ inputs
+                             , smtSkolemMap :: [Either SW (SW, [SW])]                  -- ^ skolem-map
+                             , kindsUsed    :: Set.Set Kind                            -- ^ kinds used
+                             , smtAsserts   :: [(String, Maybe CallStack, SW)]         -- ^ assertions
+                             , tactics      :: [Tactic SW]                             -- ^ tactics to use
+                             , objectives   :: [(OptimizeStyle, [Objective (SW, SW)])] -- ^ optimization goals
+                             , smtLibPgm    :: SMTConfig -> CaseCond -> SMTLibPgm      -- ^ SMTLib representation, given the config and case-splits
                              }
 
 instance NFData SMTProblem where

@@ -196,13 +196,20 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
                                              CaseVac  ss _  -> map pos ss
                                              CaseCov  ss qq -> map pos ss ++ map neg qq
                                              CstrVac        -> []
-                                             Opt{}          -> []
+                                             Opt _ gs       -> map mkGoal gs
+
                  o | CstrVac     <- caseCond = pos trueSW -- always a SAT call!
                    | CaseVac _ s <- caseCond = pos s      -- always a SAT call!
                    | isSat                   = pos out
                    | True                    = neg out
-                 neg s = "(not " ++ pos s ++ ")"
-                 pos   = cvtSW skolemMap
+
+                 neg s     = "(not " ++ pos s ++ ")"
+                 pos       = cvtSW skolemMap
+
+                 eq (orig, track) = "(= " ++ pos track ++ " " ++ pos orig ++ ")"
+                 mkGoal (Minimize _ ab) = eq ab
+                 mkGoal (Maximize _ ab) = eq ab
+
         skolemMap = M.fromList [(s, ss) | Right (s, ss) <- skolemInps, not (null ss)]
         tableMap  = IM.fromList $ map mkConstTable constTables ++ map mkSkTable skolemTables
           where mkConstTable (((t, _, _), _), _) = (t, "table" ++ show t)
