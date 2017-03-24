@@ -808,7 +808,7 @@ allSatWith config p = do
                case addNonEqConstraints (roundingMode config) qinps nonEqConsts (smtLibPgm config NoCase) of
                  Nothing ->  -- no new constraints added, stop
                             return Nothing
-                 Just finalPgm -> do msg $ "Generated SMTLib program:\n" ++ finalPgm
+                 Just finalPgm -> do msg $ "Generated SMTLib program:\n" ++ (finalPgm ++ intercalate "\n" ("" : optimizeArgs config ++ [satCmd config]))
                                      smtAnswer <- engine (solver config) (updateName (n-1) config) True qinps skolemMap finalPgm
                                      msg "Done.."
                                      return $ Just $ SatResult smtAnswer
@@ -820,7 +820,7 @@ callSolver isSat checkMsg wrap SMTProblem{smtInputs=qinps, smtSkolemMap=skolemMa
        let msg = when (verbose config) . putStrLn . ("** " ++)
        msg checkMsg
        let finalPgm = intercalate "\n" (pre ++ post) where SMTLibPgm _ (_, pre, post) = smtLibPgm config caseCond
-       msg $ "Generated SMTLib program:\n" ++ finalPgm
+       msg $ "Generated SMTLib program:\n" ++ (finalPgm ++ intercalate "\n" ("" : optimizeArgs config ++ [satCmd config]))
        smtAnswer <- engine (solver config) config isSat qinps skolemMap finalPgm
        msg "Done.."
        return $ wrap smtAnswer

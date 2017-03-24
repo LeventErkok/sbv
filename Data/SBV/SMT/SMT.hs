@@ -484,8 +484,8 @@ standardSolver config script cleanErrs failure success = do
     case smtFile config of
       Nothing -> return ()
       Just f  -> do msg $ "Saving the generated script in file: " ++ show f
-                    writeFile f (scriptBody script)
-    contents <- timeIf isTiming (WorkByProver nmSolver) $ pipeProcess config  exec opts script cleanErrs
+                    writeFile f (scriptBody script ++ intercalate "\n" ("" : optimizeArgs config ++ [satCmd config]))
+    contents <- timeIf isTiming (WorkByProver nmSolver) $ pipeProcess config exec opts script cleanErrs
     msg $ nmSolver ++ " output:\n" ++ either id (intercalate "\n") contents
     case contents of
       Left e   -> return $ failure (lines e)
