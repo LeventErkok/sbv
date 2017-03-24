@@ -87,6 +87,7 @@ Library
                   , Data.SBV.Examples.Misc.NoDiv0
                   , Data.SBV.Examples.Misc.Word4
                   , Data.SBV.Examples.Polynomials.Polynomials
+                  , Data.SBV.Examples.Optimization.VM
                   , Data.SBV.Examples.Puzzles.Birthday
                   , Data.SBV.Examples.Puzzles.Coins
                   , Data.SBV.Examples.Puzzles.Counts
