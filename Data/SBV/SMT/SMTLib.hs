@@ -54,8 +54,8 @@ toSMTLib2 = cvt SMTLib2
          = unsupported "uninterpreted sorts"
          | needsOptimization && not (supportsOptimization solverCaps)
          = unsupported "optimization routines"
-         | needsUniversalOpt
-         = unsupportedAll "optimization of universally quantified metrics"
+         | not $ null needsUniversalOpt
+         = unsupportedAll $ "optimization of universally quantified metric(s): " ++ unwords needsUniversalOpt
          | True
          = SMTLibPgm v (aliasTable, pre, post)
          where sorts = [s | KUserSort s _ <- Set.toList kindInfo]
@@ -74,10 +74,11 @@ toSMTLib2 = cvt SMTLib2
                needsDoubles = KDouble `Set.member` kindInfo
                (needsOptimization, needsUniversalOpt) = case caseSelectors of
                                                           Opt _ ss -> let universals = [s | (ALL, (s, _)) <- qinps]
-                                                                          isUniversal (Maximize s) = s `elem` universals
-                                                                          isUniversal (Minimize s) = s `elem` universals
-                                                                      in  (True,  any isUniversal ss)
-                                                          _        -> (False, False)
+                                                                          isUniversal (Maximize nm s) | s `elem` universals = [nm]
+                                                                          isUniversal (Minimize nm s) | s `elem` universals = [nm]
+                                                                          isUniversal _                                     = []
+                                                                      in  (True,  concatMap isUniversal ss)
+                                                          _        -> (False, [])
                needsQuantifiers
                  | isSat = ALL `elem` quantifiers
                  | True  = EX  `elem` quantifiers

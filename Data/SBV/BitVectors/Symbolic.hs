@@ -289,8 +289,8 @@ data OptimizeStyle = Independent   -- ^ Each objective is optimized independentl
                    deriving (Eq, Show)
 
 -- | Should we minimize or maximize?
-data Objective a = Minimize a      -- ^ Minimize this metric
-                 | Maximize a      -- ^ Maximize this metric
+data Objective a = Minimize String a      -- ^ Minimize this metric
+                 | Maximize String a      -- ^ Maximize this metric
                  deriving (Show, Functor)
 
 -- | Solver tactic
@@ -308,8 +308,8 @@ instance NFData OptimizeStyle where
    rnf x = x `seq` ()
 
 instance NFData a => NFData (Objective a) where
-   rnf (Minimize a) = rnf a `seq` ()
-   rnf (Maximize a) = rnf a `seq` ()
+   rnf (Minimize s a) = rnf s `seq` rnf a `seq` ()
+   rnf (Maximize s a) = rnf s `seq` rnf a `seq` ()
 
 instance NFData a => NFData (Tactic a) where
    rnf (CaseSplit   b l)      = rnf b `seq` rnf l `seq` ()
@@ -879,9 +879,15 @@ addSValTactic tac = do st <- ask
 -- | Add an optimization goal
 addSValOptGoal :: OptimizeStyle -> [Objective SVal] -> Symbolic ()
 addSValOptGoal s os = do st <- ask
-                         let walk (Minimize v) = Minimize `fmap` svToSW st v
-                             walk (Maximize v) = Maximize `fmap` svToSW st v
-                         os' <- liftIO $ mapM walk os
+
+                         -- create the tracking variable here for the metric
+                         let mkGoal nm v = do sv <- svMkSymVar (Just EX) (kindOf v) (Just nm)
+                                              liftIO $ svToSW st sv
+
+                         let walk (Minimize nm v) = Minimize nm `fmap` mkGoal nm v
+                             walk (Maximize nm v) = Maximize nm `fmap` mkGoal nm v
+
+                         os' <- mapM walk os
                          liftIO $ modifyIORef (rOptGoals st) ((s, os'):)
 
 -- | Add a constraint with a given probability

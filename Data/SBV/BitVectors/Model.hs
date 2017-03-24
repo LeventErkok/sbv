@@ -1641,13 +1641,13 @@ class Metric a where
   optimize :: OptimizeStyle -> [Objective a] -> Symbolic ()
 
   -- | Minimize a metric independently
-  minimize :: a -> Symbolic ()
+  minimize :: String -> a -> Symbolic ()
 
   -- | Maximize a metric independently
-  maximize :: a -> Symbolic ()
+  maximize :: String -> a -> Symbolic ()
 
-  minimize o = optimize Lexicographic [Minimize o]
-  maximize o = optimize Lexicographic [Maximize o]
+  minimize nm o = optimize Lexicographic [Minimize nm o]
+  maximize nm o = optimize Lexicographic [Maximize nm o]
 
 instance Metric SWord8   where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
 instance Metric SWord16  where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os

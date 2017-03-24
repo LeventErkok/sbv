@@ -483,8 +483,8 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
                         | hasObjectives = map minmax goals ++ style s
                         | True          = []
 
-                  minmax (Minimize v) = "(minimize " ++  show v ++ ")"
-                  minmax (Maximize v) = "(maximize " ++  show v ++ ")"
+                  minmax (Minimize _ v) = "(minimize " ++  show v ++ ")"
+                  minmax (Maximize _ v) = "(maximize " ++  show v ++ ")"
 
                   style Lexicographic = [] -- default, no option needed
                   style Independent   = ["(set-option :opt.priority box)"]
