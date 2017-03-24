@@ -57,6 +57,8 @@
     calls (which return unit) can now be directly sat/prove processed, without needing
     a final call to return at the end.
 
+  * Add type synonym Goal (for "Symbolic ()"), in order to simplify type signatures
+
   * SBV now properly adds check-sat commands and other directives in debugging output.
     
 ### Version 5.15, 2017-01-30

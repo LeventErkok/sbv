@@ -17,7 +17,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Data.SBV.Provers.Prover (
-         SMTSolver(..), SMTConfig(..), Predicate, Provable(..)
+         SMTSolver(..), SMTConfig(..), Predicate, Provable(..), Goal
        , ThmResult(..), SatResult(..), SafeResult(..), AllSatResult(..), SMTResult(..)
        , isSatisfiable, isSatisfiableWith, isTheorem, isTheoremWith
        , prove, proveWith
@@ -117,6 +117,10 @@ defaultSMTCfg = z3
 -- unless you are building further utilities on top of SBV itself. Instead, simply use the 'Predicate'
 -- type when necessary.
 type Predicate = Symbolic SBool
+
+-- | A goal is a symbolic program that returns no values. The idea is that the constraints/min-max
+-- goals will serve as appropriate directives for sat/prove calls.
+type Goal = Symbolic ()
 
 -- | A type @a@ is provable if we can turn it into a predicate.
 -- Note that a predicate can be made from a curried function of arbitrary arity, where

@@ -189,8 +189,8 @@ module Data.SBV (
   -- * Properties, proofs, satisfiability, and safety
   -- $proveIntro
 
-  -- ** Predicates
-  , Predicate, Provable(..), Equality(..)
+  -- ** Predicates and Goals
+  , Predicate, Goal, Provable(..), Equality(..)
   -- ** Proving properties
   , prove, proveWith, isTheorem, isTheoremWith
   -- ** Checking satisfiability
@@ -376,9 +376,9 @@ satWithAll = (`sbvWithAll` satWith)
 satWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, SatResult)
 satWithAny    = (`sbvWithAny` satWith)
 
--- If we get a program producing nothing, pretend it simply returns True.
+-- If we get a program producing nothing (i.e., Symbolic ()), pretend it simply returns True.
 -- This is useful since min/max calls and constraints will provide the context
-instance Provable (Symbolic ()) where
+instance Provable Goal where
   forAll_    a = forAll_    ((a >> return true) :: Predicate)
   forAll ns  a = forAll ns  ((a >> return true) :: Predicate)
   forSome_   a = forSome_   ((a >> return true) :: Predicate)
