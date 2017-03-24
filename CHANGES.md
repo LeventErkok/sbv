@@ -41,13 +41,15 @@
     To use the functionality of these modules, users must now explicitly import the corresponding
     module. Not other changes should be needed other than the explicit import.
 
-  * Changed the signature of the function:
+  * Changed the signatures of:
 
-        isSatisfiableInCurrentPath :: SBool -> Symbolic Bool
+          isSatisfiableInCurrentPath :: SBool -> Symbolic Bool
+        svIsSatisfiableInCurrentPath :: SVal  -> Symbolic Bool
 
     to:
 
-        isSatisfiableInCurrentPath :: SBool -> Symbolic (Maybe SatResult)
+          isSatisfiableInCurrentPath :: SBool -> Symbolic (Maybe SatResult)
+        svIsSatisfiableInCurrentPath :: SVal  -> Symbolic (Maybe SatResult)
 
     which returns the result in case of SAT. This is more useful than before. This is
     backwards-compatibility breaking, but is more useful. (Requested by Jared Ziegler.)
