@@ -19,13 +19,19 @@ strongMutex []     = false
 strongMutex (a:as) = ite a (bnot (bOr as)) (strongMutex as)
 
 -- | The allocation problem. Inspired by: <http://rise4fun.com/z3opt/tutorialcontent/guide#h25>
+--
 --   - We have three virtual machines (VMs) which require 100, 50 and 15 GB hard disk respectively.
+--
 --   - There are three servers with capabilities 100, 75 and 200 GB in that order.
+--
 --   - Find out a way to place VMs into servers in order to
---       -- Minimize the number of servers used
---       -- Minimize the operation cost (the servers have fixed daily costs 10, 5 and 20 USD respectively.)
+--
+--        - Minimize the number of servers used
+--
+--        - Minimize the operation cost (the servers have fixed daily costs 10, 5 and 20 USD respectively.)
 --
 -- We have:
+--
 -- >>> sat allocate
 -- Satisfiable. Model:
 --   x11         = False :: Bool
