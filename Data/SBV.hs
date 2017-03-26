@@ -219,7 +219,8 @@ module Data.SBV (
   , Tactic(..), tactic
 
   -- * Optimization
-  , OptimizeStyle(..), Objective(..), Penalty(..), minimize, maximize, assertSoft, optimize
+  -- $optiIntro
+  , OptimizeStyle(..), Penalty(..), Objective(..), minimize, maximize, assertSoft, optimize
 
   -- * Model extraction
   -- $modelExtraction
@@ -531,6 +532,43 @@ Also see "Data.SBV.Examples.Misc.NoDiv0" for the classic div-by-zero example.
 {- $tacticIntro
 In certain cases, the prove/sat calls can benefit from user guidance, in terms of tactics. From a semantic view,
 a tactic has no effect on the meaning of a predicate. It is merely guidance for SBV to guide the proof.
+-}
+
+{- $optiIntro
+  Arithmetic goals (over on both bounded 'SIntN', 'SWordN', and unbounded 'SInteger' types,
+  and over 'SReal') can be optimized by SBV, basically using the corresponding features in the
+  z3 SMT solver. A good review of these features as implemented by Z3 (and thus what is available
+  in SBV) is given in this paper: <http://www.easychair.org/publications/download/Z_-_Maximal_Satisfaction_with_Z3>.
+
+  In its most basic form, SBV allows for optimization of real or integral valued metrics. Goals can be
+  lexicographically (default), independently, or pareto-front optimized. The relevant functions are:
+
+      * 'minimize': Minimize a given arithmetic goal
+      * 'maximize': Minimize a given arithmetic goal
+      * 'optimize': A generic entry point that allows more parameterization
+
+    For instance, a call of the form 
+
+         > minimize "name-of-goal" (x + 2*y)
+
+    minimizes the arithmetic goal @x+2*y@, where @x@ and @y@ can be bit-vectors, reals,
+    or integers. Such goals will be lexicographicly optimized, i.e., in the order
+    given. Use the more general 'optimize' function to access pareto and independent
+    optimization features.
+
+    See "Data.SBV.Examples.Optimization.VM" for a basic example of the use of optimization routines.
+
+    Related to optimization, SBV implements soft-asserts via 'assertSoft' calls. A soft assertion
+    is a hint to the SMT solver that we would like a particular condition to hold if **possible*.
+    That is, if there is a solution satisfying it, then we would like it to hold, but it can be violated
+    if there is no way to satisfy it. Each soft-assertion can be associated with a numeric penalty for
+    not satisfying it, hence turning it into an optimization problem.
+
+    Note that 'assertSoft' works well with optimization goals ('minimize'/'maximize' etc.),
+    and are most useful when we are optimizing a metric and thus some of the constraints
+    can be relaxed with a penalty to obtain a good solution. Again
+    see <http://www.easychair.org/publications/download/Z_-_Maximal_Satisfaction_with_Z3>
+    for a good overview of the features in Z3 that SBV is providing the bridge for.
 -}
 
 {- $modelExtraction

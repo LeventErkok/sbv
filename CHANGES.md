@@ -11,6 +11,13 @@
     extra clutter. Also, new optimization features made the use of old style
     optimization goals obsolete, which are now in their own module. (See below.)
 
+  * The next two bullets cover new features in SBV regarding optimization, based
+    on the capabilities of the z3 SMT solver. With this release SBV gains the
+    capability optimize objectives, and solve MaxSAT problems; by appropriately
+    employing the corresponding capabilities in z3. A good review of these features
+    as implemented by Z3, and thus what is available in SBV is given in this
+    paper: http://www.easychair.org/publications/download/Z_-_Maximal_Satisfaction_with_Z3
+
   * Implemented optimization, allowing for optimization of real or integral valued metrics.
     Goals can be independently, lexicographicly, or pareto-front optimized. Currently,
     only the z3 backend supports optimization routines.

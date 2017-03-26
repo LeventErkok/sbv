@@ -283,17 +283,20 @@ newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SW, SBVExpr)}
 type NamedSymVar = (SW, String)
 
 -- | Style of optimization
-data OptimizeStyle = Independent   -- ^ Each objective is optimized independently.
-                   | Lexicographic -- ^ Objectives are optimized in the order given, earlier objectives have higher priority.
-                   | Pareto        -- ^ Objectives are optimized according to pareto front: No objective can be made better without making some other worse.
+data OptimizeStyle = Lexicographic -- ^ Objectives are optimized in the order given, earlier objectives have higher priority. This is the default.
+                   | Independent   -- ^ Each objective is optimized independently.
+                   | Pareto        -- ^ Objectives are optimized according to pareto front: That is, no objective can be made better without making some other worse.
                    deriving (Eq, Show)
 
--- | Penalty for a soft-assertion
-data Penalty = DefaultPenalty                  -- ^ Default: Penalty of 1 and no group attached
+-- | Penalty for a soft-assertion. The default penalty is @1@, with all soft-assertions belonging
+-- to the same objective goal. A positive weight and an optional group can be provided by using
+-- the 'Penalty' constructor.
+data Penalty = DefaultPenalty                  -- ^ Default: Penalty of @1@ and no group attached
              | Penalty Rational (Maybe String) -- ^ Penalty with a weight and an optional group
              deriving Show
 
--- | Should we minimize or maximize?
+-- | Objective of optimization. We can minimize, maximize, or give a soft assertion with a penalty
+-- for not satisfying it.
 data Objective a = Minimize   String a         -- ^ Minimize this metric
                  | Maximize   String a         -- ^ Maximize this metric
                  | AssertSoft String a Penalty -- ^ A soft assertion, with an associated penalty 

@@ -1637,9 +1637,11 @@ assertSoft nm o p = addSValOptGoal Lexicographic [unSBV `fmap` AssertSoft nm o p
 
 -- | Class of metrics we can optimize for. Currently,
 -- bounded signed/unsigned bit-vectors, unbounded integers,
--- and algebraic reals can be optimized. (But not, say,
--- SFloat, SDouble, or SBool.)
+-- and algebraic reals can be optimized. (But not, say, SFloat, SDouble, or SBool.)
 -- Minimal complete definition: optimize.
+--
+-- A good reference on these features is given in the following paper:
+-- <http://www.easychair.org/publications/download/Z_-_Maximal_Satisfaction_with_Z3>.
 class Metric a where
   -- | Optimize a collection of metrics, using the given strategy
   optimize :: OptimizeStyle -> [Objective a] -> Symbolic ()
