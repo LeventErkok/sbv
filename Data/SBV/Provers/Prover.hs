@@ -1,4 +1,4 @@
------------------------------------------------------------------------------
+ -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.SBV.Provers.Prover
 -- Copyright   :  (c) Levent Erkok
@@ -32,8 +32,8 @@ module Data.SBV.Provers.Prover (
        , internalSATCheck
        ) where
 
-import Data.List         (intercalate, partition, nub)
 import Data.Char         (isSpace)
+import Data.List         (intercalate, partition, nub)
 
 import Control.Monad     (when, unless)
 import System.FilePath   (addExtension, splitExtension)
@@ -487,8 +487,17 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
                         | hasObjectives = map minmax goals ++ style s
                         | True          = []
 
-                  minmax (Minimize _ (_, v)) = "(minimize " ++  show v ++ ")"
-                  minmax (Maximize _ (_, v)) = "(maximize " ++  show v ++ ")"
+                  minmax (Minimize   _  (_, v))     = "(minimize "    ++ show v ++ ")"
+                  minmax (Maximize   _  (_, v))     = "(maximize "    ++ show v ++ ")"
+                  minmax (AssertSoft nm (_, v) mbp) = "(assert-soft " ++ show v ++ penalize mbp ++ ")"
+                    where penalize DefaultPenalty    = ""
+                          penalize (Penalty w mbGrp)
+                             | w <= 0         = error $ unlines [ "SBV.AssertSoft: Goal " ++ show nm ++ " is assigned a non-positive penalty: " ++ shw
+                                                                , "All soft goals must have > 0 penalties associated."
+                                                                ]
+                             | True           = " :weight " ++ shw ++ maybe "" group mbGrp
+                             where shw = show (fromRational w :: Double)
+                          group g = " :id " ++ g
 
                   style Lexicographic = [] -- default, no option needed
                   style Independent   = ["(set-option :opt.priority box)"]

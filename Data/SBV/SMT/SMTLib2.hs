@@ -207,8 +207,9 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
                  pos       = cvtSW skolemMap
 
                  eq (orig, track) = "(= " ++ pos track ++ " " ++ pos orig ++ ")"
-                 mkGoal (Minimize _ ab) = eq ab
-                 mkGoal (Maximize _ ab) = eq ab
+                 mkGoal (Minimize   _ ab)   = eq ab
+                 mkGoal (Maximize   _ ab)   = eq ab
+                 mkGoal (AssertSoft _ ab _) = eq ab
 
         skolemMap = M.fromList [(s, ss) | Right (s, ss) <- skolemInps, not (null ss)]
         tableMap  = IM.fromList $ map mkConstTable constTables ++ map mkSkTable skolemTables

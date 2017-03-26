@@ -46,7 +46,7 @@ module Data.SBV.BitVectors.Symbolic
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
-  , OptimizeStyle(..), Objective(..), addSValOptGoal
+  , OptimizeStyle(..), Objective(..), Penalty(..), addSValOptGoal
   , Tactic(..), addSValTactic, isCaseSplitTactic, isCaseSplitAnywhere, isParallelCaseAnywhere
   , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic, isUseSolverTactic, isCheckCaseVacuityTactic, isCheckConstrVacuityTactic
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
@@ -288,9 +288,15 @@ data OptimizeStyle = Independent   -- ^ Each objective is optimized independentl
                    | Pareto        -- ^ Objectives are optimized according to pareto front: No objective can be made better without making some other worse.
                    deriving (Eq, Show)
 
+-- | Penalty for a soft-assertion
+data Penalty = DefaultPenalty                  -- ^ Default: Penalty of 1 and no group attached
+             | Penalty Rational (Maybe String) -- ^ Penalty with a weight and an optional group
+             deriving Show
+
 -- | Should we minimize or maximize?
-data Objective a = Minimize String a      -- ^ Minimize this metric
-                 | Maximize String a      -- ^ Maximize this metric
+data Objective a = Minimize   String a         -- ^ Minimize this metric
+                 | Maximize   String a         -- ^ Maximize this metric
+                 | AssertSoft String a Penalty -- ^ A soft assertion, with an associated penalty 
                  deriving (Show, Functor)
 
 -- | Solver tactic
@@ -307,9 +313,14 @@ data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-spl
 instance NFData OptimizeStyle where
    rnf x = x `seq` ()
 
+instance NFData Penalty where
+   rnf DefaultPenalty  = ()
+   rnf (Penalty p mbs) = rnf p `seq` rnf mbs `seq` ()
+
 instance NFData a => NFData (Objective a) where
-   rnf (Minimize s a) = rnf s `seq` rnf a `seq` ()
-   rnf (Maximize s a) = rnf s `seq` rnf a `seq` ()
+   rnf (Minimize   s a)   = rnf s `seq` rnf a `seq` ()
+   rnf (Maximize   s a)   = rnf s `seq` rnf a `seq` ()
+   rnf (AssertSoft s a p) = rnf s `seq` rnf a `seq` rnf p `seq` ()
 
 instance NFData a => NFData (Tactic a) where
    rnf (CaseSplit   b l)      = rnf b `seq` rnf l `seq` ()
@@ -886,8 +897,9 @@ addSValOptGoal s os = do st <- ask
                                                  trackSW <- liftIO $ svToSW st track
                                                  return (origSW, trackSW)
 
-                         let walk (Minimize nm v) = Minimize nm `fmap` mkGoal nm v
-                             walk (Maximize nm v) = Maximize nm `fmap` mkGoal nm v
+                         let walk (Minimize   nm v)     = Minimize nm              `fmap` mkGoal nm v
+                             walk (Maximize   nm v)     = Maximize nm              `fmap` mkGoal nm v
+                             walk (AssertSoft nm v mbP) = flip (AssertSoft nm) mbP `fmap` mkGoal nm v
 
                          os' <- mapM walk os
                          liftIO $ modifyIORef (rOptGoals st) ((s, os'):)

@@ -11,6 +11,37 @@
     extra clutter. Also, new optimization features made the use of old style
     optimization goals obsolete, which are now in their own module. (See below.)
 
+  * Implemented optimization, allowing for optimization of real or integral valued metrics.
+    Goals can be independently, lexicographicly, or pareto-front optimized. Currently,
+    only the z3 backend supports optimization routines.
+
+    Minimization can be done over bit-vector, real, and integer goals. The relevant
+    functions are:
+
+    	* `minimize`: Minimize a given arithmetic goal
+    	* `maximize`: Minimize a given arithmetic goal
+    	* `optimize`: A generic entry point that allows more parameterization
+
+    For instance, a call of the form 
+    
+         minimize "name-of-goal" (x + 2*y)
+
+    Minimizes the arithmetic goal x+2*y, where x and y can be bit-vectors, reals,
+    or integers. Such goals will be lexicographicly optimized, i.e., in the order
+    given. Use the more general "optimize" function to access pareto and independent
+    optimization features.
+
+  * Implemented soft-asserts. A soft assertion is a hint to the SMT solver that
+    we would like a particular condition to hold if *possible*. That is, if there is
+    a solution satisfying it, then we would like it to hold, but it can be violated
+    if there is no way to satisfy it. Each soft-assertion can be associated with
+    a numeric penalty for not satisfying it, hence turning it into an optimization problem.
+    See the `assertSoft` function for details.
+    
+    Note that `assertSoft` works well with optimization goals (minimize/maximize etc.),
+    and are most useful when we are optimizing a metric and thus some of the constraints
+    can be relaxed with a penalty to obtain a good solution.
+
   * Implemented tactics, which allow the user to navigate the proof process.
     User can, for instance, implement case-splitting in a proof to guide
     the underlying solver through. Tactics can be both SBV based (case-splitting)
@@ -25,10 +56,6 @@
        * `CheckUsing`        : Invoke with check-sat-using command, instead of check-sat
        * `UseLogic`          : Use this logic, a custom one can be specified too
        * `UseSolver`         : Use this solver (z3, yices, etc.)
-
-  * Implement optimization, allowing for optimization of real or integral valued metrics.
-    Goals can be independently, lexicographicly, or pareto-front optimized. Currently,
-    only the z3 backend supports optimization routines.
 
   * Name-space clean-up. The following modules are no longer automatically exported
     from Data.SBV:

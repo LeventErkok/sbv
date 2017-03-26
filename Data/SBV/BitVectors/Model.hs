@@ -22,7 +22,7 @@
 {-# LANGUAGE DefaultSignatures      #-}
 
 module Data.SBV.BitVectors.Model (
-    Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), SIntegral
+    Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), assertSoft, SIntegral
   , ite, iteLazy, sTestBit, sExtractBits, sPopCount, setBitTo, sFromIntegral
   , sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, (.^)
   , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
@@ -1630,6 +1630,10 @@ pConstrain t c = addConstraint (Just t) c (bnot c)
 -- | Provide a tactic for the solver engine
 tactic :: Tactic SBool -> Symbolic ()
 tactic t = addSValTactic $ unSBV `fmap` t
+
+-- | Introduce a soft assertion, with an optional penalty
+assertSoft :: String -> SBool -> Penalty -> Symbolic ()
+assertSoft nm o p = addSValOptGoal Lexicographic [unSBV `fmap` AssertSoft nm o p]
 
 -- | Class of metrics we can optimize for. Currently,
 -- bounded signed/unsigned bit-vectors, unbounded integers,

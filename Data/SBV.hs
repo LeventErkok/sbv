@@ -219,7 +219,7 @@ module Data.SBV (
   , Tactic(..), tactic
 
   -- * Optimization
-  , OptimizeStyle(..), Objective(..), minimize, maximize, optimize
+  , OptimizeStyle(..), Objective(..), Penalty(..), minimize, maximize, assertSoft, optimize
 
   -- * Model extraction
   -- $modelExtraction
