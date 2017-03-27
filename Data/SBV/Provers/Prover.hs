@@ -832,7 +832,7 @@ callSolver :: Bool -> String -> (SMTResult -> b) -> SMTProblem -> SMTConfig -> C
 callSolver isSat checkMsg wrap SMTProblem{smtInputs=qinps, smtSkolemMap=skolemMap, smtLibPgm=smtLibPgm} config caseCond = do
        let msg = when (verbose config) . putStrLn . ("** " ++)
        msg checkMsg
-       let finalPgm = intercalate "\n" (pre ++ post) where SMTLibPgm _ (_, pre, post) = smtLibPgm config caseCond
+       let finalPgm = intercalate "\n" (pre ++ post) where SMTLibPgm _ (pre, post) = smtLibPgm config caseCond
        msg $ "Generated SMTLib program:\n" ++ (finalPgm ++ intercalate "\n" ("" : optimizeArgs config ++ [satCmd config]))
        smtAnswer <- engine (solver config) config isSat qinps skolemMap finalPgm
        msg "Done.."

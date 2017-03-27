@@ -57,7 +57,7 @@ toSMTLib2 = cvt SMTLib2
          | not $ null needsUniversalOpt
          = unsupportedAll $ "optimization of universally quantified metric(s): " ++ unwords needsUniversalOpt
          | True
-         = SMTLibPgm v (aliasTable, pre, post)
+         = SMTLibPgm v (pre, post)
          where sorts = [s | KUserSort s _ <- Set.toList kindInfo]
                solverCaps = capabilities (solver config)
                unsupported w = error $ unlines [ "SBV: Given problem needs " ++ w
@@ -66,7 +66,6 @@ toSMTLib2 = cvt SMTLib2
                unsupportedAll w = error $ unlines [ "SBV: Given problem needs " ++ w
                                                   , "*** Which is not supported by SBV."
                                                   ]
-               aliasTable  = map (\(_, (x, y)) -> (y, x)) qinps
                converter   = case v of
                                SMTLib2 -> SMT2.cvt
                (pre, post) = converter kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config caseSelectors
@@ -87,7 +86,7 @@ toSMTLib2 = cvt SMTLib2
 
 -- | Add constraints generated from older models, used for querying new models
 addNonEqConstraints :: RoundingMode -> [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
-addNonEqConstraints rm  qinps cs p@(SMTLibPgm SMTLib2 _) = SMT2.addNonEqConstraints rm qinps cs p
+addNonEqConstraints rm qinps cs p@(SMTLibPgm SMTLib2 _) = SMT2.addNonEqConstraints rm qinps cs p
 
 -- | Interpret solver output based on SMT-Lib standard output responses
 interpretSolverOutput :: SMTConfig -> ([String] -> SMTModel) -> [String] -> SMTResult
