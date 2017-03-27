@@ -27,17 +27,14 @@ import Data.SBV.BitVectors.PrettyNum (smtRoundingMode, cwToSMTLib)
 
 -- | Add constraints to generate /new/ models. This function is used to query the SMT-solver, while
 -- disallowing a previous model.
-addNonEqConstraints :: RoundingMode -> [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> SMTLibPgm -> Maybe String
-addNonEqConstraints rm qinps allNonEqConstraints (SMTLibPgm _ (pre, post))
+addNonEqConstraints :: RoundingMode -> [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> Maybe [String]
+addNonEqConstraints rm qinps allNonEqConstraints
   | null allNonEqConstraints
-  = Just $ intercalate "\n" $ pre ++ post
+  = Just []
   | null refutedModel
   = Nothing
   | True
-  = Just $ intercalate "\n" $ pre
-    ++ [ "; --- refuted-models ---" ]
-    ++ refutedModel
-    ++ post
+  = Just $ "; --- refuted-models ---" : refutedModel
  where refutedModel = concatMap (nonEqs rm . map intName) nonEqConstraints
        aliasTable   = map (\(_, (x, y)) -> (y, x)) qinps
        intName (s, c)

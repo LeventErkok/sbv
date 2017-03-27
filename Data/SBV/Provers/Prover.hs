@@ -366,7 +366,7 @@ bufferSanity True  a = bracket before after (const a)
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
 proveWith config a = do simRes@SMTProblem{tactics, objectives} <- simulate cvt config False [] a
                         let hasPar = any isParallelCaseAnywhere tactics
-                        bufferSanity hasPar $ applyTactics config (False, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver False "Checking Theoremhood.." ThmResult simRes
+                        bufferSanity hasPar $ applyTactics config (False, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver False "Checking Theoremhood.." [] ThmResult simRes
   where cvt = case smtLibVersion config of
                 SMTLib2 -> toSMTLib2
         wrap                 = ThmResult
@@ -376,7 +376,7 @@ proveWith config a = do simRes@SMTProblem{tactics, objectives} <- simulate cvt c
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
 satWith config a = do simRes@SMTProblem{tactics, objectives} <- simulate cvt config True [] a
                       let hasPar = any isParallelCaseAnywhere tactics
-                      bufferSanity hasPar $ applyTactics config (True, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver True "Checking Satisfiability.." SatResult simRes
+                      bufferSanity hasPar $ applyTactics config (True, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver True "Checking Satisfiability.." [] SatResult simRes
   where cvt = case smtLibVersion config of
                 SMTLib2 -> toSMTLib2
         wrap                 = SatResult
@@ -747,7 +747,7 @@ safeWith cfg a = do
   where locInfo (Just ps) = Just $ let loc (f, sl) = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
                                    in intercalate ",\n " (map loc ps)
         locInfo _         = Nothing
-        verify res (msg, cs, cond) = do SatResult result <- runProofOn cvt cfg True [] pgm >>= \p -> callSolver True msg SatResult p cfg NoCase
+        verify res (msg, cs, cond) = do SatResult result <- runProofOn cvt cfg True [] pgm >>= \p -> callSolver True msg [] SatResult p cfg NoCase
                                         return $ SafeResult (locInfo (getCallStack `fmap` cs), msg, result)
            where pgm = res { resInputs  = [(EX, n) | (_, n) <- resInputs res]   -- make everything existential
                            , resOutputs = [cond]
@@ -774,7 +774,7 @@ isVacuousWith config a = do
                         res' = Result ki tr uic is' cs ts as uis ax asgn cstr tactics goals asserts [trueSW]
                         cvt  = case smtLibVersion config of
                                  SMTLib2 -> toSMTLib2
-                    SatResult result <- runProofOn cvt config True [] res' >>= \p -> callSolver True "Checking Satisfiability.." SatResult p config NoCase
+                    SatResult result <- runProofOn cvt config True [] res' >>= \p -> callSolver True "Checking Satisfiability.." [] SatResult p config NoCase
                     case result of
                       Unsatisfiable{} -> return True  -- constraints are unsatisfiable!
                       Satisfiable{}   -> return False -- constraints are satisfiable!
@@ -801,8 +801,9 @@ allSatWith config p = do
         return $ AllSatResult (w,  results)
   where msg = when (verbose config) . putStrLn . ("** " ++)
         go sbvPgm = loop
-          where loop !n nonEqConsts = do
-                  curResult <- invoke nonEqConsts n sbvPgm
+          where hasPar = any isParallelCaseAnywhere (tactics sbvPgm)
+                loop !n nonEqConsts = do
+                  curResult <- invoke nonEqConsts hasPar n sbvPgm
                   case curResult of
                     Nothing            -> return []
                     Just (SatResult r) -> let cont model = do let modelOnlyAssocs = [v | v@(x, _) <- modelAssocs model, not (isNonModelVar config x)]
@@ -816,23 +817,26 @@ allSatWith config p = do
                                                Unsatisfiable _               -> return []
                                                Satisfiable   _ model         -> cont model
                                                Unknown       _ model         -> cont model
-        invoke nonEqConsts n SMTProblem{smtInputs=qinps, smtSkolemMap=skolemMap, smtLibPgm=smtLibPgm} = do
+        invoke nonEqConsts hasPar n simRes@SMTProblem{smtInputs=qinps, tactics=tactics, objectives=objectives} = do
                msg $ "Looking for solution " ++ show n
-               case addNonEqConstraints (roundingMode config) qinps nonEqConsts (smtLibPgm config NoCase) of
-                 Nothing ->  -- no new constraints added, stop
+               case addNonEqConstraints (smtLibVersion config) (roundingMode config) qinps nonEqConsts of
+                 Nothing -> -- no new constraints refuted models, stop
                             return Nothing
-                 Just finalPgm -> do msg $ "Generated SMTLib program:\n" ++ (finalPgm ++ intercalate "\n" ("" : optimizeArgs config ++ [satCmd config]))
-                                     smtAnswer <- engine (solver config) (updateName (n-1) config) True qinps skolemMap finalPgm
-                                     msg "Done.."
-                                     return $ Just $ SatResult smtAnswer
+                 Just refutedModels -> do
+                    let wrap                 = SatResult
+                        unwrap (SatResult r) = r
+                    res <- bufferSanity hasPar $ applyTactics (updateName (n-1) config) (True, hasPar) (wrap, unwrap) [] tactics objectives
+                                               $ callSolver True "Checking Satisfiability.." refutedModels SatResult simRes
+                    return $ Just res
+
         updateName i cfg = cfg{smtFile = upd `fmap` smtFile cfg}
                where upd nm = let (b, e) = splitExtension nm in b ++ "_allSat_" ++ show i ++ e
 
-callSolver :: Bool -> String -> (SMTResult -> b) -> SMTProblem -> SMTConfig -> CaseCond -> IO b
-callSolver isSat checkMsg wrap SMTProblem{smtInputs=qinps, smtSkolemMap=skolemMap, smtLibPgm=smtLibPgm} config caseCond = do
+callSolver :: Bool -> String -> [String] -> (SMTResult -> b) -> SMTProblem -> SMTConfig -> CaseCond -> IO b
+callSolver isSat checkMsg refutedModels wrap SMTProblem{smtInputs=qinps, smtSkolemMap=skolemMap, smtLibPgm=smtLibPgm} config caseCond = do
        let msg = when (verbose config) . putStrLn . ("** " ++)
        msg checkMsg
-       let finalPgm = intercalate "\n" (pre ++ post) where SMTLibPgm _ (pre, post) = smtLibPgm config caseCond
+       let finalPgm = intercalate "\n" (pre ++ refutedModels ++ post) where SMTLibPgm _ (pre, post) = smtLibPgm config caseCond
        msg $ "Generated SMTLib program:\n" ++ (finalPgm ++ intercalate "\n" ("" : optimizeArgs config ++ [satCmd config]))
        smtAnswer <- engine (solver config) config isSat qinps skolemMap finalPgm
        msg "Done.."
@@ -885,5 +889,5 @@ internalSATCheck cfg condInPath st msg = do
        pgm = Result ki tr uic [(EX, n) | (_, n) <- is] cs ts as uis ax asgn cstr tactics goals assertions [sw]
        cvt = case smtLibVersion cfg of
                 SMTLib2 -> toSMTLib2
-   runProofOn cvt cfg True [] pgm >>= \p -> callSolver True msg SatResult p cfg NoCase
+   runProofOn cvt cfg True [] pgm >>= \p -> callSolver True msg [] SatResult p cfg NoCase
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
