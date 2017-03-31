@@ -389,17 +389,16 @@ rot toLeft sz amt x
 
 -- | Extract bit-sequences.
 svExtract :: Int -> Int -> SVal -> SVal
-svExtract i j x@(SVal (KBounded s _) _)
+svExtract i j x
   | i < j
   = SVal k (Left $! CW k (CWInteger 0))
   | SVal _ (Left (CW _ (CWInteger v))) <- x
   = SVal k (Left $! normCW (CW k (CWInteger (v `shiftR` j))))
   | True
   = SVal k (Right (cache y))
-  where k = KBounded s (i - j + 1)
+  where k = KBounded False (i - j + 1)
         y st = do sw <- svToSW st x
                   newExpr st k (SBVApp (Extract i j) [sw])
-svExtract _ _ _ = error "extract: non-bitvector type"
 
 -- | Join two words, by concataneting
 svJoin :: SVal -> SVal -> SVal
