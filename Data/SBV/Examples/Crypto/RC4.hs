@@ -24,6 +24,8 @@ import Data.List  (genericIndex)
 import Data.Maybe (fromJust)
 import Data.SBV
 
+import Data.SBV.Tools.STree
+
 -----------------------------------------------------------------------------
 -- * Types
 -----------------------------------------------------------------------------

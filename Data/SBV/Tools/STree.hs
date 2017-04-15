@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.BitVectors.STree
+-- Module      :  Data.SBV.Tools.STree
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -15,7 +15,7 @@
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 
-module Data.SBV.BitVectors.STree (STree, readSTree, writeSTree, mkSTree) where
+module Data.SBV.Tools.STree (STree, readSTree, writeSTree, mkSTree) where
 
 import Data.Bits (Bits(..))
 

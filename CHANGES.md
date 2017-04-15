@@ -71,6 +71,7 @@
 	- `Data.SBV.Tools.ExpectedValue` (computing with expected values)
 	- `Data.SBV.Tools.GenTest` (test case generation)
 	- `Data.SBV.Tools.Polynomial` (polynomial arithmetic, CRCs etc.)
+	- `Data.SBV.Tools.STree` (full symbolic binary trees)
  
     To use the functionality of these modules, users must now explicitly import the corresponding
     module. Not other changes should be needed other than the explicit import.

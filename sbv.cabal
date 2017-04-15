@@ -65,6 +65,7 @@ Library
                   , Data.SBV.Tools.ExpectedValue
                   , Data.SBV.Tools.GenTest
                   , Data.SBV.Tools.Polynomial
+                  , Data.SBV.Tools.STree
                   , Data.SBV.Examples.BitPrecise.BitTricks
                   , Data.SBV.Examples.BitPrecise.Legato
                   , Data.SBV.Examples.BitPrecise.MergeSort
@@ -113,7 +114,6 @@ Library
                   , Data.SBV.BitVectors.Operations
                   , Data.SBV.BitVectors.Floating
                   , Data.SBV.BitVectors.Splittable
-                  , Data.SBV.BitVectors.STree
                   , Data.SBV.BitVectors.Symbolic
                   , Data.SBV.Compilers.C
                   , Data.SBV.Compilers.CodeGen

@@ -143,8 +143,6 @@ module Data.SBV (
   , SBV
   -- *** Arrays of symbolic values
   , SymArray(..), SArray, SFunArray, mkSFunArray
-  -- *** Full binary trees
-  , STree, readSTree, writeSTree, mkSTree
   -- ** Operations on symbolic values
   -- *** Word level
   , sTestBit, sExtractBits, sPopCount, sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, sFromIntegral, setBitTo, oneIf
@@ -289,7 +287,6 @@ import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
 import Data.SBV.BitVectors.Floating
 import Data.SBV.BitVectors.Splittable
-import Data.SBV.BitVectors.STree
 
 import Data.SBV.Compilers.C
 import Data.SBV.Compilers.CodeGen
