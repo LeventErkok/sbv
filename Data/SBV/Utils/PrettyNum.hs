@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.BitVectors.PrettyNum
+-- Module      :  Data.SBV.Utils.PrettyNum
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -12,7 +12,7 @@
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Data.SBV.BitVectors.PrettyNum (
+module Data.SBV.Utils.PrettyNum (
         PrettyNum(..), readBin, shex, shexI, sbin, sbinI
       , showCFloat, showCDouble, showHFloat, showHDouble
       , showSMTFloat, showSMTDouble, smtRoundingMode, cwToSMTLib, mkSkolemZero

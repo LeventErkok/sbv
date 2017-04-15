@@ -23,7 +23,8 @@ import qualified Data.IntMap   as IM
 import qualified Data.Set      as Set
 
 import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.PrettyNum (smtRoundingMode, cwToSMTLib)
+
+import Data.SBV.Utils.PrettyNum (smtRoundingMode, cwToSMTLib)
 
 -- | Add constraints to generate /new/ models. This function is used to query the SMT-solver, while
 -- disallowing a previous model.

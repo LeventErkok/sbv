@@ -111,7 +111,6 @@ Library
                   , Data.SBV.BitVectors.Kind
                   , Data.SBV.BitVectors.Model
                   , Data.SBV.BitVectors.Operations
-                  , Data.SBV.BitVectors.PrettyNum
                   , Data.SBV.BitVectors.Floating
                   , Data.SBV.BitVectors.Splittable
                   , Data.SBV.BitVectors.STree
@@ -134,6 +133,7 @@ Library
                   , Data.SBV.Utils.Numeric
                   , Data.SBV.Utils.TDiff
                   , Data.SBV.Utils.Lib
+                  , Data.SBV.Utils.PrettyNum
                   , GHC.SrcLoc.Compat
                   , GHC.Stack.Compat
 

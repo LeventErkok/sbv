@@ -23,10 +23,10 @@ import qualified System.Info as S(os)
 
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.PrettyNum
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 import Data.SBV.Utils.Lib (splitArgs)
+import Data.SBV.Utils.PrettyNum
 
 -- Choose the correct prefix character for passing options
 -- TBD: Is there a more foolproof way of determining this?

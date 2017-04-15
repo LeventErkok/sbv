@@ -288,14 +288,18 @@ import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
 import Data.SBV.BitVectors.Model
 import Data.SBV.BitVectors.Floating
-import Data.SBV.BitVectors.PrettyNum
 import Data.SBV.BitVectors.Splittable
 import Data.SBV.BitVectors.STree
+
 import Data.SBV.Compilers.C
 import Data.SBV.Compilers.CodeGen
+
 import Data.SBV.Provers.Prover
+
 import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.TDiff
+import Data.SBV.Utils.PrettyNum
+
 import Data.Bits
 import Data.Int
 import Data.Ratio

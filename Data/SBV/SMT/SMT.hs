@@ -34,9 +34,10 @@ import qualified Data.Map as M
 
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.PrettyNum
 import Data.SBV.BitVectors.Symbolic   (SMTEngine)
 import Data.SBV.SMT.SMTLib            (interpretSolverOutput, interpretSolverModelLine)
+
+import Data.SBV.Utils.PrettyNum
 import Data.SBV.Utils.Lib             (joinArgs, splitArgs)
 import Data.SBV.Utils.TDiff
 

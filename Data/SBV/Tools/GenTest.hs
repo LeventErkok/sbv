@@ -23,7 +23,8 @@ import System.Random
 
 import Data.SBV.BitVectors.AlgReals
 import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.PrettyNum
+
+import Data.SBV.Utils.PrettyNum
 
 -- | Type of test vectors (abstract)
 newtype TestVectors = TV [([CW], [CW])]
