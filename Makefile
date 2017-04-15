@@ -85,7 +85,7 @@ gold: install
 hlint: 
 	@rm -f hlintReport.html
 	@echo "Running HLint.."
-	@hlint Data SBVUnitTest -q -rhlintReport.html -i "Use otherwise" -i "Parse error" -i "Use fewer imports"
+	@hlint Data SBVUnitTest -q -rhlintReport.html -i "Use otherwise" -i "Parse error" -i "Use fewer imports" -i "Use module export list"
 
 checkLinks:
 	@buildUtils/checkLinks

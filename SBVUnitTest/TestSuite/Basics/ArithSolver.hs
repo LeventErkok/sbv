@@ -12,7 +12,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE Rank2Types    #-}
-{-# LANGUAGE TupleSections #-}
 
 module TestSuite.Basics.ArithSolver(testSuite) where
 
