@@ -19,6 +19,7 @@ install:
 	@(make -s -C buildUtils testInterfaces)
 	$(call mkTags)
 	@cabal configure --enable-tests --ghc-options="-Werror -Wall"
+	@cabal build
 	@cabal install
 
 test: install doctest externaltest internaltest
