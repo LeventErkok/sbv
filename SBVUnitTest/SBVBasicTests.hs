@@ -27,13 +27,12 @@ import SBVTest          (SBVTestSuite(..), generateGoldCheck)
 import Paths_sbv        (getDataDir, version)
 
 import SBVTestCollection    (allTestCases)
-import SBVUnitTestBuildTime (buildTime)
 
 testCollection :: [(String, SBVTestSuite)]
 testCollection = [(n, s) | (n, False, s) <- allTestCases]
 
 main :: IO ()
-main = do putStrLn $ "*** SBVBasicTester, version: " ++ showVersion version ++ ", time stamp: " ++ buildTime
+main = do putStrLn $ "*** SBVBasicTester, version: " ++ showVersion version
           d <- getDataDir 
           run $ d </> "SBVUnitTest" </> "GoldFiles"
 

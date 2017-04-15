@@ -24,11 +24,10 @@ import Data.Version         (showVersion)
 import SBVTest              (SBVTestSuite(..), generateGoldCheck)
 import Paths_sbv            (getDataDir, version)
 
-import SBVUnitTestBuildTime (buildTime)
 import SBVTestCollection    (allTestCases)
 
 main :: IO ()
-main = do putStrLn $ "*** SBVUnitTester, version: " ++ showVersion version ++ ", time stamp: " ++ buildTime
+main = do putStrLn $ "*** SBVUnitTester, version: " ++ showVersion version
           tgts <- getArgs
           case tgts of
             [x] | x `elem` ["-h", "--help", "-?"]

@@ -3,23 +3,9 @@
 # The sbv library is distributed with the BSD3 license. See the LICENSE file
 # in the distribution for details.
 SHELL     := /usr/bin/env bash
-TSTSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs | grep -v SBVUnitTest/SBVBasicTests.hs | grep -v buildUtils/simplify.hs | grep -v buildUtils/testInterfaces.hs | grep -v sandbox | grep -v GHC/SrcLoc/Compat.hs)
-STAMPFILE = SBVUnitTest/SBVUnitTestBuildTime.hs
-DEPSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' -or -name '*.cabal' | grep -v Paths_sbv.hs | grep -v $(STAMPFILE) | grep -v dist-sandbox)
-CABAL     = cabal
-SIMPLIFY  = ./buildUtils/simplify
-# HERBIE    = -fplugin=Herbie -package-id HerbiePlugin-0.1.0.0-0e1e14fc82dbb38565b570b0204d49bd
-EXTRAOPTS = "--ghc-options=-Werror -Wall $(HERBIE)"
+TSTSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs | grep -v SBVUnitTest/SBVBasicTests.hs | grep -v buildUtils/testInterfaces.hs | grep -v sandbox | grep -v GHC/SrcLoc/Compat.hs)
 # OSX tends to sleep for long jobs; so run through caffeinate
 TIME      = /usr/bin/time caffeinate
-
-define mkStamp
-	@echo "-- Auto-generated, don't edit"		       >  ${STAMPFILE}
-	@echo "module SBVUnitTestBuildTime (buildTime) where"  >> ${STAMPFILE}
-	@echo ""					       >> ${STAMPFILE}
-	@echo "buildTime :: String"			       >> ${STAMPFILE}
-	@echo "buildTime = \"$(shell date)\""		       >> ${STAMPFILE}
-endef
 
 define mkTags
 	@find . -name \*.\*hs | xargs fast-tags
@@ -29,25 +15,17 @@ endef
 
 all: install
 
-install: $(STAMPFILE)
-
-$(STAMPFILE): $(DEPSRCS) Makefile
-	@-ghc-pkg unregister --force sbv
-	@(make -s -C buildUtils simplify)
-	$(call mkStamp)
-	$(call mkTags)
-	@$(CABAL) configure --disable-library-profiling --enable-tests
-	@((set -o pipefail; $(CABAL) build $(EXTRAOPTS) 2>&1 | $(SIMPLIFY)) || (rm $(STAMPFILE) && false))
-	@(rm -f buildUtils/testInterfaces.hi buildUtils/testInterfaces.o)
-	@$(CABAL) copy
-	@$(CABAL) register
+install: 
 	@(make -s -C buildUtils testInterfaces)
+	$(call mkTags)
+	@cabal configure --enable-tests --ghc-options="-Werror -Wall"
+	@cabal build
 
 test: install doctest externaltest internaltest
 
 doctest:
 	@echo "*** Starting inline tests.."
-	@(set -o pipefail; $(TIME) doctest ${TSTSRCS} 2>&1)
+	$(TIME) doctest ${TSTSRCS}
 
 externaltest:
 	@echo "*** Starting external test suite.."
@@ -57,11 +35,11 @@ externaltest:
 
 internaltest:
 	@echo "*** Starting internal cabal test suite.."
-	@SBV_Z3=doesnotexist $(TIME) $(CABAL) test
+	@SBV_Z3=doesnotexist $(TIME) cabal test
 	@cat dist/test/sbv*SBVBasicTests.log
 
 sdist: install
-	@(set -o pipefail; $(CABAL) sdist | $(SIMPLIFY))
+	cabal sdist
 
 veryclean: clean
 	@make -C buildUtils clean
@@ -71,7 +49,7 @@ clean:
 	@rm -rf dist $(STAMPFILE)
 
 docs:
-	@(set -o pipefail; $(CABAL) haddock --haddock-option=--no-warnings --hyperlink-source 2>&1 | $(SIMPLIFY))
+	cabal haddock --haddock-option=--no-warnings --hyperlink-source
 
 release: clean checkLinks install sdist testInterfaces hlint docs test
 	@echo "*** SBV is ready for release!"

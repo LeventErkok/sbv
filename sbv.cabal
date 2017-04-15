@@ -149,8 +149,7 @@ Executable SBVUnitTests
                 , HUnit, directory, filepath, process, syb, sbv, data-binary-ieee754
   Hs-Source-Dirs  : SBVUnitTest
   main-is         : SBVUnitTest.hs
-  Other-modules   : SBVUnitTestBuildTime
-                  , SBVTest
+  Other-modules   : SBVTest
                   , SBVTestCollection
                   , Examples.Arrays.Memory
                   , Examples.Basics.BasicTests
