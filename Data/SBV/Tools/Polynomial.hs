@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.BitVectors.Polynomials
+-- Module      :  Data.SBV.Core.Polynomials
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -24,9 +24,10 @@ import Data.List  (genericTake)
 import Data.Maybe (fromJust, fromMaybe)
 import Data.Word  (Word8, Word16, Word32, Word64)
 
-import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.Model
-import Data.SBV.BitVectors.Splittable
+import Data.SBV.Core.Data
+import Data.SBV.Core.Model
+import Data.SBV.Core.Splittable
+
 import Data.SBV.Utils.Boolean
 
 -- | Implements polynomial addition, multiplication, division, and modulus operations

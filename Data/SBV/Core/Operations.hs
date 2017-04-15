@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.BitVectors.Operations
+-- Module      :  Data.SBV.Core.Operations
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -11,7 +11,7 @@
 
 {-# LANGUAGE BangPatterns #-}
 
-module Data.SBV.BitVectors.Operations
+module Data.SBV.Core.Operations
   (
   -- ** Basic constructors
     svTrue, svFalse, svBool
@@ -43,10 +43,10 @@ module Data.SBV.BitVectors.Operations
 import Data.Bits (Bits(..))
 import Data.List (genericIndex, genericLength, genericTake)
 
-import Data.SBV.BitVectors.AlgReals
-import Data.SBV.BitVectors.Kind
-import Data.SBV.BitVectors.Concrete
-import Data.SBV.BitVectors.Symbolic
+import Data.SBV.Core.AlgReals
+import Data.SBV.Core.Kind
+import Data.SBV.Core.Concrete
+import Data.SBV.Core.Symbolic
 
 import Data.Ratio
 
@@ -727,7 +727,7 @@ eqOpt w x y = case swKind x of
 -- For uninterpreted/enumerated values, we carefully lift through the constructor index for comparisons:
 uiLift :: String -> (Int -> Int -> Bool) -> (Maybe Int, String) -> (Maybe Int, String) -> Bool
 uiLift _ cmp (Just i, _) (Just j, _) = i `cmp` j
-uiLift w _   a           b           = error $ "Data.SBV.BitVectors.Model: Impossible happened while trying to lift " ++ w ++ " over " ++ show (a, b)
+uiLift w _   a           b           = error $ "Data.SBV.Core.Operations: Impossible happened while trying to lift " ++ w ++ " over " ++ show (a, b)
 
 -- | Predicate for optimizing word operations like (+) and (*).
 isConcreteZero :: SVal -> Bool

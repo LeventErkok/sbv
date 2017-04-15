@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.BitVectors.Symbolic
+-- Module      :  Data.SBV.Core.Symbolic
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -22,7 +22,7 @@
 {-# LANGUAGE    CPP                        #-}
 {-# OPTIONS_GHC -fno-warn-orphans          #-}
 
-module Data.SBV.BitVectors.Symbolic
+module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SW(..), swKind, trueSW, falseSW
   , Op(..), FPOp(..)
@@ -76,8 +76,8 @@ import qualified Data.Sequence as S    (Seq, empty, (|>))
 import System.Mem.StableName
 import System.Random
 
-import Data.SBV.BitVectors.Kind
-import Data.SBV.BitVectors.Concrete
+import Data.SBV.Core.Kind
+import Data.SBV.Core.Concrete
 import Data.SBV.SMT.SMTLibNames
 import Data.SBV.Utils.TDiff(Timing)
 

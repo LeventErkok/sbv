@@ -13,7 +13,7 @@
 
 module Data.SBV.Provers.CVC4(cvc4) where
 
-import Data.SBV.BitVectors.Data
+import Data.SBV.Core.Data
 import Data.SBV.SMT.SMT
 
 -- | The description of the CVC4 SMT solver

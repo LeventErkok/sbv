@@ -22,7 +22,7 @@ import Control.Monad   (unless)
 import System.Random   (newStdGen, StdGen)
 import Numeric
 
-import Data.SBV.BitVectors.Data
+import Data.SBV.Core.Data
 
 -- | Generalized version of 'expectedValue', allowing the user to specify the
 -- warm-up count and the convergence factor. Maximum iteration count can also

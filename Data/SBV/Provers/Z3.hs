@@ -21,10 +21,12 @@ import Data.List          (sortBy, intercalate, groupBy)
 import System.Environment (getEnv)
 import qualified System.Info as S(os)
 
-import Data.SBV.BitVectors.AlgReals
-import Data.SBV.BitVectors.Data
+import Data.SBV.Core.AlgReals
+import Data.SBV.Core.Data
+
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
+
 import Data.SBV.Utils.Lib (splitArgs)
 import Data.SBV.Utils.PrettyNum
 

@@ -282,11 +282,11 @@ import Control.Monad            (filterM)
 import Control.Concurrent.Async (async, waitAny, waitAnyCancel)
 import System.IO.Unsafe         (unsafeInterleaveIO)             -- only used safely!
 
-import Data.SBV.BitVectors.AlgReals
-import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.Model
-import Data.SBV.BitVectors.Floating
-import Data.SBV.BitVectors.Splittable
+import Data.SBV.Core.AlgReals
+import Data.SBV.Core.Data
+import Data.SBV.Core.Model
+import Data.SBV.Core.Floating
+import Data.SBV.Core.Splittable
 
 import Data.SBV.Compilers.C
 import Data.SBV.Compilers.CodeGen

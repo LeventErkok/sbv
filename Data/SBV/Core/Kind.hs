@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.BitVectors.Kind
+-- Module      :  Data.SBV.Core.Kind
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -13,13 +13,13 @@
 {-# LANGUAGE    ScopedTypeVariables #-}
 {-# OPTIONS_GHC -fno-warn-orphans   #-}
 
-module Data.SBV.BitVectors.Kind (Kind(..), HasKind(..), constructUKind) where
+module Data.SBV.Core.Kind (Kind(..), HasKind(..), constructUKind) where
 
 import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
 
 import Data.Int
 import Data.Word
-import Data.SBV.BitVectors.AlgReals
+import Data.SBV.Core.AlgReals
 
 -- | Kind of symbolic value
 data Kind = KBool

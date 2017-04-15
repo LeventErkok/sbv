@@ -24,7 +24,7 @@ import System.FilePath                (takeBaseName, replaceExtension)
 import System.Random
 import Text.PrettyPrint.HughesPJ
 
-import Data.SBV.BitVectors.Data
+import Data.SBV.Core.Data
 
 import Data.SBV.Utils.PrettyNum (shex, showCFloat, showCDouble)
 import Data.SBV.Compilers.CodeGen

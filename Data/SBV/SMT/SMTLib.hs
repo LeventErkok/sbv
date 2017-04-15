@@ -13,7 +13,7 @@ module Data.SBV.SMT.SMTLib(SMTLibPgm, SMTLibConverter, toSMTLib2, addNonEqConstr
 
 import Data.Char (isDigit)
 
-import Data.SBV.BitVectors.Data
+import Data.SBV.Core.Data
 import Data.SBV.Provers.SExpr
 import qualified Data.SBV.SMT.SMTLib2 as SMT2
 import qualified Data.Set as Set (Set, member, toList)

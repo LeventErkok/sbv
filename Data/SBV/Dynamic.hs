@@ -122,10 +122,10 @@ module Data.SBV.Dynamic
 
 import Data.Map (Map)
 
-import Data.SBV.BitVectors.Kind
-import Data.SBV.BitVectors.Concrete
-import Data.SBV.BitVectors.Symbolic
-import Data.SBV.BitVectors.Operations
+import Data.SBV.Core.Kind
+import Data.SBV.Core.Concrete
+import Data.SBV.Core.Symbolic
+import Data.SBV.Core.Operations
 
 import Data.SBV.Compilers.CodeGen
   ( SBVCodeGen
@@ -142,11 +142,11 @@ import Data.SBV.SMT.SMT        (ThmResult(..), SatResult(..), SafeResult(..), Al
 import Data.SBV.Tools.Optimize (OptimizeOpts(..))
 import Data.SBV                (sbvCurrentSolver, sbvCheckSolverInstallation, defaultSolverConfig, sbvAvailableSolvers)
 
-import qualified Data.SBV                  as SBV (SBool, proveWithAll, proveWithAny, satWithAll, satWithAny)
-import qualified Data.SBV.BitVectors.Data  as SBV (SBV(..))
-import qualified Data.SBV.BitVectors.Model as SBV (isSatisfiableInCurrentPath, sbvQuickCheck)
-import qualified Data.SBV.Provers.Prover   as SBV (proveWith, satWith, safeWith, allSatWith, compileToSMTLib, generateSMTBenchmarks)
-import qualified Data.SBV.SMT.SMT          as SBV (Modelable(getModel, getModelDictionary))
+import qualified Data.SBV                as SBV (SBool, proveWithAll, proveWithAny, satWithAll, satWithAny)
+import qualified Data.SBV.Core.Data      as SBV (SBV(..))
+import qualified Data.SBV.Core.Model     as SBV (isSatisfiableInCurrentPath, sbvQuickCheck)
+import qualified Data.SBV.Provers.Prover as SBV (proveWith, satWith, safeWith, allSatWith, compileToSMTLib, generateSMTBenchmarks)
+import qualified Data.SBV.SMT.SMT        as SBV (Modelable(getModel, getModelDictionary))
 
 -- | Reduce a condition (i.e., try to concretize it) under the given path
 svIsSatisfiableInCurrentPath :: SVal -> Symbolic (Maybe SatResult)

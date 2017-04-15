@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.BitVectors.AlgReals
+-- Module      :  Data.SBV.Core.AlgReals
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -13,7 +13,16 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Data.SBV.BitVectors.AlgReals (AlgReal(..), mkPolyReal, algRealToSMTLib2, algRealToHaskell, mergeAlgReals, isExactRational, algRealStructuralEqual, algRealStructuralCompare) where
+module Data.SBV.Core.AlgReals (
+             AlgReal(..)
+           , mkPolyReal
+           , algRealToSMTLib2
+           , algRealToHaskell
+           , mergeAlgReals
+           , isExactRational
+           , algRealStructuralEqual
+           , algRealStructuralCompare)
+   where
 
 import Data.List       (sortBy, isPrefixOf, partition)
 import Data.Ratio      ((%), numerator, denominator)

@@ -13,7 +13,7 @@
 
 module Data.SBV.Provers.Yices(yices) where
 
-import Data.SBV.BitVectors.Data
+import Data.SBV.Core.Data
 import Data.SBV.SMT.SMT
 
 -- | The description of the Yices SMT solver

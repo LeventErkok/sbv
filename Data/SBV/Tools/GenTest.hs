@@ -21,8 +21,8 @@ import Data.List     (intercalate, groupBy)
 import Data.Maybe    (fromMaybe)
 import System.Random
 
-import Data.SBV.BitVectors.AlgReals
-import Data.SBV.BitVectors.Data
+import Data.SBV.Core.AlgReals
+import Data.SBV.Core.Data
 
 import Data.SBV.Utils.PrettyNum
 

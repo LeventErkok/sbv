@@ -19,8 +19,8 @@ import Data.Maybe          (fromMaybe, listToMaybe)
 import Numeric             (readInt, readDec, readHex, fromRat)
 import Data.Binary.IEEE754 (wordToFloat, wordToDouble)
 
-import Data.SBV.BitVectors.AlgReals
-import Data.SBV.BitVectors.Data (nan, infinity, RoundingMode(..))
+import Data.SBV.Core.AlgReals
+import Data.SBV.Core.Data (nan, infinity, RoundingMode(..))
 
 -- | ADT S-Expression format, suitable for representing get-model output of SMT-Lib
 data SExpr = ECon    String

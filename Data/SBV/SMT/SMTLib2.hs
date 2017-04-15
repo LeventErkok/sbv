@@ -22,7 +22,7 @@ import qualified Data.Map      as M
 import qualified Data.IntMap   as IM
 import qualified Data.Set      as Set
 
-import Data.SBV.BitVectors.Data
+import Data.SBV.Core.Data
 
 import Data.SBV.Utils.PrettyNum (smtRoundingMode, cwToSMTLib)
 

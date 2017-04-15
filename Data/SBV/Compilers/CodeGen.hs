@@ -26,8 +26,8 @@ import System.IO                 (hFlush, stdout)
 import           Text.PrettyPrint.HughesPJ      (Doc, vcat)
 import qualified Text.PrettyPrint.HughesPJ as P (render)
 
-import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.Symbolic (svToSymSW, svMkSymVar, outputSVal)
+import Data.SBV.Core.Data
+import Data.SBV.Core.Symbolic (svToSymSW, svMkSymVar, outputSVal)
 
 import Prelude ()
 import Prelude.Compat

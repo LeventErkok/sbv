@@ -50,7 +50,7 @@ import GHC.SrcLoc.Compat
 
 import qualified Data.Set as Set (toList)
 
-import Data.SBV.BitVectors.Data
+import Data.SBV.Core.Data
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 import Data.SBV.Utils.TDiff

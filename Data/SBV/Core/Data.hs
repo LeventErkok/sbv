@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.BitVectors.Data
+-- Module      :  Data.SBV.Core.Data
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -19,7 +19,7 @@
 {-# LANGUAGE DefaultSignatures     #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 
-module Data.SBV.BitVectors.Data
+module Data.SBV.Core.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
  , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble
  , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode
@@ -70,13 +70,14 @@ import GHC.SrcLoc.Compat
 
 import System.Random
 
-import Data.SBV.BitVectors.AlgReals
-import Data.SBV.Utils.Lib
+import Data.SBV.Core.AlgReals
+import Data.SBV.Core.Kind
+import Data.SBV.Core.Concrete
+import Data.SBV.Core.Symbolic
 
-import Data.SBV.BitVectors.Kind
-import Data.SBV.BitVectors.Concrete
-import Data.SBV.BitVectors.Symbolic
 import Data.SBV.SMT.SMTLibNames
+
+import Data.SBV.Utils.Lib
 
 import Prelude ()
 import Prelude.Compat

@@ -11,7 +11,7 @@
 
 module Data.SBV.Provers.Boolector(boolector) where
 
-import Data.SBV.BitVectors.Data
+import Data.SBV.Core.Data
 import Data.SBV.SMT.SMT
 
 -- | The description of the Boolector SMT solver

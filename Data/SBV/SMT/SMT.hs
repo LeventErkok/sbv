@@ -32,10 +32,11 @@ import System.Process     (runInteractiveProcess, waitForProcess, terminateProce
 
 import qualified Data.Map as M
 
-import Data.SBV.BitVectors.AlgReals
-import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.Symbolic   (SMTEngine)
-import Data.SBV.SMT.SMTLib            (interpretSolverOutput, interpretSolverModelLine)
+import Data.SBV.Core.AlgReals
+import Data.SBV.Core.Data
+import Data.SBV.Core.Symbolic (SMTEngine)
+
+import Data.SBV.SMT.SMTLib    (interpretSolverOutput, interpretSolverModelLine)
 
 import Data.SBV.Utils.PrettyNum
 import Data.SBV.Utils.Lib             (joinArgs, splitArgs)

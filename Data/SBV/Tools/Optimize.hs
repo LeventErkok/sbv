@@ -31,10 +31,12 @@ module Data.SBV.Tools.Optimize (
 
 import Data.Maybe (fromJust)
 
-import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.Model (OrdSymbolic(..), EqSymbolic(..))
+import Data.SBV.Core.Data
+import Data.SBV.Core.Model (OrdSymbolic(..), EqSymbolic(..))
+
 import Data.SBV.Provers.Prover   (satWith, defaultSMTCfg)
 import Data.SBV.SMT.SMT          (SatModel, getModel)
+
 import Data.SBV.Utils.Boolean
 
 -- | Optimizer configuration. Note that iterative and quantified approaches are in general not interchangeable.

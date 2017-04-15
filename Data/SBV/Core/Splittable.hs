@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.BitVectors.Splittable
+-- Module      :  Data.SBV.Core.Splittable
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -15,14 +15,14 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE BangPatterns           #-}
 
-module Data.SBV.BitVectors.Splittable (Splittable(..), FromBits(..), checkAndConvert) where
+module Data.SBV.Core.Splittable (Splittable(..), FromBits(..), checkAndConvert) where
 
 import Data.Bits (Bits(..))
 import Data.Word (Word8, Word16, Word32, Word64)
 
-import Data.SBV.BitVectors.Operations
-import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.Model
+import Data.SBV.Core.Operations
+import Data.SBV.Core.Data
+import Data.SBV.Core.Model
 
 infixr 5 #
 -- | Splitting an @a@ into two @b@'s and joining back.

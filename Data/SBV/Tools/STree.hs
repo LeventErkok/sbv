@@ -19,8 +19,8 @@ module Data.SBV.Tools.STree (STree, readSTree, writeSTree, mkSTree) where
 
 import Data.Bits (Bits(..))
 
-import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.Model
+import Data.SBV.Core.Data
+import Data.SBV.Core.Model
 
 -- | A symbolic tree containing values of type e, indexed by
 -- elements of type i. Note that these are full-trees, and their

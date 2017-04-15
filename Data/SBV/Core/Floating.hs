@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.BitVectors.Floating
+-- Module      :  Data.SBV.Core.Floating
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -12,7 +12,7 @@
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Data.SBV.BitVectors.Floating (
+module Data.SBV.Core.Floating (
          IEEEFloating(..), IEEEFloatConvertable(..)
        , sFloatAsSWord32, sDoubleAsSWord64, sWord32AsSFloat, sWord64AsSDouble
        , blastSFloat, blastSDouble
@@ -25,9 +25,9 @@ import qualified Data.Binary.IEEE754 as DB (wordToFloat, wordToDouble, floatToWo
 import Data.Int            (Int8,  Int16,  Int32,  Int64)
 import Data.Word           (Word8, Word16, Word32, Word64)
 
-import Data.SBV.BitVectors.Data
-import Data.SBV.BitVectors.Model
-import Data.SBV.BitVectors.AlgReals (isExactRational)
+import Data.SBV.Core.Data
+import Data.SBV.Core.Model
+import Data.SBV.Core.AlgReals (isExactRational)
 import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.Numeric
 

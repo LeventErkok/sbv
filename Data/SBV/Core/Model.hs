@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.BitVectors.Model
+-- Module      :  Data.SBV.Core.Model
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -21,7 +21,7 @@
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE DefaultSignatures      #-}
 
-module Data.SBV.BitVectors.Model (
+module Data.SBV.Core.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), assertSoft, SIntegral
   , ite, iteLazy, sTestBit, sExtractBits, sPopCount, setBitTo, sFromIntegral
   , sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, (.^)
@@ -60,15 +60,15 @@ import qualified Test.QuickCheck         as QC (quickCheckResult, counterexample
 import qualified Test.QuickCheck.Monadic as QC (monadicIO, run, assert, pre, monitor)
 import System.Random
 
-import Data.SBV.BitVectors.AlgReals
-import Data.SBV.BitVectors.Data
-import Data.SBV.Utils.Boolean
+import Data.SBV.Core.AlgReals
+import Data.SBV.Core.Data
+import Data.SBV.Core.Symbolic
+import Data.SBV.Core.Operations
 
 import Data.SBV.Provers.Prover (isVacuous, prove, defaultSMTCfg, internalSATCheck)
 import Data.SBV.SMT.SMT        (ThmResult, SatResult(..), showModel)
 
-import Data.SBV.BitVectors.Symbolic
-import Data.SBV.BitVectors.Operations
+import Data.SBV.Utils.Boolean
 
 -- | Newer versions of GHC (Starting with 7.8 I think), distinguishes between FiniteBits and Bits classes.
 -- We should really use FiniteBitSize for SBV which would make things better. In the interim, just work

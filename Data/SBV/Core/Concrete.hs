@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.BitVectors.Concrete
+-- Module      :  Data.SBV.Core.Concrete
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -9,15 +9,15 @@
 -- Operations on concrete values
 -----------------------------------------------------------------------------
 
-module Data.SBV.BitVectors.Concrete
-  ( module Data.SBV.BitVectors.Concrete
+module Data.SBV.Core.Concrete
+  ( module Data.SBV.Core.Concrete
   ) where
 
 import Data.Bits
 import System.Random (randomIO, randomRIO)
 
-import Data.SBV.BitVectors.Kind
-import Data.SBV.BitVectors.AlgReals
+import Data.SBV.Core.Kind
+import Data.SBV.Core.AlgReals
 
 -- | A constant value
 data CWVal = CWAlgReal  !AlgReal              -- ^ algebraic real
