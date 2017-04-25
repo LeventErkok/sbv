@@ -218,14 +218,14 @@ module Data.SBV (
 
   -- * Optimization
   -- $optiIntro
-  , OptimizeStyle(..), Penalty(..), Objective(..), minimize, maximize, assertSoft, optimize
+  , OptimizeStyle(..), Penalty(..), Objective(..), minimize, maximize, assertSoft, objective, optimize, optimizeWith
 
   -- * Model extraction
   -- $modelExtraction
 
   -- ** Inspecting proof results
   -- $resultTypes
-  , ThmResult(..), SatResult(..), SafeResult(..), AllSatResult(..), SMTResult(..)
+  , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
 
   -- ** Programmable model extraction
   -- $programmableExtraction
@@ -546,7 +546,7 @@ a tactic has no effect on the meaning of a predicate. It is merely guidance for 
 
       * 'minimize': Minimize a given arithmetic goal
       * 'maximize': Minimize a given arithmetic goal
-      * 'optimize': A generic entry point that allows more parameterization
+      * 'objective': A generic entry point that allows more parameterization
 
     For instance, a call of the form 
 
@@ -554,7 +554,7 @@ a tactic has no effect on the meaning of a predicate. It is merely guidance for 
 
     minimizes the arithmetic goal @x+2*y@, where @x@ and @y@ can be bit-vectors, reals,
     or integers. Such goals will be lexicographicly optimized, i.e., in the order
-    given. Use the more general 'optimize' function to access pareto and independent
+    given. Use the more general 'objective' function to access pareto and independent
     optimization features.
 
     See "Data.SBV.Examples.Optimization.VM" for a basic example of the use of optimization routines.
