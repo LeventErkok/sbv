@@ -17,17 +17,15 @@
     employing the corresponding capabilities in z3. A good review of these features
     as implemented by Z3, and thus what is available in SBV is given in this
     paper: http://www.easychair.org/publications/download/Z_-_Maximal_Satisfaction_with_Z3
-
-  * Implemented optimization, allowing for optimization of real or integral valued metrics.
-    Goals can be independently, lexicographicly, or pareto-front optimized. Currently,
-    only the z3 backend supports optimization routines.
+    SBV now allows for  real or integral valued metrics. Goals can be independently, lexicographicly,
+    or pareto-front optimized. Currently, only the z3 backend supports optimization routines.
 
     Minimization can be done over bit-vector, real, and integer goals. The relevant
     functions are:
 
     	* `minimize`: Minimize a given arithmetic goal
     	* `maximize`: Minimize a given arithmetic goal
-    	* `optimize`: A generic entry point that allows more parameterization
+    	* `objective`: A generic entry point that allows more parameterization
 
     For instance, a call of the form 
     
@@ -35,8 +33,11 @@
 
     Minimizes the arithmetic goal x+2*y, where x and y can be bit-vectors, reals,
     or integers. Such goals will be lexicographicly optimized, i.e., in the order
-    given. Use the more general "optimize" function to access pareto and independent
+    given. Use the more general "objective" function to access pareto and independent
     optimization features.
+
+    Once the objectives are given, a top level call to `optimize` (similar to `prove`
+    and `sat`) performs the optimization.
 
   * Implemented soft-asserts. A soft assertion is a hint to the SMT solver that
     we would like a particular condition to hold if *possible*. That is, if there is
