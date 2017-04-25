@@ -18,12 +18,13 @@
 
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate, Provable(..), Goal
-       , ThmResult(..), SatResult(..), SafeResult(..), AllSatResult(..), SMTResult(..)
+       , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
        , isSatisfiable, isSatisfiableWith, isTheorem, isTheoremWith
        , prove, proveWith
        , sat, satWith
-       , safe, safeWith, isSafe
        , allSat, allSatWith
+       , safe, safeWith, isSafe
+       , optimize, optimizeWith
        , isVacuous, isVacuousWith
        , SatModel(..), Modelable(..), displayModels, extractModels
        , getModelDictionaries, getModelValues, getModelUninterpretedValues
@@ -51,6 +52,7 @@ import GHC.SrcLoc.Compat
 import qualified Data.Set as Set (toList)
 
 import Data.SBV.Core.Data
+import Data.SBV.Core.Symbolic
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 import Data.SBV.Utils.TDiff
@@ -266,10 +268,6 @@ prove = proveWith defaultSMTCfg
 sat :: Provable a => a -> IO SatResult
 sat = satWith defaultSMTCfg
 
--- | Check that all the 'sAssert' calls are safe, equivalent to @'safeWith' 'defaultSMTCfg'@
-safe :: SExecutable a => a -> IO [SafeResult]
-safe = safeWith defaultSMTCfg
-
 -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
 -- Satisfying assignments are constructed lazily, so they will be available as returned by the solver
 -- and on demand.
@@ -280,6 +278,14 @@ safe = safeWith defaultSMTCfg
 -- function counter-example back from the SMT solver.
 allSat :: Provable a => a -> IO AllSatResult
 allSat = allSatWith defaultSMTCfg
+
+-- | Optimize a given collection of `Objective`s
+optimize :: Provable a => a -> IO OptimizeResult
+optimize = optimizeWith defaultSMTCfg
+
+-- | Check that all the 'sAssert' calls are safe, equivalent to @'safeWith' 'defaultSMTCfg'@
+safe :: SExecutable a => a -> IO [SafeResult]
+safe = safeWith defaultSMTCfg
 
 -- | Check if the given constraints are satisfiable, equivalent to @'isVacuousWith' 'defaultSMTCfg'@.
 -- See the function 'constrain' for an example use of 'isVacuous'.
@@ -362,9 +368,20 @@ bufferSanity True  a = bracket before after (const a)
                      hSetBuffering stdout b
                      hFlush stdout
 
+-- | Make sure sat/prove calls don't have objectives, and optimize does!
+objectiveCheck :: Bool -> [Objective a] -> String -> IO ()
+objectiveCheck False [] _ = return ()
+objectiveCheck False os w = error $ unlines $ ("\n*** Unsupported call to " ++ show w ++ " in the presence of objective(s):")
+                                              : [ "***\t" ++ intercalate ", " (map objectiveName os)
+                                                , "*** Use \"optimize\" to optimize for these objectives instead of " ++ show w
+                                                ]
+objectiveCheck True []  w = error $ "*** Unsupported call to " ++ w ++ " when no objectives are present. Use \"sat\" for plain satisfaction"
+objectiveCheck True _   _ = return ()
+
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
 proveWith config a = do simRes@SMTProblem{tactics, objectives} <- simulate cvt config False [] a
+                        objectiveCheck False (concatMap snd objectives) "prove"
                         let hasPar = any isParallelCaseAnywhere tactics
                         bufferSanity hasPar $ applyTactics config (False, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver False "Checking Theoremhood.." [] ThmResult simRes
   where cvt = case smtLibVersion config of
@@ -375,12 +392,33 @@ proveWith config a = do simRes@SMTProblem{tactics, objectives} <- simulate cvt c
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
 satWith config a = do simRes@SMTProblem{tactics, objectives} <- simulate cvt config True [] a
+                      objectiveCheck False (concatMap snd objectives) "sat"
                       let hasPar = any isParallelCaseAnywhere tactics
                       bufferSanity hasPar $ applyTactics config (True, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver True "Checking Satisfiability.." [] SatResult simRes
   where cvt = case smtLibVersion config of
                 SMTLib2 -> toSMTLib2
         wrap                 = SatResult
         unwrap (SatResult r) = r
+
+-- | Optimizes the objectives using the given SMT-solver
+optimizeWith :: Provable a => SMTConfig -> a -> IO OptimizeResult
+optimizeWith config a = do
+        let converter  = case smtLibVersion config of
+                           SMTLib2 -> toSMTLib2
+        msg "Optimizing.."
+        sbvPgm@SMTProblem{objectives} <- simulate converter config True [] a
+        objectiveCheck True (concatMap snd objectives) "sat"
+        case nub (map fst objectives) of
+          [Lexicographic] -> optLexicographic sbvPgm
+          [Pareto]        -> optPareto        sbvPgm
+          [Independent]   -> optIndependent   sbvPgm
+          []              -> error "SBV: optimize called with no objectives!"
+          ss              -> error $ "SBV: Multiple optimization styles found, please use only one: " ++ intercalate ", " (map show ss)
+  where msg = when (verbose config) . putStrLn . ("** " ++)
+
+        optLexicographic _ = error "optLexicographic: TBD"
+        optPareto        _ = error "optPareto: TBD"
+        optIndependent   _ = error "optIndependent: TBD"
 
 -- repeated use of partition
 cluster :: [a -> Bool] -> [a] -> [[a]]
@@ -818,6 +856,7 @@ allSatWith config p = do
                                                Satisfiable   _ model         -> cont model
                                                Unknown       _ model         -> cont model
         invoke nonEqConsts hasPar n simRes@SMTProblem{smtInputs=qinps, tactics=tactics, objectives=objectives} = do
+               objectiveCheck False (concatMap snd objectives) "allSat"
                msg $ "Looking for solution " ++ show n
                case addNonEqConstraints (smtLibVersion config) (roundingMode config) qinps nonEqConsts of
                  Nothing -> -- no new constraints refuted models, stop
