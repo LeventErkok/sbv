@@ -49,6 +49,11 @@
     and are most useful when we are optimizing a metric and thus some of the constraints
     can be relaxed with a penalty to obtain a good solution.
 
+  * SBV no longer provides the old optimization routines, based on iterative and quantifier
+    based methods. Those methods were rarely used, and are now superseded by the above
+    mechanism. If the old code is needed, please contact for help: They can be resurrected
+    in your own code if absolutely necessary.
+
   * Implemented tactics, which allow the user to navigate the proof process.
     User can, for instance, implement case-splitting in a proof to guide
     the underlying solver through. Tactics can be both SBV based (case-splitting)
@@ -67,7 +72,6 @@
   * Name-space clean-up. The following modules are no longer automatically exported
     from Data.SBV:
 
-    	- `Data.SBV.Tools.Optimize` (old optimization routines, prefer the newer ones, see above)
 	- `Data.SBV.Tools.ExpectedValue` (computing with expected values)
 	- `Data.SBV.Tools.GenTest` (test case generation)
 	- `Data.SBV.Tools.Polynomial` (polynomial arithmetic, CRCs etc.)

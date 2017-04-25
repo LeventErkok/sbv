@@ -61,7 +61,6 @@ Library
                   , Data.SBV.Bridge.ABC
                   , Data.SBV.Dynamic
                   , Data.SBV.Internals
-                  , Data.SBV.Tools.Optimize
                   , Data.SBV.Tools.ExpectedValue
                   , Data.SBV.Tools.GenTest
                   , Data.SBV.Tools.Polynomial
