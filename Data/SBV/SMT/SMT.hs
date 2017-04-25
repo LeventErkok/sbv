@@ -57,12 +57,18 @@ newtype ThmResult    = ThmResult    SMTResult
 -- The reason for having a separate 'SatResult' is to have a more meaningful 'Show' instance.
 newtype SatResult    = SatResult    SMTResult
 
--- | A 'safe' call results in a 'SafeResult'
-newtype SafeResult   = SafeResult   (Maybe String, String, SMTResult)
-
 -- | An 'allSat' call results in a 'AllSatResult'. The boolean says whether
 -- we should warn the user about prefix-existentials.
 newtype AllSatResult = AllSatResult (Bool, [SMTResult])
+
+-- | A 'safe' call results in a 'SafeResult'
+newtype SafeResult   = SafeResult   (Maybe String, String, SMTResult)
+
+-- | An 'optimize' call results in a 'OptimizeResult'
+data OptimizeResult = OptimizeUnbounded   [(String, String)]
+                    | LexicographicResult SMTResult
+                    | ParetoResult        [SMTResult]
+                    | IndependentResult   [(String, SMTResult)]
 
 -- | User friendly way of printing theorem results
 instance Show ThmResult where
@@ -103,6 +109,12 @@ instance Show AllSatResult where
               where ok = case c of
                            Satisfiable{} -> True
                            _             -> False
+
+instance Show OptimizeResult where
+  show (OptimizeUnbounded   _) = "TBD: show unbounded"
+  show (LexicographicResult _) = "TBD: show lexico"
+  show (ParetoResult        _) = "TBD: show pareto"
+  show (IndependentResult   _) = "TBD: show independent"
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
 -- solvers. The idea is that the sbv infrastructure provides a stream of 'CW''s (constant-words)
