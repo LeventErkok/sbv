@@ -1644,7 +1644,7 @@ assertSoft nm o p = addSValOptGoal Lexicographic [unSBV `fmap` AssertSoft nm o p
 -- <http://www.easychair.org/publications/download/Z_-_Maximal_Satisfaction_with_Z3>.
 class Metric a where
   -- | Optimize a collection of metrics, using the given strategy
-  optimize :: OptimizeStyle -> [Objective a] -> Symbolic ()
+  objective :: OptimizeStyle -> [Objective a] -> Symbolic ()
 
   -- | Minimize a metric independently
   minimize :: String -> a -> Symbolic ()
@@ -1652,19 +1652,19 @@ class Metric a where
   -- | Maximize a metric independently
   maximize :: String -> a -> Symbolic ()
 
-  minimize nm o = optimize Lexicographic [Minimize nm o]
-  maximize nm o = optimize Lexicographic [Maximize nm o]
+  minimize nm o = objective Lexicographic [Minimize nm o]
+  maximize nm o = objective Lexicographic [Maximize nm o]
 
-instance Metric SWord8   where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SWord16  where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SWord32  where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SWord64  where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SInt8    where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SInt16   where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SInt32   where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SInt64   where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SInteger where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SReal    where optimize s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SWord8   where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SWord16  where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SWord32  where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SWord64  where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SInt8    where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SInt16   where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SInt32   where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SInt64   where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SInteger where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SReal    where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
 
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where

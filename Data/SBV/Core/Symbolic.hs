@@ -46,7 +46,7 @@ module Data.SBV.Core.Symbolic
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
-  , OptimizeStyle(..), Objective(..), Penalty(..), addSValOptGoal
+  , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , Tactic(..), addSValTactic, isCaseSplitTactic, isCaseSplitAnywhere, isParallelCaseAnywhere
   , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic, isUseSolverTactic, isCheckCaseVacuityTactic, isCheckConstrVacuityTactic
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
@@ -301,6 +301,12 @@ data Objective a = Minimize   String a         -- ^ Minimize this metric
                  | Maximize   String a         -- ^ Maximize this metric
                  | AssertSoft String a Penalty -- ^ A soft assertion, with an associated penalty 
                  deriving (Show, Functor)
+
+-- | The name of the objective
+objectiveName :: Objective a -> String
+objectiveName (Minimize   s _)   = s
+objectiveName (Maximize   s _)   = s
+objectiveName (AssertSoft s _ _) = s
 
 -- | Solver tactic
 data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-split, with implicit coverage. Bool says whether we should be verbose.

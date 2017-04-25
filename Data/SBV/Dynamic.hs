@@ -83,12 +83,12 @@ module Data.SBV.Dynamic
   -- * Model extraction
 
   -- ** Inspecting proof results
-  , ThmResult(..), SatResult(..), SafeResult(..), AllSatResult(..), SMTResult(..)
+  , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
 
   -- ** Programmable model extraction
   , genParse, getModel, getModelDictionary
   -- * SMT Interface: Configurations and solvers
-  , SMTConfig(..), SMTLibVersion(..), SMTLibLogic(..), Logic(..), OptimizeOpts(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
+  , SMTConfig(..), SMTLibVersion(..), SMTLibLogic(..), Logic(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
 
   -- * Symbolic computations
   , outputSVal
@@ -138,8 +138,7 @@ import Data.SBV.Compilers.CodeGen
   )
 import Data.SBV.Compilers.C    (compileToC, compileToCLib)
 import Data.SBV.Provers.Prover (boolector, cvc4, yices, z3, mathSAT, abc, defaultSMTCfg)
-import Data.SBV.SMT.SMT        (ThmResult(..), SatResult(..), SafeResult(..), AllSatResult(..), genParse)
-import Data.SBV.Tools.Optimize (OptimizeOpts(..))
+import Data.SBV.SMT.SMT        (ThmResult(..), SatResult(..), SafeResult(..), OptimizeResult(..), AllSatResult(..), genParse)
 import Data.SBV                (sbvCurrentSolver, sbvCheckSolverInstallation, defaultSolverConfig, sbvAvailableSolvers)
 
 import qualified Data.SBV                as SBV (SBool, proveWithAll, proveWithAny, satWithAll, satWithAny)

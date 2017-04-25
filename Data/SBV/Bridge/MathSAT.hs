@@ -24,14 +24,14 @@
 module Data.SBV.Bridge.MathSAT (
   -- * MathSAT specific interface
   sbvCurrentSolver
-  -- ** Proving, checking satisfiability
-  , prove, sat, safe, allSat, isVacuous, isTheorem, isSatisfiable
+  -- ** Proving, checking satisfiability, optimization
+  , prove, sat, allSat, safe, optimize, isVacuous, isTheorem, isSatisfiable
   -- * Non-MathSAT specific SBV interface
   -- $moduleExportIntro
   , module Data.SBV
   ) where
 
-import Data.SBV hiding (prove, sat, safe, allSat, isVacuous, isTheorem, isSatisfiable, sbvCurrentSolver)
+import Data.SBV hiding (prove, sat, allSat, safe, optimize, isVacuous, isTheorem, isSatisfiable, sbvCurrentSolver)
 
 -- | Current solver instance, pointing to MathSAT.
 sbvCurrentSolver :: SMTConfig
@@ -60,6 +60,12 @@ allSat :: Provable a
        => a                -- ^ Property to check
        -> IO AllSatResult  -- ^ List of all satisfying models
 allSat = allSatWith sbvCurrentSolver
+
+-- | Optimize objectives, using MathSAT
+optimize :: Provable a
+         => a                -- ^ Program with objectives
+         -> IO OptimizeResult
+optimize = optimizeWith sbvCurrentSolver
 
 -- | Check vacuity of the explicit constraints introduced by calls to the 'constrain' function, using the MathSAT SMT solver
 isVacuous :: Provable a
