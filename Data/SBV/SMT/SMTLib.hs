@@ -110,14 +110,16 @@ interpretSolverOutput cfg _          ls               = ProofError    cfg  ls
 -- work with Z3 and CVC4; if new solvers are added, we might need to rework
 -- the logic here.
 interpretSolverModelLine :: [NamedSymVar] -> String -> [(Int, (String, CW))]
-interpretSolverModelLine inps line = either err extract (parseSExpr line)
+interpretSolverModelLine inps line = either err (modelValues True inps line) (parseSExpr line)
   where err r =  error $  "*** Failed to parse SMT-Lib2 model output from: "
                        ++ "*** " ++ show line ++ "\n"
                        ++ "*** Reason: " ++ r ++ "\n"
 
-        getInput (ECon v)            = isInput v
-        getInput (EApp (ECon v : _)) = isInput v
-        getInput _                   = Nothing
+identifyInput :: [NamedSymVar] -> SExpr -> Maybe (Int, SW, String)
+identifyInput inps = classify
+  where classify (ECon v)            = isInput v
+        classify (EApp (ECon v : _)) = isInput v
+        classify _                   = Nothing
 
         isInput ('s':v)
           | all isDigit v = let inpId :: Int
@@ -129,26 +131,67 @@ interpretSolverModelLine inps line = either err extract (parseSExpr line)
                                                   ++ 's':v ++ " in "  ++ show matches
         isInput _       = Nothing
 
+-- | Turn an sexpr to a binding in our model
+modelValues :: Bool -> [NamedSymVar] -> String -> SExpr -> [(Int, (String, CW))]
+modelValues errOnUnrecognized inps line = extract
+  where getInput = identifyInput inps
+
         getUIIndex (KUserSort  _ (Right xs)) i = i `lookup` zip xs [0..]
         getUIIndex _                         _ = Nothing
 
-        extract (EApp (ECon "objectives" : _)) = []
         extract (EApp [EApp [v, ENum    i]]) | Just (n, s, nm) <- getInput v                    = [(n, (nm, mkConstCW (kindOf s) (fst i)))]
         extract (EApp [EApp [v, EReal   i]]) | Just (n, s, nm) <- getInput v, isReal s          = [(n, (nm, CW KReal (CWAlgReal i)))]
+
         -- the following is when z3 returns a cast to an int. Inherently dangerous! (but useful)
         extract (EApp [EApp [v, EReal   i]]) | Just (n, _, nm) <- getInput v                    = [(n, (nm, CW KReal (CWAlgReal i)))]
+
         extract (EApp [EApp [v, ECon    i]]) | Just (n, s, nm) <- getInput v, isUninterpreted s = let k = kindOf s in [(n, (nm, CW k (CWUserSort (getUIIndex k i, i))))]
         extract (EApp [EApp [v, EDouble i]]) | Just (n, s, nm) <- getInput v, isDouble s        = [(n, (nm, CW KDouble (CWDouble i)))]
         extract (EApp [EApp [v, EFloat  i]]) | Just (n, s, nm) <- getInput v, isFloat s         = [(n, (nm, CW KFloat (CWFloat i)))]
+
         -- weird lambda app that CVC4 seems to throw out.. logic below derived from what I saw CVC4 print, hopefully sufficient
         extract (EApp (EApp (v : EApp (ECon "LAMBDA" : xs) : _) : _)) | Just{} <- getInput v, not (null xs) = extract (EApp [EApp [v, last xs]])
-        extract (EApp [EApp (v : r)])      | Just (_, _, nm) <- getInput v = error $   "SBV.SMTLib2: Cannot extract value for " ++ show nm
-                                                                                   ++ "\n\tInput: " ++ show line
-                                                                                   ++ "\n\tParse: " ++  show r
 
-        extract _                                                          = []
+        extract (EApp [EApp (v : r)])
+          | Just (_, _, nm) <- getInput v
+          , errOnUnrecognized
+          = error $   "SBV.SMTLib2: Cannot extract value for " ++ show nm
+                   ++ "\n\tInput: " ++ show line
+                   ++ "\n\tParse: " ++ show r
 
+        extract _ = []
+
+-- Similar to model-lines but designed for reading objectives
 interpretSolverObjectiveLine :: [NamedSymVar] -> String -> [(Int, (String, GeneralizedCW))]
-interpretSolverObjectiveLine = error "TBD"
+interpretSolverObjectiveLine inps line = either err extract (parseSExpr line)
+  where err r =  error $  "*** Failed to parse SMT-Lib2 model output from: "
+                       ++ "*** " ++ show line ++ "\n"
+                       ++ "*** Reason: " ++ r ++ "\n"
 
-{-# ANN interpretSolverModelLine  ("HLint: ignore Use elemIndex" :: String) #-}
+        getInput = identifyInput inps
+
+        extract :: SExpr -> [(Int, (String, GeneralizedCW))]
+        extract (EApp (ECon "objectives" : es)) = concatMap getObjValue es
+        extract _                               = []
+
+        getObjValue :: SExpr -> [(Int, (String, GeneralizedCW))]
+        getObjValue e = case modelValues False inps line (EApp [e]) of
+                          [] -> getUnboundedValues e
+                          xs -> [(i, (s, RegularCW v)) | (i, (s, v)) <- xs]
+
+        getUnboundedValues :: SExpr -> [(Int, (String, GeneralizedCW))]
+        getUnboundedValues item = go item
+          where go (EApp [v, ECon "oo"])                                | Just (n, s, nm) <- getInput v, isInteger s = [(n, (nm, InfiniteCW KUnbounded False))]
+                go (EApp [v, ECon "oo"])                                | Just (n, s, nm) <- getInput v, isReal    s = [(n, (nm, InfiniteCW KReal      False))]
+                go (EApp [v, EApp [ECon "*", ENum (-1, _), ECon "oo"]]) | Just (n, s, nm) <- getInput v, isInteger s = [(n, (nm, InfiniteCW KUnbounded True))]
+                go (EApp [v, EApp [ECon "*", ENum (-1, _), ECon "oo"]]) | Just (n, s, nm) <- getInput v, isReal    s = [(n, (nm, InfiniteCW KReal      True))]
+                go (EApp [v, ECon "epsilon"])                           | Just (n, s, nm) <- getInput v, isReal    s = [(n, (nm, EpsilonCW  KReal      False))]
+                go (EApp [v, EApp [ECon "*", EApp [ECon "to_real",ENum (-1, _)], ECon "epsilon"]])
+                                                                        | Just (n, s, nm) <- getInput v, isReal    s = [(n, (nm, EpsilonCW  KReal      True))]
+
+                go r = error $    "SBV.SMTLib2: Cannot extract objective value from solver output!"
+                               ++ "\n\tInput     : " ++ show line
+                               ++ "\n\tParse     : " ++ show r
+                               ++ "\n\tItem Parse: " ++ show item
+
+{-# ANN modelValues  ("HLint: ignore Use elemIndex" :: String) #-}
