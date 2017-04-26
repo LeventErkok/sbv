@@ -26,7 +26,7 @@ module Data.SBV.Core.Data
  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
  , sRNE, sRNA, sRTP, sRTN, sRTZ
  , SymWord(..)
- , CW(..), CWVal(..), AlgReal(..), GeneralizedCW(..), cwSameType, cwToBool
+ , CW(..), CWVal(..), AlgReal(..), GeneralizedCW(..), isRegularCW, cwSameType, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
  , SW(..), trueSW, falseSW, trueCW, falseCW, normCW
  , SVal(..)
