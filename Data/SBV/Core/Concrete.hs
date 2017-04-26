@@ -77,15 +77,13 @@ data CW = CW { _cwKind  :: !Kind
              }
         deriving (Eq, Ord)
 
--- | A generalized CW allows for infinite and epsilon values. Used in optimization problems.
-data GeneralizedCW = InfiniteCW Kind Bool   -- sign
-                   | EpsilonCW  Kind Bool   -- sign
+-- | A generalized CW allows for expressions involving infinite and epsilon values/intervals Used in optimization problems.
+data GeneralizedCW = ExtendedCW Kind String  -- The string is a visual representation of it, as close as we can get.
                    | RegularCW  CW
 
 isRegularCW :: GeneralizedCW -> Bool
-isRegularCW InfiniteCW{} = False
-isRegularCW EpsilonCW{}  = False
 isRegularCW RegularCW{}  = True
+isRegularCW ExtendedCW{} = False
 
 -- | 'Kind' instance for CW
 instance HasKind CW where
@@ -93,9 +91,8 @@ instance HasKind CW where
 
 -- | 'Kind' instance for generalized CW
 instance HasKind GeneralizedCW where
-  kindOf (InfiniteCW k _) = k
-  kindOf (EpsilonCW  k _) = k
-  kindOf (RegularCW c)    = kindOf c
+  kindOf (ExtendedCW k _) = k
+  kindOf (RegularCW  c)   = kindOf c
 
 -- | Are two CW's of the same type?
 cwSameType :: CW -> CW -> Bool
@@ -171,8 +168,7 @@ instance Show CW where
 
 -- | Show instance for Generalized 'CW'
 instance Show GeneralizedCW where
-  show (InfiniteCW k s) = (if s then "-" else "") ++ "oo :: "  ++ showBaseKind k
-  show (EpsilonCW  k s) = (if s then "-" else "") ++ "epsilon :: " ++ showBaseKind k
+  show (ExtendedCW k s) = s ++ " :: "  ++ showBaseKind k
   show (RegularCW  c)   = showCW True c
 
 -- | Show a CW, with kind info if bool is True

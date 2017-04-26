@@ -19,7 +19,8 @@ module Data.SBV.SMT.SMTLib(
         , interpretSolverObjectiveLine
         ) where
 
-import Data.Char (isDigit)
+import Data.Char (isDigit, isAlpha, isAlphaNum)
+import Data.List (isPrefixOf)
 
 import Data.SBV.Core.Data
 import Data.SBV.Provers.SExpr
@@ -181,17 +182,64 @@ interpretSolverObjectiveLine inps line = either err extract (parseSExpr line)
 
         getUnboundedValues :: SExpr -> [(Int, (String, GeneralizedCW))]
         getUnboundedValues item = go item
-          where go (EApp [v, ECon "oo"])                                | Just (n, s, nm) <- getInput v, isInteger s = [(n, (nm, InfiniteCW KUnbounded False))]
-                go (EApp [v, ECon "oo"])                                | Just (n, s, nm) <- getInput v, isReal    s = [(n, (nm, InfiniteCW KReal      False))]
-                go (EApp [v, EApp [ECon "*", ENum (-1, _), ECon "oo"]]) | Just (n, s, nm) <- getInput v, isInteger s = [(n, (nm, InfiniteCW KUnbounded True))]
-                go (EApp [v, EApp [ECon "*", ENum (-1, _), ECon "oo"]]) | Just (n, s, nm) <- getInput v, isReal    s = [(n, (nm, InfiniteCW KReal      True))]
-                go (EApp [v, ECon "epsilon"])                           | Just (n, s, nm) <- getInput v, isReal    s = [(n, (nm, EpsilonCW  KReal      False))]
-                go (EApp [v, EApp [ECon "*", EApp [ECon "to_real",ENum (-1, _)], ECon "epsilon"]])
-                                                                        | Just (n, s, nm) <- getInput v, isReal    s = [(n, (nm, EpsilonCW  KReal      True))]
+          where go (EApp [v, rest]) | Just (n, s, nm) <- getInput v = [(n, (nm, ExtendedCW (kindOf s) (render (reduce rest))))]
 
                 go r = error $    "SBV.SMTLib2: Cannot extract objective value from solver output!"
                                ++ "\n\tInput     : " ++ show line
                                ++ "\n\tParse     : " ++ show r
                                ++ "\n\tItem Parse: " ++ show item
+
+                -- A simpler variant of show for SExprs, to reduce noise
+                render :: SExpr -> String
+                render (ECon s)                       = s
+                render (ENum (i, _))                  = show i
+                render (EReal ar)                     = show ar
+                render (EFloat f)                     = show f
+                render (EDouble d)                    = show d
+                render (EApp [x])                     = render x
+                render (EApp [ECon "+",        x, y]) = render x ++ " + " ++ render y
+                render (EApp [ECon "*",        x, y]) = render x ++ " * " ++ render y
+                render (EApp [ECon "interval", x, y]) = "[" ++ render x ++ ", " ++ render y ++ "]"
+                render (EApp [x, y])                  = "[" ++ render x ++ ", " ++ render y ++ "]"
+                render (EApp xs)                      = "(" ++ unwords (map render xs) ++ ")"
+
+                size :: SExpr -> Int
+                size (EApp xs) = sum $ map size xs
+                size _         = 1
+
+                reduce :: SExpr -> SExpr
+                reduce xs
+                   | size xs' < size xs = reduce xs'
+                   | True               = xs'
+                  where xs' = simplify xs
+
+                -- recognize common patterns and simplify them
+                simplify :: SExpr -> SExpr
+                simplify (EApp [ECon "to_real", n])                         = n
+                simplify (EApp [ECon "*", ENum (-1, _), ECon s]) | simple s = ECon ('-':s)
+                simplify (EApp [ECon "+", ENum (i, _),  ECon s]) | simple s = ECon (add i s)
+                simplify (EApp [ECon "*", ENum (i, _),  ECon s]) | simple s = ECon (mul i s)
+                simplify (EApp xs)                                          = EApp (map simplify xs)
+                simplify e                                                  = e
+
+                -- Don't overprocess!
+                simple :: String -> Bool
+                simple ('-':r) = simple r
+                simple (f:r)   = isAlpha f && all isAlphaNum r
+                simple _       = False
+
+                add :: Integer -> String -> String
+                add n v = case (n < 0, "-" `isPrefixOf` v) of
+                            (True,  True)  -> v ++ show n        -- -v-2
+                            (True,  False) -> v ++ show n        --  v-2
+                            (False, True)  -> show n ++ v        --  2-v
+                            (False, False) -> v ++ "+" ++ show n --  v+2
+
+                mul :: Integer -> String -> String
+                mul n v = case (n < 0, "-" `isPrefixOf` v) of
+                            (True,  True)  -> show (-n) ++ tail v -- -2 * -v =  2v
+                            (True,  False) -> show n ++ v         -- -2 *  v = -2v
+                            (False, True)  -> show (-n) ++ tail v --  2 * -v = -2v
+                            (False, False) -> show n ++ v         --  2 *  v =  2v
 
 {-# ANN modelValues  ("HLint: ignore Use elemIndex" :: String) #-}

@@ -1089,8 +1089,7 @@ instance NFData CW where
   rnf (CW x y) = x `seq` y `seq` ()
 
 instance NFData GeneralizedCW where
-  rnf (InfiniteCW k s) = k `seq` s `seq` ()
-  rnf (EpsilonCW  k s) = k `seq` s `seq` ()
+  rnf (ExtendedCW k s) = k `seq` s `seq` ()
   rnf (RegularCW  c)   = c `seq` ()
 
 #if MIN_VERSION_base(4,9,0)
