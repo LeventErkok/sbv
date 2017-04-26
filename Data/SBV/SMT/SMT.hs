@@ -111,7 +111,11 @@ instance Show AllSatResult where
                            _             -> False
 
 instance Show OptimizeResult where
-  show (OptimizeUnbounded   cfg d) = "Objectives have unbounded optimal values:\n" ++ showModelDictionary cfg d
+  show (OptimizeUnbounded   cfg d)
+       = "Objective" ++ pluv ++ " unbounded/interval optimal value" ++ plu ++ ":\n" ++ showModelDictionary cfg d
+       where (pluv, plu) | length d > 1 = ("s have", "s")
+                         | True         = (" has", "")
+
   show (LexicographicResult r)     = show (SatResult r)
   show (ParetoResult        _)     = "TBD: show pareto"
   show (IndependentResult   _)     = "TBD: show independent"
