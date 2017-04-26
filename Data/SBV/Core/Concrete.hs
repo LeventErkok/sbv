@@ -77,9 +77,20 @@ data CW = CW { _cwKind  :: !Kind
              }
         deriving (Eq, Ord)
 
+-- | A generalized CW allows for infinite and epsilon values. Used in optimization problems.
+data GeneralizedCW = InfiniteCW Kind Bool   -- sign
+                   | EpsilonCW  Kind Bool   -- sign
+                   | RegularCW  CW
+
 -- | 'Kind' instance for CW
 instance HasKind CW where
   kindOf (CW k _) = k
+
+-- | 'Kind' instance for generalized CW
+instance HasKind GeneralizedCW where
+  kindOf (InfiniteCW k _) = k
+  kindOf (EpsilonCW  k _) = k
+  kindOf (RegularCW c)    = kindOf c
 
 -- | Are two CW's of the same type?
 cwSameType :: CW -> CW -> Bool
@@ -153,15 +164,25 @@ mapCW2 r i f d u x y = case (cwSameType x y, cwVal x, cwVal y) of
 instance Show CW where
   show = showCW True
 
+-- | Show instance for Generalized 'CW'
+instance Show GeneralizedCW where
+  show (InfiniteCW k s) = (if s then "-" else "") ++ "oo :: "  ++ showBaseKind k
+  show (EpsilonCW  k s) = (if s then "-" else "") ++ "eps :: " ++ showBaseKind k
+  show (RegularCW  c)   = showCW True c
+
 -- | Show a CW, with kind info if bool is True
 showCW :: Bool -> CW -> String
 showCW shk w | isBoolean w = show (cwToBool w) ++ (if shk then " :: Bool" else "")
 showCW shk w               = liftCW show show show show snd w ++ kInfo
-      where kInfo | shk  = " :: " ++ shKind (kindOf w)
+      where kInfo | shk  = " :: " ++ showBaseKind (kindOf w)
                   | True = ""
-            shKind k@KUserSort {}         = show k
-            shKind k | ('S':sk) <- show k = sk
-            shKind k                      = show k
+
+-- | A version of show for kinds that says Bool instead of SBool
+showBaseKind :: Kind -> String
+showBaseKind k@KUserSort {} = show k   -- Leave user-sorts untouched!
+showBaseKind k = case show k of
+                   ('S':sk) -> sk
+                   s        -> s
 
 -- | Create a constant word from an integral.
 mkConstCW :: Integral a => Kind -> a -> CW
