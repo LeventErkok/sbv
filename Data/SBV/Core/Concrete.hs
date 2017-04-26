@@ -82,6 +82,11 @@ data GeneralizedCW = InfiniteCW Kind Bool   -- sign
                    | EpsilonCW  Kind Bool   -- sign
                    | RegularCW  CW
 
+isRegularCW :: GeneralizedCW -> Bool
+isRegularCW InfiniteCW{} = False
+isRegularCW EpsilonCW{}  = False
+isRegularCW RegularCW{}  = True
+
 -- | 'Kind' instance for CW
 instance HasKind CW where
   kindOf (CW k _) = k
@@ -167,7 +172,7 @@ instance Show CW where
 -- | Show instance for Generalized 'CW'
 instance Show GeneralizedCW where
   show (InfiniteCW k s) = (if s then "-" else "") ++ "oo :: "  ++ showBaseKind k
-  show (EpsilonCW  k s) = (if s then "-" else "") ++ "eps :: " ++ showBaseKind k
+  show (EpsilonCW  k s) = (if s then "-" else "") ++ "epsilon :: " ++ showBaseKind k
   show (RegularCW  c)   = showCW True c
 
 -- | Show a CW, with kind info if bool is True
