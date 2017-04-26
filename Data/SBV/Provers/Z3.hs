@@ -89,9 +89,12 @@ z3 = SMTSolver {
 
 extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel
 extractMap isSat qinps solverLines =
-   SMTModel { modelAssocs = map snd $ squashReals $ sortByNodeId $ concatMap (interpretSolverModelLine inps) solverLines }
+   SMTModel { modelObjectives = map snd $               sortByNodeId $ concatMap (interpretSolverObjectiveLine inps) solverLines
+            , modelAssocs     = map snd $ squashReals $ sortByNodeId $ concatMap (interpretSolverModelLine     inps) solverLines
+            }
   where sortByNodeId :: [(Int, a)] -> [(Int, a)]
         sortByNodeId = sortBy (compare `on` fst)
+
         inps -- for "sat", display the prefix existentials. For completeness, we will drop
              -- only the trailing foralls. Exception: Don't drop anything if it's all a sequence of foralls
              | isSat = map snd $ if all (== ALL) (map fst qinps)
@@ -99,6 +102,7 @@ extractMap isSat qinps solverLines =
                                  else reverse $ dropWhile ((== ALL) . fst) $ reverse qinps
              -- for "proof", just display the prefix universals
              | True  = map snd $ takeWhile ((== ALL) . fst) qinps
+
         squashReals :: [(Int, (String, CW))] -> [(Int, (String, CW))]
         squashReals = concatMap squash . groupBy ((==) `on` fst)
           where squash [(i, (n, cw1)), (_, (_, cw2))] = [(i, (n, mergeReals n cw1 cw2))]

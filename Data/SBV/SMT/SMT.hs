@@ -36,7 +36,7 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (SMTEngine)
 
-import Data.SBV.SMT.SMTLib    (interpretSolverOutput, interpretSolverModelLine)
+import Data.SBV.SMT.SMTLib    (interpretSolverOutput, interpretSolverModelLine, interpretSolverObjectiveLine)
 
 import Data.SBV.Utils.PrettyNum
 import Data.SBV.Utils.Lib             (joinArgs, splitArgs)
@@ -348,14 +348,14 @@ displayModels disp (AllSatResult (_, ms)) = do
 -- | Show an SMTResult; generic version
 showSMTResult :: String -> String -> String -> String -> String -> SMTResult -> String
 showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel result = case result of
-  Unsatisfiable _             -> unsatMsg
-  Satisfiable _ (SMTModel []) -> satMsg
-  Satisfiable _ m             -> satMsgModel ++ showModel cfg m
-  Unknown     _ (SMTModel []) -> unkMsg
-  Unknown     _ m             -> unkMsgModel ++ showModel cfg m
-  ProofError  _ []            -> "*** An error occurred. No additional information available. Try running in verbose mode"
-  ProofError  _ ls            -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
-  TimeOut     _               -> "*** Timeout"
+  Unsatisfiable _               -> unsatMsg
+  Satisfiable _ (SMTModel _ []) -> satMsg
+  Satisfiable _ m               -> satMsgModel ++ showModel cfg m
+  Unknown     _ (SMTModel _ []) -> unkMsg
+  Unknown     _ m               -> unkMsgModel ++ showModel cfg m
+  ProofError  _ []              -> "*** An error occurred. No additional information available. Try running in verbose mode"
+  ProofError  _ ls              -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
+  TimeOut     _                 -> "*** Timeout"
  where cfg = resultConfig result
 
 -- | Show a model in human readable form. Ignore bindings to those variables that start
@@ -453,7 +453,9 @@ standardValueExtractor _ l = [l]
 
 -- | A standard post-processor: Reading the lines of solver output and turning it into a model:
 standardModelExtractor :: Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel
-standardModelExtractor isSat qinps solverLines = SMTModel { modelAssocs = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine inps) solverLines }
+standardModelExtractor isSat qinps solverLines = SMTModel { modelObjectives = map snd $ sortByNodeId $ concatMap (interpretSolverObjectiveLine inps) solverLines
+                                                          , modelAssocs     = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine     inps) solverLines
+                                                          }
          where sortByNodeId :: [(Int, a)] -> [(Int, a)]
                sortByNodeId = sortBy (compare `on` fst)
                inps -- for "sat", display the prefix existentials. For completeness, we will drop
