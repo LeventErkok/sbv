@@ -413,9 +413,9 @@ optimizeWith config a = do
         let hasPar  = any isParallelCaseAnywhere tactics
             result  = bufferSanity hasPar $ applyTactics config (True, hasPar) (id, id) [] tactics objectives $ callSolver True "Optimizing.." [] id sbvPgm
         case nub (map fst objectives) of
-          [Lexicographic] -> result >>= optLexicographic
-          [Pareto]        -> result >>= optPareto
-          [Independent]   -> result >>= optIndependent
+          [Lexicographic] -> optLexicographic config `fmap` result
+          [Pareto]        -> optPareto               `fmap` result
+          [Independent]   -> optIndependent          `fmap` result
           []              -> error "SBV: optimize called with no objectives!"
           ss              -> error $ "SBV: Multiple optimization styles found, please use only one: " ++ intercalate ", " (map show ss)
   where msg = when (verbose config) . putStrLn . ("** " ++)
@@ -424,8 +424,19 @@ optimizeWith config a = do
         optIndependent   _ = error "optIndependent: TBD"
 
 -- | Convert an SMTResult to an optimization-result, in the case of lexicographic objectives
-optLexicographic :: SMTResult -> IO OptimizeResult
-optLexicographic = return . LexicographicResult
+optLexicographic :: SMTConfig -> SMTResult -> OptimizeResult
+optLexicographic cfg r = case r of
+                          Unsatisfiable{} -> lr
+                          ProofError{}    -> lr
+                          TimeOut{}       -> lr
+                          Unknown _ m     -> maybe lr (OptimizeUnbounded cfg) (unbounded (modelObjectives m))
+                          Satisfiable _ m -> maybe lr (OptimizeUnbounded cfg) (unbounded (modelObjectives m))
+   where lr = LexicographicResult r
+
+unbounded ::  [(String, GeneralizedCW)] -> Maybe [(String, GeneralizedCW)]
+unbounded origs = case filter (not . isRegularCW . snd) origs of
+                    [] -> Nothing
+                    _  -> Just origs
 
 -- repeated use of partition
 cluster :: [a -> Bool] -> [a] -> [[a]]

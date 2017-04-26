@@ -65,7 +65,7 @@ newtype AllSatResult = AllSatResult (Bool, [SMTResult])
 newtype SafeResult   = SafeResult   (Maybe String, String, SMTResult)
 
 -- | An 'optimize' call results in a 'OptimizeResult'
-data OptimizeResult = OptimizeUnbounded   [(String, String)]
+data OptimizeResult = OptimizeUnbounded   SMTConfig [(String, GeneralizedCW)]
                     | LexicographicResult SMTResult
                     | ParetoResult        [SMTResult]
                     | IndependentResult   [(String, SMTResult)]
@@ -111,10 +111,10 @@ instance Show AllSatResult where
                            _             -> False
 
 instance Show OptimizeResult where
-  show (OptimizeUnbounded   _) = "TBD: show unbounded"
-  show (LexicographicResult _) = "TBD: show lexico"
-  show (ParetoResult        _) = "TBD: show pareto"
-  show (IndependentResult   _) = "TBD: show independent"
+  show (OptimizeUnbounded   cfg d) = "Objectives have unbounded optimal values:\n" ++ showModelDictionary cfg d
+  show (LexicographicResult r)     = show (SatResult r)
+  show (ParetoResult        _)     = "TBD: show pareto"
+  show (IndependentResult   _)     = "TBD: show independent"
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
 -- solvers. The idea is that the sbv infrastructure provides a stream of 'CW''s (constant-words)
@@ -361,29 +361,38 @@ showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel result = case resul
 -- | Show a model in human readable form. Ignore bindings to those variables that start
 -- with "__internal_sbv_" and also those marked as "nonModelVar" in the config; as these are only for internal purposes
 showModel :: SMTConfig -> SMTModel -> String
-showModel cfg model
+showModel cfg model = showModelDictionary cfg [(n, RegularCW c) | (n, c) <- modelAssocs model]
+
+-- | Show bindings in a generalized model dictionary, tabulated
+showModelDictionary :: SMTConfig -> [(String, GeneralizedCW)] -> String
+showModelDictionary cfg allVars
    | null allVars
    = "[There are no variables bound by the model.]"
    | null relevantVars
    = "[There are no model-variables bound by the model.]"
    | True
    = intercalate "\n" . display . map shM $ relevantVars
-  where allVars       = modelAssocs model
-        relevantVars  = filter (not . ignore) allVars
+  where relevantVars  = filter (not . ignore) allVars
         ignore (s, _) = "__internal_sbv_" `isPrefixOf` s || isNonModelVar cfg s
-        shM (s, v)    = let vs = shCW cfg v in ((length s, s), (vlength vs, vs))
+
+        shM (s, RegularCW v) = let vs = shCW cfg v in ((length s, s), (vlength vs, vs))
+        shM (s, other)       = let vs = show other in ((length s, s), (vlength vs, vs))
+
         display svs   = map line svs
            where line ((_, s), (_, v)) = "  " ++ right (nameWidth - length s) s ++ " = " ++ left (valWidth - lTrimRight (valPart v)) v
                  nameWidth             = maximum $ 0 : [l | ((l, _), _) <- svs]
                  valWidth              = maximum $ 0 : [l | (_, (l, _)) <- svs]
+
         right p s = s ++ replicate p ' '
         left  p s = replicate p ' ' ++ s
         vlength s = case dropWhile (/= ':') (reverse (takeWhile (/= '\n') s)) of
                       (':':':':r) -> length (dropWhile isSpace r)
                       _           -> length s -- conservative
+
         valPart ""          = ""
         valPart (':':':':_) = ""
         valPart (x:xs)      = x : valPart xs
+
         lTrimRight = length . dropWhile isSpace . reverse
 
 -- | Show a constant value, in the user-specified base
