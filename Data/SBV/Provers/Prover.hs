@@ -849,13 +849,13 @@ allSatWith config p = do
                                                               rest <- unsafeInterleaveIO $ loop (n+1) (modelOnlyAssocs : nonEqConsts)
                                                               return (r : rest)
                                           in case r of
-                                               Satisfiable   _ (SMTModel []) -> return [r]
-                                               Unknown       _ (SMTModel []) -> return [r]
-                                               ProofError    _ _             -> return [r]
-                                               TimeOut       _               -> return []
-                                               Unsatisfiable _               -> return []
-                                               Satisfiable   _ model         -> cont model
-                                               Unknown       _ model         -> cont model
+                                               Satisfiable   _ (SMTModel _ []) -> return [r]
+                                               Unknown       _ (SMTModel _ []) -> return [r]
+                                               ProofError    _ _               -> return [r]
+                                               TimeOut       _                 -> return []
+                                               Unsatisfiable _                 -> return []
+                                               Satisfiable   _ model           -> cont model
+                                               Unknown       _ model           -> cont model
         invoke nonEqConsts hasPar n simRes@SMTProblem{smtInputs=qinps, tactics=tactics, objectives=objectives} = do
                objectiveCheck False (concatMap snd objectives) "allSat"
                msg $ "Looking for solution " ++ show n

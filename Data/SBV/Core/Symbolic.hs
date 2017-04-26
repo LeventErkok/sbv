@@ -1125,7 +1125,7 @@ instance NFData SMTResult where
   rnf (TimeOut _)         = ()
 
 instance NFData SMTModel where
-  rnf (SMTModel assocs) = rnf assocs `seq` ()
+  rnf (SMTModel objs assocs) = rnf objs `seq` rnf assocs `seq` ()
 
 instance NFData SMTScript where
   rnf (SMTScript b m) = rnf b `seq` rnf m `seq` ()
@@ -1255,8 +1255,9 @@ instance Show SMTConfig where
   show = show . solver
 
 -- | A model, as returned by a solver
-newtype SMTModel = SMTModel {
-        modelAssocs    :: [(String, CW)]        -- ^ Mapping of symbolic values to constants.
+data SMTModel = SMTModel {
+        modelObjectives :: [(String, GeneralizedCW)]  -- ^ Mapping of symbolic values to objective values.
+     ,  modelAssocs     :: [(String, CW)]             -- ^ Mapping of symbolic values to constants.
      }
      deriving Show
 

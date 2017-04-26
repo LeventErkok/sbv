@@ -9,7 +9,15 @@
 -- Conversion of symbolic programs to SMTLib format
 -----------------------------------------------------------------------------
 
-module Data.SBV.SMT.SMTLib(SMTLibPgm, SMTLibConverter, toSMTLib2, addNonEqConstraints, interpretSolverOutput, interpretSolverModelLine) where
+module Data.SBV.SMT.SMTLib(
+          SMTLibPgm
+        , SMTLibConverter
+        , toSMTLib2
+        , addNonEqConstraints
+        , interpretSolverOutput
+        , interpretSolverModelLine
+        , interpretSolverObjectiveLine
+        ) where
 
 import Data.Char (isDigit)
 
@@ -106,9 +114,11 @@ interpretSolverModelLine inps line = either err extract (parseSExpr line)
   where err r =  error $  "*** Failed to parse SMT-Lib2 model output from: "
                        ++ "*** " ++ show line ++ "\n"
                        ++ "*** Reason: " ++ r ++ "\n"
+
         getInput (ECon v)            = isInput v
         getInput (EApp (ECon v : _)) = isInput v
         getInput _                   = Nothing
+
         isInput ('s':v)
           | all isDigit v = let inpId :: Int
                                 inpId = read v
@@ -118,8 +128,11 @@ interpretSolverModelLine inps line = either err extract (parseSExpr line)
                                  matches -> error $  "SBV.SMTLib2: Cannot uniquely identify value for "
                                                   ++ 's':v ++ " in "  ++ show matches
         isInput _       = Nothing
+
         getUIIndex (KUserSort  _ (Right xs)) i = i `lookup` zip xs [0..]
         getUIIndex _                         _ = Nothing
+
+        extract (EApp (ECon "objectives" : _)) = []
         extract (EApp [EApp [v, ENum    i]]) | Just (n, s, nm) <- getInput v                    = [(n, (nm, mkConstCW (kindOf s) (fst i)))]
         extract (EApp [EApp [v, EReal   i]]) | Just (n, s, nm) <- getInput v, isReal s          = [(n, (nm, CW KReal (CWAlgReal i)))]
         -- the following is when z3 returns a cast to an int. Inherently dangerous! (but useful)
@@ -132,6 +145,10 @@ interpretSolverModelLine inps line = either err extract (parseSExpr line)
         extract (EApp [EApp (v : r)])      | Just (_, _, nm) <- getInput v = error $   "SBV.SMTLib2: Cannot extract value for " ++ show nm
                                                                                    ++ "\n\tInput: " ++ show line
                                                                                    ++ "\n\tParse: " ++  show r
+
         extract _                                                          = []
+
+interpretSolverObjectiveLine :: [NamedSymVar] -> String -> [(Int, (String, GeneralizedCW))]
+interpretSolverObjectiveLine = error "TBD"
 
 {-# ANN interpretSolverModelLine  ("HLint: ignore Use elemIndex" :: String) #-}

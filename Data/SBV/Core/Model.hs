@@ -1684,7 +1684,7 @@ instance Testable (Symbolic SBool) where
                                  Nothing -> noQC [show r]
                                  Just b  -> return (cond, b, tvals)
                          us -> noQC us
-           complain qcInfo = showModel defaultSMTCfg (SMTModel qcInfo)
+           complain qcInfo = showModel defaultSMTCfg (SMTModel [] qcInfo)
            noQC us         = error $ "Cannot quick-check in the presence of uninterpreted constants: " ++ intercalate ", " us
 
 -- | Quick check an SBV property. Note that a regular 'quickCheck' call will work just as
