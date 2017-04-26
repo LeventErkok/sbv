@@ -408,19 +408,24 @@ satWith config a = do simRes@SMTProblem{tactics, objectives} <- simulate (getCon
 optimizeWith :: Provable a => SMTConfig -> a -> IO OptimizeResult
 optimizeWith config a = do
         msg "Optimizing.."
-        sbvPgm@SMTProblem{objectives} <- simulate (getConverter config) config True [] a
-        objectiveCheck True (concatMap snd objectives) "sat"
+        sbvPgm@SMTProblem{objectives, tactics} <- simulate (getConverter config) config True [] a
+        objectiveCheck True (concatMap snd objectives) "optimize"
+        let hasPar  = any isParallelCaseAnywhere tactics
+            result  = bufferSanity hasPar $ applyTactics config (True, hasPar) (id, id) [] tactics objectives $ callSolver True "Optimizing.." [] id sbvPgm
         case nub (map fst objectives) of
-          [Lexicographic] -> optLexicographic sbvPgm
-          [Pareto]        -> optPareto        sbvPgm
-          [Independent]   -> optIndependent   sbvPgm
+          [Lexicographic] -> result >>= optLexicographic
+          [Pareto]        -> result >>= optPareto
+          [Independent]   -> result >>= optIndependent
           []              -> error "SBV: optimize called with no objectives!"
           ss              -> error $ "SBV: Multiple optimization styles found, please use only one: " ++ intercalate ", " (map show ss)
   where msg = when (verbose config) . putStrLn . ("** " ++)
 
-        optLexicographic _ = error "optLexicographic: TBD"
         optPareto        _ = error "optPareto: TBD"
         optIndependent   _ = error "optIndependent: TBD"
+
+-- | Convert an SMTResult to an optimization-result, in the case of lexicographic objectives
+optLexicographic :: SMTResult -> IO OptimizeResult
+optLexicographic = return . LexicographicResult
 
 -- repeated use of partition
 cluster :: [a -> Bool] -> [a] -> [[a]]
