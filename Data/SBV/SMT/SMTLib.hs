@@ -229,17 +229,14 @@ interpretSolverObjectiveLine inps line = either err extract (parseSExpr line)
                 simple _       = False
 
                 add :: Integer -> String -> String
-                add n v = case (n < 0, "-" `isPrefixOf` v) of
-                            (True,  True)  -> v ++ show n        -- -v-2
-                            (True,  False) -> v ++ show n        --  v-2
-                            (False, True)  -> show n ++ v        --  2-v
-                            (False, False) -> v ++ "+" ++ show n --  v+2
+                add n v | isNeg v = show n        ++ v
+                        | True    = show n ++ "+" ++ v
 
                 mul :: Integer -> String -> String
-                mul n v = case (n < 0, "-" `isPrefixOf` v) of
-                            (True,  True)  -> show (-n) ++ tail v -- -2 * -v =  2v
-                            (True,  False) -> show n ++ v         -- -2 *  v = -2v
-                            (False, True)  -> show (-n) ++ tail v --  2 * -v = -2v
-                            (False, False) -> show n ++ v         --  2 *  v =  2v
+                mul n v | isNeg v = show (-n) ++ tail v
+                        | True    = show n    ++ v
+
+                isNeg :: String -> Bool
+                isNeg = ("-" `isPrefixOf`)
 
 {-# ANN modelValues  ("HLint: ignore Use elemIndex" :: String) #-}
