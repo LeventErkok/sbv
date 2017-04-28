@@ -12,6 +12,7 @@
 {-# LANGUAGE CPP                  #-}
 {-# LANGUAGE BangPatterns         #-}
 {-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -56,7 +57,6 @@ import Data.SBV.Core.Symbolic
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 import Data.SBV.Utils.TDiff
-import Data.SBV.Utils.Lib (cluster)
 
 import Control.DeepSeq (rnf)
 import Control.Exception (bracket)
@@ -455,8 +455,7 @@ applyTactics :: SMTConfig                             -- ^ Solver configuration
              -> (SMTConfig -> CaseCond -> IO res)     -- ^ The actual continuation at this point
              -> IO res
 applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
-   = do unless (null others) $ error $ "SBV: Unsupported tactic: " ++ show others
-        --
+   = do --
         -- TODO: The management of tactics here is quite adhoc. We should have a better story
         -- Currently, we:
         --
@@ -487,17 +486,19 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
                                 then cont finalConfig (CasePath (map (snd . snd) levels))
                                 else caseSplit finalConfig shouldCheckCaseVacuity (parallelCase, hasPar) isSat (wrap, unwrap) levels chatty cases cont
 
-  where [caseSplits, parallelCases, timeOuts, checkUsing, useLogics, useSolvers, checkCaseVacuity, checkConstrVacuity, optimizeUsing, others]
-                = cluster [ isCaseSplitTactic
-                          , isParallelCaseTactic
-                          , isStopAfterTactic
-                          , isCheckUsingTactic
-                          , isUseLogicTactic
-                          , isUseSolverTactic
-                          , isCheckCaseVacuityTactic
-                          , isCheckConstrVacuityTactic
-                          , isOptimizeUsingTactic
-                          ] tactics
+  where (caseSplits, checkCaseVacuity, parallelCases, checkConstrVacuity, timeOuts, checkUsing, useLogics, useSolvers, optimizeUsing)
+                = foldr (flip classifyTactics) ([], [], [], [], [], [], [], [], []) tactics
+
+        classifyTactics (a, b, c, d, e, f, g, h, i) = \case
+                    t@CaseSplit{}           -> (t:a,   b,   c,   d,   e,   f,   g,   h,   i)
+                    t@CheckCaseVacuity{}    -> (  a, t:b,   c,   d,   e,   f,   g,   h,   i)
+                    t@ParallelCase{}        -> (  a,   b, t:c,   d,   e,   f,   g,   h,   i)
+                    t@CheckConstrVacuity{}  -> (  a,   b,   c, t:d,   e,   f,   g,   h,   i)
+                    t@StopAfter{}           -> (  a,   b,   c,   d, t:e,   f,   g,   h,   i)
+                    t@CheckUsing{}          -> (  a,   b,   c,   d,   e, t:f,   g,   h,   i)
+                    t@UseLogic{}            -> (  a,   b,   c,   d,   e,   f, t:g,   h,   i)
+                    t@UseSolver{}           -> (  a,   b,   c,   d,   e,   f,   g, t:h,   i)
+                    t@OptimizeUsing{}       -> (  a,   b,   c,   d,   e,   f,   g,   h, t:i)
 
         hasObjectives = not $ null objectives
 
@@ -662,7 +663,7 @@ caseSplit config checkVacuity (runParallel, hasPar) isSAT (wrap, unwrap) level c
                 decideSerial multi Nothing (unwrap res) (return res)
         goSerial ((i, (nm, cond, ts)):cs)
            -- Still going down, do a regular call
-           = do let multi = any isCaseSplitAnywhere ts
+           = do let multi = not . null $ [() | CaseSplit{} <- ts]
                     mbis  = Just (i, nm)
                 startCase multi mbis
                 continue <- if isSAT   -- for a SAT check, vacuity is meaningless (what would be the point)?

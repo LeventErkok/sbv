@@ -9,9 +9,8 @@
 -- Misc helpers
 -----------------------------------------------------------------------------
 
-module Data.SBV.Utils.Lib (mlift2, mlift3, mlift4, mlift5, mlift6, mlift7, mlift8, joinArgs, splitArgs, cluster) where
+module Data.SBV.Utils.Lib (mlift2, mlift3, mlift4, mlift5, mlift6, mlift7, mlift8, joinArgs, splitArgs) where
 
-import Data.List (partition)
 import Data.Char (isSpace)
 import Data.Maybe (fromJust, isNothing)
 
@@ -89,9 +88,3 @@ splitArgs = join . f Init
           f Norm (x:xs) | isSpace x = Nothing : f Init xs
           f m (x:xs)                = Just x : f m xs
           f _ []                    = []
-
--- repeated use of partition
-cluster :: [a -> Bool] -> [a] -> [[a]]
-cluster []     xs = [xs]
-cluster (f:fs) xs = ok : cluster fs other
- where (ok, other) = partition f xs

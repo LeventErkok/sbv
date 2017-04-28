@@ -47,8 +47,7 @@ module Data.SBV.Core.Symbolic
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
-  , Tactic(..), addSValTactic, isCaseSplitTactic, isCaseSplitAnywhere, isParallelCaseAnywhere
-  , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic, isUseSolverTactic, isCheckCaseVacuityTactic, isCheckConstrVacuityTactic, isOptimizeUsingTactic
+  , Tactic(..), addSValTactic, isParallelCaseAnywhere
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
   , mkSValUserSort
@@ -343,61 +342,11 @@ instance NFData a => NFData (Tactic a) where
    rnf (UseSolver        s)   = rnf s `seq` ()
    rnf (OptimizeUsing    s)   = rnf s `seq` ()
 
--- | Is this a case-split tactic?
-isCaseSplitTactic :: Tactic a -> Bool
-isCaseSplitTactic CaseSplit{} = True
-isCaseSplitTactic _           = False
-
--- | Is this a StopAfter tactic?
-isStopAfterTactic :: Tactic a -> Bool
-isStopAfterTactic StopAfter{} = True
-isStopAfterTactic _           = False
-
--- | Is this a CheckUsing tactic?
-isCheckUsingTactic :: Tactic a -> Bool
-isCheckUsingTactic CheckUsing{} = True
-isCheckUsingTactic _            = False
-
--- | Is this a UseLogic tactic?
-isUseLogicTactic :: Tactic a -> Bool
-isUseLogicTactic UseLogic{} = True
-isUseLogicTactic _          = False
-
--- | Is this a UseSolver tactic?
-isUseSolverTactic :: Tactic a -> Bool
-isUseSolverTactic UseSolver{} = True
-isUseSolverTactic _          = False
-
--- | Is this a parallel-case tactic?
-isParallelCaseTactic :: Tactic a -> Bool
-isParallelCaseTactic ParallelCase{} = True
-isParallelCaseTactic _              = False
-
--- | Do we have a case-split anywhere in this tactic?
-isCaseSplitAnywhere :: Tactic a -> Bool
-isCaseSplitAnywhere CaseSplit{} = True
-isCaseSplitAnywhere _           = False
-
--- | Is this a check-case-vacuity tactic
-isCheckCaseVacuityTactic :: Tactic a -> Bool
-isCheckCaseVacuityTactic CheckCaseVacuity{} = True
-isCheckCaseVacuityTactic _                  = False
-
--- | Is this a check-constr-vacuity tactic
-isCheckConstrVacuityTactic :: Tactic a -> Bool
-isCheckConstrVacuityTactic CheckConstrVacuity{} = True
-isCheckConstrVacuityTactic _                    = False
-
--- | Is parallel-case anywhere?
+-- | Is there a parallel-case anywhere?
 isParallelCaseAnywhere :: Tactic a -> Bool
 isParallelCaseAnywhere ParallelCase{}   = True
 isParallelCaseAnywhere (CaseSplit _ cs) = or [any isParallelCaseAnywhere t | (_, _, t) <- cs]
 isParallelCaseAnywhere _                = False
-
--- | Is this optimize-using tactic?
-isOptimizeUsingTactic :: Tactic a -> Bool
-isOptimizeUsingTactic OptimizeUsing{} = True
-isOptimizeUsingTactic _               = False
 
 -- | Result of running a symbolic computation
 data Result = Result { reskinds       :: Set.Set Kind                            -- ^ kinds used in the program
