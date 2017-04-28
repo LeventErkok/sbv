@@ -7,17 +7,13 @@ TSTSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/
 # OSX tends to sleep for long jobs; so run through caffeinate
 TIME      = /usr/bin/time caffeinate
 
-define mkTags
-	@find . -name \*.\*hs | xargs fast-tags
-endef
-
 .PHONY: all install test doctest externaltest internaltest sdist clean docs gold stamp hlint tags checkLinks testInterfaces
 
 all: install
 
 install: 
 	@(make -s -C buildUtils testInterfaces)
-	$(call mkTags)
+	@fast-tags -R --nomerge .
 	@cabal configure --enable-tests --ghc-options="-Werror -Wall"
 	@cabal build
 	@cabal install
@@ -74,4 +70,4 @@ testInterfaces:
 	@buildUtils/testInterfaces
 
 tags:
-	$(call mkTags)
+	@fast-tags -R --nomerge .
