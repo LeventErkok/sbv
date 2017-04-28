@@ -34,7 +34,7 @@ module Data.SBV.Provers.Prover (
        ) where
 
 import Data.Char         (isSpace)
-import Data.List         (intercalate, partition, nub)
+import Data.List         (intercalate, nub)
 
 import Control.Monad     (when, unless)
 import System.FilePath   (addExtension, splitExtension)
@@ -56,6 +56,7 @@ import Data.SBV.Core.Symbolic
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 import Data.SBV.Utils.TDiff
+import Data.SBV.Utils.Lib (cluster)
 
 import Control.DeepSeq (rnf)
 import Control.Exception (bracket)
@@ -389,7 +390,7 @@ getConverter SMTConfig{smtLibVersion} = case smtLibVersion of
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
 proveWith config a = do simRes@SMTProblem{tactics, objectives} <- simulate (getConverter config) config False [] a
-                        objectiveCheck False (concatMap snd objectives) "prove"
+                        objectiveCheck False objectives "prove"
                         let hasPar = any isParallelCaseAnywhere tactics
                         bufferSanity hasPar $ applyTactics config (False, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver False "Checking Theoremhood.." [] ThmResult simRes
   where wrap                 = ThmResult
@@ -398,7 +399,7 @@ proveWith config a = do simRes@SMTProblem{tactics, objectives} <- simulate (getC
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
 satWith config a = do simRes@SMTProblem{tactics, objectives} <- simulate (getConverter config) config True [] a
-                      objectiveCheck False (concatMap snd objectives) "sat"
+                      objectiveCheck False objectives "sat"
                       let hasPar = any isParallelCaseAnywhere tactics
                       bufferSanity hasPar $ applyTactics config (True, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver True "Checking Satisfiability.." [] SatResult simRes
   where wrap                 = SatResult
@@ -409,15 +410,21 @@ optimizeWith :: Provable a => SMTConfig -> a -> IO OptimizeResult
 optimizeWith config a = do
         msg "Optimizing.."
         sbvPgm@SMTProblem{objectives, tactics} <- simulate (getConverter config) config True [] a
-        objectiveCheck True (concatMap snd objectives) "optimize"
+
+        objectiveCheck True objectives "optimize"
         let hasPar  = any isParallelCaseAnywhere tactics
             result  = bufferSanity hasPar $ applyTactics config (True, hasPar) (id, id) [] tactics objectives $ callSolver True "Optimizing.." [] id sbvPgm
-        case nub (map fst objectives) of
-          [Lexicographic] -> optLexicographic config `fmap` result
-          [Pareto]        -> optPareto               `fmap` result
-          [Independent]   -> optIndependent          `fmap` result
-          []              -> error "SBV: optimize called with no objectives!"
-          ss              -> error $ "SBV: Multiple optimization styles found, please use only one: " ++ intercalate ", " (map show ss)
+
+        let style = case nub [s | OptimizeUsing s <- tactics] of
+                      []  -> Lexicographic
+                      [s] -> s
+                      ss  -> error $ "SBV: Multiple optimization styles found, please use only one: " ++ intercalate ", " (map show ss)
+
+        case style of
+          Lexicographic -> optLexicographic config `fmap` result
+          Pareto        -> optPareto               `fmap` result
+          Independent   -> optIndependent          `fmap` result
+
   where msg = when (verbose config) . putStrLn . ("** " ++)
 
         optPareto        _ = error "optPareto: TBD"
@@ -438,22 +445,14 @@ unbounded origs = case filter (not . isRegularCW . snd) origs of
                     [] -> Nothing
                     _  -> Just origs
 
--- repeated use of partition
-cluster :: [a -> Bool] -> [a] -> [[a]]
-cluster []     xs = [xs]
-cluster (f:fs) xs = ok : cluster fs other
- where (ok, other) = partition f xs
-
--- | If we've parallel cases, use line-buffering
-
 -- | Apply the given tactics to a problem
-applyTactics :: SMTConfig                                -- ^ Solver configuration
-             -> (Bool, Bool)                             -- ^ Are we a sat-problem? Do we have anything parallel going on? (Parallel-case split.)
-             -> (SMTResult -> res, res -> SMTResult)     -- ^ Wrapper/unwrapper pair from result to SMT answer
-             -> [(String, (String, SW))]                 -- ^ Level at which we are called. (In case of a nested case-split)
-             -> [Tactic SW]                              -- ^ Tactics active at this level
-             -> [(OptimizeStyle, [Objective (SW, SW)])]  -- ^ Optimization goals we have
-             -> (SMTConfig -> CaseCond -> IO res)        -- ^ The actual continuation at this point
+applyTactics :: SMTConfig                             -- ^ Solver configuration
+             -> (Bool, Bool)                          -- ^ Are we a sat-problem? Do we have anything parallel going on? (Parallel-case split.)
+             -> (SMTResult -> res, res -> SMTResult)  -- ^ Wrapper/unwrapper pair from result to SMT answer
+             -> [(String, (String, SW))]              -- ^ Level at which we are called. (In case of a nested case-split)
+             -> [Tactic SW]                           -- ^ Tactics active at this level
+             -> [Objective (SW, SW)]                  -- ^ Optimization goals we have
+             -> (SMTConfig -> CaseCond -> IO res)     -- ^ The actual continuation at this point
              -> IO res
 applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
    = do unless (null others) $ error $ "SBV: Unsupported tactic: " ++ show others
@@ -474,11 +473,7 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
 
         if hasObjectives
 
-           then do let (optStyles, optObjectives) = unzip objectives
-                   case (nub optStyles, concat optObjectives) of
-                     ([s], goals@(_:_)) -> cont (finalOptConfig s goals) (Opt s goals)
-                     ([_], [])          -> error   "SBV: No optimization metrics provided, need at least one!"
-                     (ss, _)            -> error $ "SBV: Multiple optimization styles found, please use only one: " ++ intercalate ", " (map show ss)
+           then cont (finalOptConfig objectives) (Opt objectives)
 
            else do -- Check vacuity if asked. If result is Nothing, it means we're good to go.
                    mbRes <- if not shouldCheckConstrVacuity
@@ -492,7 +487,7 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
                                 then cont finalConfig (CasePath (map (snd . snd) levels))
                                 else caseSplit finalConfig shouldCheckCaseVacuity (parallelCase, hasPar) isSat (wrap, unwrap) levels chatty cases cont
 
-  where [caseSplits, parallelCases, timeOuts, checkUsing, useLogics, useSolvers, checkCaseVacuity, checkConstrVacuity, others]
+  where [caseSplits, parallelCases, timeOuts, checkUsing, useLogics, useSolvers, checkCaseVacuity, checkConstrVacuity, optimizeUsing, others]
                 = cluster [ isCaseSplitTactic
                           , isParallelCaseTactic
                           , isStopAfterTactic
@@ -501,6 +496,7 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
                           , isUseSolverTactic
                           , isCheckCaseVacuityTactic
                           , isCheckConstrVacuityTactic
+                          , isOptimizeUsingTactic
                           ] tactics
 
         hasObjectives = not $ null objectives
@@ -508,6 +504,8 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
         hasCaseSplits = not $ null cases
 
         parallelCase = not $ null parallelCases
+
+        optimizeStyle = last $ Lexicographic : [s | OptimizeUsing s <- optimizeUsing]
 
         shouldCheckCaseVacuity = case [b | CheckCaseVacuity b <- checkCaseVacuity] of
                                    [] -> True   -- default is to check-case-vacuity
@@ -538,9 +536,9 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
 
         finalConfig = grabUseLogic . grabCheckUsing . grabStops $ configToUse
 
-        finalOptConfig s goals = finalConfig { optimizeArgs = optimizeArgs finalConfig ++ optimizerDirectives }
+        finalOptConfig goals = finalConfig { optimizeArgs  = optimizeArgs finalConfig ++ optimizerDirectives }
             where optimizerDirectives
-                        | hasObjectives = map minmax goals ++ style s
+                        | hasObjectives = map minmax goals ++ style optimizeStyle
                         | True          = []
 
                   minmax (Minimize   _  (_, v))     = "(minimize "    ++ show v ++ ")"
@@ -868,7 +866,7 @@ allSatWith config p = do
                                                Satisfiable   _ model           -> cont model
                                                Unknown       _ model           -> cont model
         invoke nonEqConsts hasPar n simRes@SMTProblem{smtInputs=qinps, tactics=tactics, objectives=objectives} = do
-               objectiveCheck False (concatMap snd objectives) "allSat"
+               objectiveCheck False objectives "allSat"
                msg $ "Looking for solution " ++ show n
                case addNonEqConstraints (smtLibVersion config) (roundingMode config) qinps nonEqConsts of
                  Nothing -> -- no new constraints refuted models, stop

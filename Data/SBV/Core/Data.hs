@@ -49,7 +49,7 @@ module Data.SBV.Core.Data
  , declNewSArray, declNewSFunArray
  , OptimizeStyle(..), Penalty(..), Objective(..)
  , Tactic(..), CaseCond(..), SMTProblem(..), isCaseSplitTactic, isCaseSplitAnywhere, isParallelCaseAnywhere
- , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic, isUseSolverTactic, isCheckCaseVacuityTactic, isCheckConstrVacuityTactic,
+ , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic, isUseSolverTactic, isCheckCaseVacuityTactic, isCheckConstrVacuityTactic, isOptimizeUsingTactic
  ) where
 
 import Control.DeepSeq      (NFData(..))
@@ -453,12 +453,12 @@ addConstraint :: Maybe Double -> SBool -> SBool -> Symbolic ()
 addConstraint mt (SBV c) (SBV c') = addSValConstraint mt c c'
 
 -- | A case condition (internal)
-data CaseCond = NoCase                                      -- ^ No case-split
-              | CasePath [SW]                               -- ^ In a case-path
-              | CaseVac  [SW] SW                            -- ^ For checking the vacuity of a case
-              | CaseCov  [SW] [SW]                          -- ^ In a case-path end, coverage (first arg is path cond, second arg is coverage cond)
-              | CstrVac                                     -- ^ In a constraint vacuity check (top-level)
-              | Opt      OptimizeStyle [Objective (SW, SW)] -- ^ In an optimization call
+data CaseCond = NoCase                         -- ^ No case-split
+              | CasePath [SW]                  -- ^ In a case-path
+              | CaseVac  [SW] SW               -- ^ For checking the vacuity of a case
+              | CaseCov  [SW] [SW]             -- ^ In a case-path end, coverage (first arg is path cond, second arg is coverage cond)
+              | CstrVac                        -- ^ In a constraint vacuity check (top-level)
+              | Opt      [Objective (SW, SW)]  -- ^ In an optimization call
 
 instance NFData CaseCond where
   rnf NoCase           = ()
@@ -466,7 +466,7 @@ instance NFData CaseCond where
   rnf (CaseVac  ps q)  = rnf ps `seq` rnf q  `seq` ()
   rnf (CaseCov  ps qs) = rnf ps `seq` rnf qs `seq` ()
   rnf CstrVac          = ()
-  rnf (Opt s os)       = rnf s `seq` rnf os `seq` ()
+  rnf (Opt os)         = rnf os `seq` ()
 
 -- | Internal representation of a symbolic simulation result
 data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]             -- ^ inputs
@@ -474,7 +474,7 @@ data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]      
                              , kindsUsed    :: Set.Set Kind                            -- ^ kinds used
                              , smtAsserts   :: [(String, Maybe CallStack, SW)]         -- ^ assertions
                              , tactics      :: [Tactic SW]                             -- ^ tactics to use
-                             , objectives   :: [(OptimizeStyle, [Objective (SW, SW)])] -- ^ optimization goals
+                             , objectives   :: [Objective (SW, SW)]                    -- ^ optimization goals
                              , smtLibPgm    :: SMTConfig -> CaseCond -> SMTLibPgm      -- ^ SMTLib representation, given the config and case-splits
                              }
 

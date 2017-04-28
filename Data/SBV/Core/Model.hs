@@ -1633,38 +1633,32 @@ tactic t = addSValTactic $ unSBV `fmap` t
 
 -- | Introduce a soft assertion, with an optional penalty
 assertSoft :: String -> SBool -> Penalty -> Symbolic ()
-assertSoft nm o p = addSValOptGoal Lexicographic [unSBV `fmap` AssertSoft nm o p]
+assertSoft nm o p = addSValOptGoal $ unSBV `fmap` AssertSoft nm o p
 
 -- | Class of metrics we can optimize for. Currently,
 -- bounded signed/unsigned bit-vectors, unbounded integers,
 -- and algebraic reals can be optimized. (But not, say, SFloat, SDouble, or SBool.)
--- Minimal complete definition: optimize.
+-- Minimal complete definition: minimize/maximize.
 --
 -- A good reference on these features is given in the following paper:
 -- <http://www.easychair.org/publications/download/Z_-_Maximal_Satisfaction_with_Z3>.
 class Metric a where
-  -- | Optimize a collection of metrics, using the given strategy
-  objective :: OptimizeStyle -> [Objective a] -> Symbolic ()
-
-  -- | Minimize a metric independently
+  -- | Minimize a named metric
   minimize :: String -> a -> Symbolic ()
 
-  -- | Maximize a metric independently
+  -- | Maximize a named metric
   maximize :: String -> a -> Symbolic ()
 
-  minimize nm o = objective Lexicographic [Minimize nm o]
-  maximize nm o = objective Lexicographic [Maximize nm o]
-
-instance Metric SWord8   where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SWord16  where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SWord32  where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SWord64  where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SInt8    where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SInt16   where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SInt32   where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SInt64   where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SInteger where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
-instance Metric SReal    where objective s os = addSValOptGoal s $ map (unSBV `fmap`) os
+instance Metric SWord8   where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
+instance Metric SWord16  where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
+instance Metric SWord32  where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
+instance Metric SWord64  where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
+instance Metric SInt8    where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
+instance Metric SInt16   where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
+instance Metric SInt32   where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
+instance Metric SInt64   where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
+instance Metric SInteger where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
+instance Metric SReal    where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
 
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where

@@ -218,7 +218,7 @@ module Data.SBV (
 
   -- * Optimization
   -- $optiIntro
-  , OptimizeStyle(..), Penalty(..), Objective(..), minimize, maximize, assertSoft, objective, optimize, optimizeWith
+  , OptimizeStyle(..), Penalty(..), Objective(..), minimize, maximize, assertSoft, optimize, optimizeWith
 
   -- * Model extraction
   -- $modelExtraction

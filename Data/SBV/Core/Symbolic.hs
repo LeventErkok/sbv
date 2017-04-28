@@ -48,7 +48,7 @@ module Data.SBV.Core.Symbolic
   , extractSymbolicSimulationState
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , Tactic(..), addSValTactic, isCaseSplitTactic, isCaseSplitAnywhere, isParallelCaseAnywhere
-  , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic, isUseSolverTactic, isCheckCaseVacuityTactic, isCheckConstrVacuityTactic
+  , isStopAfterTactic, isCheckUsingTactic, isUseLogicTactic, isParallelCaseTactic, isUseSolverTactic, isCheckCaseVacuityTactic, isCheckConstrVacuityTactic, isOptimizeUsingTactic
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
   , mkSValUserSort
@@ -317,6 +317,7 @@ data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-spl
               | CheckUsing         String                          -- ^ Invoke with check-sat-using command, instead of check-sat
               | UseLogic           Logic                           -- ^ Use this logic, a custom one can be specified too
               | UseSolver          SMTConfig                       -- ^ Use this solver (z3, yices, etc.)
+              | OptimizeUsing      OptimizeStyle                   -- ^ Use this style for optimize calls. (Default: Lexicographic)
               deriving (Show, Functor)
 
 instance NFData OptimizeStyle where
@@ -340,6 +341,7 @@ instance NFData a => NFData (Tactic a) where
    rnf (CheckUsing       s)   = rnf s `seq` ()
    rnf (UseLogic         l)   = rnf l `seq` ()
    rnf (UseSolver        s)   = rnf s `seq` ()
+   rnf (OptimizeUsing    s)   = rnf s `seq` ()
 
 -- | Is this a case-split tactic?
 isCaseSplitTactic :: Tactic a -> Bool
@@ -392,6 +394,11 @@ isParallelCaseAnywhere ParallelCase{}   = True
 isParallelCaseAnywhere (CaseSplit _ cs) = or [any isParallelCaseAnywhere t | (_, _, t) <- cs]
 isParallelCaseAnywhere _                = False
 
+-- | Is this optimize-using tactic?
+isOptimizeUsingTactic :: Tactic a -> Bool
+isOptimizeUsingTactic OptimizeUsing{} = True
+isOptimizeUsingTactic _               = False
+
 -- | Result of running a symbolic computation
 data Result = Result { reskinds       :: Set.Set Kind                            -- ^ kinds used in the program
                      , resTraces      :: [(String, CW)]                          -- ^ quick-check counter-example information (if any)
@@ -405,7 +412,7 @@ data Result = Result { reskinds       :: Set.Set Kind                           
                      , resAsgns       :: SBVPgm                                  -- ^ assignments
                      , resConstraints :: [SW]                                    -- ^ additional constraints (boolean)
                      , resTactics     :: [Tactic SW]                             -- ^ User given tactics
-                     , resGoals       :: [(OptimizeStyle, [Objective (SW, SW)])] -- ^ User specified optimization goals
+                     , resGoals       :: [Objective (SW, SW)]                    -- ^ User specified optimization goals
                      , resAssertions  :: [(String, Maybe CallStack, SW)]         -- ^ assertions
                      , resOutputs     :: [SW]                                    -- ^ outputs
                      }
@@ -549,7 +556,7 @@ data State  = State { runMode      :: SBVRunMode
                     , rCgMap       :: IORef CgMap
                     , raxioms      :: IORef [(String, [String])]
                     , rTacs        :: IORef [Tactic SW]
-                    , rOptGoals    :: IORef [(OptimizeStyle, [Objective (SW, SW)])]
+                    , rOptGoals    :: IORef [Objective (SW, SW)]
                     , rAsserts     :: IORef [(String, Maybe CallStack, SW)]
                     , rSWCache     :: IORef (Cache SW)
                     , rAICache     :: IORef (Cache Int)
@@ -893,25 +900,26 @@ addSValTactic tac = do st <- ask
                            walk (CheckUsing s)         = return $ CheckUsing s
                            walk (UseLogic   l)         = return $ UseLogic   l
                            walk (UseSolver  s)         = return $ UseSolver  s
+                           walk (OptimizeUsing  s)     = return $ OptimizeUsing s
                        tac' <- liftIO $ walk tac
                        liftIO $ modifyIORef (rTacs st) (tac':)
 
 -- | Add an optimization goal
-addSValOptGoal :: OptimizeStyle -> [Objective SVal] -> Symbolic ()
-addSValOptGoal s os = do st <- ask
+addSValOptGoal :: Objective SVal -> Symbolic ()
+addSValOptGoal obj = do st <- ask
 
-                         -- create the tracking variable here for the metric
-                         let mkGoal nm orig = do origSW  <- liftIO $ svToSW st orig
-                                                 track   <- svMkSymVar (Just EX) (kindOf orig) (Just nm)
-                                                 trackSW <- liftIO $ svToSW st track
-                                                 return (origSW, trackSW)
-
-                         let walk (Minimize   nm v)     = Minimize nm              `fmap` mkGoal nm v
-                             walk (Maximize   nm v)     = Maximize nm              `fmap` mkGoal nm v
-                             walk (AssertSoft nm v mbP) = flip (AssertSoft nm) mbP `fmap` mkGoal nm v
-
-                         os' <- mapM walk os
-                         liftIO $ modifyIORef (rOptGoals st) ((s, os'):)
+                        -- create the tracking variable here for the metric
+                        let mkGoal nm orig = do origSW  <- liftIO $ svToSW st orig
+                                                track   <- svMkSymVar (Just EX) (kindOf orig) (Just nm)
+                                                trackSW <- liftIO $ svToSW st track
+                                                return (origSW, trackSW)
+ 
+                        let walk (Minimize   nm v)     = Minimize nm              `fmap` mkGoal nm v
+                            walk (Maximize   nm v)     = Maximize nm              `fmap` mkGoal nm v
+                            walk (AssertSoft nm v mbP) = flip (AssertSoft nm) mbP `fmap` mkGoal nm v
+ 
+                        obj' <- walk obj
+                        liftIO $ modifyIORef (rOptGoals st) (obj' :)
 
 -- | Add a constraint with a given probability
 addSValConstraint :: Maybe Double -> SVal -> SVal -> Symbolic ()

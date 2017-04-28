@@ -218,7 +218,7 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
                                              CaseVac  ss _  -> map pos ss
                                              CaseCov  ss qq -> map pos ss ++ map neg qq
                                              CstrVac        -> []
-                                             Opt _ gs       -> map mkGoal gs
+                                             Opt gs         -> map mkGoal gs
 
                  o | CstrVac     <- caseCond = pos trueSW -- always a SAT call!
                    | CaseVac _ s <- caseCond = pos s      -- always a SAT call!
