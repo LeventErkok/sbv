@@ -415,10 +415,10 @@ optimizeWith config a = do
         let hasPar  = any isParallelCaseAnywhere tactics
             result  = bufferSanity hasPar $ applyTactics config (True, hasPar) (id, id) [] tactics objectives $ callSolver True "Optimizing.." [] id sbvPgm
 
-        let style = case nub [s | OptimizeUsing s <- tactics] of
+        let style = case nub [s | OptimizePriority s <- tactics] of
                       []  -> Lexicographic
                       [s] -> s
-                      ss  -> error $ "SBV: Multiple optimization styles found, please use only one: " ++ intercalate ", " (map show ss)
+                      ss  -> error $ "SBV: Multiple optimization priorities found: " ++ intercalate ", " (map show ss) ++ ". Please use only one."
 
         case style of
           Lexicographic -> optLexicographic config `fmap` result
@@ -486,7 +486,7 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
                                 then cont finalConfig (CasePath (map (snd . snd) levels))
                                 else caseSplit finalConfig shouldCheckCaseVacuity (parallelCase, hasPar) isSat (wrap, unwrap) levels chatty cases cont
 
-  where (caseSplits, checkCaseVacuity, parallelCases, checkConstrVacuity, timeOuts, checkUsing, useLogics, useSolvers, optimizeUsing)
+  where (caseSplits, checkCaseVacuity, parallelCases, checkConstrVacuity, timeOuts, checkUsing, useLogics, useSolvers, optimizePriorities)
                 = foldr (flip classifyTactics) ([], [], [], [], [], [], [], [], []) tactics
 
         classifyTactics (a, b, c, d, e, f, g, h, i) = \case
@@ -498,7 +498,7 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
                     t@CheckUsing{}          -> (  a,   b,   c,   d,   e, t:f,   g,   h,   i)
                     t@UseLogic{}            -> (  a,   b,   c,   d,   e,   f, t:g,   h,   i)
                     t@UseSolver{}           -> (  a,   b,   c,   d,   e,   f,   g, t:h,   i)
-                    t@OptimizeUsing{}       -> (  a,   b,   c,   d,   e,   f,   g,   h, t:i)
+                    t@OptimizePriority{}    -> (  a,   b,   c,   d,   e,   f,   g,   h, t:i)
 
         hasObjectives = not $ null objectives
 
@@ -506,7 +506,7 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
 
         parallelCase = not $ null parallelCases
 
-        optimizeStyle = last $ Lexicographic : [s | OptimizeUsing s <- optimizeUsing]
+        optimizePriority = last $ Lexicographic : [s | OptimizePriority s <- optimizePriorities]
 
         shouldCheckCaseVacuity = case [b | CheckCaseVacuity b <- checkCaseVacuity] of
                                    [] -> True   -- default is to check-case-vacuity
@@ -539,7 +539,7 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
 
         finalOptConfig goals = finalConfig { optimizeArgs  = optimizeArgs finalConfig ++ optimizerDirectives }
             where optimizerDirectives
-                        | hasObjectives = map minmax goals ++ style optimizeStyle
+                        | hasObjectives = map minmax goals ++ style optimizePriority
                         | True          = []
 
                   minmax (Minimize   _  (_, v))     = "(minimize "    ++ show v ++ ")"

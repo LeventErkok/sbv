@@ -316,7 +316,7 @@ data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-spl
               | CheckUsing         String                          -- ^ Invoke with check-sat-using command, instead of check-sat
               | UseLogic           Logic                           -- ^ Use this logic, a custom one can be specified too
               | UseSolver          SMTConfig                       -- ^ Use this solver (z3, yices, etc.)
-              | OptimizeUsing      OptimizeStyle                   -- ^ Use this style for optimize calls. (Default: Lexicographic)
+              | OptimizePriority   OptimizeStyle                   -- ^ Use this style for optimize calls. (Default: Lexicographic)
               deriving (Show, Functor)
 
 instance NFData OptimizeStyle where
@@ -340,7 +340,7 @@ instance NFData a => NFData (Tactic a) where
    rnf (CheckUsing       s)   = rnf s `seq` ()
    rnf (UseLogic         l)   = rnf l `seq` ()
    rnf (UseSolver        s)   = rnf s `seq` ()
-   rnf (OptimizeUsing    s)   = rnf s `seq` ()
+   rnf (OptimizePriority s)   = rnf s `seq` ()
 
 -- | Is there a parallel-case anywhere?
 isParallelCaseAnywhere :: Tactic a -> Bool
@@ -849,7 +849,7 @@ addSValTactic tac = do st <- ask
                            walk (CheckUsing s)         = return $ CheckUsing s
                            walk (UseLogic   l)         = return $ UseLogic   l
                            walk (UseSolver  s)         = return $ UseSolver  s
-                           walk (OptimizeUsing  s)     = return $ OptimizeUsing s
+                           walk (OptimizePriority s)   = return $ OptimizePriority s
                        tac' <- liftIO $ walk tac
                        liftIO $ modifyIORef (rTacs st) (tac':)
 
