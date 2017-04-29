@@ -12,11 +12,13 @@ TIME      = /usr/bin/time caffeinate
 all: install
 
 install: 
+	@tput rmam
 	@(make -s -C buildUtils testInterfaces)
 	@fast-tags -R --nomerge .
 	@cabal configure --enable-tests --ghc-options="-Werror -Wall"
 	@cabal build
 	@cabal install
+	@tput smam
 
 test: install doctest externaltest internaltest
 
