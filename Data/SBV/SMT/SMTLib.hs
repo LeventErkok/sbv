@@ -19,8 +19,7 @@ module Data.SBV.SMT.SMTLib(
         , interpretSolverObjectiveLine
         ) where
 
-import Data.Char (isDigit, isAlpha, isAlphaNum)
-import Data.List (isPrefixOf)
+import Data.Char (isDigit)
 
 import Data.SBV.Core.Data
 import Data.SBV.Provers.SExpr
@@ -128,7 +127,7 @@ identifyInput inps = classify
                             in case [(s, nm) | (s@(SW _ (NodeId n)), nm) <-  inps, n == inpId] of
                                  []        -> Nothing
                                  [(s, nm)] -> Just (inpId, s, nm)
-                                 matches -> error $  "SBV.SMTLib2: Cannot uniquely identify value for "
+                                 matches -> error $  "SBV.SMTLib: Cannot uniquely identify value for "
                                                   ++ 's':v ++ " in "  ++ show matches
         isInput _       = Nothing
 
@@ -156,7 +155,7 @@ modelValues errOnUnrecognized inps line = extract
         extract (EApp [EApp (v : r)])
           | Just (_, _, nm) <- getInput v
           , errOnUnrecognized
-          = error $   "SBV.SMTLib2: Cannot extract value for " ++ show nm
+          = error $   "SBV.SMTLib: Cannot extract value for " ++ show nm
                    ++ "\n\tInput: " ++ show line
                    ++ "\n\tParse: " ++ show r
 
@@ -182,61 +181,33 @@ interpretSolverObjectiveLine inps line = either err extract (parseSExpr line)
 
         getUnboundedValues :: SExpr -> [(Int, (String, GeneralizedCW))]
         getUnboundedValues item = go item
-          where go (EApp [v, rest]) | Just (n, s, nm) <- getInput v = [(n, (nm, ExtendedCW (kindOf s) (render (reduce rest))))]
+          where go (EApp [v, rest]) | Just (n, s, nm) <- getInput v = [(n, (nm, ExtendedCW (toGenCW (kindOf s) (simplify rest))))]
+                go e                                                = die "extract" e
 
-                go r = error $    "SBV.SMTLib2: Cannot extract objective value from solver output!"
+                die w r = error $   "SBV.SMTLib: Cannot " ++ w ++ " objective value from solver output!"
                                ++ "\n\tInput     : " ++ show line
                                ++ "\n\tParse     : " ++ show r
                                ++ "\n\tItem Parse: " ++ show item
 
-                -- A simpler variant of show for SExprs, to reduce noise
-                render :: SExpr -> String
-                render (ECon s)                       = s
-                render (ENum (i, _))                  = show i
-                render (EReal ar)                     = show ar
-                render (EFloat f)                     = show f
-                render (EDouble d)                    = show d
-                render (EApp [x])                     = render x
-                render (EApp [ECon "+",        x, y]) = render x ++ " + " ++ render y
-                render (EApp [ECon "*",        x, y]) = render x ++ " * " ++ render y
-                render (EApp [ECon "interval", x, y]) = "[" ++ render x ++ ", " ++ render y ++ "]"
-                render (EApp [x, y])                  = "[" ++ render x ++ ", " ++ render y ++ "]"
-                render (EApp xs)                      = "(" ++ unwords (map render xs) ++ ")"
+                -- Convert to an extended expression. Hopefully complete!
+                toGenCW :: Kind -> SExpr -> ExtCW
+                toGenCW k = cvt
+                   where cvt (ECon "oo")                    = Infinite  k
+                         cvt (ECon "epsilon")               = Epsilon   k
+                         cvt (EApp [ECon "interval", x, y]) = Interval  (cvt x) (cvt y)
+                         cvt (ENum    (i, _))               = BoundedCW $ mkConstCW k i
+                         cvt (EReal   r)                    = BoundedCW $ CW k $ CWAlgReal r
+                         cvt (EFloat  f)                    = BoundedCW $ CW k $ CWFloat   f
+                         cvt (EDouble d)                    = BoundedCW $ CW k $ CWDouble  d
+                         cvt (EApp [ECon "+", x, y])        = AddExtCW (cvt x) (cvt y)
+                         cvt (EApp [ECon "*", x, y])        = MulExtCW (cvt x) (cvt y)
+                         -- Nothing else should show up, hopefully!
+                         cvt e = die "convert" e
 
-                size :: SExpr -> Int
-                size (EApp xs) = sum $ map size xs
-                size _         = 1
-
-                reduce :: SExpr -> SExpr
-                reduce xs
-                   | size xs' < size xs = reduce xs'
-                   | True               = xs'
-                  where xs' = simplify xs
-
-                -- recognize common patterns and simplify them
+                -- drop the pesky to_real's that Z3 produces.. Cool but useless.
                 simplify :: SExpr -> SExpr
-                simplify (EApp [ECon "to_real", n])                         = n
-                simplify (EApp [ECon "*", ENum (-1, _), ECon s]) | simple s = ECon ('-':s)
-                simplify (EApp [ECon "+", ENum (i, _),  ECon s]) | simple s = ECon (add i s)
-                simplify (EApp [ECon "*", ENum (i, _),  ECon s]) | simple s = ECon (mul i s)
-                simplify (EApp xs)                                          = EApp (map simplify xs)
-                simplify e                                                  = e
-
-                -- Don't overprocess!
-                simple :: String -> Bool
-                simple ('-':r) = simple r
-                simple (f:r)   = isAlpha f && all isAlphaNum r
-                simple _       = False
-
-                add :: Integer -> String -> String
-                add n v | isNeg v = show n        ++ v
-                        | True    = show n ++ "+" ++ v
-
-                mul :: Integer -> String -> String
-                mul n v | isNeg v = show (-n) ++ tail v
-                        | True    = show n    ++ v
-
-                isNeg :: String -> Bool
-                isNeg = ("-" `isPrefixOf`)
+                simplify (EApp [ECon "to_real", n]) = n
+                simplify (EApp xs)                  = EApp (map simplify xs)
+                simplify e                          = e
 
 {-# ANN modelValues  ("HLint: ignore Use elemIndex" :: String) #-}

@@ -16,6 +16,8 @@ module Data.SBV.Core.Concrete
 import Data.Bits
 import System.Random (randomIO, randomRIO)
 
+import Data.List (isPrefixOf)
+
 import Data.SBV.Core.Kind
 import Data.SBV.Core.AlgReals
 
@@ -78,8 +80,60 @@ data CW = CW { _cwKind  :: !Kind
         deriving (Eq, Ord)
 
 -- | A generalized CW allows for expressions involving infinite and epsilon values/intervals Used in optimization problems.
-data GeneralizedCW = ExtendedCW Kind String  -- The string is a visual representation of it, as close as we can get.
+data GeneralizedCW = ExtendedCW ExtCW
                    | RegularCW  CW
+
+-- | A simple expression type over extendent values, covering infinity, epsilon and intervals.
+data ExtCW = Infinite  Kind         -- infinity
+           | Epsilon   Kind         -- epsilon
+           | Interval  ExtCW ExtCW  -- closed interval
+           | BoundedCW CW           -- a bounded value (i.e., neither infinity, nor epsilon)
+           | AddExtCW  ExtCW ExtCW  -- addition
+           | MulExtCW  ExtCW ExtCW  -- multiplication
+
+-- | Kind instance for Extended CW
+instance HasKind ExtCW where
+  kindOf (Infinite  k)   = k
+  kindOf (Epsilon   k)   = k
+  kindOf (Interval  l _) = kindOf l
+  kindOf (BoundedCW  c)  = kindOf c
+  kindOf (AddExtCW  l _) = kindOf l
+  kindOf (MulExtCW  l _) = kindOf l
+
+-- | Show instance, shows with the kind
+instance Show ExtCW where
+  show = showExtCW True
+
+-- | Show an extended CW, with kind if required
+showExtCW :: Bool -> ExtCW -> String
+showExtCW = go False
+  where go parens shk extCW = case extCW of
+                                Infinite{}    -> withKind False "oo"
+                                Epsilon{}     -> withKind False "epsilon"
+                                Interval  l u -> withKind True  $ '['  : showExtCW False l ++ " .. " ++ showExtCW False u ++ "]"
+                                BoundedCW c   -> showCW shk c
+                                AddExtCW l r  -> par $ withKind False $ add (go True False l) (go True False r)
+
+                                -- a few niceties here to grok -oo and -epsilon
+                                MulExtCW (BoundedCW (CW KUnbounded (CWInteger (-1)))) Infinite{} -> withKind False "-oo"
+                                MulExtCW (BoundedCW (CW KReal      (CWAlgReal (-1)))) Infinite{} -> withKind False "-oo"
+                                MulExtCW (BoundedCW (CW KUnbounded (CWInteger (-1)))) Epsilon{}  -> withKind False "-epsilon"
+                                MulExtCW (BoundedCW (CW KReal      (CWAlgReal (-1)))) Epsilon{}  -> withKind False "-epsilon"
+
+                                MulExtCW l r  -> par $ withKind False $ mul (go True False l) (go True False r)
+           where par v | parens = '(' : v ++ ")"
+                       | True   = v
+                 withKind isInterval v | not shk    = v
+                                       | isInterval = v ++ " :: [" ++ showBaseKind (kindOf extCW) ++ "]"
+                                       | True       = v ++ " :: "  ++ showBaseKind (kindOf extCW)
+
+                 add :: String -> String -> String
+                 add n v
+                  | "-" `isPrefixOf` v = n ++ " - " ++ tail v
+                  | True               = n ++ " + " ++ v
+
+                 mul :: String -> String -> String
+                 mul n v = n ++ " * " ++ v
 
 isRegularCW :: GeneralizedCW -> Bool
 isRegularCW RegularCW{}  = True
@@ -91,8 +145,8 @@ instance HasKind CW where
 
 -- | 'Kind' instance for generalized CW
 instance HasKind GeneralizedCW where
-  kindOf (ExtendedCW k _) = k
-  kindOf (RegularCW  c)   = kindOf c
+  kindOf (ExtendedCW e) = kindOf e
+  kindOf (RegularCW  c) = kindOf c
 
 -- | Are two CW's of the same type?
 cwSameType :: CW -> CW -> Bool
@@ -168,8 +222,8 @@ instance Show CW where
 
 -- | Show instance for Generalized 'CW'
 instance Show GeneralizedCW where
-  show (ExtendedCW k s) = s ++ " :: "  ++ showBaseKind k
-  show (RegularCW  c)   = showCW True c
+  show (ExtendedCW k) = showExtCW True k
+  show (RegularCW  c) = showCW    True c
 
 -- | Show a CW, with kind info if bool is True
 showCW :: Bool -> CW -> String
@@ -209,7 +263,7 @@ randomCWVal k =
   where
     bounds :: Bool -> Int -> (Integer, Integer)
     bounds False w = (0, 2^w - 1)
-    bounds True w = (-x, x-1) where x = 2^(w-1)
+    bounds True  w = (-x, x-1) where x = 2^(w-1)
 
 -- | Generate a random constant value ('CW') of the correct kind.
 randomCW :: Kind -> IO CW
