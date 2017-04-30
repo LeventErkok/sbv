@@ -440,6 +440,7 @@ optLexicographic cfg r = case r of
                           Satisfiable _ m -> maybe lr (OptimizeUnbounded cfg) (unbounded (modelObjectives m))
    where lr = LexicographicResult r
 
+-- | Are there any unbounded (infinity/epsilon/interval) values in the objectives?
 unbounded ::  [(String, GeneralizedCW)] -> Maybe [(String, GeneralizedCW)]
 unbounded origs = case filter (not . isRegularCW . snd) origs of
                     [] -> Nothing
