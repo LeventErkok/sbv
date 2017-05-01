@@ -355,7 +355,7 @@ showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel result = case resul
   Unsatisfiable _               -> unsatMsg
   Satisfiable _ (SMTModel _ []) -> satMsg
   Satisfiable _ m               -> satMsgModel ++ showModel cfg m
-  SatExtField _ (SMTModel b _)  -> "Objective" ++ pluv ++ " unbounded/interval optimal value" ++ plu ++ ":\n" ++ showModelDictionary cfg b
+  SatExtField _ (SMTModel b _)  -> "Objective" ++ pluv ++ " extension field optimal value" ++ plu ++ ":\n" ++ showModelDictionary cfg b
                                         where (pluv, plu) | length b > 1 = ("s have", "s")
                                                           | True         = (" has", "")
   Unknown     _ (SMTModel _ []) -> unkMsg
