@@ -46,8 +46,8 @@ import Data.SBV.Utils.TDiff
 resultConfig :: SMTResult -> SMTConfig
 resultConfig (Unsatisfiable c  ) = c
 resultConfig (Satisfiable   c _) = c
+resultConfig (SatExtField   c _) = c
 resultConfig (Unknown       c _) = c
-resultConfig (Unbounded     c _) = c
 resultConfig (ProofError    c _) = c
 resultConfig (TimeOut       c  ) = c
 
@@ -315,22 +315,22 @@ instance Modelable SatResult where
 -- | 'SMTResult' as a generic model provider
 instance Modelable SMTResult where
   getModel (Unsatisfiable _) = Left "SBV.getModel: Unsatisfiable result"
+  getModel (Satisfiable _ m) = Right (False, parseModelOut m)
+  getModel (SatExtField _ _) = Left "SBV.getModel: The model is in an extension field"
   getModel (Unknown _ m)     = Right (True, parseModelOut m)
-  getModel (Unbounded _ _)   = Left "SBV.getModel: Unbounded result"
   getModel (ProofError _ s)  = error $ unlines $ "Backend solver complains: " : s
   getModel (TimeOut _)       = Left "Timeout"
-  getModel (Satisfiable _ m) = Right (False, parseModelOut m)
 
   modelExists Satisfiable{}   = True
   modelExists Unknown{}       = False -- don't risk it
   modelExists _               = False
 
   getModelDictionary (Unsatisfiable _) = M.empty
+  getModelDictionary (Satisfiable _ m) = M.fromList (modelAssocs m)
+  getModelDictionary (SatExtField _ _) = M.empty
   getModelDictionary (Unknown _ m)     = M.fromList (modelAssocs m)
-  getModelDictionary (Unbounded _ _)   = M.empty
   getModelDictionary (ProofError _ _)  = M.empty
   getModelDictionary (TimeOut _)       = M.empty
-  getModelDictionary (Satisfiable _ m) = M.fromList (modelAssocs m)
 
 -- | Extract a model out, will throw error if parsing is unsuccessful
 parseModelOut :: SatModel a => SMTModel -> a
@@ -355,11 +355,11 @@ showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel result = case resul
   Unsatisfiable _               -> unsatMsg
   Satisfiable _ (SMTModel _ []) -> satMsg
   Satisfiable _ m               -> satMsgModel ++ showModel cfg m
-  Unknown     _ (SMTModel _ []) -> unkMsg
-  Unknown     _ m               -> unkMsgModel ++ showModel cfg m
-  Unbounded   _ (SMTModel b _)  -> "Objective" ++ pluv ++ " unbounded/interval optimal value" ++ plu ++ ":\n" ++ showModelDictionary cfg b
+  SatExtField _ (SMTModel b _)  -> "Objective" ++ pluv ++ " unbounded/interval optimal value" ++ plu ++ ":\n" ++ showModelDictionary cfg b
                                         where (pluv, plu) | length b > 1 = ("s have", "s")
                                                           | True         = (" has", "")
+  Unknown     _ (SMTModel _ []) -> unkMsg
+  Unknown     _ m               -> unkMsgModel ++ showModel cfg m
   ProofError  _ []              -> "*** An error occurred. No additional information available. Try running in verbose mode"
   ProofError  _ ls              -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
   TimeOut     _                 -> "*** Timeout"

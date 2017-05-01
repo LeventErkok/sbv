@@ -687,8 +687,8 @@ caseSplit config checkVacuity (runParallel, hasPar) isSAT (wrap, unwrap) level c
         -- short name
         diag Unsatisfiable{} = "[Unsatisfiable]"
         diag Satisfiable  {} = "[Satisfiable]"
+        diag SatExtField  {} = "[Satisfiable in Field Extension]"
         diag Unknown      {} = "[Unknown]"
-        diag Unbounded    {} = "[Unbounded]"
         diag ProofError   {} = "[ProofError]"
         diag TimeOut      {} = "[TimeOut]"
 
@@ -776,8 +776,8 @@ caseSplit config checkVacuity (runParallel, hasPar) isSAT (wrap, unwrap) level c
                               case snd r of
                                 Unsatisfiable{} -> continue
                                 Satisfiable{}   -> stop
+                                SatExtField{}   -> stop
                                 ProofError{}    -> stop
-                                Unbounded{}     -> stop
                                 Unknown{}       -> if isSAT then continue else stop
                                 TimeOut{}       -> if isSAT then continue else stop
 
@@ -800,8 +800,8 @@ isSafe :: SafeResult -> Bool
 isSafe (SafeResult (_, _, result)) = case result of
                                        Unsatisfiable{} -> True
                                        Satisfiable{}   -> False
+                                       SatExtField{}   -> False   -- conservative
                                        Unknown{}       -> False   -- conservative
-                                       Unbounded{}     -> False   -- conservative
                                        ProofError{}    -> False   -- conservative
                                        TimeOut{}       -> False   -- conservative
 
@@ -817,8 +817,8 @@ isVacuousWith config a = do
                     case result of
                       Unsatisfiable{} -> return True  -- constraints are unsatisfiable!
                       Satisfiable{}   -> return False -- constraints are satisfiable!
+                      SatExtField{}   -> error "SBV: isVacuous: Solver returned a model in the extension field!"
                       Unknown{}       -> error "SBV: isVacuous: Solver returned unknown!"
-                      Unbounded{}     -> error "SBV: isVacuous: Solver returned an unbounded result!"
                       ProofError _ ls -> error $ "SBV: isVacuous: error encountered:\n" ++ unlines ls
                       TimeOut _       -> error "SBV: isVacuous: time-out."
 
@@ -848,14 +848,24 @@ allSatWith config p = do
                                                               rest <- unsafeInterleaveIO $ loop (n+1) (modelOnlyAssocs : nonEqConsts)
                                                               return (r : rest)
                                           in case r of
+                                               -- We are done! This is really how we should always stop.
+                                               Unsatisfiable{} -> return []
+
+                                               -- We have a model. If there are bindings, continue; otherwise stop
                                                Satisfiable   _ (SMTModel _ []) -> return [r]
-                                               Unknown       _ (SMTModel _ []) -> return [r]
-                                               ProofError    _ _               -> return [r]
-                                               TimeOut       _                 -> return []
-                                               Unsatisfiable _                 -> return []
-                                               Unbounded     _ model           -> cont model
                                                Satisfiable   _ model           -> cont model
-                                               Unknown       _ model           -> cont model
+
+                                               -- Satisfied in an extension field. Stop if no new bindings, otherwise continue if all regular.
+                                               -- If the model is in the extension, we also stop
+                                               SatExtField   _ (SMTModel _ [])       -> return [r]
+                                               SatExtField   _ model@(SMTModel [] _) -> cont model
+                                               SatExtField{}                         -> return []
+
+                                               -- Something bad happened, we stop here. Note that we treat Unknown as bad too in this context.
+                                               Unknown{}    -> return [r]
+                                               ProofError{} -> return [r]
+                                               TimeOut{}    -> return [r]
+
         invoke nonEqConsts hasPar n simRes@SMTProblem{smtInputs=qinps, tactics=tactics, objectives=objectives} = do
                objectiveCheck False objectives "allSat"
                msg $ "Looking for solution " ++ show n

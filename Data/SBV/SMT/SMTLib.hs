@@ -103,7 +103,7 @@ interpretSolverOutput cfg extractMap ("unknown":rest) = Unknown       cfg  $ ext
 interpretSolverOutput cfg extractMap ("sat":rest)     = let m = extractMap rest
                                                         in case filter (not . isRegularCW . snd) (modelObjectives m) of
                                                                  [] -> Satisfiable cfg m
-                                                                 _  -> Unbounded   cfg m
+                                                                 _  -> SatExtField cfg m
 interpretSolverOutput cfg _          ("timeout":_)    = TimeOut       cfg
 interpretSolverOutput cfg _          ls               = ProofError    cfg  ls
 
