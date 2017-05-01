@@ -135,6 +135,7 @@ showExtCW = go False
                  mul :: String -> String -> String
                  mul n v = n ++ " * " ++ v
 
+-- | Is this a regular CW?
 isRegularCW :: GeneralizedCW -> Bool
 isRegularCW RegularCW{}  = True
 isRegularCW ExtendedCW{} = False
