@@ -1074,11 +1074,12 @@ instance NFData (Cached a)   where rnf (Cached f) = f `seq` ()
 instance NFData SVal         where rnf (SVal x y) = rnf x `seq` rnf y `seq` ()
 
 instance NFData SMTResult where
-  rnf (Unsatisfiable _)   = ()
-  rnf (Satisfiable _ xs)  = rnf xs `seq` ()
-  rnf (Unknown _ xs)      = rnf xs `seq` ()
-  rnf (ProofError _ xs)   = rnf xs `seq` ()
-  rnf (TimeOut _)         = ()
+  rnf Unsatisfiable{}    = ()
+  rnf (Satisfiable _ xs) = rnf xs `seq` ()
+  rnf (Unknown _     xs) = rnf xs `seq` ()
+  rnf (Unbounded _   xs) = rnf xs `seq` ()
+  rnf (ProofError _  xs) = rnf xs `seq` ()
+  rnf TimeOut{}          = ()
 
 instance NFData SMTModel where
   rnf (SMTModel objs assocs) = rnf objs `seq` rnf assocs `seq` ()
@@ -1225,6 +1226,7 @@ data SMTModel = SMTModel {
 data SMTResult = Unsatisfiable SMTConfig            -- ^ Unsatisfiable
                | Satisfiable   SMTConfig SMTModel   -- ^ Satisfiable with model
                | Unknown       SMTConfig SMTModel   -- ^ Prover returned unknown, with a potential (possibly bogus) model
+               | Unbounded     SMTConfig SMTModel   -- ^ Prover returned a model with unbounded objective values. (Infinite/epsilon)
                | ProofError    SMTConfig [String]   -- ^ Prover errored out
                | TimeOut       SMTConfig            -- ^ Computation timed out (see the 'timeout' combinator)
 

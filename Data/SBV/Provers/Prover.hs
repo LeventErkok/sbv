@@ -421,30 +421,14 @@ optimizeWith config a = do
                       ss  -> error $ "SBV: Multiple optimization priorities found: " ++ intercalate ", " (map show ss) ++ ". Please use only one."
 
         case style of
-          Lexicographic -> optLexicographic config `fmap` result
-          Pareto        -> optPareto               `fmap` result
-          Independent   -> optIndependent          `fmap` result
+          Lexicographic -> LexicographicResult <$> result
+          Pareto        -> optPareto      `fmap` result
+          Independent   -> optIndependent `fmap` result
 
   where msg = when (verbose config) . putStrLn . ("** " ++)
 
         optPareto        _ = error "optPareto: TBD"
         optIndependent   _ = error "optIndependent: TBD"
-
--- | Convert an SMTResult to an optimization-result, in the case of lexicographic objectives
-optLexicographic :: SMTConfig -> SMTResult -> OptimizeResult
-optLexicographic cfg r = case r of
-                          Unsatisfiable{} -> lr
-                          ProofError{}    -> lr
-                          TimeOut{}       -> lr
-                          Unknown _ m     -> maybe lr (OptimizeUnbounded cfg) (unbounded (modelObjectives m))
-                          Satisfiable _ m -> maybe lr (OptimizeUnbounded cfg) (unbounded (modelObjectives m))
-   where lr = LexicographicResult r
-
--- | Are there any unbounded (infinity/epsilon/interval) values in the objectives?
-unbounded ::  [(String, GeneralizedCW)] -> Maybe [(String, GeneralizedCW)]
-unbounded origs = case filter (not . isRegularCW . snd) origs of
-                    [] -> Nothing
-                    _  -> Just origs
 
 -- | Apply the given tactics to a problem
 applyTactics :: SMTConfig                             -- ^ Solver configuration
@@ -704,6 +688,7 @@ caseSplit config checkVacuity (runParallel, hasPar) isSAT (wrap, unwrap) level c
         diag Unsatisfiable{} = "[Unsatisfiable]"
         diag Satisfiable  {} = "[Satisfiable]"
         diag Unknown      {} = "[Unknown]"
+        diag Unbounded    {} = "[Unbounded]"
         diag ProofError   {} = "[ProofError]"
         diag TimeOut      {} = "[TimeOut]"
 
@@ -792,6 +777,7 @@ caseSplit config checkVacuity (runParallel, hasPar) isSAT (wrap, unwrap) level c
                                 Unsatisfiable{} -> continue
                                 Satisfiable{}   -> stop
                                 ProofError{}    -> stop
+                                Unbounded{}     -> stop
                                 Unknown{}       -> if isSAT then continue else stop
                                 TimeOut{}       -> if isSAT then continue else stop
 
@@ -815,6 +801,7 @@ isSafe (SafeResult (_, _, result)) = case result of
                                        Unsatisfiable{} -> True
                                        Satisfiable{}   -> False
                                        Unknown{}       -> False   -- conservative
+                                       Unbounded{}     -> False   -- conservative
                                        ProofError{}    -> False   -- conservative
                                        TimeOut{}       -> False   -- conservative
 
@@ -831,6 +818,7 @@ isVacuousWith config a = do
                       Unsatisfiable{} -> return True  -- constraints are unsatisfiable!
                       Satisfiable{}   -> return False -- constraints are satisfiable!
                       Unknown{}       -> error "SBV: isVacuous: Solver returned unknown!"
+                      Unbounded{}     -> error "SBV: isVacuous: Solver returned an unbounded result!"
                       ProofError _ ls -> error $ "SBV: isVacuous: error encountered:\n" ++ unlines ls
                       TimeOut _       -> error "SBV: isVacuous: time-out."
 
@@ -865,6 +853,7 @@ allSatWith config p = do
                                                ProofError    _ _               -> return [r]
                                                TimeOut       _                 -> return []
                                                Unsatisfiable _                 -> return []
+                                               Unbounded     _ model           -> cont model
                                                Satisfiable   _ model           -> cont model
                                                Unknown       _ model           -> cont model
         invoke nonEqConsts hasPar n simRes@SMTProblem{smtInputs=qinps, tactics=tactics, objectives=objectives} = do

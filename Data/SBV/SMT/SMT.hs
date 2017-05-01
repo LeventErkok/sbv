@@ -44,11 +44,12 @@ import Data.SBV.Utils.TDiff
 
 -- | Extract the final configuration from a result
 resultConfig :: SMTResult -> SMTConfig
-resultConfig (Unsatisfiable c) = c
-resultConfig (Satisfiable c _) = c
-resultConfig (Unknown c _)     = c
-resultConfig (ProofError c _)  = c
-resultConfig (TimeOut c)       = c
+resultConfig (Unsatisfiable c  ) = c
+resultConfig (Satisfiable   c _) = c
+resultConfig (Unknown       c _) = c
+resultConfig (Unbounded     c _) = c
+resultConfig (ProofError    c _) = c
+resultConfig (TimeOut       c  ) = c
 
 -- | A 'prove' call results in a 'ThmResult'
 newtype ThmResult    = ThmResult    SMTResult
@@ -65,8 +66,7 @@ newtype AllSatResult = AllSatResult (Bool, [SMTResult])
 newtype SafeResult   = SafeResult   (Maybe String, String, SMTResult)
 
 -- | An 'optimize' call results in a 'OptimizeResult'
-data OptimizeResult = OptimizeUnbounded   SMTConfig [(String, GeneralizedCW)]
-                    | LexicographicResult SMTResult
+data OptimizeResult = LexicographicResult SMTResult
                     | ParetoResult        [SMTResult]
                     | IndependentResult   [(String, SMTResult)]
 
@@ -110,15 +110,11 @@ instance Show AllSatResult where
                            Satisfiable{} -> True
                            _             -> False
 
+-- | Show instance for optimization results
 instance Show OptimizeResult where
-  show (OptimizeUnbounded   cfg d)
-       = "Objective" ++ pluv ++ " unbounded/interval optimal value" ++ plu ++ ":\n" ++ showModelDictionary cfg d
-       where (pluv, plu) | length d > 1 = ("s have", "s")
-                         | True         = (" has", "")
-
-  show (LexicographicResult r)     = show (SatResult r)
-  show (ParetoResult        _)     = "TBD: show pareto"
-  show (IndependentResult   _)     = "TBD: show independent"
+  show (LexicographicResult r) = show (SatResult r)
+  show (ParetoResult        _) = "TBD: show pareto"
+  show (IndependentResult   _) = "TBD: show independent"
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
 -- solvers. The idea is that the sbv infrastructure provides a stream of 'CW''s (constant-words)
@@ -320,14 +316,18 @@ instance Modelable SatResult where
 instance Modelable SMTResult where
   getModel (Unsatisfiable _) = Left "SBV.getModel: Unsatisfiable result"
   getModel (Unknown _ m)     = Right (True, parseModelOut m)
+  getModel (Unbounded _ _)   = Left "SBV.getModel: Unbounded result"
   getModel (ProofError _ s)  = error $ unlines $ "Backend solver complains: " : s
   getModel (TimeOut _)       = Left "Timeout"
   getModel (Satisfiable _ m) = Right (False, parseModelOut m)
+
   modelExists Satisfiable{}   = True
   modelExists Unknown{}       = False -- don't risk it
   modelExists _               = False
+
   getModelDictionary (Unsatisfiable _) = M.empty
   getModelDictionary (Unknown _ m)     = M.fromList (modelAssocs m)
+  getModelDictionary (Unbounded _ _)   = M.empty
   getModelDictionary (ProofError _ _)  = M.empty
   getModelDictionary (TimeOut _)       = M.empty
   getModelDictionary (Satisfiable _ m) = M.fromList (modelAssocs m)
@@ -357,6 +357,9 @@ showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel result = case resul
   Satisfiable _ m               -> satMsgModel ++ showModel cfg m
   Unknown     _ (SMTModel _ []) -> unkMsg
   Unknown     _ m               -> unkMsgModel ++ showModel cfg m
+  Unbounded   _ (SMTModel b _)  -> "Objective" ++ pluv ++ " unbounded/interval optimal value" ++ plu ++ ":\n" ++ showModelDictionary cfg b
+                                        where (pluv, plu) | length b > 1 = ("s have", "s")
+                                                          | True         = (" has", "")
   ProofError  _ []              -> "*** An error occurred. No additional information available. Try running in verbose mode"
   ProofError  _ ls              -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
   TimeOut     _                 -> "*** Timeout"

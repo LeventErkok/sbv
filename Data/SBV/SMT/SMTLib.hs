@@ -100,7 +100,10 @@ addNonEqConstraints SMTLib2 = SMT2.addNonEqConstraints
 interpretSolverOutput :: SMTConfig -> ([String] -> SMTModel) -> [String] -> SMTResult
 interpretSolverOutput cfg _          ("unsat":_)      = Unsatisfiable cfg
 interpretSolverOutput cfg extractMap ("unknown":rest) = Unknown       cfg  $ extractMap rest
-interpretSolverOutput cfg extractMap ("sat":rest)     = Satisfiable   cfg  $ extractMap rest
+interpretSolverOutput cfg extractMap ("sat":rest)     = let m = extractMap rest
+                                                        in case filter (not . isRegularCW . snd) (modelObjectives m) of
+                                                                 [] -> Satisfiable cfg m
+                                                                 _  -> Unbounded   cfg m
 interpretSolverOutput cfg _          ("timeout":_)    = TimeOut       cfg
 interpretSolverOutput cfg _          ls               = ProofError    cfg  ls
 
@@ -161,7 +164,7 @@ modelValues errOnUnrecognized inps line = extract
 
         extract _ = []
 
--- Similar to model-lines but designed for reading objectives
+-- | Similar to reading model-lines but designed for reading objectives.
 interpretSolverObjectiveLine :: [NamedSymVar] -> String -> [(Int, (String, GeneralizedCW))]
 interpretSolverObjectiveLine inps line = either err extract (parseSExpr line)
   where err r =  error $  "*** Failed to parse SMT-Lib2 model output from: "
