@@ -1033,13 +1033,13 @@ smtLibVersionExtension :: SMTLibVersion -> String
 smtLibVersionExtension SMTLib2 = "smt2"
 
 -- | Representation of an SMT-Lib program. In between pre and post goes the refuted models
-data SMTLibPgm = SMTLibPgm SMTLibVersion  ([String], [String]) -- post: formula
+data SMTLibPgm = SMTLibPgm SMTLibVersion [String]
 
-instance NFData SMTLibVersion where rnf a                    = a `seq` ()
-instance NFData SMTLibPgm     where rnf (SMTLibPgm v (d, p)) = rnf v `seq` rnf d `seq` rnf p `seq` ()
+instance NFData SMTLibVersion where rnf a               = a `seq` ()
+instance NFData SMTLibPgm     where rnf (SMTLibPgm v p) = rnf v `seq` rnf p `seq` ()
 
 instance Show SMTLibPgm where
-  show (SMTLibPgm _ (pre, post)) = intercalate "\n" $ pre ++ post
+  show (SMTLibPgm _ pre) = intercalate "\n" pre
 
 -- Other Technicalities..
 instance NFData CW where

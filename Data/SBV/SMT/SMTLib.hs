@@ -65,7 +65,7 @@ toSMTLib2 = cvt SMTLib2
          | not $ null needsUniversalOpt
          = unsupportedAll $ "optimization of universally quantified metric(s): " ++ unwords needsUniversalOpt
          | True
-         = SMTLibPgm v (pre, post)
+         = SMTLibPgm v pgm
          where sorts = [s | KUserSort s _ <- Set.toList kindInfo]
                solverCaps = capabilities (solver config)
                unsupported w = error $ unlines [ "SBV: Given problem needs " ++ w
@@ -76,7 +76,8 @@ toSMTLib2 = cvt SMTLib2
                                                   ]
                converter    = case v of
                                 SMTLib2 -> SMT2.cvt
-               (pre, post)  = converter kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config caseSelectors
+               pgm = converter kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config caseSelectors
+
                needsFloats  = KFloat  `Set.member` kindInfo
                needsDoubles = KDouble `Set.member` kindInfo
                (needsOptimization, needsUniversalOpt) = case caseSelectors of
