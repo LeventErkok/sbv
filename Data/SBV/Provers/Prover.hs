@@ -491,7 +491,10 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
 
         parallelCase = not $ null parallelCases
 
-        optimizePriority = last $ Lexicographic : [s | OptimizePriority s <- optimizePriorities]
+        optimizePriority = case [s | OptimizePriority s <- optimizePriorities] of
+                             []  -> Lexicographic
+                             [s] -> s
+                             ss  -> error $ "SBV.OptimizePriority: Multiple optimization priorities found, at most one is allowed: " ++ intercalate "," (map show ss)
 
         shouldCheckCaseVacuity = case [b | CheckCaseVacuity b <- checkCaseVacuity] of
                                    [] -> True   -- default is to check-case-vacuity
