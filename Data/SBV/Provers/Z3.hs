@@ -61,8 +61,8 @@ z3 = SMTSolver {
 
                                         mkCont     = cont (roundingMode cfg) skolemMap
                                         contScript = case mbOptInfo of
-                                                       Just (Independent, n) -> intercalate "\n" (map (mkCont . Just) [0 .. n-1])
-                                                       _                     -> mkCont Nothing
+                                                       Just (Independent, n) | n > 1 -> intercalate "\n" (map (mkCont . Just) [0 .. n-1])
+                                                       _                             -> mkCont Nothing
 
                                         script   = SMTScript {scriptBody = tweaks ++ ppDecLim ++ pgm, scriptModel = Just contScript}
 
@@ -82,11 +82,16 @@ z3 = SMTSolver {
                                 , supportsOptimization       = True
                                 }
          }
- where cont rm skolemMap mbModelIndex = intercalate "\n" $ concatMap extract skolemMap
-        where
+ where cont rm skolemMap mbModelIndex = intercalate "\n" $ wrapModel grabValues
+        where grabValues = concatMap extract skolemMap
+
               modelIndex = case mbModelIndex of
                              Nothing -> ""
                              Just i  -> " :model_index " ++ show i
+
+              wrapModel xs = case mbModelIndex of
+                               Nothing -> xs
+                               Just i  -> ("(echo \"(objective_model " ++ show i ++ "\")") : xs ++ ["(echo \")\")"]
 
               -- In the skolemMap:
               --    * Left's are universals: i.e., the model should be true for
