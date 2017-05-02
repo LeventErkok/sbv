@@ -74,9 +74,9 @@ toSMTLib2 = cvt SMTLib2
                unsupportedAll w = error $ unlines [ "SBV: Given problem needs " ++ w
                                                   , "*** Which is not supported by SBV."
                                                   ]
-               converter   = case v of
-                               SMTLib2 -> SMT2.cvt
-               (pre, post) = converter kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config caseSelectors
+               converter    = case v of
+                                SMTLib2 -> SMT2.cvt
+               (pre, post)  = converter kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config caseSelectors
                needsFloats  = KFloat  `Set.member` kindInfo
                needsDoubles = KDouble `Set.member` kindInfo
                (needsOptimization, needsUniversalOpt) = case caseSelectors of

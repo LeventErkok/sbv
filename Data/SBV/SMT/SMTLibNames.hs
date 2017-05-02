@@ -22,4 +22,7 @@ smtLibReservedNames = map (map toLower)
                         , "assert", "check-sat", "check-sat-assuming", "declare-const", "declare-fun", "declare-sort", "define-fun", "define-fun-rec"
                         , "define-sort", "echo", "exit", "get-assertions", "get-assignment", "get-info", "get-model", "get-option", "get-proof", "get-unsat-assumptions"
                         , "get-unsat-core", "get-value", "pop", "push", "reset", "reset-assertions", "set-info", "set-logic", "set-option"
+                        --
+                        -- The following are most likely Z3 specific
+                        , "interval", "assert-soft"
                         ]
