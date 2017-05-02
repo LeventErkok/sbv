@@ -45,17 +45,29 @@ z3 = SMTSolver {
            name           = Z3
          , executable     = "z3"
          , options        = map (optionPrefix:) ["nw", "in", "smt2"]
-         , engine         = \cfg isSat qinps skolemMap pgm -> do
+
+         , engine         = \cfg isSat mbOptInfo qinps skolemMap pgm -> do
+
                                     execName <-                   getEnv "SBV_Z3"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
                                     execOpts <- (splitArgs `fmap` getEnv "SBV_Z3_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
-                                    let cfg' = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
+
+                                    let cfg'   = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
                                         tweaks = case solverTweaks cfg' of
                                                    [] -> ""
                                                    ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
-                                        dlim = printRealPrec cfg'
+
+                                        dlim     = printRealPrec cfg'
                                         ppDecLim = "(set-option :pp.decimal_precision " ++ show dlim ++ ")\n"
-                                        script = SMTScript {scriptBody = tweaks ++ ppDecLim ++ pgm, scriptModel = Just (cont (roundingMode cfg) skolemMap)}
+
+                                        mkCont     = cont (roundingMode cfg) skolemMap
+                                        contScript = case mbOptInfo of
+                                                       Just (Independent, n) -> intercalate "\n" (map (mkCont . Just) [0 .. n-1])
+                                                       _                     -> mkCont Nothing
+
+                                        script   = SMTScript {scriptBody = tweaks ++ ppDecLim ++ pgm, scriptModel = Just contScript}
+
                                     standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps))
+
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "Z3"
                                 , mbDefaultLogic             = const Nothing
@@ -70,18 +82,25 @@ z3 = SMTSolver {
                                 , supportsOptimization       = True
                                 }
          }
- where cont rm skolemMap = intercalate "\n" $ concatMap extract skolemMap
-        where -- In the skolemMap:
+ where cont rm skolemMap mbModelIndex = intercalate "\n" $ concatMap extract skolemMap
+        where
+              modelIndex = case mbModelIndex of
+                             Nothing -> ""
+                             Just i  -> " :model_index " ++ show i
+
+              -- In the skolemMap:
               --    * Left's are universals: i.e., the model should be true for
               --      any of these. So, we simply "echo 0" for these values.
               --    * Right's are existentials. If there are no dependencies (empty list), then we can
               --      simply use get-value to extract it's value. Otherwise, we have to apply it to
               --      an appropriate number of 0's to get the final value.
               extract (Left s)        = ["(echo \"((" ++ show s ++ " " ++ mkSkolemZero rm (kindOf s) ++ "))\")"]
-              extract (Right (s, [])) = let g = "(get-value (" ++ show s ++ "))" in getVal (kindOf s) g
-              extract (Right (s, ss)) = let g = "(get-value ((" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ ")))" in getVal (kindOf s) g
+              extract (Right (s, [])) = let g = "(get-value (" ++ show s ++ ")" ++ modelIndex ++ ")" in getVal (kindOf s) g
+              extract (Right (s, ss)) = let g = "(get-value ((" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))" ++ modelIndex ++ ")" in getVal (kindOf s) g
+
               getVal KReal g = ["(set-option :pp.decimal false) " ++ g, "(set-option :pp.decimal true)  " ++ g]
               getVal _     g = [g]
+
        addTimeOut Nothing  o   = o
        addTimeOut (Just i) o
          | i < 0               = error $ "Z3: Timeout value must be non-negative, received: " ++ show i

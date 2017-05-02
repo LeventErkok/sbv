@@ -488,18 +488,28 @@ standardEngine :: String
                -> ([String] -> Int -> [String])
                -> (Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel, SW -> String -> [String])
                -> SMTEngine
-standardEngine envName envOptName addTimeOut (extractMap, extractValue) cfg isSat qinps skolemMap pgm = do
+standardEngine envName envOptName addTimeOut (extractMap, extractValue) cfg isSat mbOptInfo qinps skolemMap pgm = do
+
+    -- If there's an optimization goal, it better be handled by a custom engine!
+    () <- case mbOptInfo of
+            Nothing -> return ()
+            Just _  -> error $ "SBV.standardEngine: Solver: " ++ show (name (solver cfg)) ++ " doesn't support optimization!"
+
     execName <-                    getEnv envName     `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
     execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
+
     let cfg'    = cfg {solver = (solver cfg) {executable = execName, options = maybe execOpts (addTimeOut execOpts) (timeOut cfg)}}
         tweaks  = case solverTweaks cfg' of
                     [] -> ""
                     ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
+
         cont rm = intercalate "\n" $ concatMap extract skolemMap
            where extract (Left s)        = extractValue s $ "(echo \"((" ++ show s ++ " " ++ mkSkolemZero rm (kindOf s) ++ "))\")"
                  extract (Right (s, [])) = extractValue s $ "(get-value (" ++ show s ++ "))"
                  extract (Right (s, ss)) = extractValue s $ "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
+
         script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg))}
+
     standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps))
 
 -- | A standard solver interface. If the solver is SMT-Lib compliant, then this function should suffice in

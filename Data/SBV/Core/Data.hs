@@ -468,13 +468,13 @@ instance NFData CaseCond where
   rnf (Opt os)         = rnf os `seq` ()
 
 -- | Internal representation of a symbolic simulation result
-data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]             -- ^ inputs
-                             , smtSkolemMap :: [Either SW (SW, [SW])]                  -- ^ skolem-map
-                             , kindsUsed    :: Set.Set Kind                            -- ^ kinds used
-                             , smtAsserts   :: [(String, Maybe CallStack, SW)]         -- ^ assertions
-                             , tactics      :: [Tactic SW]                             -- ^ tactics to use
-                             , objectives   :: [Objective (SW, SW)]                    -- ^ optimization goals
-                             , smtLibPgm    :: SMTConfig -> CaseCond -> SMTLibPgm      -- ^ SMTLib representation, given the config and case-splits
+data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]        -- ^ inputs
+                             , smtSkolemMap :: [Either SW (SW, [SW])]             -- ^ skolem-map
+                             , kindsUsed    :: Set.Set Kind                       -- ^ kinds used
+                             , smtAsserts   :: [(String, Maybe CallStack, SW)]    -- ^ assertions
+                             , tactics      :: [Tactic SW]                        -- ^ tactics to use
+                             , objectives   :: [Objective (SW, SW)]               -- ^ optimization goals, if any
+                             , smtLibPgm    :: SMTConfig -> CaseCond -> SMTLibPgm -- ^ SMTLib representation, given the config and case-splits
                              }
 
 instance NFData SMTProblem where

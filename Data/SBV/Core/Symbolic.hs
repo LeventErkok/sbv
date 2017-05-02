@@ -1237,7 +1237,13 @@ data SMTScript = SMTScript {
         }
 
 -- | An SMT engine
-type SMTEngine = SMTConfig -> Bool -> [(Quantifier, NamedSymVar)] -> [Either SW (SW, [SW])] -> String -> IO SMTResult
+type SMTEngine = SMTConfig                     -- ^ current configuration
+               -> Bool                         -- ^ is sat?
+               -> Maybe (OptimizeStyle, Int)   -- ^ if optimizing, the style and #of objectives
+               -> [(Quantifier, NamedSymVar)]  -- ^ quantified inputs
+               -> [Either SW (SW, [SW])]       -- ^ skolem map
+               -> String                       -- ^ program
+               -> IO SMTResult
 
 -- | Solvers that SBV is aware of
 data Solver = Z3
