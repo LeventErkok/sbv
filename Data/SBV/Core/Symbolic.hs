@@ -298,7 +298,7 @@ data Penalty = DefaultPenalty                  -- ^ Default: Penalty of @1@ and 
 -- for not satisfying it.
 data Objective a = Minimize   String a         -- ^ Minimize this metric
                  | Maximize   String a         -- ^ Maximize this metric
-                 | AssertSoft String a Penalty -- ^ A soft assertion, with an associated penalty 
+                 | AssertSoft String a Penalty -- ^ A soft assertion, with an associated penalty
                  deriving (Show, Functor)
 
 -- | The name of the objective
@@ -862,11 +862,11 @@ addSValOptGoal obj = do st <- ask
                                                 track   <- svMkSymVar (Just EX) (kindOf orig) (Just nm)
                                                 trackSW <- liftIO $ svToSW st track
                                                 return (origSW, trackSW)
- 
+
                         let walk (Minimize   nm v)     = Minimize nm              `fmap` mkGoal nm v
                             walk (Maximize   nm v)     = Maximize nm              `fmap` mkGoal nm v
                             walk (AssertSoft nm v mbP) = flip (AssertSoft nm) mbP `fmap` mkGoal nm v
- 
+
                         obj' <- walk obj
                         liftIO $ modifyIORef (rOptGoals st) (obj' :)
 
@@ -1092,17 +1092,17 @@ instance NFData SMTScript where
 -- one is experimenting with custom logics that might be supported on new solvers. See <http://smtlib.cs.uiowa.edu/logics.shtml>
 -- for the official list.
 data SMTLibLogic
-  = AUFLIA    -- ^ Formulas over the theory of linear integer arithmetic and arrays extended with free sort and function symbols but restricted to arrays with integer indices and values
-  | AUFLIRA   -- ^ Linear formulas with free sort and function symbols over one- and two-dimentional arrays of integer index and real value
-  | AUFNIRA   -- ^ Formulas with free function and predicate symbols over a theory of arrays of arrays of integer index and real value
-  | LRA       -- ^ Linear formulas in linear real arithmetic
-  | QF_ABV    -- ^ Quantifier-free formulas over the theory of bitvectors and bitvector arrays
-  | QF_AUFBV  -- ^ Quantifier-free formulas over the theory of bitvectors and bitvector arrays extended with free sort and function symbols
-  | QF_AUFLIA -- ^ Quantifier-free linear formulas over the theory of integer arrays extended with free sort and function symbols
-  | QF_AX     -- ^ Quantifier-free formulas over the theory of arrays with extensionality
-  | QF_BV     -- ^ Quantifier-free formulas over the theory of fixed-size bitvectors
-  | QF_IDL    -- ^ Difference Logic over the integers. Boolean combinations of inequations of the form x - y < b where x and y are integer variables and b is an integer constant
-  | QF_LIA    -- ^ Unquantified linear integer arithmetic. In essence, Boolean combinations of inequations between linear polynomials over integer variables
+  = AUFLIA    -- ^ Formulas over the theory of linear integer arithmetic and arrays extended with free sort and function symbols but restricted to arrays with integer indices and values.
+  | AUFLIRA   -- ^ Linear formulas with free sort and function symbols over one- and two-dimentional arrays of integer index and real value.
+  | AUFNIRA   -- ^ Formulas with free function and predicate symbols over a theory of arrays of arrays of integer index and real value.
+  | LRA       -- ^ Linear formulas in linear real arithmetic.
+  | QF_ABV    -- ^ Quantifier-free formulas over the theory of bitvectors and bitvector arrays.
+  | QF_AUFBV  -- ^ Quantifier-free formulas over the theory of bitvectors and bitvector arrays extended with free sort and function symbols.
+  | QF_AUFLIA -- ^ Quantifier-free linear formulas over the theory of integer arrays extended with free sort and function symbols.
+  | QF_AX     -- ^ Quantifier-free formulas over the theory of arrays with extensionality.
+  | QF_BV     -- ^ Quantifier-free formulas over the theory of fixed-size bitvectors.
+  | QF_IDL    -- ^ Difference Logic over the integers. Boolean combinations of inequations of the form x - y < b where x and y are integer variables and b is an integer constant.
+  | QF_LIA    -- ^ Unquantified linear integer arithmetic. In essence, Boolean combinations of inequations between linear polynomials over integer variables.
   | QF_LRA    -- ^ Unquantified linear real arithmetic. In essence, Boolean combinations of inequations between linear polynomials over real variables.
   | QF_NIA    -- ^ Quantifier-free integer arithmetic.
   | QF_NRA    -- ^ Quantifier-free real arithmetic.
@@ -1116,8 +1116,8 @@ data SMTLibLogic
   | QF_UFNIRA -- ^ Unquantified non-linear real integer arithmetic with uninterpreted sort and function symbols.
   | UFLRA     -- ^ Linear real arithmetic with uninterpreted sort and function symbols.
   | UFNIA     -- ^ Non-linear integer arithmetic with uninterpreted sort and function symbols.
-  | QF_FPBV   -- ^ Quantifier-free formulas over the theory of floating point numbers, arrays, and bit-vectors
-  | QF_FP     -- ^ Quantifier-free formulas over the theory of floating point numbers
+  | QF_FPBV   -- ^ Quantifier-free formulas over the theory of floating point numbers, arrays, and bit-vectors.
+  | QF_FP     -- ^ Quantifier-free formulas over the theory of floating point numbers.
   deriving Show
 
 -- | NFData instance for SMTLibLogic
