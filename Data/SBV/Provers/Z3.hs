@@ -131,7 +131,9 @@ extractMap isSat qinps solverLines =
         squashReals = concatMap squash . groupBy ((==) `on` fst)
           where squash [(i, (n, cw1)), (_, (_, cw2))] = [(i, (n, mergeReals n cw1 cw2))]
                 squash xs = xs
+
                 mergeReals :: String -> CW -> CW -> CW
                 mergeReals n (CW KReal (CWAlgReal a)) (CW KReal (CWAlgReal b)) = CW KReal (CWAlgReal (mergeAlgReals (bad n a b) a b))
                 mergeReals n a b = bad n a b
+
                 bad n a b = error $ "SBV.Z3: Cannot merge reals for variable: " ++ n ++ " received: " ++ show (a, b)
