@@ -15,6 +15,7 @@ module Data.SBV.SMT.SMTLib(
         , toSMTLib2
         , addNonEqConstraints
         , interpretSolverOutput
+        , interpretSolverOutputMulti
         , interpretSolverModelLine
         , interpretSolverObjectiveLine
         ) where
@@ -107,6 +108,32 @@ interpretSolverOutput cfg extractMap ("sat":rest)     = let m = extractMap rest
                                                                  _  -> SatExtField cfg m
 interpretSolverOutput cfg _          ("timeout":_)    = TimeOut       cfg
 interpretSolverOutput cfg _          ls               = ProofError    cfg  ls
+
+-- | Interpret solver output based on SMT-Lib standard output responses, in the case we're expecting multiple objective model values
+interpretSolverOutputMulti :: Int -> SMTConfig -> ([String] -> SMTModel) -> [String] -> [SMTResult]
+interpretSolverOutputMulti n cfg extractMap outLines
+   | degenerate
+   = replicate n $ interpretSolverOutput cfg extractMap preModels
+   | n /= lms
+   = error $ "SBV: Expected " ++ show n ++ " models, received: " ++ show lms ++ ":\n" ++ unlines outLines
+   | True
+   = map (interpretSolverOutput cfg extractMap) multiModels
+  where degenerate = case outLines of
+                      ("sat"    :_) -> False
+                      ("unknown":_) -> False
+                      _             -> True
+
+        (preModels, postModels) = case break (== "(sbv_objective_model_marker)") outLines of
+                                    (pre, _:post) -> (pre, post)
+                                    r             -> r
+
+        walk [] sofar = reverse sofar
+        walk xs sofar = case break (== "(sbv_objective_model_marker)") xs of
+                          (g, [])     -> walk []   (g:sofar)
+                          (g, _:rest) -> walk rest (g:sofar)
+
+        multiModels = map (preModels ++) (walk postModels [])
+        lms         = length multiModels
 
 -- | Get a counter-example from an SMT-Lib2 like model output line
 -- This routing is necessarily fragile as SMT solvers tend to print output

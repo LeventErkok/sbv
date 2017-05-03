@@ -392,18 +392,24 @@ proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
 proveWith config a = do simRes@SMTProblem{tactics, objectives} <- simulate (getConverter config) config False [] a
                         objectiveCheck False objectives "prove"
                         let hasPar = any isParallelCaseAnywhere tactics
-                        bufferSanity hasPar $ applyTactics config (False, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver False "Checking Theoremhood.." [] ThmResult simRes
+                        bufferSanity hasPar $ applyTactics config (False, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver False "Checking Theoremhood.." [] mwrap simRes
   where wrap                 = ThmResult
         unwrap (ThmResult r) = r
+
+        mwrap [r] = wrap r
+        mwrap xs  = error $ "SBV.proveWith: Backend solver returned a non-singleton answer:\n" ++ show (map ThmResult xs)
 
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
 satWith config a = do simRes@SMTProblem{tactics, objectives} <- simulate (getConverter config) config True [] a
                       objectiveCheck False objectives "sat"
                       let hasPar = any isParallelCaseAnywhere tactics
-                      bufferSanity hasPar $ applyTactics config (True, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver True "Checking Satisfiability.." [] SatResult simRes
+                      bufferSanity hasPar $ applyTactics config (True, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver True "Checking Satisfiability.." [] mwrap simRes
   where wrap                 = SatResult
         unwrap (SatResult r) = r
+
+        mwrap [r] = wrap r
+        mwrap xs  = error $ "SBV.satWith: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
 
 -- | Optimizes the objectives using the given SMT-solver
 optimizeWith :: Provable a => SMTConfig -> a -> IO OptimizeResult
@@ -412,23 +418,58 @@ optimizeWith config a = do
         sbvPgm@SMTProblem{objectives, tactics} <- simulate (getConverter config) config True [] a
 
         objectiveCheck True objectives "optimize"
-        let hasPar  = any isParallelCaseAnywhere tactics
-            result  = bufferSanity hasPar $ applyTactics config (True, hasPar) (id, id) [] tactics objectives $ callSolver True "Optimizing.." [] id sbvPgm
 
-        let style = case nub [s | OptimizePriority s <- tactics] of
+        let hasPar  = any isParallelCaseAnywhere tactics
+            style = case nub [s | OptimizePriority s <- tactics] of
                       []  -> Lexicographic
                       [s] -> s
                       ss  -> error $ "SBV: Multiple optimization priorities found: " ++ intercalate ", " (map show ss) ++ ". Please use only one."
 
-        case style of
-          Lexicographic -> LexicographicResult <$> result
-          Pareto        -> optPareto      `fmap` result
-          Independent   -> optIndependent `fmap` result
+
+            optimizer = case style of
+               Lexicographic -> optLexicographic
+               Independent   -> optIndependent
+               Pareto        -> optPareto
+
+        optimizer hasPar config sbvPgm
 
   where msg = when (verbose config) . putStrLn . ("** " ++)
 
-        optPareto        _ = error "optPareto: TBD"
-        optIndependent   _ = error "optIndependent: TBD"
+-- | Construct a lexicographic optimization result
+optLexicographic :: Bool -> SMTConfig -> SMTProblem -> IO OptimizeResult
+optLexicographic hasPar config sbvPgm@SMTProblem{objectives, tactics} = do
+        result <- bufferSanity hasPar $ applyTactics config (True, hasPar) (id, id) [] tactics objectives $ callSolver True "Lexicographically optimizing.." [] mwrap sbvPgm
+        return $ LexicographicResult result
+
+  where mwrap [r] = r
+        mwrap xs  = error $ "SBV.optLexicographic: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
+
+-- | Construct an independent optimization result
+optIndependent :: Bool -> SMTConfig -> SMTProblem -> IO OptimizeResult
+optIndependent hasPar config sbvPgm@SMTProblem{objectives, tactics} = do
+        let ns = map objectiveName objectives
+        result <- bufferSanity hasPar $ applyTactics config (True, hasPar) (wrap ns, unwrap) [] tactics objectives $ callSolver True "Independently optimizing.." [] mwrap sbvPgm
+        return $ IndependentResult result
+
+  where wrap :: [String] -> SMTResult -> [(String, SMTResult)]
+        wrap ns r = zip ns (repeat r)
+
+        -- the role of unwrap here is to take the result with more info in case a case-split is
+        -- performed and we need to decide in a SAT context.
+        unwrap :: [(String, SMTResult)] -> SMTResult
+        unwrap xs = case [r | (_, r@Satisfiable{}) <- xs] ++ [r | (_, r@SatExtField{}) <- xs] ++ map snd xs of
+                     (r:_) -> r
+                     []    -> error "SBV.optIndependent: Impossible happened: Received no results!"
+
+        mwrap xs
+         | lobs == lxs = zip (map objectiveName objectives) xs
+         | True        = error $ "SBV.optIndependent: Expected " ++ show lobs ++ " objective results, but received: " ++ show lxs ++ ":\n" ++ show (map SatResult xs)
+         where lxs  = length xs
+               lobs = length objectives
+
+-- | Construct a pareto-front optimization result
+optPareto :: Bool -> SMTConfig -> SMTProblem -> IO OptimizeResult
+optPareto _hasPar _config _sbvPgm = error "SBV.optPareto: TBD"
 
 -- | Apply the given tactics to a problem
 applyTactics :: SMTConfig                                                       -- ^ Solver configuration
@@ -803,11 +844,13 @@ safeWith cfg a = do
   where locInfo (Just ps) = Just $ let loc (f, sl) = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
                                    in intercalate ",\n " (map loc ps)
         locInfo _         = Nothing
-        verify res (msg, cs, cond) = do SatResult result <- runProofOn (getConverter cfg) cfg True [] pgm >>= \p -> callSolver True msg [] SatResult p cfg Nothing NoCase
+        verify res (msg, cs, cond) = do result <- runProofOn (getConverter cfg) cfg True [] pgm >>= \p -> callSolver True msg [] mwrap p cfg Nothing NoCase
                                         return $ SafeResult (locInfo (getCallStack `fmap` cs), msg, result)
            where pgm = res { resInputs  = [(EX, n) | (_, n) <- resInputs res]   -- make everything existential
                            , resOutputs = [cond]
                            }
+                 mwrap [r] = r
+                 mwrap xs  = error $ "SBV.safeWith: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
 
 -- | Check if a safe-call was safe or not, turning a 'SafeResult' to a Bool.
 isSafe :: SafeResult -> Bool
@@ -827,7 +870,7 @@ isVacuousWith config a = do
            [] -> return False -- no constraints, no need to check
            _  -> do let is'  = [(EX, i) | (_, i) <- is] -- map all quantifiers to "exists" for the constraint check
                         res' = Result ki tr uic is' cs ts as uis ax asgn cstr tactics goals asserts [trueSW]
-                    SatResult result <- runProofOn (getConverter config) config True [] res' >>= \p -> callSolver True "Checking Satisfiability.." [] SatResult p config Nothing NoCase
+                    result <- runProofOn (getConverter config) config True [] res' >>= \p -> callSolver True "Checking Vacuity.." [] mwrap p config Nothing NoCase
                     case result of
                       Unsatisfiable{} -> return True  -- constraints are unsatisfiable!
                       Satisfiable{}   -> return False -- constraints are satisfiable!
@@ -835,6 +878,8 @@ isVacuousWith config a = do
                       Unknown{}       -> error "SBV: isVacuous: Solver returned unknown!"
                       ProofError _ ls -> error $ "SBV: isVacuous: error encountered:\n" ++ unlines ls
                       TimeOut _       -> error "SBV: isVacuous: time-out."
+        where mwrap [r] = r
+              mwrap xs  = error $ "SBV.isVacuousWith: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
 
 -- | Find all satisfying assignments using the given SMT-solver
 allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
@@ -887,16 +932,21 @@ allSatWith config p = do
                  Nothing -> -- no new constraints refuted models, stop
                             return Nothing
                  Just refutedModels -> do
+
                     let wrap                 = SatResult
                         unwrap (SatResult r) = r
+
+                        mwrap  [r]           = wrap r
+                        mwrap xs             = error $ "SBV.allSatWith: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
+
                     res <- bufferSanity hasPar $ applyTactics (updateName (n-1) config) (True, hasPar) (wrap, unwrap) [] tactics objectives
-                                               $ callSolver True "Checking Satisfiability.." refutedModels SatResult simRes
+                                               $ callSolver True "Checking Satisfiability.." refutedModels mwrap simRes
                     return $ Just res
 
         updateName i cfg = cfg{smtFile = upd `fmap` smtFile cfg}
                where upd nm = let (b, e) = splitExtension nm in b ++ "_allSat_" ++ show i ++ e
 
-callSolver :: Bool -> String -> [String] -> (SMTResult -> b) -> SMTProblem -> SMTConfig -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO b
+callSolver :: Bool -> String -> [String] -> ([SMTResult] -> b) -> SMTProblem -> SMTConfig -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO b
 callSolver isSat checkMsg refutedModels wrap SMTProblem{smtInputs, smtSkolemMap, smtLibPgm} config mbOptInfo caseCond = do
        let msg = when (verbose config) . putStrLn . ("** " ++)
            finalPgm = intercalate "\n" (pgm ++ refutedModels) where SMTLibPgm _ pgm = smtLibPgm config caseCond
@@ -951,9 +1001,14 @@ internalSATCheck cfg condInPath st msg = do
    sw <- sbvToSW st condInPath
    () <- forceSWArg sw
    Result ki tr uic is cs ts as uis ax asgn cstr tactics goals assertions _ <- extractSymbolicSimulationState st
+
    let -- Construct the corresponding sat-checker for the branch. Note that we need to
        -- forget about the quantifiers and just use an "exist", as we're looking for a
        -- point-satisfiability check here; whatever the original program was.
        pgm = Result ki tr uic [(EX, n) | (_, n) <- is] cs ts as uis ax asgn cstr tactics goals assertions [sw]
-   runProofOn (getConverter cfg) cfg True [] pgm >>= \p -> callSolver True msg [] SatResult p cfg Nothing NoCase
+
+       mwrap [r] = SatResult r
+       mwrap xs  = error $ "SBV.internalSATCheck: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
+
+   runProofOn (getConverter cfg) cfg True [] pgm >>= \p -> callSolver True msg [] mwrap p cfg Nothing NoCase
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

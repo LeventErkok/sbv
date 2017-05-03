@@ -112,9 +112,10 @@ instance Show AllSatResult where
 
 -- | Show instance for optimization results
 instance Show OptimizeResult where
-  show (LexicographicResult r) = show (SatResult r)
-  show (ParetoResult        _) = "TBD: show pareto"
-  show (IndependentResult   _) = "TBD: show independent"
+  show (LexicographicResult r)  = show (SatResult r)
+  show (IndependentResult   xs) = let shift s = intercalate "\n" (map ("  " ++) (lines s))
+                                  in intercalate "\n" ["Optimization results for objective " ++ show s ++ ":\n" ++ shift (show (SatResult r)) | (s, r) <- xs]
+  show (ParetoResult        _)  = "TBD: show pareto"
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
 -- solvers. The idea is that the sbv infrastructure provides a stream of 'CW''s (constant-words)
@@ -510,7 +511,10 @@ standardEngine envName envOptName addTimeOut (extractMap, extractValue) cfg isSa
 
         script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg))}
 
-    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps))
+        -- standard engines only return one result ever
+        wrap x = [x]
+
+    standardSolver cfg' script id (wrap . ProofError cfg') (wrap . interpretSolverOutput cfg' (extractMap isSat qinps))
 
 -- | A standard solver interface. If the solver is SMT-Lib compliant, then this function should suffice in
 -- communicating with it.

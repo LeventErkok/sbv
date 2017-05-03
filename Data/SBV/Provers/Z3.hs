@@ -60,13 +60,17 @@ z3 = SMTSolver {
                                         ppDecLim = "(set-option :pp.decimal_precision " ++ show dlim ++ ")\n"
 
                                         mkCont     = cont (roundingMode cfg) skolemMap
-                                        contScript = case mbOptInfo of
-                                                       Just (Independent, n) | n > 1 -> intercalate "\n" (map (mkCont . Just) [0 .. n-1])
-                                                       _                             -> mkCont Nothing
+                                        (nModels, contScript) = case mbOptInfo of
+                                                                  Just (Independent, n) | n > 1 -> (n, intercalate "\n" (map (mkCont . Just) [0 .. n-1]))
+                                                                  _                             -> (1, mkCont Nothing)
 
                                         script   = SMTScript {scriptBody = tweaks ++ ppDecLim ++ pgm, scriptModel = Just contScript}
 
-                                    standardSolver cfg' script id (ProofError cfg') (interpretSolverOutput cfg' (extractMap isSat qinps))
+                                        mkResult c em
+                                         | nModels == 1 = replicate 1 . interpretSolverOutput              c em
+                                         | True         =               interpretSolverOutputMulti nModels c em
+
+                                    standardSolver cfg' script id (replicate nModels . ProofError cfg') (mkResult cfg' (extractMap isSat qinps))
 
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "Z3"
@@ -90,8 +94,8 @@ z3 = SMTSolver {
                              Just i  -> " :model_index " ++ show i
 
               wrapModel xs = case mbModelIndex of
-                               Nothing -> xs
-                               Just i  -> ("(echo \"(objective_model " ++ show i ++ "\")") : xs ++ ["(echo \")\")"]
+                               Just _ -> "(echo \"(sbv_objective_model_marker)\")" : xs
+                               _      -> xs
 
               -- In the skolemMap:
               --    * Left's are universals: i.e., the model should be true for

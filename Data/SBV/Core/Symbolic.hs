@@ -1243,7 +1243,7 @@ type SMTEngine = SMTConfig                     -- ^ current configuration
                -> [(Quantifier, NamedSymVar)]  -- ^ quantified inputs
                -> [Either SW (SW, [SW])]       -- ^ skolem map
                -> String                       -- ^ program
-               -> IO SMTResult
+               -> IO [SMTResult]
 
 -- | Solvers that SBV is aware of
 data Solver = Z3
