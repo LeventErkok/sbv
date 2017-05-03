@@ -469,7 +469,19 @@ optIndependent hasPar config sbvPgm@SMTProblem{objectives, tactics} = do
 
 -- | Construct a pareto-front optimization result
 optPareto :: Bool -> SMTConfig -> SMTProblem -> IO OptimizeResult
-optPareto _hasPar _config _sbvPgm = error "SBV.optPareto: TBD"
+optPareto hasPar config sbvPgm@SMTProblem{objectives, tactics} = do
+        result <- bufferSanity hasPar $ applyTactics config (True, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver True "Independently optimizing.." [] id sbvPgm
+        return $ ParetoResult result
+
+  where wrap :: SMTResult -> [SMTResult]
+        wrap r = [r]
+
+        -- the role of unwrap here is to take the result with more info in case a case-split is
+        -- performed and we need to decide in a SAT context.
+        unwrap :: [SMTResult] -> SMTResult
+        unwrap xs = case [r | r@Satisfiable{} <- xs] ++ [r | r@SatExtField{} <- xs] ++ xs of
+                     (r:_) -> r
+                     []    -> error "SBV.optPareto: Impossible happened: Received no results!"
 
 -- | Apply the given tactics to a problem
 applyTactics :: SMTConfig                                                       -- ^ Solver configuration
