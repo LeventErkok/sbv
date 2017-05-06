@@ -16,6 +16,7 @@ module Data.SBV.SMT.SMTLib(
         , addNonEqConstraints
         , interpretSolverOutput
         , interpretSolverOutputMulti
+        , interpretSolverParetoOutput
         , interpretSolverModelLine
         , interpretSolverObjectiveLine
         ) where
@@ -134,6 +135,12 @@ interpretSolverOutputMulti n cfg extractMap outLines
 
         multiModels = map (preModels ++) (walk postModels [])
         lms         = length multiModels
+
+-- | Interpret solver output based on SMT-Lib pareto-output mode. Unfortunately this is likely to be very Z3 specific, and quite dissimilar
+-- to other modes. (A "request" has been filed so we don't have to do this: <https://github.com/Z3Prover/z3/issues/1008>.) In the mean
+-- time we try to interpret the Z3 output as well as we can.
+interpretSolverParetoOutput :: SMTConfig -> ([String] -> SMTModel) -> [String] -> [SMTResult]
+interpretSolverParetoOutput _cfg _extractMap _lines = []
 
 -- | Get a counter-example from an SMT-Lib2 like model output line
 -- This routing is necessarily fragile as SMT solvers tend to print output

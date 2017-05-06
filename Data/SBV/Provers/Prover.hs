@@ -601,7 +601,9 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
 
                   style Lexicographic = [] -- default, no option needed
                   style Independent   = ["(set-option :opt.priority box)"]
-                  style Pareto        = ["(set-option :opt.priority pareto)"]
+                  style Pareto        = [ "(set-option :opt.priority pareto)"
+                                        , "(set-option :opt.print_model true)"
+                                        ]
 
 -- | Implements the "constraint vacuity check" tactic, making sure the calls to "constrain"
 -- describe a satisfiable condition. Returns:

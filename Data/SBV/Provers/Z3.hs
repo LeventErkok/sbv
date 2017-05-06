@@ -60,13 +60,17 @@ z3 = SMTSolver {
                                         ppDecLim = "(set-option :pp.decimal_precision " ++ show dlim ++ ")\n"
 
                                         mkCont     = cont (roundingMode cfg) skolemMap
-                                        (nModels, contScript) = case mbOptInfo of
-                                                                  Just (Independent, n) | n > 1 -> (n, intercalate "\n" (map (mkCont . Just) [0 .. n-1]))
-                                                                  _                             -> (1, mkCont Nothing)
 
-                                        script   = SMTScript {scriptBody = tweaks ++ ppDecLim ++ pgm, scriptModel = Just contScript}
+                                        (nModels, isPareto, mbContScript) =
+                                                case mbOptInfo of
+                                                  Just (Pareto, _)              -> (1, True,  Nothing)
+                                                  Just (Independent, n) | n > 1 -> (n, False, Just (intercalate "\n" (map (mkCont . Just) [0 .. n-1])))
+                                                  _                             -> (1, False, Just (mkCont Nothing))
+
+                                        script   = SMTScript {scriptBody = tweaks ++ ppDecLim ++ pgm, scriptModel = mbContScript}
 
                                         mkResult c em
+                                         | isPareto     =               interpretSolverParetoOutput        c em
                                          | nModels == 1 = replicate 1 . interpretSolverOutput              c em
                                          | True         =               interpretSolverOutputMulti nModels c em
 

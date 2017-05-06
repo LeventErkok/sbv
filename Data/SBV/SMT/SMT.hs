@@ -112,10 +112,18 @@ instance Show AllSatResult where
 
 -- | Show instance for optimization results
 instance Show OptimizeResult where
-  show (LexicographicResult r)  = show (SatResult r)
-  show (IndependentResult   xs) = let shift s = intercalate "\n" (map ("  " ++) (lines s))
-                                  in intercalate "\n" ["Optimization results for objective " ++ show s ++ ":\n" ++ shift (show (SatResult r)) | (s, r) <- xs]
-  show (ParetoResult        _)  = "TBD: show pareto"
+  show = showOptResult
+
+-- | Nice printing of optimization results
+showOptResult :: OptimizeResult -> String
+showOptResult res =
+  case res of
+    LexicographicResult r  -> show (SatResult r)
+    IndependentResult   xs -> multi [("Optimization results for objective "    ++ show s, SatResult r) | (s, r) <- xs]
+    ParetoResult        xs -> multi [("Optimization results for pareto front " ++ show i, SatResult r) | (i, r) <- zip [(1::Int)..] xs]
+ where shift s  = intercalate "\n" (map ("  " ++) (lines (show s)))
+       multi [] = "There are no objectives for which to display models for."
+       multi xs = intercalate "\n" [t ++ ":\n" ++ shift r | (t, r) <- xs]
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
 -- solvers. The idea is that the sbv infrastructure provides a stream of 'CW''s (constant-words)
