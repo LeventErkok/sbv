@@ -147,7 +147,7 @@ interpretSolverParetoOutput cfg extractMap outLines
   | not isSAT
   = cont [finalLine : initLines]
   | True
-  = cont $ map ("sat" :) modelGroups
+  = map (Satisfiable cfg) modelGroups
   where finalLine = last outLines
         initLines = init outLines
         isSAT     = case words finalLine of
@@ -163,23 +163,19 @@ interpretSolverParetoOutput cfg extractMap outLines
         irrelevant  = null . dropWhile isSpace
         cluster (x:y:rest) = (x, y) : cluster rest
         cluster []         = []
-        cluster _          = error $ "SBV.pareto: Unable to parse pareto fronts from solver output. Uneven length:"
+        cluster _          = error $ "SBV.pareto: Unable to parse pareto fronts from solver output. Uneven length:\n"
                                    ++ unlines outLines
 
-        grok :: (String, String) -> [String]
+        grok :: (String, String) -> SMTModel
         grok (obj, ms)
           | "(objectives" `isPrefixOf` dropWhile isSpace obj
           , "(model"      `isPrefixOf` dropWhile isSpace ms
-          = obj : getBindings ms
+          = extractMap ["sat", obj, ms]
           | True
-          = error $  "SBV.pareto: Unable to parse pareto front from solver output. Unexpected output:"
+          = error $  "SBV.pareto: Unable to parse pareto front from solver output:\n"
                   ++ unlines [obj, ms]
                   ++ "SBV.pareto: The bigger context is:"
                   ++ unlines outLines
-
-        -- this is where it gets really flaky! But hopefully it'll stand to practice
-        getBindings :: String -> [String]
-        getBindings ms = [ms]
 
 -- | Get a counter-example from an SMT-Lib2 like model output line
 -- This routing is necessarily fragile as SMT solvers tend to print output
@@ -210,12 +206,23 @@ identifyInput inps = classify
 
 -- | Turn an sexpr to a binding in our model
 modelValues :: Bool -> [NamedSymVar] -> String -> SExpr -> [(Int, (String, CW))]
-modelValues errOnUnrecognized inps line = extract
+modelValues errOnUnrecognized inps line = extractModel
   where getInput = identifyInput inps
 
         getUIIndex (KUserSort  _ (Right xs)) i = i `lookup` zip xs [0..]
         getUIIndex _                         _ = Nothing
 
+        -- Lines of the form (model (define-fun s0 () Int 0) ...)
+        extractModel (EApp (ECon "model" : rest)) = concatMap extractDefine rest
+        extractModel e                            = extract e
+
+        -- Lines of the form (define-fun s0 () Int 0)
+        extractDefine (EApp (ECon "define-fun" : nm : EApp [] : ECon _ : rest)) = extract $ EApp (nm : rest)
+        extractDefine r = error $   "SBV.SMTLib: Cannot extract value from model level define-fun:"
+                                ++ "\n\tInput: " ++ show line
+                                ++ "\n\tParse: " ++ show r
+
+        -- Lines of the form ((s0 0))
         extract (EApp [EApp [v, ENum    i]]) | Just (n, s, nm) <- getInput v                    = [(n, (nm, mkConstCW (kindOf s) (fst i)))]
         extract (EApp [EApp [v, EReal   i]]) | Just (n, s, nm) <- getInput v, isReal s          = [(n, (nm, CW KReal (CWAlgReal i)))]
 
