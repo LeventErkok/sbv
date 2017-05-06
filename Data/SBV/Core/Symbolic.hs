@@ -704,8 +704,9 @@ svMkSymVar mbQ k mbNm = do
                                      liftIO $ modifyIORef (rCInfo st) ((fromMaybe "_" mbNm, cw):)
                                      return (SVal k (Left cw))
           _          -> do (sw, internalName) <- liftIO $ newSW st k
-                           let nm = fromMaybe internalName mbNm
-                           liftIO $ modifyIORef (rinps st) ((q, (sw, nm)):)
+                           let chosenName = fromMaybe internalName mbNm
+                           uniqueName <- uniquify chosenName
+                           liftIO $ modifyIORef (rinps st) ((q, (sw, uniqueName)):)
                            return $ SVal k $ Right $ cache (const (return sw))
 
 -- | Create a properly quantified variable of a user defined sort. Only valid
@@ -723,9 +724,21 @@ mkSValUserSort k mbQ mbNm = do
                   (Nothing, Concrete{})       -> error $ "SBV: Uninterpreted sort " ++ sortName ++ " can not be used in concrete simulation mode."
         ctr <- liftIO $ incCtr st
         let sw = SW k (NodeId ctr)
-            nm = fromMaybe ('s':show ctr) mbNm
-        liftIO $ modifyIORef (rinps st) ((q, (sw, nm)):)
+            chosenName = fromMaybe ('s':show ctr) mbNm
+        uniqueName <- uniquify chosenName
+        liftIO $ modifyIORef (rinps st) ((q, (sw, uniqueName)):)
         return $ SVal k $ Right $ cache (const (return sw))
+
+-- | Create a new name, being careful to avoid previously existing names.
+-- We add ticks to avoid collisions.
+uniquify :: String -> Symbolic String
+uniquify nm = do st <- ask
+                 is <- liftIO $ readIORef (rinps st)
+                 let prev = [n | (_, (_, n)) <- is]
+                     find n
+                       | n `elem` prev = find (n ++ "'")
+                       | True          = n
+                 return $ find nm
 
 -- | Add a user specified axiom to the generated SMT-Lib file. The first argument is a mere
 -- string, use for commenting purposes. The second argument is intended to hold the multiple-lines
