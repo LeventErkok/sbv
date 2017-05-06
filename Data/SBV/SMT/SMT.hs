@@ -119,11 +119,11 @@ showOptResult :: OptimizeResult -> String
 showOptResult res =
   case res of
     LexicographicResult r  -> show (SatResult r)
-    IndependentResult   xs -> multi [("Optimization results for objective "    ++ show s, SatResult r) | (s, r) <- xs]
-    ParetoResult        xs -> multi [("Optimization results for pareto front " ++ show i, SatResult r) | (i, r) <- zip [(1::Int)..] xs]
+    IndependentResult   xs -> multi "Objectives"    [("Optimization results for objective "    ++ show s, SatResult r) | (s, r) <- xs]
+    ParetoResult        xs -> multi "Pareto fronts" [("Optimization results for pareto front " ++ show i, SatResult r) | (i, r) <- zip [(1::Int)..] xs]
  where shift s  = intercalate "\n" (map ("  " ++) (lines (show s)))
-       multi [] = "There are no objectives for which to display models for."
-       multi xs = intercalate "\n" [t ++ ":\n" ++ shift r | (t, r) <- xs]
+       multi w [] = "There are no " ++ w ++ " for which to display models for."
+       multi _ xs = intercalate "\n" [t ++ ":\n" ++ shift r | (t, r) <- xs]
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
 -- solvers. The idea is that the sbv infrastructure provides a stream of 'CW''s (constant-words)

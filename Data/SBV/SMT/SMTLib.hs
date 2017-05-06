@@ -21,7 +21,8 @@ module Data.SBV.SMT.SMTLib(
         , interpretSolverObjectiveLine
         ) where
 
-import Data.Char (isDigit)
+import Data.Char  (isDigit)
+import Data.Maybe (fromMaybe)
 
 import Data.SBV.Core.Data
 import Data.SBV.Provers.SExpr
@@ -111,11 +112,11 @@ interpretSolverOutput cfg _          ("timeout":_)    = TimeOut       cfg
 interpretSolverOutput cfg _          ls               = ProofError    cfg  ls
 
 -- | Interpret solver output based on SMT-Lib standard output responses, in the case we're expecting multiple objective model values
-interpretSolverOutputMulti :: Int -> SMTConfig -> ([String] -> SMTModel) -> [String] -> [SMTResult]
-interpretSolverOutputMulti n cfg extractMap outLines
+interpretSolverOutputMulti :: Maybe Int -> SMTConfig -> ([String] -> SMTModel) -> [String] -> [SMTResult]
+interpretSolverOutputMulti mbN cfg extractMap outLines
    | degenerate
-   = replicate n $ interpretSolverOutput cfg extractMap preModels
-   | n /= lms
+   = replicate (fromMaybe 1 mbN) $ interpretSolverOutput cfg extractMap preModels
+   | Just n <- mbN, n /= lms
    = error $ "SBV: Expected " ++ show n ++ " models, received: " ++ show lms ++ ":\n" ++ unlines outLines
    | True
    = map (interpretSolverOutput cfg extractMap) multiModels
@@ -140,7 +141,24 @@ interpretSolverOutputMulti n cfg extractMap outLines
 -- to other modes. (A "request" has been filed so we don't have to do this: <https://github.com/Z3Prover/z3/issues/1008>.) In the mean
 -- time we try to interpret the Z3 output as well as we can.
 interpretSolverParetoOutput :: SMTConfig -> ([String] -> SMTModel) -> [String] -> [SMTResult]
-interpretSolverParetoOutput _cfg _extractMap _lines = []
+interpretSolverParetoOutput cfg extractMap outLines
+  | null outLines
+  = cont []
+  | not isSAT
+  = cont (finalLine : initLines)
+  | True
+  = cont ("sat" : modelLines)
+  where finalLine = last outLines
+        initLines = init outLines
+        isSAT     = case words finalLine of
+                      "sat":_ -> True
+                      _       -> False
+
+        cont = interpretSolverOutputMulti Nothing cfg extractMap
+
+        -- convert what z3 prints as Pareto output to what we can parse
+        -- this is necessarily flaky, but hopefully good enough!
+        modelLines = initLines
 
 -- | Get a counter-example from an SMT-Lib2 like model output line
 -- This routing is necessarily fragile as SMT solvers tend to print output

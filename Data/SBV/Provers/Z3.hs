@@ -70,9 +70,9 @@ z3 = SMTSolver {
                                         script   = SMTScript {scriptBody = tweaks ++ ppDecLim ++ pgm, scriptModel = mbContScript}
 
                                         mkResult c em
-                                         | isPareto     =               interpretSolverParetoOutput        c em
-                                         | nModels == 1 = replicate 1 . interpretSolverOutput              c em
-                                         | True         =               interpretSolverOutputMulti nModels c em
+                                         | isPareto     =               interpretSolverParetoOutput               c em
+                                         | nModels == 1 = replicate 1 . interpretSolverOutput                     c em
+                                         | True         =               interpretSolverOutputMulti (Just nModels) c em
 
                                     standardSolver cfg' script id (replicate nModels . ProofError cfg') (mkResult cfg' (extractMap isSat qinps))
 
