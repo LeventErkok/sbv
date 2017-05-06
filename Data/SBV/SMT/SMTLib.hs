@@ -103,13 +103,16 @@ addNonEqConstraints SMTLib2 = SMT2.addNonEqConstraints
 -- | Interpret solver output based on SMT-Lib standard output responses
 interpretSolverOutput :: SMTConfig -> ([String] -> SMTModel) -> [String] -> SMTResult
 interpretSolverOutput cfg _          ("unsat":_)      = Unsatisfiable cfg
-interpretSolverOutput cfg extractMap ("unknown":rest) = Unknown       cfg  $ extractMap rest
-interpretSolverOutput cfg extractMap ("sat":rest)     = let m = extractMap rest
-                                                        in case filter (not . isRegularCW . snd) (modelObjectives m) of
-                                                                 [] -> Satisfiable cfg m
-                                                                 _  -> SatExtField cfg m
+interpretSolverOutput cfg extractMap ("unknown":rest) = Unknown       cfg $ extractMap rest
+interpretSolverOutput cfg extractMap ("sat":rest)     = classifyModel cfg $ extractMap rest
 interpretSolverOutput cfg _          ("timeout":_)    = TimeOut       cfg
-interpretSolverOutput cfg _          ls               = ProofError    cfg  ls
+interpretSolverOutput cfg _          ls               = ProofError    cfg ls
+
+-- | Do we have a regular sat-model, or something in the extension field?
+classifyModel :: SMTConfig -> SMTModel -> SMTResult
+classifyModel cfg m = case filter (not . isRegularCW . snd) (modelObjectives m) of
+                        [] -> Satisfiable cfg m
+                        _  -> SatExtField cfg m
 
 -- | Interpret solver output based on SMT-Lib standard output responses, in the case we're expecting multiple objective model values
 interpretSolverOutputMulti :: Int -> SMTConfig -> ([String] -> SMTModel) -> [String] -> [SMTResult]
@@ -147,7 +150,7 @@ interpretSolverParetoOutput cfg extractMap outLines
   | not isSAT
   = cont [finalLine : initLines]
   | True
-  = map (Satisfiable cfg) modelGroups
+  = groupModels
   where finalLine = last outLines
         initLines = init outLines
         isSAT     = case words finalLine of
@@ -159,18 +162,18 @@ interpretSolverParetoOutput cfg extractMap outLines
         -- convert what z3 prints as Pareto output to what we can parse
         -- this is necessarily flaky, but hopefully good enough!
         -- The output is expected to be alternating lines of objectives and models
-        modelGroups = map grok $ cluster $ filter (not . irrelevant) initLines
+        groupModels = map grok $ cluster $ filter (not . irrelevant) initLines
         irrelevant  = null . dropWhile isSpace
         cluster (x:y:rest) = (x, y) : cluster rest
         cluster []         = []
         cluster _          = error $ "SBV.pareto: Unable to parse pareto fronts from solver output. Uneven length:\n"
                                    ++ unlines outLines
 
-        grok :: (String, String) -> SMTModel
+        grok :: (String, String) -> SMTResult
         grok (obj, ms)
           | "(objectives" `isPrefixOf` dropWhile isSpace obj
           , "(model"      `isPrefixOf` dropWhile isSpace ms
-          = extractMap ["sat", obj, ms]
+          = classifyModel cfg $ extractMap [obj, ms]
           | True
           = error $  "SBV.pareto: Unable to parse pareto front from solver output:\n"
                   ++ unlines [obj, ms]
