@@ -220,7 +220,7 @@ modelValues errOnUnrecognized inps line = extractModel
         extractModel e                            = extract e
 
         -- Lines of the form (define-fun s0 () Int 0)
-        extractDefine (EApp (ECon "define-fun" : nm : EApp [] : ECon _ : rest)) = extract $ EApp (nm : rest)
+        extractDefine (EApp (ECon "define-fun" : nm : EApp [] : ECon _ : rest)) = extract $ EApp [EApp (nm : rest)]
         extractDefine r = error $   "SBV.SMTLib: Cannot extract value from model level define-fun:"
                                 ++ "\n\tInput: " ++ show line
                                 ++ "\n\tParse: " ++ show r
