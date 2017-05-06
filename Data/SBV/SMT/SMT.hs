@@ -119,8 +119,8 @@ showOptResult :: OptimizeResult -> String
 showOptResult res =
   case res of
     LexicographicResult r  -> show (SatResult r)
-    IndependentResult   xs -> multi "Objectives"    [("Optimization results for objective "    ++ show s, SatResult r) | (s, r) <- xs]
-    ParetoResult        xs -> multi "Pareto fronts" [("Optimization results for pareto front " ++ show i, SatResult r) | (i, r) <- zip [(1::Int)..] xs]
+    IndependentResult   xs -> multi "Objectives"    [("Results for objective "    ++ show s, SatResult r) | (s, r) <- xs]
+    ParetoResult        xs -> multi "Pareto fronts" [("Results for pareto front " ++ show i, SatResult r) | (i, r) <- zip [(1::Int)..] xs]
  where shift s  = intercalate "\n" (map ("  " ++) (lines (show s)))
        multi w [] = "There are no " ++ w ++ " for which to display models for."
        multi _ xs = intercalate "\n" [t ++ ":\n" ++ shift r | (t, r) <- xs]

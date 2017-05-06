@@ -21,7 +21,8 @@ module Data.SBV.SMT.SMTLib(
         , interpretSolverObjectiveLine
         ) where
 
-import Data.Char  (isDigit)
+import Data.Char (isDigit, isSpace)
+import Data.List (isPrefixOf)
 
 import Data.SBV.Core.Data
 import Data.SBV.Provers.SExpr
@@ -146,7 +147,7 @@ interpretSolverParetoOutput cfg extractMap outLines
   | not isSAT
   = cont [finalLine : initLines]
   | True
-  = cont (map ("sat" :) modelGroups)
+  = cont $ map ("sat" :) modelGroups
   where finalLine = last outLines
         initLines = init outLines
         isSAT     = case words finalLine of
@@ -157,7 +158,28 @@ interpretSolverParetoOutput cfg extractMap outLines
 
         -- convert what z3 prints as Pareto output to what we can parse
         -- this is necessarily flaky, but hopefully good enough!
-        modelGroups = [initLines]
+        -- The output is expected to be alternating lines of objectives and models
+        modelGroups = map grok $ cluster $ filter (not . irrelevant) initLines
+        irrelevant  = null . dropWhile isSpace
+        cluster (x:y:rest) = (x, y) : cluster rest
+        cluster []         = []
+        cluster _          = error $ "SBV.pareto: Unable to parse pareto fronts from solver output. Uneven length:"
+                                   ++ unlines outLines
+
+        grok :: (String, String) -> [String]
+        grok (obj, ms)
+          | "(objectives" `isPrefixOf` dropWhile isSpace obj
+          , "(model"      `isPrefixOf` dropWhile isSpace ms
+          = obj : getBindings ms
+          | True
+          = error $  "SBV.pareto: Unable to parse pareto front from solver output. Unexpected output:"
+                  ++ unlines [obj, ms]
+                  ++ "SBV.pareto: The bigger context is:"
+                  ++ unlines outLines
+
+        -- this is where it gets really flaky! But hopefully it'll stand to practice
+        getBindings :: String -> [String]
+        getBindings ms = [ms]
 
 -- | Get a counter-example from an SMT-Lib2 like model output line
 -- This routing is necessarily fragile as SMT solvers tend to print output
