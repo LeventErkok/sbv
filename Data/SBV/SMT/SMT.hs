@@ -276,15 +276,19 @@ instance (SatModel a, SatModel b, SatModel c, SatModel d, SatModel e, SatModel f
 class Modelable a where
   -- | Is there a model?
   modelExists :: a -> Bool
+
   -- | Extract a model, the result is a tuple where the first argument (if True)
   -- indicates whether the model was "probable". (i.e., if the solver returned unknown.)
   getModel :: SatModel b => a -> Either String (Bool, b)
+
   -- | Extract a model dictionary. Extract a dictionary mapping the variables to
   -- their respective values as returned by the SMT solver. Also see `getModelDictionaries`.
   getModelDictionary :: a -> M.Map String CW
+
   -- | Extract a model value for a given element. Also see `getModelValues`.
   getModelValue :: SymWord b => String -> a -> Maybe b
   getModelValue v r = fromCW `fmap` (v `M.lookup` getModelDictionary r)
+
   -- | Extract a representative name for the model value of an uninterpreted kind.
   -- This is supposed to correspond to the value as computed internally by the
   -- SMT solver; and is unportable from solver to solver. Also see `getModelUninterpretedValues`.
@@ -298,6 +302,13 @@ class Modelable a where
   extractModel a = case getModel a of
                      Right (_, b) -> Just b
                      _            -> Nothing
+
+  -- | Extract model objective values, for all optimization goals.
+  getModelObjectives :: a -> M.Map String GeneralizedCW
+
+  -- | Extract the value of an objective
+  getModelObjectiveValue :: String -> a -> Maybe GeneralizedCW
+  getModelObjectiveValue v r = v `M.lookup` getModelObjectives r
 
 -- | Return all the models from an 'allSat' call, similar to 'extractModel' but
 -- is suitable for the case of multiple results.
@@ -321,12 +332,14 @@ instance Modelable ThmResult where
   getModel           (ThmResult r) = getModel r
   modelExists        (ThmResult r) = modelExists r
   getModelDictionary (ThmResult r) = getModelDictionary r
+  getModelObjectives (ThmResult r) = getModelObjectives r
 
 -- | 'SatResult' as a generic model provider
 instance Modelable SatResult where
   getModel           (SatResult r) = getModel r
   modelExists        (SatResult r) = modelExists r
   getModelDictionary (SatResult r) = getModelDictionary r
+  getModelObjectives (SatResult r) = getModelObjectives r
 
 -- | 'SMTResult' as a generic model provider
 instance Modelable SMTResult where
@@ -347,6 +360,13 @@ instance Modelable SMTResult where
   getModelDictionary (Unknown _ m)     = M.fromList (modelAssocs m)
   getModelDictionary (ProofError _ _)  = M.empty
   getModelDictionary (TimeOut _)       = M.empty
+
+  getModelObjectives (Unsatisfiable _) = M.empty
+  getModelObjectives (Satisfiable _ m) = M.fromList (modelObjectives m)
+  getModelObjectives (SatExtField _ m) = M.fromList (modelObjectives m)
+  getModelObjectives (Unknown _ m)     = M.fromList (modelObjectives m)
+  getModelObjectives (ProofError _ _)  = M.empty
+  getModelObjectives (TimeOut _)       = M.empty
 
 -- | Extract a model out, will throw error if parsing is unsuccessful
 parseModelOut :: SatModel a => SMTModel -> a
