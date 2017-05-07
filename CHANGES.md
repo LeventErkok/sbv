@@ -5,11 +5,15 @@
 
 ### Version 6.0, Not yet released
   * This is a backwards compatibility breaking release, hence the major version
-    bump from 5.15 to 6.0. However, old code should more or less work with the
-    same semantics, but might require a few extra imports. This was done
-    in order to reduce the number of exported items from Data.SBV to avoid
-    extra clutter. Also, new optimization features made the use of old style
-    optimization goals obsolete, which are now in their own module. (See below.)
+    bump from 5.15 to 6.0:
+     
+        * Most of existing code should work with no changes
+	* Old code relying on some features might require extra imports,
+	  since we no longer export some functionality directly from Data.SBV.
+          This was done in order to reduce the number of exported items to
+          avoid extra clutter.
+        * Old optimization features are removed, as the new and much improved
+	  capabilities should be used instead.
 
   * The next two bullets cover new features in SBV regarding optimization, based
     on the capabilities of the z3 SMT solver. With this release SBV gains the
@@ -17,34 +21,37 @@
     employing the corresponding capabilities in z3. A good review of these features
     as implemented by Z3, and thus what is available in SBV is given in this
     paper: http://www.easychair.org/publications/download/Z_-_Maximal_Satisfaction_with_Z3
-    SBV now allows for  real or integral valued metrics. Goals can be independently, lexicographicly,
-    or pareto-front optimized. Currently, only the z3 backend supports optimization routines.
 
-    Minimization can be done over bit-vector, real, and integer goals. The relevant
+
+  * SBV now allows for  real or integral valued metrics. Goals can be lexicographically
+    (default), independently, or pareto-front optimized. Currently, only the z3 backend
+    supports optimization routines.
+
+    Optimization can be done over bit-vector, real, and integer goals. The relevant
     functions are:
 
     	* `minimize`: Minimize a given arithmetic goal
     	* `maximize`: Minimize a given arithmetic goal
-    	* `objective`: A generic entry point that allows more parameterization
 
     For instance, a call of the form 
     
-         minimize "name-of-goal" (x + 2*y)
+         minimize "name-of-goal" $ x + 2*y
 
     Minimizes the arithmetic goal x+2*y, where x and y can be bit-vectors, reals,
     or integers. Such goals will be lexicographicly optimized, i.e., in the order
-    given. Use the more general "objective" function to access pareto and independent
-    optimization features.
+    given. If there are multiple goals, then user can also ask for independent
+    optimization results, or pareto-fronts.
 
     Once the objectives are given, a top level call to `optimize` (similar to `prove`
     and `sat`) performs the optimization.
 
-  * Implemented soft-asserts. A soft assertion is a hint to the SMT solver that
+  * SBV now implements soft-asserts. A soft assertion is a hint to the SMT solver that
     we would like a particular condition to hold if *possible*. That is, if there is
-    a solution satisfying it, then we would like it to hold, but it can be violated
-    if there is no way to satisfy it. Each soft-assertion can be associated with
-    a numeric penalty for not satisfying it, hence turning it into an optimization problem.
-    See the `assertSoft` function for details.
+    a solution satisfying it, then we would like it to hold. However, if the set of
+    constraints is unsatisfiable, then a soft-assertion can be violated by incurring
+    a user-given numeric penalty to satisfy the remaining constraints. The solver then
+    tries to minimize the penalty, i.e., satisfy as many of the soft-asserts as possible
+    such that the total penalty for those that are not satisfied is minimized.
     
     Note that `assertSoft` works well with optimization goals (minimize/maximize etc.),
     and are most useful when we are optimizing a metric and thus some of the constraints
@@ -55,10 +62,10 @@
     mechanism. If the old code is needed, please contact for help: They can be resurrected
     in your own code if absolutely necessary.
 
-  * Implemented tactics, which allow the user to navigate the proof process.
-    User can, for instance, implement case-splitting in a proof to guide
-    the underlying solver through. Tactics can be both SBV based (case-splitting)
-    or more-or-less solely implemented by the underlying solver. Here is the list
+  * SBV now implements tactics, which allow the user to navigate the proof process.
+    This is an advanced feature that most users will have no need of, but can become
+    handy when dealing with complicated problems. Users can, for instance, implement
+    case-splitting in a proof to guide the underlying solver through. Here is the list
     of tactics implemented:
 
        * `CaseSplit`         : Case-split, with implicit coverage. Bool says whether we should be verbose.
@@ -69,6 +76,7 @@
        * `CheckUsing`        : Invoke with check-sat-using command, instead of check-sat
        * `UseLogic`          : Use this logic, a custom one can be specified too
        * `UseSolver`         : Use this solver (z3, yices, etc.)
+       * `OptimizePriority`  : Specify priority for optimization: Lexicographic (default), Independent, or Pareto.
 
   * Name-space clean-up. The following modules are no longer automatically exported
     from Data.SBV:
