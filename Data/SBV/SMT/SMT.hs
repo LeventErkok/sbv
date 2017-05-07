@@ -74,19 +74,19 @@ data OptimizeResult = LexicographicResult SMTResult
 instance Show ThmResult where
   show (ThmResult r) = showSMTResult "Q.E.D."
                                      "Unknown"     "Unknown. Potential counter-example:\n"
-                                     "Falsifiable" "Falsifiable. Counter-example:\n" r
+                                     "Falsifiable" "Falsifiable. Counter-example:\n" "Falsifiable in an extension field:\n" r
 
 -- | User friendly way of printing satisfiablity results
 instance Show SatResult where
   show (SatResult r) = showSMTResult "Unsatisfiable"
                                      "Unknown"     "Unknown. Potential model:\n"
-                                     "Satisfiable" "Satisfiable. Model:\n" r
+                                     "Satisfiable" "Satisfiable. Model:\n" "Satisfiable in an extension field. Model:\n" r
 
 -- | User friendly way of printing safety results
 instance Show SafeResult where
    show (SafeResult (mbLoc, msg, r)) = showSMTResult (tag "No violations detected")
                                                      (tag "Unknown")  (tag "Unknown. Potential violating model:\n")
-                                                     (tag "Violated") (tag "Violated. Model:\n") r
+                                                     (tag "Violated") (tag "Violated. Model:\n") (tag "Violated in an extension field:\n") r
         where loc   = maybe "" (++ ": ") mbLoc
               tag s = loc ++ msg ++ ": " ++ s
 
@@ -105,7 +105,9 @@ instance Show AllSatResult where
                           _ -> "Found " ++ show c ++ " different solutions." ++ uniqueWarn
           sh i c = (ok, showSMTResult "Unsatisfiable"
                                       "Unknown" "Unknown. Potential model:\n"
-                                      ("Solution #" ++ show i ++ ":\nSatisfiable") ("Solution #" ++ show i ++ ":\n") c)
+                                      ("Solution #" ++ show i ++ ":\nSatisfiable") ("Solution #" ++ show i ++ ":\n")
+                                      ("Solution $" ++ show i ++ " in an extension field:\n")
+                                      c)
               where ok = case c of
                            Satisfiable{} -> True
                            _             -> False
@@ -131,6 +133,7 @@ instance Show OptimizeResult where
                                     (tag "Unknown. Potential model:" ++ "\n")
                                     (tag "Optimal with no assignments.")
                                     (tag "Optimal model:" ++ "\n")
+                                    (tag "Optimal in an extension field:" ++ "\n")
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
 -- solvers. The idea is that the sbv infrastructure provides a stream of 'CW''s (constant-words)
@@ -386,14 +389,12 @@ displayModels disp (AllSatResult (_, ms)) = do
   where display r i = disp i r >> return i
 
 -- | Show an SMTResult; generic version
-showSMTResult :: String -> String -> String -> String -> String -> SMTResult -> String
-showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel result = case result of
+showSMTResult :: String -> String -> String -> String -> String -> String -> SMTResult -> String
+showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel satExtMsg result = case result of
   Unsatisfiable _               -> unsatMsg
   Satisfiable _ (SMTModel _ []) -> satMsg
   Satisfiable _ m               -> satMsgModel ++ showModel cfg m
-  SatExtField _ (SMTModel b _)  -> "Objective" ++ pluv ++ " extension field optimal value" ++ plu ++ ":\n" ++ showModelDictionary cfg b
-                                        where (pluv, plu) | length b > 1 = ("s have", "s")
-                                                          | True         = (" has", "")
+  SatExtField _ (SMTModel b _)  -> satExtMsg   ++ showModelDictionary cfg b
   Unknown     _ (SMTModel _ []) -> unkMsg
   Unknown     _ m               -> unkMsgModel ++ showModel cfg m
   ProofError  _ []              -> "*** An error occurred. No additional information available. Try running in verbose mode"
