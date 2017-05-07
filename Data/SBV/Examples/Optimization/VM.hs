@@ -33,7 +33,7 @@ strongMutex (a:as) = ite a (bnot (bOr as)) (strongMutex as)
 -- We have:
 --
 -- >>> optimize allocate
--- Satisfiable. Model:
+-- Optimal model:
 --   x11         = False :: Bool
 --   x12         = False :: Bool
 --   x13         =  True :: Bool
