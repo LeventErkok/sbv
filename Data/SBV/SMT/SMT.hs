@@ -112,18 +112,25 @@ instance Show AllSatResult where
 
 -- | Show instance for optimization results
 instance Show OptimizeResult where
-  show = showOptResult
+  show res = case res of
+               LexicographicResult r   -> sh id r
 
--- | Nice printing of optimization results
-showOptResult :: OptimizeResult -> String
-showOptResult res =
-  case res of
-    LexicographicResult r  -> show (SatResult r)
-    IndependentResult   xs -> multi "Objectives"    [("Results for objective "    ++ show s, SatResult r) | (s, r) <- xs]
-    ParetoResult        xs -> multi "Pareto fronts" [("Results for pareto front " ++ show i, SatResult r) | (i, r) <- zip [(1::Int)..] xs]
- where shift s  = intercalate "\n" (map ("  " ++) (lines (show s)))
-       multi w [] = "There are no " ++ w ++ " for which to display models for."
-       multi _ xs = intercalate "\n" [t ++ ":\n" ++ shift r | (t, r) <- xs]
+               IndependentResult   rs  -> multi "objectives" (map (uncurry shI) rs)
+
+               ParetoResult        [r] -> sh (\s -> "Unique pareto front: " ++ s) r
+               ParetoResult        rs  -> multi "pareto optimal values" (zipWith shP [(1::Int)..] rs)
+
+       where multi w [] = "There are no " ++ w ++ " to display models for."
+             multi _ xs = intercalate "\n" xs
+
+             shI n = sh (\s -> "Objective "     ++ show n ++ ": " ++ s)
+             shP i = sh (\s -> "Pareto front #" ++ show i ++ ": " ++ s)
+
+             sh tag = showSMTResult (tag "Unsatisfiable.")
+                                    (tag "Unknown.")
+                                    (tag "Unknown. Potential model:" ++ "\n")
+                                    (tag "Optimal with no assignments.")
+                                    (tag "Optimal model:" ++ "\n")
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
 -- solvers. The idea is that the sbv infrastructure provides a stream of 'CW''s (constant-words)
