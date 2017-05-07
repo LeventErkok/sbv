@@ -470,7 +470,7 @@ optIndependent hasPar config sbvPgm@SMTProblem{objectives, tactics} = do
 -- | Construct a pareto-front optimization result
 optPareto :: Bool -> SMTConfig -> SMTProblem -> IO OptimizeResult
 optPareto hasPar config sbvPgm@SMTProblem{objectives, tactics} = do
-        result <- bufferSanity hasPar $ applyTactics config (True, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver True "Independently optimizing.." [] id sbvPgm
+        result <- bufferSanity hasPar $ applyTactics config (True, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver True "Pareto optimizing.." [] id sbvPgm
         return $ ParetoResult result
 
   where wrap :: SMTResult -> [SMTResult]
