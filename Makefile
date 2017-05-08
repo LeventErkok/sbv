@@ -24,7 +24,7 @@ test: install doctest externaltest internaltest
 
 doctest:
 	@echo "*** Starting inline tests.."
-	$(TIME) doctest ${TSTSRCS}
+	@$(TIME) doctest ${TSTSRCS}
 
 externaltest:
 	@echo "*** Starting external test suite.."
