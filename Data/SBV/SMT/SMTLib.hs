@@ -269,12 +269,12 @@ interpretSolverObjectiveLine inps line = either err extract (parseSExpr line)
         getUnboundedValues :: SExpr -> [(Int, (String, GeneralizedCW))]
         getUnboundedValues item = go item
           where go (EApp [v, rest]) | Just (n, s, nm) <- getInput v = [(n, (nm, ExtendedCW (toGenCW (kindOf s) (simplify rest))))]
-                go e                                                = die "extract" e
+                go _                                                = []
 
-                die w r = error $   "SBV.SMTLib: Cannot " ++ w ++ " objective value from solver output!"
-                               ++ "\n\tInput     : " ++ show line
-                               ++ "\n\tParse     : " ++ show r
-                               ++ "\n\tItem Parse: " ++ show item
+                die r = error $   "SBV.SMTLib: Cannot convert objective value from solver output!"
+                             ++ "\n\tInput     : " ++ show line
+                             ++ "\n\tParse     : " ++ show r
+                             ++ "\n\tItem Parse: " ++ show item
 
                 -- Convert to an extended expression. Hopefully complete!
                 toGenCW :: Kind -> SExpr -> ExtCW
@@ -289,7 +289,7 @@ interpretSolverObjectiveLine inps line = either err extract (parseSExpr line)
                          cvt (EApp [ECon "+", x, y])        = AddExtCW (cvt x) (cvt y)
                          cvt (EApp [ECon "*", x, y])        = MulExtCW (cvt x) (cvt y)
                          -- Nothing else should show up, hopefully!
-                         cvt e = die "convert" e
+                         cvt e = die e
 
                 -- drop the pesky to_real's that Z3 produces.. Cool but useless.
                 simplify :: SExpr -> SExpr
