@@ -615,8 +615,6 @@ specifying a timeout ('StopAfter'). For most users, default values of these shou
 
        @ 'tactic' $ 'OptimizePriority' 'Pareto' @
 
-  See "Data.SBV.Examples.Optimization.VM" for a basic example of the use of optimization routines.
-
 == Soft Assertions
 
   Related to optimization, SBV implements soft-asserts via 'assertSoft' calls. A soft assertion
@@ -645,6 +643,14 @@ specifying a timeout ('StopAfter'). For most users, default values of these shou
 
   Finally in the third case, we are also associating this constraint with a group. The group
   name is only needed if we have classes of soft-constraints that should be considered together.
+
+== Optimization examples
+
+  The following examples illustrate the use of basic optimization routines:
+
+     * "Data.SBV.Examples.Optimization.LinearOpt": Simple linear-optimization example.
+     * "Data.SBV.Examples.Optimization.Production": Scheduling machines in a shop
+     * "Data.SBV.Examples.Optimization.VM": Scheduling virtual-machines in a data-center
 -}
 
 {- $modelExtraction
