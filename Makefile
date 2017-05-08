@@ -57,7 +57,7 @@ clean:
 
 docs:
 	@tput rmam
-	cabal haddock --haddock-option=--no-warnings --hyperlink-source
+	cabal haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
 	@tput smam
 
 release: clean checkLinks install sdist testInterfaces hlint docs test
