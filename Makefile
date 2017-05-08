@@ -23,22 +23,30 @@ install:
 test: install doctest externaltest internaltest
 
 doctest:
+	@tput rmam
 	@echo "*** Starting inline tests.."
 	@$(TIME) doctest ${TSTSRCS}
+	@tput smam
 
 externaltest:
+	@tput rmam
 	@echo "*** Starting external test suite.."
 	@# Note we use "-s" here skipping no-solver tests; which are covered
 	@# in the cabal test suite right below.
 	@$(TIME) dist/build/SBVUnitTests/SBVUnitTests -s
+	@tput smam
 
 internaltest:
+	@tput rmam
 	@echo "*** Starting internal cabal test suite.."
 	@SBV_Z3=doesnotexist $(TIME) cabal test
 	@cat dist/test/sbv*SBVBasicTests.log
+	@tput smam
 
 sdist: install
+	@tput rmam
 	cabal sdist
+	@tput smam
 
 veryclean: clean
 	@make -C buildUtils clean
@@ -48,7 +56,9 @@ clean:
 	@rm -rf dist $(STAMPFILE)
 
 docs:
+	@tput rmam
 	cabal haddock --haddock-option=--no-warnings --hyperlink-source
+	@tput smam
 
 release: clean checkLinks install sdist testInterfaces hlint docs test
 	@echo "*** SBV is ready for release!"
