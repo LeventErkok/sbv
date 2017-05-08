@@ -1,9 +1,10 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 5.15, 2017-01-30
+* Latest Hackage released version: 6.0, 2017-05-07
 
-### Version 6.0, Not yet released
+### Version 6.0, 2017-05-07
+
   * This is a backwards compatibility breaking release, hence the major version
     bump from 5.15 to 6.0:
      
@@ -112,7 +113,9 @@
   * SBV now properly adds check-sat commands and other directives in debugging output.
 
   * New examples:
-      - Data.SBV.Examples.Optimization.VM: A server allocation optimization problem
+      - Data.SBV.Examples.Optimization.LinearOpt: Simple linear-optimization example.
+      - Data.SBV.Examples.Optimization.Production: Scheduling machines in a shop
+      - Data.SBV.Examples.Optimization.VM: Scheduling virtual-machines in a data-center
     
 ### Version 5.15, 2017-01-30
 
