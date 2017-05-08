@@ -186,7 +186,7 @@ module Data.SBV (
 
   -- * Properties, proofs, satisfiability, and safety
   -- $proveIntro
-
+  -- $noteOnNestedQuantifiers
   -- ** Predicates and Goals
   , Predicate, Goal, Provable(..), Equality(..)
   -- ** Proving properties
@@ -894,6 +894,21 @@ which would list all three elements of this domain as satisfying solutions.
 
 Note that the result is properly typed as @X@ elements; these are not mere strings. So, in a 'getModel' scenario, the user can recover actual
 elements of the domain and program further with those values as usual.
+-}
+
+{- $noteOnNestedQuantifiers
+=== A note on reasoning in the presence of quantifers
+
+Note that SBV allows reasoning with quantifiers: Inputs can be existentially or universally quantified. Predicates can be built
+with arbitrary nesting of such quantifiers as well. However, SBV always /assumes/ that the input is in
+prenex-normal form: <https://en.wikipedia.org/wiki/Prenex_normal_form>. That is,
+all the input declarations are treated as happening at the beginning of a predicate, followed by the actual formula. Unfortunately,
+the way predicates are written can be misleading at times, since symbolic inputs can be created at arbitrary points; interleaving them
+with other code. The rule is simple, however: All inputs are assumed at the top, in the order declared, regardless of their quantifiers.
+SBV will apply skolemization to get rid of existentials before sending predicates to backend solvers. However, if you do want nested
+quantification, you will manually have to first convert to prenex-normal form (which produces an equisatisfiable but not necessarily
+equivalent formula), and code that explicitly in SBV. See <https://github.com/LeventErkok/sbv/issues/256> for a detailed discussion
+of this issue.
 -}
 
 {-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}
