@@ -219,6 +219,7 @@ module Data.SBV (
   -- * Optimization
   -- $optiIntro
   , OptimizeStyle(..), Penalty(..), Objective(..), minimize, maximize, assertSoft, optimize, optimizeWith
+  , ExtCW(..), GeneralizedCW(..)
 
   -- * Model extraction
   -- $modelExtraction
@@ -235,7 +236,7 @@ module Data.SBV (
   -- * SMT Interface: Configurations and solvers
   , SMTConfig(..), SMTLibVersion(..), SMTLibLogic(..), Logic(..), Solver(..), SMTSolver(..)
   , boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
-  , Timing(..), TimedStep(..), TimingInfo, showTDiff, CW(..), ExtCW(..), GeneralizedCW(..), HasKind(..), Kind(..), cwToBool
+  , Timing(..), TimedStep(..), TimingInfo, showTDiff, CW(..), HasKind(..), Kind(..), cwToBool
 
   -- * Symbolic computations
   , Symbolic, output, SymWord(..)
@@ -532,44 +533,118 @@ Also see "Data.SBV.Examples.Misc.NoDiv0" for the classic div-by-zero example.
 
 {- $tacticIntro
 In certain cases, the prove/sat calls can benefit from user guidance, in terms of tactics. From a semantic view,
-a tactic has no effect on the meaning of a predicate. It is merely guidance for SBV to guide the proof.
+a tactic has no effect on the meaning of a predicate. It is merely guidance for SBV to guide the proof. It is
+also used for executing cases in parallel ('ParallelCase'), or picking the logic to use ('UseLogic'), or
+specifying a timeout ('StopAfter'). For most users, default values of these should suffice.
 -}
 
 {- $optiIntro
-  Arithmetic goals (over on both bounded 'SIntN', 'SWordN', and unbounded 'SInteger' types,
-  and over 'SReal') can be optimized by SBV, basically using the corresponding features in the
-  z3 SMT solver. A good review of these features as implemented by Z3 (and thus what is available
-  in SBV) is given in this paper: <http://www.easychair.org/publications/download/Z_-_Maximal_Satisfaction_with_Z3>.
+  SBV can optimize metric functions, i.e., those that generate both bounded 'SIntN', 'SWordN', and unbounded 'SInteger'
+  types, along with those produce 'SReal's. That is, it can find models satisfying all the constraints while minimizing
+  or maximizing user given metrics. Currently, optimization requires the use of the z3 SMT solver as the backend,
+  and a good review of these features is given
+  in this paper: <http://www.easychair.org/publications/download/Z_-_Maximal_Satisfaction_with_Z3>.
 
-  In its most basic form, SBV allows for optimization of real or integral valued metrics. Goals can be
-  lexicographically (default), independently, or pareto-front optimized. The relevant functions are:
+  Goals can be lexicographically (default), independently, or pareto-front optimized. The relevant functions are:
 
       * 'minimize': Minimize a given arithmetic goal
       * 'maximize': Minimize a given arithmetic goal
-      * 'objective': A generic entry point that allows more parameterization
 
-    For instance, a call of the form 
+  Goals can be optimized at a regular or an extended value: An extended value is either positive or negative infinity
+  (for unbounded integers and reals) or positive or negative epsilon differential from a real value (for reals).
 
-         > minimize "name-of-goal" (x + 2*y)
+  For instance, a call of the form 
 
-    minimizes the arithmetic goal @x+2*y@, where @x@ and @y@ can be bit-vectors, reals,
-    or integers. Such goals will be lexicographicly optimized, i.e., in the order
-    given. Use the more general 'objective' function to access pareto and independent
-    optimization features.
+       @ 'minimize' "name-of-goal" $ x + 2*y @
 
-    See "Data.SBV.Examples.Optimization.VM" for a basic example of the use of optimization routines.
+  minimizes the arithmetic goal @x+2*y@, where @x@ and @y@ can be signed\/unsigned bit-vectors, reals,
+  or integers.
 
-    Related to optimization, SBV implements soft-asserts via 'assertSoft' calls. A soft assertion
-    is a hint to the SMT solver that we would like a particular condition to hold if **possible*.
-    That is, if there is a solution satisfying it, then we would like it to hold, but it can be violated
-    if there is no way to satisfy it. Each soft-assertion can be associated with a numeric penalty for
-    not satisfying it, hence turning it into an optimization problem.
+== A simple example
 
-    Note that 'assertSoft' works well with optimization goals ('minimize'/'maximize' etc.),
-    and are most useful when we are optimizing a metric and thus some of the constraints
-    can be relaxed with a penalty to obtain a good solution. Again
-    see <http://www.easychair.org/publications/download/Z_-_Maximal_Satisfaction_with_Z3>
-    for a good overview of the features in Z3 that SBV is providing the bridge for.
+  Here's an optimization example in action:
+
+  >>> optimize $ \x y -> minimize "goal" (x+2*(y::SInteger))
+  Optimal in an extension field:
+    goal = -oo :: Integer
+
+  Of course, this becomes more useful when the result is not in an extension field:
+
+  @
+      optimize $ do x <- sInteger "x"
+                    y <- sInteger "y"
+
+                    constrain $ x .> 0
+                    constrain $ x .< 6
+                    constrain $ y .> 2
+                    constrain $ y .< 12
+
+                    minimize "goal" (x+2*(y::SInteger))
+  @
+
+  This will produce:
+
+  @
+  Optimal model:
+    x    = 1 :: Integer
+    y    = 3 :: Integer
+    goal = 7 :: Integer
+   @
+
+  As usual, the programmatic API can be used to extract the values of objectives and model-values ('getModelObjectives',
+  'getModel', etc.) to access these values and program with them further.
+
+== Multiple optimization goals
+
+  Multiple goals can be specified, using the same syntax. In this case, the user gets to pick what style of
+  optimization to perform:
+
+    * The default is lexicographic. That is, solver will optimize the goals in the given order, optimizing
+      the latter ones under the model that optimizes the previous ones. This is the default behavior, but
+      can also be explicitly specified by:
+
+       @ 'tactic' $ 'OptimizePriority' 'Lexicographic' @
+
+    * Goals can also be independently optimized. In this case the user will be presented a model for each
+      goal given. To enable this, use the tactic:
+
+       @ 'tactic' $ 'OptimizePriority' 'Independent' @
+
+    * Finally, the user can query for pareto-fronts. A pareto front is an model such that no goal can be made
+      "better" without making some other goal "worse." To enable this style, use:
+
+       @ 'tactic' $ 'OptimizePriority' 'Pareto' @
+
+  See "Data.SBV.Examples.Optimization.VM" for a basic example of the use of optimization routines.
+
+== Soft Assertions
+
+  Related to optimization, SBV implements soft-asserts via 'assertSoft' calls. A soft assertion
+  is a hint to the SMT solver that we would like a particular condition to hold if **possible*.
+  That is, if there is a solution satisfying it, then we would like it to hold, but it can be violated
+  if there is no way to satisfy it. Each soft-assertion can be associated with a numeric penalty for
+  not satisfying it, hence turning it into an optimization problem.
+
+  Note that 'assertSoft' works well with optimization goals ('minimize'/'maximize' etc.),
+  and are most useful when we are optimizing a metric and thus some of the constraints
+  can be relaxed with a penalty to obtain a good solution. Again
+  see <http://www.easychair.org/publications/download/Z_-_Maximal_Satisfaction_with_Z3>
+  for a good overview of the features in Z3 that SBV is providing the bridge for.
+
+  A soft assertion can be specified in one of the following three main ways:
+
+       @
+         'assertSoft' "bounded_x" (x .< 5) 'DefaultPenalty'
+         'assertSoft' "bounded_x" (x .< 5) ('Penalty' 2.3 Nothing)
+         'assertSoft' "bounded_x" (x .< 5) ('Penalty' 4.7 (Just "group-1")) @
+
+  In the first form, we are saying that the constraint @x .< 5@ must be satisfied, if possible,
+  but if this constraint can not be satisfied to find a model, it can be violated with the default penalty of 1.
+
+  In the second case, we are associating a penalty value of @2.3@.
+
+  Finally in the third case, we are also associating this constraint with a group. The group
+  name is only needed if we have classes of soft-constraints that should be considered together.
 -}
 
 {- $modelExtraction
@@ -685,7 +760,7 @@ the introduction of variables.
 Note that the proper reading of a constraint
 depends on the context:
 
-    * In a 'sat' (or 'allSat') call: The constraint added is asserted
+  * In a 'sat' (or 'allSat') call: The constraint added is asserted
     conjunctively. That is, the resulting satisfying model (if any) will
     always satisfy all the constraints given.
 
@@ -731,9 +806,7 @@ rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'fals
 A probabilistic constraint (see 'pConstrain') attaches a probability threshold for the
 constraint to be considered. For instance:
 
-  @
-     'pConstrain' 0.8 c
-  @
+  @ 'pConstrain' 0.8 c @
 
 will make sure that the condition @c@ is satisfied 80% of the time (and correspondingly, falsified 20%
 of the time), in expectation. This variant is useful for 'genTest' and 'quickCheck' functions, where we
@@ -753,6 +826,17 @@ Note that while 'constrain' can be used freely, 'pConstrain' is only allowed in 
 'genTest' or 'quickCheck'. Calls to 'pConstrain' in a prove/sat call will be rejected as SBV does not
 deal with probabilistic constraints when it comes to satisfiability and proofs.
 Also, both 'constrain' and 'pConstrain' calls during code-generation will also be rejected, for similar reasons.
+
+=== Constraint vacuity
+
+SBV does not check that a given constraints is not vacuous. That is, that it can never be satisfied. This is usually
+the right behavior, since checking vacuity can be costly. The functions 'isVacuous' and 'isVacuousWith' should be used
+to explicitly check for constraint vacuity if desired. Alternatively, the tactic:
+
+  @ 'tactic' $  'CheckConstrVacuity' True @
+
+can be given which will force SBV to run an explicit check that constraints are not vacuous. (And complain if they are!)
+Note that this adds an extra call to the solver for each constraint, and thus can be rather costly.
 -}
 
 {- $uninterpreted

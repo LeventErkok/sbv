@@ -289,7 +289,8 @@ safe :: SExecutable a => a -> IO [SafeResult]
 safe = safeWith defaultSMTCfg
 
 -- | Check if the given constraints are satisfiable, equivalent to @'isVacuousWith' 'defaultSMTCfg'@.
--- See the function 'constrain' for an example use of 'isVacuous'.
+-- See the function 'constrain' for an example use of 'isVacuous'. Also see the 'CheckConstrVacuity'
+-- tactic.
 isVacuous :: Provable a => a -> IO Bool
 isVacuous = isVacuousWith defaultSMTCfg
 
@@ -876,7 +877,8 @@ isSafe (SafeResult (_, _, result)) = case result of
                                        ProofError{}    -> False   -- conservative
                                        TimeOut{}       -> False   -- conservative
 
--- | Determine if the constraints are vacuous using the given SMT-solver
+-- | Determine if the constraints are vacuous using the given SMT-solver. Also see
+-- the 'CheckConstrVacuity' tactic.
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
 isVacuousWith config a = do
         Result ki tr uic is cs ts as uis ax asgn cstr tactics goals asserts _out <- runSymbolic (True, config) $ forAll_ a >>= output
