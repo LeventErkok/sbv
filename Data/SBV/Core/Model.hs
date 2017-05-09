@@ -548,38 +548,44 @@ liftPB w o xs
 -- | 'True' if at most `k` of the input arguments are 'True'
 pbAtMost :: [SBool] -> Int -> SBool
 pbAtMost xs k
- | all isConcrete xs = literal $ sum (map (pbToInteger 1) xs) <= fromIntegral k
+ | k < 0             = error $ "SBV.pbAtMost: Non-negative value required, received: " ++ show k
+ | all isConcrete xs = literal $ sum (map (pbToInteger "pbAtMost" 1) xs) <= fromIntegral k
  | True              = liftPB "pbAtMost" (PB_AtMost k) xs
 
 -- | 'True' if at least `k` of the input arguments are 'True'
 pbAtLeast :: [SBool] -> Int -> SBool
 pbAtLeast xs k
- | all isConcrete xs = literal $ sum (map (pbToInteger 1) xs) >= fromIntegral k
+ | k < 0             = error $ "SBV.pbAtLeast: Non-negative value required, received: " ++ show k
+ | all isConcrete xs = literal $ sum (map (pbToInteger "pbAtLeast" 1) xs) >= fromIntegral k
  | True              = liftPB "pbAtLeast" (PB_AtLeast k) xs
 
 -- | 'True' if exactly `k` of the input arguments are 'True'
 pbExactly :: [SBool] -> Int -> SBool
 pbExactly xs k
- | all isConcrete xs = literal $ sum (map (pbToInteger 1) xs) == fromIntegral k
+ | k < 0             = error $ "SBV.pbExactly: Non-negative value required, received: " ++ show k
+ | all isConcrete xs = literal $ sum (map (pbToInteger "pbExactly" 1) xs) == fromIntegral k
  | True              = liftPB "pbExactly" (PB_Exactly k) xs
 
 -- | 'True' if the sum of coefficients for 'True' elements is at most 'k'. Generalizes 'pbAtMost'.
 pbLe :: [(Int, SBool)] -> Int -> SBool
 pbLe xs k
- | all isConcrete (map snd xs) = literal $ sum [pbToInteger c b | (c, b) <- xs] <= fromIntegral k
+ | k < 0                       = error $ "SBV.pbLe: Non-negative value required, received: " ++ show k
+ | all isConcrete (map snd xs) = literal $ sum [pbToInteger "pbLe" c b | (c, b) <- xs] <= fromIntegral k
  | True                        = liftPB "pbLe" (PB_Le (map fst xs) k) (map snd xs)
 
 -- | 'True' if the sum of coefficients for 'True' elements is at least 'k'. Generalizes 'pbAtLeast'.
 pbGe :: [(Int, SBool)] -> Int -> SBool
 pbGe xs k
- | all isConcrete (map snd xs) = literal $ sum [pbToInteger c b | (c, b) <- xs] >= fromIntegral k
+ | k < 0                       = error $ "SBV.pbGe: Non-negative value required, received: " ++ show k
+ | all isConcrete (map snd xs) = literal $ sum [pbToInteger "pbGe" c b | (c, b) <- xs] >= fromIntegral k
  | True                        = liftPB "pbGe" (PB_Ge (map fst xs) k) (map snd xs)
 
 -- | 'True' if the sum of coefficients for 'True' elements is exactly least 'k'. Useful for coding
 -- /exactly K-of-N/ constraints, and in particular mutex constraints.
 pbEq :: [(Int, SBool)] -> Int -> SBool
 pbEq xs k
- | all isConcrete (map snd xs) = literal $ sum [pbToInteger c b | (c, b) <- xs] == fromIntegral k
+ | k < 0                       = error $ "SBV.pbEq: Non-negative value required, received: " ++ show k
+ | all isConcrete (map snd xs) = literal $ sum [pbToInteger "pbEq" c b | (c, b) <- xs] == fromIntegral k
  | True                        = liftPB "pbEq" (PB_Eq (map fst xs) k) (map snd xs)
 
 -- | 'True' if there is at most one set bit
@@ -591,8 +597,9 @@ pbStronglyMutexed :: [SBool] -> SBool
 pbStronglyMutexed xs = pbExactly xs 1
 
 -- | Convert a concrete pseudo-boolean to given int; converting to integer
-pbToInteger :: Int -> SBool -> Integer
-pbToInteger c b
+pbToInteger :: String -> Int -> SBool -> Integer
+pbToInteger w c b
+ | c < 0                 = error $ "SBV." ++ w ++ ": Non-negative coefficient required, received: " ++ show c
  | Just v <- unliteral b = if v then fromIntegral c else 0
  | True                  = error $ "SBV.pbToInteger: Received a symbolic boolean: " ++ show (c, b)
 
