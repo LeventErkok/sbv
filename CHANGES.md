@@ -212,10 +212,10 @@
 
 ### Version 5.7, 2015-12-21
 
-  * Export HasKind(..) from the Dynamic interface. Thanks to Adam Foltzer for the patch.
+  * Export `HasKind(..)` from the Dynamic interface. Thanks to Adam Foltzer for the patch.
   * More careful handling of SMT-Lib reserved names.
   * Update tested version of MathSAT to 5.3.9
-  * Generalize sShiftLeft/sShiftRight/sRotateLeft/sRotateRight to work with signed
+  * Generalize `sShiftLeft`/`sShiftRight`/`sRotateLeft`/`sRotateRight` to work with signed
     shift/rotate amounts, where negative values revert the direction. Similar
     generalizations are also done for the dynamic variants.
 
@@ -227,14 +227,14 @@
 
   * Rework how SBV properties are quick-checked; much more usable and robust
 
-  * Provide a function sbvQuickCheck, which is essentially the same as
+  * Provide a function `sbvQuickCheck`, which is essentially the same as
     quickCheck, except it also returns a boolean. Useful for the
-    programmable API. (The dynamic version is called svQuickCheck)
+    programmable API. (The dynamic version is called `svQuickCheck`.)
 
   * Several changes/additions in support of the sbvPlugin development:
-  * Data.SBV.Dynamic: Define/export svFloat/svDouble/sReal/sNumerator/sDenominator
-  * Data.SBV.Internals: Export constructors of Result, SMTModel,
-    and the function showModel
+  * Data.SBV.Dynamic: Define/export `svFloat`/`svDouble`/`sReal`/`sNumerator`/`sDenominator`
+  * Data.SBV.Internals: Export constructors of `Result`, `SMTModel`,
+    and the function `showModel`
   * Simplify how Uninterpreted-types are internally represented.
 
 ### Version 5.5, 2015-11-10
