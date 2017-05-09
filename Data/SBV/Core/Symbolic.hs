@@ -1124,6 +1124,7 @@ data SMTLibLogic
   | UFNIA     -- ^ Non-linear integer arithmetic with uninterpreted sort and function symbols.
   | QF_FPBV   -- ^ Quantifier-free formulas over the theory of floating point numbers, arrays, and bit-vectors.
   | QF_FP     -- ^ Quantifier-free formulas over the theory of floating point numbers.
+  | QF_FD     -- ^ Quantifier-free finite domains
   deriving Show
 
 -- | NFData instance for SMTLibLogic
