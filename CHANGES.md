@@ -12,13 +12,13 @@
   * This is a backwards compatibility breaking release, hence the major version
     bump from 5.15 to 6.0:
      
-        - Most of existing code should work with no changes
-	- Old code relying on some features might require extra imports,
-	  since we no longer export some functionality directly from Data.SBV.
-          This was done in order to reduce the number of exported items to
-          avoid extra clutter.
-        - Old optimization features are removed, as the new and much improved
-	  capabilities should be used instead.
+       - Most of existing code should work with no changes
+       - Old code relying on some features might require extra imports,
+	 since we no longer export some functionality directly from Data.SBV.
+         This was done in order to reduce the number of exported items to
+         avoid extra clutter.
+       - Old optimization features are removed, as the new and much improved
+	 capabilities should be used instead.
 
   * The next two bullets cover new features in SBV regarding optimization, based
     on the capabilities of the z3 SMT solver. With this release SBV gains the
