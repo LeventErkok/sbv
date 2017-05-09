@@ -2,10 +2,18 @@
 #
 # The sbv library is distributed with the BSD3 license. See the LICENSE file
 # in the distribution for details.
-SHELL     := /usr/bin/env bash
-TSTSRCS   = $(shell find . -name '*.hs' -or -name '*.lhs' | grep -v SBVUnitTest/SBVUnitTest.hs | grep -v SBVUnitTest/SBVBasicTests.hs | grep -v buildUtils/testInterfaces.hs | grep -v sandbox | grep -v GHC/SrcLoc/Compat.hs)
+
+OS := $(shell uname)
+
+SHELL   := /usr/bin/env bash
+TSTSRCS = $(shell find . -name '*.hs' | grep -v SBVUnitTest | grep -v buildUtils | grep -v sandbox | grep -v GHC/SrcLoc/Compat.hs)
+
+ifeq ($(OS), Darwin)
 # OSX tends to sleep for long jobs; so run through caffeinate
 TIME      = /usr/bin/time caffeinate
+else
+TIME      = /usr/bin/time
+endif
 
 .PHONY: all install test doctest externaltest internaltest sdist clean docs gold stamp hlint tags checkLinks testInterfaces
 
