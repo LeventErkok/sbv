@@ -13,11 +13,6 @@ module Data.SBV.Examples.Optimization.VM where
 
 import Data.SBV
 
--- | True precisely when exactly one of the inputs is
-strongMutex :: [SBool] -> SBool
-strongMutex []     = false
-strongMutex (a:as) = ite a (bnot (bOr as)) (strongMutex as)
-
 -- | The allocation problem. Inspired by: <http://rise4fun.com/z3opt/tutorialcontent/guide#h25>
 --
 --   - We have three virtual machines (VMs) which require 100, 50 and 15 GB hard disk respectively.
@@ -55,9 +50,9 @@ allocate = do
     x3@[x31, x32, x33] <- sBools ["x31", "x32", "x33"]
 
     -- Each job runs on exactly one server
-    constrain $ strongMutex x1
-    constrain $ strongMutex x2
-    constrain $ strongMutex x3
+    constrain $ pbStronglyMutexed x1
+    constrain $ pbStronglyMutexed x2
+    constrain $ pbStronglyMutexed x3
 
     let need :: [SBool] -> SInteger
         need rs = sum $ zipWith (\r c -> ite r c 0) rs [100, 50, 15]

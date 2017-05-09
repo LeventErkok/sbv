@@ -152,7 +152,7 @@ module Data.SBV (
   , sTestBit, sExtractBits, sPopCount, sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, sFromIntegral, setBitTo, oneIf
   , lsb, msb, label
   -- *** Pseudo-boolean (cardinality) operators
-  , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq
+  , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   -- *** Predicates
   , allEqual, allDifferent, inRange, sElem
   -- *** Addition and Multiplication with high-bits

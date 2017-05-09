@@ -27,7 +27,7 @@ module Data.SBV.Core.Model (
   , sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, (.^)
   , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
-  , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq
+  , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   , constrain, pConstrain, tactic, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
@@ -545,42 +545,50 @@ liftPB w o xs
                     registerKind st KUnbounded
                     newExpr st KBool (SBVApp (PseudoBoolean o) xsw)
 
--- | @xs `atMost` k@ is 'True' if at most `k` of the input arguments are 'True'
+-- | 'True' if at most `k` of the input arguments are 'True'
 pbAtMost :: [SBool] -> Int -> SBool
 pbAtMost xs k
  | all isConcrete xs = literal $ sum (map (pbToInteger 1) xs) <= fromIntegral k
  | True              = liftPB "pbAtMost" (PB_AtMost k) xs
 
--- | @xs `atLeast` k@ is 'True' if at least `k` of the input arguments are 'True'
+-- | 'True' if at least `k` of the input arguments are 'True'
 pbAtLeast :: [SBool] -> Int -> SBool
 pbAtLeast xs k
  | all isConcrete xs = literal $ sum (map (pbToInteger 1) xs) >= fromIntegral k
  | True              = liftPB "pbAtLeast" (PB_AtLeast k) xs
 
--- | @xs `exactly` k@ is 'True' if exactly `k` of the input arguments are 'True'
+-- | 'True' if exactly `k` of the input arguments are 'True'
 pbExactly :: [SBool] -> Int -> SBool
 pbExactly xs k
  | all isConcrete xs = literal $ sum (map (pbToInteger 1) xs) == fromIntegral k
  | True              = liftPB "pbExactly" (PB_Exactly k) xs
 
--- | @pbLE [(ci, xi), ..] k@ is 'True' if the sum of $ci$ such that the $xi$ is 'True' is at most 'k'. Generalizes 'pbAtMost'.
+-- | 'True' if the sum of coefficients for 'True' elements is at most 'k'. Generalizes 'pbAtMost'.
 pbLe :: [(Int, SBool)] -> Int -> SBool
 pbLe xs k
  | all isConcrete (map snd xs) = literal $ sum [pbToInteger c b | (c, b) <- xs] <= fromIntegral k
  | True                        = liftPB "pbLe" (PB_Le (map fst xs) k) (map snd xs)
 
--- | @pbGE [(ci, xi), ..] k@ is 'True' if the sum of $ci$ such that the $xi$ is 'True' is at least 'k'. Generalizes 'pbAtLeast'.
+-- | 'True' if the sum of coefficients for 'True' elements is at least 'k'. Generalizes 'pbAtLeast'.
 pbGe :: [(Int, SBool)] -> Int -> SBool
 pbGe xs k
  | all isConcrete (map snd xs) = literal $ sum [pbToInteger c b | (c, b) <- xs] >= fromIntegral k
  | True                        = liftPB "pbGe" (PB_Ge (map fst xs) k) (map snd xs)
 
--- | @pbEq [(ci, xi), ..] k@ is 'True' if the sum of $ci$ such that the $xi$ is 'True' is exactly 'k'. Generalizes 'pbExactly'
--- /exactly K-of-N/ constraints.
+-- | 'True' if the sum of coefficients for 'True' elements is exactly least 'k'. Useful for coding
+-- /exactly K-of-N/ constraints, and in particular mutex constraints.
 pbEq :: [(Int, SBool)] -> Int -> SBool
 pbEq xs k
  | all isConcrete (map snd xs) = literal $ sum [pbToInteger c b | (c, b) <- xs] == fromIntegral k
  | True                        = liftPB "pbEq" (PB_Eq (map fst xs) k) (map snd xs)
+
+-- | 'True' if there is at most one set bit
+pbMutexed :: [SBool] -> SBool
+pbMutexed xs = pbAtMost xs 1
+
+-- | 'True' if there is exactly one set bit
+pbStronglyMutexed :: [SBool] -> SBool
+pbStronglyMutexed xs = pbExactly xs 1
 
 -- | Convert a concrete pseudo-boolean to given int; converting to integer
 pbToInteger :: Int -> SBool -> Integer

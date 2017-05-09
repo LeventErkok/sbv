@@ -7,16 +7,17 @@
 
   * Add support for pseudo-boolean operations:
   
-          pbAtMost   :: [SBool]        -> Int -> SBool
-          pbAtLeast  :: [SBool]        -> Int -> SBool
-          pbExactly  :: [SBool]        -> Int -> SBool
-          pbLe       :: [(Int, SBool)] -> Int -> SBool
-          pbGe       :: [(Int, SBool)] -> Int -> SBool
-          pbEq       :: [(Int, SBool)] -> Int -> SBool
+          pbAtMost           :: [SBool]        -> Int -> SBool
+          pbAtLeast          :: [SBool]        -> Int -> SBool
+          pbExactly          :: [SBool]        -> Int -> SBool
+          pbLe               :: [(Int, SBool)] -> Int -> SBool
+          pbGe               :: [(Int, SBool)] -> Int -> SBool
+          pbEq               :: [(Int, SBool)] -> Int -> SBool
+          pbMutexed          :: [SBool]               -> SBool
+          pbStronglyMutexed  :: [SBool]               -> SBool
 
-    These functions, while can be directly coded in SBV, produce
-    better translations to SMTLib for more efficient solving of
-    cardinality constraints.
+    These functions, while can be directly coded in SBV, produce better
+    translations to SMTLib for more efficient solving of cardinality constraints.
 
 ### Version 6.0, 2017-05-07
 
