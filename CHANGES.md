@@ -6,13 +6,13 @@
 ### Version 6.1, Not yet released
 
   * Add support for pseudo-boolean operations:
-
-       - `pbAtMost   :: [SBool]        -> Int -> SBool`
-       - `pbAtLeast  :: [SBool]        -> Int -> SBool`
-       - `pbExactly  :: [SBool]        -> Int -> SBool`
-       - `pbLe       :: [(Int, SBool)] -> Int -> SBool`
-       - `pbGe       :: [(Int, SBool)] -> Int -> SBool`
-       - `pbEq       :: [(Int, SBool)] -> Int -> SBool`
+  
+          pbAtMost   :: [SBool]        -> Int -> SBool
+          pbAtLeast  :: [SBool]        -> Int -> SBool
+          pbExactly  :: [SBool]        -> Int -> SBool
+          pbLe       :: [(Int, SBool)] -> Int -> SBool
+          pbGe       :: [(Int, SBool)] -> Int -> SBool
+          pbEq       :: [(Int, SBool)] -> Int -> SBool
 
     These functions, while can be directly coded in SBV, produce
     better translations to SMTLib for more efficient solving of
