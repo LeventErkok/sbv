@@ -35,6 +35,7 @@ boolector = SMTSolver {
                               , supportsFloats             = False
                               , supportsDoubles            = False
                               , supportsOptimization       = False
+                              , supportsPseudoBooleans     = False
                               }
          }
  where addTimeOut o i | i < 0 = error $ "Boolector: Timeout value must be non-negative, received: " ++ show i

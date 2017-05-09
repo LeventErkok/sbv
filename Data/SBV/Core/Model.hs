@@ -27,6 +27,7 @@ module Data.SBV.Core.Model (
   , sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, (.^)
   , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
+  , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq
   , constrain, pConstrain, tactic, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
@@ -39,7 +40,7 @@ module Data.SBV.Core.Model (
   )
   where
 
-import Control.Monad        (when, unless)
+import Control.Monad        (when, unless, mplus)
 import Control.Monad.Reader (ask)
 import Control.Monad.Trans  (liftIO)
 
@@ -512,6 +513,80 @@ sElem x xs = bAny (.== x) xs
 -- | Returns 1 if the boolean is true, otherwise 0.
 oneIf :: (Num a, SymWord a) => SBool -> SBV a
 oneIf t = ite t 1 0
+
+-- | Lift a pseudo-boolean op, performing checks
+liftPB :: String -> PBOp -> [SBool] -> SBool
+liftPB w o xs
+  | Just e <- check o
+  = error $ "SBV." ++ w ++ ": " ++ e
+  | True
+  = result
+  where check (PB_AtMost  k) = pos k
+        check (PB_AtLeast k) = pos k
+        check (PB_Exactly k) = pos k
+        check (PB_Le cs   k) = pos k `mplus` match cs
+        check (PB_Ge cs   k) = pos k `mplus` match cs
+        check (PB_Eq cs   k) = pos k `mplus` match cs
+
+        pos k
+          | k < 0 = Just $ "comparison value must be positive, received: " ++ show k
+          | True  = Nothing
+
+        match cs
+          | any (< 0) cs = Just $ "coefficients must be non-negative. Received: " ++ show cs
+          | lxs /= lcs   = Just $ "coefficient length must match number of arguments. Received: " ++ show (lcs, lxs)
+          | True         = Nothing
+          where lxs = length xs
+                lcs = length cs
+
+        result = SBV (SVal KBool (Right (cache r)))
+        r st   = do xsw <- mapM (sbvToSW st) xs
+                    -- PseudoBoolean's implicitly require support for integers, so make sure to register that kind!
+                    registerKind st KUnbounded
+                    newExpr st KBool (SBVApp (PseudoBoolean o) xsw)
+
+-- | @xs `atMost` k@ is 'True' if at most `k` of the input arguments are 'True'
+pbAtMost :: [SBool] -> Int -> SBool
+pbAtMost xs k
+ | all isConcrete xs = literal $ sum (map (pbToInteger 1) xs) <= fromIntegral k
+ | True              = liftPB "pbAtMost" (PB_AtMost k) xs
+
+-- | @xs `atLeast` k@ is 'True' if at least `k` of the input arguments are 'True'
+pbAtLeast :: [SBool] -> Int -> SBool
+pbAtLeast xs k
+ | all isConcrete xs = literal $ sum (map (pbToInteger 1) xs) >= fromIntegral k
+ | True              = liftPB "pbAtLeast" (PB_AtLeast k) xs
+
+-- | @xs `exactly` k@ is 'True' if exactly `k` of the input arguments are 'True'
+pbExactly :: [SBool] -> Int -> SBool
+pbExactly xs k
+ | all isConcrete xs = literal $ sum (map (pbToInteger 1) xs) == fromIntegral k
+ | True              = liftPB "pbExactly" (PB_Exactly k) xs
+
+-- | @pbLE [(ci, xi), ..] k@ is 'True' if the sum of $ci$ such that the $xi$ is 'True' is at most 'k'. Generalizes 'pbAtMost'.
+pbLe :: [(Int, SBool)] -> Int -> SBool
+pbLe xs k
+ | all isConcrete (map snd xs) = literal $ sum [pbToInteger c b | (c, b) <- xs] <= fromIntegral k
+ | True                        = liftPB "pbLe" (PB_Le (map fst xs) k) (map snd xs)
+
+-- | @pbGE [(ci, xi), ..] k@ is 'True' if the sum of $ci$ such that the $xi$ is 'True' is at least 'k'. Generalizes 'pbAtLeast'.
+pbGe :: [(Int, SBool)] -> Int -> SBool
+pbGe xs k
+ | all isConcrete (map snd xs) = literal $ sum [pbToInteger c b | (c, b) <- xs] >= fromIntegral k
+ | True                        = liftPB "pbGe" (PB_Ge (map fst xs) k) (map snd xs)
+
+-- | @pbEq [(ci, xi), ..] k@ is 'True' if the sum of $ci$ such that the $xi$ is 'True' is exactly 'k'. Generalizes 'pbExactly'
+-- /exactly K-of-N/ constraints.
+pbEq :: [(Int, SBool)] -> Int -> SBool
+pbEq xs k
+ | all isConcrete (map snd xs) = literal $ sum [pbToInteger c b | (c, b) <- xs] == fromIntegral k
+ | True                        = liftPB "pbEq" (PB_Eq (map fst xs) k) (map snd xs)
+
+-- | Convert a concrete pseudo-boolean to given int; converting to integer
+pbToInteger :: Int -> SBool -> Integer
+pbToInteger c b
+ | Just v <- unliteral b = if v then fromIntegral c else 0
+ | True                  = error $ "SBV.pbToInteger: Received a symbolic boolean: " ++ show (c, b)
 
 -- | Predicate for optimizing word operations like (+) and (*).
 isConcreteZero :: SBV a -> Bool

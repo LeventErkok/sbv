@@ -133,20 +133,26 @@ module Data.SBV (
   -- *** Signed algebraic reals
   -- $algReals
   , SReal, AlgReal, sRealToSInteger
+
   -- ** Creating a symbolic variable
   -- $createSym
   , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger, sReal, sFloat, sDouble
+
   -- ** Creating a list of symbolic variables
   -- $createSyms
   , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReals, sFloats, sDoubles
+
   -- *** Abstract SBV type
   , SBV
   -- *** Arrays of symbolic values
   , SymArray(..), SArray, SFunArray, mkSFunArray
+
   -- ** Operations on symbolic values
   -- *** Word level
   , sTestBit, sExtractBits, sPopCount, sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, sFromIntegral, setBitTo, oneIf
   , lsb, msb, label
+  -- *** Pseudo-boolean (cardinality) operators
+  , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq
   -- *** Predicates
   , allEqual, allDifferent, inRange, sElem
   -- *** Addition and Multiplication with high-bits

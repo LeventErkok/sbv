@@ -37,6 +37,7 @@ yices = SMTSolver {
                               , supportsFloats             = False
                               , supportsDoubles            = False
                               , supportsOptimization       = False
+                              , supportsPseudoBooleans     = False
                               }
          }
   where addTimeOut _ _ = error "Yices: Timeout values are not supported by Yices"

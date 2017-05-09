@@ -25,7 +25,7 @@
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SW(..), swKind, trueSW, falseSW
-  , Op(..), FPOp(..)
+  , Op(..), PBOp(..), FPOp(..)
   , Quantifier(..), needsExistentials
   , RoundingMode(..)
   , SBVType(..), newUninterpreted, addAxiom
@@ -41,7 +41,7 @@ module Data.SBV.Core.Symbolic
   , getTableIndex
   , SBVPgm(..), Symbolic, runSymbolic, runSymbolic', State
   , inProofMode, SBVRunMode(..), Result(..)
-  , Logic(..), SMTLibLogic(..)
+  , Logic(..), SMTLibLogic(..), registerKind
   , addAssertion, addSValConstraint, internalConstraint, internalVariable
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
@@ -147,6 +147,7 @@ data Op = Plus
         | Uninterpreted String
         | Label String                          -- Essentially no-op; useful for code generation to emit comments.
         | IEEEFP FPOp                           -- Floating-point ops, categorized separately
+        | PseudoBoolean PBOp                    -- Pseudo-boolean ops, categorized separately
         deriving (Eq, Ord)
 
 -- | Floating point operations
@@ -204,6 +205,15 @@ instance Show FPOp where
    show FP_IsNegative        = "fp.isNegative"
    show FP_IsPositive        = "fp.isPositive"
 
+-- | Pseudo-boolean operations
+data PBOp = PB_AtMost  Int        -- ^ At most k
+          | PB_AtLeast Int        -- ^ At least k
+          | PB_Exactly Int        -- ^ Exactly k
+          | PB_Le      [Int] Int  -- ^ At most k,  with coefficients given. Generalizes PB_AtMost
+          | PB_Ge      [Int] Int  -- ^ At least k, with coefficients given. Generalizes PB_AtLeast
+          | PB_Eq      [Int] Int  -- ^ Exactly k,  with coefficients given. Generalized PB_Exactly
+          deriving (Eq, Ord, Show)
+
 -- | Show instance for 'Op'. Note that this is largely for debugging purposes, not used
 -- for being read by any tool.
 instance Show Op where
@@ -221,6 +231,7 @@ instance Show Op where
   show (Uninterpreted i) = "[uninterpreted] " ++ i
   show (Label s)         = "[label] " ++ s
   show (IEEEFP w)        = show w
+  show (PseudoBoolean p) = show p
   show op
     | Just s <- op `lookup` syms = s
     | True                       = error "impossible happened; can't find op!"
@@ -1157,6 +1168,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsFloats             :: Bool                 -- ^ Does the solver support single-precision floating point numbers?
        , supportsDoubles            :: Bool                 -- ^ Does the solver support double-precision floating point numbers?
        , supportsOptimization       :: Bool                 -- ^ Does the solver support optimization routines?
+       , supportsPseudoBooleans     :: Bool                 -- ^ Does the solver support pseudo-boolean operations?
        }
 
 -- | Rounding mode to be used for the IEEE floating-point operations.

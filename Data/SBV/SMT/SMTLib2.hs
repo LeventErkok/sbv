@@ -243,11 +243,11 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
           | null foralls = mkDef a
           | True         = [letShift (mkLet a)]
 
-        mkDef (s, SBVApp (Label m) [e]) = emit (s, cvtSW     skolemMap          e) (Just m)
-        mkDef (s, e)                    = emit (s, cvtExp rm skolemMap tableMap e) Nothing
+        mkDef (s, SBVApp (Label m) [e]) = emit (s, cvtSW                skolemMap          e) (Just m)
+        mkDef (s, e)                    = emit (s, cvtExp solverCaps rm skolemMap tableMap e) Nothing
 
-        mkLet (s, SBVApp (Label m) [e]) = "(let ((" ++ show s ++ " " ++ cvtSW     skolemMap          e ++ ")) ; " ++ m
-        mkLet (s, e)                    = "(let ((" ++ show s ++ " " ++ cvtExp rm skolemMap tableMap e ++ "))"
+        mkLet (s, SBVApp (Label m) [e]) = "(let ((" ++ show s ++ " " ++ cvtSW                skolemMap          e ++ ")) ; " ++ m
+        mkLet (s, e)                    = "(let ((" ++ show s ++ " " ++ cvtExp solverCaps rm skolemMap tableMap e ++ "))"
 
         -- does the solver allow define-fun; or do we need declare-fun/assert combo?
         useDefFun = supportsMacros solverCaps
@@ -382,27 +382,38 @@ getTable m i
   | Just tn <- i `IM.lookup` m = tn
   | True                       = error $ "SBV.SMTLib2: Cannot locate table " ++ show i
 
-cvtExp :: RoundingMode -> SkolemMap -> TableMap -> SBVExpr -> String
-cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
+cvtExp :: SolverCapabilities -> RoundingMode -> SkolemMap -> TableMap -> SBVExpr -> String
+cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
   where ssw = cvtSW skolemMap
-        bvOp     = all isBounded       arguments
-        intOp    = any isInteger       arguments
-        realOp   = any isReal          arguments
-        doubleOp = any isDouble        arguments
-        floatOp  = any isFloat         arguments
-        boolOp   = all isBoolean       arguments
+
+        supportsPB = supportsPseudoBooleans caps
+
+        bvOp     = all isBounded arguments
+        intOp    = any isInteger arguments
+        realOp   = any isReal    arguments
+        doubleOp = any isDouble  arguments
+        floatOp  = any isFloat   arguments
+        boolOp   = all isBoolean arguments
+
         bad | intOp = error $ "SBV.SMTLib2: Unsupported operation on unbounded integers: " ++ show expr
             | True  = error $ "SBV.SMTLib2: Unsupported operation on real values: " ++ show expr
+
         ensureBVOrBool = bvOp || boolOp || bad
         ensureBV       = bvOp || bad
+
         addRM s = s ++ " " ++ smtRoundingMode rm
+
+        -- lift a binary op
         lift2  o _ [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
         lift2  o _ sbvs   = error $ "SBV.SMTLib2.sh.lift2: Unexpected arguments: "   ++ show (o, sbvs)
+
         -- lift a binary operation with rounding-mode added; used for floating-point arithmetic
         lift2WM o fo | doubleOp || floatOp = lift2 (addRM fo)
                      | True                = lift2 o
+
         lift1FP o fo | doubleOp || floatOp = lift1 fo
                      | True                = lift1 o
+
         liftAbs sgned args | doubleOp || floatOp = lift1 "fp.abs" sgned args
                            | intOp               = lift1 "abs"    sgned args
                            | bvOp, sgned         = mkAbs (head args) "bvslt" "bvneg"
@@ -412,32 +423,42 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                   where ltz = "(" ++ cmp ++ " " ++ x ++ " " ++ z ++ ")"
                         nx  = "(" ++ neg ++ " " ++ x ++ ")"
                         z   = cvtCW rm (mkConstCW (kindOf (head arguments)) (0::Integer))
+
         lift2B bOp vOp
           | boolOp = lift2 bOp
           | True   = lift2 vOp
+
         lift1B bOp vOp
           | boolOp = lift1 bOp
           | True   = lift1 vOp
+
         eqBV  = lift2 "="
         neqBV = lift2 "distinct"
+
         equal sgn sbvs
           | doubleOp = lift2 "fp.eq" sgn sbvs
           | floatOp  = lift2 "fp.eq" sgn sbvs
           | True     = lift2 "=" sgn sbvs
+
         notEqual sgn sbvs
           | doubleOp = "(not " ++ equal sgn sbvs ++ ")"
           | floatOp  = "(not " ++ equal sgn sbvs ++ ")"
           | True     = lift2 "distinct" sgn sbvs
+
         lift2S oU oS sgn = lift2 (if sgn then oS else oU) sgn
         lift2Cmp o fo | doubleOp || floatOp = lift2 fo
                       | True                = lift2 o
+
         unintComp o [a, b]
           | KUserSort s (Right _) <- kindOf (head arguments)
           = let idx v = "(" ++ s ++ "_constrIndex " ++ " " ++ v ++ ")" in "(" ++ o ++ " " ++ idx a ++ " " ++ idx b ++ ")"
         unintComp o sbvs = error $ "SBV.SMT.SMTLib2.sh.unintComp: Unexpected arguments: "   ++ show (o, sbvs)
+
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
         lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib2.sh.lift1: Unexpected arguments: "   ++ show (o, sbvs)
+
         sh (SBVApp Ite [a, b, c]) = "(ite " ++ ssw a ++ " " ++ ssw b ++ " " ++ ssw c ++ ")"
+
         sh (SBVApp (LkUp (t, aKnd, _, l) i e) [])
           | needsCheck = "(ite " ++ cond ++ ssw e ++ " " ++ lkUp ++ ")"
           | True       = lkUp
@@ -464,30 +485,39 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                 mkCnst = cvtCW rm . mkConstCW (kindOf i)
                 le0  = "(" ++ less ++ " " ++ ssw i ++ " " ++ mkCnst 0 ++ ")"
                 gtl  = "(" ++ leq  ++ " " ++ mkCnst l ++ " " ++ ssw i ++ ")"
+
         sh (SBVApp (KindCast f t) [a]) = handleKindCast f t (ssw a)
+
         sh (SBVApp (ArrEq i j) [])  = "(= array_" ++ show i ++ " array_" ++ show j ++")"
         sh (SBVApp (ArrRead i) [a]) = "(select array_" ++ show i ++ " " ++ ssw a ++ ")"
+
         sh (SBVApp (Uninterpreted nm) [])   = nm
         sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm ++ " " ++ unwords (map ssw args) ++ ")"
+
         sh (SBVApp (Extract i j) [a]) | ensureBV = "((_ extract " ++ show i ++ " " ++ show j ++ ") " ++ ssw a ++ ")"
+
         sh (SBVApp (Rol i) [a])
            | bvOp  = rot  ssw "rotate_left"  i a
            | intOp = sh (SBVApp (Shl i) [a])       -- Haskell treats rotateL as shiftL for unbounded values
            | True  = bad
+
         sh (SBVApp (Ror i) [a])
            | bvOp  = rot  ssw "rotate_right" i a
            | intOp = sh (SBVApp (Shr i) [a])     -- Haskell treats rotateR as shiftR for unbounded values
            | True  = bad
+
         sh (SBVApp (Shl i) [a])
            | bvOp   = shft rm ssw "bvshl"  "bvshl"  i a
            | i < 0  = sh (SBVApp (Shr (-i)) [a])  -- flip sign/direction
            | intOp  = "(* " ++ ssw a ++ " " ++ show (bit i :: Integer) ++ ")"  -- Implement shiftL by multiplication by 2^i
            | True   = bad
+
         sh (SBVApp (Shr i) [a])
            | bvOp  = shft rm ssw "bvlshr" "bvashr" i a
            | i < 0 = sh (SBVApp (Shl (-i)) [a])  -- flip sign/direction
            | intOp = "(div " ++ ssw a ++ " " ++ show (bit i :: Integer) ++ ")"  -- Implement shiftR by division by 2^i
            | True  = bad
+
         sh (SBVApp op args)
           | Just f <- lookup op smtBVOpTable, ensureBVOrBool
           = f (any hasSign args) (map ssw args)
@@ -501,8 +531,15 @@ cvtExp rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                , (Join, lift2 "concat")
                                ]
         sh (SBVApp (Label _)                       [a]) = cvtSW skolemMap a  -- This won't be reached; but just in case!
+
         sh (SBVApp (IEEEFP (FP_Cast kFrom kTo m)) args) = handleFPCast kFrom kTo (ssw m) (unwords (map ssw args))
         sh (SBVApp (IEEEFP w                    ) args) = "(" ++ show w ++ " " ++ unwords (map ssw args) ++ ")"
+
+        sh (SBVApp (PseudoBoolean pb) args)
+          | supportsPB = handlePB pb args'
+          | True       = reducePB pb args'
+          where args' = map ssw args
+
         sh inp@(SBVApp op args)
           | intOp, Just f <- lookup op smtOpIntTable
           = f True (map ssw args)
@@ -706,3 +743,25 @@ handleKindCast kFrom kTo a
         signExtend i = "((_ sign_extend " ++ show i ++  ") "  ++ a ++ ")"
         zeroExtend i = "((_ zero_extend " ++ show i ++  ") "  ++ a ++ ")"
         extract    i = "((_ extract "     ++ show i ++ " 0) " ++ a ++ ")"
+
+-- Translation of pseudo-booleans, in case the solver supports them
+handlePB :: PBOp -> [String] -> String
+handlePB (PB_AtMost  k) args = "((_ at-most "  ++ show k                                                ++ ") " ++ unwords args ++ ")"
+handlePB (PB_AtLeast k) args = "((_ at-least " ++ show k                                                ++ ") " ++ unwords args ++ ")"
+handlePB (PB_Exactly k) args = "((_ pbeq "     ++ unwords (map show (replicate (length args) 1 ++ [k])) ++ ") " ++ unwords args ++ ")"
+handlePB (PB_Eq cs   k) args = "((_ pbeq "     ++ unwords (map show (cs ++ [k]))                        ++ ") " ++ unwords args ++ ")"
+handlePB (PB_Le cs   k) args = "((_ pble "     ++ unwords (map show (cs ++ [k]))                        ++ ") " ++ unwords args ++ ")"
+handlePB (PB_Ge cs   k) args = "((_ pbge "     ++ unwords (map show (cs ++ [k]))                        ++ ") " ++ unwords args ++ ")"
+
+-- Translation of pseudo-booleans, in case the solver does *not* support them
+reducePB :: PBOp -> [String] -> String
+reducePB op args = case op of
+                     PB_AtMost  k -> "(<= " ++ addIf (repeat 1) ++ " " ++ show k ++ ")"
+                     PB_AtLeast k -> "(>= " ++ addIf (repeat 1) ++ " " ++ show k ++ ")"
+                     PB_Exactly k -> "(=  " ++ addIf (repeat 1) ++ " " ++ show k ++ ")"
+                     PB_Le cs   k -> "(<= " ++ addIf cs         ++ " " ++ show k ++ ")"
+                     PB_Ge cs   k -> "(>= " ++ addIf cs         ++ " " ++ show k ++ ")"
+                     PB_Eq cs   k -> "(=  " ++ addIf cs         ++ " " ++ show k ++ ")"
+
+  where addIf :: [Int] -> String
+        addIf cs = "(+ " ++ unwords ["(ite " ++ a ++ " " ++ show c ++ " 0)" | (a, c) <- zip args cs] ++ ")"

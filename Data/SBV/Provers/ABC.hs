@@ -37,6 +37,7 @@ abc = SMTSolver {
                               , supportsFloats             = False
                               , supportsDoubles            = False
                               , supportsOptimization       = False
+                              , supportsPseudoBooleans     = False
                               }
          }
   where addTimeOut _ _ = error "ABC: Timeout values are not supported"
