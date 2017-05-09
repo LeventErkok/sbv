@@ -12,9 +12,9 @@
   * This is a backwards compatibility breaking release, hence the major version
     bump from 5.15 to 6.0:
      
-       - Most of existing code should work with no changes
+       - Most of existing code should work with no changes.
        - Old code relying on some features might require extra imports,
-	 since we no longer export some functionality directly from Data.SBV.
+	 since we no longer export some functionality directly from `Data.SBV`.
          This was done in order to reduce the number of exported items to
          avoid extra clutter.
        - Old optimization features are removed, as the new and much improved
@@ -111,7 +111,7 @@
     calls (which return unit) can now be directly sat/prove processed, without needing
     a final call to return at the end.
 
-  * Add type synonym Goal (for "Symbolic ()"), in order to simplify type signatures
+  * Add type synonym `Goal` (for `Symbolic ()`), in order to simplify type signatures
 
   * SBV now properly adds check-sat commands and other directives in debugging output.
 
