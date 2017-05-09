@@ -746,12 +746,12 @@ handleKindCast kFrom kTo a
 
 -- Translation of pseudo-booleans, in case the solver supports them
 handlePB :: PBOp -> [String] -> String
-handlePB (PB_AtMost  k) args = "((_ at-most "  ++ show k                                                ++ ") " ++ unwords args ++ ")"
-handlePB (PB_AtLeast k) args = "((_ at-least " ++ show k                                                ++ ") " ++ unwords args ++ ")"
-handlePB (PB_Exactly k) args = "((_ pbeq "     ++ unwords (map show (replicate (length args) 1 ++ [k])) ++ ") " ++ unwords args ++ ")"
-handlePB (PB_Eq cs   k) args = "((_ pbeq "     ++ unwords (map show (cs ++ [k]))                        ++ ") " ++ unwords args ++ ")"
-handlePB (PB_Le cs   k) args = "((_ pble "     ++ unwords (map show (cs ++ [k]))                        ++ ") " ++ unwords args ++ ")"
-handlePB (PB_Ge cs   k) args = "((_ pbge "     ++ unwords (map show (cs ++ [k]))                        ++ ") " ++ unwords args ++ ")"
+handlePB (PB_AtMost  k) args = "((_ at-most "  ++ show k                                             ++ ") " ++ unwords args ++ ")"
+handlePB (PB_AtLeast k) args = "((_ at-least " ++ show k                                             ++ ") " ++ unwords args ++ ")"
+handlePB (PB_Exactly k) args = "((_ pbeq "     ++ unwords (map show (k : replicate (length args) 1)) ++ ") " ++ unwords args ++ ")"
+handlePB (PB_Eq cs   k) args = "((_ pbeq "     ++ unwords (map show (k : cs))                        ++ ") " ++ unwords args ++ ")"
+handlePB (PB_Le cs   k) args = "((_ pble "     ++ unwords (map show (k : cs))                        ++ ") " ++ unwords args ++ ")"
+handlePB (PB_Ge cs   k) args = "((_ pbge "     ++ unwords (map show (k : cs))                        ++ ") " ++ unwords args ++ ")"
 
 -- Translation of pseudo-booleans, in case the solver does *not* support them
 reducePB :: PBOp -> [String] -> String

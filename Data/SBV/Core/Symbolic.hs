@@ -278,13 +278,14 @@ reorder s = case s of
 
 -- | Show instance for 'SBVExpr'. Again, only for debugging purposes.
 instance Show SBVExpr where
-  show (SBVApp Ite [t, a, b]) = unwords ["if", show t, "then", show a, "else", show b]
-  show (SBVApp (Shl i) [a])   = unwords [show a, "<<", show i]
-  show (SBVApp (Shr i) [a])   = unwords [show a, ">>", show i]
-  show (SBVApp (Rol i) [a])   = unwords [show a, "<<<", show i]
-  show (SBVApp (Ror i) [a])   = unwords [show a, ">>>", show i]
-  show (SBVApp op  [a, b])    = unwords [show a, show op, show b]
-  show (SBVApp op  args)      = unwords (show op : map show args)
+  show (SBVApp Ite [t, a, b])             = unwords ["if", show t, "then", show a, "else", show b]
+  show (SBVApp (Shl i) [a])               = unwords [show a, "<<", show i]
+  show (SBVApp (Shr i) [a])               = unwords [show a, ">>", show i]
+  show (SBVApp (Rol i) [a])               = unwords [show a, "<<<", show i]
+  show (SBVApp (Ror i) [a])               = unwords [show a, ">>>", show i]
+  show (SBVApp (PseudoBoolean pb) args)   = unwords (show pb : map show args)
+  show (SBVApp op                 [a, b]) = unwords [show a, show op, show b]
+  show (SBVApp op                 args)   = unwords (show op : map show args)
 
 -- | A program is a sequence of assignments
 newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SW, SBVExpr)}
