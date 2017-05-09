@@ -3,17 +3,21 @@
 
 * Latest Hackage released version: 6.0, 2017-05-07
 
+### Version 6.1, Not yet released
+
+  * 
+
 ### Version 6.0, 2017-05-07
 
   * This is a backwards compatibility breaking release, hence the major version
     bump from 5.15 to 6.0:
      
-        * Most of existing code should work with no changes
-	* Old code relying on some features might require extra imports,
+        - Most of existing code should work with no changes
+	- Old code relying on some features might require extra imports,
 	  since we no longer export some functionality directly from Data.SBV.
           This was done in order to reduce the number of exported items to
           avoid extra clutter.
-        * Old optimization features are removed, as the new and much improved
+        - Old optimization features are removed, as the new and much improved
 	  capabilities should be used instead.
 
   * The next two bullets cover new features in SBV regarding optimization, based
@@ -23,7 +27,6 @@
     as implemented by Z3, and thus what is available in SBV is given in this
     paper: http://www.easychair.org/publications/download/Z_-_Maximal_Satisfaction_with_Z3
 
-
   * SBV now allows for  real or integral valued metrics. Goals can be lexicographically
     (default), independently, or pareto-front optimized. Currently, only the z3 backend
     supports optimization routines.
@@ -31,8 +34,8 @@
     Optimization can be done over bit-vector, real, and integer goals. The relevant
     functions are:
 
-    	* `minimize`: Minimize a given arithmetic goal
-    	* `maximize`: Minimize a given arithmetic goal
+    	- `minimize`: Minimize a given arithmetic goal
+    	- `maximize`: Minimize a given arithmetic goal
 
     For instance, a call of the form 
     
@@ -69,15 +72,15 @@
     case-splitting in a proof to guide the underlying solver through. Here is the list
     of tactics implemented:
 
-       * `CaseSplit`         : Case-split, with implicit coverage. Bool says whether we should be verbose.
-       * `CheckCaseVacuity`  : Should the case-splits be checked for vacuity? (Default: True.)
-       * `ParallelCase`      : Run case-splits in parallel. (Default: Sequential.)
-       * `CheckConstrVacuity`: Should constraints be checked for vacuity? (Default: False.)
-       * `StopAfter`         : Time-out given to solver, in seconds.
-       * `CheckUsing`        : Invoke with check-sat-using command, instead of check-sat
-       * `UseLogic`          : Use this logic, a custom one can be specified too
-       * `UseSolver`         : Use this solver (z3, yices, etc.)
-       * `OptimizePriority`  : Specify priority for optimization: Lexicographic (default), Independent, or Pareto.
+        - `CaseSplit`         : Case-split, with implicit coverage. Bool says whether we should be verbose.
+        - `CheckCaseVacuity`  : Should the case-splits be checked for vacuity? (Default: True.)
+        - `ParallelCase`      : Run case-splits in parallel. (Default: Sequential.)
+        - `CheckConstrVacuity`: Should constraints be checked for vacuity? (Default: False.)
+        - `StopAfter`         : Time-out given to solver, in seconds.
+        - `CheckUsing`        : Invoke with check-sat-using command, instead of check-sat
+        - `UseLogic`          : Use this logic, a custom one can be specified too
+        - `UseSolver`         : Use this solver (z3, yices, etc.)
+        - `OptimizePriority`  : Specify priority for optimization: Lexicographic (default), Independent, or Pareto.
 
   * Name-space clean-up. The following modules are no longer automatically exported
     from Data.SBV:
