@@ -415,8 +415,12 @@ showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel satExtMsg result = 
  where cfg = resultConfig result
 
        showUC Nothing   = ""
-       showUC (Just []) = ". [No unsat core received. Have you labeled relevant assertions?]"
-       showUC (Just xs) = intercalate "\n" $ ". Unsat core:" : map ("  " ++) xs
+       showUC (Just []) = dot ++ "[No unsat core received. Have you labeled relevant assertions?]"
+       showUC (Just xs) = intercalate "\n" $ (dot ++ "Unsat core:") : map ("  " ++) xs
+
+       dot = case reverse unsatMsg of
+               ('.':_) -> " "
+               _       -> ". "
 
 -- | Show a model in human readable form. Ignore bindings to those variables that start
 -- with "__internal_sbv_" and also those marked as "nonModelVar" in the config; as these are only for internal purposes
