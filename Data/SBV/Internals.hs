@@ -13,7 +13,9 @@
 
 module Data.SBV.Internals (
   -- * Running symbolic programs /manually/
-  Result(..), SBVRunMode(..)
+    Result(..), SBVRunMode(..)
+  -- * Solver capabilities
+  , SolverCapabilities(..)
   -- * Internal structures useful for low-level programming
   , module Data.SBV.Core.Data
   -- * Operations useful for instantiating SBV type classes
