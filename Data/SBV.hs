@@ -839,6 +839,19 @@ Note that while 'constrain' can be used freely, 'pConstrain' is only allowed in 
 deal with probabilistic constraints when it comes to satisfiability and proofs.
 Also, both 'constrain' and 'pConstrain' calls during code-generation will also be rejected, for similar reasons.
 
+=== Named constraints and unsat cores
+
+Constraints can be given names:
+
+  @ 'namedConstraint' "a is at least 5" $ a .>= 5@
+
+Such constraints are useful when used in conjunction with 'getUnsatCore', and 'extractUnsatCore' features,
+where the backend solver can be queried to obtain an unsat core in case the constraints are unsatisfiable:
+
+   @ satWith z3{getUnsatCore=True} $ do ... @
+
+See "Data.SBV.Examples.Misc.UnsatCore" for an example use case.
+
 === Constraint vacuity
 
 SBV does not check that a given constraints is not vacuous. That is, that it can never be satisfied. This is usually

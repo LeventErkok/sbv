@@ -23,9 +23,6 @@ p = do a <- sInteger "a"
        namedConstraint "more than 10" $ a .>= (10::SInteger)
        namedConstraint "irrelevant"   $ a .>= b
 
-       -- we can also label arbitrary internal terms, if necessary
-       constrain $ (a + b) .<= label "really not relevant" (a + b + 12)
-
 -- | Extract the unsat-core of 'p'. We have:
 --
 -- >>> ucCore
@@ -35,7 +32,7 @@ p = do a <- sInteger "a"
 -- =====================================
 -- Unsat core is: ["less than 5","more than 10"]
 --
--- Demonstrating the use of unsat-cores.
+-- Demonstrating that the constraint @a .>= b@ is /not/ needed for unsatisfiablity in this case.
 ucCore :: IO ()
 ucCore = do r <- satWith z3{getUnsatCore=True} p
             print r
