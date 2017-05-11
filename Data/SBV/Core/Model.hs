@@ -1813,9 +1813,9 @@ isSatisfiableInCurrentPath cond = do
            pc   = getPathCondition st
        check <- liftIO $ internalSATCheck cfg (pc &&& cond) st "isSatisfiableInCurrentPath: Checking satisfiability"
        let res = case check of
-                   SatResult Satisfiable{}     -> True
-                   SatResult (Unsatisfiable{}) -> False
-                   _                           -> error $ "isSatisfiableInCurrentPath: Unexpected external result: " ++ show check
+                   SatResult Satisfiable{}   -> True
+                   SatResult Unsatisfiable{} -> False
+                   _                         -> error $ "isSatisfiableInCurrentPath: Unexpected external result: " ++ show check
        res `seq` liftIO $ msg $ "isSatisfiableInCurrentPath: Conclusion: " ++ if res then "Satisfiable" else "Unsatisfiable"
        return $ if res then Just check
                        else Nothing
