@@ -371,7 +371,7 @@ data Result = Result { reskinds       :: Set.Set Kind                           
                      , resUIConsts    :: [(String, SBVType)]                     -- ^ uninterpreted constants
                      , resAxioms      :: [(String, [String])]                    -- ^ axioms
                      , resAsgns       :: SBVPgm                                  -- ^ assignments
-                     , resConstraints :: [SW]                                    -- ^ additional constraints (boolean)
+                     , resConstraints :: [(Maybe String, SW)]                    -- ^ additional constraints (boolean)
                      , resTactics     :: [Tactic SW]                             -- ^ User given tactics
                      , resGoals       :: [Objective (SW, SW)]                    -- ^ User specified optimization goals
                      , resAssertions  :: [(String, Maybe CallStack, SW)]         -- ^ assertions
@@ -506,7 +506,7 @@ data State  = State { runMode      :: SBVRunMode
                     , rctr         :: IORef Int
                     , rUsedKinds   :: IORef KindSet
                     , rinps        :: IORef [(Quantifier, NamedSymVar)]
-                    , rConstraints :: IORef [SW]
+                    , rConstraints :: IORef [(Maybe String, SW)]
                     , routs        :: IORef [SW]
                     , rtblMap      :: IORef TableMap
                     , spgm         :: IORef SBVPgm
@@ -842,16 +842,16 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs tactics goals assertions outsO
 
 -- | Handling constraints
-imposeConstraint :: SVal -> Symbolic ()
-imposeConstraint c = do st <- ask
-                        case runMode st of
-                          CodeGen -> error "SBV: constraints are not allowed in code-generation"
-                          _       -> liftIO $ internalConstraint st c
+imposeConstraint :: Maybe String -> SVal -> Symbolic ()
+imposeConstraint mbNm c = do st <- ask
+                             case runMode st of
+                               CodeGen -> error "SBV: constraints are not allowed in code-generation"
+                               _       -> liftIO $ internalConstraint st mbNm c
 
 -- | Require a boolean condition to be true in the state. Only used for internal purposes.
-internalConstraint :: State -> SVal -> IO ()
-internalConstraint st b = do v <- svToSW st b
-                             modifyIORef (rConstraints st) (v:)
+internalConstraint :: State -> Maybe String -> SVal -> IO ()
+internalConstraint st mbNm b = do v <- svToSW st b
+                                  modifyIORef (rConstraints st) ((mbNm, v):)
 
 -- | Add a tactic
 addSValTactic :: Tactic SVal -> Symbolic ()
@@ -888,19 +888,19 @@ addSValOptGoal obj = do st <- ask
                         obj' <- walk obj
                         liftIO $ modifyIORef (rOptGoals st) (obj' :)
 
--- | Add a constraint with a given probability
-addSValConstraint :: Maybe Double -> SVal -> SVal -> Symbolic ()
-addSValConstraint Nothing  c _  = imposeConstraint c
-addSValConstraint (Just t) c c'
+-- | Add a constraint with a given probability, and possibly a name
+addSValConstraint :: Maybe String -> Maybe Double -> SVal -> SVal -> Symbolic ()
+addSValConstraint mbNm Nothing  c _  = imposeConstraint mbNm c
+addSValConstraint mbNm (Just t) c c'
   | t < 0 || t > 1
   = error $ "SBV: pConstrain: Invalid probability threshold: " ++ show t ++ ", must be in [0, 1]."
   | True
   = do st <- ask
        unless (isConcreteMode st) $ error "SBV: pConstrain only allowed in 'genTest' or 'quickCheck' contexts."
        case () of
-         () | t > 0 && t < 1 -> liftIO (throwDice st) >>= \d -> imposeConstraint (if d <= t then c else c')
-            | t > 0          -> imposeConstraint c
-            | True           -> imposeConstraint c'
+         () | t > 0 && t < 1 -> liftIO (throwDice st) >>= \d -> imposeConstraint mbNm (if d <= t then c else c')
+            | t > 0          -> imposeConstraint mbNm c
+            | True           -> imposeConstraint mbNm c'
 
 -- | Mark an interim result as an output. Useful when constructing Symbolic programs
 -- that return multiple values, or when the result is programmatically computed.

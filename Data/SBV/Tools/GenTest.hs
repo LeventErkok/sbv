@@ -48,7 +48,7 @@ genTest n m = gen 0 []
                        gen (i+1) (t:sofar)
         tc g = do (_, Result _ tvals _ _ cs _ _ _ _ _ cstrs _ _ _ os) <- runSymbolic' (Concrete g) (m >>= output)
                   let cval = fromMaybe (error "Cannot generate tests in the presence of uninterpeted constants!") . (`lookup` cs)
-                      cond = all (cwToBool . cval) cstrs
+                      cond = all (cwToBool . cval . snd) cstrs
                   if cond
                      then return (map snd tvals, map cval os)
                      else tc g  -- try again, with the same set of constraints

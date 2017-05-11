@@ -448,8 +448,8 @@ mkSFunArray :: (SBV a -> SBV b) -> SFunArray a b
 mkSFunArray = SFunArray
 
 -- | Add a constraint with a given probability.
-addConstraint :: Maybe Double -> SBool -> SBool -> Symbolic ()
-addConstraint mt (SBV c) (SBV c') = addSValConstraint mt c c'
+addConstraint :: Maybe String -> Maybe Double -> SBool -> SBool -> Symbolic ()
+addConstraint mn mt (SBV c) (SBV c') = addSValConstraint mn mt c c'
 
 -- | A case condition (internal)
 data CaseCond = NoCase                         -- ^ No case-split

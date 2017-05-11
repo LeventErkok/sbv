@@ -9,6 +9,7 @@
 -- Conversion of symbolic programs to SMTLib format, Using v2 of the standard
 -----------------------------------------------------------------------------
 {-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE TupleSections #-}
 
 module Data.SBV.SMT.SMTLib2(cvt, addNonEqConstraints) where
 
@@ -16,6 +17,7 @@ import Data.Bits     (bit)
 import Data.Function (on)
 import Data.Ord      (comparing)
 import Data.List     (intercalate, partition, groupBy, sortBy)
+import Data.Maybe    (mapMaybe)
 
 import qualified Data.Foldable as F (toList)
 import qualified Data.Map      as M
@@ -88,7 +90,7 @@ cvt :: Set.Set Kind                 -- ^ kinds used
     -> [(String, SBVType)]          -- ^ uninterpreted functions/constants
     -> [(String, [String])]         -- ^ user given axioms
     -> SBVPgm                       -- ^ assignments
-    -> [SW]                         -- ^ extra constraints
+    -> [(Maybe String, SW)]         -- ^ extra constraints
     -> SW                           -- ^ output variable
     -> SMTConfig                    -- ^ configuration
     -> CaseCond                     -- ^ case analysis data
@@ -187,11 +189,14 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
         letShift = align 12
 
         finalAssert
-          | null foralls = map (\a -> "(assert " ++ a ++ ")") assertions
+          | null foralls = map (\a -> "(assert " ++ named a ++ ")") assertions
           | True         = [impAlign (letShift combined) ++ replicate noOfCloseParens ')']
           where combined = case assertions of
-                             [x] -> x
-                             xs  -> "(and " ++ unwords xs ++ ")"
+                             [x] -> named x
+                             xs  -> "(and " ++ unwords (map named xs) ++ ")"
+
+                named (Nothing, x) = x
+                named (Just nm, x) = "(! " ++ x ++ " :named " ++ nm ++ ")"
 
         impAlign s
           | null delayedEqualities = s
@@ -213,34 +218,36 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
         --     -- negation of the output in a prove
         --     -- output itself in a sat
         assertions
-           | null finals = [cvtSW skolemMap trueSW]
+           | null finals = [(Nothing, cvtSW skolemMap trueSW)]
            | True        = finals
-           where finals
-                   | null cstrs' = o
-                   | True        = cstrs' ++ o
 
-                 cstrs' = concatMap pos cstrs ++ case caseCond of
-                                                   NoCase         -> []
-                                                   CasePath ss    -> concatMap pos ss
-                                                   CaseVac  ss _  -> concatMap pos ss
-                                                   CaseCov  ss qq -> concatMap pos ss ++ concatMap neg qq
-                                                   CstrVac        -> []
-                                                   Opt gs         -> map mkGoal gs
+           where finals  = cstrs' ++ maybe [] (\r -> [(Nothing, r)]) mbO
 
-                 o | CstrVac     <- caseCond = pos trueSW -- always a SAT call!
-                   | CaseVac _ s <- caseCond = pos s      -- always a SAT call!
-                   | isSat                   = pos out
-                   | True                    = neg out
+                 cstrs' =  [(mbNm, c') | (mbNm, c) <- cstrs, Just c' <- [pos c]]
+                        ++ condAsserts
+
+                 condAsserts = map (Nothing,) $ case caseCond of
+                                                    NoCase         -> []
+                                                    CasePath ss    -> mapMaybe pos ss
+                                                    CaseVac  ss _  -> mapMaybe pos ss
+                                                    CaseCov  ss qq -> mapMaybe pos ss ++ mapMaybe neg qq
+                                                    CstrVac        -> []
+                                                    Opt gs         -> map mkGoal gs
+
+                 mbO | CstrVac     <- caseCond = pos trueSW -- always a SAT call!
+                     | CaseVac _ s <- caseCond = pos s      -- always a SAT call!
+                     | isSat                   = pos out
+                     | True                    = neg out
 
                  neg s
-                  | s == trueSW  = [cvtSW skolemMap falseSW]
-                  | s == falseSW = []
-                  | True         = ["(not " ++ cvtSW skolemMap s ++ ")"]
+                  | s == trueSW  = Just $ cvtSW skolemMap falseSW
+                  | s == falseSW = Nothing
+                  | True         = Just $ "(not " ++ cvtSW skolemMap s ++ ")"
 
                  pos s
-                  | s == trueSW  = []
-                  | s == falseSW = [cvtSW skolemMap falseSW]
-                  | True         = [cvtSW skolemMap s]
+                  | s == trueSW  = Nothing
+                  | s == falseSW = Just $ cvtSW skolemMap falseSW
+                  | True         = Just $ cvtSW skolemMap s
 
                  eq (orig, track) = "(= " ++ cvtSW skolemMap track ++ " " ++ cvtSW skolemMap orig ++ ")"
                  mkGoal (Minimize   _ ab)   = eq ab

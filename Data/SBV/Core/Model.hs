@@ -28,7 +28,7 @@ module Data.SBV.Core.Model (
   , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
-  , constrain, pConstrain, tactic, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
+  , constrain, namedConstraint, pConstrain, tactic, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
   , sRealToSInteger, label
@@ -1709,13 +1709,18 @@ instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymW
 --  >>> isVacuous pred'
 --  False
 constrain :: SBool -> Symbolic ()
-constrain c = addConstraint Nothing c (bnot c)
+constrain c = addConstraint Nothing Nothing c (bnot c)
+
+-- | A version of constrain, that also attaches a name. This variant is useful
+-- for extracting unsat cores.
+namedConstraint :: String -> SBool -> Symbolic ()
+namedConstraint nm c = addConstraint (Just nm) Nothing c (bnot c)
 
 -- | Adding a probabilistic constraint. The 'Double' argument is the probability
 -- threshold. Probabilistic constraints are useful for 'genTest' and 'quickCheck'
 -- calls where we restrict our attention to /interesting/ parts of the input domain.
 pConstrain :: Double -> SBool -> Symbolic ()
-pConstrain t c = addConstraint (Just t) c (bnot c)
+pConstrain t c = addConstraint Nothing (Just t) c (bnot c)
 
 -- | Provide a tactic for the solver engine
 tactic :: Tactic SBool -> Symbolic ()
@@ -1762,7 +1767,7 @@ instance Testable (Symbolic SBool) where
                                      QC.assert r
      where test g = do (r, Result{resTraces=tvals, resConsts=cs, resConstraints=cstrs, resUIConsts=unints}) <- runSymbolic' (Concrete g) prop
                        let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
-                           cond = all (cwToBool . cval) cstrs
+                           cond = all (cwToBool . cval . snd) cstrs
                        case map fst unints of
                          [] -> case unliteral r of
                                  Nothing -> noQC [show r]

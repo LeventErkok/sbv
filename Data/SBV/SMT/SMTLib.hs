@@ -41,7 +41,7 @@ type SMTLibConverter =  Set.Set Kind                 -- ^ Kinds used in the prob
                      -> [(String, SBVType)]          -- ^ uninterpreted functions/constants
                      -> [(String, [String])]         -- ^ user given axioms
                      -> SBVPgm                       -- ^ assignments
-                     -> [SW]                         -- ^ extra constraints
+                     -> [(Maybe String, SW)]         -- ^ extra constraints
                      -> SW                           -- ^ output variable
                      -> SMTConfig                    -- ^ configuration
                      -> CaseCond                     -- ^ case analysis

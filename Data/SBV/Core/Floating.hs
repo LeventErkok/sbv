@@ -391,7 +391,7 @@ sFloatAsSWord32 fVal
              | True
              = do n   <- internalVariable st w32
                   ysw <- newExpr st KFloat (SBVApp (IEEEFP (FP_Reinterpret w32 KFloat)) [n])
-                  internalConstraint st $ unSBV $ fVal `fpIsEqualObject` SBV (SVal KFloat (Right (cache (\_ -> return ysw))))
+                  internalConstraint st Nothing $ unSBV $ fVal `fpIsEqualObject` SBV (SVal KFloat (Right (cache (\_ -> return ysw))))
                   return n
 
 -- | Convert an 'SDouble' to an 'SWord64', preserving the bit-correspondence. Note that since the
@@ -412,7 +412,7 @@ sDoubleAsSWord64 fVal
              | True
              = do n   <- internalVariable st w64
                   ysw <- newExpr st KDouble (SBVApp (IEEEFP (FP_Reinterpret w64 KDouble)) [n])
-                  internalConstraint st $ unSBV $ fVal `fpIsEqualObject` SBV (SVal KDouble (Right (cache (\_ -> return ysw))))
+                  internalConstraint st Nothing $ unSBV $ fVal `fpIsEqualObject` SBV (SVal KDouble (Right (cache (\_ -> return ysw))))
                   return n
 
 -- | Extract the sign\/exponent\/mantissa of a single-precision float. The output will have

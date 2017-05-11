@@ -208,7 +208,7 @@ module Data.SBV (
   , solve
   -- ** Adding constraints
   -- $constrainIntro
-  , constrain, pConstrain
+  , constrain, namedConstraint, pConstrain
   -- ** Checking constraint vacuity
   , isVacuous, isVacuousWith
   -- ** Quick-checking

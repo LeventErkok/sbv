@@ -54,7 +54,7 @@ expectedValueWith chatty warmupCount mbMaxIter epsilon m
                                                    (KUnbounded, CWInteger v) -> v
                                                    (KReal, _)                -> error "Cannot compute expected-values for real valued results."
                                                    _                         -> error $ "SBV.expectedValueWith: Unexpected CW: " ++ show cw
-                       if all ((== 1) . cval) cstrs
+                       if all ((== 1) . cval . snd) cstrs
                           then return $ map cval os
                           else runOnce g -- constraint not satisfied try again with the same set of constraints
         go :: Int -> [Integer] -> IO [Double]
