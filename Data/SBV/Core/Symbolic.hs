@@ -406,7 +406,7 @@ instance Show Result where
                 ++ ["DEFINE"]
                 ++ map (\(s, e) -> "  " ++ shs s ++ " = " ++ show e) (F.toList (pgmAssignments xs))
                 ++ ["CONSTRAINTS"]
-                ++ map (("  " ++) . show) cstrs
+                ++ map (("  " ++) . shCstr) cstrs
                 ++ ["ASSERTIONS"]
                 ++ map (("  "++) . shAssert) asserts
                 ++ ["OUTPUTS"]
@@ -414,23 +414,35 @@ instance Show Result where
     where usorts = [sh s t | KUserSort s t <- Set.toList kinds]
                    where sh s (Left   _) = s
                          sh s (Right es) = s ++ " (" ++ intercalate ", " es ++ ")"
+
           shs sw = show sw ++ " :: " ++ show (swKind sw)
+
           sht ((i, at, rt), es)  = "  Table " ++ show i ++ " : " ++ show at ++ "->" ++ show rt ++ " = " ++ show es
+
           shc (sw, cw) = "  " ++ show sw ++ " = " ++ show cw
+
           shcg (s, ss) = ("Variable: " ++ s) : map ("  " ++) ss
+
           shn (q, (sw, nm)) = "  " ++ ni ++ " :: " ++ show (swKind sw) ++ ex ++ alias
             where ni = show sw
                   ex | q == ALL = ""
                      | True     = ", existential"
                   alias | ni == nm = ""
                         | True     = ", aliasing " ++ show nm
+
           sha (i, (nm, (ai, bi), ctx)) = "  " ++ ni ++ " :: " ++ show ai ++ " -> " ++ show bi ++ alias
                                        ++ "\n     Context: "     ++ show ctx
             where ni = "array_" ++ show i
                   alias | ni == nm = ""
                         | True     = ", aliasing " ++ show nm
+
           shui (nm, t) = "  [uninterpreted] " ++ nm ++ " :: " ++ show t
+
           shax (nm, ss) = "  -- user defined axiom: " ++ nm ++ "\n  " ++ intercalate "\n  " ss
+
+          shCstr (Nothing, c) = show c
+          shCstr (Just nm, c) = nm ++ ": " ++ show c
+
           shAssert (nm, stk, p) = "  -- assertion: " ++ nm ++ " " ++ maybe "[No location]"
 #if MIN_VERSION_base(4,9,0)
                 prettyCallStack
