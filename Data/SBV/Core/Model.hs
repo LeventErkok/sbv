@@ -323,7 +323,6 @@ label m x
    | True                  = SBV $ SVal k $ Right $ cache r
   where k    = kindOf x
         r st = do xsw <- sbvToSW st x
-                  registerLabel st m
                   newExpr st k (SBVApp (Label m) [xsw])
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
