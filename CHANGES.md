@@ -10,10 +10,6 @@
     
         namedConstraint :: String -> SBool -> Symbolic ()
 
-    or the `label` function:
-
-        label :: SymWord a => String -> SBV a -> SBV a
-
     to associate a label to a constrain or a boolean term that
     can later be labeled by the backend solver as belonging to the
     unsat-core.
@@ -32,8 +28,10 @@
     i.e., any unnamed yet part-of-the-core-unsat expressions will be missing;
     as speculated in the SMT-Lib document itself.
 
+    Currently, only Z3 supports unsat-cores.
+
   * Add support for pseudo-boolean operations:
-  
+
           pbAtMost           :: [SBool]        -> Int -> SBool
           pbAtLeast          :: [SBool]        -> Int -> SBool
           pbExactly          :: [SBool]        -> Int -> SBool
@@ -45,19 +43,24 @@
 
     These functions, while can be directly coded in SBV, produce better
     translations to SMTLib for more efficient solving of cardinality constraints.
+    Currently, only Z3 supports pseudo-booleans directly. For all other solvers,
+    SBV will translate these to equivalent terms that do not require special
+    functions.
+
+  * Export 'SolverCapabilities' from 'Data.SBV.Internals', in case users want access.
 
 ### Version 6.0, 2017-05-07
 
   * This is a backwards compatibility breaking release, hence the major version
     bump from 5.15 to 6.0:
-     
+
        - Most of existing code should work with no changes.
        - Old code relying on some features might require extra imports,
-	 since we no longer export some functionality directly from `Data.SBV`.
+         since we no longer export some functionality directly from `Data.SBV`.
          This was done in order to reduce the number of exported items to
          avoid extra clutter.
        - Old optimization features are removed, as the new and much improved
-	 capabilities should be used instead.
+         capabilities should be used instead.
 
   * The next two bullets cover new features in SBV regarding optimization, based
     on the capabilities of the z3 SMT solver. With this release SBV gains the
@@ -73,8 +76,8 @@
     Optimization can be done over bit-vector, real, and integer goals. The relevant
     functions are:
 
-    	- `minimize`: Minimize a given arithmetic goal
-    	- `maximize`: Minimize a given arithmetic goal
+        - `minimize`: Minimize a given arithmetic goal
+        - `maximize`: Minimize a given arithmetic goal
 
     For instance, a call of the form 
     
@@ -124,10 +127,10 @@
   * Name-space clean-up. The following modules are no longer automatically exported
     from Data.SBV:
 
-	- `Data.SBV.Tools.ExpectedValue` (computing with expected values)
-	- `Data.SBV.Tools.GenTest` (test case generation)
-	- `Data.SBV.Tools.Polynomial` (polynomial arithmetic, CRCs etc.)
-	- `Data.SBV.Tools.STree` (full symbolic binary trees)
+        - `Data.SBV.Tools.ExpectedValue` (computing with expected values)
+        - `Data.SBV.Tools.GenTest` (test case generation)
+        - `Data.SBV.Tools.Polynomial` (polynomial arithmetic, CRCs etc.)
+        - `Data.SBV.Tools.STree` (full symbolic binary trees)
  
     To use the functionality of these modules, users must now explicitly import the corresponding
     module. Not other changes should be needed other than the explicit import.
@@ -220,7 +223,7 @@
        * svSetBit                  : set a given bit
        * svBlastLE, svBlastBE      : Bit-blast to big/little endian
        * svWordFromLE, svWordFromBE: Unblast from big/little endian
-       * svAddConstant		   : Add a constant to an SVal
+       * svAddConstant             : Add a constant to an SVal
        * svIncrement, svDecrement  : Add/subtract 1 from an SVal
 
 ### Version 5.9, 2016-01-05
