@@ -578,7 +578,7 @@ standardSolver config script cleanErrs failure success = do
         opts     = options smtSolver
         isTiming = timing config
         nmSolver = show (name smtSolver)
-    msg $ "Calling: " ++ show (unwords (exec:[joinArgs opts]))
+    msg $ "Calling: " ++ show (exec ++ (if null opts then "" else " ") ++ joinArgs opts)
     case smtFile config of
       Nothing -> return ()
       Just f  -> do msg $ "Saving the generated script in file: " ++ show f
