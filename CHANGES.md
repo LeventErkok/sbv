@@ -8,11 +8,11 @@
   * Add support for unsat-core extraction. To use this feature, use
     the namedConstraint function::
     
-       namedConstraint :: String -> SBool -> Symbolic ()
+        namedConstraint :: String -> SBool -> Symbolic ()
 
     or the label function:
 
-       label :: SymWord a => String -> SBV a -> SBV a
+        label :: SymWord a => String -> SBV a -> SBV a
 
     to associate a label to a constrain or a boolean term that
     can later be labeled by the backend solver as belonging to the
