@@ -38,7 +38,7 @@ cvc4 = SMTSolver {
                               , supportsDoubles            = False
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
-                              , supportsUnsatCores         = True
+                              , supportsUnsatCores         = False
                               }
          }
  where addTimeOut o i | i < 0 = error $ "CVC4: Timeout value must be non-negative, received: " ++ show i
