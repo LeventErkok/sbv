@@ -6,11 +6,11 @@
 ### Version 6.1, Not yet released
 
   * Add support for unsat-core extraction. To use this feature, use
-    the namedConstraint function::
+    the `namedConstraint` function:
     
         namedConstraint :: String -> SBool -> Symbolic ()
 
-    or the label function:
+    or the `label` function:
 
         label :: SymWord a => String -> SBV a -> SBV a
 
