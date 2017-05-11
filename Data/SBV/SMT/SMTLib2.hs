@@ -213,25 +213,36 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
         --     -- negation of the output in a prove
         --     -- output itself in a sat
         assertions
-           | null cstrs' = [o]
-           | True        = cstrs' ++ [o]
-           where cstrs' = map pos cstrs ++ case caseCond of
-                                             NoCase         -> []
-                                             CasePath ss    -> map pos ss
-                                             CaseVac  ss _  -> map pos ss
-                                             CaseCov  ss qq -> map pos ss ++ map neg qq
-                                             CstrVac        -> []
-                                             Opt gs         -> map mkGoal gs
+           | null finals = [cvtSW skolemMap trueSW]
+           | True        = finals
+           where finals
+                   | null cstrs' = o
+                   | True        = cstrs' ++ o
+
+                 cstrs' = concatMap pos cstrs ++ case caseCond of
+                                                   NoCase         -> []
+                                                   CasePath ss    -> concatMap pos ss
+                                                   CaseVac  ss _  -> concatMap pos ss
+                                                   CaseCov  ss qq -> concatMap pos ss ++ concatMap neg qq
+                                                   CstrVac        -> []
+                                                   Opt gs         -> map mkGoal gs
 
                  o | CstrVac     <- caseCond = pos trueSW -- always a SAT call!
                    | CaseVac _ s <- caseCond = pos s      -- always a SAT call!
                    | isSat                   = pos out
                    | True                    = neg out
 
-                 neg s     = "(not " ++ pos s ++ ")"
-                 pos       = cvtSW skolemMap
+                 neg s
+                  | s == trueSW  = [cvtSW skolemMap falseSW]
+                  | s == falseSW = []
+                  | True         = ["(not " ++ cvtSW skolemMap s ++ ")"]
 
-                 eq (orig, track) = "(= " ++ pos track ++ " " ++ pos orig ++ ")"
+                 pos s
+                  | s == trueSW  = []
+                  | s == falseSW = [cvtSW skolemMap falseSW]
+                  | True         = [cvtSW skolemMap s]
+
+                 eq (orig, track) = "(= " ++ cvtSW skolemMap track ++ " " ++ cvtSW skolemMap orig ++ ")"
                  mkGoal (Minimize   _ ab)   = eq ab
                  mkGoal (Maximize   _ ab)   = eq ab
                  mkGoal (AssertSoft _ ab _) = eq ab
