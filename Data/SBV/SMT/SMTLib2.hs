@@ -165,7 +165,7 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
 
              ++ delayedAsserts delayedEqualities
 
-             ++ [finalAssert]
+             ++ finalAssert
 
         noOfCloseParens
           | null foralls = 0
@@ -187,8 +187,11 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
         letShift = align 12
 
         finalAssert
-          | null foralls = "(assert " ++ assertOut ++ ")"
-          | True         = impAlign (letShift assertOut) ++ replicate noOfCloseParens ')'
+          | null foralls = map (\a -> "(assert " ++ a ++ ")") assertions
+          | True         = [impAlign (letShift combined) ++ replicate noOfCloseParens ')']
+          where combined = case assertions of
+                             [x] -> x
+                             xs  -> "(and " ++ unwords xs ++ ")"
 
         impAlign s
           | null delayedEqualities = s
@@ -209,9 +212,9 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
         -- That is, we always assert all path constraints and path conditions AND
         --     -- negation of the output in a prove
         --     -- output itself in a sat
-        assertOut
-           | null cstrs' = o
-           | True        = "(and " ++ unwords (cstrs' ++ [o]) ++ ")"
+        assertions
+           | null cstrs' = [o]
+           | True        = cstrs' ++ [o]
            where cstrs' = map pos cstrs ++ case caseCond of
                                              NoCase         -> []
                                              CasePath ss    -> map pos ss
