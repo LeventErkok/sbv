@@ -195,11 +195,20 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
         letShift = align 12
 
         finalAssert
-          | null foralls = map (\a -> "(assert " ++ named a ++ ")") assertions
-          | True         = [impAlign (letShift combined) ++ replicate noOfCloseParens ')']
-          where combined = case assertions of
-                             [x] -> named x
-                             xs  -> "(and " ++ unwords (map named xs) ++ ")"
+          | null foralls
+          = map (\a -> "(assert " ++ named a ++ ")") assertions
+          | not (null namedAsserts)
+          = error $ intercalate "\n" [ "SBV: Named constraints and quantifiers cannot be mixed!"
+                                     , "   Quantified variables: " ++ unwords (map show foralls)
+                                     , "   Named constraints   : " ++ intercalate ", " (map show namedAsserts)
+                                     ]
+          | True
+          = [impAlign (letShift combined) ++ replicate noOfCloseParens ')']
+          where namedAsserts = [n | (Just n, _) <- assertions]
+
+                combined = case map snd assertions of
+                             [x] -> x
+                             xs  -> "(and " ++ unwords xs ++ ")"
 
         impAlign s
           | null delayedEqualities = s
@@ -267,11 +276,11 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
           | null foralls = mkDef a
           | True         = [letShift (mkLet a)]
 
-        mkDef (s, SBVApp (Label m) [e]) = emit (s, curry named (Just m) (cvtSW                skolemMap          e)) (Just m)
-        mkDef (s, e)                    = emit (s,                       cvtExp solverCaps rm skolemMap tableMap e) Nothing
+        mkDef (s, SBVApp (Label m) [e]) = emit (s, cvtSW                skolemMap          e) (Just m)
+        mkDef (s, e)                    = emit (s, cvtExp solverCaps rm skolemMap tableMap e) Nothing
 
-        mkLet (s, SBVApp (Label m) [e]) = "(let ((" ++ show s ++ " " ++ curry named (Just m) (cvtSW                skolemMap          e) ++ ")) ; " ++ m
-        mkLet (s, e)                    = "(let ((" ++ show s ++ " " ++                       cvtExp solverCaps rm skolemMap tableMap e  ++ "))"
+        mkLet (s, SBVApp (Label m) [e]) = "(let ((" ++ show s ++ " " ++ cvtSW                skolemMap          e ++ ")) ; " ++ m
+        mkLet (s, e)                    = "(let ((" ++ show s ++ " " ++ cvtExp solverCaps rm skolemMap tableMap e ++ "))"
 
         -- does the solver allow define-fun; or do we need declare-fun/assert combo?
         useDefFun = supportsMacros solverCaps
@@ -554,7 +563,8 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                , (Not,  lift1B "not" "bvnot")
                                , (Join, lift2 "concat")
                                ]
-        sh (SBVApp (Label m) [a]) = curry named (Just m) (cvtSW skolemMap a)  -- This won't be reached; but just in case!
+
+        sh (SBVApp (Label m) [a]) = curry named (Just m) $ cvtSW skolemMap a  -- This won't be reached; but just in case!
 
         sh (SBVApp (IEEEFP (FP_Cast kFrom kTo m)) args) = handleFPCast kFrom kTo (ssw m) (unwords (map ssw args))
         sh (SBVApp (IEEEFP w                    ) args) = "(" ++ show w ++ " " ++ unwords (map ssw args) ++ ")"
