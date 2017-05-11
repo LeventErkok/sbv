@@ -323,6 +323,7 @@ label m x
    | True                  = SBV $ SVal k $ Right $ cache r
   where k    = kindOf x
         r st = do xsw <- sbvToSW st x
+                  registerLabel st m
                   newExpr st k (SBVApp (Label m) [xsw])
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
@@ -1814,7 +1815,7 @@ isSatisfiableInCurrentPath cond = do
        check <- liftIO $ internalSATCheck cfg (pc &&& cond) st "isSatisfiableInCurrentPath: Checking satisfiability"
        let res = case check of
                    SatResult Satisfiable{}     -> True
-                   SatResult (Unsatisfiable _) -> False
+                   SatResult (Unsatisfiable{}) -> False
                    _                           -> error $ "isSatisfiableInCurrentPath: Unexpected external result: " ++ show check
        res `seq` liftIO $ msg $ "isSatisfiableInCurrentPath: Conclusion: " ++ if res then "Satisfiable" else "Unsatisfiable"
        return $ if res then Just check

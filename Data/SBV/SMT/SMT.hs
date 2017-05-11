@@ -44,7 +44,7 @@ import Data.SBV.Utils.TDiff
 
 -- | Extract the final configuration from a result
 resultConfig :: SMTResult -> SMTConfig
-resultConfig (Unsatisfiable c  ) = c
+resultConfig (Unsatisfiable c _) = c
 resultConfig (Satisfiable   c _) = c
 resultConfig (SatExtField   c _) = c
 resultConfig (Unknown       c _) = c
@@ -313,6 +313,9 @@ class Modelable a where
   getModelObjectiveValue :: String -> a -> Maybe GeneralizedCW
   getModelObjectiveValue v r = v `M.lookup` getModelObjectives r
 
+  -- | Extract unsat core
+  extractUnsatCore :: a -> Maybe [String]
+
 -- | Return all the models from an 'allSat' call, similar to 'extractModel' but
 -- is suitable for the case of multiple results.
 extractModels :: SatModel a => AllSatResult -> [a]
@@ -336,6 +339,7 @@ instance Modelable ThmResult where
   modelExists        (ThmResult r) = modelExists r
   getModelDictionary (ThmResult r) = getModelDictionary r
   getModelObjectives (ThmResult r) = getModelObjectives r
+  extractUnsatCore   (ThmResult r) = extractUnsatCore   r
 
 -- | 'SatResult' as a generic model provider
 instance Modelable SatResult where
@@ -343,33 +347,41 @@ instance Modelable SatResult where
   modelExists        (SatResult r) = modelExists r
   getModelDictionary (SatResult r) = getModelDictionary r
   getModelObjectives (SatResult r) = getModelObjectives r
+  extractUnsatCore   (SatResult r) = extractUnsatCore   r
 
 -- | 'SMTResult' as a generic model provider
 instance Modelable SMTResult where
-  getModel (Unsatisfiable _) = Left "SBV.getModel: Unsatisfiable result"
-  getModel (Satisfiable _ m) = Right (False, parseModelOut m)
-  getModel (SatExtField _ _) = Left "SBV.getModel: The model is in an extension field"
-  getModel (Unknown _ m)     = Right (True, parseModelOut m)
-  getModel (ProofError _ s)  = error $ unlines $ "Backend solver complains: " : s
-  getModel (TimeOut _)       = Left "Timeout"
+  getModel (Unsatisfiable _ _) = Left "SBV.getModel: Unsatisfiable result"
+  getModel (Satisfiable _ m)   = Right (False, parseModelOut m)
+  getModel (SatExtField _ _)   = Left "SBV.getModel: The model is in an extension field"
+  getModel (Unknown _ m)       = Right (True, parseModelOut m)
+  getModel (ProofError _ s)    = error $ unlines $ "Backend solver complains: " : s
+  getModel (TimeOut _)         = Left "Timeout"
 
   modelExists Satisfiable{}   = True
   modelExists Unknown{}       = False -- don't risk it
   modelExists _               = False
 
-  getModelDictionary (Unsatisfiable _) = M.empty
+  getModelDictionary Unsatisfiable{}   = M.empty
   getModelDictionary (Satisfiable _ m) = M.fromList (modelAssocs m)
-  getModelDictionary (SatExtField _ _) = M.empty
+  getModelDictionary SatExtField{}     = M.empty
   getModelDictionary (Unknown _ m)     = M.fromList (modelAssocs m)
-  getModelDictionary (ProofError _ _)  = M.empty
-  getModelDictionary (TimeOut _)       = M.empty
+  getModelDictionary ProofError{}      = M.empty
+  getModelDictionary TimeOut{}         = M.empty
 
-  getModelObjectives (Unsatisfiable _) = M.empty
+  getModelObjectives Unsatisfiable{}   = M.empty
   getModelObjectives (Satisfiable _ m) = M.fromList (modelObjectives m)
   getModelObjectives (SatExtField _ m) = M.fromList (modelObjectives m)
   getModelObjectives (Unknown _ m)     = M.fromList (modelObjectives m)
-  getModelObjectives (ProofError _ _)  = M.empty
-  getModelObjectives (TimeOut _)       = M.empty
+  getModelObjectives ProofError{}      = M.empty
+  getModelObjectives TimeOut{}         = M.empty
+
+  extractUnsatCore (Unsatisfiable _ uc) = uc
+  extractUnsatCore Satisfiable{}        = Nothing
+  extractUnsatCore SatExtField{}        = Nothing
+  extractUnsatCore Unknown{}            = Nothing
+  extractUnsatCore ProofError{}         = Nothing
+  extractUnsatCore TimeOut{}            = Nothing
 
 -- | Extract a model out, will throw error if parsing is unsuccessful
 parseModelOut :: SatModel a => SMTModel -> a
@@ -391,7 +403,7 @@ displayModels disp (AllSatResult (_, ms)) = do
 -- | Show an SMTResult; generic version
 showSMTResult :: String -> String -> String -> String -> String -> String -> SMTResult -> String
 showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel satExtMsg result = case result of
-  Unsatisfiable _               -> unsatMsg
+  Unsatisfiable _ mbUC          -> unsatMsg ++ showUC mbUC
   Satisfiable _ (SMTModel _ []) -> satMsg
   Satisfiable _ m               -> satMsgModel ++ showModel cfg m
   SatExtField _ (SMTModel b _)  -> satExtMsg   ++ showModelDictionary cfg b
@@ -401,6 +413,10 @@ showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel satExtMsg result = 
   ProofError  _ ls              -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
   TimeOut     _                 -> "*** Timeout"
  where cfg = resultConfig result
+
+       showUC Nothing   = ""
+       showUC (Just []) = ". [No unsat core received. Have you labeled relevant assertions?]"
+       showUC (Just xs) = intercalate "\n" $ ". Unsat core:" : map ("  " ++) xs
 
 -- | Show a model in human readable form. Ignore bindings to those variables that start
 -- with "__internal_sbv_" and also those marked as "nonModelVar" in the config; as these are only for internal purposes
@@ -617,13 +633,17 @@ runSolver cfg execPath opts script
                              response <- case scriptModel script of
                                            Nothing -> do send $ satCmd cfg
                                                          return Nothing
-                                           Just ls -> do r <- ask $ satCmd cfg
-                                                         vals <- if any (`isPrefixOf` r) ["sat", "unknown"]
-                                                                 then do let mls = lines ls
-                                                                         when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
-                                                                                                 mapM_ putStrLn mls
-                                                                         mapM ask mls
-                                                                 else return []
+                                           Just ls -> do r    <- ask $ satCmd cfg
+                                                         vals <- case () of
+                                                                    () | any (`isPrefixOf` r) ["sat", "unknown"]
+                                                                       -> do let mls = lines ls
+                                                                             when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
+                                                                                                     mapM_ putStrLn mls
+                                                                             mapM ask mls
+                                                                    () | getUnsatCore cfg && "unsat" `isPrefixOf` r
+                                                                       -> do when (verbose cfg) $ putStrLn "** Querying for unsat cores"
+                                                                             mapM ask ["(get-unsat-core)"]
+                                                                    () -> return []
                                                          return $ Just (r, vals)
                              cleanUp response
       executeSolver `C.onException`  (terminateProcess pid >> waitForProcess pid)

@@ -9,11 +9,11 @@
 -- Parsing of S-expressions (mainly used for parsing SMT-Lib get-value output)
 -----------------------------------------------------------------------------
 
-module Data.SBV.Provers.SExpr where
+module Data.SBV.Provers.SExpr (SExpr(..), parseSExpr) where
 
 import Data.Bits           (setBit, testBit)
 import Data.Word           (Word32, Word64)
-import Data.Char           (isDigit, ord)
+import Data.Char           (isDigit, ord, isSpace)
 import Data.List           (isPrefixOf)
 import Data.Maybe          (fromMaybe, listToMaybe)
 import Numeric             (readInt, readDec, readHex, fromRat)
@@ -31,20 +31,42 @@ data SExpr = ECon    String
            | EApp    [SExpr]
            deriving Show
 
+-- | Extremely simple minded tokenizer, good for our use model.
+tokenize :: String -> [String]
+tokenize inp = go inp []
+ where go "" sofar = reverse sofar
+
+       go (c:cs) sofar
+          | isSpace c = go (dropWhile isSpace cs) sofar
+
+       go ('(':cs) sofar = go cs ("(" : sofar)
+       go (')':cs) sofar = go cs (")" : sofar)
+
+       go (':':':':cs) sofar = go cs ("::" : sofar)
+
+       go ('|':r) sofar = case span (/= '|') r of
+                            (pre, '|':rest) -> go rest (pre : sofar)
+                            (pre, rest)     -> go rest (pre : sofar)
+
+       go cs sofar = case span (`notElem` stopper) cs of
+                       (pre, post) -> go post (pre : sofar)
+
+       -- characters that can stop the current token
+       -- it is *crucial* that this list contains every character
+       -- we can match in one of the previous cases!
+       stopper = " ():|"
+
 -- | Parse a string into an SExpr, potentially failing with an error message
 parseSExpr :: String -> Either String SExpr
 parseSExpr inp = do (sexp, extras) <- parse inpToks
                     if null extras
                        then return sexp
                        else die "Extra tokens after valid input"
-  where inpToks = let cln ""          sofar = sofar
-                      cln ('(':r)     sofar = cln r (" ( " ++ sofar)
-                      cln (')':r)     sofar = cln r (" ) " ++ sofar)
-                      cln (':':':':r) sofar = cln r (" :: " ++ sofar)
-                      cln (c:r)       sofar = cln r (c:sofar)
-                  in reverse (map reverse (words (cln inp "")))
+  where inpToks = tokenize inp
+
         die w = fail $  "SBV.Provers.SExpr: Failed to parse S-Expr: " ++ w
                      ++ "\n*** Input : <" ++ inp ++ ">"
+
         parse []         = die "ran out of tokens"
         parse ("(":toks) = do (f, r) <- parseApp toks []
                               f' <- cvt (EApp f)
@@ -53,12 +75,14 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         parse [tok]      = do t <- pTok tok
                               return (t, [])
         parse _          = die "ill-formed s-expr"
+
         parseApp []         _     = die "failed to grab s-expr application"
         parseApp (")":toks) sofar = return (reverse sofar, toks)
         parseApp ("(":toks) sofar = do (f, r) <- parse ("(":toks)
                                        parseApp r (f : sofar)
         parseApp (tok:toks) sofar = do t <- pTok tok
                                        parseApp toks (t : sofar)
+
         pTok "false"              = return $ ENum (0, Nothing)
         pTok "true"               = return $ ENum (1, Nothing)
         pTok ('0':'b':r)          = mkNum (Just (length r))     $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
@@ -70,12 +94,15 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
           = if '.' `elem` n then getReal n
             else mkNum Nothing $ readDec n
         pTok n                 = return $ ECon (constantMap n)
+
         mkNum l [(n, "")] = return $ ENum (n, l)
         mkNum _ _         = die "cannot read number"
+
         getReal n = return $ EReal $ mkPolyReal (Left (exact, n'))
           where exact = not ("?" `isPrefixOf` reverse n)
                 n' | exact = n
                    | True  = init n
+
         -- simplify numbers and root-obj values
         cvt (EApp [ECon "to_int",  EReal a])                       = return $ EReal a   -- ignore the "casting"
         cvt (EApp [ECon "to_real", EReal a])                       = return $ EReal a   -- ignore the "casting"
@@ -107,6 +134,7 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         cvt (EApp [ECon "_",     ECon "-zero",     ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat  (-0)
         cvt (EApp [ECon "_",     ECon "-zero",     ENum (11, _),       ENum (53,      _)])           = return $ EDouble (-0)
         cvt x                                                                                        = return x
+
         getCoeff (EApp [ECon "*", ENum k, EApp [ECon "^", ECon "x", ENum p]]) = return (fst k, fst p)  -- kx^p
         getCoeff (EApp [ECon "*", ENum k,                 ECon "x"        ] ) = return (fst k,     1)  -- kx
         getCoeff (                        EApp [ECon "^", ECon "x", ENum p] ) = return (    1, fst p)  --  x^p

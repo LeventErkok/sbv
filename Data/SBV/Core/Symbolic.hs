@@ -41,7 +41,7 @@ module Data.SBV.Core.Symbolic
   , getTableIndex
   , SBVPgm(..), Symbolic, runSymbolic, runSymbolic', State
   , inProofMode, SBVRunMode(..), Result(..)
-  , Logic(..), SMTLibLogic(..), registerKind
+  , Logic(..), SMTLibLogic(..), registerKind, registerLabel
   , addAssertion, addSValConstraint, internalConstraint, internalVariable
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
@@ -68,7 +68,7 @@ import GHC.Stack.Compat
 import qualified Data.Generics as G    (Data(..))
 import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
 import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
-import qualified Data.Set      as Set  (Set, empty, toList, insert)
+import qualified Data.Set      as Set  (Set, empty, toList, insert, member)
 import qualified Data.Foldable as F    (toList)
 import qualified Data.Sequence as S    (Seq, empty, (|>))
 
@@ -505,6 +505,7 @@ data State  = State { runMode      :: SBVRunMode
                     , rCInfo       :: IORef [(String, CW)]
                     , rctr         :: IORef Int
                     , rUsedKinds   :: IORef KindSet
+                    , rUsedLbls    :: IORef (Set.Set String)
                     , rinps        :: IORef [(Quantifier, NamedSymVar)]
                     , rConstraints :: IORef [(Maybe String, SW)]
                     , routs        :: IORef [SW]
@@ -630,6 +631,21 @@ registerKind st k
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | True
   = modifyIORef (rUsedKinds st) (Set.insert k)
+
+-- | Register a new label with the system, making sure they are unique and have no '|'s in them
+registerLabel :: State -> String -> IO ()
+registerLabel st nm
+  | map toLower nm `elem` smtLibReservedNames
+  = error $ "SBV: " ++ show nm ++ " is a reserved string; please use a different name."
+  | '|' `elem` nm
+  = error $ "SBV: " ++ show nm ++ " contains the character `|', which is not allowed!"
+  | '\\' `elem` nm
+  = error $ "SBV: " ++ show nm ++ " contains the character `\', which is not allowed!"
+  | True
+  = do old <- readIORef $ rUsedLbls st
+       if nm `Set.member` old
+          then error $ "SBV: " ++ show nm ++ " is used as a label multiple times. Please do not use duplicate names!"
+          else modifyIORef (rUsedLbls st) (Set.insert nm)
 
 -- | Create a new constant; hash-cons as necessary
 -- NB. For each constant, we also store weather it's negative-0 or not,
@@ -778,6 +794,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
    swCache   <- newIORef IMap.empty
    aiCache   <- newIORef IMap.empty
    usedKinds <- newIORef Set.empty
+   usedLbls  <- newIORef Set.empty
    cstrs     <- newIORef []
    tacs      <- newIORef []
    optGoals  <- newIORef []
@@ -791,6 +808,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
                   , rCInfo       = cInfo
                   , rctr         = ctr
                   , rUsedKinds   = usedKinds
+                  , rUsedLbls    = usedLbls
                   , rinps        = inps
                   , routs        = outs
                   , rtblMap      = tables
@@ -846,7 +864,10 @@ imposeConstraint :: Maybe String -> SVal -> Symbolic ()
 imposeConstraint mbNm c = do st <- ask
                              case runMode st of
                                CodeGen -> error "SBV: constraints are not allowed in code-generation"
-                               _       -> liftIO $ internalConstraint st mbNm c
+                               _       -> do () <- case mbNm of
+                                                     Nothing -> return ()
+                                                     Just nm -> liftIO $ registerLabel st nm
+                                             liftIO $ internalConstraint st mbNm c
 
 -- | Require a boolean condition to be true in the state. Only used for internal purposes.
 internalConstraint :: State -> Maybe String -> SVal -> IO ()
@@ -1092,12 +1113,12 @@ instance NFData (Cached a)   where rnf (Cached f) = f `seq` ()
 instance NFData SVal         where rnf (SVal x y) = rnf x `seq` rnf y `seq` ()
 
 instance NFData SMTResult where
-  rnf Unsatisfiable{}    = ()
-  rnf (Satisfiable _ xs) = rnf xs `seq` ()
-  rnf (SatExtField _ xs) = rnf xs `seq` ()
-  rnf (Unknown _     xs) = rnf xs `seq` ()
-  rnf (ProofError _  xs) = rnf xs `seq` ()
-  rnf TimeOut{}          = ()
+  rnf (Unsatisfiable _ uc) = rnf uc `seq` ()
+  rnf (Satisfiable _   xs) = rnf xs `seq` ()
+  rnf (SatExtField _   xs) = rnf xs `seq` ()
+  rnf (Unknown _       xs) = rnf xs `seq` ()
+  rnf (ProofError _    xs) = rnf xs `seq` ()
+  rnf TimeOut{}            = ()
 
 instance NFData SMTModel where
   rnf (SMTModel objs assocs) = rnf objs `seq` rnf assocs `seq` ()
@@ -1170,6 +1191,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsDoubles            :: Bool                 -- ^ Does the solver support double-precision floating point numbers?
        , supportsOptimization       :: Bool                 -- ^ Does the solver support optimization routines?
        , supportsPseudoBooleans     :: Bool                 -- ^ Does the solver support pseudo-boolean operations?
+       , supportsUnsatCores         :: Bool                 -- ^ Does the solver support extraction of unsat-cores?
        }
 
 -- | Rounding mode to be used for the IEEE floating-point operations.
@@ -1222,6 +1244,7 @@ data SMTConfig = SMTConfig {
        , solver         :: SMTSolver      -- ^ The actual SMT solver.
        , roundingMode   :: RoundingMode   -- ^ Rounding mode to use for floating-point conversions
        , useLogic       :: Maybe Logic    -- ^ If Nothing, pick automatically. Otherwise, either use the given one, or use the custom string.
+       , getUnsatCore   :: Bool           -- ^ Should we query unsat-core?
        }
 
 -- We're just seq'ing top-level here, it shouldn't really matter. (i.e., no need to go deeper.)
@@ -1243,12 +1266,12 @@ data SMTModel = SMTModel {
 -- and build layers of results, if needed. For ordinary uses of the library,
 -- this type should not be needed, instead use the accessor functions on
 -- it. (Custom Show instances and model extractors.)
-data SMTResult = Unsatisfiable SMTConfig            -- ^ Unsatisfiable
-               | Satisfiable   SMTConfig SMTModel   -- ^ Satisfiable with model
-               | SatExtField   SMTConfig SMTModel   -- ^ Prover returned a model, but in an extension field containing Infinite/epsilon
-               | Unknown       SMTConfig SMTModel   -- ^ Prover returned unknown, with a potential (possibly bogus) model
-               | ProofError    SMTConfig [String]   -- ^ Prover errored out
-               | TimeOut       SMTConfig            -- ^ Computation timed out (see the 'timeout' combinator)
+data SMTResult = Unsatisfiable SMTConfig (Maybe [String]) -- ^ Unsatisfiable, with unsat-core if requested
+               | Satisfiable   SMTConfig SMTModel         -- ^ Satisfiable with model
+               | SatExtField   SMTConfig SMTModel         -- ^ Prover returned a model, but in an extension field containing Infinite/epsilon
+               | Unknown       SMTConfig SMTModel         -- ^ Prover returned unknown, with a potential (possibly bogus) model
+               | ProofError    SMTConfig [String]         -- ^ Prover errored out
+               | TimeOut       SMTConfig                  -- ^ Computation timed out (see the 'timeout' combinator)
 
 -- | A script, to be passed to the solver.
 data SMTScript = SMTScript {
@@ -1286,4 +1309,5 @@ data SMTSolver = SMTSolver {
 instance Show SMTSolver where
    show = show . name
 
-{-# ANN type FPOp   ("HLint: ignore Use camelCase" :: String) #-}
+{-# ANN type FPOp ("HLint: ignore Use camelCase" :: String) #-}
+{-# ANN type PBOp ("HLint: ignore Use camelCase" :: String) #-}

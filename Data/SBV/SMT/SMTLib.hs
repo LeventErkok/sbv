@@ -21,8 +21,9 @@ module Data.SBV.SMT.SMTLib(
         , interpretSolverObjectiveLine
         ) where
 
-import Data.Char (isDigit, isSpace)
-import Data.List (isPrefixOf)
+import Data.Char  (isDigit, isSpace)
+import Data.List  (isPrefixOf)
+import Data.Maybe (isJust, fromJust)
 
 import Data.SBV.Core.Data
 import Data.SBV.Provers.SExpr
@@ -102,11 +103,34 @@ addNonEqConstraints SMTLib2 = SMT2.addNonEqConstraints
 
 -- | Interpret solver output based on SMT-Lib standard output responses
 interpretSolverOutput :: SMTConfig -> ([String] -> SMTModel) -> [String] -> SMTResult
-interpretSolverOutput cfg _          ("unsat":_)      = Unsatisfiable cfg
+interpretSolverOutput cfg _          ("unsat":ucCore) = Unsatisfiable cfg $ parseUnsatCore (getUnsatCore cfg) ucCore
 interpretSolverOutput cfg extractMap ("unknown":rest) = Unknown       cfg $ extractMap rest
 interpretSolverOutput cfg extractMap ("sat":rest)     = classifyModel cfg $ extractMap rest
 interpretSolverOutput cfg _          ("timeout":_)    = TimeOut       cfg
 interpretSolverOutput cfg _          ls               = ProofError    cfg ls
+
+-- | Parse unsat-core if requested
+parseUnsatCore :: Bool -> [String] -> Maybe [String]
+parseUnsatCore False _  = Nothing
+parseUnsatCore True  ls = Just $ concatMap getLabels ls
+   where getLabels s = case parseSExpr s of
+                         Left  e         -> bad e
+                         Right (EApp xs) -> let result = map grab xs
+                                            in if all isJust result
+                                               then map fromJust result
+                                               else bad "Unexpected non-label construct"
+                         Right _         -> bad "Unexpected response from the solver"
+
+          where grab (ECon l) = Just $ noBar l
+                grab _        = Nothing
+
+                noBar = reverse . dropWhile bar . reverse . dropWhile bar
+                bar   = (== '|')
+
+                bad e = error $ unlines [ "SBV: Cannot extract an unsat core:"
+                                        , "  Received:  " ++ show s
+                                        , "  Reason  : " ++ e
+                                        ]
 
 -- | Do we have a regular sat-model, or something in the extension field?
 classifyModel :: SMTConfig -> SMTModel -> SMTResult

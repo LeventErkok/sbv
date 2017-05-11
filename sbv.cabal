@@ -86,6 +86,7 @@ Library
                   , Data.SBV.Examples.Misc.Auxiliary
                   , Data.SBV.Examples.Misc.NoDiv0
                   , Data.SBV.Examples.Misc.Word4
+                  , Data.SBV.Examples.Misc.UnsatCore
                   , Data.SBV.Examples.Polynomials.Polynomials
                   , Data.SBV.Examples.Optimization.LinearOpt
                   , Data.SBV.Examples.Optimization.Production

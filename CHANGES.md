@@ -5,6 +5,33 @@
 
 ### Version 6.1, Not yet released
 
+  * Add support for unsat-core extraction. To use this feature, use
+    the namedConstraint function::
+    
+       namedConstraint :: String -> SBool -> Symbolic ()
+
+    or the label function:
+
+       label :: SymWord a => String -> SBV a -> SBV a
+
+    to associate a label to a constrain or a boolean term that
+    can later be labeled by the backend solver as belonging to the
+    unsat-core.
+
+    Unsat-cores are not enabled by default since they can be
+    expensive; to use:
+
+        satWith z3{getUnsatCore=True} $ do ...
+
+    In the programmatic API, the function:
+
+        extractUnsatCore :: Modelable a => a -> Maybe [String]
+
+    can be used to programmatically extract the unsat-core. Note that
+    backend solvers will only include the named expressions in the unsat-core,
+    i.e., any unnamed yet part-of-the-core-unsat expressions will be missing;
+    as speculated in the SMT-Lib document itself.
+
   * Add support for pseudo-boolean operations:
   
           pbAtMost           :: [SBool]        -> Int -> SBool

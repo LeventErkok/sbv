@@ -84,6 +84,7 @@ mkConfig s smtVersion tweaks = SMTConfig { verbose        = False
                                          , isNonModelVar  = const False  -- i.e., everything is a model-variable by default
                                          , roundingMode   = RoundNearestTiesToEven
                                          , useLogic       = Nothing
+                                         , getUnsatCore   = False
                                          }
 
 -- | Default configuration for the Boolector SMT solver
@@ -301,20 +302,20 @@ isVacuous = isVacuousWith defaultSMTCfg
 isTheoremWith :: Provable a => SMTConfig -> Maybe Int -> a -> IO (Maybe Bool)
 isTheoremWith cfg mbTo p = do r <- proveWith cfg{timeOut = mbTo} p
                               case r of
-                                ThmResult (Unsatisfiable _) -> return $ Just True
-                                ThmResult (Satisfiable _ _) -> return $ Just False
-                                ThmResult (TimeOut _)       -> return Nothing
-                                _                           -> error $ "SBV.isTheorem: Received:\n" ++ show r
+                                ThmResult Unsatisfiable{} -> return $ Just True
+                                ThmResult Satisfiable{}   -> return $ Just False
+                                ThmResult TimeOut{}       -> return Nothing
+                                _                         -> error $ "SBV.isTheorem: Received:\n" ++ show r
 
 -- | Check whether a given property is satisfiable, with an optional time out and the given solver.
 -- Returns @Nothing@ if times out, or the result wrapped in a @Just@ otherwise.
 isSatisfiableWith :: Provable a => SMTConfig -> Maybe Int -> a -> IO (Maybe Bool)
 isSatisfiableWith cfg mbTo p = do r <- satWith cfg{timeOut = mbTo} p
                                   case r of
-                                    SatResult (Satisfiable _ _) -> return $ Just True
-                                    SatResult (Unsatisfiable _) -> return $ Just False
-                                    SatResult (TimeOut _)       -> return Nothing
-                                    _                           -> error $ "SBV.isSatisfiable: Received: " ++ show r
+                                    SatResult Satisfiable{}   -> return $ Just True
+                                    SatResult Unsatisfiable{} -> return $ Just False
+                                    SatResult TimeOut{}       -> return Nothing
+                                    _                         -> error $ "SBV.isSatisfiable: Received: " ++ show r
 
 -- | Checks theoremhood within the given optional time limit of @i@ seconds.
 -- Returns @Nothing@ if times out, or the result wrapped in a @Just@ otherwise.

@@ -38,6 +38,7 @@ mathSAT = SMTSolver {
                               , supportsDoubles            = True
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
+                              , supportsUnsatCores         = True
                               }
          }
  where addTimeOut _ _ = error "MathSAT: Timeout values are not supported"

@@ -331,7 +331,7 @@ solve = return . bAnd
 sbvCheckSolverInstallation :: SMTConfig -> IO Bool
 sbvCheckSolverInstallation cfg = do ThmResult r <- proveWith cfg $ \x -> (x+x) .== ((x*2) :: SWord8)
                                     case r of
-                                      Unsatisfiable _ -> return True
+                                      Unsatisfiable{} -> return True
                                       _               -> return False
 
 -- | The default configs corresponding to supported SMT solvers
