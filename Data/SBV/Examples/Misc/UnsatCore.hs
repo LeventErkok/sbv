@@ -13,7 +13,7 @@ module Data.SBV.Examples.Misc.UnsatCore where
 
 import Data.SBV
 
--- | A simple goal with a three constraints, two of which is
+-- | A simple goal with three constraints, two of which are
 -- conflicting with each other while the third is irrelevant.
 p :: Goal
 p = do a <- sInteger "a"
