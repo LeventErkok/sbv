@@ -85,6 +85,7 @@ mkConfig s smtVersion tweaks = SMTConfig { verbose        = False
                                          , roundingMode   = RoundNearestTiesToEven
                                          , useLogic       = Nothing
                                          , getUnsatCore   = False
+                                         , customQuery    = Nothing
                                          }
 
 -- | Default configuration for the Boolector SMT solver
@@ -530,19 +531,20 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
                                 then cont finalConfig mbOptInfo (CasePath (map (snd . snd) levels))
                                 else caseSplit finalConfig mbOptInfo shouldCheckCaseVacuity (parallelCase, hasPar) isSat (wrap, unwrap) levels chatty cases cont
 
-  where (caseSplits, checkCaseVacuity, parallelCases, checkConstrVacuity, timeOuts, checkUsing, useLogics, useSolvers, optimizePriorities)
-                = foldr (flip classifyTactics) ([], [], [], [], [], [], [], [], []) tactics
+  where (caseSplits, checkCaseVacuity, parallelCases, checkConstrVacuity, timeOuts, checkUsing, useLogics, useSolvers, optimizePriorities, queryUsings)
+                = foldr (flip classifyTactics) ([], [], [], [], [], [], [], [], [], []) tactics
 
-        classifyTactics (a, b, c, d, e, f, g, h, i) = \case
-                    t@CaseSplit{}           -> (t:a,   b,   c,   d,   e,   f,   g,   h,   i)
-                    t@CheckCaseVacuity{}    -> (  a, t:b,   c,   d,   e,   f,   g,   h,   i)
-                    t@ParallelCase{}        -> (  a,   b, t:c,   d,   e,   f,   g,   h,   i)
-                    t@CheckConstrVacuity{}  -> (  a,   b,   c, t:d,   e,   f,   g,   h,   i)
-                    t@StopAfter{}           -> (  a,   b,   c,   d, t:e,   f,   g,   h,   i)
-                    t@CheckUsing{}          -> (  a,   b,   c,   d,   e, t:f,   g,   h,   i)
-                    t@UseLogic{}            -> (  a,   b,   c,   d,   e,   f, t:g,   h,   i)
-                    t@UseSolver{}           -> (  a,   b,   c,   d,   e,   f,   g, t:h,   i)
-                    t@OptimizePriority{}    -> (  a,   b,   c,   d,   e,   f,   g,   h, t:i)
+        classifyTactics (a, b, c, d, e, f, g, h, i, j) = \case
+                    t@CaseSplit{}           -> (t:a,   b,   c,   d,   e,   f,   g,   h,   i,   j)
+                    t@CheckCaseVacuity{}    -> (  a, t:b,   c,   d,   e,   f,   g,   h,   i,   j)
+                    t@ParallelCase{}        -> (  a,   b, t:c,   d,   e,   f,   g,   h,   i,   j)
+                    t@CheckConstrVacuity{}  -> (  a,   b,   c, t:d,   e,   f,   g,   h,   i,   j)
+                    t@StopAfter{}           -> (  a,   b,   c,   d, t:e,   f,   g,   h,   i,   j)
+                    t@CheckUsing{}          -> (  a,   b,   c,   d,   e, t:f,   g,   h,   i,   j)
+                    t@UseLogic{}            -> (  a,   b,   c,   d,   e,   f, t:g,   h,   i,   j)
+                    t@UseSolver{}           -> (  a,   b,   c,   d,   e,   f,   g, t:h,   i,   j)
+                    t@OptimizePriority{}    -> (  a,   b,   c,   d,   e,   f,   g,   h, t:i,   j)
+                    t@QueryUsing{}          -> (  a,   b,   c,   d,   e,   f,   g,   h,   i, t:j)
 
         hasObjectives = not $ null objectives
 
@@ -577,12 +579,17 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
                            [] -> c
                            ss -> c { useLogic = Just (last ss) }
 
+        grabQueryUsing c = case [f | QueryUsing f <- queryUsings] of
+                              []  -> c
+                              [f] -> c { customQuery = Just f }
+                              _   -> error "SBV.QueryUsing: Multiple user-continuations found, at most one is allowed."
+
         configToUse = case [s | UseSolver s <- useSolvers] of
                         []  -> cfgIn
                         [s] -> s
                         ss  -> error $ "SBV.UseSolver: Multiple UseSolver tactics found, at most one is allowed: " ++ intercalate "," (map show ss)
 
-        finalConfig = grabUseLogic . grabCheckUsing . grabStops $ configToUse
+        finalConfig = grabQueryUsing . grabUseLogic . grabCheckUsing . grabStops $ configToUse
 
         finalOptConfig goals = finalConfig { optimizeArgs  = optimizeArgs finalConfig ++ optimizerDirectives }
             where optimizerDirectives

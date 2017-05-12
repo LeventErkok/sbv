@@ -46,7 +46,7 @@ module Data.SBV.Core.Symbolic
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
-  , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
+  , OptimizeStyle(..), Query(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , Tactic(..), addSValTactic, isParallelCaseAnywhere
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
@@ -293,6 +293,13 @@ newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SW, SBVExpr)}
 -- | 'NamedSymVar' pairs symbolic words and user given/automatically generated names
 type NamedSymVar = (SW, String)
 
+-- | A query is a user-guided mechanism to extract results from the solver.
+data Query = Query (IO (Maybe ([Char], [[Char]])) -> IO (Maybe ([Char], [[Char]])))
+
+-- | Show instance for Query
+instance Show Query where
+   show _ = "<Query>"
+
 -- | Style of optimization
 data OptimizeStyle = Lexicographic -- ^ Objectives are optimized in the order given, earlier objectives have higher priority. This is the default.
                    | Independent   -- ^ Each objective is optimized independently.
@@ -329,6 +336,7 @@ data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-spl
               | UseLogic           Logic                           -- ^ Use this logic, a custom one can be specified too
               | UseSolver          SMTConfig                       -- ^ Use this solver (z3, yices, etc.)
               | OptimizePriority   OptimizeStyle                   -- ^ Use this style for optimize calls. (Default: Lexicographic)
+              | QueryUsing         Query                           -- ^ Use a custom query-engine to extract results.
               deriving (Show, Functor)
 
 instance NFData OptimizeStyle where
@@ -353,6 +361,7 @@ instance NFData a => NFData (Tactic a) where
    rnf (UseLogic         l)   = rnf l `seq` ()
    rnf (UseSolver        s)   = rnf s `seq` ()
    rnf (OptimizePriority s)   = rnf s `seq` ()
+   rnf (QueryUsing       _)   = ()
 
 -- | Is there a parallel-case anywhere?
 isParallelCaseAnywhere :: Tactic a -> Bool
@@ -901,6 +910,7 @@ addSValTactic tac = do st <- ask
                            walk (UseLogic   l)         = return $ UseLogic   l
                            walk (UseSolver  s)         = return $ UseSolver  s
                            walk (OptimizePriority s)   = return $ OptimizePriority s
+                           walk (QueryUsing f)         = return $ QueryUsing f
                        tac' <- liftIO $ walk tac
                        liftIO $ modifyIORef (rTacs st) (tac':)
 
@@ -1257,6 +1267,7 @@ data SMTConfig = SMTConfig {
        , roundingMode   :: RoundingMode   -- ^ Rounding mode to use for floating-point conversions
        , useLogic       :: Maybe Logic    -- ^ If Nothing, pick automatically. Otherwise, either use the given one, or use the custom string.
        , getUnsatCore   :: Bool           -- ^ Should we query unsat-core?
+       , customQuery    :: Maybe Query    -- ^ Custom user-given query
        }
 
 -- We're just seq'ing top-level here, it shouldn't really matter. (i.e., no need to go deeper.)

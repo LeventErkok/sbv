@@ -48,7 +48,7 @@ module Data.SBV.Core.Data
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), getSBranchRunConfig
  , declNewSArray, declNewSFunArray
  , OptimizeStyle(..), Penalty(..), Objective(..)
- , Tactic(..), CaseCond(..), SMTProblem(..), isParallelCaseAnywhere
+ , Query(..), Tactic(..), CaseCond(..), SMTProblem(..), isParallelCaseAnywhere
  ) where
 
 import Control.DeepSeq      (NFData(..))

@@ -220,7 +220,7 @@ module Data.SBV (
 
   -- * Tactics
   -- $tacticIntro
-  , Tactic(..), tactic
+  , Tactic(..), tactic, Query(..)
 
   -- * Optimization
   -- $optiIntro

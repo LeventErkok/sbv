@@ -34,7 +34,7 @@ import qualified Data.Map as M
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (SMTEngine)
+import Data.SBV.Core.Symbolic (SMTEngine, Query(..))
 
 import Data.SBV.SMT.SMTLib    (interpretSolverOutput, interpretSolverModelLine, interpretSolverObjectiveLine)
 
@@ -495,7 +495,7 @@ pipeProcess cfg execName opts script cleanErrs = do
                           let errors = dropWhile isSpace (cleanErrs allErrors)
                           in case (null errors, ec) of
                                 (True, ExitSuccess)  -> return $ Right $ map clean (filter (not . null) (lines contents))
-                                (_, ec')             -> let errors' = if null errors
+                                (_,    ec')          -> let errors' = if null errors
                                                                       then (if null (dropWhile isSpace contents)
                                                                             then "(No error message printed on stderr by the executable.)"
                                                                             else contents)
@@ -632,9 +632,13 @@ runSolver cfg execPath opts script
                                                              then (ExitSuccess, "unknown"              , "")
                                                              else (ex,          finalOut ++ "\n" ++ out, err)
                 return (send, ask, cleanUp, pid)
+
       let executeSolver = do mapM_ send (lines (scriptBody script))
                              mapM_ send (optimizeArgs cfg)
-                             response <- case scriptModel script of
+
+                             -- Capture what SBV would do here
+                             let sbvContinuation =
+                                        case scriptModel script of
                                            Nothing -> do send $ satCmd cfg
                                                          return Nothing
                                            Just ls -> do r    <- ask $ satCmd cfg
@@ -649,7 +653,16 @@ runSolver cfg execPath opts script
                                                                              mapM ask ["(get-unsat-core)"]
                                                                     () -> return []
                                                          return $ Just (r, vals)
-                             cleanUp response
+
+                             -- If we're given a custom continuation, call it. Otherwise execute
+                             k <- case customQuery cfg of
+                                     Nothing         -> return id
+                                     Just (Query f)  -> do when (verbose cfg) $ putStrLn "** Custom query is requested. Giving control to the user."
+                                                           return f
+
+                             -- Off to the races!
+                             cleanUp =<< k sbvContinuation
+
       executeSolver `C.onException`  (terminateProcess pid >> waitForProcess pid)
 
 -- | In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
