@@ -14,7 +14,8 @@ module Data.SBV.Examples.Misc.UnsatCore where
 import Data.SBV
 
 -- | A simple goal with three constraints, two of which are
--- conflicting with each other while the third is irrelevant.
+-- conflicting with each other. The third is irrelevant, in the sense
+-- that it does not contribute to the fact that the goal is unsatisfiable.
 p :: Goal
 p = do a <- sInteger "a"
        b <- sInteger "b"
