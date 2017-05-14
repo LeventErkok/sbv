@@ -283,7 +283,7 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
         mkLet (s, e)                    = "(let ((" ++ show s ++ " " ++ cvtExp solverCaps rm skolemMap tableMap e ++ "))"
 
         -- does the solver allow define-fun; or do we need declare-fun/assert combo?
-        useDefFun = supportsMacros solverCaps
+        useDefFun = supportsDefineFun solverCaps
 
         declConst (s, c) = emit (s, cvtCW rm c) Nothing
 
