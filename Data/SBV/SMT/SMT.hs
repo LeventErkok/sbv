@@ -542,10 +542,13 @@ standardModelExtractor isSat qinps solverLines = SMTModel { modelObjectives = ma
 -- | A standard engine interface. Most solvers follow-suit here in how we "chat" to them..
 standardEngine :: String
                -> String
+               -> (SMTConfig -> SMTConfig)
                -> ([String] -> Int -> [String])
                -> (Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel, SW -> String -> [String])
                -> SMTEngine
-standardEngine envName envOptName addTimeOut (extractMap, extractValue) cfg isSat mbOptInfo qinps skolemMap pgm = do
+standardEngine envName envOptName modConfig addTimeOut (extractMap, extractValue) cfgIn isSat mbOptInfo qinps skolemMap pgm = do
+
+    let cfg = modConfig cfgIn
 
     -- If there's an optimization goal, it better be handled by a custom engine!
     () <- case mbOptInfo of

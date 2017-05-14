@@ -1203,7 +1203,7 @@ instance NFData Logic where
 data SolverCapabilities = SolverCapabilities {
          capSolverName              :: String               -- ^ Name of the solver
        , mbDefaultLogic             :: Bool -> Maybe String -- ^ set-logic string to use in case not automatically determined (if any). If Bool is True, then reals are present.
-       , supportsMacros             :: Bool                 -- ^ Does the solver understand SMT-Lib2 macros?
+       , supportsDefineFun          :: Bool                 -- ^ Does the solver understand SMT-Lib2 define-funs?
        , supportsProduceModels      :: Bool                 -- ^ Does the solver understand produce-models option setting
        , supportsQuantifiers        :: Bool                 -- ^ Does the solver understand SMT-Lib2 style quantifiers?
        , supportsUninterpretedSorts :: Bool                 -- ^ Does the solver understand SMT-Lib2 style uninterpreted-sorts
