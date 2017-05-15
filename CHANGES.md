@@ -28,7 +28,7 @@
     i.e., any unnamed yet part-of-the-core-unsat expressions will be missing;
     as speculated in the SMT-Lib document itself.
 
-    Currently, only Z3 supports unsat-cores.
+    Currently, only Z3 and MathSAT backends support unsat-cores.
 
   * Add support for pseudo-boolean operations:
 
