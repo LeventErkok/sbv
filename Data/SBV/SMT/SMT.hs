@@ -490,45 +490,18 @@ shCW = sh . printBase
 -- | Helper function to spin off to an SMT solver.
 pipeProcess :: SMTConfig -> String -> [String] -> SMTScript -> (String -> String) -> ([String] -> a) -> ([String] -> a) -> IO a
 pipeProcess cfg execName opts script cleanErrs failure success = do
-           mbExecPath <- findExecutable execName
-           contents   <- case mbExecPath of
-                           Nothing       -> return $ Left $ "Unable to locate executable for " ++ nm
-                                                         ++ "\nExecutable specified: " ++ show execName
-                           Just execPath ->
-                                    do solverResult <- timeIf (timing cfg) (WorkByProver nm) $ dispatchSolver cfg execPath opts script
-                                       case solverResult of
-                                         Left s                          -> return $ Left s
-                                         Right (ec, contents, allErrors) ->
-                                           let errors = dropWhile isSpace (cleanErrs allErrors)
-                                           in case (null errors, ec) of
-                                                 (True, ExitSuccess)  -> return $ Right $ map clean (filter (not . null) (lines contents))
-                                                 (_,    ec')          -> let errors' = if null errors
-                                                                                       then (if null (dropWhile isSpace contents)
-                                                                                             then "(No error message printed on stderr by the executable.)"
-                                                                                             else contents)
-                                                                                       else errors
-                                                                             finalEC = case (ec', ec) of
-                                                                                         (ExitFailure n, _) -> n
-                                                                                         (_, ExitFailure n) -> n
-                                                                                         _                  -> 0 -- can happen if ExitSuccess but there is output on stderr
-                                                                         in return $ Left $  "Failed to complete the call to " ++ nm
-                                                                                          ++ "\nExecutable   : " ++ show execPath
-                                                                                          ++ "\nOptions      : " ++ joinArgs opts
-                                                                                          ++ "\nExit code    : " ++ show finalEC
-                                                                                          ++ "\nSolver output: "
-                                                                                          ++ "\n" ++ line ++ "\n"
-                                                                                          ++ intercalate "\n" (filter (not . null) (lines errors'))
-                                                                                          ++ "\n" ++ line
-                                                                                          ++ "\nGiving up.."
-           msg $ nm ++ " output:\n" ++ either id (intercalate "\n") contents
-           case contents of
-             Left e   -> return $ failure (lines e)
-             Right xs -> return $ success (mergeSExpr xs)
-     where clean = reverse . dropWhile isSpace . reverse . dropWhile isSpace
-           line  = replicate 78 '='
+    mbExecPath <- findExecutable execName
+    case mbExecPath of
+      Nothing      -> return $ failure [ "Unable to locate executable for " ++ show (name (solver cfg))
+                                       , "Executable specified: " ++ show execName
+                                       ]
 
-           nm       = show (name (solver cfg))
-           msg      = when (verbose cfg) . putStrLn . ("** " ++)
+      Just execPath -> runSolver cfg execPath opts script cleanErrs failure success
+                       `C.catch`
+                       (\(e::C.SomeException) -> return $ failure [ "Failed to start the external solver: " ++ show e
+                                                                  , "Make sure you can start " ++ show execPath
+                                                                  , "from the command line without issues."
+                                                                  ])
 
 -- | The standard-model that most SMT solvers should happily work with
 standardModel :: (Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel, SW -> String -> [String])
@@ -602,46 +575,69 @@ standardSolver config script cleanErrs failure success = do
       Nothing -> return ()
       Just f  -> do msg $ "Saving the generated script in file: " ++ show f
                     writeFile f (scriptBody script ++ intercalate "\n" ("" : optimizeArgs config ++ [satCmd config]))
-    pipeProcess config exec opts script cleanErrs failure success
-
--- | Wrap the solver call to protect against any exceptions
-dispatchSolver :: SMTConfig -> FilePath -> [String] -> SMTScript -> IO (Either String (ExitCode, String, String))
-dispatchSolver cfg execPath opts script = rnf script `seq` (Right `fmap` runSolver cfg execPath opts script) `C.catch` (\(e::C.SomeException) -> bad (show e))
-  where bad s = return $ Left $ unlines [ "Failed to start the external solver: " ++ s
-                                        , "Make sure you can start " ++ show execPath
-                                        , "from the command line without issues."
-                                        ]
+    rnf script `seq` pipeProcess config exec opts script cleanErrs failure success
 
 -- | A variant of 'readProcessWithExitCode'; except it knows about continuation strings
 -- and can speak SMT-Lib2 (just a little).
-runSolver :: SMTConfig -> FilePath -> [String] -> SMTScript -> IO (ExitCode, String, String)
-runSolver cfg execPath opts script
- = do (send, ask, cleanUp, pid) <- do
+runSolver :: SMTConfig -> FilePath -> [String] -> SMTScript -> (String -> String) -> ([String] -> a) -> ([String] -> a) -> IO a
+runSolver cfg execPath opts script cleanErrs failure success
+ = do let nm  = show (name (solver cfg))
+          msg = when (verbose cfg) . putStrLn . ("** " ++)
+
+      (send, ask, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
                 let send l    = hPutStr inh (l ++ "\n") >> hFlush inh
                     recv      = hGetLine outh
                     ask l     = send l >> recv
                     cleanUp response
-                        = do hClose inh
-                             outMVar <- newEmptyMVar
-                             out <- hGetContents outh
-                             _ <- forkIO $ C.evaluate (length out) >> putMVar outMVar ()
-                             err <- hGetContents errh
-                             _ <- forkIO $ C.evaluate (length err) >> putMVar outMVar ()
-                             takeMVar outMVar
-                             takeMVar outMVar
-                             hClose outh
-                             hClose errh
-                             ex <- waitForProcess pid
-                             return $ case response of
-                                        Nothing        -> (ex, out, err)
-                                        Just (r, vals) -> -- if the status is unknown, prepare for the possibility of not having a model
-                                                          -- TBD: This is rather crude and potentially Z3 specific
-                                                          let finalOut = intercalate "\n" (r : vals)
-                                                              notAvail = "model is not available" `isInfixOf` (finalOut ++ out ++ err)
-                                                          in if "unknown" `isPrefixOf` r && notAvail
-                                                             then (ExitSuccess, "unknown"              , "")
-                                                             else (ex,          finalOut ++ "\n" ++ out, err)
+                      = do (ec, contents, allErrors) <- timeIf (timing cfg) (WorkByProver nm) $ do
+                                      hClose inh
+                                      outMVar <- newEmptyMVar
+                                      out <- hGetContents outh
+                                      _ <- forkIO $ C.evaluate (length out) >> putMVar outMVar ()
+                                      err <- hGetContents errh
+                                      _ <- forkIO $ C.evaluate (length err) >> putMVar outMVar ()
+                                      takeMVar outMVar
+                                      takeMVar outMVar
+                                      hClose outh
+                                      hClose errh
+                                      ex <- waitForProcess pid
+
+                                      msg $ nm ++ " exit-code: " ++ show ex ++ ", output:\n" ++ out ++ err
+
+                                      -- Massage the output, preparing for the possibility of not having a model
+                                      -- TBD: This is rather crude and potentially Z3 specific
+                                      return $ case response of
+                                                 Nothing        -> (ex, out, err)
+                                                 Just (r, vals) -> let finalOut = intercalate "\n" (r:vals)
+                                                                       notAvail = "model is not available" `isInfixOf` (finalOut ++ out ++ err)
+                                                                   in if "unknown" `isPrefixOf` r && notAvail
+                                                                      then (ExitSuccess, "unknown"              , "")
+                                                                      else (ex,          finalOut ++ "\n" ++ out, err)
+
+                           let errors = dropWhile isSpace (cleanErrs allErrors)
+                               clean  = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+
+                           case (null errors, ec) of
+                             (True, ExitSuccess)  -> return $ success $ mergeSExpr $ map clean (filter (not . null) (lines contents))
+                             (_,    ec')          -> let errors' = filter (not . null) $ lines $ if null errors
+                                                                                                 then (if null (dropWhile isSpace contents)
+                                                                                                       then "(No error message printed on stderr by the executable.)"
+                                                                                                       else contents)
+                                                                                                 else errors
+                                                         finalEC = case (ec', ec) of
+                                                                     (ExitFailure n, _) -> n
+                                                                     (_, ExitFailure n) -> n
+                                                                     _                  -> 0 -- can happen if ExitSuccess but there is output on stderr
+                                                     in return $ failure $ [ "Failed to complete the call to " ++ nm
+                                                                           , "Executable   : " ++ show execPath
+                                                                           , "Options      : " ++ joinArgs opts
+                                                                           , "Exit code    : " ++ show finalEC
+                                                                           , "Solver output: "
+                                                                           , replicate 78 '='
+                                                                           ]
+                                                                           ++ errors'
+                                                                           ++ ["Giving up.."]
                 return (send, ask, cleanUp, pid)
 
       let executeSolver = do mapM_ send (lines (scriptBody script))
