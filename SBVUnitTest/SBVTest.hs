@@ -13,6 +13,7 @@
 module SBVTest(
           generateGoldCheck, showsAs, ioShowsAs, mkTestSuite, SBVTestSuite(..)
         , isThm, isSat, runSAT, numberOfModels
+        , assertIsThm, assertIsntThm, assertIsSat, assertIsntSat
         , module Test.Tasty
         , module Test.Tasty.HUnit
         , module Test.HUnit
@@ -72,3 +73,19 @@ numberOfModels p = do AllSatResult (_, rs) <- allSat p
 -- | Symbolicly run a SAT instance using the default config
 runSAT :: Symbolic a -> IO Result
 runSAT = runSymbolic (True, defaultSMTCfg)
+
+-- | ...
+assertIsThm :: Provable a => a -> Assertion
+assertIsThm t = assert (isThm t)
+
+-- | ...
+assertIsntThm :: Provable a => a -> Assertion
+assertIsntThm t = assert (fmap not (isThm t))
+
+-- | ..
+assertIsSat :: Provable a => a -> Assertion
+assertIsSat p = assert (isSat p)
+
+-- | ..
+assertIsntSat :: Provable a => a -> Assertion
+assertIsntSat p = assert (fmap not (isSat p))
