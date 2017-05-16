@@ -247,7 +247,7 @@ Test-Suite SBVBasicTests
                   , TestSuite.Puzzles.Coins
                   , TestSuite.Puzzles.Counts
 
-Test-Suite SBVIntTests
+Test-Suite int-test-extended
   type            : exitcode-stdio-1.0
   default-language: Haskell2010
   ghc-options     : -Wall
