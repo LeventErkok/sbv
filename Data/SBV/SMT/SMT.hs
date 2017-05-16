@@ -12,7 +12,27 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DefaultSignatures   #-}
 
-module Data.SBV.SMT.SMT where
+module Data.SBV.SMT.SMT (
+       -- * Model extraction
+         Modelable(..)
+       , SatModel(..), genParse
+       , extractModels, getModelValues
+       , getModelDictionaries, getModelUninterpretedValues
+       , displayModels, showModel
+
+       -- * Prover Engines
+       , standardEngine
+       , standardModel
+       , standardSolver
+
+       -- * Results of various tasks
+       , ThmResult(..)
+       , SatResult(..)
+       , AllSatResult(..)
+       , SafeResult(..)
+       , OptimizeResult(..)
+       )
+       where
 
 import qualified Control.Exception as C
 
@@ -466,18 +486,6 @@ shCW = sh . printBase
         sh 10 = show
         sh 16 = hexS
         sh n  = \w -> show w ++ " -- Ignoring unsupported printBase " ++ show n ++ ", use 2, 10, or 16."
-
--- | Print uninterpreted function values from models. Very, very crude..
-shUI :: (String, [String]) -> [String]
-shUI (flong, cases) = ("  -- uninterpreted: " ++ f) : map shC cases
-  where tf = dropWhile (/= '_') flong
-        f  =  if null tf then flong else tail tf
-        shC s = "       " ++ s
-
--- | Print uninterpreted array values from models. Very, very crude..
-shUA :: (String, [String]) -> [String]
-shUA (f, cases) = ("  -- array: " ++ f) : map shC cases
-  where shC s = "       " ++ s
 
 -- | Helper function to spin off to an SMT solver.
 pipeProcess :: SMTConfig -> String -> [String] -> SMTScript -> (String -> String) -> IO (Either String [String])
