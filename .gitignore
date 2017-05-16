@@ -1,5 +1,7 @@
-.*~
+*~
 dist
 tags
 TAGS
 .cabal-sandbox/
+.stack-work/
+stack.yaml
