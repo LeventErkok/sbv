@@ -282,6 +282,8 @@ Test-Suite int-test-extended
   main-is         : SBVIntTest.hs
   Other-modules   : SBVTest
                   , Examples.Arrays.Memory
-                  , Examples.Basics.Index		  
+                  , Examples.Basics.Index
+                  , Examples.Basics.ProofTests
                   , TestSuite.Arrays.Memory
                   , TestSuite.Basics.Index
+                  , TestSuite.Basics.ProofTests
