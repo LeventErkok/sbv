@@ -13,6 +13,8 @@
 module SBVTest(
           generateGoldCheck, showsAs, ioShowsAs, mkTestSuite, SBVTestSuite(..)
         , isThm, isSat, runSAT, numberOfModels
+        , module Test.Tasty
+        , module Test.Tasty.HUnit
         , module Test.HUnit
         , module Data.SBV
         ) where
@@ -22,7 +24,9 @@ import Data.SBV.Internals      (runSymbolic, Symbolic, Result)
 
 import Data.Maybe              (fromJust)
 import System.FilePath         ((</>))
-import Test.HUnit              (Test(..), Assertion, assert, (~:), test)
+import Test.Tasty              (testGroup, TestTree)
+import Test.Tasty.HUnit        (assert, Assertion, testCase)
+import Test.HUnit              (Test(..), (~:), test)
 
 -- | A Test-suite, parameterized by the gold-check generator/checker
 newtype SBVTestSuite = SBVTestSuite ((forall a. Show a => (IO a -> FilePath -> IO ())) -> Test)

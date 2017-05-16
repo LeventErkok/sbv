@@ -9,22 +9,33 @@
 -- Test suite for Examples.Arrays.Memory
 -----------------------------------------------------------------------------
 
-module TestSuite.Arrays.Memory(testSuite) where
+module TestSuite.Arrays.Memory(tests) where
 
-import Examples.Arrays.Memory
+import Data.SBV (Symbolic, SBool)
+import Examples.Arrays.Memory (raw, waw, wcommutesGood, wcommutesBad)
 import SBVTest
 
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-     "memory-raw"           ~: assert       =<< isThm t1
-   , "memory-waw"           ~: assert       =<< isThm t2
-   , "memory-wcommute-good" ~: assert       =<< isThm t3
-   , "memory-wcommute-bad"  ~: assert . not =<< isThm t4
-   ]
-   where t1 = free "a" >>= \a -> free "x" >>= \x ->                                       newArray "m" Nothing >>= return . raw a x
-         t2 = free "a" >>= \a -> free "x" >>= \x -> free "y" >>= \y ->                    newArray "m" Nothing >>= return . waw a x y
-         t3 = free "a" >>= \a -> free "x" >>= \x -> free "b" >>= \b -> free "y" >>= \y -> newArray "m" Nothing >>= return . wcommutesGood (a, x) (b, y)
-         t4 = free "a" >>= \a -> free "x" >>= \x -> free "b" >>= \b -> free "y" >>= \y -> newArray "m" Nothing >>= return . wcommutesBad  (a, x) (b, y)
+tests :: TestTree
+tests =
+  testGroup "Arrays.Memory"
+    [ testCase "raw"
+        (assertIsThm
+          (free "a" >>= \a -> free "x" >>= \x ->                                       newArray "m" Nothing >>= return . raw a x))
+    , testCase "waw"
+        (assertIsThm
+          (free "a" >>= \a -> free "x" >>= \x -> free "y" >>= \y ->                    newArray "m" Nothing >>= return . waw a x y))
+    , testCase "wcommute-good"
+        (assertIsThm
+          (free "a" >>= \a -> free "x" >>= \x -> free "b" >>= \b -> free "y" >>= \y -> newArray "m" Nothing >>= return . wcommutesGood (a, x) (b, y)))
+    , testCase "wcommute-bad"
+        (assertIsntThm
+          (free "a" >>= \a -> free "x" >>= \x -> free "b" >>= \b -> free "y" >>= \y -> newArray "m" Nothing >>= return . wcommutesBad  (a, x) (b, y)))
+    ]
+
+assertIsThm :: Symbolic SBool -> Assertion
+assertIsThm t = assert (isThm t)
+
+assertIsntThm :: Symbolic SBool -> Assertion
+assertIsntThm t = assert (fmap not (isThm t))
 
 {-# ANN module ("HLint: ignore Use fmap" :: String) #-}
