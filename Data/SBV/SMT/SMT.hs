@@ -488,41 +488,47 @@ shCW = sh . printBase
         sh n  = \w -> show w ++ " -- Ignoring unsupported printBase " ++ show n ++ ", use 2, 10, or 16."
 
 -- | Helper function to spin off to an SMT solver.
-pipeProcess :: SMTConfig -> String -> [String] -> SMTScript -> (String -> String) -> IO (Either String [String])
-pipeProcess cfg execName opts script cleanErrs = do
-        let nm = show (name (solver cfg))
-        mbExecPath <- findExecutable execName
-        case mbExecPath of
-          Nothing       -> return $ Left $ "Unable to locate executable for " ++ nm
-                                        ++ "\nExecutable specified: " ++ show execName
-          Just execPath ->
-                   do solverResult <- dispatchSolver cfg execPath opts script
-                      case solverResult of
-                        Left s                          -> return $ Left s
-                        Right (ec, contents, allErrors) ->
-                          let errors = dropWhile isSpace (cleanErrs allErrors)
-                          in case (null errors, ec) of
-                                (True, ExitSuccess)  -> return $ Right $ map clean (filter (not . null) (lines contents))
-                                (_,    ec')          -> let errors' = if null errors
-                                                                      then (if null (dropWhile isSpace contents)
-                                                                            then "(No error message printed on stderr by the executable.)"
-                                                                            else contents)
-                                                                      else errors
-                                                            finalEC = case (ec', ec) of
-                                                                        (ExitFailure n, _) -> n
-                                                                        (_, ExitFailure n) -> n
-                                                                        _                  -> 0 -- can happen if ExitSuccess but there is output on stderr
-                                                        in return $ Left $  "Failed to complete the call to " ++ nm
-                                                                         ++ "\nExecutable   : " ++ show execPath
-                                                                         ++ "\nOptions      : " ++ joinArgs opts
-                                                                         ++ "\nExit code    : " ++ show finalEC
-                                                                         ++ "\nSolver output: "
-                                                                         ++ "\n" ++ line ++ "\n"
-                                                                         ++ intercalate "\n" (filter (not . null) (lines errors'))
-                                                                         ++ "\n" ++ line
-                                                                         ++ "\nGiving up.."
-  where clean = reverse . dropWhile isSpace . reverse . dropWhile isSpace
-        line  = replicate 78 '='
+pipeProcess :: SMTConfig -> String -> [String] -> SMTScript -> (String -> String) -> ([String] -> a) -> ([String] -> a) -> IO a
+pipeProcess cfg execName opts script cleanErrs failure success = do
+           mbExecPath <- findExecutable execName
+           contents   <- case mbExecPath of
+                           Nothing       -> return $ Left $ "Unable to locate executable for " ++ nm
+                                                         ++ "\nExecutable specified: " ++ show execName
+                           Just execPath ->
+                                    do solverResult <- timeIf (timing cfg) (WorkByProver nm) $ dispatchSolver cfg execPath opts script
+                                       case solverResult of
+                                         Left s                          -> return $ Left s
+                                         Right (ec, contents, allErrors) ->
+                                           let errors = dropWhile isSpace (cleanErrs allErrors)
+                                           in case (null errors, ec) of
+                                                 (True, ExitSuccess)  -> return $ Right $ map clean (filter (not . null) (lines contents))
+                                                 (_,    ec')          -> let errors' = if null errors
+                                                                                       then (if null (dropWhile isSpace contents)
+                                                                                             then "(No error message printed on stderr by the executable.)"
+                                                                                             else contents)
+                                                                                       else errors
+                                                                             finalEC = case (ec', ec) of
+                                                                                         (ExitFailure n, _) -> n
+                                                                                         (_, ExitFailure n) -> n
+                                                                                         _                  -> 0 -- can happen if ExitSuccess but there is output on stderr
+                                                                         in return $ Left $  "Failed to complete the call to " ++ nm
+                                                                                          ++ "\nExecutable   : " ++ show execPath
+                                                                                          ++ "\nOptions      : " ++ joinArgs opts
+                                                                                          ++ "\nExit code    : " ++ show finalEC
+                                                                                          ++ "\nSolver output: "
+                                                                                          ++ "\n" ++ line ++ "\n"
+                                                                                          ++ intercalate "\n" (filter (not . null) (lines errors'))
+                                                                                          ++ "\n" ++ line
+                                                                                          ++ "\nGiving up.."
+           msg $ nm ++ " output:\n" ++ either id (intercalate "\n") contents
+           case contents of
+             Left e   -> return $ failure (lines e)
+             Right xs -> return $ success (mergeSExpr xs)
+     where clean = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+           line  = replicate 78 '='
+
+           nm       = show (name (solver cfg))
+           msg      = when (verbose cfg) . putStrLn . ("** " ++)
 
 -- | The standard-model that most SMT solvers should happily work with
 standardModel :: (Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel, SW -> String -> [String])
@@ -591,18 +597,12 @@ standardSolver config script cleanErrs failure success = do
         smtSolver= solver config
         exec     = executable smtSolver
         opts     = options smtSolver
-        isTiming = timing config
-        nmSolver = show (name smtSolver)
     msg $ "Calling: " ++ show (exec ++ (if null opts then "" else " ") ++ joinArgs opts)
     case smtFile config of
       Nothing -> return ()
       Just f  -> do msg $ "Saving the generated script in file: " ++ show f
                     writeFile f (scriptBody script ++ intercalate "\n" ("" : optimizeArgs config ++ [satCmd config]))
-    contents <- timeIf isTiming (WorkByProver nmSolver) $ pipeProcess config exec opts script cleanErrs
-    msg $ nmSolver ++ " output:\n" ++ either id (intercalate "\n") contents
-    case contents of
-      Left e   -> return $ failure (lines e)
-      Right xs -> return $ success (mergeSExpr xs)
+    pipeProcess config exec opts script cleanErrs failure success
 
 -- | Wrap the solver call to protect against any exceptions
 dispatchSolver :: SMTConfig -> FilePath -> [String] -> SMTScript -> IO (Either String (ExitCode, String, String))
