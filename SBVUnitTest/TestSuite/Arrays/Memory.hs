@@ -11,7 +11,6 @@
 
 module TestSuite.Arrays.Memory(tests) where
 
-import Data.SBV (Symbolic, SBool)
 import Examples.Arrays.Memory (raw, waw, wcommutesGood, wcommutesBad)
 import SBVTest
 
@@ -31,11 +30,5 @@ tests =
         (assertIsntThm
           (free "a" >>= \a -> free "x" >>= \x -> free "b" >>= \b -> free "y" >>= \y -> newArray "m" Nothing >>= return . wcommutesBad  (a, x) (b, y)))
     ]
-
-assertIsThm :: Symbolic SBool -> Assertion
-assertIsThm t = assert (isThm t)
-
-assertIsntThm :: Symbolic SBool -> Assertion
-assertIsntThm t = assert (fmap not (isThm t))
 
 {-# ANN module ("HLint: ignore Use fmap" :: String) #-}

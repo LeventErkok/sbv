@@ -9,12 +9,18 @@
 -- Test suite for Examples.Basics.Higher
 -----------------------------------------------------------------------------
 
-module TestSuite.Basics.Higher(testSuite) where
+module TestSuite.Basics.Higher(tests) where
 
 import Data.SBV
 
 import Examples.Basics.Higher
 import SBVTest
+
+tests :: TestTree
+tests =
+  testGroup "Basics.Higher"
+    [
+    ]
 
 -- Test suite
 testSuite :: SBVTestSuite
