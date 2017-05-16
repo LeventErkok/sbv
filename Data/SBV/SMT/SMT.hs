@@ -488,7 +488,7 @@ shCW = sh . printBase
         sh n  = \w -> show w ++ " -- Ignoring unsupported printBase " ++ show n ++ ", use 2, 10, or 16."
 
 -- | Helper function to spin off to an SMT solver.
-pipeProcess :: SMTConfig -> String -> [String] -> SMTScript -> (String -> String) -> ([String] -> a) -> ([String] -> a) -> IO a
+pipeProcess :: SMTConfig -> String -> [String] -> SMTScript -> (String -> String) -> ([String] -> [SMTResult]) -> ([String] -> [SMTResult]) -> IO [SMTResult]
 pipeProcess cfg execName opts script cleanErrs failure success = do
     mbExecPath <- findExecutable execName
     case mbExecPath of
@@ -564,7 +564,7 @@ standardEngine envName envOptName modConfig addTimeOut (extractMap, extractValue
 
 -- | A standard solver interface. If the solver is SMT-Lib compliant, then this function should suffice in
 -- communicating with it.
-standardSolver :: SMTConfig -> SMTScript -> (String -> String) -> ([String] -> a) -> ([String] -> a) -> IO a
+standardSolver :: SMTConfig -> SMTScript -> (String -> String) -> ([String] -> [SMTResult]) -> ([String] -> [SMTResult]) -> IO [SMTResult]
 standardSolver config script cleanErrs failure success = do
     let msg      = when (verbose config) . putStrLn . ("** " ++)
         smtSolver= solver config
@@ -579,7 +579,7 @@ standardSolver config script cleanErrs failure success = do
 
 -- | A variant of 'readProcessWithExitCode'; except it knows about continuation strings
 -- and can speak SMT-Lib2 (just a little).
-runSolver :: SMTConfig -> FilePath -> [String] -> SMTScript -> (String -> String) -> ([String] -> a) -> ([String] -> a) -> IO a
+runSolver :: SMTConfig -> FilePath -> [String] -> SMTScript -> (String -> String) -> ([String] -> [SMTResult]) -> ([String] -> [SMTResult]) -> IO [SMTResult]
 runSolver cfg execPath opts script cleanErrs failure success
  = do let nm  = show (name (solver cfg))
           msg = when (verbose cfg) . putStrLn . ("** " ++)
@@ -589,8 +589,9 @@ runSolver cfg execPath opts script cleanErrs failure success
                 let send l    = hPutStr inh (l ++ "\n") >> hFlush inh
                     recv      = hGetLine outh
                     ask l     = send l >> recv
+
                     cleanUp response
-                      = do (ec, contents, allErrors) <- timeIf (timing cfg) (WorkByProver nm) $ do
+                      = do (ec, contents, allErrors) <- do
                                       hClose inh
                                       outMVar <- newEmptyMVar
                                       out <- hGetContents outh
@@ -647,7 +648,7 @@ runSolver cfg execPath opts script cleanErrs failure success
                              let sbvContinuation =
                                         case scriptModel script of
                                            Nothing -> do send $ satCmd cfg
-                                                         return Nothing
+                                                         cleanUp Nothing
                                            Just ls -> do r    <- ask $ satCmd cfg
                                                          vals <- case () of
                                                                     () | any (`isPrefixOf` r) ["sat", "unknown"]
@@ -659,16 +660,16 @@ runSolver cfg execPath opts script cleanErrs failure success
                                                                        -> do when (verbose cfg) $ putStrLn "** Querying for unsat cores"
                                                                              mapM ask ["(get-unsat-core)"]
                                                                     () -> return []
-                                                         return $ Just (r, vals)
+                                                         cleanUp $ Just (r, vals)
 
                              -- If we're given a custom continuation, call it. Otherwise execute
                              k <- case customQuery cfg of
-                                     Nothing         -> return id
-                                     Just (Query f)  -> do when (verbose cfg) $ putStrLn "** Custom query is requested. Giving control to the user."
-                                                           return f
+                                    Nothing         -> return sbvContinuation
+                                    Just (Query f)  -> do when (verbose cfg) $ putStrLn "** Custom query is requested. Giving control to the user."
+                                                          return $ f send ask sbvContinuation
 
                              -- Off to the races!
-                             cleanUp =<< k sbvContinuation
+                             timeIf (timing cfg) (WorkByProver nm) k
 
       executeSolver `C.onException`  (terminateProcess pid >> waitForProcess pid)
 

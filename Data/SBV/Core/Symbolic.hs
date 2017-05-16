@@ -294,7 +294,11 @@ newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SW, SBVExpr)}
 type NamedSymVar = (SW, String)
 
 -- | A query is a user-guided mechanism to extract results from the solver.
-data Query = Query (IO (Maybe ([Char], [[Char]])) -> IO (Maybe ([Char], [[Char]])))
+data Query = Query (   (String -> IO ())          -- ^ send: A means of sending a string to the solver
+                    -> (String -> IO String)      -- ^ ask : A means for sending a string, and returning a result
+                    -> IO [SMTResult]             -- ^ cont: What SBV would execute: Call check-sat and interpret results
+                    -> IO [SMTResult]             -- ^ result: User determined output, possibly obtained by calling 'cont'
+                   )
 
 -- | Show instance for Query
 instance Show Query where
