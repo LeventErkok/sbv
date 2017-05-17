@@ -54,7 +54,7 @@ import qualified Data.Map as M
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (SMTEngine, Query(..))
+import Data.SBV.Core.Symbolic (SMTEngine, runQuery)
 
 import Data.SBV.SMT.SMTLib    (interpretSolverOutput, interpretSolverModelLine, interpretSolverObjectiveLine)
 
@@ -664,9 +664,13 @@ runSolver cfg execPath opts script cleanErrs failure success
 
                              -- If we're given a custom continuation, call it. Otherwise execute
                              k <- case customQuery cfg of
-                                    Nothing         -> return sbvContinuation
-                                    Just (Query f)  -> do when (verbose cfg) $ putStrLn "** Custom query is requested. Giving control to the user."
-                                                          return $ f send ask sbvContinuation
+                                    Nothing  -> return sbvContinuation
+                                    Just q   -> do when (verbose cfg) $ putStrLn "** Custom query is requested. Giving control to the user."
+                                                   return $ runQuery q QueryState { querySend    = send
+                                                                                  , queryAsk     = ask
+                                                                                  , queryConfig  = cfg
+                                                                                  , queryDefault = sbvContinuation
+                                                                                  }
 
                              -- Off to the races!
                              timeIf (timing cfg) (WorkByProver nm) k

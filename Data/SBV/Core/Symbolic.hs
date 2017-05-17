@@ -46,22 +46,24 @@ module Data.SBV.Core.Symbolic
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
-  , OptimizeStyle(..), Query(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
+  , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , Tactic(..), addSValTactic, isParallelCaseAnywhere
+  , Query(..), QueryState(..), runQuery
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
   , mkSValUserSort
   , SArr(..), readSArr, resetSArr, writeSArr, mergeSArr, newSArr, eqSArr
   ) where
 
-import Control.DeepSeq      (NFData(..))
-import Control.Monad        (when, unless)
-import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
-import Control.Monad.Trans  (MonadIO, liftIO)
-import Data.Char            (isAlpha, isAlphaNum, toLower)
-import Data.IORef           (IORef, newIORef, modifyIORef, readIORef, writeIORef)
-import Data.List            (intercalate, sortBy)
-import Data.Maybe           (isJust, fromJust, fromMaybe)
+import Control.DeepSeq          (NFData(..))
+import Control.Monad            (when, unless)
+import Control.Monad.Reader     (MonadReader, ReaderT, ask, runReaderT)
+import Control.Monad.State.Lazy (MonadState, StateT(..), evalStateT)
+import Control.Monad.Trans      (MonadIO, liftIO)
+import Data.Char                (isAlpha, isAlphaNum, toLower)
+import Data.IORef               (IORef, newIORef, modifyIORef, readIORef, writeIORef)
+import Data.List                (intercalate, sortBy)
+import Data.Maybe               (isJust, fromJust, fromMaybe)
 
 import GHC.Stack.Compat
 
@@ -293,17 +295,6 @@ newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SW, SBVExpr)}
 -- | 'NamedSymVar' pairs symbolic words and user given/automatically generated names
 type NamedSymVar = (SW, String)
 
--- | A query is a user-guided mechanism to extract results from the solver.
-newtype Query = Query (   (String -> IO ())          -- send: A means of sending a string to the solver
-                       -> (String -> IO String)      -- ask : A means for sending a string, and returning a result
-                       -> IO [SMTResult]             -- cont: What SBV would execute: Call check-sat and interpret results
-                       -> IO [SMTResult]             -- result: User determined output, possibly obtained by calling 'cont'
-                      )
-
--- | Show instance for Query
-instance Show Query where
-   show _ = "<Query>"
-
 -- | Style of optimization
 data OptimizeStyle = Lexicographic -- ^ Objectives are optimized in the order given, earlier objectives have higher priority. This is the default.
                    | Independent   -- ^ Each objective is optimized independently.
@@ -330,6 +321,25 @@ objectiveName (Minimize   s _)   = s
 objectiveName (Maximize   s _)   = s
 objectiveName (AssertSoft s _ _) = s
 
+-- | The state we keep track of as we interact with the solver
+data QueryState = QueryState { querySend    :: String -> IO ()
+                             , queryAsk     :: String -> IO String
+                             , queryConfig  :: SMTConfig
+                             , queryDefault :: IO [SMTResult]
+                             }
+
+-- | A query is a user-guided mechanism to extract results from the solver.
+newtype Query a = Query (StateT QueryState IO a)
+             deriving (Applicative, Functor, Monad, MonadIO, MonadState QueryState)
+
+-- | Show instance for Query, needed since tactics are Showable
+instance Show (Query a) where
+   show _ = "<Query>"
+
+-- | Execute a query
+runQuery :: Query a -> QueryState -> IO a
+runQuery (Query f) qs = evalStateT f qs
+
 -- | Solver tactic
 data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-split, with implicit coverage. Bool says whether we should be verbose.
               | CheckCaseVacuity   Bool                            -- ^ Should the case-splits be checked for vacuity? (Default: True.)
@@ -340,7 +350,7 @@ data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-spl
               | UseLogic           Logic                           -- ^ Use this logic, a custom one can be specified too
               | UseSolver          SMTConfig                       -- ^ Use this solver (z3, yices, etc.)
               | OptimizePriority   OptimizeStyle                   -- ^ Use this style for optimize calls. (Default: Lexicographic)
-              | QueryUsing         Query                           -- ^ Use a custom query-engine to extract results.
+              | QueryUsing         (Query [SMTResult])             -- ^ Use a custom query-engine to extract results.
               deriving (Show, Functor)
 
 instance NFData OptimizeStyle where
@@ -1255,23 +1265,23 @@ instance HasKind RoundingMode
 -- The 'printBase' field can be used to print numbers in base 2, 10, or 16. If base 2 or 16 is used, then floating-point values will
 -- be printed in their internal memory-layout format as well, which can come in handy for bit-precise analysis.
 data SMTConfig = SMTConfig {
-         verbose        :: Bool           -- ^ Debug mode
-       , timing         :: Timing         -- ^ Print timing information on how long different phases took (construction, solving, etc.)
-       , sBranchTimeOut :: Maybe Int      -- ^ How much time to give to the solver for each call of 'sBranch' check. (In seconds. Default: No limit.)
-       , timeOut        :: Maybe Int      -- ^ How much time to give to the solver. (In seconds. Default: No limit.)
-       , printBase      :: Int            -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
-       , printRealPrec  :: Int            -- ^ Print algebraic real values with this precision. (SReal, default: 16)
-       , solverTweaks   :: [String]       -- ^ Additional lines of script to give to the solver (user specified)
-       , optimizeArgs   :: [String]       -- ^ Additional commands to pass before check-sat is issued
-       , satCmd         :: String         -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
-       , isNonModelVar  :: String -> Bool -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
-       , smtFile        :: Maybe FilePath -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
-       , smtLibVersion  :: SMTLibVersion  -- ^ What version of SMT-lib we use for the tool
-       , solver         :: SMTSolver      -- ^ The actual SMT solver.
-       , roundingMode   :: RoundingMode   -- ^ Rounding mode to use for floating-point conversions
-       , useLogic       :: Maybe Logic    -- ^ If Nothing, pick automatically. Otherwise, either use the given one, or use the custom string.
-       , getUnsatCore   :: Bool           -- ^ Should we query unsat-core?
-       , customQuery    :: Maybe Query    -- ^ Custom user-given query
+         verbose        :: Bool                      -- ^ Debug mode
+       , timing         :: Timing                    -- ^ Print timing information on how long different phases took (construction, solving, etc.)
+       , sBranchTimeOut :: Maybe Int                 -- ^ How much time to give to the solver for each call of 'sBranch' check. (In seconds. Default: No limit.)
+       , timeOut        :: Maybe Int                 -- ^ How much time to give to the solver. (In seconds. Default: No limit.)
+       , printBase      :: Int                       -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
+       , printRealPrec  :: Int                       -- ^ Print algebraic real values with this precision. (SReal, default: 16)
+       , solverTweaks   :: [String]                  -- ^ Additional lines of script to give to the solver (user specified)
+       , optimizeArgs   :: [String]                  -- ^ Additional commands to pass before check-sat is issued
+       , satCmd         :: String                    -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
+       , isNonModelVar  :: String -> Bool            -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
+       , smtFile        :: Maybe FilePath            -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
+       , smtLibVersion  :: SMTLibVersion             -- ^ What version of SMT-lib we use for the tool
+       , solver         :: SMTSolver                 -- ^ The actual SMT solver.
+       , roundingMode   :: RoundingMode              -- ^ Rounding mode to use for floating-point conversions
+       , useLogic       :: Maybe Logic               -- ^ If Nothing, pick automatically. Otherwise, either use the given one, or use the custom string.
+       , getUnsatCore   :: Bool                      -- ^ Should we query unsat-core?
+       , customQuery    :: Maybe (Query [SMTResult]) -- ^ Custom user-given query
        }
 
 -- We're just seq'ing top-level here, it shouldn't really matter. (i.e., no need to go deeper.)

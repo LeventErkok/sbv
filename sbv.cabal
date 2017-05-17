@@ -59,6 +59,7 @@ Library
                   , Data.SBV.Bridge.Yices
                   , Data.SBV.Bridge.Z3
                   , Data.SBV.Bridge.ABC
+                  , Data.SBV.Control
                   , Data.SBV.Dynamic
                   , Data.SBV.Internals
                   , Data.SBV.Tools.CodeGen
