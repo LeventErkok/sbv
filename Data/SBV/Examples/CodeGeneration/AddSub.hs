@@ -12,6 +12,7 @@
 module Data.SBV.Examples.CodeGeneration.AddSub where
 
 import Data.SBV
+import Data.SBV.Tools.CodeGen
 
 -- | Simple function that returns add/sum of args
 addSub :: SWord8 -> SWord8 -> (SWord8, SWord8)

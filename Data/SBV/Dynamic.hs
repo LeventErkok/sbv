@@ -93,8 +93,6 @@ module Data.SBV.Dynamic
   -- * Symbolic computations
   , outputSVal
 
-  -- * Getting SMT-Lib output (for offline analysis)
-  , compileToSMTLib, generateSMTBenchmarks
   -- * Code generation from symbolic programs
   , SBVCodeGen
 
@@ -118,6 +116,9 @@ module Data.SBV.Dynamic
 
   -- ** Compilation to C
   , compileToC, compileToCLib
+
+  -- ** Compilation to SMTLib
+  , compileToSMTLib, generateSMTBenchmarks
   ) where
 
 import Data.Map (Map)
@@ -127,16 +128,16 @@ import Data.SBV.Core.Concrete
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Operations
 
-import Data.SBV.Compilers.CodeGen
-  ( SBVCodeGen
-  , svCgInput, svCgInputArr
-  , svCgOutput, svCgOutputArr
-  , svCgReturn, svCgReturnArr
-  , cgPerformRTCs, cgSetDriverValues, cgGenerateDriver, cgGenerateMakefile
-  , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIgnoreSAssert
-  , cgIntegerSize, cgSRealType, CgSRealType(..)
-  )
-import Data.SBV.Compilers.C    (compileToC, compileToCLib)
+import Data.SBV.Compilers.CodeGen ( SBVCodeGen
+                                  , svCgInput, svCgInputArr
+                                  , svCgOutput, svCgOutputArr
+                                  , svCgReturn, svCgReturnArr
+                                  , cgPerformRTCs, cgSetDriverValues, cgGenerateDriver, cgGenerateMakefile
+                                  , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIgnoreSAssert
+                                  , cgIntegerSize, cgSRealType, CgSRealType(..)
+                                  )
+import Data.SBV.Compilers.C       (compileToC, compileToCLib)
+
 import Data.SBV.Provers.Prover (boolector, cvc4, yices, z3, mathSAT, abc, defaultSMTCfg)
 import Data.SBV.SMT.SMT        (ThmResult(..), SatResult(..), SafeResult(..), OptimizeResult(..), AllSatResult(..), genParse)
 import Data.SBV                (sbvCurrentSolver, sbvCheckSolverInstallation, defaultSolverConfig, sbvAvailableSolvers)

@@ -6,13 +6,14 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Computing population-counts (number of set bits) and autimatically
+-- Computing population-counts (number of set bits) and automatically
 -- generating C code.
 -----------------------------------------------------------------------------
 
 module Data.SBV.Examples.CodeGeneration.PopulationCount where
 
 import Data.SBV
+import Data.SBV.Tools.CodeGen
 
 -----------------------------------------------------------------------------
 -- * Reference: Slow but /obviously/ correct

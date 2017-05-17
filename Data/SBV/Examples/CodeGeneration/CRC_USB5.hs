@@ -17,6 +17,7 @@
 module Data.SBV.Examples.CodeGeneration.CRC_USB5 where
 
 import Data.SBV
+import Data.SBV.Tools.CodeGen
 import Data.SBV.Tools.Polynomial
 
 -----------------------------------------------------------------------------

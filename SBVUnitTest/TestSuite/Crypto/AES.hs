@@ -11,7 +11,6 @@
 
 module TestSuite.Crypto.AES(testSuite) where
 
-import Data.SBV
 import Data.SBV.Internals
 import Data.SBV.Examples.Crypto.AES
 

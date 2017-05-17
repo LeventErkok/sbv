@@ -16,7 +16,9 @@
 module Data.SBV.Examples.CodeGeneration.Uninterpreted where
 
 import Data.Maybe (fromMaybe)
+
 import Data.SBV
+import Data.SBV.Tools.CodeGen
 
 -- | A definition of shiftLeft that can deal with variable length shifts.
 -- (Note that the ``shiftL`` method from the 'Bits' class requires an 'Int' shift

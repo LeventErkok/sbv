@@ -11,7 +11,6 @@
 
 module TestSuite.CodeGeneration.Fibonacci(testSuite) where
 
-import Data.SBV
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.Fibonacci
 
