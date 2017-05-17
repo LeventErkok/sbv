@@ -6,7 +6,7 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Computing population-counts (number of set bits) and autimatically
+-- Computing population-counts (number of set bits) and automatically
 -- generating C code.
 -----------------------------------------------------------------------------
 
