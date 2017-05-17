@@ -49,6 +49,14 @@
 
   * Export 'SolverCapabilities' from 'Data.SBV.Internals', in case users want access.
 
+
+  * Move the following two functions to 'Data.SBV.Internals':
+    
+	  compileToSMTLib
+	  generateSMTBenchmarks
+
+    If you use them, please 'import Data.SBV.Internals'
+
 ### Version 6.0, 2017-05-07
 
   * This is a backwards compatibility breaking release, hence the major version

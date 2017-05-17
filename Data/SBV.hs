@@ -273,9 +273,6 @@ module Data.SBV (
   -- $unboundedCGen
   , cgIntegerSize, cgSRealType, CgSRealType(..)
 
-  -- ** Compilation to C
-  , compileToC, compileToCLib
-
   -- * Module exports
   -- $moduleExportIntro
 
