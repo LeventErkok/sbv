@@ -12,10 +12,35 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Data.SBV.Compilers.CodeGen where
+module Data.SBV.Compilers.CodeGen (
+        -- * The codegen monad
+          SBVCodeGen(..)
+
+        -- * Specifying inputs, SBV variants
+        , cgInput,  cgInputArr
+        , cgOutput, cgOutputArr
+        , cgReturn, cgReturnArr
+
+        -- * Specifying inputs, SVal variants
+        , svCgInput,  svCgInputArr
+        , svCgOutput, svCgOutputArr
+        , svCgReturn, svCgReturnArr
+
+        -- * Settings
+        , cgPerformRTCs, cgSetDriverValues
+        , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIgnoreSAssert
+        , cgIntegerSize, cgSRealType, CgSRealType(..)
+
+        -- * Infrastructure
+        , CgTarget(..), CgConfig(..), CgState(..), CgPgmBundle(..), CgPgmKind(..), CgVal(..)
+        , defaultCgConfig, initCgState, isCgDriver, isCgMakefile
+
+        -- * Generating collateral
+        , cgGenerateDriver, cgGenerateMakefile, codeGen, renderCgPgmBundle
+        ) where
 
 import Control.Monad             (filterM, replicateM, unless)
-import Control.Monad.Trans
+import Control.Monad.Trans       (MonadIO, lift)
 import Control.Monad.State.Lazy  (MonadState, StateT(..), modify)
 import Data.Char                 (toLower, isSpace)
 import Data.List                 (nub, isPrefixOf, intercalate, (\\))

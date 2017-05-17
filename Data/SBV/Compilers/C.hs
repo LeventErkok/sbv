@@ -25,9 +25,9 @@ import System.Random
 import Text.PrettyPrint.HughesPJ
 
 import Data.SBV.Core.Data
-
-import Data.SBV.Utils.PrettyNum (shex, showCFloat, showCDouble)
 import Data.SBV.Compilers.CodeGen
+
+import Data.SBV.Utils.PrettyNum   (shex, showCFloat, showCDouble)
 
 import GHC.Stack.Compat
 #if !MIN_VERSION_base(4,9,0)
