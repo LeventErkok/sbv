@@ -37,8 +37,17 @@ getConfig = do QueryState{queryConfig} <- get
 
 -- | Send a string to the solver, and return the response
 ask :: String -> Query String
-ask s = do QueryState{queryAsk} <- get
-           io $ queryAsk s
+ask s = do QueryState{queryAsk, queryConfig} <- get
+
+           let dbg what m
+                 | verbose queryConfig = message $ what ++ " " ++ m
+                 | True                = return ()
+
+           dbg "-->" s
+           r <- io $ queryAsk s
+           dbg "<--" r
+
+           return r
 
 -- | Perform an IO action
 io :: IO a -> Query a
