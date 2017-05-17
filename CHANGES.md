@@ -49,6 +49,9 @@
 
   * Export 'SolverCapabilities' from 'Data.SBV.Internals', in case users want access.
 
+  * Move code-generation facilities to 'Data.SBV.Tools.CodeGen', no longer exporting
+    the relevant functions directly from 'Data.SBV'. This could break existing code,
+    but the fix should be as simple as 'import Data.SBV.Tools.CodeGen'.
 
   * Move the following two functions to 'Data.SBV.Internals':
     

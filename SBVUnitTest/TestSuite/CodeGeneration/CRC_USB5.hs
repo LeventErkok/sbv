@@ -11,7 +11,6 @@
 
 module TestSuite.CodeGeneration.CRC_USB5(testSuite) where
 
-import Data.SBV
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.CRC_USB5
 

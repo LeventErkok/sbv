@@ -11,7 +11,6 @@
 
 module TestSuite.CodeGeneration.PopulationCount(testSuite) where
 
-import Data.SBV
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.PopulationCount
 

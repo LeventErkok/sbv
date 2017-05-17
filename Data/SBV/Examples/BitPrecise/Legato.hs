@@ -39,6 +39,7 @@ module Data.SBV.Examples.BitPrecise.Legato where
 import Data.Array (Array, Ix(..), (!), (//), array)
 
 import Data.SBV
+import Data.SBV.Tools.CodeGen
 
 import GHC.Generics (Generic)
 
