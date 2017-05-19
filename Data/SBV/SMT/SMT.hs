@@ -604,7 +604,8 @@ runSolver cfg execPath opts script cleanErrs failure success
                                       hClose errh
                                       ex <- waitForProcess pid
 
-                                      msg $ nm ++ " exit-code: " ++ show ex ++ ", output:\n" ++ out ++ err
+                                      msg $ nm ++ " exit-code: " ++ show ex
+                                               ++ ", output:\n"  ++ maybe [] (\(r, vals) -> intercalate "\n" (r : vals)) response ++ out ++ err
 
                                       -- Massage the output, preparing for the possibility of not having a model
                                       -- TBD: This is rather crude and potentially Z3 specific
