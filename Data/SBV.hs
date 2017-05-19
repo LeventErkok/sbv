@@ -151,10 +151,7 @@ module Data.SBV (
   -- *** Word level
   , sTestBit, sExtractBits, sPopCount, sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, sFromIntegral, setBitTo, oneIf
   , lsb, msb, label
-  -- *** Pseudo-boolean (cardinality) operators
-  , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
-  -- *** Predicates
-  , allEqual, allDifferent, inRange, sElem
+
   -- *** Addition and Multiplication with high-bits
   , fullAdder, fullMultiplier
   -- *** Exponentiation
@@ -209,6 +206,12 @@ module Data.SBV (
   -- ** Adding constraints
   -- $constrainIntro
   , constrain, namedConstraint, pConstrain
+  -- *** Cardinality constraints
+  -- $cardIntro
+  , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
+  -- *** Predicates
+  , allEqual, allDifferent, inRange, sElem
+
   -- ** Checking constraint vacuity
   , isVacuous, isVacuousWith
   -- ** Quick-checking
@@ -882,6 +885,30 @@ SBV will apply skolemization to get rid of existentials before sending predicate
 quantification, you will manually have to first convert to prenex-normal form (which produces an equisatisfiable but not necessarily
 equivalent formula), and code that explicitly in SBV. See <https://github.com/LeventErkok/sbv/issues/256> for a detailed discussion
 of this issue.
+-}
+
+{- $cardIntro
+A pseudo-boolean function (<http://en.wikipedia.org/wiki/Pseudo-Boolean_function>) is a
+function from booleans to reals, basically treating 'True' as @1@ and 'False' as @0@. They
+are typically expressed in polynomial form. Such functions can be used to express cardinality
+constraints, where we want to /count/ how many things satisfy a certain condition.
+
+One can code such constraints using regular SBV programming: Simply
+walk over the booleans and the corresponding coefficients, and assert the required relation.
+For instance:
+
+   > [b0, b1, b2, b3] `pbAtMost` 2
+
+is precisely equivalent to:
+
+   > sum (map (\b -> ite b 1 0) [b0, b1, b2, b3]) .<= 2
+
+and they both express that at most /two/ of @b0@, @b1@, @b2@, and @b3@ can be 'true'.
+However, the equivalent forms give rise to long formulas and the cardinality constraint
+can get lost in the translation. The idea here is that if you use these functions instead, SBV will
+produce better translations to SMTLib for more efficient solving of cardinality constraints, assuming
+the backend solver supports them. Currently, only Z3 supports pseudo-booleans directly. For all other solvers,
+SBV will translate these to equivalent terms that do not require special functions.
 -}
 
 {-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}
