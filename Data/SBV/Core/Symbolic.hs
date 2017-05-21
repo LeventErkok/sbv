@@ -39,7 +39,7 @@ module Data.SBV.Core.Symbolic
   , NamedSymVar
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
-  , SBVPgm(..), Symbolic, runSymbolic, runSymbolic', State
+  , SBVPgm(..), Symbolic, runSymbolic, runSymbolicWithState, runSymbolic', State
   , inProofMode, SBVRunMode(..), Result(..)
   , Logic(..), SMTLibLogic(..), registerKind, registerLabel
   , addAssertion, addSValConstraint, internalConstraint, internalVariable
@@ -48,7 +48,7 @@ module Data.SBV.Core.Symbolic
   , extractSymbolicSimulationState
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , Tactic(..), addSValTactic, isParallelCaseAnywhere
-  , Query(..), QueryState(..), runQuery
+  , Query(..), QueryContext, QueryState(..), runQuery
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
   , mkSValUserSort
@@ -321,11 +321,15 @@ objectiveName (Minimize   s _)   = s
 objectiveName (Maximize   s _)   = s
 objectiveName (AssertSoft s _ _) = s
 
+-- | The context of a query is the state/result pair at any given time
+type QueryContext = (State, Result)
+
 -- | The state we keep track of as we interact with the solver
-data QueryState = QueryState { querySend    :: String -> IO ()
-                             , queryAsk     :: String -> IO String
-                             , queryConfig  :: SMTConfig
-                             , queryDefault :: IO [SMTResult]
+data QueryState = QueryState { querySend     :: String -> IO ()
+                             , queryAsk      :: String -> IO String
+                             , queryConfig   :: SMTConfig
+                             , queryContext  :: QueryContext
+                             , queryDefault  :: IO [SMTResult]
                              }
 
 -- | A query is a user-guided mechanism to extract results from the solver.
@@ -338,7 +342,14 @@ instance Show (Query a) where
 
 -- | Execute a query
 runQuery :: Query a -> QueryState -> IO a
-runQuery (Query f) qs = evalStateT f qs
+runQuery (Query f) qs@QueryState{queryContext} = evalStateT f qs{queryContext = interactive queryContext}
+   where interactive (st, res) = (st{runMode = newMode (runMode st)}, res)
+
+         -- If in proof mode, switch to interactive, otherwise stay put
+         newMode  (Proof bcfg)   = Interactive bcfg
+         newMode m@Interactive{} = m
+         newMode m@CodeGen       = m
+         newMode m@Concrete{}    = m
 
 -- | Solver tactic
 data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-split, with implicit coverage. Bool says whether we should be verbose.
@@ -515,23 +526,26 @@ type CgMap     = Map.Map String [String]
 type Cache a   = IMap.IntMap [(StableName (State -> IO a), a)]
 
 -- | Different means of running a symbolic piece of code
-data SBVRunMode = Proof (Bool, SMTConfig) -- ^ Fully Symbolic, proof mode.
-                | CodeGen                 -- ^ Code generation mode.
-                | Concrete StdGen         -- ^ Concrete simulation mode. The StdGen is for the pConstrain acceptance in cross runs.
+data SBVRunMode = Proof       (Bool, SMTConfig) -- ^ Fully Symbolic, proof mode.
+                | Interactive (Bool, SMTConfig) -- ^ In an interactive mode, during user control.
+                | CodeGen                       -- ^ Code generation mode.
+                | Concrete StdGen               -- ^ Concrete simulation mode. The StdGen is for the pConstrain acceptance in cross runs.
 
 -- | Is this a concrete run? (i.e., quick-check or test-generation like)
 isConcreteMode :: State -> Bool
 isConcreteMode State{runMode} = case runMode of
-                                  Concrete{} -> True
-                                  Proof{}    -> False
-                                  CodeGen    -> False
+                                  Concrete{}    -> True
+                                  Proof{}       -> False
+                                  Interactive{} -> False
+                                  CodeGen       -> False
 
 -- | Is this a CodeGen run? (i.e., generating code)
 isCodeGenMode :: State -> Bool
 isCodeGenMode State{runMode} = case runMode of
-                                 Concrete{} -> False
-                                 Proof{}    -> False
-                                 CodeGen    -> True
+                                 Concrete{}    -> False
+                                 Proof{}       -> False
+                                 Interactive{} -> False
+                                 CodeGen       -> True
 
 -- | The state of the symbolic interpreter
 data State  = State { runMode      :: SBVRunMode
@@ -559,6 +573,10 @@ data State  = State { runMode      :: SBVRunMode
                     , rAICache     :: IORef (Cache Int)
                     }
 
+-- | NFData is a bit of a lie, but it's sufficient, most of the content is iorefs that we don't want to touch
+instance NFData State where
+   rnf State{} = ()
+
 -- | Get the current path condition
 getSValPathCondition :: State -> SVal
 getSValPathCondition = pathCond
@@ -570,9 +588,10 @@ extendSValPathCondition st f = st{pathCond = f (pathCond st)}
 -- | Are we running in proof mode?
 inProofMode :: State -> Bool
 inProofMode s = case runMode s of
-                  Proof{}    -> True
-                  CodeGen    -> False
-                  Concrete{} -> False
+                  Proof{}       -> True
+                  Interactive{} -> True
+                  CodeGen       -> False
+                  Concrete{}    -> False
 
 -- | If in proof mode, get the underlying configuration (used for 'sBranch')
 getSBranchRunConfig :: State -> Maybe SMTConfig
@@ -754,11 +773,13 @@ svMkSymVar :: Maybe Quantifier -> Kind -> Maybe String -> Symbolic SVal
 svMkSymVar mbQ k mbNm = do
         st <- ask
         let q = case (mbQ, runMode st) of
-                  (Just x,  _)                -> x   -- user given, just take it
-                  (Nothing, Concrete{})       -> ALL -- concrete simulation, pick universal
-                  (Nothing, Proof (True,  _)) -> EX  -- sat mode, pick existential
-                  (Nothing, Proof (False, _)) -> ALL -- proof mode, pick universal
-                  (Nothing, CodeGen)          -> ALL -- code generation, pick universal
+                  (Just x,  _)                      -> x   -- user given, just take it
+                  (Nothing, Concrete{})             -> ALL -- concrete simulation, pick universal
+                  (Nothing, Proof       (True,  _)) -> EX  -- sat mode, pick existential
+                  (Nothing, Proof       (False, _)) -> ALL -- proof mode, pick universal
+                  (Nothing, Interactive (True,  _)) -> EX  -- interactive sat mode, pick existential
+                  (Nothing, Interactive (False, _)) -> ALL -- interactive proof mode, pick universal
+                  (Nothing, CodeGen)                -> ALL -- code generation, pick universal
         case runMode st of
           Concrete _ | q == EX -> case mbNm of
                                     Nothing -> error $ "Cannot quick-check in the presence of existential variables, type: " ++ show k
@@ -778,11 +799,13 @@ mkSValUserSort k mbQ mbNm = do
         let (KUserSort sortName _) = k
         liftIO $ registerKind st k
         let q = case (mbQ, runMode st) of
-                  (Just x,  _)                -> x
-                  (Nothing, Proof (True,  _)) -> EX
-                  (Nothing, Proof (False, _)) -> ALL
-                  (Nothing, CodeGen)          -> error $ "SBV: Uninterpreted sort " ++ sortName ++ " can not be used in code-generation mode."
-                  (Nothing, Concrete{})       -> error $ "SBV: Uninterpreted sort " ++ sortName ++ " can not be used in concrete simulation mode."
+                  (Just x,  _)                      -> x
+                  (Nothing, Proof       (True,  _)) -> EX
+                  (Nothing, Proof       (False, _)) -> ALL
+                  (Nothing, Interactive (True,  _)) -> EX
+                  (Nothing, Interactive (False, _)) -> ALL
+                  (Nothing, CodeGen)                -> error $ "SBV: Uninterpreted sort " ++ sortName ++ " can not be used in code-generation mode."
+                  (Nothing, Concrete{})             -> error $ "SBV: Uninterpreted sort " ++ sortName ++ " can not be used in concrete simulation mode."
         ctr <- liftIO $ incCtr st
         let sw = SW k (NodeId ctr)
             nm = fromMaybe ('s':show ctr) mbNm
@@ -810,6 +833,10 @@ addAxiom nm ax = do
 -- argument indicates if this is a sat instance or not.
 runSymbolic :: (Bool, SMTConfig) -> Symbolic a -> IO Result
 runSymbolic m c = snd `fmap` runSymbolic' (Proof m) c
+
+-- | Run a symbolic computation in the Proof mode, but also return the final state
+runSymbolicWithState :: (Bool, SMTConfig) -> Symbolic a -> IO (State, Result)
+runSymbolicWithState m c = runSymbolic' (Proof m) (c >> ask)
 
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
 runSymbolic' :: SBVRunMode -> Symbolic a -> IO (a, Result)
@@ -1318,6 +1345,7 @@ data SMTScript = SMTScript {
 
 -- | An SMT engine
 type SMTEngine = SMTConfig                     -- ^ current configuration
+               -> QueryContext                 -- ^ the context in which queries will be run (if any)
                -> Bool                         -- ^ is sat?
                -> Maybe (OptimizeStyle, Int)   -- ^ if optimizing, the style and #of objectives
                -> [(Quantifier, NamedSymVar)]  -- ^ quantified inputs

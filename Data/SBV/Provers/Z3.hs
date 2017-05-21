@@ -46,7 +46,7 @@ z3 = SMTSolver {
          , executable     = "z3"
          , options        = map (optionPrefix:) ["nw", "in", "smt2"]
 
-         , engine         = \cfg isSat mbOptInfo qinps skolemMap pgm -> do
+         , engine         = \cfg ctx isSat mbOptInfo qinps skolemMap pgm -> do
 
                                     execName <-                   getEnv "SBV_Z3"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
                                     execOpts <- (splitArgs `fmap` getEnv "SBV_Z3_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
@@ -74,7 +74,7 @@ z3 = SMTSolver {
                                          | nModels == 1 = replicate 1 . interpretSolverOutput               c em
                                          | True         =               interpretSolverOutputMulti  nModels c em
 
-                                    standardSolver cfg' script id (replicate nModels . ProofError cfg') (mkResult cfg' (extractMap isSat qinps))
+                                    standardSolver cfg' ctx script id (replicate nModels . ProofError cfg') (mkResult cfg' (extractMap isSat qinps))
 
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "Z3"

@@ -346,7 +346,7 @@ compileToSMTLib version isSat a = do
         let comments = ["Created on " ++ show t]
             cvt = case version of
                     SMTLib2 -> toSMTLib2
-        SMTProblem{smtLibPgm} <- simulate cvt defaultSMTCfg isSat comments a
+        (_, SMTProblem{smtLibPgm}) <- simulate cvt defaultSMTCfg isSat comments a
         let out = show (smtLibPgm defaultSMTCfg NoCase)
         return $ out ++ "\n(check-sat)\n"
 
@@ -392,10 +392,11 @@ getConverter SMTConfig{smtLibVersion} = case smtLibVersion of
 
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
-proveWith config a = do simRes@SMTProblem{tactics, objectives} <- simulate (getConverter config) config False [] a
+proveWith config a = do (ctx, simRes@SMTProblem{tactics, objectives}) <- simulate (getConverter config) config False [] a
                         objectiveCheck False objectives "prove"
                         let hasPar = any isParallelCaseAnywhere tactics
-                        bufferSanity hasPar $ applyTactics config (False, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver False "Checking Theoremhood.." [] mwrap simRes
+                        bufferSanity hasPar $ applyTactics config ctx (False, hasPar) (wrap, unwrap) [] tactics objectives
+                                            $ callSolver False "Checking Theoremhood.." [] mwrap simRes
   where wrap                 = ThmResult
         unwrap (ThmResult r) = r
 
@@ -404,10 +405,11 @@ proveWith config a = do simRes@SMTProblem{tactics, objectives} <- simulate (getC
 
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
-satWith config a = do simRes@SMTProblem{tactics, objectives} <- simulate (getConverter config) config True [] a
+satWith config a = do (ctx, simRes@SMTProblem{tactics, objectives}) <- simulate (getConverter config) config True [] a
                       objectiveCheck False objectives "sat"
                       let hasPar = any isParallelCaseAnywhere tactics
-                      bufferSanity hasPar $ applyTactics config (True, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver True "Checking Satisfiability.." [] mwrap simRes
+                      bufferSanity hasPar $ applyTactics config ctx (True, hasPar) (wrap, unwrap) [] tactics objectives
+                                          $ callSolver True "Checking Satisfiability.." [] mwrap simRes
   where wrap                 = SatResult
         unwrap (SatResult r) = r
 
@@ -418,7 +420,7 @@ satWith config a = do simRes@SMTProblem{tactics, objectives} <- simulate (getCon
 optimizeWith :: Provable a => SMTConfig -> a -> IO OptimizeResult
 optimizeWith config a = do
         msg "Optimizing.."
-        sbvPgm@SMTProblem{objectives, tactics} <- simulate (getConverter config) config True [] a
+        (ctx, sbvPgm@SMTProblem{objectives, tactics}) <- simulate (getConverter config) config True [] a
 
         objectiveCheck True objectives "optimize"
 
@@ -434,24 +436,26 @@ optimizeWith config a = do
                Independent   -> optIndependent
                Pareto        -> optPareto
 
-        optimizer hasPar config sbvPgm
+        optimizer hasPar config ctx sbvPgm
 
   where msg = when (verbose config) . putStrLn . ("** " ++)
 
 -- | Construct a lexicographic optimization result
-optLexicographic :: Bool -> SMTConfig -> SMTProblem -> IO OptimizeResult
-optLexicographic hasPar config sbvPgm@SMTProblem{objectives, tactics} = do
-        result <- bufferSanity hasPar $ applyTactics config (True, hasPar) (id, id) [] tactics objectives $ callSolver True "Lexicographically optimizing.." [] mwrap sbvPgm
+optLexicographic :: Bool -> SMTConfig -> QueryContext -> SMTProblem -> IO OptimizeResult
+optLexicographic hasPar config ctx sbvPgm@SMTProblem{objectives, tactics} = do
+        result <- bufferSanity hasPar $ applyTactics config ctx (True, hasPar) (id, id) [] tactics objectives
+                                      $ callSolver True "Lexicographically optimizing.." [] mwrap sbvPgm
         return $ LexicographicResult result
 
   where mwrap [r] = r
         mwrap xs  = error $ "SBV.optLexicographic: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
 
 -- | Construct an independent optimization result
-optIndependent :: Bool -> SMTConfig -> SMTProblem -> IO OptimizeResult
-optIndependent hasPar config sbvPgm@SMTProblem{objectives, tactics} = do
+optIndependent :: Bool -> SMTConfig -> QueryContext -> SMTProblem -> IO OptimizeResult
+optIndependent hasPar config ctx sbvPgm@SMTProblem{objectives, tactics} = do
         let ns = map objectiveName objectives
-        result <- bufferSanity hasPar $ applyTactics config (True, hasPar) (wrap ns, unwrap) [] tactics objectives $ callSolver True "Independently optimizing.." [] mwrap sbvPgm
+        result <- bufferSanity hasPar $ applyTactics config ctx (True, hasPar) (wrap ns, unwrap) [] tactics objectives
+                                      $ callSolver True "Independently optimizing.." [] mwrap sbvPgm
         return $ IndependentResult result
 
   where wrap :: [String] -> SMTResult -> [(String, SMTResult)]
@@ -471,9 +475,10 @@ optIndependent hasPar config sbvPgm@SMTProblem{objectives, tactics} = do
                lobs = length objectives
 
 -- | Construct a pareto-front optimization result
-optPareto :: Bool -> SMTConfig -> SMTProblem -> IO OptimizeResult
-optPareto hasPar config sbvPgm@SMTProblem{objectives, tactics} = do
-        result <- bufferSanity hasPar $ applyTactics config (True, hasPar) (wrap, unwrap) [] tactics objectives $ callSolver True "Pareto optimizing.." [] id sbvPgm
+optPareto :: Bool -> SMTConfig -> QueryContext -> SMTProblem -> IO OptimizeResult
+optPareto hasPar config ctx sbvPgm@SMTProblem{objectives, tactics} = do
+        result <- bufferSanity hasPar $ applyTactics config ctx (True, hasPar) (wrap, unwrap) [] tactics objectives
+                                      $ callSolver True "Pareto optimizing.." [] id sbvPgm
         return $ ParetoResult result
 
   where wrap :: SMTResult -> [SMTResult]
@@ -487,15 +492,16 @@ optPareto hasPar config sbvPgm@SMTProblem{objectives, tactics} = do
                      []    -> error "SBV.optPareto: Impossible happened: Received no results!"
 
 -- | Apply the given tactics to a problem
-applyTactics :: SMTConfig                                                       -- ^ Solver configuration
-             -> (Bool, Bool)                                                    -- ^ Are we a sat-problem? Do we have anything parallel going on? (Parallel-case split.)
-             -> (SMTResult -> res, res -> SMTResult)                            -- ^ Wrapper/unwrapper pair from result to SMT answer
-             -> [(String, (String, SW))]                                        -- ^ Level at which we are called. (In case of a nested case-split)
-             -> [Tactic SW]                                                     -- ^ Tactics active at this level
-             -> [Objective (SW, SW)]                                            -- ^ Optimization goals we have
-             -> (SMTConfig -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO res) -- ^ The actual continuation at this point
+applyTactics :: SMTConfig                                                                       -- ^ Solver configuration
+             -> QueryContext                                                                    -- ^ Context for user queries
+             -> (Bool, Bool)                                                                    -- ^ Are we a sat-problem? Do we have anything parallel going on? (Parallel-case split.)
+             -> (SMTResult -> res, res -> SMTResult)                                            -- ^ Wrapper/unwrapper pair from result to SMT answer
+             -> [(String, (String, SW))]                                                        -- ^ Level at which we are called. (In case of a nested case-split)
+             -> [Tactic SW]                                                                     -- ^ Tactics active at this level
+             -> [Objective (SW, SW)]                                                            -- ^ Optimization goals we have
+             -> (SMTConfig -> QueryContext -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO res) -- ^ The actual continuation at this point
              -> IO res
-applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
+applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
    = do --
         -- TODO: The management of tactics here is quite adhoc. We should have a better story
         -- Currently, we:
@@ -517,19 +523,19 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
 
         if hasObjectives
 
-           then cont (finalOptConfig objectives) mbOptInfo (Opt objectives)
+           then cont (finalOptConfig objectives) ctx mbOptInfo (Opt objectives)
 
            else do -- Check vacuity if asked. If result is Nothing, it means we're good to go.
                    mbRes <- if not shouldCheckConstrVacuity
                             then return Nothing
-                            else constraintVacuityCheck isSat finalConfig mbOptInfo (wrap, unwrap) cont
+                            else constraintVacuityCheck isSat finalConfig ctx mbOptInfo (wrap, unwrap) cont
 
                    -- Do case split, if vacuity said continue
                    case mbRes of
                      Just r  -> return r
                      Nothing -> if null caseSplits
-                                then cont finalConfig mbOptInfo (CasePath (map (snd . snd) levels))
-                                else caseSplit finalConfig mbOptInfo shouldCheckCaseVacuity (parallelCase, hasPar) isSat (wrap, unwrap) levels chatty cases cont
+                                then cont finalConfig ctx mbOptInfo (CasePath (map (snd . snd) levels))
+                                else caseSplit finalConfig ctx mbOptInfo shouldCheckCaseVacuity (parallelCase, hasPar) isSat (wrap, unwrap) levels chatty cases cont
 
   where (caseSplits, checkCaseVacuity, parallelCases, checkConstrVacuity, timeOuts, checkUsing, useLogics, useSolvers, optimizePriorities, queryUsings)
                 = foldr (flip classifyTactics) ([], [], [], [], [], [], [], [], [], []) tactics
@@ -624,15 +630,16 @@ applyTactics cfgIn (isSat, hasPar) (wrap, unwrap) levels tactics objectives cont
 -- NB. We'll do a SAT call even if there are *no* constraints! This is OK, as the call will be cheap; and this is an opt-in call. (i.e.,
 -- the user asked us to do it explicitly.)
 constraintVacuityCheck :: forall res.
-                          Bool                                                            -- ^ isSAT?
-                       -> SMTConfig                                                       -- ^ config
-                       -> Maybe (OptimizeStyle, Int)                                      -- ^ optimization info
-                       -> (SMTResult -> res, res -> SMTResult)                            -- ^ wrappers back and forth from final result
-                       -> (SMTConfig -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO res) -- ^ continuation
-                       -> IO (Maybe res)                                                  -- ^ result, wrapped in Maybe if vacuity fails
-constraintVacuityCheck True  _      _ _              _ = return Nothing -- for a SAT check, vacuity is meaningless (what would be the point)?
-constraintVacuityCheck False config d (wrap, unwrap) f = do
-               res <- f config d CstrVac
+                          Bool                                                                            -- ^ isSAT?
+                       -> SMTConfig                                                                       -- ^ config
+                       -> QueryContext                                                                    -- ^ query context
+                       -> Maybe (OptimizeStyle, Int)                                                      -- ^ optimization info
+                       -> (SMTResult -> res, res -> SMTResult)                                            -- ^ wrappers back and forth from final result
+                       -> (SMTConfig -> QueryContext -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO res) -- ^ continuation
+                       -> IO (Maybe res)                                                                  -- ^ result, wrapped in Maybe if vacuity fails
+constraintVacuityCheck True  _      _   _ _              _ = return Nothing -- for a SAT check, vacuity is meaningless (what would be the point)?
+constraintVacuityCheck False config ctx d (wrap, unwrap) f = do
+               res <- f config ctx d CstrVac
                case unwrap res of
                  Satisfiable{} -> return Nothing
                  _             -> return $ Just $ wrap vacuityFailResult
@@ -642,18 +649,19 @@ constraintVacuityCheck False config d (wrap, unwrap) f = do
 
 -- | Implements the case-split tactic. Works for both Sat and Proof, hence the quantification on @res@
 caseSplit :: forall res.
-             SMTConfig                                                       -- ^ Solver config
-          -> Maybe (OptimizeStyle, Int)                                      -- ^ Are we optimizing?
-          -> Bool                                                            -- ^ Should we check vacuity of cases?
-          -> (Bool, Bool)                                                    -- ^ Should we run the cases in parallel? Second bool: Is anything parallel going on?
-          -> Bool                                                            -- ^ True if we're sat solving
-          -> (SMTResult -> res, res -> SMTResult)                            -- ^ wrapper, unwrapper from sat/proof to the actual result
-          -> [(String, (String, SW))]                                        -- ^ Path condition as we reached here. (In a nested case split, First #, then actual name.)
-          -> Bool                                                            -- ^ Should we be chatty on the case-splits?
-          -> [(String, SW, [Tactic SW])]                                     -- ^ List of cases. Case name, condition, plus further tactics for nested case-splitting etc.
-          -> (SMTConfig -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO res) -- ^ The "solver" once we provide it with a problem and a case
+             SMTConfig                                                                       -- ^ Solver config
+          -> QueryContext                                                                    -- ^ Context for queries
+          -> Maybe (OptimizeStyle, Int)                                                      -- ^ Are we optimizing?
+          -> Bool                                                                            -- ^ Should we check vacuity of cases?
+          -> (Bool, Bool)                                                                    -- ^ Should we run the cases in parallel? Second bool: Is anything parallel going on?
+          -> Bool                                                                            -- ^ True if we're sat solving
+          -> (SMTResult -> res, res -> SMTResult)                                            -- ^ wrapper, unwrapper from sat/proof to the actual result
+          -> [(String, (String, SW))]                                                        -- ^ Path condition as we reached here. (In a nested case split, First #, then actual name.)
+          -> Bool                                                                            -- ^ Should we be chatty on the case-splits?
+          -> [(String, SW, [Tactic SW])]                                                     -- ^ List of cases. Case name, condition, plus further tactics for nested case-splitting etc.
+          -> (SMTConfig -> QueryContext -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO res) -- ^ The "solver" once we provide it with a problem and a case
           -> IO res
-caseSplit config mbOptInfo checkVacuity (runParallel, hasPar) isSAT (wrap, unwrap) level chatty cases cont
+caseSplit config ctx mbOptInfo checkVacuity (runParallel, hasPar) isSAT (wrap, unwrap) level chatty cases cont
      | runParallel = goParallel tasks
      | True        = goSerial   tasks
 
@@ -722,7 +730,7 @@ caseSplit config mbOptInfo checkVacuity (runParallel, hasPar) isSAT (wrap, unwra
            -- At the end, we do a coverage call
            = do let multi = runParallel
                 startCase multi Nothing
-                res <- cont config mbOptInfo (CaseCov (map (snd . snd) level) [c | (_, c, _) <- cases])
+                res <- cont config ctx mbOptInfo (CaseCov (map (snd . snd) level) [c | (_, c, _) <- cases])
                 decideSerial multi Nothing (unwrap res) (return res)
         goSerial ((i, (nm, cond, ts)):cs)
            -- Still going down, do a regular call
@@ -732,13 +740,13 @@ caseSplit config mbOptInfo checkVacuity (runParallel, hasPar) isSAT (wrap, unwra
                 continue <- if isSAT   -- for a SAT check, vacuity is meaningless (what would be the point)?
                             then return True
                             else if checkVacuity
-                                 then do res <- cont config mbOptInfo (CaseVac (map (snd . snd) level) cond)
+                                 then do res <- cont config ctx mbOptInfo (CaseVac (map (snd . snd) level) cond)
                                          case unwrap res of
                                            Satisfiable{} -> vacuityMsg (Just True)  multi (i, nm) >> return True
                                            _             -> vacuityMsg (Just False) multi (i, nm) >> return False
                                  else vacuityMsg Nothing  multi (i, nm) >> return True
                 if continue
-                   then do res <- applyTactics config (isSAT, hasPar) (wrap, unwrap) (level ++ [(i, (nm, cond))]) ts [] cont
+                   then do res <- applyTactics config ctx (isSAT, hasPar) (wrap, unwrap) (level ++ [(i, (nm, cond))]) ts [] cont
                            decideSerial multi mbis (unwrap res) (goSerial cs)
                    else return $ wrap $ vacuityFailResult (i, nm)
 
@@ -794,18 +802,18 @@ caseSplit config mbOptInfo checkVacuity (runParallel, hasPar) isSAT (wrap, unwra
                   let caseProof = do continue <- if isSAT   -- for a SAT check, vacuity is meaningless (what would be the point)?
                                                  then return True
                                                  else if checkVacuity
-                                                      then do res <- cont config mbOptInfo (CaseVac (map (snd . snd) level) cond)
+                                                      then do res <- cont config ctx mbOptInfo (CaseVac (map (snd . snd) level) cond)
                                                               case unwrap res of
                                                                 Satisfiable{} -> return True
                                                                 _             -> return False
                                                       else return True
                                      if continue
-                                        then unwrap `fmap` applyTactics config (isSAT, hasPar) (wrap, unwrap) (level ++ [(i, (nm, cond))]) ts [] cont
+                                        then unwrap `fmap` applyTactics config ctx (isSAT, hasPar) (wrap, unwrap) (level ++ [(i, (nm, cond))]) ts [] cont
                                         else return $ vacuityFailResult (i, nm)
                   in (mkCaseNameBase nm i, caseProof)
 
              -- Create the coverage claim
-             let cov = unwrap `fmap` cont config mbOptInfo (CaseCov (map (snd . snd) level) [c | (_, c, _) <- cases])
+             let cov = unwrap `fmap` cont config ctx mbOptInfo (CaseCov (map (snd . snd) level) [c | (_, c, _) <- cases])
 
              (decidingTag, res) <- decideParallel $ map mkTask cs ++ [(mkCovNameBase, cov)]
 
@@ -862,13 +870,14 @@ caseSplit config mbOptInfo checkVacuity (runParallel, hasPar) isSAT (wrap, unwra
 -- | Check if any of the assertions can be violated
 safeWith :: SExecutable a => SMTConfig -> a -> IO [SafeResult]
 safeWith cfg a = do
-        res@Result{resAssertions=asserts} <- runSymbolic (True, cfg) $ sName_ a >>= output
-        mapM (verify res) asserts
+        (st, res@Result{resAssertions=asserts}) <- runSymbolicWithState (True, cfg) $ sName_ a >>= output
+        mapM (verify st res) asserts
   where locInfo (Just ps) = Just $ let loc (f, sl) = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
                                    in intercalate ",\n " (map loc ps)
-        locInfo _         = Nothing
-        verify res (msg, cs, cond) = do result <- runProofOn (getConverter cfg) cfg True [] pgm >>= \p -> callSolver True msg [] mwrap p cfg Nothing NoCase
-                                        return $ SafeResult (locInfo (getCallStack `fmap` cs), msg, result)
+        locInfo _                     = Nothing
+        verify st res (msg, cs, cond) = do (ctx, problem) <- runProofOn (getConverter cfg) cfg True [] st pgm
+                                           result         <- callSolver True msg [] mwrap problem cfg ctx Nothing NoCase
+                                           return $ SafeResult (locInfo (getCallStack `fmap` cs), msg, result)
            where pgm = res { resInputs  = [(EX, n) | (_, n) <- resInputs res]   -- make everything existential
                            , resOutputs = [cond]
                            }
@@ -889,12 +898,13 @@ isSafe (SafeResult (_, _, result)) = case result of
 -- the 'CheckConstrVacuity' tactic.
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
 isVacuousWith config a = do
-        Result ki tr uic is cs ts as uis ax asgn cstr tactics goals asserts _out <- runSymbolic (True, config) $ forAll_ a >>= output
+        (st, Result ki tr uic is cs ts as uis ax asgn cstr tactics goals asserts _out) <- runSymbolicWithState (True, config) $ forAll_ a >>= output
         case cstr of
            [] -> return False -- no constraints, no need to check
            _  -> do let is'  = [(EX, i) | (_, i) <- is] -- map all quantifiers to "exists" for the constraint check
                         res' = Result ki tr uic is' cs ts as uis ax asgn cstr tactics goals asserts [trueSW]
-                    result <- runProofOn (getConverter config) config True [] res' >>= \p -> callSolver True "Checking Vacuity.." [] mwrap p config Nothing NoCase
+                    (ctx, problem) <- runProofOn (getConverter config) config True [] st res'
+                    result         <- callSolver True "Checking Vacuity.." [] mwrap problem config ctx Nothing NoCase
                     case result of
                       Unsatisfiable{} -> return True  -- constraints are unsatisfiable!
                       Satisfiable{}   -> return False -- constraints are satisfiable!
@@ -909,22 +919,22 @@ isVacuousWith config a = do
 allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
 allSatWith config p = do
         msg "Checking Satisfiability, all solutions.."
-        sbvPgm@SMTProblem{smtInputs=qinps, kindsUsed=ki} <- simulate (getConverter config) config True [] p
+        (ctx, sbvPgm@SMTProblem{smtInputs=qinps, kindsUsed=ki}) <- simulate (getConverter config) config True [] p
         let usorts = [s | us@(KUserSort s _) <- Set.toList ki, isFree us]
                 where isFree (KUserSort _ (Left _)) = True
                       isFree _                      = False
         unless (null usorts) $ msg $  "SBV.allSat: Uninterpreted sorts present: " ++ unwords usorts
                                    ++ "\n               SBV will use equivalence classes to generate all-satisfying instances."
-        results <- unsafeInterleaveIO $ go sbvPgm (1::Int) []
+        results <- unsafeInterleaveIO $ go ctx sbvPgm (1::Int) []
         -- See if there are any existentials below any universals
         -- If such is the case, then the solutions are unique upto prefix existentials
         let w = ALL `elem` map fst qinps
         return $ AllSatResult (w,  results)
   where msg = when (verbose config) . putStrLn . ("** " ++)
-        go sbvPgm = loop
+        go ctx sbvPgm = loop
           where hasPar = any isParallelCaseAnywhere (tactics sbvPgm)
                 loop !n nonEqConsts = do
-                  curResult <- invoke nonEqConsts hasPar n sbvPgm
+                  curResult <- invoke nonEqConsts hasPar n ctx sbvPgm
                   case curResult of
                     Nothing            -> return []
                     Just (SatResult r) -> let cont model = do let modelOnlyAssocs = [v | v@(x, _) <- modelAssocs model, not (isNonModelVar config x)]
@@ -949,7 +959,7 @@ allSatWith config p = do
                                                ProofError{} -> return [r]
                                                TimeOut{}    -> return [r]
 
-        invoke nonEqConsts hasPar n simRes@SMTProblem{smtInputs, tactics, objectives} = do
+        invoke nonEqConsts hasPar n ctx simRes@SMTProblem{smtInputs, tactics, objectives} = do
                objectiveCheck False objectives "allSat"
                msg $ "Looking for solution " ++ show n
                case addNonEqConstraints (smtLibVersion config) (roundingMode config) smtInputs nonEqConsts of
@@ -963,39 +973,39 @@ allSatWith config p = do
                         mwrap  [r]           = wrap r
                         mwrap xs             = error $ "SBV.allSatWith: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
 
-                    res <- bufferSanity hasPar $ applyTactics (updateName (n-1) config) (True, hasPar) (wrap, unwrap) [] tactics objectives
+                    res <- bufferSanity hasPar $ applyTactics (updateName (n-1) config) ctx (True, hasPar) (wrap, unwrap) [] tactics objectives
                                                $ callSolver True "Checking Satisfiability.." refutedModels mwrap simRes
                     return $ Just res
 
         updateName i cfg = cfg{smtFile = upd `fmap` smtFile cfg}
                where upd nm = let (b, e) = splitExtension nm in b ++ "_allSat_" ++ show i ++ e
 
-callSolver :: Bool -> String -> [String] -> ([SMTResult] -> b) -> SMTProblem -> SMTConfig -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO b
-callSolver isSat checkMsg refutedModels wrap SMTProblem{smtInputs, smtSkolemMap, smtLibPgm} config mbOptInfo caseCond = do
+callSolver :: Bool -> String -> [String] -> ([SMTResult] -> b) -> SMTProblem -> SMTConfig -> QueryContext -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO b
+callSolver isSat checkMsg refutedModels wrap SMTProblem{smtInputs, smtSkolemMap, smtLibPgm} config ctx mbOptInfo caseCond = do
        let msg = when (verbose config) . putStrLn . ("** " ++)
            finalPgm = intercalate "\n" (pgm ++ refutedModels) where SMTLibPgm _ pgm = smtLibPgm config caseCond
 
        msg checkMsg
        msg $ "Generated SMTLib program:\n" ++ (finalPgm ++ intercalate "\n" ("" : optimizeArgs config ++ [satCmd config]))
 
-       smtAnswer <- engine (solver config) config isSat mbOptInfo smtInputs smtSkolemMap finalPgm
+       smtAnswer <- engine (solver config) config ctx isSat mbOptInfo smtInputs smtSkolemMap finalPgm
 
        msg "Done.."
 
        return $ wrap smtAnswer
 
-simulate :: Provable a => SMTLibConverter -> SMTConfig -> Bool -> [String] -> a -> IO SMTProblem
+simulate :: Provable a => SMTLibConverter -> SMTConfig -> Bool -> [String] -> a -> IO (QueryContext, SMTProblem)
 simulate converter config isSat comments predicate = do
         let msg = when (verbose config) . putStrLn . ("** " ++)
             isTiming = timing config
         msg "Starting symbolic simulation.."
-        res <- timeIf isTiming ProblemConstruction $ runSymbolic (isSat, config) $ (if isSat then forSome_ else forAll_) predicate >>= output
+        (st, res) <- timeIf isTiming ProblemConstruction $ runSymbolicWithState (isSat, config) $ (if isSat then forSome_ else forAll_) predicate >>= output
         msg $ "Generated symbolic trace:\n" ++ show res
         msg "Translating to SMT-Lib.."
-        runProofOn converter config isSat comments res
+        runProofOn converter config isSat comments st res
 
-runProofOn :: SMTLibConverter -> SMTConfig -> Bool -> [String] -> Result -> IO SMTProblem
-runProofOn converter config isSat comments res =
+runProofOn :: SMTLibConverter -> SMTConfig -> Bool -> [String] -> State -> Result -> IO (QueryContext, SMTProblem)
+runProofOn converter config isSat comments st res =
         let isTiming = timing config
         in case res of
              Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs tacs goals assertions [o@(SW KBool _)] ->
@@ -1009,8 +1019,8 @@ runProofOn converter config isSat comments res =
                                          go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
                                          go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
                       smtScript = converter ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o
-                      result = SMTProblem {smtInputs=is, smtSkolemMap=skolemMap, kindsUsed=ki, smtAsserts=assertions, tactics=tacs, objectives=goals, smtLibPgm=smtScript}
-                  in rnf smtScript `seq` return result
+                      problem   = SMTProblem {smtInputs=is, smtSkolemMap=skolemMap, kindsUsed=ki, smtAsserts=assertions, tactics=tacs, objectives=goals, smtLibPgm=smtScript}
+                  in rnf smtScript `seq` return ((st, res), problem)
              Result{resOutputs = os} -> case length os of
                            0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
                            1  -> error $ "Impossible happened, non-boolean output in " ++ show os
@@ -1034,5 +1044,6 @@ internalSATCheck cfg condInPath st msg = do
        mwrap [r] = SatResult r
        mwrap xs  = error $ "SBV.internalSATCheck: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
 
-   runProofOn (getConverter cfg) cfg True [] pgm >>= \p -> callSolver True msg [] mwrap p cfg Nothing NoCase
+   (ctx, problem) <- runProofOn (getConverter cfg) cfg True [] st pgm
+   callSolver True msg [] mwrap problem cfg ctx Nothing NoCase
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

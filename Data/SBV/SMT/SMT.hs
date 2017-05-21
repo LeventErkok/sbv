@@ -54,7 +54,7 @@ import qualified Data.Map as M
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (SMTEngine, runQuery)
+import Data.SBV.Core.Symbolic (SMTEngine, QueryContext, runQuery)
 
 import Data.SBV.SMT.SMTLib    (interpretSolverOutput, interpretSolverModelLine, interpretSolverObjectiveLine)
 
@@ -488,15 +488,15 @@ shCW = sh . printBase
         sh n  = \w -> show w ++ " -- Ignoring unsupported printBase " ++ show n ++ ", use 2, 10, or 16."
 
 -- | Helper function to spin off to an SMT solver.
-pipeProcess :: SMTConfig -> String -> [String] -> SMTScript -> (String -> String) -> ([String] -> [SMTResult]) -> ([String] -> [SMTResult]) -> IO [SMTResult]
-pipeProcess cfg execName opts script cleanErrs failure success = do
+pipeProcess :: SMTConfig -> QueryContext -> String -> [String] -> SMTScript -> (String -> String) -> ([String] -> [SMTResult]) -> ([String] -> [SMTResult]) -> IO [SMTResult]
+pipeProcess cfg ctx execName opts script cleanErrs failure success = do
     mbExecPath <- findExecutable execName
     case mbExecPath of
       Nothing      -> return $ failure [ "Unable to locate executable for " ++ show (name (solver cfg))
                                        , "Executable specified: " ++ show execName
                                        ]
 
-      Just execPath -> runSolver cfg execPath opts script cleanErrs failure success
+      Just execPath -> runSolver cfg ctx execPath opts script cleanErrs failure success
                        `C.catch`
                        (\(e::C.SomeException) -> return $ failure [ "Failed to start the external solver: " ++ show e
                                                                   , "Make sure you can start " ++ show execPath
@@ -533,7 +533,7 @@ standardEngine :: String
                -> ([String] -> Int -> [String])
                -> (Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel, SW -> String -> [String])
                -> SMTEngine
-standardEngine envName envOptName modConfig addTimeOut (extractMap, extractValue) cfgIn isSat mbOptInfo qinps skolemMap pgm = do
+standardEngine envName envOptName modConfig addTimeOut (extractMap, extractValue) cfgIn ctx isSat mbOptInfo qinps skolemMap pgm = do
 
     let cfg = modConfig cfgIn
 
@@ -560,12 +560,12 @@ standardEngine envName envOptName modConfig addTimeOut (extractMap, extractValue
         -- standard engines only return one result ever
         wrap x = [x]
 
-    standardSolver cfg' script id (wrap . ProofError cfg') (wrap . interpretSolverOutput cfg' (extractMap isSat qinps))
+    standardSolver cfg' ctx script id (wrap . ProofError cfg') (wrap . interpretSolverOutput cfg' (extractMap isSat qinps))
 
 -- | A standard solver interface. If the solver is SMT-Lib compliant, then this function should suffice in
 -- communicating with it.
-standardSolver :: SMTConfig -> SMTScript -> (String -> String) -> ([String] -> [SMTResult]) -> ([String] -> [SMTResult]) -> IO [SMTResult]
-standardSolver config script cleanErrs failure success = do
+standardSolver :: SMTConfig -> QueryContext -> SMTScript -> (String -> String) -> ([String] -> [SMTResult]) -> ([String] -> [SMTResult]) -> IO [SMTResult]
+standardSolver config ctx script cleanErrs failure success = do
     let msg      = when (verbose config) . putStrLn . ("** " ++)
         smtSolver= solver config
         exec     = executable smtSolver
@@ -575,12 +575,12 @@ standardSolver config script cleanErrs failure success = do
       Nothing -> return ()
       Just f  -> do msg $ "Saving the generated script in file: " ++ show f
                     writeFile f (scriptBody script ++ intercalate "\n" ("" : optimizeArgs config ++ [satCmd config]))
-    rnf script `seq` pipeProcess config exec opts script cleanErrs failure success
+    rnf script `seq` pipeProcess config ctx exec opts script cleanErrs failure success
 
 -- | A variant of 'readProcessWithExitCode'; except it knows about continuation strings
 -- and can speak SMT-Lib2 (just a little).
-runSolver :: SMTConfig -> FilePath -> [String] -> SMTScript -> (String -> String) -> ([String] -> [SMTResult]) -> ([String] -> [SMTResult]) -> IO [SMTResult]
-runSolver cfg execPath opts script cleanErrs failure success
+runSolver :: SMTConfig -> QueryContext -> FilePath -> [String] -> SMTScript -> (String -> String) -> ([String] -> [SMTResult]) -> ([String] -> [SMTResult]) -> IO [SMTResult]
+runSolver cfg ctx execPath opts script cleanErrs failure success
  = do let nm  = show (name (solver cfg))
           msg = when (verbose cfg) . putStrLn . ("** " ++)
 
@@ -670,6 +670,7 @@ runSolver cfg execPath opts script cleanErrs failure success
                                                    return $ runQuery q QueryState { querySend    = send
                                                                                   , queryAsk     = ask
                                                                                   , queryConfig  = cfg
+                                                                                  , queryContext = ctx
                                                                                   , queryDefault = sbvContinuation
                                                                                   }
 
