@@ -1020,7 +1020,7 @@ runProofOn converter config isSat comments st res =
                                          go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
                       smtScript = converter ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o
                       problem   = SMTProblem {smtInputs=is, smtSkolemMap=skolemMap, kindsUsed=ki, smtAsserts=assertions, tactics=tacs, objectives=goals, smtLibPgm=smtScript}
-                  in rnf smtScript `seq` return ((st, res), problem)
+                  in rnf smtScript `seq` return (st, problem)
              Result{resOutputs = os} -> case length os of
                            0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
                            1  -> error $ "Impossible happened, non-boolean output in " ++ show os

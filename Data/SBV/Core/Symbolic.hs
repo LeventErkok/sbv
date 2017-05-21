@@ -322,8 +322,8 @@ objectiveName (Minimize   s _)   = s
 objectiveName (Maximize   s _)   = s
 objectiveName (AssertSoft s _ _) = s
 
--- | The context of a query is the state/result pair at any given time
-type QueryContext = (State, Result)
+-- | The context of a query is the state of the symbolic simulation run
+type QueryContext = State
 
 -- | The state we keep track of as we interact with the solver
 data QueryState = QueryState { querySend     :: String -> IO ()
@@ -344,7 +344,7 @@ instance Show (Query a) where
 -- | Execute a query
 runQuery :: Query a -> QueryState -> IO a
 runQuery (Query f) qs@QueryState{queryContext} = evalStateT f qs{queryContext = interactive queryContext}
-   where interactive (st, res) = (st{runMode = newMode (runMode st)}, res)
+   where interactive st = st{runMode = newMode (runMode st)}
 
          -- If in proof mode, switch to interactive, otherwise stay put
          newMode  (Proof bcfg)   = Interactive bcfg

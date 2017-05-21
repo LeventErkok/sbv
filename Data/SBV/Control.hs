@@ -100,8 +100,8 @@ render st (SBV (SVal _ (Right f))) = renderSW <$> uncache f st
 
 -- | Assert a new "fact"
 assert :: SBool -> Query ()
-assert s = do (st, _) <- getContext
-              ls      <- io $ render st s
+assert s = do st <- getContext
+              ls <- io $ render st s
 
               let sendAll []     = return ()
                   sendAll [x]    = send $ "(assert " ++ x ++ ")" 
