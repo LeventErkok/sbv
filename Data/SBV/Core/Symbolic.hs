@@ -61,7 +61,7 @@ import Control.Monad.Reader     (MonadReader, ReaderT, ask, runReaderT)
 import Control.Monad.State.Lazy (MonadState, StateT(..), evalStateT)
 import Control.Monad.Trans      (MonadIO, liftIO)
 import Data.Char                (isAlpha, isAlphaNum, toLower)
-import Data.IORef               (IORef, newIORef, readIORef, modifyIORef)
+import Data.IORef               (IORef, newIORef, readIORef)
 import Data.List                (intercalate, sortBy)
 import Data.Maybe               (isJust, fromJust, fromMaybe)
 
@@ -625,6 +625,12 @@ instance Eq SVal where
   SVal _ (Left a) /= SVal _ (Left b) = a /= b
   a /= b = error $ "Comparing symbolic bit-vectors; Use (./=) instead. Received: " ++ show (a, b)
 
+-- | Things we do not support in interactive mode, at least for now!
+noInteractive :: [String] -> IO ()
+noInteractive ss = error $ unlines $  "*** Data.SBV: Unsupported interactive/query mode feature."
+                                   :  map ("***  " ++) ss
+                                   ++ ["*** Data.SBV: Please report this as a feature request!"]
+
 -- | Modification of the state, but carefully handling the interactive tasks
 modifyState :: State -> (State -> IORef a) -> (a -> a) -> IO () -> IO ()
 modifyState st@State{runMode} field update interactiveUpdate = do
@@ -657,14 +663,21 @@ newUninterpreted st nm t mbCode
           Just t' -> when (t /= t') $ error $  "Uninterpreted constant " ++ show nm ++ " used at incompatible types\n"
                                             ++ "      Current type      : " ++ show t ++ "\n"
                                             ++ "      Previously used at: " ++ show t'
-          Nothing -> do modifyIORef (rUIMap st) (Map.insert nm t)
-                        when (isJust mbCode) $ modifyIORef (rCgMap st) (Map.insert nm (fromJust mbCode))
+          Nothing -> do modifyState st rUIMap (Map.insert nm t) $ noInteractive [ "Uninterpreted function introduction:"
+                                                                                , "  Named:  " ++ nm
+                                                                                , "  Type :  " ++ show t
+                                                                                ]
+                        when (isJust mbCode) $ modifyState st rCgMap (Map.insert nm (fromJust mbCode)) (return ())
   where validChar x = isAlphaNum x || x `elem` "_"
         enclosed    = head nm == '|' && last nm == '|' && length nm > 2 && not (any (`elem` "|\\") (tail (init nm)))
 
 -- | Add a new sAssert based constraint
 addAssertion :: State -> Maybe CallStack -> String -> SW -> IO ()
-addAssertion st cs msg cond = modifyIORef (rAsserts st) ((msg, cs, cond):)
+addAssertion st cs msg cond = modifyState st rAsserts ((msg, cs, cond):)
+                                        $ noInteractive [ "Named assertions (sAssert):"
+                                                        , "  Tag: " ++ msg
+                                                        , "  Loc: " ++ maybe "Unknown" show cs
+                                                        ]
 
 -- | Create an internal variable, which acts as an input but isn't visible to the user.
 -- Such variables are existentially quantified in a SAT context, and universally quantified
@@ -672,9 +685,16 @@ addAssertion st cs msg cond = modifyIORef (rAsserts st) ((msg, cs, cond):)
 internalVariable :: State -> Kind -> IO SW
 internalVariable st k = do (sw, nm) <- newSW st k
                            let q = case runMode st of
-                                     Proof (True,  _) -> EX
-                                     _                -> ALL
-                           modifyIORef (rinps st) ((q, (sw, "__internal_sbv_" ++ nm)):)
+                                     Proof       (True,  _) -> EX
+                                     Proof       (False, _) -> ALL
+                                     Interactive (True,  _) -> EX
+                                     Interactive (False, _) -> ALL
+                                     CodeGen                -> ALL
+                                     Concrete{}             -> ALL
+                           modifyState st rinps ((q, (sw, "__internal_sbv_" ++ nm)):)
+                                     $ noInteractive [ "Internal variable creation:"
+                                                     , "  Named: " ++ nm
+                                                     ]
                            return sw
 {-# INLINE internalVariable #-}
 
@@ -692,7 +712,12 @@ registerKind st k
   | KUserSort sortName _ <- k, map toLower sortName `elem` smtLibReservedNames
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | True
-  = modifyIORef (rUsedKinds st) (Set.insert k)
+  = do ks <- readIORef (rUsedKinds st)
+       -- explicitly check membership in case we use it in a query context
+       unless (k `Set.member` ks) $ modifyState st rUsedKinds (Set.insert k)
+                                              $ noInteractive [ "Registering a new kind:"
+                                                              , "  Kind: " ++ show k
+                                                              ]
 
 -- | Register a new label with the system, making sure they are unique and have no '|'s in them
 registerLabel :: State -> String -> IO ()
@@ -707,7 +732,10 @@ registerLabel st nm
   = do old <- readIORef $ rUsedLbls st
        if nm `Set.member` old
           then error $ "SBV: " ++ show nm ++ " is used as a label multiple times. Please do not use duplicate names!"
-          else modifyIORef (rUsedLbls st) (Set.insert nm)
+          else modifyState st rUsedLbls (Set.insert nm)
+                         $ noInteractive [ "Registering a label:"
+                                         , "  Label: " ++ nm
+                                         ]
 
 -- | Create a new constant; hash-cons as necessary
 -- NB. For each constant, we also store weather it's negative-0 or not,
@@ -722,7 +750,10 @@ newConst st c = do
     Just sw -> return sw
     Nothing -> do let k = kindOf c
                   (sw, _) <- newSW st k
-                  modifyIORef (rconstMap st) (Map.insert key sw)
+                  modifyState st rconstMap (Map.insert key sw)
+                            $ noInteractive [ "Creation of a new constant:"
+                                            , "   Value: " ++ show c
+                                            ]
                   return sw
   where isNeg0 (CWFloat  f) = isNegativeZero f
         isNeg0 (CWDouble d) = isNegativeZero d
@@ -737,7 +768,12 @@ getTableIndex st at rt elts = do
   case key `Map.lookup` tblMap of
     Just i -> return i
     _      -> do let i = Map.size tblMap
-                 modifyIORef (rtblMap st) (Map.insert key i)
+                 modifyState st rtblMap (Map.insert key i)
+                            $ noInteractive [ "Creation of a new table:"
+                                            , "   Index kind: " ++ show at
+                                            , "   Value kind: " ++ show rt
+                                            , "   Elements  : " ++ unwords (map show elts)
+                                            ]
                  return i
 
 -- | Create a new expression; hash-cons as necessary
@@ -748,8 +784,13 @@ newExpr st k app = do
    case e `Map.lookup` exprMap of
      Just sw -> return sw
      Nothing -> do (sw, _) <- newSW st k
-                   modifyIORef (spgm st)     (\(SBVPgm xs) -> SBVPgm (xs S.|> (sw, e)))
-                   modifyIORef (rexprMap st) (Map.insert e sw)
+                   modifyState st spgm (\(SBVPgm xs) -> SBVPgm (xs S.|> (sw, e)))
+                             $ noInteractive [ "Creation of a new symbolic expression:"
+                                             , "  Kind: " ++ show k
+                                             , "  Node: " ++ show sw
+                                             , "  Expr: " ++ show e
+                                             ]
+                   modifyState st rexprMap (Map.insert e sw) (return ())
                    return sw
 {-# INLINE newExpr #-}
 
@@ -793,7 +834,7 @@ svMkSymVar mbQ k mbNm = do
                                     Nothing -> error $ "Cannot quick-check in the presence of existential variables, type: " ++ show k
                                     Just nm -> error $ "Cannot quick-check in the presence of existential variable " ++ nm ++ " :: " ++ show k
           Concrete _           -> do cw <- liftIO (randomCW k)
-                                     liftIO $ modifyIORef (rCInfo st) ((fromMaybe "_" mbNm, cw):)
+                                     liftIO $ modifyState st rCInfo ((fromMaybe "_" mbNm, cw):) (return ())
                                      return (SVal k (Left cw))
           _          -> do (sw, internalName) <- liftIO $ newSW st k
                            let nm = fromMaybe internalName mbNm
@@ -824,7 +865,13 @@ introduceUserName :: State -> String -> Kind -> Quantifier -> SW -> Symbolic SVa
 introduceUserName st nm k q sw = do is <- liftIO $ readIORef (rinps st)
                                     if nm `elem` [n | (_, (_, n)) <- is]
                                        then error $ "SBV: Repeated user given name: " ++ show nm ++ ". Please use unique names."
-                                       else do liftIO $ modifyIORef (rinps st) ((q, (sw, nm)):)
+                                       else do liftIO $ modifyState st rinps ((q, (sw, nm)):)
+                                                                  $ noInteractive [ "Adding a new named input:"
+                                                                                  , "  Name      : " ++ show nm
+                                                                                  , "  Kind      : " ++ show k
+                                                                                  , "  Quantifier: " ++ if q == EX then "existential" else "universal"
+                                                                                  , "  Node      : " ++ show sw
+                                                                                  ]
                                                return $ SVal k $ Right $ cache (const (return sw))
 
 -- | Add a user specified axiom to the generated SMT-Lib file. The first argument is a mere
@@ -835,7 +882,11 @@ introduceUserName st nm k q sw = do is <- liftIO $ readIORef (rinps st)
 addAxiom :: String -> [String] -> Symbolic ()
 addAxiom nm ax = do
         st <- ask
-        liftIO $ modifyIORef (raxioms st) ((nm, ax) :)
+        liftIO $ modifyState st raxioms ((nm, ax) :)
+                           $ noInteractive [ "Adding a new axiom:"
+                                           , "  Named: " ++ show nm
+                                           , "  Axiom: " ++ unlines ax
+                                           ]
 
 -- | Run a symbolic computation in Proof mode and return a 'Result'. The boolean
 -- argument indicates if this is a sat instance or not.
@@ -942,7 +993,10 @@ imposeConstraint mbNm c = do st <- ask
 -- | Require a boolean condition to be true in the state. Only used for internal purposes.
 internalConstraint :: State -> Maybe String -> SVal -> IO ()
 internalConstraint st mbNm b = do v <- svToSW st b
-                                  modifyIORef (rConstraints st) ((mbNm, v):)
+                                  modifyState st rConstraints ((mbNm, v):)
+                                            $ noInteractive [ "Adding an internal constraint:"
+                                                            , "  Named: " ++ fromMaybe "<unnamed>" mbNm
+                                                            ]
 
 -- | Add a tactic
 addSValTactic :: Tactic SVal -> Symbolic ()
@@ -961,7 +1015,10 @@ addSValTactic tac = do st <- ask
                            walk (OptimizePriority s)   = return $ OptimizePriority s
                            walk (QueryUsing f)         = return $ QueryUsing f
                        tac' <- liftIO $ walk tac
-                       liftIO $ modifyIORef (rTacs st) (tac':)
+                       liftIO $ modifyState st rTacs (tac':)
+                                          $ noInteractive [ "Adding a new tactic:"
+                                                          , "  Tactic: " ++ show tac
+                                                          ]
 
 -- | Add an optimization goal
 addSValOptGoal :: Objective SVal -> Symbolic ()
@@ -978,7 +1035,10 @@ addSValOptGoal obj = do st <- ask
                             walk (AssertSoft nm v mbP) = flip (AssertSoft nm) mbP `fmap` mkGoal nm v
 
                         obj' <- walk obj
-                        liftIO $ modifyIORef (rOptGoals st) (obj' :)
+                        liftIO $ modifyState st rOptGoals (obj' :)
+                                           $ noInteractive [ "Adding an optimization objective:"
+                                                           , "  Objective: " ++ show obj
+                                                           ]
 
 -- | Add a constraint with a given probability, and possibly a name
 addSValConstraint :: Maybe String -> Maybe Double -> SVal -> SVal -> Symbolic ()
@@ -1000,11 +1060,11 @@ outputSVal :: SVal -> Symbolic ()
 outputSVal (SVal _ (Left c)) = do
   st <- ask
   sw <- liftIO $ newConst st c
-  liftIO $ modifyIORef (routs st) (sw:)
+  liftIO $ modifyState st routs (sw:) (return ())
 outputSVal (SVal _ (Right f)) = do
   st <- ask
   sw <- liftIO $ uncache f st
-  liftIO $ modifyIORef (routs st) (sw:)
+  liftIO $ modifyState st routs (sw:) (return ())
 
 ---------------------------------------------------------------------------------
 -- * Symbolic Arrays
@@ -1039,7 +1099,10 @@ resetSArr (SArr ainfo f) b = SArr ainfo $ cache g
                   val <- svToSW st b
                   i <- uncacheAI f st
                   let j = IMap.size amap
-                  j `seq` modifyIORef (rArrayMap st) (IMap.insert j ("array_" ++ show j, ainfo, ArrayReset i val))
+                  j `seq` modifyState st rArrayMap (IMap.insert j ("array_" ++ show j, ainfo, ArrayReset i val))
+                                      (noInteractive [ "An array reset:"
+                                                     , "  Array info: " ++ show ainfo
+                                                     ])
                   return j
 
 -- | Update the element at @a@ to be @b@
@@ -1050,7 +1113,10 @@ writeSArr (SArr ainfo f) a b = SArr ainfo $ cache g
                   val  <- svToSW st b
                   amap <- readIORef (rArrayMap st)
                   let j = IMap.size amap
-                  j `seq` modifyIORef (rArrayMap st) (IMap.insert j ("array_" ++ show j, ainfo, ArrayMutate arr addr val))
+                  j `seq` modifyState st rArrayMap (IMap.insert j ("array_" ++ show j, ainfo, ArrayMutate arr addr val))
+                                      (noInteractive [ "An array update:"
+                                                     , "  Array info: " ++ show ainfo
+                                                     ])
                   return j
 
 -- | Merge two given arrays on the symbolic condition
@@ -1063,7 +1129,10 @@ mergeSArr t (SArr ainfo a) (SArr _ b) = SArr ainfo $ cache h
                   ts <- svToSW st t
                   amap <- readIORef (rArrayMap st)
                   let k = IMap.size amap
-                  k `seq` modifyIORef (rArrayMap st) (IMap.insert k ("array_" ++ show k, ainfo, ArrayMerge ts ai bi))
+                  k `seq` modifyState st rArrayMap (IMap.insert k ("array_" ++ show k, ainfo, ArrayMerge ts ai bi))
+                                      (noInteractive [ "An array merge:"
+                                                     , "  Array info: " ++ show ainfo
+                                                     ])
                   return k
 
 -- | Create a named new array, with an optional initial value
@@ -1076,7 +1145,11 @@ newSArr ainfo mkNm mbInit = do
     actx <- liftIO $ case mbInit of
                        Nothing   -> return $ ArrayFree Nothing
                        Just ival -> svToSW st ival >>= \sw -> return $ ArrayFree (Just sw)
-    liftIO $ modifyIORef (rArrayMap st) (IMap.insert i (nm, ainfo, actx))
+    liftIO $ modifyState st rArrayMap (IMap.insert i (nm, ainfo, actx))
+                       $ noInteractive [ "A new array creation:"
+                                       , "  Array info: " ++ show ainfo
+                                       , "  Named     : " ++ show nm
+                                       ]
     return $ SArr ainfo $ cache $ const $ return i
 
 -- | Compare two arrays for equality
@@ -1129,7 +1202,7 @@ uncacheGen getCache (Cached f) st = do
         case maybe Nothing (sn `lookup`) (h `IMap.lookup` stored) of
           Just r  -> return r
           Nothing -> do r <- f st
-                        r `seq` modifyIORef rCache (IMap.insertWith (++) h [(sn, r)])
+                        r `seq` R.modifyIORef' rCache (IMap.insertWith (++) h [(sn, r)])
                         return r
 
 -- | Representation of SMTLib Program versions. As of June 2015, we're dropping support

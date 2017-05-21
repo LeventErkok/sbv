@@ -498,7 +498,7 @@ pipeProcess cfg ctx execName opts script cleanErrs failure success = do
 
       Just execPath -> runSolver cfg ctx execPath opts script cleanErrs failure success
                        `C.catch`
-                       (\(e::C.SomeException) -> return $ failure [ "Failed to start the external solver: " ++ show e
+                       (\(e::C.SomeException) -> return $ failure [ "Failed to start the external solver:\n" ++ show e
                                                                   , "Make sure you can start " ++ show execPath
                                                                   , "from the command line without issues."
                                                                   ])
