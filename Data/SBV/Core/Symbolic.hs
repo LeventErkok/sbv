@@ -61,12 +61,13 @@ import Control.Monad.Reader     (MonadReader, ReaderT, ask, runReaderT)
 import Control.Monad.State.Lazy (MonadState, StateT(..), evalStateT)
 import Control.Monad.Trans      (MonadIO, liftIO)
 import Data.Char                (isAlpha, isAlphaNum, toLower)
-import Data.IORef               (IORef, newIORef, modifyIORef, readIORef, writeIORef)
+import Data.IORef               (IORef, newIORef, readIORef, modifyIORef)
 import Data.List                (intercalate, sortBy)
 import Data.Maybe               (isJust, fromJust, fromMaybe)
 
 import GHC.Stack.Compat
 
+import qualified Data.IORef    as R    (modifyIORef')
 import qualified Data.Generics as G    (Data(..))
 import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
 import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
@@ -624,18 +625,25 @@ instance Eq SVal where
   SVal _ (Left a) /= SVal _ (Left b) = a /= b
   a /= b = error $ "Comparing symbolic bit-vectors; Use (./=) instead. Received: " ++ show (a, b)
 
+-- | Modification of the state, but carefully handling the interactive tasks
+modifyState :: State -> (State -> IORef a) -> (a -> a) -> IO () -> IO ()
+modifyState st@State{runMode} field update interactiveUpdate = do
+        R.modifyIORef' (field st) update
+        case runMode of
+          Interactive{} -> interactiveUpdate
+          _             -> return ()
+
 -- | Increment the variable counter
 incCtr :: State -> IO Int
-incCtr s = do ctr <- readIORef (rctr s)
-              let i = ctr + 1
-              i `seq` writeIORef (rctr s) i
-              return ctr
+incCtr st = do ctr <- readIORef (rctr st)
+               modifyState st rctr (+1) (return ())
+               return ctr
 
 -- | Generate a random value, for quick-check and test-gen purposes
 throwDice :: State -> IO Double
 throwDice st = do g <- readIORef (rStdGen st)
                   let (r, g') = randomR (0, 1) g
-                  writeIORef (rStdGen st) g'
+                  modifyState st rStdGen (const g') (return ())
                   return r
 
 -- | Create a new uninterpreted symbol, possibly with user given code
