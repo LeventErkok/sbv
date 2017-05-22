@@ -39,7 +39,7 @@ module Data.SBV.Core.Symbolic
   , NamedSymVar
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
-  , SBVPgm(..), Symbolic, runSymbolic, runSymbolicWithState, runSymbolic', State
+  , SBVPgm(..), Symbolic, runSymbolic, runSymbolicWithState, runSymbolic', State, withNewIncState, IncState
   , inProofMode, SBVRunMode(..), Result(..)
   , Logic(..), SMTLibLogic(..), registerKind, registerLabel
   , addAssertion, addSValConstraint, internalConstraint, internalVariable
@@ -548,9 +548,35 @@ isCodeGenMode State{runMode} = case runMode of
                                  Interactive{} -> False
                                  CodeGen       -> True
 
+-- | The state in query mode, i.e., additional context
+data IncState = IncState { rNewConsts :: IORef CnstMap
+                         , rNewAsgns  :: IORef SBVPgm
+                         }
+
+-- | Get a new IncState
+newIncState :: IO IncState
+newIncState = do
+        nc  <- newIORef Map.empty
+        pgm <- newIORef (SBVPgm S.empty)
+        return IncState { rNewConsts = nc
+                        , rNewAsgns  = pgm
+                        }
+
+-- | Get a new IncState
+withNewIncState :: State -> (State -> IO a) -> IO (IncState, a)
+withNewIncState st cont = do
+        is <- newIncState
+        R.modifyIORef' (rIncState st) (const is)
+        r  <- cont st
+        finalIncState <- readIORef (rIncState st)
+        return (finalIncState, r)
+
+-- | Return and clean and incState
+
 -- | The state of the symbolic interpreter
 data State  = State { runMode      :: SBVRunMode
                     , pathCond     :: SVal                             -- ^ kind KBool
+                    , rIncState    :: IORef IncState
                     , rStdGen      :: IORef StdGen
                     , rCInfo       :: IORef [(String, CW)]
                     , rctr         :: IORef Int
@@ -638,6 +664,12 @@ modifyState st@State{runMode} field update interactiveUpdate = do
         case runMode of
           Interactive{} -> interactiveUpdate
           _             -> return ()
+
+-- | Modify the incremental state
+modifyIncState  :: State -> (IncState -> IORef a) -> (a -> a) -> IO ()
+modifyIncState State{rIncState} field update = do
+        incState <- readIORef rIncState
+        R.modifyIORef' (field incState) update
 
 -- | Increment the variable counter
 incCtr :: State -> IO Int
@@ -750,10 +782,8 @@ newConst st c = do
     Just sw -> return sw
     Nothing -> do let k = kindOf c
                   (sw, _) <- newSW st k
-                  modifyState st rconstMap (Map.insert key sw)
-                            $ noInteractive [ "Creation of a new constant:"
-                                            , "   Value: " ++ show c
-                                            ]
+                  let ins = Map.insert key sw
+                  modifyState st rconstMap ins $ modifyIncState st rNewConsts ins
                   return sw
   where isNeg0 (CWFloat  f) = isNegativeZero f
         isNeg0 (CWDouble d) = isNegativeZero d
@@ -784,12 +814,8 @@ newExpr st k app = do
    case e `Map.lookup` exprMap of
      Just sw -> return sw
      Nothing -> do (sw, _) <- newSW st k
-                   modifyState st spgm (\(SBVPgm xs) -> SBVPgm (xs S.|> (sw, e)))
-                             $ noInteractive [ "Creation of a new symbolic expression:"
-                                             , "  Kind: " ++ show k
-                                             , "  Node: " ++ show sw
-                                             , "  Expr: " ++ show e
-                                             ]
+                   let append (SBVPgm xs) = SBVPgm (xs S.|> (sw, e))
+                   modifyState st spgm append $ modifyIncState st rNewAsgns append
                    modifyState st rexprMap (Map.insert e sw) (return ())
                    return sw
 {-# INLINE newExpr #-}
@@ -920,11 +946,13 @@ runSymbolic' currentRunMode (Symbolic c) = do
    tacs      <- newIORef []
    optGoals  <- newIORef []
    asserts   <- newIORef []
+   istate    <- newIORef =<< newIncState
    rGen      <- case currentRunMode of
                   Concrete g -> newIORef g
                   _          -> newStdGen >>= newIORef
    let st = State { runMode      = currentRunMode
                   , pathCond     = SVal KBool (Left trueCW)
+                  , rIncState    = istate
                   , rStdGen      = rGen
                   , rCInfo       = cInfo
                   , rctr         = ctr

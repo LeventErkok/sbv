@@ -33,8 +33,7 @@ import Control.Monad.Trans      (liftIO)
 
 import Data.SBV.Core.Data
 
-import Data.SBV.Core.Concrete (showCW)
-import Data.SBV.Core.Symbolic (QueryState(..), QueryContext, Query(..), SMTResult(..), SMTConfig(..))
+import Data.SBV.Core.Symbolic (QueryState(..), QueryContext, Query(..), SMTResult(..), SMTConfig(..), withNewIncState, IncState)
 
 -- | Get the current configuration
 getConfig :: Query SMTConfig
@@ -82,32 +81,21 @@ continue :: Query [SMTResult]
 continue = do QueryState{queryDefault} <- get
               io queryDefault
 
--- | Render a constant
-renderCW :: CW -> [String]
-renderCW cw = [showCW False cw]
+-- | Sync-up the external solver with new context we have generated
+syncUpSolver :: IncState -> Query ()
+syncUpSolver _ = return ()
 
--- | Render a node.
--- TODO: Handle the case when the node is a skolem constant.
--- But first, figure out precisely under which conditions
--- this is possible; we might want to reject some of those cases.
-renderSW :: SW -> [String]
-renderSW sw = [show sw]
-
--- | Render a symbolic value in state
-render :: State -> SBV a -> IO [String]
-render _  (SBV (SVal _ (Left cw))) = return $ renderCW cw
-render st (SBV (SVal _ (Right f))) = renderSW <$> uncache f st
+-- | Execute in a new incremental context
+inNewContext :: (State -> IO a) -> Query a
+inNewContext act = do st <- getContext
+                      (is, r) <- io $ withNewIncState st act
+                      syncUpSolver is
+                      return r
 
 -- | Assert a new "fact"
 assert :: SBool -> Query ()
-assert s = do st <- getContext
-              ls <- io $ render st s
-
-              let sendAll []     = return ()
-                  sendAll [x]    = send $ "(assert " ++ x ++ ")" 
-                  sendAll (x:xs) = send x >> sendAll xs
-
-              sendAll ls
+assert s = do sw <- inNewContext (`sbvToSW` s)
+              send $ "(assert " ++ show sw ++ ")"
 
 -- | Produce this answer as the result
 result :: SMTResult -> Query [SMTResult]
