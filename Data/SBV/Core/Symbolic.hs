@@ -39,7 +39,7 @@ module Data.SBV.Core.Symbolic
   , NamedSymVar
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
-  , SBVPgm(..), Symbolic, runSymbolic, runSymbolicWithState, runSymbolic', State, withNewIncState, IncState
+  , SBVPgm(..), Symbolic, runSymbolic, runSymbolicWithState, runSymbolic', State, withNewIncState, IncState(..)
   , inProofMode, SBVRunMode(..), Result(..)
   , Logic(..), SMTLibLogic(..), registerKind, registerLabel
   , addAssertion, addSValConstraint, internalConstraint, internalVariable

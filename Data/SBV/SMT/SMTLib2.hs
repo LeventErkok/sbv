@@ -11,7 +11,7 @@
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE TupleSections #-}
 
-module Data.SBV.SMT.SMTLib2(cvt, addNonEqConstraints) where
+module Data.SBV.SMT.SMTLib2(cvt, cvtInc, addNonEqConstraints) where
 
 import Data.Bits     (bit)
 import Data.Function (on)
@@ -25,6 +25,7 @@ import qualified Data.IntMap   as IM
 import qualified Data.Set      as Set
 
 import Data.SBV.Core.Data
+import Data.SBV.SMT.Utils
 
 import Data.SBV.Utils.PrettyNum (smtRoundingMode, cwToSMTLib)
 
@@ -79,22 +80,7 @@ tbd :: String -> a
 tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
-cvt :: Set.Set Kind                 -- ^ kinds used
-    -> Bool                         -- ^ is this a sat problem?
-    -> [String]                     -- ^ extra comments to place on top
-    -> [(Quantifier, NamedSymVar)]  -- ^ inputs
-    -> [Either SW (SW, [SW])]       -- ^ skolemized version inputs
-    -> [(SW, CW)]                   -- ^ constants
-    -> [((Int, Kind, Kind), [SW])]  -- ^ auto-generated tables
-    -> [(Int, ArrayInfo)]           -- ^ user specified arrays
-    -> [(String, SBVType)]          -- ^ uninterpreted functions/constants
-    -> [(String, [String])]         -- ^ user given axioms
-    -> SBVPgm                       -- ^ assignments
-    -> [(Maybe String, SW)]         -- ^ extra constraints
-    -> SW                           -- ^ output variable
-    -> SMTConfig                    -- ^ configuration
-    -> CaseCond                     -- ^ case analysis data
-    -> [String]
+cvt :: SMTLibConverter [String]
 cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out config caseCond = pgm
   where hasInteger     = KUnbounded `Set.member` kindInfo
         hasReal        = KReal      `Set.member` kindInfo
@@ -149,7 +135,7 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
              ++ [ "; --- uninterpreted sorts ---" ]
              ++ concatMap declSort usorts
              ++ [ "; --- literal constants ---" ]
-             ++ concatMap declConst consts
+             ++ concatMap (declConst config) consts
              ++ [ "; --- skolem constants ---" ]
              ++ [ "(declare-fun " ++ show s ++ " " ++ swFunType ss s ++ ")" ++ userName s | Right (s, ss) <- skolemInps]
              ++ [ "; --- constant tables ---" ]
@@ -276,24 +262,11 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
           | null foralls = mkDef a
           | True         = [letShift (mkLet a)]
 
-        mkDef (s, SBVApp (Label m) [e]) = emit (s, cvtSW                skolemMap          e) (Just m)
-        mkDef (s, e)                    = emit (s, cvtExp solverCaps rm skolemMap tableMap e) Nothing
+        mkDef (s, SBVApp (Label m) [e]) = defineFun config (s, cvtSW                skolemMap          e) (Just m)
+        mkDef (s, e)                    = defineFun config (s, cvtExp solverCaps rm skolemMap tableMap e) Nothing
 
         mkLet (s, SBVApp (Label m) [e]) = "(let ((" ++ show s ++ " " ++ cvtSW                skolemMap          e ++ ")) ; " ++ m
         mkLet (s, e)                    = "(let ((" ++ show s ++ " " ++ cvtExp solverCaps rm skolemMap tableMap e ++ "))"
-
-        -- does the solver allow define-fun; or do we need declare-fun/assert combo?
-        useDefFun = supportsDefineFun solverCaps
-
-        declConst (s, c) = emit (s, cvtCW rm c) Nothing
-
-        emit (s, def) mbComment
-          | useDefFun = ["(define-fun "   ++ varT ++ " " ++ def ++ ")" ++ cmnt]
-          | True      = [ "(declare-fun " ++ varT ++ ")" ++ cmnt
-                        , "(assert (= "   ++ show s ++ " " ++ def ++ "))"
-                        ]
-          where varT = show s ++ " " ++ swFunType [] s
-                cmnt = maybe "" (" ; " ++) mbComment
 
         userName s = case s `lookup` map snd inputs of
                         Just u  | show s /= u -> " ; tracks user variable " ++ show u
@@ -309,6 +282,22 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
                 where body []     _ = ""
                       body [_]    i = show i
                       body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
+
+cvtInc :: SMTLibIncConverter [String]
+cvtInc consts _pgm cfg = concatMap (declConst cfg) consts
+
+defineFun :: SMTConfig -> (SW, String) -> Maybe String -> [String]
+defineFun cfg (s, def) mbComment
+  | useDefFun = ["(define-fun "   ++ varT ++ " " ++ def ++ ")" ++ cmnt]
+  | True      = [ "(declare-fun " ++ varT ++ ")" ++ cmnt
+                , "(assert (= "   ++ show s ++ " " ++ def ++ "))"
+                ]
+  where varT      = show s ++ " " ++ swFunType [] s
+        cmnt      = maybe "" (" ; " ++) mbComment
+        useDefFun = supportsDefineFun (capabilities (solver cfg))
+
+declConst :: SMTConfig -> (SW, CW) -> [String]
+declConst cfg (s, c) = defineFun cfg (s, cvtCW (roundingMode cfg) c) Nothing
 
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = ["(declare-fun " ++ i ++ " " ++ cvtType t ++ ")"]

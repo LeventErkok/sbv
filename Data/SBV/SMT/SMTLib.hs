@@ -11,8 +11,8 @@
 
 module Data.SBV.SMT.SMTLib(
           SMTLibPgm
-        , SMTLibConverter
         , toSMTLib2
+        , toIncSMTLib2
         , addNonEqConstraints
         , interpretSolverOutput
         , interpretSolverOutputMulti
@@ -25,31 +25,16 @@ import Data.Char  (isDigit, isSpace)
 import Data.List  (isPrefixOf)
 import Data.Maybe (isJust, fromJust)
 
+import qualified Data.Set as Set (member, toList)
+
 import Data.SBV.Core.Data
 import Data.SBV.Provers.SExpr
-import qualified Data.SBV.SMT.SMTLib2 as SMT2
-import qualified Data.Set as Set (Set, member, toList)
 
--- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
-type SMTLibConverter =  Set.Set Kind                 -- ^ Kinds used in the problem
-                     -> Bool                         -- ^ is this a sat problem?
-                     -> [String]                     -- ^ extra comments to place on top
-                     -> [(Quantifier, NamedSymVar)]  -- ^ inputs and aliasing names
-                     -> [Either SW (SW, [SW])]       -- ^ skolemized inputs
-                     -> [(SW, CW)]                   -- ^ constants
-                     -> [((Int, Kind, Kind), [SW])]  -- ^ auto-generated tables
-                     -> [(Int, ArrayInfo)]           -- ^ user specified arrays
-                     -> [(String, SBVType)]          -- ^ uninterpreted functions/constants
-                     -> [(String, [String])]         -- ^ user given axioms
-                     -> SBVPgm                       -- ^ assignments
-                     -> [(Maybe String, SW)]         -- ^ extra constraints
-                     -> SW                           -- ^ output variable
-                     -> SMTConfig                    -- ^ configuration
-                     -> CaseCond                     -- ^ case analysis
-                     -> SMTLibPgm
+import Data.SBV.SMT.Utils
+import qualified Data.SBV.SMT.SMTLib2 as SMT2
 
 -- | Convert to SMTLib-2 format
-toSMTLib2 :: SMTLibConverter
+toSMTLib2 :: SMTLibConverter SMTLibPgm
 toSMTLib2 = cvt SMTLib2
   where cvt v kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config caseSelectors
          | KUnbounded `Set.member` kindInfo && not (supportsUnboundedInts solverCaps)
@@ -78,8 +63,8 @@ toSMTLib2 = cvt SMTLib2
                unsupportedAll w = error $ unlines [ "SBV: Given problem needs " ++ w
                                                   , "*** Which is not supported by SBV."
                                                   ]
-               converter    = case v of
-                                SMTLib2 -> SMT2.cvt
+               converter = case v of
+                             SMTLib2 -> SMT2.cvt
                pgm = converter kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config caseSelectors
 
                needsFloats  = KFloat  `Set.member` kindInfo
@@ -96,6 +81,11 @@ toSMTLib2 = cvt SMTLib2
                  | isSat = ALL `elem` quantifiers
                  | True  = EX  `elem` quantifiers
                  where quantifiers = map fst qinps
+
+-- | Convert to SMTLib-2 format
+toIncSMTLib2 :: SMTLibIncConverter [String]
+toIncSMTLib2 = cvt SMTLib2
+  where cvt SMTLib2 = SMT2.cvtInc
 
 -- | Add constraints generated from older models, used for querying new models
 addNonEqConstraints :: SMTLibVersion -> RoundingMode -> [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> Maybe [String]

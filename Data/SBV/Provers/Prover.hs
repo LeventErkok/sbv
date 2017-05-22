@@ -56,6 +56,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
+import Data.SBV.SMT.Utils
 import Data.SBV.Utils.TDiff
 
 import Control.DeepSeq (rnf)
@@ -386,7 +387,7 @@ objectiveCheck True _   _ = return ()
 -- we no longer support SMTLib1, so the following is more or less a no-op,
 -- but it's good to use it since if we add some other target GHC's pattern-match
 -- warning will point us to here.
-getConverter :: SMTConfig -> SMTLibConverter
+getConverter :: SMTConfig -> SMTLibConverter SMTLibPgm
 getConverter SMTConfig{smtLibVersion} = case smtLibVersion of
                                           SMTLib2 -> toSMTLib2
 
@@ -994,7 +995,7 @@ callSolver isSat checkMsg refutedModels wrap SMTProblem{smtInputs, smtSkolemMap,
 
        return $ wrap smtAnswer
 
-simulate :: Provable a => SMTLibConverter -> SMTConfig -> Bool -> [String] -> a -> IO (QueryContext, SMTProblem)
+simulate :: Provable a => SMTLibConverter SMTLibPgm -> SMTConfig -> Bool -> [String] -> a -> IO (QueryContext, SMTProblem)
 simulate converter config isSat comments predicate = do
         let msg = when (verbose config) . putStrLn . ("** " ++)
             isTiming = timing config
@@ -1004,7 +1005,7 @@ simulate converter config isSat comments predicate = do
         msg "Translating to SMT-Lib.."
         runProofOn converter config isSat comments st res
 
-runProofOn :: SMTLibConverter -> SMTConfig -> Bool -> [String] -> State -> Result -> IO (QueryContext, SMTProblem)
+runProofOn :: SMTLibConverter SMTLibPgm -> SMTConfig -> Bool -> [String] -> State -> Result -> IO (QueryContext, SMTProblem)
 runProofOn converter config isSat comments st res =
         let isTiming = timing config
         in case res of

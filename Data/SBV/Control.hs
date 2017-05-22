@@ -31,9 +31,15 @@ module Data.SBV.Control(
 import Control.Monad.State.Lazy (get)
 import Control.Monad.Trans      (liftIO)
 
-import Data.SBV.Core.Data
+import Data.IORef (readIORef)
+import Data.List  (sortBy)
 
-import Data.SBV.Core.Symbolic (QueryState(..), QueryContext, Query(..), SMTResult(..), SMTConfig(..), withNewIncState, IncState)
+import qualified Data.Map as Map (toList)
+
+import Data.SBV.Core.Data
+import Data.SBV.Core.Symbolic (QueryState(..), QueryContext, Query(..), SMTResult(..), SMTConfig(..), withNewIncState, IncState(..))
+
+import Data.SBV.SMT.SMTLib (toIncSMTLib2)
 
 -- | Get the current configuration
 getConfig :: Query SMTConfig
@@ -83,7 +89,14 @@ continue = do QueryState{queryDefault} <- get
 
 -- | Sync-up the external solver with new context we have generated
 syncUpSolver :: IncState -> Query ()
-syncUpSolver _ = return ()
+syncUpSolver is = do
+        cfg <- getConfig
+        ls  <- io $ do let swapc ((_, a), b)   = (b, a)
+                           cmp   (a, _) (b, _) = a `compare` b
+                       cnsts <- (sortBy cmp . map swapc . Map.toList) `fmap` readIORef (rNewConsts is)
+                       as    <- readIORef (rNewAsgns  is)
+                       return $ toIncSMTLib2 cnsts as cfg
+        mapM_ send ls
 
 -- | Execute in a new incremental context
 inNewContext :: (State -> IO a) -> Query a
