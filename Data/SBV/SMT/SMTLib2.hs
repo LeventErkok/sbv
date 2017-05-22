@@ -259,11 +259,8 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
         asgns = F.toList asgnsSeq
 
         mkAssign a
-          | null foralls = mkDef a
+          | null foralls = declDef config skolemMap tableMap a
           | True         = [letShift (mkLet a)]
-
-        mkDef (s, SBVApp (Label m) [e]) = defineFun config (s, cvtSW                skolemMap          e) (Just m)
-        mkDef (s, e)                    = defineFun config (s, cvtExp solverCaps rm skolemMap tableMap e) Nothing
 
         mkLet (s, SBVApp (Label m) [e]) = "(let ((" ++ show s ++ " " ++ cvtSW                skolemMap          e ++ ")) ; " ++ m
         mkLet (s, e)                    = "(let ((" ++ show s ++ " " ++ cvtExp solverCaps rm skolemMap tableMap e ++ "))"
@@ -283,8 +280,28 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
                       body [_]    i = show i
                       body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
 
+-- | Things we do not support in interactive mode, at least for now!
+noInteractive :: [String] -> a
+noInteractive ss = error $ unlines $  "*** Data.SBV: Unsupported interactive/query mode feature."
+                                   :  map ("***  " ++) ss
+                                   ++ ["*** Data.SBV: Please report this as a feature request!"]
+
+-- | Convert in a query context
 cvtInc :: SMTLibIncConverter [String]
-cvtInc consts _pgm cfg = concatMap (declConst cfg) consts
+cvtInc consts (SBVPgm asgnsSeq) cfg =  concatMap (declConst cfg)                    consts
+                                    ++ concatMap (declDef   cfg skolemMap tableMap) (F.toList asgnsSeq)
+  where -- NB. The below setting of skolemMap to empty is OK, since we do
+        -- not support queries in the context of skolemized variables
+        skolemMap = M.empty
+        tableMap  = noInteractive ["Programs constant tabled data"]
+
+declDef :: SMTConfig -> SkolemMap -> TableMap -> (SW, SBVExpr) -> [String]
+declDef config skolemMap tableMap (s, expr) =
+        case expr of
+          SBVApp  (Label m) [e] -> defineFun config (s, cvtSW          skolemMap          e) (Just m)
+          e                     -> defineFun config (s, cvtExp caps rm skolemMap tableMap e) Nothing
+  where caps = capabilities (solver config)
+        rm   = roundingMode config
 
 defineFun :: SMTConfig -> (SW, String) -> Maybe String -> [String]
 defineFun cfg (s, def) mbComment
