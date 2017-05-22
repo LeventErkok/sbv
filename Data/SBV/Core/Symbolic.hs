@@ -48,7 +48,7 @@ module Data.SBV.Core.Symbolic
   , extractSymbolicSimulationState
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , Tactic(..), addSValTactic, isParallelCaseAnywhere
-  , Query(..), QueryContext, QueryState(..), runQuery
+  , Query(..), QueryContext, QueryState(..), query, runQuery
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
   , mkSValUserSort
@@ -344,6 +344,10 @@ instance Show (Query a) where
 -- | Execute a query
 runQuery :: Query a -> QueryState -> IO a
 runQuery (Query f) = evalStateT f
+
+-- | Install a custom query
+query :: Query [SMTResult] -> Symbolic ()
+query q = addSValTactic (QueryUsing q)
 
 -- | Solver tactic
 data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-split, with implicit coverage. Bool says whether we should be verbose.
