@@ -54,7 +54,7 @@ import qualified Data.Map as M
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (SMTEngine, QueryContext, runQuery)
+import Data.SBV.Core.Symbolic (SMTEngine, QueryContext, runQuery, getProofMode, inNonInteractiveProofMode, switchToInteractiveMode)
 
 import Data.SBV.SMT.SMTLib    (interpretSolverOutput, interpretSolverModelLine, interpretSolverObjectiveLine)
 
@@ -670,16 +670,19 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                     () -> return []
                                                          cleanUp $ Just (r, vals)
 
-                             -- If we're given a custom continuation, call it. Otherwise execute
-                             k <- case customQuery cfg of
-                                    Nothing  -> return sbvContinuation
-                                    Just q   -> do when (verbose cfg) $ putStrLn "** Custom query is requested. Giving control to the user."
-                                                   return $ runQuery q QueryState { querySend    = send
-                                                                                  , queryAsk     = ask
-                                                                                  , queryConfig  = cfg
-                                                                                  , queryContext = ctx
-                                                                                  , queryDefault = sbvContinuation
-                                                                                  }
+                             -- If we're given a custom continuation and we're in a proof context, call it. Otherwise execute
+                             k <- case (inNonInteractiveProofMode ctx, customQuery cfg) of
+                                    (True, Just q) -> do
+                                        when (verbose cfg) $ putStrLn "** Custom query is requested. Giving control to the user."
+                                        return $ runQuery q QueryState { querySend    = send
+                                                                       , queryAsk     = ask
+                                                                       , queryConfig  = cfg
+                                                                       , queryContext = switchToInteractiveMode ctx
+                                                                       , queryDefault = sbvContinuation
+                                                                       }
+                                    (False, Just _) -> do when (verbose cfg) $ putStrLn $ "** Skipping the custom query in mode: " ++ show (getProofMode ctx)
+                                                          return sbvContinuation
+                                    (_, Nothing)    -> return sbvContinuation
 
                              -- Off to the races!
                              timeIf (timing cfg) (WorkByProver nm) k

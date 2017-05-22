@@ -40,7 +40,7 @@ module Data.SBV.Core.Symbolic
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
   , SBVPgm(..), Symbolic, runSymbolic, runSymbolicWithState, runSymbolic', State, withNewIncState, IncState(..)
-  , inProofMode, SBVRunMode(..), Result(..)
+  , inProofMode, inNonInteractiveProofMode, switchToInteractiveMode, getProofMode, SBVRunMode(..), Result(..)
   , Logic(..), SMTLibLogic(..), registerKind, registerLabel
   , addAssertion, addSValConstraint, internalConstraint, internalVariable
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
@@ -343,14 +343,7 @@ instance Show (Query a) where
 
 -- | Execute a query
 runQuery :: Query a -> QueryState -> IO a
-runQuery (Query f) qs@QueryState{queryContext} = evalStateT f qs{queryContext = interactive queryContext}
-   where interactive st = st{runMode = newMode (runMode st)}
-
-         -- If in proof mode, switch to interactive, otherwise stay put
-         newMode  (Proof bcfg)   = Interactive bcfg
-         newMode m@Interactive{} = m
-         newMode m@CodeGen       = m
-         newMode m@Concrete{}    = m
+runQuery (Query f) = evalStateT f
 
 -- | Solver tactic
 data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-split, with implicit coverage. Bool says whether we should be verbose.
@@ -532,6 +525,15 @@ data SBVRunMode = Proof       (Bool, SMTConfig) -- ^ Fully Symbolic, proof mode.
                 | CodeGen                       -- ^ Code generation mode.
                 | Concrete StdGen               -- ^ Concrete simulation mode. The StdGen is for the pConstrain acceptance in cross runs.
 
+-- Show instance for SBVRunMode; debugging purposes only
+instance Show SBVRunMode where
+   show (Proof       (True, _))  = "Satisfiability"
+   show (Proof       (False, _)) = "Proof"
+   show (Interactive (True, _))  = "Satisfiability"
+   show (Interactive (False, _)) = "Proof"
+   show CodeGen                  = "Code generation"
+   show Concrete{}               = "Concrete evaluation"
+
 -- | Is this a concrete run? (i.e., quick-check or test-generation like)
 isConcreteMode :: State -> Bool
 isConcreteMode State{runMode} = case runMode of
@@ -619,6 +621,28 @@ inProofMode s = case runMode s of
                   Interactive{} -> True
                   CodeGen       -> False
                   Concrete{}    -> False
+
+-- | Return the current proof mode
+getProofMode :: State -> SBVRunMode
+getProofMode = runMode
+
+-- | Are we running in proof mode, but not in an interactive query?
+inNonInteractiveProofMode :: State -> Bool
+inNonInteractiveProofMode s = case runMode s of
+                                Proof{}       -> True
+                                Interactive{} -> False
+                                CodeGen       -> False
+                                Concrete{}    -> False
+
+-- | Move to interactive mode from proof mode. It's an error to call
+-- this function in a non-proof mode.
+switchToInteractiveMode :: State -> State
+switchToInteractiveMode s = case runMode s of
+                              Proof bfcg      -> s {runMode = Interactive bfcg}
+                              m@Interactive{} -> bad m
+                              m@CodeGen       -> bad m
+                              m@Concrete{}    -> bad m
+  where bad m = error $ "Data.SBV: Impossible happened: Trying to switch to interactive in mode: " ++ show m
 
 -- | If in proof mode, get the underlying configuration (used for 'sBranch')
 getSBranchRunConfig :: State -> Maybe SMTConfig
