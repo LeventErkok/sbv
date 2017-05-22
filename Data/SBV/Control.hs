@@ -17,7 +17,7 @@ module Data.SBV.Control(
        getConfig, ask
 
      -- * Performing actions
-     , io, message
+     , io
 
      -- * Add new assertions
      , assert
