@@ -582,7 +582,7 @@ standardSolver config ctx script cleanErrs failure success = do
 runSolver :: SMTConfig -> QueryContext -> FilePath -> [String] -> SMTScript -> (String -> String) -> ([String] -> [SMTResult]) -> ([String] -> [SMTResult]) -> IO [SMTResult]
 runSolver cfg ctx execPath opts script cleanErrs failure success
  = do let nm  = show (name (solver cfg))
-          msg = when (verbose cfg) . putStrLn . ("** " ++)
+          msg = when (verbose cfg) . mapM_ (putStrLn . ("*** " ++))
 
       (send, ask, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
@@ -604,8 +604,15 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                       hClose errh
                                       ex <- waitForProcess pid
 
-                                      msg $ nm ++ " exit-code: " ++ show ex
-                                               ++ ", output:\n"  ++ maybe [] (\(r, vals) -> intercalate "\n" (r : vals)) response ++ out ++ err
+                                      msg $   [ "Solver   : " ++ nm
+                                              , "Exit code: " ++ show ex
+                                              ]
+                                           ++ case response of
+                                                Nothing      -> []
+                                                Just (r, vs) ->   ("Response : " ++ r)
+                                                                : ["           " ++ l  | l <- vs]
+                                           ++ [ "Output   : " ++ out | not (null out)]
+                                           ++ [ "Std-err  : " ++ err | not (null err)]
 
                                       -- Massage the output, preparing for the possibility of not having a model
                                       -- TBD: This is rather crude and potentially Z3 specific
