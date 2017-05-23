@@ -518,9 +518,7 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels tactics objectives 
         when (hasObjectives && not isSat)     $ error "SBV: Optimization is only available for sat calls."
         when (hasObjectives && hasCaseSplits) $ error "SBV: Optimization and case-splits are not supported together."
 
-        when hasQueries $ case checkQueryApplicability ctx of
-                            Nothing -> return ()
-                            Just s  -> error $ "SBV: User given queries are not allowed " ++ s
+        when hasQueries $ checkQueryApplicability hasCaseSplits ctx
 
         let mbOptInfo
                 | not hasObjectives = Nothing
@@ -563,7 +561,7 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels tactics objectives 
 
         hasQueries    = not $ null queryUsings
 
-        parallelCase = not $ null parallelCases
+        parallelCase  = not $ null parallelCases
 
         optimizePriority = case [s | OptimizePriority s <- optimizePriorities] of
                              []  -> Lexicographic
@@ -628,12 +626,30 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels tactics objectives 
                                         ]
 
 -- | Should we allow a custom query? Returns the reason why we shouldn't, if there is one
-checkQueryApplicability :: QueryContext -> Maybe String
-checkQueryApplicability QueryContext{contextSkolems} = checkSkolems contextSkolems
-  where checkSkolems [] = Nothing
-        checkSkolems xs = Just $ "in the presence of quantified variable" ++ plu xs ++ ": " ++ intercalate ", " (map show xs)
-          where plu [_] = ""
-                plu _   = "s"
+checkQueryApplicability :: Bool -> QueryContext -> IO ()
+checkQueryApplicability hasCaseSplits QueryContext{contextSkolems} = do
+        checkSkolems    contextSkolems
+        checkCaseSplits hasCaseSplits
+  where
+        -- Can't execute queries if there are quantified skolem vars, as those generate
+        -- quantified formulae and thus variables won't be visible to the user past the query
+        checkSkolems [] = return ()
+        checkSkolems xs = noInteractive [ "Queries in the presence of quantified variable(s):"
+                                        , "  " ++   intercalate ", " (map show xs)
+                                        ]
+        -- Can execute queries if there are case splits. This is an interesting (but probablt inconsequential) restriction. The
+        -- reason why is that case-splits rely on the fact that the internal state of SBV remains constant once we are done
+        -- simulating. But the whole point of a query is to alter that state further! Thus, if we run a query in a case-split
+        -- context, we'd have a terrible race condition. If absolutely necessary, this can be worked around by making a "deep copy"
+        -- of the state and all it's IORefs as we go down a branch, but that can be costly and could lead to space leaks. Let's
+        -- fight that battle if it actually does become an issue.
+        checkCaseSplits False = return ()
+        checkCaseSplits True  = noInteractive [ "Queries in the presence of case splits."]
+
+        noInteractive :: [String] -> a
+        noInteractive ss = error $ unlines $  "*** Data.SBV: Unsupported interactive/query mode feature."
+                                           :  map ("***  " ++) ss
+                                           ++ ["*** Data.SBV: Please report this as a feature request!"]
 
 -- | Implements the "constraint vacuity check" tactic, making sure the calls to "constrain"
 -- describe a satisfiable condition. Returns:
