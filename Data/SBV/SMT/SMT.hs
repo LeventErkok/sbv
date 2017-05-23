@@ -584,11 +584,25 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
  = do let nm  = show (name (solver cfg))
           msg = when (verbose cfg) . mapM_ (putStrLn . ("*** " ++))
 
-      (send, ask, cleanUp, pid) <- do
+      (send, ask, askFull, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
                 let send l    = hPutStr inh (l ++ "\n") >> hFlush inh
-                    recv      = hGetLine outh
+
+                    -- Send a line, get a line
                     ask l     = send l >> recv
+                    recv      = hGetLine outh
+
+                    -- Send a line, get a whole s-expr
+                    askFull l = send l >> recvFull
+                    recvFull  = (intercalate "\n" . reverse) `fmap` go 0 []
+                      where go i sofar = do ln <- hGetLine outh
+                                            let open  = length $ filter (== '(') ln
+                                                close = length $ filter (== ')') ln
+                                                need  = i + open - close
+                                                acc   = ln : sofar
+                                            if need <= 0
+                                               then return acc
+                                               else go need acc
 
                     cleanUp response
                       = do (ec, contents, allErrors) <- do
@@ -647,7 +661,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                            ]
                                                                            ++ errors'
                                                                            ++ ["Giving up.."]
-                return (send, ask, cleanUp, pid)
+                return (send, ask, askFull, cleanUp, pid)
 
       let executeSolver = do mapM_ send (lines (scriptBody script))
                              mapM_ send (optimizeArgs cfg)
@@ -675,7 +689,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                     (True, Just q) -> do
                                         when (verbose cfg) $ putStrLn "** Custom query is requested. Giving control to the user."
                                         return $ runQuery q QueryState { querySend    = send
-                                                                       , queryAsk     = ask
+                                                                       , queryAsk     = askFull
                                                                        , queryConfig  = cfg
                                                                        , queryContext = switchToInteractiveMode ctx
                                                                        , queryDefault = sbvContinuation
