@@ -604,8 +604,8 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                then return acc
                                                else go need acc
 
-                    cleanUp response
-                      = do (ec, contents, allErrors) <- do
+                    cleanUp ignoreExitCode response
+                      = do (ecObtained, contents, allErrors) <- do
                                       hClose inh
                                       outMVar <- newEmptyMVar
                                       out <- hGetContents outh
@@ -638,6 +638,10 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                       then (ExitSuccess, "unknown"              , "")
                                                                       else (ex,          finalOut ++ "\n" ++ out, err)
 
+                           -- If we're told to ignore the exit code, then ignore it
+                           let ec | ignoreExitCode = ExitSuccess
+                                  | True           = ecObtained
+
                            let errors = dropWhile isSpace (cleanErrs allErrors)
                                clean  = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 
@@ -667,10 +671,10 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                              mapM_ send (optimizeArgs cfg)
 
                              -- Capture what SBV would do here
-                             let sbvContinuation =
+                             let sbvContinuation ignoreExitCode =
                                         case scriptModel script of
                                            Nothing -> do send $ satCmd cfg
-                                                         cleanUp Nothing
+                                                         cleanUp ignoreExitCode Nothing
                                            Just ls -> do r    <- ask $ satCmd cfg
                                                          vals <- case () of
                                                                     () | any (`isPrefixOf` r) ["sat", "unknown"]
@@ -682,21 +686,22 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                        -> do when (verbose cfg) $ putStrLn "** Querying for unsat cores"
                                                                              mapM ask ["(get-unsat-core)"]
                                                                     () -> return []
-                                                         cleanUp $ Just (r, vals)
+                                                         cleanUp ignoreExitCode $ Just (r, vals)
 
                              -- If we're given a custom continuation and we're in a proof context, call it. Otherwise execute
                              k <- case (inNonInteractiveProofMode (contextState ctx), customQuery cfg) of
                                     (True, Just q) -> do
                                         when (verbose cfg) $ putStrLn "** Custom query is requested. Giving control to the user."
-                                        return $ runQuery q QueryState { querySend    = send
-                                                                       , queryAsk     = askFull
-                                                                       , queryConfig  = cfg
-                                                                       , queryContext = ctx { contextState = switchToInteractiveMode (contextState ctx) }
-                                                                       , queryDefault = sbvContinuation
+                                        return $ runQuery q QueryState { querySend           = send
+                                                                       , queryAsk            = askFull
+                                                                       , queryConfig         = cfg
+                                                                       , queryContext        = ctx { contextState = switchToInteractiveMode (contextState ctx) }
+                                                                       , queryDefault        = sbvContinuation
+                                                                       , queryIgnoreExitCode = False
                                                                        }
                                     (False, Just _) -> do when (verbose cfg) $ putStrLn $ "** Skipping the custom query in mode: " ++ show (getProofMode (contextState ctx))
-                                                          return sbvContinuation
-                                    (_, Nothing)    -> return sbvContinuation
+                                                          return (sbvContinuation False)
+                                    (_, Nothing)    -> return (sbvContinuation False)
 
                              -- Off to the races!
                              timeIf (timing cfg) (WorkByProver nm) k

@@ -6,29 +6,31 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Control sublanguage for interacting with SMT solvers, see the 'QueryUsing'
--- tactic for details.
+-- Control sublanguage for interacting with SMT solvers.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Data.SBV.Control(
-     -- * Communicating with the solver
-       getConfig, ask
-
-     -- * Performing actions
-     , io
-
      -- * Add new assertions
-     , assert
+       assert
+
+     -- * Sending an arbitrary string
+     , ask
+
+     -- * Controlling the solver behavior
+     , ignoreExitCode
 
      -- * Terminating the query
      , continue
      , result
      , failure
+
+     -- * Performing actions
+     , io
      ) where
 
-import Control.Monad.State.Lazy (get)
+import Control.Monad.State.Lazy (get, modify)
 import Control.Monad.Trans      (liftIO)
 
 import Data.IORef (readIORef)
@@ -48,6 +50,14 @@ getConfig = queryConfig <$> get
 -- | Get the current context
 getContextState :: Query State
 getContextState = contextState . queryContext <$> get
+
+-- | Should we ignore the exit code from the solver upon finish?
+-- The default is /not/ to ignore. However, you might want to set
+-- this to 'False' before you issue a call to 'continue', in case the interactive
+-- part of your query caused solver to issue some errors that you would
+-- like to ignore.
+ignoreExitCode :: Bool -> Query ()
+ignoreExitCode b = modify (\qs -> qs {queryIgnoreExitCode  = b})
 
 -- | Send a string to the solver, and return the response
 ask :: String -> Query String
@@ -74,7 +84,7 @@ send s = do QueryState{querySend, queryConfig} <- get
             dbg "-->" s
             io $ querySend s
 
--- | Perform an IO action
+-- | Perform an arbitrary IO action.
 io :: IO a -> Query a
 io = liftIO
 
@@ -82,10 +92,10 @@ io = liftIO
 message :: String -> Query ()
 message = io . putStrLn
 
--- | Run what SBV would've run, should we not have taken control
+-- | Run what SBV would've run, should we not have taken control.
 continue :: Query [SMTResult]
-continue = do QueryState{queryDefault} <- get
-              io queryDefault
+continue = do QueryState{queryDefault, queryIgnoreExitCode} <- get
+              io $ queryDefault queryIgnoreExitCode
 
 -- | Sync-up the external solver with new context we have generated
 syncUpSolver :: IncState -> Query ()
@@ -118,3 +128,7 @@ result x = return [x]
 failure :: [String] -> Query [SMTResult]
 failure ms = do QueryState{queryConfig} <- get
                 result $ ProofError queryConfig ms
+
+{- $commIntro
+Some good text here
+-}

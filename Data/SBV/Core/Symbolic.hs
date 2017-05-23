@@ -333,11 +333,12 @@ instance NFData QueryContext where
    rnf (QueryContext st sks) = rnf st `seq` rnf sks `seq` ()
 
 -- | The state we keep track of as we interact with the solver
-data QueryState = QueryState { querySend     :: String -> IO ()
-                             , queryAsk      :: String -> IO String
-                             , queryConfig   :: SMTConfig
-                             , queryContext  :: QueryContext
-                             , queryDefault  :: IO [SMTResult]
+data QueryState = QueryState { querySend           :: String -> IO ()
+                             , queryAsk            :: String -> IO String
+                             , queryConfig         :: SMTConfig
+                             , queryContext        :: QueryContext
+                             , queryDefault        :: Bool -> IO [SMTResult]
+                             , queryIgnoreExitCode :: Bool
                              }
 
 -- | A query is a user-guided mechanism to extract results from the solver.
