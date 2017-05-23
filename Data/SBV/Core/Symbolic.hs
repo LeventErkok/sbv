@@ -48,7 +48,7 @@ module Data.SBV.Core.Symbolic
   , extractSymbolicSimulationState
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , Tactic(..), addSValTactic, isParallelCaseAnywhere
-  , Query(..), QueryContext, QueryState(..), query, runQuery
+  , Query(..), QueryContext(..), QueryState(..), query, runQuery
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
   , mkSValUserSort
@@ -322,8 +322,15 @@ objectiveName (Minimize   s _)   = s
 objectiveName (Maximize   s _)   = s
 objectiveName (AssertSoft s _ _) = s
 
--- | The context of a query is the state of the symbolic simulation run
-type QueryContext = State
+-- | The context of a query is the state of the symbolic simulation run and some extra info
+data QueryContext = QueryContext {
+                        contextState   :: State
+                      , contextSkolems :: [String]
+                      }
+
+-- | NFData instance for purposes of timing info collection
+instance NFData QueryContext where
+   rnf (QueryContext st sks) = rnf st `seq` rnf sks `seq` ()
 
 -- | The state we keep track of as we interact with the solver
 data QueryState = QueryState { querySend     :: String -> IO ()

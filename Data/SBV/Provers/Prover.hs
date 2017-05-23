@@ -1,4 +1,4 @@
- -----------------------------------------------------------------------------
+
 -- |
 -- Module      :  Data.SBV.Provers.Prover
 -- Copyright   :  (c) Levent Erkok
@@ -518,6 +518,10 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels tactics objectives 
         when (hasObjectives && not isSat)     $ error "SBV: Optimization is only available for sat calls."
         when (hasObjectives && hasCaseSplits) $ error "SBV: Optimization and case-splits are not supported together."
 
+        when hasQueries $ case checkQueryApplicability ctx of
+                            Nothing -> return ()
+                            Just s  -> error $ "SBV: User given queries are not allowed " ++ s
+
         let mbOptInfo
                 | not hasObjectives = Nothing
                 | True              = Just (optimizePriority, length objectives)
@@ -556,6 +560,8 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels tactics objectives 
         hasObjectives = not $ null objectives
 
         hasCaseSplits = not $ null cases
+
+        hasQueries    = not $ null queryUsings
 
         parallelCase = not $ null parallelCases
 
@@ -620,6 +626,14 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels tactics objectives 
                   style Pareto        = [ "(set-option :opt.priority pareto)"
                                         , "(set-option :opt.print_model true)"
                                         ]
+
+-- | Should we allow a custom query? Returns the reason why we shouldn't, if there is one
+checkQueryApplicability :: QueryContext -> Maybe String
+checkQueryApplicability QueryContext{contextSkolems} = checkSkolems contextSkolems
+  where checkSkolems [] = Nothing
+        checkSkolems xs = Just $ "in the presence of quantified variable" ++ plu xs ++ ": " ++ intercalate ", " (map show xs)
+          where plu [_] = ""
+                plu _   = "s"
 
 -- | Implements the "constraint vacuity check" tactic, making sure the calls to "constrain"
 -- describe a satisfiable condition. Returns:
@@ -1011,17 +1025,24 @@ runProofOn converter config isSat comments st res =
         in case res of
              Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs tacs goals assertions [o@(SW KBool _)] ->
                timeIf isTiming Translation
-                $ let skolemMap = skolemize (if isSat then is else map flipQ is)
-                           where flipQ (ALL, x) = (EX, x)
-                                 flipQ (EX, x)  = (ALL, x)
-                                 skolemize :: [(Quantifier, NamedSymVar)] -> [Either SW (SW, [SW])]
-                                 skolemize qinps = go qinps ([], [])
-                                   where go []                   (_,  sofar) = reverse sofar
-                                         go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
-                                         go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
+                $ let flipQ (ALL, x) = (EX,  x)
+                      flipQ (EX,  x) = (ALL, x)
+
+                      skolemize :: [(Quantifier, NamedSymVar)] -> [Either SW (SW, [SW])]
+                      skolemize quants = go quants ([], [])
+                        where go []                   (_,  sofar) = reverse sofar
+                              go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
+                              go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
+
+                      qinps      = if isSat then is else map flipQ is
+                      skolemMap  = skolemize qinps
+                      skolemVars = [s | (ALL, (_, s)) <- qinps]
+
                       smtScript = converter ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o
                       problem   = SMTProblem {smtInputs=is, smtSkolemMap=skolemMap, kindsUsed=ki, smtAsserts=assertions, tactics=tacs, objectives=goals, smtLibPgm=smtScript}
-                  in rnf smtScript `seq` return (st, problem)
+                      context   = QueryContext {contextState = st, contextSkolems = skolemVars}
+
+                  in rnf smtScript `seq` return (context, problem)
              Result{resOutputs = os} -> case length os of
                            0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
                            1  -> error $ "Impossible happened, non-boolean output in " ++ show os

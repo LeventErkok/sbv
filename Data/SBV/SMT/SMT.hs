@@ -685,16 +685,16 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                          cleanUp $ Just (r, vals)
 
                              -- If we're given a custom continuation and we're in a proof context, call it. Otherwise execute
-                             k <- case (inNonInteractiveProofMode ctx, customQuery cfg) of
+                             k <- case (inNonInteractiveProofMode (contextState ctx), customQuery cfg) of
                                     (True, Just q) -> do
                                         when (verbose cfg) $ putStrLn "** Custom query is requested. Giving control to the user."
                                         return $ runQuery q QueryState { querySend    = send
                                                                        , queryAsk     = askFull
                                                                        , queryConfig  = cfg
-                                                                       , queryContext = switchToInteractiveMode ctx
+                                                                       , queryContext = ctx { contextState = switchToInteractiveMode (contextState ctx) }
                                                                        , queryDefault = sbvContinuation
                                                                        }
-                                    (False, Just _) -> do when (verbose cfg) $ putStrLn $ "** Skipping the custom query in mode: " ++ show (getProofMode ctx)
+                                    (False, Just _) -> do when (verbose cfg) $ putStrLn $ "** Skipping the custom query in mode: " ++ show (getProofMode (contextState ctx))
                                                           return sbvContinuation
                                     (_, Nothing)    -> return sbvContinuation
 

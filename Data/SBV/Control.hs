@@ -37,7 +37,7 @@ import Data.List  (sortBy)
 import qualified Data.Map as Map (toList)
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (QueryState(..), QueryContext, Query(..), SMTResult(..), SMTConfig(..), withNewIncState, IncState(..))
+import Data.SBV.Core.Symbolic (QueryState(..), Query(..), SMTResult(..), SMTConfig(..), withNewIncState, IncState(..))
 
 import Data.SBV.SMT.SMTLib (toIncSMTLib2)
 
@@ -46,8 +46,8 @@ getConfig :: Query SMTConfig
 getConfig = queryConfig <$> get
 
 -- | Get the current context
-getContext :: Query QueryContext
-getContext = queryContext <$> get
+getContextState :: Query State
+getContextState = contextState . queryContext <$> get
 
 -- | Send a string to the solver, and return the response
 ask :: String -> Query String
@@ -100,7 +100,7 @@ syncUpSolver is = do
 
 -- | Execute in a new incremental context
 inNewContext :: (State -> IO a) -> Query a
-inNewContext act = do st <- getContext
+inNewContext act = do st <- getContextState
                       (is, r) <- io $ withNewIncState st act
                       syncUpSolver is
                       return r
