@@ -293,7 +293,7 @@ cvtInc consts (SBVPgm asgnsSeq) cfg =  concatMap (declConst cfg)                
   where -- NB. The below setting of skolemMap to empty is OK, since we do
         -- not support queries in the context of skolemized variables
         skolemMap = M.empty
-        tableMap  = noInteractive ["Programs constant tabled data"]
+        tableMap  = noInteractive ["Programs with constant tabled data"]
 
 declDef :: SMTConfig -> SkolemMap -> TableMap -> (SW, SBVExpr) -> [String]
 declDef config skolemMap tableMap (s, expr) =
