@@ -4,13 +4,13 @@ report any issues you might see with newer releases.
 
   * ABC:
       * http://bitbucket.org/alanmi/abc
-      * Version as downloaded from the above site on Jan 30, 2017.
+      * Version as downloaded from the above site on Jan 30, 2017
   * Boolector:
       * http://fmv.jku.at/boolector/
       * Version 2.4.1
   * CVC4:
-      * http://cvc4.cs.nyu.edu/web/
-      * Version 1.4
+      * https://github.com/CVC4/CVC4
+      * Version as downloaded from the above site on May 23, 2017
   * MathSAT:
       * http://mathsat.fbk.eu/
       * Version 5.4.1
@@ -19,4 +19,4 @@ report any issues you might see with newer releases.
       * Version 2.5.2
   * Z3:
       * http://github.com/Z3Prover/z3
-      * Version as downloaded from the above site on Jul 30, 2016.
+      * Version as downloaded from the above site on April 30, 2017
