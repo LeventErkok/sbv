@@ -440,6 +440,9 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         lift2  o _ [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
         lift2  o _ sbvs   = error $ "SBV.SMTLib2.sh.lift2: Unexpected arguments: "   ++ show (o, sbvs)
 
+        -- lift an arbitrary arity operator
+        liftN o _ xs = "(" ++ o ++ " " ++ unwords xs ++ ")"
+
         -- lift a binary operation with rounding-mode added; used for floating-point arithmetic
         lift2WM o fo | doubleOp || floatOp = lift2 (addRM fo)
                      | True                = lift2 o
@@ -466,19 +469,28 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           | True   = lift1 vOp
 
         eqBV  = lift2 "="
-        neqBV = lift2 "distinct"
+        neqBV = liftN "distinct"
 
         equal sgn sbvs
           | doubleOp = lift2 "fp.eq" sgn sbvs
           | floatOp  = lift2 "fp.eq" sgn sbvs
-          | True     = lift2 "=" sgn sbvs
+          | True     = lift2 "="     sgn sbvs
 
         notEqual sgn sbvs
-          | doubleOp = "(not " ++ equal sgn sbvs ++ ")"
-          | floatOp  = "(not " ++ equal sgn sbvs ++ ")"
-          | True     = lift2 "distinct" sgn sbvs
+          | doubleOp = liftP sbvs
+          | floatOp  = liftP sbvs
+          | True     = liftN "distinct" sgn sbvs
+          where liftP [_, _] = "(not " ++ equal sgn sbvs ++ ")"
+                liftP args   = "(and " ++ unwords (walk args) ++ ")"
+
+                walk []     = []
+                walk (e:es) = map (pair e) es ++ walk es
+
+                pair e1 e2  = "(not (fp.eq " ++ e1 ++ " " ++ e2 ++ "))"
 
         lift2S oU oS sgn = lift2 (if sgn then oS else oU) sgn
+        liftNS oU oS sgn = liftN (if sgn then oS else oU) sgn
+
         lift2Cmp o fo | doubleOp || floatOp = lift2 fo
                       | True                = lift2 o
 
@@ -638,7 +650,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                     ]
                 -- equality and comparisons are the only thing that works on uninterpreted sorts
                 uninterpretedTable = [ (Equal,       lift2S "="        "="        True)
-                                     , (NotEqual,    lift2S "distinct" "distinct" True)
+                                     , (NotEqual,    liftNS "distinct" "distinct" True)
                                      , (LessThan,    unintComp "<")
                                      , (GreaterThan, unintComp ">")
                                      , (LessEq,      unintComp "<=")
