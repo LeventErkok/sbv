@@ -13,6 +13,8 @@
 
 module Data.SBV.Provers.CVC4(cvc4) where
 
+import Data.Maybe (isNothing)
+
 import Data.SBV.Core.Data
 import Data.SBV.SMT.SMT
 
@@ -24,7 +26,7 @@ cvc4 = SMTSolver {
            name         = CVC4
          , executable   = "cvc4"
          , options      = ["--lang", "smt"]
-         , engine       = standardEngine "SBV_CVC4" "SBV_CVC4_OPTIONS" id addTimeOut standardModel
+         , engine       = standardEngine "SBV_CVC4" "SBV_CVC4_OPTIONS" modConfig addTimeOut standardModel
          , capabilities = SolverCapabilities {
                                 capSolverName              = "CVC4"
                               , mbDefaultLogic             = const (Just "ALL_SUPPORTED")  -- CVC4 is not happy if we don't set the logic, so fall-back to this if necessary
@@ -39,7 +41,15 @@ cvc4 = SMTSolver {
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
                               , supportsUnsatCores         = False
+                              , supportsCustomQueries      = True
                               }
          }
  where addTimeOut o i | i < 0 = error $ "CVC4: Timeout value must be non-negative, received: " ++ show i
                       | True  = o ++ ["--tlimit=" ++ show i ++ "000"]  -- SBV takes seconds, CVC4 wants milli-seconds
+
+       -- If custom queries are present, CVC4 requires an explicit command-line argument
+       modConfig :: SMTConfig -> SMTConfig
+       modConfig cfg
+        | isNothing (customQuery cfg) = cfg
+        | True                        = cfg {solver = (solver cfg) {options = newOpts}}
+        where newOpts = options (solver cfg) ++ ["--interactive"]

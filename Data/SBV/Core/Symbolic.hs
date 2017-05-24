@@ -1400,6 +1400,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsOptimization       :: Bool                 -- ^ Does the solver support optimization routines?
        , supportsPseudoBooleans     :: Bool                 -- ^ Does the solver support pseudo-boolean operations?
        , supportsUnsatCores         :: Bool                 -- ^ Does the solver support extraction of unsat-cores?
+       , supportsCustomQueries      :: Bool                 -- ^ Does the solver support interactive queries per SMT-Lib?
        }
 
 -- | Rounding mode to be used for the IEEE floating-point operations.

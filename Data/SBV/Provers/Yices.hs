@@ -13,6 +13,8 @@
 
 module Data.SBV.Provers.Yices(yices) where
 
+import Data.Maybe (isNothing)
+
 import Data.SBV.Core.Data
 import Data.SBV.SMT.SMT
 
@@ -24,7 +26,7 @@ yices = SMTSolver {
            name         = Yices
          , executable   = "yices-smt2"
          , options      = []
-         , engine       = standardEngine "SBV_YICES" "SBV_YICES_OPTIONS" id addTimeOut standardModel
+         , engine       = standardEngine "SBV_YICES" "SBV_YICES_OPTIONS" modConfig addTimeOut standardModel
          , capabilities = SolverCapabilities {
                                 capSolverName              = "Yices"
                               , mbDefaultLogic             = logic
@@ -39,6 +41,7 @@ yices = SMTSolver {
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
                               , supportsUnsatCores         = False
+                              , supportsCustomQueries      = True
                               }
          }
   where addTimeOut _ _ = error "Yices: Timeout values are not supported by Yices"
@@ -46,3 +49,10 @@ yices = SMTSolver {
         logic hasReals
           | hasReals   = Just "QF_UFLRA"
           | True       = Just "QF_AUFLIA"
+
+        -- If custom queries are present, Yices requires to be in the push-pop mode
+        modConfig :: SMTConfig -> SMTConfig
+        modConfig cfg
+         | isNothing (customQuery cfg) = cfg
+         | True                        = cfg {solver = (solver cfg) {options = newOpts}}
+         where newOpts = options (solver cfg) ++ ["--mode=push-pop"]

@@ -11,6 +11,8 @@
 
 module Data.SBV.Provers.Boolector(boolector) where
 
+import Data.Maybe (isNothing)
+
 import Data.SBV.Core.Data
 import Data.SBV.SMT.SMT
 
@@ -22,7 +24,7 @@ boolector = SMTSolver {
            name         = Boolector
          , executable   = "boolector"
          , options      = ["--smt2", "--smt2-model", "--no-exit-codes"]
-         , engine       = standardEngine "SBV_BOOLECTOR" "SBV_BOOLECTOR_OPTIONS" id addTimeOut standardModel
+         , engine       = standardEngine "SBV_BOOLECTOR" "SBV_BOOLECTOR_OPTIONS" modConfig addTimeOut standardModel
          , capabilities = SolverCapabilities {
                                 capSolverName              = "Boolector"
                               , mbDefaultLogic             = const Nothing
@@ -37,7 +39,15 @@ boolector = SMTSolver {
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
                               , supportsUnsatCores         = False
+                              , supportsCustomQueries      = True
                               }
          }
  where addTimeOut o i | i < 0 = error $ "Boolector: Timeout value must be non-negative, received: " ++ show i
                       | True  = o ++ ["-t=" ++ show i]
+
+       -- If custom queries are present, Boolector requires to be in the "--incremental" mode
+       modConfig :: SMTConfig -> SMTConfig
+       modConfig cfg
+        | isNothing (customQuery cfg) = cfg
+        | True                        = cfg {solver = (solver cfg) {options = newOpts}}
+        where newOpts = options (solver cfg) ++ ["--incremental"]
