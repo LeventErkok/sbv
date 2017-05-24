@@ -728,7 +728,21 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
         p o [a, b]
           | Just co <- lookup o cBinOps
           = a <+> text co <+> b
+        p NotEqual xs = distinct xs
         p o args = die $ "Received operator " ++ show o ++ " applied to " ++ show args
+
+        -- generate a pairwise inequality check
+        distinct args = fsep $ andAll $ walk args
+          where walk []     = []
+                walk (e:es) = map (pair e) es ++ walk es
+
+                pair e1 e2  = parens (e1 <+> text "!=" <+> e2)
+
+                -- like punctuate, but more spacing
+                andAll []     = []
+                andAll (d:ds) = go d ds
+                     where go d' [] = [d']
+                           go d' (e:es) = (d' <+> text "&&") : go e es
 
         -- Div0 needs to protect, but only when the arguments are not float/double. (Div by 0 for those are well defined to be Inf/NaN etc.)
         protectDiv0 k divOp def a b = case k of

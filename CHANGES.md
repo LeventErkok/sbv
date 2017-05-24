@@ -30,6 +30,14 @@
 
     Currently, only Z3 and MathSAT backends support unsat-cores.
 
+  * Added 'distinct', which takes a list of symbolic values and returns 'true' if
+    they are all different from each-other, pairwise. This function is similar to
+    the existing 'allDifferent' function, but it generates much more compact SMT-Lib code,
+    instead of pairwise inequalities. However, its type is more restricted, as it only
+    applies to SBV values (i.e., SWord/SFloat etc.), while 'allDifferent' applies to
+    instances of the more general 'EqSymbolic' class. When applied to SBV values,
+    they are equivalent.
+
   * Add support for pseudo-boolean operations:
 
           pbAtMost           :: [SBool]        -> Int -> SBool

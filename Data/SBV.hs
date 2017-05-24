@@ -210,7 +210,7 @@ module Data.SBV (
   -- $cardIntro
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   -- *** Predicates
-  , allEqual, allDifferent, inRange, sElem
+  , allEqual, allDifferent, distinct, inRange, sElem
 
   -- ** Checking constraint vacuity
   , isVacuous, isVacuousWith

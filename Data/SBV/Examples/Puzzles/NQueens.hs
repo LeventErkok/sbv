@@ -19,7 +19,7 @@ type Solution = [SWord8]
 -- | Checks that a given solution of @n@-queens is valid, i.e., no queen
 -- captures any other.
 isValid :: Int -> Solution -> SBool
-isValid n s = bAll rangeFine s &&& allDifferent s &&& bAll checkDiag ijs
+isValid n s = bAll rangeFine s &&& distinct s &&& bAll checkDiag ijs
   where rangeFine x = x .>= 1 &&& x .<= fromIntegral n
         ijs = [(i, j) | i <- [1..n], j <- [i+1..n]]
         checkDiag (i, j) = diffR ./= diffC

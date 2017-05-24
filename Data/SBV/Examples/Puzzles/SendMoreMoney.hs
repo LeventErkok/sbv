@@ -40,6 +40,6 @@ sendMoreMoney = allSat $ do
             more      = val [m,o,r,e]
             money     = val [m,o,n,e,y]
         constrain $ bAll isDigit ds
-        constrain $ allDifferent ds
+        constrain $ distinct ds
         constrain $ s ./= 0 &&& m ./= 0
         solve [send + more .== money]

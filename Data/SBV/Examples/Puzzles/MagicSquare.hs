@@ -37,7 +37,7 @@ diag _          = []
 
 -- | Test if a given board is a magic square
 isMagic :: Board -> SBool
-isMagic rows = bAnd $ fromBool isSquare : allEqual (map sum items) : allDifferent (concat rows) : map chk items
+isMagic rows = bAnd $ fromBool isSquare : allEqual (map sum items) : distinct (concat rows) : map chk items
   where items = d1 : d2 : rows ++ columns
         n = genericLength rows
         isSquare = all (\r -> genericLength r == n) rows

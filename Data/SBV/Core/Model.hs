@@ -25,7 +25,7 @@ module Data.SBV.Core.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), assertSoft, SIntegral
   , ite, iteLazy, sTestBit, sExtractBits, sPopCount, setBitTo, sFromIntegral
   , sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, (.^)
-  , allEqual, allDifferent, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
+  , allEqual, allDifferent, distinct, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   , constrain, namedConstraint, pConstrain, tactic, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
@@ -492,7 +492,25 @@ instance Boolean SBool where
   SBV a ||| SBV b = SBV (svOr a b)
   SBV a <+> SBV b = SBV (svXOr a b)
 
--- | Returns (symbolic) true if all the elements of the given list are different.
+-- | Returns (symbolic) true if all the SBV elements of the given list are different.
+-- Compare this function to 'allDifferent', which behaves similarly except with a
+-- more general type. While 'distinct' is restricted to direct SBV values, it will generate
+-- better SMTLib output as it can condense the pairwise inequality checks. So, it should be
+-- preferred whenever possible.
+distinct :: SymWord a => [SBV a] -> SBool
+distinct []  = true
+distinct [_] = true
+distinct xs
+  | all isConcrete xs
+  = allDifferent xs
+  | True
+  = SBV (SVal KBool (Right (cache r)))
+  where r st = do xsw <- mapM (sbvToSW st) xs
+                  newExpr st KBool (SBVApp NotEqual xsw)
+
+-- | Returns (symbolic) true if all the elements of the given list are different. This version
+-- works on arbitrary 'EqSymbolic' instances. Prefer 'distinct' for SBV's, which generate better
+-- SMT-Lib code.
 allDifferent :: EqSymbolic a => [a] -> SBool
 allDifferent []     = true
 allDifferent (x:xs) = bAll (x ./=) xs &&& allDifferent xs

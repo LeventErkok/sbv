@@ -28,7 +28,7 @@ type Board = [Row]
 -- | Given a series of elements, make sure they are all different
 -- and they all are numbers between 1 and 9
 check :: [SWord8] -> SBool
-check grp = bAnd $ allDifferent grp : map rangeFine grp
+check grp = bAnd $ distinct grp : map rangeFine grp
   where rangeFine x = x .> 0 &&& x .<= 9
 
 -- | Given a full Sudoku board, check that it is valid
