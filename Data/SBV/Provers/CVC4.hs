@@ -52,4 +52,4 @@ cvc4 = SMTSolver {
        modConfig cfg
         | isNothing (customQuery cfg) = cfg
         | True                        = cfg {solver = (solver cfg) {options = newOpts}}
-        where newOpts = options (solver cfg) ++ ["--interactive"]
+        where newOpts = options (solver cfg) ++ ["--incremental", "--interactive", "--no-interactive-prompt"]
