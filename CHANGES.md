@@ -29,6 +29,7 @@
     as speculated in the SMT-Lib document itself.
 
     Currently, only Z3 and MathSAT backends support unsat-cores.
+    
     (Thanks to Rohit Ramesh for the suggestion leading to this feature.)
 
   * Added function `distinct`, which returns true if all the elements of the
