@@ -25,7 +25,7 @@ module Data.SBV.Core.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), assertSoft, SIntegral
   , ite, iteLazy, sTestBit, sExtractBits, sPopCount, setBitTo, sFromIntegral
   , sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, (.^)
-  , allEqual, allDifferent, distinct, inRange, sElem, oneIf, blastBE, blastLE, fullAdder, fullMultiplier
+  , oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   , constrain, namedConstraint, pConstrain, tactic, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
@@ -327,30 +327,66 @@ label m x
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.
---
--- Minimal complete definition: '.=='
 infix 4 .==, ./=
 class EqSymbolic a where
-  (.==), (./=) :: a -> a -> SBool
+  -- | Symbolic equality.
+  (.==) :: a -> a -> SBool
+  -- | Symbolic inequality.
+  (./=) :: a -> a -> SBool
+
+  -- | Returns (symbolic) true if all the elements of the given list are different.
+  distinct :: [a] -> SBool
+
+  -- | Returns (symbolic) true if all the elements of the given list are the same.
+  allEqual :: [a] -> SBool
+
+  -- | Symbolic membership test.
+  sElem    :: a -> [a] -> SBool
+
   -- minimal complete definition: .==
   x ./= y = bnot (x .== y)
+
+  allEqual []     = true
+  allEqual (x:xs) = bAll (x .==) xs
+
+  -- Default implementation of distinct. Note that we override
+  -- this method for the base types to generate better code.
+  distinct []     = true
+  distinct (x:xs) = bAll (x ./=) xs &&& distinct xs
+
+  sElem x xs = bAny (.== x) xs
 
 -- | Symbolic Comparisons. Similar to 'Eq', we cannot implement Haskell's 'Ord' class
 -- since there is no way to return an 'Ordering' value from a symbolic comparison.
 -- Furthermore, 'OrdSymbolic' requires 'Mergeable' to implement if-then-else, for the
 -- benefit of implementing symbolic versions of 'max' and 'min' functions.
---
--- Minimal complete definition: '.<'
 infix 4 .<, .<=, .>, .>=
 class (Mergeable a, EqSymbolic a) => OrdSymbolic a where
-  (.<), (.<=), (.>), (.>=) :: a -> a -> SBool
-  smin, smax :: a -> a -> a
+  -- | Symbolic less than.
+  (.<)  :: a -> a -> SBool
+  -- | Symbolic less than or equal to.
+  (.<=) :: a -> a -> SBool
+  -- | Symbolic greater than.
+  (.>)  :: a -> a -> SBool
+  -- | Symbolic greater than or equal to.
+  (.>=) :: a -> a -> SBool
+  -- | Symbolic minimum.
+  smin  :: a -> a -> a
+  -- | Symbolic maximum.
+  smax  :: a -> a -> a
+  -- | Is the value withing the allowed /inclusive/ range?
+  inRange    :: a -> (a, a) -> SBool
+
   -- minimal complete definition: .<
   a .<= b    = a .< b ||| a .== b
   a .>  b    = b .<  a
   a .>= b    = b .<= a
+
   a `smin` b = ite (a .<= b) a b
   a `smax` b = ite (a .<= b) b a
+
+  inRange x (y, z) = x .>= y &&& x .<= z
+
 
 {- We can't have a generic instance of the form:
 
@@ -367,6 +403,30 @@ for natural reasons..
 instance EqSymbolic (SBV a) where
   SBV x .== SBV y = SBV (svEqual x y)
   SBV x ./= SBV y = SBV (svNotEqual x y)
+
+  -- Custom version of distinct that generates better code for base types
+  distinct []  = true
+  distinct [_] = true
+  distinct xs
+    | all isConc xs
+    = checkDiff xs
+    | True
+    = SBV (SVal KBool (Right (cache r)))
+    where r st = do xsw <- mapM (sbvToSW st) xs
+                    newExpr st KBool (SBVApp NotEqual xsw)
+
+          -- We call this in case all are concrete, which will
+          -- reduce to a constant and generate no code at all!
+          -- Note that this is essentially the same as the default
+          -- definition, which unfortunately we can no longer call!
+          checkDiff []     = true
+          checkDiff (a:as) = bAll (a ./=) as &&& checkDiff as
+
+          -- Sigh, we can't use isConcrete since that requires SymWord
+          -- constraint that we don't have here. (To support SBools.)
+          isConc (SBV (SVal _ (Left _))) = True
+          isConc _                       = False
+
 
 instance SymWord a => OrdSymbolic (SBV a) where
   SBV x .<  SBV y = SBV (svLessThan x y)
@@ -491,42 +551,6 @@ instance Boolean SBool where
   SBV a &&& SBV b = SBV (svAnd a b)
   SBV a ||| SBV b = SBV (svOr a b)
   SBV a <+> SBV b = SBV (svXOr a b)
-
--- | Returns (symbolic) true if all the SBV elements of the given list are different.
--- Compare this function to 'allDifferent', which behaves similarly except with a
--- more general type. While 'distinct' is restricted to direct SBV values, it will generate
--- better SMTLib output as it can condense the pairwise inequality checks. So, it should be
--- preferred whenever possible.
-distinct :: SymWord a => [SBV a] -> SBool
-distinct []  = true
-distinct [_] = true
-distinct xs
-  | all isConcrete xs
-  = allDifferent xs
-  | True
-  = SBV (SVal KBool (Right (cache r)))
-  where r st = do xsw <- mapM (sbvToSW st) xs
-                  newExpr st KBool (SBVApp NotEqual xsw)
-
--- | Returns (symbolic) true if all the elements of the given list are different. This version
--- works on arbitrary 'EqSymbolic' instances. Prefer 'distinct' for SBV's, which generate better
--- SMT-Lib code.
-allDifferent :: EqSymbolic a => [a] -> SBool
-allDifferent []     = true
-allDifferent (x:xs) = bAll (x ./=) xs &&& allDifferent xs
-
--- | Returns (symbolic) true if all the elements of the given list are the same.
-allEqual :: EqSymbolic a => [a] -> SBool
-allEqual []     = true
-allEqual (x:xs) = bAll (x .==) xs
-
--- | Returns (symbolic) true if the argument is in range
-inRange :: OrdSymbolic a => a -> (a, a) -> SBool
-inRange x (y, z) = x .>= y &&& x .<= z
-
--- | Symbolic membership test
-sElem :: EqSymbolic a => a -> [a] -> SBool
-sElem x xs = bAny (.== x) xs
 
 -- | Returns 1 if the boolean is true, otherwise 0.
 oneIf :: (Num a, SymWord a) => SBool -> SBV a
