@@ -28,7 +28,8 @@
     i.e., any unnamed yet part-of-the-core-unsat expressions will be missing;
     as speculated in the SMT-Lib document itself.
 
-    Currently, only Z3 and MathSAT backends support unsat-cores.
+    Currently, only Z3 and MathSAT backends support unsat-cores. Thanks to
+    Rohit Ramesh for the suggestion.
 
   * Added function `distinct`, which returns true if all the elements of the
     given list are different. This function replaces the old `allDifferent`
