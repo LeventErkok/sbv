@@ -265,7 +265,7 @@ initMachine mem (rx, ra, mc, fc, fz) = Mostek { memory    = resetArray mem mc
 -- running Legato's algorithm does indeed compute the product of @x@ and @y@ correctly.
 legatoIsCorrect :: Memory -> (Address, Value) -> (Address, Value) -> Address -> InitVals -> SBool
 legatoIsCorrect mem (addrX, x) (addrY, y) addrLow initVals
-        = allDifferent [addrX, addrY, addrLow]    -- note the conditional: addresses must be distinct!
+        = distinct [addrX, addrY, addrLow]    -- note the conditional: addresses must be distinct!
                 ==> result .== expected
     where (hi, lo) = runLegato (addrX, x) (addrY, y) addrLow (initMachine mem initVals)
           -- NB. perform the comparison over 16 bit values to avoid overflow!
