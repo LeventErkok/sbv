@@ -29,14 +29,14 @@
     as speculated in the SMT-Lib document itself.
 
     Currently, only Z3 and MathSAT backends support unsat-cores.
+    
+    (Thanks to Rohit Ramesh for the suggestion leading to this feature.)
 
-  * Added 'distinct', which takes a list of symbolic values and returns 'true' if
-    they are all different from each-other, pairwise. This function is similar to
-    the existing 'allDifferent' function, but it generates much more compact SMT-Lib code,
-    instead of pairwise inequalities. However, its type is more restricted, as it only
-    applies to SBV values (i.e., SWord/SFloat etc.), while 'allDifferent' applies to
-    instances of the more general 'EqSymbolic' class. When applied to SBV values,
-    they are equivalent.
+  * Added function `distinct`, which returns true if all the elements of the
+    given list are different. This function replaces the old `allDifferent`
+    function, which is now removed. The difference is that `distinct` will produce
+    much better code for SMT-Lib. If you used `allDifferent` before, simply
+    replacing it with `distinct` should work.
 
   * Add support for pseudo-boolean operations:
 
@@ -67,6 +67,10 @@
          generateSMTBenchmarks
 
     If you use them, please `import Data.SBV.Internals`.
+
+  * Reorganized `EqSymbolic` and `EqOrd` classes to collect some of the
+    similarly named function together. Users should see no impact due to this change.
+
 
 ### Version 6.0, 2017-05-07
 

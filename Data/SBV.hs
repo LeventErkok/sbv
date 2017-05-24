@@ -163,10 +163,7 @@ module Data.SBV (
 
   -- ** Conditionals: Mergeable values
   , Mergeable(..), ite, iteLazy
-  -- ** Symbolic equality
-  , EqSymbolic(..)
-  -- ** Symbolic ordering
-  , OrdSymbolic(..)
+
   -- ** Symbolic integral numbers
   , SIntegral
   -- ** Division
@@ -183,6 +180,12 @@ module Data.SBV (
   -- * Uninterpreted sorts, constants, and functions
   -- $uninterpreted
   , Uninterpreted(..), addAxiom
+
+  -- * Symbolic Equality and Comparisons
+  , EqSymbolic(..), OrdSymbolic(..)
+  -- * Cardinality constraints
+  -- $cardIntro
+  , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
 
   -- * Enumerations
   -- $enumerations
@@ -206,11 +209,6 @@ module Data.SBV (
   -- ** Adding constraints
   -- $constrainIntro
   , constrain, namedConstraint, pConstrain
-  -- *** Cardinality constraints
-  -- $cardIntro
-  , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
-  -- *** Predicates
-  , allEqual, allDifferent, distinct, inRange, sElem
 
   -- ** Checking constraint vacuity
   , isVacuous, isVacuousWith
