@@ -50,9 +50,9 @@ yices = SMTSolver {
           | hasReals   = Just "QF_UFLRA"
           | True       = Just "QF_AUFLIA"
 
-        -- If custom queries are present, Yices requires to be in the push-pop mode
+        -- If custom queries are present, Yices requires to be in the incremental mode
         modConfig :: SMTConfig -> SMTConfig
         modConfig cfg
          | isNothing (customQuery cfg) = cfg
          | True                        = cfg {solver = (solver cfg) {options = newOpts}}
-         where newOpts = options (solver cfg) ++ ["--mode=push-pop"]
+         where newOpts = options (solver cfg) ++ ["--incremental"]
