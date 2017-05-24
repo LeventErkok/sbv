@@ -518,9 +518,7 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels tactics objectives 
         when (hasObjectives && not isSat)     $ error "SBV: Optimization is only available for sat calls."
         when (hasObjectives && hasCaseSplits) $ error "SBV: Optimization and case-splits are not supported together."
 
-        when hasQueries $ case checkQueryApplicability cfgIn hasCaseSplits ctx of
-                             Nothing -> return ()
-                             Just e  -> error e
+        when hasQueries $ maybe (return ()) error $ checkQueryApplicability cfgIn hasCaseSplits ctx
 
         let mbOptInfo
                 | not hasObjectives = Nothing
@@ -630,9 +628,9 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels tactics objectives 
 -- | Should we allow a custom query? Returns the reason why we shouldn't, if there is one
 checkQueryApplicability :: SMTConfig -> Bool -> QueryContext -> Maybe String
 checkQueryApplicability cfgIn hasCaseSplits QueryContext{contextSkolems} =
-                (checkSupport  $ supportsCustomQueries $ capabilities $ solver cfgIn)
-        `mplus` (checkSkolems    contextSkolems)
-        `mplus` (checkCaseSplits hasCaseSplits)
+                checkSupport    (supportsCustomQueries $ capabilities $ solver cfgIn)
+        `mplus` checkSkolems    contextSkolems
+        `mplus` checkCaseSplits hasCaseSplits
   where
         -- Check if the underlying solver has support for it
         checkSupport True  = Nothing
@@ -960,12 +958,23 @@ allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
 allSatWith config p = do
         msg "Checking Satisfiability, all solutions.."
         (ctx, sbvPgm@SMTProblem{smtInputs=qinps, kindsUsed=ki}) <- simulate (getConverter config) config True [] p
+
         let usorts = [s | us@(KUserSort s _) <- Set.toList ki, isFree us]
                 where isFree (KUserSort _ (Left _)) = True
                       isFree _                      = False
+
         unless (null usorts) $ msg $  "SBV.allSat: Uninterpreted sorts present: " ++ unwords usorts
                                    ++ "\n               SBV will use equivalence classes to generate all-satisfying instances."
+
+        -- We cannot support allSat with custom-queries, since the state would be reused!
+
+        unless (null [() | QueryUsing _ <- tactics sbvPgm])
+               $ error $ unlines [ "*** Data.SBV: allSat calls are not supported in the presence of interactive queries."
+                                 , "*** Data.SBV: Please report this as a feature request!"
+                                 ]
+
         results <- unsafeInterleaveIO $ go ctx sbvPgm (1::Int) []
+
         -- See if there are any existentials below any universals
         -- If such is the case, then the solutions are unique upto prefix existentials
         let w = ALL `elem` map fst qinps
