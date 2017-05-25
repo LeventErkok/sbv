@@ -221,7 +221,11 @@ module Data.SBV (
 
   -- * Tactics
   -- $tacticIntro
-  , Tactic(..), tactic, query
+  , Tactic(..), tactic
+
+  -- * User queries
+  -- $queryIntro
+  , query
 
   -- * Optimization
   -- $optiIntro
@@ -907,6 +911,16 @@ can get lost in the translation. The idea here is that if you use these function
 produce better translations to SMTLib for more efficient solving of cardinality constraints, assuming
 the backend solver supports them. Currently, only Z3 supports pseudo-booleans directly. For all other solvers,
 SBV will translate these to equivalent terms that do not require special functions.
+-}
+
+{- $queryIntro
+In certain cases, the user might want to take over the communication with the solver, programmatically
+querying the engine and issuing commands accordingly. Even with human guidance, perhaps, where the user
+can take a look at the engine state and issue commands to guide the proof. This is an advanced feature,
+as the user is given full access to the underlying SMT solver, so the usual protections provided by
+SBV are no longer there to prevent mistakes.
+
+TODO: Need better text/example here.
 -}
 
 {-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}
