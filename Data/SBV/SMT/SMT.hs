@@ -497,11 +497,13 @@ pipeProcess cfg ctx execName opts script cleanErrs failure success = do
                                        ]
 
       Just execPath -> runSolver cfg ctx execPath opts script cleanErrs failure success
-                       `C.catch`
-                       (\(e::C.SomeException) -> return $ failure [ "Failed to start the external solver:\n" ++ show e
-                                                                  , "Make sure you can start " ++ show execPath
-                                                                  , "from the command line without issues."
-                                                                  ])
+                       `C.catches`
+                        [ C.Handler (\(e :: C.ErrorCall)     -> C.throw e)
+                        , C.Handler (\(e :: C.SomeException) -> return $ failure [ "Failed to start the external solver:\n" ++ show e
+                                                                                 , "Make sure you can start " ++ show execPath
+                                                                                 , "from the command line without issues."
+                                                                                 ])
+                        ]
 
 -- | The standard-model that most SMT solvers should happily work with
 standardModel :: (Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel, SW -> String -> [String])
