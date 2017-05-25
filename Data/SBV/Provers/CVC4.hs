@@ -40,7 +40,7 @@ cvc4 = SMTSolver {
                               , supportsDoubles            = False
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
-                              , supportsUnsatCores         = False
+                              , supportsUnsatCores         = True
                               , supportsCustomQueries      = True
                               }
          }
