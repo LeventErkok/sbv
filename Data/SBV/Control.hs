@@ -198,7 +198,8 @@ getValue s = do sw <- inNewContext (`sbvToSW` s)
 -- | Bail out if we don't get what we expected
 unexpected :: String -> String -> String -> String -> Maybe String -> a
 unexpected ctx sent expected received mbReason = error $ unlines $ [
-          "*** Data.SBV: Unexpected response from the solver."
+          ""
+        , "*** Data.SBV: Unexpected response from the solver."
         , "***    Context : " ++ ctx
         , "***    Sent    : " ++ sent
         , "***    Expected: " ++ expected
