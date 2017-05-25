@@ -119,6 +119,9 @@ Library
                   , Data.SBV.Core.Floating
                   , Data.SBV.Core.Splittable
                   , Data.SBV.Core.Symbolic
+                  , Data.SBV.Control.Query
+                  , Data.SBV.Control.Types
+                  , Data.SBV.Control.Utils
                   , Data.SBV.Compilers.C
                   , Data.SBV.Compilers.CodeGen
                   , Data.SBV.SMT.SMT
