@@ -26,6 +26,7 @@ module Data.SBV.Control(
      , getValue
 
      -- * Controlling the solver behavior
+     , SMTOption(..), setOption
      , ignoreExitCode
 
      -- * Terminating the query
@@ -126,6 +127,19 @@ inNewContext act = do st <- getContextState
                       (is, r) <- io $ withNewIncState st act
                       syncUpSolver is
                       return r
+
+-- | Option values that can be set in the solver. Note that not
+-- all solvers may support all of these!
+data SMTOption = DiagnosticOutputChannel FilePath
+
+-- | Show instance for SMTOption maintains smt-lib format per the
+-- SMTLib2 standard document
+instance Show SMTOption where
+   show (DiagnosticOutputChannel f) = ":diagnostic-output-channel " ++ show f
+
+-- | Set an option
+setOption :: SMTOption -> Query ()
+setOption o = send $ "(set-option " ++ show o ++ ")"
 
 -- | Assert a new "fact"
 assert :: SBool -> Query ()
