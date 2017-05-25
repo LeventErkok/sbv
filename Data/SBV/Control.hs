@@ -9,7 +9,8 @@
 -- Control sublanguage for interacting with SMT solvers.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE NamedFieldPuns    #-}
 
 module Data.SBV.Control(
      -- * Add new assertions
@@ -17,6 +18,12 @@ module Data.SBV.Control(
 
      -- * Sending an arbitrary string
      , ask
+
+     -- * Checking satisfiability
+     , CheckSatResult(..), checkSat
+
+     -- * Extracting a value
+     , getValue
 
      -- * Controlling the solver behavior
      , ignoreExitCode
@@ -42,6 +49,11 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (QueryState(..), Query(..), SMTResult(..), SMTConfig(..), withNewIncState, IncState(..))
 
 import Data.SBV.SMT.SMTLib (toIncSMTLib2)
+
+import Data.SBV.Provers.SExpr
+
+import Data.Int
+import Data.Word
 
 -- | Get the current configuration
 getConfig :: Query SMTConfig
@@ -119,6 +131,80 @@ inNewContext act = do st <- getContextState
 assert :: SBool -> Query ()
 assert s = do sw <- inNewContext (`sbvToSW` s)
               send $ "(assert " ++ show sw ++ ")"
+
+-- | Result of a 'checkSat' call.
+data CheckSatResult = Sat | Unsat | Unk
+                    deriving (Eq, Show)
+
+-- | Check for satisfiability.
+checkSat :: Query CheckSatResult
+checkSat = do let cmd = "(check-sat)"
+              r <- ask cmd
+              case words r of
+                ["sat"]     -> return Sat
+                ["unsat"]   -> return Unsat
+                ["unknown"] -> return Unk
+                _           -> unexpected "checkSat" cmd "one of unknown/sat/unsat" r Nothing
+
+-- | A class which allows for sexpr-conversion to values
+class SMTValue a where
+  sexprToVal :: SExpr -> Maybe a
+
+  default sexprToVal :: Integral a => SExpr -> Maybe a
+  sexprToVal (ENum (i, _)) = Just $ fromIntegral i
+  sexprToVal _             = Nothing
+
+instance SMTValue Int8
+instance SMTValue Int16
+instance SMTValue Int32
+instance SMTValue Int64
+instance SMTValue Word8
+instance SMTValue Word16
+instance SMTValue Word32
+instance SMTValue Word64
+instance SMTValue Integer
+
+instance SMTValue Float where
+   sexprToVal (EFloat f) = Just f
+   sexprToVal _          = Nothing
+
+instance SMTValue Double where
+   sexprToVal (EDouble f) = Just f
+   sexprToVal _           = Nothing
+
+instance SMTValue Bool where
+   sexprToVal (ENum (1, _)) = Just True
+   sexprToVal (ENum (0, _)) = Just False
+   sexprToVal _             = Nothing
+
+instance SMTValue AlgReal where
+   sexprToVal (EReal a) = Just a
+   sexprToVal _         = Nothing
+
+-- | Get the value of a term.
+getValue :: SMTValue a => SBV a -> Query a
+getValue s = do sw <- inNewContext (`sbvToSW` s)
+                let nm  = show sw
+                    cmd = "(get-value (" ++ nm ++ "))"
+                    bad = unexpected "getValue" cmd "a model value"
+                r <- ask cmd
+                case parseSExpr r of
+                  Left e                                          -> bad r (Just e)
+                  Right (EApp [EApp [ECon o,  v]]) | o == show sw -> case sexprToVal v of
+                                                                       Nothing -> bad r Nothing
+                                                                       Just c  -> return c
+                  _                                               -> bad r Nothing
+
+-- | Bail out if we don't get what we expected
+unexpected :: String -> String -> String -> String -> Maybe String -> a
+unexpected ctx sent expected received mbReason = error $ unlines $ [
+          "*** Data.SBV: Unexpected response from the solver."
+        , "***    Context : " ++ ctx
+        , "***    Sent    : " ++ sent
+        , "***    Expected: " ++ expected
+        , "***    Received: " ++ received
+        ]
+     ++ [ "***    Reason  : " ++ r | Just r <- [mbReason]]
 
 -- | Produce this answer as the result
 result :: SMTResult -> Query [SMTResult]
