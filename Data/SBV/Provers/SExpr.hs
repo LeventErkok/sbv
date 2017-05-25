@@ -48,13 +48,20 @@ tokenize inp = go inp []
                             (pre, '|':rest) -> go rest (pre : sofar)
                             (pre, rest)     -> go rest (pre : sofar)
 
+       -- TODO: Should we care for an escaped '"'? I don't
+       -- think this can happen in legit SMTLib output, but if it
+       -- does, we'd just choke in a much different way!
+       go ('"':r) sofar = case span (/= '"') r of
+                            (pre, '"':rest) -> go rest (pre : sofar)
+                            (pre, rest)     -> go rest (pre : sofar)
+
        go cs sofar = case span (`notElem` stopper) cs of
                        (pre, post) -> go post (pre : sofar)
 
        -- characters that can stop the current token
        -- it is *crucial* that this list contains every character
        -- we can match in one of the previous cases!
-       stopper = " ():|"
+       stopper = " ():|\""
 
 -- | Parse a string into an SExpr, potentially failing with an error message
 parseSExpr :: String -> Either String SExpr
