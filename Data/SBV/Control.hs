@@ -31,7 +31,7 @@ module Data.SBV.Control(
      , ignoreExitCode
 
      -- * Terminating the query
-     , continue
+     , sbvResume
      , result
      , failure
 
@@ -67,7 +67,7 @@ getContextState = contextState . queryContext <$> get
 
 -- | Should we ignore the exit code from the solver upon finish?
 -- The default is /not/ to ignore. However, you might want to set
--- this to 'False' before you issue a call to 'continue', in case the interactive
+-- this to 'False' before you issue a call to 'sbvResume', in case the interactive
 -- part of your query caused solver to issue some errors that you would
 -- like to ignore.
 ignoreExitCode :: Bool -> Query ()
@@ -106,10 +106,14 @@ io = liftIO
 message :: String -> Query ()
 message = io . putStrLn
 
--- | Run what SBV would've run, should we not have taken control.
-continue :: Query [SMTResult]
-continue = do QueryState{queryDefault, queryIgnoreExitCode} <- get
-              io $ queryDefault queryIgnoreExitCode
+-- | Run what SBV would've run, should we not have taken control. Note that
+-- if you call this function, SBV will issue a call to check-sat and then
+-- collect the model with respect to all the changes the query has performed.
+-- If you already do have a model built during the query, use 'result' to
+-- return it, instead of telling sbv to do it on its own.
+sbvResume :: Query [SMTResult]
+sbvResume = do QueryState{queryDefault, queryIgnoreExitCode} <- get
+               io $ queryDefault queryIgnoreExitCode
 
 -- | Sync-up the external solver with new context we have generated
 syncUpSolver :: IncState -> Query ()
