@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 
 module Data.SBV.Control(
@@ -153,12 +154,12 @@ data CheckSatResult = Sat | Unsat | Unk
 -- | Check for satisfiability.
 checkSat :: Query CheckSatResult
 checkSat = do let cmd = "(check-sat)"
+                  bad = unexpected "checkSat" cmd "one of sat/unsat/unknown"
               r <- ask cmd
-              case words r of
-                ["sat"]     -> return Sat
-                ["unsat"]   -> return Unsat
-                ["unknown"] -> return Unk
-                _           -> unexpected "checkSat" cmd "one of unknown/sat/unsat" r Nothing
+              parse r bad $ \case ECon "sat"     -> return Sat
+                                  ECon "unsat"   -> return Unsat
+                                  ECon "unknown" -> return Unk
+                                  _              -> bad r Nothing
 
 -- | A class which allows for sexpr-conversion to values
 class SMTValue a where
@@ -202,12 +203,16 @@ getValue s = do sw <- inNewContext (`sbvToSW` s)
                     cmd = "(get-value (" ++ nm ++ "))"
                     bad = unexpected "getValue" cmd "a model value"
                 r <- ask cmd
-                case parseSExpr r of
-                  Left e                                          -> bad r (Just e)
-                  Right (EApp [EApp [ECon o,  v]]) | o == show sw -> case sexprToVal v of
-                                                                       Nothing -> bad r Nothing
-                                                                       Just c  -> return c
-                  _                                               -> bad r Nothing
+                parse r bad $ \case EApp [EApp [ECon o,  v]] | o == show sw -> case sexprToVal v of
+                                                                                 Nothing -> bad r Nothing
+                                                                                 Just c  -> return c
+                                    _                                       -> bad r Nothing
+
+-- | Bail out if a parse goes bad
+parse :: String -> (String -> Maybe String -> a) -> (SExpr -> a) -> a
+parse r fCont sCont = case parseSExpr r of
+                        Left  e   -> fCont r (Just e)
+                        Right res -> sCont res
 
 -- | Bail out if we don't get what we expected
 unexpected :: String -> String -> String -> String -> Maybe String -> a
