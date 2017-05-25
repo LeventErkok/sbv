@@ -17,7 +17,7 @@ module Data.SBV.Control(
        assert
 
      -- * Sending an arbitrary string
-     , ask
+     , send, ask
 
      -- * Checking satisfiability
      , CheckSatResult(..), checkSat
