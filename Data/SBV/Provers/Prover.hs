@@ -345,10 +345,9 @@ compileToSMTLib :: Provable a => SMTLibVersion   -- ^ Version of SMTLib to compi
 compileToSMTLib version isSat a = do
         t <- getClockTime
         let comments = ["Created on " ++ show t]
-            cvt = case version of
-                    SMTLib2 -> toSMTLib2
-        (_, SMTProblem{smtLibPgm}) <- simulate cvt defaultSMTCfg isSat comments a
-        let out = show (smtLibPgm defaultSMTCfg NoCase)
+            cfg      = defaultSMTCfg { smtLibVersion = version }
+        (_, SMTProblem{smtLibPgm}) <- simulate (toSMTLib cfg) cfg isSat comments a
+        let out = show (smtLibPgm cfg NoCase)
         return $ out ++ "\n(check-sat)\n"
 
 -- | Create SMT-Lib benchmarks, for supported versions of SMTLib. The first argument is the basename of the file.
@@ -383,17 +382,9 @@ objectiveCheck False os w = error $ unlines $ ("\n*** Unsupported call to " ++ s
 objectiveCheck True []  w = error $ "*** Unsupported call to " ++ w ++ " when no objectives are present. Use \"sat\" for plain satisfaction"
 objectiveCheck True _   _ = return ()
 
--- | Pick the converter, based on the SMTLib version. Note that
--- we no longer support SMTLib1, so the following is more or less a no-op,
--- but it's good to use it since if we add some other target GHC's pattern-match
--- warning will point us to here.
-getConverter :: SMTConfig -> SMTLibConverter SMTLibPgm
-getConverter SMTConfig{smtLibVersion} = case smtLibVersion of
-                                          SMTLib2 -> toSMTLib2
-
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
-proveWith config a = do (ctx, simRes@SMTProblem{tactics, objectives}) <- simulate (getConverter config) config False [] a
+proveWith config a = do (ctx, simRes@SMTProblem{tactics, objectives}) <- simulate (toSMTLib config) config False [] a
                         objectiveCheck False objectives "prove"
                         let hasPar = any isParallelCaseAnywhere tactics
                         bufferSanity hasPar $ applyTactics config ctx (False, hasPar) (wrap, unwrap) [] tactics objectives
@@ -406,7 +397,7 @@ proveWith config a = do (ctx, simRes@SMTProblem{tactics, objectives}) <- simulat
 
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
-satWith config a = do (ctx, simRes@SMTProblem{tactics, objectives}) <- simulate (getConverter config) config True [] a
+satWith config a = do (ctx, simRes@SMTProblem{tactics, objectives}) <- simulate (toSMTLib config) config True [] a
                       objectiveCheck False objectives "sat"
                       let hasPar = any isParallelCaseAnywhere tactics
                       bufferSanity hasPar $ applyTactics config ctx (True, hasPar) (wrap, unwrap) [] tactics objectives
@@ -421,7 +412,7 @@ satWith config a = do (ctx, simRes@SMTProblem{tactics, objectives}) <- simulate 
 optimizeWith :: Provable a => SMTConfig -> a -> IO OptimizeResult
 optimizeWith config a = do
         msg "Optimizing.."
-        (ctx, sbvPgm@SMTProblem{objectives, tactics}) <- simulate (getConverter config) config True [] a
+        (ctx, sbvPgm@SMTProblem{objectives, tactics}) <- simulate (toSMTLib config) config True [] a
 
         objectiveCheck True objectives "optimize"
 
@@ -913,7 +904,7 @@ safeWith cfg a = do
   where locInfo (Just ps) = Just $ let loc (f, sl) = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
                                    in intercalate ",\n " (map loc ps)
         locInfo _                     = Nothing
-        verify st res (msg, cs, cond) = do (ctx, problem) <- runProofOn (getConverter cfg) cfg True [] st pgm
+        verify st res (msg, cs, cond) = do (ctx, problem) <- runProofOn (toSMTLib cfg) cfg True [] st pgm
                                            result         <- callSolver True msg [] mwrap problem cfg ctx Nothing NoCase
                                            return $ SafeResult (locInfo (getCallStack `fmap` cs), msg, result)
            where pgm = res { resInputs  = [(EX, n) | (_, n) <- resInputs res]   -- make everything existential
@@ -941,7 +932,7 @@ isVacuousWith config a = do
            [] -> return False -- no constraints, no need to check
            _  -> do let is'  = [(EX, i) | (_, i) <- is] -- map all quantifiers to "exists" for the constraint check
                         res' = Result ki tr uic is' cs ts as uis ax asgn cstr tactics goals asserts [trueSW]
-                    (ctx, problem) <- runProofOn (getConverter config) config True [] st res'
+                    (ctx, problem) <- runProofOn (toSMTLib config) config True [] st res'
                     result         <- callSolver True "Checking Vacuity.." [] mwrap problem config ctx Nothing NoCase
                     case result of
                       Unsatisfiable{} -> return True  -- constraints are unsatisfiable!
@@ -957,7 +948,7 @@ isVacuousWith config a = do
 allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
 allSatWith config p = do
         msg "Checking Satisfiability, all solutions.."
-        (ctx, sbvPgm@SMTProblem{smtInputs=qinps, kindsUsed=ki}) <- simulate (getConverter config) config True [] p
+        (ctx, sbvPgm@SMTProblem{smtInputs=qinps, kindsUsed=ki}) <- simulate (toSMTLib config) config True [] p
 
         let usorts = [s | us@(KUserSort s _) <- Set.toList ki, isFree us]
                 where isFree (KUserSort _ (Left _)) = True
@@ -1100,6 +1091,6 @@ internalSATCheck cfg condInPath st msg = do
        mwrap [r] = SatResult r
        mwrap xs  = error $ "SBV.internalSATCheck: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
 
-   (ctx, problem) <- runProofOn (getConverter cfg) cfg True [] st pgm
+   (ctx, problem) <- runProofOn (toSMTLib cfg) cfg True [] st pgm
    callSolver True msg [] mwrap problem cfg ctx Nothing NoCase
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
