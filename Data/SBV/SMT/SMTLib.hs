@@ -28,7 +28,7 @@ import Data.Maybe (isJust, fromJust)
 import qualified Data.Set as Set (member, toList)
 
 import Data.SBV.Core.Data
-import Data.SBV.Provers.SExpr
+import Data.SBV.Utils.SExpr
 
 import Data.SBV.SMT.Utils
 import qualified Data.SBV.SMT.SMTLib2 as SMT2

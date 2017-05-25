@@ -127,7 +127,6 @@ Library
                   , Data.SBV.SMT.SMTLibNames
                   , Data.SBV.SMT.Utils
                   , Data.SBV.Provers.Prover
-                  , Data.SBV.Provers.SExpr
                   , Data.SBV.Provers.Boolector
                   , Data.SBV.Provers.CVC4
                   , Data.SBV.Provers.Yices
@@ -139,6 +138,7 @@ Library
                   , Data.SBV.Utils.TDiff
                   , Data.SBV.Utils.Lib
                   , Data.SBV.Utils.PrettyNum
+                  , Data.SBV.Utils.SExpr
                   , GHC.SrcLoc.Compat
                   , GHC.Stack.Compat
 

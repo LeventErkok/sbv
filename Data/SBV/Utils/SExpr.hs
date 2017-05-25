@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Provers.SExpr
+-- Module      :  Data.SBV.Utils.SExpr
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -9,7 +9,7 @@
 -- Parsing of S-expressions (mainly used for parsing SMT-Lib get-value output)
 -----------------------------------------------------------------------------
 
-module Data.SBV.Provers.SExpr (SExpr(..), parseSExpr) where
+module Data.SBV.Utils.SExpr (SExpr(..), parseSExpr) where
 
 import Data.Bits           (setBit, testBit)
 import Data.Word           (Word32, Word64)

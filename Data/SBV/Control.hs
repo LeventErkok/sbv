@@ -52,7 +52,7 @@ import Data.SBV.Core.Symbolic (QueryState(..), Query(..), SMTResult(..), SMTConf
 
 import Data.SBV.SMT.SMTLib (toIncSMTLib2)
 
-import Data.SBV.Provers.SExpr
+import Data.SBV.Utils.SExpr
 
 import Data.Int
 import Data.Word
