@@ -48,12 +48,13 @@ tokenize inp = go inp []
                             (pre, '|':rest) -> go rest (pre : sofar)
                             (pre, rest)     -> go rest (pre : sofar)
 
-       -- TODO: Should we care for an escaped '"'? I don't
-       -- think this can happen in legit SMTLib output, but if it
-       -- does, we'd just choke in a much different way!
-       go ('"':r) sofar = case span (/= '"') r of
-                            (pre, '"':rest) -> go rest (pre : sofar)
-                            (pre, rest)     -> go rest (pre : sofar)
+       go ('"':r) sofar = go rest (str : sofar)
+           where grabString []            acc = (reverse acc, []) -- Strictly speaking, this is the unterminated string case; but let's ignore
+                 grabString ('"':cs)      acc = (reverse acc, cs)
+                 grabString ('\\':'"':cs) acc = grabString cs ('"':acc)
+                 grabString (c:cs)        acc = grabString cs (c:acc)
+
+                 (str, rest) = grabString r []
 
        go cs sofar = case span (`notElem` stopper) cs of
                        (pre, post) -> go post (pre : sofar)
