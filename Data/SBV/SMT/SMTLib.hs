@@ -9,10 +9,12 @@
 -- Conversion of symbolic programs to SMTLib format
 -----------------------------------------------------------------------------
 
-module Data.SBV.SMT.SMTLib(
+{-# LANGUAGE NamedFieldPuns #-}
+
+module Data.SBV.SMT.SMTLib (
           SMTLibPgm
-        , toSMTLib2
-        , toIncSMTLib2
+        , toSMTLib
+        , toIncSMTLib
         , addNonEqConstraints
         , interpretSolverOutput
         , interpretSolverOutputMulti
@@ -32,6 +34,14 @@ import Data.SBV.Utils.SExpr
 
 import Data.SBV.SMT.Utils
 import qualified Data.SBV.SMT.SMTLib2 as SMT2
+
+toSMTLib :: SMTConfig -> SMTLibConverter SMTLibPgm
+toSMTLib SMTConfig{smtLibVersion} = case smtLibVersion of
+                                      SMTLib2 -> toSMTLib2
+
+toIncSMTLib :: SMTConfig -> SMTLibIncConverter [String]
+toIncSMTLib SMTConfig{smtLibVersion} = case smtLibVersion of
+                                         SMTLib2 -> toIncSMTLib2
 
 -- | Convert to SMTLib-2 format
 toSMTLib2 :: SMTLibConverter SMTLibPgm
