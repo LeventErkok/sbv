@@ -26,9 +26,13 @@ module Data.SBV.Control (
      , SMTOption(..), setOption
      , ignoreExitCode
 
+     -- * Constructing an assignment for a model
+     , (|->)
+
      -- * Terminating the query
      , sbvResume
      , result
+     , success
      , failure
 
      -- * Performing actions

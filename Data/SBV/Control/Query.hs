@@ -19,21 +19,28 @@ module Data.SBV.Control.Query (
      , getValue, getModel
      , SMTOption(..), setOption
      , ignoreExitCode
+     , (|->)
      , result
+     , success
      , failure
      , sbvResume
      , io
      ) where
 
+import Control.Monad            (unless)
 import Control.Monad.State.Lazy (get)
 
+import Data.List (intercalate)
+
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (QueryState(..), Query(..), SMTResult(..))
+import Data.SBV.Core.Symbolic (QueryState(..), Query(..), SMTResult(..), State(..))
 
 import Data.SBV.Utils.SExpr
 
 import Data.SBV.Control.Types
 import Data.SBV.Control.Utils
+
+import Data.IORef (readIORef)
 
 -- | Set an option.
 setOption :: SMTOption -> Query ()
@@ -53,6 +60,65 @@ checkSat = do let cmd = "(check-sat)"
                                   ECon "unsat"   -> return Unsat
                                   ECon "unknown" -> return Unk
                                   _              -> bad r Nothing
+
+-- | Make an assignment
+infix 1 |->
+(|->) :: SymWord a => SBV a -> a -> (SBV a, CW)
+a |-> v = case literal v of
+            SBV (SVal _ (Left cw)) -> (a, cw)
+            r                      -> error $ "Data.SBV: Impossible happened in |->: Cannot construct a CW with literal: " ++ show r
+
+-- | Produce the query result from an assignment.
+success :: [(SBV a, CW)] -> Query [SMTResult]
+success asgns = do QueryState{queryConfig} <- get
+ 
+                   let grabValues st = do ss <- mapM (sbvToSW st . fst) asgns
+
+                                          inps <- reverse <$> readIORef (rinps st)
+
+                                          -- sanity checks
+                                          --     - All existentials should be given a value
+                                          --     - No duplicates
+                                          --     - No bindings to vars that are not inputs
+                                          let missing, extra, dup :: [String]
+                                              missing = [n | (EX, (s, n)) <- inps, s `notElem` ss]
+                                              extra   = [show s | s <- ss, s `notElem` map (fst . snd) inps]
+                                              dup     = let walk []     = []
+                                                            walk (n:ns)
+                                                              | n `elem` ns = show n : walk (filter (/= n) ns)
+                                                              | True        = walk ns
+                                                        in walk ss
+
+                                          unless (null (missing ++ extra ++ dup)) $ do
+
+                                                let misTag = "***   Missing inputs"
+                                                    dupTag = "***   Duplicate bindings"
+                                                    extTag = "***   Extra bindings"
+
+                                                    maxLen = maximum $  0
+                                                                      : [length misTag | not (null missing)]
+                                                                     ++ [length extTag | not (null extra)]
+                                                                     ++ [length dupTag | not (null dup)]
+
+                                                    align s = s ++ replicate (maxLen - length s) ' ' ++ ": "
+
+                                                error $ unlines $ [""
+                                                                  , "*** Data.SBV: Query model construction has a faulty assignment."
+                                                                  ]
+                                                               ++ [ align misTag ++ intercalate ", "  missing | not (null missing)]
+                                                               ++ [ align extTag ++ intercalate ", "  extra   | not (null extra)  ]
+                                                               ++ [ align dupTag ++ intercalate ", "  dup     | not (null dup)    ]
+                                                               ++ [ "*** Data.SBV: Check your query result construction!" ]
+
+                                          return $ zip (map show ss) (map snd asgns)
+
+                   assocs <- inNewContext grabValues
+
+                   let m = SMTModel { modelObjectives = []
+                                    , modelAssocs     = assocs
+                                    }
+
+                   result $ Satisfiable queryConfig m
 
 -- | Produce this answer as the result.
 result :: SMTResult -> Query [SMTResult]
