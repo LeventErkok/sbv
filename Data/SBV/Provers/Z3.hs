@@ -59,7 +59,7 @@ z3 = SMTSolver {
                                         dlim     = printRealPrec cfg'
                                         ppDecLim = "(set-option :pp.decimal_precision " ++ show dlim ++ ")\n"
 
-                                        mkCont     = cont (roundingMode cfg) skolemMap
+                                        mkCont   = cont (roundingMode cfg) skolemMap
 
                                         (nModels, isPareto, mbContScript) =
                                                 case mbOptInfo of
