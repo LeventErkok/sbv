@@ -33,10 +33,12 @@ import Data.SBV.Utils.SExpr
 import Data.SBV.SMT.Utils
 import qualified Data.SBV.SMT.SMTLib2 as SMT2
 
+-- | Convert to SMT-Lib, in a full program context.
 toSMTLib :: SMTConfig -> SMTLibConverter SMTLibPgm
 toSMTLib SMTConfig{smtLibVersion} = case smtLibVersion of
                                       SMTLib2 -> toSMTLib2
 
+-- | Convert to SMT-Lib, in an incremental query context.
 toIncSMTLib :: SMTConfig -> SMTLibIncConverter [String]
 toIncSMTLib SMTConfig{smtLibVersion} = case smtLibVersion of
                                          SMTLib2 -> toIncSMTLib2
