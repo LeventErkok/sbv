@@ -612,9 +612,7 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels tactics objectives 
 
                   style Lexicographic = [] -- default, no option needed
                   style Independent   = ["(set-option :opt.priority box)"]
-                  style Pareto        = [ "(set-option :opt.priority pareto)"
-                                        , "(set-option :opt.print_model true)"
-                                        ]
+                  style Pareto        = ["(set-option :opt.priority pareto)"]
 
 -- | Should we allow a custom query? Returns the reason why we shouldn't, if there is one
 checkQueryApplicability :: SMTConfig -> Bool -> QueryContext -> Maybe String
