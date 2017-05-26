@@ -12,7 +12,13 @@
 module Data.SBV.Control.Types (
        CheckSatResult(..)
      , SMTOption(..)
+     , Assignment(..)
      ) where
+
+import Data.SBV.Core.Data (SVal, CW)
+
+-- | An Assignment of a model binding
+data Assignment = Assign SVal CW
 
 -- | Result of a 'checkSat' call.
 data CheckSatResult = Sat | Unsat | Unk

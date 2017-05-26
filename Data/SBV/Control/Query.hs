@@ -46,7 +46,7 @@ import Data.IORef (readIORef)
 setOption :: SMTOption -> Query ()
 setOption o = send $ "(set-option " ++ show o ++ ")"
 
--- | Assert a new "fact"
+-- | Assert a new constraint.
 assert :: SBool -> Query ()
 assert s = do sw <- inNewContext (`sbvToSW` s)
               send $ "(assert " ++ show sw ++ ")"
@@ -61,18 +61,20 @@ checkSat = do let cmd = "(check-sat)"
                                   ECon "unknown" -> return Unk
                                   _              -> bad r Nothing
 
--- | Make an assignment
+-- | Make an assignment. The type 'Assignment' is abstract, see 'success' for an example use case.
 infix 1 |->
-(|->) :: SymWord a => SBV a -> a -> (SBV a, CW)
-a |-> v = case literal v of
-            SBV (SVal _ (Left cw)) -> (a, cw)
-            r                      -> error $ "Data.SBV: Impossible happened in |->: Cannot construct a CW with literal: " ++ show r
+(|->) :: SymWord a => SBV a -> a -> Assignment
+SBV a |-> v = case literal v of
+                SBV (SVal _ (Left cw)) -> Assign a cw
+                r                      -> error $ "Data.SBV: Impossible happened in |->: Cannot construct a CW with literal: " ++ show r
 
 -- | Produce the query result from an assignment.
-success :: [(SBV a, CW)] -> Query [SMTResult]
+success :: [Assignment] -> Query [SMTResult]
 success asgns = do QueryState{queryConfig} <- get
- 
-                   let grabValues st = do ss <- mapM (sbvToSW st . fst) asgns
+
+                   let grabValues st = do let extract (Assign s n) = sbvToSW st (SBV s) >>= \sw -> return (sw, n)
+
+                                          modelAssignment <- mapM extract asgns
 
                                           inps <- reverse <$> readIORef (rinps st)
 
@@ -80,14 +82,16 @@ success asgns = do QueryState{queryConfig} <- get
                                           --     - All existentials should be given a value
                                           --     - No duplicates
                                           --     - No bindings to vars that are not inputs
-                                          let missing, extra, dup :: [String]
-                                              missing = [n | (EX, (s, n)) <- inps, s `notElem` ss]
-                                              extra   = [show s | s <- ss, s `notElem` map (fst . snd) inps]
+                                          let userSS = map fst modelAssignment
+
+                                              missing, extra, dup :: [String]
+                                              missing = [n | (EX, (s, n)) <- inps, s `notElem` userSS]
+                                              extra   = [show s | s <- userSS, s `notElem` map (fst . snd) inps]
                                               dup     = let walk []     = []
                                                             walk (n:ns)
                                                               | n `elem` ns = show n : walk (filter (/= n) ns)
                                                               | True        = walk ns
-                                                        in walk ss
+                                                        in walk userSS
 
                                           unless (null (missing ++ extra ++ dup)) $ do
 
@@ -110,12 +114,12 @@ success asgns = do QueryState{queryConfig} <- get
                                                                ++ [ align dupTag ++ intercalate ", "  dup     | not (null dup)    ]
                                                                ++ [ "*** Data.SBV: Check your query result construction!" ]
 
-                                          return $ zip (map show ss) (map snd asgns)
+                                          return modelAssignment
 
                    assocs <- inNewContext grabValues
 
                    let m = SMTModel { modelObjectives = []
-                                    , modelAssocs     = assocs
+                                    , modelAssocs     = [(show s, c) | (s, c) <- assocs]
                                     }
 
                    result $ Satisfiable queryConfig m

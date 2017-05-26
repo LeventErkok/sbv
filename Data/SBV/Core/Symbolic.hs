@@ -354,11 +354,11 @@ newtype Query a = Query (StateT QueryState IO a)
 instance Show (Query a) where
    show _ = "<Query>"
 
--- | Execute a query
+-- | Execute a query.
 runQuery :: Query a -> QueryState -> IO a
 runQuery (Query f) = evalStateT f
 
--- | Install a custom query
+-- | Install a custom query.
 query :: Query [SMTResult] -> Symbolic ()
 query q = addSValTactic (QueryUsing q)
 
