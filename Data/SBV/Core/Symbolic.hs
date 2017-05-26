@@ -300,8 +300,7 @@ type NamedSymVar = (SW, String)
 -- to specify a max number of fronts to query the solver for, since there might
 -- potentially be an infinite number of them and there is no way to know exactly
 -- how many ahead of time. If 'Nothing' is given, SBV will possibly loop forever
--- if the number is really infinite, though in this case the user is saying
--- she knows it's finite and will wait to receive all.
+-- if the number is really infinite.
 data OptimizeStyle = Lexicographic      -- ^ Objectives are optimized in the order given, earlier objectives have higher priority. This is the default.
                    | Independent        -- ^ Each objective is optimized independently.
                    | Pareto (Maybe Int) -- ^ Objectives are optimized according to pareto front: That is, no objective can be made better without making some other worse.

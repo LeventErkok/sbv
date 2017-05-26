@@ -582,17 +582,26 @@ specifying a timeout ('StopAfter'). For most users, default values of these shou
       the latter ones under the model that optimizes the previous ones. This is the default behavior, but
       can also be explicitly specified by:
 
-       @ 'tactic' $ 'OptimizePriority' 'Lexicographic' @
+              @ 'tactic' $ 'OptimizePriority' 'Lexicographic' @
 
     * Goals can also be independently optimized. In this case the user will be presented a model for each
       goal given. To enable this, use the tactic:
 
-       @ 'tactic' $ 'OptimizePriority' 'Independent' @
+              @ 'tactic' $ 'OptimizePriority' 'Independent' @
 
     * Finally, the user can query for pareto-fronts. A pareto front is an model such that no goal can be made
       "better" without making some other goal "worse." To enable this style, use:
 
-       @ 'tactic' $ 'OptimizePriority' 'Pareto' @
+              @
+                'tactic' $ 'OptimizePriority' ('Pareto' Nothing)
+                'tactic' $ 'OptimizePriority' ('Pareto' (Just 30)) @
+
+      The optional number specifies the maximum number of pareto-fronts the user is asking to get. If 'Nothing',
+      SBV will query for all pareto-fronts. Note that pareto-fronts can be infinite in number, so if 'Nothing'
+      is used, there is a potential for infinitely waiting for the SBV-solver interaction to finish. If you
+      suspect this might be the case, run in 'verbose' mode to see the interaction and put a limiting factor
+      appropriately. (In general, there is no a-priori way to know how many Pareto-fronts exist for a given
+      problem.)
 
 == Soft Assertions
 
