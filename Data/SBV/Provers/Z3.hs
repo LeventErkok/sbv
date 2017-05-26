@@ -17,7 +17,7 @@ import qualified Control.Exception as C
 
 import Data.Char          (toLower)
 import Data.Function      (on)
-import Data.List          (sortBy, intercalate, groupBy)
+import Data.List          (sortBy, groupBy)
 import System.Environment (getEnv)
 import qualified System.Info as S(os)
 
@@ -63,8 +63,8 @@ z3 = SMTSolver {
 
                                         (nModels, mbContScript) =
                                                 case mbOptInfo of
-                                                  Just (Independent, n) | n > 1 -> (n, Just (intercalate "\n" (map (mkCont . Just) [0 .. n-1])))
-                                                  _                             -> (1, Just (mkCont Nothing))
+                                                  Just (Independent, n) | n > 1 -> (n, concatMap (mkCont . Just) [0 .. n-1])
+                                                  _                             -> (1, mkCont Nothing)
 
                                         script   = SMTScript {scriptBody = tweaks ++ ppDecLim ++ pgm, scriptModel = mbContScript}
 
@@ -91,7 +91,7 @@ z3 = SMTSolver {
                                 , supportsCustomQueries      = True
                                 }
          }
- where cont rm skolemMap mbModelIndex = intercalate "\n" $ wrapModel grabValues
+ where cont rm skolemMap mbModelIndex = wrapModel grabValues
         where grabValues = concatMap extract skolemMap
 
               modelIndex = case mbModelIndex of

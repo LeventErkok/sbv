@@ -1486,8 +1486,8 @@ data SMTResult = Unsatisfiable SMTConfig (Maybe [String]) -- ^ Unsatisfiable, wi
 
 -- | A script, to be passed to the solver.
 data SMTScript = SMTScript {
-          scriptBody  :: String        -- ^ Initial feed
-        , scriptModel :: Maybe String  -- ^ Optional continuation script, if the result is sat
+          scriptBody  :: String   -- ^ Initial feed
+        , scriptModel :: [String] -- ^ Continuation script, to extract results
         }
 
 -- | An SMT engine

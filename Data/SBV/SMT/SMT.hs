@@ -552,12 +552,12 @@ standardEngine envName envOptName modConfig addTimeOut (extractMap, extractValue
                     [] -> ""
                     ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
 
-        cont rm = intercalate "\n" $ concatMap extract skolemMap
+        cont rm = concatMap extract skolemMap
            where extract (Left s)        = extractValue s $ "(echo \"((" ++ show s ++ " " ++ mkSkolemZero rm (kindOf s) ++ "))\")"
                  extract (Right (s, [])) = extractValue s $ "(get-value (" ++ show s ++ "))"
                  extract (Right (s, ss)) = extractValue s $ "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
 
-        script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = Just (cont (roundingMode cfg))}
+        script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = cont (roundingMode cfg)}
 
         -- standard engines only return one result ever
         wrap x = [x]
@@ -674,33 +674,27 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                              mapM_ send (optimizeArgs cfg)
 
                              -- Capture what SBV would do here
-                             let sbvContinuation ignoreExitCode =
-                                        case scriptModel script of
-                                           Nothing -> do send $ satCmd cfg
-                                                         cleanUp ignoreExitCode Nothing
-                                           Just ls -> do r    <- ask $ satCmd cfg
-                                                         vals <- case () of
-                                                                    () | any (`isPrefixOf` r) ["sat", "unknown"]
-                                                                       -> do let mls = lines ls
-                                                                             when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
-                                                                                                     mapM_ putStrLn mls
-                                                                             mapM ask mls
-                                                                    () | getUnsatCore cfg && "unsat" `isPrefixOf` r
-                                                                       -> do when (verbose cfg) $ putStrLn "** Querying for unsat cores"
-                                                                             mapM ask ["(get-unsat-core)"]
-                                                                    () -> return []
-                                                         cleanUp ignoreExitCode $ Just (r, vals)
+                             let sbvContinuation ignoreExitCode = do r    <- ask $ satCmd cfg
+                                                                     vals <- case () of
+                                                                                () | any (`isPrefixOf` r) ["sat", "unknown"]
+                                                                                   -> do let mls = scriptModel script
+                                                                                         when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
+                                                                                                                 mapM_ putStrLn mls
+                                                                                         mapM ask mls
+                                                                                () | getUnsatCore cfg && "unsat" `isPrefixOf` r
+                                                                                   -> do when (verbose cfg) $ putStrLn "** Querying for unsat cores"
+                                                                                         mapM ask ["(get-unsat-core)"]
+                                                                                () -> return []
+                                                                     cleanUp ignoreExitCode $ Just (r, vals)
 
                              -- Ask for a model. We assume this is done when we're in a check-sat/sat situation.
-                             let askModel = case scriptModel script of
-                                               Nothing -> error "Data.SBV: Back-end solver does not support interactive query of models."
-                                               Just ls -> do let mls = lines ls
-                                                             when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
-                                                                                     mapM_ putStrLn mls
-                                                             vals <- mapM askFull mls
-                                                             when (verbose cfg) $ do putStrLn "** Received the following responses:"
-                                                                                     mapM_ putStrLn vals
-                                                             return $ success $ mergeSExpr $ "sat" : map cleanLine (filter (not . null) vals)
+                             let askModel = do let mls = scriptModel script
+                                               when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
+                                                                       mapM_ putStrLn mls
+                                               vals <- mapM askFull mls
+                                               when (verbose cfg) $ do putStrLn "** Received the following responses:"
+                                                                       mapM_ putStrLn vals
+                                               return $ success $ mergeSExpr $ "sat" : map cleanLine (filter (not . null) vals)
 
                              -- If we're given a custom continuation and we're in a proof context, call it. Otherwise execute
                              k <- case (inNonInteractiveProofMode (contextState ctx), customQuery cfg) of
