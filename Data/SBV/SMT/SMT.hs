@@ -300,9 +300,9 @@ class Modelable a where
   -- | Is there a model?
   modelExists :: a -> Bool
 
-  -- | Extract a model, the result is a tuple where the first argument (if True)
+  -- | Extract assignments of a model, the result is a tuple where the first argument (if True)
   -- indicates whether the model was "probable". (i.e., if the solver returned unknown.)
-  getModel :: SatModel b => a -> Either String (Bool, b)
+  getAssignment :: SatModel b => a -> Either String (Bool, b)
 
   -- | Extract a model dictionary. Extract a dictionary mapping the variables to
   -- their respective values as returned by the SMT solver. Also see `getModelDictionaries`.
@@ -320,9 +320,9 @@ class Modelable a where
                                      Just (CW _ (CWUserSort (_, s))) -> Just s
                                      _                               -> Nothing
 
-  -- | A simpler variant of 'getModel' to get a model out without the fuss.
+  -- | A simpler variant of 'getAssignment' to get a model out without the fuss.
   extractModel :: SatModel b => a -> Maybe b
-  extractModel a = case getModel a of
+  extractModel a = case getAssignment a of
                      Right (_, b) -> Just b
                      _            -> Nothing
 
@@ -339,7 +339,7 @@ class Modelable a where
 -- | Return all the models from an 'allSat' call, similar to 'extractModel' but
 -- is suitable for the case of multiple results.
 extractModels :: SatModel a => AllSatResult -> [a]
-extractModels (AllSatResult (_, xs)) = [ms | Right (_, ms) <- map getModel xs]
+extractModels (AllSatResult (_, xs)) = [ms | Right (_, ms) <- map getAssignment xs]
 
 -- | Get dictionaries from an all-sat call. Similar to `getModelDictionary`.
 getModelDictionaries :: AllSatResult -> [M.Map String CW]
@@ -355,7 +355,7 @@ getModelUninterpretedValues s (AllSatResult (_, xs)) =  map (s `getModelUninterp
 
 -- | 'ThmResult' as a generic model provider
 instance Modelable ThmResult where
-  getModel           (ThmResult r) = getModel r
+  getAssignment      (ThmResult r) = getAssignment r
   modelExists        (ThmResult r) = modelExists r
   getModelDictionary (ThmResult r) = getModelDictionary r
   getModelObjectives (ThmResult r) = getModelObjectives r
@@ -363,7 +363,7 @@ instance Modelable ThmResult where
 
 -- | 'SatResult' as a generic model provider
 instance Modelable SatResult where
-  getModel           (SatResult r) = getModel r
+  getAssignment      (SatResult r) = getAssignment r
   modelExists        (SatResult r) = modelExists r
   getModelDictionary (SatResult r) = getModelDictionary r
   getModelObjectives (SatResult r) = getModelObjectives r
@@ -371,12 +371,12 @@ instance Modelable SatResult where
 
 -- | 'SMTResult' as a generic model provider
 instance Modelable SMTResult where
-  getModel (Unsatisfiable _ _) = Left "SBV.getModel: Unsatisfiable result"
-  getModel (Satisfiable _ m)   = Right (False, parseModelOut m)
-  getModel (SatExtField _ _)   = Left "SBV.getModel: The model is in an extension field"
-  getModel (Unknown _ m)       = Right (True, parseModelOut m)
-  getModel (ProofError _ s)    = error $ unlines $ "Backend solver complains: " : s
-  getModel (TimeOut _)         = Left "Timeout"
+  getAssignment (Unsatisfiable _ _) = Left "SBV.getModel: Unsatisfiable result"
+  getAssignment (Satisfiable _ m)   = Right (False, parseModelOut m)
+  getAssignment (SatExtField _ _)   = Left "SBV.getModel: The model is in an extension field"
+  getAssignment (Unknown _ m)       = Right (True, parseModelOut m)
+  getAssignment (ProofError _ s)    = error $ unlines $ "Backend solver complains: " : s
+  getAssignment (TimeOut _)         = Left "Timeout"
 
   modelExists Satisfiable{}   = True
   modelExists Unknown{}       = False -- don't risk it
@@ -407,8 +407,8 @@ instance Modelable SMTResult where
 parseModelOut :: SatModel a => SMTModel -> a
 parseModelOut m = case parseCWs [c | (_, c) <- modelAssocs m] of
                    Just (x, []) -> x
-                   Just (_, ys) -> error $ "SBV.getModel: Partially constructed model; remaining elements: " ++ show ys
-                   Nothing      -> error $ "SBV.getModel: Cannot construct a model from: " ++ show m
+                   Just (_, ys) -> error $ "SBV.parseModelOut: Partially constructed model; remaining elements: " ++ show ys
+                   Nothing      -> error $ "SBV.parseModelOut: Cannot construct a model from: " ++ show m
 
 -- | Given an 'allSat' call, we typically want to iterate over it and print the results in sequence. The
 -- 'displayModels' function automates this task by calling 'disp' on each result, consecutively. The first
@@ -416,7 +416,7 @@ parseModelOut m = case parseCWs [c | (_, c) <- modelAssocs m] of
 -- element indicates whether the model is alleged (i.e., if the solver is not sure, returing Unknown)
 displayModels :: SatModel a => (Int -> (Bool, a) -> IO ()) -> AllSatResult -> IO Int
 displayModels disp (AllSatResult (_, ms)) = do
-    inds <- zipWithM display [a | Right a <- map (getModel . SatResult) ms] [(1::Int)..]
+    inds <- zipWithM display [a | Right a <- map (getAssignment . SatResult) ms] [(1::Int)..]
     return $ last (0:inds)
   where display r i = disp i r >> return i
 

@@ -55,6 +55,9 @@
     SBV will translate these to equivalent terms that do not require special
     functions.
 
+  * The function getModel has been renamed to getAssignment. (The former name is
+    now available as a query command.)
+
   * Export `SolverCapabilities` from `Data.SBV.Internals`, in case users want access.
 
   * Move code-generation facilities to `Data.SBV.Tools.CodeGen`, no longer exporting
