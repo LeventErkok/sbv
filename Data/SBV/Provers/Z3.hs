@@ -61,18 +61,16 @@ z3 = SMTSolver {
 
                                         mkCont   = cont (roundingMode cfg) skolemMap
 
-                                        (nModels, isPareto, mbContScript) =
+                                        (nModels, mbContScript) =
                                                 case mbOptInfo of
-                                                  Just (Pareto, _)              -> (1, True,  Nothing)
-                                                  Just (Independent, n) | n > 1 -> (n, False, Just (intercalate "\n" (map (mkCont . Just) [0 .. n-1])))
-                                                  _                             -> (1, False, Just (mkCont Nothing))
+                                                  Just (Independent, n) | n > 1 -> (n, Just (intercalate "\n" (map (mkCont . Just) [0 .. n-1])))
+                                                  _                             -> (1, Just (mkCont Nothing))
 
                                         script   = SMTScript {scriptBody = tweaks ++ ppDecLim ++ pgm, scriptModel = mbContScript}
 
                                         mkResult c em
-                                         | isPareto     =               interpretSolverParetoOutput         c em
-                                         | nModels == 1 = replicate 1 . interpretSolverOutput               c em
-                                         | True         =               interpretSolverOutputMulti  nModels c em
+                                         | nModels == 1 = replicate 1 . interpretSolverOutput              c em
+                                         | True         =               interpretSolverOutputMulti nModels c em
 
                                     standardSolver cfg' ctx script id (replicate nModels . ProofError cfg') (mkResult cfg' (extractMap isSat qinps))
 

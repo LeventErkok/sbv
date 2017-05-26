@@ -18,13 +18,11 @@ module Data.SBV.SMT.SMTLib (
         , addNonEqConstraints
         , interpretSolverOutput
         , interpretSolverOutputMulti
-        , interpretSolverParetoOutput
         , interpretSolverModelLine
         , interpretSolverObjectiveLine
         ) where
 
-import Data.Char  (isDigit, isSpace)
-import Data.List  (isPrefixOf)
+import Data.Char  (isDigit)
 import Data.Maybe (isJust, fromJust)
 
 import qualified Data.Set as Set (member, toList)
@@ -164,56 +162,29 @@ interpretSolverOutputMulti n cfg extractMap outLines
         multiModels = map (preModels ++) (walk postModels [])
         lms         = length multiModels
 
--- | Interpret solver output based on SMT-Lib pareto-output mode. Unfortunately this is likely to be very Z3 specific, and quite dissimilar
--- to other modes. (A "request" has been filed so we don't have to do this: <https://github.com/Z3Prover/z3/issues/1008>.) In the mean
--- time we try to interpret the Z3 output as well as we can.
-interpretSolverParetoOutput :: SMTConfig -> ([String] -> SMTModel) -> [String] -> [SMTResult]
-interpretSolverParetoOutput cfg extractMap outLines
-  | null outLines
-  = cont []
-  | not isSAT
-  = cont [finalLine : initLines]
-  | True
-  = groupModels
-  where finalLine = last outLines
-        initLines = init outLines
-        isSAT     = case words finalLine of
-                      "sat":_ -> True
-                      _       -> False
-
-        cont = map (interpretSolverOutput cfg extractMap)
-
-        -- convert what z3 prints as Pareto output to what we can parse
-        -- this is necessarily flaky, but hopefully good enough!
-        -- The output is expected to be alternating lines of objectives and models
-        groupModels = map grok $ cluster $ filter (not . irrelevant) initLines
-        irrelevant  = null . dropWhile isSpace
-        cluster (x:y:rest) = (x, y) : cluster rest
-        cluster []         = []
-        cluster _          = error $ "SBV.pareto: Unable to parse pareto fronts from solver output. Uneven length:\n"
-                                   ++ unlines outLines
-
-        grok :: (String, String) -> SMTResult
-        grok (obj, ms)
-          | "(objectives" `isPrefixOf` dropWhile isSpace obj
-          , "(model"      `isPrefixOf` dropWhile isSpace ms
-          = classifyModel cfg $ extractMap [obj, ms]
-          | True
-          = error $  "SBV.pareto: Unable to parse pareto front from solver output:\n"
-                  ++ unlines [obj, ms]
-                  ++ "SBV.pareto: The bigger context is:"
-                  ++ unlines outLines
-
 -- | Get a counter-example from an SMT-Lib2 like model output line
 -- This routing is necessarily fragile as SMT solvers tend to print output
 -- in whatever form they deem convenient for them.. Currently, it's tuned to
 -- work with Z3 and CVC4; if new solvers are added, we might need to rework
 -- the logic here.
 interpretSolverModelLine :: [NamedSymVar] -> String -> [(Int, (String, CW))]
-interpretSolverModelLine inps line = either err (modelValues True inps line) (parseSExpr line)
-  where err r =  error $  "*** Failed to parse SMT-Lib2 model output from: "
-                       ++ "*** " ++ show line ++ "\n"
-                       ++ "*** Reason: " ++ r ++ "\n"
+interpretSolverModelLine inps line = either parseError chkErr (parseSExpr line)
+  where parseError r =  error $  unlines [ ""
+                                         , "*** Failed to parse SMT-Lib2 model output from: "
+                                         , "*** " ++ show line ++ "\n"
+                                         , "*** Reason: " ++ r ++ "\n"
+                                         ]
+
+        solverError e = error $  unlines [ ""
+                                         , "*** Cannot extract model values."
+                                         , "***   Solver says: " ++ e
+                                         , "*** Make sure models are queried in a sat-context"
+                                         , "*** That is, after a checkSat call returning a Sat result."
+                                         ]
+
+        chkErr e = case e of
+                    EApp [ECon "error", ECon er] -> solverError er
+                    _                            -> modelValues True inps line e
 
 identifyInput :: [NamedSymVar] -> SExpr -> Maybe (Int, SW, String)
 identifyInput inps = classify
