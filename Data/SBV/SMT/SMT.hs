@@ -371,9 +371,9 @@ instance Modelable SatResult where
 
 -- | 'SMTResult' as a generic model provider
 instance Modelable SMTResult where
-  getAssignment (Unsatisfiable _ _) = Left "SBV.getModel: Unsatisfiable result"
+  getAssignment (Unsatisfiable _ _) = Left "SBV.getAssignment: Unsatisfiable result"
   getAssignment (Satisfiable _ m)   = Right (False, parseModelOut m)
-  getAssignment (SatExtField _ _)   = Left "SBV.getModel: The model is in an extension field"
+  getAssignment (SatExtField _ _)   = Left "SBV.getAssignment: The model is in an extension field"
   getAssignment (Unknown _ m)       = Right (True, parseModelOut m)
   getAssignment (ProofError _ s)    = error $ unlines $ "Backend solver complains: " : s
   getAssignment (TimeOut _)         = Left "Timeout"
