@@ -59,8 +59,12 @@ import Data.SBV.SMT.SMTLib
 import Data.SBV.SMT.Utils
 import Data.SBV.Utils.TDiff
 
+import qualified Data.SBV.Control as Control
+
 import Control.DeepSeq (rnf)
 import Control.Exception (bracket)
+
+import qualified Data.IORef as IORef (newIORef, readIORef, writeIORef)
 
 import qualified Data.SBV.Provers.Boolector  as Boolector
 import qualified Data.SBV.Provers.CVC4       as CVC4
@@ -426,7 +430,7 @@ optimizeWith config a = do
             optimizer = case style of
                Lexicographic -> optLexicographic
                Independent   -> optIndependent
-               Pareto        -> optPareto
+               Pareto mbN    -> optPareto mbN
 
         optimizer hasPar config ctx sbvPgm
 
@@ -467,11 +471,42 @@ optIndependent hasPar config ctx sbvPgm@SMTProblem{objectives, tactics} = do
                lobs = length objectives
 
 -- | Construct a pareto-front optimization result
-optPareto :: Bool -> SMTConfig -> QueryContext -> SMTProblem -> IO OptimizeResult
-optPareto hasPar config ctx sbvPgm@SMTProblem{objectives, tactics} = do
+optPareto :: Maybe Int -> Bool -> SMTConfig -> QueryContext -> SMTProblem -> IO OptimizeResult
+optPareto mbN hasPar config ctx sbvPgm@SMTProblem{objectives, tactics=origTactics} = do
+
+        -- make sure we don't have a query already
+        case [() | QueryUsing _ <- origTactics] of
+           [] -> return ()
+           _  -> error $ unlines [ ""
+                                 , "*** Data.SBV: Pareto-front extraction is not supported in the presence of custom queries."
+                                 , "*** Data.SBV: Please report this as a feature request!"
+                                 ]
+
+        -- The only way to communicate back from the tactic is to use an IORef here! This is
+        -- totally safe, though I wish there was a better way to do this.
+        isParetoLimitReached <- IORef.newIORef False
+
+        let tactics = QueryUsing paretoTactic : origTactics
+
+            -- Continuously query
+            paretoTactic = let loop (Just i) ms
+                                 | i <= 0
+                                 = do Control.io $ IORef.writeIORef isParetoLimitReached True
+                                      return (reverse ms)
+
+                               loop mbi ms = do cs <- Control.checkSat
+                                                case cs of
+                                                  Control.Sat -> do m <- Control.getModel
+                                                                    loop (subtract 1 <$> mbi) (m:ms)
+                                                  _           -> return (reverse ms)
+                           in loop mbN []
+
         result <- bufferSanity hasPar $ applyTactics config ctx (True, hasPar) (wrap, unwrap) [] tactics objectives
                                       $ callSolver True "Pareto optimizing.." [] id sbvPgm
-        return $ ParetoResult result
+
+        limitReached <- IORef.readIORef isParetoLimitReached
+
+        return $ ParetoResult limitReached result
 
   where wrap :: SMTResult -> [SMTResult]
         wrap r = [r]
@@ -612,7 +647,7 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels tactics objectives 
 
                   style Lexicographic = [] -- default, no option needed
                   style Independent   = ["(set-option :opt.priority box)"]
-                  style Pareto        = ["(set-option :opt.priority pareto)"]
+                  style (Pareto _)    = ["(set-option :opt.priority pareto)"]
 
 -- | Should we allow a custom query? Returns the reason why we shouldn't, if there is one
 checkQueryApplicability :: SMTConfig -> Bool -> QueryContext -> Maybe String

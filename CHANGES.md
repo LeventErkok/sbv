@@ -3,6 +3,15 @@
 
 * Latest Hackage released version: 6.0, 2017-05-07
 
+### Version 6.2, Not yet released. On the 'interactive' branch.
+
+  * Pareto-front extraction has been reworked, reflecting the changes in Z3 for
+    this functionality. Since pareto-fronts can be infinite in number, the user
+    is now allowed to specify a "limit" to stop the solver from querying ad
+    infinitum. If the limit is not specified, then sbv will query till it
+    exhausts all the pareto-fronts, or till it runs out of memory in case there
+    is an infinite number of them.
+
 ### Version 6.1, Not yet released
 
   * Add support for unsat-core extraction. To use this feature, use

@@ -296,10 +296,15 @@ newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SW, SBVExpr)}
 -- | 'NamedSymVar' pairs symbolic words and user given/automatically generated names
 type NamedSymVar = (SW, String)
 
--- | Style of optimization
-data OptimizeStyle = Lexicographic -- ^ Objectives are optimized in the order given, earlier objectives have higher priority. This is the default.
-                   | Independent   -- ^ Each objective is optimized independently.
-                   | Pareto        -- ^ Objectives are optimized according to pareto front: That is, no objective can be made better without making some other worse.
+-- | Style of optimization. Note that in the pareto case the user is allowed
+-- to specify a max number of fronts to query the solver for, since there might
+-- potentially be an infinite number of them and there is no way to know exactly
+-- how many ahead of time. If 'Nothing' is given, SBV will possibly loop forever
+-- if the number is really infinite, though in this case the user is saying
+-- she knows it's finite and will wait to receive all.
+data OptimizeStyle = Lexicographic      -- ^ Objectives are optimized in the order given, earlier objectives have higher priority. This is the default.
+                   | Independent        -- ^ Each objective is optimized independently.
+                   | Pareto (Maybe Int) -- ^ Objectives are optimized according to pareto front: That is, no objective can be made better without making some other worse.
                    deriving (Eq, Show)
 
 -- | Penalty for a soft-assertion. The default penalty is @1@, with all soft-assertions belonging
