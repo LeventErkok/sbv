@@ -170,23 +170,12 @@ interpretSolverOutputMulti n cfg extractMap outLines
 -- work with Z3 and CVC4; if new solvers are added, we might need to rework
 -- the logic here.
 interpretSolverModelLine :: [NamedSymVar] -> String -> [(Int, (String, CW))]
-interpretSolverModelLine inps line = either parseError chkErr (parseSExpr line)
+interpretSolverModelLine inps line = either parseError (modelValues True inps line) (parseSExpr line)
   where parseError r =  error $  unlines [ ""
                                          , "*** Failed to parse SMT-Lib2 model output from: "
                                          , "*** " ++ show line ++ "\n"
                                          , "*** Reason: " ++ r ++ "\n"
                                          ]
-
-        solverError e = error $  unlines [ ""
-                                         , "*** Cannot extract model values."
-                                         , "***   Solver says: " ++ e
-                                         , "*** Make sure models are queried in a sat-context"
-                                         , "*** That is, after a checkSat call returning a Sat result."
-                                         ]
-
-        chkErr e = case e of
-                    EApp [ECon "error", ECon er] -> solverError er
-                    _                            -> modelValues True inps line e
 
 identifyInput :: [NamedSymVar] -> SExpr -> Maybe (Int, SW, String)
 identifyInput inps = classify

@@ -68,7 +68,10 @@ tokenize inp = go inp []
 parseSExpr :: String -> Either String SExpr
 parseSExpr inp = do (sexp, extras) <- parse inpToks
                     if null extras
-                       then return sexp
+                       then case sexp of
+                              EApp [ECon "error", ECon er] -> Left $ "Solver returned an error: " ++ er
+                              _                            -> return sexp
+
                        else die "Extra tokens after valid input"
   where inpToks = tokenize inp
 
