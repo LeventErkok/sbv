@@ -18,6 +18,7 @@ module Data.SBV.Control.Query (
      , CheckSatResult(..), checkSat
      , getValue, getModel
      , SMTOption(..), setOption
+     , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
      , ignoreExitCode
      , (|->)
      , result
@@ -45,6 +46,58 @@ import Data.IORef (readIORef)
 -- | Set an option.
 setOption :: SMTOption -> Query ()
 setOption o = send $ "(set-option " ++ show o ++ ")"
+
+-- | Ask solver for info.
+getInfo :: SMTInfoFlag -> Query SMTInfoResponse
+getInfo flag = do
+    let cmd = "(get-info " ++ show flag ++ ")"
+        bad = unexpected "getInfo" cmd "a valid get-info response"
+
+        isAllStatistics AllStatistics = True
+        isAllStatistics _             = False
+
+        isAllStat = isAllStatistics flag
+
+        -- remove unnecessary quoting
+        unquote ('"':s@(_:_)) | last s == '"' = init s
+        unquote s                             = s
+
+        -- sort of a light-hearted show
+        serialize (ECon s)      = unquote s
+        serialize (ENum (i, _)) = show i
+        serialize (EReal   r)   = show r
+        serialize (EFloat  f)   = show f
+        serialize (EDouble d)   = show d
+        serialize (EApp [x])    = serialize x
+        serialize (EApp ss)     = "(" ++ unwords (map serialize ss) ++ ")"
+
+        grabAllStat k v = (serialize k, serialize v)
+
+        -- we're trying to do our best to get key-value pairs here, but this
+        -- is necessarily a half-hearted attempt.
+        grabAllStats (EApp xs) = walk xs
+           where walk []             = []
+                 walk [t]            = [grabAllStat t (ECon "")]
+                 walk (t : v : rest) =  grabAllStat t v          : walk rest
+        grabAllStats o = [grabAllStat o (ECon "")]
+
+    r <- ask cmd
+
+    parse r bad $ \pe ->
+       if isAllStat
+          then return $ Resp_AllStatistics $ grabAllStats pe
+          else case pe of
+                 ECon "unsupported"                                        -> return Resp_Unsupported
+                 EApp [ECon ":assertion-stack-levels", ENum (i, _)]        -> return $ Resp_AssertionStackLevels i
+                 EApp (ECon ":authors" : ns)                               -> return $ Resp_Authors (map serialize ns)
+                 EApp [ECon ":error-behavior", ECon "immediate-exit"]      -> return $ Resp_Error ErrorImmediateExit
+                 EApp [ECon ":error-behavior", ECon "continued-execution"] -> return $ Resp_Error ErrorContinuedExecution
+                 EApp (ECon ":name" : o)                                   -> return $ Resp_Name (serialize (EApp o))
+                 EApp [ECon ":reason-unknown", ECon "memout"]              -> return $ Resp_ReasonUnknown UnknownMemOut
+                 EApp [ECon ":reason-unknown", ECon "incomplete"]          -> return $ Resp_ReasonUnknown UnknownIncomplete
+                 EApp (ECon ":reason-unknown" : o)                         -> return $ Resp_ReasonUnknown (UnknownOther (serialize (EApp o)))
+                 EApp (ECon ":version" : o)                                -> return $ Resp_Version (serialize (EApp o))
+                 _                                                         -> return $ Resp_InfoKeyword (serialize pe)
 
 -- | Assert a new constraint.
 assert :: SBool -> Query ()

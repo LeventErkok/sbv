@@ -44,11 +44,14 @@ tokenize inp = go inp []
 
        go (':':':':cs) sofar = go cs ("::" : sofar)
 
+       go (':':cs) sofar = case break isSpace cs of
+                            (pre, rest) -> go rest ((':':pre) : sofar)
+
        go ('|':r) sofar = case span (/= '|') r of
                             (pre, '|':rest) -> go rest (pre : sofar)
                             (pre, rest)     -> go rest (pre : sofar)
 
-       go ('"':r) sofar = go rest (str : sofar)
+       go ('"':r) sofar = go rest (show str : sofar)
            where grabString []            acc = (reverse acc, []) -- Strictly speaking, this is the unterminated string case; but let's ignore
                  grabString ('"':cs)      acc = (reverse acc, cs)
                  grabString ('\\':'"':cs) acc = grabString cs ('"':acc)
@@ -62,7 +65,7 @@ tokenize inp = go inp []
        -- characters that can stop the current token
        -- it is *crucial* that this list contains every character
        -- we can match in one of the previous cases!
-       stopper = " ():|\""
+       stopper = " \t\n():|\""
 
 -- | Parse a string into an SExpr, potentially failing with an error message
 parseSExpr :: String -> Either String SExpr

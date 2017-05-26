@@ -26,6 +26,10 @@ module Data.SBV.Control (
      , SMTOption(..), setOption
      , ignoreExitCode
 
+     -- * Getting solver information
+     , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..)
+     , getInfo
+
      -- * Constructing assignments
      , (|->)
 
