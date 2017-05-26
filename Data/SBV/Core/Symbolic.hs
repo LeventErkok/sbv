@@ -338,6 +338,7 @@ data QueryState = QueryState { querySend           :: String -> IO ()
                              , queryConfig         :: SMTConfig
                              , queryContext        :: QueryContext
                              , queryDefault        :: Bool -> IO [SMTResult]
+                             , queryGetModel       :: IO [SMTResult]
                              , queryIgnoreExitCode :: Bool
                              }
 

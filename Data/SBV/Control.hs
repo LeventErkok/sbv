@@ -19,8 +19,8 @@ module Data.SBV.Control (
      -- * Checking satisfiability
      , CheckSatResult(..), checkSat
 
-     -- * Extracting a value
-     , getValue
+     -- * Extracting values
+     , getValue, getModel
 
      -- * Controlling the solver behavior
      , SMTOption(..), setOption

@@ -586,6 +586,8 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
  = do let nm  = show (name (solver cfg))
           msg = when (verbose cfg) . mapM_ (putStrLn . ("*** " ++))
 
+          cleanLine  = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+
       (send, ask, askFull, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
                 let send l    = hPutStr inh (l ++ "\n") >> hFlush inh
@@ -645,10 +647,9 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                   | True           = ecObtained
 
                            let errors = dropWhile isSpace (cleanErrs allErrors)
-                               clean  = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 
                            case (null errors, ec) of
-                             (True, ExitSuccess)  -> return $ success $ mergeSExpr $ map clean (filter (not . null) (lines contents))
+                             (True, ExitSuccess)  -> return $ success $ mergeSExpr $ map cleanLine (filter (not . null) (lines contents))
                              (_,    ec')          -> let errors' = filter (not . null) $ lines $ if null errors
                                                                                                  then (if null (dropWhile isSpace contents)
                                                                                                        then "(No error message printed on stderr by the executable.)"
@@ -690,6 +691,17 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                     () -> return []
                                                          cleanUp ignoreExitCode $ Just (r, vals)
 
+                             -- Ask for a model. We assume this is done when we're in a check-sat/sat situation.
+                             let askModel = case scriptModel script of
+                                               Nothing -> error "Data.SBV: Back-end solver does not support interactive query of models."
+                                               Just ls -> do let mls = lines ls
+                                                             when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
+                                                                                     mapM_ putStrLn mls
+                                                             vals <- mapM askFull mls
+                                                             when (verbose cfg) $ do putStrLn "** Received the following responses:"
+                                                                                     mapM_ putStrLn vals
+                                                             return $ success $ mergeSExpr $ "sat" : map cleanLine (filter (not . null) vals)
+
                              -- If we're given a custom continuation and we're in a proof context, call it. Otherwise execute
                              k <- case (inNonInteractiveProofMode (contextState ctx), customQuery cfg) of
                                     (True, Just q) -> do
@@ -699,6 +711,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                        , queryConfig         = cfg
                                                                        , queryContext        = ctx { contextState = switchToInteractiveMode (contextState ctx) }
                                                                        , queryDefault        = sbvContinuation
+                                                                       , queryGetModel       = askModel
                                                                        , queryIgnoreExitCode = False
                                                                        }
                                     (False, Just _) -> do when (verbose cfg) $ putStrLn $ "** Skipping the custom query in mode: " ++ show (getProofMode (contextState ctx))

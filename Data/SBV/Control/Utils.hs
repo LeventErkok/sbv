@@ -15,7 +15,7 @@
 
 module Data.SBV.Control.Utils (
        io
-     , ask, send, getValue
+     , ask, send, getValue, getModel
      , ignoreExitCode
      , inNewContext
      , parse
@@ -33,7 +33,7 @@ import Control.Monad.State.Lazy (get, modify', liftIO)
 import Data.IORef (readIORef)
 
 import Data.SBV.Core.Data     (SBV, AlgReal, sbvToSW)
-import Data.SBV.Core.Symbolic (SMTConfig(..), State, IncState(..), Query, QueryContext(..), QueryState(..), withNewIncState)
+import Data.SBV.Core.Symbolic (SMTConfig(..), State, IncState(..), Query, QueryContext(..), QueryState(..), withNewIncState, SMTResult(..))
 
 import Data.SBV.SMT.SMTLib  (toIncSMTLib)
 
@@ -42,10 +42,6 @@ import Data.SBV.Utils.SExpr
 -- | Get the current configuration
 getConfig :: Query SMTConfig
 getConfig = queryConfig <$> get
-
--- | Get the current context
-getContextState :: Query State
-getContextState = contextState . queryContext <$> get
 
 -- | Should we ignore the exit code from the solver upon finish?
 -- The default is /not/ to ignore. However, you might want to set
@@ -72,8 +68,8 @@ syncUpSolver is = do
 
 -- | Execute in a new incremental context
 inNewContext :: (State -> IO a) -> Query a
-inNewContext act = do st <- getContextState
-                      (is, r) <- io $ withNewIncState st act
+inNewContext act = do QueryState{queryContext} <- get
+                      (is, r) <- io $ withNewIncState (contextState queryContext) act
                       syncUpSolver is
                       return r
 
@@ -148,6 +144,16 @@ getValue s = do sw <- inNewContext (`sbvToSW` s)
                                                                                  Nothing -> bad r Nothing
                                                                                  Just c  -> return c
                                     _                                       -> bad r Nothing
+
+-- | Get the value of free inputs, packing it into an SMTResult
+getModel :: Query SMTResult
+getModel = do QueryState{queryGetModel} <- get
+              ms <- io queryGetModel
+              case ms of
+                [m] -> return m
+                []  -> error   "Data.SBV: getModel: No models returned"
+                _   -> error $ "Data.SBV: getModel: Expected one model, received: " ++ show (length ms)
+
 -- | Bail out if a parse goes bad
 parse :: String -> (String -> Maybe String -> a) -> (SExpr -> a) -> a
 parse r fCont sCont = case parseSExpr r of

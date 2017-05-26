@@ -13,28 +13,15 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Data.SBV.Control.Query (
-     -- * Add new assertions
        assert
-
-     -- * Sending an arbitrary string
      , send, ask
-
-     -- * Checking satisfiability
      , CheckSatResult(..), checkSat
-
-     -- * Extracting a value
-     , getValue
-
-     -- * Controlling the solver behavior
+     , getValue, getModel
      , SMTOption(..), setOption
      , ignoreExitCode
-
-     -- * Terminating the query
      , result
      , failure
      , sbvResume
-
-     -- * Performing actions
      , io
      ) where
 
