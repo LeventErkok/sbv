@@ -723,21 +723,30 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
       executeSolver `C.onException`  (terminateProcess pid >> waitForProcess pid)
 
 -- | In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
--- each S-Expression spanning only a single line. We'll ignore things like parentheses inside quotes
--- etc., as it should not be an issue
+-- each S-Expression spanning only a single line. We ignore strings that span multiple lines,
+-- hopefullt that should not be an issue!
 mergeSExpr :: [String] -> [String]
 mergeSExpr []       = []
 mergeSExpr (x:xs)
  | d == 0 = x : mergeSExpr xs
  | True   = let (f, r) = grab d xs in unwords (x:f) : mergeSExpr r
  where d = parenDiff x
+
        parenDiff :: String -> Int
        parenDiff = go 0
          where go i ""       = i
                go i ('(':cs) = let i'= i+1 in i' `seq` go i' cs
                go i (')':cs) = let i'= i-1 in i' `seq` go i' cs
+               go i ('"':cs) = go i (skipString cs)
                go i (_  :cs) = go i cs
+
        grab i ls
          | i <= 0    = ([], ls)
        grab _ []     = ([], [])
        grab i (l:ls) = let (a, b) = grab (i+parenDiff l) ls in (l:a, b)
+
+       skipString ('\\':'"':cs) = skipString cs
+       skipString ('"':'"':cs)  = skipString cs
+       skipString ('"':cs)      = cs
+       skipString (_:cs)        = skipString cs
+       skipString []            = []             -- Oh dear, line finished, but the string didn't. We're in trouble. Ignore!
