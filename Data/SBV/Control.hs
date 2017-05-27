@@ -33,6 +33,9 @@ module Data.SBV.Control (
      -- * Constructing assignments
      , (|->)
 
+     -- * Entering and exiting assertion stack
+     , getAssertionStackDepth, push, pop, reset
+
      -- * Terminating the query
      , sbvResume
      , result

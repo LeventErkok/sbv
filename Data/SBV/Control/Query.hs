@@ -15,7 +15,7 @@
 module Data.SBV.Control.Query (
        assert
      , send, ask
-     , CheckSatResult(..), checkSat
+     , CheckSatResult(..), checkSat, push, pop, getAssertionStackDepth, reset
      , getValue, getModel
      , SMTOption(..), setOption
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
@@ -29,7 +29,7 @@ module Data.SBV.Control.Query (
      ) where
 
 import Control.Monad            (unless)
-import Control.Monad.State.Lazy (get)
+import Control.Monad.State.Lazy (get, modify')
 
 import Data.List (intercalate)
 
@@ -113,6 +113,35 @@ checkSat = do let cmd = "(check-sat)"
                                   ECon "unsat"   -> return Unsat
                                   ECon "unknown" -> return Unk
                                   _              -> bad r Nothing
+
+-- | The current assertion stack depth, i.e., #push - #pops after start. Always non-negative.
+getAssertionStackDepth :: Query Int
+getAssertionStackDepth = queryAssertionStackDepth <$>  get
+
+-- | Push the context, entering a new one. Pushes multiple levels if /n/ > 1.
+push :: Int -> Query ()
+push i
+ | i <= 0 = error $ "Data.SBV: push requires a strictly positive level argument, received: " ++ show i
+ | True   = do depth <- getAssertionStackDepth
+               send $ "(push " ++ show i ++ ")"
+               modify' $ \s -> s{queryAssertionStackDepth = depth + i}
+
+-- | Pop the context, exiting a new one. Pops multiple levels if /n/ > 1. It's an error to pop levels that don't exist.
+pop :: Int -> Query ()
+pop i
+ | i <= 0 = error $ "Data.SBV: pop requires a strictly positive level argument, received: " ++ show i
+ | True   = do depth <- getAssertionStackDepth
+               if i > depth
+                  then error $ "Data.SBV: Illegally trying to pop " ++ shl i ++ ", at current level: " ++ show depth
+                  else do send $ "(pop " ++ show i ++ ")"
+                          modify' $ \s -> s{queryAssertionStackDepth = depth - i}
+   where shl 1 = "one level"
+         shl n = show n ++ " levels"
+
+-- | Reset the solver, bringing it to the state at the beginning
+reset :: Query ()
+reset = do send "(reset)"
+           modify' $ \s -> s{queryAssertionStackDepth = 0}
 
 -- | Make an assignment. The type 'Assignment' is abstract, see 'success' for an example use case.
 infix 1 |->
