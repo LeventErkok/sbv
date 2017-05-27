@@ -14,6 +14,19 @@
     exhausts all the pareto-fronts, or till it runs out of memory in case there
     is an infinite number of them.
 
+  * Extraction of unsat-cores has changed. Instead of a config option, we
+    now use a tactic:
+
+        tactic $ SetOptions [ProduceUnsatCores True]
+
+    The config option "getUnsatCore" is removed. Otherwise, no other
+    changes should be necessary to make your code work as before.
+
+  * Configuration option "useLogic" is removed. Again, this should
+    be done by a tactic of the form:
+
+        tactic $ SetOptions [SetLogic QF_NRA]
+
 ### Version 6.1, 2017-05-26
 
   * Add support for unsat-core extraction. To use this feature, use
