@@ -724,7 +724,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
 
 -- | In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
 -- each S-Expression spanning only a single line. We ignore strings that span multiple lines,
--- hopefullt that should not be an issue!
+-- hopefully that should not be an issue!
 mergeSExpr :: [String] -> [String]
 mergeSExpr []       = []
 mergeSExpr (x:xs)
