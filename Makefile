@@ -78,9 +78,11 @@ gold: install
 	dist/build/SBVUnitTests/SBVUnitTests -c ${TGTS}
 
 hlint: 
-	@rm -f hlintReport.html
 	@echo "Running HLint.."
-	@hlint Data SBVUnitTest -q -rhlintReport.html -i "Use otherwise" -i "Parse error" -i "Use fewer imports" -i "Use module export list"
+	@hlint Data SBVUnitTest -i "Use otherwise" -i "Parse error" -i "Use fewer imports" -i "Use module export list"
+
+uploadDocs:
+	@buildUtils/hackage-docs
 
 checkLinks:
 	@buildUtils/checkLinks
