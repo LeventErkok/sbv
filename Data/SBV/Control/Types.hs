@@ -76,10 +76,12 @@ instance Show SMTInfoFlag where
 -- all solvers may support all of these!
 data SMTOption = DiagnosticOutputChannel FilePath
                | RandomSeed Integer
+               | ProduceProofs Bool
 
 -- | Show instance for SMTOption maintains smt-lib format per the SMTLib2 standard document.
 instance Show SMTOption where
   show (DiagnosticOutputChannel f) = ":diagnostic-output-channel " ++ show f
   show (RandomSeed              i) = ":random-seed " ++ show i
+  show (ProduceProofs           b) = ":produce-proofs " ++ if b then "true" else "false"
 
 {-# ANN type SMTInfoResponse ("HLint: ignore Use camelCase" :: String) #-}
