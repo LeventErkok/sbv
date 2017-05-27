@@ -56,6 +56,8 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (SMTEngine, QueryContext, runQuery, getProofMode, inNonInteractiveProofMode, switchToInteractiveMode)
 
+import Data.SBV.Control.Types
+
 import Data.SBV.SMT.SMTLib    (interpretSolverOutput, interpretSolverModelLine, interpretSolverObjectiveLine)
 
 import Data.SBV.Utils.PrettyNum
@@ -684,13 +686,16 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
 
                              -- Capture what SBV would do here
                              let sbvContinuation ignoreExitCode = do r    <- ask $ satCmd cfg
+
+                                                                     let getUnsatCores = or [b | ProduceUnsatCores b <- solverSetOptions cfg]
+
                                                                      vals <- case () of
                                                                                 () | any (`isPrefixOf` r) ["sat", "unknown"]
                                                                                    -> do let mls = scriptModel script
                                                                                          when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
                                                                                                                  mapM_ putStrLn mls
                                                                                          mapM ask mls
-                                                                                () | getUnsatCore cfg && "unsat" `isPrefixOf` r
+                                                                                () | getUnsatCores && "unsat" `isPrefixOf` r
                                                                                    -> do when (verbose cfg) $ putStrLn "** Querying for unsat cores"
                                                                                          mapM ask ["(get-unsat-core)"]
                                                                                 () -> return []

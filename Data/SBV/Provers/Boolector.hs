@@ -39,6 +39,7 @@ boolector = SMTSolver {
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
                               , supportsUnsatCores         = False
+                              , supportsProofs             = True
                               , supportsCustomQueries      = True
                               }
          }

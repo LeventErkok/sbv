@@ -12,6 +12,7 @@
 module Data.SBV.Examples.Misc.UnsatCore where
 
 import Data.SBV
+import Data.SBV.Control
 
 -- | A simple goal with three constraints, two of which are
 -- conflicting with each other. The third is irrelevant, in the sense
@@ -19,6 +20,9 @@ import Data.SBV
 p :: Goal
 p = do a <- sInteger "a"
        b <- sInteger "b"
+
+       -- tell the solver we want unsat-cores
+       tactic $ SetOptions [ProduceUnsatCores True]
 
        -- create named constraints, which will allow
        -- unsat-core extraction with the given names
@@ -37,7 +41,7 @@ p = do a <- sInteger "a"
 --
 -- Demonstrating that the constraint @a .> b@ is /not/ needed for unsatisfiablity in this case.
 ucCore :: IO ()
-ucCore = do r <- satWith z3{getUnsatCore=True} p
+ucCore = do r <- sat p
             print r
             putStrLn "====================================="
             case extractUnsatCore r of

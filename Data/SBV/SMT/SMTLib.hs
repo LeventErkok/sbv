@@ -30,6 +30,8 @@ import qualified Data.Set as Set (member, toList)
 import Data.SBV.Core.Data
 import Data.SBV.Utils.SExpr
 
+import Data.SBV.Control.Types
+
 import Data.SBV.SMT.Utils
 import qualified Data.SBV.SMT.SMTLib2 as SMT2
 
@@ -103,7 +105,7 @@ addNonEqConstraints SMTLib2 = SMT2.addNonEqConstraints
 
 -- | Interpret solver output based on SMT-Lib standard output responses
 interpretSolverOutput :: SMTConfig -> ([String] -> SMTModel) -> [String] -> SMTResult
-interpretSolverOutput cfg _          ("unsat":ucCore) = Unsatisfiable cfg $ parseUnsatCore (getUnsatCore cfg) ucCore
+interpretSolverOutput cfg _          ("unsat":ucCore) = Unsatisfiable cfg $ parseUnsatCore (or [b | ProduceUnsatCores b <- solverSetOptions cfg]) ucCore
 interpretSolverOutput cfg extractMap ("unknown":rest) = Unknown       cfg $ extractMap rest
 interpretSolverOutput cfg extractMap ("sat":rest)     = classifyModel cfg $ extractMap rest
 interpretSolverOutput cfg _          ("timeout":_)    = TimeOut       cfg

@@ -26,6 +26,9 @@ module Data.SBV.Control (
      , SMTOption(..), setOption
      , ignoreExitCode
 
+     -- * Logics supported
+     , Logic(..)
+
      -- * Getting solver information
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..)
      , getInfo

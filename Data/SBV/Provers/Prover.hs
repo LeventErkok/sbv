@@ -74,23 +74,22 @@ import qualified Data.SBV.Provers.MathSAT    as MathSAT
 import qualified Data.SBV.Provers.ABC        as ABC
 
 mkConfig :: SMTSolver -> SMTLibVersion -> [String] -> SMTConfig
-mkConfig s smtVersion tweaks = SMTConfig { verbose        = False
-                                         , timing         = NoTiming
-                                         , sBranchTimeOut = Nothing
-                                         , timeOut        = Nothing
-                                         , printBase      = 10
-                                         , printRealPrec  = 16
-                                         , smtFile        = Nothing
-                                         , solver         = s
-                                         , solverTweaks   = tweaks
-                                         , smtLibVersion  = smtVersion
-                                         , optimizeArgs   = []
-                                         , satCmd         = "(check-sat)"
-                                         , isNonModelVar  = const False  -- i.e., everything is a model-variable by default
-                                         , roundingMode   = RoundNearestTiesToEven
-                                         , useLogic       = Nothing
-                                         , getUnsatCore   = False
-                                         , customQuery    = Nothing
+mkConfig s smtVersion tweaks = SMTConfig { verbose          = False
+                                         , timing           = NoTiming
+                                         , sBranchTimeOut   = Nothing
+                                         , timeOut          = Nothing
+                                         , printBase        = 10
+                                         , printRealPrec    = 16
+                                         , smtFile          = Nothing
+                                         , solver           = s
+                                         , solverTweaks     = tweaks
+                                         , smtLibVersion    = smtVersion
+                                         , optimizeArgs     = []
+                                         , satCmd           = "(check-sat)"
+                                         , isNonModelVar    = const False  -- i.e., everything is a model-variable by default
+                                         , roundingMode     = RoundNearestTiesToEven
+                                         , solverSetOptions = []
+                                         , customQuery      = Nothing
                                          }
 
 -- | Default configuration for the Boolector SMT solver
@@ -566,7 +565,7 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels tactics objectives 
                                 then cont finalConfig ctx mbOptInfo (CasePath (map (snd . snd) levels))
                                 else caseSplit finalConfig ctx mbOptInfo shouldCheckCaseVacuity (parallelCase, hasPar) isSat (wrap, unwrap) levels chatty cases cont
 
-  where (caseSplits, checkCaseVacuity, parallelCases, checkConstrVacuity, timeOuts, checkUsing, useLogics, useSolvers, optimizePriorities, queryUsings)
+  where (caseSplits, checkCaseVacuity, parallelCases, checkConstrVacuity, timeOuts, checkUsing, useSolvers, optimizePriorities, queryUsings, setOptions)
                 = foldr (flip classifyTactics) ([], [], [], [], [], [], [], [], [], []) tactics
 
         classifyTactics (a, b, c, d, e, f, g, h, i, j) = \case
@@ -576,10 +575,10 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels tactics objectives 
                     t@CheckConstrVacuity{}  -> (  a,   b,   c, t:d,   e,   f,   g,   h,   i,   j)
                     t@StopAfter{}           -> (  a,   b,   c,   d, t:e,   f,   g,   h,   i,   j)
                     t@CheckUsing{}          -> (  a,   b,   c,   d,   e, t:f,   g,   h,   i,   j)
-                    t@UseLogic{}            -> (  a,   b,   c,   d,   e,   f, t:g,   h,   i,   j)
-                    t@UseSolver{}           -> (  a,   b,   c,   d,   e,   f,   g, t:h,   i,   j)
-                    t@OptimizePriority{}    -> (  a,   b,   c,   d,   e,   f,   g,   h, t:i,   j)
-                    t@QueryUsing{}          -> (  a,   b,   c,   d,   e,   f,   g,   h,   i, t:j)
+                    t@UseSolver{}           -> (  a,   b,   c,   d,   e,   f, t:g,   h,   i,   j)
+                    t@OptimizePriority{}    -> (  a,   b,   c,   d,   e,   f,   g, t:h,   i,   j)
+                    t@QueryUsing{}          -> (  a,   b,   c,   d,   e,   f,   g,   h, t:i,   j)
+                    t@SetOptions{}          -> (  a,   b,   c,   d,   e,   f,   g,   h,   i, t:j)
 
         hasObjectives = not $ null objectives
 
@@ -612,9 +611,9 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels tactics objectives 
                              [s] -> c {satCmd = "(check-sat-using " ++ s ++ ")"}
                              ss  -> c {satCmd = "(check-sat-using (then " ++ unwords ss ++ "))"}
 
-        grabUseLogic c = case [l | UseLogic l <- useLogics] of
-                           [] -> c
-                           ss -> c { useLogic = Just (last ss) }
+        grabSetOptions c = case concat [os | SetOptions os <- setOptions] of
+                             [] -> c
+                             ss -> c { solverSetOptions = solverSetOptions c ++ ss }
 
         grabQueryUsing c = case [f | QueryUsing f <- queryUsings] of
                               []  -> c
@@ -626,7 +625,7 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels tactics objectives 
                         [s] -> s
                         ss  -> error $ "SBV.UseSolver: Multiple UseSolver tactics found, at most one is allowed: " ++ intercalate "," (map show ss)
 
-        finalConfig = grabQueryUsing . grabUseLogic . grabCheckUsing . grabStops $ configToUse
+        finalConfig = grabQueryUsing . grabSetOptions . grabCheckUsing . grabStops $ configToUse
 
         finalOptConfig goals = finalConfig { optimizeArgs  = optimizeArgs finalConfig ++ optimizerDirectives }
             where optimizerDirectives

@@ -12,6 +12,7 @@
 module Data.SBV.Examples.Existentials.Diophantine where
 
 import Data.SBV
+import Data.SBV.Control
 
 --------------------------------------------------------------------------------------------------
 -- * Representing solutions
@@ -48,11 +49,17 @@ ldn problem = do solution <- basis (map (map literal) m)
 -- AUFLIA for this problem, as the BV solver that is chosen automatically has a performance
 -- issue. See: <https://z3.codeplex.com/workitem/88>.)
 basis :: [[SInteger]] -> IO [[Integer]]
-basis m = extractModels `fmap` allSatWith z3{useLogic = Just (PredefinedLogic AUFLIA)} cond
+basis m = extractModels `fmap` allSat cond
  where cond = do as <- mkExistVars  n
                  bs <- mkForallVars n
+
+                 -- Tell the solver to use this logic!
+                 tactic $ SetOptions [SetLogic AUFLIA]
+
                  return $ ok as &&& (ok bs ==> as .== bs ||| bnot (bs `less` as))
+
        n = if null m then 0 else length (head m)
+
        ok xs = bAny (.> 0) xs &&& bAll (.>= 0) xs &&& bAnd [sum (zipWith (*) r xs) .== 0 | r <- m]
        as `less` bs = bAnd (zipWith (.<=) as bs) &&& bOr (zipWith (.<) as bs)
 

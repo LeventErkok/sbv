@@ -88,7 +88,7 @@ module Data.SBV.Dynamic
   -- ** Programmable model extraction
   , genParse, getAssignment, getModelDictionary
   -- * SMT Interface: Configurations and solvers
-  , SMTConfig(..), SMTLibVersion(..), SMTLibLogic(..), Logic(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
+  , SMTConfig(..), SMTLibVersion(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
 
   -- * Symbolic computations
   , outputSVal

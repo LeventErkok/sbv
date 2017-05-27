@@ -38,7 +38,6 @@ module Data.SBV.Core.Data
  , Op(..), PBOp(..), FPOp(..), NamedSymVar, getTableIndex
  , SBVPgm(..), Symbolic, SExecutable(..), runSymbolic, runSymbolic', State, getPathCondition, extendPathCondition
  , inProofMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
- , Logic(..), SMTLibLogic(..)
  , addConstraint, internalVariable, internalConstraint, isCodeGenMode
  , SBVType(..), newUninterpreted, addAxiom
  , Quantifier(..), needsExistentials

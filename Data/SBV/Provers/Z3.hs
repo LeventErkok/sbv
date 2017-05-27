@@ -88,6 +88,7 @@ z3 = SMTSolver {
                                 , supportsOptimization       = True
                                 , supportsPseudoBooleans     = True
                                 , supportsUnsatCores         = True
+                                , supportsProofs             = True
                                 , supportsCustomQueries      = True
                                 }
          }

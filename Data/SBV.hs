@@ -245,7 +245,7 @@ module Data.SBV (
   , getModelDictionaries, getModelValues, getModelUninterpretedValues
 
   -- * SMT Interface: Configurations and solvers
-  , SMTConfig(..), SMTLibVersion(..), SMTLibLogic(..), Logic(..), Solver(..), SMTSolver(..)
+  , SMTConfig(..), SMTLibVersion(..), Solver(..), SMTSolver(..)
   , boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
   , Timing(..), TimedStep(..), TimingInfo, showTDiff, CW(..), HasKind(..), Kind(..), cwToBool
 

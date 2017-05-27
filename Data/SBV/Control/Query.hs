@@ -19,6 +19,7 @@ module Data.SBV.Control.Query (
      , getValue, getModel
      , SMTOption(..), setOption
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
+     , Logic(..), Assignment(..)
      , ignoreExitCode
      , (|->)
      , result
@@ -34,6 +35,7 @@ import Control.Monad.State.Lazy (get, modify')
 import Data.List (intercalate)
 
 import Data.SBV.Core.Data
+
 import Data.SBV.Core.Symbolic (QueryState(..), Query(..), SMTResult(..), State(..))
 
 import Data.SBV.Utils.SExpr
@@ -42,6 +44,9 @@ import Data.SBV.Control.Types
 import Data.SBV.Control.Utils
 
 import Data.IORef (readIORef)
+
+-- | An Assignment of a model binding
+data Assignment = Assign SVal CW
 
 -- | Set an option.
 setOption :: SMTOption -> Query ()

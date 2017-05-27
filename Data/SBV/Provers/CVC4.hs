@@ -41,6 +41,7 @@ cvc4 = SMTSolver {
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
                               , supportsUnsatCores         = True
+                              , supportsProofs             = True
                               , supportsCustomQueries      = True
                               }
          }

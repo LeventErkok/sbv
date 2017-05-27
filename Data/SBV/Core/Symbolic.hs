@@ -41,7 +41,7 @@ module Data.SBV.Core.Symbolic
   , getTableIndex
   , SBVPgm(..), Symbolic, runSymbolic, runSymbolicWithState, runSymbolic', State(..), withNewIncState, IncState(..)
   , inProofMode, inNonInteractiveProofMode, switchToInteractiveMode, getProofMode, SBVRunMode(..), Result(..)
-  , Logic(..), SMTLibLogic(..), registerKind, registerLabel
+  , registerKind, registerLabel
   , addAssertion, addSValConstraint, internalConstraint, internalVariable
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
@@ -82,6 +82,8 @@ import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
 import Data.SBV.SMT.SMTLibNames
 import Data.SBV.Utils.TDiff(Timing)
+
+import Data.SBV.Control.Types
 
 import Prelude ()
 import Prelude.Compat
@@ -370,8 +372,8 @@ data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-spl
               | CheckConstrVacuity Bool                            -- ^ Should "constraints" be checked for vacuity? (Default: False.)
               | StopAfter          Int                             -- ^ Time-out given to solver, in seconds.
               | CheckUsing         String                          -- ^ Invoke with check-sat-using command, instead of check-sat
-              | UseLogic           Logic                           -- ^ Use this logic, a custom one can be specified too
               | UseSolver          SMTConfig                       -- ^ Use this solver (z3, yices, etc.)
+              | SetOptions         [SMTOption]                     -- ^ Set these options
               | OptimizePriority   OptimizeStyle                   -- ^ Use this style for optimize calls. (Default: Lexicographic)
               | QueryUsing         (Query [SMTResult])             -- ^ Use a custom query-engine to extract results.
               deriving (Show, Functor)
@@ -395,8 +397,8 @@ instance NFData a => NFData (Tactic a) where
    rnf (CheckConstrVacuity b) = rnf b `seq` ()
    rnf (StopAfter        i)   = rnf i `seq` ()
    rnf (CheckUsing       s)   = rnf s `seq` ()
-   rnf (UseLogic         l)   = rnf l `seq` ()
    rnf (UseSolver        s)   = rnf s `seq` ()
+   rnf (SetOptions       o)  =  rnf o `seq` ()
    rnf (OptimizePriority s)   = rnf s `seq` ()
    rnf (QueryUsing       _)   = ()
 
@@ -1080,8 +1082,8 @@ addSValTactic tac = do st <- ask
                            walk (StopAfter i)          = return $ StopAfter  i
                            walk (CheckConstrVacuity b) = return $ CheckConstrVacuity b
                            walk (CheckUsing s)         = return $ CheckUsing s
-                           walk (UseLogic   l)         = return $ UseLogic   l
                            walk (UseSolver  s)         = return $ UseSolver  s
+                           walk (SetOptions o)         = return $ SetOptions o
                            walk (OptimizePriority s)   = return $ OptimizePriority s
                            walk (QueryUsing f)         = return $ QueryUsing f
                        tac' <- liftIO $ walk tac
@@ -1340,57 +1342,6 @@ instance NFData SMTModel where
 instance NFData SMTScript where
   rnf (SMTScript b m) = rnf b `seq` rnf m `seq` ()
 
--- | SMT-Lib logics. If left unspecified SBV will pick the logic based on what it determines is needed. However, the
--- user can override this choice using the 'useLogic' parameter to the configuration. This is especially handy if
--- one is experimenting with custom logics that might be supported on new solvers. See <http://smtlib.cs.uiowa.edu/logics.shtml>
--- for the official list.
-data SMTLibLogic
-  = AUFLIA    -- ^ Formulas over the theory of linear integer arithmetic and arrays extended with free sort and function symbols but restricted to arrays with integer indices and values.
-  | AUFLIRA   -- ^ Linear formulas with free sort and function symbols over one- and two-dimentional arrays of integer index and real value.
-  | AUFNIRA   -- ^ Formulas with free function and predicate symbols over a theory of arrays of arrays of integer index and real value.
-  | LRA       -- ^ Linear formulas in linear real arithmetic.
-  | QF_ABV    -- ^ Quantifier-free formulas over the theory of bitvectors and bitvector arrays.
-  | QF_AUFBV  -- ^ Quantifier-free formulas over the theory of bitvectors and bitvector arrays extended with free sort and function symbols.
-  | QF_AUFLIA -- ^ Quantifier-free linear formulas over the theory of integer arrays extended with free sort and function symbols.
-  | QF_AX     -- ^ Quantifier-free formulas over the theory of arrays with extensionality.
-  | QF_BV     -- ^ Quantifier-free formulas over the theory of fixed-size bitvectors.
-  | QF_IDL    -- ^ Difference Logic over the integers. Boolean combinations of inequations of the form x - y < b where x and y are integer variables and b is an integer constant.
-  | QF_LIA    -- ^ Unquantified linear integer arithmetic. In essence, Boolean combinations of inequations between linear polynomials over integer variables.
-  | QF_LRA    -- ^ Unquantified linear real arithmetic. In essence, Boolean combinations of inequations between linear polynomials over real variables.
-  | QF_NIA    -- ^ Quantifier-free integer arithmetic.
-  | QF_NRA    -- ^ Quantifier-free real arithmetic.
-  | QF_RDL    -- ^ Difference Logic over the reals. In essence, Boolean combinations of inequations of the form x - y < b where x and y are real variables and b is a rational constant.
-  | QF_UF     -- ^ Unquantified formulas built over a signature of uninterpreted (i.e., free) sort and function symbols.
-  | QF_UFBV   -- ^ Unquantified formulas over bitvectors with uninterpreted sort function and symbols.
-  | QF_UFIDL  -- ^ Difference Logic over the integers (in essence) but with uninterpreted sort and function symbols.
-  | QF_UFLIA  -- ^ Unquantified linear integer arithmetic with uninterpreted sort and function symbols.
-  | QF_UFLRA  -- ^ Unquantified linear real arithmetic with uninterpreted sort and function symbols.
-  | QF_UFNRA  -- ^ Unquantified non-linear real arithmetic with uninterpreted sort and function symbols.
-  | QF_UFNIRA -- ^ Unquantified non-linear real integer arithmetic with uninterpreted sort and function symbols.
-  | UFLRA     -- ^ Linear real arithmetic with uninterpreted sort and function symbols.
-  | UFNIA     -- ^ Non-linear integer arithmetic with uninterpreted sort and function symbols.
-  | QF_FPBV   -- ^ Quantifier-free formulas over the theory of floating point numbers, arrays, and bit-vectors.
-  | QF_FP     -- ^ Quantifier-free formulas over the theory of floating point numbers.
-  | QF_FD     -- ^ Quantifier-free finite domains
-  deriving Show
-
--- | NFData instance for SMTLibLogic
-instance NFData SMTLibLogic where
-   rnf x = x `seq` ()
-
--- | Chosen logic for the solver
-data Logic = PredefinedLogic SMTLibLogic  -- ^ Use one of the logics as defined by the standard
-           | CustomLogic     String       -- ^ Use this name for the logic
-
-instance Show Logic where
-  show (PredefinedLogic l) = show l
-  show (CustomLogic     s) = s
-
--- | NFData instance for Logic
-instance NFData Logic where
-  rnf (PredefinedLogic l) = rnf l
-  rnf (CustomLogic s)     = rnf s `seq` ()
-
 -- | Translation tricks needed for specific capabilities afforded by each solver
 data SolverCapabilities = SolverCapabilities {
          capSolverName              :: String               -- ^ Name of the solver
@@ -1406,6 +1357,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsOptimization       :: Bool                 -- ^ Does the solver support optimization routines?
        , supportsPseudoBooleans     :: Bool                 -- ^ Does the solver support pseudo-boolean operations?
        , supportsUnsatCores         :: Bool                 -- ^ Does the solver support extraction of unsat-cores?
+       , supportsProofs             :: Bool                 -- ^ Does the solver support extraction of proofs?
        , supportsCustomQueries      :: Bool                 -- ^ Does the solver support interactive queries per SMT-Lib?
        }
 
@@ -1444,23 +1396,22 @@ instance HasKind RoundingMode
 -- The 'printBase' field can be used to print numbers in base 2, 10, or 16. If base 2 or 16 is used, then floating-point values will
 -- be printed in their internal memory-layout format as well, which can come in handy for bit-precise analysis.
 data SMTConfig = SMTConfig {
-         verbose        :: Bool                      -- ^ Debug mode
-       , timing         :: Timing                    -- ^ Print timing information on how long different phases took (construction, solving, etc.)
-       , sBranchTimeOut :: Maybe Int                 -- ^ How much time to give to the solver for each call of 'sBranch' check. (In seconds. Default: No limit.)
-       , timeOut        :: Maybe Int                 -- ^ How much time to give to the solver. (In seconds. Default: No limit.)
-       , printBase      :: Int                       -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
-       , printRealPrec  :: Int                       -- ^ Print algebraic real values with this precision. (SReal, default: 16)
-       , solverTweaks   :: [String]                  -- ^ Additional lines of script to give to the solver (user specified)
-       , optimizeArgs   :: [String]                  -- ^ Additional commands to pass before check-sat is issued
-       , satCmd         :: String                    -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
-       , isNonModelVar  :: String -> Bool            -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
-       , smtFile        :: Maybe FilePath            -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
-       , smtLibVersion  :: SMTLibVersion             -- ^ What version of SMT-lib we use for the tool
-       , solver         :: SMTSolver                 -- ^ The actual SMT solver.
-       , roundingMode   :: RoundingMode              -- ^ Rounding mode to use for floating-point conversions
-       , useLogic       :: Maybe Logic               -- ^ If Nothing, pick automatically. Otherwise, either use the given one, or use the custom string.
-       , getUnsatCore   :: Bool                      -- ^ Should we query unsat-core?
-       , customQuery    :: Maybe (Query [SMTResult]) -- ^ Custom user-given query
+         verbose          :: Bool                      -- ^ Debug mode
+       , timing           :: Timing                    -- ^ Print timing information on how long different phases took (construction, solving, etc.)
+       , sBranchTimeOut   :: Maybe Int                 -- ^ How much time to give to the solver for each call of 'sBranch' check. (In seconds. Default: No limit.)
+       , timeOut          :: Maybe Int                 -- ^ How much time to give to the solver. (In seconds. Default: No limit.)
+       , printBase        :: Int                       -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
+       , printRealPrec    :: Int                       -- ^ Print algebraic real values with this precision. (SReal, default: 16)
+       , solverTweaks     :: [String]                  -- ^ Additional lines of script to give to the solver (user specified)
+       , optimizeArgs     :: [String]                  -- ^ Additional commands to pass before check-sat is issued
+       , satCmd           :: String                    -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
+       , isNonModelVar    :: String -> Bool            -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
+       , smtFile          :: Maybe FilePath            -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
+       , smtLibVersion    :: SMTLibVersion             -- ^ What version of SMT-lib we use for the tool
+       , solver           :: SMTSolver                 -- ^ The actual SMT solver.
+       , roundingMode     :: RoundingMode              -- ^ Rounding mode to use for floating-point conversions
+       , solverSetOptions :: [SMTOption]               -- ^ Options to set as we start the solver
+       , customQuery      :: Maybe (Query [SMTResult]) -- ^ Custom user-given query
        }
 
 -- We're just seq'ing top-level here, it shouldn't really matter. (i.e., no need to go deeper.)
