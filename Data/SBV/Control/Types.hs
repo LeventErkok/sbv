@@ -148,3 +148,4 @@ instance NFData Logic where
    rnf x = x `seq` ()
 
 {-# ANN type SMTInfoResponse ("HLint: ignore Use camelCase" :: String) #-}
+{-# ANN type Logic           ("HLint: ignore Use camelCase" :: String) #-}
