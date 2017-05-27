@@ -21,7 +21,7 @@ smtLibReservedNames = map (map toLower)
                         , "!", "_", "as", "BINARY", "DECIMAL", "exists", "HEXADECIMAL", "forall", "let", "NUMERAL", "par", "STRING", "CHAR"
                         , "assert", "check-sat", "check-sat-assuming", "declare-const", "declare-fun", "declare-sort", "define-fun", "define-fun-rec"
                         , "define-sort", "echo", "exit", "get-assertions", "get-assignment", "get-info", "get-model", "get-option", "get-proof", "get-unsat-assumptions"
-                        , "get-unsat-core", "get-value", "pop", "push", "reset", "reset-assertions", "set-info", "set-logic", "set-option"
+                        , "get-unsat-core", "get-value", "pop", "push", "reset", "reset-assertions", "set-info", "set-logic", "set-option", "match"
                         --
                         -- The following are most likely Z3 specific
                         , "interval", "assert-soft"
