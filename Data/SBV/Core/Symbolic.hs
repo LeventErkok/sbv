@@ -180,7 +180,7 @@ data FPOp = FP_Cast        Kind Kind SW   -- From-Kind, To-Kind, RoundingMode. T
           | FP_IsPositive
           deriving (Eq, Ord)
 
--- | Note that the show instance maps to the SMTLib names. We need to make sure
+-- Note that the show instance maps to the SMTLib names. We need to make sure
 -- this mapping stays correct through SMTLib changes. The only exception
 -- is FP_Cast; where we handle different source/origins explicitly later on.
 instance Show FPOp where
@@ -219,7 +219,7 @@ data PBOp = PB_AtMost  Int        -- ^ At most k
           | PB_Eq      [Int] Int  -- ^ Exactly k,  with coefficients given. Generalized PB_Exactly
           deriving (Eq, Ord, Show)
 
--- | Show instance for 'Op'. Note that this is largely for debugging purposes, not used
+-- Show instance for 'Op'. Note that this is largely for debugging purposes, not used
 -- for being read by any tool.
 instance Show Op where
   show (Shl i) = "<<"  ++ show i
@@ -281,7 +281,7 @@ reorder s = case s of
   where isCommutative :: Op -> Bool
         isCommutative o = o `elem` [Plus, Times, Equal, NotEqual, And, Or, XOr]
 
--- | Show instance for 'SBVExpr'. Again, only for debugging purposes.
+-- Show instance for 'SBVExpr'. Again, only for debugging purposes.
 instance Show SBVExpr where
   show (SBVApp Ite [t, a, b])             = unwords ["if", show t, "then", show a, "else", show b]
   show (SBVApp (Shl i) [a])               = unwords [show a, "<<", show i]
@@ -334,7 +334,6 @@ data QueryContext = QueryContext {
                       , contextSkolems :: [String]
                       }
 
--- | NFData instance for purposes of timing info collection
 instance NFData QueryContext where
    rnf (QueryContext st sks) = rnf st `seq` rnf sks `seq` ()
 
@@ -353,7 +352,7 @@ data QueryState = QueryState { querySend                :: String -> IO ()
 newtype Query a = Query (StateT QueryState IO a)
              deriving (Applicative, Functor, Monad, MonadIO, MonadState QueryState)
 
--- | Show instance for Query, needed since tactics are Showable
+-- Show instance for Query, needed since tactics are Showable
 instance Show (Query a) where
    show _ = "<Query>"
 
@@ -426,7 +425,7 @@ data Result = Result { reskinds       :: Set.Set Kind                           
                      , resOutputs     :: [SW]                                    -- ^ outputs
                      }
 
--- | Show instance for 'Result'. Only for debugging purposes.
+-- Show instance for 'Result'. Only for debugging purposes.
 instance Show Result where
   show (Result _ _ _ _ cs _ _ [] [] _ [] _ _ _ [r])
     | Just c <- r `lookup` cs
@@ -622,7 +621,7 @@ data State  = State { runMode      :: SBVRunMode
                     , rAICache     :: IORef (Cache Int)
                     }
 
--- | NFData is a bit of a lie, but it's sufficient, most of the content is iorefs that we don't want to touch
+-- NFData is a bit of a lie, but it's sufficient, most of the content is iorefs that we don't want to touch
 instance NFData State where
    rnf State{} = ()
 
@@ -678,7 +677,7 @@ data SVal = SVal !Kind !(Either CW (Cached SW))
 instance HasKind SVal where
   kindOf (SVal k _) = k
 
--- | Show instance for 'SVal'. Not particularly "desirable", but will do if needed
+-- Show instance for 'SVal'. Not particularly "desirable", but will do if needed
 -- NB. We do not show the type info on constant KBool values, since there's no
 -- implicit "fromBoolean" applied to Booleans in Haskell; and thus a statement
 -- of the form "True :: SBool" is just meaningless. (There should be a fromBoolean!)

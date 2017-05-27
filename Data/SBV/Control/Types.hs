@@ -63,7 +63,7 @@ data SMTInfoResponse = Resp_Unsupported
                      | Resp_InfoKeyword          String
                      deriving Show
 
--- | Show instance for SMTInfoFlag maintains smt-lib format per the SMTLib2 standard document.
+-- Show instance for SMTInfoFlag maintains smt-lib format per the SMTLib2 standard document.
 instance Show SMTInfoFlag where
   show AllStatistics        = ":all-statistics"
   show AssertionStackLevels = ":assertion-stack-levels"
@@ -82,7 +82,6 @@ data SMTOption = DiagnosticOutputChannel FilePath
                | ProduceUnsatCores       Bool
                | ProduceProofs           Bool
 
--- | NFData instance for SMTOption (Since it can be used part of the Tactic)
 instance NFData SMTOption where
   rnf (DiagnosticOutputChannel f) = rnf f `seq` ()
   rnf (RandomSeed i)              = rnf i `seq` ()
@@ -90,7 +89,7 @@ instance NFData SMTOption where
   rnf (ProduceUnsatCores b)       = rnf b `seq` ()
   rnf (ProduceProofs b)           = rnf b `seq` ()
 
--- | Show instance for SMTOption maintains smt-lib format per the SMTLib2 standard document.
+-- Show instance for SMTOption maintains smt-lib format per the SMTLib2 standard document.
 instance Show SMTOption where
   show (DiagnosticOutputChannel f) = ":diagnostic-output-channel " ++ show f
   show (RandomSeed              i) = ":random-seed "               ++ show i
@@ -135,14 +134,13 @@ data Logic
   | CustomLogic String -- ^ In case you need a really custom string!
   deriving Generic
 
--- | The show instance is "almost" the derived one, but not quite!
+-- The show instance is "almost" the derived one, but not quite!
 instance GShow Logic
 instance Show Logic where
   show Logic_ALL       = "ALL"
   show (CustomLogic l) = l
   show l               = gshow l
 
--- | NFData instance for Logic
 instance NFData Logic where
    rnf x = x `seq` ()
 

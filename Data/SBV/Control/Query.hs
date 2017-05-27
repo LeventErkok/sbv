@@ -146,7 +146,7 @@ pop i
    where shl 1 = "one level"
          shl n = show n ++ " levels"
 
--- | Reset the solver, bringing it to the state at the beginning
+-- | Reset the solver, bringing it to the state at the beginning.
 reset :: Query ()
 reset = do send "(reset)"
            modify' $ \s -> s{queryAssertionStackDepth = 0}

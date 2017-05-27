@@ -94,19 +94,19 @@ data OptimizeResult = LexicographicResult SMTResult
                     | ParetoResult        Bool [SMTResult]
                     | IndependentResult   [(String, SMTResult)]
 
--- | User friendly way of printing theorem results
+-- User friendly way of printing theorem results
 instance Show ThmResult where
   show (ThmResult r) = showSMTResult "Q.E.D."
                                      "Unknown"     "Unknown. Potential counter-example:\n"
                                      "Falsifiable" "Falsifiable. Counter-example:\n" "Falsifiable in an extension field:\n" r
 
--- | User friendly way of printing satisfiablity results
+-- User friendly way of printing satisfiablity results
 instance Show SatResult where
   show (SatResult r) = showSMTResult "Unsatisfiable"
                                      "Unknown"     "Unknown. Potential model:\n"
                                      "Satisfiable" "Satisfiable. Model:\n" "Satisfiable in an extension field. Model:\n" r
 
--- | User friendly way of printing safety results
+-- User friendly way of printing safety results
 instance Show SafeResult where
    show (SafeResult (mbLoc, msg, r)) = showSMTResult (tag "No violations detected")
                                                      (tag "Unknown")  (tag "Unknown. Potential violating model:\n")
@@ -114,7 +114,7 @@ instance Show SafeResult where
         where loc   = maybe "" (++ ": ") mbLoc
               tag s = loc ++ msg ++ ": " ++ s
 
--- | The Show instance of AllSatResults. Note that we have to be careful in being lazy enough
+-- The Show instance of AllSatResults. Note that we have to be careful in being lazy enough
 -- as the typical use case is to pull results out as they become available.
 instance Show AllSatResult where
   show (AllSatResult (e, xs)) = go (0::Int) xs
@@ -136,7 +136,7 @@ instance Show AllSatResult where
                            Satisfiable{} -> True
                            _             -> False
 
--- | Show instance for optimization results
+-- Show instance for optimization results
 instance Show OptimizeResult where
   show res = case res of
                LexicographicResult r   -> sh id r

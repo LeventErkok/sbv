@@ -149,7 +149,7 @@ data CgSRealType = CgFloat      -- ^ @float@
                  | CgLongDouble -- ^ @long double@
                  deriving Eq
 
--- | 'Show' instance for 'cgSRealType' displays values as they would be used in a C program
+-- 'Show' instance for 'cgSRealType' displays values as they would be used in a C program
 instance Show CgSRealType where
   show CgFloat      = "float"
   show CgDouble     = "double"
@@ -305,7 +305,7 @@ isCgMakefile :: CgPgmKind -> Bool
 isCgMakefile CgMakefile{} = True
 isCgMakefile _            = False
 
--- | A simple way to print bundles, mostly for debugging purposes.
+-- A simple way to print bundles, mostly for debugging purposes.
 instance Show CgPgmBundle where
    show (CgPgmBundle _ fs) = intercalate "\n" $ map showFile fs
     where showFile :: (FilePath, (CgPgmKind, [Doc])) -> String
