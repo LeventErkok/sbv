@@ -601,7 +601,9 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                     ask l     = send l >> recv
                     recv      = hGetLine outh
 
-                    -- Send a line, get a whole s-expr
+                    -- Send a line, get a whole s-expr. We ignore the
+                    -- pathetic case that there might be a string with an
+                    -- unbalanced parentheses in it..
                     askFull l = send l >> recvFull
                     recvFull  = (intercalate "\n" . reverse) `fmap` go 0 []
                       where go i sofar = do ln <- hGetLine outh
@@ -609,7 +611,9 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                 close = length $ filter (== ')') ln
                                                 need  = i + open - close
                                                 acc   = ln : sofar
-                                            if need <= 0
+                                                -- make sure we get *something*
+                                                empty = null $ dropWhile isSpace ln
+                                            if not empty && need <= 0
                                                then return acc
                                                else go need acc
 
