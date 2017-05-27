@@ -1059,11 +1059,11 @@ callSolver isSat checkMsg refutedModels wrap SMTProblem{smtInputs, smtSkolemMap,
            finalPgm = intercalate "\n" (pgm ++ refutedModels) where SMTLibPgm _ pgm = smtLibPgm config caseCond
 
        msg checkMsg
-       msg $  unlines $  "Generated SMTLib program:"
-                       : solverTweaks config
-                      ++ [finalPgm]
-                      ++ optimizeArgs config
-                      ++ [satCmd config]
+       msg $  intercalate "\n" $  "Generated SMTLib program:"
+                               : solverTweaks config
+                              ++ [finalPgm]
+                              ++ optimizeArgs config
+                              ++ [satCmd config]
 
        smtAnswer <- engine (solver config) config ctx isSat mbOptInfo smtInputs smtSkolemMap finalPgm
 
