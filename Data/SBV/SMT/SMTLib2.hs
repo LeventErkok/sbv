@@ -17,7 +17,7 @@ import Data.Bits     (bit)
 import Data.Function (on)
 import Data.Ord      (comparing)
 import Data.List     (intercalate, partition, groupBy, sortBy)
-import Data.Maybe    (mapMaybe, listToMaybe)
+import Data.Maybe    (mapMaybe)
 
 import qualified Data.Foldable as F (toList)
 import qualified Data.Map      as M
@@ -93,9 +93,14 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
         rm             = roundingMode config
         solverCaps     = capabilities (solver config)
 
+        -- a variant of listToMaybe that is more strict
+        findOption _ []  = Nothing
+        findOption _ [x] = Just x
+        findOption w xs  = error $ "Only one set option call to " ++ w ++ " is allowed, found: " ++ show (length xs)
+
         -- Determining the logic is surprisingly tricky!
         logic
-           | Just l <- listToMaybe [l | SetLogic l <- solverSetOptions config]
+           | Just l <- findOption "SetLogic" [l | SetLogic l <- solverSetOptions config]
            = ["(set-logic " ++ show l ++ ") ; NB. User specified."]
            | hasDouble || hasFloat    -- NB. We don't check for quantifiers here, we probably should..
            = if hasBVs
@@ -124,7 +129,7 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
           | True                             = []
 
         unsatCore
-          | Just o@(ProduceUnsatCores True) <- listToMaybe [uc | uc@ProduceUnsatCores{} <- solverSetOptions config]
+          | Just o@(ProduceUnsatCores True) <- findOption "ProduceUnsatCores" [uc | uc@ProduceUnsatCores{} <- solverSetOptions config]
           = if supportsUnsatCores solverCaps
                then ["(set-option " ++ show o ++ ")"]
                else error $ "SBV: unsat cores are requested, but the backend solver " ++ show (solver config) ++ " doesn't support them!"
@@ -132,7 +137,7 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
           = []
 
         proofs
-          | Just o@(ProduceProofs True) <- listToMaybe [pp | pp@ProduceProofs{} <- solverSetOptions config]
+          | Just o@(ProduceProofs True) <- findOption "ProduceProofs" [pp | pp@ProduceProofs{} <- solverSetOptions config]
           = if supportsProofs solverCaps
                then ["(set-option " ++ show o ++ ")"]
                else error $ "SBV: proofs are requested, but the backend solver " ++ show (solver config) ++ " doesn't support them!"
