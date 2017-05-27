@@ -48,9 +48,12 @@ import Data.IORef (readIORef)
 -- | An Assignment of a model binding
 data Assignment = Assign SVal CW
 
--- | Set an option.
+-- | Set an option. Note that "SetLogic" is custom, as it is really not
+-- an option. Note that sending this yourself is risky, as when this
+-- call is done, you already have a logic set. The solver might reject it.
 setOption :: SMTOption -> Query ()
-setOption o = send $ "(set-option " ++ show o ++ ")"
+setOption (SetLogic l) = send $ "(set-logic "  ++ show l ++ ")"
+setOption o            = send $ "(set-option " ++ show o ++ ")"
 
 -- | Ask solver for info.
 getInfo :: SMTInfoFlag -> Query SMTInfoResponse
