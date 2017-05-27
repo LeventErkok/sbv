@@ -101,9 +101,8 @@ instance Show SMTOption where
   show (SetLogic                i) = show i
 
 -- | SMT-Lib logics. If left unspecified SBV will pick the logic based on what it determines is needed. However, the
--- user can override this choice using the 'useLogic' parameter to the configuration. This is especially handy if
--- one is experimenting with custom logics that might be supported on new solvers. See <http://smtlib.cs.uiowa.edu/logics.shtml>
--- for the official list.
+-- user can override this choice using the tactic 'SetOptions' This is especially handy if one is experimenting with custom
+-- logics that might be supported on new solvers. See <http://smtlib.cs.uiowa.edu/logics.shtml> for the official list.
 data Logic
   = AUFLIA             -- ^ Formulas over the theory of linear integer arithmetic and arrays extended with free sort and function symbols but restricted to arrays with integer indices and values.
   | AUFLIRA            -- ^ Linear formulas with free sort and function symbols over one- and two-dimentional arrays of integer index and real value.
