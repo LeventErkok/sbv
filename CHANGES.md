@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 6.0, 2017-05-07
+* Latest Hackage released version: 6.1, 2017-05-26
 
-### Version 6.1, Not yet released
+### Version 6.1, 2017-05-26
 
   * Add support for unsat-core extraction. To use this feature, use
     the `namedConstraint` function:
