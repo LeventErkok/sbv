@@ -1,9 +1,11 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 6.0, 2017-05-07
+* Latest Hackage released version: 6.1, 2017-05-26
 
-### Version 6.2, Not yet released. On the 'interactive' branch.
+### Version 6.2, Not yet released.
+
+  * Release 6.2 is all about custom queries. Details to follow.
 
   * Pareto-front extraction has been reworked, reflecting the changes in Z3 for
     this functionality. Since pareto-fronts can be infinite in number, the user
@@ -12,7 +14,7 @@
     exhausts all the pareto-fronts, or till it runs out of memory in case there
     is an infinite number of them.
 
-### Version 6.1, Not yet released
+### Version 6.1, 2017-05-26
 
   * Add support for unsat-core extraction. To use this feature, use
     the `namedConstraint` function:
