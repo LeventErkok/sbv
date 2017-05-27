@@ -5,7 +5,7 @@
 
 ### Version 6.2, Not yet released.
 
-  * Release 6.2 is all about custom queries. Details to follow.
+  * This release is all about custom queries. Details to follow.
 
   * Pareto-front extraction has been reworked, reflecting the changes in Z3 for
     this functionality. Since pareto-fronts can be infinite in number, the user
