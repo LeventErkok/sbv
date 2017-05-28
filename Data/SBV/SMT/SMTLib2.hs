@@ -100,21 +100,25 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
 
         -- Determining the logic is surprisingly tricky!
         logic
+           -- user told us what to do: so just take it:
            | Just l <- findOption "SetLogic" [l | SetLogic l <- solverSetOptions config]
            = ["(set-logic " ++ show l ++ ") ; NB. User specified."]
-           | hasDouble || hasFloat    -- NB. We don't check for quantifiers here, we probably should..
-           = if hasBVs
-             then ["(set-logic QF_FPBV)"]
-             else ["(set-logic QF_FP)"]
+
+           -- Otherwise, we try to determine the most suitable logic.
+           -- NB. This isn't really fool proof!
+           | hasDouble || hasFloat
+           = if hasInteger || not (null foralls)
+             then ["(set-logic ALL)"]
+             else if hasBVs
+                  then ["(set-logic QF_FPBV)"]
+                  else ["(set-logic QF_FP)"]
            | hasInteger || hasReal || not (null usorts) || hasNonBVArrays
            = let why | hasInteger        = "has unbounded values"
                      | hasReal           = "has algebraic reals"
                      | not (null usorts) = "has user-defined sorts"
                      | hasNonBVArrays    = "has non-bitvector arrays"
                      | True              = "cannot determine the SMTLib-logic to use"
-             in case mbDefaultLogic solverCaps hasReal of
-                  Nothing -> ["; " ++ why ++ ", no logic specified."]
-                  Just l  -> ["(set-logic " ++ l ++ "); " ++ why ++ ", using solver-default logic."]
+             in ["(set-logic ALL) ;"  ++ why ++ ", using catch-all."]
            | True
            = ["(set-logic " ++ qs ++ as ++ ufs ++ "BV)"]
           where qs  | null foralls && null axs = "QF_"  -- axioms are likely to contain quantifiers

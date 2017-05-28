@@ -29,7 +29,6 @@ cvc4 = SMTSolver {
          , engine       = standardEngine "SBV_CVC4" "SBV_CVC4_OPTIONS" modConfig addTimeOut standardModel
          , capabilities = SolverCapabilities {
                                 capSolverName              = "CVC4"
-                              , mbDefaultLogic             = const (Just "ALL_SUPPORTED")  -- CVC4 is not happy if we don't set the logic, so fall-back to this if necessary
                               , supportsDefineFun          = True
                               , supportsProduceModels      = True
                               , supportsQuantifiers        = True

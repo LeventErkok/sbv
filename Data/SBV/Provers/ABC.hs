@@ -27,7 +27,6 @@ abc = SMTSolver {
          , engine       = standardEngine "SBV_ABC" "SBV_ABC_OPTIONS" id addTimeOut standardModel
          , capabilities = SolverCapabilities {
                                 capSolverName              = "ABC"
-                              , mbDefaultLogic             = const Nothing
                               , supportsDefineFun          = True
                               , supportsProduceModels      = True
                               , supportsQuantifiers        = False

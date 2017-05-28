@@ -76,7 +76,6 @@ z3 = SMTSolver {
 
          , capabilities   = SolverCapabilities {
                                   capSolverName              = "Z3"
-                                , mbDefaultLogic             = const Nothing
                                 , supportsDefineFun          = True
                                 , supportsProduceModels      = True
                                 , supportsQuantifiers        = True

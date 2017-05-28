@@ -1343,21 +1343,20 @@ instance NFData SMTScript where
 
 -- | Translation tricks needed for specific capabilities afforded by each solver
 data SolverCapabilities = SolverCapabilities {
-         capSolverName              :: String               -- ^ Name of the solver
-       , mbDefaultLogic             :: Bool -> Maybe String -- ^ set-logic string to use in case not automatically determined (if any). If Bool is True, then reals are present.
-       , supportsDefineFun          :: Bool                 -- ^ Does the solver understand SMT-Lib2 define-funs?
-       , supportsProduceModels      :: Bool                 -- ^ Does the solver understand produce-models option setting
-       , supportsQuantifiers        :: Bool                 -- ^ Does the solver understand SMT-Lib2 style quantifiers?
-       , supportsUninterpretedSorts :: Bool                 -- ^ Does the solver understand SMT-Lib2 style uninterpreted-sorts
-       , supportsUnboundedInts      :: Bool                 -- ^ Does the solver support unbounded integers?
-       , supportsReals              :: Bool                 -- ^ Does the solver support reals?
-       , supportsFloats             :: Bool                 -- ^ Does the solver support single-precision floating point numbers?
-       , supportsDoubles            :: Bool                 -- ^ Does the solver support double-precision floating point numbers?
-       , supportsOptimization       :: Bool                 -- ^ Does the solver support optimization routines?
-       , supportsPseudoBooleans     :: Bool                 -- ^ Does the solver support pseudo-boolean operations?
-       , supportsUnsatCores         :: Bool                 -- ^ Does the solver support extraction of unsat-cores?
-       , supportsProofs             :: Bool                 -- ^ Does the solver support extraction of proofs?
-       , supportsCustomQueries      :: Bool                 -- ^ Does the solver support interactive queries per SMT-Lib?
+         capSolverName              :: String  -- ^ Name of the solver
+       , supportsDefineFun          :: Bool    -- ^ Does the solver understand SMT-Lib2 define-funs?
+       , supportsProduceModels      :: Bool    -- ^ Does the solver understand produce-models option setting
+       , supportsQuantifiers        :: Bool    -- ^ Does the solver understand SMT-Lib2 style quantifiers?
+       , supportsUninterpretedSorts :: Bool    -- ^ Does the solver understand SMT-Lib2 style uninterpreted-sorts
+       , supportsUnboundedInts      :: Bool    -- ^ Does the solver support unbounded integers?
+       , supportsReals              :: Bool    -- ^ Does the solver support reals?
+       , supportsFloats             :: Bool    -- ^ Does the solver support single-precision floating point numbers?
+       , supportsDoubles            :: Bool    -- ^ Does the solver support double-precision floating point numbers?
+       , supportsOptimization       :: Bool    -- ^ Does the solver support optimization routines?
+       , supportsPseudoBooleans     :: Bool    -- ^ Does the solver support pseudo-boolean operations?
+       , supportsUnsatCores         :: Bool    -- ^ Does the solver support extraction of unsat-cores?
+       , supportsProofs             :: Bool    -- ^ Does the solver support extraction of proofs?
+       , supportsCustomQueries      :: Bool    -- ^ Does the solver support interactive queries per SMT-Lib?
        }
 
 -- | Rounding mode to be used for the IEEE floating-point operations.

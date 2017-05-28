@@ -29,7 +29,6 @@ yices = SMTSolver {
          , engine       = standardEngine "SBV_YICES" "SBV_YICES_OPTIONS" modConfig addTimeOut standardModel
          , capabilities = SolverCapabilities {
                                 capSolverName              = "Yices"
-                              , mbDefaultLogic             = logic
                               , supportsDefineFun          = True
                               , supportsProduceModels      = True
                               , supportsQuantifiers        = False
@@ -46,10 +45,6 @@ yices = SMTSolver {
                               }
          }
   where addTimeOut _ _ = error "Yices: Timeout values are not supported by Yices"
-        -- Yices doesn't like it if we don't set the logic; so pick one and hope for the best
-        logic hasReals
-          | hasReals   = Just "QF_UFLRA"
-          | True       = Just "QF_AUFLIA"
 
         -- If custom queries are present, Yices requires to be in the incremental mode
         modConfig :: SMTConfig -> SMTConfig

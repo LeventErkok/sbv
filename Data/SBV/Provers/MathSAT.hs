@@ -29,7 +29,6 @@ mathSAT = SMTSolver {
          , engine       = standardEngine "SBV_MATHSAT" "SBV_MATHSAT_OPTIONS" modConfig addTimeOut standardModel
          , capabilities = SolverCapabilities {
                                 capSolverName              = "MathSAT"
-                              , mbDefaultLogic             = const Nothing
                               , supportsDefineFun          = True
                               , supportsProduceModels      = True
                               , supportsQuantifiers        = True

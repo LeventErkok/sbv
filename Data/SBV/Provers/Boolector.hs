@@ -27,7 +27,6 @@ boolector = SMTSolver {
          , engine       = standardEngine "SBV_BOOLECTOR" "SBV_BOOLECTOR_OPTIONS" modConfig addTimeOut standardModel
          , capabilities = SolverCapabilities {
                                 capSolverName              = "Boolector"
-                              , mbDefaultLogic             = const Nothing
                               , supportsDefineFun          = False
                               , supportsProduceModels      = True
                               , supportsQuantifiers        = False
