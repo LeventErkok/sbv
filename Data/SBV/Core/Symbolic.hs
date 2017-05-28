@@ -338,8 +338,7 @@ instance NFData QueryContext where
    rnf (QueryContext st sks) = rnf st `seq` rnf sks `seq` ()
 
 -- | The state we keep track of as we interact with the solver
-data QueryState = QueryState { querySend                :: String -> IO ()
-                             , queryAsk                 :: String -> IO String
+data QueryState = QueryState { queryAsk                 :: String -> IO String
                              , queryConfig              :: SMTConfig
                              , queryContext             :: QueryContext
                              , queryDefault             :: Bool -> IO [SMTResult]
@@ -358,7 +357,18 @@ instance Show (Query a) where
 
 -- | Execute a query.
 runQuery :: Query a -> QueryState -> IO a
-runQuery (Query f) = evalStateT f
+runQuery (Query userQuery) qs@QueryState{queryAsk} = evalStateT f' qs
+  where f' = do let cmd = "(set-option :print-success true)"
+                r <- liftIO $ queryAsk cmd
+                case r of
+                  "success" -> userQuery
+                  _         -> error $ unlines [ ""
+                                               , "*** Data.SBV: Failed to initiate contact with the solver!"
+                                               , "***   Sent    : " ++ cmd
+                                               , "***   Expected: success"
+                                               , "***   Received: " ++ r
+                                               , "*** Try running in debug mode for further information."
+                                               ]
 
 -- | Install a custom query.
 query :: Query [SMTResult] -> Symbolic ()

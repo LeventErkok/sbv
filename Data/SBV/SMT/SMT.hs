@@ -714,16 +714,18 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                              k <- case (inNonInteractiveProofMode (contextState ctx), customQuery cfg) of
                                     (True, Just q) -> do
                                         when (verbose cfg) $ putStrLn "** Custom query is requested. Giving control to the user."
-                                        return $ runQuery q QueryState { querySend               = send
-                                                                       , queryAsk                = askFull
-                                                                       , queryConfig             = cfg
-                                                                       , queryContext            = ctx { contextState = switchToInteractiveMode (contextState ctx) }
-                                                                       , queryDefault            = sbvContinuation
-                                                                       , queryGetModel           = askModel
-                                                                       , queryIgnoreExitCode     = False
-                                                                       , queryAssertionStackDepth = 0
-                                                                       }
-                                    (False, Just _) -> do when (verbose cfg) $ putStrLn $ "** Skipping the custom query in mode: " ++ show (getProofMode (contextState ctx))
+                                        let interactiveCtx = ctx { contextState = switchToInteractiveMode (contextState ctx) }
+                                            qs = QueryState { queryAsk                 = askFull
+                                                            , queryConfig              = cfg
+                                                            , queryContext             = interactiveCtx
+                                                            , queryDefault             = sbvContinuation
+                                                            , queryGetModel            = askModel
+                                                            , queryIgnoreExitCode      = False
+                                                            , queryAssertionStackDepth = 0
+                                                            }
+                                        return $ runQuery q qs
+                                    (False, Just _) -> do when (verbose cfg) $
+                                                               putStrLn $ "** Skipping the custom query in mode: " ++ show (getProofMode (contextState ctx))
                                                           return (sbvContinuation False)
                                     (_, Nothing)    -> return (sbvContinuation False)
 

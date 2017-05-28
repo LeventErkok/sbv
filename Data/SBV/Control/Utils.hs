@@ -28,6 +28,7 @@ import Data.Word
 
 import qualified Data.Map as Map
 
+import Control.Monad (when)
 import Control.Monad.State.Lazy (get, modify', liftIO)
 
 import Data.IORef (readIORef)
@@ -87,16 +88,17 @@ ask s = do QueryState{queryAsk, queryConfig} <- get
 
            return r
 
--- | Send a string to the solver, where no answer is expected
+-- | Send a string to the solver, where no answer is expected. But we
+-- do require the solver to print back success.
 send :: String -> Query ()
-send s = do QueryState{querySend, queryConfig} <- get
+send s = do QueryState{queryAsk, queryConfig} <- get
 
-            let dbg what m
-                  | verbose queryConfig = io . putStrLn $ what ++ " " ++ m
-                  | True                = return ()
+            r <- io $ queryAsk s
 
-            dbg "-->" s
-            io $ querySend s
+            case words r of
+              ["success"] -> when (verbose queryConfig) $ io $ putStrLn $ "[SUCCESS] " ++ s
+              _           -> do io $ putStrLn $ "[FAILED]  " ++ s
+                                unexpected "Command" s "success" r Nothing
 
 -- | A class which allows for sexpr-conversion to values
 class SMTValue a where
