@@ -78,13 +78,13 @@ inNewContext act = do QueryState{queryContext} <- get
 ask :: String -> Query String
 ask s = do QueryState{queryAsk, queryConfig} <- get
 
-           let dbg what m
-                 | verbose queryConfig = io . putStrLn $ what ++ " " ++ m
+           let dbg what
+                 | verbose queryConfig = io . putStrLn $ what
                  | True                = return ()
 
-           dbg "-->" s
+           dbg $ "[SENDING]  " ++ s
            r <- io $ queryAsk s
-           dbg "<--" r
+           dbg $ "[RECEIVED] " ++ r
 
            return r
 
