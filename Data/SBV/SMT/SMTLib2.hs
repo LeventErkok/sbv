@@ -118,7 +118,7 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
                      | not (null usorts) = "has user-defined sorts"
                      | hasNonBVArrays    = "has non-bitvector arrays"
                      | True              = "cannot determine the SMTLib-logic to use"
-             in ["(set-logic ALL) ;"  ++ why ++ ", using catch-all."]
+             in ["(set-logic ALL) ; "  ++ why ++ ", using catch-all."]
            | True
            = ["(set-logic " ++ qs ++ as ++ ufs ++ "BV)"]
           where qs  | null foralls && null axs = "QF_"  -- axioms are likely to contain quantifiers
