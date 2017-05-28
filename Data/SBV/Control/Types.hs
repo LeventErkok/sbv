@@ -48,7 +48,7 @@ data SMTErrorBehavior = ErrorImmediateExit
 -- | Reason for reporting unknown.
 data SMTReasonUnknown = UnknownMemOut
                       | UnknownIncomplete
-                      | UnknownOther String
+                      | UnknownOther      String
                       deriving Show
 
 -- | Collectable information from the solver.
@@ -89,12 +89,17 @@ instance NFData SMTOption where
   rnf (ProduceUnsatCores b)       = rnf b `seq` ()
   rnf (ProduceProofs b)           = rnf b `seq` ()
 
+-- SMTLib's True/False is spelled differently than Haskell's.
+smtBool :: Bool -> String
+smtBool True  = "true"
+smtBool False = "false"
+
 -- Show instance for SMTOption maintains smt-lib format per the SMTLib2 standard document.
 instance Show SMTOption where
-  show (DiagnosticOutputChannel f) = ":diagnostic-output-channel " ++ show f
-  show (RandomSeed              i) = ":random-seed "               ++ show i
-  show (ProduceUnsatCores       b) = ":produce-unsat-cores "       ++ if b then "true" else "false"
-  show (ProduceProofs           b) = ":produce-proofs"             ++ if b then "true" else "false"
+  show (DiagnosticOutputChannel f) = unwords [":diagnostic-output-channel", show f]
+  show (RandomSeed              i) = unwords [":random-seed",               show i]
+  show (ProduceUnsatCores       b) = unwords [":produce-unsat-cores",       smtBool b]
+  show (ProduceProofs           b) = unwords [":produce-proofs",            smtBool b]
   -- Strictly speaking SetLogic is not an option but a command. But I think that's a wart in SMTLib. We're careful in how we process
   -- this though, so no worries.
   show (SetLogic                i) = show i
