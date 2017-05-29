@@ -9,16 +9,18 @@
 -- Test suite for Examples.Puzzles.PowerSet
 -----------------------------------------------------------------------------
 
-module TestSuite.Puzzles.PowerSet(testSuite) where
+module TestSuite.Puzzles.PowerSet(tests) where
 
 import Data.SBV
 
 import Examples.Puzzles.PowerSet
 import SBVTest
 
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [ "powerSet " ++ show i ~: assert (pSet i) | i <- [0 .. 7] ]
- where pSet :: Int -> IO Bool
-       pSet n = do cnt <- numberOfModels $ genPowerSet `fmap` mkExistVars n
-                   return (cnt == 2^n)
+tests :: TestTree
+tests =
+  testGroup "Puzzles.PowerSet"
+    [ testCase ("powerSet " ++ show i) (assert (pSet i)) | i <- [0 .. 7] ]
+
+pSet :: Int -> IO Bool
+pSet n = do cnt <- numberOfModels $ genPowerSet `fmap` mkExistVars n
+            return (cnt == 2^n)

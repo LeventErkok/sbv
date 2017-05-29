@@ -68,7 +68,6 @@ allTestCases = [
      , ("counts",      False, T09_02.testSuite)
 --     , ("dogCatMouse", True,  T09_03.testSuite)
 --     , ("euler185",    True,  T09_04.testSuite)
---     , ("powerset",    True,  T09_07.testSuite)
 --     , ("sudoku",      True,  T09_08.testSuite)
 --     , ("temperature", True,  T09_09.testSuite)
 --     , ("u2bridge",    True,  T09_10.testSuite)

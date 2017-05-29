@@ -296,3 +296,4 @@ Test-Suite int-test-extended
                   , TestSuite.CRC.Parity
                   , TestSuite.Puzzles.MagicSquare
                   , TestSuite.Puzzles.NQueens
+                  , TestSuite.Puzzles.PowerSet

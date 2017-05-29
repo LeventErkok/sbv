@@ -46,7 +46,7 @@ tests =
   -- euler
   , TestSuite.Puzzles.MagicSquare.tests
   , TestSuite.Puzzles.NQueens.tests
-  -- , TestSuite.Puzzles.PowerSet.tests
+  , TestSuite.Puzzles.PowerSet.tests
   -- , TestSuite.Puzzles.Sukoku.tests
   -- temp
   -- u2br
