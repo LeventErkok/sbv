@@ -288,3 +288,4 @@ Test-Suite int-test-extended
                   , TestSuite.BitPrecise.PrefixSum
                   , TestSuite.CRC.CCITT_Unidir
                   , TestSuite.CRC.GenPoly
+                  , TestSuite.Crypto.RC4
