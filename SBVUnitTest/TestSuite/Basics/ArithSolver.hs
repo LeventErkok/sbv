@@ -13,7 +13,7 @@
 
 {-# LANGUAGE Rank2Types    #-}
 
-module TestSuite.Basics.ArithSolver(testSuite) where
+module TestSuite.Basics.ArithSolver(tests) where
 
 import Data.Maybe (fromMaybe, fromJust)
 import qualified Data.Binary.IEEE754 as DB (wordToFloat, wordToDouble, floatToWord, doubleToWord)
@@ -27,9 +27,10 @@ ghcBitSize :: Bits a => a -> Int
 ghcBitSize x = fromMaybe (error "SBV.ghcBitSize: Unexpected non-finite usage!") (bitSizeMaybe x)
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test $
-        genReals
+tests :: TestTree
+tests =
+  testGroup "Basics.ArithSolver"
+   (    genReals
      ++ genFloats
      ++ genDoubles
      ++ genFPConverts
@@ -62,9 +63,9 @@ testSuite = mkTestSuite $ \_ -> test $
      ++ genIntTestS True   "rotateL"          rotateL
      ++ genIntTestS True   "rotateR"          rotateR
      ++ genBlasts
-     ++ genIntCasts
+     ++ genIntCasts)
 
-genBinTest :: Bool -> String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [Test]
+genBinTest :: Bool -> String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [TestTree]
 genBinTest unboundedOK nm op = map mkTest $  [(show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- w8s ]
                                           ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- w16s, y <- w16s]
                                           ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- w32s, y <- w32s]
@@ -74,13 +75,13 @@ genBinTest unboundedOK nm op = map mkTest $  [(show x, show y, mkThm2 x y (x `op
                                           ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i32s, y <- i32s]
                                           ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i64s, y <- i64s]
                                           ++ [(show x, show y, mkThm2 x y (x `op` y)) | unboundedOK, x <- iUBs, y <- iUBs]
-  where mkTest (x, y, t) = "genBinTest.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
+  where mkTest (x, y, t) = testCase ("genBinTest.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y) (assert t)
         mkThm2 x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                   constrain $ a .== literal x
                                   constrain $ b .== literal y
                                   return $ literal r .== a `op` b
 
-genBoolTest :: String -> (forall a. Ord a => a -> a -> Bool) -> (forall a. OrdSymbolic a => a -> a -> SBool) -> [Test]
+genBoolTest :: String -> (forall a. Ord a => a -> a -> Bool) -> (forall a. OrdSymbolic a => a -> a -> SBool) -> [TestTree]
 genBoolTest nm op opS = map mkTest $  [(show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- w8s ]
                                    ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- w16s, y <- w16s]
                                    ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- w32s, y <- w32s]
@@ -90,13 +91,13 @@ genBoolTest nm op opS = map mkTest $  [(show x, show y, mkThm2 x y (x `op` y)) |
                                    ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i32s, y <- i32s]
                                    ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i64s, y <- i64s]
                                    ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- iUBs, y <- iUBs]
-  where mkTest (x, y, t) = "genBoolTest.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
+  where mkTest (x, y, t) = testCase ("genBoolTest.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y) (assert t)
         mkThm2 x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                   constrain $ a .== literal x
                                   constrain $ b .== literal y
                                   return $ literal r .== a `opS` b
 
-genUnTest :: Bool -> String -> (forall a. (Num a, Bits a) => a -> a) -> [Test]
+genUnTest :: Bool -> String -> (forall a. (Num a, Bits a) => a -> a) -> [TestTree]
 genUnTest unboundedOK nm op = map mkTest $  [(show x, mkThm x (op x)) | x <- w8s ]
                                          ++ [(show x, mkThm x (op x)) | x <- w16s]
                                          ++ [(show x, mkThm x (op x)) | x <- w32s]
@@ -106,12 +107,12 @@ genUnTest unboundedOK nm op = map mkTest $  [(show x, mkThm x (op x)) | x <- w8s
                                          ++ [(show x, mkThm x (op x)) | x <- i32s]
                                          ++ [(show x, mkThm x (op x)) | x <- i64s]
                                          ++ [(show x, mkThm x (op x)) | unboundedOK, x <- iUBs]
-  where mkTest (x, t) = "genUnTest.arithmetic-" ++ nm ++ "." ++ x ~: assert t
+  where mkTest (x, t) = testCase ("genUnTest.arithmetic-" ++ nm ++ "." ++ x) (assert t)
         mkThm x r = isThm $ do a <- free "x"
                                constrain $ a .== literal x
                                return $ literal r .== op a
 
-genIntTest :: String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [Test]
+genIntTest :: String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [TestTree]
 genIntTest nm op = map mkTest $  [("u8",  show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- is]
                               ++ [("u16", show x, show y, mkThm2 x y (x `op` y)) | x <- w16s, y <- is]
                               ++ [("u32", show x, show y, mkThm2 x y (x `op` y)) | x <- w32s, y <- is]
@@ -121,14 +122,14 @@ genIntTest nm op = map mkTest $  [("u8",  show x, show y, mkThm2 x y (x `op` y))
                               ++ [("s32", show x, show y, mkThm2 x y (x `op` y)) | x <- i32s, y <- is]
                               ++ [("s64", show x, show y, mkThm2 x y (x `op` y)) | x <- i64s, y <- is]
                               ++ [("iUB", show x, show y, mkThm2 x y (x `op` y)) | x <- iUBs, y <- is]
-  where mkTest (l, x, y, t) = "genIntTest.arithmetic-" ++ nm ++ "." ++ l ++ "_" ++ x ++ "_" ++ y ~: assert t
+  where mkTest (l, x, y, t) = testCase ("genIntTest.arithmetic-" ++ nm ++ "." ++ l ++ "_" ++ x ++ "_" ++ y) (assert t)
         is = [-10 .. 10]
         mkThm2 x y r = isThm $ do a <- free "x"
                                   constrain $ a .== literal x
                                   return $ literal r .== a `op` y
 
 
-genIntTestS :: Bool -> String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [Test]
+genIntTestS :: Bool -> String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [TestTree]
 genIntTestS unboundedOK nm op = map mkTest $  [("u8",  show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- [0 .. (ghcBitSize x - 1)]]
                                            ++ [("u16", show x, show y, mkThm2 x y (x `op` y)) | x <- w16s, y <- [0 .. (ghcBitSize x - 1)]]
                                            ++ [("u32", show x, show y, mkThm2 x y (x `op` y)) | x <- w32s, y <- [0 .. (ghcBitSize x - 1)]]
@@ -138,12 +139,12 @@ genIntTestS unboundedOK nm op = map mkTest $  [("u8",  show x, show y, mkThm2 x 
                                            ++ [("s32", show x, show y, mkThm2 x y (x `op` y)) | x <- i32s, y <- [0 .. (ghcBitSize x - 1)]]
                                            ++ [("s64", show x, show y, mkThm2 x y (x `op` y)) | x <- i64s, y <- [0 .. (ghcBitSize x - 1)]]
                                            ++ [("iUB", show x, show y, mkThm2 x y (x `op` y)) | unboundedOK, x <- iUBs, y <- [0 .. 10]]
-  where mkTest (l, x, y, t) = "genIntTestS.arithmetic-" ++ nm ++ "." ++ l ++ "_" ++ x ++ "_" ++ y ~: assert t
+  where mkTest (l, x, y, t) = testCase ("genIntTestS.arithmetic-" ++ nm ++ "." ++ l ++ "_" ++ x ++ "_" ++ y) (assert t)
         mkThm2 x y r = isThm $ do a <- free "x"
                                   constrain $ a .== literal x
                                   return $ literal r .== a `op` y
 
-genBlasts :: [Test]
+genBlasts :: [TestTree]
 genBlasts = map mkTest $  [(show x, mkThm fromBitsLE blastLE x) | x <- w8s ]
                        ++ [(show x, mkThm fromBitsBE blastBE x) | x <- w8s ]
                        ++ [(show x, mkThm fromBitsLE blastLE x) | x <- i8s ]
@@ -160,16 +161,16 @@ genBlasts = map mkTest $  [(show x, mkThm fromBitsLE blastLE x) | x <- w8s ]
                        ++ [(show x, mkThm fromBitsBE blastBE x) | x <- w64s]
                        ++ [(show x, mkThm fromBitsLE blastLE x) | x <- i64s]
                        ++ [(show x, mkThm fromBitsBE blastBE x) | x <- i64s]
-  where mkTest (x, t) = "genBlasts.blast-" ++ show x ~: assert t
+  where mkTest (x, t) = testCase ("genBlasts.blast-" ++ show x) (assert t)
         mkThm from to v = isThm $ do a <- free "x"
                                      constrain $ a .== literal v
                                      return $ a .== from (to a)
 
-genIntCasts :: [Test]
+genIntCasts :: [TestTree]
 genIntCasts = map mkTest $  cast w8s ++ cast w16s ++ cast w32s ++ cast w64s
                          ++ cast i8s ++ cast i16s ++ cast i32s ++ cast i64s
                          ++ cast iUBs
-   where mkTest (x, t) = "sIntCast-" ++ x ~: assert t
+   where mkTest (x, t) = testCase ("sIntCast-" ++ x) (assert t)
          cast :: forall a. (Show a, Integral a, SymWord a) => [a] -> [(String, IO Bool)]
          cast xs = toWords xs ++ toInts xs
          toWords xs =  [(show x, mkThm x (fromIntegral x :: Word8 ))  | x <- xs]
@@ -185,7 +186,7 @@ genIntCasts = map mkTest $  cast w8s ++ cast w16s ++ cast w32s ++ cast w64s
                                   constrain $ a .== literal v
                                   return $ literal res .== sFromIntegral a
 
-genReals :: [Test]
+genReals :: [TestTree]
 genReals = map mkTest $  [("+",  show x, show y, mkThm2 (+)   x y (x +  y)) | x <- rs, y <- rs        ]
                       ++ [("-",  show x, show y, mkThm2 (-)   x y (x -  y)) | x <- rs, y <- rs        ]
                       ++ [("*",  show x, show y, mkThm2 (*)   x y (x *  y)) | x <- rs, y <- rs        ]
@@ -196,19 +197,19 @@ genReals = map mkTest $  [("+",  show x, show y, mkThm2 (+)   x y (x +  y)) | x 
                       ++ [(">=", show x, show y, mkThm2 (.>=) x y (x >= y)) | x <- rs, y <- rs        ]
                       ++ [("==", show x, show y, mkThm2 (.==) x y (x == y)) | x <- rs, y <- rs        ]
                       ++ [("/=", show x, show y, mkThm2 (./=) x y (x /= y)) | x <- rs, y <- rs        ]
-  where mkTest (nm, x, y, t) = "genReals.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
+  where mkTest (nm, x, y, t) = testCase ("genReals.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y) (assert t)
         mkThm2 op x y r = isThm $ do [a, b] <- mapM free ["x", "y"]
                                      constrain $ a .== literal x
                                      constrain $ b .== literal y
                                      return $ literal r .== a `op` b
 
-genFloats :: [Test]
+genFloats :: [TestTree]
 genFloats = genIEEE754 "genFloats" fs
 
-genDoubles :: [Test]
+genDoubles :: [TestTree]
 genDoubles = genIEEE754 "genDoubles" ds
 
-genIEEE754 :: (IEEEFloating a, Show a, Ord a) => String -> [a] -> [Test]
+genIEEE754 :: (IEEEFloating a, Show a, Ord a) => String -> [a] -> [TestTree]
 genIEEE754 origin vs =  map tst1 [("pred_"   ++ nm, x, y)    | (nm, x, y)    <- preds]
                      ++ map tst1 [("unary_"  ++ nm, x, y)    | (nm, x, y)    <- uns]
                      ++ map tst2 [("binary_" ++ nm, x, y, r) | (nm, x, y, r) <- bins]
@@ -251,8 +252,8 @@ genIEEE754 origin vs =  map tst1 [("pred_"   ++ nm, x, y)    | (nm, x, y)    <- 
         m f = f sRNE
 
         preds =   [(pn, show x, mkThmP ps x (pc x)) | (pn, ps, pc) <- predicates, x <- vs]
-        tst2 (nm, x, y, t) = origin ++ ".arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
-        tst1 (nm, x,    t) = origin ++ ".arithmetic-" ++ nm ++ "." ++ x              ~: assert t
+        tst2 (nm, x, y, t) = testCase (origin ++ ".arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y) (assert t)
+        tst1 (nm, x,    t) = testCase (origin ++ ".arithmetic-" ++ nm ++ "." ++ x) (assert t)
 
         eqF v val
           | isNaN          val        = constrain $ fpIsNaN v
@@ -307,7 +308,7 @@ genIEEE754 origin vs =  map tst1 [("pred_"   ++ nm, x, y)    | (nm, x, y)    <- 
                      , ("fpIsPoint",        fpIsPoint,         \x -> not (isNaN x || isInfinite x))
                      ]
 
-genFPConverts :: [Test]
+genFPConverts :: [TestTree]
 genFPConverts = map tst1 [("fpCast_" ++ nm, x, y) | (nm, x, y) <- converts]
   where converts =   [("toFP_Int8_ToFloat",     show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- i8s ]
                  ++  [("toFP_Int16_ToFloat",    show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- i16s]
@@ -373,7 +374,7 @@ genFPConverts = map tst1 [("fpCast_" ++ nm, x, y) | (nm, x, y) <- converts]
 
         m f = f sRNE
 
-        tst1 (nm, x, t) = "fpConverts.arithmetic-" ++ nm ++ "." ++ x ~: assert t
+        tst1 (nm, x, t) = testCase ("fpConverts.arithmetic-" ++ nm ++ "." ++ x) (assert t)
 
         eqF v val
           | isNaN          val        = constrain $ fpIsNaN v
@@ -406,7 +407,7 @@ genFPConverts = map tst1 [("fpCast_" ++ nm, x, y) | (nm, x, y) <- converts]
                                     eqF a x
                                     return $ literal r .== op a
 
-genQRems :: [Test]
+genQRems :: [TestTree]
 genQRems = map mkTest $  [("divMod",  show x, show y, mkThm2 sDivMod  x y (x `divMod'`  y)) | x <- w8s,  y <- w8s ]
                       ++ [("divMod",  show x, show y, mkThm2 sDivMod  x y (x `divMod'`  y)) | x <- w16s, y <- w16s]
                       ++ [("divMod",  show x, show y, mkThm2 sDivMod  x y (x `divMod'`  y)) | x <- w32s, y <- w32s]
@@ -427,7 +428,7 @@ genQRems = map mkTest $  [("divMod",  show x, show y, mkThm2 sDivMod  x y (x `di
                       ++ [("quotRem", show x, show y, mkThm2 sQuotRem x y (x `quotRem'` y)) | x <- iUBs, y <- iUBs]
   where divMod'  x y = if y == 0 then (0, x) else x `divMod`  y
         quotRem' x y = if y == 0 then (0, x) else x `quotRem` y
-        mkTest (nm, x, y, t) = "genQRems.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: assert t
+        mkTest (nm, x, y, t) = testCase ("genQRems.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y) (assert t)
         mkThm2 op x y (e1, e2) = isThm $ do [a, b] <- mapM free ["x", "y"]
                                             constrain $ a .== literal x
                                             constrain $ b .== literal y

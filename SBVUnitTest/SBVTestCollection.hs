@@ -15,7 +15,6 @@ import SBVTest
 
 -- To add a new collection of tests, import below and add to allTestCases variable
 import qualified TestSuite.Basics.ArithNoSolver           as T02_01(testSuite)
--- import qualified TestSuite.Basics.ArithSolver             as T02_02(testSuite)
 import qualified TestSuite.Basics.BasicTests              as T02_03(testSuite)
 -- import qualified TestSuite.Basics.Higher                  as T02_04(testSuite)
 -- import qualified TestSuite.Basics.IteTest                 as T02_06(testSuite)
@@ -47,7 +46,6 @@ import qualified TestSuite.Puzzles.Counts                 as T09_02(testSuite)
 allTestCases :: [(String, Bool, SBVTestSuite)]
 allTestCases = [
        ("arithCF",     False, T02_01.testSuite)
---     , ("arith",       True,  T02_02.testSuite)
      , ("basic",       False, T02_03.testSuite)
 --     , ("higher",      True,  T02_04.testSuite)
 --     , ("ite",         True,  T02_06.testSuite)
