@@ -9,15 +9,16 @@
 -- Test suite for Examples.Uninterpreted.Uninterpreted
 -----------------------------------------------------------------------------
 
-module TestSuite.Uninterpreted.Uninterpreted where
+module TestSuite.Uninterpreted.Uninterpreted(tests) where
 
 import Examples.Uninterpreted.Uninterpreted
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-   "uninterpreted-0" ~: assert       =<< isThm p0
- , "uninterpreted-1" ~: assert       =<< isThm p1
- , "uninterpreted-2" ~: assert . not =<< isThm p2
- ]
+tests :: TestTree
+tests =
+  testGroup "Uninterpreted.Uninterpreted"
+    [ testCase "uninterpreted-0" (assertIsThm p0)
+    , testCase "uninterpreted-1" (assertIsThm p1)
+    , testCase "uninterpreted-2" (assertIsntThm p2)
+    ]

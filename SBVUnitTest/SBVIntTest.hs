@@ -52,7 +52,7 @@ tests =
   -- u2br
   -- auf
   , TestSuite.Uninterpreted.Axioms.tests
-  -- , TestSuite.Uninterpreted.Function.tests
-  -- , TestSuite.Uninterpreted.Sort.tests
-  -- , TestSuite.Uninterpreted.Uninterpreted.tests
+  , TestSuite.Uninterpreted.Function.tests
+  , TestSuite.Uninterpreted.Sort.tests
+  , TestSuite.Uninterpreted.Uninterpreted.tests
   ]

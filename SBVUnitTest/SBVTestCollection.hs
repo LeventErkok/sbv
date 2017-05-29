@@ -71,7 +71,4 @@ allTestCases = [
 --     , ("temperature", True,  T09_09.testSuite)
 --     , ("u2bridge",    True,  T09_10.testSuite)
 --     , ("auf1",        True,  T10_01.testSuite)
---     , ("auf2",        True,  T10_03.testSuite)
---     , ("unint-sort",  True,  T10_04.testSuite)
---     , ("unint",       True,  T10_05.testSuite)
      ]

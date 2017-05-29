@@ -256,7 +256,7 @@ Test-Suite int-test-extended
                   , DeriveDataTypeable
                     -- Rank2Types
                     -- RankNTypes
-                    -- ScopedTypeVariables
+                  , ScopedTypeVariables
                     -- TupleSections
   Build-depends :
                 -- inherent constraints from library (todo)
@@ -300,3 +300,6 @@ Test-Suite int-test-extended
                   , TestSuite.Puzzles.PowerSet
                   , TestSuite.Puzzles.Sudoku
                   , TestSuite.Uninterpreted.Axioms
+                  , TestSuite.Uninterpreted.Function
+                  , TestSuite.Uninterpreted.Sort
+                  , TestSuite.Uninterpreted.Uninterpreted
