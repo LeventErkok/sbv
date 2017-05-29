@@ -9,14 +9,14 @@
 -- Testsuite for Data.SBV.Examples.Uninterpreted.Function
 -----------------------------------------------------------------------------
 
-module TestSuite.Uninterpreted.Function where
+module TestSuite.Uninterpreted.Function(tests) where
 
 import Data.SBV.Examples.Uninterpreted.Function
 
 import SBVTest
 
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-   "aufunc-0" ~: assert =<< isThm thmGood
- ]
+tests :: TestTree
+tests =
+  testGroup "Uninterpreted.Function"
+  [ testCase "aufunc-0" (assertIsThm thmGood)
+  ]
