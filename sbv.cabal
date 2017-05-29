@@ -259,13 +259,11 @@ Test-Suite int-test-extended
                     -- TupleSections
   Build-depends :
                 -- inherent constraints from library (todo)
-                  base
+                  base, syb, filepath >= 1.0
+                , sbv
                 -- , directory
                 -- , process
-                -- , syb
                 -- , data-binary-ieee754
-                , filepath >= 1.0
-                , sbv
                 -- constraints here
                 , tasty >= 0.11.2 && < 0.12
                 , tasty-hunit >= 0.9.2 && < 0.10
@@ -279,8 +277,11 @@ Test-Suite int-test-extended
                   , Examples.Basics.ProofTests
                   , Examples.Basics.QRem
                   , Examples.CRC.CCITT_Unidir
+                  , Examples.CRC.USB5
                   , Examples.CRC.GenPoly
                   , Examples.CRC.Parity
+                  , Examples.Puzzles.PowerSet
+                  , Examples.Uninterpreted.Uninterpreted
                   , TestSuite.Arrays.Memory
                   , TestSuite.Basics.Index
                   , TestSuite.Basics.ProofTests
@@ -288,7 +289,10 @@ Test-Suite int-test-extended
                   , TestSuite.BitPrecise.BitTricks
                   , TestSuite.BitPrecise.PrefixSum
                   , TestSuite.CRC.CCITT_Unidir
+                  , TestSuite.CRC.USB5
                   , TestSuite.CRC.GenPoly
                   , TestSuite.Crypto.RC4
                   , TestSuite.Polynomials.Polynomials
                   , TestSuite.CRC.Parity
+                  , TestSuite.Puzzles.MagicSquare
+                  , TestSuite.Puzzles.NQueens
