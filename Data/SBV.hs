@@ -808,9 +808,10 @@ Constraints can be given names:
   @ 'namedConstraint' "a is at least 5" $ a .>= 5@
 
 Such constraints are useful when used in conjunction with 'getUnsatCore', and 'extractUnsatCore' features,
-where the backend solver can be queried to obtain an unsat core in case the constraints are unsatisfiable:
+where the backend solver can be queried to obtain an unsat core in case the constraints are unsatisfiable,
+which can be enabled by the following tactic:
 
-   @ satWith z3{getUnsatCore=True} $ do ... @
+   @ tactic $ SetOptions [ProduceUnsatCores True] @
 
 See "Data.SBV.Examples.Misc.UnsatCore" for an example use case.
 
