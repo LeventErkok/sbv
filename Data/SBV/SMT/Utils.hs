@@ -12,6 +12,7 @@
 module Data.SBV.SMT.Utils (
           SMTLibConverter
         , SMTLibIncConverter
+        , annotateWithName
        )
        where
 
@@ -42,3 +43,10 @@ type SMTLibIncConverter a =  [(SW, CW)]    -- ^ constants
                           -> SBVPgm        -- ^ assignments
                           -> SMTConfig     -- ^ configuration
                           -> a
+
+-- | Create an annotated term with the given name
+annotateWithName :: String -> String -> String
+annotateWithName nm x = "(! " ++ x ++ " :named |" ++ concatMap sanitize nm ++ "|)"
+  where sanitize '|'  = "_bar_"
+        sanitize '\\' = "_backslash_"
+        sanitize c    = [c]

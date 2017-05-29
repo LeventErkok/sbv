@@ -854,7 +854,4 @@ reducePB op args = case op of
 -- Add a named annotation
 named :: (Maybe String, String) -> String
 named (Nothing, x) = x
-named (Just nm, x) = "(! " ++ x ++ " :named |" ++ concatMap sanitize nm ++ "|)"
-  where sanitize '|'  = "_bar_"
-        sanitize '\\' = "_backslash_"
-        sanitize c    = [c]
+named (Just nm, x) = annotateWithName nm x
