@@ -221,8 +221,9 @@ Test-Suite SBVBasicTests
   Build-depends : base >= 4.8 && < 5
                 , bytestring >= 0.9
                 , HUnit, directory, filepath, syb, sbv, data-binary-ieee754
-                , tasty >= 0.11.2 && < 0.12
-                , tasty-hunit >= 0.9.2 && < 0.10
+                , tasty >= 0.11.2
+                , tasty-golden >= 2.3.1.1
+                , tasty-hunit >= 0.9.2
   Hs-Source-Dirs  : SBVUnitTest
   main-is         : SBVBasicTests.hs
   Other-modules   : SBVBasicTests
@@ -263,13 +264,11 @@ Test-Suite int-test-extended
                 -- inherent constraints from library (todo)
                   base, data-binary-ieee754, filepath >= 1.0, syb
                 , sbv
-                -- , directory
-                -- , process
                 -- constraints here
-                , bytestring
-                , tasty >= 0.11.2 && < 0.12
-                , tasty-golden >= 2.3.1.1 && < 2.4
-                , tasty-hunit >= 0.9.2 && < 0.10
+                , bytestring >= 0.9
+                , tasty >= 0.11.2
+                , tasty-golden >= 2.3.1.1
+                , tasty-hunit >= 0.9.2
                 -- temporarily here, in transition
                 , HUnit
   Hs-Source-Dirs  : SBVUnitTest
