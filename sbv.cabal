@@ -304,3 +304,4 @@ Test-Suite int-test-extended
                   , TestSuite.Puzzles.MagicSquare
                   , TestSuite.Puzzles.NQueens
                   , TestSuite.Puzzles.PowerSet
+                  , TestSuite.Puzzles.Sudoku

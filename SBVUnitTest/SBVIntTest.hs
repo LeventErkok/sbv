@@ -47,7 +47,7 @@ tests =
   , TestSuite.Puzzles.MagicSquare.tests
   , TestSuite.Puzzles.NQueens.tests
   , TestSuite.Puzzles.PowerSet.tests
-  -- , TestSuite.Puzzles.Sukoku.tests
+  , TestSuite.Puzzles.Sudoku.tests
   -- temp
   -- u2br
   -- auf
