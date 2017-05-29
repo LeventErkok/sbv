@@ -265,7 +265,9 @@ Test-Suite int-test-extended
                 -- , directory
                 -- , process
                 -- constraints here
+                , bytestring
                 , tasty >= 0.11.2 && < 0.12
+                , tasty-golden >= 2.3.1.1 && < 2.4
                 , tasty-hunit >= 0.9.2 && < 0.10
                 -- temporarily here, in transition
                 , HUnit
@@ -273,6 +275,7 @@ Test-Suite int-test-extended
   main-is         : SBVIntTest.hs
   Other-modules   : SBVTest
                   , Examples.Arrays.Memory
+                  , Examples.Basics.Higher
                   , Examples.Basics.Index
                   , Examples.Basics.ProofTests
                   , Examples.Basics.QRem
@@ -284,6 +287,7 @@ Test-Suite int-test-extended
                   , Examples.Uninterpreted.Uninterpreted
                   , TestSuite.Arrays.Memory
                   , TestSuite.Basics.ArithSolver
+                  , TestSuite.Basics.Higher
                   , TestSuite.Basics.Index
                   , TestSuite.Basics.ProofTests
                   , TestSuite.Basics.QRem
@@ -303,3 +307,4 @@ Test-Suite int-test-extended
                   , TestSuite.Uninterpreted.Function
                   , TestSuite.Uninterpreted.Sort
                   , TestSuite.Uninterpreted.Uninterpreted
+
