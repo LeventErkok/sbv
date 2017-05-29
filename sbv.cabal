@@ -259,7 +259,8 @@ Test-Suite int-test-extended
   default-language: Haskell2010
   ghc-options     : -Wall
   other-extensions:
-                    -- DeriveAnyClass
+                    DeriveAnyClass
+                  , DeriveDataTypeable
                     -- Rank2Types
                     -- RankNTypes
                     -- ScopedTypeVariables
@@ -305,3 +306,4 @@ Test-Suite int-test-extended
                   , TestSuite.Puzzles.NQueens
                   , TestSuite.Puzzles.PowerSet
                   , TestSuite.Puzzles.Sudoku
+                  , TestSuite.Uninterpreted.Axioms
