@@ -280,6 +280,7 @@ Test-Suite int-test-extended
                   , Examples.Basics.QRem
                   , Examples.CRC.CCITT_Unidir
                   , Examples.CRC.GenPoly
+                  , Examples.CRC.Parity
                   , TestSuite.Arrays.Memory
                   , TestSuite.Basics.Index
                   , TestSuite.Basics.ProofTests
@@ -290,3 +291,4 @@ Test-Suite int-test-extended
                   , TestSuite.CRC.GenPoly
                   , TestSuite.Crypto.RC4
                   , TestSuite.Polynomials.Polynomials
+                  , TestSuite.CRC.Parity
