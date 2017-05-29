@@ -9,13 +9,14 @@
 -- Test suite for Examples.CRC.USB5
 -----------------------------------------------------------------------------
 
-module TestSuite.CRC.USB5(testSuite) where
+module TestSuite.CRC.USB5(tests) where
 
 import Examples.CRC.USB5
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-   "usbGood" ~: assert =<< isThm usbGood
- ]
+tests :: TestTree
+tests =
+  testGroup "CRC.USB5"
+    [ testCase "usbGood" (assertIsThm usbGood)
+    ]
