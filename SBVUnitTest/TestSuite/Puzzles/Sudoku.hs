@@ -22,8 +22,8 @@ tests =
     [ testCase ("sudoku " ++ show n) (assert (checkPuzzle s))
        | (n, s) <-
            zip
-	     [(0::Int)..]
-	     [puzzle0, puzzle1, puzzle2, puzzle3, puzzle4, puzzle5, puzzle6] ]
+             [(0::Int)..]
+             [puzzle0, puzzle1, puzzle2, puzzle3, puzzle4, puzzle5, puzzle6] ]
 
 checkPuzzle :: Puzzle -> IO Bool
 checkPuzzle (i, f) = isSat $ (valid . f) `fmap` mkExistVars i
