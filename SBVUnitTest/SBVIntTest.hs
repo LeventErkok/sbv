@@ -2,6 +2,7 @@ module Main(main) where
 
 import Test.Tasty
 import qualified TestSuite.Arrays.Memory
+import qualified TestSuite.Basics.ArithSolver
 import qualified TestSuite.Basics.Index
 import qualified TestSuite.Basics.ProofTests
 import qualified TestSuite.Basics.QRem
@@ -28,7 +29,7 @@ main = defaultMain (testGroup "Tests" tests)
 tests :: [TestTree]
 tests =
   [ TestSuite.Arrays.Memory.tests
-  -- arith
+  , TestSuite.Basics.ArithSolver.tests 
   -- higher
   , TestSuite.Basics.Index.tests
   -- ite
