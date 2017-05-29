@@ -9,13 +9,13 @@
 -- Test suite for Examples.CRC.Parity
 -----------------------------------------------------------------------------
 
-module TestSuite.CRC.Parity(testSuite) where
+module TestSuite.CRC.Parity(tests) where
 
 import Examples.CRC.Parity
 import SBVTest
 
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-   "parity" ~: assert =<< isThm parityOK
- ]
+tests :: TestTree
+tests =
+  testGroup "CRC.Parity"
+    [ testCase "parity" (assertIsThm parityOK)
+    ]
