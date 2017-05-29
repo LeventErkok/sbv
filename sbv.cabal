@@ -283,3 +283,4 @@ Test-Suite int-test-extended
                   , TestSuite.Basics.ProofTests
                   , TestSuite.Basics.QRem
                   , TestSuite.BitPrecise.BitTricks
+                  , TestSuite.BitPrecise.PrefixSum
