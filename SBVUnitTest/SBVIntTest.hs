@@ -5,6 +5,7 @@ import qualified TestSuite.Arrays.Memory
 import qualified TestSuite.Basics.Index
 import qualified TestSuite.Basics.ProofTests
 import qualified TestSuite.Basics.QRem
+import qualified TestSuite.BitPrecise.BitTricks
 
 main :: IO ()
 main = defaultMain (testGroup "Tests" tests)
@@ -18,4 +19,5 @@ tests =
   -- ite
   , TestSuite.Basics.ProofTests.tests
   , TestSuite.Basics.QRem.tests
+  , TestSuite.BitPrecise.BitTricks.tests
   ]
