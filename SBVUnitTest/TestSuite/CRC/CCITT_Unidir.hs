@@ -9,14 +9,15 @@
 -- Test suite for Examples.CRC.CCITT_Unidir
 -----------------------------------------------------------------------------
 
-module TestSuite.CRC.CCITT_Unidir(testSuite) where
+module TestSuite.CRC.CCITT_Unidir(tests) where
 
 import Examples.CRC.CCITT_Unidir
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-   "ccitHDis3" ~: assert       =<< isThm (crcUniGood 3)
- , "ccitHDis4" ~: assert . not =<< isThm (crcUniGood 4)
- ]
+tests :: TestTree
+tests =
+  testGroup "CCITT_Unidir"
+    [   testCase "ccitHDis3" (assertIsThm (crcUniGood 3))
+      , testCase "ccitHDis4" (assertIsntThm (crcUniGood 4))
+    ]

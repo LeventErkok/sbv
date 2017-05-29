@@ -7,6 +7,7 @@ import qualified TestSuite.Basics.ProofTests
 import qualified TestSuite.Basics.QRem
 import qualified TestSuite.BitPrecise.BitTricks
 import qualified TestSuite.BitPrecise.PrefixSum
+import qualified TestSuite.CRC.CCITT_Unidir
 
 main :: IO ()
 main = defaultMain (testGroup "Tests" tests)
@@ -22,4 +23,5 @@ tests =
   , TestSuite.Basics.QRem.tests
   , TestSuite.BitPrecise.BitTricks.tests
   , TestSuite.BitPrecise.PrefixSum.tests
+  , TestSuite.CRC.CCITT_Unidir.tests
   ]
