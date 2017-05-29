@@ -9,16 +9,17 @@
 -- Test suite for Data.SBV.Examples.Polynomials.Polynomials
 -----------------------------------------------------------------------------
 
-module TestSuite.Polynomials.Polynomials(testSuite) where
+module TestSuite.Polynomials.Polynomials(tests) where
 
 import Data.SBV.Examples.Polynomials.Polynomials
 
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-   "polynomial-1" ~: assert =<< isThm multUnit
- , "polynomial-2" ~: assert =<< isThm multComm
- , "polynomial-3" ~: assert =<< isThm polyDivMod
- ]
+tests :: TestTree
+tests =
+  testGroup "Polynomials.Polynomials"
+    [ testCase "polynomial-1" (assertIsThm multUnit)
+    , testCase "polynomial-2" (assertIsThm multComm)
+    , testCase "polynomial-3" (assertIsThm polyDivMod)
+    ]
