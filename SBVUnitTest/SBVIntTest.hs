@@ -9,6 +9,7 @@ import qualified TestSuite.BitPrecise.BitTricks
 import qualified TestSuite.BitPrecise.PrefixSum
 import qualified TestSuite.CRC.CCITT_Unidir
 import qualified TestSuite.CRC.GenPoly
+import qualified TestSuite.Crypto.RC4
 
 main :: IO ()
 main = defaultMain (testGroup "Tests" tests)
@@ -26,4 +27,5 @@ tests =
   , TestSuite.BitPrecise.PrefixSum.tests
   , TestSuite.CRC.CCITT_Unidir.tests
   , TestSuite.CRC.GenPoly.tests
+  , TestSuite.Crypto.RC4.tests
   ]
