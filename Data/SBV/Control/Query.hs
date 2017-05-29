@@ -13,9 +13,9 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Data.SBV.Control.Query (
-       assert
+       assert, namedAssert
      , send, ask
-     , CheckSatResult(..), checkSat, push, pop, getAssertionStackDepth, reset
+     , CheckSatResult(..), checkSat, getUnsatCore, push, pop, getAssertionStackDepth, reset
      , getValue, getModel
      , SMTOption(..), setOption
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
@@ -38,6 +38,7 @@ import Data.SBV.Core.Data
 
 import Data.SBV.Core.Symbolic (QueryState(..), Query(..), SMTResult(..), State(..))
 
+import Data.SBV.SMT.Utils
 import Data.SBV.Utils.SExpr
 
 import Data.SBV.Control.Types
@@ -48,9 +49,7 @@ import Data.IORef (readIORef)
 -- | An Assignment of a model binding
 data Assignment = Assign SVal CW
 
--- | Set an option. Note that "SetLogic" is custom, as it is really not
--- an option. Note that sending this yourself is risky, as when this
--- call is done, you already have a logic set. The solver might reject it.
+-- | Set an option.
 setOption :: SMTOption -> Query ()
 setOption (SetLogic l) = send $ "(set-logic "  ++ show l ++ ")"
 setOption o            = send $ "(set-option " ++ show o ++ ")"
@@ -107,10 +106,15 @@ getInfo flag = do
                  EApp (ECon ":version" : o)                                -> return $ Resp_Version (serialize (EApp o))
                  _                                                         -> return $ Resp_InfoKeyword (serialize pe)
 
--- | Assert a new constraint.
+-- | Assert a new constraint. Analogous to 'Data.SBV.constrain'.
 assert :: SBool -> Query ()
 assert s = do sw <- inNewContext (`sbvToSW` s)
               send $ "(assert " ++ show sw ++ ")"
+
+-- | Assert a new constraint, with a name. Useful for unsat-core extraction. Analogous to 'Data.SBV.namedConstraint'.
+namedAssert :: String -> SBool -> Query ()
+namedAssert nm s = do sw <- inNewContext (`sbvToSW` s)
+                      send $ "(assert " ++ annotateWithName nm (show sw) ++ ")"
 
 -- | Check for satisfiability.
 checkSat :: Query CheckSatResult
@@ -150,6 +154,23 @@ pop i
 reset :: Query ()
 reset = do send "(reset)"
            modify' $ \s -> s{queryAssertionStackDepth = 0}
+
+-- | Retrieve the unsat-core. Note you must have arranged for
+-- unsat cores to be produced first (/via/ @tactic $ SetOptions [ProduceUnsatCores True]@)
+-- for this call to not error out!
+getUnsatCore :: Query [String]
+getUnsatCore = do
+        let cmd = "(get-unsat-core)"
+            bad = unexpected "getUnsatCore" cmd "an unsat-core response"
+
+            fromECon (ECon s) = Just s
+            fromECon _        = Nothing
+
+        r <- ask cmd
+
+        parse r bad $ \case
+           EApp es | Just xs <- sequence (map fromECon es) -> return xs
+           _                                               -> bad r Nothing
 
 -- | Make an assignment. The type 'Assignment' is abstract, see 'success' for an example use case.
 infix 1 |->

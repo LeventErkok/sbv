@@ -10,8 +10,8 @@
 -----------------------------------------------------------------------------
 
 module Data.SBV.Control (
-     -- * Add new assertions
-       assert
+     -- * Adding new assertions
+       assert, namedAssert
 
      -- * Sending an arbitrary string
      , send, ask
@@ -26,8 +26,8 @@ module Data.SBV.Control (
      , SMTOption(..), setOption
      , ignoreExitCode
 
-     -- * Logics supported
-     , Logic(..)
+     -- * Extracting the unsat core
+     , getUnsatCore
 
      -- * Getting solver information
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..)
@@ -47,6 +47,10 @@ module Data.SBV.Control (
 
      -- * Performing actions
      , io
+
+     -- * Logics supported
+     , Logic(..)
+
      ) where
 
 import Data.SBV.Control.Query
