@@ -286,6 +286,7 @@ Test-Suite int-test-extended
                   , Examples.Basics.ProofTests
                   , Examples.Basics.QRem
                   , Examples.CRC.CCITT_Unidir
+                  , Examples.CRC.GenPoly
                   , TestSuite.Arrays.Memory
                   , TestSuite.Basics.Index
                   , TestSuite.Basics.ProofTests
@@ -293,3 +294,4 @@ Test-Suite int-test-extended
                   , TestSuite.BitPrecise.BitTricks
                   , TestSuite.BitPrecise.PrefixSum
                   , TestSuite.CRC.CCITT_Unidir
+                  , TestSuite.CRC.GenPoly
