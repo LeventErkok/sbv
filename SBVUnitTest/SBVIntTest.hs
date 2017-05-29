@@ -6,6 +6,7 @@ import qualified TestSuite.Basics.Index
 import qualified TestSuite.Basics.ProofTests
 import qualified TestSuite.Basics.QRem
 import qualified TestSuite.BitPrecise.BitTricks
+import qualified TestSuite.BitPrecise.PrefixSum
 
 main :: IO ()
 main = defaultMain (testGroup "Tests" tests)
@@ -20,4 +21,5 @@ tests =
   , TestSuite.Basics.ProofTests.tests
   , TestSuite.Basics.QRem.tests
   , TestSuite.BitPrecise.BitTricks.tests
+  , TestSuite.BitPrecise.PrefixSum.tests
   ]
