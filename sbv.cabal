@@ -282,3 +282,4 @@ Test-Suite int-test-extended
                   , TestSuite.Basics.Index
                   , TestSuite.Basics.ProofTests
                   , TestSuite.Basics.QRem
+                  , TestSuite.BitPrecise.BitTricks
