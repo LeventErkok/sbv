@@ -291,6 +291,7 @@ Test-Suite int-test-extended
                   , Examples.CRC.GenPoly
                   , Examples.CRC.Parity
                   , Examples.Puzzles.PowerSet
+                  , Examples.Puzzles.Temperature
                   , Examples.Uninterpreted.Uninterpreted
                   , TestSuite.Arrays.Memory
                   , TestSuite.Basics.ArithSolver
@@ -313,6 +314,9 @@ Test-Suite int-test-extended
                   , TestSuite.Puzzles.NQueens
                   , TestSuite.Puzzles.PowerSet
                   , TestSuite.Puzzles.Sudoku
+                  , TestSuite.Puzzles.Temperature
+                  , TestSuite.Puzzles.U2Bridge
+                  , TestSuite.Uninterpreted.AUF
                   , TestSuite.Uninterpreted.Axioms
                   , TestSuite.Uninterpreted.Function
                   , TestSuite.Uninterpreted.Sort
