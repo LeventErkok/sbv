@@ -47,7 +47,7 @@ externaltest:
 internaltest:
 	@tput rmam
 	@echo "*** Starting internal cabal test suite.."
-	@SBV_Z3=doesnotexist $(TIME) cabal test
+	@SBV_Z3=doesnotexist $(TIME) cabal test SBVBasicTests
 	@cat dist/test/sbv*SBVBasicTests.log
 	@tput smam
 

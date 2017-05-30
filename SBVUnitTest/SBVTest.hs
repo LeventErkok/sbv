@@ -13,6 +13,9 @@
 module SBVTest(
           generateGoldCheck, showsAs, ioShowsAs, mkTestSuite, SBVTestSuite(..)
         , isThm, isSat, runSAT, numberOfModels
+        , assertIsThm, assertIsntThm, assertIsSat, assertIsntSat
+        , module Test.Tasty
+        , module Test.Tasty.HUnit
         , module Test.HUnit
         , module Data.SBV
         ) where
@@ -22,7 +25,9 @@ import Data.SBV.Internals      (runSymbolic, Symbolic, Result)
 
 import Data.Maybe              (fromJust)
 import System.FilePath         ((</>))
-import Test.HUnit              (Test(..), Assertion, assert, (~:), test)
+import Test.Tasty              (testGroup, TestTree)
+import Test.Tasty.HUnit        (assert, Assertion, testCase)
+import Test.HUnit              (Test(..), (~:), test)
 
 -- | A Test-suite, parameterized by the gold-check generator/checker
 newtype SBVTestSuite = SBVTestSuite ((forall a. Show a => (IO a -> FilePath -> IO ())) -> Test)
@@ -68,3 +73,19 @@ numberOfModels p = do AllSatResult (_, rs) <- allSat p
 -- | Symbolicly run a SAT instance using the default config
 runSAT :: Symbolic a -> IO Result
 runSAT = runSymbolic (True, defaultSMTCfg)
+
+-- | ...
+assertIsThm :: Provable a => a -> Assertion
+assertIsThm t = assert (isThm t)
+
+-- | ...
+assertIsntThm :: Provable a => a -> Assertion
+assertIsntThm t = assert (fmap not (isThm t))
+
+-- | ..
+assertIsSat :: Provable a => a -> Assertion
+assertIsSat p = assert (isSat p)
+
+-- | ..
+assertIsntSat :: Provable a => a -> Assertion
+assertIsntSat p = assert (fmap not (isSat p))
