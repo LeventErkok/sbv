@@ -209,7 +209,7 @@ genFloats = genIEEE754 "genFloats" fs
 genDoubles :: [TestTree]
 genDoubles = genIEEE754 "genDoubles" ds
 
-genIEEE754 :: (IEEEFloating a, Show a, Ord a) => String -> [a] -> [TestTree]
+genIEEE754 :: (IEEEFloating a, Show a) => String -> [a] -> [TestTree]
 genIEEE754 origin vs =  map tst1 [("pred_"   ++ nm, x, y)    | (nm, x, y)    <- preds]
                      ++ map tst1 [("unary_"  ++ nm, x, y)    | (nm, x, y)    <- uns]
                      ++ map tst2 [("binary_" ++ nm, x, y, r) | (nm, x, y, r) <- bins]
