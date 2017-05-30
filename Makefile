@@ -66,7 +66,7 @@ release: clean checkLinks install sdist testInterfaces hlint docs test
 
 hlint: 
 	@echo "Running HLint.."
-	@hlint Data SBVUnitTest -i "Use otherwise" -i "Parse error" -i "Use fewer imports" -i "Use module export list"
+	@hlint Data SBVUnitTest -i "Use otherwise" -i "Parse error" -i "Use fewer imports" -i "Use module export list" -i "Use import/export shortcut"
 
 uploadDocs:
 	@buildUtils/hackage-docs
