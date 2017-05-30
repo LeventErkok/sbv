@@ -15,7 +15,7 @@ else
 TIME      = /usr/bin/time
 endif
 
-.PHONY: all install test doctest externaltest internaltest sdist clean docs gold stamp hlint tags checkLinks testInterfaces
+.PHONY: all install test doctest internaltest sdist clean docs gold hlint tags checkLinks testInterfaces
 
 all: install
 
@@ -28,27 +28,20 @@ install:
 	@cabal install
 	@tput smam
 
-test: install doctest externaltest internaltest
+test: install doctest
+	@tput rmam
+	@SBV_Z3=doesnotexist $(TIME) cabal test SBVBasicTests
+	@                    $(TIME) ./dist/build/int-test-extended/int-test-extended
+	@tput smam
+
+# use this as follows: make gold TGT="cgUSB5"
+gold: 
+	./dist/build/int-test-extended/int-test-extended -p ${TGT} --accept
 
 doctest:
 	@tput rmam
 	@echo "*** Starting inline tests.."
 	@$(TIME) doctest ${TSTSRCS}
-	@tput smam
-
-externaltest:
-	@tput rmam
-	@echo "*** Starting external test suite.."
-	@# Note we use "-s" here skipping no-solver tests; which are covered
-	@# in the cabal test suite right below.
-	@$(TIME) dist/build/SBVUnitTests/SBVUnitTests -s
-	@tput smam
-
-internaltest:
-	@tput rmam
-	@echo "*** Starting internal cabal test suite.."
-	@SBV_Z3=doesnotexist $(TIME) cabal test SBVBasicTests
-	@cat dist/test/sbv*SBVBasicTests.log
 	@tput smam
 
 sdist: install
@@ -70,12 +63,6 @@ docs:
 
 release: clean checkLinks install sdist testInterfaces hlint docs test
 	@echo "*** SBV is ready for release!"
-
-# use this as follows: make gold TGTS="cgUSB5"
-# where the tag is one (or many) given in the SBVUnitTest.hs file
-# if TGTS is not specified, then all gold files are regenerated
-gold: install
-	dist/build/SBVUnitTests/SBVUnitTests -c ${TGTS}
 
 hlint: 
 	@echo "Running HLint.."
