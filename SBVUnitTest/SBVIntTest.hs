@@ -16,6 +16,8 @@ import qualified TestSuite.CRC.GenPoly
 import qualified TestSuite.Crypto.RC4
 import qualified TestSuite.Polynomials.Polynomials
 import qualified TestSuite.CRC.Parity
+import qualified TestSuite.Puzzles.DogCatMouse
+import qualified TestSuite.Puzzles.Euler185
 import qualified TestSuite.Puzzles.MagicSquare
 import qualified TestSuite.Puzzles.NQueens
 import qualified TestSuite.Puzzles.PowerSet
@@ -45,8 +47,8 @@ tests =
   , TestSuite.Crypto.RC4.tests
   , TestSuite.Polynomials.Polynomials.tests
   , TestSuite.CRC.Parity.tests
-  -- dogcat
-  -- euler
+  , TestSuite.Puzzles.DogCatMouse.tests
+  , TestSuite.Puzzles.Euler185.tests
   , TestSuite.Puzzles.MagicSquare.tests
   , TestSuite.Puzzles.NQueens.tests
   , TestSuite.Puzzles.PowerSet.tests
