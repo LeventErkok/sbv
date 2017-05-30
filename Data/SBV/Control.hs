@@ -17,7 +17,7 @@ module Data.SBV.Control (
      , send, ask
 
      -- * Checking satisfiability
-     , CheckSatResult(..), checkSat
+     , CheckSatResult(..), checkSat, checkSatAssuming
 
      -- * Extracting values
      , getValue, getModel

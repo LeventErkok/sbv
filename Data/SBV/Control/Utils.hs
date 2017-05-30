@@ -15,7 +15,7 @@
 
 module Data.SBV.Control.Utils (
        io
-     , ask, send, getValue, getModel
+     , ask, send, getValue, getModel, getUnsatAssumptions
      , ignoreExitCode
      , inNewContext
      , parse
@@ -155,6 +155,27 @@ getModel = do QueryState{queryGetModel} <- get
                 [m] -> return m
                 []  -> error   "Data.SBV: getModel: No models returned"
                 _   -> error $ "Data.SBV: getModel: Expected one model, received: " ++ show (length ms)
+
+-- | Retrieve the set of unsatisfiable assumptions, following a call to 'checkSatAssuming'. Note that
+-- this function isn't exported to the user, but rather used internally. The user simple calls 'checkSatAssuming'.
+getUnsatAssumptions :: [String] -> [(String, a)] -> Query [a]
+getUnsatAssumptions originals proxyMap = do
+        let cmd = "(get-unsat-assumptions)"
+            bad = unexpected "getUnsatAssumptions" cmd "a list of unsatisfiable assumptions"
+
+            fromECon (ECon s) = Just s
+            fromECon _        = Nothing
+
+        r <- ask cmd
+
+        let walk []     sofar = return $ reverse sofar
+            walk (a:as) sofar = case a `lookup` proxyMap of
+                                  Just v  -> walk as (v:sofar)
+                                  Nothing -> bad a $ Just $ "Unexpected assumption named " ++ show a ++ ". Was expecting one of: " ++ show originals
+
+        parse r bad $ \case
+           EApp es | Just xs <- mapM fromECon es -> walk xs []
+           _                                     -> bad r Nothing
 
 -- | Bail out if a parse goes bad
 parse :: String -> (String -> Maybe String -> a) -> (SExpr -> a) -> a

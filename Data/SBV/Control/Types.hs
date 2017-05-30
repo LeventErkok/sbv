@@ -26,7 +26,7 @@ import Generics.Deriving.Show (GShow, gshow)
 
 import Control.DeepSeq (NFData(..))
 
--- | Result of a 'checkSat' call.
+-- | Result of a 'checkSat' or 'checkSatAssuming' call.
 data CheckSatResult = Sat | Unsat | Unk
                     deriving (Eq, Show)
 
@@ -80,6 +80,7 @@ data SMTOption = DiagnosticOutputChannel FilePath
                | RandomSeed              Integer
                | SetLogic                Logic
                | ProduceUnsatCores       Bool
+               | ProduceUnsatAssumptions Bool
                | ProduceProofs           Bool
 
 instance NFData SMTOption where
@@ -87,6 +88,7 @@ instance NFData SMTOption where
   rnf (RandomSeed i)              = rnf i `seq` ()
   rnf (SetLogic l)                = rnf l `seq` ()
   rnf (ProduceUnsatCores b)       = rnf b `seq` ()
+  rnf (ProduceUnsatAssumptions b) = rnf b `seq` ()
   rnf (ProduceProofs b)           = rnf b `seq` ()
 
 -- SMTLib's True/False is spelled differently than Haskell's.
@@ -99,6 +101,7 @@ instance Show SMTOption where
   show (DiagnosticOutputChannel f) = unwords [":diagnostic-output-channel", show f]
   show (RandomSeed              i) = unwords [":random-seed",               show i]
   show (ProduceUnsatCores       b) = unwords [":produce-unsat-cores",       smtBool b]
+  show (ProduceUnsatAssumptions b) = unwords [":produce-unsat-assumptions", smtBool b]
   show (ProduceProofs           b) = unwords [":produce-proofs",            smtBool b]
   -- Strictly speaking SetLogic is not an option but a command. But I think that's a wart in SMTLib. We're careful in how we process
   -- this though, so no worries.

@@ -15,7 +15,7 @@
 module Data.SBV.Control.Query (
        assert, namedAssert
      , send, ask
-     , CheckSatResult(..), checkSat, getUnsatCore, push, pop, getAssertionStackDepth, reset
+     , CheckSatResult(..), checkSat, checkSatAssuming, getUnsatCore, push, pop, getAssertionStackDepth, reset
      , getValue, getModel
      , SMTOption(..), setOption
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
@@ -32,7 +32,8 @@ module Data.SBV.Control.Query (
 import Control.Monad            (unless)
 import Control.Monad.State.Lazy (get, modify')
 
-import Data.List (intercalate)
+import Data.List (unzip3, intercalate, nubBy)
+import Data.Function (on)
 
 import Data.SBV.Core.Data
 
@@ -126,6 +127,54 @@ checkSat = do let cmd = "(check-sat)"
                                   ECon "unknown" -> return Unk
                                   _              -> bad r Nothing
 
+-- | Check for satisfiability, under the given conditions. Similar to 'checkSat'
+-- except it allows making further assumptions as captured by the first argument
+-- of booleans. If the result is 'Unsat', the user will also receive a subset of
+-- the given assumptions that led to the 'Unsat' conclusion. Note that while this
+-- set will be a subset of the inputs, it is not necessarily guaranteed to be minimal.
+--
+-- You must have arranged for the production of unsat-assumptions
+-- first (/via/ @tactic $ SetOptions [ProduceUnsatAssumptions True]@)
+-- for this call to not error out!
+--
+-- Usage note: 'getUnsatCore' is usually easier to use than 'checkSatAssuming', as it
+-- allows the use of named assertions, as obtained by 'namedAssert'. If 'getUnsatCore'
+-- fills your needs, you should definitely prefer it over 'checkSatAssuming'.
+checkSatAssuming :: [SBool] -> Query (CheckSatResult, Maybe [SBool])
+checkSatAssuming sBools = do
+        -- sigh.. SMT-Lib requires the values to be literals only. So, create proxies.
+        let mkAssumption st = do swsOriginal <- mapM (\sb -> sbvToSW st sb >>= \sw -> return (sw, sb)) sBools
+
+                                 -- drop duplicates and trues
+                                 let swbs = [p | p@(sw, _) <- nubBy ((==) `on` fst) swsOriginal, sw /= trueSW]
+
+                                     translate (sw, sb) = (nm, decls, (proxy, sb))
+                                        where nm    = show sw
+                                              proxy = "__assumption_proxy_" ++ nm
+                                              decls = [ "(declare-const " ++ proxy ++ " Bool)"
+                                                      , "(assert (= " ++ proxy ++ " " ++ nm ++ "))"
+                                                      ]
+
+                                 return $ map translate swbs
+
+        assumptions <- inNewContext mkAssumption
+
+        let (origNames, declss, proxyMap) = unzip3 assumptions
+
+        let cmd = "(check-sat-assuming (" ++ unwords (map fst proxyMap) ++ "))"
+            bad = unexpected "checkSatAssuming" cmd "one of sat/unsat/unknown"
+
+        mapM_ send $ concat declss
+        r <- ask cmd
+
+        let grabUnsat = do as <- getUnsatAssumptions origNames proxyMap
+                           return (Unsat, Just as)
+
+        parse r bad $ \case ECon "sat"     -> return (Sat, Nothing)
+                            ECon "unsat"   -> grabUnsat
+                            ECon "unknown" -> return (Unk, Nothing)
+                            _              -> bad r Nothing
+
 -- | The current assertion stack depth, i.e., #push - #pops after start. Always non-negative.
 getAssertionStackDepth :: Query Int
 getAssertionStackDepth = queryAssertionStackDepth <$>  get
@@ -169,8 +218,8 @@ getUnsatCore = do
         r <- ask cmd
 
         parse r bad $ \case
-           EApp es | Just xs <- sequence (map fromECon es) -> return xs
-           _                                               -> bad r Nothing
+           EApp es | Just xs <- mapM fromECon es -> return xs
+           _                                     -> bad r Nothing
 
 -- | Make an assignment. The type 'Assignment' is abstract, see 'success' for an example use case.
 infix 1 |->
