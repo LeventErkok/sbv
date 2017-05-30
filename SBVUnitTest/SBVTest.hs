@@ -13,6 +13,10 @@
 module SBVTest(
           generateGoldCheck, showsAs, ioShowsAs, mkTestSuite, SBVTestSuite(..)
         , isThm, isSat, runSAT, numberOfModels
+        , assertIsThm, assertIsntThm, assertIsSat, assertIsntSat
+        , module Test.Tasty
+        , module Test.Tasty.HUnit
+        , goldenVsStringShow
         , module Test.HUnit
         , module Data.SBV
         ) where
@@ -20,9 +24,13 @@ module SBVTest(
 import Data.SBV                (SMTConfig(..), Provable(..), isTheorem, isTheoremWith, isSatisfiable, AllSatResult(..), allSat, SymWord(free), SymArray(newArray), defaultSMTCfg)
 import Data.SBV.Internals      (runSymbolic, Symbolic, Result)
 
+import qualified Data.ByteString.Lazy.Char8 as LBC
 import Data.Maybe              (fromJust)
 import System.FilePath         ((</>))
-import Test.HUnit              (Test(..), Assertion, assert, (~:), test)
+import Test.Tasty              (testGroup, TestTree, TestName)
+import Test.Tasty.Golden       (goldenVsString)
+import Test.Tasty.HUnit        (assert, Assertion, testCase)
+import Test.HUnit              (Test(..), (~:), test)
 
 -- | A Test-suite, parameterized by the gold-check generator/checker
 newtype SBVTestSuite = SBVTestSuite ((forall a. Show a => (IO a -> FilePath -> IO ())) -> Test)
@@ -39,6 +47,15 @@ showsAs r s = assert $ show r == s
 ioShowsAs :: Show a => IO a -> String -> Assertion
 ioShowsAs r s = do v <- r
                    assert $ show v == s
+
+-- TODO: Need to use tasty.golden's fascility for generating golden file instead
+
+goldDir2 :: FilePath
+goldDir2 = "SBVUnitTest/GoldFiles/"
+
+goldenVsStringShow :: Show a => TestName -> FilePath -> IO a -> TestTree
+goldenVsStringShow n fp res =
+  goldenVsString n (goldDir2 ++ fp) (fmap (LBC.pack . show) res)
 
 -- | Create a gold file for the test case
 generateGoldCheck :: FilePath -> Bool -> (forall a. Show a => IO a -> FilePath -> IO ())
@@ -68,3 +85,19 @@ numberOfModels p = do AllSatResult (_, rs) <- allSat p
 -- | Symbolicly run a SAT instance using the default config
 runSAT :: Symbolic a -> IO Result
 runSAT = runSymbolic (True, defaultSMTCfg)
+
+-- | ...
+assertIsThm :: Provable a => a -> Assertion
+assertIsThm t = assert (isThm t)
+
+-- | ...
+assertIsntThm :: Provable a => a -> Assertion
+assertIsntThm t = assert (fmap not (isThm t))
+
+-- | ..
+assertIsSat :: Provable a => a -> Assertion
+assertIsSat p = assert (isSat p)
+
+-- | ..
+assertIsntSat :: Provable a => a -> Assertion
+assertIsntSat p = assert (fmap not (isSat p))

@@ -9,7 +9,7 @@
 -- Test suite for Examples.Puzzles.Temperature
 -----------------------------------------------------------------------------
 
-module TestSuite.Puzzles.Temperature(testSuite) where
+module TestSuite.Puzzles.Temperature(tests) where
 
 import Data.SBV
 
@@ -17,7 +17,8 @@ import Examples.Puzzles.Temperature
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-  "temperature" ~: allSat (revOf `fmap` exists_) `goldCheck` "temperature.gold"
- ]
+tests :: TestTree
+tests =
+  testGroup "Puzzles.Temperature"
+    [ goldenVsStringShow "temperature" "temperature.gold" (allSat (revOf `fmap` exists_))
+    ]

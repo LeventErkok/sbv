@@ -9,7 +9,7 @@
 -- Test suite for Data.SBV.Examples.Puzzles.DogCatMouse
 -----------------------------------------------------------------------------
 
-module TestSuite.Puzzles.DogCatMouse(testSuite) where
+module TestSuite.Puzzles.DogCatMouse(tests) where
 
 import Data.SBV
 -- import Data.SBV.Examples.Puzzles.DogCatMouse   -- everything defined here
@@ -17,10 +17,11 @@ import Data.SBV
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-  "dog_cat_mouse" ~: allSat p `goldCheck` "dogCatMouse.gold"
- ]
+tests :: TestTree
+tests =
+  testGroup "Puzzles.DogCatMouse"
+    [ goldenVsStringShow "dog_cat_mouse" "dogCatMouse.gold" (allSat p)
+    ]
  where p = do [dog, cat, mouse] <- sIntegers ["dog", "cat", "mouse"]
               solve [ dog   .>= 1                                   -- at least one dog
                     , cat   .>= 1                                   -- at least one cat

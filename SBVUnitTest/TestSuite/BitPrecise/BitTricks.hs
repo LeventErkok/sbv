@@ -9,18 +9,18 @@
 -- Test suite for Data.SBV.Examples.BitPrecise.BitTricks
 -----------------------------------------------------------------------------
 
-module TestSuite.BitPrecise.BitTricks(testSuite) where
+module TestSuite.BitPrecise.BitTricks(tests) where
 
 import Data.SBV.Examples.BitPrecise.BitTricks
 
 import SBVTest
 
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-   "fast min"              ~: assert =<< isThm fastMinCorrect
- , "fast max"              ~: assert =<< isThm fastMaxCorrect
- , "opposite signs"        ~: assert =<< isThm oppositeSignsCorrect
- , "conditional set clear" ~: assert =<< isThm conditionalSetClearCorrect
- , "power of two"          ~: assert =<< isThm powerOfTwoCorrect
- ]
+tests :: TestTree
+tests =
+  testGroup "BitPrecise.BitTricks"
+    [ testCase "fast min" (assertIsThm fastMinCorrect)
+    , testCase "fast max" (assertIsThm fastMaxCorrect)
+    , testCase "opposite signs" (assertIsThm oppositeSignsCorrect)
+    , testCase "conditional set clear" (assertIsThm conditionalSetClearCorrect)
+    , testCase "power of two" (assertIsThm powerOfTwoCorrect)
+    ]

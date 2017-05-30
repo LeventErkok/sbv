@@ -9,7 +9,7 @@
 -- Test suite for Data.SBV.Examples.PrefixSum.PrefixSum
 -----------------------------------------------------------------------------
 
-module TestSuite.BitPrecise.PrefixSum(testSuite) where
+module TestSuite.BitPrecise.PrefixSum(tests) where
 
 import Data.SBV
 import Data.SBV.Examples.BitPrecise.PrefixSum
@@ -17,8 +17,10 @@ import Data.SBV.Examples.BitPrecise.PrefixSum
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-    "prefixSum1" ~: assert =<< isThm (flIsCorrect  8 (0, (+)))
-  , "prefixSum2" ~: assert =<< isThm (flIsCorrect 16 (0, smax))
-  ]
+tests :: TestTree
+tests =
+  testGroup "BitPrecise.PrefixSum"
+    [
+        testCase "prefixSum1" (assertIsThm (flIsCorrect  8 (0, (+))))
+      , testCase "prefixSum2" (assertIsThm (flIsCorrect 16 (0, smax)))
+    ]

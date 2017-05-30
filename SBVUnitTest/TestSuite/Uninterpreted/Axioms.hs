@@ -12,17 +12,16 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 
-module TestSuite.Uninterpreted.Axioms(testSuite) where
+module TestSuite.Uninterpreted.Axioms(tests) where
 
 import Data.SBV
 import SBVTest
 import Data.Generics
 
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-  "unint-axioms" ~: assert =<< isThm p0
- ]
+tests :: TestTree
+tests =
+  testGroup "Uninterpreted.Axioms"
+    [ testCase "unint-axioms" (assertIsThm p0) ]
 
 -- Example provided by Thomas DuBuisson:
 newtype Bitstring = Bitstring () deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)

@@ -12,17 +12,18 @@
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module TestSuite.Uninterpreted.Sort where
+module TestSuite.Uninterpreted.Sort(tests) where
 
 import Data.SBV
 import SBVTest
 import Data.Generics
 
--- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test [
-  "unint-sort" ~: assert . (==4) . length . (extractModels :: AllSatResult -> [L]) =<< allSat p0
- ]
+tests :: TestTree
+tests =
+  testGroup "Uninterpreted.Sort"
+    [ testCase "unint-sort"
+        (assert . (==4) . length . (extractModels :: AllSatResult -> [L]) =<< allSat p0)
+    ]
 
 data L = Nil | Cons Int L deriving (Eq, Ord, Data, Read, Show)
 instance SymWord L
