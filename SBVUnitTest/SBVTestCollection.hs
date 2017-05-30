@@ -16,7 +16,6 @@ import SBVTest
 -- To add a new collection of tests, import below and add to allTestCases variable
 import qualified TestSuite.Basics.ArithNoSolver           as T02_01(testSuite)
 import qualified TestSuite.Basics.BasicTests              as T02_03(testSuite)
--- import qualified TestSuite.Basics.IteTest                 as T02_06(testSuite)
 import qualified TestSuite.BitPrecise.Legato              as T03_02(testSuite)
 import qualified TestSuite.BitPrecise.MergeSort           as T03_03(testSuite)
 import qualified TestSuite.CRC.CCITT                      as T04_01(testSuite)
@@ -46,7 +45,6 @@ allTestCases :: [(String, Bool, SBVTestSuite)]
 allTestCases = [
        ("arithCF",     False, T02_01.testSuite)
      , ("basic",       False, T02_03.testSuite)
---     , ("ite",         True,  T02_06.testSuite)
      , ("legato",      False, T03_02.testSuite)
      , ("mergeSort",   False, T03_03.testSuite)
      , ("ccitt",       False, T04_01.testSuite)
