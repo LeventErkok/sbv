@@ -5,6 +5,7 @@ import qualified TestSuite.Arrays.Memory
 import qualified TestSuite.Basics.ArithSolver
 import qualified TestSuite.Basics.Higher
 import qualified TestSuite.Basics.Index
+import qualified TestSuite.Basics.IteTest
 import qualified TestSuite.Basics.ProofTests
 import qualified TestSuite.Basics.QRem
 import qualified TestSuite.BitPrecise.BitTricks
@@ -33,7 +34,7 @@ tests =
   , TestSuite.Basics.ArithSolver.tests
   , TestSuite.Basics.Higher.tests
   , TestSuite.Basics.Index.tests
-  -- ite
+  , TestSuite.Basics.IteTest.tests
   , TestSuite.Basics.ProofTests.tests
   , TestSuite.Basics.QRem.tests
   , TestSuite.BitPrecise.BitTricks.tests

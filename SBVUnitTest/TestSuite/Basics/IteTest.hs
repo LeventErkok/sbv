@@ -9,7 +9,7 @@
 -- Test various incarnations of ite/iteLazy/sBranch
 -----------------------------------------------------------------------------
 
-module TestSuite.Basics.IteTest(testSuite)  where
+module TestSuite.Basics.IteTest(tests)  where
 
 import Data.SBV
 
@@ -25,13 +25,14 @@ chk3 :: (SBool -> (SBool, SBool) -> (SBool, SBool)  -> (SBool, SBool)) -> SWord8
 chk3 cond x = fst (cond (x .== x) (true, undefined::SBool) (undefined, undefined))
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-   "ite-1"  ~: rs (chk1 ite) `goldCheck` "iteTest1.gold"
- , "ite-2"  ~: rs (chk2 ite) `goldCheck` "iteTest2.gold"
- , "ite-3"  ~: rs (chk3 ite) `goldCheck` "iteTest3.gold"
- , "ite-4"  ~: assert =<< isThm (chk1 iteLazy)
- , "ite-5"  ~: assert =<< isThm (chk2 iteLazy)
- , "ite-6"  ~: assert =<< isThm (chk3 iteLazy)
- ]
+tests :: TestTree
+tests =
+  testGroup "Basics.Ite"
+    [ goldenVsStringShow "ite-1" "iteTest1.gold" (rs (chk1 ite))
+    , goldenVsStringShow "ite-2" "iteTest2.gold" (rs (chk2 ite))
+    , goldenVsStringShow "ite-3" "iteTest3.gold" (rs (chk3 ite))
+    , testCase "ite-4" (assertIsThm (chk1 iteLazy))
+    , testCase "ite-5" (assertIsThm (chk2 iteLazy))
+    , testCase "ite-6" (assertIsThm (chk3 iteLazy))
+    ]
  where rs f = runSAT $ forAll ["x"] f

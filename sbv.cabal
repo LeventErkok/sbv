@@ -288,6 +288,7 @@ Test-Suite int-test-extended
                   , TestSuite.Arrays.Memory
                   , TestSuite.Basics.ArithSolver
                   , TestSuite.Basics.Higher
+                  , TestSuite.Basics.IteTest
                   , TestSuite.Basics.Index
                   , TestSuite.Basics.ProofTests
                   , TestSuite.Basics.QRem
