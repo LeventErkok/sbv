@@ -17,11 +17,11 @@
 
         tactic $ SetOptions [ProduceUnsatCores True]
 
-    The config option "getUnsatCore" is removed. Otherwise, no other
+    The config option `getUnsatCore` is removed. Otherwise, no other
     changes should be necessary to make your code work as before. (Note
     that this is a breaking change from v6.1.)
 
-  * Configuration option "useLogic" is removed. Again, this should
+  * Configuration option `useLogic` is removed. Again, this should
     be done by a tactic of the form:
 
         tactic $ SetOptions [SetLogic QF_NRA]
