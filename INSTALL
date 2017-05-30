@@ -3,17 +3,9 @@ like this:
 
      cabal install sbv
 
-Once the installation is done, you will get the Data.SBV library.
-The installation will also put a binary named
+SBV relies on an external SMT solver to be installed. We currently support
+ABC, Boolector, CVC4, MathSAT, Yices, and Z3. We recommend installing the
+freely available z3 SMT solver from Microsoft, the default solver used
+by SBV. You can get it from <http://github.com/Z3Prover/z3>.
 
-     SBVUnitTests
-
-in your .cabal/bin directory (or wherever you installed it.) It's
-highly recommended that you run this program to ensure everything
-is working correctly. In particular, you will first need to install
-Z3, the default SMT solver used by sbv, from Microsoft. (You can get it
-from <http://github.com/Z3Prover/z3>.)
 Please make sure that the "z3" executable is in your path.
-
-Once you have installed sbv, you can use it in your Haskell programs
-by simply importing the Data.SBV module.

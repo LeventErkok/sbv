@@ -5,8 +5,6 @@
 
 ### Version 6.2, Not yet released.
 
-  * This release is all about custom queries. Details to follow.
-
   * Pareto-front extraction has been reworked, reflecting the changes in Z3 for
     this functionality. Since pareto-fronts can be infinite in number, the user
     is now allowed to specify a "limit" to stop the solver from querying ad
@@ -20,12 +18,23 @@
         tactic $ SetOptions [ProduceUnsatCores True]
 
     The config option "getUnsatCore" is removed. Otherwise, no other
-    changes should be necessary to make your code work as before.
+    changes should be necessary to make your code work as before. (Note
+    that this is a breaking change from v6.1.)
 
   * Configuration option "useLogic" is removed. Again, this should
     be done by a tactic of the form:
 
         tactic $ SetOptions [SetLogic QF_NRA]
+
+  * Thanks to Kanishka Azimi, our external test suite is now run by
+    Tasty! Kanishka modernized the test suite, and reworked the
+    infrastructure that was showing its age. Thanks!
+
+  * SBV now has support for interactive solver queries. However, we
+    are currently not advertising this widely; it is only intended for
+    early beta-adapters and testing. Documentation is also rather
+    sparse currently. Version 6.3 will have a proper support. In the
+    mean time, you can browse the contents of "Data.SBV.Control" module.
 
 ### Version 6.1, 2017-05-26
 
