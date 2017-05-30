@@ -1,6 +1,8 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main(main) where
 
 import Test.Tasty
+import Test.Tasty.Runners (noPattern, TestPattern)
 import qualified TestSuite.Arrays.Memory
 import qualified TestSuite.Basics.ArithSolver
 import qualified TestSuite.Basics.Higher
@@ -31,7 +33,15 @@ import qualified TestSuite.Uninterpreted.Sort
 import qualified TestSuite.Uninterpreted.Uninterpreted
 
 main :: IO ()
-main = defaultMain (testGroup "Tests" tests)
+main =
+  defaultMain
+    (askOption
+      (\(v :: TestPattern) ->
+        testGroup
+          "Tests"
+          (if (show v == show noPattern)
+             then []
+             else tests)))
 
 tests :: [TestTree]
 tests =
