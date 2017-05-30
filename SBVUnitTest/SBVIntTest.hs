@@ -22,6 +22,9 @@ import qualified TestSuite.Puzzles.MagicSquare
 import qualified TestSuite.Puzzles.NQueens
 import qualified TestSuite.Puzzles.PowerSet
 import qualified TestSuite.Puzzles.Sudoku
+import qualified TestSuite.Puzzles.Temperature
+import qualified TestSuite.Puzzles.U2Bridge
+import qualified TestSuite.Uninterpreted.AUF
 import qualified TestSuite.Uninterpreted.Axioms
 import qualified TestSuite.Uninterpreted.Function
 import qualified TestSuite.Uninterpreted.Sort
@@ -53,9 +56,9 @@ tests =
   , TestSuite.Puzzles.NQueens.tests
   , TestSuite.Puzzles.PowerSet.tests
   , TestSuite.Puzzles.Sudoku.tests
-  -- temp
-  -- u2br
-  -- auf
+  , TestSuite.Puzzles.Temperature.tests
+  , TestSuite.Puzzles.U2Bridge.tests
+  , TestSuite.Uninterpreted.AUF.tests
   , TestSuite.Uninterpreted.Axioms.tests
   , TestSuite.Uninterpreted.Function.tests
   , TestSuite.Uninterpreted.Sort.tests

@@ -31,10 +31,6 @@ import qualified TestSuite.Crypto.AES                     as T06_01(testSuite)
 import qualified TestSuite.Existentials.CRCPolynomial     as T07_01(testSuite)
 import qualified TestSuite.Puzzles.Coins                  as T09_01(testSuite)
 import qualified TestSuite.Puzzles.Counts                 as T09_02(testSuite)
--- import qualified TestSuite.Puzzles.Euler185               as T09_04(testSuite)
--- import qualified TestSuite.Puzzles.Temperature            as T09_09(testSuite)
--- import qualified TestSuite.Puzzles.U2Bridge               as T09_10(testSuite)
--- import qualified TestSuite.Uninterpreted.AUF              as T10_01(testSuite)
 
 -- Bool says whether we need a real SMT solver to run this test
 -- Note that it's ok to say True even if an SMT solver is *not*
@@ -59,7 +55,4 @@ allTestCases = [
      , ("existPoly",   False, T07_01.testSuite)
      , ("coins",       False, T09_01.testSuite)
      , ("counts",      False, T09_02.testSuite)
---     , ("temperature", True,  T09_09.testSuite)
---     , ("u2bridge",    True,  T09_10.testSuite)
---     , ("auf1",        True,  T10_01.testSuite)
      ]
