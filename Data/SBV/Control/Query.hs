@@ -59,7 +59,7 @@ setOption o            = send $ "(set-option " ++ show o ++ ")"
 getInfo :: SMTInfoFlag -> Query SMTInfoResponse
 getInfo flag = do
     let cmd = "(get-info " ++ show flag ++ ")"
-        bad = unexpected "getInfo" cmd "a valid get-info response"
+        bad = unexpected "getInfo" cmd "a valid get-info response" Nothing
 
         isAllStatistics AllStatistics = True
         isAllStatistics _             = False
@@ -120,7 +120,7 @@ namedAssert nm s = do sw <- inNewContext (`sbvToSW` s)
 -- | Check for satisfiability.
 checkSat :: Query CheckSatResult
 checkSat = do let cmd = "(check-sat)"
-                  bad = unexpected "checkSat" cmd "one of sat/unsat/unknown"
+                  bad = unexpected "checkSat" cmd "one of sat/unsat/unknown" Nothing
               r <- ask cmd
               parse r bad $ \case ECon "sat"     -> return Sat
                                   ECon "unsat"   -> return Unsat
@@ -163,6 +163,12 @@ checkSatAssuming sBools = do
 
         let cmd = "(check-sat-assuming (" ++ unwords (map fst proxyMap) ++ "))"
             bad = unexpected "checkSatAssuming" cmd "one of sat/unsat/unknown"
+                           $ Just [ "Make sure you use:"
+                                  , ""
+                                  , "       tactic $ SetOptions [ProduceUnsatAssumptions True]"
+                                  , ""
+                                  , "to make sure the solver is ready for producing unsat assumptions"
+                                  ]
 
         mapM_ send $ concat declss
         r <- ask cmd
@@ -211,6 +217,13 @@ getUnsatCore :: Query [String]
 getUnsatCore = do
         let cmd = "(get-unsat-core)"
             bad = unexpected "getUnsatCore" cmd "an unsat-core response"
+                           $ Just [ "Make sure you use:"
+                                  , ""
+                                  , "       tactic $ SetOptions [ProduceUnsatCores True]"
+                                  , ""
+                                  , "to make sure the solver is ready for producing unsat cores"
+                                  ]
+
 
             fromECon (ECon s) = Just s
             fromECon _        = Nothing

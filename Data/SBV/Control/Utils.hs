@@ -22,7 +22,7 @@ module Data.SBV.Control.Utils (
      , unexpected
      ) where
 
-import Data.List (sortBy)
+import Data.List (sortBy, intercalate)
 import Data.Int
 import Data.Word
 
@@ -98,7 +98,7 @@ send s = do QueryState{queryAsk, queryConfig} <- get
             case words r of
               ["success"] -> when (verbose queryConfig) $ io $ putStrLn $ "[SUCCESS] " ++ s
               _           -> do io $ putStrLn $ "[FAILED]  " ++ s
-                                unexpected "Command" s "success" r Nothing
+                                unexpected "Command" s "success" Nothing r Nothing
 
 -- | A class which allows for sexpr-conversion to values
 class SMTValue a where
@@ -140,7 +140,7 @@ getValue :: SMTValue a => SBV a -> Query a
 getValue s = do sw <- inNewContext (`sbvToSW` s)
                 let nm  = show sw
                     cmd = "(get-value (" ++ nm ++ "))"
-                    bad = unexpected "getValue" cmd "a model value"
+                    bad = unexpected "getValue" cmd "a model value" Nothing
                 r <- ask cmd
                 parse r bad $ \case EApp [EApp [ECon o,  v]] | o == show sw -> case sexprToVal v of
                                                                                  Nothing -> bad r Nothing
@@ -161,7 +161,14 @@ getModel = do QueryState{queryGetModel} <- get
 getUnsatAssumptions :: [String] -> [(String, a)] -> Query [a]
 getUnsatAssumptions originals proxyMap = do
         let cmd = "(get-unsat-assumptions)"
+
             bad = unexpected "getUnsatAssumptions" cmd "a list of unsatisfiable assumptions"
+                           $ Just [ "Make sure you use:"
+                                  , ""
+                                  , "       tactic $ SetOptions [ProduceUnsatAssumptions True]"
+                                  , ""
+                                  , "to make sure the solver is ready for producing unsat assumptions"
+                                  ]
 
             fromECon (ECon s) = Just s
             fromECon _        = Nothing
@@ -184,8 +191,8 @@ parse r fCont sCont = case parseSExpr r of
                         Right res -> sCont res
 
 -- | Bail out if we don't get what we expected
-unexpected :: String -> String -> String -> String -> Maybe String -> a
-unexpected ctx sent expected received mbReason = error $ unlines $ [
+unexpected :: String -> String -> String -> Maybe [String] -> String -> Maybe String -> a
+unexpected ctx sent expected mbHint received mbReason = error $ unlines $ [
           ""
         , "*** Data.SBV: Unexpected response from the solver."
         , "***    Context : " ++ ctx
@@ -193,4 +200,6 @@ unexpected ctx sent expected received mbReason = error $ unlines $ [
         , "***    Expected: " ++ expected
         , "***    Received: " ++ received
         ]
-     ++ [ "***    Reason  : " ++ r | Just r <- [mbReason]]
+     ++ [ "***    Reason  : " ++ r                 | Just r <- [mbReason]]
+     ++ [ "***    Hint    : " ++ intercalate tab r | Just r <- [mbHint]]
+ where tab = "\n***              "
