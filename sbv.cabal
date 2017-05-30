@@ -300,6 +300,8 @@ Test-Suite int-test-extended
                   , TestSuite.Crypto.RC4
                   , TestSuite.Polynomials.Polynomials
                   , TestSuite.CRC.Parity
+                  , TestSuite.Puzzles.DogCatMouse
+                  , TestSuite.Puzzles.Euler185
                   , TestSuite.Puzzles.MagicSquare
                   , TestSuite.Puzzles.NQueens
                   , TestSuite.Puzzles.PowerSet

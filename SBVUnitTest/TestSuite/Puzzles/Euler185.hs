@@ -9,7 +9,7 @@
 -- Test suite for Data.SBV.Examples.Puzzles.Euler185
 -----------------------------------------------------------------------------
 
-module TestSuite.Puzzles.Euler185(testSuite) where
+module TestSuite.Puzzles.Euler185(tests) where
 
 import Data.SBV
 import Data.SBV.Examples.Puzzles.Euler185
@@ -17,7 +17,8 @@ import Data.SBV.Examples.Puzzles.Euler185
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-  "euler185" ~: allSat euler185 `goldCheck` "euler185.gold"
- ]
+tests :: TestTree
+tests =
+  testGroup "Puzzles.Euler185"
+    [ goldenVsStringShow "euler185" "euler185.gold" (allSat euler185)
+    ]
