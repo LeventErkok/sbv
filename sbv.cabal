@@ -146,86 +146,11 @@ Library
                   , GHC.SrcLoc.Compat
                   , GHC.Stack.Compat
 
-Executable SBVUnitTests
-  default-language: Haskell2010
-  ghc-options     : -Wall
-  other-extensions: DeriveAnyClass
-                    Rank2Types
-                    RankNTypes
-                    ScopedTypeVariables
-                    TupleSections
-  Build-depends : base  >= 4.8 && < 5
-                , HUnit, directory, filepath, process, syb, sbv, data-binary-ieee754
-  Hs-Source-Dirs  : SBVUnitTest
-  main-is         : SBVUnitTest.hs
-  Other-modules   : SBVTest
-                  , SBVTestCollection
-                  , Examples.Arrays.Memory
-                  , Examples.Basics.BasicTests
-                  , Examples.Basics.Higher
-                  , Examples.Basics.Index
-                  , Examples.Basics.ProofTests
-                  , Examples.Basics.QRem
-                  , Examples.CRC.CCITT
-                  , Examples.CRC.CCITT_Unidir
-                  , Examples.CRC.GenPoly
-                  , Examples.CRC.Parity
-                  , Examples.CRC.USB5
-                  , Examples.Puzzles.PowerSet
-                  , Examples.Puzzles.Temperature
-                  , Examples.Uninterpreted.Uninterpreted
-                  , TestSuite.Arrays.Memory
-                  , TestSuite.Basics.ArithNoSolver
-                  , TestSuite.Basics.ArithSolver
-                  , TestSuite.Basics.BasicTests
-                  , TestSuite.Basics.Higher
-                  , TestSuite.Basics.Index
-                  , TestSuite.Basics.IteTest
-                  , TestSuite.Basics.ProofTests
-                  , TestSuite.Basics.QRem
-                  , TestSuite.BitPrecise.BitTricks
-                  , TestSuite.BitPrecise.Legato
-                  , TestSuite.BitPrecise.MergeSort
-                  , TestSuite.BitPrecise.PrefixSum
-                  , TestSuite.CodeGeneration.AddSub
-                  , TestSuite.CodeGeneration.CgTests
-                  , TestSuite.CodeGeneration.CRC_USB5
-                  , TestSuite.CodeGeneration.Fibonacci
-                  , TestSuite.CodeGeneration.Floats
-                  , TestSuite.CodeGeneration.GCD
-                  , TestSuite.CodeGeneration.PopulationCount
-                  , TestSuite.CodeGeneration.Uninterpreted
-                  , TestSuite.Crypto.AES
-                  , TestSuite.Crypto.RC4
-                  , TestSuite.Existentials.CRCPolynomial
-                  , TestSuite.CRC.CCITT
-                  , TestSuite.CRC.CCITT_Unidir
-                  , TestSuite.CRC.GenPoly
-                  , TestSuite.CRC.Parity
-                  , TestSuite.CRC.USB5
-                  , TestSuite.Puzzles.Coins
-                  , TestSuite.Polynomials.Polynomials
-                  , TestSuite.Puzzles.Counts
-                  , TestSuite.Puzzles.DogCatMouse
-                  , TestSuite.Puzzles.Euler185
-                  , TestSuite.Puzzles.MagicSquare
-                  , TestSuite.Puzzles.NQueens
-                  , TestSuite.Puzzles.PowerSet
-                  , TestSuite.Puzzles.Sudoku
-                  , TestSuite.Puzzles.U2Bridge
-                  , TestSuite.Puzzles.Temperature
-                  , TestSuite.Uninterpreted.AUF
-                  , TestSuite.Uninterpreted.Function
-                  , TestSuite.Uninterpreted.Uninterpreted
-                  , TestSuite.Uninterpreted.Sort
-                  , TestSuite.Uninterpreted.Axioms
-  Buildable:        False
-
 Test-Suite SBVBasicTests
   type            : exitcode-stdio-1.0
   default-language: Haskell2010
   ghc-options     : -Wall -with-rtsopts=-K64m
-  Build-depends : base >= 4.8 && < 5
+  Build-depends : base
                 , bytestring >= 0.9
                 , HUnit, directory, filepath, syb, sbv, data-binary-ieee754
                 , tasty >= 0.11.2
@@ -264,12 +189,10 @@ Test-Suite int-test-extended
                     DeriveAnyClass
                   , DeriveDataTypeable
                   , Rank2Types
-                    -- RankNTypes
                   , ScopedTypeVariables
-                  -- , TupleSections
   Build-depends :
-                -- inherent constraints from library (todo)
-                  base, data-binary-ieee754, filepath >= 1.0, syb
+                -- inherent constraints from library
+                  base, data-binary-ieee754, filepath, syb
                 , sbv
                 -- constraints here
                 , bytestring >= 0.9
