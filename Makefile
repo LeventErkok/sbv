@@ -25,7 +25,7 @@ install:
 	@fast-tags -R --nomerge .
 	@cabal configure --enable-tests --ghc-options="-Werror -Wall"
 	@cabal build
-	@cabal install
+	@cabal install --force-reinstalls
 	@tput smam
 
 test: install doctest
