@@ -31,7 +31,7 @@ install:
 test: install doctest
 	@tput rmam
 	@SBV_Z3=doesnotexist $(TIME) cabal test SBVBasicTests
-	@                    $(TIME) ./dist/build/int-test-extended/int-test-extended
+	@                    $(TIME) ./dist/build/int-test-extended/int-test-extended -j 4
 	@tput smam
 
 # use this as follows: make gold TGT="cgUSB5"
