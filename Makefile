@@ -35,9 +35,10 @@ test: install doctest
 	@                    $(TIME) ./dist/build/int-test-extended/int-test-extended -p '**' -j 4
 	@tput smam
 
-# use this as follows: make gold TGT="cgUSB5"
+# use this as follows: make gold TGT="U2Bridge"
+# NB. This is currently not working! Need to fix.
 gold: 
-	cabal test int-test-extended --test-option="-p ${TGT}"
+	./dist/build/int-test-extended/int-test-extended -p ${TGT}
 
 doctest:
 	@tput rmam
