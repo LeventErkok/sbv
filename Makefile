@@ -35,9 +35,16 @@ test: install doctest
 	@                    $(TIME) ./dist/build/int-test-extended/int-test-extended -p '**' -j 4
 	@tput smam
 
-# use this as follows: make gold TGT="U2Bridge"
-# NB. This is currently not working! Need to fix.
+# use this as follows:
+#          /bin/rm SBVUnitTest/GoldFiles/U2Bridge.gold
+#          make gold TGT="U2Bridge"
 gold: 
+	./dist/build/int-test-extended/int-test-extended -p ${TGT}
+
+
+# use this as follows:
+#         make testPattern TGT="U2Bridge"
+testPattern:
 	./dist/build/int-test-extended/int-test-extended -p ${TGT}
 
 doctest:
