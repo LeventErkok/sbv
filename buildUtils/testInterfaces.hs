@@ -4,31 +4,38 @@ import Data.SBV
 import Data.List
 import Control.Monad
 import System.Exit
+import System.Environment
 
 -- Known solvers with bugs! Should really be empty!
 badSolvers :: [SMTConfig]
 badSolvers = []
 
 main :: IO ()
-main = do ss  <- filter (not . skip) `fmap` sbvAvailableSolvers
-          let req = filter (not . skip) [abc, boolector, cvc4, mathSAT, yices, z3]
-              need  = sort $ map show req
-              cur   = sort $ map show ss
-              extra = filter (`notElem` need) cur
-              miss  = filter (`notElem` cur ) need
-          when (cur /= need) $ do
-                putStrLn $ unlines [ "Bad solver list: " ++ show ss
-                                   , "          Extra: " ++ show extra
-                                   , "        Missing: " ++ show miss
-                                   ]
-                exitFailure
-          mapM_ test ss
-          putStrLn $ "Tested OK basic connection to: " ++ intercalate ", "  need
-          unless (null badSolvers) $ putStrLn $ "*** NB: The following solvers are ignored: " ++ intercalate ", " (map show badSolvers)
-          exitSuccess
-  where skip :: SMTConfig -> Bool
-        skip s = show s `elem` map show badSolvers
+main = do let allSolvers = map (\s -> (show s, s)) [abc, boolector, cvc4, mathSAT, yices, z3]
 
+          args <- getArgs
+
+          let chosenSolvers = case args of
+                               [] -> allSolvers
+                               _  -> let walk []     = []
+                                         walk (c:cs) = case c `lookup` allSolvers of
+                                                         Nothing -> error $ "Unknown chosen solver: " ++ show c
+                                                         Just s  -> (c, s) : walk cs
+                                     in walk args
+
+              (requiredBad, requiredPresent) = partition (\(n, _) -> n `elem` map show badSolvers) chosenSolvers
+
+          mapM_ (test . snd) requiredPresent
+
+          let tested   = sort $ map fst requiredPresent
+              allKnown = sort $ map fst allSolvers
+
+              skipped  = filter (`notElem` tested) allKnown
+
+
+          putStrLn $ "Tested OK basic connection to: " ++ intercalate ", " (map fst requiredPresent)
+          unless (null requiredBad) $ putStrLn $ "*** NB: The following solvers are declared bad: " ++ intercalate ", " (map show requiredBad)
+          unless (null skipped)     $ putStrLn $ "*** NB: The following solvers are skipped: "      ++ intercalate ", " skipped
 
 test :: SMTConfig -> IO ()
 test s = do check  "t0" t0 (== Just False)

@@ -73,6 +73,11 @@ docs:
 release: clean checkLinks install sdist testInterfaces hlint docs test
 	@echo "*** SBV is ready for release!"
 
+# same as release really, but doesn't check links and tests fewer solver connections.
+# suitable to use when we're in more poverished environment.
+limitedRelease: clean install sdist limitedTestInterfaces hlint docs test
+	@echo "*** SBV is looking OK, but you should really run the 'release' target!"
+
 hlint: 
 	@echo "Running HLint.."
 	@hlint Data SBVUnitTest -i "Use otherwise" -i "Parse error" -i "Use fewer imports" -i "Use module export list" -i "Use import/export shortcut"
@@ -86,6 +91,11 @@ checkLinks:
 testInterfaces:
 	make -C buildUtils
 	@buildUtils/testInterfaces
+
+# only test connection to a few solvers
+limitedTestInterfaces:
+	make -C buildUtils
+	@buildUtils/testInterfaces Yices Z3 CVC4
 
 tags:
 	@fast-tags -R --nomerge .
