@@ -39,7 +39,7 @@ main =
       (\(v :: TestPattern) ->
         testGroup
           "Tests"
-          (if (show v == show noPattern)
+          (if show v == show noPattern
              then []
              else tests)))
 
