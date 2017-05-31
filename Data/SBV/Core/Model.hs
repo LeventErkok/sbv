@@ -1717,39 +1717,7 @@ instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymW
   sbvUninterpret mbCgData nm = let f = sbvUninterpret (uc7 `fmap` mbCgData) nm in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6
     where uc7 (cs, fn) = (cs, \a b c d e f g -> fn (a, b, c, d, e, f, g))
 
--- | Adding arbitrary constraints. When adding constraints, one has to be careful about
--- making sure they are not inconsistent. The function 'isVacuous' can be use for this purpose.
--- Here is an example. Consider the following predicate:
---
--- >>> let pred = do { x <- forall "x"; constrain $ x .< x; return $ x .>= (5 :: SWord8) }
---
--- This predicate asserts that all 8-bit values are larger than 5, subject to the constraint that the
--- values considered satisfy @x .< x@, i.e., they are less than themselves. Since there are no values that
--- satisfy this constraint, the proof will pass vacuously:
---
--- >>> prove pred
--- Q.E.D.
---
--- We can use 'isVacuous' to make sure to see that the pass was vacuous:
---
--- >>> isVacuous pred
--- True
---
--- While the above example is trivial, things can get complicated if there are multiple constraints with
--- non-straightforward relations; so if constraints are used one should make sure to check the predicate
--- is not vacuously true. Here's an example that is not vacuous:
---
---  >>> let pred' = do { x <- forall "x"; constrain $ x .> 6; return $ x .>= (5 :: SWord8) }
---
--- This time the proof passes as expected:
---
---  >>> prove pred'
---  Q.E.D.
---
--- And the proof is not vacuous:
---
---  >>> isVacuous pred'
---  False
+-- | Add a constraint, any satisfying instance must satisfy this condition.
 constrain :: SBool -> Symbolic ()
 constrain c = addConstraint Nothing Nothing c (bnot c)
 

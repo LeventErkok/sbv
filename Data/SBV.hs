@@ -815,9 +815,44 @@ which can be enabled by the following tactic:
 
 See "Data.SBV.Examples.Misc.UnsatCore" for an example use case.
 
-=== Constraint vacuity
+=== Adding arbitrary constraints
+Adding arbitrary constraints. When adding constraints, one has to be careful about
+making sure they are not inconsistent. The function 'isVacuous' can be use for this purpose.
+Here is an example. Consider the following predicate:
 
-SBV does not check that a given constraints is not vacuous. That is, that it can never be satisfied. This is usually
+    >>> let pred = do { x <- forall "x"; constrain $ x .< x; return $ x .>= (5 :: SWord8) }
+
+This predicate asserts that all 8-bit values are larger than 5, subject to the constraint that the
+values considered satisfy @x .< x@, i.e., they are less than themselves. Since there are no values that
+satisfy this constraint, the proof will pass vacuously:
+
+    >>> prove pred
+    Q.E.D.
+
+We can use 'isVacuous' to make sure to see that the pass was vacuous:
+
+    >>> isVacuous pred
+    True
+
+While the above example is trivial, things can get complicated if there are multiple constraints with
+non-straightforward relations; so if constraints are used one should make sure to check the predicate
+is not vacuously true. Here's an example that is not vacuous:
+
+     >>> let pred' = do { x <- forall "x"; constrain $ x .> 6; return $ x .>= (5 :: SWord8) }
+
+This time the proof passes as expected:
+
+     >>> prove pred'
+     Q.E.D.
+
+And the proof is not vacuous:
+
+     >>> isVacuous pred'
+     False
+
+=== Checking constraint vacuity
+
+As we discussed SBV does not check that a given constraints is not vacuous. That is, that it can never be satisfied. This is usually
 the right behavior, since checking vacuity can be costly. The functions 'isVacuous' and 'isVacuousWith' should be used
 to explicitly check for constraint vacuity if desired. Alternatively, the tactic:
 
