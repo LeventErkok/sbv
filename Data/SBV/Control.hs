@@ -29,6 +29,9 @@ module Data.SBV.Control (
      -- * Extracting the unsat core
      , getUnsatCore
 
+     -- * Extracting a proof
+     , getProof
+
      -- * Getting solver information
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..)
      , getInfo

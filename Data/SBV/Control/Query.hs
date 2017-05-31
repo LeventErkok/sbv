@@ -15,7 +15,7 @@
 module Data.SBV.Control.Query (
        assert, namedAssert
      , send, ask
-     , CheckSatResult(..), checkSat, checkSatAssuming, getUnsatCore, push, pop, getAssertionStackDepth, reset
+     , CheckSatResult(..), checkSat, checkSatAssuming, getUnsatCore, getProof, push, pop, getAssertionStackDepth, reset
      , getValue, getModel
      , SMTOption(..), setOption
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
@@ -167,7 +167,7 @@ checkSatAssuming sBools = do
                                   , ""
                                   , "       tactic $ SetOptions [ProduceUnsatAssumptions True]"
                                   , ""
-                                  , "to make sure the solver is ready for producing unsat assumptions"
+                                  , "to make sure the solver is ready for producing unsat assumptions."
                                   ]
 
         mapM_ send $ concat declss
@@ -221,7 +221,7 @@ getUnsatCore = do
                                   , ""
                                   , "       tactic $ SetOptions [ProduceUnsatCores True]"
                                   , ""
-                                  , "to make sure the solver is ready for producing unsat cores"
+                                  , "to make sure the solver is ready for producing unsat cores."
                                   ]
 
 
@@ -233,6 +233,32 @@ getUnsatCore = do
         parse r bad $ \case
            EApp es | Just xs <- mapM fromECon es -> return xs
            _                                     -> bad r Nothing
+
+-- | Retrieve the proof. Note you must have arranged for
+-- unsat cores to be produced first (/via/ @tactic $ SetOptions [ProduceProofs True]@)
+-- for this call to not error out!
+--
+-- A proof is simply a 'String', as returned by the solver. We return an 'Either' type,
+-- with the 'Left' choice if something goes wrong with an explanation. In the future, SBV might
+-- provide a better datatype, depending on the use cases. Please get in touch if you
+-- use this function and can suggest a better API.
+getProof :: Query String
+getProof = do
+        let cmd = "(get-proof)"
+            bad = unexpected "getProof" cmd "a get-proof response"
+                           $ Just [ "Make sure you use:"
+                                  , ""
+                                  , "       tactic $ SetOptions [ProduceProofs True]"
+                                  , ""
+                                  , "to make sure the solver is ready for producing proofs."
+                                  ]
+
+
+        r <- ask cmd
+
+        -- we only care about the fact that we can parse the output, so the
+        -- result of parsing is ignored.
+        parse r bad $ \_ -> return r
 
 -- | Make an assignment. The type 'Assignment' is abstract, see 'success' for an example use case.
 infix 1 |->
