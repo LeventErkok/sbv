@@ -25,7 +25,7 @@ check () {
   fi
 
   echo -n "\rChecking:" "$what"
-  /usr/local/bin/wget -q --spider --tries=1 --timeout=5 "$what"
+  wget -q --spider --tries=1 --timeout=5 "$what"
   ans=$?
   if [ ! $ans -eq 0 ]; then
     clearLine
