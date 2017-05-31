@@ -28,9 +28,10 @@ install:
 	@cabal install --force-reinstalls
 	@tput smam
 
+# NB. Don't use cabal test in this target; we want to see the verbose output.
 test: install doctest
 	@tput rmam
-	@SBV_Z3=doesnotexist $(TIME) cabal test SBVBasicTests
+	@SBV_Z3=doesnotexist $(TIME) ./dist/build/SBVBasicTests/SBVBasicTests
 	@                    $(TIME) ./dist/build/int-test-extended/int-test-extended -p '**' -j 4
 	@tput smam
 
