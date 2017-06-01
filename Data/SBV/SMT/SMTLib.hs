@@ -70,7 +70,7 @@ toSMTLib2 = cvt SMTLib2
          where sorts = [s | KUserSort s _ <- Set.toList kindInfo]
                solverCaps = capabilities (solver config)
                unsupported w = error $ unlines [ "SBV: Given problem needs " ++ w
-                                               , "*** Which is not supported by SBV for the chosen solver: " ++ capSolverName solverCaps
+                                               , "*** Which is not supported by SBV for the chosen solver: " ++ show (name (solver config))
                                                ]
                unsupportedAll w = error $ unlines [ "SBV: Given problem needs " ++ w
                                                   , "*** Which is not supported by SBV."

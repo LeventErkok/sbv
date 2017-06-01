@@ -28,8 +28,7 @@ mathSAT = SMTSolver {
          , options      = ["-input=smt2", "-theory.fp.minmax_zero_mode=4"]
          , engine       = standardEngine "SBV_MATHSAT" "SBV_MATHSAT_OPTIONS" modConfig addTimeOut standardModel
          , capabilities = SolverCapabilities {
-                                capSolverName              = "MathSAT"
-                              , supportsDefineFun          = True
+                                supportsDefineFun          = True
                               , supportsProduceModels      = True
                               , supportsQuantifiers        = True
                               , supportsUninterpretedSorts = True

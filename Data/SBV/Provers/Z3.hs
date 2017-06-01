@@ -75,8 +75,7 @@ z3 = SMTSolver {
                                     standardSolver cfg' ctx script id (replicate nModels . ProofError cfg') (mkResult cfg' (extractMap isSat qinps))
 
          , capabilities   = SolverCapabilities {
-                                  capSolverName              = "Z3"
-                                , supportsDefineFun          = True
+                                  supportsDefineFun          = True
                                 , supportsProduceModels      = True
                                 , supportsQuantifiers        = True
                                 , supportsUninterpretedSorts = True
