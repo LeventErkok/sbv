@@ -86,7 +86,9 @@ uploadDocs:
 	@buildUtils/hackage-docs
 
 checkLinks:
+	@tput rmam
 	@buildUtils/checkLinks
+	@tput smam
 
 testInterfaces:
 	make -C buildUtils
