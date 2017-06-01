@@ -27,7 +27,7 @@ p = do a <- sInteger "a"
        -- create named constraints, which will allow
        -- unsat-core extraction with the given names
        namedConstraint "less than 5"  $ a .< 5
-       namedConstraint "more than 10" $ a .> (10::SInteger)
+       namedConstraint "more than 10" $ a .> 10
        namedConstraint "irrelevant"   $ a .> b
 
 -- | Extract the unsat-core of 'p'. We have:
