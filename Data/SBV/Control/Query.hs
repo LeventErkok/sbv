@@ -12,9 +12,10 @@
 {-# LANGUAGE LambdaCase     #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Data.SBV.Control.Query (
-       assert, namedAssert
-     , send, ask
+       send, ask
      , CheckSatResult(..), checkSat, checkSatAssuming, getUnsatCore, getProof, push, pop, getAssertionStackDepth, reset
      , getValue, getModel
      , SMTOption(..), setOption
@@ -107,15 +108,18 @@ getInfo flag = do
                  EApp (ECon ":version" : o)                                -> return $ Resp_Version (serialize (EApp o))
                  _                                                         -> return $ Resp_InfoKeyword (serialize pe)
 
--- | Assert a new constraint. Analogous to 'Data.SBV.constrain'.
-assert :: SBool -> Query ()
-assert s = do sw <- inNewContext (`sbvToSW` s)
-              send $ "(assert " ++ show sw ++ ")"
+-- | 'Query' as a 'Constraint' container.
+instance Constrainable Query where
+   constrain          = addQueryConstraint Nothing
+   namedConstraint nm = addQueryConstraint (Just nm)
 
--- | Assert a new constraint, with a name. Useful for unsat-core extraction. Analogous to 'Data.SBV.namedConstraint'.
-namedAssert :: String -> SBool -> Query ()
-namedAssert nm s = do sw <- inNewContext (`sbvToSW` s)
-                      send $ "(assert " ++ annotateWithName nm (show sw) ++ ")"
+-- | Adding a constraint, possibly named. Only used internally.
+-- Use 'constrain' and 'namedConstraint' from user programs.
+addQueryConstraint :: Maybe String -> SBool -> Query ()
+addQueryConstraint mbNm b = do sw <- inNewContext (`sbvToSW` b)
+                               send $ "(assert " ++ mkNamed mbNm (show sw)  ++ ")"
+   where mkNamed Nothing   s = s
+         mkNamed (Just nm) s = annotateWithName nm s
 
 -- | Check for satisfiability.
 checkSat :: Query CheckSatResult

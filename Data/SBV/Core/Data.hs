@@ -38,7 +38,7 @@ module Data.SBV.Core.Data
  , Op(..), PBOp(..), FPOp(..), NamedSymVar, getTableIndex
  , SBVPgm(..), Symbolic, SExecutable(..), runSymbolic, runSymbolic', State, getPathCondition, extendPathCondition
  , inProofMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
- , addConstraint, internalVariable, internalConstraint, isCodeGenMode
+ , Constrainable(..), addConstraint, internalVariable, internalConstraint, isCodeGenMode
  , SBVType(..), newUninterpreted, addAxiom
  , Quantifier(..), needsExistentials
  , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension, smtLibReservedNames
@@ -227,6 +227,14 @@ sbvToSymSW :: SBV a -> Symbolic SW
 sbvToSymSW sbv = do
         st <- ask
         liftIO $ sbvToSW st sbv
+
+-- | A computation that can be constrained with a boolean condition. This class
+-- is used internally and not otherwise exported from SBV.
+class Constrainable m where
+   -- | Add a constraint, any satisfying instance must satisfy this condition
+   constrain       :: SBool -> m ()
+   -- | Add a named constraint. The name is used in unsat-core extraction.
+   namedConstraint :: String -> SBool -> m ()
 
 -- | A class representing what can be returned from a symbolic computation.
 class Outputtable a where

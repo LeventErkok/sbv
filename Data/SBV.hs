@@ -179,10 +179,12 @@ module Data.SBV (
 
   -- * Symbolic Equality and Comparisons
   , EqSymbolic(..), OrdSymbolic(..)
+
   -- * Constraints
-  -- ** Adding constraints
   -- $constrainIntro
-  , constrain, namedConstraint, pConstrain, isVacuous, isVacuousWith
+  , constrain, namedConstraint, pConstrain
+  -- ** Checking vacuity
+  , isVacuous, isVacuousWith
   -- ** Cardinality constraints
   -- $cardIntro
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
@@ -960,7 +962,8 @@ can take a look at the engine state and issue commands to guide the proof. This 
 as the user is given full access to the underlying SMT solver, so the usual protections provided by
 SBV are no longer there to prevent mistakes.
 
-TODO: Need better text/example here.
+We are currently not advertising queries widely, this is a beta release for early adapters. Upcoming
+releases will be more user friendly!
 -}
 
 {-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}

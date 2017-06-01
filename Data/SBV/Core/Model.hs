@@ -28,7 +28,7 @@ module Data.SBV.Core.Model (
   , oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
-  , constrain, namedConstraint, pConstrain, tactic, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
+  , pConstrain, tactic, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
   , sRealToSInteger, label
@@ -1717,14 +1717,10 @@ instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymW
   sbvUninterpret mbCgData nm = let f = sbvUninterpret (uc7 `fmap` mbCgData) nm in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6
     where uc7 (cs, fn) = (cs, \a b c d e f g -> fn (a, b, c, d, e, f, g))
 
--- | Add a constraint, any satisfying instance must satisfy this condition.
-constrain :: SBool -> Symbolic ()
-constrain c = addConstraint Nothing Nothing c (bnot c)
-
--- | A version of constrain, that also attaches a name. This variant is useful
--- for extracting unsat cores.
-namedConstraint :: String -> SBool -> Symbolic ()
-namedConstraint nm c = addConstraint (Just nm) Nothing c (bnot c)
+-- | Symbolic computations can be constrained, limiting the values variables can take.
+instance Constrainable Symbolic where
+   constrain          c = addConstraint Nothing   Nothing c (bnot c)
+   namedConstraint nm c = addConstraint (Just nm) Nothing c (bnot c)
 
 -- | Adding a probabilistic constraint. The 'Double' argument is the probability
 -- threshold. Probabilistic constraints are useful for 'genTest' and 'quickCheck'

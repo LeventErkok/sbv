@@ -10,46 +10,47 @@
 -----------------------------------------------------------------------------
 
 module Data.SBV.Control (
-     -- * Adding new assertions
-       assert, namedAssert
-
-     -- * Sending an arbitrary string
-     , send, ask
-
      -- * Checking satisfiability
-     , CheckSatResult(..), checkSat, checkSatAssuming
+       CheckSatResult(..), checkSat, checkSatAssuming
 
-     -- * Extracting values
+     -- * Querying the solver
+     -- ** Extracting values
      , getValue, getModel
 
-     -- * Controlling the solver behavior
-     , SMTOption(..), setOption
-     , ignoreExitCode
-
-     -- * Extracting the unsat core
+     -- ** Extracting the unsat core
      , getUnsatCore
 
-     -- * Extracting a proof
+     -- ** Extracting a proof
      , getProof
 
      -- * Getting solver information
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..)
      , getInfo
 
-     -- * Constructing assignments
-     , (|->)
 
      -- * Entering and exiting assertion stack
      , getAssertionStackDepth, push, pop, reset
 
-     -- * Terminating the query
+     -- * Communicating results back
+     -- ** Constructing assignments
+     , (|->)
+
+     -- ** Terminating the query
      , sbvResume
      , result
      , success
      , failure
 
+     -- * Controlling the solver behavior
+     , SMTOption(..), setOption
+     , ignoreExitCode
+
      -- * Performing actions
      , io
+
+     -- * Sending an arbitrary string
+     -- $sendStringInfo
+     , send, ask
 
      -- * Logics supported
      , Logic(..)
@@ -57,3 +58,9 @@ module Data.SBV.Control (
      ) where
 
 import Data.SBV.Control.Query
+
+{- $sendStringInfo
+In rare cases it might be necessary to send an arbitrary string down to the solver. Needless to say, this
+should be avoided if at all possible. Users should prefer the provided API. If you do find yourself
+needing 'send' and 'ask' directly, please get in touch to see if SBV can support a typed API for your use case.
+-}
