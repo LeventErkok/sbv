@@ -33,6 +33,9 @@ import Data.SBV.Tools.CodeGen
 import Data.SBV.Tools.Polynomial
 
 import Data.List (transpose)
+import Data.Maybe (fromJust)
+
+import Numeric (showHex)
 
 -----------------------------------------------------------------------------
 -- * Formalizing GF(2^8)
@@ -358,7 +361,7 @@ aesDecrypt ct decKS
 
 -- | 128-bit encryption test, from Appendix C.1 of the AES standard:
 --
--- >>> map hex t128Enc
+-- >>> map hex8 t128Enc
 -- ["69c4e0d8","6a7b0430","d8cdb780","70b4c55a"]
 --
 t128Enc :: [SWord32]
@@ -369,7 +372,7 @@ t128Enc = aesEncrypt pt ks
 
 -- | 128-bit decryption test, from Appendix C.1 of the AES standard:
 --
--- >>> map hex t128Dec
+-- >>> map hex8 t128Dec
 -- ["00112233","44556677","8899aabb","ccddeeff"]
 --
 t128Dec :: [SWord32]
@@ -384,7 +387,7 @@ t128Dec = aesDecrypt ct ks
 
 -- | 192-bit encryption test, from Appendix C.2 of the AES standard:
 --
--- >>> map hex t192Enc
+-- >>> map hex8 t192Enc
 -- ["dda97ca4","864cdfe0","6eaf70a0","ec0d7191"]
 --
 t192Enc :: [SWord32]
@@ -395,7 +398,7 @@ t192Enc = aesEncrypt pt ks
 
 -- | 192-bit decryption test, from Appendix C.2 of the AES standard:
 --
--- >>> map hex t192Dec
+-- >>> map hex8 t192Dec
 -- ["00112233","44556677","8899aabb","ccddeeff"]
 --
 t192Dec :: [SWord32]
@@ -410,7 +413,7 @@ t192Dec = aesDecrypt ct ks
 
 -- | 256-bit encryption, from Appendix C.3 of the AES standard:
 --
--- >>> map hex t256Enc
+-- >>> map hex8 t256Enc
 -- ["8ea2b7ca","516745bf","eafc4990","4b496089"]
 --
 t256Enc :: [SWord32]
@@ -421,7 +424,7 @@ t256Enc = aesEncrypt pt ks
 
 -- | 256-bit decryption, from Appendix C.3 of the AES standard:
 --
--- >>> map hex t256Dec
+-- >>> map hex8 t256Dec
 -- ["00112233","44556677","8899aabb","ccddeeff"]
 --
 t256Dec :: [SWord32]
@@ -579,6 +582,12 @@ aes128LibComponents = [ ("aes128KeySchedule",  keySchedule)
 -- somewhat simplistically, so these numbers should be considered very rough estimates.)
 cgAES128Library :: IO ()
 cgAES128Library = compileToCLib Nothing "aes128Lib" aes128LibComponents
+
+--------------------------------------------------------------------------------------------
+-- | For doctest purposes only
+hex8 :: (SymWord a, Show a, Integral a) => SBV a -> String
+hex8 v = replicate (8 - length s) '0' ++ s
+  where s = flip showHex "" . fromJust . unliteral $ v
 
 {-# ANN aesRound    ("HLint: ignore Use head" :: String) #-}
 {-# ANN aesInvRound ("HLint: ignore Use head" :: String) #-}

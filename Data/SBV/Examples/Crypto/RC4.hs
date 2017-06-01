@@ -26,6 +26,8 @@ import Data.SBV
 
 import Data.SBV.Tools.STree
 
+import Numeric (showHex)
+
 -----------------------------------------------------------------------------
 -- * Types
 -----------------------------------------------------------------------------
@@ -97,13 +99,13 @@ keyScheduleString = keySchedule . map (literal . fromIntegral . ord)
 -- | RC4 encryption. We generate key-words and xor it with the input. The
 -- following test-vectors are from Wikipedia <http://en.wikipedia.org/wiki/RC4>:
 --
--- >>> concatMap hex $ encrypt "Key" "Plaintext"
+-- >>> concatMap hex2 $ encrypt "Key" "Plaintext"
 -- "bbf316e8d940af0ad3"
 --
--- >>> concatMap hex $ encrypt "Wiki" "pedia"
+-- >>> concatMap hex2 $ encrypt "Wiki" "pedia"
 -- "1021bf0420"
 --
--- >>> concatMap hex $ encrypt "Secret" "Attack at dawn"
+-- >>> concatMap hex2 $ encrypt "Secret" "Attack at dawn"
 -- "45a01f645fc35b383552544b9bf5"
 encrypt :: String -> String -> [SWord8]
 encrypt key pt = zipWith xor (keyScheduleString key) (map cvt pt)
@@ -143,3 +145,9 @@ rc4IsCorrect = prove $ do
             ct  = zipWith xor ks pt
             pt' = zipWith xor ks ct
         return $ pt .== pt'
+
+--------------------------------------------------------------------------------------------
+-- | For doctest purposes only
+hex2 :: (SymWord a, Show a, Integral a) => SBV a -> String
+hex2 v = replicate (2 - length s) '0' ++ s
+  where s = flip showHex "" . fromJust . unliteral $ v

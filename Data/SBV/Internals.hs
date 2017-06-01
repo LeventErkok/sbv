@@ -22,7 +22,7 @@ module Data.SBV.Internals (
   , module Data.SBV.Core.Data
 
   -- * Operations useful for instantiating SBV type classes
-  , genLiteral, genFromCW, genMkSymVar, checkAndConvert, genParse, showModel, SMTModel(..), liftQRem, liftDMod
+  , genLiteral, genFromCW, CW(..), genMkSymVar, checkAndConvert, genParse, showModel, SMTModel(..), liftQRem, liftDMod
 
   -- * Getting SMT-Lib output (for offline analysis)
   , compileToSMTLib, generateSMTBenchmarks
@@ -35,6 +35,12 @@ module Data.SBV.Internals (
 
   -- * Various math utilities around floats
   , module Data.SBV.Utils.Numeric
+
+  -- * Pretty number printing
+  , module Data.SBV.Utils.PrettyNum
+
+  -- * Timing computations
+  , module Data.SBV.Utils.TDiff
   ) where
 
 import Data.SBV.Core.Data
@@ -50,5 +56,8 @@ import Data.SBV.Provers.Prover (compileToSMTLib, generateSMTBenchmarks)
 import Data.SBV.SMT.SMT (genParse, showModel)
 
 import Data.SBV.Utils.Numeric
+
+import Data.SBV.Utils.TDiff
+import Data.SBV.Utils.PrettyNum
 
 {-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}

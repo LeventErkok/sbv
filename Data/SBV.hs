@@ -143,7 +143,7 @@ module Data.SBV (
   , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReals, sFloats, sDoubles
 
   -- *** Abstract SBV type
-  , SBV
+  , SBV, HasKind(..), Kind(..)
   -- *** Arrays of symbolic values
   , SymArray(..), SArray, SFunArray, mkSFunArray
 
@@ -172,10 +172,6 @@ module Data.SBV (
   , Boolean(..)
   -- *** Generalizations of boolean operations
   , bAnd, bOr, bAny, bAll
-  -- ** Pretty-printing and reading numbers in Hex & Binary
-  , PrettyNum(..), readBin
-  -- * Checking satisfiability in path conditions
-  , isSatisfiableInCurrentPath
 
   -- * Uninterpreted sorts, constants, and functions
   -- $uninterpreted
@@ -183,7 +179,11 @@ module Data.SBV (
 
   -- * Symbolic Equality and Comparisons
   , EqSymbolic(..), OrdSymbolic(..)
-  -- * Cardinality constraints
+  -- * Constraints
+  -- ** Adding constraints
+  -- $constrainIntro
+  , constrain, namedConstraint, pConstrain, isVacuous, isVacuousWith
+  -- ** Cardinality constraints
   -- $cardIntro
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
 
@@ -204,14 +204,11 @@ module Data.SBV (
   , sAssert, safe, safeWith, isSafe, SExecutable(..)
   -- ** Finding all satisfying assignments
   , allSat, allSatWith
+  -- ** Checking satisfiability in path conditions
+  , isSatisfiableInCurrentPath
   -- ** Satisfying a sequence of boolean conditions
   , solve
-  -- ** Adding constraints
-  -- $constrainIntro
-  , constrain, namedConstraint, pConstrain
 
-  -- ** Checking constraint vacuity
-  , isVacuous, isVacuousWith
   -- ** Quick-checking
   , sbvQuickCheck
 
@@ -247,7 +244,6 @@ module Data.SBV (
   -- * SMT Interface: Configurations and solvers
   , SMTConfig(..), SMTLibVersion(..), Solver(..), SMTSolver(..)
   , boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
-  , Timing(..), TimedStep(..), TimingInfo, showTDiff, CW(..), HasKind(..), Kind(..), cwToBool
 
   -- * Symbolic computations
   , Symbolic, output, SymWord(..)
@@ -274,8 +270,6 @@ import Data.SBV.Core.Splittable
 import Data.SBV.Provers.Prover
 
 import Data.SBV.Utils.Boolean
-import Data.SBV.Utils.TDiff
-import Data.SBV.Utils.PrettyNum
 
 import Data.Bits
 import Data.Int
@@ -791,10 +785,10 @@ will fail it.
 
 The following properties hold:
 
-  @
+ @
     'constrain'      = 'pConstrain' 1
     'pConstrain' t c = 'pConstrain' (1-t) (not c)
-  @
+ @
 
 Note that while 'constrain' can be used freely, 'pConstrain' is only allowed in the contexts of
 'genTest' or 'quickCheck'. Calls to 'pConstrain' in a prove/sat call will be rejected as SBV does not
@@ -815,8 +809,9 @@ which can be enabled by the following tactic:
 
 See "Data.SBV.Examples.Misc.UnsatCore" for an example use case.
 
-=== Adding arbitrary constraints
-Adding arbitrary constraints. When adding constraints, one has to be careful about
+=== Constraint vacuity
+
+When adding constraints, one has to be careful about
 making sure they are not inconsistent. The function 'isVacuous' can be use for this purpose.
 Here is an example. Consider the following predicate:
 
@@ -850,7 +845,7 @@ And the proof is not vacuous:
      >>> isVacuous pred'
      False
 
-=== Checking constraint vacuity
+=== Checking for vacuity
 
 As we discussed SBV does not check that a given constraints is not vacuous. That is, that it can never be satisfied. This is usually
 the right behavior, since checking vacuity can be costly. The functions 'isVacuous' and 'isVacuousWith' should be used
