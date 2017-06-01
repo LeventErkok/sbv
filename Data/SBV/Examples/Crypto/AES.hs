@@ -7,7 +7,7 @@
 -- Stability   :  experimental
 --
 -- An implementation of AES (Advanced Encryption Standard), using SBV.
--- For details on AES, see FIPS-197: <http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf>.
+-- For details on AES, see FIPS-197: <https://doi.org/10.6028/NIST.FIPS.197>.
 --
 -- We do a T-box implementation, which leads to good C code as we can take
 -- advantage of look-up tables. Note that we make virtually no attempt to
