@@ -30,20 +30,22 @@ p = do a <- sInteger "a"
        namedConstraint "more than 10" $ a .> 10
        namedConstraint "irrelevant"   $ a .> b
 
+       -- To obtain the unsat-core, we run a query
+       query $ do cs <- checkSat
+                  case cs of
+                    Unsat -> do core <- getUnsatCore
+                                io $ putStrLn $ "Unsat core is: " ++ show core
+                    _     -> io $ putStrLn "Problem is satisfiable."
+
+                  -- Just resume as SBV would
+                  sbvResume
+
 -- | Extract the unsat-core of 'p'. We have:
 --
 -- >>> ucCore
--- Unsatisfiable. Unsat core:
---   less than 5
---   more than 10
--- =====================================
 -- Unsat core is: ["less than 5","more than 10"]
+-- Unsatisfiable
 --
 -- Demonstrating that the constraint @a .> b@ is /not/ needed for unsatisfiablity in this case.
 ucCore :: IO ()
-ucCore = do r <- sat p
-            print r
-            putStrLn "====================================="
-            case extractUnsatCore r of
-              Nothing -> putStrLn "No unsat core!"
-              Just xs -> putStrLn $ "Unsat core is: " ++ show xs
+ucCore = print =<< sat p
