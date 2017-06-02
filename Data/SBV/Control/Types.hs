@@ -77,19 +77,30 @@ instance Show SMTInfoFlag where
 -- | Option values that can be set in the solver. Note that not
 -- all solvers may support all of these!
 data SMTOption = DiagnosticOutputChannel FilePath
-               | RandomSeed              Integer
-               | SetLogic                Logic
-               | ProduceUnsatCores       Bool
-               | ProduceUnsatAssumptions Bool
+               -- | :global-declarations b_value
+               -- | :interactive-mode b_value
+               -- | :print-success b_value
+               -- | :produce-assertions b_value
+               -- | :produce-assignments b_value
+               -- | :produce-models b_value
                | ProduceProofs           Bool
+               | ProduceUnsatAssumptions Bool
+               | ProduceUnsatCores       Bool
+               | RandomSeed              Integer
+               -- | :regular-output-channel string
+               -- | :reproducible-resource-limit numeral
+               -- | :verbosity numeral
+               -- Strictly speaking, the following is not an option; but it fits well here.
+               -- I think that's a wart in the SMTLib document itself.
+               | SetLogic                Logic
 
 instance NFData SMTOption where
   rnf (DiagnosticOutputChannel f) = rnf f `seq` ()
+  rnf (ProduceProofs b)           = rnf b `seq` ()
+  rnf (ProduceUnsatAssumptions b) = rnf b `seq` ()
+  rnf (ProduceUnsatCores b)       = rnf b `seq` ()
   rnf (RandomSeed i)              = rnf i `seq` ()
   rnf (SetLogic l)                = rnf l `seq` ()
-  rnf (ProduceUnsatCores b)       = rnf b `seq` ()
-  rnf (ProduceUnsatAssumptions b) = rnf b `seq` ()
-  rnf (ProduceProofs b)           = rnf b `seq` ()
 
 -- SMTLib's True/False is spelled differently than Haskell's.
 smtBool :: Bool -> String
@@ -99,12 +110,10 @@ smtBool False = "false"
 -- Show instance for SMTOption maintains smt-lib format per the SMTLib2 standard document.
 instance Show SMTOption where
   show (DiagnosticOutputChannel f) = unwords [":diagnostic-output-channel", show f]
-  show (RandomSeed              i) = unwords [":random-seed",               show i]
-  show (ProduceUnsatCores       b) = unwords [":produce-unsat-cores",       smtBool b]
-  show (ProduceUnsatAssumptions b) = unwords [":produce-unsat-assumptions", smtBool b]
   show (ProduceProofs           b) = unwords [":produce-proofs",            smtBool b]
-  -- Strictly speaking SetLogic is not an option but a command. But I think that's a wart in SMTLib. We're careful in how we process
-  -- this though, so no worries.
+  show (ProduceUnsatAssumptions b) = unwords [":produce-unsat-assumptions", smtBool b]
+  show (ProduceUnsatCores       b) = unwords [":produce-unsat-cores",       smtBool b]
+  show (RandomSeed              i) = unwords [":random-seed",               show i]
   show (SetLogic                i) = show i
 
 -- | SMT-Lib logics. If left unspecified SBV will pick the logic based on what it determines is needed. However, the
