@@ -28,9 +28,7 @@ yices = SMTSolver {
          , options      = []
          , engine       = standardEngine "SBV_YICES" "SBV_YICES_OPTIONS" modConfig addTimeOut standardModel
          , capabilities = SolverCapabilities {
-                                supportsDefineFun          = True
-                              , supportsProduceModels      = True
-                              , supportsQuantifiers        = False
+                                supportsQuantifiers        = False
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
                               , supportsReals              = True
@@ -38,8 +36,6 @@ yices = SMTSolver {
                               , supportsDoubles            = False
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
-                              , supportsUnsatCores         = False
-                              , supportsProofs             = True
                               , supportsCustomQueries      = True
                               }
          }

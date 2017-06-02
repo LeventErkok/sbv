@@ -82,7 +82,7 @@ tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
 cvt :: SMTLibConverter [String]
-cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out config caseCond = pgm
+cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out cfg caseCond = pgm
   where hasInteger     = KUnbounded `Set.member` kindInfo
         hasReal        = KReal      `Set.member` kindInfo
         hasFloat       = KFloat     `Set.member` kindInfo
@@ -90,8 +90,8 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
         hasBVs         = not $ null [() | KBounded{} <- Set.toList kindInfo]
         usorts         = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
         hasNonBVArrays = (not . null) [() | (_, (_, (k1, k2), _)) <- arrs, not (isBounded k1 && isBounded k2)]
-        rm             = roundingMode config
-        solverCaps     = capabilities (solver config)
+        rm             = roundingMode cfg
+        solverCaps     = capabilities (solver cfg)
 
         -- a variant of listToMaybe that is more strict
         findOption _ []  = Nothing
@@ -101,7 +101,7 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
         -- Determining the logic is surprisingly tricky!
         logic
            -- user told us what to do: so just take it:
-           | Just l <- findOption "SetLogic" [l | SetLogic l <- solverSetOptions config]
+           | Just l <- findOption "SetLogic" [l | SetLogic l <- solverSetOptions cfg]
            = ["(set-logic " ++ show l ++ ") ; NB. User specified."]
 
            -- Otherwise, we try to determine the most suitable logic.
@@ -128,34 +128,28 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
                 ufs | null uis && null tbls    = ""     -- we represent tables as UFs
                     | True                     = "UF"
 
-        getModels
-          | supportsProduceModels solverCaps = ["(set-option :produce-models true)"]
-          | True                             = []
+        getModels = ["(set-option :produce-models true)"]
 
         unsatCore
-          | Just o@(ProduceUnsatCores True) <- findOption "ProduceUnsatCores" [uc | uc@ProduceUnsatCores{} <- solverSetOptions config]
-          = if supportsUnsatCores solverCaps
-               then ["(set-option " ++ show o ++ ")"]
-               else error $ "SBV: unsat cores are requested, but the backend solver " ++ show (solver config) ++ " doesn't support them!"
+          | Just o@(ProduceUnsatCores True) <- findOption "ProduceUnsatCores" [uc | uc@ProduceUnsatCores{} <- solverSetOptions cfg]
+          = ["(set-option " ++ show o ++ ")"]
           | True
           = []
 
         proofs
-          | Just o@(ProduceProofs True) <- findOption "ProduceProofs" [pp | pp@ProduceProofs{} <- solverSetOptions config]
-          = if supportsProofs solverCaps
-               then ["(set-option " ++ show o ++ ")"]
-               else error $ "SBV: proofs are requested, but the backend solver " ++ show (solver config) ++ " doesn't support them!"
+          | Just o@(ProduceProofs True) <- findOption "ProduceProofs" [pp | pp@ProduceProofs{} <- solverSetOptions cfg]
+          = ["(set-option " ++ show o ++ ")"]
           | True
           = []
 
         unsatAssumptions
-          | Just o@(ProduceUnsatAssumptions True) <- findOption "ProduceUnsatAssumptions" [pp | pp@ProduceUnsatAssumptions{} <- solverSetOptions config]
+          | Just o@(ProduceUnsatAssumptions True) <- findOption "ProduceUnsatAssumptions" [pp | pp@ProduceUnsatAssumptions{} <- solverSetOptions cfg]
           = ["(set-option " ++ show o ++ ")"]
           | True
           = []
 
         -- process all other settings we're given
-        otherSettings = concatMap opts $ solverSetOptions config
+        otherSettings = concatMap opts $ solverSetOptions cfg
            where opts SetLogic{}                  = []     -- processed already
                  opts ProduceUnsatCores{}         = []     -- processed already
                  opts ProduceProofs{}             = []     -- processed already
@@ -178,7 +172,7 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
              ++ [ "; --- uninterpreted sorts ---" ]
              ++ concatMap declSort usorts
              ++ [ "; --- literal constants ---" ]
-             ++ concatMap (declConst config) consts
+             ++ map (declConst cfg) consts
              ++ [ "; --- skolem constants ---" ]
              ++ [ "(declare-fun " ++ show s ++ " " ++ swFunType ss s ++ ")" ++ userName s | Right (s, ss) <- skolemInps]
              ++ [ "; --- constant tables ---" ]
@@ -198,7 +192,7 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
                 | not (null foralls)
                 ]
 
-             ++ concatMap mkAssign asgns
+             ++ map mkAssign asgns
 
              ++ delayedAsserts delayedEqualities
 
@@ -302,8 +296,8 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
         asgns = F.toList asgnsSeq
 
         mkAssign a
-          | null foralls = declDef config skolemMap tableMap a
-          | True         = [letShift (mkLet a)]
+          | null foralls = declDef cfg skolemMap tableMap a
+          | True         = letShift (mkLet a)
 
         mkLet (s, SBVApp (Label m) [e]) = "(let ((" ++ show s ++ " " ++ cvtSW                skolemMap          e ++ ")) ; " ++ m
         mkLet (s, e)                    = "(let ((" ++ show s ++ " " ++ cvtExp solverCaps rm skolemMap tableMap e ++ "))"
@@ -331,33 +325,28 @@ noInteractive ss = error $ unlines $  "*** Data.SBV: Unsupported interactive/que
 
 -- | Convert in a query context
 cvtInc :: SMTLibIncConverter [String]
-cvtInc consts (SBVPgm asgnsSeq) cfg =  concatMap (declConst cfg)                    consts
-                                    ++ concatMap (declDef   cfg skolemMap tableMap) (F.toList asgnsSeq)
+cvtInc consts (SBVPgm asgnsSeq) cfg =  map (declConst cfg)                    consts
+                                    ++ map (declDef   cfg skolemMap tableMap) (F.toList asgnsSeq)
   where -- NB. The below setting of skolemMap to empty is OK, since we do
         -- not support queries in the context of skolemized variables
         skolemMap = M.empty
         tableMap  = noInteractive ["Programs with constant tabled data"]
 
-declDef :: SMTConfig -> SkolemMap -> TableMap -> (SW, SBVExpr) -> [String]
-declDef config skolemMap tableMap (s, expr) =
+declDef :: SMTConfig -> SkolemMap -> TableMap -> (SW, SBVExpr) -> String
+declDef cfg skolemMap tableMap (s, expr) =
         case expr of
-          SBVApp  (Label m) [e] -> defineFun config (s, cvtSW          skolemMap          e) (Just m)
-          e                     -> defineFun config (s, cvtExp caps rm skolemMap tableMap e) Nothing
-  where caps = capabilities (solver config)
-        rm   = roundingMode config
+          SBVApp  (Label m) [e] -> defineFun (s, cvtSW          skolemMap          e) (Just m)
+          e                     -> defineFun (s, cvtExp caps rm skolemMap tableMap e) Nothing
+  where caps = capabilities (solver cfg)
+        rm   = roundingMode cfg
 
-defineFun :: SMTConfig -> (SW, String) -> Maybe String -> [String]
-defineFun cfg (s, def) mbComment
-  | useDefFun = ["(define-fun "   ++ varT ++ " " ++ def ++ ")" ++ cmnt]
-  | True      = [ "(declare-fun " ++ varT ++ ")" ++ cmnt
-                , "(assert (= "   ++ show s ++ " " ++ def ++ "))"
-                ]
+defineFun :: (SW, String) -> Maybe String -> String
+defineFun (s, def) mbComment = "(define-fun "   ++ varT ++ " " ++ def ++ ")" ++ cmnt
   where varT      = show s ++ " " ++ swFunType [] s
         cmnt      = maybe "" (" ; " ++) mbComment
-        useDefFun = supportsDefineFun (capabilities (solver cfg))
 
-declConst :: SMTConfig -> (SW, CW) -> [String]
-declConst cfg (s, c) = defineFun cfg (s, cvtCW (roundingMode cfg) c) Nothing
+declConst :: SMTConfig -> (SW, CW) -> String
+declConst cfg (s, c) = defineFun (s, cvtCW (roundingMode cfg) c) Nothing
 
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = ["(declare-fun " ++ i ++ " " ++ cvtType t ++ ")"]

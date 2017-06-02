@@ -28,9 +28,7 @@ mathSAT = SMTSolver {
          , options      = ["-input=smt2", "-theory.fp.minmax_zero_mode=4"]
          , engine       = standardEngine "SBV_MATHSAT" "SBV_MATHSAT_OPTIONS" modConfig addTimeOut standardModel
          , capabilities = SolverCapabilities {
-                                supportsDefineFun          = True
-                              , supportsProduceModels      = True
-                              , supportsQuantifiers        = True
+                                supportsQuantifiers        = True
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
                               , supportsReals              = True
@@ -38,8 +36,6 @@ mathSAT = SMTSolver {
                               , supportsDoubles            = True
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
-                              , supportsUnsatCores         = True
-                              , supportsProofs             = True
                               , supportsCustomQueries      = True
                               }
          }

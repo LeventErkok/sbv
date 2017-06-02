@@ -26,9 +26,7 @@ boolector = SMTSolver {
          , options      = ["--smt2", "--smt2-model", "--no-exit-codes"]
          , engine       = standardEngine "SBV_BOOLECTOR" "SBV_BOOLECTOR_OPTIONS" modConfig addTimeOut standardModel
          , capabilities = SolverCapabilities {
-                                supportsDefineFun          = False
-                              , supportsProduceModels      = True
-                              , supportsQuantifiers        = False
+                                supportsQuantifiers        = False
                               , supportsUninterpretedSorts = False
                               , supportsUnboundedInts      = False
                               , supportsReals              = False
@@ -36,8 +34,6 @@ boolector = SMTSolver {
                               , supportsDoubles            = False
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
-                              , supportsUnsatCores         = False
-                              , supportsProofs             = True
                               , supportsCustomQueries      = True
                               }
          }

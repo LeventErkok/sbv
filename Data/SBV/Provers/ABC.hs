@@ -26,9 +26,7 @@ abc = SMTSolver {
          , options      = ["-S", "%blast; &sweep -C 5000; &syn4; &cec -s -m -C 2000"]
          , engine       = standardEngine "SBV_ABC" "SBV_ABC_OPTIONS" id addTimeOut standardModel
          , capabilities = SolverCapabilities {
-                                supportsDefineFun          = True
-                              , supportsProduceModels      = True
-                              , supportsQuantifiers        = False
+                                supportsQuantifiers        = False
                               , supportsUninterpretedSorts = False
                               , supportsUnboundedInts      = False
                               , supportsReals              = False
@@ -36,8 +34,6 @@ abc = SMTSolver {
                               , supportsDoubles            = False
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
-                              , supportsUnsatCores         = False
-                              , supportsProofs             = True
                               , supportsCustomQueries      = False
                               }
          }

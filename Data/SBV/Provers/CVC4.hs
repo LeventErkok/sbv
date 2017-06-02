@@ -28,9 +28,7 @@ cvc4 = SMTSolver {
          , options      = ["--lang", "smt"]
          , engine       = standardEngine "SBV_CVC4" "SBV_CVC4_OPTIONS" modConfig addTimeOut standardModel
          , capabilities = SolverCapabilities {
-                                supportsDefineFun          = True
-                              , supportsProduceModels      = True
-                              , supportsQuantifiers        = True
+                                supportsQuantifiers        = True
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
                               , supportsReals              = True  -- Not quite the same capability as Z3; but works more or less..
@@ -38,8 +36,6 @@ cvc4 = SMTSolver {
                               , supportsDoubles            = False
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
-                              , supportsUnsatCores         = True
-                              , supportsProofs             = True
                               , supportsCustomQueries      = True
                               }
          }
