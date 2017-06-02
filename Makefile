@@ -10,17 +10,23 @@ TSTSRCS = $(shell find . -name '*.hs' | grep -v SBVUnitTest | grep -v buildUtils
 
 ifeq ($(OS), Darwin)
 # OSX tends to sleep for long jobs; so run through caffeinate
-TIME      = /usr/bin/time caffeinate
+TIME = /usr/bin/time caffeinate
 else
-TIME      = /usr/bin/time
+TIME = /usr/bin/time
 endif
 
 BUILDTIMES = buildTimes.log
 
+ifeq (z$(MAKECMDGOALS), "zrelease")
 define startTimer
 	@tput rmam
 	@echo [`date +%T`] $(1) >> ${BUILDTIMES}
 endef
+else
+define startTimer
+	@tput rmam
+endef
+endif
 
 define endTimer
 	@tput smam
