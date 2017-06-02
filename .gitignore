@@ -5,3 +5,4 @@ TAGS
 .cabal-sandbox/
 .stack-work/
 stack.yaml
+buildTimes.log
