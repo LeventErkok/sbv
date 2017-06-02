@@ -19,7 +19,6 @@ import Data.Char     (isAlpha, toUpper)
 import Data.Function (on)
 import Data.List     (intercalate, groupBy)
 import Data.Maybe    (fromMaybe)
-import System.Random
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
@@ -43,15 +42,14 @@ genTest :: Outputtable a => Int -> Symbolic a -> IO TestVectors
 genTest n m = gen 0 []
   where gen i sofar
          | i == n = return $ TV $ reverse sofar
-         | True   = do g <- newStdGen
-                       t <- tc g
+         | True   = do t <- tc
                        gen (i+1) (t:sofar)
-        tc g = do (_, Result _ tvals _ _ cs _ _ _ _ _ cstrs _ _ _ os) <- runSymbolic' (Concrete g) (m >>= output)
-                  let cval = fromMaybe (error "Cannot generate tests in the presence of uninterpeted constants!") . (`lookup` cs)
-                      cond = all (cwToBool . cval . snd) cstrs
-                  if cond
-                     then return (map snd tvals, map cval os)
-                     else tc g  -- try again, with the same set of constraints
+        tc = do (_, Result _ tvals _ _ cs _ _ _ _ _ cstrs _ _ _ os) <- runSymbolic' Concrete (m >>= output)
+                let cval = fromMaybe (error "Cannot generate tests in the presence of uninterpeted constants!") . (`lookup` cs)
+                    cond = all (cwToBool . cval . snd) cstrs
+                if cond
+                   then return (map snd tvals, map cval os)
+                   else tc   -- try again, with the same set of constraints
 
 -- | Test output style
 data TestStyle = Haskell String                     -- ^ As a Haskell value with given name
