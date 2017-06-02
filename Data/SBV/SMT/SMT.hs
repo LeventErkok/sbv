@@ -615,15 +615,15 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
 
                     terminateSolver = do hClose inh
                                          outMVar <- newEmptyMVar
-                                         out <- hGetContents outh
+                                         out <- hGetContents outh `C.catch`  (\(e :: C.SomeException) -> return (show e))
                                          _ <- forkIO $ C.evaluate (length out) >> putMVar outMVar ()
-                                         err <- hGetContents errh
+                                         err <- hGetContents errh `C.catch`  (\(e :: C.SomeException) -> return (show e))
                                          _ <- forkIO $ C.evaluate (length err) >> putMVar outMVar ()
                                          takeMVar outMVar
                                          takeMVar outMVar
-                                         hClose outh
-                                         hClose errh
-                                         ex <- waitForProcess pid
+                                         hClose outh `C.catch`  (\(_ :: C.SomeException) -> return ())
+                                         hClose errh `C.catch`  (\(_ :: C.SomeException) -> return ())
+                                         ex <- waitForProcess pid `C.catch` (\(_ :: C.SomeException) -> return (ExitFailure (-999)))
                                          return (out, err, ex)
 
                     cleanUp ignoreExitCode response
