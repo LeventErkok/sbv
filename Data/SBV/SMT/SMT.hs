@@ -573,43 +573,62 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
 
           cleanLine  = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 
-      (send, ask, askFull, cleanUp, pid) <- do
+      (send, ask, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
                 let send l    = hPutStr inh (l ++ "\n") >> hFlush inh
 
-                    -- Send a line, get a line
-                    ask l     = send l >> recv
-                    recv      = hGetLine outh
+                    -- read a line from the handle safely.
+                    safeGetLine h = (Right <$> hGetLine h) `C.catch`  (\(e :: C.SomeException) -> return (Left (show e)))
 
                     -- Send a line, get a whole s-expr. We ignore the
                     -- pathetic case that there might be a string with an
                     -- unbalanced parentheses in it..
-                    askFull l = send l >> recvFull
-                    recvFull  = (intercalate "\n" . reverse) `fmap` go 0 []
-                      where go i sofar = do ln <- hGetLine outh
-                                            let open  = length $ filter (== '(') ln
-                                                close = length $ filter (== ')') ln
-                                                need  = i + open - close
-                                                acc   = ln : sofar
-                                                -- make sure we get *something*
-                                                empty = null $ dropWhile isSpace ln
-                                            if not empty && need <= 0
-                                               then return acc
-                                               else go need acc
+                    ask command = send command >> (intercalate "\n" . reverse) `fmap` go 0 []
+                      where go i sofar = do errln <- safeGetLine outh
+                                            case errln of
+                                              Right ln -> let open  = length $ filter (== '(') ln
+                                                              close = length $ filter (== ')') ln
+                                                              need  = i + open - close
+                                                              acc   = ln : sofar
+                                                              -- make sure we get *something*
+                                                              empty = null $ dropWhile isSpace ln
+                                                          in if not empty && need <= 0
+                                                             then return acc
+                                                             else go need acc
+                                              Left e   -> do (outOrig, errOrig, ex) <- terminateSolver
+
+                                                             let out = intercalate "\n" . lines $ outOrig
+                                                                 err = intercalate "\n" . lines $ errOrig
+
+                                                             error $ unlines $ [""
+                                                                               , "*** IO error  : " ++ e
+                                                                               , "*** Executable: " ++ execPath
+                                                                               , "*** Options   : " ++ joinArgs opts
+                                                                               ]
+                                                                            ++ [ "*** Request   : " ++ command                                   ]
+                                                                            ++ [ "*** Response  : " ++ unlines (reverse sofar) | not $ null sofar]
+                                                                            ++ [ "*** Stdout    : " ++ out                     | not $ null out  ]
+                                                                            ++ [ "*** Stderr    : " ++ err                     | not $ null err  ]
+                                                                            ++ [ "*** Exit code : " ++ show ex
+                                                                               , "*** Giving up!"
+                                                                               ]
+
+                    terminateSolver = do hClose inh
+                                         outMVar <- newEmptyMVar
+                                         out <- hGetContents outh
+                                         _ <- forkIO $ C.evaluate (length out) >> putMVar outMVar ()
+                                         err <- hGetContents errh
+                                         _ <- forkIO $ C.evaluate (length err) >> putMVar outMVar ()
+                                         takeMVar outMVar
+                                         takeMVar outMVar
+                                         hClose outh
+                                         hClose errh
+                                         ex <- waitForProcess pid
+                                         return (out, err, ex)
 
                     cleanUp ignoreExitCode response
                       = do (ecObtained, contents, allErrors) <- do
-                                      hClose inh
-                                      outMVar <- newEmptyMVar
-                                      out <- hGetContents outh
-                                      _ <- forkIO $ C.evaluate (length out) >> putMVar outMVar ()
-                                      err <- hGetContents errh
-                                      _ <- forkIO $ C.evaluate (length err) >> putMVar outMVar ()
-                                      takeMVar outMVar
-                                      takeMVar outMVar
-                                      hClose outh
-                                      hClose errh
-                                      ex <- waitForProcess pid
+                                      (out, err, ex) <- terminateSolver
 
                                       msg $   [ "Solver   : " ++ nm
                                               , "Exit code: " ++ show ex
@@ -649,7 +668,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                      (_, ExitFailure n) -> n
                                                                      _                  -> 0 -- can happen if ExitSuccess but there is output on stderr
                                                      in return $ failure $ [ "Failed to complete the call to " ++ nm
-                                                                           , "Executable   : " ++ show execPath
+                                                                           , "Executable   : " ++ execPath
                                                                            , "Options      : " ++ joinArgs opts
                                                                            , "Exit code    : " ++ show finalEC
                                                                            , "Solver output: "
@@ -657,7 +676,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                            ]
                                                                            ++ errors'
                                                                            ++ ["Giving up.."]
-                return (send, ask, askFull, cleanUp, pid)
+                return (send, ask, cleanUp, pid)
 
       let executeSolver = do mapM_ send (lines (scriptBody script))
                              mapM_ send (optimizeArgs cfg)
@@ -679,7 +698,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                              let askModel = do let mls = scriptModel script
                                                when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
                                                                        mapM_ putStrLn mls
-                                               vals <- mapM askFull mls
+                                               vals <- mapM ask mls
                                                when (verbose cfg) $ do putStrLn "** Received the following responses:"
                                                                        mapM_ putStrLn vals
                                                return $ success $ mergeSExpr $ "sat" : map cleanLine (filter (not . null) vals)
@@ -689,7 +708,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                     (True, Just q) -> do
                                         when (verbose cfg) $ putStrLn "** Custom query is requested. Giving control to the user."
                                         let interactiveCtx = ctx { contextState = switchToInteractiveMode (contextState ctx) }
-                                            qs = QueryState { queryAsk                 = askFull
+                                            qs = QueryState { queryAsk                 = ask
                                                             , queryConfig              = cfg
                                                             , queryContext             = interactiveCtx
                                                             , queryDefault             = sbvContinuation
