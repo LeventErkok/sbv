@@ -232,10 +232,13 @@ getUnsatCore = do
             fromECon (ECon s) = Just s
             fromECon _        = Nothing
 
+            noBar = reverse . dropWhile bar . reverse . dropWhile bar
+            bar   = (== '|')
+
         r <- ask cmd
 
         parse r bad $ \case
-           EApp es | Just xs <- mapM fromECon es -> return xs
+           EApp es | Just xs <- mapM fromECon es -> return $ map noBar xs
            _                                     -> bad r Nothing
 
 -- | Retrieve the proof. Note you must have arranged for
