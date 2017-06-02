@@ -50,10 +50,8 @@ toSMTLib2 = cvt SMTLib2
          = unsupported "unbounded integers"
          | KReal `Set.member` kindInfo  && not (supportsReals solverCaps)
          = unsupported "algebraic reals"
-         | needsFloats && not (supportsFloats solverCaps)
-         = unsupported "single-precision floating-point numbers"
-         | needsDoubles && not (supportsDoubles solverCaps)
-         = unsupported "double-precision floating-point numbers"
+         | (needsFloats || needsDoubles) && not (supportsIEEE754 solverCaps)
+         = unsupported "floating-point numbers"
          | needsQuantifiers && not (supportsQuantifiers solverCaps)
          = unsupported "quantifiers"
          | not (null sorts) && not (supportsUninterpretedSorts solverCaps)

@@ -1322,8 +1322,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsUninterpretedSorts :: Bool    -- ^ Does the solver understand SMT-Lib2 style uninterpreted-sorts
        , supportsUnboundedInts      :: Bool    -- ^ Does the solver support unbounded integers?
        , supportsReals              :: Bool    -- ^ Does the solver support reals?
-       , supportsFloats             :: Bool    -- ^ Does the solver support single-precision floating point numbers?
-       , supportsDoubles            :: Bool    -- ^ Does the solver support double-precision floating point numbers?
+       , supportsIEEE754            :: Bool    -- ^ Does the solver support floating point numbers?
        , supportsOptimization       :: Bool    -- ^ Does the solver support optimization routines?
        , supportsPseudoBooleans     :: Bool    -- ^ Does the solver support pseudo-boolean operations?
        , supportsCustomQueries      :: Bool    -- ^ Does the solver support interactive queries per SMT-Lib?
