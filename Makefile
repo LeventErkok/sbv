@@ -17,7 +17,7 @@ endif
 
 BUILDTIMES = buildTimes.log
 
-ifeq (z$(MAKECMDGOALS), "zrelease")
+ifeq (z$(MAKECMDGOALS), zrelease)
 define startTimer
 	@tput rmam
 	@echo [`date +%T`] $(1) >> ${BUILDTIMES}
