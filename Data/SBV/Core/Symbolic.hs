@@ -42,7 +42,7 @@ module Data.SBV.Core.Symbolic
   , SBVPgm(..), Symbolic, runSymbolic, runSymbolicWithState, runSymbolic', State(..), withNewIncState, IncState(..)
   , inProofMode, inNonInteractiveProofMode, switchToInteractiveMode, getProofMode, SBVRunMode(..), Result(..)
   , registerKind, registerLabel
-  , addAssertion, addSValConstraint, internalConstraint, internalVariable
+  , addAssertion, imposeConstraint, internalConstraint, internalVariable
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
@@ -76,7 +76,6 @@ import qualified Data.Foldable as F    (toList)
 import qualified Data.Sequence as S    (Seq, empty, (|>))
 
 import System.Mem.StableName
-import System.Random
 
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
@@ -552,7 +551,7 @@ type Cache a   = IMap.IntMap [(StableName (State -> IO a), a)]
 data SBVRunMode = Proof       (Bool, SMTConfig) -- ^ Fully Symbolic, proof mode.
                 | Interactive (Bool, SMTConfig) -- ^ In an interactive mode, during user control.
                 | CodeGen                       -- ^ Code generation mode.
-                | Concrete StdGen               -- ^ Concrete simulation mode. The StdGen is for the pConstrain acceptance in cross runs.
+                | Concrete                      -- ^ Concrete simulation mode.
 
 -- Show instance for SBVRunMode; debugging purposes only
 instance Show SBVRunMode where
@@ -561,15 +560,7 @@ instance Show SBVRunMode where
    show (Interactive (True, _))  = "Satisfiability"
    show (Interactive (False, _)) = "Proof"
    show CodeGen                  = "Code generation"
-   show Concrete{}               = "Concrete evaluation"
-
--- | Is this a concrete run? (i.e., quick-check or test-generation like)
-isConcreteMode :: State -> Bool
-isConcreteMode State{runMode} = case runMode of
-                                  Concrete{}    -> True
-                                  Proof{}       -> False
-                                  Interactive{} -> False
-                                  CodeGen       -> False
+   show Concrete                 = "Concrete evaluation"
 
 -- | Is this a CodeGen run? (i.e., generating code)
 isCodeGenMode :: State -> Bool
@@ -608,7 +599,6 @@ withNewIncState st cont = do
 data State  = State { runMode      :: SBVRunMode
                     , pathCond     :: SVal                             -- ^ kind KBool
                     , rIncState    :: IORef IncState
-                    , rStdGen      :: IORef StdGen
                     , rCInfo       :: IORef [(String, CW)]
                     , rctr         :: IORef Int
                     , rUsedKinds   :: IORef KindSet
@@ -729,13 +719,6 @@ incCtr :: State -> IO Int
 incCtr st = do ctr <- readIORef (rctr st)
                modifyState st rctr (+1) (return ())
                return ctr
-
--- | Generate a random value, for quick-check and test-gen purposes
-throwDice :: State -> IO Double
-throwDice st = do g <- readIORef (rStdGen st)
-                  let (r, g') = randomR (0, 1) g
-                  modifyState st rStdGen (const g') (return ())
-                  return r
 
 -- | Create a new uninterpreted symbol, possibly with user given code
 newUninterpreted :: State -> String -> SBVType -> Maybe [String] -> IO ()
@@ -909,15 +892,15 @@ svMkSymVar mbQ k mbNm = do
                   (Nothing, Interactive (False, _)) -> ALL -- interactive proof mode, pick universal
                   (Nothing, CodeGen)                -> ALL -- code generation, pick universal
         case runMode st of
-          Concrete _ | q == EX -> case mbNm of
-                                    Nothing -> error $ "Cannot quick-check in the presence of existential variables, type: " ++ show k
-                                    Just nm -> error $ "Cannot quick-check in the presence of existential variable " ++ nm ++ " :: " ++ show k
-          Concrete _           -> do cw <- liftIO (randomCW k)
-                                     liftIO $ modifyState st rCInfo ((fromMaybe "_" mbNm, cw):) (return ())
-                                     return (SVal k (Left cw))
-          _          -> do (sw, internalName) <- liftIO $ newSW st k
-                           let nm = fromMaybe internalName mbNm
-                           introduceUserName st nm k q sw
+          Concrete | q == EX -> case mbNm of
+                                  Nothing -> error $ "Cannot quick-check in the presence of existential variables, type: " ++ show k
+                                  Just nm -> error $ "Cannot quick-check in the presence of existential variable " ++ nm ++ " :: " ++ show k
+          Concrete           -> do cw <- liftIO (randomCW k)
+                                   liftIO $ modifyState st rCInfo ((fromMaybe "_" mbNm, cw):) (return ())
+                                   return (SVal k (Left cw))
+          _                  -> do (sw, internalName) <- liftIO $ newSW st k
+                                   let nm = fromMaybe internalName mbNm
+                                   introduceUserName st nm k q sw
 
 -- | Create a properly quantified variable of a user defined sort. Only valid
 -- in proof contexts.
@@ -1000,13 +983,9 @@ runSymbolic' currentRunMode (Symbolic c) = do
    optGoals  <- newIORef []
    asserts   <- newIORef []
    istate    <- newIORef =<< newIncState
-   rGen      <- case currentRunMode of
-                  Concrete g -> newIORef g
-                  _          -> newStdGen >>= newIORef
    let st = State { runMode      = currentRunMode
                   , pathCond     = SVal KBool (Left trueCW)
                   , rIncState    = istate
-                  , rStdGen      = rGen
                   , rCInfo       = cInfo
                   , rctr         = ctr
                   , rUsedKinds   = usedKinds
@@ -1120,20 +1099,6 @@ addSValOptGoal obj = do st <- ask
                                            $ noInteractive [ "Adding an optimization objective:"
                                                            , "  Objective: " ++ show obj
                                                            ]
-
--- | Add a constraint with a given probability, and possibly a name
-addSValConstraint :: Maybe String -> Maybe Double -> SVal -> SVal -> Symbolic ()
-addSValConstraint mbNm Nothing  c _  = imposeConstraint mbNm c
-addSValConstraint mbNm (Just t) c c'
-  | t < 0 || t > 1
-  = error $ "SBV: pConstrain: Invalid probability threshold: " ++ show t ++ ", must be in [0, 1]."
-  | True
-  = do st <- ask
-       unless (isConcreteMode st) $ error "SBV: pConstrain only allowed in 'genTest' or 'quickCheck' contexts."
-       case () of
-         () | t > 0 && t < 1 -> liftIO (throwDice st) >>= \d -> imposeConstraint mbNm (if d <= t then c else c')
-            | t > 0          -> imposeConstraint mbNm c
-            | True           -> imposeConstraint mbNm c'
 
 -- | Mark an interim result as an output. Useful when constructing Symbolic programs
 -- that return multiple values, or when the result is programmatically computed.
@@ -1338,7 +1303,7 @@ instance NFData (Cached a)   where rnf (Cached f) = f `seq` ()
 instance NFData SVal         where rnf (SVal x y) = rnf x `seq` rnf y `seq` ()
 
 instance NFData SMTResult where
-  rnf (Unsatisfiable _ uc) = rnf uc `seq` ()
+  rnf Unsatisfiable{}      = ()
   rnf (Satisfiable _   xs) = rnf xs `seq` ()
   rnf (SatExtField _   xs) = rnf xs `seq` ()
   rnf (Unknown _       xs) = rnf xs `seq` ()
@@ -1353,9 +1318,7 @@ instance NFData SMTScript where
 
 -- | Translation tricks needed for specific capabilities afforded by each solver
 data SolverCapabilities = SolverCapabilities {
-         supportsDefineFun          :: Bool    -- ^ Does the solver understand SMT-Lib2 define-funs?
-       , supportsProduceModels      :: Bool    -- ^ Does the solver understand produce-models option setting
-       , supportsQuantifiers        :: Bool    -- ^ Does the solver understand SMT-Lib2 style quantifiers?
+         supportsQuantifiers        :: Bool    -- ^ Does the solver understand SMT-Lib2 style quantifiers?
        , supportsUninterpretedSorts :: Bool    -- ^ Does the solver understand SMT-Lib2 style uninterpreted-sorts
        , supportsUnboundedInts      :: Bool    -- ^ Does the solver support unbounded integers?
        , supportsReals              :: Bool    -- ^ Does the solver support reals?
@@ -1363,8 +1326,6 @@ data SolverCapabilities = SolverCapabilities {
        , supportsDoubles            :: Bool    -- ^ Does the solver support double-precision floating point numbers?
        , supportsOptimization       :: Bool    -- ^ Does the solver support optimization routines?
        , supportsPseudoBooleans     :: Bool    -- ^ Does the solver support pseudo-boolean operations?
-       , supportsUnsatCores         :: Bool    -- ^ Does the solver support extraction of unsat-cores?
-       , supportsProofs             :: Bool    -- ^ Does the solver support extraction of proofs?
        , supportsCustomQueries      :: Bool    -- ^ Does the solver support interactive queries per SMT-Lib?
        }
 
@@ -1440,12 +1401,12 @@ data SMTModel = SMTModel {
 -- and build layers of results, if needed. For ordinary uses of the library,
 -- this type should not be needed, instead use the accessor functions on
 -- it. (Custom Show instances and model extractors.)
-data SMTResult = Unsatisfiable SMTConfig (Maybe [String]) -- ^ Unsatisfiable, with unsat-core if requested
-               | Satisfiable   SMTConfig SMTModel         -- ^ Satisfiable with model
-               | SatExtField   SMTConfig SMTModel         -- ^ Prover returned a model, but in an extension field containing Infinite/epsilon
-               | Unknown       SMTConfig SMTModel         -- ^ Prover returned unknown, with a potential (possibly bogus) model
-               | ProofError    SMTConfig [String]         -- ^ Prover errored out
-               | TimeOut       SMTConfig                  -- ^ Computation timed out (see the 'timeout' combinator)
+data SMTResult = Unsatisfiable SMTConfig           -- ^ Unsatisfiable
+               | Satisfiable   SMTConfig SMTModel  -- ^ Satisfiable with model
+               | SatExtField   SMTConfig SMTModel  -- ^ Prover returned a model, but in an extension field containing Infinite/epsilon
+               | Unknown       SMTConfig SMTModel  -- ^ Prover returned unknown, with a potential (possibly bogus) model
+               | ProofError    SMTConfig [String]  -- ^ Prover errored out
+               | TimeOut       SMTConfig           -- ^ Computation timed out (see the 'timeout' combinator)
 
 -- | A script, to be passed to the solver.
 data SMTScript = SMTScript {

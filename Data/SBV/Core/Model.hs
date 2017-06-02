@@ -28,7 +28,7 @@ module Data.SBV.Core.Model (
   , oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
-  , pConstrain, tactic, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
+  , tactic, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
   , sRealToSInteger, label
@@ -59,7 +59,6 @@ import Test.QuickCheck                         (Testable(..), Arbitrary(..))
 import qualified Test.QuickCheck.Test    as QC (isSuccess)
 import qualified Test.QuickCheck         as QC (quickCheckResult, counterexample)
 import qualified Test.QuickCheck.Monadic as QC (monadicIO, run, assert, pre, monitor)
-import System.Random
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
@@ -1719,14 +1718,8 @@ instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymW
 
 -- | Symbolic computations can be constrained, limiting the values variables can take.
 instance Constrainable Symbolic where
-   constrain          c = addConstraint Nothing   Nothing c (bnot c)
-   namedConstraint nm c = addConstraint (Just nm) Nothing c (bnot c)
-
--- | Adding a probabilistic constraint. The 'Double' argument is the probability
--- threshold. Probabilistic constraints are useful for 'genTest' and 'quickCheck'
--- calls where we restrict our attention to /interesting/ parts of the input domain.
-pConstrain :: Double -> SBool -> Symbolic ()
-pConstrain t c = addConstraint Nothing (Just t) c (bnot c)
+   constrain          (SBV c) = imposeConstraint Nothing   c
+   namedConstraint nm (SBV c) = imposeConstraint (Just nm) c
 
 -- | Provide a tactic for the solver engine
 tactic :: Tactic SBool -> Symbolic ()
@@ -1767,19 +1760,23 @@ instance Testable SBool where
   property s                       = error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show s ++ ")"
 
 instance Testable (Symbolic SBool) where
-   property prop = QC.monadicIO $ do (cond, r, tvals) <- QC.run (newStdGen >>= test)
+   property prop = QC.monadicIO $ do (cond, r, tvals) <- QC.run test
                                      QC.pre cond
                                      unless (r || null tvals) $ QC.monitor (QC.counterexample (complain tvals))
                                      QC.assert r
-     where test g = do (r, Result{resTraces=tvals, resConsts=cs, resConstraints=cstrs, resUIConsts=unints}) <- runSymbolic' (Concrete g) prop
-                       let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
-                           cond = all (cwToBool . cval . snd) cstrs
-                       case map fst unints of
-                         [] -> case unliteral r of
-                                 Nothing -> noQC [show r]
-                                 Just b  -> return (cond, b, tvals)
-                         us -> noQC us
+     where test = do (r, Result{resTraces=tvals, resConsts=cs, resConstraints=cstrs, resUIConsts=unints}) <- runSymbolic' Concrete prop
+
+                     let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
+                         cond = all (cwToBool . cval . snd) cstrs
+
+                     case map fst unints of
+                       [] -> case unliteral r of
+                               Nothing -> noQC [show r]
+                               Just b  -> return (cond, b, tvals)
+                       us -> noQC us
+
            complain qcInfo = showModel defaultSMTCfg (SMTModel [] qcInfo)
+
            noQC us         = error $ "Cannot quick-check in the presence of uninterpreted constants: " ++ intercalate ", " us
 
 -- | Quick check an SBV property. Note that a regular 'quickCheck' call will work just as

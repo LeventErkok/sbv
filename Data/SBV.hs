@@ -182,7 +182,7 @@ module Data.SBV (
 
   -- * Constraints
   -- $constrainIntro
-  , constrain, namedConstraint, pConstrain
+  , constrain, namedConstraint
   -- ** Checking vacuity
   , isVacuous, isVacuousWith
   -- ** Cardinality constraints
@@ -773,39 +773,15 @@ Also note that this semantics imply that test case generation ('genTest') and qu
 can take arbitrarily long in the presence of constraints, if the random input values generated
 rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'false'@.)
 
-A probabilistic constraint (see 'pConstrain') attaches a probability threshold for the
-constraint to be considered. For instance:
-
-  @ 'pConstrain' 0.8 c @
-
-will make sure that the condition @c@ is satisfied 80% of the time (and correspondingly, falsified 20%
-of the time), in expectation. This variant is useful for 'genTest' and 'quickCheck' functions, where we
-want to filter the test cases according to some probability distribution, to make sure that the test-vectors
-are drawn from interesting subsets of the input space. For instance, if we were to generate 100 test cases
-with the above constraint, we'd expect about 80 of them to satisfy the condition @c@, while about 20 of them
-will fail it.
-
-The following properties hold:
-
- @
-    'constrain'      = 'pConstrain' 1
-    'pConstrain' t c = 'pConstrain' (1-t) (not c)
- @
-
-Note that while 'constrain' can be used freely, 'pConstrain' is only allowed in the contexts of
-'genTest' or 'quickCheck'. Calls to 'pConstrain' in a prove/sat call will be rejected as SBV does not
-deal with probabilistic constraints when it comes to satisfiability and proofs.
-Also, both 'constrain' and 'pConstrain' calls during code-generation will also be rejected, for similar reasons.
-
 === Named constraints and unsat cores
 
 Constraints can be given names:
 
   @ 'namedConstraint' "a is at least 5" $ a .>= 5@
 
-Such constraints are useful when used in conjunction with 'getUnsatCore', and 'extractUnsatCore' features,
-where the backend solver can be queried to obtain an unsat core in case the constraints are unsatisfiable,
-which can be enabled by the following tactic:
+Such constraints are useful when used in conjunction with 'getUnsatCore' function
+where the backend solver can be queried to obtain an unsat core in case the constraints are unsatisfiable.
+This feature is enabled by the following tactic:
 
    @ tactic $ SetOptions [ProduceUnsatCores True] @
 

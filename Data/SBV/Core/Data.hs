@@ -454,9 +454,9 @@ instance (HasKind a, HasKind b) => Show (SFunArray a b) where
 mkSFunArray :: (SBV a -> SBV b) -> SFunArray a b
 mkSFunArray = SFunArray
 
--- | Add a constraint with a given probability.
-addConstraint :: Maybe String -> Maybe Double -> SBool -> SBool -> Symbolic ()
-addConstraint mn mt (SBV c) (SBV c') = addSValConstraint mn mt c c'
+-- | Add a constraint, possibly named
+addConstraint :: Maybe String -> SBool -> Symbolic ()
+addConstraint mn (SBV c) = imposeConstraint mn c
 
 -- | A case condition (internal)
 data CaseCond = NoCase                         -- ^ No case-split
