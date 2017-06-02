@@ -12,14 +12,9 @@
     exhausts all the pareto-fronts, or till it runs out of memory in case there
     is an infinite number of them.
 
-  * Extraction of unsat-cores has changed. Instead of a config option, we
-    now use a tactic:
-
-        tactic $ SetOptions [ProduceUnsatCores True]
-
-    The config option `getUnsatCore` is removed. Otherwise, no other
-    changes should be necessary to make your code work as before. (Note
-    that this is a breaking change from v6.1.)
+  * Extraction of unsat-cores has changed. To use this feature, we now use
+    custom queries. See "Data.SBV.Examples.Misc.UnsatCore" for an example.
+    Old style of unsat-core extraction is no longer supported.
 
   * Configuration option `useLogic` is removed. Again, this should
     be done by a tactic of the form:
@@ -29,6 +24,11 @@
   * Thanks to Kanishka Azimi, our external test suite is now run by
     Tasty! Kanishka modernized the test suite, and reworked the
     infrastructure that was showing its age. Thanks!
+
+  * The function pConstrain and the Data.SBV.Tools.ExpectedValue are
+    removed. Probabilistic constraints were rarely used, and if
+    necessary can be implemented outside of SBV. If you were using
+    this feature, please get in contact.
 
   * SBV now has support for interactive solver queries. However, we
     are currently not advertising this widely; it is only intended for
