@@ -75,25 +75,30 @@ instance Show SMTInfoFlag where
   show Version              = ":version"
   show (InfoKeyword s)      = s
 
--- | Option values that can be set in the solver. Note that not
--- all solvers may support all of these!
-data SMTOption = DiagnosticOutputChannel FilePath
-               | GlobalDeclarations      Bool
-               -- | :interactive-mode b_value
-               -- | :print-success b_value
-               -- | :produce-assertions b_value
-               -- | :produce-assignments b_value
-               -- | :produce-models b_value
-               | ProduceProofs           Bool
-               | ProduceUnsatAssumptions Bool
-               | ProduceUnsatCores       Bool
-               | RandomSeed              Integer
-               -- | :regular-output-channel string
-               -- | :reproducible-resource-limit numeral
-               -- | :verbosity numeral
-               -- Strictly speaking, the following is not an option; but it fits well here.
-               -- I think that's a wart in the SMTLib document itself.
-               | SetLogic                Logic
+-- | Option values that can be set in the solver, following Section 4.1.7 of the SMTLib document <http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-draft-3.pdf>.
+--
+-- Note that not all solvers may support all of these!
+--
+-- Furthermore, SBV doesn't support the following options allowed by SMTLib.
+--
+--    * @:interactive-mode@                (Deprecated in SMTLib, use 'ProduceAssertions' instead.)
+--    * @:print-success@                   (SBV critically needs this to be True in query mode.)
+--    * @:produce-models@                  (SBV always sets this option so it can extract models.)
+--    * @:regular-output-channel@          (SBV always requires regular output to come on stdout for query purposes.)
+--
+-- Note that 'SetLogic' is, strictly speaking, not an SMTLib option. However, we treat it as such here
+-- uniformly, as it fits better with how options work.
+data SMTOption = DiagnosticOutputChannel   FilePath
+               | GlobalDeclarations        Bool
+               | ProduceAssertions         Bool
+               | ProduceAssignments        Bool
+               | ProduceProofs             Bool
+               | ProduceUnsatAssumptions   Bool
+               | ProduceUnsatCores         Bool
+               | RandomSeed                Integer
+               | ReproducibleResourceLimit Integer
+               | SMTVerbosity              Integer
+               | SetLogic                  Logic
                deriving (Generic, NFData)
 
 -- SMTLib's True/False is spelled differently than Haskell's.
@@ -103,13 +108,17 @@ smtBool False = "false"
 
 -- Show instance for SMTOption maintains smt-lib format per the SMTLib2 standard document.
 instance Show SMTOption where
-  show (DiagnosticOutputChannel f) = unwords [":diagnostic-output-channel", show f]
-  show (GlobalDeclarations      b) = unwords [":global-declarations",       smtBool b]
-  show (ProduceProofs           b) = unwords [":produce-proofs",            smtBool b]
-  show (ProduceUnsatAssumptions b) = unwords [":produce-unsat-assumptions", smtBool b]
-  show (ProduceUnsatCores       b) = unwords [":produce-unsat-cores",       smtBool b]
-  show (RandomSeed              i) = unwords [":random-seed",               show i]
-  show (SetLogic                i) = show i
+  show (DiagnosticOutputChannel   f) = unwords [":diagnostic-output-channel",   show f]
+  show (GlobalDeclarations        b) = unwords [":global-declarations",         smtBool b]
+  show (ProduceAssertions         b) = unwords [":produce-assertions",          smtBool b]
+  show (ProduceAssignments        b) = unwords [":produce-assignments",         smtBool b]
+  show (ProduceProofs             b) = unwords [":produce-proofs",              smtBool b]
+  show (ProduceUnsatAssumptions   b) = unwords [":produce-unsat-assumptions",   smtBool b]
+  show (ProduceUnsatCores         b) = unwords [":produce-unsat-cores",         smtBool b]
+  show (RandomSeed                i) = unwords [":random-seed",                 show i]
+  show (ReproducibleResourceLimit i) = unwords [":reproducible-resource-limit", show i]
+  show (SMTVerbosity              i) = unwords [":verbosity",                   show i]
+  show (SetLogic                  i) = show i
 
 -- | SMT-Lib logics. If left unspecified SBV will pick the logic based on what it determines is needed. However, the
 -- user can override this choice using the tactic 'SetOptions' This is especially handy if one is experimenting with custom
