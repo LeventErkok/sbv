@@ -77,7 +77,7 @@ instance Show SMTInfoFlag where
 -- | Option values that can be set in the solver. Note that not
 -- all solvers may support all of these!
 data SMTOption = DiagnosticOutputChannel FilePath
-               -- | :global-declarations b_value
+               | GlobalDeclarations      Bool
                -- | :interactive-mode b_value
                -- | :print-success b_value
                -- | :produce-assertions b_value
@@ -96,6 +96,7 @@ data SMTOption = DiagnosticOutputChannel FilePath
 
 instance NFData SMTOption where
   rnf (DiagnosticOutputChannel f) = rnf f `seq` ()
+  rnf (GlobalDeclarations b)      = rnf b `seq` ()
   rnf (ProduceProofs b)           = rnf b `seq` ()
   rnf (ProduceUnsatAssumptions b) = rnf b `seq` ()
   rnf (ProduceUnsatCores b)       = rnf b `seq` ()
@@ -110,6 +111,7 @@ smtBool False = "false"
 -- Show instance for SMTOption maintains smt-lib format per the SMTLib2 standard document.
 instance Show SMTOption where
   show (DiagnosticOutputChannel f) = unwords [":diagnostic-output-channel", show f]
+  show (GlobalDeclarations      b) = unwords [":global-declarations",       smtBool b]
   show (ProduceProofs           b) = unwords [":produce-proofs",            smtBool b]
   show (ProduceUnsatAssumptions b) = unwords [":produce-unsat-assumptions", smtBool b]
   show (ProduceUnsatCores       b) = unwords [":produce-unsat-cores",       smtBool b]
