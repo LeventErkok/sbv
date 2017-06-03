@@ -47,10 +47,6 @@ module Data.SBV.Control (
      -- * Performing actions
      , io
 
-     -- * Sending an arbitrary string
-     -- $sendStringInfo
-     , send, ask
-
      -- * Solver options
      , SMTOption(..)
 
@@ -60,9 +56,3 @@ module Data.SBV.Control (
      ) where
 
 import Data.SBV.Control.Query
-
-{- $sendStringInfo
-In rare cases it might be necessary to send an arbitrary string down to the solver. Needless to say, this
-should be avoided if at all possible. Users should prefer the provided API. If you do find yourself
-needing 'send' and 'ask' directly, please get in touch to see if SBV can support a typed API for your use case.
--}

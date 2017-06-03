@@ -41,6 +41,11 @@ module Data.SBV.Internals (
 
   -- * Timing computations
   , module Data.SBV.Utils.TDiff
+
+  -- * Sending an arbitrary string
+  -- $sendStringInfo
+  , sendStringToSolver, sendRequestToSolver
+
   ) where
 
 import Data.SBV.Core.Data
@@ -59,5 +64,25 @@ import Data.SBV.Utils.Numeric
 
 import Data.SBV.Utils.TDiff
 import Data.SBV.Utils.PrettyNum
+
+import qualified Data.SBV.Control.Utils as CUtils
+
+-- | Send an arbitrary string to the solver in a query.
+-- Note that this is inherently dangerous as it can put the solver in an arbitrary
+-- state and confuse SBV.
+sendStringToSolver :: String -> Query ()
+sendStringToSolver = CUtils.send
+
+-- | Send an arbitrary string to the solver in a query, and return a response.
+-- Note that this is inherently dangerous as it can put the solver in an arbitrary
+-- state and confuse SBV.
+sendRequestToSolver :: String -> Query String
+sendRequestToSolver = CUtils.ask
+
+{- $sendStringInfo
+In rare cases it might be necessary to send an arbitrary string down to the solver. Needless to say, this
+should be avoided if at all possible. Users should prefer the provided API. If you do find yourself
+needing 'send' and 'ask' directly, please get in touch to see if SBV can support a typed API for your use case.
+-}
 
 {-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}
