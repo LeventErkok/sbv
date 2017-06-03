@@ -9,7 +9,8 @@
 -- Types related to interactive queries
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric  #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Data.SBV.Control.Types (
        CheckSatResult(..)
@@ -93,15 +94,7 @@ data SMTOption = DiagnosticOutputChannel FilePath
                -- Strictly speaking, the following is not an option; but it fits well here.
                -- I think that's a wart in the SMTLib document itself.
                | SetLogic                Logic
-
-instance NFData SMTOption where
-  rnf (DiagnosticOutputChannel f) = rnf f `seq` ()
-  rnf (GlobalDeclarations b)      = rnf b `seq` ()
-  rnf (ProduceProofs b)           = rnf b `seq` ()
-  rnf (ProduceUnsatAssumptions b) = rnf b `seq` ()
-  rnf (ProduceUnsatCores b)       = rnf b `seq` ()
-  rnf (RandomSeed i)              = rnf i `seq` ()
-  rnf (SetLogic l)                = rnf l `seq` ()
+               deriving (Generic, NFData)
 
 -- SMTLib's True/False is spelled differently than Haskell's.
 smtBool :: Bool -> String
@@ -151,7 +144,7 @@ data Logic
   | QF_FD              -- ^ Quantifier-free finite domains
   | Logic_ALL          -- ^ The catch-all value
   | CustomLogic String -- ^ In case you need a really custom string!
-  deriving Generic
+  deriving (Generic, NFData)
 
 -- The show instance is "almost" the derived one, but not quite!
 instance GShow Logic
@@ -159,9 +152,6 @@ instance Show Logic where
   show Logic_ALL       = "ALL"
   show (CustomLogic l) = l
   show l               = gshow l
-
-instance NFData Logic where
-   rnf x = x `seq` ()
 
 {-# ANN type SMTInfoResponse ("HLint: ignore Use camelCase" :: String) #-}
 {-# ANN type Logic           ("HLint: ignore Use camelCase" :: String) #-}

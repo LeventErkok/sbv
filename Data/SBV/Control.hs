@@ -42,7 +42,6 @@ module Data.SBV.Control (
      , failure
 
      -- * Controlling the solver behavior
-     , SMTOption(..), setOption
      , ignoreExitCode
 
      -- * Performing actions
@@ -51,6 +50,9 @@ module Data.SBV.Control (
      -- * Sending an arbitrary string
      -- $sendStringInfo
      , send, ask
+
+     -- * Solver options
+     , SMTOption(..)
 
      -- * Logics supported
      , Logic(..)

@@ -18,7 +18,7 @@ module Data.SBV.Control.Query (
        send, ask
      , CheckSatResult(..), checkSat, checkSatAssuming, getUnsatCore, getProof, push, pop, getAssertionStackDepth, reset
      , getValue, getModel
-     , SMTOption(..), setOption
+     , SMTOption(..)
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
      , Logic(..), Assignment(..)
      , ignoreExitCode
@@ -50,11 +50,6 @@ import Data.IORef (readIORef)
 
 -- | An Assignment of a model binding
 data Assignment = Assign SVal CW
-
--- | Set an option.
-setOption :: SMTOption -> Query ()
-setOption (SetLogic l) = send $ "(set-logic "  ++ show l ++ ")"
-setOption o            = send $ "(set-option " ++ show o ++ ")"
 
 -- | Ask solver for info.
 getInfo :: SMTInfoFlag -> Query SMTInfoResponse
@@ -108,10 +103,14 @@ getInfo flag = do
                  EApp (ECon ":version" : o)                                -> return $ Resp_Version (serialize (EApp o))
                  _                                                         -> return $ Resp_InfoKeyword (serialize pe)
 
--- | 'Query' as a 'Constraint' container.
-instance Constrainable Query where
+-- | 'Query' as a 'SolverContext'.
+instance SolverContext Query where
    constrain          = addQueryConstraint Nothing
    namedConstraint nm = addQueryConstraint (Just nm)
+
+   setOption (SetLogic l) = send $ "(set-logic "  ++ show l ++ ")"
+   setOption o            = send $ "(set-option " ++ show o ++ ")"
+
 
 -- | Adding a constraint, possibly named. Only used internally.
 -- Use 'constrain' and 'namedConstraint' from user programs.

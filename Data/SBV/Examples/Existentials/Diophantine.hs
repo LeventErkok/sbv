@@ -54,7 +54,7 @@ basis m = extractModels `fmap` allSat cond
                  bs <- mkForallVars n
 
                  -- Tell the solver to use this logic!
-                 tactic $ SetOptions [SetLogic AUFLIA]
+                 setLogic AUFLIA
 
                  return $ ok as &&& (ok bs ==> as .== bs ||| bnot (bs `less` as))
 

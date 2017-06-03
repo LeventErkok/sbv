@@ -22,7 +22,7 @@ p = do a <- sInteger "a"
        b <- sInteger "b"
 
        -- tell the solver we want unsat-cores
-       tactic $ SetOptions [ProduceUnsatCores True]
+       setOption $ ProduceUnsatCores True
 
        -- create named constraints, which will allow
        -- unsat-core extraction with the given names

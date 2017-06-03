@@ -42,7 +42,7 @@ module Data.SBV.Core.Symbolic
   , SBVPgm(..), Symbolic, runSymbolic, runSymbolicWithState, runSymbolic', State(..), withNewIncState, IncState(..)
   , inProofMode, inNonInteractiveProofMode, switchToInteractiveMode, getProofMode, SBVRunMode(..), Result(..)
   , registerKind, registerLabel
-  , addAssertion, imposeConstraint, internalConstraint, internalVariable
+  , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
@@ -381,7 +381,6 @@ data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-spl
               | StopAfter          Int                             -- ^ Time-out given to solver, in seconds.
               | CheckUsing         String                          -- ^ Invoke with check-sat-using command, instead of check-sat
               | UseSolver          SMTConfig                       -- ^ Use this solver (z3, yices, etc.)
-              | SetOptions         [SMTOption]                     -- ^ Set these options
               | OptimizePriority   OptimizeStyle                   -- ^ Use this style for optimize calls. (Default: Lexicographic)
               | QueryUsing         (Query [SMTResult])             -- ^ Use a custom query-engine to extract results.
               deriving (Show, Functor)
@@ -406,7 +405,6 @@ instance NFData a => NFData (Tactic a) where
    rnf (StopAfter        i)   = rnf i `seq` ()
    rnf (CheckUsing       s)   = rnf s `seq` ()
    rnf (UseSolver        s)   = rnf s `seq` ()
-   rnf (SetOptions       o)  =  rnf o `seq` ()
    rnf (OptimizePriority s)   = rnf s `seq` ()
    rnf (QueryUsing       _)   = ()
 
@@ -429,6 +427,7 @@ data Result = Result { reskinds       :: Set.Set Kind                           
                      , resAsgns       :: SBVPgm                                  -- ^ assignments
                      , resConstraints :: [(Maybe String, SW)]                    -- ^ additional constraints (boolean)
                      , resTactics     :: [Tactic SW]                             -- ^ User given tactics
+                     , resSMTOptions  :: [SMTOption]                             -- ^ User specified solver options
                      , resGoals       :: [Objective (SW, SW)]                    -- ^ User specified optimization goals
                      , resAssertions  :: [(String, Maybe CallStack, SW)]         -- ^ assertions
                      , resOutputs     :: [SW]                                    -- ^ outputs
@@ -436,10 +435,13 @@ data Result = Result { reskinds       :: Set.Set Kind                           
 
 -- Show instance for 'Result'. Only for debugging purposes.
 instance Show Result where
-  show (Result _ _ _ _ cs _ _ [] [] _ [] _ _ _ [r])
+  -- If there's nothing interesting going on, just print the constant. Note that the
+  -- definiton of interesting here is rather subjective; but essentially if we reduced
+  -- the result to a single constant already, without any reference to anything.
+  show Result{resConsts=cs, resOutputs=[r]}
     | Just c <- r `lookup` cs
     = show c
-  show (Result kinds _ cgs is cs ts as uis axs xs cstrs tacs goals asserts os) = intercalate "\n" $
+  show (Result kinds _ cgs is cs ts as uis axs xs cstrs tacs smtOptions goals asserts os) = intercalate "\n" $
                    (if null usorts then [] else "SORTS" : map ("  " ++) usorts)
                 ++ ["INPUTS"]
                 ++ map shn is
@@ -457,6 +459,8 @@ instance Show Result where
                 ++ map shax axs
                 ++ ["TACTICS"]
                 ++ map show tacs
+                ++ ["SMT OPTIONS"]
+                ++ map show smtOptions
                 ++ ["GOALS"]
                 ++ map show goals
                 ++ ["DEFINE"]
@@ -615,6 +619,7 @@ data State  = State { runMode      :: SBVRunMode
                     , rCgMap       :: IORef CgMap
                     , raxioms      :: IORef [(String, [String])]
                     , rTacs        :: IORef [Tactic SW]
+                    , rSMTOptions  :: IORef [SMTOption]
                     , rOptGoals    :: IORef [Objective (SW, SW)]
                     , rAsserts     :: IORef [(String, Maybe CallStack, SW)]
                     , rSWCache     :: IORef (Cache SW)
@@ -700,7 +705,10 @@ noInteractive ss = error $ unlines $  "*** Data.SBV: Unsupported interactive/que
                                    :  map ("***  " ++) ss
                                    ++ ["*** Data.SBV: Please report this as a feature request!"]
 
--- | Modification of the state, but carefully handling the interactive tasks
+-- | Modification of the state, but carefully handling the interactive tasks.
+-- Note that the state is always updated regardless of the mode, but we get
+-- to also perform extra operation in interactive mode. (Typically error out, but also simply
+-- ignore if it has no impact.)
 modifyState :: State -> (State -> IORef a) -> (a -> a) -> IO () -> IO ()
 modifyState st@State{runMode} field update interactiveUpdate = do
         R.modifyIORef' (field st) update
@@ -980,6 +988,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
    usedLbls  <- newIORef Set.empty
    cstrs     <- newIORef []
    tacs      <- newIORef []
+   smtOpts   <- newIORef []
    optGoals  <- newIORef []
    asserts   <- newIORef []
    istate    <- newIORef =<< newIncState
@@ -1004,6 +1013,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
                   , rAICache     = aiCache
                   , rConstraints = cstrs
                   , rTacs        = tacs
+                  , rSMTOptions  = smtOpts
                   , rOptGoals    = optGoals
                   , rAsserts     = asserts
                   }
@@ -1018,7 +1028,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
 extractSymbolicSimulationState :: State -> IO Result
 extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblMap=tables, rArrayMap=arrays, rUIMap=uis, raxioms=axioms
                                        , rAsserts=asserts, rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints=cstrs
-                                       , rTacs=tacs, rOptGoals=optGoals } = do
+                                       , rTacs=tacs, rSMTOptions=opts, rOptGoals=optGoals } = do
    SBVPgm rpgm  <- readIORef pgm
    inpsO <- reverse `fmap` readIORef inps
    outsO <- reverse `fmap` readIORef outs
@@ -1036,9 +1046,16 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    traceVals  <- reverse `fmap` readIORef cInfo
    extraCstrs <- reverse `fmap` readIORef cstrs
    tactics    <- reverse `fmap` readIORef tacs
+   options    <- reverse `fmap` readIORef opts
    goals      <- reverse `fmap` readIORef optGoals
    assertions <- reverse `fmap` readIORef asserts
-   return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs tactics goals assertions outsO
+   return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs tactics options goals assertions outsO
+
+
+-- | Add a new option
+addNewSMTOption :: SMTOption -> Symbolic ()
+addNewSMTOption o =  do st <- ask
+                        liftIO $ modifyState st rSMTOptions (o:) (return ())
 
 -- | Handling constraints
 imposeConstraint :: Maybe String -> SVal -> Symbolic ()
@@ -1071,7 +1088,6 @@ addSValTactic tac = do st <- ask
                            walk (CheckConstrVacuity b) = return $ CheckConstrVacuity b
                            walk (CheckUsing s)         = return $ CheckUsing s
                            walk (UseSolver  s)         = return $ UseSolver  s
-                           walk (SetOptions o)         = return $ SetOptions o
                            walk (OptimizePriority s)   = return $ OptimizePriority s
                            walk (QueryUsing f)         = return $ QueryUsing f
                        tac' <- liftIO $ walk tac
@@ -1286,12 +1302,12 @@ instance NFData CallStack where
 #endif
 
 instance NFData Result where
-  rnf (Result kindInfo qcInfo cgs inps consts tbls arrs uis axs pgm cstr tacs goals asserts outs)
+  rnf (Result kindInfo qcInfo cgs inps consts tbls arrs uis axs pgm cstr tacs opts goals asserts outs)
         = rnf kindInfo `seq` rnf qcInfo  `seq` rnf cgs  `seq` rnf inps
                        `seq` rnf consts  `seq` rnf tbls `seq` rnf arrs
                        `seq` rnf uis     `seq` rnf axs  `seq` rnf pgm
                        `seq` rnf cstr    `seq` rnf tacs `seq` rnf goals
-                       `seq` rnf asserts `seq` rnf outs
+                       `seq` rnf opts    `seq` rnf asserts `seq` rnf outs
 instance NFData Kind         where rnf a          = seq a ()
 instance NFData ArrayContext where rnf a          = seq a ()
 instance NFData SW           where rnf a          = seq a ()

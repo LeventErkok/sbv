@@ -18,6 +18,8 @@
 {-# LANGUAGE PatternGuards         #-}
 {-# LANGUAGE DefaultSignatures     #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
 
 module Data.SBV.Core.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
@@ -38,7 +40,7 @@ module Data.SBV.Core.Data
  , Op(..), PBOp(..), FPOp(..), NamedSymVar, getTableIndex
  , SBVPgm(..), Symbolic, SExecutable(..), runSymbolic, runSymbolic', State, getPathCondition, extendPathCondition
  , inProofMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
- , Constrainable(..), addConstraint, internalVariable, internalConstraint, isCodeGenMode
+ , SolverContext(..), addConstraint, internalVariable, internalConstraint, isCodeGenMode
  , SBVType(..), newUninterpreted, addAxiom
  , Quantifier(..), needsExistentials
  , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension, smtLibReservedNames
@@ -49,6 +51,8 @@ module Data.SBV.Core.Data
  , OptimizeStyle(..), Penalty(..), Objective(..)
  , QueryState(..), QueryContext(..), Query(..), query, Tactic(..), CaseCond(..), SMTProblem(..), isParallelCaseAnywhere
  ) where
+
+import GHC.Generics (Generic)
 
 import Control.DeepSeq      (NFData(..))
 import Control.Monad.Reader (ask)
@@ -73,6 +77,8 @@ import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
 import Data.SBV.Core.Symbolic
 
+import Data.SBV.Control.Types
+
 import Data.SBV.SMT.SMTLibNames
 
 import Data.SBV.Utils.Lib
@@ -91,6 +97,7 @@ extendPathCondition st f = extendSValPathCondition st (unSBV . f . SBV)
 -- | The "Symbolic" value. The parameter 'a' is phantom, but is
 -- extremely important in keeping the user interface strongly typed.
 newtype SBV a = SBV { unSBV :: SVal }
+              deriving (Generic, NFData)
 
 -- | A symbolic boolean/bit
 type SBool   = SBV Bool
@@ -228,13 +235,22 @@ sbvToSymSW sbv = do
         st <- ask
         liftIO $ sbvToSW st sbv
 
--- | A computation that can be constrained with a boolean condition. This class
--- is used internally and not otherwise exported from SBV.
-class Constrainable m where
+-- | Actions we can do in a context: Either at problem description
+-- time or while we are dynamically querying. 'Symbolic' and 'Query' are
+-- two instances of this class. Note that we use this mechanism
+-- internally and do not export it from SBV.
+class SolverContext m where
    -- | Add a constraint, any satisfying instance must satisfy this condition
    constrain       :: SBool -> m ()
    -- | Add a named constraint. The name is used in unsat-core extraction.
    namedConstraint :: String -> SBool -> m ()
+   -- | Set an option.
+   setOption :: SMTOption -> m ()
+   -- | Set the logic.
+   setLogic :: Logic -> m ()
+
+   -- Logic is an option in our implementation, so default implementation suffices.
+   setLogic = setOption . SetLogic
 
 -- | A class representing what can be returned from a symbolic computation.
 class Outputtable a where
@@ -465,14 +481,7 @@ data CaseCond = NoCase                         -- ^ No case-split
               | CaseCov  [SW] [SW]             -- ^ In a case-path end, coverage (first arg is path cond, second arg is coverage cond)
               | CstrVac                        -- ^ In a constraint vacuity check (top-level)
               | Opt      [Objective (SW, SW)]  -- ^ In an optimization call
-
-instance NFData CaseCond where
-  rnf NoCase           = ()
-  rnf (CasePath ps)    = rnf ps
-  rnf (CaseVac  ps q)  = rnf ps `seq` rnf q  `seq` ()
-  rnf (CaseCov  ps qs) = rnf ps `seq` rnf qs `seq` ()
-  rnf CstrVac          = ()
-  rnf (Opt os)         = rnf os `seq` ()
+              deriving (Generic, NFData)
 
 -- | Internal representation of a symbolic simulation result
 data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]        -- ^ inputs
@@ -480,15 +489,11 @@ data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]      
                              , kindsUsed    :: Set.Set Kind                       -- ^ kinds used
                              , smtAsserts   :: [(String, Maybe CallStack, SW)]    -- ^ assertions
                              , tactics      :: [Tactic SW]                        -- ^ tactics to use
+                             , smtOptions   :: [SMTOption]                        -- ^ options to set
                              , objectives   :: [Objective (SW, SW)]               -- ^ optimization goals, if any
                              , smtLibPgm    :: SMTConfig -> CaseCond -> SMTLibPgm -- ^ SMTLib representation, given the config and case-splits
                              }
-
-instance NFData SMTProblem where
-  rnf (SMTProblem i m k a t o p) = rnf i `seq` rnf m `seq` rnf k `seq` rnf a `seq` rnf t `seq` rnf o `seq` rnf p `seq` ()
-
-instance NFData (SBV a) where
-  rnf (SBV x) = rnf x `seq` ()
+                             deriving (Generic, NFData)
 
 -- | Symbolically executable program fragments. This class is mainly used for 'safe' calls, and is sufficently populated internally to cover most use
 -- cases. Users can extend it as they wish to allow 'safe' checks for SBV programs that return/take types that are user-defined.

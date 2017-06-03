@@ -1716,10 +1716,11 @@ instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymW
   sbvUninterpret mbCgData nm = let f = sbvUninterpret (uc7 `fmap` mbCgData) nm in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6
     where uc7 (cs, fn) = (cs, \a b c d e f g -> fn (a, b, c, d, e, f, g))
 
--- | Symbolic computations can be constrained, limiting the values variables can take.
-instance Constrainable Symbolic where
+-- | Symbolic computations provide a context for writing symbolic programs.
+instance SolverContext Symbolic where
    constrain          (SBV c) = imposeConstraint Nothing   c
    namedConstraint nm (SBV c) = imposeConstraint (Just nm) c
+   setOption o                = addNewSMTOption  o
 
 -- | Provide a tactic for the solver engine
 tactic :: Tactic SBool -> Symbolic ()
