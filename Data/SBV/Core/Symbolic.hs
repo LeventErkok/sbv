@@ -346,7 +346,7 @@ data QueryState = QueryState { queryAsk                 :: String -> IO String
                              , queryAssertionStackDepth :: Int
                              }
 
--- | A query is a user-guided mechanism to extract results from the solver.
+-- | A query is a user-guided mechanism to directly communicate and extract results from the solver.
 newtype Query a = Query (StateT QueryState IO a)
              deriving (Applicative, Functor, Monad, MonadIO, MonadState QueryState)
 
