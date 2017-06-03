@@ -15,7 +15,7 @@
 module Data.SBV.Control.Types (
        CheckSatResult(..)
      , Logic(..)
-     , SMTOption(..)
+     , SMTOption(..), isStartModeOption
      , SMTInfoFlag(..)
      , SMTErrorBehavior(..)
      , SMTReasonUnknown(..)
@@ -100,6 +100,24 @@ data SMTOption = DiagnosticOutputChannel   FilePath
                | SMTVerbosity              Integer
                | SetLogic                  Logic
                deriving (Generic, NFData)
+
+-- We use the following instance when we want to talk about it in Haskell context.
+-- The Show instance is for how we print it in SMT-Lib.
+instance GShow SMTOption
+
+-- Can this command only be run at start mode?
+isStartModeOption :: SMTOption -> Bool
+isStartModeOption DiagnosticOutputChannel{}   = False
+isStartModeOption GlobalDeclarations{}        = True
+isStartModeOption ProduceAssertions{}         = True
+isStartModeOption ProduceAssignments{}        = True
+isStartModeOption ProduceProofs{}             = True
+isStartModeOption ProduceUnsatAssumptions{}   = True
+isStartModeOption ProduceUnsatCores{}         = True
+isStartModeOption RandomSeed{}                = True
+isStartModeOption ReproducibleResourceLimit{} = False
+isStartModeOption SMTVerbosity{}              = False
+isStartModeOption SetLogic{}                  = True
 
 -- SMTLib's True/False is spelled differently than Haskell's.
 smtBool :: Bool -> String

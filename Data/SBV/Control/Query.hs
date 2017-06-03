@@ -48,6 +48,8 @@ import Data.SBV.Control.Utils
 
 import Data.IORef (readIORef)
 
+import Generics.Deriving.Show
+
 -- | An Assignment of a model binding
 data Assignment = Assign SVal CW
 
@@ -108,8 +110,14 @@ instance SolverContext Query where
    constrain          = addQueryConstraint Nothing
    namedConstraint nm = addQueryConstraint (Just nm)
 
-   setOption (SetLogic l) = send $ "(set-logic "  ++ show l ++ ")"
-   setOption o            = send $ "(set-option " ++ show o ++ ")"
+   setOption o
+     | isStartModeOption o = error $ unlines [ ""
+                                             , "*** Data.SBV: " ++ show (gshow o) ++ " can only be set at start-up time."
+                                             , "*** Hint: Move the call to 'setOption' before the query."
+                                             ]
+     | True                = case o of
+                               SetLogic l -> send $ "(set-logic "  ++ show l ++ ")"   -- This will actually never happen since SetLogic is start-mode. But for completion.
+                               _          -> send $ "(set-option " ++ show o ++ ")"
 
 
 -- | Adding a constraint, possibly named. Only used internally.
