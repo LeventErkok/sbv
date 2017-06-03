@@ -75,7 +75,7 @@ instance Show SMTInfoFlag where
   show Version              = ":version"
   show (InfoKeyword s)      = s
 
--- | Option values that can be set in the solver, following Section 4.1.7 of the SMTLib document <http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-draft-3.pdf>.
+-- | Option values that can be set in the solver, following the SMTLib document <http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-draft-3.pdf>.
 --
 -- Note that not all solvers may support all of these!
 --
@@ -105,7 +105,9 @@ data SMTOption = DiagnosticOutputChannel   FilePath
 -- The Show instance is for how we print it in SMT-Lib.
 instance GShow SMTOption
 
--- Can this command only be run at start mode?
+-- | Can this command only be run at the very beginning? If 'True' then
+-- we will reject setting these options in the query mode. Note that this
+-- classification follows the SMTLib document.
 isStartModeOption :: SMTOption -> Bool
 isStartModeOption DiagnosticOutputChannel{}   = False
 isStartModeOption GlobalDeclarations{}        = True
