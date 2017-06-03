@@ -40,6 +40,7 @@ module Data.SBV.Control (
      , result
      , success
      , failure
+     , exit
 
      -- * Controlling the solver behavior
      , ignoreExitCode

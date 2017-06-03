@@ -16,7 +16,7 @@
 
 module Data.SBV.Control.Query (
        send, ask
-     , CheckSatResult(..), checkSat, checkSatAssuming, getUnsatCore, getProof, push, pop, getAssertionStackDepth, reset
+     , CheckSatResult(..), checkSat, checkSatAssuming, getUnsatCore, getProof, push, pop, getAssertionStackDepth, reset, exit
      , getValue, getModel
      , SMTOption(..)
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
@@ -216,10 +216,18 @@ pop i
    where shl 1 = "one level"
          shl n = show n ++ " levels"
 
--- | Reset the solver, bringing it to the state at the beginning.
+-- | Reset the solver, bringing it to the state at the beginning. Note that this makes the
+-- solver "forget" everything we have sent down, so subsequence interaction will have no
+-- knowledge of the bindings to variables constructed so far. Use with care.
 reset :: Query ()
 reset = do send "(reset)"
            modify' $ \s -> s{queryAssertionStackDepth = 0}
+
+-- | Exit the solver. This action will cause the solver to terminate. Needless to say,
+-- trying to communicate with the solver after issuing "exit" will simply fail.
+exit :: Query ()
+exit = do send "(exit)"
+          modify' $ \s -> s{queryAssertionStackDepth = 0}
 
 -- | Retrieve the unsat-core. Note you must have arranged for
 -- unsat cores to be produced first (/via/ @tactic $ SetOptions [ProduceUnsatCores True]@)
