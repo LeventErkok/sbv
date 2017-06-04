@@ -18,6 +18,7 @@ module Data.SBV.Control.Query (
        send, ask
      , CheckSatResult(..), checkSat, checkSatAssuming, getUnsatCore, getProof, push, pop, getAssertionStackDepth
      , reset, resetAssertions, exit
+     , getAssertions
      , getValue, getModel
      , SMTOption(..)
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
@@ -54,6 +55,22 @@ import Generics.Deriving.Show
 -- | An Assignment of a model binding
 data Assignment = Assign SVal CW
 
+-- sort of a light-hearted show for SExprs, for better consumption at the user level.
+serialize :: Bool -> SExpr -> String
+serialize removeQuotes = go
+  where go (ECon s)      = if removeQuotes then unquote s else s
+        go (ENum (i, _)) = show i
+        go (EReal   r)   = show r
+        go (EFloat  f)   = show f
+        go (EDouble d)   = show d
+        go (EApp [x])    = go x
+        go (EApp ss)     = "(" ++ unwords (map go ss) ++ ")"
+
+        -- remove unnecessary quoting from a string
+        unquote ('"':s@(_:_)) | last s == '"' = init s
+        unquote s                             = s
+
+
 -- | Ask solver for info.
 getInfo :: SMTInfoFlag -> Query SMTInfoResponse
 getInfo flag = do
@@ -65,20 +82,9 @@ getInfo flag = do
 
         isAllStat = isAllStatistics flag
 
-        -- remove unnecessary quoting
-        unquote ('"':s@(_:_)) | last s == '"' = init s
-        unquote s                             = s
+        render = serialize True
 
-        -- sort of a light-hearted show
-        serialize (ECon s)      = unquote s
-        serialize (ENum (i, _)) = show i
-        serialize (EReal   r)   = show r
-        serialize (EFloat  f)   = show f
-        serialize (EDouble d)   = show d
-        serialize (EApp [x])    = serialize x
-        serialize (EApp ss)     = "(" ++ unwords (map serialize ss) ++ ")"
-
-        grabAllStat k v = (serialize k, serialize v)
+        grabAllStat k v = (render k, render v)
 
         -- we're trying to do our best to get key-value pairs here, but this
         -- is necessarily a half-hearted attempt.
@@ -96,15 +102,15 @@ getInfo flag = do
           else case pe of
                  ECon "unsupported"                                        -> return Resp_Unsupported
                  EApp [ECon ":assertion-stack-levels", ENum (i, _)]        -> return $ Resp_AssertionStackLevels i
-                 EApp (ECon ":authors" : ns)                               -> return $ Resp_Authors (map serialize ns)
+                 EApp (ECon ":authors" : ns)                               -> return $ Resp_Authors (map render ns)
                  EApp [ECon ":error-behavior", ECon "immediate-exit"]      -> return $ Resp_Error ErrorImmediateExit
                  EApp [ECon ":error-behavior", ECon "continued-execution"] -> return $ Resp_Error ErrorContinuedExecution
-                 EApp (ECon ":name" : o)                                   -> return $ Resp_Name (serialize (EApp o))
+                 EApp (ECon ":name" : o)                                   -> return $ Resp_Name (render (EApp o))
                  EApp [ECon ":reason-unknown", ECon "memout"]              -> return $ Resp_ReasonUnknown UnknownMemOut
                  EApp [ECon ":reason-unknown", ECon "incomplete"]          -> return $ Resp_ReasonUnknown UnknownIncomplete
-                 EApp (ECon ":reason-unknown" : o)                         -> return $ Resp_ReasonUnknown (UnknownOther (serialize (EApp o)))
-                 EApp (ECon ":version" : o)                                -> return $ Resp_Version (serialize (EApp o))
-                 _                                                         -> return $ Resp_InfoKeyword (serialize pe)
+                 EApp (ECon ":reason-unknown" : o)                         -> return $ Resp_ReasonUnknown (UnknownOther (render (EApp o)))
+                 EApp (ECon ":version" : o)                                -> return $ Resp_Version (render (EApp o))
+                 _                                                         -> return $ Resp_InfoKeyword (render pe)
 
 -- | 'Query' as a 'SolverContext'.
 instance SolverContext Query where
@@ -145,8 +151,8 @@ checkSat = do let cmd = "(check-sat)"
 -- the given assumptions that led to the 'Unsat' conclusion. Note that while this
 -- set will be a subset of the inputs, it is not necessarily guaranteed to be minimal.
 --
--- You must have arranged for the production of unsat-assumptions
--- first (/via/ @tactic $ SetOptions [ProduceUnsatAssumptions True]@)
+-- You must have arranged for the production of unsat assumptions
+-- first (/via/ @'setOption' 'ProduceUnsatAssumptions' 'True'@)
 -- for this call to not error out!
 --
 -- Usage note: 'getUnsatCore' is usually easier to use than 'checkSatAssuming', as it
@@ -177,9 +183,9 @@ checkSatAssuming sBools = do
             bad = unexpected "checkSatAssuming" cmd "one of sat/unsat/unknown"
                            $ Just [ "Make sure you use:"
                                   , ""
-                                  , "       tactic $ SetOptions [ProduceUnsatAssumptions True]"
+                                  , "       setOption $ ProduceUnsatAssumptions True"
                                   , ""
-                                  , "to make sure the solver is ready for producing unsat assumptions."
+                                  , "to tell the solver to produce unsat assumptions."
                                   ]
 
         mapM_ send $ concat declss
@@ -242,7 +248,7 @@ exit = do send "(exit)"
           modify' $ \s -> s{queryAssertionStackDepth = 0}
 
 -- | Retrieve the unsat-core. Note you must have arranged for
--- unsat cores to be produced first (/via/ @tactic $ SetOptions [ProduceUnsatCores True]@)
+-- unsat cores to be produced first (/via/ @'setOption' 'ProduceUnsatCores' 'True'@)
 -- for this call to not error out!
 getUnsatCore :: Query [String]
 getUnsatCore = do
@@ -250,9 +256,9 @@ getUnsatCore = do
             bad = unexpected "getUnsatCore" cmd "an unsat-core response"
                            $ Just [ "Make sure you use:"
                                   , ""
-                                  , "       tactic $ SetOptions [ProduceUnsatCores True]"
+                                  , "       setOption $ ProduceUnsatCores True"
                                   , ""
-                                  , "to make sure the solver is ready for producing unsat cores."
+                                  , "so the solver will be ready to compute unsat cores."
                                   ]
 
 
@@ -269,11 +275,10 @@ getUnsatCore = do
            _                                     -> bad r Nothing
 
 -- | Retrieve the proof. Note you must have arranged for
--- unsat cores to be produced first (/via/ @tactic $ SetOptions [ProduceProofs True]@)
+-- proofs to be produced first (/via/ @'setOption' 'ProduceProofs' 'True'@)
 -- for this call to not error out!
 --
--- A proof is simply a 'String', as returned by the solver. We return an 'Either' type,
--- with the 'Left' choice if something goes wrong with an explanation. In the future, SBV might
+-- A proof is simply a 'String', as returned by the solver. In the future, SBV might
 -- provide a better datatype, depending on the use cases. Please get in touch if you
 -- use this function and can suggest a better API.
 getProof :: Query String
@@ -282,7 +287,7 @@ getProof = do
             bad = unexpected "getProof" cmd "a get-proof response"
                            $ Just [ "Make sure you use:"
                                   , ""
-                                  , "       tactic $ SetOptions [ProduceProofs True]"
+                                  , "       setOption $ ProduceProofs True"
                                   , ""
                                   , "to make sure the solver is ready for producing proofs."
                                   ]
@@ -293,6 +298,33 @@ getProof = do
         -- we only care about the fact that we can parse the output, so the
         -- result of parsing is ignored.
         parse r bad $ \_ -> return r
+
+-- | Retrieve assertions. Note you must have arranged for
+-- assertions to be available first (/via/ @'setOption' 'ProduceAssertions' 'True'@)
+-- for this call to not error out!
+--
+-- Note that the set of assertions returned is merely a list of strings, just like the
+-- case for 'getProof'. In the future, SBV might provide a better datatype, depending
+-- on the use cases. Please get in touch if you use this function and can suggest
+-- a better API.
+getAssertions :: Query [String]
+getAssertions = do
+        let cmd = "(get-assertions)"
+            bad = unexpected "getAssertions" cmd "a get-assertions response"
+                           $ Just [ "Make sure you use:"
+                                  , ""
+                                  , "       setOption $ ProduceAssertions True"
+                                  , ""
+                                  , "to make sure the solver is ready for producing assertions."
+                                  ]
+
+            render = serialize False
+
+        r <- ask cmd
+
+        parse r bad $ \pe -> case pe of
+                                EApp xs -> return $ map render xs
+                                _       -> return [render pe]
 
 -- | Make an assignment. The type 'Assignment' is abstract, see 'success' for an example use case.
 infix 1 |->

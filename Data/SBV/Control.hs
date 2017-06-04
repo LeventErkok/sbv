@@ -23,6 +23,9 @@ module Data.SBV.Control (
      -- ** Extracting a proof
      , getProof
 
+     -- ** Extracting assertions
+     , getAssertions
+
      -- * Getting solver information
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..)
      , getInfo
