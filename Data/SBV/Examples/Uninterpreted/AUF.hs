@@ -45,13 +45,12 @@ type A = SFunArray Word32 Word32
 f :: SWord32 -> SWord64
 f = uninterpret "f"
 
--- | Correctness theorem. We state it for all values of @x@, @y@, and 
--- the array @a@. We also take an arbitrary initializer for the array.
-thm1 :: SWord32 -> SWord32 -> A -> SWord32 -> SBool
-thm1 x y a initVal = lhs ==> rhs
-  where a'  = resetArray a initVal -- initialize array
-        lhs = x + 2 .== y
-        rhs =     f (readArray (writeArray a' x 3) (y - 2))
+-- | Correctness theorem. We state it for all values of @x@, @y@, and
+-- the given array @a@. 
+thm1 :: SWord32 -> SWord32 -> A -> SBool
+thm1 x y a = lhs ==> rhs
+  where lhs = x + 2 .== y
+        rhs =     f (readArray (writeArray a x 3) (y - 2))
               .== f (y - x + 1)
 
 -- | Prints Q.E.D. when run, as expected
@@ -62,9 +61,9 @@ proveThm1 :: IO ThmResult
 proveThm1 = prove $ do
                 x <- free "x"
                 y <- free "y"
-                a <- newArray "a"
-                i <- free "initVal"
-                return $ thm1 x y a i
+                -- Take an "initialized" array, one that returns 0's for all initial reads
+                let a = mkSFunArray (const 0)
+                return $ thm1 x y a
 
 --------------------------------------------------------------
 -- * Model using SMT arrays
