@@ -20,8 +20,7 @@ module Data.SBV.Dynamic
     SVal
   , HasKind(..), Kind(..), CW(..), CWVal(..), cwToBool
   -- *** Arrays of symbolic values
-  , SArr
-  , readSArr, resetSArr, writeSArr, mergeSArr, newSArr, eqSArr
+  , SArr, readSArr, writeSArr, mergeSArr, newSArr, eqSArr
 
   -- ** Creating a symbolic variable
   , Symbolic

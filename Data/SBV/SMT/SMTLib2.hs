@@ -358,13 +358,12 @@ genTableData rm skolemMap (_quantified, args) consts ((i, aknd, _), elts)
 
 -- TODO: We currently do not support non-constant arrays when quantifiers are present, as
 -- we might have to skolemize those. Implement this properly.
--- The difficulty is with the ArrayReset/Mutate/Merge: We have to postpone an init if
+-- The difficulty is with the Mutate/Merge: We have to postpone an init if
 -- the components are themselves postponed, so this cannot be implemented as a simple map.
 declArray :: Bool -> [SW] -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String])
-declArray quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : map (wrap . snd) pre, map (snd . snd) post)
+declArray quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : map (wrap . snd) pre, map snd post)
   where topLevel = not quantified || case ctx of
                                        ArrayFree         -> True
-                                       ArrayReset _ sw   -> sw `elem` consts
                                        ArrayMutate _ a b -> all (`elem` consts) [a, b]
                                        ArrayMerge c _ _  -> c `elem` consts
         (pre, post) = partition fst ctxInfo
@@ -377,15 +376,9 @@ declArray quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : map
         adecl = "(declare-fun " ++ nm ++ " () (Array " ++ smtType aKnd ++ " " ++ smtType bKnd ++ "))"
         ctxInfo = case ctx of
                     ArrayFree         -> []
-                    ArrayReset _ sw   -> declA sw
-                    ArrayMutate j a b -> [(all (`elem` consts) [a, b], (True, "(= " ++ nm ++ " (store array_" ++ show j ++ " " ++ ssw a ++ " " ++ ssw b ++ "))"))]
-                    ArrayMerge  t j k -> [(t `elem` consts,            (True, "(= " ++ nm ++ " (ite " ++ ssw t ++ " array_" ++ show j ++ " array_" ++ show k ++ "))"))]
-        declA sw = let iv = nm ++ "_freeInitializer"
-                   in [ (True,             (False, "(declare-fun " ++ iv ++ " () " ++ smtType aKnd ++ ")"))
-                      , (sw `elem` consts, (True, "(= (select " ++ nm ++ " " ++ iv ++ ") " ++ ssw sw ++ ")"))
-                      ]
-        wrap (False, s) = s
-        wrap (True, s)  = "(assert " ++ s ++ ")"
+                    ArrayMutate j a b -> [(all (`elem` consts) [a, b], "(= " ++ nm ++ " (store array_" ++ show j ++ " " ++ ssw a ++ " " ++ ssw b ++ "))")]
+                    ArrayMerge  t j k -> [(t `elem` consts,            "(= " ++ nm ++ " (ite " ++ ssw t ++ " array_" ++ show j ++ " array_" ++ show k ++ "))")]
+        wrap s = "(assert " ++ s ++ ")"
 
 swType :: SW -> String
 swType s = smtType (kindOf s)

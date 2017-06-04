@@ -1480,7 +1480,6 @@ instance SymArray SFunArray where
   newArray nm                                 = declNewSFunArray (Just nm)
   newArray_                                   = declNewSFunArray Nothing
   readArray     (SFunArray f)                 = f
-  resetArray    (SFunArray _) a               = SFunArray $ const a
   writeArray    (SFunArray f) a b             = SFunArray (\a' -> ite (a .== a') b (f a'))
   mergeArrays t (SFunArray g)   (SFunArray h) = SFunArray (\x -> ite t (g x) (h x))
 

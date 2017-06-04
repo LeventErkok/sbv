@@ -399,8 +399,6 @@ class SymArray array where
   newArray       :: (HasKind a, HasKind b) => String -> Symbolic (array a b)
   -- | Read the array element at @a@
   readArray      :: array a b -> SBV a -> SBV b
-  -- | Reset all the elements of the array to the value @b@
-  resetArray     :: SymWord b => array a b -> SBV b -> array a b
   -- | Update the element at @a@ to be @b@
   writeArray     :: SymWord b => array a b -> SBV a -> SBV b -> array a b
   -- | Merge two given arrays on the symbolic condition
@@ -429,7 +427,6 @@ instance SymArray SArray where
   newArray_                                      = declNewSArray (\t -> "array_" ++ show t)
   newArray n                                     = declNewSArray (const n)
   readArray   (SArray arr) (SBV a)               = SBV (readSArr arr a)
-  resetArray  (SArray arr) (SBV b)               = SArray (resetSArr arr b)
   writeArray  (SArray arr) (SBV a)    (SBV b)    = SArray (writeSArr arr a b)
   mergeArrays (SBV t)      (SArray a) (SArray b) = SArray (mergeSArr t a b)
 

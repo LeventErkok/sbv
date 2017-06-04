@@ -52,7 +52,7 @@ module Data.SBV.Core.Symbolic
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
   , mkSValUserSort
-  , SArr(..), readSArr, resetSArr, writeSArr, mergeSArr, newSArr, eqSArr
+  , SArr(..), readSArr, writeSArr, mergeSArr, newSArr, eqSArr
   ) where
 
 import Control.DeepSeq          (NFData(..))
@@ -513,13 +513,11 @@ instance Show Result where
 
 -- | The context of a symbolic array as created
 data ArrayContext = ArrayFree                -- ^ A new array, the contents are uninitialized
-                  | ArrayReset Int SW        -- ^ An array created from another array by fixing each element to another value
                   | ArrayMutate Int SW SW    -- ^ An array created by mutating another array at a given cell
                   | ArrayMerge  SW Int Int   -- ^ An array created by symbolically merging two other arrays
 
 instance Show ArrayContext where
   show ArrayFree           = " initialized with random elements"
-  show (ArrayReset  i s)   = " reset array_" ++ show i ++ " with " ++ show s ++ " :: " ++ show (swKind s)
   show (ArrayMutate i a b) = " cloned from array_" ++ show i ++ " with " ++ show a ++ " :: " ++ show (swKind a) ++ " |-> " ++ show b ++ " :: " ++ show (swKind b)
   show (ArrayMerge  s i j) = " merged arrays " ++ show i ++ " and " ++ show j ++ " on condition " ++ show s
 
@@ -1152,19 +1150,6 @@ readSArr (SArr (_, bk) f) a = SVal bk $ Right $ cache r
   where r st = do arr <- uncacheAI f st
                   i   <- svToSW st a
                   newExpr st bk (SBVApp (ArrRead arr) [i])
-
--- | Reset all the elements of the array to the value @b@
-resetSArr :: SArr -> SVal -> SArr
-resetSArr (SArr ainfo f) b = SArr ainfo $ cache g
-  where g st = do amap <- readIORef (rArrayMap st)
-                  val <- svToSW st b
-                  i <- uncacheAI f st
-                  let j = IMap.size amap
-                  j `seq` modifyState st rArrayMap (IMap.insert j ("array_" ++ show j, ainfo, ArrayReset i val))
-                                      (noInteractive [ "An array reset:"
-                                                     , "  Array info: " ++ show ainfo
-                                                     ])
-                  return j
 
 -- | Update the element at @a@ to be @b@
 writeSArr :: SArr -> SVal -> SVal -> SArr

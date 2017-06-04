@@ -30,6 +30,11 @@
     necessary can be implemented outside of SBV. If you were using
     this feature, please get in contact.
 
+  * SArray and SFunArray has been reworked, and they no longer take
+    and initial value. Similarly resetArray has been removed, as it
+    did not really do what it advertised. If an initial value is needed,
+    it is best to code this explicitly in your model.
+
   * SBV now has support for interactive solver queries. However, we
     are currently not advertising this widely; it is only intended for
     early beta-adapters and testing. Documentation is also rather
