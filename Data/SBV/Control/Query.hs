@@ -16,7 +16,8 @@
 
 module Data.SBV.Control.Query (
        send, ask
-     , CheckSatResult(..), checkSat, checkSatAssuming, getUnsatCore, getProof, push, pop, getAssertionStackDepth, reset, exit
+     , CheckSatResult(..), checkSat, checkSatAssuming, getUnsatCore, getProof, push, pop, getAssertionStackDepth
+     , reset, resetAssertions, exit
      , getValue, getModel
      , SMTOption(..)
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
@@ -217,11 +218,22 @@ pop i
          shl n = show n ++ " levels"
 
 -- | Reset the solver, bringing it to the state at the beginning. Note that this makes the
--- solver "forget" everything we have sent down, so subsequence interaction will have no
--- knowledge of the bindings to variables constructed so far. Use with care.
+-- solver "forget" everything we have sent down, so subsequent interaction will have no
+-- knowledge of the bindings to variables constructed so far. See 'resetAssertions' for a
+-- variant that keeps the bindings.
 reset :: Query ()
 reset = do send "(reset)"
            modify' $ \s -> s{queryAssertionStackDepth = 0}
+
+-- | Reset the solver, by forgetting all the assertions. However, bindings are kept as is,
+-- as opposed to 'reset'. Use this variant to clean-up the solver state while leaving the bindings
+-- intact. Pops all assertion levels. Declarations and definitions resulting from the 'setLogic'
+-- command are unaffected. If you issued @'setOption' 'GlobalDeclarations' 'True'@
+-- then all declarations and definitions remain unaffected, not just the ones made at the very
+-- first level. Otherwise, only the definitions and bindings from the first level remain.
+resetAssertions :: Query ()
+resetAssertions = do send "(reset-assertions)"
+                     modify' $ \s -> s{queryAssertionStackDepth = 0}
 
 -- | Exit the solver. This action will cause the solver to terminate. Needless to say,
 -- trying to communicate with the solver after issuing "exit" will simply fail.

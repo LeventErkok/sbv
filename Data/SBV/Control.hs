@@ -29,7 +29,10 @@ module Data.SBV.Control (
 
 
      -- * Entering and exiting assertion stack
-     , getAssertionStackDepth, push, pop, reset
+     , getAssertionStackDepth, push, pop
+
+     -- * Resetting the solver state
+     , reset, resetAssertions
 
      -- * Communicating results back
      -- ** Constructing assignments
