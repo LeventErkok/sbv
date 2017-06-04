@@ -22,7 +22,9 @@ module Data.SBV.Control.Utils (
      , unexpected
      ) where
 
-import Data.List (sortBy, intercalate)
+import Data.List  (sortBy, intercalate)
+import Data.Maybe (isNothing)
+
 import Data.Int
 import Data.Word
 
@@ -198,8 +200,8 @@ unexpected ctx sent expected mbHint received mbReason = error $ unlines $ [
         , "***    Context : " ++ ctx
         , "***    Sent    : " ++ sent
         , "***    Expected: " ++ expected
-        , "***    Received: " ++ received
         ]
+     ++ [ "***    Received: " ++ received          | isNothing mbReason  ]
      ++ [ "***    Reason  : " ++ r                 | Just r <- [mbReason]]
      ++ [ "***    Hint    : " ++ intercalate tab r | Just r <- [mbHint]]
  where tab = "\n***              "
