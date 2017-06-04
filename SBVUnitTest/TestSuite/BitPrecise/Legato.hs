@@ -24,7 +24,6 @@ testSuite = mkTestSuite $ \goldCheck -> test [
  , "legato-2" ~: legatoC `goldCheck` "legato_c.gold"
  ]
  where legatoPgm = runSAT $ do
-                       mem     <- newArray "mem"
                        addrX   <- free "addrX"
                        x       <- free "x"
                        addrY   <- free "addrY"
@@ -32,15 +31,14 @@ testSuite = mkTestSuite $ \goldCheck -> test [
                        addrLow <- free "addrLow"
                        regX    <- free "regX"
                        regA    <- free "regA"
-                       memVals <- free "memVals"
                        flagC   <- free "flagC"
                        flagZ   <- free "flagZ"
-                       output $ legatoIsCorrect mem (addrX, x) (addrY, y) addrLow (regX, regA, memVals, flagC, flagZ)
+                       output $ legatoIsCorrect (mkSFunArray (const 0)) (addrX, x) (addrY, y) addrLow (regX, regA, flagC, flagZ)
        legatoC = compileToC' "legatoMult" $ do
                     cgSetDriverValues [87, 92]
                     cgPerformRTCs True
                     x <- cgInput "x"
                     y <- cgInput "y"
-                    let (hi, lo) = runLegato (0, x) (1, y) 2 (initMachine (mkSFunArray (const 0)) (0, 0, 0, false, false))
+                    let (hi, lo) = runLegato (0, x) (1, y) 2 (initMachine (mkSFunArray (const 0)) (0, 0, false, false))
                     cgOutput "hi" hi
                     cgOutput "lo" lo

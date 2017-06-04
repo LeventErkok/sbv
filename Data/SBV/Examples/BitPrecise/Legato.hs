@@ -248,7 +248,6 @@ runLegato (f1Addr, f1Val) (f2Addr, f2Val) loAddr m = (getReg RegA mFinal, peek l
 -- | Helper synonym for capturing relevant bits of Mostek
 type InitVals = ( Value      -- Content of Register X
                 , Value      -- Content of Register A
-                , Value      -- Initial contents of memory
                 , Bit        -- Value of FlagC
                 , Bit        -- Value of FlagZ
                 )
@@ -256,10 +255,10 @@ type InitVals = ( Value      -- Content of Register X
 -- | Create an instance of the Mostek machine, initialized by the memory and the relevant
 -- values of the registers and the flags
 initMachine :: Memory -> InitVals -> Mostek
-initMachine mem (rx, ra, mc, fc, fz) = Mostek { memory    = resetArray mem mc
-                                              , registers = array (minBound, maxBound) [(RegX, rx),  (RegA, ra)]
-                                              , flags     = array (minBound, maxBound) [(FlagC, fc), (FlagZ, fz)]
-                                              }
+initMachine mem (rx, ra, fc, fz) = Mostek { memory    = mem
+                                          , registers = array (minBound, maxBound) [(RegX, rx),  (RegA, ra)]
+                                          , flags     = array (minBound, maxBound) [(FlagC, fc), (FlagZ, fz)]
+                                          }
 
 -- | The correctness theorem. For all possible memory configurations, the factors (@x@ and @y@ below), the location
 -- of the low-byte result and the initial-values of registers and the flags, this function will return True only if
@@ -285,12 +284,27 @@ type Model = SFunArray
 -- type Model = SArray
 
 -- | The correctness theorem.
---   On a decent MacBook Pro, this proof takes about 3 minutes with the 'SFunArray' memory model
---   and about 30 minutes with the 'SArray' model, using yices as the SMT solver
+-- On a 2011 MacBook, this proof takes about 1 minute 45 seconds with the 'SFunArray' memory model
+-- using boolector as the solver.
 correctnessTheorem :: IO ThmResult
-correctnessTheorem = proveWith yices{timing = PrintTiming} $
-    forAll ["mem", "addrX", "x", "addrY", "y", "addrLow", "regX", "regA", "memVals", "flagC", "flagZ"]
-           legatoIsCorrect
+correctnessTheorem = proveWith boolector{timing = PrintTiming} $ do
+        let mem = mkSFunArray (const 0)
+
+        addrX <- sWord32 "addrX"
+        x     <- sWord8  "x"
+
+        addrY <- sWord32 "addrY"
+        y     <- sWord8  "y"
+
+        addrLow <- sWord32 "addrLow"
+
+        regX  <- sWord8 "regX"
+        regA  <- sWord8 "regA"
+
+        flagC <- sBool "flagC"
+        flagZ <- sBool "flagZ"
+
+        return $ legatoIsCorrect mem (addrX, x) (addrY, y) addrLow (regX, regA, flagC, flagZ)
 
 ------------------------------------------------------------------
 -- * C Code generation
@@ -301,7 +315,7 @@ legatoInC :: IO ()
 legatoInC = compileToC Nothing "runLegato" $ do
                 x <- cgInput "x"
                 y <- cgInput "y"
-                let (hi, lo) = runLegato (0, x) (1, y) 2 (initMachine (mkSFunArray (const 0)) (0, 0, 0, false, false))
+                let (hi, lo) = runLegato (0, x) (1, y) 2 (initMachine (mkSFunArray (const 0)) (0, 0, false, false))
                 cgOutput "hi" hi
                 cgOutput "lo" lo
 
