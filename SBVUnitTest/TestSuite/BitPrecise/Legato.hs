@@ -24,7 +24,7 @@ testSuite = mkTestSuite $ \goldCheck -> test [
  , "legato-2" ~: legatoC `goldCheck` "legato_c.gold"
  ]
  where legatoPgm = runSAT $ do
-                       mem     <- newArray "mem" Nothing
+                       mem     <- newArray "mem"
                        addrX   <- free "addrX"
                        x       <- free "x"
                        addrY   <- free "addrY"

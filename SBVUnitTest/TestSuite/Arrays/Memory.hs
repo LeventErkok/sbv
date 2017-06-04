@@ -19,16 +19,16 @@ tests =
   testGroup "Arrays.Memory"
     [ testCase "raw"
         (assertIsThm
-          (free "a" >>= \a -> free "x" >>= \x ->                                       newArray "m" Nothing >>= return . raw a x))
+          (free "a" >>= \a -> free "x" >>= \x ->                                       newArray "m" >>= return . raw a x))
     , testCase "waw"
         (assertIsThm
-          (free "a" >>= \a -> free "x" >>= \x -> free "y" >>= \y ->                    newArray "m" Nothing >>= return . waw a x y))
+          (free "a" >>= \a -> free "x" >>= \x -> free "y" >>= \y ->                    newArray "m" >>= return . waw a x y))
     , testCase "wcommute-good"
         (assertIsThm
-          (free "a" >>= \a -> free "x" >>= \x -> free "b" >>= \b -> free "y" >>= \y -> newArray "m" Nothing >>= return . wcommutesGood (a, x) (b, y)))
+          (free "a" >>= \a -> free "x" >>= \x -> free "b" >>= \b -> free "y" >>= \y -> newArray "m" >>= return . wcommutesGood (a, x) (b, y)))
     , testCase "wcommute-bad"
         (assertIsntThm
-          (free "a" >>= \a -> free "x" >>= \x -> free "b" >>= \b -> free "y" >>= \y -> newArray "m" Nothing >>= return . wcommutesBad  (a, x) (b, y)))
+          (free "a" >>= \a -> free "x" >>= \x -> free "b" >>= \b -> free "y" >>= \y -> newArray "m" >>= return . wcommutesBad  (a, x) (b, y)))
     ]
 
 {-# ANN module ("HLint: ignore Use fmap" :: String) #-}

@@ -512,17 +512,16 @@ instance Show Result where
                 stk ++ ": " ++ show p
 
 -- | The context of a symbolic array as created
-data ArrayContext = ArrayFree (Maybe SW)     -- ^ A new array, with potential initializer for each cell
+data ArrayContext = ArrayFree                -- ^ A new array, the contents are uninitialized
                   | ArrayReset Int SW        -- ^ An array created from another array by fixing each element to another value
                   | ArrayMutate Int SW SW    -- ^ An array created by mutating another array at a given cell
                   | ArrayMerge  SW Int Int   -- ^ An array created by symbolically merging two other arrays
 
 instance Show ArrayContext where
-  show (ArrayFree Nothing)  = " initialized with random elements"
-  show (ArrayFree (Just s)) = " initialized with " ++ show s ++ " :: " ++ show (swKind s)
-  show (ArrayReset i s)     = " reset array_" ++ show i ++ " with " ++ show s ++ " :: " ++ show (swKind s)
-  show (ArrayMutate i a b)  = " cloned from array_" ++ show i ++ " with " ++ show a ++ " :: " ++ show (swKind a) ++ " |-> " ++ show b ++ " :: " ++ show (swKind b)
-  show (ArrayMerge s i j)   = " merged arrays " ++ show i ++ " and " ++ show j ++ " on condition " ++ show s
+  show ArrayFree           = " initialized with random elements"
+  show (ArrayReset  i s)   = " reset array_" ++ show i ++ " with " ++ show s ++ " :: " ++ show (swKind s)
+  show (ArrayMutate i a b) = " cloned from array_" ++ show i ++ " with " ++ show a ++ " :: " ++ show (swKind a) ++ " |-> " ++ show b ++ " :: " ++ show (swKind b)
+  show (ArrayMerge  s i j) = " merged arrays " ++ show i ++ " and " ++ show j ++ " on condition " ++ show s
 
 -- | Expression map, used for hash-consing
 type ExprMap   = Map.Map SBVExpr SW
@@ -1198,15 +1197,13 @@ mergeSArr t (SArr ainfo a) (SArr _ b) = SArr ainfo $ cache h
                   return k
 
 -- | Create a named new array, with an optional initial value
-newSArr :: (Kind, Kind) -> (Int -> String) -> Maybe SVal -> Symbolic SArr
-newSArr ainfo mkNm mbInit = do
+newSArr :: (Kind, Kind) -> (Int -> String) -> Symbolic SArr
+newSArr ainfo mkNm = do
     st <- ask
     amap <- liftIO $ readIORef $ rArrayMap st
     let i = IMap.size amap
         nm = mkNm i
-    actx <- liftIO $ case mbInit of
-                       Nothing   -> return $ ArrayFree Nothing
-                       Just ival -> svToSW st ival >>= \sw -> return $ ArrayFree (Just sw)
+    actx <- liftIO $ return ArrayFree
     liftIO $ modifyState st rArrayMap (IMap.insert i (nm, ainfo, actx))
                        $ noInteractive [ "A new array creation:"
                                        , "  Array info: " ++ show ainfo

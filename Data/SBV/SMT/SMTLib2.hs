@@ -363,11 +363,10 @@ genTableData rm skolemMap (_quantified, args) consts ((i, aknd, _), elts)
 declArray :: Bool -> [SW] -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String])
 declArray quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : map (wrap . snd) pre, map (snd . snd) post)
   where topLevel = not quantified || case ctx of
-                                       ArrayFree Nothing -> True
-                                       ArrayFree (Just sw) -> sw `elem` consts
-                                       ArrayReset _ sw     -> sw `elem` consts
-                                       ArrayMutate _ a b   -> all (`elem` consts) [a, b]
-                                       ArrayMerge c _ _    -> c `elem` consts
+                                       ArrayFree         -> True
+                                       ArrayReset _ sw   -> sw `elem` consts
+                                       ArrayMutate _ a b -> all (`elem` consts) [a, b]
+                                       ArrayMerge c _ _  -> c `elem` consts
         (pre, post) = partition fst ctxInfo
         nm = "array_" ++ show i
         ssw sw
@@ -377,9 +376,8 @@ declArray quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : map
          = tbd "Non-constant array initializer in a quantified context"
         adecl = "(declare-fun " ++ nm ++ " () (Array " ++ smtType aKnd ++ " " ++ smtType bKnd ++ "))"
         ctxInfo = case ctx of
-                    ArrayFree Nothing   -> []
-                    ArrayFree (Just sw) -> declA sw
-                    ArrayReset _ sw     -> declA sw
+                    ArrayFree         -> []
+                    ArrayReset _ sw   -> declA sw
                     ArrayMutate j a b -> [(all (`elem` consts) [a, b], (True, "(= " ++ nm ++ " (store array_" ++ show j ++ " " ++ ssw a ++ " " ++ ssw b ++ "))"))]
                     ArrayMerge  t j k -> [(t `elem` consts,            (True, "(= " ++ nm ++ " (ite " ++ ssw t ++ " array_" ++ show j ++ " array_" ++ show k ++ "))"))]
         declA sw = let iv = nm ++ "_freeInitializer"

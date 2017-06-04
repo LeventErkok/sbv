@@ -62,7 +62,7 @@ proveThm1 :: IO ThmResult
 proveThm1 = prove $ do
                 x <- free "x"
                 y <- free "y"
-                a <- newArray "a" Nothing
+                a <- newArray "a"
                 i <- free "initVal"
                 return $ thm1 x y a i
 
@@ -89,5 +89,5 @@ proveThm2 :: IO ThmResult
 proveThm2 = prove $ do
                 x <- free "x"
                 y <- free "y"
-                a <- newArray "b" Nothing
+                a <- newArray "b"
                 return $ thm2 x y a

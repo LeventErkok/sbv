@@ -60,7 +60,6 @@ import Control.Monad.Trans  (liftIO)
 import Data.Int             (Int8, Int16, Int32, Int64)
 import Data.Word            (Word8, Word16, Word32, Word64)
 import Data.List            (elemIndex, intercalate)
-import Data.Maybe           (fromMaybe)
 
 import qualified Data.Set as Set (Set)
 import qualified Data.Generics as G    (Data(..))
@@ -384,10 +383,7 @@ instance (Random a, SymWord a) => Random (SBV a) where
 ---------------------------------------------------------------------------------
 
 -- | Flat arrays of symbolic values
--- An @array a b@ is an array indexed by the type @'SBV' a@, with elements of type @'SBV' b@
--- If an initial value is not provided in 'newArray_' and 'newArray' methods, then the elements
--- are left unspecified, i.e., the solver is free to choose any value. This is the right thing
--- to do if arrays are used as inputs to functions to be verified, typically. 
+-- An @array a b@ is an array indexed by the type @'SBV' a@, with elements of type @'SBV' b@.
 --
 -- While it's certainly possible for user to create instances of 'SymArray', the
 -- 'SArray' and 'SFunArray' instances already provided should cover most use cases
@@ -397,10 +393,10 @@ instance (Random a, SymWord a) => Random (SBV a) where
 --
 -- Minimal complete definition: All methods are required, no defaults.
 class SymArray array where
-  -- | Create a new array, with an optional initial value
-  newArray_      :: (HasKind a, HasKind b) => Maybe (SBV b) -> Symbolic (array a b)
-  -- | Create a named new array, with an optional initial value
-  newArray       :: (HasKind a, HasKind b) => String -> Maybe (SBV b) -> Symbolic (array a b)
+  -- | Create a new anonymous array
+  newArray_      :: (HasKind a, HasKind b) => Symbolic (array a b)
+  -- | Create a named new array
+  newArray       :: (HasKind a, HasKind b) => String -> Symbolic (array a b)
   -- | Read the array element at @a@
   readArray      :: array a b -> SBV a -> SBV b
   -- | Reset all the elements of the array to the value @b@
@@ -438,16 +434,18 @@ instance SymArray SArray where
   mergeArrays (SBV t)      (SArray a) (SArray b) = SArray (mergeSArr t a b)
 
 -- | Declare a new symbolic array, with a potential initial value
-declNewSArray :: forall a b. (HasKind a, HasKind b) => (Int -> String) -> Maybe (SBV b) -> Symbolic (SArray a b)
-declNewSArray mkNm mbInit = do
+declNewSArray :: forall a b. (HasKind a, HasKind b) => (Int -> String) -> Symbolic (SArray a b)
+declNewSArray mkNm = do
    let aknd = kindOf (undefined :: a)
        bknd = kindOf (undefined :: b)
-   arr <- newSArr (aknd, bknd) mkNm (fmap unSBV mbInit)
+   arr <- newSArr (aknd, bknd) mkNm
    return (SArray arr)
 
--- | Declare a new functional symbolic array, with a potential initial value. Note that a read from an uninitialized cell will result in an error.
-declNewSFunArray :: forall a b. (HasKind a, HasKind b) => Maybe (SBV b) -> Symbolic (SFunArray a b)
-declNewSFunArray mbiVal = return $ SFunArray $ const $ fromMaybe (error "Reading from an uninitialized array entry") mbiVal
+-- | Declare a new functional symbolic array. Note that a read from an uninitialized cell will result in an error.
+declNewSFunArray :: forall a b. (HasKind a, HasKind b) => Maybe String -> Symbolic (SFunArray a b)
+declNewSFunArray mbNm = return $ SFunArray $ error . msg mbNm
+  where msg Nothing   i = "Reading from an uninitialized array entry, index: " ++ show i
+        msg (Just nm) i = "Array " ++ show nm ++ ": Reading from an uninitialized array entry, index: " ++ show i
 
 -- | Arrays implemented internally as functions
 --

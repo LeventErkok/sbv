@@ -1477,8 +1477,8 @@ instance SymWord b => Mergeable (SArray a b) where
 -- force equality can be defined, any non-toy instance
 -- will suffer from efficiency issues; so we don't define it
 instance SymArray SFunArray where
-  newArray _                                  = newArray_ -- the name is irrelevant in this case
-  newArray_     mbiVal                        = declNewSFunArray mbiVal
+  newArray nm                                 = declNewSFunArray (Just nm)
+  newArray_                                   = declNewSFunArray Nothing
   readArray     (SFunArray f)                 = f
   resetArray    (SFunArray _) a               = SFunArray $ const a
   writeArray    (SFunArray f) a b             = SFunArray (\a' -> ite (a .== a') b (f a'))
