@@ -361,7 +361,7 @@ genTableData rm skolemMap (_quantified, args) consts ((i, aknd, _), elts)
 -- The difficulty is with the ArrayReset/Mutate/Merge: We have to postpone an init if
 -- the components are themselves postponed, so this cannot be implemented as a simple map.
 declArray :: Bool -> [SW] -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String])
-declArray quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : map wrap pre, map snd post)
+declArray quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : map (wrap . snd) pre, map (snd . snd) post)
   where topLevel = not quantified || case ctx of
                                        ArrayFree Nothing -> True
                                        ArrayFree (Just sw) -> sw `elem` consts
@@ -380,11 +380,11 @@ declArray quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : map
                     ArrayFree Nothing   -> []
                     ArrayFree (Just sw) -> declA sw
                     ArrayReset _ sw     -> declA sw
-                    ArrayMutate j a b -> [(all (`elem` consts) [a, b], "(= " ++ nm ++ " (store array_" ++ show j ++ " " ++ ssw a ++ " " ++ ssw b ++ "))")]
-                    ArrayMerge  t j k -> [(t `elem` consts,            "(= " ++ nm ++ " (ite " ++ ssw t ++ " array_" ++ show j ++ " array_" ++ show k ++ "))")]
+                    ArrayMutate j a b -> [(all (`elem` consts) [a, b], (True, "(= " ++ nm ++ " (store array_" ++ show j ++ " " ++ ssw a ++ " " ++ ssw b ++ "))"))]
+                    ArrayMerge  t j k -> [(t `elem` consts,            (True, "(= " ++ nm ++ " (ite " ++ ssw t ++ " array_" ++ show j ++ " array_" ++ show k ++ "))"))]
         declA sw = let iv = nm ++ "_freeInitializer"
-                   in [ (True,             "(declare-fun " ++ iv ++ " () " ++ smtType aKnd ++ ")")
-                      , (sw `elem` consts, "(= (select " ++ nm ++ " " ++ iv ++ ") " ++ ssw sw ++ ")")
+                   in [ (True,             (False, "(declare-fun " ++ iv ++ " () " ++ smtType aKnd ++ ")"))
+                      , (sw `elem` consts, (True, "(= (select " ++ nm ++ " " ++ iv ++ ") " ++ ssw sw ++ ")"))
                       ]
         wrap (False, s) = s
         wrap (True, s)  = "(assert " ++ s ++ ")"
