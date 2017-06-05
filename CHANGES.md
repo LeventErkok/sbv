@@ -20,9 +20,9 @@
     the time-elapsed for each solver:
        
           satWithAll
-	  satWithAny
-	  proveWithAll
-	  proveWithAny
+          satWithAny
+          proveWithAll
+          proveWithAny
 
     NB. This is a backwards compatibility breaking change, since the type
     has changed.
