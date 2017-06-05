@@ -147,6 +147,8 @@ import qualified Data.SBV.Core.Model     as SBV (isSatisfiableInCurrentPath, sbv
 import qualified Data.SBV.Provers.Prover as SBV (proveWith, satWith, safeWith, allSatWith, compileToSMTLib, generateSMTBenchmarks)
 import qualified Data.SBV.SMT.SMT        as SBV (Modelable(getAssignment, getModelDictionary))
 
+import System.Time (TimeDiff)
+
 -- | Reduce a condition (i.e., try to concretize it) under the given path
 svIsSatisfiableInCurrentPath :: SVal -> Symbolic (Maybe SatResult)
 svIsSatisfiableInCurrentPath = SBV.isSatisfiableInCurrentPath . toSBool
@@ -199,25 +201,25 @@ allSatWith cfg s = SBV.allSatWith cfg (fmap toSBool s)
 
 -- | Prove a property with multiple solvers, running them in separate threads. The
 -- results will be returned in the order produced.
-proveWithAll :: [SMTConfig] -> Symbolic SVal -> IO [(Solver, ThmResult)]
+proveWithAll :: [SMTConfig] -> Symbolic SVal -> IO [(Solver, TimeDiff, ThmResult)]
 proveWithAll cfgs s = SBV.proveWithAll cfgs (fmap toSBool s)
 
 -- | Prove a property with multiple solvers, running them in separate
 -- threads. Only the result of the first one to finish will be
 -- returned, remaining threads will be killed.
-proveWithAny :: [SMTConfig] -> Symbolic SVal -> IO (Solver, ThmResult)
+proveWithAny :: [SMTConfig] -> Symbolic SVal -> IO (Solver, TimeDiff, ThmResult)
 proveWithAny cfgs s = SBV.proveWithAny cfgs (fmap toSBool s)
 
 -- | Find a satisfying assignment to a property with multiple solvers,
 -- running them in separate threads. The results will be returned in
 -- the order produced.
-satWithAll :: [SMTConfig] -> Symbolic SVal -> IO [(Solver, SatResult)]
+satWithAll :: [SMTConfig] -> Symbolic SVal -> IO [(Solver, TimeDiff, SatResult)]
 satWithAll cfgs s = SBV.satWithAll cfgs (fmap toSBool s)
 
 -- | Find a satisfying assignment to a property with multiple solvers,
 -- running them in separate threads. Only the result of the first one
 -- to finish will be returned, remaining threads will be killed.
-satWithAny :: [SMTConfig] -> Symbolic SVal -> IO (Solver, SatResult)
+satWithAny :: [SMTConfig] -> Symbolic SVal -> IO (Solver, TimeDiff, SatResult)
 satWithAny cfgs s = SBV.satWithAny cfgs (fmap toSBool s)
 
 -- | Extract a model, the result is a tuple where the first argument (if True)

@@ -16,10 +16,31 @@
     custom queries. See "Data.SBV.Examples.Misc.UnsatCore" for an example.
     Old style of unsat-core extraction is no longer supported.
 
+  * The following functions have been reworked, so they now also return
+    the time-elapsed for each solver:
+       
+          satWithAll
+	  satWithAny
+	  proveWithAll
+	  proveWithAny
+
+    NB. This is a backwards compatibility breaking change, since the type
+    has changed.
+
+  * Changed the way `satWithAny` and `proveWithAny` works. Previously, these
+    two functions ran multiple solvers, and took the result of the first
+    one to finish, killing all the others. In addition, they *waitied* for
+    the still-running solvers to finish cleaning-up, as sending a 'ThreadKilled'
+    is usually not instantaneous. Furthermore, a solver might simply take
+    its time! We now send the interrupt but do not wait for the process to
+    actually terminate. In rare occasions this could create zombie processes
+    if you use a solver that is not cooperating, but we have seen not insignificant
+    speed-ups for regular usage due to ThreadKilled wait times being rather long.
+
   * Configuration option `useLogic` is removed. Again, this should
     be done by a tactic of the form:
 
-        tactic $ SetOptions [SetLogic QF_NRA]
+        setOption $ SetLogic QF_NRA
 
   * Thanks to Kanishka Azimi, our external test suite is now run by
     Tasty! Kanishka modernized the test suite, and reworked the

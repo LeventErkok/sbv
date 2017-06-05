@@ -9,8 +9,9 @@
 -- Abstraction of SMT solvers
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DefaultSignatures   #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE DefaultSignatures          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Data.SBV.SMT.SMT (
        -- * Model extraction
@@ -72,11 +73,13 @@ resultConfig (ProofError    c _) = c
 resultConfig (TimeOut       c  ) = c
 
 -- | A 'prove' call results in a 'ThmResult'
-newtype ThmResult    = ThmResult    SMTResult
+newtype ThmResult = ThmResult SMTResult
+                  deriving NFData
 
 -- | A 'sat' call results in a 'SatResult'
 -- The reason for having a separate 'SatResult' is to have a more meaningful 'Show' instance.
-newtype SatResult    = SatResult    SMTResult
+newtype SatResult = SatResult SMTResult
+                  deriving NFData
 
 -- | An 'allSat' call results in a 'AllSatResult'. The boolean says whether
 -- we should warn the user about prefix-existentials.
