@@ -106,7 +106,7 @@ yices = mkConfig Yices.yices SMTLib2 []
 
 -- | Default configuration for the Z3 SMT solver
 z3 :: SMTConfig
-z3 = mkConfig Z3.z3 SMTLib2 ["(set-option :smt.mbqi true) ; use model based quantifier instantiation"]
+z3 = mkConfig Z3.z3 SMTLib2 []
 
 -- | Default configuration for the MathSAT SMT solver
 mathSAT :: SMTConfig
