@@ -4,7 +4,7 @@ report any issues you might see with newer releases.
 
   * ABC:
       * http://bitbucket.org/alanmi/abc
-      * Version as downloaded from the above site on Jan 30, 2017
+      * Version as downloaded from the above site on Jun 5, 2017
   * Boolector:
       * http://fmv.jku.at/boolector/
       * Version 2.4.1
@@ -19,4 +19,4 @@ report any issues you might see with newer releases.
       * Version 2.5.2
   * Z3:
       * http://github.com/Z3Prover/z3
-      * Version as downloaded from the above site on April 30, 2017
+      * Version as downloaded from the above site on Jun 4, 2017
