@@ -98,6 +98,7 @@ data SMTOption = DiagnosticOutputChannel   FilePath
                | RandomSeed                Integer
                | ReproducibleResourceLimit Integer
                | SMTVerbosity              Integer
+               | OptionKeyword             String  [String]
                | SetLogic                  Logic
                deriving (Generic, NFData)
 
@@ -119,6 +120,7 @@ isStartModeOption ProduceUnsatCores{}         = True
 isStartModeOption RandomSeed{}                = True
 isStartModeOption ReproducibleResourceLimit{} = False
 isStartModeOption SMTVerbosity{}              = False
+isStartModeOption OptionKeyword{}             = True  -- Conservative.
 isStartModeOption SetLogic{}                  = True
 
 -- SMTLib's True/False is spelled differently than Haskell's.
@@ -138,6 +140,7 @@ instance Show SMTOption where
   show (RandomSeed                i) = unwords [":random-seed",                 show i]
   show (ReproducibleResourceLimit i) = unwords [":reproducible-resource-limit", show i]
   show (SMTVerbosity              i) = unwords [":verbosity",                   show i]
+  show (OptionKeyword          k as) = unwords $ k : as
   show (SetLogic                  i) = show i
 
 -- | SMT-Lib logics. If left unspecified SBV will pick the logic based on what it determines is needed. However, the
