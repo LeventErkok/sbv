@@ -50,7 +50,7 @@ Library
                   , ghc
                   , QuickCheck >= 2.9.2
                   , crackNum >= 1.9
-                  , array, async, containers, deepseq, directory, filepath, old-time
+                  , array, async, containers, deepseq, directory, filepath, time
                   , pretty, process, mtl, random, syb, data-binary-ieee754
                   , generic-deriving
   Exposed-modules : Data.SBV

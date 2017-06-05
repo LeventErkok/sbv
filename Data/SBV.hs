@@ -283,7 +283,7 @@ import Data.Word
 
 import Control.Exception (finally, throwTo, AsyncException(ThreadKilled))
 
-import System.Time (getClockTime, diffClockTimes, TimeDiff, ClockTime)
+import Data.Time (getCurrentTime, diffUTCTime, NominalDiffTime, UTCTime)
 
 -- | The currently active solver, obtained by importing "Data.SBV".
 -- To have other solvers /current/, import one of the bridge
@@ -324,17 +324,17 @@ sbvAvailableSolvers :: IO [SMTConfig]
 sbvAvailableSolvers = filterM sbvCheckSolverInstallation (map defaultSolverConfig [minBound .. maxBound])
 
 -- | Perform an action asynchronously, returning results together with diff-time.
-runInThread :: NFData b => ClockTime -> (SMTConfig -> IO b) -> SMTConfig -> IO (Async (Solver, TimeDiff, b))
+runInThread :: NFData b => UTCTime -> (SMTConfig -> IO b) -> SMTConfig -> IO (Async (Solver, NominalDiffTime, b))
 runInThread beginTime action config = async $ do
                 result  <- action config
-                endTime <- rnf result `seq` getClockTime
-                return (name (solver config), diffClockTimes endTime beginTime, result)
+                endTime <- rnf result `seq` getCurrentTime
+                return (name (solver config), endTime `diffUTCTime` beginTime, result)
 
 -- | Perform action for all given configs, return the first one that wins. Note that we do
 -- not wait for the other asyncs to terminate; hopefully they'll do so quickly.
-sbvWithAny :: NFData b => [SMTConfig] -> (SMTConfig -> a -> IO b) -> a -> IO (Solver, TimeDiff, b)
+sbvWithAny :: NFData b => [SMTConfig] -> (SMTConfig -> a -> IO b) -> a -> IO (Solver, NominalDiffTime, b)
 sbvWithAny []      _    _ = error "SBV.withAny: No solvers given!"
-sbvWithAny solvers what a = do beginTime <- getClockTime
+sbvWithAny solvers what a = do beginTime <- getCurrentTime
                                snd `fmap` (mapM (runInThread beginTime (`what` a)) solvers >>= waitAnyFastCancel)
    where -- Async's `waitAnyCancel` nicely blocks; so we use this variant to ignore the
          -- wait part for killed threads.
@@ -342,8 +342,8 @@ sbvWithAny solvers what a = do beginTime <- getClockTime
          cancelFast other = throwTo (asyncThreadId other) ThreadKilled
 
 -- | Perform action for all given configs, return all the results.
-sbvWithAll :: NFData b => [SMTConfig] -> (SMTConfig -> a -> IO b) -> a -> IO [(Solver, TimeDiff, b)]
-sbvWithAll solvers what a = do beginTime <- getClockTime
+sbvWithAll :: NFData b => [SMTConfig] -> (SMTConfig -> a -> IO b) -> a -> IO [(Solver, NominalDiffTime, b)]
+sbvWithAll solvers what a = do beginTime <- getCurrentTime
                                mapM (runInThread beginTime (`what` a)) solvers >>= (unsafeInterleaveIO . go)
    where go []  = return []
          go as  = do (d, r) <- waitAny as
@@ -357,7 +357,7 @@ sbvWithAll solvers what a = do beginTime <- getClockTime
 
 -- | Prove a property with multiple solvers, running them in separate threads. The
 -- results will be returned in the order produced.
-proveWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, TimeDiff, ThmResult)]
+proveWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, ThmResult)]
 proveWithAll  = (`sbvWithAll` proveWith)
 
 -- | Prove a property with multiple solvers, running them in separate threads. Only
@@ -365,12 +365,12 @@ proveWithAll  = (`sbvWithAll` proveWith)
 -- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
 -- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
 -- that some processes take their time to terminate. So, this solution favors quick turnaround.
-proveWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, TimeDiff, ThmResult)
+proveWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, NominalDiffTime, ThmResult)
 proveWithAny  = (`sbvWithAny` proveWith)
 
 -- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. The
 -- results will be returned in the order produced.
-satWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, TimeDiff, SatResult)]
+satWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, SatResult)]
 satWithAll = (`sbvWithAll` satWith)
 
 -- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. Only
@@ -378,7 +378,7 @@ satWithAll = (`sbvWithAll` satWith)
 -- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
 -- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
 -- that some processes take their time to terminate. So, this solution favors quick turnaround.
-satWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, TimeDiff, SatResult)
+satWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, NominalDiffTime, SatResult)
 satWithAny    = (`sbvWithAny` satWith)
 
 -- If we get a program producing nothing (i.e., Symbolic ()), pretend it simply returns True.

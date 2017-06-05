@@ -19,10 +19,10 @@
   * The following functions have been reworked, so they now also return
     the time-elapsed for each solver:
        
-        satWithAll   :: Provable a => [SMTConfig] -> a -> IO [(Solver, TimeDiff, SatResult)]
-        satWithAny   :: Provable a => [SMTConfig] -> a -> IO  (Solver, TimeDiff, SatResult)
-        proveWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, TimeDiff, ThmResult)]
-        proveWithAny :: Provable a => [SMTConfig] -> a -> IO  (Solver, TimeDiff, ThmResult)
+        satWithAll   :: Provable a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, SatResult)]
+        satWithAny   :: Provable a => [SMTConfig] -> a -> IO  (Solver, NominalDiffTime, SatResult)
+        proveWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, ThmResult)]
+        proveWithAny :: Provable a => [SMTConfig] -> a -> IO  (Solver, NominalDiffTime, ThmResult)
 
     NB. This is a backwards compatibility breaking change, since the type
     has changed.

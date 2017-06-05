@@ -39,7 +39,7 @@ import Data.List         (intercalate, nub)
 
 import Control.Monad     (when, unless, mplus)
 import System.FilePath   (addExtension, splitExtension)
-import System.Time       (getClockTime)
+import Data.Time         (getCurrentTime, utcToLocalZonedTime)
 import System.IO         (hGetBuffering, hSetBuffering, stdout, hFlush, BufferMode(..))
 import System.IO.Unsafe  (unsafeInterleaveIO)
 
@@ -346,7 +346,7 @@ compileToSMTLib :: Provable a => SMTLibVersion   -- ^ Version of SMTLib to compi
                               -> a
                               -> IO String
 compileToSMTLib version isSat a = do
-        t <- getClockTime
+        t <- utcToLocalZonedTime =<< getCurrentTime
         let comments = ["Created on " ++ show t]
             cfg      = defaultSMTCfg { smtLibVersion = version }
         (_, SMTProblem{smtLibPgm}) <- simulate (toSMTLib cfg) cfg isSat comments a
