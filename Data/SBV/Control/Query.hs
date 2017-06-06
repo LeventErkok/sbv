@@ -16,7 +16,8 @@
 
 module Data.SBV.Control.Query (
        send, ask
-     , CheckSatResult(..), checkSat, checkSatAssuming, getUnsatCore, getProof, push, pop, getAssertionStackDepth
+     , CheckSatResult(..), checkSat, checkSatAssuming, getUnsatCore, getProof, getAssignment
+     , push, pop, getAssertionStackDepth
      , reset, resetAssertions, exit
      , getAssertions
      , getValue, getModel
@@ -55,21 +56,29 @@ import Generics.Deriving.Show
 -- | An Assignment of a model binding
 data Assignment = Assign SVal CW
 
--- sort of a light-hearted show for SExprs, for better consumption at the user level.
+-- Remove one pair of surrounding 'c's, if present
+noSurrounding :: Char -> String -> String
+noSurrounding c (c':cs@(_:_)) | c == c' && c == last cs  = init cs
+noSurrounding _ s                                        = s
+
+-- Remove a pair of surrounding quotes
+unQuote :: String -> String
+unQuote = noSurrounding '"'
+
+-- Remove a pair of surrounding bars
+unBar :: String -> String
+unBar = noSurrounding '|'
+
+-- Sort of a light-hearted show for SExprs, for better consumption at the user level.
 serialize :: Bool -> SExpr -> String
 serialize removeQuotes = go
-  where go (ECon s)      = if removeQuotes then unquote s else s
+  where go (ECon s)      = if removeQuotes then unQuote s else s
         go (ENum (i, _)) = show i
         go (EReal   r)   = show r
         go (EFloat  f)   = show f
         go (EDouble d)   = show d
         go (EApp [x])    = go x
         go (EApp ss)     = "(" ++ unwords (map go ss) ++ ")"
-
-        -- remove unnecessary quoting from a string
-        unquote ('"':s@(_:_)) | last s == '"' = init s
-        unquote s                             = s
-
 
 -- | Ask solver for info.
 getInfo :: SMTInfoFlag -> Query SMTInfoResponse
@@ -266,13 +275,10 @@ getUnsatCore = do
             fromECon (ECon s) = Just s
             fromECon _        = Nothing
 
-            noBar = reverse . dropWhile bar . reverse . dropWhile bar
-            bar   = (== '|')
-
         r <- ask cmd
 
         parse r bad $ \case
-           EApp es | Just xs <- mapM fromECon es -> return $ map noBar xs
+           EApp es | Just xs <- mapM fromECon es -> return $ map unBar xs
            _                                     -> bad r Nothing
 
 -- | Retrieve the proof. Note you must have arranged for
@@ -327,6 +333,30 @@ getAssertions = do
         parse r bad $ \pe -> case pe of
                                 EApp xs -> return $ map render xs
                                 _       -> return [render pe]
+
+-- | Retrieve the assignment. This is a lightweight version of 'getValue', where the
+-- solver returns the truth value for all named subterms of type 'Bool'.
+getAssignment :: Query [(String, Bool)]
+getAssignment = do
+        let cmd = "(get-assignment)"
+            bad = unexpected "getAssignment" cmd "a get-assignment response"
+                           $ Just [ "Make sure you use:"
+                                  , ""
+                                  , "       setOption $ ProduceAssignments True"
+                                  , ""
+                                  , "to make sure the solver is ready for producing assignments,"
+                                  , "and that there is a model by first issuing a 'checkSat' call."
+                                  ]
+
+            -- we're expecting boolean assignment to labels, essentially
+            grab (EApp [ECon s, ENum (0, _)]) = Just (unQuote s, False)
+            grab (EApp [ECon s, ENum (1, _)]) = Just (unQuote s, True)
+            grab _                            = Nothing
+
+        r <- ask cmd
+
+        parse r bad $ \case EApp ps | Just vs <- mapM grab ps -> return vs
+                            _                                 -> bad r Nothing
 
 -- | Make an assignment. The type 'Assignment' is abstract, see 'success' for an example use case.
 infix 1 |->

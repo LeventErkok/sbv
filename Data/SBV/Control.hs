@@ -15,7 +15,7 @@ module Data.SBV.Control (
 
      -- * Querying the solver
      -- ** Extracting values
-     , getValue, getModel
+     , getValue, getModel, getAssignment
 
      -- ** Extracting the unsat core
      , getUnsatCore
