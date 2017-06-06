@@ -167,7 +167,7 @@ getUnsatAssumptions originals proxyMap = do
             bad = unexpected "getUnsatAssumptions" cmd "a list of unsatisfiable assumptions"
                            $ Just [ "Make sure you use:"
                                   , ""
-                                  , "       tactic $ SetOptions [ProduceUnsatAssumptions True]"
+                                  , "       setOption $ ProduceUnsatAssumptions True"
                                   , ""
                                   , "to make sure the solver is ready for producing unsat assumptions,"
                                   , "and that there is a model by first issuing a 'checkSat' call."
