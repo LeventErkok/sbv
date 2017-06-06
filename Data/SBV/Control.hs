@@ -28,7 +28,7 @@ module Data.SBV.Control (
 
      -- * Getting solver information
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..)
-     , getInfo
+     , getInfo, getOption
 
 
      -- * Entering and exiting assertion stack

@@ -16,7 +16,7 @@
 
 module Data.SBV.Control.Query (
        send, ask
-     , CheckSatResult(..), checkSat, checkSatAssuming, getUnsatCore, getProof, getAssignment
+     , CheckSatResult(..), checkSat, checkSatAssuming, getUnsatCore, getProof, getAssignment, getOption
      , push, pop, getAssertionStackDepth
      , reset, resetAssertions, exit
      , getAssertions
@@ -68,6 +68,20 @@ unQuote = noSurrounding '"'
 -- Remove a pair of surrounding bars
 unBar :: String -> String
 unBar = noSurrounding '|'
+
+-- Is this a string? If so, return it, otherwise fail in the Maybe monad.
+fromECon :: SExpr -> Maybe String
+fromECon (ECon s) = Just s
+fromECon _        = Nothing
+
+-- Collect strings appearing, used in 'getOption' only
+stringsOf :: SExpr -> [String]
+stringsOf (ECon s)      = [s]
+stringsOf (ENum (i, _)) = [show i]
+stringsOf (EReal   r)   = [show r]
+stringsOf (EFloat  f)   = [show f]
+stringsOf (EDouble d)   = [show d]
+stringsOf (EApp ss)     = concatMap stringsOf ss
 
 -- Sort of a light-hearted show for SExprs, for better consumption at the user level.
 serialize :: Bool -> SExpr -> String
@@ -136,6 +150,48 @@ instance SolverContext Query where
                                _          -> send $ "(set-option " ++ show o ++ ")"
 
 
+-- | Retrieve the value of an 'SMTOption.' The curious function argument is on purpose here,
+-- simply pass the constructor name. Example: the call @'getOption' 'ProduceUnsatCores'@ will return
+-- either @Nothing@ or @Just (ProduceUnsatCores True)@ or @Just (ProduceUnsatCores False)@.
+--
+-- Result will be 'Nothing' if the solver does not support this option.
+getOption :: (a -> SMTOption) -> Query (Maybe SMTOption)
+getOption f = case f undefined of
+                 DiagnosticOutputChannel{}   -> askFor "DiagnosticOutputChannel"   ":diagnostic-output-channel"   $ string     DiagnosticOutputChannel
+                 GlobalDeclarations{}        -> askFor "GlobalDeclarations"        ":global-declarations"         $ bool       GlobalDeclarations
+                 ProduceAssertions{}         -> askFor "ProduceAssertions"         ":produce-assertions"          $ bool       ProduceAssertions
+                 ProduceAssignments{}        -> askFor "ProduceAssignments"        ":produce-assignments"         $ bool       ProduceAssignments
+                 ProduceProofs{}             -> askFor "ProduceProofs"             ":produce-proofs"              $ bool       ProduceProofs
+                 ProduceUnsatAssumptions{}   -> askFor "ProduceUnsatAssumptions"   ":produce-unsat-assumptions"   $ bool       ProduceUnsatAssumptions
+                 ProduceUnsatCores{}         -> askFor "ProduceUnsatCores"         ":produce-unsat-cores"         $ bool       ProduceUnsatCores
+                 RandomSeed{}                -> askFor "RandomSeed"                ":random-seed"                 $ integer    RandomSeed
+                 ReproducibleResourceLimit{} -> askFor "ReproducibleResourceLimit" ":reproducible-resource-limit" $ integer    ReproducibleResourceLimit
+                 SMTVerbosity{}              -> askFor "SMTVerbosity"              ":verbosity"                   $ integer    SMTVerbosity
+                 OptionKeyword nm _          -> askFor ("OptionKeyword" ++ nm)     nm                             $ stringList (OptionKeyword nm)
+                 SetLogic{}                  -> error "Data.SBV.Query: SMTLib does not allow querying value of the logic!"
+
+  where askFor sbvName smtLibName continue = do
+                let cmd = "(get-option " ++ smtLibName ++ ")"
+                    bad = unexpected ("getOption " ++ sbvName) cmd "a valid option value" Nothing
+
+                r <- ask cmd
+
+                parse r bad $ \case ECon "unsupported" -> return Nothing
+                                    e                  -> continue e (bad r)
+
+        string c (ECon s) _ = return $ Just $ c s
+        string _ e        k = k $ Just $ "Expected string, but got: " ++ show (serialize False e)
+
+        bool c (ENum (0, _)) _ = return $ Just $ c False
+        bool c (ENum (1, _)) _ = return $ Just $ c True
+        bool _ e             k = k $ Just $ "Expected boolean, but got: " ++ show (serialize False e)
+
+        integer c (ENum (i, _)) _ = return $ Just $ c i
+        integer _ e             k = k $ Just $ "Expected integer, but got: " ++ show (serialize False e)
+
+        -- free format, really
+        stringList c e _ = return $ Just $ c $ stringsOf e
+
 -- | Adding a constraint, possibly named. Only used internally.
 -- Use 'constrain' and 'namedConstraint' from user programs.
 addQueryConstraint :: Maybe String -> SBool -> Query ()
@@ -148,7 +204,9 @@ addQueryConstraint mbNm b = do sw <- inNewContext (`sbvToSW` b)
 checkSat :: Query CheckSatResult
 checkSat = do let cmd = "(check-sat)"
                   bad = unexpected "checkSat" cmd "one of sat/unsat/unknown" Nothing
+
               r <- ask cmd
+
               parse r bad $ \case ECon "sat"     -> return Sat
                                   ECon "unsat"   -> return Unsat
                                   ECon "unknown" -> return Unk
@@ -271,9 +329,6 @@ getUnsatCore = do
                                   , "and that there is a model by first issuing a 'checkSat' call."
                                   ]
 
-
-            fromECon (ECon s) = Just s
-            fromECon _        = Nothing
 
         r <- ask cmd
 
