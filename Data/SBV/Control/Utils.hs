@@ -169,7 +169,8 @@ getUnsatAssumptions originals proxyMap = do
                                   , ""
                                   , "       tactic $ SetOptions [ProduceUnsatAssumptions True]"
                                   , ""
-                                  , "to make sure the solver is ready for producing unsat assumptions."
+                                  , "to make sure the solver is ready for producing unsat assumptions,"
+                                  , "and that there is a model by first issuing a 'checkSat' call."
                                   ]
 
             fromECon (ECon s) = Just s

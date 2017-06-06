@@ -258,7 +258,8 @@ getUnsatCore = do
                                   , ""
                                   , "       setOption $ ProduceUnsatCores True"
                                   , ""
-                                  , "so the solver will be ready to compute unsat cores."
+                                  , "so the solver will be ready to compute unsat cores,"
+                                  , "and that there is a model by first issuing a 'checkSat' call."
                                   ]
 
 
@@ -290,6 +291,7 @@ getProof = do
                                   , "       setOption $ ProduceProofs True"
                                   , ""
                                   , "to make sure the solver is ready for producing proofs."
+                                  , "and that there is a proof by first issuing a 'checkSat' call."
                                   ]
 
 
