@@ -85,7 +85,7 @@ module Data.SBV.Dynamic
   , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
 
   -- ** Programmable model extraction
-  , genParse, getAssignment, getModelDictionary
+  , genParse, getModelAssignment, getModelDictionary
   -- * SMT Interface: Configurations and solvers
   , SMTConfig(..), SMTLibVersion(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
 
@@ -145,7 +145,7 @@ import qualified Data.SBV                as SBV (SBool, proveWithAll, proveWithA
 import qualified Data.SBV.Core.Data      as SBV (SBV(..))
 import qualified Data.SBV.Core.Model     as SBV (isSatisfiableInCurrentPath, sbvQuickCheck)
 import qualified Data.SBV.Provers.Prover as SBV (proveWith, satWith, safeWith, allSatWith, compileToSMTLib, generateSMTBenchmarks)
-import qualified Data.SBV.SMT.SMT        as SBV (Modelable(getAssignment, getModelDictionary))
+import qualified Data.SBV.SMT.SMT        as SBV (Modelable(getModelAssignment, getModelDictionary))
 
 import Data.Time (NominalDiffTime)
 
@@ -224,8 +224,8 @@ satWithAny cfgs s = SBV.satWithAny cfgs (fmap toSBool s)
 
 -- | Extract a model, the result is a tuple where the first argument (if True)
 -- indicates whether the model was "probable". (i.e., if the solver returned unknown.)
-getAssignment :: SMTResult -> Either String (Bool, [CW])
-getAssignment = SBV.getAssignment
+getModelAssignment :: SMTResult -> Either String (Bool, [CW])
+getModelAssignment = SBV.getModelAssignment
 
 -- | Extract a model dictionary. Extract a dictionary mapping the variables to
 -- their respective values as returned by the SMT solver. Also see `getModelDictionaries`.

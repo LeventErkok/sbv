@@ -594,7 +594,7 @@ specifying a timeout ('StopAfter'). For most users, default values of these shou
    @
 
   As usual, the programmatic API can be used to extract the values of objectives and model-values ('getModelObjectives',
-  'getAssignment', etc.) to access these values and program with them further.
+  'getModelAssignment', etc.) to access these values and program with them further.
 
 == Multiple optimization goals
 
@@ -915,7 +915,7 @@ which would list all three elements of this domain as satisfying solutions.
      Found 3 different solutions.
    @
 
-Note that the result is properly typed as @X@ elements; these are not mere strings. So, in a 'getAssignment' scenario, the user can recover actual
+Note that the result is properly typed as @X@ elements; these are not mere strings. So, in a 'getModelAssignment' scenario, the user can recover actual
 elements of the domain and program further with those values as usual.
 -}
 

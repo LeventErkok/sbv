@@ -25,7 +25,7 @@ import Data.Generics
 -- i.e., this type will not be uninterpreted but rather preserved and will
 -- be just like any other symbolic type SBV provides. Note the automatically
 -- derived classes we need: 'Eq', 'Ord', 'Data', 'Read', 'Show', 'SymWord',
--- 'HasKind', and 'SatModel'. (The last one is only needed if 'getAssignment' and friends are used.)
+-- 'HasKind', and 'SatModel'. (The last one is only needed if 'getModelAssignment' and friends are used.)
 --
 -- Also note that we need to @import Data.Generics@ and have the @LANGUAGE@
 -- option @DeriveDataTypeable@ and @DeriveAnyClass@ set.
