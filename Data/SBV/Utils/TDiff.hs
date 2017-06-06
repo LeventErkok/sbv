@@ -50,9 +50,9 @@ timedStepLabel lbl =
     Translation         -> "translation"
     WorkByProver x      -> x
 
--- Show NominalDiffTime in human readable form. NominalDiffTime is
+-- | Show 'NominalDiffTime' in human readable form. 'NominalDiffTime' is
 -- essentially picoseconds (10^-12 seconds). We show it so that
--- it's represented at the day:hour:minute:second.XXX granularity
+-- it's represented at the day:hour:minute:second.XXX granularity.
 showTDiff :: NominalDiffTime -> String
 showTDiff diff
    | denom /= 1    -- Should never happen! But just in case.
