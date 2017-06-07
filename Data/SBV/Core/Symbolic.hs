@@ -356,18 +356,30 @@ instance Show (Query a) where
 
 -- | Execute a query.
 runQuery :: Query a -> QueryState -> IO a
-runQuery (Query userQuery) qs@QueryState{queryAsk} = evalStateT f' qs
+runQuery (Query userQuery) qs@QueryState{queryAsk, queryConfig} = evalStateT f' qs
   where f' = do let cmd = "(set-option :print-success true)"
+
                 r <- liftIO $ queryAsk cmd
+
+                let backend = name $ solver queryConfig
+
                 case r of
-                  "success" -> userQuery
-                  _         -> error $ unlines [ ""
-                                               , "*** Data.SBV: Failed to initiate contact with the solver!"
-                                               , "***   Sent    : " ++ cmd
-                                               , "***   Expected: success"
-                                               , "***   Received: " ++ r
-                                               , "*** Try running in debug mode for further information."
-                                               ]
+                  "success"     -> userQuery
+                  "unsupported" -> error $ unlines [ ""
+                                                   , "*** Backend solver (" ++  show backend ++ ") does not support the command:"
+                                                   , "***"
+                                                   , "***     (set-option :print-success true)"
+                                                   , "***"
+                                                   , "*** SBV relies on this feature to coordinate communication!"
+                                                   , "*** Please request this as a feature!"
+                                                   ]
+                  _             -> error $ unlines [ ""
+                                                   , "*** Data.SBV: Failed to initiate contact with the solver!"
+                                                   , "***   Sent    : " ++ cmd
+                                                   , "***   Expected: success"
+                                                   , "***   Received: " ++ r
+                                                   , "*** Try running in debug mode for further information."
+                                                   ]
 
 -- | Install a custom query.
 query :: Query [SMTResult] -> Symbolic ()
