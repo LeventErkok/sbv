@@ -30,7 +30,6 @@ module Data.SBV.Control (
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..)
      , getInfo, getOption
 
-
      -- * Entering and exiting assertion stack
      , getAssertionStackDepth, push, pop
 
@@ -40,6 +39,9 @@ module Data.SBV.Control (
      -- * Communicating results back
      -- ** Constructing assignments
      , (|->)
+
+     -- ** Miscellaneous
+     , echo
 
      -- ** Terminating the query
      , sbvResume

@@ -17,7 +17,7 @@
 module Data.SBV.Control.Query (
        send, ask
      , CheckSatResult(..), checkSat, checkSatAssuming, getUnsatCore, getProof, getAssignment, getOption
-     , push, pop, getAssertionStackDepth
+     , push, pop, getAssertionStackDepth, echo
      , reset, resetAssertions, exit
      , getAssertions
      , getValue, getModel
@@ -305,6 +305,19 @@ reset = do send "(reset)"
 resetAssertions :: Query ()
 resetAssertions = do send "(reset-assertions)"
                      modify' $ \s -> s{queryAssertionStackDepth = 0}
+
+-- | Echo a string. Note that the echoing is done by the solver, not by SBV.
+echo :: String -> Query ()
+echo s = do let cmd = "(echo \"" ++ concatMap sanitize s ++ "\")"
+
+            -- we send the command, but otherwise ignore the response
+            -- note that 'send' would be incorrect here, as it requires a 'success' response.
+            -- 'ask' doesn't.
+            _ <- ask cmd
+
+            return ()
+  where sanitize '"'  = "\"\""  -- quotes need to be duplicated
+        sanitize c    = [c]
 
 -- | Exit the solver. This action will cause the solver to terminate. Needless to say,
 -- trying to communicate with the solver after issuing "exit" will simply fail.
