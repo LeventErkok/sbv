@@ -15,7 +15,7 @@
 module Data.SBV.Control.Types (
        CheckSatResult(..)
      , Logic(..)
-     , SMTOption(..), isStartModeOption
+     , SMTOption(..), isStartModeOption, setSMTOption
      , SMTInfoFlag(..)
      , SMTErrorBehavior(..)
      , SMTReasonUnknown(..)
@@ -61,7 +61,7 @@ data SMTInfoResponse = Resp_Unsupported
                      | Resp_Name                 String
                      | Resp_ReasonUnknown        SMTReasonUnknown
                      | Resp_Version              String
-                     | Resp_InfoKeyword          String
+                     | Resp_InfoKeyword          String [String]
                      deriving Show
 
 -- Show instance for SMTInfoFlag maintains smt-lib format per the SMTLib2 standard document.
@@ -86,7 +86,7 @@ instance Show SMTInfoFlag where
 --    * @:produce-models@                  (SBV always sets this option so it can extract models.)
 --    * @:regular-output-channel@          (SBV always requires regular output to come on stdout for query purposes.)
 --
--- Note that 'SetLogic' is, strictly speaking, not an SMTLib option. However, we treat it as such here
+-- Note that 'SetLogic' and 'SetInfo' are, strictly speaking, not SMTLib options. However, we treat it as such here
 -- uniformly, as it fits better with how options work.
 data SMTOption = DiagnosticOutputChannel   FilePath
                | GlobalDeclarations        Bool
@@ -100,11 +100,8 @@ data SMTOption = DiagnosticOutputChannel   FilePath
                | SMTVerbosity              Integer
                | OptionKeyword             String  [String]
                | SetLogic                  Logic
-               deriving (Generic, NFData)
-
--- We use the following instance when we want to talk about it in Haskell context.
--- The Show instance is for how we print it in SMT-Lib.
-instance GShow SMTOption
+               | SetInfo                   String  [String]
+               deriving (Show, Generic, NFData)
 
 -- | Can this command only be run at the very beginning? If 'True' then
 -- we will reject setting these options in the query mode. Note that this
@@ -122,26 +119,33 @@ isStartModeOption ReproducibleResourceLimit{} = False
 isStartModeOption SMTVerbosity{}              = False
 isStartModeOption OptionKeyword{}             = True  -- Conservative.
 isStartModeOption SetLogic{}                  = True
+isStartModeOption SetInfo{}                   = False
 
 -- SMTLib's True/False is spelled differently than Haskell's.
 smtBool :: Bool -> String
 smtBool True  = "true"
 smtBool False = "false"
 
--- Show instance for SMTOption maintains smt-lib format per the SMTLib2 standard document.
-instance Show SMTOption where
-  show (DiagnosticOutputChannel   f) = unwords [":diagnostic-output-channel",   show f]
-  show (GlobalDeclarations        b) = unwords [":global-declarations",         smtBool b]
-  show (ProduceAssertions         b) = unwords [":produce-assertions",          smtBool b]
-  show (ProduceAssignments        b) = unwords [":produce-assignments",         smtBool b]
-  show (ProduceProofs             b) = unwords [":produce-proofs",              smtBool b]
-  show (ProduceUnsatAssumptions   b) = unwords [":produce-unsat-assumptions",   smtBool b]
-  show (ProduceUnsatCores         b) = unwords [":produce-unsat-cores",         smtBool b]
-  show (RandomSeed                i) = unwords [":random-seed",                 show i]
-  show (ReproducibleResourceLimit i) = unwords [":reproducible-resource-limit", show i]
-  show (SMTVerbosity              i) = unwords [":verbosity",                   show i]
-  show (OptionKeyword          k as) = unwords $ k : as
-  show (SetLogic                  i) = show i
+-- | Translate an option setting to SMTLib. Note the SetLogic/SetInfo discrepancy.
+setSMTOption :: SMTOption -> String
+setSMTOption = cvt
+  where cvt (DiagnosticOutputChannel   f) = opt   [":diagnostic-output-channel",   show f]
+        cvt (GlobalDeclarations        b) = opt   [":global-declarations",         smtBool b]
+        cvt (ProduceAssertions         b) = opt   [":produce-assertions",          smtBool b]
+        cvt (ProduceAssignments        b) = opt   [":produce-assignments",         smtBool b]
+        cvt (ProduceProofs             b) = opt   [":produce-proofs",              smtBool b]
+        cvt (ProduceUnsatAssumptions   b) = opt   [":produce-unsat-assumptions",   smtBool b]
+        cvt (ProduceUnsatCores         b) = opt   [":produce-unsat-cores",         smtBool b]
+        cvt (RandomSeed                i) = opt   [":random-seed",                 show i]
+        cvt (ReproducibleResourceLimit i) = opt   [":reproducible-resource-limit", show i]
+        cvt (SMTVerbosity              i) = opt   [":verbosity",                   show i]
+        cvt (OptionKeyword          k as) = opt   (k : as)
+        cvt (SetLogic                  l) = logic l
+        cvt (SetInfo                k as) = info  (k : as)
+
+        opt   xs = "(set-option " ++ unwords xs ++ ")"
+        info  xs = "(set-info "   ++ unwords xs ++ ")"
+        logic l  = "(set-logic "  ++ show l     ++ ")"
 
 -- | SMT-Lib logics. If left unspecified SBV will pick the logic based on what it determines is needed. However, the
 -- user can override this choice using the tactic 'SetOptions' This is especially handy if one is experimenting with custom

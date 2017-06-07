@@ -134,7 +134,7 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
         -- process all other settings we're given
         userSettings = concatMap opts $ solverSetOptions cfg
            where opts SetLogic{} = []     -- processed already
-                 opts o          = ["(set-option " ++ show o ++ ")"]
+                 opts o          = [setSMTOption o]
 
         settings =  getModels
                  ++ logic

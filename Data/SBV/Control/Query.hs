@@ -51,8 +51,6 @@ import Data.SBV.Control.Utils
 
 import Data.IORef (readIORef)
 
-import Generics.Deriving.Show
-
 -- | An Assignment of a model binding
 data Assignment = Assign SVal CW
 
@@ -133,7 +131,8 @@ getInfo flag = do
                  EApp [ECon ":reason-unknown", ECon "incomplete"]          -> return $ Resp_ReasonUnknown UnknownIncomplete
                  EApp (ECon ":reason-unknown" : o)                         -> return $ Resp_ReasonUnknown (UnknownOther (render (EApp o)))
                  EApp (ECon ":version" : o)                                -> return $ Resp_Version (render (EApp o))
-                 _                                                         -> return $ Resp_InfoKeyword (render pe)
+                 EApp (ECon s : o)                                         -> return $ Resp_InfoKeyword s (map render o)
+                 _                                                         -> bad r Nothing
 
 -- | 'Query' as a 'SolverContext'.
 instance SolverContext Query where
@@ -142,13 +141,10 @@ instance SolverContext Query where
 
    setOption o
      | isStartModeOption o = error $ unlines [ ""
-                                             , "*** Data.SBV: " ++ show (gshow o) ++ " can only be set at start-up time."
+                                             , "*** Data.SBV: '" ++ show o ++ "' can only be set at start-up time."
                                              , "*** Hint: Move the call to 'setOption' before the query."
                                              ]
-     | True                = case o of
-                               SetLogic l -> send $ "(set-logic "  ++ show l ++ ")"   -- This will actually never happen since SetLogic is start-mode. But for completion.
-                               _          -> send $ "(set-option " ++ show o ++ ")"
-
+     | True                = send $ setSMTOption o
 
 -- | Retrieve the value of an 'SMTOption.' The curious function argument is on purpose here,
 -- simply pass the constructor name. Example: the call @'getOption' 'ProduceUnsatCores'@ will return
@@ -169,6 +165,8 @@ getOption f = case f undefined of
                  SMTVerbosity{}              -> askFor "SMTVerbosity"              ":verbosity"                   $ integer    SMTVerbosity
                  OptionKeyword nm _          -> askFor ("OptionKeyword" ++ nm)     nm                             $ stringList (OptionKeyword nm)
                  SetLogic{}                  -> error "Data.SBV.Query: SMTLib does not allow querying value of the logic!"
+                 -- Not to be confused by getInfo, which is totally irrelevant!
+                 SetInfo{}                   -> error "Data.SBV.Query: SMTLib does not allow querying value of meta-info!"
 
   where askFor sbvName smtLibName continue = do
                 let cmd = "(get-option " ++ smtLibName ++ ")"

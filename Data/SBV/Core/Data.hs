@@ -243,6 +243,8 @@ class SolverContext m where
    constrain       :: SBool -> m ()
    -- | Add a named constraint. The name is used in unsat-core extraction.
    namedConstraint :: String -> SBool -> m ()
+   -- | Set info. Example: @setInfo ":status" ["unsat"]@.
+   setInfo :: String -> [String] -> m ()
    -- | Set an option.
    setOption :: SMTOption -> m ()
    -- | Set the logic.
@@ -250,6 +252,8 @@ class SolverContext m where
 
    -- Logic is an option in our implementation, so default implementation suffices.
    setLogic = setOption . SetLogic
+   -- Info is an option in our implementation, so default implementation suffices.
+   setInfo k = setOption . SetInfo k
 
 -- | A class representing what can be returned from a symbolic computation.
 class Outputtable a where
