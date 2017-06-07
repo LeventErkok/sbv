@@ -16,7 +16,7 @@
 module Data.SBV.Control.Utils (
        io
      , ask, send, getValue, getModel, getUnsatAssumptions
-     , ignoreExitCode
+     , ignoreExitCode, getTranscript
      , inNewContext
      , parse
      , unexpected
@@ -186,6 +186,16 @@ getUnsatAssumptions originals proxyMap = do
         parse r bad $ \case
            EApp es | Just xs <- mapM fromECon es -> walk xs []
            _                                     -> bad r Nothing
+
+-- | Retrieve the transcript of communications so far. We get a list of @[Either String String]@, where 'Left' is what SBV
+-- sent to the solver, and 'Right' is what it received in response.
+getTranscript :: Query [Either String String]
+getTranscript = do QueryState{queryContext} <- get
+
+                   transcript <- io $ readIORef (contextTranscript queryContext)
+
+                   -- note the transcript is stored in reverse!
+                   return $ reverse transcript
 
 -- | Bail out if a parse goes bad
 parse :: String -> (String -> Maybe String -> a) -> (SExpr -> a) -> a

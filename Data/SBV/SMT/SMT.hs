@@ -45,11 +45,14 @@ import Data.Int           (Int8, Int16, Int32, Int64)
 import Data.Function      (on)
 import Data.List          (intercalate, isPrefixOf, isInfixOf, sortBy)
 import Data.Word          (Word8, Word16, Word32, Word64)
+
 import System.Directory   (findExecutable)
 import System.Environment (getEnv)
 import System.Exit        (ExitCode(..))
 import System.IO          (hClose, hFlush, hPutStr, hGetContents, hGetLine)
 import System.Process     (runInteractiveProcess, waitForProcess, terminateProcess)
+
+import qualified Data.IORef as IORef (modifyIORef')
 
 import qualified Data.Map as M
 
@@ -578,10 +581,14 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
 
       (send, ask, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
-                let send l    = hPutStr inh (l ++ "\n") >> hFlush inh
+                let send l = do hPutStr inh (l ++ "\n")
+                                hFlush inh
+                                IORef.modifyIORef' (contextTranscript ctx) (Left l :)
 
                     -- read a line from the handle safely.
-                    safeGetLine h = (Right <$> hGetLine h) `C.catch`  (\(e :: C.SomeException) -> return (Left (show e)))
+                    safeGetLine h = do out <- (Right <$> hGetLine h) `C.catch`  (\(e :: C.SomeException) -> return (Left (show e)))
+                                       IORef.modifyIORef' (contextTranscript ctx) (Right (either id id out) :)
+                                       return out
 
                     -- Send a line, get a whole s-expr. We ignore the
                     -- pathetic case that there might be a string with an

@@ -329,12 +329,13 @@ objectiveName (AssertSoft s _ _) = s
 
 -- | The context of a query is the state of the symbolic simulation run and some extra info
 data QueryContext = QueryContext {
-                        contextState   :: State
-                      , contextSkolems :: [String]
+                        contextState      :: State
+                      , contextTranscript :: IORef [Either String String]   -- Left: sent out. Right: received.
+                      , contextSkolems    :: [String]
                       }
 
 instance NFData QueryContext where
-   rnf (QueryContext st sks) = rnf st `seq` rnf sks `seq` ()
+   rnf (QueryContext st script sks) = rnf st `seq` rnf script `seq` rnf sks `seq` ()
 
 -- | The state we keep track of as we interact with the solver
 data QueryState = QueryState { queryAsk                 :: String -> IO String

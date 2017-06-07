@@ -1101,9 +1101,16 @@ runProofOn converter config isSat comments st res =
                       smtScript = converter ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o
                       problem   = SMTProblem { smtInputs=is, smtSkolemMap=skolemMap, kindsUsed=ki
                                              , smtAsserts=assertions, tactics=tacs, smtOptions=options, objectives=goals, smtLibPgm=smtScript}
-                      context   = QueryContext {contextState = st, contextSkolems = skolemVars}
 
-                  in rnf smtScript `seq` return (context, problem)
+                  in do rScript <- IORef.newIORef []
+
+                        let context = QueryContext { contextState      = st
+                                                   , contextTranscript = rScript
+                                                   , contextSkolems    = skolemVars
+                                                   }
+
+                        rnf smtScript `seq` return (context, problem)
+
              Result{resOutputs = os} -> case length os of
                            0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
                            1  -> error $ "Impossible happened, non-boolean output in " ++ show os
