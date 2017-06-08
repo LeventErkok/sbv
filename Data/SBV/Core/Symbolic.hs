@@ -335,7 +335,7 @@ data QueryContext = QueryContext {
                       }
 
 instance NFData QueryContext where
-   rnf (QueryContext st script sks) = rnf st `seq` rnf script `seq` rnf sks `seq` ()
+   rnf (QueryContext st rscript sks) = rnf st `seq` rscript `seq` rnf sks `seq` ()
 
 -- | The state we keep track of as we interact with the solver
 data QueryState = QueryState { queryAsk                 :: String -> IO String
