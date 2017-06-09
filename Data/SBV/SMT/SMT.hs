@@ -711,7 +711,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                      (ExitFailure n, _) -> n
                                                                      (_, ExitFailure n) -> n
                                                                      _                  -> 0 -- can happen if ExitSuccess but there is output on stderr
-                                                     in return $ failure $ [ "Failed to complete the call to " ++ nm
+                                                     in return $ failure $ [ "Failed to complete the call to " ++ nm ++ ":"
                                                                            , "Executable   : " ++ execPath
                                                                            , "Options      : " ++ joinArgs opts
                                                                            , "Exit code    : " ++ show finalEC
