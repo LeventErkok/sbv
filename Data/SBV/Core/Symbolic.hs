@@ -1061,7 +1061,6 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    assertions <- reverse `fmap` readIORef asserts
    return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs tactics options goals assertions outsO
 
-
 -- | Add a new option
 addNewSMTOption :: SMTOption -> Symbolic ()
 addNewSMTOption o =  do st <- ask
@@ -1380,7 +1379,6 @@ data SMTConfig = SMTConfig {
        , timeOut          :: Maybe Int                 -- ^ How much time to give to the solver. (In seconds. Default: No limit.)
        , printBase        :: Int                       -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
        , printRealPrec    :: Int                       -- ^ Print algebraic real values with this precision. (SReal, default: 16)
-       , solverTweaks     :: [String]                  -- ^ Additional lines of script to give to the solver (user specified)
        , optimizeArgs     :: [String]                  -- ^ Additional commands to pass before check-sat is issued
        , satCmd           :: String                    -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
        , isNonModelVar    :: String -> Bool            -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)

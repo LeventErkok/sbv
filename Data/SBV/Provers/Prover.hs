@@ -73,48 +73,47 @@ import qualified Data.SBV.Provers.Z3         as Z3
 import qualified Data.SBV.Provers.MathSAT    as MathSAT
 import qualified Data.SBV.Provers.ABC        as ABC
 
-mkConfig :: SMTSolver -> SMTLibVersion -> [String] -> SMTConfig
-mkConfig s smtVersion tweaks = SMTConfig { verbose          = False
-                                         , timing           = NoTiming
-                                         , sBranchTimeOut   = Nothing
-                                         , timeOut          = Nothing
-                                         , printBase        = 10
-                                         , printRealPrec    = 16
-                                         , smtFile          = Nothing
-                                         , solver           = s
-                                         , solverTweaks     = tweaks
-                                         , smtLibVersion    = smtVersion
-                                         , optimizeArgs     = []
-                                         , satCmd           = "(check-sat)"
-                                         , isNonModelVar    = const False  -- i.e., everything is a model-variable by default
-                                         , roundingMode     = RoundNearestTiesToEven
-                                         , solverSetOptions = []
-                                         , customQuery      = Nothing
-                                         }
+mkConfig :: SMTSolver -> SMTLibVersion -> SMTConfig
+mkConfig s smtVersion = SMTConfig { verbose          = False
+                                  , timing           = NoTiming
+                                  , sBranchTimeOut   = Nothing
+                                  , timeOut          = Nothing
+                                  , printBase        = 10
+                                  , printRealPrec    = 16
+                                  , smtFile          = Nothing
+                                  , solver           = s
+                                  , smtLibVersion    = smtVersion
+                                  , optimizeArgs     = []
+                                  , satCmd           = "(check-sat)"
+                                  , isNonModelVar    = const False  -- i.e., everything is a model-variable by default
+                                  , roundingMode     = RoundNearestTiesToEven
+                                  , solverSetOptions = []
+                                  , customQuery      = Nothing
+                                  }
 
 -- | Default configuration for the Boolector SMT solver
 boolector :: SMTConfig
-boolector = mkConfig Boolector.boolector SMTLib2 []
+boolector = mkConfig Boolector.boolector SMTLib2
 
 -- | Default configuration for the CVC4 SMT Solver.
 cvc4 :: SMTConfig
-cvc4 = mkConfig CVC4.cvc4 SMTLib2 []
+cvc4 = mkConfig CVC4.cvc4 SMTLib2
 
 -- | Default configuration for the Yices SMT Solver.
 yices :: SMTConfig
-yices = mkConfig Yices.yices SMTLib2 []
+yices = mkConfig Yices.yices SMTLib2
 
 -- | Default configuration for the Z3 SMT solver
 z3 :: SMTConfig
-z3 = mkConfig Z3.z3 SMTLib2 []
+z3 = mkConfig Z3.z3 SMTLib2
 
 -- | Default configuration for the MathSAT SMT solver
 mathSAT :: SMTConfig
-mathSAT = mkConfig MathSAT.mathSAT SMTLib2 []
+mathSAT = mkConfig MathSAT.mathSAT SMTLib2
 
 -- | Default configuration for the ABC synthesis and verification tool.
 abc :: SMTConfig
-abc = mkConfig ABC.abc SMTLib2 []
+abc = mkConfig ABC.abc SMTLib2
 
 -- | The default solver used by SBV. This is currently set to z3.
 defaultSMTCfg :: SMTConfig
@@ -1057,11 +1056,10 @@ callSolver isSat checkMsg refutedModels wrap SMTProblem{smtInputs, smtSkolemMap,
            finalPgm = intercalate "\n" (pgm ++ refutedModels) where SMTLibPgm _ pgm = smtLibPgm config caseCond
 
        msg checkMsg
-       msg $  intercalate "\n" $  "Generated SMTLib program:"
-                               : solverTweaks config
-                              ++ [finalPgm]
-                              ++ optimizeArgs config
-                              ++ [satCmd config]
+       msg $  intercalate "\n" $ "Generated SMTLib program:"
+                               : finalPgm
+                               : optimizeArgs config
+                              ++ [maybe (satCmd config) (const "; Run with a custom query.") (customQuery config)]
 
        smtAnswer <- engine (solver config) config ctx isSat mbOptInfo smtInputs smtSkolemMap finalPgm
 
