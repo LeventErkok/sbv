@@ -62,6 +62,8 @@ import Data.SBV.Core.Symbolic (SMTEngine, QueryContext, runQuery, getProofMode, 
 
 import Data.SBV.SMT.SMTLib    (interpretSolverOutput, interpretSolverModelLine, interpretSolverObjectiveLine)
 
+import Data.SBV.Control.Types (setSMTOption)
+
 import Data.SBV.Utils.PrettyNum
 import Data.SBV.Utils.Lib             (joinArgs, splitArgs)
 import Data.SBV.Utils.TDiff
@@ -539,16 +541,15 @@ standardEngine envName envOptName modConfig addTimeOut (extractMap, extractValue
     execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
 
     let cfg'    = cfg {solver = (solver cfg) {executable = execName, options = maybe execOpts (addTimeOut execOpts) (timeOut cfg)}}
-        tweaks  = case solverTweaks cfg' of
-                    [] -> ""
-                    ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
 
         cont rm = concatMap extract skolemMap
            where extract (Left s)        = extractValue s $ "(echo \"((" ++ show s ++ " " ++ mkSkolemZero rm (kindOf s) ++ "))\")"
                  extract (Right (s, [])) = extractValue s $ "(get-value (" ++ show s ++ "))"
                  extract (Right (s, ss)) = extractValue s $ "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
 
-        script = SMTScript {scriptBody = tweaks ++ pgm, scriptModel = cont (roundingMode cfg)}
+        script = SMTScript { scriptBody  = unlines (map setSMTOption (solverSetOptions cfg')) ++ pgm
+                           , scriptModel = cont (roundingMode cfg)
+                           }
 
         -- standard engines only return one result ever
         wrap x = [x]
@@ -567,7 +568,10 @@ standardSolver config ctx script cleanErrs failure success = do
     case smtFile config of
       Nothing -> return ()
       Just f  -> do msg $ "Saving the generated script in file: " ++ show f
-                    writeFile f (scriptBody script ++ intercalate "\n" ("" : optimizeArgs config ++ [satCmd config]))
+                    writeFile f (   scriptBody script
+                                 ++ intercalate "\n"
+                                       ("" : optimizeArgs config ++ [maybe (satCmd config) (const "; Run with a custom query.") (customQuery config)])
+                                )
     rnf script `seq` pipeProcess config ctx exec opts script cleanErrs failure success
 
 -- | A variant of 'readProcessWithExitCode'; except it knows about continuation strings

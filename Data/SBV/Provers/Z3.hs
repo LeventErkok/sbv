@@ -23,6 +23,7 @@ import qualified System.Info as S(os)
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
+import Data.SBV.Control.Types (SMTOption(OptionKeyword), setSMTOption)
 
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
@@ -51,22 +52,23 @@ z3 = SMTSolver {
                                     execName <-                   getEnv "SBV_Z3"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
                                     execOpts <- (splitArgs `fmap` getEnv "SBV_Z3_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
 
-                                    let cfg'   = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
-                                        tweaks = case solverTweaks cfg' of
-                                                   [] -> ""
-                                                   ts -> unlines $ "; --- user given solver tweaks ---" : ts ++ ["; --- end of user given tweaks ---"]
+                                    let ppDecLim = OptionKeyword ":pp.decimal_precision" [show (printRealPrec cfg)]
 
-                                        dlim     = printRealPrec cfg'
-                                        ppDecLim = "(set-option :pp.decimal_precision " ++ show dlim ++ ")\n"
+                                        cfg'   = cfg { solver           = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts}
+                                                     , solverSetOptions = ppDecLim : solverSetOptions cfg
+                                                     }
 
-                                        mkCont   = cont (roundingMode cfg) skolemMap
+
+                                        mkCont   = cont (roundingMode cfg') skolemMap
 
                                         (nModels, mbContScript) =
                                                 case mbOptInfo of
                                                   Just (Independent, n) | n > 1 -> (n, concatMap (mkCont . Just) [0 .. n-1])
                                                   _                             -> (1, mkCont Nothing)
 
-                                        script   = SMTScript {scriptBody = tweaks ++ ppDecLim ++ pgm, scriptModel = mbContScript}
+                                        script = SMTScript { scriptBody  = unlines (map setSMTOption (solverSetOptions cfg')) ++ pgm
+                                                           , scriptModel = mbContScript
+                                                           }
 
                                         mkResult c em
                                          | nModels == 1 = replicate 1 . interpretSolverOutput              c em
