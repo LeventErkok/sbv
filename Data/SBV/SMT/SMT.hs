@@ -49,7 +49,7 @@ import Data.Word          (Word8, Word16, Word32, Word64)
 import System.Directory   (findExecutable)
 import System.Environment (getEnv)
 import System.Exit        (ExitCode(..))
-import System.IO          (hClose, hFlush, hPutStr, hGetContents, hGetLine)
+import System.IO          (hClose, hFlush, hPutStrLn, hGetContents, hGetLine)
 import System.Process     (runInteractiveProcess, waitForProcess, terminateProcess)
 
 import qualified Data.IORef as IORef (modifyIORef')
@@ -583,7 +583,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
 
           cleanLine  = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 
-      (ask, cleanUp, pid) <- do
+      (send, ask, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
 
                 let -- read a line from the handle safely.
@@ -602,27 +602,27 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                     -- Hopefully that doesn't happen often.
                     parenBalance s = length (filter (== '(') s) - length (filter (== ')') s)
 
-                    -- Send a line, get a whole s-expr. We ignore the
-                    -- pathetic case that there might be a string with an
-                    -- unbalanced parentheses in it..
+                    -- send a command down, but check that we're balanced in parens. If we aren't
+                    -- this is most likely an SBV bug.
+                    send command = case parenBalance command of
+                                     i | i /= 0-> error $ unlines [ ""
+                                                                  , "*** Data.SBV: Unbalanced input detected."
+                                                                  , "***"
+                                                                  , "***   Sending: " ++ command
+                                                                  , "***"
+                                                                  , "*** This is most likely an SBV bug. Please report!"
+                                                                  ]
+                                     _ -> do hPutStrLn inh command
+                                             hFlush inh
+                                             IORef.modifyIORef' (contextTranscript ctx) (Left command :)
+
+                    -- Send a line, get a whole s-expr. We ignore the pathetic case that there might be a string with an unbalanced parentheses in it in a response.
                     ask command = -- solvers don't respond to empty lines or comments; we just pass back
                                   -- success in these cases to keep the illusion of everything has a response
                                   let cmd = dropWhile isSpace command
                                   in if null cmd || ";" `isPrefixOf` cmd
                                      then return "success"
-                                     else do () <- case parenBalance command of
-                                                     0 -> return ()
-                                                     _ -> error $ unlines [ ""
-                                                                          , "*** Data.SBV: Unbalanced input detected."
-                                                                          , "***"
-                                                                          , "***   Sending: " ++ command
-                                                                          , "***"
-                                                                          , "*** This is most likely an SBV bug. Please report!"
-                                                                          ]
-
-                                             hPutStr inh (command ++ "\n")
-                                             hFlush inh
-                                             IORef.modifyIORef' (contextTranscript ctx) (Left command :)
+                                     else do send command
                                              if fakeResponseNeeded cmd
                                                 then return "success"
                                                 else do response <- go 0 []
@@ -720,10 +720,15 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                            ]
                                                                            ++ errors'
                                                                            ++ ["Giving up.."]
-                return (ask, cleanUp, pid)
+                return (send, ask, cleanUp, pid)
 
-      let executeSolver = do let sendAndGetSuccess l = do
-                                        r <- ask l
+      let executeSolver = do let sendAndGetSuccess l
+                                   -- The pathetic case when the solver doesn't support queries, so we pretend it responded "success"
+                                   -- Currently ABC is the only such solver. We should ask them to support this feature!
+                                   | not (supportsCustomQueries (capabilities (solver cfg)))
+                                   = send l
+                                   | True
+                                   = do r <- ask l
                                         case words r of
                                           ["success"] -> return ()
                                           _           -> let isOption = "(set-option" `isPrefixOf` dropWhile isSpace l
@@ -780,6 +785,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                         when (verbose cfg) $ putStrLn "** Custom query is requested. Giving control to the user."
                                         let interactiveCtx = ctx { contextState = switchToInteractiveMode (contextState ctx) }
                                             qs = QueryState { queryAsk                 = ask
+                                                            , querySend                = send
                                                             , queryConfig              = cfg
                                                             , queryContext             = interactiveCtx
                                                             , queryDefault             = sbvContinuation

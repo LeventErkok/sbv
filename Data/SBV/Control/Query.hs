@@ -144,7 +144,7 @@ instance SolverContext Query where
                                              , "*** Data.SBV: '" ++ show o ++ "' can only be set at start-up time."
                                              , "*** Hint: Move the call to 'setOption' before the query."
                                              ]
-     | True                = send $ setSMTOption o
+     | True                = send True $ setSMTOption o
 
 -- | Retrieve the value of an 'SMTOption.' The curious function argument is on purpose here,
 -- simply pass the constructor name. Example: the call @'getOption' 'ProduceUnsatCores'@ will return
@@ -194,7 +194,7 @@ getOption f = case f undefined of
 -- Use 'constrain' and 'namedConstraint' from user programs.
 addQueryConstraint :: Maybe String -> SBool -> Query ()
 addQueryConstraint mbNm b = do sw <- inNewContext (`sbvToSW` b)
-                               send $ "(assert " ++ mkNamed mbNm (show sw)  ++ ")"
+                               send True $ "(assert " ++ mkNamed mbNm (show sw)  ++ ")"
    where mkNamed Nothing   s = s
          mkNamed (Just nm) s = annotateWithName nm s
 
@@ -253,7 +253,7 @@ checkSatAssuming sBools = do
                                   , "to tell the solver to produce unsat assumptions."
                                   ]
 
-        mapM_ send $ concat declss
+        mapM_ (send True) $ concat declss
         r <- ask cmd
 
         let grabUnsat = do as <- getUnsatAssumptions origNames proxyMap
@@ -273,7 +273,7 @@ push :: Int -> Query ()
 push i
  | i <= 0 = error $ "Data.SBV: push requires a strictly positive level argument, received: " ++ show i
  | True   = do depth <- getAssertionStackDepth
-               send $ "(push " ++ show i ++ ")"
+               send True $ "(push " ++ show i ++ ")"
                modify' $ \s -> s{queryAssertionStackDepth = depth + i}
 
 -- | Pop the context, exiting a new one. Pops multiple levels if /n/ > 1. It's an error to pop levels that don't exist.
@@ -283,7 +283,7 @@ pop i
  | True   = do depth <- getAssertionStackDepth
                if i > depth
                   then error $ "Data.SBV: Illegally trying to pop " ++ shl i ++ ", at current level: " ++ show depth
-                  else do send $ "(pop " ++ show i ++ ")"
+                  else do send True $ "(pop " ++ show i ++ ")"
                           modify' $ \s -> s{queryAssertionStackDepth = depth - i}
    where shl 1 = "one level"
          shl n = show n ++ " levels"
@@ -293,7 +293,7 @@ pop i
 -- knowledge of the bindings to variables constructed so far. See 'resetAssertions' for a
 -- variant that keeps the bindings.
 reset :: Query ()
-reset = do send "(reset)"
+reset = do send True "(reset)"
            modify' $ \s -> s{queryAssertionStackDepth = 0}
 
 -- | Reset the solver, by forgetting all the assertions. However, bindings are kept as is,
@@ -303,7 +303,7 @@ reset = do send "(reset)"
 -- then all declarations and definitions remain unaffected, not just the ones made at the very
 -- first level. Otherwise, only the definitions and bindings from the first level remain.
 resetAssertions :: Query ()
-resetAssertions = do send "(reset-assertions)"
+resetAssertions = do send True "(reset-assertions)"
                      modify' $ \s -> s{queryAssertionStackDepth = 0}
 
 -- | Echo a string. Note that the echoing is done by the solver, not by SBV.
@@ -311,8 +311,10 @@ echo :: String -> Query ()
 echo s = do let cmd = "(echo \"" ++ concatMap sanitize s ++ "\")"
 
             -- we send the command, but otherwise ignore the response
-            -- note that 'send' would be incorrect here, as it requires a 'success' response.
-            -- 'ask' doesn't.
+            -- note that 'send True/False' would be incorrect here. 'send True' would
+            -- require a success response. 'send False' would fail to consume the
+            -- output. But 'ask' does the right thing! It gets "some" response,
+            -- and forgets about it immediately.
             _ <- ask cmd
 
             return ()
@@ -322,7 +324,7 @@ echo s = do let cmd = "(echo \"" ++ concatMap sanitize s ++ "\")"
 -- | Exit the solver. This action will cause the solver to terminate. Needless to say,
 -- trying to communicate with the solver after issuing "exit" will simply fail.
 exit :: Query ()
-exit = do send "(exit)"
+exit = do send True "(exit)"
           modify' $ \s -> s{queryAssertionStackDepth = 0}
 
 -- | Retrieve the unsat-core. Note you must have arranged for

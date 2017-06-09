@@ -69,9 +69,9 @@ import qualified Data.SBV.Control.Utils as CUtils
 
 -- | Send an arbitrary string to the solver in a query.
 -- Note that this is inherently dangerous as it can put the solver in an arbitrary
--- state and confuse SBV.
+-- state and confuse SBV. If you use this feature, you are on your own!
 sendStringToSolver :: String -> Query ()
-sendStringToSolver = CUtils.send
+sendStringToSolver = CUtils.send False
 
 -- | Send an arbitrary string to the solver in a query, and return a response.
 -- Note that this is inherently dangerous as it can put the solver in an arbitrary

@@ -67,7 +67,7 @@ syncUpSolver is = do
                        cnsts <- (sortBy cmp . map swapc . Map.toList) `fmap` readIORef (rNewConsts is)
                        as    <- readIORef (rNewAsgns  is)
                        return $ toIncSMTLib cfg cnsts as cfg
-        mapM_ send ls
+        mapM_ (send True) ls
 
 -- | Execute in a new incremental context
 inNewContext :: (State -> IO a) -> Query a
@@ -90,17 +90,22 @@ ask s = do QueryState{queryAsk, queryConfig} <- get
 
            return r
 
--- | Send a string to the solver, where no answer is expected. But we
--- do require the solver to print back success.
-send :: String -> Query ()
-send s = do QueryState{queryAsk, queryConfig} <- get
+-- | Send a string to the solver. If the first argument is 'True', we will require
+-- a "success" response as well. Otherwise, we'll fire and forget.
+send :: Bool -> String -> Query ()
+send requireSuccess s = do
 
-            r <- io $ queryAsk s
+            QueryState{queryAsk, querySend, queryConfig} <- get
 
-            case words r of
-              ["success"] -> when (verbose queryConfig) $ io $ putStrLn $ "[SUCCESS] " ++ s
-              _           -> do io $ putStrLn $ "[FAILED]  " ++ s
-                                unexpected "Command" s "success" Nothing r Nothing
+            if requireSuccess
+               then do r <- io $ queryAsk s
+
+                       case words r of
+                         ["success"] -> when (verbose queryConfig) $ io $ putStrLn $ "[SUCCESS] " ++ s
+                         _           -> do io $ putStrLn $ "[FAILED]  " ++ s
+                                           unexpected "Command" s "success" Nothing r Nothing
+
+               else io $ querySend s  -- fire and forget. if you use this, you're on your own!
 
 -- | A class which allows for sexpr-conversion to values
 class SMTValue a where

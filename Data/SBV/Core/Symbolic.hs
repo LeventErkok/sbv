@@ -339,6 +339,7 @@ instance NFData QueryContext where
 
 -- | The state we keep track of as we interact with the solver
 data QueryState = QueryState { queryAsk                 :: String -> IO String
+                             , querySend                :: String -> IO ()
                              , queryConfig              :: SMTConfig
                              , queryContext             :: QueryContext
                              , queryDefault             :: Bool -> IO [SMTResult]
