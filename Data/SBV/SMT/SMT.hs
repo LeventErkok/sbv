@@ -62,8 +62,6 @@ import Data.SBV.Core.Symbolic (SMTEngine, QueryContext, runQuery, getProofMode, 
 
 import Data.SBV.SMT.SMTLib    (interpretSolverOutput, interpretSolverModelLine, interpretSolverObjectiveLine)
 
-import Data.SBV.Control.Types (setSMTOption)
-
 import Data.SBV.Utils.PrettyNum
 import Data.SBV.Utils.Lib             (joinArgs, splitArgs)
 import Data.SBV.Utils.TDiff
@@ -547,7 +545,7 @@ standardEngine envName envOptName modConfig addTimeOut (extractMap, extractValue
                  extract (Right (s, [])) = extractValue s $ "(get-value (" ++ show s ++ "))"
                  extract (Right (s, ss)) = extractValue s $ "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
 
-        script = SMTScript { scriptBody  = unlines (map setSMTOption (solverSetOptions cfg')) ++ pgm
+        script = SMTScript { scriptBody  = pgm
                            , scriptModel = cont (roundingMode cfg)
                            }
 
@@ -724,7 +722,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
 
       let executeSolver = do let sendAndGetSuccess l
                                    -- The pathetic case when the solver doesn't support queries, so we pretend it responded "success"
-                                   -- Currently ABC is the only such solver. We should ask them to support this feature!
+                                   -- Currently ABC is the only such solver. Filed a request for ABC at: https://bitbucket.org/alanmi/abc/issues/70/
                                    | not (supportsCustomQueries (capabilities (solver cfg)))
                                    = send l
                                    | True
