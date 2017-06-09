@@ -799,8 +799,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
       executeSolver `C.onException`  (terminateProcess pid >> waitForProcess pid)
 
 -- | In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
--- each S-Expression spanning only a single line. We ignore strings that span multiple lines,
--- hopefully that should not be an issue!
+-- each S-Expression spanning only a single line.
 mergeSExpr :: [String] -> [String]
 mergeSExpr []       = []
 mergeSExpr (x:xs)
@@ -814,6 +813,7 @@ mergeSExpr (x:xs)
                go i ('(':cs) = let i'= i+1 in i' `seq` go i' cs
                go i (')':cs) = let i'= i-1 in i' `seq` go i' cs
                go i ('"':cs) = go i (skipString cs)
+               go i ('|':cs) = go i (skipBar cs)
                go i (_  :cs) = go i cs
 
        grab i ls
@@ -826,3 +826,7 @@ mergeSExpr (x:xs)
        skipString ('"':cs)      = cs
        skipString (_:cs)        = skipString cs
        skipString []            = []             -- Oh dear, line finished, but the string didn't. We're in trouble. Ignore!
+
+       skipBar ('|':cs) = cs
+       skipBar (_:cs)   = skipBar cs
+       skipBar []       = []                     -- Oh dear, line finished, but the string didn't. We're in trouble. Ignore!
