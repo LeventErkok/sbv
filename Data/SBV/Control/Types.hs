@@ -75,7 +75,7 @@ instance Show SMTInfoFlag where
   show Version              = ":version"
   show (InfoKeyword s)      = s
 
--- | Option values that can be set in the solver, following the SMTLib document <http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-draft-3.pdf>.
+-- | Option values that can be set in the solver, following the SMTLib specification <http://smtlib.cs.uiowa.edu/language.shtml>.
 --
 -- Note that not all solvers may support all of these!
 --
