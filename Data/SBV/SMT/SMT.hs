@@ -583,21 +583,51 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
 
           cleanLine  = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 
-      (send, ask, cleanUp, pid) <- do
+      (ask, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
-                let send l = do hPutStr inh (l ++ "\n")
-                                hFlush inh
-                                IORef.modifyIORef' (contextTranscript ctx) (Left l :)
 
-                    -- read a line from the handle safely.
+                let -- read a line from the handle safely.
                     safeGetLine h = do out <- (Right <$> hGetLine h) `C.catch`  (\(e :: C.SomeException) -> return (Left (show e)))
                                        IORef.modifyIORef' (contextTranscript ctx) (Right (either id id out) :)
                                        return out
 
+                    -- TODO: Work around Z3 issue: Some commands do not get a success response. Work around
+                    -- it till it gets fixed. This is inherently dangerous. See:
+                    -- https://github.com/LeventErkok/sbv/issues/289
+                    fakeResponseNeeded cmd = any (\c -> ('(':c) `isPrefixOf` cmd) noResponseCommands
+                      where noResponseCommands = ["assert-soft", "minimize", "maximize"]
+
+                    -- make sure what we're sending has balanced parentheses.
+                    -- TODO: This ignores string constants which might have unbalanced parentheses!
+                    -- Hopefully that doesn't happen often.
+                    parenBalance s = length (filter (== '(') s) - length (filter (== ')') s)
+
                     -- Send a line, get a whole s-expr. We ignore the
                     -- pathetic case that there might be a string with an
                     -- unbalanced parentheses in it..
-                    ask command = send command >> (intercalate "\n" . reverse) `fmap` go 0 []
+                    ask command = -- solvers don't respond to empty lines or comments; we just pass back
+                                  -- success in these cases to keep the illusion of everything has a response
+                                  let cmd = dropWhile isSpace command
+                                  in if null cmd || ";" `isPrefixOf` cmd
+                                     then return "success"
+                                     else do () <- case parenBalance command of
+                                                     0 -> return ()
+                                                     _ -> error $ unlines [ ""
+                                                                          , "*** Data.SBV: Unbalanced input detected."
+                                                                          , "***"
+                                                                          , "***   Sending: " ++ command
+                                                                          , "***"
+                                                                          , "*** This is most likely an SBV bug. Please report!"
+                                                                          ]
+
+                                             hPutStr inh (command ++ "\n")
+                                             hFlush inh
+                                             IORef.modifyIORef' (contextTranscript ctx) (Left command :)
+                                             if fakeResponseNeeded cmd
+                                                then return "success"
+                                                else do response <- go 0 []
+                                                        return $ intercalate "\n" $ reverse response
+
                       where go i sofar = do errln <- safeGetLine outh
                                             case errln of
                                               Right ln -> let open  = length $ filter (== '(') ln
@@ -690,10 +720,37 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                            ]
                                                                            ++ errors'
                                                                            ++ ["Giving up.."]
-                return (send, ask, cleanUp, pid)
+                return (ask, cleanUp, pid)
 
-      let executeSolver = do mapM_ send (lines (scriptBody script))
-                             mapM_ send (optimizeArgs cfg)
+      let executeSolver = do let sendAndGetSuccess l = do
+                                        r <- ask l
+                                        case words r of
+                                          ["success"] -> return ()
+                                          _           -> let isOption = "(set-option" `isPrefixOf` dropWhile isSpace l
+
+                                                             reason | isOption = [ "*** Backend solver reports it does not support this option."
+                                                                                 , "*** Double-check the spelling of the option value, and if"
+                                                                                 , "*** correct, please report this as a bug/feature request with the solver!"
+                                                                                 ]
+                                                                    | True     = [ "*** Failed to establish solver context. Running in debug mode might provide"
+                                                                                 , "*** more information. Please report this as an issue!"
+                                                                                 ]
+
+                                                         in error $ unlines $ [""
+                                                                              , "*** Data.SBV: Unexpected non-success response from " ++ nm ++ ":"
+                                                                              , "***"
+                                                                              , "***    Sent    : " ++ l
+                                                                              , "***    Expected: success"
+                                                                              , "***    Received: " ++ r
+                                                                              , "***"
+                                                                              , "***    Executable: " ++ execPath
+                                                                              , "***    Options   : " ++ joinArgs opts
+                                                                              , "***"
+                                                                              ]
+                                                                              ++ reason
+
+                             mapM_ sendAndGetSuccess (mergeSExpr (lines (scriptBody script)))
+                             mapM_ sendAndGetSuccess (optimizeArgs cfg)
 
                              -- Capture what SBV would do here
                              let sbvContinuation ignoreExitCode = do
