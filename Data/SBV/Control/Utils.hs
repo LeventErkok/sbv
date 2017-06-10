@@ -76,17 +76,18 @@ inNewContext act = do QueryState{queryContext} <- get
                       syncUpSolver is
                       return r
 
+-- | Internal diagnostic messages.
+debugMsg :: [String] -> Query ()
+debugMsg msg = do QueryState{queryConfig} <- get
+                  when (verbose queryConfig) $ mapM_ (io . putStrLn) msg
+
 -- | Send a string to the solver, and return the response
 ask :: String -> Query String
-ask s = do QueryState{queryAsk, queryConfig} <- get
+ask s = do QueryState{queryAsk} <- get
 
-           let dbg what
-                 | verbose queryConfig = io . putStrLn $ what
-                 | True                = return ()
-
-           dbg $ "[SENDING]  " ++ s
+           debugMsg ["[SENDING]  " ++ s]
            r <- io $ queryAsk s
-           dbg $ "[RECEIVED] " ++ r
+           debugMsg ["[RECEIVED] " ++ r]
 
            return r
 
@@ -183,10 +184,21 @@ getUnsatAssumptions originals proxyMap = do
 
         r <- ask cmd
 
+        -- If unsat-cores are enabled, z3 might end-up printing an assumption that wasn't
+        -- in the original list of assumptions for `check-sat-assuming`. So, we walk over
+        -- and ignore those that weren't in the original list, and put a warning for those
+        -- we couldn't find.
         let walk []     sofar = return $ reverse sofar
             walk (a:as) sofar = case a `lookup` proxyMap of
                                   Just v  -> walk as (v:sofar)
-                                  Nothing -> bad a $ Just $ "Unexpected assumption named " ++ show a ++ ". Was expecting one of: " ++ show originals
+                                  Nothing -> do debugMsg [ "*** In call to 'getUnsatAssumptions'"
+                                                         , "***"
+                                                         , "***    Unexpected assumption named: " ++ show a
+                                                         , "***    Was expecting one of       : " ++ show originals
+                                                         , "***"
+                                                         , "*** This can happen if unsat-cores are also enabled. Ignoring."
+                                                         ]
+                                                walk as sofar
 
         parse r bad $ \case
            EApp es | Just xs <- mapM fromECon es -> walk xs []
