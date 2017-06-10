@@ -589,12 +589,6 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                        IORef.modifyIORef' (contextTranscript ctx) (Right (either id id out) :)
                                        return out
 
-                    -- TODO: Work around Z3 issue: Some commands do not get a success response. Work around
-                    -- it till it gets fixed. This is inherently dangerous. See:
-                    -- https://github.com/LeventErkok/sbv/issues/289
-                    fakeResponseNeeded cmd = any (\c -> ('(':c) `isPrefixOf` cmd) noResponseCommands
-                      where noResponseCommands = ["assert-soft", "minimize", "maximize"]
-
                     -- make sure what we're sending has balanced parentheses.
                     -- TODO: This ignores string constants which might have unbalanced parentheses!
                     -- Hopefully that doesn't happen often.
@@ -621,10 +615,8 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                   in if null cmd || ";" `isPrefixOf` cmd
                                      then return "success"
                                      else do send command
-                                             if fakeResponseNeeded cmd
-                                                then return "success"
-                                                else do response <- go 0 []
-                                                        return $ intercalate "\n" $ reverse response
+                                             response <- go 0 []
+                                             return $ intercalate "\n" $ reverse response
 
                       where go i sofar = do errln <- safeGetLine outh
                                             case errln of
