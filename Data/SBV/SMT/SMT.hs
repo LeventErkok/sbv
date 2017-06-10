@@ -63,7 +63,8 @@ import Data.SBV.Core.Symbolic (SMTEngine, QueryContext, runQuery, getProofMode, 
 import Data.SBV.SMT.SMTLib    (interpretSolverOutput, interpretSolverModelLine, interpretSolverObjectiveLine)
 
 import Data.SBV.Utils.PrettyNum
-import Data.SBV.Utils.Lib             (joinArgs, splitArgs)
+import Data.SBV.Utils.Lib       (joinArgs, splitArgs)
+import Data.SBV.Utils.SExpr     (parenDeficit)
 import Data.SBV.Utils.TDiff
 
 -- | Extract the final configuration from a result
@@ -589,24 +590,21 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                        IORef.modifyIORef' (contextTranscript ctx) (Right (either id id out) :)
                                        return out
 
-                    -- make sure what we're sending has balanced parentheses.
-                    -- TODO: This ignores string constants which might have unbalanced parentheses!
-                    -- Hopefully that doesn't happen often.
-                    parenBalance s = length (filter (== '(') s) - length (filter (== ')') s)
-
                     -- send a command down, but check that we're balanced in parens. If we aren't
                     -- this is most likely an SBV bug.
-                    send command = case parenBalance command of
-                                     i | i /= 0-> error $ unlines [ ""
-                                                                  , "*** Data.SBV: Unbalanced input detected."
-                                                                  , "***"
-                                                                  , "***   Sending: " ++ command
-                                                                  , "***"
-                                                                  , "*** This is most likely an SBV bug. Please report!"
-                                                                  ]
-                                     _ -> do hPutStrLn inh command
-                                             hFlush inh
-                                             IORef.modifyIORef' (contextTranscript ctx) (Left command :)
+                    send command
+                      | parenDeficit command /= 0
+                      = error $ unlines [ ""
+                                        , "*** Data.SBV: Unbalanced input detected."
+                                        , "***"
+                                        , "***   Sending: " ++ command
+                                        , "***"
+                                        , "*** This is most likely an SBV bug. Please report!"
+                                        ]
+                      | True
+                      = do hPutStrLn inh command
+                           hFlush inh
+                           IORef.modifyIORef' (contextTranscript ctx) (Left command :)
 
                     -- Send a line, get a whole s-expr. We ignore the pathetic case that there might be a string with an unbalanced parentheses in it in a response.
                     ask command = -- solvers don't respond to empty lines or comments; we just pass back
@@ -620,9 +618,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
 
                       where go i sofar = do errln <- safeGetLine outh
                                             case errln of
-                                              Right ln -> let open  = length $ filter (== '(') ln
-                                                              close = length $ filter (== ')') ln
-                                                              need  = i + open - close
+                                              Right ln -> let need  = i + parenDeficit ln
                                                               acc   = ln : sofar
                                                               -- make sure we get *something*
                                                               empty = null $ dropWhile isSpace ln

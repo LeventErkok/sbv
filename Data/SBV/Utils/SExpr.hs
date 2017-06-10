@@ -9,7 +9,9 @@
 -- Parsing of S-expressions (mainly used for parsing SMT-Lib get-value output)
 -----------------------------------------------------------------------------
 
-module Data.SBV.Utils.SExpr (SExpr(..), parseSExpr) where
+{-# LANGUAGE BangPatterns #-}
+
+module Data.SBV.Utils.SExpr (SExpr(..), parenDeficit, parseSExpr) where
 
 import Data.Bits           (setBit, testBit)
 import Data.Word           (Word32, Word64)
@@ -67,6 +69,15 @@ tokenize inp = go inp []
        -- it is *crucial* that this list contains every character
        -- we can match in one of the previous cases!
        stopper = " \t\n():|\""
+
+-- | The balance of parens in this string. If 0, this means it's a legit line!
+parenDeficit :: String -> Int
+parenDeficit = go 0 . tokenize
+  where go :: Int -> [String] -> Int
+        go !balance []          = balance
+        go !balance ("(" : rest) = go (balance+1) rest
+        go !balance (")" : rest) = go (balance-1) rest
+        go !balance (_   : rest) = go balance     rest
 
 -- | Parse a string into an SExpr, potentially failing with an error message
 parseSExpr :: String -> Either String SExpr
