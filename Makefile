@@ -52,7 +52,7 @@ basicTest:
 
 extendedTests:
 	$(call startTimer,$@)
-	@$(TIME) ./dist/build/int-test-extended/int-test-extended -p '**' -j 4
+	@$(TIME) ./dist/build/int-test-extended/int-test-extended --hide-successes -p '**' -j 4
 	$(call endTimer,$@)
 
 test: install doctest basicTest extendedTests
