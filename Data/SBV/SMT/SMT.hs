@@ -512,12 +512,10 @@ standardModelExtractor isSat qinps solverLines = SMTModel { modelObjectives = ma
                                                           }
          where sortByNodeId :: [(Int, a)] -> [(Int, a)]
                sortByNodeId = sortBy (compare `on` fst)
-               inps -- for "sat", display the prefix existentials. For completeness, we will drop
-                    -- only the trailing foralls. Exception: Don't drop anything if it's all a sequence of foralls
-                    | isSat = map snd $ if all (== ALL) (map fst qinps)
-                                        then qinps
-                                        else reverse $ dropWhile ((== ALL) . fst) $ reverse qinps
-                    -- for "proof", just display the prefix universals
+
+               -- for "sat",   display the existentials.
+               -- for "proof", display the universals.
+               inps | isSat = map snd $ takeWhile ((/= ALL) . fst) qinps
                     | True  = map snd $ takeWhile ((== ALL) . fst) qinps
 
 -- | A standard engine interface. Most solvers follow-suit here in how we "chat" to them..
@@ -542,7 +540,7 @@ standardEngine envName envOptName modConfig addTimeOut (extractMap, extractValue
     let cfg'    = cfg {solver = (solver cfg) {executable = execName, options = maybe execOpts (addTimeOut execOpts) (timeOut cfg)}}
 
         cont rm = concatMap extract skolemMap
-           where extract (Left s)        = extractValue s $ "(echo \"((" ++ show s ++ " " ++ mkSkolemZero rm (kindOf s) ++ "))\")"
+           where extract (Left _)        = []  -- universals; we don't need their value, as the model is true for all of these.
                  extract (Right (s, [])) = extractValue s $ "(get-value (" ++ show s ++ "))"
                  extract (Right (s, ss)) = extractValue s $ "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
 
@@ -665,9 +663,8 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                               ]
                                            ++ case response of
                                                 Nothing      -> []
-                                                Just (r, vs) ->   ("Response : " ++ r)
-                                                                : ["           " ++ l  | l <- vs]
-                                           ++ [ "Output   : " ++ out | not (null out)]
+                                                Just (r, vs) ->    ("Response : " ++ r)
+                                                                :  ["           " ++ l  | l <- vs ++ lines out]
                                            ++ [ "Std-err  : " ++ err | not (null err)]
 
                                       -- Massage the output, preparing for the possibility of not having a model

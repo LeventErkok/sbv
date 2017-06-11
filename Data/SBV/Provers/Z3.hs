@@ -99,12 +99,11 @@ z3 = SMTSolver {
                                _      -> xs
 
               -- In the skolemMap:
-              --    * Left's are universals: i.e., the model should be true for
-              --      any of these. So, we simply "echo 0" for these values.
+              --    * Left's are universals: i.e., the model should be true for any of these. So, we do not query for these.
               --    * Right's are existentials. If there are no dependencies (empty list), then we can
               --      simply use get-value to extract it's value. Otherwise, we have to apply it to
               --      an appropriate number of 0's to get the final value.
-              extract (Left s)        = ["(echo \"((" ++ show s ++ " " ++ mkSkolemZero rm (kindOf s) ++ "))\")"]
+              extract (Left _)        = []
               extract (Right (s, [])) = let g = "(get-value (" ++ show s ++ ")" ++ modelIndex ++ ")" in getVal (kindOf s) g
               extract (Right (s, ss)) = let g = "(get-value ((" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))" ++ modelIndex ++ ")" in getVal (kindOf s) g
 
@@ -124,12 +123,9 @@ extractMap isSat qinps solverLines =
   where sortByNodeId :: [(Int, a)] -> [(Int, a)]
         sortByNodeId = sortBy (compare `on` fst)
 
-        inps -- for "sat", display the prefix existentials. For completeness, we will drop
-             -- only the trailing foralls. Exception: Don't drop anything if it's all a sequence of foralls
-             | isSat = map snd $ if all (== ALL) (map fst qinps)
-                                 then qinps
-                                 else reverse $ dropWhile ((== ALL) . fst) $ reverse qinps
-             -- for "proof", just display the prefix universals
+        -- for "sat",   display the existentials.
+        -- for "proof", display the universals.
+        inps | isSat = map snd $ takeWhile ((/= ALL) . fst) qinps
              | True  = map snd $ takeWhile ((== ALL) . fst) qinps
 
         squashReals :: [(Int, (String, CW))] -> [(Int, (String, CW))]
