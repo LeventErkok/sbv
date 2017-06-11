@@ -717,8 +717,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                           _           -> let isOption = "(set-option" `isPrefixOf` dropWhile isSpace l
 
                                                              reason | isOption = [ "*** Backend solver reports it does not support this option."
-                                                                                 , "*** Double-check the spelling of the option value, and if"
-                                                                                 , "*** correct, please report this as a bug/feature request with the solver!"
+                                                                                 , "*** Please report this as a bug/feature request with the solver!"
                                                                                  ]
                                                                     | True     = [ "*** Failed to establish solver context. Running in debug mode might provide"
                                                                                  , "*** more information. Please report this as an issue!"
