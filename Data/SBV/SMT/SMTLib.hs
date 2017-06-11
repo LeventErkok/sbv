@@ -16,6 +16,7 @@ module Data.SBV.SMT.SMTLib (
         , toSMTLib
         , toIncSMTLib
         , addNonEqConstraints
+        , multiModelSeparator
         , interpretSolverOutput
         , interpretSolverOutputMulti
         , interpretSolverModelLine
@@ -112,6 +113,12 @@ classifyModel cfg m = case filter (not . isRegularCW . snd) (modelObjectives m) 
                         [] -> Satisfiable cfg m
                         _  -> SatExtField cfg m
 
+-- | A minor hack. We use a custom separator field based on a GUID to separte multiple-model lines.
+-- The only requirement is that the solver doesn't spit out the following line for any other purpose,
+-- which is virtually guaranteed. We can also dynamically generate this, but there is really no need.
+multiModelSeparator :: String
+multiModelSeparator = "sbv_objective_model_marker_unique_744a92ac-427f-4ca6-8f5c-20d2f9f92bb4"
+
 -- | Interpret solver output based on SMT-Lib standard output responses, in the case we're expecting multiple objective model values
 interpretSolverOutputMulti :: Int -> SMTConfig -> ([String] -> SMTModel) -> [String] -> [SMTResult]
 interpretSolverOutputMulti n cfg extractMap outLines
@@ -126,12 +133,12 @@ interpretSolverOutputMulti n cfg extractMap outLines
                       ("unknown":_) -> False
                       _             -> True
 
-        (preModels, postModels) = case break (== "(sbv_objective_model_marker)") outLines of
+        (preModels, postModels) = case break (== show multiModelSeparator) outLines of
                                     (pre, _:post) -> (pre, post)
                                     r             -> r
 
         walk [] sofar = reverse sofar
-        walk xs sofar = case break (== "(sbv_objective_model_marker)") xs of
+        walk xs sofar = case break (== show multiModelSeparator) xs of
                           (g, [])     -> walk []   (g:sofar)
                           (g, _:rest) -> walk rest (g:sofar)
 

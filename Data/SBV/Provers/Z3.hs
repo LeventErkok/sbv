@@ -95,7 +95,7 @@ z3 = SMTSolver {
                              Just i  -> " :model_index " ++ show i
 
               wrapModel xs = case mbModelIndex of
-                               Just _ -> "(echo \"(sbv_objective_model_marker)\")" : xs
+                               Just _ -> let marker = "(echo " ++ show multiModelSeparator ++ ")" in marker : xs
                                _      -> xs
 
               -- In the skolemMap:
