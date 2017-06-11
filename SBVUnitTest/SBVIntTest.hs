@@ -34,6 +34,7 @@ import qualified TestSuite.Uninterpreted.Uninterpreted
 import qualified TestSuite.Optimization.Basics
 import qualified TestSuite.Optimization.ExtensionField
 import qualified TestSuite.Optimization.AssertSoft
+import qualified TestSuite.Optimization.Combined
 
 main :: IO ()
 main =
@@ -79,4 +80,5 @@ tests =
   , TestSuite.Optimization.Basics.tests
   , TestSuite.Optimization.ExtensionField.tests
   , TestSuite.Optimization.AssertSoft.tests
+  , TestSuite.Optimization.Combined.tests
   ]

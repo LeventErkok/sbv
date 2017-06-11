@@ -1,0 +1,7 @@
+Optimal model:
+  a      =  True :: Bool
+  b      = False :: Bool
+  c      =  True :: Bool
+  soft_a =  True :: Bool
+  soft_b = False :: Bool
+  soft_c =  True :: Bool

@@ -246,3 +246,4 @@ Test-Suite int-test-extended
                   , TestSuite.Optimization.Basics
                   , TestSuite.Optimization.ExtensionField
                   , TestSuite.Optimization.AssertSoft
+                  , TestSuite.Optimization.Combined

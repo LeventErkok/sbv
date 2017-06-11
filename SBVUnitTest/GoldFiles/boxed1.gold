@@ -1,0 +1,20 @@
+Objective "min_x": Optimal in an extension field:
+  min_x        =     0.0 :: Real
+  max_x_plus_y =    13.0 :: Real
+  min_y        = epsilon :: Real
+  max_y        =     4.0 :: Real
+Objective "max_x_plus_y": Optimal in an extension field:
+  min_x        =     0.0 :: Real
+  max_x_plus_y =    13.0 :: Real
+  min_y        = epsilon :: Real
+  max_y        =     4.0 :: Real
+Objective "min_y": Optimal in an extension field:
+  min_x        =     0.0 :: Real
+  max_x_plus_y =    13.0 :: Real
+  min_y        = epsilon :: Real
+  max_y        =     4.0 :: Real
+Objective "max_y": Optimal in an extension field:
+  min_x        =     0.0 :: Real
+  max_x_plus_y =    13.0 :: Real
+  min_y        = epsilon :: Real
+  max_y        =     4.0 :: Real
