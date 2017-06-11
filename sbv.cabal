@@ -93,6 +93,7 @@ Library
                   , Data.SBV.Examples.Optimization.LinearOpt
                   , Data.SBV.Examples.Optimization.Production
                   , Data.SBV.Examples.Optimization.VM
+                  , Data.SBV.Examples.Optimization.ExtField
                   , Data.SBV.Examples.Puzzles.Birthday
                   , Data.SBV.Examples.Puzzles.Coins
                   , Data.SBV.Examples.Puzzles.Counts
