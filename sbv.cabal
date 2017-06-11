@@ -243,4 +243,6 @@ Test-Suite int-test-extended
                   , TestSuite.Uninterpreted.Function
                   , TestSuite.Uninterpreted.Sort
                   , TestSuite.Uninterpreted.Uninterpreted
-
+                  , TestSuite.Optimization.Basics
+                  , TestSuite.Optimization.ExtensionField
+                  , TestSuite.Optimization.AssertSoft

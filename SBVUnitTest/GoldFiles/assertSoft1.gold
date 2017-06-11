@@ -1,0 +1,7 @@
+Optimal model:
+  x   =     0 :: Integer
+  y   =     1 :: Integer
+  as1 = False :: Bool
+  as2 =  True :: Bool
+  as3 =  True :: Bool
+  as4 = False :: Bool

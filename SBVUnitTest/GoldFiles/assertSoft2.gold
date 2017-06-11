@@ -1,0 +1,8 @@
+Optimal model:
+  a1    = False :: Bool
+  a2    =  True :: Bool
+  a3    =  True :: Bool
+  as_a1 = False :: Bool
+  as_a2 =  True :: Bool
+  as_a3 =  True :: Bool
+  as_a4 =  True :: Bool

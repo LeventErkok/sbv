@@ -31,6 +31,9 @@ import qualified TestSuite.Uninterpreted.Axioms
 import qualified TestSuite.Uninterpreted.Function
 import qualified TestSuite.Uninterpreted.Sort
 import qualified TestSuite.Uninterpreted.Uninterpreted
+import qualified TestSuite.Optimization.Basics
+import qualified TestSuite.Optimization.ExtensionField
+import qualified TestSuite.Optimization.AssertSoft
 
 main :: IO ()
 main =
@@ -73,4 +76,7 @@ tests =
   , TestSuite.Uninterpreted.Function.tests
   , TestSuite.Uninterpreted.Sort.tests
   , TestSuite.Uninterpreted.Uninterpreted.tests
+  , TestSuite.Optimization.Basics.tests
+  , TestSuite.Optimization.ExtensionField.tests
+  , TestSuite.Optimization.AssertSoft.tests
   ]
