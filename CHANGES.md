@@ -37,10 +37,10 @@
     if you use a solver that is not cooperating, but we have seen not insignificant
     speed-ups for regular usage due to ThreadKilled wait times being rather long.
 
-  * Configuration option `useLogic` is removed. Again, this should
-    be done by a tactic of the form:
+  * Configuration option `useLogic` is removed. If required, this should
+    be done by a call to the new 'setLogic' function:
 
-        setOption $ SetLogic QF_NRA
+        setLogic QF_NRA
 
   * Thanks to Kanishka Azimi, our external test suite is now run by
     Tasty! Kanishka modernized the test suite, and reworked the
@@ -59,7 +59,7 @@
   * SBV now has support for interactive solver queries. However, we
     are currently not advertising this widely; it is only intended for
     early beta-adapters and testing. Documentation is also rather
-    sparse currently. Version 6.3 will have a proper support. In the
+    sparse currently. Next version will have a proper support. In the
     mean time, you can browse the contents of "Data.SBV.Control" module.
 
 ### Version 6.1, 2017-05-26
