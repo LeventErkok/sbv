@@ -788,10 +788,14 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
 
       let launchSolver = do startTranscript    (transcriptFile cfg) cfg
                             r <- executeSolver
-                            finalizeTranscript (transcriptFile cfg)
+                            finalizeTranscript (transcriptFile cfg) Nothing
                             return r
 
-      launchSolver `C.onException` (terminateProcess pid >> waitForProcess pid >> finalizeTranscript (transcriptFile cfg))
+      launchSolver `C.catch` (\(e :: C.SomeException) -> do terminateProcess pid
+                                                            ec <- waitForProcess pid
+                                                            recordException    (transcriptFile cfg) (show e)
+                                                            finalizeTranscript (transcriptFile cfg) (Just ec)
+                                                            C.throwIO e)
 
 -- | In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
 -- each S-Expression spanning only a single line.
@@ -846,17 +850,19 @@ startTranscript (Just f) cfg = do ts <- show <$> getZonedTime
                                   ]
 
 -- | Finish up the transcript file.
-finalizeTranscript :: Maybe FilePath -> IO ()
-finalizeTranscript Nothing  = return ()
-finalizeTranscript (Just f) = do ts <- show <$> getZonedTime
-                                 appendFile f $ end ts
-  where end ts = unlines [ ""
-                         , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
-                         , ";;;"
-                         , ";;; SBV: Finished at " ++ ts
-                         , ";;;"
-                         , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
-                         ]
+finalizeTranscript :: Maybe FilePath -> Maybe ExitCode -> IO ()
+finalizeTranscript Nothing  _    = return ()
+finalizeTranscript (Just f) mbEC = do ts <- show <$> getZonedTime
+                                      appendFile f $ end ts
+  where end ts = unlines $ [ ""
+                           , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+                           , ";;;"
+                           , ";;; SBV: Finished at " ++ ts
+                           ]
+                       ++  [ ";;;\n;;; Exit code: " ++ show ec | Just ec <- [mbEC] ]
+                       ++  [ ";;;"
+                           , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+                           ]
 
 -- If requested, record in the transcript file
 recordTranscript :: Maybe FilePath -> Either String String -> IO ()
@@ -870,3 +876,19 @@ recordTranscript (Just f) m = do tsPre <- formatTime defaultTimeLocale "; [%T%Q"
                                                                             [x] -> [ts ++ "] Received: " ++ x]
                                                                             xs  -> (ts ++ "] Received: ") : map (";   " ++) xs
 {-# INLINE recordTranscript #-}
+
+-- Record the exception
+recordException :: Maybe FilePath -> String -> IO ()
+recordException Nothing  _ = return ()
+recordException (Just f) m = do ts <- show <$> getZonedTime
+                                appendFile f $ exc ts
+  where exc ts = unlines $ [ ""
+                           , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+                           , ";;;"
+                           , ";;; SBV: Caught an exception at " ++ ts
+                           , ";;;"
+                           ]
+                        ++ [ ";;;   " ++ l | l <- lines m ]
+                        ++ [ ";;;"
+                           , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+                           ]
