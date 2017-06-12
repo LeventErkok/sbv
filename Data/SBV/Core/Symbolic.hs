@@ -794,18 +794,22 @@ newSW st k = do ctr <- incCtr st
                 return (sw, 's' : show ctr)
 {-# INLINE newSW #-}
 
--- | Register a new kind with the system, used for uninterpreted sorts
+-- | Register a new kind with the system, used for uninterpreted sorts.
+-- NB: Is it safe to have new kinds in query mode? It could be that
+-- the new kind might introduce a constraint that effects the logic. For
+-- instance, if we're seeing 'Double' for the first time and using a BV
+-- logic, then things would fall apart. But this should be rare, and hopefully
+-- the 'success' checking mechanism will catch the rare cases where this
+-- is an issue. In either case, the user can always arrange for the right
+-- logic by calling 'setLogic' appropriately, so it seems safe to just
+-- allow for this.
 registerKind :: State -> Kind -> IO ()
 registerKind st k
   | KUserSort sortName _ <- k, map toLower sortName `elem` smtLibReservedNames
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | True
   = do ks <- readIORef (rUsedKinds st)
-       -- explicitly check membership in case we use it in a query context
-       unless (k `Set.member` ks) $ modifyState st rUsedKinds (Set.insert k)
-                                              $ noInteractive [ "Registering a new kind:"
-                                                              , "  Kind: " ++ show k
-                                                              ]
+       unless (k `Set.member` ks) $ modifyState st rUsedKinds (Set.insert k) (return ())
 
 -- | Register a new label with the system, making sure they are unique and have no '|'s in them
 registerLabel :: State -> String -> IO ()
