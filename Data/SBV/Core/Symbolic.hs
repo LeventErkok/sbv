@@ -712,7 +712,8 @@ instance Eq SVal where
 
 -- | Things we do not support in interactive mode, at least for now!
 noInteractive :: [String] -> IO ()
-noInteractive ss = error $ unlines $  "*** Data.SBV: Unsupported interactive/query mode feature."
+noInteractive ss = error $ unlines $  ""
+                                   :  "*** Data.SBV: Unsupported interactive/query mode feature."
                                    :  map ("***  " ++) ss
                                    ++ ["*** Data.SBV: Please report this as a feature request!"]
 
