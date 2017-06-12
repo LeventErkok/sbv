@@ -12,6 +12,7 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE DefaultSignatures          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns             #-}
 
 module Data.SBV.SMT.SMT (
        -- * Model extraction
@@ -41,18 +42,19 @@ import Control.Concurrent (newEmptyMVar, takeMVar, putMVar, forkIO)
 import Control.DeepSeq    (NFData(..))
 import Control.Monad      (when, zipWithM)
 import Data.Char          (isSpace)
+import Data.Maybe         (fromMaybe)
 import Data.Int           (Int8, Int16, Int32, Int64)
 import Data.Function      (on)
 import Data.List          (intercalate, isPrefixOf, isInfixOf, sortBy)
 import Data.Word          (Word8, Word16, Word32, Word64)
+
+import Data.Time          (getZonedTime, defaultTimeLocale, formatTime)
 
 import System.Directory   (findExecutable)
 import System.Environment (getEnv)
 import System.Exit        (ExitCode(..))
 import System.IO          (hClose, hFlush, hPutStrLn, hGetContents, hGetLine)
 import System.Process     (runInteractiveProcess, waitForProcess, terminateProcess)
-
-import qualified Data.IORef as IORef (modifyIORef')
 
 import qualified Data.Map as M
 
@@ -584,9 +586,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
 
                 let -- read a line from the handle safely.
-                    safeGetLine h = do out <- (Right <$> hGetLine h) `C.catch`  (\(e :: C.SomeException) -> return (Left (show e)))
-                                       IORef.modifyIORef' (contextTranscript ctx) (Right (either id id out) :)
-                                       return out
+                    safeGetLine h = (Right <$> hGetLine h) `C.catch` (\(e :: C.SomeException) -> return (Left (show e)))
 
                     -- send a command down, but check that we're balanced in parens. If we aren't
                     -- this is most likely an SBV bug.
@@ -602,7 +602,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                       | True
                       = do hPutStrLn inh command
                            hFlush inh
-                           IORef.modifyIORef' (contextTranscript ctx) (Left command :)
+                           recordTranscript (transcriptFile cfg) $ Left command
 
                     -- Send a line, get a whole s-expr. We ignore the pathetic case that there might be a string with an unbalanced parentheses in it in a response.
                     ask command = -- solvers don't respond to empty lines or comments; we just pass back
@@ -612,7 +612,9 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                      then return "success"
                                      else do send command
                                              response <- go 0 []
-                                             return $ intercalate "\n" $ reverse response
+                                             let collated = intercalate "\n" $ reverse response
+                                             recordTranscript (transcriptFile cfg) $ Right collated
+                                             return collated
 
                       where go i sofar = do errln <- safeGetLine outh
                                             case errln of
@@ -784,7 +786,12 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                              -- Off to the races!
                              timeIf (timing cfg) (WorkByProver nm) k
 
-      executeSolver `C.onException`  (terminateProcess pid >> waitForProcess pid)
+      let launchSolver = do startTranscript    (transcriptFile cfg) cfg
+                            r <- executeSolver
+                            finalizeTranscript (transcriptFile cfg)
+                            return r
+
+      launchSolver `C.onException` (terminateProcess pid >> waitForProcess pid >> finalizeTranscript (transcriptFile cfg))
 
 -- | In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
 -- each S-Expression spanning only a single line.
@@ -818,3 +825,48 @@ mergeSExpr (x:xs)
        skipBar ('|':cs) = cs
        skipBar (_:cs)   = skipBar cs
        skipBar []       = []                     -- Oh dear, line finished, but the string didn't. We're in trouble. Ignore!
+
+-- | Start a transcript file, if requested.
+startTranscript :: Maybe FilePath -> SMTConfig -> IO ()
+startTranscript Nothing  _   = return ()
+startTranscript (Just f) cfg = do ts <- show <$> getZonedTime
+                                  mbExecPath <- findExecutable (executable (solver cfg))
+                                  writeFile f $ start ts mbExecPath
+  where SMTSolver{name, options} = solver cfg
+        start ts mbPath = unlines [ ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+                                  , ";;; SBV: Starting at " ++ ts
+                                  , ";;;"
+                                  , ";;;           Solver    : " ++ show name
+                                  , ";;;           Executable: " ++ fromMaybe "Unable to locate the executable" mbPath
+                                  , ";;;           Options   : " ++ unwords options
+                                  , ";;;"
+                                  , ";;; This file is an auto-generated loadable SMT-Lib file."
+                                  , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+                                  , ""
+                                  ]
+
+-- | Finish up the transcript file.
+finalizeTranscript :: Maybe FilePath -> IO ()
+finalizeTranscript Nothing  = return ()
+finalizeTranscript (Just f) = do ts <- show <$> getZonedTime
+                                 appendFile f $ end ts
+  where end ts = unlines [ ""
+                         , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+                         , ";;;"
+                         , ";;; SBV: Finished at " ++ ts
+                         , ";;;"
+                         , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+                         ]
+
+-- If requested, record in the transcript file
+recordTranscript :: Maybe FilePath -> Either String String -> IO ()
+recordTranscript Nothing  _ = return ()
+recordTranscript (Just f) m = do tsPre <- formatTime defaultTimeLocale "; [%T%Q" <$> getZonedTime
+                                 let ts = take 15 $ tsPre ++ repeat '0'
+                                 case m of
+                                   Left  sent -> appendFile f $ unlines $ (ts ++ "] Sending:") : lines sent
+                                   Right recv -> appendFile f $ unlines $ case lines (dropWhile isSpace recv) of
+                                                                            []  -> [ts ++ "] Received: <NO RESPONSE>"]  -- can't really happen.
+                                                                            [x] -> [ts ++ "] Received: " ++ x]
+                                                                            xs  -> (ts ++ "] Received: ") : map (";   " ++) xs
+{-# INLINE recordTranscript #-}

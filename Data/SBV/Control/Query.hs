@@ -24,7 +24,7 @@ module Data.SBV.Control.Query (
      , SMTOption(..)
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
      , Logic(..), Assignment(..)
-     , ignoreExitCode, getTranscript
+     , ignoreExitCode
      , (|->)
      , result
      , success

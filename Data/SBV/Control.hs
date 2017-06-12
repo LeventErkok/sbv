@@ -41,7 +41,7 @@ module Data.SBV.Control (
      , (|->)
 
      -- ** Miscellaneous
-     , echo, getTranscript
+     , echo
 
      -- ** Terminating the query
      , sbvResume

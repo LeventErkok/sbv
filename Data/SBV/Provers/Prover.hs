@@ -81,6 +81,7 @@ mkConfig s smtVersion = SMTConfig { verbose          = False
                                   , printBase        = 10
                                   , printRealPrec    = 16
                                   , smtFile          = Nothing
+                                  , transcriptFile   = Nothing
                                   , solver           = s
                                   , smtLibVersion    = smtVersion
                                   , optimizeArgs     = []
@@ -1100,10 +1101,7 @@ runProofOn converter config isSat comments st res =
                       problem   = SMTProblem { smtInputs=is, smtSkolemMap=skolemMap, kindsUsed=ki
                                              , smtAsserts=assertions, tactics=tacs, smtOptions=options, objectives=goals, smtLibPgm=smtScript}
 
-                  in do rScript <- IORef.newIORef []
-
-                        let context = QueryContext { contextState      = st
-                                                   , contextTranscript = rScript
+                  in do let context = QueryContext { contextState      = st
                                                    , contextSkolems    = skolemVars
                                                    }
 
