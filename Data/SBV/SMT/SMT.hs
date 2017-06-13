@@ -888,7 +888,7 @@ recordException (Just f) m = do ts <- show <$> getZonedTime
                            , ";;; SBV: Caught an exception at " ++ ts
                            , ";;;"
                            ]
-                        ++ [ ";;;   " ++ l | l <- lines m ]
+                        ++ [ ";;;   " ++ l | l <- dropWhile null (lines m) ]
                         ++ [ ";;;"
                            , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
                            ]
