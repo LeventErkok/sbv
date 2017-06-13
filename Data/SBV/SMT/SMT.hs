@@ -770,7 +770,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                         let heartbeat = "(set-option :print-success true)"
                                         r <- ask (Just 5000000) heartbeat  -- Give the solver 5s to respond, this should be plenty enough!
                                         case words r of
-                                          ["success"]     -> return ()
+                                          ["success"]     -> when (verbose cfg) $ putStrLn "** Heartbeat established!"
                                           ["unsupported"] -> error $ unlines [ ""
                                                                              , "*** Backend solver (" ++  show backend ++ ") does not support the command:"
                                                                              , "***"
