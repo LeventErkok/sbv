@@ -1384,8 +1384,7 @@ data SMTConfig = SMTConfig {
        , optimizeArgs     :: [String]                  -- ^ Additional commands to pass before check-sat is issued
        , satCmd           :: String                    -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
        , isNonModelVar    :: String -> Bool            -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
-       , smtFile          :: Maybe FilePath            -- ^ If Just, the generated SMT script will be put in this file (for debugging purposes mostly)
-       , transcriptFile   :: Maybe FilePath            -- ^ If Just, the entire interaction will be recorded as a playable file (for debugging purposes mostly)
+       , transcript       :: Maybe FilePath            -- ^ If Just, the entire interaction will be recorded as a playable file (for debugging purposes mostly)
        , smtLibVersion    :: SMTLibVersion             -- ^ What version of SMT-lib we use for the tool
        , solver           :: SMTSolver                 -- ^ The actual SMT solver.
        , roundingMode     :: RoundingMode              -- ^ Rounding mode to use for floating-point conversions

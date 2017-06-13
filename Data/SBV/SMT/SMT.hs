@@ -566,13 +566,6 @@ standardSolver config ctx script cleanErrs failure success = do
         exec     = executable smtSolver
         opts     = options smtSolver
     msg $ "Calling: " ++ show (exec ++ (if null opts then "" else " ") ++ joinArgs opts)
-    case smtFile config of
-      Nothing -> return ()
-      Just f  -> do msg $ "Saving the generated script in file: " ++ show f
-                    writeFile f (   scriptBody script
-                                 ++ intercalate "\n"
-                                       ("" : optimizeArgs config ++ [maybe (satCmd config) (const "; Run with a custom query.") (customQuery config)])
-                                )
     rnf script `seq` pipeProcess config ctx exec opts script cleanErrs failure success
 
 -- | An internal type to track of solver interactions
@@ -607,7 +600,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                       | True
                       = do hPutStrLn inh command
                            hFlush inh
-                           recordTranscript (transcriptFile cfg) $ Left (command, mbTimeOut)
+                           recordTranscript (transcript cfg) $ Left (command, mbTimeOut)
 
                     -- Send a line, get a whole s-expr. We ignore the pathetic case that there might be a string with an unbalanced parentheses in it in a response.
                     ask :: Maybe Int -> String -> IO String
@@ -620,7 +613,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                      else do send mbTimeOut command
                                              response <- go 0 []
                                              let collated = intercalate "\n" $ reverse response
-                                             recordTranscript (transcriptFile cfg) $ Right collated
+                                             recordTranscript (transcript cfg) $ Right collated
                                              return collated
 
                       where safeGetLine h = case mbTimeOut of
@@ -813,15 +806,15 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                              -- Off to the races!
                              timeIf (timing cfg) (WorkByProver nm) k
 
-      let launchSolver = do startTranscript    (transcriptFile cfg) cfg
+      let launchSolver = do startTranscript    (transcript cfg) cfg
                             r <- executeSolver
-                            finalizeTranscript (transcriptFile cfg) Nothing
+                            finalizeTranscript (transcript cfg) Nothing
                             return r
 
       launchSolver `C.catch` (\(e :: C.SomeException) -> do terminateProcess pid
                                                             ec <- waitForProcess pid
-                                                            recordException    (transcriptFile cfg) (show e)
-                                                            finalizeTranscript (transcriptFile cfg) (Just ec)
+                                                            recordException    (transcript cfg) (show e)
+                                                            finalizeTranscript (transcript cfg) (Just ec)
                                                             C.throwIO e)
 
 -- | In case the SMT-Lib solver returns a response over multiple lines, compress them so we have

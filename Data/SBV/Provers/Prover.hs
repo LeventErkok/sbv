@@ -79,8 +79,7 @@ mkConfig s smtVersion = SMTConfig { verbose          = False
                                   , sBranchTimeOut   = Nothing
                                   , printBase        = 10
                                   , printRealPrec    = 16
-                                  , smtFile          = Nothing
-                                  , transcriptFile   = Nothing
+                                  , transcript       = Nothing
                                   , solver           = s
                                   , smtLibVersion    = smtVersion
                                   , optimizeArgs     = []
@@ -1036,7 +1035,7 @@ allSatWith config p = do
                                                $ callSolver True "Checking Satisfiability.." refutedModels mwrap simRes
                     return $ Just res
 
-        updateName i cfg = cfg{smtFile = upd `fmap` smtFile cfg}
+        updateName i cfg = cfg{transcript = upd `fmap` transcript cfg}
                where upd nm = let (b, e) = splitExtension nm in b ++ "_allSat_" ++ show i ++ e
 
 callSolver :: Bool -> String -> [String] -> ([SMTResult] -> b) -> SMTProblem -> SMTConfig -> QueryContext -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO b

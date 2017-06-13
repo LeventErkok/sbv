@@ -57,6 +57,10 @@
     and return types simplified. Also removed the `StopAfter` tactic for the
     same reasons.
 
+  * Configuration option 'smtFile' is removed. Instead use 'transcript' now, which
+    provides a much more detailed output that's directly loadable to a solver
+    and has an accurate account of precisely what SBV sent.
+
   * Thanks to Kanishka Azimi, our external test suite is now run by
     Tasty! Kanishka modernized the test suite, and reworked the
     infrastructure that was showing its age. Thanks!
