@@ -298,8 +298,6 @@ safe = safeWith defaultSMTCfg
 isVacuous :: Provable a => a -> IO Bool
 isVacuous = isVacuousWith defaultSMTCfg
 
--- Decision procedures (with optional timeout)
-
 -- | Check whether a given property is a theorem.
 isTheoremWith :: Provable a => SMTConfig -> a -> IO Bool
 isTheoremWith cfg p = do r <- proveWith cfg p

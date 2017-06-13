@@ -1416,7 +1416,7 @@ data SMTResult = Unsatisfiable SMTConfig           -- ^ Unsatisfiable
                | SatExtField   SMTConfig SMTModel  -- ^ Prover returned a model, but in an extension field containing Infinite/epsilon
                | Unknown       SMTConfig SMTModel  -- ^ Prover returned unknown, with a potential (possibly bogus) model
                | ProofError    SMTConfig [String]  -- ^ Prover errored out
-               | TimeOut       SMTConfig           -- ^ Computation timed out (see the 'timeout' combinator)
+               | TimeOut       SMTConfig           -- ^ Computation timed out
 
 -- | A script, to be passed to the solver.
 data SMTScript = SMTScript {
