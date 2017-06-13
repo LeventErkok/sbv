@@ -61,10 +61,7 @@ z3 = SMTSolver {
                                                   Just (Independent, n) | n > 1 -> (n, concatMap (mkCont . Just) [0 .. n-1])
                                                   _                             -> (1, mkCont Nothing)
 
-                                        -- maintain the invariant that we always send print-success as the very first thing.
-                                        extraOptions = [ OptionKeyword ":print-success"        ["true"]
-                                                       , OptionKeyword ":pp.decimal_precision" [show (printRealPrec cfg)]
-                                                       ]
+                                        extraOptions = [OptionKeyword ":pp.decimal_precision" [show (printRealPrec cfg)]]
 
                                         script = SMTScript { scriptBody  = unlines (map setSMTOption extraOptions) ++ pgm
                                                            , scriptModel = mbContScript

@@ -129,10 +129,6 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
                 ufs | null uis && null tbls    = ""     -- we represent tables as UFs
                     | True                     = "UF"
 
-        -- We always require success for commands, and ask for models. We maintain the
-        -- invariant that the first non-comment we send down is the command that
-        -- turns on printing success.
-        requireSuccess = ["(set-option :print-success true)"]
         getModels      = ["(set-option :produce-models true)"]
 
         -- process all other settings we're given
@@ -140,8 +136,7 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
            where opts SetLogic{} = []     -- processed already
                  opts o          = [setSMTOption o]
 
-        settings =  requireSuccess
-                 ++ getModels
+        settings =  getModels
                  ++ logic
                  ++ userSettings
 

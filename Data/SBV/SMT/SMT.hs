@@ -762,6 +762,33 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                               ]
                                                                               ++ reason
 
+                             -- First check that the solver supports :print-success
+                             let backend = name $ solver cfg
+                             if not (supportsCustomQueries (capabilities (solver cfg)))
+                                then when (verbose cfg) $ putStrLn $ "** Skipping heart-beat for the solver " ++ show backend
+                                else do when (verbose cfg) $ putStrLn "** Checking for heartbeat."
+                                        let heartbeat = "(set-option :print-success true)"
+                                        r <- ask (Just 5000000) heartbeat  -- Give the solver 5s to respond, this should be plenty enough!
+                                        case words r of
+                                          ["success"]     -> return ()
+                                          ["unsupported"] -> error $ unlines [ ""
+                                                                             , "*** Backend solver (" ++  show backend ++ ") does not support the command:"
+                                                                             , "***"
+                                                                             , "***     (set-option :print-success true)"
+                                                                             , "***"
+                                                                             , "*** SBV relies on this feature to coordinate communication!"
+                                                                             , "*** Please request this as a feature!"
+                                                                             ]
+                                          _               -> error $ unlines [ ""
+                                                                             , "*** Data.SBV: Failed to initiate contact with the solver!"
+                                                                             , "***"
+                                                                             , "***   Sent    : " ++ heartbeat
+                                                                             , "***   Expected: success"
+                                                                             , "***   Received: " ++ r
+                                                                             , "***"
+                                                                             , "*** Try running in debug mode for further information."
+                                                                             ]
+
                              mapM_ (sendAndGetSuccess Nothing) (mergeSExpr (lines (scriptBody script)))
                              mapM_ (sendAndGetSuccess Nothing) (optimizeArgs cfg)
 
