@@ -582,7 +582,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
 
           cleanLine  = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 
-      (send, ask, cleanUp, pid) <- do
+      (send, ask, getStringFromSolver, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
 
                 let -- send a command down, but check that we're balanced in parens. If we aren't
@@ -611,10 +611,14 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                   in if null cmd || ";" `isPrefixOf` cmd
                                      then return "success"
                                      else do send mbTimeOut command
-                                             response <- go 0 []
-                                             let collated = intercalate "\n" $ reverse response
-                                             recordTranscript (transcript cfg) $ Right collated
-                                             return collated
+                                             getStringFromSolver (Just command) mbTimeOut
+
+                    getStringFromSolver :: Maybe String -> Maybe Int -> IO String
+                    getStringFromSolver mbCommand mbTimeOut = do
+                                response <- go 0 []
+                                let collated = intercalate "\n" $ reverse response
+                                recordTranscript (transcript cfg) $ Right collated
+                                return collated
 
                       where safeGetLine h = case mbTimeOut of
                                               Nothing -> SolverRegular <$> hGetLine h
@@ -643,23 +647,24 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                                         , "*** Executable: " ++ execPath
                                                                                         , "*** Options   : " ++ joinArgs opts
                                                                                         ]
-                                                                                     ++ [ "*** Request   : " ++ command                                   ]
-                                                                                     ++ [ "*** Response  : " ++ unlines (reverse sofar) | not $ null sofar]
-                                                                                     ++ [ "*** Stdout    : " ++ out                     | not $ null out  ]
-                                                                                     ++ [ "*** Stderr    : " ++ err                     | not $ null err  ]
+                                                                                     ++ [ "*** Request   : " ++ command                 | Just command <- [mbCommand]]
+                                                                                     ++ [ "*** Response  : " ++ unlines (reverse sofar) | not $ null sofar           ]
+                                                                                     ++ [ "*** Stdout    : " ++ out                     | not $ null out             ]
+                                                                                     ++ [ "*** Stderr    : " ++ err                     | not $ null err             ]
                                                                                      ++ [ "*** Exit code : " ++ show ex
                                                                                         , "*** Giving up!"
                                                                                         ]
 
                                               SolverTimeout e -> do terminateProcess pid -- NB. Do not *wait* for the process, just quit.
-                                                                    error $ unlines [ ""
-                                                                                    , "*** Data.SBV: Timeout."
-                                                                                    , "***"
-                                                                                    , "***   " ++ e
-                                                                                    , "***   Last command sent was: " ++ command
-                                                                                    , "***"
-                                                                                    , "*** Giving up!"
-                                                                                    ]
+                                                                    error $ unlines $ [ ""
+                                                                                      , "*** Data.SBV: Timeout."
+                                                                                      , "***"
+                                                                                      , "***   " ++ e
+                                                                                      ]
+                                                                                   ++ [ "***   Last command sent was: " ++ command | Just command <- [mbCommand]]
+                                                                                   ++ [ "***"
+                                                                                      , "*** Giving up!"
+                                                                                      ]
 
                     terminateSolver = do hClose inh
                                          outMVar <- newEmptyMVar
@@ -723,7 +728,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                            ]
                                                                            ++ errors'
                                                                            ++ ["Giving up.."]
-                return (send, ask, cleanUp, pid)
+                return (send, ask, getStringFromSolver, cleanUp, pid)
 
       let executeSolver = do let sendAndGetSuccess :: Maybe Int -> String -> IO ()
                                  sendAndGetSuccess mbTimeOut l
@@ -789,6 +794,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                         let interactiveCtx = ctx { contextState = switchToInteractiveMode (contextState ctx) }
                                             qs = QueryState { queryAsk                 = ask
                                                             , querySend                = send
+                                                            , queryRetrieveString      = getStringFromSolver Nothing
                                                             , queryConfig              = cfg
                                                             , queryContext             = interactiveCtx
                                                             , queryDefault             = sbvContinuation

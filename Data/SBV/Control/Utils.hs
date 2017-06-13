@@ -21,6 +21,8 @@ module Data.SBV.Control.Utils (
      , parse
      , unexpected
      , timeout
+     , queryDebug
+     , retrieveString
      ) where
 
 import Data.List  (sortBy, intercalate)
@@ -81,19 +83,19 @@ inNewContext act = do QueryState{queryContext} <- get
                       return r
 
 -- | Internal diagnostic messages.
-debugMsg :: [String] -> Query ()
-debugMsg msg = do QueryState{queryConfig} <- get
-                  when (verbose queryConfig) $ mapM_ (io . putStrLn) msg
+queryDebug :: [String] -> Query ()
+queryDebug msg = do QueryState{queryConfig} <- get
+                    when (verbose queryConfig) $ mapM_ (io . putStrLn) msg
 
 -- | Send a string to the solver, and return the response
 ask :: String -> Query String
 ask s = do QueryState{queryAsk, queryTimeOutValue} <- get
 
            case queryTimeOutValue of
-             Nothing -> debugMsg ["[SENDING]  " ++ s]
-             Just i  -> debugMsg ["[SENDING, TimeOut: " ++ showTimeoutValue i ++ "]  " ++ s]
+             Nothing -> queryDebug ["[SENDING]  " ++ s]
+             Just i  -> queryDebug ["[SENDING, TimeOut: " ++ showTimeoutValue i ++ "]  " ++ s]
            r <- io $ queryAsk queryTimeOutValue s
-           debugMsg ["[RECEIVED] " ++ r]
+           queryDebug ["[RECEIVED] " ++ r]
 
            return r
 
@@ -115,6 +117,12 @@ send requireSuccess s = do
                                            unexpected "Command" s "success" Nothing r Nothing
 
                else io $ querySend queryTimeOutValue s  -- fire and forget. if you use this, you're on your own!
+
+-- | Retrieve string from the solver. Should only be used for internal purposes. Use 'send'/'ask'. If the time-out
+-- is given and and is exceeded by the solver, then we will raise an error.
+retrieveString :: Maybe Int -> Query String
+retrieveString mbTo = do QueryState{queryRetrieveString} <- get
+                         io $ queryRetrieveString mbTo
 
 -- | A class which allows for sexpr-conversion to values
 class SMTValue a where
@@ -199,13 +207,13 @@ getUnsatAssumptions originals proxyMap = do
         let walk []     sofar = return $ reverse sofar
             walk (a:as) sofar = case a `lookup` proxyMap of
                                   Just v  -> walk as (v:sofar)
-                                  Nothing -> do debugMsg [ "*** In call to 'getUnsatAssumptions'"
-                                                         , "***"
-                                                         , "***    Unexpected assumption named: " ++ show a
-                                                         , "***    Was expecting one of       : " ++ show originals
-                                                         , "***"
-                                                         , "*** This can happen if unsat-cores are also enabled. Ignoring."
-                                                         ]
+                                  Nothing -> do queryDebug [ "*** In call to 'getUnsatAssumptions'"
+                                                           , "***"
+                                                           , "***    Unexpected assumption named: " ++ show a
+                                                           , "***    Was expecting one of       : " ++ show originals
+                                                           , "***"
+                                                           , "*** This can happen if unsat-cores are also enabled. Ignoring."
+                                                           ]
                                                 walk as sofar
 
         parse r bad $ \case
