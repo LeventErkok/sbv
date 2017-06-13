@@ -54,12 +54,6 @@ Library
                   , pretty, process, mtl, random, syb, data-binary-ieee754
                   , generic-deriving
   Exposed-modules : Data.SBV
-                  , Data.SBV.Bridge.Boolector
-                  , Data.SBV.Bridge.CVC4
-                  , Data.SBV.Bridge.MathSAT
-                  , Data.SBV.Bridge.Yices
-                  , Data.SBV.Bridge.Z3
-                  , Data.SBV.Bridge.ABC
                   , Data.SBV.Control
                   , Data.SBV.Dynamic
                   , Data.SBV.Internals

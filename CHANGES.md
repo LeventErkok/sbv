@@ -5,6 +5,13 @@
 
 ### Version 6.2, Not yet released.
 
+  * The Bridge modules (`Data.SBV.Bridge.Yices`, `Data.SBV.Bridge.Z3`) etc. are
+    all removed. The bridge functionality was hardly used, where different solvers
+    were much easier to access using the `with` functions. (Such as `proveWith`,
+    `satWith` etc.) This should result in no loss of functionality, except for
+    occasional explicit mention of solvers in your code, if you were using
+    bridge modules to start with.
+
   * Pareto-front extraction has been reworked, reflecting the changes in Z3 for
     this functionality. Since pareto-fronts can be infinite in number, the user
     is now allowed to specify a "limit" to stop the solver from querying ad
@@ -18,7 +25,7 @@
 
   * The following functions have been reworked, so they now also return
     the time-elapsed for each solver:
-       
+
         satWithAll   :: Provable a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, SatResult)]
         satWithAny   :: Provable a => [SMTConfig] -> a -> IO  (Solver, NominalDiffTime, SatResult)
         proveWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, ThmResult)]
