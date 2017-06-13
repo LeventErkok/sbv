@@ -87,7 +87,7 @@ module Data.SBV.Dynamic
   -- ** Programmable model extraction
   , genParse, getModelAssignment, getModelDictionary
   -- * SMT Interface: Configurations and solvers
-  , SMTConfig(..), SMTLibVersion(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
+  , SMTConfig(..), SMTLibVersion(..), Solver(..), SMTSolver(..), boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
 
   -- * Symbolic computations
   , outputSVal
@@ -139,7 +139,7 @@ import Data.SBV.Compilers.C       (compileToC, compileToCLib)
 
 import Data.SBV.Provers.Prover (boolector, cvc4, yices, z3, mathSAT, abc, defaultSMTCfg)
 import Data.SBV.SMT.SMT        (ThmResult(..), SatResult(..), SafeResult(..), OptimizeResult(..), AllSatResult(..), genParse)
-import Data.SBV                (sbvCurrentSolver, sbvCheckSolverInstallation, defaultSolverConfig, sbvAvailableSolvers)
+import Data.SBV                (sbvCheckSolverInstallation, defaultSolverConfig, sbvAvailableSolvers)
 
 import qualified Data.SBV                as SBV (SBool, proveWithAll, proveWithAny, satWithAll, satWithAny)
 import qualified Data.SBV.Core.Data      as SBV (SBV(..))
