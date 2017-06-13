@@ -20,6 +20,7 @@ module Data.SBV.Control.Utils (
      , inNewContext
      , parse
      , unexpected
+     , timeout
      ) where
 
 import Data.List  (sortBy, intercalate)
@@ -36,9 +37,12 @@ import Control.Monad.State.Lazy (get, modify', liftIO)
 import Data.IORef (readIORef)
 
 import Data.SBV.Core.Data     (SBV, AlgReal, sbvToSW)
-import Data.SBV.Core.Symbolic (SMTConfig(..), State, IncState(..), Query, QueryContext(..), QueryState(..), withNewIncState, SMTResult(..))
+import Data.SBV.Core.Symbolic ( SMTConfig(..), State, IncState(..), Query
+                              , QueryContext(..), QueryState(..), withNewIncState, SMTResult(..)
+                              )
 
 import Data.SBV.SMT.SMTLib  (toIncSMTLib)
+import Data.SBV.SMT.Utils   (showTimeoutValue)
 
 import Data.SBV.Utils.SExpr
 
@@ -83,10 +87,12 @@ debugMsg msg = do QueryState{queryConfig} <- get
 
 -- | Send a string to the solver, and return the response
 ask :: String -> Query String
-ask s = do QueryState{queryAsk} <- get
+ask s = do QueryState{queryAsk, queryTimeOutValue} <- get
 
-           debugMsg ["[SENDING]  " ++ s]
-           r <- io $ queryAsk s
+           case queryTimeOutValue of
+             Nothing -> debugMsg ["[SENDING]  " ++ s]
+             Just i  -> debugMsg ["[SENDING, TimeOut: " ++ showTimeoutValue i ++ "]  " ++ s]
+           r <- io $ queryAsk queryTimeOutValue s
            debugMsg ["[RECEIVED] " ++ r]
 
            return r
@@ -96,17 +102,19 @@ ask s = do QueryState{queryAsk} <- get
 send :: Bool -> String -> Query ()
 send requireSuccess s = do
 
-            QueryState{queryAsk, querySend, queryConfig} <- get
+            QueryState{queryAsk, querySend, queryConfig, queryTimeOutValue} <- get
 
             if requireSuccess
-               then do r <- io $ queryAsk s
+               then do r <- io $ queryAsk queryTimeOutValue s
 
                        case words r of
                          ["success"] -> when (verbose queryConfig) $ io $ putStrLn $ "[SUCCESS] " ++ s
-                         _           -> do io $ putStrLn $ "[FAILED]  " ++ s
+                         _           -> do case queryTimeOutValue of
+                                             Nothing -> io $ putStrLn $ "[FAILED]  " ++ s
+                                             Just i  -> io $ putStrLn $ "[FAILED, TimeOut: " ++ showTimeoutValue i ++ "]  " ++ s
                                            unexpected "Command" s "success" Nothing r Nothing
 
-               else io $ querySend s  -- fire and forget. if you use this, you're on your own!
+               else io $ querySend queryTimeOutValue s  -- fire and forget. if you use this, you're on your own!
 
 -- | A class which allows for sexpr-conversion to values
 class SMTValue a where
@@ -203,6 +211,26 @@ getUnsatAssumptions originals proxyMap = do
         parse r bad $ \case
            EApp es | Just xs <- mapM fromECon es -> walk xs []
            _                                     -> bad r Nothing
+
+-- | Timeout a query action, typically a command call to the underlying SMT solver.
+-- The duration is in microseconds (@1\/10^6@ seconds). If the duration
+-- is negative, then no timeout is imposed. When specifying long timeouts, be careful not to exceed
+-- @maxBound :: Int@. (On a 64 bit machine, this bound is practically infinite. But on a 32 bit
+-- machine, it corresponds to about 36 minutes!)
+--
+-- Semantics: The call @timeout n q@ causes the timeout value to be applied to all interactive calls that take place
+-- as we execute the query @q@. That is, each call that happens during the execution of @q@ gets a separate
+-- time-out value, as opposed to one timeout value that limits the whole query. This is typically the intended behavior.
+-- It is advisible to apply this combinator to calls that involve a single call to the solver for
+-- finer control, as opposed to an entire set of interactions. However, different use cases might call for different scenarios.
+--
+-- If the solver responds within the time-out specified, then we continue as usual. However, if the backend solver times-out
+-- using this mechanism, there is no telling what the state of the solver will be. Thus, we raise an error in this case.
+timeout :: Int -> Query a -> Query a
+timeout n q = do modify' (\qs -> qs {queryTimeOutValue = Just n})
+                 r <- q
+                 modify' (\qs -> qs {queryTimeOutValue = Nothing})
+                 return r
 
 -- | Bail out if a parse goes bad
 parse :: String -> (String -> Maybe String -> a) -> (SExpr -> a) -> a

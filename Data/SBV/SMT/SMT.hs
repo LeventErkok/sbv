@@ -63,11 +63,14 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (SMTEngine, QueryContext, runQuery, getProofMode, inNonInteractiveProofMode, switchToInteractiveMode)
 
 import Data.SBV.SMT.SMTLib    (interpretSolverOutput, interpretSolverModelLine, interpretSolverObjectiveLine)
+import Data.SBV.SMT.Utils     (showTimeoutValue)
 
 import Data.SBV.Utils.PrettyNum
 import Data.SBV.Utils.Lib       (joinArgs, splitArgs)
 import Data.SBV.Utils.SExpr     (parenDeficit)
 import Data.SBV.Utils.TDiff
+
+import qualified System.Timeout as Timeout (timeout)
 
 -- | Extract the final configuration from a result
 resultConfig :: SMTResult -> SMTConfig
@@ -572,6 +575,11 @@ standardSolver config ctx script cleanErrs failure success = do
                                 )
     rnf script `seq` pipeProcess config ctx exec opts script cleanErrs failure success
 
+-- | An internal type to track of solver interactions
+data SolverLine = SolverRegular   String  -- ^ All is well
+                | SolverTimeout   String  -- ^ Timeout expired
+                | SolverException String  -- ^ Something else went wrong
+
 -- | A variant of 'readProcessWithExitCode'; except it knows about continuation strings
 -- and can speak SMT-Lib2 (just a little).
 runSolver :: SMTConfig -> QueryContext -> FilePath -> [String] -> SMTScript -> (String -> String) -> ([String] -> [SMTResult]) -> ([String] -> [SMTResult]) -> IO [SMTResult]
@@ -584,12 +592,10 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
       (send, ask, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
 
-                let -- read a line from the handle safely.
-                    safeGetLine h = (Right <$> hGetLine h) `C.catch` (\(e :: C.SomeException) -> return (Left (show e)))
-
-                    -- send a command down, but check that we're balanced in parens. If we aren't
+                let -- send a command down, but check that we're balanced in parens. If we aren't
                     -- this is most likely an SBV bug.
-                    send command
+                    send :: Maybe Int -> String -> IO ()
+                    send mbTimeOut command
                       | parenDeficit command /= 0
                       = error $ unlines [ ""
                                         , "*** Data.SBV: Unbalanced input detected."
@@ -601,46 +607,65 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                       | True
                       = do hPutStrLn inh command
                            hFlush inh
-                           recordTranscript (transcriptFile cfg) $ Left command
+                           recordTranscript (transcriptFile cfg) $ Left (command, mbTimeOut)
 
                     -- Send a line, get a whole s-expr. We ignore the pathetic case that there might be a string with an unbalanced parentheses in it in a response.
-                    ask command = -- solvers don't respond to empty lines or comments; we just pass back
+                    ask :: Maybe Int -> String -> IO String
+                    ask mbTimeOut command =
+                                  -- solvers don't respond to empty lines or comments; we just pass back
                                   -- success in these cases to keep the illusion of everything has a response
                                   let cmd = dropWhile isSpace command
                                   in if null cmd || ";" `isPrefixOf` cmd
                                      then return "success"
-                                     else do send command
+                                     else do send mbTimeOut command
                                              response <- go 0 []
                                              let collated = intercalate "\n" $ reverse response
                                              recordTranscript (transcriptFile cfg) $ Right collated
                                              return collated
 
-                      where go i sofar = do errln <- safeGetLine outh
+                      where safeGetLine h = case mbTimeOut of
+                                              Nothing -> SolverRegular <$> hGetLine h
+                                              Just t  -> do r <- Timeout.timeout t (hGetLine h)
+                                                            case r of
+                                                              Just l  -> return $ SolverRegular l
+                                                              Nothing -> return $ SolverTimeout $ "User specified timeout of " ++ showTimeoutValue t ++ " exceeded."
+
+                            go i sofar = do errln <- safeGetLine outh `C.catch` (\(e :: C.SomeException) -> return (SolverException (show e)))
                                             case errln of
-                                              Right ln -> let need  = i + parenDeficit ln
-                                                              acc   = ln : sofar
-                                                              -- make sure we get *something*
-                                                              empty = null $ dropWhile isSpace ln
-                                                          in if not empty && need <= 0
-                                                             then return acc
-                                                             else go need acc
-                                              Left e   -> do (outOrig, errOrig, ex) <- terminateSolver
+                                              SolverRegular ln -> let need  = i + parenDeficit ln
+                                                                      acc   = ln : sofar
+                                                                      -- make sure we get *something*
+                                                                      empty = null $ dropWhile isSpace ln
+                                                                  in if not empty && need <= 0
+                                                                     then return acc
+                                                                     else go need acc
 
-                                                             let out = intercalate "\n" . lines $ outOrig
-                                                                 err = intercalate "\n" . lines $ errOrig
+                                              SolverException e -> do (outOrig, errOrig, ex) <- terminateSolver
 
-                                                             error $ unlines $ [""
-                                                                               , "*** IO error  : " ++ e
-                                                                               , "*** Executable: " ++ execPath
-                                                                               , "*** Options   : " ++ joinArgs opts
-                                                                               ]
-                                                                            ++ [ "*** Request   : " ++ command                                   ]
-                                                                            ++ [ "*** Response  : " ++ unlines (reverse sofar) | not $ null sofar]
-                                                                            ++ [ "*** Stdout    : " ++ out                     | not $ null out  ]
-                                                                            ++ [ "*** Stderr    : " ++ err                     | not $ null err  ]
-                                                                            ++ [ "*** Exit code : " ++ show ex
-                                                                               , "*** Giving up!"
-                                                                               ]
+                                                                      let out = intercalate "\n" . lines $ outOrig
+                                                                          err = intercalate "\n" . lines $ errOrig
+
+                                                                      error $ unlines $ [""
+                                                                                        , "*** Error     : " ++ e
+                                                                                        , "*** Executable: " ++ execPath
+                                                                                        , "*** Options   : " ++ joinArgs opts
+                                                                                        ]
+                                                                                     ++ [ "*** Request   : " ++ command                                   ]
+                                                                                     ++ [ "*** Response  : " ++ unlines (reverse sofar) | not $ null sofar]
+                                                                                     ++ [ "*** Stdout    : " ++ out                     | not $ null out  ]
+                                                                                     ++ [ "*** Stderr    : " ++ err                     | not $ null err  ]
+                                                                                     ++ [ "*** Exit code : " ++ show ex
+                                                                                        , "*** Giving up!"
+                                                                                        ]
+
+                                              SolverTimeout e -> do terminateProcess pid -- NB. Do not *wait* for the process, just quit.
+                                                                    error $ unlines [ ""
+                                                                                    , "*** Data.SBV: Timeout."
+                                                                                    , "***"
+                                                                                    , "***   " ++ e
+                                                                                    , "***"
+                                                                                    , "*** Giving up!"
+                                                                                    ]
 
                     terminateSolver = do hClose inh
                                          outMVar <- newEmptyMVar
@@ -706,13 +731,14 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                            ++ ["Giving up.."]
                 return (send, ask, cleanUp, pid)
 
-      let executeSolver = do let sendAndGetSuccess l
+      let executeSolver = do let sendAndGetSuccess :: Maybe Int -> String -> IO ()
+                                 sendAndGetSuccess mbTimeOut l
                                    -- The pathetic case when the solver doesn't support queries, so we pretend it responded "success"
                                    -- Currently ABC is the only such solver. Filed a request for ABC at: https://bitbucket.org/alanmi/abc/issues/70/
                                    | not (supportsCustomQueries (capabilities (solver cfg)))
-                                   = send l
+                                   = send mbTimeOut l
                                    | True
-                                   = do r <- ask l
+                                   = do r <- ask mbTimeOut l
                                         case words r of
                                           ["success"] -> return ()
                                           _           -> let isOption = "(set-option" `isPrefixOf` dropWhile isSpace l
@@ -737,18 +763,18 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                               ]
                                                                               ++ reason
 
-                             mapM_ sendAndGetSuccess (mergeSExpr (lines (scriptBody script)))
-                             mapM_ sendAndGetSuccess (optimizeArgs cfg)
+                             mapM_ (sendAndGetSuccess Nothing) (mergeSExpr (lines (scriptBody script)))
+                             mapM_ (sendAndGetSuccess Nothing) (optimizeArgs cfg)
 
                              -- Capture what SBV would do here
                              let sbvContinuation ignoreExitCode = do
-                                        r <- ask $ satCmd cfg
+                                        r <- ask Nothing $ satCmd cfg
 
                                         vals <- if any (`isPrefixOf` r) ["sat", "unknown"]
                                                    then  do let mls = scriptModel script
                                                             when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
                                                                                     mapM_ putStrLn mls
-                                                            mapM ask mls
+                                                            mapM (ask Nothing) mls
                                                    else return []
 
                                         cleanUp ignoreExitCode $ Just (r, vals)
@@ -757,7 +783,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                              let askModel = do let mls = scriptModel script
                                                when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
                                                                        mapM_ putStrLn mls
-                                               vals <- mapM ask mls
+                                               vals <- mapM (ask Nothing) mls
                                                when (verbose cfg) $ do putStrLn "** Received the following responses:"
                                                                        mapM_ putStrLn vals
                                                return $ success $ mergeSExpr $ "sat" : map cleanLine (filter (not . null) vals)
@@ -774,6 +800,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                             , queryDefault             = sbvContinuation
                                                             , queryGetModel            = askModel
                                                             , queryIgnoreExitCode      = False
+                                                            , queryTimeOutValue        = Nothing
                                                             , queryAssertionStackDepth = 0
                                                             }
                                         return $ runQuery q qs
@@ -864,16 +891,18 @@ finalizeTranscript (Just f) mbEC = do ts <- show <$> getZonedTime
                            ]
 
 -- If requested, record in the transcript file
-recordTranscript :: Maybe FilePath -> Either String String -> IO ()
+recordTranscript :: Maybe FilePath -> Either (String, Maybe Int) String -> IO ()
 recordTranscript Nothing  _ = return ()
 recordTranscript (Just f) m = do tsPre <- formatTime defaultTimeLocale "; [%T%Q" <$> getZonedTime
                                  let ts = take 15 $ tsPre ++ repeat '0'
                                  case m of
-                                   Left  sent -> appendFile f $ unlines $ (ts ++ "] Sending:") : lines sent
-                                   Right recv -> appendFile f $ unlines $ case lines (dropWhile isSpace recv) of
-                                                                            []  -> [ts ++ "] Received: <NO RESPONSE>"]  -- can't really happen.
-                                                                            [x] -> [ts ++ "] Received: " ++ x]
-                                                                            xs  -> (ts ++ "] Received: ") : map (";   " ++) xs
+                                   Left  (sent, mbTimeOut) -> appendFile f $ unlines $ (ts ++ "] " ++ to mbTimeOut ++ "Sending:") : lines sent
+                                   Right recv              -> appendFile f $ unlines $ case lines (dropWhile isSpace recv) of
+                                                                                        []  -> [ts ++ "] Received: <NO RESPONSE>"]  -- can't really happen.
+                                                                                        [x] -> [ts ++ "] Received: " ++ x]
+                                                                                        xs  -> (ts ++ "] Received: ") : map (";   " ++) xs
+        where to Nothing  = ""
+              to (Just i) = "[Timeout: " ++ showTimeoutValue i ++ "] "
 {-# INLINE recordTranscript #-}
 
 -- Record the exception

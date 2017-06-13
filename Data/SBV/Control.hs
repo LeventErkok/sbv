@@ -51,7 +51,7 @@ module Data.SBV.Control (
      , exit
 
      -- * Controlling the solver behavior
-     , ignoreExitCode
+     , ignoreExitCode, timeout
 
      -- * Performing actions
      , io

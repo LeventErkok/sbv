@@ -337,13 +337,14 @@ instance NFData QueryContext where
    rnf (QueryContext st sks) = rnf st `seq` rnf sks `seq` ()
 
 -- | The state we keep track of as we interact with the solver
-data QueryState = QueryState { queryAsk                 :: String -> IO String
-                             , querySend                :: String -> IO ()
+data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -> IO String
+                             , querySend                :: Maybe Int -> String -> IO ()
                              , queryConfig              :: SMTConfig
                              , queryContext             :: QueryContext
                              , queryDefault             :: Bool -> IO [SMTResult]
                              , queryGetModel            :: IO [SMTResult]
                              , queryIgnoreExitCode      :: Bool
+                             , queryTimeOutValue        :: Maybe Int
                              , queryAssertionStackDepth :: Int
                              }
 
@@ -360,7 +361,7 @@ runQuery :: Query a -> QueryState -> IO a
 runQuery (Query userQuery) qs@QueryState{queryAsk, queryConfig} = evalStateT f' qs
   where f' = do let cmd = "(set-option :print-success true)"
 
-                r <- liftIO $ queryAsk cmd
+                r <- liftIO $ queryAsk Nothing cmd
 
                 let backend = name $ solver queryConfig
 

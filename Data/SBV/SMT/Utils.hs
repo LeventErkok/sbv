@@ -13,6 +13,7 @@ module Data.SBV.SMT.Utils (
           SMTLibConverter
         , SMTLibIncConverter
         , annotateWithName
+        , showTimeoutValue
        )
        where
 
@@ -50,3 +51,10 @@ annotateWithName nm x = "(! " ++ x ++ " :named |" ++ concatMap sanitize nm ++ "|
   where sanitize '|'  = "_bar_"
         sanitize '\\' = "_backslash_"
         sanitize c    = [c]
+
+-- | Show a millisecond time-out value somewhat nicely
+showTimeoutValue :: Int -> String
+showTimeoutValue i = case (i `quotRem` 1000000, i `quotRem` 500000) of
+                       ((s, 0), _)  -> shows s                              "s"
+                       (_, (hs, 0)) -> shows (fromIntegral hs / (2::Float)) "s"
+                       _            -> shows i "ms"
