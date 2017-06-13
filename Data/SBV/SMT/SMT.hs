@@ -663,6 +663,7 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                                     , "*** Data.SBV: Timeout."
                                                                                     , "***"
                                                                                     , "***   " ++ e
+                                                                                    , "***   Last command sent was: " ++ command
                                                                                     , "***"
                                                                                     , "*** Giving up!"
                                                                                     ]
