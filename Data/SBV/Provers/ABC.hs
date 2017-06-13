@@ -24,7 +24,7 @@ abc = SMTSolver {
            name         = ABC
          , executable   = "abc"
          , options      = ["-S", "%blast; &sweep -C 5000; &syn4; &cec -s -m -C 2000"]
-         , engine       = standardEngine "SBV_ABC" "SBV_ABC_OPTIONS" id addTimeOut standardModel
+         , engine       = standardEngine "SBV_ABC" "SBV_ABC_OPTIONS" id standardModel
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False
                               , supportsUninterpretedSorts = False
@@ -36,4 +36,3 @@ abc = SMTSolver {
                               , supportsCustomQueries      = False
                               }
          }
-  where addTimeOut _ _ = error "ABC: Timeout values are not supported"

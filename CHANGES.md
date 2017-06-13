@@ -49,6 +49,14 @@
 
         setLogic QF_NRA
 
+  * Configuration option `timeOut` is removed. This was rarely used, and the solver
+    support was rather sketchy. We now have a better mechanism in the query mode
+    for timeouts, where it really matters. Please get in touch if you relied on
+    this old mechanism. Correspondingly, the functions `isTheorem`, `isSatisfiable`,
+    `isTheoremWith` and `isSatisfiableWith` had their time-out arguments removed
+    and return types simplified. Also removed the `StopAfter` tactic for the
+    same reasons.
+
   * Thanks to Kanishka Azimi, our external test suite is now run by
     Tasty! Kanishka modernized the test suite, and reworked the
     infrastructure that was showing its age. Thanks!

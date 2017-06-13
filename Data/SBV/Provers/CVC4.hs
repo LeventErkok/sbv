@@ -26,7 +26,7 @@ cvc4 = SMTSolver {
            name         = CVC4
          , executable   = "cvc4"
          , options      = ["--lang", "smt"]
-         , engine       = standardEngine "SBV_CVC4" "SBV_CVC4_OPTIONS" modConfig addTimeOut standardModel
+         , engine       = standardEngine "SBV_CVC4" "SBV_CVC4_OPTIONS" modConfig standardModel
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = True
                               , supportsUninterpretedSorts = True
@@ -38,10 +38,7 @@ cvc4 = SMTSolver {
                               , supportsCustomQueries      = True
                               }
          }
- where addTimeOut o i | i < 0 = error $ "CVC4: Timeout value must be non-negative, received: " ++ show i
-                      | True  = o ++ ["--tlimit=" ++ show i ++ "000"]  -- SBV takes seconds, CVC4 wants milli-seconds
-
-       -- If custom queries are present, CVC4 requires an explicit command-line argument
+ where -- If custom queries are present, CVC4 requires an explicit command-line argument
        modConfig :: SMTConfig -> SMTConfig
        modConfig cfg
         | isNothing (customQuery cfg) = cfg

@@ -26,7 +26,7 @@ mathSAT = SMTSolver {
            name         = MathSAT
          , executable   = "mathsat"
          , options      = ["-input=smt2", "-theory.fp.minmax_zero_mode=4"]
-         , engine       = standardEngine "SBV_MATHSAT" "SBV_MATHSAT_OPTIONS" modConfig addTimeOut standardModel
+         , engine       = standardEngine "SBV_MATHSAT" "SBV_MATHSAT_OPTIONS" modConfig standardModel
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = True
                               , supportsUninterpretedSorts = True
@@ -38,9 +38,8 @@ mathSAT = SMTSolver {
                               , supportsCustomQueries      = True
                               }
          }
- where addTimeOut _ _ = error "MathSAT: Timeout values are not supported"
 
-       -- If unsat cores are needed, MathSAT requires an explicit command-line argument
+ where -- If unsat cores are needed, MathSAT requires an explicit command-line argument
        modConfig :: SMTConfig -> SMTConfig
        modConfig cfg
         | or [b | ProduceUnsatCores b <- solverSetOptions cfg]

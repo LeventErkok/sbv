@@ -24,7 +24,7 @@ boolector = SMTSolver {
            name         = Boolector
          , executable   = "boolector"
          , options      = ["--smt2", "--smt2-model", "--no-exit-codes"]
-         , engine       = standardEngine "SBV_BOOLECTOR" "SBV_BOOLECTOR_OPTIONS" modConfig addTimeOut standardModel
+         , engine       = standardEngine "SBV_BOOLECTOR" "SBV_BOOLECTOR_OPTIONS" modConfig standardModel
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False
                               , supportsUninterpretedSorts = False
@@ -36,10 +36,8 @@ boolector = SMTSolver {
                               , supportsCustomQueries      = True
                               }
          }
- where addTimeOut o i | i < 0 = error $ "Boolector: Timeout value must be non-negative, received: " ++ show i
-                      | True  = o ++ ["-t=" ++ show i]
 
-       -- If custom queries are present, Boolector requires to be in the "--incremental" mode
+ where -- If custom queries are present, Boolector requires to be in the "--incremental" mode
        modConfig :: SMTConfig -> SMTConfig
        modConfig cfg
         | isNothing (customQuery cfg) = cfg

@@ -52,7 +52,7 @@ z3 = SMTSolver {
                                     execName <-                   getEnv "SBV_Z3"          `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
                                     execOpts <- (splitArgs `fmap` getEnv "SBV_Z3_OPTIONS") `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
 
-                                    let cfg'   = cfg { solver = (solver cfg) {executable = execName, options = addTimeOut (timeOut cfg) execOpts} }
+                                    let cfg'   = cfg {solver = (solver cfg) {executable = execName, options = execOpts}}
 
                                         mkCont   = cont (roundingMode cfg') skolemMap
 
@@ -109,11 +109,6 @@ z3 = SMTSolver {
 
               getVal KReal g = ["(set-option :pp.decimal false) " ++ g, "(set-option :pp.decimal true)  " ++ g]
               getVal _     g = [g]
-
-       addTimeOut Nothing  o   = o
-       addTimeOut (Just i) o
-         | i < 0               = error $ "Z3: Timeout value must be non-negative, received: " ++ show i
-         | True                = o ++ [optionPrefix : "T:" ++ show i]
 
 extractMap :: Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel
 extractMap isSat qinps solverLines =

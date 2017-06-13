@@ -77,7 +77,6 @@ mkConfig :: SMTSolver -> SMTLibVersion -> SMTConfig
 mkConfig s smtVersion = SMTConfig { verbose          = False
                                   , timing           = NoTiming
                                   , sBranchTimeOut   = Nothing
-                                  , timeOut          = Nothing
                                   , printBase        = 10
                                   , printRealPrec    = 16
                                   , smtFile          = Nothing
@@ -302,34 +301,28 @@ isVacuous = isVacuousWith defaultSMTCfg
 
 -- Decision procedures (with optional timeout)
 
--- | Check whether a given property is a theorem, with an optional time out and the given solver.
--- Returns @Nothing@ if times out, or the result wrapped in a @Just@ otherwise.
-isTheoremWith :: Provable a => SMTConfig -> Maybe Int -> a -> IO (Maybe Bool)
-isTheoremWith cfg mbTo p = do r <- proveWith cfg{timeOut = mbTo} p
-                              case r of
-                                ThmResult Unsatisfiable{} -> return $ Just True
-                                ThmResult Satisfiable{}   -> return $ Just False
-                                ThmResult TimeOut{}       -> return Nothing
-                                _                         -> error $ "SBV.isTheorem: Received:\n" ++ show r
+-- | Check whether a given property is a theorem.
+isTheoremWith :: Provable a => SMTConfig -> a -> IO Bool
+isTheoremWith cfg p = do r <- proveWith cfg p
+                         case r of
+                           ThmResult Unsatisfiable{} -> return True
+                           ThmResult Satisfiable{}   -> return False
+                           _                         -> error $ "SBV.isTheorem: Received:\n" ++ show r
 
--- | Check whether a given property is satisfiable, with an optional time out and the given solver.
--- Returns @Nothing@ if times out, or the result wrapped in a @Just@ otherwise.
-isSatisfiableWith :: Provable a => SMTConfig -> Maybe Int -> a -> IO (Maybe Bool)
-isSatisfiableWith cfg mbTo p = do r <- satWith cfg{timeOut = mbTo} p
-                                  case r of
-                                    SatResult Satisfiable{}   -> return $ Just True
-                                    SatResult Unsatisfiable{} -> return $ Just False
-                                    SatResult TimeOut{}       -> return Nothing
-                                    _                         -> error $ "SBV.isSatisfiable: Received: " ++ show r
+-- | Check whether a given property is satisfiable.
+isSatisfiableWith :: Provable a => SMTConfig -> a -> IO Bool
+isSatisfiableWith cfg p = do r <- satWith cfg p
+                             case r of
+                               SatResult Satisfiable{}   -> return True
+                               SatResult Unsatisfiable{} -> return False
+                               _                         -> error $ "SBV.isSatisfiable: Received: " ++ show r
 
--- | Checks theoremhood within the given optional time limit of @i@ seconds.
--- Returns @Nothing@ if times out, or the result wrapped in a @Just@ otherwise.
-isTheorem :: Provable a => Maybe Int -> a -> IO (Maybe Bool)
+-- | Checks theoremhood.
+isTheorem :: Provable a => a -> IO Bool
 isTheorem = isTheoremWith defaultSMTCfg
 
--- | Checks satisfiability within the given optional time limit of @i@ seconds.
--- Returns @Nothing@ if times out, or the result wrapped in a @Just@ otherwise.
-isSatisfiable :: Provable a => Maybe Int -> a -> IO (Maybe Bool)
+-- | Checks satisfiability.
+isSatisfiable :: Provable a => a -> IO Bool
 isSatisfiable = isSatisfiableWith defaultSMTCfg
 
 -- | Compiles to SMT-Lib and returns the resulting program as a string. Useful for saving
@@ -566,19 +559,18 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels smtOptions tactics 
                                 then cont finalConfig ctx mbOptInfo (CasePath (map (snd . snd) levels))
                                 else caseSplit finalConfig ctx mbOptInfo shouldCheckCaseVacuity (parallelCase, hasPar) isSat (wrap, unwrap) levels smtOptions chatty cases cont
 
-  where (caseSplits, checkCaseVacuity, parallelCases, checkConstrVacuity, timeOuts, checkUsing, useSolvers, optimizePriorities, queryUsings)
-                = foldr (flip classifyTactics) ([], [], [], [], [], [], [], [], []) tactics
+  where (caseSplits, checkCaseVacuity, parallelCases, checkConstrVacuity, checkUsing, useSolvers, optimizePriorities, queryUsings)
+                = foldr (flip classifyTactics) ([], [], [], [], [], [], [], []) tactics
 
-        classifyTactics (a, b, c, d, e, f, g, h, i) = \case
-                    t@CaseSplit{}           -> (t:a,   b,   c,   d,   e,   f,   g,   h,   i)
-                    t@CheckCaseVacuity{}    -> (  a, t:b,   c,   d,   e,   f,   g,   h,   i)
-                    t@ParallelCase{}        -> (  a,   b, t:c,   d,   e,   f,   g,   h,   i)
-                    t@CheckConstrVacuity{}  -> (  a,   b,   c, t:d,   e,   f,   g,   h,   i)
-                    t@StopAfter{}           -> (  a,   b,   c,   d, t:e,   f,   g,   h,   i)
-                    t@CheckUsing{}          -> (  a,   b,   c,   d,   e, t:f,   g,   h,   i)
-                    t@UseSolver{}           -> (  a,   b,   c,   d,   e,   f, t:g,   h,   i)
-                    t@OptimizePriority{}    -> (  a,   b,   c,   d,   e,   f,   g, t:h,   i)
-                    t@QueryUsing{}          -> (  a,   b,   c,   d,   e,   f,   g,   h, t:i)
+        classifyTactics (a, b, c, d, e, f, g, h) = \case
+                    t@CaseSplit{}           -> (t:a,   b,   c,   d,   e,   f,   g,   h)
+                    t@CheckCaseVacuity{}    -> (  a, t:b,   c,   d,   e,   f,   g,   h)
+                    t@ParallelCase{}        -> (  a,   b, t:c,   d,   e,   f,   g,   h)
+                    t@CheckConstrVacuity{}  -> (  a,   b,   c, t:d,   e,   f,   g,   h)
+                    t@CheckUsing{}          -> (  a,   b,   c,   d, t:e,   f,   g,   h)
+                    t@UseSolver{}           -> (  a,   b,   c,   d,   e, t:f,   g,   h)
+                    t@OptimizePriority{}    -> (  a,   b,   c,   d,   e,   f, t:g,   h)
+                    t@QueryUsing{}          -> (  a,   b,   c,   d,   e,   f,   g, t:h)
 
         hasObjectives = not $ null objectives
 
@@ -602,10 +594,6 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels smtOptions tactics 
 
         (chatty, cases) = let (vs, css) = unzip [(v, cs) | CaseSplit v cs <- caseSplits] in (or (verbose cfgIn : vs), concat css)
 
-        grabStops c = case [i | StopAfter i <- timeOuts] of
-                        [] -> c
-                        xs -> c {timeOut = Just (maximum xs)}
-
         grabCheckUsing c = case [s | CheckUsing s <- checkUsing] of
                              []  -> c
                              [s] -> c {satCmd = "(check-sat-using " ++ s ++ ")"}
@@ -623,7 +611,7 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels smtOptions tactics 
 
         grabSetOptions c = c { solverSetOptions = smtOptions ++ solverSetOptions c }
 
-        finalConfig = grabQueryUsing . grabSetOptions . grabCheckUsing . grabStops $ configToUse
+        finalConfig = grabQueryUsing . grabSetOptions . grabCheckUsing $ configToUse
 
         finalOptConfig goals = finalConfig { optimizeArgs  = optimizeArgs finalConfig ++ optimizerDirectives }
             where optimizerDirectives

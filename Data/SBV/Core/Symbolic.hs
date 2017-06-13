@@ -391,7 +391,6 @@ data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-spl
               | CheckCaseVacuity   Bool                            -- ^ Should the case-splits be checked for vacuity? (Default: True.)
               | ParallelCase                                       -- ^ Run case-splits in parallel. (Default: Sequential.)
               | CheckConstrVacuity Bool                            -- ^ Should "constraints" be checked for vacuity? (Default: False.)
-              | StopAfter          Int                             -- ^ Time-out given to solver, in seconds.
               | CheckUsing         String                          -- ^ Invoke with check-sat-using command, instead of check-sat
               | UseSolver          SMTConfig                       -- ^ Use this solver (z3, yices, etc.)
               | OptimizePriority   OptimizeStyle                   -- ^ Use this style for optimize calls. (Default: Lexicographic)
@@ -415,7 +414,6 @@ instance NFData a => NFData (Tactic a) where
    rnf (CheckCaseVacuity b)   = rnf b `seq` ()
    rnf ParallelCase           = ()
    rnf (CheckConstrVacuity b) = rnf b `seq` ()
-   rnf (StopAfter        i)   = rnf i `seq` ()
    rnf (CheckUsing       s)   = rnf s `seq` ()
    rnf (UseSolver        s)   = rnf s `seq` ()
    rnf (OptimizePriority s)   = rnf s `seq` ()
@@ -1098,7 +1096,6 @@ addSValTactic tac = do st <- ask
                                                          in CaseSplit b `fmap` mapM app cs
                            walk ParallelCase           = return   ParallelCase
                            walk (CheckCaseVacuity b)   = return $ CheckCaseVacuity b
-                           walk (StopAfter i)          = return $ StopAfter  i
                            walk (CheckConstrVacuity b) = return $ CheckConstrVacuity b
                            walk (CheckUsing s)         = return $ CheckUsing s
                            walk (UseSolver  s)         = return $ UseSolver  s
@@ -1381,7 +1378,6 @@ data SMTConfig = SMTConfig {
          verbose          :: Bool                      -- ^ Debug mode
        , timing           :: Timing                    -- ^ Print timing information on how long different phases took (construction, solving, etc.)
        , sBranchTimeOut   :: Maybe Int                 -- ^ How much time to give to the solver for each call of 'sBranch' check. (In seconds. Default: No limit.)
-       , timeOut          :: Maybe Int                 -- ^ How much time to give to the solver. (In seconds. Default: No limit.)
        , printBase        :: Int                       -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
        , printRealPrec    :: Int                       -- ^ Print algebraic real values with this precision. (SReal, default: 16)
        , optimizeArgs     :: [String]                  -- ^ Additional commands to pass before check-sat is issued

@@ -26,7 +26,7 @@ yices = SMTSolver {
            name         = Yices
          , executable   = "yices-smt2"
          , options      = []
-         , engine       = standardEngine "SBV_YICES" "SBV_YICES_OPTIONS" modConfig addTimeOut standardModel
+         , engine       = standardEngine "SBV_YICES" "SBV_YICES_OPTIONS" modConfig standardModel
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False
                               , supportsUninterpretedSorts = True
@@ -38,9 +38,7 @@ yices = SMTSolver {
                               , supportsCustomQueries      = True
                               }
          }
-  where addTimeOut _ _ = error "Yices: Timeout values are not supported by Yices"
-
-        -- If custom queries are present, Yices requires to be in the incremental mode
+  where -- If custom queries are present, Yices requires to be in the incremental mode
         modConfig :: SMTConfig -> SMTConfig
         modConfig cfg
          | isNothing (customQuery cfg) = cfg
