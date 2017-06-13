@@ -524,10 +524,9 @@ standardModelExtractor isSat qinps solverLines = SMTModel { modelObjectives = ma
 standardEngine :: String
                -> String
                -> (SMTConfig -> SMTConfig)
-               -> ([String] -> Int -> [String])
                -> (Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel, SW -> String -> [String])
                -> SMTEngine
-standardEngine envName envOptName modConfig addTimeOut (extractMap, extractValue) cfgIn ctx isSat mbOptInfo qinps skolemMap pgm = do
+standardEngine envName envOptName modConfig (extractMap, extractValue) cfgIn ctx isSat mbOptInfo qinps skolemMap pgm = do
 
     let cfg = modConfig cfgIn
 
@@ -539,7 +538,7 @@ standardEngine envName envOptName modConfig addTimeOut (extractMap, extractValue
     execName <-                    getEnv envName     `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
     execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
 
-    let cfg'    = cfg {solver = (solver cfg) {executable = execName, options = maybe execOpts (addTimeOut execOpts) (timeOut cfg)}}
+    let cfg'    = cfg {solver = (solver cfg) {executable = execName, options = execOpts}}
 
         cont rm = concatMap extract skolemMap
            where extract (Left _)        = []  -- universals; we don't need their value, as the model is true for all of these.

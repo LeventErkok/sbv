@@ -45,30 +45,23 @@ crcGood hd divisor sent received =
 mkPoly :: SWord16 -> SWord64
 mkPoly d = 0 # 1 # d
 
--- how long do we wait for each poly.. (seconds)
-waitFor :: Int
-waitFor = 15
-
 genPoly :: SWord8 -> IO ()
 genPoly hd = do putStrLn $ "*** Looking for polynomials with HD = " ++ show hd
                 (skipped, res) <- go 0 [] []
                 putStrLn $ "*** Good polynomials with HD = " ++ show hd
                 mapM_ (\(i, s) -> putStrLn (show i ++ ". " ++ showPoly (mkPoly s)))  (zip [(1::Integer)..] res)
-                putStrLn $ "*** Skipped the followings, proof exceeded timeout value of " ++ show waitFor
                 mapM_ (\(i, s) -> putStrLn (show i ++ ". " ++ showPoly (mkPoly s)))  (zip [(1::Integer)..] skipped)
                 putStrLn "*** Done."
   where go :: SWord16 -> [SWord16] -> [SWord16] -> IO ([SWord16], [SWord16])
         go poly skip acc
          | poly == maxBound = return (skip, acc)
          | True             = do putStr $ "Testing " ++ showPoly  (mkPoly poly) ++ "... "
-                                 thm <- isTheorem (Just waitFor) $ crcGood hd poly
-                                 case thm of
-                                   Nothing    -> do putStrLn "Timeout, skipping.."
-                                                    go (poly+1) (poly:skip) acc
-                                   Just True  -> do putStrLn "Good!"
-                                                    go (poly+1) skip (poly:acc)
-                                   Just False -> do putStrLn "Bad!"
-                                                    go (poly+1) skip acc
+                                 thm <- isTheorem $ crcGood hd poly
+                                 if thm
+                                    then do putStrLn "Good!"
+                                            go (poly+1) skip (poly:acc)
+                                    else do putStrLn "Bad!"
+                                            go (poly+1) skip acc
 
 findHD3Polynomials :: IO ()
 findHD3Polynomials = genPoly 3

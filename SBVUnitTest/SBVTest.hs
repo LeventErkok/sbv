@@ -12,7 +12,7 @@
 {-# LANGUAGE RankNTypes #-}
 module SBVTest(
           generateGoldCheck, showsAs, ioShowsAs, mkTestSuite, SBVTestSuite(..)
-        , isThm, isSat, runSAT, numberOfModels
+        , runSAT, numberOfModels
         , assertIsThm, assertIsntThm, assertIsSat, assertIsntSat
         , module Test.Tasty
         , module Test.Tasty.HUnit
@@ -25,7 +25,7 @@ import Data.SBV                (SMTConfig(..), Provable(..), isTheorem, isTheore
 import Data.SBV.Internals      (runSymbolic, Symbolic, Result)
 
 import qualified Data.ByteString.Lazy.Char8 as LBC
-import Data.Maybe              (fromJust)
+
 import System.FilePath         ((</>))
 import Test.Tasty              (testGroup, TestTree, TestName)
 import Test.Tasty.Golden       (goldenVsString)
@@ -69,14 +69,6 @@ generateGoldCheck goldDir shouldCreate action goldFile
                       assert $ show v == g
  where gf = goldDir </> goldFile
 
--- | Check if a property is a theorem, no timeout
-isThm :: Provable a => a -> IO Bool
-isThm p = fromJust `fmap` isTheorem Nothing p
-
--- | Check if a property is satisfiable, no timeout
-isSat :: Provable a => a -> IO Bool
-isSat p = fromJust `fmap` isSatisfiable Nothing p
-
 -- | Count the number of models
 numberOfModels :: Provable a => a -> IO Int
 numberOfModels p = do AllSatResult (_, rs) <- allSat p
@@ -86,18 +78,18 @@ numberOfModels p = do AllSatResult (_, rs) <- allSat p
 runSAT :: Symbolic a -> IO Result
 runSAT = runSymbolic (True, defaultSMTCfg)
 
--- | ...
+-- | Turn provable to an assertion, theorem case
 assertIsThm :: Provable a => a -> Assertion
-assertIsThm t = assert (isThm t)
+assertIsThm t = assert (isTheorem t)
 
--- | ...
+-- | Turn provable to a negative assertion, theorem case
 assertIsntThm :: Provable a => a -> Assertion
-assertIsntThm t = assert (fmap not (isThm t))
+assertIsntThm t = assert (fmap not (isTheorem t))
 
--- | ..
+-- | Turn provable to an assertion, satisfiability case
 assertIsSat :: Provable a => a -> Assertion
-assertIsSat p = assert (isSat p)
+assertIsSat p = assert (isSatisfiable p)
 
--- | ..
+-- | Turn provable to a negative assertion, satisfiability case
 assertIsntSat :: Provable a => a -> Assertion
-assertIsntSat p = assert (fmap not (isSat p))
+assertIsntSat p = assert (fmap not (isSatisfiable p))
