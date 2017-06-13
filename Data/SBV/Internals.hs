@@ -101,7 +101,7 @@ synchronizeSolverComms mbTo = do ts  <- Query.io (show <$> getZonedTime)
 
                                  sendStringToSolver cmd
 
-                                 Query.queryDebug ["*** Attempting to synchronize with tag: " ++ tag]
+                                 Query.queryDebug ["** Attempting to synchronize with tag: " ++ tag]
 
                                  let loop = do s <- retrieveStringFromSolver mbTo
                                                unless (s == tag) $  do Query.queryDebug ["*** Synchronization loop, ignoring response: " ++ s]
@@ -109,7 +109,7 @@ synchronizeSolverComms mbTo = do ts  <- Query.io (show <$> getZonedTime)
 
                                  loop
 
-                                 Query.queryDebug ["*** Synchronization point reached!"]
+                                 Query.queryDebug ["** Synchronization point reached!"]
 
 {- $coordinateSolverInfo
 In rare cases it might be necessary to send an arbitrary string down to the solver. Needless to say, this
