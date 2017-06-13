@@ -245,7 +245,7 @@ module Data.SBV (
 
   -- * SMT Interface: Configurations and solvers
   , SMTConfig(..), SMTLibVersion(..), Solver(..), SMTSolver(..)
-  , boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, sbvCurrentSolver, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
+  , boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
   , setLogic, setOption, setInfo
 
   -- * Symbolic computations
@@ -284,13 +284,6 @@ import Data.Word
 import Control.Exception (finally, throwTo, AsyncException(ThreadKilled))
 
 import Data.Time (getCurrentTime, diffUTCTime, NominalDiffTime, UTCTime)
-
--- | The currently active solver, obtained by importing "Data.SBV".
--- To have other solvers /current/, import one of the bridge
--- modules "Data.SBV.Bridge.ABC", "Data.SBV.Bridge.Boolector", "Data.SBV.Bridge.CVC4",
--- "Data.SBV.Bridge.Yices", or "Data.SBV.Bridge.Z3" directly.
-sbvCurrentSolver :: SMTConfig
-sbvCurrentSolver = z3
 
 -- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
 -- problems with constraints, like the following:
