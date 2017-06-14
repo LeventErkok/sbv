@@ -18,7 +18,7 @@ module Data.SBV.Control.Query (
        send, ask, retrieveString
      , CheckSatResult(..), checkSat, checkSatAssuming, getUnsatCore, getProof, getAssignment, getOption
      , push, pop, getAssertionStackDepth, echo
-     , reset, resetAssertions, exit
+     , resetAssertions, exit
      , getAssertions
      , getValue, getModel
      , SMTOption(..)
@@ -287,14 +287,6 @@ pop i
                           modify' $ \s -> s{queryAssertionStackDepth = depth - i}
    where shl 1 = "one level"
          shl n = show n ++ " levels"
-
--- | Reset the solver, bringing it to the state at the beginning. Note that this makes the
--- solver "forget" everything we have sent down, so subsequent interaction will have no
--- knowledge of the bindings to variables constructed so far. See 'resetAssertions' for a
--- variant that keeps the bindings.
-reset :: Query ()
-reset = do send True "(reset)"
-           modify' $ \s -> s{queryAssertionStackDepth = 0}
 
 -- | Reset the solver, by forgetting all the assertions. However, bindings are kept as is,
 -- as opposed to 'reset'. Use this variant to clean-up the solver state while leaving the bindings

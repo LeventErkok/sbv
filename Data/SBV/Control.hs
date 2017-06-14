@@ -34,7 +34,7 @@ module Data.SBV.Control (
      , getAssertionStackDepth, push, pop
 
      -- * Resetting the solver state
-     , reset, resetAssertions
+     , resetAssertions
 
      -- * Communicating results back
      -- ** Constructing assignments
