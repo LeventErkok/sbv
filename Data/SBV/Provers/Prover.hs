@@ -660,7 +660,8 @@ checkQueryApplicability cfgIn hasCaseSplits QueryContext{contextSkolems} =
         checkCaseSplits True  = noInteractive [ "Queries in the presence of case splits."]
 
         noInteractive :: [String] -> Maybe String
-        noInteractive ss = Just $ unlines $  "*** Data.SBV: Unsupported interactive/query mode feature."
+        noInteractive ss = Just $ unlines $ ""
+                                          : "*** Data.SBV: Unsupported interactive/query mode feature."
                                           :  map ("***  " ++) ss
                                           ++ ["*** Data.SBV: Please report this as a feature request!"]
 
