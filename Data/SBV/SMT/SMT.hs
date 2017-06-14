@@ -789,6 +789,13 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                                              , "*** Try running in debug mode for further information."
                                                                              ]
 
+                             -- For push/pop support, we require :global-declarations to be true. But not all solvers
+                             -- support this. Issue it if supported. (If not, we'll reject pop calls.)
+                             if not (supportsGlobalDecls (capabilities (solver cfg)))
+                                then when (verbose cfg) $ do putStrLn $ "** Backend solver " ++ show backend ++ " does not support global decls."
+                                                             putStrLn   "** Some incremental calls, such as pop, will be limited."
+                                else sendAndGetSuccess Nothing "(set-option :global-declarations true)"
+
                              mapM_ (sendAndGetSuccess Nothing) (mergeSExpr (lines (scriptBody script)))
                              mapM_ (sendAndGetSuccess Nothing) (optimizeArgs cfg)
 

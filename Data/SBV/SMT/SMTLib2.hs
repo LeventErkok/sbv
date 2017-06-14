@@ -129,9 +129,8 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
                 ufs | null uis && null tbls    = ""     -- we represent tables as UFs
                     | True                     = "UF"
 
-        -- SBV always requires the following two settings
+        -- SBV always requires the production of models!
         getModels   = ["(set-option :produce-models true)"]
-        globalDecls = ["(set-option :global-declarations true)"]
 
         -- process all other settings we're given
         userSettings = concatMap opts $ solverSetOptions cfg
@@ -139,7 +138,6 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
                  opts o          = [setSMTOption o]
 
         settings =  getModels
-                 ++ globalDecls
                  ++ logic
                  ++ userSettings
 
