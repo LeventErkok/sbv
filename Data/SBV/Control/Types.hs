@@ -85,11 +85,11 @@ instance Show SMTInfoFlag where
 --    * @:print-success@                   (SBV critically needs this to be True in query mode.)
 --    * @:produce-models@                  (SBV always sets this option so it can extract models.)
 --    * @:regular-output-channel@          (SBV always requires regular output to come on stdout for query purposes.)
+--    * @:global-declarations@             (SBV always uses global declarations since definitions are accumulative.)
 --
 -- Note that 'SetLogic' and 'SetInfo' are, strictly speaking, not SMTLib options. However, we treat it as such here
 -- uniformly, as it fits better with how options work.
 data SMTOption = DiagnosticOutputChannel   FilePath
-               | GlobalDeclarations        Bool
                | ProduceAssertions         Bool
                | ProduceAssignments        Bool
                | ProduceProofs             Bool
@@ -108,7 +108,6 @@ data SMTOption = DiagnosticOutputChannel   FilePath
 -- classification follows the SMTLib document.
 isStartModeOption :: SMTOption -> Bool
 isStartModeOption DiagnosticOutputChannel{}   = False
-isStartModeOption GlobalDeclarations{}        = True
 isStartModeOption ProduceAssertions{}         = True
 isStartModeOption ProduceAssignments{}        = True
 isStartModeOption ProduceProofs{}             = True
@@ -130,7 +129,6 @@ smtBool False = "false"
 setSMTOption :: SMTOption -> String
 setSMTOption = cvt
   where cvt (DiagnosticOutputChannel   f) = opt   [":diagnostic-output-channel",   show f]
-        cvt (GlobalDeclarations        b) = opt   [":global-declarations",         smtBool b]
         cvt (ProduceAssertions         b) = opt   [":produce-assertions",          smtBool b]
         cvt (ProduceAssignments        b) = opt   [":produce-assignments",         smtBool b]
         cvt (ProduceProofs             b) = opt   [":produce-proofs",              smtBool b]

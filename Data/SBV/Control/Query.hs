@@ -154,7 +154,6 @@ instance SolverContext Query where
 getOption :: (a -> SMTOption) -> Query (Maybe SMTOption)
 getOption f = case f undefined of
                  DiagnosticOutputChannel{}   -> askFor "DiagnosticOutputChannel"   ":diagnostic-output-channel"   $ string     DiagnosticOutputChannel
-                 GlobalDeclarations{}        -> askFor "GlobalDeclarations"        ":global-declarations"         $ bool       GlobalDeclarations
                  ProduceAssertions{}         -> askFor "ProduceAssertions"         ":produce-assertions"          $ bool       ProduceAssertions
                  ProduceAssignments{}        -> askFor "ProduceAssignments"        ":produce-assignments"         $ bool       ProduceAssignments
                  ProduceProofs{}             -> askFor "ProduceProofs"             ":produce-proofs"              $ bool       ProduceProofs
@@ -291,9 +290,7 @@ pop i
 -- | Reset the solver, by forgetting all the assertions. However, bindings are kept as is,
 -- as opposed to 'reset'. Use this variant to clean-up the solver state while leaving the bindings
 -- intact. Pops all assertion levels. Declarations and definitions resulting from the 'setLogic'
--- command are unaffected. If you issued @'setOption' 'GlobalDeclarations' 'True'@
--- then all declarations and definitions remain unaffected, not just the ones made at the very
--- first level. Otherwise, only the definitions and bindings from the first level remain.
+-- command are unaffected. Note that SBV implicitly uses global-declarations, so bindings will remain intact.
 resetAssertions :: Query ()
 resetAssertions = do send True "(reset-assertions)"
                      modify' $ \s -> s{queryAssertionStackDepth = 0}
