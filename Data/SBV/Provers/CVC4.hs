@@ -36,6 +36,7 @@ cvc4 = SMTSolver {
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
                               , supportsCustomQueries      = True
+                              , supportsGlobalDecls        = True
                               }
          }
  where -- If custom queries are present, CVC4 requires an explicit command-line argument

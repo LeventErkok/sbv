@@ -82,6 +82,7 @@ z3 = SMTSolver {
                                 , supportsOptimization       = True
                                 , supportsPseudoBooleans     = True
                                 , supportsCustomQueries      = True
+                                , supportsGlobalDecls        = True
                                 }
          }
  where cont rm skolemMap mbModelIndex = wrapModel grabValues

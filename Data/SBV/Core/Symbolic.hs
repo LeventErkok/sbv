@@ -1309,14 +1309,15 @@ instance NFData SMTScript where
 
 -- | Translation tricks needed for specific capabilities afforded by each solver
 data SolverCapabilities = SolverCapabilities {
-         supportsQuantifiers        :: Bool    -- ^ Does the solver understand SMT-Lib2 style quantifiers?
-       , supportsUninterpretedSorts :: Bool    -- ^ Does the solver understand SMT-Lib2 style uninterpreted-sorts
-       , supportsUnboundedInts      :: Bool    -- ^ Does the solver support unbounded integers?
-       , supportsReals              :: Bool    -- ^ Does the solver support reals?
-       , supportsIEEE754            :: Bool    -- ^ Does the solver support floating point numbers?
-       , supportsOptimization       :: Bool    -- ^ Does the solver support optimization routines?
-       , supportsPseudoBooleans     :: Bool    -- ^ Does the solver support pseudo-boolean operations?
-       , supportsCustomQueries      :: Bool    -- ^ Does the solver support interactive queries per SMT-Lib?
+         supportsQuantifiers        :: Bool    -- ^ Support for SMT-Lib2 style quantifiers?
+       , supportsUninterpretedSorts :: Bool    -- ^ Support for SMT-Lib2 style uninterpreted-sorts
+       , supportsUnboundedInts      :: Bool    -- ^ Support for unbounded integers?
+       , supportsReals              :: Bool    -- ^ Support for reals?
+       , supportsIEEE754            :: Bool    -- ^ Support for floating point numbers?
+       , supportsOptimization       :: Bool    -- ^ Support for optimization routines?
+       , supportsPseudoBooleans     :: Bool    -- ^ Support for pseudo-boolean operations?
+       , supportsCustomQueries      :: Bool    -- ^ Support for interactive queries per SMT-Lib?
+       , supportsGlobalDecls        :: Bool    -- ^ Support for global decls, needed for push-pop.
        }
 
 -- | Rounding mode to be used for the IEEE floating-point operations.

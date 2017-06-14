@@ -36,6 +36,7 @@ yices = SMTSolver {
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
                               , supportsCustomQueries      = True
+                              , supportsGlobalDecls        = False
                               }
          }
   where -- If custom queries are present, Yices requires to be in the incremental mode
