@@ -282,8 +282,16 @@ pop i
  | True   = do depth <- getAssertionStackDepth
                if i > depth
                   then error $ "Data.SBV: Illegally trying to pop " ++ shl i ++ ", at current level: " ++ show depth
-                  else do send True $ "(pop " ++ show i ++ ")"
-                          modify' $ \s -> s{queryAssertionStackDepth = depth - i}
+                  else do QueryState{queryConfig} <- get
+                          if not (supportsGlobalDecls (capabilities (solver queryConfig)))
+                             then error $ unlines [ ""
+                                                  , "*** Data.SBV: Backend solver does not support global-declarations."
+                                                  , "***           Hence, calls to 'pop' are not supported."
+                                                  , "***"
+                                                  , "*** Request this as a feature for the underlying solver!"
+                                                  ]
+                             else do send True $ "(pop " ++ show i ++ ")"
+                                     modify' $ \s -> s{queryAssertionStackDepth = depth - i}
    where shl 1 = "one level"
          shl n = show n ++ " levels"
 
