@@ -82,7 +82,6 @@ sdist: install
 	$(call endTimer,$@)
 
 veryclean: clean
-	@rm -f ${BUILDTIMES}
 	@make -C buildUtils clean
 	@-ghc-pkg unregister sbv
 
@@ -101,7 +100,7 @@ markBuildStart:
 markBuildEnd:
 	@echo `date`. SBV release build finished.		   >> ${BUILDTIMES}
 
-release: markBuildStart clean checkLinks install sdist testInterfaces hlint docs test markBuildEnd
+release: markBuildStart veryclean checkLinks install sdist testInterfaces hlint docs test markBuildEnd
 	@echo "*** SBV is ready for release!"
 
 # same as release really, but doesn't check links and tests fewer solver connections.

@@ -38,8 +38,8 @@ main = do let allSolvers = map (\s -> (show s, s)) [abc, boolector, cvc4, mathSA
           unless (null skipped)     $ putStrLn $ "*** NB: The following solvers are skipped: "      ++ intercalate ", " skipped
 
 test :: SMTConfig -> IO ()
-test s = do check  "t0" t0 (== Just False)
-            check  "t1" t1 (== Just True)
+test s = do check  "t0" t0 (== False)
+            check  "t1" t1 (== True)
             models "t2" t2 (== ([2,62,66,126,130,190,194,254]::[Word8]))
             models "t3" t3 (== ([]::[Word8]))
             models "t4" t4 (== [4::Word8])
@@ -48,7 +48,7 @@ test s = do check  "t0" t0 (== Just False)
           | f r  = return ()
           | True = do putStrLn $ m ++ "[" ++ show s ++ "] FAIL. Got: " ++ show r
                       exitFailure
-        thm = isTheoremWith s Nothing
+        thm = isTheoremWith s
         models m p f = (extractModels `fmap` allSat p) >>= decide m f . sort
         t0 x = x   .== x+(1::SWord8)
         t1 x = x*2 .== x+(x::SWord8)
