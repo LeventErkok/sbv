@@ -38,11 +38,11 @@ all: install
 
 install: 
 	$(call startTimer,$@)
-	@(make -s -C buildUtils testInterfaces)
 	@fast-tags -R --nomerge .
 	@cabal configure --enable-tests --ghc-options="-Werror -Wall"
 	@cabal build
 	@cabal install --force-reinstalls
+	@(make -s -C buildUtils testInterfaces)
 	$(call endTimer,$@)
 
 basicTest:
