@@ -42,7 +42,6 @@ install:
 	@cabal configure --enable-tests --ghc-options="-Werror -Wall"
 	@cabal build
 	@cabal install --force-reinstalls
-	@(make -s -C buildUtils testInterfaces)
 	$(call endTimer,$@)
 
 basicTest:
@@ -124,6 +123,7 @@ checkLinks:
 
 testInterfaces:
 	$(call startTimer,$@)
+	make -C buildUtils veryClean
 	make -C buildUtils
 	@buildUtils/testInterfaces
 	$(call endTimer,$@)
@@ -131,6 +131,7 @@ testInterfaces:
 # only test connection to a few solvers
 limitedTestInterfaces:
 	$(call startTimer,$@)
+	make -C buildUtils veryClean
 	make -C buildUtils
 	@buildUtils/testInterfaces Yices Z3 CVC4
 	$(call startTimer,$@)
