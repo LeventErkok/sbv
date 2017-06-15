@@ -133,7 +133,7 @@ limitedTestInterfaces:
 	$(call startTimer,$@)
 	make -C buildUtils veryClean
 	make -C buildUtils
-	@buildUtils/testInterfaces Yices Z3 CVC4
+	@buildUtils/testInterfaces Yices Z3
 	$(call startTimer,$@)
 
 tags:
