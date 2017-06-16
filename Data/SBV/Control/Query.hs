@@ -41,7 +41,7 @@ import Data.Function (on)
 
 import Data.SBV.Core.Data
 
-import Data.SBV.Core.Symbolic (QueryState(..), Query(..), SMTResult(..), State(..))
+import Data.SBV.Core.Symbolic (QueryState(..), Query(..), SMTResult(..), State(..), registerLabel)
 
 import Data.SBV.SMT.Utils
 import Data.SBV.Utils.SExpr
@@ -192,7 +192,8 @@ getOption f = case f undefined of
 -- | Adding a constraint, possibly named. Only used internally.
 -- Use 'constrain' and 'namedConstraint' from user programs.
 addQueryConstraint :: Maybe String -> SBool -> Query ()
-addQueryConstraint mbNm b = do sw <- inNewContext (`sbvToSW` b)
+addQueryConstraint mbNm b = do sw <- inNewContext (\st -> do maybe (return ()) (registerLabel st) mbNm
+                                                             sbvToSW st b)
                                send True $ "(assert " ++ mkNamed mbNm (show sw)  ++ ")"
    where mkNamed Nothing   s = s
          mkNamed (Just nm) s = annotateWithName nm s
