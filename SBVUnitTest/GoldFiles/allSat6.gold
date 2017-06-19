@@ -1,0 +1,10 @@
+Solution #1:
+  x = 0 :: Word8
+  y = 1 :: Word8
+Solution #2:
+  x = 0 :: Word8
+  y = 2 :: Word8
+Solution #3:
+  x = 1 :: Word8
+  y = 2 :: Word8
+Found 3 different solutions. (Unique up to prefix existentials.)

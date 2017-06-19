@@ -10,6 +10,7 @@ import qualified TestSuite.Basics.Index
 import qualified TestSuite.Basics.IteTest
 import qualified TestSuite.Basics.ProofTests
 import qualified TestSuite.Basics.QRem
+import qualified TestSuite.Basics.AllSat
 import qualified TestSuite.BitPrecise.BitTricks
 import qualified TestSuite.BitPrecise.PrefixSum
 import qualified TestSuite.CRC.CCITT_Unidir
@@ -56,6 +57,7 @@ tests =
   , TestSuite.Basics.IteTest.tests
   , TestSuite.Basics.ProofTests.tests
   , TestSuite.Basics.QRem.tests
+  , TestSuite.Basics.AllSat.tests
   , TestSuite.BitPrecise.BitTricks.tests
   , TestSuite.BitPrecise.PrefixSum.tests
   , TestSuite.CRC.CCITT_Unidir.tests

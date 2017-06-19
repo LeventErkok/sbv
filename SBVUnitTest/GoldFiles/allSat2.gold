@@ -1,0 +1,9 @@
+Solution #1:
+  x = Q!val!0 :: Q
+  y = Q!val!0 :: Q
+  z = Q!val!0 :: Q
+Solution #2:
+  x = Q!val!0 :: Q
+  y = Q!val!0 :: Q
+  z = Q!val!1 :: Q
+Found 2 different solutions.
