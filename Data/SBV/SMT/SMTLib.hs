@@ -15,7 +15,6 @@ module Data.SBV.SMT.SMTLib (
           SMTLibPgm
         , toSMTLib
         , toIncSMTLib
-        , addNonEqConstraints
         , multiModelSeparator
         , interpretSolverOutput
         , interpretSolverOutputMulti
@@ -94,10 +93,6 @@ toSMTLib2 = cvt SMTLib2
 toIncSMTLib2 :: SMTLibIncConverter [String]
 toIncSMTLib2 = cvt SMTLib2
   where cvt SMTLib2 = SMT2.cvtInc
-
--- | Add constraints generated from older models, used for querying new models
-addNonEqConstraints :: SMTLibVersion -> RoundingMode -> [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> Maybe [String]
-addNonEqConstraints SMTLib2 = SMT2.addNonEqConstraints
 
 -- | Interpret solver output based on SMT-Lib standard output responses
 interpretSolverOutput :: SMTConfig -> ([String] -> SMTModel) -> [String] -> SMTResult

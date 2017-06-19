@@ -10,7 +10,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                  #-}
-{-# LANGUAGE BangPatterns         #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE NamedFieldPuns       #-}
@@ -38,15 +37,14 @@ module Data.SBV.Provers.Prover (
 import Data.Char         (isSpace)
 import Data.List         (intercalate, nub)
 
-import Control.Monad        (when, unless, mplus)
+import Control.Monad        (when, mplus)
 import Control.Monad.Reader (ask)
 import Control.Monad.Trans  (liftIO)
 import Control.Monad.State  (evalStateT)
 
-import System.FilePath   (addExtension, splitExtension)
+import System.FilePath   (addExtension)
 import Data.Time         (getCurrentTime, utcToLocalZonedTime)
 import System.IO         (hGetBuffering, hSetBuffering, stdout, hFlush, BufferMode(..))
-import System.IO.Unsafe  (unsafeInterleaveIO)
 
 import Control.Concurrent.Async (async, wait, cancel, waitAny, Async)
 
@@ -54,8 +52,6 @@ import GHC.Stack.Compat
 #if !MIN_VERSION_base(4,9,0)
 import GHC.SrcLoc.Compat
 #endif
-
-import qualified Data.Set as Set (toList)
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
@@ -959,79 +955,9 @@ isVacuousWith config a = do
 
 -- | Find all satisfying assignments using the given SMT-solver
 allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
-allSatWith config p = do
-        msg "Checking Satisfiability, all solutions.."
-        (ctx, sbvPgm@SMTProblem{smtInputs=qinps, kindsUsed=ki}) <- simulate config True [] p
-
-        let usorts = [s | us@(KUserSort s _) <- Set.toList ki, isFree us]
-                where isFree (KUserSort _ (Left _)) = True
-                      isFree _                      = False
-
-        unless (null usorts) $ msg $  "SBV.allSat: Uninterpreted sorts present: " ++ unwords usorts
-                                   ++ "\n               SBV will use equivalence classes to generate all-satisfying instances."
-
-        -- We cannot support allSat with custom-queries, since the state would be reused!
-
-        unless (null [() | QueryUsing _ <- tactics sbvPgm])
-               $ error $ unlines [ "*** Data.SBV: allSat calls are not supported in the presence of interactive queries."
-                                 , "*** Data.SBV: Please report this as a feature request!"
-                                 ]
-
-        results <- unsafeInterleaveIO $ go ctx sbvPgm (1::Int) []
-
-        -- See if there are any existentials below any universals
-        -- If such is the case, then the solutions are unique upto prefix existentials
-        let w = ALL `elem` map fst qinps
-        return $ AllSatResult (w,  results)
-  where msg = when (verbose config) . putStrLn . ("** " ++)
-        go ctx sbvPgm = loop
-          where hasPar = any isParallelCaseAnywhere (tactics sbvPgm)
-                loop !n nonEqConsts = do
-                  curResult <- invoke nonEqConsts hasPar n ctx sbvPgm
-                  case curResult of
-                    Nothing            -> return []
-                    Just (SatResult r) -> let cont model = do let modelOnlyAssocs = [v | v@(x, _) <- modelAssocs model, not (isNonModelVar config x)]
-                                                              rest <- unsafeInterleaveIO $ loop (n+1) (modelOnlyAssocs : nonEqConsts)
-                                                              return (r : rest)
-                                          in case r of
-                                               -- We are done! This is really how we should always stop.
-                                               Unsatisfiable{} -> return []
-
-                                               -- We have a model. If there are bindings, continue; otherwise stop
-                                               Satisfiable   _ (SMTModel _ []) -> return [r]
-                                               Satisfiable   _ model           -> cont model
-
-                                               -- Satisfied in an extension field. Stop if no new bindings, otherwise continue if all regular.
-                                               -- If the model is in the extension, we also stop
-                                               SatExtField   _ (SMTModel _ [])       -> return [r]
-                                               SatExtField   _ model@(SMTModel [] _) -> cont model
-                                               SatExtField{}                         -> return []
-
-                                               -- Something bad happened, we stop here. Note that we treat Unknown as bad too in this context.
-                                               Unknown{}    -> return [r]
-                                               ProofError{} -> return [r]
-                                               TimeOut{}    -> return [r]
-
-        invoke nonEqConsts hasPar n ctx simRes@SMTProblem{smtInputs, smtOptions, tactics, objectives} = do
-               objectiveCheck False objectives "allSat"
-               msg $ "Looking for solution " ++ show n
-               case addNonEqConstraints (smtLibVersion config) (roundingMode config) smtInputs nonEqConsts of
-                 Nothing -> -- no new constraints refuted models, stop
-                            return Nothing
-                 Just refutedModels -> do
-
-                    let wrap                 = SatResult
-                        unwrap (SatResult r) = r
-
-                        mwrap  [r]           = wrap r
-                        mwrap xs             = error $ "SBV.allSatWith: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
-
-                    res <- bufferSanity hasPar $ applyTactics (updateName (n-1) config) ctx (True, hasPar) (wrap, unwrap) [] smtOptions tactics objectives
-                                               $ callSolver True "Checking Satisfiability.." refutedModels mwrap simRes
-                    return $ Just res
-
-        updateName i cfg = cfg{transcript = upd `fmap` transcript cfg}
-               where upd nm = let (b, e) = splitExtension nm in b ++ "_allSat_" ++ show i ++ e
+allSatWith config predicate = runSMTInMode (SMTMode ISetup True config) $ do
+                                _ <- forSome_ predicate >>= output
+                                query $ AllSatResult <$> Control.getAllSatResult
 
 simulate :: Provable a => SMTConfig -> Bool -> [String] -> a -> IO (State, SMTProblem)
 simulate config isSat comments predicate = do

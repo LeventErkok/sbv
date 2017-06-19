@@ -11,13 +11,11 @@
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE TupleSections #-}
 
-module Data.SBV.SMT.SMTLib2(cvt, cvtInc, addNonEqConstraints) where
+module Data.SBV.SMT.SMTLib2(cvt, cvtInc) where
 
-import Data.Bits     (bit)
-import Data.Function (on)
-import Data.Ord      (comparing)
-import Data.List     (intercalate, partition, groupBy, sortBy)
-import Data.Maybe    (mapMaybe)
+import Data.Bits  (bit)
+import Data.List  (intercalate, partition)
+import Data.Maybe (mapMaybe)
 
 import qualified Data.Foldable as F (toList)
 import qualified Data.Map      as M
@@ -29,53 +27,6 @@ import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
 
 import Data.SBV.Utils.PrettyNum (smtRoundingMode, cwToSMTLib)
-
--- | Add constraints to generate /new/ models. This function is used to query the SMT-solver, while
--- disallowing a previous model.
-addNonEqConstraints :: RoundingMode -> [(Quantifier, NamedSymVar)] -> [[(String, CW)]] -> Maybe [String]
-addNonEqConstraints rm qinps allNonEqConstraints
-  | null allNonEqConstraints
-  = Just []
-  | null refutedModel
-  = Nothing
-  | True
-  = Just $ "; --- refuted-models ---" : refutedModel
- where refutedModel = concatMap (nonEqs rm . map intName) nonEqConstraints
-       aliasTable   = map (\(_, (x, y)) -> (y, x)) qinps
-       intName (s, c)
-          | Just sw <- s `lookup` aliasTable = (show sw, c)
-          | True                             = (s, c)
-       -- with existentials, we only add top-level existentials to the refuted-models list
-       nonEqConstraints = filter (not . null) $ map (filter (\(s, _) -> s `elem` topUnivs)) allNonEqConstraints
-       topUnivs = [s | (_, (_, s)) <- takeWhile (\p -> fst p == EX) qinps]
-
-nonEqs :: RoundingMode -> [(String, CW)] -> [String]
-nonEqs rm scs = format $ interp ps ++ disallow (map eqClass uninterpClasses)
-  where isFree (KUserSort _ (Left _)) = True
-        isFree _                      = False
-        (ups, ps) = partition (isFree . kindOf . snd) scs
-        format []     =  []
-        format [m]    =  ["(assert " ++ m ++ ")"]
-        format (m:ms) =  ["(assert (or " ++ m]
-                      ++ map ("            " ++) ms
-                      ++ ["        ))"]
-        -- Regular (or interpreted) sorts simply get a constraint that we disallow the current assignment
-        interp = map $ nonEq rm
-        -- Determine the equivalence classes of uninterpreted sorts:
-        uninterpClasses = filter (\l -> length l > 1) -- Only need this class if it has at least two members
-                        . map (map fst)               -- throw away sorts, we only need the names
-                        . groupBy ((==) `on` snd)     -- make sure they belong to the same sort and have the same value
-                        . sortBy (comparing snd)      -- sort them according to their sorts first
-                        $ ups                         -- take the uninterpreted sorts
-        -- Uninterpreted sorts get a constraint that says the equivalence classes as determined by the solver are disallowed:
-        eqClass :: [String] -> String
-        eqClass [] = error "SBV.allSat.nonEqs: Impossible happened, disallow received an empty list"
-        eqClass cs = "(= " ++ unwords cs ++ ")"
-        -- Now, take the conjunction of equivalence classes and assert it's negation:
-        disallow = map $ \ec -> "(not " ++ ec ++ ")"
-
-nonEq :: RoundingMode -> (String, CW) -> String
-nonEq rm (s, c) = "(not (= " ++ s ++ " " ++ cvtCW rm c ++ "))"
 
 tbd :: String -> a
 tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
