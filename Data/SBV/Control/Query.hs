@@ -227,19 +227,22 @@ getSMTResult = do cfg <- getConfig
 -- returns an 'SMTResult'.
 getModel :: Query SMTModel
 getModel = do State{runMode, rinps} <- get
+              cfg  <- getConfig
               inps <- liftIO $ reverse <$> readIORef rinps
               let vars :: [NamedSymVar]
                   vars = case runMode of
                            m@CodeGen         -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
                            m@Concrete        -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
                            SMTMode _ isSAT _ -> -- for "sat", display the prefix existentials. for "proof", display the prefix universals
-                                                if isSAT then map snd $ takeWhile ((/= ALL) . fst) inps
-                                                         else map snd $ takeWhile ((== ALL) . fst) inps
+                                                let allModelInputs = if isSAT then takeWhile ((/= ALL) . fst) inps
+                                                                              else takeWhile ((== ALL) . fst) inps
 
-                  sortByNodeId :: [NamedSymVar] -> [NamedSymVar]
-                  sortByNodeId = sortBy (compare `on` (\(SW _ n, _) -> n))
+                                                    sortByNodeId :: [NamedSymVar] -> [NamedSymVar]
+                                                    sortByNodeId = sortBy (compare `on` (\(SW _ n, _) -> n))
 
-              assocs <- mapM (\(sw, n) -> (n, ) <$> getValueCW sw) (sortByNodeId vars)
+                                                in sortByNodeId [nv | (_, nv@(_, n)) <- allModelInputs, not (isNonModelVar cfg n)]
+
+              assocs <- mapM (\(sw, n) -> (n, ) <$> getValueCW sw) vars
 
               return SMTModel { modelObjectives = []
                               , modelAssocs     = assocs
