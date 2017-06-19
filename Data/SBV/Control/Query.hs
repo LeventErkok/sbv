@@ -21,7 +21,7 @@ module Data.SBV.Control.Query (
      , push, pop, getAssertionStackDepth, echo
      , resetAssertions, exit
      , getAssertions
-     , getValue, getModel, getSMTResult
+     , getValue, getModel, getSMTResult, getAllSatResult
      , SMTOption(..)
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
      , Logic(..), Assignment(..)
@@ -35,12 +35,14 @@ import Control.Monad            (unless)
 import Control.Monad.State.Lazy (get)
 import Control.Monad.Trans      (liftIO)
 
-import Data.List (unzip3, intercalate, nubBy, sortBy)
+import Data.List     (unzip3, intercalate, nubBy, sortBy, partition, groupBy, tails)
 import Data.Function (on)
+import Data.Ord      (comparing)
 
 import Data.SBV.Core.Data
 
-import Data.SBV.Core.Symbolic (QueryState(..), Query(..), SMTModel(..), SMTResult(..), State(..), registerLabel)
+import Data.SBV.Core.Symbolic   (QueryState(..), Query(..), SMTModel(..), SMTResult(..), State(..), registerLabel, svToSW)
+import Data.SBV.Core.Operations (svNot, svOr, svNotEqual)
 
 import Data.SBV.SMT.Utils
 import Data.SBV.Utils.SExpr
@@ -49,6 +51,8 @@ import Data.SBV.Control.Types
 import Data.SBV.Control.Utils
 
 import Data.IORef (readIORef)
+
+import qualified Data.Set as Set (toList)
 
 -- | An Assignment of a model binding
 data Assignment = Assign SVal CW
@@ -221,6 +225,98 @@ getSMTResult = do cfg <- getConfig
                     Unsat -> return $ Unsatisfiable cfg
                     Sat   -> Satisfiable cfg <$> getModel
                     Unk   -> Unknown     cfg <$> getModel
+
+-- | Repeatedly issue check-sat, after refuting the previous model.
+-- The bool is true if the model is unique upto prefix existentials.
+getAllSatResult :: Query (Bool, [SMTResult])
+getAllSatResult = do queryDebug ["Checking Satisfiability, all solutions.."]
+
+                     cfg <- getConfig
+
+                     State{rinps, rUsedKinds} <- get
+
+                     ki    <- liftIO $ readIORef rUsedKinds
+                     qinps <- liftIO $ reverse <$> readIORef rinps
+
+                     let usorts = [s | us@(KUserSort s _) <- Set.toList ki, isFree us]
+
+                     unless (null usorts) $ queryDebug [ "SBV.allSat: Uninterpreted sorts present: " ++ unwords usorts
+                                                       , "            SBV will use equivalence classes to generate all-satisfying instances."
+                                                       ]
+
+                     let vars :: [(SVal, NamedSymVar)]
+                         vars = let allModelInputs = takeWhile ((/= ALL) . fst) qinps
+
+                                    sortByNodeId :: [NamedSymVar] -> [NamedSymVar]
+                                    sortByNodeId = sortBy (compare `on` (\(SW _ n, _) -> n))
+
+                                    mkSVal :: NamedSymVar -> (SVal, NamedSymVar)
+                                    mkSVal nm@(sw, _) = (SVal (kindOf sw) (Right (cache (const (return sw)))), nm)
+
+                                in map mkSVal $ sortByNodeId [nv | (_, nv@(_, n)) <- allModelInputs, not (isNonModelVar cfg n)]
+
+                         -- If we have any universals, then the solutions are unique upto prefix existentials.
+                         w = ALL `elem` map fst qinps
+
+                     ms <- loop vars cfg
+                     return (w, ms)
+
+   where isFree (KUserSort _ (Left _)) = True
+         isFree _                      = False
+
+         loop vars cfg = go (1::Int)
+            where go :: Int -> Query [SMTResult]
+                  go cnt = do queryDebug ["Looking for solution " ++ show cnt]
+                              cs <- checkSat
+                              case cs of
+                                Unsat -> return []
+                                Unk   -> do queryDebug ["Solver returned unknown, terminating query."]
+                                            return []
+                                Sat   -> do assocs <- mapM (\(sval, (sw, n)) -> do cw <- getValueCW sw
+                                                                                   return (n, (sval, cw))) vars
+
+                                            let m = Satisfiable cfg SMTModel { modelObjectives = []
+                                                                             , modelAssocs     = [(n, cw) | (n, (_, cw)) <- assocs]
+                                                                             }
+
+                                                (interpreteds, uninterpreteds) = partition (not . isFree . kindOf . fst) (map snd assocs)
+
+                                                -- For each "interpreted" variable, figure out the model equivalence
+                                                -- NB. When the kind is floating, we *have* to be careful, since +/- zero, and NaN's
+                                                -- and equality don't get along!
+                                                interpretedEqs :: [SVal]
+                                                interpretedEqs = [mkNotEq (kindOf sv) sv (SVal (kindOf sv) (Left cw)) | (sv, cw) <- interpreteds]
+                                                   where mkNotEq k a b
+                                                          | isDouble k || isFloat k = svNot (a `fpNotEq` b)
+                                                          | True                    = a `svNotEqual` b
+
+                                                         fpNotEq a b = SVal KBool $ Right $ cache r
+                                                             where r st = do swa <- svToSW st a
+                                                                             swb <- svToSW st b
+                                                                             newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [swa, swb])
+
+                                                -- For each "uninterpreted" variable, use equivalence class
+                                                uninterpretedEqs :: [SVal]
+                                                uninterpretedEqs = concatMap pwDistinct         -- Assert that they are pairwise distinct
+                                                                 . filter (\l -> length l > 1)  -- Only need this class if it has at least two members
+                                                                 . map (map fst)                -- throw away values, we only need svals
+                                                                 . groupBy ((==) `on` snd)      -- make sure they belong to the same sort and have the same value
+                                                                 . sortBy (comparing snd)       -- sort them according to their CW (i.e., sort/value)
+                                                                 $ uninterpreteds
+                                                  where pwDistinct :: [SVal] -> [SVal]
+                                                        pwDistinct ss = [x `svNotEqual` y | (x:ys) <- tails ss, y <- ys]
+
+                                                eqs = interpretedEqs ++ uninterpretedEqs
+                                                disallow = case eqs of
+                                                             [] -> Nothing
+                                                             _  -> Just $ SBV $ foldr1 svOr eqs
+
+                                            -- make sure there's some var. This happens! 'allSat true' is the pathetic example.
+                                            case disallow of
+                                              Nothing -> return [m]
+                                              Just d  -> do constrain d
+                                                            rest <- go (cnt+1)
+                                                            return $ m : rest
 
 -- | Collect model values. It is implicitly assumed that we are in a check-sat
 -- context. See 'getSMTResult' for a variant that issues a check-sat first and
