@@ -25,8 +25,8 @@ mathSAT :: SMTSolver
 mathSAT = SMTSolver {
            name         = MathSAT
          , executable   = "mathsat"
-         , options      = ["-input=smt2", "-theory.fp.minmax_zero_mode=4"]
-         , engine       = standardEngine "SBV_MATHSAT" "SBV_MATHSAT_OPTIONS" modConfig standardModel
+         , options      = modConfig ["-input=smt2", "-theory.fp.minmax_zero_mode=4"]
+         , engine       = standardEngine "SBV_MATHSAT" "SBV_MATHSAT_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = True
                               , supportsUninterpretedSorts = True
@@ -41,10 +41,9 @@ mathSAT = SMTSolver {
          }
 
  where -- If unsat cores are needed, MathSAT requires an explicit command-line argument
-       modConfig :: SMTConfig -> SMTConfig
-       modConfig cfg
+       modConfig :: [String] -> SMTConfig -> [String]
+       modConfig opts cfg
         | or [b | ProduceUnsatCores b <- solverSetOptions cfg]
-        = cfg {solver = (solver cfg) {options = newOpts}}
+        = opts ++ ["-unsat_core_generation=3"]
         | True
-        = cfg
-        where newOpts = options (solver cfg) ++ ["-unsat_core_generation=3"]
+        = opts

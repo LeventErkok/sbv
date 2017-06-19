@@ -218,6 +218,9 @@ module Data.SBV (
   -- $multiIntro
   , proveWithAll, proveWithAny, satWithAll, satWithAny
 
+  -- * Running a symbolic computation
+  , runSMT, runSMTWith
+
   -- * Tactics
   -- $tacticIntro
   , Tactic(..), tactic

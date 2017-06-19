@@ -15,8 +15,8 @@
 
 module Data.SBV.Control.Utils (
        io
-     , ask, send, getValue, getModel, getUnsatAssumptions
-     , ignoreExitCode
+     , ask, send, getValue, getValueCW, getUnsatAssumptions
+     , getQueryState, modifyQueryState, getConfig
      , inNewContext
      , parse
      , unexpected
@@ -25,7 +25,7 @@ module Data.SBV.Control.Utils (
      , retrieveString
      ) where
 
-import Data.List  (sortBy, intercalate)
+import Data.List  (sortBy, intercalate, elemIndex)
 import Data.Maybe (isNothing)
 
 import Data.Int
@@ -34,13 +34,13 @@ import Data.Word
 import qualified Data.Map as Map
 
 import Control.Monad (when)
-import Control.Monad.State.Lazy (get, modify', liftIO)
+import Control.Monad.State.Lazy (get, liftIO)
 
-import Data.IORef (readIORef)
+import Data.IORef (readIORef, writeIORef)
 
-import Data.SBV.Core.Data     (SBV, AlgReal, sbvToSW)
-import Data.SBV.Core.Symbolic ( SMTConfig(..), State, IncState(..), Query
-                              , QueryContext(..), QueryState(..), withNewIncState, SMTResult(..)
+import Data.SBV.Core.Data     (SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, Kind(..), HasKind(..), mkConstCW, CWVal(..))
+import Data.SBV.Core.Symbolic ( SMTConfig(..), State(..), IncState(..), Query
+                              , QueryState(..), withNewIncState
                               )
 
 import Data.SBV.SMT.SMTLib  (toIncSMTLib)
@@ -50,15 +50,7 @@ import Data.SBV.Utils.SExpr
 
 -- | Get the current configuration
 getConfig :: Query SMTConfig
-getConfig = queryConfig <$> get
-
--- | Should we ignore the exit code from the solver upon finish?
--- The default is /not/ to ignore. However, you might want to set
--- this to 'False' before you issue a call to 'sbvResume', in case the interactive
--- part of your query caused solver to issue some errors that you would
--- like to ignore.
-ignoreExitCode :: Bool -> Query ()
-ignoreExitCode b = modify' (\qs -> qs {queryIgnoreExitCode  = b})
+getConfig = queryConfig <$> getQueryState
 
 -- | Perform an arbitrary IO action.
 io :: IO a -> Query a
@@ -71,31 +63,54 @@ syncUpSolver is = do
         ls  <- io $ do let swapc ((_, a), b)   = (b, a)
                            cmp   (a, _) (b, _) = a `compare` b
                        cnsts <- (sortBy cmp . map swapc . Map.toList) `fmap` readIORef (rNewConsts is)
-                       as    <- readIORef (rNewAsgns  is)
+                       as    <- readIORef (rNewAsgns is)
                        return $ toIncSMTLib cfg cnsts as cfg
         mapM_ (send True) ls
 
+-- | Retrieve the query context
+getQueryState :: Query QueryState
+getQueryState = do state <- get
+                   mbQS  <- io $ readIORef (queryState state)
+                   case mbQS of
+                     Nothing -> error $ unlines [ ""
+                                                , "*** Data.SBV: Impossible happened: Query context required in a non-query mode."
+                                                , "Please report this as a bug!"
+                                                ]
+                     Just qs -> return qs
+
+-- | Modify the query state
+modifyQueryState :: (QueryState -> QueryState) -> Query ()
+modifyQueryState f = do state <- get
+                        mbQS  <- io $ readIORef (queryState state)
+                        case mbQS of
+                          Nothing -> error $ unlines [ ""
+                                                     , "*** Data.SBV: Impossible happened: Query context required in a non-query mode."
+                                                     , "Please report this as a bug!"
+                                                     ]
+                          Just qs -> let fqs = f qs
+                                     in fqs `seq` io $ writeIORef (queryState state) $ Just fqs
+
 -- | Execute in a new incremental context
 inNewContext :: (State -> IO a) -> Query a
-inNewContext act = do QueryState{queryContext} <- get
-                      (is, r) <- io $ withNewIncState (contextState queryContext) act
+inNewContext act = do st <- get
+                      (is, r) <- io $ withNewIncState st act
                       syncUpSolver is
                       return r
 
 -- | Internal diagnostic messages.
 queryDebug :: [String] -> Query ()
-queryDebug msg = do QueryState{queryConfig} <- get
+queryDebug msg = do QueryState{queryConfig} <- getQueryState
                     when (verbose queryConfig) $ mapM_ (io . putStrLn) msg
 
 -- | Send a string to the solver, and return the response
 ask :: String -> Query String
-ask s = do QueryState{queryAsk, queryTimeOutValue} <- get
+ask s = do QueryState{queryAsk, queryTimeOutValue} <- getQueryState
 
            case queryTimeOutValue of
-             Nothing -> queryDebug ["[SENDING]  " ++ s]
-             Just i  -> queryDebug ["[SENDING, TimeOut: " ++ showTimeoutValue i ++ "]  " ++ s]
+             Nothing -> queryDebug ["[SEND] " ++ s]
+             Just i  -> queryDebug ["[SEND, TimeOut: " ++ showTimeoutValue i ++ "] " ++ s]
            r <- io $ queryAsk queryTimeOutValue s
-           queryDebug ["[RECEIVED] " ++ r]
+           queryDebug ["[RECV] " ++ r]
 
            return r
 
@@ -104,16 +119,18 @@ ask s = do QueryState{queryAsk, queryTimeOutValue} <- get
 send :: Bool -> String -> Query ()
 send requireSuccess s = do
 
-            QueryState{queryAsk, querySend, queryConfig, queryTimeOutValue} <- get
+            QueryState{queryAsk, querySend, queryConfig, queryTimeOutValue} <- getQueryState
 
             if requireSuccess
                then do r <- io $ queryAsk queryTimeOutValue s
 
+                       let align tag multi = intercalate "\n" $ zipWith (++) (tag : repeat (replicate (length tag) ' ')) (filter (not . null) (lines multi))
+
                        case words r of
-                         ["success"] -> when (verbose queryConfig) $ io $ putStrLn $ "[SUCCESS] " ++ s
+                         ["success"] -> when (verbose queryConfig) $ io $ putStrLn $ align "[GOOD] " s
                          _           -> do case queryTimeOutValue of
-                                             Nothing -> io $ putStrLn $ "[FAILED]  " ++ s
-                                             Just i  -> io $ putStrLn $ "[FAILED, TimeOut: " ++ showTimeoutValue i ++ "]  " ++ s
+                                             Nothing -> io $ putStrLn $ align "[FAIL]  " s
+                                             Just i  -> io $ putStrLn $ align ("[FAIL, TimeOut: " ++ showTimeoutValue i ++ "]  ") s
                                            unexpected "Command" s "success" Nothing r Nothing
 
                else io $ querySend queryTimeOutValue s  -- fire and forget. if you use this, you're on your own!
@@ -121,7 +138,7 @@ send requireSuccess s = do
 -- | Retrieve string from the solver. Should only be used for internal purposes. Use 'send'/'ask'. If the time-out
 -- is given and and is exceeded by the solver, then we will raise an error.
 retrieveString :: Maybe Int -> Query String
-retrieveString mbTo = do QueryState{queryRetrieveString} <- get
+retrieveString mbTo = do QueryState{queryRetrieveString} <- getQueryState
                          io $ queryRetrieveString mbTo
 
 -- | A class which allows for sexpr-conversion to values
@@ -171,14 +188,28 @@ getValue s = do sw <- inNewContext (`sbvToSW` s)
                                                                                  Just c  -> return c
                                     _                                       -> bad r Nothing
 
--- | Get the value of free inputs, packing it into an SMTResult
-getModel :: Query SMTResult
-getModel = do QueryState{queryGetModel} <- get
-              ms <- io queryGetModel
-              case ms of
-                [m] -> return m
-                []  -> error   "Data.SBV: getModel: No models returned"
-                _   -> error $ "Data.SBV: getModel: Expected one model, received: " ++ show (length ms)
+-- | Get the value of a term, but in CW form. Used internally.
+getValueCW :: SW -> Query CW
+getValueCW s = do let nm  = show s
+                      cmd = "(get-value (" ++ nm ++ "))"
+                      k   = kindOf s
+
+                      bad = unexpected "getModel" cmd ("a value binding for kind: " ++ show k) Nothing
+
+                      getUIIndex (KUserSort  _ (Right xs)) i = i `elemIndex` xs
+                      getUIIndex _                         _ = Nothing
+
+                  r <- ask cmd
+
+                  let extract (ENum    i) | isBoolean       s || isBounded s = return $ mkConstCW  k (fst i)
+                      extract (EReal   i) | isReal          s                = return $ CW KReal   (CWAlgReal i)
+                      extract (EDouble i) | isDouble        s                = return $ CW KDouble (CWDouble  i)
+                      extract (EFloat  i) | isFloat         s                = return $ CW KFloat  (CWFloat   i)
+                      extract (ECon    i) | isUninterpreted s                = return $ CW k       (CWUserSort (getUIIndex k i, i))
+                      extract _                                              = bad r Nothing
+
+                  parse r bad $ \case EApp [EApp [ECon v, val]] | v == nm -> extract val
+                                      _                                   -> bad r Nothing
 
 -- | Retrieve the set of unsatisfiable assumptions, following a call to 'checkSatAssuming'. Note that
 -- this function isn't exported to the user, but rather used internally. The user simple calls 'checkSatAssuming'.
@@ -235,9 +266,9 @@ getUnsatAssumptions originals proxyMap = do
 -- If the solver responds within the time-out specified, then we continue as usual. However, if the backend solver times-out
 -- using this mechanism, there is no telling what the state of the solver will be. Thus, we raise an error in this case.
 timeout :: Int -> Query a -> Query a
-timeout n q = do modify' (\qs -> qs {queryTimeOutValue = Just n})
+timeout n q = do modifyQueryState (\qs -> qs {queryTimeOutValue = Just n})
                  r <- q
-                 modify' (\qs -> qs {queryTimeOutValue = Nothing})
+                 modifyQueryState (\qs -> qs {queryTimeOutValue = Nothing})
                  return r
 
 -- | Bail out if a parse goes bad

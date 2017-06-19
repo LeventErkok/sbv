@@ -25,6 +25,7 @@ module Data.SBV.Provers.Prover (
        , sat, satWith
        , allSat, allSatWith
        , safe, safeWith, isSafe
+       , runSMT, runSMTWith, query
        , optimize, optimizeWith
        , isVacuous, isVacuousWith
        , SatModel(..), Modelable(..), displayModels, extractModels
@@ -37,7 +38,11 @@ module Data.SBV.Provers.Prover (
 import Data.Char         (isSpace)
 import Data.List         (intercalate, nub)
 
-import Control.Monad     (when, unless, mplus)
+import Control.Monad        (when, unless, mplus)
+import Control.Monad.Reader (ask)
+import Control.Monad.Trans  (liftIO)
+import Control.Monad.State  (evalStateT)
+
 import System.FilePath   (addExtension, splitExtension)
 import Data.Time         (getCurrentTime, utcToLocalZonedTime)
 import System.IO         (hGetBuffering, hSetBuffering, stdout, hFlush, BufferMode(..))
@@ -56,7 +61,6 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
-import Data.SBV.SMT.Utils
 import Data.SBV.Utils.TDiff
 
 import qualified Data.SBV.Control as Control
@@ -87,6 +91,7 @@ mkConfig s smtVersion = SMTConfig { verbose          = False
                                   , isNonModelVar    = const False  -- i.e., everything is a model-variable by default
                                   , roundingMode     = RoundNearestTiesToEven
                                   , solverSetOptions = []
+                                  , ignoreExitCode   = False
                                   , customQuery      = Nothing
                                   }
 
@@ -265,6 +270,10 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymW
   forSome (s:ss) k = exists s >>= \a -> forSome ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   forSome []     k = forSome_ k
 
+-- | Run an arbitrary symbolic computation, equivalent to @'runSMTWith' 'defaultSMTCfg''@
+runSMT :: Symbolic a -> IO a
+runSMT = runSMTWith defaultSMTCfg
+
 -- | Prove a predicate, equivalent to @'proveWith' 'defaultSMTCfg'@
 prove :: Provable a => a -> IO ThmResult
 prove = proveWith defaultSMTCfg
@@ -339,7 +348,7 @@ compileToSMTLib version isSat a = do
         t <- utcToLocalZonedTime =<< getCurrentTime
         let comments = ["Created on " ++ show t]
             cfg      = defaultSMTCfg { smtLibVersion = version }
-        (_, SMTProblem{smtLibPgm}) <- simulate (toSMTLib cfg) cfg isSat comments a
+        (_, SMTProblem{smtLibPgm}) <- simulate cfg isSat comments a
         let out = show (smtLibPgm cfg NoCase)
         return $ out ++ "\n(check-sat)\n"
 
@@ -375,37 +384,31 @@ objectiveCheck False os w = error $ unlines $ ("\n*** Unsupported call to " ++ s
 objectiveCheck True []  w = error $ "*** Unsupported call to " ++ w ++ " when no objectives are present. Use \"sat\" for plain satisfaction"
 objectiveCheck True _   _ = return ()
 
--- | Proves the predicate using the given SMT-solver
-proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
-proveWith config a = do (ctx, simRes@SMTProblem{tactics, smtOptions, objectives}) <- simulate (toSMTLib config) config False [] a
-                        objectiveCheck False objectives "prove"
-                        let hasPar = any isParallelCaseAnywhere tactics
-                        bufferSanity hasPar $ applyTactics config ctx (False, hasPar) (wrap, unwrap) [] smtOptions tactics objectives
-                                            $ callSolver False "Checking Theoremhood.." [] mwrap simRes
-  where wrap                 = ThmResult
-        unwrap (ThmResult r) = r
+-- | Runs an arbitrary symbolic computation, exposed to the user in SAT mode
+runSMTWith :: SMTConfig -> Symbolic a -> IO a
+runSMTWith = runSMTInMode . SMTMode ISetup True
 
-        mwrap [r] = wrap r
-        mwrap xs  = error $ "SBV.proveWith: Backend solver returned a non-singleton answer:\n" ++ show (map ThmResult xs)
+-- | Run an SMT config in the given mode
+runSMTInMode :: SBVRunMode -> Symbolic a -> IO a
+runSMTInMode mode a = fst <$> runSymbolic' mode a
+
+-- | Proves the predicate using the given SMT-solver
+proveWith :: Provable predicate => SMTConfig -> predicate -> IO ThmResult
+proveWith config predicate = runSMTInMode (SMTMode ISetup False config) $ do
+                                _ <- forAll_ predicate >>= output
+                                query $ ThmResult <$> Control.getSMTResult
 
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
-satWith config a = do (ctx, simRes@SMTProblem{tactics, smtOptions, objectives}) <- simulate (toSMTLib config) config True [] a
-                      objectiveCheck False objectives "sat"
-                      let hasPar = any isParallelCaseAnywhere tactics
-                      bufferSanity hasPar $ applyTactics config ctx (True, hasPar) (wrap, unwrap) [] smtOptions tactics objectives
-                                          $ callSolver True "Checking Satisfiability.." [] mwrap simRes
-  where wrap                 = SatResult
-        unwrap (SatResult r) = r
-
-        mwrap [r] = wrap r
-        mwrap xs  = error $ "SBV.satWith: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
+satWith config predicate = runSMTInMode (SMTMode ISetup True config) $ do
+                                _ <- forSome_ predicate >>= output
+                                query $ SatResult <$> Control.getSMTResult
 
 -- | Optimizes the objectives using the given SMT-solver
 optimizeWith :: Provable a => SMTConfig -> a -> IO OptimizeResult
 optimizeWith config a = do
         msg "Optimizing.."
-        (ctx, sbvPgm@SMTProblem{objectives, tactics}) <- simulate (toSMTLib config) config True [] a
+        (ctx, sbvPgm@SMTProblem{objectives, tactics}) <- simulate config True [] a
 
         objectiveCheck True objectives "optimize"
 
@@ -426,7 +429,7 @@ optimizeWith config a = do
   where msg = when (verbose config) . putStrLn . ("** " ++)
 
 -- | Construct a lexicographic optimization result
-optLexicographic :: Bool -> SMTConfig -> QueryContext -> SMTProblem -> IO OptimizeResult
+optLexicographic :: Bool -> SMTConfig -> State -> SMTProblem -> IO OptimizeResult
 optLexicographic hasPar config ctx sbvPgm@SMTProblem{objectives, smtOptions, tactics} = do
         result <- bufferSanity hasPar $ applyTactics config ctx (True, hasPar) (id, id) [] smtOptions tactics objectives
                                       $ callSolver True "Lexicographically optimizing.." [] mwrap sbvPgm
@@ -436,7 +439,7 @@ optLexicographic hasPar config ctx sbvPgm@SMTProblem{objectives, smtOptions, tac
         mwrap xs  = error $ "SBV.optLexicographic: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
 
 -- | Construct an independent optimization result
-optIndependent :: Bool -> SMTConfig -> QueryContext -> SMTProblem -> IO OptimizeResult
+optIndependent :: Bool -> SMTConfig -> State -> SMTProblem -> IO OptimizeResult
 optIndependent hasPar config ctx sbvPgm@SMTProblem{objectives, smtOptions, tactics} = do
         let ns = map objectiveName objectives
         result <- bufferSanity hasPar $ applyTactics config ctx (True, hasPar) (wrap ns, unwrap) [] smtOptions tactics objectives
@@ -460,7 +463,7 @@ optIndependent hasPar config ctx sbvPgm@SMTProblem{objectives, smtOptions, tacti
                lobs = length objectives
 
 -- | Construct a pareto-front optimization result
-optPareto :: Maybe Int -> Bool -> SMTConfig -> QueryContext -> SMTProblem -> IO OptimizeResult
+optPareto :: Maybe Int -> Bool -> SMTConfig -> State -> SMTProblem -> IO OptimizeResult
 optPareto mbN hasPar config ctx sbvPgm@SMTProblem{objectives, smtOptions, tactics=origTactics} = do
 
         -- make sure we don't have a query already
@@ -485,7 +488,7 @@ optPareto mbN hasPar config ctx sbvPgm@SMTProblem{objectives, smtOptions, tactic
 
                                loop mbi ms = do cs <- Control.checkSat
                                                 case cs of
-                                                  Control.Sat -> do m <- Control.getModel
+                                                  Control.Sat -> do m <- error "PARETO.getModel" -- Control.getModel
                                                                     loop (subtract 1 <$> mbi) (m:ms)
                                                   _           -> return (reverse ms)
                            in loop mbN []
@@ -508,15 +511,15 @@ optPareto mbN hasPar config ctx sbvPgm@SMTProblem{objectives, smtOptions, tactic
                      []    -> error "SBV.optPareto: Impossible happened: Received no results!"
 
 -- | Apply the given tactics to a problem
-applyTactics :: SMTConfig                                                                       -- ^ Solver configuration
-             -> QueryContext                                                                    -- ^ Context for user queries
-             -> (Bool, Bool)                                                                    -- ^ Are we a sat-problem? Do we have anything parallel going on? (Parallel-case split.)
-             -> (SMTResult -> res, res -> SMTResult)                                            -- ^ Wrapper/unwrapper pair from result to SMT answer
-             -> [(String, (String, SW))]                                                        -- ^ Level at which we are called. (In case of a nested case-split)
-             -> [Control.SMTOption]                                                             -- ^ Options to set
-             -> [Tactic SW]                                                                     -- ^ Tactics active at this level
-             -> [Objective (SW, SW)]                                                            -- ^ Optimization goals we have
-             -> (SMTConfig -> QueryContext -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO res) -- ^ The actual continuation at this point
+applyTactics :: SMTConfig                                                                -- ^ Solver configuration
+             -> State                                                                    -- ^ State in which we're running
+             -> (Bool, Bool)                                                             -- ^ Are we a sat-problem? Do we have anything parallel going on? (Parallel-case split.)
+             -> (SMTResult -> res, res -> SMTResult)                                     -- ^ Wrapper/unwrapper pair from result to SMT answer
+             -> [(String, (String, SW))]                                                 -- ^ Level at which we are called. (In case of a nested case-split)
+             -> [Control.SMTOption]                                                      -- ^ Options to set
+             -> [Tactic SW]                                                              -- ^ Tactics active at this level
+             -> [Objective (SW, SW)]                                                     -- ^ Optimization goals we have
+             -> (SMTConfig -> State -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO res) -- ^ The actual continuation at this point
              -> IO res
 applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels smtOptions tactics objectives cont
    = do --
@@ -534,7 +537,7 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels smtOptions tactics 
         when (hasObjectives && not isSat)     $ error "SBV: Optimization is only available for sat calls."
         when (hasObjectives && hasCaseSplits) $ error "SBV: Optimization and case-splits are not supported together."
 
-        when hasQueries $ maybe (return ()) error $ checkQueryApplicability cfgIn hasCaseSplits ctx
+        when hasQueries $ maybe (return ()) error $ checkQueryApplicability cfgIn hasCaseSplits
 
         let mbOptInfo
                 | not hasObjectives = Nothing
@@ -632,10 +635,9 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels smtOptions tactics 
                   style (Pareto _)    = ["(set-option :opt.priority pareto)"]
 
 -- | Should we allow a custom query? Returns the reason why we shouldn't, if there is one
-checkQueryApplicability :: SMTConfig -> Bool -> QueryContext -> Maybe String
-checkQueryApplicability cfgIn hasCaseSplits QueryContext{contextSkolems} =
+checkQueryApplicability :: SMTConfig -> Bool -> Maybe String
+checkQueryApplicability cfgIn hasCaseSplits =
                 checkSupport    (supportsCustomQueries $ capabilities $ solver cfgIn)
-        `mplus` checkSkolems    contextSkolems
         `mplus` checkCaseSplits hasCaseSplits
   where
         -- Check if the underlying solver has support for it
@@ -644,12 +646,6 @@ checkQueryApplicability cfgIn hasCaseSplits QueryContext{contextSkolems} =
                                            , "   Solver: " ++ show (solver cfgIn)
                                            ]
 
-        -- Can't execute queries if there are quantified skolem vars, as those generate
-        -- quantified formulae and thus variables won't be visible to the user past the query
-        checkSkolems [] = Nothing
-        checkSkolems xs = noInteractive [ "Queries in the presence of quantified variable(s):"
-                                        , "  " ++   intercalate ", " (map show xs)
-                                        ]
         -- Can execute queries if there are case splits. This is an interesting (but probablt inconsequential) restriction. The
         -- reason why is that case-splits rely on the fact that the internal state of SBV remains constant once we are done
         -- simulating. But the whole point of a query is to alter that state further! Thus, if we run a query in a case-split
@@ -675,13 +671,13 @@ checkQueryApplicability cfgIn hasCaseSplits QueryContext{contextSkolems} =
 -- NB. We'll do a SAT call even if there are *no* constraints! This is OK, as the call will be cheap; and this is an opt-in call. (i.e.,
 -- the user asked us to do it explicitly.)
 constraintVacuityCheck :: forall res.
-                          Bool                                                                            -- ^ isSAT?
-                       -> SMTConfig                                                                       -- ^ config
-                       -> QueryContext                                                                    -- ^ query context
-                       -> Maybe (OptimizeStyle, Int)                                                      -- ^ optimization info
-                       -> (SMTResult -> res, res -> SMTResult)                                            -- ^ wrappers back and forth from final result
-                       -> (SMTConfig -> QueryContext -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO res) -- ^ continuation
-                       -> IO (Maybe res)                                                                  -- ^ result, wrapped in Maybe if vacuity fails
+                          Bool                                                                     -- ^ isSAT?
+                       -> SMTConfig                                                                -- ^ config
+                       -> State                                                                    -- ^ query state
+                       -> Maybe (OptimizeStyle, Int)                                               -- ^ optimization info
+                       -> (SMTResult -> res, res -> SMTResult)                                     -- ^ wrappers back and forth from final result
+                       -> (SMTConfig -> State -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO res) -- ^ continuation
+                       -> IO (Maybe res)                                                           -- ^ result, wrapped in Maybe if vacuity fails
 constraintVacuityCheck True  _      _   _ _              _ = return Nothing -- for a SAT check, vacuity is meaningless (what would be the point)?
 constraintVacuityCheck False config ctx d (wrap, unwrap) f = do
                res <- f config ctx d CstrVac
@@ -694,18 +690,18 @@ constraintVacuityCheck False config ctx d (wrap, unwrap) f = do
 
 -- | Implements the case-split tactic. Works for both Sat and Proof, hence the quantification on @res@
 caseSplit :: forall res.
-             SMTConfig                                                                       -- ^ Solver config
-          -> QueryContext                                                                    -- ^ Context for queries
-          -> Maybe (OptimizeStyle, Int)                                                      -- ^ Are we optimizing?
-          -> Bool                                                                            -- ^ Should we check vacuity of cases?
-          -> (Bool, Bool)                                                                    -- ^ Should we run the cases in parallel? Second bool: Is anything parallel going on?
-          -> Bool                                                                            -- ^ True if we're sat solving
-          -> (SMTResult -> res, res -> SMTResult)                                            -- ^ wrapper, unwrapper from sat/proof to the actual result
-          -> [(String, (String, SW))]                                                        -- ^ Path condition as we reached here. (In a nested case split, First #, then actual name.)
-          -> [Control.SMTOption]                                                             -- ^ Options to pass down
-          -> Bool                                                                            -- ^ Should we be chatty on the case-splits?
-          -> [(String, SW, [Tactic SW])]                                                     -- ^ List of cases. Case name, condition, plus further tactics for nested case-splitting etc.
-          -> (SMTConfig -> QueryContext -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO res) -- ^ The "solver" once we provide it with a problem and a case
+             SMTConfig                                                                -- ^ Solver config
+          -> State                                                                    -- ^ Query state
+          -> Maybe (OptimizeStyle, Int)                                               -- ^ Are we optimizing?
+          -> Bool                                                                     -- ^ Should we check vacuity of cases?
+          -> (Bool, Bool)                                                             -- ^ Should we run the cases in parallel? Second bool: Is anything parallel going on?
+          -> Bool                                                                     -- ^ True if we're sat solving
+          -> (SMTResult -> res, res -> SMTResult)                                     -- ^ wrapper, unwrapper from sat/proof to the actual result
+          -> [(String, (String, SW))]                                                 -- ^ Path condition as we reached here. (In a nested case split, First #, then actual name.)
+          -> [Control.SMTOption]                                                      -- ^ Options to pass down
+          -> Bool                                                                     -- ^ Should we be chatty on the case-splits?
+          -> [(String, SW, [Tactic SW])]                                              -- ^ List of cases. Case name, condition, plus further tactics for nested case-splitting etc.
+          -> (SMTConfig -> State -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO res) -- ^ The "solver" once we provide it with a problem and a case
           -> IO res
 caseSplit config ctx mbOptInfo checkVacuity (runParallel, hasPar) isSAT (wrap, unwrap) level smtOptions chatty cases cont
      | runParallel = goParallel tasks
@@ -916,13 +912,13 @@ caseSplit config ctx mbOptInfo checkVacuity (runParallel, hasPar) isSAT (wrap, u
 -- | Check if any of the assertions can be violated
 safeWith :: SExecutable a => SMTConfig -> a -> IO [SafeResult]
 safeWith cfg a = do
-        (st, res@Result{resAssertions=asserts}) <- runSymbolicWithState (True, cfg) $ sName_ a >>= output
+        (_, st, res@Result{resAssertions=asserts}) <- runSymbolicWithState (True, cfg) $ sName_ a >>= output
         mapM (verify st res) asserts
   where locInfo (Just ps) = Just $ let loc (f, sl) = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
                                    in intercalate ",\n " (map loc ps)
         locInfo _                     = Nothing
-        verify st res (msg, cs, cond) = do (ctx, problem) <- runProofOn (toSMTLib cfg) cfg True [] st pgm
-                                           result         <- callSolver True msg [] mwrap problem cfg ctx Nothing NoCase
+        verify st res (msg, cs, cond) = do let problem = runProofOn cfg True [] pgm
+                                           result <- callSolver True msg [] mwrap problem cfg st Nothing NoCase
                                            return $ SafeResult (locInfo (getCallStack `fmap` cs), msg, result)
            where pgm = res { resInputs  = [(EX, n) | (_, n) <- resInputs res]   -- make everything existential
                            , resOutputs = [cond]
@@ -944,13 +940,13 @@ isSafe (SafeResult (_, _, result)) = case result of
 -- the 'CheckConstrVacuity' tactic.
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
 isVacuousWith config a = do
-        (st, Result ki tr uic is cs ts as uis ax asgn cstr tactics options goals asserts _out) <- runSymbolicWithState (True, config) $ forAll_ a >>= output
+        (_, st, Result ki tr uic is cs ts as uis ax asgn cstr tactics options goals asserts _out) <- runSymbolicWithState (True, config) $ forAll_ a >>= output
         case cstr of
            [] -> return False -- no constraints, no need to check
-           _  -> do let is'  = [(EX, i) | (_, i) <- is] -- map all quantifiers to "exists" for the constraint check
-                        res' = Result ki tr uic is' cs ts as uis ax asgn cstr tactics options goals asserts [trueSW]
-                    (ctx, problem) <- runProofOn (toSMTLib config) config True [] st res'
-                    result         <- callSolver True "Checking Vacuity.." [] mwrap problem config ctx Nothing NoCase
+           _  -> do let is'     = [(EX, i) | (_, i) <- is] -- map all quantifiers to "exists" for the constraint check
+                        res'    = Result ki tr uic is' cs ts as uis ax asgn cstr tactics options goals asserts [trueSW]
+                        problem = runProofOn config True [] res'
+                    result <- callSolver True "Checking Vacuity.." [] mwrap problem config st Nothing NoCase
                     case result of
                       Unsatisfiable{} -> return True  -- constraints are unsatisfiable!
                       Satisfiable{}   -> return False -- constraints are satisfiable!
@@ -965,7 +961,7 @@ isVacuousWith config a = do
 allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
 allSatWith config p = do
         msg "Checking Satisfiability, all solutions.."
-        (ctx, sbvPgm@SMTProblem{smtInputs=qinps, kindsUsed=ki}) <- simulate (toSMTLib config) config True [] p
+        (ctx, sbvPgm@SMTProblem{smtInputs=qinps, kindsUsed=ki}) <- simulate config True [] p
 
         let usorts = [s | us@(KUserSort s _) <- Set.toList ki, isFree us]
                 where isFree (KUserSort _ (Left _)) = True
@@ -1037,69 +1033,49 @@ allSatWith config p = do
         updateName i cfg = cfg{transcript = upd `fmap` transcript cfg}
                where upd nm = let (b, e) = splitExtension nm in b ++ "_allSat_" ++ show i ++ e
 
-callSolver :: Bool -> String -> [String] -> ([SMTResult] -> b) -> SMTProblem -> SMTConfig -> QueryContext -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO b
-callSolver isSat checkMsg refutedModels wrap SMTProblem{smtInputs, smtSkolemMap, smtLibPgm} config ctx mbOptInfo caseCond = do
-       let msg = when (verbose config) . putStrLn . ("** " ++)
-           finalPgm = intercalate "\n" (pgm ++ refutedModels) where SMTLibPgm _ pgm = smtLibPgm config caseCond
+simulate :: Provable a => SMTConfig -> Bool -> [String] -> a -> IO (State, SMTProblem)
+simulate config isSat comments predicate = do
+        let msg       = when (verbose config) . putStrLn . ("** " ++)
+            isTiming  = timing config
 
-       msg checkMsg
-       msg $  intercalate "\n" $ "Generated SMTLib program:"
-                               : finalPgm
-                               : optimizeArgs config
-                              ++ [maybe (satCmd config) (const "; Run with a custom query.") (customQuery config)]
-
-       smtAnswer <- engine (solver config) config ctx isSat mbOptInfo smtInputs smtSkolemMap finalPgm
-
-       msg "Done.."
-
-       return $ wrap smtAnswer
-
-simulate :: Provable a => SMTLibConverter SMTLibPgm -> SMTConfig -> Bool -> [String] -> a -> IO (QueryContext, SMTProblem)
-simulate converter config isSat comments predicate = do
-        let msg = when (verbose config) . putStrLn . ("** " ++)
-            isTiming = timing config
         msg "Starting symbolic simulation.."
-        (st, res) <- timeIf isTiming ProblemConstruction $ runSymbolicWithState (isSat, config) $ (if isSat then forSome_ else forAll_) predicate >>= output
+        (_, st, res) <- timeIf isTiming rnf $ runSymbolicWithState (isSat, config) $ (if isSat then forSome_ else forAll_) predicate >>= output
         msg $ "Generated symbolic trace:\n" ++ show res
-        msg "Translating to SMT-Lib.."
-        runProofOn converter config isSat comments st res
 
-runProofOn :: SMTLibConverter SMTLibPgm -> SMTConfig -> Bool -> [String] -> State -> Result -> IO (QueryContext, SMTProblem)
-runProofOn converter config isSat comments st res =
-        let isTiming = timing config
-        in case res of
-             Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs tacs options goals assertions [o@(SW KBool _)] ->
-               timeIf isTiming Translation
-                $ let flipQ (ALL, x) = (EX,  x)
-                      flipQ (EX,  x) = (ALL, x)
+        let problem = runProofOn config isSat comments res
+        rnf problem `seq` return (st, problem)
 
-                      skolemize :: [(Quantifier, NamedSymVar)] -> [Either SW (SW, [SW])]
-                      skolemize quants = go quants ([], [])
-                        where go []                   (_,  sofar) = reverse sofar
-                              go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
-                              go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
+runProofOn :: SMTConfig -> Bool -> [String] -> Result -> SMTProblem
+runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs tacs options goals assertions outputs) =
+     let flipQ (ALL, x) = (EX,  x)
+         flipQ (EX,  x) = (ALL, x)
 
-                      qinps      = if isSat then is else map flipQ is
-                      skolemMap  = skolemize qinps
-                      skolemVars = [s | (ALL, (_, s)) <- qinps]
+         skolemize :: [(Quantifier, NamedSymVar)] -> [Either SW (SW, [SW])]
+         skolemize quants = go quants ([], [])
+           where go []                   (_,  sofar) = reverse sofar
+                 go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
+                 go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
 
-                      smtScript = converter ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o
-                      problem   = SMTProblem { smtInputs=is, smtSkolemMap=skolemMap, kindsUsed=ki
-                                             , smtAsserts=assertions, tactics=tacs, smtOptions=options, objectives=goals, smtLibPgm=smtScript}
+         qinps      = if isSat then is else map flipQ is
+         skolemMap  = skolemize qinps
 
-                  in do let context = QueryContext { contextState      = st
-                                                   , contextSkolems    = skolemVars
-                                                   }
+         o = case outputs of
+               []  -> trueSW
+               [so] -> case so of
+                        SW KBool _ -> so
+                        _          -> error $ unlines [ "Impossible happened, non-boolean output: " ++ show so
+                                                      , "Detected while generating the trace:\n" ++ show res
+                                                      ]
+               os  -> error $ unlines [ "User error: Multiple output values detected: " ++ show os
+                                      , "Detected while generating the trace:\n" ++ show res
+                                      , "*** Check calls to \"output\", they are typically not needed!"
+                                      ]
 
-                        rnf smtScript `seq` return (context, problem)
+         smtScript = toSMTLib config ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o
+         problem   = SMTProblem { smtInputs=is, smtSkolemMap=skolemMap, kindsUsed=ki
+                                , smtAsserts=assertions, tactics=tacs, smtOptions=options, objectives=goals, smtLibPgm=smtScript}
 
-             Result{resOutputs = os} -> case length os of
-                           0  -> error $ "Impossible happened, unexpected non-outputting result\n" ++ show res
-                           1  -> error $ "Impossible happened, non-boolean output in " ++ show os
-                                       ++ "\nDetected while generating the trace:\n" ++ show res
-                           _  -> error $ "User error: Multiple output values detected: " ++ show os
-                                       ++ "\nDetected while generating the trace:\n" ++ show res
-                                       ++ "\n*** Check calls to \"output\", they are typically not needed!"
+     in rnf problem `seq` problem
 
 -- | Run an external proof on the given condition to see if it is satisfiable.
 internalSATCheck :: SMTConfig -> SBool -> State -> String -> IO SatResult
@@ -1116,6 +1092,36 @@ internalSATCheck cfg condInPath st msg = do
        mwrap [r] = SatResult r
        mwrap xs  = error $ "SBV.internalSATCheck: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
 
-   (ctx, problem) <- runProofOn (toSMTLib cfg) cfg True [] st pgm
-   callSolver True msg [] mwrap problem cfg ctx Nothing NoCase
+       problem = runProofOn cfg True [] pgm
+
+   callSolver True msg [] mwrap problem cfg st Nothing NoCase
+
+-- | Run a custom query
+query :: Query a -> Symbolic a
+query (Query userQuery) = do
+     st <- ask
+     case runMode st of
+        SMTMode ISetup isSAT cfg -> liftIO $ do let backend = engine (solver cfg)
+                                                    m' = SMTMode IRun isSAT cfg
+
+                                                res <- extractSymbolicSimulationState st
+
+                                                let SMTProblem{smtOptions, smtLibPgm} = runProofOn cfg isSAT [] res
+                                                    cfg' = cfg { solverSetOptions = solverSetOptions cfg ++ smtOptions }
+                                                    pgm  = smtLibPgm cfg' NoCase
+
+                                                backend cfg' st (show pgm) $ \ctx -> evalStateT userQuery ctx{runMode = m'}
+        m -> error $ unlines [ ""
+                             , "*** Data.SBV: Invalid query call."
+                             , "***"
+                             , "***   Current mode: " ++ show m
+                             , "***"
+                             , "*** Query calls are only valid within runSMT/runSMTWith calls"
+                             ]
+
+
+-- TODO: Needs to go!
+callSolver :: a
+callSolver = error "Prover.callSolver. Needs to go!"
+
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

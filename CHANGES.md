@@ -3,7 +3,19 @@
 
 * Latest Hackage released version: 6.1, 2017-05-26
 
-### Version 6.2, Not yet released.
+### Version 7.0, Not yet released.
+
+  * This is a major rewrite of the internals of SBV, and is a backwards compatibility
+    breaking release. While we kept the top-level and most commonly used APIs the
+    same (both types and semantics), much of the internals and advanced features
+    have been rewritten to move SBV to a new model of execution: SBV no longer
+    runs your program symbolically and calls the SMT solver afterwards. Instead,
+    the interaction with the solver happens interleaved with your programs execution.
+    The motivation is to allow the end-users to send/receive arbitrary SMTLib
+    commands to the solver, instead of the cooked-up recipes. SBV still provides
+    all the recipes for its existing functionality, but users can now interact
+    with the solver directly. See the module "Data.SBV.Control" for the main
+    API, together with the new functions 'runSMT' and 'runSMTWith'.
 
   * The Bridge modules (`Data.SBV.Bridge.Yices`, `Data.SBV.Bridge.Z3`) etc. are
     all removed. The bridge functionality was hardly used, where different solvers
@@ -31,9 +43,6 @@
         proveWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, ThmResult)]
         proveWithAny :: Provable a => [SMTConfig] -> a -> IO  (Solver, NominalDiffTime, ThmResult)
 
-    NB. This is a backwards compatibility breaking change, since the type
-    has changed.
-
   * Changed the way `satWithAny` and `proveWithAny` works. Previously, these
     two functions ran multiple solvers, and took the result of the first
     one to finish, killing all the others. In addition, they *waitied* for
@@ -58,7 +67,7 @@
     same reasons.
 
   * Configuration option 'smtFile' is removed. Instead use 'transcript' now, which
-    provides a much more detailed output that's directly loadable to a solver
+    provides a much more detailed output that is directly loadable to a solver
     and has an accurate account of precisely what SBV sent.
 
   * Thanks to Kanishka Azimi, our external test suite is now run by
@@ -74,12 +83,6 @@
     and initial value. Similarly resetArray has been removed, as it
     did not really do what it advertised. If an initial value is needed,
     it is best to code this explicitly in your model.
-
-  * SBV now has support for interactive solver queries. However, we
-    are currently not advertising this widely; it is only intended for
-    early beta-adapters and testing. Documentation is also rather
-    sparse currently. Next version will have a proper support. In the
-    mean time, you can browse the contents of "Data.SBV.Control" module.
 
 ### Version 6.1, 2017-05-26
 

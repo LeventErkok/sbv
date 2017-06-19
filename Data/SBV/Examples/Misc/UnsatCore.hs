@@ -17,7 +17,7 @@ import Data.SBV.Control
 -- | A simple goal with three constraints, two of which are
 -- conflicting with each other. The third is irrelevant, in the sense
 -- that it does not contribute to the fact that the goal is unsatisfiable.
-p :: Goal
+p :: Symbolic (Maybe [String])
 p = do a <- sInteger "a"
        b <- sInteger "b"
 
@@ -33,12 +33,9 @@ p = do a <- sInteger "a"
        -- To obtain the unsat-core, we run a query
        query $ do cs <- checkSat
                   case cs of
-                    Unsat -> do core <- getUnsatCore
-                                io $ putStrLn $ "Unsat core is: " ++ show core
-                    _     -> io $ putStrLn "Problem is satisfiable."
+                    Unsat -> Just <$> getUnsatCore
+                    _     -> return Nothing
 
-                  -- Just resume as SBV would
-                  sbvResume
 
 -- | Extract the unsat-core of 'p'. We have:
 --
@@ -48,4 +45,7 @@ p = do a <- sInteger "a"
 --
 -- Demonstrating that the constraint @a .> b@ is /not/ needed for unsatisfiablity in this case.
 ucCore :: IO ()
-ucCore = print =<< sat p
+ucCore = do mbCore <- runSMT p
+            case mbCore of
+              Nothing   -> putStrLn "Problem is satisfiable."
+              Just core -> putStrLn $ "Unsat core is: " ++ show core

@@ -1522,7 +1522,7 @@ instance HasKind a => Uninterpreted (SBV a) where
      | Just (_, v) <- mbCgData = v
      | True                    = SBV $ SVal ka $ Right $ cache result
     where ka = kindOf (undefined :: a)
-          result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st v
+          result st | Just (_, v) <- mbCgData, inSMTMode st = sbvToSW st v
                     | True = do newUninterpreted st nm (SBVType [ka]) (fst `fmap` mbCgData)
                                 newExpr st ka $ SBVApp (Uninterpreted nm) []
 
@@ -1536,7 +1536,7 @@ instance (SymWord b, HasKind a) => Uninterpreted (SBV b -> SBV a) where
            = SBV $ SVal ka $ Right $ cache result
            where ka = kindOf (undefined :: a)
                  kb = kindOf (undefined :: b)
-                 result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st (v arg0)
+                 result st | Just (_, v) <- mbCgData, inSMTMode st = sbvToSW st (v arg0)
                            | True = do newUninterpreted st nm (SBVType [kb, ka]) (fst `fmap` mbCgData)
                                        sw0 <- sbvToSW st arg0
                                        mapM_ forceSWArg [sw0]
@@ -1553,7 +1553,7 @@ instance (SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV c -> SBV b -> S
            where ka = kindOf (undefined :: a)
                  kb = kindOf (undefined :: b)
                  kc = kindOf (undefined :: c)
-                 result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st (v arg0 arg1)
+                 result st | Just (_, v) <- mbCgData, inSMTMode st = sbvToSW st (v arg0 arg1)
                            | True = do newUninterpreted st nm (SBVType [kc, kb, ka]) (fst `fmap` mbCgData)
                                        sw0 <- sbvToSW st arg0
                                        sw1 <- sbvToSW st arg1
@@ -1572,7 +1572,7 @@ instance (SymWord d, SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV d ->
                  kb = kindOf (undefined :: b)
                  kc = kindOf (undefined :: c)
                  kd = kindOf (undefined :: d)
-                 result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st (v arg0 arg1 arg2)
+                 result st | Just (_, v) <- mbCgData, inSMTMode st = sbvToSW st (v arg0 arg1 arg2)
                            | True = do newUninterpreted st nm (SBVType [kd, kc, kb, ka]) (fst `fmap` mbCgData)
                                        sw0 <- sbvToSW st arg0
                                        sw1 <- sbvToSW st arg1
@@ -1593,7 +1593,7 @@ instance (SymWord e, SymWord d, SymWord c, SymWord b, HasKind a) => Uninterprete
                  kc = kindOf (undefined :: c)
                  kd = kindOf (undefined :: d)
                  ke = kindOf (undefined :: e)
-                 result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st (v arg0 arg1 arg2 arg3)
+                 result st | Just (_, v) <- mbCgData, inSMTMode st = sbvToSW st (v arg0 arg1 arg2 arg3)
                            | True = do newUninterpreted st nm (SBVType [ke, kd, kc, kb, ka]) (fst `fmap` mbCgData)
                                        sw0 <- sbvToSW st arg0
                                        sw1 <- sbvToSW st arg1
@@ -1616,7 +1616,7 @@ instance (SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasKind a) => U
                  kd = kindOf (undefined :: d)
                  ke = kindOf (undefined :: e)
                  kf = kindOf (undefined :: f)
-                 result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st (v arg0 arg1 arg2 arg3 arg4)
+                 result st | Just (_, v) <- mbCgData, inSMTMode st = sbvToSW st (v arg0 arg1 arg2 arg3 arg4)
                            | True = do newUninterpreted st nm (SBVType [kf, ke, kd, kc, kb, ka]) (fst `fmap` mbCgData)
                                        sw0 <- sbvToSW st arg0
                                        sw1 <- sbvToSW st arg1
@@ -1641,7 +1641,7 @@ instance (SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasK
                  ke = kindOf (undefined :: e)
                  kf = kindOf (undefined :: f)
                  kg = kindOf (undefined :: g)
-                 result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st (v arg0 arg1 arg2 arg3 arg4 arg5)
+                 result st | Just (_, v) <- mbCgData, inSMTMode st = sbvToSW st (v arg0 arg1 arg2 arg3 arg4 arg5)
                            | True = do newUninterpreted st nm (SBVType [kg, kf, ke, kd, kc, kb, ka]) (fst `fmap` mbCgData)
                                        sw0 <- sbvToSW st arg0
                                        sw1 <- sbvToSW st arg1
@@ -1669,7 +1669,7 @@ instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymW
                  kf = kindOf (undefined :: f)
                  kg = kindOf (undefined :: g)
                  kh = kindOf (undefined :: h)
-                 result st | Just (_, v) <- mbCgData, inProofMode st = sbvToSW st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6)
+                 result st | Just (_, v) <- mbCgData, inSMTMode st = sbvToSW st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6)
                            | True = do newUninterpreted st nm (SBVType [kh, kg, kf, ke, kd, kc, kb, ka]) (fst `fmap` mbCgData)
                                        sw0 <- sbvToSW st arg0
                                        sw1 <- sbvToSW st arg1

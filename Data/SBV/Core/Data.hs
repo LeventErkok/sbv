@@ -39,7 +39,7 @@ module Data.SBV.Core.Data
  , cache, Cached, uncache, uncacheAI, HasKind(..)
  , Op(..), PBOp(..), FPOp(..), NamedSymVar, getTableIndex
  , SBVPgm(..), Symbolic, SExecutable(..), runSymbolic, runSymbolic', State, getPathCondition, extendPathCondition
- , inProofMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
+ , inSMTMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
  , SolverContext(..), addConstraint, internalVariable, internalConstraint, isCodeGenMode
  , SBVType(..), newUninterpreted, addAxiom
  , Quantifier(..), needsExistentials
@@ -49,7 +49,7 @@ module Data.SBV.Core.Data
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), getSBranchRunConfig
  , declNewSArray, declNewSFunArray
  , OptimizeStyle(..), Penalty(..), Objective(..)
- , QueryState(..), QueryContext(..), Query(..), query, Tactic(..), CaseCond(..), SMTProblem(..), isParallelCaseAnywhere
+ , QueryState(..), Query(..), Tactic(..), CaseCond(..), SMTProblem(..), isParallelCaseAnywhere
  ) where
 
 import GHC.Generics (Generic)
@@ -374,7 +374,7 @@ class (HasKind a, Ord a) => SymWord a where
   fromCW cw                         = error $ "Cannot convert CW " ++ show cw ++ " to kind " ++ show (kindOf (undefined :: a))
 
   default mkSymWord :: (Read a, G.Data a) => Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
-  mkSymWord mbQ mbNm = SBV <$> mkSValUserSort k mbQ mbNm
+  mkSymWord mbQ mbNm = SBV <$> svMkSymVar mbQ k mbNm
     where k = constructUKind (undefined :: a)
 
 instance (Random a, SymWord a) => Random (SBV a) where

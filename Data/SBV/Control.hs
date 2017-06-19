@@ -11,11 +11,11 @@
 
 module Data.SBV.Control (
      -- * Checking satisfiability
-       CheckSatResult(..), checkSat, checkSatAssuming
+       CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming
 
      -- * Querying the solver
      -- ** Extracting values
-     , getValue, getModel, getAssignment
+     , getValue, getModel, getAssignment, getSMTResult
 
      -- ** Extracting the unsat core
      , getUnsatCore
@@ -44,10 +44,7 @@ module Data.SBV.Control (
      , echo
 
      -- ** Terminating the query
-     , sbvResume
-     , result
-     , success
-     , failure
+     , mkResult
      , exit
 
      -- * Controlling the solver behavior

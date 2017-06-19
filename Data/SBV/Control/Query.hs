@@ -11,37 +11,36 @@
 
 {-# LANGUAGE LambdaCase     #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TupleSections  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Data.SBV.Control.Query (
        send, ask, retrieveString
-     , CheckSatResult(..), checkSat, checkSatAssuming, getUnsatCore, getProof, getAssignment, getOption
+     , CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming, getUnsatCore, getProof, getAssignment, getOption
      , push, pop, getAssertionStackDepth, echo
      , resetAssertions, exit
      , getAssertions
-     , getValue, getModel
+     , getValue, getModel, getSMTResult
      , SMTOption(..)
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
      , Logic(..), Assignment(..)
      , ignoreExitCode, timeout
      , (|->)
-     , result
-     , success
-     , failure
-     , sbvResume
+     , mkResult
      , io
      ) where
 
 import Control.Monad            (unless)
-import Control.Monad.State.Lazy (get, modify')
+import Control.Monad.State.Lazy (get)
+import Control.Monad.Trans      (liftIO)
 
-import Data.List (unzip3, intercalate, nubBy)
+import Data.List (unzip3, intercalate, nubBy, sortBy)
 import Data.Function (on)
 
 import Data.SBV.Core.Data
 
-import Data.SBV.Core.Symbolic (QueryState(..), Query(..), SMTResult(..), State(..), registerLabel)
+import Data.SBV.Core.Symbolic (QueryState(..), Query(..), SMTModel(..), SMTResult(..), State(..), registerLabel)
 
 import Data.SBV.SMT.Utils
 import Data.SBV.Utils.SExpr
@@ -200,15 +199,51 @@ addQueryConstraint mbNm b = do sw <- inNewContext (\st -> do maybe (return ()) (
 
 -- | Check for satisfiability.
 checkSat :: Query CheckSatResult
-checkSat = do let cmd = "(check-sat)"
-                  bad = unexpected "checkSat" cmd "one of sat/unsat/unknown" Nothing
+checkSat = do cfg <- getConfig
+              checkSatUsing $ satCmd cfg
 
-              r <- ask cmd
+-- | Check for satisfiability with a custom check-sat-using command.
+checkSatUsing :: String -> Query CheckSatResult
+checkSatUsing cmd = do let bad = unexpected "checkSat" cmd "one of sat/unsat/unknown" Nothing
 
-              parse r bad $ \case ECon "sat"     -> return Sat
-                                  ECon "unsat"   -> return Unsat
-                                  ECon "unknown" -> return Unk
-                                  _              -> bad r Nothing
+                       r <- ask cmd
+
+                       parse r bad $ \case ECon "sat"     -> return Sat
+                                           ECon "unsat"   -> return Unsat
+                                           ECon "unknown" -> return Unk
+                                           _              -> bad r Nothing
+
+-- | Issue check-sat and get an SMT Result out.
+getSMTResult :: Query SMTResult
+getSMTResult = do cfg <- getConfig
+                  cs  <- checkSat
+                  case cs of
+                    Unsat -> return $ Unsatisfiable cfg
+                    Sat   -> Satisfiable cfg <$> getModel
+                    Unk   -> Unknown     cfg <$> getModel
+
+-- | Collect model values. It is implicitly assumed that we are in a check-sat
+-- context. See 'getSMTResult' for a variant that issues a check-sat first and
+-- returns an 'SMTResult'.
+getModel :: Query SMTModel
+getModel = do State{runMode, rinps} <- get
+              inps <- liftIO $ reverse <$> readIORef rinps
+              let vars :: [NamedSymVar]
+                  vars = case runMode of
+                           m@CodeGen         -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+                           m@Concrete        -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+                           SMTMode _ isSAT _ -> -- for "sat", display the prefix existentials. for "proof", display the prefix universals
+                                                if isSAT then map snd $ takeWhile ((/= ALL) . fst) inps
+                                                         else map snd $ takeWhile ((== ALL) . fst) inps
+
+                  sortByNodeId :: [NamedSymVar] -> [NamedSymVar]
+                  sortByNodeId = sortBy (compare `on` (\(SW _ n, _) -> n))
+
+              assocs <- mapM (\(sw, n) -> (n, ) <$> getValueCW sw) (sortByNodeId vars)
+
+              return SMTModel { modelObjectives = []
+                              , modelAssocs     = assocs
+                              }
 
 -- | Check for satisfiability, under the given conditions. Similar to 'checkSat'
 -- except it allows making further assumptions as captured by the first argument
@@ -266,7 +301,7 @@ checkSatAssuming sBools = do
 
 -- | The current assertion stack depth, i.e., #push - #pops after start. Always non-negative.
 getAssertionStackDepth :: Query Int
-getAssertionStackDepth = queryAssertionStackDepth <$>  get
+getAssertionStackDepth = queryAssertionStackDepth <$> getQueryState
 
 -- | Push the context, entering a new one. Pushes multiple levels if /n/ > 1.
 push :: Int -> Query ()
@@ -274,7 +309,7 @@ push i
  | i <= 0 = error $ "Data.SBV: push requires a strictly positive level argument, received: " ++ show i
  | True   = do depth <- getAssertionStackDepth
                send True $ "(push " ++ show i ++ ")"
-               modify' $ \s -> s{queryAssertionStackDepth = depth + i}
+               modifyQueryState $ \s -> s{queryAssertionStackDepth = depth + i}
 
 -- | Pop the context, exiting a new one. Pops multiple levels if /n/ > 1. It's an error to pop levels that don't exist.
 pop :: Int -> Query ()
@@ -283,7 +318,7 @@ pop i
  | True   = do depth <- getAssertionStackDepth
                if i > depth
                   then error $ "Data.SBV: Illegally trying to pop " ++ shl i ++ ", at current level: " ++ show depth
-                  else do QueryState{queryConfig} <- get
+                  else do QueryState{queryConfig} <- getQueryState
                           if not (supportsGlobalDecls (capabilities (solver queryConfig)))
                              then error $ unlines [ ""
                                                   , "*** Data.SBV: Backend solver does not support global-declarations."
@@ -292,7 +327,7 @@ pop i
                                                   , "*** Request this as a feature for the underlying solver!"
                                                   ]
                              else do send True $ "(pop " ++ show i ++ ")"
-                                     modify' $ \s -> s{queryAssertionStackDepth = depth - i}
+                                     modifyQueryState $ \s -> s{queryAssertionStackDepth = depth - i}
    where shl 1 = "one level"
          shl n = show n ++ " levels"
 
@@ -302,7 +337,7 @@ pop i
 -- command are unaffected. Note that SBV implicitly uses global-declarations, so bindings will remain intact.
 resetAssertions :: Query ()
 resetAssertions = do send True "(reset-assertions)"
-                     modify' $ \s -> s{queryAssertionStackDepth = 0}
+                     modifyQueryState $ \s -> s{queryAssertionStackDepth = 0}
 
 -- | Echo a string. Note that the echoing is done by the solver, not by SBV.
 echo :: String -> Query ()
@@ -323,7 +358,7 @@ echo s = do let cmd = "(echo \"" ++ concatMap sanitize s ++ "\")"
 -- trying to communicate with the solver after issuing "exit" will simply fail.
 exit :: Query ()
 exit = do send True "(exit)"
-          modify' $ \s -> s{queryAssertionStackDepth = 0}
+          modifyQueryState $ \s -> s{queryAssertionStackDepth = 0}
 
 -- | Retrieve the unsat-core. Note you must have arranged for
 -- unsat cores to be produced first (/via/ @'setOption' 'ProduceUnsatCores' 'True'@)
@@ -432,75 +467,57 @@ SBV a |-> v = case literal v of
                 r                      -> error $ "Data.SBV: Impossible happened in |->: Cannot construct a CW with literal: " ++ show r
 
 -- | Produce the query result from an assignment.
-success :: [Assignment] -> Query [SMTResult]
-success asgns = do QueryState{queryConfig} <- get
+mkResult :: [Assignment] -> Query SMTResult
+mkResult asgns = do QueryState{queryConfig} <- getQueryState
 
-                   let grabValues st = do let extract (Assign s n) = sbvToSW st (SBV s) >>= \sw -> return (sw, n)
+                    let grabValues st = do let extract (Assign s n) = sbvToSW st (SBV s) >>= \sw -> return (sw, n)
 
-                                          modelAssignment <- mapM extract asgns
+                                           modelAssignment <- mapM extract asgns
 
-                                          inps <- reverse <$> readIORef (rinps st)
+                                           inps <- reverse <$> readIORef (rinps st)
 
-                                          -- sanity checks
-                                          --     - All existentials should be given a value
-                                          --     - No duplicates
-                                          --     - No bindings to vars that are not inputs
-                                          let userSS = map fst modelAssignment
+                                           -- sanity checks
+                                           --     - All existentials should be given a value
+                                           --     - No duplicates
+                                           --     - No bindings to vars that are not inputs
+                                           let userSS = map fst modelAssignment
 
-                                              missing, extra, dup :: [String]
-                                              missing = [n | (EX, (s, n)) <- inps, s `notElem` userSS]
-                                              extra   = [show s | s <- userSS, s `notElem` map (fst . snd) inps]
-                                              dup     = let walk []     = []
-                                                            walk (n:ns)
-                                                              | n `elem` ns = show n : walk (filter (/= n) ns)
-                                                              | True        = walk ns
-                                                        in walk userSS
+                                               missing, extra, dup :: [String]
+                                               missing = [n | (EX, (s, n)) <- inps, s `notElem` userSS]
+                                               extra   = [show s | s <- userSS, s `notElem` map (fst . snd) inps]
+                                               dup     = let walk []     = []
+                                                             walk (n:ns)
+                                                               | n `elem` ns = show n : walk (filter (/= n) ns)
+                                                               | True        = walk ns
+                                                         in walk userSS
 
-                                          unless (null (missing ++ extra ++ dup)) $ do
+                                           unless (null (missing ++ extra ++ dup)) $ do
 
-                                                let misTag = "***   Missing inputs"
-                                                    dupTag = "***   Duplicate bindings"
-                                                    extTag = "***   Extra bindings"
+                                                 let misTag = "***   Missing inputs"
+                                                     dupTag = "***   Duplicate bindings"
+                                                     extTag = "***   Extra bindings"
 
-                                                    maxLen = maximum $  0
-                                                                      : [length misTag | not (null missing)]
-                                                                     ++ [length extTag | not (null extra)]
-                                                                     ++ [length dupTag | not (null dup)]
+                                                     maxLen = maximum $  0
+                                                                       : [length misTag | not (null missing)]
+                                                                      ++ [length extTag | not (null extra)]
+                                                                      ++ [length dupTag | not (null dup)]
 
-                                                    align s = s ++ replicate (maxLen - length s) ' ' ++ ": "
+                                                     align s = s ++ replicate (maxLen - length s) ' ' ++ ": "
 
-                                                error $ unlines $ [""
-                                                                  , "*** Data.SBV: Query model construction has a faulty assignment."
-                                                                  ]
-                                                               ++ [ align misTag ++ intercalate ", "  missing | not (null missing)]
-                                                               ++ [ align extTag ++ intercalate ", "  extra   | not (null extra)  ]
-                                                               ++ [ align dupTag ++ intercalate ", "  dup     | not (null dup)    ]
-                                                               ++ [ "*** Data.SBV: Check your query result construction!" ]
+                                                 error $ unlines $ [""
+                                                                   , "*** Data.SBV: Query model construction has a faulty assignment."
+                                                                   ]
+                                                                ++ [ align misTag ++ intercalate ", "  missing | not (null missing)]
+                                                                ++ [ align extTag ++ intercalate ", "  extra   | not (null extra)  ]
+                                                                ++ [ align dupTag ++ intercalate ", "  dup     | not (null dup)    ]
+                                                                ++ [ "*** Data.SBV: Check your query result construction!" ]
 
-                                          return modelAssignment
+                                           return modelAssignment
 
-                   assocs <- inNewContext grabValues
+                    assocs <- inNewContext grabValues
 
-                   let m = SMTModel { modelObjectives = []
-                                    , modelAssocs     = [(show s, c) | (s, c) <- assocs]
-                                    }
+                    let m = SMTModel { modelObjectives = []
+                                     , modelAssocs     = [(show s, c) | (s, c) <- assocs]
+                                     }
 
-                   result $ Satisfiable queryConfig m
-
--- | Produce this answer as the result.
-result :: SMTResult -> Query [SMTResult]
-result x = return [x]
-
--- | Fail with error.
-failure :: [String] -> Query [SMTResult]
-failure ms = do QueryState{queryConfig} <- get
-                result $ ProofError queryConfig ms
-
--- | Run what SBV would've run, should we not have taken control. Note that
--- if you call this function, SBV will issue a call to check-sat and then
--- collect the model with respect to all the changes the query has performed.
--- If you already do have a model built during the query, use 'result' to
--- return it, instead of telling sbv to do it on its own.
-sbvResume :: Query [SMTResult]
-sbvResume = do QueryState{queryDefault, queryIgnoreExitCode} <- get
-               io $ queryDefault queryIgnoreExitCode
+                    return $ Satisfiable queryConfig m

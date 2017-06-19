@@ -25,8 +25,8 @@ yices :: SMTSolver
 yices = SMTSolver {
            name         = Yices
          , executable   = "yices-smt2"
-         , options      = []
-         , engine       = standardEngine "SBV_YICES" "SBV_YICES_OPTIONS" modConfig standardModel
+         , options      = modConfig []
+         , engine       = standardEngine "SBV_YICES" "SBV_YICES_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False
                               , supportsUninterpretedSorts = True
@@ -40,8 +40,7 @@ yices = SMTSolver {
                               }
          }
   where -- If custom queries are present, Yices requires to be in the incremental mode
-        modConfig :: SMTConfig -> SMTConfig
-        modConfig cfg
-         | isNothing (customQuery cfg) = cfg
-         | True                        = cfg {solver = (solver cfg) {options = newOpts}}
-         where newOpts = options (solver cfg) ++ ["--incremental"]
+        modConfig :: [String] -> SMTConfig -> [String]
+        modConfig opts cfg
+         | isNothing (customQuery cfg) = opts
+         | True                        = opts ++ ["--incremental"]

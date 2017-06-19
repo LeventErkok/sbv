@@ -25,8 +25,8 @@ cvc4 :: SMTSolver
 cvc4 = SMTSolver {
            name         = CVC4
          , executable   = "cvc4"
-         , options      = ["--lang", "smt"]
-         , engine       = standardEngine "SBV_CVC4" "SBV_CVC4_OPTIONS" modConfig standardModel
+         , options      = modConfig ["--lang", "smt"]
+         , engine       = standardEngine "SBV_CVC4" "SBV_CVC4_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = True
                               , supportsUninterpretedSorts = True
@@ -40,8 +40,7 @@ cvc4 = SMTSolver {
                               }
          }
  where -- If custom queries are present, CVC4 requires an explicit command-line argument
-       modConfig :: SMTConfig -> SMTConfig
-       modConfig cfg
-        | isNothing (customQuery cfg) = cfg
-        | True                        = cfg {solver = (solver cfg) {options = newOpts}}
-        where newOpts = options (solver cfg) ++ ["--incremental", "--interactive", "--no-interactive-prompt"]
+       modConfig :: [String] -> SMTConfig -> [String]
+       modConfig opts cfg
+        | isNothing (customQuery cfg) = opts
+        | True                        = opts ++ ["--incremental", "--interactive", "--no-interactive-prompt"]

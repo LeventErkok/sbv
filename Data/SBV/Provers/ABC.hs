@@ -23,8 +23,8 @@ abc :: SMTSolver
 abc = SMTSolver {
            name         = ABC
          , executable   = "abc"
-         , options      = ["-S", "%blast; &sweep -C 5000; &syn4; &cec -s -m -C 2000"]
-         , engine       = standardEngine "SBV_ABC" "SBV_ABC_OPTIONS" id standardModel
+         , options      = const ["-S", "%blast; &sweep -C 5000; &syn4; &cec -s -m -C 2000"]
+         , engine       = standardEngine "SBV_ABC" "SBV_ABC_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False
                               , supportsUninterpretedSorts = False

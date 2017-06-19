@@ -19,6 +19,7 @@
 {-# LANGUAGE    NamedFieldPuns             #-}
 {-# LANGUAGE    DeriveDataTypeable         #-}
 {-# LANGUAGE    DeriveFunctor              #-}
+{-# LANGUAGE    Rank2Types                 #-}
 {-# LANGUAGE    CPP                        #-}
 {-# OPTIONS_GHC -fno-warn-orphans          #-}
 
@@ -40,7 +41,7 @@ module Data.SBV.Core.Symbolic
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
   , SBVPgm(..), Symbolic, runSymbolic, runSymbolicWithState, runSymbolic', State(..), withNewIncState, IncState(..)
-  , inProofMode, inNonInteractiveProofMode, switchToInteractiveMode, getProofMode, SBVRunMode(..), Result(..)
+  , inSMTMode, SBVRunMode(..), IStage(..), Result(..)
   , registerKind, registerLabel
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
@@ -48,17 +49,16 @@ module Data.SBV.Core.Symbolic
   , extractSymbolicSimulationState
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , Tactic(..), addSValTactic, isParallelCaseAnywhere
-  , Query(..), QueryContext(..), QueryState(..), query, runQuery
+  , Query(..), QueryState(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
   , outputSVal
-  , mkSValUserSort
   , SArr(..), readSArr, writeSArr, mergeSArr, newSArr, eqSArr
   ) where
 
 import Control.DeepSeq          (NFData(..))
 import Control.Monad            (when, unless)
 import Control.Monad.Reader     (MonadReader, ReaderT, ask, runReaderT)
-import Control.Monad.State.Lazy (MonadState, StateT(..), evalStateT)
+import Control.Monad.State.Lazy (MonadState, StateT(..))
 import Control.Monad.Trans      (MonadIO, liftIO)
 import Data.Char                (isAlpha, isAlphaNum, toLower)
 import Data.IORef               (IORef, newIORef, readIORef)
@@ -327,43 +327,22 @@ objectiveName (Minimize   s _)   = s
 objectiveName (Maximize   s _)   = s
 objectiveName (AssertSoft s _ _) = s
 
--- | The context of a query is the state of the symbolic simulation run and some extra info
-data QueryContext = QueryContext {
-                        contextState   :: State
-                      , contextSkolems :: [String]
-                      }
-
-instance NFData QueryContext where
-   rnf (QueryContext st sks) = rnf st `seq` rnf sks `seq` ()
-
 -- | The state we keep track of as we interact with the solver
 data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -> IO String
                              , querySend                :: Maybe Int -> String -> IO ()
                              , queryRetrieveString      :: Maybe Int -> IO String
                              , queryConfig              :: SMTConfig
-                             , queryContext             :: QueryContext
-                             , queryDefault             :: Bool -> IO [SMTResult]
-                             , queryGetModel            :: IO [SMTResult]
-                             , queryIgnoreExitCode      :: Bool
                              , queryTimeOutValue        :: Maybe Int
                              , queryAssertionStackDepth :: Int
                              }
 
 -- | A query is a user-guided mechanism to directly communicate and extract results from the solver.
-newtype Query a = Query (StateT QueryState IO a)
-             deriving (Applicative, Functor, Monad, MonadIO, MonadState QueryState)
+newtype Query a = Query (StateT State IO a)
+             deriving (Applicative, Functor, Monad, MonadIO, MonadState State)
 
 -- Show instance for Query, needed since tactics are Showable
 instance Show (Query a) where
    show _ = "<Query>"
-
--- | Execute a query.
-runQuery :: Query a -> QueryState -> IO a
-runQuery (Query userQuery) = evalStateT userQuery
-
--- | Install a custom query.
-query :: Query [SMTResult] -> Symbolic ()
-query q = addSValTactic (QueryUsing q)
 
 -- | Solver tactic
 data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-split, with implicit coverage. Bool says whether we should be verbose.
@@ -538,28 +517,30 @@ type CgMap     = Map.Map String [String]
 -- | Cached values, implementing sharing
 type Cache a   = IMap.IntMap [(StableName (State -> IO a), a)]
 
+-- | Stage of an interactive run
+data IStage = ISetup    -- Before we initiate contact
+            | IRun      -- After the contact is started
+
 -- | Different means of running a symbolic piece of code
-data SBVRunMode = Proof       (Bool, SMTConfig) -- ^ Fully Symbolic, proof mode.
-                | Interactive (Bool, SMTConfig) -- ^ In an interactive mode, during user control.
-                | CodeGen                       -- ^ Code generation mode.
-                | Concrete                      -- ^ Concrete simulation mode.
+data SBVRunMode = SMTMode  IStage Bool SMTConfig -- ^ In regular mode, with a stage. Bool is True if this is SAT.
+                | CodeGen                        -- ^ Code generation mode.
+                | Concrete                       -- ^ Concrete simulation mode.
 
 -- Show instance for SBVRunMode; debugging purposes only
 instance Show SBVRunMode where
-   show (Proof       (True, _))  = "Satisfiability"
-   show (Proof       (False, _)) = "Proof"
-   show (Interactive (True, _))  = "Satisfiability"
-   show (Interactive (False, _)) = "Proof"
+   show (SMTMode ISetup True  _) = "Satisfiability setup"
+   show (SMTMode IRun   True  _) = "Satisfiability"
+   show (SMTMode ISetup False _) = "Proof setup"
+   show (SMTMode IRun   False _) = "Proof"
    show CodeGen                  = "Code generation"
    show Concrete                 = "Concrete evaluation"
 
 -- | Is this a CodeGen run? (i.e., generating code)
 isCodeGenMode :: State -> Bool
 isCodeGenMode State{runMode} = case runMode of
-                                 Concrete{}    -> False
-                                 Proof{}       -> False
-                                 Interactive{} -> False
-                                 CodeGen       -> True
+                                 Concrete{} -> False
+                                 SMTMode{}  -> False
+                                 CodeGen    -> True
 
 -- | The state in query mode, i.e., additional context
 data IncState = IncState { rNewConsts :: IORef CnstMap
@@ -611,6 +592,7 @@ data State  = State { runMode      :: SBVRunMode
                     , rAsserts     :: IORef [(String, Maybe CallStack, SW)]
                     , rSWCache     :: IORef (Cache SW)
                     , rAICache     :: IORef (Cache Int)
+                    , queryState   :: IORef (Maybe QueryState)
                     }
 
 -- NFData is a bit of a lie, but it's sufficient, most of the content is iorefs that we don't want to touch
@@ -626,39 +608,16 @@ extendSValPathCondition :: State -> (SVal -> SVal) -> State
 extendSValPathCondition st f = st{pathCond = f (pathCond st)}
 
 -- | Are we running in proof mode?
-inProofMode :: State -> Bool
-inProofMode s = case runMode s of
-                  Proof{}       -> True
-                  Interactive{} -> True
-                  CodeGen       -> False
-                  Concrete{}    -> False
+inSMTMode :: State -> Bool
+inSMTMode s = case runMode s of
+                CodeGen    -> False
+                Concrete{} -> False
+                SMTMode{}  -> True
 
--- | Return the current proof mode
-getProofMode :: State -> SBVRunMode
-getProofMode = runMode
-
--- | Are we running in proof mode, but not in an interactive query?
-inNonInteractiveProofMode :: State -> Bool
-inNonInteractiveProofMode s = case runMode s of
-                                Proof{}       -> True
-                                Interactive{} -> False
-                                CodeGen       -> False
-                                Concrete{}    -> False
-
--- | Move to interactive mode from proof mode. It's an error to call
--- this function in a non-proof mode.
-switchToInteractiveMode :: State -> State
-switchToInteractiveMode s = case runMode s of
-                              Proof bfcg      -> s {runMode = Interactive bfcg}
-                              m@Interactive{} -> bad m
-                              m@CodeGen       -> bad m
-                              m@Concrete{}    -> bad m
-  where bad m = error $ "Data.SBV: Impossible happened: Trying to switch to interactive in mode: " ++ show m
-
--- | If in proof mode, get the underlying configuration (used for 'sBranch')
+-- | If in proof mode, get the underlying configuration (used in 'isSatisfiableInCurrentPath')
 getSBranchRunConfig :: State -> Maybe SMTConfig
 getSBranchRunConfig st = case runMode st of
-                           Proof (_, s)  -> Just s
+                           SMTMode _ _ c -> Just c
                            _             -> Nothing
 
 -- | The "Symbolic" value. Either a constant (@Left@) or a symbolic
@@ -701,8 +660,8 @@ modifyState :: State -> (State -> IORef a) -> (a -> a) -> IO () -> IO ()
 modifyState st@State{runMode} field update interactiveUpdate = do
         R.modifyIORef' (field st) update
         case runMode of
-          Interactive{} -> interactiveUpdate
-          _             -> return ()
+          SMTMode IRun _ _ -> interactiveUpdate
+          _                -> return ()
 
 -- | Modify the incremental state
 modifyIncState  :: State -> (IncState -> IORef a) -> (a -> a) -> IO ()
@@ -749,12 +708,10 @@ addAssertion st cs msg cond = modifyState st rAsserts ((msg, cs, cond):)
 internalVariable :: State -> Kind -> IO SW
 internalVariable st k = do (sw, nm) <- newSW st k
                            let q = case runMode st of
-                                     Proof       (True,  _) -> EX
-                                     Proof       (False, _) -> ALL
-                                     Interactive (True,  _) -> EX
-                                     Interactive (False, _) -> ALL
-                                     CodeGen                -> ALL
-                                     Concrete{}             -> ALL
+                                     SMTMode    _ True  _ -> EX
+                                     SMTMode    _ False _ -> ALL
+                                     CodeGen              -> ALL
+                                     Concrete{}           -> ALL
                            modifyState st rinps ((q, (sw, "__internal_sbv_" ++ nm)):)
                                      $ noInteractive [ "Internal variable creation:"
                                                      , "  Named: " ++ nm
@@ -800,10 +757,7 @@ registerLabel st nm
   = do old <- readIORef $ rUsedLbls st
        if nm `Set.member` old
           then error $ "SBV: " ++ show nm ++ " is used as a label multiple times. Please do not use duplicate names!"
-          else modifyState st rUsedLbls (Set.insert nm)
-                         $ noInteractive [ "Registering a label:"
-                                         , "  Label: " ++ nm
-                                         ]
+          else modifyState st rUsedLbls (Set.insert nm) (return ())
 
 -- | Create a new constant; hash-cons as necessary
 -- NB. For each constant, we also store weather it's negative-0 or not,
@@ -877,50 +831,41 @@ newtype Symbolic a = Symbolic (ReaderT State IO a)
 
 -- | Create a symbolic value, based on the quantifier we have. If an
 -- explicit quantifier is given, we just use that. If not, then we
--- pick existential for SAT calls and universal for everything else.
+-- pick the quantifier appropriately based on the run-mode.
 -- @randomCW@ is used for generating random values for this variable
 -- when used for 'quickCheck' purposes.
 svMkSymVar :: Maybe Quantifier -> Kind -> Maybe String -> Symbolic SVal
 svMkSymVar mbQ k mbNm = do
         st <- ask
-        let q = case (mbQ, runMode st) of
-                  (Just x,  _)                      -> x   -- user given, just take it
-                  (Nothing, Concrete{})             -> ALL -- concrete simulation, pick universal
-                  (Nothing, Proof       (True,  _)) -> EX  -- sat mode, pick existential
-                  (Nothing, Proof       (False, _)) -> ALL -- proof mode, pick universal
-                  (Nothing, Interactive (True,  _)) -> EX  -- interactive sat mode, pick existential
-                  (Nothing, Interactive (False, _)) -> ALL -- interactive proof mode, pick universal
-                  (Nothing, CodeGen)                -> ALL -- code generation, pick universal
-        case runMode st of
-          Concrete | q == EX -> case mbNm of
-                                  Nothing -> error $ "Cannot quick-check in the presence of existential variables, type: " ++ show k
-                                  Just nm -> error $ "Cannot quick-check in the presence of existential variable " ++ nm ++ " :: " ++ show k
-          Concrete           -> do cw <- liftIO (randomCW k)
-                                   liftIO $ modifyState st rCInfo ((fromMaybe "_" mbNm, cw):) (return ())
-                                   return (SVal k (Left cw))
-          _                  -> do (sw, internalName) <- liftIO $ newSW st k
-                                   let nm = fromMaybe internalName mbNm
-                                   introduceUserName st nm k q sw
 
--- | Create a properly quantified variable of a user defined sort. Only valid
--- in proof contexts.
-mkSValUserSort :: Kind -> Maybe Quantifier -> Maybe String -> Symbolic SVal
-mkSValUserSort k mbQ mbNm = do
-        st <- ask
-        let (KUserSort sortName _) = k
-        liftIO $ registerKind st k
-        let q = case (mbQ, runMode st) of
-                  (Just x,  _)                      -> x
-                  (Nothing, Proof       (True,  _)) -> EX
-                  (Nothing, Proof       (False, _)) -> ALL
-                  (Nothing, Interactive (True,  _)) -> EX
-                  (Nothing, Interactive (False, _)) -> ALL
-                  (Nothing, CodeGen)                -> error $ "SBV: Uninterpreted sort " ++ sortName ++ " can not be used in code-generation mode."
-                  (Nothing, Concrete{})             -> error $ "SBV: Uninterpreted sort " ++ sortName ++ " can not be used in concrete simulation mode."
-        ctr <- liftIO $ incCtr st
-        let sw = SW k (NodeId ctr)
-            nm = fromMaybe ('s':show ctr) mbNm
-        introduceUserName st nm k q sw
+        let varInfo = case mbNm of
+                        Nothing -> ", of type " ++ show k
+                        Just nm -> ", while defining " ++ nm ++ " :: " ++ show k
+
+            disallow what  = error $ "Data.SBV: Unsupported: " ++ what ++ varInfo ++ " in mode: " ++ show (runMode st)
+
+            noUI cont
+              | isUninterpreted k  = disallow "Uninterpreted sorts"
+              | True               = cont
+
+            mkS q = do (sw, internalName) <- liftIO $ newSW st k
+                       let nm = fromMaybe internalName mbNm
+                       introduceUserName st nm k q sw
+
+            mkC   = do cw <- liftIO (randomCW k)
+                       liftIO $ do registerKind st k
+                                   modifyState st rCInfo ((fromMaybe "_" mbNm, cw):) (return ())
+                       return $ SVal k (Left cw)
+
+        case (mbQ, runMode st) of
+          (Just q,  SMTMode{}        ) -> mkS q
+          (Nothing, SMTMode _ isSAT _) -> mkS (if isSAT then EX else ALL)
+
+          (Just EX, CodeGen{})         -> disallow "Existentially quantified variables"
+          (_      , CodeGen)           -> noUI $ mkS ALL  -- code generation, pick universal
+
+          (Just EX,  Concrete{})       -> disallow "Existentially quantified variables"
+          (_      ,  Concrete{})       -> noUI mkC
 
 -- | Introduce a new user name. We die if repeated.
 introduceUserName :: State -> String -> Kind -> Quantifier -> SW -> Symbolic SVal
@@ -953,11 +898,12 @@ addAxiom nm ax = do
 -- | Run a symbolic computation in Proof mode and return a 'Result'. The boolean
 -- argument indicates if this is a sat instance or not.
 runSymbolic :: (Bool, SMTConfig) -> Symbolic a -> IO Result
-runSymbolic m c = snd `fmap` runSymbolic' (Proof m) c
+runSymbolic (isSAT, cfg) comp = snd `fmap` runSymbolic' (SMTMode ISetup isSAT cfg) comp
 
 -- | Run a symbolic computation in the Proof mode, but also return the final state
-runSymbolicWithState :: (Bool, SMTConfig) -> Symbolic a -> IO (State, Result)
-runSymbolicWithState m c = runSymbolic' (Proof m) (c >> ask)
+runSymbolicWithState :: (Bool, SMTConfig) -> Symbolic a -> IO (a, State, Result)
+runSymbolicWithState (isSAT, cfg) c = do ((a, st), res) <- runSymbolic' (SMTMode ISetup isSAT cfg) (c >>= \a -> ask >>= \st -> return (a, st))
+                                         return (a, st, res)
 
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
 runSymbolic' :: SBVRunMode -> Symbolic a -> IO (a, Result)
@@ -984,6 +930,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
    optGoals  <- newIORef []
    asserts   <- newIORef []
    istate    <- newIORef =<< newIncState
+   qstate    <- newIORef Nothing
    let st = State { runMode      = currentRunMode
                   , pathCond     = SVal KBool (Left trueCW)
                   , rIncState    = istate
@@ -1008,6 +955,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
                   , rSMTOptions  = smtOpts
                   , rOptGoals    = optGoals
                   , rAsserts     = asserts
+                  , queryState   = qstate
                   }
    _ <- newConst st falseCW -- s(-2) == falseSW
    _ <- newConst st trueCW  -- s(-1) == trueSW
@@ -1369,6 +1317,7 @@ data SMTConfig = SMTConfig {
        , roundingMode     :: RoundingMode              -- ^ Rounding mode to use for floating-point conversions
        , solverSetOptions :: [SMTOption]               -- ^ Options to set as we start the solver
        , customQuery      :: Maybe (Query [SMTResult]) -- ^ Custom user-given query
+       , ignoreExitCode   :: Bool                      -- ^ If true, we shall ignore the exit code upon exit. Otherwise we require ExitSuccess.
        }
 
 -- We're just seq'ing top-level here, it shouldn't really matter. (i.e., no need to go deeper.)
@@ -1404,14 +1353,12 @@ data SMTScript = SMTScript {
         }
 
 -- | An SMT engine
-type SMTEngine = SMTConfig                     -- ^ current configuration
-               -> QueryContext                 -- ^ the context in which queries will be run (if any)
-               -> Bool                         -- ^ is sat?
-               -> Maybe (OptimizeStyle, Int)   -- ^ if optimizing, the style and #of objectives
-               -> [(Quantifier, NamedSymVar)]  -- ^ quantified inputs
-               -> [Either SW (SW, [SW])]       -- ^ skolem map
-               -> String                       -- ^ program
-               -> IO [SMTResult]
+type SMTEngine =  forall res.
+                  SMTConfig         -- ^ current configuration
+               -> State             -- ^ the state in which to run the engine
+               -> String            -- ^ program
+               -> (State -> IO res) -- ^ continuation
+               -> IO res
 
 -- | Solvers that SBV is aware of
 data Solver = Z3
@@ -1424,11 +1371,11 @@ data Solver = Z3
 
 -- | An SMT solver
 data SMTSolver = SMTSolver {
-         name           :: Solver             -- ^ The solver in use
-       , executable     :: String             -- ^ The path to its executable
-       , options        :: [String]           -- ^ Options to provide to the solver
-       , engine         :: SMTEngine          -- ^ The solver engine, responsible for interpreting solver output
-       , capabilities   :: SolverCapabilities -- ^ Various capabilities of the solver
+         name           :: Solver                -- ^ The solver in use
+       , executable     :: String                -- ^ The path to its executable
+       , options        :: SMTConfig -> [String] -- ^ Options to provide to the solver
+       , engine         :: SMTEngine             -- ^ The solver engine, responsible for interpreting solver output
+       , capabilities   :: SolverCapabilities    -- ^ Various capabilities of the solver
        }
 
 instance Show SMTSolver where

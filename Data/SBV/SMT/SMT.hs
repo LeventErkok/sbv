@@ -12,6 +12,7 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE DefaultSignatures          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE Rank2Types                 #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 
 module Data.SBV.SMT.SMT (
@@ -24,7 +25,6 @@ module Data.SBV.SMT.SMT (
 
        -- * Prover Engines
        , standardEngine
-       , standardModel
        , standardSolver
 
        -- * Results of various tasks
@@ -44,9 +44,10 @@ import Control.Monad      (when, zipWithM)
 import Data.Char          (isSpace)
 import Data.Maybe         (fromMaybe)
 import Data.Int           (Int8, Int16, Int32, Int64)
-import Data.Function      (on)
-import Data.List          (intercalate, isPrefixOf, isInfixOf, sortBy)
+import Data.List          (intercalate, isPrefixOf)
 import Data.Word          (Word8, Word16, Word32, Word64)
+
+import Data.IORef (readIORef, writeIORef)
 
 import Data.Time          (getZonedTime, defaultTimeLocale, formatTime)
 
@@ -60,15 +61,13 @@ import qualified Data.Map as M
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (SMTEngine, QueryContext, runQuery, getProofMode, inNonInteractiveProofMode, switchToInteractiveMode)
+import Data.SBV.Core.Symbolic (SMTEngine, State(..))
 
-import Data.SBV.SMT.SMTLib    (interpretSolverOutput, interpretSolverModelLine, interpretSolverObjectiveLine)
 import Data.SBV.SMT.Utils     (showTimeoutValue)
 
 import Data.SBV.Utils.PrettyNum
 import Data.SBV.Utils.Lib       (joinArgs, splitArgs)
 import Data.SBV.Utils.SExpr     (parenDeficit)
-import Data.SBV.Utils.TDiff
 
 import qualified System.Timeout as Timeout (timeout)
 
@@ -485,102 +484,61 @@ shCW = sh . printBase
         sh n  = \w -> show w ++ " -- Ignoring unsupported printBase " ++ show n ++ ", use 2, 10, or 16."
 
 -- | Helper function to spin off to an SMT solver.
-pipeProcess :: SMTConfig -> QueryContext -> String -> [String] -> SMTScript -> (String -> String) -> ([String] -> [SMTResult]) -> ([String] -> [SMTResult]) -> IO [SMTResult]
-pipeProcess cfg ctx execName opts script cleanErrs failure success = do
+pipeProcess :: SMTConfig -> State -> String -> [String] -> String -> (State -> IO a) -> IO a
+pipeProcess cfg ctx execName opts pgm continuation = do
     mbExecPath <- findExecutable execName
     case mbExecPath of
-      Nothing      -> return $ failure [ "Unable to locate executable for " ++ show (name (solver cfg))
-                                       , "Executable specified: " ++ show execName
-                                       ]
+      Nothing      -> error $ unlines [ "Unable to locate executable for " ++ show (name (solver cfg))
+                                      , "Executable specified: " ++ show execName
+                                      ]
 
-      Just execPath -> runSolver cfg ctx execPath opts script cleanErrs failure success
+      Just execPath -> runSolver cfg ctx execPath opts pgm continuation
                        `C.catches`
                         [ C.Handler (\(e :: C.ErrorCall)     -> C.throw e)
-                        , C.Handler (\(e :: C.SomeException) -> return $ failure [ "Failed to start the external solver:\n" ++ show e
-                                                                                 , "Make sure you can start " ++ show execPath
-                                                                                 , "from the command line without issues."
-                                                                                 ])
+                        , C.Handler (\(e :: C.SomeException) -> error $ unlines [ "Failed to start the external solver:\n" ++ show e
+                                                                                , "Make sure you can start " ++ show execPath
+                                                                                , "from the command line without issues."
+                                                                                ])
                         ]
-
--- | The standard-model that most SMT solvers should happily work with
-standardModel :: (Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel, SW -> String -> [String])
-standardModel = (standardModelExtractor, standardValueExtractor)
-
--- | Some solvers (Z3) require multiple calls for certain value extractions; as in multi-precision reals. Deal with that here
-standardValueExtractor :: SW -> String -> [String]
-standardValueExtractor _ l = [l]
-
--- | A standard post-processor: Reading the lines of solver output and turning it into a model:
-standardModelExtractor :: Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel
-standardModelExtractor isSat qinps solverLines = SMTModel { modelObjectives = map snd $ sortByNodeId $ concatMap (interpretSolverObjectiveLine inps) solverLines
-                                                          , modelAssocs     = map snd $ sortByNodeId $ concatMap (interpretSolverModelLine     inps) solverLines
-                                                          }
-         where sortByNodeId :: [(Int, a)] -> [(Int, a)]
-               sortByNodeId = sortBy (compare `on` fst)
-
-               -- for "sat",   display the existentials.
-               -- for "proof", display the universals.
-               inps | isSat = map snd $ takeWhile ((/= ALL) . fst) qinps
-                    | True  = map snd $ takeWhile ((== ALL) . fst) qinps
 
 -- | A standard engine interface. Most solvers follow-suit here in how we "chat" to them..
 standardEngine :: String
                -> String
-               -> (SMTConfig -> SMTConfig)
-               -> (Bool -> [(Quantifier, NamedSymVar)] -> [String] -> SMTModel, SW -> String -> [String])
                -> SMTEngine
-standardEngine envName envOptName modConfig (extractMap, extractValue) cfgIn ctx isSat mbOptInfo qinps skolemMap pgm = do
-
-    let cfg = modConfig cfgIn
-
-    -- If there's an optimization goal, it better be handled by a custom engine!
-    () <- case mbOptInfo of
-            Nothing -> return ()
-            Just _  -> error $ "SBV.standardEngine: Solver: " ++ show (name (solver cfg)) ++ " doesn't support optimization!"
+standardEngine envName envOptName cfg ctx pgm continuation = do
 
     execName <-                    getEnv envName     `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
-    execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg)))
+    execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg) cfg))
 
-    let cfg'    = cfg {solver = (solver cfg) {executable = execName, options = execOpts}}
+    let cfg' = cfg {solver = (solver cfg) {executable = execName, options = const execOpts}}
 
-        cont rm = concatMap extract skolemMap
-           where extract (Left _)        = []  -- universals; we don't need their value, as the model is true for all of these.
-                 extract (Right (s, [])) = extractValue s $ "(get-value (" ++ show s ++ "))"
-                 extract (Right (s, ss)) = extractValue s $ "(get-value (" ++ show s ++ concat [' ' : mkSkolemZero rm (kindOf a) | a <- ss] ++ "))"
-
-        script = SMTScript { scriptBody  = pgm
-                           , scriptModel = cont (roundingMode cfg)
-                           }
-
-        -- standard engines only return one result ever
-        wrap x = [x]
-
-    standardSolver cfg' ctx script id (wrap . ProofError cfg') (wrap . interpretSolverOutput cfg' (extractMap isSat qinps))
+    standardSolver cfg' ctx pgm continuation
 
 -- | A standard solver interface. If the solver is SMT-Lib compliant, then this function should suffice in
 -- communicating with it.
-standardSolver :: SMTConfig -> QueryContext -> SMTScript -> (String -> String) -> ([String] -> [SMTResult]) -> ([String] -> [SMTResult]) -> IO [SMTResult]
-standardSolver config ctx script cleanErrs failure success = do
+standardSolver :: SMTConfig       -- ^ The currrent configuration
+               -> State           -- ^ Context in which we are running
+               -> String          -- ^ The program
+               -> (State -> IO a) -- ^ The continuation
+               -> IO a
+standardSolver config ctx pgm continuation = do
     let msg      = when (verbose config) . putStrLn . ("** " ++)
         smtSolver= solver config
         exec     = executable smtSolver
-        opts     = options smtSolver
-    msg $ "Calling: " ++ show (exec ++ (if null opts then "" else " ") ++ joinArgs opts)
-    rnf script `seq` pipeProcess config ctx exec opts script cleanErrs failure success
+        opts     = options smtSolver config
+    msg $ "Calling: "  ++ (exec ++ (if null opts then "" else " ") ++ joinArgs opts)
+    rnf pgm `seq` pipeProcess config ctx exec opts pgm continuation
 
 -- | An internal type to track of solver interactions
 data SolverLine = SolverRegular   String  -- ^ All is well
                 | SolverTimeout   String  -- ^ Timeout expired
                 | SolverException String  -- ^ Something else went wrong
 
--- | A variant of 'readProcessWithExitCode'; except it knows about continuation strings
--- and can speak SMT-Lib2 (just a little).
-runSolver :: SMTConfig -> QueryContext -> FilePath -> [String] -> SMTScript -> (String -> String) -> ([String] -> [SMTResult]) -> ([String] -> [SMTResult]) -> IO [SMTResult]
-runSolver cfg ctx execPath opts script cleanErrs failure success
+-- | A variant of 'readProcessWithExitCode'; except it deals with SBV continuations
+runSolver :: SMTConfig -> State -> FilePath -> [String] -> String -> (State -> IO a) -> IO a
+runSolver cfg ctx execPath opts pgm continuation
  = do let nm  = show (name (solver cfg))
           msg = when (verbose cfg) . mapM_ (putStrLn . ("*** " ++))
-
-          cleanLine  = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 
       (send, ask, getStringFromSolver, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
@@ -679,55 +637,28 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                          ex <- waitForProcess pid `C.catch` (\(_ :: C.SomeException) -> return (ExitFailure (-999)))
                                          return (out, err, ex)
 
-                    cleanUp ignoreExitCode response
-                      = do (ecObtained, contents, allErrors) <- do
-                                      (out, err, ex) <- terminateSolver
+                    cleanUp
+                      = do (out, err, ex) <- terminateSolver
 
-                                      msg $   [ "Solver   : " ++ nm
-                                              , "Exit code: " ++ show ex
-                                              ]
-                                           ++ case response of
-                                                Nothing      -> []
-                                                Just (r, vs) ->    ("Response : " ++ r)
-                                                                :  ["           " ++ l  | l <- vs ++ lines out]
-                                           ++ [ "Std-err  : " ++ err | not (null err)]
+                           msg $   [ "Solver   : " ++ nm
+                                   , "Exit code: " ++ show ex
+                                   ]
+                                ++ [ "Std-out  : " ++ intercalate "\n           " (lines out) | not (null out)]
+                                ++ [ "Std-err  : " ++ intercalate "\n           " (lines err) | not (null err)]
 
-                                      -- Massage the output, preparing for the possibility of not having a model
-                                      -- TBD: This is rather crude and potentially Z3 specific
-                                      return $ case response of
-                                                 Nothing        -> (ex, out, err)
-                                                 Just (r, vals) -> let finalOut = intercalate "\n" (r:vals)
-                                                                       notAvail = "model is not available" `isInfixOf` (finalOut ++ out ++ err)
-                                                                   in if "unknown" `isPrefixOf` r && notAvail
-                                                                      then (ExitSuccess, "unknown"              , "")
-                                                                      else (ex,          finalOut ++ "\n" ++ out, err)
-
-                           -- If we're told to ignore the exit code, then ignore it
-                           let ec | ignoreExitCode = ExitSuccess
-                                  | True           = ecObtained
-
-                           let errors = dropWhile isSpace (cleanErrs allErrors)
-
-                           case (null errors, ec) of
-                             (True, ExitSuccess)  -> return $ success $ mergeSExpr $ map cleanLine (filter (not . null) (lines contents))
-                             (_,    ec')          -> let errors' = filter (not . null) $ lines $ if null errors
-                                                                                                 then (if null (dropWhile isSpace contents)
-                                                                                                       then "(No error message printed on stderr by the executable.)"
-                                                                                                       else contents)
-                                                                                                 else errors
-                                                         finalEC = case (ec', ec) of
-                                                                     (ExitFailure n, _) -> n
-                                                                     (_, ExitFailure n) -> n
-                                                                     _                  -> 0 -- can happen if ExitSuccess but there is output on stderr
-                                                     in return $ failure $ [ "Failed to complete the call to " ++ nm ++ ":"
-                                                                           , "Executable   : " ++ execPath
-                                                                           , "Options      : " ++ joinArgs opts
-                                                                           , "Exit code    : " ++ show finalEC
-                                                                           , "Solver output: "
-                                                                           , replicate 78 '='
-                                                                           ]
-                                                                           ++ errors'
-                                                                           ++ ["Giving up.."]
+                           case ex of
+                             ExitSuccess -> return ()
+                             _           -> if ignoreExitCode cfg
+                                               then msg ["Ignoring non-zero exit code of " ++ show ex ++ " per user request!"]
+                                               else error $ unlines $  [ ""
+                                                                       , "*** Failed to complete the call to " ++ nm ++ ":"
+                                                                       , "*** Executable   : " ++ execPath
+                                                                       , "*** Options      : " ++ joinArgs opts
+                                                                       , "*** Exit code    : " ++ show ex
+                                                                       ]
+                                                                    ++ [ "*** Std-out      : " ++ intercalate "\n                   " (lines out)]
+                                                                    ++ [ "*** Std-err      : " ++ intercalate "\n                   " (lines err)]
+                                                                    ++ ["Giving up.."]
                 return (send, ask, getStringFromSolver, cleanUp, pid)
 
       let executeSolver = do let sendAndGetSuccess :: Maybe Int -> String -> IO ()
@@ -738,18 +669,21 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                    = send mbTimeOut l
                                    | True
                                    = do r <- ask mbTimeOut l
+                                        let align tag multi = intercalate "\n" $ zipWith (++) (tag : repeat (replicate (length tag) ' ')) (filter (not . null) (lines multi))
                                         case words r of
-                                          ["success"] -> return ()
-                                          _           -> let isOption = "(set-option" `isPrefixOf` dropWhile isSpace l
+                                          ["success"] -> when (verbose cfg) $ putStrLn $ align "[GOOD] " l
+                                          _           -> do when (verbose cfg) $ putStrLn $ align "[FAIL] " l
 
-                                                             reason | isOption = [ "*** Backend solver reports it does not support this option."
-                                                                                 , "*** Please report this as a bug/feature request with the solver!"
-                                                                                 ]
-                                                                    | True     = [ "*** Failed to establish solver context. Running in debug mode might provide"
-                                                                                 , "*** more information. Please report this as an issue!"
-                                                                                 ]
+                                                            let isOption = "(set-option" `isPrefixOf` dropWhile isSpace l
 
-                                                         in error $ unlines $ [""
+                                                                reason | isOption = [ "*** Backend solver reports it does not support this option."
+                                                                                    , "*** Please report this as a bug/feature request with the solver!"
+                                                                                    ]
+                                                                       | True     = [ "*** Failed to establish solver context. Running in debug mode might provide"
+                                                                                    , "*** more information. Please report this as an issue!"
+                                                                                    ]
+
+                                                            error $ unlines $ [""
                                                                               , "*** Data.SBV: Unexpected non-success response from " ++ nm ++ ":"
                                                                               , "***"
                                                                               , "***    Sent    : " ++ l
@@ -766,11 +700,10 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                              let backend = name $ solver cfg
                              if not (supportsCustomQueries (capabilities (solver cfg)))
                                 then when (verbose cfg) $ putStrLn $ "** Skipping heart-beat for the solver " ++ show backend
-                                else do when (verbose cfg) $ putStrLn "** Checking for heartbeat."
-                                        let heartbeat = "(set-option :print-success true)"
+                                else do let heartbeat = "(set-option :print-success true)"
                                         r <- ask (Just 5000000) heartbeat  -- Give the solver 5s to respond, this should be plenty enough!
                                         case words r of
-                                          ["success"]     -> when (verbose cfg) $ putStrLn "** Heartbeat established!"
+                                          ["success"]     -> when (verbose cfg) $ putStrLn $ "[GOOD] " ++ heartbeat
                                           ["unsupported"] -> error $ unlines [ ""
                                                                              , "*** Backend solver (" ++  show backend ++ ") does not support the command:"
                                                                              , "***"
@@ -796,55 +729,31 @@ runSolver cfg ctx execPath opts script cleanErrs failure success
                                                              putStrLn   "** Some incremental calls, such as pop, will be limited."
                                 else sendAndGetSuccess Nothing "(set-option :global-declarations true)"
 
-                             mapM_ (sendAndGetSuccess Nothing) (mergeSExpr (lines (scriptBody script)))
-                             mapM_ (sendAndGetSuccess Nothing) (optimizeArgs cfg)
+                             mapM_ (sendAndGetSuccess Nothing) (mergeSExpr (lines pgm))
 
-                             -- Capture what SBV would do here
-                             let sbvContinuation ignoreExitCode = do
-                                        r <- ask Nothing $ satCmd cfg
+                             -- Prepare the query context and ship it off
+                             let qs = QueryState { queryAsk                 = ask
+                                                 , querySend                = send
+                                                 , queryRetrieveString      = getStringFromSolver Nothing
+                                                 , queryConfig              = cfg
+                                                 , queryTimeOutValue        = Nothing
+                                                 , queryAssertionStackDepth = 0
+                                                 }
+                                 qsp = queryState ctx
 
-                                        vals <- if any (`isPrefixOf` r) ["sat", "unknown"]
-                                                   then  do let mls = scriptModel script
-                                                            when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
-                                                                                    mapM_ putStrLn mls
-                                                            mapM (ask Nothing) mls
-                                                   else return []
+                             mbQS <- readIORef qsp
 
-                                        cleanUp ignoreExitCode $ Just (r, vals)
+                             case mbQS of
+                               Nothing -> writeIORef qsp (Just qs)
+                               Just _  -> error $ unlines [ ""
+                                                          , "Data.SBV: Impossible happened, query-state was already set."
+                                                          , "Please report this as a bug!"
+                                                          ]
 
-                             -- Ask for a model. We assume this is done when we're in a check-sat/sat situation.
-                             let askModel = do let mls = scriptModel script
-                                               when (verbose cfg) $ do putStrLn "** Sending the following model extraction commands:"
-                                                                       mapM_ putStrLn mls
-                                               vals <- mapM (ask Nothing) mls
-                                               when (verbose cfg) $ do putStrLn "** Received the following responses:"
-                                                                       mapM_ putStrLn vals
-                                               return $ success $ mergeSExpr $ "sat" : map cleanLine (filter (not . null) vals)
-
-                             -- If we're given a custom continuation and we're in a proof context, call it. Otherwise execute
-                             k <- case (inNonInteractiveProofMode (contextState ctx), customQuery cfg) of
-                                    (True, Just q) -> do
-                                        when (verbose cfg) $ putStrLn "** Custom query is requested. Giving control to the user."
-                                        let interactiveCtx = ctx { contextState = switchToInteractiveMode (contextState ctx) }
-                                            qs = QueryState { queryAsk                 = ask
-                                                            , querySend                = send
-                                                            , queryRetrieveString      = getStringFromSolver Nothing
-                                                            , queryConfig              = cfg
-                                                            , queryContext             = interactiveCtx
-                                                            , queryDefault             = sbvContinuation
-                                                            , queryGetModel            = askModel
-                                                            , queryIgnoreExitCode      = False
-                                                            , queryTimeOutValue        = Nothing
-                                                            , queryAssertionStackDepth = 0
-                                                            }
-                                        return $ runQuery q qs
-                                    (False, Just _) -> do when (verbose cfg) $
-                                                               putStrLn $ "** Skipping the custom query in mode: " ++ show (getProofMode (contextState ctx))
-                                                          return (sbvContinuation False)
-                                    (_, Nothing)    -> return (sbvContinuation False)
-
-                             -- Off to the races!
-                             timeIf (timing cfg) (WorkByProver nm) k
+                             -- off we go!
+                             r <- continuation ctx
+                             cleanUp
+                             return r
 
       let launchSolver = do startTranscript    (transcript cfg) cfg
                             r <- executeSolver
@@ -863,7 +772,7 @@ mergeSExpr :: [String] -> [String]
 mergeSExpr []       = []
 mergeSExpr (x:xs)
  | d == 0 = x : mergeSExpr xs
- | True   = let (f, r) = grab d xs in unwords (x:f) : mergeSExpr r
+ | True   = let (f, r) = grab d xs in unlines (x:f) : mergeSExpr r
  where d = parenDiff x
 
        parenDiff :: String -> Int
@@ -902,7 +811,7 @@ startTranscript (Just f) cfg = do ts <- show <$> getZonedTime
                                   , ";;;"
                                   , ";;;           Solver    : " ++ show name
                                   , ";;;           Executable: " ++ fromMaybe "Unable to locate the executable" mbPath
-                                  , ";;;           Options   : " ++ unwords options
+                                  , ";;;           Options   : " ++ unwords (options cfg)
                                   , ";;;"
                                   , ";;; This file is an auto-generated loadable SMT-Lib file."
                                   , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"

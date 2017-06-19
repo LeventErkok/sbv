@@ -23,8 +23,8 @@ boolector :: SMTSolver
 boolector = SMTSolver {
            name         = Boolector
          , executable   = "boolector"
-         , options      = ["--smt2", "--smt2-model", "--no-exit-codes"]
-         , engine       = standardEngine "SBV_BOOLECTOR" "SBV_BOOLECTOR_OPTIONS" modConfig standardModel
+         , options      = modConfig ["--smt2", "--smt2-model", "--no-exit-codes"]
+         , engine       = standardEngine "SBV_BOOLECTOR" "SBV_BOOLECTOR_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False
                               , supportsUninterpretedSorts = False
@@ -39,8 +39,7 @@ boolector = SMTSolver {
          }
 
  where -- If custom queries are present, Boolector requires to be in the "--incremental" mode
-       modConfig :: SMTConfig -> SMTConfig
-       modConfig cfg
-        | isNothing (customQuery cfg) = cfg
-        | True                        = cfg {solver = (solver cfg) {options = newOpts}}
-        where newOpts = options (solver cfg) ++ ["--incremental"]
+       modConfig :: [String] -> SMTConfig -> [String]
+       modConfig opts cfg
+        | isNothing (customQuery cfg) = opts
+        | True                        = opts ++ ["--incremental"]
