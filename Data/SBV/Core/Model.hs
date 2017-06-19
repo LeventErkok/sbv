@@ -426,7 +426,6 @@ instance EqSymbolic (SBV a) where
           isConc (SBV (SVal _ (Left _))) = True
           isConc _                       = False
 
-
 instance SymWord a => OrdSymbolic (SBV a) where
   SBV x .<  SBV y = SBV (svLessThan x y)
   SBV x .<= SBV y = SBV (svLessEq x y)
