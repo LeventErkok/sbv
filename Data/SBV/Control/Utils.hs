@@ -201,12 +201,14 @@ getValueCW s = do let nm  = show s
 
                   r <- ask cmd
 
-                  let extract (ENum    i) | isBoolean       s || isBounded s = return $ mkConstCW  k (fst i)
-                      extract (EReal   i) | isReal          s                = return $ CW KReal   (CWAlgReal i)
-                      extract (EDouble i) | isDouble        s                = return $ CW KDouble (CWDouble  i)
-                      extract (EFloat  i) | isFloat         s                = return $ CW KFloat  (CWFloat   i)
-                      extract (ECon    i) | isUninterpreted s                = return $ CW k       (CWUserSort (getUIIndex k i, i))
-                      extract _                                              = bad r Nothing
+                  let isIntegral sw = isBoolean sw || isBounded sw || isInteger sw
+
+                      extract (ENum    i) | isIntegral      s = return $ mkConstCW  k (fst i)
+                      extract (EReal   i) | isReal          s = return $ CW KReal   (CWAlgReal i)
+                      extract (EFloat  i) | isFloat         s = return $ CW KFloat  (CWFloat   i)
+                      extract (EDouble i) | isDouble        s = return $ CW KDouble (CWDouble  i)
+                      extract (ECon    i) | isUninterpreted s = return $ CW k       (CWUserSort (getUIIndex k i, i))
+                      extract _                               = bad r Nothing
 
                   parse r bad $ \case EApp [EApp [ECon v, val]] | v == nm -> extract val
                                       _                                   -> bad r Nothing
