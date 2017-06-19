@@ -18,8 +18,8 @@ import SBVTest
 tests :: TestTree
 tests =
   testGroup "Optimization.AssertSoft"
-    [ goldenVsStringShow "optAssertSoft1" "assertSoft1.gold" (optimize assertSoft1)
-    , goldenVsStringShow "optAssertSoft2" "assertSoft2.gold" (optimize assertSoft2)
+    [ goldenVsStringShow "assertSoft1" (optimize assertSoft1)
+    , goldenVsStringShow "assertSoft2" (optimize assertSoft2)
     ]
 
 assertSoft1 :: Goal

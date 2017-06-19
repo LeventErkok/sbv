@@ -20,7 +20,7 @@ import SBVTest
 tests :: TestTree
 tests =
   testGroup "Puzzles.DogCatMouse"
-    [ goldenVsStringShow "dog_cat_mouse" "dogCatMouse.gold" (allSat p)
+    [ goldenVsStringShow "dogCatMouse" (allSat p)
     ]
  where p = do [dog, cat, mouse] <- sIntegers ["dog", "cat", "mouse"]
               solve [ dog   .>= 1                                   -- at least one dog

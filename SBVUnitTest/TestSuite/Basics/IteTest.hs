@@ -28,11 +28,11 @@ chk3 cond x = fst (cond (x .== x) (true, undefined::SBool) (undefined, undefined
 tests :: TestTree
 tests =
   testGroup "Basics.Ite"
-    [ goldenVsStringShow "ite-1" "iteTest1.gold" (rs (chk1 ite))
-    , goldenVsStringShow "ite-2" "iteTest2.gold" (rs (chk2 ite))
-    , goldenVsStringShow "ite-3" "iteTest3.gold" (rs (chk3 ite))
-    , testCase "ite-4" (assertIsThm (chk1 iteLazy))
-    , testCase "ite-5" (assertIsThm (chk2 iteLazy))
-    , testCase "ite-6" (assertIsThm (chk3 iteLazy))
+    [ goldenVsStringShow "iteTest1" (rs (chk1 ite))
+    , goldenVsStringShow "iteTest2" (rs (chk2 ite))
+    , goldenVsStringShow "iteTest3" (rs (chk3 ite))
+    , testCase "iteTest4" (assertIsThm (chk1 iteLazy))
+    , testCase "iteTest5" (assertIsThm (chk2 iteLazy))
+    , testCase "iteTest6" (assertIsThm (chk3 iteLazy))
     ]
  where rs f = runSAT $ forAll ["x"] f

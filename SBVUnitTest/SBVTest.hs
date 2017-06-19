@@ -53,9 +53,9 @@ ioShowsAs r s = do v <- r
 goldDir2 :: FilePath
 goldDir2 = "SBVUnitTest/GoldFiles/"
 
-goldenVsStringShow :: Show a => TestName -> FilePath -> IO a -> TestTree
-goldenVsStringShow n fp res =
-  goldenVsString n (goldDir2 ++ fp) (fmap (LBC.pack . show) res)
+goldenVsStringShow :: Show a => TestName -> IO a -> TestTree
+goldenVsStringShow n res =
+  goldenVsString n (goldDir2 ++ n ++ ".gold") (fmap (LBC.pack . show) res)
 
 -- | Create a gold file for the test case
 generateGoldCheck :: FilePath -> Bool -> (forall a. Show a => IO a -> FilePath -> IO ())

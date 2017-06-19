@@ -18,8 +18,8 @@ import SBVTest
 tests :: TestTree
 tests =
   testGroup "Optimization.Basics"
-    [ goldenVsStringShow "optBasics1" "optBasics1.gold" (optimize optBasics1)
-    , goldenVsStringShow "optBasics2" "optBasics2.gold" (optimize optBasics2)
+    [ goldenVsStringShow "optBasics1" (optimize optBasics1)
+    , goldenVsStringShow "optBasics2" (optimize optBasics2)
     ]
 
 optBasics1 :: Goal

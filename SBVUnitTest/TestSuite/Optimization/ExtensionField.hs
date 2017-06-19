@@ -18,9 +18,9 @@ import SBVTest
 tests :: TestTree
 tests =
   testGroup "Optimization.ExtensionField"
-    [ goldenVsStringShow "optExtField1" "optExtField1.gold" (optimize optExtField1)
-    , goldenVsStringShow "optExtField2" "optExtField2.gold" (optimize optExtField2)
-    , goldenVsStringShow "optExtField3" "optExtField3.gold" (optimize optExtField3)
+    [ goldenVsStringShow "optExtField1" (optimize optExtField1)
+    , goldenVsStringShow "optExtField2" (optimize optExtField2)
+    , goldenVsStringShow "optExtField3" (optimize optExtField3)
     ]
 
 optExtField1 :: Goal

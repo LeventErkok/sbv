@@ -20,9 +20,9 @@ import SBVTest
 tests :: TestTree
 tests =
   testGroup "Uninterpreted.AUF"
-    [ testCase "auf-0" (assertIsThm (free "x" >>= \x -> free "y" >>= \y -> return (thm1 x y (mkSFunArray (const 0)))))
-    , testCase "auf-1" (assertIsThm (newArray "b" >>= \b -> free "x" >>= \x -> free "y" >>= \y -> return (thm2 x y b)))
-    , goldenVsStringShow "auf-2" "auf-1.gold" pgm
+    [ goldenVsStringShow "auf-1" pgm
+    , testCase "auf-2" (assertIsThm (free "x" >>= \x -> free "y" >>= \y -> return (thm1 x y (mkSFunArray (const 0)))))
+    , testCase "auf-3" (assertIsThm (newArray "b" >>= \b -> free "x" >>= \x -> free "y" >>= \y -> return (thm2 x y b)))
     ]
  where pgm = runSAT $ do
                 x <- free "x"

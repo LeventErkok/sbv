@@ -18,11 +18,11 @@ import SBVTest
 tests :: TestTree
 tests =
   testGroup "Optimization.Combined"
-    [ goldenVsStringShow "combined1" "combined1.gold" (optimize combined1)
-    , goldenVsStringShow "combined2" "combined2.gold" (optimize combined2)
-    , goldenVsStringShow "pareto1"   "pareto1.gold"   (optimize pareto1)
-    , goldenVsStringShow "pareto2"   "pareto2.gold"   (optimize pareto2)
-    , goldenVsStringShow "boxed1"    "boxed1.gold"    (optimize boxed1)
+    [ goldenVsStringShow "combined1" (optimize combined1)
+    , goldenVsStringShow "combined2" (optimize combined2)
+    , goldenVsStringShow "pareto1"   (optimize pareto1)
+    , goldenVsStringShow "pareto2"   (optimize pareto2)
+    , goldenVsStringShow "boxed1"    (optimize boxed1)
     ]
 
 combined1 :: Goal

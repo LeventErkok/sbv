@@ -20,5 +20,5 @@ import SBVTest
 tests :: TestTree
 tests =
   testGroup "Puzzles.Euler185"
-    [ goldenVsStringShow "euler185" "euler185.gold" (allSat euler185)
+    [ goldenVsStringShow "euler185" (allSat euler185)
     ]

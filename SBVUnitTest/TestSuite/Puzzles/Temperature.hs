@@ -20,5 +20,5 @@ import SBVTest
 tests :: TestTree
 tests =
   testGroup "Puzzles.Temperature"
-    [ goldenVsStringShow "temperature" "temperature.gold" (allSat (revOf `fmap` exists_))
+    [ goldenVsStringShow "temperature" (allSat (revOf `fmap` exists_))
     ]
