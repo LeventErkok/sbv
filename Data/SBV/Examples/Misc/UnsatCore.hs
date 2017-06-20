@@ -41,7 +41,6 @@ p = do a <- sInteger "a"
 --
 -- >>> ucCore
 -- Unsat core is: ["less than 5","more than 10"]
--- Unsatisfiable
 --
 -- Demonstrating that the constraint @a .> b@ is /not/ needed for unsatisfiablity in this case.
 ucCore :: IO ()
