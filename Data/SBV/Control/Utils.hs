@@ -9,14 +9,16 @@
 -- Query related utils.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE DefaultSignatures     #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# OPTIONS_GHC -fno-warn-orphans  #-}
 
 module Data.SBV.Control.Utils (
        io
      , ask, send, getValue, getValueCW, getUnsatAssumptions
      , getQueryState, modifyQueryState, getConfig
+     , checkSat, checkSatUsing, getAllSatResult
      , inNewContext
      , parse
      , unexpected
@@ -25,28 +27,62 @@ module Data.SBV.Control.Utils (
      , retrieveString
      ) where
 
-import Data.List  (sortBy, intercalate, elemIndex)
+import Data.List  (sortBy, intercalate, elemIndex, partition, groupBy, tails)
 import Data.Maybe (isNothing)
+
+import Data.Ord      (comparing)
+import Data.Function (on)
 
 import Data.Int
 import Data.Word
 
 import qualified Data.Map as Map
 
-import Control.Monad (when)
+import Control.Monad            (when, unless)
 import Control.Monad.State.Lazy (get, liftIO)
 
 import Data.IORef (readIORef, writeIORef)
 
-import Data.SBV.Core.Data     (SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, Kind(..), HasKind(..), mkConstCW, CWVal(..))
-import Data.SBV.Core.Symbolic ( SMTConfig(..), State(..), IncState(..), Query
-                              , QueryState(..), withNewIncState
+import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, Kind(..)
+                              , HasKind(..), mkConstCW, CWVal(..), SMTResult(..)
+                              , NamedSymVar, SMTConfig(..), Query, SMTModel(..)
+                              , QueryState(..), SVal(..), Quantifier(..), cache
+                              , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..)
+                              , SolverContext(..), SBool
                               )
+import Data.SBV.Core.Symbolic (IncState(..), withNewIncState, State(..), svToSW, registerLabel)
+
+import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
 import Data.SBV.SMT.SMTLib  (toIncSMTLib)
-import Data.SBV.SMT.Utils   (showTimeoutValue)
+import Data.SBV.SMT.Utils   (showTimeoutValue, annotateWithName)
 
 import Data.SBV.Utils.SExpr
+import Data.SBV.Control.Types
+
+import qualified Data.Set as Set (toList)
+
+-- | 'Query' as a 'SolverContext'.
+instance SolverContext Query where
+   constrain          = addQueryConstraint Nothing
+   namedConstraint nm = addQueryConstraint (Just nm)
+
+   setOption o
+     | isStartModeOption o = error $ unlines [ ""
+                                             , "*** Data.SBV: '" ++ show o ++ "' can only be set at start-up time."
+                                             , "*** Hint: Move the call to 'setOption' before the query."
+                                             ]
+     | True                = send True $ setSMTOption o
+
+-- | Adding a constraint, possibly named. Only used internally.
+-- Use 'constrain' and 'namedConstraint' from user programs.
+addQueryConstraint :: Maybe String -> SBool -> Query ()
+addQueryConstraint mbNm b = do sw <- inNewContext (\st -> do maybe (return ()) (registerLabel st) mbNm
+                                                             sbvToSW st b)
+                               send True $ "(assert " ++ mkNamed mbNm (show sw)  ++ ")"
+   where mkNamed Nothing   s = s
+         mkNamed (Just nm) s = annotateWithName nm s
+
 
 -- | Get the current configuration
 getConfig :: Query SMTConfig
@@ -212,6 +248,114 @@ getValueCW s = do let nm  = show s
 
                   parse r bad $ \case EApp [EApp [ECon v, val]] | v == nm -> extract val
                                       _                                   -> bad r Nothing
+
+-- | Check for satisfiability.
+checkSat :: Query CheckSatResult
+checkSat = do cfg <- getConfig
+              checkSatUsing $ satCmd cfg
+
+-- | Check for satisfiability with a custom check-sat-using command.
+checkSatUsing :: String -> Query CheckSatResult
+checkSatUsing cmd = do let bad = unexpected "checkSat" cmd "one of sat/unsat/unknown" Nothing
+
+                       r <- ask cmd
+
+                       parse r bad $ \case ECon "sat"     -> return Sat
+                                           ECon "unsat"   -> return Unsat
+                                           ECon "unknown" -> return Unk
+                                           _              -> bad r Nothing
+
+-- | Repeatedly issue check-sat, after refuting the previous model.
+-- The bool is true if the model is unique upto prefix existentials.
+getAllSatResult :: Query (Bool, [SMTResult])
+getAllSatResult = do queryDebug ["Checking Satisfiability, all solutions.."]
+
+                     cfg <- getConfig
+
+                     State{rinps, rUsedKinds} <- get
+
+                     ki    <- liftIO $ readIORef rUsedKinds
+                     qinps <- liftIO $ reverse <$> readIORef rinps
+
+                     let usorts = [s | us@(KUserSort s _) <- Set.toList ki, isFree us]
+
+                     unless (null usorts) $ queryDebug [ "SBV.allSat: Uninterpreted sorts present: " ++ unwords usorts
+                                                       , "            SBV will use equivalence classes to generate all-satisfying instances."
+                                                       ]
+
+                     let vars :: [(SVal, NamedSymVar)]
+                         vars = let allModelInputs = takeWhile ((/= ALL) . fst) qinps
+
+                                    sortByNodeId :: [NamedSymVar] -> [NamedSymVar]
+                                    sortByNodeId = sortBy (compare `on` (\(SW _ n, _) -> n))
+
+                                    mkSVal :: NamedSymVar -> (SVal, NamedSymVar)
+                                    mkSVal nm@(sw, _) = (SVal (kindOf sw) (Right (cache (const (return sw)))), nm)
+
+                                in map mkSVal $ sortByNodeId [nv | (_, nv@(_, n)) <- allModelInputs, not (isNonModelVar cfg n)]
+
+                         -- If we have any universals, then the solutions are unique upto prefix existentials.
+                         w = ALL `elem` map fst qinps
+
+                     ms <- loop vars cfg
+                     return (w, ms)
+
+   where isFree (KUserSort _ (Left _)) = True
+         isFree _                      = False
+
+         loop vars cfg = go (1::Int)
+            where go :: Int -> Query [SMTResult]
+                  go cnt = do queryDebug ["Looking for solution " ++ show cnt]
+                              cs <- checkSat
+                              case cs of
+                                Unsat -> return []
+                                Unk   -> do queryDebug ["Solver returned unknown, terminating query."]
+                                            return []
+                                Sat   -> do assocs <- mapM (\(sval, (sw, n)) -> do cw <- getValueCW sw
+                                                                                   return (n, (sval, cw))) vars
+
+                                            let m = Satisfiable cfg SMTModel { modelObjectives = []
+                                                                             , modelAssocs     = [(n, cw) | (n, (_, cw)) <- assocs]
+                                                                             }
+
+                                                (interpreteds, uninterpreteds) = partition (not . isFree . kindOf . fst) (map snd assocs)
+
+                                                -- For each "interpreted" variable, figure out the model equivalence
+                                                -- NB. When the kind is floating, we *have* to be careful, since +/- zero, and NaN's
+                                                -- and equality don't get along!
+                                                interpretedEqs :: [SVal]
+                                                interpretedEqs = [mkNotEq (kindOf sv) sv (SVal (kindOf sv) (Left cw)) | (sv, cw) <- interpreteds]
+                                                   where mkNotEq k a b
+                                                          | isDouble k || isFloat k = svNot (a `fpNotEq` b)
+                                                          | True                    = a `svNotEqual` b
+
+                                                         fpNotEq a b = SVal KBool $ Right $ cache r
+                                                             where r st = do swa <- svToSW st a
+                                                                             swb <- svToSW st b
+                                                                             newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [swa, swb])
+
+                                                -- For each "uninterpreted" variable, use equivalence class
+                                                uninterpretedEqs :: [SVal]
+                                                uninterpretedEqs = concatMap pwDistinct         -- Assert that they are pairwise distinct
+                                                                 . filter (\l -> length l > 1)  -- Only need this class if it has at least two members
+                                                                 . map (map fst)                -- throw away values, we only need svals
+                                                                 . groupBy ((==) `on` snd)      -- make sure they belong to the same sort and have the same value
+                                                                 . sortBy (comparing snd)       -- sort them according to their CW (i.e., sort/value)
+                                                                 $ uninterpreteds
+                                                  where pwDistinct :: [SVal] -> [SVal]
+                                                        pwDistinct ss = [x `svNotEqual` y | (x:ys) <- tails ss, y <- ys]
+
+                                                eqs = interpretedEqs ++ uninterpretedEqs
+                                                disallow = case eqs of
+                                                             [] -> Nothing
+                                                             _  -> Just $ SBV $ foldr1 svOr eqs
+
+                                            -- make sure there's some var. This happens! 'allSat true' is the pathetic example.
+                                            case disallow of
+                                              Nothing -> return [m]
+                                              Just d  -> do constrain d
+                                                            rest <- go (cnt+1)
+                                                            return $ m : rest
 
 -- | Retrieve the set of unsatisfiable assumptions, following a call to 'checkSatAssuming'. Note that
 -- this function isn't exported to the user, but rather used internally. The user simple calls 'checkSatAssuming'.
