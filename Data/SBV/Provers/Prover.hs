@@ -447,17 +447,9 @@ optimizeWith config style = runWithQuery True opt config
                  mapM_ (Control.send True) optimizerDirectives
 
                  case style of
-                    Lexicographic -> optLexicographic
-                    Independent   -> optIndependent
+                    Lexicographic -> LexicographicResult <$> Control.getLexicographicOptResults
+                    Independent   -> IndependentResult   <$> Control.getIndependentOptResults (map objectiveName objectives)
                     Pareto mbN    -> optPareto mbN
-
--- | Construct a lexicographic optimization result
-optLexicographic :: Query OptimizeResult
-optLexicographic = LexicographicResult <$> Control.getSMTResultWithObjectives
-
--- | Construct an independent optimization result
-optIndependent :: Query OptimizeResult
-optIndependent = error "optIndependent"
 
 -- | Construct a pareto-front optimization result
 optPareto :: Maybe Int -> Query OptimizeResult

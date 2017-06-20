@@ -22,7 +22,8 @@ module Data.SBV.Control.Query (
      , push, pop, getAssertionStackDepth, echo
      , resetAssertions, exit
      , getAssertions
-     , getValue, getModel, getSMTResult, getSMTResultWithObjectives, getAllSatResult
+     , getValue, getModel, getSMTResult
+     , getLexicographicOptResults, getIndependentOptResults, getAllSatResult
      , SMTOption(..)
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
      , Logic(..), Assignment(..)
@@ -32,7 +33,7 @@ module Data.SBV.Control.Query (
      , io
      ) where
 
-import Control.Monad            (unless)
+import Control.Monad            (unless, zipWithM)
 import Control.Monad.State.Lazy (get)
 
 import Data.List     (unzip3, intercalate, nubBy, sortBy, elemIndex)
@@ -182,111 +183,138 @@ getSMTResult = do cfg <- getConfig
                     Sat   -> Satisfiable cfg <$> getModel
                     Unk   -> Unknown     cfg <$> getModel
 
--- | Issue check-sat and get an SMT result together with objectives to form a result out.
-getSMTResultWithObjectives :: Query SMTResult
-getSMTResultWithObjectives = do cfg <- getConfig
+-- | Classify a model based on whether it has unbound objectives or not.
+classifyModel :: SMTConfig -> SMTModel -> SMTResult
+classifyModel cfg m = case filter (not . isRegularCW . snd) (modelObjectives m) of
+                        [] -> Satisfiable cfg m
+                        _  -> SatExtField cfg m
+
+-- | Issue check-sat and get results of a lexicographic optimization.
+getLexicographicOptResults :: Query SMTResult
+getLexicographicOptResults = do cfg <- getConfig
                                 cs  <- checkSat
                                 case cs of
                                   Unsat -> return $ Unsatisfiable cfg
                                   Sat   -> classifyModel cfg <$> getModelWithObjectives
                                   Unk   -> Unknown       cfg <$> getModelWithObjectives
-   where classifyModel :: SMTConfig -> SMTModel -> SMTResult
-         classifyModel cfg m = case filter (not . isRegularCW . snd) (modelObjectives m) of
-                                 [] -> Satisfiable cfg m
-                                 _  -> SatExtField cfg m
+   where getModelWithObjectives :: Query SMTModel
+         getModelWithObjectives = do objectiveValues <- getObjectiveValues
+                                     m               <- getModel
+                                     return m {modelObjectives = objectiveValues}
+
+-- | Issue check-sat and get results of an independent (boxed) optimization.
+getIndependentOptResults :: [String] -> Query [(String, SMTResult)]
+getIndependentOptResults objNames = do cfg <- getConfig
+                                       cs  <- checkSat
+                                       case cs of
+                                         Unsat -> return [(nm, Unsatisfiable cfg) | nm <- objNames]
+                                         Sat   -> continue (classifyModel cfg)
+                                         Unk   -> continue (Unknown cfg)
+  where -- When we start, check-sat is issued, so get objective values first.
+        continue classify = do objectiveValues <- getObjectiveValues
+                               nms <- zipWithM getIndependentResult [0..] objNames
+                               return [(n, classify (m {modelObjectives = objectiveValues})) | (n, m) <- nms]
+
+        getIndependentResult :: Int -> String -> Query (String, SMTModel)
+        getIndependentResult i s = do m <- getModelAtIndex (Just i)
+                                      return (s, m)
 
 -- | Collect model values. It is implicitly assumed that we are in a check-sat
 -- context. See 'getSMTResult' for a variant that issues a check-sat first and
 -- returns an 'SMTResult'.
 getModel :: Query SMTModel
-getModel = do State{runMode} <- get
-              cfg  <- getConfig
-              inps <- getQuantifiedInputs
-              let vars :: [NamedSymVar]
-                  vars = case runMode of
-                           m@CodeGen         -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
-                           m@Concrete        -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
-                           SMTMode _ isSAT _ -> -- for "sat", display the prefix existentials. for "proof", display the prefix universals
-                                                let allModelInputs = if isSAT then takeWhile ((/= ALL) . fst) inps
-                                                                              else takeWhile ((== ALL) . fst) inps
+getModel = getModelAtIndex Nothing
 
-                                                    sortByNodeId :: [NamedSymVar] -> [NamedSymVar]
-                                                    sortByNodeId = sortBy (compare `on` (\(SW _ n, _) -> n))
+-- | Get a model stored at an index. This is likely very Z3 specific!
+getModelAtIndex :: Maybe Int -> Query SMTModel
+getModelAtIndex mbi = do
+             State{runMode} <- get
+             cfg  <- getConfig
+             inps <- getQuantifiedInputs
+             let vars :: [NamedSymVar]
+                 vars = case runMode of
+                          m@CodeGen         -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+                          m@Concrete        -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+                          SMTMode _ isSAT _ -> -- for "sat", display the prefix existentials. for "proof", display the prefix universals
+                                               let allModelInputs = if isSAT then takeWhile ((/= ALL) . fst) inps
+                                                                             else takeWhile ((== ALL) . fst) inps
 
-                                                in sortByNodeId [nv | (_, nv@(_, n)) <- allModelInputs, not (isNonModelVar cfg n)]
+                                                   sortByNodeId :: [NamedSymVar] -> [NamedSymVar]
+                                                   sortByNodeId = sortBy (compare `on` (\(SW _ n, _) -> n))
 
-              assocs <- mapM (\(sw, n) -> (n, ) <$> getValueCW sw) vars
+                                               in sortByNodeId [nv | (_, nv@(_, n)) <- allModelInputs, not (isNonModelVar cfg n)]
 
-              return SMTModel { modelObjectives = []
-                              , modelAssocs     = assocs
-                              }
+             assocs <- mapM (\(sw, n) -> (n, ) <$> getValueCW mbi sw) vars
 
--- | Collect model values, together with objectives.
--- NB. This is very much likely Z3 specific, and will need to be reworked
--- if objectives find their way into proper SMTLib treatment.
-getModelWithObjectives :: Query SMTModel
-getModelWithObjectives = do -- When we start, check-sat is already issued, and we are looking at objective values
-                            r <- retrieveResponse Nothing
+             return SMTModel { modelObjectives = []
+                             , modelAssocs     = assocs
+                             }
 
-                            inpSWs <- map (fst . snd) <$> getQuantifiedInputs
+-- | Just after a check-sat is issued, collect objective values. Used
+-- internally only, not exposed to the user.
+getObjectiveValues :: Query [(String, GeneralizedCW)]
+getObjectiveValues = do r <- retrieveResponse Nothing
 
-                            let bad = unexpected "getModelWithObjectives" "check-sat" "a list of objective values" Nothing
+                        inputs <- map snd <$> getQuantifiedInputs
 
-                                objectiveValues = parse r bad $ \case EApp (ECon "objectives" : es) -> map (getObjValue (bad r Nothing) inpSWs) es
-                                                                      _                             -> bad r Nothing
+                        let bad = unexpected "getObjectiveValues" "check-sat" "a list of objective values" Nothing
 
-                            -- Now do a regular getModel call, and return together with the objectives
-                            m <- getModel
-                            return m {modelObjectives = objectiveValues}
+                        parse r bad $ \case EApp (ECon "objectives" : es) -> return $ map (getObjValue (bad r Nothing) inputs) es
+                                            _                             -> bad r Nothing
+  where -- | Parse an objective value out.
+        getObjValue :: (forall a. Maybe [String] -> a) -> [NamedSymVar] -> SExpr -> (String, GeneralizedCW)
+        getObjValue bailOut inputs (EApp [ECon nm, v]) = (actualName, extract v)
+          where s :: SW
+                actualName :: String
+                (s, actualName) = case [(sw, an) | (sw, an) <- inputs, show sw == nm] of
+                                    [swn] -> swn
+                                    _     -> bailOut $ Just [ "Unknown objective value for " ++ nm
+                                                            , "Was expecting one of: " ++ intercalate ", "  (map sh inputs)
+                                                            ]
+                                  where sh (sw, n)
+                                         | ss == n = n
+                                         | True    = ss ++ " (aliasing " ++ n ++ ")"
+                                         where ss = show sw
 
--- | Parse an objective value out.
-getObjValue :: (forall a. Maybe [String] -> a) -> [SW] -> SExpr -> (String, GeneralizedCW)
-getObjValue bailOut inpSWs (EApp [ECon nm, v]) = (nm, extract v)
-  where s :: SW
-        s = case [sw | sw <- inpSWs, show sw == nm] of
-              [sw] -> sw
-              _    -> bailOut $ Just [ "Unknown objective value for " ++ nm
-                                     , "Was expecting one of: " ++ intercalate ", "  (map show inpSWs)
-                                     ]
+                k = kindOf s
 
-        k = kindOf s
+                isIntegral sw = isBoolean sw || isBounded sw || isInteger sw
 
-        isIntegral sw = isBoolean sw || isBounded sw || isInteger sw
+                getUIIndex (KUserSort  _ (Right xs)) i = i `elemIndex` xs
+                getUIIndex _                         _ = Nothing
 
-        getUIIndex (KUserSort  _ (Right xs)) i = i `elemIndex` xs
-        getUIIndex _                         _ = Nothing
+                extract (ENum    i) | isIntegral      s = RegularCW  $ mkConstCW  k (fst i)
+                extract (EReal   i) | isReal          s = RegularCW  $ CW KReal   (CWAlgReal i)
+                extract (EFloat  i) | isFloat         s = RegularCW  $ CW KFloat  (CWFloat   i)
+                extract (EDouble i) | isDouble        s = RegularCW  $ CW KDouble (CWDouble  i)
+                extract (ECon    i) | isUninterpreted s = RegularCW  $ CW k       (CWUserSort (getUIIndex k i, i))
 
-        extract (ENum    i) | isIntegral      s = RegularCW  $ mkConstCW  k (fst i)
-        extract (EReal   i) | isReal          s = RegularCW  $ CW KReal   (CWAlgReal i)
-        extract (EFloat  i) | isFloat         s = RegularCW  $ CW KFloat  (CWFloat   i)
-        extract (EDouble i) | isDouble        s = RegularCW  $ CW KDouble (CWDouble  i)
-        extract (ECon    i) | isUninterpreted s = RegularCW  $ CW k       (CWUserSort (getUIIndex k i, i))
+                -- Exhausted regular values, look for infinities and such:
+                extract val                             = ExtendedCW $ cvt (simplify val)
 
-        -- Exhausted regular values, look for infinities and such:
-        extract val                             = ExtendedCW $ cvt (simplify val)
+                -- Convert to an extended expression. Hopefully complete!
+                cvt :: SExpr -> ExtCW
+                cvt (ECon "oo")                    = Infinite  k
+                cvt (ECon "epsilon")               = Epsilon   k
+                cvt (EApp [ECon "interval", x, y]) = Interval  (cvt x) (cvt y)
+                cvt (ENum    (i, _))               = BoundedCW $ mkConstCW k i
+                cvt (EReal   r)                    = BoundedCW $ CW k $ CWAlgReal r
+                cvt (EFloat  f)                    = BoundedCW $ CW k $ CWFloat   f
+                cvt (EDouble d)                    = BoundedCW $ CW k $ CWDouble  d
+                cvt (EApp [ECon "+", x, y])        = AddExtCW (cvt x) (cvt y)
+                cvt (EApp [ECon "*", x, y])        = MulExtCW (cvt x) (cvt y)
+                -- Nothing else should show up, hopefully!
+                cvt e = bailOut $ Just [ "Unable to understand solver output."
+                                       , "While trying to process: " ++ show e
+                                       ]
 
-        -- Convert to an extended expression. Hopefully complete!
-        cvt :: SExpr -> ExtCW
-        cvt (ECon "oo")                    = Infinite  k
-        cvt (ECon "epsilon")               = Epsilon   k
-        cvt (EApp [ECon "interval", x, y]) = Interval  (cvt x) (cvt y)
-        cvt (ENum    (i, _))               = BoundedCW $ mkConstCW k i
-        cvt (EReal   r)                    = BoundedCW $ CW k $ CWAlgReal r
-        cvt (EFloat  f)                    = BoundedCW $ CW k $ CWFloat   f
-        cvt (EDouble d)                    = BoundedCW $ CW k $ CWDouble  d
-        cvt (EApp [ECon "+", x, y])        = AddExtCW (cvt x) (cvt y)
-        cvt (EApp [ECon "*", x, y])        = MulExtCW (cvt x) (cvt y)
-        -- Nothing else should show up, hopefully!
-        cvt e = bailOut $ Just [ "Unable to understand solver output."
-                               , "While trying to process: " ++ show e
-                               ]
+                -- drop the pesky to_real's that Z3 produces.. Cool but useless.
+                simplify :: SExpr -> SExpr
+                simplify (EApp [ECon "to_real", n]) = n
+                simplify (EApp xs)                  = EApp (map simplify xs)
+                simplify e                          = e
 
-        -- drop the pesky to_real's that Z3 produces.. Cool but useless.
-        simplify :: SExpr -> SExpr
-        simplify (EApp [ECon "to_real", n]) = n
-        simplify (EApp xs)                  = EApp (map simplify xs)
-        simplify e                          = e
-getObjValue bailOut _ _ = bailOut Nothing
+        getObjValue bailOut _ _ = bailOut Nothing
 
 
 -- | Check for satisfiability, under the given conditions. Similar to 'checkSat'

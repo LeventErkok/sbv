@@ -19,7 +19,7 @@ import Data.SBV
 --
 -- We have:
 --
--- >>> optimize (OptimizePriority Independent) problem
+-- >>> optimize Independent problem
 -- Objective "one-x": Optimal in an extension field:
 --   one-x =                    oo :: Integer
 --   min_y = 7.0 + (2.0 * epsilon) :: Real

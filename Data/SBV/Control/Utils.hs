@@ -234,30 +234,36 @@ getValue s = do sw <- inNewContext (`sbvToSW` s)
                                                                                  Just c  -> return c
                                     _                                       -> bad r Nothing
 
--- | Get the value of a term, but in CW form. Used internally.
-getValueCW :: SW -> Query CW
-getValueCW s = do let nm  = show s
-                      cmd = "(get-value (" ++ nm ++ "))"
-                      k   = kindOf s
+-- | Get the value of a term, but in CW form. Used internally. The model-index, in particular
+-- is extremely Z3 specific!
+getValueCW :: Maybe Int -> SW -> Query CW
+getValueCW mbi s = do let nm  = show s
+                          k   = kindOf s
 
-                      bad = unexpected "getModel" cmd ("a value binding for kind: " ++ show k) Nothing
+                          modelIndex = case mbi of
+                                         Nothing -> ""
+                                         Just i  -> " :model_index " ++ show i
 
-                      getUIIndex (KUserSort  _ (Right xs)) i = i `elemIndex` xs
-                      getUIIndex _                         _ = Nothing
+                          cmd        = "(get-value (" ++ nm ++ ")" ++ modelIndex ++ ")"
 
-                  r <- ask cmd
+                          bad = unexpected "getModel" cmd ("a value binding for kind: " ++ show k) Nothing
 
-                  let isIntegral sw = isBoolean sw || isBounded sw || isInteger sw
+                          getUIIndex (KUserSort  _ (Right xs)) i = i `elemIndex` xs
+                          getUIIndex _                         _ = Nothing
 
-                      extract (ENum    i) | isIntegral      s = return $ mkConstCW  k (fst i)
-                      extract (EReal   i) | isReal          s = return $ CW KReal   (CWAlgReal i)
-                      extract (EFloat  i) | isFloat         s = return $ CW KFloat  (CWFloat   i)
-                      extract (EDouble i) | isDouble        s = return $ CW KDouble (CWDouble  i)
-                      extract (ECon    i) | isUninterpreted s = return $ CW k       (CWUserSort (getUIIndex k i, i))
-                      extract _                               = bad r Nothing
+                      r <- ask cmd
 
-                  parse r bad $ \case EApp [EApp [ECon v, val]] | v == nm -> extract val
-                                      _                                   -> bad r Nothing
+                      let isIntegral sw = isBoolean sw || isBounded sw || isInteger sw
+
+                          extract (ENum    i) | isIntegral      s = return $ mkConstCW  k (fst i)
+                          extract (EReal   i) | isReal          s = return $ CW KReal   (CWAlgReal i)
+                          extract (EFloat  i) | isFloat         s = return $ CW KFloat  (CWFloat   i)
+                          extract (EDouble i) | isDouble        s = return $ CW KDouble (CWDouble  i)
+                          extract (ECon    i) | isUninterpreted s = return $ CW k       (CWUserSort (getUIIndex k i, i))
+                          extract _                               = bad r Nothing
+
+                      parse r bad $ \case EApp [EApp [ECon v, val]] | v == nm -> extract val
+                                          _                                   -> bad r Nothing
 
 -- | Check for satisfiability.
 checkSat :: Query CheckSatResult
@@ -326,7 +332,7 @@ getAllSatResult = do queryDebug ["Checking Satisfiability, all solutions.."]
                                 Unsat -> return []
                                 Unk   -> do queryDebug ["Solver returned unknown, terminating query."]
                                             return []
-                                Sat   -> do assocs <- mapM (\(sval, (sw, n)) -> do cw <- getValueCW sw
+                                Sat   -> do assocs <- mapM (\(sval, (sw, n)) -> do cw <- getValueCW Nothing sw
                                                                                    return (n, (sval, cw))) vars
 
                                             let m = Satisfiable cfg SMTModel { modelObjectives = []
