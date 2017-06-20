@@ -34,7 +34,6 @@ module Data.SBV.Control.Query (
 
 import Control.Monad            (unless)
 import Control.Monad.State.Lazy (get)
-import Control.Monad.Trans      (liftIO)
 
 import Data.List     (unzip3, intercalate, nubBy, sortBy, elemIndex)
 import Data.Function (on)
@@ -47,8 +46,6 @@ import Data.SBV.Utils.SExpr
 
 import Data.SBV.Control.Types
 import Data.SBV.Control.Utils
-
-import Data.IORef (readIORef)
 
 -- | An Assignment of a model binding
 data Assignment = Assign SVal CW
@@ -202,9 +199,9 @@ getSMTResultWithObjectives = do cfg <- getConfig
 -- context. See 'getSMTResult' for a variant that issues a check-sat first and
 -- returns an 'SMTResult'.
 getModel :: Query SMTModel
-getModel = do State{runMode, rinps} <- get
+getModel = do State{runMode} <- get
               cfg  <- getConfig
-              inps <- liftIO $ reverse <$> readIORef rinps
+              inps <- getQuantifiedInputs
               let vars :: [NamedSymVar]
                   vars = case runMode of
                            m@CodeGen         -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
@@ -231,8 +228,7 @@ getModelWithObjectives :: Query SMTModel
 getModelWithObjectives = do -- When we start, check-sat is already issued, and we are looking at objective values
                             r <- retrieveResponse Nothing
 
-                            State{rinps} <- get
-                            inpSWs <- liftIO $ (reverse . map (fst . snd)) <$> readIORef rinps
+                            inpSWs <- map (fst . snd) <$> getQuantifiedInputs
 
                             let bad = unexpected "getModelWithObjectives" "check-sat" "a list of objective values" Nothing
 
@@ -516,12 +512,11 @@ SBV a |-> v = case literal v of
 -- | Produce the query result from an assignment.
 mkResult :: [Assignment] -> Query SMTResult
 mkResult asgns = do QueryState{queryConfig} <- getQueryState
+                    inps <- getQuantifiedInputs
 
                     let grabValues st = do let extract (Assign s n) = sbvToSW st (SBV s) >>= \sw -> return (sw, n)
 
                                            modelAssignment <- mapM extract asgns
-
-                                           inps <- reverse <$> readIORef (rinps st)
 
                                            -- sanity checks
                                            --     - All existentials should be given a value
