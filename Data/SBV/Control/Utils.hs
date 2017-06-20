@@ -17,7 +17,7 @@
 module Data.SBV.Control.Utils (
        io
      , ask, send, getValue, getValueCW, getUnsatAssumptions
-     , getQueryState, modifyQueryState, getConfig, getObjectives
+     , getQueryState, modifyQueryState, getConfig, getObjectives, getQuantifiedInputs
      , checkSat, checkSatUsing, getAllSatResult
      , inNewContext
      , parse
@@ -275,6 +275,11 @@ checkSatUsing cmd = do let bad = unexpected "checkSat" cmd "one of sat/unsat/unk
                                            ECon "unknown" -> return Unk
                                            _              -> bad r Nothing
 
+-- | What are the top level inputs?
+getQuantifiedInputs :: Query [(Quantifier, NamedSymVar)]
+getQuantifiedInputs = do State{rinps} <- get
+                         liftIO $ reverse <$> readIORef rinps
+
 -- | Repeatedly issue check-sat, after refuting the previous model.
 -- The bool is true if the model is unique upto prefix existentials.
 getAllSatResult :: Query (Bool, [SMTResult])
@@ -282,10 +287,10 @@ getAllSatResult = do queryDebug ["Checking Satisfiability, all solutions.."]
 
                      cfg <- getConfig
 
-                     State{rinps, rUsedKinds} <- get
+                     State{rUsedKinds} <- get
 
                      ki    <- liftIO $ readIORef rUsedKinds
-                     qinps <- liftIO $ reverse <$> readIORef rinps
+                     qinps <- getQuantifiedInputs
 
                      let usorts = [s | us@(KUserSort s _) <- Set.toList ki, isFree us]
 
