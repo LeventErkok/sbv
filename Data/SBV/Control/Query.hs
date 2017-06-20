@@ -12,6 +12,7 @@
 {-# LANGUAGE LambdaCase     #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TupleSections  #-}
+{-# LANGUAGE Rank2Types     #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -35,7 +36,7 @@ import Control.Monad            (unless)
 import Control.Monad.State.Lazy (get)
 import Control.Monad.Trans      (liftIO)
 
-import Data.List     (unzip3, intercalate, nubBy, sortBy)
+import Data.List     (unzip3, intercalate, nubBy, sortBy, elemIndex)
 import Data.Function (on)
 
 import Data.SBV.Core.Data
@@ -163,14 +164,14 @@ getOption f = case f undefined of
                                     e                  -> continue e (bad r)
 
         string c (ECon s) _ = return $ Just $ c s
-        string _ e        k = k $ Just $ "Expected string, but got: " ++ show (serialize False e)
+        string _ e        k = k $ Just ["Expected string, but got: " ++ show (serialize False e)]
 
         bool c (ENum (0, _)) _ = return $ Just $ c False
         bool c (ENum (1, _)) _ = return $ Just $ c True
-        bool _ e             k = k $ Just $ "Expected boolean, but got: " ++ show (serialize False e)
+        bool _ e             k = k $ Just ["Expected boolean, but got: " ++ show (serialize False e)]
 
         integer c (ENum (i, _)) _ = return $ Just $ c i
-        integer _ e             k = k $ Just $ "Expected integer, but got: " ++ show (serialize False e)
+        integer _ e             k = k $ Just ["Expected integer, but got: " ++ show (serialize False e)]
 
         -- free format, really
         stringList c e _ = return $ Just $ c $ stringsOf e
@@ -230,18 +231,67 @@ getModelWithObjectives :: Query SMTModel
 getModelWithObjectives = do -- When we start, check-sat is already issued, and we are looking at objective values
                             r <- retrieveResponse Nothing
 
+                            State{rinps} <- get
+                            inpSWs <- liftIO $ (reverse . map (fst . snd)) <$> readIORef rinps
+
                             let bad = unexpected "getModelWithObjectives" "check-sat" "a list of objective values" Nothing
 
-                                objectiveValues = parse r bad $ \case EApp (ECon "objectives" : es) -> map getObjValue es
+                                objectiveValues = parse r bad $ \case EApp (ECon "objectives" : es) -> map (getObjValue (bad r Nothing) inpSWs) es
                                                                       _                             -> bad r Nothing
- 
+
                             -- Now do a regular getModel call, and return together with the objectives
                             m <- getModel
                             return m {modelObjectives = objectiveValues}
 
 -- | Parse an objective value out.
-getObjValue :: SExpr -> (String, GeneralizedCW)
-getObjValue _ = error "tbd"
+getObjValue :: (forall a. Maybe [String] -> a) -> [SW] -> SExpr -> (String, GeneralizedCW)
+getObjValue bailOut inpSWs (EApp [ECon nm, v]) = (nm, extract v)
+  where s :: SW
+        s = case [sw | sw <- inpSWs, show sw == nm] of
+              [sw] -> sw
+              _    -> bailOut $ Just [ "Unknown objective value for " ++ nm
+                                     , "Was expecting one of: " ++ intercalate ", "  (map show inpSWs)
+                                     ]
+
+        k = kindOf s
+
+        isIntegral sw = isBoolean sw || isBounded sw || isInteger sw
+
+        getUIIndex (KUserSort  _ (Right xs)) i = i `elemIndex` xs
+        getUIIndex _                         _ = Nothing
+
+        extract (ENum    i) | isIntegral      s = RegularCW  $ mkConstCW  k (fst i)
+        extract (EReal   i) | isReal          s = RegularCW  $ CW KReal   (CWAlgReal i)
+        extract (EFloat  i) | isFloat         s = RegularCW  $ CW KFloat  (CWFloat   i)
+        extract (EDouble i) | isDouble        s = RegularCW  $ CW KDouble (CWDouble  i)
+        extract (ECon    i) | isUninterpreted s = RegularCW  $ CW k       (CWUserSort (getUIIndex k i, i))
+
+        -- Exhausted regular values, look for infinities and such:
+        extract val                             = ExtendedCW $ cvt (simplify val)
+
+        -- Convert to an extended expression. Hopefully complete!
+        cvt :: SExpr -> ExtCW
+        cvt (ECon "oo")                    = Infinite  k
+        cvt (ECon "epsilon")               = Epsilon   k
+        cvt (EApp [ECon "interval", x, y]) = Interval  (cvt x) (cvt y)
+        cvt (ENum    (i, _))               = BoundedCW $ mkConstCW k i
+        cvt (EReal   r)                    = BoundedCW $ CW k $ CWAlgReal r
+        cvt (EFloat  f)                    = BoundedCW $ CW k $ CWFloat   f
+        cvt (EDouble d)                    = BoundedCW $ CW k $ CWDouble  d
+        cvt (EApp [ECon "+", x, y])        = AddExtCW (cvt x) (cvt y)
+        cvt (EApp [ECon "*", x, y])        = MulExtCW (cvt x) (cvt y)
+        -- Nothing else should show up, hopefully!
+        cvt e = bailOut $ Just [ "Unable to understand solver output."
+                               , "While trying to process: " ++ show e
+                               ]
+
+        -- drop the pesky to_real's that Z3 produces.. Cool but useless.
+        simplify :: SExpr -> SExpr
+        simplify (EApp [ECon "to_real", n]) = n
+        simplify (EApp xs)                  = EApp (map simplify xs)
+        simplify e                          = e
+getObjValue bailOut _ _ = bailOut Nothing
+
 
 -- | Check for satisfiability, under the given conditions. Similar to 'checkSat'
 -- except it allows making further assumptions as captured by the first argument
@@ -372,7 +422,6 @@ getUnsatCore = do
                                   , "so the solver will be ready to compute unsat cores,"
                                   , "and that there is a model by first issuing a 'checkSat' call."
                                   ]
-
 
         r <- ask cmd
 

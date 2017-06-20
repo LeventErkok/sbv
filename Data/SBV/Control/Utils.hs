@@ -428,13 +428,13 @@ timeout n q = do modifyQueryState (\qs -> qs {queryTimeOutValue = Just n})
                  return r
 
 -- | Bail out if a parse goes bad
-parse :: String -> (String -> Maybe String -> a) -> (SExpr -> a) -> a
+parse :: String -> (String -> Maybe [String] -> a) -> (SExpr -> a) -> a
 parse r fCont sCont = case parseSExpr r of
-                        Left  e   -> fCont r (Just e)
+                        Left  e   -> fCont r (Just [e])
                         Right res -> sCont res
 
 -- | Bail out if we don't get what we expected
-unexpected :: String -> String -> String -> Maybe [String] -> String -> Maybe String -> a
+unexpected :: String -> String -> String -> Maybe [String] -> String -> Maybe [String] -> a
 unexpected ctx sent expected mbHint received mbReason = error $ unlines $ [
           ""
         , "*** Data.SBV: Unexpected response from the solver."
@@ -443,6 +443,6 @@ unexpected ctx sent expected mbHint received mbReason = error $ unlines $ [
         , "***    Expected: " ++ expected
         ]
      ++ [ "***    Received: " ++ received          | isNothing mbReason  ]
-     ++ [ "***    Reason  : " ++ r                 | Just r <- [mbReason]]
+     ++ [ "***    Reason  : " ++ intercalate tab r | Just r <- [mbReason]]
      ++ [ "***    Hint    : " ++ intercalate tab r | Just r <- [mbHint]]
  where tab = "\n***              "
