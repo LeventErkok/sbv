@@ -62,6 +62,7 @@ import Data.SBV.SMT.SMTLib
 import Data.SBV.Utils.TDiff
 
 import qualified Data.SBV.Control       as Control
+import qualified Data.SBV.Control.Query as Control
 import qualified Data.SBV.Control.Utils as Control
 
 import Control.DeepSeq (rnf)
@@ -424,7 +425,7 @@ optimizeWith config style = runWithQuery True opt config
 
 -- | Construct a lexicographic optimization result
 optLexicographic :: Query OptimizeResult
-optLexicographic = error "optLexicographic"
+optLexicographic = LexicographicResult <$> Control.getSMTResultWithObjectives
 
 -- | Construct an independent optimization result
 optIndependent :: Query OptimizeResult

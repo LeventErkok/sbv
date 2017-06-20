@@ -21,7 +21,7 @@ module Data.SBV.Control.Query (
      , push, pop, getAssertionStackDepth, echo
      , resetAssertions, exit
      , getAssertions
-     , getValue, getModel, getSMTResult, getAllSatResult
+     , getValue, getModel, getSMTResult, getSMTResultWithObjectives, getAllSatResult
      , SMTOption(..)
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
      , Logic(..), Assignment(..)
@@ -184,6 +184,19 @@ getSMTResult = do cfg <- getConfig
                     Sat   -> Satisfiable cfg <$> getModel
                     Unk   -> Unknown     cfg <$> getModel
 
+-- | Issue check-sat and get an SMT result together with objectives to form a result out.
+getSMTResultWithObjectives :: Query SMTResult
+getSMTResultWithObjectives = do cfg <- getConfig
+                                cs  <- checkSat
+                                case cs of
+                                  Unsat -> return $ Unsatisfiable cfg
+                                  Sat   -> classifyModel cfg <$> getModelWithObjectives
+                                  Unk   -> Unknown       cfg <$> getModelWithObjectives
+   where classifyModel :: SMTConfig -> SMTModel -> SMTResult
+         classifyModel cfg m = case filter (not . isRegularCW . snd) (modelObjectives m) of
+                                 [] -> Satisfiable cfg m
+                                 _  -> SatExtField cfg m
+
 -- | Collect model values. It is implicitly assumed that we are in a check-sat
 -- context. See 'getSMTResult' for a variant that issues a check-sat first and
 -- returns an 'SMTResult'.
@@ -209,6 +222,26 @@ getModel = do State{runMode, rinps} <- get
               return SMTModel { modelObjectives = []
                               , modelAssocs     = assocs
                               }
+
+-- | Collect model values, together with objectives.
+-- NB. This is very much likely Z3 specific, and will need to be reworked
+-- if objectives find their way into proper SMTLib treatment.
+getModelWithObjectives :: Query SMTModel
+getModelWithObjectives = do -- When we start, check-sat is already issued, and we are looking at objective values
+                            r <- retrieveResponse Nothing
+
+                            let bad = unexpected "getModelWithObjectives" "check-sat" "a list of objective values" Nothing
+
+                                objectiveValues = parse r bad $ \case EApp (ECon "objectives" : es) -> map getObjValue es
+                                                                      _                             -> bad r Nothing
+ 
+                            -- Now do a regular getModel call, and return together with the objectives
+                            m <- getModel
+                            return m {modelObjectives = objectiveValues}
+
+-- | Parse an objective value out.
+getObjValue :: SExpr -> (String, GeneralizedCW)
+getObjValue _ = error "tbd"
 
 -- | Check for satisfiability, under the given conditions. Similar to 'checkSat'
 -- except it allows making further assumptions as captured by the first argument
