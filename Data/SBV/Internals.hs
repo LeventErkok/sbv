@@ -44,7 +44,7 @@ module Data.SBV.Internals (
 
   -- * Coordinating with the solver
   -- $coordinateSolverInfo
-  , sendStringToSolver, sendRequestToSolver, retrieveStringFromSolver, synchronizeSolverComms
+  , sendStringToSolver, sendRequestToSolver, retrieveResponseFromSolver, synchronizeSolverComms
 
   ) where
 
@@ -80,8 +80,8 @@ sendStringToSolver = Query.send False
 -- If the time-out is exceeded, then we will raise an error. Note that this is inherently
 -- dangerous as it can put the solver in an arbitrary state and confuse SBV. If you use this
 -- feature, you are on your own!
-retrieveStringFromSolver :: Maybe Int -> Query String
-retrieveStringFromSolver = Query.retrieveString
+retrieveResponseFromSolver :: Maybe Int -> Query String
+retrieveResponseFromSolver = Query.retrieveResponse
 
 -- | Send an arbitrary string to the solver in a query, and return a response.
 -- Note that this is inherently dangerous as it can put the solver in an arbitrary
@@ -103,7 +103,7 @@ synchronizeSolverComms mbTo = do ts  <- Query.io (show <$> getZonedTime)
 
                                  Query.queryDebug ["** Attempting to synchronize with tag: " ++ tag]
 
-                                 let loop = do s <- retrieveStringFromSolver mbTo
+                                 let loop = do s <- retrieveResponseFromSolver mbTo
                                                unless (s == tag) $  do Query.queryDebug ["*** Synchronization loop, ignoring response: " ++ s]
                                                                        loop
 

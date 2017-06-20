@@ -16,7 +16,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Data.SBV.Control.Query (
-       send, ask, retrieveString
+       send, ask, retrieveResponse
      , CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming, getUnsatCore, getProof, getAssignment, getOption
      , push, pop, getAssertionStackDepth, echo
      , resetAssertions, exit

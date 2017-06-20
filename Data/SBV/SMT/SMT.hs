@@ -540,7 +540,7 @@ runSolver cfg ctx execPath opts pgm continuation
  = do let nm  = show (name (solver cfg))
           msg = when (verbose cfg) . mapM_ (putStrLn . ("*** " ++))
 
-      (send, ask, getStringFromSolver, cleanUp, pid) <- do
+      (send, ask, getResponseFromSolver, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
 
                 let -- send a command down, but check that we're balanced in parens. If we aren't
@@ -569,10 +569,10 @@ runSolver cfg ctx execPath opts pgm continuation
                                   in if null cmd || ";" `isPrefixOf` cmd
                                      then return "success"
                                      else do send mbTimeOut command
-                                             getStringFromSolver (Just command) mbTimeOut
+                                             getResponseFromSolver (Just command) mbTimeOut
 
-                    getStringFromSolver :: Maybe String -> Maybe Int -> IO String
-                    getStringFromSolver mbCommand mbTimeOut = do
+                    getResponseFromSolver :: Maybe String -> Maybe Int -> IO String
+                    getResponseFromSolver mbCommand mbTimeOut = do
                                 response <- go 0 []
                                 let collated = intercalate "\n" $ reverse response
                                 recordTranscript (transcript cfg) $ Right collated
@@ -659,7 +659,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                     ++ [ "*** Std-out      : " ++ intercalate "\n                   " (lines out)]
                                                                     ++ [ "*** Std-err      : " ++ intercalate "\n                   " (lines err)]
                                                                     ++ ["Giving up.."]
-                return (send, ask, getStringFromSolver, cleanUp, pid)
+                return (send, ask, getResponseFromSolver, cleanUp, pid)
 
       let executeSolver = do let sendAndGetSuccess :: Maybe Int -> String -> IO ()
                                  sendAndGetSuccess mbTimeOut l
@@ -734,7 +734,7 @@ runSolver cfg ctx execPath opts pgm continuation
                              -- Prepare the query context and ship it off
                              let qs = QueryState { queryAsk                 = ask
                                                  , querySend                = send
-                                                 , queryRetrieveString      = getStringFromSolver Nothing
+                                                 , queryRetrieveResponse    = getResponseFromSolver Nothing
                                                  , queryConfig              = cfg
                                                  , queryTimeOutValue        = Nothing
                                                  , queryAssertionStackDepth = 0

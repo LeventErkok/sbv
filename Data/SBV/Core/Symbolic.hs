@@ -330,7 +330,7 @@ objectiveName (AssertSoft s _ _) = s
 -- | The state we keep track of as we interact with the solver
 data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -> IO String
                              , querySend                :: Maybe Int -> String -> IO ()
-                             , queryRetrieveString      :: Maybe Int -> IO String
+                             , queryRetrieveResponse    :: Maybe Int -> IO String
                              , queryConfig              :: SMTConfig
                              , queryTimeOutValue        :: Maybe Int
                              , queryAssertionStackDepth :: Int

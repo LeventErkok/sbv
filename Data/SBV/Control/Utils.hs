@@ -24,7 +24,7 @@ module Data.SBV.Control.Utils (
      , unexpected
      , timeout
      , queryDebug
-     , retrieveString
+     , retrieveResponse
      ) where
 
 import Data.List  (sortBy, intercalate, elemIndex, partition, groupBy, tails)
@@ -170,17 +170,22 @@ send requireSuccess s = do
                        case words r of
                          ["success"] -> when (verbose queryConfig) $ io $ putStrLn $ align "[GOOD] " s
                          _           -> do case queryTimeOutValue of
-                                             Nothing -> io $ putStrLn $ align "[FAIL]  " s
+                                             Nothing -> io $ putStrLn $ align "[FAIL] " s
                                              Just i  -> io $ putStrLn $ align ("[FAIL, TimeOut: " ++ showTimeoutValue i ++ "]  ") s
                                            unexpected "Command" s "success" Nothing r Nothing
 
                else io $ querySend queryTimeOutValue s  -- fire and forget. if you use this, you're on your own!
 
--- | Retrieve string from the solver. Should only be used for internal purposes. Use 'send'/'ask'. If the time-out
+-- | Retrieve a response from the solver, that is a valid s-expression. Should only
+-- be used for internal purposes. Use 'send'/'ask'. If the time-out
 -- is given and and is exceeded by the solver, then we will raise an error.
-retrieveString :: Maybe Int -> Query String
-retrieveString mbTo = do QueryState{queryRetrieveString} <- getQueryState
-                         io $ queryRetrieveString mbTo
+retrieveResponse :: Maybe Int -> Query String
+retrieveResponse mbTo = do QueryState{queryRetrieveResponse, queryConfig} <- getQueryState
+                           s <- io $ queryRetrieveResponse mbTo
+                           when (verbose queryConfig) $ io $ do
+                                let align tag multi = intercalate "\n" $ zipWith (++) (tag : repeat (replicate (length tag) ' ')) (filter (not . null) (lines multi))
+                                putStrLn $ align "[RECV] " s
+                           return s
 
 -- | A class which allows for sexpr-conversion to values
 class SMTValue a where
