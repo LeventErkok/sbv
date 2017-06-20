@@ -37,7 +37,7 @@ import Data.SBV
 --
 -- We have:
 --
--- >>> optimize production
+-- >>> optimize Lexicographic production
 -- Optimal model:
 --   X     = 45 :: Integer
 --   Y     =  6 :: Integer

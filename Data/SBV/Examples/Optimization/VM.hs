@@ -27,7 +27,7 @@ import Data.SBV
 --
 -- We have:
 --
--- >>> optimize allocate
+-- >>> optimize Lexicographic allocate
 -- Optimal model:
 --   x11         = False :: Bool
 --   x12         = False :: Bool

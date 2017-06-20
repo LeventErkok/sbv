@@ -19,7 +19,7 @@ import Data.SBV
 --
 -- We have:
 --
--- >>> optimize problem
+-- >>> optimize (OptimizePriority Independent) problem
 -- Objective "one-x": Optimal in an extension field:
 --   one-x =                    oo :: Integer
 --   min_y = 7.0 + (2.0 * epsilon) :: Real
@@ -43,7 +43,3 @@ problem = do x <- sInteger "x"
              minimize "min_y" $ 2+y+z
 
              minimize "min_z" z
-
-             -- Optimize the goals independently to avoid
-             -- interaction in the lexicographic order
-             tactic $ OptimizePriority Independent

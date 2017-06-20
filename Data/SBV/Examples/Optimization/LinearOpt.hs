@@ -24,7 +24,7 @@ import Data.SBV
 --          4. x1 >= 0
 --          5. x2 >= 0
 --
--- >>> optimize problem
+-- >>> optimize Lexicographic problem
 -- Optimal model:
 --   x1   =  47 % 9 :: Real
 --   x2   =  20 % 9 :: Real

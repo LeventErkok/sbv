@@ -24,6 +24,10 @@
     occasional explicit mention of solvers in your code, if you were using
     bridge modules to start with.
 
+  * Optimization routines have been changed to take a priority as an argument, (i.e.,
+    Lexicographic, Independent, etc.). The old method of supplying the priority
+    via tactics is no longer supported.
+
   * Pareto-front extraction has been reworked, reflecting the changes in Z3 for
     this functionality. Since pareto-fronts can be infinite in number, the user
     is now allowed to specify a "limit" to stop the solver from querying ad
