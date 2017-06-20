@@ -39,7 +39,7 @@ module Data.SBV.Provers.Prover (
 import Data.Char         (isSpace)
 import Data.List         (intercalate)
 
-import Control.Monad        (when, mplus)
+import Control.Monad        (when, unless, mplus)
 import Control.Monad.Reader (ask)
 import Control.Monad.Trans  (liftIO)
 import Control.Monad.State  (evalStateT)
@@ -395,13 +395,41 @@ satWith = runWithQuery True $ SatResult <$> Control.getSMTResult
 optimizeWith :: Provable a => SMTConfig -> OptimizeStyle -> a -> IO OptimizeResult
 optimizeWith config style = runWithQuery True opt config
   where opt = do objectives <- Control.getObjectives
+                 qinps      <- Control.getQuantifiedInputs
 
-                 when (null objectives) $ error "*** Data.SBV: Unsupported call to optimize when no objectives are present. Use \"sat\" for plain satisfaction"
+                 when (null objectives) $
+                        error $ unlines [ ""
+                                        , "*** Data.SBV: Unsupported call to optimize when no objectives are present."
+                                        , "*** Use \"sat\" for plain satisfaction"
+                                        ]
 
-                 let optimizerDirectives = map minmax objectives ++ priority style
-                       where minmax (Minimize   _  (_, v))     = "(minimize "    ++ show v ++ ")"
-                             minmax (Maximize   _  (_, v))     = "(maximize "    ++ show v ++ ")"
-                             minmax (AssertSoft nm (_, v) mbp) = "(assert-soft " ++ show v ++ penalize mbp ++ ")"
+                 unless (supportsOptimization (capabilities (solver config))) $
+                        error $ unlines [ ""
+                                        , "*** Data.SBV: The backend solver " ++ show (name (solver config)) ++ "does not support optimization goals."
+                                        , "*** Please use a solver that has support, such as z3"
+                                        ]
+
+                 let needsUniversalOpt = let universals = [s | (ALL, (s, _)) <- qinps]
+                                             check (x, y) nm = [nm | any (`elem` universals) [x, y]]
+                                             isUniversal (Maximize   nm xy)   = check xy nm
+                                             isUniversal (Minimize   nm xy)   = check xy nm
+                                             isUniversal (AssertSoft nm xy _) = check xy nm
+                                         in  concatMap isUniversal objectives
+
+                 unless (null needsUniversalOpt) $
+                        error $ unlines [ ""
+                                        , "*** Data.SBV: Problem needs optimization of universally quantified metric(s):"
+                                        , "***"
+                                        , "***          " ++  unwords needsUniversalOpt
+                                        , "***"
+                                        , "*** Optimization is only meaningful existentially quantified values."
+                                        ]
+
+                 let optimizerDirectives = concatMap minmax objectives ++ priority style
+                       where mkEq (x, y) = "(assert (= " ++ show x ++ " " ++ show y ++ "))"
+                             minmax (Minimize   _  xy@(_, v))     = [mkEq xy, "(minimize "    ++ show v ++ ")"]
+                             minmax (Maximize   _  xy@(_, v))     = [mkEq xy, "(maximize "    ++ show v ++ ")"]
+                             minmax (AssertSoft nm xy@(_, v) mbp) = [mkEq xy, "(assert-soft " ++ show v ++ penalize mbp ++ ")"]
                                where penalize DefaultPenalty    = ""
                                      penalize (Penalty w mbGrp)
                                         | w <= 0         = error $ unlines [ "SBV.AssertSoft: Goal " ++ show nm ++ " is assigned a non-positive penalty: " ++ shw
@@ -502,9 +530,7 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels smtOptions tactics 
 
         when hasQueries $ maybe (return ()) error $ checkQueryApplicability cfgIn hasCaseSplits
 
-        let mbOptInfo
-                | not hasObjectives = Nothing
-                | True              = Just (optimizePriority, length objectives)
+        let mbOptInfo = Nothing
 
         if hasObjectives
 
@@ -522,18 +548,16 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels smtOptions tactics 
                                 then cont finalConfig ctx mbOptInfo (CasePath (map (snd . snd) levels))
                                 else caseSplit finalConfig ctx mbOptInfo shouldCheckCaseVacuity (parallelCase, hasPar) isSat (wrap, unwrap) levels smtOptions chatty cases cont
 
-  where (caseSplits, checkCaseVacuity, parallelCases, checkConstrVacuity, checkUsing, useSolvers, optimizePriorities, queryUsings)
-                = foldr (flip classifyTactics) ([], [], [], [], [], [], [], []) tactics
+  where (caseSplits, checkCaseVacuity, parallelCases, checkConstrVacuity, checkUsing, queryUsings)
+                = foldr (flip classifyTactics) ([], [], [], [], [], []) tactics
 
-        classifyTactics (a, b, c, d, e, f, g, h) = \case
-                    t@CaseSplit{}           -> (t:a,   b,   c,   d,   e,   f,   g,   h)
-                    t@CheckCaseVacuity{}    -> (  a, t:b,   c,   d,   e,   f,   g,   h)
-                    t@ParallelCase{}        -> (  a,   b, t:c,   d,   e,   f,   g,   h)
-                    t@CheckConstrVacuity{}  -> (  a,   b,   c, t:d,   e,   f,   g,   h)
-                    t@CheckUsing{}          -> (  a,   b,   c,   d, t:e,   f,   g,   h)
-                    t@UseSolver{}           -> (  a,   b,   c,   d,   e, t:f,   g,   h)
-                    t@OptimizePriority{}    -> (  a,   b,   c,   d,   e,   f, t:g,   h)
-                    t@QueryUsing{}          -> (  a,   b,   c,   d,   e,   f,   g, t:h)
+        classifyTactics (a, b, c, d, e, f) = \case
+                    t@CaseSplit{}           -> (t:a,   b,   c,   d,   e,   f)
+                    t@CheckCaseVacuity{}    -> (  a, t:b,   c,   d,   e,   f)
+                    t@ParallelCase{}        -> (  a,   b, t:c,   d,   e,   f)
+                    t@CheckConstrVacuity{}  -> (  a,   b,   c, t:d,   e,   f)
+                    t@CheckUsing{}          -> (  a,   b,   c,   d, t:e,   f)
+                    t@QueryUsing{}          -> (  a,   b,   c,   d,   e, t:f)
 
         hasObjectives = not $ null objectives
 
@@ -542,11 +566,6 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels smtOptions tactics 
         hasQueries    = not $ null queryUsings
 
         parallelCase  = not $ null parallelCases
-
-        optimizePriority = case [s | OptimizePriority s <- optimizePriorities] of
-                             []  -> Lexicographic
-                             [s] -> s
-                             ss  -> error $ "SBV.OptimizePriority: Multiple optimization priorities found, at most one is allowed: " ++ intercalate "," (map show ss)
 
         shouldCheckCaseVacuity = case [b | CheckCaseVacuity b <- checkCaseVacuity] of
                                    [] -> True   -- default is to check-case-vacuity
@@ -567,14 +586,9 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels smtOptions tactics 
                               [f] -> c { customQuery = Just f }
                               _   -> error "SBV.QueryUsing: Multiple user-continuations found, at most one is allowed."
 
-        configToUse = case [s | UseSolver s <- useSolvers] of
-                        []  -> cfgIn
-                        [s] -> s
-                        ss  -> error $ "SBV.UseSolver: Multiple UseSolver tactics found, at most one is allowed: " ++ intercalate "," (map show ss)
-
         grabSetOptions c = c { solverSetOptions = smtOptions ++ solverSetOptions c }
 
-        finalConfig = grabQueryUsing . grabSetOptions . grabCheckUsing $ configToUse
+        finalConfig = grabQueryUsing . grabSetOptions . grabCheckUsing $ cfgIn
 
 -- | Should we allow a custom query? Returns the reason why we shouldn't, if there is one
 checkQueryApplicability :: SMTConfig -> Bool -> Maybe String
@@ -585,7 +599,7 @@ checkQueryApplicability cfgIn hasCaseSplits =
         -- Check if the underlying solver has support for it
         checkSupport True  = Nothing
         checkSupport False = noInteractive [ "Chosen solver does not support interactive queries:"
-                                           , "   Solver: " ++ show (solver cfgIn)
+                                           , "   Solver: " ++ show (name (solver cfgIn))
                                            ]
 
         -- Can execute queries if there are case splits. This is an interesting (but probablt inconsequential) restriction. The
