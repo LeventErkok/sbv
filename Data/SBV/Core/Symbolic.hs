@@ -1308,7 +1308,6 @@ data SMTConfig = SMTConfig {
        , sBranchTimeOut   :: Maybe Int                 -- ^ How much time to give to the solver for each call of 'sBranch' check. (In seconds. Default: No limit.)
        , printBase        :: Int                       -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
        , printRealPrec    :: Int                       -- ^ Print algebraic real values with this precision. (SReal, default: 16)
-       , optimizeArgs     :: [String]                  -- ^ Additional commands to pass before check-sat is issued
        , satCmd           :: String                    -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
        , isNonModelVar    :: String -> Bool            -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
        , transcript       :: Maybe FilePath            -- ^ If Just, the entire interaction will be recorded as a playable file (for debugging purposes mostly)

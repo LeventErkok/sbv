@@ -18,11 +18,11 @@ import SBVTest
 tests :: TestTree
 tests =
   testGroup "Optimization.Combined"
-    [ goldenVsStringShow "combined1" (optimize combined1)
-    , goldenVsStringShow "combined2" (optimize combined2)
-    , goldenVsStringShow "pareto1"   (optimize pareto1)
-    , goldenVsStringShow "pareto2"   (optimize pareto2)
-    , goldenVsStringShow "boxed1"    (optimize boxed1)
+    [ goldenVsStringShow "combined1" (optimize Lexicographic      combined1)
+    , goldenVsStringShow "combined2" (optimize Lexicographic      combined2)
+    , goldenVsStringShow "pareto1"   (optimize (Pareto Nothing)   pareto1)
+    , goldenVsStringShow "pareto2"   (optimize (Pareto (Just 30)) pareto2)
+    , goldenVsStringShow "boxed1"    (optimize Independent        boxed1)
     ]
 
 combined1 :: Goal
@@ -34,8 +34,6 @@ combined1 = do x <- sInteger "x"
                constrain $ y .< z
                constrain $ z .< 5
                constrain $ x ./= y
-
-               tactic $ OptimizePriority Lexicographic
 
                maximize "max_x" x
                maximize "max_y" y
@@ -52,8 +50,6 @@ combined2 = do a <- sBool "a"
                constrain $ a .== c
                constrain $ bnot (a &&& b)
 
-               tactic $ OptimizePriority Lexicographic
-
 pareto1 :: Goal
 pareto1 = do x <- sInteger "x"
              y <- sInteger "y"
@@ -62,8 +58,6 @@ pareto1 = do x <- sInteger "x"
              constrain $ x .>= 0
              constrain $ 4 .>= y
              constrain $ y .>= 0
-
-             tactic $ OptimizePriority (Pareto Nothing)
 
              minimize "min_x"            x
              maximize "max_x_plus_y"   $ x + y
@@ -75,8 +69,6 @@ pareto2 = do x <- sInteger "x"
 
              constrain $ 5 .>= x
              constrain $ x .>= 0
-
-             tactic $ OptimizePriority (Pareto (Just 20))
 
              minimize "min_x"            x
              maximize "max_y"            y
@@ -95,7 +87,5 @@ boxed1 = do x <- sReal "x"
             maximize "max_x_plus_y" (x + y)
             minimize "min_y"        y
             maximize "max_y"        y
-
-            tactic $ OptimizePriority Independent
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

@@ -32,10 +32,12 @@ module Data.SBV.Provers.Prover (
        , boolector, cvc4, yices, z3, mathSAT, abc, defaultSMTCfg
        , compileToSMTLib, generateSMTBenchmarks
        , internalSATCheck
+       -- Only here temporarily. To be eliminated/reduced once we decide the tactic story
+       , applyTactics, bufferSanity
        ) where
 
 import Data.Char         (isSpace)
-import Data.List         (intercalate, nub)
+import Data.List         (intercalate)
 
 import Control.Monad        (when, mplus)
 import Control.Monad.Reader (ask)
@@ -59,12 +61,13 @@ import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 import Data.SBV.Utils.TDiff
 
-import qualified Data.SBV.Control as Control
+import qualified Data.SBV.Control       as Control
+import qualified Data.SBV.Control.Utils as Control
 
 import Control.DeepSeq (rnf)
 import Control.Exception (bracket)
 
-import qualified Data.IORef as IORef (newIORef, readIORef, writeIORef)
+-- import qualified Data.IORef as IORef (newIORef, readIORef, writeIORef)
 
 import qualified Data.SBV.Provers.Boolector  as Boolector
 import qualified Data.SBV.Provers.CVC4       as CVC4
@@ -82,7 +85,6 @@ mkConfig s smtVersion = SMTConfig { verbose          = False
                                   , transcript       = Nothing
                                   , solver           = s
                                   , smtLibVersion    = smtVersion
-                                  , optimizeArgs     = []
                                   , satCmd           = "(check-sat)"
                                   , isNonModelVar    = const False  -- i.e., everything is a model-variable by default
                                   , roundingMode     = RoundNearestTiesToEven
@@ -290,7 +292,7 @@ allSat :: Provable a => a -> IO AllSatResult
 allSat = allSatWith defaultSMTCfg
 
 -- | Optimize a given collection of `Objective`s
-optimize :: Provable a => a -> IO OptimizeResult
+optimize :: Provable a => OptimizeStyle -> a -> IO OptimizeResult
 optimize = optimizeWith defaultSMTCfg
 
 -- | Check that all the 'sAssert' calls are safe, equivalent to @'safeWith' 'defaultSMTCfg'@
@@ -370,106 +372,69 @@ bufferSanity True  a = bracket before after (const a)
                      hSetBuffering stdout b
                      hFlush stdout
 
--- | Make sure sat/prove calls don't have objectives, and optimize does!
-objectiveCheck :: Bool -> [Objective a] -> String -> IO ()
-objectiveCheck False [] _ = return ()
-objectiveCheck False os w = error $ unlines $ ("\n*** Unsupported call to " ++ show w ++ " in the presence of objective(s):")
-                                            : [ "***\t" ++ intercalate ", " (map objectiveName os)
-                                              , "*** Use \"optimize\" to optimize for these objectives instead of " ++ show w
-                                              ]
-objectiveCheck True []  w = error $ "*** Unsupported call to " ++ w ++ " when no objectives are present. Use \"sat\" for plain satisfaction"
-objectiveCheck True _   _ = return ()
-
 -- | Runs an arbitrary symbolic computation, exposed to the user in SAT mode
 runSMTWith :: SMTConfig -> Symbolic a -> IO a
-runSMTWith = runSMTInMode . SMTMode ISetup True
+runSMTWith cfg a = fst <$> runSymbolic' (SMTMode ISetup True cfg) a
 
--- | Run an SMT config in the given mode
-runSMTInMode :: SBVRunMode -> Symbolic a -> IO a
-runSMTInMode mode a = fst <$> runSymbolic' mode a
+-- | Runs with a query.
+runWithQuery :: Provable a => Bool -> Query b -> SMTConfig -> a -> IO b
+runWithQuery isSAT q cfg a = fst <$> runSymbolic' (SMTMode ISetup isSAT cfg) comp
+  where comp =  do _ <- (if isSAT then forSome_ else forAll_) a >>= output
+                   query q
 
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable predicate => SMTConfig -> predicate -> IO ThmResult
-proveWith config predicate = runSMTInMode (SMTMode ISetup False config) $ do
-                                _ <- forAll_ predicate >>= output
-                                query $ ThmResult <$> Control.getSMTResult
+proveWith = runWithQuery False $ ThmResult <$> Control.getSMTResult
 
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
-satWith config predicate = runSMTInMode (SMTMode ISetup True config) $ do
-                                _ <- forSome_ predicate >>= output
-                                query $ SatResult <$> Control.getSMTResult
+satWith = runWithQuery True $ SatResult <$> Control.getSMTResult
 
 -- | Optimizes the objectives using the given SMT-solver
-optimizeWith :: Provable a => SMTConfig -> a -> IO OptimizeResult
-optimizeWith config a = do
-        msg "Optimizing.."
-        (ctx, sbvPgm@SMTProblem{objectives, tactics}) <- simulate config True [] a
+optimizeWith :: Provable a => SMTConfig -> OptimizeStyle -> a -> IO OptimizeResult
+optimizeWith config style = runWithQuery True opt config
+  where opt = do objectives <- Control.getObjectives
 
-        objectiveCheck True objectives "optimize"
+                 when (null objectives) $ error "*** Data.SBV: Unsupported call to optimize when no objectives are present. Use \"sat\" for plain satisfaction"
 
-        let hasPar  = any isParallelCaseAnywhere tactics
-            style = case nub [s | OptimizePriority s <- tactics] of
-                      []  -> Lexicographic
-                      [s] -> s
-                      ss  -> error $ "SBV: Multiple optimization priorities found: " ++ intercalate ", " (map show ss) ++ ". Please use only one."
+                 let optimizerDirectives = map minmax objectives ++ priority style
+                       where minmax (Minimize   _  (_, v))     = "(minimize "    ++ show v ++ ")"
+                             minmax (Maximize   _  (_, v))     = "(maximize "    ++ show v ++ ")"
+                             minmax (AssertSoft nm (_, v) mbp) = "(assert-soft " ++ show v ++ penalize mbp ++ ")"
+                               where penalize DefaultPenalty    = ""
+                                     penalize (Penalty w mbGrp)
+                                        | w <= 0         = error $ unlines [ "SBV.AssertSoft: Goal " ++ show nm ++ " is assigned a non-positive penalty: " ++ shw
+                                                                           , "All soft goals must have > 0 penalties associated."
+                                                                           ]
+                                        | True           = " :weight " ++ shw ++ maybe "" group mbGrp
+                                        where shw = show (fromRational w :: Double)
 
+                                     group g = " :id " ++ g
 
-            optimizer = case style of
-               Lexicographic -> optLexicographic
-               Independent   -> optIndependent
-               Pareto mbN    -> optPareto mbN
+                             priority Lexicographic = [] -- default, no option needed
+                             priority Independent   = ["(set-option :opt.priority box)"]
+                             priority (Pareto _)    = ["(set-option :opt.priority pareto)"]
 
-        optimizer hasPar config ctx sbvPgm
+                 mapM_ (Control.send True) optimizerDirectives
 
-  where msg = when (verbose config) . putStrLn . ("** " ++)
+                 case style of
+                    Lexicographic -> optLexicographic
+                    Independent   -> optIndependent
+                    Pareto mbN    -> optPareto mbN
 
 -- | Construct a lexicographic optimization result
-optLexicographic :: Bool -> SMTConfig -> State -> SMTProblem -> IO OptimizeResult
-optLexicographic hasPar config ctx sbvPgm@SMTProblem{objectives, smtOptions, tactics} = do
-        result <- bufferSanity hasPar $ applyTactics config ctx (True, hasPar) (id, id) [] smtOptions tactics objectives
-                                      $ callSolver True "Lexicographically optimizing.." [] mwrap sbvPgm
-        return $ LexicographicResult result
-
-  where mwrap [r] = r
-        mwrap xs  = error $ "SBV.optLexicographic: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
+optLexicographic :: Query OptimizeResult
+optLexicographic = error "optLexicographic"
 
 -- | Construct an independent optimization result
-optIndependent :: Bool -> SMTConfig -> State -> SMTProblem -> IO OptimizeResult
-optIndependent hasPar config ctx sbvPgm@SMTProblem{objectives, smtOptions, tactics} = do
-        let ns = map objectiveName objectives
-        result <- bufferSanity hasPar $ applyTactics config ctx (True, hasPar) (wrap ns, unwrap) [] smtOptions tactics objectives
-                                      $ callSolver True "Independently optimizing.." [] mwrap sbvPgm
-        return $ IndependentResult result
-
-  where wrap :: [String] -> SMTResult -> [(String, SMTResult)]
-        wrap ns r = zip ns (repeat r)
-
-        -- the role of unwrap here is to take the result with more info in case a case-split is
-        -- performed and we need to decide in a SAT context.
-        unwrap :: [(String, SMTResult)] -> SMTResult
-        unwrap xs = case [r | (_, r@Satisfiable{}) <- xs] ++ [r | (_, r@SatExtField{}) <- xs] ++ map snd xs of
-                     (r:_) -> r
-                     []    -> error "SBV.optIndependent: Impossible happened: Received no results!"
-
-        mwrap xs
-         | lobs == lxs = zip (map objectiveName objectives) xs
-         | True        = error $ "SBV.optIndependent: Expected " ++ show lobs ++ " objective results, but received: " ++ show lxs ++ ":\n" ++ show (map SatResult xs)
-         where lxs  = length xs
-               lobs = length objectives
+optIndependent :: Query OptimizeResult
+optIndependent = error "optIndependent"
 
 -- | Construct a pareto-front optimization result
-optPareto :: Maybe Int -> Bool -> SMTConfig -> State -> SMTProblem -> IO OptimizeResult
-optPareto mbN hasPar config ctx sbvPgm@SMTProblem{objectives, smtOptions, tactics=origTactics} = do
+optPareto :: Maybe Int -> Query OptimizeResult
+optPareto _mbN = error "optPareto"
 
-        -- make sure we don't have a query already
-        case [() | QueryUsing _ <- origTactics] of
-           [] -> return ()
-           _  -> error $ unlines [ ""
-                                 , "*** Data.SBV: Pareto-front extraction is not supported in the presence of custom queries."
-                                 , "*** Data.SBV: Please report this as a feature request!"
-                                 ]
-
+{-
         -- The only way to communicate back from the tactic is to use an IORef here! This is
         -- totally safe, though I wish there was a better way to do this.
         isParetoLimitReached <- IORef.newIORef False
@@ -505,6 +470,7 @@ optPareto mbN hasPar config ctx sbvPgm@SMTProblem{objectives, smtOptions, tactic
         unwrap xs = case [r | r@Satisfiable{} <- xs] ++ [r | r@SatExtField{} <- xs] ++ xs of
                      (r:_) -> r
                      []    -> error "SBV.optPareto: Impossible happened: Received no results!"
+-}
 
 -- | Apply the given tactics to a problem
 applyTactics :: SMTConfig                                                                -- ^ Solver configuration
@@ -541,7 +507,7 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels smtOptions tactics 
 
         if hasObjectives
 
-           then cont (finalOptConfig objectives) ctx mbOptInfo (Opt objectives)
+           then cont finalConfig ctx mbOptInfo (Opt objectives)
 
            else do -- Check vacuity if asked. If result is Nothing, it means we're good to go.
                    mbRes <- if not shouldCheckConstrVacuity
@@ -608,27 +574,6 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels smtOptions tactics 
         grabSetOptions c = c { solverSetOptions = smtOptions ++ solverSetOptions c }
 
         finalConfig = grabQueryUsing . grabSetOptions . grabCheckUsing $ configToUse
-
-        finalOptConfig goals = finalConfig { optimizeArgs  = optimizeArgs finalConfig ++ optimizerDirectives }
-            where optimizerDirectives
-                        | hasObjectives = map minmax goals ++ style optimizePriority
-                        | True          = []
-
-                  minmax (Minimize   _  (_, v))     = "(minimize "    ++ show v ++ ")"
-                  minmax (Maximize   _  (_, v))     = "(maximize "    ++ show v ++ ")"
-                  minmax (AssertSoft nm (_, v) mbp) = "(assert-soft " ++ show v ++ penalize mbp ++ ")"
-                    where penalize DefaultPenalty    = ""
-                          penalize (Penalty w mbGrp)
-                             | w <= 0         = error $ unlines [ "SBV.AssertSoft: Goal " ++ show nm ++ " is assigned a non-positive penalty: " ++ shw
-                                                                , "All soft goals must have > 0 penalties associated."
-                                                                ]
-                             | True           = " :weight " ++ shw ++ maybe "" group mbGrp
-                             where shw = show (fromRational w :: Double)
-                          group g = " :id " ++ g
-
-                  style Lexicographic = [] -- default, no option needed
-                  style Independent   = ["(set-option :opt.priority box)"]
-                  style (Pareto _)    = ["(set-option :opt.priority pareto)"]
 
 -- | Should we allow a custom query? Returns the reason why we shouldn't, if there is one
 checkQueryApplicability :: SMTConfig -> Bool -> Maybe String
@@ -955,9 +900,7 @@ isVacuousWith config a = do
 
 -- | Find all satisfying assignments using the given SMT-solver
 allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
-allSatWith config predicate = runSMTInMode (SMTMode ISetup True config) $ do
-                                _ <- forSome_ predicate >>= output
-                                query $ AllSatResult <$> Control.getAllSatResult
+allSatWith = runWithQuery True $ AllSatResult <$> Control.getAllSatResult
 
 simulate :: Provable a => SMTConfig -> Bool -> [String] -> a -> IO (State, SMTProblem)
 simulate config isSat comments predicate = do

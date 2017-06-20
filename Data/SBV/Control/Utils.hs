@@ -17,7 +17,7 @@
 module Data.SBV.Control.Utils (
        io
      , ask, send, getValue, getValueCW, getUnsatAssumptions
-     , getQueryState, modifyQueryState, getConfig
+     , getQueryState, modifyQueryState, getConfig, getObjectives
      , checkSat, checkSatUsing, getAllSatResult
      , inNewContext
      , parse
@@ -48,7 +48,7 @@ import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, K
                               , NamedSymVar, SMTConfig(..), Query, SMTModel(..)
                               , QueryState(..), SVal(..), Quantifier(..), cache
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..)
-                              , SolverContext(..), SBool
+                              , SolverContext(..), SBool, Objective(..)
                               )
 import Data.SBV.Core.Symbolic (IncState(..), withNewIncState, State(..), svToSW, registerLabel)
 
@@ -87,6 +87,11 @@ addQueryConstraint mbNm b = do sw <- inNewContext (\st -> do maybe (return ()) (
 -- | Get the current configuration
 getConfig :: Query SMTConfig
 getConfig = queryConfig <$> getQueryState
+
+-- | Get the objectives
+getObjectives :: Query [Objective (SW, SW)]
+getObjectives = do State{rOptGoals} <- get
+                   io $ reverse <$> readIORef rOptGoals
 
 -- | Perform an arbitrary IO action.
 io :: IO a -> Query a
