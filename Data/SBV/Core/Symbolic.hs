@@ -350,8 +350,6 @@ data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-spl
               | ParallelCase                                       -- ^ Run case-splits in parallel. (Default: Sequential.)
               | CheckConstrVacuity Bool                            -- ^ Should "constraints" be checked for vacuity? (Default: False.)
               | CheckUsing         String                          -- ^ Invoke with check-sat-using command, instead of check-sat
-              | UseSolver          SMTConfig                       -- ^ Use this solver (z3, yices, etc.)
-              | OptimizePriority   OptimizeStyle                   -- ^ Use this style for optimize calls. (Default: Lexicographic)
               | QueryUsing         (Query [SMTResult])             -- ^ Use a custom query-engine to extract results.
               deriving (Show, Functor)
 
@@ -373,8 +371,6 @@ instance NFData a => NFData (Tactic a) where
    rnf ParallelCase           = ()
    rnf (CheckConstrVacuity b) = rnf b `seq` ()
    rnf (CheckUsing       s)   = rnf s `seq` ()
-   rnf (UseSolver        s)   = rnf s `seq` ()
-   rnf (OptimizePriority s)   = rnf s `seq` ()
    rnf (QueryUsing       _)   = ()
 
 -- | Is there a parallel-case anywhere?
@@ -1025,8 +1021,6 @@ addSValTactic tac = do st <- ask
                            walk (CheckCaseVacuity b)   = return $ CheckCaseVacuity b
                            walk (CheckConstrVacuity b) = return $ CheckConstrVacuity b
                            walk (CheckUsing s)         = return $ CheckUsing s
-                           walk (UseSolver  s)         = return $ UseSolver  s
-                           walk (OptimizePriority s)   = return $ OptimizePriority s
                            walk (QueryUsing f)         = return $ QueryUsing f
                        tac' <- liftIO $ walk tac
                        liftIO $ modifyState st rTacs (tac':)
@@ -1323,9 +1317,6 @@ data SMTConfig = SMTConfig {
 instance NFData SMTConfig where
   rnf SMTConfig{} = ()
 
-instance Show SMTConfig where
-  show = show . solver
-
 -- | A model, as returned by a solver
 data SMTModel = SMTModel {
         modelObjectives :: [(String, GeneralizedCW)]  -- ^ Mapping of symbolic values to objective values.
@@ -1376,9 +1367,6 @@ data SMTSolver = SMTSolver {
        , engine         :: SMTEngine             -- ^ The solver engine, responsible for interpreting solver output
        , capabilities   :: SolverCapabilities    -- ^ Various capabilities of the solver
        }
-
-instance Show SMTSolver where
-   show = show . name
 
 {-# ANN type FPOp ("HLint: ignore Use camelCase" :: String) #-}
 {-# ANN type PBOp ("HLint: ignore Use camelCase" :: String) #-}
