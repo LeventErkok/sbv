@@ -35,11 +35,11 @@ problem = do x <- free "x"
 --   x = 0 :: Integer
 --   y = 0 :: Integer
 -- Solution #2:
---   x =  1 :: Integer
---   y = -1 :: Integer
--- Solution #3:
 --   x = 1 :: Integer
 --   y = 1 :: Integer
+-- Solution #3:
+--   x =  1 :: Integer
+--   y = -1 :: Integer
 -- Found 3 different solutions.
 --
 -- Note that solutions @2@ and @3@ share the value @x = 1@, since there are
