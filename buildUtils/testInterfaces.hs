@@ -10,8 +10,11 @@ import System.Environment
 badSolvers :: [SMTConfig]
 badSolvers = []
 
+solverName :: SMTConfig -> String
+solverName = show . name . solver
+
 main :: IO ()
-main = do let allSolvers = map (\s -> (show s, s)) [abc, boolector, cvc4, mathSAT, yices, z3]
+main = do let allSolvers = map (\s -> (solverName s, s)) [abc, boolector, cvc4, mathSAT, yices, z3]
 
           args <- getArgs
 
@@ -23,7 +26,7 @@ main = do let allSolvers = map (\s -> (show s, s)) [abc, boolector, cvc4, mathSA
                                                          Just s  -> (c, s) : walk cs
                                      in walk args
 
-              (requiredBad, requiredPresent) = partition (\(n, _) -> n `elem` map show badSolvers) chosenSolvers
+              (requiredBad, requiredPresent) = partition (\(n, _) -> n `elem` map solverName badSolvers) chosenSolvers
 
           mapM_ (test . snd) requiredPresent
 
@@ -34,7 +37,7 @@ main = do let allSolvers = map (\s -> (show s, s)) [abc, boolector, cvc4, mathSA
 
 
           putStrLn $ "Tested OK basic connection to: " ++ intercalate ", " (map fst requiredPresent)
-          unless (null requiredBad) $ putStrLn $ "*** NB: The following solvers are declared bad: " ++ intercalate ", " (map show requiredBad)
+          unless (null requiredBad) $ putStrLn $ "*** NB: The following solvers are declared bad: " ++ intercalate ", " (map (\(n, s)-> show (n, solverName s)) requiredBad)
           unless (null skipped)     $ putStrLn $ "*** NB: The following solvers are skipped: "      ++ intercalate ", " skipped
 
 test :: SMTConfig -> IO ()
@@ -46,7 +49,7 @@ test s = do check  "t0" t0 (== False)
   where check m p f = thm p >>= decide m f
         decide m f r
           | f r  = return ()
-          | True = do putStrLn $ m ++ "[" ++ show s ++ "] FAIL. Got: " ++ show r
+          | True = do putStrLn $ m ++ "[" ++ solverName s ++ "] FAIL. Got: " ++ show r
                       exitFailure
         thm = isTheoremWith s
         models m p f = (extractModels `fmap` allSat p) >>= decide m f . sort
