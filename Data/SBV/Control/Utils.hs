@@ -18,7 +18,7 @@
 module Data.SBV.Control.Utils (
        io
      , ask, send, getValue, getValueCW, getUnsatAssumptions
-     , getQueryState, modifyQueryState, getConfig, getObjectives, getQuantifiedInputs
+     , getQueryState, modifyQueryState, getConfig, getObjectives, getSBVAssertions, getQuantifiedInputs
      , checkSat, checkSatUsing, getAllSatResult
      , inNewContext
      , parse
@@ -63,6 +63,8 @@ import Data.SBV.Control.Types
 
 import qualified Data.Set as Set (toList)
 
+import GHC.Stack.Compat
+
 -- | 'Query' as a 'SolverContext'.
 instance SolverContext Query where
    constrain          = addQueryConstraint Nothing
@@ -93,6 +95,11 @@ getConfig = queryConfig <$> getQueryState
 getObjectives :: Query [Objective (SW, SW)]
 getObjectives = do State{rOptGoals} <- get
                    io $ reverse <$> readIORef rOptGoals
+
+-- | Get the assertions put in via 'sAssert'
+getSBVAssertions :: Query [(String, Maybe CallStack, SW)]
+getSBVAssertions = do State{rAsserts} <- get
+                      io $ reverse <$> readIORef rAsserts
 
 -- | Perform an arbitrary IO action.
 io :: IO a -> Query a
