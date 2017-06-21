@@ -28,14 +28,16 @@ data Solution = Homogeneous    [[Integer]]
 -- * Solving diophantine equations
 --------------------------------------------------------------------------------------------------
 -- | ldn: Solve a (L)inear (D)iophantine equation, returning minimal solutions over (N)aturals.
--- The input is given as a rows of equations, with rhs values separated into a tuple.
-ldn :: [([Integer], Integer)] -> IO Solution
-ldn problem = do solution <- basis (map (map literal) m)
-                 if homogeneous
-                    then return $ Homogeneous solution
-                    else do let ones  = [xs | (1:xs) <- solution]
-                                zeros = [xs | (0:xs) <- solution]
-                            return $ NonHomogeneous ones zeros
+-- The input is given as a rows of equations, with rhs values separated into a tuple. The first
+-- parameter limits the search to bound: In case there are too many solutions, you might want
+-- to limit your search space.
+ldn :: Maybe Int -> [([Integer], Integer)] -> IO Solution
+ldn mbLim problem = do solution <- basis mbLim (map (map literal) m)
+                       if homogeneous
+                           then return $ Homogeneous solution
+                           else do let ones  = [xs | (1:xs) <- solution]
+                                       zeros = [xs | (0:xs) <- solution]
+                                   return $ NonHomogeneous ones zeros
   where rhs = map snd problem
         lhs = map fst problem
         homogeneous = all (== 0) rhs
@@ -48,8 +50,8 @@ ldn problem = do solution <- basis (map (map literal) m)
 -- order using the ordinary less-than relation. (NB. We explicitly tell z3 to use the logic
 -- AUFLIA for this problem, as the BV solver that is chosen automatically has a performance
 -- issue. See: <https://z3.codeplex.com/workitem/88>.)
-basis :: [[SInteger]] -> IO [[Integer]]
-basis m = extractModels `fmap` allSat cond
+basis :: Maybe Int -> [[SInteger]] -> IO [[Integer]]
+basis mbLim m = extractModels `fmap` allSatWith z3{allSatMaxModelCount = mbLim} cond
  where cond = do as <- mkExistVars  n
                  bs <- mkForallVars n
 
@@ -88,7 +90,7 @@ basis m = extractModels `fmap` allSat cond
 -- to the equation given. It's harder to see that they cover all possibilities,
 -- but a moments thought reveals that is indeed the case.
 test :: IO Solution
-test = ldn [([2,1,-1], 2)]
+test = ldn Nothing [([2,1,-1], 2)]
 
 -- | A puzzle: Five sailors and a monkey escape from a naufrage and reach an island with
 -- coconuts. Before dawn, they gather a few of them and decide to sleep first and share
@@ -128,12 +130,18 @@ test = ldn [([2,1,-1], 2)]
 -- Note that this is the minimum solution, that is, we are guaranteed that there's
 -- no solution with less number of coconuts. In fact, any member of @[15625*k-4 | k <- [1..]]@
 -- is a solution, i.e., so are @31246@, @46871@, @62496@, @78121@, etc.
+--
+-- Note that we iteratively deepen our search by requesting increasing number of
+-- solutions to avoid the all-sat pitfall.
 sailors :: IO [Integer]
-sailors = do NonHomogeneous (xs:_) _ <- ldn [ ([1, -5,  0,  0,  0,  0,  0], 1)
-                                            , ([0,  4, -5 , 0,  0,  0,  0], 1)
-                                            , ([0,  0,  4, -5 , 0,  0,  0], 1)
-                                            , ([0,  0,  0,  4, -5,  0,  0], 1)
-                                            , ([0,  0,  0,  0,  4, -5,  0], 1)
-                                            , ([0,  0,  0,  0,  0,  4, -5], 1)
-                                            ]
-             return xs
+sailors = search 1
+  where search i = do soln <- ldn (Just i) [ ([1, -5,  0,  0,  0,  0,  0], 1)
+                                           , ([0,  4, -5 , 0,  0,  0,  0], 1)
+                                           , ([0,  0,  4, -5 , 0,  0,  0], 1)
+                                           , ([0,  0,  0,  4, -5,  0,  0], 1)
+                                           , ([0,  0,  0,  0,  4, -5,  0], 1)
+                                           , ([0,  0,  0,  0,  0,  4, -5], 1)
+                                           ]
+                      case soln of
+                        NonHomogeneous (xs:_) _ -> return xs
+                        _                       -> search (i+1)
