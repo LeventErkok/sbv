@@ -101,7 +101,7 @@ newtype SafeResult   = SafeResult   (Maybe String, String, SMTResult)
 -- if we reached pareto-query limit and so there might be more unqueried results remaining. If 'False',
 -- it means that we have all the pareto fronts returned. See the 'Pareto' 'OptimizeStyle' for details.
 data OptimizeResult = LexicographicResult SMTResult
-                    | ParetoResult        Bool [SMTResult]
+                    | ParetoResult        (Bool, [SMTResult])
                     | IndependentResult   [(String, SMTResult)]
 
 -- User friendly way of printing theorem results
@@ -154,11 +154,11 @@ instance Show OptimizeResult where
 
                IndependentResult   rs  -> multi "objectives" (map (uncurry shI) rs)
 
-               ParetoResult  False  [r] -> sh (\s -> "Unique pareto front: " ++ s) r
-               ParetoResult  False  rs  -> multi "pareto optimal values" (zipWith shP [(1::Int)..] rs)
-               ParetoResult  True   rs  ->    multi "pareto optimal values" (zipWith shP [(1::Int)..] rs)
-                                          ++ "\n*** Note: Pareto-front extraction was terminated before stream was ended as requested by the user."
-                                          ++ "\n***       There might be other (potentially infinitely more) results."
+               ParetoResult (False, [r]) -> sh (\s -> "Unique pareto front: " ++ s) r
+               ParetoResult (False, rs)  -> multi "pareto optimal values" (zipWith shP [(1::Int)..] rs)
+               ParetoResult (True,  rs)  ->    multi "pareto optimal values" (zipWith shP [(1::Int)..] rs)
+                                           ++ "\n*** Note: Pareto-front extraction was terminated before stream was ended as requested by the user."
+                                           ++ "\n***       There might be other (potentially infinitely more) results."
 
        where multi w [] = "There are no " ++ w ++ " to display models for."
              multi _ xs = intercalate "\n" xs

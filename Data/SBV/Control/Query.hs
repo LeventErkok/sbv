@@ -23,7 +23,7 @@ module Data.SBV.Control.Query (
      , resetAssertions, exit
      , getAssertions
      , getValue, getModel, getSMTResult
-     , getLexicographicOptResults, getIndependentOptResults, getAllSatResult
+     , getLexicographicOptResults, getIndependentOptResults, getParetoOptResults, getAllSatResult
      , SMTOption(..)
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
      , Logic(..), Assignment(..)
@@ -218,6 +218,24 @@ getIndependentOptResults objNames = do cfg <- getConfig
         getIndependentResult :: Int -> String -> Query (String, SMTModel)
         getIndependentResult i s = do m <- getModelAtIndex (Just i)
                                       return (s, m)
+
+-- | Construct a pareto-front optimization result
+getParetoOptResults :: Maybe Int -> Query (Bool, [SMTResult])
+getParetoOptResults = error "getParetoOptResults"
+{-
+optPareto = loop []
+  where loop ms (Just i) | i <= 0 = return (True, reverse ms)
+        loop ms mbi               = do cs <- Control.checkSat
+                                       case cs of
+                                        Control.Sat -> Control.getModel
+
+
+                                                case cs of
+                                                  Control.Sat -> do m <- error "PARETO.getModel" -- Control.getModel
+                                                                    loop (subtract 1 <$> mbi) (m:ms)
+                                                  _           -> return (reverse ms)
+                           in loop mbN []
+-}
 
 -- | Collect model values. It is implicitly assumed that we are in a check-sat
 -- context. See 'getSMTResult' for a variant that issues a check-sat first and

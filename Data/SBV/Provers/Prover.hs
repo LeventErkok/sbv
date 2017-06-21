@@ -68,8 +68,6 @@ import qualified Data.SBV.Control.Utils as Control
 import Control.DeepSeq (rnf)
 import Control.Exception (bracket)
 
--- import qualified Data.IORef as IORef (newIORef, readIORef, writeIORef)
-
 import qualified Data.SBV.Provers.Boolector  as Boolector
 import qualified Data.SBV.Provers.CVC4       as CVC4
 import qualified Data.SBV.Provers.Yices      as Yices
@@ -451,49 +449,7 @@ optimizeWith config style = runWithQuery True opt config
                  case style of
                     Lexicographic -> LexicographicResult <$> Control.getLexicographicOptResults
                     Independent   -> IndependentResult   <$> Control.getIndependentOptResults (map objectiveName objectives)
-                    Pareto mbN    -> optPareto mbN
-
--- | Construct a pareto-front optimization result
-optPareto :: Maybe Int -> Query OptimizeResult
-optPareto _mbN = error "optPareto"
-
-{-
-        -- The only way to communicate back from the tactic is to use an IORef here! This is
-        -- totally safe, though I wish there was a better way to do this.
-        isParetoLimitReached <- IORef.newIORef False
-
-        let tactics = QueryUsing paretoTactic : origTactics
-
-            -- Continuously query
-            paretoTactic = let loop (Just i) ms
-                                 | i <= 0
-                                 = do Control.io $ IORef.writeIORef isParetoLimitReached True
-                                      return (reverse ms)
-
-                               loop mbi ms = do cs <- Control.checkSat
-                                                case cs of
-                                                  Control.Sat -> do m <- error "PARETO.getModel" -- Control.getModel
-                                                                    loop (subtract 1 <$> mbi) (m:ms)
-                                                  _           -> return (reverse ms)
-                           in loop mbN []
-
-        result <- bufferSanity hasPar $ applyTactics config ctx (True, hasPar) (wrap, unwrap) [] smtOptions tactics objectives
-                                      $ callSolver True "Pareto optimizing.." [] id sbvPgm
-
-        limitReached <- IORef.readIORef isParetoLimitReached
-
-        return $ ParetoResult limitReached result
-
-  where wrap :: SMTResult -> [SMTResult]
-        wrap r = [r]
-
-        -- the role of unwrap here is to take the result with more info in case a case-split is
-        -- performed and we need to decide in a SAT context.
-        unwrap :: [SMTResult] -> SMTResult
-        unwrap xs = case [r | r@Satisfiable{} <- xs] ++ [r | r@SatExtField{} <- xs] ++ xs of
-                     (r:_) -> r
-                     []    -> error "SBV.optPareto: Impossible happened: Received no results!"
--}
+                    Pareto mbN    -> ParetoResult        <$> Control.getParetoOptResults mbN
 
 -- | Apply the given tactics to a problem
 applyTactics :: SMTConfig                                                                -- ^ Solver configuration
