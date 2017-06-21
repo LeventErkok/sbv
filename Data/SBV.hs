@@ -562,14 +562,15 @@ specifying a timeout ('StopAfter'). For most users, default values of these shou
 
   Here's an optimization example in action:
 
-  >>> optimize $ \x y -> minimize "goal" (x+2*(y::SInteger))
+  >>> optimize Lexicographic $ \x y -> minimize "goal" (x+2*(y::SInteger))
   Optimal in an extension field:
     goal = -oo :: Integer
 
   Of course, this becomes more useful when the result is not in an extension field:
 
   @
-      optimize $ do x <- sInteger "x"
+      optimize Lexicographic $ do
+                    x <- sInteger "x"
                     y <- sInteger "y"
 
                     constrain $ x .> 0
