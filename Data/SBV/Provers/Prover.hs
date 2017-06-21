@@ -944,9 +944,15 @@ runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls
                []  -> trueSW
                [so] -> case so of
                         SW KBool _ -> so
-                        _          -> error $ unlines [ "Impossible happened, non-boolean output: " ++ show so
+                        _          -> trueSW
+                                      {-
+                                      -- TODO: We used to error out here, but "safeWith" might have a non-bool out
+                                      -- I wish we can get rid of this and still check for it. Perhaps this entire
+                                      -- runProofOn might disappear.
+                                      error $ unlines [ "Impossible happened, non-boolean output: " ++ show so
                                                       , "Detected while generating the trace:\n" ++ show res
                                                       ]
+                                      -}
                os  -> error $ unlines [ "User error: Multiple output values detected: " ++ show os
                                       , "Detected while generating the trace:\n" ++ show res
                                       , "*** Check calls to \"output\", they are typically not needed!"
