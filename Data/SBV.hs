@@ -802,7 +802,7 @@ When adding constraints, one has to be careful about
 making sure they are not inconsistent. The function 'isVacuous' can be use for this purpose.
 Here is an example. Consider the following predicate:
 
-    >>> let pred = do { x <- forall "x"; constrain $ x .< x; return $ x .>= (5 :: SWord8) }
+    >>> let pred = do { x <- free "x"; constrain $ x .< x; return $ x .>= (5 :: SWord8) }
 
 This predicate asserts that all 8-bit values are larger than 5, subject to the constraint that the
 values considered satisfy @x .< x@, i.e., they are less than themselves. Since there are no values that
@@ -820,7 +820,7 @@ While the above example is trivial, things can get complicated if there are mult
 non-straightforward relations; so if constraints are used one should make sure to check the predicate
 is not vacuously true. Here's an example that is not vacuous:
 
-     >>> let pred' = do { x <- forall "x"; constrain $ x .> 6; return $ x .>= (5 :: SWord8) }
+     >>> let pred' = do { x <- free "x"; constrain $ x .> 6; return $ x .>= (5 :: SWord8) }
 
 This time the proof passes as expected:
 

@@ -892,23 +892,12 @@ isSafe (SafeResult (_, _, result)) = case result of
 -- | Determine if the constraints are vacuous using the given SMT-solver. Also see
 -- the 'CheckConstrVacuity' tactic.
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
-isVacuousWith config a = do
-        (_, st, Result ki tr uic is cs ts as uis ax asgn cstr tactics options goals asserts _out) <- runSymbolicWithState (True, config) $ forAll_ a >>= output
-        case cstr of
-           [] -> return False -- no constraints, no need to check
-           _  -> do let is'     = [(EX, i) | (_, i) <- is] -- map all quantifiers to "exists" for the constraint check
-                        res'    = Result ki tr uic is' cs ts as uis ax asgn cstr tactics options goals asserts [trueSW]
-                        problem = runProofOn config True [] res'
-                    result <- callSolver True "Checking Vacuity.." [] mwrap problem config st Nothing NoCase
-                    case result of
-                      Unsatisfiable{} -> return True  -- constraints are unsatisfiable!
-                      Satisfiable{}   -> return False -- constraints are satisfiable!
-                      SatExtField{}   -> error "SBV: isVacuous: Solver returned a model in the extension field!"
-                      Unknown{}       -> error "SBV: isVacuous: Solver returned unknown!"
-                      ProofError _ ls -> error $ "SBV: isVacuous: error encountered:\n" ++ unlines ls
-                      TimeOut _       -> error "SBV: isVacuous: time-out."
-        where mwrap [r] = r
-              mwrap xs  = error $ "SBV.isVacuousWith: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
+isVacuousWith cfg a = fst <$> runSymbolic' (SMTMode ISetup True cfg) (forSome_ a >> query check)  -- NB. Can't call runWithQuery since last constraint would become the implication!
+   where check = do cs <- Control.checkSat
+                    case cs of
+                      Control.Unsat -> return True
+                      Control.Sat   -> return False
+                      Control.Unk   -> error "SBV: isVacuous: Solver returned unknown!"
 
 -- | Find all satisfying assignments using the given SMT-solver
 allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
