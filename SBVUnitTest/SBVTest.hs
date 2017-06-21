@@ -71,7 +71,7 @@ generateGoldCheck goldDir shouldCreate action goldFile
 
 -- | Count the number of models
 numberOfModels :: Provable a => a -> IO Int
-numberOfModels p = do AllSatResult (_, rs) <- allSat p
+numberOfModels p = do AllSatResult (_, _, rs) <- allSat p
                       return $ length rs
 
 -- | Symbolicly run a SAT instance using the default config

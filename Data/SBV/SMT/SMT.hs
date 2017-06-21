@@ -89,9 +89,10 @@ newtype ThmResult = ThmResult SMTResult
 newtype SatResult = SatResult SMTResult
                   deriving NFData
 
--- | An 'allSat' call results in a 'AllSatResult'. The boolean says whether
--- we should warn the user about prefix-existentials.
-newtype AllSatResult = AllSatResult (Bool, [SMTResult])
+-- | An 'allSat' call results in a 'AllSatResult'. The first boolean says whether we
+-- hit the max-model limit as we searched. The second boolean says whether
+-- there were prefix-existentials.
+newtype AllSatResult = AllSatResult (Bool, Bool, [SMTResult])
 
 -- | A 'safe' call results in a 'SafeResult'
 newtype SafeResult   = SafeResult   (Maybe String, String, SMTResult)
@@ -126,16 +127,17 @@ instance Show SafeResult where
 -- The Show instance of AllSatResults. Note that we have to be careful in being lazy enough
 -- as the typical use case is to pull results out as they become available.
 instance Show AllSatResult where
-  show (AllSatResult (e, xs)) = go (0::Int) xs
+  show (AllSatResult (l, e, xs)) = go (0::Int) xs
     where uniqueWarn | e    = " (Unique up to prefix existentials.)"
                      | True = ""
           go c (s:ss) = let c'      = c+1
                             (ok, o) = sh c' s
                         in c' `seq` if ok then o ++ "\n" ++ go c' ss else o
-          go c []     = case c of
-                          0 -> "No solutions found."
-                          1 -> "This is the only solution." ++ uniqueWarn
-                          _ -> "Found " ++ show c ++ " different solutions." ++ uniqueWarn
+          go c []     = case (l, c) of
+                          (True,  _) -> "Search stopped since model count request was reached." ++ uniqueWarn
+                          (False, 0) -> "No solutions found."
+                          (False, 1) -> "This is the only solution." ++ uniqueWarn
+                          (False, _) -> "Found " ++ show c ++ " different solutions." ++ uniqueWarn
           sh i c = (ok, showSMTResult "Unsatisfiable"
                                       "Unknown" "Unknown. Potential model:\n"
                                       ("Solution #" ++ show i ++ ":\nSatisfiable") ("Solution #" ++ show i ++ ":\n")
@@ -352,19 +354,19 @@ class Modelable a where
 -- | Return all the models from an 'allSat' call, similar to 'extractModel' but
 -- is suitable for the case of multiple results.
 extractModels :: SatModel a => AllSatResult -> [a]
-extractModels (AllSatResult (_, xs)) = [ms | Right (_, ms) <- map getModelAssignment xs]
+extractModels (AllSatResult (_, _, xs)) = [ms | Right (_, ms) <- map getModelAssignment xs]
 
 -- | Get dictionaries from an all-sat call. Similar to `getModelDictionary`.
 getModelDictionaries :: AllSatResult -> [M.Map String CW]
-getModelDictionaries (AllSatResult (_, xs)) = map getModelDictionary xs
+getModelDictionaries (AllSatResult (_, _, xs)) = map getModelDictionary xs
 
 -- | Extract value of a variable from an all-sat call. Similar to `getModelValue`.
 getModelValues :: SymWord b => String -> AllSatResult -> [Maybe b]
-getModelValues s (AllSatResult (_, xs)) =  map (s `getModelValue`) xs
+getModelValues s (AllSatResult (_, _, xs)) =  map (s `getModelValue`) xs
 
 -- | Extract value of an uninterpreted variable from an all-sat call. Similar to `getModelUninterpretedValue`.
 getModelUninterpretedValues :: String -> AllSatResult -> [Maybe String]
-getModelUninterpretedValues s (AllSatResult (_, xs)) =  map (s `getModelUninterpretedValue`) xs
+getModelUninterpretedValues s (AllSatResult (_, _, xs)) =  map (s `getModelUninterpretedValue`) xs
 
 -- | 'ThmResult' as a generic model provider
 instance Modelable ThmResult where
@@ -419,7 +421,7 @@ parseModelOut m = case parseCWs [c | (_, c) <- modelAssocs m] of
 -- 'Int' argument to 'disp' 'is the current model number. The second argument is a tuple, where the first
 -- element indicates whether the model is alleged (i.e., if the solver is not sure, returing Unknown)
 displayModels :: SatModel a => (Int -> (Bool, a) -> IO ()) -> AllSatResult -> IO Int
-displayModels disp (AllSatResult (_, ms)) = do
+displayModels disp (AllSatResult (_, _, ms)) = do
     inds <- zipWithM display [a | Right a <- map (getModelAssignment . SatResult) ms] [(1::Int)..]
     return $ last (0:inds)
   where display r i = disp i r >> return i

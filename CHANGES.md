@@ -17,6 +17,18 @@
     with the solver directly. See the module "Data.SBV.Control" for the main
     API, together with the new functions 'runSMT' and 'runSMTWith'.
 
+  * The call 'allSat' has been reworked so it performs only one call to the underlying
+    solver and repeatedly issues check-sat to get new assignments. This differs from the
+    previous implementation where we spun off a new call to the executable for each
+    successive model. While this is more efficient and much more preferable, it also
+    means that the results are no longer lazily computed: If there is an infinite number
+    of solutions (or a very large number), you can no longer merely do a 'take' on the result.
+    While this is inconvenient, it fits better with our new methodology of query based
+    interaction. Note that the old behavior can be modeled, if required, by the user; by explicitly
+    interleaving the calls to 'sat.' Furthermore, we now provide a new configuration
+    parameter named 'allSatMaxModelCount' which can be used to limit the number models we
+    seek. The default is to get all models, however long that might take.
+
   * The Bridge modules (`Data.SBV.Bridge.Yices`, `Data.SBV.Bridge.Z3`) etc. are
     all removed. The bridge functionality was hardly used, where different solvers
     were much easier to access using the `with` functions. (Such as `proveWith`,
