@@ -566,29 +566,24 @@ specifying a timeout ('StopAfter'). For most users, default values of these shou
   Optimal in an extension field:
     goal = -oo :: Integer
 
+  We will describe the role of the constructor 'Lexicographic' shortly.
+
   Of course, this becomes more useful when the result is not in an extension field:
 
-  @
-      optimize Lexicographic $ do
-                    x <- sInteger "x"
-                    y <- sInteger "y"
-
-                    constrain $ x .> 0
-                    constrain $ x .< 6
-                    constrain $ y .> 2
-                    constrain $ y .< 12
-
-                    minimize "goal" (x+2*(y::SInteger))
-  @
-
-  This will produce:
-
-  @
-  Optimal model:
-    x    = 1 :: Integer
-    y    = 3 :: Integer
-    goal = 7 :: Integer
-   @
+>>> :{
+    optimize Lexicographic $ do
+                  x <- sInteger "x"
+                  y <- sInteger "y"
+                  constrain $ x .> 0
+                  constrain $ x .< 6
+                  constrain $ y .> 2
+                  constrain $ y .< 12
+                  minimize "goal" $ x + 2 * y
+    :}
+Optimal model:
+  x    = 1 :: Integer
+  y    = 3 :: Integer
+  goal = 7 :: Integer
 
   As usual, the programmatic API can be used to extract the values of objectives and model-values ('getModelObjectives',
   'getModelAssignment', etc.) to access these values and program with them further.
@@ -596,32 +591,22 @@ specifying a timeout ('StopAfter'). For most users, default values of these shou
 == Multiple optimization goals
 
   Multiple goals can be specified, using the same syntax. In this case, the user gets to pick what style of
-  optimization to perform:
+  optimization to perform, by passing the relevant 'OptimizeStyle' as the first argument to 'optimize'.
 
-    * The default is lexicographic. That is, solver will optimize the goals in the given order, optimizing
-      the latter ones under the model that optimizes the previous ones. This is the default behavior, but
-      can also be explicitly specified by:
+    * ['Lexicographic']. The solver will optimize the goals in the given order, optimizing
+      the latter ones under the model that optimizes the previous ones.
 
-              @ 'tactic' $ 'OptimizePriority' 'Lexicographic' @
+    * ['Independent']. The solver will optimize the goals independently of each other. In this case the user will
+      be presented a model for each goal given.
 
-    * Goals can also be independently optimized. In this case the user will be presented a model for each
-      goal given. To enable this, use the tactic:
+    * ['Pareto']. Finally, the user can query for pareto-fronts. A pareto front is an model such that no goal can be made
+      "better" without making some other goal "worse."
 
-              @ 'tactic' $ 'OptimizePriority' 'Independent' @
-
-    * Finally, the user can query for pareto-fronts. A pareto front is an model such that no goal can be made
-      "better" without making some other goal "worse." To enable this style, use:
-
-              @
-                'tactic' $ 'OptimizePriority' ('Pareto' Nothing)
-                'tactic' $ 'OptimizePriority' ('Pareto' (Just 30)) @
-
-      The optional number specifies the maximum number of pareto-fronts the user is asking to get. If 'Nothing',
-      SBV will query for all pareto-fronts. Note that pareto-fronts can be infinite in number, so if 'Nothing'
-      is used, there is a potential for infinitely waiting for the SBV-solver interaction to finish. If you
-      suspect this might be the case, run in 'verbose' mode to see the interaction and put a limiting factor
-      appropriately. (In general, there is no a-priori way to know how many Pareto-fronts exist for a given
-      problem.)
+      The optional number argument to 'Pareto' specifies the maximum number of pareto-fronts the user is asking
+      to get. If 'Nothing', SBV will query for all pareto-fronts. Note that pareto-fronts can be infinite
+      in number, so if 'Nothing' is used, there is a potential for infinitely waiting for the SBV-solver interaction
+      to finish. (If you suspect this might be the case, run in 'verbose' mode to see the interaction and
+      put a limiting factor appropriately.)
 
 == Soft Assertions
 
