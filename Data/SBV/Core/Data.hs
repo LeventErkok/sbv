@@ -551,42 +551,42 @@ instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData 
 
 -- Functions
 instance (SymWord a, SExecutable p) => SExecutable (SBV a -> p) where
-   sName_        k = forall_   >>= \a -> sName_   $ k a
-   sName (s:ss)  k = forall s  >>= \a -> sName ss $ k a
+   sName_        k = exists_   >>= \a -> sName_   $ k a
+   sName (s:ss)  k = exists s  >>= \a -> sName ss $ k a
    sName []      k = sName_ k
 
 -- 2 Tuple input
 instance (SymWord a, SymWord b, SExecutable p) => SExecutable ((SBV a, SBV b) -> p) where
-  sName_        k = forall_  >>= \a -> sName_   $ \b -> k (a, b)
-  sName (s:ss)  k = forall s >>= \a -> sName ss $ \b -> k (a, b)
+  sName_        k = exists_  >>= \a -> sName_   $ \b -> k (a, b)
+  sName (s:ss)  k = exists s >>= \a -> sName ss $ \b -> k (a, b)
   sName []      k = sName_ k
 
 -- 3 Tuple input
 instance (SymWord a, SymWord b, SymWord c, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c) -> p) where
-  sName_       k  = forall_  >>= \a -> sName_   $ \b c -> k (a, b, c)
-  sName (s:ss) k  = forall s >>= \a -> sName ss $ \b c -> k (a, b, c)
+  sName_       k  = exists_  >>= \a -> sName_   $ \b c -> k (a, b, c)
+  sName (s:ss) k  = exists s >>= \a -> sName ss $ \b c -> k (a, b, c)
   sName []     k  = sName_ k
 
 -- 4 Tuple input
 instance (SymWord a, SymWord b, SymWord c, SymWord d, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d) -> p) where
-  sName_        k = forall_  >>= \a -> sName_   $ \b c d -> k (a, b, c, d)
-  sName (s:ss)  k = forall s >>= \a -> sName ss $ \b c d -> k (a, b, c, d)
+  sName_        k = exists_  >>= \a -> sName_   $ \b c d -> k (a, b, c, d)
+  sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d -> k (a, b, c, d)
   sName []      k = sName_ k
 
 -- 5 Tuple input
 instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
-  sName_        k = forall_  >>= \a -> sName_   $ \b c d e -> k (a, b, c, d, e)
-  sName (s:ss)  k = forall s >>= \a -> sName ss $ \b c d e -> k (a, b, c, d, e)
+  sName_        k = exists_  >>= \a -> sName_   $ \b c d e -> k (a, b, c, d, e)
+  sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e -> k (a, b, c, d, e)
   sName []      k = sName_ k
 
 -- 6 Tuple input
 instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
-  sName_        k = forall_  >>= \a -> sName_   $ \b c d e f -> k (a, b, c, d, e, f)
-  sName (s:ss)  k = forall s >>= \a -> sName ss $ \b c d e f -> k (a, b, c, d, e, f)
+  sName_        k = exists_  >>= \a -> sName_   $ \b c d e f -> k (a, b, c, d, e, f)
+  sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e f -> k (a, b, c, d, e, f)
   sName []      k = sName_ k
 
 -- 7 Tuple input
 instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
-  sName_        k = forall_  >>= \a -> sName_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  sName (s:ss)  k = forall s >>= \a -> sName ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  sName_        k = exists_  >>= \a -> sName_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   sName []      k = sName_ k
