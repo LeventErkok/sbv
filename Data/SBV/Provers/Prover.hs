@@ -861,20 +861,23 @@ caseSplit config ctx mbOptInfo checkVacuity (runParallel, hasPar) isSAT (wrap, u
 
 -- | Check if any of the assertions can be violated
 safeWith :: SExecutable a => SMTConfig -> a -> IO [SafeResult]
-safeWith cfg a = do
-        (_, st, res@Result{resAssertions=asserts}) <- runSymbolicWithState (True, cfg) $ sName_ a >>= output
-        mapM (verify st res) asserts
-  where locInfo (Just ps) = Just $ let loc (f, sl) = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
-                                   in intercalate ",\n " (map loc ps)
-        locInfo _                     = Nothing
-        verify st res (msg, cs, cond) = do let problem = runProofOn cfg True [] pgm
-                                           result <- callSolver True msg [] mwrap problem cfg st Nothing NoCase
-                                           return $ SafeResult (locInfo (getCallStack `fmap` cs), msg, result)
-           where pgm = res { resInputs  = [(EX, n) | (_, n) <- resInputs res]   -- make everything existential
-                           , resOutputs = [cond]
-                           }
-                 mwrap [r] = r
-                 mwrap xs  = error $ "SBV.safeWith: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
+safeWith cfg a = fst <$> runSymbolic' (SMTMode ISetup True cfg) (sName_ a >> check)
+  where check = query $ Control.getSBVAssertions >>= mapM verify
+
+        -- check that the cond is unsatisfiable. If satisfiable, that would
+        -- indicate the assignment under which the 'sAssert' would fail
+        verify :: (String, Maybe CallStack, SW) -> Query SafeResult
+        verify (msg, cs, cond) = do
+                let locInfo ps = let loc (f, sl) = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f] in intercalate ",\n " (map loc ps)
+                    location   = (locInfo . getCallStack) `fmap` cs
+
+                result <- do Control.push 1
+                             Control.send True $ "(assert " ++ show cond ++ ")"
+                             r <- Control.getSMTResult
+                             Control.pop 1
+                             return r
+
+                return $ SafeResult (location, msg, result)
 
 -- | Check if a safe-call was safe or not, turning a 'SafeResult' to a Bool.
 isSafe :: SafeResult -> Bool
