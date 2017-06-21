@@ -78,20 +78,20 @@ import qualified Data.SBV.Provers.MathSAT    as MathSAT
 import qualified Data.SBV.Provers.ABC        as ABC
 
 mkConfig :: SMTSolver -> SMTLibVersion -> SMTConfig
-mkConfig s smtVersion = SMTConfig { verbose          = False
-                                  , timing           = NoTiming
-                                  , sBranchTimeOut   = Nothing
-                                  , printBase        = 10
-                                  , printRealPrec    = 16
-                                  , transcript       = Nothing
-                                  , solver           = s
-                                  , smtLibVersion    = smtVersion
-                                  , satCmd           = "(check-sat)"
-                                  , isNonModelVar    = const False  -- i.e., everything is a model-variable by default
-                                  , roundingMode     = RoundNearestTiesToEven
-                                  , solverSetOptions = []
-                                  , ignoreExitCode   = False
-                                  , customQuery      = Nothing
+mkConfig s smtVersion = SMTConfig { verbose             = False
+                                  , timing              = NoTiming
+                                  , printBase           = 10
+                                  , printRealPrec       = 16
+                                  , transcript          = Nothing
+                                  , solver              = s
+                                  , smtLibVersion       = smtVersion
+                                  , satCmd              = "(check-sat)"
+                                  , allSatMaxModelCount = Nothing                -- i.e., return all satisfying models
+                                  , isNonModelVar       = const False            -- i.e., everything is a model-variable by default
+                                  , roundingMode        = RoundNearestTiesToEven
+                                  , solverSetOptions    = []
+                                  , ignoreExitCode      = False
+                                  , customQuery         = Nothing
                                   }
 
 -- | Default configuration for the Boolector SMT solver
@@ -282,8 +282,10 @@ sat :: Provable a => a -> IO SatResult
 sat = satWith defaultSMTCfg
 
 -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
--- Satisfying assignments are constructed lazily, so they will be available as returned by the solver
--- and on demand.
+-- Note that this call will block until all satisfying assignments are found. If you have a problem
+-- with infinitely many satisfying models (consider 'SInteger') or a very large number of them, you
+-- might have to wait for a long time. To avoid such cases, use the 'allSatMaxModelCount' parameter
+-- in the configuration.
 --
 -- NB. Uninterpreted constant/function values and counter-examples for array values are ignored for
 -- the purposes of @'allSat'@. That is, only the satisfying assignments modulo uninterpreted functions and
