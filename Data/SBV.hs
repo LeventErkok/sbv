@@ -507,8 +507,8 @@ We can use 'safe' to statically see if such a violation is possible before we us
 
 >>> safe (sub :: SInt8 -> SInt8 -> SInt8)
 [sub: x >= y must hold!: Violated. Model:
-  s0 = -128 :: Int8
-  s1 = -127 :: Int8]
+  s0 = 30 :: Int8
+  s1 = 32 :: Int8]
 
 What happens if we make sure to arrange for this invariant? Consider this version:
 
