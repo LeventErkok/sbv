@@ -277,14 +277,19 @@ getModelAtIndex mbi = do
 -- | Just after a check-sat is issued, collect objective values. Used
 -- internally only, not exposed to the user.
 getObjectiveValues :: Query [(String, GeneralizedCW)]
-getObjectiveValues = do r <- retrieveResponse Nothing
-
-                        inputs <- map snd <$> getQuantifiedInputs
+getObjectiveValues = do rs <- retrieveResponse "getObjectiveValues" Nothing
 
                         let bad = unexpected "getObjectiveValues" "check-sat" "a list of objective values" Nothing
 
+                            r   =  case rs of
+                                     [o] -> o
+                                     xs  -> bad (intercalate "\n" rs) $ Just ["Was expecting a single response, got: " ++ show (length xs)]
+
+                        inputs <- map snd <$> getQuantifiedInputs
+
                         parse r bad $ \case EApp (ECon "objectives" : es) -> return $ mapMaybe (getObjValue (bad r Nothing) inputs) es
                                             _                             -> bad r Nothing
+
   where -- | Parse an objective value out.
         getObjValue :: (forall a. Maybe [String] -> a) -> [NamedSymVar] -> SExpr -> Maybe (String, GeneralizedCW)
         getObjValue bailOut inputs expr =

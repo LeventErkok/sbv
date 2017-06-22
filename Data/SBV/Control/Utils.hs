@@ -44,6 +44,8 @@ import Control.Monad.State.Lazy (get, liftIO)
 
 import Data.IORef (readIORef, writeIORef)
 
+import Data.Time (getZonedTime)
+
 import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, Kind(..)
                               , HasKind(..), mkConstCW, CWVal(..), SMTResult(..)
                               , NamedSymVar, SMTConfig(..), Query, SMTModel(..)
@@ -184,16 +186,37 @@ send requireSuccess s = do
 
                else io $ querySend queryTimeOutValue s  -- fire and forget. if you use this, you're on your own!
 
--- | Retrieve a response from the solver, that is a valid s-expression. Should only
--- be used for internal purposes. Use 'send'/'ask'. If the time-out
--- is given and and is exceeded by the solver, then we will raise an error.
-retrieveResponse :: Maybe Int -> Query String
-retrieveResponse mbTo = do QueryState{queryRetrieveResponse, queryConfig} <- getQueryState
-                           s <- io $ queryRetrieveResponse mbTo
-                           when (verbose queryConfig) $ io $ do
+-- | Retrieve a responses from the solver until it produces a synchronization tag. We make the tag
+-- unique by attaching a time stamp, so no need to worry about getting the wrong tag unless it happens
+-- in the very same picosecond! We return multiple valid s-expressions till the solver responds with the tag.
+-- Should only be used for internal tasks or when we want to synchronize communications, and not on a
+-- regular basis! Use 'send'/'ask' for that purpose. This comes in handy, however, when solvers respond
+-- multiple times as in optimization for instance, where we both get a check-sat answer and some objective values.
+retrieveResponse :: String -> Maybe Int -> Query [String]
+retrieveResponse userTag mbTo = do
+             ts  <- io (show <$> getZonedTime)
+
+             let synchTag = show $ userTag ++ " (at: " ++ ts ++ ")"
+                 cmd = "(echo " ++ synchTag ++ ")"
+
+             queryDebug ["[SYNC] Attempting to synchronize with tag: " ++ synchTag]
+
+             send False cmd
+
+             QueryState{queryRetrieveResponse, queryConfig} <- getQueryState
+
+             let loop sofar = do
+                  s <- io $ queryRetrieveResponse mbTo
+
+                  if s == synchTag
+                     then do queryDebug ["[SYNC] Synchronization achieved using tag: " ++ synchTag]
+                             return $ reverse sofar
+                     else do when (verbose queryConfig) $ io $ do
                                 let align tag multi = intercalate "\n" $ zipWith (++) (tag : repeat (replicate (length tag) ' ')) (filter (not . null) (lines multi))
                                 putStrLn $ align "[RECV] " s
-                           return s
+                             loop (s : sofar)
+
+             loop []
 
 -- | A class which allows for sexpr-conversion to values
 class SMTValue a where
