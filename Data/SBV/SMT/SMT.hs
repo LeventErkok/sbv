@@ -573,6 +573,10 @@ runSolver cfg ctx execPath opts pgm continuation
                                      else do send mbTimeOut command
                                              getResponseFromSolver (Just command) mbTimeOut
 
+                    -- Get a response from the solver, with an optional time-out on how long
+                    -- to wait. Note that there's *always* a time-out of 5 seconds once we get the
+                    -- first line of response, as while the solver might take it's time to respond,
+                    -- once it starts responding successive lines should come quickly.
                     getResponseFromSolver :: Maybe String -> Maybe Int -> IO String
                     getResponseFromSolver mbCommand mbTimeOut = do
                                 response <- go 0 []
@@ -580,14 +584,21 @@ runSolver cfg ctx execPath opts pgm continuation
                                 recordTranscript (transcript cfg) $ Right collated
                                 return collated
 
-                      where safeGetLine h = case mbTimeOut of
+                      where align tag multi = intercalate "\n" $ zipWith (++) (tag : repeat (replicate (length tag) ' ')) (filter (not . null) (lines multi))
+
+                            safeGetLine firstLine h =
+                                         let timeOutToUse | firstLine = mbTimeOut
+                                                          | True      = Just 5000000
+                                             timeOutMsg t | firstLine = "User specified timeout of " ++ showTimeoutValue t ++ " exceeded."
+                                                          | True      = "A multiline complete response wasn't received before " ++ showTimeoutValue t ++ " exceeded."
+                                         in case timeOutToUse of
                                               Nothing -> SolverRegular <$> hGetLine h
                                               Just t  -> do r <- Timeout.timeout t (hGetLine h)
                                                             case r of
                                                               Just l  -> return $ SolverRegular l
-                                                              Nothing -> return $ SolverTimeout $ "User specified timeout of " ++ showTimeoutValue t ++ " exceeded."
+                                                              Nothing -> return $ SolverTimeout $ timeOutMsg t
 
-                            go i sofar = do errln <- safeGetLine outh `C.catch` (\(e :: C.SomeException) -> return (SolverException (show e)))
+                            go i sofar = do errln <- safeGetLine (i == 0) outh `C.catch` (\(e :: C.SomeException) -> return (SolverException (show e)))
                                             case errln of
                                               SolverRegular ln -> let need  = i + parenDeficit ln
                                                                       acc   = ln : sofar
@@ -607,10 +618,10 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                         , "*** Executable: " ++ execPath
                                                                                         , "*** Options   : " ++ joinArgs opts
                                                                                         ]
-                                                                                     ++ [ "*** Request   : " ++ command                 | Just command <- [mbCommand]]
-                                                                                     ++ [ "*** Response  : " ++ unlines (reverse sofar) | not $ null sofar           ]
-                                                                                     ++ [ "*** Stdout    : " ++ out                     | not $ null out             ]
-                                                                                     ++ [ "*** Stderr    : " ++ err                     | not $ null err             ]
+                                                                                     ++ [ "*** Request   : " ++ command                      | Just command <- [mbCommand]]
+                                                                                     ++ [ "*** Response  : " `align` unlines (reverse sofar) | not $ null sofar           ]
+                                                                                     ++ [ "*** Stdout    : " ++ out                          | not $ null out             ]
+                                                                                     ++ [ "*** Stderr    : " ++ err                          | not $ null err             ]
                                                                                      ++ [ "*** Exit code : " ++ show ex
                                                                                         , "*** Giving up!"
                                                                                         ]
@@ -621,7 +632,10 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                       , "***"
                                                                                       , "***   " ++ e
                                                                                       ]
+                                                                                   ++ [ "***   Response so far: " `align` unlines (reverse sofar) | not $ null sofar]
+                                                                                   ++ [ "***" ]
                                                                                    ++ [ "***   Last command sent was: " ++ command | Just command <- [mbCommand]]
+                                                                                   ++ [ "***   Run with 'verbose=True' for further information" | not (verbose cfg)]
                                                                                    ++ [ "***"
                                                                                       , "*** Giving up!"
                                                                                       ]
