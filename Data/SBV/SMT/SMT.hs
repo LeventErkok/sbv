@@ -731,6 +731,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                              putStrLn   "** Some incremental calls, such as pop, will be limited."
                                 else sendAndGetSuccess Nothing "(set-option :global-declarations true)"
 
+                             -- Now dump the program!
                              mapM_ (sendAndGetSuccess Nothing) (mergeSExpr (lines pgm))
 
                              -- Prepare the query context and ship it off
