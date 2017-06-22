@@ -37,7 +37,7 @@ import Control.Monad            (unless, zipWithM)
 import Control.Monad.State.Lazy (get)
 
 import Data.List     (unzip3, intercalate, nubBy, sortBy, elemIndex)
-import Data.Maybe    (mapMaybe)
+import Data.Maybe    (mapMaybe, listToMaybe)
 import Data.Function (on)
 
 import Data.SBV.Core.Data
@@ -222,21 +222,26 @@ getIndependentOptResults objNames = do cfg <- getConfig
 
 -- | Construct a pareto-front optimization result
 getParetoOptResults :: Maybe Int -> Query (Bool, [SMTResult])
-getParetoOptResults = error "getParetoOptResults"
-{-
-optPareto = loop []
-  where loop ms (Just i) | i <= 0 = return (True, reverse ms)
-        loop ms mbi               = do cs <- Control.checkSat
-                                       case cs of
-                                        Control.Sat -> Control.getModel
+getParetoOptResults (Just i)
+        | i <= 0             = return (True, [])
+getParetoOptResults mbN      = do cfg <- getConfig
+                                  cs  <- checkSat
+                                  case cs of
+                                    Unsat -> return (False, [])
+                                    Sat   -> continue (classifyModel cfg)
+                                    Unk   -> continue (Unknown cfg)
+  where continue classify = do m <- getModel
+                               (limReached, fronts) <- getParetoFronts (subtract 1 <$> mbN) [m]
+                               return (limReached, reverse (map classify fronts))
 
-
-                                                case cs of
-                                                  Control.Sat -> do m <- error "PARETO.getModel" -- Control.getModel
-                                                                    loop (subtract 1 <$> mbi) (m:ms)
-                                                  _           -> return (reverse ms)
-                           in loop mbN []
--}
+        getParetoFronts :: Maybe Int -> [SMTModel] -> Query (Bool, [SMTModel])
+        getParetoFronts (Just i) sofar | i <= 0 = return (True, sofar)
+        getParetoFronts mbi      sofar          = do cs <- checkSat
+                                                     let more = getModel >>= \m -> getParetoFronts (subtract 1 <$> mbi) (m : sofar)
+                                                     case cs of
+                                                       Unsat -> return (False, sofar)
+                                                       Sat   -> more
+                                                       Unk   -> more
 
 -- | Collect model values. It is implicitly assumed that we are in a check-sat
 -- context. See 'getSMTResult' for a variant that issues a check-sat first and
@@ -282,60 +287,55 @@ getObjectiveValues = do r <- retrieveResponse Nothing
                                             _                             -> bad r Nothing
   where -- | Parse an objective value out.
         getObjValue :: (forall a. Maybe [String] -> a) -> [NamedSymVar] -> SExpr -> Maybe (String, GeneralizedCW)
-        getObjValue _       _      (EApp [_])          = Nothing                        -- this happens when a soft-assertion has no associated group
-        getObjValue bailOut inputs (EApp [ECon nm, v]) = Just (actualName, extract v)
-          where s :: SW
-                actualName :: String
-                (s, actualName) = case [(sw, an) | (sw, an) <- inputs, show sw == nm] of
-                                    [swn] -> swn
-                                    _     -> bailOut $ Just [ "Unknown objective value for " ++ nm
-                                                            , "Was expecting one of: " ++ intercalate ", "  (map sh inputs)
-                                                            ]
-                                  where sh (sw, n)
-                                         | ss == n = n
-                                         | True    = ss ++ " (aliasing " ++ n ++ ")"
-                                         where ss = show sw
+        getObjValue bailOut inputs expr =
+                case expr of
+                  EApp [_]          -> Nothing  -- Happens when a soft-assertion has no associated group.
+                  EApp [ECon nm, v] -> case listToMaybe [p | p@(sw, _) <- inputs, show sw == nm] of
+                                         Nothing               -> Nothing -- Happens when the soft assertion has a group-id that's not one of the input names
+                                         Just (sw, actualName) -> Just (actualName, grab sw v)
+                  _                 -> dontUnderstand (show expr)
 
-                k = kindOf s
+          where dontUnderstand s = bailOut $ Just [ "Unable to understand solver output."
+                                                  , "While trying to process: " ++ s
+                                                  ]
 
-                isIntegral sw = isBoolean sw || isBounded sw || isInteger sw
+                grab :: SW -> SExpr -> GeneralizedCW
+                grab s = extract
+                  where k = kindOf s
 
-                getUIIndex (KUserSort  _ (Right xs)) i = i `elemIndex` xs
-                getUIIndex _                         _ = Nothing
+                        isIntegral sw = isBoolean sw || isBounded sw || isInteger sw
 
-                extract (ENum    i) | isIntegral      s = RegularCW  $ mkConstCW  k (fst i)
-                extract (EReal   i) | isReal          s = RegularCW  $ CW KReal   (CWAlgReal i)
-                extract (EFloat  i) | isFloat         s = RegularCW  $ CW KFloat  (CWFloat   i)
-                extract (EDouble i) | isDouble        s = RegularCW  $ CW KDouble (CWDouble  i)
-                extract (ECon    i) | isUninterpreted s = RegularCW  $ CW k       (CWUserSort (getUIIndex k i, i))
+                        getUIIndex (KUserSort  _ (Right xs)) i = i `elemIndex` xs
+                        getUIIndex _                         _ = Nothing
 
-                -- Exhausted regular values, look for infinities and such:
-                extract val                             = ExtendedCW $ cvt (simplify val)
+                        extract (ENum    i) | isIntegral      s = RegularCW  $ mkConstCW  k (fst i)
+                        extract (EReal   i) | isReal          s = RegularCW  $ CW KReal   (CWAlgReal i)
+                        extract (EFloat  i) | isFloat         s = RegularCW  $ CW KFloat  (CWFloat   i)
+                        extract (EDouble i) | isDouble        s = RegularCW  $ CW KDouble (CWDouble  i)
+                        extract (ECon    i) | isUninterpreted s = RegularCW  $ CW k       (CWUserSort (getUIIndex k i, i))
 
-                -- Convert to an extended expression. Hopefully complete!
-                cvt :: SExpr -> ExtCW
-                cvt (ECon "oo")                    = Infinite  k
-                cvt (ECon "epsilon")               = Epsilon   k
-                cvt (EApp [ECon "interval", x, y]) = Interval  (cvt x) (cvt y)
-                cvt (ENum    (i, _))               = BoundedCW $ mkConstCW k i
-                cvt (EReal   r)                    = BoundedCW $ CW k $ CWAlgReal r
-                cvt (EFloat  f)                    = BoundedCW $ CW k $ CWFloat   f
-                cvt (EDouble d)                    = BoundedCW $ CW k $ CWDouble  d
-                cvt (EApp [ECon "+", x, y])        = AddExtCW (cvt x) (cvt y)
-                cvt (EApp [ECon "*", x, y])        = MulExtCW (cvt x) (cvt y)
-                -- Nothing else should show up, hopefully!
-                cvt e = bailOut $ Just [ "Unable to understand solver output."
-                                       , "While trying to process: " ++ show e
-                                       ]
+                        -- Exhausted regular values, look for infinities and such:
+                        extract val                             = ExtendedCW $ cvt (simplify val)
 
-                -- drop the pesky to_real's that Z3 produces.. Cool but useless.
-                simplify :: SExpr -> SExpr
-                simplify (EApp [ECon "to_real", n]) = n
-                simplify (EApp xs)                  = EApp (map simplify xs)
-                simplify e                          = e
+                        -- Convert to an extended expression. Hopefully complete!
+                        cvt :: SExpr -> ExtCW
+                        cvt (ECon "oo")                    = Infinite  k
+                        cvt (ECon "epsilon")               = Epsilon   k
+                        cvt (EApp [ECon "interval", x, y]) = Interval  (cvt x) (cvt y)
+                        cvt (ENum    (i, _))               = BoundedCW $ mkConstCW k i
+                        cvt (EReal   r)                    = BoundedCW $ CW k $ CWAlgReal r
+                        cvt (EFloat  f)                    = BoundedCW $ CW k $ CWFloat   f
+                        cvt (EDouble d)                    = BoundedCW $ CW k $ CWDouble  d
+                        cvt (EApp [ECon "+", x, y])        = AddExtCW (cvt x) (cvt y)
+                        cvt (EApp [ECon "*", x, y])        = MulExtCW (cvt x) (cvt y)
+                        -- Nothing else should show up, hopefully!
+                        cvt e = dontUnderstand (show e)
 
-        getObjValue bailOut _ _ = bailOut Nothing
-
+                        -- drop the pesky to_real's that Z3 produces.. Cool but useless.
+                        simplify :: SExpr -> SExpr
+                        simplify (EApp [ECon "to_real", n]) = n
+                        simplify (EApp xs)                  = EApp (map simplify xs)
+                        simplify e                          = e
 
 -- | Check for satisfiability, under the given conditions. Similar to 'checkSat'
 -- except it allows making further assumptions as captured by the first argument
