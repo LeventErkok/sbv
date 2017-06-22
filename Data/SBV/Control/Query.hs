@@ -37,6 +37,7 @@ import Control.Monad            (unless, zipWithM)
 import Control.Monad.State.Lazy (get)
 
 import Data.List     (unzip3, intercalate, nubBy, sortBy, elemIndex)
+import Data.Maybe    (mapMaybe)
 import Data.Function (on)
 
 import Data.SBV.Core.Data
@@ -277,11 +278,12 @@ getObjectiveValues = do r <- retrieveResponse Nothing
 
                         let bad = unexpected "getObjectiveValues" "check-sat" "a list of objective values" Nothing
 
-                        parse r bad $ \case EApp (ECon "objectives" : es) -> return $ map (getObjValue (bad r Nothing) inputs) es
+                        parse r bad $ \case EApp (ECon "objectives" : es) -> return $ mapMaybe (getObjValue (bad r Nothing) inputs) es
                                             _                             -> bad r Nothing
   where -- | Parse an objective value out.
-        getObjValue :: (forall a. Maybe [String] -> a) -> [NamedSymVar] -> SExpr -> (String, GeneralizedCW)
-        getObjValue bailOut inputs (EApp [ECon nm, v]) = (actualName, extract v)
+        getObjValue :: (forall a. Maybe [String] -> a) -> [NamedSymVar] -> SExpr -> Maybe (String, GeneralizedCW)
+        getObjValue _       _      (EApp [_])          = Nothing                        -- this happens when a soft-assertion has no associated group
+        getObjValue bailOut inputs (EApp [ECon nm, v]) = Just (actualName, extract v)
           where s :: SW
                 actualName :: String
                 (s, actualName) = case [(sw, an) | (sw, an) <- inputs, show sw == nm] of
