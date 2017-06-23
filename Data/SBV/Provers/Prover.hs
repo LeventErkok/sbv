@@ -75,51 +75,54 @@ import qualified Data.SBV.Provers.Z3         as Z3
 import qualified Data.SBV.Provers.MathSAT    as MathSAT
 import qualified Data.SBV.Provers.ABC        as ABC
 
-mkConfig :: SMTSolver -> SMTLibVersion -> SMTConfig
-mkConfig s smtVersion = SMTConfig { verbose             = False
-                                  , timing              = NoTiming
-                                  , printBase           = 10
-                                  , printRealPrec       = 16
-                                  , transcript          = Nothing
-                                  , solver              = s
-                                  , smtLibVersion       = smtVersion
-                                  , satCmd              = "(check-sat)"
-                                  , allSatMaxModelCount = Nothing                -- i.e., return all satisfying models
-                                  , isNonModelVar       = const False            -- i.e., everything is a model-variable by default
-                                  , roundingMode        = RoundNearestTiesToEven
-                                  , solverSetOptions    = []
-                                  , ignoreExitCode      = False
-                                  , customQuery         = Nothing
-                                  }
+mkConfig :: SMTSolver -> SMTLibVersion -> [Control.SMTOption] -> SMTConfig
+mkConfig s smtVersion startOpts = SMTConfig { verbose             = False
+                                            , timing              = NoTiming
+                                            , printBase           = 10
+                                            , printRealPrec       = 16
+                                            , transcript          = Nothing
+                                            , solver              = s
+                                            , smtLibVersion       = smtVersion
+                                            , satCmd              = "(check-sat)"
+                                            , allSatMaxModelCount = Nothing                -- i.e., return all satisfying models
+                                            , isNonModelVar       = const False            -- i.e., everything is a model-variable by default
+                                            , roundingMode        = RoundNearestTiesToEven
+                                            , solverSetOptions    = startOpts
+                                            , ignoreExitCode      = False
+                                            , customQuery         = Nothing
+                                            }
+
+-- | If supported, this makes all output go to stdout, which works better with SBV
+-- Alas, not all solvers support it..
+allOnStdOut :: Control.SMTOption
+allOnStdOut = Control.OptionKeyword ":diagnostic-output-channel" [show "stdout"]
 
 -- | Default configuration for the Boolector SMT solver
 boolector :: SMTConfig
-boolector = mkConfig Boolector.boolector SMTLib2
+boolector = mkConfig Boolector.boolector SMTLib2 []
 
 -- | Default configuration for the CVC4 SMT Solver.
 cvc4 :: SMTConfig
-cvc4 = mkConfig CVC4.cvc4 SMTLib2
+cvc4 = mkConfig CVC4.cvc4 SMTLib2 [allOnStdOut]
 
 -- | Default configuration for the Yices SMT Solver.
 yices :: SMTConfig
-yices = mkConfig Yices.yices SMTLib2
+yices = mkConfig Yices.yices SMTLib2 []
 
 -- | Default configuration for the Z3 SMT solver
 z3 :: SMTConfig
-z3 = cfg {solverSetOptions = [ Control.OptionKeyword ":smtlib2_compliant"    ["true"]
-                             , Control.OptionKeyword ":pp.decimal_precision" [show (printRealPrec cfg)]
-                             ]
-                             ++ solverSetOptions cfg
-         }
- where cfg = mkConfig Z3.z3 SMTLib2
+z3 = cfg { solverSetOptions = solverSetOptions cfg ++ [Control.OptionKeyword ":pp.decimal_precision" [show (printRealPrec cfg)]] }
+  where cfg = mkConfig Z3.z3 SMTLib2 [ Control.OptionKeyword ":smtlib2_compliant"    ["true"]
+                                     , allOnStdOut
+                                     ]
 
 -- | Default configuration for the MathSAT SMT solver
 mathSAT :: SMTConfig
-mathSAT = mkConfig MathSAT.mathSAT SMTLib2
+mathSAT = mkConfig MathSAT.mathSAT SMTLib2 [allOnStdOut]
 
 -- | Default configuration for the ABC synthesis and verification tool.
 abc :: SMTConfig
-abc = mkConfig ABC.abc SMTLib2
+abc = mkConfig ABC.abc SMTLib2 [allOnStdOut]
 
 -- | The default solver used by SBV. This is currently set to z3.
 defaultSMTCfg :: SMTConfig
