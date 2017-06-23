@@ -240,9 +240,9 @@ showSMTDouble rm d
 toSMTLibRational :: Rational -> String
 toSMTLibRational r
    | n < 0
-   = "(- (/ "  ++ show (abs n) ++ " " ++ show d ++ "))"
+   = "(- (/ "  ++ show (abs n) ++ ".0 " ++ show d ++ ".0))"
    | True
-   = "(/ " ++ show n ++ " " ++ show d ++ ")"
+   = "(/ " ++ show n ++ ".0 " ++ show d ++ ".0)"
   where n = numerator r
         d = denominator r
 
