@@ -542,7 +542,7 @@ runSolver cfg ctx execPath opts pgm continuation
  = do let nm  = show (name (solver cfg))
           msg = when (verbose cfg) . mapM_ (putStrLn . ("*** " ++))
 
-      (send, ask, getResponseFromSolver, cleanUp, pid) <- do
+      (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
 
                 let -- send a command down, but check that we're balanced in parens. If we aren't
@@ -676,7 +676,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                     ++ [ "*** Std-out      : " ++ intercalate "\n                   " (lines out)]
                                                                     ++ [ "*** Std-err      : " ++ intercalate "\n                   " (lines err)]
                                                                     ++ ["Giving up.."]
-                return (send, ask, getResponseFromSolver, cleanUp, pid)
+                return (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid)
 
       let executeSolver = do let align tag multi = intercalate "\n" $ zipWith (++) (tag : repeat (replicate (length tag) ' ')) (filter (not . null) (lines multi))
 
@@ -702,17 +702,25 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                     , "*** more information. Please report this as an issue!"
                                                                                     ]
 
-                                                            error $ unlines $ [""
-                                                                              , "*** Data.SBV: Unexpected non-success response from " ++ nm ++ ":"
-                                                                              , "***"
-                                                                              , "***    Sent    : " ++ l
-                                                                              , "***    Expected: success"
-                                                                              , "***    Received: " ++ r
-                                                                              , "***"
-                                                                              , "***    Executable: " ++ execPath
-                                                                              , "***    Options   : " ++ joinArgs opts
-                                                                              , "***"
-                                                                              ]
+                                                            (outOrig, errOrig, ex) <- terminateSolver
+                                                            let out = intercalate "\n" . lines $ outOrig
+                                                                err = intercalate "\n" . lines $ errOrig
+
+                                                            error $ unlines $  [""
+                                                                               , "*** Data.SBV: Unexpected non-success response from " ++ nm ++ ":"
+                                                                               , "***"
+                                                                               , "***    Sent    : " ++ l
+                                                                               , "***    Expected: success"
+                                                                               , "***    Received: " ++ r
+                                                                               ]
+                                                                            ++ [ "***    Stdout    : " ++ out       | not $ null out]
+                                                                            ++ [ "***    Stderr    : " ++ err       | not $ null err]
+                                                                            ++ [ "***    Exit code : " ++ show ex
+                                                                               , "***"
+                                                                               , "***    Executable: " ++ execPath
+                                                                               , "***    Options   : " ++ joinArgs opts
+                                                                               , "***"
+                                                                               ]
                                                                               ++ reason
 
                              -- First check that the solver supports :print-success
