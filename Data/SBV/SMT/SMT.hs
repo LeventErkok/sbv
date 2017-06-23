@@ -579,18 +579,18 @@ runSolver cfg ctx execPath opts pgm continuation
                     -- once it starts responding successive lines should come quickly.
                     getResponseFromSolver :: Maybe String -> Maybe Int -> IO String
                     getResponseFromSolver mbCommand mbTimeOut = do
-                                response <- go 0 []
+                                response <- go True 0 []
                                 let collated = intercalate "\n" $ reverse response
                                 recordTranscript (transcript cfg) $ Right collated
                                 return collated
 
                       where align tag multi = intercalate "\n" $ zipWith (++) (tag : repeat (replicate (length tag) ' ')) (filter (not . null) (lines multi))
 
-                            safeGetLine firstLine h =
-                                         let timeOutToUse | firstLine = mbTimeOut
-                                                          | True      = Just 5000000
-                                             timeOutMsg t | firstLine = "User specified timeout of " ++ showTimeoutValue t ++ " exceeded."
-                                                          | True      = "A multiline complete response wasn't received before " ++ showTimeoutValue t ++ " exceeded."
+                            safeGetLine isFirst h =
+                                         let timeOutToUse | isFirst = mbTimeOut
+                                                          | True    = Just 5000000
+                                             timeOutMsg t | isFirst = "User specified timeout of " ++ showTimeoutValue t ++ " exceeded."
+                                                          | True    = "A multiline complete response wasn't received before " ++ showTimeoutValue t ++ " exceeded."
                                          in case timeOutToUse of
                                               Nothing -> SolverRegular <$> hGetLine h
                                               Just t  -> do r <- Timeout.timeout t (hGetLine h)
@@ -598,7 +598,8 @@ runSolver cfg ctx execPath opts pgm continuation
                                                               Just l  -> return $ SolverRegular l
                                                               Nothing -> return $ SolverTimeout $ timeOutMsg t
 
-                            go i sofar = do errln <- safeGetLine (i == 0) outh `C.catch` (\(e :: C.SomeException) -> return (SolverException (show e)))
+                            go isFirst i sofar = do
+                                            errln <- safeGetLine isFirst outh `C.catch` (\(e :: C.SomeException) -> return (SolverException (show e)))
                                             case errln of
                                               SolverRegular ln -> let need  = i + parenDeficit ln
                                                                       acc   = ln : sofar
@@ -606,7 +607,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                       empty = null $ dropWhile isSpace ln
                                                                   in if not empty && need <= 0
                                                                      then return acc
-                                                                     else go need acc
+                                                                     else go False need acc
 
                                               SolverException e -> do (outOrig, errOrig, ex) <- terminateSolver
 
@@ -677,15 +678,17 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                     ++ ["Giving up.."]
                 return (send, ask, getResponseFromSolver, cleanUp, pid)
 
-      let executeSolver = do let sendAndGetSuccess :: Maybe Int -> String -> IO ()
+      let executeSolver = do let align tag multi = intercalate "\n" $ zipWith (++) (tag : repeat (replicate (length tag) ' ')) (filter (not . null) (lines multi))
+
+                                 sendAndGetSuccess :: Maybe Int -> String -> IO ()
                                  sendAndGetSuccess mbTimeOut l
                                    -- The pathetic case when the solver doesn't support queries, so we pretend it responded "success"
                                    -- Currently ABC is the only such solver. Filed a request for ABC at: https://bitbucket.org/alanmi/abc/issues/70/
                                    | not (supportsCustomQueries (capabilities (solver cfg)))
-                                   = send mbTimeOut l
+                                   = do send mbTimeOut l
+                                        when (verbose cfg) $ putStrLn $ align "[ISSUE] " l
                                    | True
                                    = do r <- ask mbTimeOut l
-                                        let align tag multi = intercalate "\n" $ zipWith (++) (tag : repeat (replicate (length tag) ' ')) (filter (not . null) (lines multi))
                                         case words r of
                                           ["success"] -> when (verbose cfg) $ putStrLn $ align "[GOOD] " l
                                           _           -> do when (verbose cfg) $ putStrLn $ align "[FAIL] " l
