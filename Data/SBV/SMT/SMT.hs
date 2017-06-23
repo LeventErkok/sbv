@@ -702,6 +702,9 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                     , "*** more information. Please report this as an issue!"
                                                                                     ]
 
+                                                            -- put a sync point here before we die so we consume everything
+                                                            extras <- getResponseFromSolver Nothing (Just 5000000) `C.catch` (\(e :: C.SomeException) -> return (show e))
+
                                                             (outOrig, errOrig, ex) <- terminateSolver
                                                             let out = intercalate "\n" . lines $ outOrig
                                                                 err = intercalate "\n" . lines $ errOrig
@@ -711,10 +714,10 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                , "***"
                                                                                , "***    Sent    : " ++ l
                                                                                , "***    Expected: success"
-                                                                               , "***    Received: " ++ r
+                                                                               , "***    Received: " `align` (r ++ "\n" ++ extras)
                                                                                ]
-                                                                            ++ [ "***    Stdout    : " ++ out       | not $ null out]
-                                                                            ++ [ "***    Stderr    : " ++ err       | not $ null err]
+                                                                            ++ [ "***    Stdout    : " `align` out | not $ null out]
+                                                                            ++ [ "***    Stderr    : " `align` err | not $ null err]
                                                                             ++ [ "***    Exit code : " ++ show ex
                                                                                , "***"
                                                                                , "***    Executable: " ++ execPath
