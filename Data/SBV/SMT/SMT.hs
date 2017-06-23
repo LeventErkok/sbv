@@ -63,7 +63,7 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (SMTEngine, State(..))
 
-import Data.SBV.SMT.Utils     (showTimeoutValue)
+import Data.SBV.SMT.Utils     (showTimeoutValue, alignPlain, alignDiagnostic)
 
 import Data.SBV.Utils.PrettyNum
 import Data.SBV.Utils.Lib       (joinArgs, splitArgs)
@@ -584,9 +584,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                 recordTranscript (transcript cfg) $ Right collated
                                 return collated
 
-                      where align tag multi = intercalate "\n" $ zipWith (++) (tag : repeat (replicate (length tag) ' ')) (filter (not . null) (lines multi))
-
-                            safeGetLine isFirst h =
+                      where safeGetLine isFirst h =
                                          let timeOutToUse | isFirst = mbTimeOut
                                                           | True    = Just 5000000
                                              timeOutMsg t | isFirst = "User specified timeout of " ++ showTimeoutValue t ++ " exceeded."
@@ -619,11 +617,11 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                         , "*** Executable: " ++ execPath
                                                                                         , "*** Options   : " ++ joinArgs opts
                                                                                         ]
-                                                                                     ++ [ "*** Request   : " ++ command                      | Just command <- [mbCommand]]
-                                                                                     ++ [ "*** Response  : " `align` unlines (reverse sofar) | not $ null sofar           ]
-                                                                                     ++ [ "*** Stdout    : " ++ out                          | not $ null out             ]
-                                                                                     ++ [ "*** Stderr    : " ++ err                          | not $ null err             ]
-                                                                                     ++ [ "*** Exit code : " ++ show ex
+                                                                                     ++ [ "*** Request   : " `alignDiagnostic` command                 | Just command <- [mbCommand]]
+                                                                                     ++ [ "*** Response  : " `alignDiagnostic` unlines (reverse sofar) | not $ null sofar           ]
+                                                                                     ++ [ "*** Stdout    : " `alignDiagnostic` out                     | not $ null out             ]
+                                                                                     ++ [ "*** Stderr    : " `alignDiagnostic` err                     | not $ null err             ]
+                                                                                     ++ [ "*** Exit code : " `alignDiagnostic` show ex
                                                                                         , "*** Giving up!"
                                                                                         ]
 
@@ -633,9 +631,9 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                       , "***"
                                                                                       , "***   " ++ e
                                                                                       ]
-                                                                                   ++ [ "***   Response so far: " `align` unlines (reverse sofar) | not $ null sofar]
+                                                                                   ++ [ "***   Response so far: " `alignDiagnostic` unlines (reverse sofar) | not $ null sofar]
                                                                                    ++ [ "***" ]
-                                                                                   ++ [ "***   Last command sent was: " ++ command | Just command <- [mbCommand]]
+                                                                                   ++ [ "***   Last command sent was: " `alignDiagnostic` command | Just command <- [mbCommand]]
                                                                                    ++ [ "***   Run with 'verbose=True' for further information" | not (verbose cfg)]
                                                                                    ++ [ "***"
                                                                                       , "*** Giving up!"
@@ -678,20 +676,18 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                     ++ ["Giving up.."]
                 return (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid)
 
-      let executeSolver = do let align tag multi = intercalate "\n" $ zipWith (++) (tag : repeat (replicate (length tag) ' ')) (filter (not . null) (lines multi))
-
-                                 sendAndGetSuccess :: Maybe Int -> String -> IO ()
+      let executeSolver = do let sendAndGetSuccess :: Maybe Int -> String -> IO ()
                                  sendAndGetSuccess mbTimeOut l
                                    -- The pathetic case when the solver doesn't support queries, so we pretend it responded "success"
                                    -- Currently ABC is the only such solver. Filed a request for ABC at: https://bitbucket.org/alanmi/abc/issues/70/
                                    | not (supportsCustomQueries (capabilities (solver cfg)))
                                    = do send mbTimeOut l
-                                        when (verbose cfg) $ putStrLn $ align "[ISSUE] " l
+                                        when (verbose cfg) $ putStrLn $ "[ISSUE] " `alignPlain` l
                                    | True
                                    = do r <- ask mbTimeOut l
                                         case words r of
-                                          ["success"] -> when (verbose cfg) $ putStrLn $ align "[GOOD] " l
-                                          _           -> do when (verbose cfg) $ putStrLn $ align "[FAIL] " l
+                                          ["success"] -> when (verbose cfg) $ putStrLn $ "[GOOD] " `alignPlain` l
+                                          _           -> do when (verbose cfg) $ putStrLn $ "[FAIL] " `alignPlain` l
 
                                                             let isOption = "(set-option" `isPrefixOf` dropWhile isSpace l
 
@@ -712,12 +708,12 @@ runSolver cfg ctx execPath opts pgm continuation
                                                             error $ unlines $  [""
                                                                                , "*** Data.SBV: Unexpected non-success response from " ++ nm ++ ":"
                                                                                , "***"
-                                                                               , "***    Sent    : " ++ l
+                                                                               , "***    Sent    : " `alignDiagnostic` l
                                                                                , "***    Expected: success"
-                                                                               , "***    Received: " `align` (r ++ "\n" ++ extras)
+                                                                               , "***    Received: " `alignDiagnostic` (r ++ "\n" ++ extras)
                                                                                ]
-                                                                            ++ [ "***    Stdout    : " `align` out | not $ null out]
-                                                                            ++ [ "***    Stderr    : " `align` err | not $ null err]
+                                                                            ++ [ "***    Stdout    : " `alignDiagnostic` out | not $ null out]
+                                                                            ++ [ "***    Stderr    : " `alignDiagnostic` err | not $ null err]
                                                                             ++ [ "***    Exit code : " ++ show ex
                                                                                , "***"
                                                                                , "***    Executable: " ++ execPath

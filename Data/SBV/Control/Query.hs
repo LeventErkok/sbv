@@ -37,7 +37,7 @@ import Control.Monad            (unless, zipWithM)
 import Control.Monad.State.Lazy (get)
 
 import Data.List     (unzip3, intercalate, nubBy, sortBy, elemIndex)
-import Data.Maybe    (mapMaybe, listToMaybe)
+import Data.Maybe    (listToMaybe, catMaybes)
 import Data.Function (on)
 
 import Data.SBV.Core.Data
@@ -281,30 +281,31 @@ getObjectiveValues = do rs <- retrieveResponse "getObjectiveValues" Nothing
 
                         let bad = unexpected "getObjectiveValues" "check-sat" "a list of objective values" Nothing
 
-                            r   =  case rs of
-                                     [o] -> o
-                                     xs  -> bad (intercalate "\n" rs) $ Just ["Was expecting a single response, got: " ++ show (length xs)]
+                        r <- case rs of
+                               [o] -> return o
+                               xs  -> bad (intercalate "\n" rs) $ Just ["Was expecting a single response, got: " ++ show (length xs)]
 
                         inputs <- map snd <$> getQuantifiedInputs
 
-                        parse r bad $ \case EApp (ECon "objectives" : es) -> return $ mapMaybe (getObjValue (bad r Nothing) inputs) es
+                        parse r bad $ \case EApp (ECon "objectives" : es) -> do mbVals <- mapM (getObjValue (bad r) inputs) es
+                                                                                return $ catMaybes mbVals
                                             _                             -> bad r Nothing
 
   where -- | Parse an objective value out.
-        getObjValue :: (forall a. Maybe [String] -> a) -> [NamedSymVar] -> SExpr -> Maybe (String, GeneralizedCW)
+        getObjValue :: (forall a. Maybe [String] -> Query a) -> [NamedSymVar] -> SExpr -> Query (Maybe (String, GeneralizedCW))
         getObjValue bailOut inputs expr =
                 case expr of
-                  EApp [_]          -> Nothing  -- Happens when a soft-assertion has no associated group.
+                  EApp [_]          -> return Nothing  -- Happens when a soft-assertion has no associated group.
                   EApp [ECon nm, v] -> case listToMaybe [p | p@(sw, _) <- inputs, show sw == nm] of
-                                         Nothing               -> Nothing -- Happens when the soft assertion has a group-id that's not one of the input names
-                                         Just (sw, actualName) -> Just (actualName, grab sw v)
+                                         Nothing               -> return Nothing -- Happens when the soft assertion has a group-id that's not one of the input names
+                                         Just (sw, actualName) -> grab sw v >>= \val -> return $ Just (actualName, val)
                   _                 -> dontUnderstand (show expr)
 
           where dontUnderstand s = bailOut $ Just [ "Unable to understand solver output."
                                                   , "While trying to process: " ++ s
                                                   ]
 
-                grab :: SW -> SExpr -> GeneralizedCW
+                grab :: SW -> SExpr -> Query GeneralizedCW
                 grab s = extract
                   where k = kindOf s
 
@@ -313,26 +314,26 @@ getObjectiveValues = do rs <- retrieveResponse "getObjectiveValues" Nothing
                         getUIIndex (KUserSort  _ (Right xs)) i = i `elemIndex` xs
                         getUIIndex _                         _ = Nothing
 
-                        extract (ENum    i) | isIntegral      s = RegularCW  $ mkConstCW  k (fst i)
-                        extract (EReal   i) | isReal          s = RegularCW  $ CW KReal   (CWAlgReal i)
-                        extract (EFloat  i) | isFloat         s = RegularCW  $ CW KFloat  (CWFloat   i)
-                        extract (EDouble i) | isDouble        s = RegularCW  $ CW KDouble (CWDouble  i)
-                        extract (ECon    i) | isUninterpreted s = RegularCW  $ CW k       (CWUserSort (getUIIndex k i, i))
+                        extract (ENum    i) | isIntegral      s = return $ RegularCW  $ mkConstCW  k (fst i)
+                        extract (EReal   i) | isReal          s = return $ RegularCW  $ CW KReal   (CWAlgReal i)
+                        extract (EFloat  i) | isFloat         s = return $ RegularCW  $ CW KFloat  (CWFloat   i)
+                        extract (EDouble i) | isDouble        s = return $ RegularCW  $ CW KDouble (CWDouble  i)
+                        extract (ECon    i) | isUninterpreted s = return $ RegularCW  $ CW k       (CWUserSort (getUIIndex k i, i))
 
                         -- Exhausted regular values, look for infinities and such:
-                        extract val                             = ExtendedCW $ cvt (simplify val)
+                        extract val                             = ExtendedCW <$> cvt (simplify val)
 
                         -- Convert to an extended expression. Hopefully complete!
-                        cvt :: SExpr -> ExtCW
-                        cvt (ECon "oo")                    = Infinite  k
-                        cvt (ECon "epsilon")               = Epsilon   k
-                        cvt (EApp [ECon "interval", x, y]) = Interval  (cvt x) (cvt y)
-                        cvt (ENum    (i, _))               = BoundedCW $ mkConstCW k i
-                        cvt (EReal   r)                    = BoundedCW $ CW k $ CWAlgReal r
-                        cvt (EFloat  f)                    = BoundedCW $ CW k $ CWFloat   f
-                        cvt (EDouble d)                    = BoundedCW $ CW k $ CWDouble  d
-                        cvt (EApp [ECon "+", x, y])        = AddExtCW (cvt x) (cvt y)
-                        cvt (EApp [ECon "*", x, y])        = MulExtCW (cvt x) (cvt y)
+                        cvt :: SExpr -> Query ExtCW
+                        cvt (ECon "oo")                    = return $ Infinite  k
+                        cvt (ECon "epsilon")               = return $ Epsilon   k
+                        cvt (EApp [ECon "interval", x, y]) =          Interval  <$> cvt x <*> cvt y
+                        cvt (ENum    (i, _))               = return $ BoundedCW $ mkConstCW k i
+                        cvt (EReal   r)                    = return $ BoundedCW $ CW k $ CWAlgReal r
+                        cvt (EFloat  f)                    = return $ BoundedCW $ CW k $ CWFloat   f
+                        cvt (EDouble d)                    = return $ BoundedCW $ CW k $ CWDouble  d
+                        cvt (EApp [ECon "+", x, y])        =          AddExtCW <$> cvt x <*> cvt y
+                        cvt (EApp [ECon "*", x, y])        =          MulExtCW <$> cvt x <*> cvt y
                         -- Nothing else should show up, hopefully!
                         cvt e = dontUnderstand (show e)
 

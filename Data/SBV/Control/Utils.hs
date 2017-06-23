@@ -9,10 +9,11 @@
 -- Query related utils.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE DefaultSignatures     #-}
-{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE BangPatterns          #-}
+{-# LANGUAGE DefaultSignatures     #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 
 module Data.SBV.Control.Utils (
@@ -28,8 +29,7 @@ module Data.SBV.Control.Utils (
      , retrieveResponse
      ) where
 
-import Data.List  (sortBy, intercalate, elemIndex, partition, groupBy, tails)
-import Data.Maybe (isNothing)
+import Data.List  (sortBy, elemIndex, partition, groupBy, tails)
 
 import Data.Ord      (comparing)
 import Data.Function (on)
@@ -38,6 +38,7 @@ import Data.Int
 import Data.Word
 
 import qualified Data.Map as Map
+import qualified Control.Exception as C
 
 import Control.Monad            (when, unless)
 import Control.Monad.State.Lazy (get, liftIO)
@@ -58,7 +59,7 @@ import Data.SBV.Core.Symbolic (IncState(..), withNewIncState, State(..), svToSW,
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
 import Data.SBV.SMT.SMTLib  (toIncSMTLib)
-import Data.SBV.SMT.Utils   (showTimeoutValue, annotateWithName)
+import Data.SBV.SMT.Utils   (showTimeoutValue, annotateWithName, alignDiagnostic, alignPlain)
 
 import Data.SBV.Utils.SExpr
 import Data.SBV.Control.Types
@@ -175,13 +176,11 @@ send requireSuccess s = do
             if requireSuccess
                then do r <- io $ queryAsk queryTimeOutValue s
 
-                       let align tag multi = intercalate "\n" $ zipWith (++) (tag : repeat (replicate (length tag) ' ')) (filter (not . null) (lines multi))
-
                        case words r of
-                         ["success"] -> when (verbose queryConfig) $ io $ putStrLn $ align "[GOOD] " s
+                         ["success"] -> when (verbose queryConfig) $ io $ putStrLn $ "[GOOD] " `alignPlain` s
                          _           -> do case queryTimeOutValue of
-                                             Nothing -> io $ putStrLn $ align "[FAIL] " s
-                                             Just i  -> io $ putStrLn $ align ("[FAIL, TimeOut: " ++ showTimeoutValue i ++ "]  ") s
+                                             Nothing -> io $ putStrLn $ "[FAIL] " `alignPlain` s
+                                             Just i  -> io $ putStrLn $ ("[FAIL, TimeOut: " ++ showTimeoutValue i ++ "]  ") `alignPlain` s
                                            unexpected "Command" s "success" Nothing r Nothing
 
                else io $ querySend queryTimeOutValue s  -- fire and forget. if you use this, you're on your own!
@@ -206,14 +205,12 @@ retrieveResponse userTag mbTo = do
              QueryState{queryRetrieveResponse, queryConfig} <- getQueryState
 
              let loop sofar = do
-                  s <- io $ queryRetrieveResponse mbTo
+                  s <- io $ queryRetrieveResponse mbTo `C.catch` (\(e :: C.SomeException) -> return (show e))
 
                   if s == synchTag
                      then do queryDebug ["[SYNC] Synchronization achieved using tag: " ++ synchTag]
                              return $ reverse sofar
-                     else do when (verbose queryConfig) $ io $ do
-                                let align tag multi = intercalate "\n" $ zipWith (++) (tag : repeat (replicate (length tag) ' ')) (filter (not . null) (lines multi))
-                                putStrLn $ align "[RECV] " s
+                     else do when (verbose queryConfig) $ io $ putStrLn $ "[RECV] " `alignPlain` s
                              loop (s : sofar)
 
              loop []
@@ -483,15 +480,17 @@ parse r fCont sCont = case parseSExpr r of
                         Right res -> sCont res
 
 -- | Bail out if we don't get what we expected
-unexpected :: String -> String -> String -> Maybe [String] -> String -> Maybe [String] -> a
-unexpected ctx sent expected mbHint received mbReason = error $ unlines $ [
-          ""
-        , "*** Data.SBV: Unexpected response from the solver."
-        , "***    Context : " ++ ctx
-        , "***    Sent    : " ++ sent
-        , "***    Expected: " ++ expected
-        ]
-     ++ [ "***    Received: " ++ received          | isNothing mbReason  ]
-     ++ [ "***    Reason  : " ++ intercalate tab r | Just r <- [mbReason]]
-     ++ [ "***    Hint    : " ++ intercalate tab r | Just r <- [mbHint]]
- where tab = "\n***              "
+unexpected :: String -> String -> String -> Maybe [String] -> String -> Maybe [String] -> Query a
+unexpected ctx sent expected mbHint received mbReason = do
+        -- empty the response channel first
+        extras <- retrieveResponse "terminating upon unexpected response" (Just 5000000)
+
+        error $ unlines $ [ ""
+                          , "*** Data.SBV: Unexpected response from the solver."
+                          , "***    Context : " `alignDiagnostic` ctx
+                          , "***    Sent    : " `alignDiagnostic` sent
+                          , "***    Expected: " `alignDiagnostic` expected
+                          , "***    Received: " `alignDiagnostic` unlines (received : extras)
+                          ]
+                       ++ [ "***    Reason  : " `alignDiagnostic` unlines r | Just r <- [mbReason]]
+                       ++ [ "***    Hint    : " `alignDiagnostic` unlines r | Just r <- [mbHint]]

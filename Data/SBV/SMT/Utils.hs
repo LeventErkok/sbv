@@ -14,11 +14,14 @@ module Data.SBV.SMT.Utils (
         , SMTLibIncConverter
         , annotateWithName
         , showTimeoutValue
+        , alignDiagnostic
+        , alignPlain
        )
        where
 
 import Data.SBV.Core.Data
 
+import Data.List (intercalate)
 import qualified Data.Set as Set (Set)
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
@@ -58,3 +61,15 @@ showTimeoutValue i = case (i `quotRem` 1000000, i `quotRem` 500000) of
                        ((s, 0), _)  -> shows s                              "s"
                        (_, (hs, 0)) -> shows (fromIntegral hs / (2::Float)) "s"
                        _            -> shows i "ms"
+
+-- | Nicely align a potentially multi-line message with some tag, but prefix with three stars
+alignDiagnostic :: String -> String -> String
+alignDiagnostic = alignWithPrefix "*** "
+
+-- | Nicely align a potentially multi-line message with some tag, no prefix.
+alignPlain :: String -> String -> String
+alignPlain = alignWithPrefix ""
+
+-- | Align with some given prefix
+alignWithPrefix :: String -> String -> String -> String
+alignWithPrefix pre tag multi = intercalate "\n" $ zipWith (++) (tag : repeat (pre ++ replicate (length tag - length pre) ' ')) (filter (not . null) (lines multi))
