@@ -1290,20 +1290,19 @@ instance HasKind RoundingMode
 -- The 'printBase' field can be used to print numbers in base 2, 10, or 16. If base 2 or 16 is used, then floating-point values will
 -- be printed in their internal memory-layout format as well, which can come in handy for bit-precise analysis.
 data SMTConfig = SMTConfig {
-         verbose             :: Bool                      -- ^ Debug mode
-       , timing              :: Timing                    -- ^ Print timing information on how long different phases took (construction, solving, etc.)
-       , printBase           :: Int                       -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
-       , printRealPrec       :: Int                       -- ^ Print algebraic real values with this precision. (SReal, default: 16)
-       , satCmd              :: String                    -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
-       , allSatMaxModelCount :: Maybe Int
-       , isNonModelVar       :: String -> Bool            -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
-       , transcript          :: Maybe FilePath            -- ^ If Just, the entire interaction will be recorded as a playable file (for debugging purposes mostly)
-       , smtLibVersion       :: SMTLibVersion             -- ^ What version of SMT-lib we use for the tool
-       , solver              :: SMTSolver                 -- ^ The actual SMT solver.
-       , roundingMode        :: RoundingMode              -- ^ Rounding mode to use for floating-point conversions
-       , solverSetOptions    :: [SMTOption]               -- ^ Options to set as we start the solver
-       , customQuery         :: Maybe (Query [SMTResult]) -- ^ Custom user-given query
-       , ignoreExitCode      :: Bool                      -- ^ If true, we shall ignore the exit code upon exit. Otherwise we require ExitSuccess.
+         verbose             :: Bool           -- ^ Debug mode
+       , timing              :: Timing         -- ^ Print timing information on how long different phases took (construction, solving, etc.)
+       , printBase           :: Int            -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
+       , printRealPrec       :: Int            -- ^ Print algebraic real values with this precision. (SReal, default: 16)
+       , satCmd              :: String         -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
+       , allSatMaxModelCount :: Maybe Int      -- ^ In an allSat call, return at most this many models. If nothing, return all.
+       , isNonModelVar       :: String -> Bool -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
+       , transcript          :: Maybe FilePath -- ^ If Just, the entire interaction will be recorded as a playable file (for debugging purposes mostly)
+       , smtLibVersion       :: SMTLibVersion  -- ^ What version of SMT-lib we use for the tool
+       , solver              :: SMTSolver      -- ^ The actual SMT solver.
+       , roundingMode        :: RoundingMode   -- ^ Rounding mode to use for floating-point conversions
+       , solverSetOptions    :: [SMTOption]    -- ^ Options to set as we start the solver
+       , ignoreExitCode      :: Bool           -- ^ If true, we shall ignore the exit code upon exit. Otherwise we require ExitSuccess.
        }
 
 -- We're just seq'ing top-level here, it shouldn't really matter. (i.e., no need to go deeper.)

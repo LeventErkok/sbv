@@ -13,8 +13,6 @@
 
 module Data.SBV.Provers.Yices(yices) where
 
-import Data.Maybe (isNothing)
-
 import Data.SBV.Core.Data
 import Data.SBV.SMT.SMT
 
@@ -25,7 +23,7 @@ yices :: SMTSolver
 yices = SMTSolver {
            name         = Yices
          , executable   = "yices-smt2"
-         , options      = modConfig []
+         , options      = const []
          , engine       = standardEngine "SBV_YICES" "SBV_YICES_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False
@@ -39,8 +37,3 @@ yices = SMTSolver {
                               , supportsGlobalDecls        = False
                               }
          }
-  where -- If custom queries are present, Yices requires to be in the incremental mode
-        modConfig :: [String] -> SMTConfig -> [String]
-        modConfig opts cfg
-         | isNothing (customQuery cfg) = opts
-         | True                        = opts ++ ["--incremental"]

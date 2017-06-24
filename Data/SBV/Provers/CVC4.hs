@@ -13,8 +13,6 @@
 
 module Data.SBV.Provers.CVC4(cvc4) where
 
-import Data.Maybe (isNothing)
-
 import Data.SBV.Core.Data
 import Data.SBV.SMT.SMT
 
@@ -25,7 +23,7 @@ cvc4 :: SMTSolver
 cvc4 = SMTSolver {
            name         = CVC4
          , executable   = "cvc4"
-         , options      = modConfig ["--lang", "smt"]
+         , options      = const ["--lang", "smt"]
          , engine       = standardEngine "SBV_CVC4" "SBV_CVC4_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = True
@@ -39,8 +37,3 @@ cvc4 = SMTSolver {
                               , supportsGlobalDecls        = True
                               }
          }
- where -- If custom queries are present, CVC4 requires an explicit command-line argument
-       modConfig :: [String] -> SMTConfig -> [String]
-       modConfig opts cfg
-        | isNothing (customQuery cfg) = opts
-        | True                        = opts ++ ["--incremental", "--interactive", "--no-interactive-prompt"]

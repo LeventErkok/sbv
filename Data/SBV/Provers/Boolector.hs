@@ -11,8 +11,6 @@
 
 module Data.SBV.Provers.Boolector(boolector) where
 
-import Data.Maybe (isNothing)
-
 import Data.SBV.Core.Data
 import Data.SBV.SMT.SMT
 
@@ -23,7 +21,7 @@ boolector :: SMTSolver
 boolector = SMTSolver {
            name         = Boolector
          , executable   = "boolector"
-         , options      = modConfig ["--smt2", "--smt2-model", "--no-exit-codes"]
+         , options      = const ["--smt2", "--smt2-model", "--no-exit-codes"]
          , engine       = standardEngine "SBV_BOOLECTOR" "SBV_BOOLECTOR_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False
@@ -37,9 +35,3 @@ boolector = SMTSolver {
                               , supportsGlobalDecls        = False
                               }
          }
-
- where -- If custom queries are present, Boolector requires to be in the "--incremental" mode
-       modConfig :: [String] -> SMTConfig -> [String]
-       modConfig opts cfg
-        | isNothing (customQuery cfg) = opts
-        | True                        = opts ++ ["--incremental"]
