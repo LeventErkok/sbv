@@ -417,11 +417,11 @@ instance Show Result where
                 ++ ["AXIOMS"]
                 ++ map shax axs
                 ++ ["TACTICS"]
-                ++ map show tacs
+                ++ sh2 tacs
                 ++ ["SMT OPTIONS"]
-                ++ map show smtOptions
+                ++ sh2 smtOptions
                 ++ ["GOALS"]
-                ++ map show goals
+                ++ sh2 goals
                 ++ ["DEFINE"]
                 ++ map (\(s, e) -> "  " ++ shs s ++ " = " ++ show e) (F.toList (pgmAssignments xs))
                 ++ ["CONSTRAINTS"]
@@ -429,8 +429,11 @@ instance Show Result where
                 ++ ["ASSERTIONS"]
                 ++ map (("  "++) . shAssert) asserts
                 ++ ["OUTPUTS"]
-                ++ map (("  " ++) . show) os
-    where usorts = [sh s t | KUserSort s t <- Set.toList kinds]
+                ++ sh2 os
+    where sh2 :: Show a => [a] -> [String]
+          sh2 = map ((" "++) . show)
+
+          usorts = [sh s t | KUserSort s t <- Set.toList kinds]
                    where sh s (Left   _) = s
                          sh s (Right es) = s ++ " (" ++ intercalate ", " es ++ ")"
 
