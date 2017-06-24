@@ -34,7 +34,14 @@ endef
 
 .PHONY: all install test doctest basicTest extendedTests sdist clean docs gold hlint tags checkLinks testInterfaces markBuildStart markBuildEnd  release
 
-all: install
+all: quick
+
+quick:
+	$(call startTimer,$@)
+	@fast-tags -R --nomerge .
+	@cabal build
+	@cabal register
+	$(call endTimer,$@)
 
 install: 
 	$(call startTimer,$@)
