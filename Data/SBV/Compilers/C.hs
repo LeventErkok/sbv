@@ -29,10 +29,7 @@ import Data.SBV.Compilers.CodeGen
 
 import Data.SBV.Utils.PrettyNum   (shex, showCFloat, showCDouble)
 
-import GHC.Stack.Compat
-#if !MIN_VERSION_base(4,9,0)
-import GHC.SrcLoc.Compat
-#endif
+import GHC.Stack
 
 ---------------------------------------------------------------------------
 -- * API

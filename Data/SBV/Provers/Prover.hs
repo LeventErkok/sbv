@@ -50,11 +50,6 @@ import System.IO         (hGetBuffering, hSetBuffering, stdout, hFlush, BufferMo
 
 import Control.Concurrent.Async (async, wait, cancel, waitAny, Async)
 
-import GHC.Stack.Compat
-#if !MIN_VERSION_base(4,9,0)
-import GHC.SrcLoc.Compat
-#endif
-
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.SMT.SMT
@@ -67,6 +62,8 @@ import qualified Data.SBV.Control.Utils as Control
 
 import Control.DeepSeq (rnf)
 import Control.Exception (bracket)
+
+import GHC.Stack
 
 import qualified Data.SBV.Provers.Boolector  as Boolector
 import qualified Data.SBV.Provers.CVC4       as CVC4

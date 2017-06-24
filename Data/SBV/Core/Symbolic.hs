@@ -65,7 +65,7 @@ import Data.IORef               (IORef, newIORef, readIORef)
 import Data.List                (intercalate, sortBy)
 import Data.Maybe               (isJust, fromJust, fromMaybe)
 
-import GHC.Stack.Compat
+import GHC.Stack
 
 import qualified Data.IORef    as R    (modifyIORef')
 import qualified Data.Generics as G    (Data(..))
@@ -83,9 +83,6 @@ import Data.SBV.SMT.SMTLibNames
 import Data.SBV.Utils.TDiff(Timing)
 
 import Data.SBV.Control.Types
-
-import Prelude ()
-import Prelude.Compat
 
 -- | A symbolic node id
 newtype NodeId = NodeId Int deriving (Eq, Ord)

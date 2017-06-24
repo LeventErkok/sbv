@@ -66,7 +66,7 @@ import Data.SBV.Control.Types
 
 import qualified Data.Set as Set (toList)
 
-import GHC.Stack.Compat
+import GHC.Stack
 
 -- | 'Query' as a 'SolverContext'.
 instance SolverContext Query where

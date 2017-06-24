@@ -46,7 +46,8 @@ import Control.Monad.Trans  (liftIO)
 
 import GHC.Generics (U1(..), M1(..), (:*:)(..), K1(..))
 import qualified GHC.Generics as G
-import GHC.Stack.Compat
+
+import GHC.Stack
 
 import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits       (Bits(..))

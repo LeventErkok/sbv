@@ -64,10 +64,7 @@ import Data.List            (elemIndex, intercalate)
 import qualified Data.Set as Set (Set)
 import qualified Data.Generics as G    (Data(..))
 
-import GHC.Stack.Compat
-#if !MIN_VERSION_base(4,9,0)
-import GHC.SrcLoc.Compat
-#endif
+import GHC.Stack
 
 import System.Random
 
@@ -81,9 +78,6 @@ import Data.SBV.Control.Types
 import Data.SBV.SMT.SMTLibNames
 
 import Data.SBV.Utils.Lib
-
-import Prelude ()
-import Prelude.Compat
 
 -- | Get the current path condition
 getPathCondition :: State -> SBool

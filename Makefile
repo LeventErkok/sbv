@@ -6,7 +6,7 @@
 OS := $(shell uname)
 
 SHELL   := /usr/bin/env bash
-TSTSRCS = $(shell find . -name '*.hs' | grep -v SBVUnitTest | grep -v buildUtils | grep -v sandbox | grep -v GHC/SrcLoc/Compat.hs)
+TSTSRCS = $(shell find . -name '*.hs' | grep -v SBVUnitTest | grep -v buildUtils | grep -v sandbox)
 
 ifeq ($(OS), Darwin)
 # OSX tends to sleep for long jobs; so run through caffeinate

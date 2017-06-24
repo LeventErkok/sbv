@@ -54,9 +54,6 @@ import qualified Text.PrettyPrint.HughesPJ as P (render)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (svToSymSW, svMkSymVar, outputSVal)
 
-import Prelude ()
-import Prelude.Compat
-
 -- | Abstract over code generation for different languages
 class CgTarget a where
   targetName :: a -> String
