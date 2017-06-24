@@ -198,8 +198,7 @@ getLexicographicOptResults = do cfg <- getConfig
                                   Unsat -> return $ Unsatisfiable cfg
                                   Sat   -> classifyModel cfg <$> getModelWithObjectives
                                   Unk   -> Unknown       cfg <$> getModelWithObjectives
-   where getModelWithObjectives :: Query SMTModel
-         getModelWithObjectives = do objectiveValues <- getObjectiveValues
+   where getModelWithObjectives = do objectiveValues <- getObjectiveValues
                                      m               <- getModel
                                      return m {modelObjectives = objectiveValues}
 
@@ -211,8 +210,7 @@ getIndependentOptResults objNames = do cfg <- getConfig
                                          Unsat -> return [(nm, Unsatisfiable cfg) | nm <- objNames]
                                          Sat   -> continue (classifyModel cfg)
                                          Unk   -> continue (Unknown cfg)
-  where -- When we start, check-sat is issued, so get objective values first.
-        continue classify = do objectiveValues <- getObjectiveValues
+  where continue classify = do objectiveValues <- getObjectiveValues
                                nms <- zipWithM getIndependentResult [0..] objNames
                                return [(n, classify (m {modelObjectives = objectiveValues})) | (n, m) <- nms]
 
@@ -277,13 +275,11 @@ getModelAtIndex mbi = do
 -- | Just after a check-sat is issued, collect objective values. Used
 -- internally only, not exposed to the user.
 getObjectiveValues :: Query [(String, GeneralizedCW)]
-getObjectiveValues = do rs <- retrieveResponse "getObjectiveValues" Nothing
+getObjectiveValues = do let cmd = "(get-objectives)"
 
-                        let bad = unexpected "getObjectiveValues" "check-sat" "a list of objective values" Nothing
+                            bad = unexpected "getObjectiveValues" cmd "a list of objective values" Nothing
 
-                        r <- case rs of
-                               [o] -> return o
-                               xs  -> bad (intercalate "\n" rs) $ Just ["Was expecting a single response, got: " ++ show (length xs)]
+                        r <- ask cmd
 
                         inputs <- map snd <$> getQuantifiedInputs
 
