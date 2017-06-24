@@ -599,18 +599,29 @@ mkSMTResult asgns = do
 
                                           error $ unlines $ [""
                                                             , "*** Data.SBV: Query model construction has a faulty assignment."
+                                                            , "***"
                                                             ]
                                                          ++ [ align misTag ++ intercalate ", "  missing | not (null missing)]
                                                          ++ [ align extTag ++ intercalate ", "  extra   | not (null extra)  ]
                                                          ++ [ align dupTag ++ intercalate ", "  dup     | not (null dup)    ]
-                                                         ++ [ "*** Data.SBV: Check your query result construction!" ]
+                                                         ++ [ "***"
+                                                            , "*** Data.SBV: Check your query result construction!"
+                                                            ]
 
-                                    return modelAssignment
+                                    let findName s = case [nm | (_, (i, nm)) <- inps, s == i] of
+                                                        [nm] -> nm
+                                                        []   -> error "*** Data.SBV: Impossible happened: Cannot find " ++ show s ++ " in the input list"
+                                                        nms  -> error $ unlines [ ""
+                                                                                , "*** Data.SBV: Impossible happened: Multiple matches for: " ++ show s
+                                                                                , "***   Candidates: " ++ unwords nms
+                                                                                ]
+
+                                    return [(findName s, n) | (s, n) <- modelAssignment]
 
              assocs <- inNewContext grabValues
 
              let m = SMTModel { modelObjectives = []
-                              , modelAssocs     = [(show s, c) | (s, c) <- assocs]
+                              , modelAssocs     = assocs
                               }
 
              return $ Satisfiable queryConfig m
