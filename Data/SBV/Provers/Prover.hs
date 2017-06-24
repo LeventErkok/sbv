@@ -39,7 +39,7 @@ module Data.SBV.Provers.Prover (
 import Data.Char         (isSpace)
 import Data.List         (intercalate)
 
-import Control.Monad        (when, unless, mplus)
+import Control.Monad        (when, unless)
 import Control.Monad.Reader (ask)
 import Control.Monad.Trans  (liftIO)
 import Control.Monad.State  (evalStateT)
@@ -486,8 +486,6 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels smtOptions tactics 
         when (hasObjectives && not isSat)     $ error "SBV: Optimization is only available for sat calls."
         when (hasObjectives && hasCaseSplits) $ error "SBV: Optimization and case-splits are not supported together."
 
-        when hasQueries $ maybe (return ()) error $ checkQueryApplicability cfgIn hasCaseSplits
-
         let mbOptInfo = Nothing
 
         if hasObjectives
@@ -506,22 +504,19 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels smtOptions tactics 
                                 then cont finalConfig ctx mbOptInfo (CasePath (map (snd . snd) levels))
                                 else caseSplit finalConfig ctx mbOptInfo shouldCheckCaseVacuity (parallelCase, hasPar) isSat (wrap, unwrap) levels smtOptions chatty cases cont
 
-  where (caseSplits, checkCaseVacuity, parallelCases, checkConstrVacuity, checkUsing, queryUsings)
-                = foldr (flip classifyTactics) ([], [], [], [], [], []) tactics
+  where (caseSplits, checkCaseVacuity, parallelCases, checkConstrVacuity, checkUsing)
+                = foldr (flip classifyTactics) ([], [], [], [], []) tactics
 
-        classifyTactics (a, b, c, d, e, f) = \case
-                    t@CaseSplit{}           -> (t:a,   b,   c,   d,   e,   f)
-                    t@CheckCaseVacuity{}    -> (  a, t:b,   c,   d,   e,   f)
-                    t@ParallelCase{}        -> (  a,   b, t:c,   d,   e,   f)
-                    t@CheckConstrVacuity{}  -> (  a,   b,   c, t:d,   e,   f)
-                    t@CheckUsing{}          -> (  a,   b,   c,   d, t:e,   f)
-                    t@QueryUsing{}          -> (  a,   b,   c,   d,   e, t:f)
+        classifyTactics (a, b, c, d, e) = \case
+                    t@CaseSplit{}           -> (t:a,   b,   c,   d,   e)
+                    t@CheckCaseVacuity{}    -> (  a, t:b,   c,   d,   e)
+                    t@ParallelCase{}        -> (  a,   b, t:c,   d,   e)
+                    t@CheckConstrVacuity{}  -> (  a,   b,   c, t:d,   e)
+                    t@CheckUsing{}          -> (  a,   b,   c,   d, t:e)
 
         hasObjectives = not $ null objectives
 
         hasCaseSplits = not $ null cases
-
-        hasQueries    = not $ null queryUsings
 
         parallelCase  = not $ null parallelCases
 
@@ -539,41 +534,9 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels smtOptions tactics 
                              [s] -> c {satCmd = "(check-sat-using " ++ s ++ ")"}
                              ss  -> c {satCmd = "(check-sat-using (then " ++ unwords ss ++ "))"}
 
-        grabQueryUsing c = case [f | QueryUsing f <- queryUsings] of
-                              []  -> c
-                              [f] -> c { customQuery = Just f }
-                              _   -> error "SBV.QueryUsing: Multiple user-continuations found, at most one is allowed."
-
         grabSetOptions c = c { solverSetOptions = smtOptions ++ solverSetOptions c }
 
-        finalConfig = grabQueryUsing . grabSetOptions . grabCheckUsing $ cfgIn
-
--- | Should we allow a custom query? Returns the reason why we shouldn't, if there is one
-checkQueryApplicability :: SMTConfig -> Bool -> Maybe String
-checkQueryApplicability cfgIn hasCaseSplits =
-                checkSupport    (supportsCustomQueries $ capabilities $ solver cfgIn)
-        `mplus` checkCaseSplits hasCaseSplits
-  where
-        -- Check if the underlying solver has support for it
-        checkSupport True  = Nothing
-        checkSupport False = noInteractive [ "Chosen solver does not support interactive queries:"
-                                           , "   Solver: " ++ show (name (solver cfgIn))
-                                           ]
-
-        -- Can execute queries if there are case splits. This is an interesting (but probablt inconsequential) restriction. The
-        -- reason why is that case-splits rely on the fact that the internal state of SBV remains constant once we are done
-        -- simulating. But the whole point of a query is to alter that state further! Thus, if we run a query in a case-split
-        -- context, we'd have a terrible race condition. If absolutely necessary, this can be worked around by making a "deep copy"
-        -- of the state and all it's IORefs as we go down a branch, but that can be costly and could lead to space leaks. Let's
-        -- fight that battle if it actually does become an issue.
-        checkCaseSplits False = Nothing
-        checkCaseSplits True  = noInteractive [ "Queries in the presence of case splits."]
-
-        noInteractive :: [String] -> Maybe String
-        noInteractive ss = Just $ unlines $ ""
-                                          : "*** Data.SBV: Unsupported interactive/query mode feature."
-                                          :  map ("***  " ++) ss
-                                          ++ ["*** Data.SBV: Please report this as a feature request!"]
+        finalConfig = grabSetOptions . grabCheckUsing $ cfgIn
 
 -- | Implements the "constraint vacuity check" tactic, making sure the calls to "constrain"
 -- describe a satisfiable condition. Returns:

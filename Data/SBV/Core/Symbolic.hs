@@ -340,17 +340,12 @@ data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -
 newtype Query a = Query (StateT State IO a)
              deriving (Applicative, Functor, Monad, MonadIO, MonadState State)
 
--- Show instance for Query, needed since tactics are Showable
-instance Show (Query a) where
-   show _ = "<Query>"
-
 -- | Solver tactic
 data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-split, with implicit coverage. Bool says whether we should be verbose.
               | CheckCaseVacuity   Bool                            -- ^ Should the case-splits be checked for vacuity? (Default: True.)
               | ParallelCase                                       -- ^ Run case-splits in parallel. (Default: Sequential.)
               | CheckConstrVacuity Bool                            -- ^ Should "constraints" be checked for vacuity? (Default: False.)
               | CheckUsing         String                          -- ^ Invoke with check-sat-using command, instead of check-sat
-              | QueryUsing         (Query [SMTResult])             -- ^ Use a custom query-engine to extract results.
               deriving (Show, Functor)
 
 instance NFData OptimizeStyle where
@@ -371,7 +366,6 @@ instance NFData a => NFData (Tactic a) where
    rnf ParallelCase           = ()
    rnf (CheckConstrVacuity b) = rnf b `seq` ()
    rnf (CheckUsing       s)   = rnf s `seq` ()
-   rnf (QueryUsing       _)   = ()
 
 -- | Is there a parallel-case anywhere?
 isParallelCaseAnywhere :: Tactic a -> Bool
@@ -1021,7 +1015,6 @@ addSValTactic tac = do st <- ask
                            walk (CheckCaseVacuity b)   = return $ CheckCaseVacuity b
                            walk (CheckConstrVacuity b) = return $ CheckConstrVacuity b
                            walk (CheckUsing s)         = return $ CheckUsing s
-                           walk (QueryUsing f)         = return $ QueryUsing f
                        tac' <- liftIO $ walk tac
                        liftIO $ modifyState st rTacs (tac':)
                                           $ noInteractive [ "Adding a new tactic:"
