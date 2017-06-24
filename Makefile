@@ -39,7 +39,7 @@ all: quick
 quick:
 	$(call startTimer,$@)
 	@fast-tags -R --nomerge .
-	@cabal build
+	@cabal build --ghc-options="-Werror -Wall"
 	@cabal register
 	$(call endTimer,$@)
 
