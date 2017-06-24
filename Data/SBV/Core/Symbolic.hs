@@ -431,7 +431,7 @@ instance Show Result where
                 ++ ["OUTPUTS"]
                 ++ sh2 os
     where sh2 :: Show a => [a] -> [String]
-          sh2 = map ((" "++) . show)
+          sh2 = map (("  "++) . show)
 
           usorts = [sh s t | KUserSort s t <- Set.toList kinds]
                    where sh s (Left   _) = s
