@@ -61,7 +61,7 @@ goldenVsStringShow n res = goldenVsString n (goldDir2 ++ n ++ ".gold") (fmap (LB
 
 -- Run an IO action, capture it's stdout, and make that a test
 goldenCapturedIO :: TestName -> IO () -> TestTree
-goldenCapturedIO n res = goldenVsString n gf (fmap (LBC.pack) (capture_ res))
+goldenCapturedIO n res = goldenVsString n gf (fmap LBC.pack (capture_ res))
   where gf = goldDir2 ++ n ++ ".gold"
 
 -- | Create a gold file for the test case
