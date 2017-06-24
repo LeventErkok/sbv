@@ -29,7 +29,7 @@ module Data.SBV.Control.Query (
      , Logic(..), Assignment(..)
      , ignoreExitCode, timeout
      , (|->)
-     , mkResult
+     , mkSMTResult
      , io
      ) where
 
@@ -564,56 +564,57 @@ SBV a |-> v = case literal v of
                 r                      -> error $ "Data.SBV: Impossible happened in |->: Cannot construct a CW with literal: " ++ show r
 
 -- | Produce the query result from an assignment.
-mkResult :: [Assignment] -> Query SMTResult
-mkResult asgns = do QueryState{queryConfig} <- getQueryState
-                    inps <- getQuantifiedInputs
+mkSMTResult :: [Assignment] -> Query SMTResult
+mkSMTResult asgns = do
+             QueryState{queryConfig} <- getQueryState
+             inps <- getQuantifiedInputs
 
-                    let grabValues st = do let extract (Assign s n) = sbvToSW st (SBV s) >>= \sw -> return (sw, n)
+             let grabValues st = do let extract (Assign s n) = sbvToSW st (SBV s) >>= \sw -> return (sw, n)
 
-                                           modelAssignment <- mapM extract asgns
+                                    modelAssignment <- mapM extract asgns
 
-                                           -- sanity checks
-                                           --     - All existentials should be given a value
-                                           --     - No duplicates
-                                           --     - No bindings to vars that are not inputs
-                                           let userSS = map fst modelAssignment
+                                    -- sanity checks
+                                    --     - All existentials should be given a value
+                                    --     - No duplicates
+                                    --     - No bindings to vars that are not inputs
+                                    let userSS = map fst modelAssignment
 
-                                               missing, extra, dup :: [String]
-                                               missing = [n | (EX, (s, n)) <- inps, s `notElem` userSS]
-                                               extra   = [show s | s <- userSS, s `notElem` map (fst . snd) inps]
-                                               dup     = let walk []     = []
-                                                             walk (n:ns)
-                                                               | n `elem` ns = show n : walk (filter (/= n) ns)
-                                                               | True        = walk ns
-                                                         in walk userSS
+                                        missing, extra, dup :: [String]
+                                        missing = [n | (EX, (s, n)) <- inps, s `notElem` userSS]
+                                        extra   = [show s | s <- userSS, s `notElem` map (fst . snd) inps]
+                                        dup     = let walk []     = []
+                                                      walk (n:ns)
+                                                        | n `elem` ns = show n : walk (filter (/= n) ns)
+                                                        | True        = walk ns
+                                                  in walk userSS
 
-                                           unless (null (missing ++ extra ++ dup)) $ do
+                                    unless (null (missing ++ extra ++ dup)) $ do
 
-                                                 let misTag = "***   Missing inputs"
-                                                     dupTag = "***   Duplicate bindings"
-                                                     extTag = "***   Extra bindings"
+                                          let misTag = "***   Missing inputs"
+                                              dupTag = "***   Duplicate bindings"
+                                              extTag = "***   Extra bindings"
 
-                                                     maxLen = maximum $  0
-                                                                       : [length misTag | not (null missing)]
-                                                                      ++ [length extTag | not (null extra)]
-                                                                      ++ [length dupTag | not (null dup)]
+                                              maxLen = maximum $  0
+                                                                : [length misTag | not (null missing)]
+                                                               ++ [length extTag | not (null extra)]
+                                                               ++ [length dupTag | not (null dup)]
 
-                                                     align s = s ++ replicate (maxLen - length s) ' ' ++ ": "
+                                              align s = s ++ replicate (maxLen - length s) ' ' ++ ": "
 
-                                                 error $ unlines $ [""
-                                                                   , "*** Data.SBV: Query model construction has a faulty assignment."
-                                                                   ]
-                                                                ++ [ align misTag ++ intercalate ", "  missing | not (null missing)]
-                                                                ++ [ align extTag ++ intercalate ", "  extra   | not (null extra)  ]
-                                                                ++ [ align dupTag ++ intercalate ", "  dup     | not (null dup)    ]
-                                                                ++ [ "*** Data.SBV: Check your query result construction!" ]
+                                          error $ unlines $ [""
+                                                            , "*** Data.SBV: Query model construction has a faulty assignment."
+                                                            ]
+                                                         ++ [ align misTag ++ intercalate ", "  missing | not (null missing)]
+                                                         ++ [ align extTag ++ intercalate ", "  extra   | not (null extra)  ]
+                                                         ++ [ align dupTag ++ intercalate ", "  dup     | not (null dup)    ]
+                                                         ++ [ "*** Data.SBV: Check your query result construction!" ]
 
-                                           return modelAssignment
+                                    return modelAssignment
 
-                    assocs <- inNewContext grabValues
+             assocs <- inNewContext grabValues
 
-                    let m = SMTModel { modelObjectives = []
-                                     , modelAssocs     = [(show s, c) | (s, c) <- assocs]
-                                     }
+             let m = SMTModel { modelObjectives = []
+                              , modelAssocs     = [(show s, c) | (s, c) <- assocs]
+                              }
 
-                    return $ Satisfiable queryConfig m
+             return $ Satisfiable queryConfig m

@@ -44,7 +44,7 @@ module Data.SBV.Control (
      , echo
 
      -- ** Terminating the query
-     , mkResult
+     , mkSMTResult
      , exit
 
      -- * Controlling the solver behavior
