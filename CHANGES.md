@@ -5,6 +5,9 @@
 
 ### Version 7.0, Not yet released.
 
+  * NB. SBV now requires GHC >= 8.0.1 to compile. If you are stuck with an older
+    version of GHC, please get in contact.
+
   * This is a major rewrite of the internals of SBV, and is a backwards compatibility
     breaking release. While we kept the top-level and most commonly used APIs the
     same (both types and semantics), much of the internals and advanced features
