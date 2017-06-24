@@ -352,8 +352,9 @@ compileToSMTLib version isSat a = do
         t <- getZonedTime
         let comments = ["Created on " ++ show t]
             cfg      = defaultSMTCfg { smtLibVersion = version }
-        (_, SMTProblem{smtLibPgm}) <- simulate cfg isSat comments a
-        let out = show (smtLibPgm cfg NoCase)
+        (_, _, res) <- runSymbolicWithState (isSat, cfg) $ (if isSat then forSome_ else forAll_) a >>= output
+        let SMTProblem{smtLibPgm} = runProofOn cfg isSat comments res
+            out = show (smtLibPgm cfg NoCase)
         return $ out ++ "\n(check-sat)\n"
 
 -- | Create SMT-Lib benchmarks, for supported versions of SMTLib. The first argument is the basename of the file.
@@ -826,18 +827,6 @@ isVacuousWith cfg a = fst <$> runSymbolic' (SMTMode ISetup True cfg) (forSome_ a
 -- | Find all satisfying assignments using the given SMT-solver
 allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
 allSatWith = runWithQuery True $ AllSatResult <$> Control.getAllSatResult
-
-simulate :: Provable a => SMTConfig -> Bool -> [String] -> a -> IO (State, SMTProblem)
-simulate config isSat comments predicate = do
-        let msg       = when (verbose config) . putStrLn . ("** " ++)
-            isTiming  = timing config
-
-        msg "Starting symbolic simulation.."
-        (_, st, res) <- timeIf isTiming rnf $ runSymbolicWithState (isSat, config) $ (if isSat then forSome_ else forAll_) predicate >>= output
-        msg $ "Generated symbolic trace:\n" ++ show res
-
-        let problem = runProofOn config isSat comments res
-        rnf problem `seq` return (st, problem)
 
 runProofOn :: SMTConfig -> Bool -> [String] -> Result -> SMTProblem
 runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs tacs options goals assertions outputs) =
