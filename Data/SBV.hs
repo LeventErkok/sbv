@@ -227,7 +227,7 @@ module Data.SBV (
 
   -- * User queries
   -- $queryIntro
-  , query
+  , Query, query
 
   -- * Optimization
   -- $optiIntro
