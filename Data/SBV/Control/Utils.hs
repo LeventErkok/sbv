@@ -159,10 +159,10 @@ ask :: String -> Query String
 ask s = do QueryState{queryAsk, queryTimeOutValue} <- getQueryState
 
            case queryTimeOutValue of
-             Nothing -> queryDebug ["[SEND] " ++ s]
-             Just i  -> queryDebug ["[SEND, TimeOut: " ++ showTimeoutValue i ++ "] " ++ s]
+             Nothing -> queryDebug ["[SEND] " `alignPlain` s]
+             Just i  -> queryDebug ["[SEND, TimeOut: " ++ showTimeoutValue i ++ "] " `alignPlain` s]
            r <- io $ queryAsk queryTimeOutValue s
-           queryDebug ["[RECV] " ++ r]
+           queryDebug ["[RECV] " `alignPlain` r]
 
            return r
 
@@ -202,7 +202,7 @@ retrieveResponse userTag mbTo = do
 
              send False cmd
 
-             QueryState{queryRetrieveResponse, queryConfig} <- getQueryState
+             QueryState{queryRetrieveResponse} <- getQueryState
 
              let loop sofar = do
                   s <- io $ queryRetrieveResponse mbTo `C.catch` (\(e :: C.SomeException) -> return (show e))
@@ -210,7 +210,7 @@ retrieveResponse userTag mbTo = do
                   if s == synchTag
                      then do queryDebug ["[SYNC] Synchronization achieved using tag: " ++ synchTag]
                              return $ reverse sofar
-                     else do when (verbose queryConfig) $ io $ putStrLn $ "[RECV] " `alignPlain` s
+                     else do queryDebug ["[RECV] " `alignPlain` s]
                              loop (s : sofar)
 
              loop []
