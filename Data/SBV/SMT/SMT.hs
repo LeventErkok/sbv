@@ -600,12 +600,16 @@ runSolver cfg ctx execPath opts pgm continuation
                                             errln <- safeGetLine isFirst outh `C.catch` (\(e :: C.SomeException) -> return (SolverException (show e)))
                                             case errln of
                                               SolverRegular ln -> let need  = i + parenDeficit ln
-                                                                      acc   = ln : sofar
                                                                       -- make sure we get *something*
-                                                                      empty = null $ dropWhile isSpace ln
-                                                                  in if not empty && need <= 0
-                                                                     then return acc
-                                                                     else go False need acc
+                                                                      empty = case dropWhile isSpace ln of
+                                                                                []      -> True
+                                                                                (';':_) -> True   -- yes this does happen! I've seen z3 print out comments on stderr.
+                                                                                _       -> False
+                                                                  in case (empty, need <= 0) of
+                                                                        (True, _)      -> do when (verbose cfg) $ putStrLn $ "[SKIP] " `alignPlain` ln
+                                                                                             go isFirst need sofar
+                                                                        (False, False) -> go False   need (ln:sofar)
+                                                                        (False, True)  -> return (ln:sofar)
 
                                               SolverException e -> do (outOrig, errOrig, ex) <- terminateSolver
 
