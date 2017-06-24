@@ -1,0 +1,64 @@
+Just (DiagnosticOutputChannel "stdout")
+Just (ProduceAssertions True)
+Just (ProduceAssignments True)
+Just (ProduceProofs True)
+Nothing
+Just (ProduceUnsatCores True)
+Just (RandomSeed 123)
+Nothing
+Just (SMTVerbosity 0)
+Just (OptionKeyword ":smt.mbqi" ["1"])
+Just (OptionKeyword ":smt.mbqi" ["1"])
+Resp_ReasonUnknown (UnknownOther "state of the most recent check-sat command is not known")
+Resp_Version "4.5.1"
+Resp_InfoKeyword ":status" ["sat"]
+Everything is OK
+(Sat,Nothing)
+[("s_1",True),("s7",True),("a > 0",True),("s15",True),("s_2",False),("s8",True),("a+b_<_12",True),("s17",True),("later, a > 4",True),("s18",True),("s12",True)]
+Resp_AllStatistics [(":arith-assert-lower","6"),(":arith-assert-upper","2"),(":final-checks","2"),(":max-memory","1.03"),(":memory","1.0"),(":mk-bool-var","11"),(":mk-clause","5"),(":num-allocs","3589"),(":num-checks","2"),(":propagations","5"),(":rlimit-count","336"),(":time","0.0")]
+Resp_AssertionStackLevels 0
+Resp_Authors ["Leonardo de Moura, Nikolaj Bjorner and Christoph Wintersteiger"]
+Resp_Error ErrorContinuedExecution
+Resp_Name "Z3"
+Resp_ReasonUnknown (UnknownOther "unknown")
+Resp_Version "4.5.1"
+Resp_Unsupported
+Resp_Unsupported
+(a,b) = (5,1)
+(Unsat,Just [<symbolic> :: SBool])
+2
+["bey","hey"]
+((set-logic ALL)
+(declare-fun bey () Bool)
+(declare-fun hey () Bool)
+(proof
+(let (($x210 (<= s0 6)))
+(let (($x211 (not $x210)))
+(let (($x214 (or (not bey) $x211)))
+(let ((@x216 (monotonicity (rewrite (= (> s0 6) $x211)) (= (or (not bey) (> s0 6)) $x214))))
+(let ((@x209 (rewrite (= (=> bey (> s0 6)) (or (not bey) (> s0 6))))))
+(let ((@x219 (mp (asserted (=> bey (> s0 6))) (trans @x209 @x216 (= (=> bey (> s0 6)) $x214)) $x214)))
+(let (($x230 (>= s0 6)))
+(let (($x228 (not $x230)))
+(let (($x232 (or (not hey) $x228)))
+(let ((@x234 (monotonicity (rewrite (= (< s0 6) $x228)) (= (or (not hey) (< s0 6)) $x232))))
+(let ((@x227 (rewrite (= (=> hey (< s0 6)) (or (not hey) (< s0 6))))))
+(let ((@x237 (mp (asserted (=> hey (< s0 6))) (trans @x227 @x234 (= (=> hey (< s0 6)) $x232)) $x232)))
+(unit-resolution ((_ th-lemma arith farkas 1 1) (or $x230 $x210)) (unit-resolution @x237 (asserted hey) $x228) (unit-resolution @x219 (asserted bey) $x211) false)))))))))))))))
+(! s7 :named a > 0)
+s8
+s12
+(! s15 :named a+b_<_12)
+(! s17 :named later, a > 4)
+(= __assumption_proxy_s18 s18)
+(= __assumption_proxy_s20 s20)
+(= __assumption_proxy_s22 s22)
+(! s24 :named bey)
+(! s25 :named hey)
+Satisfiable. Model:
+  a  =  332 :: Integer
+  b  =    3 :: Integer
+  c  =  2.3 :: Float
+  d  = True :: Bool
+  e  = 3.12 :: Real
+  s5 =  244 :: Word8
