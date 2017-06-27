@@ -636,7 +636,6 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                       , "***   " ++ e
                                                                                       ]
                                                                                    ++ [ "***   Response so far: " `alignDiagnostic` unlines (reverse sofar) | not $ null sofar]
-                                                                                   ++ [ "***" ]
                                                                                    ++ [ "***   Last command sent was: " `alignDiagnostic` command | Just command <- [mbCommand]]
                                                                                    ++ [ "***   Run with 'verbose=True' for further information" | not (verbose cfg)]
                                                                                    ++ [ "***"
