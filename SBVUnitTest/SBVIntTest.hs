@@ -11,7 +11,6 @@ import qualified TestSuite.Basics.IteTest
 import qualified TestSuite.Basics.ProofTests
 import qualified TestSuite.Basics.QRem
 import qualified TestSuite.Basics.AllSat
-import qualified TestSuite.Basics.BasicQuery
 import qualified TestSuite.BitPrecise.BitTricks
 import qualified TestSuite.BitPrecise.PrefixSum
 import qualified TestSuite.CRC.CCITT_Unidir
@@ -37,6 +36,13 @@ import qualified TestSuite.Optimization.Basics
 import qualified TestSuite.Optimization.ExtensionField
 import qualified TestSuite.Optimization.AssertSoft
 import qualified TestSuite.Optimization.Combined
+import qualified TestSuite.Queries.BasicQuery
+import qualified TestSuite.Queries.Int_ABC
+import qualified TestSuite.Queries.Int_Boolector
+import qualified TestSuite.Queries.Int_CVC4
+import qualified TestSuite.Queries.Int_Mathsat
+import qualified TestSuite.Queries.Int_Yices
+import qualified TestSuite.Queries.Int_Z3
 
 main :: IO ()
 main =
@@ -59,7 +65,6 @@ tests =
   , TestSuite.Basics.ProofTests.tests
   , TestSuite.Basics.QRem.tests
   , TestSuite.Basics.AllSat.tests
-  , TestSuite.Basics.BasicQuery.tests
   , TestSuite.BitPrecise.BitTricks.tests
   , TestSuite.BitPrecise.PrefixSum.tests
   , TestSuite.CRC.CCITT_Unidir.tests
@@ -85,4 +90,11 @@ tests =
   , TestSuite.Optimization.ExtensionField.tests
   , TestSuite.Optimization.AssertSoft.tests
   , TestSuite.Optimization.Combined.tests
+  , TestSuite.Queries.BasicQuery.tests
+  , TestSuite.Queries.Int_ABC.tests
+  , TestSuite.Queries.Int_Boolector.tests
+  , TestSuite.Queries.Int_CVC4.tests
+  , TestSuite.Queries.Int_Mathsat.tests
+  , TestSuite.Queries.Int_Yices.tests
+  , TestSuite.Queries.Int_Z3.tests
   ]

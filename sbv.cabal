@@ -217,7 +217,6 @@ Test-Suite int-test-extended
                   , TestSuite.Basics.ProofTests
                   , TestSuite.Basics.QRem
                   , TestSuite.Basics.AllSat
-                  , TestSuite.Basics.BasicQuery
                   , TestSuite.BitPrecise.BitTricks
                   , TestSuite.BitPrecise.PrefixSum
                   , TestSuite.CRC.CCITT_Unidir
@@ -243,3 +242,10 @@ Test-Suite int-test-extended
                   , TestSuite.Optimization.ExtensionField
                   , TestSuite.Optimization.AssertSoft
                   , TestSuite.Optimization.Combined
+                  , TestSuite.Queries.BasicQuery
+                  , TestSuite.Queries.Int_ABC
+                  , TestSuite.Queries.Int_Boolector
+                  , TestSuite.Queries.Int_CVC4
+                  , TestSuite.Queries.Int_Mathsat
+                  , TestSuite.Queries.Int_Yices
+                  , TestSuite.Queries.Int_Z3
