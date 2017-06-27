@@ -23,7 +23,7 @@ cvc4 :: SMTSolver
 cvc4 = SMTSolver {
            name         = CVC4
          , executable   = "cvc4"
-         , options      = const ["--lang", "smt"]
+         , options      = const ["--lang", "smt", "--incremental", "--interactive", "--no-interactive-prompt"]
          , engine       = standardEngine "SBV_CVC4" "SBV_CVC4_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = True
