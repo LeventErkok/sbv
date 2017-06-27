@@ -32,8 +32,6 @@ define endTimer
 	@tput smam
 endef
 
-.PHONY: all install test doctest basicTest extendedTests sdist clean docs gold hlint tags checkLinks testInterfaces markBuildStart markBuildEnd  release
-
 all: quick
 
 quick:
@@ -61,7 +59,15 @@ extendedTests:
 	@$(TIME) ./dist/build/int-test-extended/int-test-extended --hide-successes -p '**' -j 4
 	$(call endTimer,$@)
 
+# When "limited", we skip query tests
+limitedExtendedTests:
+	$(call startTimer,$@)
+	@$(TIME) ./dist/build/int-test-extended/int-test-extended --hide-successes -p \!query -j 4
+	$(call endTimer,$@)
+
 test: install doctest basicTest extendedTests
+
+limitedTest: install doctest basicTest limitedExtendedTests
 
 
 # use this as follows:
@@ -111,7 +117,7 @@ release: markBuildStart veryclean checkLinks install sdist testInterfaces hlint 
 
 # same as release really, but doesn't check links and tests fewer solver connections.
 # suitable to use when we're in more poverished environment.
-limitedRelease: clean install sdist limitedTestInterfaces hlint docs test
+limitedRelease: clean install sdist limitedTestInterfaces hlint docs limitedTest
 	@echo "*** SBV is looking OK, but you should really run the 'release' target!"
 
 hlint: 
