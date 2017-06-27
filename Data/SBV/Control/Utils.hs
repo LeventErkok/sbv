@@ -51,7 +51,7 @@ import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, K
                               , NamedSymVar, SMTConfig(..), Query, SMTModel(..)
                               , QueryState(..), SVal(..), Quantifier(..), cache
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..)
-                              , SolverContext(..), SBool, Objective(..)
+                              , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               )
 import Data.SBV.Core.Symbolic (IncState(..), withNewIncState, State(..), svToSW, registerLabel)
 
@@ -172,7 +172,7 @@ send requireSuccess s = do
 
             QueryState{queryAsk, querySend, queryConfig, queryTimeOutValue} <- getQueryState
 
-            if requireSuccess
+            if requireSuccess && supportsCustomQueries (capabilities (solver queryConfig))
                then do r <- io $ queryAsk queryTimeOutValue s
 
                        case words r of
