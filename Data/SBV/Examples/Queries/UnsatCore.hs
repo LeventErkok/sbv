@@ -1,15 +1,15 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Examples.Misc.UnsatCore
+-- Module      :  Data.SBV.Examples.Queries.UnsatCore
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Demonstrates extraction of unsat-cores.
+-- Demonstrates extraction of unsat-cores via queries.
 -----------------------------------------------------------------------------
 
-module Data.SBV.Examples.Misc.UnsatCore where
+module Data.SBV.Examples.Queries.UnsatCore where
 
 import Data.SBV
 import Data.SBV.Control

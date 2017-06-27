@@ -81,7 +81,6 @@ Library
                   , Data.SBV.Examples.Misc.Auxiliary
                   , Data.SBV.Examples.Misc.NoDiv0
                   , Data.SBV.Examples.Misc.Word4
-                  , Data.SBV.Examples.Misc.UnsatCore
                   , Data.SBV.Examples.Polynomials.Polynomials
                   , Data.SBV.Examples.Optimization.LinearOpt
                   , Data.SBV.Examples.Optimization.Production
@@ -98,6 +97,7 @@ Library
                   , Data.SBV.Examples.Puzzles.SendMoreMoney
                   , Data.SBV.Examples.Puzzles.Sudoku
                   , Data.SBV.Examples.Puzzles.U2Bridge
+                  , Data.SBV.Examples.Queries.UnsatCore
                   , Data.SBV.Examples.Uninterpreted.AUF
                   , Data.SBV.Examples.Uninterpreted.Deduce
                   , Data.SBV.Examples.Uninterpreted.Function
