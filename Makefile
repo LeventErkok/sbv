@@ -40,7 +40,7 @@ quick:
 	$(call startTimer,$@)
 	@fast-tags -R --nomerge .
 	@cabal build --ghc-options="-Werror -Wall"
-	@cabal register
+	@cabal install
 	$(call endTimer,$@)
 
 install: 
