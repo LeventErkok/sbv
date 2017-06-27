@@ -688,7 +688,12 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                     ]
 
                                                             -- put a sync point here before we die so we consume everything
-                                                            extras <- getResponseFromSolver Nothing (Just 5000000) `C.catch` (\(e :: C.SomeException) -> return (show e))
+                                                            mbExtras <- (Right <$> getResponseFromSolver Nothing (Just 5000000)) `C.catch` (\(e :: C.SomeException) -> return (Left (show e)))
+
+                                                            -- Ignore any exceptions from last sync, pointless.
+                                                            let extras = case mbExtras of
+                                                                           Left _   -> []
+                                                                           Right xs -> xs
 
                                                             (outOrig, errOrig, ex) <- terminateSolver
                                                             let out = intercalate "\n" . lines $ outOrig
@@ -697,9 +702,9 @@ runSolver cfg ctx execPath opts pgm continuation
                                                             error $ unlines $  [""
                                                                                , "*** Data.SBV: Unexpected non-success response from " ++ nm ++ ":"
                                                                                , "***"
-                                                                               , "***    Sent    : " `alignDiagnostic` l
-                                                                               , "***    Expected: success"
-                                                                               , "***    Received: " `alignDiagnostic` (r ++ "\n" ++ extras)
+                                                                               , "***    Sent      : " `alignDiagnostic` l
+                                                                               , "***    Expected  : success"
+                                                                               , "***    Received  : " `alignDiagnostic` (r ++ "\n" ++ extras)
                                                                                ]
                                                                             ++ [ "***    Stdout    : " `alignDiagnostic` out | not $ null out]
                                                                             ++ [ "***    Stderr    : " `alignDiagnostic` err | not $ null err]
