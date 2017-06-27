@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  TestSuite.Basics.BasicQuery
+-- Module      :  TestSuite.Queries.BasicQuery
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -11,7 +11,7 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module TestSuite.Basics.BasicQuery (tests)  where
+module TestSuite.Queries.BasicQuery (tests)  where
 
 import Data.SBV
 import Data.SBV.Control

@@ -38,7 +38,6 @@ import Data.Int
 import Data.Word
 
 import qualified Data.Map as Map
-import qualified Control.Exception as C
 
 import Control.Monad            (when, unless)
 import Control.Monad.State.Lazy (get, liftIO)
@@ -205,9 +204,12 @@ retrieveResponse userTag mbTo = do
              QueryState{queryRetrieveResponse} <- getQueryState
 
              let loop sofar = do
-                  s <- io $ queryRetrieveResponse mbTo `C.catch` (\(e :: C.SomeException) -> return (show e))
+                  s <- io $ queryRetrieveResponse mbTo
 
-                  if s == synchTag
+                  -- strictly speaking SMTLib requires solvers to print quotes around
+                  -- echo'ed strings, but they don't always do. Accommodate for that
+                  -- here, though I wish we didn't have to.
+                  if s == synchTag || show s == synchTag
                      then do queryDebug ["[SYNC] Synchronization achieved using tag: " ++ synchTag]
                              return $ reverse sofar
                      else do queryDebug ["[RECV] " `alignPlain` s]
