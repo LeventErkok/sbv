@@ -611,23 +611,16 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                         (False, False) -> go False   need (ln:sofar)
                                                                         (False, True)  -> return (ln:sofar)
 
-                                              SolverException e -> do (outOrig, errOrig, ex) <- terminateSolver
-
-                                                                      let out = intercalate "\n" . lines $ outOrig
-                                                                          err = intercalate "\n" . lines $ errOrig
-
-                                                                      error $ unlines $ [""
-                                                                                        , "*** Error     : " ++ e
-                                                                                        , "*** Executable: " ++ execPath
-                                                                                        , "*** Options   : " ++ joinArgs opts
-                                                                                        ]
-                                                                                     ++ [ "*** Request   : " `alignDiagnostic` command                 | Just command <- [mbCommand]]
-                                                                                     ++ [ "*** Response  : " `alignDiagnostic` unlines (reverse sofar) | not $ null sofar           ]
-                                                                                     ++ [ "*** Stdout    : " `alignDiagnostic` out                     | not $ null out             ]
-                                                                                     ++ [ "*** Stderr    : " `alignDiagnostic` err                     | not $ null err             ]
-                                                                                     ++ [ "*** Exit code : " `alignDiagnostic` show ex
-                                                                                        , "*** Giving up!"
-                                                                                        ]
+                                              SolverException e -> error $ unlines $ [""
+                                                                                     , "*** Error     : " ++ e
+                                                                                     , "*** Executable: " ++ execPath
+                                                                                     , "*** Options   : " ++ joinArgs opts
+                                                                                     ]
+                                                                                  ++ [ "*** Request   : " `alignDiagnostic` command                 | Just command <- [mbCommand]]
+                                                                                  ++ [ "*** Response  : " `alignDiagnostic` unlines (reverse sofar) | not $ null sofar           ]
+                                                                                  ++ [ "***"
+                                                                                     , "*** Giving up!"
+                                                                                     ]
 
                                               SolverTimeout e -> do terminateProcess pid -- NB. Do not *wait* for the process, just quit.
                                                                     error $ unlines $ [ ""
