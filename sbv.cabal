@@ -45,7 +45,7 @@ Library
                     TupleSections
                     TypeOperators
                     TypeSynonymInstances
-  Build-Depends   : base >= 4.8 && < 5
+  Build-Depends   : base >= 4.9 && < 5
                   , ghc
                   , QuickCheck >= 2.9.2
                   , crackNum >= 1.9
@@ -141,7 +141,7 @@ Test-Suite SBVBasicTests
   type            : exitcode-stdio-1.0
   default-language: Haskell2010
   ghc-options     : -Wall -with-rtsopts=-K64m
-  Build-depends : base
+  Build-depends : base >= 4.9
                 , HUnit, directory, filepath, syb, sbv, data-binary-ieee754
                 , bytestring   >= 0.9
                 , tasty        >= 0.11.2
@@ -184,7 +184,7 @@ Test-Suite int-test-extended
                   , ScopedTypeVariables
   Build-depends :
                 -- inherent constraints from library
-                  base, data-binary-ieee754, filepath, syb
+                  base >= 4.9, data-binary-ieee754, filepath, syb
                 , sbv
                 -- constraints here
                 , bytestring   >= 0.9
