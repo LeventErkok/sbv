@@ -98,6 +98,7 @@ Library
                   , Data.SBV.Examples.Puzzles.Sudoku
                   , Data.SBV.Examples.Puzzles.U2Bridge
                   , Data.SBV.Examples.Queries.UnsatCore
+                  , Data.SBV.Examples.Queries.GuessNumber
                   , Data.SBV.Examples.Uninterpreted.AUF
                   , Data.SBV.Examples.Uninterpreted.Deduce
                   , Data.SBV.Examples.Uninterpreted.Function
