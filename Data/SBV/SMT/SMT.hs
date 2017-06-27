@@ -78,7 +78,6 @@ resultConfig (Satisfiable   c _) = c
 resultConfig (SatExtField   c _) = c
 resultConfig (Unknown       c _) = c
 resultConfig (ProofError    c _) = c
-resultConfig (TimeOut       c  ) = c
 
 -- | A 'prove' call results in a 'ThmResult'
 newtype ThmResult = ThmResult SMTResult
@@ -107,19 +106,19 @@ data OptimizeResult = LexicographicResult SMTResult
 -- User friendly way of printing theorem results
 instance Show ThmResult where
   show (ThmResult r) = showSMTResult "Q.E.D."
-                                     "Unknown"     "Unknown. Potential counter-example:\n"
+                                     "Unknown"
                                      "Falsifiable" "Falsifiable. Counter-example:\n" "Falsifiable in an extension field:\n" r
 
 -- User friendly way of printing satisfiablity results
 instance Show SatResult where
   show (SatResult r) = showSMTResult "Unsatisfiable"
-                                     "Unknown"     "Unknown. Potential model:\n"
+                                     "Unknown"
                                      "Satisfiable" "Satisfiable. Model:\n" "Satisfiable in an extension field. Model:\n" r
 
 -- User friendly way of printing safety results
 instance Show SafeResult where
    show (SafeResult (mbLoc, msg, r)) = showSMTResult (tag "No violations detected")
-                                                     (tag "Unknown")  (tag "Unknown. Potential violating model:\n")
+                                                     (tag "Unknown")
                                                      (tag "Violated") (tag "Violated. Model:\n") (tag "Violated in an extension field:\n") r
         where loc   = maybe "" (++ ": ") mbLoc
               tag s = loc ++ msg ++ ": " ++ s
@@ -139,7 +138,7 @@ instance Show AllSatResult where
                           (False, 1) -> "This is the only solution." ++ uniqueWarn
                           (False, _) -> "Found " ++ show c ++ " different solutions." ++ uniqueWarn
           sh i c = (ok, showSMTResult "Unsatisfiable"
-                                      "Unknown" "Unknown. Potential model:\n"
+                                      "Unknown"
                                       ("Solution #" ++ show i ++ ":\nSatisfiable") ("Solution #" ++ show i ++ ":\n")
                                       ("Solution $" ++ show i ++ " in an extension field:\n")
                                       c)
@@ -168,7 +167,6 @@ instance Show OptimizeResult where
 
              sh tag = showSMTResult (tag "Unsatisfiable.")
                                     (tag "Unknown.")
-                                    (tag "Unknown. Potential model:" ++ "\n")
                                     (tag "Optimal with no assignments.")
                                     (tag "Optimal model:" ++ "\n")
                                     (tag "Optimal in an extension field:" ++ "\n")
@@ -387,9 +385,8 @@ instance Modelable SMTResult where
   getModelAssignment (Unsatisfiable _) = Left "SBV.getModelAssignment: Unsatisfiable result"
   getModelAssignment (Satisfiable _ m) = Right (False, parseModelOut m)
   getModelAssignment (SatExtField _ _) = Left "SBV.getModelAssignment: The model is in an extension field"
-  getModelAssignment (Unknown _ m)     = Right (True, parseModelOut m)
+  getModelAssignment (Unknown _ m)     = Left $ "SBV.getModelAssignment: Solver state is unknown: " ++ m
   getModelAssignment (ProofError _ s)  = error $ unlines $ "Backend solver complains: " : s
-  getModelAssignment (TimeOut _)       = Left "Timeout"
 
   modelExists Satisfiable{}   = True
   modelExists Unknown{}       = False -- don't risk it
@@ -398,16 +395,14 @@ instance Modelable SMTResult where
   getModelDictionary Unsatisfiable{}   = M.empty
   getModelDictionary (Satisfiable _ m) = M.fromList (modelAssocs m)
   getModelDictionary SatExtField{}     = M.empty
-  getModelDictionary (Unknown _ m)     = M.fromList (modelAssocs m)
+  getModelDictionary Unknown{}         = M.empty
   getModelDictionary ProofError{}      = M.empty
-  getModelDictionary TimeOut{}         = M.empty
 
   getModelObjectives Unsatisfiable{}   = M.empty
   getModelObjectives (Satisfiable _ m) = M.fromList (modelObjectives m)
   getModelObjectives (SatExtField _ m) = M.fromList (modelObjectives m)
-  getModelObjectives (Unknown _ m)     = M.fromList (modelObjectives m)
+  getModelObjectives Unknown{}         = M.empty
   getModelObjectives ProofError{}      = M.empty
-  getModelObjectives TimeOut{}         = M.empty
 
 -- | Extract a model out, will throw error if parsing is unsuccessful
 parseModelOut :: SatModel a => SMTModel -> a
@@ -427,17 +422,15 @@ displayModels disp (AllSatResult (_, _, ms)) = do
   where display r i = disp i r >> return i
 
 -- | Show an SMTResult; generic version
-showSMTResult :: String -> String -> String -> String -> String -> String -> SMTResult -> String
-showSMTResult unsatMsg unkMsg unkMsgModel satMsg satMsgModel satExtMsg result = case result of
+showSMTResult :: String -> String -> String -> String -> String -> SMTResult -> String
+showSMTResult unsatMsg unkMsg satMsg satMsgModel satExtMsg result = case result of
   Unsatisfiable _               -> unsatMsg
   Satisfiable _ (SMTModel _ []) -> satMsg
   Satisfiable _ m               -> satMsgModel ++ showModel cfg m
   SatExtField _ (SMTModel b _)  -> satExtMsg   ++ showModelDictionary cfg b
-  Unknown     _ (SMTModel _ []) -> unkMsg
-  Unknown     _ m               -> unkMsgModel ++ showModel cfg m
+  Unknown     _ r               -> unkMsg ++ ".\n" ++ "  Reason: " `alignPlain` r
   ProofError  _ []              -> "*** An error occurred. No additional information available. Try running in verbose mode"
   ProofError  _ ls              -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
-  TimeOut     _                 -> "*** Timeout"
  where cfg = resultConfig result
 
 -- | Show a model in human readable form. Ignore bindings to those variables that start

@@ -175,6 +175,18 @@ getOption f = case f undefined of
         -- free format, really
         stringList c e _ = return $ Just $ c $ stringsOf e
 
+-- | Get the reason unknown. Only internally used.
+getUnknownReason :: Query String
+getUnknownReason = do ru <- getInfo ReasonUnknown
+                      case ru of
+                        Resp_Unsupported     -> return "No reason provided."
+                        Resp_ReasonUnknown r -> return $ case r of
+                                                           UnknownMemOut       -> "Out of memory."
+                                                           UnknownIncomplete   -> "Incomplete."
+                                                           UnknownOther      s -> s
+                        -- Shouldn't happen, but just in case:
+                        _                    -> return $ "Unexpected reason value received: " ++ show ru
+
 -- | Issue check-sat and get an SMT Result out.
 getSMTResult :: Query SMTResult
 getSMTResult = do cfg <- getConfig
@@ -182,7 +194,7 @@ getSMTResult = do cfg <- getConfig
                   case cs of
                     Unsat -> return $ Unsatisfiable cfg
                     Sat   -> Satisfiable cfg <$> getModel
-                    Unk   -> Unknown     cfg <$> getModel
+                    Unk   -> Unknown     cfg <$> getUnknownReason
 
 -- | Classify a model based on whether it has unbound objectives or not.
 classifyModel :: SMTConfig -> SMTModel -> SMTResult
@@ -197,7 +209,7 @@ getLexicographicOptResults = do cfg <- getConfig
                                 case cs of
                                   Unsat -> return $ Unsatisfiable cfg
                                   Sat   -> classifyModel cfg <$> getModelWithObjectives
-                                  Unk   -> Unknown       cfg <$> getModelWithObjectives
+                                  Unk   -> Unknown       cfg <$> getUnknownReason
    where getModelWithObjectives = do objectiveValues <- getObjectiveValues
                                      m               <- getModel
                                      return m {modelObjectives = objectiveValues}
@@ -206,10 +218,13 @@ getLexicographicOptResults = do cfg <- getConfig
 getIndependentOptResults :: [String] -> Query [(String, SMTResult)]
 getIndependentOptResults objNames = do cfg <- getConfig
                                        cs  <- checkSat
+
                                        case cs of
                                          Unsat -> return [(nm, Unsatisfiable cfg) | nm <- objNames]
                                          Sat   -> continue (classifyModel cfg)
-                                         Unk   -> continue (Unknown cfg)
+                                         Unk   -> do ur <- Unknown cfg <$> getUnknownReason
+                                                     return [(nm, ur) | nm <- objNames]
+
   where continue classify = do objectiveValues <- getObjectiveValues
                                nms <- zipWithM getIndependentResult [0..] objNames
                                return [(n, classify (m {modelObjectives = objectiveValues})) | (n, m) <- nms]
@@ -224,10 +239,13 @@ getParetoOptResults (Just i)
         | i <= 0             = return (True, [])
 getParetoOptResults mbN      = do cfg <- getConfig
                                   cs  <- checkSat
+
                                   case cs of
                                     Unsat -> return (False, [])
                                     Sat   -> continue (classifyModel cfg)
-                                    Unk   -> continue (Unknown cfg)
+                                    Unk   -> do ur <- getUnknownReason
+                                                return (False, [ProofError cfg [ur]])
+
   where continue classify = do m <- getModel
                                (limReached, fronts) <- getParetoFronts (subtract 1 <$> mbN) [m]
                                return (limReached, reverse (map classify fronts))

@@ -692,7 +692,6 @@ caseSplit config ctx mbOptInfo checkVacuity (runParallel, hasPar) isSAT (wrap, u
         diag SatExtField  {} = "[Satisfiable in Field Extension]"
         diag Unknown      {} = "[Unknown]"
         diag ProofError   {} = "[ProofError]"
-        diag TimeOut      {} = "[TimeOut]"
 
         -- If we're SAT, we stop at first satisfiable and report back. Otherwise continue.
         -- Note that we also stop if we get a ProofError, as that clearly is not OK
@@ -781,7 +780,6 @@ caseSplit config ctx mbOptInfo checkVacuity (runParallel, hasPar) isSAT (wrap, u
                                 SatExtField{}   -> stop
                                 ProofError{}    -> stop
                                 Unknown{}       -> if isSAT then continue else stop
-                                TimeOut{}       -> if isSAT then continue else stop
 
 -- | Check if any of the assertions can be violated
 safeWith :: SExecutable a => SMTConfig -> a -> IO [SafeResult]
@@ -811,7 +809,6 @@ isSafe (SafeResult (_, _, result)) = case result of
                                        SatExtField{}   -> False   -- conservative
                                        Unknown{}       -> False   -- conservative
                                        ProofError{}    -> False   -- conservative
-                                       TimeOut{}       -> False   -- conservative
 
 -- | Determine if the constraints are vacuous using the given SMT-solver. Also see
 -- the 'CheckConstrVacuity' tactic.

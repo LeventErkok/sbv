@@ -1234,7 +1234,6 @@ instance NFData SMTResult where
   rnf (SatExtField _   xs) = rnf xs `seq` ()
   rnf (Unknown _       xs) = rnf xs `seq` ()
   rnf (ProofError _    xs) = rnf xs `seq` ()
-  rnf TimeOut{}            = ()
 
 instance NFData SMTModel where
   rnf (SMTModel objs assocs) = rnf objs `seq` rnf assocs `seq` ()
@@ -1324,9 +1323,8 @@ data SMTModel = SMTModel {
 data SMTResult = Unsatisfiable SMTConfig           -- ^ Unsatisfiable
                | Satisfiable   SMTConfig SMTModel  -- ^ Satisfiable with model
                | SatExtField   SMTConfig SMTModel  -- ^ Prover returned a model, but in an extension field containing Infinite/epsilon
-               | Unknown       SMTConfig SMTModel  -- ^ Prover returned unknown, with a potential (possibly bogus) model
+               | Unknown       SMTConfig String    -- ^ Prover returned unknown, with the given reason
                | ProofError    SMTConfig [String]  -- ^ Prover errored out
-               | TimeOut       SMTConfig           -- ^ Computation timed out
 
 -- | A script, to be passed to the solver.
 data SMTScript = SMTScript {
