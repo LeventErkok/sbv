@@ -19,7 +19,7 @@
 module Data.SBV.Control.Query (
        send, ask, retrieveResponse
      , CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming, getUnsatCore, getProof, getAssignment, getOption
-     , push, pop, getAssertionStackDepth, echo
+     , push, pop, getAssertionStackDepth, inNewAssertionStack, echo
      , resetAssertions, exit
      , getAssertions
      , getValue, getModel, getSMTResult
@@ -396,6 +396,14 @@ checkSatAssuming sBools = do
 -- | The current assertion stack depth, i.e., #push - #pops after start. Always non-negative.
 getAssertionStackDepth :: Query Int
 getAssertionStackDepth = queryAssertionStackDepth <$> getQueryState
+
+-- | Run the query in a new assertion stack. That is, we push the context, run the query
+-- commands, and pop it back.
+inNewAssertionStack :: Query a -> Query a
+inNewAssertionStack q = do push 1
+                           r <- q
+                           pop 1
+                           return r
 
 -- | Push the context, entering a new one. Pushes multiple levels if /n/ > 1.
 push :: Int -> Query ()
