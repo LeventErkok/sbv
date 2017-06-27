@@ -243,11 +243,16 @@ class SolverContext m where
    setOption :: SMTOption -> m ()
    -- | Set the logic.
    setLogic :: Logic -> m ()
+   -- | Set a solver time-out value, in milli-seconds. This function
+   -- essentially translates to the SMTLib call @(set-info :timeout val)@,
+   -- and your backend solver may or may not support it! The amount given
+   -- is in milliseconds.
+   setTimeOut :: Integer -> m ()
 
-   -- Logic is an option in our implementation, so default implementation suffices.
-   setLogic = setOption . SetLogic
-   -- Info is an option in our implementation, so default implementation suffices.
-   setInfo k = setOption . SetInfo k
+   -- time-out, logic, and info are  simply options in our implementation, so default implementation suffices
+   setTimeOut t = setOption $ OptionKeyword ":timeout" [show t]
+   setLogic     = setOption . SetLogic
+   setInfo    k = setOption . SetInfo k
 
 -- | A class representing what can be returned from a symbolic computation.
 class Outputtable a where
