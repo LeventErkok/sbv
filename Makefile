@@ -17,6 +17,10 @@ endif
 
 BUILDTIMES = buildTimes.log
 
+.PHONY: quick install basicTest extendedTests limitedExtendedTests test limitedTest gold testPattern doctest sdist
+.PHONY: veryclean clean docs markBuildStart markBuildEnd release limitedRelease hlint uploadDocs checkLinks testInterfaces
+.PHONY: limitedTestInterfaces tags
+
 ifeq (z$(MAKECMDGOALS), zrelease)
 define startTimer
 	@tput rmam
