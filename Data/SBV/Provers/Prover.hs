@@ -85,6 +85,7 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose             = False
                                             , roundingMode        = RoundNearestTiesToEven
                                             , solverSetOptions    = startOpts
                                             , ignoreExitCode      = False
+                                            , redirectVerbose     = Nothing
                                             }
 
 -- | If supported, this makes all output go to stdout, which works better with SBV

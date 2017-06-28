@@ -16,6 +16,7 @@ module Data.SBV.SMT.Utils (
         , showTimeoutValue
         , alignDiagnostic
         , alignPlain
+        , debug
        )
        where
 
@@ -73,3 +74,10 @@ alignPlain = alignWithPrefix ""
 -- | Align with some given prefix
 alignWithPrefix :: String -> String -> String -> String
 alignWithPrefix pre tag multi = intercalate "\n" $ zipWith (++) (tag : repeat (pre ++ replicate (length tag - length pre) ' ')) (filter (not . null) (lines multi))
+
+-- | Diagnostic message when verbose
+debug :: SMTConfig -> [String] -> IO ()
+debug cfg
+  | not (verbose cfg)             = const (return ())
+  | Just f <- redirectVerbose cfg = mapM_ (appendFile f . (++ "\n"))
+  | True                          = mapM_ putStrLn

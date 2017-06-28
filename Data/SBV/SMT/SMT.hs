@@ -40,7 +40,7 @@ import qualified Control.Exception as C
 
 import Control.Concurrent (newEmptyMVar, takeMVar, putMVar, forkIO)
 import Control.DeepSeq    (NFData(..))
-import Control.Monad      (when, zipWithM)
+import Control.Monad      (zipWithM)
 import Data.Char          (isSpace)
 import Data.Maybe         (fromMaybe)
 import Data.Int           (Int8, Int16, Int32, Int64)
@@ -63,7 +63,7 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (SMTEngine, State(..))
 
-import Data.SBV.SMT.Utils     (showTimeoutValue, alignPlain, alignDiagnostic)
+import Data.SBV.SMT.Utils     (showTimeoutValue, alignPlain, alignDiagnostic, debug)
 
 import Data.SBV.Utils.PrettyNum
 import Data.SBV.Utils.Lib       (joinArgs, splitArgs)
@@ -517,7 +517,7 @@ standardSolver :: SMTConfig       -- ^ The currrent configuration
                -> (State -> IO a) -- ^ The continuation
                -> IO a
 standardSolver config ctx pgm continuation = do
-    let msg      = when (verbose config) . putStrLn . ("** " ++)
+    let msg s    = debug config ["** " ++ s]
         smtSolver= solver config
         exec     = executable smtSolver
         opts     = options smtSolver config
@@ -533,7 +533,7 @@ data SolverLine = SolverRegular   String  -- ^ All is well
 runSolver :: SMTConfig -> State -> FilePath -> [String] -> String -> (State -> IO a) -> IO a
 runSolver cfg ctx execPath opts pgm continuation
  = do let nm  = show (name (solver cfg))
-          msg = when (verbose cfg) . mapM_ (putStrLn . ("*** " ++))
+          msg = debug cfg . map ("*** " ++)
 
       (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
@@ -599,7 +599,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                 (';':_) -> True   -- yes this does happen! I've seen z3 print out comments on stderr.
                                                                                 _       -> False
                                                                   in case (empty, need <= 0) of
-                                                                        (True, _)      -> do when (verbose cfg) $ putStrLn $ "[SKIP] " `alignPlain` ln
+                                                                        (True, _)      -> do debug cfg ["[SKIP] " `alignPlain` ln]
                                                                                              go isFirst need sofar
                                                                         (False, False) -> go False   need (ln:sofar)
                                                                         (False, True)  -> return (ln:sofar)
@@ -671,12 +671,12 @@ runSolver cfg ctx execPath opts pgm continuation
                                    -- Currently ABC is the only such solver. Filed a request for ABC at: https://bitbucket.org/alanmi/abc/issues/70/
                                    | not (supportsCustomQueries (capabilities (solver cfg)))
                                    = do send mbTimeOut l
-                                        when (verbose cfg) $ putStrLn $ "[ISSUE] " `alignPlain` l
+                                        debug cfg ["[ISSUE] " `alignPlain` l]
                                    | True
                                    = do r <- ask mbTimeOut l
                                         case words r of
-                                          ["success"] -> when (verbose cfg) $ putStrLn $ "[GOOD] " `alignPlain` l
-                                          _           -> do when (verbose cfg) $ putStrLn $ "[FAIL] " `alignPlain` l
+                                          ["success"] -> debug cfg ["[GOOD] " `alignPlain` l]
+                                          _           -> do debug cfg ["[FAIL] " `alignPlain` l]
 
                                                             let isOption = "(set-option" `isPrefixOf` dropWhile isSpace l
 
@@ -722,11 +722,11 @@ runSolver cfg ctx execPath opts pgm continuation
                              -- First check that the solver supports :print-success
                              let backend = name $ solver cfg
                              if not (supportsCustomQueries (capabilities (solver cfg)))
-                                then when (verbose cfg) $ putStrLn $ "** Skipping heart-beat for the solver " ++ show backend
+                                then debug cfg ["** Skipping heart-beat for the solver " ++ show backend]
                                 else do let heartbeat = "(set-option :print-success true)"
                                         r <- ask (Just 5000000) heartbeat  -- Give the solver 5s to respond, this should be plenty enough!
                                         case words r of
-                                          ["success"]     -> when (verbose cfg) $ putStrLn $ "[GOOD] " ++ heartbeat
+                                          ["success"]     -> debug cfg ["[GOOD] " ++ heartbeat]
                                           ["unsupported"] -> error $ unlines [ ""
                                                                              , "*** Backend solver (" ++  show backend ++ ") does not support the command:"
                                                                              , "***"
@@ -748,8 +748,9 @@ runSolver cfg ctx execPath opts pgm continuation
                              -- For push/pop support, we require :global-declarations to be true. But not all solvers
                              -- support this. Issue it if supported. (If not, we'll reject pop calls.)
                              if not (supportsGlobalDecls (capabilities (solver cfg)))
-                                then when (verbose cfg) $ do putStrLn $ "** Backend solver " ++ show backend ++ " does not support global decls."
-                                                             putStrLn   "** Some incremental calls, such as pop, will be limited."
+                                then debug cfg [ "** Backend solver " ++ show backend ++ " does not support global decls."
+                                               , "** Some incremental calls, such as pop, will be limited."
+                                               ]
                                 else sendAndGetSuccess Nothing "(set-option :global-declarations true)"
 
                              -- Now dump the program!

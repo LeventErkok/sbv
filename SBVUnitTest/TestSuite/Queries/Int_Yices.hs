@@ -15,16 +15,18 @@ module TestSuite.Queries.Int_Yices (tests)  where
 import Data.SBV
 import Data.SBV.Control
 
+import Control.Monad (unless)
+
 import SBVTest
 
 -- Test suite
 tests :: TestTree
 tests =
   testGroup "Basics.QueryIndividual"
-    [ goldenCapturedIO "query_yices" $ print =<< runSMTWith yices{verbose=True} q
+    [ goldenCapturedIO "query_yices" $ \rf -> runSMTWith yices{verbose=True, redirectVerbose=Just rf} q
     ]
 
-q :: Symbolic (Int32, Int32)
+q :: Symbolic ()
 q = do a <- sInt32 "a"
        b <- sInt32 "b"
 
@@ -40,17 +42,13 @@ q = do a <- sInt32 "a"
                   cs <- checkSat
 
                   case cs of
-                    Sat -> io $ putStrLn "Everything is OK"
-                    Unk -> io .print =<< getInfo ReasonUnknown
+                    Sat -> return ()
+                    Unk -> getInfo ReasonUnknown >>= error . show
                     r   -> error $ "Something went bad, why not-sat/unk?: " ++ show r
-
-                  -- Query a/b
-                  av <- getValue a
-                  bv <- getValue b
-                  io $ putStrLn $ "(a,b) = " ++ show (av, bv)
 
                   -- Now assert so that we get even a bigger value..
                   namedConstraint "extra" $ a .>= 1
                   _ <- checkSat
 
-                  (,) <$> getValue a <*> getValue b
+                  res <- (,) <$> getValue a <*> getValue b
+                  unless (res == (1, 1)) $ error $ "Didn't get (1,1): " ++ show res

@@ -15,16 +15,18 @@ module TestSuite.Queries.Int_Z3 (tests)  where
 import Data.SBV
 import Data.SBV.Control
 
+import Control.Monad (unless)
+
 import SBVTest
 
 -- Test suite
 tests :: TestTree
 tests =
   testGroup "Basics.QueryIndividual"
-    [ goldenCapturedIO "query_z3" $ print =<< runSMTWith z3{verbose=True} q
+    [ goldenCapturedIO "query_z3" $ \rf -> runSMTWith z3{verbose=True, redirectVerbose=Just rf} q
     ]
 
-q :: Symbolic (Int32, Int32)
+q :: Symbolic ()
 q = do a <- sInt32 "a"
        b <- sInt32 "b"
 
@@ -36,25 +38,24 @@ q = do a <- sInt32 "a"
                   constrain $ b   .<  2
                   namedConstraint "a+b_<_12" $ a+b .< 12
 
-                  av <- inNewAssertionStack $ do
+                  gv <- inNewAssertionStack $ do
 
                             constrain $ a .< 2
                             cs <- checkSat
 
                             case cs of
-                              Sat -> io $ putStrLn "Everything is OK"
-                              Unk -> io .print =<< getInfo ReasonUnknown
+                              Sat -> return ()
+                              Unk -> getInfo ReasonUnknown >>= error . show
                               r   -> error $ "Something went bad, why not-sat/unk?: " ++ show r
 
                             -- Query a/b
                             av <- getValue a
-                            bv <- getValue b
-                            io $ putStrLn $ "(a,b) = " ++ show (av, bv)
 
                             return av
 
                   -- Now assert so that we get even a bigger value..
-                  namedConstraint "extra" $ a .> literal av
+                  namedConstraint "extra" $ a .> literal gv
                   _ <- checkSat
 
-                  (,) <$> getValue a <*> getValue b
+                  res <- (,) <$> getValue a <*> getValue b
+                  unless (res == (1, 1)) $ error $ "Didn't get (1,1): " ++ show res

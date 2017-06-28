@@ -39,7 +39,7 @@ import Data.Word
 
 import qualified Data.Map as Map
 
-import Control.Monad            (when, unless)
+import Control.Monad            (unless)
 import Control.Monad.State.Lazy (get, liftIO)
 
 import Data.IORef (readIORef, writeIORef)
@@ -58,7 +58,7 @@ import Data.SBV.Core.Symbolic (IncState(..), withNewIncState, State(..), svToSW,
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
 import Data.SBV.SMT.SMTLib  (toIncSMTLib)
-import Data.SBV.SMT.Utils   (showTimeoutValue, annotateWithName, alignDiagnostic, alignPlain)
+import Data.SBV.SMT.Utils   (showTimeoutValue, annotateWithName, alignDiagnostic, alignPlain, debug)
 
 import Data.SBV.Utils.SExpr
 import Data.SBV.Control.Types
@@ -150,8 +150,8 @@ inNewContext act = do st <- get
 
 -- | Internal diagnostic messages.
 queryDebug :: [String] -> Query ()
-queryDebug msg = do QueryState{queryConfig} <- getQueryState
-                    when (verbose queryConfig) $ mapM_ (io . putStrLn) msg
+queryDebug msgs = do QueryState{queryConfig} <- getQueryState
+                     io $ debug queryConfig msgs
 
 -- | Send a string to the solver, and return the response
 ask :: String -> Query String
@@ -176,10 +176,10 @@ send requireSuccess s = do
                then do r <- io $ queryAsk queryTimeOutValue s
 
                        case words r of
-                         ["success"] -> when (verbose queryConfig) $ io $ putStrLn $ "[GOOD] " `alignPlain` s
+                         ["success"] -> queryDebug ["[GOOD] " `alignPlain` s]
                          _           -> do case queryTimeOutValue of
-                                             Nothing -> io $ putStrLn $ "[FAIL] " `alignPlain` s
-                                             Just i  -> io $ putStrLn $ ("[FAIL, TimeOut: " ++ showTimeoutValue i ++ "]  ") `alignPlain` s
+                                             Nothing -> queryDebug ["[FAIL] " `alignPlain` s]
+                                             Just i  -> queryDebug [("[FAIL, TimeOut: " ++ showTimeoutValue i ++ "]  ") `alignPlain` s]
                                            unexpected "Command" s "success" Nothing r Nothing
 
                else io $ querySend queryTimeOutValue s  -- fire and forget. if you use this, you're on your own!

@@ -1295,6 +1295,7 @@ data SMTConfig = SMTConfig {
        , roundingMode        :: RoundingMode   -- ^ Rounding mode to use for floating-point conversions
        , solverSetOptions    :: [SMTOption]    -- ^ Options to set as we start the solver
        , ignoreExitCode      :: Bool           -- ^ If true, we shall ignore the exit code upon exit. Otherwise we require ExitSuccess.
+       , redirectVerbose     :: Maybe FilePath -- ^ Redirect the verbose output to this file if given. If Nothing, stdout is implied.
        }
 
 -- We're just seq'ing top-level here, it shouldn't really matter. (i.e., no need to go deeper.)

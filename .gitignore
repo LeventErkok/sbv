@@ -6,3 +6,10 @@ TAGS
 .stack-work/
 stack.yaml
 buildTimes.log
+SBVUnitTest/GoldFiles/query1.gold_temp
+SBVUnitTest/GoldFiles/query_abc.gold_temp
+SBVUnitTest/GoldFiles/query_boolector.gold_temp
+SBVUnitTest/GoldFiles/query_cvc4.gold_temp
+SBVUnitTest/GoldFiles/query_mathsat.gold_temp
+SBVUnitTest/GoldFiles/query_yices.gold_temp
+SBVUnitTest/GoldFiles/query_z3.gold_temp

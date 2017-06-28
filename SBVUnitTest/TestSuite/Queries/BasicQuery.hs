@@ -22,7 +22,7 @@ import SBVTest
 tests :: TestTree
 tests =
   testGroup "Basics.Query"
-    [ goldenCapturedIO "query1" $ print . SatResult =<< runSMT query1
+    [ goldenCapturedIO "query1" $ \rf -> print . SatResult =<< runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just rf} query1
     ]
 
 query1 :: Symbolic SMTResult

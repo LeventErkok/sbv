@@ -29,11 +29,9 @@ import qualified Data.ByteString.Lazy.Char8 as LBC
 
 import System.FilePath         ((</>))
 import Test.Tasty              (testGroup, TestTree, TestName)
-import Test.Tasty.Golden       (goldenVsString)
+import Test.Tasty.Golden       (goldenVsString, goldenVsFile)
 import Test.Tasty.HUnit        (assert, Assertion, testCase)
 import Test.HUnit              (Test(..), (~:), test)
-
-import System.IO.Silently      (capture_)
 
 -- | A Test-suite, parameterized by the gold-check generator/checker
 newtype SBVTestSuite = SBVTestSuite ((forall a. Show a => (IO a -> FilePath -> IO ())) -> Test)
@@ -59,10 +57,10 @@ goldDir2 = "SBVUnitTest/GoldFiles/"
 goldenVsStringShow :: Show a => TestName -> IO a -> TestTree
 goldenVsStringShow n res = goldenVsString n (goldDir2 ++ n ++ ".gold") (fmap (LBC.pack . show) res)
 
--- Run an IO action, capture it's stdout, and make that a test
-goldenCapturedIO :: TestName -> IO () -> TestTree
-goldenCapturedIO n res = goldenVsString n gf (fmap LBC.pack (capture_ res))
-  where gf = goldDir2 ++ n ++ ".gold"
+goldenCapturedIO :: TestName -> (FilePath -> IO ()) -> TestTree
+goldenCapturedIO n res = goldenVsFile n gf gfTmp (res gfTmp)
+  where gf    = goldDir2 ++ n ++ ".gold"
+        gfTmp = gf ++ "_temp"
 
 -- | Create a gold file for the test case
 generateGoldCheck :: FilePath -> Bool -> (forall a. Show a => IO a -> FilePath -> IO ())
