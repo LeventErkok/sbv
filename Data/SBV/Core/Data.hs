@@ -46,7 +46,7 @@ module Data.SBV.Core.Data
  , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension, smtLibReservedNames
  , SolverCapabilities(..)
  , extractSymbolicSimulationState
- , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), getSBranchRunConfig
+ , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , declNewSArray, declNewSFunArray
  , OptimizeStyle(..), Penalty(..), Objective(..)
  , QueryState(..), Query(..), Tactic(..), CaseCond(..), SMTProblem(..), isParallelCaseAnywhere

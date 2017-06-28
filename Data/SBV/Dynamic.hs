@@ -64,7 +64,6 @@ module Data.SBV.Dynamic
   , svBlastLE, svBlastBE
   -- ** Conditionals: Mergeable values
   , svIte, svLazyIte, svSymbolicMerge
-  , svIsSatisfiableInCurrentPath
   -- * Uninterpreted sorts, constants, and functions
   , svUninterpreted
   -- * Properties, proofs, and satisfiability
@@ -143,15 +142,11 @@ import Data.SBV                (sbvCheckSolverInstallation, defaultSolverConfig,
 
 import qualified Data.SBV                as SBV (SBool, proveWithAll, proveWithAny, satWithAll, satWithAny)
 import qualified Data.SBV.Core.Data      as SBV (SBV(..))
-import qualified Data.SBV.Core.Model     as SBV (isSatisfiableInCurrentPath, sbvQuickCheck)
+import qualified Data.SBV.Core.Model     as SBV (sbvQuickCheck)
 import qualified Data.SBV.Provers.Prover as SBV (proveWith, satWith, safeWith, allSatWith, compileToSMTLib, generateSMTBenchmarks)
 import qualified Data.SBV.SMT.SMT        as SBV (Modelable(getModelAssignment, getModelDictionary))
 
 import Data.Time (NominalDiffTime)
-
--- | Reduce a condition (i.e., try to concretize it) under the given path
-svIsSatisfiableInCurrentPath :: SVal -> Symbolic (Maybe SatResult)
-svIsSatisfiableInCurrentPath = SBV.isSatisfiableInCurrentPath . toSBool
 
 -- | Dynamic variant of quick-check
 svQuickCheck :: Symbolic SVal -> IO Bool

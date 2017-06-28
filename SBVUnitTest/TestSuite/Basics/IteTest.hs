@@ -6,7 +6,7 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test various incarnations of ite/iteLazy/sBranch
+-- Test various incarnations of laziness in ite
 -----------------------------------------------------------------------------
 
 module TestSuite.Basics.IteTest(tests)  where

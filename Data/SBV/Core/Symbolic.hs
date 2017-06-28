@@ -50,7 +50,7 @@ module Data.SBV.Core.Symbolic
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , Tactic(..), addSValTactic, isParallelCaseAnywhere
   , Query(..), QueryState(..)
-  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine, getSBranchRunConfig
+  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
   , outputSVal
   , SArr(..), readSArr, writeSArr, mergeSArr, newSArr, eqSArr
   ) where
@@ -103,8 +103,8 @@ swKind :: SW -> Kind
 swKind (SW k _) = k
 
 -- | Forcing an argument; this is a necessary evil to make sure all the arguments
--- to an uninterpreted function and sBranch test conditions are evaluated before called;
--- the semantics of uinterpreted functions is necessarily strict; deviating from Haskell's
+-- to an uninterpreted function are evaluated before called; the semantics of uinterpreted
+-- functions is necessarily strict; deviating from Haskell's
 forceSWArg :: SW -> IO ()
 forceSWArg (SW k n) = k `seq` n `seq` return ()
 
@@ -604,12 +604,6 @@ inSMTMode s = case runMode s of
                 Concrete{} -> False
                 SMTMode{}  -> True
 
--- | If in proof mode, get the underlying configuration (used in 'isSatisfiableInCurrentPath')
-getSBranchRunConfig :: State -> Maybe SMTConfig
-getSBranchRunConfig st = case runMode st of
-                           SMTMode _ _ c -> Just c
-                           _             -> Nothing
-
 -- | The "Symbolic" value. Either a constant (@Left@) or a symbolic
 -- value (@Right Cached@). Note that caching is essential for making
 -- sure sharing is preserved.
@@ -953,8 +947,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
    res <- extractSymbolicSimulationState st
    return (r, res)
 
--- | Grab the program from a running symbolic simulation state. This is useful for internal purposes, for
--- instance when implementing 'sBranch'.
+-- | Grab the program from a running symbolic simulation state.
 extractSymbolicSimulationState :: State -> IO Result
 extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblMap=tables, rArrayMap=arrays, rUIMap=uis, raxioms=axioms
                                        , rAsserts=asserts, rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints=cstrs

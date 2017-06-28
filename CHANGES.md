@@ -85,6 +85,10 @@
     and return types simplified. Also removed the `StopAfter` tactic for the
     same reasons.
 
+  * The function 'isSatisfiableInCurrentPath' is removed. Proper queries should be used
+    for what this function tentatively attempted to provide. Please get in touch
+    if you relied on this function and want to restructure your code to use proper queries.
+
   * Configuration option 'smtFile' is removed. Instead use 'transcript' now, which
     provides a much more detailed output that is directly loadable to a solver
     and has an accurate account of precisely what SBV sent.

@@ -31,7 +31,6 @@ module Data.SBV.Provers.Prover (
        , getModelDictionaries, getModelValues, getModelUninterpretedValues
        , boolector, cvc4, yices, z3, mathSAT, abc, defaultSMTCfg
        , compileToSMTLib, generateSMTBenchmarks
-       , internalSATCheck
        -- Only here temporarily. To be eliminated/reduced once we decide the tactic story
        , applyTactics, bufferSanity
        ) where
@@ -862,25 +861,6 @@ runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls
 
      in rnf problem `seq` problem
 
--- | Run an external proof on the given condition to see if it is satisfiable.
-internalSATCheck :: SMTConfig -> SBool -> State -> String -> IO SatResult
-internalSATCheck cfg condInPath st msg = do
-   sw <- sbvToSW st condInPath
-   () <- forceSWArg sw
-   Result ki tr uic is cs ts as uis ax asgn cstr tactics options goals assertions _ <- extractSymbolicSimulationState st
-
-   let -- Construct the corresponding sat-checker for the branch. Note that we need to
-       -- forget about the quantifiers and just use an "exist", as we're looking for a
-       -- point-satisfiability check here; whatever the original program was.
-       pgm = Result ki tr uic [(EX, n) | (_, n) <- is] cs ts as uis ax asgn cstr tactics options goals assertions [sw]
-
-       mwrap [r] = SatResult r
-       mwrap xs  = error $ "SBV.internalSATCheck: Backend solver returned a non-singleton answer:\n" ++ show (map SatResult xs)
-
-       problem = runProofOn cfg True [] pgm
-
-   callSolver True msg [] mwrap problem cfg st Nothing NoCase
-
 -- | Run a custom query
 query :: Query a -> Symbolic a
 query (Query userQuery) = do
@@ -903,10 +883,5 @@ query (Query userQuery) = do
                              , "***"
                              , "*** Query calls are only valid within runSMT/runSMTWith calls"
                              ]
-
-
--- TODO: Needs to go!
-callSolver :: a
-callSolver = error "Prover.callSolver. Needs to go!"
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

@@ -35,14 +35,11 @@ module Data.SBV.Core.Model (
   , sAssert
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCW, genMkSymVar
-  , isSatisfiableInCurrentPath
   , sbvQuickCheck
   )
   where
 
 import Control.Monad        (when, unless, mplus)
-import Control.Monad.Reader (ask)
-import Control.Monad.Trans  (liftIO)
 
 import GHC.Generics (U1(..), M1(..), (:*:)(..), K1(..))
 import qualified GHC.Generics as G
@@ -66,8 +63,8 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Operations
 
-import Data.SBV.Provers.Prover (isVacuous, prove, defaultSMTCfg, internalSATCheck)
-import Data.SBV.SMT.SMT        (ThmResult, SatResult(..), showModel)
+import Data.SBV.Provers.Prover (defaultSMTCfg)
+import Data.SBV.SMT.SMT        (showModel)
 
 import Data.SBV.Utils.Boolean
 
@@ -1804,28 +1801,5 @@ slet x f = SBV $ SVal k $ Right $ cache r
                         res  = f xsbv
                     sbvToSW st res
 
--- | Check if a boolean condition is satisfiable in the current state. This function can be useful in contexts where an
--- interpreter implemented on top of SBV needs to decide if a particular stae (represented by the boolean) is reachable
--- in the current if-then-else paths implied by the 'ite' calls. Returns Nothing if not satisfiable, otherwise the
--- satisfying model.
-isSatisfiableInCurrentPath :: SBool -> Symbolic (Maybe SatResult)
-isSatisfiableInCurrentPath cond = do
-       st <- ask
-       let cfg  = fromMaybe defaultSMTCfg (getSBranchRunConfig st)
-           msg  = when (verbose cfg) . putStrLn . ("** " ++)
-           pc   = getPathCondition st
-       check <- liftIO $ internalSATCheck cfg (pc &&& cond) st "isSatisfiableInCurrentPath: Checking satisfiability"
-       let res = case check of
-                   SatResult Satisfiable{}   -> True
-                   SatResult Unsatisfiable{} -> False
-                   _                         -> error $ "isSatisfiableInCurrentPath: Unexpected external result: " ++ show check
-       res `seq` liftIO $ msg $ "isSatisfiableInCurrentPath: Conclusion: " ++ if res then "Satisfiable" else "Unsatisfiable"
-       return $ if res then Just check
-                       else Nothing
-
--- We use 'isVacuous' and 'prove' only for the "test" section in this file, and GHC complains about that. So, this shuts it up.
-__unused :: a
-__unused = error "__unused" (isVacuous :: SBool -> IO Bool) (prove :: SBool -> IO ThmResult)
-
-{-# ANN module   ("HLint: ignore Reduce duplication" :: String)#-}
-{-# ANN module   ("HLint: ignore Eta reduce" :: String)        #-}
+{-# ANN module   ("HLint: ignore Reduce duplication" :: String) #-}
+{-# ANN module   ("HLint: ignore Eta reduce" :: String)         #-}

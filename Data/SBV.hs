@@ -206,8 +206,6 @@ module Data.SBV (
   , sAssert, safe, safeWith, isSafe, SExecutable(..)
   -- ** Finding all satisfying assignments
   , allSat, allSatWith
-  -- ** Checking satisfiability in path conditions
-  , isSatisfiableInCurrentPath
   -- ** Satisfying a sequence of boolean conditions
   , solve
 
