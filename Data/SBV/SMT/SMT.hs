@@ -23,9 +23,8 @@ module Data.SBV.SMT.SMT (
        , getModelDictionaries, getModelUninterpretedValues
        , displayModels, showModel
 
-       -- * Prover Engines
+       -- * Standard prover engine
        , standardEngine
-       , standardSolver
 
        -- * Results of various tasks
        , ThmResult(..)
