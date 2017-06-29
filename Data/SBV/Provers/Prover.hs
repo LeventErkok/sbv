@@ -55,6 +55,8 @@ import Data.SBV.SMT.SMT
 import Data.SBV.SMT.SMTLib
 import Data.SBV.Utils.TDiff
 
+import Data.IORef (readIORef, writeIORef)
+
 import qualified Data.SBV.Control       as Control
 import qualified Data.SBV.Control.Query as Control
 import qualified Data.SBV.Control.Utils as Control
@@ -866,9 +868,10 @@ runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls
 query :: Query a -> Symbolic a
 query (Query userQuery) = do
      st <- ask
-     case runMode st of
+     rm <- liftIO $ readIORef (runMode st)
+     case rm of
+        -- Transitioning from setup
         SMTMode ISetup isSAT cfg -> liftIO $ do let backend = engine (solver cfg)
-                                                    m' = SMTMode IRun isSAT cfg
 
                                                 res <- extractSymbolicSimulationState st
 
@@ -876,7 +879,23 @@ query (Query userQuery) = do
                                                     cfg' = cfg { solverSetOptions = solverSetOptions cfg ++ smtOptions }
                                                     pgm  = smtLibPgm cfg' NoCase
 
-                                                backend cfg' st (show pgm) $ \ctx -> evalStateT userQuery ctx{runMode = m'}
+                                                writeIORef (runMode st) $ SMTMode IRun isSAT cfg
+
+                                                backend cfg' st (show pgm) $ evalStateT userQuery
+
+        -- Already in a query! Can't really handle.
+        SMTMode IRun _ _ -> error $ unlines [ ""
+                                            , "*** Data.SBV: A nested query call is detected:"
+                                            , "***"
+                                            , "***   Only a single query computation is allowed."
+                                            , "***   Please restructure your code accordingly!"
+                                            , "***"
+                                            , "*** NB. Most often, a single query is sufficient. However,"
+                                            , "*** if your use case calls for separate calls, please get-in-touch"
+                                            , "*** to see how we can restructure SBV to support such use cases!"
+                                            ]
+
+        -- Otherwise choke!
         m -> error $ unlines [ ""
                              , "*** Data.SBV: Invalid query call."
                              , "***"

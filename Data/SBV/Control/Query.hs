@@ -36,6 +36,8 @@ module Data.SBV.Control.Query (
 import Control.Monad            (unless, zipWithM)
 import Control.Monad.State.Lazy (get)
 
+import Data.IORef    (readIORef)
+
 import Data.List     (unzip3, intercalate, nubBy, sortBy, elemIndex)
 import Data.Maybe    (listToMaybe, catMaybes)
 import Data.Function (on)
@@ -271,8 +273,9 @@ getModelAtIndex mbi = do
              State{runMode} <- get
              cfg  <- getConfig
              inps <- getQuantifiedInputs
+             rm   <- io $ readIORef runMode
              let vars :: [NamedSymVar]
-                 vars = case runMode of
+                 vars = case rm of
                           m@CodeGen         -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
                           m@Concrete        -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
                           SMTMode _ isSAT _ -> -- for "sat", display the prefix existentials. for "proof", display the prefix universals

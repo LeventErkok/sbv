@@ -385,14 +385,14 @@ sFloatAsSWord32 fVal
   | True
   = SBV (SVal w32 (Right (cache y)))
   where w32  = KBounded False 32
-        y st | isCodeGenMode st
-             = do f <- sbvToSW st fVal
-                  newExpr st w32 (SBVApp (IEEEFP (FP_Reinterpret KFloat w32)) [f])
-             | True
-             = do n   <- internalVariable st w32
-                  ysw <- newExpr st KFloat (SBVApp (IEEEFP (FP_Reinterpret w32 KFloat)) [n])
-                  internalConstraint st Nothing $ unSBV $ fVal `fpIsEqualObject` SBV (SVal KFloat (Right (cache (\_ -> return ysw))))
-                  return n
+        y st = do cg <- isCodeGenMode st
+                  if cg
+                     then do f <- sbvToSW st fVal
+                             newExpr st w32 (SBVApp (IEEEFP (FP_Reinterpret KFloat w32)) [f])
+                     else do n   <- internalVariable st w32
+                             ysw <- newExpr st KFloat (SBVApp (IEEEFP (FP_Reinterpret w32 KFloat)) [n])
+                             internalConstraint st Nothing $ unSBV $ fVal `fpIsEqualObject` SBV (SVal KFloat (Right (cache (\_ -> return ysw))))
+                             return n
 
 -- | Convert an 'SDouble' to an 'SWord64', preserving the bit-correspondence. Note that since the
 -- representation for @NaN@s are not unique, this function will return a symbolic value when given a
@@ -406,14 +406,14 @@ sDoubleAsSWord64 fVal
   | True
   = SBV (SVal w64 (Right (cache y)))
   where w64  = KBounded False 64
-        y st | isCodeGenMode st
-             = do f <- sbvToSW st fVal
-                  newExpr st w64 (SBVApp (IEEEFP (FP_Reinterpret KDouble w64)) [f])
-             | True
-             = do n   <- internalVariable st w64
-                  ysw <- newExpr st KDouble (SBVApp (IEEEFP (FP_Reinterpret w64 KDouble)) [n])
-                  internalConstraint st Nothing $ unSBV $ fVal `fpIsEqualObject` SBV (SVal KDouble (Right (cache (\_ -> return ysw))))
-                  return n
+        y st = do cg <- isCodeGenMode st
+                  if cg
+                     then do f <- sbvToSW st fVal
+                             newExpr st w64 (SBVApp (IEEEFP (FP_Reinterpret KDouble w64)) [f])
+                     else do n   <- internalVariable st w64
+                             ysw <- newExpr st KDouble (SBVApp (IEEEFP (FP_Reinterpret w64 KDouble)) [n])
+                             internalConstraint st Nothing $ unSBV $ fVal `fpIsEqualObject` SBV (SVal KDouble (Right (cache (\_ -> return ysw))))
+                             return n
 
 -- | Extract the sign\/exponent\/mantissa of a single-precision float. The output will have
 -- 8 bits in the second argument for exponent, and 23 in the third for the mantissa.

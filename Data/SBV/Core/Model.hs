@@ -1519,9 +1519,11 @@ instance HasKind a => Uninterpreted (SBV a) where
      | Just (_, v) <- mbCgData = v
      | True                    = SBV $ SVal ka $ Right $ cache result
     where ka = kindOf (undefined :: a)
-          result st | Just (_, v) <- mbCgData, inSMTMode st = sbvToSW st v
-                    | True = do newUninterpreted st nm (SBVType [ka]) (fst `fmap` mbCgData)
-                                newExpr st ka $ SBVApp (Uninterpreted nm) []
+          result st = do isSMT <- inSMTMode st
+                         case (isSMT, mbCgData) of
+                           (True, Just (_, v)) -> sbvToSW st v
+                           _                   -> do newUninterpreted st nm (SBVType [ka]) (fst `fmap` mbCgData)
+                                                     newExpr st ka $ SBVApp (Uninterpreted nm) []
 
 -- Functions of one argument
 instance (SymWord b, HasKind a) => Uninterpreted (SBV b -> SBV a) where
@@ -1533,11 +1535,13 @@ instance (SymWord b, HasKind a) => Uninterpreted (SBV b -> SBV a) where
            = SBV $ SVal ka $ Right $ cache result
            where ka = kindOf (undefined :: a)
                  kb = kindOf (undefined :: b)
-                 result st | Just (_, v) <- mbCgData, inSMTMode st = sbvToSW st (v arg0)
-                           | True = do newUninterpreted st nm (SBVType [kb, ka]) (fst `fmap` mbCgData)
-                                       sw0 <- sbvToSW st arg0
-                                       mapM_ forceSWArg [sw0]
-                                       newExpr st ka $ SBVApp (Uninterpreted nm) [sw0]
+                 result st = do isSMT <- inSMTMode st
+                                case (isSMT, mbCgData) of
+                                  (True, Just (_, v)) -> sbvToSW st (v arg0)
+                                  _                   -> do newUninterpreted st nm (SBVType [kb, ka]) (fst `fmap` mbCgData)
+                                                            sw0 <- sbvToSW st arg0
+                                                            mapM_ forceSWArg [sw0]
+                                                            newExpr st ka $ SBVApp (Uninterpreted nm) [sw0]
 
 -- Functions of two arguments
 instance (SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV c -> SBV b -> SBV a) where
@@ -1550,12 +1554,14 @@ instance (SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV c -> SBV b -> S
            where ka = kindOf (undefined :: a)
                  kb = kindOf (undefined :: b)
                  kc = kindOf (undefined :: c)
-                 result st | Just (_, v) <- mbCgData, inSMTMode st = sbvToSW st (v arg0 arg1)
-                           | True = do newUninterpreted st nm (SBVType [kc, kb, ka]) (fst `fmap` mbCgData)
-                                       sw0 <- sbvToSW st arg0
-                                       sw1 <- sbvToSW st arg1
-                                       mapM_ forceSWArg [sw0, sw1]
-                                       newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1]
+                 result st = do isSMT <- inSMTMode st
+                                case (isSMT, mbCgData) of
+                                  (True, Just (_, v)) -> sbvToSW st (v arg0 arg1)
+                                  _                   -> do newUninterpreted st nm (SBVType [kc, kb, ka]) (fst `fmap` mbCgData)
+                                                            sw0 <- sbvToSW st arg0
+                                                            sw1 <- sbvToSW st arg1
+                                                            mapM_ forceSWArg [sw0, sw1]
+                                                            newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1]
 
 -- Functions of three arguments
 instance (SymWord d, SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV d -> SBV c -> SBV b -> SBV a) where
@@ -1569,13 +1575,15 @@ instance (SymWord d, SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV d ->
                  kb = kindOf (undefined :: b)
                  kc = kindOf (undefined :: c)
                  kd = kindOf (undefined :: d)
-                 result st | Just (_, v) <- mbCgData, inSMTMode st = sbvToSW st (v arg0 arg1 arg2)
-                           | True = do newUninterpreted st nm (SBVType [kd, kc, kb, ka]) (fst `fmap` mbCgData)
-                                       sw0 <- sbvToSW st arg0
-                                       sw1 <- sbvToSW st arg1
-                                       sw2 <- sbvToSW st arg2
-                                       mapM_ forceSWArg [sw0, sw1, sw2]
-                                       newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2]
+                 result st = do isSMT <- inSMTMode st
+                                case (isSMT, mbCgData) of
+                                  (True, Just (_, v)) -> sbvToSW st (v arg0 arg1 arg2)
+                                  _                   -> do newUninterpreted st nm (SBVType [kd, kc, kb, ka]) (fst `fmap` mbCgData)
+                                                            sw0 <- sbvToSW st arg0
+                                                            sw1 <- sbvToSW st arg1
+                                                            sw2 <- sbvToSW st arg2
+                                                            mapM_ forceSWArg [sw0, sw1, sw2]
+                                                            newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2]
 
 -- Functions of four arguments
 instance (SymWord e, SymWord d, SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
@@ -1590,14 +1598,16 @@ instance (SymWord e, SymWord d, SymWord c, SymWord b, HasKind a) => Uninterprete
                  kc = kindOf (undefined :: c)
                  kd = kindOf (undefined :: d)
                  ke = kindOf (undefined :: e)
-                 result st | Just (_, v) <- mbCgData, inSMTMode st = sbvToSW st (v arg0 arg1 arg2 arg3)
-                           | True = do newUninterpreted st nm (SBVType [ke, kd, kc, kb, ka]) (fst `fmap` mbCgData)
-                                       sw0 <- sbvToSW st arg0
-                                       sw1 <- sbvToSW st arg1
-                                       sw2 <- sbvToSW st arg2
-                                       sw3 <- sbvToSW st arg3
-                                       mapM_ forceSWArg [sw0, sw1, sw2, sw3]
-                                       newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3]
+                 result st = do isSMT <- inSMTMode st
+                                case (isSMT, mbCgData) of
+                                  (True, Just (_, v)) -> sbvToSW st (v arg0 arg1 arg2 arg3)
+                                  _                   -> do newUninterpreted st nm (SBVType [ke, kd, kc, kb, ka]) (fst `fmap` mbCgData)
+                                                            sw0 <- sbvToSW st arg0
+                                                            sw1 <- sbvToSW st arg1
+                                                            sw2 <- sbvToSW st arg2
+                                                            sw3 <- sbvToSW st arg3
+                                                            mapM_ forceSWArg [sw0, sw1, sw2, sw3]
+                                                            newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3]
 
 -- Functions of five arguments
 instance (SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
@@ -1613,15 +1623,17 @@ instance (SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasKind a) => U
                  kd = kindOf (undefined :: d)
                  ke = kindOf (undefined :: e)
                  kf = kindOf (undefined :: f)
-                 result st | Just (_, v) <- mbCgData, inSMTMode st = sbvToSW st (v arg0 arg1 arg2 arg3 arg4)
-                           | True = do newUninterpreted st nm (SBVType [kf, ke, kd, kc, kb, ka]) (fst `fmap` mbCgData)
-                                       sw0 <- sbvToSW st arg0
-                                       sw1 <- sbvToSW st arg1
-                                       sw2 <- sbvToSW st arg2
-                                       sw3 <- sbvToSW st arg3
-                                       sw4 <- sbvToSW st arg4
-                                       mapM_ forceSWArg [sw0, sw1, sw2, sw3, sw4]
-                                       newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4]
+                 result st = do isSMT <- inSMTMode st
+                                case (isSMT, mbCgData) of
+                                  (True, Just (_, v)) -> sbvToSW st (v arg0 arg1 arg2 arg3 arg4)
+                                  _                   -> do newUninterpreted st nm (SBVType [kf, ke, kd, kc, kb, ka]) (fst `fmap` mbCgData)
+                                                            sw0 <- sbvToSW st arg0
+                                                            sw1 <- sbvToSW st arg1
+                                                            sw2 <- sbvToSW st arg2
+                                                            sw3 <- sbvToSW st arg3
+                                                            sw4 <- sbvToSW st arg4
+                                                            mapM_ forceSWArg [sw0, sw1, sw2, sw3, sw4]
+                                                            newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4]
 
 -- Functions of six arguments
 instance (SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasKind a) => Uninterpreted (SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
@@ -1638,16 +1650,18 @@ instance (SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasK
                  ke = kindOf (undefined :: e)
                  kf = kindOf (undefined :: f)
                  kg = kindOf (undefined :: g)
-                 result st | Just (_, v) <- mbCgData, inSMTMode st = sbvToSW st (v arg0 arg1 arg2 arg3 arg4 arg5)
-                           | True = do newUninterpreted st nm (SBVType [kg, kf, ke, kd, kc, kb, ka]) (fst `fmap` mbCgData)
-                                       sw0 <- sbvToSW st arg0
-                                       sw1 <- sbvToSW st arg1
-                                       sw2 <- sbvToSW st arg2
-                                       sw3 <- sbvToSW st arg3
-                                       sw4 <- sbvToSW st arg4
-                                       sw5 <- sbvToSW st arg5
-                                       mapM_ forceSWArg [sw0, sw1, sw2, sw3, sw4, sw5]
-                                       newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5]
+                 result st = do isSMT <- inSMTMode st
+                                case (isSMT, mbCgData) of
+                                  (True, Just (_, v)) -> sbvToSW st (v arg0 arg1 arg2 arg3 arg4 arg5)
+                                  _                   -> do newUninterpreted st nm (SBVType [kg, kf, ke, kd, kc, kb, ka]) (fst `fmap` mbCgData)
+                                                            sw0 <- sbvToSW st arg0
+                                                            sw1 <- sbvToSW st arg1
+                                                            sw2 <- sbvToSW st arg2
+                                                            sw3 <- sbvToSW st arg3
+                                                            sw4 <- sbvToSW st arg4
+                                                            sw5 <- sbvToSW st arg5
+                                                            mapM_ forceSWArg [sw0, sw1, sw2, sw3, sw4, sw5]
+                                                            newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5]
 
 -- Functions of seven arguments
 instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymWord b, HasKind a)
@@ -1666,17 +1680,19 @@ instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymW
                  kf = kindOf (undefined :: f)
                  kg = kindOf (undefined :: g)
                  kh = kindOf (undefined :: h)
-                 result st | Just (_, v) <- mbCgData, inSMTMode st = sbvToSW st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6)
-                           | True = do newUninterpreted st nm (SBVType [kh, kg, kf, ke, kd, kc, kb, ka]) (fst `fmap` mbCgData)
-                                       sw0 <- sbvToSW st arg0
-                                       sw1 <- sbvToSW st arg1
-                                       sw2 <- sbvToSW st arg2
-                                       sw3 <- sbvToSW st arg3
-                                       sw4 <- sbvToSW st arg4
-                                       sw5 <- sbvToSW st arg5
-                                       sw6 <- sbvToSW st arg6
-                                       mapM_ forceSWArg [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
-                                       newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
+                 result st = do isSMT <- inSMTMode st
+                                case (isSMT, mbCgData) of
+                                  (True, Just (_, v)) -> sbvToSW st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6)
+                                  _                   -> do newUninterpreted st nm (SBVType [kh, kg, kf, ke, kd, kc, kb, ka]) (fst `fmap` mbCgData)
+                                                            sw0 <- sbvToSW st arg0
+                                                            sw1 <- sbvToSW st arg1
+                                                            sw2 <- sbvToSW st arg2
+                                                            sw3 <- sbvToSW st arg3
+                                                            sw4 <- sbvToSW st arg4
+                                                            sw5 <- sbvToSW st arg5
+                                                            sw6 <- sbvToSW st arg6
+                                                            mapM_ forceSWArg [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
+                                                            newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
 
 -- Uncurried functions of two arguments
 instance (SymWord c, SymWord b, HasKind a) => Uninterpreted ((SBV c, SBV b) -> SBV a) where

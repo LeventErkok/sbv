@@ -526,11 +526,12 @@ instance Show SBVRunMode where
    show Concrete                 = "Concrete evaluation"
 
 -- | Is this a CodeGen run? (i.e., generating code)
-isCodeGenMode :: State -> Bool
-isCodeGenMode State{runMode} = case runMode of
-                                 Concrete{} -> False
-                                 SMTMode{}  -> False
-                                 CodeGen    -> True
+isCodeGenMode :: State -> IO Bool
+isCodeGenMode State{runMode} = do rm <- readIORef runMode
+                                  return $ case rm of
+                                             Concrete{} -> False
+                                             SMTMode{}  -> False
+                                             CodeGen    -> True
 
 -- | The state in query mode, i.e., additional context
 data IncState = IncState { rNewConsts :: IORef CnstMap
@@ -558,8 +559,8 @@ withNewIncState st cont = do
 -- | Return and clean and incState
 
 -- | The state of the symbolic interpreter
-data State  = State { runMode      :: SBVRunMode
-                    , pathCond     :: SVal                             -- ^ kind KBool
+data State  = State { pathCond     :: SVal                             -- ^ kind KBool
+                    , runMode      :: IORef SBVRunMode
                     , rIncState    :: IORef IncState
                     , rCInfo       :: IORef [(String, CW)]
                     , rctr         :: IORef Int
@@ -598,11 +599,12 @@ extendSValPathCondition :: State -> (SVal -> SVal) -> State
 extendSValPathCondition st f = st{pathCond = f (pathCond st)}
 
 -- | Are we running in proof mode?
-inSMTMode :: State -> Bool
-inSMTMode s = case runMode s of
-                CodeGen    -> False
-                Concrete{} -> False
-                SMTMode{}  -> True
+inSMTMode :: State -> IO Bool
+inSMTMode State{runMode} = do rm <- readIORef runMode
+                              return $ case rm of
+                                         CodeGen    -> False
+                                         Concrete{} -> False
+                                         SMTMode{}  -> True
 
 -- | The "Symbolic" value. Either a constant (@Left@) or a symbolic
 -- value (@Right Cached@). Note that caching is essential for making
@@ -643,7 +645,8 @@ noInteractive ss = error $ unlines $  ""
 modifyState :: State -> (State -> IORef a) -> (a -> a) -> IO () -> IO ()
 modifyState st@State{runMode} field update interactiveUpdate = do
         R.modifyIORef' (field st) update
-        case runMode of
+        rm <- readIORef runMode
+        case rm of
           SMTMode IRun _ _ -> interactiveUpdate
           _                -> return ()
 
@@ -691,7 +694,8 @@ addAssertion st cs msg cond = modifyState st rAsserts ((msg, cs, cond):)
 -- in a proof context.
 internalVariable :: State -> Kind -> IO SW
 internalVariable st k = do (sw, nm) <- newSW st k
-                           let q = case runMode st of
+                           rm <- readIORef (runMode st)
+                           let q = case rm of
                                      SMTMode    _ True  _ -> EX
                                      SMTMode    _ False _ -> ALL
                                      CodeGen              -> ALL
@@ -821,12 +825,13 @@ newtype Symbolic a = Symbolic (ReaderT State IO a)
 svMkSymVar :: Maybe Quantifier -> Kind -> Maybe String -> Symbolic SVal
 svMkSymVar mbQ k mbNm = do
         st <- ask
+        rm <- liftIO $ readIORef (runMode st)
 
         let varInfo = case mbNm of
                         Nothing -> ", of type " ++ show k
                         Just nm -> ", while defining " ++ nm ++ " :: " ++ show k
 
-            disallow what  = error $ "Data.SBV: Unsupported: " ++ what ++ varInfo ++ " in mode: " ++ show (runMode st)
+            disallow what  = error $ "Data.SBV: Unsupported: " ++ what ++ varInfo ++ " in mode: " ++ show rm
 
             noUI cont
               | isUninterpreted k  = disallow "Uninterpreted sorts"
@@ -841,7 +846,7 @@ svMkSymVar mbQ k mbNm = do
                                    modifyState st rCInfo ((fromMaybe "_" mbNm, cw):) (return ())
                        return $ SVal k (Left cw)
 
-        case (mbQ, runMode st) of
+        case (mbQ, rm) of
           (Just q,  SMTMode{}        ) -> mkS q
           (Nothing, SMTMode _ isSAT _) -> mkS (if isSAT then EX else ALL)
 
@@ -892,6 +897,7 @@ runSymbolicWithState (isSAT, cfg) c = do ((a, st), res) <- runSymbolic' (SMTMode
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
 runSymbolic' :: SBVRunMode -> Symbolic a -> IO (a, Result)
 runSymbolic' currentRunMode (Symbolic c) = do
+   rm        <- newIORef currentRunMode
    ctr       <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
    cInfo     <- newIORef []
    pgm       <- newIORef (SBVPgm S.empty)
@@ -915,7 +921,7 @@ runSymbolic' currentRunMode (Symbolic c) = do
    asserts   <- newIORef []
    istate    <- newIORef =<< newIncState
    qstate    <- newIORef Nothing
-   let st = State { runMode      = currentRunMode
+   let st = State { runMode      = rm
                   , pathCond     = SVal KBool (Left trueCW)
                   , rIncState    = istate
                   , rCInfo       = cInfo
@@ -982,7 +988,8 @@ addNewSMTOption o =  do st <- ask
 -- | Handling constraints
 imposeConstraint :: Maybe String -> SVal -> Symbolic ()
 imposeConstraint mbNm c = do st <- ask
-                             case runMode st of
+                             rm <- liftIO $ readIORef (runMode st)
+                             case rm of
                                CodeGen -> error "SBV: constraints are not allowed in code-generation"
                                _       -> do () <- case mbNm of
                                                      Nothing -> return ()
