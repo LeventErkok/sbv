@@ -760,6 +760,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                  , querySend                = send
                                                  , queryRetrieveResponse    = getResponseFromSolver Nothing
                                                  , queryConfig              = cfg
+                                                 , queryTerminate           = cleanUp
                                                  , queryTimeOutValue        = Nothing
                                                  , queryAssertionStackDepth = 0
                                                  }
@@ -775,10 +776,9 @@ runSolver cfg ctx execPath opts pgm continuation
                                                           ]
 
                              -- off we go!
-                             r <- continuation ctx
-                             cleanUp
-                             return r
+                             continuation ctx
 
+      -- NB. Don't use 'bracket' here, as it wouldn't have access to the exception.
       let launchSolver = do startTranscript    (transcript cfg) cfg
                             r <- executeSolver
                             finalizeTranscript (transcript cfg) Nothing

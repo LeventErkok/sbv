@@ -388,7 +388,16 @@ runSMTWith cfg a = fst <$> runSymbolic' (SMTMode ISetup True cfg) a
 runWithQuery :: Provable a => Bool -> Query b -> SMTConfig -> a -> IO b
 runWithQuery isSAT q cfg a = fst <$> runSymbolic' (SMTMode ISetup isSAT cfg) comp
   where comp =  do _ <- (if isSAT then forSome_ else forAll_) a >>= output
-                   query q
+                   r <- query q
+
+                   -- Clean-up after ourselves
+                   State{queryState} <- ask
+                   liftIO $ do qs <- readIORef queryState
+                               case qs of
+                                 Nothing                         -> return ()
+                                 Just QueryState{queryTerminate} -> queryTerminate
+
+                   return r
 
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable predicate => SMTConfig -> predicate -> IO ThmResult
@@ -883,17 +892,8 @@ query (Query userQuery) = do
 
                                                 backend cfg' st (show pgm) $ evalStateT userQuery
 
-        -- Already in a query! Can't really handle.
-        SMTMode IRun _ _ -> error $ unlines [ ""
-                                            , "*** Data.SBV: A nested query call is detected:"
-                                            , "***"
-                                            , "***   Only a single query computation is allowed."
-                                            , "***   Please restructure your code accordingly!"
-                                            , "***"
-                                            , "*** NB. Most often, a single query is sufficient. However,"
-                                            , "*** if your use case calls for separate calls, please get-in-touch"
-                                            , "*** to see how we can restructure SBV to support such use cases!"
-                                            ]
+        -- Already in a query, just continue
+        SMTMode IRun _ _ -> liftIO $ evalStateT userQuery st
 
         -- Otherwise choke!
         m -> error $ unlines [ ""

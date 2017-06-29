@@ -329,6 +329,7 @@ data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -
                              , querySend                :: Maybe Int -> String -> IO ()
                              , queryRetrieveResponse    :: Maybe Int -> IO String
                              , queryConfig              :: SMTConfig
+                             , queryTerminate           :: IO ()
                              , queryTimeOutValue        :: Maybe Int
                              , queryAssertionStackDepth :: Int
                              }
