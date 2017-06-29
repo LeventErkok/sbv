@@ -22,8 +22,12 @@ import SBVTest
 tests :: TestTree
 tests =
   testGroup "Basics.Query"
-    [ goldenCapturedIO "query1" $ \rf -> print . SatResult =<< runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just rf} query1
+    [ goldenCapturedIO "query1" testQuery
     ]
+
+testQuery :: FilePath -> IO ()
+testQuery rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just rf} query1
+                  appendFile rf ("\n FINAL:" ++ show (SatResult r) ++ "\nDONE!")
 
 query1 :: Symbolic SMTResult
 query1 = do
@@ -54,65 +58,64 @@ query1 = do
        query $ do constrain $ a+2 .>= 5
                   namedConstraint "a+b_<_12" $ a+b .< 12
 
-                  io . print =<< getOption DiagnosticOutputChannel
-                  io . print =<< getOption ProduceAssertions
-                  io . print =<< getOption ProduceAssignments
-                  io . print =<< getOption ProduceProofs
-                  io . print =<< getOption ProduceUnsatAssumptions
-                  io . print =<< getOption ProduceUnsatCores
-                  io . print =<< getOption RandomSeed
-                  io . print =<< getOption ReproducibleResourceLimit
-                  io . print =<< getOption SMTVerbosity
-                  io . print =<< getOption (OptionKeyword ":smt.mbqi")
-                  io . print =<< getOption (OptionKeyword ":smt.mbqi")
+                  _ <- getOption DiagnosticOutputChannel
+                  _ <- getOption ProduceAssertions
+                  _ <- getOption ProduceAssignments
+                  _ <- getOption ProduceProofs
+                  _ <- getOption ProduceUnsatAssumptions
+                  _ <- getOption ProduceUnsatCores
+                  _ <- getOption RandomSeed
+                  _ <- getOption ReproducibleResourceLimit
+                  _ <- getOption SMTVerbosity
+                  _ <- getOption (OptionKeyword ":smt.mbqi")
+                  _ <- getOption (OptionKeyword ":smt.mbqi")
 
-                  io .print =<< getInfo ReasonUnknown
-                  io .print =<< getInfo (InfoKeyword ":version")
-                  io .print =<< getInfo (InfoKeyword ":status")
+                  _ <- getInfo ReasonUnknown
+                  _ <- getInfo (InfoKeyword ":version")
+                  _ <- getInfo (InfoKeyword ":status")
 
                   namedConstraint "later, a > 4" $ a .> 4
 
                   cs <- checkSat
 
                   case cs of
-                    Sat -> io $ putStrLn "Everything is OK"
-                    Unk -> io .print =<< getInfo ReasonUnknown
+                    Sat -> return ()
+                    Unk -> getInfo ReasonUnknown >>= error . show
                     r   -> error $ "Something went bad, why not-sat/unk?: " ++ show r
 
                   setInfo ":status" ["unknown"]
 
-                  io . print =<< checkSatAssuming [a .> 2]
-                  io . print =<< getAssignment
+                  _ <- checkSatAssuming [a .> 2]
+                  _ <- getAssignment
 
-                  io . print =<< getInfo AllStatistics
-                  io . print =<< getInfo AssertionStackLevels
-                  io . print =<< getInfo Authors
-                  io . print =<< getInfo ErrorBehavior
-                  io . print =<< getInfo Name
-                  io . print =<< getInfo ReasonUnknown
-                  io . print =<< getInfo Version
-                  io . print =<< getInfo (InfoKeyword ":memory")
-                  io . print =<< getInfo (InfoKeyword ":time")
+                  _ <- getInfo AllStatistics
+                  _ <- getInfo AssertionStackLevels
+                  _ <- getInfo Authors
+                  _ <- getInfo ErrorBehavior
+                  _ <- getInfo Name
+                  _ <- getInfo ReasonUnknown
+                  _ <- getInfo Version
+                  _ <- getInfo (InfoKeyword ":memory")
+                  _ <- getInfo (InfoKeyword ":time")
 
                   -- Query a/b
                   av <- getValue a
                   bv <- getValue b
-                  io $ putStrLn $ "(a,b) = " ++ show (av, bv)
 
-                  io . print =<< checkSatAssuming [a .> 100,  a .> 9]
+                  _ <- checkSatAssuming [a .> 100,  a .> 9]
 
                   push 5
                   pop 3
-                  io . print =<< getAssertionStackDepth
+                  _ <- getAssertionStackDepth
 
                   -- Now assert so that we get even a bigger value..
                   namedConstraint "bey" $ a .> literal (av + bv)
                   namedConstraint "hey" $ a .< literal (av + bv)
                   _ <- checkSat
-                  io . print =<< timeout 4000 getUnsatCore
+                  _ <- timeout 4000 getUnsatCore
 
-                  io . putStrLn =<< timeout 7000 getProof
-                  io . mapM_ putStrLn =<< timeout 6000 getAssertions
+                  _ <- timeout 7000 getProof
+                  _ <- timeout 6000 getAssertions
 
                   echo "there we go"
 
