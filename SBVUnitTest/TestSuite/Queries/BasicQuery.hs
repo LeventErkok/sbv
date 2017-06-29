@@ -88,7 +88,9 @@ query1 = do
                   _ <- checkSatAssuming [a .> 2]
                   _ <- getAssignment
 
-                  _ <- getInfo AllStatistics
+                  -- ends up printing different numbers on different machines..
+                  -- _ <- getInfo AllStatistics
+
                   _ <- getInfo AssertionStackLevels
                   _ <- getInfo Authors
                   _ <- getInfo ErrorBehavior
