@@ -9,7 +9,9 @@
 -- Integration with HUnit-based test suite for SBV
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module SBVTest(
           generateGoldCheck, showsAs, ioShowsAs, mkTestSuite, SBVTestSuite(..)
         , runSAT, numberOfModels
@@ -22,16 +24,19 @@ module SBVTest(
         , module Data.SBV
         ) where
 
-import Data.SBV                (SMTConfig(..), Provable(..), isTheorem, isTheoremWith, isSatisfiable, AllSatResult(..), allSat, SymWord(free), SymArray(newArray), defaultSMTCfg)
-import Data.SBV.Internals      (runSymbolic, Symbolic, Result)
+import qualified Control.Exception as C
 
 import qualified Data.ByteString.Lazy.Char8 as LBC
 
+import System.Directory        (removeFile)
 import System.FilePath         ((</>))
 import Test.Tasty              (testGroup, TestTree, TestName)
 import Test.Tasty.Golden       (goldenVsString, goldenVsFile)
 import Test.Tasty.HUnit        (assert, Assertion, testCase)
 import Test.HUnit              (Test(..), (~:), test)
+
+import Data.SBV                (SMTConfig(..), Provable(..), isTheorem, isTheoremWith, isSatisfiable, AllSatResult(..), allSat, SymWord(free), SymArray(newArray), defaultSMTCfg)
+import Data.SBV.Internals      (runSymbolic, Symbolic, Result)
 
 -- | A Test-suite, parameterized by the gold-check generator/checker
 newtype SBVTestSuite = SBVTestSuite ((forall a. Show a => (IO a -> FilePath -> IO ())) -> Test)
@@ -58,9 +63,11 @@ goldenVsStringShow :: Show a => TestName -> IO a -> TestTree
 goldenVsStringShow n res = goldenVsString n (goldDir2 ++ n ++ ".gold") (fmap (LBC.pack . show) res)
 
 goldenCapturedIO :: TestName -> (FilePath -> IO ()) -> TestTree
-goldenCapturedIO n res = goldenVsFile n gf gfTmp (res gfTmp)
+goldenCapturedIO n res = goldenVsFile n gf gfTmp (rm gfTmp >> res gfTmp)
   where gf    = goldDir2 ++ n ++ ".gold"
         gfTmp = gf ++ "_temp"
+
+        rm f = removeFile f `C.catch` (\(_ :: C.SomeException) -> return ())
 
 -- | Create a gold file for the test case
 generateGoldCheck :: FilePath -> Bool -> (forall a. Show a => IO a -> FilePath -> IO ())
