@@ -52,7 +52,8 @@ q = do a <- sInt32 "a"
 
                   -- Now assert so that we get even a bigger value..
                   namedConstraint "extra" $ a .> literal av
+                  constrain $ b .< 2
                   _ <- checkSat
 
                   res <- (,) <$> getValue a <*> getValue b
-                  unless (res == (1, 1)) $ error $ "Didn't get (1,1): " ++ show res
+                  unless (res == (2, 1)) $ error $ "Didn't get (2,1): " ++ show res

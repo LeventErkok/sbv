@@ -44,16 +44,13 @@
 [GOOD] (assert s15)
 [SEND] (check-sat)
 [RECV] sat
-Everything is OK
 [SEND] (get-value (s0))
 [RECV] ((s0 #x00000001))
-[SEND] (get-value (s1))
-[RECV] ((s1 #x00000001))
-(a,b) = (1,1)
 [GOOD] (pop 1)
 [GOOD] (define-fun s16 () (_ BitVec 32) #x00000001)
 [GOOD] (define-fun s17 () Bool (bvsgt s0 s16))
 [GOOD] (assert (! s17 :named |extra|))
+[GOOD] (assert s11)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -62,4 +59,3 @@ Everything is OK
 [RECV] ((s1 #x00000001))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-(2,1)

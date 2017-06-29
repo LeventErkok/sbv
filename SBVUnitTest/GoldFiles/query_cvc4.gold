@@ -42,16 +42,13 @@
 [GOOD] (assert s15)
 [SEND] (check-sat)
 [RECV] sat
-Everything is OK
 [SEND] (get-value (s0))
 [RECV] ((s0 (_ bv1 32)))
-[SEND] (get-value (s1))
-[RECV] ((s1 (_ bv1 32)))
-(a,b) = (1,1)
 [GOOD] (pop 1)
 [GOOD] (define-fun s16 () (_ BitVec 32) #x00000001)
 [GOOD] (define-fun s17 () Bool (bvsgt s0 s16))
 [GOOD] (assert (! s17 :named |extra|))
+[GOOD] (assert s11)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -61,4 +58,3 @@ Everything is OK
 *** Solver   : CVC4
 *** Exit code: ExitSuccess
 *** Std-out  : 
-(2,1)

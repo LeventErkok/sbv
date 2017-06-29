@@ -26,12 +26,9 @@
 [ISSUE] (assert s4)
 [SEND] (check-sat)
 [RECV] sat
-Everything is OK
 [SEND] (get-value (s0))
 [RECV] ((s0 #x1))
 [SEND] (get-value (s1))
 [RECV] ((s1 #x1))
-(a,b) = (1,1)
 *** Solver   : ABC
 *** Exit code: ExitSuccess
-(1,1)
