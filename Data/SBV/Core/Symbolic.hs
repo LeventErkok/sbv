@@ -952,6 +952,13 @@ runSymbolic' currentRunMode (Symbolic c) = do
    _ <- newConst st trueCW  -- s(-1) == trueSW
    r <- runReaderT c st
    res <- extractSymbolicSimulationState st
+
+   -- Clean-up after ourselves
+   qs <- readIORef qstate
+   case qs of
+     Nothing                         -> return ()
+     Just QueryState{queryTerminate} -> queryTerminate
+
    return (r, res)
 
 -- | Grab the program from a running symbolic simulation state.

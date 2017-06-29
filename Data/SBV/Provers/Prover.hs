@@ -388,16 +388,7 @@ runSMTWith cfg a = fst <$> runSymbolic' (SMTMode ISetup True cfg) a
 runWithQuery :: Provable a => Bool -> Query b -> SMTConfig -> a -> IO b
 runWithQuery isSAT q cfg a = fst <$> runSymbolic' (SMTMode ISetup isSAT cfg) comp
   where comp =  do _ <- (if isSAT then forSome_ else forAll_) a >>= output
-                   r <- query q
-
-                   -- Clean-up after ourselves
-                   State{queryState} <- ask
-                   liftIO $ do qs <- readIORef queryState
-                               case qs of
-                                 Nothing                         -> return ()
-                                 Just QueryState{queryTerminate} -> queryTerminate
-
-                   return r
+                   query q
 
 -- | Proves the predicate using the given SMT-solver
 proveWith :: Provable predicate => SMTConfig -> predicate -> IO ThmResult
