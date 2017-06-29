@@ -23,7 +23,7 @@ import SBVTest
 tests :: TestTree
 tests =
   testGroup "Basics.QueryIndividual"
-    [ goldenCapturedIO "query_yices" $ \rf -> runSMTWith yices{verbose=True, redirectVerbose=Just rf} q
+    [ goldenCapturedIO "extOnly_query_yices" $ \rf -> runSMTWith yices{verbose=True, redirectVerbose=Just rf} q
     ]
 
 q :: Symbolic ()

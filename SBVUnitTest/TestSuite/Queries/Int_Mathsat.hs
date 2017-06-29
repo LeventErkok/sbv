@@ -23,7 +23,7 @@ import SBVTest
 tests :: TestTree
 tests =
   testGroup "Basics.QueryIndividual"
-    [ goldenCapturedIO "query_mathsat" $ \rf -> runSMTWith mathSAT{verbose=True, redirectVerbose=Just rf} q
+    [ goldenCapturedIO "extOnly_query_mathsat" $ \rf -> runSMTWith mathSAT{verbose=True, redirectVerbose=Just rf} q
     ]
 
 q :: Symbolic ()
