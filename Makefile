@@ -60,13 +60,13 @@ basicTest:
 
 extendedTests:
 	$(call startTimer,$@)
-	@$(TIME) ./dist/build/int-test-extended/int-test-extended --hide-successes -p '**' -j 4
+	@$(TIME) ./dist/build/int-test-extended/int-test-extended --hide-successes -p '**' -j `grep -c "^processor" /proc/cpuinfo`
 	$(call endTimer,$@)
 
 # When "limited", we skip query tests
 limitedExtendedTests:
 	$(call startTimer,$@)
-	@$(TIME) ./dist/build/int-test-extended/int-test-extended --hide-successes -p \!extOnly -j 4
+	@$(TIME) ./dist/build/int-test-extended/int-test-extended --hide-successes -p \!extOnly -j `grep -c "^processor" /proc/cpuinfo`
 	$(call endTimer,$@)
 
 test: install doctest basicTest extendedTests
