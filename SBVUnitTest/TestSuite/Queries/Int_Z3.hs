@@ -49,9 +49,7 @@ q = do a <- sInt32 "a"
                               r   -> error $ "Something went bad, why not-sat/unk?: " ++ show r
 
                             -- Query a/b
-                            av <- getValue a
-
-                            return av
+                            getValue a
 
                   -- Now assert so that we get even a bigger value..
                   namedConstraint "extra" $ a .> literal gv
