@@ -353,7 +353,7 @@ compileToSMTLib version isSat a = do
         t <- getZonedTime
         let comments = ["Created on " ++ show t]
             cfg      = defaultSMTCfg { smtLibVersion = version }
-        (_, _, res) <- runSymbolicWithState (isSat, cfg) $ (if isSat then forSome_ else forAll_) a >>= output
+        res <- runSymbolic (isSat, cfg) $ (if isSat then forSome_ else forAll_) a >>= output
         let SMTProblem{smtLibPgm} = runProofOn cfg isSat comments res
             out = show (smtLibPgm cfg NoCase)
         return $ out ++ "\n(check-sat)\n"

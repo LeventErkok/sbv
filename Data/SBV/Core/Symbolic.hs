@@ -40,7 +40,7 @@ module Data.SBV.Core.Symbolic
   , NamedSymVar
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
-  , SBVPgm(..), Symbolic, runSymbolic, runSymbolicWithState, runSymbolic', State(..), withNewIncState, IncState(..)
+  , SBVPgm(..), Symbolic, runSymbolic, runSymbolic', State(..), withNewIncState, IncState(..)
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..)
   , registerKind, registerLabel
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable
@@ -889,11 +889,6 @@ addAxiom nm ax = do
 -- argument indicates if this is a sat instance or not.
 runSymbolic :: (Bool, SMTConfig) -> Symbolic a -> IO Result
 runSymbolic (isSAT, cfg) comp = snd `fmap` runSymbolic' (SMTMode ISetup isSAT cfg) comp
-
--- | Run a symbolic computation in the Proof mode, but also return the final state
-runSymbolicWithState :: (Bool, SMTConfig) -> Symbolic a -> IO (a, State, Result)
-runSymbolicWithState (isSAT, cfg) c = do ((a, st), res) <- runSymbolic' (SMTMode ISetup isSAT cfg) (c >>= \a -> ask >>= \st -> return (a, st))
-                                         return (a, st, res)
 
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
 runSymbolic' :: SBVRunMode -> Symbolic a -> IO (a, Result)
