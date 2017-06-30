@@ -11,8 +11,10 @@ TSTSRCS = $(shell find . -name '*.hs' | grep -v SBVUnitTest | grep -v buildUtils
 ifeq ($(OS), Darwin)
 # OSX tends to sleep for long jobs; so run through caffeinate
 TIME = /usr/bin/time caffeinate
+NO_OF_CORES = `sysctl hw.ncpu | awk '{print $$2}'`
 else
 TIME = /usr/bin/time
+NO_OF_CORES = `grep -c "^processor" /proc/cpuinfo`
 endif
 
 BUILDTIMES = buildTimes.log
@@ -60,13 +62,13 @@ basicTest:
 
 extendedTests:
 	$(call startTimer,$@)
-	@$(TIME) ./dist/build/int-test-extended/int-test-extended --hide-successes -p '**' -j `grep -c "^processor" /proc/cpuinfo`
+	@$(TIME) ./dist/build/int-test-extended/int-test-extended --hide-successes -p '**' -j $(NO_OF_CORES)
 	$(call endTimer,$@)
 
 # When "limited", we skip query tests
 limitedExtendedTests:
 	$(call startTimer,$@)
-	@$(TIME) ./dist/build/int-test-extended/int-test-extended --hide-successes -p \!extOnly -j `grep -c "^processor" /proc/cpuinfo`
+	@$(TIME) ./dist/build/int-test-extended/int-test-extended --hide-successes -p \!extOnly -j $(NO_OF_CORES)
 	$(call endTimer,$@)
 
 test: install doctest basicTest extendedTests
@@ -116,7 +118,7 @@ markBuildStart:
 markBuildEnd:
 	@echo `date`. SBV release build finished.		   >> ${BUILDTIMES}
 
-release: markBuildStart veryclean checkLinks install sdist testInterfaces hlint docs test markBuildEnd
+release: markBuildStart veryclean install sdist testInterfaces hlint docs test checkLinks markBuildEnd
 	@echo "*** SBV is ready for release!"
 
 # same as release really, but doesn't check links and tests fewer solver connections.
