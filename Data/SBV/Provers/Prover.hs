@@ -351,7 +351,7 @@ compileToSMTLib :: Provable a => SMTLibVersion   -- ^ Version of SMTLib to compi
                               -> IO String
 compileToSMTLib version isSat a = do
         t <- getZonedTime
-        let comments = ["Created on " ++ show t]
+        let comments = ["Automatically created by SBV on " ++ show t]
             cfg      = defaultSMTCfg { smtLibVersion = version }
         res <- runSymbolic (isSat, cfg) $ (if isSat then forSome_ else forAll_) a >>= output
         let SMTProblem{smtLibPgm} = runProofOn cfg isSat comments res
