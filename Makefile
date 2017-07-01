@@ -38,14 +38,7 @@ define endTimer
 	@tput smam
 endef
 
-all: quick
-
-quick:
-	$(call startTimer,$@)
-	@fast-tags -R --nomerge .
-	@cabal build --ghc-options="-Werror -Wall"
-	@cabal install
-	$(call endTimer,$@)
+all: install
 
 install: 
 	$(call startTimer,$@)
@@ -53,6 +46,13 @@ install:
 	@cabal configure --enable-tests --ghc-options="-Werror -Wall"
 	@cabal build
 	@cabal install --force-reinstalls
+	$(call endTimer,$@)
+
+quick:
+	$(call startTimer,$@)
+	@fast-tags -R --nomerge .
+	@cabal build --ghc-options="-Werror -Wall"
+	@cabal install
 	$(call endTimer,$@)
 
 basicTest:
