@@ -40,7 +40,7 @@ module Data.SBV.Core.Data
  , Op(..), PBOp(..), FPOp(..), NamedSymVar, getTableIndex
  , SBVPgm(..), Symbolic, SExecutable(..), runSymbolic, runSymbolic', State, getPathCondition, extendPathCondition
  , inSMTMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
- , SolverContext(..), addConstraint, internalVariable, internalConstraint, isCodeGenMode
+ , SolverContext(..), internalVariable, internalConstraint, isCodeGenMode
  , SBVType(..), newUninterpreted, addAxiom
  , Quantifier(..), needsExistentials
  , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension, smtLibReservedNames
@@ -467,10 +467,6 @@ instance (HasKind a, HasKind b) => Show (SFunArray a b) where
 -- | Lift a function to an array. Useful for creating arrays in a pure context. (Otherwise use `newArray`.)
 mkSFunArray :: (SBV a -> SBV b) -> SFunArray a b
 mkSFunArray = SFunArray
-
--- | Add a constraint, possibly named
-addConstraint :: Maybe String -> SBool -> Symbolic ()
-addConstraint mn (SBV c) = imposeConstraint mn c
 
 -- | A case condition (internal)
 data CaseCond = NoCase                         -- ^ No case-split
