@@ -87,7 +87,7 @@ data GeneralizedCW = ExtendedCW ExtCW
 data ExtCW = Infinite  Kind         -- infinity
            | Epsilon   Kind         -- epsilon
            | Interval  ExtCW ExtCW  -- closed interval
-           | BoundedCW CW           -- a bounded value (i.e., neither infinity, nor epsilon)
+           | BoundedCW CW           -- a bounded value (i.e., neither infinity, nor epsilon). Note that this cannot appear at top, but can appear as a sub-expr.
            | AddExtCW  ExtCW ExtCW  -- addition
            | MulExtCW  ExtCW ExtCW  -- multiplication
 

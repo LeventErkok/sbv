@@ -323,22 +323,29 @@ getObjectiveValues = do let cmd = "(get-objectives)"
                                                   ]
 
                 grab :: SW -> SExpr -> Query GeneralizedCW
-                grab s = extract
+                grab s topExpr = extract topExpr
                   where k = kindOf s
 
-                        isIntegral sw = isBoolean sw || isBounded sw || isInteger sw
+                        -- things that can be printed as "integral" values
+                        isFromInteger sw = or [f sw | f <- [isBoolean, isBounded, isInteger, isReal, isFloat, isDouble]]
 
                         getUIIndex (KUserSort  _ (Right xs)) i = i `elemIndex` xs
                         getUIIndex _                         _ = Nothing
 
-                        extract (ENum    i) | isIntegral      s = return $ RegularCW  $ mkConstCW  k (fst i)
-                        extract (EReal   i) | isReal          s = return $ RegularCW  $ CW KReal   (CWAlgReal i)
-                        extract (EFloat  i) | isFloat         s = return $ RegularCW  $ CW KFloat  (CWFloat   i)
-                        extract (EDouble i) | isDouble        s = return $ RegularCW  $ CW KDouble (CWDouble  i)
-                        extract (ECon    i) | isUninterpreted s = return $ RegularCW  $ CW k       (CWUserSort (getUIIndex k i, i))
+                        guard True  v = return v
+                        guard False _ = dontUnderstand (show topExpr)
+
+                        extract (ENum    i) = guard (isFromInteger s) $ RegularCW  $ mkConstCW  k (fst i)
+                        extract (EReal   i) = guard (isReal        s) $ RegularCW  $ CW KReal   (CWAlgReal i)
+                        extract (EFloat  i) = guard (isFloat       s) $ RegularCW  $ CW KFloat  (CWFloat   i)
+                        extract (EDouble i) = guard (isDouble      s) $ RegularCW  $ CW KDouble (CWDouble  i)
+
+                        -- If we have an ECon, it could be uninterpted, or oo/epsilon
+                        extract (ECon i)
+                           | isUninterpreted s = return $ RegularCW  $ CW k (CWUserSort (getUIIndex k i, i))
 
                         -- Exhausted regular values, look for infinities and such:
-                        extract val                             = ExtendedCW <$> cvt (simplify val)
+                        extract val         = ExtendedCW <$> cvt (simplify val)
 
                         -- Convert to an extended expression. Hopefully complete!
                         cvt :: SExpr -> Query ExtCW
