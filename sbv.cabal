@@ -241,6 +241,7 @@ Test-Suite int-test-extended
                   , TestSuite.Optimization.ExtensionField
                   , TestSuite.Optimization.AssertSoft
                   , TestSuite.Optimization.Combined
+                  , TestSuite.Optimization.Reals
                   , TestSuite.Queries.BasicQuery
                   , TestSuite.Queries.Int_ABC
                   , TestSuite.Queries.Int_Boolector

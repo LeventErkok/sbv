@@ -37,6 +37,7 @@ import qualified TestSuite.Optimization.Basics
 import qualified TestSuite.Optimization.ExtensionField
 import qualified TestSuite.Optimization.AssertSoft
 import qualified TestSuite.Optimization.Combined
+import qualified TestSuite.Optimization.Reals
 import qualified TestSuite.Queries.BasicQuery
 import qualified TestSuite.Queries.Int_ABC
 import qualified TestSuite.Queries.Int_Boolector
@@ -92,6 +93,7 @@ tests =
   , TestSuite.Optimization.ExtensionField.tests
   , TestSuite.Optimization.AssertSoft.tests
   , TestSuite.Optimization.Combined.tests
+  , TestSuite.Optimization.Reals.tests
   , TestSuite.Queries.BasicQuery.tests
   , TestSuite.Queries.Int_ABC.tests
   , TestSuite.Queries.Int_Boolector.tests
