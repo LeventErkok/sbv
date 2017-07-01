@@ -40,7 +40,7 @@ module Data.SBV.Core.Symbolic
   , NamedSymVar
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
-  , SBVPgm(..), Symbolic, runSymbolic, runSymbolic', State(..), withNewIncState, IncState(..)
+  , SBVPgm(..), Symbolic, runSymbolic, runSymbolicWithResult, State(..), withNewIncState, IncState(..)
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..)
   , registerKind, registerLabel
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable
@@ -888,11 +888,11 @@ addAxiom nm ax = do
 -- | Run a symbolic computation in Proof mode and return a 'Result'. The boolean
 -- argument indicates if this is a sat instance or not.
 runSymbolic :: (Bool, SMTConfig) -> Symbolic a -> IO Result
-runSymbolic (isSAT, cfg) comp = snd `fmap` runSymbolic' (SMTMode ISetup isSAT cfg) comp
+runSymbolic (isSAT, cfg) comp = snd `fmap` runSymbolicWithResult (SMTMode ISetup isSAT cfg) comp
 
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
-runSymbolic' :: SBVRunMode -> Symbolic a -> IO (a, Result)
-runSymbolic' currentRunMode (Symbolic c) = do
+runSymbolicWithResult :: SBVRunMode -> Symbolic a -> IO (a, Result)
+runSymbolicWithResult currentRunMode (Symbolic c) = do
    rm        <- newIORef currentRunMode
    ctr       <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
    cInfo     <- newIORef []

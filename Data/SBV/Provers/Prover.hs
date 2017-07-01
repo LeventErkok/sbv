@@ -382,11 +382,11 @@ bufferSanity True  a = bracket before after (const a)
 
 -- | Runs an arbitrary symbolic computation, exposed to the user in SAT mode
 runSMTWith :: SMTConfig -> Symbolic a -> IO a
-runSMTWith cfg a = fst <$> runSymbolic' (SMTMode ISetup True cfg) a
+runSMTWith cfg a = fst <$> runSymbolicWithResult (SMTMode ISetup True cfg) a
 
 -- | Runs with a query.
 runWithQuery :: Provable a => Bool -> Query b -> SMTConfig -> a -> IO b
-runWithQuery isSAT q cfg a = fst <$> runSymbolic' (SMTMode ISetup isSAT cfg) comp
+runWithQuery isSAT q cfg a = fst <$> runSymbolicWithResult (SMTMode ISetup isSAT cfg) comp
   where comp =  do _ <- (if isSAT then forSome_ else forAll_) a >>= output
                    query q
 
@@ -785,7 +785,7 @@ caseSplit config ctx mbOptInfo checkVacuity (runParallel, hasPar) isSAT (wrap, u
 
 -- | Check if any of the assertions can be violated
 safeWith :: SExecutable a => SMTConfig -> a -> IO [SafeResult]
-safeWith cfg a = fst <$> runSymbolic' (SMTMode ISetup True cfg) (sName_ a >> check)
+safeWith cfg a = fst <$> runSymbolicWithResult (SMTMode ISetup True cfg) (sName_ a >> check)
   where check = query $ Control.getSBVAssertions >>= mapM verify
 
         -- check that the cond is unsatisfiable. If satisfiable, that would
@@ -815,7 +815,7 @@ isSafe (SafeResult (_, _, result)) = case result of
 -- | Determine if the constraints are vacuous using the given SMT-solver. Also see
 -- the 'CheckConstrVacuity' tactic.
 isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
-isVacuousWith cfg a = fst <$> runSymbolic' (SMTMode ISetup True cfg) (forSome_ a >> query check)  -- NB. Can't call runWithQuery since last constraint would become the implication!
+isVacuousWith cfg a = fst <$> runSymbolicWithResult (SMTMode ISetup True cfg) (forSome_ a >> query check)  -- NB. Can't call runWithQuery since last constraint would become the implication!
    where check = do cs <- Control.checkSat
                     case cs of
                       Control.Unsat -> return True

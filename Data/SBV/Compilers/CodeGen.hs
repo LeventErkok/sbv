@@ -314,7 +314,7 @@ instance Show CgPgmBundle where
 -- of makefiles, source code, headers, etc.
 codeGen :: CgTarget l => l -> CgConfig -> String -> SBVCodeGen () -> IO CgPgmBundle
 codeGen l cgConfig nm (SBVCodeGen comp) = do
-   (((), st'), res) <- runSymbolic' CodeGen $ runStateT comp initCgState { cgFinalConfig = cgConfig }
+   (((), st'), res) <- runSymbolicWithResult CodeGen $ runStateT comp initCgState { cgFinalConfig = cgConfig }
    let st = st' { cgInputs       = reverse (cgInputs st')
                 , cgOutputs      = reverse (cgOutputs st')
                 }
