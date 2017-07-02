@@ -501,7 +501,7 @@ applyTactics cfgIn ctx (isSat, hasPar) (wrap, unwrap) levels smtOptions tactics 
                      Just r  -> return r
                      Nothing -> if null caseSplits
                                 then cont finalConfig ctx mbOptInfo (CasePath (map (snd . snd) levels))
-                                else caseSplit finalConfig ctx mbOptInfo shouldCheckCaseVacuity (parallelCase, hasPar) isSat (wrap, unwrap) levels smtOptions chatty cases cont
+                                else oldCaseSplit finalConfig ctx mbOptInfo shouldCheckCaseVacuity (parallelCase, hasPar) isSat (wrap, unwrap) levels smtOptions chatty cases cont
 
   where (caseSplits, checkCaseVacuity, parallelCases, checkConstrVacuity, checkUsing)
                 = foldr (flip classifyTactics) ([], [], [], [], []) tactics
@@ -565,7 +565,7 @@ constraintVacuityCheck False config ctx d (wrap, unwrap) f = do
                                               ]
 
 -- | Implements the case-split tactic. Works for both Sat and Proof, hence the quantification on @res@
-caseSplit :: forall res.
+oldCaseSplit :: forall res.
              SMTConfig                                                                -- ^ Solver config
           -> State                                                                    -- ^ Query state
           -> Maybe (OptimizeStyle, Int)                                               -- ^ Are we optimizing?
@@ -579,7 +579,7 @@ caseSplit :: forall res.
           -> [(String, SW, [Tactic SW])]                                              -- ^ List of cases. Case name, condition, plus further tactics for nested case-splitting etc.
           -> (SMTConfig -> State -> Maybe (OptimizeStyle, Int) -> CaseCond -> IO res) -- ^ The "solver" once we provide it with a problem and a case
           -> IO res
-caseSplit config ctx mbOptInfo checkVacuity (runParallel, hasPar) isSAT (wrap, unwrap) level smtOptions chatty cases cont
+oldCaseSplit config ctx mbOptInfo checkVacuity (runParallel, hasPar) isSAT (wrap, unwrap) level smtOptions chatty cases cont
      | runParallel = goParallel tasks
      | True        = goSerial   tasks
 

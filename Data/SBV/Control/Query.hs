@@ -20,6 +20,7 @@ module Data.SBV.Control.Query (
        send, ask, retrieveResponse
      , CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet, getUnsatCore, getProof, getAssignment, getOption
      , push, pop, getAssertionStackDepth, inNewAssertionStack, echo
+     , caseSplit
      , resetAssertions, exit
      , getAssertions
      , getValue, getModel, getSMTResult
@@ -33,7 +34,7 @@ module Data.SBV.Control.Query (
      , io
      ) where
 
-import Control.Monad            (unless, zipWithM)
+import Control.Monad            (unless, when, zipWithM)
 import Control.Monad.State.Lazy (get)
 
 import Data.IORef    (readIORef)
@@ -47,6 +48,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic   (QueryState(..), Query(..), SMTModel(..), SMTResult(..), State(..))
 
 import Data.SBV.Utils.SExpr
+import Data.SBV.Utils.Boolean
 
 import Data.SBV.Control.Types
 import Data.SBV.Control.Utils
@@ -472,6 +474,34 @@ pop i
                                      modifyQueryState $ \s -> s{queryAssertionStackDepth = depth - i}
    where shl 1 = "one level"
          shl n = show n ++ " levels"
+
+-- | Search for a result via a sequence of case-splits, guided by the user. If one of
+-- the conditions lead to a satisfiable result, returns @Just@ that result. If none of them
+-- do, returns @Nothing@. Note that we automatically generate a coverage case and search
+-- for it automatically as well. In that latter case, the string returned will be "Coverage".
+-- The first argument controls printing progress messages 
+caseSplit :: Bool -> [(String, SBool)] -> Query (Maybe (String, SMTResult))
+caseSplit printCases cases = do cfg <- getConfig
+                                go cfg (cases ++ [("Coverage", bnot (bOr (map snd cases)))])
+  where msg = when printCases . io . putStrLn
+
+        go _ []            = return Nothing
+        go cfg ((n,c):ncs) = do let notify s = msg $ "Case " ++ n ++ ": " ++ s
+
+                                notify "Starting"
+                                r <- checkSatAssuming [c]
+
+                                case r of
+                                  Unsat -> do notify "Unsatisfiable"
+                                              go cfg ncs
+
+                                  Sat   -> do notify "Satisfiable"
+                                              res <- Satisfiable cfg <$> getModel
+                                              return $ Just (n, res)
+
+                                  Unk   -> do notify "Unknown"
+                                              res <- Unknown cfg <$> getUnknownReason
+                                              return $ Just (n, res)
 
 -- | Reset the solver, by forgetting all the assertions. However, bindings are kept as is,
 -- as opposed to 'reset'. Use this variant to clean-up the solver state while leaving the bindings
