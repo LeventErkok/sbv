@@ -217,6 +217,7 @@ Test-Suite int-test-extended
                   , TestSuite.Basics.Index
                   , TestSuite.Basics.ProofTests
                   , TestSuite.Basics.QRem
+                  , TestSuite.Basics.TOut
                   , TestSuite.BitPrecise.BitTricks
                   , TestSuite.BitPrecise.PrefixSum
                   , TestSuite.CRC.CCITT_Unidir
