@@ -346,7 +346,7 @@ compileToSMTLib version isSat a = do
             cfg      = defaultSMTCfg { smtLibVersion = version }
         res <- runSymbolic (isSat, cfg) $ (if isSat then forSome_ else forAll_) a >>= output
         let SMTProblem{smtLibPgm} = runProofOn cfg isSat comments res
-            out = show (smtLibPgm cfg NoCase)
+            out = show (smtLibPgm cfg)
         return $ out ++ "\n(check-sat)\n"
 
 -- | Create SMT-Lib benchmarks, for supported versions of SMTLib. The first argument is the basename of the file.
@@ -532,7 +532,7 @@ query (Query userQuery) = do
 
                                                 let SMTProblem{smtOptions, smtLibPgm} = runProofOn cfg isSAT [] res
                                                     cfg' = cfg { solverSetOptions = solverSetOptions cfg ++ smtOptions }
-                                                    pgm  = smtLibPgm cfg' NoCase
+                                                    pgm  = smtLibPgm cfg'
 
                                                 writeIORef (runMode st) $ SMTMode IRun isSAT cfg
 

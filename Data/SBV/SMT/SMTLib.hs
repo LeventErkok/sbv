@@ -37,7 +37,7 @@ toIncSMTLib SMTConfig{smtLibVersion} = case smtLibVersion of
 -- | Convert to SMTLib-2 format
 toSMTLib2 :: SMTLibConverter SMTLibPgm
 toSMTLib2 = cvt SMTLib2
-  where cvt v kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config caseSelectors
+  where cvt v kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config
          | KUnbounded `Set.member` kindInfo && not (supportsUnboundedInts solverCaps)
          = unsupported "unbounded integers"
          | KReal `Set.member` kindInfo  && not (supportsReals solverCaps)
@@ -48,10 +48,6 @@ toSMTLib2 = cvt SMTLib2
          = unsupported "quantifiers"
          | not (null sorts) && not (supportsUninterpretedSorts solverCaps)
          = unsupported "uninterpreted sorts"
-         | needsOptimization && not (supportsOptimization solverCaps)
-         = unsupported "optimization routines"
-         | not $ null needsUniversalOpt
-         = unsupportedAll $ "optimization of universally quantified metric(s): " ++ unwords needsUniversalOpt
          | True
          = SMTLibPgm v pgm
          where sorts = [s | KUserSort s _ <- Set.toList kindInfo]
@@ -59,23 +55,12 @@ toSMTLib2 = cvt SMTLib2
                unsupported w = error $ unlines [ "SBV: Given problem needs " ++ w
                                                , "*** Which is not supported by SBV for the chosen solver: " ++ show (name (solver config))
                                                ]
-               unsupportedAll w = error $ unlines [ "SBV: Given problem needs " ++ w
-                                                  , "*** Which is not supported by SBV."
-                                                  ]
                converter = case v of
                              SMTLib2 -> SMT2.cvt
-               pgm = converter kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config caseSelectors
+               pgm = converter kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config
 
                needsFloats  = KFloat  `Set.member` kindInfo
                needsDoubles = KDouble `Set.member` kindInfo
-               (needsOptimization, needsUniversalOpt) = case caseSelectors of
-                                                          Opt ss -> let universals   = [s | (ALL, (s, _)) <- qinps]
-                                                                        check (x, y) = any (`elem` universals) [x, y]
-                                                                        isUniversal (Maximize nm xy) | check xy = [nm]
-                                                                        isUniversal (Minimize nm xy) | check xy = [nm]
-                                                                        isUniversal _                           = []
-                                                                    in  (True,  concatMap isUniversal ss)
-                                                          _      -> (False, [])
                needsQuantifiers
                  | isSat = ALL `elem` quantifiers
                  | True  = EX  `elem` quantifiers

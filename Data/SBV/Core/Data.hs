@@ -49,7 +49,7 @@ module Data.SBV.Core.Data
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , declNewSArray, declNewSFunArray
  , OptimizeStyle(..), Penalty(..), Objective(..)
- , QueryState(..), Query(..), CaseCond(..), SMTProblem(..)
+ , QueryState(..), Query(..), SMTProblem(..)
  ) where
 
 import GHC.Generics (Generic)
@@ -479,23 +479,14 @@ instance (HasKind a, HasKind b) => Show (SFunArray a b) where
 mkSFunArray :: (SBV a -> SBV b) -> SFunArray a b
 mkSFunArray = SFunArray
 
--- | A case condition (internal)
-data CaseCond = NoCase                         -- ^ No case-split
-              | CasePath [SW]                  -- ^ In a case-path
-              | CaseVac  [SW] SW               -- ^ For checking the vacuity of a case
-              | CaseCov  [SW] [SW]             -- ^ In a case-path end, coverage (first arg is path cond, second arg is coverage cond)
-              | CstrVac                        -- ^ In a constraint vacuity check (top-level)
-              | Opt      [Objective (SW, SW)]  -- ^ In an optimization call
-              deriving (Generic, NFData)
-
 -- | Internal representation of a symbolic simulation result
-data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]        -- ^ inputs
-                             , smtSkolemMap :: [Either SW (SW, [SW])]             -- ^ skolem-map
-                             , kindsUsed    :: Set.Set Kind                       -- ^ kinds used
-                             , smtAsserts   :: [(String, Maybe CallStack, SW)]    -- ^ assertions
-                             , smtOptions   :: [SMTOption]                        -- ^ options to set
-                             , objectives   :: [Objective (SW, SW)]               -- ^ optimization goals, if any
-                             , smtLibPgm    :: SMTConfig -> CaseCond -> SMTLibPgm -- ^ SMTLib representation, given the config and case-splits
+data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]     -- ^ inputs
+                             , smtSkolemMap :: [Either SW (SW, [SW])]          -- ^ skolem-map
+                             , kindsUsed    :: Set.Set Kind                    -- ^ kinds used
+                             , smtAsserts   :: [(String, Maybe CallStack, SW)] -- ^ assertions
+                             , smtOptions   :: [SMTOption]                     -- ^ options to set
+                             , objectives   :: [Objective (SW, SW)]            -- ^ optimization goals, if any
+                             , smtLibPgm    :: SMTConfig -> SMTLibPgm          -- ^ SMTLib representation, given the config
                              }
                              deriving (Generic, NFData)
 

@@ -40,7 +40,6 @@ type SMTLibConverter a =  Set.Set Kind                 -- ^ Kinds used in the pr
                        -> [(Maybe String, SW)]         -- ^ extra constraints
                        -> SW                           -- ^ output variable
                        -> SMTConfig                    -- ^ configuration
-                       -> CaseCond                     -- ^ case analysis
                        -> a
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)

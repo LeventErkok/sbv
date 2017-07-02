@@ -15,7 +15,6 @@ module Data.SBV.SMT.SMTLib2(cvt, cvtInc) where
 
 import Data.Bits  (bit)
 import Data.List  (intercalate, partition)
-import Data.Maybe (mapMaybe)
 
 import qualified Data.Foldable as F (toList)
 import qualified Data.Map      as M
@@ -33,7 +32,7 @@ tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
 cvt :: SMTLibConverter [String]
-cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out cfg caseCond = pgm
+cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out cfg = pgm
   where hasInteger     = KUnbounded `Set.member` kindInfo
         hasReal        = KReal      `Set.member` kindInfo
         hasFloat       = KFloat     `Set.member` kindInfo
@@ -184,20 +183,9 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
            where finals  = cstrs' ++ maybe [] (\r -> [(Nothing, r)]) mbO
 
                  cstrs' =  [(mbNm, c') | (mbNm, c) <- cstrs, Just c' <- [pos c]]
-                        ++ condAsserts
 
-                 condAsserts = map (Nothing,) $ case caseCond of
-                                                    NoCase         -> []
-                                                    CasePath ss    -> mapMaybe pos ss
-                                                    CaseVac  ss _  -> mapMaybe pos ss
-                                                    CaseCov  ss qq -> mapMaybe pos ss ++ mapMaybe neg qq
-                                                    CstrVac        -> []
-                                                    Opt gs         -> map mkGoal gs
-
-                 mbO | CstrVac     <- caseCond = pos trueSW -- always a SAT call!
-                     | CaseVac _ s <- caseCond = pos s      -- always a SAT call!
-                     | isSat                   = pos out
-                     | True                    = neg out
+                 mbO | isSat = pos out
+                     | True  = neg out
 
                  neg s
                   | s == trueSW  = Just $ cvtSW skolemMap falseSW
@@ -208,11 +196,6 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
                   | s == trueSW  = Nothing
                   | s == falseSW = Just $ cvtSW skolemMap falseSW
                   | True         = Just $ cvtSW skolemMap s
-
-                 eq (orig, track) = "(= " ++ cvtSW skolemMap track ++ " " ++ cvtSW skolemMap orig ++ ")"
-                 mkGoal (Minimize   _ ab)   = eq ab
-                 mkGoal (Maximize   _ ab)   = eq ab
-                 mkGoal (AssertSoft _ ab _) = eq ab
 
         skolemMap = M.fromList [(s, ss) | Right (s, ss) <- skolemInps, not (null ss)]
         tableMap  = IM.fromList $ map mkConstTable constTables ++ map mkSkTable skolemTables
