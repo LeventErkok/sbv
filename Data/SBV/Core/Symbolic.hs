@@ -40,7 +40,7 @@ module Data.SBV.Core.Symbolic
   , NamedSymVar
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
-  , SBVPgm(..), Symbolic, runSymbolic, runSymbolicWithResult, State(..), withNewIncState, IncState(..)
+  , SBVPgm(..), Symbolic, runSymbolic, runSymbolicWithResult, State(..), withNewIncState, IncState(..), incrementInternalCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..)
   , registerKind, registerLabel
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable
@@ -658,10 +658,10 @@ modifyIncState State{rIncState} field update = do
         R.modifyIORef' (field incState) update
 
 -- | Increment the variable counter
-incCtr :: State -> IO Int
-incCtr st = do ctr <- readIORef (rctr st)
-               modifyState st rctr (+1) (return ())
-               return ctr
+incrementInternalCounter :: State -> IO Int
+incrementInternalCounter st = do ctr <- readIORef (rctr st)
+                                 modifyState st rctr (+1) (return ())
+                                 return ctr
 
 -- | Create a new uninterpreted symbol, possibly with user given code
 newUninterpreted :: State -> String -> SBVType -> Maybe [String] -> IO ()
@@ -710,7 +710,7 @@ internalVariable st k = do (sw, nm) <- newSW st k
 
 -- | Create a new SW
 newSW :: State -> Kind -> IO (SW, String)
-newSW st k = do ctr <- incCtr st
+newSW st k = do ctr <- incrementInternalCounter st
                 let sw = SW k (NodeId ctr)
                 registerKind st k
                 return (sw, 's' : show ctr)
