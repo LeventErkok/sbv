@@ -396,21 +396,23 @@ checkSatAssumingHelper :: Bool -> [SBool] -> Query (CheckSatResult, Maybe [SBool
 checkSatAssumingHelper getAssumptions sBools = do
         -- sigh.. SMT-Lib requires the values to be literals only. So, create proxies.
         let mkAssumption st = do swsOriginal <- mapM (\sb -> do sw <- sbvToSW st sb
-                                                                unique <- incrementInternalCounter st
-                                                                return (sw, (unique, sb)))
-                                                     sBools
+                                                                return (sw, sb)) sBools
 
                                  -- drop duplicates and trues
                                  let swbs = [p | p@(sw, _) <- nubBy ((==) `on` fst) swsOriginal, sw /= trueSW]
 
-                                     translate (sw, (unique, sb)) = (nm, decls, (proxy, sb))
+                                 -- get a unique proxy name for each
+                                 uniqueSWBs <- mapM (\(sw, sb) -> do unique <- incrementInternalCounter st
+                                                                     return (sw, (unique, sb))) swbs
+
+                                 let translate (sw, (unique, sb)) = (nm, decls, (proxy, sb))
                                         where nm    = show sw
                                               proxy = "__assumption_proxy_" ++ nm ++ "_" ++ show unique
                                               decls = [ "(declare-const " ++ proxy ++ " Bool)"
                                                       , "(assert (= " ++ proxy ++ " " ++ nm ++ "))"
                                                       ]
 
-                                 return $ map translate swbs
+                                 return $ map translate uniqueSWBs
 
         assumptions <- inNewContext mkAssumption
 
