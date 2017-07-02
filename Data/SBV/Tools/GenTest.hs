@@ -37,7 +37,7 @@ getTestValues (TV vs) = vs
 -- | Generate a set of concrete test values from a symbolic program. The output
 -- can be rendered as test vectors in different languages as necessary. Use the
 -- function 'output' call to indicate what fields should be in the test result.
--- (Also see 'constrain' and 'pConstrain' for filtering acceptable test values.)
+-- (Also see 'constrain' for filtering acceptable test values.)
 genTest :: Outputtable a => Int -> Symbolic a -> IO TestVectors
 genTest n m = gen 0 []
   where gen i sofar
