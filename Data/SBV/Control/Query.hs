@@ -503,7 +503,7 @@ exit = do send True "(exit)"
           modifyQueryState $ \s -> s{queryAssertionStackDepth = 0}
 
 -- | Retrieve the unsat-core. Note you must have arranged for
--- unsat cores to be produced first (/via/ @'setOption' 'ProduceUnsatCores' 'True'@)
+-- unsat cores to be produced first (/via/ @'setOption' $ 'ProduceUnsatCores' 'True'@)
 -- for this call to not error out!
 getUnsatCore :: Query [String]
 getUnsatCore = do
@@ -524,7 +524,7 @@ getUnsatCore = do
            _                                     -> bad r Nothing
 
 -- | Retrieve the proof. Note you must have arranged for
--- proofs to be produced first (/via/ @'setOption' 'ProduceProofs' 'True'@)
+-- proofs to be produced first (/via/ @'setOption' $ 'ProduceProofs' 'True'@)
 -- for this call to not error out!
 --
 -- A proof is simply a 'String', as returned by the solver. In the future, SBV might
@@ -550,7 +550,7 @@ getProof = do
         parse r bad $ \_ -> return r
 
 -- | Retrieve assertions. Note you must have arranged for
--- assertions to be available first (/via/ @'setOption' 'ProduceAssertions' 'True'@)
+-- assertions to be available first (/via/ @'setOption' $ 'ProduceAssertions' 'True'@)
 -- for this call to not error out!
 --
 -- Note that the set of assertions returned is merely a list of strings, just like the
