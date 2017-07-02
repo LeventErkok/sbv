@@ -24,7 +24,7 @@ module Data.SBV.Control.Query (
      , resetAssertions, exit
      , getAssertions
      , getValue, getModel, getSMTResult
-     , getLexicographicOptResults, getIndependentOptResults, getParetoOptResults, getAllSatResult
+     , getLexicographicOptResults, getIndependentOptResults, getParetoOptResults, getAllSatResult, getUnknownReason
      , SMTOption(..)
      , SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
      , Logic(..), Assignment(..)
