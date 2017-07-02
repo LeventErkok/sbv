@@ -9,7 +9,6 @@
 -- Conversion of symbolic programs to SMTLib format, Using v2 of the standard
 -----------------------------------------------------------------------------
 {-# LANGUAGE PatternGuards #-}
-{-# LANGUAGE TupleSections #-}
 
 module Data.SBV.SMT.SMTLib2(cvt, cvtInc) where
 
