@@ -117,7 +117,7 @@ query1 = do
                   _ <- checkSat
                   _ <- timeout 4000 getUnsatCore
 
-                  _ <- timeout 7000 getProof
+                  _ <- getProof
                   _ <- timeout 6000 getAssertions
 
                   echo "there we go"
