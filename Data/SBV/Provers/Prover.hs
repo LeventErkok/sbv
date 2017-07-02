@@ -299,8 +299,7 @@ safe :: SExecutable a => a -> IO [SafeResult]
 safe = safeWith defaultSMTCfg
 
 -- | Check if the given constraints are satisfiable, equivalent to @'isVacuousWith' 'defaultSMTCfg'@.
--- See the function 'constrain' for an example use of 'isVacuous'. Also see the 'CheckConstrVacuity'
--- tactic.
+-- See the function 'constrain' for an example use of 'isVacuous'.
 isVacuous :: Provable a => a -> IO Bool
 isVacuous = isVacuousWith defaultSMTCfg
 
