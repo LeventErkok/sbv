@@ -45,7 +45,7 @@ import Data.Function (on)
 
 import Data.SBV.Core.Data
 
-import Data.SBV.Core.Symbolic   (QueryState(..), Query(..), SMTModel(..), SMTResult(..), State(..))
+import Data.SBV.Core.Symbolic   (QueryState(..), Query(..), SMTModel(..), SMTResult(..), State(..), incrementInternalCounter)
 
 import Data.SBV.Utils.SExpr
 import Data.SBV.Utils.Boolean
@@ -395,14 +395,17 @@ checkSatAssumingWithUnsatisfiableSet = checkSatAssumingHelper True
 checkSatAssumingHelper :: Bool -> [SBool] -> Query (CheckSatResult, Maybe [SBool])
 checkSatAssumingHelper getAssumptions sBools = do
         -- sigh.. SMT-Lib requires the values to be literals only. So, create proxies.
-        let mkAssumption st = do swsOriginal <- mapM (\sb -> sbvToSW st sb >>= \sw -> return (sw, sb)) sBools
+        let mkAssumption st = do swsOriginal <- mapM (\sb -> do sw <- sbvToSW st sb
+                                                                unique <- incrementInternalCounter st
+                                                                return (sw, (unique, sb)))
+                                                     sBools
 
                                  -- drop duplicates and trues
                                  let swbs = [p | p@(sw, _) <- nubBy ((==) `on` fst) swsOriginal, sw /= trueSW]
 
-                                     translate (sw, sb) = (nm, decls, (proxy, sb))
+                                     translate (sw, (unique, sb)) = (nm, decls, (proxy, sb))
                                         where nm    = show sw
-                                              proxy = "__assumption_proxy_" ++ nm
+                                              proxy = "__assumption_proxy_" ++ nm ++ "_" ++ show unique
                                               decls = [ "(declare-const " ++ proxy ++ " Bool)"
                                                       , "(assert (= " ++ proxy ++ " " ++ nm ++ "))"
                                                       ]
