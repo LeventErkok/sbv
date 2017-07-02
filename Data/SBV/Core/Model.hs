@@ -28,7 +28,7 @@ module Data.SBV.Core.Model (
   , oneIf, blastBE, blastLE, fullAdder, fullMultiplier
   , lsb, msb, genVar, genVar_, forall, forall_, exists, exists_
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
-  , tactic, sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
+  , sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
   , sRealToSInteger, label
@@ -1724,10 +1724,6 @@ instance SolverContext Symbolic where
    constrain          (SBV c) = imposeConstraint Nothing   c
    namedConstraint nm (SBV c) = imposeConstraint (Just nm) c
    setOption o                = addNewSMTOption  o
-
--- | Provide a tactic for the solver engine
-tactic :: Tactic SBool -> Symbolic ()
-tactic t = addSValTactic $ unSBV `fmap` t
 
 -- | Introduce a soft assertion, with an optional penalty
 assertSoft :: String -> SBool -> Penalty -> Symbolic ()

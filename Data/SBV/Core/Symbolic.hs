@@ -48,7 +48,6 @@ module Data.SBV.Core.Symbolic
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
-  , Tactic(..), addSValTactic, isParallelCaseAnywhere
   , Query(..), QueryState(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
   , outputSVal
@@ -338,14 +337,6 @@ data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -
 newtype Query a = Query (StateT State IO a)
              deriving (Applicative, Functor, Monad, MonadIO, MonadState State)
 
--- | Solver tactic
-data Tactic a = CaseSplit          Bool [(String, a, [Tactic a])]  -- ^ Case-split, with implicit coverage. Bool says whether we should be verbose.
-              | CheckCaseVacuity   Bool                            -- ^ Should the case-splits be checked for vacuity? (Default: True.)
-              | ParallelCase                                       -- ^ Run case-splits in parallel. (Default: Sequential.)
-              | CheckConstrVacuity Bool                            -- ^ Should "constraints" be checked for vacuity? (Default: False.)
-              | CheckUsing         String                          -- ^ Invoke with check-sat-using command, instead of check-sat
-              deriving (Show, Functor)
-
 instance NFData OptimizeStyle where
    rnf x = x `seq` ()
 
@@ -357,19 +348,6 @@ instance NFData a => NFData (Objective a) where
    rnf (Minimize   s a)   = rnf s `seq` rnf a `seq` ()
    rnf (Maximize   s a)   = rnf s `seq` rnf a `seq` ()
    rnf (AssertSoft s a p) = rnf s `seq` rnf a `seq` rnf p `seq` ()
-
-instance NFData a => NFData (Tactic a) where
-   rnf (CaseSplit   b l)      = rnf b `seq` rnf l `seq` ()
-   rnf (CheckCaseVacuity b)   = rnf b `seq` ()
-   rnf ParallelCase           = ()
-   rnf (CheckConstrVacuity b) = rnf b `seq` ()
-   rnf (CheckUsing       s)   = rnf s `seq` ()
-
--- | Is there a parallel-case anywhere?
-isParallelCaseAnywhere :: Tactic a -> Bool
-isParallelCaseAnywhere ParallelCase{}   = True
-isParallelCaseAnywhere (CaseSplit _ cs) = or [any isParallelCaseAnywhere t | (_, _, t) <- cs]
-isParallelCaseAnywhere _                = False
 
 -- | Result of running a symbolic computation
 data Result = Result { reskinds       :: Set.Set Kind                            -- ^ kinds used in the program
@@ -383,7 +361,6 @@ data Result = Result { reskinds       :: Set.Set Kind                           
                      , resAxioms      :: [(String, [String])]                    -- ^ axioms
                      , resAsgns       :: SBVPgm                                  -- ^ assignments
                      , resConstraints :: [(Maybe String, SW)]                    -- ^ additional constraints (boolean)
-                     , resTactics     :: [Tactic SW]                             -- ^ User given tactics
                      , resSMTOptions  :: [SMTOption]                             -- ^ User specified solver options
                      , resGoals       :: [Objective (SW, SW)]                    -- ^ User specified optimization goals
                      , resAssertions  :: [(String, Maybe CallStack, SW)]         -- ^ assertions
@@ -398,7 +375,7 @@ instance Show Result where
   show Result{resConsts=cs, resOutputs=[r]}
     | Just c <- r `lookup` cs
     = show c
-  show (Result kinds _ cgs is cs ts as uis axs xs cstrs tacs smtOptions goals asserts os) = intercalate "\n" $
+  show (Result kinds _ cgs is cs ts as uis axs xs cstrs smtOptions goals asserts os) = intercalate "\n" $
                    (if null usorts then [] else "SORTS" : map ("  " ++) usorts)
                 ++ ["INPUTS"]
                 ++ map shn is
@@ -414,8 +391,6 @@ instance Show Result where
                 ++ concatMap shcg cgs
                 ++ ["AXIOMS"]
                 ++ map shax axs
-                ++ ["TACTICS"]
-                ++ sh2 tacs
                 ++ ["SMT OPTIONS"]
                 ++ sh2 smtOptions
                 ++ ["GOALS"]
@@ -578,7 +553,6 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rUIMap       :: IORef UIMap
                     , rCgMap       :: IORef CgMap
                     , raxioms      :: IORef [(String, [String])]
-                    , rTacs        :: IORef [Tactic SW]
                     , rSMTOptions  :: IORef [SMTOption]
                     , rOptGoals    :: IORef [Objective (SW, SW)]
                     , rAsserts     :: IORef [(String, Maybe CallStack, SW)]
@@ -911,7 +885,6 @@ runSymbolicWithResult currentRunMode (Symbolic c) = do
    usedKinds <- newIORef Set.empty
    usedLbls  <- newIORef Set.empty
    cstrs     <- newIORef []
-   tacs      <- newIORef []
    smtOpts   <- newIORef []
    optGoals  <- newIORef []
    asserts   <- newIORef []
@@ -937,7 +910,6 @@ runSymbolicWithResult currentRunMode (Symbolic c) = do
                   , rSWCache     = swCache
                   , rAICache     = aiCache
                   , rConstraints = cstrs
-                  , rTacs        = tacs
                   , rSMTOptions  = smtOpts
                   , rOptGoals    = optGoals
                   , rAsserts     = asserts
@@ -960,7 +932,7 @@ runSymbolicWithResult currentRunMode (Symbolic c) = do
 extractSymbolicSimulationState :: State -> IO Result
 extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblMap=tables, rArrayMap=arrays, rUIMap=uis, raxioms=axioms
                                        , rAsserts=asserts, rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints=cstrs
-                                       , rTacs=tacs, rSMTOptions=opts, rOptGoals=optGoals } = do
+                                       , rSMTOptions=opts, rOptGoals=optGoals } = do
    SBVPgm rpgm  <- readIORef pgm
    inpsO <- reverse `fmap` readIORef inps
    outsO <- reverse `fmap` readIORef outs
@@ -977,11 +949,10 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    cgMap <- Map.toList `fmap` readIORef cgs
    traceVals  <- reverse `fmap` readIORef cInfo
    extraCstrs <- reverse `fmap` readIORef cstrs
-   tactics    <- reverse `fmap` readIORef tacs
    options    <- reverse `fmap` readIORef opts
    goals      <- reverse `fmap` readIORef optGoals
    assertions <- reverse `fmap` readIORef asserts
-   return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs tactics options goals assertions outsO
+   return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs options goals assertions outsO
 
 -- | Add a new option
 addNewSMTOption :: SMTOption -> Symbolic ()
@@ -1006,23 +977,6 @@ internalConstraint st mbNm b = do v <- svToSW st b
                                             $ noInteractive [ "Adding an internal constraint:"
                                                             , "  Named: " ++ fromMaybe "<unnamed>" mbNm
                                                             ]
-
--- | Add a tactic
-addSValTactic :: Tactic SVal -> Symbolic ()
-addSValTactic tac = do st <- ask
-                       let walk (CaseSplit b cs)       = let app (nm, v, ts) = do ts' <- mapM walk ts
-                                                                                  v' <- svToSW st v
-                                                                                  return (nm, v', ts')
-                                                         in CaseSplit b `fmap` mapM app cs
-                           walk ParallelCase           = return   ParallelCase
-                           walk (CheckCaseVacuity b)   = return $ CheckCaseVacuity b
-                           walk (CheckConstrVacuity b) = return $ CheckConstrVacuity b
-                           walk (CheckUsing s)         = return $ CheckUsing s
-                       tac' <- liftIO $ walk tac
-                       liftIO $ modifyState st rTacs (tac':)
-                                          $ noInteractive [ "Adding a new tactic:"
-                                                          , "  Tactic: " ++ show tac
-                                                          ]
 
 -- | Add an optimization goal
 addSValOptGoal :: Objective SVal -> Symbolic ()
@@ -1215,11 +1169,11 @@ instance NFData CallStack where
 #endif
 
 instance NFData Result where
-  rnf (Result kindInfo qcInfo cgs inps consts tbls arrs uis axs pgm cstr tacs opts goals asserts outs)
+  rnf (Result kindInfo qcInfo cgs inps consts tbls arrs uis axs pgm cstr opts goals asserts outs)
         = rnf kindInfo `seq` rnf qcInfo  `seq` rnf cgs  `seq` rnf inps
                        `seq` rnf consts  `seq` rnf tbls `seq` rnf arrs
                        `seq` rnf uis     `seq` rnf axs  `seq` rnf pgm
-                       `seq` rnf cstr    `seq` rnf tacs `seq` rnf goals
+                       `seq` rnf cstr    `seq` rnf goals
                        `seq` rnf opts    `seq` rnf asserts `seq` rnf outs
 instance NFData Kind         where rnf a          = seq a ()
 instance NFData ArrayContext where rnf a          = seq a ()

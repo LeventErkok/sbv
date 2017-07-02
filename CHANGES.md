@@ -20,6 +20,10 @@
     with the solver directly. See the module "Data.SBV.Control" for the main
     API, together with the new functions 'runSMT' and 'runSMTWith'.
 
+  * The 'Tactic' based solver control (introduced in v6.0) is completely removed, and
+    is replaced by the above described mechanism which gives the user a lot of
+    flexibility instead.
+
   * The call 'allSat' has been reworked so it performs only one call to the underlying
     solver and repeatedly issues check-sat to get new assignments. This differs from the
     previous implementation where we spun off a new call to the executable for each
@@ -82,8 +86,7 @@
     for timeouts, where it really matters. Please get in touch if you relied on
     this old mechanism. Correspondingly, the functions `isTheorem`, `isSatisfiable`,
     `isTheoremWith` and `isSatisfiableWith` had their time-out arguments removed
-    and return types simplified. Also removed the `StopAfter` tactic for the
-    same reasons.
+    and return types simplified.
 
   * The function 'isSatisfiableInCurrentPath' is removed. Proper queries should be used
     for what this function tentatively attempted to provide. Please get in touch

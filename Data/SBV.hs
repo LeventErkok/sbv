@@ -219,10 +219,6 @@ module Data.SBV (
   -- * Running a symbolic computation
   , runSMT, runSMTWith
 
-  -- * Tactics
-  -- $tacticIntro
-  , Tactic(..), tactic
-
   -- * User queries
   -- $queryIntro
   , Query, query
@@ -526,13 +522,6 @@ by SBV to print a diagnostic info to pinpoint the failure.
 Also see "Data.SBV.Examples.Misc.NoDiv0" for the classic div-by-zero example.
 -}
 
-
-{- $tacticIntro
-In certain cases, the prove/sat calls can benefit from user guidance, in terms of tactics. From a semantic view,
-a tactic has no effect on the meaning of a predicate. It is merely guidance for SBV to guide the proof. It is
-also used for executing cases in parallel ('ParallelCase'), or picking the logic to use ('UseLogic'), or
-specifying a timeout ('StopAfter'). For most users, default values of these should suffice.
--}
 
 {- $optiIntro
   SBV can optimize metric functions, i.e., those that generate both bounded 'SIntN', 'SWordN', and unbounded 'SInteger'

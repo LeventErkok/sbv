@@ -49,7 +49,7 @@ module Data.SBV.Core.Data
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , declNewSArray, declNewSFunArray
  , OptimizeStyle(..), Penalty(..), Objective(..)
- , QueryState(..), Query(..), Tactic(..), CaseCond(..), SMTProblem(..), isParallelCaseAnywhere
+ , QueryState(..), Query(..), CaseCond(..), SMTProblem(..)
  ) where
 
 import GHC.Generics (Generic)
@@ -493,7 +493,6 @@ data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]      
                              , smtSkolemMap :: [Either SW (SW, [SW])]             -- ^ skolem-map
                              , kindsUsed    :: Set.Set Kind                       -- ^ kinds used
                              , smtAsserts   :: [(String, Maybe CallStack, SW)]    -- ^ assertions
-                             , tactics      :: [Tactic SW]                        -- ^ tactics to use
                              , smtOptions   :: [SMTOption]                        -- ^ options to set
                              , objectives   :: [Objective (SW, SW)]               -- ^ optimization goals, if any
                              , smtLibPgm    :: SMTConfig -> CaseCond -> SMTLibPgm -- ^ SMTLib representation, given the config and case-splits
