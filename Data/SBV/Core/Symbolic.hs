@@ -350,20 +350,20 @@ instance NFData a => NFData (Objective a) where
    rnf (AssertSoft s a p) = rnf s `seq` rnf a `seq` rnf p `seq` ()
 
 -- | Result of running a symbolic computation
-data Result = Result { reskinds       :: Set.Set Kind                            -- ^ kinds used in the program
-                     , resTraces      :: [(String, CW)]                          -- ^ quick-check counter-example information (if any)
-                     , resUISegs      :: [(String, [String])]                    -- ^ uninterpeted code segments
-                     , resInputs      :: [(Quantifier, NamedSymVar)]             -- ^ inputs (possibly existential)
-                     , resConsts      :: [(SW, CW)]                              -- ^ constants
-                     , resTables      :: [((Int, Kind, Kind), [SW])]             -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
-                     , resArrays      :: [(Int, ArrayInfo)]                      -- ^ arrays (user specified)
-                     , resUIConsts    :: [(String, SBVType)]                     -- ^ uninterpreted constants
-                     , resAxioms      :: [(String, [String])]                    -- ^ axioms
-                     , resAsgns       :: SBVPgm                                  -- ^ assignments
-                     , resConstraints :: [(Maybe String, SW)]                    -- ^ additional constraints (boolean)
-                     , resSMTOptions  :: [SMTOption]                             -- ^ User specified solver options
-                     , resAssertions  :: [(String, Maybe CallStack, SW)]         -- ^ assertions
-                     , resOutputs     :: [SW]                                    -- ^ outputs
+data Result = Result { reskinds       :: Set.Set Kind                    -- ^ kinds used in the program
+                     , resTraces      :: [(String, CW)]                  -- ^ quick-check counter-example information (if any)
+                     , resUISegs      :: [(String, [String])]            -- ^ uninterpeted code segments
+                     , resInputs      :: [(Quantifier, NamedSymVar)]     -- ^ inputs (possibly existential)
+                     , resConsts      :: [(SW, CW)]                      -- ^ constants
+                     , resTables      :: [((Int, Kind, Kind), [SW])]     -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
+                     , resArrays      :: [(Int, ArrayInfo)]              -- ^ arrays (user specified)
+                     , resUIConsts    :: [(String, SBVType)]             -- ^ uninterpreted constants
+                     , resAxioms      :: [(String, [String])]            -- ^ axioms
+                     , resAsgns       :: SBVPgm                          -- ^ assignments
+                     , resConstraints :: [(Maybe String, SW)]            -- ^ additional constraints (boolean)
+                     , resSMTOptions  :: [SMTOption]                     -- ^ User specified solver options
+                     , resAssertions  :: [(String, Maybe CallStack, SW)] -- ^ assertions
+                     , resOutputs     :: [SW]                            -- ^ outputs
                      }
 
 -- Show instance for 'Result'. Only for debugging purposes.
