@@ -539,15 +539,6 @@ instance SIntegral Int32
 instance SIntegral Int64
 instance SIntegral Integer
 
--- Boolean combinators
-instance Boolean SBool where
-  true  = literal True
-  false = literal False
-  bnot (SBV b) = SBV (svNot b)
-  SBV a &&& SBV b = SBV (svAnd a b)
-  SBV a ||| SBV b = SBV (svOr a b)
-  SBV a <+> SBV b = SBV (svXOr a b)
-
 -- | Returns 1 if the boolean is true, otherwise 0.
 oneIf :: (Num a, SymWord a) => SBool -> SBV a
 oneIf t = ite t 1 0

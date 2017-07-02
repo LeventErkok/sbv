@@ -72,12 +72,14 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
 import Data.SBV.Core.Symbolic
+import Data.SBV.Core.Operations
 
 import Data.SBV.Control.Types
 
 import Data.SBV.SMT.SMTLibNames
 
 import Data.SBV.Utils.Lib
+import Data.SBV.Utils.Boolean
 
 -- | Get the current path condition
 getPathCondition :: State -> SBool
@@ -150,6 +152,15 @@ sNaN = literal nan
 -- 'SDouble' and 'SFloat'.
 sInfinity :: (Floating a, SymWord a) => SBV a
 sInfinity = literal infinity
+
+-- Boolean combinators
+instance Boolean SBool where
+  true  = SBV (svBool True)
+  false = SBV (svBool False)
+  bnot (SBV b) = SBV (svNot b)
+  SBV a &&& SBV b = SBV (svAnd a b)
+  SBV a ||| SBV b = SBV (svOr a b)
+  SBV a <+> SBV b = SBV (svXOr a b)
 
 -- | 'RoundingMode' can be used symbolically
 instance SymWord RoundingMode
