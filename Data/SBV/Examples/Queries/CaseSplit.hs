@@ -56,6 +56,7 @@ csDemo1 = runSMT $ do
 -- Case less than 8: Unsatisfiable
 -- Case Coverage: Starting
 -- Case Coverage: Satisfiable
+-- ("Coverage",10)
 csDemo2 :: IO (String, Integer)
 csDemo2 = runSMT $ do
 
