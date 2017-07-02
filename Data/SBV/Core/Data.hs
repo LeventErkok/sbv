@@ -485,7 +485,6 @@ data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]     -
                              , kindsUsed    :: Set.Set Kind                    -- ^ kinds used
                              , smtAsserts   :: [(String, Maybe CallStack, SW)] -- ^ assertions
                              , smtOptions   :: [SMTOption]                     -- ^ options to set
-                             , objectives   :: [Objective (SW, SW)]            -- ^ optimization goals, if any
                              , smtLibPgm    :: SMTConfig -> SMTLibPgm          -- ^ SMTLib representation, given the config
                              }
                              deriving (Generic, NFData)

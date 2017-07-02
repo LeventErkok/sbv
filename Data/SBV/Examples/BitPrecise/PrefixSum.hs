@@ -118,7 +118,6 @@ thm2 = prove $ flIsCorrect 16 (0, smax)
 -- USER GIVEN CODE SEGMENTS
 -- AXIOMS
 -- SMT OPTIONS
--- GOALS
 -- DEFINE
 --   s8 :: SWord8 = s0 + s1
 --   s9 :: SWord8 = s2 + s8
@@ -169,7 +168,6 @@ ladnerFischerTrace n = gen >>= print
 -- USER GIVEN CODE SEGMENTS
 -- AXIOMS
 -- SMT OPTIONS
--- GOALS
 -- DEFINE
 --   s8 :: SWord8 = s0 + s1
 --   s9 :: SWord8 = s2 + s8

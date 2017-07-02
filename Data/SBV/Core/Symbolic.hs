@@ -362,7 +362,6 @@ data Result = Result { reskinds       :: Set.Set Kind                           
                      , resAsgns       :: SBVPgm                                  -- ^ assignments
                      , resConstraints :: [(Maybe String, SW)]                    -- ^ additional constraints (boolean)
                      , resSMTOptions  :: [SMTOption]                             -- ^ User specified solver options
-                     , resGoals       :: [Objective (SW, SW)]                    -- ^ User specified optimization goals
                      , resAssertions  :: [(String, Maybe CallStack, SW)]         -- ^ assertions
                      , resOutputs     :: [SW]                                    -- ^ outputs
                      }
@@ -375,7 +374,7 @@ instance Show Result where
   show Result{resConsts=cs, resOutputs=[r]}
     | Just c <- r `lookup` cs
     = show c
-  show (Result kinds _ cgs is cs ts as uis axs xs cstrs smtOptions goals asserts os) = intercalate "\n" $
+  show (Result kinds _ cgs is cs ts as uis axs xs cstrs smtOptions asserts os) = intercalate "\n" $
                    (if null usorts then [] else "SORTS" : map ("  " ++) usorts)
                 ++ ["INPUTS"]
                 ++ map shn is
@@ -393,8 +392,6 @@ instance Show Result where
                 ++ map shax axs
                 ++ ["SMT OPTIONS"]
                 ++ sh2 smtOptions
-                ++ ["GOALS"]
-                ++ sh2 goals
                 ++ ["DEFINE"]
                 ++ map (\(s, e) -> "  " ++ shs s ++ " = " ++ show e) (F.toList (pgmAssignments xs))
                 ++ ["CONSTRAINTS"]
@@ -932,7 +929,7 @@ runSymbolicWithResult currentRunMode (Symbolic c) = do
 extractSymbolicSimulationState :: State -> IO Result
 extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblMap=tables, rArrayMap=arrays, rUIMap=uis, raxioms=axioms
                                        , rAsserts=asserts, rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints=cstrs
-                                       , rSMTOptions=opts, rOptGoals=optGoals } = do
+                                       , rSMTOptions=opts } = do
    SBVPgm rpgm  <- readIORef pgm
    inpsO <- reverse `fmap` readIORef inps
    outsO <- reverse `fmap` readIORef outs
@@ -950,9 +947,8 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    traceVals  <- reverse `fmap` readIORef cInfo
    extraCstrs <- reverse `fmap` readIORef cstrs
    options    <- reverse `fmap` readIORef opts
-   goals      <- reverse `fmap` readIORef optGoals
    assertions <- reverse `fmap` readIORef asserts
-   return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs options goals assertions outsO
+   return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs options assertions outsO
 
 -- | Add a new option
 addNewSMTOption :: SMTOption -> Symbolic ()
@@ -1169,12 +1165,11 @@ instance NFData CallStack where
 #endif
 
 instance NFData Result where
-  rnf (Result kindInfo qcInfo cgs inps consts tbls arrs uis axs pgm cstr opts goals asserts outs)
+  rnf (Result kindInfo qcInfo cgs inps consts tbls arrs uis axs pgm cstr opts asserts outs)
         = rnf kindInfo `seq` rnf qcInfo  `seq` rnf cgs  `seq` rnf inps
                        `seq` rnf consts  `seq` rnf tbls `seq` rnf arrs
                        `seq` rnf uis     `seq` rnf axs  `seq` rnf pgm
-                       `seq` rnf cstr    `seq` rnf goals
-                       `seq` rnf opts    `seq` rnf asserts `seq` rnf outs
+                       `seq` rnf cstr    `seq` rnf opts `seq` rnf asserts `seq` rnf outs
 instance NFData Kind         where rnf a          = seq a ()
 instance NFData ArrayContext where rnf a          = seq a ()
 instance NFData SW           where rnf a          = seq a ()

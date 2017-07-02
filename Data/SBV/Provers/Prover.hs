@@ -482,7 +482,7 @@ allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
 allSatWith = runWithQuery True $ AllSatResult <$> Control.getAllSatResult
 
 runProofOn :: SMTConfig -> Bool -> [String] -> Result -> SMTProblem
-runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs options goals assertions outputs) =
+runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs options assertions outputs) =
      let flipQ (ALL, x) = (EX,  x)
          flipQ (EX,  x) = (ALL, x)
 
@@ -515,7 +515,7 @@ runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls
 
          smtScript = toSMTLib config ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o
          problem   = SMTProblem { smtInputs=is, smtSkolemMap=skolemMap, kindsUsed=ki
-                                , smtAsserts=assertions, smtOptions=options, objectives=goals, smtLibPgm=smtScript}
+                                , smtAsserts=assertions, smtOptions=options, smtLibPgm=smtScript}
 
      in rnf problem `seq` problem
 
