@@ -118,12 +118,12 @@ markBuildStart:
 markBuildEnd:
 	@echo `date`. SBV release build finished.		   >> ${BUILDTIMES}
 
-release: markBuildStart veryclean install sdist testInterfaces hlint docs test checkLinks markBuildEnd
+release: markBuildStart veryclean install sdist testInterfaces docs test checkLinks hlint markBuildEnd
 	@echo "*** SBV is ready for release!"
 
 # same as release really, but doesn't check links and tests fewer solver connections.
 # suitable to use when we're in more poverished environment.
-limitedRelease: clean install sdist limitedTestInterfaces hlint docs limitedTest
+limitedRelease: clean install sdist limitedTestInterfaces docs limitedTest hlint
 	@echo "*** SBV is looking OK, but you should really run the 'release' target!"
 
 hlint: 
