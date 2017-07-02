@@ -84,9 +84,13 @@
 [RECV] sat
 [GOOD] (set-info :status unknown)
 [GOOD] (define-fun s18 () Bool (> s0 s9))
-[GOOD] (declare-const __assumption_proxy_s18 Bool)
-[GOOD] (assert (= __assumption_proxy_s18 s18))
-[SEND] (check-sat-assuming (__assumption_proxy_s18))
+[GOOD] (declare-const __assumption_proxy_s18_19 Bool)
+[GOOD] (assert (= __assumption_proxy_s18_19 s18))
+[SEND] (check-sat-assuming (__assumption_proxy_s18_19))
+[RECV] sat
+[GOOD] (declare-const __assumption_proxy_s18_20 Bool)
+[GOOD] (assert (= __assumption_proxy_s18_20 s18))
+[SEND] (check-sat-assuming (__assumption_proxy_s18_20))
 [RECV] sat
 [SEND] (get-assignment)
 [RECV] ((s_1 true) (s7 true) (|a > 0| true) (s15 true) (s_2 false) (s8 true) (a+b_<_12 true) (s17 true) (|later, a > 4| true) (s18 true) (s12 true))
@@ -105,60 +109,60 @@
 [SEND] (get-info :memory)
 [RECV] unsupported
 [SEND] (get-info :time)
-[SKIP] ; :memory line: 69 position: 0
+[SKIP] ; :memory line: 72 position: 0
 [RECV] unsupported
 [SEND] (get-value (s0))
-[SKIP] ; :time line: 70 position: 0
+[SKIP] ; :time line: 73 position: 0
 [RECV] ((s0 5))
 [SEND] (get-value (s1))
 [RECV] ((s1 1))
-[GOOD] (define-fun s19 () Int 100)
-[GOOD] (define-fun s21 () Int 9)
-[GOOD] (define-fun s20 () Bool (> s0 s19))
+[GOOD] (define-fun s21 () Int 100)
+[GOOD] (define-fun s23 () Int 9)
 [GOOD] (define-fun s22 () Bool (> s0 s21))
-[GOOD] (declare-const __assumption_proxy_s20 Bool)
-[GOOD] (assert (= __assumption_proxy_s20 s20))
-[GOOD] (declare-const __assumption_proxy_s22 Bool)
-[GOOD] (assert (= __assumption_proxy_s22 s22))
-[SEND] (check-sat-assuming (__assumption_proxy_s20 __assumption_proxy_s22))
+[GOOD] (define-fun s24 () Bool (> s0 s23))
+[GOOD] (declare-const __assumption_proxy_s22_25 Bool)
+[GOOD] (assert (= __assumption_proxy_s22_25 s22))
+[GOOD] (declare-const __assumption_proxy_s24_26 Bool)
+[GOOD] (assert (= __assumption_proxy_s24_26 s24))
+[SEND] (check-sat-assuming (__assumption_proxy_s22_25 __assumption_proxy_s24_26))
 [RECV] unsat
 [SEND] (get-unsat-assumptions)
-[RECV] (a+b_<_12 __assumption_proxy_s20)
+[RECV] (a+b_<_12 __assumption_proxy_s22_25)
 *** In call to 'getUnsatAssumptions'
 ***
 ***    Unexpected assumption named: "a+b_<_12"
-***    Was expecting one of       : ["s20","s22"]
+***    Was expecting one of       : ["s22","s24"]
 ***
 *** This can happen if unsat-cores are also enabled. Ignoring.
 [GOOD] (push 5)
 [GOOD] (pop 3)
-[GOOD] (define-fun s23 () Int 6)
-[GOOD] (define-fun s24 () Bool (> s0 s23))
-[GOOD] (assert (! s24 :named |bey|))
-[GOOD] (define-fun s25 () Bool (< s0 s23))
-[GOOD] (assert (! s25 :named |hey|))
+[GOOD] (define-fun s27 () Int 6)
+[GOOD] (define-fun s28 () Bool (> s0 s27))
+[GOOD] (assert (! s28 :named |bey|))
+[GOOD] (define-fun s29 () Bool (< s0 s27))
+[GOOD] (assert (! s29 :named |hey|))
 [SEND] (check-sat)
 [RECV] unsat
 [SEND, TimeOut: 4000ms] (get-unsat-core)
 [RECV] (bey hey)
-[SEND, TimeOut: 7000ms] (get-proof)
+[SEND] (get-proof)
 [RECV] ((set-logic ALL)
        (declare-fun bey () Bool)
        (declare-fun hey () Bool)
        (proof
-       (let (($x210 (<= s0 6)))
-       (let (($x211 (not $x210)))
-       (let (($x214 (or (not bey) $x211)))
-       (let ((@x216 (monotonicity (rewrite (= (> s0 6) $x211)) (= (or (not bey) (> s0 6)) $x214))))
-       (let ((@x209 (rewrite (= (=> bey (> s0 6)) (or (not bey) (> s0 6))))))
-       (let ((@x219 (mp (asserted (=> bey (> s0 6))) (trans @x209 @x216 (= (=> bey (> s0 6)) $x214)) $x214)))
-       (let (($x230 (>= s0 6)))
-       (let (($x228 (not $x230)))
-       (let (($x232 (or (not hey) $x228)))
-       (let ((@x234 (monotonicity (rewrite (= (< s0 6) $x228)) (= (or (not hey) (< s0 6)) $x232))))
-       (let ((@x227 (rewrite (= (=> hey (< s0 6)) (or (not hey) (< s0 6))))))
-       (let ((@x237 (mp (asserted (=> hey (< s0 6))) (trans @x227 @x234 (= (=> hey (< s0 6)) $x232)) $x232)))
-       (unit-resolution ((_ th-lemma arith farkas 1 1) (or $x230 $x210)) (unit-resolution @x237 (asserted hey) $x228) (unit-resolution @x219 (asserted bey) $x211) false)))))))))))))))
+       (let (($x232 (<= s0 6)))
+       (let (($x233 (not $x232)))
+       (let (($x236 (or (not bey) $x233)))
+       (let ((@x238 (monotonicity (rewrite (= (> s0 6) $x233)) (= (or (not bey) (> s0 6)) $x236))))
+       (let ((@x231 (rewrite (= (=> bey (> s0 6)) (or (not bey) (> s0 6))))))
+       (let ((@x241 (mp (asserted (=> bey (> s0 6))) (trans @x231 @x238 (= (=> bey (> s0 6)) $x236)) $x236)))
+       (let (($x252 (>= s0 6)))
+       (let (($x250 (not $x252)))
+       (let (($x254 (or (not hey) $x250)))
+       (let ((@x256 (monotonicity (rewrite (= (< s0 6) $x250)) (= (or (not hey) (< s0 6)) $x254))))
+       (let ((@x249 (rewrite (= (=> hey (< s0 6)) (or (not hey) (< s0 6))))))
+       (let ((@x259 (mp (asserted (=> hey (< s0 6))) (trans @x249 @x256 (= (=> hey (< s0 6)) $x254)) $x254)))
+       (unit-resolution ((_ th-lemma arith farkas 1 1) (or $x252 $x232)) (unit-resolution @x259 (asserted hey) $x250) (unit-resolution @x241 (asserted bey) $x233) false)))))))))))))))
 [SEND, TimeOut: 6000ms] (get-assertions)
 
 [RECV] ((! s7 :named |a > 0|)
@@ -166,11 +170,12 @@
         s12
         (! s15 :named |a+b_<_12|)
         (! s17 :named |later, a > 4|)
-        (= __assumption_proxy_s18 s18)
-        (= __assumption_proxy_s20 s20)
-        (= __assumption_proxy_s22 s22)
-        (! s24 :named |bey|)
-        (! s25 :named |hey|))
+        (= __assumption_proxy_s18_19 s18)
+        (= __assumption_proxy_s18_20 s18)
+        (= __assumption_proxy_s22_25 s22)
+        (= __assumption_proxy_s24_26 s24)
+        (! s28 :named |bey|)
+        (! s29 :named |hey|))
 [SEND] (echo "there we go")
 [RECV] "there we go"
 *** Solver   : Z3

@@ -105,7 +105,7 @@ query1 = do
                   av <- getValue a
                   bv <- getValue b
 
-                  _ <- checkSatAssuming [a .> 100,  a .> 9]
+                  _ <- checkSatAssumingWithUnsatisfiableSet [a .> 100,  a .> 9]
 
                   push 5
                   pop 3
