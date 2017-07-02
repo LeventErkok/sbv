@@ -1,4 +1,4 @@
-
+-----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.SBV.Provers.Prover
 -- Copyright   :  (c) Levent Erkok
@@ -18,43 +18,36 @@
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate, Provable(..), Goal
        , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
-       , isSatisfiable, isSatisfiableWith, isTheorem, isTheoremWith
-       , prove, proveWith
-       , sat, satWith
-       , allSat, allSatWith
-       , safe, safeWith, isSafe
-       , runSMT, runSMTWith, query
-       , optimize, optimizeWith
-       , isVacuous, isVacuousWith
+       , SExecutable(..), isSafe
+       , runSMT, runSMTWith
        , SatModel(..), Modelable(..), displayModels, extractModels
        , getModelDictionaries, getModelValues, getModelUninterpretedValues
        , boolector, cvc4, yices, z3, mathSAT, abc, defaultSMTCfg
        , compileToSMTLib, generateSMTBenchmarks
        ) where
 
-import Data.List (intercalate)
 
-import Control.Monad        (when, unless)
-import Control.Monad.Reader (ask)
-import Control.Monad.Trans  (liftIO)
-import Control.Monad.State  (evalStateT)
+import Control.Monad   (when, unless)
+import Control.DeepSeq (rnf, NFData(..))
+
+import Control.Concurrent.Async (async, waitAny, asyncThreadId, Async)
+import Control.Exception (finally, throwTo, AsyncException(ThreadKilled))
+
+import System.IO.Unsafe (unsafeInterleaveIO)             -- only used safely!
 
 import System.FilePath   (addExtension)
-import Data.Time         (getZonedTime)
+
+import Data.Time (getZonedTime, NominalDiffTime, UTCTime, getCurrentTime, diffUTCTime)
+import Data.List (intercalate)
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.SMT.SMT
-import Data.SBV.SMT.SMTLib
 import Data.SBV.Utils.TDiff
-
-import Data.IORef (readIORef, writeIORef)
 
 import qualified Data.SBV.Control       as Control
 import qualified Data.SBV.Control.Query as Control
 import qualified Data.SBV.Control.Utils as Control
-
-import Control.DeepSeq (rnf)
 
 import GHC.Stack
 
@@ -102,7 +95,7 @@ yices = mkConfig Yices.yices SMTLib2 []
 -- | Default configuration for the Z3 SMT solver
 z3 :: SMTConfig
 z3 = cfg { solverSetOptions = solverSetOptions cfg ++ [Control.OptionKeyword ":pp.decimal_precision" [show (printRealPrec cfg)]] }
-  where cfg = mkConfig Z3.z3 SMTLib2 [ Control.OptionKeyword ":smtlib2_compliant"    ["true"]
+  where cfg = mkConfig Z3.z3 SMTLib2 [ Control.OptionKeyword ":smtlib2_compliant" ["true"]
                                      , allOnStdOut
                                      ]
 
@@ -144,6 +137,7 @@ class Provable a where
   -- is a predicate with two arguments, captured using an ordinary Haskell function. Internally,
   -- @x@ will be named @s0@ and @y@ will be named @s1@.
   forAll_ :: a -> Predicate
+
   -- | Turns a value into a predicate, allowing users to provide names for the inputs.
   -- If the user does not provide enough number of names for the variables, the remaining ones
   -- will be internally generated. Note that the names are only used for printing models and has no
@@ -154,11 +148,176 @@ class Provable a where
   -- This is the same as above, except the variables will be named @x@ and @y@ respectively,
   -- simplifying the counter-examples when they are printed.
   forAll  :: [String] -> a -> Predicate
+
   -- | Turns a value into an existentially quantified predicate. (Indeed, 'exists' would have been
   -- a better choice here for the name, but alas it's already taken.)
   forSome_ :: a -> Predicate
-  -- | Version of 'forSome' that allows user defined names
+
+  -- | Version of 'forSome' that allows user defined names.
   forSome :: [String] -> a -> Predicate
+
+  -- | Prove a predicate, using the default solver.
+  prove :: a -> IO ThmResult
+  prove = proveWith defaultSMTCfg
+
+  -- | Prove the predicate using the given SMT-solver.
+  proveWith :: SMTConfig -> a -> IO ThmResult
+  proveWith = runWithQuery False $ ThmResult <$> Control.getSMTResult
+
+  -- | Find a satisfying assignment for a predicate, using the default solver.
+  sat :: a -> IO SatResult
+  sat = satWith defaultSMTCfg
+
+  -- | Find a satisfying assignment using the given SMT-solver.
+  satWith :: SMTConfig -> a -> IO SatResult
+  satWith = runWithQuery True $ SatResult <$> Control.getSMTResult
+
+  -- | Find all satisfying assignments, using the default solver. See 'allSatWith' for details.
+  allSat :: a -> IO AllSatResult
+  allSat = allSatWith defaultSMTCfg
+
+  -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
+  -- Note that this call will block until all satisfying assignments are found. If you have a problem
+  -- with infinitely many satisfying models (consider 'SInteger') or a very large number of them, you
+  -- might have to wait for a long time. To avoid such cases, use the 'allSatMaxModelCount' parameter
+  -- in the configuration.
+  --
+  -- NB. Uninterpreted constant/function values and counter-examples for array values are ignored for
+  -- the purposes of @'allSat'@. That is, only the satisfying assignments modulo uninterpreted functions and
+  -- array inputs will be returned. This is due to the limitation of not having a robust means of getting a
+  -- function counter-example back from the SMT solver.
+  --  Find all satisfying assignments using the given SMT-solver
+  allSatWith :: SMTConfig -> a -> IO AllSatResult
+  allSatWith = runWithQuery True $ AllSatResult <$> Control.getAllSatResult
+
+  -- | Optimize a given collection of `Objective`s
+  optimize :: OptimizeStyle -> a -> IO OptimizeResult
+  optimize = optimizeWith defaultSMTCfg
+
+  -- | Optimizes the objectives using the given SMT-solver.
+  optimizeWith :: SMTConfig -> OptimizeStyle -> a -> IO OptimizeResult
+  optimizeWith config style = runWithQuery True opt config
+    where opt = do objectives <- Control.getObjectives
+                   qinps      <- Control.getQuantifiedInputs
+
+                   when (null objectives) $
+                          error $ unlines [ ""
+                                          , "*** Data.SBV: Unsupported call to optimize when no objectives are present."
+                                          , "*** Use \"sat\" for plain satisfaction"
+                                          ]
+
+                   unless (supportsOptimization (capabilities (solver config))) $
+                          error $ unlines [ ""
+                                          , "*** Data.SBV: The backend solver " ++ show (name (solver config)) ++ "does not support optimization goals."
+                                          , "*** Please use a solver that has support, such as z3"
+                                          ]
+
+                   let needsUniversalOpt = let universals = [s | (ALL, (s, _)) <- qinps]
+                                               check (x, y) nm = [nm | any (`elem` universals) [x, y]]
+                                               isUniversal (Maximize   nm xy)   = check xy nm
+                                               isUniversal (Minimize   nm xy)   = check xy nm
+                                               isUniversal (AssertSoft nm xy _) = check xy nm
+                                           in  concatMap isUniversal objectives
+
+                   unless (null needsUniversalOpt) $
+                          error $ unlines [ ""
+                                          , "*** Data.SBV: Problem needs optimization of universally quantified metric(s):"
+                                          , "***"
+                                          , "***          " ++  unwords needsUniversalOpt
+                                          , "***"
+                                          , "*** Optimization is only meaningful existentially quantified values."
+                                          ]
+
+                   let optimizerDirectives = concatMap minmax objectives ++ priority style
+                         where mkEq (x, y) = "(assert (= " ++ show x ++ " " ++ show y ++ "))"
+                               minmax (Minimize   _  xy@(_, v))     = [mkEq xy, "(minimize "    ++ show v ++ ")"]
+                               minmax (Maximize   _  xy@(_, v))     = [mkEq xy, "(maximize "    ++ show v ++ ")"]
+                               minmax (AssertSoft nm xy@(_, v) mbp) = [mkEq xy, "(assert-soft " ++ show v ++ penalize mbp ++ ")"]
+                                 where penalize DefaultPenalty    = ""
+                                       penalize (Penalty w mbGrp)
+                                          | w <= 0         = error $ unlines [ "SBV.AssertSoft: Goal " ++ show nm ++ " is assigned a non-positive penalty: " ++ shw
+                                                                             , "All soft goals must have > 0 penalties associated."
+                                                                             ]
+                                          | True           = " :weight " ++ shw ++ maybe "" group mbGrp
+                                          where shw = show (fromRational w :: Double)
+
+                                       group g = " :id " ++ g
+
+                               priority Lexicographic = [] -- default, no option needed
+                               priority Independent   = ["(set-option :opt.priority box)"]
+                               priority (Pareto _)    = ["(set-option :opt.priority pareto)"]
+
+                   mapM_ (Control.send True) optimizerDirectives
+
+                   case style of
+                      Lexicographic -> LexicographicResult <$> Control.getLexicographicOptResults
+                      Independent   -> IndependentResult   <$> Control.getIndependentOptResults (map objectiveName objectives)
+                      Pareto mbN    -> ParetoResult        <$> Control.getParetoOptResults mbN
+
+  -- | Check if the constraints given are consistent, using the default solver.
+  isVacuous :: a -> IO Bool
+  isVacuous = isVacuousWith defaultSMTCfg
+
+  -- | Determine if the constraints are vacuous using the given SMT-solver.
+  isVacuousWith :: SMTConfig -> a -> IO Bool
+  isVacuousWith cfg a = -- NB. Can't call runWithQuery since last constraint would become the implication!
+                        fst <$> runSymbolicWithResult (SMTMode ISetup True cfg) (forSome_ a >> Control.query check)
+     where check = do cs <- Control.checkSat
+                      case cs of
+                        Control.Unsat -> return True
+                        Control.Sat   -> return False
+                        Control.Unk   -> error "SBV: isVacuous: Solver returned unknown!"
+
+  -- | Checks theoremhood using the default solver.
+  isTheorem :: a -> IO Bool
+  isTheorem = isTheoremWith defaultSMTCfg
+
+  -- | Check whether a given property is a theorem.
+  isTheoremWith :: SMTConfig -> a -> IO Bool
+  isTheoremWith cfg p = do r <- proveWith cfg p
+                           case r of
+                             ThmResult Unsatisfiable{} -> return True
+                             ThmResult Satisfiable{}   -> return False
+                             _                         -> error $ "SBV.isTheorem: Received:\n" ++ show r
+
+
+  -- | Checks satisfiability using the default solver.
+  isSatisfiable :: a -> IO Bool
+  isSatisfiable = isSatisfiableWith defaultSMTCfg
+
+  -- | Check whether a given property is satisfiable.
+  isSatisfiableWith :: SMTConfig -> a -> IO Bool
+  isSatisfiableWith cfg p = do r <- satWith cfg p
+                               case r of
+                                 SatResult Satisfiable{}   -> return True
+                                 SatResult Unsatisfiable{} -> return False
+                                 _                         -> error $ "SBV.isSatisfiable: Received: " ++ show r
+
+  -- | Prove a property with multiple solvers, running them in separate threads. The
+  -- results will be returned in the order produced.
+  proveWithAll :: [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, ThmResult)]
+  proveWithAll  = (`sbvWithAll` proveWith)
+
+  -- | Prove a property with multiple solvers, running them in separate threads. Only
+  -- the result of the first one to finish will be returned, remaining threads will be killed.
+  -- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
+  -- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
+  -- that some processes take their time to terminate. So, this solution favors quick turnaround.
+  proveWithAny :: [SMTConfig] -> a -> IO (Solver, NominalDiffTime, ThmResult)
+  proveWithAny  = (`sbvWithAny` proveWith)
+
+  -- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. The
+  -- results will be returned in the order produced.
+  satWithAll :: [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, SatResult)]
+  satWithAll = (`sbvWithAll` satWith)
+
+  -- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. Only
+  -- the result of the first one to finish will be returned, remaining threads will be killed.
+  -- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
+  -- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
+  -- that some processes take their time to terminate. So, this solution favors quick turnaround.
+  satWithAny :: [SMTConfig] -> a -> IO (Solver, NominalDiffTime, SatResult)
+  satWithAny    = (`sbvWithAny` satWith)
 
 instance Provable Predicate where
   forAll_    = id
@@ -265,67 +424,9 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymW
   forSome (s:ss) k = exists s >>= \a -> forSome ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   forSome []     k = forSome_ k
 
--- | Run an arbitrary symbolic computation, equivalent to @'runSMTWith' 'defaultSMTCfg''@
+-- | Run an arbitrary symbolic computation, equivalent to @'runSMTWith' 'defaultSMTCfg'@
 runSMT :: Symbolic a -> IO a
 runSMT = runSMTWith defaultSMTCfg
-
--- | Prove a predicate, equivalent to @'proveWith' 'defaultSMTCfg'@
-prove :: Provable a => a -> IO ThmResult
-prove = proveWith defaultSMTCfg
-
--- | Find a satisfying assignment for a predicate, equivalent to @'satWith' 'defaultSMTCfg'@
-sat :: Provable a => a -> IO SatResult
-sat = satWith defaultSMTCfg
-
--- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
--- Note that this call will block until all satisfying assignments are found. If you have a problem
--- with infinitely many satisfying models (consider 'SInteger') or a very large number of them, you
--- might have to wait for a long time. To avoid such cases, use the 'allSatMaxModelCount' parameter
--- in the configuration.
---
--- NB. Uninterpreted constant/function values and counter-examples for array values are ignored for
--- the purposes of @'allSat'@. That is, only the satisfying assignments modulo uninterpreted functions and
--- array inputs will be returned. This is due to the limitation of not having a robust means of getting a
--- function counter-example back from the SMT solver.
-allSat :: Provable a => a -> IO AllSatResult
-allSat = allSatWith defaultSMTCfg
-
--- | Optimize a given collection of `Objective`s
-optimize :: Provable a => OptimizeStyle -> a -> IO OptimizeResult
-optimize = optimizeWith defaultSMTCfg
-
--- | Check that all the 'sAssert' calls are safe, equivalent to @'safeWith' 'defaultSMTCfg'@
-safe :: SExecutable a => a -> IO [SafeResult]
-safe = safeWith defaultSMTCfg
-
--- | Check if the given constraints are satisfiable, equivalent to @'isVacuousWith' 'defaultSMTCfg'@.
--- See the function 'constrain' for an example use of 'isVacuous'.
-isVacuous :: Provable a => a -> IO Bool
-isVacuous = isVacuousWith defaultSMTCfg
-
--- | Check whether a given property is a theorem.
-isTheoremWith :: Provable a => SMTConfig -> a -> IO Bool
-isTheoremWith cfg p = do r <- proveWith cfg p
-                         case r of
-                           ThmResult Unsatisfiable{} -> return True
-                           ThmResult Satisfiable{}   -> return False
-                           _                         -> error $ "SBV.isTheorem: Received:\n" ++ show r
-
--- | Check whether a given property is satisfiable.
-isSatisfiableWith :: Provable a => SMTConfig -> a -> IO Bool
-isSatisfiableWith cfg p = do r <- satWith cfg p
-                             case r of
-                               SatResult Satisfiable{}   -> return True
-                               SatResult Unsatisfiable{} -> return False
-                               _                         -> error $ "SBV.isSatisfiable: Received: " ++ show r
-
--- | Checks theoremhood.
-isTheorem :: Provable a => a -> IO Bool
-isTheorem = isTheoremWith defaultSMTCfg
-
--- | Checks satisfiability.
-isSatisfiable :: Provable a => a -> IO Bool
-isSatisfiable = isSatisfiableWith defaultSMTCfg
 
 -- | Compiles to SMT-Lib and returns the resulting program as a string. Useful for saving
 -- the result to a file for off-line analysis, for instance if you have an SMT solver that's not natively
@@ -345,7 +446,7 @@ compileToSMTLib version isSat a = do
         let comments = ["Automatically created by SBV on " ++ show t]
             cfg      = defaultSMTCfg { smtLibVersion = version }
         res <- runSymbolic (isSat, cfg) $ (if isSat then forSome_ else forAll_) a >>= output
-        let SMTProblem{smtLibPgm} = runProofOn cfg isSat comments res
+        let SMTProblem{smtLibPgm} = Control.runProofOn cfg isSat comments res
             out = show (smtLibPgm cfg)
         return $ out ++ "\n(check-sat)\n"
 
@@ -368,95 +469,7 @@ runSMTWith cfg a = fst <$> runSymbolicWithResult (SMTMode ISetup True cfg) a
 runWithQuery :: Provable a => Bool -> Query b -> SMTConfig -> a -> IO b
 runWithQuery isSAT q cfg a = fst <$> runSymbolicWithResult (SMTMode ISetup isSAT cfg) comp
   where comp =  do _ <- (if isSAT then forSome_ else forAll_) a >>= output
-                   query q
-
--- | Proves the predicate using the given SMT-solver
-proveWith :: Provable predicate => SMTConfig -> predicate -> IO ThmResult
-proveWith = runWithQuery False $ ThmResult <$> Control.getSMTResult
-
--- | Find a satisfying assignment using the given SMT-solver
-satWith :: Provable a => SMTConfig -> a -> IO SatResult
-satWith = runWithQuery True $ SatResult <$> Control.getSMTResult
-
--- | Optimizes the objectives using the given SMT-solver
-optimizeWith :: Provable a => SMTConfig -> OptimizeStyle -> a -> IO OptimizeResult
-optimizeWith config style = runWithQuery True opt config
-  where opt = do objectives <- Control.getObjectives
-                 qinps      <- Control.getQuantifiedInputs
-
-                 when (null objectives) $
-                        error $ unlines [ ""
-                                        , "*** Data.SBV: Unsupported call to optimize when no objectives are present."
-                                        , "*** Use \"sat\" for plain satisfaction"
-                                        ]
-
-                 unless (supportsOptimization (capabilities (solver config))) $
-                        error $ unlines [ ""
-                                        , "*** Data.SBV: The backend solver " ++ show (name (solver config)) ++ "does not support optimization goals."
-                                        , "*** Please use a solver that has support, such as z3"
-                                        ]
-
-                 let needsUniversalOpt = let universals = [s | (ALL, (s, _)) <- qinps]
-                                             check (x, y) nm = [nm | any (`elem` universals) [x, y]]
-                                             isUniversal (Maximize   nm xy)   = check xy nm
-                                             isUniversal (Minimize   nm xy)   = check xy nm
-                                             isUniversal (AssertSoft nm xy _) = check xy nm
-                                         in  concatMap isUniversal objectives
-
-                 unless (null needsUniversalOpt) $
-                        error $ unlines [ ""
-                                        , "*** Data.SBV: Problem needs optimization of universally quantified metric(s):"
-                                        , "***"
-                                        , "***          " ++  unwords needsUniversalOpt
-                                        , "***"
-                                        , "*** Optimization is only meaningful existentially quantified values."
-                                        ]
-
-                 let optimizerDirectives = concatMap minmax objectives ++ priority style
-                       where mkEq (x, y) = "(assert (= " ++ show x ++ " " ++ show y ++ "))"
-                             minmax (Minimize   _  xy@(_, v))     = [mkEq xy, "(minimize "    ++ show v ++ ")"]
-                             minmax (Maximize   _  xy@(_, v))     = [mkEq xy, "(maximize "    ++ show v ++ ")"]
-                             minmax (AssertSoft nm xy@(_, v) mbp) = [mkEq xy, "(assert-soft " ++ show v ++ penalize mbp ++ ")"]
-                               where penalize DefaultPenalty    = ""
-                                     penalize (Penalty w mbGrp)
-                                        | w <= 0         = error $ unlines [ "SBV.AssertSoft: Goal " ++ show nm ++ " is assigned a non-positive penalty: " ++ shw
-                                                                           , "All soft goals must have > 0 penalties associated."
-                                                                           ]
-                                        | True           = " :weight " ++ shw ++ maybe "" group mbGrp
-                                        where shw = show (fromRational w :: Double)
-
-                                     group g = " :id " ++ g
-
-                             priority Lexicographic = [] -- default, no option needed
-                             priority Independent   = ["(set-option :opt.priority box)"]
-                             priority (Pareto _)    = ["(set-option :opt.priority pareto)"]
-
-                 mapM_ (Control.send True) optimizerDirectives
-
-                 case style of
-                    Lexicographic -> LexicographicResult <$> Control.getLexicographicOptResults
-                    Independent   -> IndependentResult   <$> Control.getIndependentOptResults (map objectiveName objectives)
-                    Pareto mbN    -> ParetoResult        <$> Control.getParetoOptResults mbN
-
--- | Check if any of the assertions can be violated
-safeWith :: SExecutable a => SMTConfig -> a -> IO [SafeResult]
-safeWith cfg a = fst <$> runSymbolicWithResult (SMTMode ISetup True cfg) (sName_ a >> check)
-  where check = query $ Control.getSBVAssertions >>= mapM verify
-
-        -- check that the cond is unsatisfiable. If satisfiable, that would
-        -- indicate the assignment under which the 'sAssert' would fail
-        verify :: (String, Maybe CallStack, SW) -> Query SafeResult
-        verify (msg, cs, cond) = do
-                let locInfo ps = let loc (f, sl) = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f] in intercalate ",\n " (map loc ps)
-                    location   = (locInfo . getCallStack) `fmap` cs
-
-                result <- do Control.push 1
-                             Control.send True $ "(assert " ++ show cond ++ ")"
-                             r <- Control.getSMTResult
-                             Control.pop 1
-                             return r
-
-                return $ SafeResult (location, msg, result)
+                   Control.query q
 
 -- | Check if a safe-call was safe or not, turning a 'SafeResult' to a Bool.
 isSafe :: SafeResult -> Bool
@@ -467,131 +480,158 @@ isSafe (SafeResult (_, _, result)) = case result of
                                        Unknown{}       -> False   -- conservative
                                        ProofError{}    -> False   -- conservative
 
--- | Determine if the constraints are vacuous using the given SMT-solver. Also see
--- the 'CheckConstrVacuity' tactic.
-isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
-isVacuousWith cfg a = fst <$> runSymbolicWithResult (SMTMode ISetup True cfg) (forSome_ a >> query check)  -- NB. Can't call runWithQuery since last constraint would become the implication!
-   where check = do cs <- Control.checkSat
-                    case cs of
-                      Control.Unsat -> return True
-                      Control.Sat   -> return False
-                      Control.Unk   -> error "SBV: isVacuous: Solver returned unknown!"
+-- | Perform an action asynchronously, returning results together with diff-time.
+runInThread :: NFData b => UTCTime -> (SMTConfig -> IO b) -> SMTConfig -> IO (Async (Solver, NominalDiffTime, b))
+runInThread beginTime action config = async $ do
+                result  <- action config
+                endTime <- rnf result `seq` getCurrentTime
+                return (name (solver config), endTime `diffUTCTime` beginTime, result)
 
--- | Find all satisfying assignments using the given SMT-solver
-allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
-allSatWith = runWithQuery True $ AllSatResult <$> Control.getAllSatResult
+-- | Perform action for all given configs, return the first one that wins. Note that we do
+-- not wait for the other asyncs to terminate; hopefully they'll do so quickly.
+sbvWithAny :: NFData b => [SMTConfig] -> (SMTConfig -> a -> IO b) -> a -> IO (Solver, NominalDiffTime, b)
+sbvWithAny []      _    _ = error "SBV.withAny: No solvers given!"
+sbvWithAny solvers what a = do beginTime <- getCurrentTime
+                               snd `fmap` (mapM (runInThread beginTime (`what` a)) solvers >>= waitAnyFastCancel)
+   where -- Async's `waitAnyCancel` nicely blocks; so we use this variant to ignore the
+         -- wait part for killed threads.
+         waitAnyFastCancel asyncs = waitAny asyncs `finally` mapM_ cancelFast asyncs
+         cancelFast other = throwTo (asyncThreadId other) ThreadKilled
 
-runProofOn :: SMTConfig -> Bool -> [String] -> Result -> SMTProblem
-runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs options assertions outputs) =
-     let flipQ (ALL, x) = (EX,  x)
-         flipQ (EX,  x) = (ALL, x)
+-- | Perform action for all given configs, return all the results.
+sbvWithAll :: NFData b => [SMTConfig] -> (SMTConfig -> a -> IO b) -> a -> IO [(Solver, NominalDiffTime, b)]
+sbvWithAll solvers what a = do beginTime <- getCurrentTime
+                               mapM (runInThread beginTime (`what` a)) solvers >>= (unsafeInterleaveIO . go)
+   where go []  = return []
+         go as  = do (d, r) <- waitAny as
+                     -- The following filter works because the Eq instance on Async
+                     -- checks the thread-id; so we know that we're removing the
+                     -- correct solver from the list. This also allows for
+                     -- running the same-solver (with different options), since
+                     -- they will get different thread-ids.
+                     rs <- unsafeInterleaveIO $ go (filter (/= d) as)
+                     return (r : rs)
 
-         skolemize :: [(Quantifier, NamedSymVar)] -> [Either SW (SW, [SW])]
-         skolemize quants = go quants ([], [])
-           where go []                   (_,  sofar) = reverse sofar
-                 go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
-                 go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
+-- | Symbolically executable program fragments. This class is mainly used for 'safe' calls, and is sufficently populated internally to cover most use
+-- cases. Users can extend it as they wish to allow 'safe' checks for SBV programs that return/take types that are user-defined.
+class SExecutable a where
+   sName_ :: a -> Symbolic ()
+   sName  :: [String] -> a -> Symbolic ()
 
-         qinps      = if isSat then is else map flipQ is
-         skolemMap  = skolemize qinps
+   -- | Check safety using the default solver.
+   safe :: a -> IO [SafeResult]
+   safe = safeWith defaultSMTCfg
 
-         o = case outputs of
-               []  -> trueSW
-               [so] -> case so of
-                        SW KBool _ -> so
-                        _          -> trueSW
-                                      {-
-                                      -- TODO: We used to error out here, but "safeWith" might have a non-bool out
-                                      -- I wish we can get rid of this and still check for it. Perhaps this entire
-                                      -- runProofOn might disappear.
-                                      error $ unlines [ "Impossible happened, non-boolean output: " ++ show so
-                                                      , "Detected while generating the trace:\n" ++ show res
-                                                      ]
-                                      -}
-               os  -> error $ unlines [ "User error: Multiple output values detected: " ++ show os
-                                      , "Detected while generating the trace:\n" ++ show res
-                                      , "*** Check calls to \"output\", they are typically not needed!"
-                                      ]
+   -- | Check if any of the 'sAssert' calls can be violated.
+   safeWith :: SMTConfig -> a -> IO [SafeResult]
+   safeWith cfg a = fst <$> runSymbolicWithResult (SMTMode ISetup True cfg) (sName_ a >> check)
+     where check = Control.query $ Control.getSBVAssertions >>= mapM verify
 
-         smtScript = toSMTLib config ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o
-         problem   = SMTProblem { smtInputs=is, smtSkolemMap=skolemMap, kindsUsed=ki
-                                , smtAsserts=assertions, smtOptions=options, smtLibPgm=smtScript}
+           -- check that the cond is unsatisfiable. If satisfiable, that would
+           -- indicate the assignment under which the 'sAssert' would fail
+           verify :: (String, Maybe CallStack, SW) -> Query SafeResult
+           verify (msg, cs, cond) = do
+                   let locInfo ps = let loc (f, sl) = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
+                                    in intercalate ",\n " (map loc ps)
+                       location   = (locInfo . getCallStack) `fmap` cs
 
-     in rnf problem `seq` problem
+                   result <- do Control.push 1
+                                Control.send True $ "(assert " ++ show cond ++ ")"
+                                r <- Control.getSMTResult
+                                Control.pop 1
+                                return r
 
--- | Run a custom query
-query :: Query a -> Symbolic a
-query (Query userQuery) = do
-     st <- ask
-     rm <- liftIO $ readIORef (runMode st)
-     case rm of
-        -- Transitioning from setup
-        SMTMode ISetup isSAT cfg -> liftIO $ do let backend = engine (solver cfg)
+                   return $ SafeResult (location, msg, result)
 
-                                                res <- extractSymbolicSimulationState st
+instance NFData a => SExecutable (Symbolic a) where
+   sName_   a = a >>= \r -> rnf r `seq` return ()
+   sName []   = sName_
+   sName xs   = error $ "SBV.SExecutable.sName: Extra unmapped name(s): " ++ intercalate ", " xs
 
-                                                let SMTProblem{smtOptions, smtLibPgm} = runProofOn cfg isSAT [] res
-                                                    cfg' = cfg { solverSetOptions = solverSetOptions cfg ++ smtOptions }
-                                                    pgm  = smtLibPgm cfg'
+instance SExecutable (SBV a) where
+   sName_   v = sName_ (output v)
+   sName xs v = sName xs (output v)
 
-                                                writeIORef (runMode st) $ SMTMode IRun isSAT cfg
+-- Unit output
+instance SExecutable () where
+   sName_   () = sName_   (output ())
+   sName xs () = sName xs (output ())
 
-                                                backend cfg' st (show pgm) $ evalStateT userQuery
+-- List output
+instance SExecutable [SBV a] where
+   sName_   vs = sName_   (output vs)
+   sName xs vs = sName xs (output vs)
 
-        -- Already in a query, in theory we can just continue, but that causes use-case issues
-        -- so we reject it. TODO: Review if we should actually support this. The issue arises with
-        -- expressions like this:
-        --
-        -- In the following t0's output doesn't get recorded, as the output call is too late when we get
-        -- here. (The output field isn't "incremental.") So, t0/t1 behave differently!
-        --
-        --   t0 = satWith z3{verbose=True, transcript=Just "t.smt2"} $ query (return (false::SBool))
-        --   t1 = satWith z3{verbose=True, transcript=Just "t.smt2"} $ ((return (false::SBool)) :: Predicate)
-        --
-        -- Also, not at all clear what it means to go in an out of query mode:
-        --
-        -- r = runSMTWith z3{verbose=True} $ do
-        --         a' <- sInteger "a"
-        --
-        --        (a, av) <- query $ do _ <- checkSat
-        --                              av <- getValue a'
-        --                              return (a', av)
-        --
-        --        liftIO $ putStrLn $ "Got: " ++ show av
-        --        -- constrain $ a .> literal av + 1      -- Cant' do this since we're "out" of query. Sigh.
-        --
-        --        bv <- query $ do constrain $ a .> literal av + 1
-        --                         _ <- checkSat
-        --                         getValue a
-        --
-        --        return $ a' .== a' + 1
-        --
-        -- This would be one possible implementation, alas it has the problems above:
-        --
-        --    SMTMode IRun _ _ -> liftIO $ evalStateT userQuery st
-        --
-        -- So, we just reject it.
+-- 2 Tuple output
+instance (NFData a, SymWord a, NFData b, SymWord b) => SExecutable (SBV a, SBV b) where
+  sName_ (a, b) = sName_ (output a >> output b)
+  sName _       = sName_
 
-        SMTMode IRun _ _ -> error $ unlines [ ""
-                                            , "*** Data.SBV: Unsupported nested query is detected."
-                                            , "***"
-                                            , "*** Please group your queries into one block. Note that this"
-                                            , "*** can also arise if you have a call to 'query' not within 'runSMT'"
-                                            , "*** For instance, within 'sat'/'prove' calls with custom user queries."
-                                            , "*** The solution is to do the sat/prove part in the query directly."
-                                            , "***"
-                                            , "*** While multiple/nested queries should not be necessary in general,"
-                                            , "*** please do get in touch if your use case does require such a feature,"
-                                            , "*** to see how we can accommodate such scenarios."
-                                            ]
+-- 3 Tuple output
+instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c) => SExecutable (SBV a, SBV b, SBV c) where
+  sName_ (a, b, c) = sName_ (output a >> output b >> output c)
+  sName _          = sName_
 
-        -- Otherwise choke!
-        m -> error $ unlines [ ""
-                             , "*** Data.SBV: Invalid query call."
-                             , "***"
-                             , "***   Current mode: " ++ show m
-                             , "***"
-                             , "*** Query calls are only valid within runSMT/runSMTWith calls"
-                             ]
+-- 4 Tuple output
+instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d) => SExecutable (SBV a, SBV b, SBV c, SBV d) where
+  sName_ (a, b, c, d) = sName_ (output a >> output b >> output c >> output c >> output d)
+  sName _             = sName_
+
+-- 5 Tuple output
+instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e) => SExecutable (SBV a, SBV b, SBV c, SBV d, SBV e) where
+  sName_ (a, b, c, d, e) = sName_ (output a >> output b >> output c >> output d >> output e)
+  sName _                = sName_
+
+-- 6 Tuple output
+instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f) => SExecutable (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
+  sName_ (a, b, c, d, e, f) = sName_ (output a >> output b >> output c >> output d >> output e >> output f)
+  sName _                   = sName_
+
+-- 7 Tuple output
+instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f, NFData g, SymWord g) => SExecutable (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
+  sName_ (a, b, c, d, e, f, g) = sName_ (output a >> output b >> output c >> output d >> output e >> output f >> output g)
+  sName _                      = sName_
+
+-- Functions
+instance (SymWord a, SExecutable p) => SExecutable (SBV a -> p) where
+   sName_        k = exists_   >>= \a -> sName_   $ k a
+   sName (s:ss)  k = exists s  >>= \a -> sName ss $ k a
+   sName []      k = sName_ k
+
+-- 2 Tuple input
+instance (SymWord a, SymWord b, SExecutable p) => SExecutable ((SBV a, SBV b) -> p) where
+  sName_        k = exists_  >>= \a -> sName_   $ \b -> k (a, b)
+  sName (s:ss)  k = exists s >>= \a -> sName ss $ \b -> k (a, b)
+  sName []      k = sName_ k
+
+-- 3 Tuple input
+instance (SymWord a, SymWord b, SymWord c, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c) -> p) where
+  sName_       k  = exists_  >>= \a -> sName_   $ \b c -> k (a, b, c)
+  sName (s:ss) k  = exists s >>= \a -> sName ss $ \b c -> k (a, b, c)
+  sName []     k  = sName_ k
+
+-- 4 Tuple input
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d) -> p) where
+  sName_        k = exists_  >>= \a -> sName_   $ \b c d -> k (a, b, c, d)
+  sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d -> k (a, b, c, d)
+  sName []      k = sName_ k
+
+-- 5 Tuple input
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
+  sName_        k = exists_  >>= \a -> sName_   $ \b c d e -> k (a, b, c, d, e)
+  sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e -> k (a, b, c, d, e)
+  sName []      k = sName_ k
+
+-- 6 Tuple input
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
+  sName_        k = exists_  >>= \a -> sName_   $ \b c d e f -> k (a, b, c, d, e, f)
+  sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e f -> k (a, b, c, d, e, f)
+  sName []      k = sName_ k
+
+-- 7 Tuple input
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
+  sName_        k = exists_  >>= \a -> sName_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  sName []      k = sName_ k
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

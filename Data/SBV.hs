@@ -123,13 +123,9 @@ module Data.SBV (
   -- *** Signed unbounded integers
   -- $unboundedLimitations
   , SInteger
-  -- *** IEEE-floating point numbers
+  -- *** Floating point numbers
   -- $floatingPoints
-  , SFloat, SDouble, IEEEFloating(..), IEEEFloatConvertable(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity
-  -- **** Rounding modes
-  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero, sRNE, sRNA, sRTP, sRTN, sRTZ
-  -- **** Bit-pattern conversions
-  , sFloatAsSWord32, sWord32AsSFloat, sDoubleAsSWord64, sWord64AsSDouble, blastSFloat, blastSDouble
+  , SFloat, SDouble
   -- *** Signed algebraic reals
   -- $algReals
   , SReal, AlgReal, sRealToSInteger
@@ -178,13 +174,11 @@ module Data.SBV (
   , Uninterpreted(..), addAxiom
 
   -- * Symbolic Equality and Comparisons
-  , EqSymbolic(..), OrdSymbolic(..)
+  , EqSymbolic(..), OrdSymbolic(..), Equality(..)
 
   -- * Constraints
   -- $constrainIntro
   , constrain, namedConstraint
-  -- ** Checking vacuity
-  , isVacuous, isVacuousWith
   -- ** Cardinality constraints
   -- $cardIntro
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
@@ -195,37 +189,23 @@ module Data.SBV (
   -- * Properties, proofs, satisfiability, and safety
   -- $proveIntro
   -- $noteOnNestedQuantifiers
-  -- ** Predicates and Goals
-  , Predicate, Goal, Provable(..), Equality(..)
-  -- ** Proving properties
-  , prove, proveWith, isTheorem, isTheoremWith
-  -- ** Checking satisfiability
-  , sat, satWith, isSatisfiable, isSatisfiableWith
+  -- $multiIntro
+  , Predicate, Goal, Provable(..)
   -- ** Checking safety
   -- $safeIntro
-  , sAssert, safe, safeWith, isSafe, SExecutable(..)
-  -- ** Finding all satisfying assignments
-  , allSat, allSatWith
+  , sAssert, isSafe, SExecutable(..)
   -- ** Satisfying a sequence of boolean conditions
   , solve
 
   -- ** Quick-checking
   , sbvQuickCheck
 
-  -- * Proving properties using multiple solvers
-  -- $multiIntro
-  , proveWithAll, proveWithAny, satWithAll, satWithAny
-
   -- * Running a symbolic computation
   , runSMT, runSMTWith
 
-  -- * User queries
-  -- $queryIntro
-  , Query, query
-
   -- * Optimization
   -- $optiIntro
-  , OptimizeStyle(..), Penalty(..), Objective(..), minimize, maximize, assertSoft, optimize, optimizeWith
+  , OptimizeStyle(..), Penalty(..), Objective(..), minimize, maximize, assertSoft
   , ExtCW(..), GeneralizedCW(..)
 
   -- * Model extraction
@@ -234,6 +214,13 @@ module Data.SBV (
   -- ** Inspecting proof results
   -- $resultTypes
   , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
+
+  -- * IEEE-floating point numbers
+  , IEEEFloating(..), IEEEFloatConvertable(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity
+  -- ** Rounding modes
+  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero, sRNE, sRNA, sRTP, sRTN, sRTZ
+  -- ** Bit-pattern conversions
+  , sFloatAsSWord32, sWord32AsSFloat, sDoubleAsSWord64, sWord64AsSDouble, blastSFloat, blastSDouble
 
   -- ** Programmable model extraction
   -- $programmableExtraction
@@ -257,11 +244,7 @@ module Data.SBV (
   , module Data.Ratio
   ) where
 
-import Control.DeepSeq (NFData(..))
-
-import Control.Monad            (filterM)
-import Control.Concurrent.Async (async, waitAny, asyncThreadId, Async)
-import System.IO.Unsafe         (unsafeInterleaveIO)             -- only used safely!
+import Control.Monad (filterM)
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
@@ -277,10 +260,6 @@ import Data.Bits
 import Data.Int
 import Data.Ratio
 import Data.Word
-
-import Control.Exception (finally, throwTo, AsyncException(ThreadKilled))
-
-import Data.Time (getCurrentTime, diffUTCTime, NominalDiffTime, UTCTime)
 
 -- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
 -- problems with constraints, like the following:
@@ -312,64 +291,6 @@ defaultSolverConfig ABC       = abc
 -- | Return the known available solver configs, installed on your machine.
 sbvAvailableSolvers :: IO [SMTConfig]
 sbvAvailableSolvers = filterM sbvCheckSolverInstallation (map defaultSolverConfig [minBound .. maxBound])
-
--- | Perform an action asynchronously, returning results together with diff-time.
-runInThread :: NFData b => UTCTime -> (SMTConfig -> IO b) -> SMTConfig -> IO (Async (Solver, NominalDiffTime, b))
-runInThread beginTime action config = async $ do
-                result  <- action config
-                endTime <- rnf result `seq` getCurrentTime
-                return (name (solver config), endTime `diffUTCTime` beginTime, result)
-
--- | Perform action for all given configs, return the first one that wins. Note that we do
--- not wait for the other asyncs to terminate; hopefully they'll do so quickly.
-sbvWithAny :: NFData b => [SMTConfig] -> (SMTConfig -> a -> IO b) -> a -> IO (Solver, NominalDiffTime, b)
-sbvWithAny []      _    _ = error "SBV.withAny: No solvers given!"
-sbvWithAny solvers what a = do beginTime <- getCurrentTime
-                               snd `fmap` (mapM (runInThread beginTime (`what` a)) solvers >>= waitAnyFastCancel)
-   where -- Async's `waitAnyCancel` nicely blocks; so we use this variant to ignore the
-         -- wait part for killed threads.
-         waitAnyFastCancel asyncs = waitAny asyncs `finally` mapM_ cancelFast asyncs
-         cancelFast other = throwTo (asyncThreadId other) ThreadKilled
-
--- | Perform action for all given configs, return all the results.
-sbvWithAll :: NFData b => [SMTConfig] -> (SMTConfig -> a -> IO b) -> a -> IO [(Solver, NominalDiffTime, b)]
-sbvWithAll solvers what a = do beginTime <- getCurrentTime
-                               mapM (runInThread beginTime (`what` a)) solvers >>= (unsafeInterleaveIO . go)
-   where go []  = return []
-         go as  = do (d, r) <- waitAny as
-                     -- The following filter works because the Eq instance on Async
-                     -- checks the thread-id; so we know that we're removing the
-                     -- correct solver from the list. This also allows for
-                     -- running the same-solver (with different options), since
-                     -- they will get different thread-ids.
-                     rs <- unsafeInterleaveIO $ go (filter (/= d) as)
-                     return (r : rs)
-
--- | Prove a property with multiple solvers, running them in separate threads. The
--- results will be returned in the order produced.
-proveWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, ThmResult)]
-proveWithAll  = (`sbvWithAll` proveWith)
-
--- | Prove a property with multiple solvers, running them in separate threads. Only
--- the result of the first one to finish will be returned, remaining threads will be killed.
--- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
--- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
--- that some processes take their time to terminate. So, this solution favors quick turnaround.
-proveWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, NominalDiffTime, ThmResult)
-proveWithAny  = (`sbvWithAny` proveWith)
-
--- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. The
--- results will be returned in the order produced.
-satWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, SatResult)]
-satWithAll = (`sbvWithAll` satWith)
-
--- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. Only
--- the result of the first one to finish will be returned, remaining threads will be killed.
--- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
--- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
--- that some processes take their time to terminate. So, this solution favors quick turnaround.
-satWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, NominalDiffTime, SatResult)
-satWithAny    = (`sbvWithAny` satWith)
 
 -- If we get a program producing nothing (i.e., Symbolic ()), pretend it simply returns True.
 -- This is useful since min/max calls and constraints will provide the context
@@ -925,17 +846,6 @@ can get lost in the translation. The idea here is that if you use these function
 produce better translations to SMTLib for more efficient solving of cardinality constraints, assuming
 the backend solver supports them. Currently, only Z3 supports pseudo-booleans directly. For all other solvers,
 SBV will translate these to equivalent terms that do not require special functions.
--}
-
-{- $queryIntro
-In certain cases, the user might want to take over the communication with the solver, programmatically
-querying the engine and issuing commands accordingly. Even with human guidance, perhaps, where the user
-can take a look at the engine state and issue commands to guide the proof. This is an advanced feature,
-as the user is given full access to the underlying SMT solver, so the usual protections provided by
-SBV are no longer there to prevent mistakes.
-
-We are currently not advertising queries widely, this is a beta release for early adapters. Upcoming
-releases will be more user friendly!
 -}
 
 {-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}

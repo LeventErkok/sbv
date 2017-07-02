@@ -27,6 +27,7 @@ module Data.SBV.Control.Utils (
      , timeout
      , queryDebug
      , retrieveResponse
+     , runProofOn
      ) where
 
 import Data.List  (sortBy, elemIndex, partition, groupBy, tails)
@@ -38,6 +39,8 @@ import Data.Int
 import Data.Word
 
 import qualified Data.Map as Map
+
+import Control.DeepSeq (rnf)
 
 import Control.Monad            (unless)
 import Control.Monad.State.Lazy (get, liftIO)
@@ -52,12 +55,13 @@ import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, K
                               , QueryState(..), SVal(..), Quantifier(..), cache
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
+                              , Result(..), SMTProblem(..), trueSW
                               )
 import Data.SBV.Core.Symbolic (IncState(..), withNewIncState, State(..), svToSW, registerLabel)
 
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
-import Data.SBV.SMT.SMTLib  (toIncSMTLib)
+import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
 import Data.SBV.SMT.Utils   (showTimeoutValue, annotateWithName, alignDiagnostic, alignPlain, debug)
 
 import Data.SBV.Utils.SExpr
@@ -496,3 +500,42 @@ unexpected ctx sent expected mbHint received mbReason = do
                           ]
                        ++ [ "***    Reason  : " `alignDiagnostic` unlines r | Just r <- [mbReason]]
                        ++ [ "***    Hint    : " `alignDiagnostic` unlines r | Just r <- [mbHint]]
+
+-- | Convert a query result to an SMT Problem
+runProofOn :: SMTConfig -> Bool -> [String] -> Result -> SMTProblem
+runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs options assertions outputs) =
+     let flipQ (ALL, x) = (EX,  x)
+         flipQ (EX,  x) = (ALL, x)
+
+         skolemize :: [(Quantifier, NamedSymVar)] -> [Either SW (SW, [SW])]
+         skolemize quants = go quants ([], [])
+           where go []                   (_,  sofar) = reverse sofar
+                 go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
+                 go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
+
+         qinps      = if isSat then is else map flipQ is
+         skolemMap  = skolemize qinps
+
+         o = case outputs of
+               []  -> trueSW
+               [so] -> case so of
+                        SW KBool _ -> so
+                        _          -> trueSW
+                                      {-
+                                      -- TODO: We used to error out here, but "safeWith" might have a non-bool out
+                                      -- I wish we can get rid of this and still check for it. Perhaps this entire
+                                      -- runProofOn might disappear.
+                                      error $ unlines [ "Impossible happened, non-boolean output: " ++ show so
+                                                      , "Detected while generating the trace:\n" ++ show res
+                                                      ]
+                                      -}
+               os  -> error $ unlines [ "User error: Multiple output values detected: " ++ show os
+                                      , "Detected while generating the trace:\n" ++ show res
+                                      , "*** Check calls to \"output\", they are typically not needed!"
+                                      ]
+
+         smtScript = toSMTLib config ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o
+         problem   = SMTProblem { smtInputs=is, smtSkolemMap=skolemMap, kindsUsed=ki
+                                , smtAsserts=assertions, smtOptions=options, smtLibPgm=smtScript}
+
+     in rnf problem `seq` problem
