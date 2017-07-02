@@ -415,8 +415,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                         Just d  -> do constrain d
                                                       go (cnt+1) resultsSoFar
 
--- | Retrieve the set of unsatisfiable assumptions, following a call to 'checkSatAssuming'. Note that
--- this function isn't exported to the user, but rather used internally. The user simple calls 'checkSatAssuming'.
+-- | Retrieve the set of unsatisfiable assumptions, following a call to 'checkSatAssumingWithUnsatisfiableSet'. Note that
+-- this function isn't exported to the user, but rather used internally. The user simple calls 'checkSatAssumingWithUnsatisfiableSet'.
 getUnsatAssumptions :: [String] -> [(String, a)] -> Query [a]
 getUnsatAssumptions originals proxyMap = do
         let cmd = "(get-unsat-assumptions)"

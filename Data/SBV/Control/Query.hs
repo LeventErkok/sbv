@@ -18,7 +18,7 @@
 
 module Data.SBV.Control.Query (
        send, ask, retrieveResponse
-     , CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming, getUnsatCore, getProof, getAssignment, getOption
+     , CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet, getUnsatCore, getProof, getAssignment, getOption
      , push, pop, getAssertionStackDepth, inNewAssertionStack, echo
      , resetAssertions, exit
      , getAssertions
@@ -367,21 +367,31 @@ getObjectiveValues = do let cmd = "(get-objectives)"
                         simplify (EApp xs)                  = EApp (map simplify xs)
                         simplify e                          = e
 
--- | Check for satisfiability, under the given conditions. Similar to 'checkSat'
--- except it allows making further assumptions as captured by the first argument
--- of booleans. If the result is 'Unsat', the user will also receive a subset of
--- the given assumptions that led to the 'Unsat' conclusion. Note that while this
--- set will be a subset of the inputs, it is not necessarily guaranteed to be minimal.
+-- | Check for satisfiability, under the given conditions. Similar to 'checkSat' except it allows making
+-- further assumptions as captured by the first argument of booleans. (Also see 'checkSatAssumingWithUnsatisfiableSet'
+-- for a variant that returns the subset of the given assumptions that led to the 'Unsat' conclusion.)
+checkSatAssuming :: [SBool] -> Query CheckSatResult
+checkSatAssuming sBools = fst <$> checkSatAssumingHelper False sBools
+
+-- | Check for satisfiability, under the given conditions. Returns the unsatisfiable
+-- set of assumptions. Similar to 'checkSat' except it allows making further assumptions
+-- as captured by the first argument of booleans. If the result is 'Unsat', the user will
+-- also receive a subset of the given assumptions that led to the 'Unsat' conclusion. Note
+-- that while this set will be a subset of the inputs, it is not necessarily guaranteed to be minimal.
 --
 -- You must have arranged for the production of unsat assumptions
--- first (/via/ @'setOption' 'ProduceUnsatAssumptions' 'True'@)
+-- first (/via/ @'setOption' $ 'ProduceUnsatAssumptions' 'True'@)
 -- for this call to not error out!
 --
--- Usage note: 'getUnsatCore' is usually easier to use than 'checkSatAssuming', as it
+-- Usage note: 'getUnsatCore' is usually easier to use than 'checkSatAssumingWithUnsatisfiableSet', as it
 -- allows the use of named assertions, as obtained by 'namedAssert'. If 'getUnsatCore'
--- fills your needs, you should definitely prefer it over 'checkSatAssuming'.
-checkSatAssuming :: [SBool] -> Query (CheckSatResult, Maybe [SBool])
-checkSatAssuming sBools = do
+-- fills your needs, you should definitely prefer it over 'checkSatAssumingWithUnsatisfiableSet'.
+checkSatAssumingWithUnsatisfiableSet :: [SBool] -> Query (CheckSatResult, Maybe [SBool])
+checkSatAssumingWithUnsatisfiableSet = checkSatAssumingHelper True
+
+-- | Helper for the two variants of checkSatAssuming we have. Internal only.
+checkSatAssumingHelper :: Bool -> [SBool] -> Query (CheckSatResult, Maybe [SBool])
+checkSatAssumingHelper getAssumptions sBools = do
         -- sigh.. SMT-Lib requires the values to be literals only. So, create proxies.
         let mkAssumption st = do swsOriginal <- mapM (\sb -> sbvToSW st sb >>= \sw -> return (sw, sb)) sBools
 
@@ -413,8 +423,10 @@ checkSatAssuming sBools = do
         mapM_ (send True) $ concat declss
         r <- ask cmd
 
-        let grabUnsat = do as <- getUnsatAssumptions origNames proxyMap
-                           return (Unsat, Just as)
+        let grabUnsat
+             | getAssumptions = do as <- getUnsatAssumptions origNames proxyMap
+                                   return (Unsat, Just as)
+             | True           = return (Unsat, Nothing)
 
         parse r bad $ \case ECon "sat"     -> return (Sat, Nothing)
                             ECon "unsat"   -> grabUnsat

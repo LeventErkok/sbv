@@ -85,6 +85,7 @@ query1 = do
 
                   setInfo ":status" ["unknown"]
 
+                  _ <- checkSatAssumingWithUnsatisfiableSet [a .> 2]
                   _ <- checkSatAssuming [a .> 2]
                   _ <- getAssignment
 

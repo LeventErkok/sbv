@@ -11,7 +11,7 @@
 
 module Data.SBV.Control (
      -- * Checking satisfiability
-       CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming
+       CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet
 
      -- * Querying the solver
      -- ** Extracting values
