@@ -19,7 +19,7 @@ import Data.Maybe (fromMaybe)
 import qualified Data.Binary.IEEE754 as DB (wordToFloat, wordToDouble, floatToWord, doubleToWord)
 
 import Data.SBV.Internals
-import SBVTest
+import Utils.SBVTestFramework
 
 ghcBitSize :: Bits a => a -> Int
 ghcBitSize x = fromMaybe (error "SBV.ghcBitSize: Unexpected non-finite usage!") (bitSizeMaybe x)

@@ -13,7 +13,7 @@ module TestSuite.Polynomials.Polynomials(tests) where
 
 import Data.SBV.Examples.Polynomials.Polynomials
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

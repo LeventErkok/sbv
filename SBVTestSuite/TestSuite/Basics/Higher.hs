@@ -11,7 +11,7 @@
 
 module TestSuite.Basics.Higher(tests) where
 
-import SBVTest
+import Utils.SBVTestFramework
 
 tests :: TestTree
 tests =

@@ -11,7 +11,7 @@
 
 module TestSuite.Puzzles.DogCatMouse(tests) where
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

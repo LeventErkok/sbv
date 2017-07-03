@@ -13,7 +13,7 @@ module TestSuite.BitPrecise.BitTricks(tests) where
 
 import Data.SBV.Examples.BitPrecise.BitTricks
 
-import SBVTest
+import Utils.SBVTestFramework
 
 tests :: TestTree
 tests =

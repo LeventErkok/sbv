@@ -11,7 +11,7 @@
 
 module TestSuite.Arrays.Memory(tests) where
 
-import SBVTest
+import Utils.SBVTestFramework
 
 type Address = SWord32
 type Value   = SWord64

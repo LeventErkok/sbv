@@ -13,7 +13,7 @@ module TestSuite.Existentials.CRCPolynomial(tests) where
 
 import Data.SBV.Examples.Existentials.CRCPolynomial
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

@@ -13,7 +13,7 @@ module TestSuite.CRC.CCITT(tests) where
 
 import Data.SBV.Tools.Polynomial
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

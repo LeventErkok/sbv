@@ -11,7 +11,7 @@
 
 module TestSuite.CRC.Parity(tests) where
 
-import SBVTest
+import Utils.SBVTestFramework
 
 tests :: TestTree
 tests =

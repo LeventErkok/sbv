@@ -16,7 +16,7 @@ import Data.SBV.Control
 
 import Control.Monad (unless)
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

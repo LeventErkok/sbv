@@ -13,7 +13,7 @@ module TestSuite.Puzzles.Counts(tests) where
 
 import Data.SBV.Examples.Puzzles.Counts
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

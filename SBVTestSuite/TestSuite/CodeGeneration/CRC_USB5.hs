@@ -14,7 +14,7 @@ module TestSuite.CodeGeneration.CRC_USB5(tests) where
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.CRC_USB5
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

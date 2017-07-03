@@ -14,7 +14,7 @@
 
 module TestSuite.Uninterpreted.Axioms(tests) where
 
-import SBVTest
+import Utils.SBVTestFramework
 import Data.Generics
 
 tests :: TestTree

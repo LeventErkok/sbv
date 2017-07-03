@@ -14,7 +14,7 @@
 
 module TestSuite.Uninterpreted.Sort(tests) where
 
-import SBVTest
+import Utils.SBVTestFramework
 import Data.Generics
 
 tests :: TestTree

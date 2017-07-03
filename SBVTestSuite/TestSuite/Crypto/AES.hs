@@ -14,7 +14,7 @@ module TestSuite.Crypto.AES(tests) where
 import Data.SBV.Internals
 import Data.SBV.Examples.Crypto.AES
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

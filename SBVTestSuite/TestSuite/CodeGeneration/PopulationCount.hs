@@ -14,7 +14,7 @@ module TestSuite.CodeGeneration.PopulationCount(tests) where
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.PopulationCount
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

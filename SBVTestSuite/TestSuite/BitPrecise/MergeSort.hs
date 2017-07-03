@@ -14,7 +14,7 @@ module TestSuite.BitPrecise.MergeSort(tests) where
 import Data.SBV.Internals
 import Data.SBV.Examples.BitPrecise.MergeSort
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

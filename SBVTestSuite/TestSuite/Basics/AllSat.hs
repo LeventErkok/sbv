@@ -15,7 +15,7 @@
 module TestSuite.Basics.AllSat(tests) where
 
 import Data.Generics
-import SBVTest
+import Utils.SBVTestFramework
 
 tests :: TestTree
 tests =

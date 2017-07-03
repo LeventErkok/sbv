@@ -14,7 +14,7 @@ module TestSuite.CodeGeneration.Uninterpreted(tests) where
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.Uninterpreted
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

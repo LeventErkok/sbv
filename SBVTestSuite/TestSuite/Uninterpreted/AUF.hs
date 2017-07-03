@@ -13,7 +13,7 @@ module TestSuite.Uninterpreted.AUF where
 
 import Data.SBV.Examples.Uninterpreted.AUF
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

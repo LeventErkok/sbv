@@ -13,7 +13,7 @@ module TestSuite.Puzzles.U2Bridge(tests) where
 
 import Data.SBV.Examples.Puzzles.U2Bridge
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

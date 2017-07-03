@@ -14,7 +14,7 @@ module TestSuite.CodeGeneration.AddSub(tests) where
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.AddSub
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

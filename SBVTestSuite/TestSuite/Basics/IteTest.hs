@@ -11,7 +11,7 @@
 
 module TestSuite.Basics.IteTest(tests)  where
 
-import SBVTest
+import Utils.SBVTestFramework
 
 chk1 :: (SBool -> SBool -> SBool -> SBool) -> SWord8 -> SBool
 chk1 cond x = cond (x .== x) true undefined

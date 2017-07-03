@@ -17,7 +17,7 @@ module TestSuite.Basics.ArithNoSolver(tests) where
 
 import Data.SBV.Internals
 import Data.Maybe(fromJust, fromMaybe)
-import SBVTest
+import Utils.SBVTestFramework
 import qualified Data.Binary.IEEE754 as DB (wordToFloat, wordToDouble, floatToWord, doubleToWord)
 
 ghcBitSize :: Bits a => a -> Int

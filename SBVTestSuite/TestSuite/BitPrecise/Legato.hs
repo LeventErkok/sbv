@@ -14,7 +14,7 @@ module TestSuite.BitPrecise.Legato(tests) where
 import Data.SBV.Internals
 import Data.SBV.Examples.BitPrecise.Legato
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

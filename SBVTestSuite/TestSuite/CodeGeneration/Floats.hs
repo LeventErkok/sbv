@@ -13,7 +13,7 @@ module TestSuite.CodeGeneration.Floats(tests) where
 
 import Data.SBV.Internals
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

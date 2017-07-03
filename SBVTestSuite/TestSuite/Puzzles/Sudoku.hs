@@ -13,7 +13,7 @@ module TestSuite.Puzzles.Sudoku(tests) where
 
 import Data.SBV.Examples.Puzzles.Sudoku
 
-import SBVTest
+import Utils.SBVTestFramework
 
 tests :: TestTree
 tests =

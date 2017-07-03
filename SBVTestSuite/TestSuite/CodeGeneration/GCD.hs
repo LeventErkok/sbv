@@ -14,7 +14,7 @@ module TestSuite.CodeGeneration.GCD(tests) where
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.GCD
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

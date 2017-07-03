@@ -13,7 +13,7 @@ module TestSuite.Uninterpreted.Function(tests) where
 
 import Data.SBV.Examples.Uninterpreted.Function
 
-import SBVTest
+import Utils.SBVTestFramework
 
 tests :: TestTree
 tests =

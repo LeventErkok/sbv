@@ -13,7 +13,7 @@ module TestSuite.Puzzles.NQueens(tests) where
 
 import Data.SBV.Examples.Puzzles.NQueens
 
-import SBVTest
+import Utils.SBVTestFramework
 
 tests :: TestTree
 tests =

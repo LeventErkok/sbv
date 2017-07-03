@@ -15,7 +15,7 @@ module TestSuite.Queries.BasicQuery (tests)  where
 
 import Data.SBV.Control
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

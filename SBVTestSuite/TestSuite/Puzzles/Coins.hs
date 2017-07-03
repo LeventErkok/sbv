@@ -13,7 +13,7 @@ module TestSuite.Puzzles.Coins(tests) where
 
 import Data.SBV.Examples.Puzzles.Coins
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

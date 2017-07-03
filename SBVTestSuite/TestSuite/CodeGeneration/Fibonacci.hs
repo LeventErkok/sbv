@@ -14,7 +14,7 @@ module TestSuite.CodeGeneration.Fibonacci(tests) where
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.Fibonacci
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

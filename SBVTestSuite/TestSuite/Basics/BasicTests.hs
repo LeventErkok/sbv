@@ -15,7 +15,7 @@
 module TestSuite.Basics.BasicTests(tests) where
 
 import Data.SBV.Internals
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

@@ -15,7 +15,7 @@ import Data.SBV.Tools.GenTest
 
 import System.Random
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

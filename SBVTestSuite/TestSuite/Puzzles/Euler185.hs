@@ -13,7 +13,7 @@ module TestSuite.Puzzles.Euler185(tests) where
 
 import Data.SBV.Examples.Puzzles.Euler185
 
-import SBVTest
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree

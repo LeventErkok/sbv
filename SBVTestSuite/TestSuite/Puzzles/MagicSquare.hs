@@ -13,7 +13,7 @@ module TestSuite.Puzzles.MagicSquare(tests) where
 
 import Data.SBV.Examples.Puzzles.MagicSquare
 
-import SBVTest
+import Utils.SBVTestFramework
 
 tests :: TestTree
 tests =
