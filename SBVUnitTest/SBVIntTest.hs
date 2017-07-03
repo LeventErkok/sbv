@@ -46,6 +46,7 @@ import qualified TestSuite.Queries.Int_CVC4
 import qualified TestSuite.Queries.Int_Mathsat
 import qualified TestSuite.Queries.Int_Yices
 import qualified TestSuite.Queries.Int_Z3
+import qualified TestSuite.GenTest.GenTests
 
 main :: IO ()
 main =
@@ -55,52 +56,57 @@ main =
         testGroup
           "Tests"
           (if show v == show noPattern
-             then []
-             else tests)))
+             then noSolverTests
+             else noSolverTests ++ solverTests)))
 
-tests :: [TestTree]
-tests =
-  [ TestSuite.Arrays.Memory.tests
-  , TestSuite.Basics.ArithSolver.tests
-  , TestSuite.Basics.Higher.tests
-  , TestSuite.Basics.Index.tests
-  , TestSuite.Basics.IteTest.tests
-  , TestSuite.Basics.ProofTests.tests
-  , TestSuite.Basics.QRem.tests
-  , TestSuite.Basics.AllSat.tests
-  , TestSuite.Basics.TOut.tests
-  , TestSuite.Basics.PseudoBoolean.tests
-  , TestSuite.BitPrecise.BitTricks.tests
-  , TestSuite.BitPrecise.PrefixSum.tests
-  , TestSuite.CRC.CCITT_Unidir.tests
-  , TestSuite.CRC.USB5.tests
-  , TestSuite.CRC.GenPoly.tests
-  , TestSuite.Crypto.RC4.tests
-  , TestSuite.Polynomials.Polynomials.tests
-  , TestSuite.CRC.Parity.tests
-  , TestSuite.Puzzles.DogCatMouse.tests
-  , TestSuite.Puzzles.Euler185.tests
-  , TestSuite.Puzzles.MagicSquare.tests
-  , TestSuite.Puzzles.NQueens.tests
-  , TestSuite.Puzzles.PowerSet.tests
-  , TestSuite.Puzzles.Sudoku.tests
-  , TestSuite.Puzzles.Temperature.tests
-  , TestSuite.Puzzles.U2Bridge.tests
-  , TestSuite.Uninterpreted.AUF.tests
-  , TestSuite.Uninterpreted.Axioms.tests
-  , TestSuite.Uninterpreted.Function.tests
-  , TestSuite.Uninterpreted.Sort.tests
-  , TestSuite.Uninterpreted.Uninterpreted.tests
-  , TestSuite.Optimization.Basics.tests
-  , TestSuite.Optimization.ExtensionField.tests
-  , TestSuite.Optimization.AssertSoft.tests
-  , TestSuite.Optimization.Combined.tests
-  , TestSuite.Optimization.Reals.tests
-  , TestSuite.Queries.BasicQuery.tests
-  , TestSuite.Queries.Int_ABC.tests
-  , TestSuite.Queries.Int_Boolector.tests
-  , TestSuite.Queries.Int_CVC4.tests
-  , TestSuite.Queries.Int_Mathsat.tests
-  , TestSuite.Queries.Int_Yices.tests
-  , TestSuite.Queries.Int_Z3.tests
-  ]
+-- Tests that do *not* require the presence of z3
+noSolverTests :: [TestTree]
+noSolverTests = [ TestSuite.GenTest.GenTests.tests
+                ]
+
+-- Tests that require the presence of z3
+solverTests :: [TestTree]
+solverTests = [ TestSuite.Arrays.Memory.tests
+              , TestSuite.Basics.ArithSolver.tests
+              , TestSuite.Basics.Higher.tests
+              , TestSuite.Basics.Index.tests
+              , TestSuite.Basics.IteTest.tests
+              , TestSuite.Basics.ProofTests.tests
+              , TestSuite.Basics.QRem.tests
+              , TestSuite.Basics.AllSat.tests
+              , TestSuite.Basics.TOut.tests
+              , TestSuite.Basics.PseudoBoolean.tests
+              , TestSuite.BitPrecise.BitTricks.tests
+              , TestSuite.BitPrecise.PrefixSum.tests
+              , TestSuite.CRC.CCITT_Unidir.tests
+              , TestSuite.CRC.USB5.tests
+              , TestSuite.CRC.GenPoly.tests
+              , TestSuite.Crypto.RC4.tests
+              , TestSuite.Polynomials.Polynomials.tests
+              , TestSuite.CRC.Parity.tests
+              , TestSuite.Puzzles.DogCatMouse.tests
+              , TestSuite.Puzzles.Euler185.tests
+              , TestSuite.Puzzles.MagicSquare.tests
+              , TestSuite.Puzzles.NQueens.tests
+              , TestSuite.Puzzles.PowerSet.tests
+              , TestSuite.Puzzles.Sudoku.tests
+              , TestSuite.Puzzles.Temperature.tests
+              , TestSuite.Puzzles.U2Bridge.tests
+              , TestSuite.Uninterpreted.AUF.tests
+              , TestSuite.Uninterpreted.Axioms.tests
+              , TestSuite.Uninterpreted.Function.tests
+              , TestSuite.Uninterpreted.Sort.tests
+              , TestSuite.Uninterpreted.Uninterpreted.tests
+              , TestSuite.Optimization.Basics.tests
+              , TestSuite.Optimization.ExtensionField.tests
+              , TestSuite.Optimization.AssertSoft.tests
+              , TestSuite.Optimization.Combined.tests
+              , TestSuite.Optimization.Reals.tests
+              , TestSuite.Queries.BasicQuery.tests
+              , TestSuite.Queries.Int_ABC.tests
+              , TestSuite.Queries.Int_Boolector.tests
+              , TestSuite.Queries.Int_CVC4.tests
+              , TestSuite.Queries.Int_Mathsat.tests
+              , TestSuite.Queries.Int_Yices.tests
+              , TestSuite.Queries.Int_Z3.tests
+              ]

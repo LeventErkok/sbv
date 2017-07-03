@@ -173,6 +173,7 @@ Test-Suite SBVBasicTests
                   , TestSuite.Existentials.CRCPolynomial
                   , TestSuite.Puzzles.Coins
                   , TestSuite.Puzzles.Counts
+                  , TestSuite.GenTest.GenTests
 
 Test-Suite int-test-extended
   type            : exitcode-stdio-1.0
@@ -186,7 +187,7 @@ Test-Suite int-test-extended
   Build-depends :
                 -- inherent constraints from library
                   base >= 4.9, data-binary-ieee754, filepath, syb
-                , sbv, directory
+                , sbv, directory, random
                 -- constraints here
                 , bytestring   >= 0.9
                 , tasty        >= 0.11.2
