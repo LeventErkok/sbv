@@ -115,7 +115,7 @@ limitedRelease: clean install sdist limitedTestInterfaces docs limitedTest hlint
 hlint: 
 	$(call startTimer,$@)
 	@echo "Running HLint.."
-	@hlint Data SBVUnitTest -i "Use otherwise" -i "Parse error" -i "Use fewer imports" -i "Use module export list" -i "Use import/export shortcut"
+	@$(TIME) ./dist/build/SBVHLint/SBVHLint
 	$(call endTimer,$@)
 
 uploadDocs:
