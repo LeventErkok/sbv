@@ -56,13 +56,13 @@ quick:
 
 tests:
 	$(call startTimer,$@)
-	@$(TIME) ./dist/build/SBVTestSuite/SBVTestSuite --hide-successes -p '**' -j $(NO_OF_CORES)
+	@$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -p '**' -j $(NO_OF_CORES)
 	$(call endTimer,$@)
 
 # When "limited", we skip query tests
 limitedTests:
 	$(call startTimer,$@)
-	@$(TIME) ./dist/build/SBVTestSuite/SBVTestSuite --hide-successes -p \!extOnly -j $(NO_OF_CORES)
+	@$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -p \!extOnly -j $(NO_OF_CORES)
 	$(call endTimer,$@)
 
 test: install tests doctest
@@ -72,7 +72,7 @@ limitedTest: install limitedTests doctest
 # use this as follows:
 #         make testPattern TGT="U2Bridge"
 testPattern:
-	./dist/build/SBVTestSuite/SBVTestSuite -p ${TGT}
+	./dist/build/SBVTest/SBVTest -p ${TGT}
 
 doctest:
 	$(call startTimer,$@)
