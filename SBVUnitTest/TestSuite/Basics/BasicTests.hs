@@ -25,31 +25,31 @@ tests = testGroup "Basics.BasicTests"
    , testCase "basic-0.3" $ test0 f3 `showsAs` "25"
    , testCase "basic-0.4" $ test0 f4 `showsAs` "25"
    , testCase "basic-0.5" $ test0 f5 `showsAs` "4"
-   , goldenVsStringShow "basic-1.1" $ test1 f1
-   , goldenVsStringShow "basic-1.2" $ test1 f2
-   , goldenVsStringShow "basic-1.3" $ test1 f3
-   , goldenVsStringShow "basic-1.4" $ test1 f4
-   , goldenVsStringShow "basic-1.5" $ test1 f5
-   , goldenVsStringShow "basic-2.1" $ test2 f1
-   , goldenVsStringShow "basic-2.2" $ test2 f2
-   , goldenVsStringShow "basic-2.3" $ test2 f3
-   , goldenVsStringShow "basic-2.4" $ test2 f4
-   , goldenVsStringShow "basic-2.5" $ test2 f5
-   , goldenVsStringShow "basic-3.1" $ test3 f1
-   , goldenVsStringShow "basic-3.2" $ test3 f2
-   , goldenVsStringShow "basic-3.3" $ test3 f3
-   , goldenVsStringShow "basic-3.4" $ test3 f4
-   , goldenVsStringShow "basic-3.5" $ test3 f5
-   , goldenVsStringShow "basic-4.1" $ test4 f1
-   , goldenVsStringShow "basic-4.2" $ test4 f2
-   , goldenVsStringShow "basic-4.3" $ test4 f3
-   , goldenVsStringShow "basic-4.4" $ test4 f4
-   , goldenVsStringShow "basic-4.5" $ test4 f5
-   , goldenVsStringShow "basic-5.1" $ test5 f1
-   , goldenVsStringShow "basic-5.2" $ test5 f2
-   , goldenVsStringShow "basic-5.3" $ test5 f3
-   , goldenVsStringShow "basic-5.4" $ test5 f4
-   , goldenVsStringShow "basic-5.5" $ test5 f5
+   , goldenVsStringShow "basic-1_1" $ test1 f1
+   , goldenVsStringShow "basic-1_2" $ test1 f2
+   , goldenVsStringShow "basic-1_3" $ test1 f3
+   , goldenVsStringShow "basic-1_4" $ test1 f4
+   , goldenVsStringShow "basic-1_5" $ test1 f5
+   , goldenVsStringShow "basic-2_1" $ test2 f1
+   , goldenVsStringShow "basic-2_2" $ test2 f2
+   , goldenVsStringShow "basic-2_3" $ test2 f3
+   , goldenVsStringShow "basic-2_4" $ test2 f4
+   , goldenVsStringShow "basic-2_5" $ test2 f5
+   , goldenVsStringShow "basic-3_1" $ test3 f1
+   , goldenVsStringShow "basic-3_2" $ test3 f2
+   , goldenVsStringShow "basic-3_3" $ test3 f3
+   , goldenVsStringShow "basic-3_4" $ test3 f4
+   , goldenVsStringShow "basic-3_5" $ test3 f5
+   , goldenVsStringShow "basic-4_1" $ test4 f1
+   , goldenVsStringShow "basic-4_2" $ test4 f2
+   , goldenVsStringShow "basic-4_3" $ test4 f3
+   , goldenVsStringShow "basic-4_4" $ test4 f4
+   , goldenVsStringShow "basic-4_5" $ test4 f5
+   , goldenVsStringShow "basic-5_1" $ test5 f1
+   , goldenVsStringShow "basic-5_2" $ test5 f2
+   , goldenVsStringShow "basic-5_3" $ test5 f3
+   , goldenVsStringShow "basic-5_4" $ test5 f4
+   , goldenVsStringShow "basic-5_5" $ test5 f5
    ]
 
 test0 :: (forall a. Num a => (a -> a -> a)) -> Word8
