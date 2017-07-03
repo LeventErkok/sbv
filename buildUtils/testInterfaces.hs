@@ -52,7 +52,7 @@ test s = do check  "t0" t0 (== False)
           | True = do putStrLn $ m ++ "[" ++ solverName s ++ "] FAIL. Got: " ++ show r
                       exitFailure
         thm = isTheoremWith s
-        models m p f = (extractModels `fmap` allSat p) >>= decide m f . sort
+        models m p f = (extractModels <$> allSat p) >>= decide m f . sort
         t0 x = x   .== x+(1::SWord8)
         t1 x = x*2 .== x+(x::SWord8)
         t2 x = x*x .== (4::SWord8)

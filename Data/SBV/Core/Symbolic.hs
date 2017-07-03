@@ -793,7 +793,7 @@ newtype Symbolic a = Symbolic (ReaderT State IO a)
 -- explicit quantifier is given, we just use that. If not, then we
 -- pick the quantifier appropriately based on the run-mode.
 -- @randomCW@ is used for generating random values for this variable
--- when used for 'quickCheck' purposes.
+-- when used for 'quickCheck' or 'genTest' purposes.
 svMkSymVar :: Maybe Quantifier -> Kind -> Maybe String -> Symbolic SVal
 svMkSymVar mbQ k mbNm = do
         st <- ask
@@ -859,7 +859,7 @@ addAxiom nm ax = do
 -- | Run a symbolic computation in Proof mode and return a 'Result'. The boolean
 -- argument indicates if this is a sat instance or not.
 runSymbolic :: (Bool, SMTConfig) -> Symbolic a -> IO Result
-runSymbolic (isSAT, cfg) comp = snd `fmap` runSymbolicWithResult (SMTMode ISetup isSAT cfg) comp
+runSymbolic (isSAT, cfg) comp = snd <$> runSymbolicWithResult (SMTMode ISetup isSAT cfg) comp
 
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
 runSymbolicWithResult :: SBVRunMode -> Symbolic a -> IO (a, Result)
@@ -931,23 +931,23 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
                                        , rAsserts=asserts, rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints=cstrs
                                        , rSMTOptions=opts } = do
    SBVPgm rpgm  <- readIORef pgm
-   inpsO <- reverse `fmap` readIORef inps
-   outsO <- reverse `fmap` readIORef outs
+   inpsO <- reverse <$> readIORef inps
+   outsO <- reverse <$> readIORef outs
    let swap  (a, b)              = (b, a)
        swapc ((_, a), b)         = (b, a)
        cmp   (a, _) (b, _)       = a `compare` b
        arrange (i, (at, rt, es)) = ((i, at, rt), es)
-   cnsts <- (sortBy cmp . map swapc . Map.toList) `fmap` readIORef (rconstMap st)
-   tbls  <- (map arrange . sortBy cmp . map swap . Map.toList) `fmap` readIORef tables
-   arrs  <- IMap.toAscList `fmap` readIORef arrays
-   unint <- Map.toList `fmap` readIORef uis
-   axs   <- reverse `fmap` readIORef axioms
+   cnsts <- (sortBy cmp . map swapc . Map.toList) <$> readIORef (rconstMap st)
+   tbls  <- (map arrange . sortBy cmp . map swap . Map.toList) <$> readIORef tables
+   arrs  <- IMap.toAscList <$> readIORef arrays
+   unint <- Map.toList <$> readIORef uis
+   axs   <- reverse <$> readIORef axioms
    knds  <- readIORef usedKinds
-   cgMap <- Map.toList `fmap` readIORef cgs
-   traceVals  <- reverse `fmap` readIORef cInfo
-   extraCstrs <- reverse `fmap` readIORef cstrs
-   options    <- reverse `fmap` readIORef opts
-   assertions <- reverse `fmap` readIORef asserts
+   cgMap <- Map.toList <$> readIORef cgs
+   traceVals  <- reverse <$> readIORef cInfo
+   extraCstrs <- reverse <$> readIORef cstrs
+   options    <- reverse <$> readIORef opts
+   assertions <- reverse <$> readIORef asserts
    return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs options assertions outsO
 
 -- | Add a new option
@@ -984,9 +984,9 @@ addSValOptGoal obj = do st <- ask
                                                 trackSW <- liftIO $ svToSW st track
                                                 return (origSW, trackSW)
 
-                        let walk (Minimize   nm v)     = Minimize nm              `fmap` mkGoal nm v
-                            walk (Maximize   nm v)     = Maximize nm              `fmap` mkGoal nm v
-                            walk (AssertSoft nm v mbP) = flip (AssertSoft nm) mbP `fmap` mkGoal nm v
+                        let walk (Minimize   nm v)     = Minimize nm              <$> mkGoal nm v
+                            walk (Maximize   nm v)     = Maximize nm              <$> mkGoal nm v
+                            walk (AssertSoft nm v mbP) = flip (AssertSoft nm) mbP <$> mkGoal nm v
 
                         obj' <- walk obj
                         liftIO $ modifyState st rOptGoals (obj' :)

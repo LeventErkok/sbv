@@ -254,12 +254,12 @@ mkConstCW (KUserSort s _) a = error $ "Unexpected call to mkConstCW with uninter
 randomCWVal :: Kind -> IO CWVal
 randomCWVal k =
   case k of
-    KBool         -> fmap CWInteger (randomRIO (0,1))
-    KBounded s w  -> fmap CWInteger (randomRIO (bounds s w))
-    KUnbounded    -> fmap CWInteger randomIO
-    KReal         -> fmap CWAlgReal randomIO
-    KFloat        -> fmap CWFloat randomIO
-    KDouble       -> fmap CWDouble randomIO
+    KBool         -> CWInteger <$> randomRIO (0, 1)
+    KBounded s w  -> CWInteger <$> randomRIO (bounds s w)
+    KUnbounded    -> CWInteger <$> randomIO
+    KReal         -> CWAlgReal <$> randomIO
+    KFloat        -> CWFloat   <$> randomIO
+    KDouble       -> CWDouble  <$> randomIO
     KUserSort s _ -> error $ "Unexpected call to randomCWVal with uninterpreted kind: " ++ s
   where
     bounds :: Bool -> Int -> (Integer, Integer)
@@ -268,4 +268,4 @@ randomCWVal k =
 
 -- | Generate a random constant value ('CW') of the correct kind.
 randomCW :: Kind -> IO CW
-randomCW k = fmap (CW k) (randomCWVal k)
+randomCW k = CW k <$> randomCWVal k

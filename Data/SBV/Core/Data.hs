@@ -231,7 +231,7 @@ sbvToSW st (SBV s) = svToSW st s
 
 -- | Create a symbolic variable.
 mkSymSBV :: forall a. Maybe Quantifier -> Kind -> Maybe String -> Symbolic (SBV a)
-mkSymSBV mbQ k mbNm = fmap SBV (svMkSymVar mbQ k mbNm)
+mkSymSBV mbQ k mbNm = SBV <$> svMkSymVar mbQ k mbNm
 
 -- | Convert a symbolic value to an SW, inside the Symbolic monad
 sbvToSymSW :: SBV a -> Symbolic SW
