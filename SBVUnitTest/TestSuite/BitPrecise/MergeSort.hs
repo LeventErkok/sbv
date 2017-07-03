@@ -19,7 +19,7 @@ import SBVTest
 -- Test suite
 tests :: TestTree
 tests = testGroup "BitPrecise.MergeSort" [
-   goldenVsStringShow "mergeSort" mergeC
+   goldenVsStringShow "merge" mergeC
  ]
  where mergeC = compileToC' "merge" $ do
                    cgSetDriverValues [10, 6, 4, 82, 71]
