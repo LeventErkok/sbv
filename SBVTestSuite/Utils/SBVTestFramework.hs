@@ -1,18 +1,18 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  SBVTest
+-- Module      :  Utils.SBVTestFramework
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Integration with HUnit-based test suite for SBV
+-- Various goodies for testing SBV
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module SBVTest (
+module Utils.SBVTestFramework (
           showsAs
         , runSAT, numberOfModels
         , assertIsThm, assertIsntThm, assertIsSat, assertIsntSat
@@ -45,7 +45,7 @@ showsAs r s = assert $ show r == s
 -- TODO: Need to use tasty.golden's fascility for generating golden file instead
 
 goldDir2 :: FilePath
-goldDir2 = "SBVUnitTest/GoldFiles/"
+goldDir2 = "SBVTestSuite/GoldFiles/"
 
 goldenString :: TestName -> IO String -> TestTree
 goldenString n res = goldenVsString n (goldDir2 ++ n ++ ".gold") (fmap LBC.pack res)
