@@ -296,7 +296,7 @@ forte vname bigEndian ss vs = intercalate "\n" $ [ "// Automatically generated b
         form []     [] = []
         form []     bs = error $ "SBV.renderTest: Mismatched index in stream, extra " ++ show (length bs) ++ " bit(s) remain."
         form (i:is) bs
-          | length bs < i = error $ "SBV.renderTest: Mismatched index in stream, was looking for " ++ show i ++ " bit(s), but only " ++ show i ++ " remains."
+          | length bs < i = error $ "SBV.renderTest: Mismatched index in stream, was looking for " ++ show i ++ " bit(s), but only " ++ show bs ++ " remains."
           | i == 1        = let b:r = bs
                                 v   = if b == '1' then "T" else "F"
                             in v : form is r
