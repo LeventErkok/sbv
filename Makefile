@@ -82,7 +82,6 @@ limitedTest: install doctest basicTest limitedExtendedTests
 gold: 
 	./dist/build/int-test-extended/int-test-extended -p ${TGT}
 
-
 # use this as follows:
 #         make testPattern TGT="U2Bridge"
 testPattern:
