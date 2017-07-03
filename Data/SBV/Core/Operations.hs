@@ -20,7 +20,7 @@ module Data.SBV.Core.Operations
   , svAsBool, svAsInteger, svNumerator, svDenominator
   -- ** Basic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs
-  , svDivide, svQuot, svRem
+  , svDivide, svQuot, svRem, svQuotRem
   , svEqual, svNotEqual
   , svLessThan, svGreaterThan, svLessEq, svGreaterEq
   , svAnd, svOr, svXOr, svNot
@@ -233,6 +233,10 @@ svRem x y
   where
     rem' a b | kindOf x == KUnbounded = mod a (abs b)
              | otherwise              = rem a b
+
+-- | Combination of quot and rem
+svQuotRem :: SVal -> SVal -> (SVal, SVal)
+svQuotRem x y = (x `svQuot` y, x `svRem` y)
 
 -- | Optimize away x == true and x /= false to x; otherwise just do eqOpt
 eqOptBool :: Op -> SW -> SW -> SW -> Maybe SW

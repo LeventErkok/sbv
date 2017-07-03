@@ -43,7 +43,7 @@ module Data.SBV.Dynamic
   , svLessThan, svGreaterThan, svLessEq, svGreaterEq
   -- *** Arithmetic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs
-  , svDivide, svQuot, svRem, svExp
+  , svDivide, svQuot, svRem, svQuotRem, svExp
   , svAddConstant, svIncrement, svDecrement
   -- *** Logical operations
   , svAnd, svOr, svXOr, svNot
