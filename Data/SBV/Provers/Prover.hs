@@ -36,9 +36,10 @@ import Control.Exception (finally, throwTo, AsyncException(ThreadKilled))
 import System.IO.Unsafe (unsafeInterleaveIO)             -- only used safely!
 
 import System.FilePath   (addExtension)
+import System.Directory  (getCurrentDirectory)
 
 import Data.Time (getZonedTime, NominalDiffTime, UTCTime, getCurrentTime, diffUTCTime)
-import Data.List (intercalate)
+import Data.List (intercalate, isPrefixOf)
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
@@ -524,14 +525,18 @@ class SExecutable a where
 
    -- | Check if any of the 'sAssert' calls can be violated.
    safeWith :: SMTConfig -> a -> IO [SafeResult]
-   safeWith cfg a = fst <$> runSymbolicWithResult (SMTMode ISetup True cfg) (sName_ a >> check)
-     where check = Control.query $ Control.getSBVAssertions >>= mapM verify
+   safeWith cfg a = do cwd <- (++ "/") <$> getCurrentDirectory
+                       let mkRelative path
+                              | cwd `isPrefixOf` path = drop (length cwd) path
+                              | True                  = path
+                       fst <$> runSymbolicWithResult (SMTMode ISetup True cfg) (sName_ a >> check mkRelative)
+     where check mkRelative = Control.query $ Control.getSBVAssertions >>= mapM (verify mkRelative)
 
            -- check that the cond is unsatisfiable. If satisfiable, that would
            -- indicate the assignment under which the 'sAssert' would fail
-           verify :: (String, Maybe CallStack, SW) -> Query SafeResult
-           verify (msg, cs, cond) = do
-                   let locInfo ps = let loc (f, sl) = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
+           verify :: (FilePath -> FilePath) -> (String, Maybe CallStack, SW) -> Query SafeResult
+           verify mkRelative (msg, cs, cond) = do
+                   let locInfo ps = let loc (f, sl) = concat [mkRelative (srcLocFile sl), ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
                                     in intercalate ",\n " (map loc ps)
                        location   = (locInfo . getCallStack) `fmap` cs
 
