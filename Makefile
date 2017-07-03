@@ -19,7 +19,7 @@ endif
 
 BUILDTIMES = buildTimes.log
 
-.PHONY: quick install basicTest extendedTests limitedExtendedTests test limitedTest gold testPattern doctest sdist
+.PHONY: quick install tests limitedTests test limitedTest gold testPattern doctest sdist
 .PHONY: veryclean clean docs markBuildStart markBuildEnd release limitedRelease hlint uploadDocs checkLinks testInterfaces
 .PHONY: limitedTestInterfaces tags
 
@@ -55,37 +55,25 @@ quick:
 	@cabal install
 	$(call endTimer,$@)
 
-basicTest:
+tests:
 	$(call startTimer,$@)
-	@SBV_Z3=doesnotexist $(TIME) ./dist/build/SBVBasicTests/SBVBasicTests
-	$(call endTimer,$@)
-
-extendedTests:
-	$(call startTimer,$@)
-	@$(TIME) ./dist/build/int-test-extended/int-test-extended --hide-successes -p '**' -j $(NO_OF_CORES)
+	@$(TIME) ./dist/build/SBVTestSuite/SBVTestSuite --hide-successes -p '**' -j $(NO_OF_CORES)
 	$(call endTimer,$@)
 
 # When "limited", we skip query tests
-limitedExtendedTests:
+limitedTests:
 	$(call startTimer,$@)
-	@$(TIME) ./dist/build/int-test-extended/int-test-extended --hide-successes -p \!extOnly -j $(NO_OF_CORES)
+	@$(TIME) ./dist/build/SBVTestSuite/SBVTestSuite --hide-successes -p \!extOnly -j $(NO_OF_CORES)
 	$(call endTimer,$@)
 
-test: install doctest basicTest extendedTests
+test: install tests doctest
 
-limitedTest: install doctest basicTest limitedExtendedTests
-
-
-# use this as follows:
-#          /bin/rm SBVUnitTest/GoldFiles/U2Bridge.gold
-#          make gold TGT="U2Bridge"
-gold: 
-	./dist/build/int-test-extended/int-test-extended -p ${TGT}
+limitedTest: install limitedTests doctest
 
 # use this as follows:
 #         make testPattern TGT="U2Bridge"
 testPattern:
-	./dist/build/int-test-extended/int-test-extended -p ${TGT}
+	./dist/build/SBVTestSuite/SBVTestSuite -p ${TGT}
 
 doctest:
 	$(call startTimer,$@)
