@@ -6,4 +6,4 @@ TAGS
 .stack-work/
 stack.yaml
 buildTimes.log
-SBVUnitTest/GoldFiles/*.gold_temp
+SBVTestSuite/GoldFiles/*.gold_temp
