@@ -9,17 +9,16 @@
 -- Test suite for Data.SBV.Examples.Existentials.CRCPolynomial
 -----------------------------------------------------------------------------
 
-module TestSuite.Existentials.CRCPolynomial(testSuite) where
+module TestSuite.Existentials.CRCPolynomial(tests) where
 
-import Data.SBV
 import Data.SBV.Examples.Existentials.CRCPolynomial
 
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-  "crcPolyExist" ~: pgm `goldCheck` "crcPolyExist.gold"
+tests :: TestTree
+tests = testGroup "Existentials.CRCPolynomial" [
+  goldenVsStringShow "crcPolyExist" pgm
  ]
  where pgm = runSAT $ do
                 p <- exists "poly"

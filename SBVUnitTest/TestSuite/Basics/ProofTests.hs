@@ -11,9 +11,6 @@
 
 module TestSuite.Basics.ProofTests(tests)  where
 
-import Data.SBV
-
-import Examples.Basics.ProofTests
 import SBVTest
 
 tests :: TestTree
@@ -30,9 +27,25 @@ tests =
     , testCase "proofs-9" (assertIsSat (exists "x" >>= \x -> return x :: Predicate))
     ]
 
-xyEq ::
-  (EqSymbolic a, SymWord a1) =>
-    (SBV a1 -> SBV Word8 -> a) -> (SBV a1 -> SWord8 -> a) -> Symbolic SBool
+xyEq :: (EqSymbolic a, SymWord a1) => (SBV a1 -> SBV Word8 -> a) -> (SBV a1 -> SWord8 -> a) -> Symbolic SBool
 func1 `xyEq` func2 = do x <- exists_
                         y <- exists_
                         return $ func1 x y .== func2 x (y :: SWord8)
+
+f1, f2, f3, f4 :: Num a => a -> a -> a
+f1 x y = (x+y)*(x-y)
+f2 x y = (x*x)-(y*y)
+f3 x y = (x+y)*(x+y)
+f4 x y = x*x + 2*x*y + y*y
+
+f1eqf2 :: Predicate
+f1eqf2 = forAll_ $ \x y -> f1 x y .== f2 x (y :: SWord8)
+
+f1eqf3 :: Predicate
+f1eqf3 = forAll ["x", "y"] $ \x y -> f1 x y .== f3 x (y :: SWord8)
+
+f3eqf4 :: Predicate
+f3eqf4 = forAll_ $ \x y -> f3 x y .== f4 x (y :: SWord8)
+
+f1Single :: Predicate
+f1Single = forAll_ $ \x -> f1 x x .== (0 :: SWord16)

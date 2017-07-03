@@ -9,19 +9,18 @@
 -- Test suite for Data.SBV.Examples.BitPrecise.Legato
 -----------------------------------------------------------------------------
 
-module TestSuite.BitPrecise.Legato(testSuite) where
+module TestSuite.BitPrecise.Legato(tests) where
 
-import Data.SBV
 import Data.SBV.Internals
 import Data.SBV.Examples.BitPrecise.Legato
 
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-   "legato-1" ~: legatoPgm `goldCheck` "legato.gold"
- , "legato-2" ~: legatoC `goldCheck` "legato_c.gold"
+tests :: TestTree
+tests = testGroup "BitPrecise.Legato" [
+   goldenVsStringShow "legato"   legatoPgm
+ , goldenVsStringShow "legato_c" legatoC
  ]
  where legatoPgm = runSAT $ do
                        addrX   <- free "addrX"

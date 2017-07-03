@@ -12,7 +12,6 @@
 
 module TestSuite.Queries.Int_Mathsat (tests)  where
 
-import Data.SBV
 import Data.SBV.Control
 
 import Control.Monad (unless)

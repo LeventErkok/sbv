@@ -11,9 +11,6 @@
 
 module TestSuite.Puzzles.DogCatMouse(tests) where
 
-import Data.SBV
--- import Data.SBV.Examples.Puzzles.DogCatMouse   -- everything defined here
-
 import SBVTest
 
 -- Test suite

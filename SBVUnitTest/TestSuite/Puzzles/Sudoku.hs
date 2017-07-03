@@ -11,7 +11,6 @@
 
 module TestSuite.Puzzles.Sudoku(tests) where
 
-import Data.SBV
 import Data.SBV.Examples.Puzzles.Sudoku
 
 import SBVTest

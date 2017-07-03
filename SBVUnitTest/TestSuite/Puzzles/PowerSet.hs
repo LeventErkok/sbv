@@ -11,9 +11,6 @@
 
 module TestSuite.Puzzles.PowerSet(tests) where
 
-import Data.SBV
-
-import Examples.Puzzles.PowerSet
 import SBVTest
 
 tests :: TestTree
@@ -22,5 +19,7 @@ tests =
     [ testCase ("powerSet " ++ show i) (assert (pSet i)) | i <- [0 .. 7] ]
 
 pSet :: Int -> IO Bool
-pSet n = do cnt <- numberOfModels $ genPowerSet `fmap` mkExistVars n
+pSet n = do cnt <- numberOfModels $ do _ <- mapM (\i -> sBool ("e" ++ show i)) [1..n]
+                                       -- Look ma! No constraints!
+                                       return (true :: SBool)
             return (cnt == 2^n)

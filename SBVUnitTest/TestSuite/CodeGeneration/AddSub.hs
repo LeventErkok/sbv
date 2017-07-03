@@ -9,7 +9,7 @@
 -- Test suite for Data.SBV.Examples.CodeGeneration.AddSub
 -----------------------------------------------------------------------------
 
-module TestSuite.CodeGeneration.AddSub(testSuite) where
+module TestSuite.CodeGeneration.AddSub(tests) where
 
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.AddSub
@@ -17,9 +17,9 @@ import Data.SBV.Examples.CodeGeneration.AddSub
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-   "addSub" ~: code `goldCheck` "addSub.gold"
+tests :: TestTree
+tests = testGroup "CodeGen.addSub" [
+   goldenVsStringShow "addSub" code
  ]
  where code = compileToC' "addSub" $ do
                 cgSetDriverValues [76, 92]

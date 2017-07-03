@@ -11,7 +11,6 @@
 
 module TestSuite.GenTest.GenTests(tests) where
 
-import Data.SBV
 import Data.SBV.Tools.GenTest
 
 import System.Random

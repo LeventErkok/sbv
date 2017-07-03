@@ -11,19 +11,18 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module TestSuite.CodeGeneration.CgTests(testSuite) where
+module TestSuite.CodeGeneration.CgTests(tests) where
 
-import Data.SBV
 import Data.SBV.Internals
 
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-   "selChecked"   ~: genSelect True  "selChecked"   `goldCheck` "selChecked.gold"
- , "selUnchecked" ~: genSelect False "selUnChecked" `goldCheck` "selUnchecked.gold"
- , "codegen1"     ~: foo `goldCheck` "codeGen1.gold"
+tests :: TestTree
+tests = testGroup "CodeGeneration.CgTests" [
+   goldenVsStringShow "selChecked"   $ genSelect True  "selChecked"
+ , goldenVsStringShow "selUnchecked" $ genSelect False "selUnChecked"
+ , goldenVsStringShow "codegen1"       foo
  ]
  where genSelect b n = compileToC' n $ do
                          cgSetDriverValues [65]

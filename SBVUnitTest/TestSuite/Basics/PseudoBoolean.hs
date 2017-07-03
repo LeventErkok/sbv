@@ -11,7 +11,6 @@
 
 module TestSuite.Basics.PseudoBoolean(tests)  where
 
-import Data.SBV
 import Data.SBV.Control
 import SBVTest
 

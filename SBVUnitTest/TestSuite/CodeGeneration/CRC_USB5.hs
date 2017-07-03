@@ -9,7 +9,7 @@
 -- Test suite for Data.SBV.Examples.CodeGeneration.CRC_USB5
 -----------------------------------------------------------------------------
 
-module TestSuite.CodeGeneration.CRC_USB5(testSuite) where
+module TestSuite.CodeGeneration.CRC_USB5(tests) where
 
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.CRC_USB5
@@ -17,10 +17,10 @@ import Data.SBV.Examples.CodeGeneration.CRC_USB5
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-   "crcUSB5-1" ~: genC crcUSB  `goldCheck` "crcUSB5_1.gold"
- , "crcUSB5-2" ~: genC crcUSB' `goldCheck` "crcUSB5_2.gold"
+tests :: TestTree
+tests = testGroup "CRC.CodeGen" [
+   goldenVsStringShow "crcUSB5_1" $ genC crcUSB
+ , goldenVsStringShow "crcUSB5_2" $ genC crcUSB'
  ]
  where genC f = compileToC' "crcUSB5" $ do
                    cgSetDriverValues [0xFEDC]

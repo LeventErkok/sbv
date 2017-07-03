@@ -11,7 +11,6 @@
 
 module TestSuite.Puzzles.MagicSquare(tests) where
 
-import Data.SBV
 import Data.SBV.Examples.Puzzles.MagicSquare
 
 import SBVTest

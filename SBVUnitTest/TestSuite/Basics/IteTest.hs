@@ -11,8 +11,6 @@
 
 module TestSuite.Basics.IteTest(tests)  where
 
-import Data.SBV
-
 import SBVTest
 
 chk1 :: (SBool -> SBool -> SBool -> SBool) -> SWord8 -> SBool

@@ -11,7 +11,6 @@
 
 module TestSuite.BitPrecise.PrefixSum(tests) where
 
-import Data.SBV
 import Data.SBV.Examples.BitPrecise.PrefixSum
 
 import SBVTest

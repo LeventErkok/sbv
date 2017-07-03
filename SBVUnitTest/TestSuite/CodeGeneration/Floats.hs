@@ -9,17 +9,16 @@
 -- Test-suite for generating floating-point related C code
 -----------------------------------------------------------------------------
 
-module TestSuite.CodeGeneration.Floats(testSuite) where
+module TestSuite.CodeGeneration.Floats(tests) where
 
-import Data.SBV
 import Data.SBV.Internals
 
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-   "floats_cgen" ~: code `goldCheck` "floats_cgen.gold"
+tests :: TestTree
+tests = testGroup "CodeGeneration.Floats" [
+   goldenVsStringShow "floats_cgen" code
  ]
  where code  = compileToCLib' "floatCodeGen" cases
 

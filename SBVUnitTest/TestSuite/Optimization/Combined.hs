@@ -11,7 +11,6 @@
 
 module TestSuite.Optimization.Combined(tests) where
 
-import Data.SBV
 import SBVTest
 
 -- Test suite

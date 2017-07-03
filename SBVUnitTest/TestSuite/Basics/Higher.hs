@@ -11,9 +11,6 @@
 
 module TestSuite.Basics.Higher(tests) where
 
-import Data.SBV
-
-import Examples.Basics.Higher
 import SBVTest
 
 tests :: TestTree
@@ -31,3 +28,26 @@ tests =
     ]
  where double          = (2*) === (\x -> x+(x::SWord8))
        onlyFailsFor128 = (2*) === (\x -> ite (x .== 128) 5 (x+(x::SWord8)))
+
+type B = SWord8
+
+f11 :: B -> B
+f11 x = x
+
+f12 :: B -> (B, B)
+f12 x = (x, x)
+
+f21 :: (B, B) -> B
+f21 (x, y) = x + y
+
+f22 :: (B, B) -> (B, B)
+f22 (x, y) = (x, y)
+
+f31 :: B -> B -> B
+f31 x y = x + y
+
+f32 :: B -> B -> (B, B)
+f32 x y = (x, y)
+
+f33 :: B -> B -> B -> (B, B, B)
+f33 x y z = (x, y, z)

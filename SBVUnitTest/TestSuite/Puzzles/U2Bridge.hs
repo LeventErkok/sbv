@@ -11,7 +11,6 @@
 
 module TestSuite.Puzzles.U2Bridge(tests) where
 
-import Data.SBV
 import Data.SBV.Examples.Puzzles.U2Bridge
 
 import SBVTest

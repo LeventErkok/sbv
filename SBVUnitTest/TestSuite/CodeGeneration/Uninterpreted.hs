@@ -9,7 +9,7 @@
 -- Test suite for Data.SBV.Examples.CodeGeneration.Uninterpreted
 -----------------------------------------------------------------------------
 
-module TestSuite.CodeGeneration.Uninterpreted(testSuite) where
+module TestSuite.CodeGeneration.Uninterpreted(tests) where
 
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.Uninterpreted
@@ -17,9 +17,9 @@ import Data.SBV.Examples.CodeGeneration.Uninterpreted
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-   "cgUninterpret" ~: genC `goldCheck` "cgUninterpret.gold"
+tests :: TestTree
+tests = testGroup "CodeGeneration.Uninterpreted" [
+   goldenVsStringShow "cgUninterpret"  genC
  ]
  where genC = compileToC' "tstShiftLeft" $ do
                   cgSetDriverValues [1, 2, 3]

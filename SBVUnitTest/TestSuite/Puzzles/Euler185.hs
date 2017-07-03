@@ -11,7 +11,6 @@
 
 module TestSuite.Puzzles.Euler185(tests) where
 
-import Data.SBV
 import Data.SBV.Examples.Puzzles.Euler185
 
 import SBVTest

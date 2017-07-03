@@ -9,7 +9,7 @@
 -- Test suite for Data.SBV.Examples.CodeGeneration.Fibonacci
 -----------------------------------------------------------------------------
 
-module TestSuite.CodeGeneration.Fibonacci(testSuite) where
+module TestSuite.CodeGeneration.Fibonacci(tests) where
 
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.Fibonacci
@@ -17,10 +17,10 @@ import Data.SBV.Examples.CodeGeneration.Fibonacci
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-   "fib1" ~: tst [12] "fib1" (fib1 64) `goldCheck` "fib1.gold"
- , "fib2" ~: tst [20] "fib2" (fib2 64) `goldCheck` "fib2.gold"
+tests :: TestTree
+tests = testGroup "CodeGeneration.Fibonacci" [
+   goldenVsStringShow "fib1" $ tst [12] "fib1" (fib1 64)
+ , goldenVsStringShow "fib2" $ tst [20] "fib2" (fib2 64)
  ]
  where tst vs nm f = compileToC' nm $ do cgPerformRTCs True
                                          cgSetDriverValues vs

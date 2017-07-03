@@ -12,7 +12,6 @@
 
 module TestSuite.Queries.Int_Z3 (tests)  where
 
-import Data.SBV
 import Data.SBV.Control
 
 import Control.Monad (unless)

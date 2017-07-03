@@ -9,7 +9,7 @@
 -- Test suite for Data.SBV.Examples.CodeGeneration.PopulationCount
 -----------------------------------------------------------------------------
 
-module TestSuite.CodeGeneration.PopulationCount(testSuite) where
+module TestSuite.CodeGeneration.PopulationCount(tests) where
 
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.PopulationCount
@@ -17,10 +17,10 @@ import Data.SBV.Examples.CodeGeneration.PopulationCount
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-   "popCount-1" ~: genC False `goldCheck` "popCount1.gold"
- , "popCount-2" ~: genC True  `goldCheck` "popCount2.gold"
+tests :: TestTree
+tests = testGroup "CodeGeneration.PopulationCount" [
+   goldenVsStringShow "popCount1" $ genC False
+ , goldenVsStringShow "popCount2" $ genC True
  ]
  where genC b = compileToC' "popCount" $ do
                   cgSetDriverValues [0x0123456789ABCDEF]

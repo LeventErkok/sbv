@@ -13,7 +13,6 @@
 
 module TestSuite.Queries.BasicQuery (tests)  where
 
-import Data.SBV
 import Data.SBV.Control
 
 import SBVTest

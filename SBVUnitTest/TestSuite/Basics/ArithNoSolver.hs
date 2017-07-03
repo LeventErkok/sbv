@@ -13,13 +13,10 @@
 {-# LANGUAGE Rank2Types    #-}
 {-# LANGUAGE TupleSections #-}
 
-module TestSuite.Basics.ArithNoSolver(testSuite) where
+module TestSuite.Basics.ArithNoSolver(tests) where
 
-import Data.SBV
 import Data.SBV.Internals
-
 import Data.Maybe(fromJust, fromMaybe)
-
 import SBVTest
 import qualified Data.Binary.IEEE754 as DB (wordToFloat, wordToDouble, floatToWord, doubleToWord)
 
@@ -27,42 +24,42 @@ ghcBitSize :: Bits a => a -> Int
 ghcBitSize x = fromMaybe (error "SBV.ghcBitSize: Unexpected non-finite usage!") (bitSizeMaybe x)
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \_ -> test $
-        genReals
-     ++ genFloats
-     ++ genQRems
-     ++ genBinTest  "+"                (+)
-     ++ genBinTest  "-"                (-)
-     ++ genBinTest  "*"                (*)
-     ++ genUnTest   "negate"           negate
-     ++ genUnTest   "abs"              abs
-     ++ genUnTest   "signum"           signum
-     ++ genBinTest  ".&."              (.&.)
-     ++ genBinTest  ".|."              (.|.)
-     ++ genBoolTest "<"                (<)  (.<)
-     ++ genBoolTest "<="               (<=) (.<=)
-     ++ genBoolTest ">"                (>)  (.>)
-     ++ genBoolTest ">="               (>=) (.>=)
-     ++ genBoolTest "=="               (==) (.==)
-     ++ genBoolTest "/="               (/=) (./=)
-     ++ genBinTest  "xor"              xor
-     ++ genUnTest   "complement"       complement
-     ++ genIntTest  "shift"            shift
-     ++ genIntTest  "rotate"           rotate
-     ++ genIntTestS "setBit"           setBit
-     ++ genIntTestS "clearBit"         clearBit
-     ++ genIntTestS "complementBit"    complementBit
-     ++ genIntTest  "shift"            shift
-     ++ genIntTestS "shiftL"           shiftL
-     ++ genIntTestS "shiftR"           shiftR
-     ++ genIntTest  "rotate"           rotate
-     ++ genIntTestS "rotateL"          rotateL
-     ++ genIntTestS "rotateR"          rotateR
-     ++ genBlasts
-     ++ genIntCasts
+tests :: TestTree
+tests = testGroup "Arith.NoSolver" $
+           genReals
+        ++ genFloats
+        ++ genQRems
+        ++ genBinTest  "+"             (+)
+        ++ genBinTest  "-"             (-)
+        ++ genBinTest  "*"             (*)
+        ++ genUnTest   "negate"        negate
+        ++ genUnTest   "abs"           abs
+        ++ genUnTest   "signum"        signum
+        ++ genBinTest  ".&."           (.&.)
+        ++ genBinTest  ".|."           (.|.)
+        ++ genBoolTest "<"             (<)  (.<)
+        ++ genBoolTest "<="            (<=) (.<=)
+        ++ genBoolTest ">"             (>)  (.>)
+        ++ genBoolTest ">="            (>=) (.>=)
+        ++ genBoolTest "=="            (==) (.==)
+        ++ genBoolTest "/="            (/=) (./=)
+        ++ genBinTest  "xor"           xor
+        ++ genUnTest   "complement"    complement
+        ++ genIntTest  "shift"         shift
+        ++ genIntTest  "rotate"        rotate
+        ++ genIntTestS "setBit"        setBit
+        ++ genIntTestS "clearBit"      clearBit
+        ++ genIntTestS "complementBit" complementBit
+        ++ genIntTest  "shift"         shift
+        ++ genIntTestS "shiftL"        shiftL
+        ++ genIntTestS "shiftR"        shiftR
+        ++ genIntTest  "rotate"        rotate
+        ++ genIntTestS "rotateL"       rotateL
+        ++ genIntTestS "rotateR"       rotateR
+        ++ genBlasts
+        ++ genIntCasts
 
-genBinTest :: String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [Test]
+genBinTest :: String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [TestTree]
 genBinTest nm op = map mkTest $
         zipWith pair [(show x, show y, x `op` y) | x <- w8s,  y <- w8s ] [x `op` y | x <- sw8s,  y <- sw8s]
      ++ zipWith pair [(show x, show y, x `op` y) | x <- w16s, y <- w16s] [x `op` y | x <- sw16s, y <- sw16s]
@@ -73,10 +70,10 @@ genBinTest nm op = map mkTest $
      ++ zipWith pair [(show x, show y, x `op` y) | x <- i32s, y <- i32s] [x `op` y | x <- si32s, y <- si32s]
      ++ zipWith pair [(show x, show y, x `op` y) | x <- i64s, y <- i64s] [x `op` y | x <- si64s, y <- si64s]
      ++ zipWith pair [(show x, show y, x `op` y) | x <- iUBs, y <- iUBs] [x `op` y | x <- siUBs, y <- siUBs]
-  where pair (x, y, a) b   = (x, y, show (fromIntegral a `asTypeOf` b) == show b)
-        mkTest (x, y, s) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
+  where pair (x, y, a) b = (x, y, show (fromIntegral a `asTypeOf` b) == show b)
+        mkTest (x, y, s) = testCase ("arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y) (s `showsAs` "True")
 
-genBoolTest :: String -> (forall a. Ord a => a -> a -> Bool) -> (forall a. OrdSymbolic a => a -> a -> SBool) -> [Test]
+genBoolTest :: String -> (forall a. Ord a => a -> a -> Bool) -> (forall a. OrdSymbolic a => a -> a -> SBool) -> [TestTree]
 genBoolTest nm op opS = map mkTest $
         zipWith pair [(show x, show y, x `op` y) | x <- w8s,  y <- w8s ] [x `opS` y | x <- sw8s,  y <- sw8s]
      ++ zipWith pair [(show x, show y, x `op` y) | x <- w16s, y <- w16s] [x `opS` y | x <- sw16s, y <- sw16s]
@@ -87,10 +84,10 @@ genBoolTest nm op opS = map mkTest $
      ++ zipWith pair [(show x, show y, x `op` y) | x <- i32s, y <- i32s] [x `opS` y | x <- si32s, y <- si32s]
      ++ zipWith pair [(show x, show y, x `op` y) | x <- i64s, y <- i64s] [x `opS` y | x <- si64s, y <- si64s]
      ++ zipWith pair [(show x, show y, x `op` y) | x <- iUBs, y <- iUBs] [x `opS` y | x <- siUBs, y <- siUBs]
-  where pair (x, y, a) b   = (x, y, Just a == unliteral b)
-        mkTest (x, y, s) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
+  where pair (x, y, a) b = (x, y, Just a == unliteral b)
+        mkTest (x, y, s) = testCase ("arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y) (s `showsAs` "True")
 
-genUnTest :: String -> (forall a. (Num a, Bits a) => a -> a) -> [Test]
+genUnTest :: String -> (forall a. (Num a, Bits a) => a -> a) -> [TestTree]
 genUnTest nm op = map mkTest $
         zipWith pair [(show x, op x) | x <- w8s ] [op x | x <- sw8s ]
      ++ zipWith pair [(show x, op x) | x <- w16s] [op x | x <- sw16s]
@@ -101,10 +98,10 @@ genUnTest nm op = map mkTest $
      ++ zipWith pair [(show x, op x) | x <- i32s] [op x | x <- si32s]
      ++ zipWith pair [(show x, op x) | x <- i64s] [op x | x <- si64s]
      ++ zipWith pair [(show x, op x) | x <- iUBs] [op x | x <- siUBs]
-  where pair (x, a) b   = (x, show (fromIntegral a `asTypeOf` b) == show b)
-        mkTest (x, s) = "arithCF-" ++ nm ++ "." ++ x ~: s `showsAs` "True"
+  where pair (x, a) b = (x, show (fromIntegral a `asTypeOf` b) == show b)
+        mkTest (x, s) = testCase ("arithCF-" ++ nm ++ "." ++ x) (s `showsAs` "True")
 
-genIntTest :: String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [Test]
+genIntTest :: String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [TestTree]
 genIntTest nm op = map mkTest $
         zipWith pair [("u8",  show x, show y, x `op` y) | x <- w8s,  y <- is] [x `op` y | x <- sw8s,  y <- is]
      ++ zipWith pair [("u16", show x, show y, x `op` y) | x <- w16s, y <- is] [x `op` y | x <- sw16s, y <- is]
@@ -116,10 +113,10 @@ genIntTest nm op = map mkTest $
      ++ zipWith pair [("s64", show x, show y, x `op` y) | x <- i64s, y <- is] [x `op` y | x <- si64s, y <- is]
      ++ zipWith pair [("iUB", show x, show y, x `op` y) | x <- iUBs, y <- is] [x `op` y | x <- siUBs, y <- is]
   where pair (t, x, y, a) b       = (t, x, y, show a, show b, show (fromIntegral a `asTypeOf` b) == show b)
-        mkTest (t, x, y, a, b, s) = "arithCF-" ++ nm ++ "." ++ t ++ "_" ++ x ++ "_" ++ y ++ "_" ++ a ++ "_" ++ b ~: s `showsAs` "True"
+        mkTest (t, x, y, a, b, s) = testCase ("arithCF-" ++ nm ++ "." ++ t ++ "_" ++ x ++ "_" ++ y ++ "_" ++ a ++ "_" ++ b) (s `showsAs` "True")
         is = [-10 .. 10]
 
-genIntTestS :: String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [Test]
+genIntTestS :: String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [TestTree]
 genIntTestS nm op = map mkTest $
         zipWith pair [("u8",  show x, show y, x `op` y) | x <- w8s,  y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- sw8s,  y <- [0 .. (ghcBitSize x - 1)]]
      ++ zipWith pair [("u16", show x, show y, x `op` y) | x <- w16s, y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- sw16s, y <- [0 .. (ghcBitSize x - 1)]]
@@ -131,9 +128,9 @@ genIntTestS nm op = map mkTest $
      ++ zipWith pair [("s64", show x, show y, x `op` y) | x <- i64s, y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- si64s, y <- [0 .. (ghcBitSize x - 1)]]
      ++ zipWith pair [("iUB", show x, show y, x `op` y) | x <- iUBs, y <- [0 .. 10]]              [x `op` y | x <- siUBs, y <- [0 .. 10             ]]
   where pair (t, x, y, a) b       = (t, x, y, show a, show b, show (fromIntegral a `asTypeOf` b) == show b)
-        mkTest (t, x, y, a, b, s) = "arithCF-" ++ nm ++ "." ++ t ++ "_" ++ x ++ "_" ++ y ++ "_" ++ a ++ "_" ++ b ~: s `showsAs` "True"
+        mkTest (t, x, y, a, b, s) = testCase ("arithCF-" ++ nm ++ "." ++ t ++ "_" ++ x ++ "_" ++ y ++ "_" ++ a ++ "_" ++ b) (s `showsAs` "True")
 
-genBlasts :: [Test]
+genBlasts :: [TestTree]
 genBlasts = map mkTest $
              [(show x, fromBitsLE (blastLE x) .== x) | x <- sw8s ]
           ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- sw8s ]
@@ -151,13 +148,13 @@ genBlasts = map mkTest $
           ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- sw64s]
           ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- si64s]
           ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- si64s]
-  where mkTest (x, r) = "blast-" ++ x ~: r `showsAs` "True"
+  where mkTest (x, r) = testCase ("blast-" ++ x) (r `showsAs` "True")
 
-genIntCasts :: [Test]
+genIntCasts :: [TestTree]
 genIntCasts = map mkTest $  cast w8s ++ cast w16s ++ cast w32s ++ cast w64s
                          ++ cast i8s ++ cast i16s ++ cast i32s ++ cast i64s
                          ++ cast iUBs
-   where mkTest (x, r) = "intCast-" ++ x ~: r `showsAs` "True"
+   where mkTest (x, r) = testCase ("intCast-" ++ x) (r `showsAs` "True")
          lhs x = sFromIntegral (literal x)
          rhs x = literal (fromIntegral x)
          cast :: forall a. (Show a, Integral a, SymWord a) => [a] -> [(String, SBool)]
@@ -172,7 +169,7 @@ genIntCasts = map mkTest $  cast w8s ++ cast w16s ++ cast w32s ++ cast w64s
                     ++ [(show x, lhs x .== (rhs x :: SInt64))   | x <- xs]
                     ++ [(show x, lhs x .== (rhs x :: SInteger)) | x <- xs]
 
-genQRems :: [Test]
+genQRems :: [TestTree]
 genQRems = map mkTest $
         zipWith pair [("divMod",  show x, show y, x `divMod0`  y) | x <- w8s,  y <- w8s ] [x `sDivMod`  y | x <- sw8s,  y <- sw8s ]
      ++ zipWith pair [("divMod",  show x, show y, x `divMod0`  y) | x <- w16s, y <- w16s] [x `sDivMod`  y | x <- sw16s, y <- sw16s]
@@ -193,7 +190,7 @@ genQRems = map mkTest $
      ++ zipWith pair [("quotRem", show x, show y, x `quotRem1` y) | x <- i64s, y <- i64s] [x `sQuotRem` y | x <- si64s, y <- si64s]
      ++ zipWith pair [("quotRem", show x, show y, x `quotRem0` y) | x <- iUBs, y <- iUBs] [x `sQuotRem` y | x <- siUBs, y <- siUBs]
   where pair (nm, x, y, (r1, r2)) (e1, e2)   = (nm, x, y, show (fromIntegral r1 `asTypeOf` e1, fromIntegral r2 `asTypeOf` e2) == show (e1, e2))
-        mkTest (nm, x, y, s) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
+        mkTest (nm, x, y, s) = testCase ("arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y) (s `showsAs` "True")
         -- Haskell's divMod and quotRem differs from SBV's in two ways:
         --     - when y is 0, Haskell throws an exception, SBV sets the result to 0; like in division
         --     - Haskell overflows if x == minBound and y == -1 for bounded signed types; but SBV returns minBound, 0; which is more meaningful
@@ -205,7 +202,7 @@ genQRems = map mkTest $
         quotRem0 x y = if y == 0       then (0, x) else x `quotRem`  y
         quotRem1 x y = if overflow x y then (x, 0) else x `quotRem0` y
 
-genReals :: [Test]
+genReals :: [TestTree]
 genReals = map mkTest $
         map ("+",)  (zipWith pair [(show x, show y, x +  y) | x <- rs, y <- rs        ] [x +   y | x <- srs,  y <- srs                       ])
      ++ map ("-",)  (zipWith pair [(show x, show y, x -  y) | x <- rs, y <- rs        ] [x -   y | x <- srs,  y <- srs                       ])
@@ -218,9 +215,9 @@ genReals = map mkTest $
      ++ map ("/=",) (zipWith pair [(show x, show y, x /= y) | x <- rs, y <- rs        ] [x ./= y | x <- srs,  y <- srs                       ])
      ++ map ("/",)  (zipWith pair [(show x, show y, x /  y) | x <- rs, y <- rs, y /= 0] [x / y   | x <- srs,  y <- srs, unliteral y /= Just 0])
   where pair (x, y, a) b   = (x, y, Just a == unliteral b)
-        mkTest (nm, (x, y, s)) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
+        mkTest (nm, (x, y, s)) = testCase ("arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y) (s `showsAs` "True")
 
-genFloats :: [Test]
+genFloats :: [TestTree]
 genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
   where bTests = map mkTest2 $  floatRun2  "+"  (+)  (+)   comb
                              ++ doubleRun2 "+"  (+)  (+)   comb
@@ -381,11 +378,11 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
           | isNaN x || isNaN y = f a b
           | True               = a == b
 
-        cvtTest  (nm, x, a, b)  = "arithCF-" ++ nm ++ "." ++ x ~: same (extract a) (extract b) `showsAs` "True"
-        cvtTestI (nm, x, a, b)  = "arithCF-" ++ nm ++ "." ++ x ~: (a == b) `showsAs` "True"
+        cvtTest  (nm, x, a, b)  = testCase ("arithCF-" ++ nm ++ "." ++ x) (same (extract a) (extract b) `showsAs` "True")
+        cvtTestI (nm, x, a, b)  = testCase ("arithCF-" ++ nm ++ "." ++ x) ((a == b) `showsAs` "True")
 
-        mkTest1 (nm, (x, s))    = "arithCF-" ++ nm ++ "." ++ x ~: s `showsAs` "True"
-        mkTest2 (nm, (x, y, s)) = "arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y  ~: s `showsAs` "True"
+        mkTest1 (nm, (x, s))    = testCase ("arithCF-" ++ nm ++ "." ++ x) (s `showsAs` "False")  -- this should choke!
+        mkTest2 (nm, (x, y, s)) = testCase ("arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y) (s `showsAs` "True")
 
         checkPred :: Show a => [a] -> [SBV a] -> (String, SBV a -> SBool, a -> Bool) -> [(String, (String, Bool))]
         checkPred xs sxs (n, ps, p) = zipWith (chk n) (map (\x -> (x, p x)) xs) (map ps sxs)

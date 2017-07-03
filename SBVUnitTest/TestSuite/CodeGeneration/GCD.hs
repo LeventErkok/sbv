@@ -9,7 +9,7 @@
 -- Test suite for Data.SBV.Examples.CodeGeneration.GCD
 -----------------------------------------------------------------------------
 
-module TestSuite.CodeGeneration.GCD(testSuite) where
+module TestSuite.CodeGeneration.GCD(tests) where
 
 import Data.SBV.Internals
 import Data.SBV.Examples.CodeGeneration.GCD
@@ -17,9 +17,9 @@ import Data.SBV.Examples.CodeGeneration.GCD
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-   "gcd" ~: gcdC `goldCheck` "gcd.gold"
+tests :: TestTree
+tests = testGroup "CodeGeneration.GCD" [
+   goldenVsStringShow "gcd" gcdC
  ]
  where gcdC = compileToC' "sgcd" $ do
                 cgSetDriverValues [55,154]

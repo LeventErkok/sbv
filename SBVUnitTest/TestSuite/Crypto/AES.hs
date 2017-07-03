@@ -9,7 +9,7 @@
 -- Test suite for Data.SBV.Examples.Crypto.AES
 -----------------------------------------------------------------------------
 
-module TestSuite.Crypto.AES(testSuite) where
+module TestSuite.Crypto.AES(tests) where
 
 import Data.SBV.Internals
 import Data.SBV.Examples.Crypto.AES
@@ -17,11 +17,11 @@ import Data.SBV.Examples.Crypto.AES
 import SBVTest
 
 -- Test suite
-testSuite :: SBVTestSuite
-testSuite = mkTestSuite $ \goldCheck -> test [
-   "aes128Enc" ~: compileToC'    "aes128Enc" (aes128EncDec True)  `goldCheck` "aes128Enc.gold"
- , "aes128Dec" ~: compileToC'    "aes128Dec" (aes128EncDec False) `goldCheck` "aes128Dec.gold"
- , "aes128Lib" ~: compileToCLib' "aes128Lib" aes128Comps          `goldCheck` "aes128Lib.gold"
+tests :: TestTree
+tests = testGroup "Crypto.AES" [
+   goldenVsStringShow "aes128Enc" $ compileToC'    "aes128Enc" (aes128EncDec True)
+ , goldenVsStringShow "aes128Dec" $ compileToC'    "aes128Dec" (aes128EncDec False)
+ , goldenVsStringShow "aes128Lib" $ compileToCLib' "aes128Lib" aes128Comps
  ]
  where aes128EncDec d = do pt  <- cgInputArr 4 "pt"
                            key <- cgInputArr 4 "key"

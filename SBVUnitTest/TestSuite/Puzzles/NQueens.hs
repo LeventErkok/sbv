@@ -11,7 +11,6 @@
 
 module TestSuite.Puzzles.NQueens(tests) where
 
-import Data.SBV
 import Data.SBV.Examples.Puzzles.NQueens
 
 import SBVTest

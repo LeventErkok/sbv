@@ -11,7 +11,6 @@
 
 module TestSuite.Uninterpreted.AUF where
 
-import Data.SBV
 import Data.SBV.Examples.Uninterpreted.AUF
 
 import SBVTest

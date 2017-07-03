@@ -11,7 +11,6 @@
 
 module TestSuite.Optimization.Reals(tests) where
 
-import Data.SBV
 import SBVTest
 
 -- Test suite
