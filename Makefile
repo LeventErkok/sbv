@@ -70,14 +70,14 @@ test: install tests doctest
 limitedTest: install limitedTests doctest
 
 # use this as follows:
-#         make testPattern TGT="U2Bridge"
+#         make testPattern TGT=U2Bridge
 testPattern:
 	./dist/build/SBVTest/SBVTest -p ${TGT}
 
 doctest:
 	$(call startTimer,$@)
 	@echo "*** Starting inline tests.."
-	@$(TIME) cabal test doctest
+	@$(TIME) ./dist/build/SBVDocTest/SBVDocTest
 	$(call endTimer,$@)
 
 sdist: install
