@@ -35,6 +35,9 @@ install:
 
  # display versions
  - cabal --version
+ - ls $HOME/.cabal/bin
+ - echo $PATH
+ - $HOME/.cabal/bin/happy --version
  - happy --version
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
 
