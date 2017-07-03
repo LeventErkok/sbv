@@ -18,6 +18,7 @@ module SBVTest(
         , assertIsThm, assertIsntThm, assertIsSat, assertIsntSat
         , module Test.Tasty
         , module Test.Tasty.HUnit
+        , goldenString
         , goldenVsStringShow
         , goldenCapturedIO
         , module Test.HUnit
@@ -58,6 +59,9 @@ ioShowsAs r s = do v <- r
 
 goldDir2 :: FilePath
 goldDir2 = "SBVUnitTest/GoldFiles/"
+
+goldenString :: TestName -> IO String -> TestTree
+goldenString n res = goldenVsString n (goldDir2 ++ n ++ ".gold") (fmap LBC.pack res)
 
 goldenVsStringShow :: Show a => TestName -> IO a -> TestTree
 goldenVsStringShow n res = goldenVsString n (goldDir2 ++ n ++ ".gold") (fmap (LBC.pack . show) res)
