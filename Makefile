@@ -6,7 +6,6 @@
 OS := $(shell uname)
 
 SHELL   := /usr/bin/env bash
-TSTSRCS = $(shell find . -name '*.hs' | grep -v SBVUnitTest | grep -v buildUtils | grep -v sandbox)
 
 ifeq ($(OS), Darwin)
 # OSX tends to sleep for long jobs; so run through caffeinate
@@ -78,7 +77,7 @@ testPattern:
 doctest:
 	$(call startTimer,$@)
 	@echo "*** Starting inline tests.."
-	@$(TIME) doctest ${TSTSRCS}
+	@$(TIME) cabal test doctest
 	$(call endTimer,$@)
 
 sdist: install
