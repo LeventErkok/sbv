@@ -19,10 +19,10 @@ notifications:
 
 matrix:
   include:
-    - env: CABALVER=1.24 GHCVER=8.0.1
+    - env: CABALVER=1.24 GHCVER=8.0.1 HAPPYVER=1.19.5
       compiler: ": #GHC 8.0.1"
       addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.1,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
-    - env: CABALVER=1.24 GHCVER=8.0.2
+    - env: CABALVER=1.24 GHCVER=8.0.2 HAPPYVER=1.19.5
       compiler: ": #GHC 8.0.2"
       addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.2,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
 
@@ -30,14 +30,12 @@ matrix:
 before_install:
  - unset CC
  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:~/.cabal/bin:$PATH
+ - export PATH=/opt/happy/$HAPPYVER/bin:$PATH
 
 install:
 
  # display versions
  - cabal --version
- - ls $HOME/.cabal/bin
- - echo $PATH
- - $HOME/.cabal/bin/happy --version
  - happy --version
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
 
