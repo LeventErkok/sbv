@@ -17,7 +17,6 @@ Bug-reports:   http://github.com/LeventErkok/sbv/issues
 Maintainer:    Levent Erkok (erkokl@gmail.com)
 Build-Type:    Simple
 Cabal-Version: >= 1.14
-Data-Files: SBVUnitTest/GoldFiles/*.gold
 Extra-Source-Files: INSTALL, README.md, COPYRIGHT, CHANGES.md
 
 source-repository head
@@ -139,7 +138,7 @@ Library
                   , Data.SBV.Utils.PrettyNum
                   , Data.SBV.Utils.SExpr
 
-Test-Suite SBVTestSuite
+Test-Suite SBVTest
   type            : exitcode-stdio-1.0
   default-language: Haskell2010
   ghc-options     : -Wall -with-rtsopts=-K64m
@@ -154,9 +153,9 @@ Test-Suite SBVTestSuite
                 , tasty        >= 0.11.2
                 , tasty-golden >= 2.3.1.1
                 , tasty-hunit  >= 0.9.2
-  Hs-Source-Dirs  : SBVUnitTest
-  main-is         : SBVTestSuite.hs
-  Other-modules   : SBVTest
+  Hs-Source-Dirs  : SBVTestSuite
+  main-is         : SBVTest.hs
+  Other-modules   : Utils.SBVTestFramework
                   , TestSuite.Arrays.Memory
                   , TestSuite.Basics.AllSat
                   , TestSuite.Basics.ArithNoSolver
