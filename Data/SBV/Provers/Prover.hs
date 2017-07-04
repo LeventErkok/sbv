@@ -23,7 +23,6 @@ module Data.SBV.Provers.Prover (
        , SatModel(..), Modelable(..), displayModels, extractModels
        , getModelDictionaries, getModelValues, getModelUninterpretedValues
        , boolector, cvc4, yices, z3, mathSAT, abc, defaultSMTCfg
-       , generateSMTBenchmarks
        ) where
 
 
@@ -35,7 +34,6 @@ import Control.Exception (finally, throwTo, AsyncException(ThreadKilled))
 
 import System.IO.Unsafe (unsafeInterleaveIO)             -- only used safely!
 
-import System.FilePath   (addExtension)
 import System.Directory  (getCurrentDirectory)
 
 import Data.Time (getZonedTime, NominalDiffTime, UTCTime, getCurrentTime, diffUTCTime)
@@ -319,6 +317,22 @@ class Provable a where
   satWithAny :: [SMTConfig] -> a -> IO (Solver, NominalDiffTime, SatResult)
   satWithAny    = (`sbvWithAny` satWith)
 
+  -- | Create an SMT-Lib2 benchmark. The 'Bool' argument controls whether this is a SAT instance, i.e.,
+  -- translate the query directly, or a PROVE instance, i.e., translate the negated query.
+  generateSMTBenchmark :: Bool -> a -> IO String
+  generateSMTBenchmark isSat a = do
+        t <- getZonedTime
+
+        let comments = ["Automatically created by SBV on " ++ show t]
+            cfg      = defaultSMTCfg { smtLibVersion = SMTLib2 }
+
+        res <- runSymbolic (isSat, cfg) $ (if isSat then forSome_ else forAll_) a >>= output
+
+        let SMTProblem{smtLibPgm} = Control.runProofOn cfg isSat comments res
+            out                   = show (smtLibPgm cfg)
+
+        return $ out ++ "\n(check-sat)\n"
+
 instance Provable Predicate where
   forAll_    = id
   forAll []  = id
@@ -427,29 +441,6 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymW
 -- | Run an arbitrary symbolic computation, equivalent to @'runSMTWith' 'defaultSMTCfg'@
 runSMT :: Symbolic a -> IO a
 runSMT = runSMTWith defaultSMTCfg
-
--- | Create SMT-Lib benchmarks. The first argument is the basename of the file, we will automatically
--- add ".smt2" per SMT-Lib2 convention. The 'Bool' argument controls whether this is a SAT instance, i.e.,
--- translate the query directly, or a PROVE instance, i.e., translate the negated query.
-generateSMTBenchmarks :: Provable a => Bool -> FilePath -> a -> IO ()
-generateSMTBenchmarks isSat f a = mapM_ gen [minBound .. maxBound]
-  where gen v = do s <- compileToSMTLib v
-                   let fn = f `addExtension` smtLibVersionExtension v
-                   writeFile fn s
-                   putStrLn $ "Generated " ++ show v ++ " benchmark " ++ show fn ++ "."
-
-        compileToSMTLib version = do
-                t <- getZonedTime
-
-                let comments = ["Automatically created by SBV on " ++ show t]
-                    cfg      = defaultSMTCfg { smtLibVersion = version }
-
-                res <- runSymbolic (isSat, cfg) $ (if isSat then forSome_ else forAll_) a >>= output
-
-                let SMTProblem{smtLibPgm} = Control.runProofOn cfg isSat comments res
-                    out                   = show (smtLibPgm cfg)
-
-                return $ out ++ "\n(check-sat)\n"
 
 -- | Runs an arbitrary symbolic computation, exposed to the user in SAT mode
 runSMTWith :: SMTConfig -> Symbolic a -> IO a

@@ -116,7 +116,7 @@ module Data.SBV.Dynamic
   , compileToC, compileToCLib
 
   -- ** Compilation to SMTLib
-  , generateSMTBenchmarks
+  , generateSMTBenchmark
   ) where
 
 import Data.Map (Map)
@@ -143,7 +143,7 @@ import Data.SBV                (sbvCheckSolverInstallation, defaultSolverConfig,
 import qualified Data.SBV                as SBV (SBool, proveWithAll, proveWithAny, satWithAll, satWithAny)
 import qualified Data.SBV.Core.Data      as SBV (SBV(..))
 import qualified Data.SBV.Core.Model     as SBV (sbvQuickCheck)
-import qualified Data.SBV.Provers.Prover as SBV (proveWith, satWith, safeWith, allSatWith, generateSMTBenchmarks)
+import qualified Data.SBV.Provers.Prover as SBV (proveWith, satWith, safeWith, allSatWith, generateSMTBenchmark)
 import qualified Data.SBV.SMT.SMT        as SBV (Modelable(getModelAssignment, getModelDictionary))
 
 import Data.Time (NominalDiffTime)
@@ -158,8 +158,8 @@ toSBool = SBV.SBV
 -- | Create SMT-Lib benchmarks. The first argument is the basename of the file, we will automatically
 -- add ".smt2" per SMT-Lib2 convention. The 'Bool' argument controls whether this is a SAT instance, i.e.,
 -- translate the query directly, or a PROVE instance, i.e., translate the negated query.
-generateSMTBenchmarks :: Bool -> FilePath -> Symbolic SVal -> IO ()
-generateSMTBenchmarks isSat f s = SBV.generateSMTBenchmarks isSat f (fmap toSBool s)
+generateSMTBenchmark :: Bool -> Symbolic SVal -> IO String
+generateSMTBenchmark isSat s = SBV.generateSMTBenchmark isSat (fmap toSBool s)
 
 -- | Proves the predicate using the given SMT-solver
 proveWith :: SMTConfig -> Symbolic SVal -> IO ThmResult
