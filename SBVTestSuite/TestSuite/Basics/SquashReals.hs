@@ -17,6 +17,8 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Basics.Reals.Squash"
-    [ goldenVsStringShow "squashReals1" $ sat (\x -> x .>= 0 &&& x*x .== (59::SReal))
-    , goldenVsStringShow "squashReals2" $ sat (\x -> x .>= 0 &&& x*x .== (16::SReal))
+    [ goldenVsStringShow "squashReals1" $ sat                            (\x -> x .>= 0 &&& x*x .== (59::SReal))
+    , goldenVsStringShow "squashReals2" $ sat                            (\x -> x .>= 0 &&& x*x .== (16::SReal))
+    , goldenVsStringShow "squashReals3" $ satWith z3{printRealPrec = 35} (\x -> x .>= 0 &&& x*x .== (59::SReal))
+    , goldenVsStringShow "squashReals4" $ satWith z3{printRealPrec = 35} (\x -> x .>= 0 &&& x*x .== (16::SReal))
     ]
