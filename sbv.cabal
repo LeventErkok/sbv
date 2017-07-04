@@ -168,6 +168,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.ProofTests
                   , TestSuite.Basics.PseudoBoolean
                   , TestSuite.Basics.QRem
+                  , TestSuite.Basics.Quantifiers
                   , TestSuite.Basics.TOut
                   , TestSuite.BitPrecise.BitTricks
                   , TestSuite.BitPrecise.Legato
