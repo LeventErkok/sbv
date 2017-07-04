@@ -145,7 +145,6 @@ void merge(const SWord8 *xs, SWord8 *ys)
   const SWord8 s41 = s14 ? s27 : s40;
   const SWord8 s42 = s28 ? s39 : s13;
   const SWord8 s43 = s20 ? s40 : s42;
-   WILL THIS BE CAUGHT
   const SWord8 s44 = s11 ? s41 : s43;
 
   ys[0] = s12;
