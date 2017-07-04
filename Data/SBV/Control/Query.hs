@@ -640,7 +640,7 @@ infix 1 |->
 (|->) :: SymWord a => SBV a -> a -> Assignment
 SBV a |-> v = case literal v of
                 SBV (SVal _ (Left cw)) -> Assign a cw
-                _                      -> error "Data.SBV: Impossible happened in |->: Cannot construct a CW with a symbolic value!"
+                r                      -> error $ "Data.SBV: Impossible happened in |->: Cannot construct a CW with literal: " ++ show r
 
 -- | Produce the query result from an assignment.
 mkSMTResult :: [Assignment] -> Query SMTResult

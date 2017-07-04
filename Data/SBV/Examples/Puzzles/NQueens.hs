@@ -42,11 +42,5 @@ nQueens n
          dispSolution model
            | lmod /= n = error $ "Impossible! Backend solver returned " ++ show lmod ++ " values, was expecting: " ++ show n
            | True      = do putStr $ show model
-                            let v = isValid n (map literal model)
-                            case unliteral v of
-                              Just True  -> putStrLn " (Valid: True)"
-                              Just False -> do putStrLn " (Valid: False)"
-                                               error $ "Failed to solve!"
-                              Nothing    -> do putStrLn " (Valid: Symbolic!)"
-                                               error $ "Failed to solve!"
+                            putStrLn $ " (Valid: " ++ show (isValid n (map literal model)) ++ ")"
            where lmod  = length model

@@ -208,12 +208,9 @@ sRTN = sRoundTowardNegative
 sRTZ :: SRoundingMode
 sRTZ = sRoundTowardZero
 
--- | Show a symbolic value. Not particularly "desirable," since we can't
--- really show symbolic values, but will do if needed for test purposes.
--- Note that we don't make this a show instance on purpose to make sure we
--- keep it under control and not let it be visible to the end users
-showSBV :: SBV a -> String
-showSBV (SBV sv) = show sv
+-- Not particularly "desirable", but will do if needed
+instance Show (SBV a) where
+  show (SBV sv) = show sv
 
 -- Equality constraint on SBV values. Not desirable since we can't really compare two
 -- symbolic values, but will do.
@@ -458,8 +455,8 @@ declNewSArray mkNm = do
 -- | Declare a new functional symbolic array. Note that a read from an uninitialized cell will result in an error.
 declNewSFunArray :: forall a b. (HasKind a, HasKind b) => Maybe String -> Symbolic (SFunArray a b)
 declNewSFunArray mbNm = return $ SFunArray $ error . msg mbNm
-  where msg Nothing   i = "Reading from an uninitialized array entry, index: " ++ showSBV i
-        msg (Just nm) i = "Array " ++ show nm ++ ": Reading from an uninitialized array entry, index: " ++ showSBV i
+  where msg Nothing   i = "Reading from an uninitialized array entry, index: " ++ show i
+        msg (Just nm) i = "Array " ++ show nm ++ ": Reading from an uninitialized array entry, index: " ++ show i
 
 -- | Arrays implemented internally as functions
 --

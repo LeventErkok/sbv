@@ -112,14 +112,14 @@ toBytes x = [x1, x2, x3, x4]
 -- Q.E.D.
 fromBytes :: [GF28] -> SWord32
 fromBytes [x1, x2, x3, x4] = (x1 # x2) # (x3 # x4)
-fromBytes xs               = error $ "fromBytes: Unexpected (/= 4) input length: " ++ show (length xs)
+fromBytes xs               = error $ "fromBytes: Unexpected input: " ++ show xs
 
 -- | Rotating a state row by a fixed amount to the right.
 rotR :: [GF28] -> Int -> [GF28]
 rotR [a, b, c, d] 1 = [d, a, b, c]
 rotR [a, b, c, d] 2 = [c, d, a, b]
 rotR [a, b, c, d] 3 = [b, c, d, a]
-rotR xs           i = error $ "rotR: Unexpected input: " ++ show (length xs, i)
+rotR xs           i = error $ "rotR: Unexpected input: " ++ show (xs, i)
 
 -----------------------------------------------------------------------------
 -- ** The key schedule

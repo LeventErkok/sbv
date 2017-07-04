@@ -66,11 +66,7 @@ magic n
           | True
           = do putStrLn $ "Solution #" ++ show i
                mapM_ printRow board
-               let good = case unliteral (isMagic sboard) of
-                            Just False -> "False"
-                            Just True  -> "True"
-                            Nothing    -> "Symbolic!"
-               putStrLn $ "Valid Check: " ++ good
+               putStrLn $ "Valid Check: " ++ show (isMagic sboard)
                putStrLn "Done."
           where lmod  = length model
                 board = chunk n model

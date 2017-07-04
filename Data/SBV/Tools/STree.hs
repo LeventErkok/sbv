@@ -47,7 +47,7 @@ readSTree :: (Num i, Bits i, SymWord i, SymWord e) => STree i e -> SBV i -> SBV 
 readSTree s i = walk (blastBE i) s
   where walk []     (SLeaf v)  = v
         walk (b:bs) (SBin l r) = ite b (walk bs r) (walk bs l)
-        walk bs     _          = error $ "SBV.STree.readSTree: Impossible happened! Length: " ++ show (length bs)
+        walk _      _          = error $ "SBV.STree.readSTree: Impossible happened while reading: " ++ show i
 
 -- | Writing a value, similar to how reads are done. The important thing is that the tree
 -- representation keeps updates to a minimum.
@@ -55,7 +55,7 @@ writeSTree :: (Mergeable (SBV e), Num i, Bits i, SymWord i, SymWord e) => STree 
 writeSTree s i j = walk (blastBE i) s
   where walk []     _          = SLeaf j
         walk (b:bs) (SBin l r) = SBin (ite b l (walk bs l)) (ite b (walk bs r) r)
-        walk bs     _          = error $ "SBV.STree.writeSTree: Impossible happened! Length: " ++ show (length bs)
+        walk _      _          = error $ "SBV.STree.writeSTree: Impossible happened while reading: " ++ show i
 
 -- | Construct the fully balanced initial tree using the given values.
 mkSTree :: forall i e. HasKind i => [SBV e] -> STree i e

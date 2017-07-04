@@ -95,7 +95,7 @@ liftC f x y = let (a, b) = f (literal x) (literal y) in (fromJust (unliteral a),
 liftS :: SymWord a => (a -> String) -> SBV a -> String
 liftS f s
   | Just x <- unliteral s = f x
-  | True                  = "<symbolic>"
+  | True                  = show s
 
 -- | Pretty print as a polynomial
 sp :: Bits a => Bool -> a -> String
@@ -137,9 +137,9 @@ ites s xs ys
 polyMult :: (Num a, Bits a, SymWord a, FromBits (SBV a)) => (SBV a, SBV a, [Int]) -> SBV a
 polyMult (x, y, red)
   | isReal x
-  = error $ "SBV.polyMult: Received a real value: " ++ show (unSBV x)
+  = error $ "SBV.polyMult: Received a real value: " ++ show x
   | not (isBounded x)
-  = error $ "SBV.polyMult: Received infinite precision value: " ++ show (unSBV x)
+  = error $ "SBV.polyMult: Received infinite precision value: " ++ show x
   | True
   = fromBitsLE $ genericTake sz $ r ++ repeat false
   where (_, r) = mdp ms rs
@@ -152,9 +152,9 @@ polyMult (x, y, red)
 polyDivMod :: (Num a, Bits a, SymWord a, FromBits (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
 polyDivMod x y
    | isReal x
-   = error $ "SBV.polyDivMod: Received a real value: " ++ show (unSBV x)
+   = error $ "SBV.polyDivMod: Received a real value: " ++ show x
    | not (isBounded x)
-   = error $ "SBV.polyDivMod: Received infinite precision value: " ++ show (unSBV x)
+   = error $ "SBV.polyDivMod: Received infinite precision value: " ++ show x
    | True
    = ite (y .== 0) (0, x) (adjust d, adjust r)
    where adjust xs = fromBitsLE $ genericTake sz $ xs ++ repeat false
@@ -243,9 +243,9 @@ crcBV n m p = take n $ go (replicate n false) (m ++ replicate n false)
 crc :: (FromBits (SBV a), FromBits (SBV b), Num a, Num b, Bits a, Bits b, SymWord a, SymWord b) => Int -> SBV a -> SBV b -> SBV b
 crc n m p
   | isReal m || isReal p
-  = error $ "SBV.crc: Received a real value: " ++ show (unSBV m, unSBV p)
+  = error $ "SBV.crc: Received a real value: " ++ show (m, p)
   | not (isBounded m) || not (isBounded p)
-  = error $ "SBV.crc: Received an infinite precision value: " ++ show (unSBV m, unSBV p)
+  = error $ "SBV.crc: Received an infinite precision value: " ++ show (m, p)
   | True
   = fromBitsBE $ replicate (sz - n) false ++ crcBV n (blastBE m) (blastBE p)
   where sz = intSizeOf p

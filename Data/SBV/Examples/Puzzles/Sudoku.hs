@@ -64,11 +64,7 @@ dispSolution (i, f) (_, fs)
   | lmod /= i = error $ "Impossible! Backend solver returned " ++ show lmod ++ " values, was expecting: " ++ show i
   | True      = do putStrLn "Final board:"
                    mapM_ printRow final
-                   let res = case unliteral (valid final) of
-                                Nothing    -> "Symbolic!"
-                                Just False -> "Failed!"
-                                Just True  -> "True"
-                   putStrLn $ "Valid Check: " ++ res
+                   putStrLn $ "Valid Check: " ++ show (valid final)
                    putStrLn "Done."
   where lmod = length fs
         final = f (map literal fs)
