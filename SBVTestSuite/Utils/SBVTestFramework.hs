@@ -36,7 +36,6 @@ import Test.Tasty.HUnit   (assert, Assertion, testCase)
 
 import Data.SBV
 
--- import Paths_sbv       (getDataDir)
 import System.FilePath ((</>), (<.>))
 
 import Data.SBV.Internals (runSymbolic, Symbolic, Result)
@@ -45,13 +44,6 @@ import Data.SBV.Internals (runSymbolic, Symbolic, Result)
 showsAs :: Show a => a -> String -> Assertion
 showsAs r s = assert $ show r == s
 
-{-
-TODO: Don't I really need something like this?
-
-goldFile :: FilePath -> IO FilePath
-goldFile nm = do d <- getDataDir
-                 return $ d </> "SBVTestSuite" </> "GoldFiles" </> nm <.> "gold"
--}
 goldFile :: FilePath -> FilePath
 goldFile nm = "SBVTestSuite" </> "GoldFiles" </> nm <.> "gold"
 
