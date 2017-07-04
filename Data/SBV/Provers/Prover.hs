@@ -95,10 +95,9 @@ yices = mkConfig Yices.yices SMTLib2 []
 
 -- | Default configuration for the Z3 SMT solver
 z3 :: SMTConfig
-z3 = cfg { solverSetOptions = solverSetOptions cfg ++ [Control.OptionKeyword ":pp.decimal_precision" [show (printRealPrec cfg)]] }
-  where cfg = mkConfig Z3.z3 SMTLib2 [ Control.OptionKeyword ":smtlib2_compliant" ["true"]
-                                     , allOnStdOut
-                                     ]
+z3 = mkConfig Z3.z3 SMTLib2 [ Control.OptionKeyword ":smtlib2_compliant" ["true"]
+                            , allOnStdOut
+                            ]
 
 -- | Default configuration for the MathSAT SMT solver
 mathSAT :: SMTConfig
