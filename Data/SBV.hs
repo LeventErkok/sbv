@@ -228,7 +228,7 @@ module Data.SBV (
   , getModelDictionaries, getModelValues, getModelUninterpretedValues
 
   -- * SMT Interface: Configurations and solvers
-  , SMTConfig(..), SMTLibVersion(..), Solver(..), SMTSolver(..)
+  , SMTConfig(..), Timing(..), SMTLibVersion(..), Solver(..), SMTSolver(..)
   , boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
   , setLogic, setOption, setInfo, setTimeOut
 
@@ -255,6 +255,7 @@ import Data.SBV.Core.Splittable
 import Data.SBV.Provers.Prover
 
 import Data.SBV.Utils.Boolean
+import Data.SBV.Utils.TDiff   (Timing(..))
 
 import Data.Bits
 import Data.Int
