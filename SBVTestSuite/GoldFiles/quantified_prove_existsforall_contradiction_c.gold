@@ -4,7 +4,6 @@
 [GOOD] (set-option :global-declarations true)
 [GOOD] (set-option :smtlib2_compliant true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
-[GOOD] (set-option :pp.decimal_precision 16)
 [GOOD] (set-option :produce-models true)
 [GOOD] (set-logic BV)
 [GOOD] ; --- uninterpreted sorts ---
