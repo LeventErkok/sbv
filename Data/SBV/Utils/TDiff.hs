@@ -10,14 +10,13 @@
 -----------------------------------------------------------------------------
 
 module Data.SBV.Utils.TDiff
-  ( timeIf
-  , Timing(..)
+  ( Timing(..)
   , showTDiff
   )
   where
 
-import Data.Time  (NominalDiffTime, getCurrentTime, diffUTCTime)
-import Data.IORef (IORef, writeIORef)
+import Data.Time  (NominalDiffTime)
+import Data.IORef (IORef)
 
 import Data.List (intercalate)
 
@@ -56,27 +55,3 @@ showTDiff diff
 
          aboveSeconds = map (\(t, v) -> show v ++ [t]) $ dropWhile (\p -> snd p == 0) [('d', days), ('h', hours), ('m', minutes)]
          fields       = aboveSeconds ++ [secondsPicos]
-
--- | If selected, runs the computation @m@, and prints the time it took
--- to run it. The odd second argument is simply there to force the result,
--- and is typically just @rnf@. But @(`seq` ())@ will also do if 'rnf' isn't
--- available for some reason and the WHNF is sufficient.
-timeIf :: Timing -> (a -> ()) -> IO a -> IO a
-timeIf how serialize m =
-  case how of
-    NoTiming         -> m
-    PrintTiming      -> do (elapsed, a) <- doTime serialize m
-                           putStrLn $ "** Elapsed time: " ++ showTDiff elapsed
-                           return a
-    SaveTiming here -> do (elapsed, a) <- doTime serialize m
-                          writeIORef here elapsed
-                          return a
-
-doTime :: (a -> ()) -> IO a -> IO (NominalDiffTime, a)
-doTime serialize m = do start <- getCurrentTime
-                        r     <- m
-                        end   <- serialize r `seq` getCurrentTime
-
-                        let elapsed = diffUTCTime end start
-
-                        elapsed `seq` return (elapsed, r)
