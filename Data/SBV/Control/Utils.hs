@@ -59,6 +59,7 @@ import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, K
                               )
 import Data.SBV.Core.Symbolic (IncState(..), withNewIncState, State(..), svToSW, registerLabel)
 
+import Data.SBV.Core.AlgReals   (mergeAlgReals)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
@@ -268,36 +269,58 @@ getValue s = do sw <- inNewContext (`sbvToSW` s)
                                                                                  Just c  -> return c
                                     _                                       -> bad r Nothing
 
--- | Get the value of a term, but in CW form. Used internally. The model-index, in particular
--- is extremely Z3 specific!
+-- | Get the value of a term, but in CW form. Used internally. The model-index, in particular is extremely Z3 specific!
+getValueCWHelper :: Maybe Int -> SW -> Query CW
+getValueCWHelper mbi s = do
+       let nm  = show s
+           k   = kindOf s
+
+           modelIndex = case mbi of
+                          Nothing -> ""
+                          Just i  -> " :model_index " ++ show i
+
+           cmd        = "(get-value (" ++ nm ++ ")" ++ modelIndex ++ ")"
+
+           bad = unexpected "getModel" cmd ("a value binding for kind: " ++ show k) Nothing
+
+           getUIIndex (KUserSort  _ (Right xs)) i = i `elemIndex` xs
+           getUIIndex _                         _ = Nothing
+
+       r <- ask cmd
+
+       let isIntegral sw = isBoolean sw || isBounded sw || isInteger sw
+
+           extract (ENum    i) | isIntegral      s = return $ mkConstCW  k (fst i)
+           extract (EReal   i) | isReal          s = return $ CW KReal   (CWAlgReal i)
+           extract (EFloat  i) | isFloat         s = return $ CW KFloat  (CWFloat   i)
+           extract (EDouble i) | isDouble        s = return $ CW KDouble (CWDouble  i)
+           extract (ECon    i) | isUninterpreted s = return $ CW k       (CWUserSort (getUIIndex k i, i))
+           extract _                               = bad r Nothing
+
+       parse r bad $ \case EApp [EApp [ECon v, val]] | v == nm -> extract val
+                           _                                   -> bad r Nothing
+
+-- | Get the value of a term. If the kind is Real and solver supports decimal approximations,
+-- we will "squash" the representations.
 getValueCW :: Maybe Int -> SW -> Query CW
-getValueCW mbi s = do let nm  = show s
-                          k   = kindOf s
+getValueCW mbi s
+  | kindOf s /= KReal
+  = getValueCWHelper mbi s
+  | True
+  = do cfg <- getConfig
+       if not (supportsApproxReals (capabilities (solver cfg)))
+          then getValueCWHelper mbi s
+          else do send True "(set-option :pp.decimal false)"
+                  rep1 <- getValueCWHelper mbi s
+                  send True   "(set-option :pp.decimal true)"
+                  send True $ "(set-option :pp.decimal_precision " ++ show (printRealPrec cfg) ++ ")"
+                  rep2 <- getValueCWHelper mbi s
 
-                          modelIndex = case mbi of
-                                         Nothing -> ""
-                                         Just i  -> " :model_index " ++ show i
+                  let bad = unexpected "getValueCW" "get-value" ("a real-valued binding for " ++ show s) Nothing (show (rep1, rep2)) Nothing
 
-                          cmd        = "(get-value (" ++ nm ++ ")" ++ modelIndex ++ ")"
-
-                          bad = unexpected "getModel" cmd ("a value binding for kind: " ++ show k) Nothing
-
-                          getUIIndex (KUserSort  _ (Right xs)) i = i `elemIndex` xs
-                          getUIIndex _                         _ = Nothing
-
-                      r <- ask cmd
-
-                      let isIntegral sw = isBoolean sw || isBounded sw || isInteger sw
-
-                          extract (ENum    i) | isIntegral      s = return $ mkConstCW  k (fst i)
-                          extract (EReal   i) | isReal          s = return $ CW KReal   (CWAlgReal i)
-                          extract (EFloat  i) | isFloat         s = return $ CW KFloat  (CWFloat   i)
-                          extract (EDouble i) | isDouble        s = return $ CW KDouble (CWDouble  i)
-                          extract (ECon    i) | isUninterpreted s = return $ CW k       (CWUserSort (getUIIndex k i, i))
-                          extract _                               = bad r Nothing
-
-                      parse r bad $ \case EApp [EApp [ECon v, val]] | v == nm -> extract val
-                                          _                                   -> bad r Nothing
+                  case (rep1, rep2) of
+                    (CW KReal (CWAlgReal a), CW KReal (CWAlgReal b)) -> return $ CW KReal (CWAlgReal (mergeAlgReals ("Cannot merge real-values for " ++ show s) a b))
+                    _                                                -> bad
 
 -- | Check for satisfiability.
 checkSat :: Query CheckSatResult
