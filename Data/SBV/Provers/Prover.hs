@@ -23,7 +23,7 @@ module Data.SBV.Provers.Prover (
        , SatModel(..), Modelable(..), displayModels, extractModels
        , getModelDictionaries, getModelValues, getModelUninterpretedValues
        , boolector, cvc4, yices, z3, mathSAT, abc, defaultSMTCfg
-       , compileToSMTLib, generateSMTBenchmarks
+       , generateSMTBenchmarks
        ) where
 
 
@@ -428,38 +428,29 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymW
 runSMT :: Symbolic a -> IO a
 runSMT = runSMTWith defaultSMTCfg
 
--- | Compiles to SMT-Lib and returns the resulting program as a string. Useful for saving
--- the result to a file for off-line analysis, for instance if you have an SMT solver that's not natively
--- supported out-of-the box by the SBV library. It takes two arguments:
---
---    * version: The SMTLib-version to produce. Note that we currently only support SMTLib2.
---
---    * isSat  : If 'True', will translate it as a SAT query, i.e., in the positive. If 'False', will
---               translate as a PROVE query, i.e., it will negate the result. (In this case, the check-sat
---               call to the SMT solver will produce UNSAT if the input is a theorem, as usual.)
-compileToSMTLib :: Provable a => SMTLibVersion   -- ^ Version of SMTLib to compile to. (Only SMTLib2 supported currently.)
-                              -> Bool            -- ^ If True, translate directly, otherwise negate the goal. (Use True for SAT queries, False for PROVE queries.)
-                              -> a
-                              -> IO String
-compileToSMTLib version isSat a = do
-        t <- getZonedTime
-        let comments = ["Automatically created by SBV on " ++ show t]
-            cfg      = defaultSMTCfg { smtLibVersion = version }
-        res <- runSymbolic (isSat, cfg) $ (if isSat then forSome_ else forAll_) a >>= output
-        let SMTProblem{smtLibPgm} = Control.runProofOn cfg isSat comments res
-            out = show (smtLibPgm cfg)
-        return $ out ++ "\n(check-sat)\n"
-
--- | Create SMT-Lib benchmarks, for supported versions of SMTLib. The first argument is the basename of the file.
--- The 'Bool' argument controls whether this is a SAT instance, i.e., translate the query
--- directly, or a PROVE instance, i.e., translate the negated query. (See the second boolean argument to
--- 'compileToSMTLib' for details.)
+-- | Create SMT-Lib benchmarks. The first argument is the basename of the file, we will automatically
+-- add ".smt2" per SMT-Lib2 convention. The 'Bool' argument controls whether this is a SAT instance, i.e.,
+-- translate the query directly, or a PROVE instance, i.e., translate the negated query.
 generateSMTBenchmarks :: Provable a => Bool -> FilePath -> a -> IO ()
 generateSMTBenchmarks isSat f a = mapM_ gen [minBound .. maxBound]
-  where gen v = do s <- compileToSMTLib v isSat a
+  where gen v = do s <- compileToSMTLib v
                    let fn = f `addExtension` smtLibVersionExtension v
                    writeFile fn s
                    putStrLn $ "Generated " ++ show v ++ " benchmark " ++ show fn ++ "."
+
+        compileToSMTLib version = do
+                t <- getZonedTime
+
+                let comments = ["Automatically created by SBV on " ++ show t]
+                    cfg      = defaultSMTCfg { smtLibVersion = version }
+
+                res <- runSymbolic (isSat, cfg) $ (if isSat then forSome_ else forAll_) a >>= output
+
+                let SMTProblem{smtLibPgm} = Control.runProofOn cfg isSat comments res
+                    out                   = show (smtLibPgm cfg)
+
+                return $ out ++ "\n(check-sat)\n"
+
 
 -- | Runs an arbitrary symbolic computation, exposed to the user in SAT mode
 runSMTWith :: SMTConfig -> Symbolic a -> IO a

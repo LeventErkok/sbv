@@ -116,7 +116,7 @@ module Data.SBV.Dynamic
   , compileToC, compileToCLib
 
   -- ** Compilation to SMTLib
-  , compileToSMTLib, generateSMTBenchmarks
+  , generateSMTBenchmarks
   ) where
 
 import Data.Map (Map)
@@ -143,7 +143,7 @@ import Data.SBV                (sbvCheckSolverInstallation, defaultSolverConfig,
 import qualified Data.SBV                as SBV (SBool, proveWithAll, proveWithAny, satWithAll, satWithAny)
 import qualified Data.SBV.Core.Data      as SBV (SBV(..))
 import qualified Data.SBV.Core.Model     as SBV (sbvQuickCheck)
-import qualified Data.SBV.Provers.Prover as SBV (proveWith, satWith, safeWith, allSatWith, compileToSMTLib, generateSMTBenchmarks)
+import qualified Data.SBV.Provers.Prover as SBV (proveWith, satWith, safeWith, allSatWith, generateSMTBenchmarks)
 import qualified Data.SBV.SMT.SMT        as SBV (Modelable(getModelAssignment, getModelDictionary))
 
 import Data.Time (NominalDiffTime)
@@ -155,26 +155,9 @@ svQuickCheck = SBV.sbvQuickCheck . fmap toSBool
 toSBool :: SVal -> SBV.SBool
 toSBool = SBV.SBV
 
--- | Compiles to SMT-Lib and returns the resulting program as a string. Useful for saving
--- the result to a file for off-line analysis, for instance if you have an SMT solver that's not natively
--- supported out-of-the box by the SBV library. It takes two arguments:
---
---    * version: The SMTLib-version to produce. Note that we currently only support SMTLib2.
---
---    * isSat  : If 'True', will translate it as a SAT query, i.e., in the positive. If 'False', will
---               translate as a PROVE query, i.e., it will negate the result. (In this case, the check-sat
---               call to the SMT solver will produce UNSAT if the input is a theorem, as usual.)
-compileToSMTLib :: SMTLibVersion   -- ^ If True, output SMT-Lib2, otherwise SMT-Lib1
-                -> Bool            -- ^ If True, translate directly, otherwise negate the goal. (Use True for SAT queries, False for PROVE queries.)
-                -> Symbolic SVal
-                -> IO String
-compileToSMTLib version isSat s = SBV.compileToSMTLib version isSat (fmap toSBool s)
-
--- | Create both SMT-Lib1 and SMT-Lib2 benchmarks. The first argument is the basename of the file,
--- SMT-Lib1 version will be written with suffix ".smt1" and SMT-Lib2 version will be written with
--- suffix ".smt2". The 'Bool' argument controls whether this is a SAT instance, i.e., translate the query
--- directly, or a PROVE instance, i.e., translate the negated query. (See the second boolean argument to
--- 'compileToSMTLib' for details.)
+-- | Create SMT-Lib benchmarks. The first argument is the basename of the file, we will automatically
+-- add ".smt2" per SMT-Lib2 convention. The 'Bool' argument controls whether this is a SAT instance, i.e.,
+-- translate the query directly, or a PROVE instance, i.e., translate the negated query.
 generateSMTBenchmarks :: Bool -> FilePath -> Symbolic SVal -> IO ()
 generateSMTBenchmarks isSat f s = SBV.generateSMTBenchmarks isSat f (fmap toSBool s)
 

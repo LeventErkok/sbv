@@ -25,7 +25,7 @@ module Data.SBV.Internals (
   , genLiteral, genFromCW, CW(..), genMkSymVar, checkAndConvert, genParse, showModel, SMTModel(..), liftQRem, liftDMod
 
   -- * Getting SMT-Lib output (for offline analysis)
-  , compileToSMTLib, generateSMTBenchmarks
+  , generateSMTBenchmarks
 
   -- * Compilation to C, extras
   , compileToC', compileToCLib'
@@ -55,7 +55,7 @@ import Data.SBV.Core.Splittable (checkAndConvert)
 import Data.SBV.Compilers.C       (compileToC', compileToCLib')
 import Data.SBV.Compilers.CodeGen
 
-import Data.SBV.Provers.Prover (compileToSMTLib, generateSMTBenchmarks)
+import Data.SBV.Provers.Prover (generateSMTBenchmarks)
 
 import Data.SBV.SMT.SMT (genParse, showModel)
 
