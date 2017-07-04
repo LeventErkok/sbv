@@ -451,7 +451,6 @@ generateSMTBenchmarks isSat f a = mapM_ gen [minBound .. maxBound]
 
                 return $ out ++ "\n(check-sat)\n"
 
-
 -- | Runs an arbitrary symbolic computation, exposed to the user in SAT mode
 runSMTWith :: SMTConfig -> Symbolic a -> IO a
 runSMTWith cfg a = fst <$> runSymbolicWithResult (SMTMode ISetup True cfg) a
