@@ -596,7 +596,8 @@ instance Show SVal where
   show (SVal k     (Right _)) =         "<symbolic> :: " ++ show k
 
 -- | Equality constraint on SBV values. Not desirable since we can't really compare two
--- symbolic values, but will do.
+-- symbolic values, but will do. The only reason we have this is because we want
+-- Bits instance for SBV, which has an Eq super-class.
 instance Eq SVal where
   SVal _ (Left a) == SVal _ (Left b) = a == b
   a == b = error $ "Comparing symbolic bit-vectors; Use (.==) instead. Received: " ++ show (a, b)

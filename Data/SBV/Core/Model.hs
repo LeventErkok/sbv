@@ -49,7 +49,7 @@ import GHC.Stack
 import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits       (Bits(..))
 import Data.Int        (Int8, Int16, Int32, Int64)
-import Data.List       (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate)
+import Data.List       (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7)
 import Data.Maybe      (fromMaybe)
 import Data.Word       (Word8, Word16, Word32, Word64)
 
@@ -630,7 +630,7 @@ pbToInteger :: String -> Int -> SBool -> Integer
 pbToInteger w c b
  | c < 0                 = error $ "SBV." ++ w ++ ": Non-negative coefficient required, received: " ++ show c
  | Just v <- unliteral b = if v then fromIntegral c else 0
- | True                  = error $ "SBV.pbToInteger: Received a symbolic boolean: " ++ show (c, b)
+ | True                  = error $ "SBV.pbToInteger: Received a symbolic boolean at coefficient " ++ show c
 
 -- | Predicate for optimizing word operations like (+) and (*).
 isConcreteZero :: SBV a -> Bool
@@ -761,13 +761,13 @@ instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
     | SBV (SVal _ (Left (CW _ (CWInteger n)))) <- x
     = testBit n i
     | True
-    = error $ "SBV.testBit: Called on symbolic value: " ++ show x ++ ". Use sTestBit instead."
+    = error "SBV.testBit: Called on symbolic value! Use sTestBit instead."
   -- NB. popCount is *not* implementable on non-concrete symbolic words
   popCount x
     | SBV (SVal _ (Left (CW (KBounded _ w) (CWInteger n)))) <- x
     = popCount (n .&. (bit w - 1))
     | True
-    = error $ "SBV.popCount: Called on symbolic value: " ++ show x ++ ". Use sPopCount instead."
+    = error "SBV.popCount: Called on symbolic value! Use sPopCount instead."
 
 -- | Replacement for 'testBit'. Since 'testBit' requires a 'Bool' to be returned,
 -- we cannot implement it for symbolic words. Index 0 is the least-significant bit.
@@ -1000,7 +1000,7 @@ instance (Show a, Bounded a, Integral a, Num a, SymWord a) => Enum (SBV a) where
 -- | Helper function for use in enum operations
 enumCvt :: (SymWord a, Integral a, Num b) => String -> SBV a -> b
 enumCvt w x = case unliteral x of
-                Nothing -> error $ "Enum." ++ w ++ "{" ++ showType x ++ "}: Called on symbolic value " ++ show x
+                Nothing -> error $ "Enum." ++ w ++ "{" ++ showType x ++ "}: Called on symbolic value!"
                 Just v  -> fromIntegral v
 
 -- | The 'SDivisible' class captures the essence of division.
@@ -1757,7 +1757,7 @@ instance Metric SReal    where minimize nm o = addSValOptGoal (unSBV `fmap` Mini
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where
   property (SBV (SVal _ (Left b))) = property (cwToBool b)
-  property s                       = error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show s ++ ")"
+  property _                       = error "Cannot quick-check in the presence of uninterpreted constants!"
 
 instance Testable (Symbolic SBool) where
    property prop = QC.monadicIO $ do (cond, r, tvals) <- QC.run test
@@ -1771,13 +1771,13 @@ instance Testable (Symbolic SBool) where
 
                      case map fst unints of
                        [] -> case unliteral r of
-                               Nothing -> noQC [show r]
+                               Nothing -> noQC
                                Just b  -> return (cond, b, tvals)
-                       us -> noQC us
+                       _  -> noQC
 
            complain qcInfo = showModel defaultSMTCfg (SMTModel [] qcInfo)
 
-           noQC us         = error $ "Cannot quick-check in the presence of uninterpreted constants: " ++ intercalate ", " us
+           noQC = error "Cannot quick-check in the presence of uninterpreted constants!"
 
 -- | Quick check an SBV property. Note that a regular 'quickCheck' call will work just as
 -- well. Use this variant if you want to receive the boolean result.
