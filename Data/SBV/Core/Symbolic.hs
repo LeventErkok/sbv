@@ -64,6 +64,8 @@ import Data.IORef               (IORef, newIORef, readIORef)
 import Data.List                (intercalate, sortBy)
 import Data.Maybe               (isJust, fromJust, fromMaybe)
 
+import Data.Time (getCurrentTime, UTCTime)
+
 import GHC.Stack
 
 import qualified Data.IORef    as R    (modifyIORef')
@@ -533,6 +535,7 @@ withNewIncState st cont = do
 
 -- | The state of the symbolic interpreter
 data State  = State { pathCond     :: SVal                             -- ^ kind KBool
+                    , startTime    :: UTCTime
                     , runMode      :: IORef SBVRunMode
                     , rIncState    :: IORef IncState
                     , rCInfo       :: IORef [(String, CW)]
@@ -864,6 +867,7 @@ runSymbolic (isSAT, cfg) comp = snd <$> runSymbolicWithResult (SMTMode ISetup is
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
 runSymbolicWithResult :: SBVRunMode -> Symbolic a -> IO (a, Result)
 runSymbolicWithResult currentRunMode (Symbolic c) = do
+   currTime  <- getCurrentTime
    rm        <- newIORef currentRunMode
    ctr       <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
    cInfo     <- newIORef []
@@ -888,6 +892,7 @@ runSymbolicWithResult currentRunMode (Symbolic c) = do
    istate    <- newIORef =<< newIncState
    qstate    <- newIORef Nothing
    let st = State { runMode      = rm
+                  , startTime    = currTime
                   , pathCond     = SVal KBool (Left trueCW)
                   , rIncState    = istate
                   , rCInfo       = cInfo
