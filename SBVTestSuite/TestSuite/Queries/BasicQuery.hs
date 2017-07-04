@@ -26,7 +26,7 @@ tests =
 
 testQuery :: FilePath -> IO ()
 testQuery rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just rf} query1
-                  appendFile rf ("\n FINAL:" ++ show (SatResult r) ++ "\nDONE!")
+                  appendFile rf ("\n FINAL:" ++ show (SatResult r) ++ "\nDONE!\n")
 
 query1 :: Symbolic SMTResult
 query1 = do
