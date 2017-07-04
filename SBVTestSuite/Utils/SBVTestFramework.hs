@@ -36,26 +36,34 @@ import Test.Tasty.HUnit   (assert, Assertion, testCase)
 
 import Data.SBV
 
+-- import Paths_sbv       (getDataDir)
+import System.FilePath ((</>), (<.>))
+
 import Data.SBV.Internals (runSymbolic, Symbolic, Result)
 
 -- | Checks that a particular result shows as @s@
 showsAs :: Show a => a -> String -> Assertion
 showsAs r s = assert $ show r == s
 
--- TODO: Need to use tasty.golden's fascility for generating golden file instead
+{-
+TODO: Don't I really need something like this?
 
-goldDir2 :: FilePath
-goldDir2 = "SBVTestSuite/GoldFiles/"
+goldFile :: FilePath -> IO FilePath
+goldFile nm = do d <- getDataDir
+                 return $ d </> "SBVTestSuite" </> "GoldFiles" </> nm <.> "gold"
+-}
+goldFile :: FilePath -> FilePath
+goldFile nm = "SBVTestSuite" </> "GoldFiles" </> nm <.> "gold"
 
 goldenString :: TestName -> IO String -> TestTree
-goldenString n res = goldenVsString n (goldDir2 ++ n ++ ".gold") (fmap LBC.pack res)
+goldenString n res = goldenVsString n (goldFile n) (fmap LBC.pack res)
 
 goldenVsStringShow :: Show a => TestName -> IO a -> TestTree
-goldenVsStringShow n res = goldenVsString n (goldDir2 ++ n ++ ".gold") (fmap (LBC.pack . show) res)
+goldenVsStringShow n res = goldenVsString n (goldFile n) (fmap (LBC.pack . show) res)
 
 goldenCapturedIO :: TestName -> (FilePath -> IO ()) -> TestTree
 goldenCapturedIO n res = goldenVsFile n gf gfTmp (rm gfTmp >> res gfTmp)
-  where gf    = goldDir2 ++ n ++ ".gold"
+  where gf    = goldFile n
         gfTmp = gf ++ "_temp"
 
         rm f = removeFile f `C.catch` (\(_ :: C.SomeException) -> return ())
