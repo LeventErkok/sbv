@@ -48,7 +48,7 @@ import Data.Word          (Word8, Word16, Word32, Word64)
 
 import Data.IORef (readIORef, writeIORef)
 
-import Data.Time          (getZonedTime, defaultTimeLocale, formatTime)
+import Data.Time          (getZonedTime, defaultTimeLocale, formatTime, diffUTCTime, getCurrentTime)
 
 import System.Directory   (findExecutable)
 import System.Environment (getEnv)
@@ -67,6 +67,7 @@ import Data.SBV.SMT.Utils     (showTimeoutValue, alignPlain, alignDiagnostic, de
 import Data.SBV.Utils.PrettyNum
 import Data.SBV.Utils.Lib       (joinArgs, splitArgs)
 import Data.SBV.Utils.SExpr     (parenDeficit)
+import Data.SBV.Utils.TDiff     (Timing(..), showTDiff)
 
 import qualified System.Timeout as Timeout (timeout)
 
@@ -782,12 +783,14 @@ runSolver cfg ctx execPath opts pgm continuation
       let launchSolver = do startTranscript    (transcript cfg) cfg
                             r <- executeSolver
                             finalizeTranscript (transcript cfg) Nothing
+                            recordEndTime      cfg ctx
                             return r
 
       launchSolver `C.catch` (\(e :: C.SomeException) -> do terminateProcess pid
                                                             ec <- waitForProcess pid
                                                             recordException    (transcript cfg) (show e)
                                                             finalizeTranscript (transcript cfg) (Just ec)
+                                                            recordEndTime      cfg ctx
                                                             C.throwIO e)
 
 -- | In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
@@ -822,6 +825,15 @@ mergeSExpr (x:xs)
        skipBar ('|':cs) = cs
        skipBar (_:cs)   = skipBar cs
        skipBar []       = []                     -- Oh dear, line finished, but the string didn't. We're in trouble. Ignore!
+
+-- | Compute and report the end time
+recordEndTime :: SMTConfig -> State -> IO ()
+recordEndTime SMTConfig{timing} state = case timing of
+                                           NoTiming        -> return ()
+                                           PrintTiming     -> do e <- elapsed
+                                                                 putStrLn $ "*** SBV: Elapsed time: " ++ showTDiff e
+                                           SaveTiming here -> writeIORef here =<< elapsed
+  where elapsed = getCurrentTime >>= \end -> return $ diffUTCTime end (startTime state)
 
 -- | Start a transcript file, if requested.
 startTranscript :: Maybe FilePath -> SMTConfig -> IO ()
