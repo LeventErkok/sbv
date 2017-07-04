@@ -9,9 +9,8 @@
 -- Various goodies for testing SBV
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE    RankNTypes          #-}
-{-# LANGUAGE    ScopedTypeVariables #-}
-{-# OPTIONS_GHC -fno-warn-orphans   #-}
+{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Utils.SBVTestFramework (
           showsAs
@@ -37,11 +36,7 @@ import Test.Tasty.HUnit   (assert, Assertion, testCase)
 
 import Data.SBV
 
-import Data.SBV.Internals (runSymbolic, Symbolic, Result, SBV(..))
-
--- We don't export this out of anywhere, but is darn useful within tests!
-instance Show (SBV a) where
-  show (SBV a) = show a
+import Data.SBV.Internals (runSymbolic, Symbolic, Result)
 
 -- | Checks that a particular result shows as @s@
 showsAs :: Show a => a -> String -> Assertion
