@@ -1,0 +1,21 @@
+(set-option :smtlib2_compliant true)
+(set-option :diagnostic-output-channel "stdout")
+(set-option :produce-models true)
+(set-logic QF_BV)
+; --- uninterpreted sorts ---
+; --- literal constants ---
+(define-fun s_2 () Bool false)
+(define-fun s_1 () Bool true)
+(define-fun s1 () (_ BitVec 8) #x01)
+; --- skolem constants ---
+(declare-fun s0 () (_ BitVec 8))
+; --- constant tables ---
+; --- skolemized tables ---
+; --- arrays ---
+; --- uninterpreted constants ---
+; --- user given axioms ---
+; --- formula ---
+(define-fun s2 () (_ BitVec 8) (bvadd s0 s1))
+(define-fun s3 () Bool (= s0 s2))
+(assert s3)
+(check-sat)

@@ -9,6 +9,7 @@ import qualified TestSuite.Basics.AllSat
 import qualified TestSuite.Basics.ArithNoSolver
 import qualified TestSuite.Basics.ArithSolver
 import qualified TestSuite.Basics.BasicTests
+import qualified TestSuite.Basics.GenBenchmark
 import qualified TestSuite.Basics.Higher
 import qualified TestSuite.Basics.Index
 import qualified TestSuite.Basics.IteTest
@@ -82,6 +83,7 @@ allTests = [ (True,  TestSuite.Arrays.Memory.tests)
            , (False, TestSuite.Basics.ArithNoSolver.tests)
            , (True,  TestSuite.Basics.ArithSolver.tests)
            , (False, TestSuite.Basics.BasicTests.tests)
+           , (False, TestSuite.Basics.GenBenchmark.tests)
            , (True,  TestSuite.Basics.Higher.tests)
            , (True,  TestSuite.Basics.Index.tests)
            , (True,  TestSuite.Basics.IteTest.tests)
