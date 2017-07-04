@@ -58,6 +58,13 @@
     custom queries. See "Data.SBV.Examples.Misc.UnsatCore" for an example.
     Old style of unsat-core extraction is no longer supported.
 
+  * The 'timing' option of SMTConfig has been reworked. Since we now start the
+    solver immediately, it is no longer sensible to distinguish between "SBV" time,
+    "translation" time etc. Instead, we print one simple "Elapsed" time if requested.
+    If you need a detailed timing analysis, use the new 'transcript' option to
+    SMTConfig: It will produce a file with precise timing intervals for each
+    command issued to help you figure out how long each step took.
+
   * The following functions have been reworked, so they now also return
     the time-elapsed for each solver:
 
