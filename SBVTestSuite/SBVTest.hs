@@ -16,6 +16,7 @@ import qualified TestSuite.Basics.ProofTests
 import qualified TestSuite.Basics.PseudoBoolean
 import qualified TestSuite.Basics.QRem
 import qualified TestSuite.Basics.Quantifiers
+import qualified TestSuite.Basics.SquashReals
 import qualified TestSuite.Basics.TOut
 import qualified TestSuite.BitPrecise.BitTricks
 import qualified TestSuite.BitPrecise.Legato
@@ -88,6 +89,7 @@ allTests = [ (True,  TestSuite.Arrays.Memory.tests)
            , (True,  TestSuite.Basics.PseudoBoolean.tests)
            , (True,  TestSuite.Basics.QRem.tests)
            , (True,  TestSuite.Basics.Quantifiers.tests)
+           , (True,  TestSuite.Basics.SquashReals.tests)
            , (True,  TestSuite.Basics.TOut.tests)
            , (True,  TestSuite.BitPrecise.BitTricks.tests)
            , (False, TestSuite.BitPrecise.Legato.tests)
