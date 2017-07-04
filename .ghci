@@ -1,1 +1,1 @@
-:set -i./dist/build/autogen -i./SBVUnitTest
+:set -i./dist/build/autogen -i./SBVTestSuite
