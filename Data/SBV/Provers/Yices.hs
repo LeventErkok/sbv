@@ -30,6 +30,7 @@ yices = SMTSolver {
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
                               , supportsReals              = True
+                              , supportsApproxReals        = False
                               , supportsIEEE754            = False
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False

@@ -41,6 +41,7 @@ z3 = SMTSolver {
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
                               , supportsReals              = True
+                              , supportsApproxReals        = True
                               , supportsIEEE754            = True
                               , supportsOptimization       = True
                               , supportsPseudoBooleans     = True

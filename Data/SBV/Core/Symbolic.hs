@@ -1199,6 +1199,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsUninterpretedSorts :: Bool    -- ^ Support for SMT-Lib2 style uninterpreted-sorts
        , supportsUnboundedInts      :: Bool    -- ^ Support for unbounded integers?
        , supportsReals              :: Bool    -- ^ Support for reals?
+       , supportsApproxReals        :: Bool    -- ^ Supports printing of approximations of reals?
        , supportsIEEE754            :: Bool    -- ^ Support for floating point numbers?
        , supportsOptimization       :: Bool    -- ^ Support for optimization routines?
        , supportsPseudoBooleans     :: Bool    -- ^ Support for pseudo-boolean operations?

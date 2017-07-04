@@ -28,6 +28,7 @@ boolector = SMTSolver {
                               , supportsUninterpretedSorts = False
                               , supportsUnboundedInts      = False
                               , supportsReals              = False
+                              , supportsApproxReals        = False
                               , supportsIEEE754            = False
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False

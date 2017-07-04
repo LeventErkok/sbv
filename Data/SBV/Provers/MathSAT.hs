@@ -32,6 +32,7 @@ mathSAT = SMTSolver {
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
                               , supportsReals              = True
+                              , supportsApproxReals        = False
                               , supportsIEEE754            = True
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False

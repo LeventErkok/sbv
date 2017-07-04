@@ -30,6 +30,7 @@ cvc4 = SMTSolver {
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
                               , supportsReals              = True  -- Not quite the same capability as Z3; but works more or less..
+                              , supportsApproxReals        = False
                               , supportsIEEE754            = False
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
