@@ -20,12 +20,13 @@ import Utils.SBVTestFramework
 -- Test suite
 tests :: TestTree
 tests = testGroup "GenTest.GenTests"
-   [ goldenString "tgen_haskell" $ render (Haskell "haskTest")
-   , goldenString "tgen_c"       $ render (C       "CTest")
-   , goldenString "tgen_forte"   $ render (Forte   "ForteTest" True ([32,32], [32,32,32]))
+   [ goldenCapturedIO "tgen_haskell" $ render (Haskell "haskTest")
+   , goldenCapturedIO "tgen_c"       $ render (C       "CTest")
+   , goldenCapturedIO "tgen_forte"   $ render (Forte   "ForteTest" True ([32,32], [32,32,32]))
    ]
  where simple = genTest 10 $ do x <- sWord32 "x"
                                 y <- sWord32 "y"
                                 return (x+y, x-y, x*y)
-       render s = renderTest s <$> do setStdGen (mkStdGen 0)  -- make sure we always get the same results!
-                                      simple
+       render s f = do setStdGen (mkStdGen 0)  -- make sure we always get the same results!
+                       r <- renderTest s <$> simple
+                       writeFile f r
