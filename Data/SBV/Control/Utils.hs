@@ -18,7 +18,7 @@
 
 module Data.SBV.Control.Utils (
        io
-     , ask, send, getValue, getValueCW, getUnsatAssumptions
+     , ask, send, getValue, getValueCW, getUnsatAssumptions, SMTValue(..)
      , getQueryState, modifyQueryState, getConfig, getObjectives, getSBVAssertions, getQuantifiedInputs
      , checkSat, checkSatUsing, getAllSatResult
      , inNewContext
@@ -226,19 +226,26 @@ retrieveResponse userTag mbTo = do
 class SMTValue a where
   sexprToVal :: SExpr -> Maybe a
 
-  default sexprToVal :: Integral a => SExpr -> Maybe a
-  sexprToVal (ENum (i, _)) = Just $ fromIntegral i
-  sexprToVal _             = Nothing
+  default sexprToVal :: Read a => SExpr -> Maybe a
+  sexprToVal (ECon c) = case reads c of
+                          [(v, "")] -> Just v
+                          _         -> Nothing
+  sexprToVal _        = Nothing
 
-instance SMTValue Int8
-instance SMTValue Int16
-instance SMTValue Int32
-instance SMTValue Int64
-instance SMTValue Word8
-instance SMTValue Word16
-instance SMTValue Word32
-instance SMTValue Word64
-instance SMTValue Integer
+-- | Integral values are easy to convert:
+fromIntegralToVal :: Integral a => SExpr -> Maybe a
+fromIntegralToVal (ENum (i, _)) = Just $ fromIntegral i
+fromIntegralToVal _             = Nothing
+
+instance SMTValue Int8    where sexprToVal = fromIntegralToVal
+instance SMTValue Int16   where sexprToVal = fromIntegralToVal
+instance SMTValue Int32   where sexprToVal = fromIntegralToVal
+instance SMTValue Int64   where sexprToVal = fromIntegralToVal
+instance SMTValue Word8   where sexprToVal = fromIntegralToVal
+instance SMTValue Word16  where sexprToVal = fromIntegralToVal
+instance SMTValue Word32  where sexprToVal = fromIntegralToVal
+instance SMTValue Word64  where sexprToVal = fromIntegralToVal
+instance SMTValue Integer where sexprToVal = fromIntegralToVal
 
 instance SMTValue Float where
    sexprToVal (EFloat f) = Just f
