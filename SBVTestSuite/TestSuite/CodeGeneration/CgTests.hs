@@ -22,7 +22,7 @@ tests :: TestTree
 tests = testGroup "CodeGeneration.CgTests" [
    goldenVsStringShow "selChecked"   $ genSelect True  "selChecked"
  , goldenVsStringShow "selUnchecked" $ genSelect False "selUnChecked"
- , goldenVsStringShow "codegen1"       foo
+ , goldenVsStringShow "codeGen1"       foo
  ]
  where genSelect b n = compileToC' n $ do
                          cgSetDriverValues [65]
