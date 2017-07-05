@@ -25,20 +25,27 @@ import Data.SBV.Control
 -- Case fpIsPositiveZero: Starting
 -- Case fpIsPositiveZero: Unsatisfiable
 -- Case fpIsNormal: Starting
--- Case fpIsNormal: Satisfiable
--- ("fpIsNormal",-3.689405e19)
+-- Case fpIsNormal: Unsatisfiable
+-- Case fpIsSubnormal: Starting
+-- Case fpIsSubnormal: Unsatisfiable
+-- Case fpIsPoint: Starting
+-- Case fpIsPoint: Unsatisfiable
+-- Case fpIsNaN: Starting
+-- Case fpIsNaN: Satisfiable
+-- ("fpIsNaN",NaN)
 csDemo1 :: IO (String, Float)
 csDemo1 = runSMT $ do
 
        x <- sFloat "x"
 
-       constrain $ x .== x + 1 -- yes, in the FP land, this does hold quite often!
+       constrain $ x ./= x -- yes, in the FP land, this does hold
 
        query $ do mbR <- caseSplit True [ ("fpIsNegativeZero", fpIsNegativeZero x)
                                         , ("fpIsPositiveZero", fpIsPositiveZero x)
                                         , ("fpIsNormal",       fpIsNormal       x)
                                         , ("fpIsSubnormal",    fpIsSubnormal    x)
                                         , ("fpIsPoint",        fpIsPoint        x)
+                                        , ("fpIsNaN",          fpIsNaN          x)
                                         ]
 
                   case mbR of
@@ -62,7 +69,7 @@ csDemo2 = runSMT $ do
 
        x <- sInteger "x"
 
-       constrain $ x .>= 10
+       constrain $ x .== 10
 
        query $ do mbR <- caseSplit True [ ("negative"   , x .< 0)
                                         , ("less than 8", x .< 8)
