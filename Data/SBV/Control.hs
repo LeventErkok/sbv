@@ -21,7 +21,7 @@ module Data.SBV.Control (
 
      -- * Querying the solver
      -- ** Extracting values
-     , getValue, getModel, getAssignment, getSMTResult, getUnknownReason
+     , SMTValue(..), getValue, getModel, getAssignment, getSMTResult, getUnknownReason
 
      -- ** Extracting the unsat core
      , getUnsatCore
@@ -76,7 +76,7 @@ import Data.SBV.Core.Symbolic ( Query, IStage(..), SBVRunMode(..), Symbolic, Que
                               )
 
 import Data.SBV.Control.Query
-import Data.SBV.Control.Utils (runProofOn)
+import Data.SBV.Control.Utils (runProofOn, SMTValue(..))
 
 import Data.IORef (readIORef, writeIORef)
 
