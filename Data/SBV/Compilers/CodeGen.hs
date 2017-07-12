@@ -40,7 +40,8 @@ module Data.SBV.Compilers.CodeGen (
         ) where
 
 import Control.Monad             (filterM, replicateM, unless)
-import Control.Monad.Trans       (MonadIO, lift)
+import Control.Monad.Reader      (ask)
+import Control.Monad.Trans       (MonadIO, lift, liftIO)
 import Control.Monad.State.Lazy  (MonadState, StateT(..), modify')
 import Data.Char                 (toLower, isSpace)
 import Data.List                 (nub, isPrefixOf, intercalate, (\\))
@@ -193,7 +194,7 @@ cgAddLDFlags ss = modify' (\s -> s { cgLDFlags = cgLDFlags s ++ ss })
 
 -- | Creates an atomic input in the generated code.
 svCgInput :: Kind -> String -> SBVCodeGen SVal
-svCgInput k nm = do r <- liftSymbolic (svMkSymVar (Just ALL) k Nothing)
+svCgInput k nm = do r  <- liftSymbolic (ask >>= liftIO . svMkSymVar (Just ALL) k Nothing)
                     sw <- liftSymbolic (svToSymSW r)
                     modify' (\s -> s { cgInputs = (nm, CgAtomic sw) : cgInputs s })
                     return r
@@ -202,7 +203,7 @@ svCgInput k nm = do r <- liftSymbolic (svMkSymVar (Just ALL) k Nothing)
 svCgInputArr :: Kind -> Int -> String -> SBVCodeGen [SVal]
 svCgInputArr k sz nm
   | sz < 1 = error $ "SBV.cgInputArr: Array inputs must have at least one element, given " ++ show sz ++ " for " ++ show nm
-  | True   = do rs <- liftSymbolic $ replicateM sz (svMkSymVar (Just ALL) k Nothing)
+  | True   = do rs  <- liftSymbolic $ ask >>= liftIO . replicateM sz . svMkSymVar (Just ALL) k Nothing
                 sws <- liftSymbolic $ mapM svToSymSW rs
                 modify' (\s -> s { cgInputs = (nm, CgArray sws) : cgInputs s })
                 return rs

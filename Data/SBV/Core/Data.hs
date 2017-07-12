@@ -234,7 +234,7 @@ sbvToSW st (SBV s) = svToSW st s
 
 -- | Create a symbolic variable.
 mkSymSBV :: forall a. Maybe Quantifier -> Kind -> Maybe String -> Symbolic (SBV a)
-mkSymSBV mbQ k mbNm = SBV <$> svMkSymVar mbQ k mbNm
+mkSymSBV mbQ k mbNm = SBV <$> (ask >>= liftIO . svMkSymVar mbQ k mbNm)
 
 -- | Convert a symbolic value to an SW, inside the Symbolic monad
 sbvToSymSW :: SBV a -> Symbolic SW
@@ -387,7 +387,7 @@ class (HasKind a, Ord a) => SymWord a where
   fromCW cw                         = error $ "Cannot convert CW " ++ show cw ++ " to kind " ++ show (kindOf (undefined :: a))
 
   default mkSymWord :: (Read a, G.Data a) => Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
-  mkSymWord mbQ mbNm = SBV <$> svMkSymVar mbQ k mbNm
+  mkSymWord mbQ mbNm = SBV <$> (ask >>= liftIO . svMkSymVar mbQ k mbNm)
     where k = constructUKind (undefined :: a)
 
 instance (Random a, SymWord a) => Random (SBV a) where

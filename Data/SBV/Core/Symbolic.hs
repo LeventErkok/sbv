@@ -797,10 +797,9 @@ newtype Symbolic a = Symbolic (ReaderT State IO a)
 -- pick the quantifier appropriately based on the run-mode.
 -- @randomCW@ is used for generating random values for this variable
 -- when used for 'quickCheck' or 'genTest' purposes.
-svMkSymVar :: Maybe Quantifier -> Kind -> Maybe String -> Symbolic SVal
-svMkSymVar mbQ k mbNm = do
-        st <- ask
-        rm <- liftIO $ readIORef (runMode st)
+svMkSymVar :: Maybe Quantifier -> Kind -> Maybe String -> State -> IO SVal
+svMkSymVar mbQ k mbNm st = do
+        rm <- readIORef (runMode st)
 
         let varInfo = case mbNm of
                         Nothing -> ", of type " ++ show k
@@ -812,13 +811,13 @@ svMkSymVar mbQ k mbNm = do
               | isUninterpreted k  = disallow "Uninterpreted sorts"
               | True               = cont
 
-            mkS q = do (sw, internalName) <- liftIO $ newSW st k
+            mkS q = do (sw, internalName) <- newSW st k
                        let nm = fromMaybe internalName mbNm
                        introduceUserName st nm k q sw
 
-            mkC   = do cw <- liftIO (randomCW k)
-                       liftIO $ do registerKind st k
-                                   modifyState st rCInfo ((fromMaybe "_" mbNm, cw):) (return ())
+            mkC   = do cw <- randomCW k
+                       do registerKind st k
+                          modifyState st rCInfo ((fromMaybe "_" mbNm, cw):) (return ())
                        return $ SVal k (Left cw)
 
         case (mbQ, rm) of
@@ -832,17 +831,17 @@ svMkSymVar mbQ k mbNm = do
           (_      ,  Concrete{})       -> noUI mkC
 
 -- | Introduce a new user name. We die if repeated.
-introduceUserName :: State -> String -> Kind -> Quantifier -> SW -> Symbolic SVal
-introduceUserName st nm k q sw = do is <- liftIO $ readIORef (rinps st)
+introduceUserName :: State -> String -> Kind -> Quantifier -> SW -> IO SVal
+introduceUserName st nm k q sw = do is <- readIORef (rinps st)
                                     if nm `elem` [n | (_, (_, n)) <- is]
                                        then error $ "SBV: Repeated user given name: " ++ show nm ++ ". Please use unique names."
-                                       else do liftIO $ modifyState st rinps ((q, (sw, nm)):)
-                                                                  $ noInteractive [ "Adding a new named input:"
-                                                                                  , "  Name      : " ++ show nm
-                                                                                  , "  Kind      : " ++ show k
-                                                                                  , "  Quantifier: " ++ if q == EX then "existential" else "universal"
-                                                                                  , "  Node      : " ++ show sw
-                                                                                  ]
+                                       else do modifyState st rinps ((q, (sw, nm)):)
+                                                         $ noInteractive [ "Adding a new named input:"
+                                                                         , "  Name      : " ++ show nm
+                                                                         , "  Kind      : " ++ show k
+                                                                         , "  Quantifier: " ++ if q == EX then "existential" else "universal"
+                                                                         , "  Node      : " ++ show sw
+                                                                         ]
                                                return $ SVal k $ Right $ cache (const (return sw))
 
 -- | Add a user specified axiom to the generated SMT-Lib file. The first argument is a mere
@@ -984,10 +983,10 @@ addSValOptGoal :: Objective SVal -> Symbolic ()
 addSValOptGoal obj = do st <- ask
 
                         -- create the tracking variable here for the metric
-                        let mkGoal nm orig = do origSW  <- liftIO $ svToSW st orig
-                                                track   <- svMkSymVar (Just EX) (kindOf orig) (Just nm)
-                                                trackSW <- liftIO $ svToSW st track
-                                                return (origSW, trackSW)
+                        let mkGoal nm orig = liftIO $ do origSW  <- svToSW st orig
+                                                         track   <- svMkSymVar (Just EX) (kindOf orig) (Just nm) st
+                                                         trackSW <- svToSW st track
+                                                         return (origSW, trackSW)
 
                         let walk (Minimize   nm v)     = Minimize nm              <$> mkGoal nm v
                             walk (Maximize   nm v)     = Maximize nm              <$> mkGoal nm v
