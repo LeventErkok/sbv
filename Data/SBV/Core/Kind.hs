@@ -26,7 +26,7 @@ data Kind = KBool
           | KBounded !Bool !Int
           | KUnbounded
           | KReal
-          | KUserSort String (Either String [String])
+          | KUserSort String (Either String [String])  -- name. Left: uninterpreted. Right: enum constructors.
           | KFloat
           | KDouble
 
