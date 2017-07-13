@@ -44,7 +44,9 @@ type SMTLibConverter a =  Set.Set Kind                 -- ^ Kinds used in the pr
                        -> a
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
-type SMTLibIncConverter a =  [(SW, CW)]    -- ^ constants
+type SMTLibIncConverter a =  [NamedSymVar] -- ^ inputs
+                          -> Set.Set Kind  -- ^ Newly registered kinds
+                          -> [(SW, CW)]    -- ^ constants
                           -> SBVPgm        -- ^ assignments
                           -> SMTConfig     -- ^ configuration
                           -> a

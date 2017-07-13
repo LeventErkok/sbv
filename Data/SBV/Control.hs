@@ -16,6 +16,9 @@ module Data.SBV.Control (
      -- $queryIntro
        Query, query
 
+     -- * Create a fresh variable
+     , freshVar_, freshVar
+
      -- * Checking satisfiability
      , CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet
 

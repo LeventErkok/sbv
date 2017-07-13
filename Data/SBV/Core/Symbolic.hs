@@ -509,16 +509,22 @@ isCodeGenMode State{runMode} = do rm <- readIORef runMode
                                              CodeGen    -> True
 
 -- | The state in query mode, i.e., additional context
-data IncState = IncState { rNewConsts :: IORef CnstMap
+data IncState = IncState { rNewInps   :: IORef [NamedSymVar]   -- always existential!
+                         , rNewKinds  :: IORef KindSet
+                         , rNewConsts :: IORef CnstMap
                          , rNewAsgns  :: IORef SBVPgm
                          }
 
 -- | Get a new IncState
 newIncState :: IO IncState
 newIncState = do
+        is  <- newIORef []
+        ks  <- newIORef Set.empty
         nc  <- newIORef Map.empty
         pgm <- newIORef (SBVPgm S.empty)
-        return IncState { rNewConsts = nc
+        return IncState { rNewInps   = is
+                        , rNewKinds  = ks
+                        , rNewConsts = nc
                         , rNewAsgns  = pgm
                         }
 
@@ -607,7 +613,7 @@ instance Eq SVal where
   a /= b = error $ "Comparing symbolic bit-vectors; Use (./=) instead. Received: " ++ show (a, b)
 
 -- | Things we do not support in interactive mode, at least for now!
-noInteractive :: [String] -> IO ()
+noInteractive :: [String] -> a
 noInteractive ss = error $ unlines $  ""
                                    :  "*** Data.SBV: Unsupported interactive/query mode feature."
                                    :  map ("***  " ++) ss
@@ -705,7 +711,8 @@ registerKind st k
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | True
   = do ks <- readIORef (rUsedKinds st)
-       unless (k `Set.member` ks) $ modifyState st rUsedKinds (Set.insert k) (return ())
+       unless (k `Set.member` ks) $ modifyState st rUsedKinds (Set.insert k)
+                                              $ modifyIncState st rNewKinds (Set.insert k)
 
 -- | Register a new label with the system, making sure they are unique and have no '|'s in them
 registerLabel :: State -> String -> IO ()
@@ -835,13 +842,17 @@ introduceUserName :: State -> String -> Kind -> Quantifier -> SW -> IO SVal
 introduceUserName st nm k q sw = do is <- readIORef (rinps st)
                                     if nm `elem` [n | (_, (_, n)) <- is]
                                        then error $ "SBV: Repeated user given name: " ++ show nm ++ ". Please use unique names."
-                                       else do modifyState st rinps ((q, (sw, nm)):)
-                                                         $ noInteractive [ "Adding a new named input:"
-                                                                         , "  Name      : " ++ show nm
-                                                                         , "  Kind      : " ++ show k
-                                                                         , "  Quantifier: " ++ if q == EX then "existential" else "universal"
-                                                                         , "  Node      : " ++ show sw
-                                                                         ]
+                                       else do let newInp olds = case q of
+                                                                   EX  -> (sw, nm) : olds
+                                                                   ALL -> noInteractive [ "Adding a new universally quantified: "
+                                                                                        , "  Name      : " ++ show nm
+                                                                                        , "  Kind      : " ++ show k
+                                                                                        , "  Quantifier: Universal"
+                                                                                        , "  Node      : " ++ show sw
+                                                                                        , "Only existential variables are supported in query mode."
+                                                                                        ]
+                                               modifyState st rinps ((q, (sw, nm)):)
+                                                         $ modifyIncState st rNewInps newInp
                                                return $ SVal k $ Right $ cache (const (return sw))
 
 -- | Add a user specified axiom to the generated SMT-Lib file. The first argument is a mere

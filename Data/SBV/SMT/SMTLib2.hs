@@ -212,17 +212,19 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
         userName s = case s `lookup` map snd inputs of
                         Just u  | show s /= u -> " ; tracks user variable " ++ show u
                         _ -> ""
-        -- following sorts are built-in; do not translate them:
-        builtInSort = (`elem` ["RoundingMode"])
-        declSort (s, _)
-          | builtInSort s           = []
-        declSort (s, Left  r ) = ["(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted: " ++ r]
-        declSort (s, Right fs) = [ "(declare-datatypes () ((" ++ s ++ " " ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
-                                 , "(define-fun " ++ s ++ "_constrIndex ((x " ++ s ++ ")) Int"
-                                 ] ++ ["   " ++ body fs (0::Int)] ++ [")"]
-                where body []     _ = ""
-                      body [_]    i = show i
-                      body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
+
+-- | Declare new sorts
+declSort :: (String, Either String [String]) -> [String]
+declSort (s, _)
+  | s == "RoundingMode" -- built-in-sort; so don't declare.
+  = []
+declSort (s, Left  r ) = ["(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted: " ++ r]
+declSort (s, Right fs) = [ "(declare-datatypes () ((" ++ s ++ " " ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
+                         , "(define-fun " ++ s ++ "_constrIndex ((x " ++ s ++ ")) Int"
+                         ] ++ ["   " ++ body fs (0::Int)] ++ [")"]
+        where body []     _ = ""
+              body [_]    i = show i
+              body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
 
 -- | Things we do not support in interactive mode, at least for now!
 noInteractive :: [String] -> a
@@ -233,12 +235,16 @@ noInteractive ss = error $ unlines $  ""
 
 -- | Convert in a query context
 cvtInc :: SMTLibIncConverter [String]
-cvtInc consts (SBVPgm asgnsSeq) cfg =  map (declConst cfg)                    consts
-                                    ++ map (declDef   cfg skolemMap tableMap) (F.toList asgnsSeq)
+cvtInc inps ks consts (SBVPgm asgnsSeq) cfg =  concatMap declSort                           [(s, dt) | KUserSort s dt <- Set.toList ks]
+                                            ++ map       (declConst cfg)                    consts
+                                            ++ map       declInp                            inps
+                                            ++ map       (declDef   cfg skolemMap tableMap) (F.toList asgnsSeq)
   where -- NB. The below setting of skolemMap to empty is OK, since we do
         -- not support queries in the context of skolemized variables
         skolemMap = M.empty
         tableMap  = noInteractive ["Programs with constant tabled data"]
+
+        declInp (s, _) = "(declare-fun " ++ show s ++ " () " ++ swType s ++ ")"
 
 declDef :: SMTConfig -> SkolemMap -> TableMap -> (SW, SBVExpr) -> String
 declDef cfg skolemMap tableMap (s, expr) =

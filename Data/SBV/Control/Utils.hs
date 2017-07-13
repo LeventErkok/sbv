@@ -21,7 +21,7 @@ module Data.SBV.Control.Utils (
      , ask, send, getValue, getValueCW, getUnsatAssumptions, SMTValue(..)
      , getQueryState, modifyQueryState, getConfig, getObjectives, getSBVAssertions, getQuantifiedInputs
      , checkSat, checkSatUsing, getAllSatResult
-     , inNewContext
+     , inNewContext, freshVar, freshVar_
      , parse
      , unexpected
      , timeout
@@ -55,15 +55,15 @@ import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, K
                               , QueryState(..), SVal(..), Quantifier(..), cache
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
-                              , Result(..), SMTProblem(..), trueSW
+                              , Result(..), SMTProblem(..), trueSW, SymWord(..)
                               )
-import Data.SBV.Core.Symbolic (IncState(..), withNewIncState, State(..), svToSW, registerLabel)
+import Data.SBV.Core.Symbolic (IncState(..), withNewIncState, State(..), svToSW, registerLabel, svMkSymVar)
 
 import Data.SBV.Core.AlgReals   (mergeAlgReals)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
-import Data.SBV.SMT.Utils   (showTimeoutValue, annotateWithName, alignDiagnostic, alignPlain, debug)
+import Data.SBV.SMT.Utils   (showTimeoutValue, annotateWithName, alignDiagnostic, alignPlain, debug, mergeSExpr)
 
 import Data.SBV.Utils.SExpr
 import Data.SBV.Control.Types
@@ -118,10 +118,12 @@ syncUpSolver is = do
         cfg <- getConfig
         ls  <- io $ do let swapc ((_, a), b)   = (b, a)
                            cmp   (a, _) (b, _) = a `compare` b
-                       cnsts <- (sortBy cmp . map swapc . Map.toList) `fmap` readIORef (rNewConsts is)
+                       inps  <- reverse <$> readIORef (rNewInps is)
+                       ks    <- readIORef (rNewKinds is)
+                       cnsts <- sortBy cmp . map swapc . Map.toList <$> readIORef (rNewConsts is)
                        as    <- readIORef (rNewAsgns is)
-                       return $ toIncSMTLib cfg cnsts as cfg
-        mapM_ (send True) ls
+                       return $ toIncSMTLib cfg inps ks cnsts as cfg
+        mapM_ (send True) (mergeSExpr ls)
 
 -- | Retrieve the query context
 getQueryState :: Query QueryState
@@ -152,6 +154,22 @@ inNewContext act = do st <- get
                       (is, r) <- io $ withNewIncState st act
                       syncUpSolver is
                       return r
+
+-- | Similar to 'freshVar', except creates unnamed variable.
+freshVar_ :: forall a. SymWord a => Query (SBV a)
+freshVar_ = inNewContext $ fmap SBV . svMkSymVar (Just EX) k Nothing
+  where k = kindOf (undefined :: a)
+
+-- | Create a fresh variable in query mode. You should prefer
+-- creating input variables using 'sBool', 'sInt32', etc., which act
+-- as primary inputs to the model and can be existential or universal.
+-- Use 'freshVar' only in query mode for anonymous temporary variables.
+-- Such variables are always existential. Note that 'freshVar' should hardly be
+-- needed: Your input variables and symbolic expressions should suffice for
+-- most major use cases.
+freshVar :: forall a. SymWord a => String -> Query (SBV a)
+freshVar nm = inNewContext $ fmap SBV . svMkSymVar (Just EX) k (Just nm)
+  where k = kindOf (undefined :: a)
 
 -- | Internal diagnostic messages.
 queryDebug :: [String] -> Query ()
