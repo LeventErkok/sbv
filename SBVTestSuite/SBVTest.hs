@@ -65,6 +65,7 @@ import qualified TestSuite.Queries.Int_CVC4
 import qualified TestSuite.Queries.Int_Mathsat
 import qualified TestSuite.Queries.Int_Yices
 import qualified TestSuite.Queries.Int_Z3
+import qualified TestSuite.Queries.Uninterpreted
 import qualified TestSuite.Uninterpreted.AUF
 import qualified TestSuite.Uninterpreted.Axioms
 import qualified TestSuite.Uninterpreted.Function
@@ -141,6 +142,7 @@ allTests = [ (True,  TestSuite.Arrays.Memory.tests)
            , (True,  TestSuite.Queries.Int_Mathsat.tests)
            , (True,  TestSuite.Queries.Int_Yices.tests)
            , (True,  TestSuite.Queries.Int_Z3.tests)
+           , (True,  TestSuite.Queries.Uninterpreted.tests)
            , (True,  TestSuite.Uninterpreted.AUF.tests)
            , (True,  TestSuite.Uninterpreted.Axioms.tests)
            , (True,  TestSuite.Uninterpreted.Function.tests)
