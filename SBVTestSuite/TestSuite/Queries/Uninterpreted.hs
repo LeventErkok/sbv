@@ -11,7 +11,6 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
-{-# LANGUAGE DeriveAnyClass      #-}
 
 module TestSuite.Queries.Uninterpreted where
 
