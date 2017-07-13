@@ -18,7 +18,7 @@
 
 module Data.SBV.Control.Utils (
        io
-     , ask, send, getValue, getValueCW, getUnsatAssumptions, SMTValue(..)
+     , ask, send, getValue, getUninterpretedValue, getValueCW, getUnsatAssumptions, SMTValue(..)
      , getQueryState, modifyQueryState, getConfig, getObjectives, getSBVAssertions, getQuantifiedInputs
      , checkSat, checkSatUsing, getAllSatResult
      , inNewContext, freshVar, freshVar_
@@ -293,6 +293,30 @@ getValue s = do sw <- inNewContext (`sbvToSW` s)
                                                                                  Nothing -> bad r Nothing
                                                                                  Just c  -> return c
                                     _                                       -> bad r Nothing
+
+-- | Get the value of an uninterpreted sort, as a String
+getUninterpretedValue :: HasKind a => SBV a -> Query String
+getUninterpretedValue s =
+        case kindOf s of
+          KUserSort _ (Left _) -> do sw <- inNewContext (`sbvToSW` s)
+
+                                     let nm  = show sw
+                                         cmd = "(get-value (" ++ nm ++ "))"
+                                         bad = unexpected "getValue" cmd "a model value" Nothing
+
+                                     r <- ask cmd
+
+                                     parse r bad $ \case EApp [EApp [ECon o,  ECon v]] | o == show sw -> return v
+                                                         _                                             -> bad r Nothing
+
+          k                    -> error $ unlines [""
+                                                  , "*** SBV.getUninterpretedValue: Called on an 'interpreted' kind"
+                                                  , "*** "
+                                                  , "***    Kind: " ++ show k
+                                                  , "***    Hint: Use 'getValue' to extract value for interpreted kinds."
+                                                  , "*** "
+                                                  , "*** Only truly uninterpreted sorts should be used with 'getUninterpretedValue.'"
+                                                  ]
 
 -- | Get the value of a term, but in CW form. Used internally. The model-index, in particular is extremely Z3 specific!
 getValueCWHelper :: Maybe Int -> SW -> Query CW
@@ -587,3 +611,5 @@ runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls
                                 , smtAsserts=assertions, smtOptions=options, smtLibPgm=smtScript}
 
      in rnf problem `seq` problem
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
