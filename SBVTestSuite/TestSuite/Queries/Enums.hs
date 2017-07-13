@@ -31,9 +31,9 @@ data BinOp  = Plus | Minus | Times deriving (Eq, Ord, Show, Read, Data, SymWord,
 type SBinOp = SBV BinOp
 
 test :: Symbolic ()
-test = do (p :: SBinOp) <- free "p"
-          (m :: SBinOp) <- free "m"
-          (t :: SBinOp) <- free "t"
+test = do p :: SBinOp <- free "p"
+          m :: SBinOp <- free "m"
+          t :: SBinOp <- free "t"
 
           constrain $ p .<= m
           constrain $ m .<= t
