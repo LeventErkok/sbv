@@ -58,6 +58,7 @@ import qualified TestSuite.Puzzles.Temperature
 import qualified TestSuite.Puzzles.U2Bridge
 import qualified TestSuite.Queries.BasicQuery
 import qualified TestSuite.Queries.Enums
+import qualified TestSuite.Queries.FreshVars
 import qualified TestSuite.Queries.Int_ABC
 import qualified TestSuite.Queries.Int_Boolector
 import qualified TestSuite.Queries.Int_CVC4
@@ -133,6 +134,7 @@ allTests = [ (True,  TestSuite.Arrays.Memory.tests)
            , (True,  TestSuite.Puzzles.U2Bridge.tests)
            , (True,  TestSuite.Queries.BasicQuery.tests)
            , (True,  TestSuite.Queries.Enums.tests)
+           , (True,  TestSuite.Queries.FreshVars.tests)
            , (True,  TestSuite.Queries.Int_ABC.tests)
            , (True,  TestSuite.Queries.Int_Boolector.tests)
            , (True,  TestSuite.Queries.Int_CVC4.tests)

@@ -212,6 +212,7 @@ Test-Suite SBVTest
                   , TestSuite.Puzzles.U2Bridge
                   , TestSuite.Queries.BasicQuery
                   , TestSuite.Queries.Enums
+                  , TestSuite.Queries.FreshVars
                   , TestSuite.Queries.Int_ABC
                   , TestSuite.Queries.Int_Boolector
                   , TestSuite.Queries.Int_CVC4
