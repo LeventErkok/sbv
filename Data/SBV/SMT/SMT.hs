@@ -62,7 +62,7 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (SMTEngine, State(..))
 
-import Data.SBV.SMT.Utils     (showTimeoutValue, alignPlain, alignDiagnostic, debug)
+import Data.SBV.SMT.Utils     (showTimeoutValue, alignPlain, alignDiagnostic, debug, mergeSExpr)
 
 import Data.SBV.Utils.PrettyNum
 import Data.SBV.Utils.Lib       (joinArgs, splitArgs)
@@ -792,39 +792,6 @@ runSolver cfg ctx execPath opts pgm continuation
                                                             finalizeTranscript (transcript cfg) (Just ec)
                                                             recordEndTime      cfg ctx
                                                             C.throwIO e)
-
--- | In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
--- each S-Expression spanning only a single line.
-mergeSExpr :: [String] -> [String]
-mergeSExpr []       = []
-mergeSExpr (x:xs)
- | d == 0 = x : mergeSExpr xs
- | True   = let (f, r) = grab d xs in unlines (x:f) : mergeSExpr r
- where d = parenDiff x
-
-       parenDiff :: String -> Int
-       parenDiff = go 0
-         where go i ""       = i
-               go i ('(':cs) = let i'= i+1 in i' `seq` go i' cs
-               go i (')':cs) = let i'= i-1 in i' `seq` go i' cs
-               go i ('"':cs) = go i (skipString cs)
-               go i ('|':cs) = go i (skipBar cs)
-               go i (_  :cs) = go i cs
-
-       grab i ls
-         | i <= 0    = ([], ls)
-       grab _ []     = ([], [])
-       grab i (l:ls) = let (a, b) = grab (i+parenDiff l) ls in (l:a, b)
-
-       skipString ('\\':'"':cs) = skipString cs
-       skipString ('"':'"':cs)  = skipString cs
-       skipString ('"':cs)      = cs
-       skipString (_:cs)        = skipString cs
-       skipString []            = []             -- Oh dear, line finished, but the string didn't. We're in trouble. Ignore!
-
-       skipBar ('|':cs) = cs
-       skipBar (_:cs)   = skipBar cs
-       skipBar []       = []                     -- Oh dear, line finished, but the string didn't. We're in trouble. Ignore!
 
 -- | Compute and report the end time
 recordEndTime :: SMTConfig -> State -> IO ()

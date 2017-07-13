@@ -17,6 +17,7 @@ module Data.SBV.SMT.Utils (
         , alignDiagnostic
         , alignPlain
         , debug
+        , mergeSExpr
        )
        where
 
@@ -80,3 +81,37 @@ debug cfg
   | not (verbose cfg)             = const (return ())
   | Just f <- redirectVerbose cfg = mapM_ (appendFile f . (++ "\n"))
   | True                          = mapM_ putStrLn
+
+-- | In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
+-- each S-Expression spanning only a single line.
+mergeSExpr :: [String] -> [String]
+mergeSExpr []       = []
+mergeSExpr (x:xs)
+ | d == 0 = x : mergeSExpr xs
+ | True   = let (f, r) = grab d xs in unlines (x:f) : mergeSExpr r
+ where d = parenDiff x
+
+       parenDiff :: String -> Int
+       parenDiff = go 0
+         where go i ""       = i
+               go i ('(':cs) = let i'= i+1 in i' `seq` go i' cs
+               go i (')':cs) = let i'= i-1 in i' `seq` go i' cs
+               go i ('"':cs) = go i (skipString cs)
+               go i ('|':cs) = go i (skipBar cs)
+               go i (_  :cs) = go i cs
+
+       grab i ls
+         | i <= 0    = ([], ls)
+       grab _ []     = ([], [])
+       grab i (l:ls) = let (a, b) = grab (i+parenDiff l) ls in (l:a, b)
+
+       skipString ('\\':'"':cs) = skipString cs
+       skipString ('"':'"':cs)  = skipString cs
+       skipString ('"':cs)      = cs
+       skipString (_:cs)        = skipString cs
+       skipString []            = []             -- Oh dear, line finished, but the string didn't. We're in trouble. Ignore!
+
+       skipBar ('|':cs) = cs
+       skipBar (_:cs)   = skipBar cs
+       skipBar []       = []                     -- Oh dear, line finished, but the string didn't. We're in trouble. Ignore!
+
