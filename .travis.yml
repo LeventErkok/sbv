@@ -33,9 +33,8 @@ before_install:
      mkdir -p $HOME/bin;
      wget --quiet -L -O z3.zip http://github.com/Z3Prover/bin/raw/master/nightly/`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x86.*ubuntu.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | awk -F\" '{print $2}'`;
      unzip -q z3.zip -d z3_temp;
-     mv z3_temp/* z3_downloaded;
-     /bin/rm -rf z3.zip z3_temp;
-     ln -s z3_downloaded/bin/z3 $HOME/bin;
+     cp z3_temp/*/bin/z3 $HOME/bin;
+     z3 --version
    fi
  - unset CC
  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:~/.cabal/bin:$PATH
