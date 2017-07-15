@@ -39,8 +39,8 @@ before_install:
  - export PATH=$PATH:$PWD/z3_downloaded/$Z3Base/bin
  - ls -l `which z3`
  - file  `which z3`
- - z3 --version
  - `which z3` --version
+ - z3 --version
 
 install:
 
