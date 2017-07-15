@@ -21,35 +21,16 @@ matrix:
   include:
     - env: CABALVER=1.24 GHCVER=8.0.1 HAPPYVER=1.19.5
       compiler: ": #GHC 8.0.1"
-      addons:
-          apt:
-              packages:
-                  - libstdc++6
-                  - cabal-install-1.24
-                  - ghc-8.0.2
-                  - alex-3.1.7
-                  - happy-1.19.5
-              sources:
-                  - hvr-ghc
+      addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.1,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
     - env: CABALVER=1.24 GHCVER=8.0.2 HAPPYVER=1.19.5
       compiler: ": #GHC 8.0.2"
-      addons:
-          apt:
-              packages:
-                  - libstdc++6
-                  - cabal-install-1.24
-                  - ghc-8.0.2
-                  - alex-3.1.7
-                  - happy-1.19.5
-              sources:
-                  - hvr-ghc
+      addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.2,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
 
 # Note: the distinction between `before_install` and `install` is not important.
 before_install:
  - unset CC
  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:~/.cabal/bin:$PATH
  - export PATH=/opt/happy/$HAPPYVER/bin:$PATH
- - apt-get install libstdc++6
  - export Z3=`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x64.*ubuntu.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | awk -F\" '{print $2}'`
  - export Z3Base=`basename $Z3 .zip`
  - wget --quiet -L -O z3.zip http://github.com/Z3Prover/bin/raw/master/nightly/$Z3
