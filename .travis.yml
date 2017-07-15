@@ -40,6 +40,7 @@ before_install:
  - ls -l `which z3`
  - file  `which z3`
  - z3 --version
+ - `which z3` --version
 
 install:
 
