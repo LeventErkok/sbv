@@ -37,6 +37,8 @@ before_install:
      unzip -q z3.zip -d z3_temp;
      cp z3_temp/$Z3Base/bin/z3 $HOME/bin;
      chmod +x $HOME/bin/z3;
+     pwd;
+     ls -l $HOME/bin;
      $HOME/bin/z3 --version;
    fi
  - unset CC
