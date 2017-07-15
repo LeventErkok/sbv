@@ -37,18 +37,18 @@ before_install:
      mv z3_temp/* z3_downloaded;
      /bin/rm -rf z3.zip z3_temp;
      ln -s z3_downloaded/bin/z3 .;
-     export PATH=$HOME/bin:$PATH;
-     z3 --version;
    fi
  - unset CC
  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:~/.cabal/bin:$PATH
  - export PATH=/opt/happy/$HAPPYVER/bin:$PATH
+ - export PATH=$HOME/bin:$PATH
 
 install:
 
  # display versions
  - cabal --version
  - happy --version
+ - z3 --version
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
 
  # install
