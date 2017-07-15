@@ -31,14 +31,18 @@ before_install:
  - unset CC
  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:~/.cabal/bin:$PATH
  - export PATH=/opt/happy/$HAPPYVER/bin:$PATH
- - export Z3=`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x64.*ubuntu.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | awk -F\" '{print $2}'`
- - export Z3Base=`basename $Z3 .zip`
- - wget --quiet -L -O z3.zip http://github.com/Z3Prover/bin/raw/master/nightly/$Z3
- - unzip -q z3.zip -d z3_downloaded
- - /bin/rm z3.zip
- - export PATH=$PATH:$PWD/z3_downloaded/$Z3Base/bin
- - file  `which z3`
- - z3 --version
+##########################################################################################################
+# Z3 install experiment. Fails with:
+# $ z3 --version
+# z3: /usr/lib/x86_64-linux-gnu/libstdc++.so.6: version `GLIBCXX_3.4.18' not found (required by z3)
+##########################################################################################################
+# - export Z3=`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x64.*ubuntu.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | awk -F\" '{print $2}'`
+# - export Z3Base=`basename $Z3 .zip`
+# - wget --quiet -L -O z3.zip http://github.com/Z3Prover/bin/raw/master/nightly/$Z3
+# - unzip -q z3.zip -d z3_downloaded
+# - /bin/rm z3.zip
+# - export PATH=$PATH:$PWD/z3_downloaded/$Z3Base/bin
+# - z3 --version
 
 install:
 
