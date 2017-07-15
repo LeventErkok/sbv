@@ -33,15 +33,10 @@ before_install:
      mkdir -p $HOME/bin;
      Z3=`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x86.*ubuntu.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | awk -F\" '{print $2}'`;
      Z3Base=`basename $Z3 .zip`;
-     echo $Z3;
-     echo $Z3Base;
-     echo wget --quiet -L -O z3.zip http://github.com/Z3Prover/bin/raw/master/nightly/$Z3;
      wget --quiet -L -O z3.zip http://github.com/Z3Prover/bin/raw/master/nightly/$Z3;
      unzip -q z3.zip -d z3_temp;
      cp z3_temp/$Z3Base/bin/z3 $HOME/bin;
-     find . -iname z3;
-     echo $HOME/bin;
-     ls $HOME/bin;
+     chmod +x $HOME/bin/z3
      $HOME/bin/z3 --version;
    fi
  - unset CC
