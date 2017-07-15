@@ -35,15 +35,16 @@ before_install:
  - export Z3Base=`basename $Z3 .zip`
  - wget --quiet -L -O z3.zip http://github.com/Z3Prover/bin/raw/master/nightly/$Z3
  - unzip -q z3.zip -d z3_downloaded
+ - /bin/rm z3.zip
  - export PATH=$PATH:$PWD/z3_downloaded/$Z3Base/bin
+ - ls `which z3`
+ - z3 --version
 
 install:
 
  # display versions
  - cabal --version
  - happy --version
- - ls -l `which z3`
- - z3 --version
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
 
  # install
