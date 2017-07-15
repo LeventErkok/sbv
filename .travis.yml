@@ -37,9 +37,7 @@ before_install:
  - unzip -q z3.zip -d z3_downloaded
  - /bin/rm z3.zip
  - export PATH=$PATH:$PWD/z3_downloaded/$Z3Base/bin
- - ls -l `which z3`
  - file  `which z3`
- - `which z3` --version
  - z3 --version
 
 install:
