@@ -28,6 +28,10 @@ matrix:
 
 # Note: the distinction between `before_install` and `install` is not important.
 before_install:
+ - unset CC
+ - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:~/.cabal/bin:$PATH
+ - export PATH=/opt/happy/$HAPPYVER/bin:$PATH
+ - export PATH=$HOME/bin:$PATH
  - if [[ $TRAVIS_OS_NAME == 'linux' ]];
    then
      mkdir -p $HOME/bin;
@@ -37,13 +41,9 @@ before_install:
      unzip -q z3.zip -d z3_temp;
      cp z3_temp/$Z3Base/bin/z3 $HOME/bin;
      ls -l $HOME/bin/z3;
-     file $HOME/bin/z3;
+     rehash;
      $HOME/bin/z3 --version;
    fi
- - unset CC
- - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:~/.cabal/bin:$PATH
- - export PATH=/opt/happy/$HAPPYVER/bin:$PATH
- - export PATH=$HOME/bin:$PATH
 
 install:
 
