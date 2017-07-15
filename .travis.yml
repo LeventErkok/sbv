@@ -36,9 +36,6 @@ before_install:
  - wget --quiet -L -O z3.zip http://github.com/Z3Prover/bin/raw/master/nightly/$Z3
  - unzip -q z3.zip -d z3_downloaded
  - export PATH=$PATH:$PWD/z3_downloaded/$Z3Base/bin
- - ls -l /home/travis/build/LeventErkok/sbv/z3_downloaded/z3-4.5.1.da34de340d58-x86-ubuntu-14.04/bin/z3
- - /home/travis/build/LeventErkok/sbv/z3_downloaded/z3-4.5.1.da34de340d58-x86-ubuntu-14.04/bin/z3 --version
- - z3 --version
 
 install:
 
