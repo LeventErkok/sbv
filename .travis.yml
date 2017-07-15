@@ -36,12 +36,8 @@ before_install:
      wget --quiet -L -O z3.zip http://github.com/Z3Prover/bin/raw/master/nightly/$Z3;
      unzip -q z3.zip -d z3_temp;
      cp z3_temp/$Z3Base/bin/z3 $HOME/bin;
-     chmod +x $HOME/bin/z3;
-     pwd;
-     echo "Listing home/bin-1";
-     ls -l $HOME/bin;
-     echo "Listing home/bin-2";
      ls -l $HOME/bin/z3;
+     file $HOME/bin/z3;
      $HOME/bin/z3 --version;
    fi
  - unset CC
