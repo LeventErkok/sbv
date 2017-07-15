@@ -32,7 +32,7 @@ before_install:
    then
      mkdir -p $HOME/bin;
      cd $HOME/bin;
-     wget --quiet -L -O z3.zip http://github.com/Z3Prover/bin/raw/master/nightly/`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x64.*ubuntu.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | awk -F\" '{print $2}'`;
+     wget --quiet -L -O z3.zip http://github.com/Z3Prover/bin/raw/master/nightly/`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x86.*ubuntu.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | awk -F\" '{print $2}'`;
      unzip -q z3.zip -d z3_temp;
      mv z3_temp/* z3_downloaded;
      /bin/rm -rf z3.zip z3_temp;
