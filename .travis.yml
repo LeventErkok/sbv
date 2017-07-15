@@ -42,6 +42,7 @@ install:
  # display versions
  - cabal --version
  - happy --version
+ - ls -l `which z3`
  - z3 --version
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
 
