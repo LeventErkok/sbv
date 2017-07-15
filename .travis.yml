@@ -38,7 +38,10 @@ before_install:
      cp z3_temp/$Z3Base/bin/z3 $HOME/bin;
      chmod +x $HOME/bin/z3;
      pwd;
+     echo "Listing home/bin-1";
      ls -l $HOME/bin;
+     echo "Listing home/bin-2";
+     ls -l $HOME/bin/z3;
      $HOME/bin/z3 --version;
    fi
  - unset CC
