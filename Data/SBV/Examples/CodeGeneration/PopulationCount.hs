@@ -64,10 +64,11 @@ respect to the slower reference version.
 -}
 
 -- | States the correctness of faster population-count algorithm, with respect
--- to the reference slow version. (We use yices here as it's quite fast for
--- this problem. Z3 seems to take much longer.) We have:
+-- to the reference slow version. Turns out abc is the fastest solver here for
+-- this problem. (NB. We're currently not testing this on Travis since
+-- it only has Z3 and it takes quite a while to run.)
 --
--- >>> proveWith yices fastPopCountIsCorrect
+-- ghci> proveWith abc fastPopCountIsCorrect
 -- Q.E.D.
 fastPopCountIsCorrect :: SWord64 -> SBool
 fastPopCountIsCorrect x = popCountFast x .== popCountSlow x
