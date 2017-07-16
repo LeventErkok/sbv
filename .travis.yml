@@ -1,7 +1,7 @@
 # NB: don't set `language: haskell` here
 language: c
 dist: trusty
-sudo: required
+sudo: false
 
 cache:
   directories:
