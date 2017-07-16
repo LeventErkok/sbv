@@ -5,5 +5,4 @@ TAGS
 .cabal-sandbox/
 .stack-work/
 stack.yaml
-buildTimes.log
 SBVTestSuite/GoldFiles/*.gold_temp

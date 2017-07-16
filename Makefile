@@ -5,141 +5,64 @@
 
 OS := $(shell uname)
 
-SHELL   := /usr/bin/env bash
+SHELL := /usr/bin/env bash
 
 ifeq ($(OS), Darwin)
 # OSX tends to sleep for long jobs; so run through caffeinate
-TIME = /usr/bin/time caffeinate
+TIME        = /usr/bin/time caffeinate
 NO_OF_CORES = `sysctl hw.ncpu | awk '{print $$2}'`
 else
-TIME = /usr/bin/time
+TIME        = /usr/bin/time
 NO_OF_CORES = `grep -c "^processor" /proc/cpuinfo`
 endif
 
-BUILDTIMES = buildTimes.log
-
-.PHONY: quick install tests limitedTests test limitedTest gold testPattern doctest sdist
-.PHONY: veryclean clean docs markBuildStart markBuildEnd release limitedRelease hlint uploadDocs checkLinks testInterfaces
-.PHONY: limitedTestInterfaces tags
-
-ifeq (z$(MAKECMDGOALS), zrelease)
-define startTimer
-	@tput rmam
-	@echo [`date +%T`] $(1) >> ${BUILDTIMES}
-endef
-else
-define startTimer
-	@tput rmam
-endef
-endif
-
-define endTimer
-	@tput smam
-endef
+.PHONY: install docs test release testPattern tags uploadDocs clean veryclean
 
 all: install
 
-install: 
-	$(call startTimer,$@)
-	@fast-tags -R --nomerge .
-	@cabal configure --enable-tests --ghc-options="-Werror -Wall"
-	@cabal build
-	@cabal install --force-reinstalls
-	$(call endTimer,$@)
+install: tags
+	@tput rmam
+	@$(TIME) cabal configure --enable-tests --ghc-options="-Werror -Wall"
+	@$(TIME) cabal build
+	@$(TIME) cabal install --force-reinstalls
+	@tput smam
 
-quick:
-	$(call startTimer,$@)
-	@fast-tags -R --nomerge .
-	@cabal build --ghc-options="-Werror -Wall"
-	@cabal install
-	$(call endTimer,$@)
+docs:
+	@tput rmam
+	cabal haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
+	@tput smam
 
-tests:
-	$(call startTimer,$@)
+test:
+	@tput rmam
 	@$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -j $(NO_OF_CORES)
-	$(call endTimer,$@)
+	@$(TIME) ./dist/build/SBVDocTest/SBVDocTest
+	@$(TIME) ./dist/build/SBVHLint/SBVHLint
+	@tput smam
 
-# When "limited", we skip query tests
-limitedTests:
-	$(call startTimer,$@)
-	@$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -p \!extOnly -j $(NO_OF_CORES)
-	$(call endTimer,$@)
-
-test: install tests doctest
-
-limitedTest: install limitedTests doctest
+release: veryclean install docs test
+	@tput rmam
+	cabal sdist
+	@make -C buildUtils veryclean
+	@make -C buildUtils
+	buildUtils/testInterfaces
+	buildUtils/checkLinks
+	@echo "*** SBV is ready for release!"
+	@tput smam
 
 # use this as follows:
 #         make testPattern TGT=U2Bridge
 testPattern:
 	./dist/build/SBVTest/SBVTest -p ${TGT}
 
-doctest:
-	$(call startTimer,$@)
-	@echo "*** Starting inline tests.."
-	@$(TIME) ./dist/build/SBVDocTest/SBVDocTest
-	$(call endTimer,$@)
-
-sdist: install
-	$(call startTimer,$@)
-	cabal sdist
-	$(call endTimer,$@)
-
-veryclean: clean
-	@make -C buildUtils clean
-	@-ghc-pkg unregister sbv
-
-clean:
-	@rm -rf dist
-
-docs:
-	$(call startTimer,$@)
-	cabal haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
-	$(call endTimer,$@)
-
-markBuildStart:
-	@echo ===================================================================== >> ${BUILDTIMES}
-	@echo `date`. A new release build of SBV is starting.                       >> ${BUILDTIMES}
-
-markBuildEnd:
-	@echo `date`. SBV release build finished.		   >> ${BUILDTIMES}
-
-release: markBuildStart veryclean install sdist testInterfaces docs test checkLinks hlint markBuildEnd
-	@echo "*** SBV is ready for release!"
-
-# same as release really, but doesn't check links and tests fewer solver connections.
-# suitable to use when we're in more poverished environment.
-limitedRelease: clean install sdist limitedTestInterfaces docs limitedTest hlint
-	@echo "*** SBV is looking OK, but you should really run the 'release' target!"
-
-hlint: 
-	$(call startTimer,$@)
-	@echo "Running HLint.."
-	@$(TIME) ./dist/build/SBVHLint/SBVHLint
-	$(call endTimer,$@)
+tags:
+	@fast-tags -R --nomerge .
 
 uploadDocs:
 	@buildUtils/hackage-docs
 
-checkLinks:
-	$(call startTimer,$@)
-	@buildUtils/checkLinks
-	$(call endTimer,$@)
+clean:
+	@rm -rf dist
 
-testInterfaces:
-	$(call startTimer,$@)
-	make -C buildUtils veryClean
-	make -C buildUtils
-	@buildUtils/testInterfaces
-	$(call endTimer,$@)
-
-# only test connection to a few solvers
-limitedTestInterfaces:
-	$(call startTimer,$@)
-	make -C buildUtils veryClean
-	make -C buildUtils
-	@buildUtils/testInterfaces Yices Z3
-	$(call startTimer,$@)
-
-tags:
-	@fast-tags -R --nomerge .
+veryclean: clean
+	@make -C buildUtils clean
+	@-ghc-pkg unregister sbv
