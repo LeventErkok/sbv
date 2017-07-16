@@ -480,7 +480,4 @@ mkSFunArray :: (SBV a -> SBV b) -> SFunArray a b
 mkSFunArray = SFunArray
 
 -- | Internal representation of a symbolic simulation result
-data SMTProblem = SMTProblem { smtOptions   :: [SMTOption]            -- ^ options to set
-                             , smtLibPgm    :: SMTConfig -> SMTLibPgm -- ^ SMTLib representation, given the config
-                             }
-                             deriving (Generic, NFData)
+newtype SMTProblem = SMTProblem {smtLibPgm :: SMTConfig -> SMTLibPgm} -- ^ SMTLib representation, given the config

@@ -40,8 +40,6 @@ import Data.Word
 
 import qualified Data.Map as Map
 
-import Control.DeepSeq (rnf)
-
 import Control.Monad            (unless)
 import Control.Monad.State.Lazy (get, liftIO)
 
@@ -575,7 +573,7 @@ unexpected ctx sent expected mbHint received mbReason = do
 
 -- | Convert a query result to an SMT Problem
 runProofOn :: SMTConfig -> Bool -> [String] -> Result -> SMTProblem
-runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs options _assertions outputs) =
+runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs _assertions outputs) =
      let flipQ (ALL, x) = (EX,  x)
          flipQ (EX,  x) = (ALL, x)
 
@@ -606,9 +604,6 @@ runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls
                                       , "*** Check calls to \"output\", they are typically not needed!"
                                       ]
 
-         smtScript = toSMTLib config ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o
-         problem   = SMTProblem {smtOptions=options, smtLibPgm=smtScript}
-
-     in rnf problem `seq` problem
+     in SMTProblem { smtLibPgm = toSMTLib config ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o }
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

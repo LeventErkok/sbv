@@ -74,7 +74,7 @@ module Data.SBV.Control (
      ) where
 
 import Data.SBV.Core.Data     (SMTProblem(..), SMTSolver(..), SMTConfig(..))
-import Data.SBV.Core.Symbolic ( Query, IStage(..), SBVRunMode(..), Symbolic, Query(..)
+import Data.SBV.Core.Symbolic ( Query, IStage(..), SBVRunMode(..), Symbolic, Query(..), rSMTOptions
                               , extractSymbolicSimulationState, solverSetOptions, runMode
                               )
 
@@ -96,10 +96,11 @@ query (Query userQuery) = do
         -- Transitioning from setup
         SMTMode ISetup isSAT cfg -> liftIO $ do let backend = engine (solver cfg)
 
-                                                res <- extractSymbolicSimulationState st
+                                                res     <- extractSymbolicSimulationState st
+                                                setOpts <- reverse <$> readIORef (rSMTOptions st)
 
-                                                let SMTProblem{smtOptions, smtLibPgm} = runProofOn cfg isSAT [] res
-                                                    cfg' = cfg { solverSetOptions = solverSetOptions cfg ++ smtOptions }
+                                                let SMTProblem{smtLibPgm} = runProofOn cfg isSAT [] res
+                                                    cfg' = cfg { solverSetOptions = solverSetOptions cfg ++ setOpts }
                                                     pgm  = smtLibPgm cfg'
 
                                                 writeIORef (runMode st) $ SMTMode IRun isSAT cfg
