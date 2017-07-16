@@ -61,10 +61,7 @@ import Data.Int             (Int8, Int16, Int32, Int64)
 import Data.Word            (Word8, Word16, Word32, Word64)
 import Data.List            (elemIndex)
 
-import qualified Data.Set as Set (Set)
 import qualified Data.Generics as G    (Data(..))
-
-import GHC.Stack
 
 import System.Random
 
@@ -483,11 +480,7 @@ mkSFunArray :: (SBV a -> SBV b) -> SFunArray a b
 mkSFunArray = SFunArray
 
 -- | Internal representation of a symbolic simulation result
-data SMTProblem = SMTProblem { smtInputs    :: [(Quantifier, NamedSymVar)]     -- ^ inputs
-                             , smtSkolemMap :: [Either SW (SW, [SW])]          -- ^ skolem-map
-                             , kindsUsed    :: Set.Set Kind                    -- ^ kinds used
-                             , smtAsserts   :: [(String, Maybe CallStack, SW)] -- ^ assertions
-                             , smtOptions   :: [SMTOption]                     -- ^ options to set
-                             , smtLibPgm    :: SMTConfig -> SMTLibPgm          -- ^ SMTLib representation, given the config
+data SMTProblem = SMTProblem { smtOptions   :: [SMTOption]            -- ^ options to set
+                             , smtLibPgm    :: SMTConfig -> SMTLibPgm -- ^ SMTLib representation, given the config
                              }
                              deriving (Generic, NFData)

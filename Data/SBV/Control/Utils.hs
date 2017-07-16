@@ -575,7 +575,7 @@ unexpected ctx sent expected mbHint received mbReason = do
 
 -- | Convert a query result to an SMT Problem
 runProofOn :: SMTConfig -> Bool -> [String] -> Result -> SMTProblem
-runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs options assertions outputs) =
+runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs options _assertions outputs) =
      let flipQ (ALL, x) = (EX,  x)
          flipQ (EX,  x) = (ALL, x)
 
@@ -607,8 +607,7 @@ runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls
                                       ]
 
          smtScript = toSMTLib config ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o
-         problem   = SMTProblem { smtInputs=is, smtSkolemMap=skolemMap, kindsUsed=ki
-                                , smtAsserts=assertions, smtOptions=options, smtLibPgm=smtScript}
+         problem   = SMTProblem {smtOptions=options, smtLibPgm=smtScript}
 
      in rnf problem `seq` problem
 
