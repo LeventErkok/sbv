@@ -78,7 +78,7 @@
 -- If a predicate is not valid, 'prove' will return a counterexample: An
 -- assignment to inputs such that the predicate fails. The 'sat' function will
 -- return a satisfying assignment, if there is one. The 'allSat' function returns
--- all satisfying assignments, lazily.
+-- all satisfying assignments.
 --
 -- The sbv library uses third-party SMT solvers via the standard SMT-Lib interface:
 -- <http://smtlib.cs.uiowa.edu/>
