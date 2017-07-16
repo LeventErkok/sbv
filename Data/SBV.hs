@@ -370,6 +370,15 @@ particular, any Haskell program you build out of symbolic components is fully co
 executable within Haskell, without the need for any custom interpreters. (They are truly
 Haskell programs, not AST's built out of pieces of syntax.) This provides for an integrated
 feel of the system, one of the original design goals for SBV.
+
+= Incremental mode: Queries
+
+SBV provides a wide variety of ways to utilize SMT-solvers, without requiring the user to
+deal with the solvers themselves. While this mode is convenient, advanced users might need
+access to the underlying solver, using the SMTLib language. For such use cases, SBV allows
+users to have an interactive session: The user can issue commands to the solver, inspect
+the values/results, and formulate new constraints. This advanced feature is available through
+the "Data.SBV.Control" module, where most SMTLib features are made available via a typed-API.
 -}
 
 {- $proveIntro
