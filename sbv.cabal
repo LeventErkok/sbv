@@ -98,6 +98,7 @@ Library
                   , Data.SBV.Examples.Puzzles.Sudoku
                   , Data.SBV.Examples.Puzzles.U2Bridge
                   , Data.SBV.Examples.Queries.UnsatCore
+                  , Data.SBV.Examples.Queries.FourFours
                   , Data.SBV.Examples.Queries.GuessNumber
                   , Data.SBV.Examples.Queries.CaseSplit
                   , Data.SBV.Examples.Queries.Enums
