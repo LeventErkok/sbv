@@ -13,7 +13,7 @@
 
 module Data.SBV.Internals (
   -- * Running symbolic programs /manually/
-    Result(..), SBVRunMode(..)
+    Result(..), SBVRunMode(..), IStage(..)
 
   -- * Solver capabilities
   , SolverCapabilities(..)
@@ -47,6 +47,7 @@ module Data.SBV.Internals (
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model      (genLiteral, genFromCW, genMkSymVar, liftQRem, liftDMod)
+import Data.SBV.Core.Symbolic   (IStage(..))
 import Data.SBV.Core.Splittable (checkAndConvert)
 
 import Data.SBV.Compilers.C       (compileToC', compileToCLib')

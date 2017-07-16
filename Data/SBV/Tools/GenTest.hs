@@ -44,7 +44,7 @@ genTest n m = gen 0 []
          | i == n = return $ TV $ reverse sofar
          | True   = do t <- tc
                        gen (i+1) (t:sofar)
-        tc = do (_, Result {resTraces=tvals, resConsts=cs, resConstraints=cstrs, resOutputs=os}) <- runSymbolicWithResult Concrete (m >>= output)
+        tc = do (_, Result {resTraces=tvals, resConsts=cs, resConstraints=cstrs, resOutputs=os}) <- runSymbolic Concrete (m >>= output)
                 let cval = fromMaybe (error "Cannot generate tests in the presence of uninterpeted constants!") . (`lookup` cs)
                     cond = all (cwToBool . cval . snd) cstrs
                 if cond

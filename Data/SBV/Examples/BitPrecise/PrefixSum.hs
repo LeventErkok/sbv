@@ -18,7 +18,6 @@
 module Data.SBV.Examples.BitPrecise.PrefixSum where
 
 import Data.SBV
-import Data.SBV.Internals (runSymbolic)
 
 ----------------------------------------------------------------------
 -- * Formalizing power-lists
@@ -82,113 +81,17 @@ flIsCorrect n zf = do
         return $ ps zf args .== lf zf args
 
 -- | Proves Ladner-Fischer is equivalent to reference specification for addition.
--- @0@ is the left-unit element, and we use a power-list of size @8@.
+-- @0@ is the left-unit element, and we use a power-list of size @8@. We have:
+--
+-- >>> thm1
+-- Q.E.D.
 thm1 :: IO ThmResult
 thm1 = prove $ flIsCorrect  8 (0, (+))
 
 -- | Proves Ladner-Fischer is equivalent to reference specification for the function @max@.
--- @0@ is the left-unit element, and we use a power-list of size @16@.
+-- @0@ is the left-unit element, and we use a power-list of size @16@. We have:
+--
+-- >>> thm2
+-- Q.E.D.
 thm2 :: IO ThmResult
 thm2 = prove $ flIsCorrect 16 (0, smax)
-
-----------------------------------------------------------------------
--- * Inspecting symbolic traces
-----------------------------------------------------------------------
-
--- | A symbolic trace can help illustrate the action of Ladner-Fischer. This
--- generator produces the actions of Ladner-Fischer for addition, showing how
--- the computation proceeds:
---
--- >>> ladnerFischerTrace 8
--- INPUTS
---   s0 :: SWord8
---   s1 :: SWord8
---   s2 :: SWord8
---   s3 :: SWord8
---   s4 :: SWord8
---   s5 :: SWord8
---   s6 :: SWord8
---   s7 :: SWord8
--- CONSTANTS
---   s_2 = False :: Bool
---   s_1 = True :: Bool
--- TABLES
--- ARRAYS
--- UNINTERPRETED CONSTANTS
--- USER GIVEN CODE SEGMENTS
--- AXIOMS
--- DEFINE
---   s8 :: SWord8 = s0 + s1
---   s9 :: SWord8 = s2 + s8
---   s10 :: SWord8 = s2 + s3
---   s11 :: SWord8 = s8 + s10
---   s12 :: SWord8 = s4 + s11
---   s13 :: SWord8 = s4 + s5
---   s14 :: SWord8 = s11 + s13
---   s15 :: SWord8 = s6 + s14
---   s16 :: SWord8 = s6 + s7
---   s17 :: SWord8 = s13 + s16
---   s18 :: SWord8 = s11 + s17
--- CONSTRAINTS
--- ASSERTIONS
--- OUTPUTS
---   s0
---   s8
---   s9
---   s11
---   s12
---   s14
---   s15
---   s18
-ladnerFischerTrace :: Int -> IO ()
-ladnerFischerTrace n = gen >>= print
-  where gen = runSymbolic (True, defaultSMTCfg) $ do args :: [SWord8] <- mkForallVars n
-                                                     mapM_ output $ lf (0, (+)) args
-
--- | Trace generator for the reference spec. It clearly demonstrates that the reference
--- implementation fewer operations, but is not parallelizable at all:
---
--- >>> scanlTrace 8
--- INPUTS
---   s0 :: SWord8
---   s1 :: SWord8
---   s2 :: SWord8
---   s3 :: SWord8
---   s4 :: SWord8
---   s5 :: SWord8
---   s6 :: SWord8
---   s7 :: SWord8
--- CONSTANTS
---   s_2 = False :: Bool
---   s_1 = True :: Bool
--- TABLES
--- ARRAYS
--- UNINTERPRETED CONSTANTS
--- USER GIVEN CODE SEGMENTS
--- AXIOMS
--- DEFINE
---   s8 :: SWord8 = s0 + s1
---   s9 :: SWord8 = s2 + s8
---   s10 :: SWord8 = s3 + s9
---   s11 :: SWord8 = s4 + s10
---   s12 :: SWord8 = s5 + s11
---   s13 :: SWord8 = s6 + s12
---   s14 :: SWord8 = s7 + s13
--- CONSTRAINTS
--- ASSERTIONS
--- OUTPUTS
---   s0
---   s8
---   s9
---   s10
---   s11
---   s12
---   s13
---   s14
---
-scanlTrace :: Int -> IO ()
-scanlTrace n = gen >>= print
-  where gen = runSymbolic (True, defaultSMTCfg) $ do args :: [SWord8] <- mkForallVars n
-                                                     mapM_ output $ ps (0, (+)) args
-
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

@@ -1764,7 +1764,7 @@ instance Testable (Symbolic SBool) where
                                      QC.pre cond
                                      unless (r || null tvals) $ QC.monitor (QC.counterexample (complain tvals))
                                      QC.assert r
-     where test = do (r, Result{resTraces=tvals, resConsts=cs, resConstraints=cstrs, resUIConsts=unints}) <- runSymbolicWithResult Concrete prop
+     where test = do (r, Result{resTraces=tvals, resConsts=cs, resConstraints=cstrs, resUIConsts=unints}) <- runSymbolic Concrete prop
 
                      let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
                          cond = all (cwToBool . cval . snd) cstrs

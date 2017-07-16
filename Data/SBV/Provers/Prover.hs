@@ -259,7 +259,7 @@ class Provable a where
   -- | Determine if the constraints are vacuous using the given SMT-solver.
   isVacuousWith :: SMTConfig -> a -> IO Bool
   isVacuousWith cfg a = -- NB. Can't call runWithQuery since last constraint would become the implication!
-                        fst <$> runSymbolicWithResult (SMTMode ISetup True cfg) (forSome_ a >> Control.query check)
+                        fst <$> runSymbolic (SMTMode ISetup True cfg) (forSome_ a >> Control.query check)
      where check = do cs <- Control.checkSat
                       case cs of
                         Control.Unsat -> return True
@@ -326,7 +326,7 @@ class Provable a where
         let comments = ["Automatically created by SBV on " ++ show t]
             cfg      = defaultSMTCfg { smtLibVersion = SMTLib2 }
 
-        res <- runSymbolic (isSat, cfg) $ (if isSat then forSome_ else forAll_) a >>= output
+        (_, res) <- runSymbolic (SMTMode ISetup isSat cfg) $ (if isSat then forSome_ else forAll_) a >>= output
 
         let SMTProblem{smtLibPgm} = Control.runProofOn cfg isSat comments res
             out                   = show (smtLibPgm cfg)
@@ -444,11 +444,11 @@ runSMT = runSMTWith defaultSMTCfg
 
 -- | Runs an arbitrary symbolic computation, exposed to the user in SAT mode
 runSMTWith :: SMTConfig -> Symbolic a -> IO a
-runSMTWith cfg a = fst <$> runSymbolicWithResult (SMTMode ISetup True cfg) a
+runSMTWith cfg a = fst <$> runSymbolic (SMTMode ISetup True cfg) a
 
 -- | Runs with a query.
 runWithQuery :: Provable a => Bool -> Query b -> SMTConfig -> a -> IO b
-runWithQuery isSAT q cfg a = fst <$> runSymbolicWithResult (SMTMode ISetup isSAT cfg) comp
+runWithQuery isSAT q cfg a = fst <$> runSymbolic (SMTMode ISetup isSAT cfg) comp
   where comp =  do _ <- (if isSAT then forSome_ else forAll_) a >>= output
                    Control.query q
 
@@ -509,7 +509,7 @@ class SExecutable a where
                        let mkRelative path
                               | cwd `isPrefixOf` path = drop (length cwd) path
                               | True                  = path
-                       fst <$> runSymbolicWithResult (SMTMode ISetup True cfg) (sName_ a >> check mkRelative)
+                       fst <$> runSymbolic (SMTMode ISetup True cfg) (sName_ a >> check mkRelative)
      where check mkRelative = Control.query $ Control.getSBVAssertions >>= mapM (verify mkRelative)
 
            -- check that the cond is unsatisfiable. If satisfiable, that would

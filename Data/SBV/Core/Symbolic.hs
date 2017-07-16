@@ -40,7 +40,7 @@ module Data.SBV.Core.Symbolic
   , NamedSymVar
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
-  , SBVPgm(..), Symbolic, runSymbolic, runSymbolicWithResult, State(..), withNewIncState, IncState(..), incrementInternalCounter
+  , SBVPgm(..), Symbolic, runSymbolic, State(..), withNewIncState, IncState(..), incrementInternalCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..)
   , registerKind, registerLabel
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable
@@ -866,14 +866,9 @@ addAxiom nm ax = do
                                            , "  Axiom: " ++ unlines ax
                                            ]
 
--- | Run a symbolic computation in Proof mode and return a 'Result'. The boolean
--- argument indicates if this is a sat instance or not.
-runSymbolic :: (Bool, SMTConfig) -> Symbolic a -> IO Result
-runSymbolic (isSAT, cfg) comp = snd <$> runSymbolicWithResult (SMTMode ISetup isSAT cfg) comp
-
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
-runSymbolicWithResult :: SBVRunMode -> Symbolic a -> IO (a, Result)
-runSymbolicWithResult currentRunMode (Symbolic c) = do
+runSymbolic :: SBVRunMode -> Symbolic a -> IO (a, Result)
+runSymbolic currentRunMode (Symbolic c) = do
    currTime  <- getCurrentTime
    rm        <- newIORef currentRunMode
    ctr       <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements

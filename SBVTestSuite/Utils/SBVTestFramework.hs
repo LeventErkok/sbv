@@ -38,7 +38,7 @@ import Data.SBV
 
 import System.FilePath ((</>), (<.>))
 
-import Data.SBV.Internals (runSymbolic, Symbolic, Result)
+import Data.SBV.Internals (runSymbolic, Symbolic, Result, SBVRunMode(..), IStage(..))
 
 -- | Checks that a particular result shows as @s@
 showsAs :: Show a => a -> String -> Assertion
@@ -67,7 +67,7 @@ numberOfModels p = do AllSatResult (_, _, rs) <- allSat p
 
 -- | Symbolicly run a SAT instance using the default config
 runSAT :: Symbolic a -> IO Result
-runSAT = runSymbolic (True, defaultSMTCfg)
+runSAT cmp = snd <$> runSymbolic (SMTMode ISetup True defaultSMTCfg) cmp
 
 -- | Turn provable to an assertion, theorem case
 assertIsThm :: Provable a => a -> Assertion
