@@ -85,7 +85,9 @@ install:
 script:
  - cabal configure --enable-tests --enable-benchmarks -v2  # -v2 provides useful information for debugging
  - cabal build   # this builds all libraries and executables (including tests/benchmarks)
- - travis_wait 30 cabal test --test-options="--hide-successes -p \!nonZ3"  # travis only has z3!
+ - travis_wait 30 cabal test SBVTest    --test-options="--hide-successes -p \!nonZ3"  # travis only has z3!
+ - travis_wait 30 cabal test SBVDocTest
+ - travis_wait 30 cabal test SBVHLint
  - cabal check
  - cabal sdist   # tests that a source-distribution can be generated
 
