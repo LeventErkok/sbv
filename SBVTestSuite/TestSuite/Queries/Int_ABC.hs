@@ -22,7 +22,7 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Basics.QueryIndividual"
-    [ goldenCapturedIO "extOnly_query_abc" $ \rf -> runSMTWith abc{verbose=True, redirectVerbose=Just rf} q
+    [ goldenCapturedIO "nonZ3_query_abc" $ \rf -> runSMTWith abc{verbose=True, redirectVerbose=Just rf} q
     ]
 
 q :: Symbolic ()
