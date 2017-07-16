@@ -257,7 +257,8 @@ class SolverContext m where
    -- | Set a solver time-out value, in milli-seconds. This function
    -- essentially translates to the SMTLib call @(set-info :timeout val)@,
    -- and your backend solver may or may not support it! The amount given
-   -- is in milliseconds.
+   -- is in milliseconds. Also see the function 'timeOut' for finer level
+   -- control of time-outs, directly from SBV.
    setTimeOut :: Integer -> m ()
 
    -- time-out, logic, and info are  simply options in our implementation, so default implementation suffices
