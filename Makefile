@@ -56,7 +56,7 @@ quick:
 
 tests:
 	$(call startTimer,$@)
-	@$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -p '**' -j $(NO_OF_CORES)
+	@$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -j $(NO_OF_CORES)
 	$(call endTimer,$@)
 
 # When "limited", we skip query tests

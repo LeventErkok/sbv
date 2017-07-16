@@ -2,7 +2,6 @@
 module Main(main) where
 
 import Test.Tasty
-import Test.Tasty.Runners (noPattern, TestPattern)
 
 import qualified TestSuite.Arrays.Memory
 import qualified TestSuite.Basics.AllSat
@@ -73,13 +72,13 @@ import qualified TestSuite.Uninterpreted.Sort
 import qualified TestSuite.Uninterpreted.Uninterpreted
 
 main :: IO ()
-main = defaultMain $ askOption $ \(v :: TestPattern) -> testGroup "Tests" (pick v)
- where pick v
-        | show v == show noPattern = [t | (False, t) <- allTests]  -- Running in travis, just run no-solver tests
-        | True                     = [t | (_,     t) <- allTests]  -- Running locally, run everthing
+main = defaultMain $ testGroup "Tests" (map snd allTests)
 
 -- If the Bool is True, then that test requires the presence of Z3
 -- Otherwise, it can be run without the presence of the solver.
+-- Note that we actually do not use this info when we pick the tests,
+-- but one can imagine this becoming useful later on if we have to do
+-- basic testing in environments that don't have a reliable Z3 installation.
 allTests :: [(Bool, TestTree)]
 allTests = [ (True,  TestSuite.Arrays.Memory.tests)
            , (True,  TestSuite.Basics.AllSat.tests)
