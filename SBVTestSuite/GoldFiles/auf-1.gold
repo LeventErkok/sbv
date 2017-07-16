@@ -14,7 +14,6 @@ UNINTERPRETED CONSTANTS
   [uninterpreted] f :: SWord32 -> SWord64
 USER GIVEN CODE SEGMENTS
 AXIOMS
-SMT OPTIONS
 DEFINE
   s3 :: SWord32 = s0 + s2
   s4 :: SBool = s1 == s3
