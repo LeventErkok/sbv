@@ -13,7 +13,7 @@
     same (both types and semantics), much of the internals and advanced features
     have been rewritten to move SBV to a new model of execution: SBV no longer
     runs your program symbolically and calls the SMT solver afterwards. Instead,
-    the interaction with the solver happens interleaved with your programs execution.
+    the interaction with the solver happens interleaved with the actual program execution.
     The motivation is to allow the end-users to send/receive arbitrary SMTLib
     commands to the solver, instead of the cooked-up recipes. SBV still provides
     all the recipes for its existing functionality, but users can now interact
@@ -22,7 +22,7 @@
 
   * The 'Tactic' based solver control (introduced in v6.0) is completely removed, and
     is replaced by the above described mechanism which gives the user a lot of
-    flexibility instead.
+    flexibility instead. Use queries for anything that required a tactic before.
 
   * The call 'allSat' has been reworked so it performs only one call to the underlying
     solver and repeatedly issues check-sat to get new assignments. This differs from the
