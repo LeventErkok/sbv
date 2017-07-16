@@ -9,5 +9,5 @@ testInterfaces: testInterfaces.hs
 clean:
 	@rm -f *.o *.hi
 
-veryClean:
+veryclean:
 	@rm -f $(TARGETS)
