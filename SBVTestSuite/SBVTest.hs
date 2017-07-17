@@ -72,7 +72,7 @@ import qualified TestSuite.Uninterpreted.Sort
 import qualified TestSuite.Uninterpreted.Uninterpreted
 
 main :: IO ()
-main = defaultMain $ testGroup "Tests" (drop 3 (take 4 (map snd allTests)))
+main = defaultMain $ testGroup "Tests" (map snd allTests)
 
 -- If the Bool is True, then that test requires the presence of Z3
 -- Otherwise, it can be run without the presence of the solver.
