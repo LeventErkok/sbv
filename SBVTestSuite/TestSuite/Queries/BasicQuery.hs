@@ -21,7 +21,7 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Basics.Query"
-    [ goldenCapturedIO "query1" testQuery
+    [ goldenCapturedIO "noTravis_query1" testQuery
     ]
 
 testQuery :: FilePath -> IO ()
