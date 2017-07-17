@@ -12,8 +12,9 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Data.SBV.Control (
-     -- * User queries
      -- $queryIntro
+
+     -- * User queries
        Query, query
 
      -- * Create a fresh variable
@@ -169,4 +170,78 @@ querying the engine and issuing commands accordingly. Even with human guidance, 
 can take a look at the engine state and issue commands to guide the proof. This is an advanced feature,
 as the user is given full access to the underlying SMT solver, so the usual protections provided by
 SBV are no longer there to prevent mistakes.
+
+Having said that, queries can be extremely powerful as they allow direct control of the solver. Here's a
+simple example:
+
+@
+    module Test where
+
+    import Data.SBV
+    import Data.SBV.Control  -- queries require this module to be imported!
+
+    test :: Symbolic (Maybe (Integer, Integer))
+    test = do x <- sInteger "x"   -- a free variable named "x"
+              y <- sInteger "y"   -- a free variable named "y"
+
+              -- require the sum to be 10
+              constrain $ x + y .== 10
+
+              -- Go into the Query mode
+              query $ do
+                    -- Query the solver: Are the constraints satisfiable?
+                    cs <- checkSat
+                    case cs of
+                      Unk   -> error "Solver said unknown!"
+                      Unsat -> return Nothing -- no solution!
+                      Sat   -> -- Query the values:
+                               do xv <- getValue x
+                                  yv <- getValue y
+
+                                  io $ putStrLn $ "Solver returned: " ++ show (xv, yv)
+
+                                  -- We can now add new constraints,
+                                  -- Or perform arbitrary computations and tell
+                                  -- the solver anything we want!
+                                  constrain $ x .> literal xv + literal yv
+
+                                  -- call checkSat again
+                                  csNew <- checkSat
+                                  case csNew of
+                                    Unk   -> error "Solver said unknown!"
+                                    Unsat -> return Nothing
+                                    Sat   -> do xv2 <- getValue x
+                                                yv2 <- getValue y
+
+                                                return $ Just (xv2, yv2)
+@
+
+Note the type of 'test', it returns an optional pair of integers in the 'Symbolic' monad. We turn
+it into an IO value with the 'runSMT' function: (There's also 'runSMTWith' that uses a user specified
+solver instead of the default.)
+
+@
+    pair :: IO (Maybe (Integer, Integer))
+    pair = runSMT test
+@
+
+When run, this can return:
+
+@
+*Test> pair
+Solver returned: (10,0)
+Just (11,-1)
+@
+
+demonstrating that the user has full contact with the solver and can guide it as the program executes. SBV
+provides access to many SMTLib features in the query mode, as exported from this very module.
+
+For other examples see:
+
+  - "Data.SBV.Examples.Queries.AllSat": Simulating SBV's 'allSat' using queries.
+  - "Data.SBV.Examples.Queries.CaseSplit": Performing a case-split during a query.
+  - "Data.SBV.Examples.Queries.Enums": Using enumerations in queries.
+  - "Data.SBV.Examples.Queries.FourFours": Solution to a fun arithmetic puzzle, coded using queries.
+  - "Data.SBV.Examples.Queries.GuessNumber": The famous number guessing game.
+  - "Data.SBV.Examples.Queries.UnsatCore": Extracting unsat-cores using queries.
 -}
