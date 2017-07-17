@@ -97,6 +97,7 @@ Library
                   , Data.SBV.Examples.Puzzles.SendMoreMoney
                   , Data.SBV.Examples.Puzzles.Sudoku
                   , Data.SBV.Examples.Puzzles.U2Bridge
+                  , Data.SBV.Examples.Queries.AllSat
                   , Data.SBV.Examples.Queries.UnsatCore
                   , Data.SBV.Examples.Queries.FourFours
                   , Data.SBV.Examples.Queries.GuessNumber
