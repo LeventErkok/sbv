@@ -64,11 +64,12 @@ respect to the slower reference version.
 -}
 
 -- | States the correctness of faster population-count algorithm, with respect
--- to the reference slow version. Turns out abc is the fastest solver here for
--- this problem. (NB. We're currently not testing this on Travis since
--- it only has Z3 and it takes quite a while to run.)
+-- to the reference slow version. Turns out Z3's default tactic is rather slow
+-- for this one, but there's a magic incantation to make it go fast.
+-- See <https://github.com/Z3Prover/z3/issues/1150> for details.
 --
--- ghci> proveWith abc fastPopCountIsCorrect
+-- >>> let cmd = "(check-sat-using (then (using-params ackermannize_bv :div0_ackermann_limit 1000000) simplify bit-blast sat))"
+-- >>> proveWith z3{satCmd = cmd} fastPopCountIsCorrect
 -- Q.E.D.
 fastPopCountIsCorrect :: SWord64 -> SBool
 fastPopCountIsCorrect x = popCountFast x .== popCountSlow x
