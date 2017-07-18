@@ -42,6 +42,8 @@ Library
                     Rank2Types
                     RankNTypes
                     ScopedTypeVariables
+                    StandaloneDeriving
+                    TemplateHaskell
                     TupleSections
                     TypeOperators
                     TypeSynonymInstances
