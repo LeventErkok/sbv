@@ -103,6 +103,10 @@
     provides a much more detailed output that is directly loadable to a solver
     and has an accurate account of precisely what SBV sent.
 
+  * Enumerations are now much easier to use symbolically, with the addition
+    of the template-haskell splice mkSymbolicEnumeration. See "Data/SBV/Examples/Misc/Enumerate.hs"
+    for an example.
+
   * Thanks to Kanishka Azimi, our external test suite is now run by
     Tasty! Kanishka modernized the test suite, and reworked the
     infrastructure that was showing its age. Thanks!

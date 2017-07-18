@@ -51,6 +51,7 @@ Library
                   , ghc
                   , QuickCheck >= 2.9.2
                   , crackNum >= 1.9
+                  , template-haskell >= 2.11.1.0
                   , array, async, containers, deepseq, directory, filepath, time
                   , pretty, process, mtl, random, syb, data-binary-ieee754
                   , generic-deriving
@@ -154,6 +155,7 @@ Test-Suite SBVTest
                   , ScopedTypeVariables
   Build-depends : base >= 4.9, data-binary-ieee754, filepath, syb
                 , sbv, directory, random
+                , template-haskell >= 2.11.1.0
                 , bytestring   >= 0.9
                 , tasty        >= 0.11.2.2
                 , tasty-golden >= 2.3.1.1

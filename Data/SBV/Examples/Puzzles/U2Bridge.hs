@@ -9,18 +9,19 @@
 -- The famous U2 bridge crossing puzzle: <http://www.braingle.com/brainteasers/515/u2.html>
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE DeriveAnyClass       #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE DeriveGeneric        #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module Data.SBV.Examples.Puzzles.U2Bridge where
 
 import Control.Monad       (unless)
 import Control.Monad.State (State, runState, put, get, modify, evalState)
 
-import Data.Generics (Data)
 import GHC.Generics (Generic)
 
 import Data.SBV
@@ -29,9 +30,10 @@ import Data.SBV
 -- * Modeling the puzzle
 -------------------------------------------------------------
 
--- | U2 band members. We want to translate this to SMT-Lib
--- as a data-type, and hence the deriving mechanism.
-data U2Member = Bono | Edge | Adam | Larry deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind, SatModel)
+-- | U2 band members. We want to translate this to SMT-Lib as a data-type, and hence the
+-- call to mkSymbolicEnumeration.
+data U2Member = Bono | Edge | Adam | Larry
+mkSymbolicEnumeration ''U2Member
 
 -- | Symbolic shorthand for a 'U2Member'
 type SU2Member = SBV U2Member
@@ -61,7 +63,8 @@ sCrossTime m =   ite (m .== bono) (literal (crossTime Bono))
                                   (literal (crossTime Larry)) -- Must be Larry
 
 -- | Location of the flash
-data Location = Here | There deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind, SatModel)
+data Location = Here | There
+mkSymbolicEnumeration ''Location
 
 -- | Symbolic variant of 'Location'
 type SLocation = SBV Location

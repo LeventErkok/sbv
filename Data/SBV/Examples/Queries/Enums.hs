@@ -9,20 +9,20 @@
 -- Demonstrates the use of enumeration values during queries.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveAnyClass     #-}
 
 module Data.SBV.Examples.Queries.Enums where
 
 import Data.SBV
 import Data.SBV.Control
-import Data.Generics
 
--- | Days of the week. The bulky @deriving@ clause is necessary to make this
--- type usable as a symbolic kind in SBV.
+-- | Days of the week. We make it symbolic using the 'mkSymbolicEnumeration' splice.
 data Day = Monday | Tuesday | Wednesday | Thursday | Friday | Saturday | Sunday
-         deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind, SMTValue)
+mkSymbolicEnumeration ''Day
 
 -- | The type synonym 'SDay' is the symbolic variant of 'Day'. (Similar to 'SInteger'/'Integer'
 -- and others.)

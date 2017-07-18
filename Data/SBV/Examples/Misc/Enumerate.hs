@@ -12,6 +12,8 @@
 -- example involving enumerations.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -19,17 +21,16 @@
 module Data.SBV.Examples.Misc.Enumerate where
 
 import Data.SBV
-import Data.Generics
 
 -- | A simple enumerated type, that we'd like to translate to SMT-Lib intact;
 -- i.e., this type will not be uninterpreted but rather preserved and will
--- be just like any other symbolic type SBV provides. Note the automatically
--- derived classes we need: 'Eq', 'Ord', 'Data', 'Read', 'Show', 'SymWord',
--- 'HasKind', and 'SatModel'. (The last one is only needed if 'getModelAssignment' and friends are used.)
+-- be just like any other symbolic type SBV provides.
 --
--- Also note that we need to @import Data.Generics@ and have the @LANGUAGE@
--- option @DeriveDataTypeable@ and @DeriveAnyClass@ set.
-data E = A | B | C deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
+-- Also note that we need to have the following @LANGUAGE@ options defined:
+-- @TemplateHaskell@, @StandaloneDeriving@, @DeriveDataTypeable@, @DeriveAnyClass@ for
+-- this to work.
+data E = A | B | C
+mkSymbolicEnumeration ''E
 
 -- | Give a name to the symbolic variants of 'E', for convenience
 type SE = SBV E

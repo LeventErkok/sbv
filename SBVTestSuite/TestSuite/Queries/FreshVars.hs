@@ -9,16 +9,20 @@
 -- Testing fresh-vars in query mode
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module TestSuite.Queries.FreshVars (tests)  where
 
-import Data.Generics
 import Data.SBV.Control
 
 import Utils.SBVTestFramework
+
+data BinOp  = Plus | Minus | Times
+mkSymbolicEnumeration ''BinOp
 
 -- Test suite
 tests :: TestTree
@@ -31,7 +35,6 @@ testQuery :: FilePath -> IO ()
 testQuery rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just rf} fv
                   appendFile rf ("\n FINAL:" ++ show (SatResult r) ++ "\nDONE!\n")
 
-data BinOp  = Plus | Minus | Times deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind, SMTValue)
 type SBinOp = SBV BinOp
 
 fv :: Symbolic SMTResult

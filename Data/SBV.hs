@@ -105,8 +105,11 @@
 -- get in touch if there is a solver you'd like to see included.
 ---------------------------------------------------------------------------------
 
-{-# LANGUAGE    FlexibleInstances #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE    FlexibleInstances  #-}
+{-# LANGUAGE    QuasiQuotes        #-}
+{-# LANGUAGE    TemplateHaskell    #-}
+{-# LANGUAGE    StandaloneDeriving #-}
+{-# OPTIONS_GHC -fno-warn-orphans  #-}
 
 module Data.SBV (
   -- * Programming with symbolic values
@@ -185,6 +188,7 @@ module Data.SBV (
 
   -- * Enumerations
   -- $enumerations
+  , mkSymbolicEnumeration
 
   -- * Properties, proofs, satisfiability, and safety
   -- $proveIntro
@@ -261,6 +265,10 @@ import Data.Bits
 import Data.Int
 import Data.Ratio
 import Data.Word
+
+import qualified Language.Haskell.TH as TH
+import Data.Generics
+import Data.SBV.Control.Utils(SMTValue)
 
 -- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
 -- problems with constraints, like the following:
@@ -348,6 +356,21 @@ instance {-# OVERLAPPABLE #-}
 
 instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> z) where
   k === l = prove $ \a b c d e f g -> k (a, b, c, d, e, f, g) .== l (a, b, c, d, e, f, g)
+
+-- | Make an enumeration a symbolic type.
+mkSymbolicEnumeration :: TH.Name -> TH.Q [TH.Dec]
+mkSymbolicEnumeration typeName = do
+    let typeCon = TH.conT typeName
+    [d| deriving instance Eq       $(typeCon)
+        deriving instance Show     $(typeCon)
+        deriving instance Ord      $(typeCon)
+        deriving instance Read     $(typeCon)
+        deriving instance Data     $(typeCon)
+        deriving instance SymWord  $(typeCon)
+        deriving instance HasKind  $(typeCon)
+        deriving instance SMTValue $(typeCon)
+        deriving instance SatModel $(typeCon)
+      |]
 
 -- Haddock section documentation
 {- $progIntro
@@ -773,7 +796,9 @@ following example demonstrates:
 (Note that you'll also need to use the language pragmas @DeriveDataTypeable@, @DeriveAnyClass@, and import @Data.Generics@ for the above to work.) 
 
 This is all it takes to introduce 'B' as an uninterpreted sort in SBV, which makes the type @SBV B@ automagically become available as the type
-of symbolic values that ranges over 'B' values. Note that the @()@ argument is important to distinguish it from enumerations.
+of symbolic values that ranges over 'B' values. Note that the @()@ argument is important to distinguish it from enumerations, which will be
+translated to proper SMT data-types.
+
 
 Uninterpreted functions over both uninterpreted and regular sorts can be declared using the facilities introduced by
 the 'Uninterpreted' class.
@@ -783,15 +808,24 @@ the 'Uninterpreted' class.
 If the uninterpreted sort definition takes the form of an enumeration (i.e., a simple data type with all nullary constructors), then SBV will actually
 translate that as just such a data-type to SMT-Lib, and will use the constructors as the inhabitants of the said sort. A simple example is:
 
-  @
-    data X = A | B | C deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind, SatModel)
-  @
+@
+    data X = A | B | C
+    mkSymbolicEnumeration ''X
+@
+
+Note the magic incantation @mkSymbolicEnumeration ''X@. For this to work, you need to have the following
+options turned on:
+
+>   LANGUAGE TemplateHaskell
+>   LANGUAGE StandaloneDeriving
+>   LANGUAGE DeriveDataTypeable
+>   LANGUAGE DeriveAnyClass
 
 Now, the user can define
 
-  @
+@
     type SX = SBV X
-  @
+@
 
 and treat @SX@ as a regular symbolic type ranging over the values @A@, @B@, and @C@. Such values can be compared for equality, and with the usual
 other comparison operators, such as @.==@, @./=@, @.>@, @.>=@, @<@, and @<=@.
@@ -799,13 +833,13 @@ other comparison operators, such as @.==@, @./=@, @.>@, @.>=@, @<@, and @<=@.
 Note that in this latter case the type is no longer uninterpreted, but is properly represented as a simple enumeration of the said elements. A simple
 query would look like:
 
-   @
+@
      allSat $ \x -> x .== (x :: SX)
-   @
+@
 
 which would list all three elements of this domain as satisfying solutions.
 
-   @
+@
      Solution #1:
        s0 = A :: X
      Solution #2:
@@ -813,10 +847,12 @@ which would list all three elements of this domain as satisfying solutions.
      Solution #3:
        s0 = C :: X
      Found 3 different solutions.
-   @
+@
 
 Note that the result is properly typed as @X@ elements; these are not mere strings. So, in a 'getModelAssignment' scenario, the user can recover actual
 elements of the domain and program further with those values as usual.
+
+See "Data.SBV.Examples.Misc.Enumerate" for an extended example on how to use symbolic enumerations.
 -}
 
 {- $noteOnNestedQuantifiers

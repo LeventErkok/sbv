@@ -27,29 +27,35 @@
 -- Who owns the fish?
 ------------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Data.SBV.Examples.Puzzles.Fish where
 
-import Data.Generics
 import Data.SBV
 
 -- | Colors of houses
-data Color       = Red      | Green    | White      | Yellow    | Blue   deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
+data Color = Red | Green | White | Yellow | Blue
+mkSymbolicEnumeration ''Color
 
 -- | Nationalities of the occupants
-data Nationality = Briton   | Dane     | Swede      | Norwegian | German deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
+data Nationality = Briton | Dane | Swede | Norwegian | German
+mkSymbolicEnumeration ''Nationality
 
 -- | Beverage choices
-data Beverage    = Tea      | Coffee   | Milk       | Beer      | Water  deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
+data Beverage = Tea | Coffee | Milk | Beer | Water
+mkSymbolicEnumeration ''Beverage
 
 -- | Pets they keep
-data Pet         = Dog      | Horse    | Cat        | Bird      | Fish   deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
+data Pet = Dog | Horse | Cat | Bird | Fish
+mkSymbolicEnumeration ''Pet
 
 -- | Sports they engage in
-data Sport       = Football | Baseball | Volleyball | Hockey    | Tennis deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
+data Sport = Football | Baseball | Volleyball | Hockey | Tennis
+mkSymbolicEnumeration ''Sport
 
 -- | We have:
 --

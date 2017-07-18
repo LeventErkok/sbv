@@ -9,16 +9,20 @@
 -- Test suite for Data.SBV.Examples.Uninterpreted.AUF
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module TestSuite.Queries.Enums where
 
-import Data.Generics
 import Data.SBV.Control
 
 import Utils.SBVTestFramework
+
+data BinOp  = Plus | Minus | Times
+mkSymbolicEnumeration ''BinOp
 
 -- Test suite
 tests :: TestTree
@@ -27,7 +31,6 @@ tests =
     [ goldenCapturedIO "qEnum1" $ \rf -> runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just rf} test
     ]
 
-data BinOp  = Plus | Minus | Times deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind, SMTValue)
 type SBinOp = SBV BinOp
 
 test :: Symbolic ()
