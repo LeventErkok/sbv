@@ -2,6 +2,7 @@
 module Main(main) where
 
 import Test.Tasty
+import System.Environment (lookupEnv)
 
 import qualified TestSuite.Arrays.Memory
 import qualified TestSuite.Basics.AllSat
@@ -55,14 +56,14 @@ import qualified TestSuite.Puzzles.PowerSet
 import qualified TestSuite.Puzzles.Sudoku
 import qualified TestSuite.Puzzles.Temperature
 import qualified TestSuite.Puzzles.U2Bridge
--- import qualified TestSuite.Queries.BasicQuery
+import qualified TestSuite.Queries.BasicQuery
 import qualified TestSuite.Queries.Enums
 import qualified TestSuite.Queries.FreshVars
--- import qualified TestSuite.Queries.Int_ABC
--- import qualified TestSuite.Queries.Int_Boolector
--- import qualified TestSuite.Queries.Int_CVC4
--- import qualified TestSuite.Queries.Int_Mathsat
--- import qualified TestSuite.Queries.Int_Yices
+import qualified TestSuite.Queries.Int_ABC
+import qualified TestSuite.Queries.Int_Boolector
+import qualified TestSuite.Queries.Int_CVC4
+import qualified TestSuite.Queries.Int_Mathsat
+import qualified TestSuite.Queries.Int_Yices
 import qualified TestSuite.Queries.Int_Z3
 import qualified TestSuite.Queries.Uninterpreted
 import qualified TestSuite.Uninterpreted.AUF
@@ -72,79 +73,87 @@ import qualified TestSuite.Uninterpreted.Sort
 import qualified TestSuite.Uninterpreted.Uninterpreted
 
 main :: IO ()
-main = defaultMain $ testGroup "Tests" (map snd allTests)
+main = do mbTravis <- lookupEnv "SBV_UNDER_TRAVIS"
 
--- If the Bool is True, then that test requires the presence of Z3
--- Otherwise, it can be run without the presence of the solver.
--- Note that we actually do not use this info when we pick the tests,
--- but one can imagine this becoming useful later on if we have to do
--- basic testing in environments that don't have a reliable Z3 installation.
-allTests :: [(Bool, TestTree)]
-allTests = [ (True,  TestSuite.Arrays.Memory.tests)
-           , (True,  TestSuite.Basics.AllSat.tests)
-           , (False, TestSuite.Basics.ArithNoSolver.tests)
-           , (True,  TestSuite.Basics.ArithSolver.tests)
-           , (False, TestSuite.Basics.BasicTests.tests)
-           , (False, TestSuite.Basics.GenBenchmark.tests)
-           , (True,  TestSuite.Basics.Higher.tests)
-           , (True,  TestSuite.Basics.Index.tests)
-           , (True,  TestSuite.Basics.IteTest.tests)
-           , (True,  TestSuite.Basics.ProofTests.tests)
-           , (True,  TestSuite.Basics.PseudoBoolean.tests)
-           , (True,  TestSuite.Basics.QRem.tests)
-           , (True,  TestSuite.Basics.Quantifiers.tests)
-           , (True,  TestSuite.Basics.SquashReals.tests)
-           , (True,  TestSuite.Basics.TOut.tests)
-           , (True,  TestSuite.BitPrecise.BitTricks.tests)
-           , (False, TestSuite.BitPrecise.Legato.tests)
-           , (False, TestSuite.BitPrecise.MergeSort.tests)
-           , (True,  TestSuite.BitPrecise.PrefixSum.tests)
-           , (False, TestSuite.CodeGeneration.AddSub.tests)
-           , (False, TestSuite.CodeGeneration.CgTests.tests)
-           , (False, TestSuite.CodeGeneration.CRC_USB5.tests)
-           , (False, TestSuite.CodeGeneration.Fibonacci.tests)
-           , (False, TestSuite.CodeGeneration.Floats.tests)
-           , (False, TestSuite.CodeGeneration.GCD.tests)
-           , (False, TestSuite.CodeGeneration.PopulationCount.tests)
-           , (False, TestSuite.CodeGeneration.Uninterpreted.tests)
-           , (False, TestSuite.CRC.CCITT.tests)
-           , (True,  TestSuite.CRC.CCITT_Unidir.tests)
-           , (True,  TestSuite.CRC.GenPoly.tests)
-           , (True,  TestSuite.CRC.Parity.tests)
-           , (True,  TestSuite.CRC.USB5.tests)
-           , (False, TestSuite.Crypto.AES.tests)
-           , (True,  TestSuite.Crypto.RC4.tests)
-           , (False, TestSuite.Existentials.CRCPolynomial.tests)
-           , (False, TestSuite.GenTest.GenTests.tests)
-           , (True,  TestSuite.Optimization.AssertSoft.tests)
-           , (True,  TestSuite.Optimization.Basics.tests)
-           , (True,  TestSuite.Optimization.Combined.tests)
-           , (True,  TestSuite.Optimization.ExtensionField.tests)
-           , (True,  TestSuite.Optimization.Reals.tests)
-           , (True,  TestSuite.Polynomials.Polynomials.tests)
-           , (False, TestSuite.Puzzles.Coins.tests)
-           , (False, TestSuite.Puzzles.Counts.tests)
-           , (True,  TestSuite.Puzzles.DogCatMouse.tests)
-           , (True,  TestSuite.Puzzles.Euler185.tests)
-           , (True,  TestSuite.Puzzles.MagicSquare.tests)
-           , (True,  TestSuite.Puzzles.NQueens.tests)
-           , (True,  TestSuite.Puzzles.PowerSet.tests)
-           , (True,  TestSuite.Puzzles.Sudoku.tests)
-           , (True,  TestSuite.Puzzles.Temperature.tests)
-           , (True,  TestSuite.Puzzles.U2Bridge.tests)
-           -- , (True,  TestSuite.Queries.BasicQuery.tests)
-           , (True,  TestSuite.Queries.Enums.tests)
-           , (True,  TestSuite.Queries.FreshVars.tests)
-           -- , (True,  TestSuite.Queries.Int_ABC.tests)
-           -- , (True,  TestSuite.Queries.Int_Boolector.tests)
-           -- , (True,  TestSuite.Queries.Int_CVC4.tests)
-           -- , (True,  TestSuite.Queries.Int_Mathsat.tests)
-           -- , (True,  TestSuite.Queries.Int_Yices.tests)
-           , (True,  TestSuite.Queries.Int_Z3.tests)
-           , (True,  TestSuite.Queries.Uninterpreted.tests)
-           , (True,  TestSuite.Uninterpreted.AUF.tests)
-           , (True,  TestSuite.Uninterpreted.Axioms.tests)
-           , (True,  TestSuite.Uninterpreted.Function.tests)
-           , (True,  TestSuite.Uninterpreted.Sort.tests)
-           , (True,  TestSuite.Uninterpreted.Uninterpreted.tests)
+          isTravis <- case mbTravis of
+                        Just "yes" -> do putStrLn "SBVTests: Running on Travis"
+                                         return True
+                        _          -> do putStrLn "SBVTests: Not running on Travis"
+                                         return False
+
+          let testCases = [tc | (canRunOnTravis, _, tc) <- allTests, not isTravis || canRunOnTravis]
+
+          defaultMain $ testGroup "Tests" testCases
+
+-- If the first  Bool is True, then that test can run on Travis
+-- If the second Bool is True, then that test requires the presence of Z3
+-- Note that we currently do not use the second boolean, but it can come in handy later.
+allTests :: [(Bool, Bool, TestTree)]
+allTests = [ (True,  True,  TestSuite.Arrays.Memory.tests)
+           , (True,  True,  TestSuite.Basics.AllSat.tests)
+           , (True,  False, TestSuite.Basics.ArithNoSolver.tests)
+           , (True,  True,  TestSuite.Basics.ArithSolver.tests)
+           , (True,  False, TestSuite.Basics.BasicTests.tests)
+           , (True,  False, TestSuite.Basics.GenBenchmark.tests)
+           , (True,  True,  TestSuite.Basics.Higher.tests)
+           , (True,  True,  TestSuite.Basics.Index.tests)
+           , (True,  True,  TestSuite.Basics.IteTest.tests)
+           , (True,  True,  TestSuite.Basics.ProofTests.tests)
+           , (True,  True,  TestSuite.Basics.PseudoBoolean.tests)
+           , (True,  True,  TestSuite.Basics.QRem.tests)
+           , (True,  True,  TestSuite.Basics.Quantifiers.tests)
+           , (True,  True,  TestSuite.Basics.SquashReals.tests)
+           , (True,  True,  TestSuite.Basics.TOut.tests)
+           , (True,  True,  TestSuite.BitPrecise.BitTricks.tests)
+           , (True,  False, TestSuite.BitPrecise.Legato.tests)
+           , (True,  False, TestSuite.BitPrecise.MergeSort.tests)
+           , (True,  True,  TestSuite.BitPrecise.PrefixSum.tests)
+           , (True,  False, TestSuite.CodeGeneration.AddSub.tests)
+           , (True,  False, TestSuite.CodeGeneration.CgTests.tests)
+           , (True,  False, TestSuite.CodeGeneration.CRC_USB5.tests)
+           , (True,  False, TestSuite.CodeGeneration.Fibonacci.tests)
+           , (True,  False, TestSuite.CodeGeneration.Floats.tests)
+           , (True,  False, TestSuite.CodeGeneration.GCD.tests)
+           , (True,  False, TestSuite.CodeGeneration.PopulationCount.tests)
+           , (True,  False, TestSuite.CodeGeneration.Uninterpreted.tests)
+           , (True,  False, TestSuite.CRC.CCITT.tests)
+           , (True,  True,  TestSuite.CRC.CCITT_Unidir.tests)
+           , (True,  True,  TestSuite.CRC.GenPoly.tests)
+           , (True,  True,  TestSuite.CRC.Parity.tests)
+           , (True,  True,  TestSuite.CRC.USB5.tests)
+           , (True,  False, TestSuite.Crypto.AES.tests)
+           , (True,  True,  TestSuite.Crypto.RC4.tests)
+           , (True,  False, TestSuite.Existentials.CRCPolynomial.tests)
+           , (True,  False, TestSuite.GenTest.GenTests.tests)
+           , (True,  True,  TestSuite.Optimization.AssertSoft.tests)
+           , (True,  True,  TestSuite.Optimization.Basics.tests)
+           , (True,  True,  TestSuite.Optimization.Combined.tests)
+           , (True,  True,  TestSuite.Optimization.ExtensionField.tests)
+           , (True,  True,  TestSuite.Optimization.Reals.tests)
+           , (True,  True,  TestSuite.Polynomials.Polynomials.tests)
+           , (True,  False, TestSuite.Puzzles.Coins.tests)
+           , (True,  False, TestSuite.Puzzles.Counts.tests)
+           , (True,  True,  TestSuite.Puzzles.DogCatMouse.tests)
+           , (True,  True,  TestSuite.Puzzles.Euler185.tests)
+           , (True,  True,  TestSuite.Puzzles.MagicSquare.tests)
+           , (True,  True,  TestSuite.Puzzles.NQueens.tests)
+           , (True,  True,  TestSuite.Puzzles.PowerSet.tests)
+           , (True,  True,  TestSuite.Puzzles.Sudoku.tests)
+           , (True,  True,  TestSuite.Puzzles.Temperature.tests)
+           , (True,  True,  TestSuite.Puzzles.U2Bridge.tests)
+           , (False, True,  TestSuite.Queries.BasicQuery.tests)
+           , (True,  True,  TestSuite.Queries.Enums.tests)
+           , (True,  True,  TestSuite.Queries.FreshVars.tests)
+           , (False, True,  TestSuite.Queries.Int_ABC.tests)
+           , (False, True,  TestSuite.Queries.Int_Boolector.tests)
+           , (False, True,  TestSuite.Queries.Int_CVC4.tests)
+           , (False, True,  TestSuite.Queries.Int_Mathsat.tests)
+           , (False, True,  TestSuite.Queries.Int_Yices.tests)
+           , (True,  True,  TestSuite.Queries.Int_Z3.tests)
+           , (True,  True,  TestSuite.Queries.Uninterpreted.tests)
+           , (True,  True,  TestSuite.Uninterpreted.AUF.tests)
+           , (True,  True,  TestSuite.Uninterpreted.Axioms.tests)
+           , (True,  True,  TestSuite.Uninterpreted.Function.tests)
+           , (True,  True,  TestSuite.Uninterpreted.Sort.tests)
+           , (True,  True,  TestSuite.Uninterpreted.Uninterpreted.tests)
            ]

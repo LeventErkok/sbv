@@ -30,6 +30,7 @@ matrix:
 # Note: the distinction between `before_install` and `install` is not important.
 before_install:
  - unset CC
+ - export SBV_UNDER_TRAVIS=yes
  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:~/.cabal/bin:$PATH
  - export PATH=/opt/happy/$HAPPYVER/bin:$PATH
  - export Z3=`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x64.*ubuntu.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | awk -F\" '{print $2}'`
@@ -85,10 +86,6 @@ install:
 script:
  - cabal configure --enable-tests --enable-benchmarks -v2  # -v2 provides useful information for debugging
  - cabal build   # this builds all libraries and executables (including tests/benchmarks)
-   # Use the following three lines once tasty patterns start working!
-   # - travis_wait 30 cabal test SBVTest    --test-options=-p!noTravis_
-   # - travis_wait 30 cabal test SBVDocTest
-   # - travis_wait 30 cabal test SBVHLint
  - travis_wait 30 cabal test 
  - cabal check
  - cabal sdist   # tests that a source-distribution can be generated
