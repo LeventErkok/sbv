@@ -105,10 +105,11 @@
 -- get in touch if there is a solver you'd like to see included.
 ---------------------------------------------------------------------------------
 
-{-# LANGUAGE    FlexibleInstances  #-}
-{-# LANGUAGE    QuasiQuotes        #-}
-{-# LANGUAGE    TemplateHaskell    #-}
-{-# LANGUAGE    StandaloneDeriving #-}
+{-# LANGUAGE    FlexibleInstances   #-}
+{-# LANGUAGE    QuasiQuotes         #-}
+{-# LANGUAGE    TemplateHaskell     #-}
+{-# LANGUAGE    ScopedTypeVariables #-}
+{-# LANGUAGE    StandaloneDeriving  #-}
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 
 module Data.SBV (
@@ -250,6 +251,8 @@ module Data.SBV (
 
 import Control.Monad (filterM)
 
+import qualified Control.Exception as C
+
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
@@ -283,10 +286,11 @@ solve = return . bAnd
 -- | Check whether the given solver is installed and is ready to go. This call does a
 -- simple call to the solver to ensure all is well.
 sbvCheckSolverInstallation :: SMTConfig -> IO Bool
-sbvCheckSolverInstallation cfg = do ThmResult r <- proveWith cfg $ \x -> (x+x) .== ((x*2) :: SWord8)
-                                    case r of
-                                      Unsatisfiable{} -> return True
-                                      _               -> return False
+sbvCheckSolverInstallation cfg = check `C.catch` (\(_ :: C.SomeException) -> return False)
+  where check = do ThmResult r <- proveWith cfg $ \x -> (x+x) .== ((x*2) :: SWord8)
+                   case r of
+                     Unsatisfiable{} -> return True
+                     _               -> return False
 
 -- | The default configs corresponding to supported SMT solvers
 defaultSolverConfig :: Solver -> SMTConfig
