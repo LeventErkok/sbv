@@ -227,6 +227,7 @@ svQuot x y
 -- defined s.t. @x/0 = 0@, which holds even when @x@ itself is @0@.
 svRem :: SVal -> SVal -> SVal
 svRem x y
+  | isConcreteZero x = x
   | isConcreteZero y = x
   | isConcreteOne  y = svInteger (kindOf x) 0
   | True             = liftSym2 (mkSymOp Rem) nonzeroCheck
