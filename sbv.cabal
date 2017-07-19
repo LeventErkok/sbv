@@ -157,7 +157,7 @@ Test-Suite SBVTest
                 , sbv, directory, random, mtl
                 , template-haskell >= 2.11
                 , bytestring   >= 0.9
-                , tasty        >= 0.11.2.2
+                , tasty        >= 0.11.2.3
                 , tasty-golden >= 2.3.1.1
                 , tasty-hunit  >= 0.9.2
   Hs-Source-Dirs  : SBVTestSuite
