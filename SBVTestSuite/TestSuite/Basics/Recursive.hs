@@ -44,7 +44,7 @@ mgcdDyn i = D.proveWith z3 $ do
 checkThm :: ThmResult -> Assertion
 checkThm r = assert isThm
   where isThm = case r of
-                  ThmResult Unsatisfiable{} -> (return True :: IO Bool)
+                  ThmResult Unsatisfiable{} -> return True :: IO Bool
                   ThmResult Satisfiable{}   -> return False
                   _                         -> error "checkThm: Unexpected result!"
 
