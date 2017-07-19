@@ -176,6 +176,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.PseudoBoolean
                   , TestSuite.Basics.QRem
                   , TestSuite.Basics.Quantifiers
+                  , TestSuite.Basics.Recursive
                   , TestSuite.Basics.SquashReals
                   , TestSuite.Basics.TOut
                   , TestSuite.BitPrecise.BitTricks

@@ -17,6 +17,7 @@ import qualified TestSuite.Basics.ProofTests
 import qualified TestSuite.Basics.PseudoBoolean
 import qualified TestSuite.Basics.QRem
 import qualified TestSuite.Basics.Quantifiers
+import qualified TestSuite.Basics.Recursive
 import qualified TestSuite.Basics.SquashReals
 import qualified TestSuite.Basics.TOut
 import qualified TestSuite.BitPrecise.BitTricks
