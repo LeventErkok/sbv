@@ -73,16 +73,24 @@ import qualified TestSuite.Uninterpreted.Function
 import qualified TestSuite.Uninterpreted.Sort
 import qualified TestSuite.Uninterpreted.Uninterpreted
 
+data Platform = Local | TravisLinux | TravisOSX | TravisWindows
+              deriving Show
+
 main :: IO ()
 main = do mbTravis <- lookupEnv "SBV_UNDER_TRAVIS"
 
-          isTravis <- case mbTravis of
-                        Just "yes" -> do putStrLn "SBVTests: Running on Travis"
-                                         return True
-                        _          -> do putStrLn "SBVTests: Not running on Travis"
-                                         return False
+          let platform = case mbTravis of
+                           Nothing      -> Local
+                           Just "linux" -> TravisLinux
+                           Just "osx"   -> TravisOSX
+                           Just "win"   -> TravisWindows
+                           x            -> error $ "SBV_UNDER_TRAVIS: Unexpected value: " ++ show x
 
-          let testCases = [tc | (canRunOnTravis, tc) <- allTests, not isTravis || canRunOnTravis]
+              testCases = case platform of
+                            Local         -> map snd allTests
+                            TravisLinux   ->        [tc | (True, tc) <- allTests]
+                            TravisOSX     -> take 1 [tc | (True, tc) <- allTests]
+                            TravisWindows -> take 1 [tc | (True, tc) <- allTests]
 
           defaultMain $ testGroup "Tests" testCases
 
