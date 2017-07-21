@@ -69,9 +69,9 @@ install:
                $HOME/.cabal/packages/hackage.haskell.org/00-index.tar;
    fi
  - travis_retry cabal update
- - "sed --in-place='' -e 's/^jobs:.*$/jobs: 2/' $HOME/.cabal/config"
+ - "sed -i travis_backup  -e 's/^jobs:.*$/jobs: 2/' $HOME/.cabal/config"
  - cabal install --only-dependencies --enable-tests --enable-benchmarks --dry -v > installplan.txt
- - sed --in-place='' -e '1,/^Resolving /d' installplan.txt; cat installplan.txt
+ - sed -i travis_backup -e '1,/^Resolving /d' installplan.txt; cat installplan.txt
 
 # check whether current requested install-plan matches cached package-db snapshot
  - if diff -u installplan.txt $HOME/.cabsnap/installplan.txt;
