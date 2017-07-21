@@ -26,9 +26,10 @@ matrix:
     - env: CABALVER=1.24 GHCVER=8.0.2 HAPPYVER=1.19.5
       compiler: ": #GHC 8.0.2"
       addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.2,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
-    - os: osx
-      env: CABALVER=1.24 GHCVER=8.0.2 HAPPYVER=1.19.5
-      compiler: ": #GHC 8.0.2"
+      # Can't get travis working on OSX yet..
+      # - os: osx
+      # env: CABALVER=1.24 GHCVER=8.0.2 HAPPYVER=1.19.5
+      # compiler: ": #GHC 8.0.2"
 
 # Note: the distinction between `before_install` and `install` is not important.
 before_install:
@@ -56,11 +57,6 @@ before_install:
 
 install:
 
- # I'm not sure why the following is needed on OSX, seems it shoud not be.. Hmm.
- - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-     cabal update;
-     cabal install happy Glob QuickCheck async crackNum data-binary-ieee754 doctest generic-deriving hlint random syb tasty tasty-golden tasty-hunit --force-reinstalls;
-   fi
  # display versions
  - cabal --version
  - happy --version
