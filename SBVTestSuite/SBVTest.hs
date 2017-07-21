@@ -86,11 +86,16 @@ main = do mbTravis <- lookupEnv "SBV_UNDER_TRAVIS"
                            Just "win"   -> TravisWindows
                            x            -> error $ "SBV_UNDER_TRAVIS: Unexpected value: " ++ show x
 
+              -- TODO:
+              --   For OSX:     tests time out on Travis, so we run just one test case for now.
+              --   For Windows: We actually don't have Travis build on Windows yet.
               testCases = case platform of
-                            Local         -> map snd allTests
+                            Local         ->        [tc | (_   , tc) <- allTests]
                             TravisLinux   ->        [tc | (True, tc) <- allTests]
                             TravisOSX     -> take 1 [tc | (True, tc) <- allTests]
                             TravisWindows -> take 1 [tc | (True, tc) <- allTests]
+
+          putStrLn $ "SBVTest: Test platform: " ++ show platform
 
           defaultMain $ testGroup "Tests" testCases
 
