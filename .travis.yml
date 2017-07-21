@@ -63,11 +63,10 @@ install:
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
 
  # install
- - ls -alR $HOME/.cabal
  - if [ -f $HOME/.cabal/packages/hackage.haskell.org/00-index.tar.gz ];
    then
-     zcat $HOME/.cabal/packages/hackage.haskell.org/00-index.tar.gz >
-          $HOME/.cabal/packages/hackage.haskell.org/00-index.tar;
+     gunzip -c $HOME/.cabal/packages/hackage.haskell.org/00-index.tar.gz >
+               $HOME/.cabal/packages/hackage.haskell.org/00-index.tar;
    fi
  - travis_retry cabal update
  - "sed -i  's/^jobs:.*$/jobs: 2/' $HOME/.cabal/config"
