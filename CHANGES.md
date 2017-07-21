@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 7.0, 2017-07-19
 
+### Version 7.1, Not yet released
+  
+  * New dev version.
+
 ### Version 7.0, Released 2017-07-19
 
   * NB. SBV now requires GHC >= 8.0.1 to compile. If you are stuck with an older
