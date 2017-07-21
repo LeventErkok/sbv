@@ -3,10 +3,6 @@ language: c
 dist: trusty
 sudo: false
 
-os:
-  - linux
-  - osx
-
 cache:
   directories:
     - $HOME/.cabsnap
@@ -30,6 +26,9 @@ matrix:
     - env: CABALVER=1.24 GHCVER=8.0.2 HAPPYVER=1.19.5
       compiler: ": #GHC 8.0.2"
       addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.2,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
+    - os: osx
+      env: CABALVER=1.24 GHCVER=8.0.2 HAPPYVER=1.19.5
+      compiler: ": #GHC 8.0.2"
 
 # Note: the distinction between `before_install` and `install` is not important.
 before_install:
@@ -40,13 +39,16 @@ before_install:
  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
      echo "Getting Z3 for linux";
      export Z3=`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x64.*ubuntu.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | awk -F\" '{print $2}'`;
+     echo "Linux Z3: $Z3"
    fi
  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
      echo "Installing ghc on OSX";
      brew update;
      brew install ghc cabal-install;
+     cabal install happy;
      echo "Getting Z3 for OSX";
      export Z3=`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x64.*osx.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | awk -F\" '{print $2}'`;
+     echo "OSX Z3: $Z3"
    fi
  - export Z3Base=`basename $Z3 .zip`
  - wget --quiet -L -O z3.zip http://github.com/Z3Prover/bin/raw/master/nightly/$Z3
