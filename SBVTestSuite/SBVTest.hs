@@ -2,7 +2,7 @@
 module Main(main) where
 
 import Test.Tasty
-import SBVTestSuite.Utils(getTestEnvironment)
+import Utils.SBVTestFramework (getTestEnvironment, TestEnvironment(..))
 
 import qualified TestSuite.Arrays.Memory
 import qualified TestSuite.Basics.AllSat
@@ -85,7 +85,7 @@ main = do testEnv <- getTestEnvironment
                             RemoteWindows -> [] -- TODO: What's the right test-suite here?
                             RemoteUnknown -> []
 
-          putStrLn $ "SBVTest: Test platform: " ++ show platform
+          putStrLn $ "SBVTest: Test platform: " ++ show testEnv
 
           defaultMain $ testGroup "Tests" testCases
 
