@@ -19,5 +19,5 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Basics.timeout"
-    [ goldenVsStringShow "timeout1" (sat (setTimeOut 1000 >> euler185))
+    [ goldenVsStringShow "timeout1" $ sat $ setTimeOut 1000 >> euler185
     ]
