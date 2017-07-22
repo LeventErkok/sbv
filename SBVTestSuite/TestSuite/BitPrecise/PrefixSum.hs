@@ -19,7 +19,6 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "BitPrecise.PrefixSum"
-    [
-        testCase "prefixSum1" (assertIsThm (flIsCorrect  8 (0, (+))))
-      , testCase "prefixSum2" (assertIsThm (flIsCorrect 16 (0, smax)))
+    [ testCase "prefixSum1" $ assertIsThm $ flIsCorrect  8 (0, (+))
+    , testCase "prefixSum2" $ assertIsThm $ flIsCorrect 16 (0, smax)
     ]

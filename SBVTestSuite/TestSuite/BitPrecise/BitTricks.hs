@@ -18,9 +18,9 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "BitPrecise.BitTricks"
-    [ testCase "fast min" (assertIsThm fastMinCorrect)
-    , testCase "fast max" (assertIsThm fastMaxCorrect)
-    , testCase "opposite signs" (assertIsThm oppositeSignsCorrect)
-    , testCase "conditional set clear" (assertIsThm conditionalSetClearCorrect)
-    , testCase "power of two" (assertIsThm powerOfTwoCorrect)
+    [ testCase "fast min"              $ assertIsThm fastMinCorrect
+    , testCase "fast max"              $ assertIsThm fastMaxCorrect
+    , testCase "opposite signs"        $ assertIsThm oppositeSignsCorrect
+    , testCase "conditional set clear" $ assertIsThm conditionalSetClearCorrect
+    , testCase "power of two"          $ assertIsThm powerOfTwoCorrect
     ]
