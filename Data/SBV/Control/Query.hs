@@ -631,7 +631,18 @@ getAssignment = do
         parse r bad $ \case EApp ps | Just vs <- mapM grab ps -> return vs
                             _                                 -> bad r Nothing
 
--- | Make an assignment. The type 'Assignment' is abstract, see 'success' for an example use case.
+-- | Make an assignment. The type 'Assignment' is abstract, the result is typically passed
+-- to 'mkSMTResult':
+--
+-- @ mkSMTResult [ a |-> 332
+--             , b |-> 2.3
+--             , c |-> True
+--             ]
+-- @
+--
+-- End users should use 'getModel' for automatically constructing models from the current solver state.
+-- However, an explicit 'Assignment' might be handy in complex scenarios where a model needs to be
+-- created manually.
 infix 1 |->
 (|->) :: SymWord a => SBV a -> a -> Assignment
 SBV a |-> v = case literal v of

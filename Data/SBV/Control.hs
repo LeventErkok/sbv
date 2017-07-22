@@ -49,21 +49,18 @@ module Data.SBV.Control (
      -- * Resetting the solver state
      , resetAssertions
 
-     -- * Communicating results back
-     -- ** Constructing assignments
+     -- * Constructing assignments
      , (|->)
 
-     -- ** Miscellaneous
-     , echo
-
-     -- ** Terminating the query
+     -- * Terminating the query
      , mkSMTResult
      , exit
 
      -- * Controlling the solver behavior
      , ignoreExitCode, timeout
 
-     -- * Performing actions
+     -- * Miscellaneous
+     , echo
      , io
 
      -- * Solver options
@@ -166,13 +163,8 @@ query (Query userQuery) = do
 
 {- $queryIntro
 In certain cases, the user might want to take over the communication with the solver, programmatically
-querying the engine and issuing commands accordingly. Even with human guidance, perhaps, where the user
-can take a look at the engine state and issue commands to guide the proof. This is an advanced feature,
-as the user is given full access to the underlying SMT solver, so the usual protections provided by
-SBV are no longer there to prevent mistakes.
-
-Having said that, queries can be extremely powerful as they allow direct control of the solver. Here's a
-simple example:
+querying the engine and issuing commands accordingly. Queries can be extremely powerful as
+they allow direct control of the solver. Here's a simple example:
 
 @
     module Test where
