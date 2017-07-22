@@ -26,10 +26,9 @@ matrix:
     - env: CABALVER=1.24 GHCVER=8.0.2 HAPPYVER=1.19.5
       compiler: ": #GHC 8.0.2"
       addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.2,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
-      # Can't get travis working on OSX yet..
-      # - os: osx
-      # env: CABALVER=1.24 GHCVER=8.0.2 HAPPYVER=1.19.5
-      # compiler: ": #GHC 8.0.2"
+    - os: osx
+      env: CABALVER=1.24 GHCVER=8.0.2 HAPPYVER=1.19.5
+      compiler: ": #GHC 8.0.2"
 
 # Note: the distinction between `before_install` and `install` is not important.
 before_install:
@@ -38,15 +37,21 @@ before_install:
  - export PATH=/opt/happy/$HAPPYVER/bin:$PATH
  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
      export Z3=`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x64.*ubuntu.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | awk -F\" '{print $2}'`;
-     export SBV_UNDER_TRAVIS=linux;
+     export SBV_TEST_ENVIRONMENT=linux;
      echo "Linux Z3 $Z3";
    fi
  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
      brew update;
      brew install ghc cabal-install;
      export Z3=`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x64.*osx.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | awk -F\" '{print $2}'`;
-     export SBV_UNDER_TRAVIS=osx;
+     export SBV_TEST_ENVIRONMENT=osx;
      echo "OSX Z3 $Z3";
+   fi
+ # Travis doesn't support windows actually, but this is how we would get Z3 for it. (Untested)
+ - if [[ "$TRAVIS_OS_NAME" == "win" ]]; then
+     export Z3=`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x64.*win.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | awk -F\" '{print $2}'`;
+     export SBV_TEST_ENVIRONMENT=win;
+     echo "Windows Z3 $Z3";
    fi
  - export Z3Base=`basename $Z3 .zip`
  - wget --quiet -L -O z3.zip http://github.com/Z3Prover/bin/raw/master/nightly/$Z3
@@ -100,7 +105,9 @@ install:
 script:
  - cabal configure --enable-tests --enable-benchmarks -v2  # -v2 provides useful information for debugging
  - cabal build   # this builds all libraries and executables (including tests/benchmarks)
- - travis_wait 30 cabal test 
+ - travis_wait 30 cabal test SBVTest
+ - travis_wait 30 cabal test SBVDocTest
+ - travis_wait 30 cabal test SBVHLint
  - cabal check
  - cabal sdist   # tests that a source-distribution can be generated
 

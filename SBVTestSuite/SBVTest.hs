@@ -2,7 +2,7 @@
 module Main(main) where
 
 import Test.Tasty
-import System.Environment (lookupEnv)
+import SBVTestSuite.Utils(getTestEnvironment)
 
 import qualified TestSuite.Arrays.Memory
 import qualified TestSuite.Basics.AllSat
@@ -73,27 +73,17 @@ import qualified TestSuite.Uninterpreted.Function
 import qualified TestSuite.Uninterpreted.Sort
 import qualified TestSuite.Uninterpreted.Uninterpreted
 
-data Platform = Local | TravisLinux | TravisOSX | TravisWindows
-              deriving Show
-
 main :: IO ()
-main = do mbTravis <- lookupEnv "SBV_UNDER_TRAVIS"
+main = do testEnv <- getTestEnvironment
 
-          let platform = case mbTravis of
-                           Nothing      -> Local
-                           Just "linux" -> TravisLinux
-                           Just "osx"   -> TravisOSX
-                           Just "win"   -> TravisWindows
-                           x            -> error $ "SBV_UNDER_TRAVIS: Unexpected value: " ++ show x
-
-              -- TODO:
-              --   For OSX:     tests time out on Travis, so we run just one test case for now.
-              --   For Windows: We actually don't have Travis build on Windows yet.
-              testCases = case platform of
-                            Local         ->        [tc | (_   , tc) <- allTests]
-                            TravisLinux   ->        [tc | (True, tc) <- allTests]
-                            TravisOSX     -> take 1 [tc | (True, tc) <- allTests]
-                            TravisWindows -> take 1 [tc | (True, tc) <- allTests]
+          let -- TODO: We probably need a better way to pick exactly what tests
+              -- to run here
+              testCases = case testEnv of
+                            Local         -> [tc | (_   , tc) <- allTests]
+                            RemoteLinux   -> [tc | (True, tc) <- allTests]
+                            RemoteOSX     -> [] -- TODO: What's the right test-suite here?
+                            RemoteWindows -> [] -- TODO: What's the right test-suite here?
+                            RemoteUnknown -> []
 
           putStrLn $ "SBVTest: Test platform: " ++ show platform
 

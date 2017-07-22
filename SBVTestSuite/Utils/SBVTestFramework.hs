@@ -19,6 +19,7 @@ module Utils.SBVTestFramework (
         , goldenString
         , goldenVsStringShow
         , goldenCapturedIO
+        , TestEnvironment(..), getTestEnvironment
         -- module exports to simplify life
         , module Test.Tasty
         , module Test.Tasty.HUnit
@@ -30,6 +31,8 @@ import qualified Control.Exception as C
 import qualified Data.ByteString.Lazy.Char8 as LBC
 
 import System.Directory   (removeFile)
+import System.Environment (lookupEnv)
+
 import Test.Tasty         (testGroup, TestTree, TestName)
 import Test.Tasty.Golden  (goldenVsString, goldenVsFile)
 import Test.Tasty.HUnit   (assert, Assertion, testCase)
@@ -39,6 +42,29 @@ import Data.SBV
 import System.FilePath ((</>), (<.>))
 
 import Data.SBV.Internals (runSymbolic, Symbolic, Result, SBVRunMode(..), IStage(..))
+
+---------------------------------------------------------------------------------------
+-- Test environment
+data TestEnvironment =   Local
+                       | RemoteUnknown
+                       | RemoteLinux
+                       | RemoteOSX
+                       | RemoteWindows
+                       deriving Show
+
+getTestEnvironment :: IO TestEnvironment
+getTestEnvironment = do mbTestEnv <- lookupEnv "SBV_TEST_ENVIRONMENT"
+
+                        let testEnv = case mbTestEnv of
+                                        Nothing      -> RemoteUnknown
+                                        Just "local" -> Local
+                                        Just "linux" -> RemoteLinux
+                                        Just "osx"   -> RemoteOSX
+                                        Just "win"   -> RemoteWindows
+                                        x            -> error $ "SBV_TEST_ENVIRONMENT: Unexpected value: " ++ show x
+
+                        putStrLn $ "SBV Test environment is: " ++ show testEnv
+                        return testEnv
 
 -- | Checks that a particular result shows as @s@
 showsAs :: Show a => a -> String -> Assertion

@@ -7,6 +7,8 @@ OS := $(shell uname)
 
 SHELL := /usr/bin/env bash
 
+export SBV_TEST_ENVIRONMENT := local
+
 ifeq ($(OS), Darwin)
 # OSX tends to sleep for long jobs; so run through caffeinate
 TIME        = /usr/bin/time caffeinate
