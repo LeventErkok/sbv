@@ -55,16 +55,13 @@ data TestEnvironment =   Local
 getTestEnvironment :: IO TestEnvironment
 getTestEnvironment = do mbTestEnv <- lookupEnv "SBV_TEST_ENVIRONMENT"
 
-                        let testEnv = case mbTestEnv of
-                                        Nothing      -> RemoteUnknown
-                                        Just "local" -> Local
-                                        Just "linux" -> RemoteLinux
-                                        Just "osx"   -> RemoteOSX
-                                        Just "win"   -> RemoteWindows
-                                        x            -> error $ "SBV_TEST_ENVIRONMENT: Unexpected value: " ++ show x
-
-                        putStrLn $ "SBV Test environment is: " ++ show testEnv
-                        return testEnv
+                        return $ case mbTestEnv of
+                                   Nothing      -> RemoteUnknown
+                                   Just "local" -> Local
+                                   Just "linux" -> RemoteLinux
+                                   Just "osx"   -> RemoteOSX
+                                   Just "win"   -> RemoteWindows
+                                   x            -> error $ "SBV_TEST_ENVIRONMENT: Unexpected value: " ++ show x
 
 -- | Checks that a particular result shows as @s@
 showsAs :: Show a => a -> String -> Assertion
