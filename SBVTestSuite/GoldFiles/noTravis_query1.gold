@@ -186,5 +186,5 @@
   c  =  2.3 :: Float
   d  = True :: Bool
   e  = 3.12 :: Real
-  s5 =  244 :: Word8
+  s5 =  -12 :: Int8
 DONE!

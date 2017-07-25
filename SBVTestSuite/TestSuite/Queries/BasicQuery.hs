@@ -38,7 +38,7 @@ query1 = do
 
        e <- sReal "e"
 
-       (f :: SWord8) <- free_
+       f :: SInt8 <- free_
 
        namedConstraint "a > 0" $ a .> 0
        constrain $ b .> 0
