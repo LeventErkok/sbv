@@ -46,9 +46,6 @@ before_install:
  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
      brew update;
      brew install ghc cabal-install;
-     /bin/rm -f $HOME/.cabal/packages/hackage.haskell.org/00-index.tar.gz;
-     /bin/rm -f $HOME/.cabal/packages/hackage.haskell.org/00-index.tar;
-     /bin/rm -f $HOME/.cabal/packages/hackage.haskell.org/00-index.cache;
      cabal update;
      cabal install happy;
      export Z3=`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x64.*osx.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | awk -F\" '{print $2}'`;
