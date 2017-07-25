@@ -46,7 +46,7 @@ before_install:
  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
      brew update;
      brew install ghc cabal-install;
-     rehash;
+     /bin/rm -rf $HOME/.cabal;
      cabal --version;
      cabal update;
      cabal install happy;
