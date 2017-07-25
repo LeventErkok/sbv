@@ -80,16 +80,18 @@ main = do testEnv <- getTestEnvironment
 
           let allTestCases    = [tc | (_,    tc) <- allTests]
               travisTestCases = [tc | (True, tc) <- allTests]
+              noTestCases     = []
 
               run = defaultMain . testGroup "Tests"
 
           case testEnv of
             TestEnvLocal         -> run allTestCases
             TestEnvTravisLinux   -> run travisTestCases
-            TestEnvTravisOSX     -> run travisTestCases
+            TestEnvTravisOSX     -> -- TODO: Travis can't handle tests here, times out
+                                    run noTestCases
             TestEnvTravisWindows -> run travisTestCases
             TestEnvUnknown       -> do putStrLn "Unknown test environment, skipping tests"
-                                       run []
+                                       run noTestCases
 
 -- If the first  Bool is True, then that test can run on Travis
 allTests :: [(Bool, TestTree)]
