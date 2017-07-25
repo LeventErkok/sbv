@@ -36,7 +36,7 @@ data STreeInternal i e = SLeaf e                        -- NB. parameter 'i' is 
                        | SBin  (STreeInternal i e) (STreeInternal i e)
                        deriving Show
 
-instance (SymWord e, Mergeable (SBV e)) => Mergeable (STree i e) where
+instance SymWord e => Mergeable (STree i e) where
   symbolicMerge f b (SLeaf i)  (SLeaf j)    = SLeaf (symbolicMerge f b i j)
   symbolicMerge f b (SBin l r) (SBin l' r') = SBin  (symbolicMerge f b l l') (symbolicMerge f b r r')
   symbolicMerge _ _ _          _            = error "SBV.STree.symbolicMerge: Impossible happened while merging states"
@@ -51,7 +51,7 @@ readSTree s i = walk (blastBE i) s
 
 -- | Writing a value, similar to how reads are done. The important thing is that the tree
 -- representation keeps updates to a minimum.
-writeSTree :: (Mergeable (SBV e), Num i, Bits i, SymWord i, SymWord e) => STree i e -> SBV i -> SBV e -> STree i e
+writeSTree :: (Num i, Bits i, SymWord i, SymWord e) => STree i e -> SBV i -> SBV e -> STree i e
 writeSTree s i j = walk (blastBE i) s
   where walk []     _          = SLeaf j
         walk (b:bs) (SBin l r) = SBin (ite b l (walk bs l)) (ite b (walk bs r) r)
