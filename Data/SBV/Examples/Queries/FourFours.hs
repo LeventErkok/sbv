@@ -153,36 +153,62 @@ generate i t = runSMT $ do symT <- fill t
 -- | Given an integer, walk through all possible tree shapes (at most 640 of them), and find a
 -- filling that solves the puzzle.
 find :: Integer -> IO ()
-find i = go allPossibleTrees
-  where go []     = putStrLn $ show i ++ ": No solution found."
-        go (t:ts) = do chk <- generate i t
+find target = go allPossibleTrees
+  where go []     = putStrLn $ show target ++ ": No solution found."
+        go (t:ts) = do chk <- generate target t
                        case chk of
                          Nothing -> go ts
-                         Just r  -> putStrLn $ show i ++ ": " ++ show r
+                         Just r  -> do let ok  = concEval r == target
+                                           tag = if ok then " [OK]: " else " [BAD]: "
+                                           sh i | i < 10 = ' ' : show i
+                                                | True   =       show i
 
--- | Solution to the puzzle. We have:
+                                       putStrLn $ sh target ++ tag ++ show r
+
+        -- Make sure the result is correct!
+        concEval :: T BinOp UnOp -> Integer
+        concEval F         = 4
+        concEval (U u t)   = uEval u (concEval t)
+        concEval (B b l r) = bEval b (concEval l) (concEval r)
+
+        uEval :: UnOp -> Integer -> Integer
+        uEval Negate    i = -i
+        uEval Sqrt      i = if i == 4 then  2 else error $ "uEval: Found sqrt applied to value: " ++ show i
+        uEval Factorial i = if i == 4 then 24 else error $ "uEval: Found factorial applied to value: " ++ show i
+
+        bEval :: BinOp -> Integer -> Integer -> Integer
+        bEval Plus   i j = i + j
+        bEval Minus  i j = i - j
+        bEval Times  i j = i * j
+        bEval Divide i j = i `div` j
+        bEval Expt   i j = i ^ j
+
+-- | Solution to the puzzle. When you run this puzzle, the solver can produce different results
+-- than what's shown here, but the expressions should still be all valid!
 --
--- >>> puzzle
--- 0: (4 + (4 - (4 + 4)))
--- 1: (4 / (4 + (4 - 4)))
--- 2: sqrt((4 + (4 * (4 - 4))))
--- 3: (4 - (4 ^ (4 - 4)))
--- 4: (4 * (4 ^ (4 - 4)))
--- 5: (4 + (4 ^ (4 - 4)))
--- 6: (4 + sqrt((4 * (4 / 4))))
--- 7: (4 + (4 - (4 / 4)))
--- 8: (4 - (4 - (4 + 4)))
--- 9: (4 + (4 + (4 / 4)))
--- 10: (4 + (4 + (4 - sqrt(4))))
--- 11: (4 + ((4 + 4!) / 4))
--- 12: (4 * (4 - (4 / 4)))
--- 13: (4! + ((sqrt(4) - 4!) / sqrt(4)))
--- 14: (4 + (4 + (4 + sqrt(4))))
--- 15: (4 + ((4! - sqrt(4)) / sqrt(4)))
--- 16: (4 + (4 + (4 + 4)))
--- 17: (4 + ((sqrt(4) + 4!) / sqrt(4)))
--- 18: -(4 + (4 - (4! + sqrt(4))))
--- 19: -(4 - (4! - (4 / 4)))
--- 20: (4 * (4 + (4 / 4)))
+-- @
+-- ghci> puzzle
+--  0 [OK]: (4 - (4 + (4 - 4)))
+--  1 [OK]: (4 / (4 + (4 - 4)))
+--  2 [OK]: sqrt((4 + (4 * (4 - 4))))
+--  3 [OK]: (4 - (4 ^ (4 - 4)))
+--  4 [OK]: (4 + (4 * (4 - 4)))
+--  5 [OK]: (4 + (4 ^ (4 - 4)))
+--  6 [OK]: (4 + sqrt((4 * (4 / 4))))
+--  7 [OK]: (4 + (4 - (4 / 4)))
+--  8 [OK]: (4 - (4 - (4 + 4)))
+--  9 [OK]: (4 + (4 + (4 / 4)))
+-- 10 [OK]: (4 + (4 + (4 - sqrt(4))))
+-- 11 [OK]: (4 + ((4 + 4!) / 4))
+-- 12 [OK]: (4 * (4 - (4 / 4)))
+-- 13 [OK]: (4! + ((sqrt(4) - 4!) / sqrt(4)))
+-- 14 [OK]: (4 + (4 + (4 + sqrt(4))))
+-- 15 [OK]: (4 + ((4! - sqrt(4)) / sqrt(4)))
+-- 16 [OK]: (4 * (4 * (4 / 4)))
+-- 17 [OK]: (4 + ((sqrt(4) + 4!) / sqrt(4)))
+-- 18 [OK]: -(4 + (4 - (sqrt(4) + 4!)))
+-- 19 [OK]: -(4 - (4! - (4 / 4)))
+-- 20 [OK]: (4 * (4 + (4 / 4)))
+-- @
 puzzle :: IO ()
 puzzle = mapM_ find [0 .. 20]
