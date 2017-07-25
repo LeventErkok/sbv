@@ -45,23 +45,24 @@ import Data.SBV.Internals (runSymbolic, Symbolic, Result, SBVRunMode(..), IStage
 
 ---------------------------------------------------------------------------------------
 -- Test environment
-data TestEnvironment =   Local
-                       | RemoteUnknown
-                       | RemoteLinux
-                       | RemoteOSX
-                       | RemoteWindows
-                       deriving Show
+data TestEnvironment = TestEnvLocal
+                     | TestEnvTravisLinux
+                     | TestEnvTravisOSX
+                     | TestEnvTravisWindows   -- Travis actually doesn't support windows yet. This is "reserved" for future
+                     | TestEnvUnknown
+                     deriving Show
 
 getTestEnvironment :: IO TestEnvironment
 getTestEnvironment = do mbTestEnv <- lookupEnv "SBV_TEST_ENVIRONMENT"
 
-                        return $ case mbTestEnv of
-                                   Nothing      -> RemoteUnknown
-                                   Just "local" -> Local
-                                   Just "linux" -> RemoteLinux
-                                   Just "osx"   -> RemoteOSX
-                                   Just "win"   -> RemoteWindows
-                                   x            -> error $ "SBV_TEST_ENVIRONMENT: Unexpected value: " ++ show x
+                        case mbTestEnv of
+                          Just "local" -> return TestEnvLocal
+                          Just "linux" -> return TestEnvTravisLinux
+                          Just "osx"   -> return TestEnvTravisOSX
+                          Just "win"   -> return TestEnvTravisWindows
+                          Just other   -> do putStrLn $ "Ignoring unexpected test env value: " ++ show other
+                                             return TestEnvUnknown
+                          Nothing      -> return TestEnvUnknown
 
 -- | Checks that a particular result shows as @s@
 showsAs :: Show a => a -> String -> Assertion

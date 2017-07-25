@@ -76,18 +76,20 @@ import qualified TestSuite.Uninterpreted.Uninterpreted
 main :: IO ()
 main = do testEnv <- getTestEnvironment
 
-          let -- TODO: We probably need a better way to pick exactly what tests
-              -- to run here
-              testCases = case testEnv of
-                            Local         -> [tc | (_   , tc) <- allTests]
-                            RemoteLinux   -> [tc | (True, tc) <- allTests]
-                            RemoteOSX     -> [] -- TODO: What's the right test-suite here?
-                            RemoteWindows -> [] -- TODO: What's the right test-suite here?
-                            RemoteUnknown -> []
-
           putStrLn $ "SBVTest: Test platform: " ++ show testEnv
 
-          defaultMain $ testGroup "Tests" testCases
+          let allTestCases    = [tc | (_,    tc) <- allTests]
+              travisTestCases = [tc | (True, tc) <- allTests]
+
+              run = defaultMain . testGroup "Tests"
+
+          case testEnv of
+            TestEnvLocal         -> run allTestCases
+            TestEnvTravisLinux   -> run travisTestCases
+            TestEnvTravisOSX     -> run travisTestCases
+            TestEnvTravisWindows -> run travisTestCases
+            TestEnvUnknown       -> do putStrLn "Unknown test environment, skipping tests"
+                                       run []
 
 -- If the first  Bool is True, then that test can run on Travis
 allTests :: [(Bool, TestTree)]

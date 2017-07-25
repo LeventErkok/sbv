@@ -19,11 +19,12 @@ main = do
     putStrLn $ "SBVHLint: Test platform: " ++ show testEnv
 
     case testEnv of
-      Local         -> runHLint
-      RemoteLinux   -> runHLint
-      RemoteOSX     -> exitSuccess -- TODO: What's the right test-suite here?
-      RemoteWindows -> exitSuccess -- TODO: What's the right test-suite here?
-      RemoteUnknown -> exitSuccess
+      TestEnvLocal         -> runHLint
+      TestEnvTravisLinux   -> runHLint
+      TestEnvTravisOSX     -> runHLint
+      TestEnvTravisWindows -> runHLint
+      TestEnvUnknown       -> do putStrLn "Unknown test environment, skipping hlint run"
+                                 exitSuccess
  where runHLint = do hints <- hlint arguments
                      if null hints
                         then exitSuccess
