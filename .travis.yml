@@ -44,12 +44,13 @@ before_install:
      echo "Linux Z3 $Z3";
    fi
  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+     /bin/rm -rf $HOME/.cabsnap;
+     mkdir -p $HOME/.ghc $HOME/.cabal/lib $HOME/.cabal/share $HOME/.cabal/bin;
      brew update;
      brew install ghc cabal-install;
-     /bin/rm -rf $HOME/.cabal;
-     cabal --version;
      cabal update;
      cabal install happy;
+     cabal install --only-dependencies --enable-tests --enable-benchmarks;
      export Z3=`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x64.*osx.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | awk -F\" '{print $2}'`;
      export SBV_TEST_ENVIRONMENT=osx;
      echo "OSX Z3 $Z3";
