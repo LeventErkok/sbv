@@ -46,6 +46,8 @@ before_install:
  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
      brew update;
      brew install ghc cabal-install;
+     rehash;
+     cabal --version;
      cabal update;
      cabal install happy;
      export Z3=`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x64.*osx.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | awk -F\" '{print $2}'`;
