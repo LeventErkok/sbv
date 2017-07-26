@@ -21,7 +21,7 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Basics.QueryIndividual"
-    [ goldenCapturedIO "query_badOption" $ \rf -> (runSMTWith z3{verbose=True, redirectVerbose=Just rf} q)
+    [ goldenCapturedIO "query_badOption" $ \rf -> runSMTWith z3{verbose=True, redirectVerbose=Just rf} q
                                                   `C.catch`
                                                   (\(e::C.SomeException) -> appendFile rf ("\n\n" ++ show e))
     ]
