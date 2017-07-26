@@ -88,8 +88,7 @@ main = do testEnv <- getTestEnvironment
           case testEnv of
             TestEnvLocal         -> run allTestCases
             TestEnvTravisLinux   -> run travisTestCases
-            TestEnvTravisOSX     -> -- TODO: Travis can't handle tests here, times out
-                                    run noTestCases
+            TestEnvTravisOSX     -> run travisTestCases
             TestEnvTravisWindows -> run travisTestCases
             TestEnvUnknown       -> do putStrLn "Unknown test environment, skipping tests"
                                        run noTestCases
