@@ -58,6 +58,7 @@ import qualified TestSuite.Puzzles.Sudoku
 import qualified TestSuite.Puzzles.Temperature
 import qualified TestSuite.Puzzles.U2Bridge
 import qualified TestSuite.Queries.BasicQuery
+import qualified TestSuite.Queries.BadOption
 import qualified TestSuite.Queries.Enums
 import qualified TestSuite.Queries.FreshVars
 import qualified TestSuite.Queries.Int_ABC
@@ -149,6 +150,7 @@ allTests = [ (True,  TestSuite.Arrays.Memory.tests)
            , (True,  TestSuite.Puzzles.Temperature.tests)
            , (True,  TestSuite.Puzzles.U2Bridge.tests)
            , (False, TestSuite.Queries.BasicQuery.tests)
+           , (True,  TestSuite.Queries.BadOption.tests)
            , (True,  TestSuite.Queries.Enums.tests)
            , (True,  TestSuite.Queries.FreshVars.tests)
            , (False, TestSuite.Queries.Int_ABC.tests)

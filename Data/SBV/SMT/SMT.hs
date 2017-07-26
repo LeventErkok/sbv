@@ -582,12 +582,31 @@ runSolver cfg ctx execPath opts pgm continuation
                                                           | True    = Just 5000000
                                              timeOutMsg t | isFirst = "User specified timeout of " ++ showTimeoutValue t ++ " exceeded."
                                                           | True    = "A multiline complete response wasn't received before " ++ showTimeoutValue t ++ " exceeded."
+
+                                             -- Like hGetLine, except it keeps getting lines if inside a string.
+                                             getFullLine :: IO String
+                                             getFullLine = intercalate "\n" . reverse <$> collect False []
+                                                where collect inString sofar = do ln <- hGetLine h
+
+                                                                                  let walk inside []           = inside
+                                                                                      walk inside ('"':cs)     = walk (not inside) cs
+                                                                                      walk inside (_:cs)       = walk inside       cs
+
+                                                                                      stillInside = walk inString ln
+
+                                                                                      sofar' = ln : sofar
+
+                                                                                  if stillInside
+                                                                                     then collect True sofar'
+                                                                                     else return sofar'
+
                                          in case timeOutToUse of
-                                              Nothing -> SolverRegular <$> hGetLine h
-                                              Just t  -> do r <- Timeout.timeout t (hGetLine h)
+                                              Nothing -> SolverRegular <$> getFullLine
+                                              Just t  -> do r <- Timeout.timeout t getFullLine
                                                             case r of
                                                               Just l  -> return $ SolverRegular l
                                                               Nothing -> return $ SolverTimeout $ timeOutMsg t
+
 
                             go isFirst i sofar = do
                                             errln <- safeGetLine isFirst outh `C.catch` (\(e :: C.SomeException) -> return (SolverException (show e)))
@@ -681,7 +700,8 @@ runSolver cfg ctx execPath opts pgm continuation
                                                             let isOption = "(set-option" `isPrefixOf` dropWhile isSpace l
 
                                                                 reason | isOption = [ "*** Backend solver reports it does not support this option."
-                                                                                    , "*** Please report this as a bug/feature request with the solver!"
+                                                                                    , "*** Check the spelling, and if correct please report this as a"
+                                                                                    , "*** bug/feature request with the solver!"
                                                                                     ]
                                                                        | True     = [ "*** Failed to establish solver context. Running in debug mode might provide"
                                                                                     , "*** more information. Please report this as an issue!"
