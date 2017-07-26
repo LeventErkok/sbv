@@ -30,6 +30,8 @@ import Data.SBV
 -- @TemplateHaskell@, @StandaloneDeriving@, @DeriveDataTypeable@, @DeriveAnyClass@ for
 -- this to work.
 data E = A | B | C
+
+-- | Make 'E' a symbolic value.
 mkSymbolicEnumeration ''E
 
 -- | Give a name to the symbolic variants of 'E', for convenience

@@ -38,11 +38,15 @@ import Data.Maybe
 -- and exponentiation will only be to the power @0@. This does restrict the search space, but is sufficient to
 -- solve all the instances.
 data BinOp = Plus | Minus | Times | Divide | Expt
+
+-- | Make 'BinOp' a symbolic value.
 mkSymbolicEnumeration ''BinOp
 
 -- | Supported unary operators. Similar to 'BinOp' case, we will restrict square-root and factorial to
 -- be only applied to the value @4.
 data UnOp  = Negate | Sqrt | Factorial
+
+-- | Make 'UnOp' a symbolic value.
 mkSymbolicEnumeration ''UnOp
 
 -- | Symbolic variant of 'BinOp'.
