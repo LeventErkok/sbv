@@ -20,12 +20,17 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Basics.QueryIndividual"
-    [ goldenCapturedIO "query_Interpolant1" $ \rf -> runSMTWith z3{verbose=True, redirectVerbose=Just rf} q1
-    , goldenCapturedIO "query_Interpolant2" $ \rf -> runSMTWith z3{verbose=True, redirectVerbose=Just rf} q2
-    , goldenCapturedIO "query_Interpolant3" $ \rf -> runSMTWith z3{verbose=True, redirectVerbose=Just rf} q3
+    [ goldenCapturedIO "query_Interpolant1" $ testQuery q1
+    , goldenCapturedIO "query_Interpolant2" $ testQuery q2
+    , goldenCapturedIO "query_Interpolant3" $ testQuery q3
+    , goldenCapturedIO "query_Interpolant4" $ testQuery q4
     ]
 
-q1 :: Symbolic ()
+testQuery :: Show a => Symbolic a -> FilePath -> IO ()
+testQuery t rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just rf} t
+                    appendFile rf ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
+
+q1 :: Symbolic [String]
 q1 = do a <- sInteger "a"
         b <- sInteger "b"
         c <- sInteger "c"
@@ -37,10 +42,9 @@ q1 = do a <- sInteger "a"
         namedConstraint "c2" $ b .== d &&& bnot (c .== d)
 
         query $ do _ <- checkSat
-                   _ <- getInterpolant "c1" "c2"
-                   return ()
+                   getInterpolant ["c1", "c2"]
 
-q2 :: Symbolic ()
+q2 :: Symbolic [String]
 q2 = do a <- sInteger "a"
         b <- sInteger "b"
         c <- sInteger "c"
@@ -56,10 +60,9 @@ q2 = do a <- sInteger "a"
         namedConstraint "c2" $   a .== b &&& g c ./= g d
 
         query $ do _ <- checkSat
-                   _ <- getInterpolant "c1" "c2"
-                   return ()
+                   getInterpolant ["c1", "c2"]
 
-q3 :: Symbolic ()
+q3 :: Symbolic [String]
 q3 = do x <- sInteger "x"
         y <- sInteger "y"
         z <- sInteger "z"
@@ -73,7 +76,22 @@ q3 = do x <- sInteger "x"
         setOption $ ProduceInterpolants True
 
         query $ do _ <- checkSat
-                   _ <- getInterpolant "c1" "c2"
-                   return ()
+                   getInterpolant ["c1", "c2"]
+
+q4 :: Symbolic [String]
+q4 = do a <- sInteger "a"
+        b <- sInteger "b"
+        c <- sInteger "c"
+        d <- sInteger "d"
+        e <- sInteger "e"
+
+        namedConstraint "c1" $ a .== b &&& a .== c
+        namedConstraint "c2" $ c .== d
+        namedConstraint "c3" $ b .== e &&& d ./= e
+
+        setOption $ ProduceInterpolants True
+
+        query $ do _ <- checkSat
+                   getInterpolant ["c1", "c2", "c3"]
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

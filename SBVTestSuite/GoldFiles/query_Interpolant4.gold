@@ -16,32 +16,29 @@
 [GOOD] (declare-fun s1 () Int) ; tracks user variable "b"
 [GOOD] (declare-fun s2 () Int) ; tracks user variable "c"
 [GOOD] (declare-fun s3 () Int) ; tracks user variable "d"
+[GOOD] (declare-fun s4 () Int) ; tracks user variable "e"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] (declare-fun f (Int) Int)
-[GOOD] (declare-fun g (Int) Int)
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s4 () Int (f s0))
-[GOOD] (define-fun s5 () Bool (= s2 s4))
-[GOOD] (define-fun s6 () Int (f s1))
-[GOOD] (define-fun s7 () Bool (= s3 s6))
-[GOOD] (define-fun s8 () Bool (and s5 s7))
-[GOOD] (define-fun s9 () Bool (= s0 s1))
-[GOOD] (define-fun s10 () Int (g s2))
-[GOOD] (define-fun s11 () Int (g s3))
-[GOOD] (define-fun s12 () Bool (distinct s10 s11))
-[GOOD] (define-fun s13 () Bool (and s9 s12))
-[GOOD] (assert (! s8 :named |c1|))
-[GOOD] (assert (! s13 :named |c2|))
+[GOOD] (define-fun s5 () Bool (= s0 s1))
+[GOOD] (define-fun s6 () Bool (= s0 s2))
+[GOOD] (define-fun s7 () Bool (and s5 s6))
+[GOOD] (define-fun s8 () Bool (= s2 s3))
+[GOOD] (define-fun s9 () Bool (= s1 s4))
+[GOOD] (define-fun s10 () Bool (distinct s3 s4))
+[GOOD] (define-fun s11 () Bool (and s9 s10))
+[GOOD] (assert (! s7 :named |c1|))
+[GOOD] (assert (! s8 :named |c2|))
+[GOOD] (assert (! s11 :named |c3|))
 [SEND] (check-sat)
 [RECV] unsat
-[SEND] (get-interpolant |c1| |c2|)
-[RECV] (interpolants (or (= s2 s3) (not (= s0 s1))))
+[SEND] (get-interpolant |c1| |c2| |c3|)
+[RECV] (interpolants (= s1 s2) (= s1 s3))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL OUTPUT:
-["(or (= s2 s3) (not (= s0 s1)))"]
+["(= s1 s2)","(= s1 s3)"]
