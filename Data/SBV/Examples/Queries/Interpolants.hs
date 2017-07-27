@@ -21,7 +21,7 @@ import Data.SBV.Control
 -- of @y@, which is the only common symbol among them. We have:
 --
 -- >>> runSMT evenOdd
--- ["(<= 0 (+ (div s1 2) (div (* -1 s1) 2)))"]
+-- ["(<= 0 (+ (div s1 2) (div (* (- 1) s1) 2)))"]
 --
 -- This is a bit hard to read unfortunately, due to translation artifacts and use of strings. To analyze,
 -- we need to know that @s1@ is @y@ through SBV's translation. Let's express it in

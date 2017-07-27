@@ -83,12 +83,18 @@ stringsOf (EApp ss)     = concatMap stringsOf ss
 serialize :: Bool -> SExpr -> String
 serialize removeQuotes = go
   where go (ECon s)      = if removeQuotes then unQuote s else s
-        go (ENum (i, _)) = show i
-        go (EReal   r)   = show r
-        go (EFloat  f)   = show f
-        go (EDouble d)   = show d
+        go (ENum (i, _)) = shNN i
+        go (EReal   r)   = shNN r
+        go (EFloat  f)   = shNN f
+        go (EDouble d)   = shNN d
         go (EApp [x])    = go x
         go (EApp ss)     = "(" ++ unwords (map go ss) ++ ")"
+
+        -- be careful with negative number printing in SMT-Lib..
+        shNN :: (Show a, Num a, Ord a) => a -> String
+        shNN i
+          | i < 0 = "(- " ++ show (-i) ++ ")"
+          | True  = show i
 
 -- | Ask solver for info.
 getInfo :: SMTInfoFlag -> Query SMTInfoResponse
