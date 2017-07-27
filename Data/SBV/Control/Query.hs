@@ -581,40 +581,55 @@ getProof = do
         -- result of parsing is ignored.
         parse r bad $ \_ -> return r
 
--- | Retrieve the interpolant. Note you must have arranged for
+-- | Retrieve interpolants after an 'Unsat' result is obtained. Note you must have arranged for
 -- interpolants to be produced first (/via/ @'setOption' $ 'ProduceInterpolants' 'True'@)
 -- for this call to not error out!
 --
 -- To get an interpolant for a pair of formulas @A@ and @B@, use a 'namedConstraint' to attach
--- names to @A@ and @B@. Then call 'getInterpolant "A" "B"', assuming those are the names
--- you gave to the formulas. An interpolant for @A@ and @B@ is a formula @I@ such that
--- @A ==> I@ and @B ==> not I@. That is, it's evidence that @A@ and @B@ cannot be true together
+-- names to @A@ and @B@. Then call 'getInterpolant' @[\"A\", \"B\"]@, assuming those are the names
+-- you gave to the formulas.
+--
+-- An interpolant for @A@ and @B@ is a formula @I@ such that:
+--
+-- @
+--        A ==> I
+--    and B ==> not I
+-- @
+--
+-- That is, it's evidence that @A@ and @B@ cannot be true together
 -- since @A@ implies @I@ but @B@ implies @not I@; establishing that @A@ and @B@ cannot
 -- be satisfied at the same time. Furthermore, @I@ will have only the symbols that are common
 -- to @A@ and @B@.
 --
--- Currently, SBV only returns simple interpolants, and does not support sequence or tree-interpolants
--- due to limitations in Z3 interface. If you need these, please get in touch. Furthermore, the result
--- is a mere string representing the formula, as opposed to a more structured type, just like in
--- 'getProof', for similar reasons.  Please get in touch if you use this function and can suggest a better API.
-getInterpolant :: String -> String -> Query String
-getInterpolant f1 f2 = do
-        let cmd = "(get-interpolant |" ++ f1 ++ "| |" ++ f2 ++ "|)"
-            bad = unexpected "getInterpolant" cmd "a get-interpolant response"
-                           $ Just [ "Make sure you use:"
-                                  , ""
-                                  , "       setOption $ ProduceInterpolants True"
-                                  , ""
-                                  , "to make sure the solver is ready for producing interpolants,"
-                                  , "and that you have named the formulas with calls to 'namedConstraint'."
-                                  ]
+-- Interpolants generalize to sequences: If you pass more than two formulas, then you will get
+-- a sequence of interpolants. In general, for @N@ formulas that are not satisfiable together, you will be
+-- returned @N-1@ interpolants. If formulas are @A1 .. An@, then interpolants will be @I1 .. I(N-1)@, such
+-- that @A1 ==> I1@, @A2 /\\ I1 ==> I2@, @A3 /\\ I2 ==> I3@, ..., and finally @AN ===> not I(N-1)@.
+--
+-- Currently, SBV only returns simple and sequence interpolants, and does not support tree-interpolants.
+-- If you need these, please get in touch. Furthermore, the result will be a list of mere strings representing the
+-- interpolating formulas, as opposed to a more structured type. Please get in touch if you use this function and can
+-- suggest a better API.
+getInterpolant :: [String] -> Query [String]
+getInterpolant fs
+  | length fs < 2
+  = error $ "SBV.getInterpolant requires at least two named constraints, received: " ++ show fs
+  | True
+  = do let bar s = '|' : s ++ "|"
+           cmd = "(get-interpolant " ++ unwords (map bar fs) ++ ")"
+           bad = unexpected "getInterpolant" cmd "a get-interpolant response"
+                          $ Just [ "Make sure you use:"
+                                 , ""
+                                 , "       setOption $ ProduceInterpolants True"
+                                 , ""
+                                 , "to make sure the solver is ready for producing interpolants,"
+                                 , "and that you have named the formulas with calls to 'namedConstraint'."
+                                 ]
 
+       r <- ask cmd
 
-        r <- ask cmd
-
-        -- we only care about the fact that we can parse the output, so the
-        -- result of parsing is ignored.
-        parse r bad $ \_ -> return r
+       parse r bad $ \case EApp (ECon "interpolants" : es) -> return $ map (serialize False) es
+                           _                               -> bad r Nothing
 
 -- | Retrieve assertions. Note you must have arranged for
 -- assertions to be available first (/via/ @'setOption' $ 'ProduceAssertions' 'True'@)
