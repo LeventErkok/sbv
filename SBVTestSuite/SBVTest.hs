@@ -2,7 +2,10 @@
 module Main(main) where
 
 import Test.Tasty
+
 import Utils.SBVTestFramework (getTestEnvironment, TestEnvironment(..))
+
+import System.Exit (exitSuccess)
 
 import qualified TestSuite.Arrays.Memory
 import qualified TestSuite.Basics.AllSat
@@ -75,24 +78,30 @@ import qualified TestSuite.Uninterpreted.Function
 import qualified TestSuite.Uninterpreted.Sort
 import qualified TestSuite.Uninterpreted.Uninterpreted
 
+-- On Travis, the build machines are subject to time-out limits. So, we cannot really run
+-- everything yet remain within the timeout bounds. Here, we randomly pick a subset; with
+-- the hope that over many runs this tests larger parts of the test-suite.
+-- TODO: Not quite sure how to do this yet!
+travisFilter :: TestTree -> IO TestTree
+travisFilter = return
+
 main :: IO ()
 main = do testEnv <- getTestEnvironment
 
           putStrLn $ "SBVTest: Test platform: " ++ show testEnv
 
-          let allTestCases    = [tc | (_,    tc) <- allTests]
-              travisTestCases = [tc | (True, tc) <- allTests]
-              noTestCases     = []
+          let allTestCases       = testGroup "Tests" [tc | (_,    tc) <- allTests]
+              allTravisTestCases = testGroup "Tests" [tc | (True, tc) <- allTests]
 
-              run = defaultMain . testGroup "Tests"
+          travisTestCases <- travisFilter allTravisTestCases
 
           case testEnv of
-            TestEnvLocal         -> run allTestCases
-            TestEnvTravisLinux   -> run travisTestCases
-            TestEnvTravisOSX     -> run travisTestCases
-            TestEnvTravisWindows -> run travisTestCases
+            TestEnvLocal         -> defaultMain allTestCases
+            TestEnvTravisLinux   -> defaultMain travisTestCases
+            TestEnvTravisOSX     -> defaultMain travisTestCases
+            TestEnvTravisWindows -> defaultMain travisTestCases
             TestEnvUnknown       -> do putStrLn "Unknown test environment, skipping tests"
-                                       run noTestCases
+                                       exitSuccess
 
 -- If the first  Bool is True, then that test can run on Travis
 allTests :: [(Bool, TestTree)]
