@@ -7,6 +7,7 @@
 [GOOD] (set-option :produce-unsat-cores true)
 [GOOD] (set-option :produce-unsat-assumptions true)
 [GOOD] (set-option :produce-proofs true)
+[GOOD] (set-option :produce-interpolants true)
 [GOOD] (set-option :random-seed 123)
 [GOOD] (set-option :produce-assertions true)
 [GOOD] (set-option :smt.mbqi true)
@@ -54,17 +55,19 @@
 [RECV] true
 [SEND] (get-option :produce-proofs)
 [RECV] true
+[SEND] (get-option :produce-interpolants)
+[RECV] true
 [SEND] (get-option :produce-unsat-assumptions)
 [RECV] unsupported
 [SEND] (get-option :produce-unsat-cores)
-[SKIP] ; :produce-unsat-assumptions line: 42 position: 0
+[SKIP] ; :produce-unsat-assumptions line: 44 position: 0
 [RECV] true
 [SEND] (get-option :random-seed)
 [RECV] 123
 [SEND] (get-option :reproducible-resource-limit)
 [RECV] unsupported
 [SEND] (get-option :verbosity)
-[SKIP] ; :reproducible-resource-limit line: 45 position: 0
+[SKIP] ; :reproducible-resource-limit line: 47 position: 0
 [RECV] 0
 [SEND] (get-option :smt.mbqi)
 [RECV] true
@@ -108,10 +111,10 @@
 [SEND] (get-info :memory)
 [RECV] unsupported
 [SEND] (get-info :time)
-[SKIP] ; :memory line: 71 position: 0
+[SKIP] ; :memory line: 73 position: 0
 [RECV] unsupported
 [SEND] (get-value (s0))
-[SKIP] ; :time line: 72 position: 0
+[SKIP] ; :time line: 74 position: 0
 [RECV] ((s0 5))
 [SEND] (get-value (s1))
 [RECV] ((s1 1))
