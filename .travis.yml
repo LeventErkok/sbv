@@ -114,7 +114,7 @@ script:
    # - travis_wait 30 cabal test SBVTest --test-options="--hide-successes"
    # - travis_wait 30 cabal test SBVDocTest
    # - travis_wait 30 cabal test SBVHLint
- - ./dist/build/SBVTest/SBVTest --hide-successes -j 2
+ - ./dist/build/SBVTest/SBVTest -q -j 2
  - ./dist/build/SBVDocTest/SBVDocTest
  - ./dist/build/SBVHLint/SBVHLint
  - cabal check
