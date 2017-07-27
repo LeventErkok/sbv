@@ -75,3 +75,5 @@ q3 = do x <- sInteger "x"
         query $ do _ <- checkSat
                    _ <- getInterpolant "c1" "c2"
                    return ()
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
