@@ -19,7 +19,7 @@
 module Data.SBV.Control.Query (
        send, ask, retrieveResponse
      , CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet
-     , getUnsatCore, getProof, getAssignment, getOption, freshVar, freshVar_, push, pop, getAssertionStackDepth
+     , getUnsatCore, getProof, getInterpolant, getAssignment, getOption, freshVar, freshVar_, push, pop, getAssertionStackDepth
      , inNewAssertionStack, echo, caseSplit, resetAssertions, exit, getAssertions, getValue, getUninterpretedValue, getModel, getSMTResult
      , getLexicographicOptResults, getIndependentOptResults, getParetoOptResults, getAllSatResult, getUnknownReason
      , SMTOption(..), SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
@@ -143,6 +143,7 @@ getOption f = case f undefined of
                  ProduceAssertions{}         -> askFor "ProduceAssertions"         ":produce-assertions"          $ bool       ProduceAssertions
                  ProduceAssignments{}        -> askFor "ProduceAssignments"        ":produce-assignments"         $ bool       ProduceAssignments
                  ProduceProofs{}             -> askFor "ProduceProofs"             ":produce-proofs"              $ bool       ProduceProofs
+                 ProduceInterpolants{}       -> askFor "ProduceInterpolants"       ":produce-interpolants"        $ bool       ProduceInterpolants
                  ProduceUnsatAssumptions{}   -> askFor "ProduceUnsatAssumptions"   ":produce-unsat-assumptions"   $ bool       ProduceUnsatAssumptions
                  ProduceUnsatCores{}         -> askFor "ProduceUnsatCores"         ":produce-unsat-cores"         $ bool       ProduceUnsatCores
                  RandomSeed{}                -> askFor "RandomSeed"                ":random-seed"                 $ integer    RandomSeed
@@ -569,8 +570,43 @@ getProof = do
                                   , ""
                                   , "       setOption $ ProduceProofs True"
                                   , ""
-                                  , "to make sure the solver is ready for producing proofs."
+                                  , "to make sure the solver is ready for producing proofs,"
                                   , "and that there is a proof by first issuing a 'checkSat' call."
+                                  ]
+
+
+        r <- ask cmd
+
+        -- we only care about the fact that we can parse the output, so the
+        -- result of parsing is ignored.
+        parse r bad $ \_ -> return r
+
+-- | Retrieve the interpolant. Note you must have arranged for
+-- interpolants to be produced first (/via/ @'setOption' $ 'ProduceInterpolants' 'True'@)
+-- for this call to not error out!
+--
+-- To get an interpolant for a pair of formulas @A@ and @B@, use a 'namedConstraint' to attach
+-- names to @A@ and @B@. Then call 'getInterpolant "A" "B"', assuming those are the names
+-- you gave to the formulas. An interpolant for @A@ and @B@ is a formula @I@ such that
+-- @A ==> I@ and @B ==> not I@. That is, it's evidence that @A@ and @B@ cannot be true together
+-- since @A@ implies @I@ but @B@ implies @not I@; establishing that @A@ and @B@ cannot
+-- be satisfied at the same time. Furthermore, @I@ will have only the symbols that are common
+-- to @A@ and @B@.
+--
+-- Currently, SBV only returns simple interpolants, and does not support sequence or tree-interpolants
+-- due to limitations in Z3 interface. If you need these, please get in touch. Furthermore, the result
+-- is a mere string representing the formula, as opposed to a more structured type, just like in
+-- 'getProof', for similar reasons.  Please get in touch if you use this function and can suggest a better API.
+getInterpolant :: String -> String -> Query String
+getInterpolant f1 f2 = do
+        let cmd = "(get-interpolant |" ++ f1 ++ "| |" ++ f2 ++ "|)"
+            bad = unexpected "getInterpolant" cmd "a get-interpolant response"
+                           $ Just [ "Make sure you use:"
+                                  , ""
+                                  , "       setOption $ ProduceInterpolants True"
+                                  , ""
+                                  , "to make sure the solver is ready for producing interpolants,"
+                                  , "and that you have named the formulas with calls to 'namedConstraint'."
                                   ]
 
 

@@ -8,6 +8,8 @@
   * Support for SMT-results that can contain multi-line strings, which
     is rare but it does happen.
 
+  * Add support for 'getInterpolant' in Query mode.
+
   * Many improvements to build infrastructure and code clean-up.
 
 ### Version 7.0, Released 2017-07-19

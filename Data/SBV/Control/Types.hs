@@ -93,6 +93,7 @@ data SMTOption = DiagnosticOutputChannel   FilePath
                | ProduceAssertions         Bool
                | ProduceAssignments        Bool
                | ProduceProofs             Bool
+               | ProduceInterpolants       Bool
                | ProduceUnsatAssumptions   Bool
                | ProduceUnsatCores         Bool
                | RandomSeed                Integer
@@ -111,6 +112,7 @@ isStartModeOption DiagnosticOutputChannel{}   = False
 isStartModeOption ProduceAssertions{}         = True
 isStartModeOption ProduceAssignments{}        = True
 isStartModeOption ProduceProofs{}             = True
+isStartModeOption ProduceInterpolants{}       = True
 isStartModeOption ProduceUnsatAssumptions{}   = True
 isStartModeOption ProduceUnsatCores{}         = True
 isStartModeOption RandomSeed{}                = True
@@ -132,6 +134,7 @@ setSMTOption = cvt
         cvt (ProduceAssertions         b) = opt   [":produce-assertions",          smtBool b]
         cvt (ProduceAssignments        b) = opt   [":produce-assignments",         smtBool b]
         cvt (ProduceProofs             b) = opt   [":produce-proofs",              smtBool b]
+        cvt (ProduceInterpolants       b) = opt   [":produce-interpolants",        smtBool b]
         cvt (ProduceUnsatAssumptions   b) = opt   [":produce-unsat-assumptions",   smtBool b]
         cvt (ProduceUnsatCores         b) = opt   [":produce-unsat-cores",         smtBool b]
         cvt (RandomSeed                i) = opt   [":random-seed",                 show i]

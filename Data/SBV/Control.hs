@@ -33,6 +33,9 @@ module Data.SBV.Control (
      -- ** Extracting a proof
      , getProof
 
+     -- ** Extracting interpolants
+     , getInterpolant
+
      -- ** Extracting assertions
      , getAssertions
 
@@ -236,4 +239,5 @@ For other examples see:
   - "Data.SBV.Examples.Queries.FourFours": Solution to a fun arithmetic puzzle, coded using queries.
   - "Data.SBV.Examples.Queries.GuessNumber": The famous number guessing game.
   - "Data.SBV.Examples.Queries.UnsatCore": Extracting unsat-cores using queries.
+  - "Data.SBV.Examples.Queries.Interpolants": Extracting interpolants using queries.
 -}
