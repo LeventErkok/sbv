@@ -106,6 +106,7 @@ Library
                   , Data.SBV.Examples.Queries.GuessNumber
                   , Data.SBV.Examples.Queries.CaseSplit
                   , Data.SBV.Examples.Queries.Enums
+                  , Data.SBV.Examples.Queries.Interpolants
                   , Data.SBV.Examples.Uninterpreted.AUF
                   , Data.SBV.Examples.Uninterpreted.Deduce
                   , Data.SBV.Examples.Uninterpreted.Function
