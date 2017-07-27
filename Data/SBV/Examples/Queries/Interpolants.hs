@@ -21,7 +21,7 @@ import Data.SBV.Control
 -- of @y@, which is the only common symbol among them. We have:
 --
 -- >>> runSMT evenOdd
--- "(<= 0 (+ (div s1 2) (div (* (- 1) s1) 2)))"
+-- ["(<= 0 (+ (div s1 2) (div (* -1 s1) 2)))"]
 --
 -- This is a bit hard to read unfortunately, due to translation artifacts and use of strings. To analyze,
 -- we need to know that @s1@ is @y@ through SBV's translation. Let's express it in
@@ -43,7 +43,7 @@ import Data.SBV.Control
 -- Q.E.D.
 --
 -- This establishes that we indeed have an interpolant!
-evenOdd :: Symbolic String
+evenOdd :: Symbolic [String]
 evenOdd = do
        x <- sInteger "x"
        y <- sInteger "y"
@@ -60,6 +60,6 @@ evenOdd = do
        -- To obtain the interpolant, we run a query
        query $ do cs <- checkSat
                   case cs of
-                    Unsat -> getInterpolant "y is even" "y is odd"
+                    Unsat -> getInterpolant ["y is even", "y is odd"]
                     Sat   -> error "Unexpected sat result!"
                     Unk   -> error "Unexpected unknown result!"
