@@ -227,6 +227,7 @@ Test-Suite SBVTest
                   , TestSuite.Queries.Int_Mathsat
                   , TestSuite.Queries.Int_Yices
                   , TestSuite.Queries.Int_Z3
+                  , TestSuite.Queries.Interpolants
                   , TestSuite.Queries.Uninterpreted
                   , TestSuite.Uninterpreted.AUF
                   , TestSuite.Uninterpreted.Axioms
