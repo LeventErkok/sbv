@@ -5,7 +5,10 @@
 
 ### Version 7.1, Not yet released
   
-  * New dev version.
+  * Support for SMT-results that can contain multi-line strings, which
+    is rare but it does happen.
+
+  * Many improvements to build infrastructure and code clean-up.
 
 ### Version 7.0, Released 2017-07-19
 
