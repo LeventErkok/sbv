@@ -3,7 +3,7 @@ module Main(main) where
 
 import Test.Tasty
 
-import Utils.SBVTestFramework (getTestEnvironment, TestEnvironment(..))
+import Utils.SBVTestFramework (getTestEnvironment, TestEnvironment(..), pickTests)
 
 import System.Exit (exitSuccess)
 
@@ -81,9 +81,13 @@ import qualified TestSuite.Uninterpreted.Uninterpreted
 -- On Travis, the build machines are subject to time-out limits. So, we cannot really run
 -- everything yet remain within the timeout bounds. Here, we randomly pick a subset; with
 -- the hope that over many runs this tests larger parts of the test-suite.
--- TODO: Not quite sure how to do this yet!
-travisFilter :: TestTree -> IO TestTree
-travisFilter = return
+travisFilter :: TravisOS -> TestTree -> IO TestTree
+travisFilter te tt = do putStrLn $ "Travis: Reducing tests by " ++ show (100-p) ++ "% for running on " ++ show te
+                        pickTests p tt
+  where p = case te of
+              TravisLinux   -> 70
+              TravisOSX     -> 30
+              TravisWindows -> 30
 
 main :: IO ()
 main = do testEnv <- getTestEnvironment
@@ -93,15 +97,13 @@ main = do testEnv <- getTestEnvironment
           let allTestCases       = testGroup "Tests" [tc | (_,    tc) <- allTests]
               allTravisTestCases = testGroup "Tests" [tc | (True, tc) <- allTests]
 
-          travisTestCases <- travisFilter allTravisTestCases
+          travisTestCases <- travisFilter testEnv allTravisTestCases
 
           case testEnv of
-            TestEnvLocal         -> defaultMain allTestCases
-            TestEnvTravisLinux   -> defaultMain travisTestCases
-            TestEnvTravisOSX     -> defaultMain travisTestCases
-            TestEnvTravisWindows -> defaultMain travisTestCases
-            TestEnvUnknown       -> do putStrLn "Unknown test environment, skipping tests"
-                                       exitSuccess
+            TestEnvLocal    -> defaultMain allTestCases
+            TestEnvTravis _ -> defaultMain travisTestCases
+            TestEnvUnknown  -> do putStrLn "Unknown test environment, skipping tests"
+                                  exitSuccess
 
 -- If the first  Bool is True, then that test can run on Travis
 allTests :: [(Bool, TestTree)]

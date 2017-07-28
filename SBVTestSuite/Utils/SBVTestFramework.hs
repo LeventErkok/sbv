@@ -19,7 +19,8 @@ module Utils.SBVTestFramework (
         , goldenString
         , goldenVsStringShow
         , goldenCapturedIO
-        , TestEnvironment(..), getTestEnvironment
+        , TravisOS(..), TestEnvironment(..), getTestEnvironment
+        , pickTests
         -- module exports to simplify life
         , module Test.Tasty
         , module Test.Tasty.HUnit
@@ -37,6 +38,9 @@ import Test.Tasty         (testGroup, TestTree, TestName)
 import Test.Tasty.Golden  (goldenVsString, goldenVsFile)
 import Test.Tasty.HUnit   (assert, Assertion, testCase)
 
+import Test.Tasty.Runners hiding (Result)
+import System.Random (randomRIO)
+
 import Data.SBV
 
 import System.FilePath ((</>), (<.>))
@@ -45,10 +49,13 @@ import Data.SBV.Internals (runSymbolic, Symbolic, Result, SBVRunMode(..), IStage
 
 ---------------------------------------------------------------------------------------
 -- Test environment
+data TravisOS = TravisLinux
+              | TravisOSX
+              | TravisWindows    -- Travis actually doesn't support windows yet. This is "reserved" for future
+              deriving Show
+
 data TestEnvironment = TestEnvLocal
-                     | TestEnvTravisLinux
-                     | TestEnvTravisOSX
-                     | TestEnvTravisWindows   -- Travis actually doesn't support windows yet. This is "reserved" for future
+                     | TestEnvTravis TravisOS
                      | TestEnvUnknown
                      deriving Show
 
@@ -56,10 +63,10 @@ getTestEnvironment :: IO TestEnvironment
 getTestEnvironment = do mbTestEnv <- lookupEnv "SBV_TEST_ENVIRONMENT"
 
                         case mbTestEnv of
-                          Just "local" -> return TestEnvLocal
-                          Just "linux" -> return TestEnvTravisLinux
-                          Just "osx"   -> return TestEnvTravisOSX
-                          Just "win"   -> return TestEnvTravisWindows
+                          Just "local" -> return $ TestEnvLocal
+                          Just "linux" -> return $ TestEnvTravis TravisLinux
+                          Just "osx"   -> return $ TestEnvTravis TravisOSX
+                          Just "win"   -> return $ TestEnvTravis TravisWindows
                           Just other   -> do putStrLn $ "Ignoring unexpected test env value: " ++ show other
                                              return TestEnvUnknown
                           Nothing      -> return TestEnvUnknown
@@ -108,3 +115,43 @@ assertIsSat p = assert (isSatisfiable p)
 -- | Turn provable to a negative assertion, satisfiability case
 assertIsntSat :: Provable a => a -> Assertion
 assertIsntSat p = assert (fmap not (isSatisfiable p))
+
+-- | Picking a certain percent of tests.
+data Picker = Picker (IO (Maybe TestTree))
+instance Monoid Picker where
+   mempty = Picker (return Nothing)
+   Picker t1 `mappend` Picker t2 = Picker $ merge <$> t1 <*> t2
+     where merge Nothing  b         = b
+           merge a        Nothing   = a
+           merge (Just t) (Just t') = case (t, t') of
+                                        (a@SingleTest{}, b@SingleTest{})   -> Just $ TestGroup "pickTests.combined" [a, b]
+                                        (a@SingleTest{}, TestGroup n g)    -> Just $ TestGroup n (a:g)
+                                        (TestGroup n g,   a@SingleTest{})  -> Just $ TestGroup n (g ++ [a])
+                                        (TestGroup n1 g1, TestGroup n2 g2) -> Just $ if n1 == n2 then TestGroup n1 (g1 ++ g2)
+                                                                                                 else TestGroup "pickTests.combined" [t, t']
+                                        _ -> error "pickTests: Unexpected case!"
+
+-- | Given a percentage of tests to run, pickTests returns approximately that many percent of tests, randomly picked.
+pickTests :: Integer -> TestTree -> IO TestTree
+pickTests d = fromPicker <$> foldTestTree trivialFold{foldSingle = fs, foldGroup = fg} mempty
+  where fs _ n t = Picker $ do c <- randomRIO (0, 99)
+                               if c < d
+                               then return (Just (SingleTest n t))
+                               else return Nothing
+
+        fg tn (Picker iot) = Picker $ do mbt <- iot
+                                         case mbt of
+                                           Nothing -> return Nothing
+                                           Just t  -> case t of
+                                                        SingleTest{}      -> return $ Just $ TestGroup tn [t]
+                                                        TestGroup _ g     -> return $ Just $ TestGroup tn (concatMap getTests g)
+                                                        PlusTestOptions{} -> error "pickTests: Unexpected PlusTestOptions"
+                                                        WithResource{}    -> error "pickTests: Unexpected WithResource"
+                                                        AskOptions{}      -> error "pickTests: Unexpected AskOptions"
+                              where getTests (TestGroup "pickTests.combined" ts) = concatMap getTests ts
+                                    getTests t                                   = [t]
+
+        fromPicker (Picker iot) = do mbt <- iot
+                                     case mbt of
+                                       Nothing -> return $ TestGroup "pickTests.NoTestsSelected" []
+                                       Just t  -> return t
