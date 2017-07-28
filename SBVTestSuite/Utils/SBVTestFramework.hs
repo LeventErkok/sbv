@@ -117,7 +117,7 @@ assertIsntSat :: Provable a => a -> Assertion
 assertIsntSat p = assert (fmap not (isSatisfiable p))
 
 -- | Picking a certain percent of tests.
-data Picker = Picker (IO (Maybe TestTree))
+newtype Picker = Picker (IO (Maybe TestTree))
 instance Monoid Picker where
    mempty = Picker (return Nothing)
    Picker t1 `mappend` Picker t2 = Picker $ merge <$> t1 <*> t2
