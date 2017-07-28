@@ -3,7 +3,7 @@ module Main(main) where
 
 import Test.Tasty
 
-import Utils.SBVTestFramework (getTestEnvironment, TestEnvironment(..), pickTests)
+import Utils.SBVTestFramework (getTestEnvironment, TestEnvironment(..), TravisOS(..), pickTests)
 
 import System.Exit (exitSuccess)
 
@@ -97,13 +97,11 @@ main = do testEnv <- getTestEnvironment
           let allTestCases       = testGroup "Tests" [tc | (_,    tc) <- allTests]
               allTravisTestCases = testGroup "Tests" [tc | (True, tc) <- allTests]
 
-          travisTestCases <- travisFilter testEnv allTravisTestCases
-
           case testEnv of
-            TestEnvLocal    -> defaultMain allTestCases
-            TestEnvTravis _ -> defaultMain travisTestCases
-            TestEnvUnknown  -> do putStrLn "Unknown test environment, skipping tests"
-                                  exitSuccess
+            TestEnvLocal     -> defaultMain allTestCases
+            TestEnvTravis os -> defaultMain =<< travisFilter os allTravisTestCases
+            TestEnvUnknown   -> do putStrLn "Unknown test environment, skipping tests"
+                                   exitSuccess
 
 -- If the first  Bool is True, then that test can run on Travis
 allTests :: [(Bool, TestTree)]
