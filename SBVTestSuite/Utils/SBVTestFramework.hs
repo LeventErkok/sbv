@@ -63,7 +63,7 @@ getTestEnvironment :: IO TestEnvironment
 getTestEnvironment = do mbTestEnv <- lookupEnv "SBV_TEST_ENVIRONMENT"
 
                         case mbTestEnv of
-                          Just "local" -> return $ TestEnvLocal
+                          Just "local" -> return   TestEnvLocal
                           Just "linux" -> return $ TestEnvTravis TravisLinux
                           Just "osx"   -> return $ TestEnvTravis TravisOSX
                           Just "win"   -> return $ TestEnvTravis TravisWindows
@@ -133,7 +133,10 @@ instance Monoid Picker where
 
 -- | Given a percentage of tests to run, pickTests returns approximately that many percent of tests, randomly picked.
 pickTests :: Integer -> TestTree -> IO TestTree
-pickTests d = fromPicker <$> foldTestTree trivialFold{foldSingle = fs, foldGroup = fg} mempty
+pickTests d origTests
+   | d ==   0 = return noTestSelected
+   | d == 100 = return origTests
+   | True     = fromPicker <$> foldTestTree trivialFold{foldSingle = fs, foldGroup = fg} mempty $ origTests
   where fs _ n t = Picker $ do c <- randomRIO (0, 99)
                                if c < d
                                then return (Just (SingleTest n t))
@@ -153,5 +156,7 @@ pickTests d = fromPicker <$> foldTestTree trivialFold{foldSingle = fs, foldGroup
 
         fromPicker (Picker iot) = do mbt <- iot
                                      case mbt of
-                                       Nothing -> return $ TestGroup "pickTests.NoTestsSelected" []
+                                       Nothing -> return noTestSelected
                                        Just t  -> return t
+
+        noTestSelected = TestGroup "pickTests.NoTestsSelected" []
