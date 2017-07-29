@@ -85,8 +85,8 @@ travisFilter :: TravisOS -> TestTree -> IO TestTree
 travisFilter te tt = do putStrLn $ "Travis: Reducing tests by " ++ show (100-p) ++ "% for running on " ++ show te
                         pickTests p tt
   where p = case te of
-              TravisLinux   ->  30
-              TravisOSX     ->   0
+              TravisLinux   ->  40
+              TravisOSX     ->  10
               TravisWindows -> 100   -- Travis doesn't actually have Windows, just keep this at 100 for now.
 
 main :: IO ()
