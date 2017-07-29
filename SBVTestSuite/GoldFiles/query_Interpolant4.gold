@@ -36,7 +36,9 @@
 [SEND] (check-sat)
 [RECV] unsat
 [SEND] (get-interpolant |c1| |c2| |c3|)
-[RECV] (interpolants (= s1 s2) (= s1 s3))
+[RECV] (interpolants
+        (= s1 s2)
+        (= s1 s3))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 

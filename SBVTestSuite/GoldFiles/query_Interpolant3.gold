@@ -39,7 +39,8 @@
 [SEND] (check-sat)
 [RECV] unsat
 [SEND] (get-interpolant |c1| |c2|)
-[RECV] (interpolants (= array_1 (store array_2 s1 0)))
+[RECV] (interpolants
+        (= array_1 (store array_2 s1 0)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 

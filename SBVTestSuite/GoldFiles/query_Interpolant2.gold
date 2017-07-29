@@ -39,7 +39,8 @@
 [SEND] (check-sat)
 [RECV] unsat
 [SEND] (get-interpolant |c1| |c2|)
-[RECV] (interpolants (or (= s2 s3) (not (= s0 s1))))
+[RECV] (interpolants
+        (or (= s2 s3) (not (= s0 s1))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
