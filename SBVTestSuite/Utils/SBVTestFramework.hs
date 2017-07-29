@@ -43,6 +43,8 @@ import System.Random (randomRIO)
 
 import Data.SBV
 
+import Data.Maybe(fromMaybe, catMaybes)
+
 import System.FilePath ((</>), (<.>))
 
 import Data.SBV.Internals (runSymbolic, Symbolic, Result, SBVRunMode(..), IStage(..))
@@ -117,46 +119,18 @@ assertIsntSat :: Provable a => a -> Assertion
 assertIsntSat p = assert (fmap not (isSatisfiable p))
 
 -- | Picking a certain percent of tests.
-newtype Picker = Picker (IO (Maybe TestTree))
-instance Monoid Picker where
-   mempty = Picker (return Nothing)
-   Picker t1 `mappend` Picker t2 = Picker $ merge <$> t1 <*> t2
-     where merge Nothing  b         = b
-           merge a        Nothing   = a
-           merge (Just t) (Just t') = case (t, t') of
-                                        (a@SingleTest{}, b@SingleTest{})   -> Just $ TestGroup "pickTests.combined" [a, b]
-                                        (a@SingleTest{}, TestGroup n g)    -> Just $ TestGroup n (a:g)
-                                        (TestGroup n g,   a@SingleTest{})  -> Just $ TestGroup n (g ++ [a])
-                                        (TestGroup n1 g1, TestGroup n2 g2) -> Just $ if n1 == n2 then TestGroup n1 (g1 ++ g2)
-                                                                                                 else TestGroup "pickTests.combined" [t, t']
-                                        _ -> error "pickTests: Unexpected case!"
+pickTests :: Int -> TestTree -> IO TestTree
+pickTests d origTests = fromMaybe noTestsSelected <$> walk origTests
+   where noTestsSelected = TestGroup "pickTests.NoTestsSelected" []
 
--- | Given a percentage of tests to run, pickTests returns approximately that many percent of tests, randomly picked.
-pickTests :: Integer -> TestTree -> IO TestTree
-pickTests d origTests
-   | d ==   0 = return noTestSelected
-   | d == 100 = return origTests
-   | True     = fromPicker <$> foldTestTree trivialFold{foldSingle = fs, foldGroup = fg} mempty $ origTests
-  where fs _ n t = Picker $ do c <- randomRIO (0, 99)
-                               if c < d
-                               then return (Just (SingleTest n t))
-                               else return Nothing
-
-        fg tn (Picker iot) = Picker $ do mbt <- iot
-                                         case mbt of
-                                           Nothing -> return Nothing
-                                           Just t  -> case t of
-                                                        SingleTest{}      -> return $ Just $ TestGroup tn [t]
-                                                        TestGroup _ g     -> return $ Just $ TestGroup tn (concatMap getTests g)
-                                                        PlusTestOptions{} -> error "pickTests: Unexpected PlusTestOptions"
-                                                        WithResource{}    -> error "pickTests: Unexpected WithResource"
-                                                        AskOptions{}      -> error "pickTests: Unexpected AskOptions"
-                              where getTests (TestGroup "pickTests.combined" ts) = concatMap getTests ts
-                                    getTests t                                   = [t]
-
-        fromPicker (Picker iot) = do mbt <- iot
-                                     case mbt of
-                                       Nothing -> return noTestSelected
-                                       Just t  -> return t
-
-        noTestSelected = TestGroup "pickTests.NoTestsSelected" []
+         walk PlusTestOptions{} = error "pickTests: Unexpected PlusTestOptions"
+         walk WithResource{}    = error "pickTests: Unexpected WithResource"
+         walk AskOptions{}      = error "pickTests: Unexpected AskOptions"
+         walk t@SingleTest{}    = do c <- randomRIO (0, 99)
+                                     if c < d
+                                        then return $ Just t
+                                        else return Nothing
+         walk (TestGroup tn ts) = do cs <- catMaybes <$> mapM walk ts
+                                     case cs of
+                                       [] -> return Nothing
+                                       _  -> return $ Just $ TestGroup tn cs
