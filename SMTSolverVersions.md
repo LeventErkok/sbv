@@ -19,4 +19,4 @@ report any issues you might see with newer releases.
       * Version 2.5.2
   * Z3:
       * http://github.com/Z3Prover/z3
-      * Version as downloaded from the above site on Jun 4, 2017
+      * Version as downloaded from the above site on Jul 29, 2017

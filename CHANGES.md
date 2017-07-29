@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 7.0, 2017-07-19
+* Latest Hackage released version: 7.1, 2017-07-29
 
-### Version 7.1, Not yet released
+### Version 7.1, 2017-07-29
   
   * Add support for 'getInterpolant' in Query mode.
 
