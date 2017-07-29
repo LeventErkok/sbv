@@ -5,12 +5,16 @@
 
 ### Version 7.1, Not yet released
   
-  * Support for SMT-results that can contain multi-line strings, which
-    is rare but it does happen.
-
   * Add support for 'getInterpolant' in Query mode.
 
+  * Support for SMT-results that can contain multi-line strings, which
+    is rare but it does happen. Previously SBV incorrectly interpreted such
+    responses to be erroneous.
+
   * Many improvements to build infrastructure and code clean-up.
+
+  * Fix a bug in the implementation of `svSetBit`. Thanks to Robert Dockins
+    for the report.
 
 ### Version 7.0, Released 2017-07-19
 

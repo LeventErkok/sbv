@@ -171,7 +171,7 @@ svBlastLE x = map (svTestBit x) [0 .. intSizeOf x - 1]
 
 -- | Set a given bit at index
 svSetBit :: SVal -> Int -> SVal
-svSetBit x i = x `svXOr` svInteger (kindOf x) (bit i :: Integer)
+svSetBit x i = x `svOr` svInteger (kindOf x) (bit i :: Integer)
 
 -- | Bit-blast: Big-endian. Assumes the input is a bit-vector.
 svBlastBE :: SVal -> [SVal]
