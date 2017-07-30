@@ -1,12 +1,9 @@
 build: off
 
 before_build:
-- cd
-- git clone -q https://github.com/Z3Prover/bin.git C:\projects\z3Repo
-- 7z x C:\projects\z3Repo\nightly\z3*x64*win*zip z3_downloaded
-- cd
+- git clone -q https://github.com/Z3Prover/bin.git
+- 7z x C:\projects\sbv\z3Repo\nightly\z3*x64*win*zip z3_downloaded
 - dir
-- dir z3_downloaded /s
 - wget stop
 - curl -ostack.zip -L --insecure http://www.stackage.org/stack/windows-i386
 - 7z x stack.zip stack.exe
