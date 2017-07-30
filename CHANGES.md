@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 7.1, 2017-07-29
 
+### Version 7.2, Not yet released
+  
+  * Mark new dev version
+
 ### Version 7.1, 2017-07-29
   
   * Add support for 'getInterpolant' in Query mode.
