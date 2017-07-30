@@ -22,7 +22,7 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Basics.QueryIndividual"
-    [ goldenCapturedIO "noTravis_query_boolector" $ \rf -> runSMTWith boolector{verbose=True, redirectVerbose=Just rf} q
+    [ goldenCapturedIO "query_boolector" $ \rf -> runSMTWith boolector{verbose=True, redirectVerbose=Just rf} q
     ]
 
 q :: Symbolic ()
