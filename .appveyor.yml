@@ -1,6 +1,10 @@
 build: off
 
 before_build:
+- curl -oz3_downloaded.zip -T "*x64-win.zip" -L --insecure http://github.com/Z3Prover/bin/raw/master/nightly
+- 7z x z3_downloaded.zip z3_downloaded
+- echo %cd%
+- dir z3* /s
 - curl -ostack.zip -L --insecure http://www.stackage.org/stack/windows-i386
 - 7z x stack.zip stack.exe
 - stack setup --install-ghc > nul
@@ -8,6 +12,7 @@ before_build:
 - stack exec which ghc
 # The following is at best fragile. What happens if ghc version gets updated?
 - set PATH=C:\Users\appveyor\AppData\Local\Programs\stack\i386-windows\ghc-8.0.2\bin;C:\Users\appveyor\AppData\Roaming\local\bin;%PATH%
+- z3 /?
 
 
 skip_tags: true
