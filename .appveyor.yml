@@ -5,6 +5,7 @@ before_build:
 - 7z x stack.zip stack.exe
 - stack setup --install-ghc > nul
 - stack install cabal-install
+- set PATH=C:\Users\appveyor\AppData\Roaming\local\bin;%PATH%
 
 skip_tags: true
 
