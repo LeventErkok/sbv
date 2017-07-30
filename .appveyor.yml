@@ -7,5 +7,5 @@ before_build:
 skip_tags: true
 
 build_script:
+- stack install cabal
 - cabal install
-
