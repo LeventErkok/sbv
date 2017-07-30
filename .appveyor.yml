@@ -13,4 +13,11 @@ before_build:
 skip_tags: true
 
 build_script:
-- cabal install
+- cabal update
+- cabal configure --enable-tests --enable-benchmarks -v2
+- cabal build
+  # - cabal test SBVTest
+  # - cabal test SBVDocTest
+  # - cabal test SBVHLint
+- cabal check
+- cabal sdist
