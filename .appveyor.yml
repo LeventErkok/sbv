@@ -1,8 +1,8 @@
 build: off
 
 before_build:
-- curl -oz3_downloaded.zip -T "*x64-win.zip" -L --insecure http://github.com/Z3Prover/bin/raw/master/nightly
-- 7z x z3_downloaded.zip z3_downloaded
+- curl -L --insecure http://github.com/Z3Prover/bin/raw/master/nightly
+- 7z x z3*x64*win*zip z3_downloaded
 - echo %cd%
 - dir z3* /s
 - curl -ostack.zip -L --insecure http://www.stackage.org/stack/windows-i386
