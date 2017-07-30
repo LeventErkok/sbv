@@ -1,0 +1,8 @@
+build: off
+
+before_build:
+
+skip_tags: true
+
+build_script:
+- cabal install
