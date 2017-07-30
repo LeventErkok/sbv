@@ -14,7 +14,9 @@ skip_tags: true
 
 build_script:
 - cabal update
-- cabal install --only-dependencies --enable-tests --enable-benchmarks -v2
+- cabal install alex
+- cabal install happy
+- cabal install --only-dependencies --enable-tests --enable-benchmarks
 - cabal build
   # - cabal test SBVTest
   # - cabal test SBVDocTest
