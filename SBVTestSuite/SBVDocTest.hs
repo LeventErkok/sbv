@@ -13,8 +13,8 @@ main = do testEnv <- getTestEnvironment
           putStrLn $ "SBVDocTest: Test platform: " ++ show testEnv
 
           case testEnv of
-            TestEnvLocal     -> runDocTest
-            TestEnvTravis _  -> runDocTest
-            TestEnvUnknown   -> do putStrLn "Unknown test environment, skipping doctests"
-                                   exitSuccess
+            TestEnvLocal   -> runDocTest
+            TestEnvCI{}    -> runDocTest
+            TestEnvUnknown -> do putStrLn "Unknown test environment, skipping doctests"
+                                 exitSuccess
  where runDocTest = glob "Data/SBV/**/*.hs" >>= doctest

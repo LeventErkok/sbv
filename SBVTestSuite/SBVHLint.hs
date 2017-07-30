@@ -19,10 +19,10 @@ main = do
     putStrLn $ "SBVHLint: Test platform: " ++ show testEnv
 
     case testEnv of
-      TestEnvLocal    -> runHLint
-      TestEnvTravis _ -> runHLint
-      TestEnvUnknown  -> do putStrLn "Unknown test environment, skipping hlint run"
-                            exitSuccess
+      TestEnvLocal   -> runHLint
+      TestEnvCI{}    -> runHLint
+      TestEnvUnknown -> do putStrLn "Unknown test environment, skipping hlint run"
+                           exitSuccess
  where runHLint = do hints <- hlint arguments
                      if null hints
                         then exitSuccess

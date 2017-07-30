@@ -3,7 +3,7 @@ module Main(main) where
 
 import Test.Tasty
 
-import Utils.SBVTestFramework (getTestEnvironment, TestEnvironment(..), TravisOS(..), pickTests)
+import Utils.SBVTestFramework (getTestEnvironment, TestEnvironment(..), CIOS(..), pickTests)
 
 import System.Exit (exitSuccess)
 
@@ -78,32 +78,34 @@ import qualified TestSuite.Uninterpreted.Function
 import qualified TestSuite.Uninterpreted.Sort
 import qualified TestSuite.Uninterpreted.Uninterpreted
 
--- On Travis, the build machines are subject to time-out limits. So, we cannot really run
--- everything yet remain within the timeout bounds. Here, we randomly pick a subset; with
--- the hope that over many runs this tests larger parts of the test-suite.
-travisFilter :: TravisOS -> TestTree -> IO TestTree
-travisFilter te tt = do putStrLn $ "Travis: Reducing tests by " ++ show (100-p) ++ "% for running on " ++ show te
-                        pickTests p tt
-  where p = case te of
-              TravisLinux   ->  30
-              TravisOSX     ->  10
-              TravisWindows -> 100   -- Travis doesn't actually have Windows, just keep this at 100 for now.
+-- On remote machines (Travis/Appveyor etc.), the build machines are subject to time-out limits.
+-- So, we cannot really run everything yet remain within the timeout bounds. Here, we randomly
+-- pick a subset; with the hope that over many runs this tests larger parts of the test-suite.
+ciFilter :: CIOS -> TestTree -> IO TestTree
+ciFilter te tt = do putStrLn $ "CI: Reducing tests by " ++ show (100-p) ++ "% for running on " ++ show te
+                    pickTests p tt
+  where -- emprically determined percentages that work OK with remote services.
+        -- TODO: Would be nice to increase these numbers if we can.
+        p = case te of
+              CILinux   ->  30
+              CIOSX     ->  10
+              CIWindows -> 100
 
 main :: IO ()
 main = do testEnv <- getTestEnvironment
 
           putStrLn $ "SBVTest: Test platform: " ++ show testEnv
 
-          let allTestCases       = testGroup "Tests" [tc | (_,    tc) <- allTests]
-              allTravisTestCases = testGroup "Tests" [tc | (True, tc) <- allTests]
+          let allTestCases   = testGroup "Tests" [tc | (_,    tc) <- allTests]
+              allCITestCases = testGroup "Tests" [tc | (True, tc) <- allTests]
 
           case testEnv of
             TestEnvLocal     -> defaultMain allTestCases
-            TestEnvTravis os -> defaultMain =<< travisFilter os allTravisTestCases
+            TestEnvCI     os -> defaultMain =<< ciFilter os allCITestCases
             TestEnvUnknown   -> do putStrLn "Unknown test environment, skipping tests"
                                    exitSuccess
 
--- If the first  Bool is True, then that test can run on Travis
+-- If the first  Bool is True, then that test can run on CI
 allTests :: [(Bool, TestTree)]
 allTests = [ (True,  TestSuite.Arrays.Memory.tests)
            , (True,  TestSuite.Basics.AllSat.tests)

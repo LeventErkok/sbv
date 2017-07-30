@@ -19,7 +19,7 @@ module Utils.SBVTestFramework (
         , goldenString
         , goldenVsStringShow
         , goldenCapturedIO
-        , TravisOS(..), TestEnvironment(..), getTestEnvironment
+        , CIOS(..), TestEnvironment(..), getTestEnvironment
         , pickTests
         -- module exports to simplify life
         , module Test.Tasty
@@ -50,14 +50,14 @@ import System.FilePath ((</>), (<.>))
 import Data.SBV.Internals (runSymbolic, Symbolic, Result, SBVRunMode(..), IStage(..))
 
 ---------------------------------------------------------------------------------------
--- Test environment
-data TravisOS = TravisLinux
-              | TravisOSX
-              | TravisWindows    -- Travis actually doesn't support windows yet. This is "reserved" for future
-              deriving Show
+-- Test environment; continuous integration
+data CIOS = CILinux
+          | CIOSX
+          | CIWindows
+          deriving Show
 
 data TestEnvironment = TestEnvLocal
-                     | TestEnvTravis TravisOS
+                     | TestEnvCI CIOS
                      | TestEnvUnknown
                      deriving Show
 
@@ -66,9 +66,9 @@ getTestEnvironment = do mbTestEnv <- lookupEnv "SBV_TEST_ENVIRONMENT"
 
                         case mbTestEnv of
                           Just "local" -> return   TestEnvLocal
-                          Just "linux" -> return $ TestEnvTravis TravisLinux
-                          Just "osx"   -> return $ TestEnvTravis TravisOSX
-                          Just "win"   -> return $ TestEnvTravis TravisWindows
+                          Just "linux" -> return $ TestEnvCI CILinux
+                          Just "osx"   -> return $ TestEnvCI CIOSX
+                          Just "win"   -> return $ TestEnvCI CIWindows
                           Just other   -> do putStrLn $ "Ignoring unexpected test env value: " ++ show other
                                              return TestEnvUnknown
                           Nothing      -> return TestEnvUnknown
