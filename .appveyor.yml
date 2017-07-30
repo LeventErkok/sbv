@@ -10,4 +10,4 @@ before_build:
 skip_tags: true
 
 build_script:
-- cabal install
+- stack exec cabal install
