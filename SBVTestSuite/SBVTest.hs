@@ -87,94 +87,103 @@ ciFilter te tt = do putStrLn $ "CI: Reducing tests by " ++ show (100-p) ++ "% fo
   where -- emprically determined percentages that work OK with remote services.
         -- TODO: Would be nice to increase these numbers if we can.
         p = case te of
-              CILinux   ->  30
-              CIOSX     ->  10
-              CIWindows ->  20
+              CILinux   -> 30
+              CIOSX     -> 10
+              CIWindows -> 10
 
 main :: IO ()
 main = do testEnv <- getTestEnvironment
 
           putStrLn $ "SBVTest: Test platform: " ++ show testEnv
 
-          let allTestCases   = testGroup "Tests" [tc | (_,    tc) <- allTests]
-              allCITestCases = testGroup "Tests" [tc | (True, tc) <- allTests]
-
           case testEnv of
-            TestEnvLocal     -> defaultMain allTestCases
-            TestEnvCI     os -> defaultMain =<< ciFilter os allCITestCases
             TestEnvUnknown   -> do putStrLn "Unknown test environment, skipping tests"
                                    exitSuccess
 
--- If the first  Bool is True, then that test can run on CI
-allTests :: [(Bool, TestTree)]
-allTests = [ (True,  TestSuite.Arrays.Memory.tests)
-           , (True,  TestSuite.Basics.AllSat.tests)
-           , (True,  TestSuite.Basics.ArithNoSolver.tests)
-           , (True,  TestSuite.Basics.ArithSolver.tests)
-           , (True,  TestSuite.Basics.BasicTests.tests)
-           , (True,  TestSuite.Basics.GenBenchmark.tests)
-           , (True,  TestSuite.Basics.Higher.tests)
-           , (True,  TestSuite.Basics.Index.tests)
-           , (True,  TestSuite.Basics.IteTest.tests)
-           , (True,  TestSuite.Basics.ProofTests.tests)
-           , (True,  TestSuite.Basics.PseudoBoolean.tests)
-           , (True,  TestSuite.Basics.QRem.tests)
-           , (True,  TestSuite.Basics.Quantifiers.tests)
-           , (True,  TestSuite.Basics.Recursive.tests)
-           , (True,  TestSuite.Basics.SquashReals.tests)
-           , (True,  TestSuite.Basics.TOut.tests)
-           , (True,  TestSuite.BitPrecise.BitTricks.tests)
-           , (True,  TestSuite.BitPrecise.Legato.tests)
-           , (True,  TestSuite.BitPrecise.MergeSort.tests)
-           , (True,  TestSuite.BitPrecise.PrefixSum.tests)
-           , (True,  TestSuite.CodeGeneration.AddSub.tests)
-           , (True,  TestSuite.CodeGeneration.CgTests.tests)
-           , (True,  TestSuite.CodeGeneration.CRC_USB5.tests)
-           , (True,  TestSuite.CodeGeneration.Fibonacci.tests)
-           , (True,  TestSuite.CodeGeneration.Floats.tests)
-           , (True,  TestSuite.CodeGeneration.GCD.tests)
-           , (True,  TestSuite.CodeGeneration.PopulationCount.tests)
-           , (True,  TestSuite.CodeGeneration.Uninterpreted.tests)
-           , (True,  TestSuite.CRC.CCITT.tests)
-           , (True,  TestSuite.CRC.CCITT_Unidir.tests)
-           , (True,  TestSuite.CRC.GenPoly.tests)
-           , (True,  TestSuite.CRC.Parity.tests)
-           , (True,  TestSuite.CRC.USB5.tests)
-           , (True,  TestSuite.Crypto.AES.tests)
-           , (True,  TestSuite.Crypto.RC4.tests)
-           , (True,  TestSuite.Existentials.CRCPolynomial.tests)
-           , (True,  TestSuite.GenTest.GenTests.tests)
-           , (True,  TestSuite.Optimization.AssertSoft.tests)
-           , (True,  TestSuite.Optimization.Basics.tests)
-           , (True,  TestSuite.Optimization.Combined.tests)
-           , (True,  TestSuite.Optimization.ExtensionField.tests)
-           , (True,  TestSuite.Optimization.Reals.tests)
-           , (True,  TestSuite.Polynomials.Polynomials.tests)
-           , (True,  TestSuite.Puzzles.Coins.tests)
-           , (True,  TestSuite.Puzzles.Counts.tests)
-           , (True,  TestSuite.Puzzles.DogCatMouse.tests)
-           , (True,  TestSuite.Puzzles.Euler185.tests)
-           , (True,  TestSuite.Puzzles.MagicSquare.tests)
-           , (True,  TestSuite.Puzzles.NQueens.tests)
-           , (True,  TestSuite.Puzzles.PowerSet.tests)
-           , (True,  TestSuite.Puzzles.Sudoku.tests)
-           , (True,  TestSuite.Puzzles.Temperature.tests)
-           , (True,  TestSuite.Puzzles.U2Bridge.tests)
-           , (False, TestSuite.Queries.BasicQuery.tests)
-           , (False, TestSuite.Queries.BadOption.tests)
-           , (True,  TestSuite.Queries.Enums.tests)
-           , (True,  TestSuite.Queries.FreshVars.tests)
-           , (False, TestSuite.Queries.Int_ABC.tests)
-           , (False, TestSuite.Queries.Int_Boolector.tests)
-           , (False, TestSuite.Queries.Int_CVC4.tests)
-           , (False, TestSuite.Queries.Int_Mathsat.tests)
-           , (False, TestSuite.Queries.Int_Yices.tests)
-           , (True,  TestSuite.Queries.Int_Z3.tests)
-           , (True,  TestSuite.Queries.Interpolants.tests)
-           , (True,  TestSuite.Queries.Uninterpreted.tests)
-           , (True,  TestSuite.Uninterpreted.AUF.tests)
-           , (True,  TestSuite.Uninterpreted.Axioms.tests)
-           , (True,  TestSuite.Uninterpreted.Function.tests)
-           , (True,  TestSuite.Uninterpreted.Sort.tests)
-           , (True,  TestSuite.Uninterpreted.Uninterpreted.tests)
-           ]
+            TestEnvLocal     -> defaultMain $ testGroup "Local" [heavyTests, localOnlyTests, otherTests]
+
+            TestEnvCI os     -> do reducedHeavyTests <- ciFilter os heavyTests
+                                   defaultMain $ testGroup "Remote" [reducedHeavyTests, otherTests]
+
+-- | The following tests take too long/too burdensome for remote tests, so we run only a percentage of them
+heavyTests :: TestTree
+heavyTests = testGroup "SBVHeavyTests" [TestSuite.Basics.ArithSolver.tests]
+
+-- | The following tests can only be run locally
+localOnlyTests :: TestTree
+localOnlyTests = testGroup "SBVLocalOnlyTests" [
+                     TestSuite.Queries.BasicQuery.tests
+                   , TestSuite.Queries.BadOption.tests
+                   , TestSuite.Queries.Int_ABC.tests
+                   , TestSuite.Queries.Int_Boolector.tests
+                   , TestSuite.Queries.Int_CVC4.tests
+                   , TestSuite.Queries.Int_Mathsat.tests
+                   , TestSuite.Queries.Int_Yices.tests
+                   ]
+
+-- | Remaining tests
+otherTests :: TestTree
+otherTests = testGroup "SBVOtherTests" [
+                 TestSuite.Arrays.Memory.tests
+               , TestSuite.Basics.AllSat.tests
+               , TestSuite.Basics.ArithNoSolver.tests
+               , TestSuite.Basics.BasicTests.tests
+               , TestSuite.Basics.GenBenchmark.tests
+               , TestSuite.Basics.Higher.tests
+               , TestSuite.Basics.Index.tests
+               , TestSuite.Basics.IteTest.tests
+               , TestSuite.Basics.ProofTests.tests
+               , TestSuite.Basics.PseudoBoolean.tests
+               , TestSuite.Basics.QRem.tests
+               , TestSuite.Basics.Quantifiers.tests
+               , TestSuite.Basics.Recursive.tests
+               , TestSuite.Basics.SquashReals.tests
+               , TestSuite.Basics.TOut.tests
+               , TestSuite.BitPrecise.BitTricks.tests
+               , TestSuite.BitPrecise.Legato.tests
+               , TestSuite.BitPrecise.MergeSort.tests
+               , TestSuite.BitPrecise.PrefixSum.tests
+               , TestSuite.CodeGeneration.AddSub.tests
+               , TestSuite.CodeGeneration.CgTests.tests
+               , TestSuite.CodeGeneration.CRC_USB5.tests
+               , TestSuite.CodeGeneration.Fibonacci.tests
+               , TestSuite.CodeGeneration.Floats.tests
+               , TestSuite.CodeGeneration.GCD.tests
+               , TestSuite.CodeGeneration.PopulationCount.tests
+               , TestSuite.CodeGeneration.Uninterpreted.tests
+               , TestSuite.CRC.CCITT.tests
+               , TestSuite.CRC.CCITT_Unidir.tests
+               , TestSuite.CRC.GenPoly.tests
+               , TestSuite.CRC.Parity.tests
+               , TestSuite.CRC.USB5.tests
+               , TestSuite.Crypto.AES.tests
+               , TestSuite.Crypto.RC4.tests
+               , TestSuite.Existentials.CRCPolynomial.tests
+               , TestSuite.GenTest.GenTests.tests
+               , TestSuite.Optimization.AssertSoft.tests
+               , TestSuite.Optimization.Basics.tests
+               , TestSuite.Optimization.Combined.tests
+               , TestSuite.Optimization.ExtensionField.tests
+               , TestSuite.Optimization.Reals.tests
+               , TestSuite.Polynomials.Polynomials.tests
+               , TestSuite.Puzzles.Coins.tests
+               , TestSuite.Puzzles.Counts.tests
+               , TestSuite.Puzzles.DogCatMouse.tests
+               , TestSuite.Puzzles.Euler185.tests
+               , TestSuite.Puzzles.MagicSquare.tests
+               , TestSuite.Puzzles.NQueens.tests
+               , TestSuite.Puzzles.PowerSet.tests
+               , TestSuite.Puzzles.Sudoku.tests
+               , TestSuite.Puzzles.Temperature.tests
+               , TestSuite.Puzzles.U2Bridge.tests
+               , TestSuite.Queries.Enums.tests
+               , TestSuite.Queries.FreshVars.tests
+               , TestSuite.Queries.Int_Z3.tests
+               , TestSuite.Queries.Interpolants.tests
+               , TestSuite.Queries.Uninterpreted.tests
+               , TestSuite.Uninterpreted.AUF.tests
+               , TestSuite.Uninterpreted.Axioms.tests
+               , TestSuite.Uninterpreted.Function.tests
+               , TestSuite.Uninterpreted.Sort.tests
+               , TestSuite.Uninterpreted.Uninterpreted.tests
+               ]
