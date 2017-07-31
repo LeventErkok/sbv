@@ -13,8 +13,6 @@
 
 module Data.SBV.Provers.Z3(z3) where
 
-import Data.Char (toLower)
-
 import Data.SBV.Core.Data
 import Data.SBV.SMT.SMT
 
