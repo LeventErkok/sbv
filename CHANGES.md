@@ -5,7 +5,11 @@
 
 ### Version 7.2, Not yet released
   
-  * Mark new dev version
+  * Development/Infrastructure: Lots of work around the continuous integration
+    for SBV. We now build/test on Linux/Mac/Windows on every commit. Thanks to
+    Travis/Appveyor for providing free remote infrastructure. There are still
+    gotchas and some reductions in tests due to host capacity issues. If you
+    would like to be involved and improve the test suite, please get in touch!
 
 ### Version 7.1, 2017-07-29
   
