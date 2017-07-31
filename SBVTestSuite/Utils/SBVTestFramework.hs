@@ -30,18 +30,23 @@ module Utils.SBVTestFramework (
 import qualified Control.Exception as C
 
 import qualified Data.ByteString.Lazy.Char8 as LBC
+import qualified Data.ByteString as BS
 
 import System.Directory   (removeFile)
 import System.Environment (lookupEnv)
 
 import Test.Tasty         (testGroup, TestTree, TestName)
-import Test.Tasty.Golden  (goldenVsString, goldenVsFile)
 import Test.Tasty.HUnit   (assert, Assertion, testCase)
+
+import Test.Tasty.Golden           (goldenVsString)
+import Test.Tasty.Golden.Advanced  (goldenTest)
 
 import Test.Tasty.Runners hiding (Result)
 import System.Random (randomRIO)
 
 import Data.SBV
+
+import Data.Char (chr, ord)
 
 import Data.Maybe(fromMaybe, catMaybes)
 
@@ -87,11 +92,34 @@ goldenVsStringShow :: Show a => TestName -> IO a -> TestTree
 goldenVsStringShow n res = goldenVsString n (goldFile n) (fmap (LBC.pack . show) res)
 
 goldenCapturedIO :: TestName -> (FilePath -> IO ()) -> TestTree
-goldenCapturedIO n res = goldenVsFile n gf gfTmp (rm gfTmp >> res gfTmp)
+goldenCapturedIO n res = doTheDiff n gf gfTmp (rm gfTmp >> res gfTmp)
   where gf    = goldFile n
         gfTmp = gf ++ "_temp"
 
         rm f = removeFile f `C.catch` (\(_ :: C.SomeException) -> return ())
+
+-- | When comparing ignore \r's for windows's sake
+doTheDiff :: TestName -> FilePath -> FilePath -> IO () -> TestTree
+doTheDiff nm ref new act = goldenTest nm (BS.readFile ref) (act >> BS.readFile new) cmp upd
+   where upd = BS.writeFile ref
+
+         cmp :: BS.ByteString -> BS.ByteString -> IO (Maybe String)
+         cmp x y
+          | cleanUp x == cleanUp y = return Nothing
+          | True                   = return $ Just $ unlines $ [ "Discrepancy found. Expected: " ++ ref
+                                                                 , "============================================"
+                                                                 ]
+                                                              ++ lines xs
+                                                              ++ [ "Got: " ++ new
+                                                                 , "============================================"
+                                                                 ]
+                                                              ++ lines ys
+          where xs = map (chr . fromIntegral) $ BS.unpack x
+                ys = map (chr . fromIntegral) $ BS.unpack y
+
+         -- deal with insane Windows \r stuff
+         cleanUp = BS.filter (/= slashr)
+         slashr  = fromIntegral (ord '\r')
 
 -- | Count the number of models
 numberOfModels :: Provable a => a -> IO Int
