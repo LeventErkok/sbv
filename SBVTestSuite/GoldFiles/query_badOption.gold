@@ -43,4 +43,4 @@
 *** bug/feature request with the solver!
 
 CallStack (from HasCallStack):
-  error, called at ./Data/SBV/SMT/SMT.hs:722:61 in sbv-7.1-56ITrlqRjAjFzgs28xEVp3:Data.SBV.SMT.SMT
+  error, called at ./Data/SBV/SMT/SMT.hs:722:61 in sbv-7.2-BmAQsjRcnLN24H2yOFpcOt:Data.SBV.SMT.SMT

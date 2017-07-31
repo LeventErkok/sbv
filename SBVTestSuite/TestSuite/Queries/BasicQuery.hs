@@ -116,10 +116,10 @@ query1 = do
                   namedConstraint "bey" $ a .> literal (av + bv)
                   namedConstraint "hey" $ a .< literal (av + bv)
                   _ <- checkSat
-                  _ <- timeout 4000 getUnsatCore
+                  _ <- timeout 80000 getUnsatCore
 
                   _ <- getProof
-                  _ <- timeout 6000 getAssertions
+                  _ <- timeout 90000 getAssertions
 
                   echo "there we go"
 

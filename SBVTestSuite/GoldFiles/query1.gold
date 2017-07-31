@@ -145,7 +145,7 @@
 [GOOD] (assert (! s29 :named |hey|))
 [SEND] (check-sat)
 [RECV] unsat
-[SEND, TimeOut: 4000ms] (get-unsat-core)
+[SEND, TimeOut: 80000ms] (get-unsat-core)
 [RECV] (bey hey)
 [SEND] (get-proof)
 [RECV] ((set-logic ALL)
@@ -165,7 +165,7 @@
        (let ((@x249 (rewrite (= (=> hey (< s0 6)) (or (not hey) (< s0 6))))))
        (let ((@x259 (mp (asserted (=> hey (< s0 6))) (trans @x249 @x256 (= (=> hey (< s0 6)) $x254)) $x254)))
        (unit-resolution ((_ th-lemma arith farkas 1 1) (or $x252 $x232)) (unit-resolution @x259 (asserted hey) $x250) (unit-resolution @x241 (asserted bey) $x233) false)))))))))))))))
-[SEND, TimeOut: 6000ms] (get-assertions)
+[SEND, TimeOut: 90000ms] (get-assertions)
 
 [RECV] ((! s7 :named |a > 0|)
         s8
