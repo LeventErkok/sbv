@@ -89,7 +89,7 @@ ciFilter te tt = do putStrLn $ "CI: Reducing tests by " ++ show (100-p) ++ "% fo
         p = case te of
               CILinux   -> 30
               CIOSX     -> 10
-              CIWindows ->  0 -- The appveyor image really can't handle this one at all!
+              CIWindows -> 10
 
 main :: IO ()
 main = do testEnv <- getTestEnvironment
