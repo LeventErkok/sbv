@@ -23,7 +23,7 @@ main = do testEnv <- getTestEnvironment
                                       exitSuccess
  where runDocTest windowsSkip = do allFiles <- glob "Data/SBV/**/*.hs"
                                    let testFiles
-                                         | windowsSkip = filter bad allFiles
+                                         | windowsSkip = filter (not . bad) allFiles
                                          | True        = allFiles
                                    doctest testFiles
 
