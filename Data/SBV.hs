@@ -98,6 +98,9 @@
 --
 --   * Z3 from Microsoft: <http://github.com/Z3Prover/z3/wiki>
 --
+-- SBV requires recent versions of these solvers; please see the file
+-- @SMTSolverVersions.md@ in the source distribution for specifics.
+--
 -- SBV also allows calling these solvers in parallel, either getting results from multiple solvers
 -- or returning the fastest one. (See 'proveWithAll', 'proveWithAny', etc.)
 --
