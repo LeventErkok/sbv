@@ -237,7 +237,7 @@ Test-Suite SBVTest
 
 Test-Suite SBVDocTest
     Build-Depends:    base, directory, filepath, random
-                    , doctest      >= 0.9
+                    , doctest      >= 0.13
                     , Glob         >= 0.7
                     , bytestring   >= 0.9
                     , tasty        >= 0.11.2.3
