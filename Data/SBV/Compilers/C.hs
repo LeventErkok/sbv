@@ -662,6 +662,12 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                   , (And, "&"), (Or, "|"), (XOr, "^")
                   ]
 
+        -- see if we can find a constant shift; makes the output way more readable
+        getShiftAmnt def [_, sw] = case sw `lookup` consts of
+                                    Just (CW _  (CWInteger i)) -> integer i
+                                    _                          -> def
+        getShiftAmnt def _       = def
+
         p :: Op -> [Doc] -> Doc
         p (ArrRead _)       _  = tbd "User specified arrays (ArrRead)"
         p (ArrEq _ _)       _  = tbd "User specified arrays (ArrEq)"
@@ -675,8 +681,8 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
         p Join [a, b]          = join (let (s1 : s2 : _) = opArgs in (s1, s2, a, b))
         p (Rol i) [a]          = rotate True  i a (head opArgs)
         p (Ror i) [a]          = rotate False i a (head opArgs)
-        p Shl     [a, i]       = shift  True  i a (head opArgs)   -- The order of i/a being reversed here is
-        p Shr     [a, i]       = shift  False i a (head opArgs)   -- intentional and historical (from the days when Shl/Shr had a constant parameter.)
+        p Shl     [a, i]       = shift  True  (getShiftAmnt i opArgs) a -- The order of i/a being reversed here is
+        p Shr     [a, i]       = shift  False (getShiftAmnt i opArgs) a -- intentional and historical (from the days when Shl/Shr had a constant parameter.)
         p Not [a]              = case kindOf (head opArgs) of
                                    -- be careful about booleans, bitwise complement is not correct for them!
                                    KBool -> text "!" <> a
@@ -749,9 +755,7 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
            where res  = a <+> text divOp <+> b
                  wrap = parens (b <+> text "== 0") <+> text "?" <+> def <+> text ":" <+> parens res
 
-        shift toLeft i a s = case kindOf s of
-                               KReal                   -> tbd $ "Shift for real quantity: " ++ show (toLeft, i, s)
-                               _                       -> a <+> text cop <+> i
+        shift toLeft i a = a <+> text cop <+> i
           where cop | toLeft = "<<"
                     | True   = ">>"
 
@@ -764,7 +768,7 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                         KBounded False sz           ->     parens (a <+> text cop  <+> int i)
                                                       <+> text "|"
                                                       <+> parens (a <+> text cop' <+> int (sz - i))
-                        KUnbounded                  -> shift toLeft (int i) a s -- For SInteger, rotate is the same as shift in Haskell
+                        KUnbounded                  -> shift toLeft (int i) a -- For SInteger, rotate is the same as shift in Haskell
                         _                           -> tbd $ "Rotation for unbounded quantity: " ++ show (toLeft, i, s)
           where (cop, cop') | toLeft = ("<<", ">>")
                             | True   = (">>", "<<")

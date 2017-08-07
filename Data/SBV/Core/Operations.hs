@@ -343,7 +343,10 @@ svNot = liftSym1 (mkSymOp1SC opt Not)
 -- | Shift left by a constant amount. Translates to the "bvshl"
 -- operation in SMT-Lib.
 svShl :: SVal -> Int -> SVal
-svShl x i = svShiftLeft x amnt
+svShl x i
+  | i < 0  = svShr x (-i)
+  | i == 0 = x
+  | True   = svShiftLeft x amnt
   where k    = kindOf x
         amnt = SVal k (Left $! CW k (CWInteger (fromIntegral i)))
 
@@ -351,7 +354,10 @@ svShl x i = svShiftLeft x amnt
 -- (logical shift right) or "bvashr" (arithmetic shift right) in
 -- SMT-Lib, depending on whether @x@ is a signed bitvector.
 svShr :: SVal -> Int -> SVal
-svShr x i = svShiftRight x amnt
+svShr x i
+  | i < 0  = svShl x (-i)
+  | i == 0 = x
+  | True   = svShiftRight x amnt
   where k    = kindOf x
         amnt = SVal k (Left $! CW k (CWInteger (fromIntegral i)))
 
