@@ -136,8 +136,8 @@ data Op = Plus
         | Or
         | XOr
         | Not
-        | Shl Int
-        | Shr Int
+        | Shl
+        | Shr
         | Rol Int
         | Ror Int
         | Extract Int Int                       -- Extract i j: extract bits i to j. Least significant bit is 0 (big-endian)
@@ -219,8 +219,8 @@ data PBOp = PB_AtMost  Int        -- ^ At most k
 -- Show instance for 'Op'. Note that this is largely for debugging purposes, not used
 -- for being read by any tool.
 instance Show Op where
-  show (Shl i) = "<<"  ++ show i
-  show (Shr i) = ">>"  ++ show i
+  show Shl    = "<<"
+  show Shr    = ">>"
   show (Rol i) = "<<<" ++ show i
   show (Ror i) = ">>>" ++ show i
   show (Extract i j) = "choose [" ++ show i ++ ":" ++ show j ++ "]"
@@ -281,8 +281,8 @@ reorder s = case s of
 -- Show instance for 'SBVExpr'. Again, only for debugging purposes.
 instance Show SBVExpr where
   show (SBVApp Ite [t, a, b])             = unwords ["if", show t, "then", show a, "else", show b]
-  show (SBVApp (Shl i) [a])               = unwords [show a, "<<", show i]
-  show (SBVApp (Shr i) [a])               = unwords [show a, ">>", show i]
+  show (SBVApp Shl     [a, i])            = unwords [show a, "<<", show i]
+  show (SBVApp Shr     [a, i])            = unwords [show a, ">>", show i]
   show (SBVApp (Rol i) [a])               = unwords [show a, "<<<", show i]
   show (SBVApp (Ror i) [a])               = unwords [show a, ">>>", show i]
   show (SBVApp (PseudoBoolean pb) args)   = unwords (show pb : map show args)

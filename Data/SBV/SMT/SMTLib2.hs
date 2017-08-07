@@ -485,25 +485,19 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (Extract i j) [a]) | ensureBV = "((_ extract " ++ show i ++ " " ++ show j ++ ") " ++ ssw a ++ ")"
 
         sh (SBVApp (Rol i) [a])
-           | bvOp  = rot  ssw "rotate_left"  i a
-           | intOp = sh (SBVApp (Shl i) [a])       -- Haskell treats rotateL as shiftL for unbounded values
+           | bvOp  = rot ssw "rotate_left"  i a
            | True  = bad
 
         sh (SBVApp (Ror i) [a])
            | bvOp  = rot  ssw "rotate_right" i a
-           | intOp = sh (SBVApp (Shr i) [a])     -- Haskell treats rotateR as shiftR for unbounded values
            | True  = bad
 
-        sh (SBVApp (Shl i) [a])
-           | bvOp   = shft rm ssw "bvshl"  "bvshl"  i a
-           | i < 0  = sh (SBVApp (Shr (-i)) [a])  -- flip sign/direction
-           | intOp  = "(* " ++ ssw a ++ " " ++ show (bit i :: Integer) ++ ")"  -- Implement shiftL by multiplication by 2^i
+        sh (SBVApp Shl [a, i])
+           | bvOp   = shft ssw "bvshl"  "bvshl" a i
            | True   = bad
 
-        sh (SBVApp (Shr i) [a])
-           | bvOp  = shft rm ssw "bvlshr" "bvashr" i a
-           | i < 0 = sh (SBVApp (Shl (-i)) [a])  -- flip sign/direction
-           | intOp = "(div " ++ ssw a ++ " " ++ show (bit i :: Integer) ++ ")"  -- Implement shiftR by division by 2^i
+        sh (SBVApp Shr [a, i])
+           | bvOp  = shft ssw "bvlshr" "bvashr" a i
            | True  = bad
 
         sh (SBVApp op args)
@@ -670,11 +664,10 @@ handleFPCast kFrom kTo rm input
 rot :: (SW -> String) -> String -> Int -> SW -> String
 rot ssw o c x = "((_ " ++ o ++ " " ++ show c ++ ") " ++ ssw x ++ ")"
 
-shft :: RoundingMode -> (SW -> String) -> String -> String -> Int -> SW -> String
-shft rm ssw oW oS c x = "(" ++ o ++ " " ++ ssw x ++ " " ++ cvtCW rm c' ++ ")"
-   where s  = hasSign x
-         c' = mkConstCW (kindOf x) c
-         o  = if s then oS else oW
+shft :: (SW -> String) -> String -> String -> SW -> SW -> String
+shft ssw oW oS x c = "(" ++ o ++ " " ++ ssw x ++ " " ++ ssw c ++ ")"
+   where s = hasSign x
+         o = if s then oS else oW
 
 -- Various casts
 handleKindCast :: Kind -> Kind -> String -> String

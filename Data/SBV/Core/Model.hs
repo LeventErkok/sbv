@@ -527,8 +527,7 @@ instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c, OrdSymbolic d, OrdSymboli
 -- It is similar to the standard 'Integral' class, except ranging over symbolic instances.
 class (SymWord a, Num a, Bits a) => SIntegral a
 
--- 'SIntegral' Instances, including all possible variants except 'Bool', since booleans
--- are not numbers.
+-- 'SIntegral' Instances, skips Real/Float/Bool
 instance SIntegral Word8
 instance SIntegral Word16
 instance SIntegral Word32
@@ -818,35 +817,28 @@ sFromIntegral x
         y st   = do xsw <- sbvToSW st x
                     newExpr st kTo (SBVApp (KindCast kFrom kTo) [xsw])
 
+-- | Lift a binary operation thru it's dynamic counterpart. Note that
+-- we still want the actual functions here as differ in their type
+-- compared to their dynamic counterparts, but the implementations
+-- are the same.
+liftViaSVal :: (SVal -> SVal -> SVal) -> SBV a -> SBV b -> SBV c
+liftViaSVal f (SBV a) (SBV b) = SBV $ f a b
+
 -- | Generalization of 'shiftL', when the shift-amount is symbolic. Since Haskell's
 -- 'shiftL' only takes an 'Int' as the shift amount, it cannot be used when we have
--- a symbolic amount to shift with. The first argument should be a bounded quantity.
+-- a symbolic amount to shift with.
 sShiftLeft :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
-sShiftLeft x i
-  | not (isBounded x)
-  = error "SBV.sShiftRight: Shifted amount should be a bounded quantity!"
-  | True
-  = ite (i .< 0)
-        (select [x `shiftR` k | k <- [0 .. ghcBitSize x - 1]] z (-i))
-        (select [x `shiftL` k | k <- [0 .. ghcBitSize x - 1]] z   i )
-  where z = genLiteral (kindOf x) (0::Integer)
+sShiftLeft = liftViaSVal svShiftLeft
 
 -- | Generalization of 'shiftR', when the shift-amount is symbolic. Since Haskell's
 -- 'shiftR' only takes an 'Int' as the shift amount, it cannot be used when we have
--- a symbolic amount to shift with. The first argument should be a bounded quantity.
+-- a symbolic amount to shift with.
 --
 -- NB. If the shiftee is signed, then this is an arithmetic shift; otherwise it's logical,
 -- following the usual Haskell convention. See 'sSignedShiftArithRight' for a variant
 -- that explicitly uses the msb as the sign bit, even for unsigned underlying types.
 sShiftRight :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
-sShiftRight x i
-  | not (isBounded x)
-  = error "SBV.sShiftRight: Shifted amount should be a bounded quantity!"
-  | True
-  = ite (i .< 0)
-        (select [x `shiftL` k | k <- [0 .. ghcBitSize x - 1]] z (-i))
-        (select [x `shiftR` k | k <- [0 .. ghcBitSize x - 1]] z   i )
-  where z = genLiteral (kindOf x) (0::Integer)
+sShiftRight = liftViaSVal svShiftRight
 
 -- | Arithmetic shift-right with a symbolic unsigned shift amount. This is equivalent
 -- to 'sShiftRight' when the argument is signed. However, if the argument is unsigned,
@@ -865,41 +857,13 @@ sSignedShiftArithRight x i
 -- 'rotateL' only takes an 'Int' as the shift amount, it cannot be used when we have
 -- a symbolic amount to shift with. The first argument should be a bounded quantity.
 sRotateLeft :: (SIntegral a, SIntegral b, SDivisible (SBV b)) => SBV a -> SBV b -> SBV a
-sRotateLeft x i
-  | not (isBounded x)
-  = sShiftLeft x i
-  | isBounded i && bit si <= toInteger sx    -- wrap-around not possible
-  = ite (i .< 0)
-        (select [x `rotateR` k | k <- [0 .. bit si - 1]] z (-i))
-        (select [x `rotateL` k | k <- [0 .. bit si - 1]] z   i )
-  | True
-  = ite (i .< 0)
-        (select [x `rotateR` k | k <- [0 .. sx     - 1]] z ((-i) `sRem` n))
-        (select [x `rotateL` k | k <- [0 .. sx     - 1]] z (  i  `sRem` n))
-    where sx = ghcBitSize x
-          si = ghcBitSize i
-          z  = genLiteral (kindOf x) (0::Integer)
-          n  = genLiteral (kindOf i) (toInteger sx)
+sRotateLeft = liftViaSVal svRotateLeft
 
 -- | Generalization of 'rotateR', when the shift-amount is symbolic. Since Haskell's
 -- 'rotateR' only takes an 'Int' as the shift amount, it cannot be used when we have
 -- a symbolic amount to shift with. The first argument should be a bounded quantity.
 sRotateRight :: (SIntegral a, SIntegral b, SDivisible (SBV b)) => SBV a -> SBV b -> SBV a
-sRotateRight x i
-  | not (isBounded x)
-  = sShiftRight x i
-  | isBounded i && bit si <= toInteger sx   -- wrap-around not possible
-  = ite (i .< 0)
-        (select [x `rotateL` k | k <- [0 .. bit si - 1]] z (-i))
-        (select [x `rotateR` k | k <- [0 .. bit si - 1]] z   i)
-  | True
-  = ite (i .< 0)
-        (select [x `rotateL` k | k <- [0 .. sx     - 1]] z ((-i) `sRem` n))
-        (select [x `rotateR` k | k <- [0 .. sx     - 1]] z (  i  `sRem` n))
-    where sx = ghcBitSize x
-          si = ghcBitSize i
-          z  = genLiteral (kindOf x) (0::Integer)
-          n  = genLiteral (kindOf i) (toInteger sx)
+sRotateRight = liftViaSVal svRotateRight
 
 -- | Full adder. Returns the carry-out from the addition.
 --

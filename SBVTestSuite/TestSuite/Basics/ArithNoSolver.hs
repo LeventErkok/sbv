@@ -10,18 +10,18 @@
 -- the constant folding based arithmetic implementation in SBV
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE Rank2Types    #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE TupleSections       #-}
 
 module TestSuite.Basics.ArithNoSolver(tests) where
 
-import Data.SBV.Internals
-import Data.Maybe(fromJust, fromMaybe)
-import Utils.SBVTestFramework
 import qualified Data.Binary.IEEE754 as DB (wordToFloat, wordToDouble, floatToWord, doubleToWord)
 
-ghcBitSize :: Bits a => a -> Int
-ghcBitSize x = fromMaybe (error "SBV.ghcBitSize: Unexpected non-finite usage!") (bitSizeMaybe x)
+import Data.SBV.Internals
+import Utils.SBVTestFramework
+
+import Data.Maybe (fromJust, isJust)
 
 -- Test suite
 tests :: TestTree
@@ -29,33 +29,35 @@ tests = testGroup "Arith.NoSolver" $
            genReals
         ++ genFloats
         ++ genQRems
-        ++ genBinTest  "+"             (+)
-        ++ genBinTest  "-"             (-)
-        ++ genBinTest  "*"             (*)
-        ++ genUnTest   "negate"        negate
-        ++ genUnTest   "abs"           abs
-        ++ genUnTest   "signum"        signum
-        ++ genBinTest  ".&."           (.&.)
-        ++ genBinTest  ".|."           (.|.)
-        ++ genBoolTest "<"             (<)  (.<)
-        ++ genBoolTest "<="            (<=) (.<=)
-        ++ genBoolTest ">"             (>)  (.>)
-        ++ genBoolTest ">="            (>=) (.>=)
-        ++ genBoolTest "=="            (==) (.==)
-        ++ genBoolTest "/="            (/=) (./=)
-        ++ genBinTest  "xor"           xor
-        ++ genUnTest   "complement"    complement
-        ++ genIntTest  "shift"         shift
-        ++ genIntTest  "rotate"        rotate
-        ++ genIntTestS "setBit"        setBit
-        ++ genIntTestS "clearBit"      clearBit
-        ++ genIntTestS "complementBit" complementBit
-        ++ genIntTest  "shift"         shift
-        ++ genIntTestS "shiftL"        shiftL
-        ++ genIntTestS "shiftR"        shiftR
-        ++ genIntTest  "rotate"        rotate
-        ++ genIntTestS "rotateL"       rotateL
-        ++ genIntTestS "rotateR"       rotateR
+        ++ genBinTest            "+"             (+)
+        ++ genBinTest            "-"             (-)
+        ++ genBinTest            "*"             (*)
+        ++ genUnTest             "negate"        negate
+        ++ genUnTest             "abs"           abs
+        ++ genUnTest             "signum"        signum
+        ++ genBinTest            ".&."           (.&.)
+        ++ genBinTest            ".|."           (.|.)
+        ++ genBoolTest           "<"             (<)  (.<)
+        ++ genBoolTest           "<="            (<=) (.<=)
+        ++ genBoolTest           ">"             (>)  (.>)
+        ++ genBoolTest           ">="            (>=) (.>=)
+        ++ genBoolTest           "=="            (==) (.==)
+        ++ genBoolTest           "/="            (/=) (./=)
+        ++ genBinTest            "xor"           xor
+        ++ genUnTest             "complement"    complement
+        ++ genIntTest      False "setBit"        setBit
+        ++ genIntTest      False "clearBit"      clearBit
+        ++ genIntTest      False "complementBit" complementBit
+        ++ genIntTest      True  "shift"         shift
+        ++ genIntTest      True  "shiftL"        shiftL
+        ++ genIntTest      True  "shiftR"        shiftR
+        ++ genIntTest      True  "rotate"        rotate
+        ++ genIntTest      True  "rotateL"       rotateL
+        ++ genIntTest      True  "rotateR"       rotateR
+        ++ genShiftRotTest       "shiftL_gen"    sShiftLeft
+        ++ genShiftRotTest       "shiftR_gen"    sShiftRight
+        ++ genShiftRotTest       "rotateL_gen"   sRotateLeft
+        ++ genShiftRotTest       "rotateR_gen"   sRotateRight
         ++ genBlasts
         ++ genIntCasts
 
@@ -101,33 +103,39 @@ genUnTest nm op = map mkTest $
   where pair (x, a) b = (x, show (fromIntegral a `asTypeOf` b) == show b)
         mkTest (x, s) = testCase ("arithCF-" ++ nm ++ "." ++ x) (s `showsAs` "True")
 
-genIntTest :: String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [TestTree]
-genIntTest nm op = map mkTest $
-        zipWith pair [("u8",  show x, show y, x `op` y) | x <- w8s,  y <- is] [x `op` y | x <- sw8s,  y <- is]
-     ++ zipWith pair [("u16", show x, show y, x `op` y) | x <- w16s, y <- is] [x `op` y | x <- sw16s, y <- is]
-     ++ zipWith pair [("u32", show x, show y, x `op` y) | x <- w32s, y <- is] [x `op` y | x <- sw32s, y <- is]
-     ++ zipWith pair [("u64", show x, show y, x `op` y) | x <- w64s, y <- is] [x `op` y | x <- sw64s, y <- is]
-     ++ zipWith pair [("s8",  show x, show y, x `op` y) | x <- i8s,  y <- is] [x `op` y | x <- si8s,  y <- is]
-     ++ zipWith pair [("s16", show x, show y, x `op` y) | x <- i16s, y <- is] [x `op` y | x <- si16s, y <- is]
-     ++ zipWith pair [("s32", show x, show y, x `op` y) | x <- i32s, y <- is] [x `op` y | x <- si32s, y <- is]
-     ++ zipWith pair [("s64", show x, show y, x `op` y) | x <- i64s, y <- is] [x `op` y | x <- si64s, y <- is]
-     ++ zipWith pair [("iUB", show x, show y, x `op` y) | x <- iUBs, y <- is] [x `op` y | x <- siUBs, y <- is]
-  where pair (t, x, y, a) b       = (t, x, y, show a, show b, show (fromIntegral a `asTypeOf` b) == show b)
+genIntTest :: Bool -> String -> (forall a. (Num a, Bits a) => (a -> Int -> a)) -> [TestTree]
+genIntTest overSized nm op = map mkTest $
+        zipWith pair [("u8",  show x, show y, x `op` y) | x <- w8s,  y <- is (intSizeOf x)] [x `op` y | x <- sw8s,  y <- is (intSizeOf x)]
+     ++ zipWith pair [("u16", show x, show y, x `op` y) | x <- w16s, y <- is (intSizeOf x)] [x `op` y | x <- sw16s, y <- is (intSizeOf x)]
+     ++ zipWith pair [("u32", show x, show y, x `op` y) | x <- w32s, y <- is (intSizeOf x)] [x `op` y | x <- sw32s, y <- is (intSizeOf x)]
+     ++ zipWith pair [("u64", show x, show y, x `op` y) | x <- w64s, y <- is (intSizeOf x)] [x `op` y | x <- sw64s, y <- is (intSizeOf x)]
+     ++ zipWith pair [("s8",  show x, show y, x `op` y) | x <- i8s,  y <- is (intSizeOf x)] [x `op` y | x <- si8s,  y <- is (intSizeOf x)]
+     ++ zipWith pair [("s16", show x, show y, x `op` y) | x <- i16s, y <- is (intSizeOf x)] [x `op` y | x <- si16s, y <- is (intSizeOf x)]
+     ++ zipWith pair [("s32", show x, show y, x `op` y) | x <- i32s, y <- is (intSizeOf x)] [x `op` y | x <- si32s, y <- is (intSizeOf x)]
+     ++ zipWith pair [("s64", show x, show y, x `op` y) | x <- i64s, y <- is (intSizeOf x)] [x `op` y | x <- si64s, y <- is (intSizeOf x)]
+     ++ zipWith pair [("iUB", show x, show y, x `op` y) | x <- iUBs, y <- [0..10]]          [x `op` y | x <- siUBs, y <- [0..10]]
+  where is sz = [0 .. sz - 1] ++ extras
+          where extras
+                 | overSized = map (sz +) ([0 .. 1] ++ [sz, sz+1])
+                 | True      = []
+        pair (t, x, y, a) b       = (t, x, y, show a, show b, show (fromIntegral a `asTypeOf` b) == show b)
         mkTest (t, x, y, a, b, s) = testCase ("arithCF-" ++ nm ++ "." ++ t ++ "_" ++ x ++ "_" ++ y ++ "_" ++ a ++ "_" ++ b) (s `showsAs` "True")
-        is = [-10 .. 10]
 
-genIntTestS :: String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [TestTree]
-genIntTestS nm op = map mkTest $
-        zipWith pair [("u8",  show x, show y, x `op` y) | x <- w8s,  y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- sw8s,  y <- [0 .. (ghcBitSize x - 1)]]
-     ++ zipWith pair [("u16", show x, show y, x `op` y) | x <- w16s, y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- sw16s, y <- [0 .. (ghcBitSize x - 1)]]
-     ++ zipWith pair [("u32", show x, show y, x `op` y) | x <- w32s, y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- sw32s, y <- [0 .. (ghcBitSize x - 1)]]
-     ++ zipWith pair [("u64", show x, show y, x `op` y) | x <- w64s, y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- sw64s, y <- [0 .. (ghcBitSize x - 1)]]
-     ++ zipWith pair [("s8",  show x, show y, x `op` y) | x <- i8s,  y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- si8s,  y <- [0 .. (ghcBitSize x - 1)]]
-     ++ zipWith pair [("s16", show x, show y, x `op` y) | x <- i16s, y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- si16s, y <- [0 .. (ghcBitSize x - 1)]]
-     ++ zipWith pair [("s32", show x, show y, x `op` y) | x <- i32s, y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- si32s, y <- [0 .. (ghcBitSize x - 1)]]
-     ++ zipWith pair [("s64", show x, show y, x `op` y) | x <- i64s, y <- [0 .. (ghcBitSize x - 1)]] [x `op` y | x <- si64s, y <- [0 .. (ghcBitSize x - 1)]]
-     ++ zipWith pair [("iUB", show x, show y, x `op` y) | x <- iUBs, y <- [0 .. 10]]              [x `op` y | x <- siUBs, y <- [0 .. 10             ]]
-  where pair (t, x, y, a) b       = (t, x, y, show a, show b, show (fromIntegral a `asTypeOf` b) == show b)
+genShiftRotTest :: String -> (forall a. (SIntegral a, SDivisible (SBV a)) => (SBV a -> SBV a -> SBV a)) -> [TestTree]
+genShiftRotTest nm op = map mkTest $
+        zipWith pair [("u8",  show x, show y, literal x `op` y) | x <- w8s,  y <- is (intSizeOf x)   ] [x `op` y | x <- sw8s,  y <- is (intSizeOf x)   ]
+     ++ zipWith pair [("u16", show x, show y, literal x `op` y) | x <- w16s, y <- is (intSizeOf x)   ] [x `op` y | x <- sw16s, y <- is (intSizeOf x)   ]
+     ++ zipWith pair [("u32", show x, show y, literal x `op` y) | x <- w32s, y <- is (intSizeOf x)   ] [x `op` y | x <- sw32s, y <- is (intSizeOf x)   ]
+     ++ zipWith pair [("u64", show x, show y, literal x `op` y) | x <- w64s, y <- is (intSizeOf x)   ] [x `op` y | x <- sw64s, y <- is (intSizeOf x)   ]
+     ++ zipWith pair [("s8",  show x, show y, literal x `op` y) | x <- i8s,  y <- is (intSizeOf x)   ] [x `op` y | x <- si8s,  y <- is (intSizeOf x)   ]
+     ++ zipWith pair [("s16", show x, show y, literal x `op` y) | x <- i16s, y <- is (intSizeOf x)   ] [x `op` y | x <- si16s, y <- is (intSizeOf x)   ]
+     ++ zipWith pair [("s32", show x, show y, literal x `op` y) | x <- i32s, y <- is (intSizeOf x)   ] [x `op` y | x <- si32s, y <- is (intSizeOf x)   ]
+     ++ zipWith pair [("s64", show x, show y, literal x `op` y) | x <- i64s, y <- is (intSizeOf x)   ] [x `op` y | x <- si64s, y <- is (intSizeOf x)   ]
+     -- NB. No generic shift/rotate for SMTLib unbounded integers
+  where is sz = let b :: Word32
+                    b = fromIntegral sz
+                in map (sFromIntegral . literal) $ [0 .. b - 1] ++ [b, b+1, 2*b, 2*b+1]
+        pair (t, x, y, a) b       = (t, x, y, show a, show b, isJust (unliteral a) && isJust (unliteral b) && show a == show b)
         mkTest (t, x, y, a, b, s) = testCase ("arithCF-" ++ nm ++ "." ++ t ++ "_" ++ x ++ "_" ++ y ++ "_" ++ a ++ "_" ++ b) (s `showsAs` "True")
 
 genBlasts :: [TestTree]

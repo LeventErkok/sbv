@@ -343,23 +343,17 @@ svNot = liftSym1 (mkSymOp1SC opt Not)
 -- | Shift left by a constant amount. Translates to the "bvshl"
 -- operation in SMT-Lib.
 svShl :: SVal -> Int -> SVal
-svShl x i
-  | i < 0   = svShr x (-i)
-  | i == 0  = x
-  | True    = liftSym1 (mkSymOp1 (Shl i))
-                       (noRealUnary "shiftL") (`shiftL` i)
-                       (noFloatUnary "shiftL") (noDoubleUnary "shiftL") x
+svShl x i = svShiftLeft x amnt
+  where k    = kindOf x
+        amnt = SVal k (Left $! CW k (CWInteger (fromIntegral i)))
 
 -- | Shift right by a constant amount. Translates to either "bvlshr"
 -- (logical shift right) or "bvashr" (arithmetic shift right) in
 -- SMT-Lib, depending on whether @x@ is a signed bitvector.
 svShr :: SVal -> Int -> SVal
-svShr x i
-  | i < 0   = svShl x (-i)
-  | i == 0  = x
-  | True    = liftSym1 (mkSymOp1 (Shr i))
-                       (noRealUnary "shiftR") (`shiftR` i)
-                       (noFloatUnary "shiftR") (noDoubleUnary "shiftR") x
+svShr x i = svShiftRight x amnt
+  where k    = kindOf x
+        amnt = SVal k (Left $! CW k (CWInteger (fromIntegral i)))
 
 -- | Rotate-left, by a constant
 svRol :: SVal -> Int -> SVal
@@ -611,33 +605,55 @@ svTestBit x i
   | True            = svFalse
 
 -- | Generalization of 'svShl', where the shift-amount is symbolic.
--- The first argument should be a bounded quantity.
 svShiftLeft :: SVal -> SVal -> SVal
-svShiftLeft x i
-  | not (isBounded x)
-  = error "SBV.svShiftLeft: Shifted amount should be a bounded quantity!"
-  | True
-  = svIte (svLessThan i zi)
-          (svSelect [svShr x k | k <- [0 .. intSizeOf x - 1]] z (svUNeg i))
-          (svSelect [svShl x k | k <- [0 .. intSizeOf x - 1]] z         i)
-  where z  = svInteger (kindOf x) 0
-        zi = svInteger (kindOf i) 0
+svShiftLeft = svShift True
 
 -- | Generalization of 'svShr', where the shift-amount is symbolic.
--- The first argument should be a bounded quantity.
 --
 -- NB. If the shiftee is signed, then this is an arithmetic shift;
 -- otherwise it's logical.
 svShiftRight :: SVal -> SVal -> SVal
-svShiftRight x i
-  | not (isBounded x)
-  = error "SBV.svShiftLeft: Shifted amount should be a bounded quantity!"
+svShiftRight = svShift False
+
+-- | Generic shifting of bounded quantities.
+svShift :: Bool -> SVal -> SVal -> SVal
+svShift toLeft x i
+  | not (kindCheck kx ki)
+  = error $ "SBV." ++ nm ++ ": Not yet implemented, symbolic quantity/shiftee kind combo: " ++ show (kx, ki)
+  | toLeft
+  = svIte (i `svLessThan` zi) goRight goLeft
   | True
-  = svIte (svLessThan i zi)
-          (svSelect [svShl x k | k <- [0 .. intSizeOf x - 1]] z (svUNeg i))
-          (svSelect [svShr x k | k <- [0 .. intSizeOf x - 1]] z         i)
-  where z  = svInteger (kindOf x) 0
+  = svIte (i `svLessThan` zi) goLeft goRight
+  where -- let's ignore the cases where the Integer (second argument) can overflow here; shouldn't be an issue and also there's
+        -- nothing much we can do at this point.
+        shiftRI, shiftLI :: Integer -> Integer -> Integer
+        a `shiftRI` b = a `shiftR` fromIntegral b
+        a `shiftLI` b = a `shiftL` fromIntegral b
+
+        isConst (SVal _ Left{}) = True
+        isConst _               = False
+
+        goLeft  = mkShift Shl shiftLI
+        goRight = mkShift Shr shiftRI
+
+        -- Unfortunately we can't just call liftSym2 here since shift/rotates support different types for its arguments.
+        mkShift op opC =
+                case (x, i) of
+                  (SVal _ (Left (CW _ (CWInteger xv))), SVal _ (Left (CW _ (CWInteger rv))))
+                        -> SVal kx . Left $! normCW $ CW kx (CWInteger (xv `opC` rv))
+                  _     -> liftSym2 (mkSymOp op) (const (const True)) (noReal nm) opC (noFloat nm) (noDouble nm) x i
+
+        nm | toLeft = "shiftLeft"
+           | True   = "shiftRight"
+
         zi = svInteger (kindOf i) 0
+
+        kx = kindOf x
+        ki = kindOf i
+
+        kindCheck a b | isBounded a = isBounded b
+                      | isInteger a = isInteger b && isConst x && isConst i  -- only support unbounded if constants
+                      | True        = False
 
 -- | Generalization of 'svRol', where the rotation amount is symbolic.
 -- The first argument should be a bounded quantity.

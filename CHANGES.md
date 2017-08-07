@@ -4,6 +4,13 @@
 * Latest Hackage released version: 7.1, 2017-07-29
 
 ### Version 7.2, Not yet released
+
+  * Reworked implementation of shifts and rotates: When a signed quantity was
+    being shifted right by more than its size, SBV used to return 0. Robert Dockins pointed
+    out that the correct answer is actually -1 in such cases. The new implementation
+    merges the dynamic and typed interfaces, and drops support for non-constant shifts
+    of unbounded integers, which is not supported by SMTLib. Thanks to Robert for
+    reporting the issue and identifying the root cause.
   
   * Development/Infrastructure: Lots of work around the continuous integration
     for SBV. We now build/test on Linux/Mac/Windows on every commit. Thanks to

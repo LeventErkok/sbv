@@ -11,18 +11,15 @@
 -- constant folding.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE Rank2Types    #-}
+{-# LANGUAGE Rank2Types       #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module TestSuite.Basics.ArithSolver(tests) where
 
-import Data.Maybe (fromMaybe)
 import qualified Data.Binary.IEEE754 as DB (wordToFloat, wordToDouble, floatToWord, doubleToWord)
 
 import Data.SBV.Internals
 import Utils.SBVTestFramework
-
-ghcBitSize :: Bits a => a -> Int
-ghcBitSize x = fromMaybe (error "SBV.ghcBitSize: Unexpected non-finite usage!") (bitSizeMaybe x)
 
 -- Test suite
 tests :: TestTree
@@ -33,33 +30,35 @@ tests =
      ++ genDoubles
      ++ genFPConverts
      ++ genQRems
-     ++ genBinTest  True   "+"                (+)
-     ++ genBinTest  True   "-"                (-)
-     ++ genBinTest  True   "*"                (*)
-     ++ genUnTest   True   "negate"           negate
-     ++ genUnTest   True   "abs"              abs
-     ++ genUnTest   True   "signum"           signum
-     ++ genBinTest  False  ".&."              (.&.)
-     ++ genBinTest  False  ".|."              (.|.)
-     ++ genBoolTest        "<"                (<)  (.<)
-     ++ genBoolTest        "<="               (<=) (.<=)
-     ++ genBoolTest        ">"                (>)  (.>)
-     ++ genBoolTest        ">="               (>=) (.>=)
-     ++ genBoolTest        "=="               (==) (.==)
-     ++ genBoolTest        "/="               (/=) (./=)
-     ++ genBinTest  False  "xor"              xor
-     ++ genUnTest   False  "complement"       complement
-     ++ genIntTest         "shift"            shift
-     ++ genIntTest         "rotate"           rotate
-     ++ genIntTestS False  "setBit"           setBit
-     ++ genIntTestS False  "clearBit"         clearBit
-     ++ genIntTestS False  "complementBit"    complementBit
-     ++ genIntTest         "shift"            shift
-     ++ genIntTestS True   "shiftL"           shiftL
-     ++ genIntTestS True   "shiftR"           shiftR
-     ++ genIntTest         "rotate"           rotate
-     ++ genIntTestS True   "rotateL"          rotateL
-     ++ genIntTestS True   "rotateR"          rotateR
+     ++ genBinTest       True  "+"                (+)
+     ++ genBinTest       True  "-"                (-)
+     ++ genBinTest       True  "*"                (*)
+     ++ genUnTest        True  "negate"           negate
+     ++ genUnTest        True  "abs"              abs
+     ++ genUnTest        True  "signum"           signum
+     ++ genBinTest       False ".&."              (.&.)
+     ++ genBinTest       False ".|."              (.|.)
+     ++ genBoolTest            "<"                (<)  (.<)
+     ++ genBoolTest            "<="               (<=) (.<=)
+     ++ genBoolTest            ">"                (>)  (.>)
+     ++ genBoolTest            ">="               (>=) (.>=)
+     ++ genBoolTest            "=="               (==) (.==)
+     ++ genBoolTest            "/="               (/=) (./=)
+     ++ genBinTest       False "xor"              xor
+     ++ genUnTest        False "complement"       complement
+     ++ genIntTest       False "setBit"           setBit
+     ++ genIntTest       False "clearBit"         clearBit
+     ++ genIntTest       False "complementBit"    complementBit
+     ++ genIntTest       True  "shift"            shift
+     ++ genIntTest       True  "shiftL"           shiftL
+     ++ genIntTest       True  "shiftR"           shiftR
+     ++ genIntTest       True  "rotate"           rotate
+     ++ genIntTest       True  "rotateL"          rotateL
+     ++ genIntTest       True  "rotateR"          rotateR
+     ++ genShiftRotTest        "shiftL_gen"       sShiftLeft
+     ++ genShiftRotTest        "shiftR_gen"       sShiftRight
+     ++ genShiftRotTest        "rotateL_gen"      sRotateLeft
+     ++ genShiftRotTest        "rotateR_gen"      sRotateRight
      ++ genBlasts
      ++ genIntCasts)
 
@@ -110,37 +109,49 @@ genUnTest unboundedOK nm op = map mkTest $  [(show x, mkThm x (op x)) | x <- w8s
                                    constrain $ a .== literal x
                                    return $ literal r .== op a
 
-genIntTest :: String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [TestTree]
-genIntTest nm op = map mkTest $  [("u8",  show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- is]
-                              ++ [("u16", show x, show y, mkThm2 x y (x `op` y)) | x <- w16s, y <- is]
-                              ++ [("u32", show x, show y, mkThm2 x y (x `op` y)) | x <- w32s, y <- is]
-                              ++ [("u64", show x, show y, mkThm2 x y (x `op` y)) | x <- w64s, y <- is]
-                              ++ [("s8",  show x, show y, mkThm2 x y (x `op` y)) | x <- i8s,  y <- is]
-                              ++ [("s16", show x, show y, mkThm2 x y (x `op` y)) | x <- i16s, y <- is]
-                              ++ [("s32", show x, show y, mkThm2 x y (x `op` y)) | x <- i32s, y <- is]
-                              ++ [("s64", show x, show y, mkThm2 x y (x `op` y)) | x <- i64s, y <- is]
-                              ++ [("iUB", show x, show y, mkThm2 x y (x `op` y)) | x <- iUBs, y <- is]
-  where mkTest (l, x, y, t) = testCase ("genIntTest.arithmetic-" ++ nm ++ "." ++ l ++ "_" ++ x ++ "_" ++ y) (assert t)
-        is = [-10 .. 10]
+genIntTest :: Bool -> String -> (forall a. (Num a, Bits a) => (a -> Int -> a)) -> [TestTree]
+genIntTest overSized nm op = map mkTest $
+        [("u8",  show x, show y, mkThm2 x y (x `op` y)) |              x <- w8s,  y <- is (intSizeOf x)]
+     ++ [("u16", show x, show y, mkThm2 x y (x `op` y)) |              x <- w16s, y <- is (intSizeOf x)]
+     ++ [("u32", show x, show y, mkThm2 x y (x `op` y)) |              x <- w32s, y <- is (intSizeOf x)]
+     ++ [("u64", show x, show y, mkThm2 x y (x `op` y)) |              x <- w64s, y <- is (intSizeOf x)]
+     ++ [("s8",  show x, show y, mkThm2 x y (x `op` y)) |              x <- i8s,  y <- is (intSizeOf x)]
+     ++ [("s16", show x, show y, mkThm2 x y (x `op` y)) |              x <- i16s, y <- is (intSizeOf x)]
+     ++ [("s32", show x, show y, mkThm2 x y (x `op` y)) |              x <- i32s, y <- is (intSizeOf x)]
+     ++ [("s64", show x, show y, mkThm2 x y (x `op` y)) |              x <- i64s, y <- is (intSizeOf x)]
+     -- No size based tests for unbounded integers
+  where is sz = [0 .. sz - 1] ++ extras
+          where extras
+                 | overSized = map (sz +) ([0 .. 1] ++ [sz, sz+1])
+                 | True      = []
+        mkTest (l, x, y, t) = testCase ("genIntTest.arithmetic-" ++ nm ++ "." ++ l ++ "_" ++ x ++ "_" ++ y) (assert t)
         mkThm2 x y r = isTheorem $ do a <- free "x"
                                       constrain $ a .== literal x
                                       return $ literal r .== a `op` y
 
-
-genIntTestS :: Bool -> String -> (forall a. (Num a, Bits a) => a -> Int -> a) -> [TestTree]
-genIntTestS unboundedOK nm op = map mkTest $  [("u8",  show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- [0 .. (ghcBitSize x - 1)]]
-                                           ++ [("u16", show x, show y, mkThm2 x y (x `op` y)) | x <- w16s, y <- [0 .. (ghcBitSize x - 1)]]
-                                           ++ [("u32", show x, show y, mkThm2 x y (x `op` y)) | x <- w32s, y <- [0 .. (ghcBitSize x - 1)]]
-                                           ++ [("u64", show x, show y, mkThm2 x y (x `op` y)) | x <- w64s, y <- [0 .. (ghcBitSize x - 1)]]
-                                           ++ [("s8",  show x, show y, mkThm2 x y (x `op` y)) | x <- i8s,  y <- [0 .. (ghcBitSize x - 1)]]
-                                           ++ [("s16", show x, show y, mkThm2 x y (x `op` y)) | x <- i16s, y <- [0 .. (ghcBitSize x - 1)]]
-                                           ++ [("s32", show x, show y, mkThm2 x y (x `op` y)) | x <- i32s, y <- [0 .. (ghcBitSize x - 1)]]
-                                           ++ [("s64", show x, show y, mkThm2 x y (x `op` y)) | x <- i64s, y <- [0 .. (ghcBitSize x - 1)]]
-                                           ++ [("iUB", show x, show y, mkThm2 x y (x `op` y)) | unboundedOK, x <- iUBs, y <- [0 .. 10]]
-  where mkTest (l, x, y, t) = testCase ("genIntTestS.arithmetic-" ++ nm ++ "." ++ l ++ "_" ++ x ++ "_" ++ y) (assert t)
-        mkThm2 x y r = isTheorem $ do a <- free "x"
-                                      constrain $ a .== literal x
-                                      return $ literal r .== a `op` y
+genShiftRotTest :: String -> (forall a. (SIntegral a, SDivisible (SBV a)) => (SBV a -> SBV a -> SBV a)) -> [TestTree]
+genShiftRotTest nm op = map mkTest $
+        [("u8",  show x, show y, mkThm2 x (fromIntegral y) (literal x `op` sFromIntegral (literal y))) | x <- w8s,  y <- is (intSizeOf x)]
+     ++ [("u16", show x, show y, mkThm2 x (fromIntegral y) (literal x `op` sFromIntegral (literal y))) | x <- w16s, y <- is (intSizeOf x)]
+     ++ [("u32", show x, show y, mkThm2 x (fromIntegral y) (literal x `op` sFromIntegral (literal y))) | x <- w32s, y <- is (intSizeOf x)]
+     ++ [("u64", show x, show y, mkThm2 x (fromIntegral y) (literal x `op` sFromIntegral (literal y))) | x <- w64s, y <- is (intSizeOf x)]
+     ++ [("s8",  show x, show y, mkThm2 x (fromIntegral y) (literal x `op` sFromIntegral (literal y))) | x <- i8s,  y <- is (intSizeOf x)]
+     ++ [("s16", show x, show y, mkThm2 x (fromIntegral y) (literal x `op` sFromIntegral (literal y))) | x <- i16s, y <- is (intSizeOf x)]
+     ++ [("s32", show x, show y, mkThm2 x (fromIntegral y) (literal x `op` sFromIntegral (literal y))) | x <- i32s, y <- is (intSizeOf x)]
+     ++ [("s64", show x, show y, mkThm2 x (fromIntegral y) (literal x `op` sFromIntegral (literal y))) | x <- i64s, y <- is (intSizeOf x)]
+     -- NB. No generic shift/rotate for SMTLib unbounded integers
+  where is sz = let b :: Word32
+                    b = fromIntegral sz
+                in [0 .. b - 1] ++ [b, b+1, 2*b, 2*b+1]
+        mkTest (l, x, y, t) = testCase ("genShiftRotTest.arithmetic-" ++ nm ++ "." ++ l ++ "_" ++ x ++ "_" ++ y) (assert t)
+        mkThm2 x y sr
+         | Just r <- unliteral sr
+         = isTheorem $ do [a, b] <- mapM free ["x", "y"]
+                          constrain $ a .== literal x
+                          constrain $ b .== literal y
+                          return $ literal r .== a `op` b
+         | True
+         = return False
 
 genBlasts :: [TestTree]
 genBlasts = map mkTest $  [(show x, mkThm fromBitsLE blastLE x) | x <- w8s ]
