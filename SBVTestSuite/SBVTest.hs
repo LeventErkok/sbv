@@ -87,7 +87,7 @@ ciFilter te tt = do putStrLn $ "CI: Reducing tests by " ++ show (100-p) ++ "% fo
   where -- emprically determined percentages that work OK with remote services.
         -- TODO: Would be nice to increase these numbers if we can.
         p = case te of
-              CILinux   -> 30
+              CILinux   -> 20
               CIOSX     -> 10
               CIWindows ->  0 -- Appveyor runs out-of memory even with 10%
 
