@@ -31,8 +31,8 @@ matrix:
       compiler: ": #GHC 8.2.1"
       addons: {apt: {packages: [cabal-install-2.0,ghc-8.2.1,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
     - os: osx
-      env: CABALVER=1.24 GHCVER=8.0.2 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=False
-      compiler: ": #GHC 8.0.2"
+      env: CABALVER=2.0 GHCVER=8.2.1 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=False
+      compiler: ": #GHC 8.2.1"
 
 # Note: the distinction between `before_install` and `install` is not important.
 before_install:
