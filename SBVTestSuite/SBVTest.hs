@@ -86,9 +86,9 @@ ciFilter te tt = do putStrLn $ "CI: Reducing tests by " ++ show (100-p) ++ "% fo
                     pickTests p tt
   where -- The precentages to run. TODO: Push these as high as they can reliably go.
         p = case te of
-              CILinux   -> 50
-              CIOSX     -> 30
-              CIWindows -> 10
+              CILinux   -> 70
+              CIOSX     -> 40
+              CIWindows ->  0 -- On Windows, Appveyor runs out of memory even for 10%.
 
 main :: IO ()
 main = do testEnv <- getTestEnvironment
