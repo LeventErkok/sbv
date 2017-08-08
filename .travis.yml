@@ -39,6 +39,7 @@ before_install:
  - unset CC
  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:~/.cabal/bin:$PATH
  - export PATH=/opt/happy/$HAPPYVER/bin:$PATH
+ - export TASTY_HIDE_SUCCESSES=True 
  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
      export Z3=`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x64.*ubuntu.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | awk -F\" '{print $2}'`;
      export SBV_TEST_ENVIRONMENT=linux;
