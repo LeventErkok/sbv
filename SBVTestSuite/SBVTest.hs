@@ -78,12 +78,16 @@ import qualified TestSuite.Uninterpreted.Function
 import qualified TestSuite.Uninterpreted.Sort
 import qualified TestSuite.Uninterpreted.Uninterpreted
 
--- On remote machines for Appveyor, the build machine doesn't have enough memory
--- to run our heavy tests; so we skip tests for Windows hosts. TODO: Would be nice
--- to run them on Windows as well.
+-- On remote machines for Appveyor/Travis, the build machines doesn't have enough memory
+-- and/or powerful enough to run our heavy tests; so we skip tests for Windows hosts and
+-- reduce them for OSX. For Linux, we run them all. Note that this is only for remote
+-- hosts; when we run locally, all tests are run.
+--
+-- TODO: Would be nice to run them all on Windows/OSX on remote hosts as well.
 ciFilter :: CIOS -> TestTree -> IO TestTree
-ciFilter CIWindows tt = putStrLn "Windows CI: Skipping tests." >> pickTests 0 tt
-ciFilter _         tt = return tt
+ciFilter CIWindows tt = putStrLn "Windows CI: Skipping tests."        >> pickTests  0 tt
+ciFilter CIOSX    tt  = putStrLn "OSX CI: Running only 40% of tests." >> pickTests 40 tt
+ciFilter CILinux  tt  = return tt
 
 main :: IO ()
 main = do testEnv <- getTestEnvironment
