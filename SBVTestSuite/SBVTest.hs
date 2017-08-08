@@ -86,7 +86,7 @@ import qualified TestSuite.Uninterpreted.Uninterpreted
 -- TODO: Would be nice to run them all on Windows/OSX on remote hosts as well.
 ciFilter :: CIOS -> TestTree -> IO TestTree
 ciFilter CIWindows tt = putStrLn "Windows CI: Skipping tests."        >> pickTests  0 tt
-ciFilter CIOSX    tt  = putStrLn "OSX CI: Running only 40% of tests." >> pickTests 40 tt
+ciFilter CIOSX    tt  = putStrLn "OSX CI: Running only 30% of tests." >> pickTests 30 tt
 ciFilter CILinux  tt  = return tt
 
 main :: IO ()
