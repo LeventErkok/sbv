@@ -2,7 +2,7 @@ build: off
 
 environment:
       SBV_TEST_ENVIRONMENT: win
-      TASTY_HIDE_SUCCESSES: True 
+      TASTY_HIDE_SUCCESSES: True
 
 before_build:
 - git clone -q https://github.com/Z3Prover/bin.git Z3Prover
