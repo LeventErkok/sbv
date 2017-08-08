@@ -78,17 +78,12 @@ import qualified TestSuite.Uninterpreted.Function
 import qualified TestSuite.Uninterpreted.Sort
 import qualified TestSuite.Uninterpreted.Uninterpreted
 
--- On remote machines (Travis/Appveyor etc.), the build machines are subject to time-out limits.
--- So, we cannot really run everything yet remain within the timeout bounds. Here, we randomly
--- pick a subset; with the hope that over many runs this tests larger parts of the test-suite.
+-- On remote machines for Appveyor, the build machine doesn't have enough memory
+-- to run our heavy tests; so we skip tests for Windows hosts. TODO: Would be nice
+-- to run them on Windows as well.
 ciFilter :: CIOS -> TestTree -> IO TestTree
-ciFilter te tt = do putStrLn $ "CI: Reducing tests by " ++ show (100-p) ++ "% for running on " ++ show te
-                    pickTests p tt
-  where -- The precentages to run. TODO: Push these as high as they can reliably go.
-        p = case te of
-              CILinux   -> 70
-              CIOSX     -> 40
-              CIWindows ->  0 -- On Windows, Appveyor runs out of memory even for 10%.
+ciFilter CIWindows tt = putStrLn "Windows CI: Skipping tests." >> pickTests 0 tt
+ciFilter _         tt = return tt
 
 main :: IO ()
 main = do testEnv <- getTestEnvironment
