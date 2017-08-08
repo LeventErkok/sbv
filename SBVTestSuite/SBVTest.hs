@@ -84,13 +84,11 @@ import qualified TestSuite.Uninterpreted.Uninterpreted
 ciFilter :: CIOS -> TestTree -> IO TestTree
 ciFilter te tt = do putStrLn $ "CI: Reducing tests by " ++ show (100-p) ++ "% for running on " ++ show te
                     pickTests p tt
-  where -- I just didn't have enough luck with any stable runs on Travis/Appveyor.
-        -- Keeping these numbers at 0 now, till we figure out a way to get reliable
-        -- failure info out of tasty when things fail.
+  where -- The precentages to run. TODO: Push these as high as they can reliably go.
         p = case te of
-              CILinux   -> 40
-              CIOSX     -> 20
-              CIWindows ->  0 -- Appveyor runs out-of memory even with 10%
+              CILinux   -> 50
+              CIOSX     -> 30
+              CIWindows -> 10
 
 main :: IO ()
 main = do testEnv <- getTestEnvironment
