@@ -665,9 +665,36 @@ rot :: (SW -> String) -> String -> Int -> SW -> String
 rot ssw o c x = "((_ " ++ o ++ " " ++ show c ++ ") " ++ ssw x ++ ")"
 
 shft :: (SW -> String) -> String -> String -> SW -> SW -> String
-shft ssw oW oS x c = "(" ++ o ++ " " ++ ssw x ++ " " ++ ssw c ++ ")"
+shft ssw oW oS x c = "(" ++ o ++ " " ++ ssw x ++ " " ++ adjust (ssw c) ++ ")"
    where s = hasSign x
          o = if s then oS else oW
+
+         -- In SMTLib, shift operations require both arguments to have the same size, but SBV allows for differing sizes.
+         -- We handle the discrepancy here by properly extending/reducing the index argument. The semantics is as follows
+         --
+         --    If |c| = |x|:
+         --      No change
+         --    If |c| > |x|:
+         --      extract bits |x|-1 .. 0 of c and use as the shift amount.
+         --    If |c| < |x|:
+         --      If c is signed: Sign extend c to |x| bits
+         --      Else          : Zero-extend c to |x| bits
+         adjust arg
+           | KBounded _ xSize <- kindOf x, KBounded cSigned cSize <- kindOf c
+           = reSize cSigned xSize cSize arg
+           | True
+           = error $ "Data.SBV.SMTLib2.shft: Received unexpected kinds: " ++ show (kindOf x, kindOf c)
+
+         reSize isSigned xSize cSize arg
+           | cSize == xSize
+           = arg
+           | cSize > xSize
+           = "((_ extract " ++ show (xSize - 1) ++ " 0) " ++ arg ++ ")"
+           | isSigned
+           = "((_ sign_extend " ++ show diff ++ ") " ++ arg ++ ")"
+           | True
+           = "((_ zero_extend " ++ show diff ++ ") " ++ arg ++ ")"
+          where diff = xSize - cSize
 
 -- Various casts
 handleKindCast :: Kind -> Kind -> String -> String
