@@ -3767,8 +3767,6 @@ aes128BlockDecrypt.o: aes128BlockDecrypt.c aes128Lib.h
 clean:
 	rm -f *.o
 
-bust
-
 veryclean: clean
 	rm -f aes128Lib.a aes128Lib_driver
 == END: "Makefile" ==================

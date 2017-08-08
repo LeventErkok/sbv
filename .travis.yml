@@ -108,7 +108,6 @@ script:
  - cabal configure --enable-tests --enable-benchmarks -v2  # -v2 provides useful information for debugging
  - cabal build   # this builds all libraries and executables (including tests/benchmarks)
  - travis_wait 60 cabal test SBVTest
- - cat dist/test/sbv-7.2-SBVTest.log
  - travis_wait 60 cabal test SBVDocTest
  - travis_wait 60 cabal test SBVHLint
  - cabal check
