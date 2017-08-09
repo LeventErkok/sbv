@@ -142,25 +142,32 @@ genShiftRotTest nm op = map mkTest $
 -- A few tests for mixed-size shifts
 genShiftMixSize :: [TestTree]
 genShiftMixSize = map mkTest $
-           map pair [(show x, show y, "shl_w8_w16", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- w8s,  y <- w16s, y >= 0]
-        ++ map pair [(show x, show y, "shr_w8_w16", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- w8s,  y <- w16s, y >= 0]
-        ++ map pair [(show x, show y, "shl_w16_w8", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- w16s, y <- w8s , y >= 0]
-        ++ map pair [(show x, show y, "shr_w16_w8", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- w16s, y <- w8s , y >= 0]
-        ++ map pair [(show x, show y, "shl_i8_i16", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- i8s,  y <- i16s, y >= 0]
-        ++ map pair [(show x, show y, "shr_i8_i16", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- i8s,  y <- i16s, y >= 0]
-        ++ map pair [(show x, show y, "shl_i16_i8", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- i16s, y <- i8s , y >= 0]
-        ++ map pair [(show x, show y, "shr_i16_i8", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- i16s, y <- i8s , y >= 0]
-        ++ map pair [(show x, show y, "shl_w8_i16", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- w8s,  y <- i16s, y >= 0]
-        ++ map pair [(show x, show y, "shr_w8_i16", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- w8s,  y <- i16s, y >= 0]
-        ++ map pair [(show x, show y, "shl_w16_i8", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- w16s, y <- i8s , y >= 0]
-        ++ map pair [(show x, show y, "shr_w16_i8", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- w16s, y <- i8s , y >= 0]
-        ++ map pair [(show x, show y, "shl_i8_w16", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- i8s,  y <- w16s, y >= 0]
-        ++ map pair [(show x, show y, "shr_i8_w16", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- i8s,  y <- w16s, y >= 0]
-        ++ map pair [(show x, show y, "shl_i16_w8", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- i16s, y <- w8s , y >= 0]
-        ++ map pair [(show x, show y, "shr_i16_w8", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- i16s, y <- w8s , y >= 0]
+           map pair [(show x, show y, "shl_w8_w16", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- w8s,  y <- yw16s]
+        ++ map pair [(show x, show y, "shr_w8_w16", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- w8s,  y <- yw16s]
+        ++ map pair [(show x, show y, "shl_w16_w8", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- w16s, y <- w8s]
+        ++ map pair [(show x, show y, "shr_w16_w8", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- w16s, y <- w8s]
+        ++ map pair [(show x, show y, "shl_i8_i16", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- i8s,  y <- yi16s]
+        ++ map pair [(show x, show y, "shr_i8_i16", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- i8s,  y <- yi16s]
+        ++ map pair [(show x, show y, "shl_i16_i8", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- i16s, y <- i8s, y >= 0]
+        ++ map pair [(show x, show y, "shr_i16_i8", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- i16s, y <- i8s, y >= 0]
+        ++ map pair [(show x, show y, "shl_w8_i16", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- w8s,  y <- yi16s]
+        ++ map pair [(show x, show y, "shr_w8_i16", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- w8s,  y <- yi16s]
+        ++ map pair [(show x, show y, "shl_w16_i8", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- w16s, y <- i8s, y >= 0]
+        ++ map pair [(show x, show y, "shr_w16_i8", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- w16s, y <- i8s, y >= 0]
+        ++ map pair [(show x, show y, "shl_i8_w16", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- i8s,  y <- yw16s]
+        ++ map pair [(show x, show y, "shr_i8_w16", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- i8s,  y <- yw16s]
+        ++ map pair [(show x, show y, "shl_i16_w8", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- i16s, y <- w8s]
+        ++ map pair [(show x, show y, "shr_i16_w8", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- i16s, y <- w8s]
    where pair :: (SymWord a, Show a) => (String, String, String, SBV a, a) -> (String, Bool)
          pair (x, y, l, sr, lr) = (l ++ "." ++ x ++ "_" ++ y ++ "_" ++  show (unliteral sr) ++ "_" ++ show lr, isJust (unliteral sr) && unliteral sr == Just lr)
          mkTest (l, s) = testCase ("arithCF-genShiftMixSize" ++ l) (s `showsAs` "True")
+
+         yi16s :: [Int16]
+         yi16s = [0, 255, 256, 257, maxBound]
+
+         yw16s :: [Word16]
+         yw16s = [0, 255, 256, 257, maxBound]
+
 
 genBlasts :: [TestTree]
 genBlasts = map mkTest $

@@ -156,23 +156,29 @@ genShiftRotTest nm op = map mkTest $
 
 -- A few tests for mixed-size shifts
 genShiftMixSize :: [TestTree]
-genShiftMixSize = map mkTest $  [(show x, show y, "shl_w8_w16", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- w8s,  y <- w16s, y >= 0]
-                             ++ [(show x, show y, "shr_w8_w16", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- w8s,  y <- w16s, y >= 0]
-                             ++ [(show x, show y, "shl_w16_w8", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- w16s, y <- w8s , y >= 0]
-                             ++ [(show x, show y, "shr_w16_w8", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- w16s, y <- w8s , y >= 0]
-                             ++ [(show x, show y, "shl_i8_i16", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- i8s,  y <- i16s, y >= 0]
-                             ++ [(show x, show y, "shr_i8_i16", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- i8s,  y <- i16s, y >= 0]
-                             ++ [(show x, show y, "shl_i16_i8", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- i16s, y <- i8s , y >= 0]
-                             ++ [(show x, show y, "shr_i16_i8", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- i16s, y <- i8s , y >= 0]
-                             ++ [(show x, show y, "shl_w8_i16", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- w8s,  y <- i16s, y >= 0]
-                             ++ [(show x, show y, "shr_w8_i16", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- w8s,  y <- i16s, y >= 0]
-                             ++ [(show x, show y, "shl_w16_i8", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- w16s, y <- i8s , y >= 0]
-                             ++ [(show x, show y, "shr_w16_i8", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- w16s, y <- i8s , y >= 0]
-                             ++ [(show x, show y, "shl_i8_w16", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- i8s,  y <- w16s, y >= 0]
-                             ++ [(show x, show y, "shr_i8_w16", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- i8s,  y <- w16s, y >= 0]
-                             ++ [(show x, show y, "shl_i16_w8", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- i16s, y <- w8s , y >= 0]
-                             ++ [(show x, show y, "shr_i16_w8", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- i16s, y <- w8s , y >= 0]
-   where mkTest (x, y, l, t) = testCase ("genShiftMixSize." ++ l ++ "." ++ x ++ "_" ++ y) (assert t)
+genShiftMixSize = map mkTest $  [(show x, show y, "shl_w8_w16", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- w8s,  y <- yw16s]
+                             ++ [(show x, show y, "shr_w8_w16", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- w8s,  y <- yw16s]
+                             ++ [(show x, show y, "shl_w16_w8", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- w16s, y <- w8s]
+                             ++ [(show x, show y, "shr_w16_w8", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- w16s, y <- w8s]
+                             ++ [(show x, show y, "shl_i8_i16", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- i8s,  y <- yi16s]
+                             ++ [(show x, show y, "shr_i8_i16", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- i8s,  y <- yi16s]
+                             ++ [(show x, show y, "shl_i16_i8", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- i16s, y <- i8s, y >= 0]
+                             ++ [(show x, show y, "shr_i16_i8", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- i16s, y <- i8s, y >= 0]
+                             ++ [(show x, show y, "shl_w8_i16", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- w8s,  y <- yi16s]
+                             ++ [(show x, show y, "shr_w8_i16", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- w8s,  y <- yi16s]
+                             ++ [(show x, show y, "shl_w16_i8", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- w16s, y <- i8s, y >= 0]
+                             ++ [(show x, show y, "shr_w16_i8", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- w16s, y <- i8s, y >= 0]
+                             ++ [(show x, show y, "shl_i8_w16", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- i8s,  y <- yw16s]
+                             ++ [(show x, show y, "shr_i8_w16", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- i8s,  y <- yw16s]
+                             ++ [(show x, show y, "shl_i16_w8", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- i16s, y <- w8s]
+                             ++ [(show x, show y, "shr_i16_w8", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- i16s, y <- w8s]
+   where yi16s :: [Int16]
+         yi16s = [0, 255, 256, 257, maxBound]
+
+         yw16s :: [Word16]
+         yw16s = [0, 255, 256, 257, maxBound]
+
+         mkTest (x, y, l, t) = testCase ("genShiftMixSize." ++ l ++ "." ++ x ++ "_" ++ y) (assert t)
          mk :: (SymWord a, SymWord b) => (SBV a -> SBV b -> SBV a) -> a -> b -> a -> IO Bool
          mk o x y r
           = isTheorem $ do a <- free "x"
