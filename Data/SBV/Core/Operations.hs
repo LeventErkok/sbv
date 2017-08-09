@@ -344,44 +344,50 @@ svNot = liftSym1 (mkSymOp1SC opt Not)
 -- operation in SMT-Lib.
 svShl :: SVal -> Int -> SVal
 svShl x i
-  | i < 0  = svShr x (-i)
-  | i == 0 = x
-  | True   = svShiftLeft x amnt
-  where k    = kindOf x
-        amnt = SVal k (Left $! CW k (CWInteger (fromIntegral i)))
+  | i <= 0
+  = x
+  | isBounded x, i >= intSizeOf x
+  = svInteger k 0
+  | True
+  = x `svShiftLeft` svInteger k (fromIntegral i)
+  where k = kindOf x
 
 -- | Shift right by a constant amount. Translates to either "bvlshr"
 -- (logical shift right) or "bvashr" (arithmetic shift right) in
 -- SMT-Lib, depending on whether @x@ is a signed bitvector.
 svShr :: SVal -> Int -> SVal
 svShr x i
-  | i < 0  = svShl x (-i)
-  | i == 0 = x
-  | True   = svShiftRight x amnt
-  where k    = kindOf x
-        amnt = SVal k (Left $! CW k (CWInteger (fromIntegral i)))
+  | i <= 0
+  = x
+  | isBounded x, i >= intSizeOf x
+  = svInteger k $ if hasSign x then -1 else 0
+  | True
+  = x `svShiftRight` svInteger k (fromIntegral i)
+  where k = kindOf x
 
 -- | Rotate-left, by a constant
 svRol :: SVal -> Int -> SVal
 svRol x i
-  | i < 0   = svRor x (-i)
-  | i == 0  = x
-  | True    = case kindOf x of
-                KBounded _ sz -> liftSym1 (mkSymOp1 (Rol (i `mod` sz)))
-                                          (noRealUnary "rotateL") (rot True sz i)
-                                          (noFloatUnary "rotateL") (noDoubleUnary "rotateL") x
-                _ -> svShl x i   -- for unbounded Integers, rotateL is the same as shiftL in Haskell
+  | i <= 0
+  = x
+  | True
+  = case kindOf x of
+           KBounded _ sz -> liftSym1 (mkSymOp1 (Rol (i `mod` sz)))
+                                     (noRealUnary "rotateL") (rot True sz i)
+                                     (noFloatUnary "rotateL") (noDoubleUnary "rotateL") x
+           _ -> svShl x i   -- for unbounded Integers, rotateL is the same as shiftL in Haskell
 
 -- | Rotate-right, by a constant
 svRor :: SVal -> Int -> SVal
 svRor x i
-  | i < 0   = svRol x (-i)
-  | i == 0  = x
-  | True    = case kindOf x of
-                KBounded _ sz -> liftSym1 (mkSymOp1 (Ror (i `mod` sz)))
-                                          (noRealUnary "rotateR") (rot False sz i)
-                                          (noFloatUnary "rotateR") (noDoubleUnary "rotateR") x
-                _ -> svShr x i   -- for unbounded integers, rotateR is the same as shiftR in Haskell
+  | i <= 0
+  = x
+  | True
+  = case kindOf x of
+      KBounded _ sz -> liftSym1 (mkSymOp1 (Ror (i `mod` sz)))
+                                (noRealUnary "rotateR") (rot False sz i)
+                                (noFloatUnary "rotateR") (noDoubleUnary "rotateR") x
+      _ -> svShr x i   -- for unbounded integers, rotateR is the same as shiftR in Haskell
 
 -- | Generic rotation. Since the underlying representation is just Integers, rotations has to be
 -- careful on the bit-size.
@@ -621,45 +627,86 @@ svShiftLeft = svShift True
 svShiftRight :: SVal -> SVal -> SVal
 svShiftRight = svShift False
 
--- | Generic shifting of bounded quantities.
+-- | Generic shifting of bounded quantities. The shift amount must be non-negative and within the bounds of the argument
+-- for bit vectors. For negative shift amounts, the result is returned unchanged. For overshifts, left-shift produces 0,
+-- right shift produces 0 or -1 depending on the result being signed.
 svShift :: Bool -> SVal -> SVal -> SVal
 svShift toLeft x i
-  | not (kindCheck kx ki)
-  = error $ "SBV." ++ nm ++ ": Not yet implemented, symbolic quantity/shiftee kind combo: " ++ show (kx, ki)
-  | toLeft
-  = svIte (i `svLessThan` zi) goRight goLeft
+  | Just r <- constFoldValue
+  = r
   | True
-  = svIte (i `svLessThan` zi) goLeft goRight
-  where -- let's ignore the cases where the Integer (second argument) can overflow here; shouldn't be an issue and also there's
-        -- nothing much we can do at this point.
-        shiftRI, shiftLI :: Integer -> Integer -> Integer
-        a `shiftRI` b = a `shiftR` fromIntegral b
-        a `shiftLI` b = a `shiftL` fromIntegral b
+  = svIte (i `svLessEq` svInteger ki 0)                                           -- Negative or 0 shift, no change
+          x
+          $ svIte (i `svGreaterEq` svInteger ki (fromIntegral (intSizeOf x)))     -- Overshift, by at least the bit-width of x
+                  overShiftValue
+                  regularShiftValue
 
-        isConst (SVal _ Left{}) = True
-        isConst _               = False
-
-        goLeft  = mkShift Shl shiftLI
-        goRight = mkShift Shr shiftRI
-
-        -- Unfortunately we can't just call liftSym2 here since shift/rotates support different types for its arguments.
-        mkShift op opC =
-                case (x, i) of
-                  (SVal _ (Left (CW _ (CWInteger xv))), SVal _ (Left (CW _ (CWInteger rv))))
-                        -> SVal kx . Left $! normCW $ CW kx (CWInteger (xv `opC` rv))
-                  _     -> liftSym2 (mkSymOp op) (const (const True)) (noReal nm) opC (noFloat nm) (noDouble nm) x i
-
-        nm | toLeft = "shiftLeft"
+  where nm | toLeft = "shiftLeft"
            | True   = "shiftRight"
-
-        zi = svInteger (kindOf i) 0
 
         kx = kindOf x
         ki = kindOf i
 
-        kindCheck a b | isBounded a = isBounded b
-                      | isInteger a = isInteger b && isConst x && isConst i  -- only support unbounded if constants
-                      | True        = False
+        -- Constant fold the result if possible. If either quantity is unbounded, then we only support constants
+        -- as there's no easy/meaningful way to map this combo to SMTLib. Should be rarely needed, if ever!
+        -- We also perform basic sanity check here so that if we go past here, we know we have bitvectors only.
+        constFoldValue
+          | Just xv <- getConst x, Just iv <- getConst i
+          = Just $ SVal kx . Left $! normCW $ CW kx (CWInteger (xv `opC` shiftAmount iv))
+
+          | isInteger x || isInteger i
+          = bailOut $ "Not yet implemented unbounded/non-constants shifts for " ++ show (kx, ki) ++ ", please file a request!"
+
+          | not (isBounded x && isBounded i)
+          = bailOut $ "Unexpected kinds: " ++ show (kx, ki)
+
+          | True
+          = Nothing
+
+          where bailOut m = error $ "SBV." ++ nm ++ ": " ++ m
+
+                getConst (SVal _ (Left (CW _ (CWInteger val)))) = Just val
+                getConst _                                      = Nothing
+
+                opC | toLeft = shiftL
+                    | True   = shiftR
+
+                -- like fromIntegral, but more paranoid
+                shiftAmount :: Integer -> Int
+                shiftAmount iv
+                  | iv <= 0                                          = 0
+                  | isInteger i, iv > fromIntegral (maxBound :: Int) = bailOut $ "Unsupported constant unbounded shift with amount: " ++ show iv
+                  | isInteger x                                      = fromIntegral iv
+                  | iv >= fromIntegral ub                            = ub
+                  | not (isBounded x && isBounded i)                 = bailOut $ "Unsupported kinds: " ++ show (kx, ki)
+                  | True                                             = fromIntegral iv
+                 where ub = intSizeOf x
+
+        -- An overshift occurs if we're shifting by more than or equal to the bit-width of x
+        --     For shift-left: this value is always 0
+        --     For shift-right:
+        --        If x is unsigned: 0
+        --        If x is signed and is less than 0, then -1 else 0
+        overShiftValue | toLeft    = zx
+                       | hasSign x = svIte (x `svLessThan` zx) neg1 zx
+                       | True      = zx
+          where zx   = svInteger kx 0
+                neg1 = svInteger kx (-1)
+
+        -- Regular shift, we know that the shift value fits into the bit-width of x, since it's between 0 and sizeOf x. So, we can just
+        -- turn it into a properly sized argument and ship it to SMTLib
+        regularShiftValue = SVal kx $ Right $ cache result
+           where result st = do sw1 <- svToSW st x
+                                sw2 <- svToSW st i
+
+                                let op | toLeft = Shl
+                                       | True   = Shr
+
+                                adjustedShift <- if kx == ki
+                                                 then return sw2
+                                                 else newExpr st kx (SBVApp (KindCast ki kx) [sw2])
+
+                                newExpr st kx (SBVApp op [sw1, adjustedShift])
 
 -- | Generalization of 'svRol', where the rotation amount is symbolic.
 -- The first argument should be a bounded quantity.

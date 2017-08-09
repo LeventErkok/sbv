@@ -493,11 +493,11 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
            | True  = bad
 
         sh (SBVApp Shl [a, i])
-           | bvOp   = shft rm ssw "bvshl"  "bvshl" a i
+           | bvOp   = shft ssw "bvshl"  "bvshl" a i
            | True   = bad
 
         sh (SBVApp Shr [a, i])
-           | bvOp  = shft rm ssw "bvlshr" "bvashr" a i
+           | bvOp  = shft ssw "bvlshr" "bvashr" a i
            | True  = bad
 
         sh (SBVApp op args)
@@ -664,47 +664,9 @@ handleFPCast kFrom kTo rm input
 rot :: (SW -> String) -> String -> Int -> SW -> String
 rot ssw o c x = "((_ " ++ o ++ " " ++ show c ++ ") " ++ ssw x ++ ")"
 
-shft :: RoundingMode -> (SW -> String) -> String -> String -> SW -> SW -> String
-shft rm ssw oW oS x c = "(" ++ o ++ " " ++ ssw x ++ " " ++ adjust (ssw c) ++ ")"
-   where xIsSigned = hasSign x
-         o = if xIsSigned then oS else oW
-
-         kindX = kindOf x
-         kindC = kindOf c
-
-         -- In SMTLib, shift operations require both arguments to have the same size, but SBV allows for differing sizes.
-         -- We handle the discrepancy here by properly extending/reducing the index argument. The semantics is as follows
-         --
-         --    If |c| = |x|:
-         --      No change
-         --    If |c| > |x|:
-         --      if c >= |x| (n.b. the value of c here!)
-         --      then create the constant |x| and use that as the shift amount. (Down-saturate.)
-         --      else extract bits |x|-1 .. 0 of c and use as the shift amount.
-         --    If |c| < |x|:
-         --      If c is signed: Sign-extend c to |x| bits
-         --      Else          : Zero-extend c to |x| bits
-         adjust arg
-           | KBounded _ xSize <- kindX, KBounded cSigned cSize <- kindC
-           = reSize cSigned xSize cSize arg
-           | True
-           = error $ "Data.SBV.SMTLib2.shft: Received unexpected kinds: " ++ show (kindX, kindC)
-
-         reSize cIsSigned xSize cSize arg
-           | cSize == xSize
-           = arg
-           | cSize > xSize
-           = let chopped = "((_ extract " ++ show (xSize - 1) ++ " 0) " ++ arg ++ ")"
-                 maxShft = cvtCW rm (mkConstCW kindX xSize)
-                 maxCmp  = cvtCW rm (mkConstCW kindC xSize)
-                 cmpOp   = if cIsSigned then "bvsge" else "bvuge"
-                 cond    = "(" ++ cmpOp ++ " " ++ arg ++ " " ++ maxCmp ++ ")"
-             in "(ite " ++ cond ++ " " ++ maxShft ++ " " ++ chopped ++ ")"
-           | cIsSigned
-           = "((_ sign_extend " ++ show diff ++ ") " ++ arg ++ ")"
-           | True
-           = "((_ zero_extend " ++ show diff ++ ") " ++ arg ++ ")"
-          where diff = xSize - cSize
+shft :: (SW -> String) -> String -> String -> SW -> SW -> String
+shft ssw oW oS x c = "(" ++ o ++ " " ++ ssw x ++ " " ++ ssw c ++ ")"
+   where o = if hasSign x then oS else oW
 
 -- Various casts
 handleKindCast :: Kind -> Kind -> String -> String
