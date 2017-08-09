@@ -360,10 +360,14 @@ svShr x i
   | i <= 0
   = x
   | isBounded x, i >= intSizeOf x
-  = svInteger k $ if hasSign x then -1 else 0
+  = if not (hasSign x)
+       then z
+       else svIte (x `svLessThan` z) neg1 z
   | True
   = x `svShiftRight` svInteger k (fromIntegral i)
-  where k = kindOf x
+  where k    = kindOf x
+        z    = svInteger k 0
+        neg1 = svInteger k (-1)
 
 -- | Rotate-left, by a constant
 svRol :: SVal -> Int -> SVal
