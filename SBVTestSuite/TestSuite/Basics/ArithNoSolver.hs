@@ -58,6 +58,7 @@ tests = testGroup "Arith.NoSolver" $
         ++ genShiftRotTest       "shiftR_gen"    sShiftRight
         ++ genShiftRotTest       "rotateL_gen"   sRotateLeft
         ++ genShiftRotTest       "rotateR_gen"   sRotateRight
+        ++ genShiftMixSize
         ++ genBlasts
         ++ genIntCasts
 
@@ -123,20 +124,43 @@ genIntTest overSized nm op = map mkTest $
 
 genShiftRotTest :: String -> (forall a. (SIntegral a, SDivisible (SBV a)) => (SBV a -> SBV a -> SBV a)) -> [TestTree]
 genShiftRotTest nm op = map mkTest $
-        zipWith pair [("u8",  show x, show y, literal x `op` y) | x <- w8s,  y <- is (intSizeOf x)   ] [x `op` y | x <- sw8s,  y <- is (intSizeOf x)   ]
-     ++ zipWith pair [("u16", show x, show y, literal x `op` y) | x <- w16s, y <- is (intSizeOf x)   ] [x `op` y | x <- sw16s, y <- is (intSizeOf x)   ]
-     ++ zipWith pair [("u32", show x, show y, literal x `op` y) | x <- w32s, y <- is (intSizeOf x)   ] [x `op` y | x <- sw32s, y <- is (intSizeOf x)   ]
-     ++ zipWith pair [("u64", show x, show y, literal x `op` y) | x <- w64s, y <- is (intSizeOf x)   ] [x `op` y | x <- sw64s, y <- is (intSizeOf x)   ]
-     ++ zipWith pair [("s8",  show x, show y, literal x `op` y) | x <- i8s,  y <- is (intSizeOf x)   ] [x `op` y | x <- si8s,  y <- is (intSizeOf x)   ]
-     ++ zipWith pair [("s16", show x, show y, literal x `op` y) | x <- i16s, y <- is (intSizeOf x)   ] [x `op` y | x <- si16s, y <- is (intSizeOf x)   ]
-     ++ zipWith pair [("s32", show x, show y, literal x `op` y) | x <- i32s, y <- is (intSizeOf x)   ] [x `op` y | x <- si32s, y <- is (intSizeOf x)   ]
-     ++ zipWith pair [("s64", show x, show y, literal x `op` y) | x <- i64s, y <- is (intSizeOf x)   ] [x `op` y | x <- si64s, y <- is (intSizeOf x)   ]
+        zipWith pair [("u8",  show x, show y, literal x `op` y) | x <- w8s,  y <- is (intSizeOf x)] [x `op` y | x <- sw8s,  y <- is (intSizeOf x)]
+     ++ zipWith pair [("u16", show x, show y, literal x `op` y) | x <- w16s, y <- is (intSizeOf x)] [x `op` y | x <- sw16s, y <- is (intSizeOf x)]
+     ++ zipWith pair [("u32", show x, show y, literal x `op` y) | x <- w32s, y <- is (intSizeOf x)] [x `op` y | x <- sw32s, y <- is (intSizeOf x)]
+     ++ zipWith pair [("u64", show x, show y, literal x `op` y) | x <- w64s, y <- is (intSizeOf x)] [x `op` y | x <- sw64s, y <- is (intSizeOf x)]
+     ++ zipWith pair [("s8",  show x, show y, literal x `op` y) | x <- i8s,  y <- is (intSizeOf x)] [x `op` y | x <- si8s,  y <- is (intSizeOf x)]
+     ++ zipWith pair [("s16", show x, show y, literal x `op` y) | x <- i16s, y <- is (intSizeOf x)] [x `op` y | x <- si16s, y <- is (intSizeOf x)]
+     ++ zipWith pair [("s32", show x, show y, literal x `op` y) | x <- i32s, y <- is (intSizeOf x)] [x `op` y | x <- si32s, y <- is (intSizeOf x)]
+     ++ zipWith pair [("s64", show x, show y, literal x `op` y) | x <- i64s, y <- is (intSizeOf x)] [x `op` y | x <- si64s, y <- is (intSizeOf x)]
      -- NB. No generic shift/rotate for SMTLib unbounded integers
   where is sz = let b :: Word32
                     b = fromIntegral sz
                 in map (sFromIntegral . literal) $ [0 .. b - 1] ++ [b, b+1, 2*b, 2*b+1]
-        pair (t, x, y, a) b       = (t, x, y, show a, show b, isJust (unliteral a) && isJust (unliteral b) && show a == show b)
+        pair (t, x, y, a) b       = (t, x, y, show a, show b, isJust (unliteral a) && isJust (unliteral b) && unliteral a == unliteral b)
         mkTest (t, x, y, a, b, s) = testCase ("arithCF-" ++ nm ++ "." ++ t ++ "_" ++ x ++ "_" ++ y ++ "_" ++ a ++ "_" ++ b) (s `showsAs` "True")
+
+-- A few tests for mixed-size shifts
+genShiftMixSize :: [TestTree]
+genShiftMixSize = map mkTest $
+           map pair [(show x, show y, "shl_w8_w16", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- w8s,  y <- w16s, y >= 0]
+        ++ map pair [(show x, show y, "shr_w8_w16", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- w8s,  y <- w16s, y >= 0]
+        ++ map pair [(show x, show y, "shl_w16_w8", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- w16s, y <- w8s , y >= 0]
+        ++ map pair [(show x, show y, "shr_w16_w8", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- w16s, y <- w8s , y >= 0]
+        ++ map pair [(show x, show y, "shl_i8_i16", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- i8s,  y <- i16s, y >= 0]
+        ++ map pair [(show x, show y, "shr_i8_i16", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- i8s,  y <- i16s, y >= 0]
+        ++ map pair [(show x, show y, "shl_i16_i8", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- i16s, y <- i8s , y >= 0]
+        ++ map pair [(show x, show y, "shr_i16_i8", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- i16s, y <- i8s , y >= 0]
+        ++ map pair [(show x, show y, "shl_w8_i16", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- w8s,  y <- i16s, y >= 0]
+        ++ map pair [(show x, show y, "shr_w8_i16", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- w8s,  y <- i16s, y >= 0]
+        ++ map pair [(show x, show y, "shl_w16_i8", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- w16s, y <- i8s , y >= 0]
+        ++ map pair [(show x, show y, "shr_w16_i8", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- w16s, y <- i8s , y >= 0]
+        ++ map pair [(show x, show y, "shl_i8_w16", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- i8s,  y <- w16s, y >= 0]
+        ++ map pair [(show x, show y, "shr_i8_w16", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- i8s,  y <- w16s, y >= 0]
+        ++ map pair [(show x, show y, "shl_i16_w8", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- i16s, y <- w8s , y >= 0]
+        ++ map pair [(show x, show y, "shr_i16_w8", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- i16s, y <- w8s , y >= 0]
+   where pair :: (SymWord a, Show a) => (String, String, String, SBV a, a) -> (String, Bool)
+         pair (x, y, l, sr, lr) = (l ++ "." ++ x ++ "_" ++ y ++ "_" ++  show (unliteral sr) ++ "_" ++ show lr, isJust (unliteral sr) && unliteral sr == Just lr)
+         mkTest (l, s) = testCase ("arithCF-genShiftMixSize" ++ l) (s `showsAs` "True")
 
 genBlasts :: [TestTree]
 genBlasts = map mkTest $

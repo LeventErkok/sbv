@@ -677,7 +677,7 @@ shft ssw oW oS x c = "(" ++ o ++ " " ++ ssw x ++ " " ++ adjust (ssw c) ++ ")"
          --    If |c| > |x|:
          --      extract bits |x|-1 .. 0 of c and use as the shift amount.
          --    If |c| < |x|:
-         --      If c is signed: Sign extend c to |x| bits
+         --      If c is signed: Sign-extend c to |x| bits
          --      Else          : Zero-extend c to |x| bits
          adjust arg
            | KBounded _ xSize <- kindOf x, KBounded cSigned cSize <- kindOf c

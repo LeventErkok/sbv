@@ -59,6 +59,7 @@ tests =
      ++ genShiftRotTest        "shiftR_gen"       sShiftRight
      ++ genShiftRotTest        "rotateL_gen"      sRotateLeft
      ++ genShiftRotTest        "rotateR_gen"      sRotateRight
+     ++ genShiftMixSize
      ++ genBlasts
      ++ genIntCasts)
 
@@ -111,14 +112,14 @@ genUnTest unboundedOK nm op = map mkTest $  [(show x, mkThm x (op x)) | x <- w8s
 
 genIntTest :: Bool -> String -> (forall a. (Num a, Bits a) => (a -> Int -> a)) -> [TestTree]
 genIntTest overSized nm op = map mkTest $
-        [("u8",  show x, show y, mkThm2 x y (x `op` y)) |              x <- w8s,  y <- is (intSizeOf x)]
-     ++ [("u16", show x, show y, mkThm2 x y (x `op` y)) |              x <- w16s, y <- is (intSizeOf x)]
-     ++ [("u32", show x, show y, mkThm2 x y (x `op` y)) |              x <- w32s, y <- is (intSizeOf x)]
-     ++ [("u64", show x, show y, mkThm2 x y (x `op` y)) |              x <- w64s, y <- is (intSizeOf x)]
-     ++ [("s8",  show x, show y, mkThm2 x y (x `op` y)) |              x <- i8s,  y <- is (intSizeOf x)]
-     ++ [("s16", show x, show y, mkThm2 x y (x `op` y)) |              x <- i16s, y <- is (intSizeOf x)]
-     ++ [("s32", show x, show y, mkThm2 x y (x `op` y)) |              x <- i32s, y <- is (intSizeOf x)]
-     ++ [("s64", show x, show y, mkThm2 x y (x `op` y)) |              x <- i64s, y <- is (intSizeOf x)]
+        [("u8",  show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- is (intSizeOf x)]
+     ++ [("u16", show x, show y, mkThm2 x y (x `op` y)) | x <- w16s, y <- is (intSizeOf x)]
+     ++ [("u32", show x, show y, mkThm2 x y (x `op` y)) | x <- w32s, y <- is (intSizeOf x)]
+     ++ [("u64", show x, show y, mkThm2 x y (x `op` y)) | x <- w64s, y <- is (intSizeOf x)]
+     ++ [("s8",  show x, show y, mkThm2 x y (x `op` y)) | x <- i8s,  y <- is (intSizeOf x)]
+     ++ [("s16", show x, show y, mkThm2 x y (x `op` y)) | x <- i16s, y <- is (intSizeOf x)]
+     ++ [("s32", show x, show y, mkThm2 x y (x `op` y)) | x <- i32s, y <- is (intSizeOf x)]
+     ++ [("s64", show x, show y, mkThm2 x y (x `op` y)) | x <- i64s, y <- is (intSizeOf x)]
      -- No size based tests for unbounded integers
   where is sz = [0 .. sz - 1] ++ extras
           where extras
@@ -152,6 +153,33 @@ genShiftRotTest nm op = map mkTest $
                           return $ literal r .== a `op` b
          | True
          = return False
+
+-- A few tests for mixed-size shifts
+genShiftMixSize :: [TestTree]
+genShiftMixSize = map mkTest $  [(show x, show y, "shl_w8_w16", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- w8s,  y <- w16s, y >= 0]
+                             ++ [(show x, show y, "shr_w8_w16", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- w8s,  y <- w16s, y >= 0]
+                             ++ [(show x, show y, "shl_w16_w8", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- w16s, y <- w8s , y >= 0]
+                             ++ [(show x, show y, "shr_w16_w8", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- w16s, y <- w8s , y >= 0]
+                             ++ [(show x, show y, "shl_i8_i16", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- i8s,  y <- i16s, y >= 0]
+                             ++ [(show x, show y, "shr_i8_i16", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- i8s,  y <- i16s, y >= 0]
+                             ++ [(show x, show y, "shl_i16_i8", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- i16s, y <- i8s , y >= 0]
+                             ++ [(show x, show y, "shr_i16_i8", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- i16s, y <- i8s , y >= 0]
+                             ++ [(show x, show y, "shl_w8_i16", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- w8s,  y <- i16s, y >= 0]
+                             ++ [(show x, show y, "shr_w8_i16", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- w8s,  y <- i16s, y >= 0]
+                             ++ [(show x, show y, "shl_w16_i8", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- w16s, y <- i8s , y >= 0]
+                             ++ [(show x, show y, "shr_w16_i8", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- w16s, y <- i8s , y >= 0]
+                             ++ [(show x, show y, "shl_i8_w16", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- i8s,  y <- w16s, y >= 0]
+                             ++ [(show x, show y, "shr_i8_w16", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- i8s,  y <- w16s, y >= 0]
+                             ++ [(show x, show y, "shl_i16_w8", mk sShiftLeft  x y (x `shiftL` fromIntegral y)) | x <- i16s, y <- w8s , y >= 0]
+                             ++ [(show x, show y, "shr_i16_w8", mk sShiftRight x y (x `shiftR` fromIntegral y)) | x <- i16s, y <- w8s , y >= 0]
+   where mkTest (x, y, l, t) = testCase ("genShiftMixSize." ++ l ++ "." ++ x ++ "_" ++ y) (assert t)
+         mk :: (SymWord a, SymWord b) => (SBV a -> SBV b -> SBV a) -> a -> b -> a -> IO Bool
+         mk o x y r
+          = isTheorem $ do a <- free "x"
+                           b <- free "y"
+                           constrain $ a .== literal x
+                           constrain $ b .== literal y
+                           return $ literal r .== a `o` b
 
 genBlasts :: [TestTree]
 genBlasts = map mkTest $  [(show x, mkThm fromBitsLE blastLE x) | x <- w8s ]
