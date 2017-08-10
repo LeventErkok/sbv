@@ -21,17 +21,17 @@ notifications:
 
 matrix:
   include:
-    - env: CABALVER=1.24 GHCVER=8.0.1 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=False
+    - env: CABALVER=1.24 GHCVER=8.0.1 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=False SBV_HEAVYTEST_PERCENTAGE=10
       compiler: ": #GHC 8.0.1"
       addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.1,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
-    - env: CABALVER=1.24 GHCVER=8.0.2 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=False
+    - env: CABALVER=1.24 GHCVER=8.0.2 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=False SBV_HEAVYTEST_PERCENTAGE=10
       compiler: ": #GHC 8.0.2"
       addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.2,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
-    - env: CABALVER=2.0 GHCVER=8.2.1 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=True
+    - env: CABALVER=2.0 GHCVER=8.2.1 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=True SBV_HEAVYTEST_PERCENTAGE=100
       compiler: ": #GHC 8.2.1"
       addons: {apt: {packages: [cabal-install-2.0,ghc-8.2.1,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
     - os: osx
-      env: CABALVER=2.0 GHCVER=8.2.1 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=False
+      env: CABALVER=2.0 GHCVER=8.2.1 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=False SBV_HEAVYTEST_PERCENTAGE=10
       compiler: ": #GHC 8.2.1"
 
 # Note: the distinction between `before_install` and `install` is not important.

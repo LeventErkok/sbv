@@ -2,6 +2,7 @@ build: off
 
 environment:
       SBV_TEST_ENVIRONMENT: win
+      SBV_HEAVYTEST_PERCENTAGE:  0
       TASTY_HIDE_SUCCESSES: True
 
 before_build:

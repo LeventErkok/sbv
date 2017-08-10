@@ -84,13 +84,13 @@ import qualified TestSuite.Uninterpreted.Uninterpreted
 -- hosts; when we run locally, all tests are run.
 --
 -- TODO: Would be nice to run them all on Windows/OSX on remote hosts as well.
-ciFilter :: CIOS -> TestTree -> IO TestTree
-ciFilter CIWindows tt = putStrLn "Windows CI: Skipping tests."        >> pickTests  0 tt
-ciFilter CIOSX    tt  = putStrLn "OSX CI: Running only 30% of tests." >> pickTests 30 tt
-ciFilter CILinux  tt  = return tt
+ciFilter :: CIOS -> Int -> TestTree -> IO TestTree
+ciFilter _  100 tt = return tt
+ciFilter os   n tt = do putStrLn $ "OS: " ++ show os ++ ", Running only " ++ show n ++ "% of tests."
+                        pickTests n tt
 
 main :: IO ()
-main = do testEnv <- getTestEnvironment
+main = do (testEnv, testPercentage) <- getTestEnvironment
 
           putStrLn $ "SBVTest: Test platform: " ++ show testEnv
 
@@ -100,7 +100,7 @@ main = do testEnv <- getTestEnvironment
 
             TestEnvLocal     -> defaultMain $ testGroup "Local" [heavyTests, localOnlyTests, otherTests]
 
-            TestEnvCI os     -> do reducedHeavyTests <- ciFilter os heavyTests
+            TestEnvCI os     -> do reducedHeavyTests <- ciFilter os testPercentage heavyTests
                                    defaultMain $ testGroup "Remote" [reducedHeavyTests, otherTests]
 
 -- | The following tests take too long/too burdensome for remote tests, so we run only a percentage of them

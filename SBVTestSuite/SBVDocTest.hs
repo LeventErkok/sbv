@@ -11,7 +11,7 @@ import System.Exit (exitSuccess)
 import Utils.SBVTestFramework (getTestEnvironment, TestEnvironment(..), CIOS(..))
 
 main :: IO ()
-main = do testEnv <- getTestEnvironment
+main = do (testEnv, _) <- getTestEnvironment
 
           putStrLn $ "SBVDocTest: Test platform: " ++ show testEnv
 

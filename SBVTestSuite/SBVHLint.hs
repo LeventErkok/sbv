@@ -14,7 +14,7 @@ arguments =
 
 main :: IO ()
 main = do
-    testEnv <- getTestEnvironment
+    (testEnv, _) <- getTestEnvironment
 
     putStrLn $ "SBVHLint: Test platform: " ++ show testEnv
 

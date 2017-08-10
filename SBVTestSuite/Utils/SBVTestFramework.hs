@@ -46,7 +46,7 @@ import System.Random (randomRIO)
 
 import Data.SBV
 
-import Data.Char (chr, ord)
+import Data.Char (chr, ord, isDigit)
 
 import Data.Maybe(fromMaybe, catMaybes)
 
@@ -66,17 +66,26 @@ data TestEnvironment = TestEnvLocal
                      | TestEnvUnknown
                      deriving Show
 
-getTestEnvironment :: IO TestEnvironment
-getTestEnvironment = do mbTestEnv <- lookupEnv "SBV_TEST_ENVIRONMENT"
+getTestEnvironment :: IO (TestEnvironment, Int)
+getTestEnvironment = do mbTestEnv  <- lookupEnv "SBV_TEST_ENVIRONMENT"
+                        mbTestPerc <- lookupEnv "SBV_HEAVYTEST_PERCENTAGE"
 
-                        case mbTestEnv of
-                          Just "local" -> return   TestEnvLocal
-                          Just "linux" -> return $ TestEnvCI CILinux
-                          Just "osx"   -> return $ TestEnvCI CIOSX
-                          Just "win"   -> return $ TestEnvCI CIWindows
-                          Just other   -> do putStrLn $ "Ignoring unexpected test env value: " ++ show other
-                                             return TestEnvUnknown
-                          Nothing      -> return TestEnvUnknown
+                        env <- case mbTestEnv of
+                                 Just "local" -> return   TestEnvLocal
+                                 Just "linux" -> return $ TestEnvCI CILinux
+                                 Just "osx"   -> return $ TestEnvCI CIOSX
+                                 Just "win"   -> return $ TestEnvCI CIWindows
+                                 Just other   -> do putStrLn $ "Ignoring unexpected test env value: " ++ show other
+                                                    return TestEnvUnknown
+                                 Nothing      -> return TestEnvUnknown
+
+                        perc <- case mbTestPerc of
+                                 Just n | all isDigit n -> return (read n)
+                                 Just n                 -> do putStrLn $ "Ignoring unexpected test percentage value: " ++ show n
+                                                              return 100
+                                 Nothing                -> return 100
+
+                        return (env, perc)
 
 -- | Checks that a particular result shows as @s@
 showsAs :: Show a => a -> String -> Assertion
