@@ -713,7 +713,7 @@ svShift toLeft x i
                                 newExpr st kx (SBVApp op [sw1, adjustedShift])
 
 -- | Generalization of 'svRol', where the rotation amount is symbolic.
--- The first argument should be a bounded quantity.
+-- If the first argument is not bounded, then the this is the same as shift.
 svRotateLeft :: SVal -> SVal -> SVal
 svRotateLeft x i
   | not (isBounded x)
@@ -733,7 +733,7 @@ svRotateLeft x i
           n  = svInteger (kindOf i) (toInteger sx)
 
 -- | Generalization of 'svRor', where the rotation amount is symbolic.
--- The first argument should be a bounded quantity.
+-- If the first argument is not bounded, then the this is the same as shift.
 svRotateRight :: SVal -> SVal -> SVal
 svRotateRight x i
   | not (isBounded x)
