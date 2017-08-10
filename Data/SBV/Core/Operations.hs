@@ -639,7 +639,7 @@ svShift toLeft x i
   | Just r <- constFoldValue
   = r
   | True
-  = svIte (i `svLessEq` svInteger ki 0)                                           -- Negative or 0 shift, no change
+  = svIte (i `svLessThan` svInteger ki 0)                                         -- Negative shift, no change
           x
           $ svIte (i `svGreaterEq` svInteger ki (fromIntegral (intSizeOf x)))     -- Overshift, by at least the bit-width of x
                   overShiftValue
@@ -655,6 +655,12 @@ svShift toLeft x i
         -- as there's no easy/meaningful way to map this combo to SMTLib. Should be rarely needed, if ever!
         -- We also perform basic sanity check here so that if we go past here, we know we have bitvectors only.
         constFoldValue
+          | Just iv <- getConst i, iv == 0
+          = Just x
+
+          | Just xv <- getConst x, xv == 0
+          = Just x
+
           | Just xv <- getConst x, Just iv <- getConst i
           = Just $ SVal kx . Left $! normCW $ CW kx (CWInteger (xv `opC` shiftAmount iv))
 
