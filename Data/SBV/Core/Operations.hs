@@ -152,9 +152,9 @@ svAbs = liftSym1 (mkSymOp1 Abs) abs abs abs abs
 
 -- | Division.
 svDivide :: SVal -> SVal -> SVal
-svDivide = liftSym2 (mkSymOp Quot) rationalCheck (/) die (/) (/)
-   where -- should never happen
-         die = error "impossible: integer valued data found in Fractional instance"
+svDivide = liftSym2 (mkSymOp Quot) rationalCheck (/) idiv (/) (/)
+   where idiv x 0 = x
+         idiv x y = x `div` y
 
 -- | Exponentiation.
 svExp :: SVal -> SVal -> SVal
