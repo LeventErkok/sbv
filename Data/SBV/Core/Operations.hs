@@ -638,6 +638,10 @@ svShift :: Bool -> SVal -> SVal -> SVal
 svShift toLeft x i
   | Just r <- constFoldValue
   = r
+  | cannotOverShift
+  = svIte (i `svLessThan` svInteger ki 0)                                         -- Negative shift, no change
+          x
+          regularShiftValue
   | True
   = svIte (i `svLessThan` svInteger ki 0)                                         -- Negative shift, no change
           x
@@ -691,6 +695,18 @@ svShift toLeft x i
                   | not (isBounded x && isBounded i)                 = bailOut $ "Unsupported kinds: " ++ show (kx, ki)
                   | True                                             = fromIntegral iv
                  where ub = intSizeOf x
+
+        -- Overshift is not possible if the bit-size of x won't even fit into the bit-vector size
+        -- of i. Note that this is a *necessary* check, Consider for instance if we're shifting a
+        -- 32-bit value using a 1-bit shift amount (which can happen if the value is 1 with minimal
+        -- shift widths). We would compare 1 >= 32, but stuffing 32 into bit-vector of size 1 would
+        -- overflow. See https://github.com/LeventErkok/sbv/issues/323 for this case. Thus, we
+        -- make sure that the bit-vector would fit as a value.
+        cannotOverShift = maxRepresentable <= fromIntegral (intSizeOf x)
+          where maxRepresentable :: Integer
+                maxRepresentable
+                  | hasSign i = bit (intSizeOf i - 1) - 1
+                  | True      = bit (intSizeOf i    ) - 1
 
         -- An overshift occurs if we're shifting by more than or equal to the bit-width of x
         --     For shift-left: this value is always 0
