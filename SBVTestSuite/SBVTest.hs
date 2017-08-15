@@ -21,6 +21,7 @@ import qualified TestSuite.Basics.PseudoBoolean
 import qualified TestSuite.Basics.QRem
 import qualified TestSuite.Basics.Quantifiers
 import qualified TestSuite.Basics.Recursive
+import qualified TestSuite.Basics.SmallShifts
 import qualified TestSuite.Basics.SquashReals
 import qualified TestSuite.Basics.TOut
 import qualified TestSuite.BitPrecise.BitTricks
@@ -135,6 +136,7 @@ otherTests = testGroup "SBVOtherTests" [
                , TestSuite.Basics.QRem.tests
                , TestSuite.Basics.Quantifiers.tests
                , TestSuite.Basics.Recursive.tests
+               , TestSuite.Basics.SmallShifts.tests
                , TestSuite.Basics.SquashReals.tests
                , TestSuite.Basics.TOut.tests
                , TestSuite.BitPrecise.BitTricks.tests
