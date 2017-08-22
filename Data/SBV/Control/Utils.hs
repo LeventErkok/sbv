@@ -32,6 +32,7 @@ module Data.SBV.Control.Utils (
 
 import Data.List  (sortBy, elemIndex, partition, groupBy, tails)
 
+import Data.Char     (isPunctuation, isSpace)
 import Data.Ord      (comparing)
 import Data.Function (on)
 
@@ -201,7 +202,13 @@ send requireSuccess s = do
                          _           -> do case queryTimeOutValue of
                                              Nothing -> queryDebug ["[FAIL] " `alignPlain` s]
                                              Just i  -> queryDebug [("[FAIL, TimeOut: " ++ showTimeoutValue i ++ "]  ") `alignPlain` s]
-                                           unexpected "Command" s "success" Nothing r Nothing
+
+
+                                           let cmd = case words (dropWhile (\c -> isSpace c || isPunctuation c) s) of
+                                                       (c:_) -> c
+                                                       _     -> "Command"
+
+                                           unexpected cmd s "success" Nothing r Nothing
 
                else io $ querySend queryTimeOutValue s  -- fire and forget. if you use this, you're on your own!
 

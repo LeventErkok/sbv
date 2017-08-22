@@ -223,7 +223,7 @@ class Provable a where
                                           , "***"
                                           , "***          " ++  unwords needsUniversalOpt
                                           , "***"
-                                          , "*** Optimization is only meaningful existentially quantified values."
+                                          , "*** Optimization is only meaningful with existentially quantified values."
                                           ]
 
                    let optimizerDirectives = concatMap minmax objectives ++ priority style
