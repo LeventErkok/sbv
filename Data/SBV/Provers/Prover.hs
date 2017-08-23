@@ -37,7 +37,12 @@ import System.IO.Unsafe (unsafeInterleaveIO)             -- only used safely!
 import System.Directory  (getCurrentDirectory)
 
 import Data.Time (getZonedTime, NominalDiffTime, UTCTime, getCurrentTime, diffUTCTime)
-import Data.List (intercalate, isPrefixOf)
+import Data.List (intercalate, isPrefixOf, nub)
+
+import Data.Maybe (mapMaybe)
+
+import qualified Data.Map.Strict as M
+import qualified Data.Foldable   as S (toList)
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
@@ -197,6 +202,7 @@ class Provable a where
   optimizeWith config style = runWithQuery True opt config
     where opt = do objectives <- Control.getObjectives
                    qinps      <- Control.getQuantifiedInputs
+                   spgm       <- Control.getSBVPgm
 
                    when (null objectives) $
                           error $ unlines [ ""
@@ -210,21 +216,44 @@ class Provable a where
                                           , "*** Please use a solver that has support, such as z3"
                                           ]
 
-                   let needsUniversalOpt = let universals = [s | (ALL, (s, _)) <- qinps]
-                                               check (x, y) nm = [nm | any (`elem` universals) [x, y]]
-                                               isUniversal (Maximize   nm xy)   = check xy nm
-                                               isUniversal (Minimize   nm xy)   = check xy nm
-                                               isUniversal (AssertSoft nm xy _) = check xy nm
-                                           in  concatMap isUniversal objectives
+                   let universals = [s | (ALL, s) <- qinps]
 
-                   unless (null needsUniversalOpt) $
-                          error $ unlines [ ""
-                                          , "*** Data.SBV: Problem needs optimization of universally quantified metric(s):"
-                                          , "***"
-                                          , "***          " ++  unwords needsUniversalOpt
-                                          , "***"
-                                          , "*** Optimization is only meaningful with existentially quantified values."
-                                          ]
+                       mappings :: M.Map SW SBVExpr
+                       mappings = M.fromList (S.toList (pgmAssignments spgm))
+
+                       chaseUniversal entry = map snd $ go entry []
+                         where go x sofar
+                                | Just _  <- x `lookup` sofar
+                                = sofar
+                                | Just nm <- x `lookup` universals
+                                = (x, nm) : sofar
+                                | True
+                                = let oVars (LkUp _ a b)             = [a, b]
+                                      oVars (IEEEFP (FP_Cast _ _ o)) = [o]
+                                      oVars _                        = []
+                                      vars = case x `M.lookup` mappings of
+                                               Nothing            -> []
+                                               Just (SBVApp o ss) -> nub (oVars o ++ ss)
+                                  in foldr go sofar vars
+
+                   let needsUniversalOpt = let tag _  [] = Nothing
+                                               tag nm xs = Just (nm, xs)
+                                               needsUniversal (Maximize   nm (x, _))   = tag nm (chaseUniversal x)
+                                               needsUniversal (Minimize   nm (x, _))   = tag nm (chaseUniversal x)
+                                               needsUniversal (AssertSoft nm (x, _) _) = tag nm (chaseUniversal x)
+                                           in mapMaybe needsUniversal objectives
+
+                   unless (not (null universals) && null needsUniversalOpt) $
+                          let len = maximum $ 0 : [length nm | (nm, _) <- needsUniversalOpt]
+                              pad n = n ++ replicate (len - length n) ' '
+                          in error $ unlines $ [ ""
+                                               , "*** Data.SBV: Problem needs optimization of metric depending on universally quantified variable(s):"
+                                               , "***"
+                                               ]
+                                           ++  [ "***          " ++  pad s ++ " [Depends on: " ++ intercalate ", " xs ++ "]"  | (s, xs) <- needsUniversalOpt ]
+                                           ++  [ "***"
+                                               , "*** Optimization is only meaningful with existentially quantified metrics."
+                                               ]
 
                    let optimizerDirectives = concatMap minmax objectives ++ priority style
                          where mkEq (x, y) = "(assert (= " ++ show x ++ " " ++ show y ++ "))"

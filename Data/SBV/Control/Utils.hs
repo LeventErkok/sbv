@@ -19,7 +19,7 @@
 module Data.SBV.Control.Utils (
        io
      , ask, send, getValue, getUninterpretedValue, getValueCW, getUnsatAssumptions, SMTValue(..)
-     , getQueryState, modifyQueryState, getConfig, getObjectives, getSBVAssertions, getQuantifiedInputs
+     , getQueryState, modifyQueryState, getConfig, getObjectives, getSBVAssertions, getSBVPgm, getQuantifiedInputs
      , checkSat, checkSatUsing, getAllSatResult
      , inNewContext, freshVar, freshVar_
      , parse
@@ -54,7 +54,7 @@ import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, K
                               , QueryState(..), SVal(..), Quantifier(..), cache
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
-                              , Result(..), SMTProblem(..), trueSW, SymWord(..)
+                              , Result(..), SMTProblem(..), trueSW, SymWord(..), SBVPgm(..)
                               )
 import Data.SBV.Core.Symbolic (IncState(..), withNewIncState, State(..), svToSW, registerLabel, svMkSymVar)
 
@@ -101,6 +101,11 @@ getConfig = queryConfig <$> getQueryState
 getObjectives :: Query [Objective (SW, SW)]
 getObjectives = do State{rOptGoals} <- get
                    io $ reverse <$> readIORef rOptGoals
+
+-- | Get the program
+getSBVPgm :: Query SBVPgm
+getSBVPgm = do State{spgm} <- get
+               io $ readIORef spgm
 
 -- | Get the assertions put in via 'sAssert'
 getSBVAssertions :: Query [(String, Maybe CallStack, SW)]
