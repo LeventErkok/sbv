@@ -11,6 +11,14 @@
     merges the dynamic and typed interfaces, and drops support for non-constant shifts
     of unbounded integers, which is not supported by SMTLib. Thanks to Robert for
     reporting the issue and identifying the root cause.
+
+  * Rework how quantifiers are handled: We now generate separte asserts for
+    prefix-existentials. This allows for better (smaller) quantified code, while
+    preserving semantics.
+
+  * Rework the interaction between quantifiers and optimization routines.
+    Optimization routines now properly handle quantified formulas, so long as the
+    quantified metric does not involve any universal quantification itself.
   
   * Development/Infrastructure: Lots of work around the continuous integration
     for SBV. We now build/test on Linux/Mac/Windows on every commit. Thanks to

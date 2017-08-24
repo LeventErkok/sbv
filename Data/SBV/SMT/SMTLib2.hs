@@ -129,8 +129,10 @@ cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs ui
            = ([], asgns)  -- the apparent "switch" here is OK; rest of the code works correctly if there are no foralls.
            | True
            = span pre asgns
-           where first      = minimum foralls
-                 pre (s, _) = s < first
+           where first      = nodeId (minimum foralls)
+                 pre (s, _) = nodeId s < first
+
+                 nodeId (SW _ n) = n
 
         noOfCloseParens
           | null foralls = 0
