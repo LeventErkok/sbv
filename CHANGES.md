@@ -18,7 +18,8 @@
 
   * Rework the interaction between quantifiers and optimization routines.
     Optimization routines now properly handle quantified formulas, so long as the
-    quantified metric does not involve any universal quantification itself.
+    quantified metric does not involve any universal quantification itself. Thanks
+    to Matthew Danish for reporting the issue.
   
   * Development/Infrastructure: Lots of work around the continuous integration
     for SBV. We now build/test on Linux/Mac/Windows on every commit. Thanks to
