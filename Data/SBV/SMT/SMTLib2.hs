@@ -108,22 +108,31 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
              ++ concatMap declUI uis
              ++ [ "; --- user given axioms ---" ]
              ++ map declAx axs
-
              ++ [ "; --- formula ---" ]
+
+             ++ map (declDef cfg skolemMap tableMap) preQuantifierAssigns
              ++ ["(assert (forall (" ++ intercalate "\n                 "
                                         ["(" ++ show s ++ " " ++ swType s ++ ")" | s <- foralls] ++ ")"
                 | not (null foralls)
                 ]
-
-             ++ map mkAssign asgns
+             ++ map mkAssign postQuantifierAssigns
 
              ++ delayedAsserts delayedEqualities
 
              ++ finalAssert
 
+        -- identify the assignments that can come before the first quantifier
+        (preQuantifierAssigns, postQuantifierAssigns)
+           | null foralls
+           = ([], asgns)  -- the apparent "switch" here is OK; rest of the code works correctly if there are no foralls.
+           | True
+           = span pre asgns
+           where first      = minimum foralls
+                 pre (s, _) = s < first
+
         noOfCloseParens
           | null foralls = 0
-          | True         = length asgns + 2 + (if null delayedEqualities then 0 else 1)
+          | True         = length postQuantifierAssigns + 2 + (if null delayedEqualities then 0 else 1)
 
         foralls    = [s | Left s <- skolemInps]
         forallArgs = concatMap ((" " ++) . show) foralls
