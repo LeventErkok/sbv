@@ -45,12 +45,12 @@ q2 = do a <- sInteger "a"
         constrain $ 2 * (a * x + b1) .== 2
         constrain $ 4 * (a * x + b2) .== 4
         constrain $ a .>= 0
-        minimize "goal" $ a
+        minimize "goal" a
 
 q3 :: Goal
 q3 = do a <- sInteger "a"
         [b1, b2] <- sIntegers ["b1", "b2"]
-        minimize "goal" $ a
+        minimize "goal" a
         x <- forall "x" :: Symbolic SInteger
         constrain $ 2 * (a * x + b1) .== 2
         constrain $ 4 * (a * x + b2) .== 4
@@ -64,3 +64,5 @@ q4 = do a <- sInteger "a"
         constrain $ 2 * (a * x + b1) .== 2
         constrain $ 4 * (a * x + b2) .== 4
         constrain $ a .>= 0
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

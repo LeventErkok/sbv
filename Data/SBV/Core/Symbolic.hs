@@ -55,6 +55,7 @@ module Data.SBV.Core.Symbolic
   , SArr(..), readSArr, writeSArr, mergeSArr, newSArr, eqSArr
   ) where
 
+import Control.Arrow            (first, second, (***))
 import Control.DeepSeq          (NFData(..))
 import Control.Monad            (when, unless)
 import Control.Monad.Reader     (MonadReader, ReaderT, ask, runReaderT)
@@ -380,7 +381,7 @@ instance Show Result where
                    (if null usorts then [] else "SORTS" : map ("  " ++) usorts)
                 ++ ["INPUTS"]
                 ++ map shn (fst is)
-                ++ (if null (snd is) then [] else "TRACKER VARS" : map shn (map (EX,) (snd is)))
+                ++ (if null (snd is) then [] else "TRACKER VARS" : map (shn . (EX,)) (snd is))
                 ++ ["CONSTANTS"]
                 ++ map shc cs
                 ++ ["TABLES"]
@@ -680,7 +681,7 @@ internalVariable st k = do (sw, nm) <- newSW st k
                                      SMTMode    _ False _ -> ALL
                                      CodeGen              -> ALL
                                      Concrete{}           -> ALL
-                           modifyState st rinps (\(is, ints) -> ((q, (sw, "__internal_sbv_" ++ nm)):is, ints))
+                           modifyState st rinps (first ((:) (q, (sw, "__internal_sbv_" ++ nm))))
                                      $ noInteractive [ "Internal variable creation:"
                                                      , "  Named: " ++ nm
                                                      ]
@@ -866,9 +867,9 @@ introduceUserName st isTracker nm k q sw = do
                                                                 , "Only existential variables are supported in query mode."
                                                                 ]
                         if isTracker
-                           then modifyState st rinps (\(ois, oints) -> (ois, (sw, nm) : oints))
+                           then modifyState st rinps (second ((:) (sw, nm)))
                                           $ noInteractive ["Adding a new tracker variable in interactive mode: " ++ show nm]
-                           else modifyState st rinps (\(ois, oints) -> ((q, (sw, nm)):ois, oints))
+                           else modifyState st rinps (first ((:) (q, (sw, nm))))
                                           $ modifyIncState st rNewInps newInp
                         return $ SVal k $ Right $ cache (const (return sw))
 
@@ -958,7 +959,7 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
                                        , rAsserts=asserts, rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints=cstrs
                                        } = do
    SBVPgm rpgm  <- readIORef pgm
-   inpsO <- (\(x, y) -> (reverse x, reverse y)) <$> readIORef inps
+   inpsO <- (reverse *** reverse) <$> readIORef inps
    outsO <- reverse <$> readIORef outs
    let swap  (a, b)              = (b, a)
        swapc ((_, a), b)         = (b, a)
