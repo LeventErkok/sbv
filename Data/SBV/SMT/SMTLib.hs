@@ -64,7 +64,7 @@ toSMTLib2 = cvt SMTLib2
                needsQuantifiers
                  | isSat = ALL `elem` quantifiers
                  | True  = EX  `elem` quantifiers
-                 where quantifiers = map fst qinps
+                 where quantifiers = map fst (fst qinps)
 
 -- | Convert to SMTLib-2 format
 toIncSMTLib2 :: SMTLibIncConverter [String]

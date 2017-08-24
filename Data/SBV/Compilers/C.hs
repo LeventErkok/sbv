@@ -418,7 +418,7 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _uis _
   = tbd "Explicit constraints"
   | not (null arrs)
   = tbd "User specified arrays"
-  | needsExistentials (map fst ins)
+  | needsExistentials (map fst (fst ins))
   = error "SBV->C: Cannot compile functions with existentially quantified variables."
   | True
   = [pre, header, post]
@@ -455,7 +455,7 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _uis _
                          $$ vcat (map text ls)
                          $$ text ""
 
-       typeWidth = getMax 0 $ [len (kindOf s) | (s, _) <- assignments] ++ [len (kindOf s) | (_, (s, _)) <- ins]
+       typeWidth = getMax 0 $ [len (kindOf s) | (s, _) <- assignments] ++ [len (kindOf s) | (_, (s, _)) <- fst ins]
                 where len KReal{}             = 5
                       len KFloat{}            = 6 -- SFloat
                       len KDouble{}           = 7 -- SDouble

@@ -9,11 +9,12 @@
 -- Query related utils.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE BangPatterns          #-}
-{-# LANGUAGE DefaultSignatures     #-}
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE    BangPatterns          #-}
+{-# LANGUAGE    DefaultSignatures     #-}
+{-# LANGUAGE    LambdaCase            #-}
+{-# LANGUAGE    NamedFieldPuns        #-}
+{-# LANGUAGE    ScopedTypeVariables   #-}
+{-# LANGUAGE    TupleSections         #-}
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 
 module Data.SBV.Control.Utils (
@@ -397,10 +398,18 @@ checkSatUsing cmd = do let bad = unexpected "checkSat" cmd "one of sat/unsat/unk
                                            ECon "unknown" -> return Unk
                                            _              -> bad r Nothing
 
--- | What are the top level inputs?
+-- | What are the top level inputs? Trackers are returned as top level existentials
 getQuantifiedInputs :: Query [(Quantifier, NamedSymVar)]
 getQuantifiedInputs = do State{rinps} <- get
-                         liftIO $ reverse <$> readIORef rinps
+                         (rQinps, rTrackers) <- liftIO $ readIORef rinps
+
+                         let qinps    = reverse rQinps
+                             trackers = map (EX,) $ reverse rTrackers
+
+                             -- separate the existential prefix, which will go first
+                             (preQs, postQs) = span (\(q, _) -> q == EX) qinps
+
+                         return $ preQs ++ trackers ++ postQs
 
 -- | Repeatedly issue check-sat, after refuting the previous model.
 -- The bool is true if the model is unique upto prefix existentials.
@@ -595,7 +604,7 @@ runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls
                  go ((ALL, (v, _)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
                  go ((EX,  (v, _)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
 
-         qinps      = if isSat then is else map flipQ is
+         qinps      = if isSat then fst is else map flipQ (fst is)
          skolemMap  = skolemize qinps
 
          o = case outputs of

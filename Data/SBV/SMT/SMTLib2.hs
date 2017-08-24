@@ -31,7 +31,7 @@ tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
 cvt :: SMTLibConverter [String]
-cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out cfg = pgm
+cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out cfg = pgm
   where hasInteger     = KUnbounded `Set.member` kindInfo
         hasReal        = KReal      `Set.member` kindInfo
         hasFloat       = KFloat     `Set.member` kindInfo
@@ -98,6 +98,8 @@ cvt kindInfo isSat comments inputs skolemInps consts tbls arrs uis axs (SBVPgm a
              ++ map (declConst cfg) consts
              ++ [ "; --- skolem constants ---" ]
              ++ [ "(declare-fun " ++ show s ++ " " ++ swFunType ss s ++ ")" ++ userName s | Right (s, ss) <- skolemInps]
+             ++ [ "; --- optimization tracker variables ---" | not (null trackerVars) ]
+             ++ [ "(declare-fun " ++ show s ++ " " ++ swFunType [] s ++ ") ; tracks " ++ nm | (s, nm) <- trackerVars]
              ++ [ "; --- constant tables ---" ]
              ++ concatMap constTable constTables
              ++ [ "; --- skolemized tables ---" ]
