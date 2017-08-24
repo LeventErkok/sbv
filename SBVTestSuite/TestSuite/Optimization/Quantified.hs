@@ -28,8 +28,8 @@ tests =
     , goldenVsStringShow "optQuant4" $ opt  q4
     , goldenString       "optQuant5" $ optE q5
     ]
-    where opt q  = optimize Lexicographic q
-          optE q = ((show <$> optimize Lexicographic q) `C.catch` (\(e::C.SomeException) -> return (pick (show e))))
+    where opt    = optimize Lexicographic
+          optE q = (show <$> optimize Lexicographic q) `C.catch` (\(e::C.SomeException) -> return (pick (show e)))
           pick s = unlines [l | l <- lines s, "***" `isPrefixOf` l]
 
 q1 :: Goal
