@@ -49,6 +49,7 @@ import qualified TestSuite.Optimization.AssertSoft
 import qualified TestSuite.Optimization.Basics
 import qualified TestSuite.Optimization.Combined
 import qualified TestSuite.Optimization.ExtensionField
+import qualified TestSuite.Optimization.Quantified
 import qualified TestSuite.Optimization.Reals
 import qualified TestSuite.Polynomials.Polynomials
 import qualified TestSuite.Puzzles.Coins
@@ -164,6 +165,7 @@ otherTests = testGroup "SBVOtherTests" [
                , TestSuite.Optimization.Basics.tests
                , TestSuite.Optimization.Combined.tests
                , TestSuite.Optimization.ExtensionField.tests
+               , TestSuite.Optimization.Quantified.tests
                , TestSuite.Optimization.Reals.tests
                , TestSuite.Polynomials.Polynomials.tests
                , TestSuite.Puzzles.Coins.tests

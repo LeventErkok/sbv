@@ -1,0 +1,5 @@
+Optimal model:
+  a    = 0 :: Integer
+  b1   = 1 :: Integer
+  b2   = 1 :: Integer
+  goal = 0 :: Integer
