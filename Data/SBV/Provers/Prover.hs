@@ -243,7 +243,7 @@ class Provable a where
                                                needsUniversal (AssertSoft nm (x, _) _) = tag nm (chaseUniversal x)
                                            in mapMaybe needsUniversal objectives
 
-                   unless (not (null universals) && null needsUniversalOpt) $
+                   unless (null universals || null needsUniversalOpt) $
                           let len = maximum $ 0 : [length nm | (nm, _) <- needsUniversalOpt]
                               pad n = n ++ replicate (len - length n) ' '
                           in error $ unlines $ [ ""
