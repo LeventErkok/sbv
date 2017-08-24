@@ -218,15 +218,19 @@ class Provable a where
 
                    let universals = [s | (ALL, s) <- qinps]
 
+                       firstUniversal
+                         | null universals = error "Data.SBV: Impossible happened! Universal optimization with no universals!"
+                         | True            = minimum (map (nodeId . fst) universals)
+
+                       nodeId (SW _ n) = n
+
                        mappings :: M.Map SW SBVExpr
                        mappings = M.fromList (S.toList (pgmAssignments spgm))
 
                        chaseUniversal entry = map snd $ go entry []
                          where go x sofar
-                                | Just _  <- x `lookup` sofar
-                                = sofar
-                                | Just nm <- x `lookup` universals
-                                = (x, nm) : sofar
+                                | nx >= firstUniversal
+                                = nub $ [unm | unm@(u, _) <- universals, nx >= nodeId u] ++ sofar
                                 | True
                                 = let oVars (LkUp _ a b)             = [a, b]
                                       oVars (IEEEFP (FP_Cast _ _ o)) = [o]
@@ -235,6 +239,7 @@ class Provable a where
                                                Nothing            -> []
                                                Just (SBVApp o ss) -> nub (oVars o ++ ss)
                                   in foldr go sofar vars
+                                where nx = nodeId x
 
                    let needsUniversalOpt = let tag _  [] = Nothing
                                                tag nm xs = Just (nm, xs)
@@ -247,7 +252,7 @@ class Provable a where
                           let len = maximum $ 0 : [length nm | (nm, _) <- needsUniversalOpt]
                               pad n = n ++ replicate (len - length n) ' '
                           in error $ unlines $ [ ""
-                                               , "*** Data.SBV: Problem needs optimization of metric depending on universally quantified variable(s):"
+                                               , "*** Data.SBV: Problem needs optimization of metric in the scope of universally quantified variable(s):"
                                                , "***"
                                                ]
                                            ++  [ "***          " ++  pad s ++ " [Depends on: " ++ intercalate ", " xs ++ "]"  | (s, xs) <- needsUniversalOpt ]

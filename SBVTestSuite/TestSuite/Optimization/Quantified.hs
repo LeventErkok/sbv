@@ -22,12 +22,15 @@ import qualified Control.Exception as C
 tests :: TestTree
 tests =
   testGroup "Optimization.Reals"
-    [ goldenString       "optQuant1" ((show <$> optimize Lexicographic q1) `C.catch` (\(e::C.SomeException) -> return (pick (show e))))
-    , goldenVsStringShow "optQuant2" (optimize Lexicographic q2)
-    , goldenVsStringShow "optQuant3" (optimize Lexicographic q3)
-    , goldenVsStringShow "optQuant4" (optimize Lexicographic q4)
+    [ goldenString       "optQuant1" $ optE q1
+    , goldenVsStringShow "optQuant2" $ opt  q2
+    , goldenVsStringShow "optQuant3" $ opt  q3
+    , goldenVsStringShow "optQuant4" $ opt  q4
+    , goldenString       "optQuant5" $ optE q5
     ]
-    where pick s = unlines [l | l <- lines s, "***" `isPrefixOf` l]
+    where opt q  = optimize Lexicographic q
+          optE q = ((show <$> optimize Lexicographic q) `C.catch` (\(e::C.SomeException) -> return (pick (show e))))
+          pick s = unlines [l | l <- lines s, "***" `isPrefixOf` l]
 
 q1 :: Goal
 q1 = do a <- sInteger "a"
@@ -64,5 +67,15 @@ q4 = do a <- sInteger "a"
         constrain $ 2 * (a * x + b1) .== 2
         constrain $ 4 * (a * x + b2) .== 4
         constrain $ a .>= 0
+
+q5 :: Goal
+q5 = do a <- sInteger "a"
+        x <- forall "x" :: Symbolic SInteger
+        y <- forall "y" :: Symbolic SInteger
+        b <- sInteger "b"
+        constrain $ a .>= 0
+        constrain $ b .>= 0
+        constrain $ x+y .>= 0
+        minimize "goal" $ a+b
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
