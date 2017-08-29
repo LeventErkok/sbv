@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 7.1, 2017-07-29
+* Latest Hackage released version: 7.2, 2017-08-29
 
-### Version 7.2, Not yet released
+### Version 7.2, 2017-08-29
 
   * Reworked implementation of shifts and rotates: When a signed quantity was
     being shifted right by more than its size, SBV used to return 0. Robert Dockins pointed
