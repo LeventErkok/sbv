@@ -59,7 +59,7 @@ import Data.SBV.Internals (runSymbolic, Symbolic, Result, SBVRunMode(..), IStage
 data CIOS = CILinux
           | CIOSX
           | CIWindows
-          deriving Show
+          deriving (Show, Eq)
 
 data TestEnvironment = TestEnvLocal
                      | TestEnvCI CIOS

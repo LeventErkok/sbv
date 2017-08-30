@@ -11,16 +11,18 @@ import System.Exit (exitSuccess)
 import Utils.SBVTestFramework (getTestEnvironment, TestEnvironment(..), CIOS(..))
 
 main :: IO ()
-main = do (testEnv, _) <- getTestEnvironment
+main = do (testEnv, testPercentage) <- getTestEnvironment
 
           putStrLn $ "SBVDocTest: Test platform: " ++ show testEnv
 
           case testEnv of
-            TestEnvLocal        -> runDocTest False
-            TestEnvCI CIWindows -> runDocTest True
-            TestEnvCI _         -> runDocTest False
-            TestEnvUnknown      -> do putStrLn "Unknown test environment, skipping doctests"
+            TestEnvLocal   -> runDocTest False
+            TestEnvCI env  -> if testPercentage < 50
+                              then do putStrLn $ "Test percentage below tresheold, skipping doctest: " ++ show testPercentage
                                       exitSuccess
+                              else runDocTest (env == CIWindows)
+            TestEnvUnknown  -> do putStrLn "Unknown test environment, skipping doctests"
+                                  exitSuccess
  where runDocTest windowsSkip = do allFiles <- glob "Data/SBV/**/*.hs"
                                    let testFiles
                                          | windowsSkip = filter (not . bad) allFiles

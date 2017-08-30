@@ -14,13 +14,16 @@ arguments =
 
 main :: IO ()
 main = do
-    (testEnv, _) <- getTestEnvironment
+    (testEnv, testPercentage) <- getTestEnvironment
 
     putStrLn $ "SBVHLint: Test platform: " ++ show testEnv
 
     case testEnv of
       TestEnvLocal   -> runHLint
-      TestEnvCI{}    -> runHLint
+      TestEnvCI{}    -> if testPercentage < 50
+                           then do putStrLn $ "Test percentage below tresheold, skipping hlint: " ++ show testPercentage
+                                   exitSuccess
+                           else runHLint
       TestEnvUnknown -> do putStrLn "Unknown test environment, skipping hlint run"
                            exitSuccess
  where runHLint = do hints <- hlint arguments
