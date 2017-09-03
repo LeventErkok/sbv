@@ -122,14 +122,17 @@ io = liftIO
 syncUpSolver :: IncState -> Query ()
 syncUpSolver is = do
         cfg <- getConfig
-        ls  <- io $ do let swapc ((_, a), b)   = (b, a)
+        ls  <- io $ do let swap  (a, b)        = (b, a)
+                           swapc ((_, a), b)   = (b, a)
                            cmp   (a, _) (b, _) = a `compare` b
+                           arrange (i, (at, rt, es)) = ((i, at, rt), es)
                        inps  <- reverse <$> readIORef (rNewInps is)
                        ks    <- readIORef (rNewKinds is)
                        cnsts <- sortBy cmp . map swapc . Map.toList <$> readIORef (rNewConsts is)
                        arrs  <- IMap.toAscList <$> readIORef (rNewArrs is)
+                       tbls  <- (map arrange . sortBy cmp . map swap . Map.toList) <$> readIORef (rNewTbls is)
                        as    <- readIORef (rNewAsgns is)
-                       return $ toIncSMTLib cfg inps ks cnsts arrs as cfg
+                       return $ toIncSMTLib cfg inps ks cnsts arrs tbls as cfg
         mapM_ (send True) (mergeSExpr ls)
 
 -- | Retrieve the query context

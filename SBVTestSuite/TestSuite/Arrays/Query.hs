@@ -21,9 +21,12 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Arrays.Query"
-    [ goldenCapturedIO "queryArrays1" $ \rf -> do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just rf} q1
-                                                  appendFile rf ("\n FINAL:" ++ show r ++ "\nDONE!\n")
+    [ goldenCapturedIO "queryArrays1" $ t q1
+    , goldenCapturedIO "queryArrays2" $ t q2
+    , goldenCapturedIO "queryArrays3" $ t q3
     ]
+    where t tc goldFile = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile} tc
+                             appendFile goldFile ("\n FINAL:" ++ show r ++ "\nDONE!\n")
 
 q1 :: Symbolic (Word8, Word8, Int8)
 q1 = do m  :: SArray Word8 Int8 <- newArray "a"
@@ -41,3 +44,21 @@ q1 = do m  :: SArray Word8 Int8 <- newArray "a"
                    va2 <- getValue a2
                    vv1 <- getValue v1
                    return (va1, va2, vv1)
+
+q2 :: Symbolic Word8
+q2 = do i <- sWord8 "i"
+
+        setLogic QF_UFBV
+
+        query $ do constrain $ i .== select [0 .. 255] 0 i
+                   _ <- checkSat
+                   getValue i
+
+q3 :: Symbolic Word8
+q3 = do i <- sWord8 "i"
+
+        setLogic QF_UFBV
+
+        query $ do constrain $ i .== select (replicate 256 i) 0 i
+                   _ <- checkSat
+                   getValue i

@@ -239,31 +239,37 @@ declSort (s, Right fs) = [ "(declare-datatypes () ((" ++ s ++ " " ++ unwords (ma
               body [_]    i = show i
               body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
 
--- | Things we do not support in interactive mode, at least for now!
-noInteractive :: [String] -> a
-noInteractive ss = error $ unlines $  ""
-                                   :  "*** Data.SBV: Unsupported interactive/query mode feature."
-                                   :  map ("***  " ++) ss
-                                   ++ ["*** Data.SBV: Please report this as a feature request!"]
-
 -- | Convert in a query context
 cvtInc :: SMTLibIncConverter [String]
-cvtInc inps ks consts arrs (SBVPgm asgnsSeq) cfg =  concatMap declSort                           [(s, dt) | KUserSort s dt <- Set.toList ks]
-                                                 ++ map       (declConst cfg)                    consts
-                                                 ++ map       declInp                            inps
-                                                 ++ concat    arrayConstants
-                                                 ++ concatMap asrt  arrayDelayeds
-                                                 ++ map       (declDef   cfg skolemMap tableMap) (F.toList asgnsSeq)
+cvtInc inps ks consts arrs tbls (SBVPgm asgnsSeq) cfg =
+            -- sorts
+               concatMap declSort [(s, dt) | KUserSort s dt <- Set.toList ks]
+            -- constants
+            ++ map (declConst cfg) consts
+            -- inputs
+            ++ map declInp inps
+            -- arrays
+            ++ concat arrayConstants
+            ++ concatMap asrt arrayDelayeds
+            -- tables
+            ++ concatMap constTable allTables
+            -- expressions
+            ++ map  (declDef cfg skolemMap tableMap) (F.toList asgnsSeq)
   where -- NB. The below setting of skolemMap to empty is OK, since we do
         -- not support queries in the context of skolemized variables
         skolemMap = M.empty
-        tableMap  = noInteractive ["Programs with constant tabled data"]
+
+        rm = roundingMode cfg
 
         declInp (s, _) = "(declare-fun " ++ show s ++ " () " ++ swType s ++ ")"
 
         (arrayConstants, arrayDelayeds) = unzip $ map (declArray False (map fst consts) skolemMap) arrs
 
-        asrt ss = map (\s -> "(assert " ++ s ++ ")") ss
+        allTables = [(t, either id id (genTableData rm skolemMap (False, []) (map fst consts) t)) | t <- tbls]
+        tableMap  = IM.fromList $ map mkTable allTables
+          where mkTable (((t, _, _), _), _) = (t, "table" ++ show t)
+
+        asrt = map (\s -> "(assert " ++ s ++ ")")
 
 declDef :: SMTConfig -> SkolemMap -> TableMap -> (SW, SBVExpr) -> String
 declDef cfg skolemMap tableMap (s, expr) =

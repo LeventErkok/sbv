@@ -44,12 +44,13 @@ type SMTLibConverter a =  Set.Set Kind                                  -- ^ Kin
                        -> a
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
-type SMTLibIncConverter a =  [NamedSymVar]      -- ^ inputs
-                          -> Set.Set Kind       -- ^ Newly registered kinds
-                          -> [(SW, CW)]         -- ^ constants
-                          -> [(Int, ArrayInfo)] -- ^ newly created arrays
-                          -> SBVPgm             -- ^ assignments
-                          -> SMTConfig          -- ^ configuration
+type SMTLibIncConverter a =  [NamedSymVar]               -- ^ inputs
+                          -> Set.Set Kind                -- ^ Newly registered kinds
+                          -> [(SW, CW)]                  -- ^ constants
+                          -> [(Int, ArrayInfo)]          -- ^ newly created arrays
+                          -> [((Int, Kind, Kind), [SW])] -- ^ newly created tables
+                          -> SBVPgm                      -- ^ assignments
+                          -> SMTConfig                   -- ^ configuration
                           -> a
 
 -- | Create an annotated term with the given name

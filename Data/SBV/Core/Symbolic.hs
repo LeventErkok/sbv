@@ -513,6 +513,7 @@ data IncState = IncState { rNewInps   :: IORef [NamedSymVar]   -- always existen
                          , rNewKinds  :: IORef KindSet
                          , rNewConsts :: IORef CnstMap
                          , rNewArrs   :: IORef ArrayMap
+                         , rNewTbls   :: IORef TableMap
                          , rNewAsgns  :: IORef SBVPgm
                          }
 
@@ -523,11 +524,13 @@ newIncState = do
         ks  <- newIORef Set.empty
         nc  <- newIORef Map.empty
         am  <- newIORef IMap.empty
+        tm  <- newIORef Map.empty
         pgm <- newIORef (SBVPgm S.empty)
         return IncState { rNewInps   = is
                         , rNewKinds  = ks
                         , rNewConsts = nc
                         , rNewArrs   = am
+                        , rNewTbls   = tm
                         , rNewAsgns  = pgm
                         }
 
@@ -760,13 +763,9 @@ getTableIndex st at rt elts = do
   tblMap <- readIORef (rtblMap st)
   case key `Map.lookup` tblMap of
     Just i -> return i
-    _      -> do let i = Map.size tblMap
-                 modifyState st rtblMap (Map.insert key i)
-                            $ noInteractive [ "Creation of a new table:"
-                                            , "   Index kind: " ++ show at
-                                            , "   Value kind: " ++ show rt
-                                            , "   Elements  : " ++ unwords (map show elts)
-                                            ]
+    _      -> do let i   = Map.size tblMap
+                     upd = Map.insert key i
+                 modifyState st rtblMap upd $ modifyIncState st rNewTbls upd
                  return i
 
 -- | Create a new expression; hash-cons as necessary
