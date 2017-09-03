@@ -8,6 +8,7 @@ import Utils.SBVTestFramework (getTestEnvironment, TestEnvironment(..), CIOS(..)
 import System.Exit (exitSuccess)
 
 import qualified TestSuite.Arrays.Memory
+import qualified TestSuite.Arrays.Query
 import qualified TestSuite.Basics.AllSat
 import qualified TestSuite.Basics.ArithNoSolver
 import qualified TestSuite.Basics.ArithSolver
@@ -125,6 +126,7 @@ localOnlyTests = testGroup "SBVLocalOnlyTests" [
 otherTests :: TestTree
 otherTests = testGroup "SBVOtherTests" [
                  TestSuite.Arrays.Memory.tests
+               , TestSuite.Arrays.Query.tests
                , TestSuite.Basics.AllSat.tests
                , TestSuite.Basics.ArithNoSolver.tests
                , TestSuite.Basics.BasicTests.tests

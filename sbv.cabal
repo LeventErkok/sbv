@@ -165,6 +165,7 @@ Test-Suite SBVTest
   main-is         : SBVTest.hs
   Other-modules   : Utils.SBVTestFramework
                   , TestSuite.Arrays.Memory
+                  , TestSuite.Arrays.Query
                   , TestSuite.Basics.AllSat
                   , TestSuite.Basics.ArithNoSolver
                   , TestSuite.Basics.ArithSolver
