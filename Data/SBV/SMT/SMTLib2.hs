@@ -248,16 +248,22 @@ noInteractive ss = error $ unlines $  ""
 
 -- | Convert in a query context
 cvtInc :: SMTLibIncConverter [String]
-cvtInc inps ks consts (SBVPgm asgnsSeq) cfg =  concatMap declSort                           [(s, dt) | KUserSort s dt <- Set.toList ks]
-                                            ++ map       (declConst cfg)                    consts
-                                            ++ map       declInp                            inps
-                                            ++ map       (declDef   cfg skolemMap tableMap) (F.toList asgnsSeq)
+cvtInc inps ks consts arrs (SBVPgm asgnsSeq) cfg =  concatMap declSort                           [(s, dt) | KUserSort s dt <- Set.toList ks]
+                                                 ++ map       (declConst cfg)                    consts
+                                                 ++ map       declInp                            inps
+                                                 ++ concat    arrayConstants
+                                                 ++ concatMap asrt  arrayDelayeds
+                                                 ++ map       (declDef   cfg skolemMap tableMap) (F.toList asgnsSeq)
   where -- NB. The below setting of skolemMap to empty is OK, since we do
         -- not support queries in the context of skolemized variables
         skolemMap = M.empty
         tableMap  = noInteractive ["Programs with constant tabled data"]
 
         declInp (s, _) = "(declare-fun " ++ show s ++ " () " ++ swType s ++ ")"
+
+        (arrayConstants, arrayDelayeds) = unzip $ map (declArray False (map fst consts) skolemMap) arrs
+
+        asrt ss = map (\s -> "(assert " ++ s ++ ")") ss
 
 declDef :: SMTConfig -> SkolemMap -> TableMap -> (SW, SBVExpr) -> String
 declDef cfg skolemMap tableMap (s, expr) =

@@ -40,7 +40,8 @@ import Data.Function (on)
 import Data.Int
 import Data.Word
 
-import qualified Data.Map as Map
+import qualified Data.Map    as Map
+import qualified Data.IntMap as IMap
 
 import Control.Monad            (unless)
 import Control.Monad.State.Lazy (get, liftIO)
@@ -126,8 +127,9 @@ syncUpSolver is = do
                        inps  <- reverse <$> readIORef (rNewInps is)
                        ks    <- readIORef (rNewKinds is)
                        cnsts <- sortBy cmp . map swapc . Map.toList <$> readIORef (rNewConsts is)
+                       arrs  <- IMap.toAscList <$> readIORef (rNewArrs is)
                        as    <- readIORef (rNewAsgns is)
-                       return $ toIncSMTLib cfg inps ks cnsts as cfg
+                       return $ toIncSMTLib cfg inps ks cnsts arrs as cfg
         mapM_ (send True) (mergeSExpr ls)
 
 -- | Retrieve the query context
