@@ -23,7 +23,7 @@ tests =
   testGroup "Basics.QueryIndividual"
     [ goldenCapturedIO "query_badOption" $ \rf -> runSMTWith z3{verbose=True, redirectVerbose=Just rf} q
                                                   `C.catch`
-                                                  (\(e::C.SomeException) -> appendFile rf ("\n\n" ++ show e))
+                                                  (\(e::C.SomeException) -> appendFile rf ("\n\n" ++ unlines (init (lines (show e)))))
     ]
 
 q :: Symbolic ()
