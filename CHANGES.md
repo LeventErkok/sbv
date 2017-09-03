@@ -5,6 +5,11 @@
 
 ### Version 7.3, Not yet released
 
+  * Query mode: Add support for arrays in query mode. Thanks to Brad Hardy for
+    requesting support for arrays, which was left out before.
+
+  * Query mode: Add support for constant tables. (As used by 'select' calls.)
+
 ### Version 7.2, 2017-08-29
 
   * Reworked implementation of shifts and rotates: When a signed quantity was
