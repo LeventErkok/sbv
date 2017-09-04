@@ -24,6 +24,7 @@ tests =
     [ goldenCapturedIO "queryArrays1" $ t q1
     , goldenCapturedIO "queryArrays2" $ t q2
     , goldenCapturedIO "queryArrays3" $ t q3
+    , goldenCapturedIO "queryArrays4" $ t q4
     ]
     where t tc goldFile = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile} tc
                              appendFile goldFile ("\n FINAL:" ++ show r ++ "\nDONE!\n")
@@ -62,3 +63,18 @@ q3 = do i <- sWord8 "i"
         query $ do constrain $ i .== select (replicate 256 i) 0 i
                    _ <- checkSat
                    getValue i
+
+q4 :: Symbolic (Word8, Word8)
+q4 = do i <- sWord8 "i"
+        j <- sWord8 "j"
+
+        setLogic QF_UFBV
+
+        query $ do constrain $ i .== select [0 .. 255] 0 i
+                   _ <- checkSat
+                   iv <- getValue i
+                   constrain $ j .== select [0 .. 255] 0 j
+                   constrain $ j .== i+1
+                   _ <- checkSat
+                   jv <- getValue j
+                   return (iv, jv)

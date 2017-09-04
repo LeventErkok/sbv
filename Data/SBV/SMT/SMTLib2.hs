@@ -381,7 +381,7 @@ cvtCW = cwToSMTLib
 getTable :: TableMap -> Int -> String
 getTable m i
   | Just tn <- i `IM.lookup` m = tn
-  | True                       = error $ "SBV.SMTLib2: Cannot locate table " ++ show i
+  | True                       = "table" ++ show i  -- constant tables are always named this way
 
 cvtExp :: SolverCapabilities -> RoundingMode -> SkolemMap -> TableMap -> SBVExpr -> String
 cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
