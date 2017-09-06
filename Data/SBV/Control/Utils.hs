@@ -133,7 +133,7 @@ syncUpSolver is = do
                        tbls  <- (map arrange . sortBy cmp . map swap . Map.toList) <$> readIORef (rNewTbls is)
                        as    <- readIORef (rNewAsgns is)
                        return $ toIncSMTLib cfg inps ks cnsts arrs tbls as cfg
-        mapM_ (send True) (mergeSExpr ls)
+        mapM_ (send True) $ mergeSExpr ls
 
 -- | Retrieve the query context
 getQueryState :: Query QueryState
