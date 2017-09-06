@@ -25,6 +25,7 @@ tests =
     , goldenCapturedIO "queryArrays2" $ t q2
     , goldenCapturedIO "queryArrays3" $ t q3
     , goldenCapturedIO "queryArrays4" $ t q4
+    , goldenCapturedIO "queryArrays5" $ t q5
     ]
     where t tc goldFile = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile} tc
                              appendFile goldFile ("\n FINAL:" ++ show r ++ "\nDONE!\n")
@@ -78,3 +79,25 @@ q4 = do i <- sWord8 "i"
                    _ <- checkSat
                    jv <- getValue j
                    return (iv, jv)
+
+q5 :: Symbolic (Maybe (Word8, Int8))
+q5 = do m  :: SArray Word8 Int8 <- newArray "a"
+
+        a <- sWord8 "a"
+        v <- sInt8  "v"
+
+        query $ do let m2    = writeArray (writeArray m a v) (a+1) (v+1)
+                       vRead = readArray  m2 (a+1)
+
+                   constrain $ v + 1 ./= vRead
+
+                   cs <- checkSat
+
+                   case cs of
+                     Unsat -> return Nothing
+                     Unk   -> error "solver returned Unknown!"
+                     Sat   -> do av <- getValue a
+                                 vv <- getValue v
+                                 return $ Just (av, vv)
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
