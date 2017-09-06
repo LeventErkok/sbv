@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 7.2, 2017-08-29
+* Latest Hackage released version: 7.3, 2017-09-06
 
-### Version 7.3, Not yet released
+### Version 7.3, 2017-09-06
 
   * Query mode: Add support for arrays in query mode. Thanks to Brad Hardy for
     providing the use-case and debugging help.
