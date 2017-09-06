@@ -6,7 +6,7 @@
 ### Version 7.3, Not yet released
 
   * Query mode: Add support for arrays in query mode. Thanks to Brad Hardy for
-    requesting support for arrays, which was left out before.
+    providing the use-case and debugging help.
 
   * Query mode: Add support for tables. (As used by 'select' calls.)
 
