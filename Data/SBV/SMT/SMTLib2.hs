@@ -250,11 +250,12 @@ cvtInc inps ks consts arrs tbls (SBVPgm asgnsSeq) cfg =
             ++ map declInp inps
             -- arrays
             ++ concat arrayConstants
-            ++ concatMap asrt arrayDelayeds
             -- tables
             ++ concatMap constTable allTables
             -- expressions
             ++ map  (declDef cfg skolemMap tableMap) (F.toList asgnsSeq)
+            -- delayed equalities
+            ++ concatMap asrt arrayDelayeds
   where -- NB. The below setting of skolemMap to empty is OK, since we do
         -- not support queries in the context of skolemized variables
         skolemMap = M.empty
