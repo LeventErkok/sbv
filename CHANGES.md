@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 7.3, 2017-09-06
 
+### Version 7.4, Not yet released
+
+  * New development version
+
 ### Version 7.3, 2017-09-06
 
   * Query mode: Add support for arrays in query mode. Thanks to Brad Hardy for
