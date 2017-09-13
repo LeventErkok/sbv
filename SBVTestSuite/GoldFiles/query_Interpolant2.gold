@@ -40,9 +40,9 @@
 [RECV] unsat
 [SEND] (get-interpolant |c1| |c2|)
 [RECV] (interpolants
-        (or (= s2 s3) (not (= s0 s1))))
+        (or (= s2 s3) (not (= s1 s0))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL OUTPUT:
-["(or (= s2 s3) (not (= s0 s1)))"]
+["(or (= s2 s3) (not (= s1 s0)))"]

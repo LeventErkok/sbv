@@ -143,40 +143,40 @@ Pareto front #24: Optimal model:
   max_y        = 27 :: Integer
   max_x_plus_y = 27 :: Integer
 Pareto front #25: Optimal model:
-  x            =  0 :: Integer
-  y            = 28 :: Integer
-  min_x        =  0 :: Integer
-  max_y        = 28 :: Integer
-  max_x_plus_y = 28 :: Integer
+  x            = 0 :: Integer
+  y            = 3 :: Integer
+  min_x        = 0 :: Integer
+  max_y        = 3 :: Integer
+  max_x_plus_y = 3 :: Integer
 Pareto front #26: Optimal model:
-  x            =  0 :: Integer
-  y            = 29 :: Integer
-  min_x        =  0 :: Integer
-  max_y        = 29 :: Integer
-  max_x_plus_y = 29 :: Integer
+  x            = 0 :: Integer
+  y            = 2 :: Integer
+  min_x        = 0 :: Integer
+  max_y        = 2 :: Integer
+  max_x_plus_y = 2 :: Integer
 Pareto front #27: Optimal model:
-  x            =  0 :: Integer
-  y            = 30 :: Integer
-  min_x        =  0 :: Integer
-  max_y        = 30 :: Integer
-  max_x_plus_y = 30 :: Integer
+  x            = 0 :: Integer
+  y            = 1 :: Integer
+  min_x        = 0 :: Integer
+  max_y        = 1 :: Integer
+  max_x_plus_y = 1 :: Integer
 Pareto front #28: Optimal model:
-  x            =  0 :: Integer
-  y            = 31 :: Integer
-  min_x        =  0 :: Integer
-  max_y        = 31 :: Integer
-  max_x_plus_y = 31 :: Integer
+  x            = 0 :: Integer
+  y            = 0 :: Integer
+  min_x        = 0 :: Integer
+  max_y        = 0 :: Integer
+  max_x_plus_y = 0 :: Integer
 Pareto front #29: Optimal model:
   x            =  0 :: Integer
-  y            = 32 :: Integer
+  y            = -1 :: Integer
   min_x        =  0 :: Integer
-  max_y        = 32 :: Integer
-  max_x_plus_y = 32 :: Integer
+  max_y        = -1 :: Integer
+  max_x_plus_y = -1 :: Integer
 Pareto front #30: Optimal model:
   x            =  0 :: Integer
-  y            = 33 :: Integer
+  y            = -2 :: Integer
   min_x        =  0 :: Integer
-  max_y        = 33 :: Integer
-  max_x_plus_y = 33 :: Integer
+  max_y        = -2 :: Integer
+  max_x_plus_y = -2 :: Integer
 *** Note: Pareto-front extraction was terminated before stream was ended as requested by the user.
 ***       There might be other (potentially infinitely more) results.

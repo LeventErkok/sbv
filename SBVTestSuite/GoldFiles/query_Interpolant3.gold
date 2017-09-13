@@ -40,9 +40,10 @@
 [RECV] unsat
 [SEND] (get-interpolant |c1| |c2|)
 [RECV] (interpolants
-        (= array_1 (store array_2 s1 0)))
+        (and (= (select array_1 s0) (select (store array_2 s1 0) s0))
+            (or (= 0 (select array_1 s0)) (not (= s0 s1)))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL OUTPUT:
-["(= array_1 (store array_2 s1 0))"]
+["(and (= (select array_1 s0) (select (store array_2 s1 0) s0)) (or (= 0 (select array_1 s0)) (not (= s0 s1))))"]

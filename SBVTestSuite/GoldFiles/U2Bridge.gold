@@ -3,13 +3,13 @@ Satisfiable. Model:
   s1  =  Edge :: U2Member
   s2  =  Bono :: U2Member
   s3  =  True :: Bool
-  s4  =  Edge :: U2Member
+  s4  =  Bono :: U2Member
   s5  =  Bono :: U2Member
   s6  = False :: Bool
   s7  = Larry :: U2Member
   s8  =  Adam :: U2Member
   s9  =  True :: Bool
-  s10 =  Bono :: U2Member
+  s10 =  Edge :: U2Member
   s11 =  Bono :: U2Member
   s12 = False :: Bool
   s13 =  Edge :: U2Member

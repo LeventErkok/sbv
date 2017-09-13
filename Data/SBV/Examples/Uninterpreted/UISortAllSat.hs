@@ -56,12 +56,12 @@ classify = uninterpret "classify"
 --   l1 = L!val!1 :: L
 --   l2 = L!val!2 :: L
 -- Solution #2:
---   l  = L!val!2 :: L
+--   l  = L!val!1 :: L
 --   l0 = L!val!0 :: L
 --   l1 = L!val!1 :: L
 --   l2 = L!val!2 :: L
 -- Solution #3:
---   l  = L!val!1 :: L
+--   l  = L!val!2 :: L
 --   l0 = L!val!0 :: L
 --   l1 = L!val!1 :: L
 --   l2 = L!val!2 :: L
