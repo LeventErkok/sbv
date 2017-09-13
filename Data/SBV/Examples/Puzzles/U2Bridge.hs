@@ -259,15 +259,15 @@ solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ 
 -- Solution #1:
 --  0 --> Edge, Bono
 --  2 <-- Bono
---  4 --> Larry, Adam
--- 14 <-- Edge
+--  3 --> Larry, Adam
+-- 13 <-- Edge
 -- 15 --> Edge, Bono
 -- Total time: 17
 -- Solution #2:
 --  0 --> Edge, Bono
 --  2 <-- Edge
---  3 --> Larry, Adam
--- 13 <-- Bono
+--  4 --> Larry, Adam
+-- 14 <-- Bono
 -- 15 --> Edge, Bono
 -- Total time: 17
 -- Found: 2 solutions with 5 moves.
