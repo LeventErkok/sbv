@@ -181,7 +181,9 @@ freshVar :: forall a. SymWord a => String -> Query (SBV a)
 freshVar nm = inNewContext $ fmap SBV . svMkSymVar (Just EX) k (Just nm)
   where k = kindOf (undefined :: a)
 
--- | Internal diagnostic messages.
+-- | If 'verbose' is 'True', print the message, useful for debugging messages
+-- in custom queries. Note that 'redirectVerbose' will be respected: If a
+-- file redirection is given, the output will go to the file.
 queryDebug :: [String] -> Query ()
 queryDebug msgs = do QueryState{queryConfig} <- getQueryState
                      io $ debug queryConfig msgs

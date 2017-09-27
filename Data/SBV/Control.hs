@@ -63,6 +63,7 @@ module Data.SBV.Control (
      , ignoreExitCode, timeout
 
      -- * Miscellaneous
+     , queryDebug
      , echo
      , io
 
@@ -80,7 +81,7 @@ import Data.SBV.Core.Symbolic ( Query, IStage(..), SBVRunMode(..), Symbolic, Que
                               )
 
 import Data.SBV.Control.Query
-import Data.SBV.Control.Utils (runProofOn, SMTValue(..))
+import Data.SBV.Control.Utils (runProofOn, SMTValue(..), queryDebug)
 
 import Data.IORef (readIORef, writeIORef)
 
