@@ -5,7 +5,8 @@
 
 ### Version 7.4, Not yet released
 
-  * New development version
+  * Export queryDebug from the Control module, allowing custom queries to print
+    debugging messages with the verbose flag is set.
 
 ### Version 7.3, 2017-09-06
 
