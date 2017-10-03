@@ -18,7 +18,7 @@ import Data.SBV.SMT.SMT
 
 -- | The description of the Z3 SMT solver.
 -- The default executable is @\"z3\"@, which must be in your path. You can use the @SBV_Z3@ environment variable to point to the executable on your system.
--- The default options are @\"-nw -in -smt2\"@, which is valid for Z3 4.1. You can use the @SBV_Z3_OPTIONS@ environment variable to override the options.
+-- The default options are @\"-nw -in -smt2\"@. You can use the @SBV_Z3_OPTIONS@ environment variable to override the options.
 z3 :: SMTSolver
 z3 = SMTSolver {
            name         = Z3
