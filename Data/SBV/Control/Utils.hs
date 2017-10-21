@@ -284,12 +284,14 @@ instance SMTValue Word64  where sexprToVal = fromIntegralToVal
 instance SMTValue Integer where sexprToVal = fromIntegralToVal
 
 instance SMTValue Float where
-   sexprToVal (EFloat f) = Just f
-   sexprToVal _          = Nothing
+   sexprToVal (EFloat f)    = Just f
+   sexprToVal (ENum (v, _)) = Just (fromIntegral v)
+   sexprToVal _             = Nothing
 
 instance SMTValue Double where
-   sexprToVal (EDouble f) = Just f
-   sexprToVal _           = Nothing
+   sexprToVal (EDouble f)   = Just f
+   sexprToVal (ENum (v, _)) = Just (fromIntegral v)
+   sexprToVal _             = Nothing
 
 instance SMTValue Bool where
    sexprToVal (ENum (1, _)) = Just True
@@ -297,8 +299,9 @@ instance SMTValue Bool where
    sexprToVal _             = Nothing
 
 instance SMTValue AlgReal where
-   sexprToVal (EReal a) = Just a
-   sexprToVal _         = Nothing
+   sexprToVal (EReal a)     = Just a
+   sexprToVal (ENum (v, _)) = Just (fromIntegral v)
+   sexprToVal _             = Nothing
 
 -- | Get the value of a term.
 getValue :: SMTValue a => SBV a -> Query a
