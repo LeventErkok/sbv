@@ -10,7 +10,7 @@
 
   * Relax value-parsing to allow for non-standard output from solvers. For
     instance, MathSAT prints reals as integers when they do not have a
-    fraction. We know support such cases, relaxing the standard slightly.
+    fraction. We now support such cases, relaxing the standard slightly.
 
 ### Version 7.3, 2017-09-06
 
