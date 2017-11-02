@@ -48,6 +48,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.SMT.SMT
 import Data.SBV.Utils.TDiff
+import Data.SBV.Utils.PrettyNum
 
 import qualified Data.SBV.Control       as Control
 import qualified Data.SBV.Control.Query as Control
@@ -262,9 +263,9 @@ class Provable a where
 
                    let optimizerDirectives = concatMap minmax objectives ++ priority style
                          where mkEq (x, y) = "(assert (= " ++ show x ++ " " ++ show y ++ "))"
-                               minmax (Minimize   _  xy@(_, v))     = [mkEq xy, "(minimize "    ++ show v ++ ")"]
-                               minmax (Maximize   _  xy@(_, v))     = [mkEq xy, "(maximize "    ++ show v ++ ")"]
-                               minmax (AssertSoft nm xy@(_, v) mbp) = [mkEq xy, "(assert-soft " ++ show v ++ penalize mbp ++ ")"]
+                               minmax (Minimize   _  xy@(_, v))     = [mkEq xy, "(minimize "    ++ signAdjust v (show v) ++ ")"]
+                               minmax (Maximize   _  xy@(_, v))     = [mkEq xy, "(maximize "    ++ signAdjust v (show v) ++ ")"]
+                               minmax (AssertSoft nm xy@(_, v) mbp) = [mkEq xy, "(assert-soft " ++ signAdjust v (show v) ++ penalize mbp ++ ")"]
                                  where penalize DefaultPenalty    = ""
                                        penalize (Penalty w mbGrp)
                                           | w <= 0         = error $ unlines [ "SBV.AssertSoft: Goal " ++ show nm ++ " is assigned a non-positive penalty: " ++ shw
@@ -278,6 +279,21 @@ class Provable a where
                                priority Lexicographic = [] -- default, no option needed
                                priority Independent   = ["(set-option :opt.priority box)"]
                                priority (Pareto _)    = ["(set-option :opt.priority pareto)"]
+
+                               -- if the goal is a signed-BV, then we need to add 2^{n-1} to the maximal value
+                               -- is properly placed in the correct range. See http://github.com/Z3Prover/z3/issues/1339 for
+                               -- details on why we have to do this:
+                               signAdjust :: SW -> String -> String
+                               signAdjust v o = case kindOf v of
+                                                  -- NB. The order we spit out the addition here (i.e., "bvadd v constant")
+                                                  -- is important as we parse it back in precisely that form when we
+                                                  -- get the objective. Don't change it!
+                                                  KBounded True sz -> "(bvadd " ++ o ++ " " ++ adjust sz ++ ")"
+                                                  _                -> o
+                                  where adjust :: Int -> String
+                                        adjust sz = cwToSMTLib RoundNearestTiesToEven -- rounding mode doesn't matter here, just pick one
+                                                              (mkConstCW (KBounded False sz)
+                                                                         ((2::Integer)^(fromIntegral sz - (1::Integer))))
 
                    mapM_ (Control.send True) optimizerDirectives
 

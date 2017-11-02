@@ -109,12 +109,13 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         parseApp (tok:toks) sofar = do t <- pTok tok
                                        parseApp toks (t : sofar)
 
-        pTok "false"              = return $ ENum (0, Nothing)
-        pTok "true"               = return $ ENum (1, Nothing)
-        pTok ('0':'b':r)          = mkNum (Just (length r))     $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
-        pTok ('b':'v':r)          = mkNum Nothing               $ readDec (takeWhile (/= '[') r)
-        pTok ('#':'b':r)          = mkNum (Just (length r))     $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
-        pTok ('#':'x':r)          = mkNum (Just (4 * length r)) $ readHex r
+        pTok "false" = return $ ENum (0, Nothing)
+        pTok "true"  = return $ ENum (1, Nothing)
+
+        pTok ('0':'b':r)                                 = mkNum (Just (length r))     $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
+        pTok ('b':'v':r) | not (null r) && all isDigit r = mkNum Nothing               $ readDec (takeWhile (/= '[') r)
+        pTok ('#':'b':r)                                 = mkNum (Just (length r))     $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
+        pTok ('#':'x':r)                                 = mkNum (Just (4 * length r)) $ readHex r
         pTok n
           | not (null n) && isDigit (head n)
           = if '.' `elem` n then getReal n

@@ -317,13 +317,16 @@ getObjectiveValues = do let cmd = "(get-objectives)"
         getObjValue :: (forall a. Maybe [String] -> Query a) -> [NamedSymVar] -> SExpr -> Query (Maybe (String, GeneralizedCW))
         getObjValue bailOut inputs expr =
                 case expr of
-                  EApp [_]          -> return Nothing  -- Happens when a soft-assertion has no associated group.
-                  EApp [ECon nm, v] -> case listToMaybe [p | p@(sw, _) <- inputs, show sw == nm] of
-                                         Nothing               -> return Nothing -- Happens when the soft assertion has a group-id that's not one of the input names
-                                         Just (sw, actualName) -> grab sw v >>= \val -> return $ Just (actualName, val)
-                  _                 -> dontUnderstand (show expr)
+                  EApp [_]                                       -> return Nothing            -- Happens when a soft-assertion has no associated group.
+                  EApp [ECon nm, v]                              -> locate nm v               -- Regular case
+                  EApp [EApp [ECon "bvadd", ECon nm, ENum _], v] -> locate nm v               -- Happens when we "adjust" a signed-bounded objective
+                  _                                              -> dontUnderstand (show expr)
 
-          where dontUnderstand s = bailOut $ Just [ "Unable to understand solver output."
+          where locate nm v = case listToMaybe [p | p@(sw, _) <- inputs, show sw == nm] of
+                                Nothing               -> return Nothing -- Happens when the soft assertion has a group-id that's not one of the input names
+                                Just (sw, actualName) -> grab sw v >>= \val -> return $ Just (actualName, val)
+
+                dontUnderstand s = bailOut $ Just [ "Unable to understand solver output."
                                                   , "While trying to process: " ++ s
                                                   ]
 
