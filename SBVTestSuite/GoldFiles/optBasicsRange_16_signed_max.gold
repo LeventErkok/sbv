@@ -1,0 +1,3 @@
+Optimal model:
+  x = 32767 :: Int16
+  m = 32767 :: Int16

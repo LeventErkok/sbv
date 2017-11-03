@@ -16,10 +16,29 @@ import Utils.SBVTestFramework
 -- Test suite
 tests :: TestTree
 tests =
-  testGroup "Optimization.Basics"
-    [ goldenVsStringShow "optBasics1" (optimize Lexicographic optBasics1)
-    , goldenVsStringShow "optBasics2" (optimize Lexicographic optBasics2)
-    ]
+  testGroup "Optimization.Basics" $
+       [ goldenVsStringShow "optBasics1" (optimize Lexicographic optBasics1)
+       , goldenVsStringShow "optBasics2" (optimize Lexicographic optBasics2)
+       ]
+    ++ [ goldenVsStringShow ("optBasicsRange_" ++ n) (optimize Lexicographic f)
+       | (n, f) <- [ ("08_unsigned_max", sWord8  "x" >>= maximize "m")
+                   , ("08_unsigned_min", sWord8  "x" >>= minimize "m")
+                   , ("16_unsigned_max", sWord16 "x" >>= maximize "m")
+                   , ("16_unsigned_min", sWord16 "x" >>= minimize "m")
+                   , ("32_unsigned_max", sWord32 "x" >>= maximize "m")
+                   , ("32_unsigned_min", sWord32 "x" >>= minimize "m")
+                   , ("64_unsigned_max", sWord64 "x" >>= maximize "m")
+                   , ("64_unsigned_min", sWord64 "x" >>= minimize "m")
+                   , ("08_signed_max",   sInt8   "x" >>= maximize "m")
+                   , ("08_signed_min",   sInt8   "x" >>= minimize "m")
+                   , ("16_signed_max",   sInt16  "x" >>= maximize "m")
+                   , ("16_signed_min",   sInt16  "x" >>= minimize "m")
+                   , ("32_signed_max",   sInt32  "x" >>= maximize "m")
+                   , ("32_signed_min",   sInt32  "x" >>= minimize "m")
+                   , ("64_signed_max",   sInt64  "x" >>= maximize "m")
+                   , ("64_signed_min",   sInt64  "x" >>= minimize "m")
+                   ]
+       ]
 
 optBasics1 :: Goal
 optBasics1 = do x <- sInteger "x"

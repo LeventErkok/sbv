@@ -1,0 +1,3 @@
+Optimal model:
+  x = 255 :: Word8
+  m = 255 :: Word8
