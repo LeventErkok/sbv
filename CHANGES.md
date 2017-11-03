@@ -12,6 +12,12 @@
     instance, MathSAT prints reals as integers when they do not have a
     fraction. We now support such cases, relaxing the standard slightly.
 
+  * Fix optimization routines when applied to signed-bitvector goals. Thanks
+    to Anders Kaseorg for reporting. Since SMT-Lib does not distinguish between
+    signed and unsigned bit-vectors, we have to be careful when expressing goals
+    that are over signed values. See https://github.com/LeventErkok/sbv/issues/333
+    for details.
+
 ### Version 7.3, 2017-09-06
 
   * Query mode: Add support for arrays in query mode. Thanks to Brad Hardy for
