@@ -9,8 +9,9 @@
     debugging messages with the verbose flag is set.
 
   * Relax value-parsing to allow for non-standard output from solvers. For
-    instance, MathSAT prints reals as integers when they do not have a
-    fraction. We now support such cases, relaxing the standard slightly.
+    instance, MathSAT/Yices prints reals as integers when they do not have a
+    fraction. We now support such cases, relaxing the standard slightly. Thanks
+    to Geoffrey Ramseyer for reporting.
 
   * Fix optimization routines when applied to signed-bitvector goals. Thanks
     to Anders Kaseorg for reporting. Since SMT-Lib does not distinguish between
