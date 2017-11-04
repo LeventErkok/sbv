@@ -19,7 +19,7 @@ tests =
     [ testCase ("powerSet " ++ show i) (assert (pSet i)) | i <- [0 .. 7] ]
 
 pSet :: Int -> IO Bool
-pSet n = do cnt <- numberOfModels $ do _ <- mapM (\i -> sBool ("e" ++ show i)) [1..n]
+pSet n = do cnt <- numberOfModels $ do mapM_ (\i -> sBool ("e" ++ show i)) [1..n]
                                        -- Look ma! No constraints!
                                        return (true :: SBool)
             return (cnt == 2^n)
