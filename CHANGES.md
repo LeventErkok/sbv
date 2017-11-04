@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 7.3, 2017-09-06
+* Latest Hackage released version: 7.4, 2017-11-03
 
-### Version 7.4, Not yet released
+### Version 7.4, 2017-11-03
 
   * Export queryDebug from the Control module, allowing custom queries to print
     debugging messages with the verbose flag is set.
