@@ -16,6 +16,7 @@
 ***                Legal parameters are:
 ***                  auto_config (bool) (default: true)
 ***                  debug_ref_count (bool) (default: false)
+***                  dot_proof_file (string) (default: proof.dot)
 ***                  dump_models (bool) (default: false)
 ***                  memory_high_watermark (unsigned int) (default: 0)
 ***                  memory_max_alloc_count (unsigned int) (default: 0)
