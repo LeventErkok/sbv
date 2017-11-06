@@ -3,6 +3,8 @@
 
 * Latest Hackage released version: 7.4, 2017-11-03
 
+### Version 7.4.5, Current development version on github
+
 ### Version 7.4, 2017-11-03
 
   * Export queryDebug from the Control module, allowing custom queries to print
