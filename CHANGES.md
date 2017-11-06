@@ -35,7 +35,7 @@
     of unbounded integers, which is not supported by SMTLib. Thanks to Robert for
     reporting the issue and identifying the root cause.
 
-  * Rework how quantifiers are handled: We now generate separte asserts for
+  * Rework how quantifiers are handled: We now generate separate asserts for
     prefix-existentials. This allows for better (smaller) quantified code, while
     preserving semantics.
 
@@ -135,7 +135,7 @@
 
   * Changed the way `satWithAny` and `proveWithAny` works. Previously, these
     two functions ran multiple solvers, and took the result of the first
-    one to finish, killing all the others. In addition, they *waitied* for
+    one to finish, killing all the others. In addition, they *waited* for
     the still-running solvers to finish cleaning-up, as sending a 'ThreadKilled'
     is usually not instantaneous. Furthermore, a solver might simply take
     its time! We now send the interrupt but do not wait for the process to
@@ -288,7 +288,7 @@
          minimize "name-of-goal" $ x + 2*y
 
     Minimizes the arithmetic goal x+2*y, where x and y can be bit-vectors, reals,
-    or integers. Such goals will be lexicographicly optimized, i.e., in the order
+    or integers. Such goals will be lexicographically optimized, i.e., in the order
     given. If there are multiple goals, then user can also ask for independent
     optimization results, or pareto-fronts.
 
@@ -454,7 +454,7 @@
   * Fix some typos
   * Add 'svEnumFromThenTo' to the Dynamic interface, allowing dynamic construction
     of [x, y .. z] and [x .. y] when the involved values are concrete.
-  * Add 'svExp' to the Dynamic interface, implementing exponentation
+  * Add 'svExp' to the Dynamic interface, implementing exponentiation
 
 ### Version 5.7, 2015-12-21
 
@@ -495,7 +495,7 @@
     it simply returns its final argument. Use in coordination with 'safe' and 'safeWith', see below.
 
   * Implement 'safe' and 'safeWith', which statically determine all calls to 'sAssert'
-    being safe to execute. Any vilations will be flagged. 
+    being safe to execute. Any violations will be flagged. 
 
   * SBV->C: Translate 'sAssert' calls to dynamic checks in the generated C code. If this is
     not desired, use the 'cgIgnoreSAssert' function to turn it off.
@@ -725,7 +725,7 @@
     changes. The introduction of the Dynamic SBV variant (i.e., one that does
     not mandate a phantom type as in "SBV Word8" etc. allows library writers
     more flexibility as they deal with arbitrary bit-vector sizes. The main
-    customor of these changes are the Cryptol language and the associated
+    customer of these changes are the Cryptol language and the associated
     toolset, but other developers building on top of SBV can find it useful
     as well. NB: The "strongly-typed" aspect of SBV is still the main way
     end-users should interact with SBV, and nothing changed in that respect!
@@ -767,7 +767,7 @@
        * isPositiveZeroFP
        * isPointFP (corresponds to a real number, i.e., neither NaN nor infinity)
 
-  * Reimplement sbvTestBit, by Brian Huffman. This version is much faster at large
+  * Re-implement sbvTestBit, by Brian Huffman. This version is much faster at large
     word sizes, as it avoids the costly mask generation.
 
   * Code changes to suppress warnings with GHC7.10. General clean-up.
@@ -902,7 +902,7 @@ uninterpreted.
     lazy at the Word instance, but not at lists/tuples etc. Thanks to Brian Huffman
     for reporting this bug.
 
-  * Add a few constant-folding optimizations for 'sDiv'and 'sRem'
+  * Add a few constant-folding optimizations for 'sDiv' and 'sRem'
 
   * Boolector: Modify output parser to conform to the new Boolector output format. This
     means that you need at least v2.0.0 of Boolector installed if you want to use that
@@ -1133,7 +1133,7 @@ uninterpreted.
 
 ### Version 2.3, 2012-07-20
 
-  * Maintanence release, no new features.
+  * Maintenance release, no new features.
   * Tweak cabal dependencies to avoid using packages that are newer
     than those that come with ghc-7.4.2. Apparently this is a no-no
     that breaks many things, see the discussion in this thread:
@@ -1143,7 +1143,7 @@ uninterpreted.
 
 ### Version 2.2, 2012-07-17
 
-  * Maintanence release, no new features.
+  * Maintenance release, no new features.
   * Update cabal dependencies, in particular fix the
     regression with respect to latest version of the
     containers package.
@@ -1241,10 +1241,10 @@ uninterpreted.
   * Add a hook so users can add custom script segments for SMT solvers. The new
     "solverTweaks" field in the SMTConfig data-type can be used for this purpose.
     The need for this came about due to the need to workaround a Z3 v3.2 issue
-    detalied below:
+    detailed below:
       http://stackoverflow.com/questions/9426420/soundness-issue-with-integer-bv-mixed-benchmarks
     As a consequence, mixed Integer/BV problems can cause soundness issues in Z3
-    and does in SBV. Unfortunately, it is too severe for SBV to add the woraround
+    and does in SBV. Unfortunately, it is too severe for SBV to add the workaround
     option, as it slows down the solver as a side effect as well. Thus, we are
     making this optionally available if/when needed. (Note that the work-around
     should not be necessary with Z3 v3.3; which is not released yet.)
@@ -1321,7 +1321,7 @@ uninterpreted.
      is useful for quickCheck and genTest functions for filtering acceptable
      test values. (Calls to pConstrain will be rejected for sat/prove calls.)
    * Add "isVacuous" which can be used to check that the constraints added
-     via constrain are satisfable. This is useful to prevent vacuous passes,
+     via constrain are satisfiable. This is useful to prevent vacuous passes,
      i.e., when a proof is not just passing because the constraints imposed
      are inconsistent. (Also added accompanying isVacuousWith.)
    * Add "free" and "free_", analogous to "forall/forall_" and "exists/exists_"
@@ -1515,7 +1515,7 @@ Testing:
 
 ### Version 0.9.14, 2011-03-19
     
-  * Reimplement sharing using Stable names, inspired
+  * Re-implement sharing using Stable names, inspired
     by the Data.Reify techniques. This avoids tricks
     with unsafe memory stashing, and hence is safe.
     Thus, issues with respect to CAFs are now resolved.
@@ -1545,7 +1545,7 @@ New features:
 Bug fixes:
 
   * Output naming bug, reported by Josef Svenningsson
-  * Specification bug in Legatos multipler example
+  * Specification bug in Legatos multiplier example
 
 ### Version 0.9.11, 2011-02-16
   
