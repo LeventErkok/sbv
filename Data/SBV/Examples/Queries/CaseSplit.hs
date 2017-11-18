@@ -6,7 +6,7 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- A couple of demonstrations for the caseSplit tactic.
+-- A couple of demonstrations for the 'caseSplit' function.
 -----------------------------------------------------------------------------
 
 module Data.SBV.Examples.Queries.CaseSplit where

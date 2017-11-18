@@ -46,7 +46,7 @@ module Data.SBV.Control (
      -- * Entering and exiting assertion stack
      , getAssertionStackDepth, push, pop, inNewAssertionStack
 
-     -- * Tactics
+     -- * Higher level tactics
      , caseSplit
 
      -- * Resetting the solver state

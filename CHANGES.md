@@ -5,6 +5,9 @@
 
 ### Version 7.4.5, Current development version on github
 
+  * Remove obsolote references to tactics in a few haddock comments. Thanks
+    to Matthew Pickering for reporting.
+
 ### Version 7.4, 2017-11-03
 
   * Export queryDebug from the Control module, allowing custom queries to print
@@ -314,7 +317,8 @@
     mechanism. If the old code is needed, please contact for help: They can be resurrected
     in your own code if absolutely necessary.
 
-  * SBV now implements tactics, which allow the user to navigate the proof process.
+  * (NB. This feature is deprecated in 7.0, see above for its replacement.)
+    SBV now implements tactics, which allow the user to navigate the proof process.
     This is an advanced feature that most users will have no need of, but can become
     handy when dealing with complicated problems. Users can, for instance, implement
     case-splitting in a proof to guide the underlying solver through. Here is the list

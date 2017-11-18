@@ -738,9 +738,9 @@ Constraints can be given names:
 
 Such constraints are useful when used in conjunction with 'getUnsatCore' function
 where the backend solver can be queried to obtain an unsat core in case the constraints are unsatisfiable.
-This feature is enabled by the following tactic:
+This feature is enabled by the following option:
 
-   @ tactic $ SetOptions [ProduceUnsatCores True] @
+   @ setOption $ ProduceUnsatCores True @
 
 See "Data.SBV.Examples.Misc.UnsatCore" for an example use case.
 
@@ -784,12 +784,7 @@ And the proof is not vacuous:
 
 As we discussed SBV does not check that a given constraints is not vacuous. That is, that it can never be satisfied. This is usually
 the right behavior, since checking vacuity can be costly. The functions 'isVacuous' and 'isVacuousWith' should be used
-to explicitly check for constraint vacuity if desired. Alternatively, the tactic:
-
-  @ 'tactic' $  'CheckConstrVacuity' True @
-
-can be given which will force SBV to run an explicit check that constraints are not vacuous. (And complain if they are!)
-Note that this adds an extra call to the solver for each constraint, and thus can be rather costly.
+to explicitly check for constraint vacuity if desired.
 -}
 
 {- $uninterpreted

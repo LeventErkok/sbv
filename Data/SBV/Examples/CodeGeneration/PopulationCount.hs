@@ -64,7 +64,7 @@ respect to the slower reference version.
 -}
 
 -- | States the correctness of faster population-count algorithm, with respect
--- to the reference slow version. Turns out Z3's default tactic is rather slow
+-- to the reference slow version. Turns out Z3's default solver is rather slow
 -- for this one, but there's a magic incantation to make it go fast.
 -- See <https://github.com/Z3Prover/z3/issues/1150> for details.
 --

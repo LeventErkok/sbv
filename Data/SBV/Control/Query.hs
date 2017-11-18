@@ -471,7 +471,8 @@ pop i
 -- the conditions lead to a satisfiable result, returns @Just@ that result. If none of them
 -- do, returns @Nothing@. Note that we automatically generate a coverage case and search
 -- for it automatically as well. In that latter case, the string returned will be "Coverage".
--- The first argument controls printing progress messages 
+-- The first argument controls printing progress messages  See "Data.SBV.Examples.Queries.CaseSplit"
+-- for an example use case.
 caseSplit :: Bool -> [(String, SBool)] -> Query (Maybe (String, SMTResult))
 caseSplit printCases cases = do cfg <- getConfig
                                 go cfg (cases ++ [("Coverage", bnot (bOr (map snd cases)))])
