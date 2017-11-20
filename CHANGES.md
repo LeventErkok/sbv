@@ -8,6 +8,12 @@
   * Remove obsolote references to tactics in a few haddock comments. Thanks
     to Matthew Pickering for reporting.
 
+  * Added logic 'Logic_NONE', to be used in cases where SBV should not
+    try to set the logic. This is useful when there is no viable value to
+    set, and the back-end solver doesn't understand the SMT-Lib convention
+    of using "ALL" as the logic name. (One example of this is the Yices
+    solver.)
+
 ### Version 7.4, 2017-11-03
 
   * Export queryDebug from the Control module, allowing custom queries to print

@@ -146,7 +146,9 @@ setSMTOption = cvt
 
         opt   xs = "(set-option " ++ unwords xs ++ ")"
         info  xs = "(set-info "   ++ unwords xs ++ ")"
-        logic l  = "(set-logic "  ++ show l     ++ ")"
+
+        logic Logic_NONE = "; NB. not setting the logic per user request of Logic_NONE"
+        logic l          = "(set-logic " ++ show l ++ ")"
 
 -- | SMT-Lib logics. If left unspecified SBV will pick the logic based on what it determines is needed. However, the
 -- user can override this choice using a call to 'setLogic' This is especially handy if one is experimenting with custom
@@ -178,8 +180,9 @@ data Logic
   | UFNIA              -- ^ Non-linear integer arithmetic with uninterpreted sort and function symbols.
   | QF_FPBV            -- ^ Quantifier-free formulas over the theory of floating point numbers, arrays, and bit-vectors.
   | QF_FP              -- ^ Quantifier-free formulas over the theory of floating point numbers.
-  | QF_FD              -- ^ Quantifier-free finite domains
-  | Logic_ALL          -- ^ The catch-all value
+  | QF_FD              -- ^ Quantifier-free finite domains.
+  | Logic_ALL          -- ^ The catch-all value.
+  | Logic_NONE         -- ^ Use this value when you want SBV to simply not set the logic.
   | CustomLogic String -- ^ In case you need a really custom string!
   deriving (Generic, NFData)
 

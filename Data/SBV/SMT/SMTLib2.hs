@@ -52,7 +52,9 @@ cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs ui
                                                 , "*** Only one setOption call to 'SetLogic' is allowed, found: " ++ show (length ls)
                                                 , "***  " ++ unwords (map show ls)
                                                 ]
-           = ["(set-logic " ++ show l ++ ") ; NB. User specified."]
+           = case l of
+               Logic_NONE -> ["; NB. Not setting the logic per user request of Logic_NONE"]
+               _          -> ["(set-logic " ++ show l ++ ") ; NB. User specified."]
 
            -- Otherwise, we try to determine the most suitable logic.
            -- NB. This isn't really fool proof!
