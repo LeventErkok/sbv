@@ -155,7 +155,7 @@ module Data.SBV (
   , sTestBit, sExtractBits, sPopCount, sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, sFromIntegral, setBitTo, oneIf
   , lsb, msb, label
 
-  -- *** Addition and Multiplication with high-bits
+  -- *** Addition and Multiplication with carry-out
   , fullAdder, fullMultiplier
   -- *** Exponentiation
   , (.^)
