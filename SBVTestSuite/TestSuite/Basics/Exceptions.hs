@@ -39,8 +39,7 @@ yicesExc rf = runSMTWith yices{verbose=True, redirectVerbose=Just rf} exc
 testsRemote :: TestTree
 testsRemote =
   testGroup "Basics.exceptions.remote"
-    [ 
-    , goldenCapturedIO "exceptionRemote1" z3Exc2
+    [ goldenCapturedIO "exceptionRemote1" z3Exc2
     ]
 
 -- Create the case where we ask for integer-logic, but use reals
