@@ -170,6 +170,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.ArithNoSolver
                   , TestSuite.Basics.ArithSolver
                   , TestSuite.Basics.BasicTests
+                  , TestSuite.Basics.Exceptions
                   , TestSuite.Basics.GenBenchmark
                   , TestSuite.Basics.Higher
                   , TestSuite.Basics.Index
