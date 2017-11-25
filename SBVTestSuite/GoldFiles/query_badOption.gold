@@ -7,7 +7,6 @@
 [FAIL] (set-option :there-is-no-such-option bad argument)
 
 
-
 *** Data.SBV: Unexpected non-success response from Z3:
 ***
 ***    Sent      : (set-option :there-is-no-such-option bad argument)
@@ -34,13 +33,11 @@
 ***                  verbose (unsigned int) (default: 0)
 ***                  warning (bool) (default: true)
 ***                  well_sorted_check (bool) (default: false)")
-***    Exit code : ExitFailure (-15)
 ***
+***    Exit code : ExitFailure (-15)
 ***    Executable: /usr/local/bin/z3
 ***    Options   : -nw -in -smt2
 ***
-*** Backend solver reports it does not support this option.
-*** Check the spelling, and if correct please report this as a
-*** bug/feature request with the solver!
-
-CallStack (from HasCallStack):
+***    Reason    : Backend solver reports it does not support this option.
+***                Check the spelling, and if correct please report this as a
+***                bug/feature request with the solver!
