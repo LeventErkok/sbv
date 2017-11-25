@@ -13,6 +13,7 @@ import qualified TestSuite.Basics.AllSat
 import qualified TestSuite.Basics.ArithNoSolver
 import qualified TestSuite.Basics.ArithSolver
 import qualified TestSuite.Basics.BasicTests
+import qualified TestSuite.Basics.Exceptions
 import qualified TestSuite.Basics.GenBenchmark
 import qualified TestSuite.Basics.Higher
 import qualified TestSuite.Basics.Index
@@ -113,7 +114,8 @@ heavyTests = testGroup "SBVHeavyTests" [TestSuite.Basics.ArithSolver.tests]
 -- | The following tests can only be run locally
 localOnlyTests :: TestTree
 localOnlyTests = testGroup "SBVLocalOnlyTests" [
-                     TestSuite.Queries.BasicQuery.tests
+                     TestSuite.Basics.Exceptions.testsLocal
+                   , TestSuite.Queries.BasicQuery.tests
                    , TestSuite.Queries.BadOption.tests
                    , TestSuite.Queries.Int_ABC.tests
                    , TestSuite.Queries.Int_Boolector.tests
@@ -130,6 +132,7 @@ otherTests = testGroup "SBVOtherTests" [
                , TestSuite.Basics.AllSat.tests
                , TestSuite.Basics.ArithNoSolver.tests
                , TestSuite.Basics.BasicTests.tests
+               , TestSuite.Basics.Exceptions.testsRemote
                , TestSuite.Basics.GenBenchmark.tests
                , TestSuite.Basics.Higher.tests
                , TestSuite.Basics.Index.tests
