@@ -62,7 +62,7 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (SMTEngine, State(..))
 
-import Data.SBV.SMT.Utils     (showTimeoutValue, alignPlain, alignDiagnostic, debug, mergeSExpr)
+import Data.SBV.SMT.Utils     (showTimeoutValue, alignPlain, alignDiagnostic, debug, mergeSExpr, SMTException(..))
 
 import Data.SBV.Utils.PrettyNum
 import Data.SBV.Utils.Lib       (joinArgs, splitArgs)
@@ -489,7 +489,8 @@ pipeProcess cfg ctx execName opts pgm continuation = do
 
       Just execPath -> runSolver cfg ctx execPath opts pgm continuation
                        `C.catches`
-                        [ C.Handler (\(e :: C.ErrorCall)     -> C.throw e)
+                        [ C.Handler (\(e :: SMTException)    -> C.throwIO e)
+                        , C.Handler (\(e :: C.ErrorCall)     -> C.throwIO e)
                         , C.Handler (\(e :: C.SomeException) -> error $ unlines [ "Failed to start the external solver:\n" ++ show e
                                                                                 , "Make sure you can start " ++ show execPath
                                                                                 , "from the command line without issues."
@@ -699,12 +700,12 @@ runSolver cfg ctx execPath opts pgm continuation
 
                                                             let isOption = "(set-option" `isPrefixOf` dropWhile isSpace l
 
-                                                                reason | isOption = [ "*** Backend solver reports it does not support this option."
-                                                                                    , "*** Check the spelling, and if correct please report this as a"
-                                                                                    , "*** bug/feature request with the solver!"
+                                                                reason | isOption = [ "Backend solver reports it does not support this option."
+                                                                                    , "Check the spelling, and if correct please report this as a"
+                                                                                    , "bug/feature request with the solver!"
                                                                                     ]
-                                                                       | True     = [ "*** Failed to establish solver context. Running in debug mode might provide"
-                                                                                    , "*** more information. Please report this as an issue!"
+                                                                       | True     = [ "Check solver response for further information. If your code is correct,"
+                                                                                    , "please report this as an issue either with SBV or the solver itself!"
                                                                                     ]
 
                                                             -- put a sync point here before we die so we consume everything
@@ -719,22 +720,19 @@ runSolver cfg ctx execPath opts pgm continuation
                                                             let out = intercalate "\n" . lines $ outOrig
                                                                 err = intercalate "\n" . lines $ errOrig
 
-                                                            error $ unlines $  [""
-                                                                               , "*** Data.SBV: Unexpected non-success response from " ++ nm ++ ":"
-                                                                               , "***"
-                                                                               , "***    Sent      : " `alignDiagnostic` l
-                                                                               , "***    Expected  : success"
-                                                                               , "***    Received  : " `alignDiagnostic` (r ++ "\n" ++ extras)
-                                                                               ]
-                                                                            ++ [ "***    Stdout    : " `alignDiagnostic` out | not $ null out]
-                                                                            ++ [ "***    Stderr    : " `alignDiagnostic` err | not $ null err]
-                                                                            ++ [ "***    Exit code : " ++ show ex
-                                                                               , "***"
-                                                                               , "***    Executable: " ++ execPath
-                                                                               , "***    Options   : " ++ joinArgs opts
-                                                                               , "***"
-                                                                               ]
-                                                                              ++ reason
+                                                                exc = SMTException { smtExceptionDescription = "Data.SBV: Unexpected non-success response from " ++ nm
+                                                                                   , smtExceptionSent        = l
+                                                                                   , smtExceptionExpected    = "success"
+                                                                                   , smtExceptionReceived    = r ++ "\n" ++ extras
+                                                                                   , smtExceptionStdOut      = out
+                                                                                   , smtExceptionStdErr      = Just err
+                                                                                   , smtExceptionExitCode    = Just ex
+                                                                                   , smtExceptionConfig      = cfg { solver = (solver cfg) {executable = execPath } }
+                                                                                   , smtExceptionReason      = Just reason
+                                                                                   , smtExceptionHint        = Nothing
+                                                                                   }
+
+                                                            C.throwIO exc
 
                              -- Mark in the log, mostly.
                              sendAndGetSuccess Nothing "; Automatically generated by SBV. Do not edit."

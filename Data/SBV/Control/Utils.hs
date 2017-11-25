@@ -57,7 +57,7 @@ import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, K
                               , QueryState(..), SVal(..), Quantifier(..), cache
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
-                              , Result(..), SMTProblem(..), trueSW, SymWord(..), SBVPgm(..)
+                              , Result(..), SMTProblem(..), trueSW, SymWord(..), SBVPgm(..), SMTSolver(..)
                               )
 import Data.SBV.Core.Symbolic (IncState(..), withNewIncState, State(..), svToSW, registerLabel, svMkSymVar)
 
@@ -65,12 +65,14 @@ import Data.SBV.Core.AlgReals   (mergeAlgReals)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
-import Data.SBV.SMT.Utils   (showTimeoutValue, annotateWithName, alignDiagnostic, alignPlain, debug, mergeSExpr)
+import Data.SBV.SMT.Utils   (showTimeoutValue, annotateWithName, alignPlain, debug, mergeSExpr, SMTException(..))
 
 import Data.SBV.Utils.SExpr
 import Data.SBV.Control.Types
 
 import qualified Data.Set as Set (toList)
+
+import qualified Control.Exception as C
 
 import GHC.Stack
 
@@ -598,15 +600,21 @@ unexpected ctx sent expected mbHint received mbReason = do
         -- empty the response channel first
         extras <- retrieveResponse "terminating upon unexpected response" (Just 5000000)
 
-        error $ unlines $ [ ""
-                          , "*** Data.SBV: Unexpected response from the solver."
-                          , "***    Context : " `alignDiagnostic` ctx
-                          , "***    Sent    : " `alignDiagnostic` sent
-                          , "***    Expected: " `alignDiagnostic` expected
-                          , "***    Received: " `alignDiagnostic` unlines (received : extras)
-                          ]
-                       ++ [ "***    Reason  : " `alignDiagnostic` unlines r | Just r <- [mbReason]]
-                       ++ [ "***    Hint    : " `alignDiagnostic` unlines r | Just r <- [mbHint]]
+        cfg <- getConfig
+
+        let exc = SMTException { smtExceptionDescription = "Data.SBV: Unexpected response from the solver, context: " ++ ctx
+                               , smtExceptionSent        = sent
+                               , smtExceptionExpected    = expected
+                               , smtExceptionReceived    = received
+                               , smtExceptionStdOut      = unlines extras
+                               , smtExceptionStdErr      = Nothing
+                               , smtExceptionExitCode    = Nothing
+                               , smtExceptionConfig      = cfg
+                               , smtExceptionReason      = mbReason
+                               , smtExceptionHint        = mbHint
+                               }
+
+        io $ C.throwIO exc
 
 -- | Convert a query result to an SMT Problem
 runProofOn :: SMTConfig -> Bool -> [String] -> Result -> SMTProblem

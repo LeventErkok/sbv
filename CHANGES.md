@@ -14,6 +14,17 @@
     of using "ALL" as the logic name. (One example of this is the Yices
     solver.)
 
+  * SBV now returns SMTException (instead of just calling error) in case
+    the backend solver responds with error message. The type SMTException
+    can be caught by the user programs, and it includes many fields as an
+    indication of what went wrong. (The command sent, what was expected,
+    what was seen, etc.) Note that if this exception is ever caught, the
+    backend solver is no longer alive: You should either just throw it,
+    or perform proper clean-up on your user code as required to set up
+    a new context. The provided show instance formats the exception nicely
+    for display purposes. See https://github.com/LeventErkok/sbv/issues/335
+    for details and thanks to Brian Huffman for reporting.
+
 ### Version 7.4, 2017-11-03
 
   * Export queryDebug from the Control module, allowing custom queries to print
