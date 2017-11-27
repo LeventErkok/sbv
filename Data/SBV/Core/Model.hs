@@ -27,7 +27,7 @@
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Data.SBV.Core.Model (
-    Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), assertSoft, SIntegral
+    Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), assertSoft, SIntegral, SFiniteBits
   , ite, iteLazy, sTestBit, sExtractBits, sPopCount, setBitTo, sFromIntegral
   , sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, (.^)
   , oneIf, blastBE, blastLE, fullAdder, fullMultiplier
@@ -532,6 +532,10 @@ instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c, OrdSymbolic d, OrdSymboli
 -- It is similar to the standard 'Integral' class, except ranging over symbolic instances.
 class (SymWord a, Num a, Bits a) => SIntegral a
 
+-- | Finite bit-length symbolic values. Essentially the same as 'SIntegral', but further leaves out 'Integer'. Akin
+-- to Haskell's 'FiniteBits' class.
+class (SymWord a, Num a, Bits a) => SFiniteBits a
+
 -- 'SIntegral' Instances, skips Real/Float/Bool
 instance SIntegral Word8
 instance SIntegral Word16
@@ -542,6 +546,16 @@ instance SIntegral Int16
 instance SIntegral Int32
 instance SIntegral Int64
 instance SIntegral Integer
+
+-- 'SIntegral' Instances, skips Real/Float/Bool/Integer
+instance SFiniteBits Word8
+instance SFiniteBits Word16
+instance SFiniteBits Word32
+instance SFiniteBits Word64
+instance SFiniteBits Int8
+instance SFiniteBits Int16
+instance SFiniteBits Int32
+instance SFiniteBits Int64
 
 -- | Returns 1 if the boolean is true, otherwise 0.
 oneIf :: (Num a, SymWord a) => SBool -> SBV a
@@ -672,7 +686,7 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
 -- | Symbolic exponentiation using bit blasting and repeated squaring.
 --
 -- N.B. The exponent must be unsigned. Signed exponents will be rejected.
-(.^) :: (Mergeable b, Num b, SIntegral e) => b -> SBV e -> b
+(.^) :: (Mergeable b, Num b, SFiniteBits e) => b -> SBV e -> b
 b .^ e | isSigned e = error "(.^): exponentiation only works with unsigned exponents"
        | True       = product $ zipWith (\use n -> ite use n 1)
                                         (blastLE e)
@@ -775,23 +789,21 @@ instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
 
 -- | Replacement for 'testBit'. Since 'testBit' requires a 'Bool' to be returned,
 -- we cannot implement it for symbolic words. Index 0 is the least-significant bit.
-sTestBit :: SBV a -> Int -> SBool
+sTestBit :: SFiniteBits a => SBV a -> Int -> SBool
 sTestBit (SBV x) i = SBV (svTestBit x i)
 
 -- | Variant of 'sTestBit', where we want to extract multiple bit positions.
-sExtractBits :: SBV a -> [Int] -> [SBool]
+sExtractBits :: SFiniteBits a => SBV a -> [Int] -> [SBool]
 sExtractBits x = map (sTestBit x)
 
 -- | Replacement for 'popCount'. Since 'popCount' returns an 'Int', we cannot implement
 -- it for symbolic words. Here, we return an 'SWord8', which can overflow when used on
--- quantities that have more than 255 bits. Currently, that's only the 'SInteger' type
--- that SBV supports, all other types are safe. Even with 'SInteger', this will only
--- overflow if there are at least 256-bits set in the number, and the smallest such
--- number is 2^256-1, which is a pretty darn big number to worry about for practical
--- purposes. In any case, we do not support 'sPopCount' for unbounded symbolic integers,
--- as the only possible implementation wouldn't symbolically terminate. So the only overflow
--- issue is with really-really large concrete 'SInteger' values.
-sPopCount :: (Num a, Bits a, SymWord a) => SBV a -> SWord8
+-- quantities that have more than 255 bits. For the regular interface, this suffices
+-- for all types we support. For the Dynamic interface, this will fail for bit-vectors
+-- larger than that many bits. The alternative would be to return SInteger here, but that
+-- seems a total overkill for most use cases. If such is required, users are encouraged
+-- to define their own variants, which is rather easy.
+sPopCount :: SFiniteBits a => SBV a -> SWord8
 sPopCount x
   | isReal x          = error "SBV.sPopCount: Called on a real value" -- can't really happen due to types, but being overcautious
   | isConcrete x      = go 0 x
@@ -804,7 +816,7 @@ sPopCount x
 -- | Generalization of 'setBit' based on a symbolic boolean. Note that 'setBit' and
 -- 'clearBit' are still available on Symbolic words, this operation comes handy when
 -- the condition to set/clear happens to be symbolic.
-setBitTo :: (Num a, Bits a, SymWord a) => SBV a -> Int -> SBool -> SBV a
+setBitTo :: SFiniteBits a => SBV a -> Int -> SBool -> SBV a
 setBitTo x i b = ite b (setBit x i) (clearBit x i)
 
 -- | Conversion between integral-symbolic values, akin to Haskell's fromIntegral
@@ -850,13 +862,14 @@ sShiftRight = liftViaSVal svShiftRight
 -- then it explicitly treats its msb as a sign-bit, and uses it as the bit that
 -- gets shifted in. Useful when using the underlying unsigned bit representation to implement
 -- custom signed operations. Note that there is no direct Haskell analogue of this function.
-sSignedShiftArithRight:: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
+sSignedShiftArithRight:: (SFiniteBits a, SIntegral b) => SBV a -> SBV b -> SBV a
 sSignedShiftArithRight x i
   | isSigned i = error "sSignedShiftArithRight: shift amount should be unsigned"
-  | isSigned x = sShiftRight x i
+  | isSigned x = ssa x i
   | True       = ite (msb x)
-                     (complement (sShiftRight (complement x) i))
-                     (sShiftRight x i)
+                     (complement (ssa (complement x) i))
+                     (ssa x i)
+  where ssa = liftViaSVal svShiftRight
 
 -- | Generalization of 'rotateL', when the shift-amount is symbolic. Since Haskell's
 -- 'rotateL' only takes an 'Int' as the shift amount, it cannot be used when we have
@@ -873,7 +886,7 @@ sRotateRight = liftViaSVal svRotateRight
 -- | Full adder. Returns the carry-out from the addition.
 --
 -- N.B. Only works for unsigned types. Signed arguments will be rejected.
-fullAdder :: SIntegral a => SBV a -> SBV a -> (SBool, SBV a)
+fullAdder :: SFiniteBits a => SBV a -> SBV a -> (SBool, SBV a)
 fullAdder a b
   | isSigned a = error "fullAdder: only works on unsigned numbers"
   | True       = (a .> s ||| b .> s, s)
@@ -887,7 +900,7 @@ fullAdder a b
 -- N.B. The higher-order bits are determined using a simple shift-add multiplier,
 -- thus involving bit-blasting. It'd be naive to expect SMT solvers to deal efficiently
 -- with properties involving this function, at least with the current state of the art.
-fullMultiplier :: SIntegral a => SBV a -> SBV a -> (SBV a, SBV a)
+fullMultiplier :: SFiniteBits a => SBV a -> SBV a -> (SBV a, SBV a)
 fullMultiplier a b
   | isSigned a = error "fullMultiplier: only works on unsigned numbers"
   | True       = (go (ghcBitSize a) 0 a, a*b)
@@ -900,25 +913,28 @@ fullMultiplier a b
            where mask = ite k (bit (ghcBitSize v - 1)) 0
 
 -- | Little-endian blasting of a word into its bits. Also see the 'FromBits' class.
-blastLE :: (Num a, Bits a, SymWord a) => SBV a -> [SBool]
+blastLE :: SFiniteBits a => SBV a -> [SBool]
 blastLE x
- | isReal x          = error "SBV.blastLE: Called on a real value"
- | not (isBounded x) = error "SBV.blastLE: Called on an infinite precision value"
+ | isReal x          = error "SBV.blastLE: Called on a real value"                -- can't happen due to types, but just being cautious
+ | not (isBounded x) = error "SBV.blastLE: Called on an infinite precision value" -- can't happen due to types, but just being cautious
  | True              = map (sTestBit x) [0 .. intSizeOf x - 1]
 
 -- | Big-endian blasting of a word into its bits. Also see the 'FromBits' class.
-blastBE :: (Num a, Bits a, SymWord a) => SBV a -> [SBool]
+blastBE :: SFiniteBits a => SBV a -> [SBool]
 blastBE = reverse . blastLE
 
--- | Least significant bit of a word, always stored at index 0.
-lsb :: SBV a -> SBool
-lsb x = sTestBit x 0
+-- | Least significant bit of a word, always stored at index 0. NB.
+lsb :: SFiniteBits a => SBV a -> SBool
+lsb x@(SBV v)
+ | isReal x          = error "SBV.msb: Called on a real value"                    -- can't happen due to types, but just being cautious
+ | not (isBounded x) = error "SBV.blastLE: Called on an infinite precision value" -- can't happen due to types, but just being cautious
+ | True              = SBV (svTestBit v 0)
 
 -- | Most significant bit of a word, always stored at the last position.
-msb :: (Num a, Bits a, SymWord a) => SBV a -> SBool
+msb :: SFiniteBits a => SBV a -> SBool
 msb x
- | isReal x          = error "SBV.msb: Called on a real value"
- | not (isBounded x) = error "SBV.msb: Called on an infinite precision value"
+ | isReal x          = error "SBV.msb: Called on a real value"                  -- can't happen due to types, but just being cautious
+ | not (isBounded x) = error "SBV.msb: Called on an infinite precision value"   -- can't happen due to types, but just being cautious
  | True              = sTestBit x (intSizeOf x - 1)
 
 -- Enum instance. These instances are suitable for use with concrete values,

@@ -25,6 +25,38 @@
     for display purposes. See https://github.com/LeventErkok/sbv/issues/335
     for details and thanks to Brian Huffman for reporting.
 
+  * Introduce SFiniteBits class, which only incorporates finite-words in it,
+    i.e., SWord/SInt for 8-16-32-64. In particular it leaves out SInteger,
+    SFloat, SDouble, and SReal. Important in recognizing bit-vectors of
+    finite size, essentially.
+
+  * Tightened certain signatures where SBV was too liberal, using the SFiniteBits
+    class. As a result, the following functions have slightly changed types, to reflect
+    the finite requirement:
+
+         lsb                    :: SFiniteBits a => SBV a -> SBool
+         msb                    :: SFiniteBits a => SBV a -> SBool
+         blastBE                :: SFiniteBits a => SBV a -> [SBool]
+         blastLE                :: SFiniteBits a => SBV a -> [SBool]
+         sExtractBits           :: SFiniteBits a => SBV a -> [Int] -> [SBool]
+         sPopCount              :: SFiniteBits a => SBV a -> SWord8
+         sSignedShiftArithRight :: (SFiniteBits a, SIntegral b) => SBV a -> SBV b -> SBV a
+         sTestBit               :: SFiniteBits a => SBV a -> Int -> SBool
+         setBitTo               :: SFiniteBits a => SBV a -> Int -> SBool -> SBV a
+         fullAdder              :: SFiniteBits a => SBV a -> SBV a -> (SBool, SBV a)
+         fullMultiplier         :: SFiniteBits a => SBV a -> SBV a -> (SBV a, SBV a)
+         (.^)                   :: (Mergeable b, Num b, SFiniteBits e) => b -> SBV e -> b
+
+    Similar changes were done to the following less used functions as well:
+  
+         polyMult   :: (SFiniteBits a, FromBits (SBV a)) => (SBV a, SBV a, [Int]) -> SBV a
+         polyDivMod :: (SFiniteBits a, FromBits (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
+         crc        :: (FromBits (SBV a), FromBits (SBV b), SFiniteBits a, SFiniteBits b) => Int -> SBV a -> SBV b -> SBV b
+         readSTree  :: (SFiniteBits i, SymWord e) => STree i e -> SBV i -> SBV e
+         writeSTree :: (SFiniteBits i, SymWord e) => STree i e -> SBV i -> SBV e -> STree i e
+
+    Thanks to Thomas DuBuisson for reporting.
+
 ### Version 7.4, 2017-11-03
 
   * Export queryDebug from the Control module, allowing custom queries to print

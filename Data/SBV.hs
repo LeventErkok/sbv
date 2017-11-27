@@ -169,6 +169,8 @@ module Data.SBV (
 
   -- ** Symbolic integral numbers
   , SIntegral
+  -- ** Symbolic finite bits
+  , SFiniteBits
   -- ** Division
   , SDivisible(..)
   -- ** The Boolean class
