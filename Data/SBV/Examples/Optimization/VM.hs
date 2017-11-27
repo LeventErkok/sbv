@@ -13,7 +13,7 @@ module Data.SBV.Examples.Optimization.VM where
 
 import Data.SBV
 
--- | The allocation problem. Inspired by: <http://rise4fun.com/z3opt/tutorialcontent/guide#h25>
+-- | The allocation problem. Inspired by: <http://rise4fun.com/Z3/tutorialcontent/optimization#h25>
 --
 --   - We have three virtual machines (VMs) which require 100, 50 and 15 GB hard disk respectively.
 --
