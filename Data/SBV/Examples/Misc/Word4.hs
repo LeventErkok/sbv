@@ -138,10 +138,6 @@ instance SDivisible SWord4 where
 -- | SIntegral instance, using default methods
 instance SIntegral Word4
 
--- | Conversion from bits
-instance FromBits SWord4 where
-  fromBitsLE = checkAndConvert 4
-
 -- | Joining/splitting to/from Word8
 instance Splittable Word8 Word4 where
   split x           = (Word4 (x `shiftR` 4), word4 x)

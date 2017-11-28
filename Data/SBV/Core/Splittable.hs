@@ -15,14 +15,14 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE BangPatterns           #-}
 
-module Data.SBV.Core.Splittable (Splittable(..), FromBits(..), checkAndConvert) where
+module Data.SBV.Core.Splittable (Splittable(..)) where
 
 import Data.Bits (Bits(..))
 import Data.Word (Word8, Word16, Word32, Word64)
 
 import Data.SBV.Core.Operations
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model
+import Data.SBV.Core.Model () -- instances only
 
 infixr 5 #
 -- | Splitting an @a@ into two @b@'s and joining back.
@@ -77,43 +77,3 @@ instance Splittable SWord16 SWord8 where
   split (SBV x) = (SBV (svExtract 15 8 x), SBV (svExtract 7 0 x))
   SBV a # SBV b = SBV (svJoin a b)
   extend b = 0 # b
-
--- | Unblasting a value from symbolic-bits. The bits can be given little-endian
--- or big-endian. For a signed number in little-endian, we assume the very last bit
--- is the sign digit. This is a bit awkward, but it is more consistent with the "reverse" view of
--- little-big-endian representations
---
--- Minimal complete definition: 'fromBitsLE'
-class FromBits a where
- fromBitsLE, fromBitsBE :: [SBool] -> a
- fromBitsBE = fromBitsLE . reverse
-
--- | Construct a symbolic word from its bits given in little-endian
-fromBinLE :: (Num a, Bits a, SymWord a) => [SBool] -> SBV a
-fromBinLE = go 0 0
-  where go !acc _  []     = acc
-        go !acc !i (x:xs) = go (ite x (setBit acc i) acc) (i+1) xs
-
--- | Perform a sanity check that we should receive precisely the same
--- number of bits as required by the resulting type. The input is little-endian
-checkAndConvert :: (Num a, Bits a, SymWord a) => Int -> [SBool] -> SBV a
-checkAndConvert sz xs
-  | sz /= l
-  = error $ "SBV.fromBits.SWord" ++ ssz ++ ": Expected " ++ ssz ++ " elements, got: " ++ show l
-  | True
-  = fromBinLE xs
-  where l   = length xs
-        ssz = show sz
-
-instance FromBits SBool where
- fromBitsLE [x] = x
- fromBitsLE xs  = error $ "SBV.fromBits.SBool: Expected 1 element, got: " ++ show (length xs)
-
-instance FromBits SWord8  where fromBitsLE = checkAndConvert  8
-instance FromBits SInt8   where fromBitsLE = checkAndConvert  8
-instance FromBits SWord16 where fromBitsLE = checkAndConvert 16
-instance FromBits SInt16  where fromBitsLE = checkAndConvert 16
-instance FromBits SWord32 where fromBitsLE = checkAndConvert 32
-instance FromBits SInt32  where fromBitsLE = checkAndConvert 32
-instance FromBits SWord64 where fromBitsLE = checkAndConvert 64
-instance FromBits SInt64  where fromBitsLE = checkAndConvert 64
