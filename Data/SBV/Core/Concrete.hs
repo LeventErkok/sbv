@@ -72,7 +72,6 @@ instance Ord CWVal where
   CWUserSort a `compare` CWUserSort b = a `compare` b
 
 -- | 'CW' represents a concrete word of a fixed size:
--- Endianness is mostly irrelevant (see the 'FromBits' class).
 -- For signed words, the most significant digit is considered to be the sign.
 data CW = CW { _cwKind  :: !Kind
              , cwVal    :: !CWVal
