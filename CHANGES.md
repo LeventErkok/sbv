@@ -25,35 +25,41 @@
     for display purposes. See https://github.com/LeventErkok/sbv/issues/335
     for details and thanks to Brian Huffman for reporting.
 
-  * Introduce SFiniteBits class, which only incorporates finite-words in it,
+  * Removed the 'FromBits' class. It's functionality is now merged with the
+    new 'SFiniteBits' class, see below.
+
+  * Introduce 'SFiniteBits' class, which only incorporates finite-words in it,
     i.e., SWord/SInt for 8-16-32-64. In particular it leaves out SInteger,
     SFloat, SDouble, and SReal. Important in recognizing bit-vectors of
-    finite size, essentially.
+    finite size, essentially. Here are the methods:
 
-  * Tightened certain signatures where SBV was too liberal, using the SFiniteBits
-    class. As a result, the following functions have slightly changed types, to reflect
-    the finite requirement:
+        class (SymWord a, Num a, Bits a) => SFiniteBits a where
+            sFiniteBitSize      :: SBV a -> Int                     -- ^ Bit size
+            lsb                 :: SBV a -> SBool                   -- ^ Least significant bit of a word, always stored at index 0.
+            msb                 :: SBV a -> SBool                   -- ^ Most significant bit of a word, always stored at the last position.
+            blastBE             :: SBV a -> [SBool]                 -- ^ Big-endian blasting of a word into its bits. Also see the 'FromBits' class.
+            blastLE             :: SBV a -> [SBool]                 -- ^ Little-endian blasting of a word into its bits. Also see the 'FromBits' class.
+            fromBitsBE          :: [SBool] -> SBV a                 -- ^ Reconstruct from given bits, given in little-endian
+            fromBitsLE          :: [SBool] -> SBV a                 -- ^ Reconstruct from given bits, given in little-endian
+            sTestBit            :: SBV a -> Int -> SBool            -- ^ Replacement for 'testBit', returning 'SBool' instead of 'Bool'
+            sExtractBits        :: SBV a -> [Int] -> [SBool]        -- ^ Variant of 'sTestBit', where we want to extract multiple bit positions.
+            sPopCount           :: SBV a -> SWord8                  -- ^ Variant of 'popCount', returning a symbolic value.
+            setBitTo            :: SBV a -> Int -> SBool -> SBV a   -- ^ A combo of 'setBit' and 'clearBit', when the bit to be set is symbolic.
+            fullAdder           :: SBV a -> SBV a -> (SBool, SBV a) -- ^ Full adder, returns carry-out from the addition. Only for unsigned quantities.
+            fullMultiplier      :: SBV a -> SBV a -> (SBV a, SBV a) -- ^ Full multipler, returns both high and low-order bits. Only for unsigned quantities.
+            sCountLeadingZeros  :: SBV a -> SWord8                  -- ^ Count leading zeros in a word, big-endian interpretation
+            sCountTrailingZeros :: SBV a -> SWord8                  -- ^ Count trailing zeros in a word, big-endian interpretation
 
-         lsb                    :: SFiniteBits a => SBV a -> SBool
-         msb                    :: SFiniteBits a => SBV a -> SBool
-         blastBE                :: SFiniteBits a => SBV a -> [SBool]
-         blastLE                :: SFiniteBits a => SBV a -> [SBool]
-         sExtractBits           :: SFiniteBits a => SBV a -> [Int] -> [SBool]
-         sPopCount              :: SFiniteBits a => SBV a -> SWord8
+    Note that these functions (with the exception of sFiniteBitSize, sCountLeadingZeros,
+    and sCountTrailingZeros) already existed in SBV, we're now grouping them into this class.
+
+  * Tightened certain signatures where SBV was too liberal, using the SFiniteBits class. New signatures are:
+
          sSignedShiftArithRight :: (SFiniteBits a, SIntegral b) => SBV a -> SBV b -> SBV a
-         sTestBit               :: SFiniteBits a => SBV a -> Int -> SBool
-         setBitTo               :: SFiniteBits a => SBV a -> Int -> SBool -> SBV a
-         fullAdder              :: SFiniteBits a => SBV a -> SBV a -> (SBool, SBV a)
-         fullMultiplier         :: SFiniteBits a => SBV a -> SBV a -> (SBV a, SBV a)
          (.^)                   :: (Mergeable b, Num b, SFiniteBits e) => b -> SBV e -> b
-
-    Similar changes were done to the following less used functions as well:
-  
-         polyMult   :: (SFiniteBits a, FromBits (SBV a)) => (SBV a, SBV a, [Int]) -> SBV a
-         polyDivMod :: (SFiniteBits a, FromBits (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
-         crc        :: (FromBits (SBV a), FromBits (SBV b), SFiniteBits a, SFiniteBits b) => Int -> SBV a -> SBV b -> SBV b
-         readSTree  :: (SFiniteBits i, SymWord e) => STree i e -> SBV i -> SBV e
-         writeSTree :: (SFiniteBits i, SymWord e) => STree i e -> SBV i -> SBV e -> STree i e
+         crc                    :: (SFiniteBits a, SFiniteBits b) => Int -> SBV a -> SBV b -> SBV b
+         readSTree              :: (SFiniteBits i, SymWord e) => STree i e -> SBV i -> SBV e
+         writeSTree             :: (SFiniteBits i, SymWord e) => STree i e -> SBV i -> SBV e -> STree i e
 
     Thanks to Thomas DuBuisson for reporting.
 

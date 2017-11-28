@@ -152,15 +152,11 @@ module Data.SBV (
 
   -- ** Operations on symbolic values
   -- *** Word level
-  , sTestBit, sExtractBits, sPopCount, sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, sFromIntegral, setBitTo, oneIf
-  , lsb, msb, label
+  , sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, sFromIntegral, oneIf
+  , label
 
-  -- *** Addition and Multiplication with carry-out
-  , fullAdder, fullMultiplier
   -- *** Exponentiation
   , (.^)
-  -- *** Blasting/Unblasting
-  , blastBE, blastLE, FromBits(..)
   -- *** Splitting, joining, and extending
   , Splittable(..)
 
@@ -170,7 +166,7 @@ module Data.SBV (
   -- ** Symbolic integral numbers
   , SIntegral
   -- ** Symbolic finite bits
-  , SFiniteBits
+  , SFiniteBits(..)
   -- ** Division
   , SDivisible(..)
   -- ** The Boolean class
