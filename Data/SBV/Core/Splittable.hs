@@ -13,7 +13,6 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TypeSynonymInstances   #-}
 {-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE BangPatterns           #-}
 
 module Data.SBV.Core.Splittable (Splittable(..)) where
 
