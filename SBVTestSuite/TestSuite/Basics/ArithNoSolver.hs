@@ -60,6 +60,7 @@ tests = testGroup "Arith.NoSolver" $
         ++ genShiftRotTest       "rotateR_gen"   sRotateRight
         ++ genShiftMixSize
         ++ genBlasts
+        ++ genCounts
         ++ genIntCasts
 
 genBinTest :: String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [TestTree]
@@ -188,6 +189,26 @@ genBlasts = map mkTest $
           ++ [(show x, fromBitsLE (blastLE x) .== x) | x <- si64s]
           ++ [(show x, fromBitsBE (blastBE x) .== x) | x <- si64s]
   where mkTest (x, r) = testCase ("blast-" ++ x) (r `showsAs` "True")
+
+genCounts :: [TestTree]
+genCounts = map mkTest $
+             [(show x, sCountTrailingZeros x .== sCountLeadingZeros (fromBitsBE (blastLE x) :: SWord8 )) | x <- sw8s ]
+          ++ [(show x, sCountTrailingZeros x .== sCountLeadingZeros (fromBitsLE (blastBE x) :: SWord8 )) | x <- sw8s ]
+          ++ [(show x, sCountTrailingZeros x .== sCountLeadingZeros (fromBitsBE (blastLE x) :: SInt8  )) | x <- si8s ]
+          ++ [(show x, sCountTrailingZeros x .== sCountLeadingZeros (fromBitsLE (blastBE x) :: SInt8  )) | x <- si8s ]
+          ++ [(show x, sCountTrailingZeros x .== sCountLeadingZeros (fromBitsBE (blastLE x) :: SWord16)) | x <- sw16s]
+          ++ [(show x, sCountTrailingZeros x .== sCountLeadingZeros (fromBitsLE (blastBE x) :: SWord16)) | x <- sw16s]
+          ++ [(show x, sCountTrailingZeros x .== sCountLeadingZeros (fromBitsBE (blastLE x) :: SInt16 )) | x <- si16s]
+          ++ [(show x, sCountTrailingZeros x .== sCountLeadingZeros (fromBitsLE (blastBE x) :: SInt16 )) | x <- si16s]
+          ++ [(show x, sCountTrailingZeros x .== sCountLeadingZeros (fromBitsBE (blastLE x) :: SWord32)) | x <- sw32s]
+          ++ [(show x, sCountTrailingZeros x .== sCountLeadingZeros (fromBitsLE (blastBE x) :: SWord32)) | x <- sw32s]
+          ++ [(show x, sCountTrailingZeros x .== sCountLeadingZeros (fromBitsBE (blastLE x) :: SInt32 )) | x <- si32s]
+          ++ [(show x, sCountTrailingZeros x .== sCountLeadingZeros (fromBitsLE (blastBE x) :: SInt32 )) | x <- si32s]
+          ++ [(show x, sCountTrailingZeros x .== sCountLeadingZeros (fromBitsBE (blastLE x) :: SWord64)) | x <- sw64s]
+          ++ [(show x, sCountTrailingZeros x .== sCountLeadingZeros (fromBitsLE (blastBE x) :: SWord64)) | x <- sw64s]
+          ++ [(show x, sCountTrailingZeros x .== sCountLeadingZeros (fromBitsBE (blastLE x) :: SInt64 )) | x <- si64s]
+          ++ [(show x, sCountTrailingZeros x .== sCountLeadingZeros (fromBitsLE (blastBE x) :: SInt64 )) | x <- si64s]
+  where mkTest (x, r) = testCase ("count-" ++ x) (r `showsAs` "True")
 
 genIntCasts :: [TestTree]
 genIntCasts = map mkTest $  cast w8s ++ cast w16s ++ cast w32s ++ cast w64s

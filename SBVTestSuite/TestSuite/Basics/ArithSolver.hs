@@ -61,6 +61,7 @@ tests =
      ++ genShiftRotTest        "rotateR_gen"      sRotateRight
      ++ genShiftMixSize
      ++ genBlasts
+     ++ genCounts
      ++ genIntCasts)
 
 genBinTest :: Bool -> String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [TestTree]
@@ -208,6 +209,28 @@ genBlasts = map mkTest $  [(show x, mkThm fromBitsLE blastLE x) | x <- w8s ]
         mkThm from to v = isTheorem $ do a <- free "x"
                                          constrain $ a .== literal v
                                          return $ a .== from (to a)
+
+genCounts :: [TestTree]
+genCounts = map mkTest $  [(show x, mkThm (fromBitsLE :: [SBool] -> SWord8 ) blastBE x) | x <- w8s ]
+                       ++ [(show x, mkThm (fromBitsBE :: [SBool] -> SWord8 ) blastLE x) | x <- w8s ]
+                       ++ [(show x, mkThm (fromBitsLE :: [SBool] -> SInt8  ) blastBE x) | x <- i8s ]
+                       ++ [(show x, mkThm (fromBitsBE :: [SBool] -> SInt8  ) blastLE x) | x <- i8s ]
+                       ++ [(show x, mkThm (fromBitsLE :: [SBool] -> SWord16) blastBE x) | x <- w16s]
+                       ++ [(show x, mkThm (fromBitsBE :: [SBool] -> SWord16) blastLE x) | x <- w16s]
+                       ++ [(show x, mkThm (fromBitsLE :: [SBool] -> SInt16 ) blastBE x) | x <- i16s]
+                       ++ [(show x, mkThm (fromBitsBE :: [SBool] -> SInt16 ) blastLE x) | x <- i16s]
+                       ++ [(show x, mkThm (fromBitsLE :: [SBool] -> SWord32) blastBE x) | x <- w32s]
+                       ++ [(show x, mkThm (fromBitsBE :: [SBool] -> SWord32) blastLE x) | x <- w32s]
+                       ++ [(show x, mkThm (fromBitsLE :: [SBool] -> SInt32 ) blastBE x) | x <- i32s]
+                       ++ [(show x, mkThm (fromBitsBE :: [SBool] -> SInt32 ) blastLE x) | x <- i32s]
+                       ++ [(show x, mkThm (fromBitsLE :: [SBool] -> SWord64) blastBE x) | x <- w64s]
+                       ++ [(show x, mkThm (fromBitsBE :: [SBool] -> SWord64) blastLE x) | x <- w64s]
+                       ++ [(show x, mkThm (fromBitsLE :: [SBool] -> SInt64 ) blastBE x) | x <- i64s]
+                       ++ [(show x, mkThm (fromBitsBE :: [SBool] -> SInt64 ) blastLE x) | x <- i64s]
+  where mkTest (x, t) = testCase ("genCounts.count-" ++ show x) (assert t)
+        mkThm from to v = isTheorem $ do a <- free "x"
+                                         constrain $ a .== literal v
+                                         return $ sCountTrailingZeros a .== sCountLeadingZeros (from (to a))
 
 genIntCasts :: [TestTree]
 genIntCasts = map mkTest $  cast w8s ++ cast w16s ++ cast w32s ++ cast w64s
