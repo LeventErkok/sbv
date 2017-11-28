@@ -22,7 +22,7 @@ module Data.SBV.Internals (
   , module Data.SBV.Core.Data
 
   -- * Operations useful for instantiating SBV type classes
-  , genLiteral, genFromCW, CW(..), genMkSymVar, checkAndConvert, genParse, showModel, SMTModel(..), liftQRem, liftDMod
+  , genLiteral, genFromCW, CW(..), genMkSymVar, genParse, showModel, SMTModel(..), liftQRem, liftDMod
 
   -- * Compilation to C, extras
   , compileToC', compileToCLib'
@@ -48,7 +48,6 @@ module Data.SBV.Internals (
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model      (genLiteral, genFromCW, genMkSymVar, liftQRem, liftDMod)
 import Data.SBV.Core.Symbolic   (IStage(..))
-import Data.SBV.Core.Splittable (checkAndConvert)
 
 import Data.SBV.Compilers.C       (compileToC', compileToCLib')
 import Data.SBV.Compilers.CodeGen
