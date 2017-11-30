@@ -52,7 +52,7 @@ import GHC.Stack
 import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits       (Bits(..))
 import Data.Int        (Int8, Int16, Int32, Int64)
-import Data.List       (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate)
+import Data.List       (genericLength, genericIndex, genericTake, genericReplicate, unzip4, unzip5, unzip6, unzip7, intercalate)
 import Data.Maybe      (fromMaybe)
 import Data.Word       (Word8, Word16, Word32, Word64)
 
@@ -522,7 +522,7 @@ instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c, OrdSymbolic d, OrdSymboli
 -- @
 --
 -- It is similar to the standard 'Integral' class, except ranging over symbolic instances.
-class (SymWord a, Num a, Bits a) => SIntegral a
+class (SymWord a, Num a, Bits a, Integral a) => SIntegral a
 
 -- 'SIntegral' Instances, skips Real/Float/Bool
 instance SIntegral Word8
@@ -784,12 +784,23 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
 
 -- | Symbolic exponentiation using bit blasting and repeated squaring.
 --
--- N.B. The exponent must be unsigned. Signed exponents will be rejected.
-(.^) :: (Mergeable b, Num b, SFiniteBits e) => b -> SBV e -> b
-b .^ e | isSigned e = error "(.^): exponentiation only works with unsigned exponents"
-       | True       = product $ zipWith (\use n -> ite use n 1)
-                                        (blastLE e)
-                                        (iterate (\x -> x*x) b)
+-- N.B. The exponent must be unsigned/bounded if symbolic. Signed exponents will be rejected.
+(.^) :: (Mergeable b, Num b, SIntegral e) => b -> SBV e -> b
+b .^ e
+  | isConcrete e, Just (x :: Integer) <- unliteral (sFromIntegral e)
+  = if x >= 0 then product (genericReplicate x b)
+              else error $ "(.^): exponentiation: negative exponent: " ++ show x
+  | not (isBounded e) || isSigned e
+  = error $ "(.^): exponentiation only works with unsigned bounded symbolic exponents, kind: " ++ show (kindOf e)
+  | True
+  =  -- NB. We can't simply use sTestBit and blastLE since they have SFiniteBit requirement
+     -- but we want to have SIntegral here only.
+     let SBV expt = e
+         expBit i = SBV (svTestBit expt i)
+         blasted  = map expBit [0 .. intSizeOf e - 1]
+     in product $ zipWith (\use n -> ite use n 1)
+                          blasted
+                          (iterate (\x -> x*x) b)
 
 instance (SymWord a, Fractional a) => Fractional (SBV a) where
   fromRational  = literal . fromRational

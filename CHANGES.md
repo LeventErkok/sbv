@@ -25,6 +25,14 @@
     for display purposes. See https://github.com/LeventErkok/sbv/issues/335
     for details and thanks to Brian Huffman for reporting.
 
+  * SIntegral class now has Integral as a super-class, which ensures the
+    base-type it's used at is Integral. This was already true for all instances,
+    so we are just making it more explicit.
+
+  * Improve the implementation of .^ (exponentiation) to cover more cases,
+    in particular signed exponents are now OK so long as they are concrete
+    and positive, following Haskell notation.
+
   * Removed the 'FromBits' class. It's functionality is now merged with the
     new 'SFiniteBits' class, see below.
 
@@ -56,7 +64,6 @@
   * Tightened certain signatures where SBV was too liberal, using the SFiniteBits class. New signatures are:
 
          sSignedShiftArithRight :: (SFiniteBits a, SIntegral b) => SBV a -> SBV b -> SBV a
-         (.^)                   :: (Mergeable b, Num b, SFiniteBits e) => b -> SBV e -> b
          crc                    :: (SFiniteBits a, SFiniteBits b) => Int -> SBV a -> SBV b -> SBV b
          readSTree              :: (SFiniteBits i, SymWord e) => STree i e -> SBV i -> SBV e
          writeSTree             :: (SFiniteBits i, SymWord e) => STree i e -> SBV i -> SBV e -> STree i e
