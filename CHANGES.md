@@ -31,7 +31,7 @@
 
   * Improve the implementation of .^ (exponentiation) to cover more cases,
     in particular signed exponents are now OK so long as they are concrete
-    and positive, following Haskell notation.
+    and positive, following Haskell convention.
 
   * Removed the 'FromBits' class. It's functionality is now merged with the
     new 'SFiniteBits' class, see below.
