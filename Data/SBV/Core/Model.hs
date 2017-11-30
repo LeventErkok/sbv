@@ -52,7 +52,7 @@ import GHC.Stack
 import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits       (Bits(..))
 import Data.Int        (Int8, Int16, Int32, Int64)
-import Data.List       (genericLength, genericIndex, genericTake, genericReplicate, unzip4, unzip5, unzip6, unzip7, intercalate)
+import Data.List       (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate)
 import Data.Maybe      (fromMaybe)
 import Data.Word       (Word8, Word16, Word32, Word64)
 
@@ -788,7 +788,11 @@ instance (Ord a, Num a, SymWord a) => Num (SBV a) where
 (.^) :: (Mergeable b, Num b, SIntegral e) => b -> SBV e -> b
 b .^ e
   | isConcrete e, Just (x :: Integer) <- unliteral (sFromIntegral e)
-  = if x >= 0 then product (genericReplicate x b)
+  = if x >= 0 then let go n v
+                        | n == 0 = 1
+                        | even n =     go (n `div` 2) (v * v)
+                        | True   = v * go (n `div` 2) (v * v)
+                   in  go x b
               else error $ "(.^): exponentiation: negative exponent: " ++ show x
   | not (isBounded e) || isSigned e
   = error $ "(.^): exponentiation only works with unsigned bounded symbolic exponents, kind: " ++ show (kindOf e)
