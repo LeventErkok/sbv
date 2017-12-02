@@ -33,7 +33,7 @@
     in particular signed exponents are now OK so long as they are concrete
     and positive, following Haskell convention.
 
-  * Removed the 'FromBits' class. It's functionality is now merged with the
+  * Removed the 'FromBits' class. Its functionality is now merged with the
     new 'SFiniteBits' class, see below.
 
   * Introduce 'SFiniteBits' class, which only incorporates finite-words in it,
@@ -58,8 +58,8 @@
             sCountLeadingZeros  :: SBV a -> SWord8                  -- ^ Count leading zeros in a word, big-endian interpretation
             sCountTrailingZeros :: SBV a -> SWord8                  -- ^ Count trailing zeros in a word, big-endian interpretation
 
-    Note that these functions (with the exception of sFiniteBitSize, sCountLeadingZeros,
-    and sCountTrailingZeros) already existed in SBV, we're now grouping them into this class.
+    Note that the functions 'sFiniteBitSize', 'sCountLeadingZeros', and 'sCountTrailingZeros' are
+    new. Others have existed in SBV before, we are just grouping them together now in this new class.
 
   * Tightened certain signatures where SBV was too liberal, using the SFiniteBits class. New signatures are:
 
