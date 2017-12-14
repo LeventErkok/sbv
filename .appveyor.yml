@@ -4,6 +4,7 @@ environment:
       SBV_TEST_ENVIRONMENT: win
       SBV_HEAVYTEST_PERCENTAGE:  0
       TASTY_HIDE_SUCCESSES: True
+      STACK_ROOT: c:\sr
 
 before_build:
 - git clone -q https://github.com/Z3Prover/bin.git Z3Prover
