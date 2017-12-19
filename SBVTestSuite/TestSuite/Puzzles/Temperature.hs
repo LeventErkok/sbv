@@ -13,12 +13,16 @@ module TestSuite.Puzzles.Temperature(tests) where
 
 import Utils.SBVTestFramework
 
+import Data.List (sort)
+import qualified Data.Map as M
+
 -- Test suite
 tests :: TestTree
 tests =
   testGroup "Puzzles.Temperature"
-    [ goldenVsStringShow "temperature" (allSat (revOf `fmap` exists_))
+    [ goldenVsStringShow "temperature" result
     ]
+    where result = (sort . concatMap M.toList . getModelDictionaries) `fmap` allSat (revOf `fmap` exists_)
 
 type Temp = SInteger
 

@@ -1,5 +1,1 @@
-Solution #1:
-  s0 = 16 :: Integer
-Solution #2:
-  s0 = 28 :: Integer
-Found 2 different solutions.
+[("s0",16 :: Integer),("s0",28 :: Integer)]
