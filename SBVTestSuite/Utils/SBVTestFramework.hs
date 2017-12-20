@@ -15,7 +15,7 @@
 module Utils.SBVTestFramework (
           showsAs
         , runSAT, numberOfModels
-        , assertIsThm, assertIsntThm, assertIsSat, assertIsntSat
+        , assert, assertIsThm, assertIsntThm, assertIsSat, assertIsntSat
         , goldenString
         , goldenVsStringShow
         , goldenCapturedIO
@@ -35,8 +35,8 @@ import qualified Data.ByteString as BS
 import System.Directory   (removeFile)
 import System.Environment (lookupEnv)
 
-import Test.Tasty         (testGroup, TestTree, TestName)
-import Test.Tasty.HUnit   (assert, Assertion, testCase)
+import Test.Tasty            (testGroup, TestTree, TestName)
+import Test.Tasty.HUnit      ((@?), Assertion, testCase, AssertionPredicable)
 
 import Test.Tasty.Golden           (goldenVsString)
 import Test.Tasty.Golden.Advanced  (goldenTest)
@@ -86,6 +86,10 @@ getTestEnvironment = do mbTestEnv  <- lookupEnv "SBV_TEST_ENVIRONMENT"
                                  Nothing                -> return 100
 
                         return (env, perc)
+
+-- | Generic assertion. This is less safe than usual, but will do.
+assert :: AssertionPredicable t => t -> Assertion
+assert t = t @? "assertion-failure"
 
 -- | Checks that a particular result shows as @s@
 showsAs :: Show a => a -> String -> Assertion
