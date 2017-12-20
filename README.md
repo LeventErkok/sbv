@@ -7,13 +7,13 @@ Please see: http://leventerkok.github.io/sbv/
 ### Build Status
 
  - Linux:
-     - GHC 8.0.1 [![Build1][3]][1]
-     - GHC 8.0.2 [![Build1][4]][1]
-     - GHC 8.2.1 [![Build1][5]][1]
+     - GHC 8.0.2 [![Build1][3]][1]
+     - GHC 8.2.1 [![Build1][4]][1]
+     - GHC 8.2.2 [![Build1][5]][1]
  - Mac OSX:
      - GHC 8.2.1 [![Build1][6]][1]
  - Windows:
-     - GHC 8.0.2 [![Build5][7]][2]
+     - GHC 8.2.2 [![Build5][7]][2]
 
 [1]: https://travis-ci.org/LeventErkok/sbv
 [2]: https://ci.appveyor.com/project/LeventErkok/sbv
