@@ -25,10 +25,10 @@ build_script:
 - cabal update
 - stack install alex
 - stack install happy
-- cabal install --only-dependencies --enable-tests --enable-benchmarks
-- cabal build
-- cabal test SBVTest
-- cabal test SBVDocTest
-- cabal test SBVHLint
-- cabal check
-- cabal sdist
+- stack install --only-dependencies --enable-tests --enable-benchmarks
+- stack build
+- stack test SBVTest
+- stack test SBVDocTest
+- stack test SBVHLint
+- stack check
+- stack sdist
