@@ -23,8 +23,8 @@ skip_tags: true
 
 build_script:
 - cabal update
-- cabal install alex
-- cabal install happy
+- stack install alex
+- stack install happy
 - cabal install --only-dependencies --enable-tests --enable-benchmarks
 - cabal build
 - cabal test SBVTest
