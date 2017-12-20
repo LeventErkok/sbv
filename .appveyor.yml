@@ -17,18 +17,18 @@ before_build:
 - stack exec which ghc
 - stack install cabal-install
 # The following is at best fragile. What happens if ghc version gets updated?
-- set PATH=C:\Users\appveyor\AppData\Local\Programs\stack\i386-windows\ghc-8.0.2\bin;C:\Users\appveyor\AppData\Roaming\local\bin;%PATH%
+- set PATH=C:\Users\appveyor\AppData\Local\Programs\stack\i386-windows\ghc-8.2.2\bin;C:\Users\appveyor\AppData\Roaming\local\bin;%PATH%
 
 skip_tags: true
 
 build_script:
 - cabal update
-- stack install alex
-- stack install happy
-- stack install --only-dependencies --enable-tests --enable-benchmarks
-- stack build
-- stack test SBVTest
-- stack test SBVDocTest
-- stack test SBVHLint
-- stack check
-- stack sdist
+- cabal install alex
+- cabal install happy
+- cabal install --only-dependencies --enable-tests --enable-benchmarks
+- cabal build
+- cabal test SBVTest
+- cabal test SBVDocTest
+- cabal test SBVHLint
+- cabal check
+- cabal sdist
