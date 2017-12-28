@@ -87,7 +87,7 @@ constructUKind a = KUserSort sortName mbEnumFields
         isEnumeration = not (null constrs) && all (null . G.constrFields) constrs
         mbEnumFields
          | isEnumeration = check constrs []
-         | True          = Left $ sortName ++ "is not a finite non-empty enumeration"
+         | True          = Left $ sortName ++ " is not a finite non-empty enumeration"
         check []     sofar = Right $ reverse sofar
         check (c:cs) sofar = case checkConstr c of
                                 Nothing -> check cs (show c : sofar)
