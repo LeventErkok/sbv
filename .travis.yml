@@ -77,7 +77,7 @@ install:
    fi
  - travis_retry cabal update
  - "sed -itravis_backup -e 's/^jobs:.*$/jobs: 2/' $HOME/.cabal/config"
- - cabal install --only-dependencies --enable-tests --enable-benchmarks --allow-newer=ansi-terminal --dry -v > installplan.txt
+ - cabal install --only-dependencies --enable-tests --enable-benchmarks --dry -v > installplan.txt
  - sed -itravis_backup -e '1,/^Resolving /d' installplan.txt; cat installplan.txt
 
 # check whether current requested install-plan matches cached package-db snapshot
@@ -105,7 +105,7 @@ install:
 
 # Here starts the actual work to be performed for the package under test; any command which exits with a non-zero exit code causes the build to fail.
 script:
- - cabal configure --enable-tests --enable-benchmarks -v2 --allow-newer=ansi-terminal # -v2 provides useful information for debugging
+ - cabal configure --enable-tests --enable-benchmarks -v2 # -v2 provides useful information for debugging
  - cabal build   # this builds all libraries and executables (including tests/benchmarks)
  - travis_wait 60 cabal test SBVTest
  - travis_wait 60 cabal test SBVDocTest
