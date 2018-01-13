@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 7.4, 2017-11-03
+* Latest Hackage released version: 7.5, 2018-01-13
 
-### Version 7.4.5, Current development version on github
+### Version 7.5, Released 2018-01-13
 
   * Remove obsolote references to tactics in a few haddock comments. Thanks
     to Matthew Pickering for reporting.
