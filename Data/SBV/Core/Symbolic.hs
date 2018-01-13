@@ -967,8 +967,8 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
        swapc ((_, a), b)         = (b, a)
        cmp   (a, _) (b, _)       = a `compare` b
        arrange (i, (at, rt, es)) = ((i, at, rt), es)
-   cnsts <- (sortBy cmp . map swapc . Map.toList) <$> readIORef (rconstMap st)
-   tbls  <- (map arrange . sortBy cmp . map swap . Map.toList) <$> readIORef tables
+   cnsts <- sortBy cmp . map swapc . Map.toList <$> readIORef (rconstMap st)
+   tbls  <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef tables
    arrs  <- IMap.toAscList <$> readIORef arrays
    unint <- Map.toList <$> readIORef uis
    axs   <- reverse <$> readIORef axioms

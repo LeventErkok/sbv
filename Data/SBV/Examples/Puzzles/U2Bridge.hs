@@ -129,8 +129,7 @@ instance Mergeable a => Mergeable (Move a) where
 
 -- | Read the state via an accessor function
 peek :: (Status -> a) -> Move a
-peek f = do s <- get
-            return (f s)
+peek f = f <$> get
 
 -- | Given an arbitrary member, return his location
 whereIs :: SU2Member -> Move SLocation

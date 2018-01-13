@@ -447,11 +447,9 @@ instance SymArray SArray where
 
 -- | Declare a new symbolic array, with a potential initial value
 declNewSArray :: forall a b. (HasKind a, HasKind b) => (Int -> String) -> Symbolic (SArray a b)
-declNewSArray mkNm = do
-   let aknd = kindOf (undefined :: a)
+declNewSArray mkNm = SArray <$> newSArr (aknd, bknd) mkNm
+ where aknd = kindOf (undefined :: a)
        bknd = kindOf (undefined :: b)
-   arr <- newSArr (aknd, bknd) mkNm
-   return (SArray arr)
 
 -- | Declare a new functional symbolic array. Note that a read from an uninitialized cell will result in an error.
 declNewSFunArray :: forall a b. (HasKind a, HasKind b) => Maybe String -> Symbolic (SFunArray a b)

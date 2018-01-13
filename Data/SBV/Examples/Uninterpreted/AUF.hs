@@ -88,5 +88,4 @@ proveThm2 :: IO ThmResult
 proveThm2 = prove $ do
                 x <- free "x"
                 y <- free "y"
-                a <- newArray "b"
-                return $ thm2 x y a
+                thm2 x y <$> newArray "b"

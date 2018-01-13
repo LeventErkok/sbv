@@ -133,7 +133,7 @@ syncUpSolver is = do
                        ks    <- readIORef (rNewKinds is)
                        cnsts <- sortBy cmp . map swapc . Map.toList <$> readIORef (rNewConsts is)
                        arrs  <- IMap.toAscList <$> readIORef (rNewArrs is)
-                       tbls  <- (map arrange . sortBy cmp . map swap . Map.toList) <$> readIORef (rNewTbls is)
+                       tbls  <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef (rNewTbls is)
                        as    <- readIORef (rNewAsgns is)
                        return $ toIncSMTLib cfg inps ks cnsts arrs tbls as cfg
         mapM_ (send True) $ mergeSExpr ls

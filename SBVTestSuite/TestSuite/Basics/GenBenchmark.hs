@@ -20,7 +20,5 @@ tests =
     [ goldenString "genBenchMark1" $ gen False (\x -> x .== (x+1::SWord8))
     , goldenString "genBenchMark2" $ gen True  (\x -> x .== (x+1::SWord8))
     ]
-    where gen b f = do r <- generateSMTBenchmark b f
-                       -- the first line is time-stamp, get rid of it so test
-                       -- is repeatable
-                       return $ unlines $ tail $ lines r
+    where gen b f = -- the first line is time-stamp, get rid of it so test is repeatable
+                    unlines . tail . lines <$> generateSMTBenchmark b f

@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 7.5, 2018-01-13
 
+### Version 7.5.5, Current development version
+
+  * No changes yet!
+
 ### Version 7.5, Released 2018-01-13
 
   * Remove obsolote references to tactics in a few haddock comments. Thanks

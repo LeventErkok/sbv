@@ -61,7 +61,6 @@ z3Exc2 rf = do r <- runSMT z3ExcCatch `C.catch` \(e :: SMTException) -> return (
                         x <- sInteger "x"
                         y <- sInteger "y"
                         query $ do constrain $ x*y .== x*x
-                                   cs <- checkSat
-                                   return $ show cs
+                                   show <$> checkSat
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

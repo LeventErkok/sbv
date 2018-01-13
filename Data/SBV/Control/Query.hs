@@ -309,8 +309,7 @@ getObjectiveValues = do let cmd = "(get-objectives)"
 
                         inputs <- map snd <$> getQuantifiedInputs
 
-                        parse r bad $ \case EApp (ECon "objectives" : es) -> do mbVals <- mapM (getObjValue (bad r) inputs) es
-                                                                                return $ catMaybes mbVals
+                        parse r bad $ \case EApp (ECon "objectives" : es) -> catMaybes <$> mapM (getObjValue (bad r) inputs) es
                                             _                             -> bad r Nothing
 
   where -- | Parse an objective value out.
