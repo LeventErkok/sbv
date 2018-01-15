@@ -23,33 +23,25 @@ endif
 all: install
 
 install: tags
-	@tput rmam
-	@$(TIME) cabal configure --enable-tests --ghc-options="-Werror -Wall"
+	@$(TIME) cabal configure --enable-tests --ghc-options="-Werror -Wall -fhide-source-paths"
 	@$(TIME) cabal build
 	@$(TIME) cabal install --force-reinstalls
-	@tput smam
 
 docs:
-	@tput rmam
 	cabal haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
-	@tput smam
 
 test:
-	@tput rmam
 	@$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -j $(NO_OF_CORES)
 	@$(TIME) ./dist/build/SBVDocTest/SBVDocTest
 	@$(TIME) ./dist/build/SBVHLint/SBVHLint
-	@tput smam
 
 release: veryclean install docs test
-	@tput rmam
 	cabal sdist
 	@make -C buildUtils veryclean
 	@make -C buildUtils
 	buildUtils/testInterfaces
 	buildUtils/checkLinks
 	@echo "*** SBV is ready for release!"
-	@tput smam
 
 # use this as follows:
 #         make testPattern TGT=U2Bridge
