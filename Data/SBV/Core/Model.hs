@@ -1748,7 +1748,7 @@ assertSoft nm o p = addSValOptGoal $ unSBV `fmap` AssertSoft nm o p
 -- Minimal complete definition: minimize/maximize.
 --
 -- A good reference on these features is given in the following paper:
--- <http://www.easychair.org/publications/download/Z_-_Maximal_Satisfaction_with_Z3>.
+-- <https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>.
 class Metric a where
   -- | Minimize a named metric
   minimize :: String -> a -> Symbolic ()
