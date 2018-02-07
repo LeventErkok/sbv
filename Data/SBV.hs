@@ -492,7 +492,7 @@ Also see "Data.SBV.Examples.Misc.NoDiv0" for the classic div-by-zero example.
   types, along with those produce 'SReal's. That is, it can find models satisfying all the constraints while minimizing
   or maximizing user given metrics. Currently, optimization requires the use of the z3 SMT solver as the backend,
   and a good review of these features is given
-  in this paper: <http://www.easychair.org/publications/download/Z_-_Maximal_Satisfaction_with_Z3>.
+  in this paper: <https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>.
 
   Goals can be lexicographically (default), independently, or pareto-front optimized. The relevant functions are:
 
@@ -570,7 +570,7 @@ Optimal model:
   Note that 'assertSoft' works well with optimization goals ('minimize'/'maximize' etc.),
   and are most useful when we are optimizing a metric and thus some of the constraints
   can be relaxed with a penalty to obtain a good solution. Again
-  see <http://www.easychair.org/publications/download/Z_-_Maximal_Satisfaction_with_Z3>
+  see <https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>
   for a good overview of the features in Z3 that SBV is providing the bridge for.
 
   A soft assertion can be specified in one of the following three main ways:
