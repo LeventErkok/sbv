@@ -146,29 +146,29 @@ multInverse = prove $ do a <- sDouble "a"
 -- >>> roundingAdd
 -- Satisfiable. Model:
 --   rm = RoundTowardPositive :: RoundingMode
---   x  =              -256.0 :: Float
---   y  =       4.6475088e-10 :: Float
+--   x  =                 1.0 :: Float
+--   y  =       -6.1035094e-5 :: Float
 --
 -- (Note that depending on your version of Z3, you might get a different result.)
 -- Unfortunately we can't directly validate this result at the Haskell level, as Haskell only supports
 -- 'RoundNearestTiesToEven'. We have:
 --
--- >>> (-256.0 + 4.6475088e-10) :: Float
--- -256.0
+-- >>> (1 + (-6.1035094e-5)) :: Float
+-- 0.99993896
 --
 -- While we cannot directly see the result when the mode is 'RoundTowardPositive' in Haskell, we can use
 -- SBV to provide us with that result thusly:
 --
--- >>> sat $ \z -> z .== fpAdd sRoundTowardPositive (-256.0) (4.6475088e-10 :: SFloat)
+-- >>> sat $ \z -> z .== fpAdd sRoundTowardPositive   1 (-6.1035094e-5 :: SFloat)
 -- Satisfiable. Model:
---   s0 = -255.99998 :: Float
+--   s0 = 0.999939 :: Float
 --
 -- We can see why these two resuls are indeed different: The 'RoundTowardsPositive'
 -- (which rounds towards positive-infinity) produces a larger result. Indeed, if we treat these numbers
 -- as 'Double' values, we get:
 --
--- >>>  (-256.0 + 4.6475088e-10) :: Double
--- -255.99999999953525
+-- >>> (1 + (-6.1035094e-5)) :: Double
+-- 0.999938964906
 --
 -- we see that the "more precise" result is larger than what the 'Float' value is, justifying the
 -- larger value with 'RoundTowardPositive'. A more detailed study is beyond our current scope, so we'll
