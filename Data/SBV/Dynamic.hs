@@ -26,6 +26,7 @@ module Data.SBV.Dynamic
   , Symbolic
   , Quantifier(..)
   , svMkSymVar
+  , sWordN, sWordN_, sIntN, sIntN_
   -- ** Operations on symbolic values
   -- *** Boolean literals
   , svTrue, svFalse, svBool, svAsBool

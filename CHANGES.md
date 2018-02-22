@@ -5,7 +5,10 @@
 
 ### Version 7.5.5, Current development version
 
-  * No changes yet!
+  * Define and export sWordN, sWordN_, sIntN_, from the Dynamic
+    interface, which simplifies creation of variables of arbitrary
+    bit sizes. These are similar to sWord8, sInt8, etc.; except
+    they create dynamic counterparts that can be of arbitrary bit size.
 
 ### Version 7.5, Released 2018-01-13
 

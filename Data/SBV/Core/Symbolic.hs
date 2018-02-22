@@ -32,7 +32,7 @@ module Data.SBV.Core.Symbolic
   , RoundingMode(..)
   , SBVType(..), newUninterpreted, addAxiom
   , SVal(..)
-  , svMkSymVar
+  , svMkSymVar, sWordN, sWordN_, sIntN, sIntN_
   , ArrayContext(..), ArrayInfo
   , svToSW, svToSymSW, forceSWArg
   , SBVExpr(..), newExpr, isCodeGenMode
@@ -812,6 +812,22 @@ svMkSymVar = svMkSymVarGen False
 -- | Create an existentially quantified tracker variable
 svMkTrackerVar :: Kind -> String -> State -> IO SVal
 svMkTrackerVar k nm = svMkSymVarGen True (Just EX) k (Just nm)
+
+-- | Create an N-bit symbolic unsigned named variable
+sWordN :: Int -> String -> Symbolic SVal
+sWordN w nm = ask >>= liftIO . svMkSymVar Nothing (KBounded False w) (Just nm)
+
+-- | Create an N-bit symbolic unsigned unnamed variable
+sWordN_ :: Int -> Symbolic SVal
+sWordN_ w = ask >>= liftIO . svMkSymVar Nothing (KBounded False w) Nothing
+
+-- | Create an N-bit symbolic signed named variable
+sIntN :: Int -> String -> Symbolic SVal
+sIntN w nm = ask >>= liftIO . svMkSymVar Nothing (KBounded True w) (Just nm)
+
+-- | Create an N-bit symbolic signed unnamed variable
+sIntN_ :: Int -> Symbolic SVal
+sIntN_ w = ask >>= liftIO . svMkSymVar Nothing (KBounded True w) Nothing
 
 -- | Create a symbolic value, based on the quantifier we have. If an
 -- explicit quantifier is given, we just use that. If not, then we
