@@ -283,8 +283,8 @@ import Data.SBV.Control.Utils (SMTValue)
 -- problems with constraints, like the following:
 --
 -- @
---   do [x, y, z] <- sIntegers [\"x\", \"y\", \"z\"]
---      solve [x .> 5, y + z .< x]
+--   sat $ do [x, y, z] <- sIntegers [\"x\", \"y\", \"z\"]
+--            solve [x .> 5, y + z .< x]
 -- @
 solve :: [SBool] -> Symbolic SBool
 solve = return . bAnd
