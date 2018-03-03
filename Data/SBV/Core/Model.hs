@@ -1805,7 +1805,7 @@ instance Testable (Symbolic SVal) where
                              return (SBV s :: SBool)
 
 -- | Explicit sharing combinator. The SBV library has internal caching/hash-consing mechanisms
--- built in, based on Andy Gill's type-safe obervable sharing technique (see: <http://ittc.ku.edu/~andygill/paper.php?label=DSLExtract09>).
+-- built in, based on Andy Gill's type-safe obervable sharing technique (see: <http://ku-fpg.github.io/files/Gill-09-TypeSafeReification.pdf>).
 -- However, there might be times where being explicit on the sharing can help, especially in experimental code. The 'slet' combinator
 -- ensures that its first argument is computed once and passed on to its continuation, explicitly indicating the intent of sharing. Most
 -- use cases of the SBV library should simply use Haskell's @let@ construct for this purpose.

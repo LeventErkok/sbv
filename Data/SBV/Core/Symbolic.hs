@@ -1134,7 +1134,7 @@ eqSArr (SArr _ a) (SArr _ b) = SVal KBool $ Right $ cache c
 -- takes into the account of how symbolic simulation executes.
 --
 -- See Andy Gill's type-safe obervable sharing trick for the inspiration behind
--- this technique: <http://ittc.ku.edu/~andygill/paper.php?label=DSLExtract09>
+-- this technique: <http://ku-fpg.github.io/files/Gill-09-TypeSafeReification.pdf>
 --
 -- Note that this is *not* a general memo utility!
 newtype Cached a = Cached (State -> IO a)
