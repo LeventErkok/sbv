@@ -10,6 +10,8 @@
     bit sizes. These are similar to sWord8, sInt8, etc.; except
     they create dynamic counterparts that can be of arbitrary bit size.
 
+  * Fix various GHC 8.4.1 related breakages in compilation.
+
 ### Version 7.5, Released 2018-01-13
 
   * Remove obsolote references to tactics in a few haddock comments. Thanks
