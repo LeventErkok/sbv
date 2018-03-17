@@ -56,7 +56,7 @@ before_install:
      cabal install --only-dependencies --enable-tests --enable-benchmarks;
    fi
  - export Z3Base=`basename $Z3 .zip`
- - wget --quiet -L -O z3.zip http://github.com/Z3Prover/bin/raw/master/nightly/$Z3
+ - wget --quiet -L -O z3.zip http://github.com/Z3Prover/bin/raw/master/nightly/`basename $Z3`
  - unzip -q z3.zip -d z3_downloaded
  - /bin/rm z3.zip
  - export PATH=$PATH:$PWD/z3_downloaded/$Z3Base/bin
