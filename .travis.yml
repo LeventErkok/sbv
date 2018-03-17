@@ -21,15 +21,18 @@ notifications:
 
 matrix:
   include:
-    - env: CABALVER=1.24 GHCVER=8.0.2 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=False SBV_HEAVYTEST_PERCENTAGE=15
-      compiler: ": #GHC 8.0.2"
-      addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.2,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
     - env: CABALVER=2.0 GHCVER=8.2.1 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=True SBV_HEAVYTEST_PERCENTAGE=15
       compiler: ": #GHC 8.2.1"
       addons: {apt: {packages: [cabal-install-2.0,ghc-8.2.1,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
-    - env: CABALVER=2.0 GHCVER=8.2.2 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=True SBV_HEAVYTEST_PERCENTAGE=60
+
+    - env: CABALVER=2.0 GHCVER=8.2.2 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=True SBV_HEAVYTEST_PERCENTAGE=15
       compiler: ": #GHC 8.2.2"
       addons: {apt: {packages: [cabal-install-2.0,ghc-8.2.2,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
+
+    - env: CABALVER=2.0 GHCVER=8.4.1 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=True SBV_HEAVYTEST_PERCENTAGE=60
+      compiler: ": #GHC 8.4.1"
+      addons: {apt: {packages: [cabal-install-2.0,ghc-8.4.1,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
+
     - os: osx
       env: CABALVER=2.0 GHCVER=8.2.1 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=False SBV_HEAVYTEST_PERCENTAGE=15
       compiler: ": #GHC 8.2.1"
@@ -56,7 +59,7 @@ before_install:
      cabal install --only-dependencies --enable-tests --enable-benchmarks;
    fi
  - export Z3Base=`basename $Z3 .zip`
- - wget --quiet -L -O z3.zip http://github.com/Z3Prover/bin/raw/master/nightly/$Z3
+ - wget --quiet -L -O z3.zip http://github.com/Z3Prover/bin/raw/master/nightly/`basename $Z3`
  - unzip -q z3.zip -d z3_downloaded
  - /bin/rm z3.zip
  - export PATH=$PATH:$PWD/z3_downloaded/$Z3Base/bin
