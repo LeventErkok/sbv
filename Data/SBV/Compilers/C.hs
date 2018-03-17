@@ -24,7 +24,7 @@ import System.FilePath                (takeBaseName, replaceExtension)
 import System.Random
 
 -- Work around the fact that GHC 8.4.1 started exporting <>.. Hmm..
-import Text.PrettyPrint.HughesPJ hiding ((<>))
+import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
 import Data.SBV.Core.Data
