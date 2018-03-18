@@ -1,16 +1,17 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 7.5, 2018-01-13
+* Latest Hackage released version: 7.6, 2018-03-18
 
-### Version 7.5.5, Current development version
+### Version 7.6, Released 2018-03-18
+
+  * GHC 8.4.1 compatibility: Work around compilation issues. SBV
+    now compiles cleanly with GHC 8.4.1.
 
   * Define and export sWordN, sWordN_, sIntN_, from the Dynamic
     interface, which simplifies creation of variables of arbitrary
     bit sizes. These are similar to sWord8, sInt8, etc.; except
     they create dynamic counterparts that can be of arbitrary bit size.
-
-  * Fix various GHC 8.4.1 related breakages in compilation.
 
 ### Version 7.5, Released 2018-01-13
 

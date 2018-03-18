@@ -19,5 +19,5 @@ report any issues you might see with newer releases.
       * Version 2.5.4
   * Z3:
       * http://github.com/Z3Prover/z3
-      * Version as downloaded from the above site on Dec 19, 2017
+      * Version as downloaded from the above site on Mar 18, 2018
       * You should use at least version 4.6.0 of Z3, or directly from the sources.
