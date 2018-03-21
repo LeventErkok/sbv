@@ -158,12 +158,22 @@ svDivide = liftSym2 (mkSymOp Quot) rationalCheck (/) idiv (/) (/)
 
 -- | Exponentiation.
 svExp :: SVal -> SVal -> SVal
-svExp b e | hasSign (kindOf e) = error "svExp: exponentiation only works with unsigned exponents"
-          | True               = prod $ zipWith (\use n -> svIte use n one)
-                                                (svBlastLE e)
-                                                (iterate (\x -> svTimes x x) b)
-         where prod = foldr svTimes one
-               one  = svInteger (kindOf b) 1
+svExp b e
+  | Just x <- svAsInteger e
+  = if x >= 0 then let go n v
+                        | n == 0 = one
+                        | even n =             go (n `div` 2) (svTimes v v)
+                        | True   = svTimes v $ go (n `div` 2) (svTimes v v)
+                   in  go x b
+              else error $ "svExp: exponentiation: negative exponent: " ++ show x
+  | not (isBounded e) || hasSign e
+  = error $ "svExp: exponentiation only works with unsigned bounded symbolic exponents, kind: " ++ show (kindOf e)
+  | True
+  = prod $ zipWith (\use n -> svIte use n one)
+                   (svBlastLE e)
+                   (iterate (\x -> svTimes x x) b)
+  where prod = foldr svTimes one
+        one  = svInteger (kindOf b) 1
 
 -- | Bit-blast: Little-endian. Assumes the input is a bit-vector.
 svBlastLE :: SVal -> [SVal]
