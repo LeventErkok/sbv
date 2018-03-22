@@ -88,7 +88,7 @@ serialize removeQuotes = go
         go (EReal   r)   = shNN r
         go (EFloat  f)   = shNN f
         go (EDouble d)   = shNN d
-        go (EString s)   = show s
+        go (EString s)   = s
         go (EApp [x])    = go x
         go (EApp ss)     = "(" ++ unwords (map go ss) ++ ")"
 
