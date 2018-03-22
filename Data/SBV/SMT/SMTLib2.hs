@@ -35,6 +35,7 @@ cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs ui
   where hasInteger     = KUnbounded `Set.member` kindInfo
         hasReal        = KReal      `Set.member` kindInfo
         hasFloat       = KFloat     `Set.member` kindInfo
+        hasString      = KString    `Set.member` kindInfo
         hasDouble      = KDouble    `Set.member` kindInfo
         hasBVs         = not $ null [() | KBounded{} <- Set.toList kindInfo]
         usorts         = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
@@ -58,6 +59,11 @@ cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs ui
 
            -- Otherwise, we try to determine the most suitable logic.
            -- NB. This isn't really fool proof!
+
+           -- we never set QF_S (ALL seems to work better in all cases)
+           | hasString
+           = ["(set-logic ALL)"]
+
            | hasDouble || hasFloat
            = if hasInteger || not (null foralls)
              then ["(set-logic ALL)"]
@@ -361,6 +367,7 @@ smtType KUnbounded      = "Int"
 smtType KReal           = "Real"
 smtType KFloat          = "(_ FloatingPoint  8 24)"
 smtType KDouble         = "(_ FloatingPoint 11 53)"
+smtType KString         = "String"
 smtType (KUserSort s _) = s
 
 cvtType :: SBVType -> String
@@ -485,6 +492,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                               KReal         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
                               KFloat        -> error "SBV.SMT.SMTLib2.cvtExp: unexpected float valued index"
                               KDouble       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected double valued index"
+                              KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                               KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
                 lkUp = "(" ++ getTable tableMap t ++ " " ++ ssw i ++ ")"
                 cond
@@ -497,6 +505,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 KReal         -> ("<", "<=")
                                 KFloat        -> ("fp.lt", "fp.leq")
                                 KDouble       -> ("fp.lt", "fp.geq")
+                                KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
                 mkCnst = cvtCW rm . mkConstCW (kindOf i)
                 le0  = "(" ++ less ++ " " ++ ssw i ++ " " ++ mkCnst 0 ++ ")"
@@ -550,6 +559,8 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           | supportsPB = handlePB pb args'
           | True       = reducePB pb args'
           where args' = map ssw args
+
+        sh (SBVApp (StrOp op) args) = "(" ++ show op ++ " " ++ unwords (map ssw args) ++ ")"
 
         sh inp@(SBVApp op args)
           | intOp, Just f <- lookup op smtOpIntTable
@@ -640,7 +651,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
 --   ((_ fp.to_ubv m) RoundingMode (_ FloatingPoint eb sb) (_ BitVec m))
 --
 --   ; to signed machine integer, represented as a 2's complement bit vector
---   ((_ fp.to_sbv m) RoundingMode (_ FloatingPoint eb sb) (_ BitVec m)) 
+--   ((_ fp.to_sbv m) RoundingMode (_ FloatingPoint eb sb) (_ BitVec m))
 --
 --   ; to real
 --   (fp.to_real (_ FloatingPoint eb sb) Real)

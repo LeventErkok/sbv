@@ -27,7 +27,7 @@
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SW(..), swKind, trueSW, falseSW
-  , Op(..), PBOp(..), FPOp(..)
+  , Op(..), PBOp(..), FPOp(..), StrOp(..)
   , Quantifier(..), needsExistentials
   , RoundingMode(..)
   , SBVType(..), newUninterpreted, addAxiom
@@ -152,6 +152,7 @@ data Op = Plus
         | Label String                          -- Essentially no-op; useful for code generation to emit comments.
         | IEEEFP FPOp                           -- Floating-point ops, categorized separately
         | PseudoBoolean PBOp                    -- Pseudo-boolean ops, categorized separately
+        | StrOp StrOp                           -- String ops, categorized separately
         deriving (Eq, Ord)
 
 -- | Floating point operations
@@ -218,6 +219,34 @@ data PBOp = PB_AtMost  Int        -- ^ At most k
           | PB_Eq      [Int] Int  -- ^ Exactly k,  with coefficients given. Generalized PB_Exactly
           deriving (Eq, Ord, Show)
 
+data StrOp = StrConcat        -- ^ Concatenation of one or more strings
+           | StrLen           -- ^ String length
+           | StrSubstr        -- ^ Retrieves substring of @s@ at @offset@
+           | StrIndexOf       -- ^ Retrieves first position of @sub@ in @s@, @-1@ if there are no occurrences
+           | StrOffsetIndexOf -- ^ Retrieves first position of @sub@ at or after @offset@ in @s@, @-1@ if there are no occurrences
+           | StrAt            -- ^ Substring of length 1 at @offset@ in @s@
+           | StrContains      -- ^ Does @s@ contain the substring @sub@?
+           | StrPrefixOf      -- ^ Is @pre@ a prefix of @s@?
+           | StrSuffixOf      -- ^ Is @suf@ a suffix of @s@?
+           | StrReplace       -- ^ Replace the first occurrence of @src@ by @dst@ in @s@
+           | StrToInt         -- ^ Retrieve integer encoded by string @s@ (ground rewriting only)
+           | IntToStr         -- ^ Retrieve string encoded by integer @i@ (ground rewriting only)
+           deriving (Eq, Ord)
+
+instance Show StrOp where
+  show StrConcat        = "str.++"
+  show StrLen           = "str.len"
+  show StrSubstr        = "str.substr"
+  show StrIndexOf       = "str.indexof"
+  show StrOffsetIndexOf = "str.indexof"
+  show StrAt            = "str.at"
+  show StrContains      = "str.contains"
+  show StrPrefixOf      = "str.prefixof"
+  show StrSuffixOf      = "str.suffixof"
+  show StrReplace       = "str.replace"
+  show StrToInt         = "str.to.int"
+  show IntToStr         = "str.to.str"
+
 -- Show instance for 'Op'. Note that this is largely for debugging purposes, not used
 -- for being read by any tool.
 instance Show Op where
@@ -236,6 +265,7 @@ instance Show Op where
   show (Label s)         = "[label] " ++ s
   show (IEEEFP w)        = show w
   show (PseudoBoolean p) = show p
+  show (StrOp s)         = show s
   show op
     | Just s <- op `lookup` syms = s
     | True                       = error "impossible happened; can't find op!"

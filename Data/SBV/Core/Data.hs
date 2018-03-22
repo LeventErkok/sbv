@@ -23,7 +23,7 @@
 
 module Data.SBV.Core.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
- , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble
+ , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble, SString
  , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode
  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
  , sRNE, sRNA, sRTP, sRTN, sRTZ
@@ -129,6 +129,9 @@ type SFloat = SBV Float
 
 -- | IEEE-754 double-precision floating point numbers
 type SDouble = SBV Double
+
+-- | Strings
+type SString = SBV String
 
 -- | Not-A-Number for 'Double' and 'Float'. Surprisingly, Haskell
 -- Prelude doesn't have this value defined, so we provide it here.

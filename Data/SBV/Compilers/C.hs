@@ -183,6 +183,7 @@ specifier cfg sw = case kindOf sw of
                      KReal         -> specF (fromJust (cgReal cfg))
                      KFloat        -> specF CgFloat
                      KDouble       -> specF CgDouble
+                     KString       -> die "specifier KString"
                      KUserSort s _ -> die $ "uninterpreted sort: " ++ s
   where spec :: (Bool, Int) -> Doc
         spec (False,  1) = text "%d"
@@ -462,6 +463,7 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _uis _
                 where len KReal{}             = 5
                       len KFloat{}            = 6 -- SFloat
                       len KDouble{}           = 7 -- SDouble
+                      len KString{}           = die "what's the len of a string?" -- TODO(joel)
                       len KUnbounded{}        = 8
                       len KBool               = 5 -- SBool
                       len (KBounded False n)  = 5 + length (show n) -- SWordN
@@ -711,6 +713,7 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                                                KReal           -> die "array index with real value"
                                                KFloat          -> die "array index with float value"
                                                KDouble         -> die "array index with double value"
+                                               KString         -> die "array index with string value"
                                                KUnbounded      -> case cgInteger cfg of
                                                                     Nothing -> (True, True) -- won't matter, it'll be rejected later
                                                                     Just i  -> (True, canOverflow True i)

@@ -9,9 +9,11 @@
 -- Internal data-structures for the sbv library
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE    DefaultSignatures   #-}
-{-# LANGUAGE    ScopedTypeVariables #-}
-{-# OPTIONS_GHC -fno-warn-orphans   #-}
+{-# LANGUAGE    DefaultSignatures    #-}
+{-# LANGUAGE    FlexibleInstances    #-}
+{-# LANGUAGE    ScopedTypeVariables  #-}
+{-# LANGUAGE    TypeSynonymInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans    #-}
 
 module Data.SBV.Core.Kind (Kind(..), HasKind(..), constructUKind) where
 
@@ -29,6 +31,7 @@ data Kind = KBool
           | KUserSort String (Either String [String])  -- name. Left: uninterpreted. Right: enum constructors.
           | KFloat
           | KDouble
+          | KString
 
 -- | Helper for Eq/Ord instances below
 kindRank :: Kind -> Either Int (Either (Bool, Int) String)
@@ -39,6 +42,7 @@ kindRank KReal           = Left 2
 kindRank (KUserSort s _) = Right (Right s)
 kindRank KFloat          = Left 3
 kindRank KDouble         = Left 4
+kindRank KString         = Left 5
 {-# INLINE kindRank #-}
 
 -- | We want to equate user-sorts only by name
@@ -58,6 +62,7 @@ instance Show Kind where
   show (KUserSort s _)    = s
   show KFloat             = "SFloat"
   show KDouble            = "SDouble"
+  show KString            = "SString"
 
 instance Eq  G.DataType where
    a == b = G.tyconUQname (G.dataTypeName a) == G.tyconUQname (G.dataTypeName b)
@@ -75,6 +80,7 @@ kindHasSign k =
     KReal        -> True
     KFloat       -> True
     KDouble      -> True
+    KString      -> False
     KUserSort{}  -> False
 
 -- | Construct an uninterpreted/enumerated kind from a piece of data; we distinguish simple enumerations as those
@@ -111,6 +117,7 @@ class HasKind a where
   isDouble        :: a -> Bool
   isInteger       :: a -> Bool
   isUninterpreted :: a -> Bool
+  isString        :: a -> Bool
   showType        :: a -> String
   -- defaults
   hasSign x = kindHasSign (kindOf x)
@@ -121,6 +128,7 @@ class HasKind a where
                   KReal         -> error "SBV.HasKind.intSizeOf((S)Real)"
                   KFloat        -> error "SBV.HasKind.intSizeOf((S)Float)"
                   KDouble       -> error "SBV.HasKind.intSizeOf((S)Double)"
+                  KString       -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KUserSort s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
   isBoolean       x | KBool{}      <- kindOf x = True
                     | True                     = False
@@ -135,6 +143,8 @@ class HasKind a where
   isInteger       x | KUnbounded{} <- kindOf x = True
                     | True                     = False
   isUninterpreted x | KUserSort{}  <- kindOf x = True
+                    | True                     = False
+  isString        x | KString{}    <- kindOf x = True
                     | True                     = False
   showType = show . kindOf
 
@@ -154,6 +164,8 @@ instance HasKind Word64  where kindOf _ = KBounded False 64
 instance HasKind Integer where kindOf _ = KUnbounded
 instance HasKind AlgReal where kindOf _ = KReal
 instance HasKind Float   where kindOf _ = KFloat
+-- TODO: also Text / ByteString?
+instance HasKind String  where kindOf _ = KString
 instance HasKind Double  where kindOf _ = KDouble
 
 instance HasKind Kind where

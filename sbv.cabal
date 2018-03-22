@@ -118,6 +118,7 @@ Library
                   , Data.SBV.Core.Operations
                   , Data.SBV.Core.Floating
                   , Data.SBV.Core.Splittable
+                  , Data.SBV.Core.String
                   , Data.SBV.Core.Symbolic
                   , Data.SBV.Control.Query
                   , Data.SBV.Control.Types
@@ -175,6 +176,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.Recursive
                   , TestSuite.Basics.SmallShifts
                   , TestSuite.Basics.SquashReals
+                  , TestSuite.Basics.String
                   , TestSuite.Basics.TOut
                   , TestSuite.BitPrecise.BitTricks
                   , TestSuite.BitPrecise.Legato

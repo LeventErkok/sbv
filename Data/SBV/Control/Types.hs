@@ -181,6 +181,7 @@ data Logic
   | QF_FPBV            -- ^ Quantifier-free formulas over the theory of floating point numbers, arrays, and bit-vectors.
   | QF_FP              -- ^ Quantifier-free formulas over the theory of floating point numbers.
   | QF_FD              -- ^ Quantifier-free finite domains.
+  | QF_S               -- ^ Quantifier-free formulas over the theory of strings.
   | Logic_ALL          -- ^ The catch-all value.
   | Logic_NONE         -- ^ Use this value when you want SBV to simply not set the logic.
   | CustomLogic String -- ^ In case you need a really custom string!
