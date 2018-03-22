@@ -71,13 +71,13 @@ addSub x y = (x+y, x-y)
 -- typedef double SDouble;
 -- <BLANKLINE>
 -- /* Unsigned bit-vectors */
--- typedef uint8_t  SWord8 ;
+-- typedef uint8_t  SWord8;
 -- typedef uint16_t SWord16;
 -- typedef uint32_t SWord32;
 -- typedef uint64_t SWord64;
 -- <BLANKLINE>
 -- /* Signed bit-vectors */
--- typedef int8_t  SInt8 ;
+-- typedef int8_t  SInt8;
 -- typedef int16_t SInt16;
 -- typedef int32_t SInt32;
 -- typedef int64_t SInt64;
