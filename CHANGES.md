@@ -3,6 +3,13 @@
 
 * Latest Hackage released version: 7.6, 2018-03-18
 
+### Version 7.6.5, Current development version
+
+  * Slightly modify the generated-C headers by removing whitespace.
+    This allows for certain "lint" rules to pass when SBV generated
+    code is used in conjunction with a larger code base. Thanks
+    to Greg Horn for the pull request.
+
 ### Version 7.6, Released 2018-03-18
 
   * GHC 8.4.1 compatibility: Work around compilation issues. SBV
