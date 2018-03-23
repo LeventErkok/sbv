@@ -26,6 +26,7 @@ data CWVal = CWAlgReal  !AlgReal              -- ^ algebraic real
            | CWInteger  !Integer              -- ^ bit-vector/unbounded integer
            | CWFloat    !Float                -- ^ float
            | CWDouble   !Double               -- ^ double
+           | CWString   !String               -- ^ string
            | CWUserSort !(Maybe Int, String)  -- ^ value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
 
 -- | Eq instance for CWVal. Note that we cannot simply derive Eq/Ord, since CWAlgReal doesn't have proper
@@ -37,6 +38,7 @@ instance Eq CWVal where
   CWUserSort a == CWUserSort b = a == b
   CWFloat a    == CWFloat b         = a == b
   CWDouble a   == CWDouble b        = a == b
+  CWString a   == CWString b        = a == b
   _            == _                 = False
 
 -- | Ord instance for CWVal. Same comments as the 'Eq' instance why this cannot be derived.
@@ -45,30 +47,42 @@ instance Ord CWVal where
   CWAlgReal _ `compare` CWInteger _   = LT
   CWAlgReal _ `compare` CWFloat _     = LT
   CWAlgReal _ `compare` CWDouble _    = LT
+  CWAlgReal _ `compare` CWString _    = LT
   CWAlgReal _ `compare` CWUserSort _  = LT
 
   CWInteger _ `compare` CWAlgReal _   = GT
   CWInteger a `compare` CWInteger b   = a `compare` b
   CWInteger _ `compare` CWFloat _     = LT
   CWInteger _ `compare` CWDouble _    = LT
+  CWInteger _ `compare` CWString _    = LT
   CWInteger _ `compare` CWUserSort _  = LT
 
   CWFloat _   `compare` CWAlgReal _   = GT
   CWFloat _   `compare` CWInteger _   = GT
   CWFloat a   `compare` CWFloat b     = a `compare` b
   CWFloat _   `compare` CWDouble _    = LT
+  CWFloat _   `compare` CWString _    = LT
   CWFloat _   `compare` CWUserSort _  = LT
 
   CWDouble _  `compare` CWAlgReal _   = GT
   CWDouble _  `compare` CWInteger _   = GT
   CWDouble _  `compare` CWFloat _     = GT
   CWDouble a  `compare` CWDouble b    = a `compare` b
+  CWDouble _  `compare` CWString _    = LT
   CWDouble _  `compare` CWUserSort _  = LT
+
+  CWString _  `compare` CWAlgReal _   = GT
+  CWString _  `compare` CWInteger _   = GT
+  CWString _  `compare` CWFloat _     = GT
+  CWString _  `compare` CWDouble _    = GT
+  CWString a  `compare` CWString b    = a `compare` b
+  CWString _  `compare` CWUserSort _  = LT
 
   CWUserSort _ `compare` CWAlgReal _  = GT
   CWUserSort _ `compare` CWInteger _  = GT
   CWUserSort _ `compare` CWFloat _    = GT
   CWUserSort _ `compare` CWDouble _   = GT
+  CWUserSort _ `compare` CWString _   = GT
   CWUserSort a `compare` CWUserSort b = a `compare` b
 
 -- | 'CW' represents a concrete word of a fixed size:
@@ -180,39 +194,43 @@ trueCW :: CW
 trueCW  = CW KBool (CWInteger 1)
 
 -- | Lift a unary function through a CW
-liftCW :: (AlgReal -> b) -> (Integer -> b) -> (Float -> b) -> (Double -> b) -> ((Maybe Int, String) -> b) -> CW -> b
-liftCW f _ _ _ _ (CW _ (CWAlgReal v))  = f v
-liftCW _ f _ _ _ (CW _ (CWInteger v))  = f v
-liftCW _ _ f _ _ (CW _ (CWFloat v))    = f v
-liftCW _ _ _ f _ (CW _ (CWDouble v))   = f v
-liftCW _ _ _ _ f (CW _ (CWUserSort v)) = f v
+liftCW :: (AlgReal -> b) -> (Integer -> b) -> (Float -> b) -> (Double -> b) -> (String -> b) -> ((Maybe Int, String) -> b) -> CW -> b
+liftCW f _ _ _ _ _ (CW _ (CWAlgReal v))  = f v
+liftCW _ f _ _ _ _ (CW _ (CWInteger v))  = f v
+liftCW _ _ f _ _ _ (CW _ (CWFloat v))    = f v
+liftCW _ _ _ f _ _ (CW _ (CWDouble v))   = f v
+liftCW _ _ _ _ f _ (CW _ (CWString v))   = f v
+liftCW _ _ _ _ _ f (CW _ (CWUserSort v)) = f v
 
 -- | Lift a binary function through a CW
-liftCW2 :: (AlgReal -> AlgReal -> b) -> (Integer -> Integer -> b) -> (Float -> Float -> b) -> (Double -> Double -> b) -> ((Maybe Int, String) -> (Maybe Int, String) -> b) -> CW -> CW -> b
-liftCW2 r i f d u x y = case (cwVal x, cwVal y) of
-                         (CWAlgReal a,  CWAlgReal b)  -> r a b
-                         (CWInteger a,  CWInteger b)  -> i a b
-                         (CWFloat a,    CWFloat b)    -> f a b
-                         (CWDouble a,   CWDouble b)   -> d a b
-                         (CWUserSort a, CWUserSort b) -> u a b
-                         _                            -> error $ "SBV.liftCW2: impossible, incompatible args received: " ++ show (x, y)
+liftCW2 :: (AlgReal -> AlgReal -> b) -> (Integer -> Integer -> b) -> (Float -> Float -> b) -> (Double -> Double -> b) -> (String -> String -> b) -> ((Maybe Int, String) -> (Maybe Int, String) -> b) -> CW -> CW -> b
+liftCW2 r i f d s u x y = case (cwVal x, cwVal y) of
+                           (CWAlgReal a,  CWAlgReal b)  -> r a b
+                           (CWInteger a,  CWInteger b)  -> i a b
+                           (CWFloat a,    CWFloat b)    -> f a b
+                           (CWDouble a,   CWDouble b)   -> d a b
+                           (CWString a,   CWString b)   -> s a b
+                           (CWUserSort a, CWUserSort b) -> u a b
+                           _                            -> error $ "SBV.liftCW2: impossible, incompatible args received: " ++ show (x, y)
 
 -- | Map a unary function through a CW.
-mapCW :: (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> ((Maybe Int, String) -> (Maybe Int, String)) -> CW -> CW
-mapCW r i f d u x  = normCW $ CW (kindOf x) $ case cwVal x of
+mapCW :: (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> (String -> String) -> ((Maybe Int, String) -> (Maybe Int, String)) -> CW -> CW
+mapCW r i f d s u x  = normCW $ CW (kindOf x) $ case cwVal x of
                                                CWAlgReal a  -> CWAlgReal  (r a)
                                                CWInteger a  -> CWInteger  (i a)
                                                CWFloat a    -> CWFloat    (f a)
                                                CWDouble a   -> CWDouble   (d a)
+                                               CWString a   -> CWString   (s a)
                                                CWUserSort a -> CWUserSort (u a)
 
 -- | Map a binary function through a CW.
-mapCW2 :: (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (Float -> Float -> Float) -> (Double -> Double -> Double) -> ((Maybe Int, String) -> (Maybe Int, String) -> (Maybe Int, String)) -> CW -> CW -> CW
-mapCW2 r i f d u x y = case (cwSameType x y, cwVal x, cwVal y) of
+mapCW2 :: (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (Float -> Float -> Float) -> (Double -> Double -> Double) -> (String -> String -> String) -> ((Maybe Int, String) -> (Maybe Int, String) -> (Maybe Int, String)) -> CW -> CW -> CW
+mapCW2 r i f d s u x y = case (cwSameType x y, cwVal x, cwVal y) of
                         (True, CWAlgReal a,  CWAlgReal b)  -> normCW $ CW (kindOf x) (CWAlgReal  (r a b))
                         (True, CWInteger a,  CWInteger b)  -> normCW $ CW (kindOf x) (CWInteger  (i a b))
                         (True, CWFloat a,    CWFloat b)    -> normCW $ CW (kindOf x) (CWFloat    (f a b))
                         (True, CWDouble a,   CWDouble b)   -> normCW $ CW (kindOf x) (CWDouble   (d a b))
+                        (True, CWString a,   CWString b)   -> normCW $ CW (kindOf x) (CWString   (s a b))
                         (True, CWUserSort a, CWUserSort b) -> normCW $ CW (kindOf x) (CWUserSort (u a b))
                         _                                  -> error $ "SBV.mapCW2: impossible, incompatible args received: " ++ show (x, y)
 
@@ -228,7 +246,7 @@ instance Show GeneralizedCW where
 -- | Show a CW, with kind info if bool is True
 showCW :: Bool -> CW -> String
 showCW shk w | isBoolean w = show (cwToBool w) ++ (if shk then " :: Bool" else "")
-showCW shk w               = liftCW show show show show snd w ++ kInfo
+showCW shk w               = liftCW show show show show show snd w ++ kInfo
       where kInfo | shk  = " :: " ++ showBaseKind (kindOf w)
                   | True = ""
 
@@ -247,6 +265,7 @@ mkConstCW KUnbounded      a = normCW $ CW KUnbounded (CWInteger (toInteger a))
 mkConstCW KReal           a = normCW $ CW KReal      (CWAlgReal (fromInteger (toInteger a)))
 mkConstCW KFloat          a = normCW $ CW KFloat     (CWFloat   (fromInteger (toInteger a)))
 mkConstCW KDouble         a = normCW $ CW KDouble    (CWDouble  (fromInteger (toInteger a)))
+mkConstCW KString         a = error $ "Unexpected call to mkConstCW (String) with value: " ++ show (toInteger a)
 mkConstCW (KUserSort s _) a = error $ "Unexpected call to mkConstCW with uninterpreted kind: " ++ s ++ " with value: " ++ show (toInteger a)
 
 -- | Generate a random constant value ('CWVal') of the correct kind.
@@ -259,6 +278,7 @@ randomCWVal k =
     KReal         -> CWAlgReal <$> randomIO
     KFloat        -> CWFloat   <$> randomIO
     KDouble       -> CWDouble  <$> randomIO
+    KString       -> error "Unexpected call to randomCWVal KString"
     KUserSort s _ -> error $ "Unexpected call to randomCWVal with uninterpreted kind: " ++ s
   where
     bounds :: Bool -> Int -> (Integer, Integer)

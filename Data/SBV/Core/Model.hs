@@ -33,7 +33,7 @@ module Data.SBV.Core.Model (
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   , sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
-  , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, slet
+  , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, sString, sStrings, slet
   , sRealToSInteger, label
   , sAssert
   , liftQRem, liftDMod, symbolicMergeWithKind
@@ -54,6 +54,7 @@ import Data.Bits       (Bits(..))
 import Data.Int        (Int8, Int16, Int32, Int64)
 import Data.List       (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate)
 import Data.Maybe      (fromMaybe)
+import Data.String     (IsString(..))
 import Data.Word       (Word8, Word16, Word32, Word64)
 
 import Test.QuickCheck                         (Testable(..), Arbitrary(..))
@@ -186,9 +187,18 @@ instance SymWord Double where
   -- and in the presence of NaN's it would be incorrect to do any optimization
   isConcretely _ _ = False
 
+instance SymWord String where
+  mkSymWord = genMkSymVar KString
+  literal   = SBV . SVal KString . Left . CW KString . CWString
+  fromCW (CW _ (CWString a)) = a
+  fromCW c                   = error $ "SymWord.String: Unexpected non-string value: " ++ show c
+
+instance IsString SString where
+  fromString = literal
+
 ------------------------------------------------------------------------------------
 -- * Smart constructors for creating symbolic values. These are not strictly
--- necessary, as they are mere aliases for 'symbolic' and 'symbolics', but 
+-- necessary, as they are mere aliases for 'symbolic' and 'symbolics', but
 -- they nonetheless make programming easier.
 ------------------------------------------------------------------------------------
 -- | Declare an 'SBool'
@@ -294,6 +304,12 @@ sDouble = symbolic
 -- | Declare a list of 'SDouble's
 sDoubles :: [String] -> Symbolic [SDouble]
 sDoubles = symbolics
+
+sString :: String -> Symbolic SString
+sString = symbolic
+
+sStrings :: [String] -> Symbolic [SString]
+sStrings = symbolics
 
 -- | Convert an SReal to an SInteger. That is, it computes the
 -- largest integer @n@ that satisfies @sIntegerToSReal n <= r@
@@ -820,6 +836,7 @@ instance (SymWord a, Fractional a) => Fractional (SBV a) where
                       k@KBounded{}  -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KUnbounded  -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KBool       -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KString     -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KUserSort{} -> error $ "Unexpected Fractional case for: " ++ show k
 
 -- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat and SDouble

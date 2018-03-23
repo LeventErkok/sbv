@@ -25,6 +25,7 @@ import qualified TestSuite.Basics.Quantifiers
 import qualified TestSuite.Basics.Recursive
 import qualified TestSuite.Basics.SmallShifts
 import qualified TestSuite.Basics.SquashReals
+import qualified TestSuite.Basics.String
 import qualified TestSuite.Basics.TOut
 import qualified TestSuite.BitPrecise.BitTricks
 import qualified TestSuite.BitPrecise.Legato
@@ -144,6 +145,7 @@ otherTests = testGroup "SBVOtherTests" [
                , TestSuite.Basics.Recursive.tests
                , TestSuite.Basics.SmallShifts.tests
                , TestSuite.Basics.SquashReals.tests
+               , TestSuite.Basics.String.tests
                , TestSuite.Basics.TOut.tests
                , TestSuite.BitPrecise.BitTricks.tests
                , TestSuite.BitPrecise.Legato.tests

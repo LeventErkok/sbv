@@ -48,6 +48,8 @@
 --
 --   * 'SDouble': IEEE-754 double-precision floating point values
 --
+--   * 'SString': Strings
+--
 --   * 'SArray', 'SFunArray': Flat arrays of symbolic values.
 --
 --   * Symbolic polynomials over GF(2^n), polynomial arithmetic, and CRCs.
@@ -59,7 +61,7 @@
 --
 -- The user can construct ordinary Haskell programs using these types, which behave
 -- very similar to their concrete counterparts. In particular these types belong to the
--- standard classes 'Num', 'Bits', custom versions of 'Eq' ('EqSymbolic') 
+-- standard classes 'Num', 'Bits', custom versions of 'Eq' ('EqSymbolic')
 -- and 'Ord' ('OrdSymbolic'), along with several other custom classes for simplifying
 -- programming with symbolic values. The framework takes full advantage of Haskell's type
 -- inference to avoid many common mistakes.
@@ -133,17 +135,20 @@ module Data.SBV (
   -- *** Floating point numbers
   -- $floatingPoints
   , SFloat, SDouble
+  -- *** Strings
+  -- $strings
+  , SString
   -- *** Signed algebraic reals
   -- $algReals
   , SReal, AlgReal, sRealToSInteger
 
   -- ** Creating a symbolic variable
   -- $createSym
-  , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger, sReal, sFloat, sDouble
+  , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger, sReal, sFloat, sDouble, sString
 
   -- ** Creating a list of symbolic variables
   -- $createSyms
-  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReals, sFloats, sDoubles
+  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReals, sFloats, sDoubles, sStrings
 
   -- *** Abstract SBV type
   , SBV, HasKind(..), Kind(..)
@@ -231,6 +236,9 @@ module Data.SBV (
   -- ** Bit-pattern conversions
   , sFloatAsSWord32, sWord32AsSFloat, sDoubleAsSWord64, sWord64AsSDouble, blastSFloat, blastSDouble
 
+  -- * Strings
+  , strConcat, (.++), strLen, strSubstr, strIndexOf, strOffsetIndexOf, strAt, strContains, strPrefixOf, strSuffixOf, strReplace, strToInt, intToStr
+
   -- ** Programmable model extraction
   -- $programmableExtraction
   , SatModel(..), Modelable(..), displayModels, extractModels
@@ -262,6 +270,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Splittable
+import Data.SBV.Core.String
 
 import Data.SBV.Provers.Prover
 
@@ -502,7 +511,7 @@ Also see "Data.SBV.Examples.Misc.NoDiv0" for the classic div-by-zero example.
   Goals can be optimized at a regular or an extended value: An extended value is either positive or negative infinity
   (for unbounded integers and reals) or positive or negative epsilon differential from a real value (for reals).
 
-  For instance, a call of the form 
+  For instance, a call of the form
 
        @ 'minimize' "name-of-goal" $ x + 2*y @
 
@@ -798,7 +807,7 @@ following example demonstrates:
      data B = B () deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind, SatModel)
   @
 
-(Note that you'll also need to use the language pragmas @DeriveDataTypeable@, @DeriveAnyClass@, and import @Data.Generics@ for the above to work.) 
+(Note that you'll also need to use the language pragmas @DeriveDataTypeable@, @DeriveAnyClass@, and import @Data.Generics@ for the above to work.)
 
 This is all it takes to introduce 'B' as an uninterpreted sort in SBV, which makes the type @SBV B@ automagically become available as the type
 of symbolic values that ranges over 'B' values. Note that the @()@ argument is important to distinguish it from enumerations, which will be
