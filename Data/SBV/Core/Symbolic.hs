@@ -219,6 +219,7 @@ data PBOp = PB_AtMost  Int        -- ^ At most k
           | PB_Eq      [Int] Int  -- ^ Exactly k,  with coefficients given. Generalized PB_Exactly
           deriving (Eq, Ord, Show)
 
+-- | String operations
 data StrOp = StrConcat        -- ^ Concatenation of one or more strings
            | StrLen           -- ^ String length
            | StrSubstr        -- ^ Retrieves substring of @s@ at @offset@
@@ -233,6 +234,8 @@ data StrOp = StrConcat        -- ^ Concatenation of one or more strings
            | IntToStr         -- ^ Retrieve string encoded by integer @i@ (ground rewriting only)
            deriving (Eq, Ord)
 
+-- | Show instance for `StrOp`. Note that the mapping here is
+-- important to match the SMTLib equivalents, see here: <https://rise4fun.com/z3/tutorialcontent/sequences>
 instance Show StrOp where
   show StrConcat        = "str.++"
   show StrLen           = "str.len"

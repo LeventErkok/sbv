@@ -301,9 +301,11 @@ sDouble = symbolic
 sDoubles :: [String] -> Symbolic [SDouble]
 sDoubles = symbolics
 
+-- | Declare an 'SString'
 sString :: String -> Symbolic SString
 sString = symbolic
 
+-- | Declare a list of 'SString's
 sStrings :: [String] -> Symbolic [SString]
 sStrings = symbolics
 
