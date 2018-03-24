@@ -246,7 +246,7 @@ instance Show GeneralizedCW where
 -- | Show a CW, with kind info if bool is True
 showCW :: Bool -> CW -> String
 showCW shk w | isBoolean w = show (cwToBool w) ++ (if shk then " :: Bool" else "")
-showCW shk w               = liftCW show show show show show snd w ++ kInfo
+showCW shk w               = liftCW show show show show id snd w ++ kInfo
       where kInfo | shk  = " :: " ++ showBaseKind (kindOf w)
                   | True = ""
 
