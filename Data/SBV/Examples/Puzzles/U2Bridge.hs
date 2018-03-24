@@ -20,7 +20,7 @@
 module Data.SBV.Examples.Puzzles.U2Bridge where
 
 import Control.Monad       (unless)
-import Control.Monad.State (State, runState, put, get, modify, evalState)
+import Control.Monad.State (State, runState, put, get, gets, modify, evalState)
 
 import GHC.Generics (Generic)
 
@@ -129,7 +129,7 @@ instance Mergeable a => Mergeable (Move a) where
 
 -- | Read the state via an accessor function
 peek :: (Status -> a) -> Move a
-peek f = f <$> get
+peek = gets
 
 -- | Given an arbitrary member, return his location
 whereIs :: SU2Member -> Move SLocation
