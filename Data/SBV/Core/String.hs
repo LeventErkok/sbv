@@ -30,9 +30,16 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Model ()
 import Data.SBV.Core.Symbolic
 
+-- | Is the string concretely known empty?
+isConcretelyEmpty :: SString -> Bool
+isConcretelyEmpty ss | Just s <- unliteral ss = null s
+                     | True                   = False
+
 -- | Concatenate two strings
 strConcat :: SString -> SString -> SString
-strConcat = lift2 StrConcat (Just (++))
+strConcat x y | isConcretelyEmpty x = y
+              | isConcretelyEmpty y = x
+              | True                = lift2 StrConcat (Just (++)) x y
 
 -- | Short cut for `strConcat`.
 infixr 5 .++
