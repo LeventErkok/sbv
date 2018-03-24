@@ -370,7 +370,8 @@ recoverKindedValue k e = case e of
                            EReal   i | isReal          k -> Just $ CW KReal    (CWAlgReal i)
                            EFloat  i | isFloat         k -> Just $ CW KFloat   (CWFloat   i)
                            EDouble i | isDouble        k -> Just $ CW KDouble  (CWDouble  i)
-                           ECon    i | isUninterpreted k -> Just $ CW k        (CWUserSort (getUIIndex k i, i))
+                           ECon    s | isString        k -> Just $ CW KString  (CWString  s)
+                           ECon    s | isUninterpreted k -> Just $ CW k        (CWUserSort (getUIIndex k s, s))
                            _                             -> Nothing
   where isIntegralLike = or [f k | f <- [isBoolean, isBounded, isInteger, isReal, isFloat, isDouble]]
 
