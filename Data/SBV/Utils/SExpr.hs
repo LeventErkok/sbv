@@ -30,7 +30,6 @@ data SExpr = ECon    String
            | EReal   AlgReal
            | EFloat  Float
            | EDouble Double
-           | EString String
            | EApp    [SExpr]
            deriving Show
 
@@ -117,9 +116,6 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         pTok ('b':'v':r) | not (null r) && all isDigit r = mkNum Nothing               $ readDec (takeWhile (/= '[') r)
         pTok ('#':'b':r)                                 = mkNum (Just (length r))     $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
         pTok ('#':'x':r)                                 = mkNum (Just (4 * length r)) $ readHex r
-
-        -- working with String is a real bummer here
-        pTok ('"':r) = pure (EString (init r))
 
         pTok n
           | not (null n) && isDigit (head n)

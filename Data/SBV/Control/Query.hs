@@ -78,7 +78,6 @@ stringsOf (EReal   r)   = [show r]
 stringsOf (EFloat  f)   = [show f]
 stringsOf (EDouble d)   = [show d]
 stringsOf (EApp ss)     = concatMap stringsOf ss
-stringsOf (EString s)   = [s]
 
 -- Sort of a light-hearted show for SExprs, for better consumption at the user level.
 serialize :: Bool -> SExpr -> String
@@ -88,7 +87,6 @@ serialize removeQuotes = go
         go (EReal   r)   = shNN r
         go (EFloat  f)   = shNN f
         go (EDouble d)   = shNN d
-        go (EString s)   = s
         go (EApp [x])    = go x
         go (EApp ss)     = "(" ++ unwords (map go ss) ++ ")"
 
