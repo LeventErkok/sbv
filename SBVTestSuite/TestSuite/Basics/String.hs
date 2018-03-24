@@ -1,4 +1,4 @@
-{-# language OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  TestSuite.Basics.String
@@ -7,7 +7,8 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test the pseudo-boolean functions
+-- Test the string functions.
+-- Most of these tests are adopted from <https://rise4fun.com/z3/tutorialcontent/sequences>
 -----------------------------------------------------------------------------
 
 module TestSuite.Basics.String(tests)  where
@@ -19,18 +20,18 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Basics.String" [
-      goldenCapturedIO "strConcat"     $ \rf -> checkWith z3{redirectVerbose=Just rf} strConcatSat Sat
-    , goldenCapturedIO "strConcatBad"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strConcatUnsat Unsat
-    , goldenCapturedIO "strIndexOf"    $ \rf -> checkWith z3{redirectVerbose=Just rf} strIndexOfSat Sat
+      goldenCapturedIO "strConcat"     $ \rf -> checkWith z3{redirectVerbose=Just rf} strConcatSat    Sat
+    , goldenCapturedIO "strConcatBad"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strConcatUnsat  Unsat
+    , goldenCapturedIO "strIndexOf"    $ \rf -> checkWith z3{redirectVerbose=Just rf} strIndexOfSat   Sat
     , goldenCapturedIO "strIndexOfBad" $ \rf -> checkWith z3{redirectVerbose=Just rf} strIndexOfUnsat Unsat
-    , goldenCapturedIO "strExamples1"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples1 Sat
-    , goldenCapturedIO "strExamples2"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples2 Unsat
-    , goldenCapturedIO "strExamples3"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples3 Sat
-    , goldenCapturedIO "strExamples4"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples4 Sat
-    , goldenCapturedIO "strExamples5"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples5 Sat
-    , goldenCapturedIO "strExamples6"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples6 Unsat
-    , goldenCapturedIO "strExamples7"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples7 Sat
-    , goldenCapturedIO "strExamples8"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples8 Unsat
+    , goldenCapturedIO "strExamples1"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples1    Sat
+    , goldenCapturedIO "strExamples2"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples2    Unsat
+    , goldenCapturedIO "strExamples3"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples3    Sat
+    , goldenCapturedIO "strExamples4"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples4    Sat
+    , goldenCapturedIO "strExamples5"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples5    Sat
+    , goldenCapturedIO "strExamples6"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples6    Unsat
+    , goldenCapturedIO "strExamples7"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples7    Sat
+    , goldenCapturedIO "strExamples8"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples8    Unsat
     ]
 
 -- to test interactively, use:
@@ -63,9 +64,9 @@ strIndexOfUnsat = constrain $ strIndexOf "abcabc" "a" ./= 0
 strExamples1 :: Symbolic ()
 strExamples1 = constrain $ bAnd
   [ strAt "abc" 1 .++ strAt "abc" 0 .== "ba"
-  , strIndexOf "abcabc" "a" .== 0
+  , strIndexOf "abcabc" "a"         .== 0
   , strOffsetIndexOf "abcabc" "a" 1 .== 3
-  , strSubstr "xxabcyy" 2 3 .== "abc"
+  , strSubstr "xxabcyy" 2 3         .== "abc"
   ]
 
 -- A string cannot overlap with two different characters.
@@ -87,7 +88,7 @@ strExamples4 :: Symbolic ()
 strExamples4 = do
   [a, b] <- sStrings ["a", "b"]
   constrain $ "abc" .++ a .== b .++ "cef"
-  constrain $ strLen a .== 2
+  constrain $ strLen a .<= 2
 
 -- There is a solution to a that is not a sequence of "a"'s.
 strExamples5 :: Symbolic ()

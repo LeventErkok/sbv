@@ -26,7 +26,7 @@
 [GOOD] (define-fun s5 () String (str.++ s1 s4))
 [GOOD] (define-fun s6 () Bool (= s3 s5))
 [GOOD] (define-fun s7 () Int (str.len s0))
-[GOOD] (define-fun s9 () Bool (= s7 s8))
+[GOOD] (define-fun s9 () Bool (<= s7 s8))
 [GOOD] (assert s6)
 [GOOD] (assert s9)
 [SEND] (check-sat)
