@@ -20,11 +20,7 @@
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE DefaultSignatures      #-}
 
--- Keep GHC quiet.. I wish we can be more specific on these as opposed to module
--- level turning of redundant-constraints. Note that his is not needed >= GHC 8.0.2
--- since they removed this constraint from -Wall, see: https://ghc.haskell.org/trac/ghc/ticket/10635
-{-# OPTIONS_GHC -fno-warn-orphans               #-}
-{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
+{-# OPTIONS_GHC -fno-warn-orphans   #-}
 
 module Data.SBV.Core.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), assertSoft, SIntegral, SFiniteBits(..)
