@@ -10,6 +10,10 @@
     code is used in conjunction with a larger code base. Thanks
     to Greg Horn for the pull request.
 
+  * Improve implementation of 'svExp' to match that of '.^', making
+    it more defined when the exponent is constant. Thanks to Brian
+    Huffman for the patch.
+
 ### Version 7.6, Released 2018-03-18
 
   * GHC 8.4.1 compatibility: Work around compilation issues. SBV
