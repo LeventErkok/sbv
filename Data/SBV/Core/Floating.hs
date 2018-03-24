@@ -18,8 +18,6 @@ module Data.SBV.Core.Floating (
        , blastSFloat, blastSDouble
        ) where
 
-import Control.Monad (join)
-
 import qualified Data.Binary.IEEE754 as DB (wordToFloat, wordToDouble, floatToWord, doubleToWord)
 
 import Data.Int            (Int8,  Int16,  Int32,  Int64)
@@ -249,7 +247,7 @@ instance IEEEFloatConvertable AlgReal where
 concEval1 :: SymWord a => Maybe (a -> a) -> Maybe SRoundingMode -> SBV a -> Maybe (SBV a)
 concEval1 mbOp mbRm a = do op <- mbOp
                            v  <- unliteral a
-                           case join (unliteral `fmap` mbRm) of
+                           case unliteral =<< mbRm of
                              Nothing                     -> (Just . literal) (op v)
                              Just RoundNearestTiesToEven -> (Just . literal) (op v)
                              _                           -> Nothing
@@ -259,7 +257,7 @@ concEval2 :: SymWord a => Maybe (a -> a -> a) -> Maybe SRoundingMode -> SBV a ->
 concEval2 mbOp mbRm a b  = do op <- mbOp
                               v1 <- unliteral a
                               v2 <- unliteral b
-                              case join (unliteral `fmap` mbRm) of
+                              case unliteral =<< mbRm of
                                 Nothing                     -> (Just . literal) (v1 `op` v2)
                                 Just RoundNearestTiesToEven -> (Just . literal) (v1 `op` v2)
                                 _                           -> Nothing
@@ -269,7 +267,7 @@ concEval2B :: SymWord a => Maybe (a -> a -> Bool) -> Maybe SRoundingMode -> SBV 
 concEval2B mbOp mbRm a b  = do op <- mbOp
                                v1 <- unliteral a
                                v2 <- unliteral b
-                               case join (unliteral `fmap` mbRm) of
+                               case unliteral =<< mbRm of
                                  Nothing                     -> (Just . literal) (v1 `op` v2)
                                  Just RoundNearestTiesToEven -> (Just . literal) (v1 `op` v2)
                                  _                           -> Nothing
@@ -280,7 +278,7 @@ concEval3 mbOp mbRm a b c = do op <- mbOp
                                v1 <- unliteral a
                                v2 <- unliteral b
                                v3 <- unliteral c
-                               case join (unliteral `fmap` mbRm) of
+                               case unliteral =<< mbRm of
                                  Nothing                     -> (Just . literal) (op v1 v2 v3)
                                  Just RoundNearestTiesToEven -> (Just . literal) (op v1 v2 v3)
                                  _                           -> Nothing
