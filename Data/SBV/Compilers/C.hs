@@ -214,6 +214,7 @@ mkConst _   (CW (KBounded sg sz) (CWInteger i)) = showSizedConst i (sg,   sz)
 mkConst _   (CW KBool            (CWInteger i)) = showSizedConst i (False, 1)
 mkConst _   (CW KFloat           (CWFloat f))   = text $ showCFloat f
 mkConst _   (CW KDouble          (CWDouble d))  = text $ showCDouble d
+mkConst _   (CW KString          (CWString s))  = text $ show s
 mkConst _   cw                                  = die $ "mkConst: " ++ show cw
 
 showSizedConst :: Integer -> (Bool, Int) -> Doc
@@ -463,7 +464,7 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _uis _
                 where len KReal{}             = 5
                       len KFloat{}            = 6 -- SFloat
                       len KDouble{}           = 7 -- SDouble
-                      len KString{}           = die "what's the len of a string?" -- TODO(joel)
+                      len KString{}           = 7 -- SString
                       len KUnbounded{}        = 8
                       len KBool               = 5 -- SBool
                       len (KBounded False n)  = 5 + length (show n) -- SWordN

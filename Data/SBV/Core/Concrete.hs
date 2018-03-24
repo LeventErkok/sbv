@@ -278,7 +278,7 @@ randomCWVal k =
     KReal         -> CWAlgReal <$> randomIO
     KFloat        -> CWFloat   <$> randomIO
     KDouble       -> CWDouble  <$> randomIO
-    KString       -> error "Unexpected call to randomCWVal KString"
+    KString       -> error "TBD: randomCWVal for KString. Please report!"
     KUserSort s _ -> error $ "Unexpected call to randomCWVal with uninterpreted kind: " ++ s
   where
     bounds :: Bool -> Int -> (Integer, Integer)

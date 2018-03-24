@@ -270,7 +270,7 @@ cwToSMTLib rm x
   | hasSign x        , CWInteger  w      <- cwVal x = if w == negate (2 ^ intSizeOf x)
                                                       then mkMinBound (intSizeOf x)
                                                       else negIf (w < 0) $ smtLibHex (intSizeOf x) (abs w)
-  | isString x, CWString s <- cwVal x = show s
+  | isString x       , CWString s        <- cwVal x = show s
   | True = error $ "SBV.cvtCW: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
   where roundModeConvert s = fromMaybe s (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])
         -- Carefully code hex numbers, SMTLib is picky about lengths of hex constants. For the time

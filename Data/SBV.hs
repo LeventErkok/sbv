@@ -678,6 +678,13 @@ Floating point numbers are defined by the IEEE-754 standard; and correspond to H
 by Rummer and Wahl: <http://www.philipp.ruemmer.org/publications/smt-fpa.pdf>.
 -}
 
+{- $strings
+Support for strings (contributed by Joel Burget) adds support for QF_S logic,
+described here: <https://rise4fun.com/z3/tutorialcontent/sequences>. Note that this logic
+is still not part of official SMTLib (as of March 2018), so it should be considered
+experimental.
+-}
+
 {- $constrainIntro
 A constraint is a means for restricting the input domain of a formula. Here's a simple
 example:
