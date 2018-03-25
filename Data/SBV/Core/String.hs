@@ -70,8 +70,9 @@ strSubstr s offset len
   = lift3 StrSubstr Nothing s offset len
 
 -- | `strIndexOf s sub`. Retrieves first position of @sub@ in @s@, @-1@ if there are no occurrences.
+-- Equivalent to `strOffsetIndexOf s sub 0`.
 strIndexOf :: SString -> SString -> SInteger
-strIndexOf = lift2 StrIndexOf Nothing
+strIndexOf s sub = strOffsetIndexOf s sub 0
 
 -- | `strOffsetIndexOf s sub offset`. Retrieves first position of @sub@ at or after @offset@ in @s@, @-1@ if there are no occurrences.
 strOffsetIndexOf :: SString -> SString -> SInteger -> SInteger
