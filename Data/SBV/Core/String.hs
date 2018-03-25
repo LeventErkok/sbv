@@ -122,9 +122,18 @@ strSuffixOf suf s
 
 -- | `strReplace s src dst`. Replace the first occurrence of @src@ by @dst@ in @s@
 strReplace :: SString -> SString -> SString -> SString
-strReplace = lift3 StrReplace Nothing
-
--- | `strToInt s`. Retrieve integer encoded by string @s@ (ground rewriting only)
+strReplace s src dst
+  | Just a <- unliteral s
+  , Just b <- unliteral src
+  , Just c <- unliteral dst
+  = literal $ walk a b c
+  | True
+  = lift3 StrReplace Nothing s src dst
+  where walk haystack needle newNeedle = go haystack
+           where go []       = []
+                 go i@(c:cs)
+                  | needle `isPrefixOf` i = newNeedle ++ drop (length needle) i
+                  | True                  = c : go cs
 strToInt :: SString -> SInteger
 strToInt = lift1 StrToInt Nothing
 
