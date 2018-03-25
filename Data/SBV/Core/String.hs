@@ -66,7 +66,7 @@ strSubstr s offset len
   , valid o                                  -- offset is valid
   , l >= 0                                   -- length is not-negative
   , valid $ o + l - 1                        -- we don't overrun
-  = literal $ genericTake l $ genericDrop o $ c
+  = literal $ genericTake l $ genericDrop o c
   | True                                     -- either symbolic, or something is out-of-bounds
   = lift3 StrSubstr Nothing s offset len
 
