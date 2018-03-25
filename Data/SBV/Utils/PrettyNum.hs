@@ -9,6 +9,7 @@
 -- Number representations in hex/bin
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
@@ -47,6 +48,8 @@ class PrettyNum a where
 -- Why not default methods? Because defaults need "Integral a" but Bool is not..
 instance PrettyNum Bool where
   {hexS = show; binS = show; hex = show; bin = show}
+instance PrettyNum String where
+  {hexS = show; binS = show; hex = show; bin = show}
 instance PrettyNum Word8 where
   {hexS = shex True True (False,8) ; binS = sbin True True (False,8) ; hex = shex False False (False,8) ; bin = sbin False False (False,8) ;}
 instance PrettyNum Int8 where
@@ -69,25 +72,28 @@ instance PrettyNum Integer where
 instance PrettyNum CW where
   hexS cw | isUninterpreted cw = show cw ++ " :: " ++ show (kindOf cw)
           | isBoolean cw       = hexS (cwToBool cw) ++ " :: Bool"
-          | isFloat cw         = let CWFloat  f  = cwVal cw in show f ++ " :: Float\n"  ++ show (floatToFP f)
-          | isDouble cw        = let CWDouble d  = cwVal cw in show d ++ " :: Double\n" ++ show (doubleToFP d)
+          | isFloat cw         = let CWFloat   f = cwVal cw in show f ++ " :: Float\n"  ++ show (floatToFP f)
+          | isDouble cw        = let CWDouble  d = cwVal cw in show d ++ " :: Double\n" ++ show (doubleToFP d)
           | isReal cw          = let CWAlgReal w = cwVal cw in show w ++ " :: Real"
+          | isString cw        = let CWString  s = cwVal cw in show s ++ " :: String"
           | not (isBounded cw) = let CWInteger w = cwVal cw in shexI True True w
           | True               = let CWInteger w = cwVal cw in shex  True True (hasSign cw, intSizeOf cw) w
 
   binS cw | isUninterpreted cw = show cw  ++ " :: " ++ show (kindOf cw)
           | isBoolean cw       = binS (cwToBool cw)  ++ " :: Bool"
-          | isFloat cw         = let CWFloat  f  = cwVal cw in show f ++ " :: Float\n"  ++ show (floatToFP f)
-          | isDouble cw        = let CWDouble d  = cwVal cw in show d ++ " :: Double\n" ++ show (doubleToFP d)
+          | isFloat cw         = let CWFloat   f = cwVal cw in show f ++ " :: Float\n"  ++ show (floatToFP f)
+          | isDouble cw        = let CWDouble  d = cwVal cw in show d ++ " :: Double\n" ++ show (doubleToFP d)
           | isReal cw          = let CWAlgReal w = cwVal cw in show w ++ " :: Real"
+          | isString cw        = let CWString  s = cwVal cw in show s ++ " :: String"
           | not (isBounded cw) = let CWInteger w = cwVal cw in sbinI True True w
           | True               = let CWInteger w = cwVal cw in sbin  True True (hasSign cw, intSizeOf cw) w
 
   hex cw | isUninterpreted cw = show cw
          | isBoolean cw       = hexS (cwToBool cw) ++ " :: Bool"
-         | isFloat cw         = let CWFloat  f  = cwVal cw in show f
-         | isDouble cw        = let CWDouble d  = cwVal cw in show d
+         | isFloat cw         = let CWFloat   f = cwVal cw in show f
+         | isDouble cw        = let CWDouble  d = cwVal cw in show d
          | isReal cw          = let CWAlgReal w = cwVal cw in show w
+         | isString cw        = let CWString  s = cwVal cw in show s
          | not (isBounded cw) = let CWInteger w = cwVal cw in shexI False False w
          | True               = let CWInteger w = cwVal cw in shex  False False (hasSign cw, intSizeOf cw) w
 
@@ -96,6 +102,7 @@ instance PrettyNum CW where
          | isFloat cw         = let CWFloat  f  = cwVal cw in show f
          | isDouble cw        = let CWDouble d  = cwVal cw in show d
          | isReal cw          = let CWAlgReal w = cwVal cw in show w
+         | isString cw        = let CWString  s = cwVal cw in show s
          | not (isBounded cw) = let CWInteger w = cwVal cw in sbinI False False w
          | True               = let CWInteger w = cwVal cw in sbin  False False (hasSign cw, intSizeOf cw) w
 
