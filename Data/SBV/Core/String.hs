@@ -18,12 +18,12 @@ module Data.SBV.Core.String (
        , strIndexOf
        , strOffsetIndexOf
        , strAt
-       , strContains
-       , strPrefixOf
-       , strSuffixOf
+       , strIsInfixOf
+       , strIsPrefixOf
+       , strIsSuffixOf
        , strReplace
-       , strToInt
-       , intToStr
+       , strStrToInt
+       , strIntToStr
        ) where
 
 import Data.SBV.Core.Data
@@ -94,28 +94,25 @@ strOffsetIndexOf s sub offset
 strAt :: SString -> SInteger -> SString
 strAt s offset = strSubstr s offset 1
 
--- | `strContains s sub`. Does @s@ contain the substring @sub@? Note the reversal here!
--- We're sticking to SMTLib convention, as opposed to Haskell's `isInfixOf`/`isSuffixOf`
--- and also `strPrefixOf` and `strSuffixOf` below. Unfortunate, we are staying consistent
--- with the corresponding SMTLib function.
-strContains :: SString -> SString -> SBool
-strContains s sub
+-- | @sub@ `strIsInfixOf` @s@. Does @s@ contain the substring @sub@?
+strIsInfixOf :: SString -> SString -> SBool
+strIsInfixOf s sub
   | isConcretelyEmpty sub
   = literal True
   | True
-  = lift2 StrContains (Just (flip isInfixOf)) s sub  -- NB. flip!
+  = lift2 StrContains (Just isInfixOf) sub s -- NB. flip, since `StrContains` takes args in rev order!
 
--- | `strPrefixOf pre s`. Is @pre@ a prefix of @s@?
-strPrefixOf :: SString -> SString -> SBool
-strPrefixOf pre s
+-- | @pre@ `strIsPrefixOf` @s@. Is @pre@ a prefix of @s@?
+strIsPrefixOf :: SString -> SString -> SBool
+strIsPrefixOf pre s
   | isConcretelyEmpty pre
   = literal True
   | True
   = lift2 StrPrefixOf (Just isPrefixOf) pre s
 
--- | `strSuffixOf suf s`. Is @suf@ a suffix of @s@?
-strSuffixOf :: SString -> SString -> SBool
-strSuffixOf suf s
+-- | @suf@ `strIsSuffixOf` @s@. Is @suf@ a suffix of @s@?
+strIsSuffixOf :: SString -> SString -> SBool
+strIsSuffixOf suf s
   | isConcretelyEmpty suf
   = literal True
   | True
@@ -136,13 +133,13 @@ strReplace s src dst
                   | needle `isPrefixOf` i = newNeedle ++ drop (length needle) i
                   | True                  = c : go cs
 
--- | `strToInt s`. Retrieve integer encoded by string @s@ (ground rewriting only).
+-- | `strStrToInt s`. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when 's' only contains digits,
 -- that is, if it encodes a natural number. Otherwise, it returns '-1'.
--- The confusing name is unfortunate, but we are sticking to the SMTLib semantics again.
+-- The confusing name is unfortunate, but we are sticking to the SMTLib semantics here.
 -- See <http://cvc4.cs.stanford.edu/wiki/Strings> for details.
-strToInt :: SString -> SInteger
-strToInt s
+strStrToInt :: SString -> SInteger
+strStrToInt s
  | Just a <- unliteral s
  = if all isDigit a
    then literal (read a)
@@ -152,10 +149,9 @@ strToInt s
 
 -- | `intToStr i`. Retrieve string encoded by integer @i@ (ground rewriting only).
 -- Again, only naturals are supported, any input that is not a natural number
--- produces empty string.
--- See <http://cvc4.cs.stanford.edu/wiki/Strings> for details.
-intToStr :: SInteger -> SString
-intToStr i
+-- produces empty string. See <http://cvc4.cs.stanford.edu/wiki/Strings> for details.
+strIntToStr :: SInteger -> SString
+strIntToStr i
  | Just v <- unliteral i
  = literal $ if v >= 0 then show v else ""
  | True

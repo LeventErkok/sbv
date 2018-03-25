@@ -102,24 +102,24 @@ strExamples5 = do
 strExamples6 :: Symbolic ()
 strExamples6 = do
   [a, b, c] <- sStrings ["a", "b", "c"]
-  constrain $ a `strContains` b
-  constrain $ b `strContains` c
-  constrain $ bnot $ a `strContains` c
+  constrain $ b `strIsInfixOf` a
+  constrain $ c `strIsInfixOf` b
+  constrain $ bnot $ c `strIsInfixOf` a
 
 -- But containment is not a linear order.
 strExamples7 :: Symbolic ()
 strExamples7 = do
   [a, b, c] <- sStrings ["a", "b", "c"]
-  constrain $ a `strContains` b
-  constrain $ a `strContains` c
-  constrain $ bnot $ b `strContains` c
-  constrain $ bnot $ c `strContains` b
+  constrain $ b `strIsInfixOf` a
+  constrain $ c `strIsInfixOf` a
+  constrain $ bnot $ c `strIsInfixOf` b
+  constrain $ bnot $ b `strIsInfixOf` c
 
 -- Any string is equal to the prefix and suffix that add up to a its length.
 strExamples8 :: Symbolic ()
 strExamples8 = do
   [a, b, c] <- sStrings ["a", "b", "c"]
-  constrain $ strPrefixOf b a
-  constrain $ strSuffixOf c a
+  constrain $ b `strIsPrefixOf` a
+  constrain $ c `strIsSuffixOf` a
   constrain $ strLen a .== strLen b + strLen c
   constrain $ bnot $ a .== b .++ c
