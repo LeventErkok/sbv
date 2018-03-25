@@ -30,7 +30,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Model ()
 import Data.SBV.Core.Symbolic
 
-import Data.List (genericLength, genericTake, genericDrop)
+import Data.List (genericLength, genericTake, genericDrop, tails, isPrefixOf)
 
 -- | Is the string concretely known empty?
 isConcretelyEmpty :: SString -> Bool
@@ -76,7 +76,15 @@ strIndexOf s sub = strOffsetIndexOf s sub 0
 
 -- | `strOffsetIndexOf s sub offset`. Retrieves first position of @sub@ at or after @offset@ in @s@, @-1@ if there are no occurrences.
 strOffsetIndexOf :: SString -> SString -> SInteger -> SInteger
-strOffsetIndexOf = lift3 StrOffsetIndexOf Nothing
+strOffsetIndexOf s sub offset
+  | Just c <- unliteral s               -- a constant string
+  , Just n <- unliteral sub             -- a constant search pattern
+  , Just o <- unliteral offset          -- at a constant offset
+  = case [i | (i, t) <- zip [o ..] (tails (genericDrop o c)), n `isPrefixOf` t] of
+      (i:_) -> literal i
+      _     -> -1
+  | True
+  = lift3 StrIndexOf Nothing sub s offset
 
 -- | `strAt s offset`. Substring of length 1 at @offset@ in @s@.
 strAt :: SString -> SInteger -> SString
