@@ -53,7 +53,7 @@ infixr 5 .++
 strLen :: SString -> SInteger
 strLen = lift1 StrLen (Just (fromIntegral . length))
 
--- | `strSubStr s offset length` is the substring of @s@ at offset `offset` with length `length`.
+-- | `strSubstr s offset length` is the substring of @s@ at offset `offset` with length `length`.
 -- This function is under-specified when the offset is outside the range of positions in @s@ or @length@
 -- is negative or @offset+length@ exceeds the length of @s@.
 strSubstr :: SString -> SInteger -> SInteger -> SString
@@ -147,7 +147,7 @@ strStrToInt s
  | True
  = lift1 StrToInt Nothing s
 
--- | `intToStr i`. Retrieve string encoded by integer @i@ (ground rewriting only).
+-- | `strIntToStr i`. Retrieve string encoded by integer @i@ (ground rewriting only).
 -- Again, only naturals are supported, any input that is not a natural number
 -- produces empty string. See <http://cvc4.cs.stanford.edu/wiki/Strings> for details.
 strIntToStr :: SInteger -> SString
