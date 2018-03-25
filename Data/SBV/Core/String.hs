@@ -106,7 +106,11 @@ strContains s sub
 
 -- | `strPrefixOf pre s`. Is @pre@ a prefix of @s@?
 strPrefixOf :: SString -> SString -> SBool
-strPrefixOf = lift2 StrPrefixOf Nothing
+strPrefixOf pre s
+  | isConcretelyEmpty pre
+  = literal True
+  | True
+  = lift2 StrPrefixOf (Just isPrefixOf) pre s
 
 -- | `strSuffixOf suf s`. Is @suf@ a suffix of @s@?
 strSuffixOf :: SString -> SString -> SBool
