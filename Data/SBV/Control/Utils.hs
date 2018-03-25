@@ -370,7 +370,7 @@ recoverKindedValue k e = case e of
                            EReal   i | isReal          k -> Just $ CW KReal    (CWAlgReal i)
                            EFloat  i | isFloat         k -> Just $ CW KFloat   (CWFloat   i)
                            EDouble i | isDouble        k -> Just $ CW KDouble  (CWDouble  i)
-                           ECon    s | isString        k -> Just $ CW KString  (CWString  s)
+                           ECon    s | isString        k -> Just $ CW KString  (CWString   (dropQuotes s))
                            ECon    s | isUninterpreted k -> Just $ CW k        (CWUserSort (getUIIndex k s, s))
                            _                             -> Nothing
   where isIntegralLike = or [f k | f <- [isBoolean, isBounded, isInteger, isReal, isFloat, isDouble]]
@@ -378,6 +378,12 @@ recoverKindedValue k e = case e of
         getUIIndex (KUserSort  _ (Right xs)) i = i `elemIndex` xs
         getUIIndex _                         _ = Nothing
 
+        -- Make sure strings are really strings
+        dropQuotes xs
+          | length xs < 2 || head xs /= '"' || last xs /= '"'
+          = error $ "Expected a string constant with quotes, received: <" ++ xs ++ ">"
+          | True
+          = tail (init xs)
 
 -- | Get the value of a term. If the kind is Real and solver supports decimal approximations,
 -- we will "squash" the representations.
