@@ -149,8 +149,17 @@ strToInt s
    else -1
  | True
  = lift1 StrToInt Nothing s
+
+-- | `intToStr i`. Retrieve string encoded by integer @i@ (ground rewriting only).
+-- Again, only naturals are supported, any input that is not a natural number
+-- produces empty string.
+-- See <http://cvc4.cs.stanford.edu/wiki/Strings> for details.
 intToStr :: SInteger -> SString
-intToStr = lift1 IntToStr Nothing
+intToStr i
+ | Just v <- unliteral i
+ = literal $ if v >= 0 then show v else ""
+ | True
+ = lift1 IntToStr Nothing i
 
 -- | Lift a unary operator over strings.
 lift1 :: forall a b. (SymWord a, SymWord b) => StrOp -> Maybe (a -> b) -> SBV a -> SBV b
