@@ -80,6 +80,7 @@ strOffsetIndexOf s sub offset
   | Just c <- unliteral s               -- a constant string
   , Just n <- unliteral sub             -- a constant search pattern
   , Just o <- unliteral offset          -- at a constant offset
+  , o >= 0, o < genericLength c         -- offset is good
   = case [i | (i, t) <- zip [o ..] (tails (genericDrop o c)), n `isPrefixOf` t] of
       (i:_) -> literal i
       _     -> -1
