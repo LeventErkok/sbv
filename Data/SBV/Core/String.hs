@@ -93,9 +93,16 @@ strOffsetIndexOf s sub offset
 strAt :: SString -> SInteger -> SString
 strAt s offset = strSubstr s offset 1
 
--- | `strContains s sub`. Does @s@ contain the substring @sub@?
+-- | `strContains s sub`. Does @s@ contain the substring @sub@? Note the reversal here!
+-- We're sticking to SMTLib convention, as opposed to Haskell's `isInfixOf`/`isSuffixOf`
+-- and also `strPrefixOf` and `strSuffixOf` below. Unfortunate, we are staying consistent
+-- with the corresponding SMTLib function.
 strContains :: SString -> SString -> SBool
-strContains = lift2 StrContains Nothing
+strContains s sub
+  | isConcretelyEmpty sub
+  = literal True
+  | True
+  = lift2 StrContains (Just (flip isInfixOf)) s sub  -- NB. flip!
 
 -- | `strPrefixOf pre s`. Is @pre@ a prefix of @s@?
 strPrefixOf :: SString -> SString -> SBool
