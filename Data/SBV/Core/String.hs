@@ -30,6 +30,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Model ()
 import Data.SBV.Core.Symbolic
 
+import Data.Char (isDigit)
 import Data.List (genericLength, genericTake, genericDrop, tails, isPrefixOf, isSuffixOf, isInfixOf)
 
 -- | Is the string concretely known empty?
@@ -134,10 +135,20 @@ strReplace s src dst
                  go i@(c:cs)
                   | needle `isPrefixOf` i = newNeedle ++ drop (length needle) i
                   | True                  = c : go cs
-strToInt :: SString -> SInteger
-strToInt = lift1 StrToInt Nothing
 
--- | `intToStr i`. Retrieve string encoded by integer @i@ (ground rewriting only)
+-- | `strToInt s`. Retrieve integer encoded by string @s@ (ground rewriting only).
+-- Note that by definition this function only works when 's' only contains digits,
+-- that is, if it encodes a natural number. Otherwise, it returns '-1'.
+-- The confusing name is unfortunate, but we are sticking to the SMTLib semantics again.
+-- See <http://cvc4.cs.stanford.edu/wiki/Strings> for details.
+strToInt :: SString -> SInteger
+strToInt s
+ | Just a <- unliteral s
+ = if all isDigit a
+   then literal (read a)
+   else -1
+ | True
+ = lift1 StrToInt Nothing s
 intToStr :: SInteger -> SString
 intToStr = lift1 IntToStr Nothing
 
