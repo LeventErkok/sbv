@@ -24,10 +24,12 @@ module Data.SBV.Core.String (
        , strReplace
        , strStrToInt
        , strIntToStr
+       , strTake
+       , strDrop
        ) where
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model ()
+import Data.SBV.Core.Model (ite, (.<=), (.>=))
 import Data.SBV.Core.Symbolic
 
 import Data.Char (isDigit)
@@ -55,7 +57,8 @@ strLen = lift1 StrLen (Just (fromIntegral . length))
 
 -- | `strSubstr s offset length` is the substring of @s@ at offset `offset` with length `length`.
 -- This function is under-specified when the offset is outside the range of positions in @s@ or @length@
--- is negative or @offset+length@ exceeds the length of @s@.
+-- is negative or @offset+length@ exceeds the length of @s@. For a friendlier version of this function
+-- that acts like Haskell's `take`, see `strTake`.
 strSubstr :: SString -> SInteger -> SInteger -> SString
 strSubstr s offset len
   | Just c <- unliteral s                    -- a constant string
@@ -156,6 +159,19 @@ strIntToStr i
  = literal $ if v >= 0 then show v else ""
  | True
  = lift1 IntToStr Nothing i
+
+-- | `strTake len s`. Corresponds to Haskell's `take` on symbolic-strings.
+strTake :: SInteger -> SString -> SString
+strTake i s = ite (i .<= 0)        (literal "")
+            $ ite (i .>= strLen s) s
+            $ strSubstr s 0 i
+
+-- | `strDrop len s`. Corresponds to Haskell's `drop` on symbolic-strings.
+strDrop :: SInteger -> SString -> SString
+strDrop i s = ite (i .>= ls) (literal "")
+            $ ite (i .<= 0)  s
+            $ strSubstr s i (ls - i)
+  where ls = strLen s
 
 -- | Lift a unary operator over strings.
 lift1 :: forall a b. (SymWord a, SymWord b) => StrOp -> Maybe (a -> b) -> SBV a -> SBV b
