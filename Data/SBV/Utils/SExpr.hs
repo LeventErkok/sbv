@@ -53,7 +53,7 @@ tokenize inp = go inp []
                             (pre, '|':rest) -> go rest (pre : sofar)
                             (pre, rest)     -> go rest (pre : sofar)
 
-       go ('"':r) sofar = go rest (show str : sofar)
+       go ('"':r) sofar = go rest (finalStr : sofar)
            where grabString []            acc = (reverse acc, [])        -- Strictly speaking, this is the unterminated string case; but let's ignore
                  grabString ('\\':'"':cs) acc = grabString cs ('"':acc)  -- I don't think this is a valid escape actually, but it used to be. Be safe.
                  grabString ('"' :'"':cs) acc = grabString cs ('"':acc)  -- In SMTLib "" becomes ". Weird escape indeed.
@@ -61,6 +61,7 @@ tokenize inp = go inp []
                  grabString (c:cs)        acc = grabString cs (c:acc)
 
                  (str, rest) = grabString r []
+                 finalStr    = '"' : str ++ "\""
 
        go cs sofar = case span (`notElem` stopper) cs of
                        (pre, post) -> go post (pre : sofar)
