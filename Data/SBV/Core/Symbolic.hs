@@ -224,7 +224,6 @@ data StrOp = StrConcat        -- ^ Concatenation of one or more strings
            | StrLen           -- ^ String length
            | StrSubstr        -- ^ Retrieves substring of @s@ at @offset@
            | StrIndexOf       -- ^ Retrieves first position of @sub@ in @s@, @-1@ if there are no occurrences
-           | StrOffsetIndexOf -- ^ Retrieves first position of @sub@ at or after @offset@ in @s@, @-1@ if there are no occurrences
            | StrAt            -- ^ Substring of length 1 at @offset@ in @s@
            | StrContains      -- ^ Does @s@ contain the substring @sub@?
            | StrPrefixOf      -- ^ Is @pre@ a prefix of @s@?
@@ -241,7 +240,6 @@ instance Show StrOp where
   show StrLen           = "str.len"
   show StrSubstr        = "str.substr"
   show StrIndexOf       = "str.indexof"
-  show StrOffsetIndexOf = "str.indexof"
   show StrAt            = "str.at"
   show StrContains      = "str.contains"
   show StrPrefixOf      = "str.prefixof"
