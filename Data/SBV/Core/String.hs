@@ -30,7 +30,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Model ()
 import Data.SBV.Core.Symbolic
 
-import Data.List (genericLength, genericTake, genericDrop, tails, isPrefixOf)
+import Data.List (genericLength, genericTake, genericDrop, tails, isPrefixOf, isSuffixOf, isInfixOf)
 
 -- | Is the string concretely known empty?
 isConcretelyEmpty :: SString -> Bool
