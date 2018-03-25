@@ -13,9 +13,12 @@ module Data.SBV.Core.Concrete
   ( module Data.SBV.Core.Concrete
   ) where
 
+import Control.Monad (replicateM)
+
 import Data.Bits
 import System.Random (randomIO, randomRIO)
 
+import Data.Char (chr)
 import Data.List (isPrefixOf)
 
 import Data.SBV.Core.Kind
@@ -278,7 +281,8 @@ randomCWVal k =
     KReal         -> CWAlgReal <$> randomIO
     KFloat        -> CWFloat   <$> randomIO
     KDouble       -> CWDouble  <$> randomIO
-    KString       -> error "TBD: randomCWVal for KString. Please report!"
+    KString       -> do l <- randomRIO (0, 100)
+                        CWString <$> replicateM l (chr <$> randomRIO (0, 255))
     KUserSort s _ -> error $ "Unexpected call to randomCWVal with uninterpreted kind: " ++ s
   where
     bounds :: Bool -> Int -> (Integer, Integer)
