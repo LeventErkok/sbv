@@ -34,7 +34,7 @@ module Data.SBV.Control.Utils (
 
 import Data.List  (sortBy, elemIndex, partition, groupBy, tails)
 
-import Data.Char     (isPunctuation, isSpace)
+import Data.Char     (isPunctuation, isSpace, chr)
 import Data.Ord      (comparing)
 import Data.Function (on)
 
@@ -75,6 +75,8 @@ import qualified Data.Set as Set (toList)
 import qualified Control.Exception as C
 
 import GHC.Stack
+
+import Numeric (readOct, readHex)
 
 -- | 'Query' as a 'SolverContext'.
 instance SolverContext Query where
@@ -370,7 +372,7 @@ recoverKindedValue k e = case e of
                            EReal   i | isReal          k -> Just $ CW KReal    (CWAlgReal i)
                            EFloat  i | isFloat         k -> Just $ CW KFloat   (CWFloat   i)
                            EDouble i | isDouble        k -> Just $ CW KDouble  (CWDouble  i)
-                           ECon    s | isString        k -> Just $ CW KString  (CWString   (dropQuotes s))
+                           ECon    s | isString        k -> Just $ CW KString  (CWString   (interpretString s))
                            ECon    s | isUninterpreted k -> Just $ CW k        (CWUserSort (getUIIndex k s, s))
                            _                             -> Nothing
   where isIntegralLike = or [f k | f <- [isBoolean, isBounded, isInteger, isReal, isFloat, isDouble]]
@@ -379,11 +381,24 @@ recoverKindedValue k e = case e of
         getUIIndex _                         _ = Nothing
 
         -- Make sure strings are really strings
-        dropQuotes xs
+        interpretString xs
           | length xs < 2 || head xs /= '"' || last xs /= '"'
           = error $ "Expected a string constant with quotes, received: <" ++ xs ++ ">"
           | True
-          = tail (init xs)
+          = handleEscapes $ tail (init xs)
+
+        -- In a real string, escapes are meaningful. Taken from <https://en.wikipedia.org/wiki/Escape_sequences_in_C>
+        -- NB. We don't handle \u variants.
+        specials = [ ('a',  0x07), ('b', 0x08), ('f', 0x0C), ('n',  0x0A)
+                   , ('r',  0x0D), ('t', 0x09), ('v', 0x0B), ('\\', 0x5C)
+                   , ('\'', 0x27), ('"', 0x22), ('?', 0x3F)
+                   ]
+
+        handleEscapes ""                                                        = ""
+        handleEscapes ('\\':c:rest)         | Just v    <- c `lookup` specials  = chr v : handleEscapes rest
+        handleEscapes ('\\':'x':c1:c2:rest) | [(v, "")] <- readHex [c1, c2]     = chr v : handleEscapes rest
+        handleEscapes ('\\':c1:c2:c3:rest)  | [(v, "")] <- readOct [c1, c2, c3] = chr v : handleEscapes rest
+        handleEscapes (c:cs)                                                    = c     : handleEscapes cs
 
 -- | Get the value of a term. If the kind is Real and solver supports decimal approximations,
 -- we will "squash" the representations.
