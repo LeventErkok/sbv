@@ -183,7 +183,7 @@ specifier cfg sw = case kindOf sw of
                      KReal         -> specF (fromJust (cgReal cfg))
                      KFloat        -> specF CgFloat
                      KDouble       -> specF CgDouble
-                     KString       -> die "specifier KString"
+                     KString       -> text "%s"
                      KUserSort s _ -> die $ "uninterpreted sort: " ++ s
   where spec :: (Bool, Int) -> Doc
         spec (False,  1) = text "%d"
@@ -414,6 +414,8 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _uis _
   | isNothing (cgInteger cfg) && KUnbounded `Set.member` kindInfo
   = error $ "SBV->C: Unbounded integers are not supported by the C compiler."
           ++ "\nUse 'cgIntegerSize' to specify a fixed size for SInteger representation."
+  | KString `Set.member` kindInfo
+  = error $ "SBV->C: Strings are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
   | isNothing (cgReal cfg) && KReal `Set.member` kindInfo
   = error $ "SBV->C: SReal values are not supported by the C compiler."
           ++ "\nUse 'cgSRealType' to specify a custom type for SReal representation."
