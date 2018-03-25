@@ -87,9 +87,11 @@ strOffsetIndexOf s sub offset
   | True
   = lift3 StrIndexOf Nothing sub s offset
 
--- | `strAt s offset`. Substring of length 1 at @offset@ in @s@.
+-- | `strAt s offset`. Substring of length 1 at @offset@ in @s@. Note that this is rather odd
+-- as it returns a string; one would expect a character instead. But we're following the SMTLib theory
+-- here and returning a string, and also we don't really have an 'SChar' type to start with anyhow.
 strAt :: SString -> SInteger -> SString
-strAt = lift2 StrAt Nothing
+strAt s offset = strSubstr s offset 1
 
 -- | `strContains s sub`. Does @s@ contain the substring @sub@?
 strContains :: SString -> SString -> SBool

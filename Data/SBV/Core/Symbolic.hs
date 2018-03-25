@@ -219,12 +219,11 @@ data PBOp = PB_AtMost  Int        -- ^ At most k
           | PB_Eq      [Int] Int  -- ^ Exactly k,  with coefficients given. Generalized PB_Exactly
           deriving (Eq, Ord, Show)
 
--- | String operations
+-- | String operations. Note that we do not define `StrAt` as it translates to `StrSubStr` trivially.
 data StrOp = StrConcat        -- ^ Concatenation of one or more strings
            | StrLen           -- ^ String length
            | StrSubstr        -- ^ Retrieves substring of @s@ at @offset@
            | StrIndexOf       -- ^ Retrieves first position of @sub@ in @s@, @-1@ if there are no occurrences
-           | StrAt            -- ^ Substring of length 1 at @offset@ in @s@
            | StrContains      -- ^ Does @s@ contain the substring @sub@?
            | StrPrefixOf      -- ^ Is @pre@ a prefix of @s@?
            | StrSuffixOf      -- ^ Is @suf@ a suffix of @s@?
@@ -240,7 +239,6 @@ instance Show StrOp where
   show StrLen           = "str.len"
   show StrSubstr        = "str.substr"
   show StrIndexOf       = "str.indexof"
-  show StrAt            = "str.at"
   show StrContains      = "str.contains"
   show StrPrefixOf      = "str.prefixof"
   show StrSuffixOf      = "str.suffixof"
