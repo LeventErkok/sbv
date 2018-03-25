@@ -30,6 +30,8 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Model ()
 import Data.SBV.Core.Symbolic
 
+import Data.List (genericLength, genericTake, genericDrop)
+
 -- | Is the string concretely known empty?
 isConcretelyEmpty :: SString -> Bool
 isConcretelyEmpty ss | Just s <- unliteral ss = null s
@@ -50,10 +52,22 @@ infixr 5 .++
 strLen :: SString -> SInteger
 strLen = lift1 StrLen (Just (fromIntegral . length))
 
--- | `strSubStr s offset length` is the substring of `s` at offset `offset` with length `length`. When
--- the offset/length is out-of-bounds, the result is unspecified.
+-- | `strSubStr s offset length` is the substring of @s@ at offset `offset` with length `length`.
+-- This function is under-specified when the offset is outside the range of positions in @s@ or @length@
+-- is negative or @offset+length@ exceeds the length of @s@.
 strSubstr :: SString -> SInteger -> SInteger -> SString
-strSubstr = lift3 StrSubstr Nothing
+strSubstr s offset len
+  | Just c <- unliteral s                    -- a constant string
+  , Just o <- unliteral offset               -- a constant offset
+  , Just l <- unliteral len                  -- a constant length
+  , let lc = genericLength c                 -- length of the string
+  , let valid x = x >= 0 && x < lc           -- predicate that checks valid point
+  , valid o                                  -- offset is valid
+  , l >= 0                                   -- length is not-negative
+  , valid $ o + l - 1                        -- we don't overrun
+  = literal $ genericTake l $ genericDrop o $ c
+  | True                                     -- either symbolic, or something is out-of-bounds
+  = lift3 StrSubstr Nothing s offset len
 
 -- | `strIndexOf s sub`. Retrieves first position of @sub@ in @s@, @-1@ if there are no occurrences.
 strIndexOf :: SString -> SString -> SInteger
