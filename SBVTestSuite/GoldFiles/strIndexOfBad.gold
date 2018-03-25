@@ -5,14 +5,11 @@
 [GOOD] (set-option :smtlib2_compliant true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
 [GOOD] (set-option :produce-models true)
-[GOOD] (set-logic ALL)
+[GOOD] (set-logic QF_BV)
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s_2 () Bool false)
 [GOOD] (define-fun s_1 () Bool true)
-[GOOD] (define-fun s3 () Int 0)
-[GOOD] (define-fun s0 () String "abcabc")
-[GOOD] (define-fun s1 () String "a")
 [GOOD] ; --- skolem constants ---
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
@@ -20,9 +17,7 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s2 () Int (str.indexof s0 s1))
-[GOOD] (define-fun s4 () Bool (distinct s2 s3))
-[GOOD] (assert s4)
+[GOOD] (assert s_2)
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3
