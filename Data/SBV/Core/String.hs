@@ -114,7 +114,11 @@ strPrefixOf pre s
 
 -- | `strSuffixOf suf s`. Is @suf@ a suffix of @s@?
 strSuffixOf :: SString -> SString -> SBool
-strSuffixOf = lift2 StrSuffixOf Nothing
+strSuffixOf suf s
+  | isConcretelyEmpty suf
+  = literal True
+  | True
+  = lift2 StrSuffixOf (Just isSuffixOf) suf s
 
 -- | `strReplace s src dst`. Replace the first occurrence of @src@ by @dst@ in @s@
 strReplace :: SString -> SString -> SString -> SString
