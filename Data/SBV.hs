@@ -239,6 +239,9 @@ module Data.SBV (
   -- * Strings
   , strConcat, (.++), strLen, strSubstr, strIndexOf, strOffsetIndexOf, strAt, strIsInfixOf, strIsPrefixOf, strIsSuffixOf, strReplace, strStrToInt, strIntToStr, strTake, strDrop
 
+  -- * Regular expressions
+  , SRegExp(..), strMatch
+
   -- ** Programmable model extraction
   -- $programmableExtraction
   , SatModel(..), Modelable(..), displayModels, extractModels

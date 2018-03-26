@@ -27,7 +27,7 @@
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SW(..), swKind, trueSW, falseSW
-  , Op(..), PBOp(..), FPOp(..), StrOp(..)
+  , Op(..), PBOp(..), FPOp(..), StrOp(..), SRegExp(..)
   , Quantifier(..), needsExistentials
   , RoundingMode(..)
   , SBVType(..), newUninterpreted, addAxiom
@@ -233,19 +233,57 @@ data StrOp = StrConcat        -- ^ Concatenation of one or more strings
            | StrInRe SRegExp  -- ^ Check if string is in the regular expression
            deriving (Eq, Ord)
 
+-- | Regular expressions. Note that regular expressions themselves are
+-- concrete, but the `strMatch` can check membership against a symbolic
+-- string. Also, we are preferring a datatype approach here, as opposed to
+-- coming up with some string-representation; there are way too many alternatives
+-- already so inventing one isn't a priority. Please get in touch if you
+-- would like a parser for this type as it might be easier to use.
+data SRegExp = RE_Literal String       -- ^ Precisely match the given string
+             | RE_All                  -- ^ Accept every string
+             | RE_None                 -- ^ Accept no strings
+             | RE_Range Char Char      -- ^ Accept range of characters
+             | RE_Conc  SRegExp SRegExp  -- ^ Concatenation
+             | RE_Star  SRegExp         -- ^ Kleene Star: Zero or more
+             | RE_Plus  SRegExp         -- ^ Kleene Plus: One or more
+             | RE_Opt   SRegExp         -- ^ Zero or one
+             | RE_Loop  Int Int SRegExp -- ^ From @n@ repetitions to @m@ repetitions
+             | RE_Union SRegExp SRegExp  -- ^ Union of regular expressions
+             | RE_Inter SRegExp SRegExp  -- ^ Intersection of regular expressions
+            deriving (Eq, Ord)
+
+-- | Show instance for `SRegExp`. The mapping is done so the outcome matches the
+-- SMTLib string reg-exp operations
+instance Show SRegExp where
+  show (RE_Literal s)       = "(str.to.re \"" ++ s ++ "\")"
+  show RE_All               = "re.allchar"
+  show RE_None              = "re.nostr"
+  show (RE_Range ch1 ch2)   = "(re.range " ++ show [ch1] ++ " " ++ show [ch2] ++ ")"
+  show (RE_Conc  r1 r2)     = "(re.++ " ++ show r1 ++ " " ++ show r2 ++ ")"
+  show (RE_Star  r)         = "(re.* " ++ show r ++ ")"
+  show (RE_Plus  r)         = "(re.+ " ++ show r ++ ")"
+  show (RE_Opt   r)         = "(re.opt " ++ show r ++ ")"
+  show (RE_Loop  lo hi r)
+        | lo >= 0, hi >= lo = "((_ re.loop " ++ show lo ++ " " ++ show hi ++ ") " ++ show r ++ ")"
+        | True              = error $ "Invalid regular-expression RE_Loop with arguments: " ++ show (lo, hi)
+  show (RE_Union r1 r2)     = "(re_union " ++ show r1 ++ " " ++ show r2 ++ ")"
+  show (RE_Inter r1 r2)     = "(re_inter " ++ show r1 ++ " " ++ show r2 ++ ")"
+
 -- | Show instance for `StrOp`. Note that the mapping here is
 -- important to match the SMTLib equivalents, see here: <https://rise4fun.com/z3/tutorialcontent/sequences>
 instance Show StrOp where
-  show StrConcat        = "str.++"
-  show StrLen           = "str.len"
-  show StrSubstr        = "str.substr"
-  show StrIndexOf       = "str.indexof"
-  show StrContains      = "str.contains"
-  show StrPrefixOf      = "str.prefixof"
-  show StrSuffixOf      = "str.suffixof"
-  show StrReplace       = "str.replace"
-  show StrToInt         = "str.to.int"
-  show IntToStr         = "str.to.str"
+  show StrConcat   = "str.++"
+  show StrLen      = "str.len"
+  show StrSubstr   = "str.substr"
+  show StrIndexOf  = "str.indexof"
+  show StrContains = "str.contains"
+  show StrPrefixOf = "str.prefixof"
+  show StrSuffixOf = "str.suffixof"
+  show StrReplace  = "str.replace"
+  show StrStrToInt = "str.to.int"
+  show StrIntToStr = "str.to.str"
+  -- Note the breakage here with respect to argument order. We fix this explicitly later.
+  show (StrInRe s) = "str.in.re " ++ show s
 
 -- Show instance for 'Op'. Note that this is largely for debugging purposes, not used
 -- for being read by any tool.
@@ -1379,5 +1417,6 @@ data SMTSolver = SMTSolver {
        , capabilities   :: SolverCapabilities    -- ^ Various capabilities of the solver
        }
 
-{-# ANN type FPOp ("HLint: ignore Use camelCase" :: String) #-}
-{-# ANN type PBOp ("HLint: ignore Use camelCase" :: String) #-}
+{-# ANN type FPOp    ("HLint: ignore Use camelCase" :: String) #-}
+{-# ANN type PBOp    ("HLint: ignore Use camelCase" :: String) #-}
+{-# ANN type SRegExp ("HLint: ignore Use camelCase" :: String) #-}
