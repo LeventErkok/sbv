@@ -30,7 +30,7 @@ module Data.SBV.Core.String (
        ) where
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model (ite, (.<=), (.>=))
+import Data.SBV.Core.Model
 
 import Data.Char (isDigit)
 import Data.List (genericLength, genericTake, genericDrop, tails, isPrefixOf, isSuffixOf, isInfixOf)
@@ -47,6 +47,13 @@ strConcat x y | isConcretelyEmpty x = y
               | True                = lift2 StrConcat (Just (++)) x y
 
 -- | Short cut for `strConcat`.
+--
+-- >>> :set -XOverloadedStrings
+-- >>> sat $ \x y z -> strLen x .== 5 &&& strLen y .== 1 &&& x .++ y .++ z .== "Hello world!"
+-- Satisfiable. Model:
+--   s0 =  "Hello" :: String
+--   s1 =      " " :: String
+--   s2 = "world!" :: String
 infixr 5 .++
 (.++) :: SString -> SString -> SString
 (.++) = strConcat
