@@ -34,6 +34,9 @@ tests =
     , goldenCapturedIO "strExamples8"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples8    Unsat
     , goldenCapturedIO "strExamples9"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples9    Sat
     , goldenCapturedIO "strExamples10" $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples10   Unsat
+    , goldenCapturedIO "strExamples11" $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples11   Unsat
+    , goldenCapturedIO "strExamples12" $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples12   Unsat
+    , goldenCapturedIO "strExamples13" $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples13   Unsat
     ]
 
 -- to test interactively, use:
@@ -139,3 +142,24 @@ strExamples10 = do
    a <- sString "a"
    constrain $ strMatch a (RE_Loop 1 3 (RE_Literal "ab"))
    constrain $ strLen a .> 6
+
+-- Conversion from nat to string, only ground terms
+strExamples11 :: Symbolic ()
+strExamples11 = do
+   i <- sInteger "i"
+   constrain $ i .== 11
+   constrain $ bnot $ strNatToStr i .== "11"
+
+-- Conversion from nat to string, negative values produce empty string
+strExamples12 :: Symbolic ()
+strExamples12 = do
+   i <- sInteger "i"
+   constrain $ i .== -2
+   constrain $ bnot $ strNatToStr i .== ""
+
+-- Conversion from string to nat, only ground terms
+strExamples13 :: Symbolic ()
+strExamples13 = do
+   s <- sString "s"
+   constrain $ s .== "13"
+   constrain $ bnot $ strStrToNat s .== 13
