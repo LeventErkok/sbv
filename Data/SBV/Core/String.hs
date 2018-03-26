@@ -148,7 +148,7 @@ strStrToInt s
    then literal (read a)
    else -1
  | True
- = lift1 StrToInt Nothing s
+ = lift1 StrStrToInt Nothing s
 
 -- | `strIntToStr i`. Retrieve string encoded by integer @i@ (ground rewriting only).
 -- Again, only naturals are supported, any input that is not a natural number
@@ -158,7 +158,7 @@ strIntToStr i
  | Just v <- unliteral i
  = literal $ if v >= 0 then show v else ""
  | True
- = lift1 IntToStr Nothing i
+ = lift1 StrIntToStr Nothing i
 
 -- | `strTake len s`. Corresponds to Haskell's `take` on symbolic-strings.
 strTake :: SInteger -> SString -> SString

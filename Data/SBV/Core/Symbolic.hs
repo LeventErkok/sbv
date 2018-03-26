@@ -228,8 +228,9 @@ data StrOp = StrConcat        -- ^ Concatenation of one or more strings
            | StrPrefixOf      -- ^ Is @pre@ a prefix of @s@?
            | StrSuffixOf      -- ^ Is @suf@ a suffix of @s@?
            | StrReplace       -- ^ Replace the first occurrence of @src@ by @dst@ in @s@
-           | StrToInt         -- ^ Retrieve integer encoded by string @s@ (ground rewriting only)
-           | IntToStr         -- ^ Retrieve string encoded by integer @i@ (ground rewriting only)
+           | StrStrToInt      -- ^ Retrieve integer encoded by string @s@ (ground rewriting only)
+           | StrIntToStr      -- ^ Retrieve string encoded by integer @i@ (ground rewriting only)
+           | StrInRe SRegExp  -- ^ Check if string is in the regular expression
            deriving (Eq, Ord)
 
 -- | Show instance for `StrOp`. Note that the mapping here is
