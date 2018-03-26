@@ -32,6 +32,8 @@ tests =
     , goldenCapturedIO "strExamples6"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples6    Unsat
     , goldenCapturedIO "strExamples7"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples7    Sat
     , goldenCapturedIO "strExamples8"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples8    Unsat
+    , goldenCapturedIO "strExamples9"  $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples9    Sat
+    , goldenCapturedIO "strExamples10" $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples10   Unsat
     ]
 
 -- to test interactively, use:
@@ -123,3 +125,17 @@ strExamples8 = do
   constrain $ c `strIsSuffixOf` a
   constrain $ strLen a .== strLen b + strLen c
   constrain $ bnot $ a .== b .++ c
+
+-- The maximal length is 6 for a string of length 2 repeated at most 3 times
+strExamples9 :: Symbolic ()
+strExamples9 = do
+   a <- sString "a"
+   constrain $ strMatch a (RE_Loop 1 3 (RE_Literal "ab"))
+   constrain $ strLen a .== 6
+
+-- The maximal length is 6 for a string of length 2 repeated at most 3 times
+strExamples10 :: Symbolic ()
+strExamples10 = do
+   a <- sString "a"
+   constrain $ strMatch a (RE_Loop 1 3 (RE_Literal "ab"))
+   constrain $ strLen a .> 6
