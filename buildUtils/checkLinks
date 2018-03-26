@@ -24,6 +24,16 @@ check () {
       return 0
   fi
 
+  # ditto
+  if [ z$what = 'zhttps://ci.appveyor.com/project/LeventErkok/sbv' ]; then
+      return 0
+  fi
+
+  # ditto
+  if [ z$what = 'zhttps://ci.appveyor.com/api/projects/status/github/LeventErkok/sbv' ]; then
+      return 0
+  fi
+
   echo -n "\rChecking:" "$what"
   wget -q --spider --tries=1 --timeout=5 "$what"
   ans=$?
