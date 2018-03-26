@@ -74,10 +74,20 @@ infixr 5 .++
 strLen :: SString -> SInteger
 strLen = lift1 StrLen (Just (fromIntegral . length))
 
--- | `strSubstr s offset length` is the substring of @s@ at offset `offset` with length `length`.
--- This function is under-specified when the offset is outside the range of positions in @s@ or @length@
--- is negative or @offset+length@ exceeds the length of @s@. For a friendlier version of this function
--- that acts like Haskell's `take`, see `strTake`.
+-- | @`strSubstr` s offset len@ is the substring of @s@ at offset `offset` with length `len`.
+-- This function is under-specified when the offset is outside the range of positions in @s@ or @len@
+-- is negative or @offset+len@ exceeds the length of @s@. For a friendlier version of this function
+-- that acts like Haskell's `take`/`drop`, see `strTake`/`strDrop`.
+--
+-- >>> :set -XOverloadedStrings
+-- >>> prove $ \s i -> i .>= 0 &&& i .< strLen s ==> strSubstr s 0 i .++ strSubstr s i (strLen s - i) .== s
+-- Q.E.D.
+-- >>> sat  $ \i j -> strSubstr "hello" i j .== "ell"
+-- Satisfiable. Model:
+--   s0 = 1 :: Integer
+--   s1 = 3 :: Integer
+-- >>> sat  $ \i j -> strSubstr "hell" i j .== "no"
+-- Unsatisfiable
 strSubstr :: SString -> SInteger -> SInteger -> SString
 strSubstr s offset len
   | Just c <- unliteral s                    -- a constant string
