@@ -130,7 +130,7 @@ type SFloat = SBV Float
 -- | IEEE-754 double-precision floating point numbers
 type SDouble = SBV Double
 
--- | Strings
+-- | A symbolic string
 type SString = SBV String
 
 -- | Not-A-Number for 'Double' and 'Float'. Surprisingly, Haskell
