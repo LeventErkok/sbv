@@ -63,6 +63,14 @@ infixr 5 .++
 (.++) = strConcat
 
 -- | Length of a string.
+--
+-- >>> sat $ \s -> strLen s .== 2
+-- Satisfiable. Model:
+--   s0 = "\NUL\NUL" :: String
+-- >>> sat $ \s -> strLen s .< 0
+-- Unsatisfiable
+-- >>> prove $ \s1 s2 -> strLen s1 + strLen s2 .== strLen (s1 .++ s2)
+-- Q.E.D.
 strLen :: SString -> SInteger
 strLen = lift1 StrLen (Just (fromIntegral . length))
 
