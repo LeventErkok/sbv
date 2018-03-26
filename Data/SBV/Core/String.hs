@@ -40,7 +40,7 @@ isConcretelyEmpty :: SString -> Bool
 isConcretelyEmpty ss | Just s <- unliteral ss = null s
                      | True                   = False
 
--- | Concatenate two strings
+-- | Concatenate two strings. See also `.++`.
 strConcat :: SString -> SString -> SString
 strConcat x y | isConcretelyEmpty x = y
               | isConcretelyEmpty y = x
