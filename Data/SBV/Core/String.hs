@@ -119,7 +119,7 @@ strOffsetIndexOf s sub offset
       (i:_) -> literal i
       _     -> -1
   | True
-  = lift3 StrIndexOf Nothing sub s offset
+  = lift3 StrIndexOf Nothing s sub offset
 
 -- | `strAt s offset`. Substring of length 1 at @offset@ in @s@. Note that this is rather odd
 -- as it returns a string; one would expect a character instead. But we're following the SMTLib theory
