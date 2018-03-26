@@ -36,7 +36,7 @@ import Data.Char (isDigit)
 import Data.List (genericLength, genericTake, genericDrop, tails, isPrefixOf, isSuffixOf, isInfixOf)
 
 -- For doctest use only
-import Data.SBV.Provers.Prover (sat, SatResult)
+import Data.SBV.Provers.Prover (sat, prove, SatResult, ThmResult)
 import Data.SBV.Utils.Boolean  ((&&&))
 
 -- | Is the string concretely known empty?
@@ -246,5 +246,6 @@ concEval3 mbOp a b c = literal <$> (mbOp <*> unliteral a <*> unliteral b <*> unl
 
 -- | Make GHC not complain about doctest imports. Sigh..
 __unused :: a
-__unused = undefined (sat :: SBool -> IO SatResult)
+__unused = undefined (sat   :: SBool -> IO SatResult)
+                     (prove :: SBool -> IO ThmResult)
                      ((&&&) :: SBool -> SBool -> SBool)
