@@ -35,6 +35,10 @@ import Data.SBV.Core.Model
 import Data.Char (isDigit)
 import Data.List (genericLength, genericTake, genericDrop, tails, isPrefixOf, isSuffixOf, isInfixOf)
 
+-- For doctest use only
+import Data.SBV.Provers.Prover (sat, SatResult)
+import Data.SBV.Utils.Boolean  ((&&&))
+
 -- | Is the string concretely known empty?
 isConcretelyEmpty :: SString -> Bool
 isConcretelyEmpty ss | Just s <- unliteral ss = null s
@@ -239,3 +243,8 @@ concEval2 mbOp a b = literal <$> (mbOp <*> unliteral a <*> unliteral b)
 -- | Concrete evaluation for ternary ops
 concEval3 :: (SymWord a, SymWord b, SymWord c, SymWord d) => Maybe (a -> b -> c -> d) -> SBV a -> SBV b -> SBV c -> Maybe (SBV d)
 concEval3 mbOp a b c = literal <$> (mbOp <*> unliteral a <*> unliteral b <*> unliteral c)
+
+-- | Make GHC not complain about doctest imports. Sigh..
+__unused :: a
+__unused = undefined (sat :: SBool -> IO SatResult)
+                     ((&&&) :: SBool -> SBool -> SBool)
