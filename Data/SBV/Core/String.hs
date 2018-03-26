@@ -104,6 +104,13 @@ strSubstr s offset len
 
 -- | @`strIndexOf` s sub@. Retrieves first position of @sub@ in @s@, @-1@ if there are no occurrences.
 -- Equivalent to @`strOffsetIndexOf` s sub 0@.
+--
+-- >>> prove $ \s i -> i .> 0 &&& i .< strLen s ==> strIndexOf s (strSubstr s i 1) .<= i
+-- Q.E.D.
+-- >>> prove $ \s i -> i .> 0 &&& i .< strLen s ==> strIndexOf s (strSubstr s i 1) .== i
+-- Falsifiable. Counter-example:
+--   s0 = "\NUL\NUL\NUL" :: String
+--   s1 =              2 :: Integer
 strIndexOf :: SString -> SString -> SInteger
 strIndexOf s sub = strOffsetIndexOf s sub 0
 
