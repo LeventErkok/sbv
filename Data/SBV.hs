@@ -237,7 +237,7 @@ module Data.SBV (
   , sFloatAsSWord32, sWord32AsSFloat, sDoubleAsSWord64, sWord64AsSDouble, blastSFloat, blastSDouble
 
   -- * Strings
-  , strConcat, (.++), strLen, strSubstr, strIndexOf, strOffsetIndexOf, strAt, strIsInfixOf, strIsPrefixOf, strIsSuffixOf, strReplace, strStrToInt, strIntToStr, strTake, strDrop
+  , strConcat, (.++), strLen, strSubstr, strIndexOf, strOffsetIndexOf, strAt, strIsInfixOf, strIsPrefixOf, strIsSuffixOf, strReplace, strStrToNat, strNatToStr, strTake, strDrop
 
   -- * Regular expressions
   , SRegExp(..), strMatch

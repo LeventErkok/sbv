@@ -22,8 +22,8 @@ module Data.SBV.Core.String (
        , strIsPrefixOf
        , strIsSuffixOf
        , strReplace
-       , strStrToInt
-       , strIntToStr
+       , strStrToNat
+       , strNatToStr
        , strTake
        , strDrop
        , strMatch
@@ -136,29 +136,29 @@ strReplace s src dst
                   | needle `isPrefixOf` i = newNeedle ++ drop (length needle) i
                   | True                  = c : go cs
 
--- | `strStrToInt s`. Retrieve integer encoded by string @s@ (ground rewriting only).
+-- | `strStrToNat s`. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when 's' only contains digits,
 -- that is, if it encodes a natural number. Otherwise, it returns '-1'.
--- The confusing name is unfortunate, but we are sticking to the SMTLib semantics here.
 -- See <http://cvc4.cs.stanford.edu/wiki/Strings> for details.
-strStrToInt :: SString -> SInteger
-strStrToInt s
+strStrToNat :: SString -> SInteger
+strStrToNat s
  | Just a <- unliteral s
  = if all isDigit a
    then literal (read a)
    else -1
  | True
- = lift1 StrStrToInt Nothing s
+ = lift1 StrStrToNat Nothing s
 
--- | `strIntToStr i`. Retrieve string encoded by integer @i@ (ground rewriting only).
+-- | `strNatToStr i`. Retrieve string encoded by integer @i@ (ground rewriting only).
 -- Again, only naturals are supported, any input that is not a natural number
--- produces empty string. See <http://cvc4.cs.stanford.edu/wiki/Strings> for details.
-strIntToStr :: SInteger -> SString
-strIntToStr i
+-- produces empty string, even though we take an integer as an argument.
+-- See <http://cvc4.cs.stanford.edu/wiki/Strings> for details.
+strNatToStr :: SInteger -> SString
+strNatToStr i
  | Just v <- unliteral i
  = literal $ if v >= 0 then show v else ""
  | True
- = lift1 StrIntToStr Nothing i
+ = lift1 StrNatToStr Nothing i
 
 -- | `strTake len s`. Corresponds to Haskell's `take` on symbolic-strings.
 strTake :: SInteger -> SString -> SString

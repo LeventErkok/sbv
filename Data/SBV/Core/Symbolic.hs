@@ -228,8 +228,8 @@ data StrOp = StrConcat        -- ^ Concatenation of one or more strings
            | StrPrefixOf      -- ^ Is @pre@ a prefix of @s@?
            | StrSuffixOf      -- ^ Is @suf@ a suffix of @s@?
            | StrReplace       -- ^ Replace the first occurrence of @src@ by @dst@ in @s@
-           | StrStrToInt      -- ^ Retrieve integer encoded by string @s@ (ground rewriting only)
-           | StrIntToStr      -- ^ Retrieve string encoded by integer @i@ (ground rewriting only)
+           | StrStrToNat      -- ^ Retrieve integer encoded by string @s@ (ground rewriting only)
+           | StrNatToStr      -- ^ Retrieve string encoded by integer @i@ (ground rewriting only)
            | StrInRe SRegExp  -- ^ Check if string is in the regular expression
            deriving (Eq, Ord)
 
@@ -280,8 +280,8 @@ instance Show StrOp where
   show StrPrefixOf = "str.prefixof"
   show StrSuffixOf = "str.suffixof"
   show StrReplace  = "str.replace"
-  show StrStrToInt = "str.to.int"
-  show StrIntToStr = "str.to.str"
+  show StrStrToNat = "str.to.int"    -- NB. SMTLib uses "int" here though only nats are supported
+  show StrNatToStr = "int.to.str"    -- NB. SMTLib uses "int" here though only nats are supported
   -- Note the breakage here with respect to argument order. We fix this explicitly later.
   show (StrInRe s) = "str.in.re " ++ show s
 
