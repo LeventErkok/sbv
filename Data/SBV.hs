@@ -118,73 +118,82 @@
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 
 module Data.SBV (
-  -- * Programming with symbolic values
   -- $progIntro
 
-  -- ** Symbolic types
+  -- * Symbolic types
 
-  -- *** Symbolic bit
-    SBool
-  -- *** Unsigned symbolic bit-vectors
+  -- ** Booleans
+    SBool, oneIf
+  -- *** The Boolean class
+  , Boolean(..)
+  -- *** Logical operations
+  , bAnd, bOr, bAny, bAll
+  -- ** Bit-vectors
+  -- *** Unsigned bit-vectors
   , SWord8, SWord16, SWord32, SWord64
-  -- *** Signed symbolic bit-vectors
+  -- *** Signed bit-vectors
   , SInt8, SInt16, SInt32, SInt64
-  -- *** Signed unbounded integers
+  -- ** Unbounded integers
   -- $unboundedLimitations
   , SInteger
-  -- *** Floating point numbers
+  -- ** Floating point numbers
   -- $floatingPoints
   , SFloat, SDouble
-  -- *** Strings
-  -- $strings
-  , SString
-  -- *** Signed algebraic reals
+  -- ** Algebraic reals
   -- $algReals
   , SReal, AlgReal, sRealToSInteger
+  -- ** Strings
+  -- $strings
+  , SString
+  -- * Arrays of symbolic values
+  , SymArray(..), SArray, SFunArray, mkSFunArray
 
-  -- ** Creating a symbolic variable
+  -- * Creating symbolic values
+  -- ** Single value
   -- $createSym
   , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger, sReal, sFloat, sDouble, sString
 
-  -- ** Creating a list of symbolic variables
+  -- ** List of values
   -- $createSyms
   , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReals, sFloats, sDoubles, sStrings
 
-  -- *** Abstract SBV type
-  , SBV, HasKind(..), Kind(..)
-  -- *** Arrays of symbolic values
-  , SymArray(..), SArray, SFunArray, mkSFunArray
-
-  -- ** Operations on symbolic values
-  -- *** Word level
-  , sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, sFromIntegral, oneIf
-  , label
-
-  -- *** Exponentiation
-  , (.^)
-  -- *** Splitting, joining, and extending
-  , Splittable(..)
-
-  -- ** Conditionals: Mergeable values
+  -- * Symbolic Equality and Comparisons
+  , EqSymbolic(..), OrdSymbolic(..), Equality(..)
+  -- * Conditionals: Mergeable values
   , Mergeable(..), ite, iteLazy
 
-  -- ** Symbolic integral numbers
+  -- * Symbolic integral numbers
   , SIntegral
-  -- ** Symbolic finite bits
-  , SFiniteBits(..)
-  -- ** Division
+  -- * Division and Modulus
   , SDivisible(..)
-  -- ** The Boolean class
-  , Boolean(..)
-  -- *** Generalizations of boolean operations
-  , bAnd, bOr, bAny, bAll
+  -- * Bit-vector operations
+  -- ** Conversions
+  , sFromIntegral
+  -- ** Shifts and rotates
+  -- $shiftRotate
+  , sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight
+  -- ** Finite bit-vector operations
+  , SFiniteBits(..)
+  -- ** Splitting, joining, and extending
+  , Splittable(..)
+  -- ** Exponentiation
+  , (.^)
+  -- * IEEE-floating point numbers
+  , IEEEFloating(..), IEEEFloatConvertable(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity
+  -- ** Rounding modes
+  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero, sRNE, sRNA, sRTP, sRTN, sRTZ
+  -- ** Bit-pattern conversions
+  , sFloatAsSWord32, sWord32AsSFloat, sDoubleAsSWord64, sWord64AsSDouble, blastSFloat, blastSDouble
+  -- * Strings and Regular Expressions
+  -- ** General string operations
+  , strConcat, (.++), strLen, strSubstr, strIndexOf, strOffsetIndexOf, strAt, strIsInfixOf, strIsPrefixOf, strIsSuffixOf, strReplace, strStrToNat, strNatToStr, strTake, strDrop
+
+  -- ** Regular expressions
+  , SRegExp(..), strMatch
 
   -- * Uninterpreted sorts, constants, and functions
   -- $uninterpreted
   , Uninterpreted(..), addAxiom
-
-  -- * Symbolic Equality and Comparisons
-  , EqSymbolic(..), OrdSymbolic(..), Equality(..)
 
   -- * Constraints
   -- $constrainIntro
@@ -229,19 +238,6 @@ module Data.SBV (
   -- $resultTypes
   , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
 
-  -- * IEEE-floating point numbers
-  , IEEEFloating(..), IEEEFloatConvertable(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity
-  -- ** Rounding modes
-  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero, sRNE, sRNA, sRTP, sRTN, sRTZ
-  -- ** Bit-pattern conversions
-  , sFloatAsSWord32, sWord32AsSFloat, sDoubleAsSWord64, sWord64AsSDouble, blastSFloat, blastSDouble
-
-  -- * String operations
-  , strConcat, (.++), strLen, strSubstr, strIndexOf, strOffsetIndexOf, strAt, strIsInfixOf, strIsPrefixOf, strIsSuffixOf, strReplace, strStrToNat, strNatToStr, strTake, strDrop
-
-  -- * Regular expressions
-  , SRegExp(..), strMatch
-
   -- ** Programmable model extraction
   -- $programmableExtraction
   , SatModel(..), Modelable(..), displayModels, extractModels
@@ -251,6 +247,9 @@ module Data.SBV (
   , SMTConfig(..), Timing(..), SMTLibVersion(..), Solver(..), SMTSolver(..)
   , boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
   , setLogic, setOption, setInfo, setTimeOut
+
+  -- *** Abstract SBV type
+  , SBV, HasKind(..), Kind(..), label
 
   -- * Symbolic computations
   , Symbolic, output, SymWord(..)
@@ -416,11 +415,9 @@ executable within Haskell, without the need for any custom interpreters. (They a
 Haskell programs, not AST's built out of pieces of syntax.) This provides for an integrated
 feel of the system, one of the original design goals for SBV.
 
-= Incremental mode: Queries
-
-SBV provides a wide variety of ways to utilize SMT-solvers, without requiring the user to
+Incremental query mode: SBV provides a wide variety of ways to utilize SMT-solvers, without requiring the user to
 deal with the solvers themselves. While this mode is convenient, advanced users might need
-access to the underlying solver, using the SMTLib language. For such use cases, SBV allows
+access to the underlying solver at a lower level. For such use cases, SBV allows
 users to have an interactive session: The user can issue commands to the solver, inspect
 the values/results, and formulate new constraints. This advanced feature is available through
 the "Data.SBV.Control" module, where most SMTLib features are made available via a typed-API.
@@ -686,6 +683,12 @@ Support for strings (contributed by Joel Burget) adds support for QF_S logic,
 described here: <https://rise4fun.com/z3/tutorialcontent/sequences>. Note that this logic
 is still not part of official SMTLib (as of March 2018), so it should be considered
 experimental.
+-}
+
+{- $shiftRotate
+Symbolic words (both signed and unsigned) are an instance of Haskell's 'Bits' class, so regular
+bitwise operations are automatically available for them. Shifts and rotates, however, require
+specialized type-signatures since Haskell insists on an 'Int' second argument for them.
 -}
 
 {- $constrainIntro
