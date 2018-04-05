@@ -5,6 +5,15 @@
 
 OS := $(shell uname)
 
+GHCVERSION := $(shell ghc --version | awk '{print $$NF}')
+
+ifeq ($(GHCVERSION), 8.0.1)
+# GHC 8.0.1 (and possibly others) don't understand hide-source-paths and are picky about redundant constraints.
+CONFIGOPTS = "-Werror -Wall -Wno-redundant-constraints"
+else
+CONFIGOPTS = "-Werror -Wall -fhide-source-paths"
+endif
+
 SHELL := /usr/bin/env bash
 
 export SBV_TEST_ENVIRONMENT := local
@@ -23,7 +32,7 @@ endif
 all: install
 
 install: tags
-	@$(TIME) cabal configure --enable-tests --ghc-options="-Werror -Wall -fhide-source-paths"
+	@$(TIME) cabal configure --enable-tests --ghc-options=$(CONFIGOPTS)
 	@$(TIME) cabal build
 	@$(TIME) cabal install --force-reinstalls
 
