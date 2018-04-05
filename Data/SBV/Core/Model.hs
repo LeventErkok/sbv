@@ -916,7 +916,7 @@ instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
     | True
     = error $ "SBV.popCount: Called on symbolic value: " ++ show x ++ ". Use sPopCount instead."
 
--- | Conversion between integral-symbolic values, akin to Haskell's fromIntegral
+-- | Conversion between integral-symbolic values, akin to Haskell's `fromIntegral`
 sFromIntegral :: forall a b. (Integral a, HasKind a, Num a, SymWord a, HasKind b, Num b, SymWord b) => SBV a -> SBV b
 sFromIntegral x
   | isReal x
