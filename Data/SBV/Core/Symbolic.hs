@@ -234,22 +234,22 @@ data StrOp = StrConcat        -- ^ Concatenation of one or more strings
            deriving (Eq, Ord)
 
 -- | Regular expressions. Note that regular expressions themselves are
--- concrete, but the `strMatch` can check membership against a symbolic
+-- concrete, but the `strMatch` function can check membership against a symbolic
 -- string. Also, we are preferring a datatype approach here, as opposed to
 -- coming up with some string-representation; there are way too many alternatives
 -- already so inventing one isn't a priority. Please get in touch if you
 -- would like a parser for this type as it might be easier to use.
-data SRegExp = RE_Literal String       -- ^ Precisely match the given string
-             | RE_All                  -- ^ Accept every string
-             | RE_None                 -- ^ Accept no strings
-             | RE_Range Char Char      -- ^ Accept range of characters
-             | RE_Conc  SRegExp SRegExp  -- ^ Concatenation
+data SRegExp = RE_Literal String        -- ^ Precisely match the given string
+             | RE_All                   -- ^ Accept every string
+             | RE_None                  -- ^ Accept no strings
+             | RE_Range Char Char       -- ^ Accept range of characters
+             | RE_Conc  SRegExp SRegExp -- ^ Concatenation
              | RE_Star  SRegExp         -- ^ Kleene Star: Zero or more
              | RE_Plus  SRegExp         -- ^ Kleene Plus: One or more
              | RE_Opt   SRegExp         -- ^ Zero or one
              | RE_Loop  Int Int SRegExp -- ^ From @n@ repetitions to @m@ repetitions
-             | RE_Union SRegExp SRegExp  -- ^ Union of regular expressions
-             | RE_Inter SRegExp SRegExp  -- ^ Intersection of regular expressions
+             | RE_Union SRegExp SRegExp -- ^ Union of regular expressions
+             | RE_Inter SRegExp SRegExp -- ^ Intersection of regular expressions
             deriving (Eq, Ord)
 
 -- | Show instance for `SRegExp`. The mapping is done so the outcome matches the
