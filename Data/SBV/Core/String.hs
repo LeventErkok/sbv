@@ -136,15 +136,15 @@ strAt s offset = strSubstr s offset 1
 
 -- | @sub@ `strIsInfixOf` @s@. Does @s@ contain the substring @sub@?
 strIsInfixOf :: SString -> SString -> SBool
-strIsInfixOf s sub
+sub `strIsInfixOf` s
   | isConcretelyEmpty sub
   = literal True
   | True
-  = lift2 StrContains (Just isInfixOf) sub s -- NB. flip, since `StrContains` takes args in rev order!
+  = lift2 StrContains (Just isInfixOf) s sub -- NB. flip, since `StrContains` takes args in rev order!
 
 -- | @pre@ `strIsPrefixOf` @s@. Is @pre@ a prefix of @s@?
 strIsPrefixOf :: SString -> SString -> SBool
-strIsPrefixOf pre s
+pre `strIsPrefixOf` s
   | isConcretelyEmpty pre
   = literal True
   | True
@@ -152,7 +152,7 @@ strIsPrefixOf pre s
 
 -- | @suf@ `strIsSuffixOf` @s@. Is @suf@ a suffix of @s@?
 strIsSuffixOf :: SString -> SString -> SBool
-strIsSuffixOf suf s
+suf `strIsSuffixOf` s
   | isConcretelyEmpty suf
   = literal True
   | True
