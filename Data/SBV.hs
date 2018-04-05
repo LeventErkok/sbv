@@ -191,40 +191,32 @@ module Data.SBV (
   -- ** Regular expressions
   , SRegExp(..), strMatch
 
-  -- * Uninterpreted sorts, constants, and functions
-  -- $uninterpreted
-  , Uninterpreted(..), addAxiom
-
-  -- * Constraints
-  -- $constrainIntro
-  , constrain, namedConstraint
-  -- ** Cardinality constraints
-  -- $cardIntro
-  , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
-
   -- * Enumerations
   -- $enumerations
   , mkSymbolicEnumeration
+
+
+  -- * Uninterpreted sorts, constants, and functions
+  -- $uninterpreted
+  , Uninterpreted(..), addAxiom
 
   -- * Properties, proofs, satisfiability, and safety
   -- $proveIntro
   -- $noteOnNestedQuantifiers
   -- $multiIntro
-  , Predicate, Goal, Provable(..)
+  , Predicate, Goal, Provable(..), solve
+  -- ** Constraints
+  -- $constrainIntro
+  , constrain, namedConstraint
+  -- ** Cardinality constraints
+  -- $cardIntro
+  , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   -- ** Checking safety
   -- $safeIntro
   , sAssert, isSafe, SExecutable(..)
-  -- ** Satisfying a sequence of boolean conditions
-  , solve
 
   -- ** Quick-checking
   , sbvQuickCheck
-
-  -- * Running a symbolic computation
-  , runSMT, runSMTWith
-
-  -- * Solver exceptions
-  , SMTException(..)
 
   -- * Optimization
   -- $optiIntro
@@ -245,14 +237,17 @@ module Data.SBV (
 
   -- * SMT Interface: Configurations and solvers
   , SMTConfig(..), Timing(..), SMTLibVersion(..), Solver(..), SMTSolver(..)
-  , boolector, cvc4, yices, z3, mathSAT, abc, defaultSolverConfig, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
+  -- ** Solvers
+  , boolector, cvc4, yices, z3, mathSAT, abc
+  -- ** Configurations
+  , defaultSolverConfig, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
   , setLogic, setOption, setInfo, setTimeOut
+  -- ** Solver exceptions
+  , SMTException(..)
 
-  -- *** Abstract SBV type
-  , SBV, HasKind(..), Kind(..), label
-
-  -- * Symbolic computations
-  , Symbolic, output, SymWord(..)
+  -- * Abstract SBV type
+  , SBV, HasKind(..), Kind(..), SymWord(..)
+  , Symbolic, label, output, runSMT, runSMTWith
 
   -- * Module exports
   -- $moduleExportIntro
