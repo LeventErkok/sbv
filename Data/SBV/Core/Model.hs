@@ -1034,7 +1034,7 @@ enumCvt w x = case unliteral x of
 -- | The 'SDivisible' class captures the essence of division.
 -- Unfortunately we cannot use Haskell's 'Integral' class since the 'Real'
 -- and 'Enum' superclasses are not implementable for symbolic bit-vectors.
--- However, 'quotRem' and 'divMod' makes perfect sense, and the 'SDivisible' class captures
+-- However, 'quotRem' and 'divMod' both make perfect sense, and the 'SDivisible' class captures
 -- this operation. One issue is how division by 0 behaves. The verification
 -- technology requires total functions, and there are several design choices
 -- here. We follow Isabelle/HOL approach of assigning the value 0 for division
