@@ -179,9 +179,11 @@ module Data.SBV (
   -- ** Exponentiation
   , (.^)
   -- * IEEE-floating point numbers
-  , IEEEFloating(..), IEEEFloatConvertable(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity
+  , IEEEFloating(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity
   -- ** Rounding modes
   , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero, sRNE, sRNA, sRTP, sRTN, sRTZ
+  -- ** Conversion to/from floats
+  , IEEEFloatConvertable(..)
   -- ** Bit-pattern conversions
   , sFloatAsSWord32, sWord32AsSFloat, sDoubleAsSWord64, sWord64AsSDouble, blastSFloat, blastSDouble
   -- * Strings and Regular Expressions
@@ -213,10 +215,6 @@ module Data.SBV (
   -- ** Named constraints and unsat cores
   -- $namedConstraints
   , namedConstraint
-  -- * Constraint vacuity
-  -- $constraintVacuity
-  -- * Checking vacuity
-  -- $checkForVacuity
   -- ** Cardinality constraints
   -- $cardIntro
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
@@ -229,7 +227,15 @@ module Data.SBV (
 
   -- * Optimization
   -- $optiIntro
-  , OptimizeStyle(..), Penalty(..), Objective(..), minimize, maximize, assertSoft
+  -- ** Style of optimization
+  , OptimizeStyle(..)
+  -- ** Objectives
+  , Objective(..), minimize, maximize
+  -- ** Soft assumptions
+  -- $softAssertions
+  , assertSoft , Penalty(..)
+  -- ** Field extensions
+  -- | If an optimization results in an infinity/epsilon value, the returned `CW` value will be in the corresponding extension field.
   , ExtCW(..), GeneralizedCW(..)
 
   -- * Model extraction
@@ -437,12 +443,13 @@ to communicate with arbitrary SMT solvers.
 -}
 
 {- $multiIntro
+=== Using multiple solvers
 On a multi-core machine, it might be desirable to try a given property using multiple SMT solvers,
 using parallel threads. Even with machines with single-cores, threading can be helpful if you
 want to try out multiple-solvers but do not know which one would work the best
 for the problem at hand ahead of time.
 
-The functions in this section allow proving/satisfiability-checking with multiple
+SBV allows proving/satisfiability-checking with multiple
 backends at the same time. Each function comes in two variants, one that
 returns the results from all solvers, the other that returns the fastest one.
 
@@ -552,6 +559,14 @@ Optimal model:
   As usual, the programmatic API can be used to extract the values of objectives and model-values ('getModelObjectives',
   'getModelAssignment', etc.) to access these values and program with them further.
 
+== Optimization examples
+
+  The following examples illustrate the use of basic optimization routines:
+
+     * "Data.SBV.Examples.Optimization.LinearOpt": Simple linear-optimization example.
+     * "Data.SBV.Examples.Optimization.Production": Scheduling machines in a shop
+     * "Data.SBV.Examples.Optimization.VM": Scheduling virtual-machines in a data-center
+
 == Multiple optimization goals
 
   Multiple goals can be specified, using the same syntax. In this case, the user gets to pick what style of
@@ -571,8 +586,9 @@ Optimal model:
       in number, so if 'Nothing' is used, there is a potential for infinitely waiting for the SBV-solver interaction
       to finish. (If you suspect this might be the case, run in 'verbose' mode to see the interaction and
       put a limiting factor appropriately.)
+-}
 
-== Soft Assertions
+{- $softAssertions
 
   Related to optimization, SBV implements soft-asserts via 'assertSoft' calls. A soft assertion
   is a hint to the SMT solver that we would like a particular condition to hold if **possible*.
@@ -601,13 +617,6 @@ Optimal model:
   Finally in the third case, we are also associating this constraint with a group. The group
   name is only needed if we have classes of soft-constraints that should be considered together.
 
-== Optimization examples
-
-  The following examples illustrate the use of basic optimization routines:
-
-     * "Data.SBV.Examples.Optimization.LinearOpt": Simple linear-optimization example.
-     * "Data.SBV.Examples.Optimization.Production": Scheduling machines in a shop
-     * "Data.SBV.Examples.Optimization.VM": Scheduling virtual-machines in a data-center
 -}
 
 {- $modelExtraction
@@ -760,24 +769,8 @@ constraints are not vacuous, the functions 'isVacuous' (and 'isVacuousWith') can
 Also note that this semantics imply that test case generation ('genTest') and quick-check
 can take arbitrarily long in the presence of constraints, if the random input values generated
 rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'false'@.)
--}
 
-{- $namedConstraints
-
-Constraints can be given names:
-
-  @ 'namedConstraint' "a is at least 5" $ a .>= 5@
-
-Such constraints are useful when used in conjunction with 'getUnsatCore' function
-where the backend solver can be queried to obtain an unsat core in case the constraints are unsatisfiable.
-This feature is enabled by the following option:
-
-   @ setOption $ ProduceUnsatCores True @
-
-See "Data.SBV.Examples.Misc.UnsatCore" for an example use case.
--}
-
-{- $constraintVacuity
+=== Constraint vacuity
 
 When adding constraints, one has to be careful about
 making sure they are not inconsistent. The function 'isVacuous' can be use for this purpose.
@@ -814,11 +807,19 @@ And the proof is not vacuous:
      False
 -}
 
-{- $checkForVacuity
+{- $namedConstraints
 
-As we discussed SBV does not check that a given constraints is not vacuous. That is, that it can never be satisfied. This is usually
-the right behavior, since checking vacuity can be costly. The functions 'isVacuous' and 'isVacuousWith' should be used
-to explicitly check for constraint vacuity if desired.
+Constraints can be given names:
+
+  @ 'namedConstraint' "a is at least 5" $ a .>= 5@
+
+Such constraints are useful when used in conjunction with 'getUnsatCore' function
+where the backend solver can be queried to obtain an unsat core in case the constraints are unsatisfiable.
+This feature is enabled by the following option:
+
+   @ setOption $ ProduceUnsatCores True @
+
+See "Data.SBV.Examples.Misc.UnsatCore" for an example use case.
 -}
 
 {- $uninterpreted
