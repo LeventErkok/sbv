@@ -200,22 +200,31 @@ module Data.SBV (
   -- $uninterpreted
   , Uninterpreted(..), addAxiom
 
-  -- * Properties, proofs, satisfiability, and safety
+  -- * Properties, proofs, and satisfiability
   -- $proveIntro
   -- $noteOnNestedQuantifiers
   -- $multiIntro
   , Predicate, Goal, Provable(..), solve
-  -- ** Constraints
+  -- * Constraints
   -- $constrainIntro
-  , constrain, namedConstraint
+  -- ** General constraints
+  -- $generalConstraints
+  , constrain
+  -- ** Named constraints and unsat cores
+  -- $namedConstraints
+  , namedConstraint
+  -- * Constraint vacuity
+  -- $constraintVacuity
+  -- * Checking vacuity
+  -- $checkForVacuity
   -- ** Cardinality constraints
   -- $cardIntro
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
-  -- ** Checking safety
+  -- * Checking safety
   -- $safeIntro
   , sAssert, isSafe, SExecutable(..)
 
-  -- ** Quick-checking
+  -- * Quick-checking
   , sbvQuickCheck
 
   -- * Optimization
@@ -726,7 +735,9 @@ depends on the context:
   * In a 'genTest' call: Similar to 'quickCheck' and 'prove': If a constraint
     does not hold, the input value is ignored and is not included in the test
     set.
+-}
 
+{- $generalConstraints
 A good use case (in fact the motivating use case) for 'constrain' is attaching a
 constraint to a 'forall' or 'exists' variable at the time of its creation.
 Also, the conjunctive semantics for 'sat' and the implicative
@@ -749,8 +760,9 @@ constraints are not vacuous, the functions 'isVacuous' (and 'isVacuousWith') can
 Also note that this semantics imply that test case generation ('genTest') and quick-check
 can take arbitrarily long in the presence of constraints, if the random input values generated
 rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'false'@.)
+-}
 
-=== Named constraints and unsat cores
+{- $namedConstraints
 
 Constraints can be given names:
 
@@ -763,8 +775,9 @@ This feature is enabled by the following option:
    @ setOption $ ProduceUnsatCores True @
 
 See "Data.SBV.Examples.Misc.UnsatCore" for an example use case.
+-}
 
-=== Constraint vacuity
+{- $constraintVacuity
 
 When adding constraints, one has to be careful about
 making sure they are not inconsistent. The function 'isVacuous' can be use for this purpose.
@@ -799,8 +812,9 @@ And the proof is not vacuous:
 
      >>> isVacuous pred'
      False
+-}
 
-=== Checking for vacuity
+{- $checkForVacuity
 
 As we discussed SBV does not check that a given constraints is not vacuous. That is, that it can never be satisfied. This is usually
 the right behavior, since checking vacuity can be costly. The functions 'isVacuous' and 'isVacuousWith' should be used
