@@ -9,13 +9,15 @@
 -- Query related utils.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE    BangPatterns          #-}
-{-# LANGUAGE    DefaultSignatures     #-}
-{-# LANGUAGE    LambdaCase            #-}
-{-# LANGUAGE    NamedFieldPuns        #-}
-{-# LANGUAGE    ScopedTypeVariables   #-}
-{-# LANGUAGE    TupleSections         #-}
-{-# OPTIONS_GHC -fno-warn-orphans  #-}
+{-# LANGUAGE    BangPatterns         #-}
+{-# LANGUAGE    DefaultSignatures    #-}
+{-# LANGUAGE    LambdaCase           #-}
+{-# LANGUAGE    NamedFieldPuns       #-}
+{-# LANGUAGE    ScopedTypeVariables  #-}
+{-# LANGUAGE    TupleSections        #-}
+{-# LANGUAGE    TypeSynonymInstances #-}
+{-# LANGUAGE    FlexibleInstances    #-}
+{-# OPTIONS_GHC -fno-warn-orphans    #-}
 
 module Data.SBV.Control.Utils (
        io
@@ -307,6 +309,12 @@ instance SMTValue AlgReal where
    sexprToVal (EReal a)     = Just a
    sexprToVal (ENum (v, _)) = Just (fromIntegral v)
    sexprToVal _             = Nothing
+
+instance SMTValue String where
+   sexprToVal (ECon s)
+     | length s >= 2 && head s == '"' && last s == '"'
+     = Just (tail (init s))
+   sexprToVal _        = Nothing
 
 -- | Get the value of a term.
 getValue :: SMTValue a => SBV a -> Query a
