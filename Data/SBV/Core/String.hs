@@ -133,9 +133,15 @@ strOffsetIndexOf s sub offset
   | True
   = lift3 StrIndexOf Nothing s sub offset
 
--- | `strAt s offset`. Substring of length 1 at @offset@ in @s@. Note that this is rather odd
+-- | @`strAt` s offset@. Substring of length 1 at @offset@ in @s@. Note that this is rather odd
 -- as it returns a string; one would expect a character instead. But we're following the SMTLib theory
 -- here and returning a string, and also we don't really have an 'SChar' type to start with anyhow.
+--
+-- >>> prove $ \s1 s2 -> strAt (strConcat s1 s2) (strLen s1) .== strAt s2 0
+-- Q.E.D.
+-- >>> sat $ \s -> strLen s .>= 2 &&& strAt s 0 ./= strAt s (strLen s - 1)
+-- Satisfiable. Model:
+--   s0 = "\NUL\NUL " :: String
 strAt :: SString -> SInteger -> SString
 strAt s offset = strSubstr s offset 1
 
