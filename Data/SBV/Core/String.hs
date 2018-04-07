@@ -232,7 +232,10 @@ strNatToStr i
  | True
  = lift1 StrNatToStr Nothing i
 
--- | `strTake len s`. Corresponds to Haskell's `take` on symbolic-strings.
+-- | @`strTake` len s@. Corresponds to Haskell's `take` on symbolic-strings.
+--
+-- >>> prove $ \s i -> i .>= 0 ==> strLen (strTake i s) .<= i
+-- Q.E.D.
 strTake :: SInteger -> SString -> SString
 strTake i s = ite (i .<= 0)        (literal "")
             $ ite (i .>= strLen s) s
