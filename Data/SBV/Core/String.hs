@@ -158,7 +158,12 @@ sub `strIsInfixOf` s
   | True
   = lift2 StrContains (Just isInfixOf) s sub -- NB. flip, since `StrContains` takes args in rev order!
 
--- | @pre@ `strIsPrefixOf` @s@. Is @pre@ a prefix of @s@?
+-- | @`strIsPrefixOf` pre s@. Is @pre@ a prefix of @s@?
+--
+-- >>> prove $ \s1 s2 -> s1 `strIsPrefixOf` (s1 .++ s2)
+-- Q.E.D.
+-- >>> prove $ \s1 s2 -> s1 `strIsPrefixOf` s2 ==> strSubstr s2 0 (strLen s1) .== s1
+-- Q.E.D.
 strIsPrefixOf :: SString -> SString -> SBool
 pre `strIsPrefixOf` s
   | isConcretelyEmpty pre
