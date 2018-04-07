@@ -19,7 +19,7 @@ import Utils.SBVTestFramework
 -- Test suite
 tests :: TestTree
 tests =
-  testGroup "Basics.QueryIndividual"
+  testGroup "Basics.QueryInterpolants"
     [ goldenCapturedIO "query_Interpolant1" $ testQuery q1
     , goldenCapturedIO "query_Interpolant2" $ testQuery q2
     , goldenCapturedIO "query_Interpolant3" $ testQuery q3
