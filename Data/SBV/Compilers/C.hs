@@ -189,6 +189,7 @@ specifier cfg sw = case kindOf sw of
                      KFloat        -> specF CgFloat
                      KDouble       -> specF CgDouble
                      KString       -> text "%s"
+                     KSequence _   -> error "TODO(joel)"
                      KChar         -> text "%c"
                      KUserSort s _ -> die $ "uninterpreted sort: " ++ s
   where spec :: (Bool, Int) -> Doc
@@ -480,6 +481,7 @@ genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins preConsts tbls arrs
                       len KFloat{}            = 6 -- SFloat
                       len KDouble{}           = 7 -- SDouble
                       len KString{}           = 7 -- SString
+                      len KSequence{}         = error "TODO(joel)"
                       len KChar{}             = 5 -- SChar
                       len KUnbounded{}        = 8
                       len KBool               = 5 -- SBool
@@ -737,6 +739,7 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                                                                     Nothing -> (True, True) -- won't matter, it'll be rejected later
                                                                     Just i  -> (True, canOverflow True i)
                                                KUserSort s _   -> die $ "Uninterpreted sort: " ++ s
+                                               KSequence _     -> die "array index with sequence value"
         -- Div/Rem should be careful on 0, in the SBV world x `div` 0 is 0, x `rem` 0 is x
         -- NB: Quot is supposed to truncate toward 0; Not clear to me if C guarantees this behavior.
         -- Brief googling suggests C99 does indeed truncate toward 0, but other C compilers might differ.

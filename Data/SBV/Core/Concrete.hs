@@ -33,7 +33,9 @@ data CWVal = CWAlgReal  !AlgReal              -- ^ algebraic real
            | CWDouble   !Double               -- ^ double
            | CWChar     !Char                 -- ^ character
            | CWString   !String               -- ^ string
+           | CWSequence ![CWVal]              -- ^ sequence
            | CWUserSort !(Maybe Int, String)  -- ^ value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
+           deriving Show
 
 -- | Eq instance for CWVal. Note that we cannot simply derive Eq/Ord, since CWAlgReal doesn't have proper
 -- instances for these when values are infinitely precise reals. However, we do
@@ -46,6 +48,7 @@ instance Eq CWVal where
   CWDouble   a   == CWDouble   b = a `fpIsEqualObjectH` b   -- ditto
   CWChar     a   == CWChar     b = a == b
   CWString   a   == CWString   b = a == b
+  CWSequence a   == CWSequence b = a == b
   _              == _            = False
 
 -- | Ord instance for CWVal. Same comments as the 'Eq' instance why this cannot be derived.
@@ -56,6 +59,7 @@ instance Ord CWVal where
   CWAlgReal _ `compare`  CWDouble _   = LT
   CWAlgReal _ `compare`  CWChar _     = LT
   CWAlgReal _ `compare`  CWString _   = LT
+  CWAlgReal _ `compare`  CWSequence _ = LT
   CWAlgReal _ `compare`  CWUserSort _ = LT
 
   CWInteger _ `compare`  CWAlgReal _  = GT
@@ -64,6 +68,7 @@ instance Ord CWVal where
   CWInteger _ `compare`  CWDouble _   = LT
   CWInteger _ `compare`  CWChar _     = LT
   CWInteger _ `compare`  CWString _   = LT
+  CWInteger _ `compare`  CWSequence _ = LT
   CWInteger _ `compare`  CWUserSort _ = LT
 
   CWFloat _   `compare`  CWAlgReal _  = GT
@@ -72,6 +77,7 @@ instance Ord CWVal where
   CWFloat _   `compare`  CWDouble _   = LT
   CWFloat _   `compare`  CWChar _     = LT
   CWFloat _   `compare`  CWString _   = LT
+  CWFloat _   `compare`  CWSequence _ = LT
   CWFloat _   `compare`  CWUserSort _ = LT
 
   CWDouble _  `compare`  CWAlgReal _  = GT
@@ -80,6 +86,7 @@ instance Ord CWVal where
   CWDouble a  `compare`  CWDouble b   = a `fpCompareObjectH` b
   CWDouble _  `compare`  CWChar _     = LT
   CWDouble _  `compare`  CWString _   = LT
+  CWDouble _  `compare`  CWSequence _ = LT
   CWDouble _  `compare`  CWUserSort _ = LT
 
   CWChar _    `compare`  CWAlgReal _  = GT
@@ -88,6 +95,7 @@ instance Ord CWVal where
   CWChar _    `compare`  CWDouble _   = GT
   CWChar a    `compare`  CWChar b     = a `compare` b
   CWChar _    `compare`  CWString _   = LT
+  CWChar _    `compare`  CWSequence _ = LT
   CWChar _    `compare`  CWUserSort _ = LT
 
   CWString _  `compare`  CWAlgReal _  = GT
@@ -96,7 +104,17 @@ instance Ord CWVal where
   CWString _  `compare`  CWDouble _   = GT
   CWString _  `compare`  CWChar _     = GT
   CWString a  `compare`  CWString b   = a `compare` b
+  CWString _  `compare`  CWSequence _ = LT
   CWString _  `compare`  CWUserSort _ = LT
+
+  CWSequence _ `compare`  CWAlgReal _  = GT
+  CWSequence _ `compare`  CWInteger _  = GT
+  CWSequence _ `compare`  CWFloat _    = GT
+  CWSequence _ `compare`  CWDouble _   = GT
+  CWSequence _ `compare`  CWChar _     = GT
+  CWSequence _ `compare`  CWString _   = GT
+  CWSequence a `compare`  CWSequence b = a `compare` b
+  CWSequence _ `compare`  CWUserSort _ = LT
 
   CWUserSort _ `compare` CWAlgReal _  = GT
   CWUserSort _ `compare` CWInteger _  = GT
@@ -104,6 +122,7 @@ instance Ord CWVal where
   CWUserSort _ `compare` CWDouble _   = GT
   CWUserSort _ `compare` CWChar _     = GT
   CWUserSort _ `compare` CWString _   = GT
+  CWUserSort _ `compare` CWSequence _ = LT
   CWUserSort a `compare` CWUserSort b = a `compare` b
 
 -- | 'CW' represents a concrete word of a fixed size:
@@ -215,24 +234,26 @@ trueCW :: CW
 trueCW  = CW KBool (CWInteger 1)
 
 -- | Lift a unary function through a CW
-liftCW :: (AlgReal -> b) -> (Integer -> b) -> (Float -> b) -> (Double -> b) -> (Char -> b) -> (String -> b) -> ((Maybe Int, String) -> b) -> CW -> b
-liftCW f _ _ _ _ _ _ (CW _ (CWAlgReal  v)) = f v
-liftCW _ f _ _ _ _ _ (CW _ (CWInteger  v)) = f v
-liftCW _ _ f _ _ _ _ (CW _ (CWFloat    v)) = f v
-liftCW _ _ _ f _ _ _ (CW _ (CWDouble   v)) = f v
-liftCW _ _ _ _ f _ _ (CW _ (CWChar     v)) = f v
-liftCW _ _ _ _ _ f _ (CW _ (CWString   v)) = f v
-liftCW _ _ _ _ _ _ f (CW _ (CWUserSort v)) = f v
+liftCW :: (AlgReal -> b) -> (Integer -> b) -> (Float -> b) -> (Double -> b) -> (Char -> b) -> (String -> b) -> ([CWVal] -> b) -> ((Maybe Int, String) -> b) -> CW -> b
+liftCW f _ _ _ _ _ _ _ (CW _ (CWAlgReal  v)) = f v
+liftCW _ f _ _ _ _ _ _ (CW _ (CWInteger  v)) = f v
+liftCW _ _ f _ _ _ _ _ (CW _ (CWFloat    v)) = f v
+liftCW _ _ _ f _ _ _ _ (CW _ (CWDouble   v)) = f v
+liftCW _ _ _ _ f _ _ _ (CW _ (CWChar     v)) = f v
+liftCW _ _ _ _ _ f _ _ (CW _ (CWString   v)) = f v
+liftCW _ _ _ _ _ _ f _ (CW _ (CWSequence v)) = f v
+liftCW _ _ _ _ _ _ _ f (CW _ (CWUserSort v)) = f v
 
 -- | Lift a binary function through a CW
-liftCW2 :: (AlgReal -> AlgReal -> b) -> (Integer -> Integer -> b) -> (Float -> Float -> b) -> (Double -> Double -> b) -> (Char -> Char -> b) -> (String -> String -> b) -> ((Maybe Int, String) -> (Maybe Int, String) -> b) -> CW -> CW -> b
-liftCW2 r i f d c s u x y = case (cwVal x, cwVal y) of
+liftCW2 :: (AlgReal -> AlgReal -> b) -> (Integer -> Integer -> b) -> (Float -> Float -> b) -> (Double -> Double -> b) -> (Char -> Char -> b) -> (String -> String -> b) -> ([CWVal] -> [CWVal] -> b) -> ((Maybe Int, String) -> (Maybe Int, String) -> b) -> CW -> CW -> b
+liftCW2 r i f d c s q u x y = case (cwVal x, cwVal y) of
                               (CWAlgReal a,  CWAlgReal b)  -> r a b
                               (CWInteger a,  CWInteger b)  -> i a b
                               (CWFloat a,    CWFloat b)    -> f a b
                               (CWDouble a,   CWDouble b)   -> d a b
                               (CWChar a,     CWChar b)     -> c a b
                               (CWString a,   CWString b)   -> s a b
+                              (CWSequence a, CWSequence b) -> q a b
                               (CWUserSort a, CWUserSort b) -> u a b
                               _                            -> error $ "SBV.liftCW2: impossible, incompatible args received: " ++ show (x, y)
 
@@ -245,6 +266,7 @@ mapCW r i f d c s u x  = normCW $ CW (kindOf x) $ case cwVal x of
                                                     CWDouble   a -> CWDouble   (d a)
                                                     CWChar     a -> CWChar     (c a)
                                                     CWString   a -> CWString   (s a)
+                                                    CWSequence _ -> error "SBV.mapCW: impossible, called on CWSequence"
                                                     CWUserSort a -> CWUserSort (u a)
 
 -- | Map a binary function through a CW.
@@ -271,7 +293,7 @@ instance Show GeneralizedCW where
 -- | Show a CW, with kind info if bool is True
 showCW :: Bool -> CW -> String
 showCW shk w | isBoolean w = show (cwToBool w) ++ (if shk then " :: Bool" else "")
-showCW shk w               = liftCW show show show show show show snd w ++ kInfo
+showCW shk w               = liftCW show show show show show show show snd w ++ kInfo
       where kInfo | shk  = " :: " ++ showBaseKind (kindOf w)
                   | True = ""
 
@@ -292,6 +314,7 @@ mkConstCW KFloat          a = normCW $ CW KFloat     (CWFloat   (fromInteger (to
 mkConstCW KDouble         a = normCW $ CW KDouble    (CWDouble  (fromInteger (toInteger a)))
 mkConstCW KChar           a = error $ "Unexpected call to mkConstCW (Char) with value: " ++ show (toInteger a)
 mkConstCW KString         a = error $ "Unexpected call to mkConstCW (String) with value: " ++ show (toInteger a)
+mkConstCW KSequence{}     a = error $ "Unexpected call to mkConstCW (Sequence) with value: " ++ show (toInteger a)
 mkConstCW (KUserSort s _) a = error $ "Unexpected call to mkConstCW with uninterpreted kind: " ++ s ++ " with value: " ++ show (toInteger a)
 
 -- | Generate a random constant value ('CWVal') of the correct kind.
@@ -307,6 +330,8 @@ randomCWVal k =
     -- TODO: KString/KChar currently only go for 0..255; include unicode?
     KString       -> do l <- randomRIO (0, 100)
                         CWString <$> replicateM l (chr <$> randomRIO (0, 255))
+    KSequence k'  -> do l <- randomRIO (0, 100)
+                        CWSequence <$> replicateM l (randomCWVal k')
     KChar         -> CWChar . chr <$> randomRIO (0, 255)
     KUserSort s _ -> error $ "Unexpected call to randomCWVal with uninterpreted kind: " ++ s
   where

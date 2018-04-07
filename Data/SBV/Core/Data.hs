@@ -23,7 +23,7 @@
 
 module Data.SBV.Core.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
- , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble, SChar, SString
+ , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble, SChar, SString, SSequence
  , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode
  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
  , sRNE, sRNA, sRTP, sRTN, sRTZ
@@ -37,7 +37,7 @@ module Data.SBV.Core.Data
  , sbvToSW, sbvToSymSW, forceSWArg
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, uncacheAI, HasKind(..)
- , Op(..), PBOp(..), FPOp(..), StrOp(..), RegExp(..), NamedSymVar, getTableIndex
+ , Op(..), PBOp(..), FPOp(..), StrOp(..), RegExp(..), SeqOp(..), NamedSymVar, getTableIndex
  , SBVPgm(..), Symbolic, runSymbolic, State, getPathCondition, extendPathCondition
  , inSMTMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
  , SolverContext(..), internalVariable, internalConstraint, isCodeGenMode
@@ -68,6 +68,7 @@ import System.Random
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
+import Data.SBV.Core.Sequence
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Operations
 
@@ -146,6 +147,8 @@ type SChar = SBV Char
 -- and internally processed as one unit as opposed to a fixed-length list of characters.
 type SString = SBV String
 
+type SSequence a = SBV (Sequence a)
+
 -- | Not-A-Number for 'Double' and 'Float'. Surprisingly, Haskell
 -- Prelude doesn't have this value defined, so we provide it here.
 nan :: Floating a => a
@@ -222,7 +225,7 @@ sRTZ :: SRoundingMode
 sRTZ = sRoundTowardZero
 
 -- | A 'Show' instance is not particularly "desirable," when the value is symbolic,
--- but we do need this instance as otherwise we cannot simply evaluate Haskell functions 
+-- but we do need this instance as otherwise we cannot simply evaluate Haskell functions
 -- that return symbolic values and have their constant values printed easily!
 instance Show (SBV a) where
   show (SBV sv) = show sv

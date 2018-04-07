@@ -50,7 +50,7 @@ import Prelude hiding (length, take, elem, notElem, head)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model () -- instances only
 
-import Data.SBV.String
+import Data.SBV.String (charToStr, head, length, take)
 import qualified Data.Char as C
 
 -- For testing only
@@ -290,7 +290,13 @@ concEval1 mbOp a = literal <$> (mbOp <*> unliteral a)
 
 -- | Quiet GHC about testing only imports
 __unused :: a
-__unused = undefined isSpace length take elem notElem head
+__unused = undefined
+  isSpace
+  (length :: SString -> SInteger)
+  (take :: SInteger -> SString -> SString)
+  elem
+  notElem
+  (head :: SString -> SChar)
 
 {- $matching
 A symbolic string or a character ('SString' or 'SChar') can be matched against a regular-expression. Note

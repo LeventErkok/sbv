@@ -144,18 +144,21 @@ module Data.SBV (
   , SReal, AlgReal, sRealToSInteger
   -- ** Characters, Strings and Regular Expressions
   -- $strings
-  , SChar, SString, (.++), (.!!)
+  , SChar, SString
+  -- ** Sequences
+  -- $sequenes
+  , Sequence(..), SSequence
   -- * Arrays of symbolic values
   , SymArray(..), SArray, SFunArray, mkSFunArray
 
   -- * Creating symbolic values
   -- ** Single value
   -- $createSym
-  , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger, sReal, sFloat, sDouble, sChar, sString
+  , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger, sReal, sFloat, sDouble, sChar, sString, sSequence
 
   -- ** List of values
   -- $createSyms
-  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReals, sFloats, sDoubles, sChars, sStrings
+  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReals, sFloats, sDoubles, sChars, sStrings, sSequences
 
   -- * Symbolic Equality and Comparisons
   , EqSymbolic(..), OrdSymbolic(..), Equality(..)
@@ -292,8 +295,8 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 import Data.SBV.Core.Floating
+import Data.SBV.Core.Sequence (Sequence(..))
 import Data.SBV.Core.Splittable
-import Data.SBV.String ((.++), (.!!))
 
 import Data.SBV.Provers.Prover
 

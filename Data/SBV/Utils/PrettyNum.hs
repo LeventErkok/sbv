@@ -31,6 +31,7 @@ import Data.Numbers.CrackNum (floatToFP, doubleToFP)
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.AlgReals (algRealToSMTLib2)
+import Data.SBV.Core.Kind     (smtType)
 
 import Data.SBV.Utils.Lib (stringToQFS)
 
@@ -308,6 +309,7 @@ cwToSMTLib rm x
                                                       else negIf (w < 0) $ smtLibHex (intSizeOf x) (abs w)
   | isChar x         , CWChar c          <- cwVal x = smtLibHex 8 (fromIntegral (ord c))
   | isString x       , CWString s        <- cwVal x = '\"' : stringToQFS s ++ "\""
+  | isSequence x                                    = smtLibSeq x
   | True = error $ "SBV.cvtCW: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
   where roundModeConvert s = fromMaybe s (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])
         -- Carefully code hex numbers, SMTLib is picky about lengths of hex constants. For the time
@@ -327,6 +329,14 @@ cwToSMTLib rm x
         -- as there is no positive value we can provide to make the bvneg work.. (see above)
         mkMinBound :: Int -> String
         mkMinBound i = "#b1" ++ replicate (i-1) '0'
+
+        smtLibSeq :: CW -> String
+        smtLibSeq (CW kind (CWSequence [])) = "(as seq.empty " ++ smtType kind ++ ")"
+        smtLibSeq (CW (KSequence k) (CWSequence xs)) =
+          let mkSeq  inner = "(seq.++ "   ++ inner ++ ")"
+              mkUnit inner = "(seq.unit " ++ inner ++ ")"
+          in mkSeq (unwords (mkUnit . cwToSMTLib rm . CW k <$> xs))
+        smtLibSeq _ = error "SBV.cwToSMTLib: Impossible case (smtLibSeq)"
 
 -- | Create a skolem 0 for the kind
 mkSkolemZero :: RoundingMode -> Kind -> String

@@ -27,7 +27,7 @@
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SW(..), swKind, trueSW, falseSW
-  , Op(..), PBOp(..), OvOp(..), FPOp(..), StrOp(..), RegExp(..)
+  , Op(..), PBOp(..), OvOp(..), FPOp(..), StrOp(..), RegExp(..), SeqOp(..)
   , Quantifier(..), needsExistentials
   , RoundingMode(..)
   , SBVType(..), newUninterpreted, addAxiom
@@ -156,6 +156,7 @@ data Op = Plus
         | PseudoBoolean PBOp                    -- Pseudo-boolean ops, categorized separately
         | OverflowOp    OvOp                    -- Overflow-ops, categorized separately
         | StrOp StrOp                           -- String ops, categorized separately
+        | SeqOp SeqOp
         deriving (Eq, Ord)
 
 -- | Floating point operations
@@ -249,6 +250,21 @@ data StrOp = StrConcat       -- ^ Concatenation of one or more strings
            | StrInRe RegExp  -- ^ Check if string is in the regular expression
            deriving (Eq, Ord)
 
+-- TODO: check all these are used, document
+data SeqOp = SeqUnit
+           | SeqEmpty
+           | SeqConcat
+           | SeqLen
+           | SeqExtract
+           | SeqIndexOf
+           | SeqOffsetIndexOf -- XXX remove?
+           | SeqAt
+           | SeqContains
+           | SeqPrefixOf
+           | SeqSuffixOf
+           | SeqReplace
+           deriving (Eq, Ord)
+
 -- | Regular expressions. Note that regular expressions themselves are
 -- concrete, but the `match` function from the 'RegExpMatchable' class
 -- can check membership against a symbolic string/character. Also, we
@@ -334,6 +350,20 @@ instance Show StrOp where
   -- Note the breakage here with respect to argument order. We fix this explicitly later.
   show (StrInRe s) = "str.in.re " ++ show s
 
+instance Show SeqOp where
+  show SeqUnit          = "seq.unit"
+  show SeqEmpty         = "seq.empty"
+  show SeqConcat        = "seq.++"
+  show SeqLen           = "seq.len"
+  show SeqExtract       = "seq.extract"
+  show SeqIndexOf       = "seq.indexof"
+  show SeqOffsetIndexOf = "seq.indexof"
+  show SeqAt            = "seq.at"
+  show SeqContains      = "seq.contains"
+  show SeqPrefixOf      = "seq.prefixof"
+  show SeqSuffixOf      = "seq.suffixof"
+  show SeqReplace       = "seq.replace"
+
 -- Show instance for 'Op'. Note that this is largely for debugging purposes, not used
 -- for being read by any tool.
 instance Show Op where
@@ -354,6 +384,7 @@ instance Show Op where
   show (PseudoBoolean p) = show p
   show (OverflowOp o)    = show o
   show (StrOp s)         = show s
+  show (SeqOp s)         = show s
   show op
     | Just s <- op `lookup` syms = s
     | True                       = error "impossible happened; can't find op!"
@@ -1362,7 +1393,7 @@ instance NFData Result where
   rnf (Result kindInfo qcInfo obs cgs inps consts tbls arrs uis axs pgm cstr asserts outs)
         = rnf kindInfo `seq` rnf qcInfo  `seq` rnf obs    `seq` rnf cgs
                        `seq` rnf inps    `seq` rnf consts `seq` rnf tbls
-                       `seq` rnf arrs    `seq` rnf uis    `seq` rnf axs 
+                       `seq` rnf arrs    `seq` rnf uis    `seq` rnf axs
                        `seq` rnf pgm     `seq` rnf cstr   `seq` rnf asserts
                        `seq` rnf outs
 instance NFData Kind         where rnf a          = seq a ()

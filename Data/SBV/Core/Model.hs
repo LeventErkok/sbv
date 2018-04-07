@@ -29,7 +29,7 @@ module Data.SBV.Core.Model (
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   , sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
-  , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, sChar, sChars, sString, sStrings, slet
+  , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, sChar, sChars, sString, sStrings, sSequence, sSequences, slet
   , sRealToSInteger, label, observe
   , sAssert
   , liftQRem, liftDMod, symbolicMergeWithKind
@@ -63,6 +63,7 @@ import qualified Test.QuickCheck.Monadic as QC (monadicIO, run, assert, pre, mon
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
+import Data.SBV.Core.Sequence
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Operations
 
@@ -185,6 +186,19 @@ instance SymWord String where
   literal   = SBV . SVal KString . Left . CW KString . CWString
   fromCW (CW _ (CWString a)) = a
   fromCW c                   = error $ "SymWord.String: Unexpected non-string value: " ++ show c
+
+instance SymWord a => SymWord (Sequence a) where
+  mkSymWord = genMkSymVar (KSequence (kindOf (undefined :: a)))
+  literal (Sequence as)  =
+    let k = KSequence (kindOf (undefined :: a))
+        toCWVal a = case literal a of
+          SBV (SVal _ (Left (CW _ cwval))) -> cwval
+          _                                -> error "SymWord.Sequence: could not produce a concrete word for value"
+    in SBV $ SVal k $ Left $ CW k $ CWSequence $ toCWVal <$> as
+  fromCW  (CW _ (CWSequence a))
+    = Sequence (fromCW . CW (kindOf (undefined :: a)) <$> a)
+  fromCW  c
+    = error $ "SymWord.Sequence: Unexpected non-sequence value: " ++ show c
 
 instance SymWord Char where
   mkSymWord = genMkSymVar KChar
@@ -319,6 +333,14 @@ sChars = symbolics
 -- | Declare a list of 'SString's
 sStrings :: [String] -> Symbolic [SString]
 sStrings = symbolics
+
+-- | Declare an 'SSequence'
+sSequence :: SymWord a => String -> Symbolic (SSequence a)
+sSequence = symbolic
+
+-- | Declare a list of 'SSequence's
+sSequences :: SymWord a => [String] -> Symbolic [SSequence a]
+sSequences = symbolics
 
 -- | Convert an SReal to an SInteger. That is, it computes the
 -- largest integer @n@ that satisfies @sIntegerToSReal n <= r@
@@ -865,6 +887,7 @@ instance (SymWord a, Fractional a) => Fractional (SBV a) where
                       k@KString     -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KChar       -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KUserSort{} -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KSequence{} -> error $ "Unexpected Fractional case for: " ++ show k
 
 -- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat and SDouble
 -- Note that most of the fields are "undefined" for symbolic values, we add methods as they are supported by SMTLib.

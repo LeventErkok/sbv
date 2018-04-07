@@ -24,6 +24,7 @@ import Data.SBV
 import Data.SBV.Control
 
 import qualified Data.SBV.RegExp as R
+import           Data.SBV.String ((.++))
 
 -- | Simple expression language
 data SQLExpr = Query   SQLExpr

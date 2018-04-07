@@ -17,6 +17,7 @@ import Data.List (genericLength, transpose)
 import Data.SBV
 import Data.SBV.Control
 
+import           Data.SBV.String ((.!!))
 import qualified Data.SBV.String as S
 import qualified Data.SBV.RegExp as R
 

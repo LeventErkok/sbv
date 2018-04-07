@@ -15,13 +15,14 @@
 {-# LANGUAGE    TypeSynonymInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans    #-}
 
-module Data.SBV.Core.Kind (Kind(..), HasKind(..), constructUKind) where
+module Data.SBV.Core.Kind (Kind(..), HasKind(..), constructUKind, smtType) where
 
 import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
 
 import Data.Int
 import Data.Word
 import Data.SBV.Core.AlgReals
+import Data.SBV.Core.Sequence
 
 -- | Kind of symbolic value
 data Kind = KBool
@@ -33,6 +34,7 @@ data Kind = KBool
           | KDouble
           | KChar
           | KString
+          | KSequence !Kind
 
 -- | Helper for Eq/Ord instances below
 kindRank :: Kind -> Either Int (Either (Bool, Int) String)
@@ -45,6 +47,7 @@ kindRank KFloat          = Left 3
 kindRank KDouble         = Left 4
 kindRank KChar           = Left 5
 kindRank KString         = Left 6
+kindRank (KSequence _)   = Left 7
 {-# INLINE kindRank #-}
 
 -- | We want to equate user-sorts only by name
@@ -66,6 +69,7 @@ instance Show Kind where
   show KDouble            = "SDouble"
   show KString            = "SString"
   show KChar              = "SChar"
+  show (KSequence a)      = "[" ++ show a ++ "]"
 
 instance Eq  G.DataType where
    a == b = G.tyconUQname (G.dataTypeName a) == G.tyconUQname (G.dataTypeName b)
@@ -85,6 +89,7 @@ kindHasSign k =
     KDouble      -> True
     KString      -> False
     KChar        -> False
+    KSequence _  -> False
     KUserSort{}  -> False
 
 -- | Construct an uninterpreted/enumerated kind from a piece of data; we distinguish simple enumerations as those
@@ -124,6 +129,7 @@ class HasKind a where
   isUninterpreted :: a -> Bool
   isChar          :: a -> Bool
   isString        :: a -> Bool
+  isSequence      :: a -> Bool
   showType        :: a -> String
   -- defaults
   hasSign x = kindHasSign (kindOf x)
@@ -136,6 +142,7 @@ class HasKind a where
                   KDouble       -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KString       -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KChar         -> error "SBV.HasKind.intSizeOf((S)Char)"
+                  KSequence _   -> error "SBV.HasKind.intSizeOf((S)SSequence)"
                   KUserSort s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
   isBoolean       x | KBool{}      <- kindOf x = True
                     | True                     = False
@@ -154,6 +161,8 @@ class HasKind a where
   isString        x | KString{}    <- kindOf x = True
                     | True                     = False
   isChar          x | KChar{}      <- kindOf x = True
+                    | True                     = False
+  isSequence      x | KSequence{}  <- kindOf x = True
                     | True                     = False
   showType = show . kindOf
 
@@ -176,6 +185,21 @@ instance HasKind Float   where kindOf _ = KFloat
 instance HasKind Double  where kindOf _ = KDouble
 instance HasKind Char    where kindOf _ = KChar
 instance HasKind String  where kindOf _ = KString
+-- TODO: also Text / ByteString?
+instance HasKind a => HasKind (Sequence a) where
+  kindOf _ = KSequence (kindOf (undefined :: a))
 
 instance HasKind Kind where
   kindOf = id
+
+smtType :: Kind -> String
+smtType KBool           = "Bool"
+smtType (KBounded _ sz) = "(_ BitVec " ++ show sz ++ ")"
+smtType KUnbounded      = "Int"
+smtType KReal           = "Real"
+smtType KFloat          = "(_ FloatingPoint  8 24)"
+smtType KDouble         = "(_ FloatingPoint 11 53)"
+smtType KString         = "String"
+smtType (KSequence k)   = "(Seq " ++ smtType k ++ ")"
+smtType KChar           = "(_ BitVec 8)"
+smtType (KUserSort s _) = s

@@ -57,6 +57,8 @@ Library
                   , Data.SBV.Dynamic
                   , Data.SBV.Internals
                   , Data.SBV.String
+                  , Data.SBV.Sequence
+                  , Data.SBV.Sequence.Internal
                   , Data.SBV.Char
                   , Data.SBV.RegExp
                   , Data.SBV.Tools.CodeGen
@@ -109,6 +111,7 @@ Library
                   , Documentation.SBV.Examples.Queries.CaseSplit
                   , Documentation.SBV.Examples.Queries.Enums
                   , Documentation.SBV.Examples.Queries.Interpolants
+                  , Documentation.SBV.Examples.Sequences.Fibonacci
                   , Documentation.SBV.Examples.Strings.RegexCrossword
                   , Documentation.SBV.Examples.Strings.SQLInjection
                   , Documentation.SBV.Examples.Uninterpreted.AUF
@@ -124,6 +127,7 @@ Library
                   , Data.SBV.Core.Model
                   , Data.SBV.Core.Operations
                   , Data.SBV.Core.Floating
+                  , Data.SBV.Core.Sequence
                   , Data.SBV.Core.Splittable
                   , Data.SBV.Core.Symbolic
                   , Data.SBV.Control.Query
@@ -181,6 +185,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.QRem
                   , TestSuite.Basics.Quantifiers
                   , TestSuite.Basics.Recursive
+                  , TestSuite.Basics.Sequence
                   , TestSuite.Basics.SmallShifts
                   , TestSuite.Basics.SquashReals
                   , TestSuite.Basics.String

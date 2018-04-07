@@ -66,6 +66,7 @@ import Data.SBV.Core.Symbolic (IncState(..), withNewIncState, State(..), svToSW,
 
 import Data.SBV.Core.AlgReals   (mergeAlgReals)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
+import Data.SBV.Core.Sequence   (Sequence(Sequence))
 
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
 import Data.SBV.SMT.Utils   (showTimeoutValue, addAnnotations, alignPlain, debug, mergeSExpr, SMTException(..))
@@ -347,6 +348,16 @@ instance SMTValue Char where
    sexprToVal (ENum (i, _)) = Just (chr (fromIntegral i))
    sexprToVal _             = Nothing
 
+instance SMTValue a => SMTValue (Sequence a) where
+   sexprToVal (EApp [ECon "seq.++", l, r]) = do
+     Sequence l' <- sexprToVal l
+     Sequence r' <- sexprToVal r
+     pure $ Sequence $ l' ++ r'
+   sexprToVal (EApp [ECon "seq.unit", a]) = do
+     a' <- sexprToVal a
+     pure $ Sequence [a']
+   sexprToVal _        = Nothing
+
 -- | Get the value of a term.
 getValue :: SMTValue a => SBV a -> Query a
 getValue s = do sw <- inNewContext (`sbvToSW` s)
@@ -372,7 +383,7 @@ getUninterpretedValue s =
                                      r <- ask cmd
 
                                      parse r bad $ \case EApp [EApp [ECon o,  ECon v]] | o == show sw -> return v
-                                                         _                                             -> bad r Nothing
+                                                         _                                            -> bad r Nothing
 
           k                    -> error $ unlines [""
                                                   , "*** SBV.getUninterpretedValue: Called on an 'interpreted' kind"

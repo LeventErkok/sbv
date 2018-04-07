@@ -1,6 +1,7 @@
-{-# LANGUAGE Rank2Types          #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# OPTIONS_GHC -fno-warn-orphans  #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -36,6 +37,7 @@ import qualified Prelude as P
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
+import Data.SBV.Sequence.Internal
 
 import qualified Data.Char as C
 import Data.List (genericLength, genericIndex, genericDrop, genericTake)
@@ -58,7 +60,7 @@ import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 -- >>> prove $ \s1 s2 -> length s1 + length s2 .== length (s1 .++ s2)
 -- Q.E.D.
 length :: SString -> SInteger
-length = lift1 StrLen (Just (fromIntegral . P.length))
+length = lift1 (StrOp StrLen) (Just (fromIntegral . P.length))
 
 -- | @`null` s@ is True iff the string is empty
 --
@@ -103,7 +105,7 @@ tail s
 -- >>> prove $ \c -> length (charToStr c) .== 1
 -- Q.E.D.
 charToStr :: SChar -> SString
-charToStr = lift1 StrUnit (Just wrap)
+charToStr = lift1 (StrOp StrUnit) (Just wrap)
   where wrap c = [c]
 
 -- | @`strToStrAt` s offset@. Substring of length 1 at @offset@ in @s@. Unspecified if
@@ -146,8 +148,8 @@ strToCharAt s i
 (.!!) = strToCharAt
 
 -- | @`implode` cs@ is the string of length @|cs|@ containing precisely those
--- characters. Note that there is no corresponding function @explode@, since
--- we wouldn't know the length of a symbolic string.
+-- characters. Note that there is no corresponding function @explode@, since we
+-- wouldn't know the length of a symbolic string.
 --
 -- >>> prove $ \c1 c2 c3 -> length (implode [c1, c2, c3]) .== 3
 -- Q.E.D.
@@ -160,7 +162,7 @@ implode = foldr ((.++) . charToStr) ""
 concat :: SString -> SString -> SString
 concat x y | isConcretelyEmpty x = y
            | isConcretelyEmpty y = x
-           | True                = lift2 StrConcat (Just (++)) x y
+           | True                = lift2 (StrOp StrConcat) (Just (++)) x y
 
 -- | Short cut for `concat`.
 --
@@ -184,7 +186,7 @@ sub `isInfixOf` s
   | isConcretelyEmpty sub
   = literal True
   | True
-  = lift2 StrContains (Just (flip L.isInfixOf)) s sub -- NB. flip, since `StrContains` takes args in rev order!
+  = lift2 (StrOp StrContains) (Just (flip L.isInfixOf)) s sub -- NB. flip, since `StrContains` takes args in rev order!
 
 -- | @`isPrefixOf` pre s@. Is @pre@ a prefix of @s@?
 --
@@ -197,7 +199,7 @@ pre `isPrefixOf` s
   | isConcretelyEmpty pre
   = literal True
   | True
-  = lift2 StrPrefixOf (Just L.isPrefixOf) pre s
+  = lift2 (StrOp StrPrefixOf) (Just L.isPrefixOf) pre s
 
 -- | @`isSuffixOf` suf s@. Is @suf@ a suffix of @s@?
 --
@@ -210,7 +212,7 @@ suf `isSuffixOf` s
   | isConcretelyEmpty suf
   = literal True
   | True
-  = lift2 StrSuffixOf (Just L.isSuffixOf) suf s
+  = lift2 (StrOp StrSuffixOf) (Just L.isSuffixOf) suf s
 
 -- | @`take` len s@. Corresponds to Haskell's `take` on symbolic-strings.
 --
@@ -258,7 +260,7 @@ subStr s offset len
   , valid $ o + l                            -- we don't overrun
   = literal $ genericTake l $ genericDrop o c
   | True                                     -- either symbolic, or something is out-of-bounds
-  = lift3 StrSubstr Nothing s offset len
+  = lift3 (StrOp StrSubstr) Nothing s offset len
 
 -- | @`replace` s src dst@. Replace the first occurrence of @src@ by @dst@ in @s@
 --
@@ -275,7 +277,7 @@ replace s src dst
   , Just c <- unliteral dst
   = literal $ walk a b c
   | True
-  = lift3 StrReplace Nothing s src dst
+  = lift3 (StrOp StrReplace) Nothing s src dst
   where walk haystack needle newNeedle = go haystack   -- note that needle is guaranteed non-empty here.
            where go []       = []
                  go i@(c:cs)
@@ -315,7 +317,7 @@ offsetIndexOf s sub offset
       (i:_) -> literal i
       _     -> -1
   | True
-  = lift3 StrIndexOf Nothing s sub offset
+  = lift3 (StrOp StrIndexOf) Nothing s sub offset
 
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when 's' only contains digits,
@@ -331,7 +333,7 @@ strToNat s
    then literal (read a)
    else -1
  | True
- = lift1 StrStrToNat Nothing s
+ = lift1 (StrOp StrStrToNat) Nothing s
 
 -- | @`natToStr` i@. Retrieve string encoded by integer @i@ (ground rewriting only).
 -- Again, only naturals are supported, any input that is not a natural number
@@ -345,55 +347,7 @@ natToStr i
  | Just v <- unliteral i
  = literal $ if v >= 0 then show v else ""
  | True
- = lift1 StrNatToStr Nothing i
-
--- | Lift a unary operator over strings.
-lift1 :: forall a b. (SymWord a, SymWord b) => StrOp -> Maybe (a -> b) -> SBV a -> SBV b
-lift1 w mbOp a
-  | Just cv <- concEval1 mbOp a
-  = cv
-  | True
-  = SBV $ SVal k $ Right $ cache r
-  where k = kindOf (undefined :: b)
-        r st = do swa <- sbvToSW st a
-                  newExpr st k (SBVApp (StrOp w) [swa])
-
--- | Lift a binary operator over strings.
-lift2 :: forall a b c. (SymWord a, SymWord b, SymWord c) => StrOp -> Maybe (a -> b -> c) -> SBV a -> SBV b -> SBV c
-lift2 w mbOp a b
-  | Just cv <- concEval2 mbOp a b
-  = cv
-  | True
-  = SBV $ SVal k $ Right $ cache r
-  where k = kindOf (undefined :: c)
-        r st = do swa <- sbvToSW st a
-                  swb <- sbvToSW st b
-                  newExpr st k (SBVApp (StrOp w) [swa, swb])
-
--- | Lift a ternary operator over strings.
-lift3 :: forall a b c d. (SymWord a, SymWord b, SymWord c, SymWord d) => StrOp -> Maybe (a -> b -> c -> d) -> SBV a -> SBV b -> SBV c -> SBV d
-lift3 w mbOp a b c
-  | Just cv <- concEval3 mbOp a b c
-  = cv
-  | True
-  = SBV $ SVal k $ Right $ cache r
-  where k = kindOf (undefined :: d)
-        r st = do swa <- sbvToSW st a
-                  swb <- sbvToSW st b
-                  swc <- sbvToSW st c
-                  newExpr st k (SBVApp (StrOp w) [swa, swb, swc])
-
--- | Concrete evaluation for unary ops
-concEval1 :: (SymWord a, SymWord b) => Maybe (a -> b) -> SBV a -> Maybe (SBV b)
-concEval1 mbOp a = literal <$> (mbOp <*> unliteral a)
-
--- | Concrete evaluation for binary ops
-concEval2 :: (SymWord a, SymWord b, SymWord c) => Maybe (a -> b -> c) -> SBV a -> SBV b -> Maybe (SBV c)
-concEval2 mbOp a b = literal <$> (mbOp <*> unliteral a <*> unliteral b)
-
--- | Concrete evaluation for ternary ops
-concEval3 :: (SymWord a, SymWord b, SymWord c, SymWord d) => Maybe (a -> b -> c -> d) -> SBV a -> SBV b -> SBV c -> Maybe (SBV d)
-concEval3 mbOp a b c = literal <$> (mbOp <*> unliteral a <*> unliteral b <*> unliteral c)
+ = lift1 (StrOp StrNatToStr) Nothing i
 
 -- | Is the string concretely known empty?
 isConcretelyEmpty :: SString -> Bool

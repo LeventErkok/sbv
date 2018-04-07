@@ -16,6 +16,7 @@ module TestSuite.Basics.String(tests)  where
 import Data.SBV.Control
 import Utils.SBVTestFramework
 
+import           Data.SBV.String ((.++), (.!!))
 import qualified Data.SBV.String as S
 import qualified Data.SBV.RegExp as R
 
