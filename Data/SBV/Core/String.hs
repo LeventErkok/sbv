@@ -145,7 +145,12 @@ strOffsetIndexOf s sub offset
 strAt :: SString -> SInteger -> SString
 strAt s offset = strSubstr s offset 1
 
--- | @sub@ `strIsInfixOf` @s@. Does @s@ contain the substring @sub@?
+-- | @`strIsInfixOf` sub s@. Does @s@ contain the substring @sub@?
+--
+-- >>> prove $ \s1 s2 s3 -> s2 `strIsInfixOf` (s1 .++ s2 .++ s3)
+-- Q.E.D.
+-- >>> prove $ \s1 s2 -> s1 `strIsInfixOf` s2 &&& s2 `strIsInfixOf` s1 <=> s1 .== s2
+-- Q.E.D.
 strIsInfixOf :: SString -> SString -> SBool
 sub `strIsInfixOf` s
   | isConcretelyEmpty sub
