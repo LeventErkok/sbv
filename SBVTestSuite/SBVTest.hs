@@ -76,6 +76,7 @@ import qualified TestSuite.Queries.Int_Mathsat
 import qualified TestSuite.Queries.Int_Yices
 import qualified TestSuite.Queries.Int_Z3
 import qualified TestSuite.Queries.Interpolants
+import qualified TestSuite.Queries.Strings
 import qualified TestSuite.Queries.Uninterpreted
 import qualified TestSuite.Uninterpreted.AUF
 import qualified TestSuite.Uninterpreted.Axioms
@@ -189,6 +190,7 @@ otherTests = testGroup "SBVOtherTests" [
                , TestSuite.Queries.FreshVars.tests
                , TestSuite.Queries.Int_Z3.tests
                , TestSuite.Queries.Interpolants.tests
+               , TestSuite.Queries.Strings.tests
                , TestSuite.Queries.Uninterpreted.tests
                , TestSuite.Uninterpreted.AUF.tests
                , TestSuite.Uninterpreted.Axioms.tests
