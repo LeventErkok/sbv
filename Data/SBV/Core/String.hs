@@ -184,7 +184,10 @@ suf `strIsSuffixOf` s
   | True
   = lift2 StrSuffixOf (Just isSuffixOf) suf s
 
--- | `strReplace s src dst`. Replace the first occurrence of @src@ by @dst@ in @s@
+-- | @`strReplace` s src dst@. Replace the first occurrence of @src@ by @dst@ in @s@
+--
+-- >>> prove $ \s -> strReplace "hello" s "world" .== "world" ==> s .== "hello"
+-- Q.E.D.
 strReplace :: SString -> SString -> SString -> SString
 strReplace s src dst
   | Just a <- unliteral s
