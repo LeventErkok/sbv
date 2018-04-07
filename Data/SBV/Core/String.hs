@@ -171,7 +171,12 @@ pre `strIsPrefixOf` s
   | True
   = lift2 StrPrefixOf (Just isPrefixOf) pre s
 
--- | @suf@ `strIsSuffixOf` @s@. Is @suf@ a suffix of @s@?
+-- | @`strIsSuffixOf` suf s@. Is @suf@ a suffix of @s@?
+--
+-- >>> prove $ \s1 s2 -> s2 `strIsSuffixOf` (s1 .++ s2)
+-- Q.E.D.
+-- >>> prove $ \s1 s2 -> s1 `strIsSuffixOf` s2 ==> strSubstr s2 (strLen s2 - strLen s1) (strLen s1) .== s1
+-- Q.E.D.
 strIsSuffixOf :: SString -> SString -> SBool
 suf `strIsSuffixOf` s
   | isConcretelyEmpty suf
