@@ -241,7 +241,12 @@ strTake i s = ite (i .<= 0)        (literal "")
             $ ite (i .>= strLen s) s
             $ strSubstr s 0 i
 
--- | `strDrop len s`. Corresponds to Haskell's `drop` on symbolic-strings.
+-- | @`strDrop` len s@. Corresponds to Haskell's `drop` on symbolic-strings.
+--
+-- >>> prove $ \s i -> strLen (strDrop i s) .<= strLen s
+-- Q.E.D.
+-- >>> prove $ \s i -> strTake i s .++ strDrop i s .== s
+-- Q.E.D.
 strDrop :: SInteger -> SString -> SString
 strDrop i s = ite (i .>= ls) (literal "")
             $ ite (i .<= 0)  s
