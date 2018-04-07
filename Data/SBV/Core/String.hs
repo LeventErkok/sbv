@@ -218,10 +218,13 @@ strStrToNat s
  | True
  = lift1 StrStrToNat Nothing s
 
--- | `strNatToStr i`. Retrieve string encoded by integer @i@ (ground rewriting only).
+-- | @`strNatToStr` i@. Retrieve string encoded by integer @i@ (ground rewriting only).
 -- Again, only naturals are supported, any input that is not a natural number
 -- produces empty string, even though we take an integer as an argument.
 -- See <http://cvc4.cs.stanford.edu/wiki/Strings> for details.
+--
+-- >>> prove $ \i -> strLen (strNatToStr i) .== 3 ==> i .<= 999
+-- Q.E.D.
 strNatToStr :: SInteger -> SString
 strNatToStr i
  | Just v <- unliteral i
