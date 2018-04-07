@@ -77,7 +77,7 @@ strLen = lift1 StrLen (Just (fromIntegral . length))
 -- | @`strSubstr` s offset len@ is the substring of @s@ at offset `offset` with length `len`.
 -- This function is under-specified when the offset is outside the range of positions in @s@ or @len@
 -- is negative or @offset+len@ exceeds the length of @s@. For a friendlier version of this function
--- that acts like Haskell's `take`/`drop`, see `strTake`/`strDrop`.
+-- that acts like Haskell's `take`\/`drop`, see `strTake`\/`strDrop`.
 --
 -- >>> :set -XOverloadedStrings
 -- >>> prove $ \s i -> i .>= 0 &&& i .< strLen s ==> strSubstr s 0 i .++ strSubstr s i (strLen s - i) .== s
