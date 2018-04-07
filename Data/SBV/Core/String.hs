@@ -116,6 +116,11 @@ strIndexOf s sub = strOffsetIndexOf s sub 0
 
 -- | @`strOffsetIndexOf` s sub offset@. Retrieves first position of @sub@ at or
 -- after @offset@ in @s@, @-1@ if there are no occurrences.
+--
+-- >>> prove $ \s sub -> strOffsetIndexOf s sub 0 .== strIndexOf s sub
+-- Q.E.D.
+-- >>> prove $ \s sub i -> i .>= strLen s &&& strLen sub .> 0 ==> strOffsetIndexOf s sub i .== -1
+-- Q.E.D.
 strOffsetIndexOf :: SString -> SString -> SInteger -> SInteger
 strOffsetIndexOf s sub offset
   | Just c <- unliteral s               -- a constant string
