@@ -202,10 +202,13 @@ strReplace s src dst
                   | needle `isPrefixOf` i = newNeedle ++ drop (length needle) i
                   | True                  = c : go cs
 
--- | `strStrToNat s`. Retrieve integer encoded by string @s@ (ground rewriting only).
+-- | @`strStrToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when 's' only contains digits,
 -- that is, if it encodes a natural number. Otherwise, it returns '-1'.
 -- See <http://cvc4.cs.stanford.edu/wiki/Strings> for details.
+--
+-- >>> prove $ \s -> let n = strStrToNat s in n .>= 0 &&& n .< 10 ==> strLen s .== 1
+-- Q.E.D.
 strStrToNat :: SString -> SInteger
 strStrToNat s
  | Just a <- unliteral s
