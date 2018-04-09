@@ -250,8 +250,11 @@ module Data.SBV (
   , SatModel(..), Modelable(..), displayModels, extractModels
   , getModelDictionaries, getModelValues, getModelUninterpretedValues
 
-  -- * SMT Interface: Configurations and solvers
+  -- * SMT Interface
   , SMTConfig(..), Timing(..), SMTLibVersion(..), Solver(..), SMTSolver(..)
+  -- ** Controlling verbosity
+  -- $verbosity
+
   -- ** Solvers
   , boolector, cvc4, yices, z3, mathSAT, abc
   -- ** Configurations
@@ -929,6 +932,20 @@ can get lost in the translation. The idea here is that if you use these function
 produce better translations to SMTLib for more efficient solving of cardinality constraints, assuming
 the backend solver supports them. Currently, only Z3 supports pseudo-booleans directly. For all other solvers,
 SBV will translate these to equivalent terms that do not require special functions.
+-}
+
+{- $verbosity
+
+SBV provides various levels of verbosity to aid in debugging, by using the 'SMTConfig' fields:
+
+  * ['verbose'] Print on stdout a shortened account of what is sent/received. This is specifically trimmed to reduce noise
+    and is good for quick debugging. The output is not supposed to be machine-readable.
+  * ['redirectVerbose'] Send the verbose output to a file. Note that you still have to set `verbose=True` for redirection to
+    take effect. Otherwise, the output is the same as what you would see in `verbose`.
+  * ['transcript'] Produce a file that is valid SMTLib2 format, containing everything sent and received. In particular, one can
+    directly feed this file to the SMT-solver outside of the SBV since it is machine-readable. This is good for offline analysis
+    situations, where you want to have a full account of what happened. For instance, it will print time-stamps at every interaction
+    point, so you can see how long each command took.
 -}
 
 {-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}
