@@ -1,5 +1,6 @@
-{-# language OverloadedStrings #-}
-module Data.SBV.Examples.Puzzles.RegexCrossword where
+{-# LANGUAGE OverloadedStrings #-}
+
+module Data.SBV.Examples.Strings.RegexCrossword where
 
 import Control.Monad (forM_)
 import Data.SBV

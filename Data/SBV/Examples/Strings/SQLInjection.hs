@@ -1,6 +1,7 @@
-{-# language OverloadedStrings   #-}
-{-# language ScopedTypeVariables #-}
-module Data.SBV.Examples.Puzzles.SqlInjection
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
+module Data.SBV.Examples.Strings.SQLInjection
   ( findInjection
   , exampleProgram
   ) where

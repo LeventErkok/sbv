@@ -94,9 +94,7 @@ Library
                   , Data.SBV.Examples.Puzzles.Fish
                   , Data.SBV.Examples.Puzzles.MagicSquare
                   , Data.SBV.Examples.Puzzles.NQueens
-                  , Data.SBV.Examples.Puzzles.RegexCrossword
                   , Data.SBV.Examples.Puzzles.SendMoreMoney
-                  , Data.SBV.Examples.Puzzles.SqlInjection
                   , Data.SBV.Examples.Puzzles.Sudoku
                   , Data.SBV.Examples.Puzzles.U2Bridge
                   , Data.SBV.Examples.Queries.AllSat
@@ -106,6 +104,8 @@ Library
                   , Data.SBV.Examples.Queries.CaseSplit
                   , Data.SBV.Examples.Queries.Enums
                   , Data.SBV.Examples.Queries.Interpolants
+                  , Data.SBV.Examples.Strings.RegexCrossword
+                  , Data.SBV.Examples.Strings.SQLInjection
                   , Data.SBV.Examples.Uninterpreted.AUF
                   , Data.SBV.Examples.Uninterpreted.Deduce
                   , Data.SBV.Examples.Uninterpreted.Function
