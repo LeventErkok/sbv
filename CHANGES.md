@@ -5,6 +5,16 @@
 
 ### Version 7.6.5, Current development version
 
+  * Add support for Symbolic strings. ('SString' type.) Thanks
+    to Joel Burget for the implementation. SBV now supports
+    the new QF_S logic, which allows reasoning with symbolic
+    strings and regular expressions. Currently only Z3 has
+    support for this logic. Various string operations are
+    supported, including length, concatenation, regular-expression
+    match, substrig operations etc.
+
+  * Revamp Haddock documentation, hopefully easier to follow now.
+
   * Slightly modify the generated-C headers by removing whitespace.
     This allows for certain "lint" rules to pass when SBV generated
     code is used in conjunction with a larger code base. Thanks
@@ -29,7 +39,7 @@
   * Remove obsolote references to tactics in a few haddock comments. Thanks
     to Matthew Pickering for reporting.
 
-  * Added logic 'Logic_NONE', to be used in cases where SBV should not
+  * Added logic Logic_NONE, to be used in cases where SBV should not
     try to set the logic. This is useful when there is no viable value to
     set, and the back-end solver doesn't understand the SMT-Lib convention
     of using "ALL" as the logic name. (One example of this is the Yices
