@@ -212,12 +212,21 @@ module Data.SBV (
   -- ** General constraints
   -- $generalConstraints
   , constrain
-  -- ** Named constraints and unsat cores
+
+  -- ** Constraint Vacuity
+  -- $constraintVacuity
+
+  -- ** Named constraints
   -- $namedConstraints
   , namedConstraint
+
+  -- ** Unsat cores
+  -- $unsatCores
+
   -- ** Cardinality constraints
   -- $cardIntro
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
+
   -- * Checking safety
   -- $safeIntro
   , sAssert, isSafe, SExecutable(..)
@@ -227,7 +236,9 @@ module Data.SBV (
 
   -- * Optimization
   -- $optiIntro
-  -- ** Style of optimization
+
+  -- ** Multiple optimization goals
+  -- $multiOpt
   , OptimizeStyle(..)
   -- ** Objectives
   , Objective(..), minimize, maximize
@@ -562,15 +573,14 @@ Optimal model:
   As usual, the programmatic API can be used to extract the values of objectives and model-values ('getModelObjectives',
   'getModelAssignment', etc.) to access these values and program with them further.
 
-== Optimization examples
-
   The following examples illustrate the use of basic optimization routines:
 
      * "Data.SBV.Examples.Optimization.LinearOpt": Simple linear-optimization example.
      * "Data.SBV.Examples.Optimization.Production": Scheduling machines in a shop
      * "Data.SBV.Examples.Optimization.VM": Scheduling virtual-machines in a data-center
+-}
 
-== Multiple optimization goals
+{- $multiOpt
 
   Multiple goals can be specified, using the same syntax. In this case, the user gets to pick what style of
   optimization to perform, by passing the relevant 'OptimizeStyle' as the first argument to 'optimize'.
@@ -772,8 +782,9 @@ constraints are not vacuous, the functions 'isVacuous' (and 'isVacuousWith') can
 Also note that this semantics imply that test case generation ('genTest') and quick-check
 can take arbitrarily long in the presence of constraints, if the random input values generated
 rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'false'@.)
+-}
 
-=== Constraint vacuity
+{- $constraintVacuity
 
 When adding constraints, one has to be careful about
 making sure they are not inconsistent. The function 'isVacuous' can be use for this purpose.
@@ -815,8 +826,10 @@ And the proof is not vacuous:
 Constraints can be given names:
 
   @ 'namedConstraint' "a is at least 5" $ a .>= 5@
+-}
 
-Such constraints are useful when used in conjunction with 'getUnsatCore' function
+{- $unsatCores
+Named constraints are useful when used in conjunction with 'getUnsatCore' function
 where the backend solver can be queried to obtain an unsat core in case the constraints are unsatisfiable.
 This feature is enabled by the following option:
 
