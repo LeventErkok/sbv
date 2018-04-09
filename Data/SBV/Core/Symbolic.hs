@@ -65,6 +65,7 @@ import Data.Char                (isAlpha, isAlphaNum, toLower)
 import Data.IORef               (IORef, newIORef, readIORef)
 import Data.List                (intercalate, sortBy)
 import Data.Maybe               (isJust, fromJust, fromMaybe)
+import Data.String              (IsString(fromString))
 
 import Data.Time (getCurrentTime, UTCTime)
 
@@ -252,6 +253,13 @@ data SRegExp = RE_Literal String        -- ^ Precisely match the given string
              | RE_Inter SRegExp SRegExp -- ^ Intersection of regular expressions
             deriving (Eq, Ord)
 
+instance IsString SRegExp where
+  fromString = RE_Literal
+
+instance Num SRegExp where
+  (+) = RE_Union
+  (*) = RE_Conc
+
 -- | Show instance for `SRegExp`. The mapping is done so the outcome matches the
 -- SMTLib string reg-exp operations
 instance Show SRegExp where
@@ -266,8 +274,8 @@ instance Show SRegExp where
   show (RE_Loop  lo hi r)
         | lo >= 0, hi >= lo = "((_ re.loop " ++ show lo ++ " " ++ show hi ++ ") " ++ show r ++ ")"
         | True              = error $ "Invalid regular-expression RE_Loop with arguments: " ++ show (lo, hi)
-  show (RE_Union r1 r2)     = "(re_union " ++ show r1 ++ " " ++ show r2 ++ ")"
-  show (RE_Inter r1 r2)     = "(re_inter " ++ show r1 ++ " " ++ show r2 ++ ")"
+  show (RE_Union r1 r2)     = "(re.union " ++ show r1 ++ " " ++ show r2 ++ ")"
+  show (RE_Inter r1 r2)     = "(re.inter " ++ show r1 ++ " " ++ show r2 ++ ")"
 
 -- | Show instance for `StrOp`. Note that the mapping here is
 -- important to match the SMTLib equivalents, see here: <https://rise4fun.com/z3/tutorialcontent/sequences>
