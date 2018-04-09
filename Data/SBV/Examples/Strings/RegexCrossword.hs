@@ -2,7 +2,7 @@
 
 module Data.SBV.Examples.Strings.RegexCrossword where
 
-import Control.Monad (forM_)
+import Control.Monad
 import Data.SBV
 import qualified Data.Map as Map
 
@@ -16,7 +16,7 @@ solveCrossword (RegexCrossword rowRegexps colRegexps) = do
   solvedRows <- getModelDictionaries <$> allSat puzzle
   let numRows = length rowRegexps
   case solvedRows of
-    [solvedRows'] -> do
+    [solvedRows'] ->
       forM_ [1..numRows] $ \n ->
         case Map.lookup ("row-" ++ show n) solvedRows' of
           Nothing -> putStrLn "(unexpected) row not found"
@@ -30,7 +30,7 @@ solveCrossword (RegexCrossword rowRegexps colRegexps) = do
               numCols = length colRegexps
 
           -- constrain rows
-          rowVars <- flip traverse [1..numRows] $ \rowN ->
+          rowVars <- forM [1..numRows] $ \rowN ->
             free ("row-" ++ show rowN)
           forM_ (zip rowVars rowRegexps) $ \(rowVar, rowRegexp) -> do
             constrain $ strMatch rowVar rowRegexp
@@ -64,7 +64,7 @@ main = do
 
     [ "UB" + "IE" + "AW" -- UB|IE|AW
     , RE_Star (reClass "TUBE") -- [TUBE]*
-    , (reClass "BORF") * RE_All -- [BORF].
+    , reClass "BORF" * RE_All -- [BORF].
     ]
 
   -- https://regexcrossword.com/challenges/intermediate/puzzles/2
@@ -75,7 +75,7 @@ main = do
     , "PR" + "ER" + "EP" -- (PR|ER|EP)
     ]
 
-    [ (reClass "BQW") * ("PR" + "LE") -- [BQW](PR|LE)
+    [ reClass "BQW" * ("PR" + "LE") -- [BQW](PR|LE)
     , RE_Plus (reClass "RANK") -- [RANK]+
     ]
 
