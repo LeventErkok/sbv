@@ -253,12 +253,22 @@ data SRegExp = RE_Literal String        -- ^ Precisely match the given string
              | RE_Inter SRegExp SRegExp -- ^ Intersection of regular expressions
             deriving (Eq, Ord)
 
+-- | With overloaded strings, we can have direct
+-- literal regular expressions.
 instance IsString SRegExp where
   fromString = RE_Literal
 
+-- | Regular expressions as a 'Num' instance. Note that
+-- only `+` (union) and `*` (concatenation) make sense.
 instance Num SRegExp where
   (+) = RE_Union
   (*) = RE_Conc
+
+  abs         = error "Num.SRegExp: no abs method"
+  signum      = error "Num.SRegExp: no signum method"
+  fromInteger = error "Num.SRegExp: no fromInteger method"
+  negate      = error "Num.SRegExp: no negate method"
+
 
 -- | Show instance for `SRegExp`. The mapping is done so the outcome matches the
 -- SMTLib string reg-exp operations
