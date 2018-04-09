@@ -86,7 +86,7 @@ exploitRe
   * dropRe
   -- This runs faster if we exclude the option of trailing legitimate
   -- statements
-  -- * RE_Star ("; " + statementRe)
+  --    * RE_Star ("; " + statementRe)
 
 findInjection :: Expr -> IO ()
 findInjection expr = do
