@@ -269,7 +269,6 @@ instance Num SRegExp where
   fromInteger = error "Num.SRegExp: no fromInteger method"
   negate      = error "Num.SRegExp: no negate method"
 
-
 -- | Show instance for `SRegExp`. The mapping is done so the outcome matches the
 -- SMTLib string reg-exp operations
 instance Show SRegExp where
