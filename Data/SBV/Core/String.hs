@@ -37,7 +37,7 @@ import Data.List (genericLength, genericTake, genericDrop, tails, isPrefixOf, is
 
 -- For doctest use only
 import Data.SBV.Provers.Prover (sat, prove, SatResult, ThmResult)
-import Data.SBV.Utils.Boolean  ((&&&), (==>))
+import Data.SBV.Utils.Boolean  ((&&&), (==>), (<=>))
 
 -- | Is the string concretely known empty?
 isConcretelyEmpty :: SString -> Bool
