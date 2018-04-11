@@ -6,115 +6,100 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- This example solves regex crosswords from https://regexcrossword.com/.
+-- This example solves regex crosswords from <http://regexcrossword.com>
 -----------------------------------------------------------------------------
 {-# LANGUAGE OverloadedStrings #-}
 
-module Data.SBV.Examples.Strings.RegexCrossword (solveCrosswords) where
+module Data.SBV.Examples.Strings.RegexCrossword where
 
-import Control.Monad (forM, forM_)
-import qualified Data.Map as Map
+import Data.List (genericLength, transpose)
+
 import Data.SBV
+import Data.SBV.Control
 
--- | We specify a crossword as the list of regexes constraining its rows and
--- columns.
-data RegexCrossword = RegexCrossword [SRegExp] [SRegExp]
+-- | Solve a given crossword, returning the corresponding rows
+solveCrossword :: [SRegExp] -> [SRegExp] -> IO [String]
+solveCrossword rowRegExps colRegExps = runSMT $ do
+        let numRows = genericLength rowRegExps
+            numCols = genericLength colRegExps
 
-solveCrossword :: RegexCrossword -> IO ()
-solveCrossword (RegexCrossword rowRegexps colRegexps) = do
-  solvedRows <- getModelDictionaries <$> allSat puzzle
-  let numRows = length rowRegexps
-  case solvedRows of
-    [solvedRows'] ->
-      forM_ [1..numRows] $ \n ->
-        case Map.lookup ("row-" ++ show n) solvedRows' of
-          Nothing -> putStrLn "(unexpected) row not found"
-          Just solvedRow -> print solvedRow
-    []                 -> error "no solution"
-    _                  -> error "no unique solution"
+        -- constrain rows
+        let mkRow rowRegExp = do row <- free_
+                                 constrain $ row `strMatch` rowRegExp
+                                 constrain $ strLen row .== literal numCols
+                                 return row
 
-  where lit = literal . fromIntegral
-        puzzle = do
-          let numRows = length rowRegexps
-              numCols = length colRegexps
+        rows <- mapM mkRow rowRegExps
 
-          -- constrain rows
-          rowVars <- forM [1..numRows] $ \rowN ->
-            free ("row-" ++ show rowN)
-          forM_ (zip rowVars rowRegexps) $ \(rowVar, rowRegexp) -> do
-            constrain $ strMatch rowVar rowRegexp
-            constrain $ strLen rowVar .== lit numCols
+        -- constrain colums
+        let mkCol colRegExp = do col <- free_
+                                 constrain $ col `strMatch` colRegExp
+                                 constrain $ strLen col .== literal numRows
+                                 return col
 
-          -- constrain columns
-          colVars <- mkFreeVars numCols
-          forM_ (zip colVars colRegexps) $ \(colVar, colRegexp) -> do
-            constrain $ strMatch colVar colRegexp
-            constrain $ strLen colVar .== lit numRows
+        cols <- mapM mkCol colRegExps
 
-          -- constrain intersections
-          forM_ [0..numRows - 1] $ \rowN ->
-            forM_ [0..numCols - 1] $ \colN ->
-              let row = rowVars !! rowN
-                  col = colVars !! colN
-              in constrain $ strAt row (lit colN)
-                         .== strAt col (lit rowN)
+        -- constrain each "cell" as they rows/columns intersect:
+        let rowss =           [[strAt r (literal i) | i <- [0..numCols-1]] | r <- rows]
+        let colss = transpose [[strAt c (literal i) | i <- [0..numRows-1]] | c <- cols]
 
--- Helper to define a character class.
+        constrain $ bAnd $ zipWith (.==) (concat rowss) (concat colss)
+
+        -- Now query to extract the solution
+        query $ do cs <- checkSat
+                   case cs of
+                     Unk   -> error "Solver returned unknown!"
+                     Unsat -> error "There are no solutions to this puzzle!"
+                     Sat   -> mapM getValue rows
+
+-- | Helper to define a character class.
 reClass :: String -> SRegExp
 reClass = foldr (\char re -> RE_Literal [char] + re) RE_None
 
--- | Solve three example crosswords:
+-- | Solve <http://regexcrossword.com/challenges/intermediate/puzzles/1>
 --
--- >>> solveCrossword
--- puzzle 1:
--- "ATO" :: String
--- "WEL" :: String
--- puzzle 2:
--- "WA" :: String
--- "LK" :: String
--- "ER" :: String
--- puzzle 3:
--- "RATS" :: String
--- "ABUT" :: String
--- "TUBA" :: String
--- "STAR" :: String
-solveCrosswords :: IO ()
-solveCrosswords = do
-  -- https://regexcrossword.com/challenges/intermediate/puzzles/1
-  putStrLn "puzzle 1:"
-  solveCrossword $ RegexCrossword
-    [ RE_Star (reClass "NOTAD")  -- [NOTAD]*
-    , "WEL" + "BAL" + "EAR" -- WEL|BAL|EAR
-    ]
+-- >>> puzzle1
+-- ["ATO","WEL"]
+puzzle1 :: IO [String]
+puzzle1 = solveCrossword rs cs
+  where rs = [ RE_Star (reClass "NOTAD")  -- [NOTAD]*
+             , "WEL" + "BAL" + "EAR"      -- WEL|BAL|EAR
+             ]
 
-    [ "UB" + "IE" + "AW" -- UB|IE|AW
-    , RE_Star (reClass "TUBE") -- [TUBE]*
-    , reClass "BORF" * RE_All -- [BORF].
-    ]
+        cs = [ "UB" + "IE" + "AW"         -- UB|IE|AW
+             , RE_Star (reClass "TUBE")   -- [TUBE]*
+             , reClass "BORF" * RE_All    -- [BORF].
+             ]
 
-  -- https://regexcrossword.com/challenges/intermediate/puzzles/2
-  putStrLn "\npuzzle 2:"
-  solveCrossword $ RegexCrossword
-    [ RE_Plus (reClass "AWE") -- [AWE]+
-    , RE_Plus (reClass "ALP") * "K" -- [ALP]+K
-    , "PR" + "ER" + "EP" -- (PR|ER|EP)
-    ]
+-- | Solve <http://regexcrossword.com/challenges/intermediate/puzzles/2>
+--
+-- >>> puzzle2
+-- ["WA","LK","ER"]
+puzzle2 :: IO [String]
+puzzle2 = solveCrossword rs cs
+  where rs = [ RE_Plus (reClass "AWE")       -- [AWE]+
+             , RE_Plus (reClass "ALP") * "K" -- [ALP]+K
+             , "PR" + "ER" + "EP"            -- (PR|ER|EP)
+             ]
 
-    [ reClass "BQW" * ("PR" + "LE") -- [BQW](PR|LE)
-    , RE_Plus (reClass "RANK") -- [RANK]+
-    ]
+        cs = [ reClass "BQW" * ("PR" + "LE") -- [BQW](PR|LE)
+             , RE_Plus (reClass "RANK")      -- [RANK]+
+             ]
 
-  -- https://regexcrossword.com/challenges/palindromeda/puzzles/3
-  putStrLn "\npuzzle 3:"
-  solveCrossword $ RegexCrossword
-    [ RE_Star (reClass "TRASH") -- [TRASH]*
-    , ("AF" + "AB") * RE_Star (reClass "TUP") -- (FA|AB)[TUP]*
-    , RE_Star ("BA" + "TH" + "TU") -- (BA|TH|TU)*
-    , RE_Star RE_All * "A" * RE_Star RE_All -- .*A.*
-    ]
+-- | Solve <http://regexcrossword.com/challenges/palindromeda/puzzles/3>
+--
+-- >>> puzzle3
+-- ["RATS","ABUT","TUBA","STAR"]
+puzzle3 :: IO [String]
+puzzle3 = solveCrossword rs cs
+ where rs = [ RE_Star (reClass "TRASH")                       -- [TRASH]*
+            , ("FA" + "AB") * RE_Star (reClass "TUP")         -- (FA|AB)[TUP]*
+            , RE_Star ("BA" + "TH" + "TU")                    -- (BA|TH|TU)*
+            , RE_Star RE_All * "A" * RE_Star RE_All           -- .*A.*
+            ]
 
-    [ RE_Star ("TS" + "RA" + "QA") -- (TS|RA|QA)*
-    , RE_Star ("AB" + "UT" + "AR") -- (AB|UT|AR)*
-    , ("K" + "T") * "U" * RE_Star RE_All * ("A" + "R") -- (K|T)U.*(A|R)
-    , RE_Plus ("AR" + "FS" + "ST")-- (AR|FS|ST)+
-    ]
+       cs = [ RE_Star ("TS" + "RA" + "QA")                     -- (TS|RA|QA)*
+            , RE_Star ("AB" + "UT" + "AR")                     -- (AB|UT|AR)*
+            , ("K" + "T") * "U" * RE_Star RE_All * ("A" + "R") -- (K|T)U.*(A|R)
+            , RE_Plus ("AR" + "FS" + "ST")                     -- (AR|FS|ST)+
+            ]
