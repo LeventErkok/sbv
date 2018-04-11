@@ -1,15 +1,24 @@
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Data.SBV.Examples.Puzzles.RegexCrossword
+-- Copyright   :  (c) Joel Burget
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+--
+-- This example solves regex crosswords from https://regexcrossword.com/.
+-----------------------------------------------------------------------------
 {-# LANGUAGE OverloadedStrings #-}
 
-module Data.SBV.Examples.Strings.RegexCrossword where
+module Data.SBV.Examples.Strings.RegexCrossword (solveCrosswords) where
 
-import Control.Monad
-import Data.SBV
+import Control.Monad (forM, forM_)
 import qualified Data.Map as Map
+import Data.SBV
 
-data RegexCrossword = RegexCrossword
-  { rows :: [SRegExp]
-  , cols :: [SRegExp]
-  }
+-- | We specify a crossword as the list of regexes constraining its rows and
+-- columns.
+data RegexCrossword = RegexCrossword [SRegExp] [SRegExp]
 
 solveCrossword :: RegexCrossword -> IO ()
 solveCrossword (RegexCrossword rowRegexps colRegexps) = do
@@ -50,11 +59,27 @@ solveCrossword (RegexCrossword rowRegexps colRegexps) = do
               in constrain $ strAt row (lit colN)
                          .== strAt col (lit rowN)
 
+-- Helper to define a character class.
 reClass :: String -> SRegExp
 reClass = foldr (\char re -> RE_Literal [char] + re) RE_None
 
-main :: IO ()
-main = do
+-- | Solve three example crosswords:
+--
+-- >>> solveCrossword
+-- puzzle 1:
+-- "ATO" :: String
+-- "WEL" :: String
+-- puzzle 2:
+-- "WA" :: String
+-- "LK" :: String
+-- "ER" :: String
+-- puzzle 3:
+-- "RATS" :: String
+-- "ABUT" :: String
+-- "TUBA" :: String
+-- "STAR" :: String
+solveCrosswords :: IO ()
+solveCrosswords = do
   -- https://regexcrossword.com/challenges/intermediate/puzzles/1
   putStrLn "puzzle 1:"
   solveCrossword $ RegexCrossword

@@ -1,3 +1,25 @@
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Data.SBV.Examples.Puzzles.SQLInjection
+-- Copyright   :  (c) Joel Burget
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+--
+-- This implements the symbolic evaluation of a language which operates on
+-- strings in a way similar to bash. It's possible to do different analyses,
+-- but this example finds program inputs which result in a query containing a
+-- SQL injection.
+--
+-- The example program (in pseudo-code) @query ("SELECT msg FROM msgs where
+-- topicid='" ++ my_topicid ++ "'")@ can be analyzed via:
+--
+-- >>> findInjection exampleProgram
+-- Satisfiable. Model:
+-- my_topicid = "h'; DROP TABLE 'users" :: String
+-- undef      =                      "" :: String
+-- s2         =                      "" :: String
+-----------------------------------------------------------------------------
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -8,14 +30,13 @@ module Data.SBV.Examples.Strings.SQLInjection
 
 import Control.Monad.State
 import Control.Monad.Writer
-import Data.String
 import Data.SBV hiding (name)
+import Data.String
 
 data Expr
   = Query Expr
   | Const String
   | Concat Expr Expr
-  | Interpolate [Expr] Expr
   | ReadVar Expr
   | WriteVar Expr Expr
 
@@ -33,16 +54,6 @@ eval expr = case expr of
     lift $ lift exists_
   Const str -> pure $ literal str
   Concat exp1 exp2 -> (.++) <$> eval exp1 <*> eval exp2
-  Interpolate varnames template -> do
-    varnames' <- traverse eval varnames
-    template' <- eval template
-    foldM
-      (\tmpl name -> do
-        arr <- get
-        let val = readArray arr name
-        pure $ strReplace tmpl name val
-      )
-      template' varnames'
   ReadVar nameExp -> do
     name <- eval nameExp
     arr <- get
@@ -53,15 +64,20 @@ eval expr = case expr of
     modify $ \arr -> writeArray arr name val
     pure val
 
+-- | A simple program to query all messages with a given topic id.
 exampleProgram :: Expr
 exampleProgram = Query
-  (Concat "SELECT msg FROM messages WHERE topicid=" (ReadVar "my_topicid"))
+  (Concat
+    (Concat
+      "SELECT msg FROM msgs WHERE topicid='"
+      (ReadVar "my_topicid"))
+    "'")
 
 nameRe, strRe, selectRe, dropRe, statementRe, exploitRe :: SRegExp
 
--- let's say names are up to 10 characters long and strings are up to 40
-nameRe = RE_Loop 1 10 (RE_Range 'a' 'z' + RE_Range 'A' 'Z')
-strRe = "'" * RE_Loop 1 40 (RE_Range 'a' 'z' + RE_Range 'A' 'Z' + " ") * "'"
+-- we have to severely limit the length of names and strings to get an answer
+nameRe = RE_Loop 1 7 (RE_Range 'a' 'z')
+strRe = "'" * RE_Loop 1 5 (RE_Range 'a' 'z' + " ") * "'"
 
 selectRe
   = "SELECT "
@@ -83,11 +99,11 @@ statementRe = selectRe + dropRe
 -- we're looking for a DROP TABLE after at least one legitimate command
 exploitRe
   = RE_Plus (statementRe * "; ")
-  * dropRe
-  -- This runs faster if we exclude the option of trailing legitimate
-  -- statements
-  --    * RE_Star ("; " + statementRe)
+  * "DROP TABLE 'users'"
 
+-- | Analyze the program for inputs which result in a SQL injection. There are
+-- other possible injections, but in this example we're only looking for a
+-- @DROP TABLE@ command.
 findInjection :: Expr -> IO ()
 findInjection expr = do
   satResult <- sat $ do
