@@ -270,7 +270,7 @@ strNull s
   | Just cs <- unliteral s
   = literal (null cs)
   | True
-  = strLen s .== 0
+  = s .== literal ""
 
 -- | @`w8ToStr` c@ is the string of length 1 that contains the only character
 -- whose value is the 8-bit value @c@.
