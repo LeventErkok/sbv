@@ -16,6 +16,8 @@ module TestSuite.Basics.String(tests)  where
 import Data.SBV.Control
 import Utils.SBVTestFramework
 
+import Control.Monad (unless, void)
+
 -- Test suite
 tests :: TestTree
 tests =
@@ -37,21 +39,21 @@ tests =
     , goldenCapturedIO "strExamples11" $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples11   Unsat
     , goldenCapturedIO "strExamples12" $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples12   Unsat
     , goldenCapturedIO "strExamples13" $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples13   Unsat
+    , goldenCapturedIO "strExamples14" $ \rf -> checkASat z3{redirectVerbose=Just rf} strExamples14
     ]
-
--- to test interactively, use:
---    checkWith z3 propPbAtLeast
 
 checkWith :: SMTConfig -> Symbolic () -> CheckSatResult -> IO ()
 checkWith cfg props csExpected = runSMTWith cfg{verbose=True} $ do
         _ <- props
         query $ do cs <- checkSat
-                   if cs == csExpected
-                   then return ()
-                   else case cs of
-                     Unsat -> error "Failed! Expected Sat, got UNSAT"
-                     Sat   -> getModel         >>= \r -> error $ "Failed! Expected Unsat, got SAT:\n" ++ show (SatResult (Satisfiable cfg r))
-                     Unk   -> getUnknownReason >>= \r -> error $ "Failed! Expected Unsat, got UNK:\n" ++ show r
+                   unless (cs == csExpected) $
+                     case cs of
+                       Unsat -> error "Failed! Expected Sat, got UNSAT"
+                       Sat   -> getModel         >>= \r -> error $ "Failed! Expected Unsat, got SAT:\n" ++ show (SatResult (Satisfiable cfg r))
+                       Unk   -> getUnknownReason >>= \r -> error $ "Failed! Expected Unsat, got UNK:\n" ++ show r
+
+checkASat :: SMTConfig -> Symbolic SBool -> IO ()
+checkASat cfg = void . allSatWith cfg{verbose=True}
 
 strConcatSat :: Symbolic ()
 strConcatSat = constrain $ strConcat "abc" "def" .== "abcdef"
@@ -163,3 +165,8 @@ strExamples13 = do
    s <- sString "s"
    constrain $ s .== "13"
    constrain $ bnot $ strStrToNat s .== 13
+
+-- Generate all length one strings, to enumerate all and making sure we can parse correctly
+strExamples14 :: Predicate
+strExamples14 = do s <- sString "s"
+                   return $ strLen s .== 1
