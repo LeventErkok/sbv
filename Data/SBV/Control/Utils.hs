@@ -36,7 +36,7 @@ module Data.SBV.Control.Utils (
 
 import Data.List  (sortBy, elemIndex, partition, groupBy, tails)
 
-import Data.Char     (isPunctuation, isSpace, chr)
+import Data.Char     (isPunctuation, isSpace)
 import Data.Ord      (comparing)
 import Data.Function (on)
 
@@ -67,7 +67,7 @@ import Data.SBV.Core.AlgReals   (mergeAlgReals)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
-import Data.SBV.SMT.Utils   (showTimeoutValue, annotateWithName, alignPlain, debug, mergeSExpr, SMTException(..))
+import Data.SBV.SMT.Utils   (showTimeoutValue, annotateWithName, alignPlain, debug, mergeSExpr, SMTException(..), qfsToString)
 
 import Data.SBV.Utils.SExpr
 import Data.SBV.Control.Types
@@ -77,8 +77,6 @@ import qualified Data.Set as Set (toList)
 import qualified Control.Exception as C
 
 import GHC.Stack
-
-import Numeric (readOct, readHex)
 
 -- | 'Query' as a 'SolverContext'.
 instance SolverContext Query where
@@ -393,20 +391,7 @@ recoverKindedValue k e = case e of
           | length xs < 2 || head xs /= '"' || last xs /= '"'
           = error $ "Expected a string constant with quotes, received: <" ++ xs ++ ">"
           | True
-          = handleEscapes $ tail (init xs)
-
-        -- In a real string, escapes are meaningful. Taken from <https://en.wikipedia.org/wiki/Escape_sequences_in_C>
-        -- NB. We don't handle \u variants.
-        specials = [ ('a',  0x07), ('b', 0x08), ('f', 0x0C), ('n',  0x0A)
-                   , ('r',  0x0D), ('t', 0x09), ('v', 0x0B), ('\\', 0x5C)
-                   , ('\'', 0x27), ('"', 0x22), ('?', 0x3F)
-                   ]
-
-        handleEscapes ""                                                        = ""
-        handleEscapes ('\\':c:rest)         | Just v    <- c `lookup` specials  = chr v : handleEscapes rest
-        handleEscapes ('\\':'x':c1:c2:rest) | [(v, "")] <- readHex [c1, c2]     = chr v : handleEscapes rest
-        handleEscapes ('\\':c1:c2:c3:rest)  | [(v, "")] <- readOct [c1, c2, c3] = chr v : handleEscapes rest
-        handleEscapes (c:cs)                                                    = c     : handleEscapes cs
+          = qfsToString $ tail (init xs)
 
 -- | Get the value of a term. If the kind is Real and solver supports decimal approximations,
 -- we will "squash" the representations.
