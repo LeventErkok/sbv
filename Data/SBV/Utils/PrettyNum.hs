@@ -19,7 +19,7 @@ module Data.SBV.Utils.PrettyNum (
       , showSMTFloat, showSMTDouble, smtRoundingMode, cwToSMTLib, mkSkolemZero
       ) where
 
-import Data.Char  (ord, intToDigit)
+import Data.Char  (ord, intToDigit, isPrint, ord)
 import Data.Int   (Int8, Int16, Int32, Int64)
 import Data.List  (isPrefixOf)
 import Data.Maybe (fromJust, fromMaybe, listToMaybe)
@@ -277,7 +277,7 @@ cwToSMTLib rm x
   | hasSign x        , CWInteger  w      <- cwVal x = if w == negate (2 ^ intSizeOf x)
                                                       then mkMinBound (intSizeOf x)
                                                       else negIf (w < 0) $ smtLibHex (intSizeOf x) (abs w)
-  | isString x       , CWString s        <- cwVal x = show s
+  | isString x       , CWString s        <- cwVal x = '\"' : concatMap chr s ++ "\""
   | True = error $ "SBV.cvtCW: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
   where roundModeConvert s = fromMaybe s (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])
         -- Carefully code hex numbers, SMTLib is picky about lengths of hex constants. For the time
@@ -292,10 +292,17 @@ cwToSMTLib rm x
         negIf :: Bool -> String -> String
         negIf True  a = "(bvneg " ++ a ++ ")"
         negIf False a = a
+
         -- anamoly at the 2's complement min value! Have to use binary notation here
         -- as there is no positive value we can provide to make the bvneg work.. (see above)
         mkMinBound :: Int -> String
         mkMinBound i = "#b1" ++ replicate (i-1) '0'
+
+        -- strings are almost just show, but escapes are different. Sigh
+        chr c
+         | isPrint c || c `elem` bad = [c]
+         | True                      = "\\x" ++ pad 2 (s16 (ord c))
+         where bad = "\"" -- needs to be escaped!
 
 -- | Create a skolem 0 for the kind
 mkSkolemZero :: RoundingMode -> Kind -> String
