@@ -200,7 +200,7 @@ instance Show SMTException where
 -- | Given a QF_S string (i.e., one that works in the string theory), convert it to a Haskell equivalent
 qfsToString :: String -> String
 qfsToString = go
-  where go "" = ""
+  where go ""                                                              = ""
         go ('\\':'n'       : rest)                                         = chr 10 : go rest
         go ('\\':'v'       : rest)                                         = chr 11 : go rest
         go ('\\':'f'       : rest)                                         = chr 12 : go rest
