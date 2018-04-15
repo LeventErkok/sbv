@@ -11,7 +11,7 @@
     strings and regular expressions. Currently only Z3 has
     support for this logic. Various string operations are
     supported, including length, concatenation, regular-expression
-    match, substrig operations etc.
+    matching, substrig operations etc.
 
   * Revamp Haddock documentation, hopefully easier to follow now.
 
