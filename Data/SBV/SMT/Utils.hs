@@ -123,8 +123,6 @@ mergeSExpr (x:xs)
        grab _ []     = ([], [])
        grab i (l:ls) = let (a, b) = grab (i+parenDiff l) ls in (l:a, b)
 
-       skipString ('\\':'"' :cs) = skipString cs
-       skipString ('\\':'\\':cs) = skipString cs
        skipString ('"':'"':cs)   = skipString cs
        skipString ('"':cs)       = cs
        skipString (_:cs)         = skipString cs
@@ -200,15 +198,15 @@ instance Show SMTException where
 -- | Given a QF_S string (i.e., one that works in the string theory), convert it to a Haskell equivalent
 qfsToString :: String -> String
 qfsToString = go
-  where go ""                                                              = ""
-        go ('\\':'n'       : rest)                                         = chr 10 : go rest
-        go ('\\':'v'       : rest)                                         = chr 11 : go rest
-        go ('\\':'f'       : rest)                                         = chr 12 : go rest
-        go ('\\':'r'       : rest)                                         = chr 13 : go rest
-        go ('\\':'x':c1:c2 : rest) | [(v, "")] <- readHex [c1, c2]         = chr  v : go rest
-        go ('\\':c1:c2:c3  : rest) | [(v, "")] <- readOct [c1, c2, c3]     = chr  v : go rest
-        go ('\\':'\\'      : rest)                                         = '\\'   : go rest
-        go (c              : rest)                                         = c      : go rest
+  where go ""                                                          = ""
+        go ('\\':'n'       : rest)                                     = chr 10 : go rest
+        go ('\\':'\\'       : rest)                                    = '\\'   : go rest
+        go ('\\':'v'       : rest)                                     = chr 11 : go rest
+        go ('\\':'f'       : rest)                                     = chr 12 : go rest
+        go ('\\':'r'       : rest)                                     = chr 13 : go rest
+        go ('\\':'x':c1:c2 : rest) | [(v, "")] <- readHex [c1, c2]     = chr  v : go rest
+        go ('\\':c1:c2:c3  : rest) | [(v, "")] <- readOct [c1, c2, c3] = chr  v : go rest
+        go (c              : rest)                                     = c      : go rest
 
 -- | Given a Haskell, convert it to one that's understood by the QF_S logic
 stringToQFS :: String -> String

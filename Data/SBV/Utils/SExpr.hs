@@ -55,8 +55,6 @@ tokenize inp = go inp []
 
        go ('"':r) sofar = go rest (finalStr : sofar)
            where grabString []             acc = (reverse acc, [])         -- Strictly speaking, this is the unterminated string case; but let's ignore
-                 grabString ('\\':'\\':cs) acc = grabString cs ('\\':acc)
-                 grabString ('\\':'"':cs)  acc = grabString cs ('\"':acc)
                  grabString ('"' :'"':cs)  acc = grabString cs ('"' :acc)
                  grabString ('"':cs)       acc = (reverse acc, cs)
                  grabString (c:cs)         acc = grabString cs (c:acc)
