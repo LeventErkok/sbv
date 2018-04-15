@@ -11,7 +11,7 @@
 
 module TestSuite.Polynomials.Polynomials(tests) where
 
-import Data.SBV.Examples.Polynomials.Polynomials
+import Data.SBV.Examples.Misc.Polynomials
 
 import Utils.SBVTestFramework
 
