@@ -76,7 +76,7 @@
 [SEND] (get-info :reason-unknown)
 [RECV] (:reason-unknown "state of the most recent check-sat command is not known")
 [SEND] (get-info :version)
-[RECV] (:version "4.6.2")
+[RECV] (:version "4.7.0")
 [SEND] (get-info :status)
 [RECV] (:status sat)
 [GOOD] (define-fun s16 () Int 4)
@@ -107,7 +107,7 @@
 [SEND] (get-info :reason-unknown)
 [RECV] (:reason-unknown "unknown")
 [SEND] (get-info :version)
-[RECV] (:version "4.6.2")
+[RECV] (:version "4.7.0")
 [SEND] (get-info :memory)
 [RECV] unsupported
 [SEND] (get-info :time)
