@@ -1398,11 +1398,11 @@ data SMTModel = SMTModel {
 -- and build layers of results, if needed. For ordinary uses of the library,
 -- this type should not be needed, instead use the accessor functions on
 -- it. (Custom Show instances and model extractors.)
-data SMTResult = Unsatisfiable SMTConfig           -- ^ Unsatisfiable
-               | Satisfiable   SMTConfig SMTModel  -- ^ Satisfiable with model
-               | SatExtField   SMTConfig SMTModel  -- ^ Prover returned a model, but in an extension field containing Infinite/epsilon
-               | Unknown       SMTConfig String    -- ^ Prover returned unknown, with the given reason
-               | ProofError    SMTConfig [String]  -- ^ Prover errored out
+data SMTResult = Unsatisfiable SMTConfig (Maybe [String]) -- ^ Unsatisfiable. If unsat-cores are enabled, they will be returned in the second parameter.
+               | Satisfiable   SMTConfig SMTModel         -- ^ Satisfiable with model
+               | SatExtField   SMTConfig SMTModel         -- ^ Prover returned a model, but in an extension field containing Infinite/epsilon
+               | Unknown       SMTConfig String           -- ^ Prover returned unknown, with the given reason
+               | ProofError    SMTConfig [String]         -- ^ Prover errored out
 
 -- | A script, to be passed to the solver.
 data SMTScript = SMTScript {

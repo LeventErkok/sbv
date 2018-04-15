@@ -73,7 +73,7 @@ import qualified System.Timeout as Timeout (timeout)
 
 -- | Extract the final configuration from a result
 resultConfig :: SMTResult -> SMTConfig
-resultConfig (Unsatisfiable c)   = c
+resultConfig (Unsatisfiable c _) = c
 resultConfig (Satisfiable   c _) = c
 resultConfig (SatExtField   c _) = c
 resultConfig (Unknown       c _) = c
@@ -382,11 +382,11 @@ instance Modelable SatResult where
 
 -- | 'SMTResult' as a generic model provider
 instance Modelable SMTResult where
-  getModelAssignment (Unsatisfiable _) = Left "SBV.getModelAssignment: Unsatisfiable result"
-  getModelAssignment (Satisfiable _ m) = Right (False, parseModelOut m)
-  getModelAssignment (SatExtField _ _) = Left "SBV.getModelAssignment: The model is in an extension field"
-  getModelAssignment (Unknown _ m)     = Left $ "SBV.getModelAssignment: Solver state is unknown: " ++ m
-  getModelAssignment (ProofError _ s)  = error $ unlines $ "Backend solver complains: " : s
+  getModelAssignment (Unsatisfiable _ _) = Left "SBV.getModelAssignment: Unsatisfiable result"
+  getModelAssignment (Satisfiable _ m)   = Right (False, parseModelOut m)
+  getModelAssignment (SatExtField _ _)   = Left "SBV.getModelAssignment: The model is in an extension field"
+  getModelAssignment (Unknown _ m)       = Left $ "SBV.getModelAssignment: Solver state is unknown: " ++ m
+  getModelAssignment (ProofError _ s)    = error $ unlines $ "Backend solver complains: " : s
 
   modelExists Satisfiable{}   = True
   modelExists Unknown{}       = False -- don't risk it
@@ -424,7 +424,7 @@ displayModels disp (AllSatResult (_, _, ms)) = do
 -- | Show an SMTResult; generic version
 showSMTResult :: String -> String -> String -> String -> String -> SMTResult -> String
 showSMTResult unsatMsg unkMsg satMsg satMsgModel satExtMsg result = case result of
-  Unsatisfiable _               -> unsatMsg
+  Unsatisfiable _ uc            -> unsatMsg ++ showUnsatCore uc
   Satisfiable _ (SMTModel _ []) -> satMsg
   Satisfiable _ m               -> satMsgModel ++ showModel cfg m
   SatExtField _ (SMTModel b _)  -> satExtMsg   ++ showModelDictionary cfg b
@@ -432,6 +432,8 @@ showSMTResult unsatMsg unkMsg satMsg satMsgModel satExtMsg result = case result 
   ProofError  _ []              -> "*** An error occurred. No additional information available. Try running in verbose mode"
   ProofError  _ ls              -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
  where cfg = resultConfig result
+       showUnsatCore Nothing   = ""
+       showUnsatCore (Just xs) = ". Unsat core:\n" ++ intercalate "\n" ["    " ++ x | x <- xs]
 
 -- | Show a model in human readable form. Ignore bindings to those variables that start
 -- with "__internal_sbv_" and also those marked as "nonModelVar" in the config; as these are only for internal purposes

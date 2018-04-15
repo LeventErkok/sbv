@@ -13,6 +13,10 @@
     supported, including length, concatenation, regular-expression
     matching, substrig operations etc.
 
+  * If unsat-core extraction is enabled, SBV now returns the unsat-core
+    directly with in a solver result. Thanks to Ara Adkins for the
+    suggestion.
+
   * Revamp Haddock documentation, hopefully easier to follow now.
 
   * Slightly modify the generated-C headers by removing whitespace.

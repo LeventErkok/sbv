@@ -199,9 +199,9 @@ getSMTResult :: Query SMTResult
 getSMTResult = do cfg <- getConfig
                   cs  <- checkSat
                   case cs of
-                    Unsat -> return $ Unsatisfiable cfg
-                    Sat   -> Satisfiable cfg <$> getModel
-                    Unk   -> Unknown     cfg <$> getUnknownReason
+                    Unsat -> Unsatisfiable cfg <$> getUnsatCoreIfRequested
+                    Sat   -> Satisfiable   cfg <$> getModel
+                    Unk   -> Unknown       cfg <$> getUnknownReason
 
 -- | Classify a model based on whether it has unbound objectives or not.
 classifyModel :: SMTConfig -> SMTModel -> SMTResult
@@ -214,7 +214,7 @@ getLexicographicOptResults :: Query SMTResult
 getLexicographicOptResults = do cfg <- getConfig
                                 cs  <- checkSat
                                 case cs of
-                                  Unsat -> return $ Unsatisfiable cfg
+                                  Unsat -> Unsatisfiable cfg <$> getUnsatCoreIfRequested
                                   Sat   -> classifyModel cfg <$> getModelWithObjectives
                                   Unk   -> Unknown       cfg <$> getUnknownReason
    where getModelWithObjectives = do objectiveValues <- getObjectiveValues
@@ -227,7 +227,7 @@ getIndependentOptResults objNames = do cfg <- getConfig
                                        cs  <- checkSat
 
                                        case cs of
-                                         Unsat -> return [(nm, Unsatisfiable cfg) | nm <- objNames]
+                                         Unsat -> getUnsatCoreIfRequested >>= \mbUC -> return [(nm, Unsatisfiable cfg mbUC) | nm <- objNames]
                                          Sat   -> continue (classifyModel cfg)
                                          Unk   -> do ur <- Unknown cfg <$> getUnknownReason
                                                      return [(nm, ur) | nm <- objNames]
@@ -544,6 +544,14 @@ getUnsatCore = do
         parse r bad $ \case
            EApp es | Just xs <- mapM fromECon es -> return $ map unBar xs
            _                                     -> bad r Nothing
+
+-- | Retrieve the unsat core if it was asked for in the configuration
+getUnsatCoreIfRequested :: Query (Maybe [String])
+getUnsatCoreIfRequested = do
+        cfg <- getConfig
+        if or [b | ProduceUnsatCores b <- solverSetOptions cfg]
+           then Just <$> getUnsatCore
+           else return Nothing
 
 -- | Retrieve the proof. Note you must have arranged for
 -- proofs to be produced first (/via/ @'setOption' $ 'ProduceProofs' 'True'@)
