@@ -242,7 +242,7 @@ module Data.SBV (
   -- $multiOpt
   , OptimizeStyle(..)
   -- ** Objectives
-  , Objective(..), minimize, maximize
+  , Objective(..), Metric(..)
   -- ** Soft assumptions
   -- $softAssertions
   , assertSoft , Penalty(..)
