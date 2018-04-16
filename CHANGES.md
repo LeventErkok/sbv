@@ -8,10 +8,12 @@
   * Add support for Symbolic strings. ('SString' type.) Thanks
     to Joel Burget for the implementation. SBV now supports
     the new QF_S logic, which allows reasoning with symbolic
-    strings and regular expressions. Currently only Z3 has
-    support for this logic. Various string operations are
-    supported, including length, concatenation, regular-expression
-    matching, substrig operations etc.
+    strings and regular expressions. Currently only Z3 and CVC4 has
+    support for this logic, and they do differ in some details.
+    Various string operations are supported, including length,
+    concatenation, regular-expression matching, substrig operations etc.
+    If you use this logic, you are likely to find bugs in solvers
+    themselves as support is rather new: Please report.
 
   * If unsat-core extraction is enabled, SBV now returns the unsat-core
     directly with in a solver result. Thanks to Ara Adkins for the
