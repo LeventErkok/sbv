@@ -12,8 +12,8 @@
 --
 -- A collection of string/character utilities, useful when working
 -- with symbolic strings. To the extent possible, the functions
--- in this module follow those of "Data.Char", so importing
--- qualified is the recommended workflow.
+-- in this module follow those of "Data.List" and "Data.Char",  so
+-- importing qualified is the recommended workflow.
 -----------------------------------------------------------------------------
 
 module Data.SBV.Tools.Strings (
@@ -22,9 +22,11 @@ module Data.SBV.Tools.Strings (
         -- * Conversion to/from SWord8
         , ord, chr
         -- * Deconstructing/Reconstructing
-        , strHead, strTail, charToStr, strToCharAt, implode
+        , head, tail, charToStr, strToCharAt, implode
+        -- * Membership
+        , elem
         -- * Recognizers
-        , isControl, isSpace, isLower, isUpper, isAlpha, isAlphaNum, isPrint, isDigit, isOctDigit, isHexDigit, isLetter, isPunctuation
+        , isControl, isPrint, isSpace, isLower, isUpper, isAlpha, isAlphaNum, isDigit, isOctDigit, isHexDigit, isLetter, isPunctuation
         -- * Regular Expressions
         -- ** White space
         , reNewline, reWhitespace, reWhiteSpaceNoNewLine
@@ -38,9 +40,12 @@ module Data.SBV.Tools.Strings (
         , reIdentifier
         ) where
 
+import Prelude hiding (elem, head, tail)
+
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 import Data.SBV.Core.String
+import Data.SBV.Utils.Boolean (bnot)
 
 import qualified Data.Char as C
 import Data.List (genericLength, genericIndex)
@@ -49,7 +54,7 @@ import Data.List (genericLength, genericIndex)
 --
 -- $setup
 -- >>> import Data.SBV.Provers.Prover (prove)
--- >>> import Data.SBV.Utils.Boolean  ((&&&), (==>), bnot)
+-- >>> import Data.SBV.Utils.Boolean  ((&&&), (==>), (<=>))
 
 -- | The symbolic "character." Note that, as far as SBV's symbolic strings are concerned, a character
 -- is essentially an 8-bit unsigned value, and hence is equivalent to the type 'SWord8'. Technically
@@ -74,23 +79,23 @@ ord = sFromIntegral
 chr :: SIntegral a => SBV a -> SChar
 chr = sFromIntegral
 
--- | @`strHead`@ returns the head of a string. Unspecified if the string is empty.
+-- | @`head`@ returns the head of a string. Unspecified if the string is empty.
 --
--- >>> prove $ \c -> strHead (charToStr c) .== c
+-- >>> prove $ \c -> head (charToStr c) .== c
 -- Q.E.D.
-strHead :: SString -> SWord8
-strHead = (`strToCharAt` 0)
+head :: SString -> SWord8
+head = (`strToCharAt` 0)
 
--- | @`strTail`@ returns the tail of a string. Unspecified if the string is empty.
+-- | @`tail`@ returns the tail of a string. Unspecified if the string is empty.
 --
--- >>> prove $ \h s -> strTail (charToStr h .++ s) .== s
+-- >>> prove $ \h s -> tail (charToStr h .++ s) .== s
 -- Q.E.D.
--- >>> prove $ \s -> strLen s .> 0 ==> strLen (strTail s) .== strLen s - 1
+-- >>> prove $ \s -> strLen s .> 0 ==> strLen (tail s) .== strLen s - 1
 -- Q.E.D.
--- >>> prove $ \s -> bnot (strNull s) ==> charToStr (strHead s) .++ strTail s .== s
+-- >>> prove $ \s -> bnot (strNull s) ==> charToStr (head s) .++ tail s .== s
 -- Q.E.D.
-strTail :: SString -> SString
-strTail s
+tail :: SString -> SString
+tail s
  | Just (_:cs) <- unliteral s
  = literal cs
  | True
@@ -144,8 +149,27 @@ strToCharAt s i
 implode :: [SChar] -> SString
 implode = foldr ((.++) . charToStr) ""
 
-isControl             :: a
-isControl             = error "isControl"
+-- | Is the character in the literal string? Used internally.
+--
+-- >>> prove $ \c -> c `elem` charToStr c
+-- Q.E.D.
+-- >>> :set -XOverloadedStrings
+-- >>> prove $ \c -> bnot (c `elem` "")
+-- Q.E.D.
+elem :: SChar -> SString -> SBool
+elem c s = charToStr c `strIsInfixOf` s
+
+-- | Selects control characters, which are the non-printing characters.
+--
+-- >>> prove $ \c -> isControl c <=> bnot (isPrint c)
+-- Q.E.D.
+isControl :: SChar -> SBool
+isControl = (`elem` controls)
+  where controls = "\NUL\SOH\STX\ETX\EOT\ENQ\ACK\a\b\t\n\v\f\r\SO\SI\DLE\DC1\DC2\DC3\DC4\NAK\SYN\ETB\CAN\EM\SUB\ESC\FS\GS\RS\US\DEL\128\129\130\131\132\133\134\135\136\137\138\139\140\141\142\143\144\145\146\147\148\149\150\151\152\153\154\155\156\157\158\159"
+
+-- | Selects printable characters. Complement of 'isControl'.
+isPrint :: SChar -> SBool
+isPrint = bnot . isControl
 
 isSpace               :: a
 isSpace               = error "isSpace"
@@ -161,9 +185,6 @@ isAlpha               = error "isAlpha"
 
 isAlphaNum            :: a
 isAlphaNum            = error "isAlphaNum"
-
-isPrint               :: a
-isPrint               = error "isPrint"
 
 isDigit               :: a
 isDigit               = error "isDigit"
