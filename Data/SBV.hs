@@ -188,8 +188,9 @@ module Data.SBV (
   , sFloatAsSWord32, sWord32AsSFloat, sDoubleAsSWord64, sWord64AsSDouble, blastSFloat, blastSDouble
   -- * Strings and Regular Expressions
   -- ** General string operations
-  , strConcat, (.++), strLen, strSubstr, strIndexOf, strOffsetIndexOf, strAt, strIsInfixOf, strIsPrefixOf, strIsSuffixOf, strReplace, strStrToNat, strNatToStr, strTake, strDrop
-  , strNull, w8ToStr, strToW8At, strHead, strTail
+  -- | Also see "Data.SBV.Tools.Strings" for further string related functions.
+  , strConcat, (.++), strLen, strSubstr, strIndexOf, strOffsetIndexOf, strAt, strIsInfixOf, strIsPrefixOf, strIsSuffixOf, strReplace, strStrToNat, strNatToStr
+  , strTake, strDrop, strNull
 
   -- ** Regular expressions
   , SRegExp(..), strMatch
