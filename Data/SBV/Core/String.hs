@@ -33,12 +33,14 @@ module Data.SBV.Core.String (
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 
-import Data.Char (isDigit, chr, ord)
-import Data.List (genericLength, genericTake, genericDrop, genericIndex, tails, isPrefixOf, isSuffixOf, isInfixOf)
+import Data.Char (isDigit)
+import Data.List (genericLength, genericTake, genericDrop, tails, isPrefixOf, isSuffixOf, isInfixOf)
 
 -- For doctest use only
-import Data.SBV.Provers.Prover (sat, prove, SatResult, ThmResult)
-import Data.SBV.Utils.Boolean  ((&&&), (==>), (<=>), bnot)
+--
+-- $setup
+-- >>> import Data.SBV.Provers.Prover (sat, prove, SatResult, ThmResult)
+-- >>> import Data.SBV.Utils.Boolean  ((&&&), (==>), (<=>), bnot)
 
 -- | Is the string concretely known empty?
 isConcretelyEmpty :: SString -> Bool
@@ -349,12 +351,3 @@ concEval2 mbOp a b = literal <$> (mbOp <*> unliteral a <*> unliteral b)
 -- | Concrete evaluation for ternary ops
 concEval3 :: (SymWord a, SymWord b, SymWord c, SymWord d) => Maybe (a -> b -> c -> d) -> SBV a -> SBV b -> SBV c -> Maybe (SBV d)
 concEval3 mbOp a b c = literal <$> (mbOp <*> unliteral a <*> unliteral b <*> unliteral c)
-
--- | Make GHC not complain about doctest imports. Sigh..
-__unused :: a
-__unused = undefined (sat   :: SBool -> IO SatResult)
-                     (prove :: SBool -> IO ThmResult)
-                     ((&&&) :: SBool -> SBool -> SBool)
-                     ((==>) :: SBool -> SBool -> SBool)
-                     ((<=>) :: SBool -> SBool -> SBool)
-                     (bnot  :: SBool -> SBool)
