@@ -413,16 +413,24 @@ toLower :: SChar -> SChar
 toLower c = ite (isUpper c) (chr o + 32) c
   where o = ord c :: SWord8
 
--- | Convert to upper-case. N.B. The character \223 is special. It corresponds
--- to the German Eszett, it is considered lower-case, and furthermore it's upper-case
--- maps back to itself within our character-set. So, we make an exception for that here.
+-- | Convert to upper-case. N.B. There are three special cases!
+--
+--   * The character \223 is special. It corresponds to the German Eszett, it is considered lower-case,
+--     and furthermore it's upper-case maps back to itself within our character-set. So, we leave it
+--     untouched.
+--
+--   * The character \181 maps to upper-case \924, which is beyond our character set. We leave it
+--     untouched. (This is the A with an acute accent.)
+--
+--   * The character \255 maps to upper-case \376, which is beyond our character set. We leave it
+--     untouched. (This is the non-breaking space character.)
 --
 -- >>> prove $ \c -> toUpper (toUpper c) .== toUpper c
 -- Q.E.D.
 -- >>> prove $ \c -> isUpper c ==> toUpper (toLower c) .== c
 -- Q.E.D.
 toUpper :: SChar -> SChar
-toUpper c = ite (isLower c &&& o ./= 223) (chr (o - 32)) c
+toUpper c = ite (isLower c &&& o `notElem` "\181\223\255") (chr (o - 32)) c
    where o = ord c :: SWord8
 
 -- | Is this a control character? Control characters are essentially the non-printing characters.
