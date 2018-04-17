@@ -409,6 +409,8 @@ natToStr i
 --
 -- >>> prove $ \c -> toLower (toLower c) .== toLower c
 -- Q.E.D.
+-- >>> prove $ \c -> isLower c ==> toLower (toUpper c) .== c
+-- Q.E.D.
 toLower :: SChar -> SChar
 toLower c = ite (isUpper c) (chr o + 32) c
   where o = ord c :: SWord8
