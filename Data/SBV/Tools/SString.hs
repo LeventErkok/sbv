@@ -407,8 +407,10 @@ isControl = (`elem` controls)
 isPrint :: SChar -> SBool
 isPrint = bnot . isControl
 
-isSpace               :: a
-isSpace               = error "isSpace"
+-- | Is this white-space? That is, one of "\t\n\v\f\r \160".
+isSpace :: SChar -> SBool
+isSpace = (`elem` spaces)
+  where spaces = "\t\n\v\f\r \160"
 
 isLower               :: a
 isLower               = error "isLower"
