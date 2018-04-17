@@ -395,7 +395,7 @@ natToStr i
  = lift1 StrNatToStr Nothing i
 
 
--- | Selects control characters, which are the non-printing characters.
+-- | Is this a control character? Control characters are essentially the non-printing characters.
 --
 -- >>> prove $ \c -> isControl c <=> bnot (isPrint c)
 -- Q.E.D.
@@ -403,7 +403,7 @@ isControl :: SChar -> SBool
 isControl = (`elem` controls)
   where controls = "\NUL\SOH\STX\ETX\EOT\ENQ\ACK\a\b\t\n\v\f\r\SO\SI\DLE\DC1\DC2\DC3\DC4\NAK\SYN\ETB\CAN\EM\SUB\ESC\FS\GS\RS\US\DEL\128\129\130\131\132\133\134\135\136\137\138\139\140\141\142\143\144\145\146\147\148\149\150\151\152\153\154\155\156\157\158\159"
 
--- | Selects printable characters. Complement of 'isControl'.
+-- | Is this a printable character? Complement of 'isControl'.
 isPrint :: SChar -> SBool
 isPrint = bnot . isControl
 
