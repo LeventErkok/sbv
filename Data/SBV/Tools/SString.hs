@@ -28,11 +28,9 @@ module Data.SBV.Tools.SString (
         -- * Membership, inclusion
         , elem, isInfixOf, isSuffixOf, isPrefixOf
         -- * Substrings
-        , take, drop, subStr, replace
-        -- * Locating substrings
-        , indexOf, offsetIndexOf
-        -- * Conversion to/from naturals
-       , strToNat, natToStr
+        , take, drop, subStr, replace, indexOf, offsetIndexOf
+        -- * Conversion to\/from naturals
+        , strToNat, natToStr
         -- * Recognizers
         , isControl, isPrint, isSpace, isLower, isUpper, isAlpha, isAlphaNum, isDigit, isOctDigit, isHexDigit, isLetter, isPunctuation
         -- * Regular Expressions
