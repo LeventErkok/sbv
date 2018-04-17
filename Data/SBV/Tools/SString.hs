@@ -249,7 +249,7 @@ sub `isInfixOf` s
   | isConcretelyEmpty sub
   = literal True
   | True
-  = lift2 StrContains (Just L.isInfixOf) s sub -- NB. flip, since `StrContains` takes args in rev order!
+  = lift2 StrContains (Just (flip L.isInfixOf)) s sub -- NB. flip, since `StrContains` takes args in rev order!
 
 -- | @`isPrefixOf` pre s@. Is @pre@ a prefix of @s@?
 --
