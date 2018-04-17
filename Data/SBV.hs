@@ -48,7 +48,7 @@
 --
 --   * 'SDouble': IEEE-754 double-precision floating point values
 --
---   * 'SString': Strings
+--   * 'SString', 'SRegExp': Strings and regular expressions
 --
 --   * 'SArray', 'SFunArray': Flat arrays of symbolic values.
 --
@@ -142,9 +142,9 @@ module Data.SBV (
   -- ** Algebraic reals
   -- $algReals
   , SReal, AlgReal, sRealToSInteger
-  -- ** Strings
+  -- ** Strings and Regular Expressions
   -- $strings
-  , SString
+  , SString, SRegExp(..), (.++), (.!!)
   -- * Arrays of symbolic values
   , SymArray(..), SArray, SFunArray, mkSFunArray
 
@@ -186,19 +186,10 @@ module Data.SBV (
   , IEEEFloatConvertable(..)
   -- ** Bit-pattern conversions
   , sFloatAsSWord32, sWord32AsSFloat, sDoubleAsSWord64, sWord64AsSDouble, blastSFloat, blastSDouble
-  -- * Strings and Regular Expressions
-  -- ** General string operations
-  -- | Also see "Data.SBV.Tools.Strings" for further string related functions.
-  , strConcat, (.++), strSubstr, strIndexOf, strOffsetIndexOf, strAt, strIsInfixOf, strIsPrefixOf, strIsSuffixOf, strReplace, strStrToNat, strNatToStr
-  , strNull
-
-  -- ** Regular expressions
-  , SRegExp(..), strMatch
 
   -- * Enumerations
   -- $enumerations
   , mkSymbolicEnumeration
-
 
   -- * Uninterpreted sorts, constants, and functions
   -- $uninterpreted
@@ -298,7 +289,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Splittable
-import Data.SBV.Core.String
+import Data.SBV.Tools.SString ((.++), (.!!))
 
 import Data.SBV.Provers.Prover
 
@@ -711,6 +702,8 @@ Support for strings (contributed by Joel Burget) adds support for QF_S logic,
 described here: <https://rise4fun.com/z3/tutorialcontent/sequences>. Note that this logic
 is still not part of official SMTLib (as of March 2018), so it should be considered
 experimental.
+
+See "Data.SBV.Tools.SString" and "Data.SBV.Tools.SRegExp" for further string related functions.
 -}
 
 {- $shiftRotate
