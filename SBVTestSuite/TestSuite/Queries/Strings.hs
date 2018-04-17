@@ -12,6 +12,7 @@
 module TestSuite.Queries.Strings (tests)  where
 
 import Data.SBV.Control
+import qualified Data.SBV.Tools.SString as S
 
 import Utils.SBVTestFramework
 
@@ -29,7 +30,7 @@ testQuery t rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=
 q1 :: Symbolic [String]
 q1 = do a <- sString "a"
 
-        constrain $ a `strMatch` RE_Loop 5 5 (RE_Literal "xyz")
+        constrain $ a `S.match` RE_Loop 5 5 (RE_Literal "xyz")
 
         query $ do _ <- checkSat
                    s <- getValue a

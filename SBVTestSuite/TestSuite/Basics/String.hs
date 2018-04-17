@@ -58,24 +58,24 @@ checkASat :: SMTConfig -> Symbolic SBool -> IO ()
 checkASat cfg = void . allSatWith cfg{verbose=True}
 
 strConcatSat :: Symbolic ()
-strConcatSat = constrain $ strConcat "abc" "def" .== "abcdef"
+strConcatSat = constrain $ "abc" .++ "def" .== "abcdef"
 
 strConcatUnsat :: Symbolic ()
-strConcatUnsat = constrain $ strConcat "abc" "def" .== "abcdefg"
+strConcatUnsat = constrain $ "abc" .++ "def" .== "abcdefg"
 
 strIndexOfSat :: Symbolic ()
-strIndexOfSat = constrain $ strIndexOf "abcabc" "a" .== 0
+strIndexOfSat = constrain $ S.indexOf "abcabc" "a" .== 0
 
 strIndexOfUnsat :: Symbolic ()
-strIndexOfUnsat = constrain $ strIndexOf "abcabc" "a" ./= 0
+strIndexOfUnsat = constrain $ S.indexOf "abcabc" "a" ./= 0
 
 -- Basic string operations
 strExamples1 :: Symbolic ()
 strExamples1 = constrain $ bAnd
-  [ strAt "abc" 1 .++ strAt "abc" 0 .== "ba"
-  , strIndexOf "abcabc" "a"         .== 0
-  , strOffsetIndexOf "abcabc" "a" 1 .== 3
-  , strSubstr "xxabcyy" 2 3         .== "abc"
+  [ S.charToStr ("abc" .!! 1) .++ S.charToStr ("abc" .!! 0) .== "ba"
+  , "abcabc" `S.indexOf` "a"                                .== 0
+  , S.offsetIndexOf "abcabc" "a" 1                          .== 3
+  , S.subStr "xxabcyy" 2 3                                  .== "abc"
   ]
 
 -- A string cannot overlap with two different characters.
@@ -111,25 +111,25 @@ strExamples5 = do
 strExamples6 :: Symbolic ()
 strExamples6 = do
   [a, b, c] <- sStrings ["a", "b", "c"]
-  constrain $ b `strIsInfixOf` a
-  constrain $ c `strIsInfixOf` b
-  constrain $ bnot $ c `strIsInfixOf` a
+  constrain $ b `S.isInfixOf` a
+  constrain $ c `S.isInfixOf` b
+  constrain $ bnot $ c `S.isInfixOf` a
 
 -- But containment is not a linear order.
 strExamples7 :: Symbolic ()
 strExamples7 = do
   [a, b, c] <- sStrings ["a", "b", "c"]
-  constrain $ b `strIsInfixOf` a
-  constrain $ c `strIsInfixOf` a
-  constrain $ bnot $ c `strIsInfixOf` b
-  constrain $ bnot $ b `strIsInfixOf` c
+  constrain $ b `S.isInfixOf` a
+  constrain $ c `S.isInfixOf` a
+  constrain $ bnot $ c `S.isInfixOf` b
+  constrain $ bnot $ b `S.isInfixOf` c
 
 -- Any string is equal to the prefix and suffix that add up to a its length.
 strExamples8 :: Symbolic ()
 strExamples8 = do
   [a, b, c] <- sStrings ["a", "b", "c"]
-  constrain $ b `strIsPrefixOf` a
-  constrain $ c `strIsSuffixOf` a
+  constrain $ b `S.isPrefixOf` a
+  constrain $ c `S.isSuffixOf` a
   constrain $ S.length a .== S.length b + S.length c
   constrain $ bnot $ a .== b .++ c
 
@@ -137,14 +137,14 @@ strExamples8 = do
 strExamples9 :: Symbolic ()
 strExamples9 = do
    a <- sString "a"
-   constrain $ strMatch a (RE_Loop 1 3 (RE_Literal "ab"))
+   constrain $ S.match a (RE_Loop 1 3 (RE_Literal "ab"))
    constrain $ S.length a .== 6
 
 -- The maximal length is 6 for a string of length 2 repeated at most 3 times
 strExamples10 :: Symbolic ()
 strExamples10 = do
    a <- sString "a"
-   constrain $ strMatch a (RE_Loop 1 3 (RE_Literal "ab"))
+   constrain $ S.match a (RE_Loop 1 3 (RE_Literal "ab"))
    constrain $ S.length a .> 6
 
 -- Conversion from nat to string, only ground terms
@@ -152,21 +152,21 @@ strExamples11 :: Symbolic ()
 strExamples11 = do
    i <- sInteger "i"
    constrain $ i .== 11
-   constrain $ bnot $ strNatToStr i .== "11"
+   constrain $ bnot $ S.natToStr i .== "11"
 
 -- Conversion from nat to string, negative values produce empty string
 strExamples12 :: Symbolic ()
 strExamples12 = do
    i <- sInteger "i"
    constrain $ i .== -2
-   constrain $ bnot $ strNatToStr i .== ""
+   constrain $ bnot $ S.natToStr i .== ""
 
 -- Conversion from string to nat, only ground terms
 strExamples13 :: Symbolic ()
 strExamples13 = do
    s <- sString "s"
    constrain $ s .== "13"
-   constrain $ bnot $ strStrToNat s .== 13
+   constrain $ bnot $ S.strToNat s .== 13
 
 -- Generate all length one strings, to enumerate all and making sure we can parse correctly
 strExamples14 :: Predicate
