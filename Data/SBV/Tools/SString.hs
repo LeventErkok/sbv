@@ -344,7 +344,6 @@ replace s src dst
                   | needle `L.isPrefixOf` i = newNeedle ++ genericDrop (genericLength needle :: Integer) i
                   | True                    = c : go cs
 
-
 -- | @`indexOf` s sub@. Retrieves first position of @sub@ in @s@, @-1@ if there are no occurrences.
 -- Equivalent to @`offsetIndexOf` s sub 0@.
 --
