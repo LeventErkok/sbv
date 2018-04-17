@@ -26,11 +26,13 @@ module Data.SBV.Tools.SString (
         -- * Deconstructing/Reconstructing
         , head, tail, charToStr, strToStrAt, strToCharAt, (.!!), implode, concat, (.++)
         -- * Membership, inclusion
-        , elem, isInfixOf, isSuffixOf, isPrefixOf
+        , elem, notElem, isInfixOf, isSuffixOf, isPrefixOf
         -- * Substrings
         , take, drop, subStr, replace, indexOf, offsetIndexOf
         -- * Conversion to\/from naturals
         , strToNat, natToStr
+        -- * Conversion to upper\/lower case
+        , toLower, toUpper
         -- * Recognizers
         , isControl, isPrint, isSpace, isLower, isUpper, isAlpha, isAlphaNum, isDigit, isOctDigit, isHexDigit, isLetter, isPunctuation
         -- * Regular Expressions
@@ -47,12 +49,12 @@ module Data.SBV.Tools.SString (
         , reIdentifier
         ) where
 
-import Prelude hiding (elem, head, tail, length, take, drop, concat, null)
+import Prelude hiding (elem, notElem, head, tail, length, take, drop, concat, null)
 import qualified Prelude as P
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
-import Data.SBV.Utils.Boolean (bnot)
+import Data.SBV.Utils.Boolean
 
 import qualified Data.Char as C
 import Data.List (genericLength, genericIndex, genericDrop, genericTake)
@@ -62,7 +64,7 @@ import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 --
 -- $setup
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
--- >>> import Data.SBV.Utils.Boolean  ((&&&), (==>), (<=>))
+-- >>> import Data.SBV.Utils.Boolean  ((==>), (<=>))
 
 -- | The symbolic "character." Note that, as far as SBV's symbolic strings are concerned, a character
 -- is essentially an 8-bit unsigned value, and hence is equivalent to the type 'SWord8'. Technically
@@ -214,7 +216,7 @@ infixr 5 .++
 (.++) :: SString -> SString -> SString
 (.++) = concat
 
--- | Is the character in the literal string? Used internally.
+-- | Is the character in the string?
 --
 -- >>> prove $ \c -> c `elem` charToStr c
 -- Q.E.D.
@@ -222,7 +224,20 @@ infixr 5 .++
 -- >>> prove $ \c -> bnot (c `elem` "")
 -- Q.E.D.
 elem :: SChar -> SString -> SBool
-elem c s = charToStr c `isInfixOf` s
+c `elem` s
+ | Just cs <- unliteral s, Just cc <- unliteral c
+ = literal (C.chr (fromIntegral cc) `P.elem` cs)
+ | Just cs <- unliteral s                            -- If only the second string is concrete, element-wise checking is still much better!
+ = bAny (c .==) $ map (literal . fromIntegral . C.ord) cs
+ | True
+ = charToStr c `isInfixOf` s
+
+-- | Is the character not in the string?
+--
+-- >>> prove $ \c s -> c `elem` s <=> bnot (c `notElem` s)
+-- Q.E.D.
+notElem :: SChar -> SString -> SBool
+c `notElem` s = bnot (c `elem` s)
 
 -- | @`isInfixOf` sub s@. Does @s@ contain the substring @sub@?
 --
@@ -392,6 +407,25 @@ natToStr i
  | True
  = lift1 StrNatToStr Nothing i
 
+-- | Convert to lower-case.
+--
+-- >>> prove $ \c -> toLower (toLower c) .== toLower c
+-- Q.E.D.
+toLower :: SChar -> SChar
+toLower c = ite (isUpper c) (chr o + 32) c
+  where o = ord c :: SWord8
+
+-- | Convert to upper-case. N.B. The character \223 is special. It corresponds
+-- to the German Eszett, it is considered lower-case, and furthermore it's upper-case
+-- maps back to itself within our character-set. So, we make an exception for that here.
+--
+-- >>> prove $ \c -> toUpper (toUpper c) .== toUpper c
+-- Q.E.D.
+-- >>> prove $ \c -> isUpper c ==> toUpper (toLower c) .== c
+-- Q.E.D.
+toUpper :: SChar -> SChar
+toUpper c = ite (isLower c &&& o ./= 223) (chr (o - 32)) c
+   where o = ord c :: SWord8
 
 -- | Is this a control character? Control characters are essentially the non-printing characters.
 --
@@ -410,11 +444,21 @@ isSpace :: SChar -> SBool
 isSpace = (`elem` spaces)
   where spaces = "\t\n\v\f\r \160"
 
-isLower               :: a
-isLower               = error "isLower"
+-- | Is this a lower-case character?
+--
+-- >>> prove $ \c -> isUpper c ==> isLower (toLower c)
+-- Q.E.D.
+isLower :: SChar -> SBool
+isLower = (`elem` lower)
+  where lower = "abcdefghijklmnopqrstuvwxyz\181\223\224\225\226\227\228\229\230\231\232\233\234\235\236\237\238\239\240\241\242\243\244\245\246\248\249\250\251\252\253\254\255"
 
-isUpper               :: a
-isUpper               = error "isUpper"
+-- | Is this an upper-case character?
+--
+-- >>> prove $ \c -> bnot (isLower c &&& isUpper c)
+-- Q.E.D.
+isUpper :: SChar -> SBool
+isUpper = (`elem` upper)
+  where upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ\192\193\194\195\196\197\198\199\200\201\202\203\204\205\206\207\208\209\210\211\212\213\214\216\217\218\219\220\221\222"
 
 isAlpha               :: a
 isAlpha               = error "isAlpha"
