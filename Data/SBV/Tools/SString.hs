@@ -64,7 +64,6 @@ import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 --
 -- $setup
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
--- >>> import Data.SBV.Utils.Boolean  ((==>), (<=>))
 
 -- | The symbolic "character." Note that, as far as SBV's symbolic strings are concerned, a character
 -- is essentially an 8-bit unsigned value, and hence is equivalent to the type 'SWord8'. Technically
