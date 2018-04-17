@@ -189,8 +189,8 @@ module Data.SBV (
   -- * Strings and Regular Expressions
   -- ** General string operations
   -- | Also see "Data.SBV.Tools.Strings" for further string related functions.
-  , strConcat, (.++), strLen, strSubstr, strIndexOf, strOffsetIndexOf, strAt, strIsInfixOf, strIsPrefixOf, strIsSuffixOf, strReplace, strStrToNat, strNatToStr
-  , strTake, strDrop, strNull
+  , strConcat, (.++), strSubstr, strIndexOf, strOffsetIndexOf, strAt, strIsInfixOf, strIsPrefixOf, strIsSuffixOf, strReplace, strStrToNat, strNatToStr
+  , strNull
 
   -- ** Regular expressions
   , SRegExp(..), strMatch

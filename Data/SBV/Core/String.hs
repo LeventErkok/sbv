@@ -13,7 +13,6 @@
 
 module Data.SBV.Core.String (
          strConcat, (.++)
-       , strLen
        , strSubstr
        , strIndexOf
        , strOffsetIndexOf
@@ -24,8 +23,6 @@ module Data.SBV.Core.String (
        , strReplace
        , strStrToNat
        , strNatToStr
-       , strTake
-       , strDrop
        , strMatch
        , strNull
        ) where
@@ -64,18 +61,6 @@ strConcat x y | isConcretelyEmpty x = y
 infixr 5 .++
 (.++) :: SString -> SString -> SString
 (.++) = strConcat
-
--- | Length of a string.
---
--- >>> sat $ \s -> strLen s .== 2
--- Satisfiable. Model:
---   s0 = "\NUL\NUL" :: String
--- >>> sat $ \s -> strLen s .< 0
--- Unsatisfiable
--- >>> prove $ \s1 s2 -> strLen s1 + strLen s2 .== strLen (s1 .++ s2)
--- Q.E.D.
-strLen :: SString -> SInteger
-strLen = lift1 StrLen (Just (fromIntegral . length))
 
 -- | @`strSubstr` s offset len@ is the substring of @s@ at offset `offset` with length `len`.
 -- This function is under-specified when the offset is outside the range of positions in @s@ or @len@
@@ -234,27 +219,6 @@ strNatToStr i
  = literal $ if v >= 0 then show v else ""
  | True
  = lift1 StrNatToStr Nothing i
-
--- | @`strTake` len s@. Corresponds to Haskell's `take` on symbolic-strings.
---
--- >>> prove $ \s i -> i .>= 0 ==> strLen (strTake i s) .<= i
--- Q.E.D.
-strTake :: SInteger -> SString -> SString
-strTake i s = ite (i .<= 0)        (literal "")
-            $ ite (i .>= strLen s) s
-            $ strSubstr s 0 i
-
--- | @`strDrop` len s@. Corresponds to Haskell's `drop` on symbolic-strings.
---
--- >>> prove $ \s i -> strLen (strDrop i s) .<= strLen s
--- Q.E.D.
--- >>> prove $ \s i -> strTake i s .++ strDrop i s .== s
--- Q.E.D.
-strDrop :: SInteger -> SString -> SString
-strDrop i s = ite (i .>= ls) (literal "")
-            $ ite (i .<= 0)  s
-            $ strSubstr s i (ls - i)
-  where ls = strLen s
 
 -- | @`strNull` s@ is True iff the string is empty
 --

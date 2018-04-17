@@ -16,6 +16,8 @@ module TestSuite.Basics.String(tests)  where
 import Data.SBV.Control
 import Utils.SBVTestFramework
 
+import qualified Data.SBV.Tools.SString as S
+
 import Control.Monad (unless, void)
 
 -- Test suite
@@ -95,7 +97,7 @@ strExamples4 :: Symbolic ()
 strExamples4 = do
   [a, b] <- sStrings ["a", "b"]
   constrain $ "abc" .++ a .== b .++ "cef"
-  constrain $ strLen a .<= 2
+  constrain $ S.length a .<= 2
 
 -- There is a solution to a that is not a sequence of "a"'s.
 strExamples5 :: Symbolic ()
@@ -128,7 +130,7 @@ strExamples8 = do
   [a, b, c] <- sStrings ["a", "b", "c"]
   constrain $ b `strIsPrefixOf` a
   constrain $ c `strIsSuffixOf` a
-  constrain $ strLen a .== strLen b + strLen c
+  constrain $ S.length a .== S.length b + S.length c
   constrain $ bnot $ a .== b .++ c
 
 -- The maximal length is 6 for a string of length 2 repeated at most 3 times
@@ -136,14 +138,14 @@ strExamples9 :: Symbolic ()
 strExamples9 = do
    a <- sString "a"
    constrain $ strMatch a (RE_Loop 1 3 (RE_Literal "ab"))
-   constrain $ strLen a .== 6
+   constrain $ S.length a .== 6
 
 -- The maximal length is 6 for a string of length 2 repeated at most 3 times
 strExamples10 :: Symbolic ()
 strExamples10 = do
    a <- sString "a"
    constrain $ strMatch a (RE_Loop 1 3 (RE_Literal "ab"))
-   constrain $ strLen a .> 6
+   constrain $ S.length a .> 6
 
 -- Conversion from nat to string, only ground terms
 strExamples11 :: Symbolic ()
@@ -169,4 +171,4 @@ strExamples13 = do
 -- Generate all length one strings, to enumerate all and making sure we can parse correctly
 strExamples14 :: Predicate
 strExamples14 = do s <- sString "s"
-                   return $ strLen s .== 1
+                   return $ S.length s .== 1

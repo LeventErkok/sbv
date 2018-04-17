@@ -4,7 +4,7 @@
 
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Tools.Strings
+-- Module      :  Data.SBV.Tools.SString
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -16,7 +16,7 @@
 -- importing qualified is the recommended workflow.
 -----------------------------------------------------------------------------
 
-module Data.SBV.Tools.Strings (
+module Data.SBV.Tools.SString (
         -- * The symbolic "character"
         SChar
         -- * Conversion to/from SWord8
@@ -25,6 +25,10 @@ module Data.SBV.Tools.Strings (
         , head, tail, charToStr, strToCharAt, implode
         -- * Membership
         , elem
+        -- * Length
+        , length
+        -- * Substrings
+        , take, drop
         -- * Recognizers
         , isControl, isPrint, isSpace, isLower, isUpper, isAlpha, isAlphaNum, isDigit, isOctDigit, isHexDigit, isLetter, isPunctuation
         -- * Regular Expressions
@@ -40,7 +44,8 @@ module Data.SBV.Tools.Strings (
         , reIdentifier
         ) where
 
-import Prelude hiding (elem, head, tail)
+import Prelude hiding (elem, head, tail, length, take, drop)
+import qualified Prelude as P
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
@@ -90,7 +95,7 @@ head = (`strToCharAt` 0)
 --
 -- >>> prove $ \h s -> tail (charToStr h .++ s) .== s
 -- Q.E.D.
--- >>> prove $ \s -> strLen s .> 0 ==> strLen (tail s) .== strLen s - 1
+-- >>> prove $ \s -> length s .> 0 ==> length (tail s) .== length s - 1
 -- Q.E.D.
 -- >>> prove $ \s -> bnot (strNull s) ==> charToStr (head s) .++ tail s .== s
 -- Q.E.D.
@@ -99,7 +104,7 @@ tail s
  | Just (_:cs) <- unliteral s
  = literal cs
  | True
- = strSubstr s 1 (strLen s - 1)
+ = strSubstr s 1 (length s - 1)
 
 
 -- | @`charToStr` c@ is the string of length 1 that contains the only character
@@ -108,7 +113,7 @@ tail s
 -- >>> :set -XOverloadedStrings
 -- >>> prove $ \c -> c .== 65 ==> charToStr c .== "A"
 -- Q.E.D.
--- >>> prove $ \c -> strLen (charToStr c) .== 1
+-- >>> prove $ \c -> length (charToStr c) .== 1
 -- Q.E.D.
 charToStr :: SWord8 -> SString
 charToStr = lift1 StrUnit (Just $ \cv -> [C.chr (fromIntegral cv)])
@@ -142,7 +147,7 @@ strToCharAt s i
 -- characters. Note that there is no corresponding function @explode@, since
 -- we wouldn't know the length of a symbolic string.
 --
--- >>> prove $ \c1 c2 c3 -> strLen (implode [c1, c2, c3]) .== 3
+-- >>> prove $ \c1 c2 c3 -> length (implode [c1, c2, c3]) .== 3
 -- Q.E.D.
 -- >>> prove $ \c1 c2 c3 -> map (strToCharAt (implode [c1, c2, c3])) (map literal [0 .. 2]) .== [c1, c2, c3]
 -- Q.E.D.
@@ -158,6 +163,40 @@ implode = foldr ((.++) . charToStr) ""
 -- Q.E.D.
 elem :: SChar -> SString -> SBool
 elem c s = charToStr c `strIsInfixOf` s
+
+-- | Length of a string.
+--
+-- >>> sat $ \s -> length s .== 2
+-- Satisfiable. Model:
+--   s0 = "\NUL\NUL" :: String
+-- >>> sat $ \s -> length s .< 0
+-- Unsatisfiable
+-- >>> prove $ \s1 s2 -> length s1 + length s2 .== length (s1 .++ s2)
+-- Q.E.D.
+length :: SString -> SInteger
+length = lift1 StrLen (Just (fromIntegral . P.length))
+
+-- | @`take` len s@. Corresponds to Haskell's `take` on symbolic-strings.
+--
+-- >>> prove $ \s i -> i .>= 0 ==> length (take i s) .<= i
+-- Q.E.D.
+take :: SInteger -> SString -> SString
+take i s = ite (i .<= 0)        (literal "")
+         $ ite (i .>= length s) s
+         $ strSubstr s 0 i
+
+-- | @`drop` len s@. Corresponds to Haskell's `drop` on symbolic-strings.
+--
+-- >>> prove $ \s i -> length (drop i s) .<= length s
+-- Q.E.D.
+-- >>> prove $ \s i -> take i s .++ drop i s .== s
+-- Q.E.D.
+drop :: SInteger -> SString -> SString
+drop i s = ite (i .>= ls) (literal "")
+         $ ite (i .<= 0)  s
+         $ strSubstr s i (ls - i)
+  where ls = length s
+
 
 -- | Selects control characters, which are the non-printing characters.
 --
