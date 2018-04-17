@@ -27,7 +27,7 @@ solveCrossword rowRegExps colRegExps = runSMT $ do
 
         -- constrain rows
         let mkRow rowRegExp = do row <- free_
-                                 constrain $ row `strMatch` rowRegExp
+                                 constrain $ row `S.match` rowRegExp
                                  constrain $ S.length row .== literal numCols
                                  return row
 
@@ -35,15 +35,15 @@ solveCrossword rowRegExps colRegExps = runSMT $ do
 
         -- constrain colums
         let mkCol colRegExp = do col <- free_
-                                 constrain $ col `strMatch` colRegExp
+                                 constrain $ col `S.match` colRegExp
                                  constrain $ S.length col .== literal numRows
                                  return col
 
         cols <- mapM mkCol colRegExps
 
         -- constrain each "cell" as they rows/columns intersect:
-        let rowss =           [[strAt r (literal i) | i <- [0..numCols-1]] | r <- rows]
-        let colss = transpose [[strAt c (literal i) | i <- [0..numRows-1]] | c <- cols]
+        let rowss =           [[r .!! literal i | i <- [0..numCols-1]] | r <- rows]
+        let colss = transpose [[c .!! literal i | i <- [0..numRows-1]] | c <- cols]
 
         constrain $ bAnd $ zipWith (.==) (concat rowss) (concat colss)
 
