@@ -495,8 +495,9 @@ isDigit = (`elem` "0123456789")
 isOctDigit :: SChar -> SBool
 isOctDigit = (`elem` "01234567")
 
-isHexDigit            :: a
-isHexDigit            = error "isHexDigit"
+-- | Is this a Hex digit, i.e, one of @0@..@9@, @a@..@f@, @A@..@F@.
+isHexDigit :: SChar -> SBool
+isHexDigit = (`elem` "0123456789abcdefABCDEF")
 
 isLetter              :: a
 isLetter              = error "isLetter"
