@@ -12,7 +12,7 @@
 module Documentation.SBV.Examples.BitPrecise.MergeSort where
 
 import Data.SBV
-import Data.SBV.Tools.CodeGen
+import Data.SBV.CodeGen
 
 -----------------------------------------------------------------------------
 -- * Implementing Merge-Sort

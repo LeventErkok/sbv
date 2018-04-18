@@ -11,7 +11,7 @@
 
 module TestSuite.Crypto.RC4(tests) where
 
-import Data.SBV.Tools.STree
+import Data.SBV.STree
 import Documentation.SBV.Examples.Crypto.RC4
 
 import Utils.SBVTestFramework

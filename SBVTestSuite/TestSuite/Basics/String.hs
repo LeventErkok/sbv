@@ -16,7 +16,8 @@ module TestSuite.Basics.String(tests)  where
 import Data.SBV.Control
 import Utils.SBVTestFramework
 
-import qualified Data.SBV.Tools.SString as S
+import qualified Data.SBV.String as S
+import qualified Data.SBV.RegExp as R
 
 import Control.Monad (unless, void)
 
@@ -137,14 +138,14 @@ strExamples8 = do
 strExamples9 :: Symbolic ()
 strExamples9 = do
    a <- sString "a"
-   constrain $ S.match a (RE_Loop 1 3 (RE_Literal "ab"))
+   constrain $ R.match a (RE_Loop 1 3 (RE_Literal "ab"))
    constrain $ S.length a .== 6
 
 -- The maximal length is 6 for a string of length 2 repeated at most 3 times
 strExamples10 :: Symbolic ()
 strExamples10 = do
    a <- sString "a"
-   constrain $ S.match a (RE_Loop 1 3 (RE_Literal "ab"))
+   constrain $ R.match a (RE_Loop 1 3 (RE_Literal "ab"))
    constrain $ S.length a .> 6
 
 -- Conversion from nat to string, only ground terms

@@ -11,7 +11,7 @@
 
 module TestSuite.CRC.GenPoly(tests) where
 
-import Data.SBV.Tools.Polynomial
+import Data.SBV.Polynomial
 import Utils.SBVTestFramework
 
 -- Test suite

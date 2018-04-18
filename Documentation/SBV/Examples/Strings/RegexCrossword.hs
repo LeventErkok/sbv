@@ -17,7 +17,8 @@ import Data.List (genericLength, transpose)
 import Data.SBV
 import Data.SBV.Control
 
-import qualified Data.SBV.Tools.SString as S
+import qualified Data.SBV.String as S
+import qualified Data.SBV.RegExp as R
 
 -- | Solve a given crossword, returning the corresponding rows
 solveCrossword :: [SRegExp] -> [SRegExp] -> IO [String]
@@ -27,7 +28,7 @@ solveCrossword rowRegExps colRegExps = runSMT $ do
 
         -- constrain rows
         let mkRow rowRegExp = do row <- free_
-                                 constrain $ row `S.match` rowRegExp
+                                 constrain $ row `R.match` rowRegExp
                                  constrain $ S.length row .== literal numCols
                                  return row
 
@@ -35,7 +36,7 @@ solveCrossword rowRegExps colRegExps = runSMT $ do
 
         -- constrain colums
         let mkCol colRegExp = do col <- free_
-                                 constrain $ col `S.match` colRegExp
+                                 constrain $ col `R.match` colRegExp
                                  constrain $ S.length col .== literal numRows
                                  return col
 

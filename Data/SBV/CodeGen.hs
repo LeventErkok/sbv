@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Tools.CodeGen
+-- Module      :  Data.SBV.CodeGen
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -9,7 +9,7 @@
 -- Code-generation from SBV programs.
 -----------------------------------------------------------------------------
 
-module Data.SBV.Tools.CodeGen (
+module Data.SBV.CodeGen (
 
         -- * Code generation from symbolic programs
         -- $cCodeGeneration

@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Tools.STree
+-- Module      :  Data.SBV.STree
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -15,7 +15,7 @@
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 
-module Data.SBV.Tools.STree (STree, readSTree, writeSTree, mkSTree) where
+module Data.SBV.STree (STree, readSTree, writeSTree, mkSTree) where
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model

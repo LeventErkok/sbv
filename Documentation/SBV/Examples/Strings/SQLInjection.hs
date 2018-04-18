@@ -23,7 +23,7 @@ import Data.String
 import Data.SBV
 import Data.SBV.Control
 
-import qualified Data.SBV.Tools.SString as S
+import qualified Data.SBV.RegExp as R
 
 -- | Simple expression language
 data SQLExpr = Query    SQLExpr
@@ -134,7 +134,7 @@ findInjection expr = runSMT $ do
     (_, queries) <- runWriterT (evalStateT (eval expr) env)
 
     -- For all the queries thus generated, ask that one of them be "explotiable"
-    constrain $ bAny (`S.match` exploitRe) queries
+    constrain $ bAny (`R.match` exploitRe) queries
 
     query $ do cs <- checkSat
                case cs of

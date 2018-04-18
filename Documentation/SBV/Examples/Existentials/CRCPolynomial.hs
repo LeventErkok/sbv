@@ -16,7 +16,7 @@
 module Documentation.SBV.Examples.Existentials.CRCPolynomial where
 
 import Data.SBV
-import Data.SBV.Tools.Polynomial
+import Data.SBV.Polynomial
 
 -----------------------------------------------------------------------------
 -- * Modeling 48 bit words

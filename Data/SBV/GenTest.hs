@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Tools.GenTest
+-- Module      :  Data.SBV.GenTest
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -9,7 +9,7 @@
 -- Test generation from symbolic programs
 -----------------------------------------------------------------------------
 
-module Data.SBV.Tools.GenTest (
+module Data.SBV.GenTest (
         -- * Test case generation
         genTest, TestVectors, getTestValues, renderTest, TestStyle(..)
         ) where
