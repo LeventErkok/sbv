@@ -499,8 +499,12 @@ isOctDigit = (`elem` "01234567")
 isHexDigit :: SChar -> SBool
 isHexDigit = (`elem` "0123456789abcdefABCDEF")
 
-isLetter              :: a
-isLetter              = error "isLetter"
+-- | Is this an alphabet character. Note that this function is equivalent to 'isAlpha'.
+--
+-- >>> prove $ \c -> isLetter c <=> isAlpha c
+-- Q.E.D.
+isLetter :: SChar -> SBool
+isLetter = isAlpha
 
 isPunctuation         :: a
 isPunctuation         = error "isPunctuation"
