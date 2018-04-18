@@ -481,8 +481,7 @@ isAlpha = (`elem` alpha)
 -- | Is this a number character? Note that this set contains not only the digits, but also
 -- the codes for a few numeric looking characters like 1/2 etc. Use 'isDigit' for the digits @0@ through @9@.
 isNumber :: SChar -> SBool
-isNumber = (`elem` number)
-  where number = "0123456789\178\179\185\188\189\190"
+isNumber = (`elem` "0123456789\178\179\185\188\189\190")
 
 -- | Is this an 'isAlpha' or 'isNumber'.
 isAlphaNum :: SChar -> SBool
@@ -490,8 +489,7 @@ isAlphaNum c = isAlpha c ||| isNumber c
 
 -- | Is this an ASCII digit, i.e., one of @0@..@9@.
 isDigit :: SChar -> SBool
-isDigit = (`elem` digs)
-  where digs = "0123456789"
+isDigit = (`elem` "0123456789")
 
 isOctDigit            :: a
 isOctDigit            = error "isOctDigit"
