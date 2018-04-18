@@ -484,18 +484,30 @@ isNumber :: SChar -> SBool
 isNumber = (`elem` "0123456789\178\179\185\188\189\190")
 
 -- | Is this an 'isAlpha' or 'isNumber'.
+--
+-- >>> prove $ \c -> isAlphaNum c <=> isAlpha c ||| isNumber c
+-- Q.E.D.
 isAlphaNum :: SChar -> SBool
 isAlphaNum c = isAlpha c ||| isNumber c
 
--- | Is this an ASCII digit, i.e., one of @0@..@9@.
+-- | Is this an ASCII digit, i.e., one of @0@..@9@. Note that this is a subset of 'isNumber'
+--
+-- >>> prove $ \c -> isDigit c ==> isNumber c
+-- Q.E.D.
 isDigit :: SChar -> SBool
 isDigit = (`elem` "0123456789")
 
 -- | Is this an Octal digit, i.e., one of @0@..@7@.
+--
+-- >>> prove $ \c -> isOctDigit c ==> isDigit c
+-- Q.E.D.
 isOctDigit :: SChar -> SBool
 isOctDigit = (`elem` "01234567")
 
 -- | Is this a Hex digit, i.e, one of @0@..@9@, @a@..@f@, @A@..@F@.
+--
+-- >>> prove $ \c -> isHexDigit c ==> isAlphaNum c
+-- Q.E.D.
 isHexDigit :: SChar -> SBool
 isHexDigit = (`elem` "0123456789abcdefABCDEF")
 
