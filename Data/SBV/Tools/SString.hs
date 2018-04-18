@@ -31,6 +31,8 @@ module Data.SBV.Tools.SString (
         , strToNat, natToStr
         -- * Conversion to upper\/lower case
         , toLower, toUpper
+        -- * Converting digits to ints
+        , digitToInt
         -- * Recognizers
         , isControl, isPrint, isSpace, isLower, isUpper, isAlpha, isNumber, isAlphaNum, isDigit, isOctDigit, isHexDigit, isLetter, isPunctuation
         -- * Regular Expressions
@@ -438,6 +440,20 @@ toLower c = ite (isUpper c) (chr (ord c + 32)) c
 -- Q.E.D.
 toUpper :: SChar -> SChar
 toUpper c = ite (isLower c &&& c `notElem` "\181\223\255") (chr (ord c - 32)) c
+
+-- | Convert a digit to an integer. Works for hexadecimal digits too. If the input isn't a digit,
+-- then return -1.
+--
+-- >>> prove $ \c -> isDigit c ||| isHexDigit c ==> digitToInt c .>= 0 &&& digitToInt c .<= 15
+-- Q.E.D.
+-- >>> prove $ \c -> bnot (isDigit c ||| isHexDigit c) ==> digitToInt c .== -1
+-- Q.E.D.
+digitToInt :: SChar -> SInteger
+digitToInt c = ite (uc `elem` "0123456789") (sFromIntegral (o - ord (literal '0')))
+             $ ite (uc `elem` "ABCDEF")     (sFromIntegral (o - ord (literal 'A') + 10))
+             $ -1
+  where uc = toUpper c
+        o  = ord uc
 
 -- | Is this a control character? Control characters are essentially the non-printing characters.
 isControl :: SChar -> SBool
