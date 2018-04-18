@@ -30,7 +30,6 @@ data SQLExpr = Query    SQLExpr
              | Const    String
              | Concat   SQLExpr SQLExpr
              | ReadVar  SQLExpr
-             | WriteVar SQLExpr SQLExpr
 
 -- | Literals strings can be lifted to be constant programs
 instance IsString SQLExpr where
@@ -50,10 +49,6 @@ eval (Concat e1 e2)    = (.++) <$> eval e1 <*> eval e2
 eval (ReadVar nm)      = do n   <- eval nm
                             arr <- get
                             return $ readArray arr n
-eval (WriteVar nm val) = do n <- eval nm
-                            v <- eval val
-                            modify $ \arr -> writeArray arr n v
-                            return v
 
 -- | A simple program to query all messages with a given topic id. In SQL like notation:
 --
