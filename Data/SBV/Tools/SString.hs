@@ -32,7 +32,7 @@ module Data.SBV.Tools.SString (
         -- * Conversion to upper\/lower case
         , toLower, toUpper
         -- * Recognizers
-        , isControl, isPrint, isSpace, isLower, isUpper, isAlpha, isAlphaNum, isDigit, isOctDigit, isHexDigit, isLetter, isPunctuation
+        , isControl, isPrint, isSpace, isLower, isUpper, isAlpha, isNumber, isAlphaNum, isDigit, isOctDigit, isHexDigit, isLetter, isPunctuation
         -- * Regular Expressions
         , match
         -- ** White space
@@ -391,7 +391,7 @@ offsetIndexOf s sub offset
 strToNat :: SString -> SInteger
 strToNat s
  | Just a <- unliteral s
- = if all isDigit a
+ = if all C.isDigit a
    then literal (read a)
    else -1
  | True
@@ -418,8 +418,7 @@ natToStr i
 -- >>> prove $ \c -> isLower c ==> toLower (toUpper c) .== c
 -- Q.E.D.
 toLower :: SChar -> SChar
-toLower c = ite (isUpper c) (chr (o + 32)) c
-  where o = ord c
+toLower c = ite (isUpper c) (chr (ord c + 32)) c
 
 -- | Convert to upper-case. N.B. There are three special cases!
 --
@@ -438,20 +437,20 @@ toLower c = ite (isUpper c) (chr (o + 32)) c
 -- >>> prove $ \c -> isUpper c ==> toUpper (toLower c) .== c
 -- Q.E.D.
 toUpper :: SChar -> SChar
-toUpper c = ite (isLower c &&& c `notElem` "\181\223\255") (chr (o - 32)) c
-   where o = ord c
+toUpper c = ite (isLower c &&& c `notElem` "\181\223\255") (chr (ord c - 32)) c
 
 -- | Is this a control character? Control characters are essentially the non-printing characters.
---
--- >>> prove $ \c -> isControl c <=> bnot (isPrint c)
--- Q.E.D.
 isControl :: SChar -> SBool
 isControl = (`elem` controls)
   where controls = "\NUL\SOH\STX\ETX\EOT\ENQ\ACK\a\b\t\n\v\f\r\SO\SI\DLE\DC1\DC2\DC3\DC4\NAK\SYN\ETB\CAN\EM\SUB\ESC\FS\GS\RS\US\DEL\128\129\130\131\132\133\134\135\136\137\138\139\140\141\142\143\144\145\146\147\148\149\150\151\152\153\154\155\156\157\158\159"
 
--- | Is this a printable character? Complement of 'isControl'.
+-- | Is this a printable character? Essentially the complement of 'isControl', with one
+-- exception. The Latin-1 character \173 is neither control nor printable. Go figure.
+--
+-- >>> prove $ \c -> c .== literal '\173' ||| isControl c <=> bnot (isPrint c)
+-- Q.E.D.
 isPrint :: SChar -> SBool
-isPrint = bnot . isControl
+isPrint c = c ./= literal '\173' &&& bnot (isControl c)
 
 -- | Is this white-space? That is, one of "\t\n\v\f\r \160".
 isSpace :: SChar -> SBool
@@ -474,14 +473,25 @@ isUpper :: SChar -> SBool
 isUpper = (`elem` upper)
   where upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ\192\193\194\195\196\197\198\199\200\201\202\203\204\205\206\207\208\209\210\211\212\213\214\216\217\218\219\220\221\222"
 
-isAlpha               :: a
-isAlpha               = error "isAlpha"
+-- | Is this an alphabet character? That is lower-case, upper-case and title-case letters, plus letters of caseless scripts and modifiers letters.
+isAlpha :: SChar -> SBool
+isAlpha = (`elem` alpha)
+  where alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\170\181\186\192\193\194\195\196\197\198\199\200\201\202\203\204\205\206\207\208\209\210\211\212\213\214\216\217\218\219\220\221\222\223\224\225\226\227\228\229\230\231\232\233\234\235\236\237\238\239\240\241\242\243\244\245\246\248\249\250\251\252\253\254\255"
 
-isAlphaNum            :: a
-isAlphaNum            = error "isAlphaNum"
+-- | Is this a number character? Note that this set contains not only the digits, but also
+-- the codes for a few numeric looking characters like 1/2 etc. Use 'isDigit' for the digits @0@ through @9@.
+isNumber :: SChar -> SBool
+isNumber = (`elem` number)
+  where number = "0123456789\178\179\185\188\189\190"
 
-isDigit               :: a
-isDigit               = error "isDigit"
+-- | Is this an 'isAlpha' or 'isNumber'.
+isAlphaNum :: SChar -> SBool
+isAlphaNum c = isAlpha c ||| isNumber c
+
+-- | Is this an ASCII digit, i.e., one of @0@..@9@.
+isDigit :: SChar -> SBool
+isDigit = (`elem` digs)
+  where digs = "0123456789"
 
 isOctDigit            :: a
 isOctDigit            = error "isOctDigit"
