@@ -6,12 +6,12 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.BitPrecise.BitTricks
+-- Test suite for Documentation.SBV.Examples.BitPrecise.BitTricks
 -----------------------------------------------------------------------------
 
 module TestSuite.BitPrecise.BitTricks(tests) where
 
-import Data.SBV.Examples.BitPrecise.BitTricks
+import Documentation.SBV.Examples.BitPrecise.BitTricks
 
 import Utils.SBVTestFramework
 

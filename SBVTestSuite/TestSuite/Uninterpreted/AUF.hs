@@ -6,12 +6,12 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.Uninterpreted.AUF
+-- Test suite for Documentation.SBV.Examples.Uninterpreted.AUF
 -----------------------------------------------------------------------------
 
 module TestSuite.Uninterpreted.AUF where
 
-import Data.SBV.Examples.Uninterpreted.AUF
+import Documentation.SBV.Examples.Uninterpreted.AUF
 
 import Utils.SBVTestFramework
 

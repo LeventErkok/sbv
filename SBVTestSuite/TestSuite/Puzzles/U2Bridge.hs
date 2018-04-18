@@ -6,12 +6,12 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.Puzzles.U2Bridge
+-- Test suite for Documentation.SBV.Examples.Puzzles.U2Bridge
 -----------------------------------------------------------------------------
 
 module TestSuite.Puzzles.U2Bridge(tests) where
 
-import Data.SBV.Examples.Puzzles.U2Bridge
+import Documentation.SBV.Examples.Puzzles.U2Bridge
 
 import Utils.SBVTestFramework
 

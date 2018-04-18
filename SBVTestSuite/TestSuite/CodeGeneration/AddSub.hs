@@ -6,13 +6,13 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.CodeGeneration.AddSub
+-- Test suite for Documentation.SBV.Examples.CodeGeneration.AddSub
 -----------------------------------------------------------------------------
 
 module TestSuite.CodeGeneration.AddSub(tests) where
 
 import Data.SBV.Internals
-import Data.SBV.Examples.CodeGeneration.AddSub
+import Documentation.SBV.Examples.CodeGeneration.AddSub
 
 import Utils.SBVTestFramework
 

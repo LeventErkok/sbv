@@ -6,13 +6,13 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.CodeGeneration.GCD
+-- Test suite for Documentation.SBV.Examples.CodeGeneration.GCD
 -----------------------------------------------------------------------------
 
 module TestSuite.CodeGeneration.GCD(tests) where
 
 import Data.SBV.Internals
-import Data.SBV.Examples.CodeGeneration.GCD
+import Documentation.SBV.Examples.CodeGeneration.GCD
 
 import Utils.SBVTestFramework
 

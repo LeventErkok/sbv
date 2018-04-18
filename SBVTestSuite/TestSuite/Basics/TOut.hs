@@ -11,7 +11,7 @@
 
 module TestSuite.Basics.TOut(tests)  where
 
-import Data.SBV.Examples.Puzzles.Euler185
+import Documentation.SBV.Examples.Puzzles.Euler185
 
 import Utils.SBVTestFramework
 

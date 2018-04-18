@@ -6,13 +6,13 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.CodeGeneration.Uninterpreted
+-- Test suite for Documentation.SBV.Examples.CodeGeneration.Uninterpreted
 -----------------------------------------------------------------------------
 
 module TestSuite.CodeGeneration.Uninterpreted(tests) where
 
 import Data.SBV.Internals
-import Data.SBV.Examples.CodeGeneration.Uninterpreted
+import Documentation.SBV.Examples.CodeGeneration.Uninterpreted
 
 import Utils.SBVTestFramework
 

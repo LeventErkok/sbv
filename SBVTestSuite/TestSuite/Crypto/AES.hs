@@ -6,13 +6,13 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.Crypto.AES
+-- Test suite for Documentation.SBV.Examples.Crypto.AES
 -----------------------------------------------------------------------------
 
 module TestSuite.Crypto.AES(tests) where
 
 import Data.SBV.Internals
-import Data.SBV.Examples.Crypto.AES
+import Documentation.SBV.Examples.Crypto.AES
 
 import Utils.SBVTestFramework
 

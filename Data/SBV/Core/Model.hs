@@ -1255,7 +1255,7 @@ instance (SymWord a, Arbitrary a) => Arbitrary (SBV a) where
 -- with a single constructor where the type of each field is an instance of
 -- 'Mergeable', such as a record of symbolic values. Users only need to add
 -- 'G.Generic' and 'Mergeable' to the @deriving@ clause for the data-type. See
--- 'Data.SBV.Examples.Puzzles.U2Bridge.Status' for an example and an
+-- 'Documentation.SBV.Examples.Puzzles.U2Bridge.Status' for an example and an
 -- illustration of what the instance would look like if written by hand.
 --
 -- The function 'select' is a total-indexing function out of a list of choices

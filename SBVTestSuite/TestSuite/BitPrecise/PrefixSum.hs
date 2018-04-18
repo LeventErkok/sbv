@@ -6,12 +6,12 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.PrefixSum.PrefixSum
+-- Test suite for Documentation.SBV.Examples.PrefixSum.PrefixSum
 -----------------------------------------------------------------------------
 
 module TestSuite.BitPrecise.PrefixSum(tests) where
 
-import Data.SBV.Examples.BitPrecise.PrefixSum
+import Documentation.SBV.Examples.BitPrecise.PrefixSum
 
 import Utils.SBVTestFramework
 

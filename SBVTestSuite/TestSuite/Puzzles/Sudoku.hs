@@ -6,12 +6,12 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.Puzzles.Sudoku
+-- Test suite for Documentation.SBV.Examples.Puzzles.Sudoku
 -----------------------------------------------------------------------------
 
 module TestSuite.Puzzles.Sudoku(tests) where
 
-import Data.SBV.Examples.Puzzles.Sudoku
+import Documentation.SBV.Examples.Puzzles.Sudoku
 
 import Utils.SBVTestFramework
 

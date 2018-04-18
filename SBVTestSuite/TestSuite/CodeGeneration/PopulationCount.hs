@@ -6,13 +6,13 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.CodeGeneration.PopulationCount
+-- Test suite for Documentation.SBV.Examples.CodeGeneration.PopulationCount
 -----------------------------------------------------------------------------
 
 module TestSuite.CodeGeneration.PopulationCount(tests) where
 
 import Data.SBV.Internals
-import Data.SBV.Examples.CodeGeneration.PopulationCount
+import Documentation.SBV.Examples.CodeGeneration.PopulationCount
 
 import Utils.SBVTestFramework
 

@@ -234,11 +234,11 @@ provides access to many SMTLib features in the query mode, as exported from this
 
 For other examples see:
 
-  - "Data.SBV.Examples.Queries.AllSat": Simulating SBV's 'allSat' using queries.
-  - "Data.SBV.Examples.Queries.CaseSplit": Performing a case-split during a query.
-  - "Data.SBV.Examples.Queries.Enums": Using enumerations in queries.
-  - "Data.SBV.Examples.Queries.FourFours": Solution to a fun arithmetic puzzle, coded using queries.
-  - "Data.SBV.Examples.Queries.GuessNumber": The famous number guessing game.
-  - "Data.SBV.Examples.Queries.UnsatCore": Extracting unsat-cores using queries.
-  - "Data.SBV.Examples.Queries.Interpolants": Extracting interpolants using queries.
+  - "Documentation.SBV.Examples.Queries.AllSat": Simulating SBV's 'allSat' using queries.
+  - "Documentation.SBV.Examples.Queries.CaseSplit": Performing a case-split during a query.
+  - "Documentation.SBV.Examples.Queries.Enums": Using enumerations in queries.
+  - "Documentation.SBV.Examples.Queries.FourFours": Solution to a fun arithmetic puzzle, coded using queries.
+  - "Documentation.SBV.Examples.Queries.GuessNumber": The famous number guessing game.
+  - "Documentation.SBV.Examples.Queries.UnsatCore": Extracting unsat-cores using queries.
+  - "Documentation.SBV.Examples.Queries.Interpolants": Extracting interpolants using queries.
 -}

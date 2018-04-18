@@ -6,12 +6,12 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.Polynomials.Polynomials
+-- Test suite for Documentation.SBV.Examples.Polynomials.Polynomials
 -----------------------------------------------------------------------------
 
 module TestSuite.Polynomials.Polynomials(tests) where
 
-import Data.SBV.Examples.Misc.Polynomials
+import Documentation.SBV.Examples.Misc.Polynomials
 
 import Utils.SBVTestFramework
 

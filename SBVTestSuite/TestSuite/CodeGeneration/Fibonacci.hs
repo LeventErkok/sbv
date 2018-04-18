@@ -6,13 +6,13 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.CodeGeneration.Fibonacci
+-- Test suite for Documentation.SBV.Examples.CodeGeneration.Fibonacci
 -----------------------------------------------------------------------------
 
 module TestSuite.CodeGeneration.Fibonacci(tests) where
 
 import Data.SBV.Internals
-import Data.SBV.Examples.CodeGeneration.Fibonacci
+import Documentation.SBV.Examples.CodeGeneration.Fibonacci
 
 import Utils.SBVTestFramework
 

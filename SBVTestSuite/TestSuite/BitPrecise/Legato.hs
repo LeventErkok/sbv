@@ -6,13 +6,13 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.BitPrecise.Legato
+-- Test suite for Documentation.SBV.Examples.BitPrecise.Legato
 -----------------------------------------------------------------------------
 
 module TestSuite.BitPrecise.Legato(tests) where
 
 import Data.SBV.Internals
-import Data.SBV.Examples.BitPrecise.Legato
+import Documentation.SBV.Examples.BitPrecise.Legato
 
 import Utils.SBVTestFramework
 

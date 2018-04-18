@@ -6,12 +6,12 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.Existentials.CRCPolynomial
+-- Test suite for Documentation.SBV.Examples.Existentials.CRCPolynomial
 -----------------------------------------------------------------------------
 
 module TestSuite.Existentials.CRCPolynomial(tests) where
 
-import Data.SBV.Examples.Existentials.CRCPolynomial
+import Documentation.SBV.Examples.Existentials.CRCPolynomial
 
 import Utils.SBVTestFramework
 

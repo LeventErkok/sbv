@@ -6,13 +6,13 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.Crypto.RC4
+-- Test suite for Documentation.SBV.Examples.Crypto.RC4
 -----------------------------------------------------------------------------
 
 module TestSuite.Crypto.RC4(tests) where
 
 import Data.SBV.Tools.STree
-import Data.SBV.Examples.Crypto.RC4
+import Documentation.SBV.Examples.Crypto.RC4
 
 import Utils.SBVTestFramework
 

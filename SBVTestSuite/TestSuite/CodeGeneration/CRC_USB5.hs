@@ -6,13 +6,13 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.CodeGeneration.CRC_USB5
+-- Test suite for Documentation.SBV.Examples.CodeGeneration.CRC_USB5
 -----------------------------------------------------------------------------
 
 module TestSuite.CodeGeneration.CRC_USB5(tests) where
 
 import Data.SBV.Internals
-import Data.SBV.Examples.CodeGeneration.CRC_USB5
+import Documentation.SBV.Examples.CodeGeneration.CRC_USB5
 
 import Utils.SBVTestFramework
 

@@ -6,7 +6,7 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.Uninterpreted.AUF
+-- Test suite for Documentation.SBV.Examples.Uninterpreted.AUF
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE TemplateHaskell     #-}

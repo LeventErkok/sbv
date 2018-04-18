@@ -6,13 +6,13 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.BitPrecise.MergeSort
+-- Test suite for Documentation.SBV.Examples.BitPrecise.MergeSort
 -----------------------------------------------------------------------------
 
 module TestSuite.BitPrecise.MergeSort(tests) where
 
 import Data.SBV.Internals
-import Data.SBV.Examples.BitPrecise.MergeSort
+import Documentation.SBV.Examples.BitPrecise.MergeSort
 
 import Utils.SBVTestFramework
 

@@ -6,12 +6,12 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.Puzzles.MagicSquare
+-- Test suite for Documentation.SBV.Examples.Puzzles.MagicSquare
 -----------------------------------------------------------------------------
 
 module TestSuite.Puzzles.MagicSquare(tests) where
 
-import Data.SBV.Examples.Puzzles.MagicSquare
+import Documentation.SBV.Examples.Puzzles.MagicSquare
 
 import Utils.SBVTestFramework
 

@@ -6,12 +6,12 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.Puzzles.Coins
+-- Test suite for Documentation.SBV.Examples.Puzzles.Coins
 -----------------------------------------------------------------------------
 
 module TestSuite.Puzzles.Coins(tests) where
 
-import Data.SBV.Examples.Puzzles.Coins
+import Documentation.SBV.Examples.Puzzles.Coins
 
 import Utils.SBVTestFramework
 

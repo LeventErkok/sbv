@@ -6,12 +6,12 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Test suite for Data.SBV.Examples.Puzzles.NQueens
+-- Test suite for Documentation.SBV.Examples.Puzzles.NQueens
 -----------------------------------------------------------------------------
 
 module TestSuite.Puzzles.NQueens(tests) where
 
-import Data.SBV.Examples.Puzzles.NQueens
+import Documentation.SBV.Examples.Puzzles.NQueens
 
 import Utils.SBVTestFramework
 

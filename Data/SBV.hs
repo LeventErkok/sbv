@@ -510,7 +510,7 @@ attempt is done, as we did in the 'safe' calls.
 If required, the user can pass a 'CallStack' through the first argument to 'sAssert', which will be used
 by SBV to print a diagnostic info to pinpoint the failure.
 
-Also see "Data.SBV.Examples.Misc.NoDiv0" for the classic div-by-zero example.
+Also see "Documentation.SBV.Examples.Misc.NoDiv0" for the classic div-by-zero example.
 -}
 
 
@@ -568,9 +568,9 @@ Optimal model:
 
   The following examples illustrate the use of basic optimization routines:
 
-     * "Data.SBV.Examples.Optimization.LinearOpt": Simple linear-optimization example.
-     * "Data.SBV.Examples.Optimization.Production": Scheduling machines in a shop
-     * "Data.SBV.Examples.Optimization.VM": Scheduling virtual-machines in a data-center
+     * "Documentation.SBV.Examples.Optimization.LinearOpt": Simple linear-optimization example.
+     * "Documentation.SBV.Examples.Optimization.Production": Scheduling machines in a shop
+     * "Documentation.SBV.Examples.Optimization.VM": Scheduling virtual-machines in a data-center
 -}
 
 {- $multiOpt
@@ -830,7 +830,7 @@ This feature is enabled by the following option:
 
    @ setOption $ ProduceUnsatCores True @
 
-See "Data.SBV.Examples.Misc.UnsatCore" for an example use case.
+See "Documentation.SBV.Examples.Misc.UnsatCore" for an example use case.
 -}
 
 {- $uninterpreted
@@ -900,7 +900,7 @@ which would list all three elements of this domain as satisfying solutions.
 Note that the result is properly typed as @X@ elements; these are not mere strings. So, in a 'getModelAssignment' scenario, the user can recover actual
 elements of the domain and program further with those values as usual.
 
-See "Data.SBV.Examples.Misc.Enumerate" for an extended example on how to use symbolic enumerations.
+See "Documentation.SBV.Examples.Misc.Enumerate" for an extended example on how to use symbolic enumerations.
 -}
 
 {- $noteOnNestedQuantifiers

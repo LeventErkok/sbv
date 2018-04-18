@@ -6,12 +6,12 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Testsuite for Data.SBV.Examples.Uninterpreted.Function
+-- Testsuite for Documentation.SBV.Examples.Uninterpreted.Function
 -----------------------------------------------------------------------------
 
 module TestSuite.Uninterpreted.Function(tests) where
 
-import Data.SBV.Examples.Uninterpreted.Function
+import Documentation.SBV.Examples.Uninterpreted.Function
 
 import Utils.SBVTestFramework
 
