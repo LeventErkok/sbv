@@ -304,7 +304,7 @@ randomCWVal k =
     KDouble       -> CWDouble  <$> randomIO
     KString       -> do l <- randomRIO (0, 100)
                         CWString <$> replicateM l (chr <$> randomRIO (0, 255))
-    KChar         -> CWChar <$> chr <$> randomRIO (0, 255)
+    KChar         -> CWChar . chr <$> randomRIO (0, 255)
     KUserSort s _ -> error $ "Unexpected call to randomCWVal with uninterpreted kind: " ++ s
   where
     bounds :: Bool -> Int -> (Integer, Integer)
