@@ -491,8 +491,9 @@ isAlphaNum c = isAlpha c ||| isNumber c
 isDigit :: SChar -> SBool
 isDigit = (`elem` "0123456789")
 
-isOctDigit            :: a
-isOctDigit            = error "isOctDigit"
+-- | Is this an Octal digit, i.e., one of @0@..@7@.
+isOctDigit :: SChar -> SBool
+isOctDigit = (`elem` "01234567")
 
 isHexDigit            :: a
 isHexDigit            = error "isHexDigit"
