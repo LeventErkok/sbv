@@ -19,7 +19,7 @@ module Data.SBV.Utils.PrettyNum (
       , showSMTFloat, showSMTDouble, smtRoundingMode, cwToSMTLib, mkSkolemZero
       ) where
 
-import Data.Char  (ord, intToDigit, ord)
+import Data.Char  (intToDigit, ord)
 import Data.Int   (Int8, Int16, Int32, Int64)
 import Data.List  (isPrefixOf)
 import Data.Maybe (fromJust, fromMaybe, listToMaybe)
@@ -279,6 +279,7 @@ cwToSMTLib rm x
   | hasSign x        , CWInteger  w      <- cwVal x = if w == negate (2 ^ intSizeOf x)
                                                       then mkMinBound (intSizeOf x)
                                                       else negIf (w < 0) $ smtLibHex (intSizeOf x) (abs w)
+  | isChar x         , CWChar c          <- cwVal x = smtLibHex 8 (fromIntegral (ord c))
   | isString x       , CWString s        <- cwVal x = stringToQFS s
   | True = error $ "SBV.cvtCW: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
   where roundModeConvert s = fromMaybe s (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])

@@ -17,10 +17,8 @@
 -----------------------------------------------------------------------------
 
 module Data.SBV.Tools.SString (
-        -- * The symbolic "character"
-        SChar
-        -- * Conversion to/from SWord8
-        , ord, chr
+        -- * Conversion to/from SChar
+          ord, chr
         -- * Length
         , length, null
         -- * Deconstructing/Reconstructing
@@ -65,28 +63,33 @@ import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 -- $setup
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
 
--- | The symbolic "character." Note that, as far as SBV's symbolic strings are concerned, a character
--- is essentially an 8-bit unsigned value, and hence is equivalent to the type 'SWord8'. Technically
--- speaking, this corresponds to the ISO-8859-1 (Latin-1) character set. A Haskell 'Char', on the other
--- hand, is a unicode beast; so there isn't a 1-1 correspondence between a Haskell character and an
--- SBV character. This limitation is due to the SMT-solvers only supporting this particular subset,
--- which may be relaxed in future versions.
-type SChar = SWord8
+-- | The 'ord' of a character, as an 8-bit value.
+ord :: SChar -> SWord8
+ord c
+ | Just cc <- unliteral c
+ = let v = C.ord cc
+   in if v <= 255 then literal (fromIntegral v)
+                  else error $ "SString.ord: Character value out-of 8-bit range: " ++ show (c, v)  -- Can't really happen
+ | True
+ = SBV $ SVal k $ Right $ cache r
+ where k = KBounded False 8
+       r st = do SW _ n <- sbvToSW st c
+                 return $ SW k n
 
--- | The 'ord' of a character. Note that this is essentially identity function due to
--- our representation, appropriately typed to have any numeric type.
-ord :: SIntegral a => SChar -> SBV a
-ord = sFromIntegral
-
--- | Conversion from a value to a character. If the value is not in the range
--- 0..255, then the output is underspecified.
+-- | Conversion from an 8-bit ASCII value to a character.
 --
--- >>> prove $ \x -> (0 .<= x &&& x .< (255 :: SInteger)) ==> ord (chr x) .== x
+-- >>> prove $ \x -> ord (chr x) .== x
 -- Q.E.D.
--- >>> prove $ \x -> chr ((ord x) :: SInteger) .== x
+-- >>> prove $ \x -> chr (ord x) .== x
 -- Q.E.D.
-chr :: SIntegral a => SBV a -> SChar
-chr = sFromIntegral
+chr :: SWord8 -> SChar
+chr w
+ | Just cw <- unliteral w
+ = literal (C.chr (fromIntegral cw))
+ | True
+ = SBV $ SVal KChar $ Right $ cache r
+ where r st = do SW _ n <- sbvToSW st w
+                 return $ SW KChar n
 
 -- | Length of a string.
 --
@@ -118,7 +121,7 @@ null s
 --
 -- >>> prove $ \c -> head (charToStr c) .== c
 -- Q.E.D.
-head :: SString -> SWord8
+head :: SString -> SChar
 head = (`strToCharAt` 0)
 
 -- | @`tail`@ returns the tail of a string. Unspecified if the string is empty.
@@ -140,12 +143,15 @@ tail s
 -- whose value is the 8-bit value @c@.
 --
 -- >>> :set -XOverloadedStrings
--- >>> prove $ \c -> c .== 65 ==> charToStr c .== "A"
+-- >>> prove $ \c -> c .== literal 'A' ==> charToStr c .== "A"
 -- Q.E.D.
 -- >>> prove $ \c -> length (charToStr c) .== 1
 -- Q.E.D.
-charToStr :: SWord8 -> SString
-charToStr = lift1 StrUnit (Just $ \cv -> [C.chr (fromIntegral cv)])
+charToStr :: SChar -> SString
+charToStr = lift1 StrUnit (Just check)
+  where check c
+          | C.ord c <= 255 = [c]
+          | True           = error $ "SString.charToStr: Character doesn't fit into an SMTLib 8-bit character! Received: " ++ show (c, C.ord c)
 
 -- | @`strToStrAt` s offset@. Substring of length 1 at @offset@ in @s@.
 --
@@ -161,18 +167,18 @@ strToStrAt s offset = subStr s offset 1
 -- index is out of bounds.
 --
 -- >>> :set -XOverloadedStrings
--- >>> prove $ \i -> i .>= 0 &&& i .<= 4 ==> "AAAAA" `strToCharAt` i .== 65
+-- >>> prove $ \i -> i .>= 0 &&& i .<= 4 ==> "AAAAA" `strToCharAt` i .== literal 'A'
 -- Q.E.D.
 -- >>> prove $ \s i c -> s `strToCharAt` i .== c ==> indexOf s (charToStr c) .<= i
 -- Q.E.D.
-strToCharAt :: SString -> SInteger -> SWord8
+strToCharAt :: SString -> SInteger -> SChar
 strToCharAt s i
   | Just cs <- unliteral s, Just ci <- unliteral i, ci >= 0, ci < genericLength cs, let c = C.ord (cs `genericIndex` ci), c >= 0, c < 256
-  = literal (fromIntegral c)
+  = literal (C.chr c)
   | True
   = SBV (SVal w8 (Right (cache (y (s `strToStrAt` i)))))
   where w8      = KBounded False 8
-        -- This is tricker than it needs to be, but necessary since there's
+        -- This is trickier than it needs to be, but necessary since there's
         -- no SMTLib function to extract the character from a string. Instead,
         -- we form a singleton string, and assert that it is equivalent to
         -- the extracted value. See <http://github.com/Z3Prover/z3/issues/1302>
@@ -183,7 +189,7 @@ strToCharAt s i
                      return c
 
 -- | Short cut for 'strToCharAt'
-(.!!) :: SString -> SInteger -> SWord8
+(.!!) :: SString -> SInteger -> SChar
 (.!!) = strToCharAt
 
 -- | @`implode` cs@ is the string of length @|cs|@ containing precisely those
@@ -225,9 +231,9 @@ infixr 5 .++
 elem :: SChar -> SString -> SBool
 c `elem` s
  | Just cs <- unliteral s, Just cc <- unliteral c
- = literal (C.chr (fromIntegral cc) `P.elem` cs)
+ = literal (cc `P.elem` cs)
  | Just cs <- unliteral s                            -- If only the second string is concrete, element-wise checking is still much better!
- = bAny (c .==) $ map (literal . fromIntegral . C.ord) cs
+ = bAny (c .==) $ map literal cs
  | True
  = charToStr c `isInfixOf` s
 
@@ -412,8 +418,8 @@ natToStr i
 -- >>> prove $ \c -> isLower c ==> toLower (toUpper c) .== c
 -- Q.E.D.
 toLower :: SChar -> SChar
-toLower c = ite (isUpper c) (chr o + 32) c
-  where o = ord c :: SWord8
+toLower c = ite (isUpper c) (chr (o + 32)) c
+  where o = ord c
 
 -- | Convert to upper-case. N.B. There are three special cases!
 --
@@ -432,8 +438,8 @@ toLower c = ite (isUpper c) (chr o + 32) c
 -- >>> prove $ \c -> isUpper c ==> toUpper (toLower c) .== c
 -- Q.E.D.
 toUpper :: SChar -> SChar
-toUpper c = ite (isLower c &&& o `notElem` "\181\223\255") (chr (o - 32)) c
-   where o = ord c :: SWord8
+toUpper c = ite (isLower c &&& c `notElem` "\181\223\255") (chr (o - 32)) c
+   where o = ord c
 
 -- | Is this a control character? Control characters are essentially the non-printing characters.
 --

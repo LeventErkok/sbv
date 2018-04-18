@@ -144,7 +144,7 @@ module Data.SBV (
   , SReal, AlgReal, sRealToSInteger
   -- ** Strings and Regular Expressions
   -- $strings
-  , SString, SRegExp(..), (.++), (.!!)
+  , SString, SChar, SRegExp(..), (.++), (.!!)
   -- * Arrays of symbolic values
   , SymArray(..), SArray, SFunArray, mkSFunArray
 

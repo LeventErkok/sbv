@@ -23,7 +23,7 @@
 
 module Data.SBV.Core.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
- , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble, SString
+ , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble, SChar, SString
  , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode
  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
  , sRNE, sRNA, sRTP, sRTN, sRTZ
@@ -129,6 +129,14 @@ type SFloat = SBV Float
 
 -- | IEEE-754 double-precision floating point numbers
 type SDouble = SBV Double
+
+-- | A symbolic character. Note that, as far as SBV's symbolic strings are concerned, a character
+-- is essentially an 8-bit unsigned value, and hence is equivalent to the type 'SWord8'. Technically
+-- speaking, this corresponds to the ISO-8859-1 (Latin-1) character set. A Haskell 'Char', on the other
+-- hand, is a unicode beast; so there isn't a 1-1 correspondence between a Haskell character and an
+-- SBV character. This limitation is due to the SMT-solvers only supporting this particular subset,
+-- which may be relaxed in future versions.
+type SChar = SBV Char
 
 -- | A symbolic string
 type SString = SBV String

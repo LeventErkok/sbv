@@ -36,7 +36,7 @@ module Data.SBV.Control.Utils (
 
 import Data.List  (sortBy, elemIndex, partition, groupBy, tails)
 
-import Data.Char     (isPunctuation, isSpace)
+import Data.Char     (isPunctuation, isSpace, chr)
 import Data.Ord      (comparing)
 import Data.Function (on)
 
@@ -314,6 +314,10 @@ instance SMTValue String where
      = Just (tail (init s))
    sexprToVal _        = Nothing
 
+instance SMTValue Char where
+   sexprToVal (ENum (i, _)) = Just (chr (fromIntegral i))
+   sexprToVal _             = Nothing
+
 -- | Get the value of a term.
 getValue :: SMTValue a => SBV a -> Query a
 getValue s = do sw <- inNewContext (`sbvToSW` s)
@@ -375,6 +379,7 @@ getValueCWHelper mbi s = do
 recoverKindedValue :: Kind -> SExpr -> Maybe CW
 recoverKindedValue k e = case e of
                            ENum    i | isIntegralLike    -> Just $ mkConstCW k (fst i)
+                           ENum    i | isChar          k -> Just $ CW KChar    (CWChar    (chr (fromIntegral (fst i))))
                            EReal   i | isReal          k -> Just $ CW KReal    (CWAlgReal i)
                            EFloat  i | isFloat         k -> Just $ CW KFloat   (CWFloat   i)
                            EDouble i | isDouble        k -> Just $ CW KDouble  (CWDouble  i)

@@ -184,6 +184,7 @@ specifier cfg sw = case kindOf sw of
                      KFloat        -> specF CgFloat
                      KDouble       -> specF CgDouble
                      KString       -> text "%s"
+                     KChar         -> text "%c"
                      KUserSort s _ -> die $ "uninterpreted sort: " ++ s
   where spec :: (Bool, Int) -> Doc
         spec (False,  1) = text "%d"
@@ -215,6 +216,7 @@ mkConst _   (CW KBool            (CWInteger i)) = showSizedConst i (False, 1)
 mkConst _   (CW KFloat           (CWFloat f))   = text $ showCFloat f
 mkConst _   (CW KDouble          (CWDouble d))  = text $ showCDouble d
 mkConst _   (CW KString          (CWString s))  = text $ show s
+mkConst _   (CW KChar            (CWChar c))    = text $ show c
 mkConst _   cw                                  = die $ "mkConst: " ++ show cw
 
 showSizedConst :: Integer -> (Bool, Int) -> Doc
@@ -416,6 +418,8 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _uis _
           ++ "\nUse 'cgIntegerSize' to specify a fixed size for SInteger representation."
   | KString `Set.member` kindInfo
   = error "SBV->C: Strings are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
+  | KChar `Set.member` kindInfo
+  = error "SBV->C: Characters are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
   | isNothing (cgReal cfg) && KReal `Set.member` kindInfo
   = error $ "SBV->C: SReal values are not supported by the C compiler."
           ++ "\nUse 'cgSRealType' to specify a custom type for SReal representation."
@@ -467,6 +471,7 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _uis _
                       len KFloat{}            = 6 -- SFloat
                       len KDouble{}           = 7 -- SDouble
                       len KString{}           = 7 -- SString
+                      len KChar{}             = 5 -- SChar
                       len KUnbounded{}        = 8
                       len KBool               = 5 -- SBool
                       len (KBounded False n)  = 5 + length (show n) -- SWordN
@@ -717,6 +722,7 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                                                KFloat          -> die "array index with float value"
                                                KDouble         -> die "array index with double value"
                                                KString         -> die "array index with string value"
+                                               KChar           -> die "array index with character value"
                                                KUnbounded      -> case cgInteger cfg of
                                                                     Nothing -> (True, True) -- won't matter, it'll be rejected later
                                                                     Just i  -> (True, canOverflow True i)

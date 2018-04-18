@@ -31,6 +31,7 @@ data Kind = KBool
           | KUserSort String (Either String [String])  -- name. Left: uninterpreted. Right: enum constructors.
           | KFloat
           | KDouble
+          | KChar
           | KString
 
 -- | Helper for Eq/Ord instances below
@@ -42,7 +43,8 @@ kindRank KReal           = Left 2
 kindRank (KUserSort s _) = Right (Right s)
 kindRank KFloat          = Left 3
 kindRank KDouble         = Left 4
-kindRank KString         = Left 5
+kindRank KChar           = Left 5
+kindRank KString         = Left 6
 {-# INLINE kindRank #-}
 
 -- | We want to equate user-sorts only by name
@@ -63,6 +65,7 @@ instance Show Kind where
   show KFloat             = "SFloat"
   show KDouble            = "SDouble"
   show KString            = "SString"
+  show KChar              = "SChar"
 
 instance Eq  G.DataType where
    a == b = G.tyconUQname (G.dataTypeName a) == G.tyconUQname (G.dataTypeName b)
@@ -81,6 +84,7 @@ kindHasSign k =
     KFloat       -> True
     KDouble      -> True
     KString      -> False
+    KChar        -> False
     KUserSort{}  -> False
 
 -- | Construct an uninterpreted/enumerated kind from a piece of data; we distinguish simple enumerations as those
@@ -117,6 +121,7 @@ class HasKind a where
   isDouble        :: a -> Bool
   isInteger       :: a -> Bool
   isUninterpreted :: a -> Bool
+  isChar          :: a -> Bool
   isString        :: a -> Bool
   showType        :: a -> String
   -- defaults
@@ -129,6 +134,7 @@ class HasKind a where
                   KFloat        -> error "SBV.HasKind.intSizeOf((S)Float)"
                   KDouble       -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KString       -> error "SBV.HasKind.intSizeOf((S)Double)"
+                  KChar         -> error "SBV.HasKind.intSizeOf((S)Char)"
                   KUserSort s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
   isBoolean       x | KBool{}      <- kindOf x = True
                     | True                     = False
@@ -145,6 +151,8 @@ class HasKind a where
   isUninterpreted x | KUserSort{}  <- kindOf x = True
                     | True                     = False
   isString        x | KString{}    <- kindOf x = True
+                    | True                     = False
+  isChar          x | KChar{}      <- kindOf x = True
                     | True                     = False
   showType = show . kindOf
 
@@ -164,9 +172,9 @@ instance HasKind Word64  where kindOf _ = KBounded False 64
 instance HasKind Integer where kindOf _ = KUnbounded
 instance HasKind AlgReal where kindOf _ = KReal
 instance HasKind Float   where kindOf _ = KFloat
--- TODO: also Text / ByteString?
-instance HasKind String  where kindOf _ = KString
 instance HasKind Double  where kindOf _ = KDouble
+instance HasKind Char    where kindOf _ = KChar
+instance HasKind String  where kindOf _ = KString
 
 instance HasKind Kind where
   kindOf = id

@@ -5,12 +5,12 @@
 
 ### Version 7.6.5, Current development version
 
-  * Add support for Symbolic strings. ('SString' type.) Thanks
-    to Joel Burget for the implementation. SBV now supports
-    the new QF_S logic, which allows reasoning with symbolic
+  * Add support for Symbolic characters ('SChar') and strings ('SString'.)
+    Thanks to Joel Burget for the initial implementation. SBV now
+    supports the QF_S logic, which allows reasoning with symbolic
     strings and regular expressions. Currently only Z3 and CVC4 has
     support for this logic, and they do differ in some details.
-    Various string operations are supported, including length,
+    Various character/string operations are supported, including length,
     concatenation, regular-expression matching, substrig operations etc.
     If you use this logic, you are likely to find bugs in solvers
     themselves as support is rather new: Please report.

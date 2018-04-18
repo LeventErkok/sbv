@@ -29,7 +29,7 @@ module Data.SBV.Core.Model (
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   , sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
-  , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, sString, sStrings, slet
+  , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, sChar, sChars, sString, sStrings, slet
   , sRealToSInteger, label
   , sAssert
   , liftQRem, liftDMod, symbolicMergeWithKind
@@ -48,6 +48,7 @@ import GHC.Stack
 import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits       (Bits(..))
 import Data.Int        (Int8, Int16, Int32, Int64)
+import Data.Char       (ord)
 import Data.List       (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate)
 import Data.Maybe      (fromMaybe)
 import Data.String     (IsString(..))
@@ -189,6 +190,14 @@ instance SymWord String where
   fromCW (CW _ (CWString a)) = a
   fromCW c                   = error $ "SymWord.String: Unexpected non-string value: " ++ show c
 
+instance SymWord Char where
+  mkSymWord = genMkSymVar KChar
+  literal c
+    | ord c <= 255 = SBV . SVal KChar . Left . CW KChar $ CWChar c
+    | True         = error $ "SymWord.Char: SMT-Lib only supports character's with values between 0 and 255, received: " ++ show (c, ord c)
+  fromCW (CW _ (CWChar a)) = a
+  fromCW c                 = error $ "SymWord.String: Unexpected non-char value: " ++ show c
+
 instance IsString SString where
   fromString = literal
 
@@ -301,9 +310,17 @@ sDouble = symbolic
 sDoubles :: [String] -> Symbolic [SDouble]
 sDoubles = symbolics
 
+-- | Declare an 'SChar'
+sChar :: String -> Symbolic SChar
+sChar = symbolic
+
 -- | Declare an 'SString'
 sString :: String -> Symbolic SString
 sString = symbolic
+
+-- | Declare a list of 'SChar's
+sChars :: [String] -> Symbolic [SChar]
+sChars = symbolics
 
 -- | Declare a list of 'SString's
 sStrings :: [String] -> Symbolic [SString]
@@ -835,6 +852,7 @@ instance (SymWord a, Fractional a) => Fractional (SBV a) where
                       k@KUnbounded  -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KBool       -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KString     -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KChar       -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KUserSort{} -> error $ "Unexpected Fractional case for: " ++ show k
 
 -- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat and SDouble

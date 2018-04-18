@@ -36,8 +36,9 @@ cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs ui
         hasReal        = KReal      `Set.member` kindInfo
         hasFloat       = KFloat     `Set.member` kindInfo
         hasString      = KString    `Set.member` kindInfo
+        hasChar        = KChar      `Set.member` kindInfo
         hasDouble      = KDouble    `Set.member` kindInfo
-        hasBVs         = not $ null [() | KBounded{} <- Set.toList kindInfo]
+        hasBVs         = hasChar || not (null [() | KBounded{} <- Set.toList kindInfo])   -- Remember, characters map to Word8
         usorts         = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
         hasNonBVArrays = (not . null) [() | (_, (_, (k1, k2), _)) <- arrs, not (isBounded k1 && isBounded k2)]
         rm             = roundingMode cfg
@@ -368,6 +369,7 @@ smtType KReal           = "Real"
 smtType KFloat          = "(_ FloatingPoint  8 24)"
 smtType KDouble         = "(_ FloatingPoint 11 53)"
 smtType KString         = "String"
+smtType KChar           = "(_ BitVec 8)"
 smtType (KUserSort s _) = s
 
 cvtType :: SBVType -> String
@@ -492,6 +494,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                               KReal         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
                               KFloat        -> error "SBV.SMT.SMTLib2.cvtExp: unexpected float valued index"
                               KDouble       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected double valued index"
+                              KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected char valued index"
                               KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                               KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
                 lkUp = "(" ++ getTable tableMap t ++ " " ++ ssw i ++ ")"
@@ -505,6 +508,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 KReal         -> ("<", "<=")
                                 KFloat        -> ("fp.lt", "fp.leq")
                                 KDouble       -> ("fp.lt", "fp.geq")
+                                KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
                 mkCnst = cvtCW rm . mkConstCW (kindOf i)
