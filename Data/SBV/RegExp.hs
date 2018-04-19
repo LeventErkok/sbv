@@ -48,7 +48,9 @@ import Data.SBV.Core.Model () -- instances only
 -- Only for testing
 import Prelude hiding  (length)
 import Data.SBV.String (length, charToStr)
-import Data.SBV.Char   (isSpace)
+import Data.SBV.Char   (isSpace, isPunctuation)
+
+import qualified Data.Char as C
 
 -- For doctest use only
 --
@@ -145,8 +147,13 @@ whiteSpaceNoNewLine = tab + oneOf "\v\160 "
 whiteSpace :: RegExp
 whiteSpace = newline + whiteSpaceNoNewLine
 
-punctuation         :: a
-punctuation         = error "punctuation"
+-- | Recognize a punctuation character. Anything that satisfies the predicate 'isPunctuation' will
+-- be accepted.
+--
+-- >>> prove $ \c -> c `match` punctuation ==> isPunctuation c
+-- Q.E.D.
+punctuation :: RegExp
+punctuation = oneOf $ filter C.isPunctuation $ map C.chr [0..255]
 
 digit               :: a
 digit               = error "digit"
@@ -186,4 +193,4 @@ concEval1 mbOp a = literal <$> (mbOp <*> unliteral a)
 
 -- | Quiet GHC about testing only functions
 __unused :: a
-__unused = undefined length isSpace
+__unused = undefined length isSpace isPunctuation
