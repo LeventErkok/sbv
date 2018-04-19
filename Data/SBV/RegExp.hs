@@ -45,16 +45,16 @@ module Data.SBV.RegExp (
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model () -- instances only
 
--- Only for testing
-import Prelude hiding  (length)
-import Data.SBV.String (length, charToStr)
-import Data.SBV.Char   (isSpace, isPunctuation)
-
+import Data.SBV.String
 import qualified Data.Char as C
+
+-- For testing only
+import Data.SBV.Char
 
 -- For doctest use only
 --
 -- $setup
+-- >>> import Prelude hiding (length)
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
 -- >>> import Data.SBV.Utils.Boolean  ((<=>), (==>), bAny, (&&&))
 -- >>> import Data.SBV.Core.Model
@@ -155,8 +155,12 @@ whiteSpace = newline + whiteSpaceNoNewLine
 punctuation :: RegExp
 punctuation = oneOf $ filter C.isPunctuation $ map C.chr [0..255]
 
-digit               :: a
-digit               = error "digit"
+-- | Recognize a digit. One of @0@..@9@.
+--
+-- >>> prove $ \c -> c `match` digit <=> let v = digitToInt c in 0 .<= v &&& v .< 10
+-- Q.E.D.
+digit :: RegExp
+digit = oneOf "0123456789"
 
 octDigit            :: a
 octDigit            = error "octDigit"
@@ -191,6 +195,6 @@ lift1 w mbOp a
 concEval1 :: (SymWord a, SymWord b) => Maybe (a -> b) -> SBV a -> Maybe (SBV b)
 concEval1 mbOp a = literal <$> (mbOp <*> unliteral a)
 
--- | Quiet GHC about testing only functions
+-- | Quiet GHC about testing only imports
 __unused :: a
-__unused = undefined length isSpace isPunctuation
+__unused = undefined isSpace
