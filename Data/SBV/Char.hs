@@ -76,7 +76,6 @@ c `elem` s
 notElem :: SChar -> SString -> SBool
 c `notElem` s = bnot (c `elem` s)
 
-
 -- | The 'ord' of a character, as an 8-bit value.
 ord :: SChar -> SWord8
 ord c
