@@ -32,7 +32,7 @@ module Data.SBV.Char (
         , isAscii, isLatin1, isAsciiUpper, isAsciiLower
         ) where
 
-import Prelude hiding (elem, notElem, head, tail, length, take, drop, concat, null)
+import Prelude hiding (elem, notElem)
 import qualified Prelude as P
 
 import Data.SBV.Core.Data

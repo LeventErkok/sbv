@@ -29,7 +29,7 @@ module Data.SBV.String (
         , strToNat, natToStr
         ) where
 
-import Prelude hiding (elem, notElem, head, tail, length, take, drop, concat, null)
+import Prelude hiding (head, tail, length, take, drop, concat, null)
 import qualified Prelude as P
 
 import Data.SBV.Core.Data
@@ -43,6 +43,7 @@ import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 --
 -- $setup
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
+-- >>> import Data.SBV.Utils.Boolean  ((==>), (&&&), bnot, (<=>))
 
 -- | Length of a string.
 --
