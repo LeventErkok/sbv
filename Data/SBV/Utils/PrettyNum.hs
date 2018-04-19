@@ -32,7 +32,7 @@ import Data.Numbers.CrackNum (floatToFP, doubleToFP)
 import Data.SBV.Core.Data
 import Data.SBV.Core.AlgReals (algRealToSMTLib2)
 
-import Data.SBV.SMT.Utils (stringToQFS)
+import Data.SBV.Utils.Lib (stringToQFS)
 
 -- | PrettyNum class captures printing of numbers in hex and binary formats; also supporting negative numbers.
 --
@@ -280,7 +280,7 @@ cwToSMTLib rm x
                                                       then mkMinBound (intSizeOf x)
                                                       else negIf (w < 0) $ smtLibHex (intSizeOf x) (abs w)
   | isChar x         , CWChar c          <- cwVal x = smtLibHex 8 (fromIntegral (ord c))
-  | isString x       , CWString s        <- cwVal x = stringToQFS s
+  | isString x       , CWString s        <- cwVal x = '\"' : stringToQFS s ++ "\""
   | True = error $ "SBV.cvtCW: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
   where roundModeConvert s = fromMaybe s (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])
         -- Carefully code hex numbers, SMTLib is picky about lengths of hex constants. For the time

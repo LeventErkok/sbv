@@ -9,10 +9,16 @@
 -- Misc helpers
 -----------------------------------------------------------------------------
 
-module Data.SBV.Utils.Lib (mlift2, mlift3, mlift4, mlift5, mlift6, mlift7, mlift8, joinArgs, splitArgs) where
+module Data.SBV.Utils.Lib ( mlift2, mlift3, mlift4, mlift5, mlift6, mlift7, mlift8
+                          , joinArgs, splitArgs
+                          , stringToQFS, qfsToString)
+                          where
 
-import Data.Char (isSpace)
+import Data.Char (isSpace, chr, ord)
 import Data.Maybe (fromJust, isNothing)
+
+import Numeric (readHex, readOct, showHex)
+
 
 -- | Monadic lift over 2-tuples
 mlift2 :: Monad m => (a' -> b' -> r) -> (a -> m a') -> (b -> m b') -> (a, b) -> m r
@@ -88,3 +94,41 @@ splitArgs = join . f Init
           f Norm (x:xs) | isSpace x = Nothing : f Init xs
           f m (x:xs)                = Just x : f m xs
           f _ []                    = []
+
+-- | Given a QF_S string (i.e., one that works in the string theory), convert it to a Haskell equivalent
+qfsToString :: String -> String
+qfsToString = go
+  where go ""                                                          = ""
+        go ('\\':'n'       : rest)                                     = chr 10 : go rest
+        go ('\\':'\\'       : rest)                                    = '\\'   : go rest
+        go ('\\':'v'       : rest)                                     = chr 11 : go rest
+        go ('\\':'f'       : rest)                                     = chr 12 : go rest
+        go ('\\':'r'       : rest)                                     = chr 13 : go rest
+        go ('\\':'x':c1:c2 : rest) | [(v, "")] <- readHex [c1, c2]     = chr  v : go rest
+        go ('\\':c1:c2:c3  : rest) | [(v, "")] <- readOct [c1, c2, c3] = chr  v : go rest
+        go (c              : rest)                                     = c      : go rest
+
+-- | Given a Haskell, convert it to one that's understood by the QF_S logic
+stringToQFS :: String -> String
+stringToQFS = concatMap cvt
+  where -- strings are almost just show, but escapes are different. Sigh
+        cvt c
+         | 0 <= o && o < 32
+         = escapeTable !! o
+         | c == '\\'
+         = "\\\\"
+         | c == '"'
+         = "\"\""
+         | o >= 128 && o < 256
+         = "\\x" ++ showHex (ord c) ""
+         | o > 256
+         = error $ "Data.SBV: stringToQFS: Haskell character: " ++ show c ++ " is not representable in QF_S"
+         | True
+         = [c]
+         where o = ord c
+
+        -- | First 32 values are coded in a custom way by Z3:
+        escapeTable :: [String]
+        escapeTable = [ "\\x00", "\\x01", "\\x02", "\\x03", "\\x04", "\\x05", "\\x06", "\\x07", "\\x08", "\\x09", "\\n",   "\\v",   "\\f",   "\\r",   "\\x0E", "\\x0F"
+                      , "\\x10", "\\x11", "\\x12", "\\x13", "\\x14", "\\x15", "\\x16", "\\x17", "\\x18", "\\x19", "\\x1A", "\\x1B", "\\x1C", "\\x1D", "\\x1E", "\\x1F"
+                      ]

@@ -21,8 +21,6 @@ module Data.SBV.SMT.Utils (
         , debug
         , mergeSExpr
         , SMTException(..)
-        , stringToQFS
-        , qfsToString
        )
        where
 
@@ -31,14 +29,10 @@ import qualified Control.Exception as C
 import Data.SBV.Core.Data
 import Data.SBV.Utils.Lib (joinArgs)
 
-import Data.Char (chr, ord)
-
 import Data.List (intercalate)
 import qualified Data.Set as Set (Set)
 
 import System.Exit (ExitCode(..))
-
-import Numeric (readHex, readOct, showHex)
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
 type SMTLibConverter a =  Set.Set Kind                                  -- ^ Kinds used in the problem
@@ -194,41 +188,3 @@ instance Show SMTException where
                  | True      = ["***"]
 
           in unlines $ grp1 ++ sep1 ++ grp2 ++ sep2 ++ grp3
-
--- | Given a QF_S string (i.e., one that works in the string theory), convert it to a Haskell equivalent
-qfsToString :: String -> String
-qfsToString = go
-  where go ""                                                          = ""
-        go ('\\':'n'       : rest)                                     = chr 10 : go rest
-        go ('\\':'\\'       : rest)                                    = '\\'   : go rest
-        go ('\\':'v'       : rest)                                     = chr 11 : go rest
-        go ('\\':'f'       : rest)                                     = chr 12 : go rest
-        go ('\\':'r'       : rest)                                     = chr 13 : go rest
-        go ('\\':'x':c1:c2 : rest) | [(v, "")] <- readHex [c1, c2]     = chr  v : go rest
-        go ('\\':c1:c2:c3  : rest) | [(v, "")] <- readOct [c1, c2, c3] = chr  v : go rest
-        go (c              : rest)                                     = c      : go rest
-
--- | Given a Haskell, convert it to one that's understood by the QF_S logic
-stringToQFS :: String -> String
-stringToQFS s = '\"' : concatMap cvt s ++ "\""
-  where -- strings are almost just show, but escapes are different. Sigh
-        cvt c
-         | 0 <= o && o < 32
-         = escapeTable !! o
-         | c == '\\'
-         = "\\\\"
-         | c == '"'
-         = "\"\""
-         | o >= 128 && o < 256
-         = "\\x" ++ showHex (ord c) ""
-         | o > 256
-         = error $ "Data.SBV: stringToQFS: Haskell character: " ++ show c ++ " is not representable in QF_S"
-         | True
-         = [c]
-         where o = ord c
-
-        -- | First 32 values are coded in a custom way by Z3:
-        escapeTable :: [String]
-        escapeTable = [ "\\x00", "\\x01", "\\x02", "\\x03", "\\x04", "\\x05", "\\x06", "\\x07", "\\x08", "\\x09", "\\n",   "\\v",   "\\f",   "\\r",   "\\x0E", "\\x0F"
-                      , "\\x10", "\\x11", "\\x12", "\\x13", "\\x14", "\\x15", "\\x16", "\\x17", "\\x18", "\\x19", "\\x1A", "\\x1B", "\\x1C", "\\x1D", "\\x1E", "\\x1F"
-                      ]

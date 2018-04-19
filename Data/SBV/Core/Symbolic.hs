@@ -84,7 +84,8 @@ import System.Mem.StableName
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
 import Data.SBV.SMT.SMTLibNames
-import Data.SBV.Utils.TDiff(Timing)
+import Data.SBV.Utils.TDiff (Timing)
+import Data.SBV.Utils.Lib   (stringToQFS)
 
 import Data.SBV.Control.Types
 
@@ -272,10 +273,10 @@ instance Num RegExp where
 -- | Show instance for `RegExp`. The mapping is done so the outcome matches the
 -- SMTLib string reg-exp operations
 instance Show RegExp where
-  show (Literal s)       = "(str.to.re \"" ++ s ++ "\")"
+  show (Literal s)       = "(str.to.re \"" ++ stringToQFS s ++ "\")"
   show All               = "re.allchar"
   show None              = "re.nostr"
-  show (Range ch1 ch2)   = "(re.range " ++ show [ch1] ++ " " ++ show [ch2] ++ ")"
+  show (Range ch1 ch2)   = "(re.range \"" ++ stringToQFS [ch1] ++ "\" \"" ++ stringToQFS [ch2] ++ "\")"
   show (Conc  r1 r2)     = "(re.++ " ++ show r1 ++ " " ++ show r2 ++ ")"
   show (KStar r)         = "(re.* " ++ show r ++ ")"
   show (KPlus r)         = "(re.+ " ++ show r ++ ")"

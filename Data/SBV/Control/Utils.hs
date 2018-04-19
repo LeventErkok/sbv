@@ -67,7 +67,9 @@ import Data.SBV.Core.AlgReals   (mergeAlgReals)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
-import Data.SBV.SMT.Utils   (showTimeoutValue, annotateWithName, alignPlain, debug, mergeSExpr, SMTException(..), qfsToString)
+import Data.SBV.SMT.Utils   (showTimeoutValue, annotateWithName, alignPlain, debug, mergeSExpr, SMTException(..))
+
+import Data.SBV.Utils.Lib (qfsToString)
 
 import Data.SBV.Utils.SExpr
 import Data.SBV.Control.Types
