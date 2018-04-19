@@ -13,7 +13,9 @@
 -- A collection of string/character utilities, useful when working
 -- with symbolic strings. To the extent possible, the functions
 -- in this module follow those of "Data.List" so importing qualified
--- is the recommended workflow.
+-- is the recommended workflow. Also, it is recommended you use the
+-- @OverloadedStrings@ extension to allow literal strings to be
+-- used as symbolic-strings.
 -----------------------------------------------------------------------------
 
 module Data.SBV.String (
@@ -44,6 +46,7 @@ import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 -- $setup
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
 -- >>> import Data.SBV.Utils.Boolean  ((==>), (&&&), bnot, (<=>))
+-- >>> :set -XOverloadedStrings
 
 -- | Length of a string.
 --
@@ -61,7 +64,6 @@ length = lift1 StrLen (Just (fromIntegral . P.length))
 --
 -- >>> prove $ \s -> null s <=> length s .== 0
 -- Q.E.D.
--- >>> :set -XOverloadedStrings
 -- >>> prove $ \s -> null s <=> s .== ""
 -- Q.E.D.
 null :: SString -> SBool
@@ -96,7 +98,6 @@ tail s
 -- | @`charToStr` c@ is the string of length 1 that contains the only character
 -- whose value is the 8-bit value @c@.
 --
--- >>> :set -XOverloadedStrings
 -- >>> prove $ \c -> c .== literal 'A' ==> charToStr c .== "A"
 -- Q.E.D.
 -- >>> prove $ \c -> length (charToStr c) .== 1
@@ -120,7 +121,6 @@ strToStrAt s offset = subStr s offset 1
 -- | @`strToCharAt` s i@ is the 8-bit value stored at location @i@. Unspecified if
 -- index is out of bounds.
 --
--- >>> :set -XOverloadedStrings
 -- >>> prove $ \i -> i .>= 0 &&& i .<= 4 ==> "AAAAA" `strToCharAt` i .== literal 'A'
 -- Q.E.D.
 -- >>> prove $ \s i c -> s `strToCharAt` i .== c ==> indexOf s (charToStr c) .<= i
@@ -165,7 +165,6 @@ concat x y | isConcretelyEmpty x = y
 
 -- | Short cut for `concat`.
 --
--- >>> :set -XOverloadedStrings
 -- >>> sat $ \x y z -> length x .== 5 &&& length y .== 1 &&& x .++ y .++ z .== "Hello world!"
 -- Satisfiable. Model:
 --   s0 =  "Hello" :: String
@@ -240,7 +239,6 @@ drop i s = ite (i .>= ls) (literal "")
 -- is negative or @offset+len@ exceeds the length of @s@. For a friendlier version of this function
 -- that acts like Haskell's `take`\/`drop`, see `strTake`\/`strDrop`.
 --
--- >>> :set -XOverloadedStrings
 -- >>> prove $ \s i -> i .>= 0 &&& i .< length s ==> subStr s 0 i .++ subStr s i (length s - i) .== s
 -- Q.E.D.
 -- >>> sat  $ \i j -> subStr "hello" i j .== "ell"

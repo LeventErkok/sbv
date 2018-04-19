@@ -12,6 +12,10 @@
 --
 -- A collection of character utilities, follows the namings
 -- in "Data.Char" and is intended to be imported qualified.
+-- Also, it is recommended you use the @OverloadedStrings@
+-- extension to allow literal strings to be used as
+-- symbolic-strings when working with symbolic characters
+-- and strings.
 --
 -- Note that 'SChar' type only covers Latin1 (i.e., the first 256
 -- characters), as opposed to Haskell's Unicode character support.
@@ -47,12 +51,12 @@ import Data.SBV.String (isInfixOf, charToStr)
 --
 -- $setup
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
+-- >>> :set -XOverloadedStrings
 
 -- | Is the character in the string?
 --
 -- >>> prove $ \c -> c `elem` charToStr c
 -- Q.E.D.
--- >>> :set -XOverloadedStrings
 -- >>> prove $ \c -> bnot (c `elem` "")
 -- Q.E.D.
 elem :: SChar -> SString -> SBool
