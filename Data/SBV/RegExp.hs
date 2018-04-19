@@ -100,6 +100,9 @@ literal :: String -> RegExp
 literal = Literal
 
 -- | Helper to define a character class.
+--
+-- >>> prove $ \s -> s `match` oneOf "ABCD" <=> bAny (s .==) ["A", "B", "C", "D"]
+-- Q.E.D.
 oneOf :: String -> RegExp
 oneOf = foldr (\char re -> literal [char] + re) None
 
