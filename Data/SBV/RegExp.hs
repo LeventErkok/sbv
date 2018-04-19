@@ -31,7 +31,7 @@ module Data.SBV.RegExp (
         -- ** A class of characters
         , oneOf
         -- ** Spaces
-        , newline, whiteSpace, whiteSpaceNoNewLine
+        , newline, whiteSpaceNoNewLine, whiteSpace
         -- ** Separators
         , tab, punctuation
         -- ** Digits
@@ -54,7 +54,7 @@ import Data.SBV.Char   (isSpace)
 --
 -- $setup
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
--- >>> import Data.SBV.Utils.Boolean  ((<=>), (==>), bAny)
+-- >>> import Data.SBV.Utils.Boolean  ((<=>), (==>), bAny, (&&&))
 -- >>> import Data.SBV.Core.Model
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XScopedTypeVariables
@@ -131,15 +131,19 @@ newline = oneOf "\n\r\f"
 tab :: RegExp
 tab = oneOf "\t"
 
+-- | Recognize white-space, but without a new line.
+--
+-- >>> prove $ \c -> c `match` whiteSpaceNoNewLine ==> c `match` whiteSpace &&& c ./= literal '\n'
+-- Q.E.D.
+whiteSpaceNoNewLine :: RegExp
+whiteSpaceNoNewLine = tab + oneOf "\v\160 "
+
 -- | Recognize white space.
 --
 -- >>> prove $ \c -> c `match` whiteSpace ==> isSpace c
 -- Q.E.D.
 whiteSpace :: RegExp
-whiteSpace = newline + tab + oneOf "\v\160 "
-
-whiteSpaceNoNewLine :: a
-whiteSpaceNoNewLine = error "whiteSpaceNoNewLine"
+whiteSpace = newline + whiteSpaceNoNewLine
 
 punctuation         :: a
 punctuation         = error "punctuation"
