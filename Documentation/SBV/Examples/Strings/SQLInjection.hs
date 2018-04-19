@@ -26,10 +26,10 @@ import Data.SBV.Control
 import qualified Data.SBV.RegExp as R
 
 -- | Simple expression language
-data SQLExpr = Query    SQLExpr
-             | Const    String
-             | Concat   SQLExpr SQLExpr
-             | ReadVar  SQLExpr
+data SQLExpr = Query   SQLExpr
+             | Const   String
+             | Concat  SQLExpr SQLExpr
+             | ReadVar SQLExpr
 
 -- | Literals strings can be lifted to be constant programs
 instance IsString SQLExpr where
@@ -62,36 +62,36 @@ exampleProgram = Query $ foldr1 Concat [ "SELECT msg FROM msgs WHERE topicid='"
                                        ]
 
 -- | Limit names to be at most 7 chars long, with simple letters.
-nameRe :: SRegExp
-nameRe = RE_Loop 1 7 (RE_Range 'a' 'z')
+nameRe :: R.RegExp
+nameRe = R.Loop 1 7 (R.Range 'a' 'z')
 
 -- | Strings: Again, at most of lenght 5, surrounded by quotes.
-strRe :: SRegExp
-strRe = "'" * RE_Loop 1 5 (RE_Range 'a' 'z' + " ") * "'"
+strRe :: R.RegExp
+strRe = "'" * R.Loop 1 5 (R.Range 'a' 'z' + " ") * "'"
 
 -- | A "select" command:
-selectRe :: SRegExp
+selectRe :: R.RegExp
 selectRe = "SELECT "
          * (nameRe + "*")
          * " FROM "
          * nameRe
-         * RE_Opt (  " WHERE "
-                   * nameRe
-                   * "="
-                   * (nameRe + strRe)
-                   )
+         * R.Opt (  " WHERE "
+                  * nameRe
+                  * "="
+                  * (nameRe + strRe)
+                  )
 
 -- | A "drop" instruction, which can be exploited!
-dropRe :: SRegExp
+dropRe :: R.RegExp
 dropRe = "DROP TABLE " * (nameRe + strRe)
 
 -- | We'll greatly simplify here and say a statement is either a select or a drop:
-statementRe :: SRegExp
+statementRe :: R.RegExp
 statementRe = selectRe + dropRe
 
 -- | The exploit: We're looking for a DROP TABLE after at least one legitimate command.
-exploitRe :: SRegExp
-exploitRe = RE_Plus (statementRe * "; ")
+exploitRe :: R.RegExp
+exploitRe = R.KPlus (statementRe * "; ")
           * "DROP TABLE 'users'"
 
 -- | Analyze the program for inputs which result in a SQL injection. There are

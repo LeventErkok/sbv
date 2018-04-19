@@ -1,5 +1,6 @@
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings   #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -13,20 +14,25 @@
 -----------------------------------------------------------------------------
 
 module Data.SBV.RegExp (
-        -- * Matching
-        match
-        -- * Literals
+        -- * Regular expressions
+        RegExp(..)
+        -- * Constructing regular expressions
+        -- ** Literals
         , literal
-        -- * White space
+        -- ** A class of characters
+        , oneOf
+        -- ** White space
         , newline, whiteSpace, whiteSpaceNoNewLine
-        -- * Separators
+        -- ** Separators
         , tab, punctuation
-        -- * Digits
+        -- ** Digits
         , digit, octDigit, hexDigit
-        -- * Numbers
+        -- ** Numbers
         , decimal, octal, hexadecimal
-        -- * Identifiers
+        -- ** Identifiers
         , identifier
+        -- * Matching
+        , match
         ) where
 
 import Data.SBV.Core.Data hiding (literal)
@@ -53,34 +59,41 @@ import Data.SBV.String (length)
 --
 -- For instance, you can generate valid-looking phone numbers like this:
 --
--- > let dig09 = RE_Range '0' '9'
--- > let dig19 = RE_Range '1' '9'
--- > let pre   = dig19 `RE_Conc` RE_Loop 2 2 dig09
--- > let post  = dig19 `RE_Conc` RE_Loop 3 3 dig09
--- > let phone = pre `RE_Conc` RE_Literal "-" `RE_Conc` post
+-- > let dig09 = Range '0' '9'
+-- > let dig19 = Range '1' '9'
+-- > let pre   = dig19 * Loop 2 2 dig09
+-- > let post  = dig19 * Loop 3 3 dig09
+-- > let phone = pre * "-" * post
 -- > sat (`match` phone)
 -- > Satisfiable. Model:
 -- >   s0 = "222-2248" :: String
 --
 -- >>> :set -XOverloadedStrings
--- >>> prove $ \s -> match s (RE_Literal "hello") <=> s .== "hello"
+-- >>> prove $ \s -> match s (Literal "hello") <=> s .== "hello"
 -- Q.E.D.
--- >>> prove $ \s -> match s (RE_Loop 2 5 (RE_Literal "xyz")) ==> length s .>= 6
+-- >>> prove $ \s -> match s (Loop 2 5 "xyz") ==> length s .>= 6
 -- Q.E.D.
--- >>> prove $ \s -> match s (RE_Loop 2 5 (RE_Literal "xyz")) ==> length s .<= 15
+-- >>> prove $ \s -> match s (Loop 2 5 "xyz") ==> length s .<= 15
 -- Q.E.D.
--- >>> prove $ \s -> match s (RE_Loop 2 5 (RE_Literal "xyz")) ==> length s .>= 7
+-- >>> prove $ \s -> match s (Loop 2 5 "xyz") ==> length s .>= 7
 -- Falsifiable. Counter-example:
 --   s0 = "xyzxyz" :: String
-match :: SString -> SRegExp -> SBool
+match :: SString -> RegExp -> SBool
 match s r = lift1 (StrInRe r) opt s
   where -- TODO: Replace this with a function that concretely evaluates the string against the
         -- reg-exp, possible future work. But probably there isn't enough ROI.
         opt :: Maybe (String -> Bool)
         opt = Nothing
 
-literal             :: a
-literal             = error "literal"
+-- | A literal regular-expression, matching the given string. Note that
+-- with 'OverloadedStrings' extension, you can simply use a Haskell
+-- string to mean the same thing, so this function is rarely needed.
+literal :: String -> RegExp
+literal = Literal
+
+-- | Helper to define a character class.
+oneOf :: String -> RegExp
+oneOf = foldr (\char re -> literal [char] + re) None
 
 newline             :: a
 newline             = error "newline"

@@ -48,7 +48,7 @@
 --
 --   * 'SDouble': IEEE-754 double-precision floating point values
 --
---   * 'SString', 'SRegExp': Strings and regular expressions
+--   * 'SString', 'RegExp': Strings and regular expressions
 --
 --   * 'SArray', 'SFunArray': Flat arrays of symbolic values.
 --
@@ -144,7 +144,7 @@ module Data.SBV (
   , SReal, AlgReal, sRealToSInteger
   -- ** Strings and Regular Expressions
   -- $strings
-  , SString, SChar, SRegExp(..), (.++), (.!!)
+  , SString, SChar, (.++), (.!!)
   -- * Arrays of symbolic values
   , SymArray(..), SArray, SFunArray, mkSFunArray
 

@@ -27,7 +27,7 @@
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SW(..), swKind, trueSW, falseSW
-  , Op(..), PBOp(..), FPOp(..), StrOp(..), SRegExp(..)
+  , Op(..), PBOp(..), FPOp(..), StrOp(..), RegExp(..)
   , Quantifier(..), needsExistentials
   , RoundingMode(..)
   , SBVType(..), newUninterpreted, addAxiom
@@ -221,18 +221,18 @@ data PBOp = PB_AtMost  Int        -- ^ At most k
           deriving (Eq, Ord, Show)
 
 -- | String operations. Note that we do not define `StrAt` as it translates to `StrSubStr` trivially.
-data StrOp = StrConcat        -- ^ Concatenation of one or more strings
-           | StrLen           -- ^ String length
-           | StrUnit          -- ^ Unit string
-           | StrSubstr        -- ^ Retrieves substring of @s@ at @offset@
-           | StrIndexOf       -- ^ Retrieves first position of @sub@ in @s@, @-1@ if there are no occurrences
-           | StrContains      -- ^ Does @s@ contain the substring @sub@?
-           | StrPrefixOf      -- ^ Is @pre@ a prefix of @s@?
-           | StrSuffixOf      -- ^ Is @suf@ a suffix of @s@?
-           | StrReplace       -- ^ Replace the first occurrence of @src@ by @dst@ in @s@
-           | StrStrToNat      -- ^ Retrieve integer encoded by string @s@ (ground rewriting only)
-           | StrNatToStr      -- ^ Retrieve string encoded by integer @i@ (ground rewriting only)
-           | StrInRe SRegExp  -- ^ Check if string is in the regular expression
+data StrOp = StrConcat       -- ^ Concatenation of one or more strings
+           | StrLen          -- ^ String length
+           | StrUnit         -- ^ Unit string
+           | StrSubstr       -- ^ Retrieves substring of @s@ at @offset@
+           | StrIndexOf      -- ^ Retrieves first position of @sub@ in @s@, @-1@ if there are no occurrences
+           | StrContains     -- ^ Does @s@ contain the substring @sub@?
+           | StrPrefixOf     -- ^ Is @pre@ a prefix of @s@?
+           | StrSuffixOf     -- ^ Is @suf@ a suffix of @s@?
+           | StrReplace      -- ^ Replace the first occurrence of @src@ by @dst@ in @s@
+           | StrStrToNat     -- ^ Retrieve integer encoded by string @s@ (ground rewriting only)
+           | StrNatToStr     -- ^ Retrieve string encoded by integer @i@ (ground rewriting only)
+           | StrInRe RegExp  -- ^ Check if string is in the regular expression
            deriving (Eq, Ord)
 
 -- | Regular expressions. Note that regular expressions themselves are
@@ -241,51 +241,50 @@ data StrOp = StrConcat        -- ^ Concatenation of one or more strings
 -- coming up with some string-representation; there are way too many alternatives
 -- already so inventing one isn't a priority. Please get in touch if you
 -- would like a parser for this type as it might be easier to use.
-data SRegExp = RE_Literal String        -- ^ Precisely match the given string
-             | RE_All                   -- ^ Accept every string
-             | RE_None                  -- ^ Accept no strings
-             | RE_Range Char Char       -- ^ Accept range of characters
-             | RE_Conc  SRegExp SRegExp -- ^ Concatenation
-             | RE_Star  SRegExp         -- ^ Kleene Star: Zero or more
-             | RE_Plus  SRegExp         -- ^ Kleene Plus: One or more
-             | RE_Opt   SRegExp         -- ^ Zero or one
-             | RE_Loop  Int Int SRegExp -- ^ From @n@ repetitions to @m@ repetitions
-             | RE_Union SRegExp SRegExp -- ^ Union of regular expressions
-             | RE_Inter SRegExp SRegExp -- ^ Intersection of regular expressions
+data RegExp = Literal String       -- ^ Precisely match the given string
+            | All                  -- ^ Accept every string
+            | None                 -- ^ Accept no strings
+            | Range Char Char      -- ^ Accept range of characters
+            | Conc  RegExp RegExp  -- ^ Concatenation
+            | KStar RegExp         -- ^ Kleene Star: Zero or more
+            | KPlus RegExp         -- ^ Kleene Plus: One or more
+            | Opt   RegExp         -- ^ Zero or one
+            | Loop  Int Int RegExp -- ^ From @n@ repetitions to @m@ repetitions
+            | Union RegExp RegExp  -- ^ Union of regular expressions
+            | Inter RegExp RegExp  -- ^ Intersection of regular expressions
             deriving (Eq, Ord)
 
--- | With overloaded strings, we can have direct
--- literal regular expressions.
-instance IsString SRegExp where
-  fromString = RE_Literal
+-- | With overloaded strings, we can have direct literal regular expressions.
+instance IsString RegExp where
+  fromString = Literal
 
 -- | Regular expressions as a 'Num' instance. Note that
 -- only `+` (union) and `*` (concatenation) make sense.
-instance Num SRegExp where
-  (+) = RE_Union
-  (*) = RE_Conc
+instance Num RegExp where
+  (+) = Union
+  (*) = Conc
 
-  abs         = error "Num.SRegExp: no abs method"
-  signum      = error "Num.SRegExp: no signum method"
-  fromInteger = error "Num.SRegExp: no fromInteger method"
-  negate      = error "Num.SRegExp: no negate method"
+  abs         = error "Num.RegExp: no abs method"
+  signum      = error "Num.RegExp: no signum method"
+  fromInteger = error "Num.RegExp: no fromInteger method"
+  negate      = error "Num.RegExp: no negate method"
 
--- | Show instance for `SRegExp`. The mapping is done so the outcome matches the
+-- | Show instance for `RegExp`. The mapping is done so the outcome matches the
 -- SMTLib string reg-exp operations
-instance Show SRegExp where
-  show (RE_Literal s)       = "(str.to.re \"" ++ s ++ "\")"
-  show RE_All               = "re.allchar"
-  show RE_None              = "re.nostr"
-  show (RE_Range ch1 ch2)   = "(re.range " ++ show [ch1] ++ " " ++ show [ch2] ++ ")"
-  show (RE_Conc  r1 r2)     = "(re.++ " ++ show r1 ++ " " ++ show r2 ++ ")"
-  show (RE_Star  r)         = "(re.* " ++ show r ++ ")"
-  show (RE_Plus  r)         = "(re.+ " ++ show r ++ ")"
-  show (RE_Opt   r)         = "(re.opt " ++ show r ++ ")"
-  show (RE_Loop  lo hi r)
-        | lo >= 0, hi >= lo = "((_ re.loop " ++ show lo ++ " " ++ show hi ++ ") " ++ show r ++ ")"
-        | True              = error $ "Invalid regular-expression RE_Loop with arguments: " ++ show (lo, hi)
-  show (RE_Union r1 r2)     = "(re.union " ++ show r1 ++ " " ++ show r2 ++ ")"
-  show (RE_Inter r1 r2)     = "(re.inter " ++ show r1 ++ " " ++ show r2 ++ ")"
+instance Show RegExp where
+  show (Literal s)       = "(str.to.re \"" ++ s ++ "\")"
+  show All               = "re.allchar"
+  show None              = "re.nostr"
+  show (Range ch1 ch2)   = "(re.range " ++ show [ch1] ++ " " ++ show [ch2] ++ ")"
+  show (Conc  r1 r2)     = "(re.++ " ++ show r1 ++ " " ++ show r2 ++ ")"
+  show (KStar r)         = "(re.* " ++ show r ++ ")"
+  show (KPlus r)         = "(re.+ " ++ show r ++ ")"
+  show (Opt   r)         = "(re.opt " ++ show r ++ ")"
+  show (Loop  lo hi r)
+     | lo >= 0, hi >= lo = "((_ re.loop " ++ show lo ++ " " ++ show hi ++ ") " ++ show r ++ ")"
+     | True              = error $ "Invalid regular-expression Loop with arguments: " ++ show (lo, hi)
+  show (Inter r1 r2)     = "(re.inter " ++ show r1 ++ " " ++ show r2 ++ ")"
+  show (Union r1 r2)     = "(re.union " ++ show r1 ++ " " ++ show r2 ++ ")"
 
 -- | Show instance for `StrOp`. Note that the mapping here is
 -- important to match the SMTLib equivalents, see here: <https://rise4fun.com/z3/tutorialcontent/sequences>
@@ -1436,6 +1435,5 @@ data SMTSolver = SMTSolver {
        , capabilities   :: SolverCapabilities    -- ^ Various capabilities of the solver
        }
 
-{-# ANN type FPOp    ("HLint: ignore Use camelCase" :: String) #-}
-{-# ANN type PBOp    ("HLint: ignore Use camelCase" :: String) #-}
-{-# ANN type SRegExp ("HLint: ignore Use camelCase" :: String) #-}
+{-# ANN type FPOp ("HLint: ignore Use camelCase" :: String) #-}
+{-# ANN type PBOp ("HLint: ignore Use camelCase" :: String) #-}

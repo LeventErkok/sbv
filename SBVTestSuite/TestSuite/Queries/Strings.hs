@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  TestSuite.Queries.Strings
@@ -34,7 +35,7 @@ testQuery t rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=
 qs1 :: Symbolic [String]
 qs1 = do a <- sString "a"
 
-         constrain $ a `R.match` RE_Loop 5 5 (RE_Literal "xyz")
+         constrain $ a `R.match` R.Loop 5 5 "xyz"
 
          query $ do _ <- checkSat
                     s <- getValue a
