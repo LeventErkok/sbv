@@ -55,6 +55,7 @@ import Data.SBV.String (isInfixOf, charToStr)
 
 -- | Is the character in the string?
 --
+-- >>> :set -XOverloadedStrings
 -- >>> prove $ \c -> c `elem` charToStr c
 -- Q.E.D.
 -- >>> prove $ \c -> bnot (c `elem` "")
