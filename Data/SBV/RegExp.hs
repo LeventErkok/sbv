@@ -160,13 +160,21 @@ punctuation = oneOf $ filter C.isPunctuation $ map C.chr [0..255]
 -- >>> prove $ \c -> c `match` digit <=> let v = digitToInt c in 0 .<= v &&& v .< 10
 -- Q.E.D.
 digit :: RegExp
-digit = oneOf "0123456789"
+digit = Range '0' '9'
 
-octDigit            :: a
-octDigit            = error "octDigit"
+-- | Recognize an octal digit. One of @0@..@7@.
+--
+-- >>> prove $ \c -> c `match` octDigit <=> let v = digitToInt c in 0 .<= v &&& v .< 8
+-- Q.E.D.
+octDigit :: RegExp
+octDigit = Range '0' '7'
 
-hexDigit            :: a
-hexDigit            = error "hexDigit"
+-- | Recognize a hexadecimal digit. One of @0@..@9@, @a@..@f@, @A@..@F@.
+--
+-- >>> prove $ \c -> c `match` hexDigit <=> let v = digitToInt c in 0 .<= v &&& v .< 16
+-- Q.E.D.
+hexDigit :: RegExp
+hexDigit = digit + Range 'a' 'f' + Range 'A' 'F'
 
 decimal             :: a
 decimal             = error "decimal"
