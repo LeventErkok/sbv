@@ -116,8 +116,12 @@ exactly = Literal
 oneOf :: String -> RegExp
 oneOf = foldr (\char re -> exactly [char] + re) None
 
-newline             :: a
-newline             = error "newline"
+-- | Recognize a newline
+--
+-- >>> prove $ \c -> c `match` newline ==> isSpace c
+-- Q.E.D.
+newline :: RegExp
+newline = oneOf "\n\r\f"
 
 whiteSpace          :: a
 whiteSpace          = error "whiteSpace"
