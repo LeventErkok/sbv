@@ -93,6 +93,9 @@ match s r = lift1 (StrInRe r) opt s
 -- | A literal regular-expression, matching the given string. Note that
 -- with 'OverloadedStrings' extension, you can simply use a Haskell
 -- string to mean the same thing, so this function is rarely needed.
+--
+-- >>> prove $ \s -> s `match` "LITERAL" <=> s .== "LITERAL"
+-- Q.E.D.
 literal :: String -> RegExp
 literal = Literal
 
