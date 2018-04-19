@@ -30,7 +30,7 @@ module Data.SBV.RegExp (
         , exactly
         -- ** A class of characters
         , oneOf
-        -- ** White space
+        -- ** Spaces
         , newline, whiteSpace, whiteSpaceNoNewLine
         -- ** Separators
         , tab, punctuation
@@ -117,23 +117,29 @@ exactly = Literal
 oneOf :: String -> RegExp
 oneOf = foldr (\char re -> exactly [char] + re) None
 
--- | Recognize a newline
+-- | Recognize a newline. Also includes carriage-return and form-feed.
 --
 -- >>> prove $ \c -> c `match` newline ==> isSpace c
 -- Q.E.D.
 newline :: RegExp
 newline = oneOf "\n\r\f"
 
+-- | Recognize a tab.
+--
+-- >>> prove $ \c -> c `match` tab ==> c .== literal '\t'
+-- Q.E.D.
+tab :: RegExp
+tab = oneOf "\t"
 
-
-whiteSpace          :: a
-whiteSpace          = error "whiteSpace"
+-- | Recognize white space.
+--
+-- >>> prove $ \c -> c `match` whiteSpace ==> isSpace c
+-- Q.E.D.
+whiteSpace :: RegExp
+whiteSpace = newline + tab + oneOf "\v\160 "
 
 whiteSpaceNoNewLine :: a
 whiteSpaceNoNewLine = error "whiteSpaceNoNewLine"
-
-tab                 :: a
-tab                 = error "tab"
 
 punctuation         :: a
 punctuation         = error "punctuation"
