@@ -23,8 +23,10 @@ main = do (testEnv, testPercentage) <- getTestEnvironment
                               else runDocTest (env == CIWindows)
             TestEnvUnknown  -> do putStrLn "Unknown test environment, skipping doctests"
                                   exitSuccess
- where runDocTest windowsSkip = do allFiles <- glob "Data/SBV/**/*.hs"
-                                   let testFiles
+ where runDocTest windowsSkip = do srcFiles <- glob "Data/SBV/**/*.hs"
+                                   docFiles <- glob "Documentation/SBV/**/*.hs"
+                                   let allFiles = srcFiles ++ docFiles
+                                       testFiles
                                          | windowsSkip = filter (not . bad) allFiles
                                          | True        = allFiles
                                    doctest testFiles
