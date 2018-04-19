@@ -12,8 +12,8 @@
 --
 -- A collection of string/character utilities, useful when working
 -- with symbolic strings. To the extent possible, the functions
--- in this module follow those of "Data.List" and "Data.Char",  so
--- importing qualified is the recommended workflow.
+-- in this module follow those of "Data.List" so importing qualified
+-- is the recommended workflow.
 -----------------------------------------------------------------------------
 
 module Data.SBV.String (

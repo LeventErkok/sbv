@@ -10,7 +10,9 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- A collection of regular-expression related utilities.
+-- A collection of regular-expression related utilities. The recommended
+-- workflow is to import this module qualified as the names of the functions
+-- are specificly chosen to be common identifiers.
 -----------------------------------------------------------------------------
 
 module Data.SBV.RegExp (
