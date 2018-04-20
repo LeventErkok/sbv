@@ -58,7 +58,7 @@ import Data.SBV.Char
 -- $setup
 -- >>> import Prelude hiding (length)
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
--- >>> import Data.SBV.Utils.Boolean  ((<=>), (==>), bAny, (&&&))
+-- >>> import Data.SBV.Utils.Boolean  ((<=>), (==>), bAny, (&&&), bnot)
 -- >>> import Data.SBV.Core.Model
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XScopedTypeVariables
@@ -195,6 +195,9 @@ hexDigit :: RegExp
 hexDigit = digit + Range 'a' 'f' + Range 'A' 'F'
 
 -- | Recognize a decimal number.
+--
+-- >>> prove $ \s -> (s::SString) `match` decimal ==> bnot (s `match` alpha)
+-- Q.E.D.
 decimal :: RegExp
 decimal = KPlus digit
 
