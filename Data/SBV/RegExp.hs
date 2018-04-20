@@ -173,6 +173,8 @@ octDigit = Range '0' '7'
 --
 -- >>> prove $ \c -> c `match` hexDigit <=> let v = digitToInt c in 0 .<= v &&& v .< 16
 -- Q.E.D.
+-- >>> prove $ \(c :: SChar) -> c `match` digit ==> c `match` hexDigit
+-- Q.E.D.
 hexDigit :: RegExp
 hexDigit = digit + Range 'a' 'f' + Range 'A' 'F'
 
