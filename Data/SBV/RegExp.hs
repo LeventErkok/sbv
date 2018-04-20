@@ -34,10 +34,12 @@ module Data.SBV.RegExp (
         , newline, whiteSpaceNoNewLine, whiteSpace
         -- ** Separators
         , tab, punctuation
+        -- ** Letters
+        , alpha, lowerCase, upperCase
         -- ** Digits
         , digit, octDigit, hexDigit
         -- ** Numbers
-        , decimal, octal, hexadecimal
+        , decimal, octal, hexadecimal, floating
         -- ** Identifiers
         , identifier
         ) where
@@ -155,6 +157,18 @@ whiteSpace = newline + whiteSpaceNoNewLine
 punctuation :: RegExp
 punctuation = oneOf $ filter C.isPunctuation $ map C.chr [0..255]
 
+-- | Recognize an alphabet letter, i.e., @A@..@Z@, @a@..@z@.
+alpha :: RegExp
+alpha = lowerCase + upperCase
+
+-- | Recognize a lower case letter
+lowerCase :: RegExp
+lowerCase = Range 'a' 'z'
+
+-- | Recognize an upper case letter
+upperCase :: RegExp
+upperCase = Range 'A' 'Z'
+
 -- | Recognize a digit. One of @0@..@9@.
 --
 -- >>> prove $ \c -> c `match` digit <=> let v = digitToInt c in 0 .<= v &&& v .< 10
@@ -165,6 +179,8 @@ digit = Range '0' '9'
 -- | Recognize an octal digit. One of @0@..@7@.
 --
 -- >>> prove $ \c -> c `match` octDigit <=> let v = digitToInt c in 0 .<= v &&& v .< 8
+-- Q.E.D.
+-- >>> prove $ \(c :: SChar) -> c `match` octDigit ==> c `match` digit
 -- Q.E.D.
 octDigit :: RegExp
 octDigit = Range '0' '7'
@@ -178,17 +194,31 @@ octDigit = Range '0' '7'
 hexDigit :: RegExp
 hexDigit = digit + Range 'a' 'f' + Range 'A' 'F'
 
-decimal             :: a
-decimal             = error "decimal"
+-- | Recognize a decimal number.
+decimal :: RegExp
+decimal = KPlus digit
 
-octal               :: a
-octal               = error "octal"
+-- | Recognize an octal number. Must have a prefix of the form @0o@\/@0O@.
+octal :: RegExp
+octal = ("0o" + "0O") * KPlus octDigit
 
-hexadecimal         :: a
-hexadecimal         = error "hexadecimal"
+-- | Recognize a hexadecimal number. Must have a prefix of the form @0x@\/@0X@.
+hexadecimal :: RegExp
+hexadecimal = ("0x" + "0X") * KPlus hexDigit
 
-identifier          :: a
-identifier          = error "identifier"
+-- | Recognize a floating point number. The exponent part is optional if a fraction
+-- is present. The exponent may or may not have a sign.
+floating :: RegExp
+floating = withFraction + withoutFraction
+  where withFraction    = decimal * "." * decimal * Opt expt
+        withoutFraction = decimal * expt
+        expt            = ("e" + "E") * Opt (oneOf "+-") * decimal
+
+-- | For the purposes of this regular expression, an identifier consists of a letter
+-- followed by zero or more letters, digits, underscores, and single quotes. The first
+-- letter must be lowercase.
+identifier :: RegExp
+identifier = lowerCase * KStar (alpha + digit + "_" + "'")
 
 -- | Lift a unary operator over strings.
 lift1 :: forall a b. (SymWord a, SymWord b) => StrOp -> Maybe (a -> b) -> SBV a -> SBV b
