@@ -35,7 +35,7 @@ module Data.SBV.RegExp (
         -- ** Separators
         , tab, punctuation
         -- ** Letters
-        , alpha, lowerCase, upperCase
+        , asciiLetter, asciiLower, asciiUpper
         -- ** Digits
         , digit, octDigit, hexDigit
         -- ** Numbers
@@ -158,16 +158,16 @@ punctuation :: RegExp
 punctuation = oneOf $ filter C.isPunctuation $ map C.chr [0..255]
 
 -- | Recognize an alphabet letter, i.e., @A@..@Z@, @a@..@z@.
-alpha :: RegExp
-alpha = lowerCase + upperCase
+asciiLetter :: RegExp
+asciiLetter = asciiLower + asciiUpper
 
--- | Recognize a lower case letter
-lowerCase :: RegExp
-lowerCase = Range 'a' 'z'
+-- | Recognize an ASCII lower case letter
+asciiLower :: RegExp
+asciiLower = Range 'a' 'z'
 
 -- | Recognize an upper case letter
-upperCase :: RegExp
-upperCase = Range 'A' 'Z'
+asciiUpper :: RegExp
+asciiUpper = Range 'A' 'Z'
 
 -- | Recognize a digit. One of @0@..@9@.
 --
@@ -196,7 +196,7 @@ hexDigit = digit + Range 'a' 'f' + Range 'A' 'F'
 
 -- | Recognize a decimal number.
 --
--- >>> prove $ \s -> (s::SString) `match` decimal ==> bnot (s `match` alpha)
+-- >>> prove $ \s -> (s::SString) `match` decimal ==> bnot (s `match` KStar asciiLetter)
 -- Q.E.D.
 decimal :: RegExp
 decimal = KPlus digit
@@ -221,7 +221,7 @@ floating = withFraction + withoutFraction
 -- followed by zero or more letters, digits, underscores, and single quotes. The first
 -- letter must be lowercase.
 identifier :: RegExp
-identifier = lowerCase * KStar (alpha + digit + "_" + "'")
+identifier = asciiLower * KStar (asciiLetter + digit + "_" + "'")
 
 -- | Lift a unary operator over strings.
 lift1 :: forall a b. (SymWord a, SymWord b) => StrOp -> Maybe (a -> b) -> SBV a -> SBV b
