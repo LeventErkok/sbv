@@ -33,7 +33,7 @@ module Data.SBV.Char (
         -- * Character classification
         , isControl, isSpace, isLower, isUpper, isAlpha, isAlphaNum, isPrint, isDigit, isOctDigit, isHexDigit, isLetter, isMark, isNumber, isPunctuation, isSymbol, isSeparator
         -- * Subranges
-        , isAscii, isLatin1, isAsciiUpper, isAsciiLower
+        , isAscii, isLatin1, isAsciiLetter, isAsciiUpper, isAsciiLower
         ) where
 
 import Prelude hiding (elem, notElem)
@@ -258,6 +258,13 @@ isAscii c = ord c .< 128
 -- Q.E.D.
 isLatin1 :: SChar -> SBool
 isLatin1 = const true
+
+-- | Is this an ASCII letter?
+--
+-- >>> prove $ \c -> isAsciiLetter c <=> isAsciiUpper c ||| isAsciiLower c
+-- Q.E.D.
+isAsciiLetter :: SChar -> SBool
+isAsciiLetter c = isAsciiUpper c ||| isAsciiLower c
 
 -- | Is this an ASCII Upper-case letter? i.e., @A@ thru @Z@
 --
