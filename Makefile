@@ -42,7 +42,7 @@ docs:
 test:
 	@$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -j $(NO_OF_CORES)
 	# @$(TIME) ./dist/build/SBVDocTest/SBVDocTest
-	doctest Data
+	doctest --no-magic Data/SBV/**/*.hs Documentation/SBV/**/*.hs
 	@$(TIME) ./dist/build/SBVHLint/SBVHLint
 
 release: veryclean install docs test
