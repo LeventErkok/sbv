@@ -24,6 +24,7 @@ module Data.SBV.RegExp (
         -- * Regular expressions
         RegExp(..)
         -- * Matching
+        -- $matching
         , RegExpMatchable(..)
         -- * Constructing regular expressions
         -- ** Literals
@@ -43,6 +44,8 @@ module Data.SBV.RegExp (
         -- ** Identifiers
         , identifier
         ) where
+
+import Prelude hiding (length)
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model () -- instances only
@@ -64,10 +67,9 @@ import Data.SBV.Char
 -- >>> :set -XScopedTypeVariables
 
 -- | Matchable class. Things we can match against a 'RegExp'.
--- TODO: Currently SBV does *not* optimize this call if @s@ is concrete, but
--- rather directly defers down to the solver. We might want to perform the
--- operation on the Haskell side for performance reasons, should this become
--- important.
+-- (TODO: Currently SBV does *not* optimize this call if the input is a concrete string or
+-- a character, but rather directly calls down to the solver. We might want to perform the
+-- operation on the Haskell side for performance reasons, should this become important.)
 --
 -- For instance, you can generate valid-looking phone numbers like this:
 --
@@ -90,15 +92,6 @@ instance RegExpMatchable SChar where
 
 -- | Matching symbolic strings.
 instance RegExpMatchable SString where
-   -- >>> prove $ \s -> match s "hello" <=> s .== "hello"
-   -- Q.E.D.
-   -- >>> prove $ \s -> match s (Loop 2 5 "xyz") ==> length s .>= 6
-   -- Q.E.D.
-   -- >>> prove $ \s -> match s (Loop 2 5 "xyz") ==> length s .<= 15
-   -- Q.E.D.
-   -- >>> prove $ \s -> match s (Loop 2 5 "xyz") ==> length s .>= 7
-   -- Falsifiable. Counter-example:
-   --   s0 = "xyzxyz" :: String
    match s r = lift1 (StrInRe r) opt s
      where -- TODO: Replace this with a function that concretely evaluates the string against the
            -- reg-exp, possible future work. But probably there isn't enough ROI.
@@ -243,3 +236,31 @@ concEval1 mbOp a = literal <$> (mbOp <*> unliteral a)
 -- | Quiet GHC about testing only imports
 __unused :: a
 __unused = undefined isSpace
+
+{- $matching
+A symbolic string or a character ('SString' or 'SChar') can be matched against a regular-expression. Note
+that the regular-expression itself is not a symbolic object: It's a fully concrete representation, as
+captured by the 'RegExp' class. The 'RegExp' class is an instance of 'IsString', which makes writing
+literal matches easier. The 'RegExp' type also has a (somewhat degenerate) 'Num' instance: Concatenation
+corresponds to multiplication, union corresponds to addition, and @0@ corresponds to the empty language.
+
+Note that since `match` is a method of 'RegExpMatchable' class, both 'SChar' and 'SString' can be used as
+an argument for matching. In practice, this means you might have to disambiguate with a type-ascription
+if it is not deducible from context.
+
+>>> prove $ \s -> (s :: SString) `match` "hello" <=> s .== "hello"
+Q.E.D.
+>>> prove $ \s -> s `match` Loop 2 5 "xyz" ==> length s .>= 6
+Q.E.D.
+>>> prove $ \s -> s `match` Loop 2 5 "xyz" ==> length s .<= 15
+Q.E.D.
+>>> prove $ \s -> match s (Loop 2 5 "xyz") ==> length s .>= 7
+Falsifiable. Counter-example:
+  s0 = "xyzxyz" :: String
+>>> prove $ \s -> (s :: SString) `match` "hello" ==> s `match` ("hello" + "world")
+Q.E.D.
+>>> prove $ \s -> bnot $ (s::SString) `match` ("so close" * 0)
+Q.E.D.
+>>> prove $ \c -> (c :: SChar) `match` oneOf "abcd" ==> ord c .>= ord (literal 'a') &&& ord c .<= ord (literal 'd')
+Q.E.D.
+-}
