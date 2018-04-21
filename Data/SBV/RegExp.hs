@@ -123,6 +123,8 @@ oneOf xs = Union [exactly [x] | x <- xs]
 
 -- | Recognize a newline. Also includes carriage-return and form-feed.
 --
+-- >>> newline
+-- (re.union (str.to.re "\n") (str.to.re "\r") (str.to.re "\f"))
 -- >>> prove $ \c -> c `match` newline ==> isSpace c
 -- Q.E.D.
 newline :: RegExp
