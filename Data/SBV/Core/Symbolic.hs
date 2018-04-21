@@ -251,7 +251,7 @@ data RegExp = Literal String       -- ^ Precisely match the given string
             | KPlus RegExp         -- ^ Kleene Plus: One or more
             | Opt   RegExp         -- ^ Zero or one
             | Loop  Int Int RegExp -- ^ From @n@ repetitions to @m@ repetitions
-            | Union RegExp RegExp  -- ^ Union of regular expressions
+            | Union [RegExp]       -- ^ Union of regular expressions
             | Inter RegExp RegExp  -- ^ Intersection of regular expressions
             deriving (Eq, Ord)
 
@@ -262,8 +262,8 @@ instance IsString RegExp where
 -- | Regular expressions as a 'Num' instance. Note that
 -- only `+` (union) and `*` (concatenation) make sense.
 instance Num RegExp where
-  (+) = Union
-  (*) = Conc
+  x + y = Union [x, y]
+  (*)   = Conc
 
   abs         = error "Num.RegExp: no abs method"
   signum      = error "Num.RegExp: no signum method"
@@ -289,7 +289,9 @@ instance Show RegExp where
      | lo >= 0, hi >= lo = "((_ re.loop " ++ show lo ++ " " ++ show hi ++ ") " ++ show r ++ ")"
      | True              = error $ "Invalid regular-expression Loop with arguments: " ++ show (lo, hi)
   show (Inter r1 r2)     = "(re.inter " ++ show r1 ++ " " ++ show r2 ++ ")"
-  show (Union r1 r2)     = "(re.union " ++ show r1 ++ " " ++ show r2 ++ ")"
+  show (Union [])        = "re.nostr"
+  show (Union [x])       = show x
+  show (Union xs)        = "(re.union " ++ unwords (map show xs) ++ ")"
 
 -- | Show instance for `StrOp`. Note that the mapping here is
 -- important to match the SMTLib equivalents, see here: <https://rise4fun.com/z3/tutorialcontent/sequences>
