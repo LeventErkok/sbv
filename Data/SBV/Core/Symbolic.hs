@@ -267,7 +267,11 @@ instance Num RegExp where
 
   abs         = error "Num.RegExp: no abs method"
   signum      = error "Num.RegExp: no signum method"
-  fromInteger = error "Num.RegExp: no fromInteger method"
+
+  fromInteger x
+    | x == 0    = None
+    | True      = error "Num.RegExp: Only 0 makes sense as a reg-exp!"
+
   negate      = error "Num.RegExp: no negate method"
 
 -- | Show instance for `RegExp`. The mapping is done so the outcome matches the
