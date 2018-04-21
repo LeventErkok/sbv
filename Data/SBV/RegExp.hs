@@ -125,6 +125,8 @@ newline = oneOf "\n\r\f"
 
 -- | Recognize a tab.
 --
+-- >>> tab
+-- (str.to.re "\x09")
 -- >>> prove $ \c -> c `match` tab ==> c .== literal '\t'
 -- Q.E.D.
 tab :: RegExp
@@ -132,6 +134,8 @@ tab = oneOf "\t"
 
 -- | Recognize white-space, but without a new line.
 --
+-- >>> whiteSpaceNoNewLine
+-- (re.union (str.to.re "\x09") (re.union (str.to.re "\v") (str.to.re "\xa0") (str.to.re " ")))
 -- >>> prove $ \c -> c `match` whiteSpaceNoNewLine ==> c `match` whiteSpace &&& c ./= literal '\n'
 -- Q.E.D.
 whiteSpaceNoNewLine :: RegExp
@@ -153,19 +157,30 @@ punctuation :: RegExp
 punctuation = oneOf $ filter C.isPunctuation $ map C.chr [0..255]
 
 -- | Recognize an alphabet letter, i.e., @A@..@Z@, @a@..@z@.
+--
+-- >>> asciiLetter
+-- (re.union (re.range "a" "z") (re.range "A" "Z"))
 asciiLetter :: RegExp
 asciiLetter = asciiLower + asciiUpper
 
 -- | Recognize an ASCII lower case letter
+--
+-- >>> asciiLower
+-- (re.range "a" "z")
 asciiLower :: RegExp
 asciiLower = Range 'a' 'z'
 
 -- | Recognize an upper case letter
+--
+-- >>> asciiUpper
+-- (re.range "A" "Z")
 asciiUpper :: RegExp
 asciiUpper = Range 'A' 'Z'
 
 -- | Recognize a digit. One of @0@..@9@.
 --
+-- >>> digit
+-- (re.range "0" "9")
 -- >>> prove $ \c -> c `match` digit <=> let v = digitToInt c in 0 .<= v &&& v .< 10
 -- Q.E.D.
 digit :: RegExp
@@ -173,6 +188,8 @@ digit = Range '0' '9'
 
 -- | Recognize an octal digit. One of @0@..@7@.
 --
+-- >>> octDigit
+-- (re.range "0" "7")
 -- >>> prove $ \c -> c `match` octDigit <=> let v = digitToInt c in 0 .<= v &&& v .< 8
 -- Q.E.D.
 -- >>> prove $ \(c :: SChar) -> c `match` octDigit ==> c `match` digit
@@ -182,6 +199,8 @@ octDigit = Range '0' '7'
 
 -- | Recognize a hexadecimal digit. One of @0@..@9@, @a@..@f@, @A@..@F@.
 --
+-- >>> hexDigit
+-- (re.union (re.range "0" "9") (re.range "a" "f") (re.range "A" "F"))
 -- >>> prove $ \c -> c `match` hexDigit <=> let v = digitToInt c in 0 .<= v &&& v .< 16
 -- Q.E.D.
 -- >>> prove $ \(c :: SChar) -> c `match` digit ==> c `match` hexDigit
@@ -191,16 +210,24 @@ hexDigit = digit + Range 'a' 'f' + Range 'A' 'F'
 
 -- | Recognize a decimal number.
 --
+-- >>> decimal
+-- (re.+ (re.range "0" "9"))
 -- >>> prove $ \s -> (s::SString) `match` decimal ==> bnot (s `match` KStar asciiLetter)
 -- Q.E.D.
 decimal :: RegExp
 decimal = KPlus digit
 
 -- | Recognize an octal number. Must have a prefix of the form @0o@\/@0O@.
+--
+-- >>> octal
+-- (re.++ (re.union (str.to.re "0o") (str.to.re "0O")) (re.+ (re.range "0" "7")))
 octal :: RegExp
 octal = ("0o" + "0O") * KPlus octDigit
 
 -- | Recognize a hexadecimal number. Must have a prefix of the form @0x@\/@0X@.
+--
+-- >>> hexadecimal
+-- (re.++ (re.union (str.to.re "0x") (str.to.re "0X")) (re.+ (re.union (re.range "0" "9") (re.range "a" "f") (re.range "A" "F"))))
 hexadecimal :: RegExp
 hexadecimal = ("0x" + "0X") * KPlus hexDigit
 
