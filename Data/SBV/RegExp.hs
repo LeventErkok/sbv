@@ -119,7 +119,7 @@ exactly = Literal
 -- >>> prove $ \(c :: SChar) -> c `match` oneOf "ABCD" <=> bAny (c .==) (map literal "ABCD")
 -- Q.E.D.
 oneOf :: String -> RegExp
-oneOf = foldr (\char re -> exactly [char] + re) None
+oneOf xs = Union [exactly [x] | x <- xs]
 
 -- | Recognize a newline. Also includes carriage-return and form-feed.
 --
