@@ -48,7 +48,7 @@ lintTest:
 
 # TODO: Just use the first invocation once doctest starts working on Mac again
 # See: https://github.com/LeventErkok/sbv/issues/362
-doctest:
+docTest:
 	# @$(TIME) ./dist/build/SBVDocTest/SBVDocTest
 	@$(TIME) doctest --no-magic $(DOCTESTSOURCES)
 
