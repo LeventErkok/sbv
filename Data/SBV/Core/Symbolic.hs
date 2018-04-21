@@ -263,8 +263,12 @@ instance IsString RegExp where
 -- | Regular expressions as a 'Num' instance. Note that
 -- only `+` (union) and `*` (concatenation) make sense.
 instance Num RegExp where
-  x + y = Union [x, y]
-  (*)   = Conc
+  (*)          = Conc
+
+  -- flatten the unions to make them simpler
+  Union xs + y = Union (xs ++ [y])
+  x + Union ys = Union (x  : ys)
+  x + y        = Union [x, y]
 
   abs         = error "Num.RegExp: no abs method"
   signum      = error "Num.RegExp: no signum method"
