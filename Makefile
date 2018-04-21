@@ -18,6 +18,8 @@ SHELL := /usr/bin/env bash
 
 export SBV_TEST_ENVIRONMENT := local
 
+DOCTESTSOURCES := $(shell find Data/SBV -name "*.hs") $(shell find Documentation/SBV -name "*.hs")
+
 ifeq ($(OS), Darwin)
 # OSX tends to sleep for long jobs; so run through caffeinate
 TIME        = /usr/bin/time caffeinate
@@ -39,11 +41,19 @@ install: tags
 docs:
 	cabal haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
 
-test:
-	@$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -j $(NO_OF_CORES)
-	# @$(TIME) ./dist/build/SBVDocTest/SBVDocTest
-	doctest --no-magic Data/SBV/**/*.hs Documentation/SBV/**/*.hs
+test: lintTest docTest regularTests
+
+lintTest:
 	@$(TIME) ./dist/build/SBVHLint/SBVHLint
+
+# TODO: Just use the first invocation once doctest starts working on Mac again
+# See: https://github.com/LeventErkok/sbv/issues/362
+doctest:
+	# @$(TIME) ./dist/build/SBVDocTest/SBVDocTest
+	@$(TIME) doctest --no-magic $(DOCTESTSOURCES)
+
+regularTests:
+	@$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -j $(NO_OF_CORES)
 
 release: veryclean install docs test
 	cabal sdist
