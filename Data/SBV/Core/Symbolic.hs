@@ -237,9 +237,10 @@ data StrOp = StrConcat       -- ^ Concatenation of one or more strings
            deriving (Eq, Ord)
 
 -- | Regular expressions. Note that regular expressions themselves are
--- concrete, but the `strMatch` function can check membership against a symbolic
--- string. Also, we are preferring a datatype approach here, as opposed to
--- coming up with some string-representation; there are way too many alternatives
+-- concrete, but the `match` function from the 'RegExpMatchable' class
+-- can check membership against a symbolic string/character. Also, we
+-- are preferring a datatype approach here, as opposed to coming up with
+-- some string-representation; there are way too many alternatives
 -- already so inventing one isn't a priority. Please get in touch if you
 -- would like a parser for this type as it might be easier to use.
 data RegExp = Literal String       -- ^ Precisely match the given string
