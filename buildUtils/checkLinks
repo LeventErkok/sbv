@@ -19,18 +19,17 @@ check () {
       what=$1:$2
   fi
 
-  # ignore this one, it fails for some reason, but it's good
-  if [ z$what = 'zhttp://dl.acm.org/citation.cfm' ]; then
+  # ignore a bunch, they fail for some reason, but it's good
+  if [[ $what == http://dl.acm.org/citation.cfm ]];
+  then
       return 0
   fi
-
-  # ditto
-  if [ z$what = 'zhttps://ci.appveyor.com/project/LeventErkok/sbv' ]; then
+  if [[ $what == https://ci.appveyor.com* ]];
+  then
       return 0
   fi
-
-  # ditto
-  if [ z$what = 'zhttps://ci.appveyor.com/api/projects/status/github/LeventErkok/sbv' ]; then
+  if [[ $what == http://regexcrossword.com* ]];
+  then
       return 0
   fi
 
