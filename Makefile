@@ -66,7 +66,7 @@ release: veryclean install docs test
 # use this as follows:
 #         make testPattern TGT=U2Bridge
 testPattern:
-	./dist/build/SBVTest/SBVTest -p ${TGT}
+	./dist/build/SBVTest/SBVTest --hide-successes -p ${TGT}
 
 tags:
 	@fast-tags -R --nomerge .
