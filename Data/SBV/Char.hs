@@ -79,32 +79,40 @@ c `elem` s
 notElem :: SChar -> SString -> SBool
 c `notElem` s = bnot (c `elem` s)
 
--- | The 'ord' of a character, as an 8-bit value.
-ord :: SChar -> SWord8
+-- | The 'ord' of a character.
+--
+-- (TODO) NB. With unicode, this will become a code-point value
+-- and will work without any casting.
+ord :: SChar -> SInteger
 ord c
  | Just cc <- unliteral c
- = let v = C.ord cc
-   in if v <= 255 then literal (fromIntegral v)
-                  else error $ "SString.ord: Character value out-of 8-bit range: " ++ show (c, v)  -- Can't really happen
+ = literal (fromIntegral (C.ord cc))
  | True
- = SBV $ SVal k $ Right $ cache r
- where k = KBounded False 8
-       r st = do SW _ n <- sbvToSW st c
-                 return $ SW k n
+ = SBV $ SVal kTo $ Right $ cache r
+ where kFrom = KBounded False 8
+       kTo   = KUnbounded
+       r st = do csw <- sbvToSW st c
+                 newExpr st kTo (SBVApp (KindCast kFrom kTo) [csw])
 
--- | Conversion from an 8-bit ASCII value to a character.
+-- | Conversion froman integer to a character.
 --
--- >>> prove $ \x -> ord (chr x) .== x
+-- (TODO) NB. With unicode, the second property below should be
+-- generalized.
+--
+-- >>> prove $ \x -> 0 .<= x &&& x .< 256 ==> ord (chr x) .== x
 -- Q.E.D.
 -- >>> prove $ \x -> chr (ord x) .== x
 -- Q.E.D.
-chr :: SWord8 -> SChar
+chr :: SInteger -> SChar
 chr w
  | Just cw <- unliteral w
  = literal (C.chr (fromIntegral cw))
  | True
  = SBV $ SVal KChar $ Right $ cache r
- where r st = do SW _ n <- sbvToSW st w
+ where -- TODO: With unicode, this will become a lot simpler!
+       w8 :: SWord8
+       w8 = sFromIntegral w
+       r st = do SW _ n <- sbvToSW st w8
                  return $ SW KChar n
 
 -- | Convert to lower-case.
