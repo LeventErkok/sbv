@@ -131,11 +131,13 @@ type SFloat = SBV Float
 type SDouble = SBV Double
 
 -- | A symbolic character. Note that, as far as SBV's symbolic strings are concerned, a character
--- is essentially an 8-bit unsigned value, and hence is equivalent to the type 'SWord8'. Technically
--- speaking, this corresponds to the ISO-8859-1 (Latin-1) character set: <http://en.wikipedia.org/wiki/ISO/IEC_8859-1>.
--- A Haskell 'Char', on the other hand, is a unicode beast; so there isn't a 1-1 correspondence between a
--- Haskell character and an SBV character. This limitation is due to the SMT-solvers only supporting this
--- particular subset, which may be relaxed in future versions.
+-- is currently an 8-bit unsigned value, corresponding to the ISO-8859-1 (Latin-1) character
+-- set: <http://en.wikipedia.org/wiki/ISO/IEC_8859-1>. A Haskell 'Char', on the other hand, is based
+-- on unicode. Therefore, there isn't a 1-1 correspondence between a Haskell character and an SBV
+-- character for the time being. This limitation is due to the SMT-solvers only supporting this
+-- particular subset. However, there is a pending proposal to add support for unicode, and SBV
+-- will track these changes to have full unicode support as solvers become available. For
+-- details, see: <http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml>
 type SChar = SBV Char
 
 -- | A symbolic string
