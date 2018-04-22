@@ -45,7 +45,7 @@ module Data.SBV.RegExp (
         , identifier
         ) where
 
-import Prelude hiding (length)
+import Prelude hiding (length, take, elem, notElem, head)
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model () -- instances only
@@ -59,9 +59,9 @@ import Data.SBV.Char
 -- For doctest use only
 --
 -- $setup
--- >>> import Prelude hiding (length)
+-- >>> import Prelude hiding (length, take, elem, notElem, head)
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
--- >>> import Data.SBV.Utils.Boolean  ((<=>), (==>), bAny, (&&&), bnot)
+-- >>> import Data.SBV.Utils.Boolean  ((<=>), (==>), bAny, (&&&), (|||), bnot)
 -- >>> import Data.SBV.Core.Model
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XScopedTypeVariables
@@ -160,6 +160,10 @@ punctuation = oneOf $ filter C.isPunctuation $ map C.chr [0..255]
 --
 -- >>> asciiLetter
 -- (re.union (re.range "a" "z") (re.range "A" "Z"))
+-- >>> prove $ \c -> c `match` asciiLetter <=> toUpper c `match` asciiLetter
+-- Q.E.D.
+-- >>> prove $ \c -> c `match` asciiLetter <=> toLower c `match` asciiLetter
+-- Q.E.D.
 asciiLetter :: RegExp
 asciiLetter = asciiLower + asciiUpper
 
@@ -167,6 +171,12 @@ asciiLetter = asciiLower + asciiUpper
 --
 -- >>> asciiLower
 -- (re.range "a" "z")
+-- >>> prove $ \c -> (c :: SChar) `match` asciiLower  ==> c `match` asciiLetter
+-- Q.E.D.
+-- >>> prove $ \c -> c `match` asciiLower  ==> toUpper c `match` asciiUpper
+-- Q.E.D.
+-- >>> prove $ \c -> c `match` asciiLetter ==> toLower c `match` asciiLower
+-- Q.E.D.
 asciiLower :: RegExp
 asciiLower = Range 'a' 'z'
 
@@ -174,6 +184,12 @@ asciiLower = Range 'a' 'z'
 --
 -- >>> asciiUpper
 -- (re.range "A" "Z")
+-- >>> prove $ \c -> (c :: SChar) `match` asciiUpper  ==> c `match` asciiLetter
+-- Q.E.D.
+-- >>> prove $ \c -> c `match` asciiUpper  ==> toLower c `match` asciiLower
+-- Q.E.D.
+-- >>> prove $ \c -> c `match` asciiLetter ==> toUpper c `match` asciiUpper
+-- Q.E.D.
 asciiUpper :: RegExp
 asciiUpper = Range 'A' 'Z'
 
@@ -221,6 +237,8 @@ decimal = KPlus digit
 --
 -- >>> octal
 -- (re.++ (re.union (str.to.re "0o") (str.to.re "0O")) (re.+ (re.range "0" "7")))
+-- >>> prove $ \s -> s `match` octal ==> bAny (.== take 2 s) ["0o", "0O"]
+-- Q.E.D.
 octal :: RegExp
 octal = ("0o" + "0O") * KPlus octDigit
 
@@ -228,11 +246,16 @@ octal = ("0o" + "0O") * KPlus octDigit
 --
 -- >>> hexadecimal
 -- (re.++ (re.union (str.to.re "0x") (str.to.re "0X")) (re.+ (re.union (re.range "0" "9") (re.range "a" "f") (re.range "A" "F"))))
+-- >>> prove $ \s -> s `match` hexadecimal ==> bAny (.== take 2 s) ["0x", "0X"]
+-- Q.E.D.
 hexadecimal :: RegExp
 hexadecimal = ("0x" + "0X") * KPlus hexDigit
 
 -- | Recognize a floating point number. The exponent part is optional if a fraction
 -- is present. The exponent may or may not have a sign.
+--
+-- >>> prove $ \s -> s `match` floating ==> length s .>= 3
+-- Q.E.D.
 floating :: RegExp
 floating = withFraction + withoutFraction
   where withFraction    = decimal * "." * decimal * Opt expt
@@ -242,6 +265,11 @@ floating = withFraction + withoutFraction
 -- | For the purposes of this regular expression, an identifier consists of a letter
 -- followed by zero or more letters, digits, underscores, and single quotes. The first
 -- letter must be lowercase.
+--
+-- >>> prove $ \s -> s `match` identifier ==> isAsciiLower (head s)
+-- Q.E.D.
+-- >>> prove $ \s -> s `match` identifier ==> length s .>= 1
+-- Q.E.D.
 identifier :: RegExp
 identifier = asciiLower * KStar (asciiLetter + digit + "_" + "'")
 
@@ -262,7 +290,7 @@ concEval1 mbOp a = literal <$> (mbOp <*> unliteral a)
 
 -- | Quiet GHC about testing only imports
 __unused :: a
-__unused = undefined isSpace length
+__unused = undefined isSpace length take elem notElem head
 
 {- $matching
 A symbolic string or a character ('SString' or 'SChar') can be matched against a regular-expression. Note
