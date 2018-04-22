@@ -5,13 +5,13 @@
 [GOOD] (set-option :smtlib2_compliant true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
 [GOOD] (set-option :produce-models true)
-[GOOD] (set-logic QF_BV)
+[GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s_2 () Bool false)
 [GOOD] (define-fun s_1 () Bool true)
-[GOOD] (define-fun s1 () (_ BitVec 8) #x41)
-[GOOD] (define-fun s3 () (_ BitVec 8) #x42)
+[GOOD] (define-fun s2 () Int 65)
+[GOOD] (define-fun s4 () Int 66)
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (_ BitVec 8)) ; tracks user variable "a"
 [GOOD] ; --- constant tables ---
@@ -20,10 +20,11 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s2 () Bool (bvuge s0 s1))
-[GOOD] (define-fun s4 () Bool (bvult s0 s3))
-[GOOD] (assert s2)
-[GOOD] (assert s4)
+[GOOD] (define-fun s1 () Int (+ (ite (= ((_ extract 0 0) s0) #b1) 1 0) (ite (= ((_ extract 1 1) s0) #b1) 2 0) (ite (= ((_ extract 2 2) s0) #b1) 4 0) (ite (= ((_ extract 3 3) s0) #b1) 8 0) (ite (= ((_ extract 4 4) s0) #b1) 16 0) (ite (= ((_ extract 5 5) s0) #b1) 32 0) (ite (= ((_ extract 6 6) s0) #b1) 64 0) (ite (= ((_ extract 7 7) s0) #b1) 128 0)))
+[GOOD] (define-fun s3 () Bool (>= s1 s2))
+[GOOD] (define-fun s5 () Bool (< s1 s4))
+[GOOD] (assert s3)
+[GOOD] (assert s5)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
