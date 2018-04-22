@@ -103,7 +103,8 @@ tail s
 -- >>> prove $ \c -> length (charToStr c) .== 1
 -- Q.E.D.
 charToStr :: SChar -> SString
-charToStr = lift1 StrUnit (Just (\c -> [c]))
+charToStr = lift1 StrUnit (Just wrap)
+  where wrap c = [c]
 
 -- | @`strToStrAt` s offset@. Substring of length 1 at @offset@ in @s@.
 --
