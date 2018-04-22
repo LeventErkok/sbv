@@ -103,10 +103,7 @@ tail s
 -- >>> prove $ \c -> length (charToStr c) .== 1
 -- Q.E.D.
 charToStr :: SChar -> SString
-charToStr = lift1 StrUnit (Just check)
-  where check c
-          | C.ord c <= 255 = [c]
-          | True           = error $ "SString.charToStr: Character doesn't fit into an SMTLib 8-bit character! Received: " ++ show (c, C.ord c)
+charToStr = lift1 StrUnit (Just (\c -> [c]))
 
 -- | @`strToStrAt` s offset@. Substring of length 1 at @offset@ in @s@.
 --
@@ -127,7 +124,7 @@ strToStrAt s offset = subStr s offset 1
 -- Q.E.D.
 strToCharAt :: SString -> SInteger -> SChar
 strToCharAt s i
-  | Just cs <- unliteral s, Just ci <- unliteral i, ci >= 0, ci < genericLength cs, let c = C.ord (cs `genericIndex` ci), c >= 0, c < 256
+  | Just cs <- unliteral s, Just ci <- unliteral i, ci >= 0, ci < genericLength cs, let c = C.ord (cs `genericIndex` ci)
   = literal (C.chr c)
   | True
   = SBV (SVal w8 (Right (cache (y (s `strToStrAt` i)))))
