@@ -302,6 +302,7 @@ randomCWVal k =
     KReal         -> CWAlgReal <$> randomIO
     KFloat        -> CWFloat   <$> randomIO
     KDouble       -> CWDouble  <$> randomIO
+    -- TODO: KString/KChar currently only go for 0..255; include unicode?
     KString       -> do l <- randomRIO (0, 100)
                         CWString <$> replicateM l (chr <$> randomRIO (0, 255))
     KChar         -> CWChar . chr <$> randomRIO (0, 255)
