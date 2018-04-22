@@ -17,8 +17,11 @@
 -- symbolic-strings when working with symbolic characters
 -- and strings.
 --
--- Note that 'SChar' type only covers Latin1 (i.e., the first 256
--- characters), as opposed to Haskell's Unicode character support.
+-- Note that currently 'SChar' type only covers Latin1 (i.e., the first 256
+-- characters), as opposed to Haskell's Unicode character support. However,
+-- there is a pending SMTLib proposal to extend this set to Unicode, at
+-- which point we will update these functions to match the implementations.
+-- For details, see: <http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml>
 -----------------------------------------------------------------------------
 
 module Data.SBV.Char (
@@ -221,7 +224,7 @@ isLetter :: SChar -> SBool
 isLetter = isAlpha
 
 -- | Is this a mark? Note that the Latin-1 subset doesn't have any marks; so this function
--- is simply constant false.
+-- is simply constant false for the time being.
 --
 -- >>> prove $ bnot . isMark
 -- Q.E.D.
@@ -252,7 +255,8 @@ isSeparator = (`elem` " \160")
 isAscii :: SChar -> SBool
 isAscii c = ord c .< 128
 
--- | Is this a Latin1 character? Note that this function is always true since 'SChar' corresponds precisely to Latin1.
+-- | Is this a Latin1 character? Note that this function is always true since 'SChar' corresponds
+-- precisely to Latin1 for the time being.
 --
 -- >>> prove isLatin1
 -- Q.E.D.
