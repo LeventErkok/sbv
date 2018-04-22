@@ -31,8 +31,8 @@ module Data.SBV.Char (
         , ord, chr
         -- * Conversion to upper\/lower case
         , toLower, toUpper
-        -- * Converting digits to ints
-        , digitToInt
+        -- * Converting digits to ints and back
+        , digitToInt, intToDigit
         -- * Character classification
         , isControl, isSpace, isLower, isUpper, isAlpha, isAlphaNum, isPrint, isDigit, isOctDigit, isHexDigit, isLetter, isMark, isNumber, isPunctuation, isSymbol, isSeparator
         -- * Subranges
@@ -148,6 +148,21 @@ digitToInt c = ite (uc `elem` "0123456789") (sFromIntegral (o - ord (literal '0'
              $ -1
   where uc = toUpper c
         o  = ord uc
+
+-- | Convert an an integer to a digit, inverse of 'digitToInt'. If the integer is out of
+-- bounds, we return the arbitrarily chosen space character. Note that for hexadecimal
+-- letters, we return the corresponding lowercase letter.
+--
+-- >>> prove $ \i -> i .>= 0 &&& i .<= 15 ==> digitToInt (intToDigit i) .== i
+-- Q.E.D.
+-- >>> prove $ \i -> i .<  0 ||| i .>  15 ==> digitToInt (intToDigit i) .== -1
+-- Q.E.D.
+-- >>> prove $ \c -> digitToInt c .== -1 <=> intToDigit (digitToInt c) .== literal ' '
+-- Q.E.D.
+intToDigit :: SInteger -> SChar
+intToDigit i = ite (i .>=  0 &&& i .<=  9) (chr (sFromIntegral i + ord (literal '0')))
+             $ ite (i .>= 10 &&& i .<= 15) (chr (sFromIntegral i + ord (literal 'a') - 10))
+             $ literal ' '
 
 -- | Is this a control character? Control characters are essentially the non-printing characters.
 isControl :: SChar -> SBool
