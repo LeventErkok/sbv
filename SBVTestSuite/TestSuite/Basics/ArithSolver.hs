@@ -21,6 +21,9 @@ import qualified Data.Binary.IEEE754 as DB (wordToFloat, wordToDouble, floatToWo
 import Data.SBV.Internals
 import Utils.SBVTestFramework
 
+import qualified Data.Char     as C
+import qualified Data.SBV.Char as SC
+
 -- Test suite
 tests :: TestTree
 tests =
@@ -62,7 +65,9 @@ tests =
      ++ genShiftMixSize
      ++ genBlasts
      ++ genCounts
-     ++ genIntCasts)
+     ++ genIntCasts
+     ++ genChars
+     )
 
 genBinTest :: Bool -> String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [TestTree]
 genBinTest unboundedOK nm op = map mkTest $  [(show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- w8s ]
@@ -502,6 +507,45 @@ genQRems = map mkTest $  [("divMod",  show x, show y, mkThm2 sDivMod  x y (x `di
         -- Haskell's divMod and quotRem overflows if x == minBound and y == -1 for signed types; so avoid that case
         noOverflow x y = not (x == minBound && y == -1)
 
+genChars :: [TestTree]
+genChars = map mkTest $  [("ord",           show c, mkThm SC.ord           cord            c) | c <- cs]
+                      ++ [("toLower",       show c, mkThm SC.toLower       C.toLower       c) | c <- cs]
+                      ++ [("toUpper",       show c, mkThm SC.toUpper       C.toUpper       c) | c <- cs, toUpperExceptions c]
+                      ++ [("digitToInt",    show c, mkThm SC.digitToInt    dig2Int         c) | c <- cs, digitToIntRange c]
+                      ++ [("intToDigit",    show c, mkThm SC.intToDigit    int2Dig         c) | c <- [0 .. 15]]
+                      ++ [("isControl",     show c, mkThm SC.isControl     C.isControl     c) | c <- cs]
+                      ++ [("isSpace",       show c, mkThm SC.isSpace       C.isSpace       c) | c <- cs]
+                      ++ [("isLower",       show c, mkThm SC.isLower       C.isLower       c) | c <- cs]
+                      ++ [("isUpper",       show c, mkThm SC.isUpper       C.isUpper       c) | c <- cs]
+                      ++ [("isAlpha",       show c, mkThm SC.isAlpha       C.isAlpha       c) | c <- cs]
+                      ++ [("isAlphaNum",    show c, mkThm SC.isAlphaNum    C.isAlphaNum    c) | c <- cs]
+                      ++ [("isPrint",       show c, mkThm SC.isPrint       C.isPrint       c) | c <- cs]
+                      ++ [("isDigit",       show c, mkThm SC.isDigit       C.isDigit       c) | c <- cs]
+                      ++ [("isOctDigit",    show c, mkThm SC.isOctDigit    C.isOctDigit    c) | c <- cs]
+                      ++ [("isHexDigit",    show c, mkThm SC.isHexDigit    C.isHexDigit    c) | c <- cs]
+                      ++ [("isLetter",      show c, mkThm SC.isLetter      C.isLetter      c) | c <- cs]
+                      ++ [("isMark",        show c, mkThm SC.isMark        C.isMark        c) | c <- cs]
+                      ++ [("isNumber",      show c, mkThm SC.isNumber      C.isNumber      c) | c <- cs]
+                      ++ [("isPunctuation", show c, mkThm SC.isPunctuation C.isPunctuation c) | c <- cs]
+                      ++ [("isSymbol",      show c, mkThm SC.isSymbol      C.isSymbol      c) | c <- cs]
+                      ++ [("isSeparator",   show c, mkThm SC.isSeparator   C.isSeparator   c) | c <- cs]
+                      ++ [("isAscii",       show c, mkThm SC.isAscii       C.isAscii       c) | c <- cs]
+                      ++ [("isLatin1",      show c, mkThm SC.isLatin1      C.isLatin1      c) | c <- cs]
+                      ++ [("isAsciiUpper",  show c, mkThm SC.isAsciiUpper  C.isAsciiUpper  c) | c <- cs]
+                      ++ [("isAsciiLower",  show c, mkThm SC.isAsciiLower  C.isAsciiLower  c) | c <- cs]
+  where toUpperExceptions = (`notElem` "\181\255")
+        digitToIntRange   = (`elem` "0123456789abcdefABCDEF")
+        cord :: Char -> Integer
+        cord = fromIntegral . C.ord
+        dig2Int :: Char -> Integer
+        dig2Int = fromIntegral . C.digitToInt
+        int2Dig :: Integer -> Char
+        int2Dig = C.intToDigit . fromIntegral
+        mkTest (nm, x, t) = testCase ("genChars-" ++ nm ++ "." ++ x) (assert t)
+        mkThm sop cop arg = isTheorem $ do a <- free "a"
+                                           constrain $ a .== literal arg
+                                           return $ literal (cop arg) .== sop a
+
 -- Concrete test data
 xsSigned, xsUnsigned :: (Num a, Bounded a) => [a]
 xsUnsigned = [0, 1, maxBound - 1, maxBound]
@@ -547,5 +591,9 @@ fs = xs ++ map (* (-1)) (filter (not . isNaN) xs) -- -nan is the same as nan
 ds :: [Double]
 ds = xs ++ map (* (-1)) (filter (not . isNaN) xs) -- -nan is the same as nan
   where xs = [nan, infinity, 0, 0.5, 2.516632060108026e-2, 0.8601891300751106, 5.0e-324]
+
+-- Currently we test over all latin-1 characters. But when Unicode comes along, we'll have to be more selective.
+cs :: String
+cs = map C.chr [0..255]
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

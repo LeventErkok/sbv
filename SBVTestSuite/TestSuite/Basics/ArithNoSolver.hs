@@ -23,6 +23,9 @@ import Utils.SBVTestFramework
 
 import Data.Maybe (fromJust, isJust)
 
+import qualified Data.Char     as C
+import qualified Data.SBV.Char as SC
+
 -- Test suite
 tests :: TestTree
 tests = testGroup "Arith.NoSolver" $
@@ -62,6 +65,7 @@ tests = testGroup "Arith.NoSolver" $
         ++ genBlasts
         ++ genCounts
         ++ genIntCasts
+        ++ genChars
 
 genBinTest :: String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [TestTree]
 genBinTest nm op = map mkTest $
@@ -461,6 +465,45 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                      , ("fpIsPoint",        fpIsPoint,         \x -> not (isNaN x || isInfinite x))
                      ]
 
+genChars :: [TestTree]
+genChars = map mkTest $  [("ord",           show c, check SC.ord           cord            c) | c <- cs]
+                      ++ [("toLower",       show c, check SC.toLower       C.toLower       c) | c <- cs]
+                      ++ [("toUpper",       show c, check SC.toUpper       C.toUpper       c) | c <- cs, toUpperExceptions c]
+                      ++ [("digitToInt",    show c, check SC.digitToInt    dig2Int         c) | c <- cs, digitToIntRange c]
+                      ++ [("intToDigit",    show c, check SC.intToDigit    int2Dig         c) | c <- [0 .. 15]]
+                      ++ [("isControl",     show c, check SC.isControl     C.isControl     c) | c <- cs]
+                      ++ [("isSpace",       show c, check SC.isSpace       C.isSpace       c) | c <- cs]
+                      ++ [("isLower",       show c, check SC.isLower       C.isLower       c) | c <- cs]
+                      ++ [("isUpper",       show c, check SC.isUpper       C.isUpper       c) | c <- cs]
+                      ++ [("isAlpha",       show c, check SC.isAlpha       C.isAlpha       c) | c <- cs]
+                      ++ [("isAlphaNum",    show c, check SC.isAlphaNum    C.isAlphaNum    c) | c <- cs]
+                      ++ [("isPrint",       show c, check SC.isPrint       C.isPrint       c) | c <- cs]
+                      ++ [("isDigit",       show c, check SC.isDigit       C.isDigit       c) | c <- cs]
+                      ++ [("isOctDigit",    show c, check SC.isOctDigit    C.isOctDigit    c) | c <- cs]
+                      ++ [("isHexDigit",    show c, check SC.isHexDigit    C.isHexDigit    c) | c <- cs]
+                      ++ [("isLetter",      show c, check SC.isLetter      C.isLetter      c) | c <- cs]
+                      ++ [("isMark",        show c, check SC.isMark        C.isMark        c) | c <- cs]
+                      ++ [("isNumber",      show c, check SC.isNumber      C.isNumber      c) | c <- cs]
+                      ++ [("isPunctuation", show c, check SC.isPunctuation C.isPunctuation c) | c <- cs]
+                      ++ [("isSymbol",      show c, check SC.isSymbol      C.isSymbol      c) | c <- cs]
+                      ++ [("isSeparator",   show c, check SC.isSeparator   C.isSeparator   c) | c <- cs]
+                      ++ [("isAscii",       show c, check SC.isAscii       C.isAscii       c) | c <- cs]
+                      ++ [("isLatin1",      show c, check SC.isLatin1      C.isLatin1      c) | c <- cs]
+                      ++ [("isAsciiUpper",  show c, check SC.isAsciiUpper  C.isAsciiUpper  c) | c <- cs]
+                      ++ [("isAsciiLower",  show c, check SC.isAsciiLower  C.isAsciiLower  c) | c <- cs]
+  where toUpperExceptions = (`notElem` "\181\255")
+        digitToIntRange   = (`elem` "0123456789abcdefABCDEF")
+        cord :: Char -> Integer
+        cord = fromIntegral . C.ord
+        dig2Int :: Char -> Integer
+        dig2Int = fromIntegral . C.digitToInt
+        int2Dig :: Integer -> Char
+        int2Dig = C.intToDigit . fromIntegral
+        mkTest (nm, x, t) = testCase ("genChars-" ++ nm ++ "." ++ x) (assert t)
+        check sop cop arg = case unliteral (sop (literal arg)) of
+                              Nothing -> False
+                              Just x  -> x == cop arg
+
 -- Concrete test data
 xsUnsigned :: (Num a, Bounded a) => [a]
 xsUnsigned = take 5 (iterate (1+) minBound) ++ take 5 (iterate (\x -> x-1) maxBound)
@@ -543,3 +586,7 @@ ds = xs ++ map (* (-1)) (filter (not . isNaN) xs) -- -nan is the same as nan
 
 sds :: [SDouble]
 sds = map literal ds
+
+-- Currently we test over all latin-1 characters. But when Unicode comes along, we'll have to be more selective.
+cs :: String
+cs = map C.chr [0..255]
