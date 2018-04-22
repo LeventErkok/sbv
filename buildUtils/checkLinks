@@ -68,7 +68,7 @@ else
     echo -n "Found $badLinkCount bad links! Continue? [y] "
     read ans
     if [ z"$ans" = 'zy' ]; then
-      echo "Ignoring possibly boken links.."
+      echo "Ignoring possibly broken links.."
       exit 0
     else
       exit 1
