@@ -45,14 +45,13 @@ import qualified GHC.Generics as G
 
 import GHC.Stack
 
-import Data.Array      (Array, Ix, listArray, elems, bounds, rangeSize)
-import Data.Bits       (Bits(..))
-import Data.Int        (Int8, Int16, Int32, Int64)
-import Data.Char       (ord)
-import Data.List       (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate)
-import Data.Maybe      (fromMaybe)
-import Data.String     (IsString(..))
-import Data.Word       (Word8, Word16, Word32, Word64)
+import Data.Array  (Array, Ix, listArray, elems, bounds, rangeSize)
+import Data.Bits   (Bits(..))
+import Data.Int    (Int8, Int16, Int32, Int64)
+import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate)
+import Data.Maybe  (fromMaybe)
+import Data.String (IsString(..))
+import Data.Word   (Word8, Word16, Word32, Word64)
 
 import Test.QuickCheck                         (Testable(..), Arbitrary(..))
 import qualified Test.QuickCheck.Test    as QC (isSuccess)
@@ -192,9 +191,7 @@ instance SymWord String where
 
 instance SymWord Char where
   mkSymWord = genMkSymVar KChar
-  literal c
-    | ord c <= 255 = SBV . SVal KChar . Left . CW KChar $ CWChar c
-    | True         = error $ "SymWord.Char: SMT-Lib only supports character's with values between 0 and 255, received: " ++ show (c, ord c)
+  literal c = SBV . SVal KChar . Left . CW KChar $ CWChar c
   fromCW (CW _ (CWChar a)) = a
   fromCW c                 = error $ "SymWord.String: Unexpected non-char value: " ++ show c
 

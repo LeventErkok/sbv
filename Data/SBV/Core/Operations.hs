@@ -41,7 +41,6 @@ module Data.SBV.Core.Operations
   where
 
 import Data.Bits (Bits(..))
-import Data.Char (ord)
 import Data.List (genericIndex, genericLength, genericTake)
 
 import Data.SBV.Core.AlgReals
@@ -84,9 +83,7 @@ svString s = SVal KString (Left $! CW KString (CWString s))
 
 -- | Convert from a Char
 svChar :: Char -> SVal
-svChar c
-  | ord c <= 255 = SVal KChar (Left $! CW KChar (CWChar c))
-  | True         = error $ "svChar: SMT-Lib only supports character's with values between 0 and 255, received: " ++ show (c, ord c)
+svChar c = SVal KChar (Left $! CW KChar (CWChar c))
 
 -- | Convert from a Rational
 svReal :: Rational -> SVal
