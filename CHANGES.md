@@ -6,16 +6,25 @@
 ### Version 7.6.5, Current development version
 
   * Add support for Symbolic characters ('SChar') and strings ('SString'.)
-    Thanks to Joel Burget for the initial implementation. (Note: 'SChar'
-    corresponds to the Latin-1 character set, and is thus a subset
-    of the Haskell 'Char' type.) SBV now supports the QF_S logic, which
-    allows reasoning with symbolic strings and regular expressions.
-    Currently only Z3 and CVC4 has support for this logic, and they do
-    differ in some details.  Various character/string operations are
-    supported, including length, concatenation, regular-expression
-    matching, substrig operations, recognizers, etc. If you use this logic,
-    you are likely to find bugs in solvers themselves as support is rather
-    new: Please report.
+    Thanks to Joel Burget for the initial implementation.
+    
+    The 'SChar' type currently corresponds to the Latin-1 character
+    set, and is thus a subset of the Haskell 'Char' type. This is
+    due to the current limitations in SMT-solvers. However, there
+    is a pending SMTLib proposal to support unicode, and SBV will track
+    these changes to have full unicode support: For further details
+    see: http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml
+
+    The 'SString' type is the type of symbolic strings, consisting
+    of characters from the Latin-1 character set currently, but we
+    shall extend to unicode as solvers become available.
+
+    Note that currently only Z3 and CVC4 has support for this logic,
+    and they do differ in some details. Various character/string
+    operations are supported, including length, concatenation,
+    regular-expression matching, substrig operations, recognizers, etc.
+    If you use this logic, you are likely to find bugs in solvers themselves
+    as support is rather new: Please report.
 
   * If unsat-core extraction is enabled, SBV now returns the unsat-core
     directly with in a solver result. Thanks to Ara Adkins for the
