@@ -109,6 +109,8 @@ qfsToString = go
         go (c              : rest)                                     = c      : go rest
 
 -- | Given a Haskell, convert it to one that's understood by the QF_S logic
+-- TODO: This function will require mods with the new String logic; as escapes
+-- will completely be different!
 stringToQFS :: String -> String
 stringToQFS = concatMap cvt
   where -- strings are almost just show, but escapes are different. Sigh
