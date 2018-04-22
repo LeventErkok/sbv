@@ -149,7 +149,7 @@ whiteSpace :: RegExp
 whiteSpace = newline + whiteSpaceNoNewLine
 
 -- | Recognize a punctuation character. Anything that satisfies the predicate 'isPunctuation' will
--- be accepted.
+-- be accepted.  (TODO: Will need modification when we move to unicode.)
 --
 -- >>> prove $ \c -> c `match` punctuation ==> isPunctuation c
 -- Q.E.D.
