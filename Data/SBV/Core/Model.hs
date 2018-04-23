@@ -364,8 +364,8 @@ class EqSymbolic a where
 
   -- | Symbolic membership test.
   sElem    :: a -> [a] -> SBool
+  {-# MINIMAL (.==) #-}
 
-  -- minimal complete definition: .==
   x ./= y = bnot (x .== y)
 
   allEqual []     = true
@@ -399,7 +399,8 @@ class (Mergeable a, EqSymbolic a) => OrdSymbolic a where
   -- | Is the value withing the allowed /inclusive/ range?
   inRange    :: a -> (a, a) -> SBool
 
-  -- minimal complete definition: .<
+  {-# MINIMAL (.<) #-}
+
   a .<= b    = a .< b ||| a .== b
   a .>  b    = b .<  a
   a .>= b    = b .<= a
@@ -1543,7 +1544,9 @@ class Uninterpreted a where
   -- by end-user-code, but is rather useful for the library development.
   sbvUninterpret :: Maybe ([String], a) -> String -> a
 
-  -- minimal complete definition: 'sbvUninterpret'
+  {-# MINIMAL sbvUninterpret #-}
+
+  -- defaults:
   uninterpret             = sbvUninterpret Nothing
   cgUninterpret nm code v = sbvUninterpret (Just (code, v)) nm
 
