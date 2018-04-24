@@ -15,6 +15,7 @@
 
 module Data.SBV.Core.AlgReals (
              AlgReal(..)
+           , PolyRep(..)
            , mkPolyReal
            , algRealToSMTLib2
            , algRealToHaskell
@@ -34,7 +35,7 @@ import Test.QuickCheck (Arbitrary(..))
 -- rational results explicitly, while the roots-of-polynomials are represented
 -- implicitly by their defining equation
 data AlgReal = AlgRational Bool Rational          -- bool says it's exact (i.e., SMT-solver did not return it with ? at the end.)
-             | AlgPolyRoot (Integer,  Polynomial) -- which root
+             | AlgPolyRoot (Integer,  PolyRep) -- which root
                            (Maybe String)         -- approximate decimal representation with given precision, if available
 
 -- | Check wheter a given argument is an exact rational
@@ -45,7 +46,7 @@ isExactRational _                    = False
 -- | A univariate polynomial, represented simply as a
 -- coefficient list. For instance, "5x^3 + 2x - 5" is
 -- represented as [(5, 3), (2, 1), (-5, 0)]
-newtype Polynomial = Polynomial [(Integer, Integer)]
+newtype PolyRep = PolyRep [(Integer, Integer)]
                    deriving (Eq, Ord)
 
 -- | Construct a poly-root real with a given approximate value (either as a decimal, or polynomial-root)
@@ -56,7 +57,7 @@ mkPolyReal (Left (exact, str))
       (_, (x, '.':y)) -> AlgRational exact (read (x++y) % (10 ^ length y))
       (_, (x, _))     -> AlgRational exact (read x % 1)
 mkPolyReal (Right (k, coeffs))
- = AlgPolyRoot (k, Polynomial (normalize coeffs)) Nothing
+ = AlgPolyRoot (k, PolyRep (normalize coeffs)) Nothing
  where normalize :: [(Integer, Integer)] -> [(Integer, Integer)]
        normalize = merge . sortBy (flip compare `on` snd)
        merge []                     = []
@@ -65,8 +66,8 @@ mkPolyReal (Right (k, coeffs))
          | b == d                   = merge ((a+c, b):xs)
          | True                     = (a, b) : merge r
 
-instance Show Polynomial where
-  show (Polynomial xs) = chkEmpty (join (concat [term p | p@(_, x) <- xs, x /= 0])) ++ " = " ++ show c
+instance Show PolyRep where
+  show (PolyRep xs) = chkEmpty (join (concat [term p | p@(_, x) <- xs, x /= 0])) ++ " = " ++ show c
      where c  = -1 * head ([k | (k, 0) <- xs] ++ [0])
            term ( 0, _) = []
            term ( 1, 1) = [ "x"]
@@ -172,7 +173,7 @@ algRealToSMTLib2 (AlgRational True r)
   where (m, n) = (numerator r, denominator r)
 algRealToSMTLib2 r@(AlgRational False _)
    = error $ "SBV: Unexpected inexact rational to be converted to SMTLib2: " ++ show r
-algRealToSMTLib2 (AlgPolyRoot (i, Polynomial xs) _) = "(root-obj (+ " ++ unwords (concatMap term xs) ++ ") " ++ show i ++ ")"
+algRealToSMTLib2 (AlgPolyRoot (i, PolyRep xs) _) = "(root-obj (+ " ++ unwords (concatMap term xs) ++ ") " ++ show i ++ ")"
   where term (0, _) = []
         term (k, 0) = [coeff k]
         term (1, 1) = ["x"]
