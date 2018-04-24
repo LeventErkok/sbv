@@ -207,6 +207,30 @@ ask s = do QueryState{queryAsk, queryTimeOutValue} <- getQueryState
 
            return r
 
+-- | Send a string to the solver, and return the response. Except, if the response
+-- is one of the "ignore" ones, keep querying.
+askIgnoring :: String -> [String] -> Query String
+askIgnoring s ignoreList = do
+
+           QueryState{queryAsk, queryRetrieveResponse, queryTimeOutValue} <- getQueryState
+
+           case queryTimeOutValue of
+             Nothing -> queryDebug ["[SEND] " `alignPlain` s]
+             Just i  -> queryDebug ["[SEND, TimeOut: " ++ showTimeoutValue i ++ "] " `alignPlain` s]
+           r <- io $ queryAsk queryTimeOutValue s
+           queryDebug ["[RECV] " `alignPlain` r]
+
+           let loop currentResponse
+                 | currentResponse `notElem` ignoreList
+                 = return currentResponse
+                 | True
+                 = do queryDebug ["[WARN] Previous response is explicitly ignored, beware!"]
+                      newResponse <- io $ queryRetrieveResponse queryTimeOutValue
+                      queryDebug ["[RECV] " `alignPlain` newResponse]
+                      loop newResponse
+
+           loop r
+
 -- | Send a string to the solver. If the first argument is 'True', we will require
 -- a "success" response as well. Otherwise, we'll fire and forget.
 send :: Bool -> String -> Query ()
@@ -431,7 +455,10 @@ checkSat = do cfg <- getConfig
 checkSatUsing :: String -> Query CheckSatResult
 checkSatUsing cmd = do let bad = unexpected "checkSat" cmd "one of sat/unsat/unknown" Nothing
 
-                       r <- ask cmd
+                           -- Sigh.. Ignore some of the pesky warnings. We only do it as an exception here.
+                           ignoreList = ["WARNING: optimization with quantified constraints is not supported"]
+
+                       r <- askIgnoring cmd ignoreList
 
                        parse r bad $ \case ECon "sat"     -> return Sat
                                            ECon "unsat"   -> return Unsat
