@@ -247,7 +247,7 @@ data RegExp = Literal String       -- ^ Precisely match the given string
             | All                  -- ^ Accept every string
             | None                 -- ^ Accept no strings
             | Range Char Char      -- ^ Accept range of characters
-            | Conc  RegExp RegExp  -- ^ Concatenation
+            | Conc  [RegExp]       -- ^ Concatenation
             | KStar RegExp         -- ^ Kleene Star: Zero or more
             | KPlus RegExp         -- ^ Kleene Plus: One or more
             | Opt   RegExp         -- ^ Zero or one
@@ -263,7 +263,10 @@ instance IsString RegExp where
 -- | Regular expressions as a 'Num' instance. Note that
 -- only `+` (union) and `*` (concatenation) make sense.
 instance Num RegExp where
-  (*)          = Conc
+  -- flatten the concats to make them simpler
+  Conc xs * y = Conc (xs ++ [y])
+  x * Conc ys = Conc (x  :  ys)
+  x * y       = Conc [x, y]
 
   -- flatten the unions to make them simpler
   Union xs + y = Union (xs ++ [y])
@@ -275,7 +278,8 @@ instance Num RegExp where
 
   fromInteger x
     | x == 0    = None
-    | True      = error "Num.RegExp: Only 0 makes sense as a reg-exp!"
+    | x == 1    = Literal ""   -- Unit for concatenation is the empty string
+    | True      = error $ "Num.RegExp: Only 0 and 1 makes sense as a reg-exp, no meaning for: " ++ show x
 
   negate      = error "Num.RegExp: no negate method"
 
@@ -286,7 +290,9 @@ instance Show RegExp where
   show All               = "re.allchar"
   show None              = "re.nostr"
   show (Range ch1 ch2)   = "(re.range \"" ++ stringToQFS [ch1] ++ "\" \"" ++ stringToQFS [ch2] ++ "\")"
-  show (Conc  r1 r2)     = "(re.++ " ++ show r1 ++ " " ++ show r2 ++ ")"
+  show (Conc [])         = show (1 :: Integer)
+  show (Conc [x])        = show x
+  show (Conc xs)         = "(re.++ " ++ unwords (map show xs) ++ ")"
   show (KStar r)         = "(re.* " ++ show r ++ ")"
   show (KPlus r)         = "(re.+ " ++ show r ++ ")"
   show (Opt   r)         = "(re.opt " ++ show r ++ ")"
