@@ -41,6 +41,10 @@
     it more defined when the exponent is constant. Thanks to Brian
     Huffman for the patch.
 
+  * Export the underlying polynomial representation for algorithmic
+    reals from the Internals module for further user processing.
+    Thanks  to Jan Path for the patch.
+
 ### Version 7.6, Released 2018-03-18
 
   * GHC 8.4.1 compatibility: Work around compilation issues. SBV
