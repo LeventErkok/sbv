@@ -401,15 +401,14 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
 
         supportsPB = supportsPseudoBooleans caps
 
-        bvOp       = all isBounded arguments
-        intOp      = any isInteger arguments
-        realOp     = any isReal    arguments
-        doubleOp   = any isDouble  arguments
-        floatOp    = any isFloat   arguments
-        boolOp     = all isBoolean arguments
-        charOp     = all isChar    arguments
-        stringOp   = all isString  arguments
-        uninterpOp = all isUninterpreted arguments
+        bvOp     = all isBounded arguments
+        intOp    = any isInteger arguments
+        realOp   = any isReal    arguments
+        doubleOp = any isDouble  arguments
+        floatOp  = any isFloat   arguments
+        boolOp   = all isBoolean arguments
+        charOp   = all isChar    arguments
+        stringOp = all isString  arguments
 
         bad | intOp = error $ "SBV.SMTLib2: Unsupported operation on unbounded integers: " ++ show expr
             | True  = error $ "SBV.SMTLib2: Unsupported operation on real values: " ++ show expr
@@ -594,7 +593,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           = f False (map ssw args)
           | stringOp, Just f <- lookup op smtStringTable
           = f (map ssw args)
-          | uninterpOp, Just f <- lookup op uninterpretedTable
+          | Just f <- lookup op uninterpretedTable
           = f (map ssw args)
           | True
           = error $ "SBV.SMT.SMTLib2.cvtExp.sh: impossible happened; can't translate: " ++ show inp
@@ -645,7 +644,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                     , (LessEq,        lift2Cmp  "<=" "fp.leq")
                                     , (GreaterEq,     lift2Cmp  ">=" "fp.geq")
                                     ]
-                -- equality and comparisons are the only thing that works on uninterpreted sorts
+                -- equality and comparisons are the only thing that works on uninterpreted sorts and pretty much everything else
                 uninterpretedTable = [ (Equal,       lift2S "="        "="        True)
                                      , (NotEqual,    liftNS "distinct" "distinct" True)
                                      , (LessThan,    unintComp "<")
