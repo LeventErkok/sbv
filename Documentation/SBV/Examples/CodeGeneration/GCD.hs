@@ -16,7 +16,7 @@
 module Documentation.SBV.Examples.CodeGeneration.GCD where
 
 import Data.SBV
-import Data.SBV.CodeGen
+import Data.SBV.Tools.CodeGen
 
 -----------------------------------------------------------------------------
 -- * Computing GCD

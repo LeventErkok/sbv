@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Polynomials
+-- Module      :  Data.SBV.Tools.Polynomials
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -14,7 +14,7 @@
 {-# LANGUAGE PatternGuards        #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Data.SBV.Polynomial (
+module Data.SBV.Tools.Polynomial (
         -- * Polynomial arithmetic and CRCs
         Polynomial(..), crc, crcBV, ites, mdp, addPoly
         ) where

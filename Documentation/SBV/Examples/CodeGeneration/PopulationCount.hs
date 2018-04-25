@@ -13,7 +13,7 @@
 module Documentation.SBV.Examples.CodeGeneration.PopulationCount where
 
 import Data.SBV
-import Data.SBV.CodeGen
+import Data.SBV.Tools.CodeGen
 
 -----------------------------------------------------------------------------
 -- * Reference: Slow but /obviously/ correct

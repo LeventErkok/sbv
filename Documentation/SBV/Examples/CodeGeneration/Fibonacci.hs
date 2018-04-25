@@ -15,7 +15,7 @@
 module Documentation.SBV.Examples.CodeGeneration.Fibonacci where
 
 import Data.SBV
-import Data.SBV.CodeGen
+import Data.SBV.Tools.CodeGen
 
 -----------------------------------------------------------------------------
 -- * A naive implementation

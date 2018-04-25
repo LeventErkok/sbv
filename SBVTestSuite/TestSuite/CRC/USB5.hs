@@ -11,7 +11,7 @@
 
 module TestSuite.CRC.USB5(tests) where
 
-import Data.SBV.Polynomial
+import Data.SBV.Tools.Polynomial
 import Utils.SBVTestFramework
 
 -- Test suite

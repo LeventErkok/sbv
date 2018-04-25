@@ -24,7 +24,7 @@ import Data.List  (genericIndex)
 import Data.Maybe (fromJust)
 import Data.SBV
 
-import Data.SBV.STree
+import Data.SBV.Tools.STree
 
 import Numeric (showHex)
 

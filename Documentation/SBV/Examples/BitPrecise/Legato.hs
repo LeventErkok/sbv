@@ -39,7 +39,7 @@ module Documentation.SBV.Examples.BitPrecise.Legato where
 import Data.Array (Array, Ix(..), (!), (//), array)
 
 import Data.SBV
-import Data.SBV.CodeGen
+import Data.SBV.Tools.CodeGen
 import Data.SBV.Internals (Timing(PrintTiming))
 
 import GHC.Generics (Generic)

@@ -29,8 +29,8 @@
 module Documentation.SBV.Examples.Crypto.AES where
 
 import Data.SBV
-import Data.SBV.CodeGen
-import Data.SBV.Polynomial
+import Data.SBV.Tools.CodeGen
+import Data.SBV.Tools.Polynomial
 
 import Data.List (transpose)
 import Data.Maybe (fromJust)

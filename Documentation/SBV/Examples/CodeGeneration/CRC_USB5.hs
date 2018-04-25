@@ -17,8 +17,8 @@
 module Documentation.SBV.Examples.CodeGeneration.CRC_USB5 where
 
 import Data.SBV
-import Data.SBV.CodeGen
-import Data.SBV.Polynomial
+import Data.SBV.Tools.CodeGen
+import Data.SBV.Tools.Polynomial
 
 -----------------------------------------------------------------------------
 -- * The USB polynomial
