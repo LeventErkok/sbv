@@ -106,7 +106,8 @@ charToStr :: SChar -> SString
 charToStr = lift1 StrUnit (Just wrap)
   where wrap c = [c]
 
--- | @`strToStrAt` s offset@. Substring of length 1 at @offset@ in @s@.
+-- | @`strToStrAt` s offset@. Substring of length 1 at @offset@ in @s@. Unspecified if
+-- index is out of bounds.
 --
 -- >>> prove $ \s1 s2 -> strToStrAt (s1 .++ s2) (length s1) .== strToStrAt s2 0
 -- Q.E.D.
