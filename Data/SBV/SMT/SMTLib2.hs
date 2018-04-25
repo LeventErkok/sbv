@@ -401,12 +401,15 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
 
         supportsPB = supportsPseudoBooleans caps
 
-        bvOp     = all isBounded arguments
-        intOp    = any isInteger arguments
-        realOp   = any isReal    arguments
-        doubleOp = any isDouble  arguments
-        floatOp  = any isFloat   arguments
-        boolOp   = all isBoolean arguments
+        bvOp       = all isBounded arguments
+        intOp      = any isInteger arguments
+        realOp     = any isReal    arguments
+        doubleOp   = any isDouble  arguments
+        floatOp    = any isFloat   arguments
+        boolOp     = all isBoolean arguments
+        charOp     = all isChar    arguments
+        stringOp   = all isString  arguments
+        uninterpOp = all isUninterpreted arguments
 
         bad | intOp = error $ "SBV.SMTLib2: Unsupported operation on unbounded integers: " ++ show expr
             | True  = error $ "SBV.SMTLib2: Unsupported operation on real values: " ++ show expr
@@ -478,6 +481,14 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           | KUserSort s (Right _) <- kindOf (head arguments)
           = let idx v = "(" ++ s ++ "_constrIndex " ++ v ++ ")" in "(" ++ o ++ " " ++ idx a ++ " " ++ idx b ++ ")"
         unintComp o sbvs = error $ "SBV.SMT.SMTLib2.sh.unintComp: Unexpected arguments: "   ++ show (o, sbvs)
+
+        -- NB. String comparisons are currently not supported by Z3; but will be with the new logic.
+        stringCmp swap o [a, b]
+          | KString <- kindOf (head arguments)
+          = let [a1, a2] | swap = [b, a]
+                         | True = [a, b]
+            in "(" ++ o ++ " " ++ a1 ++ " " ++ a2 ++ ")"
+        stringCmp _ o sbvs = error $ "SBV.SMT.SMTLib2.sh.stringCmp: Unexpected arguments: " ++ show (o, sbvs)
 
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
         lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib2.sh.lift1: Unexpected arguments: "   ++ show (o, sbvs)
@@ -579,7 +590,11 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           = f (any hasSign args) (map ssw args)
           | floatOp || doubleOp, Just f <- lookup op smtOpFloatDoubleTable
           = f (any hasSign args) (map ssw args)
-          | Just f <- lookup op uninterpretedTable
+          | charOp, Just f <- lookup op smtCharTable
+          = f False (map ssw args)
+          | stringOp, Just f <- lookup op smtStringTable
+          = f (map ssw args)
+          | uninterpOp, Just f <- lookup op uninterpretedTable
           = f (map ssw args)
           | True
           = error $ "SBV.SMT.SMTLib2.cvtExp.sh: impossible happened; can't translate: " ++ show inp
@@ -638,6 +653,24 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                      , (LessEq,      unintComp "<=")
                                      , (GreaterEq,   unintComp ">=")
                                      ]
+                -- For chars, the underlying type is currently SWord8, so we go with the regular bit-vector operations
+                -- TODO: This will change when we move to unicode!
+                smtCharTable = [ (Equal,         eqBV)
+                               , (NotEqual,      neqBV)
+                               , (LessThan,      lift2S  "bvult" (error "smtChar.<: did-not expect signed char here!"))
+                               , (GreaterThan,   lift2S  "bvugt" (error "smtChar.>: did-not expect signed char here!"))
+                               , (LessEq,        lift2S  "bvule" (error "smtChar.<=: did-not expect signed char here!"))
+                               , (GreaterEq,     lift2S  "bvuge" (error "smtChar.>=: did-not expect signed char here!"))
+                               ]
+                -- For strings, equality and comparisons are the only operators
+                -- TODO: The string comparison operators will most likely change with the new theory!
+                smtStringTable = [ (Equal,       lift2S "="        "="        True)
+                                 , (NotEqual,    liftNS "distinct" "distinct" True)
+                                 , (LessThan,    stringCmp False "str.<")
+                                 , (GreaterThan, stringCmp True  "str.<")
+                                 , (LessEq,      stringCmp False "str.<=")
+                                 , (GreaterEq,   stringCmp True  "str.<=")
+                                 ]
 
 -----------------------------------------------------------------------------------------------
 -- Casts supported by SMTLib. (From: <http://smtlib.cs.uiowa.edu/theories-FloatingPoint.shtml>)

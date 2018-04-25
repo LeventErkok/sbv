@@ -92,6 +92,8 @@ genBoolTest nm op opS = map mkTest $
      ++ zipWith pair [(show x, show y, x `op` y) | x <- i32s, y <- i32s] [x `opS` y | x <- si32s, y <- si32s]
      ++ zipWith pair [(show x, show y, x `op` y) | x <- i64s, y <- i64s] [x `opS` y | x <- si64s, y <- si64s]
      ++ zipWith pair [(show x, show y, x `op` y) | x <- iUBs, y <- iUBs] [x `opS` y | x <- siUBs, y <- siUBs]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- iCs,  y <- iCs ] [x `opS` y | x <- siCs,  y <- siCs]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- iSs,  y <- iSs ] [x `opS` y | x <- siSs,  y <- siSs]
   where pair (x, y, a) b = (x, y, Just a == unliteral b)
         mkTest (x, y, s) = testCase ("arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y) (s `showsAs` "True")
 
@@ -590,3 +592,17 @@ sds = map literal ds
 -- Currently we test over all latin-1 characters. But when Unicode comes along, we'll have to be more selective.
 cs :: String
 cs = map C.chr [0..255]
+
+-- For pair character ops, just take a subset
+iCs :: String
+iCs = map C.chr $ [0..5] ++ [98..102] ++ [250..255]
+
+siCs :: [SChar]
+siCs = map literal iCs
+
+-- Ditto for strings, just a few things
+iSs :: [String]
+iSs = ["", "palTRY", "teSTing", "SBV", "sTRIngs", "123", "surely", "thIS", "wiLL", "DO!"]
+
+siSs :: [SString]
+siSs = map literal iSs

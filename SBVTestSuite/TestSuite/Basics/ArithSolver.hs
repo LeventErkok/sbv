@@ -86,16 +86,21 @@ genBinTest unboundedOK nm op = map mkTest $  [(show x, show y, mkThm2 x y (x `op
                                       return $ literal r .== a `op` b
 
 genBoolTest :: String -> (forall a. Ord a => a -> a -> Bool) -> (forall a. OrdSymbolic a => a -> a -> SBool) -> [TestTree]
-genBoolTest nm op opS = map mkTest $  [(show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- w8s ]
-                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- w16s, y <- w16s]
-                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- w32s, y <- w32s]
-                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- w64s, y <- w64s]
-                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i8s,  y <- i8s ]
-                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i16s, y <- i16s]
-                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i32s, y <- i32s]
-                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i64s, y <- i64s]
-                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- iUBs, y <- iUBs]
-  where mkTest (x, y, t) = testCase ("genBoolTest.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y) (assert t)
+genBoolTest nm op opS = map mkTest $  [(show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,       y <- w8s ]
+                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- w16s,      y <- w16s]
+                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- w32s,      y <- w32s]
+                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- w64s,      y <- w64s]
+                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i8s,       y <- i8s ]
+                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i16s,      y <- i16s]
+                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i32s,      y <- i32s]
+                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i64s,      y <- i64s]
+                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- iUBs,      y <- iUBs]
+                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- reducedCS, y <- reducedCS]
+                                   ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- ss,        y <- ss, nm `elem` allowedStringComps]
+  where -- Currently Z3 doesn't allow for string comparisons, so only test equals and distinct
+        -- See: https://github.com/LeventErkok/sbv/issues/368 for tracking issue.
+        allowedStringComps = ["==", "/="]
+        mkTest (x, y, t) = testCase ("genBoolTest.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y) (assert t)
         mkThm2 x y r = isTheorem $ do [a, b] <- mapM free ["x", "y"]
                                       constrain $ a .== literal x
                                       constrain $ b .== literal y
@@ -593,7 +598,16 @@ ds = xs ++ map (* (-1)) (filter (not . isNaN) xs) -- -nan is the same as nan
   where xs = [nan, infinity, 0, 0.5, 2.516632060108026e-2, 0.8601891300751106, 5.0e-324]
 
 -- Currently we test over all latin-1 characters. But when Unicode comes along, we'll have to be more selective.
+-- TODO: Unicode update here.
 cs :: String
 cs = map C.chr [0..255]
+
+-- For pair char ops, take a subset.
+reducedCS :: String
+reducedCS = map C.chr $ [0..5] ++ [98..102] ++ [250..255]
+
+-- For strings, just a few things
+ss :: [String]
+ss = ["", "palTRY", "teSTing", "SBV", "sTRIngs", "123", "surely", "thIS", "wiLL", "DO!"]
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
