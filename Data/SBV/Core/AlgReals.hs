@@ -34,9 +34,8 @@ import Test.QuickCheck (Arbitrary(..))
 -- | Algebraic reals. Note that the representation is left abstract. We represent
 -- rational results explicitly, while the roots-of-polynomials are represented
 -- implicitly by their defining equation
-data AlgReal = AlgRational Bool Rational           -- ^ bool says it's exact (i.e., SMT-solver did not return it with ? at the end.)
-             | AlgPolyRoot (Integer,  AlgRealPoly) -- ^ which root of this polynimial?
-                           (Maybe String)          -- ^ approximate decimal representation with given precision, if available
+data AlgReal = AlgRational Bool Rational                          -- ^ bool says it's exact (i.e., SMT-solver did not return it with ? at the end.)
+             | AlgPolyRoot (Integer,  AlgRealPoly) (Maybe String) -- ^ which root of this polynomial and an approximate decimal representation with given precision, if available
 
 -- | Check wheter a given argument is an exact rational
 isExactRational :: AlgReal -> Bool
