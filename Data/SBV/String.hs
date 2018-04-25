@@ -319,7 +319,7 @@ offsetIndexOf s sub offset
 strToNat :: SString -> SInteger
 strToNat s
  | Just a <- unliteral s
- = if all C.isDigit a && not (null a)
+ = if all C.isDigit a && not (P.null a)
    then literal (read a)
    else -1
  | True
