@@ -252,10 +252,10 @@ subStr s offset len
   , Just o <- unliteral offset               -- a constant offset
   , Just l <- unliteral len                  -- a constant length
   , let lc = genericLength c                 -- length of the string
-  , let valid x = x >= 0 && x < lc           -- predicate that checks valid point
+  , let valid x = x >= 0 && x <= lc          -- predicate that checks valid point
   , valid o                                  -- offset is valid
   , l >= 0                                   -- length is not-negative
-  , valid $ o + l - 1                        -- we don't overrun
+  , valid $ o + l                            -- we don't overrun
   = literal $ genericTake l $ genericDrop o c
   | True                                     -- either symbolic, or something is out-of-bounds
   = lift3 StrSubstr Nothing s offset len
