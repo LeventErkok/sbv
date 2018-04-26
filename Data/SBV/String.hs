@@ -303,6 +303,8 @@ indexOf s sub = offsetIndexOf s sub 0
 -- Q.E.D.
 -- >>> prove $ \s sub i -> i .>= length s &&& length sub .> 0 ==> offsetIndexOf s sub i .== -1
 -- Q.E.D.
+-- >>> prove $ \s sub i -> i .> length s ==> offsetIndexOf s sub i .== -1
+-- Q.E.D.
 offsetIndexOf :: SString -> SString -> SInteger -> SInteger
 offsetIndexOf s sub offset
   | Just c <- unliteral s               -- a constant string
