@@ -572,14 +572,11 @@ genStrings = map mkTest1 (  [("length",        show s,                   mkThm1 
                          ++ [("isPrefixOf",    show s, show s1,          mkThm2 SS.isPrefixOf    isPrefixOf    s s1   ) | s <- ss, s1 <- ss                                             ]
                          ++ [("take",          show s, show i,           mkThm2 SS.take          genericTake   i s    ) | s <- ss, i <- iUBs                                            ]
                          ++ [("drop",          show s, show i,           mkThm2 SS.drop          genericDrop   i s    ) | s <- ss, i <- iUBs                                            ]
-                         ++ [("indexOf",       show s, show s1,          mkThm2 SS.indexOf       indexOf       s s1   ) | s <- ss, s1 <- ss, bug1594 s                                  ])
+                         ++ [("indexOf",       show s, show s1,          mkThm2 SS.indexOf       indexOf       s s1   ) | s <- ss, s1 <- ss                                             ])
           ++ map mkTest3 (  [("subStr",        show s, show  i, show j,  mkThm3 SS.subStr        subStr        s i  j ) | s <- ss, i  <- range s, j <- range s, i + j <= genericLength s]
-                         ++ [("replace",       show s, show s1, show s2, mkThm3 SS.replace       replace       s s1 s2) | s <- ss, s1 <- ss, s2 <- ss, bug1595 s1                       ]
+                         ++ [("replace",       show s, show s1, show s2, mkThm3 SS.replace       replace       s s1 s2) | s <- ss, s1 <- ss, s2 <- ss                                   ]
                          ++ [("offsetIndexOf", show s, show s1, show i,  mkThm3 SS.offsetIndexOf offsetIndexOf s s1 i ) | s <- ss, s1 <- ss, i <- range s                               ])
-  where bug1594 = not . null -- SEE: https://github.com/Z3Prover/z3/issues/1594
-        bug1595 = not . null -- SEE: https://github.com/Z3Prover/z3/issues/1595
-
-        strLen :: String -> Integer
+  where strLen :: String -> Integer
         strLen = fromIntegral . length
 
         strToNat :: String -> Integer
