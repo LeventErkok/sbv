@@ -54,6 +54,14 @@
     reals from the Internals module for further user processing.
     Thanks  to Jan Path for the patch.
 
+  * Quickcheck constraints: If a named constraint starts with the text
+    'sbvQuickCheckSkip', we no longer consider it to gate the input-vector
+    as irrelevant. Most end-users need not care about this technicality,
+    though it is useful in cases where you want to force SBV to go
+    through the solver and avoid constant folding in a quick-check
+    scenario. Please get in touch if you used quick-check feature before
+    and this causes any issues.
+
 ### Version 7.6, Released 2018-03-18
 
   * GHC 8.4.1 compatibility: Work around compilation issues. SBV

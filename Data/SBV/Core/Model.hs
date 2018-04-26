@@ -48,7 +48,7 @@ import GHC.Stack
 import Data.Array  (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits   (Bits(..))
 import Data.Int    (Int8, Int16, Int32, Int64)
-import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate)
+import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate, isPrefixOf)
 import Data.Maybe  (fromMaybe)
 import Data.String (IsString(..))
 import Data.Word   (Word8, Word16, Word32, Word64)
@@ -1813,7 +1813,14 @@ instance Testable (Symbolic SBool) where
      where test = do (r, Result{resTraces=tvals, resConsts=cs, resConstraints=cstrs, resUIConsts=unints}) <- runSymbolic Concrete prop
 
                      let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
-                         cond = all (cwToBool . cval . snd) cstrs
+
+                         -- We will allow named constraints that are prefix-marked with "sbvQuickCheckSkip" in them to be ignored.
+                         -- This allows us to use quickcheck as a vehicle to test the solvers.
+                         pick (Nothing, _) = True
+                         pick (Just nm, _)
+                           | "sbvQuickCheckSkip" `isPrefixOf` nm = False
+                           | True                                = True
+                         cond = all (cwToBool . cval . snd) (filter pick cstrs)
 
                      case map fst unints of
                        [] -> case unliteral r of

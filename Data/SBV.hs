@@ -747,7 +747,13 @@ depends on the context:
     and is skipped. Note that this is similar to 'prove', but is stronger: We do not
     accept a test case to be valid just because the constraints fail on them, although
     semantically the implication does hold. We simply skip that test case as a /bad/
-    test vector.
+    test vector. There is one exception to this rule: If the constraint is
+    named (see 'namedConstraint') and if the name starts with the text @sbvQuickCheckSkip@
+    then we allow such constraints to go through without discarding the test vector. This
+    nice trick allows us to test solver results bypassing the constant folding mechanism:
+    we merely allocate a new variable and assert equivalence via such a constraint.
+    Long story short: If you want a constraint to *not* stop quick-check from considering
+    the input as relevant, prefix it with @sbvQuickCheckSkip@.
 
   * In a 'genTest' call: Similar to 'quickCheck' and 'prove': If a constraint
     does not hold, the input value is ignored and is not included in the test
