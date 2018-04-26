@@ -291,6 +291,8 @@ replace s src dst
 -- Falsifiable. Counter-example:
 --   s0 = "\NUL\NUL\NUL" :: String
 --   s1 =              2 :: Integer
+-- >>> prove $ \s1 s2 -> length s2 .> length s1 ==> indexOf s1 s2 .== -1
+-- Q.E.D.
 indexOf :: SString -> SString -> SInteger
 indexOf s sub = offsetIndexOf s sub 0
 
