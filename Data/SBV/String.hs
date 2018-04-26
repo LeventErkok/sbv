@@ -264,6 +264,8 @@ subStr s offset len
 --
 -- >>> prove $ \s -> replace "hello" s "world" .== "world" ==> s .== "hello"
 -- Q.E.D.
+-- >>> prove $ \s1 s2 s3 -> length s2 .> length s1 ==> replace s1 s2 s3 .== s1
+-- Q.E.D.
 replace :: SString -> SString -> SString -> SString
 replace s src dst
   | Just b <- unliteral src, P.null b   -- If src is null, simply prepend
