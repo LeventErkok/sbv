@@ -274,7 +274,7 @@ replace s src dst
   = literal $ walk a b c
   | True
   = lift3 StrReplace Nothing s src dst
-  where walk haystack needle newNeedle = go haystack
+  where walk haystack needle newNeedle = go haystack   -- note that needle is guaranteed non-empty here.
            where go []       = []
                  go i@(c:cs)
                   | needle `L.isPrefixOf` i = newNeedle ++ genericDrop (genericLength needle :: Integer) i
