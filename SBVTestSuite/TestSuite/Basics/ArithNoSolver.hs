@@ -565,7 +565,8 @@ genStrings = map mkTest1 (  [("length",        show s,                   check1 
         subStr s i j = genericTake j (genericDrop i s)
 
         replace :: String -> String -> String -> String
-        replace s x y = go s
+        replace s "" y = y ++ s
+        replace s x  y = go s
           where go "" = ""
                 go h@(c:rest) | x `isPrefixOf` h = y ++ drop (length x) h
                               | True             = c : go rest

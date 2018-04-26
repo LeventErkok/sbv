@@ -266,6 +266,8 @@ subStr s offset len
 -- Q.E.D.
 replace :: SString -> SString -> SString -> SString
 replace s src dst
+  | Just b <- unliteral src, P.null b   -- If src is null, simply prepend
+  = dst .++ s
   | Just a <- unliteral s
   , Just b <- unliteral src
   , Just c <- unliteral dst
