@@ -17,7 +17,16 @@
 
     The 'SString' type is the type of symbolic strings, consisting
     of characters from the Latin-1 character set currently, but we
-    shall extend to unicode as solvers become available.
+    shall extend to unicode as solvers become available. Note that
+    an 'SString' is *not* simply a list of 'SChar' values: It is a
+    symbolic type of its own and is processed as a single item.
+    Conversions from list of characters is possible (via the 'implode'
+    function). In the other direction, one cannot generally 'explode'
+    a string, since it may be of arbitrary length and thus we would
+    not know what concrete list to map it to. This is a bit unlike
+    Haskell, but the differences dissipate quickly in general, and
+    the power of being able to deal with a string as a symbolic
+    entity on its own opens up many verification possibilities.
 
     Note that currently only Z3 and CVC4 has support for this logic,
     and they do differ in some details. Various character/string

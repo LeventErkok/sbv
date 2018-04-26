@@ -140,7 +140,10 @@ type SDouble = SBV Double
 -- details, see: <http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml>
 type SChar = SBV Char
 
--- | A symbolic string
+-- | A symbolic string. Note that a symbolic string is /not/ a list of symbolic characters,
+-- that is, it is not the case that @SString = [SChar]@, unlike what one might expect following
+-- Haskell strings. An 'SString' is a symbolic value of its own, of possibly arbitrary length,
+-- and internally processed as one unit as opposed to a fixed-length list of characters.
 type SString = SBV String
 
 -- | Not-A-Number for 'Double' and 'Float'. Surprisingly, Haskell
