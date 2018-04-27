@@ -28,7 +28,9 @@ import Generics.Deriving.Show (GShow, gshow)
 import Control.DeepSeq (NFData(..))
 
 -- | Result of a 'checkSat' or 'checkSatAssuming' call.
-data CheckSatResult = Sat | Unsat | Unk
+data CheckSatResult = Sat           -- ^ Satisfiable: A model is available, which can be queried with 'Data.SBV.Control.getValue'.
+                    | Unsat         -- ^ Unsatisfiable: No model is available. Unsat cores might be obtained via 'Data.SBV.Control.getUnsatCore'.
+                    | Unk           -- ^ Unknown: Use 'Data.SBV.Control.getUnknownReason' to obtain an explanation why this might be the case.
                     deriving (Eq, Show)
 
 -- | Collectable information from the solver.
