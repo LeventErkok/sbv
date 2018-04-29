@@ -30,6 +30,8 @@ module Utils.SBVTestFramework (
 
 import qualified Control.Exception as C
 
+import Control.Monad.Trans (liftIO)
+
 import qualified Data.ByteString.Lazy.Char8 as LBC
 import qualified Data.ByteString as BS
 
@@ -187,30 +189,30 @@ qc2 nm opC opS = [cf, sm]
                            _                -> return false
 
          sm = QC.testProperty (nm ++ ".symbolic") $ QC.monadicIO $ do
-                        v1 <- QC.pick QC.arbitrary
-                        v2 <- QC.pick QC.arbitrary
-                        let expected = opC v1 v2
+                        ((i1, i2, expected), result) <- QC.run $ runSMT $ do v1  <- liftIO $ QC.generate QC.arbitrary
+                                                                             v2  <- liftIO $ QC.generate QC.arbitrary
+                                                                             i1  <- free_
+                                                                             i2  <- free_
+                                                                             res <- free_
 
-                        result <- QC.run $ runSMT $ do
-                                        i1  <- free_
-                                        i2  <- free_
-                                        res <- free_
+                                                                             constrain $ i1  .== literal v1
+                                                                             constrain $ i2  .== literal v2
+                                                                             constrain $ res .== i1 `opS` i2
 
-                                        constrain $ i1  .== literal v1
-                                        constrain $ i2  .== literal v2
-                                        constrain $ res .== i1 `opS` i2
+                                                                             let pre = (v1, v2, v1 `opC` v2)
 
-                                        query $ do cs <- checkSat
-                                                   case cs of
-                                                     Unk   -> return $ Left "Unexpected: Solver responded Unknown!"
-                                                     Unsat -> return $ Left "Unexpected: Solver responded Unsatisfiable!"
-                                                     Sat   -> Right <$> getValue res
+                                                                             query $ do cs <- checkSat
+                                                                                        case cs of
+                                                                                          Unk   -> return (pre, Left "Unexpected: Solver responded Unknown!")
+                                                                                          Unsat -> return (pre, Left "Unexpected: Solver responded Unsatisfiable!")
+                                                                                          Sat   -> do r <- getValue res
+                                                                                                      return (pre, Right r)
 
                         let getCW vnm (SBV (SVal _ (Left c))) = (vnm, c)
                             getCW vnm (SBV (SVal k _       )) = error $ "qc2.getCW: Impossible happened, non-CW value while extracting: " ++ show (vnm, k)
 
-                            vals = [ getCW "i1"       (literal v1)
-                                   , getCW "i2"       (literal v2)
+                            vals = [ getCW "i1"       (literal i1)
+                                   , getCW "i2"       (literal i2)
                                    , getCW "Expected" (literal expected)
                                    ]
 
