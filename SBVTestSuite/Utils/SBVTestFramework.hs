@@ -20,6 +20,7 @@ module Utils.SBVTestFramework (
         , goldenVsStringShow
         , goldenCapturedIO
         , CIOS(..), TestEnvironment(..), getTestEnvironment
+        , qc2
         , pickTests
         -- module exports to simplify life
         , module Test.Tasty
@@ -41,10 +42,14 @@ import Test.Tasty.HUnit      ((@?), Assertion, testCase, AssertionPredicable)
 import Test.Tasty.Golden           (goldenVsString)
 import Test.Tasty.Golden.Advanced  (goldenTest)
 
+import qualified Test.Tasty.QuickCheck   as QC
+import qualified Test.QuickCheck.Monadic as QC
+
 import Test.Tasty.Runners hiding (Result)
 import System.Random (randomRIO)
 
 import Data.SBV
+import Data.SBV.Control
 
 import Data.Char (chr, ord, isDigit)
 
@@ -52,7 +57,7 @@ import Data.Maybe(fromMaybe, catMaybes)
 
 import System.FilePath ((</>), (<.>))
 
-import Data.SBV.Internals (runSymbolic, Symbolic, Result, SBVRunMode(..), IStage(..))
+import Data.SBV.Internals (runSymbolic, Symbolic, Result, SBVRunMode(..), IStage(..), SBV(..), SVal(..), showModel, SMTModel(..))
 
 ---------------------------------------------------------------------------------------
 -- Test environment; continuous integration
@@ -158,6 +163,68 @@ assertIsSat p = assert (isSatisfiable p)
 -- | Turn provable to a negative assertion, satisfiability case
 assertIsntSat :: Provable a => a -> Assertion
 assertIsntSat p = assert (fmap not (isSatisfiable p))
+
+-- | Quick-check a binary function, creating one version for constant folding, and another for solver
+qc2 :: (SymWord a, SymWord b, SymWord c, Show a, Show b, QC.Arbitrary a, QC.Arbitrary b, SMTValue c) => String -> (a -> b -> c) -> (SBV a -> SBV b -> SBV c) -> [TestTree]
+qc2 nm opC opS = [cf, sm]
+   where cf = QC.testProperty (nm ++ ".constantFold") $ do
+                        i1 <- free "i1"
+                        i2 <- free "i2"
+
+                        let extract n v = case unliteral v of
+                                            Nothing -> error $ "qc2." ++ nm ++ ": Cannot extract value for: " ++ n
+                                            Just x  -> x
+
+                            v1 = extract "i1" i1
+                            v2 = extract "i2" i2
+
+                            expected = literal $ opC v1 v2
+                            result   = opS i1 i2
+
+                        observe "Expected" expected
+                        observe "Result"   result
+
+                        case (unliteral expected, unliteral result) of
+                           (Just _, Just _) -> return $ expected .== result
+                           _                -> return false
+
+         sm = QC.testProperty (nm ++ ".symbolic") $ QC.monadicIO $ do
+                        v1 <- QC.pick QC.arbitrary
+                        v2 <- QC.pick QC.arbitrary
+                        let expected = opC v1 v2
+
+                        result <- QC.run $ runSMT $ do
+                                        i1  <- free_
+                                        i2  <- free_
+                                        res <- free_
+
+                                        constrain $ i1  .== literal v1
+                                        constrain $ i2  .== literal v2
+                                        constrain $ res .== i1 `opS` i2
+
+                                        query $ do cs <- checkSat
+                                                   case cs of
+                                                     Unk   -> return $ Left "Unexpected: Solver responded Unknown!"
+                                                     Unsat -> return $ Left "Unexpected: Solver responded Unsatisfiable!"
+                                                     Sat   -> Right <$> getValue res
+
+                        let getCW vnm (SBV (SVal _ (Left c))) = (vnm, c)
+                            getCW vnm (SBV (SVal k _       )) = error $ "qc2.getCW: Impossible happened, non-CW value while extracting: " ++ show (vnm, k)
+
+                            vals = [ getCW "i1"       (literal v1)
+                                   , getCW "i2"       (literal v2)
+                                   , getCW "Expected" (literal expected)
+                                   ]
+
+                            model = case result of
+                                      Right v -> showModel defaultSMTCfg (SMTModel [] (vals ++ [getCW "Result" (literal v)]))
+                                      Left  e -> showModel defaultSMTCfg (SMTModel [] vals) ++ "\n" ++ e
+
+                        QC.monitor (QC.counterexample model)
+
+                        case result of
+                           Right a -> QC.assert $ expected == a
+                           _       -> QC.assert False
 
 -- | Picking a certain percent of tests.
 pickTests :: Int -> TestTree -> IO TestTree

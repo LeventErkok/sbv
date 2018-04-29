@@ -78,6 +78,7 @@ import qualified TestSuite.Queries.Int_Z3
 import qualified TestSuite.Queries.Interpolants
 import qualified TestSuite.Queries.Strings
 import qualified TestSuite.Queries.Uninterpreted
+import qualified TestSuite.QuickCheck.QC
 import qualified TestSuite.Uninterpreted.AUF
 import qualified TestSuite.Uninterpreted.Axioms
 import qualified TestSuite.Uninterpreted.Function
@@ -192,6 +193,7 @@ otherTests = testGroup "SBVOtherTests" [
                , TestSuite.Queries.Interpolants.tests
                , TestSuite.Queries.Strings.tests
                , TestSuite.Queries.Uninterpreted.tests
+               , TestSuite.QuickCheck.QC.tests
                , TestSuite.Uninterpreted.AUF.tests
                , TestSuite.Uninterpreted.Axioms.tests
                , TestSuite.Uninterpreted.Function.tests

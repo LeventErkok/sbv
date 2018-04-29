@@ -158,7 +158,7 @@ Test-Suite SBVTest
                   , ScopedTypeVariables
   Build-depends : base >= 4.9, data-binary-ieee754, filepath, syb
                 , sbv, directory, random, mtl, containers
-                , template-haskell, bytestring, tasty, tasty-golden, tasty-hunit
+                , template-haskell, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, QuickCheck
   Hs-Source-Dirs  : SBVTestSuite
   main-is         : SBVTest.hs
   Other-modules   : Utils.SBVTestFramework
@@ -233,6 +233,7 @@ Test-Suite SBVTest
                   , TestSuite.Queries.Interpolants
                   , TestSuite.Queries.Strings
                   , TestSuite.Queries.Uninterpreted
+                  , TestSuite.QuickCheck.QC
                   , TestSuite.Uninterpreted.AUF
                   , TestSuite.Uninterpreted.Axioms
                   , TestSuite.Uninterpreted.Function
@@ -241,7 +242,7 @@ Test-Suite SBVTest
 
 Test-Suite SBVDocTest
     Build-Depends:    base, directory, filepath, random
-                    , doctest, Glob, bytestring, tasty, tasty-golden, tasty-hunit
+                    , doctest, Glob, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, QuickCheck
                     , sbv
     default-language: Haskell2010
     Hs-Source-Dirs  : SBVTestSuite
@@ -251,7 +252,7 @@ Test-Suite SBVDocTest
 
 Test-Suite SBVHLint
     build-depends:    base, directory, filepath, random
-                    , hlint, bytestring, tasty, tasty-golden, tasty-hunit
+                    , hlint, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, QuickCheck
                     , sbv
     default-language: Haskell2010
     hs-source-dirs:   SBVTestSuite
