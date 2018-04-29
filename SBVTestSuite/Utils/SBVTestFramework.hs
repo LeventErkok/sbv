@@ -171,9 +171,7 @@ qc2 nm opC opS = [cf, sm]
                         i1 <- free "i1"
                         i2 <- free "i2"
 
-                        let extract n v = case unliteral v of
-                                            Nothing -> error $ "qc2." ++ nm ++ ": Cannot extract value for: " ++ n
-                                            Just x  -> x
+                        let extract n = fromMaybe (error $ "qc2." ++ nm ++ ": Cannot extract value for: " ++ n) . unliteral
 
                             v1 = extract "i1" i1
                             v2 = extract "i2" i2
