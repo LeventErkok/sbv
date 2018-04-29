@@ -20,7 +20,7 @@ module Utils.SBVTestFramework (
         , goldenVsStringShow
         , goldenCapturedIO
         , CIOS(..), TestEnvironment(..), getTestEnvironment
-        , qc2
+        , qc1, qc2
         , pickTests
         -- module exports to simplify life
         , module Test.Tasty
@@ -165,6 +165,61 @@ assertIsSat p = assert (isSatisfiable p)
 -- | Turn provable to a negative assertion, satisfiability case
 assertIsntSat :: Provable a => a -> Assertion
 assertIsntSat p = assert (fmap not (isSatisfiable p))
+
+-- | Quick-check a unary function, creating one version for constant folding, and another for solver
+qc1 :: (SymWord a, SymWord b, Show a, QC.Arbitrary a, SMTValue b) => String -> (a -> b) -> (SBV a -> SBV b) -> [TestTree]
+qc1 nm opC opS = [cf, sm]
+   where cf = QC.testProperty (nm ++ ".constantFold") $ do
+                        i <- free "i"
+
+                        let extract n = fromMaybe (error $ "qc1." ++ nm ++ ": Cannot extract value for: " ++ n) . unliteral
+
+                            v = extract "i" i
+
+                            expected = literal $ opC v
+                            result   = opS i
+
+                        observe "Expected" expected
+                        observe "Result"   result
+
+                        case (unliteral expected, unliteral result) of
+                           (Just _, Just _) -> return $ expected .== result
+                           _                -> return false
+
+         sm = QC.testProperty (nm ++ ".symbolic") $ QC.monadicIO $ do
+                        ((i, expected), result) <- QC.run $ runSMT $ do v   <- liftIO $ QC.generate QC.arbitrary
+                                                                        i   <- free_
+                                                                        res <- free_
+
+                                                                        constrain $ i   .== literal v
+                                                                        constrain $ res .== opS i
+
+                                                                        let pre = (v, opC v)
+
+                                                                        query $ do cs <- checkSat
+                                                                                   case cs of
+                                                                                     Unk   -> return (pre, Left "Unexpected: Solver responded Unknown!")
+                                                                                     Unsat -> return (pre, Left "Unexpected: Solver responded Unsatisfiable!")
+                                                                                     Sat   -> do r <- getValue res
+                                                                                                 return (pre, Right r)
+
+                        let getCW vnm (SBV (SVal _ (Left c))) = (vnm, c)
+                            getCW vnm (SBV (SVal k _       )) = error $ "qc2.getCW: Impossible happened, non-CW value while extracting: " ++ show (vnm, k)
+
+                            vals = [ getCW "i"        (literal i)
+                                   , getCW "Expected" (literal expected)
+                                   ]
+
+                            model = case result of
+                                      Right v -> showModel defaultSMTCfg (SMTModel [] (vals ++ [getCW "Result" (literal v)]))
+                                      Left  e -> showModel defaultSMTCfg (SMTModel [] vals) ++ "\n" ++ e
+
+                        QC.monitor (QC.counterexample model)
+
+                        case result of
+                           Right a -> QC.assert $ expected == a
+                           _       -> QC.assert False
+
 
 -- | Quick-check a binary function, creating one version for constant folding, and another for solver
 qc2 :: (SymWord a, SymWord b, SymWord c, Show a, Show b, QC.Arbitrary a, QC.Arbitrary b, SMTValue c) => String -> (a -> b -> c) -> (SBV a -> SBV b -> SBV c) -> [TestTree]
