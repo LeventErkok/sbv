@@ -276,9 +276,10 @@ getModel = getModelAtIndex Nothing
 getModelAtIndex :: Maybe Int -> Query SMTModel
 getModelAtIndex mbi = do
              State{runMode} <- get
-             cfg  <- getConfig
-             inps <- getQuantifiedInputs
-             rm   <- io $ readIORef runMode
+             cfg   <- getConfig
+             inps  <- getQuantifiedInputs
+             obsvs <- getObservables
+             rm    <- io $ readIORef runMode
              let vars :: [NamedSymVar]
                  vars = case rm of
                           m@CodeGen         -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
@@ -287,10 +288,17 @@ getModelAtIndex mbi = do
                                                let allModelInputs = if isSAT then takeWhile ((/= ALL) . fst) inps
                                                                              else takeWhile ((== ALL) . fst) inps
 
+                                                   -- are we inside a quantifier
+                                                   insideQuantifier = length allModelInputs < length inps
+
+                                                   -- observables are only meaningful if we're not in a quantified context
+                                                   allPrefixObservables | insideQuantifier = []
+                                                                        | True             = [(EX, (sw, nm)) | (nm, sw) <- obsvs]
+
                                                    sortByNodeId :: [NamedSymVar] -> [NamedSymVar]
                                                    sortByNodeId = sortBy (compare `on` (\(SW _ n, _) -> n))
 
-                                               in sortByNodeId [nv | (_, nv@(_, n)) <- allModelInputs, not (isNonModelVar cfg n)]
+                                               in sortByNodeId [nv | (_, nv@(_, n)) <- allModelInputs ++ allPrefixObservables, not (isNonModelVar cfg n)]
 
              assocs <- mapM (\(sw, n) -> (n, ) <$> getValueCW mbi sw) vars
 

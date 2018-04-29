@@ -22,7 +22,7 @@
 module Data.SBV.Control.Utils (
        io
      , ask, send, getValue, getUninterpretedValue, getValueCW, getUnsatAssumptions, SMTValue(..)
-     , getQueryState, modifyQueryState, getConfig, getObjectives, getSBVAssertions, getSBVPgm, getQuantifiedInputs
+     , getQueryState, modifyQueryState, getConfig, getObjectives, getSBVAssertions, getSBVPgm, getQuantifiedInputs, getObservables
      , checkSat, checkSatUsing, getAllSatResult
      , inNewContext, freshVar, freshVar_
      , parse
@@ -478,6 +478,14 @@ getQuantifiedInputs = do State{rinps} <- get
 
                          return $ preQs ++ trackers ++ postQs
 
+-- | Get observables, i.e., those explicitly labeled by the user with a call to 'observe'.
+getObservables :: Query [(String, SW)]
+getObservables = do State{rObservables} <- get
+
+                    rObs <- liftIO $ readIORef rObservables
+
+                    return $ reverse rObs
+
 -- | Repeatedly issue check-sat, after refuting the previous model.
 -- The bool is true if the model is unique upto prefix existentials.
 getAllSatResult :: Query (Bool, Bool, [SMTResult])
@@ -667,7 +675,7 @@ unexpected ctx sent expected mbHint received mbReason = do
 
 -- | Convert a query result to an SMT Problem
 runProofOn :: SMTConfig -> Bool -> [String] -> Result -> SMTProblem
-runProofOn config isSat comments res@(Result ki _qcInfo _codeSegs is consts tbls arrs uis axs pgm cstrs _assertions outputs) =
+runProofOn config isSat comments res@(Result ki _qcInfo _observables _codeSegs is consts tbls arrs uis axs pgm cstrs _assertions outputs) =
      let flipQ (ALL, x) = (EX,  x)
          flipQ (EX,  x) = (ALL, x)
 

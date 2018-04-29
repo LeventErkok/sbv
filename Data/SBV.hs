@@ -249,6 +249,10 @@ module Data.SBV (
   -- $resultTypes
   , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
 
+  -- ** Observing expressions
+  -- $observeInternal
+  , observe
+
   -- ** Programmable model extraction
   -- $programmableExtraction
   , SatModel(..), Modelable(..), displayModels, extractModels
@@ -954,6 +958,30 @@ SBV provides various levels of verbosity to aid in debugging, by using the 'SMTC
     directly feed this file to the SMT-solver outside of the SBV since it is machine-readable. This is good for offline analysis
     situations, where you want to have a full account of what happened. For instance, it will print time-stamps at every interaction
     point, so you can see how long each command took.
+-}
+
+{- $observeInternal
+
+The 'observe' command can be used to trace values of arbitrary expressions during a 'sat', 'prove', or perhaps more
+importantly, in a 'quickCheck' call. This is useful for, for instance, recording expected/obtained expressions as a symbolic program is executing.
+
+>>> :{
+prove $ do a1 <- free "i1"
+           a2 <- free "i2"
+           let spec, res :: SWord8
+               spec = a1 + a2
+               res  = ite (a1 .== 12 &&& a2 .== 22)   -- insert a malicious bug!
+                          1
+                          (a1 + a2)
+           observe "Expected" spec
+           observe "Result"   res
+           return $ spec .== res
+:}
+Falsifiable. Counter-example:
+  i1       = 12 :: Word8
+  i2       = 22 :: Word8
+  Expected = 34 :: Word8
+  Result   =  1 :: Word8
 -}
 
 {-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}

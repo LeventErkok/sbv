@@ -412,7 +412,7 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
 
 -- | Generate the C program
 genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SW -> Doc -> [Doc]
-genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _uis _axioms (SBVPgm asgns) cstrs origAsserts _) inVars outVars mbRet extDecls
+genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins preConsts tbls arrs _uis _axioms (SBVPgm asgns) cstrs origAsserts _) inVars outVars mbRet extDecls
   | isNothing (cgInteger cfg) && KUnbounded `Set.member` kindInfo
   = error $ "SBV->C: Unbounded integers are not supported by the C compiler."
           ++ "\nUse 'cgIntegerSize' to specify a fixed size for SInteger representation."
@@ -503,7 +503,7 @@ genCProg cfg fn proto (Result kindInfo _tvals cgs ins preConsts tbls arrs _uis _
        isAlive (_, _)           = True
 
        genIO :: Bool -> (Bool, (String, CgVal)) -> [Doc]
-       genIO True  (alive, (cNm, CgAtomic sw)) = [declSW typeWidth sw  <+> text "=" <+> text cNm P.<> semi             | alive]
+       genIO True  (alive, (cNm, CgAtomic sw)) = [declSW typeWidth sw  <+> text "=" <+> text cNm P.<> semi               | alive]
        genIO False (alive, (cNm, CgAtomic sw)) = [text "*" P.<> text cNm <+> text "=" <+> showSW cfg consts sw P.<> semi | alive]
        genIO isInp (_,     (cNm, CgArray sws)) = zipWith genElt sws [(0::Int)..]
          where genElt sw i

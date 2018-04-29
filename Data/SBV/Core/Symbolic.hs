@@ -43,7 +43,7 @@ module Data.SBV.Core.Symbolic
   , getTableIndex
   , SBVPgm(..), Symbolic, runSymbolic, State(..), withNewIncState, IncState(..), incrementInternalCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..)
-  , registerKind, registerLabel
+  , registerKind, registerLabel, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
@@ -460,6 +460,7 @@ instance NFData a => NFData (Objective a) where
 -- | Result of running a symbolic computation
 data Result = Result { reskinds       :: Set.Set Kind                                     -- ^ kinds used in the program
                      , resTraces      :: [(String, CW)]                                   -- ^ quick-check counter-example information (if any)
+                     , resObservables :: [(String, SW)]                                   -- ^ observable expressions (part of the model)
                      , resUISegs      :: [(String, [String])]                             -- ^ uninterpeted code segments
                      , resInputs      :: ([(Quantifier, NamedSymVar)], [NamedSymVar])     -- ^ inputs (possibly existential) + tracker vars
                      , resConsts      :: [(SW, CW)]                                       -- ^ constants
@@ -481,7 +482,7 @@ instance Show Result where
   show Result{resConsts=cs, resOutputs=[r]}
     | Just c <- r `lookup` cs
     = show c
-  show (Result kinds _ cgs is cs ts as uis axs xs cstrs asserts os) = intercalate "\n" $
+  show (Result kinds _ _ cgs is cs ts as uis axs xs cstrs asserts os) = intercalate "\n" $
                    (if null usorts then [] else "SORTS" : map ("  " ++) usorts)
                 ++ ["INPUTS"]
                 ++ map shn (fst is)
@@ -655,6 +656,7 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , runMode      :: IORef SBVRunMode
                     , rIncState    :: IORef IncState
                     , rCInfo       :: IORef [(String, CW)]
+                    , rObservables :: IORef [(String, SW)]
                     , rctr         :: IORef Int
                     , rUsedKinds   :: IORef KindSet
                     , rUsedLbls    :: IORef (Set.Set String)
@@ -746,6 +748,10 @@ modifyIncState  :: State -> (IncState -> IORef a) -> (a -> a) -> IO ()
 modifyIncState State{rIncState} field update = do
         incState <- readIORef rIncState
         R.modifyIORef' (field incState) update
+
+-- | Add an observable
+recordObservable :: State -> String -> SW -> IO ()
+recordObservable st nm sw = modifyState st rObservables ((nm, sw):) (return ())
 
 -- | Increment the variable counter
 incrementInternalCounter :: State -> IO Int
@@ -1016,6 +1022,7 @@ runSymbolic currentRunMode (Symbolic c) = do
    rm        <- newIORef currentRunMode
    ctr       <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
    cInfo     <- newIORef []
+   observes  <- newIORef []
    pgm       <- newIORef (SBVPgm S.empty)
    emap      <- newIORef Map.empty
    cmap      <- newIORef Map.empty
@@ -1041,6 +1048,7 @@ runSymbolic currentRunMode (Symbolic c) = do
                   , pathCond     = SVal KBool (Left trueCW)
                   , rIncState    = istate
                   , rCInfo       = cInfo
+                  , rObservables = observes
                   , rctr         = ctr
                   , rUsedKinds   = usedKinds
                   , rUsedLbls    = usedLbls
@@ -1079,6 +1087,7 @@ runSymbolic currentRunMode (Symbolic c) = do
 extractSymbolicSimulationState :: State -> IO Result
 extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblMap=tables, rArrayMap=arrays, rUIMap=uis, raxioms=axioms
                                        , rAsserts=asserts, rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints=cstrs
+                                       , rObservables=observes
                                        } = do
    SBVPgm rpgm  <- readIORef pgm
    inpsO <- (reverse *** reverse) <$> readIORef inps
@@ -1095,9 +1104,10 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    knds  <- readIORef usedKinds
    cgMap <- Map.toList <$> readIORef cgs
    traceVals  <- reverse <$> readIORef cInfo
+   observables <- reverse <$> readIORef observes
    extraCstrs <- reverse <$> readIORef cstrs
    assertions <- reverse <$> readIORef asserts
-   return $ Result knds traceVals cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs assertions outsO
+   return $ Result knds traceVals observables cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs assertions outsO
 
 -- | Add a new option
 addNewSMTOption :: SMTOption -> Symbolic ()
@@ -1306,11 +1316,12 @@ instance NFData CallStack where
 #endif
 
 instance NFData Result where
-  rnf (Result kindInfo qcInfo cgs inps consts tbls arrs uis axs pgm cstr asserts outs)
-        = rnf kindInfo `seq` rnf qcInfo  `seq` rnf cgs  `seq` rnf inps
-                       `seq` rnf consts  `seq` rnf tbls `seq` rnf arrs
-                       `seq` rnf uis     `seq` rnf axs  `seq` rnf pgm
-                       `seq` rnf cstr    `seq` rnf asserts `seq` rnf outs
+  rnf (Result kindInfo qcInfo obs cgs inps consts tbls arrs uis axs pgm cstr asserts outs)
+        = rnf kindInfo `seq` rnf qcInfo  `seq` rnf obs    `seq` rnf cgs
+                       `seq` rnf inps    `seq` rnf consts `seq` rnf tbls
+                       `seq` rnf arrs    `seq` rnf uis    `seq` rnf axs 
+                       `seq` rnf pgm     `seq` rnf cstr   `seq` rnf asserts
+                       `seq` rnf outs
 instance NFData Kind         where rnf a          = seq a ()
 instance NFData ArrayContext where rnf a          = seq a ()
 instance NFData SW           where rnf a          = seq a ()

@@ -30,7 +30,7 @@ module Data.SBV.Core.Model (
   , sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, sChar, sChars, sString, sStrings, slet
-  , sRealToSInteger, label
+  , sRealToSInteger, label, observe
   , sAssert
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCW, genMkSymVar
@@ -39,6 +39,8 @@ module Data.SBV.Core.Model (
   where
 
 import Control.Monad        (when, unless, mplus)
+import Control.Monad.Trans  (liftIO)
+import Control.Monad.Reader (ask)
 
 import GHC.Generics (U1(..), M1(..), (:*:)(..), K1(..))
 import qualified GHC.Generics as G
@@ -47,8 +49,9 @@ import GHC.Stack
 
 import Data.Array  (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits   (Bits(..))
+import Data.Char   (toLower, isDigit)
 import Data.Int    (Int8, Int16, Int32, Int64)
-import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate)
+import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate, isPrefixOf)
 import Data.Maybe  (fromMaybe)
 import Data.String (IsString(..))
 import Data.Word   (Word8, Word16, Word32, Word64)
@@ -346,6 +349,22 @@ label m x
   where k    = kindOf x
         r st = do xsw <- sbvToSW st x
                   newExpr st k (SBVApp (Label m) [xsw])
+
+-- | Observe the value of an expression.  Such values are useful in model construction, as they are printed part of a satisfying model, or a
+-- counter-example. The same works for quick-check as well. Useful when we want to see intermediate values, or expected/obtained
+-- pairs in a particular run.
+observe :: SymWord a => String -> SBV a -> Symbolic ()
+observe m x
+  | null m
+  = error "SBV.observe: Bad empty name!"
+  | map toLower m `elem` smtLibReservedNames
+  = error $ "SBV.observe: The name chosen is reserved, please change it!: " ++ show m
+  | "s" `isPrefixOf` m && all isDigit (drop 1 m)
+  = error $ "SBV.observe: Names of the form sXXX are internal to SBV, please use a different name: " ++ show m
+  | True
+  = do st <- ask
+       liftIO $ do xsw <- sbvToSW st x
+                   recordObservable st m xsw
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.
@@ -1803,22 +1822,26 @@ instance Metric SReal    where minimize nm o = addSValOptGoal (unSBV `fmap` Mini
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where
   property (SBV (SVal _ (Left b))) = property (cwToBool b)
-  property s                       = error $ "Cannot quick-check in the presence of uninterpreted constants! (" ++ show s ++ ")"
+  property _                       = error "Quick-check: Constant folding produced a symbolic value! Perhaps used a non-reducible expression? Please report!"
 
 instance Testable (Symbolic SBool) where
-   property prop = QC.monadicIO $ do (cond, r, tvals) <- QC.run test
+   property prop = QC.monadicIO $ do (cond, r, modelVals) <- QC.run test
                                      QC.pre cond
-                                     unless (r || null tvals) $ QC.monitor (QC.counterexample (complain tvals))
+                                     unless (r || null modelVals) $ QC.monitor (QC.counterexample (complain modelVals))
                                      QC.assert r
-     where test = do (r, Result{resTraces=tvals, resConsts=cs, resConstraints=cstrs, resUIConsts=unints}) <- runSymbolic Concrete prop
+     where test = do (r, Result{resTraces=tvals, resObservables=ovals, resConsts=cs, resConstraints=cstrs, resUIConsts=unints}) <- runSymbolic Concrete prop
 
                      let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
                          cond = all (cwToBool . cval . snd) cstrs
 
+                         getObservable (nm, v) = case v `lookup` cs of
+                                                   Just cw -> (nm, cw)
+                                                   Nothing -> error $ "Quick-check: Observable " ++ nm ++ " did not reduce to a constant!"
+
                      case map fst unints of
                        [] -> case unliteral r of
                                Nothing -> noQC [show r]
-                               Just b  -> return (cond, b, tvals)
+                               Just b  -> return (cond, b, tvals ++ map getObservable ovals)
                        us -> noQC us
 
            complain qcInfo = showModel defaultSMTCfg (SMTModel [] qcInfo)
