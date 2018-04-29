@@ -129,7 +129,7 @@ localOnlyTests = testGroup "SBVLocalOnlyTests" [
 
 -- | Remaining tests
 otherTests :: TestTree
-otherTests = testGroup "SBVOtherTests" [
+otherTests = testGroup "SBVTests" [
                  TestSuite.Arrays.Memory.tests
                , TestSuite.Arrays.Query.tests
                , TestSuite.Basics.AllSat.tests
