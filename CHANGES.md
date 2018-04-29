@@ -39,6 +39,11 @@
     directly with in a solver result. Thanks to Ara Adkins for the
     suggestion.
 
+  * Add 'observe'. This function allows internal expressions to be
+    given values, which will be part of the satisfyin model or
+    the counter-example upon model construction. Useful for tracking
+    expected/returned values. Also works with quickCheck.
+
   * Revamp Haddock documentation, hopefully easier to follow now.
 
   * Slightly modify the generated-C headers by removing whitespace.
