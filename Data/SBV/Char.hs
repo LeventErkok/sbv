@@ -27,7 +27,7 @@
 module Data.SBV.Char (
         -- * Occurrence in a string
         elem, notElem
-        -- * Conversion to/from 'SWord8'
+        -- * Conversion to\/from 'SInteger'
         , ord, chr
         -- * Conversion to upper\/lower case
         , toLower, toUpper
@@ -80,9 +80,6 @@ notElem :: SChar -> SString -> SBool
 c `notElem` s = bnot (c `elem` s)
 
 -- | The 'ord' of a character.
---
--- (TODO) NB. With unicode, this will become a code-point value
--- and will work without any casting.
 ord :: SChar -> SInteger
 ord c
  | Just cc <- unliteral c
@@ -94,10 +91,7 @@ ord c
        r st = do csw <- sbvToSW st c
                  newExpr st kTo (SBVApp (KindCast kFrom kTo) [csw])
 
--- | Conversion froman integer to a character.
---
--- (TODO) NB. With unicode, the second property below should be
--- generalized.
+-- | Conversion from an integer to a character.
 --
 -- >>> prove $ \x -> 0 .<= x &&& x .< 256 ==> ord (chr x) .== x
 -- Q.E.D.
@@ -109,8 +103,7 @@ chr w
  = literal (C.chr (fromIntegral cw))
  | True
  = SBV $ SVal KChar $ Right $ cache r
- where -- TODO: With unicode, this will become a lot simpler!
-       w8 :: SWord8
+ where w8 :: SWord8
        w8 = sFromIntegral w
        r st = do SW _ n <- sbvToSW st w8
                  return $ SW KChar n
