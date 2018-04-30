@@ -297,3 +297,5 @@ pickTests d origTests = fromMaybe noTestsSelected <$> walk origTests
                                      case cs of
                                        [] -> return Nothing
                                        _  -> return $ Just $ TestGroup tn cs
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
