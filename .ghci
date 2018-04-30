@@ -1,2 +1,3 @@
--- :set -i./dist/build/autogen -i./SBVTestSuite
-:set -i./SBVTestSuite
+:set -fwarn-unused-binds -fwarn-unused-imports
+:set -i./Data -i./SBVTestSuite
+:load Data/SBV.hs
