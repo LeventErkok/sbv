@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 7.7, 2018-04-29
 
+### Version 7.7.5, Not released yet.
+
+  * New development version.
+
 ### Version 7.7, Released 2018-04-29
 
   * Add support for Symbolic characters ('SChar') and strings ('SString'.)
