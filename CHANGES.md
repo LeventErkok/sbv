@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 7.6, 2018-03-18
+* Latest Hackage released version: 7.7, 2018-04-29
 
-### Version 7.6.5, Current development version
+### Version 7.7, Released 2018-04-29
 
   * Add support for Symbolic characters ('SChar') and strings ('SString'.)
     Thanks to Joel Burget for the initial implementation.
