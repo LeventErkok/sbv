@@ -125,6 +125,8 @@ localOnlyTests = testGroup "SBVLocalOnlyTests" [
                    , TestSuite.Queries.Int_CVC4.tests
                    , TestSuite.Queries.Int_Mathsat.tests
                    , TestSuite.Queries.Int_Yices.tests
+                   -- quick-check tests take a long time, so just run them locally.
+                   , TestSuite.QuickCheck.QC.tests
                    ]
 
 -- | Remaining tests
@@ -193,7 +195,6 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Queries.Interpolants.tests
                , TestSuite.Queries.Strings.tests
                , TestSuite.Queries.Uninterpreted.tests
-               , TestSuite.QuickCheck.QC.tests
                , TestSuite.Uninterpreted.AUF.tests
                , TestSuite.Uninterpreted.Axioms.tests
                , TestSuite.Uninterpreted.Function.tests
