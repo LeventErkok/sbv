@@ -142,9 +142,9 @@ module Data.SBV (
   -- ** Algebraic reals
   -- $algReals
   , SReal, AlgReal, sRealToSInteger
-  -- ** Strings and Regular Expressions
+  -- ** Characters, Strings and Regular Expressions
   -- $strings
-  , SString, SChar, (.++), (.!!)
+  , SChar, SString, (.++), (.!!)
   -- * Arrays of symbolic values
   , SymArray(..), SArray, SFunArray, mkSFunArray
 
@@ -702,9 +702,10 @@ by Rummer and Wahl: <http://www.philipp.ruemmer.org/publications/smt-fpa.pdf>.
 -}
 
 {- $strings
-Support for strings (intial version contributed by Joel Burget) adds support for QF_S logic,
-described here: <https://rise4fun.com/z3/tutorialcontent/sequences>. Note that this logic
-is still not part of official SMTLib (as of March 2018), so it should be considered
+Support for characters, strings, and regular expressions (intial version contributed by Joel Burget)
+adds support for QF_S logic, described here: <http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml>
+and here: <https://rise4fun.com/z3/tutorialcontent/sequences>. Note
+that this logic is still not part of official SMTLib (as of March 2018), so it should be considered
 experimental.
 
 See "Data.SBV.Char", "Data.SBV.String", "Data.SBV.RegExp" for further related functions.
