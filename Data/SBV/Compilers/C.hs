@@ -18,6 +18,7 @@ import Control.DeepSeq                (rnf)
 import Data.Char                      (isSpace)
 import Data.List                      (nub, intercalate, intersperse)
 import Data.Maybe                     (isJust, isNothing, fromJust)
+import Data.Bits                      (shiftL)
 import qualified Data.Foldable as F   (toList)
 import qualified Data.Set      as Set (member, union, unions, empty, toList, singleton, fromList)
 import System.FilePath                (takeBaseName, replaceExtension)
@@ -170,9 +171,11 @@ pprCWord cnst v = (if cnst then text "const" else empty) <+> text (showCType v)
 -- | Almost a "show", but map "SWord1" to "SBool"
 -- which is used for extracting one-bit words.
 showCType :: HasKind a => a -> String
-showCType i = case kindOf i of
-                KBounded False 1 -> "SBool"
-                k                -> show k
+showCType = showCTypeOfKind . kindOf
+
+showCTypeOfKind :: Kind -> String
+showCTypeOfKind (KBounded False 1) = "SBool"
+showCTypeOfKind k                  = show k
 
 -- | The printf specifier for the type
 specifier :: CgConfig -> SW -> Doc
@@ -219,18 +222,37 @@ mkConst _   (CW KString          (CWString s))  = text $ show s
 mkConst _   (CW KChar            (CWChar c))    = text $ show c
 mkConst _   cw                                  = die $ "mkConst: " ++ show cw
 
+showSizedConstValue :: Integer -> (Bool, Int) -> Doc
+showSizedConstValue i   (False,  1) = text (if i == 0 then "false" else "true")
+showSizedConstValue i   (False,  8) = integer i
+showSizedConstValue i   (True,   8) = integer i
+showSizedConstValue i t@(False, 16) = text (shex False True t i) P.<> text "U"
+showSizedConstValue i t@(True,  16) = text (shex False True t i)
+showSizedConstValue i t@(False, 32) = text (shex False True t i) P.<> text "UL"
+showSizedConstValue i t@(True,  32) = text (shex False True t i) P.<> text "L"
+showSizedConstValue i t@(False, 64) = text (shex False True t i) P.<> text "ULL"
+showSizedConstValue i t@(True,  64) = text (shex False True t i) P.<> text "LL"
+showSizedConstValue i   (True,  1)  = die $ "Signed 1-bit value " ++ show i
+showSizedConstValue i   (s, sz)     = die $ "Constant " ++ show i ++ " at type " ++ (if s then "SInt" else "SWord") ++ show sz
+
+-- | Minimal-valued signed integers are emitted as #define-d constants
+-- to prevent automatic upcasting or signedness changes by the C
+-- compiler.
 showSizedConst :: Integer -> (Bool, Int) -> Doc
-showSizedConst i   (False,  1) = text (if i == 0 then "false" else "true")
-showSizedConst i   (False,  8) = integer i
-showSizedConst i   (True,   8) = integer i
-showSizedConst i t@(False, 16) = text (shex False True t i) P.<> text "U"
-showSizedConst i t@(True,  16) = text (shex False True t i)
-showSizedConst i t@(False, 32) = text (shex False True t i) P.<> text "UL"
-showSizedConst i t@(True,  32) = text (shex False True t i) P.<> text "L"
-showSizedConst i t@(False, 64) = text (shex False True t i) P.<> text "ULL"
-showSizedConst i t@(True,  64) = text (shex False True t i) P.<> text "LL"
-showSizedConst i   (True,  1)  = die $ "Signed 1-bit value " ++ show i
-showSizedConst i   (s, sz)     = die $ "Constant " ++ show i ++ " at type " ++ (if s then "SInt" else "SWord") ++ show sz
+showSizedConst i spec@(signed, bitSize) =
+  if signed &&
+     i == negate (1 `shiftL` (bitSize - 1)) &&
+     bitSize `elem` [8, 16, 32, 64]
+  then showMinimalValue bitSize
+  else showSizedConstValue i spec
+  where
+    showMinimalValue :: Int -> Doc
+    showMinimalValue 8 = text "INT8_MIN"
+    showMinimalValue 16 = text "INT16_MIN"
+    showMinimalValue 32 = text "INT32_MIN"
+    showMinimalValue 64 = text "INT64_MIN"
+    showMinimalValue n  = die $ "showMinimalValue: " ++ show n
+
 
 -- | Generate a makefile. The first argument is True if we have a driver.
 genMake :: Bool -> String -> String -> [String] -> Doc
