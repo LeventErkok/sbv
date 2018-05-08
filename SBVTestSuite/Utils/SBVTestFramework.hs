@@ -53,9 +53,9 @@ import System.Random (randomRIO)
 import Data.SBV
 import Data.SBV.Control
 
-import Data.Char (chr, ord, isDigit)
-
-import Data.Maybe(fromMaybe, catMaybes)
+import Data.Char  (chr, ord, isDigit)
+import Data.List  (zip3)
+import Data.Maybe (fromMaybe, catMaybes)
 
 import System.FilePath ((</>), (<.>))
 
@@ -127,15 +127,34 @@ doTheDiff nm ref new act = goldenTest nm (BS.readFile ref) (act >> BS.readFile n
          cmp x y
           | cleanUp x == cleanUp y = return Nothing
           | True                   = return $ Just $ unlines $ [ "Discrepancy found. Expected: " ++ ref
-                                                                 , "============================================"
-                                                                 ]
-                                                              ++ lines xs
-                                                              ++ [ "Got: " ++ new
-                                                                 , "============================================"
-                                                                 ]
-                                                              ++ lines ys
+                                                               , "============================================"
+                                                               ]
+                                                            ++ lxs
+                                                            ++ [ "Got: " ++ new
+                                                               , "============================================"
+                                                               ]
+                                                            ++ lys
+                                                            ++ [ "Diff: "
+                                                               , "============================================"
+                                                               ]
+                                                            ++ diff
           where xs = map (chr . fromIntegral) $ BS.unpack x
                 ys = map (chr . fromIntegral) $ BS.unpack y
+
+                lxs = lines xs
+                lys = lines ys
+
+                diffLen = length lxs `max` length lys
+                diff    = concatMap pick $ zip3 [1..diffLen] (lxs ++ repeat "") (lys ++ repeat "")
+
+                pick (i, expected, got)
+                  | expected == got
+                  = []
+                  | True
+                  = [ "== Line " ++ show i ++ " =="
+                    , "  Expected: " ++ show expected
+                    , "  Got     : " ++ show got
+                    ]
 
          -- deal with insane Windows \r stuff
          cleanUp = BS.filter (/= slashr)
