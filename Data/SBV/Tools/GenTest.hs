@@ -225,7 +225,7 @@ c n vs = intercalate "\n" $
         mkLine (is, os) = "{{" ++ intercalate ", " (map v is) ++ "}, {" ++ intercalate ", " (map v os) ++ "}}"
         v cw = case kindOf cw of
                   KBool           -> if cwToBool cw then "true " else "false"
-                  KBounded sgn sz -> let CWInteger w = cwVal cw in shex  False True (sgn, sz) w
+                  KBounded sgn sz -> let CWInteger w = cwVal cw in chex  False True (sgn, sz) w
                   KUnbounded      -> let CWInteger w = cwVal cw in shexI False True           w
                   KFloat          -> let CWFloat w   = cwVal cw in showCFloat w
                   KDouble         -> let CWDouble w  = cwVal cw in showCDouble w

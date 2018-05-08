@@ -5,7 +5,10 @@
 
 ### Version 7.7.5, Not released yet.
 
-  * New development version.
+  * C code-generation: Fix printing of min-bounds for signed 32/64
+    bit numbers: These are tricky since C does not allow -min_value
+    as a valid literal! Instead we use the macros provided in stdint.h.
+    Thanks to Matt Peddie for reporting this corner case.
 
 ### Version 7.7, Released 2018-04-29
 

@@ -14,7 +14,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Data.SBV.Utils.PrettyNum (
-        PrettyNum(..), readBin, shex, shexI, sbin, sbinI
+        PrettyNum(..), readBin, shex, chex, shexI, sbin, sbinI
       , showCFloat, showCDouble, showHFloat, showHDouble
       , showSMTFloat, showSMTDouble, smtRoundingMode, cwToSMTLib, mkSkolemZero
       ) where
@@ -129,6 +129,33 @@ shex shType shPre (signed, size) a
        pre | shPre = "0x"
            | True  = ""
        l = (size + 3) `div` 4
+
+-- | Show as hexadecimal, but for C programs. We have to be careful about
+-- printing min-bounds, since C does some funky casting, possibly losing
+-- the sign bit. In those cases, we use the defined constants in <stdint.h>.
+-- We also properly append the necessary suffixes as needed.
+chex :: (Show a, Integral a) => Bool -> Bool -> (Bool, Int) -> a -> String
+chex shType shPre (signed, size) a
+   | Just s <- (signed, size, fromIntegral a) `lookup` specials
+   = s
+   | True
+   = shex shType shPre (signed, size) a ++ suffix
+  where specials :: [((Bool, Int, Integer), String)]
+        specials = [ ((True,  8, fromIntegral (minBound :: Int8)),  "INT8_MIN" )
+                   , ((True, 16, fromIntegral (minBound :: Int16)), "INT16_MIN")
+                   , ((True, 32, fromIntegral (minBound :: Int32)), "INT32_MIN")
+                   , ((True, 64, fromIntegral (minBound :: Int64)), "INT64_MIN")
+                   ]
+        suffix = case (signed, size) of
+                   (False, 16) -> "U"
+
+                   (False, 32) -> "UL"
+                   (True,  32) -> "L"
+
+                   (False, 64) -> "ULL"
+                   (True,  64) -> "LL"
+
+                   _           -> ""
 
 -- | Show as a hexadecimal value, integer version. Almost the same as shex above
 -- except we don't have a bit-length so the length of the string will depend

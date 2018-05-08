@@ -30,7 +30,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Core.Data
 import Data.SBV.Compilers.CodeGen
 
-import Data.SBV.Utils.PrettyNum   (shex, showCFloat, showCDouble)
+import Data.SBV.Utils.PrettyNum   (chex, showCFloat, showCDouble)
 
 import GHC.Stack
 
@@ -223,12 +223,12 @@ showSizedConst :: Integer -> (Bool, Int) -> Doc
 showSizedConst i   (False,  1) = text (if i == 0 then "false" else "true")
 showSizedConst i   (False,  8) = integer i
 showSizedConst i   (True,   8) = integer i
-showSizedConst i t@(False, 16) = text (shex False True t i) P.<> text "U"
-showSizedConst i t@(True,  16) = text (shex False True t i)
-showSizedConst i t@(False, 32) = text (shex False True t i) P.<> text "UL"
-showSizedConst i t@(True,  32) = text (shex False True t i) P.<> text "L"
-showSizedConst i t@(False, 64) = text (shex False True t i) P.<> text "ULL"
-showSizedConst i t@(True,  64) = text (shex False True t i) P.<> text "LL"
+showSizedConst i t@(False, 16) = text $ chex False True t i
+showSizedConst i t@(True,  16) = text $ chex False True t i
+showSizedConst i t@(False, 32) = text $ chex False True t i
+showSizedConst i t@(True,  32) = text $ chex False True t i
+showSizedConst i t@(False, 64) = text $ chex False True t i
+showSizedConst i t@(True,  64) = text $ chex False True t i
 showSizedConst i   (True,  1)  = die $ "Signed 1-bit value " ++ show i
 showSizedConst i   (s, sz)     = die $ "Constant " ++ show i ++ " at type " ++ (if s then "SInt" else "SWord") ++ show sz
 
