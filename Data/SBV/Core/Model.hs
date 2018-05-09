@@ -71,12 +71,6 @@ import Data.SBV.SMT.SMT        (showModel)
 
 import Data.SBV.Utils.Boolean
 
-mkSymOpSC :: (SW -> SW -> Maybe SW) -> Op -> State -> Kind -> SW -> SW -> IO SW
-mkSymOpSC shortCut op st k a b = maybe (newExpr st k (SBVApp op [a, b])) return (shortCut a b)
-
-mkSymOp :: Op -> State -> Kind -> SW -> SW -> IO SW
-mkSymOp = mkSymOpSC (const (const Nothing))
-
 -- Symbolic-Word class instances
 
 -- | Generate a finite symbolic bitvector, named

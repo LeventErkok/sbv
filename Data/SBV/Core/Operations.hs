@@ -37,6 +37,8 @@ module Data.SBV.Core.Operations
   , svRotateLeft, svRotateRight
   , svBlastLE, svBlastBE
   , svAddConstant, svIncrement, svDecrement
+  -- Utils
+  , mkSymOp
   )
   where
 
