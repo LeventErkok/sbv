@@ -735,11 +735,21 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                         in protectDiv0 k "/" z a b
         p Rem  [a, b] = protectDiv0 (kindOf (head opArgs)) "%" a a b
         p UNeg [a]    = parens (text "-" <+> a)
-        p Abs  [a]    = let f = case kindOf (head opArgs) of
-                                  KFloat  -> text "fabsf"
-                                  KDouble -> text "fabs"
-                                  _       -> text "abs"
-                        in f P.<> parens a
+        p Abs  [a]    = let f KFloat             = text "fabsf" P.<> parens a
+                            f KDouble            = text "fabs"  P.<> parens a
+                            f (KBounded False _) = text "/* unsigned, skipping call to abs */" <+> a
+                            f (KBounded True 32) = text "labs"  P.<> parens a
+                            f (KBounded True 64) = text "llabs" P.<> parens a
+                            f KUnbounded         = case cgInteger cfg of
+                                                     Nothing -> f $ KBounded True 32 -- won't matter, it'll be rejected later
+                                                     Just i  -> f $ KBounded True i
+                            f KReal              = case cgReal cfg of
+                                                     Nothing           -> f KDouble -- won't matter, it'll be rejected later
+                                                     Just CgFloat      -> f KFloat
+                                                     Just CgDouble     -> f KDouble
+                                                     Just CgLongDouble -> text "fabsl" P.<> parens a
+                            f _                  = text "abs" P.<> parens a
+                        in f (kindOf (head opArgs))
         -- for And/Or, translate to boolean versions if on boolean kind
         p And [a, b] | kindOf (head opArgs) == KBool = a <+> text "&&" <+> b
         p Or  [a, b] | kindOf (head opArgs) == KBool = a <+> text "||" <+> b
