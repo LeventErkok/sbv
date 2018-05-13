@@ -477,7 +477,7 @@ declNewSFunArray mbNm = return $ SFunArray $ error . msg mbNm
 --
 --    * Internally handled by the library and not mapped to SMT-Lib
 --
---    * Reading an uninitialized value is considered an error (will throw exception)
+--    * Reading an uninitialized value is considered an error (will throw exception). See `mkSFunArray` on how to avoid this.
 --
 --    * Cannot check for equality (internally represented as functions)
 --
@@ -491,6 +491,13 @@ instance (HasKind a, HasKind b) => Show (SFunArray a b) where
   show (SFunArray _) = "SFunArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"
 
 -- | Lift a function to an array. Useful for creating arrays in a pure context. (Otherwise use `newArray`.)
+-- A simple way to create an array such that reading an unintialized value is assigned a free variable is
+-- to simply use an uninterpreted function. That is, use:
+--
+--  @ mkSFunArray (uninterpret "initial") @
+--
+-- Note that this will ensure all uninitialized reads to the same location will return the same value,
+-- without constraining them otherwise; with different indexes containing different values.
 mkSFunArray :: (SBV a -> SBV b) -> SFunArray a b
 mkSFunArray = SFunArray
 
