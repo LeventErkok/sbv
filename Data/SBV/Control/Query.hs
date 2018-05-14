@@ -33,7 +33,10 @@ module Data.SBV.Control.Query (
 import Control.Monad            (unless, when, zipWithM)
 import Control.Monad.State.Lazy (get)
 
-import Data.IORef    (readIORef)
+import Data.IORef (readIORef)
+
+import qualified Data.Map    as M
+import qualified Data.IntMap as IM
 
 import Data.List     (unzip3, intercalate, nubBy, sortBy)
 import Data.Maybe    (listToMaybe, catMaybes)
@@ -438,6 +441,37 @@ checkSatAssumingHelper getAssumptions sBools = do
 getAssertionStackDepth :: Query Int
 getAssertionStackDepth = queryAssertionStackDepth <$> getQueryState
 
+-- | Upon a pop, we need to restore all arrays and tables. See: https://github.com/LeventErkok/sbv/issues/374
+restoreTablesAndArrays :: Query ()
+restoreTablesAndArrays = do st <- get
+                            qs <- getQueryState
+
+                            case queryTblArrPreserveIndex qs of
+                              Nothing       -> return ()
+                              Just (tc, ac) -> do tCount <- M.size  <$> (io . readIORef) (rtblMap   st)
+                                                  aCount <- IM.size <$> (io . readIORef) (rArrayMap st)
+
+                                                  let tInits = [ "table"  ++ show i ++ "_initializer" | i <- [tc .. tCount - 1]]
+                                                      aInits = [ "array_" ++ show i ++ "_initializer" | i <- [ac .. aCount - 1]]
+                                                      inits  = tInits ++ aInits
+
+                                                  case inits of
+                                                    []  -> return ()   -- Nothing to do
+                                                    [x] -> send True $ "(assert " ++ x ++ ")"
+                                                    xs  -> send True $ "(assert (and " ++ unwords xs ++ "))"
+
+-- | Upon a push, record the cut-off point for table and array restoration, if we haven't already
+recordTablesAndArrayCutOff :: Query ()
+recordTablesAndArrayCutOff = do st <- get
+                                qs <- getQueryState
+
+                                case queryTblArrPreserveIndex qs of
+                                  Just _  -> return () -- already recorded, nothing to do
+                                  Nothing -> do tCount <- M.size  <$> (io . readIORef) (rtblMap   st)
+                                                aCount <- IM.size <$> (io . readIORef) (rArrayMap st)
+
+                                                modifyQueryState $ \s -> s {queryTblArrPreserveIndex = Just (tCount, aCount)}
+
 -- | Run the query in a new assertion stack. That is, we push the context, run the query
 -- commands, and pop it back.
 inNewAssertionStack :: Query a -> Query a
@@ -452,6 +486,7 @@ push i
  | i <= 0 = error $ "Data.SBV: push requires a strictly positive level argument, received: " ++ show i
  | True   = do depth <- getAssertionStackDepth
                send True $ "(push " ++ show i ++ ")"
+               recordTablesAndArrayCutOff
                modifyQueryState $ \s -> s{queryAssertionStackDepth = depth + i}
 
 -- | Pop the context, exiting a new one. Pops multiple levels if /n/ > 1. It's an error to pop levels that don't exist.
@@ -470,6 +505,7 @@ pop i
                                                   , "*** Request this as a feature for the underlying solver!"
                                                   ]
                              else do send True $ "(pop " ++ show i ++ ")"
+                                     restoreTablesAndArrays
                                      modifyQueryState $ \s -> s{queryAssertionStackDepth = depth - i}
    where shl 1 = "one level"
          shl n = show n ++ " levels"

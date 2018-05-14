@@ -5,14 +5,23 @@
 
 ### Version 7.7.5, Not released yet.
 
-  * A couple of fixes to C code-generation:
-      * Fix printing of min-bounds for signed 32/64 bit numbers: These
-        are tricky since C does not allow -min_value as a valid literal!
-	Instead we use the macros provided in stdint.h. Thanks to Matt
-	Peddie for reporting this corner case.
+  * Fix printing of min-bounds for signed 32/64 bit numbers: These
+    are tricky since C does not allow -min_value as a valid literal!
+    Instead we use the macros provided in stdint.h. Thanks to Matt
+    Peddie for reporting this corner case.
 
-      * Fix translation of the "abs" function, to make sure we use
-        the correct variant. Thanks to Matt Peddie for reporting.
+  * Fix translation of the "abs" function, to make sure we use
+    the correct variant. Thanks to Matt Peddie for reporting.
+
+  * Fix handling of tables and arrays in pushed-contexts. Previously,
+    we used initializers to get table/array values stored properly.
+    However, this trick does not work if we are in a pushed-context;
+    since a pop can forget the corresponding assignments. SBV now
+    handles this corner case properly, by using tracker assertions
+    to keep track of what array values must be restored at each pop.
+    Thanks to Martin Brain on the SMTLib mailing list for the
+    suggestion. (See https://github.com/LeventErkok/sbv/issues/374
+    for details.)
 
 ### Version 7.7, Released 2018-04-29
 

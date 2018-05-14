@@ -34,6 +34,7 @@ module Data.SBV.Control.Utils (
      , runProofOn
      ) where
 
+import Data.Maybe (isJust)
 import Data.List  (sortBy, elemIndex, partition, groupBy, tails)
 
 import Data.Char     (isPunctuation, isSpace, chr)
@@ -126,8 +127,8 @@ io :: IO a -> Query a
 io = liftIO
 
 -- | Sync-up the external solver with new context we have generated
-syncUpSolver :: IncState -> Query ()
-syncUpSolver is = do
+syncUpSolver :: Bool -> IncState -> Query ()
+syncUpSolver afterAPush is = do
         cfg <- getConfig
         ls  <- io $ do let swap  (a, b)        = (b, a)
                            swapc ((_, a), b)   = (b, a)
@@ -139,7 +140,7 @@ syncUpSolver is = do
                        arrs  <- IMap.toAscList <$> readIORef (rNewArrs is)
                        tbls  <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef (rNewTbls is)
                        as    <- readIORef (rNewAsgns is)
-                       return $ toIncSMTLib cfg inps ks cnsts arrs tbls as cfg
+                       return $ toIncSMTLib afterAPush cfg inps ks cnsts arrs tbls as cfg
         mapM_ (send True) $ mergeSExpr ls
 
 -- | Retrieve the query context
@@ -169,7 +170,11 @@ modifyQueryState f = do state <- get
 inNewContext :: (State -> IO a) -> Query a
 inNewContext act = do st <- get
                       (is, r) <- io $ withNewIncState st act
-                      syncUpSolver is
+                      mbQS <- io . readIORef . queryState $ st
+                      let afterAPush = case mbQS of
+                                         Nothing -> False
+                                         Just qs -> isJust (queryTblArrPreserveIndex qs)
+                      syncUpSolver afterAPush is
                       return r
 
 -- | Similar to 'freshVar', except creates unnamed variable.

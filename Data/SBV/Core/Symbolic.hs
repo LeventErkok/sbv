@@ -439,6 +439,7 @@ data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -
                              , queryTerminate           :: IO ()
                              , queryTimeOutValue        :: Maybe Int
                              , queryAssertionStackDepth :: Int
+                             , queryTblArrPreserveIndex :: Maybe (Int, Int)
                              }
 
 -- | A query is a user-guided mechanism to directly communicate and extract results from the solver.

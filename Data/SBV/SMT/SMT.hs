@@ -784,6 +784,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                  , queryTerminate           = cleanUp
                                                  , queryTimeOutValue        = Nothing
                                                  , queryAssertionStackDepth = 0
+                                                 , queryTblArrPreserveIndex = Nothing
                                                  }
                                  qsp = queryState ctx
 
