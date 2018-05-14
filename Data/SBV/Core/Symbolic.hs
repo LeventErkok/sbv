@@ -620,6 +620,7 @@ data IncState = IncState { rNewInps   :: IORef [NamedSymVar]   -- always existen
                          , rNewConsts :: IORef CnstMap
                          , rNewArrs   :: IORef ArrayMap
                          , rNewTbls   :: IORef TableMap
+                         , rNewUIs    :: IORef UIMap
                          , rNewAsgns  :: IORef SBVPgm
                          }
 
@@ -631,12 +632,14 @@ newIncState = do
         nc  <- newIORef Map.empty
         am  <- newIORef IMap.empty
         tm  <- newIORef Map.empty
+        ui  <- newIORef Map.empty
         pgm <- newIORef (SBVPgm S.empty)
         return IncState { rNewInps   = is
                         , rNewKinds  = ks
                         , rNewConsts = nc
                         , rNewArrs   = am
                         , rNewTbls   = tm
+                        , rNewUIs    = ui
                         , rNewAsgns  = pgm
                         }
 
@@ -765,18 +768,24 @@ newUninterpreted :: State -> String -> SBVType -> Maybe [String] -> IO ()
 newUninterpreted st nm t mbCode
   | null nm || not enclosed && (not (isAlpha (head nm)) || not (all validChar (tail nm)))
   = error $ "Bad uninterpreted constant name: " ++ show nm ++ ". Must be a valid identifier."
-  | True = do
-        uiMap <- readIORef (rUIMap st)
-        case nm `Map.lookup` uiMap of
-          Just t' -> when (t /= t') $ error $  "Uninterpreted constant " ++ show nm ++ " used at incompatible types\n"
-                                            ++ "      Current type      : " ++ show t ++ "\n"
-                                            ++ "      Previously used at: " ++ show t'
-          Nothing -> do modifyState st rUIMap (Map.insert nm t) $ noInteractive [ "Uninterpreted function introduction:"
-                                                                                , "  Named:  " ++ nm
-                                                                                , "  Type :  " ++ show t
-                                                                                ]
-                        when (isJust mbCode) $ modifyState st rCgMap (Map.insert nm (fromJust mbCode)) (return ())
-  where validChar x = isAlphaNum x || x `elem` "_"
+  | True = do uiMap <- readIORef (rUIMap st)
+              case nm `Map.lookup` uiMap of
+                Just t' -> checkType t' (return ())
+                Nothing -> do modifyState st rUIMap (Map.insert nm t)
+                                        $ modifyIncState st rNewUIs (\newUIs -> case nm `Map.lookup` newUIs of
+                                                                                  Just t' -> checkType t' newUIs
+                                                                                  Nothing -> Map.insert nm t newUIs)
+
+                              -- No need to record the code in interactive mode: CodeGen doesn't use interactive
+                              when (isJust mbCode) $ modifyState st rCgMap (Map.insert nm (fromJust mbCode)) (return ())
+  where checkType t' cont
+          | t /= t' = error $  "Uninterpreted constant " ++ show nm ++ " used at incompatible types\n"
+                            ++ "      Current type      : " ++ show t ++ "\n"
+                            ++ "      Previously used at: " ++ show t'
+          | True    = cont
+
+
+        validChar x = isAlphaNum x || x `elem` "_"
         enclosed    = head nm == '|' && last nm == '|' && length nm > 2 && not (any (`elem` "|\\") (tail (init nm)))
 
 -- | Add a new sAssert based constraint

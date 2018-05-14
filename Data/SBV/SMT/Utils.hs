@@ -57,6 +57,7 @@ type SMTLibIncConverter a =  [NamedSymVar]               -- ^ inputs
                           -> [(SW, CW)]                  -- ^ constants
                           -> [(Int, ArrayInfo)]          -- ^ newly created arrays
                           -> [((Int, Kind, Kind), [SW])] -- ^ newly created tables
+                          -> [(String, SBVType)]         -- ^ newly created uninterpreted functions/constants
                           -> SBVPgm                      -- ^ assignments
                           -> SMTConfig                   -- ^ configuration
                           -> a

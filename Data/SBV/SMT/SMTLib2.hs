@@ -254,7 +254,7 @@ declSort (s, Right fs) = [ "(declare-datatypes () ((" ++ s ++ " " ++ unwords (ma
 
 -- | Convert in a query context
 cvtInc :: Bool -> SMTLibIncConverter [String]
-cvtInc afterAPush inps ks consts arrs tbls (SBVPgm asgnsSeq) cfg =
+cvtInc afterAPush inps ks consts arrs tbls uis (SBVPgm asgnsSeq) cfg =
             -- sorts
                concatMap declSort [(s, dt) | KUserSort s dt <- Set.toList ks]
             -- constants
@@ -263,6 +263,8 @@ cvtInc afterAPush inps ks consts arrs tbls (SBVPgm asgnsSeq) cfg =
             ++ map declInp inps
             -- arrays
             ++ concat arrayConstants
+            -- uninterpreteds
+            ++ concatMap declUI uis
             -- tables
             ++ concatMap (constTable afterAPush) allTables
             -- expressions

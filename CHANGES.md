@@ -23,6 +23,10 @@
     suggestion. (See https://github.com/LeventErkok/sbv/issues/374
     for details.)
 
+  * Add support for uninterpreted function introductions in the query
+    mode. Previously, this was only allowed before the query started,
+    now we fully support uninterpreted functions in all modes.
+
 ### Version 7.7, Released 2018-04-29
 
   * Add support for Symbolic characters ('SChar') and strings ('SString'.)
