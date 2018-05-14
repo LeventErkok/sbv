@@ -22,16 +22,20 @@
 --   - Each cell has a color, one of @BLACK@, @BLUE@, @GREEN@, or @RED@.
 --
 --   - At each step, you get to press one of the center buttons. That is,
---     one of 5, 6, 9, 10, 11, 14, or 15; provided they are not @BLACK@.
+--     one of 5, 6, 9, 10, 11, 14, or 15.
 --
---   - At each button press, the colors rotate around that button, clockwise by
---     one tick. For instance if you press 15, then 11 moves to 16, 16 moves to 19,
---     19 moves to 18, 18 moves to 14, 14 moves to 10, and 10 moves to 11. Note
---     that by "move," we mean the colors move: We still refer to the buttons
+--   - Pressing a button that is currently colored @BLACK@ has no effect.
+--
+--   - Otherwise (i.e., if the pressed button is not @BLACK@), then colors
+--     rotate clockwise around that button. For instance if you press 15
+--     when it is not colored @BLACK@, then 11 moves to 16, 16 moves to 19,
+--     19 moves to 18, 18 moves to 14, 14 moves to 10, and 10 moves to 11.
+--
+--   - Note that by "move," we mean the colors move: We still refer to the buttons
 --     with the same number after a move.
 --
 -- You are given an initial board coloring, and a final one. Your goal is
--- to find a sequence of button presses that will turn the original board
+-- to find a minimal sequence of button presses that will turn the original board
 -- to the final one.
 -----------------------------------------------------------------------------
 
@@ -130,7 +134,7 @@ search initial final = runSMT $ do setLogic Logic_ALL
 -- Searching at depth: 6
 -- Found: [10,10,9,11,14,6]
 -- Found: [10,10,11,9,14,6]
--- There are no more solutions.mi
+-- There are no more solutions.
 example :: IO ()
 example = search initBoard finalBoard
    where initBoard  = [Black, Black, Black, Red, Blue, Green, Red, Black, Green, Green, Green, Black, Red, Green, Green, Red, Black, Black, Black]
