@@ -881,9 +881,11 @@ liftSym2B :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgR
 liftSym2B _   okCW opCR opCI opCF opCD opCC opCS opUI (SVal _ (Left a)) (SVal _ (Left b)) | okCW a b = svBool (liftCW2 opCR opCI opCF opCD opCC opCS opUI a b)
 liftSym2B opS _    _    _    _    _    _    _    _    a                 b                            = SVal KBool $ Right $ liftSW2 opS KBool a b
 
+-- | Create a symbolic two argument operation; with shortcut optimizations
 mkSymOpSC :: (SW -> SW -> Maybe SW) -> Op -> State -> Kind -> SW -> SW -> IO SW
 mkSymOpSC shortCut op st k a b = maybe (newExpr st k (SBVApp op [a, b])) return (shortCut a b)
 
+-- | Create a symbolic two argument operation; no shortcut optimizations
 mkSymOp :: Op -> State -> Kind -> SW -> SW -> IO SW
 mkSymOp = mkSymOpSC (const (const Nothing))
 
