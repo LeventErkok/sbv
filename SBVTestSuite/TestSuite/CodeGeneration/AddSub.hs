@@ -21,7 +21,7 @@ tests :: TestTree
 tests = testGroup "CodeGen.addSub" [
    goldenVsStringShow "addSub" code
  ]
- where code = snd <$> (compileToC' "addSub" $ do
+ where code = snd <$> compileToC' "addSub" (do
                 cgSetDriverValues [76, 92]
                 cgPerformRTCs True
                 x <- cgInput "x"
