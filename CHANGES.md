@@ -23,6 +23,10 @@
     suggestion. (See https://github.com/LeventErkok/sbv/issues/374
     for details.)
 
+  * Add a call 'cgOverwriteFiles', which suppresses code-generation
+    prompts for overwriting files and quiets the prompts during
+    code generation. Thanks to Matt Peddie for the suggestion.
+
   * Add support for uninterpreted function introductions in the query
     mode. Previously, this was only allowed before the query started,
     now we fully support uninterpreted functions in all modes.

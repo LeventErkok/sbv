@@ -53,7 +53,7 @@ compileToC :: Maybe FilePath -> String -> SBVCodeGen () -> IO ()
 compileToC mbDirName nm f = compileToC' nm f >>= renderCgPgmBundle mbDirName
 
 -- | Lower level version of 'compileToC', producing a 'CgPgmBundle'
-compileToC' :: String -> SBVCodeGen () -> IO CgPgmBundle
+compileToC' :: String -> SBVCodeGen () -> IO (CgConfig, CgPgmBundle)
 compileToC' nm f = do rands <- randoms `fmap` newStdGen
                       codeGen SBVToC (defaultCgConfig { cgDriverVals = rands }) nm f
 
@@ -71,7 +71,7 @@ compileToCLib :: Maybe FilePath -> String -> [(String, SBVCodeGen ())] -> IO ()
 compileToCLib mbDirName libName comps = compileToCLib' libName comps >>= renderCgPgmBundle mbDirName
 
 -- | Lower level version of 'compileToCLib', producing a 'CgPgmBundle'
-compileToCLib' :: String -> [(String, SBVCodeGen ())] -> IO CgPgmBundle
+compileToCLib' :: String -> [(String, SBVCodeGen ())] -> IO (CgConfig, CgPgmBundle)
 compileToCLib' libName comps = mergeToLib libName `fmap` mapM (uncurry compileToC') comps
 
 ---------------------------------------------------------------------------
@@ -847,15 +847,17 @@ align ds = map (text . pad) ss
         l     = maximum (0 : map length ss)
         pad s = replicate (l - length s) ' ' ++ s
 
--- | Merge a bunch of bundles to generate code for a library
-mergeToLib :: String -> [CgPgmBundle] -> CgPgmBundle
-mergeToLib libName bundles
+-- | Merge a bunch of bundles to generate code for a library. For the final
+-- config, we simply return the first config we receive, or the default if none.
+mergeToLib :: String -> [(CgConfig, CgPgmBundle)] -> (CgConfig, CgPgmBundle)
+mergeToLib libName cfgBundles
   | length nubKinds /= 1
   = error $  "Cannot merge programs with differing SInteger/SReal mappings. Received the following kinds:\n"
           ++ unlines (map show nubKinds)
   | True
-  = CgPgmBundle bundleKind $ sources ++ libHeader : [libDriver | anyDriver] ++ [libMake | anyMake]
-  where kinds       = [k | CgPgmBundle k _ <- bundles]
+  = (finalCfg, CgPgmBundle bundleKind $ sources ++ libHeader : [libDriver | anyDriver] ++ [libMake | anyMake])
+  where bundles     = map snd cfgBundles
+        kinds       = [k | CgPgmBundle k _ <- bundles]
         nubKinds    = nub kinds
         bundleKind  = head nubKinds
         files       = concat [fs | CgPgmBundle _ fs <- bundles]
@@ -870,6 +872,9 @@ mergeToLib libName bundles
         libHInclude = text "#include" <+> text (show (libName ++ ".h"))
         libMake     = ("Makefile", (CgMakefile mkFlags, [genLibMake anyDriver libName sourceNms mkFlags]))
         libDriver   = (libName ++ "_driver.c", (CgDriver, mergeDrivers libName libHInclude (zip (map takeBaseName sourceNms) drivers)))
+        finalCfg    = case cfgBundles of
+                        []         -> defaultCgConfig
+                        ((c, _):_) -> c
 
 -- | Create a Makefile for the library
 genLibMake :: Bool -> String -> [String] -> [String] -> Doc

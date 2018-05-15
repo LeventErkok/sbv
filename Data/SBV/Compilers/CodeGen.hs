@@ -28,7 +28,7 @@ module Data.SBV.Compilers.CodeGen (
 
         -- * Settings
         , cgPerformRTCs, cgSetDriverValues
-        , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIgnoreSAssert
+        , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIgnoreSAssert, cgOverwriteFiles
         , cgIntegerSize, cgSRealType, CgSRealType(..)
 
         -- * Infrastructure
@@ -62,24 +62,26 @@ class CgTarget a where
 
 -- | Options for code-generation.
 data CgConfig = CgConfig {
-          cgRTC           :: Bool               -- ^ If 'True', perform run-time-checks for index-out-of-bounds or shifting-by-large values etc.
-        , cgInteger       :: Maybe Int          -- ^ Bit-size to use for representing SInteger (if any)
-        , cgReal          :: Maybe CgSRealType  -- ^ Type to use for representing SReal (if any)
-        , cgDriverVals    :: [Integer]          -- ^ Values to use for the driver program generated, useful for generating non-random drivers.
-        , cgGenDriver     :: Bool               -- ^ If 'True', will generate a driver program
-        , cgGenMakefile   :: Bool               -- ^ If 'True', will generate a makefile
-        , cgIgnoreAsserts :: Bool               -- ^ If 'True', will ignore 'sAssert' calls
+          cgRTC                :: Bool               -- ^ If 'True', perform run-time-checks for index-out-of-bounds or shifting-by-large values etc.
+        , cgInteger            :: Maybe Int          -- ^ Bit-size to use for representing SInteger (if any)
+        , cgReal               :: Maybe CgSRealType  -- ^ Type to use for representing SReal (if any)
+        , cgDriverVals         :: [Integer]          -- ^ Values to use for the driver program generated, useful for generating non-random drivers.
+        , cgGenDriver          :: Bool               -- ^ If 'True', will generate a driver program
+        , cgGenMakefile        :: Bool               -- ^ If 'True', will generate a makefile
+        , cgIgnoreAsserts      :: Bool               -- ^ If 'True', will ignore 'sAssert' calls
+        , cgOverwriteGenerated :: Bool               -- ^ If 'True', will overwrite the generated files without prompting.
         }
 
 -- | Default options for code generation. The run-time checks are turned-off, and the driver values are completely random.
 defaultCgConfig :: CgConfig
-defaultCgConfig = CgConfig { cgRTC           = False
-                           , cgInteger       = Nothing
-                           , cgReal          = Nothing
-                           , cgDriverVals    = []
-                           , cgGenDriver     = True
-                           , cgGenMakefile   = True
-                           , cgIgnoreAsserts = False
+defaultCgConfig = CgConfig { cgRTC                = False
+                           , cgInteger            = Nothing
+                           , cgReal               = Nothing
+                           , cgDriverVals         = []
+                           , cgGenDriver          = True
+                           , cgGenMakefile        = True
+                           , cgIgnoreAsserts      = False
+                           , cgOverwriteGenerated = False
                            }
 
 -- | Abstraction of target language values
@@ -88,25 +90,25 @@ data CgVal = CgAtomic SW
 
 -- | Code-generation state
 data CgState = CgState {
-          cgInputs       :: [(String, CgVal)]
-        , cgOutputs      :: [(String, CgVal)]
-        , cgReturns      :: [CgVal]
-        , cgPrototypes   :: [String]    -- extra stuff that goes into the header
-        , cgDecls        :: [String]    -- extra stuff that goes into the top of the file
-        , cgLDFlags      :: [String]    -- extra options that go to the linker
-        , cgFinalConfig  :: CgConfig
+          cgInputs         :: [(String, CgVal)]
+        , cgOutputs        :: [(String, CgVal)]
+        , cgReturns        :: [CgVal]
+        , cgPrototypes     :: [String]    -- extra stuff that goes into the header
+        , cgDecls          :: [String]    -- extra stuff that goes into the top of the file
+        , cgLDFlags        :: [String]    -- extra options that go to the linker
+        , cgFinalConfig    :: CgConfig
         }
 
 -- | Initial configuration for code-generation
 initCgState :: CgState
 initCgState = CgState {
-          cgInputs        = []
-        , cgOutputs       = []
-        , cgReturns       = []
-        , cgPrototypes    = []
-        , cgDecls         = []
-        , cgLDFlags       = []
-        , cgFinalConfig   = defaultCgConfig
+          cgInputs         = []
+        , cgOutputs        = []
+        , cgReturns        = []
+        , cgPrototypes     = []
+        , cgDecls          = []
+        , cgLDFlags        = []
+        , cgFinalConfig    = defaultCgConfig
         }
 
 -- | The code-generation monad. Allows for precise layout of input values
@@ -183,6 +185,11 @@ cgAddPrototype :: [String] -> SBVCodeGen ()
 cgAddPrototype ss = modify' (\s -> let old = cgPrototypes s
                                        new = if null old then ss else old ++ [""] ++ ss
                                    in s { cgPrototypes = new })
+
+-- | If passed 'True', then we will not ask the user if we're overwriting files as we generate
+-- the C code. Otherwise, we'll prompt.
+cgOverwriteFiles :: Bool -> SBVCodeGen ()
+cgOverwriteFiles b = modify' (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgOverwriteGenerated = b } })
 
 -- | Adds the given lines to the program file generated, useful for generating programs with uninterpreted functions.
 cgAddDecl :: [String] -> SBVCodeGen ()
@@ -313,7 +320,7 @@ instance Show CgPgmBundle where
 
 -- | Generate code for a symbolic program, returning a Code-gen bundle, i.e., collection
 -- of makefiles, source code, headers, etc.
-codeGen :: CgTarget l => l -> CgConfig -> String -> SBVCodeGen () -> IO CgPgmBundle
+codeGen :: CgTarget l => l -> CgConfig -> String -> SBVCodeGen () -> IO (CgConfig, CgPgmBundle)
 codeGen l cgConfig nm (SBVCodeGen comp) = do
    (((), st'), res) <- runSymbolic CodeGen $ runStateT comp initCgState { cgFinalConfig = cgConfig }
    let st = st' { cgInputs       = reverse (cgInputs st')
@@ -323,29 +330,38 @@ codeGen l cgConfig nm (SBVCodeGen comp) = do
        dupNames = allNamedVars \\ nub allNamedVars
    unless (null dupNames) $
         error $ "SBV.codeGen: " ++ show nm ++ " has following argument names duplicated: " ++ unwords dupNames
-   return $ translate l (cgFinalConfig st) nm st res
+
+   return (cgFinalConfig st, translate l (cgFinalConfig st) nm st res)
 
 -- | Render a code-gen bundle to a directory or to stdout
-renderCgPgmBundle :: Maybe FilePath -> CgPgmBundle -> IO ()
-renderCgPgmBundle Nothing        bundle                = print bundle
-renderCgPgmBundle (Just dirName) (CgPgmBundle _ files) = do
+renderCgPgmBundle :: Maybe FilePath -> (CgConfig, CgPgmBundle) -> IO ()
+renderCgPgmBundle Nothing        (_  , bundle)              = print bundle
+renderCgPgmBundle (Just dirName) (cfg, CgPgmBundle _ files) = do
+
         b <- doesDirectoryExist dirName
-        unless b $ do putStrLn $ "Creating directory " ++ show dirName ++ ".."
+        unless b $ do unless overWrite $ putStrLn $ "Creating directory " ++ show dirName ++ ".."
                       createDirectoryIfMissing True dirName
+
         dups <- filterM (\fn -> doesFileExist (dirName </> fn)) (map fst files)
-        goOn <- case dups of
-                  [] -> return True
-                  _  -> do putStrLn $ "Code generation would override the following " ++ (if length dups == 1 then "file:" else "files:")
-                           mapM_ (\fn -> putStrLn ('\t' : fn)) dups
-                           putStr "Continue? [yn] "
-                           hFlush stdout
-                           resp <- getLine
-                           return $ map toLower resp `isPrefixOf` "yes"
+
+        goOn <- case (overWrite, dups) of
+                  (True, _) -> return True
+                  (_,   []) -> return True
+                  _         -> do putStrLn $ "Code generation would overwrite the following " ++ (if length dups == 1 then "file:" else "files:")
+                                  mapM_ (\fn -> putStrLn ('\t' : fn)) dups
+                                  putStr "Continue? [yn] "
+                                  hFlush stdout
+                                  resp <- getLine
+                                  return $ map toLower resp `isPrefixOf` "yes"
+
         if goOn then do mapM_ renderFile files
-                        putStrLn "Done."
+                        unless overWrite $ putStrLn "Done."
                 else putStrLn "Aborting."
-  where renderFile (f, (_, ds)) = do let fn = dirName </> f
-                                     putStrLn $ "Generating: " ++ show fn ++ ".."
+
+  where overWrite = cgOverwriteGenerated cfg
+
+        renderFile (f, (_, ds)) = do let fn = dirName </> f
+                                     unless overWrite $ putStrLn $ "Generating: " ++ show fn ++ ".."
                                      writeFile fn (render' (vcat ds))
 
 -- | An alternative to Pretty's 'render', which might have "leading" white-space in empty lines. This version
