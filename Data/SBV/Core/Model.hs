@@ -1308,7 +1308,6 @@ class Mergeable a where
    default symbolicMerge :: (G.Generic a, GMergeable (G.Rep a)) => Bool -> SBool -> a -> a -> a
    symbolicMerge = symbolicMergeDefault
 
-
 -- | If-then-else. This is by definition 'symbolicMerge' with both
 -- branches forced. This is typically the desired behavior, but also
 -- see 'iteLazy' should you need more laziness.
