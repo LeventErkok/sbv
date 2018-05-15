@@ -12,7 +12,10 @@
 {-# LANGUAGE CPP           #-}
 {-# LANGUAGE PatternGuards #-}
 
-module Data.SBV.Compilers.C(compileToC, compileToCLib, compileToC', compileToCLib') where
+module Data.SBV.Compilers.C(compileToC, compileToCLib,
+                            compileToCOpts, compileToCLibOpts,
+                            compileToC', compileToCLib',
+                            CodeGenDisplayOptions(..)) where
 
 import Control.DeepSeq                (rnf)
 import Data.Char                      (isSpace)
@@ -50,7 +53,12 @@ import GHC.Stack
 --
 -- Compilation will also generate a @Makefile@,  a header file, and a driver (test) program, etc.
 compileToC :: Maybe FilePath -> String -> SBVCodeGen () -> IO ()
-compileToC mbDirName nm f = compileToC' nm f >>= renderCgPgmBundle mbDirName
+compileToC = compileToCOpts Interactive
+
+-- | This is just like 'compileToC', but the first argument allows you
+-- to specify the code-generation output behavior.
+compileToCOpts :: CodeGenDisplayOptions -> Maybe FilePath -> String -> SBVCodeGen () -> IO ()
+compileToCOpts opts mbDirName nm f = compileToC' nm f >>= renderCgPgmBundle opts mbDirName
 
 -- | Lower level version of 'compileToC', producing a 'CgPgmBundle'
 compileToC' :: String -> SBVCodeGen () -> IO CgPgmBundle
@@ -68,7 +76,12 @@ compileToC' nm f = do rands <- randoms `fmap` newStdGen
 --   * The third argument is the list of functions to include, in the form of function-name/code pairs, similar
 --     to the second and third arguments of 'compileToC', except in a list.
 compileToCLib :: Maybe FilePath -> String -> [(String, SBVCodeGen ())] -> IO ()
-compileToCLib mbDirName libName comps = compileToCLib' libName comps >>= renderCgPgmBundle mbDirName
+compileToCLib = compileToCLibOpts Interactive
+
+-- | This is like 'compileToCLib', but the first argument allows you
+-- to specify the code-generation output behavior.
+compileToCLibOpts :: CodeGenDisplayOptions -> Maybe FilePath -> String -> [(String, SBVCodeGen ())] -> IO ()
+compileToCLibOpts opts mbDirName libName comps = compileToCLib' libName comps >>= renderCgPgmBundle opts mbDirName
 
 -- | Lower level version of 'compileToCLib', producing a 'CgPgmBundle'
 compileToCLib' :: String -> [(String, SBVCodeGen ())] -> IO CgPgmBundle

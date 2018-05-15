@@ -37,9 +37,10 @@ module Data.SBV.Compilers.CodeGen (
 
         -- * Generating collateral
         , cgGenerateDriver, cgGenerateMakefile, codeGen, renderCgPgmBundle
+        , CodeGenDisplayOptions(..)
         ) where
 
-import Control.Monad             (filterM, replicateM, unless)
+import Control.Monad             (filterM, replicateM, unless, when)
 import Control.Monad.Reader      (ask)
 import Control.Monad.Trans       (MonadIO, lift, liftIO)
 import Control.Monad.State.Lazy  (MonadState, StateT(..), modify')
@@ -325,28 +326,44 @@ codeGen l cgConfig nm (SBVCodeGen comp) = do
         error $ "SBV.codeGen: " ++ show nm ++ " has following argument names duplicated: " ++ unwords dupNames
    return $ translate l (cgFinalConfig st) nm st res
 
+-- | How should the code-output process behave?
+data CodeGenDisplayOptions
+  = Interactive           -- ^ Print about all output actions and prompt the
+                          -- user in case of existing files.
+  | QuietAlwaysOverwrite  -- ^ Do not print, and overwrite if files conflict.
+  | QuietNeverOverwrite   -- ^ Do not print, and abort if files conflict.
+  deriving (Eq, Show)
+
+isInteractive :: CodeGenDisplayOptions -> Bool
+isInteractive Interactive = True
+isInteractive _           = False
+
 -- | Render a code-gen bundle to a directory or to stdout
-renderCgPgmBundle :: Maybe FilePath -> CgPgmBundle -> IO ()
-renderCgPgmBundle Nothing        bundle                = print bundle
-renderCgPgmBundle (Just dirName) (CgPgmBundle _ files) = do
+renderCgPgmBundle :: CodeGenDisplayOptions -> Maybe FilePath -> CgPgmBundle -> IO ()
+renderCgPgmBundle _    Nothing        bundle                = print bundle
+renderCgPgmBundle opts (Just dirName) (CgPgmBundle _ files) = do
         b <- doesDirectoryExist dirName
-        unless b $ do putStrLn $ "Creating directory " ++ show dirName ++ ".."
+        unless b $ do spamLn $ "Creating directory " ++ show dirName ++ ".."
                       createDirectoryIfMissing True dirName
         dups <- filterM (\fn -> doesFileExist (dirName </> fn)) (map fst files)
-        goOn <- case dups of
-                  [] -> return True
-                  _  -> do putStrLn $ "Code generation would override the following " ++ (if length dups == 1 then "file:" else "files:")
+        goOn <- case (dups, opts) of
+                  ([], _) -> return True
+                  (_, QuietAlwaysOverwrite) -> return True
+                  (_, QuietNeverOverwrite)  -> return False
+                  _  -> do spamLn $ "Code generation would override the following " ++ (if length dups == 1 then "file:" else "files:")
                            mapM_ (\fn -> putStrLn ('\t' : fn)) dups
-                           putStr "Continue? [yn] "
+                           spam "Continue? [yn] "
                            hFlush stdout
                            resp <- getLine
                            return $ map toLower resp `isPrefixOf` "yes"
         if goOn then do mapM_ renderFile files
-                        putStrLn "Done."
-                else putStrLn "Aborting."
+                        spamLn "Done."
+                else spamLn "Aborting."
   where renderFile (f, (_, ds)) = do let fn = dirName </> f
-                                     putStrLn $ "Generating: " ++ show fn ++ ".."
+                                     spamLn $ "Generating: " ++ show fn ++ ".."
                                      writeFile fn (render' (vcat ds))
+        spamLn = when (isInteractive opts) . putStrLn
+        spam = when (isInteractive opts) . putStr
 
 -- | An alternative to Pretty's 'render', which might have "leading" white-space in empty lines. This version
 -- eliminates such whitespace.

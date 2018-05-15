@@ -36,6 +36,8 @@ module Data.SBV.Tools.CodeGen (
 
         -- ** Compilation to C
         , compileToC, compileToCLib
+        , compileToCOpts, compileToCLibOpts
+        , CodeGenDisplayOptions(..)
        ) where
 
 import Data.SBV.Compilers.C
