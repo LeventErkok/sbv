@@ -49,6 +49,7 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
 import Data.SBV.Core.Symbolic
+import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
 
 import Data.Ratio
 
@@ -482,11 +483,19 @@ svSymbolicMerge :: Kind -> Bool -> SVal -> SVal -> SVal -> SVal
 svSymbolicMerge k force t a b
   | Just r <- svAsBool t
   = if r then a else b
-  | force, rationalSBVCheck a b, areConcretelyEqual a b
+  | force, rationalSBVCheck a b, sameResult a b
   = a
   | True
   = SVal k $ Right $ cache c
-  where c st = do swt <- svToSW st t
+  where
+        -- Be careful with +/-0 here! See https://github.com/LeventErkok/sbv/issues/382
+        sameResult (SVal _ (Left c1)) (SVal _ (Left c2)) = c1 == c2 && floatCheck (cwVal c1) (cwVal c2)
+        sameResult _                       _             = False
+        floatCheck (CWFloat  f1) (CWFloat  f2)           = f1 `fpIsEqualObjectH` f2
+        floatCheck (CWDouble d1) (CWDouble d2)           = d1 `fpIsEqualObjectH` d2
+        floatCheck _            _                        = True
+
+        c st = do swt <- svToSW st t
                   case () of
                     () | swt == trueSW  -> svToSW st a       -- these two cases should never be needed as we expect symbolicMerge to be
                     () | swt == falseSW -> svToSW st b       -- called with symbolic tests, but just in case..
@@ -942,11 +951,6 @@ isConcreteMin (SVal _ (Left (CW (KBounded False _) (CWInteger n)))) = n == 0
 isConcreteMin (SVal _ (Left (CW (KBounded True  w) (CWInteger n)))) = n == - bit (w - 1)
 isConcreteMin (SVal _ (Left (CW KBool              (CWInteger n)))) = n == 0
 isConcreteMin _                                                     = False
-
--- | Predicate for optimizing conditionals.
-areConcretelyEqual :: SVal -> SVal -> Bool
-areConcretelyEqual (SVal _ (Left a)) (SVal _ (Left b)) = a == b
-areConcretelyEqual _                       _           = False
 
 -- | Most operations on concrete rationals require a compatibility check to avoid faulting
 -- on algebraic reals.
