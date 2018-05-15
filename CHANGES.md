@@ -23,6 +23,10 @@
     suggestion. (See https://github.com/LeventErkok/sbv/issues/374
     for details.)
 
+  * Fix corner case in ite branch equality with float/double arguments,
+    where we were previously confusing +/-0 as equal to each other.
+    Thanks to Matt Peddie for reporting.
+
   * Add a call 'cgOverwriteFiles', which suppresses code-generation
     prompts for overwriting files and quiets the prompts during
     code generation. Thanks to Matt Peddie for the suggestion.
