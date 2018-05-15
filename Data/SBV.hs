@@ -90,7 +90,7 @@
 --
 --   * ABC from University of Berkeley: <http://www.eecs.berkeley.edu/~alanmi/abc/>
 --
---   * CVC4 from New York University and University of Iowa: <http://cvc4.cs.nyu.edu/>
+--   * CVC4 from Stanford: <http://cvc4.cs.stanford.edu/web/>
 --
 --   * Boolector from Johannes Kepler University: <http://fmv.jku.at/boolector/>
 --

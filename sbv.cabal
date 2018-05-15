@@ -16,7 +16,7 @@ Homepage:      http://leventerkok.github.com/sbv/
 Bug-reports:   http://github.com/LeventErkok/sbv/issues
 Maintainer:    Levent Erkok (erkokl@gmail.com)
 Build-Type:    Simple
-Cabal-Version: >= 1.14
+Cabal-Version: 1.14
 Data-Files: SBVTestSuite/GoldFiles/*.gold
 Extra-Source-Files: INSTALL, README.md, COPYRIGHT, CHANGES.md
 
