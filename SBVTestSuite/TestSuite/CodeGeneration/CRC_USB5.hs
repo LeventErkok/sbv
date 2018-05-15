@@ -22,7 +22,7 @@ tests = testGroup "CRC.CodeGen" [
    goldenVsStringShow "crcUSB5_1" $ genC crcUSB
  , goldenVsStringShow "crcUSB5_2" $ genC crcUSB'
  ]
- where genC f = compileToC' "crcUSB5" $ do
+ where genC f = snd <$> (compileToC' "crcUSB5" $ do
                    cgSetDriverValues [0xFEDC]
                    msg <- cgInput "msg"
-                   cgReturn $ f msg
+                   cgReturn $ f msg)

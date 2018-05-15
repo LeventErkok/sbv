@@ -19,9 +19,9 @@ import Utils.SBVTestFramework
 -- Test suite
 tests :: TestTree
 tests = testGroup "Crypto.AES" [
-   goldenVsStringShow "aes128Enc" $ compileToC'    "aes128Enc" (aes128EncDec True)
- , goldenVsStringShow "aes128Dec" $ compileToC'    "aes128Dec" (aes128EncDec False)
- , goldenVsStringShow "aes128Lib" $ compileToCLib' "aes128Lib" aes128Comps
+   goldenVsStringShow "aes128Enc" $ snd <$> compileToC'    "aes128Enc" (aes128EncDec True)
+ , goldenVsStringShow "aes128Dec" $ snd <$> compileToC'    "aes128Dec" (aes128EncDec False)
+ , goldenVsStringShow "aes128Lib" $ snd <$> compileToCLib' "aes128Lib" aes128Comps
  ]
  where aes128EncDec d = do pt  <- cgInputArr 4 "pt"
                            key <- cgInputArr 4 "key"

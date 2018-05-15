@@ -22,7 +22,7 @@ tests = testGroup "CodeGeneration.Fibonacci" [
    goldenVsStringShow "fib1" $ tst [12] "fib1" (fib1 64)
  , goldenVsStringShow "fib2" $ tst [20] "fib2" (fib2 64)
  ]
- where tst vs nm f = compileToC' nm $ do cgPerformRTCs True
-                                         cgSetDriverValues vs
-                                         n <- cgInput "n"
-                                         cgReturn $ f n
+ where tst vs nm f = snd <$> (compileToC' nm $ do cgPerformRTCs True
+                                                  cgSetDriverValues vs
+                                                  n <- cgInput "n"
+                                                  cgReturn $ f n)
