@@ -71,6 +71,8 @@ testPattern:
 tags:
 	@fast-tags -R --nomerge .
 
+# Note: This is no longer needed since the new hackage builds docs
+# with hyperlinks automatically.
 uploadDocs:
 	@buildUtils/hackage-docs
 
