@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 7.7, 2018-04-29
+* Latest Hackage released version: 7.8, 2018-05-18
 
-### Version 7.7.5, Not released yet.
+### Version 7.8, Released 2018-05-18
 
   * Fix printing of min-bounds for signed 32/64 bit numbers: These
     are tricky since C does not allow -min_value as a valid literal!
@@ -34,6 +34,10 @@
   * Add support for uninterpreted function introductions in the query
     mode. Previously, this was only allowed before the query started,
     now we fully support uninterpreted functions in all modes.
+
+  * New example: Documentation/SBV/Examples/Puzzles/HexPuzzle.hs,
+    showing how to code cover properties using SBV, using a form
+    of bounded model checking.
 
 ### Version 7.7, Released 2018-04-29
 
