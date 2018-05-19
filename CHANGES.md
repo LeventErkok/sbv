@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 7.8, 2018-05-18
 
+### Version 7.8.5, Not yet released
+ 
+  * New development version
+
 ### Version 7.8, Released 2018-05-18
 
   * Fix printing of min-bounds for signed 32/64 bit numbers: These
