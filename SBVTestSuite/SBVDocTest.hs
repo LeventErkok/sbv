@@ -23,13 +23,17 @@ main = do (testEnv, testPercentage) <- getTestEnvironment
                               else runDocTest (env == CIWindows)
             TestEnvUnknown  -> do putStrLn "Unknown test environment, skipping doctests"
                                   exitSuccess
+
  where runDocTest windowsSkip = do srcFiles <- glob "Data/SBV/**/*.hs"
                                    docFiles <- glob "Documentation/SBV/**/*.hs"
+
                                    let allFiles = srcFiles ++ docFiles
                                        testFiles
                                          | windowsSkip = filter (not . bad) allFiles
                                          | True        = allFiles
-                                   doctest testFiles
+                                       args = ["--fast", "--no-magic"]
+
+                                   doctest $ args ++ testFiles
 
        -- The following test has a path encoded in its output, and hence fails on Windows
        -- since it has the c:\blah\blah format. Skip it:

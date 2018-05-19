@@ -50,7 +50,7 @@ lintTest:
 # See: https://github.com/LeventErkok/sbv/issues/362
 docTest:
 	# @$(TIME) ./dist/build/SBVDocTest/SBVDocTest
-	@$(TIME) doctest --no-magic $(DOCTESTSOURCES)
+	@$(TIME) doctest --fast --no-magic $(DOCTESTSOURCES)
 
 regularTests:
 	@$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -j $(NO_OF_CORES)
