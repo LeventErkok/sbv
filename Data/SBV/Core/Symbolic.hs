@@ -406,7 +406,7 @@ type NamedSymVar = (SW, String)
 -- potentially be an infinite number of them and there is no way to know exactly
 -- how many ahead of time. If 'Nothing' is given, SBV will possibly loop forever
 -- if the number is really infinite.
-data OptimizeStyle = Lexicographic      -- ^ Objectives are optimized in the order given, earlier objectives have higher priority. This is the default.
+data OptimizeStyle = Lexicographic      -- ^ Objectives are optimized in the order given, earlier objectives have higher priority.
                    | Independent        -- ^ Each objective is optimized independently.
                    | Pareto (Maybe Int) -- ^ Objectives are optimized according to pareto front: That is, no objective can be made better without making some other worse.
                    deriving (Eq, Show)
