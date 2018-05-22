@@ -8,6 +8,11 @@
   * Code reorg: Simplify constant mapping table, by properly accounting
     for negative-zero floats.
 
+  * Change the function 'getUnknownReason' to return a proper data-type
+    ('SMTReasonUnknown') as opposed to a mere string. This is at the
+    query level. Similarly, change `Unknown` result to return the same
+    data-type at the sat/prove level.
+
 ### Version 7.8, Released 2018-05-18
 
   * Fix printing of min-bounds for signed 32/64 bit numbers: These

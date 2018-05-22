@@ -186,16 +186,13 @@ getOption f = case f undefined of
         stringList c e _ = return $ Just $ c $ stringsOf e
 
 -- | Get the reason unknown. Only internally used.
-getUnknownReason :: Query String
+getUnknownReason :: Query SMTReasonUnknown
 getUnknownReason = do ru <- getInfo ReasonUnknown
                       case ru of
-                        Resp_Unsupported     -> return "No reason provided."
-                        Resp_ReasonUnknown r -> return $ case r of
-                                                           UnknownMemOut       -> "Out of memory."
-                                                           UnknownIncomplete   -> "Incomplete."
-                                                           UnknownOther      s -> s
+                        Resp_Unsupported     -> return $ UnknownOther "No reason provided."
+                        Resp_ReasonUnknown r -> return r
                         -- Shouldn't happen, but just in case:
-                        _                    -> return $ "Unexpected reason value received: " ++ show ru
+                        _                    -> error $ "Unexpected reason value received: " ++ show ru
 
 -- | Issue check-sat and get an SMT Result out.
 getSMTResult :: Query SMTResult
@@ -254,7 +251,7 @@ getParetoOptResults mbN      = do cfg <- getConfig
                                     Unsat -> return (False, [])
                                     Sat   -> continue (classifyModel cfg)
                                     Unk   -> do ur <- getUnknownReason
-                                                return (False, [ProofError cfg [ur]])
+                                                return (False, [ProofError cfg [show ur]])
 
   where continue classify = do m <- getModel
                                (limReached, fronts) <- getParetoFronts (subtract 1 <$> mbN) [m]

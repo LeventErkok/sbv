@@ -247,7 +247,7 @@ module Data.SBV (
 
   -- ** Inspecting proof results
   -- $resultTypes
-  , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
+  , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..), SMTReasonUnknown(..)
 
   -- ** Observing expressions
   -- $observeInternal
@@ -310,6 +310,7 @@ import Data.Generics
 
 import Data.SBV.SMT.Utils (SMTException(..))
 import Data.SBV.Control.Utils (SMTValue)
+import Data.SBV.Control.Types (SMTReasonUnknown(..))
 
 -- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
 -- problems with constraints, like the following:

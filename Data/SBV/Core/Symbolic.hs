@@ -1430,7 +1430,7 @@ data SMTModel = SMTModel {
 data SMTResult = Unsatisfiable SMTConfig (Maybe [String]) -- ^ Unsatisfiable. If unsat-cores are enabled, they will be returned in the second parameter.
                | Satisfiable   SMTConfig SMTModel         -- ^ Satisfiable with model
                | SatExtField   SMTConfig SMTModel         -- ^ Prover returned a model, but in an extension field containing Infinite/epsilon
-               | Unknown       SMTConfig String           -- ^ Prover returned unknown, with the given reason
+               | Unknown       SMTConfig SMTReasonUnknown -- ^ Prover returned unknown, with the given reason
                | ProofError    SMTConfig [String]         -- ^ Prover errored out
 
 -- | A script, to be passed to the solver.

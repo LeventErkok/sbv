@@ -52,7 +52,13 @@ data SMTErrorBehavior = ErrorImmediateExit
 data SMTReasonUnknown = UnknownMemOut
                       | UnknownIncomplete
                       | UnknownOther      String
-                      deriving Show
+                      deriving (Generic, NFData)
+
+-- | Show instance for unknown
+instance Show SMTReasonUnknown where
+  show UnknownMemOut     = "memout"
+  show UnknownIncomplete = "incomplete"
+  show (UnknownOther s)  = s
 
 -- | Collectable information from the solver.
 data SMTInfoResponse = Resp_Unsupported
