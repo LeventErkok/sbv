@@ -489,11 +489,11 @@ svSymbolicMerge k force t a b
   = SVal k $ Right $ cache c
   where
         -- Be careful with +/-0 here! See https://github.com/LeventErkok/sbv/issues/382
-        sameResult (SVal _ (Left c1)) (SVal _ (Left c2)) = c1 == c2 && floatCheck (cwVal c1) (cwVal c2)
-        sameResult _                       _             = False
-        floatCheck (CWFloat  f1) (CWFloat  f2)           = f1 `fpIsEqualObjectH` f2
-        floatCheck (CWDouble d1) (CWDouble d2)           = d1 `fpIsEqualObjectH` d2
-        floatCheck _            _                        = True
+        sameResult (SVal _ (Left c1)) (SVal _ (Left c2)) = case (cwVal c1, cwVal c2) of
+                                                             (CWFloat  f1, CWFloat  f2) -> f1 `fpIsEqualObjectH` f2
+                                                             (CWDouble d1, CWDouble d2) -> d1 `fpIsEqualObjectH` d2
+                                                             _                          -> c1 == c2
+        sameResult _                  _                  = False
 
         c st = do swt <- svToSW st t
                   case () of
