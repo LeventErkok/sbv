@@ -24,6 +24,8 @@ import Data.List (isPrefixOf)
 import Data.SBV.Core.Kind
 import Data.SBV.Core.AlgReals
 
+import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
+
 -- | A constant value
 data CWVal = CWAlgReal  !AlgReal              -- ^ algebraic real
            | CWInteger  !Integer              -- ^ bit-vector/unbounded integer
@@ -37,14 +39,14 @@ data CWVal = CWAlgReal  !AlgReal              -- ^ algebraic real
 -- instances for these when values are infinitely precise reals. However, we do
 -- need a structural eq/ord for Map indexes; so define custom ones here:
 instance Eq CWVal where
-  CWAlgReal a  == CWAlgReal b  = a `algRealStructuralEqual` b
-  CWInteger a  == CWInteger b  = a == b
-  CWUserSort a == CWUserSort b = a == b
-  CWFloat a    == CWFloat b    = a == b
-  CWDouble a   == CWDouble b   = a == b
-  CWChar   a   == CWChar b     = a == b
-  CWString a   == CWString b   = a == b
-  _            == _            = False
+  CWAlgReal  a   == CWAlgReal b  = a `algRealStructuralEqual` b
+  CWInteger  a   == CWInteger b  = a == b
+  CWUserSort a   == CWUserSort b = a == b
+  CWFloat    a   == CWFloat b    = a `fpIsEqualObjectH` b   -- We don't want +0/-0 to be confused; and also we want NaN = NaN here!
+  CWDouble   a   == CWDouble b   = a `fpIsEqualObjectH` b   -- ditto
+  CWChar     a   == CWChar b     = a == b
+  CWString   a   == CWString b   = a == b
+  _              == _            = False
 
 -- | Ord instance for CWVal. Same comments as the 'Eq' instance why this cannot be derived.
 instance Ord CWVal where

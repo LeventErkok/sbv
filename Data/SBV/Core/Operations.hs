@@ -49,7 +49,6 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
 import Data.SBV.Core.Symbolic
-import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
 
 import Data.Ratio
 
@@ -487,12 +486,7 @@ svSymbolicMerge k force t a b
   = a
   | True
   = SVal k $ Right $ cache c
-  where
-        -- Be careful with +/-0 here! See https://github.com/LeventErkok/sbv/issues/382
-        sameResult (SVal _ (Left c1)) (SVal _ (Left c2)) = case (cwVal c1, cwVal c2) of
-                                                             (CWFloat  f1, CWFloat  f2) -> f1 `fpIsEqualObjectH` f2
-                                                             (CWDouble d1, CWDouble d2) -> d1 `fpIsEqualObjectH` d2
-                                                             _                          -> c1 == c2
+  where sameResult (SVal _ (Left c1)) (SVal _ (Left c2)) = c1 == c2
         sameResult _                  _                  = False
 
         c st = do swt <- svToSW st t
