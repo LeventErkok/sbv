@@ -102,6 +102,20 @@ fpIsEqualObjectH a b
   | isNegativeZero b = isNegativeZero a
   | True             = a == b
 
+-- | Ordering for floats, avoiding the +0/-0/NaN issues. Note that this is
+-- essentially used for indexing into a map, so we need to be total. Thus,
+-- the order we pick is:
+--    NaN -oo -0 +0 +oo
+-- The placement of NaN here is questionable, but immaterial.
+fpCompareObjectH :: RealFloat a => a -> a -> Ordering
+fpCompareObjectH a b
+  | a `fpIsEqualObjectH` b   = EQ
+  | isNaN a                  = LT
+  | isNaN b                  = GT
+  | isNegativeZero a, b == 0 = LT
+  | isNegativeZero b, a == 0 = GT
+  | True                     = a `compare` b
+
 -- | Check if a number is "normal." Note that +0/-0 is not considered a normal-number
 -- and also this is not simply the negation of isDenormalized!
 fpIsNormalizedH :: RealFloat a => a -> Bool

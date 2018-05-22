@@ -24,7 +24,7 @@ import Data.List (isPrefixOf)
 import Data.SBV.Core.Kind
 import Data.SBV.Core.AlgReals
 
-import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
+import Data.SBV.Utils.Numeric (fpIsEqualObjectH, fpCompareObjectH)
 
 -- | A constant value
 data CWVal = CWAlgReal  !AlgReal              -- ^ algebraic real
@@ -39,13 +39,13 @@ data CWVal = CWAlgReal  !AlgReal              -- ^ algebraic real
 -- instances for these when values are infinitely precise reals. However, we do
 -- need a structural eq/ord for Map indexes; so define custom ones here:
 instance Eq CWVal where
-  CWAlgReal  a   == CWAlgReal b  = a `algRealStructuralEqual` b
-  CWInteger  a   == CWInteger b  = a == b
+  CWAlgReal  a   == CWAlgReal  b = a `algRealStructuralEqual` b
+  CWInteger  a   == CWInteger  b = a == b
   CWUserSort a   == CWUserSort b = a == b
-  CWFloat    a   == CWFloat b    = a `fpIsEqualObjectH` b   -- We don't want +0/-0 to be confused; and also we want NaN = NaN here!
-  CWDouble   a   == CWDouble b   = a `fpIsEqualObjectH` b   -- ditto
-  CWChar     a   == CWChar b     = a == b
-  CWString   a   == CWString b   = a == b
+  CWFloat    a   == CWFloat    b = a `fpIsEqualObjectH` b   -- We don't want +0/-0 to be confused; and also we want NaN = NaN here!
+  CWDouble   a   == CWDouble   b = a `fpIsEqualObjectH` b   -- ditto
+  CWChar     a   == CWChar     b = a == b
+  CWString   a   == CWString   b = a == b
   _              == _            = False
 
 -- | Ord instance for CWVal. Same comments as the 'Eq' instance why this cannot be derived.
@@ -68,7 +68,7 @@ instance Ord CWVal where
 
   CWFloat _   `compare`  CWAlgReal _  = GT
   CWFloat _   `compare`  CWInteger _  = GT
-  CWFloat a   `compare`  CWFloat b    = a `compare` b
+  CWFloat a   `compare`  CWFloat b    = a `fpCompareObjectH` b
   CWFloat _   `compare`  CWDouble _   = LT
   CWFloat _   `compare`  CWChar _     = LT
   CWFloat _   `compare`  CWString _   = LT
@@ -77,7 +77,7 @@ instance Ord CWVal where
   CWDouble _  `compare`  CWAlgReal _  = GT
   CWDouble _  `compare`  CWInteger _  = GT
   CWDouble _  `compare`  CWFloat _    = GT
-  CWDouble a  `compare`  CWDouble b   = a `compare` b
+  CWDouble a  `compare`  CWDouble b   = a `fpCompareObjectH` b
   CWDouble _  `compare`  CWChar _     = LT
   CWDouble _  `compare`  CWString _   = LT
   CWDouble _  `compare`  CWUserSort _ = LT

@@ -5,7 +5,8 @@
 
 ### Version 7.8.5, Not yet released
  
-  * New development version
+  * Code reorg: Simplify constant mapping table, by properly accounting
+    for negative-zero floats.
 
 ### Version 7.8, Released 2018-05-18
 

@@ -562,16 +562,16 @@ instance Show ArrayContext where
   show (ArrayMerge  s i j) = " merged arrays " ++ show i ++ " and " ++ show j ++ " on condition " ++ show s
 
 -- | Expression map, used for hash-consing
-type ExprMap   = Map.Map SBVExpr SW
+type ExprMap = Map.Map SBVExpr SW
 
--- | Constants are stored in a map, for hash-consing. The bool is needed to tell -0 from +0, sigh
-type CnstMap   = Map.Map (Bool, CW) SW
+-- | Constants are stored in a map, for hash-consing.
+type CnstMap = Map.Map CW SW
 
 -- | Kinds used in the program; used for determining the final SMT-Lib logic to pick
 type KindSet = Set.Set Kind
 
 -- | Tables generated during a symbolic run
-type TableMap  = Map.Map (Kind, Kind, [SW]) Int
+type TableMap = Map.Map (Kind, Kind, [SW]) Int
 
 -- | Representation for symbolic arrays
 type ArrayInfo = (String, (Kind, Kind), ArrayContext)
@@ -856,24 +856,19 @@ registerLabel st nm
           else modifyState st rUsedLbls (Set.insert nm) (return ())
 
 -- | Create a new constant; hash-cons as necessary
--- NB. For each constant, we also store weather it's negative-0 or not,
--- as otherwise +0 == -0 and thus we'd confuse those entries. That's a
--- bummer as we incur an extra boolean for this rare case, but it's simple
--- and hopefully we don't generate a ton of constants in general.
 newConst :: State -> CW -> IO SW
 newConst st c = do
+  putStr $ "NEWCONST: " ++ show c
   constMap <- readIORef (rconstMap st)
-  let key = (isNeg0 (cwVal c), c)
-  case key `Map.lookup` constMap of
-    Just sw -> return sw
+  case c `Map.lookup` constMap of
+    Just sw -> do putStrLn $ " HIT: " ++ show sw
+                  return sw
     Nothing -> do let k = kindOf c
                   (sw, _) <- newSW st k
-                  let ins = Map.insert key sw
+                  let ins = Map.insert c sw
                   modifyState st rconstMap ins $ modifyIncState st rNewConsts ins
+                  putStrLn $ " MISS: " ++ show sw
                   return sw
-  where isNeg0 (CWFloat  f) = isNegativeZero f
-        isNeg0 (CWDouble d) = isNegativeZero d
-        isNeg0 _            = False
 {-# INLINE newConst #-}
 
 -- | Create a new table; hash-cons as necessary
@@ -1103,10 +1098,9 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    inpsO <- (reverse *** reverse) <$> readIORef inps
    outsO <- reverse <$> readIORef outs
    let swap  (a, b)              = (b, a)
-       swapc ((_, a), b)         = (b, a)
        cmp   (a, _) (b, _)       = a `compare` b
        arrange (i, (at, rt, es)) = ((i, at, rt), es)
-   cnsts <- sortBy cmp . map swapc . Map.toList <$> readIORef (rconstMap st)
+   cnsts <- sortBy cmp . map swap . Map.toList <$> readIORef (rconstMap st)
    tbls  <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef tables
    arrs  <- IMap.toAscList <$> readIORef arrays
    unint <- Map.toList <$> readIORef uis
