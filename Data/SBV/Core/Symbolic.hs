@@ -858,16 +858,13 @@ registerLabel st nm
 -- | Create a new constant; hash-cons as necessary
 newConst :: State -> CW -> IO SW
 newConst st c = do
-  putStr $ "NEWCONST: " ++ show c
   constMap <- readIORef (rconstMap st)
   case c `Map.lookup` constMap of
-    Just sw -> do putStrLn $ " HIT: " ++ show sw
-                  return sw
+    Just sw -> return sw
     Nothing -> do let k = kindOf c
                   (sw, _) <- newSW st k
                   let ins = Map.insert c sw
                   modifyState st rconstMap ins $ modifyIncState st rNewConsts ins
-                  putStrLn $ " MISS: " ++ show sw
                   return sw
 {-# INLINE newConst #-}
 
