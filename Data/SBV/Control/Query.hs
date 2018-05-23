@@ -140,10 +140,10 @@ getInfo flag = do
 
   where render = serialize True
 
-        unk [ECon s] = case map toLower (unQuote s) `lookup` [(map toLower k, d) | (k, d) <- unknownReasons] of
-                         Just d  -> d
-                         Nothing -> UnknownOther s
-        unk o        = UnknownOther (render (EApp o))
+        unk [ECon s] | Just d <- getUR s = d
+        unk o                            = UnknownOther (render (EApp o))
+
+        getUR s = map toLower (unQuote s) `lookup` [(map toLower k, d) | (k, d) <- unknownReasons]
 
         -- As specified in Section 4.1 of the SMTLib document. Note that we're adding the
         -- extra timeout as it is useful in this context.
@@ -200,7 +200,7 @@ getOption f = case f undefined of
 getUnknownReason :: Query SMTReasonUnknown
 getUnknownReason = do ru <- getInfo ReasonUnknown
                       case ru of
-                        Resp_Unsupported     -> return $ UnknownOther "No reason provided."
+                        Resp_Unsupported     -> return $ UnknownOther "Solver responded: Unsupported."
                         Resp_ReasonUnknown r -> return r
                         -- Shouldn't happen, but just in case:
                         _                    -> error $ "Unexpected reason value received: " ++ show ru
