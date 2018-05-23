@@ -51,6 +51,7 @@ data SMTErrorBehavior = ErrorImmediateExit
 -- | Reason for reporting unknown.
 data SMTReasonUnknown = UnknownMemOut
                       | UnknownIncomplete
+                      | UnknownTimeOut
                       | UnknownOther      String
                       deriving (Generic, NFData)
 
@@ -58,6 +59,7 @@ data SMTReasonUnknown = UnknownMemOut
 instance Show SMTReasonUnknown where
   show UnknownMemOut     = "memout"
   show UnknownIncomplete = "incomplete"
+  show UnknownTimeOut    = "timeout"
   show (UnknownOther s)  = s
 
 -- | Collectable information from the solver.

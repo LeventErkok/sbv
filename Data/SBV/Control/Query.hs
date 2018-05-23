@@ -38,6 +38,7 @@ import Data.IORef (readIORef)
 import qualified Data.Map    as M
 import qualified Data.IntMap as IM
 
+import Data.Char     (toLower)
 import Data.List     (unzip3, intercalate, nubBy, sortBy)
 import Data.Maybe    (listToMaybe, catMaybes)
 import Data.Function (on)
@@ -110,8 +111,6 @@ getInfo flag = do
 
         isAllStat = isAllStatistics flag
 
-        render = serialize True
-
         grabAllStat k v = (render k, render v)
 
         -- we're trying to do our best to get key-value pairs here, but this
@@ -134,12 +133,24 @@ getInfo flag = do
                  EApp [ECon ":error-behavior", ECon "immediate-exit"]      -> return $ Resp_Error ErrorImmediateExit
                  EApp [ECon ":error-behavior", ECon "continued-execution"] -> return $ Resp_Error ErrorContinuedExecution
                  EApp (ECon ":name" : o)                                   -> return $ Resp_Name (render (EApp o))
-                 EApp [ECon ":reason-unknown", ECon "memout"]              -> return $ Resp_ReasonUnknown UnknownMemOut
-                 EApp [ECon ":reason-unknown", ECon "incomplete"]          -> return $ Resp_ReasonUnknown UnknownIncomplete
-                 EApp (ECon ":reason-unknown" : o)                         -> return $ Resp_ReasonUnknown (UnknownOther (render (EApp o)))
+                 EApp (ECon ":reason-unknown" : o)                         -> return $ Resp_ReasonUnknown (unk o)
                  EApp (ECon ":version" : o)                                -> return $ Resp_Version (render (EApp o))
                  EApp (ECon s : o)                                         -> return $ Resp_InfoKeyword s (map render o)
                  _                                                         -> bad r Nothing
+
+  where render = serialize True
+
+        unk [ECon s] = case map toLower (unQuote s) `lookup` [(map toLower k, d) | (k, d) <- unknownReasons] of
+                         Just d  -> d
+                         Nothing -> UnknownOther s
+        unk o        = UnknownOther (render (EApp o))
+
+        -- As specified in Section 4.1 of the SMTLib document. Note that we're adding the
+        -- extra timeout as it is useful in this context.
+        unknownReasons = [ ("memout",     UnknownMemOut)
+                         , ("incomplete", UnknownIncomplete)
+                         , ("timeout",    UnknownTimeOut)
+                         ]
 
 -- | Retrieve the value of an 'SMTOption.' The curious function argument is on purpose here,
 -- simply pass the constructor name. Example: the call @'getOption' 'ProduceUnsatCores'@ will return
