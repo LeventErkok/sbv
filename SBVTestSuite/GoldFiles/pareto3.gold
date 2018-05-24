@@ -1,0 +1,4 @@
+This is currently looping.
+
+Fix the gold file once https://github.com/Z3Prover/z3/issues/1647 is fixed
+

@@ -21,6 +21,7 @@ tests =
     , goldenVsStringShow "combined2" (optimize Lexicographic      combined2)
     , goldenVsStringShow "pareto1"   (optimize (Pareto Nothing)   pareto1)
     , goldenVsStringShow "pareto2"   (optimize (Pareto (Just 30)) pareto2)
+    , goldenVsStringShow "pareto3"   (optimize (Pareto Nothing)   pareto3)
     , goldenVsStringShow "boxed1"    (optimize Independent        boxed1)
     ]
 
@@ -72,6 +73,15 @@ pareto2 = do x <- sInteger "x"
              minimize "min_x"            x
              maximize "max_y"            y
              minimize "max_x_plus_y"   $ x + y
+
+pareto3 :: Goal
+pareto3 = do x <- sInteger "x"
+
+             constrain $ 1 .>= x
+             constrain $ 0 .<= x
+
+             minimize "min_x"            x
+             maximize "max_x_plus_x"   $ x + x
 
 boxed1 :: Goal
 boxed1 = do x <- sReal "x"
