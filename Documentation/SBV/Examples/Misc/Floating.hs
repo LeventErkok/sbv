@@ -56,16 +56,16 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 --
 -- >>> assocPlusRegular
 -- Falsifiable. Counter-example:
---   x =  1.9259302e-34 :: Float
---   y = -1.9259117e-34 :: Float
---   z =  -1.814176e-39 :: Float
+--   x =  -1.844675e19 :: Float
+--   y =  8.7960925e12 :: Float
+--   z = -2.4178333e24 :: Float
 --
 -- Indeed, we have:
 --
--- >>> ((1.9259302e-34) + ((-1.9259117e-34) + (-1.814176e-39))) :: Float
--- 3.4438e-41
--- >>> (((1.9259302e-34) + ((-1.9259117e-34))) + (-1.814176e-39)) :: Float
--- 3.4014e-41
+-- >>> (-1.844675e19) + ((8.7960925e12)  + (-2.4178333e24)):: Float
+-- -2.417852e24
+-- >>> ((-1.844675e19) + (8.7960925e12))  + (-2.4178333e24) :: Float
+-- -2.4178516e24
 --
 -- Note the difference between two additions!
 assocPlusRegular :: IO ThmResult
@@ -87,17 +87,17 @@ assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
 --
 -- >>> nonZeroAddition
 -- Falsifiable. Counter-example:
---   a = 2.424457e-38 :: Float
---   b =     -1.0e-45 :: Float
+--   a = -2.524355e-29 :: Float
+--   b =  9.403955e-38 :: Float
 --
 -- Indeed, we have:
 --
--- >>> (2.424457e-38 + (-1.0e-45)) == (2.424457e-38 :: Float)
+-- >>> (-2.524355e-29 + 9.403955e-38) == (-2.524355e-29 :: Float)
 -- True
 --
 -- But:
 --
--- >>> -1.0e-45 == (0 :: Float)
+-- >>> 9.403955e-38 == (0 :: Float)
 -- False
 --
 nonZeroAddition :: IO ThmResult
@@ -118,13 +118,13 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   a = 1.119056263978578e-308 :: Double
+--   a = 8.988465678497178e307 :: Double
 --
 -- Indeed, we have:
 --
--- >>> let a = 1.119056263978578e-308 :: Double
+-- >>> let a = 8.988465678497178e307 :: Double
 -- >>> a * (1/a)
--- 0.9999999999999999
+-- 1.0000000000000002
 multInverse :: IO ThmResult
 multInverse = prove $ do a <- sDouble "a"
                          constrain $ fpIsPoint a
