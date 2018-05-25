@@ -156,8 +156,8 @@ instance Show OptimizeResult where
                ParetoResult (False, [r]) -> sh (\s -> "Unique pareto front: " ++ s) r
                ParetoResult (False, rs)  -> multi "pareto optimal values" (zipWith shP [(1::Int)..] rs)
                ParetoResult (True,  rs)  ->    multi "pareto optimal values" (zipWith shP [(1::Int)..] rs)
-                                           ++ "\n*** Note: Pareto-front extraction was terminated before stream was ended as requested by the user."
-                                           ++ "\n***       There might be other (potentially infinitely more) results."
+                                           ++ "\n*** Note: Pareto-front extraction was terminated as requested by the user."
+                                           ++ "\n***       There might be many other results!"
 
        where multi w [] = "There are no " ++ w ++ " to display models for."
              multi _ xs = intercalate "\n" xs

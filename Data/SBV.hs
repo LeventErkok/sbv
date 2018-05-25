@@ -592,11 +592,16 @@ Optimal model:
     * ['Pareto']. Finally, the user can query for pareto-fronts. A pareto front is an model such that no goal can be made
       "better" without making some other goal "worse."
 
+      Pareto fronts only make sense when the objectives are bounded. If there are unbounded objective values, then the
+      backend solver can loop infinitely. (This is what z3 does currently.) If you are not sure the objectives are
+      bounded, you should first use 'Independent' mode to ensure the objectives are bounded, and then switch to
+      pareto-mode to extract them further.
+
       The optional number argument to 'Pareto' specifies the maximum number of pareto-fronts the user is asking
-      to get. If 'Nothing', SBV will query for all pareto-fronts. Note that pareto-fronts can be infinite
-      in number, so if 'Nothing' is used, there is a potential for infinitely waiting for the SBV-solver interaction
-      to finish. (If you suspect this might be the case, run in 'verbose' mode to see the interaction and
-      put a limiting factor appropriately.)
+      to get. If 'Nothing', SBV will query for all pareto-fronts. Note that pareto-fronts can be really large,
+      so if 'Nothing' is used, there is a potential for waiting indefinitely for the SBV-solver interaction to finish. (If
+      you suspect this might be the case, run in 'verbose' mode to see the interaction and put a limiting factor
+      appropriately.)
 -}
 
 {- $softAssertions
