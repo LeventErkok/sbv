@@ -1,10 +1,8 @@
-this is wrong output from z3; second model is busted. trying to get to the bottom of it.
-
 Pareto front #1: Optimal model:
   x            = 0 :: Integer
   min_x        = 0 :: Integer
   max_x_plus_x = 0 :: Integer
 Pareto front #2: Optimal model:
   x            = 1 :: Integer
-  min_x        = 0 :: Integer
-  max_x_plus_x = 0 :: Integer
+  min_x        = 1 :: Integer
+  max_x_plus_x = 2 :: Integer
