@@ -22,7 +22,6 @@ tests =
     , goldenVsStringShow "pareto1"   (optimize (Pareto Nothing)   pareto1)
     , goldenVsStringShow "pareto2"   (optimize (Pareto (Just 30)) pareto2)
     , goldenVsStringShow "pareto3"   (optimize (Pareto Nothing)   pareto3)
-    , goldenVsStringShow "pareto4"   (optimize (Pareto Nothing)   pareto4)
     , goldenVsStringShow "boxed1"    (optimize Independent        boxed1)
     ]
 
@@ -83,17 +82,6 @@ pareto3 = do x <- sInteger "x"
 
              minimize "min_x"            x
              maximize "max_x_plus_x"   $ x + x
-
-pareto4 :: Goal
-pareto4 = do x <- sInteger "x"
-
-             mxx <- sInteger "mxx"
-
-             constrain $ 1 .>= x
-             constrain $ 0 .<= x
-
-             minimize "min_x" x
-             maximize "max_mxx" mxx
 
 boxed1 :: Goal
 boxed1 = do x <- sReal "x"
