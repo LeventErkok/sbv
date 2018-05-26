@@ -10,6 +10,13 @@
     query level. Similarly, change `Unknown` result to return the same
     data-type at the sat/prove level.
 
+  * Note that with Z3 4.8.0 release, they have dropped support for
+    producing interpolants. Thus, SBV's 'getInterpolant' call is no
+    longer supported. SBV still supports this call per the SMTLib standard,
+    but if you need this functionality, you'll need to use an older
+    version of Z3. (Note that there were no changes to SBV itself, this
+    is a direct result of changes to Z3.)
+
   * Code reorg: Simplify constant mapping table, by properly accounting
     for negative-zero floats.
 

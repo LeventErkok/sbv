@@ -7,6 +7,9 @@
 -- Stability   :  experimental
 --
 -- Testing a few interpolant computations.
+--
+-- NB. As of Z3 4.8.0; Interpolants are no longer supported. We're preserving
+-- this file for future releases, when they might add support back.
 -----------------------------------------------------------------------------
 {-# LANGUAGE ScopedTypeVariables #-}
 

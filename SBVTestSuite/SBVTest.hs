@@ -75,7 +75,8 @@ import qualified TestSuite.Queries.Int_CVC4
 import qualified TestSuite.Queries.Int_Mathsat
 import qualified TestSuite.Queries.Int_Yices
 import qualified TestSuite.Queries.Int_Z3
-import qualified TestSuite.Queries.Interpolants
+-- As of Z3 4.8.0, interpolants are no longer supported; so we're skipping these tests
+-- import qualified TestSuite.Queries.Interpolants
 import qualified TestSuite.Queries.Strings
 import qualified TestSuite.Queries.Uninterpreted
 import qualified TestSuite.QuickCheck.QC
@@ -192,7 +193,8 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Queries.Enums.tests
                , TestSuite.Queries.FreshVars.tests
                , TestSuite.Queries.Int_Z3.tests
-               , TestSuite.Queries.Interpolants.tests
+               -- As of Z3 4.8.0, interpolants are no longer supported; so we're skipping these tests
+               -- , TestSuite.Queries.Interpolants.tests
                , TestSuite.Queries.Strings.tests
                , TestSuite.Queries.Uninterpreted.tests
                , TestSuite.Uninterpreted.AUF.tests

@@ -7,6 +7,11 @@
 -- Stability   :  experimental
 --
 -- Demonstrates extraction of interpolants via queries.
+--
+-- N.B. As of Z3 version 4.8.0; Z3 no longer supports interpolants. So, the
+-- following example is no longer working. We're keeping it here however,
+-- in case you use it with another solver that might support interpolants.
+-- (I know of no others for the time being, unfortunately.)
 -----------------------------------------------------------------------------
 
 module Documentation.SBV.Examples.Queries.Interpolants where
@@ -15,13 +20,16 @@ import Data.SBV
 import Data.SBV.Control
 
 -- | Compute the interpolant for formulas @y = 2x@ and @y = 2z+1@.
+--
 -- These formulas are not satisfiable together since it would mean
 -- @y@ is both even and odd at the same time. An interpolant for
 -- this pair of formulas is a formula that's expressed only in terms
 -- of @y@, which is the only common symbol among them. We have:
 --
--- >>> runSMT evenOdd
+-- @
+-- runSMT evenOdd
 -- ["(<= 0 (+ (div s1 2) (div (* (- 1) s1) 2)))"]
+-- @
 --
 -- This is a bit hard to read unfortunately, due to translation artifacts and use of strings. To analyze,
 -- we need to know that @s1@ is @y@ through SBV's translation. Let's express it in
@@ -34,13 +42,17 @@ import Data.SBV.Control
 -- is @True@; and if @y@ is odd, then then it should be @False@. You can argue
 -- mathematically that this indeed the case, but let's just use SBV to prove these:
 --
--- >>> prove $ \y -> (y `sMod` 2 .== 0) ==> (0 .<= (y `sDiv` 2) + ((-y) `sDiv` 2::SInteger))
+-- @
+-- prove $ \y -> (y `sMod` 2 .== 0) ==> (0 .<= (y `sDiv` 2) + ((-y) `sDiv` 2::SInteger))
 -- Q.E.D.
+-- @
 --
 -- And:
 --
--- >>> prove $ \y -> (y `sMod` 2 .== 1) ==> bnot (0 .<= (y `sDiv` 2) + ((-y) `sDiv` 2::SInteger))
+-- @
+-- prove $ \y -> (y `sMod` 2 .== 1) ==> bnot (0 .<= (y `sDiv` 2) + ((-y) `sDiv` 2::SInteger))
 -- Q.E.D.
+-- @
 --
 -- This establishes that we indeed have an interpolant!
 evenOdd :: Symbolic [String]

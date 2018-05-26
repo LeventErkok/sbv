@@ -660,6 +660,9 @@ getProof = do
 -- If you need these, please get in touch. Furthermore, the result will be a list of mere strings representing the
 -- interpolating formulas, as opposed to a more structured type. Please get in touch if you use this function and can
 -- suggest a better API.
+--
+-- N.B. As of Z3 version 4.8.0; Z3 no longer supports interpolants. So, uses of this function is also
+-- deprecated. If they add support in the future, we might change this function accordingly.
 getInterpolant :: [String] -> Query [String]
 getInterpolant fs
   | length fs < 2
