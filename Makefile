@@ -46,10 +46,7 @@ test: lintTest docTest regularTests
 lintTest:
 	@$(TIME) ./dist/build/SBVHLint/SBVHLint
 
-# TODO: Just use the first invocation once doctest starts working on Mac again
-# See: https://github.com/LeventErkok/sbv/issues/362
 docTest:
-	# @$(TIME) ./dist/build/SBVDocTest/SBVDocTest
 	@$(TIME) doctest --fast --no-magic $(DOCTESTSOURCES)
 
 regularTests:
@@ -66,7 +63,12 @@ release: veryclean install docs test
 # use this as follows:
 #         make testPattern TGT=U2Bridge
 testPattern:
-	./dist/build/SBVTest/SBVTest --hide-successes -p ${TGT}
+	$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -p ${TGT}
+
+# use this as follows:
+#         make docTestPattern TGT=./Documentation/SBV/Examples/Puzzles/HexPuzzle.hs
+docTestPattern:
+	$(TIME) doctest --fast --no-magic --verbose ${TGT}
 
 tags:
 	@fast-tags -R --nomerge .
