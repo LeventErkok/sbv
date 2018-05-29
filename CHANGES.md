@@ -10,12 +10,12 @@
     query level. Similarly, change `Unknown` result to return the same
     data-type at the sat/prove level.
 
-  * Note that with Z3 4.8.0 release, they have dropped support for
-    producing interpolants. Thus, SBV's 'getInterpolant' call is no
-    longer supported. SBV still supports this call per the SMTLib standard,
-    but if you need this functionality, you'll need to use an older
-    version of Z3. (Note that there were no changes to SBV itself, this
-    is a direct result of changes to Z3.)
+  * Interpolants: With Z3 4.8.0 release, Z3 folks have dropped support
+    for producing interpolants. If you need interpolants, you will have
+    to use the MathSAT backend now. Also, the MathSAT API is slightly
+    different from how Z3 supported interpolants as well, which means
+    your old code will need some modifications. See the example in
+    Documentation.SBV.Examples.Queries.Interpolants for the new usage.
 
   * Add 'constrainWithAttribute' call, which can be used to attach 
     arbitrary attribute to a constraint. Main use case is in interpolant

@@ -631,13 +631,13 @@ getProof = do
         -- result of parsing is ignored.
         parse r bad $ \_ -> return r
 
--- | Retrieve interpolants after an 'Unsat' result is obtained. Note you must have arranged for
+-- | Retrieve an interpolant after an 'Unsat' result is obtained. Note you must have arranged for
 -- interpolants to be produced first (/via/ @'setOption' $ 'ProduceInterpolants' 'True'@)
 -- for this call to not error out!
 --
--- To get an interpolant for a pair of formulas @A@ and @B@, use a 'namedConstraint' to attach
--- names to @A@ and @B@. Then call 'getInterpolant' @[\"A\", \"B\"]@, assuming those are the names
--- you gave to the formulas.
+-- To get an interpolant for a pair of formulas @A@ and @B@, use a 'constrainWithAttribute' call to attach
+-- interplation groups to @A@ and @B@. Then call 'getInterpolant' @[\"A\"]@, assuming those are the names
+-- you gave to the formulas in the @A@ group.
 --
 -- An interpolant for @A@ and @B@ is a formula @I@ such that:
 --
@@ -651,38 +651,28 @@ getProof = do
 -- be satisfied at the same time. Furthermore, @I@ will have only the symbols that are common
 -- to @A@ and @B@.
 --
--- Interpolants generalize to sequences: If you pass more than two formulas, then you will get
--- a sequence of interpolants. In general, for @N@ formulas that are not satisfiable together, you will be
--- returned @N-1@ interpolants. If formulas are @A1 .. An@, then interpolants will be @I1 .. I(N-1)@, such
--- that @A1 ==> I1@, @A2 /\\ I1 ==> I2@, @A3 /\\ I2 ==> I3@, ..., and finally @AN ===> not I(N-1)@.
---
--- Currently, SBV only returns simple and sequence interpolants, and does not support tree-interpolants.
--- If you need these, please get in touch. Furthermore, the result will be a list of mere strings representing the
--- interpolating formulas, as opposed to a more structured type. Please get in touch if you use this function and can
--- suggest a better API.
---
--- N.B. As of Z3 version 4.8.0; Z3 no longer supports interpolants. So, uses of this function is also
--- deprecated. If they add support in the future, we might change this function accordingly.
-getInterpolant :: [String] -> Query [String]
+-- N.B. As of Z3 version 4.8.0; Z3 no longer supports interpolants. Use the MathSAT backend for extracting
+-- interpolants. See 'Documentation.SBV.Examples.Queries.Interpolants' for an example.
+getInterpolant :: [String] -> Query String
 getInterpolant fs
-  | length fs < 2
-  = error $ "SBV.getInterpolant requires at least two named constraints, received: " ++ show fs
+  | null fs
+  = error $ "SBV.getInterpolant requires at least one marked constraint, received none!"
   | True
   = do let bar s = '|' : s ++ "|"
-           cmd = "(get-interpolant " ++ unwords (map bar fs) ++ ")"
+           cmd = "(get-interpolant (" ++ unwords (map bar fs) ++ "))"
            bad = unexpected "getInterpolant" cmd "a get-interpolant response"
                           $ Just [ "Make sure you use:"
                                  , ""
                                  , "       setOption $ ProduceInterpolants True"
                                  , ""
                                  , "to make sure the solver is ready for producing interpolants,"
-                                 , "and that you have named the formulas with calls to 'namedConstraint'."
+                                 , "and that you have used the proper attributes using the"
+                                 , "constrainWithAttribute function."
                                  ]
 
        r <- ask cmd
 
-       parse r bad $ \case EApp (ECon "interpolants" : es) -> return $ map (serialize False) es
-                           _                               -> bad r Nothing
+       parse r bad $ \e -> return $ serialize False e
 
 -- | Retrieve assertions. Note you must have arranged for
 -- assertions to be available first (/via/ @'setOption' $ 'ProduceAssertions' 'True'@)
