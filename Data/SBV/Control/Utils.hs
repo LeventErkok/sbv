@@ -68,7 +68,7 @@ import Data.SBV.Core.AlgReals   (mergeAlgReals)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
-import Data.SBV.SMT.Utils   (showTimeoutValue, annotateWithName, alignPlain, debug, mergeSExpr, SMTException(..))
+import Data.SBV.SMT.Utils   (showTimeoutValue, addAnnotations, alignPlain, debug, mergeSExpr, SMTException(..))
 
 import Data.SBV.Utils.Lib (qfsToString)
 
@@ -83,8 +83,9 @@ import GHC.Stack
 
 -- | 'Query' as a 'SolverContext'.
 instance SolverContext Query where
-   constrain          = addQueryConstraint Nothing
-   namedConstraint nm = addQueryConstraint (Just nm)
+   constrain                 = addQueryConstraint []
+   namedConstraint nm        = addQueryConstraint [(":named", nm)]
+   constrainWithAttribute    = addQueryConstraint
 
    setOption o
      | isStartModeOption o = error $ unlines [ ""
@@ -93,15 +94,12 @@ instance SolverContext Query where
                                              ]
      | True                = send True $ setSMTOption o
 
--- | Adding a constraint, possibly named. Only used internally.
+-- | Adding a constraint, possibly with attributes. Only used internally.
 -- Use 'constrain' and 'namedConstraint' from user programs.
-addQueryConstraint :: Maybe String -> SBool -> Query ()
-addQueryConstraint mbNm b = do sw <- inNewContext (\st -> do maybe (return ()) (registerLabel st) mbNm
+addQueryConstraint :: [(String, String)] -> SBool -> Query ()
+addQueryConstraint atts b = do sw <- inNewContext (\st -> do mapM_ (registerLabel st) [nm | (":named", nm) <- atts]
                                                              sbvToSW st b)
-                               send True $ "(assert " ++ mkNamed mbNm (show sw)  ++ ")"
-   where mkNamed Nothing   s = s
-         mkNamed (Just nm) s = annotateWithName nm s
-
+                               send True $ "(assert " ++ addAnnotations atts (show sw)  ++ ")"
 
 -- | Get the current configuration
 getConfig :: Query SMTConfig

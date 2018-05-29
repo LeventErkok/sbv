@@ -1779,9 +1779,11 @@ instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymW
 
 -- | Symbolic computations provide a context for writing symbolic programs.
 instance SolverContext Symbolic where
-   constrain          (SBV c) = imposeConstraint Nothing   c
-   namedConstraint nm (SBV c) = imposeConstraint (Just nm) c
-   setOption o                = addNewSMTOption  o
+   constrain                   (SBV c) = imposeConstraint []               c
+   namedConstraint        nm   (SBV c) = imposeConstraint [(":named", nm)] c
+   constrainWithAttribute atts (SBV c) = imposeConstraint atts             c
+
+   setOption o = addNewSMTOption  o
 
 -- | Introduce a soft assertion, with an optional penalty
 assertSoft :: String -> SBool -> Penalty -> Symbolic ()

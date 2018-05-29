@@ -138,7 +138,7 @@ strToCharAt s i
         y si st = do c <- internalVariable st w8
                      cs <- newExpr st KString (SBVApp (StrOp StrUnit) [c])
                      let csSBV = SBV (SVal KString (Right (cache (\_ -> return cs))))
-                     internalConstraint st Nothing $ unSBV $ csSBV .== si
+                     internalConstraint st [] $ unSBV $ csSBV .== si
                      return c
 
 -- | Short cut for 'strToCharAt'

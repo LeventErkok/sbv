@@ -209,9 +209,9 @@ module Data.SBV (
   -- ** Constraint Vacuity
   -- $constraintVacuity
 
-  -- ** Named constraints
+  -- ** Named constraints and attributes
   -- $namedConstraints
-  , namedConstraint
+  , namedConstraint, constrainWithAttribute
 
   -- ** Unsat cores
   -- $unsatCores
@@ -832,6 +832,12 @@ And the proof is not vacuous:
 Constraints can be given names:
 
   @ 'namedConstraint' "a is at least 5" $ a .>= 5@
+
+Similarly, arbitrary term attributes can also be associated:
+
+  @ 'constrainWithAttribute' [(":solver-specific-attribute", "value")] $ a .>= 5@
+
+Note that a 'namedConstraint' is equivalent to a 'constrainWithAttribute' call, setting the `":named"' attribute.
 -}
 
 {- $unsatCores

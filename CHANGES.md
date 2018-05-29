@@ -17,6 +17,10 @@
     version of Z3. (Note that there were no changes to SBV itself, this
     is a direct result of changes to Z3.)
 
+  * Add 'constrainWithAttribute' call, which can be used to attach 
+    arbitrary attribute to a constraint. Main use case is in interpolant
+    generation with MathSAT.
+
   * Code reorg: Simplify constant mapping table, by properly accounting
     for negative-zero floats.
 

@@ -264,6 +264,8 @@ class SolverContext m where
    constrain       :: SBool -> m ()
    -- | Add a named constraint. The name is used in unsat-core extraction.
    namedConstraint :: String -> SBool -> m ()
+   -- | Add a constraint, with arbitrary attributes. Used in interpolant generation.
+   constrainWithAttribute :: [(String, String)] -> SBool -> m ()
    -- | Set info. Example: @setInfo ":status" ["unsat"]@.
    setInfo :: String -> [String] -> m ()
    -- | Set an option.
