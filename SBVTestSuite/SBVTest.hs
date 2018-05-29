@@ -75,8 +75,7 @@ import qualified TestSuite.Queries.Int_CVC4
 import qualified TestSuite.Queries.Int_Mathsat
 import qualified TestSuite.Queries.Int_Yices
 import qualified TestSuite.Queries.Int_Z3
--- As of Z3 4.8.0, interpolants are no longer supported; so we're skipping these tests
--- import qualified TestSuite.Queries.Interpolants
+import qualified TestSuite.Queries.Interpolants
 import qualified TestSuite.Queries.Strings
 import qualified TestSuite.Queries.Uninterpreted
 import qualified TestSuite.QuickCheck.QC
@@ -126,8 +125,10 @@ localOnlyTests = testGroup "SBVLocalOnlyTests" [
                    , TestSuite.Queries.Int_CVC4.tests
                    , TestSuite.Queries.Int_Mathsat.tests
                    , TestSuite.Queries.Int_Yices.tests
-                   -- quick-check tests take a long time, so just run them locally.
+                   -- quick-check tests take a long time, so just run them locally:
                    , TestSuite.QuickCheck.QC.tests
+                   -- interpolant tests require MathSAT, run locally:
+                   , TestSuite.Queries.Interpolants.tests
                    ]
 
 -- | Remaining tests
@@ -193,8 +194,6 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Queries.Enums.tests
                , TestSuite.Queries.FreshVars.tests
                , TestSuite.Queries.Int_Z3.tests
-               -- As of Z3 4.8.0, interpolants are no longer supported; so we're skipping these tests
-               -- , TestSuite.Queries.Interpolants.tests
                , TestSuite.Queries.Strings.tests
                , TestSuite.Queries.Uninterpreted.tests
                , TestSuite.Uninterpreted.AUF.tests

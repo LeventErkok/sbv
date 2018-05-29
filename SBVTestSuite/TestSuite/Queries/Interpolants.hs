@@ -8,8 +8,6 @@
 --
 -- Testing a few interpolant computations.
 --
--- NB. As of Z3 4.8.0; Interpolants are no longer supported. We're preserving
--- this file for future releases, when they might add support back.
 -----------------------------------------------------------------------------
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -25,15 +23,16 @@ tests =
   testGroup "Basics.QueryInterpolants"
     [ goldenCapturedIO "query_Interpolant1" $ testQuery q1
     , goldenCapturedIO "query_Interpolant2" $ testQuery q2
-    , goldenCapturedIO "query_Interpolant3" $ testQuery q3
-    , goldenCapturedIO "query_Interpolant4" $ testQuery q4
     ]
 
 testQuery :: Show a => Symbolic a -> FilePath -> IO ()
-testQuery t rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just rf} t
+testQuery t rf = do r <- runSMTWith mathSAT{verbose=True, redirectVerbose=Just rf} t
                     appendFile rf ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
 
-q1 :: Symbolic [String]
+iConstraint :: String -> SBool -> Symbolic ()
+iConstraint g = constrainWithAttribute [(":interpolation-group", g)]
+
+q1 :: Symbolic String
 q1 = do a <- sInteger "a"
         b <- sInteger "b"
         c <- sInteger "c"
@@ -41,13 +40,13 @@ q1 = do a <- sInteger "a"
 
         setOption $ ProduceInterpolants True
 
-        namedConstraint "c1" $ a .== b &&& a .== c
-        namedConstraint "c2" $ b .== d &&& bnot (c .== d)
+        iConstraint "c1" $ a .== b &&& a .== c
+        iConstraint "c2" $ b .== d &&& bnot (c .== d)
 
         query $ do _ <- checkSat
-                   getInterpolant ["c1", "c2"]
+                   getInterpolant ["c1"]
 
-q2 :: Symbolic [String]
+q2 :: Symbolic String
 q2 = do a <- sInteger "a"
         b <- sInteger "b"
         c <- sInteger "c"
@@ -59,42 +58,10 @@ q2 = do a <- sInteger "a"
 
         setOption $ ProduceInterpolants True
 
-        namedConstraint "c1" $ f a .== c &&& f b .== d
-        namedConstraint "c2" $   a .== b &&& g c ./= g d
+        iConstraint "c1" $ f a .== c &&& f b .== d
+        iConstraint "c2" $   a .== b &&& g c ./= g d
 
         query $ do _ <- checkSat
-                   getInterpolant ["c1", "c2"]
-
-q3 :: Symbolic [String]
-q3 = do x <- sInteger "x"
-        y <- sInteger "y"
-        z <- sInteger "z"
-
-        a :: SArray Integer Integer <- newArray "a"
-        b :: SArray Integer Integer <- newArray "b"
-
-        namedConstraint "c1" $ b .== writeArray (writeArray a x 0) y (0::SInteger)
-        namedConstraint "c2" $ z .== x &&& readArray b z .== 1
-
-        setOption $ ProduceInterpolants True
-
-        query $ do _ <- checkSat
-                   getInterpolant ["c1", "c2"]
-
-q4 :: Symbolic [String]
-q4 = do a <- sInteger "a"
-        b <- sInteger "b"
-        c <- sInteger "c"
-        d <- sInteger "d"
-        e <- sInteger "e"
-
-        namedConstraint "c1" $ a .== b &&& a .== c
-        namedConstraint "c2" $ c .== d
-        namedConstraint "c3" $ b .== e &&& d ./= e
-
-        setOption $ ProduceInterpolants True
-
-        query $ do _ <- checkSat
-                   getInterpolant ["c1", "c2", "c3"]
+                   getInterpolant ["c1"]
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
