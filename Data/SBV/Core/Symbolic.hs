@@ -64,7 +64,7 @@ import Control.Monad.Trans      (MonadIO, liftIO)
 import Data.Char                (isAlpha, isAlphaNum, toLower)
 import Data.IORef               (IORef, newIORef, readIORef)
 import Data.List                (intercalate, sortBy)
-import Data.Maybe               (isJust, fromJust, fromMaybe)
+import Data.Maybe               (isJust, fromJust, fromMaybe, listToMaybe)
 import Data.String              (IsString(fromString))
 
 import Data.Time (getCurrentTime, UTCTime)
@@ -470,7 +470,7 @@ data Result = Result { reskinds       :: Set.Set Kind                           
                      , resUIConsts    :: [(String, SBVType)]                              -- ^ uninterpreted constants
                      , resAxioms      :: [(String, [String])]                             -- ^ axioms
                      , resAsgns       :: SBVPgm                                           -- ^ assignments
-                     , resConstraints :: [(Maybe String, SW)]                             -- ^ additional constraints (boolean)
+                     , resConstraints :: [([(String, String)], SW)]                       -- ^ additional constraints (boolean)
                      , resAssertions  :: [(String, Maybe CallStack, SW)]                  -- ^ assertions
                      , resOutputs     :: [SW]                                             -- ^ outputs
                      }
@@ -540,8 +540,7 @@ instance Show Result where
 
           shax (nm, ss) = "  -- user defined axiom: " ++ nm ++ "\n  " ++ intercalate "\n  " ss
 
-          shCstr (Nothing, c) = show c
-          shCstr (Just nm, c) = nm ++ ": " ++ show c
+          shCstr (attrs, c) = show c ++ "(attributes: " ++ show attrs ++ ")"
 
           shAssert (nm, stk, p) = "  -- assertion: " ++ nm ++ " " ++ maybe "[No location]"
 #if MIN_VERSION_base(4,9,0)
@@ -665,7 +664,7 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rUsedKinds   :: IORef KindSet
                     , rUsedLbls    :: IORef (Set.Set String)
                     , rinps        :: IORef ([(Quantifier, NamedSymVar)], [NamedSymVar]) -- User defined, and internal existential
-                    , rConstraints :: IORef [(Maybe String, SW)]
+                    , rConstraints :: IORef [([(String, String)], SW)]
                     , routs        :: IORef [SW]
                     , rtblMap      :: IORef TableMap
                     , spgm         :: IORef SBVPgm
@@ -1094,9 +1093,11 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    SBVPgm rpgm  <- readIORef pgm
    inpsO <- (reverse *** reverse) <$> readIORef inps
    outsO <- reverse <$> readIORef outs
+
    let swap  (a, b)              = (b, a)
        cmp   (a, _) (b, _)       = a `compare` b
        arrange (i, (at, rt, es)) = ((i, at, rt), es)
+
    cnsts <- sortBy cmp . map swap . Map.toList <$> readIORef (rconstMap st)
    tbls  <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef tables
    arrs  <- IMap.toAscList <$> readIORef arrays
@@ -1104,10 +1105,12 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    axs   <- reverse <$> readIORef axioms
    knds  <- readIORef usedKinds
    cgMap <- Map.toList <$> readIORef cgs
-   traceVals  <- reverse <$> readIORef cInfo
+
+   traceVals   <- reverse <$> readIORef cInfo
    observables <- reverse <$> readIORef observes
-   extraCstrs <- reverse <$> readIORef cstrs
-   assertions <- reverse <$> readIORef asserts
+   extraCstrs  <- reverse <$> readIORef cstrs
+   assertions  <- reverse <$> readIORef asserts
+
    return $ Result knds traceVals observables cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs assertions outsO
 
 -- | Add a new option
@@ -1116,23 +1119,21 @@ addNewSMTOption o =  do st <- ask
                         liftIO $ modifyState st rSMTOptions (o:) (return ())
 
 -- | Handling constraints
-imposeConstraint :: Maybe String -> SVal -> Symbolic ()
-imposeConstraint mbNm c = do st <- ask
-                             rm <- liftIO $ readIORef (runMode st)
-                             case rm of
-                               CodeGen -> error "SBV: constraints are not allowed in code-generation"
-                               _       -> do () <- case mbNm of
-                                                     Nothing -> return ()
-                                                     Just nm -> liftIO $ registerLabel st nm
-                                             liftIO $ internalConstraint st mbNm c
+imposeConstraint :: [(String, String)] -> SVal -> Symbolic ()
+imposeConstraint attrs c = do st <- ask
+                              rm <- liftIO $ readIORef (runMode st)
+                              case rm of
+                                CodeGen -> error "SBV: constraints are not allowed in code-generation"
+                                _       -> liftIO $ do mapM_ (registerLabel st) [nm | (":named",  nm) <- attrs]
+                                                       internalConstraint st attrs c
 
 -- | Require a boolean condition to be true in the state. Only used for internal purposes.
-internalConstraint :: State -> Maybe String -> SVal -> IO ()
-internalConstraint st mbNm b = do v <- svToSW st b
-                                  modifyState st rConstraints ((mbNm, v):)
-                                            $ noInteractive [ "Adding an internal constraint:"
-                                                            , "  Named: " ++ fromMaybe "<unnamed>" mbNm
-                                                            ]
+internalConstraint :: State -> [(String, String)] -> SVal -> IO ()
+internalConstraint st attrs b = do v <- svToSW st b
+                                   modifyState st rConstraints ((attrs, v):)
+                                             $ noInteractive [ "Adding an internal constraint:"
+                                                             , "  Named: " ++ fromMaybe "<unnamed>" (listToMaybe [nm | (":named", nm) <- attrs])
+                                                             ]
 
 -- | Add an optimization goal
 addSValOptGoal :: Objective SVal -> Symbolic ()

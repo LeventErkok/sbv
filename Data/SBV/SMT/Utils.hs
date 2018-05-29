@@ -14,7 +14,7 @@
 module Data.SBV.SMT.Utils (
           SMTLibConverter
         , SMTLibIncConverter
-        , annotateWithName
+        , addAnnotations
         , showTimeoutValue
         , alignDiagnostic
         , alignPlain
@@ -46,7 +46,7 @@ type SMTLibConverter a =  Set.Set Kind                                  -- ^ Kin
                        -> [(String, SBVType)]                           -- ^ uninterpreted functions/constants
                        -> [(String, [String])]                          -- ^ user given axioms
                        -> SBVPgm                                        -- ^ assignments
-                       -> [(Maybe String, SW)]                          -- ^ extra constraints
+                       -> [([(String, String)], SW)]                    -- ^ extra constraints
                        -> SW                                            -- ^ output variable
                        -> SMTConfig                                     -- ^ configuration
                        -> a
@@ -62,10 +62,12 @@ type SMTLibIncConverter a =  [NamedSymVar]               -- ^ inputs
                           -> SMTConfig                   -- ^ configuration
                           -> a
 
--- | Create an annotated term with the given name
-annotateWithName :: String -> String -> String
-annotateWithName nm x = "(! " ++ x ++ " :named |" ++ concatMap sanitize nm ++ "|)"
-  where sanitize '|'  = "_bar_"
+-- | Create an annotated term
+addAnnotations :: [(String, String)] -> String -> String
+addAnnotations []   x = x
+addAnnotations atts x = "(! " ++ x ++ " " ++ unwords (map mkAttr atts) ++ ")"
+  where mkAttr (a, v) = a ++ " |" ++ concatMap sanitize v ++ "|"
+        sanitize '|'  = "_bar_"
         sanitize '\\' = "_backslash_"
         sanitize c    = [c]
 

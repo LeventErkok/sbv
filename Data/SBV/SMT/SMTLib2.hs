@@ -14,6 +14,7 @@ module Data.SBV.SMT.SMTLib2(cvt, cvtInc) where
 
 import Data.Bits  (bit)
 import Data.List  (intercalate, partition, unzip3)
+import Data.Maybe (listToMaybe, fromMaybe)
 
 import qualified Data.Foldable as F (toList)
 import qualified Data.Map      as M
@@ -168,15 +169,16 @@ cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs ui
 
         finalAssert
           | null foralls
-          = map (\a -> "(assert " ++ named a ++ ")") assertions
+          = map (\a -> "(assert " ++ uncurry addAnnotations a ++ ")") assertions
           | not (null namedAsserts)
-          = error $ intercalate "\n" [ "SBV: Named constraints and quantifiers cannot be mixed!"
+          = error $ intercalate "\n" [ "SBV: Constraints with attributes and quantifiers cannot be mixed!"
                                      , "   Quantified variables: " ++ unwords (map show foralls)
                                      , "   Named constraints   : " ++ intercalate ", " (map show namedAsserts)
                                      ]
           | True
           = [impAlign (letShift combined) ++ replicate noOfCloseParens ')']
-          where namedAsserts = [n | (Just n, _) <- assertions]
+          where namedAsserts = [findName attrs | (attrs, _) <- assertions, not (null attrs)]
+                 where findName attrs = fromMaybe "<anonymous>" (listToMaybe [nm | (":named", nm) <- attrs])
 
                 combined = case map snd assertions of
                              [x] -> x
@@ -202,12 +204,12 @@ cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs ui
         --     -- negation of the output in a prove
         --     -- output itself in a sat
         assertions
-           | null finals = [(Nothing, cvtSW skolemMap trueSW)]
+           | null finals = [([], cvtSW skolemMap trueSW)]
            | True        = finals
 
-           where finals  = cstrs' ++ maybe [] (\r -> [(Nothing, r)]) mbO
+           where finals  = cstrs' ++ maybe [] (\r -> [([], r)]) mbO
 
-                 cstrs' =  [(mbNm, c') | (mbNm, c) <- cstrs, Just c' <- [pos c]]
+                 cstrs' =  [(attrs, c') | (attrs, c) <- cstrs, Just c' <- [pos c]]
 
                  mbO | isSat = pos out
                      | True  = neg out
@@ -606,7 +608,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                , (Join, lift2 "concat")
                                ]
 
-        sh (SBVApp (Label m) [a]) = curry named (Just m) $ cvtSW skolemMap a  -- This won't be reached; but just in case!
+        sh (SBVApp (Label _) [a]) = cvtSW skolemMap a  -- This won't be reached; but just in case!
 
         sh (SBVApp (IEEEFP (FP_Cast kFrom kTo m)) args) = handleFPCast kFrom kTo (ssw m) (unwords (map ssw args))
         sh (SBVApp (IEEEFP w                    ) args) = "(" ++ show w ++ " " ++ unwords (map ssw args) ++ ")"
@@ -865,8 +867,3 @@ reducePB op args = case op of
 
   where addIf :: [Int] -> String
         addIf cs = "(+ " ++ unwords ["(ite " ++ a ++ " " ++ show c ++ " 0)" | (a, c) <- zip args cs] ++ ")"
-
--- Add a named annotation
-named :: (Maybe String, String) -> String
-named (Nothing, x) = x
-named (Just nm, x) = annotateWithName nm x
