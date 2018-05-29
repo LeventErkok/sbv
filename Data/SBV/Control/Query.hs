@@ -656,7 +656,7 @@ getProof = do
 getInterpolant :: [String] -> Query String
 getInterpolant fs
   | null fs
-  = error $ "SBV.getInterpolant requires at least one marked constraint, received none!"
+  = error "SBV.getInterpolant requires at least one marked constraint, received none!"
   | True
   = do let bar s = '|' : s ++ "|"
            cmd = "(get-interpolant (" ++ unwords (map bar fs) ++ "))"
