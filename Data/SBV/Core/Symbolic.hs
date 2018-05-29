@@ -540,7 +540,9 @@ instance Show Result where
 
           shax (nm, ss) = "  -- user defined axiom: " ++ nm ++ "\n  " ++ intercalate "\n  " ss
 
-          shCstr (attrs, c) = show c ++ "(attributes: " ++ show attrs ++ ")"
+          shCstr ([], c)               = show c
+          shCstr ([(":named", nm)], c) = nm ++ ": " ++ show c
+          shCstr (attrs, c)            = show c ++ " (attributes: " ++ show attrs ++ ")"
 
           shAssert (nm, stk, p) = "  -- assertion: " ++ nm ++ " " ++ maybe "[No location]"
 #if MIN_VERSION_base(4,9,0)
