@@ -295,7 +295,7 @@ cgReturnArr vs
 data CgPgmBundle = CgPgmBundle (Maybe Int, Maybe CgSRealType) [(FilePath, (CgPgmKind, [Doc]))]
 
 -- | Different kinds of "files" we can produce. Currently this is quite "C" specific.
-data CgPgmKind = CgMakefile [String]
+data CgPgmKind = CgMakefile [String]  -- list of flags to pass to linker
                | CgHeader [Doc]
                | CgSource
                | CgDriver

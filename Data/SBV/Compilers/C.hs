@@ -104,13 +104,18 @@ cgen cfg nm st sbvProg
                                , (nmd ++ ".c", (CgDriver,         genDriver cfg randVals nm ins outs mbRet))
                                , (nm  ++ ".c", (CgSource,         body))
                                ]
-        body = genCProg cfg nm sig sbvProg ins outs mbRet extDecls
+
+        (body, flagsNeeded) = genCProg cfg nm sig sbvProg ins outs mbRet extDecls
+
         bundleKind = (cgInteger cfg, cgReal cfg)
+
         randVals = cgDriverVals cfg
+
         filt xs  = [c | c@(_, (k, _)) <- xs, need k]
           where need k | isCgDriver   k = cgGenDriver cfg
                        | isCgMakefile k = cgGenMakefile cfg
                        | True           = True
+
         nmd      = nm ++ "_driver"
         sig      = pprCFunHeader nm ins outs mbRet
         ins      = cgInputs st
@@ -126,7 +131,7 @@ cgen cfg nm st sbvProg
         extDecls  = case cgDecls st of
                      [] -> empty
                      xs -> vcat $ text "/* User given declarations: */" : map text xs
-        flags    = cgLDFlags st
+        flags    = flagsNeeded ++ cgLDFlags st
 
 -- | Pretty print a functions type. If there is only one output, we compile it
 -- as a function that returns that value. Otherwise, we compile it as a void function
@@ -411,7 +416,7 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
                         spec      = specifier cfg sw
 
 -- | Generate the C program
-genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SW -> Doc -> [Doc]
+genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SW -> Doc -> ([Doc], [String])
 genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins preConsts tbls arrs _uis _axioms (SBVPgm asgns) cstrs origAsserts _) inVars outVars mbRet extDecls
   | isNothing (cgInteger cfg) && KUnbounded `Set.member` kindInfo
   = error $ "SBV->C: Unbounded integers are not supported by the C compiler."
@@ -432,7 +437,7 @@ genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins preConsts tbls arrs
   | needsExistentials (map fst (fst ins))
   = error "SBV->C: Cannot compile functions with existentially quantified variables."
   | True
-  = [pre, header, post]
+  = ([pre, header, post], flagsNeeded)
  where asserts | cgIgnoreAsserts cfg = []
                | True                = origAsserts
 
@@ -461,6 +466,10 @@ genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins preConsts tbls arrs
        nm = text fn
 
        assignments = F.toList asgns
+
+       -- Do we need any linker flags for C?
+       flagsNeeded = nub $ concatMap (getLDFlag . opRes) assignments
+          where opRes (sw, SBVApp o _) = (o, kindOf sw)
 
        codeSeg (fnm, ls) =  text "/* User specified custom code for" <+> doubleQuotes (text fnm) <+> text "*/"
                          $$ vcat (map text ls)
@@ -949,5 +958,32 @@ mergeDrivers libName inc ds = pre : concatMap mkDFun ds ++ [callDrivers (map fst
                  ptag = "printf(\"" ++ tag ++ "\\n\");"
                  lsep = replicate (length tag) '='
                  psep = "printf(\"" ++ lsep ++ "\\n\");"
+
+-- Does this operation with this result kind require an LD flag?
+getLDFlag :: (Op, Kind) -> [String]
+getLDFlag (o, k) = flag o
+  where math = ["-lm"]
+
+        flag (IEEEFP FP_Cast{})                                     = math
+        flag (IEEEFP fop)       | fop `elem` requiresMath           = math
+        flag Abs                | k `elem` [KFloat, KDouble, KReal] = math
+        flag _                                                      = []
+
+        requiresMath = [ FP_Abs
+                       , FP_FMA
+                       , FP_Sqrt
+                       , FP_Rem
+                       , FP_Min
+                       , FP_Max
+                       , FP_RoundToIntegral
+                       , FP_ObjEqual
+                       , FP_IsSubnormal
+                       , FP_IsInfinite
+                       , FP_IsNaN
+                       , FP_IsNegative
+                       , FP_IsPositive
+                       , FP_IsNormal
+                       , FP_IsZero
+                       ]
 
 {-# ANN module ("HLint: ignore Redundant lambda" :: String) #-}
