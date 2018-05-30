@@ -2574,6 +2574,7 @@ int main(void)
 
 CC?=gcc
 CCFLAGS?=-Wall -O3 -DNDEBUG -fomit-frame-pointer
+LDFLAGS?=-lm
 AR?=ar
 ARFLAGS?=cr
 
@@ -2583,7 +2584,7 @@ floatCodeGen.a: toFP_Int8_ToFloat.o toFP_Int16_ToFloat.o toFP_Int32_ToFloat.o to
 	${AR} ${ARFLAGS} $@ $^
 
 floatCodeGen_driver: floatCodeGen_driver.c floatCodeGen.h
-	${CC} ${CCFLAGS} $< -o $@ floatCodeGen.a
+	${CC} ${CCFLAGS} $< -o $@ floatCodeGen.a ${LDFLAGS}
 
 toFP_Int8_ToFloat.o: toFP_Int8_ToFloat.c floatCodeGen.h
 	${CC} ${CCFLAGS} -c $< -o $@
