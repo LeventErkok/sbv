@@ -21,6 +21,9 @@
     arbitrary attribute to a constraint. Main use case is in interpolant
     generation with MathSAT.
 
+  * C code generation: SBV now spits out linker flag -lm if needed.
+    Thanks to Matt Peddie for reporting.
+
   * Code reorg: Simplify constant mapping table, by properly accounting
     for negative-zero floats.
 
