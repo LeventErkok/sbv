@@ -28,6 +28,7 @@ module Data.SBV.Tools.CodeGen (
         , cgReturn, cgReturnArr
 
         -- ** Code generation with uninterpreted functions
+        -- $cCodeWithMathFunctions
         , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIgnoreSAssert
 
         -- ** Code generation with 'SInteger' and 'SReal' types
@@ -59,4 +60,11 @@ overflow/underflows for 'SInteger', and rounding for 'SReal', so there is an imp
 
 If the user does /not/ specify these mappings, then SBV will
 refuse to compile programs that involve these types.
+-}
+
+{- $cCodeWithMathFunctions
+If you are generating C code for functions like 'fpMax', 'fpMin',
+'sqrt' etc. whose C equivalents live in @libm@, you will need to add
+@["-lm"]@ to the linker command using 'cgAddLDFlags' to run the
+example program.
 -}
