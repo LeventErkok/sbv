@@ -10,29 +10,33 @@ import System.Exit (exitSuccess)
 
 import Utils.SBVTestFramework (getTestEnvironment, TestEnvironment(..), CIOS(..))
 
+import System.Random (randomRIO)
+
 main :: IO ()
 main = do (testEnv, testPercentage) <- getTestEnvironment
 
           putStrLn $ "SBVDocTest: Test platform: " ++ show testEnv
 
           case testEnv of
-            TestEnvLocal   -> runDocTest False False
+            TestEnvLocal   -> runDocTest False False 100
             TestEnvCI env  -> if testPercentage < 50
                               then do putStrLn $ "Test percentage below tresheold, skipping doctest: " ++ show testPercentage
                                       exitSuccess
-                              else runDocTest (env == CIWindows) True
+                              else runDocTest (env == CIWindows) True testPercentage
             TestEnvUnknown  -> do putStrLn "Unknown test environment, skipping doctests"
                                   exitSuccess
 
- where runDocTest onWindows onRemote = do srcFiles <- glob "Data/SBV/**/*.hs"
-                                          docFiles <- glob "Documentation/SBV/**/*.hs"
+ where runDocTest onWindows onRemote tp = do srcFiles <- glob "Data/SBV/**/*.hs"
+                                             docFiles <- glob "Documentation/SBV/**/*.hs"
 
-                                          let allFiles  = srcFiles ++ docFiles
-                                              testFiles = filter (\nm -> not (skipWindows nm || skipRemote nm)) allFiles
+                                             let allFiles  = srcFiles ++ docFiles
+                                                 testFiles = filter (\nm -> not (skipWindows nm || skipRemote nm)) allFiles
 
-                                              args = ["--fast", "--no-magic"]
+                                                 args = ["--fast", "--no-magic"]
 
-                                          doctest $ args ++ testFiles
+                                             tfs <- pickPercentage tp testFiles
+
+                                             doctest $ args ++ tfs
 
          where skipWindows nm
                  | not onWindows = False
@@ -42,5 +46,16 @@ main = do (testEnv, testPercentage) <- getTestEnvironment
 
                skipRemote nm
                  | not onRemote = False
-                 | True         = -- The following test requires mathSAT, so can't run on remote
-                                  "interpolants.hs" `isSuffixOf` map toLower nm
+                 | True         = any (`isSuffixOf` map toLower nm) $ map (map toLower) skipList
+                 where skipList = [ "Interpolants.hs"  -- The following test requires mathSAT, so can't run on remote
+                                  , "HexPuzzle.hs"     -- Doctest is way too slow on this with ghci loading, sigh
+                                  , "MultMask.hs"      -- Also, quite slow
+                                  ]
+
+-- Pick (about) the given percentage of files
+pickPercentage :: Int -> [String] -> IO [String]
+pickPercentage 100 xs = return xs
+pickPercentage   0 _  = return []
+pickPercentage   p xs = concat <$> mapM pick xs
+  where pick f = do c <- randomRIO (0, 100)
+                    return $ if c >= p then [f] else []

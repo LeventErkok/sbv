@@ -243,7 +243,7 @@ Test-Suite SBVTest
 
 Test-Suite SBVDocTest
     Build-Depends:    base, directory, filepath, random
-                    , doctest, Glob, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, mtl, QuickCheck
+                    , doctest, Glob, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, mtl, QuickCheck, random
                     , sbv
     default-language: Haskell2010
     Hs-Source-Dirs  : SBVTestSuite
