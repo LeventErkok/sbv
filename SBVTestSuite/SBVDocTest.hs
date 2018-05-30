@@ -58,4 +58,4 @@ pickPercentage 100 xs = return xs
 pickPercentage   0 _  = return []
 pickPercentage   p xs = concat <$> mapM pick xs
   where pick f = do c <- randomRIO (0, 100)
-                    return $ if c >= p then [f] else []
+                    return [f | c >= p]
