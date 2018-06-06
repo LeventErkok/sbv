@@ -145,8 +145,8 @@ bvsmulo n x y = (underflow, overflow)
         mul2n     = sx n' x `svTimes` sx n' y
         mul2nTop  = svExtract (n'-1) (n-1) mul2n
 
-        zeros     = svInteger (KBounded True (n+1)) (-1)
-        ones      = svInteger (KBounded True (n+1)) 0
+        zeros     = svInteger (KBounded True (n+1)) 0
+        ones      = svInteger (KBounded True (n+1)) (-1)
 
         underflow = svAll [diffSign x y, svNot $ mul2nTop `svEqual` ones]
         overflow  = svAll [sameSign x y, svNot $ mul2nTop `svEqual` zeros]
