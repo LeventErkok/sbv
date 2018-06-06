@@ -152,7 +152,7 @@ bvsmulo n x y = (underflow, overflow)
         noZeros   = svNot $ (x `svEqual` z) `svOr` (y `svEqual` z)
 
         underflow = svAll [noZeros, diffSign x y, svNot $ mul2nTop `svEqual` ones]
-        overflow  = svAll [noZeros, sameSign x y, svNot $ mul2nTop `svEqual` zeros]
+        overflow  = svAll [         sameSign x y, svNot $ mul2nTop `svEqual` zeros]
 
 -- | Unsigned division. Neither underflows, nor overflows.
 bvudivo :: Int -> SVal -> SVal -> (SVal, SVal)
