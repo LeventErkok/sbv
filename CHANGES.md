@@ -5,6 +5,14 @@
 
 ### Version 7.8.5, Not yet released
  
+  * Add support for bit-vector underflow/overflow detection. The new
+    'BVOverflow' class captures conditions under which addition, subtraction,
+    multiplication, division, and negation can underflow/overflow for
+    both signed and unsigned bit-vector values. The implementation is based on
+    http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/z3prefix.pdf,
+    and can be used to detect overflow caused bugs in machine arithmetic.
+    See "Data.SBV.Tools.Overflow" for details.
+
   * Change the function 'getUnknownReason' to return a proper data-type
     ('SMTReasonUnknown') as opposed to a mere string. This is at the
     query level. Similarly, change `Unknown` result to return the same
