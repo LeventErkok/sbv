@@ -211,6 +211,7 @@ Test-Suite SBVTest
                   , TestSuite.Optimization.ExtensionField
                   , TestSuite.Optimization.Quantified
                   , TestSuite.Optimization.Reals
+                  , TestSuite.Overflows.Overflow
                   , TestSuite.Polynomials.Polynomials
                   , TestSuite.Puzzles.Coins
                   , TestSuite.Puzzles.Counts
