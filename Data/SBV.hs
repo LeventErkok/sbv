@@ -309,7 +309,7 @@ import qualified Language.Haskell.TH as TH
 import Data.Generics
 
 import Data.SBV.SMT.Utils (SMTException(..))
-import Data.SBV.Control.Utils (SMTValue)
+import Data.SBV.Control.Utils (SMTValue (..))
 import Data.SBV.Control.Types (SMTReasonUnknown(..))
 
 -- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
