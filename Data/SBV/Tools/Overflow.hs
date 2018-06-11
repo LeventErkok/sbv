@@ -69,8 +69,8 @@ zx n a
        p  = svInteger (KBounded s (n - sa)) 0
 
 -- | Sign-extend to given bits. Note that we keep the signedness of the argument.
-sx :: Int -> SVal -> SVal
-sx n a
+_sx :: Int -> SVal -> SVal
+_sx n a
  | n < sa = error $ "Data.SBV: Unexpected sign extension: from: " ++ show (intSizeOf a) ++ " to: " ++ show n
  | True   = p `svJoin` a
  where sa = intSizeOf a
@@ -94,8 +94,8 @@ sameSign :: SVal -> SVal -> SVal
 sameSign x y = (pos x `svAnd` pos y) `svOr` (neg x `svAnd` neg y)
 
 -- | Do these have opposing signs?
-diffSign :: SVal -> SVal -> SVal
-diffSign x y = svNot (sameSign x y)
+_diffSign :: SVal -> SVal -> SVal
+_diffSign x y = svNot (sameSign x y)
 
 -- | Check all true
 svAll :: [SVal] -> SVal
@@ -133,26 +133,37 @@ bvumulo 0 _ _ = (svFalse,   svFalse)
 bvumulo n x y = (underflow, overflow)
   where underflow = svFalse
 
-        n'       = 2*n
-        zn       = svInteger (KBounded False n) 0
-        overflow = svNot $ svExtract (n'-1) n (zx n' x `svTimes` zx n' y) `svEqual` zn
+        n1        = n+1
+        overflow1 = signBit $ zx n1 x `svTimes` zx n1 y
+
+        -- From Z3 sources:
+        --
+        -- expr_ref ovf(m()), v(m()), tmp(m());
+        -- ovf = m().mk_false();
+        -- v = m().mk_false();
+        -- for (unsigned i = 1; i < sz; ++i) {
+        --    mk_or(ovf, a_bits[sz-i], ovf);
+        --    mk_and(ovf, b_bits[i], tmp);
+        --    mk_or(tmp, v, v);
+        -- }
+        -- overflow2 = v;
+        --
+        overflow2 = go 1 svFalse svFalse
+          where go i ovf v
+                 | i >= n = v
+                 | True   = go (i+1) ovf' v'
+                 where ovf' = ovf  `svOr`  (x `svTestBit` (n-i))
+                       tmp  = ovf' `svAnd` (y `svTestBit` i)
+                       v'   = tmp `svOr` v
+
+        overflow = overflow1 `svOr` overflow2
 
 -- | Signed multiplication.
 bvsmulo :: Int -> SVal -> SVal -> (SVal, SVal)
 bvsmulo 0 _ _ = (svFalse,   svFalse)
-bvsmulo n x y = (underflow, overflow)
-  where n'        = 2*n
-        mul2n     = sx n' x `svTimes` sx n' y
-        mul2nTop  = svExtract (n'-1) (n-1) mul2n
-
-        zeros     = svInteger (KBounded True (n+1)) 0
-        ones      = svInteger (KBounded True (n+1)) (-1)
-
-        z         = svInteger (KBounded True n) 0
-        noZeros   = svNot $ (x `svEqual` z) `svOr` (y `svEqual` z)
-
-        underflow = svAll [noZeros, diffSign x y, svNot $ mul2nTop `svEqual` ones]
-        overflow  = svAll [         sameSign x y, svNot $ mul2nTop `svEqual` zeros]
+bvsmulo _n _x _y = (underflow, overflow)
+  where underflow = error "bvsmul_noudfl"
+        overflow  = error "bvsmul_noovfl"
 
 -- | Unsigned division. Neither underflows, nor overflows.
 bvudivo :: Int -> SVal -> SVal -> (SVal, SVal)
