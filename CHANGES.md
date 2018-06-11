@@ -5,8 +5,8 @@
 
 ### Version 7.8.5, Not yet released
  
-  * Add support for bit-vector underflow/overflow detection. The new
-    'BVOverflow' class captures conditions under which addition, subtraction,
+  * Add support for bit-vector arithmetic underflow/overflow detection. The new
+    'ArithmeticOverflow' class captures conditions under which addition, subtraction,
     multiplication, division, and negation can underflow/overflow for
     both signed and unsigned bit-vector values. The implementation is based on
     http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/z3prefix.pdf,
