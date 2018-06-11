@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  TestSuite.Overflows.Overflow
+-- Module      :  TestSuite.Overflows.Arithmetic
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -12,12 +12,12 @@
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module TestSuite.Overflows.Overflow(tests) where
+module TestSuite.Overflows.Arithmetic(tests) where
 
+import Data.SBV
 import Data.SBV.Dynamic
 import Data.SBV.Internals (unSBV, SBV(..))
 
-import Data.SBV.Control (Logic(Logic_NONE))
 import Data.SBV.Tools.Overflow
 
 import Utils.SBVTestFramework
