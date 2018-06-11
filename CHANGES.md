@@ -38,6 +38,9 @@
   * Export 'sexprToVal' for the class SMTValue, which allows for custom
     definitions of value extractions. Thanks to Brian Schroeder for the
     patch.
+  
+  * Export 'Logic' directly from Data.SBV. (Previously was from Control.)
+
 
 ### Version 7.8, Released 2018-05-18
 

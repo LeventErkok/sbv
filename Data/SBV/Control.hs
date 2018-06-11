@@ -69,10 +69,6 @@ module Data.SBV.Control (
 
      -- * Solver options
      , SMTOption(..)
-
-     -- * Logics supported
-     , Logic(..)
-
      ) where
 
 import Data.SBV.Core.Data     (SMTProblem(..), SMTSolver(..), SMTConfig(..))

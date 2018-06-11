@@ -267,7 +267,7 @@ module Data.SBV (
   , boolector, cvc4, yices, z3, mathSAT, abc
   -- ** Configurations
   , defaultSolverConfig, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
-  , setLogic, setOption, setInfo, setTimeOut
+  , setLogic, Logic(..), setOption, setInfo, setTimeOut
   -- ** Solver exceptions
   , SMTException(..)
 
@@ -310,7 +310,7 @@ import Data.Generics
 
 import Data.SBV.SMT.Utils (SMTException(..))
 import Data.SBV.Control.Utils (SMTValue (..))
-import Data.SBV.Control.Types (SMTReasonUnknown(..))
+import Data.SBV.Control.Types (SMTReasonUnknown(..), Logic(..))
 
 -- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
 -- problems with constraints, like the following:
