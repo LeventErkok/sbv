@@ -69,8 +69,8 @@ zx n a
        p  = svInteger (KBounded s (n - sa)) 0
 
 -- | Sign-extend to given bits. Note that we keep the signedness of the argument.
-_sx :: Int -> SVal -> SVal
-_sx n a
+sx :: Int -> SVal -> SVal
+sx n a
  | n < sa = error $ "Data.SBV: Unexpected sign extension: from: " ++ show (intSizeOf a) ++ " to: " ++ show n
  | True   = p `svJoin` a
  where sa = intSizeOf a
@@ -94,8 +94,8 @@ sameSign :: SVal -> SVal -> SVal
 sameSign x y = (pos x `svAnd` pos y) `svOr` (neg x `svAnd` neg y)
 
 -- | Do these have opposing signs?
-_diffSign :: SVal -> SVal -> SVal
-_diffSign x y = svNot (sameSign x y)
+diffSign :: SVal -> SVal -> SVal
+diffSign x y = svNot (sameSign x y)
 
 -- | Check all true
 svAll :: [SVal] -> SVal
@@ -161,9 +161,39 @@ bvumulo n x y = (underflow, overflow)
 -- | Signed multiplication.
 bvsmulo :: Int -> SVal -> SVal -> (SVal, SVal)
 bvsmulo 0 _ _ = (svFalse,   svFalse)
-bvsmulo _n _x _y = (underflow, overflow)
-  where underflow = error "bvsmul_noudfl"
-        overflow  = error "bvsmul_noovfl"
+bvsmulo n x y = (underflow, overflow)
+  where underflow = diffSign x y `svAnd` overflowPossible
+        overflow  = sameSign x y `svAnd` overflowPossible
+
+        n1        = n+1
+        overflow1 = (xy1 `svTestBit` n) `svXOr` (xy1 `svTestBit` (n-1))
+           where xy1 = sx n1 x `svTimes` sx n1 y
+
+        -- From Z3 sources:
+        -- expr_ref v(m()), tmp(m()), a(m()), b(m()), a_acc(m()), sign(m());
+        -- a_acc = m().mk_false();
+        -- v = m().mk_false();
+        -- for (unsigned i = 1; i + 1 < sz; ++i) {
+        --    mk_xor(b_bits[sz-1], b_bits[i], b);
+        --    mk_xor(a_bits[sz-1], a_bits[sz-1-i], a);
+        --    mk_or(a, a_acc, a_acc);
+        --    mk_and(a_acc, b, tmp);
+        --    mk_or(tmp, v, v);
+        -- }
+        -- overflow2 = v;
+        overflow2 = go 1 svFalse svFalse
+           where sY = signBit y
+                 sX = signBit x
+                 go i v a_acc
+                  | i + 1 >= n = v
+                  | True       = go (i+1) v' a_acc'
+                  where b      = sY `svXOr` (y `svTestBit` i)
+                        a      = sX `svXOr` (x `svTestBit` (n-1-i))
+                        a_acc' = a `svOr` a_acc
+                        tmp    = a_acc' `svAnd` b
+                        v'     = tmp `svOr` v
+
+        overflowPossible = overflow1 `svOr` overflow2
 
 -- | Unsigned division. Neither underflows, nor overflows.
 bvudivo :: Int -> SVal -> SVal -> (SVal, SVal)
