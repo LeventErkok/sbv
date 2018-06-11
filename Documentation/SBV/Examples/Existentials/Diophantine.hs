@@ -12,7 +12,6 @@
 module Documentation.SBV.Examples.Existentials.Diophantine where
 
 import Data.SBV
-import Data.SBV.Control
 
 --------------------------------------------------------------------------------------------------
 -- * Representing solutions
