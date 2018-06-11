@@ -116,12 +116,21 @@ svAll :: [SVal] -> SVal
 svAll = foldr svAnd svTrue
 
 -- | Are all the bits between a b (inclusive) zero?
-allZero :: Int -> Int -> SBV a -> SBool
+allZero :: Int -> Int -> SBV a -> SVal
 allZero m n (SBV x)
   | m >= sz || n < 0 || m < n
   = error $ "Data.SBV.Tools.Overflow.allZero: Received unexpected parameters: " ++ show (m, n, sz)
   | True
-  = SBV $ svAll [svTestBit x i `svEqual` svFalse | i <- [m, m-1 .. n]]
+  = svAll [svTestBit x i `svEqual` svFalse | i <- [m, m-1 .. n]]
+  where sz = intSizeOf x
+
+-- | Are all the bits between a b (inclusive) one?
+allOne :: Int -> Int -> SBV a -> SVal
+allOne m n (SBV x)
+  | m >= sz || n < 0 || m < n
+  = error $ "Data.SBV.Tools.Overflow.allOne: Received unexpected parameters: " ++ show (m, n, sz)
+  | True
+  = svAll [svTestBit x i `svEqual` svTrue | i <- [m, m-1 .. n]]
   where sz = intSizeOf x
 
 -- | Unsigned addition. Can only overflow.
@@ -310,16 +319,32 @@ sFromIntegralO x = case (kindOf x, kindOf (undefined :: b)) of
           where underflow  = false
                 overflow
                   | n <= m = false
-                  | True   = bnot $ allZero (n-1) m x
+                  | True   = SBV $ svNot $ allZero (n-1) m x
 
         u2s :: Int -> Int -> (SBool, SBool)
-        u2s = error "u2s"
+        u2s n m = (underflow, overflow)
+          where underflow = false
+                overflow
+                  | m > n = false
+                  | True  = SBV $ svNot $ allZero (n-1) (m-1) x
 
         s2u :: Int -> Int -> (SBool, SBool)
-        s2u = error "s2u"
+        s2u n m = (underflow, overflow)
+          where underflow = SBV $ (unSBV x `svTestBit` (n-1)) `svEqual` svFalse -- NB. This is wrong in the paper!
+
+                overflow
+                  | m >= n - 1 = false
+                  | True       = SBV $ svAll [(unSBV x `svTestBit` (n-1)) `svEqual` svFalse, svNot $ allZero (n-1) m x]
 
         s2s :: Int -> Int -> (SBool, SBool)
-        s2s = error "s2s"
+        s2s n m = (underflow, overflow)
+          where underflow
+                  | m > n = false
+                  | True  = SBV $ svAll [(unSBV x `svTestBit` (n-1)) `svEqual` svTrue,  svNot $ allOne  (n-1) (m-1) x]
+
+                overflow
+                  | m > n = false
+                  | True  = SBV $ svAll [(unSBV x `svTestBit` (n-1)) `svEqual` svFalse, svNot $ allZero (n-1) (m-1) x]
 
 -- Helpers
 l2 :: (SVal -> SVal -> (SBool, SBool)) -> SBV a -> SBV a -> (SBool, SBool)

@@ -13,6 +13,11 @@
     and can be used to detect overflow caused bugs in machine arithmetic.
     See "Data.SBV.Tools.Overflow" for details.
 
+  * Add 'sFromIntegralO', which is the overflow/underflow detecting variant
+    of 'sFromIntegral'. This function returns (along with the converted
+    result), a pair of booleans showing whether the conversion underflowed
+    or overflowed.
+
   * Change the function 'getUnknownReason' to return a proper data-type
     ('SMTReasonUnknown') as opposed to a mere string. This is at the
     query level. Similarly, change `Unknown` result to return the same
