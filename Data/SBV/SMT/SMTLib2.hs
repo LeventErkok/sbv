@@ -618,6 +618,9 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           | True       = reducePB pb args'
           where args' = map ssw args
 
+        -- NB: Z3 semantics have the predicates reversed: i.e., it returns true if overflow isn't possible. Hence the not.
+        sh (SBVApp (OverflowOp op) args) = "(not (" ++ show op ++ " " ++ unwords (map ssw args) ++ "))"
+
         -- Note the unfortunate reversal in StrInRe..
         sh (SBVApp (StrOp (StrInRe r)) args) = "(str.in.re " ++ unwords (map ssw args) ++ " " ++ show r ++ ")"
         sh (SBVApp (StrOp op)          args) = "(" ++ show op ++ " " ++ unwords (map ssw args) ++ ")"

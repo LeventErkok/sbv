@@ -27,7 +27,7 @@
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SW(..), swKind, trueSW, falseSW
-  , Op(..), PBOp(..), FPOp(..), StrOp(..), RegExp(..)
+  , Op(..), PBOp(..), OvOp(..), FPOp(..), StrOp(..), RegExp(..)
   , Quantifier(..), needsExistentials
   , RoundingMode(..)
   , SBVType(..), newUninterpreted, addAxiom
@@ -154,6 +154,7 @@ data Op = Plus
         | Label String                          -- Essentially no-op; useful for code generation to emit comments.
         | IEEEFP FPOp                           -- Floating-point ops, categorized separately
         | PseudoBoolean PBOp                    -- Pseudo-boolean ops, categorized separately
+        | OverflowOp    OvOp                    -- Overflow-ops, categorized separately
         | StrOp StrOp                           -- String ops, categorized separately
         deriving (Eq, Ord)
 
@@ -220,6 +221,18 @@ data PBOp = PB_AtMost  Int        -- ^ At most k
           | PB_Ge      [Int] Int  -- ^ At least k, with coefficients given. Generalizes PB_AtLeast
           | PB_Eq      [Int] Int  -- ^ Exactly k,  with coefficients given. Generalized PB_Exactly
           deriving (Eq, Ord, Show)
+
+-- | Overflow operations
+data OvOp = Overflow_SMul_OVFL   -- ^ Signed multiplication overflow
+          | Overflow_SMul_UDFL   -- ^ Signed multiplication underflow
+          | Overflow_UMul_OVFL   -- ^ Unsigned multiplication overflow
+          deriving (Eq, Ord)
+
+-- | Show instance. It's important that these follow the internal z3 names
+instance Show OvOp where
+  show Overflow_SMul_OVFL = "bvsmul_noovfl"
+  show Overflow_SMul_UDFL = "bvsmul_noudfl"
+  show Overflow_UMul_OVFL = "bvumul_noovfl"
 
 -- | String operations. Note that we do not define `StrAt` as it translates to `StrSubStr` trivially.
 data StrOp = StrConcat       -- ^ Concatenation of one or more strings
@@ -339,6 +352,7 @@ instance Show Op where
   show (Label s)         = "[label] " ++ s
   show (IEEEFP w)        = show w
   show (PseudoBoolean p) = show p
+  show (OverflowOp o)    = show o
   show (StrOp s)         = show s
   show op
     | Just s <- op `lookup` syms = s
@@ -392,6 +406,7 @@ instance Show SBVExpr where
   show (SBVApp (Rol i) [a])               = unwords [show a, "<<<", show i]
   show (SBVApp (Ror i) [a])               = unwords [show a, ">>>", show i]
   show (SBVApp (PseudoBoolean pb) args)   = unwords (show pb : map show args)
+  show (SBVApp (OverflowOp op)    args)   = unwords (show op : map show args)
   show (SBVApp op                 [a, b]) = unwords [show a, show op, show b]
   show (SBVApp op                 args)   = unwords (show op : map show args)
 
@@ -1470,3 +1485,4 @@ data SMTSolver = SMTSolver {
 
 {-# ANN type FPOp ("HLint: ignore Use camelCase" :: String) #-}
 {-# ANN type PBOp ("HLint: ignore Use camelCase" :: String) #-}
+{-# ANN type OvOp ("HLint: ignore Use camelCase" :: String) #-}
