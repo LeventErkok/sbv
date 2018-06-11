@@ -21,7 +21,8 @@ module Data.SBV.Tools.Overflow (
     ) where
 
 import Data.SBV.Core.Data
-import Data.SBV.Dynamic
+import Data.SBV.Core.Symbolic
+import Data.SBV.Core.Operations
 
 -- | Detecting underflow/overflow conditions. For each function,
 -- the first result is the condition under which the computation
@@ -35,7 +36,12 @@ class BVOverflow a where
   bvSubO :: a -> a -> (SBool, SBool)
 
   -- | Bit-vector multiplication. Unsigned multiplication can only overflow. Signed multiplication can underflow and overflow.
-  bvMulO :: a -> a -> (SBool, SBool)
+  bvMulO     :: a -> a -> (SBool, SBool)
+
+  -- | Same as 'bvMulO', except instead of doing the computation internally, it simply sends it off to z3 as a primitive.
+  -- Obviously, only use if you have the z3 backend! Note that z3 provides this operation only when no logic is set,
+  -- so make sure to call @setLogic Logic_NONE@ in your program!
+  bvMulOFast :: a -> a -> (SBool, SBool)
 
   -- | Bit-vector division. Unsigned division neither underflows nor overflows. Signed division can only overflow.
   bvDivO :: a -> a -> (SBool, SBool)
@@ -43,21 +49,22 @@ class BVOverflow a where
   -- | Bit-vector negation. Unsigned negation neither underflows nor overflows. Signed negation can only overflow.
   bvNegO :: a -> (SBool, SBool)
 
-instance BVOverflow SWord8  where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
-instance BVOverflow SWord16 where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
-instance BVOverflow SWord32 where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
-instance BVOverflow SWord64 where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
-instance BVOverflow SInt8   where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
-instance BVOverflow SInt16  where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
-instance BVOverflow SInt32  where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
-instance BVOverflow SInt64  where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
+instance BVOverflow SWord8  where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
+instance BVOverflow SWord16 where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
+instance BVOverflow SWord32 where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
+instance BVOverflow SWord64 where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
+instance BVOverflow SInt8   where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
+instance BVOverflow SInt16  where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
+instance BVOverflow SInt32  where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
+instance BVOverflow SInt64  where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
 
 instance BVOverflow SVal where
-  bvAddO = signPick2 bvuaddo bvsaddo
-  bvSubO = signPick2 bvusubo bvssubo
-  bvMulO = signPick2 bvumulo bvsmulo
-  bvDivO = signPick2 bvudivo bvsdivo
-  bvNegO = signPick1 bvunego bvsnego
+  bvAddO     = signPick2 bvuaddo     bvsaddo
+  bvSubO     = signPick2 bvusubo     bvssubo
+  bvMulO     = signPick2 bvumulo     bvsmulo
+  bvMulOFast = signPick2 bvumuloFast bvsmuloFast
+  bvDivO     = signPick2 bvudivo     bvsdivo
+  bvNegO     = signPick1 bvunego     bvsnego
 
 -- | Zero-extend to given bits
 zx :: Int -> SVal -> SVal
@@ -194,6 +201,31 @@ bvsmulo n x y = (underflow, overflow)
                         v'     = tmp `svOr` v
 
         overflowPossible = overflow1 `svOr` overflow2
+
+-- | Is this a concrete value?
+known :: SVal -> Bool
+known (SVal _ (Left _)) = True
+known _                 = False
+
+-- | Unsigned multiplication, fast version using z3 primitives.
+bvumuloFast :: Int -> SVal -> SVal -> (SVal, SVal)
+bvumuloFast n x y
+   | known x && known y                         -- Not particularly fast, but avoids shipping of to the solver
+   = bvumulo n x y
+   | True
+   = (underflow, overflow)
+  where underflow = fst $ bvumulo n x y         -- No internal version for underflow exists (because it can't underflow)
+        overflow  = svMkOverflow Overflow_UMul_OVFL x y
+
+-- | Signed multiplication, fast version using z3 primitives.
+bvsmuloFast :: Int -> SVal -> SVal -> (SVal, SVal)
+bvsmuloFast n x y
+  | known x && known y                -- Not particularly fast, but avoids shipping of to the solver
+  = bvsmulo n x y
+  | True
+  = (underflow, overflow)
+  where underflow = svMkOverflow Overflow_SMul_UDFL x y
+        overflow  = svMkOverflow Overflow_SMul_OVFL x y
 
 -- | Unsigned division. Neither underflows, nor overflows.
 bvudivo :: Int -> SVal -> SVal -> (SVal, SVal)
