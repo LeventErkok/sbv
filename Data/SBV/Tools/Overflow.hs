@@ -11,18 +11,25 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE Rank2Types           #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Data.SBV.Tools.Overflow (
 
-         -- * Overflow detection
+         -- * Arithmetic overflows
          ArithOverflow(..)
+
+         -- * Cast overflows
+       , sFromIntegralO
 
     ) where
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
+import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
+import Data.SBV.Utils.Boolean
 
 -- | Detecting underflow/overflow conditions. For each function,
 -- the first result is the condition under which the computation
@@ -107,6 +114,15 @@ diffSign x y = svNot (sameSign x y)
 -- | Check all true
 svAll :: [SVal] -> SVal
 svAll = foldr svAnd svTrue
+
+-- | Are all the bits between a b (inclusive) zero?
+allZero :: Int -> Int -> SBV a -> SBool
+allZero m n (SBV x)
+  | m >= sz || n < 0 || m < n
+  = error $ "Data.SBV.Tools.Overflow.allZero: Received unexpected parameters: " ++ show (m, n, sz)
+  | True
+  = SBV $ svAll [svTestBit x i `svEqual` svFalse | i <- [m, m-1 .. n]]
+  where sz = intSizeOf x
 
 -- | Unsigned addition. Can only overflow.
 bvuaddo :: Int -> SVal -> SVal -> (SVal, SVal)
@@ -256,6 +272,54 @@ bvsnego n x = (underflow, overflow)
 
         topSet    = svInteger (KBounded True n) (2^(n-1))
         overflow  = x `svEqual` topSet
+
+-- | Detecting underflow/overflow conditions for casting between bit-vectors. The first output is the result,
+-- the second component itself is a pair with the first boolean indicating underflow and the second indicating overflow.
+sFromIntegralO :: forall a b. (Integral a, HasKind a, Num a, SymWord a, HasKind b, Num b, SymWord b) => SBV a -> (SBV b, (SBool, SBool))
+sFromIntegralO x = case (kindOf x, kindOf (undefined :: b)) of
+                     (KBounded False n, KBounded False m) -> (res, u2u n m)
+                     (KBounded False n, KBounded True  m) -> (res, u2s n m)
+                     (KBounded True n,  KBounded False m) -> (res, s2u n m)
+                     (KBounded True n,  KBounded True  m) -> (res, s2s n m)
+                     (KUnbounded,       KBounded s m)     -> (res, checkBounds s m)
+                     (KBounded{},       KUnbounded)       -> (res, (false, false))
+                     (KUnbounded,       KUnbounded)       -> (res, (false, false))
+                     (kFrom,            kTo)              -> error $ "sFromIntegralO: Expected bounded-BV types, received: " ++ show (kFrom, kTo)
+
+  where res :: SBV b
+        res = sFromIntegral x
+
+        checkBounds :: Bool -> Int -> (SBool, SBool)
+        checkBounds signed sz = (ix .< literal lb, ix .> literal ub)
+          where ix :: SInteger
+                ix = sFromIntegral x
+
+                s :: Integer
+                s = fromIntegral sz
+
+                ub :: Integer
+                ub | signed = 2^(s - 1) - 1
+                   | True   = 2^s       - 1
+
+                lb :: Integer
+                lb | signed = -ub-1
+                   | True   = 0
+
+        u2u :: Int -> Int -> (SBool, SBool)
+        u2u n m = (underflow, overflow)
+          where underflow  = false
+                overflow
+                  | n <= m = false
+                  | True   = bnot $ allZero (n-1) m x
+
+        u2s :: Int -> Int -> (SBool, SBool)
+        u2s = error "u2s"
+
+        s2u :: Int -> Int -> (SBool, SBool)
+        s2u = error "s2u"
+
+        s2s :: Int -> Int -> (SBool, SBool)
+        s2s = error "s2s"
 
 -- Helpers
 l2 :: (SVal -> SVal -> (SBool, SBool)) -> SBV a -> SBV a -> (SBool, SBool)
