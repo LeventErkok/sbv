@@ -800,7 +800,7 @@ svRotateRight x i
           n  = svInteger (kindOf i) (toInteger sx)
 
 --------------------------------------------------------------------------------
--- Overflow detection
+-- | Overflow detection.
 svMkOverflow :: OvOp -> SVal -> SVal -> SVal
 svMkOverflow o x y = SVal KBool (Right (cache r))
     where r st = do sx <- svToSW st x
