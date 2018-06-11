@@ -34,6 +34,10 @@
 
   * Code reorg: Simplify constant mapping table, by properly accounting
     for negative-zero floats.
+    
+  * Export 'sexprToVal' for the class SMTValue, which allows for custom
+    definitions of value extractions. Thanks to Brian Schroeder for the
+    patch.
 
 ### Version 7.8, Released 2018-05-18
 
