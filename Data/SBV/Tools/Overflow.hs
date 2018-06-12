@@ -330,7 +330,7 @@ sFromIntegralO x = case (kindOf x, kindOf (undefined :: b)) of
 
         s2u :: Int -> Int -> (SBool, SBool)
         s2u n m = (underflow, overflow)
-          where underflow = SBV $ (unSBV x `svTestBit` (n-1)) `svEqual` svFalse -- NB. This is wrong in the paper!
+          where underflow = SBV $ (unSBV x `svTestBit` (n-1)) `svEqual` svTrue
 
                 overflow
                   | m >= n - 1 = false
