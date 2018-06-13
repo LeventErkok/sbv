@@ -35,7 +35,7 @@ module Data.SBV.Core.Symbolic
   , svMkSymVar, sWordN, sWordN_, sIntN, sIntN_
   , ArrayContext(..), ArrayInfo
   , svToSW, svToSymSW, forceSWArg
-  , SBVExpr(..), newExpr, isCodeGenMode
+  , SBVExpr(..), newExpr, isCodeGenMode, isSafetyCheckingIStage, isRunIStage
   , Cached, cache, uncache
   , ArrayIndex, uncacheAI
   , NamedSymVar
@@ -605,8 +605,23 @@ type CgMap     = Map.Map String [String]
 type Cache a   = IMap.IntMap [(StableName (State -> IO a), a)]
 
 -- | Stage of an interactive run
-data IStage = ISetup    -- Before we initiate contact
-            | IRun      -- After the contact is started
+data IStage = ISetup        -- Before we initiate contact.
+            | ISafe         -- In the context of a safe/safeWith call
+            | IRun          -- After the contact is started
+
+-- | Are we cecking safety
+isSafetyCheckingIStage :: IStage -> Bool
+isSafetyCheckingIStage s = case s of
+                             ISetup -> False
+                             ISafe  -> True
+                             IRun   -> False
+
+-- | Are we in a run?
+isRunIStage :: IStage -> Bool
+isRunIStage s = case s of
+                  ISetup -> False
+                  ISafe  -> False
+                  IRun   -> True
 
 -- | Different means of running a symbolic piece of code
 data SBVRunMode = SMTMode  IStage Bool SMTConfig -- ^ In regular mode, with a stage. Bool is True if this is SAT.
@@ -616,8 +631,10 @@ data SBVRunMode = SMTMode  IStage Bool SMTConfig -- ^ In regular mode, with a st
 -- Show instance for SBVRunMode; debugging purposes only
 instance Show SBVRunMode where
    show (SMTMode ISetup True  _) = "Satisfiability setup"
+   show (SMTMode ISafe  True  _) = "Safety setup"
    show (SMTMode IRun   True  _) = "Satisfiability"
    show (SMTMode ISetup False _) = "Proof setup"
+   show (SMTMode ISafe  False _) = error "ISafe-False is not an expected/supported combination for SBVRunMode!"
    show (SMTMode IRun   False _) = "Proof"
    show CodeGen                  = "Code generation"
    show Concrete                 = "Concrete evaluation"

@@ -378,7 +378,7 @@ class Provable a where
 
         (_, res) <- runSymbolic (SMTMode ISetup isSat cfg) $ (if isSat then forSome_ else forAll_) a >>= output
 
-        let SMTProblem{smtLibPgm} = Control.runProofOn cfg isSat comments res
+        let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode IRun isSat cfg) comments res
             out                   = show (smtLibPgm cfg)
 
         return $ out ++ "\n(check-sat)\n"
@@ -559,7 +559,7 @@ class SExecutable a where
                        let mkRelative path
                               | cwd `isPrefixOf` path = drop (length cwd) path
                               | True                  = path
-                       fst <$> runSymbolic (SMTMode ISetup True cfg) (sName_ a >> check mkRelative)
+                       fst <$> runSymbolic (SMTMode ISafe True cfg) (sName_ a >> check mkRelative)
      where check mkRelative = Control.query $ Control.getSBVAssertions >>= mapM (verify mkRelative)
 
            -- check that the cond is unsatisfiable. If satisfiable, that would

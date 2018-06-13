@@ -60,9 +60,9 @@ import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, K
                               , QueryState(..), SVal(..), Quantifier(..), cache
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
-                              , Result(..), SMTProblem(..), trueSW, SymWord(..), SBVPgm(..), SMTSolver(..)
+                              , Result(..), SMTProblem(..), trueSW, SymWord(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
                               )
-import Data.SBV.Core.Symbolic (IncState(..), withNewIncState, State(..), svToSW, registerLabel, svMkSymVar)
+import Data.SBV.Core.Symbolic (IncState(..), withNewIncState, State(..), svToSW, registerLabel, svMkSymVar, isSafetyCheckingIStage)
 
 import Data.SBV.Core.AlgReals   (mergeAlgReals)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
@@ -677,9 +677,13 @@ unexpected ctx sent expected mbHint received mbReason = do
         io $ C.throwIO exc
 
 -- | Convert a query result to an SMT Problem
-runProofOn :: SMTConfig -> Bool -> [String] -> Result -> SMTProblem
-runProofOn config isSat comments res@(Result ki _qcInfo _observables _codeSegs is consts tbls arrs uis axs pgm cstrs _assertions outputs) =
-     let flipQ (ALL, x) = (EX,  x)
+runProofOn :: SBVRunMode -> [String] -> Result -> SMTProblem
+runProofOn rm comments res@(Result ki _qcInfo _observables _codeSegs is consts tbls arrs uis axs pgm cstrs _assertions outputs) =
+     let (config, isSat, isSafe) = case rm of
+                                    SMTMode stage s c -> (c, s, isSafetyCheckingIStage stage)
+                                    _                 -> error $ "runProofOn: Unexpected run mode: " ++ show rm
+
+         flipQ (ALL, x) = (EX,  x)
          flipQ (EX,  x) = (ALL, x)
 
          skolemize :: [(Quantifier, NamedSymVar)] -> [Either SW (SW, [SW])]
@@ -691,23 +695,17 @@ runProofOn config isSat comments res@(Result ki _qcInfo _observables _codeSegs i
          qinps      = if isSat then fst is else map flipQ (fst is)
          skolemMap  = skolemize qinps
 
-         o = case outputs of
-               []  -> trueSW
-               [so] -> case so of
-                        SW KBool _ -> so
-                        _          -> trueSW
-                                      {-
-                                      -- TODO: We used to error out here, but "safeWith" might have a non-bool out
-                                      -- I wish we can get rid of this and still check for it. Perhaps this entire
-                                      -- runProofOn might disappear.
-                                      error $ unlines [ "Impossible happened, non-boolean output: " ++ show so
-                                                      , "Detected while generating the trace:\n" ++ show res
-                                                      ]
-                                      -}
-               os  -> error $ unlines [ "User error: Multiple output values detected: " ++ show os
-                                      , "Detected while generating the trace:\n" ++ show res
-                                      , "*** Check calls to \"output\", they are typically not needed!"
-                                      ]
+         o | isSafe = trueSW
+           | True   = case outputs of
+                        [so] -> case so of
+                                  SW KBool _ -> so
+                                  _          -> error $ unlines [ "Impossible happened, non-boolean output: " ++ show so
+                                                                , "Detected while generating the trace:\n" ++ show res
+                                                                ]
+                        os  -> error $ unlines [ "User error: Multiple output values detected: " ++ show os
+                                               , "Detected while generating the trace:\n" ++ show res
+                                               , "*** Check calls to \"output\", they are typically not needed!"
+                                               ]
 
      in SMTProblem { smtLibPgm = toSMTLib config ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o }
 
