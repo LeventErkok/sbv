@@ -46,6 +46,9 @@
   
   * Export 'Logic' directly from Data.SBV. (Previously was from Control.)
 
+  * Fix a long standing issue (ever since we introduced queries) where
+    'sAssert' calls were run in the context of the final output boolean,
+    which is simply the wrong thing to do.
 
 ### Version 7.8, Released 2018-05-18
 

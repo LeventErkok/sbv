@@ -62,7 +62,7 @@ import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, K
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSW, SymWord(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
                               )
-import Data.SBV.Core.Symbolic (IncState(..), withNewIncState, State(..), svToSW, registerLabel, svMkSymVar, isSafetyCheckingIStage)
+import Data.SBV.Core.Symbolic (IncState(..), withNewIncState, State(..), svToSW, registerLabel, svMkSymVar, isSafetyCheckingIStage, isSetupIStage)
 
 import Data.SBV.Core.AlgReals   (mergeAlgReals)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
@@ -679,9 +679,9 @@ unexpected ctx sent expected mbHint received mbReason = do
 -- | Convert a query result to an SMT Problem
 runProofOn :: SBVRunMode -> [String] -> Result -> SMTProblem
 runProofOn rm comments res@(Result ki _qcInfo _observables _codeSegs is consts tbls arrs uis axs pgm cstrs _assertions outputs) =
-     let (config, isSat, isSafe) = case rm of
-                                    SMTMode stage s c -> (c, s, isSafetyCheckingIStage stage)
-                                    _                 -> error $ "runProofOn: Unexpected run mode: " ++ show rm
+     let (config, isSat, isSafe, isSetup) = case rm of
+                                              SMTMode stage s c -> (c, s, isSafetyCheckingIStage stage, isSetupIStage stage)
+                                              _                 -> error $ "runProofOn: Unexpected run mode: " ++ show rm
 
          flipQ (ALL, x) = (EX,  x)
          flipQ (EX,  x) = (ALL, x)
@@ -697,11 +697,12 @@ runProofOn rm comments res@(Result ki _qcInfo _observables _codeSegs is consts t
 
          o | isSafe = trueSW
            | True   = case outputs of
-                        [so] -> case so of
-                                  SW KBool _ -> so
-                                  _          -> error $ unlines [ "Impossible happened, non-boolean output: " ++ show so
-                                                                , "Detected while generating the trace:\n" ++ show res
-                                                                ]
+                        []  | isSetup -> trueSW
+                        [so]          -> case so of
+                                           SW KBool _ -> so
+                                           _          -> error $ unlines [ "Impossible happened, non-boolean output: " ++ show so
+                                                                         , "Detected while generating the trace:\n" ++ show res
+                                                                         ]
                         os  -> error $ unlines [ "User error: Multiple output values detected: " ++ show os
                                                , "Detected while generating the trace:\n" ++ show res
                                                , "*** Check calls to \"output\", they are typically not needed!"

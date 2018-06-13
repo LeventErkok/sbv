@@ -35,7 +35,7 @@ module Data.SBV.Core.Symbolic
   , svMkSymVar, sWordN, sWordN_, sIntN, sIntN_
   , ArrayContext(..), ArrayInfo
   , svToSW, svToSymSW, forceSWArg
-  , SBVExpr(..), newExpr, isCodeGenMode, isSafetyCheckingIStage, isRunIStage
+  , SBVExpr(..), newExpr, isCodeGenMode, isSafetyCheckingIStage, isRunIStage, isSetupIStage
   , Cached, cache, uncache
   , ArrayIndex, uncacheAI
   , NamedSymVar
@@ -615,6 +615,13 @@ isSafetyCheckingIStage s = case s of
                              ISetup -> False
                              ISafe  -> True
                              IRun   -> False
+
+-- | Are we in setup?
+isSetupIStage :: IStage -> Bool
+isSetupIStage s = case s of
+                   ISetup -> True
+                   ISafe  -> False
+                   IRun   -> True
 
 -- | Are we in a run?
 isRunIStage :: IStage -> Bool
