@@ -12,6 +12,7 @@ import qualified TestSuite.Arrays.Query
 import qualified TestSuite.Basics.AllSat
 import qualified TestSuite.Basics.ArithNoSolver
 import qualified TestSuite.Basics.ArithSolver
+import qualified TestSuite.Basics.Assert
 import qualified TestSuite.Basics.BasicTests
 import qualified TestSuite.Basics.Exceptions
 import qualified TestSuite.Basics.GenBenchmark
@@ -140,6 +141,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Arrays.Query.tests
                , TestSuite.Basics.AllSat.tests
                , TestSuite.Basics.ArithNoSolver.tests
+               , TestSuite.Basics.Assert.tests
                , TestSuite.Basics.BasicTests.tests
                , TestSuite.Basics.Exceptions.testsRemote
                , TestSuite.Basics.GenBenchmark.tests

@@ -169,6 +169,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.AllSat
                   , TestSuite.Basics.ArithNoSolver
                   , TestSuite.Basics.ArithSolver
+                  , TestSuite.Basics.Assert
                   , TestSuite.Basics.BasicTests
                   , TestSuite.Basics.Exceptions
                   , TestSuite.Basics.GenBenchmark
