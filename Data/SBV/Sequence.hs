@@ -180,7 +180,7 @@ sub `isInfixOf` s
   = lift2 (SeqOp SeqContains) (Just (flip concreteInfixOf)) s sub -- NB. flip, since `SeqContains` takes args in rev order!
 
 concreteInfixOf :: Eq a => Sequence a -> Sequence a -> Bool
-concreteInfixOf (Sequence xs) (Sequence ys) = L.isInfixOf xs ys
+concreteInfixOf (Sequence xs) (Sequence ys) = xs `L.isInfixOf ` ys
 
 -- | @`isPrefixOf` pre s@. Is @pre@ a prefix of @s@?
 --
@@ -196,7 +196,7 @@ pre `isPrefixOf` s
   = lift2 (SeqOp SeqPrefixOf) (Just concretePrefixOf) pre s
 
 concretePrefixOf :: Eq a => Sequence a -> Sequence a -> Bool
-concretePrefixOf (Sequence xs) (Sequence ys) = L.isPrefixOf xs ys
+concretePrefixOf (Sequence xs) (Sequence ys) = xs `L.isPrefixOf ` ys
 
 -- | @`isSuffixOf` suf s@. Is @suf@ a suffix of @s@?
 --
@@ -212,7 +212,7 @@ suf `isSuffixOf` s
   = lift2 (SeqOp SeqSuffixOf) (Just concreteSuffixOf) suf s
 
 concreteSuffixOf :: Eq a => Sequence a -> Sequence a -> Bool
-concreteSuffixOf (Sequence xs) (Sequence ys) = L.isSuffixOf xs ys
+concreteSuffixOf (Sequence xs) (Sequence ys) = xs `L.isSuffixOf ` ys
 
 -- | @`take` len s@. Corresponds to Haskell's `take` on symbolic-sequences.
 --
