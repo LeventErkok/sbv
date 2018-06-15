@@ -31,12 +31,22 @@ import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
 import Data.SBV.Utils.Boolean
 
+-- Doctest only
+-- $setup
+-- >>> import Data.SBV.Provers.Prover (prove, allSat)
+-- >>> import Data.SBV.Utils.Boolean ((<=>))
+
 -- | Detecting underflow/overflow conditions. For each function,
 -- the first result is the condition under which the computation
 -- underflows, and the second is the condition under which it
 -- overflows.
 class ArithOverflow a where
   -- | Bit-vector addition. Unsigned addition can only overflow. Signed addition can underflow and overflow.
+  --
+  -- A tell tale sign of unsigned addition overflow is when the sum is less than minumum of the arguments.
+  --
+  -- >>> prove $ \x y -> snd (bvAddO x (y::SWord16)) <=> x + y .< x `smin` y
+  -- Q.E.D.
   bvAddO :: a -> a -> (SBool, SBool)
 
   -- | Bit-vector subtraction. Unsigned subtraction can only underflow. Signed subtraction can underflow and overflow.
@@ -50,10 +60,22 @@ class ArithOverflow a where
   -- so make sure to call @setLogic Logic_NONE@ in your program!
   bvMulOFast :: a -> a -> (SBool, SBool)
 
-  -- | Bit-vector division. Unsigned division neither underflows nor overflows. Signed division can only overflow.
+  -- | Bit-vector division. Unsigned division neither underflows nor overflows. Signed division can only overflow. In fact, for each
+  -- signed bitvector type, there's precisely one pair that overflows, when @x@ is @minBound@ and @y@ is @-1@:
+  --
+  -- >>> allSat $ \x y -> snd (x `bvDivO` (y::SInt8))
+  -- Solution #1:
+  --   s0 = -128 :: Int8
+  --   s1 =   -1 :: Int8
+  -- This is the only solution.
+
   bvDivO :: a -> a -> (SBool, SBool)
 
-  -- | Bit-vector negation. Unsigned negation neither underflows nor overflows. Signed negation can only overflow.
+  -- | Bit-vector negation. Unsigned negation neither underflows nor overflows. Signed negation can only overflow, when the argument is
+  -- @minBound@:
+  --
+  -- >>> prove $ \x -> x .== minBound <=> snd (bvNegO (x::SInt16))
+  -- Q.E.D.
   bvNegO :: a -> (SBool, SBool)
 
 instance ArithOverflow SWord8  where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
@@ -284,6 +306,17 @@ bvsnego n x = (underflow, overflow)
 
 -- | Detecting underflow/overflow conditions for casting between bit-vectors. The first output is the result,
 -- the second component itself is a pair with the first boolean indicating underflow and the second indicating overflow.
+--
+-- >>> sFromIntegralO (256 :: SInt16) :: (SWord8, (SBool, SBool))
+-- (0 :: SWord8,(False,True))
+-- >>> sFromIntegralO (-2 :: SInt16) :: (SWord8, (SBool, SBool))
+-- (254 :: SWord8,(True,False))
+-- >>> sFromIntegralO (2 :: SInt16) :: (SWord8, (SBool, SBool))
+-- (2 :: SWord8,(False,False))
+-- >>> prove $ \x -> sFromIntegralO (x::SInt32) .== (sFromIntegral x :: SInteger, (false, false))
+-- Q.E.D.
+--
+-- As the last example shows, converting to `sInteger` never underflows or overflows for any value.
 sFromIntegralO :: forall a b. (Integral a, HasKind a, Num a, SymWord a, HasKind b, Num b, SymWord b) => SBV a -> (SBV b, (SBool, SBool))
 sFromIntegralO x = case (kindOf x, kindOf (undefined :: b)) of
                      (KBounded False n, KBounded False m) -> (res, u2u n m)
