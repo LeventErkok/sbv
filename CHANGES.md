@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 7.8, 2018-05-18
+* Latest Hackage released version: 7.9, 2018-06-15
 
-### Version 7.8.5, Not yet released
+### Version 7.9, 2018-06-15
  
   * Add support for bit-vector arithmetic underflow/overflow detection. The new
     'ArithmeticOverflow' class captures conditions under which addition, subtraction,
