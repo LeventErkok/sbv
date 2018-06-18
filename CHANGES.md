@@ -16,6 +16,10 @@
   * Similar to above, add 'sFromIntegralChecked', providing similar support
     for casts.
 
+  * Add "Documentation.SBV.Examples.BitPrecise.BrokenSearch.hs" to show the
+    use of overflow checking utilities, using the classic broken binary search
+    example from http://ai.googleblog.com/2006/06/extra-extra-read-all-about-it-nearly.html
+
 ### Version 7.9, 2018-06-15
  
   * Add support for bit-vector arithmetic underflow/overflow detection. The new

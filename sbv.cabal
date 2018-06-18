@@ -65,6 +65,7 @@ Library
                   , Data.SBV.Tools.Polynomial
                   , Data.SBV.Tools.STree
                   , Documentation.SBV.Examples.BitPrecise.BitTricks
+                  , Documentation.SBV.Examples.BitPrecise.BrokenSearch
                   , Documentation.SBV.Examples.BitPrecise.Legato
                   , Documentation.SBV.Examples.BitPrecise.MergeSort
                   , Documentation.SBV.Examples.BitPrecise.MultMask
