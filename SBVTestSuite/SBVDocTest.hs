@@ -43,7 +43,7 @@ main = do (testEnv, testPercentage) <- getTestEnvironment
                skipWindows nm
                  | not onWindows = False
                  | True          = noGood nm skipList
-                 where skipList = [ "NoDiv0.hs",        -- Has a safety check and windows paths are printed differently
+                 where skipList = [ "NoDiv0.hs"         -- Has a safety check and windows paths are printed differently
                                   , "BrokenSearch.hs"   -- Ditto
                                   ]
                skipRemote nm
