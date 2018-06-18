@@ -35,10 +35,9 @@ module Data.SBV.Control.Utils (
      ) where
 
 import Data.Maybe (isJust)
-import Data.List  (sortBy, elemIndex, partition, groupBy, tails)
+import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails)
 
 import Data.Char     (isPunctuation, isSpace, chr)
-import Data.Ord      (comparing)
 import Data.Function (on)
 
 import Data.Int
@@ -569,7 +568,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                            . filter (\l -> length l > 1)  -- Only need this class if it has at least two members
                                                            . map (map fst)                -- throw away values, we only need svals
                                                            . groupBy ((==) `on` snd)      -- make sure they belong to the same sort and have the same value
-                                                           . sortBy (comparing snd)       -- sort them according to their CW (i.e., sort/value)
+                                                           . sortOn snd                   -- sort them according to their CW (i.e., sort/value)
                                                            $ uninterpreteds
                                             where pwDistinct :: [SVal] -> [SVal]
                                                   pwDistinct ss = [x `svNotEqual` y | (x:ys) <- tails ss, y <- ys]
