@@ -66,7 +66,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Operations
 
-import Data.SBV.Provers.Prover (defaultSMTCfg)
+import Data.SBV.Provers.Prover (defaultSMTCfg, SafeResult(..))
 import Data.SBV.SMT.SMT        (showModel)
 
 import Data.SBV.Utils.Boolean
@@ -1327,7 +1327,13 @@ iteLazy t a b
 -- | Symbolic assert. Check that the given boolean condition is always true in the given path. The
 -- optional first argument can be used to provide call-stack info via GHC's location facilities.
 sAssert :: Maybe CallStack -> String -> SBool -> SBV a -> SBV a
-sAssert cs msg cond x = SBV $ SVal k $ Right $ cache r
+sAssert cs msg cond x
+   | Just mustHold <- unliteral cond
+   = if mustHold
+     then x
+     else error $ show $ SafeResult ((locInfo . getCallStack) `fmap` cs, msg, Satisfiable defaultSMTCfg (SMTModel [] []))
+   | True
+   = SBV $ SVal k $ Right $ cache r
   where k     = kindOf x
         r st  = do xsw <- sbvToSW st x
                    let pc = getPathCondition st
@@ -1337,6 +1343,9 @@ sAssert cs msg cond x = SBV $ SVal k $ Right $ cache r
                    cnd <- sbvToSW st mustNeverHappen
                    addAssertion st cs msg cnd
                    return xsw
+
+        locInfo ps = intercalate ",\n " (map loc ps)
+          where loc (f, sl) = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
 
 -- | Merge two symbolic values, at kind @k@, possibly @force@'ing the branches to make
 -- sure they do not evaluate to the same result. This should only be used for internal purposes;
