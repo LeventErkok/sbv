@@ -38,15 +38,17 @@ main = do (testEnv, testPercentage) <- getTestEnvironment
 
                                              doctest $ args ++ tfs
 
-         where skipWindows nm
-                 | not onWindows = False
-                 | True          = -- The following test has a path encoded in its output, and hence fails on Windows
-                                   -- since it has the c:\blah\blah format. Skip it:
-                                   "nodiv0.hs" `isSuffixOf` map toLower nm
+         where noGood nm sl =  any (`isSuffixOf` map toLower nm) $ map (map toLower) sl
 
+               skipWindows nm
+                 | not onWindows = False
+                 | True          = noGood nm skipList
+                 where skipList = [ "NoDiv0.hs",        -- Has a safety check and windows paths are printed differently
+                                  , "BrokenSearch.hs"   -- Ditto
+                                  ]
                skipRemote nm
                  | not onRemote = False
-                 | True         = any (`isSuffixOf` map toLower nm) $ map (map toLower) skipList
+                 | True         = noGood nm skipList
                  where skipList = [ "Interpolants.hs"  -- The following test requires mathSAT, so can't run on remote
                                   , "HexPuzzle.hs"     -- Doctest is way too slow on this with ghci loading, sigh
                                   , "MultMask.hs"      -- Also, quite slow
