@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 7.9, 2018-06-15
 
+### Version 7.9.5, Not yet released
+
+  * New development version.
+
 ### Version 7.9, 2018-06-15
  
   * Add support for bit-vector arithmetic underflow/overflow detection. The new
