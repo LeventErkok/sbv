@@ -10,7 +10,9 @@
 -- Based on: <http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/z3prefix.pdf>
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE ImplicitParams       #-}
 {-# LANGUAGE Rank2Types           #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -18,10 +20,10 @@
 module Data.SBV.Tools.Overflow (
 
          -- * Arithmetic overflows
-         ArithOverflow(..)
+         ArithOverflow(..), CheckedArithmetic(..)
 
          -- * Cast overflows
-       , sFromIntegralO
+       , sFromIntegralO, sFromIntegralChecked
 
     ) where
 
@@ -30,6 +32,11 @@ import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
 import Data.SBV.Utils.Boolean
+
+import GHC.Stack
+
+import Data.Int
+import Data.Word
 
 -- Doctest only
 -- $setup
@@ -94,6 +101,75 @@ instance ArithOverflow SVal where
   bvMulOFast = signPick2 bvumuloFast bvsmuloFast
   bvDivO     = signPick2 bvudivo     bvsdivo
   bvNegO     = signPick1 bvunego     bvsnego
+
+-- | A class of checked-arithmetic operations. These follow the usual arithmetic,
+-- except make calls to 'sAssert' to ensure no overflow/underflow can occur.
+-- Use them in conjunction with 'safe' to ensure no overflow can happen.
+class (ArithOverflow (SBV a), Num a, SymWord a) => CheckedArithmetic a where
+  (+!)          :: (?loc :: CallStack) => SBV a -> SBV a -> SBV a
+  (-!)          :: (?loc :: CallStack) => SBV a -> SBV a -> SBV a
+  (*!)          :: (?loc :: CallStack) => SBV a -> SBV a -> SBV a
+  (/!)          :: (?loc :: CallStack) => SBV a -> SBV a -> SBV a
+  negateChecked :: (?loc :: CallStack) => SBV a          -> SBV a
+
+  infixl 6 +!, -!
+  infixl 7 *!, /!
+
+instance CheckedArithmetic Word8 where
+  (+!)          = checkOp2 ?loc "addition"       (+)    bvAddO
+  (-!)          = checkOp2 ?loc "subtraction"    (-)    bvSubO
+  (*!)          = checkOp2 ?loc "multiplication" (*)    bvMulO
+  (/!)          = checkOp2 ?loc "division"       sDiv   bvDivO
+  negateChecked = checkOp1 ?loc "unary negation" negate bvNegO
+
+instance CheckedArithmetic Word16 where
+  (+!)          = checkOp2 ?loc "addition"       (+)    bvAddO
+  (-!)          = checkOp2 ?loc "subtraction"    (-)    bvSubO
+  (*!)          = checkOp2 ?loc "multiplication" (*)    bvMulO
+  (/!)          = checkOp2 ?loc "division"       sDiv   bvDivO
+  negateChecked = checkOp1 ?loc "unary negation" negate bvNegO
+
+instance CheckedArithmetic Word32 where
+  (+!)          = checkOp2 ?loc "addition"       (+)    bvAddO
+  (-!)          = checkOp2 ?loc "subtraction"    (-)    bvSubO
+  (*!)          = checkOp2 ?loc "multiplication" (*)    bvMulO
+  (/!)          = checkOp2 ?loc "division"       sDiv   bvDivO
+  negateChecked = checkOp1 ?loc "unary negation" negate bvNegO
+
+instance CheckedArithmetic Word64 where
+  (+!)          = checkOp2 ?loc "addition"       (+)    bvAddO
+  (-!)          = checkOp2 ?loc "subtraction"    (-)    bvSubO
+  (*!)          = checkOp2 ?loc "multiplication" (*)    bvMulO
+  (/!)          = checkOp2 ?loc "division"       sDiv   bvDivO
+  negateChecked = checkOp1 ?loc "unary negation" negate bvNegO
+
+instance CheckedArithmetic Int8 where
+  (+!)          = checkOp2 ?loc "addition"       (+)    bvAddO
+  (-!)          = checkOp2 ?loc "subtraction"    (-)    bvSubO
+  (*!)          = checkOp2 ?loc "multiplication" (*)    bvMulO
+  (/!)          = checkOp2 ?loc "division"       sDiv   bvDivO
+  negateChecked = checkOp1 ?loc "unary negation" negate bvNegO
+
+instance CheckedArithmetic Int16 where
+  (+!)          = checkOp2 ?loc "addition"       (+)    bvAddO
+  (-!)          = checkOp2 ?loc "subtraction"    (-)    bvSubO
+  (*!)          = checkOp2 ?loc "multiplication" (*)    bvMulO
+  (/!)          = checkOp2 ?loc "division"       sDiv   bvDivO
+  negateChecked = checkOp1 ?loc "unary negation" negate bvNegO
+
+instance CheckedArithmetic Int32 where
+  (+!)          = checkOp2 ?loc "addition"       (+)    bvAddO
+  (-!)          = checkOp2 ?loc "subtraction"    (-)    bvSubO
+  (*!)          = checkOp2 ?loc "multiplication" (*)    bvMulO
+  (/!)          = checkOp2 ?loc "division"       sDiv   bvDivO
+  negateChecked = checkOp1 ?loc "unary negation" negate bvNegO
+
+instance CheckedArithmetic Int64 where
+  (+!)          = checkOp2 ?loc "addition"       (+)    bvAddO
+  (-!)          = checkOp2 ?loc "subtraction"    (-)    bvSubO
+  (*!)          = checkOp2 ?loc "multiplication" (*)    bvMulO
+  (/!)          = checkOp2 ?loc "division"       sDiv   bvDivO
+  negateChecked = checkOp1 ?loc "unary negation" negate bvNegO
 
 -- | Zero-extend to given bits
 zx :: Int -> SVal -> SVal
@@ -379,6 +455,18 @@ sFromIntegralO x = case (kindOf x, kindOf (undefined :: b)) of
                   | m > n = false
                   | True  = SBV $ svAll [(unSBV x `svTestBit` (n-1)) `svEqual` svFalse, svNot $ allZero (n-1) (m-1) x]
 
+-- | Version of 'sFromIntegral' that has calls to 'sAssert' for checking no overflow/underflow can happen. Use it with a 'safe' call.
+sFromIntegralChecked :: forall a b. (?loc :: CallStack, Integral a, HasKind a, HasKind b, Num a, SymWord a, HasKind b, Num b, SymWord b) => SBV a -> SBV b
+sFromIntegralChecked x = sAssert (Just ?loc) (msg "underflows") (bnot u)
+                       $ sAssert (Just ?loc) (msg "overflows")  (bnot o)
+                         r
+  where kFrom = show $ kindOf x
+        kTo   = show $ kindOf (undefined :: b)
+        msg c = "Casting from " ++ kFrom ++ " to " ++ kTo ++ " " ++ c
+
+        (r, (u, o)) = sFromIntegralO x
+
+
 -- Helpers
 l2 :: (SVal -> SVal -> (SBool, SBool)) -> SBV a -> SBV a -> (SBool, SBool)
 l2 f (SBV a) (SBV b) = f a b
@@ -397,3 +485,21 @@ signPick1 fu fs a
  | hasSign a = let (u, o) = fs n a in (SBV u, SBV o)
  | True      = let (u, o) = fu n a in (SBV u, SBV o)
  where n = intSizeOf a
+
+checkOp1 :: HasKind a => CallStack -> String -> (a -> SBV b) -> (a -> (SBool, SBool)) -> a -> SBV b
+checkOp1 loc w op cop a = sAssert (Just loc) (msg "underflows") (bnot u)
+                        $ sAssert (Just loc) (msg "overflows")  (bnot o)
+                        $ op a
+  where k = show $ kindOf a
+        msg c = k ++ " " ++ w ++ " " ++ c
+
+        (u, o) = cop a
+
+checkOp2 :: HasKind a => CallStack -> String -> (a -> b -> SBV c) -> (a -> b -> (SBool, SBool)) -> a -> b -> SBV c
+checkOp2 loc w op cop a b = sAssert (Just loc) (msg "underflows") (bnot u)
+                          $ sAssert (Just loc) (msg "overflows")  (bnot o)
+                          $ a `op` b
+  where k = show $ kindOf a
+        msg c = k ++ " " ++ w ++ " " ++ c
+
+        (u, o) = a `cop` b

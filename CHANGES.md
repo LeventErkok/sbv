@@ -5,7 +5,16 @@
 
 ### Version 7.9.5, Not yet released
 
-  * New development version.
+  * Add 'CheckedArithmetic' class, which provides bit-vector arithmetic
+    operations that do automatic underflow/overflow checking. The operations
+    follow their regular counter-parts, with an exclamation mark added at
+    the end: +!, -!, *!, /!. There is also negateChecked, for the same
+    function on unary negation. If you program using these functions,
+    then you can call 'safe' on the resulting programs to make sure
+    these operations never cause underflow and overflow conditions.
+
+  * Similar to above, add 'sFromIntegralChecked', providing similar support
+    for casts.
 
 ### Version 7.9, 2018-06-15
  
