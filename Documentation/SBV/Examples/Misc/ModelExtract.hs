@@ -42,5 +42,5 @@ genVals = go [] []
                -- Note that we simply get an integer here; but any
                -- SBV known type would be OK as well.
                case "x" `getModelValue` res of
-                 Just c -> go [c-4 .. c+4] (c : model)
+                 Just c -> go ([c-4 .. c+4] ++ disallow) (c : model)
                  _      -> return model
