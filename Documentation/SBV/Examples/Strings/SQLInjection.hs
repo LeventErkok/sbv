@@ -106,7 +106,8 @@ exploitRe = R.KPlus (statementRe * "; ")
 --
 -- We have:
 --
--- >>> findInjection exampleProgram
+-- NB. Currently skipped, see: https://github.com/LeventErkok/sbv/issues/395
+-- SKIP>>> findInjection exampleProgram
 -- "h'; DROP TABLE 'users"
 --
 -- Indeed, if we substitute the suggested string, we get the program:
