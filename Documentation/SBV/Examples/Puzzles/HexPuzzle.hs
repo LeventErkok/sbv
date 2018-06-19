@@ -116,7 +116,7 @@ search initial final = runSMT $ do setLogic Logic_ALL
                 where go curVals = do constrain $ bOr $ zipWith (\v c -> v ./= literal c) vs curVals
                                       cs <- checkSat
                                       case cs of
-                                       Unk   -> error $ "Unknown!"
+                                       Unk   -> error "Unknown!"
                                        Unsat -> io $ putStrLn $ "There are no more solutions."
                                        Sat   -> do newVals <- mapM getValue vs
                                                    io $ putStrLn $ "Found: " ++ show newVals
