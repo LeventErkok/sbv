@@ -692,8 +692,6 @@ withNewIncState st cont = do
         finalIncState <- readIORef (rIncState st)
         return (finalIncState, r)
 
--- | Return and clean and incState
-
 -- | The state of the symbolic interpreter
 data State  = State { pathCond     :: SVal                             -- ^ kind KBool
                     , startTime    :: UTCTime
