@@ -20,6 +20,9 @@
     use of overflow checking utilities, using the classic broken binary search
     example from http://ai.googleblog.com/2006/06/extra-extra-read-all-about-it-nearly.html
 
+  * Fix an issue where SBV was not sending array declarations to the SMT-solver
+    if there were no explicit constraints. Thanks to Oliver Charles for reporting.
+
 ### Version 7.9, 2018-06-15
  
   * Add support for bit-vector arithmetic underflow/overflow detection. The new
