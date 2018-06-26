@@ -23,6 +23,9 @@
   * Fix an issue where SBV was not sending array declarations to the SMT-solver
     if there were no explicit constraints. Thanks to Oliver Charles for reporting.
 
+  * Export 'addSValOptGoal' from 'Data.SBV.Internals', to help with 'Metric' class
+    instantiations. Requested by Dan Rosen.
+
 ### Version 7.9, 2018-06-15
  
   * Add support for bit-vector arithmetic underflow/overflow detection. The new
