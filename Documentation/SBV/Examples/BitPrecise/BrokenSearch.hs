@@ -27,8 +27,8 @@ import Data.SBV.Tools.Overflow
 --
 -- >>> checkCorrectMidValue midPointBroken
 -- Falsifiable. Counter-example:
---   low  =   58980346 :: Int32
---   high = 2147377153 :: Int32
+--   low  = 1676112243 :: Int32
+--   high = 2014875276 :: Int32
 midPointBroken :: SInt32 -> SInt32 -> SInt32
 midPointBroken low high = (low +! high) /! 2
 

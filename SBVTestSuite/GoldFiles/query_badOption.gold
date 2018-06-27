@@ -21,6 +21,7 @@
 ***                  memory_max_alloc_count (unsigned int) (default: 0)
 ***                  memory_max_size (unsigned int) (default: 0)
 ***                  model (bool) (default: true)
+***                  model_compress (bool) (default: true)
 ***                  model_validate (bool) (default: false)
 ***                  proof (bool) (default: false)
 ***                  rlimit (unsigned int) (default: 0)

@@ -36,7 +36,7 @@ import Data.SBV
 -- >>> maskAndMult
 -- Satisfiable. Model:
 --   mask = 0x8080808080808080 :: Word64
---   mult = 0xc202040810204081 :: Word64
+--   mult = 0x0002040810204081 :: Word64
 --
 -- That is, any 64 bit value masked by the first and multipled by the second
 -- value above will have its bits at positions @[7,15,23,31,39,47,55,63]@ moved

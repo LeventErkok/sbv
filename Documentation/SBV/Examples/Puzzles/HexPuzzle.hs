@@ -132,8 +132,8 @@ search initial final = runSMT $ do setLogic Logic_ALL
 -- Searching at depth: 4
 -- Searching at depth: 5
 -- Searching at depth: 6
--- Found: [10,10,9,11,14,6]
 -- Found: [10,10,11,9,14,6]
+-- Found: [10,10,9,11,14,6]
 -- There are no more solutions.
 example :: IO ()
 example = search initBoard finalBoard
