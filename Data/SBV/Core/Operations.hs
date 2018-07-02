@@ -943,49 +943,55 @@ mergeSFunArr t (SFunArr ainfo@(sourceKind, targetKind) a) (SFunArr binfo b)
   where c st = do ai <- uncacheFAI a st
                   bi <- uncacheFAI b st
 
-                  fArrMap <- R.readIORef (rFArrayMap st)
+                  -- Catch the degenerate case of merging an array with itself. One
+                  -- can argue this is pointless, but actually it comes up when one
+                  -- is merging composite structures (through a Mergeable class instance)
+                  -- that has an array component that didn't change. So, pays off in practice!
+                  if unFArrayIndex ai == unFArrayIndex bi
+                     then return ai
+                     else do fArrMap <- R.readIORef (rFArrayMap st)
 
-                  case (unFArrayIndex ai `IMap.lookup` fArrMap, unFArrayIndex bi `IMap.lookup` fArrMap) of
-                    (Nothing, _) -> error $ "Data.SBV.mergeSFunArr: Impossible happened while trying to access SFunArray, can't find index: " ++ show ai
-                    (_, Nothing) -> error $ "Data.SBV.mergeSFunArr: Impossible happened while trying to access SFunArray, can't find index: " ++ show bi
-                    (Just (aUi, raCache), Just (bUi, rbCache)) -> do
+                             case (unFArrayIndex ai `IMap.lookup` fArrMap, unFArrayIndex bi `IMap.lookup` fArrMap) of
+                               (Nothing, _) -> error $ "Data.SBV.mergeSFunArr: Impossible happened while trying to access SFunArray, can't find index: " ++ show ai
+                               (_, Nothing) -> error $ "Data.SBV.mergeSFunArr: Impossible happened while trying to access SFunArray, can't find index: " ++ show bi
+                               (Just (aUi, raCache), Just (bUi, rbCache)) -> do
 
-                        aMemo <- R.readIORef raCache
-                        bMemo <- R.readIORef rbCache
+                                   aMemo <- R.readIORef raCache
+                                   bMemo <- R.readIORef rbCache
 
-                        let nodeIdToSVal :: Kind -> Int -> SVal
-                            nodeIdToSVal k i = SVal k $ Right $ cache $ const $ return $ SW k (NodeId i)
+                                   let nodeIdToSVal :: Kind -> Int -> SVal
+                                       nodeIdToSVal k i = SVal k $ Right $ cache $ const $ return $ SW k (NodeId i)
 
-                            gen :: (SVal -> SVal) -> Int -> IO SW
-                            gen mk k = svToSW st $ mk $ nodeIdToSVal sourceKind k
+                                       gen :: (SVal -> SVal) -> Int -> IO SW
+                                       gen mk k = svToSW st $ mk $ nodeIdToSVal sourceKind k
 
-                            fill :: Int -> SW -> SW -> IMap.IntMap SW -> IO (IMap.IntMap SW)
-                            fill k (SW _ (NodeId ni1)) (SW _ (NodeId ni2)) m = do v <- svToSW st (svIte t sval1 sval2)
-                                                                                  return $ IMap.insert k v m
-                              where sval1 = nodeIdToSVal targetKind ni1
-                                    sval2 = nodeIdToSVal targetKind ni2
+                                       fill :: Int -> SW -> SW -> IMap.IntMap SW -> IO (IMap.IntMap SW)
+                                       fill k (SW _ (NodeId ni1)) (SW _ (NodeId ni2)) m = do v <- svToSW st (svIte t sval1 sval2)
+                                                                                             return $ IMap.insert k v m
+                                         where sval1 = nodeIdToSVal targetKind ni1
+                                               sval2 = nodeIdToSVal targetKind ni2
 
-                            merge []                  []                  sofar = return sofar
-                            merge ((k1, v1) : as)     []                  sofar = gen bUi k1 >>= \v2 -> fill k1 v1 v2 sofar >>= merge as []
-                            merge []                  ((k2, v2) : bs)     sofar = gen aUi k2 >>= \v1 -> fill k2 v1 v2 sofar >>= merge [] bs
-                            merge ass@((k1, v1) : as) bss@((k2, v2) : bs) sofar
-                              | k1 < k2                                         = gen bUi k1 >>= \nv2 -> fill k1 v1  nv2 sofar >>= merge as  bss
-                              | k1 > k2                                         = gen aUi k2 >>= \nv1 -> fill k2 nv1 v2  sofar >>= merge ass bs
-                              | True                                            =                        fill k1 v1  v2  sofar >>= merge as  bs
+                                       merge []                  []                  sofar = return sofar
+                                       merge ((k1, v1) : as)     []                  sofar = gen bUi k1 >>= \v2 -> fill k1 v1 v2 sofar >>= merge as []
+                                       merge []                  ((k2, v2) : bs)     sofar = gen aUi k2 >>= \v1 -> fill k2 v1 v2 sofar >>= merge [] bs
+                                       merge ass@((k1, v1) : as) bss@((k2, v2) : bs) sofar
+                                         | k1 < k2                                         = gen bUi k1 >>= \nv2 -> fill k1 v1  nv2 sofar >>= merge as  bss
+                                         | k1 > k2                                         = gen aUi k2 >>= \nv1 -> fill k2 nv1 v2  sofar >>= merge ass bs
+                                         | True                                            =                        fill k1 v1  v2  sofar >>= merge as  bs
 
-                        mergedMap  <- merge (IMap.toAscList aMemo) (IMap.toAscList bMemo) IMap.empty
-                        memoMerged <- R.newIORef mergedMap
+                                   mergedMap  <- merge (IMap.toAscList aMemo) (IMap.toAscList bMemo) IMap.empty
+                                   memoMerged <- R.newIORef mergedMap
 
-                        -- Craft a new uninitializer
-                        let mkUninitialized i = svIte t (aUi i) (bUi i)
+                                   -- Craft a new uninitializer
+                                   let mkUninitialized i = svIte t (aUi i) (bUi i)
 
-                        -- Add it to our collection:
-                        let j   = FArrayIndex $ IMap.size fArrMap
-                            upd = IMap.insert (unFArrayIndex j) (mkUninitialized, memoMerged)
+                                   -- Add it to our collection:
+                                   let j   = FArrayIndex $ IMap.size fArrMap
+                                       upd = IMap.insert (unFArrayIndex j) (mkUninitialized, memoMerged)
 
-                        j `seq` modifyState st rFArrayMap upd (return ())
+                                   j `seq` modifyState st rFArrayMap upd (return ())
 
-                        return j
+                                   return j
 
 -- | Create a named new array, with an optional initial value
 newSFunArr :: (Kind, Kind) -> (Int -> String) -> Symbolic SFunArr
