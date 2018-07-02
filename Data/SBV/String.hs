@@ -113,7 +113,7 @@ charToStr = lift1 StrUnit (Just wrap)
 -- Q.E.D.
 -- >>> sat $ \s -> length s .>= 2 &&& strToStrAt s 0 ./= strToStrAt s (length s - 1)
 -- Satisfiable. Model:
---   s0 = "\NUL\NUL " :: String
+--   s0 = "\NUL\NUL\EOT" :: String
 strToStrAt :: SString -> SInteger -> SString
 strToStrAt s offset = subStr s offset 1
 
@@ -289,8 +289,8 @@ replace s src dst
 -- Q.E.D.
 -- >>> prove $ \s i -> i .> 0 &&& i .< length s ==> indexOf s (subStr s i 1) .== i
 -- Falsifiable. Counter-example:
---   s0 = "\NUL\NUL\NUL" :: String
---   s1 =              2 :: Integer
+--   s0 = "\NUL\NUL\NUL\NUL\NUL" :: String
+--   s1 =                      3 :: Integer
 -- >>> prove $ \s1 s2 -> length s2 .> length s1 ==> indexOf s1 s2 .== -1
 -- Q.E.D.
 indexOf :: SString -> SString -> SInteger
