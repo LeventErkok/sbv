@@ -19,11 +19,8 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Uninterpreted.AUF"
-    [ goldenVsStringShow "auf-1" pgm
-    , testCase "auf-2" (assertIsThm (free "x" >>= \x -> free "y" >>= \y -> return (thm1 x y (mkSFunArray (const 0)))))
-    , testCase "auf-3" (assertIsThm (newArray "b" >>= \b -> free "x" >>= \x -> free "y" >>= \y -> return (thm2 x y b)))
+    [ goldenVsStringShow "auf-0" $ runSAT      $ newArray "a" >>= \a -> free "x" >>= \x -> free "y" >>= \y -> output (thm x y (a :: SFunArray Word32 Word32))
+    , goldenVsStringShow "auf-1" $ runSAT      $ newArray "a" >>= \a -> free "x" >>= \x -> free "y" >>= \y -> output (thm x y (a :: SArray    Word32 Word32))
+    , testCase "auf-2"           $ assertIsThm $ newArray "a" >>= \a -> free "x" >>= \x -> free "y" >>= \y -> return (thm x y (a :: SFunArray Word32 Word32))
+    , testCase "auf-3"           $ assertIsThm $ newArray "a" >>= \a -> free "x" >>= \x -> free "y" >>= \y -> return (thm x y (a :: SArray    Word32 Word32))
     ]
- where pgm = runSAT $ do
-                x <- free "x"
-                y <- free "y"
-                output $ thm1 x y (mkSFunArray (const 0))
