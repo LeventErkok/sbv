@@ -1,0 +1,34 @@
+INPUTS
+  s0 :: SWord32, existential, aliasing "x"
+  s1 :: SWord32, existential, aliasing "y"
+CONSTANTS
+  s_2 = False :: Bool
+  s_1 = True :: Bool
+  s2 = 2 :: Word32
+  s6 = 3 :: Word32
+  s13 = 1 :: Word32
+TABLES
+ARRAYS
+UNINTERPRETED CONSTANTS
+  [uninterpreted] f :: SWord32 -> SWord64
+  [uninterpreted] funArray_1_uninitializedRead :: SWord32 -> SWord32
+USER GIVEN CODE SEGMENTS
+AXIOMS
+DEFINE
+  s3 :: SWord32 = s0 + s2
+  s4 :: SBool = s1 == s3
+  s5 :: SBool = ~ s4
+  s7 :: SWord32 = s1 - s2
+  s8 :: SBool = s0 == s7
+  s9 :: SWord32 = [uninterpreted] funArray_1_uninitializedRead s7
+  s10 :: SWord32 = if s8 then s6 else s9
+  s11 :: SWord64 = [uninterpreted] f s10
+  s12 :: SWord32 = s1 - s0
+  s14 :: SWord32 = s12 + s13
+  s15 :: SWord64 = [uninterpreted] f s14
+  s16 :: SBool = s11 == s15
+  s17 :: SBool = s5 | s16
+CONSTRAINTS
+ASSERTIONS
+OUTPUTS
+  s17
