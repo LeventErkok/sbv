@@ -13,7 +13,7 @@ module Data.SBV.Tools.CodeGen (
 
         -- * Code generation from symbolic programs
         -- $cCodeGeneration
-          SBVCodeGen
+          SBVCodeGen, cgSym
 
         -- ** Setting code-generation options
         , cgPerformRTCs, cgSetDriverValues, cgGenerateDriver, cgGenerateMakefile, cgOverwriteFiles
