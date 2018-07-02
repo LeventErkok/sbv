@@ -288,7 +288,7 @@ type Model = SFunArray
 -- using boolector as the solver.
 correctnessTheorem :: IO ThmResult
 correctnessTheorem = proveWith boolector{timing = PrintTiming} $ do
-        let mem = mkSFunArray (const 0)
+        mem <- newArray "memory"
 
         addrX <- sWord32 "addrX"
         x     <- sWord8  "x"
@@ -313,9 +313,18 @@ correctnessTheorem = proveWith boolector{timing = PrintTiming} $ do
 -- | Generate a C program that implements Legato's algorithm automatically.
 legatoInC :: IO ()
 legatoInC = compileToC Nothing "runLegato" $ do
+                let f1Addr  = 0
+                    f2Addr  = 1
+                    lowAddr = 2
+                memUninit <- cgSym $ newArray "memory"
+                -- Strictly speaking, initializing the lowAddr location
+                -- to 0 isn't required. But not having an initial value
+                -- there causes SBV to create an uninterpreted reference
+                -- (correctly), but undesirably!
+                let mem = writeArray memUninit lowAddr 0
                 x <- cgInput "x"
                 y <- cgInput "y"
-                let (hi, lo) = runLegato (0, x) (1, y) 2 (initMachine (mkSFunArray (const 0)) (0, 0, false, false))
+                let (hi, lo) = runLegato (f1Addr, x) (f2Addr, y) lowAddr (initMachine mem (0, 0, false, false))
                 cgOutput "hi" hi
                 cgOutput "lo" lo
 

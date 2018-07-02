@@ -26,7 +26,6 @@ module Data.SBV.Core.Operations
   , svAnd, svOr, svXOr, svNot
   , svShl, svShr, svRol, svRor
   , svExtract, svJoin
-  , svUninterpreted
   , svIte, svLazyIte, svSymbolicMerge
   , svSelect
   , svSign, svUnsign, svSetBit, svWordFromBE, svWordFromLE
@@ -39,6 +38,9 @@ module Data.SBV.Core.Operations
   , svRotateLeft, svRotateRight
   , svBlastLE, svBlastBE
   , svAddConstant, svIncrement, svDecrement
+  -- ** Basic array operations
+  , SArr,        readSArr,    writeSArr,    mergeSArr,    newSArr,    eqSArr
+  , SFunArr(..), readSFunArr, writeSFunArr, mergeSFunArr, newSFunArr, newSFunArrInState
   -- Utils
   , mkSymOp
   )
@@ -46,6 +48,12 @@ module Data.SBV.Core.Operations
 
 import Data.Bits (Bits(..))
 import Data.List (genericIndex, genericLength, genericTake)
+
+import Control.Monad.Reader (ask)
+import Control.Monad.Trans  (liftIO)
+
+import qualified Data.IORef         as R    (modifyIORef', newIORef, readIORef)
+import qualified Data.IntMap.Strict as IMap (IntMap, empty, toAscList, lookup, size, insert)
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Kind
@@ -455,21 +463,6 @@ svJoin x@(SVal (KBounded s i) a) y@(SVal (KBounded _ j) b)
               newExpr st k (SBVApp Join [xsw, ysw])
 svJoin _ _ = error "svJoin: non-bitvector type"
 
--- | Uninterpreted constants and functions. An uninterpreted constant is
--- a value that is indexed by its name. The only property the prover assumes
--- about these values are that they are equivalent to themselves; i.e., (for
--- functions) they return the same results when applied to same arguments.
--- We support uninterpreted-functions as a general means of black-box'ing
--- operations that are /irrelevant/ for the purposes of the proof; i.e., when
--- the proofs can be performed without any knowledge about the function itself.
-svUninterpreted :: Kind -> String -> Maybe [String] -> [SVal] -> SVal
-svUninterpreted k nm code args = SVal k $ Right $ cache result
-  where result st = do let ty = SBVType (map kindOf args ++ [k])
-                       newUninterpreted st nm ty code
-                       sws <- mapM (svToSW st) args
-                       mapM_ forceSWArg sws
-                       newExpr st k $ SBVApp (Uninterpreted nm) sws
-
 -- | If-then-else. This one will force branches.
 svIte :: SVal -> SVal -> SVal -> SVal
 svIte t a b = svSymbolicMerge (kindOf a) True t a b
@@ -806,6 +799,215 @@ svMkOverflow o x y = SVal KBool (Right (cache r))
     where r st = do sx <- svToSW st x
                     sy <- svToSW st y
                     newExpr st KBool $ SBVApp (OverflowOp o) [sx, sy]
+
+---------------------------------------------------------------------------------
+-- * Symbolic Arrays
+---------------------------------------------------------------------------------
+
+-- | Arrays in terms of SMT-Lib arrays
+data SArr = SArr (Kind, Kind) (Cached ArrayIndex)
+
+-- | Read the array element at @a@
+readSArr :: SArr -> SVal -> SVal
+readSArr (SArr (_, bk) f) a = SVal bk $ Right $ cache r
+  where r st = do arr <- uncacheAI f st
+                  i   <- svToSW st a
+                  newExpr st bk (SBVApp (ArrRead arr) [i])
+
+-- | Update the element at @a@ to be @b@
+writeSArr :: SArr -> SVal -> SVal -> SArr
+writeSArr (SArr ainfo f) a b = SArr ainfo $ cache g
+  where g st = do arr  <- uncacheAI f st
+                  addr <- svToSW st a
+                  val  <- svToSW st b
+                  amap <- R.readIORef (rArrayMap st)
+
+                  let j   = ArrayIndex $ IMap.size amap
+                      upd = IMap.insert (unArrayIndex j) ("array_" ++ show j, ainfo, ArrayMutate arr addr val)
+
+                  j `seq` modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
+                  return j
+
+-- | Merge two given arrays on the symbolic condition
+-- Intuitively: @mergeArrays cond a b = if cond then a else b@.
+-- Merging pushes the if-then-else choice down on to elements
+mergeSArr :: SVal -> SArr -> SArr -> SArr
+mergeSArr t (SArr ainfo a) (SArr _ b) = SArr ainfo $ cache h
+  where h st = do ai <- uncacheAI a st
+                  bi <- uncacheAI b st
+                  ts <- svToSW st t
+                  amap <- R.readIORef (rArrayMap st)
+
+                  let k   = ArrayIndex $ IMap.size amap
+                      upd = IMap.insert (unArrayIndex k) ("array_" ++ show k, ainfo, ArrayMerge ts ai bi)
+
+                  k `seq` modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
+                  return k
+
+-- | Create a named new array, with an optional initial value
+newSArr :: (Kind, Kind) -> (Int -> String) -> Symbolic SArr
+newSArr ainfo mkNm = do
+    st <- ask
+    amap <- liftIO $ R.readIORef $ rArrayMap st
+
+    let i   = ArrayIndex $ IMap.size amap
+        nm  = mkNm (unArrayIndex i)
+        upd = IMap.insert (unArrayIndex i) (nm, ainfo, ArrayFree)
+
+    liftIO $ modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
+    return $ SArr ainfo $ cache $ const $ return i
+
+-- | Compare two arrays for equality
+eqSArr :: SArr -> SArr -> SVal
+eqSArr (SArr _ a) (SArr _ b) = SVal KBool $ Right $ cache c
+  where c st = do ai <- uncacheAI a st
+                  bi <- uncacheAI b st
+                  newExpr st KBool (SBVApp (ArrEq ai bi) [])
+
+-- | Arrays managed internally
+data SFunArr = SFunArr (Kind, Kind) (Cached FArrayIndex)
+
+-- | Read the array element at @a@. For efficiency purposes, we create a memo-table
+-- as we go along, as otherwise we suffer significant performance penalties. See:
+-- <https://github.com/LeventErkok/sbv/issues/402> and
+-- <https://github.com/LeventErkok/sbv/issues/396>.
+readSFunArr :: SFunArr -> SVal -> SVal
+readSFunArr (SFunArr (ak, bk) f) a
+  | kindOf a /= ak
+  = error $ "Data.SBV.readSFunArr: Impossible happened, accesing with address type: " ++ show (kindOf a) ++ ", expected: " ++ show ak
+  | True
+  = SVal bk $ Right $ cache r
+  where r st = do fArrayIndex <- uncacheFAI f st
+                  fArrMap     <- R.readIORef (rFArrayMap st)
+                  case unFArrayIndex fArrayIndex `IMap.lookup` fArrMap of
+                    Nothing -> error $ "Data.SBV.readSFunArr: Impossible happened while trying to access SFunArray, can't find index: " ++ show fArrayIndex
+                    Just (uninitializedRead, rCache) -> do
+                        memoTable  <- R.readIORef rCache
+                        SW _ (NodeId ni) <- svToSW st a
+                        case ni `IMap.lookup` memoTable of
+                          Nothing -> do let nodeIdToSVal :: Kind -> Int -> SVal
+                                            nodeIdToSVal k i = swToSVal $ SW k (NodeId i)
+
+                                            swToSVal :: SW -> SVal
+                                            swToSVal sw@(SW k _) = SVal k $ Right $ cache $ const $ return sw
+
+                                            find :: [(Int, SW)] -> SVal
+                                            find []             = uninitializedRead a
+                                            find ((i, v) : ivs) = svIte (nodeIdToSVal ak i `svEqual` a) (swToSVal v) (find ivs)
+
+                                            finalValue = find (IMap.toAscList memoTable)
+
+                                        finalSW <- svToSW st finalValue
+                                        R.modifyIORef' rCache (IMap.insert ni finalSW)
+                                        return finalSW
+                          Just v  -> return v
+
+-- | Update the element at @a@ to be @b@
+writeSFunArr :: SFunArr -> SVal -> SVal -> SFunArr
+writeSFunArr (SFunArr (ak, bk) f) a b
+  | kindOf a /= ak
+  = error $ "Data.SBV.writeSFunArr: Impossible happened, accesing with address type: " ++ show (kindOf a) ++ ", expected: " ++ show ak
+  | kindOf b /= bk
+  = error $ "Data.SBV.writeSFunArr: Impossible happened, accesing with address type: " ++ show (kindOf b) ++ ", expected: " ++ show bk
+  | True
+  = SFunArr (ak, bk) $ cache g
+  where g st = do fArrayIndex <- uncacheFAI f st
+                  fArrMap     <- R.readIORef (rFArrayMap st)
+                  case unFArrayIndex fArrayIndex `IMap.lookup` fArrMap of
+                    Nothing          -> error $ "Data.SBV.writeSFunArr: Impossible happened while trying to access SFunArray, can't find index: " ++ show fArrayIndex
+                    Just (_, rCache) -> do
+                       memoTable <- R.readIORef rCache
+                       SW _ (NodeId ni) <- svToSW st a
+                       val              <- svToSW st b
+
+                       newMemoTable <- R.newIORef $ IMap.insert ni val memoTable
+
+                       let j                 = FArrayIndex $ IMap.size fArrMap
+                           mkUninitialized i = svUninterpreted bk ("funArray_" ++ show j ++ "_uninitializedRead") Nothing [i]
+
+                           upd = IMap.insert (unFArrayIndex j) (mkUninitialized, newMemoTable)
+
+                       j `seq` modifyState st rFArrayMap upd (return ())
+
+                       return j
+
+-- | Merge two given arrays on the symbolic condition
+-- Intuitively: @mergeArrays cond a b = if cond then a else b@.
+-- Merging pushes the if-then-else choice down on to elements
+mergeSFunArr :: SVal -> SFunArr -> SFunArr -> SFunArr
+mergeSFunArr t (SFunArr ainfo@(sourceKind, targetKind) a) (SFunArr binfo b)
+  | ainfo /= binfo
+  = error $ "Data.SBV.mergeSFunArr: Impossible happened, merging incompatbile arrays: " ++ show (ainfo, binfo)
+  | True
+  = SFunArr ainfo $ cache c
+  where c st = do ai <- uncacheFAI a st
+                  bi <- uncacheFAI b st
+
+                  fArrMap <- R.readIORef (rFArrayMap st)
+
+                  case (unFArrayIndex ai `IMap.lookup` fArrMap, unFArrayIndex bi `IMap.lookup` fArrMap) of
+                    (Nothing, _) -> error $ "Data.SBV.mergeSFunArr: Impossible happened while trying to access SFunArray, can't find index: " ++ show ai
+                    (_, Nothing) -> error $ "Data.SBV.mergeSFunArr: Impossible happened while trying to access SFunArray, can't find index: " ++ show bi
+                    (Just (aUi, raCache), Just (bUi, rbCache)) -> do
+
+                        aMemo <- R.readIORef raCache
+                        bMemo <- R.readIORef rbCache
+
+                        let nodeIdToSVal :: Kind -> Int -> SVal
+                            nodeIdToSVal k i = SVal k $ Right $ cache $ const $ return $ SW k (NodeId i)
+
+                            gen :: (SVal -> SVal) -> Int -> IO SW
+                            gen mk k = svToSW st $ mk $ nodeIdToSVal sourceKind k
+
+                            fill :: Int -> SW -> SW -> IMap.IntMap SW -> IO (IMap.IntMap SW)
+                            fill k (SW _ (NodeId ni1)) (SW _ (NodeId ni2)) m = do v <- svToSW st (svIte t sval1 sval2)
+                                                                                  return $ IMap.insert k v m
+                              where sval1 = nodeIdToSVal targetKind ni1
+                                    sval2 = nodeIdToSVal targetKind ni2
+
+                            merge []                  []                  sofar = return sofar
+                            merge ((k1, v1) : as)     []                  sofar = gen bUi k1 >>= \v2 -> fill k1 v1 v2 sofar >>= merge as []
+                            merge []                  ((k2, v2) : bs)     sofar = gen aUi k2 >>= \v1 -> fill k2 v1 v2 sofar >>= merge [] bs
+                            merge ass@((k1, v1) : as) bss@((k2, v2) : bs) sofar
+                              | k1 < k2                                         = gen bUi k1 >>= \nv2 -> fill k1 v1  nv2 sofar >>= merge as  bss
+                              | k1 > k2                                         = gen aUi k2 >>= \nv1 -> fill k2 nv1 v2  sofar >>= merge ass bs
+                              | True                                            =                        fill k1 v1  v2  sofar >>= merge as  bs
+
+                        mergedMap  <- merge (IMap.toAscList aMemo) (IMap.toAscList bMemo) IMap.empty
+                        memoMerged <- R.newIORef mergedMap
+
+                        -- Craft a new uninitializer
+                        let mkUninitialized i = svIte t (aUi i) (bUi i)
+
+                        -- Add it to our collection:
+                        let j   = FArrayIndex $ IMap.size fArrMap
+                            upd = IMap.insert (unFArrayIndex j) (mkUninitialized, memoMerged)
+
+                        j `seq` modifyState st rFArrayMap upd (return ())
+
+                        return j
+
+-- | Create a named new array, with an optional initial value
+newSFunArr :: (Kind, Kind) -> (Int -> String) -> Symbolic SFunArr
+newSFunArr (ak, bk) mkNm = do st <- ask
+                              j <- liftIO $ newSFunArrInState st (ak, bk) mkNm
+
+                              return $ SFunArr (ak, bk) $ cache $ const $ return j
+
+-- | Create a new functional array in the given state
+newSFunArrInState :: State -> (Kind, Kind) -> (Int -> String) -> IO FArrayIndex
+newSFunArrInState st (_, bk) mkNm = do
+        fArrMap <- R.readIORef (rFArrayMap st)
+        memoTable <- R.newIORef IMap.empty
+
+        let j                 = FArrayIndex $ IMap.size fArrMap
+            mkUninitialized i = svUninterpreted bk (mkNm (unFArrayIndex j) ++ "_uninitializedRead") Nothing [i]
+
+            upd = IMap.insert (unFArrayIndex j) (mkUninitialized, memoTable)
+
+        j `seq` modifyState st rFArrayMap upd (return ())
+
+        return j
 
 --------------------------------------------------------------------------------
 -- Utility functions

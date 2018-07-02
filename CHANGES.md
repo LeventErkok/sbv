@@ -26,6 +26,17 @@
   * Export 'addSValOptGoal' from 'Data.SBV.Internals', to help with 'Metric' class
     instantiations. Requested by Dan Rosen.
 
+  * Rework 'SFunArray' implementation, addressing performance issues. We now
+    carefully memoize elements as we do the look-ups. This addresses several
+    perfomance issues that came up; hopefully providing some relief. The
+    function 'mkSFunArray' is also removed, which used to lift Haskell
+    functions to such arrays, often used to implement initial values. Now,
+    if a read is done on an unwritten element of 'SFunArray' we get an
+    uninterpreted constant. This is inline with how 'SArray' works, and
+    is consistent. The old 'SFunArray' implementation based on functions
+    is no longer available, though it is easy to implement it in user-space
+    if needed. Please get in contact if this proves to be an issue.
+
 ### Version 7.9, 2018-06-15
  
   * Add support for bit-vector arithmetic underflow/overflow detection. The new

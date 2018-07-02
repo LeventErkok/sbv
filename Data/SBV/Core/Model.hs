@@ -1249,10 +1249,13 @@ instance SDivisible SInteger where
 
 -- Quickcheck interface
 
--- The Arbitrary instance for SFunArray returns an array initialized
--- to an arbitrary element
+-- The Arbitrary instance for SFunArray returns an uninitialized array.
+-- Note that, by the semantics of SFunArray, any read from this array
+-- will produce an uninterpreted constant for the entry.
 instance (SymWord b, Arbitrary b) => Arbitrary (SFunArray a b) where
-  arbitrary = arbitrary >>= \r -> return $ SFunArray (const r)
+  arbitrary = return $ SFunArray (SFunArr ks (cache f))
+    where ks = (kindOf (undefined :: SBV a), kindOf (undefined :: SBV b))
+          f st = newSFunArrInState st ks (\i -> "funArray_" ++ show i)
 
 instance (SymWord a, Arbitrary a) => Arbitrary (SBV a) where
   arbitrary = literal `fmap` arbitrary
@@ -1525,16 +1528,6 @@ instance EqSymbolic (SArray a b) where
 -- the right thing to do as we've too many things and likely we want to keep it efficient.
 instance SymWord b => Mergeable (SArray a b) where
   symbolicMerge _ = mergeArrays
-
--- SFunArrays are only "Mergeable". Although a brute
--- force equality can be defined, any non-toy instance
--- will suffer from efficiency issues; so we don't define it
-instance SymArray SFunArray where
-  newArray nm                                 = declNewSFunArray (Just nm)
-  newArray_                                   = declNewSFunArray Nothing
-  readArray     (SFunArray f)                 = f
-  writeArray    (SFunArray f) a b             = SFunArray (\a' -> ite (a .== a') b (f a'))
-  mergeArrays t (SFunArray g)   (SFunArray h) = SFunArray (\x -> ite t (g x) (h x))
 
 -- When merging arrays; we'll ignore the force argument. This is arguably
 -- the right thing to do as we've too many things and likely we want to keep it efficient.

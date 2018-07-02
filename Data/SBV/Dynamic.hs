@@ -19,8 +19,10 @@ module Data.SBV.Dynamic
   -- *** Abstract symbolic value type
     SVal
   , HasKind(..), Kind(..), CW(..), CWVal(..), cwToBool
-  -- *** Arrays of symbolic values
+  -- *** SMT Arrays of symbolic values
   , SArr, readSArr, writeSArr, mergeSArr, newSArr, eqSArr
+  -- *** Functional arrays of symbolic values
+  , SFunArr, readSFunArr, writeSFunArr, mergeSFunArr, newSFunArr
 
   -- ** Creating a symbolic variable
   , Symbolic
@@ -120,7 +122,7 @@ module Data.SBV.Dynamic
   , generateSMTBenchmark
   ) where
 
-import Data.Map (Map)
+import Data.Map.Strict (Map)
 
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete

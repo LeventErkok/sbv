@@ -30,14 +30,14 @@ module Data.SBV.Core.Symbolic
   , Op(..), PBOp(..), OvOp(..), FPOp(..), StrOp(..), RegExp(..)
   , Quantifier(..), needsExistentials
   , RoundingMode(..)
-  , SBVType(..), newUninterpreted, addAxiom
+  , SBVType(..), svUninterpreted, newUninterpreted, addAxiom
   , SVal(..)
   , svMkSymVar, sWordN, sWordN_, sIntN, sIntN_
   , ArrayContext(..), ArrayInfo
   , svToSW, svToSymSW, forceSWArg
   , SBVExpr(..), newExpr, isCodeGenMode, isSafetyCheckingIStage, isRunIStage, isSetupIStage
-  , Cached, cache, uncache
-  , ArrayIndex, uncacheAI
+  , Cached, cache, uncache, modifyState, modifyIncState
+  , ArrayIndex(..), FArrayIndex(..), uncacheAI, uncacheFAI
   , NamedSymVar
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
@@ -52,7 +52,6 @@ module Data.SBV.Core.Symbolic
   , Query(..), QueryState(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
   , outputSVal
-  , SArr(..), readSArr, writeSArr, mergeSArr, newSArr, eqSArr
   ) where
 
 import Control.Arrow            (first, second, (***))
@@ -71,13 +70,13 @@ import Data.Time (getCurrentTime, UTCTime)
 
 import GHC.Stack
 
-import qualified Data.IORef    as R    (modifyIORef')
-import qualified Data.Generics as G    (Data(..))
-import qualified Data.IntMap   as IMap (IntMap, empty, size, toAscList, lookup, insert, insertWith)
-import qualified Data.Map      as Map  (Map, empty, toList, size, insert, lookup)
-import qualified Data.Set      as Set  (Set, empty, toList, insert, member)
-import qualified Data.Foldable as F    (toList)
-import qualified Data.Sequence as S    (Seq, empty, (|>))
+import qualified Data.IORef         as R    (modifyIORef')
+import qualified Data.Generics      as G    (Data(..))
+import qualified Data.IntMap.Strict as IMap (IntMap, empty, toAscList, lookup, insertWith)
+import qualified Data.Map.Strict    as Map  (Map, empty, toList, lookup, insert, size)
+import qualified Data.Set           as Set  (Set, empty, toList, insert, member)
+import qualified Data.Foldable      as F    (toList)
+import qualified Data.Sequence      as S    (Seq, empty, (|>))
 
 import System.Mem.StableName
 
@@ -147,8 +146,8 @@ data Op = Plus
         | Extract Int Int                       -- Extract i j: extract bits i to j. Least significant bit is 0 (big-endian)
         | Join                                  -- Concat two words to form a bigger one, in the order given
         | LkUp (Int, Kind, Kind, Int) !SW !SW   -- (table-index, arg-type, res-type, length of the table) index out-of-bounds-value
-        | ArrEq   Int Int                       -- Array equality
-        | ArrRead Int
+        | ArrEq   ArrayIndex ArrayIndex         -- Array equality
+        | ArrRead ArrayIndex
         | KindCast Kind Kind
         | Uninterpreted String
         | Label String                          -- Essentially no-op; useful for code generation to emit comments.
@@ -568,9 +567,9 @@ instance Show Result where
                 stk ++ ": " ++ show p
 
 -- | The context of a symbolic array as created
-data ArrayContext = ArrayFree                -- ^ A new array, the contents are uninitialized
-                  | ArrayMutate Int SW SW    -- ^ An array created by mutating another array at a given cell
-                  | ArrayMerge  SW Int Int   -- ^ An array created by symbolically merging two other arrays
+data ArrayContext = ArrayFree                              -- ^ A new array, the contents are uninitialized
+                  | ArrayMutate ArrayIndex SW SW           -- ^ An array created by mutating another array at a given cell
+                  | ArrayMerge  SW ArrayIndex ArrayIndex   -- ^ An array created by symbolically merging two other arrays
 
 instance Show ArrayContext where
   show ArrayFree           = " initialized with random elements"
@@ -592,8 +591,11 @@ type TableMap = Map.Map (Kind, Kind, [SW]) Int
 -- | Representation for symbolic arrays
 type ArrayInfo = (String, (Kind, Kind), ArrayContext)
 
--- | Arrays generated during a symbolic run
+-- | SMT Arrays generated during a symbolic run
 type ArrayMap  = IMap.IntMap ArrayInfo
+
+-- | Functional Arrays generated during a symbolic run
+type FArrayMap  = IMap.IntMap (SVal -> SVal, IORef (IMap.IntMap SW))
 
 -- | Uninterpreted-constants generated during a symbolic run
 type UIMap     = Map.Map String SBVType
@@ -710,6 +712,7 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rconstMap    :: IORef CnstMap
                     , rexprMap     :: IORef ExprMap
                     , rArrayMap    :: IORef ArrayMap
+                    , rFArrayMap   :: IORef FArrayMap
                     , rUIMap       :: IORef UIMap
                     , rCgMap       :: IORef CgMap
                     , raxioms      :: IORef [(String, [String])]
@@ -717,7 +720,8 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rOptGoals    :: IORef [Objective (SW, SW)]
                     , rAsserts     :: IORef [(String, Maybe CallStack, SW)]
                     , rSWCache     :: IORef (Cache SW)
-                    , rAICache     :: IORef (Cache Int)
+                    , rAICache     :: IORef (Cache ArrayIndex)
+                    , rFAICache    :: IORef (Cache FArrayIndex)
                     , queryState   :: IORef (Maybe QueryState)
                     }
 
@@ -800,6 +804,21 @@ incrementInternalCounter :: State -> IO Int
 incrementInternalCounter st = do ctr <- readIORef (rctr st)
                                  modifyState st rctr (+1) (return ())
                                  return ctr
+
+-- | Uninterpreted constants and functions. An uninterpreted constant is
+-- a value that is indexed by its name. The only property the prover assumes
+-- about these values are that they are equivalent to themselves; i.e., (for
+-- functions) they return the same results when applied to same arguments.
+-- We support uninterpreted-functions as a general means of black-box'ing
+-- operations that are /irrelevant/ for the purposes of the proof; i.e., when
+-- the proofs can be performed without any knowledge about the function itself.
+svUninterpreted :: Kind -> String -> Maybe [String] -> [SVal] -> SVal
+svUninterpreted k nm code args = SVal k $ Right $ cache result
+  where result st = do let ty = SBVType (map kindOf args ++ [k])
+                       newUninterpreted st nm ty code
+                       sws <- mapM (svToSW st) args
+                       mapM_ forceSWArg sws
+                       newExpr st k $ SBVApp (Uninterpreted nm) sws
 
 -- | Create a new uninterpreted symbol, possibly with user given code
 newUninterpreted :: State -> String -> SBVType -> Maybe [String] -> IO ()
@@ -1070,11 +1089,13 @@ runSymbolic currentRunMode (Symbolic c) = do
    outs      <- newIORef []
    tables    <- newIORef Map.empty
    arrays    <- newIORef IMap.empty
+   fArrays   <- newIORef IMap.empty
    uis       <- newIORef Map.empty
    cgs       <- newIORef Map.empty
    axioms    <- newIORef []
    swCache   <- newIORef IMap.empty
    aiCache   <- newIORef IMap.empty
+   faiCache  <- newIORef IMap.empty
    usedKinds <- newIORef Set.empty
    usedLbls  <- newIORef Set.empty
    cstrs     <- newIORef []
@@ -1098,12 +1119,14 @@ runSymbolic currentRunMode (Symbolic c) = do
                   , spgm         = pgm
                   , rconstMap    = cmap
                   , rArrayMap    = arrays
+                  , rFArrayMap   = fArrays
                   , rexprMap     = emap
                   , rUIMap       = uis
                   , rCgMap       = cgs
                   , raxioms      = axioms
                   , rSWCache     = swCache
                   , rAICache     = aiCache
+                  , rFAICache    = faiCache
                   , rConstraints = cstrs
                   , rSMTOptions  = smtOpts
                   , rOptGoals    = optGoals
@@ -1207,76 +1230,6 @@ outputSVal (SVal _ (Right f)) = do
   liftIO $ modifyState st routs (sw:) (return ())
 
 ---------------------------------------------------------------------------------
--- * Symbolic Arrays
----------------------------------------------------------------------------------
-
--- | Arrays implemented in terms of SMT-arrays: <http://smtlib.cs.uiowa.edu/theories-ArraysEx.shtml>
---
---   * Maps directly to SMT-lib arrays
---
---   * Reading from an unintialized value is OK and yields an unspecified result
---
---   * Can check for equality of these arrays
---
---   * Cannot quick-check theorems using @SArr@ values
---
---   * Typically slower as it heavily relies on SMT-solving for the array theory
---
-
-data SArr = SArr (Kind, Kind) (Cached ArrayIndex)
-
--- | Read the array element at @a@
-readSArr :: SArr -> SVal -> SVal
-readSArr (SArr (_, bk) f) a = SVal bk $ Right $ cache r
-  where r st = do arr <- uncacheAI f st
-                  i   <- svToSW st a
-                  newExpr st bk (SBVApp (ArrRead arr) [i])
-
--- | Update the element at @a@ to be @b@
-writeSArr :: SArr -> SVal -> SVal -> SArr
-writeSArr (SArr ainfo f) a b = SArr ainfo $ cache g
-  where g st = do arr  <- uncacheAI f st
-                  addr <- svToSW st a
-                  val  <- svToSW st b
-                  amap <- readIORef (rArrayMap st)
-                  let j   = IMap.size amap
-                      upd = IMap.insert j ("array_" ++ show j, ainfo, ArrayMutate arr addr val)
-                  j `seq` modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
-                  return j
-
--- | Merge two given arrays on the symbolic condition
--- Intuitively: @mergeArrays cond a b = if cond then a else b@.
--- Merging pushes the if-then-else choice down on to elements
-mergeSArr :: SVal -> SArr -> SArr -> SArr
-mergeSArr t (SArr ainfo a) (SArr _ b) = SArr ainfo $ cache h
-  where h st = do ai <- uncacheAI a st
-                  bi <- uncacheAI b st
-                  ts <- svToSW st t
-                  amap <- readIORef (rArrayMap st)
-                  let k   = IMap.size amap
-                      upd = IMap.insert k ("array_" ++ show k, ainfo, ArrayMerge ts ai bi)
-                  k `seq` modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
-                  return k
-
--- | Create a named new array, with an optional initial value
-newSArr :: (Kind, Kind) -> (Int -> String) -> Symbolic SArr
-newSArr ainfo mkNm = do
-    st <- ask
-    amap <- liftIO $ readIORef $ rArrayMap st
-    let i = IMap.size amap
-        nm = mkNm i
-        upd = IMap.insert i (nm, ainfo, ArrayFree)
-    liftIO $ modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
-    return $ SArr ainfo $ cache $ const $ return i
-
--- | Compare two arrays for equality
-eqSArr :: SArr -> SArr -> SVal
-eqSArr (SArr _ a) (SArr _ b) = SVal KBool $ Right $ cache c
-  where c st = do ai <- uncacheAI a st
-                  bi <- uncacheAI b st
-                  newExpr st KBool (SBVApp (ArrEq ai bi) [])
-
----------------------------------------------------------------------------------
 -- * Cached values
 ---------------------------------------------------------------------------------
 
@@ -1302,12 +1255,27 @@ cache = Cached
 uncache :: Cached SW -> State -> IO SW
 uncache = uncacheGen rSWCache
 
--- | An array index is simple an int value
-type ArrayIndex = Int
+-- | An SMT array index is simply an int value
+newtype ArrayIndex = ArrayIndex { unArrayIndex :: Int } deriving (Eq, Ord)
 
--- | Uncache, retrieving array indexes
+-- | We simply show indexes as the underlying integer
+instance Show ArrayIndex where
+  show (ArrayIndex i) = show i
+
+-- | A functional array index is simply an int value
+newtype FArrayIndex = FArrayIndex { unFArrayIndex :: Int } deriving (Eq, Ord)
+
+-- | We simply show indexes as the underlying integer
+instance Show FArrayIndex where
+  show (FArrayIndex i) = show i
+
+-- | Uncache, retrieving SMT array indexes
 uncacheAI :: Cached ArrayIndex -> State -> IO ArrayIndex
 uncacheAI = uncacheGen rAICache
+
+-- | Uncache, retrieving Functional array indexes
+uncacheFAI :: Cached FArrayIndex -> State -> IO FArrayIndex
+uncacheFAI = uncacheGen rFAICache
 
 -- | Generic uncaching. Note that this is entirely safe, since we do it in the IO monad.
 uncacheGen :: (State -> IORef (Cache a)) -> Cached a -> State -> IO a

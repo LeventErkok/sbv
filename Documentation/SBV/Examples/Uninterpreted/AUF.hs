@@ -27,6 +27,8 @@
 -- The function @read@ and @write@ are usual array operations.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Documentation.SBV.Examples.Uninterpreted.AUF where
 
 import Data.SBV
@@ -35,57 +37,37 @@ import Data.SBV
 -- * Model using functional arrays
 --------------------------------------------------------------
 
--- | The array type, takes symbolic 32-bit unsigned indexes
--- and stores 32-bit unsigned symbolic values. These are
--- functional arrays where reading before writing a cell
--- throws an exception.
-type A = SFunArray Word32 Word32
-
 -- | Uninterpreted function in the theorem
 f :: SWord32 -> SWord64
 f = uninterpret "f"
 
 -- | Correctness theorem. We state it for all values of @x@, @y@, and
--- the given array @a@. 
-thm1 :: SWord32 -> SWord32 -> A -> SBool
-thm1 x y a = lhs ==> rhs
+-- the given array @a@. Note that we're being generic in the type of
+-- array we're expecting.
+thm :: SymArray a => SWord32 -> SWord32 -> a Word32 Word32 -> SBool
+thm x y a = lhs ==> rhs
   where lhs = x + 2 .== y
         rhs =     f (readArray (writeArray a x 3) (y - 2))
               .== f (y - x + 1)
 
--- | Prints Q.E.D. when run, as expected
+-- | Prove it using SMT-Lib arrays.
 --
--- >>> proveThm1
+-- >>> proveSArray
 -- Q.E.D.
-proveThm1 :: IO ThmResult
-proveThm1 = prove $ do
+proveSArray :: IO ThmResult
+proveSArray = prove $ do
                 x <- free "x"
                 y <- free "y"
-                -- Take an "initialized" array, one that returns 0's for all initial reads
-                let a = mkSFunArray (const 0)
-                return $ thm1 x y a
+                a :: SArray Word32 Word32 <- newArray_
+                return $ thm x y a
 
---------------------------------------------------------------
--- * Model using SMT arrays
---------------------------------------------------------------
-
--- | This version directly uses SMT-arrays and hence does not need an initializer.
--- Reading an element before writing to it returns an arbitrary value.
-type B = SArray Word32 Word32
-
--- | Same as 'thm1', except we don't need an initializer with the 'SArray' model.
-thm2 :: SWord32 -> SWord32 -> B -> SBool
-thm2 x y a = lhs ==> rhs
-  where lhs = x + 2 .== y
-        rhs =     f (readArray (writeArray a x 3) (y - 2))
-              .== f (y - x + 1)
-
--- | Prints Q.E.D. when run, as expected:
+-- | Prove it using SBV's internal functional arrays.
 --
--- >>> proveThm2
+-- >>> proveSFunArray
 -- Q.E.D.
-proveThm2 :: IO ThmResult
-proveThm2 = prove $ do
+proveSFunArray :: IO ThmResult
+proveSFunArray = prove $ do
                 x <- free "x"
                 y <- free "y"
-                thm2 x y <$> newArray "b"
+                a :: SFunArray Word32 Word32 <- newArray_
+                return $ thm x y a

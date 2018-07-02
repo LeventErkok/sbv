@@ -33,7 +33,7 @@ module Data.SBV.Core.Data
  , SW(..), trueSW, falseSW, trueCW, falseCW, normCW
  , SVal(..)
  , SBV(..), NodeId(..), mkSymSBV
- , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), mkSFunArray, SArray(..)
+ , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), SArray(..)
  , sbvToSW, sbvToSymSW, forceSWArg
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, uncacheAI, HasKind(..)
@@ -450,7 +450,6 @@ class SymArray array where
 --   * Cannot quick-check theorems using @SArray@ values
 --
 --   * Typically slower as it heavily relies on SMT-solving for the array theory
---
 newtype SArray a b = SArray { unSArray :: SArr }
 
 instance (HasKind a, HasKind b) => Show (SArray a b) where
@@ -471,41 +470,43 @@ declNewSArray mkNm = do st <- ask
  where aknd = kindOf (undefined :: a)
        bknd = kindOf (undefined :: b)
 
--- | Declare a new functional symbolic array. Note that a read from an uninitialized cell will result in an error.
-declNewSFunArray :: forall a b. (HasKind a, HasKind b) => Maybe String -> Symbolic (SFunArray a b)
-declNewSFunArray mbNm = do st <- ask
-                           liftIO $ mapM_ (registerKind st) [kindOf (undefined :: a), kindOf (undefined :: b)]
-                           return $ SFunArray $ error . msg mbNm
-  where msg Nothing   i = "Reading from an uninitialized array entry, index: " ++ show i
-        msg (Just nm) i = "Array " ++ show nm ++ ": Reading from an uninitialized array entry, index: " ++ show i
-
--- | Arrays implemented internally as functions
+-- | Arrays implemented internally, without translating to SMT-Lib functions
 --
 --    * Internally handled by the library and not mapped to SMT-Lib
 --
---    * Reading an uninitialized value is considered an error (will throw exception). See `mkSFunArray` on how to avoid this.
+--    * Reading an uninitialized value is considered an uninterpreted value
 --
---    * Cannot check for equality (internally represented as functions)
+--    * Cannot check for equality. Note that this differs from SMT-Lib arrays
+--      since SMT-Lib arrays (i.e. SArray's) can be checked for equality.
+--      If equality is desired, users can define their own by ensuring the arrays
+--      map all of their domain elements to the same value. Of course, this can
+--      be costly when the domain is large, and impossible if the domain is
+--      infinite. (Such as SInteger.) In practical cases, the request, however,
+--      is usually restricted to a given (smallish) range, and is quite easy to implement
+--      as needed by simply doing a map over the domain of interest.
 --
---    * Can quick-check
+--    * Can be quick-checked
 --
 --    * Typically faster as it gets compiled away during translation
---
-newtype SFunArray a b = SFunArray (SBV a -> SBV b)
+newtype SFunArray a b = SFunArray { unSFunArray :: SFunArr }
 
 instance (HasKind a, HasKind b) => Show (SFunArray a b) where
-  show (SFunArray _) = "SFunArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"
+  show SFunArray{} = "SFunArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"
 
--- | Lift a function to an array. Useful for creating arrays in a pure context. (Otherwise use `newArray`.)
--- A simple way to create an array such that reading an unintialized value is assigned a free variable is
--- to simply use an uninterpreted function. That is, use:
---
---  @ mkSFunArray (uninterpret "initial") @
---
--- Note that this will ensure all uninitialized reads to the same location will return the same value,
--- without constraining them otherwise; with different indexes containing different values.
-mkSFunArray :: (SBV a -> SBV b) -> SFunArray a b
-mkSFunArray = SFunArray
+instance SymArray SFunArray where
+  newArray_                                       = declNewSFunArray (\t -> "funArray_" ++ show t)
+  newArray n                                      = declNewSFunArray (const n)
+  readArray   (SFunArray arr) (SBV a)             = SBV (readSFunArr arr a)
+  writeArray  (SFunArray arr) (SBV a) (SBV b)     = SFunArray (writeSFunArr arr a b)
+  mergeArrays (SBV t) (SFunArray a) (SFunArray b) = SFunArray (mergeSFunArr t a b)
+
+-- | Declare a new functional symbolic array.
+declNewSFunArray :: forall a b. (HasKind a, HasKind b) => (Int -> String) -> Symbolic (SFunArray a b)
+declNewSFunArray mkNm = do st <- ask
+                           liftIO $ mapM_ (registerKind st) [aknd, bknd]
+                           SFunArray <$> newSFunArr (aknd, bknd) mkNm
+  where aknd = kindOf (undefined :: a)
+        bknd = kindOf (undefined :: b)
 
 -- | Internal representation of a symbolic simulation result
 newtype SMTProblem = SMTProblem {smtLibPgm :: SMTConfig -> SMTLibPgm} -- ^ SMTLib representation, given the config
