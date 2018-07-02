@@ -17,9 +17,9 @@ import Data.List  (intercalate, partition, unzip3)
 import Data.Maybe (listToMaybe, fromMaybe)
 
 import qualified Data.Foldable as F (toList)
-import qualified Data.Map      as M
-import qualified Data.IntMap   as IM
-import qualified Data.Set      as Set
+import qualified Data.Map.Strict      as M
+import qualified Data.IntMap.Strict   as IM
+import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
 import Data.SBV.SMT.Utils

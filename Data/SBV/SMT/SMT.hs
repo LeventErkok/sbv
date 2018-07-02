@@ -56,7 +56,7 @@ import System.Exit        (ExitCode(..))
 import System.IO          (hClose, hFlush, hPutStrLn, hGetContents, hGetLine)
 import System.Process     (runInteractiveProcess, waitForProcess, terminateProcess)
 
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data

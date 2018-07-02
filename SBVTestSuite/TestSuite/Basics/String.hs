@@ -22,7 +22,8 @@ import qualified Data.SBV.RegExp as R
 import Control.Monad (unless)
 import Data.List (sort)
 
-import qualified Data.Map  as M
+import qualified Data.Map.Strict as M
+
 import qualified Data.Char as C
 
 -- Test suite

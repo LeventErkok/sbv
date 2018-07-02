@@ -43,8 +43,8 @@ import Data.Function (on)
 import Data.Int
 import Data.Word
 
-import qualified Data.Map    as Map
-import qualified Data.IntMap as IMap
+import qualified Data.Map.Strict    as Map
+import qualified Data.IntMap.Strict as IMap
 
 import Control.Monad            (unless)
 import Control.Monad.State.Lazy (get, liftIO)

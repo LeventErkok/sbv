@@ -35,8 +35,9 @@ import Control.Monad.State.Lazy (get)
 
 import Data.IORef (readIORef)
 
-import qualified Data.Map    as M
-import qualified Data.IntMap as IM
+import qualified Data.Map.Strict    as M
+import qualified Data.IntMap.Strict as IM
+
 
 import Data.Char     (toLower)
 import Data.List     (unzip3, intercalate, nubBy, sortBy)
