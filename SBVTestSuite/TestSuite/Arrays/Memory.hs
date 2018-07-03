@@ -70,29 +70,28 @@ mergeExt b m1 m2 i = readArray (ite b m1 m2) i .== readArray (ite (bnot b) m2 m1
 tests :: TestTree
 tests =
   testGroup "Arrays.Memory"
-    [ testCase "raw_SArray"              $ assertIsThm   (raw :: Address -> Value -> Memory SArray     -> SBool)
-    , testCase "raw_SFunArray"           $ assertIsThm   (raw :: Address -> Value -> Memory SFunArray  -> SBool)
+    [ testCase "raw_SArray"              $ assertIsThm   (raw :: Address -> Value -> Memory SArray    -> SBool)
+    , testCase "raw_SFunArray"           $ assertIsThm   (raw :: Address -> Value -> Memory SFunArray -> SBool)
 
-    , testCase "rawd_SArray"             $ assertIsThm   (rawd :: Address -> Address -> Value -> Memory SArray     -> SBool)
-    , testCase "rawd_SFunArray"          $ assertIsThm   (rawd :: Address -> Address -> Value -> Memory SFunArray  -> SBool)
+    , testCase "rawd_SArray"             $ assertIsThm   (rawd :: Address -> Address -> Value -> Memory SArray    -> SBool)
+    , testCase "rawd_SFunArray"          $ assertIsThm   (rawd :: Address -> Address -> Value -> Memory SFunArray -> SBool)
 
-    , testCase "waw_SArray"              $ assertIsThm   (waw :: Address -> Value -> Value -> Memory SArray     -> Address -> SBool)
-    , testCase "waw_SFunArray"           $ assertIsThm   (waw :: Address -> Value -> Value -> Memory SFunArray  -> Address -> SBool)
+    , testCase "waw_SArray"              $ assertIsThm   (waw :: Address -> Value -> Value -> Memory SArray    -> Address -> SBool)
+    , testCase "waw_SFunArray"           $ assertIsThm   (waw :: Address -> Value -> Value -> Memory SFunArray -> Address -> SBool)
 
-    , testCase "wcommute-good_SArray"     $ assertIsThm   (wcommutesGood :: (Address, Value) -> (Address, Value) -> Memory SArray     -> Address -> SBool)
-    , testCase "wcommute-good_SFunArray"  $ assertIsThm   (wcommutesGood :: (Address, Value) -> (Address, Value) -> Memory SFunArray  -> Address -> SBool)
+    , testCase "wcommute-good_SArray"    $ assertIsThm   (wcommutesGood :: (Address, Value) -> (Address, Value) -> Memory SArray    -> Address -> SBool)
+    , testCase "wcommute-good_SFunArray" $ assertIsThm   (wcommutesGood :: (Address, Value) -> (Address, Value) -> Memory SFunArray -> Address -> SBool)
 
-    , testCase "wcommute-bad_SArray"      $ assertIsntThm (wcommutesBad  :: (Address, Value) -> (Address, Value) -> Memory SArray     -> Address -> SBool)
-    , testCase "wcommute-bad_SFunArray"   $ assertIsntThm (wcommutesBad  :: (Address, Value) -> (Address, Value) -> Memory SFunArray  -> Address -> SBool)
+    , testCase "wcommute-bad_SArray"     $ assertIsntThm (wcommutesBad  :: (Address, Value) -> (Address, Value) -> Memory SArray    -> Address -> SBool)
+    , testCase "wcommute-bad_SFunArray"  $ assertIsntThm (wcommutesBad  :: (Address, Value) -> (Address, Value) -> Memory SFunArray -> Address -> SBool)
 
-    , testCase "ext_SArray"              $ assertIsThm   (extensionality :: Memory SArray     -> Memory SArray     -> Predicate)
+    , testCase "ext_SArray"              $ assertIsThm   (extensionality :: Memory SArray -> Memory SArray -> Predicate)
 
-    , testCase "ext2_SArray"             $ assertIsThm   (extensionality2 :: Memory SArray     -> Memory SArray     -> Address -> Predicate)
-    , testCase "ext2_SFunArray"          $ assertIsThm   (extensionality2 :: Memory SFunArray  -> Memory SFunArray  -> Address -> Predicate)
+    , testCase "ext2_SArray"             $ assertIsThm   (extensionality2 :: Memory SArray    -> Memory SArray    -> Address -> Predicate)
+    , testCase "ext2_SFunArray"          $ assertIsThm   (extensionality2 :: Memory SFunArray -> Memory SFunArray -> Address -> Predicate)
 
-    , testCase "mergeEq_SArray"          $ assertIsThm   (mergeEq :: SBool -> Memory SArray     -> Memory SArray     -> SBool)
-    , testCase "mergeEq_STermArray"      $ assertIsThm   (mergeEq :: SBool -> Memory STermArray -> Memory STermArray -> SBool)
+    , testCase "mergeEq_SArray"          $ assertIsThm   (mergeEq :: SBool -> Memory SArray -> Memory SArray -> SBool)
 
-    , testCase "mergeExt_SArray"         $ assertIsThm   (mergeExt :: SBool -> Memory SArray     -> Memory SArray     -> Address -> SBool)
-    , testCase "mergeExt_SFunArray"      $ assertIsThm   (mergeExt :: SBool -> Memory SFunArray  -> Memory SFunArray  -> Address -> SBool)
+    , testCase "mergeExt_SArray"         $ assertIsThm   (mergeExt :: SBool -> Memory SArray    -> Memory SArray    -> Address -> SBool)
+    , testCase "mergeExt_SFunArray"      $ assertIsThm   (mergeExt :: SBool -> Memory SFunArray -> Memory SFunArray -> Address -> SBool)
     ]
