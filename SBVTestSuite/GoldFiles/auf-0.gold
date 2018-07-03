@@ -10,8 +10,8 @@ CONSTANTS
 TABLES
 ARRAYS
 UNINTERPRETED CONSTANTS
+  [uninterpreted] a_uninitializedRead :: SWord32 -> SWord32
   [uninterpreted] f :: SWord32 -> SWord64
-  [uninterpreted] funArray_1_uninitializedRead :: SWord32 -> SWord32
 USER GIVEN CODE SEGMENTS
 AXIOMS
 DEFINE
@@ -20,7 +20,7 @@ DEFINE
   s5 :: SBool = ~ s4
   s7 :: SWord32 = s1 - s2
   s8 :: SBool = s0 == s7
-  s9 :: SWord32 = [uninterpreted] funArray_1_uninitializedRead s7
+  s9 :: SWord32 = [uninterpreted] a_uninitializedRead s7
   s10 :: SWord32 = if s8 then s6 else s9
   s11 :: SWord64 = [uninterpreted] f s10
   s12 :: SWord32 = s1 - s0
