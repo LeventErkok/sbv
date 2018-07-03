@@ -1041,14 +1041,6 @@ newSFunArr (ak, bk) mkNm = do st <- ask
 
                               return $ SFunArr (ak, bk) $ cache $ const $ return j
 
-
-
-            upd = IMap.insert (unFArrayIndex j) (mkUninitialized, memoTable)
-
-        j `seq` modifyState st rFArrayMap upd (return ())
-
-        return j
-
 --------------------------------------------------------------------------------
 -- Utility functions
 
