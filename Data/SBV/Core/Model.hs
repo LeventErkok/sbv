@@ -1248,15 +1248,6 @@ instance SDivisible SInteger where
             $ ite (y .>  0)              1 (-1)
 
 -- Quickcheck interface
-
--- The Arbitrary instance for SFunArray returns an uninitialized array.
--- Note that, by the semantics of SFunArray, any read from this array
--- will produce an uninterpreted constant for the entry.
-instance (SymWord b, Arbitrary b) => Arbitrary (SFunArray a b) where
-  arbitrary = return $ SFunArray (SFunArr ks (cache f))
-    where ks = (kindOf (undefined :: SBV a), kindOf (undefined :: SBV b))
-          f st = newSFunArrInState st ks (\i -> "funArray_" ++ show i)
-
 instance (SymWord a, Arbitrary a) => Arbitrary (SBV a) where
   arbitrary = literal `fmap` arbitrary
 
