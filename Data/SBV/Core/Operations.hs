@@ -967,9 +967,11 @@ writeSFunArr (SFunArr (ak, bk) f) a b
 -- Intuitively: @mergeArrays cond a b = if cond then a else b@.
 -- Merging pushes the if-then-else choice down on to elements
 mergeSFunArr :: SVal -> SFunArr -> SFunArr -> SFunArr
-mergeSFunArr t (SFunArr ainfo@(sourceKind, targetKind) a) (SFunArr binfo b)
+mergeSFunArr t array1@(SFunArr ainfo@(sourceKind, targetKind) a) array2@(SFunArr binfo b)
   | ainfo /= binfo
   = error $ "Data.SBV.mergeSFunArr: Impossible happened, merging incompatbile arrays: " ++ show (ainfo, binfo)
+  | Just test <- svAsBool t
+  = if test then array1 else array2
   | True
   = SFunArr ainfo $ cache c
   where c st = do ai <- uncacheFAI a st
