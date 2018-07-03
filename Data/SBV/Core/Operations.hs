@@ -1042,8 +1042,6 @@ newSFunArr (ak, bk) mkNm = do st <- ask
                               return $ SFunArr (ak, bk) $ cache $ const $ return j
 
 
-        let j                 = FArrayIndex $ IMap.size fArrMap
-            mkUninitialized i = svUninterpreted bk (mkNm (unFArrayIndex j) ++ "_uninitializedRead") Nothing [i]
 
             upd = IMap.insert (unFArrayIndex j) (mkUninitialized, memoTable)
 
