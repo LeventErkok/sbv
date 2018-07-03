@@ -1513,7 +1513,7 @@ instance (SymWord a, Bounded a) => Bounded (SBV a) where
 
 -- SArrays are both "EqSymbolic" and "Mergeable"
 instance EqSymbolic (SArray a b) where
-  (SArray a) .== (SArray b) = SBV (eqSArr a b)
+  SArray a .== SArray b = SBV (a `eqSArr` b)
 
 -- When merging arrays; we'll ignore the force argument. This is arguably
 -- the right thing to do as we've too many things and likely we want to keep it efficient.
