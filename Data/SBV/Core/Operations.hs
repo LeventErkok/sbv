@@ -845,7 +845,7 @@ mergeSArr t (SArr ainfo a) (SArr _ b) = SArr ainfo $ cache h
                   k `seq` modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
                   return k
 
--- | Create a named new array, with an optional initial value
+-- | Create a named new array
 newSArr :: (Kind, Kind) -> (Int -> String) -> Symbolic SArr
 newSArr ainfo mkNm = do
     st <- ask
