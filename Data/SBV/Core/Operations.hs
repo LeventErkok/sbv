@@ -53,7 +53,8 @@ import Control.Monad.Reader (ask)
 import Control.Monad.Trans  (liftIO)
 
 import qualified Data.IORef         as R    (modifyIORef', newIORef, readIORef)
-import qualified Data.IntMap.Strict as IMap (IntMap, empty, toAscList, lookup, size, insert)
+import qualified Data.Map.Strict    as Map  (toList, fromList, lookup)
+import qualified Data.IntMap.Strict as IMap (IntMap, empty, toAscList, fromAscList, lookup, size, insert)
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Kind
@@ -867,6 +868,19 @@ eqSArr (SArr _ a) (SArr _ b) = SVal KBool $ Right $ cache c
 -- | Arrays managed internally
 data SFunArr = SFunArr (Kind, Kind) (Cached FArrayIndex)
 
+-- | Convert a node-id to an SVal
+nodeIdToSVal :: Kind -> Int -> SVal
+nodeIdToSVal k i = swToSVal $ SW k (NodeId i)
+
+-- | Convert an SW to an SVal
+swToSVal :: SW -> SVal
+swToSVal sw@(SW k _) = SVal k $ Right $ cache $ const $ return sw
+
+-- | A variant of SVal equality, but taking into account of constants
+svEqualWithConsts :: (SVal, Maybe CW) -> SVal -> SVal
+svEqualWithConsts (_, Just cw) (SVal _ (Left cw')) = if cw == cw' then svTrue else svFalse
+svEqualWithConsts (v1, _)      v2                  = v1 `svEqual` v2
+   
 -- | Read the array element at @a@. For efficiency purposes, we create a memo-table
 -- as we go along, as otherwise we suffer significant performance penalties. See:
 -- <https://github.com/LeventErkok/sbv/issues/402> and
@@ -879,21 +893,17 @@ readSFunArr (SFunArr (ak, bk) f) a
   = SVal bk $ Right $ cache r
   where r st = do fArrayIndex <- uncacheFAI f st
                   fArrMap     <- R.readIORef (rFArrayMap st)
+                  constMap    <- R.readIORef (rconstMap st)
+                  let consts = Map.fromList [(i, cw) | (cw, SW _ (NodeId i)) <- Map.toList constMap]
                   case unFArrayIndex fArrayIndex `IMap.lookup` fArrMap of
                     Nothing -> error $ "Data.SBV.readSFunArr: Impossible happened while trying to access SFunArray, can't find index: " ++ show fArrayIndex
                     Just (uninitializedRead, rCache) -> do
                         memoTable  <- R.readIORef rCache
                         SW _ (NodeId ni) <- svToSW st a
                         case ni `IMap.lookup` memoTable of
-                          Nothing -> do let nodeIdToSVal :: Kind -> Int -> SVal
-                                            nodeIdToSVal k i = swToSVal $ SW k (NodeId i)
-
-                                            swToSVal :: SW -> SVal
-                                            swToSVal sw@(SW k _) = SVal k $ Right $ cache $ const $ return sw
-
-                                            find :: [(Int, SW)] -> SVal
+                          Nothing -> do let find :: [(Int, SW)] -> SVal
                                             find []             = uninitializedRead a
-                                            find ((i, v) : ivs) = svIte (nodeIdToSVal ak i `svEqual` a) (swToSVal v) (find ivs)
+                                            find ((i, v) : ivs) = svIte (svEqualWithConsts (nodeIdToSVal ak i, i `Map.lookup` consts) a) (swToSVal v) (find ivs)
 
                                             finalValue = find (IMap.toAscList memoTable)
 
@@ -913,23 +923,45 @@ writeSFunArr (SFunArr (ak, bk) f) a b
   = SFunArr (ak, bk) $ cache g
   where g st = do fArrayIndex <- uncacheFAI f st
                   fArrMap     <- R.readIORef (rFArrayMap st)
+                  constMap    <- R.readIORef (rconstMap st)
+                  let consts = Map.fromList [(i, cw) | (cw, SW _ (NodeId i)) <- Map.toList constMap]
                   case unFArrayIndex fArrayIndex `IMap.lookup` fArrMap of
                     Nothing          -> error $ "Data.SBV.writeSFunArr: Impossible happened while trying to access SFunArray, can't find index: " ++ show fArrayIndex
-                    Just (_, rCache) -> do
+                    Just (aUi, rCache) -> do
                        memoTable <- R.readIORef rCache
                        SW _ (NodeId ni) <- svToSW st a
                        val              <- svToSW st b
 
-                       newMemoTable <- R.newIORef $ IMap.insert ni val memoTable
+                       -- There are three cases:
+                       --
+                       --    (1) We hit the cache, and old value is the same as new: No write necessary, just return the array
+                       --    (2) We hit the cache, values are different. Simply insert, overriding the old-memo table location
+                       --    (3) We miss the cache: Now we have to
+                       --
+                       -- Below, we determine which case we're in and then insert the value at the end and continue
+                       cont <- case ni `IMap.lookup` memoTable of
+                                 Just oldVal
+                                   | val == oldVal -> return $ Left fArrayIndex   -- Case 1
+                                   | True          -> return $ Right memoTable    -- Case 2
 
-                       let j                 = FArrayIndex $ IMap.size fArrMap
-                           mkUninitialized i = svUninterpreted bk ("funArray_" ++ show j ++ "_uninitializedRead") Nothing [i]
+                                 Nothing           -> do let walk :: [(Int, SW)] -> [(Int, SW)] -> IO [(Int, SW)]
+                                                             walk []           sofar = return $ reverse sofar
+                                                             walk ((i, s):iss) sofar = modify i s >>= \s' -> walk iss ((i, s') : sofar)
 
-                           upd = IMap.insert (unFArrayIndex j) (mkUninitialized, newMemoTable)
+                                                             modify :: Int -> SW -> IO SW
+                                                             modify i s = svToSW st $ svIte (svEqualWithConsts (nodeIdToSVal ak i, i `Map.lookup` consts) a) b (swToSVal s)
 
-                       j `seq` modifyState st rFArrayMap upd (return ())
+                                                         Right . IMap.fromAscList <$> walk (IMap.toAscList memoTable) []
 
-                       return j
+                       case cont of
+                         Left j   -> return j
+                         Right mt -> do newMemoTable <- R.newIORef $ IMap.insert ni val mt
+
+                                        let j = FArrayIndex $ IMap.size fArrMap
+                                            upd = IMap.insert (unFArrayIndex j) (aUi, newMemoTable)
+
+                                        j `seq` modifyState st rFArrayMap upd (return ())
+                                        return j
 
 -- | Merge two given arrays on the symbolic condition
 -- Intuitively: @mergeArrays cond a b = if cond then a else b@.
@@ -959,10 +991,7 @@ mergeSFunArr t (SFunArr ainfo@(sourceKind, targetKind) a) (SFunArr binfo b)
                                    aMemo <- R.readIORef raCache
                                    bMemo <- R.readIORef rbCache
 
-                                   let nodeIdToSVal :: Kind -> Int -> SVal
-                                       nodeIdToSVal k i = SVal k $ Right $ cache $ const $ return $ SW k (NodeId i)
-
-                                       gen :: (SVal -> SVal) -> Int -> IO SW
+                                   let gen :: (SVal -> SVal) -> Int -> IO SW
                                        gen mk k = svToSW st $ mk $ nodeIdToSVal sourceKind k
 
                                        fill :: Int -> SW -> SW -> IMap.IntMap SW -> IO (IMap.IntMap SW)
