@@ -166,6 +166,9 @@ sNaN = literal nan
 sInfinity :: (Floating a, SymWord a) => SBV a
 sInfinity = literal infinity
 
+-- | Internal representation of a symbolic simulation result
+newtype SMTProblem = SMTProblem {smtLibPgm :: SMTConfig -> SMTLibPgm} -- ^ SMTLib representation, given the config
+
 -- Boolean combinators
 instance Boolean SBool where
   true  = SBV (svBool True)
@@ -515,5 +518,3 @@ declNewSFunArray mkNm = do st <- ask
   where aknd = kindOf (undefined :: a)
         bknd = kindOf (undefined :: b)
 
--- | Internal representation of a symbolic simulation result
-newtype SMTProblem = SMTProblem {smtLibPgm :: SMTConfig -> SMTLibPgm} -- ^ SMTLib representation, given the config
