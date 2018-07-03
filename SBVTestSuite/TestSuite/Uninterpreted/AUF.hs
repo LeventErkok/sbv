@@ -21,6 +21,6 @@ tests =
   testGroup "Uninterpreted.AUF"
     [ goldenVsStringShow "auf-0" $ runSAT      $ newArray "a" >>= \a -> free "x" >>= \x -> free "y" >>= \y -> output (thm x y (a :: SFunArray  Word32 Word32))
     , goldenVsStringShow "auf-1" $ runSAT      $ newArray "a" >>= \a -> free "x" >>= \x -> free "y" >>= \y -> output (thm x y (a :: SArray     Word32 Word32))
-    , testCase "auf-3"           $ assertIsThm $ newArray "a" >>= \a -> free "x" >>= \x -> free "y" >>= \y -> return (thm x y (a :: SArray     Word32 Word32))
-    , testCase "auf-4"           $ assertIsThm $ newArray "a" >>= \a -> free "x" >>= \x -> free "y" >>= \y -> return (thm x y (a :: SFunArray  Word32 Word32))
+    , testCase "tc_auf-0"        $ assertIsThm $ newArray "a" >>= \a -> free "x" >>= \x -> free "y" >>= \y -> return (thm x y (a :: SArray     Word32 Word32))
+    , testCase "tc_auf-1"        $ assertIsThm $ newArray "a" >>= \a -> free "x" >>= \x -> free "y" >>= \y -> return (thm x y (a :: SFunArray  Word32 Word32))
     ]
