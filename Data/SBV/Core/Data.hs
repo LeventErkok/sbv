@@ -447,6 +447,8 @@ class SymArray array where
 --
 --   * Can check for equality of these arrays
 --
+--   * Cannot be used in code-generation (i.e., compilation to C)
+--
 --   * Cannot quick-check theorems using @SArray@ values
 --
 --   * Typically slower as it heavily relies on SMT-solving for the array theory
@@ -470,24 +472,29 @@ declNewSArray mkNm = do st <- ask
  where aknd = kindOf (undefined :: a)
        bknd = kindOf (undefined :: b)
 
--- | Arrays implemented internally, without translating to SMT-Lib functions
+-- | Arrays implemented internally, without translating to SMT-Lib functions:
 --
---    * Internally handled by the library and not mapped to SMT-Lib
+--   * Internally handled by the library and not mapped to SMT-Lib, hence can
+--     be used with solvers that don't support arrays. (Such as abc.)
 --
---    * Reading an uninitialized value is considered an uninterpreted value
+--   * Reading from an unintialized value is OK and yields an unspecified result
 --
---    * Cannot check for equality. Note that this differs from SMT-Lib arrays
---      since SMT-Lib arrays (i.e. SArray's) can be checked for equality.
---      If equality is desired, users can define their own by ensuring the arrays
---      map all of their domain elements to the same value. Of course, this can
---      be costly when the domain is large, and impossible if the domain is
---      infinite. (Such as SInteger.) In practical cases, the request, however,
---      is usually restricted to a given (smallish) range, and is quite easy to implement
---      as needed by simply doing a map over the domain of interest.
+--   * Cannot check for equality. Note that this differs from SMT-Lib arrays
+--     since SMT-Lib arrays (i.e. SArray's) can be checked for equality.
+--     If equality is desired, users can define their own by ensuring the arrays
+--     map all of their domain elements to the same value. Of course, this can
+--     be costly when the domain is large, and impossible if the domain is
+--     infinite. (Such as SInteger.) In practical cases, the request, however,
+--     is usually restricted to a given (smallish) range, and is quite easy to implement
+--     as needed by simply doing a map over the domain of interest.
 --
---    * Can be quick-checked
+--   * Can be used in code-generation (i.e., compilation to C). Note that since they
+--     get compiled away, the generated code simply refers to the elements; i.e.,
+--     all reads and writes gets fused away.
 --
---    * Typically faster as it gets compiled away during translation
+--   * Cannot quick-check theorems using @SFunArray@ values
+--
+--   * Typically faster as it gets compiled away during translation.
 newtype SFunArray a b = SFunArray { unSFunArray :: SFunArr }
 
 instance (HasKind a, HasKind b) => Show (SFunArray a b) where
