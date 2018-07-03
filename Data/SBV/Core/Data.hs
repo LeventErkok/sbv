@@ -414,6 +414,7 @@ instance (Random a, SymWord a) => Random (SBV a) where
                        (Just lb, Just hb) -> let (v, g') = randomR (lb, hb) g in (literal (v :: a), g')
                        _                  -> error "SBV.Random: Cannot generate random values with symbolic bounds"
   random         g = let (v, g') = random g in (literal (v :: a) , g')
+
 ---------------------------------------------------------------------------------
 -- * Symbolic Arrays
 ---------------------------------------------------------------------------------
@@ -424,8 +425,11 @@ instance (Random a, SymWord a) => Random (SBV a) where
 -- While it's certainly possible for user to create instances of 'SymArray', the
 -- 'SArray' and 'SFunArray' instances already provided should cover most use cases
 -- in practice. (There are some differences between these models, however, see the corresponding
--- declaration.)
+-- declarations.)
 --
+-- As a rule of thumb, try 'SArray' first. These should generate compact code. However, if
+-- the backend solver has hard time solving the generated problems, switch to
+-- 'SFunArray'. If you still have issues, please report so we can see what the problem might be!
 --
 -- Minimal complete definition: All methods are required, no defaults.
 class SymArray array where
@@ -517,4 +521,3 @@ declNewSFunArray mkNm = do st <- ask
                            SFunArray <$> newSFunArr (aknd, bknd) mkNm
   where aknd = kindOf (undefined :: a)
         bknd = kindOf (undefined :: b)
-
