@@ -23,7 +23,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans   #-}
 
 module Data.SBV.Core.Model (
-    Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), assertSoft, SIntegral, SFiniteBits(..)
+    Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), assertWithPenalty, SIntegral, SFiniteBits(..)
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, (.^)
   , oneIf, genVar, genVar_, forall, forall_, exists, exists_
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
@@ -1779,8 +1779,8 @@ instance SolverContext Symbolic where
    setOption o = addNewSMTOption  o
 
 -- | Introduce a soft assertion, with an optional penalty
-assertSoft :: String -> SBool -> Penalty -> Symbolic ()
-assertSoft nm o p = addSValOptGoal $ unSBV `fmap` AssertSoft nm o p
+assertWithPenalty :: String -> SBool -> Penalty -> Symbolic ()
+assertWithPenalty nm o p = addSValOptGoal $ unSBV `fmap` AssertWithPenalty nm o p
 
 -- | Class of metrics we can optimize for. Currently,
 -- bounded signed/unsigned bit-vectors, unbounded integers,

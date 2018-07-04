@@ -49,7 +49,7 @@ import qualified TestSuite.Crypto.AES
 import qualified TestSuite.Crypto.RC4
 import qualified TestSuite.Existentials.CRCPolynomial
 import qualified TestSuite.GenTest.GenTests
-import qualified TestSuite.Optimization.AssertSoft
+import qualified TestSuite.Optimization.AssertWithPenalty
 import qualified TestSuite.Optimization.Basics
 import qualified TestSuite.Optimization.Combined
 import qualified TestSuite.Optimization.ExtensionField
@@ -178,7 +178,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Crypto.RC4.tests
                , TestSuite.Existentials.CRCPolynomial.tests
                , TestSuite.GenTest.GenTests.tests
-               , TestSuite.Optimization.AssertSoft.tests
+               , TestSuite.Optimization.AssertWithPenalty.tests
                , TestSuite.Optimization.Basics.tests
                , TestSuite.Optimization.Combined.tests
                , TestSuite.Optimization.ExtensionField.tests

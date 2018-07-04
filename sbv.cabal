@@ -207,12 +207,13 @@ Test-Suite SBVTest
                   , TestSuite.Crypto.RC4
                   , TestSuite.Existentials.CRCPolynomial
                   , TestSuite.GenTest.GenTests
-                  , TestSuite.Optimization.AssertSoft
+                  , TestSuite.Optimization.AssertWithPenalty
                   , TestSuite.Optimization.Basics
                   , TestSuite.Optimization.Combined
                   , TestSuite.Optimization.ExtensionField
                   , TestSuite.Optimization.Quantified
                   , TestSuite.Optimization.Reals
+                  , TestSuite.Optimization.NoOpt
                   , TestSuite.Overflows.Arithmetic
                   , TestSuite.Overflows.Casts
                   , TestSuite.Polynomials.Polynomials

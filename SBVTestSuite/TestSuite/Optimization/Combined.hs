@@ -43,9 +43,9 @@ combined2 = do a <- sBool "a"
                b <- sBool "b"
                c <- sBool "c"
 
-               assertSoft "soft_a" a (Penalty 1 (Just "A"))
-               assertSoft "soft_b" b (Penalty 2 (Just "B"))
-               assertSoft "soft_c" c (Penalty 3 (Just "A"))
+               assertWithPenalty "soft_a" a (Penalty 1 (Just "A"))
+               assertWithPenalty "soft_b" b (Penalty 2 (Just "B"))
+               assertWithPenalty "soft_c" c (Penalty 3 (Just "A"))
 
                constrain $ a .== c
                constrain $ bnot (a &&& b)

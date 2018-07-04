@@ -37,6 +37,10 @@
     is no longer available, though it is easy to implement it in user-space
     if needed. Please get in contact if this proves to be an issue.
 
+  * Rename 'assertSoft' to 'assertWithPenalty', which better reflects the nature
+    of this function. Also add extra checks to warn the user if optimization
+    constraints are present in a regular sat/prove call.
+
 ### Version 7.9, 2018-06-15
  
   * Add support for bit-vector arithmetic underflow/overflow detection. The new

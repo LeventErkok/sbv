@@ -237,7 +237,7 @@ module Data.SBV (
   , Objective(..), Metric(..)
   -- ** Soft assumptions
   -- $softAssertions
-  , assertSoft , Penalty(..)
+  , assertWithPenalty , Penalty(..)
   -- ** Field extensions
   -- | If an optimization results in an infinity/epsilon value, the returned `CW` value will be in the corresponding extension field.
   , ExtCW(..), GeneralizedCW(..)
@@ -606,13 +606,13 @@ Optimal model:
 
 {- $softAssertions
 
-  Related to optimization, SBV implements soft-asserts via 'assertSoft' calls. A soft assertion
+  Related to optimization, SBV implements soft-asserts via 'assertWithPenalty' calls. A soft assertion
   is a hint to the SMT solver that we would like a particular condition to hold if **possible*.
   That is, if there is a solution satisfying it, then we would like it to hold, but it can be violated
   if there is no way to satisfy it. Each soft-assertion can be associated with a numeric penalty for
   not satisfying it, hence turning it into an optimization problem.
 
-  Note that 'assertSoft' works well with optimization goals ('minimize'/'maximize' etc.),
+  Note that 'assertWithPenalty' works well with optimization goals ('minimize'/'maximize' etc.),
   and are most useful when we are optimizing a metric and thus some of the constraints
   can be relaxed with a penalty to obtain a good solution. Again
   see <https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>
@@ -621,9 +621,9 @@ Optimal model:
   A soft assertion can be specified in one of the following three main ways:
 
        @
-         'assertSoft' "bounded_x" (x .< 5) 'DefaultPenalty'
-         'assertSoft' "bounded_x" (x .< 5) ('Penalty' 2.3 Nothing)
-         'assertSoft' "bounded_x" (x .< 5) ('Penalty' 4.7 (Just "group-1")) @
+         'assertWithPenalty' "bounded_x" (x .< 5) 'DefaultPenalty'
+         'assertWithPenalty' "bounded_x" (x .< 5) ('Penalty' 2.3 Nothing)
+         'assertWithPenalty' "bounded_x" (x .< 5) ('Penalty' 4.7 (Just "group-1")) @
 
   In the first form, we are saying that the constraint @x .< 5@ must be satisfied, if possible,
   but if this constraint can not be satisfied to find a model, it can be violated with the default penalty of 1.

@@ -434,16 +434,16 @@ data Penalty = DefaultPenalty                  -- ^ Default: Penalty of @1@ and 
 
 -- | Objective of optimization. We can minimize, maximize, or give a soft assertion with a penalty
 -- for not satisfying it.
-data Objective a = Minimize   String a         -- ^ Minimize this metric
-                 | Maximize   String a         -- ^ Maximize this metric
-                 | AssertSoft String a Penalty -- ^ A soft assertion, with an associated penalty
+data Objective a = Minimize          String a         -- ^ Minimize this metric
+                 | Maximize          String a         -- ^ Maximize this metric
+                 | AssertWithPenalty String a Penalty -- ^ A soft assertion, with an associated penalty
                  deriving (Show, Functor)
 
 -- | The name of the objective
 objectiveName :: Objective a -> String
-objectiveName (Minimize   s _)   = s
-objectiveName (Maximize   s _)   = s
-objectiveName (AssertSoft s _ _) = s
+objectiveName (Minimize          s _)   = s
+objectiveName (Maximize          s _)   = s
+objectiveName (AssertWithPenalty s _ _) = s
 
 -- | The state we keep track of as we interact with the solver
 data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -> IO String
@@ -468,9 +468,9 @@ instance NFData Penalty where
    rnf (Penalty p mbs) = rnf p `seq` rnf mbs `seq` ()
 
 instance NFData a => NFData (Objective a) where
-   rnf (Minimize   s a)   = rnf s `seq` rnf a `seq` ()
-   rnf (Maximize   s a)   = rnf s `seq` rnf a `seq` ()
-   rnf (AssertSoft s a p) = rnf s `seq` rnf a `seq` rnf p `seq` ()
+   rnf (Minimize          s a)   = rnf s `seq` rnf a `seq` ()
+   rnf (Maximize          s a)   = rnf s `seq` rnf a `seq` ()
+   rnf (AssertWithPenalty s a p) = rnf s `seq` rnf a `seq` rnf p `seq` ()
 
 -- | Result of running a symbolic computation
 data Result = Result { reskinds       :: Set.Set Kind                                     -- ^ kinds used in the program
@@ -1207,9 +1207,9 @@ addSValOptGoal obj = do st <- ask
                                                          trackSW <- svToSW st track
                                                          return (origSW, trackSW)
 
-                        let walk (Minimize   nm v)     = Minimize nm              <$> mkGoal nm v
-                            walk (Maximize   nm v)     = Maximize nm              <$> mkGoal nm v
-                            walk (AssertSoft nm v mbP) = flip (AssertSoft nm) mbP <$> mkGoal nm v
+                        let walk (Minimize          nm v)     = Minimize nm                     <$> mkGoal nm v
+                            walk (Maximize          nm v)     = Maximize nm                     <$> mkGoal nm v
+                            walk (AssertWithPenalty nm v mbP) = flip (AssertWithPenalty nm) mbP <$> mkGoal nm v
 
                         obj' <- walk obj
                         liftIO $ modifyState st rOptGoals (obj' :)
