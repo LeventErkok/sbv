@@ -5,6 +5,13 @@
 
 ### Version 7.9.5, Not yet released
 
+  * Implement 'softConstrain': Similar to 'constrain', except the solver is
+    free to leave it unsatisfied (i.e., leave it false) if necessary to
+    find a satisfying solution. Useful in modeling conditions that are
+    "nice-to-have" but not "required." Note that this is similar to
+    'assertWithPenalty', except it works in non-optimization contexts.
+    See "Documentation.SBV.Examples.Misc.SoftConstrain" for a simple example.
+
   * Add 'CheckedArithmetic' class, which provides bit-vector arithmetic
     operations that do automatic underflow/overflow checking. The operations
     follow their regular counter-parts, with an exclamation mark added at
@@ -13,8 +20,8 @@
     then you can call 'safe' on the resulting programs to make sure
     these operations never cause underflow and overflow conditions.
 
-  * Similar to above, add 'sFromIntegralChecked', providing similar support
-    for casts.
+  * Similar to above, add 'sFromIntegralChecked', providing overflow/underflow
+    checks for cast operations.
 
   * Add "Documentation.SBV.Examples.BitPrecise.BrokenSearch.hs" to show the
     use of overflow checking utilities, using the classic broken binary search
@@ -40,13 +47,6 @@
   * Rename 'assertSoft' to 'assertWithPenalty', which better reflects the nature
     of this function. Also add extra checks to warn the user if optimization
     constraints are present in a regular sat/prove call.
-
-  * Implement 'softConstrain': Similar to 'constrain', except the solver is
-    free to leave it unsatisfied (i.e., leave it false) if necessary to
-    find a satisfying solution. Useful in modeling conditions that are
-    "nice-to-have" but not "required." Note that this is similar to
-    'assertWithPenalty', except it works in non-optimization contexts.
-    See "Documentation.SBV.Examples.Misc.SoftConstrain" for a simple example.
 
 ### Version 7.9, 2018-06-15
  
