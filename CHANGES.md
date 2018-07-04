@@ -44,6 +44,11 @@
     is no longer available, though it is easy to implement it in user-space
     if needed. Please get in contact if this proves to be an issue.
 
+  * Add 'freshArray' to allow for creation of existential fresh arrays in the query mode.
+    This is similar to 'newArray' which works in the Symbolic mode, and is analogous to
+    'freshVar'. Most users shouldn't need this as 'newArray' calls should suffice. Only
+    use if you need a brand new array after switching to query mode.
+
   * Rename 'assertSoft' to 'assertWithPenalty', which better reflects the nature
     of this function. Also add extra checks to warn the user if optimization
     constraints are present in a regular sat/prove call.

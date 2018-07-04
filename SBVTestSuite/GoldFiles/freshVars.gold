@@ -79,6 +79,18 @@
 [GOOD] (define-fun s41 () BinOp Plus)
 [GOOD] (define-fun s42 () Bool (= s16 s41))
 [GOOD] (assert s42)
+[GOOD] (declare-fun array_0 () (Array Int Int))
+[GOOD] (declare-fun s43 () Int)
+[GOOD] (declare-fun s44 () Bool)
+[GOOD] (define-fun s46 () Int 2)
+[GOOD] (define-fun s45 () Int (select array_0 s43))
+[GOOD] (define-fun s47 () Bool (= s45 s46))
+[GOOD] (assert s47)
+[GOOD] (define-fun s49 () (_ BitVec 8) #x61)
+[GOOD] (declare-fun vArray_uninitializedRead (Bool) (_ BitVec 8))
+[GOOD] (define-fun s48 () (_ BitVec 8) (vArray_uninitializedRead s44))
+[GOOD] (define-fun s50 () Bool (= s48 s49))
+[GOOD] (assert s50)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -111,23 +123,29 @@
 [RECV] ((s15 12))
 [SEND] (get-value (s16))
 [RECV] ((s16 Plus))
+[SEND] (get-value (s43))
+[RECV] ((s43 1))
+[SEND] (get-value (s44))
+[RECV] ((s44 false))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
  FINAL:Satisfiable. Model:
-  a        =    0 :: Integer
-  vBool    = True :: Bool
-  vWord8   =    1 :: Word8
-  s5       =    2 :: Word16
-  s6       =    3 :: Word32
-  vWord64  =    4 :: Word64
-  vInt8    =    5 :: Int8
-  s9       =    6 :: Int16
-  s10      =    7 :: Int32
-  vInt64   =    8 :: Int64
-  vFloat   =  9.0 :: Float
-  s13      = 10.0 :: Double
-  s14      = 11.0 :: Real
-  vInteger =   12 :: Integer
-  vBinOp   = Plus :: BinOp
+  a        =     0 :: Integer
+  vBool    =  True :: Bool
+  vWord8   =     1 :: Word8
+  s5       =     2 :: Word16
+  s6       =     3 :: Word32
+  vWord64  =     4 :: Word64
+  vInt8    =     5 :: Int8
+  s9       =     6 :: Int16
+  s10      =     7 :: Int32
+  vInt64   =     8 :: Int64
+  vFloat   =   9.0 :: Float
+  s13      =  10.0 :: Double
+  s14      =  11.0 :: Real
+  vInteger =    12 :: Integer
+  vBinOp   =  Plus :: BinOp
+  i1       =     1 :: Integer
+  i2       = False :: Bool
 DONE!

@@ -49,9 +49,6 @@ module Data.SBV.Core.Operations
 import Data.Bits (Bits(..))
 import Data.List (genericIndex, genericLength, genericTake)
 
-import Control.Monad.Reader (ask)
-import Control.Monad.Trans  (liftIO)
-
 import qualified Data.IORef         as R    (modifyIORef', newIORef, readIORef)
 import qualified Data.Map.Strict    as Map  (toList, fromList, lookup)
 import qualified Data.IntMap.Strict as IMap (IntMap, empty, toAscList, fromAscList, lookup, size, insert)
@@ -846,16 +843,15 @@ mergeSArr t (SArr ainfo a) (SArr _ b) = SArr ainfo $ cache h
                   return k
 
 -- | Create a named new array
-newSArr :: (Kind, Kind) -> (Int -> String) -> Symbolic SArr
-newSArr ainfo mkNm = do
-    st <- ask
-    amap <- liftIO $ R.readIORef $ rArrayMap st
+newSArr :: State -> (Kind, Kind) -> (Int -> String) -> IO SArr
+newSArr st ainfo mkNm = do
+    amap <- R.readIORef $ rArrayMap st
 
     let i   = ArrayIndex $ IMap.size amap
         nm  = mkNm (unArrayIndex i)
         upd = IMap.insert (unArrayIndex i) (nm, ainfo, ArrayFree)
 
-    liftIO $ modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
+    modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
     return $ SArr ainfo $ cache $ const $ return i
 
 -- | Compare two arrays for equality
@@ -1025,21 +1021,18 @@ mergeSFunArr t array1@(SFunArr ainfo@(sourceKind, targetKind) a) array2@(SFunArr
                                    return j
 
 -- | Create a named new array
-newSFunArr :: (Kind, Kind) -> (Int -> String) -> Symbolic SFunArr
-newSFunArr (ak, bk) mkNm = do st <- ask
-                              j <- liftIO $ do fArrMap <- R.readIORef (rFArrayMap st)
-                                               memoTable <- R.newIORef IMap.empty
+newSFunArr :: State -> (Kind, Kind) -> (Int -> String) -> IO SFunArr
+newSFunArr st (ak, bk) mkNm = do fArrMap <- R.readIORef (rFArrayMap st)
+                                 memoTable <- R.newIORef IMap.empty
 
-                                               let j                 = FArrayIndex $ IMap.size fArrMap
-                                                   mkUninitialized i = svUninterpreted bk (mkNm (unFArrayIndex j) ++ "_uninitializedRead") Nothing [i]
+                                 let j                 = FArrayIndex $ IMap.size fArrMap
+                                     mkUninitialized i = svUninterpreted bk (mkNm (unFArrayIndex j) ++ "_uninitializedRead") Nothing [i]
 
-                                                   upd = IMap.insert (unFArrayIndex j) (mkUninitialized, memoTable)
+                                     upd = IMap.insert (unFArrayIndex j) (mkUninitialized, memoTable)
 
-                                               j `seq` modifyState st rFArrayMap upd (return ())
+                                 j `seq` modifyState st rFArrayMap upd (return ())
 
-                                               return j
-
-                              return $ SFunArr (ak, bk) $ cache $ const $ return j
+                                 return $ SFunArr (ak, bk) $ cache $ const $ return j
 
 --------------------------------------------------------------------------------
 -- Utility functions

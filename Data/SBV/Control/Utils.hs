@@ -24,7 +24,7 @@ module Data.SBV.Control.Utils (
      , ask, send, getValue, getUninterpretedValue, getValueCW, getUnsatAssumptions, SMTValue(..)
      , getQueryState, modifyQueryState, getConfig, getObjectives, getSBVAssertions, getSBVPgm, getQuantifiedInputs, getObservables
      , checkSat, checkSatUsing, getAllSatResult
-     , inNewContext, freshVar, freshVar_
+     , inNewContext, freshVar, freshVar_, freshArray, freshArray_
      , parse
      , unexpected
      , timeout
@@ -57,7 +57,7 @@ import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, K
                               , HasKind(..), mkConstCW, CWVal(..), SMTResult(..)
                               , NamedSymVar, SMTConfig(..), Query, SMTModel(..)
                               , QueryState(..), SVal(..), Quantifier(..), cache
-                              , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..)
+                              , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..), SymArray(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSW, SymWord(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
                               )
@@ -192,6 +192,21 @@ freshVar_ = inNewContext $ fmap SBV . svMkSymVar (Just EX) k Nothing
 freshVar :: forall a. SymWord a => String -> Query (SBV a)
 freshVar nm = inNewContext $ fmap SBV . svMkSymVar (Just EX) k (Just nm)
   where k = kindOf (undefined :: a)
+
+-- | Similar to 'freshArray', except creates unnamed array.
+freshArray_ :: (SymArray array, HasKind a, HasKind b) => Query (array a b)
+freshArray_ = mkFreshArray Nothing
+
+-- | Create a fresh array in query mode. Again, you should prefer
+-- creating arrays before the queries start using 'newArray', but this
+-- method can come in handy in occasional cases where you need a new array
+-- after you start the query based interaction.
+freshArray :: (SymArray array, HasKind a, HasKind b) => String -> Query (array a b)
+freshArray = mkFreshArray . Just
+
+-- | Creating arrays, internal use only.
+mkFreshArray :: (SymArray array, HasKind a, HasKind b) => Maybe String -> Query (array a b)
+mkFreshArray = inNewContext . newArrayInState
 
 -- | If 'verbose' is 'True', print the message, useful for debugging messages
 -- in custom queries. Note that 'redirectVerbose' will be respected: If a

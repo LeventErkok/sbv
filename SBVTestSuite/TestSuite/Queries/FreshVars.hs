@@ -56,6 +56,7 @@ fv = do a <- sInteger "a"
                    vReal    :: SReal    <- freshVar_
                    vInteger :: SInteger <- freshVar  "vInteger"
                    vBinOp   :: SBinOp   <- freshVar  "vBinOp"
+
                    constrain   vBool
                    constrain $ vWord8   .== 1
                    constrain $ vWord16  .== 2
@@ -70,6 +71,13 @@ fv = do a <- sInteger "a"
                    constrain $ vReal    .== 11
                    constrain $ vInteger .== 12
                    constrain $ vBinOp   .== literal Plus
+
+                   vSArray  :: SArray    Integer Integer <- freshArray "vArray"
+                   vFArray  :: SFunArray Bool    Char    <- freshArray "vArray"
+                   vi1                                   <- freshVar "i1"
+                   vi2                                   <- freshVar "i2"
+                   constrain $ readArray vSArray vi1 .== 2
+                   constrain $ readArray vFArray vi2 .== literal 'a'
 
                    cs <- checkSat
                    case cs of
@@ -88,6 +96,8 @@ fv = do a <- sInteger "a"
                                vRealVal    <- getValue vReal
                                vIntegerVal <- getValue vInteger
                                vBinOpVal   <- getValue vBinOp
+                               vi1Val      <- getValue vi1
+                               vi2Val      <- getValue vi2
 
                                mkSMTResult [ a        |-> aVal
                                            , vBool    |-> vBoolVal
@@ -104,5 +114,7 @@ fv = do a <- sInteger "a"
                                            , vReal    |-> vRealVal
                                            , vInteger |-> vIntegerVal
                                            , vBinOp   |-> vBinOpVal
+                                           , vi1      |-> vi1Val
+                                           , vi2      |-> vi2Val
                                            ]
                      _   -> error "didn't expect non-Sat here!"

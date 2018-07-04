@@ -15,6 +15,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE InstanceSigs          #-}
 {-# LANGUAGE PatternGuards         #-}
 {-# LANGUAGE DefaultSignatures     #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -47,7 +48,6 @@ module Data.SBV.Core.Data
  , SolverCapabilities(..)
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
- , declNewSArray, declNewSFunArray
  , OptimizeStyle(..), Penalty(..), Objective(..)
  , QueryState(..), Query(..), SMTProblem(..)
  ) where
@@ -447,6 +447,8 @@ class SymArray array where
   -- Intuitively: @mergeArrays cond a b = if cond then a else b@.
   -- Merging pushes the if-then-else choice down on to elements
   mergeArrays    :: SymWord b => SBV Bool -> array a b -> array a b -> array a b
+  -- | Internal function, not exported to the user
+  newArrayInState :: (HasKind a, HasKind b) => Maybe String -> State -> IO (array a b)
 
 -- | Arrays implemented in terms of SMT-arrays: <http://smtlib.cs.uiowa.edu/theories-ArraysEx.shtml>
 --
@@ -467,19 +469,19 @@ instance (HasKind a, HasKind b) => Show (SArray a b) where
   show SArray{} = "SArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"
 
 instance SymArray SArray where
-  newArray_                                      = declNewSArray (\t -> "array_" ++ show t)
-  newArray n                                     = declNewSArray (const n)
+  newArray_                                      = ask >>= liftIO . newArrayInState Nothing
+  newArray n                                     = ask >>= liftIO . newArrayInState (Just n)
   readArray   (SArray arr) (SBV a)               = SBV (readSArr arr a)
   writeArray  (SArray arr) (SBV a)    (SBV b)    = SArray (writeSArr arr a b)
   mergeArrays (SBV t)      (SArray a) (SArray b) = SArray (mergeSArr t a b)
 
--- | Declare a new symbolic array, with a potential initial value
-declNewSArray :: forall a b. (HasKind a, HasKind b) => (Int -> String) -> Symbolic (SArray a b)
-declNewSArray mkNm = do st <- ask
-                        liftIO $ mapM_ (registerKind st) [aknd, bknd]
-                        SArray <$> newSArr (aknd, bknd) mkNm
- where aknd = kindOf (undefined :: a)
-       bknd = kindOf (undefined :: b)
+  newArrayInState :: forall a b. (HasKind a, HasKind b) => Maybe String -> State -> IO (SArray a b)
+  newArrayInState mbNm st = do mapM_ (registerKind st) [aknd, bknd]
+                               SArray <$> newSArr st (aknd, bknd) (mkNm mbNm)
+     where mkNm Nothing   t = "array_" ++ show t
+           mkNm (Just nm) _ = nm
+           aknd = kindOf (undefined :: a)
+           bknd = kindOf (undefined :: b)
 
 -- | Arrays implemented internally, without translating to SMT-Lib functions:
 --
@@ -510,16 +512,16 @@ instance (HasKind a, HasKind b) => Show (SFunArray a b) where
   show SFunArray{} = "SFunArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"
 
 instance SymArray SFunArray where
-  newArray_                                       = declNewSFunArray (\t -> "funArray_" ++ show t)
-  newArray n                                      = declNewSFunArray (const n)
+  newArray_                                       = ask >>= liftIO . newArrayInState Nothing
+  newArray n                                      = ask >>= liftIO . newArrayInState (Just n)
   readArray   (SFunArray arr) (SBV a)             = SBV (readSFunArr arr a)
   writeArray  (SFunArray arr) (SBV a) (SBV b)     = SFunArray (writeSFunArr arr a b)
   mergeArrays (SBV t) (SFunArray a) (SFunArray b) = SFunArray (mergeSFunArr t a b)
 
--- | Declare a new functional symbolic array.
-declNewSFunArray :: forall a b. (HasKind a, HasKind b) => (Int -> String) -> Symbolic (SFunArray a b)
-declNewSFunArray mkNm = do st <- ask
-                           liftIO $ mapM_ (registerKind st) [aknd, bknd]
-                           SFunArray <$> newSFunArr (aknd, bknd) mkNm
-  where aknd = kindOf (undefined :: a)
-        bknd = kindOf (undefined :: b)
+  newArrayInState :: forall a b. (HasKind a, HasKind b) => Maybe String -> State -> IO (SFunArray a b)
+  newArrayInState mbNm st = do mapM_ (registerKind st) [aknd, bknd]
+                               SFunArray <$> newSFunArr st (aknd, bknd) (mkNm mbNm)
+    where mkNm Nothing t   = "funArray_" ++ show t
+          mkNm (Just nm) _ = nm
+          aknd = kindOf (undefined :: a)
+          bknd = kindOf (undefined :: b)
