@@ -55,6 +55,7 @@ import qualified TestSuite.Optimization.Combined
 import qualified TestSuite.Optimization.ExtensionField
 import qualified TestSuite.Optimization.Quantified
 import qualified TestSuite.Optimization.Reals
+import qualified TestSuite.Optimization.NoOpt
 import qualified TestSuite.Overflows.Arithmetic
 import qualified TestSuite.Overflows.Casts
 import qualified TestSuite.Polynomials.Polynomials
@@ -184,6 +185,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Optimization.ExtensionField.tests
                , TestSuite.Optimization.Quantified.tests
                , TestSuite.Optimization.Reals.tests
+               , TestSuite.Optimization.NoOpt.tests
                , TestSuite.Overflows.Arithmetic.tests
                , TestSuite.Overflows.Casts.tests
                , TestSuite.Polynomials.Polynomials.tests
