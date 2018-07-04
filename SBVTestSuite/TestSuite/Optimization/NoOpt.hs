@@ -22,7 +22,7 @@ import Utils.SBVTestFramework
 -- Test suite
 tests :: TestTree
 tests =
-  testGroup "Optimization.NoOpt" $
+  testGroup "Optimization.NoOpt"
        [ goldenCapturedIO "noOpt1" $ \rf -> c rf $ optimizeWith z3{verbose=True, redirectVerbose=Just rf} Lexicographic (\x -> x .== (x::SWord8))
        , goldenCapturedIO "noOpt2" $ \rf -> c rf $ satWith      z3{verbose=True, redirectVerbose=Just rf}               (\x -> maximize "mx" (x::SWord8))
        ]
