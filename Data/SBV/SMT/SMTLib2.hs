@@ -169,18 +169,27 @@ cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs ui
 
         finalAssert
           | null foralls
-          = map (\a -> "(assert " ++ uncurry addAnnotations a ++ ")") assertions
+          =    map (\a -> "(assert "      ++ uncurry addAnnotations a ++ ")") hardAsserts
+            ++ map (\a -> "(assert-soft " ++ uncurry addAnnotations a ++ ")") softAsserts
           | not (null namedAsserts)
           = error $ intercalate "\n" [ "SBV: Constraints with attributes and quantifiers cannot be mixed!"
                                      , "   Quantified variables: " ++ unwords (map show foralls)
                                      , "   Named constraints   : " ++ intercalate ", " (map show namedAsserts)
                                      ]
+          | not (null softAsserts)
+          = error $ intercalate "\n" [ "SBV: Soft constraints and quantifiers cannot be mixed!"
+                                     , "   Quantified variables: " ++ unwords (map show foralls)
+                                     , "   Soft constraints    : " ++ intercalate ", " (map show softAsserts)
+                                     ]
           | True
           = [impAlign (letShift combined) ++ replicate noOfCloseParens ')']
-          where namedAsserts = [findName attrs | (attrs, _) <- assertions, not (null attrs)]
+          where namedAsserts = [findName attrs | (_, attrs, _) <- assertions, not (null attrs)]
                  where findName attrs = fromMaybe "<anonymous>" (listToMaybe [nm | (":named", nm) <- attrs])
 
-                combined = case map snd assertions of
+                hardAsserts = [(attr, v) | (False, attr, v) <- assertions]
+                softAsserts = [(attr, v) | (True,  attr, v) <- assertions]
+
+                combined = case map snd hardAsserts of
                              [x] -> x
                              xs  -> "(and " ++ unwords xs ++ ")"
 
@@ -203,13 +212,14 @@ cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs ui
         -- That is, we always assert all path constraints and path conditions AND
         --     -- negation of the output in a prove
         --     -- output itself in a sat
+        assertions :: [(Bool, [(String, String)], String)]
         assertions
-           | null finals = [([], cvtSW skolemMap trueSW)]
+           | null finals = [(False, [], cvtSW skolemMap trueSW)]
            | True        = finals
 
-           where finals  = cstrs' ++ maybe [] (\r -> [([], r)]) mbO
+           where finals  = cstrs' ++ maybe [] (\r -> [(False, [], r)]) mbO
 
-                 cstrs' =  [(attrs, c') | (attrs, c) <- cstrs, Just c' <- [pos c]]
+                 cstrs' =  [(isSoft, attrs, c') | (isSoft, attrs, c) <- cstrs, Just c' <- [pos c]]
 
                  mbO | isSat = pos out
                      | True  = neg out

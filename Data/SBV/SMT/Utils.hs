@@ -46,7 +46,7 @@ type SMTLibConverter a =  Set.Set Kind                                  -- ^ Kin
                        -> [(String, SBVType)]                           -- ^ uninterpreted functions/constants
                        -> [(String, [String])]                          -- ^ user given axioms
                        -> SBVPgm                                        -- ^ assignments
-                       -> [([(String, String)], SW)]                    -- ^ extra constraints
+                       -> [(Bool, [(String, String)], SW)]              -- ^ extra constraints
                        -> SW                                            -- ^ output variable
                        -> SMTConfig                                     -- ^ configuration
                        -> a

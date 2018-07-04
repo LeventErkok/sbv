@@ -41,6 +41,13 @@
     of this function. Also add extra checks to warn the user if optimization
     constraints are present in a regular sat/prove call.
 
+  * Implement 'softConstrain': Similar to 'constrain', except the solver is
+    free to leave it unsatisfied (i.e., leave it false) if necessary to
+    find a satisfying solution. Useful in modeling conditions that are
+    "nice-to-have" but not "required." Note that this is similar to
+    'assertWithPenalty', except it works in non-optimization contexts.
+    See "Documentation.SBV.Examples.Misc.SoftConstrain" for a simple example.
+
 ### Version 7.9, 2018-06-15
  
   * Add support for bit-vector arithmetic underflow/overflow detection. The new

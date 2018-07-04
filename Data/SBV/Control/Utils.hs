@@ -82,9 +82,10 @@ import GHC.Stack
 
 -- | 'Query' as a 'SolverContext'.
 instance SolverContext Query where
-   constrain                 = addQueryConstraint []
-   namedConstraint nm        = addQueryConstraint [(":named", nm)]
-   constrainWithAttribute    = addQueryConstraint
+   constrain                 = addQueryConstraint False []
+   softConstrain             = addQueryConstraint True  []
+   namedConstraint nm        = addQueryConstraint False [(":named", nm)]
+   constrainWithAttribute    = addQueryConstraint False
 
    setOption o
      | isStartModeOption o = error $ unlines [ ""
@@ -93,12 +94,14 @@ instance SolverContext Query where
                                              ]
      | True                = send True $ setSMTOption o
 
--- | Adding a constraint, possibly with attributes. Only used internally.
+-- | Adding a constraint, possibly with attributes and possibly soft. Only used internally.
 -- Use 'constrain' and 'namedConstraint' from user programs.
-addQueryConstraint :: [(String, String)] -> SBool -> Query ()
-addQueryConstraint atts b = do sw <- inNewContext (\st -> do mapM_ (registerLabel st) [nm | (":named", nm) <- atts]
-                                                             sbvToSW st b)
-                               send True $ "(assert " ++ addAnnotations atts (show sw)  ++ ")"
+addQueryConstraint :: Bool -> [(String, String)] -> SBool -> Query ()
+addQueryConstraint isSoft atts b = do sw <- inNewContext (\st -> do mapM_ (registerLabel st) [nm | (":named", nm) <- atts]
+                                                                    sbvToSW st b)
+                                      send True $ "(" ++ asrt ++ " " ++ addAnnotations atts (show sw)  ++ ")"
+   where asrt | isSoft = "assert-soft"
+              | True   = "assert"
 
 -- | Get the current configuration
 getConfig :: Query SMTConfig

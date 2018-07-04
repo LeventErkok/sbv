@@ -204,7 +204,7 @@ module Data.SBV (
   -- $constrainIntro
   -- ** General constraints
   -- $generalConstraints
-  , constrain
+  , constrain, softConstrain
 
   -- ** Constraint Vacuity
   -- $constraintVacuity

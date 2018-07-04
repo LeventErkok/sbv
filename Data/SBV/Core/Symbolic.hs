@@ -484,7 +484,7 @@ data Result = Result { reskinds       :: Set.Set Kind                           
                      , resUIConsts    :: [(String, SBVType)]                              -- ^ uninterpreted constants
                      , resAxioms      :: [(String, [String])]                             -- ^ axioms
                      , resAsgns       :: SBVPgm                                           -- ^ assignments
-                     , resConstraints :: [([(String, String)], SW)]                       -- ^ additional constraints (boolean)
+                     , resConstraints :: [(Bool, [(String, String)], SW)]                       -- ^ additional constraints (boolean)
                      , resAssertions  :: [(String, Maybe CallStack, SW)]                  -- ^ assertions
                      , resOutputs     :: [SW]                                             -- ^ outputs
                      }
@@ -554,9 +554,12 @@ instance Show Result where
 
           shax (nm, ss) = "  -- user defined axiom: " ++ nm ++ "\n  " ++ intercalate "\n  " ss
 
-          shCstr ([], c)               = show c
-          shCstr ([(":named", nm)], c) = nm ++ ": " ++ show c
-          shCstr (attrs, c)            = show c ++ " (attributes: " ++ show attrs ++ ")"
+          shCstr (isSoft, [], c)               = soft isSoft ++ show c
+          shCstr (isSoft, [(":named", nm)], c) = soft isSoft ++ nm ++ ": " ++ show c
+          shCstr (isSoft, attrs, c)            = soft isSoft ++ show c ++ " (attributes: " ++ show attrs ++ ")"
+
+          soft True  = "[SOFT] "
+          soft False = ""
 
           shAssert (nm, stk, p) = "  -- assertion: " ++ nm ++ " " ++ maybe "[No location]"
 #if MIN_VERSION_base(4,9,0)
@@ -705,7 +708,7 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rUsedKinds   :: IORef KindSet
                     , rUsedLbls    :: IORef (Set.Set String)
                     , rinps        :: IORef ([(Quantifier, NamedSymVar)], [NamedSymVar]) -- User defined, and internal existential
-                    , rConstraints :: IORef [([(String, String)], SW)]
+                    , rConstraints :: IORef [(Bool, [(String, String)], SW)]
                     , routs        :: IORef [SW]
                     , rtblMap      :: IORef TableMap
                     , spgm         :: IORef SBVPgm
@@ -1181,21 +1184,23 @@ addNewSMTOption o =  do st <- ask
                         liftIO $ modifyState st rSMTOptions (o:) (return ())
 
 -- | Handling constraints
-imposeConstraint :: [(String, String)] -> SVal -> Symbolic ()
-imposeConstraint attrs c = do st <- ask
-                              rm <- liftIO $ readIORef (runMode st)
-                              case rm of
-                                CodeGen -> error "SBV: constraints are not allowed in code-generation"
-                                _       -> liftIO $ do mapM_ (registerLabel st) [nm | (":named",  nm) <- attrs]
-                                                       internalConstraint st attrs c
+imposeConstraint :: Bool -> [(String, String)] -> SVal -> Symbolic ()
+imposeConstraint isSoft attrs c = do st <- ask
+                                     rm <- liftIO $ readIORef (runMode st)
+                                     case rm of
+                                       CodeGen -> error "SBV: constraints are not allowed in code-generation"
+                                       _       -> liftIO $ do mapM_ (registerLabel st) [nm | (":named",  nm) <- attrs]
+                                                              internalConstraint st isSoft attrs c
 
 -- | Require a boolean condition to be true in the state. Only used for internal purposes.
-internalConstraint :: State -> [(String, String)] -> SVal -> IO ()
-internalConstraint st attrs b = do v <- svToSW st b
-                                   modifyState st rConstraints ((attrs, v):)
-                                             $ noInteractive [ "Adding an internal constraint:"
-                                                             , "  Named: " ++ fromMaybe "<unnamed>" (listToMaybe [nm | (":named", nm) <- attrs])
-                                                             ]
+internalConstraint :: State -> Bool -> [(String, String)] -> SVal -> IO ()
+internalConstraint st isSoft attrs b = do v <- svToSW st b
+                                          modifyState st rConstraints ((isSoft, attrs, v):)
+                                                    $ noInteractive [ "Adding an internal " ++ soft ++ "constraint:"
+                                                                    , "  Named: " ++ fromMaybe "<unnamed>" (listToMaybe [nm | (":named", nm) <- attrs])
+                                                                    ]
+    where soft | isSoft = "soft-"
+               | True   = ""
 
 -- | Add an optimization goal
 addSValOptGoal :: Objective SVal -> Symbolic ()

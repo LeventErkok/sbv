@@ -46,7 +46,7 @@ genTest n m = gen 0 []
                        gen (i+1) (t:sofar)
         tc = do (_, Result {resTraces=tvals, resConsts=cs, resConstraints=cstrs, resOutputs=os}) <- runSymbolic Concrete (m >>= output)
                 let cval = fromMaybe (error "Cannot generate tests in the presence of uninterpeted constants!") . (`lookup` cs)
-                    cond = all (cwToBool . cval . snd) cstrs
+                    cond = and [cwToBool (cval v) | (False, _, v) <- cstrs] -- Only pick-up "hard" constraints, as indicated by False in the fist component
                 if cond
                    then return (map snd tvals, map cval os)
                    else tc   -- try again, with the same set of constraints
