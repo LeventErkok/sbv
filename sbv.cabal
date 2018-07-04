@@ -86,6 +86,7 @@ Library
                   , Documentation.SBV.Examples.Misc.Auxiliary
                   , Documentation.SBV.Examples.Misc.NoDiv0
                   , Documentation.SBV.Examples.Misc.Polynomials
+                  , Documentation.SBV.Examples.Misc.SoftConstrain
                   , Documentation.SBV.Examples.Misc.Word4
                   , Documentation.SBV.Examples.Optimization.LinearOpt
                   , Documentation.SBV.Examples.Optimization.Production
