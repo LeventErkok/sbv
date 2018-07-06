@@ -432,8 +432,6 @@ instance (Random a, SymWord a) => Random (SBV a) where
 -- As a rule of thumb, try 'SArray' first. These should generate compact code. However, if
 -- the backend solver has hard time solving the generated problems, switch to
 -- 'SFunArray'. If you still have issues, please report so we can see what the problem might be!
---
--- Minimal complete definition: All methods are required, no defaults.
 class SymArray array where
   -- | Create a new anonymous array
   newArray_      :: (HasKind a, HasKind b) => Symbolic (array a b)
@@ -449,6 +447,10 @@ class SymArray array where
   mergeArrays    :: SymWord b => SBV Bool -> array a b -> array a b -> array a b
   -- | Internal function, not exported to the user
   newArrayInState :: (HasKind a, HasKind b) => Maybe String -> State -> IO (array a b)
+
+  {-# MINIMAL readArray, writeArray, mergeArrays, newArrayInState #-}
+  newArray_   = ask >>= liftIO . newArrayInState Nothing
+  newArray nm = ask >>= liftIO . newArrayInState (Just nm)
 
 -- | Arrays implemented in terms of SMT-arrays: <http://smtlib.cs.uiowa.edu/theories-ArraysEx.shtml>
 --
@@ -469,8 +471,6 @@ instance (HasKind a, HasKind b) => Show (SArray a b) where
   show SArray{} = "SArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"
 
 instance SymArray SArray where
-  newArray_                                      = ask >>= liftIO . newArrayInState Nothing
-  newArray n                                     = ask >>= liftIO . newArrayInState (Just n)
   readArray   (SArray arr) (SBV a)               = SBV (readSArr arr a)
   writeArray  (SArray arr) (SBV a)    (SBV b)    = SArray (writeSArr arr a b)
   mergeArrays (SBV t)      (SArray a) (SArray b) = SArray (mergeSArr t a b)
@@ -512,8 +512,6 @@ instance (HasKind a, HasKind b) => Show (SFunArray a b) where
   show SFunArray{} = "SFunArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"
 
 instance SymArray SFunArray where
-  newArray_                                       = ask >>= liftIO . newArrayInState Nothing
-  newArray n                                      = ask >>= liftIO . newArrayInState (Just n)
   readArray   (SFunArray arr) (SBV a)             = SBV (readSFunArr arr a)
   writeArray  (SFunArray arr) (SBV a) (SBV b)     = SFunArray (writeSFunArr arr a b)
   mergeArrays (SBV t) (SFunArray a) (SFunArray b) = SFunArray (mergeSFunArr t a b)
