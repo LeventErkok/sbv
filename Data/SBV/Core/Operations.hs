@@ -876,7 +876,7 @@ swToSVal sw@(SW k _) = SVal k $ Right $ cache $ const $ return sw
 svEqualWithConsts :: (SVal, Maybe CW) -> SVal -> SVal
 svEqualWithConsts (_, Just cw) (SVal _ (Left cw')) = if cw == cw' then svTrue else svFalse
 svEqualWithConsts (v1, _)      v2                  = v1 `svEqual` v2
-   
+
 -- | Read the array element at @a@. For efficiency purposes, we create a memo-table
 -- as we go along, as otherwise we suffer significant performance penalties. See:
 -- <https://github.com/LeventErkok/sbv/issues/402> and
