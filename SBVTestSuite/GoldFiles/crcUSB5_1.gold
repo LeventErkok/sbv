@@ -108,7 +108,7 @@ SWord16 crcUSB5(const SWord16 msg)
   const SBool   s19 = false != s18;
   const SBool   s20 = (SBool) ((s0 >> 1) & 1);
   const SBool   s21 = false != s20;
-  const SBool   s22 = (SBool) ((s0 >> 0) & 1);
+  const SBool   s22 = (SBool) (s0 & 1);
   const SBool   s23 = false != s22;
   const SBool   s24 = !s9;
   const SBool   s25 = s3 ? s24 : s9;
