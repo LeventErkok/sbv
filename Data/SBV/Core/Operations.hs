@@ -896,8 +896,16 @@ readSFunArr (SFunArr (ak, bk) f) a
                     Just (uninitializedRead, rCache) -> do
                         memoTable  <- R.readIORef rCache
                         SW _ (NodeId ni) <- svToSW st a
+
+                        -- If we hit the cache, return the result right away. If we miss, we need to
+                        -- walk through each element to "merge" all possible reads as we do not know
+                        -- whether the symbolic access may end up the same as one of the earlier ones
+                        -- in the cache.
                         case ni `IMap.lookup` memoTable of
-                          Nothing -> do let find :: [(Int, SW)] -> SVal
+                          Just v  -> return v  -- cache hit!
+
+                          Nothing -> -- cache miss; walk down the cache items to form the chain of reads:
+                                     do let find :: [(Int, SW)] -> SVal
                                             find []             = uninitializedRead a
                                             find ((i, v) : ivs) = svIte (svEqualWithConsts (nodeIdToSVal ak i, i `Map.lookup` consts) a) (swToSVal v) (find ivs)
 
@@ -906,7 +914,6 @@ readSFunArr (SFunArr (ak, bk) f) a
                                         finalSW <- svToSW st finalValue
                                         R.modifyIORef' rCache (IMap.insert ni finalSW)
                                         return finalSW
-                          Just v  -> return v
 
 -- | Update the element at @a@ to be @b@
 writeSFunArr :: SFunArr -> SVal -> SVal -> SFunArr
@@ -932,22 +939,23 @@ writeSFunArr (SFunArr (ak, bk) f) a b
                        --
                        --    (1) We hit the cache, and old value is the same as new: No write necessary, just return the array
                        --    (2) We hit the cache, values are different. Simply insert, overriding the old-memo table location
-                       --    (3) We miss the cache: Now we have to
+                       --    (3) We miss the cache: Now we have to walk through all accesses and update the memo table accordingly
                        --
                        -- Below, we determine which case we're in and then insert the value at the end and continue
                        cont <- case ni `IMap.lookup` memoTable of
-                                 Just oldVal
+                                 Just oldVal                    -- Cache hit
                                    | val == oldVal -> return $ Left fArrayIndex   -- Case 1
                                    | True          -> return $ Right memoTable    -- Case 2
 
-                                 Nothing           -> do let walk :: [(Int, SW)] -> [(Int, SW)] -> IO [(Int, SW)]
-                                                             walk []           sofar = return $ reverse sofar
-                                                             walk ((i, s):iss) sofar = modify i s >>= \s' -> walk iss ((i, s') : sofar)
+                                 Nothing           -> do        -- Cache miss
+                                        let walk :: [(Int, SW)] -> [(Int, SW)] -> IO [(Int, SW)]
+                                            walk []           sofar = return $ reverse sofar
+                                            walk ((i, s):iss) sofar = modify i s >>= \s' -> walk iss ((i, s') : sofar)
 
-                                                             modify :: Int -> SW -> IO SW
-                                                             modify i s = svToSW st $ svIte (svEqualWithConsts (nodeIdToSVal ak i, i `Map.lookup` consts) a) b (swToSVal s)
+                                            modify :: Int -> SW -> IO SW
+                                            modify i s = svToSW st $ svIte (svEqualWithConsts (nodeIdToSVal ak i, i `Map.lookup` consts) a) b (swToSVal s)
 
-                                                         Right . IMap.fromAscList <$> walk (IMap.toAscList memoTable) []
+                                        Right . IMap.fromAscList <$> walk (IMap.toAscList memoTable) []
 
                        case cont of
                          Left j   -> return j
@@ -1009,7 +1017,9 @@ mergeSFunArr t array1@(SFunArr ainfo@(sourceKind, targetKind) a) array2@(SFunArr
                                    mergedMap  <- merge (IMap.toAscList aMemo) (IMap.toAscList bMemo) IMap.empty
                                    memoMerged <- R.newIORef mergedMap
 
-                                   -- Craft a new uninitializer
+                                   -- Craft a new uninitializer. Note that we do *not* create a new initializer here,
+                                   -- but simply merge the two initializers which will inherit their original unread
+                                   -- references should the test be a constant.
                                    let mkUninitialized i = svIte t (aUi i) (bUi i)
 
                                    -- Add it to our collection:
