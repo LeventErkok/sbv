@@ -83,6 +83,13 @@ mergeSem3 b m (a1, v1) (a2, v2) = readArray (ite b m1 m2) a1 .== ite b (readArra
   where m1 = writeArray m a1 v1
         m2 = writeArray m a2 v2
 
+-- | Another merge check
+mergeSem4 :: (SymArray m, Mergeable (Memory m)) => SBool -> Memory m -> Address -> Address -> SBool
+mergeSem4 b m a1 a2 = readArray m3 a2 .== ite b (readArray m a2) 3
+  where m1 = writeArray m a1 1
+        m2 = writeArray (writeArray m a1 2) a2 3
+        m3 = ite b m1 m2
+
 tests :: TestTree
 tests =
   testGroup "Arrays.Memory"
@@ -119,4 +126,7 @@ tests =
 
     , testCase "mergeSem3_SArray"        $ assertIsThm   (mergeSem3 :: SBool -> Memory SArray    -> (Address, Value) -> (Address, Value) -> SBool)
     , testCase "mergeSem3_SFunArray"     $ assertIsThm   (mergeSem3 :: SBool -> Memory SFunArray -> (Address, Value) -> (Address, Value) -> SBool)
+
+    , testCase "mergeSem4_SArray"        $ assertIsntThm (mergeSem4 :: SBool -> Memory SArray    -> Address -> Address -> SBool)
+    , testCase "mergeSem4_SFunArray"     $ assertIsntThm (mergeSem4 :: SBool -> Memory SFunArray -> Address -> Address -> SBool)
     ]
