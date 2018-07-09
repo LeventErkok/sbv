@@ -4,20 +4,16 @@ environment:
       SBV_TEST_ENVIRONMENT: win
       SBV_HEAVYTEST_PERCENTAGE:  0
       TASTY_HIDE_SUCCESSES: True
-      STACK_ROOT: c:\sr
 
 before_build:
 - git clone -q https://github.com/Z3Prover/bin.git Z3Prover
 - 7z e C:\projects\sbv\Z3Prover\nightly\z3*x64*win*zip -oc:\projects\sbv\z3_downloaded -r
 - set PATH=C:\projects\sbv\z3_downloaded;%PATH%
 - z3 --version
-- curl -ostack.zip -L --insecure http://www.stackage.org/stack/windows-i386
-- 7z x stack.zip stack.exe
-- stack setup --install-ghc > nul
-- stack exec which ghc
-- stack install cabal-install
-# The following is at best fragile. What happens if ghc version gets updated?
-- set PATH=C:\Users\appveyor\AppData\Local\Programs\stack\i386-windows\ghc-8.2.2\bin;C:\Users\appveyor\AppData\Roaming\local\bin;%PATH%
+- choco install -y cabal
+- choco install -y ghc --version 8.4.3
+- refreshenv
+- ghc --version
 
 skip_tags: true
 
