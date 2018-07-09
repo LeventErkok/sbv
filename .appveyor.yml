@@ -11,7 +11,7 @@ before_build:
 - set PATH=C:\projects\sbv\z3_downloaded;%PATH%
 - z3 --version
 - choco install -y cabal
-- choco install -y ghc --version 8.4.3
+- choco install -y ghc --version 8.4.2
 - refreshenv
 - ghc --version
 
