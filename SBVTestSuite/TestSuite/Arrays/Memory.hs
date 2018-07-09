@@ -64,8 +64,24 @@ mergeEq :: (SymArray m, Mergeable (Memory m), EqSymbolic (Memory m)) => SBool ->
 mergeEq b m1 m2 = ite b m1 m2 .== ite (bnot b) m2 m1
 
 -- | Merge, using extensionality to check result
-mergeExt :: (SymArray m, Mergeable (Memory m)) => SBool -> Memory m  -> Memory m -> Address -> SBool
+mergeExt :: (SymArray m, Mergeable (Memory m)) => SBool -> Memory m -> Memory m -> Address -> SBool
 mergeExt b m1 m2 i = readArray (ite b m1 m2) i .== readArray (ite (bnot b) m2 m1) i
+
+-- | Merge semantics
+mergeSem :: (SymArray m, Mergeable (Memory m)) => SBool -> Memory m -> Memory m -> Address -> SBool
+mergeSem b m1 m2 i = readArray (ite b m1 m2) i .== ite b (readArray m1 i) (readArray m2 i)
+
+-- | Merge semantics 2, but make sure to populate the array so merge does something interesting
+mergeSem2 :: (SymArray m, Mergeable (Memory m)) => SBool -> Memory m -> Memory m -> (Address, Value) -> (Address, Value) -> Address -> SBool
+mergeSem2 b m1 m2 (a1, v1) (a2, v2) i = readArray (ite b m1' m2') i .== ite b (readArray m1' i) (readArray m2' i)
+   where m1' = writeArray (writeArray m1 a1 v1) a2 v2
+         m2' = writeArray (writeArray m2 a1 v1) a2 v2
+
+-- | Merge is done correctly:
+mergeSem3 :: (SymArray m, Mergeable (Memory m)) => SBool -> Memory m -> (Address, Value) -> (Address, Value) -> SBool
+mergeSem3 b m (a1, v1) (a2, v2) = readArray (ite b m1 m2) a1 .== ite b (readArray m1 a1) (readArray m2 a1)
+  where m1 = writeArray m a1 v1
+        m2 = writeArray m a2 v2
 
 tests :: TestTree
 tests =
@@ -94,4 +110,13 @@ tests =
 
     , testCase "mergeExt_SArray"         $ assertIsThm   (mergeExt :: SBool -> Memory SArray    -> Memory SArray    -> Address -> SBool)
     , testCase "mergeExt_SFunArray"      $ assertIsThm   (mergeExt :: SBool -> Memory SFunArray -> Memory SFunArray -> Address -> SBool)
+
+    , testCase "mergeSem_SArray"         $ assertIsThm   (mergeSem :: SBool -> Memory SArray    -> Memory SArray    -> Address -> SBool)
+    , testCase "mergeSem_SFunArray"      $ assertIsThm   (mergeSem :: SBool -> Memory SFunArray -> Memory SFunArray -> Address -> SBool)
+
+    , testCase "mergeSem2_SArray"        $ assertIsThm   (mergeSem2 :: SBool -> Memory SArray    -> Memory SArray    -> (Address, Value) -> (Address, Value) -> Address -> SBool)
+    , testCase "mergeSem2_SFunArray"     $ assertIsThm   (mergeSem2 :: SBool -> Memory SFunArray -> Memory SFunArray -> (Address, Value) -> (Address, Value) -> Address -> SBool)
+
+    , testCase "mergeSem3_SArray"        $ assertIsThm   (mergeSem3 :: SBool -> Memory SArray    -> (Address, Value) -> (Address, Value) -> SBool)
+    , testCase "mergeSem3_SFunArray"     $ assertIsThm   (mergeSem3 :: SBool -> Memory SFunArray -> (Address, Value) -> (Address, Value) -> SBool)
     ]
