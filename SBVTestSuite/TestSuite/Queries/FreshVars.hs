@@ -72,8 +72,8 @@ fv = do a <- sInteger "a"
                    constrain $ vInteger .== 12
                    constrain $ vBinOp   .== literal Plus
 
-                   vSArray  :: SArray    Integer Integer <- freshArray "vArray"
-                   vFArray  :: SFunArray Bool    Char    <- freshArray "vArray"
+                   vSArray  :: SArray    Integer Integer <- freshArray "vSArray"
+                   vFArray  :: SFunArray Bool    Char    <- freshArray "vFArray"
                    vi1                                   <- freshVar "i1"
                    vi2                                   <- freshVar "i2"
                    constrain $ readArray vSArray vi1 .== 2
