@@ -23,12 +23,12 @@ import Data.SBV.Tools.Overflow
 --   low  = 2147483583 :: Int32
 --   high = 2147483647 :: Int32
 --
--- We can see the same, by checking that the result is correctly computed or not:
+-- Indeed:
 --
--- >>> checkCorrectMidValue midPointBroken
--- Falsifiable. Counter-example:
---   low  = 1676112243 :: Int32
---   high = 2014875276 :: Int32
+-- >>> (2147483583 + 2147483647) `div` (2::Int32)
+-- -33
+--
+-- giving us a negative mid-point value!
 midPointBroken :: SInt32 -> SInt32 -> SInt32
 midPointBroken low high = (low +! high) /! 2
 
