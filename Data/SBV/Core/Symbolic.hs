@@ -901,19 +901,21 @@ registerKind st k
                                               $ modifyIncState st rNewKinds (Set.insert k)
 
 -- | Register a new label with the system, making sure they are unique and have no '|'s in them
-registerLabel :: State -> String -> IO ()
-registerLabel st nm
+registerLabel :: String -> State -> String -> IO ()
+registerLabel whence st nm
   | map toLower nm `elem` smtLibReservedNames
-  = error $ "SBV: " ++ show nm ++ " is a reserved string; please use a different name."
+  = err "is a reserved string; please use a different name."
   | '|' `elem` nm
-  = error $ "SBV: " ++ show nm ++ " contains the character `|', which is not allowed!"
+  = err "contains the character `|', which is not allowed!"
   | '\\' `elem` nm
-  = error $ "SBV: " ++ show nm ++ " contains the character `\', which is not allowed!"
+  = err "contains the character `\', which is not allowed!"
   | True
   = do old <- readIORef $ rUsedLbls st
        if nm `Set.member` old
-          then error $ "SBV: " ++ show nm ++ " is used as a label multiple times. Please do not use duplicate names!"
+          then err "is used multiple times. Please do not use duplicate names!"
           else modifyState st rUsedLbls (Set.insert nm) (return ())
+
+  where err w = error $ "SBV (" ++ whence ++ "): " ++ show nm ++ " " ++ w
 
 -- | Create a new constant; hash-cons as necessary
 newConst :: State -> CW -> IO SW
@@ -1189,7 +1191,7 @@ imposeConstraint isSoft attrs c = do st <- ask
                                      rm <- liftIO $ readIORef (runMode st)
                                      case rm of
                                        CodeGen -> error "SBV: constraints are not allowed in code-generation"
-                                       _       -> liftIO $ do mapM_ (registerLabel st) [nm | (":named",  nm) <- attrs]
+                                       _       -> liftIO $ do mapM_ (registerLabel "Constraint" st) [nm | (":named",  nm) <- attrs]
                                                               internalConstraint st isSoft attrs c
 
 -- | Require a boolean condition to be true in the state. Only used for internal purposes.

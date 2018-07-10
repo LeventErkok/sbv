@@ -851,6 +851,8 @@ newSArr st ainfo mkNm = do
         nm  = mkNm (unArrayIndex i)
         upd = IMap.insert (unArrayIndex i) (nm, ainfo, ArrayFree)
 
+    registerLabel "SArray declaration" st nm
+
     modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
     return $ SArr ainfo $ cache $ const $ return i
 
@@ -1059,11 +1061,13 @@ newSFunArr :: State -> (Kind, Kind) -> (Int -> String) -> IO SFunArr
 newSFunArr st (ak, bk) mkNm = do fArrMap <- R.readIORef (rFArrayMap st)
                                  memoTable <- R.newIORef IMap.empty
 
-                                 let j                 = FArrayIndex $ IMap.size fArrMap
-                                     mkUninitialized i = svUninterpreted bk (mkNm (unFArrayIndex j) ++ "_uninitializedRead") Nothing [i]
+                                 let j  = FArrayIndex $ IMap.size fArrMap
+                                     nm = mkNm (unFArrayIndex j)
+                                     mkUninitialized i = svUninterpreted bk (nm ++ "_uninitializedRead") Nothing [i]
 
                                      upd = IMap.insert (unFArrayIndex j) (mkUninitialized, memoTable)
 
+                                 registerLabel "SFunArray declaration" st nm
                                  j `seq` modifyState st rFArrayMap upd (return ())
 
                                  return $ SFunArr (ak, bk) $ cache $ const $ return j

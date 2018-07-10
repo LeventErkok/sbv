@@ -97,7 +97,7 @@ instance SolverContext Query where
 -- | Adding a constraint, possibly with attributes and possibly soft. Only used internally.
 -- Use 'constrain' and 'namedConstraint' from user programs.
 addQueryConstraint :: Bool -> [(String, String)] -> SBool -> Query ()
-addQueryConstraint isSoft atts b = do sw <- inNewContext (\st -> do mapM_ (registerLabel st) [nm | (":named", nm) <- atts]
+addQueryConstraint isSoft atts b = do sw <- inNewContext (\st -> do mapM_ (registerLabel "Constraint" st) [nm | (":named", nm) <- atts]
                                                                     sbvToSW st b)
                                       send True $ "(" ++ asrt ++ " " ++ addAnnotations atts (show sw)  ++ ")"
    where asrt | isSoft = "assert-soft"
