@@ -22,8 +22,7 @@ module Documentation.SBV.Examples.Puzzles.U2Bridge where
 import Control.Monad       (unless)
 import Control.Monad.State (State, runState, put, get, gets, modify, evalState)
 
-import Data.List(sortBy)
-import Data.Ord(comparing)
+import Data.List(sortOn)
 
 import GHC.Generics (Generic)
 
@@ -254,7 +253,7 @@ solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ 
         -- same order and thus not mess up our test suite if the
         -- solver decides to return them in the alternate order
         rearrange :: AllSatResult -> AllSatResult
-        rearrange (AllSatResult (b1, b2, ms)) = AllSatResult (b1, b2, sortBy (comparing (show . SatResult)) ms)
+        rearrange (AllSatResult (b1, b2, ms)) = AllSatResult (b1, b2, sortOn (show . SatResult) ms)
 
 -- | Solve the U2-bridge crossing puzzle, starting by testing solutions with
 -- increasing number of steps, until we find one. We have:
