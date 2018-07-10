@@ -13,6 +13,9 @@ module TestSuite.Puzzles.U2Bridge(tests) where
 
 import Documentation.SBV.Examples.Puzzles.U2Bridge
 
+import Data.List(sortBy)
+import Data.Ord(comparing)
+
 import Utils.SBVTestFramework
 
 -- Test suite
@@ -28,4 +31,5 @@ tests =
     ]
  where act     = do b <- exists_; p1 <- exists_; p2 <- exists_; return (b, p1, p2)
        count n = numberOfModels $ isValid `fmap` mapM (const act) [1..(n::Int)]
-       slv n   = sat $ isValid `fmap` mapM (const act) [1..(n::Int)]
+       slv n   = rearrange `fmap` allSat (isValid `fmap` mapM (const act) [1..(n::Int)])
+       rearrange (AllSatResult (b1, b2, ms)) = AllSatResult (b1, b2, sortBy (comparing (show . SatResult)) ms)

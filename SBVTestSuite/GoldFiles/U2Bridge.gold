@@ -1,4 +1,20 @@
-Satisfiable. Model:
+Solution #1:
+  s0  = False :: Bool
+  s1  =  Edge :: U2Member
+  s2  =  Bono :: U2Member
+  s3  =  True :: Bool
+  s4  =  Bono :: U2Member
+  s5  =  Bono :: U2Member
+  s6  = False :: Bool
+  s7  = Larry :: U2Member
+  s8  =  Adam :: U2Member
+  s9  =  True :: Bool
+  s10 =  Edge :: U2Member
+  s11 =  Bono :: U2Member
+  s12 = False :: Bool
+  s13 =  Edge :: U2Member
+  s14 =  Bono :: U2Member
+Solution #2:
   s0  = False :: Bool
   s1  =  Edge :: U2Member
   s2  =  Bono :: U2Member
@@ -14,3 +30,4 @@ Satisfiable. Model:
   s12 = False :: Bool
   s13 =  Edge :: U2Member
   s14 =  Bono :: U2Member
+Found 2 different solutions.
