@@ -49,7 +49,7 @@ module Data.SBV.Core.Symbolic
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
-  , Query(..), QueryState(..)
+  , Query(..), QueryState(..), QueryContext(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
   , outputSVal
   ) where
@@ -1478,6 +1478,10 @@ data SMTSolver = SMTSolver {
        , engine         :: SMTEngine             -- ^ The solver engine, responsible for interpreting solver output
        , capabilities   :: SolverCapabilities    -- ^ Various capabilities of the solver
        }
+
+-- | Query execution context
+data QueryContext = QueryInternal       -- ^ Triggered from inside SBV
+                  | QueryExternal       -- ^ Triggered from user code
 
 {-# ANN type FPOp ("HLint: ignore Use camelCase" :: String) #-}
 {-# ANN type PBOp ("HLint: ignore Use camelCase" :: String) #-}

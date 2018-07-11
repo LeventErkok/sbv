@@ -509,7 +509,7 @@ runSMTWith cfg a = fst <$> runSymbolic (SMTMode ISetup True cfg) a
 runWithQuery :: Provable a => Bool -> Query b -> SMTConfig -> a -> IO b
 runWithQuery isSAT q cfg a = fst <$> runSymbolic (SMTMode ISetup isSAT cfg) comp
   where comp =  do _ <- (if isSAT then forSome_ else forAll_) a >>= output
-                   Control.query q
+                   Control.executeQuery QueryInternal q
 
 -- | Check if a safe-call was safe or not, turning a 'SafeResult' to a Bool.
 isSafe :: SafeResult -> Bool

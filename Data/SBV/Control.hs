@@ -74,97 +74,15 @@ module Data.SBV.Control (
      , SMTOption(..)
      ) where
 
-import Data.SBV.Core.Data     (SMTProblem(..), SMTSolver(..), SMTConfig(..))
-import Data.SBV.Core.Symbolic ( Query, IStage(..), SBVRunMode(..), Symbolic, Query(..), rSMTOptions
-                              , extractSymbolicSimulationState, solverSetOptions, runMode, isRunIStage
-                              )
+import Data.SBV.Core.Data     (SMTConfig(..))
+import Data.SBV.Core.Symbolic (Query, Symbolic, Query(..), QueryContext(..))
 
 import Data.SBV.Control.Query
-import Data.SBV.Control.Utils (runProofOn, SMTValue(..), queryDebug)
-
-import Data.IORef (readIORef, writeIORef)
-
-import qualified Control.Monad.Reader as R (ask)
-import Control.Monad.Trans  (liftIO)
-import Control.Monad.State  (evalStateT)
+import Data.SBV.Control.Utils (SMTValue(..), queryDebug, executeQuery)
 
 -- | Run a custom query
 query :: Query a -> Symbolic a
-query (Query userQuery) = do
-     st <- R.ask
-     rm <- liftIO $ readIORef (runMode st)
-     case rm of
-        -- Transitioning from setup
-        SMTMode stage isSAT cfg | not (isRunIStage stage) -> liftIO $ do
-
-                                                let backend = engine (solver cfg)
-
-                                                res     <- extractSymbolicSimulationState st
-                                                setOpts <- reverse <$> readIORef (rSMTOptions st)
-
-                                                let SMTProblem{smtLibPgm} = runProofOn rm [] res
-                                                    cfg' = cfg { solverSetOptions = solverSetOptions cfg ++ setOpts }
-                                                    pgm  = smtLibPgm cfg'
-
-                                                writeIORef (runMode st) $ SMTMode IRun isSAT cfg
-
-                                                backend cfg' st (show pgm) $ evalStateT userQuery
-
-        -- Already in a query, in theory we can just continue, but that causes use-case issues
-        -- so we reject it. TODO: Review if we should actually support this. The issue arises with
-        -- expressions like this:
-        --
-        -- In the following t0's output doesn't get recorded, as the output call is too late when we get
-        -- here. (The output field isn't "incremental.") So, t0/t1 behave differently!
-        --
-        --   t0 = satWith z3{verbose=True, transcript=Just "t.smt2"} $ query (return (false::SBool))
-        --   t1 = satWith z3{verbose=True, transcript=Just "t.smt2"} $ ((return (false::SBool)) :: Predicate)
-        --
-        -- Also, not at all clear what it means to go in an out of query mode:
-        --
-        -- r = runSMTWith z3{verbose=True} $ do
-        --         a' <- sInteger "a"
-        --
-        --        (a, av) <- query $ do _ <- checkSat
-        --                              av <- getValue a'
-        --                              return (a', av)
-        --
-        --        liftIO $ putStrLn $ "Got: " ++ show av
-        --        -- constrain $ a .> literal av + 1      -- Cant' do this since we're "out" of query. Sigh.
-        --
-        --        bv <- query $ do constrain $ a .> literal av + 1
-        --                         _ <- checkSat
-        --                         getValue a
-        --
-        --        return $ a' .== a' + 1
-        --
-        -- This would be one possible implementation, alas it has the problems above:
-        --
-        --    SMTMode IRun _ _ -> liftIO $ evalStateT userQuery st
-        --
-        -- So, we just reject it.
-
-        SMTMode IRun _ _ -> error $ unlines [ ""
-                                            , "*** Data.SBV: Unsupported nested query is detected."
-                                            , "***"
-                                            , "*** Please group your queries into one block. Note that this"
-                                            , "*** can also arise if you have a call to 'query' not within 'runSMT'"
-                                            , "*** For instance, within 'sat'/'prove' calls with custom user queries."
-                                            , "*** The solution is to do the sat/prove part in the query directly."
-                                            , "***"
-                                            , "*** While multiple/nested queries should not be necessary in general,"
-                                            , "*** please do get in touch if your use case does require such a feature,"
-                                            , "*** to see how we can accommodate such scenarios."
-                                            ]
-
-        -- Otherwise choke!
-        m -> error $ unlines [ ""
-                             , "*** Data.SBV: Invalid query call."
-                             , "***"
-                             , "***   Current mode: " ++ show m
-                             , "***"
-                             , "*** Query calls are only valid within runSMT/runSMTWith calls"
-                             ]
+query = executeQuery QueryExternal
 
 {- $queryIntro
 In certain cases, the user might want to take over the communication with the solver, programmatically
