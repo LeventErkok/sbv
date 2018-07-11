@@ -15,8 +15,8 @@ report any issues you might see with newer releases.
       * http://mathsat.fbk.eu/
       * Version 5.5.2
   * Yices:
-      * http://yices.csl.sri.com/
-      * Version 2.5.4
+      * https://github.com/SRI-CSL/yices2
+      * Version 2.6.0
   * Z3:
       * http://github.com/Z3Prover/z3
       * Version as downloaded from the above site on Jul 2, 2018
