@@ -875,10 +875,16 @@ swToSVal :: SW -> SVal
 swToSVal sw@(SW k _) = SVal k $ Right $ cache $ const $ return sw
 
 -- | A variant of SVal equality, but taking into account of constants
+-- NB. The rationalCheck is paranid perhaps, but is necessary in case
+-- we have some funky polynomial roots in there. We do allow for
+-- floating-points here though. Why? Because the Eq instance of CW
+-- does the right thing by using object equality. (i.e., it does
+-- the right thing for NaN/+0/-0 etc.) A straightforward equality
+-- here would be wrong for floats!
 svEqualWithConsts :: (SVal, Maybe CW) -> (SVal, Maybe CW) -> SVal
 svEqualWithConsts sv1 sv2 = case (grabCW sv1, grabCW sv2) of
-                               (Just cw, Just cw') -> if cw == cw' then svTrue else svFalse
-                               _                   -> fst sv1 `svEqual` fst sv2
+                               (Just cw, Just cw') | rationalCheck cw cw' -> if cw == cw' then svTrue else svFalse
+                               _                                          -> fst sv1 `svEqual` fst sv2
   where grabCW (_,                Just cw) = Just cw
         grabCW (SVal _ (Left cw), _      ) = Just cw
         grabCW _                           = Nothing
