@@ -765,12 +765,11 @@ instance Show SVal where
   show (SVal k     (Left c))  = showCW False c ++ " :: " ++ show k
   show (SVal k     (Right _)) =         "<symbolic> :: " ++ show k
 
--- | Equality constraint on SBV values. Not desirable since we can't really compare two
--- symbolic values, but will do.
+-- We really don't want an 'Eq' instance for 'SBV' or 'SVal'. As it really makes no sense.
+-- But since we do want the 'Bits' instance, we're forced to define equality. See
+-- <http://github.com/LeventErkok/sbv/issues/301>. We simply error out.
 instance Eq SVal where
-  SVal _ (Left a) == SVal _ (Left b) = a == b
   a == b = error $ "Comparing symbolic bit-vectors; Use (.==) instead. Received: " ++ show (a, b)
-  SVal _ (Left a) /= SVal _ (Left b) = a /= b
   a /= b = error $ "Comparing symbolic bit-vectors; Use (./=) instead. Received: " ++ show (a, b)
 
 -- | Things we do not support in interactive mode, at least for now!
