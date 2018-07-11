@@ -8,7 +8,7 @@
 -- Stability   :  experimental
 --
 -- Test the string functions.
--- Most of these tests are adopted from <https://rise4fun.com/z3/tutorialcontent/sequences>
+-- Most of these tests are adopted from <http://rise4fun.com/z3/tutorialcontent/sequences>
 -----------------------------------------------------------------------------
 
 module TestSuite.Basics.String(tests)  where

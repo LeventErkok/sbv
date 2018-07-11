@@ -317,7 +317,7 @@ instance Show RegExp where
   show (Union xs)        = "(re.union " ++ unwords (map show xs) ++ ")"
 
 -- | Show instance for `StrOp`. Note that the mapping here is
--- important to match the SMTLib equivalents, see here: <https://rise4fun.com/z3/tutorialcontent/sequences>
+-- important to match the SMTLib equivalents, see here: <http://rise4fun.com/z3/tutorialcontent/sequences>
 instance Show StrOp where
   show StrConcat   = "str.++"
   show StrLen      = "str.len"

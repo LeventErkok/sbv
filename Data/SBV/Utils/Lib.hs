@@ -49,7 +49,7 @@ mlift8 :: Monad m => (a' -> b' -> c' -> d' -> e' -> f' -> g' -> h' -> r) -> (a -
 mlift8 k f g h i j l m n (a, b, c, d, e, y, z, w) = f a >>= \a' -> g b >>= \b' -> h c >>= \c' -> i d >>= \d' -> j e >>= \e' -> l y >>= \y' -> m z >>= \z' -> n w >>= \w' -> return $ k a' b' c' d' e' y' z' w'
 
 -- Command line argument parsing code courtesy of Neil Mitchell's cmdargs package: see
--- <https://github.com/ndmitchell/cmdargs/blob/master/System/Console/CmdArgs/Explicit/SplitJoin.hs>
+-- <http://github.com/ndmitchell/cmdargs/blob/master/System/Console/CmdArgs/Explicit/SplitJoin.hs>
 
 -- | Given a sequence of arguments, join them together in a manner that could be used on
 --   the command line, giving preference to the Windows @cmd@ shell quoting conventions.

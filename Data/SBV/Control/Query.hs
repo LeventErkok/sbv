@@ -450,7 +450,7 @@ checkSatAssumingHelper getAssumptions sBools = do
 getAssertionStackDepth :: Query Int
 getAssertionStackDepth = queryAssertionStackDepth <$> getQueryState
 
--- | Upon a pop, we need to restore all arrays and tables. See: https://github.com/LeventErkok/sbv/issues/374
+-- | Upon a pop, we need to restore all arrays and tables. See: http://github.com/LeventErkok/sbv/issues/374
 restoreTablesAndArrays :: Query ()
 restoreTablesAndArrays = do st <- get
                             qs <- getQueryState

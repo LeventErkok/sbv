@@ -690,7 +690,7 @@ runSolver cfg ctx execPath opts pgm continuation
       let executeSolver = do let sendAndGetSuccess :: Maybe Int -> String -> IO ()
                                  sendAndGetSuccess mbTimeOut l
                                    -- The pathetic case when the solver doesn't support queries, so we pretend it responded "success"
-                                   -- Currently ABC is the only such solver. Filed a request for ABC at: https://bitbucket.org/alanmi/abc/issues/70/
+                                   -- Currently ABC is the only such solver. Filed a request for ABC at: http://bitbucket.org/alanmi/abc/issues/70/
                                    | not (supportsCustomQueries (capabilities (solver cfg)))
                                    = do send mbTimeOut l
                                         debug cfg ["[ISSUE] " `alignPlain` l]

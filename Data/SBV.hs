@@ -524,7 +524,7 @@ Also see "Documentation.SBV.Examples.Misc.NoDiv0" for the classic div-by-zero ex
   types, along with those produce 'SReal's. That is, it can find models satisfying all the constraints while minimizing
   or maximizing user given metrics. Currently, optimization requires the use of the z3 SMT solver as the backend,
   and a good review of these features is given
-  in this paper: <https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>.
+  in this paper: <http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>.
 
   Goals can be lexicographically (default), independently, or pareto-front optimized. The relevant functions are:
 
@@ -615,7 +615,7 @@ Optimal model:
   Note that 'assertWithPenalty' works well with optimization goals ('minimize'/'maximize' etc.),
   and are most useful when we are optimizing a metric and thus some of the constraints
   can be relaxed with a penalty to obtain a good solution. Again
-  see <https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>
+  see <http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>
   for a good overview of the features in Z3 that SBV is providing the bridge for.
 
   A soft assertion can be specified in one of the following three main ways:
@@ -710,7 +710,7 @@ by Rummer and Wahl: <http://www.philipp.ruemmer.org/publications/smt-fpa.pdf>.
 {- $strings
 Support for characters, strings, and regular expressions (intial version contributed by Joel Burget)
 adds support for QF_S logic, described here: <http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml>
-and here: <https://rise4fun.com/z3/tutorialcontent/sequences>. Note
+and here: <http://rise4fun.com/z3/tutorialcontent/sequences>. Note
 that this logic is still not part of official SMTLib (as of March 2018), so it should be considered
 experimental.
 
@@ -925,13 +925,13 @@ See "Documentation.SBV.Examples.Misc.Enumerate" for an extended example on how t
 
 Note that SBV allows reasoning with quantifiers: Inputs can be existentially or universally quantified. Predicates can be built
 with arbitrary nesting of such quantifiers as well. However, SBV always /assumes/ that the input is in
-prenex-normal form: <https://en.wikipedia.org/wiki/Prenex_normal_form>. That is,
+prenex-normal form: <http://en.wikipedia.org/wiki/Prenex_normal_form>. That is,
 all the input declarations are treated as happening at the beginning of a predicate, followed by the actual formula. Unfortunately,
 the way predicates are written can be misleading at times, since symbolic inputs can be created at arbitrary points; interleaving them
 with other code. The rule is simple, however: All inputs are assumed at the top, in the order declared, regardless of their quantifiers.
 SBV will apply skolemization to get rid of existentials before sending predicates to backend solvers. However, if you do want nested
 quantification, you will manually have to first convert to prenex-normal form (which produces an equisatisfiable but not necessarily
-equivalent formula), and code that explicitly in SBV. See <https://github.com/LeventErkok/sbv/issues/256> for a detailed discussion
+equivalent formula), and code that explicitly in SBV. See <http://github.com/LeventErkok/sbv/issues/256> for a detailed discussion
 of this issue.
 -}
 

@@ -716,7 +716,7 @@ svShift toLeft x i
         -- of i. Note that this is a *necessary* check, Consider for instance if we're shifting a
         -- 32-bit value using a 1-bit shift amount (which can happen if the value is 1 with minimal
         -- shift widths). We would compare 1 >= 32, but stuffing 32 into bit-vector of size 1 would
-        -- overflow. See https://github.com/LeventErkok/sbv/issues/323 for this case. Thus, we
+        -- overflow. See http://github.com/LeventErkok/sbv/issues/323 for this case. Thus, we
         -- make sure that the bit-vector would fit as a value.
         cannotOverShift = maxRepresentable <= fromIntegral (intSizeOf x)
           where maxRepresentable :: Integer
@@ -891,8 +891,8 @@ svEqualWithConsts sv1 sv2 = case (grabCW sv1, grabCW sv2) of
 
 -- | Read the array element at @a@. For efficiency purposes, we create a memo-table
 -- as we go along, as otherwise we suffer significant performance penalties. See:
--- <https://github.com/LeventErkok/sbv/issues/402> and
--- <https://github.com/LeventErkok/sbv/issues/396>.
+-- <http://github.com/LeventErkok/sbv/issues/402> and
+-- <http://github.com/LeventErkok/sbv/issues/396>.
 readSFunArr :: SFunArr -> SVal -> SVal
 readSFunArr (SFunArr (ak, bk) f) address
   | kindOf address /= ak
@@ -1179,7 +1179,7 @@ constants for the branches would still be generated. (i.e., in the above example
 It seems to me that the price to pay is rather high, as this is hardly the most common case; so we're opting
 here to ignore these cases.
 
-See https://github.com/LeventErkok/sbv/issues/379 for some further discussion.
+See http://github.com/LeventErkok/sbv/issues/379 for some further discussion.
 -}
 liftSW2 :: (State -> Kind -> SW -> SW -> IO SW) -> Kind -> SVal -> SVal -> Cached SW
 liftSW2 opS k a b = cache c

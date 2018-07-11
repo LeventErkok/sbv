@@ -7,7 +7,7 @@
 -- Stability   :  experimental
 --
 -- Testing small-shift amounts using the dynamic interface. See
--- https://github.com/LeventErkok/sbv/issues/323 for the genesis.
+-- http://github.com/LeventErkok/sbv/issues/323 for the genesis.
 -----------------------------------------------------------------------------
 
 module TestSuite.Basics.SmallShifts(tests) where
