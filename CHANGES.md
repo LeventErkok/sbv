@@ -53,6 +53,12 @@
     of this function. Also add extra checks to warn the user if optimization
     constraints are present in a regular sat/prove call.
 
+  * SBV now rejects queries if universally quantified inputs are present. Previously
+    these were allowed to go through, but in general skolemization makes the corresponding
+    variables unusable in the query context. See http://github.com/LeventErkok/sbv/issues/407
+    for details. If you have an actual use case for such a feature, please get in
+    touch. Thanks to Brian Schroeder for reporting this anomaly.
+
 ### Version 7.9, 2018-06-15
  
   * Add support for bit-vector arithmetic underflow/overflow detection. The new

@@ -36,7 +36,7 @@ module Data.SBV.Control.Utils (
      ) where
 
 import Data.Maybe (isJust)
-import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails)
+import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate)
 
 import Data.Char     (isPunctuation, isSpace, chr)
 import Data.Function (on)
@@ -740,9 +740,57 @@ runProofOn rm comments res@(Result ki _qcInfo _observables _codeSegs is consts t
 
 -- | Execute a query
 executeQuery :: QueryContext -> Query a -> Symbolic a
-executeQuery _queryContext (Query userQuery) = do
+executeQuery queryContext (Query userQuery) = do
      st <- R.ask
      rm <- liftIO $ readIORef (runMode st)
+
+     -- If we're doing an external query, then we cannot allow quantifiers to be present. Why?
+     -- Consider:
+     --
+     --      issue = do x :: SBool <- forall_
+     --                 y :: SBool <- exists_
+     --                 constrain y
+     --                 query $ do checkSat
+     --                         (,) <$> getValue x <*> getValue y
+     --
+     -- This is the (simplified/annotated SMTLib we would generate:)
+     --
+     --     (declare-fun s1 (Bool) Bool)   ; s1 is the function that corresponds to the skolemized 'y'
+     --     (assert (forall ((s0 Bool))    ; s0 is 'x'
+     --                 (s1 s0)))          ; s1 applied to s0 is the actual 'y'
+     --     (check-sat)
+     --     (get-value (s0))        ; s0 simply not visible here
+     --     (get-value (s1))        ; s1 is visible, but only via 's1 s0', so it is also not available.
+     --
+     -- And that would be terrible! The scoping rules of our "quantified" variables and how they map to
+     -- SMTLib is just not compatible. This is a historical design issue, but too late at this point. (We
+     -- should've never allowed general quantification like this, but only in limited contexts.)
+     --
+     -- So, we check if this is an external-query, and if there are quantified variables. If so, we
+     -- cowardly refuse to continue. For details, see: <http://github.com/LeventErkok/sbv/issues/407>
+
+     () <- liftIO $ case queryContext of
+                      QueryInternal -> return ()         -- we're good, internal usages don't mess with scopes
+                      QueryExternal -> do
+                        (userInps, _) <- readIORef (rinps st)
+                        let badInps = reverse [n | (ALL, (_, n)) <- userInps]
+                        case badInps of
+                          [] -> return ()
+                          _  -> let plu | length badInps > 1 = "s require"
+                                        | True               = " requires"
+                                in error $ unlines [ ""
+                                                   , "*** Data.SBV: Unsupported query call in the presence of quantified inputs."
+                                                   , "***"
+                                                   , "*** The following variable" ++ plu ++ " explicit quantification: "
+                                                   , "***"
+                                                   , "***    " ++ intercalate ", " badInps
+                                                   , "***"
+                                                   , "*** While quantification and queries can co-exist in principle, SBV currently"
+                                                   , "*** does not support this scenario. Avoid using quantifiers with user queries"
+                                                   , "*** if possible. Please do get in touch if your use case does require such"
+                                                   , "*** a feature to see how we can accommodate such scenarios."
+                                                   ]
+
      case rm of
         -- Transitioning from setup
         SMTMode stage isSAT cfg | not (isRunIStage stage) -> liftIO $ do
