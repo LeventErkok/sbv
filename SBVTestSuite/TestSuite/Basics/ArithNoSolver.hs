@@ -449,7 +449,7 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
           | True               = a == b
 
         cvtTest  (nm, x, a, b)  = testCase ("arithCF-" ++ nm ++ "." ++ x) (same (extract a) (extract b) `showsAs` "True")
-        cvtTestI (nm, x, a, b)  = testCase ("arithCF-" ++ nm ++ "." ++ x) ((a == b) `showsAs` "True")
+        cvtTestI (nm, x, a, b)  = testCase ("arithCF-" ++ nm ++ "." ++ x) ((a .== b) `showsAs` "True")
 
         mkTest1 (nm, (x, s))    = testCase ("arithCF-" ++ nm ++ "." ++ x) (s `showsAs` "True")
         mkTest2 (nm, (x, y, s)) = testCase ("arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y) (s `showsAs` "True")
