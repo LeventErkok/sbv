@@ -928,7 +928,11 @@ readSFunArr (SFunArr (ak, bk) f) address
                                             finalValue = find (IMap.toAscList memoTable)
 
                                         finalSW <- svToSW st finalValue
+
+                                        -- Cache the result, so next time we can retrieve it faster if we look it up with the same address!
+                                        -- The following line is really the whole point of having caching in SFunArray!
                                         R.modifyIORef' rCache (IMap.insert addressNodeId finalSW)
+
                                         return finalSW
 
 -- | Update the element at @address@ to be @b@
@@ -943,9 +947,12 @@ writeSFunArr (SFunArr (ak, bk) f) address b
   where g st = do fArrayIndex <- uncacheFAI f st
                   fArrMap     <- R.readIORef (rFArrayMap st)
                   constMap    <- R.readIORef (rconstMap st)
+
                   let consts = Map.fromList [(i, cw) | (cw, SW _ (NodeId i)) <- Map.toList constMap]
+
                   case unFArrayIndex fArrayIndex `IMap.lookup` fArrMap of
                     Nothing          -> error $ "Data.SBV.writeSFunArr: Impossible happened while trying to access SFunArray, can't find index: " ++ show fArrayIndex
+
                     Just (aUi, rCache) -> do
                        memoTable <- R.readIORef rCache
                        SW _ (NodeId addressNodeId) <- svToSW st address
@@ -955,7 +962,9 @@ writeSFunArr (SFunArr (ak, bk) f) address b
                        --
                        --    (1) We hit the cache, and old value is the same as new: No write necessary, just return the array
                        --    (2) We hit the cache, values are different. Simply insert, overriding the old-memo table location
-                       --    (3) We miss the cache: Now we have to walk through all accesses and update the memo table accordingly
+                       --    (3) We miss the cache: Now we have to walk through all accesses and update the memo table accordingly.
+                       --        Why? Just because we missed the cache doesn't mean that it's not there with a different "symbolic"
+                       --        address. So, we have to walk through and update each entry in case the address matches.
                        --
                        -- Below, we determine which case we're in and then insert the value at the end and continue
                        cont <- case addressNodeId `IMap.lookup` memoTable of
@@ -967,18 +976,27 @@ writeSFunArr (SFunArr (ak, bk) f) address b
 
                                         let aInfo = (address, addressNodeId `Map.lookup` consts)
 
+                                            -- NB. The order of modifications here is important as we
+                                            -- keep the keys in ascending order. (Since we'll call fromAscList later on.)
                                             walk :: [(Int, SW)] -> [(Int, SW)] -> IO [(Int, SW)]
                                             walk []           sofar = return $ reverse sofar
                                             walk ((i, s):iss) sofar = modify i s >>= \s' -> walk iss ((i, s') : sofar)
 
+                                            -- At the cached address i, currently storing value s. Conditionally update it to `b` (new value)
+                                            -- if the addresses match. Otherwise keep it the same.
                                             modify :: Int -> SW -> IO SW
                                             modify i s = svToSW st $ svIte (svEqualWithConsts (nodeIdToSVal ak i, i `Map.lookup` consts) aInfo) b (swToSVal s)
 
                                         Right . IMap.fromAscList <$> walk (IMap.toAscList memoTable) []
 
                        case cont of
-                         Left j   -> return j
-                         Right mt -> do newMemoTable <- R.newIORef $ IMap.insert addressNodeId val mt
+                         Left j   -> return j  -- There was a hit, and value was unchanged, nothing to do
+
+                         Right mt -> do        -- There was a hit, and the value was different; or there was a miss. Insert the new value
+                                               -- and create a new array. Note that we keep the aUi the same: Just because we modified
+                                               -- an array, it doesn't mean we change the uninitialized reads: they still come from the same place.
+                                               --
+                                        newMemoTable <- R.newIORef $ IMap.insert addressNodeId val mt
 
                                         let j = FArrayIndex $ IMap.size fArrMap
                                             upd = IMap.insert (unFArrayIndex j) (aUi, newMemoTable)
@@ -1008,7 +1026,7 @@ mergeSFunArr t array1@(SFunArr ainfo@(sourceKind, targetKind) a) array2@(SFunArr
                   -- is merging composite structures (through a Mergeable class instance)
                   -- that has an array component that didn't change. So, pays off in practice!
                   if unFArrayIndex ai == unFArrayIndex bi
-                     then return ai
+                     then return ai  -- merging with itself, noop
                      else do fArrMap <- R.readIORef (rFArrayMap st)
 
                              case (unFArrayIndex ai `IMap.lookup` fArrMap, unFArrayIndex bi `IMap.lookup` fArrMap) of
@@ -1016,12 +1034,21 @@ mergeSFunArr t array1@(SFunArr ainfo@(sourceKind, targetKind) a) array2@(SFunArr
                                (_, Nothing) -> error $ "Data.SBV.mergeSFunArr: Impossible happened while trying to access SFunArray, can't find index: " ++ show bi
                                (Just (aUi, raCache), Just (bUi, rbCache)) -> do
 
+                                   -- This is where the complication happens. We need to merge the caches. If the same
+                                   -- key appears in both, then that's the easy case: Just merge the entries. But if
+                                   -- a key only appears in one but not the other? Just like in the read/write cases,
+                                   -- we have to consider the possibility that the missing key can be any one of the
+                                   -- other elements in the cache. So, for each non-matching key in either memo-table,
+                                   -- we traverse the other and create a chain of look-up values.
                                    aMemo <- R.readIORef raCache
                                    bMemo <- R.readIORef rbCache
 
                                    let aMemoT = IMap.toAscList aMemo
                                        bMemoT = IMap.toAscList bMemo
 
+                                       -- gen takes a uninitialized-read creator, a key, and the choices from the "other"
+                                       -- cache that this key may map to. And creates a new SW that corresponds to the
+                                       -- merged value:
                                        gen :: (SVal -> SVal) -> Int -> [(Int, SW)] -> IO SW
                                        gen mk k choices = svToSW st $ walk choices
                                          where kInfo = (nodeIdToSVal sourceKind k, k `Map.lookup` consts)
@@ -1032,12 +1059,15 @@ mergeSFunArr t array1@(SFunArr ainfo@(sourceKind, targetKind) a) array2@(SFunArr
                                                                            (swToSVal v)
                                                                            (walk ivs)
 
+                                       -- Insert into an existing map the new key value by merging according to the test
                                        fill :: Int -> SW -> SW -> IMap.IntMap SW -> IO (IMap.IntMap SW)
                                        fill k (SW _ (NodeId ni1)) (SW _ (NodeId ni2)) m = do v <- svToSW st (svIte t sval1 sval2)
                                                                                              return $ IMap.insert k v m
                                          where sval1 = nodeIdToSVal targetKind ni1
                                                sval2 = nodeIdToSVal targetKind ni2
 
+                                       -- Walk down the memo-tables in tandem. If we find a common key: Simply fill it in. If we find
+                                       -- a key only in one, generate the corresponding read from the other cache, and do the fill.
                                        merge []                  []                  sofar = return sofar
                                        merge ((k1, v1) : as)     []                  sofar = gen bUi k1 bMemoT >>= \v2  -> fill k1 v1  v2 sofar  >>= merge as []
                                        merge []                  ((k2, v2) : bs)     sofar = gen aUi k2 aMemoT >>= \v1  -> fill k2 v1  v2 sofar  >>= merge [] bs
