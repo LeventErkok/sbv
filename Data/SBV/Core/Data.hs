@@ -424,14 +424,42 @@ instance (Random a, SymWord a) => Random (SBV a) where
 -- | Flat arrays of symbolic values
 -- An @array a b@ is an array indexed by the type @'SBV' a@, with elements of type @'SBV' b@.
 --
--- While it's certainly possible for user to create instances of 'SymArray', the
--- 'SArray' and 'SFunArray' instances already provided should cover most use cases
--- in practice. (There are some differences between these models, however, see the corresponding
--- declarations.)
---
 -- If a default value is supplied, then all the array elements will be initialized to this value.
 -- Otherwise, they will be left unspecified, i.e., a read from an unwritten location will produce
 -- an uninterpreted constant.
+--
+-- While it's certainly possible for user to create instances of 'SymArray', the
+-- 'SArray' and 'SFunArray' instances already provided should cover most use cases
+-- in practice. Note that there are a few differences between these two models in
+-- terms of use models:
+--
+--    * 'SArray' produces SMTLib arrays, and requires a solver that understands the
+--      array theory. 'SFunArray' is internally handled, and thus can be used with
+--      any solver. (Note that all solvers except 'abc' support arrays, so this isn't
+--      a big decision factor.)
+--
+--    * For both arrays, if a default value is supplied, then reading from uninitialized
+--      cell will return that value. If the default is not given, then reading from
+--      uninitialized cells is still OK for both arrays, and will produce an uninterpreted
+--      constant in both cases.
+--
+--    * Only 'SArray' supports checking equality of arrays. (That is, checking if an entire
+--      array is equivalent to another.) 'SFunArray's cannot be checked for equality. In general,
+--      checking wholesale equality of arrays is a difficult decision problem and should be
+--      avoided if possible.
+--
+--    * Only 'SFunArray' supports compilation to C. Programs using 'SArray' will not be
+--      accepted by the C-code generator.
+--
+--    * You cannot use quickcheck on programs that contain these arrays. (Neither 'SArray'
+--      nor 'SFunArray'.)
+--
+--    * With 'SArray', SBV transfers all array-processing to the SMT-solver. So, it can generate
+--      programs more quickly, but they might end up being too hard for the solver to handle. With
+--      'SFunArray', SBV only generates code for individual elements and the array itself never
+--      shows up in the resulting SMTLib program. This puts more onus on the SBV side and might
+--      have some performance impacts, but it might generate problems that are easier for the SMT
+--      solvers to handle. 
 --
 -- As a rule of thumb, try 'SArray' first. These should generate compact code. However, if
 -- the backend solver has hard time solving the generated problems, switch to
@@ -496,20 +524,11 @@ instance SymArray SArray where
 --   * Reading from an unintialized value is OK. If the default value is given in 'newArray', it will
 --     be the result. Otherwise, the read yields an uninterpreted constant.
 --
---   * Cannot check for equality. Note that this differs from SMT-Lib arrays
---     since SMT-Lib arrays (i.e. SArray's) can be checked for equality.
---     If equality is desired, users can define their own by ensuring the arrays
---     map all of their domain elements to the same value. Of course, this can
---     be costly when the domain is large, and impossible if the domain is
---     infinite. (Such as SInteger.) In practical cases, the request, however,
---     is usually restricted to a given (smallish) range, and is quite easy to implement
---     as needed by simply doing a map over the domain of interest.
+--   * Cannot check for equality of arrays.
 --
---   * Can be used in code-generation (i.e., compilation to C). Note that since they
---     get compiled away, the generated code simply refers to the elements; i.e.,
---     all reads and writes gets fused away.
+--   * Can be used in code-generation (i.e., compilation to C).
 --
---   * Can quick-check theorems using @SFunArray@ values
+--   * Can not quick-check theorems using @SFunArray@ values
 --
 --   * Typically faster as it gets compiled away during translation.
 newtype SFunArray a b = SFunArray { unSFunArray :: SFunArr }

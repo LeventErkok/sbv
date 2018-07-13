@@ -82,6 +82,10 @@
   * Export 'registerKind' from 'Data.SBV.Internals', to help with custom array declarations.
     Thanks to Brian Schroeder for the patch.
 
+  * If an asynchronous exception is caught, SBV now throws it back without further processing.
+    (For instance, if the backend solver gets killed. Previously we were turning these into
+    synchronous errors.) Thanks to Oliver Charles for pointing out this corner case.
+
 ### Version 7.9, 2018-06-15
  
   * Add support for bit-vector arithmetic underflow/overflow detection. The new
