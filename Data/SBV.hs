@@ -146,7 +146,7 @@ module Data.SBV (
   -- $strings
   , SChar, SString, (.++), (.!!)
   -- * Arrays of symbolic values
-  , SymArray(..), SArray, SFunArray
+  , SymArray(newArray_, newArray, readArray, writeArray), SArray, SFunArray
 
   -- * Creating symbolic values
   -- ** Single value
