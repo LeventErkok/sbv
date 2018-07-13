@@ -41,7 +41,7 @@ import Control.Concurrent (newEmptyMVar, takeMVar, putMVar, forkIO)
 import Control.DeepSeq    (NFData(..))
 import Control.Monad      (zipWithM)
 import Data.Char          (isSpace)
-import Data.Maybe         (fromMaybe)
+import Data.Maybe         (fromMaybe, isJust)
 import Data.Int           (Int8, Int16, Int32, Int64)
 import Data.List          (intercalate, isPrefixOf)
 import Data.Word          (Word8, Word16, Word32, Word64)
@@ -493,10 +493,10 @@ pipeProcess cfg ctx execName opts pgm continuation = do
                        `C.catches`
                         [ C.Handler (\(e :: SBVException)    -> C.throwIO e)
                         , C.Handler (\(e :: C.ErrorCall)     -> C.throwIO e)
-                        , C.Handler (\(e :: C.SomeException) -> error $ unlines [ "Failed to start the external solver:\n" ++ show e
-                                                                                , "Make sure you can start " ++ show execPath
-                                                                                , "from the command line without issues."
-                                                                                ])
+                        , C.Handler (\(e :: C.SomeException) -> handleAsync e $ error $ unlines [ "Failed to start the external solver:\n" ++ show e
+                                                                                                , "Make sure you can start " ++ show execPath
+                                                                                                , "from the command line without issues."
+                                                                                                ])
                         ]
 
 -- | A standard engine interface. Most solvers follow-suit here in how we "chat" to them..
@@ -505,8 +505,8 @@ standardEngine :: String
                -> SMTEngine
 standardEngine envName envOptName cfg ctx pgm continuation = do
 
-    execName <-                    getEnv envName     `C.catch` (\(_ :: C.SomeException) -> return (executable (solver cfg)))
-    execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(_ :: C.SomeException) -> return (options (solver cfg) cfg))
+    execName <-                    getEnv envName     `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (executable (solver cfg))))
+    execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (options (solver cfg) cfg)))
 
     let cfg' = cfg {solver = (solver cfg) {executable = execName, options = const execOpts}}
 
@@ -612,7 +612,7 @@ runSolver cfg ctx execPath opts pgm continuation
 
 
                             go isFirst i sofar = do
-                                            errln <- safeGetLine isFirst outh `C.catch` (\(e :: C.SomeException) -> return (SolverException (show e)))
+                                            errln <- safeGetLine isFirst outh `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (SolverException (show e))))
                                             case errln of
                                               SolverRegular ln -> let need  = i + parenDeficit ln
                                                                       -- make sure we get *something*
@@ -656,15 +656,15 @@ runSolver cfg ctx execPath opts pgm continuation
 
                     terminateSolver = do hClose inh
                                          outMVar <- newEmptyMVar
-                                         out <- hGetContents outh `C.catch`  (\(e :: C.SomeException) -> return (show e))
+                                         out <- hGetContents outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return (show e)))
                                          _ <- forkIO $ C.evaluate (length out) >> putMVar outMVar ()
-                                         err <- hGetContents errh `C.catch`  (\(e :: C.SomeException) -> return (show e))
+                                         err <- hGetContents errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return (show e)))
                                          _ <- forkIO $ C.evaluate (length err) >> putMVar outMVar ()
                                          takeMVar outMVar
                                          takeMVar outMVar
-                                         hClose outh `C.catch`  (\(_ :: C.SomeException) -> return ())
-                                         hClose errh `C.catch`  (\(_ :: C.SomeException) -> return ())
-                                         ex <- waitForProcess pid `C.catch` (\(_ :: C.SomeException) -> return (ExitFailure (-999)))
+                                         hClose outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return ()))
+                                         hClose errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return ()))
+                                         ex <- waitForProcess pid `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (ExitFailure (-999))))
                                          return (out, err, ex)
 
                     cleanUp
@@ -720,7 +720,8 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                     ]
 
                                                             -- put a sync point here before we die so we consume everything
-                                                            mbExtras <- (Right <$> getResponseFromSolver Nothing (Just 5000000)) `C.catch` (\(e :: C.SomeException) -> return (Left (show e)))
+                                                            mbExtras <- (Right <$> getResponseFromSolver Nothing (Just 5000000))
+                                                                        `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (Left (show e))))
 
                                                             -- Ignore any exceptions from last sync, pointless.
                                                             let extras = case mbExtras of
@@ -816,12 +817,12 @@ runSolver cfg ctx execPath opts pgm continuation
                             recordEndTime      cfg ctx
                             return r
 
-      launchSolver `C.catch` (\(e :: C.SomeException) -> do terminateProcess pid
-                                                            ec <- waitForProcess pid
-                                                            recordException    (transcript cfg) (show e)
-                                                            finalizeTranscript (transcript cfg) (Just ec)
-                                                            recordEndTime      cfg ctx
-                                                            C.throwIO e)
+      launchSolver `C.catch` (\(e :: C.SomeException) -> handleAsync e $ do terminateProcess pid
+                                                                            ec <- waitForProcess pid
+                                                                            recordException    (transcript cfg) (show e)
+                                                                            finalizeTranscript (transcript cfg) (Just ec)
+                                                                            recordEndTime      cfg ctx
+                                                                            C.throwIO e)
 
 -- | Compute and report the end time
 recordEndTime :: SMTConfig -> State -> IO ()
@@ -896,3 +897,13 @@ recordException (Just f) m = do ts <- show <$> getZonedTime
                         ++ [ ";;;"
                            , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
                            ]
+
+-- We should not be catching/processing asynchronous exceptions.
+-- See http://github.com/LeventErkok/sbv/issues/410
+handleAsync :: C.SomeException -> IO a -> IO a
+handleAsync e cont
+  | isAsynchronous = C.throwIO e
+  | True           = cont
+  where -- Stealing this definition from the asynchronous exceptions package to reduce dependencies
+        isAsynchronous :: Bool
+        isAsynchronous = isJust (C.fromException e :: Maybe C.AsyncException) || isJust (C.fromException e :: Maybe C.SomeAsyncException)
