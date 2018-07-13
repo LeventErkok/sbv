@@ -72,12 +72,20 @@ fv = do a <- sInteger "a"
                    constrain $ vInteger .== 12
                    constrain $ vBinOp   .== literal Plus
 
-                   vSArray  :: SArray    Integer Integer <- freshArray "vSArray"
-                   vFArray  :: SFunArray Bool    Char    <- freshArray "vFArray"
+                   vSArray  :: SArray    Integer Integer <- freshArray "vSArray" Nothing
+                   vFArray  :: SFunArray Bool    Char    <- freshArray "vFArray" Nothing
                    vi1                                   <- freshVar "i1"
                    vi2                                   <- freshVar "i2"
                    constrain $ readArray vSArray vi1 .== 2
                    constrain $ readArray vFArray vi2 .== literal 'a'
+
+                   viSArray  :: SArray    Integer Integer <- freshArray "viSArray" (Just (literal 42))
+                   viFArray  :: SFunArray Bool    Char    <- freshArray "viFArray" (Just (literal 'X'))
+                   mustBe42                               <- freshVar "mustBe42"
+                   mustBeX                                <- freshVar "mustBeX"
+
+                   constrain $ readArray viSArray 96    .== mustBe42
+                   constrain $ readArray viFArray false .== mustBeX
 
                    cs <- checkSat
                    case cs of
@@ -98,23 +106,27 @@ fv = do a <- sInteger "a"
                                vBinOpVal   <- getValue vBinOp
                                vi1Val      <- getValue vi1
                                vi2Val      <- getValue vi2
+                               mustBe42Val <- getValue mustBe42
+                               mustBeXVal  <- getValue mustBeX
 
-                               mkSMTResult [ a        |-> aVal
-                                           , vBool    |-> vBoolVal
-                                           , vWord8   |-> vWord8Val
-                                           , vWord16  |-> vWord16Val
-                                           , vWord32  |-> vWord32Val
-                                           , vWord64  |-> vWord64Val
-                                           , vInt8    |-> vInt8Val
-                                           , vInt16   |-> vInt16Val
-                                           , vInt32   |-> vInt32Val
-                                           , vInt64   |-> vInt64Val
-                                           , vFloat   |-> vFloatVal
-                                           , vDouble  |-> vDoubleVal
-                                           , vReal    |-> vRealVal
-                                           , vInteger |-> vIntegerVal
-                                           , vBinOp   |-> vBinOpVal
-                                           , vi1      |-> vi1Val
-                                           , vi2      |-> vi2Val
+                               mkSMTResult [ a          |-> aVal
+                                           , vBool      |-> vBoolVal
+                                           , vWord8     |-> vWord8Val
+                                           , vWord16    |-> vWord16Val
+                                           , vWord32    |-> vWord32Val
+                                           , vWord64    |-> vWord64Val
+                                           , vInt8      |-> vInt8Val
+                                           , vInt16     |-> vInt16Val
+                                           , vInt32     |-> vInt32Val
+                                           , vInt64     |-> vInt64Val
+                                           , vFloat     |-> vFloatVal
+                                           , vDouble    |-> vDoubleVal
+                                           , vReal      |-> vRealVal
+                                           , vInteger   |-> vIntegerVal
+                                           , vBinOp     |-> vBinOpVal
+                                           , vi1        |-> vi1Val
+                                           , vi2        |-> vi2Val
+                                           , mustBe42   |-> mustBe42Val
+                                           , mustBeX    |-> mustBeXVal
                                            ]
                      _   -> error "didn't expect non-Sat here!"

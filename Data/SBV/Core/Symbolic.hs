@@ -570,14 +570,15 @@ instance Show Result where
                 stk ++ ": " ++ show p
 
 -- | The context of a symbolic array as created
-data ArrayContext = ArrayFree                              -- ^ A new array, the contents are uninitialized
+data ArrayContext = ArrayFree (Maybe SW)                   -- ^ A new array, the contents are initialized with the given value, if any
                   | ArrayMutate ArrayIndex SW SW           -- ^ An array created by mutating another array at a given cell
                   | ArrayMerge  SW ArrayIndex ArrayIndex   -- ^ An array created by symbolically merging two other arrays
 
 instance Show ArrayContext where
-  show ArrayFree           = " initialized with random elements"
-  show (ArrayMutate i a b) = " cloned from array_" ++ show i ++ " with " ++ show a ++ " :: " ++ show (swKind a) ++ " |-> " ++ show b ++ " :: " ++ show (swKind b)
-  show (ArrayMerge  s i j) = " merged arrays " ++ show i ++ " and " ++ show j ++ " on condition " ++ show s
+  show (ArrayFree Nothing)   = " initialized with random elements"
+  show (ArrayFree (Just sw)) = " initialized with " ++ show sw
+  show (ArrayMutate i a b)   = " cloned from array_" ++ show i ++ " with " ++ show a ++ " :: " ++ show (swKind a) ++ " |-> " ++ show b ++ " :: " ++ show (swKind b)
+  show (ArrayMerge  s i j)   = " merged arrays " ++ show i ++ " and " ++ show j ++ " on condition " ++ show s
 
 -- | Expression map, used for hash-consing
 type ExprMap = Map.Map SBVExpr SW

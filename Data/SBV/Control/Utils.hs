@@ -205,19 +205,19 @@ freshVar nm = inNewContext $ fmap SBV . svMkSymVar (Just EX) k (Just nm)
   where k = kindOf (undefined :: a)
 
 -- | Similar to 'freshArray', except creates unnamed array.
-freshArray_ :: (SymArray array, HasKind a, HasKind b) => Query (array a b)
+freshArray_ :: (SymArray array, HasKind a, HasKind b) => Maybe (SBV b) -> Query (array a b)
 freshArray_ = mkFreshArray Nothing
 
 -- | Create a fresh array in query mode. Again, you should prefer
 -- creating arrays before the queries start using 'newArray', but this
 -- method can come in handy in occasional cases where you need a new array
 -- after you start the query based interaction.
-freshArray :: (SymArray array, HasKind a, HasKind b) => String -> Query (array a b)
-freshArray = mkFreshArray . Just
+freshArray :: (SymArray array, HasKind a, HasKind b) => String -> Maybe (SBV b) -> Query (array a b)
+freshArray nm = mkFreshArray (Just nm)
 
 -- | Creating arrays, internal use only.
-mkFreshArray :: (SymArray array, HasKind a, HasKind b) => Maybe String -> Query (array a b)
-mkFreshArray = inNewContext . newArrayInState
+mkFreshArray :: (SymArray array, HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> Query (array a b)
+mkFreshArray mbNm mbVal = inNewContext $ newArrayInState mbNm mbVal
 
 -- | If 'verbose' is 'True', print the message, useful for debugging messages
 -- in custom queries. Note that 'redirectVerbose' will be respected: If a

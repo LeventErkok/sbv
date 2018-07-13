@@ -166,6 +166,7 @@ Test-Suite SBVTest
   Hs-Source-Dirs  : SBVTestSuite
   main-is         : SBVTest.hs
   Other-modules   : Utils.SBVTestFramework
+                  , TestSuite.Arrays.InitVals
                   , TestSuite.Arrays.Memory
                   , TestSuite.Arrays.Query
                   , TestSuite.Basics.AllSat

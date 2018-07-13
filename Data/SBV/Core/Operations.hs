@@ -843,13 +843,17 @@ mergeSArr t (SArr ainfo a) (SArr _ b) = SArr ainfo $ cache h
                   return k
 
 -- | Create a named new array
-newSArr :: State -> (Kind, Kind) -> (Int -> String) -> IO SArr
-newSArr st ainfo mkNm = do
+newSArr :: State -> (Kind, Kind) -> (Int -> String) -> Maybe SVal -> IO SArr
+newSArr st ainfo mkNm mbDef = do
     amap <- R.readIORef $ rArrayMap st
+
+    mbSWDef <- case mbDef of
+                 Nothing -> return Nothing
+                 Just sv -> Just <$> svToSW st sv
 
     let i   = ArrayIndex $ IMap.size amap
         nm  = mkNm (unArrayIndex i)
-        upd = IMap.insert (unArrayIndex i) (nm, ainfo, ArrayFree)
+        upd = IMap.insert (unArrayIndex i) (nm, ainfo, ArrayFree mbSWDef)
 
     registerLabel "SArray declaration" st nm
 
@@ -1093,20 +1097,23 @@ mergeSFunArr t array1@(SFunArr ainfo@(sourceKind, targetKind) a) array2@(SFunArr
                                    return j
 
 -- | Create a named new array
-newSFunArr :: State -> (Kind, Kind) -> (Int -> String) -> IO SFunArr
-newSFunArr st (ak, bk) mkNm = do fArrMap <- R.readIORef (rFArrayMap st)
-                                 memoTable <- R.newIORef IMap.empty
+newSFunArr :: State -> (Kind, Kind) -> (Int -> String) -> Maybe SVal -> IO SFunArr
+newSFunArr st (ak, bk) mkNm mbDef = do
+        fArrMap <- R.readIORef (rFArrayMap st)
+        memoTable <- R.newIORef IMap.empty
 
-                                 let j  = FArrayIndex $ IMap.size fArrMap
-                                     nm = mkNm (unFArrayIndex j)
-                                     mkUninitialized i = svUninterpreted bk (nm ++ "_uninitializedRead") Nothing [i]
+        let j  = FArrayIndex $ IMap.size fArrMap
+            nm = mkNm (unFArrayIndex j)
+            mkUninitialized i = case mbDef of
+                                  Just def -> def
+                                  _        -> svUninterpreted bk (nm ++ "_uninitializedRead") Nothing [i]
 
-                                     upd = IMap.insert (unFArrayIndex j) (mkUninitialized, memoTable)
+            upd = IMap.insert (unFArrayIndex j) (mkUninitialized, memoTable)
 
-                                 registerLabel "SFunArray declaration" st nm
-                                 j `seq` modifyState st rFArrayMap upd (return ())
+        registerLabel "SFunArray declaration" st nm
+        j `seq` modifyState st rFArrayMap upd (return ())
 
-                                 return $ SFunArr (ak, bk) $ cache $ const $ return j
+        return $ SFunArr (ak, bk) $ cache $ const $ return j
 
 --------------------------------------------------------------------------------
 -- Utility functions

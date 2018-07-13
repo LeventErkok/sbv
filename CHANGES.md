@@ -5,6 +5,21 @@
 
 ### Version 7.9.5, Not yet released
 
+  * [BACKWARDS COMPATIBILITY] Array declarations are reworked to take
+    an initial value. The call 'newArray' now accepts an optional default
+    value, which itself can be symbolic. If provided, the array will return
+    the given value for all reads from uninitialized locations. If not given,
+    then reads from unwritten locations produce uninterpreted constants. The
+    behavior of 'SFunArray' and 'SArray' is exactly the same in this regard.
+    Note that this is a backwards-compatibility breaking change, as you need
+    to pass a 'Nothing' argument to 'newArray' to get the old behavior.
+    (Solver note: If you use 'SFunArray', then defaults are fully supported
+    by SBV since these are internally handled, concrete or symbolic. If you
+    use 'SArray', which gets translated to SMTLib, then MathSAT and Z3 supports
+    default values with both concrete and symbolic cases, CVC4 only supports
+    if they are constants. Boolector and Yices don't support default values
+    at this point in time, and ABC doesn't support arrays at all.)
+
   * Implement 'softConstrain': Similar to 'constrain', except the solver is
     free to leave it unsatisfied (i.e., leave it false) if necessary to
     find a satisfying solution. Useful in modeling conditions that are
@@ -23,15 +38,12 @@
   * Similar to above, add 'sFromIntegralChecked', providing overflow/underflow
     checks for cast operations.
 
-  * Add "Documentation.SBV.Examples.BitPrecise.BrokenSearch.hs" to show the
+  * Add "Documentation.SBV.Examples.BitPrecise.BrokenSearch" module to show the
     use of overflow checking utilities, using the classic broken binary search
     example from http://ai.googleblog.com/2006/06/extra-extra-read-all-about-it-nearly.html
 
   * Fix an issue where SBV was not sending array declarations to the SMT-solver
     if there were no explicit constraints. Thanks to Oliver Charles for reporting.
-
-  * Export 'addSValOptGoal' from 'Data.SBV.Internals', to help with 'Metric' class
-    instantiations. Requested by Dan Rosen.
 
   * Rework 'SFunArray' implementation, addressing performance issues. We now
     carefully memoize elements as we do the look-ups. This addresses several
@@ -58,6 +70,12 @@
     variables unusable in the query context. See http://github.com/LeventErkok/sbv/issues/407
     for details. If you have an actual use case for such a feature, please get in
     touch. Thanks to Brian Schroeder for reporting this anomaly.
+
+  * Export 'addSValOptGoal' from 'Data.SBV.Internals', to help with 'Metric' class
+    instantiations. Requested by Dan Rosen.
+
+  * Export 'registerKind' from 'Data.SBV.Internals', to help with custom array declarations.
+    Thanks to Brian Schroeder for the patch.
 
 ### Version 7.9, 2018-06-15
  
@@ -108,13 +126,13 @@
 
 ### Version 7.8, Released 2018-05-18
 
-  * Fix printing of min-bounds for signed 32/64 bit numbers: These
-    are tricky since C does not allow -min_value as a valid literal!
-    Instead we use the macros provided in stdint.h. Thanks to Matt
-    Peddie for reporting this corner case.
+  * Fix printing of min-bounds for signed 32/64 bit numbers in C
+    code generation: These are tricky since C does not allow
+    -min_value as a valid literal!  Instead we use the macros provided in
+    stdint.h. Thanks to Matt Peddie for reporting this corner case.
 
-  * Fix translation of the "abs" function, to make sure we use
-    the correct variant. Thanks to Matt Peddie for reporting.
+  * Fix translation of the "abs" function in C code generation, making
+    sure we use the correct variant. Thanks to Matt Peddie for reporting.
 
   * Fix handling of tables and arrays in pushed-contexts. Previously,
     we used initializers to get table/array values stored properly.

@@ -91,6 +91,17 @@
 [GOOD] (define-fun s48 () (_ BitVec 8) (vFArray_uninitializedRead s44))
 [GOOD] (define-fun s50 () Bool (= s48 s49))
 [GOOD] (assert s50)
+[GOOD] (define-fun s51 () Int 42)
+[GOOD] (define-fun array_1 () (Array Int Int) ((as const (Array Int Int)) 42))
+[GOOD] (declare-fun s52 () Int)
+[GOOD] (declare-fun s53 () (_ BitVec 8))
+[GOOD] (define-fun s54 () Int 96)
+[GOOD] (define-fun s55 () Int (select array_1 s54))
+[GOOD] (define-fun s56 () Bool (= s52 s55))
+[GOOD] (assert s56)
+[GOOD] (define-fun s57 () (_ BitVec 8) #x58)
+[GOOD] (define-fun s58 () Bool (= s53 s57))
+[GOOD] (assert s58)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -127,6 +138,10 @@
 [RECV] ((s43 1))
 [SEND] (get-value (s44))
 [RECV] ((s44 false))
+[SEND] (get-value (s52))
+[RECV] ((s52 42))
+[SEND] (get-value (s53))
+[RECV] ((s53 #x58))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
@@ -148,4 +163,6 @@
   vBinOp   =  Plus :: BinOp
   i1       =     1 :: Integer
   i2       = False :: Bool
+  mustBe42 =    42 :: Integer
+  mustBeX  =   'X' :: Char
 DONE!

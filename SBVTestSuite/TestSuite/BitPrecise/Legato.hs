@@ -32,7 +32,7 @@ tests = testGroup "BitPrecise.Legato" [
                        regA    <- free "regA"
                        flagC   <- free "flagC"
                        flagZ   <- free "flagZ"
-                       mem     <- newArray "mem"
+                       mem     <- newArray "mem" Nothing
                        output $ legatoIsCorrect mem (addrX, x) (addrY, y) addrLow (regX, regA, flagC, flagZ)
        legatoC = snd <$> compileToC' "legatoMult" (do
                     cgSetDriverValues [87, 92]
@@ -42,12 +42,7 @@ tests = testGroup "BitPrecise.Legato" [
                     cgPerformRTCs True
                     x <- cgInput "x"
                     y <- cgInput "y"
-                    memUninit <- cgSym $ newArray "mem"
-                    -- Strictly speaking, initializing the lowAddr location
-                    -- to 0 isn't required. But not having an initial value
-                    -- there causes SBV to create an uninterpreted reference
-                    -- (correctly), but undesirably!
-                    let mem      = writeArray memUninit lowAddr 0
-                        (hi, lo) = runLegato (f1Addr, x) (f2Addr, y) lowAddr (initMachine mem (0, 0, false, false))
+                    mem <- cgSym $ newArray "mem" (Just 0)
+                    let (hi, lo) = runLegato (f1Addr, x) (f2Addr, y) lowAddr (initMachine mem (0, 0, false, false))
                     cgOutput "hi" hi
                     cgOutput "lo" lo)

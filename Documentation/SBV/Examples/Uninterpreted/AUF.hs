@@ -58,7 +58,7 @@ proveSArray :: IO ThmResult
 proveSArray = prove $ do
                 x <- free "x"
                 y <- free "y"
-                a :: SArray Word32 Word32 <- newArray_
+                a :: SArray Word32 Word32 <- newArray_ Nothing
                 return $ thm x y a
 
 -- | Prove it using SBV's internal functional arrays.
@@ -69,5 +69,5 @@ proveSFunArray :: IO ThmResult
 proveSFunArray = prove $ do
                 x <- free "x"
                 y <- free "y"
-                a :: SFunArray Word32 Word32 <- newArray_
+                a :: SFunArray Word32 Word32 <- newArray_ Nothing
                 return $ thm x y a

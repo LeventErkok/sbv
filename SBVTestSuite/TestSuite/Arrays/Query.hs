@@ -32,7 +32,7 @@ tests =
                              appendFile goldFile ("\n FINAL:" ++ show r ++ "\nDONE!\n")
 
 q1 :: Symbolic (Word8, Word8, Int8)
-q1 = do m  :: SArray Word8 Int8 <- newArray "a"
+q1 = do m  :: SArray Word8 Int8 <- newArray "a" Nothing
 
         a1 <- sWord8 "a1"
         a2 <- sWord8 "a2"
@@ -82,7 +82,7 @@ q4 = do i <- sWord8 "i"
                    return (iv, jv)
 
 q5 :: Symbolic (Maybe (Word8, Int8))
-q5 = do m  :: SArray Word8 Int8 <- newArray "a"
+q5 = do m  :: SArray Word8 Int8 <- newArray "a" Nothing
 
         a <- sWord8 "a"
         v <- sInt8  "v"
@@ -102,7 +102,7 @@ q5 = do m  :: SArray Word8 Int8 <- newArray "a"
                                  return $ Just (av, vv)
 
 q6 :: Symbolic [Integer]
-q6 = do (a :: SArray Integer Integer) <- newArray "a"
+q6 = do (a :: SArray Integer Integer) <- newArray "a" Nothing
 
         query $ loop (writeArray a 1 1) []
 

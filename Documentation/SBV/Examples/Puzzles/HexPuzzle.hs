@@ -87,7 +87,7 @@ next b g = ite (readArray g b .== literal Black) g
 -- | Iteratively search at increasing depths of button-presses to see if we can
 -- transform from the initial board position to a final board position.
 search :: [Color] -> [Color] -> IO ()
-search initial final = runSMT $ do emptyGrid :: Grid <- newArray "emptyGrid"
+search initial final = runSMT $ do emptyGrid :: Grid <- newArray "emptyGrid" (Just (literal Black))
                                    let initGrid = foldr (\(i, c) a -> writeArray a (literal i) (literal c)) emptyGrid (zip [1..] initial)
                                    query $ loop (0 :: Int) initGrid []
 
@@ -131,8 +131,8 @@ search initial final = runSMT $ do emptyGrid :: Grid <- newArray "emptyGrid"
 -- Searching at depth: 4
 -- Searching at depth: 5
 -- Searching at depth: 6
--- Found: [10,10,9,11,14,6]
 -- Found: [10,10,11,9,14,6]
+-- Found: [10,10,9,11,14,6]
 -- There are no more solutions.
 example :: IO ()
 example = search initBoard finalBoard

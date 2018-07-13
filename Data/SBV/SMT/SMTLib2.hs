@@ -42,6 +42,7 @@ cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs ui
         hasBVs         = hasChar || not (null [() | KBounded{} <- Set.toList kindInfo])   -- Remember, characters map to Word8
         usorts         = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
         hasNonBVArrays = (not . null) [() | (_, (_, (k1, k2), _)) <- arrs, not (isBounded k1 && isBounded k2)]
+        hasArrayInits  = (not . null) [() | (_, (_, _, ArrayFree (Just _))) <- arrs]
         rm             = roundingMode cfg
         solverCaps     = capabilities (solver cfg)
 
@@ -63,6 +64,10 @@ cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs ui
            -- NB. This isn't really fool proof!
 
            -- we never set QF_S (ALL seems to work better in all cases)
+           
+           | hasArrayInits
+           = ["(set-logic ALL)"]
+
            | hasString
            = ["(set-logic ALL)"]
 
@@ -157,7 +162,7 @@ cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs ui
 
         (constTables, skolemTables) = ([(t, d) | (t, Left d) <- allTables], [(t, d) | (t, Right d) <- allTables])
         allTables = [(t, genTableData rm skolemMap (not (null foralls), forallArgs) (map fst consts) t) | t <- tbls]
-        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray False (not (null foralls)) (map fst consts) skolemMap) arrs
+        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg False (not (null foralls)) consts skolemMap) arrs
         delayedEqualities = concatMap snd skolemTables
 
         delayedAsserts []              = []
@@ -293,7 +298,7 @@ cvtInc afterAPush inps ks consts arrs tbls uis (SBVPgm asgnsSeq) cfg =
 
         declInp (s, _) = "(declare-fun " ++ show s ++ " () " ++ swType s ++ ")"
 
-        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray afterAPush False (map fst consts) skolemMap) arrs
+        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg afterAPush False consts skolemMap) arrs
 
         allTables = [(t, either id id (genTableData rm skolemMap (False, []) (map fst consts) t)) | t <- tbls]
         tableMap  = IM.fromList $ map mkTable allTables
@@ -371,24 +376,36 @@ genTableData rm skolemMap (_quantified, args) consts ((i, aknd, _), elts)
 -- we might have to skolemize those. Implement this properly.
 -- The difficulty is with the Mutate/Merge: We have to postpone an init if
 -- the components are themselves postponed, so this cannot be implemented as a simple map.
-declArray :: Bool -> Bool -> [SW] -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String], [String])
-declArray afterAPush quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : zipWith wrap [(0::Int)..] (map snd pre), zipWith wrap [lpre..] (map snd post), setup)
-  where topLevel = not quantified || case ctx of
-                                       ArrayFree         -> True
-                                       ArrayMutate _ a b -> all (`elem` consts) [a, b]
-                                       ArrayMerge c _ _  -> c `elem` consts
+declArray :: SMTConfig -> Bool -> Bool -> [(SW, CW)] -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String], [String])
+declArray cfg afterAPush quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : zipWith wrap [(0::Int)..] (map snd pre), zipWith wrap [lpre..] (map snd post), setup)
+  where constNames = map fst consts
+        topLevel = not quantified || case ctx of
+                                       ArrayFree mbi      -> maybe True (`elem` constNames) mbi
+                                       ArrayMutate _ a b  -> all (`elem` constNames) [a, b]
+                                       ArrayMerge c _ _   -> c `elem` constNames
         (pre, post) = partition fst ctxInfo
         nm = "array_" ++ show i
         ssw sw
-         | topLevel || sw `elem` consts
+         | topLevel || sw `elem` constNames
          = cvtSW skolemMap sw
          | True
          = tbd "Non-constant array initializer in a quantified context"
-        adecl = "(declare-fun " ++ nm ++ " () (Array " ++ smtType aKnd ++ " " ++ smtType bKnd ++ "))"
+        atyp  = "(Array " ++ smtType aKnd ++ " " ++ smtType bKnd ++ ")"
+
+        adecl = case ctx of
+                  ArrayFree (Just v) -> "(define-fun "  ++ nm ++ " () " ++ atyp ++ " ((as const " ++ atyp ++ ") " ++ constInit v ++ "))"
+                  _                  -> "(declare-fun " ++ nm ++ " () " ++ atyp ++                                                  ")"
+
+        -- CVC4 chokes if the initializer is not a constant. (Z3 is ok with it.) So, print it as
+        -- a constant if we have it in the constants; otherwise, we merely print it and hope for the best.
+        constInit v = case v `lookup` consts of
+                        Nothing -> ssw v                      -- Z3 will work, CVC4 will choke. Others don't even support this.
+                        Just c  -> cvtCW (roundingMode cfg) c -- Z3 and CVC4 will work. Other's don't support this.
+
         ctxInfo = case ctx of
-                    ArrayFree         -> []
-                    ArrayMutate j a b -> [(all (`elem` consts) [a, b], "(= " ++ nm ++ " (store array_" ++ show j ++ " " ++ ssw a ++ " " ++ ssw b ++ "))")]
-                    ArrayMerge  t j k -> [(t `elem` consts,            "(= " ++ nm ++ " (ite " ++ ssw t ++ " array_" ++ show j ++ " array_" ++ show k ++ "))")]
+                    ArrayFree _       -> []
+                    ArrayMutate j a b -> [(all (`elem` constNames) [a, b], "(= " ++ nm ++ " (store array_" ++ show j ++ " " ++ ssw a ++ " " ++ ssw b ++ "))")]
+                    ArrayMerge  t j k -> [(t `elem` constNames,            "(= " ++ nm ++ " (ite " ++ ssw t ++ " array_" ++ show j ++ " array_" ++ show k ++ "))")]
 
         -- Arrange for initializers
         mkInit idx    = "array_" ++ show i ++ "_initializer_" ++ show (idx :: Int)

@@ -429,14 +429,18 @@ instance (Random a, SymWord a) => Random (SBV a) where
 -- in practice. (There are some differences between these models, however, see the corresponding
 -- declarations.)
 --
+-- If a default value is supplied, then all the array elements will be initialized to this value.
+-- Otherwise, they will be left unspecified, i.e., a read from an unwritten location will produce
+-- an uninterpreted constant.
+--
 -- As a rule of thumb, try 'SArray' first. These should generate compact code. However, if
 -- the backend solver has hard time solving the generated problems, switch to
 -- 'SFunArray'. If you still have issues, please report so we can see what the problem might be!
 class SymArray array where
-  -- | Create a new anonymous array
-  newArray_      :: (HasKind a, HasKind b) => Symbolic (array a b)
-  -- | Create a named new array
-  newArray       :: (HasKind a, HasKind b) => String -> Symbolic (array a b)
+  -- | Create a new anonymous array, possibly with a default initial value.
+  newArray_      :: (HasKind a, HasKind b) => Maybe (SBV b) -> Symbolic (array a b)
+  -- | Create a named new array, possibly with a default initial value.
+  newArray       :: (HasKind a, HasKind b) => String -> Maybe (SBV b) -> Symbolic (array a b)
   -- | Read the array element at @a@
   readArray      :: array a b -> SBV a -> SBV b
   -- | Update the element at @a@ to be @b@
@@ -446,17 +450,18 @@ class SymArray array where
   -- Merging pushes the if-then-else choice down on to elements
   mergeArrays    :: SymWord b => SBV Bool -> array a b -> array a b -> array a b
   -- | Internal function, not exported to the user
-  newArrayInState :: (HasKind a, HasKind b) => Maybe String -> State -> IO (array a b)
+  newArrayInState :: (HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> State -> IO (array a b)
 
   {-# MINIMAL readArray, writeArray, mergeArrays, newArrayInState #-}
-  newArray_   = ask >>= liftIO . newArrayInState Nothing
-  newArray nm = ask >>= liftIO . newArrayInState (Just nm)
+  newArray_   mbVal = ask >>= liftIO . newArrayInState Nothing   mbVal
+  newArray nm mbVal = ask >>= liftIO . newArrayInState (Just nm) mbVal
 
 -- | Arrays implemented in terms of SMT-arrays: <http://smtlib.cs.uiowa.edu/theories-ArraysEx.shtml>
 --
 --   * Maps directly to SMT-lib arrays
 --
---   * Reading from an unintialized value is OK and yields an unspecified result
+--   * Reading from an unintialized value is OK. If the default value is given in 'newArray', it will
+--     be the result. Otherwise, the read yields an uninterpreted constant.
 --
 --   * Can check for equality of these arrays
 --
@@ -475,9 +480,9 @@ instance SymArray SArray where
   writeArray  (SArray arr) (SBV a)    (SBV b)    = SArray (writeSArr arr a b)
   mergeArrays (SBV t)      (SArray a) (SArray b) = SArray (mergeSArr t a b)
 
-  newArrayInState :: forall a b. (HasKind a, HasKind b) => Maybe String -> State -> IO (SArray a b)
-  newArrayInState mbNm st = do mapM_ (registerKind st) [aknd, bknd]
-                               SArray <$> newSArr st (aknd, bknd) (mkNm mbNm)
+  newArrayInState :: forall a b. (HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> State -> IO (SArray a b)
+  newArrayInState mbNm mbVal st = do mapM_ (registerKind st) [aknd, bknd]
+                                     SArray <$> newSArr st (aknd, bknd) (mkNm mbNm) (unSBV <$> mbVal)
      where mkNm Nothing   t = "array_" ++ show t
            mkNm (Just nm) _ = nm
            aknd = kindOf (undefined :: a)
@@ -488,7 +493,8 @@ instance SymArray SArray where
 --   * Internally handled by the library and not mapped to SMT-Lib, hence can
 --     be used with solvers that don't support arrays. (Such as abc.)
 --
---   * Reading from an unintialized value is OK and yields an unspecified result
+--   * Reading from an unintialized value is OK. If the default value is given in 'newArray', it will
+--     be the result. Otherwise, the read yields an uninterpreted constant.
 --
 --   * Cannot check for equality. Note that this differs from SMT-Lib arrays
 --     since SMT-Lib arrays (i.e. SArray's) can be checked for equality.
@@ -503,7 +509,7 @@ instance SymArray SArray where
 --     get compiled away, the generated code simply refers to the elements; i.e.,
 --     all reads and writes gets fused away.
 --
---   * Cannot quick-check theorems using @SFunArray@ values
+--   * Can quick-check theorems using @SFunArray@ values
 --
 --   * Typically faster as it gets compiled away during translation.
 newtype SFunArray a b = SFunArray { unSFunArray :: SFunArr }
@@ -516,9 +522,9 @@ instance SymArray SFunArray where
   writeArray  (SFunArray arr) (SBV a) (SBV b)     = SFunArray (writeSFunArr arr a b)
   mergeArrays (SBV t) (SFunArray a) (SFunArray b) = SFunArray (mergeSFunArr t a b)
 
-  newArrayInState :: forall a b. (HasKind a, HasKind b) => Maybe String -> State -> IO (SFunArray a b)
-  newArrayInState mbNm st = do mapM_ (registerKind st) [aknd, bknd]
-                               SFunArray <$> newSFunArr st (aknd, bknd) (mkNm mbNm)
+  newArrayInState :: forall a b. (HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> State -> IO (SFunArray a b)
+  newArrayInState mbNm mbVal st = do mapM_ (registerKind st) [aknd, bknd]
+                                     SFunArray <$> newSFunArr st (aknd, bknd) (mkNm mbNm) (unSBV <$> mbVal)
     where mkNm Nothing t   = "funArray_" ++ show t
           mkNm (Just nm) _ = nm
           aknd = kindOf (undefined :: a)
