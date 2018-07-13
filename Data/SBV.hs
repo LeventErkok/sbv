@@ -268,8 +268,8 @@ module Data.SBV (
   -- ** Configurations
   , defaultSolverConfig, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
   , setLogic, Logic(..), setOption, setInfo, setTimeOut
-  -- ** Solver exceptions
-  , SMTException(..)
+  -- ** SBV exceptions
+  , SBVException(..)
 
   -- * Abstract SBV type
   , SBV, HasKind(..), Kind(..), SymWord(..)
@@ -308,7 +308,7 @@ import Data.Word
 import qualified Language.Haskell.TH as TH
 import Data.Generics
 
-import Data.SBV.SMT.Utils (SMTException(..))
+import Data.SBV.SMT.Utils (SBVException(..))
 import Data.SBV.Control.Utils (SMTValue (..))
 import Data.SBV.Control.Types (SMTReasonUnknown(..), Logic(..))
 

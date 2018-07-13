@@ -20,6 +20,15 @@
     if they are constants. Boolector and Yices don't support default values
     at this point in time, and ABC doesn't support arrays at all.)
 
+  * [BACKWARDS COMPATIBILITY] SMTException type has been renamed to
+    SBVException. SBV now throws this exception in more cases to aid in
+    building tools on top of SBV that might want to deal with exceptions
+    in different ways. (Previously, we used to call 'error' instead.)
+
+  * [BACKWARDS COMPATIBILITY] Rename 'assertSoft' to 'assertWithPenalty', which
+    better reflects the nature of this function. Also add extra checks to warn
+    the user if optimization constraints are present in a regular sat/prove call.
+
   * Implement 'softConstrain': Similar to 'constrain', except the solver is
     free to leave it unsatisfied (i.e., leave it false) if necessary to
     find a satisfying solution. Useful in modeling conditions that are
@@ -60,10 +69,6 @@
     This is similar to 'newArray' which works in the Symbolic mode, and is analogous to
     'freshVar'. Most users shouldn't need this as 'newArray' calls should suffice. Only
     use if you need a brand new array after switching to query mode.
-
-  * Rename 'assertSoft' to 'assertWithPenalty', which better reflects the nature
-    of this function. Also add extra checks to warn the user if optimization
-    constraints are present in a regular sat/prove call.
 
   * SBV now rejects queries if universally quantified inputs are present. Previously
     these were allowed to go through, but in general skolemization makes the corresponding

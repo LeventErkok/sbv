@@ -29,7 +29,7 @@ testsLocal =
 -- Yices throws an exception for this since exponent is too large
 yicesExc :: FilePath -> IO ()
 yicesExc rf = runSMTWith yices{verbose=True, redirectVerbose=Just rf} exc
-                             `C.catch` \(e :: SMTException) -> do appendFile rf "CAUGHT SMT EXCEPTION"
+                             `C.catch` \(e :: SBVException) -> do appendFile rf "CAUGHT SMT EXCEPTION"
                                                                   appendFile rf (show e)
  where exc = do x <- sWord32 "x"
                 constrain $ lsb x ==> (x * (x .^ (-1::SWord32))) .== 1
@@ -45,7 +45,7 @@ testsRemote =
 -- Create the case where we ask for integer-logic, but use reals
 z3Exc1 :: FilePath -> IO ()
 z3Exc1 rf = runSMTWith z3{verbose=True, redirectVerbose=Just rf} exc
-                `C.catch` \(e :: SMTException) -> do appendFile rf "CAUGHT SMT EXCEPTION"
+                `C.catch` \(e :: SBVException) -> do appendFile rf "CAUGHT SMT EXCEPTION"
                                                      appendFile rf (show e)
    where exc = do setLogic QF_LIA
                   x <- sReal "x"
@@ -55,7 +55,7 @@ z3Exc1 rf = runSMTWith z3{verbose=True, redirectVerbose=Just rf} exc
 
 -- Similar to above, except linear logic, but use non-linear constructs
 z3Exc2 :: FilePath -> IO ()
-z3Exc2 rf = do r <- runSMT z3ExcCatch `C.catch` \(e :: SMTException) -> return ("OK, we got: " ++ smtExceptionDescription e)
+z3Exc2 rf = do r <- runSMT z3ExcCatch `C.catch` \(e :: SBVException) -> return ("OK, we got: " ++ sbvExceptionDescription e)
                appendFile rf ("\nFINAL: " ++ show r ++ "\nDONE!\n")
   where z3ExcCatch = do setLogic QF_LIA
                         x <- sInteger "x"

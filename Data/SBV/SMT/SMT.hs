@@ -62,7 +62,7 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (SMTEngine, State(..))
 
-import Data.SBV.SMT.Utils     (showTimeoutValue, alignPlain, alignDiagnostic, debug, mergeSExpr, SMTException(..))
+import Data.SBV.SMT.Utils     (showTimeoutValue, alignPlain, debug, mergeSExpr, SBVException(..))
 
 import Data.SBV.Utils.PrettyNum
 import Data.SBV.Utils.Lib       (joinArgs, splitArgs)
@@ -491,7 +491,7 @@ pipeProcess cfg ctx execName opts pgm continuation = do
 
       Just execPath -> runSolver cfg ctx execPath opts pgm continuation
                        `C.catches`
-                        [ C.Handler (\(e :: SMTException)    -> C.throwIO e)
+                        [ C.Handler (\(e :: SBVException)    -> C.throwIO e)
                         , C.Handler (\(e :: C.ErrorCall)     -> C.throwIO e)
                         , C.Handler (\(e :: C.SomeException) -> error $ unlines [ "Failed to start the external solver:\n" ++ show e
                                                                                 , "Make sure you can start " ++ show execPath
@@ -626,29 +626,33 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                         (False, False) -> go False   need (ln:sofar)
                                                                         (False, True)  -> return (ln:sofar)
 
-                                              SolverException e -> error $ unlines $ [""
-                                                                                     , "*** Error     : " ++ e
-                                                                                     , "*** Executable: " ++ execPath
-                                                                                     , "*** Options   : " ++ joinArgs opts
-                                                                                     ]
-                                                                                  ++ [ "*** Request   : " `alignDiagnostic` command                 | Just command <- [mbCommand]]
-                                                                                  ++ [ "*** Response  : " `alignDiagnostic` unlines (reverse sofar) | not $ null sofar           ]
-                                                                                  ++ [ "***"
-                                                                                     , "*** Giving up!"
-                                                                                     ]
+                                              SolverException e -> do terminateProcess pid
+                                                                      C.throwIO $ SBVException { sbvExceptionDescription = e
+                                                                                               , sbvExceptionSent        = mbCommand
+                                                                                               , sbvExceptionExpected    = Nothing
+                                                                                               , sbvExceptionReceived    = Just $ unlines (reverse sofar)
+                                                                                               , sbvExceptionStdOut      = Nothing
+                                                                                               , sbvExceptionStdErr      = Nothing
+                                                                                               , sbvExceptionExitCode    = Nothing
+                                                                                               , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
+                                                                                               , sbvExceptionReason      = Nothing
+                                                                                               , sbvExceptionHint        = Nothing
+                                                                                               }
 
                                               SolverTimeout e -> do terminateProcess pid -- NB. Do not *wait* for the process, just quit.
-                                                                    error $ unlines $ [ ""
-                                                                                      , "*** Data.SBV: Timeout."
-                                                                                      , "***"
-                                                                                      , "***   " ++ e
-                                                                                      ]
-                                                                                   ++ [ "***   Response so far: " `alignDiagnostic` unlines (reverse sofar) | not $ null sofar]
-                                                                                   ++ [ "***   Last command sent was: " `alignDiagnostic` command | Just command <- [mbCommand]]
-                                                                                   ++ [ "***   Run with 'verbose=True' for further information" | not (verbose cfg)]
-                                                                                   ++ [ "***"
-                                                                                      , "*** Giving up!"
-                                                                                      ]
+                                                                    C.throwIO $ SBVException { sbvExceptionDescription = "Timeout! " ++ e
+                                                                                             , sbvExceptionSent        = mbCommand
+                                                                                             , sbvExceptionExpected    = Nothing
+                                                                                             , sbvExceptionReceived    = Just $ unlines (reverse sofar)
+                                                                                             , sbvExceptionStdOut      = Nothing
+                                                                                             , sbvExceptionStdErr      = Nothing
+                                                                                             , sbvExceptionExitCode    = Nothing
+                                                                                             , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
+                                                                                             , sbvExceptionReason      = Nothing
+                                                                                             , sbvExceptionHint        = if not (verbose cfg)
+                                                                                                                         then Just ["Run with 'verbose=True' for further information"]
+                                                                                                                         else Nothing
+                                                                                             }
 
                     terminateSolver = do hClose inh
                                          outMVar <- newEmptyMVar
@@ -676,15 +680,20 @@ runSolver cfg ctx execPath opts pgm continuation
                              ExitSuccess -> return ()
                              _           -> if ignoreExitCode cfg
                                                then msg ["Ignoring non-zero exit code of " ++ show ex ++ " per user request!"]
-                                               else error $ unlines $  [ ""
-                                                                       , "*** Failed to complete the call to " ++ nm ++ ":"
-                                                                       , "*** Executable   : " ++ execPath
-                                                                       , "*** Options      : " ++ joinArgs opts
-                                                                       , "*** Exit code    : " ++ show ex
-                                                                       ]
-                                                                    ++ [ "*** Std-out      : " ++ intercalate "\n                   " (lines out)]
-                                                                    ++ [ "*** Std-err      : " ++ intercalate "\n                   " (lines err)]
-                                                                    ++ ["Giving up.."]
+                                               else C.throwIO $ SBVException { sbvExceptionDescription = "Failed to complete the call to " ++ nm
+                                                                             , sbvExceptionSent        = Nothing
+                                                                             , sbvExceptionExpected    = Nothing
+                                                                             , sbvExceptionReceived    = Nothing
+                                                                             , sbvExceptionStdOut      = Just out
+                                                                             , sbvExceptionStdErr      = Just err
+                                                                             , sbvExceptionExitCode    = Just ex
+                                                                             , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
+                                                                             , sbvExceptionReason      = Nothing
+                                                                             , sbvExceptionHint        = if not (verbose cfg)
+                                                                                                         then Just ["Run with 'verbose=True' for further information"]
+                                                                                                         else Nothing
+                                                                             }
+
                 return (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid)
 
       let executeSolver = do let sendAndGetSuccess :: Maybe Int -> String -> IO ()
@@ -722,16 +731,16 @@ runSolver cfg ctx execPath opts pgm continuation
                                                             let out = intercalate "\n" . lines $ outOrig
                                                                 err = intercalate "\n" . lines $ errOrig
 
-                                                                exc = SMTException { smtExceptionDescription = "Data.SBV: Unexpected non-success response from " ++ nm
-                                                                                   , smtExceptionSent        = l
-                                                                                   , smtExceptionExpected    = "success"
-                                                                                   , smtExceptionReceived    = r ++ "\n" ++ extras
-                                                                                   , smtExceptionStdOut      = out
-                                                                                   , smtExceptionStdErr      = Just err
-                                                                                   , smtExceptionExitCode    = Just ex
-                                                                                   , smtExceptionConfig      = cfg { solver = (solver cfg) {executable = execPath } }
-                                                                                   , smtExceptionReason      = Just reason
-                                                                                   , smtExceptionHint        = Nothing
+                                                                exc = SBVException { sbvExceptionDescription = "Unexpected non-success response from " ++ nm
+                                                                                   , sbvExceptionSent        = Just l
+                                                                                   , sbvExceptionExpected    = Just "success"
+                                                                                   , sbvExceptionReceived    = Just $ r ++ "\n" ++ extras
+                                                                                   , sbvExceptionStdOut      = Just out
+                                                                                   , sbvExceptionStdErr      = Just err
+                                                                                   , sbvExceptionExitCode    = Just ex
+                                                                                   , sbvExceptionConfig      = cfg { solver = (solver cfg) {executable = execPath } }
+                                                                                   , sbvExceptionReason      = Just reason
+                                                                                   , sbvExceptionHint        = Nothing
                                                                                    }
 
                                                             C.throwIO exc

@@ -78,7 +78,7 @@ import Data.SBV.Core.AlgReals   (mergeAlgReals)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
-import Data.SBV.SMT.Utils   (showTimeoutValue, addAnnotations, alignPlain, debug, mergeSExpr, SMTException(..))
+import Data.SBV.SMT.Utils   (showTimeoutValue, addAnnotations, alignPlain, debug, mergeSExpr, SBVException(..))
 
 import Data.SBV.Utils.Lib (qfsToString)
 
@@ -690,16 +690,16 @@ unexpected ctx sent expected mbHint received mbReason = do
 
         cfg <- getConfig
 
-        let exc = SMTException { smtExceptionDescription = "Data.SBV: Unexpected response from the solver, context: " ++ ctx
-                               , smtExceptionSent        = sent
-                               , smtExceptionExpected    = expected
-                               , smtExceptionReceived    = received
-                               , smtExceptionStdOut      = unlines extras
-                               , smtExceptionStdErr      = Nothing
-                               , smtExceptionExitCode    = Nothing
-                               , smtExceptionConfig      = cfg
-                               , smtExceptionReason      = mbReason
-                               , smtExceptionHint        = mbHint
+        let exc = SBVException { sbvExceptionDescription = "Unexpected response from the solver, context: " ++ ctx
+                               , sbvExceptionSent        = Just sent
+                               , sbvExceptionExpected    = Just expected
+                               , sbvExceptionReceived    = Just received
+                               , sbvExceptionStdOut      = Just $ unlines extras
+                               , sbvExceptionStdErr      = Nothing
+                               , sbvExceptionExitCode    = Nothing
+                               , sbvExceptionConfig      = cfg
+                               , sbvExceptionReason      = mbReason
+                               , sbvExceptionHint        = mbHint
                                }
 
         io $ C.throwIO exc
