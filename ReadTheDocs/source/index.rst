@@ -23,6 +23,7 @@ SMT solvers::
    :caption: Contents:
 
    introduction/introduction
+   thanks/thanks
 
 Indices and tables
 ==================
