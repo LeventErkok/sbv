@@ -38,6 +38,7 @@ module Data.SBV.Core.Model (
   )
   where
 
+import Control.Applicative  (ZipList(ZipList))
 import Control.Monad        (when, unless, mplus)
 import Control.Monad.Trans  (liftIO)
 import Control.Monad.Reader (ask)
@@ -1395,6 +1396,11 @@ instance Mergeable a => Mergeable [a] where
     | lxs == lys = zipWith (symbolicMerge f t) xs ys
     | True       = error $ "SBV.Mergeable.List: No least-upper-bound for lists of differing size " ++ show (lxs, lys)
     where (lxs, lys) = (length xs, length ys)
+
+-- ZipList
+instance Mergeable a => Mergeable (ZipList a) where
+  symbolicMerge force test (ZipList xs) (ZipList ys)
+    = ZipList (symbolicMerge force test xs ys)
 
 -- Maybe
 instance Mergeable a => Mergeable (Maybe a) where
