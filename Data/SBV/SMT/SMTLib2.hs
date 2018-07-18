@@ -855,6 +855,14 @@ handleKindCast kFrom kTo a
          | m == n = a
          | True   = extract (n - 1)
 
+        -- NB. The following works regardless n < 0 or not, because the first thing we
+        -- do is to compute "reduced" to bring it down to the correct range. It also works
+        -- regardless were mapping to signed or unsigned bit-vector; because the representation
+        -- is the same.
+        --
+        -- NB2. (TODO) There is an SMTLib equivalent of this function, called int2bv. However, it
+        -- used to be uninterpreted for a long time by Z3; though I think that got fixed. We
+        -- might want to simply use that if it's reliably available across the board in solvers.
         i2b n = "(let (" ++ reduced ++ ") (let (" ++ defs ++ ") " ++ body ++ "))"
           where b i      = show (bit i :: Integer)
                 reduced  = "(__a (mod " ++ a ++ " " ++ b n ++ "))"
