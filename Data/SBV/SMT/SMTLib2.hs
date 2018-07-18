@@ -53,7 +53,7 @@ cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs ui
                          []  -> Nothing
                          [l] -> Just l
                          ls  -> error $ unlines [ ""
-                                                , "*** Only one setOption call to 'SetLogic' is allowed, found: " ++ show (length ls)
+                                                , "*** Only one setOption call to 'setLogic' is allowed, found: " ++ show (length ls)
                                                 , "***  " ++ unwords (map show ls)
                                                 ]
            = case l of
