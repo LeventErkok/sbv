@@ -843,11 +843,7 @@ Note that a 'namedConstraint' is equivalent to a 'constrainWithAttribute' call, 
 {- $unsatCores
 Named constraints are useful when used in conjunction with 'getUnsatCore' function
 where the backend solver can be queried to obtain an unsat core in case the constraints are unsatisfiable.
-This feature is enabled by the following option:
-
-   @ setOption $ ProduceUnsatCores True @
-
-See "Documentation.SBV.Examples.Misc.UnsatCore" for an example use case.
+See 'Data.SBV.Control.getUnsatCore' for details and "Documentation.SBV.Examples.Queries.UnsatCore" for an example use case.
 -}
 
 {- $uninterpreted
