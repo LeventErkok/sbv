@@ -388,7 +388,12 @@ checkSatAssuming sBools = fst <$> checkSatAssumingHelper False sBools
 -- that while this set will be a subset of the inputs, it is not necessarily guaranteed to be minimal.
 --
 -- You must have arranged for the production of unsat assumptions
--- first (/via/ @'setOption' $ 'ProduceUnsatAssumptions' 'True'@)
+-- first via
+--
+-- @
+--     'setOption' $ 'ProduceUnsatAssumptions' 'True'
+-- @
+--
 -- for this call to not error out!
 --
 -- Usage note: 'getUnsatCore' is usually easier to use than 'checkSatAssumingWithUnsatisfiableSet', as it
@@ -578,8 +583,25 @@ exit = do send True "(exit)"
           modifyQueryState $ \s -> s{queryAssertionStackDepth = 0}
 
 -- | Retrieve the unsat-core. Note you must have arranged for
--- unsat cores to be produced first (/via/ @'setOption' $ 'ProduceUnsatCores' 'True'@)
+-- unsat cores to be produced first via
+--
+-- @
+--     'setOption' $ 'ProduceUnsatCores' 'True'
+-- @
+--
 -- for this call to not error out!
+--
+-- NB. There is no notion of a minimal unsat-core, in case unsatisfiability can be derived
+-- in multiple ways. Furthermore, Z3 does not guarantee that the generated unsat
+-- core does not have any redundant assertions either, as doing so can incur a performance penalty.
+-- (There might be assertions in the set that is not needed.) To ensure all the assertions
+-- in the core are relevant, use:
+--
+-- @
+--     'setOption' $ 'OptionKeyword' ":smt.core.minimize" ["true"]
+-- @
+--
+-- Note that this only works with Z3.
 getUnsatCore :: Query [String]
 getUnsatCore = do
         let cmd = "(get-unsat-core)"
@@ -590,6 +612,15 @@ getUnsatCore = do
                                   , ""
                                   , "so the solver will be ready to compute unsat cores,"
                                   , "and that there is a model by first issuing a 'checkSat' call."
+                                  , ""
+                                  , "If using z3, you might also optionally want to set:"
+                                  , ""
+                                  , "       setOption $ OptionKeyword \":smt.core.minimize\" [\"true\"]"
+                                  , ""
+                                  , "to make sure the unsat core doesn't have irrelevant entries,"
+                                  , "though this might incur a performance penalty."
+
+
                                   ]
 
         r <- ask cmd
@@ -607,7 +638,12 @@ getUnsatCoreIfRequested = do
            else return Nothing
 
 -- | Retrieve the proof. Note you must have arranged for
--- proofs to be produced first (/via/ @'setOption' $ 'ProduceProofs' 'True'@)
+-- proofs to be produced first via
+--
+-- @
+--     'setOption' $ 'ProduceProofs' 'True'
+-- @
+--
 -- for this call to not error out!
 --
 -- A proof is simply a 'String', as returned by the solver. In the future, SBV might
@@ -633,7 +669,12 @@ getProof = do
         parse r bad $ \_ -> return r
 
 -- | Retrieve an interpolant after an 'Unsat' result is obtained. Note you must have arranged for
--- interpolants to be produced first (/via/ @'setOption' $ 'ProduceInterpolants' 'True'@)
+-- interpolants to be produced first via
+--
+-- @
+--     'setOption' $ 'ProduceInterpolants' 'True'
+-- @
+--
 -- for this call to not error out!
 --
 -- To get an interpolant for a pair of formulas @A@ and @B@, use a 'constrainWithAttribute' call to attach
@@ -653,7 +694,7 @@ getProof = do
 -- to @A@ and @B@.
 --
 -- N.B. As of Z3 version 4.8.0; Z3 no longer supports interpolants. Use the MathSAT backend for extracting
--- interpolants. See 'Documentation.SBV.Examples.Queries.Interpolants' for an example.
+-- interpolants. See "Documentation.SBV.Examples.Queries.Interpolants" for an example.
 getInterpolant :: [String] -> Query String
 getInterpolant fs
   | null fs
@@ -676,7 +717,12 @@ getInterpolant fs
        parse r bad $ \e -> return $ serialize False e
 
 -- | Retrieve assertions. Note you must have arranged for
--- assertions to be available first (/via/ @'setOption' $ 'ProduceAssertions' 'True'@)
+-- assertions to be available first via
+--
+-- @
+--     'setOption' $ 'ProduceAssertions' 'True'
+-- @
+--
 -- for this call to not error out!
 --
 -- Note that the set of assertions returned is merely a list of strings, just like the
@@ -704,6 +750,14 @@ getAssertions = do
 
 -- | Retrieve the assignment. This is a lightweight version of 'getValue', where the
 -- solver returns the truth value for all named subterms of type 'Bool'.
+--
+-- You must have first arranged for assignments to be produced via
+--
+-- @
+--     'setOption' $ 'ProduceAssignments' 'True'
+-- @
+--
+-- for this call to not error out!
 getAssignment :: Query [(String, Bool)]
 getAssignment = do
         let cmd = "(get-assignment)"
