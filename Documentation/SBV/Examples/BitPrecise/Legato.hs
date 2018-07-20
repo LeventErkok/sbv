@@ -47,14 +47,12 @@ import GHC.Generics (Generic)
 ------------------------------------------------------------------
 -- * Mostek architecture
 ------------------------------------------------------------------
--- | The memory is addressed by 32-bit words.
-type Address  = SWord32
 
 -- | We model only two registers of Mostek that is used in the above algorithm, can add more.
-data Register = RegX  | RegA  deriving (Eq, Ord, Ix, Bounded, Enum)
+data Register = RegX  | RegA  deriving (Eq, Ord, Ix, Bounded)
 
 -- | The carry flag ('FlagC') and the zero flag ('FlagZ')
-data Flag = FlagC | FlagZ deriving (Eq, Ord, Ix, Bounded, Enum)
+data Flag = FlagC | FlagZ deriving (Eq, Ord, Ix, Bounded)
 
 -- | Mostek was an 8-bit machine.
 type Value = SWord8
@@ -68,9 +66,12 @@ type Registers = Array Register Value
 -- | Flag bank
 type Flags = Array Flag Bit
 
--- | The memory maps 32-bit words to 8-bit words. (The 'Model' data-type is
--- defined later, depending on the verification model used.)
-type Memory = Model Word32 Word8        -- Model defined later
+-- | Memory is a mere three locations, sufficient to model our problem
+data Location = F1   -- ^ multiplicand
+              | F2   -- ^ multiplier
+              | LO   -- ^ low byte of the result gets stored here
+              deriving (Eq, Ord, Ix, Bounded)
+type Memory = Array Location Value
 
 -- | Abstraction of the machine: The CPU consists of memory, registers, and flags.
 -- Unlike traditional hardware, we assume the program is stored in some other memory area that
@@ -110,12 +111,12 @@ setFlag :: Flag -> Bit -> Program
 setFlag f b m = m {flags = flags m // [(f, b)]}
 
 -- | Read memory
-peek :: Address -> Extract Value
-peek a m = readArray (memory m) a
+peek :: Location -> Extract Value
+peek a m = memory m ! a
 
 -- | Write to memory
-poke :: Address -> Value -> Program
-poke a v m = m {memory = writeArray (memory m) a v}
+poke :: Location -> Value -> Program
+poke a v m = m {memory = memory m // [(a, v)]}
 
 -- | Checking overflow. In Legato's multipler the @ADC@ instruction
 -- needs to see if the expression x + y + c overflowed, as checked
@@ -164,7 +165,7 @@ clc k = k . setFlag FlagC false
 -- and the carry moves over to the first bit. This very instruction
 -- is one of the reasons why Legato's multiplier is quite hard to understand
 -- and is typically presented as a verification challenge.
-rorM :: Address -> Instruction
+rorM :: Location -> Instruction
 rorM a k m = k . setFlag FlagC c' . poke a v' $ m
   where v  = peek a m
         c  = getFlag FlagC m
@@ -185,8 +186,8 @@ bcc l k m = ite (c .== false) (l m) (k m)
   where c = getFlag FlagC m
 
 -- | ADC: Increment the value of register @A@ by the value of memory contents
--- at address @a@, using the carry-bit as the carry-in for the addition.
-adc :: Address -> Instruction
+-- at location @a@, using the carry-bit as the carry-in for the addition.
+adc :: Location -> Instruction
 adc a k m = k . setFlag FlagZ (v' .== 0) . setFlag FlagC c' . setReg RegA v' $ m
   where v  = peek a m
         ra = getReg RegA m
@@ -213,23 +214,21 @@ end = id
 -- * Legato's algorithm in Haskell/SBV
 ------------------------------------------------------------------
 
--- | Parameterized by the addresses of locations of the factors (@F1@ and @F2@),
--- the following program multiplies them, storing the low-byte of the result
--- in the memory location @lowAddr@, and the high-byte in register @A@. The
--- implementation is a direct transliteration of Legato's algorithm given
--- at the top, using our notation.
-legato :: Address -> Address -> Address -> Program
-legato f1Addr f2Addr lowAddr = start
+-- | Multiplies the contents of @F1@ and @F2@, storing the low byte of the result
+-- in @LO@ and the high byte of it in register @A@. The implementation is a direct
+-- transliteration of Legato's algorithm given at the top, using our notation.
+legato :: Program
+legato = start
   where start   =    ldx 8
                    $ lda 0
                    $ loop
-        loop    =    rorM f1Addr
+        loop    =    rorM F1
                    $ bcc zeroCoef
                    $ clc
-                   $ adc f2Addr
+                   $ adc F2
                    $ zeroCoef
         zeroCoef =   rorR RegA
-                   $ rorM lowAddr
+                   $ rorM LO
                    $ dex
                    $ bne loop
                    $ end
@@ -237,16 +236,17 @@ legato f1Addr f2Addr lowAddr = start
 ------------------------------------------------------------------
 -- * Verification interface
 ------------------------------------------------------------------
--- | Given address/value pairs for F1 and F2, and the location of where the low-byte
--- of the result should go, @runLegato@ takes an arbitrary machine state @m@ and
+-- | Given values for  F1 and F2, @runLegato@ takes an arbitrary machine state @m@ and
 -- returns the high and low bytes of the multiplication.
-runLegato :: (Address, Value) -> (Address, Value) -> Address -> Mostek -> (Value, Value)
-runLegato (f1Addr, f1Val) (f2Addr, f2Val) loAddr m = (getReg RegA mFinal, peek loAddr mFinal)
-  where m0     = poke f1Addr f1Val $ poke f2Addr f2Val m
-        mFinal = legato f1Addr f2Addr loAddr m0
+runLegato :: Mostek -> (Value, Value)
+runLegato m = (getReg RegA m', peek LO m')
+  where m' = legato m
 
 -- | Helper synonym for capturing relevant bits of Mostek
-type InitVals = ( Value      -- Content of Register X
+type InitVals = ( Value      -- Contents of mem location F1
+                , Value      -- Contents of mem location F2
+                , Value      -- Contents of mem location LO
+                , Value      -- Content of Register X
                 , Value      -- Content of Register A
                 , Bit        -- Value of FlagC
                 , Bit        -- Value of FlagZ
@@ -254,20 +254,18 @@ type InitVals = ( Value      -- Content of Register X
 
 -- | Create an instance of the Mostek machine, initialized by the memory and the relevant
 -- values of the registers and the flags
-initMachine :: Memory -> InitVals -> Mostek
-initMachine mem (rx, ra, fc, fz) = Mostek { memory    = mem
-                                          , registers = array (minBound, maxBound) [(RegX, rx),  (RegA, ra)]
-                                          , flags     = array (minBound, maxBound) [(FlagC, fc), (FlagZ, fz)]
-                                          }
+initMachine :: InitVals -> Mostek
+initMachine (f1, f2, lo, rx, ra, fc, fz) = Mostek { memory    = array (minBound, maxBound) [(F1, f1), (F2, f2), (LO, lo)]
+                                                  , registers = array (minBound, maxBound) [(RegX, rx),  (RegA, ra)]
+                                                  , flags     = array (minBound, maxBound) [(FlagC, fc), (FlagZ, fz)]
+                                                  }
 
 -- | The correctness theorem. For all possible memory configurations, the factors (@x@ and @y@ below), the location
 -- of the low-byte result and the initial-values of registers and the flags, this function will return True only if
 -- running Legato's algorithm does indeed compute the product of @x@ and @y@ correctly.
-legatoIsCorrect :: Memory -> (Address, Value) -> (Address, Value) -> Address -> InitVals -> SBool
-legatoIsCorrect mem (addrX, x) (addrY, y) addrLow initVals
-        = distinct [addrX, addrY, addrLow]    -- note the conditional: addresses must be distinct!
-                ==> result .== expected
-    where (hi, lo) = runLegato (addrX, x) (addrY, y) addrLow (initMachine mem initVals)
+legatoIsCorrect :: InitVals -> SBool
+legatoIsCorrect initVals@(x, y, _, _, _, _, _) = result .== expected
+    where (hi, lo) = runLegato (initMachine initVals)
           -- NB. perform the comparison over 16 bit values to avoid overflow!
           -- If Value changes to be something else, modify this accordingly.
           result, expected :: SWord16
@@ -278,25 +276,13 @@ legatoIsCorrect mem (addrX, x) (addrY, y) addrLow initVals
 -- * Verification
 ------------------------------------------------------------------
 
--- | Choose the appropriate array model to be used for modeling the memory. (See 'Memory'.)
--- The 'SFunArray' is the function based model. 'SArray' is the SMT-Lib array's based model.
-type Model = SFunArray
--- type Model = SArray
-
 -- | The correctness theorem.
--- On a 2011 MacBook, this proof takes about 1 minute 45 seconds with the 'SFunArray' memory model
--- using boolector as the solver.
 correctnessTheorem :: IO ThmResult
-correctnessTheorem = proveWith boolector{timing = PrintTiming} $ do
-        mem <- newArray "memory" Nothing
+correctnessTheorem = proveWith defaultSMTCfg{timing = PrintTiming} $ do
+        lo <- sWord8 "lo"
 
-        addrX <- sWord32 "addrX"
-        x     <- sWord8  "x"
-
-        addrY <- sWord32 "addrY"
-        y     <- sWord8  "y"
-
-        addrLow <- sWord32 "addrLow"
+        x <- sWord8  "x"
+        y <- sWord8  "y"
 
         regX  <- sWord8 "regX"
         regA  <- sWord8 "regA"
@@ -304,7 +290,7 @@ correctnessTheorem = proveWith boolector{timing = PrintTiming} $ do
         flagC <- sBool "flagC"
         flagZ <- sBool "flagZ"
 
-        return $ legatoIsCorrect mem (addrX, x) (addrY, y) addrLow (regX, regA, flagC, flagZ)
+        return $ legatoIsCorrect (x, y, lo, regX, regA, flagC, flagZ)
 
 ------------------------------------------------------------------
 -- * C Code generation
@@ -313,13 +299,9 @@ correctnessTheorem = proveWith boolector{timing = PrintTiming} $ do
 -- | Generate a C program that implements Legato's algorithm automatically.
 legatoInC :: IO ()
 legatoInC = compileToC Nothing "runLegato" $ do
-                let f1Addr  = 0
-                    f2Addr  = 1
-                    lowAddr = 2
-                mem <- cgSym $ newArray "memory" (Just 0)
                 x <- cgInput "x"
                 y <- cgInput "y"
-                let (hi, lo) = runLegato (f1Addr, x) (f2Addr, y) lowAddr (initMachine mem (0, 0, false, false))
+                let (hi, lo) = runLegato (initMachine (x, y, 0, 0, 0, false, false))
                 cgOutput "hi" hi
                 cgOutput "lo" lo
 
