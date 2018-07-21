@@ -66,11 +66,13 @@ type Registers = Array Register Value
 -- | Flag bank
 type Flags = Array Flag Bit
 
--- | Memory is a mere three locations, sufficient to model our problem
+-- | We have three memory locations, sufficient to model our problem
 data Location = F1   -- ^ multiplicand
               | F2   -- ^ multiplier
               | LO   -- ^ low byte of the result gets stored here
               deriving (Eq, Ord, Ix, Bounded)
+
+-- | Memory is simply an array from locations to values
 type Memory = Array Location Value
 
 -- | Abstraction of the machine: The CPU consists of memory, registers, and flags.
