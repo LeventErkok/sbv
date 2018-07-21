@@ -29,7 +29,7 @@ TIME        = /usr/bin/time
 NO_OF_CORES = `grep -c "^processor" /proc/cpuinfo`
 endif
 
-.PHONY: install docs test release testPattern tags uploadDocs clean veryclean
+.PHONY: install docs test release testPattern tags clean veryclean
 
 all: install
 
@@ -72,11 +72,6 @@ docTestPattern:
 
 tags:
 	@fast-tags -R --nomerge .
-
-# Note: This is no longer needed since the new hackage builds docs
-# with hyperlinks automatically.
-uploadDocs:
-	@buildUtils/hackage-docs
 
 hlint: 
 	@echo "Running HLint.."
