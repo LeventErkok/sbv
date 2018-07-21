@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 7.9, 2018-06-15
+* Latest Hackage released version: 7.10, 2018-07-20
 
-### Version 7.9.5, Not yet released
+### Version 7.10, 2018-07-20
 
   * [BACKWARDS COMPATIBILITY] Array declarations are reworked to take
     an initial value. The call 'newArray' now accepts an optional default
