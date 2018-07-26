@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 7.10, 2018-07-20
 
+### Version 7.10.5, Not yet released
+
+  * New dev version
+
 ### Version 7.10, 2018-07-20
 
   * [BACKWARDS COMPATIBILITY] Array declarations are reworked to take
