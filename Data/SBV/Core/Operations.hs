@@ -1232,21 +1232,29 @@ uiLift _ cmp (Just i, _) (Just j, _) = i `cmp` j
 uiLift w _   a           b           = error $ "Data.SBV.Core.Operations: Impossible happened while trying to lift " ++ w ++ " over " ++ show (a, b)
 
 -- | Predicate for optimizing word operations like (+) and (*).
+-- NB. We specifically do *not* match for Double/Float; because
+-- FP-arithmetic doesn't obey traditional rules. For instance,
+-- 0 * x = 0 fails if x happens to be NaN or +/- Infinity. So,
+-- we merely return False when given a floating-point value here.
 isConcreteZero :: SVal -> Bool
 isConcreteZero (SVal _     (Left (CW _     (CWInteger n)))) = n == 0
 isConcreteZero (SVal KReal (Left (CW KReal (CWAlgReal v)))) = isExactRational v && v == 0
 isConcreteZero _                                            = False
 
 -- | Predicate for optimizing word operations like (+) and (*).
+-- NB. See comment on 'isConcreteZero' for why we don't match
+-- for Float/Double values here.
 isConcreteOne :: SVal -> Bool
 isConcreteOne (SVal _     (Left (CW _     (CWInteger 1)))) = True
 isConcreteOne (SVal KReal (Left (CW KReal (CWAlgReal v)))) = isExactRational v && v == 1
 isConcreteOne _                                            = False
 
--- | Predicate for optimizing bitwise operations.
+-- | Predicate for optimizing bitwise operations. The unbounded integer case of checking
+-- against -1 might look dubious, but that's how Haskell treats 'Integer' as a member
+-- of the Bits class, try @(-1 :: Integer) `testBit` i@ for any @i@ and you'll get 'True'.
 isConcreteOnes :: SVal -> Bool
 isConcreteOnes (SVal _ (Left (CW (KBounded b w) (CWInteger n)))) = n == if b then -1 else bit w - 1
-isConcreteOnes (SVal _ (Left (CW KUnbounded     (CWInteger n)))) = n == -1
+isConcreteOnes (SVal _ (Left (CW KUnbounded     (CWInteger n)))) = n == -1  -- see comment above
 isConcreteOnes (SVal _ (Left (CW KBool          (CWInteger n)))) = n == 1
 isConcreteOnes _                                                 = False
 
