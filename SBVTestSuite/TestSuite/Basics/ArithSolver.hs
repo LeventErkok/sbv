@@ -16,7 +16,7 @@
 
 module TestSuite.Basics.ArithSolver(tests) where
 
-import qualified Data.Binary.IEEE754 as DB (wordToFloat, wordToDouble, floatToWord, doubleToWord)
+import qualified Data.ReinterpretCast as RC (wordToFloat, wordToDouble, floatToWord, doubleToWord)
 
 import Data.SBV.Internals
 import Utils.SBVTestFramework
@@ -446,11 +446,11 @@ genFPConverts = map tst1 [("fpCast_" ++ nm, x, y) | (nm, x, y) <- converts]
                  -- ++  [("fromFP_Double_ToInteger", show x, mkThmC' (m fromSDouble :: SDouble -> SInteger) x (((fromIntegral :: Integer -> Integer) . fpRound0) x)) | x <- ds]
                  -- ++  [("fromFP_Double_ToReal",    show x, mkThmC' (m fromSDouble :: SDouble -> SReal)    x (                        (fromRational . fpRatio0) x)) | x <- ds]
 
-                 ++  [("reinterp_Word32_Float",  show x, mkThmC sWord32AsSFloat  x (DB.wordToFloat  x)) | x <- w32s]
-                 ++  [("reinterp_Word64_Double", show x, mkThmC sWord64AsSDouble x (DB.wordToDouble x)) | x <- w64s]
+                 ++  [("reinterp_Word32_Float",  show x, mkThmC sWord32AsSFloat  x (RC.wordToFloat  x)) | x <- w32s]
+                 ++  [("reinterp_Word64_Double", show x, mkThmC sWord64AsSDouble x (RC.wordToDouble x)) | x <- w64s]
 
-                 ++  [("reinterp_Float_Word32",  show x, mkThmP sFloatAsSWord32  x (DB.floatToWord x))  | x <- fs, not (isNaN x)] -- Not unique for NaN
-                 ++  [("reinterp_Double_Word64", show x, mkThmP sDoubleAsSWord64 x (DB.doubleToWord x)) | x <- ds, not (isNaN x)] -- Not unique for NaN
+                 ++  [("reinterp_Float_Word32",  show x, mkThmP sFloatAsSWord32  x (RC.floatToWord x))  | x <- fs, not (isNaN x)] -- Not unique for NaN
+                 ++  [("reinterp_Double_Word64", show x, mkThmP sDoubleAsSWord64 x (RC.doubleToWord x)) | x <- ds, not (isNaN x)] -- Not unique for NaN
 
         m f = f sRNE
 
