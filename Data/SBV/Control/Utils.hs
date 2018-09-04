@@ -38,7 +38,7 @@ module Data.SBV.Control.Utils (
 import Data.Maybe (isJust)
 import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate)
 
-import Data.Char     (isPunctuation, isSpace, chr)
+import Data.Char     (isPunctuation, isSpace, chr, ord)
 import Data.Function (on)
 
 import Data.Int
@@ -451,18 +451,44 @@ recoverKindedValue k e = case e of
                            EDouble i | isDouble        k -> Just $ CW KDouble  (CWDouble  i)
                            ECon    s | isString        k -> Just $ CW KString  (CWString   (interpretString s))
                            ECon    s | isUninterpreted k -> Just $ CW k        (CWUserSort (getUIIndex k s, s))
+                           _         | isList          k -> Just $ CW k        (CWList     (interpretList e))
                            _                             -> Nothing
   where isIntegralLike = or [f k | f <- [isBoolean, isBounded, isInteger, isReal, isFloat, isDouble]]
 
         getUIIndex (KUserSort  _ (Right xs)) i = i `elemIndex` xs
         getUIIndex _                         _ = Nothing
 
+        stringLike xs = length xs >= 2 && head xs == '"' && last xs == '"'
+
         -- Make sure strings are really strings
         interpretString xs
-          | length xs < 2 || head xs /= '"' || last xs /= '"'
+          | not (stringLike xs)
           = error $ "Expected a string constant with quotes, received: <" ++ xs ++ ">"
           | True
           = qfsToString $ tail (init xs)
+
+        isStringSequence (KList (KBounded _ 8)) = True
+        isStringSequence _                      = False
+
+        -- Lists are tricky since z3 prints the 8-bit variants as strings. See: <http://github.com/Z3Prover/z3/issues/1808>
+        interpretList (ECon s)
+          | isStringSequence k && stringLike s
+          = map (CWInteger . fromIntegral . ord) $ interpretString s
+        interpretList topExpr = walk topExpr
+          where walk (EApp [ECon "as", ECon "seq.empty", _]) = []
+                walk (EApp [ECon "seq.unit", v])             = case recoverKindedValue ek v of
+                                                                 Just w -> [cwVal w]
+                                                                 Nothing -> error $ "Cannot parse a sequence item of kind " ++ show ek ++ " from: " ++ show v ++ extra v
+                walk (EApp [ECon "seq.++", pre, post])       = walk pre ++ walk post
+                walk cur                                     = error $ "Expected a sequence constant, but received: " ++ show cur ++ extra cur
+
+                extra cur | show cur == t = ""
+                          | True          = "\nWhile parsing: " ++ t
+                          where t = show topExpr
+
+                ek = case k of
+                       KList ik -> ik
+                       _        -> error $ "Impossible: Expected a sequence kind, bug got: " ++ show k
 
 -- | Get the value of a term. If the kind is Real and solver supports decimal approximations,
 -- we will "squash" the representations.

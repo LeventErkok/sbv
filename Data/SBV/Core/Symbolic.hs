@@ -1389,16 +1389,17 @@ instance NFData SMTScript where
 
 -- | Translation tricks needed for specific capabilities afforded by each solver
 data SolverCapabilities = SolverCapabilities {
-         supportsQuantifiers        :: Bool    -- ^ Support for SMT-Lib2 style quantifiers?
-       , supportsUninterpretedSorts :: Bool    -- ^ Support for SMT-Lib2 style uninterpreted-sorts
-       , supportsUnboundedInts      :: Bool    -- ^ Support for unbounded integers?
-       , supportsReals              :: Bool    -- ^ Support for reals?
-       , supportsApproxReals        :: Bool    -- ^ Supports printing of approximations of reals?
-       , supportsIEEE754            :: Bool    -- ^ Support for floating point numbers?
-       , supportsOptimization       :: Bool    -- ^ Support for optimization routines?
-       , supportsPseudoBooleans     :: Bool    -- ^ Support for pseudo-boolean operations?
-       , supportsCustomQueries      :: Bool    -- ^ Support for interactive queries per SMT-Lib?
-       , supportsGlobalDecls        :: Bool    -- ^ Support for global decls, needed for push-pop.
+         supportsQuantifiers        :: Bool          -- ^ Support for SMT-Lib2 style quantifiers?
+       , supportsUninterpretedSorts :: Bool          -- ^ Support for SMT-Lib2 style uninterpreted-sorts
+       , supportsUnboundedInts      :: Bool          -- ^ Support for unbounded integers?
+       , supportsReals              :: Bool          -- ^ Support for reals?
+       , supportsApproxReals        :: Bool          -- ^ Supports printing of approximations of reals?
+       , supportsIEEE754            :: Bool          -- ^ Support for floating point numbers?
+       , supportsOptimization       :: Bool          -- ^ Support for optimization routines?
+       , supportsPseudoBooleans     :: Bool          -- ^ Support for pseudo-boolean operations?
+       , supportsCustomQueries      :: Bool          -- ^ Support for interactive queries per SMT-Lib?
+       , supportsGlobalDecls        :: Bool          -- ^ Support for global decls, needed for push-pop.
+       , supportsFlattenedSequences :: Maybe String  -- ^ Supports flattened sequence output, with given config line
        }
 
 -- | Rounding mode to be used for the IEEE floating-point operations.

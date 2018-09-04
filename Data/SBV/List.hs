@@ -42,6 +42,7 @@ import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
 -- >>> import Data.SBV.Utils.Boolean  ((==>), (&&&), bnot, (<=>))
 -- >>> import Data.Int
+-- >>> import Data.Word
 -- >>> :set -XOverloadedLists
 -- >>> :set -XScopedTypeVariables
 
@@ -68,7 +69,7 @@ null l
   | Just cs <- unliteral l
   = literal (P.null cs)
   | True
-  = l .== literal []
+  = l .== literal (List [])
 
 -- | @`head`@ returns the first element of a list. Unspecified if the list is empty.
 --
@@ -151,7 +152,7 @@ elemAt l i
 -- >>> prove $ \e1 e2 e3 -> map (`elemAt` (implode [e1, e2, e3])) (map literal [0 .. 2]) .== [e1, e2, e3]
 -- Q.E.D.
 implode :: SymWord a => [SBV a] -> SList a
-implode = foldr ((.++) . singleton) (literal [])
+implode = foldr ((.++) . singleton) (literal (List []))
 
 -- | Concatenate two lists. See also `.++`.
 concat :: SymWord a => SList a -> SList a -> SList a
@@ -218,7 +219,7 @@ suf `isSuffixOf` l
 -- >>> prove $ \l i -> i .>= 0 ==> length (take i l) .<= i
 -- Q.E.D.
 take :: SymWord a => SInteger -> SList a -> SList a
-take i l = ite (i .<= 0)        (literal [])
+take i l = ite (i .<= 0)        (literal (List []))
          $ ite (i .>= length l) l
          $ subList l 0 i
 
@@ -229,7 +230,7 @@ take i l = ite (i .<= 0)        (literal [])
 -- >>> prove $ \l i -> take i l .++ drop i l .== l
 -- Q.E.D.
 drop :: SymWord a => SInteger -> SList a -> SList a
-drop i s = ite (i .>= ls) (literal [])
+drop i s = ite (i .>= ls) (literal (List []))
          $ ite (i .<= 0)  s
          $ subList s i (ls - i)
   where ls = length s
@@ -288,10 +289,10 @@ replace l src dst
 --
 -- >>> prove $ \(l :: SList Int8) i -> i .> 0 &&& i .< length l ==> indexOf l (subList l i 1) .<= i
 -- Q.E.D.
--- >>> prove $ \l i -> i .> 0 &&& i .< length l ==> indexOf s (subList l i 1) .== i
+-- >>> prove $ \(l :: SList Word8) i -> i .> 0 &&& i .< length l ==> indexOf l (subList l i 1) .== i
 -- Falsifiable. Counter-example:
---   s0 = "\NUL\NUL\NUL\NUL\NUL" :: String
---   s1 =                      3 :: Integer
+--   s0 = [0,0,0,0,0] :: [SWord8]
+--   s1 =           3 :: Integer
 -- >>> prove $ \s1 s2 -> length s2 .> length s1 ==> indexOf s1 s2 .== -1
 -- Q.E.D.
 indexOf :: SymWord a => SList a -> SList a -> SInteger
