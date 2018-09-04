@@ -400,7 +400,7 @@ getUninterpretedValue s =
                                      r <- ask cmd
 
                                      parse r bad $ \case EApp [EApp [ECon o,  ECon v]] | o == show sw -> return v
-                                                         _                                             -> bad r Nothing
+                                                         _                                            -> bad r Nothing
 
           k                    -> error $ unlines [""
                                                   , "*** SBV.getUninterpretedValue: Called on an 'interpreted' kind"
