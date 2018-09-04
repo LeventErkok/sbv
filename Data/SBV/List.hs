@@ -8,7 +8,9 @@
 --
 -- A collection of list utilities, useful when working with symbolic lists.
 -- To the extent possible, the functions in this module follow those of "Data.List"
--- so importing qualified is the recommended workflow.
+-- so importing qualified is the recommended workflow. Also, it is recommended
+-- you use the @OverloadedLists@ extension to allow literal lists to
+-- be used as symbolic-lists.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE Rank2Types          #-}
@@ -48,21 +50,21 @@ import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 
 -- | Length of a list.
 --
--- >>> sat $ \s -> length s .== 2
+-- >>> sat $ \(l :: SList Word16) -> length l .== 2
 -- Satisfiable. Model:
---   s0 = "\NUL\NUL" :: String
--- >>> sat $ \s -> length s .< 0
+--   s0 = [0,0] :: [SWord16]
+-- >>> sat $ \(l :: SList Word16) -> length l .< 0
 -- Unsatisfiable
--- >>> prove $ \s1 s2 -> length s1 + length s2 .== length (s1 .++ s2)
+-- >>> prove $ \(l1 :: SList Word16) (l2 :: SList Word16) -> length l1 + length l2 .== length (l1 .++ l2)
 -- Q.E.D.
 length :: SymWord a => SList a -> SInteger
 length = lift1 SeqLen (Just (fromIntegral . P.length))
 
 -- | @`null` s@ is True iff the string is empty
 --
--- >>> prove $ \s -> null s <=> length s .== 0
+-- >>> prove $ \(l :: SList Word16) -> null l <=> length l .== 0
 -- Q.E.D.
--- >>> prove $ \s -> null s <=> s .== ""
+-- >>> prove $ \(l :: SList Word16) -> null l <=> l .== literal []
 -- Q.E.D.
 null :: SymWord a => SList a -> SBool
 null l
@@ -73,18 +75,18 @@ null l
 
 -- | @`head`@ returns the first element of a list. Unspecified if the list is empty.
 --
--- >>> prove $ \c -> head (singleton c) .== c
+-- >>> prove $ \c -> head (singleton c) .== (c :: SInteger)
 -- Q.E.D.
 head :: SymWord a => SList a -> SBV a
 head = (`elemAt` 0)
 
 -- | @`tail`@ returns the tail of a list. Unspecified if the list is empty.
 --
--- >>> prove $ \h t -> tail (singleton h .++ t) .== t
+-- >>> prove $ \(h :: SInteger) t -> tail (singleton h .++ t) .== t
 -- Q.E.D.
--- >>> prove $ \l -> length l .> 0 ==> length (tail l) .== length l - 1
+-- >>> prove $ \(l :: SList Integer) -> length l .> 0 ==> length (tail l) .== length l - 1
 -- Q.E.D.
--- >>> prove $ \l -> bnot (null l) ==> singleton (head s) .++ tail l .== l
+-- >>> prove $ \(l :: SList Integer) -> bnot (null l) ==> singleton (head l) .++ tail l .== l
 -- Q.E.D.
 tail :: SymWord a => SList a -> SList a
 tail l
@@ -95,9 +97,9 @@ tail l
 
 -- | @`singleton` x@ is the list of length 1 that contains the only value `x`.
 --
--- >>> prove $ \x -> head (singleton x) .== (x :: SInteger)
+-- >>> prove $ \(x :: SInteger) -> head (singleton x) .== x
 -- Q.E.D.
--- >>> prove $ \x -> length (singleton x) .== 1
+-- >>> prove $ \(x :: SInteger) -> length (singleton x) .== 1
 -- Q.E.D.
 singleton :: SymWord a => SBV a -> SList a
 singleton = lift1 SeqUnit (Just wrap)
@@ -106,11 +108,11 @@ singleton = lift1 SeqUnit (Just wrap)
 -- | @`listToListAt` l offset@. List of length 1 at @offset@ in @l@. Unspecified if
 -- index is out of bounds.
 --
--- >>> prove $ \l1 l2 -> listToListAt (l1 .++ l2) (length l1) .== listToListAt l2 0
+-- >>> prove $ \(l1 :: SList Integer) l2 -> listToListAt (l1 .++ l2) (length l1) .== listToListAt l2 0
 -- Q.E.D.
--- >>> sat $ \l -> length l .>= 2 &&& listToListAt l 0 ./= listToListAt l (length l - 1)
+-- >>> sat $ \(l :: SList Word16) -> length l .>= 2 &&& listToListAt l 0 ./= listToListAt l (length l - 1)
 -- Satisfiable. Model:
---   s0 = "\NUL\NUL\EOT" :: String
+--   s0 = [0,0,4096] :: [SWord16]
 listToListAt :: SymWord a => SList a -> SInteger -> SList a
 listToListAt s offset = subList s offset 1
 
@@ -147,9 +149,9 @@ elemAt l i
 -- elements. Note that there is no corresponding function @explode@, since
 -- we wouldn't know the length of a symbolic list.
 --
--- >>> prove $ \e1 e2 e3 -> length (implode [e1, e2, e3]) .== 3
+-- >>> prove $ \(e1 :: SInteger) e2 e3 -> length (implode [e1, e2, e3]) .== 3
 -- Q.E.D.
--- >>> prove $ \e1 e2 e3 -> map (`elemAt` (implode [e1, e2, e3])) (map literal [0 .. 2]) .== [e1, e2, e3]
+-- >>> prove $ \(e1 :: SInteger) e2 e3 -> map (`elemAt` (implode [e1, e2, e3])) (map literal [0 .. 2]) .== [e1, e2, e3]
 -- Q.E.D.
 implode :: SymWord a => [SBV a] -> SList a
 implode = foldr ((.++) . singleton) (literal (List []))
@@ -163,7 +165,7 @@ concat x y | isConcretelyEmpty x = y
 
 -- | Short cut for `concat`.
 --
--- >>> sat $ \x y z -> length x .== 5 &&& length y .== 1 &&& x .++ y .++ z .== [1 .. 12]"
+-- >>> sat $ \x y z -> length x .== 5 &&& length y .== 1 &&& x .++ y .++ z .== [1 .. 12]
 -- Satisfiable. Model:
 --   s0 =  "Hello" :: String
 --   s1 =      " " :: String
@@ -174,9 +176,9 @@ infixr 5 .++
 
 -- | @`isInfixOf` sub l@. Does @l@ contain the subsequence @sub@?
 --
--- >>> prove $ \l1 l2 l3 -> l2 `isInfixOf` (l1 .++ l2 .++ l3)
+-- >>> prove $ \(l1 :: SList Integer) l2 l3 -> l2 `isInfixOf` (l1 .++ l2 .++ l3)
 -- Q.E.D.
--- >>> prove $ \l1 l2 -> l1 `isInfixOf` l2 &&& l2 `isInfixOf` l1 <=> l1 .== l2
+-- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isInfixOf` l2 &&& l2 `isInfixOf` l1 <=> l1 .== l2
 -- Q.E.D.
 isInfixOf :: SymWord a => SList a -> SList a -> SBool
 sub `isInfixOf` l
@@ -188,9 +190,9 @@ sub `isInfixOf` l
 
 -- | @`isPrefixOf` pre l@. Is @pre@ a prefix of @l@?
 --
--- >>> prove $ \l1 l2 -> l1 `isPrefixOf` (l1 .++ l2)
+-- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isPrefixOf` (l1 .++ l2)
 -- Q.E.D.
--- >>> prove $ \l1 l2 -> l1 `isPrefixOf` l2 ==> subList l2 0 (length l1) .== l1
+-- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isPrefixOf` l2 ==> subList l2 0 (length l1) .== l1
 -- Q.E.D.
 isPrefixOf :: SymWord a => SList a -> SList a -> SBool
 pre `isPrefixOf` l
@@ -202,9 +204,9 @@ pre `isPrefixOf` l
 
 -- | @`isSuffixOf` suf l@. Is @suf@ a suffix of @l@?
 --
--- >>> prove $ \l1 l2 -> l2 `isSuffixOf` (l1 .++ l2)
+-- >>> prove $ \(l1 :: SList Word16) l2 -> l2 `isSuffixOf` (l1 .++ l2)
 -- Q.E.D.
--- >>> prove $ \l1 l2 -> l1 `isSuffixOf` l2 ==> subList l2 (length l2 - length l1) (length l1) .== l1
+-- >>> prove $ \(l1 :: SList Word16) l2 -> l1 `isSuffixOf` l2 ==> subList l2 (length l2 - length l1) (length l1) .== l1
 -- Q.E.D.
 isSuffixOf :: SymWord a => SList a -> SList a -> SBool
 suf `isSuffixOf` l
@@ -216,7 +218,7 @@ suf `isSuffixOf` l
 
 -- | @`take` len l@. Corresponds to Haskell's `take` on symbolic lists.
 --
--- >>> prove $ \l i -> i .>= 0 ==> length (take i l) .<= i
+-- >>> prove $ \(l :: SList Integer) i -> i .>= 0 ==> length (take i l) .<= i
 -- Q.E.D.
 take :: SymWord a => SInteger -> SList a -> SList a
 take i l = ite (i .<= 0)        (literal (List []))
@@ -225,9 +227,9 @@ take i l = ite (i .<= 0)        (literal (List []))
 
 -- | @`drop` len s@. Corresponds to Haskell's `drop` on symbolic-lists.
 --
--- >>> prove $ \l i -> length (drop i l) .<= length s
+-- >>> prove $ \(l :: SList Word16) i -> length (drop i l) .<= length l
 -- Q.E.D.
--- >>> prove $ \l i -> take i l .++ drop i l .== l
+-- >>> prove $ \(l :: SList Word16) i -> take i l .++ drop i l .== l
 -- Q.E.D.
 drop :: SymWord a => SInteger -> SList a -> SList a
 drop i s = ite (i .>= ls) (literal (List []))
@@ -240,7 +242,7 @@ drop i s = ite (i .>= ls) (literal (List []))
 -- is negative or @offset+len@ exceeds the length of @s@. For a friendlier version of this function
 -- that acts like Haskell's `take`\/`drop`, see `strTake`\/`strDrop`.
 --
--- >>> prove $ \s i -> i .>= 0 &&& i .< length s ==> subList s 0 i .++ subList s i (length s - i) .== s
+-- >>> prove $ \(l :: SList Integer) i -> i .>= 0 &&& i .< length l ==> subList l 0 i .++ subList l i (length l - i) .== l
 -- Q.E.D.
 -- >>> sat  $ \i j -> subList [1,2,3,4,5] i j .== [2,3,4::SInteger]
 -- Satisfiable. Model:
@@ -289,11 +291,11 @@ replace l src dst
 --
 -- >>> prove $ \(l :: SList Int8) i -> i .> 0 &&& i .< length l ==> indexOf l (subList l i 1) .<= i
 -- Q.E.D.
--- >>> prove $ \(l :: SList Word8) i -> i .> 0 &&& i .< length l ==> indexOf l (subList l i 1) .== i
+-- >>> prove $ \(l :: SList Word16) i -> i .> 0 &&& i .< length l ==> indexOf l (subList l i 1) .== i
 -- Falsifiable. Counter-example:
---   s0 = [0,0,0,0,0] :: [SWord8]
---   s1 =           3 :: Integer
--- >>> prove $ \s1 s2 -> length s2 .> length s1 ==> indexOf s1 s2 .== -1
+--   s0 = [0,0,0,0,0] :: [SWord16]
+--   s1 =           4 :: Integer
+-- >>> prove $ \(l1 :: SList Word16) l2 -> length l2 .> length l1 ==> indexOf l1 l2 .== -1
 -- Q.E.D.
 indexOf :: SymWord a => SList a -> SList a -> SInteger
 indexOf s sub = offsetIndexOf s sub 0
