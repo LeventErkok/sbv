@@ -41,7 +41,9 @@ import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 -- $setup
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
 -- >>> import Data.SBV.Utils.Boolean  ((==>), (&&&), bnot, (<=>))
+-- >>> import Data.Int
 -- >>> :set -XOverloadedLists
+-- >>> :set -XScopedTypeVariables
 
 -- | Length of a list.
 --
@@ -239,7 +241,7 @@ drop i s = ite (i .>= ls) (literal [])
 --
 -- >>> prove $ \s i -> i .>= 0 &&& i .< length s ==> subList s 0 i .++ subList s i (length s - i) .== s
 -- Q.E.D.
--- >>> sat  $ \i j -> subList "hello" i j .== "ell"
+-- >>> sat  $ \i j -> subList [1,2,3,4,5] i j .== [2,3,4::SInteger]
 -- Satisfiable. Model:
 --   s0 = 1 :: Integer
 --   s1 = 3 :: Integer
@@ -284,7 +286,7 @@ replace l src dst
 -- | @`indexOf` l sub@. Retrieves first position of @sub@ in @l@, @-1@ if there are no occurrences.
 -- Equivalent to @`offsetIndexOf` l sub 0@.
 --
--- >>> prove $ \l i -> i .> 0 &&& i .< length l ==> indexOf l (subList l i 1) .<= i
+-- >>> prove $ \(l :: SList Int8) i -> i .> 0 &&& i .< length l ==> indexOf l (subList l i 1) .<= i
 -- Q.E.D.
 -- >>> prove $ \l i -> i .> 0 &&& i .< length l ==> indexOf s (subList l i 1) .== i
 -- Falsifiable. Counter-example:
@@ -298,11 +300,11 @@ indexOf s sub = offsetIndexOf s sub 0
 -- | @`offsetIndexOf` l sub offset@. Retrieves first position of @sub@ at or
 -- after @offset@ in @l@, @-1@ if there are no occurrences.
 --
--- >>> prove $ \l sub -> offsetIndexOf l sub 0 .== indexOf l sub
+-- >>> prove $ \(l :: SList Int8) sub -> offsetIndexOf l sub 0 .== indexOf l sub
 -- Q.E.D.
--- >>> prove $ \l sub i -> i .>= length s &&& length sub .> 0 ==> offsetIndexOf l sub i .== -1
+-- >>> prove $ \(l :: SList Int8) sub i -> i .>= length l &&& length sub .> 0 ==> offsetIndexOf l sub i .== -1
 -- Q.E.D.
--- >>> prove $ \l sub i -> i .> length l ==> offsetIndexOf l sub i .== -1
+-- >>> prove $ \(l :: SList Int8) sub i -> i .> length l ==> offsetIndexOf l sub i .== -1
 -- Q.E.D.
 offsetIndexOf :: SymWord a => SList a -> SList a -> SInteger -> SInteger
 offsetIndexOf s sub offset
