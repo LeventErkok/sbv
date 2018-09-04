@@ -8,6 +8,7 @@
 --
 -- Testing MathSAT specific interactive features.
 -----------------------------------------------------------------------------
+
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module TestSuite.Queries.Int_Mathsat (tests)  where

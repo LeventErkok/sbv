@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  TestSuite.Queries.Strings
@@ -9,6 +8,8 @@
 --
 -- Testing a few strings
 -----------------------------------------------------------------------------
+
+{-# LANGUAGE OverloadedStrings #-}
 
 module TestSuite.Queries.Strings (tests)  where
 

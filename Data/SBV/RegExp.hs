@@ -1,9 +1,3 @@
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE Rank2Types           #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE OverloadedStrings    #-}
-
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.SBV.RegExp
@@ -19,6 +13,12 @@
 -- used as symbolic-strings and regular-expressions when working with
 -- this module.
 -----------------------------------------------------------------------------
+
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE Rank2Types           #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE OverloadedStrings    #-}
 
 module Data.SBV.RegExp (
         -- * Regular expressions

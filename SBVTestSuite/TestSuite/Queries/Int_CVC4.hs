@@ -8,6 +8,7 @@
 --
 -- Testing CVC4 specific interactive features
 -----------------------------------------------------------------------------
+
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module TestSuite.Queries.Int_CVC4 (tests)  where

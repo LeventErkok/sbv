@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  TestSuite.Basics.String
@@ -10,6 +9,8 @@
 -- Test the string functions.
 -- Most of these tests are adopted from <http://rise4fun.com/z3/tutorialcontent/sequences>
 -----------------------------------------------------------------------------
+
+{-# LANGUAGE OverloadedStrings #-}
 
 module TestSuite.Basics.String(tests)  where
 

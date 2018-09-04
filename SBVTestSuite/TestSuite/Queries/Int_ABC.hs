@@ -8,6 +8,7 @@
 --
 -- Testing ABC specific interactive features.
 -----------------------------------------------------------------------------
+
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module TestSuite.Queries.Int_ABC (tests)  where

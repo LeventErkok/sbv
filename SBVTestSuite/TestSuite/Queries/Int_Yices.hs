@@ -8,6 +8,7 @@
 --
 -- Testing Yices specific interactive features.
 -----------------------------------------------------------------------------
+
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module TestSuite.Queries.Int_Yices (tests)  where

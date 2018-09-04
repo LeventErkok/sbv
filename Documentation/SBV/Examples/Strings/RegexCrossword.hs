@@ -8,6 +8,7 @@
 --
 -- This example solves regex crosswords from <http://regexcrossword.com>
 -----------------------------------------------------------------------------
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module Documentation.SBV.Examples.Strings.RegexCrossword where

@@ -9,6 +9,7 @@
 -- Testing a few interpolant computations.
 --
 -----------------------------------------------------------------------------
+
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module TestSuite.Queries.Interpolants (tests)  where

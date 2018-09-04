@@ -1,7 +1,3 @@
-{-# LANGUAGE Rank2Types          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE OverloadedStrings   #-}
-
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.SBV.Char
@@ -23,6 +19,10 @@
 -- which point we will update these functions to match the implementations.
 -- For details, see: <http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml>
 -----------------------------------------------------------------------------
+
+{-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings   #-}
 
 module Data.SBV.Char (
         -- * Occurrence in a string

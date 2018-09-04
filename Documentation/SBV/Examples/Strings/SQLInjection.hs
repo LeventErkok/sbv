@@ -11,6 +11,7 @@
 -- but this example finds program inputs which result in a query containing a
 -- SQL injection.
 -----------------------------------------------------------------------------
+
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 

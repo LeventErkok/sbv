@@ -8,6 +8,7 @@
 --
 -- Testing that a bad option setting is caught properly.
 -----------------------------------------------------------------------------
+
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module TestSuite.Queries.BadOption (tests)  where

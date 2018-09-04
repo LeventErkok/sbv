@@ -1,4 +1,16 @@
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  SBVTestSuite.SBVTest.Main
+-- Copyright   :  (c) Levent Erkok
+-- License     :  BSD3
+-- Maintainer  :  erkokl@gmail.com
+-- Stability   :  experimental
+--
+-- Main entry point to the test suite
+-----------------------------------------------------------------------------
+
 {-# LANGUAGE ScopedTypeVariables #-}
+
 module Main(main) where
 
 import Test.Tasty

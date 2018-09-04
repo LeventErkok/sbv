@@ -8,6 +8,7 @@
 --
 -- Testing Z3 specific interactive features.
 -----------------------------------------------------------------------------
+
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module TestSuite.Queries.Int_Z3 (tests)  where

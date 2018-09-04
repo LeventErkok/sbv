@@ -8,6 +8,7 @@
 --
 -- Testing Boolector specific interactive features.
 -----------------------------------------------------------------------------
+
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module TestSuite.Queries.Int_Boolector (tests)  where
