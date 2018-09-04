@@ -30,9 +30,9 @@ instance HasKind L
 instance SatModel L where
   parseCWs = undefined -- make GHC shut up about the missing method, we won't actually call it
 
-type SList = SBV L
+type UList = SBV L
 
-len :: SList -> SInteger
+len :: UList -> SInteger
 len = uninterpret "len"
 
 p0 :: Symbolic SBool
