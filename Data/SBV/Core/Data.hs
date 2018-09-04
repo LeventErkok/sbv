@@ -24,7 +24,7 @@
 
 module Data.SBV.Core.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
- , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble, SChar, SString
+ , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble, SChar, SString, SList
  , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode
  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
  , sRNE, sRNA, sRTP, sRTN, sRTZ
@@ -38,7 +38,7 @@ module Data.SBV.Core.Data
  , sbvToSW, sbvToSymSW, forceSWArg
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, uncacheAI, HasKind(..)
- , Op(..), PBOp(..), FPOp(..), StrOp(..), RegExp(..), NamedSymVar, getTableIndex
+ , Op(..), PBOp(..), FPOp(..), StrOp(..), SeqOp(..), RegExp(..), NamedSymVar, getTableIndex
  , SBVPgm(..), Symbolic, runSymbolic, State, getPathCondition, extendPathCondition
  , inSMTMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
  , SolverContext(..), internalVariable, internalConstraint, isCodeGenMode
@@ -68,6 +68,7 @@ import System.Random
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
+import Data.SBV.Core.List
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Operations
 
@@ -142,9 +143,15 @@ type SChar = SBV Char
 
 -- | A symbolic string. Note that a symbolic string is /not/ a list of symbolic characters,
 -- that is, it is not the case that @SString = [SChar]@, unlike what one might expect following
--- Haskell strings. An 'SString' is a symbolic value of its own, of possibly arbitrary length,
+-- Haskell strings. An 'SString' is a symbolic value of its own, of possibly arbitrary but finite length,
 -- and internally processed as one unit as opposed to a fixed-length list of characters.
 type SString = SBV String
+
+-- | A symbolic list of items. Note that a symbolic list is /not/ a list of symbolic items,
+-- that is, it is not the case that @SList a = [a]@, unlike what one might expect following
+-- haskell lists\/sequences. An 'SList' is a symbolic value of its own, of possibly arbitrary but finite
+-- length, and internally processed as one unit as opposed to a fixed-length list of items.
+type SList a = SBV (List a)
 
 -- | Not-A-Number for 'Double' and 'Float'. Surprisingly, Haskell
 -- Prelude doesn't have this value defined, so we provide it here.

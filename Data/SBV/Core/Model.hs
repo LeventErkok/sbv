@@ -29,7 +29,8 @@ module Data.SBV.Core.Model (
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   , sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
-  , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, sChar, sChars, sString, sStrings, slet
+  , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, sChar, sChars, sString, sStrings, sList, sLists
+  , slet
   , sRealToSInteger, label, observe
   , sAssert
   , liftQRem, liftDMod, symbolicMergeWithKind
@@ -64,6 +65,7 @@ import qualified Test.QuickCheck.Monadic as QC (monadicIO, run, assert, pre, mon
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
+import Data.SBV.Core.List
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Operations
 
@@ -196,6 +198,15 @@ instance SymWord Char where
 instance IsString SString where
   fromString = literal
 
+instance SymWord a => SymWord (List a) where
+  mkSymWord = genMkSymVar (KList (kindOf (undefined :: a)))
+  literal (List as) = let k = KList (kindOf (undefined :: a))
+                          toCWVal a = case literal a of
+                                        SBV (SVal _ (Left (CW _ cwval))) -> cwval
+                                        _                                -> error "SymWord.Sequence: could not produce a concrete word for value"
+                      in SBV $ SVal k $ Left $ CW k $ CWList $ map toCWVal as
+  fromCW (CW _ (CWList a)) = List (fromCW . CW (kindOf (undefined :: a)) <$> a)
+  fromCW c                 = error $ "SymWord.fromCW: Unexpected non-list value: " ++ show c
 ------------------------------------------------------------------------------------
 -- * Smart constructors for creating symbolic values. These are not strictly
 -- necessary, as they are mere aliases for 'symbolic' and 'symbolics', but
@@ -320,6 +331,14 @@ sChars = symbolics
 -- | Declare a list of 'SString's
 sStrings :: [String] -> Symbolic [SString]
 sStrings = symbolics
+
+-- | Declare an 'SList'
+sList :: SymWord a => String -> Symbolic (SList a)
+sList = symbolic
+
+-- | Declare a list of 'SList's
+sLists :: SymWord a => [String] -> Symbolic [SList a]
+sLists = symbolics
 
 -- | Convert an SReal to an SInteger. That is, it computes the
 -- largest integer @n@ that satisfies @sIntegerToSReal n <= r@
@@ -865,6 +884,7 @@ instance (SymWord a, Fractional a) => Fractional (SBV a) where
                       k@KBool       -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KString     -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KChar       -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KList{}     -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KUserSort{} -> error $ "Unexpected Fractional case for: " ++ show k
 
 -- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat and SDouble

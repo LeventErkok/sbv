@@ -57,6 +57,7 @@ Library
                   , Data.SBV.Control
                   , Data.SBV.Dynamic
                   , Data.SBV.Internals
+                  , Data.SBV.List
                   , Data.SBV.String
                   , Data.SBV.Char
                   , Data.SBV.RegExp
@@ -127,6 +128,7 @@ Library
                   , Data.SBV.Core.Model
                   , Data.SBV.Core.Operations
                   , Data.SBV.Core.Floating
+                  , Data.SBV.Core.List
                   , Data.SBV.Core.Splittable
                   , Data.SBV.Core.Symbolic
                   , Data.SBV.Control.Query

@@ -190,6 +190,7 @@ specifier cfg sw = case kindOf sw of
                      KDouble       -> specF CgDouble
                      KString       -> text "%s"
                      KChar         -> text "%c"
+                     KList k       -> die $ "list sort: " ++ show k
                      KUserSort s _ -> die $ "uninterpreted sort: " ++ s
   where spec :: (Bool, Int) -> Doc
         spec (False,  1) = text "%d"
@@ -485,6 +486,7 @@ genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins preConsts tbls arrs
                       len KBool               = 5 -- SBool
                       len (KBounded False n)  = 5 + length (show n) -- SWordN
                       len (KBounded True  n)  = 4 + length (show n) -- SIntN
+                      len (KList s)           = die $ "List sort: " ++ show s
                       len (KUserSort s _)     = die $ "Uninterpreted sort: " ++ s
                       getMax 8 _      = 8  -- 8 is the max we can get with SInteger, so don't bother looking any further
                       getMax m []     = m
@@ -736,6 +738,7 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                                                KUnbounded      -> case cgInteger cfg of
                                                                     Nothing -> (True, True) -- won't matter, it'll be rejected later
                                                                     Just i  -> (True, canOverflow True i)
+                                               KList     s     -> die $ "List sort " ++ show s
                                                KUserSort s _   -> die $ "Uninterpreted sort: " ++ s
         -- Div/Rem should be careful on 0, in the SBV world x `div` 0 is 0, x `rem` 0 is x
         -- NB: Quot is supposed to truncate toward 0; Not clear to me if C guarantees this behavior.

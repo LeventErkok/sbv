@@ -34,7 +34,7 @@ module Data.SBV.String (
 import Prelude hiding (head, tail, length, take, drop, concat, null)
 import qualified Prelude as P
 
-import Data.SBV.Core.Data
+import Data.SBV.Core.Data hiding (SeqOp(..))
 import Data.SBV.Core.Model
 
 import qualified Data.Char as C
@@ -107,7 +107,7 @@ charToStr = lift1 StrUnit (Just wrap)
   where wrap c = [c]
 
 -- | @`strToStrAt` s offset@. Substring of length 1 at @offset@ in @s@. Unspecified if
--- index is out of bounds.
+-- offset is out of bounds.
 --
 -- >>> prove $ \s1 s2 -> strToStrAt (s1 .++ s2) (length s1) .== strToStrAt s2 0
 -- Q.E.D.

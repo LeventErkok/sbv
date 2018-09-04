@@ -76,6 +76,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSW
 
 import Data.SBV.Core.AlgReals   (mergeAlgReals)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
+import Data.SBV.Core.List       (List(..))
 
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
 import Data.SBV.SMT.Utils   (showTimeoutValue, addAnnotations, alignPlain, debug, mergeSExpr, SBVException(..))
@@ -374,6 +375,14 @@ instance SMTValue String where
 instance SMTValue Char where
    sexprToVal (ENum (i, _)) = Just (chr (fromIntegral i))
    sexprToVal _             = Nothing
+
+instance SMTValue a => SMTValue (List a) where
+   sexprToVal (EApp [ECon "seq.++", l, r]) = do List l' <- sexprToVal l
+                                                List r' <- sexprToVal r
+                                                return $ List $ l' ++ r'
+   sexprToVal (EApp [ECon "seq.unit", a])  = do a' <- sexprToVal a
+                                                return $ List [a']
+   sexprToVal _                            = Nothing
 
 -- | Get the value of a term.
 getValue :: SMTValue a => SBV a -> Query a

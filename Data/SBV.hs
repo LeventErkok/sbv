@@ -144,18 +144,21 @@ module Data.SBV (
   , SReal, AlgReal, sRealToSInteger
   -- ** Characters, Strings and Regular Expressions
   -- $strings
-  , SChar, SString, (.++), (.!!)
+  , SChar, SString
+  -- ** Symbolic lists
+  -- $lists
+  , List(..), SList
   -- * Arrays of symbolic values
   , SymArray(newArray_, newArray, readArray, writeArray), SArray, SFunArray
 
   -- * Creating symbolic values
   -- ** Single value
   -- $createSym
-  , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger, sReal, sFloat, sDouble, sChar, sString
+  , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger, sReal, sFloat, sDouble, sChar, sString, sList
 
   -- ** List of values
   -- $createSyms
-  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReals, sFloats, sDoubles, sChars, sStrings
+  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReals, sFloats, sDoubles, sChars, sStrings, sLists
 
   -- * Symbolic Equality and Comparisons
   , EqSymbolic(..), OrdSymbolic(..), Equality(..)
@@ -290,10 +293,10 @@ import qualified Control.Exception as C
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
+import Data.SBV.Core.List
 import Data.SBV.Core.Model
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Splittable
-import Data.SBV.String ((.++), (.!!))
 
 import Data.SBV.Provers.Prover
 
@@ -714,7 +717,16 @@ and here: <http://rise4fun.com/z3/tutorialcontent/sequences>. Note
 that this logic is still not part of official SMTLib (as of March 2018), so it should be considered
 experimental.
 
-See "Data.SBV.Char", "Data.SBV.String", "Data.SBV.RegExp" for further related functions.
+See "Data.SBV.Char", "Data.SBV.String", "Data.SBV.RegExp" for related functions.
+-}
+
+{- $lists
+Support for symbolic lists (intial version contributed by Joel Burget)
+adds support for sequence support, described here: <http://rise4fun.com/z3/tutorialcontent/sequences>. Note
+that this logic is still not part of official SMTLib (as of March 2018), so it should be considered
+experimental.
+
+See "Data.SBV.List" for related functions.
 -}
 
 {- $shiftRotate
