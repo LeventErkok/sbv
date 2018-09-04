@@ -351,7 +351,7 @@ instance Show SeqOp where
   show SeqConcat   = "seq.++"
   show SeqLen      = "seq.len"
   show SeqUnit     = "seq.unit"
-  show SeqSubseq   = "seq.substr"
+  show SeqSubseq   = "seq.extract"
   show SeqIndexOf  = "seq.indexof"
   show SeqContains = "seq.contains"
   show SeqPrefixOf = "seq.prefixof"
