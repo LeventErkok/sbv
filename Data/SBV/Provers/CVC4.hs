@@ -36,5 +36,6 @@ cvc4 = SMTSolver {
                               , supportsPseudoBooleans     = False
                               , supportsCustomQueries      = True
                               , supportsGlobalDecls        = True
+                              , supportsFlattenedSequences = Nothing
                               }
          }

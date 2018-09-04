@@ -36,6 +36,7 @@ z3 = SMTSolver {
                               , supportsPseudoBooleans     = True
                               , supportsCustomQueries      = True
                               , supportsGlobalDecls        = True
+                              , supportsFlattenedSequences = Just "(set-option :pp.max_depth 4294967295)"
                               }
          }
 

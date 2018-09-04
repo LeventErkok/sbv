@@ -36,5 +36,6 @@ abc = SMTSolver {
                               , supportsPseudoBooleans     = False
                               , supportsCustomQueries      = False
                               , supportsGlobalDecls        = False
+                              , supportsFlattenedSequences = Nothing
                               }
          }
