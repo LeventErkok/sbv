@@ -18,6 +18,7 @@ module Data.SBV.Core.List (List(..)) where
 
 import GHC.Exts(IsList(..))
 
+-- | A wrapper of lists, solely for the purpose of type-disambiguation tagging.
 newtype List a = List { unList :: [a] }
      deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
