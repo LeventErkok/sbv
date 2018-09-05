@@ -28,6 +28,9 @@ import Data.List (genericIndex, isInfixOf, isPrefixOf, isSuffixOf, genericTake, 
 import qualified Data.Char       as C
 import qualified Data.SBV.Char   as SC
 import qualified Data.SBV.String as SS
+import qualified Data.SBV.List   as SL
+
+import GHC.Exts(IsList(..))
 
 -- Test suite
 tests :: TestTree
@@ -70,6 +73,7 @@ tests = testGroup "Arith.NoSolver" $
         ++ genIntCasts
         ++ genChars
         ++ genStrings
+        ++ genLists
 
 genBinTest :: String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [TestTree]
 genBinTest nm op = map mkTest $
@@ -87,17 +91,18 @@ genBinTest nm op = map mkTest $
 
 genBoolTest :: String -> (forall a. Ord a => a -> a -> Bool) -> (forall a. OrdSymbolic a => a -> a -> SBool) -> [TestTree]
 genBoolTest nm op opS = map mkTest $
-        zipWith pair [(show x, show y, x `op` y) | x <- w8s,  y <- w8s ] [x `opS` y | x <- sw8s,  y <- sw8s ]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- w16s, y <- w16s] [x `opS` y | x <- sw16s, y <- sw16s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- w32s, y <- w32s] [x `opS` y | x <- sw32s, y <- sw32s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- w64s, y <- w64s] [x `opS` y | x <- sw64s, y <- sw64s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- i8s,  y <- i8s ] [x `opS` y | x <- si8s,  y <- si8s ]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- i16s, y <- i16s] [x `opS` y | x <- si16s, y <- si16s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- i32s, y <- i32s] [x `opS` y | x <- si32s, y <- si32s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- i64s, y <- i64s] [x `opS` y | x <- si64s, y <- si64s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- iUBs, y <- iUBs] [x `opS` y | x <- siUBs, y <- siUBs]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- iCs,  y <- iCs ] [x `opS` y | x <- siCs,  y <- siCs ]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- ss,   y <- ss  ] [x `opS` y | x <- sss,   y <- sss  ]
+        zipWith pair [(show x, show y, x        `op` y)        | x <- w8s,  y <- w8s ] [x `opS` y | x <- sw8s,  y <- sw8s ]
+     ++ zipWith pair [(show x, show y, x        `op` y)        | x <- w16s, y <- w16s] [x `opS` y | x <- sw16s, y <- sw16s]
+     ++ zipWith pair [(show x, show y, x        `op` y)        | x <- w32s, y <- w32s] [x `opS` y | x <- sw32s, y <- sw32s]
+     ++ zipWith pair [(show x, show y, x        `op` y)        | x <- w64s, y <- w64s] [x `opS` y | x <- sw64s, y <- sw64s]
+     ++ zipWith pair [(show x, show y, x        `op` y)        | x <- i8s,  y <- i8s ] [x `opS` y | x <- si8s,  y <- si8s ]
+     ++ zipWith pair [(show x, show y, x        `op` y)        | x <- i16s, y <- i16s] [x `opS` y | x <- si16s, y <- si16s]
+     ++ zipWith pair [(show x, show y, x        `op` y)        | x <- i32s, y <- i32s] [x `opS` y | x <- si32s, y <- si32s]
+     ++ zipWith pair [(show x, show y, x        `op` y)        | x <- i64s, y <- i64s] [x `opS` y | x <- si64s, y <- si64s]
+     ++ zipWith pair [(show x, show y, x        `op` y)        | x <- iUBs, y <- iUBs] [x `opS` y | x <- siUBs, y <- siUBs]
+     ++ zipWith pair [(show x, show y, x        `op` y)        | x <- iCs,  y <- iCs ] [x `opS` y | x <- siCs,  y <- siCs ]
+     ++ zipWith pair [(show x, show y, x        `op` y)        | x <- ss,   y <- ss  ] [x `opS` y | x <- sss,   y <- sss  ]
+     ++ zipWith pair [(show x, show y, toList x `op` toList y) | x <- ssl,  y <- ssl ] [x `opS` y | x <- ssl,   y <- ssl  ]
   where pair (x, y, a) b = (x, y, Just a == unliteral b)
         mkTest (x, y, s) = testCase ("arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y) (s `showsAs` "True")
 
@@ -594,6 +599,112 @@ genStrings = map mkTest1 (  [("length",        show s,                   check1 
                                           Nothing -> False
                                           Just x  -> x == cop arg1 arg2 arg3
 
+genLists :: [TestTree]
+genLists = map mkTest1 (   [("length",        show l,                   check1   SL.length        llen          l      ) | l <- sl                                                       ]
+                        ++ [("null",          show l,                   check1   SL.null          null          l      ) | l <- sl                                                       ]
+                        ++ [("head",          show l,                   check1   SL.head          head          l      ) | l <- sl, not (null l)                                         ]
+                        ++ [("tail",          show l,                   checkL   SL.tail          tail          l      ) | l <- sl, not (null l)                                         ]
+                        ++ [("singleton",     show i,                   checkS   SL.singleton     (: [])        i      ) | i <- iUBs                                                     ]
+                        ++ [("implode",       show l,                   checkI   SL.implode       id            l      ) | l <- sl                                                       ])
+        ++ map mkTest2 (   [("listToListAt",  show l, show i,           checkLI  SL.listToListAt  listToListAt  l i    ) | l <- sl, i  <- range l                                        ]
+                        ++ [("elemAt",        show l, show i,           checkLII SL.elemAt        elemAt        l i    ) | l <- sl, i  <- range l                                        ]
+                        ++ [("concat",        show l, show l1,          check2   SL.concat        (++)          l l1   ) | l <- sl, l1 <- sl                                             ]
+                        ++ [("isInfixOf",     show l, show l1,          check2B  SL.isInfixOf     isInfixOf     l l1   ) | l <- sl, l1 <- sl                                             ]
+                        ++ [("isSuffixOf",    show l, show l1,          check2B  SL.isSuffixOf    isSuffixOf    l l1   ) | l <- sl, l1 <- sl                                             ]
+                        ++ [("isPrefixOf",    show l, show l1,          check2B  SL.isPrefixOf    isPrefixOf    l l1   ) | l <- sl, l1 <- sl                                             ]
+                        ++ [("take",          show l, show i,           checkTD  SL.take          genericTake   i l    ) | l <- sl, i <- iUBs                                            ]
+                        ++ [("drop",          show l, show i,           checkTD  SL.drop          genericDrop   i l    ) | l <- sl, i <- iUBs                                            ]
+                        ++ [("indexOf",       show l, show l1,          check2B  SL.indexOf       indexOf       l l1   ) | l <- sl, l1 <- sl                                             ])
+        ++ map mkTest3 (   [("subList",       show l, show  i, show j,  check3   SL.subList       subList       l i  j ) | l <- sl, i  <- range l, j <- range l, i + j <= genericLength l]
+                        ++ [("replace",       show l, show l1, show l2, check3L  SL.replace       replace       l l1 l2) | l <- sl, l1 <- sl, l2 <- sl                                   ]
+                        ++ [("offsetIndexOf", show l, show l1, show i,  check3LI SL.offsetIndexOf offsetIndexOf l l1 i ) | l <- sl, l1 <- sl, i <- range l                               ])
+  where llen :: [Integer] -> Integer
+        llen = fromIntegral . length
+
+        range :: [Integer] -> [Integer]
+        range l = map fromIntegral [0 .. length l - 1]
+
+        indexOf :: [Integer] -> [Integer] -> Integer
+        indexOf s1 s2 = go 0 s1
+          where go i x
+                 | s2 `isPrefixOf` x = i
+                 | True              = case x of
+                                          []    -> -1
+                                          (_:r) -> go (i+1) r
+
+        listToListAt :: [Integer] -> Integer -> [Integer]
+        s `listToListAt` i = [s `elemAt` i]
+
+        elemAt :: [Integer] -> Integer -> Integer
+        l `elemAt` i = l `genericIndex` i
+
+        subList :: [Integer] -> Integer -> Integer -> [Integer]
+        subList s i j = genericTake j (genericDrop i s)
+
+        replace :: [Integer] -> [Integer] -> [Integer] -> [Integer]
+        replace s [] y = y ++ s
+        replace s x  y = go s
+          where go [] = []
+                go h@(c:rest) | x `isPrefixOf` h = y ++ drop (length x) h
+                              | True             = c : go rest
+
+        offsetIndexOf :: [Integer] -> [Integer] -> Integer -> Integer
+        offsetIndexOf x y i = case indexOf (genericDrop i x) y of
+                                -1 -> -1
+                                r  -> r+i
+
+        mkTest1 (nm, x, t)       = testCase ("genLists-" ++ nm ++ "." ++ x)                         (assert t)
+        mkTest2 (nm, x, y, t)    = testCase ("genLists-" ++ nm ++ "." ++ x ++ "_" ++ y)             (assert t)
+        mkTest3 (nm, x, y, z, t) = testCase ("genLists-" ++ nm ++ "." ++ x ++ "_" ++ y ++ "_" ++ z) (assert t)
+
+        checkS sop cop arg = case toList <$> unliteral (sop (literal arg)) of
+                               Nothing -> False
+                               Just x  -> x == cop arg
+
+        checkI sop cop arg = case toList <$> unliteral (sop (map literal arg)) of
+                               Nothing -> False
+                               Just x  -> x == cop arg
+
+        checkLI sop cop arg1 arg2 = case toList <$> unliteral (sop (literal (fromList arg1)) (literal arg2)) of
+                                      Nothing -> False
+                                      Just x  -> x == cop arg1 arg2
+
+        checkTD sop cop arg1 arg2 = case toList <$> unliteral (sop (literal arg1) (literal (fromList arg2))) of
+                                      Nothing -> False
+                                      Just x  -> x == cop arg1 arg2
+
+        checkLII sop cop arg1 arg2 = case unliteral (sop (literal (fromList arg1)) (literal arg2)) of
+                                       Nothing -> False
+                                       Just x  -> x == cop arg1 arg2
+
+        check1 sop cop arg            = case unliteral (sop (literal (fromList arg))) of
+                                          Nothing -> False
+                                          Just x  -> x == cop arg
+
+        checkL sop cop arg            = case toList <$> unliteral (sop (literal (fromList arg))) of
+                                          Nothing -> False
+                                          Just x  -> x == cop arg
+
+        check2 sop cop arg1 arg2      = case toList <$> unliteral (sop (literal (fromList arg1)) (literal (fromList arg2))) of
+                                          Nothing -> False
+                                          Just x  -> x == cop arg1 arg2
+
+        check2B sop cop arg1 arg2     = case unliteral (sop (literal (fromList arg1)) (literal (fromList arg2))) of
+                                          Nothing -> False
+                                          Just x  -> x == cop arg1 arg2
+
+        check3 sop cop arg1 arg2 arg3 = case toList <$> unliteral (sop (literal (fromList arg1)) (literal arg2) (literal arg3)) of
+                                          Nothing -> False
+                                          Just x  -> x == cop arg1 arg2 arg3
+
+        check3L sop cop arg1 arg2 arg3 = case toList <$> unliteral (sop (literal (fromList arg1)) (literal (fromList arg2)) (literal (fromList arg3))) of
+                                           Nothing -> False
+                                           Just x  -> x == cop arg1 arg2 arg3
+
+        check3LI sop cop arg1 arg2 arg3 = case unliteral (sop (literal (fromList arg1)) (literal (fromList arg2)) (literal arg3)) of
+                                            Nothing -> False
+                                            Just x  -> x == cop arg1 arg2 arg3
+
 -- Concrete test data
 xsUnsigned :: (Num a, Bounded a) => [a]
 xsUnsigned = take 5 (iterate (1+) minBound) ++ take 5 (iterate (\x -> x-1) maxBound)
@@ -694,3 +805,13 @@ ss = ["", "palTRY", "teSTing", "SBV", "sTRIngs", "123", "surely", "thIS", "hI", 
 
 sss :: [SString]
 sss = map literal ss
+
+-- Lists are the worst in coverage!
+sl :: [[Integer]]
+sl = [[], [0], [-1, 1], [-10, 0, 10], [3, 4, 5, 4, 5, 3]]
+
+-- Lists are the worst in coverage!
+ssl :: [SList Integer]
+ssl = map (literal . fromList) sl
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
