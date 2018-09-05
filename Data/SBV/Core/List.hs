@@ -13,6 +13,10 @@
 {-# LANGUAGE DeriveTraversable          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
+#if MIN_VERSION_base(4,10,0)
+{-# LANGUAGE UndecidableInstances #-}
+#endif
+
 module Data.SBV.Core.List (List(..)) where
 
 -- Older versions of GHC (8.0.1, for instance) cannot derive the List instance; sigh.

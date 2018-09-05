@@ -64,7 +64,7 @@ length = lift1 SeqLen (Just (fromIntegral . P.length))
 --
 -- >>> prove $ \(l :: SList Word16) -> null l <=> length l .== 0
 -- Q.E.D.
--- >>> prove $ \(l :: SList Word16) -> null l <=> l .== literal []
+-- >>> prove $ \(l :: SList Word16) -> null l <=> l .== []
 -- Q.E.D.
 null :: SymWord a => SList a -> SBool
 null l
@@ -121,7 +121,7 @@ listToListAt s offset = subList s offset 1
 --
 -- >>> prove $ \i -> i .>= 0 &&& i .<= 4 ==> [1,1,1,1,1] `elemAt` i .== (1::SInteger)
 -- Q.E.D.
--- >>> prove $ \l i e -> l `elemAt` i .== c ==> indexOf l (singleton e) .<= i
+-- >>> prove $ \(l :: SList Integer) i e -> l `elemAt` i .== e ==> indexOf l (singleton e) .<= i
 -- Q.E.D.
 elemAt :: forall a. SymWord a => SList a -> SInteger -> SBV a
 elemAt l i
@@ -151,7 +151,7 @@ elemAt l i
 --
 -- >>> prove $ \(e1 :: SInteger) e2 e3 -> length (implode [e1, e2, e3]) .== 3
 -- Q.E.D.
--- >>> prove $ \(e1 :: SInteger) e2 e3 -> map (`elemAt` (implode [e1, e2, e3])) (map literal [0 .. 2]) .== [e1, e2, e3]
+-- >>> prove $ \(e1 :: SInteger) e2 e3 -> map (elemAt (implode [e1, e2, e3])) (map literal [0 .. 2]) .== [e1, e2, e3]
 -- Q.E.D.
 implode :: SymWord a => [SBV a] -> SList a
 implode = foldr ((.++) . singleton) (literal (List []))
