@@ -191,6 +191,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.SmallShifts
                   , TestSuite.Basics.SquashReals
                   , TestSuite.Basics.String
+                  , TestSuite.Basics.List
                   , TestSuite.Basics.TOut
                   , TestSuite.BitPrecise.BitTricks
                   , TestSuite.BitPrecise.Legato

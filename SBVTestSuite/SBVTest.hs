@@ -32,6 +32,7 @@ import qualified TestSuite.Basics.GenBenchmark
 import qualified TestSuite.Basics.Higher
 import qualified TestSuite.Basics.Index
 import qualified TestSuite.Basics.IteTest
+import qualified TestSuite.Basics.List
 import qualified TestSuite.Basics.ProofTests
 import qualified TestSuite.Basics.PseudoBoolean
 import qualified TestSuite.Basics.QRem
@@ -163,6 +164,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Basics.Higher.tests
                , TestSuite.Basics.Index.tests
                , TestSuite.Basics.IteTest.tests
+               , TestSuite.Basics.List.tests
                , TestSuite.Basics.ProofTests.tests
                , TestSuite.Basics.PseudoBoolean.tests
                , TestSuite.Basics.QRem.tests
