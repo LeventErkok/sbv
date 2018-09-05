@@ -235,7 +235,7 @@ c n vs = intercalate "\n" $
                   KDouble         -> let CWDouble w  = cwVal cw in showCDouble w
                   KChar           -> error "SBV.renderTest: Unsupported char"
                   KString         -> error "SBV.renderTest: Unsupported string"
-                  KList{}         -> error $ "SBV.renderTest: Unsupported list sort!"
+                  k@KList{}       -> error $ "SBV.renderTest: Unsupported list sort!" ++ show k
                   KUserSort us _  -> error $ "SBV.renderTest: Unsupported uninterpreted sort: " ++ us
                   KReal           -> error "SBV.renderTest: Real values are not supported when generating C test-cases."
         outLine
@@ -309,7 +309,7 @@ forte vname bigEndian ss vs = intercalate "\n" $ [ "// Automatically generated b
         xlt _ (CWChar     r)  = error $ "SBV.renderTest.Forte: Unexpected char value: "          ++ show r
         xlt _ (CWString   r)  = error $ "SBV.renderTest.Forte: Unexpected string value: "        ++ show r
         xlt _ (CWAlgReal  r)  = error $ "SBV.renderTest.Forte: Unexpected real value: "          ++ show r
-        xlt _ (CWList{})      = error $ "SBV.renderTest.Forte: Unexpected list value!"
+        xlt _ CWList{}        = error   "SBV.renderTest.Forte: Unexpected list value!"
         xlt _ (CWUserSort r)  = error $ "SBV.renderTest.Forte: Unexpected uninterpreted value: " ++ show r
         mkLine  (i, o) = "("  ++ mkTuple (form (fst ss) (concatMap blast i)) ++ ", " ++ mkTuple (form (snd ss) (concatMap blast o)) ++ ")"
         mkTuple []  = "()"
