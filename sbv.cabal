@@ -245,6 +245,7 @@ Test-Suite SBVTest
                   , TestSuite.Queries.Int_Yices
                   , TestSuite.Queries.Int_Z3
                   , TestSuite.Queries.Interpolants
+                  , TestSuite.Queries.Lists
                   , TestSuite.Queries.Strings
                   , TestSuite.Queries.Uninterpreted
                   , TestSuite.QuickCheck.QC
