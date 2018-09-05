@@ -205,8 +205,10 @@ instance SymWord a => SymWord (List a) where
                                         SBV (SVal _ (Left (CW _ cwval))) -> cwval
                                         _                                -> error "SymWord.Sequence: could not produce a concrete word for value"
                       in SBV $ SVal k $ Left $ CW k $ CWList $ map toCWVal as
+
   fromCW (CW _ (CWList a)) = List (fromCW . CW (kindOf (undefined :: a)) <$> a)
   fromCW c                 = error $ "SymWord.fromCW: Unexpected non-list value: " ++ show c
+
 ------------------------------------------------------------------------------------
 -- * Smart constructors for creating symbolic values. These are not strictly
 -- necessary, as they are mere aliases for 'symbolic' and 'symbolics', but
