@@ -24,9 +24,10 @@ import Utils.SBVTestFramework
 
 import Data.List (genericIndex, isInfixOf, isPrefixOf, isSuffixOf, genericTake, genericDrop, genericLength)
 
-import qualified Data.Char     as C
-import qualified Data.SBV.Char as SC
+import qualified Data.Char       as C
+import qualified Data.SBV.Char   as SC
 import qualified Data.SBV.String as SS
+import qualified Data.SBV.List   as SL
 
 import GHC.Exts(IsList(..))
 
@@ -74,6 +75,7 @@ tests =
      ++ genIntCasts
      ++ genChars
      ++ genStrings
+     ++ genLists
      )
 
 genBinTest :: Bool -> String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [TestTree]
@@ -655,6 +657,136 @@ genStrings = map mkTest1 (  [("length",        show s,                   mkThm1 
                                                        constrain $ b .== literal arg2
                                                        constrain $ c .== literal arg3
                                                        return $ literal (cop arg1 arg2 arg3) .== sop a b c
+
+genLists :: [TestTree]
+genLists = map mkTest1 (   [("length",        show l,                   mkThm1   SL.length        llen          l      ) | l <- sl                                                       ]
+                        ++ [("null",          show l,                   mkThm1   SL.null          null          l      ) | l <- sl                                                       ]
+                        ++ [("head",          show l,                   mkThm1   SL.head          head          l      ) | l <- sl, not (null l)                                         ]
+                        ++ [("tail",          show l,                   mkThmL   SL.tail          tail          l      ) | l <- sl, not (null l)                                         ]
+                        ++ [("singleton",     show i,                   mkThmS   SL.singleton     (: [])        i      ) | i <- iUBs                                                     ]
+                        ++ [("implode",       show l,                   mkThmI   SL.implode       id            l      ) | l <- sl                                                       ])
+        ++ map mkTest2 (   [("listToListAt",  show l, show i,           mkThmLI  SL.listToListAt  listToListAt  l i    ) | l <- sl, i  <- range l                                        ]
+                        ++ [("elemAt",        show l, show i,           mkThmLII SL.elemAt        elemAt        l i    ) | l <- sl, i  <- range l                                        ]
+                        ++ [("concat",        show l, show l1,          mkThm2   SL.concat        (++)          l l1   ) | l <- sl, l1 <- sl                                             ]
+                        ++ [("isInfixOf",     show l, show l1,          mkThm2B  SL.isInfixOf     isInfixOf     l l1   ) | l <- sl, l1 <- sl                                             ]
+                        ++ [("isSuffixOf",    show l, show l1,          mkThm2B  SL.isSuffixOf    isSuffixOf    l l1   ) | l <- sl, l1 <- sl                                             ]
+                        ++ [("isPrefixOf",    show l, show l1,          mkThm2B  SL.isPrefixOf    isPrefixOf    l l1   ) | l <- sl, l1 <- sl                                             ]
+                        ++ [("take",          show l, show i,           mkThmTD  SL.take          genericTake   i l    ) | l <- sl, i <- iUBs                                            ]
+                        ++ [("drop",          show l, show i,           mkThmTD  SL.drop          genericDrop   i l    ) | l <- sl, i <- iUBs                                            ]
+                        ++ [("indexOf",       show l, show l1,          mkThm2B  SL.indexOf       indexOf       l l1   ) | l <- sl, l1 <- sl                                             ])
+        ++ map mkTest3 (   [("subList",       show l, show  i, show j,  mkThm3   SL.subList       subList       l i  j ) | l <- sl, i  <- range l, j <- range l, i + j <= genericLength l]
+                        ++ [("replace",       show l, show l1, show l2, mkThm3L  SL.replace       replace       l l1 l2) | l <- sl, l1 <- sl, l2 <- sl                                   ]
+                        ++ [("offsetIndexOf", show l, show l1, show i,  mkThm3LI SL.offsetIndexOf offsetIndexOf l l1 i ) | l <- sl, l1 <- sl, i <- range l                               ])
+  where llen :: [Integer] -> Integer
+        llen = fromIntegral . length
+
+        range :: [Integer] -> [Integer]
+        range l = map fromIntegral [0 .. length l - 1]
+
+        indexOf :: [Integer] -> [Integer] -> Integer
+        indexOf s1 s2 = go 0 s1
+          where go i x
+                 | s2 `isPrefixOf` x = i
+                 | True              = case x of
+                                          []    -> -1
+                                          (_:r) -> go (i+1) r
+
+        listToListAt :: [Integer] -> Integer -> [Integer]
+        s `listToListAt` i = [s `elemAt` i]
+
+        elemAt :: [Integer] -> Integer -> Integer
+        l `elemAt` i = l `genericIndex` i
+
+        subList :: [Integer] -> Integer -> Integer -> [Integer]
+        subList s i j = genericTake j (genericDrop i s)
+
+        replace :: [Integer] -> [Integer] -> [Integer] -> [Integer]
+        replace s [] y = y ++ s
+        replace s x  y = go s
+          where go [] = []
+                go h@(c:rest) | x `isPrefixOf` h = y ++ drop (length x) h
+                              | True             = c : go rest
+
+        offsetIndexOf :: [Integer] -> [Integer] -> Integer -> Integer
+        offsetIndexOf x y i = case indexOf (genericDrop i x) y of
+                                -1 -> -1
+                                r  -> r+i
+
+        mkTest1 (nm, x, t)       = testCase ("genLists-" ++ nm ++ "." ++ x)                         (assert t)
+        mkTest2 (nm, x, y, t)    = testCase ("genLists-" ++ nm ++ "." ++ x ++ "_" ++ y)             (assert t)
+        mkTest3 (nm, x, y, z, t) = testCase ("genLists-" ++ nm ++ "." ++ x ++ "_" ++ y ++ "_" ++ z) (assert t)
+
+        mkThmS sop cop arg = isTheorem $ do a <- free "a"
+                                            constrain $ a .== literal arg
+                                            return $ literal (fromList (cop arg)) .== sop a
+
+        mkThmI sop cop arg = isTheorem $ do let v c = do sc <- free_
+                                                         constrain $ sc .== literal c
+                                                         return sc
+                                            vs <- mapM v arg
+                                            return $ literal (fromList (cop arg)) .== sop vs
+
+        mkThmLI sop cop arg1 arg2 = isTheorem $ do a <- free "a"
+                                                   b <- free "b"
+                                                   constrain $ a .== literal (fromList arg1)
+                                                   constrain $ b .== literal arg2
+                                                   return $ literal (fromList (cop arg1 arg2)) .== sop a b
+
+        mkThmLII sop cop arg1 arg2 = isTheorem $ do a <- free "a"
+                                                    b <- free "b"
+                                                    constrain $ a .== literal (fromList arg1)
+                                                    constrain $ b .== literal arg2
+                                                    return $ literal (cop arg1 arg2) .== sop a b
+
+        mkThm1 sop cop arg = isTheorem $ do a <- free "a"
+                                            constrain $ a .== literal (fromList arg)
+                                            return $ literal (cop arg) .== sop a
+
+        mkThmL sop cop arg = isTheorem $ do a <- free "a"
+                                            constrain $ a .== literal (fromList arg)
+                                            return $ literal (fromList (cop arg)) .== sop a
+
+        mkThm2 sop cop arg1 arg2 = isTheorem $ do a <- free "a"
+                                                  b <- free "b"
+                                                  constrain $ a .== literal (fromList arg1)
+                                                  constrain $ b .== literal (fromList arg2)
+                                                  return $ literal (fromList (cop arg1 arg2)) .== sop a b
+
+        mkThm2B sop cop arg1 arg2 = isTheorem $ do a <- free "a"
+                                                   b <- free "b"
+                                                   constrain $ a .== literal (fromList arg1)
+                                                   constrain $ b .== literal (fromList arg2)
+                                                   return $ literal (cop arg1 arg2) .== sop a b
+
+        mkThmTD sop cop arg1 arg2 = isTheorem $ do a <- free "a"
+                                                   b <- free "b"
+                                                   constrain $ a .== literal arg1
+                                                   constrain $ b .== literal (fromList arg2)
+                                                   return $ literal (fromList (cop arg1 arg2)) .== sop a b
+
+        mkThm3 sop cop arg1 arg2 arg3 = isTheorem $ do a <- free "a"
+                                                       b <- free "b"
+                                                       c <- free "c"
+                                                       constrain $ a .== literal (fromList arg1)
+                                                       constrain $ b .== literal arg2
+                                                       constrain $ c .== literal arg3
+                                                       return $ literal (fromList (cop arg1 arg2 arg3)) .== sop a b c
+
+        mkThm3L sop cop arg1 arg2 arg3 = isTheorem $ do a <- free "a"
+                                                        b <- free "b"
+                                                        c <- free "c"
+                                                        constrain $ a .== literal (fromList arg1)
+                                                        constrain $ b .== literal (fromList arg2)
+                                                        constrain $ c .== literal (fromList arg3)
+                                                        return $ literal (fromList (cop arg1 arg2 arg3)) .== sop a b c
+
+        mkThm3LI sop cop arg1 arg2 arg3 = isTheorem $ do a <- free "a"
+                                                         b <- free "b"
+                                                         c <- free "c"
+                                                         constrain $ a .== literal (fromList arg1)
+                                                         constrain $ b .== literal (fromList arg2)
+                                                         constrain $ c .== literal arg3
+                                                         return $ literal (cop arg1 arg2 arg3) .== sop a b c
 
 -- Concrete test data
 xsSigned, xsUnsigned :: (Num a, Bounded a) => [a]
