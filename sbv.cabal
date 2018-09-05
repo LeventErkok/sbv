@@ -82,6 +82,7 @@ Library
                   , Documentation.SBV.Examples.Crypto.RC4
                   , Documentation.SBV.Examples.Existentials.CRCPolynomial
                   , Documentation.SBV.Examples.Existentials.Diophantine
+                  , Documentation.SBV.Examples.Lists.Fibonacci
                   , Documentation.SBV.Examples.Misc.Enumerate
                   , Documentation.SBV.Examples.Misc.Floating
                   , Documentation.SBV.Examples.Misc.ModelExtract
