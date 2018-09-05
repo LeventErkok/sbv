@@ -268,7 +268,7 @@ subList l offset len
 --
 -- >>> prove $ \l -> replace [1..5] l [6..10] .== [6..10] ==> l .== ([1..5] :: SList Word8)
 -- Q.E.D.
--- >>> prove $ \l1 l2 l3 -> length l2 .> length l1 ==> replace l1 l2 l3 .== l1
+-- >>> prove $ \(l1 :: SList Integer) l2 l3 -> length l2 .> length l1 ==> replace l1 l2 l3 .== l1
 -- Q.E.D.
 replace :: SymWord a => SList a -> SList a -> SList a -> SList a
 replace l src dst
