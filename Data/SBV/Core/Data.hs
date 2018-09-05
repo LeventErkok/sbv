@@ -154,8 +154,7 @@ type SString = SBV String
 -- that is, it is not the case that @SList a = [a]@, unlike what one might expect following
 -- haskell lists\/sequences. An 'SList' is a symbolic value of its own, of possibly arbitrary but finite
 -- length, and internally processed as one unit as opposed to a fixed-length list of items.
--- Note that we only allow flat lists of basic types, i.e., nested symbolic lists are not
--- supported.
+-- Note that lists can be nested, i.e., we do allow lists of lists of ... items.
 type SList a = SBV (List a)
 
 -- | IsList instance allows list literals to be written compactly.
