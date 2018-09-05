@@ -69,6 +69,7 @@ instance Ord CWVal where
   CWDouble   a `compare` CWDouble b   = a        `fpCompareObjectH`         b
   CWChar     a `compare` CWChar b     = a        `compare`                  b
   CWString   a `compare` CWString b   = a        `compare`                  b
+  CWList     a `compare` CWList   b   = a        `compare`                  b
   CWUserSort a `compare` CWUserSort b = a        `compare`                  b
   a            `compare` b            = cwRank a `compare`                  cwRank b
 
