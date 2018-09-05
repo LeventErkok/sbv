@@ -167,9 +167,9 @@ concat x y | isConcretelyEmpty x = y
 --
 -- >>> sat $ \x y z -> length x .== 5 &&& length y .== 1 &&& x .++ y .++ z .== [1 .. 12]
 -- Satisfiable. Model:
---   s0 =  "Hello" :: String
---   s1 =      " " :: String
---   s2 = "world!" :: String
+--   s0 =      [1,2,3,4,5] :: [SInteger]
+--   s1 =              [6] :: [SInteger]
+--   s2 = [7,8,9,10,11,12] :: [SInteger]
 infixr 5 .++
 (.++) :: SymWord a => SList a -> SList a -> SList a
 (.++) = concat
@@ -244,11 +244,11 @@ drop i s = ite (i .>= ls) (literal (List []))
 --
 -- >>> prove $ \(l :: SList Integer) i -> i .>= 0 &&& i .< length l ==> subList l 0 i .++ subList l i (length l - i) .== l
 -- Q.E.D.
--- >>> sat  $ \i j -> subList [1,2,3,4,5] i j .== [2,3,4::SInteger]
+-- >>> sat  $ \i j -> subList [1..5] i j .== ([2..4] :: SList Integer)
 -- Satisfiable. Model:
 --   s0 = 1 :: Integer
 --   s1 = 3 :: Integer
--- >>> sat  $ \i j -> subList "hell" i j .== "no"
+-- >>> sat  $ \i j -> subList [1..5] i j .== ([6..7] :: SList Integer)
 -- Unsatisfiable
 subList :: SymWord a => SList a -> SInteger -> SInteger -> SList a
 subList l offset len
@@ -266,7 +266,7 @@ subList l offset len
 
 -- | @`replace` l src dst@. Replace the first occurrence of @src@ by @dst@ in @s@
 --
--- >>> prove $ \l -> replace "hello" l "world" .== "world" ==> l .== "hello"
+-- >>> prove $ \l -> replace [1..5] l [6..10] .== [6..10] ==> l .== ([1..5] :: SList Word8)
 -- Q.E.D.
 -- >>> prove $ \l1 l2 l3 -> length l2 .> length l1 ==> replace l1 l2 l3 .== l1
 -- Q.E.D.
