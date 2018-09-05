@@ -12,23 +12,18 @@
 {-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DeriveTraversable          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-
-#if MIN_VERSION_base(4,10,0)
-{-# LANGUAGE UndecidableInstances #-}
-#endif
+{-# LANGUAGE TypeFamilies               #-}
 
 module Data.SBV.Core.List (List(..)) where
 
--- Older versions of GHC (8.0.1, for instance) cannot derive the List instance; sigh.
-
-#if MIN_VERSION_base(4,10,0)
 import GHC.Exts(IsList(..))
-#endif
 
 newtype List a = List { unList :: [a] }
-     deriving (Eq, Ord, Show, Functor, Foldable, Traversable
+     deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
-#if MIN_VERSION_base(4,10,0)
-              , IsList
-#endif
-              )
+-- Older versions of GHC (8.0.1, for instance) cannot derive the List instance; sigh.
+-- So we manually derive it here.
+instance IsList (List a) where
+   type Item (List a) = a
+   fromList = List
+   toList   = unList
