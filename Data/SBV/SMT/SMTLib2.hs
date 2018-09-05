@@ -554,6 +554,14 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
             in "(" ++ o ++ " " ++ a1 ++ " " ++ a2 ++ ")"
         stringCmp _ o sbvs = error $ "SBV.SMT.SMTLib2.sh.stringCmp: Unexpected arguments: " ++ show (o, sbvs)
 
+        -- NB. Likewise for sequences
+        seqCmp swap o [a, b]
+          | KList{} <- kindOf (head arguments)
+          = let [a1, a2] | swap = [b, a]
+                         | True = [a, b]
+            in "(" ++ o ++ " " ++ a1 ++ " " ++ a2 ++ ")"
+        seqCmp _ o sbvs = error $ "SBV.SMT.SMTLib2.sh.seqCmp: Unexpected arguments: " ++ show (o, sbvs)
+
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
         lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib2.sh.lift1: Unexpected arguments: "   ++ show (o, sbvs)
 
@@ -745,9 +753,13 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                  , (GreaterEq,   stringCmp True  "str.<=")
                                  ]
                 -- For lists, equality is really the only operator
-                -- This is unfortunate since Haskell allows comparisons too.
-                smtListTable = [ (Equal,    lift2S "="        "="        True)
-                               , (NotEqual, liftNS "distinct" "distinct" True)
+                -- Likewise here, things might change for comparisons
+                smtListTable = [ (Equal,       lift2S "="        "="        True)
+                               , (NotEqual,    liftNS "distinct" "distinct" True)
+                               , (LessThan,    seqCmp False "seq.<")
+                               , (GreaterThan, seqCmp True  "seq.<")
+                               , (LessEq,      seqCmp False "seq.<=")
+                               , (GreaterEq,   seqCmp True  "seq.<=")
                                ]
 
 -----------------------------------------------------------------------------------------------
