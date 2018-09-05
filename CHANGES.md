@@ -5,7 +5,13 @@
 
 ### Version 7.10.5, Not yet released
 
-  * New dev version
+  * Add support for symbolic lists. This is building on top of Joel
+    Burget's initial work for supporting symbolic strings and
+    sequences, as supported by Z3. SBV now supports symbolic
+    lists, with usual list operations. Note that the list theory
+    solvers are incomplete, so some queries might receive an
+    unknown answer. See "Documentation/SBV/Examples/Lists/Fibonacci.hs"
+    for an example, and the module "Data.SBV.List" for details.
 
 ### Version 7.10, 2018-07-20
 
