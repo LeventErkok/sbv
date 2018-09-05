@@ -377,12 +377,13 @@ instance SMTValue Char where
    sexprToVal _             = Nothing
 
 instance SMTValue a => SMTValue (List a) where
-   sexprToVal (EApp [ECon "seq.++", l, r]) = do List l' <- sexprToVal l
-                                                List r' <- sexprToVal r
-                                                return $ List $ l' ++ r'
-   sexprToVal (EApp [ECon "seq.unit", a])  = do a' <- sexprToVal a
-                                                return $ List [a']
-   sexprToVal _                            = Nothing
+   sexprToVal (EApp [ECon "seq.++", l, r])            = do List l' <- sexprToVal l
+                                                           List r' <- sexprToVal r
+                                                           return $ List $ l' ++ r'
+   sexprToVal (EApp [ECon "seq.unit", a])             = do a' <- sexprToVal a
+                                                           return $ List [a']
+   sexprToVal (EApp [ECon "as", ECon "seq.empty", _]) = return $ List []
+   sexprToVal _                                       = Nothing
 
 -- | Get the value of a term.
 getValue :: SMTValue a => SBV a -> Query a
