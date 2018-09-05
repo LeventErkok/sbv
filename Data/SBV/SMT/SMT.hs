@@ -627,20 +627,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                         (False, True)  -> return (ln:sofar)
 
                                               SolverException e -> do terminateProcess pid
-                                                                      C.throwIO $ SBVException { sbvExceptionDescription = e
-                                                                                               , sbvExceptionSent        = mbCommand
-                                                                                               , sbvExceptionExpected    = Nothing
-                                                                                               , sbvExceptionReceived    = Just $ unlines (reverse sofar)
-                                                                                               , sbvExceptionStdOut      = Nothing
-                                                                                               , sbvExceptionStdErr      = Nothing
-                                                                                               , sbvExceptionExitCode    = Nothing
-                                                                                               , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
-                                                                                               , sbvExceptionReason      = Nothing
-                                                                                               , sbvExceptionHint        = Nothing
-                                                                                               }
-
-                                              SolverTimeout e -> do terminateProcess pid -- NB. Do not *wait* for the process, just quit.
-                                                                    C.throwIO $ SBVException { sbvExceptionDescription = "Timeout! " ++ e
+                                                                      C.throwIO SBVException { sbvExceptionDescription = e
                                                                                              , sbvExceptionSent        = mbCommand
                                                                                              , sbvExceptionExpected    = Nothing
                                                                                              , sbvExceptionReceived    = Just $ unlines (reverse sofar)
@@ -649,10 +636,23 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                              , sbvExceptionExitCode    = Nothing
                                                                                              , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
                                                                                              , sbvExceptionReason      = Nothing
-                                                                                             , sbvExceptionHint        = if not (verbose cfg)
-                                                                                                                         then Just ["Run with 'verbose=True' for further information"]
-                                                                                                                         else Nothing
+                                                                                             , sbvExceptionHint        = Nothing
                                                                                              }
+
+                                              SolverTimeout e -> do terminateProcess pid -- NB. Do not *wait* for the process, just quit.
+                                                                    C.throwIO SBVException { sbvExceptionDescription = "Timeout! " ++ e
+                                                                                           , sbvExceptionSent        = mbCommand
+                                                                                           , sbvExceptionExpected    = Nothing
+                                                                                           , sbvExceptionReceived    = Just $ unlines (reverse sofar)
+                                                                                           , sbvExceptionStdOut      = Nothing
+                                                                                           , sbvExceptionStdErr      = Nothing
+                                                                                           , sbvExceptionExitCode    = Nothing
+                                                                                           , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
+                                                                                           , sbvExceptionReason      = Nothing
+                                                                                           , sbvExceptionHint        = if not (verbose cfg)
+                                                                                                                       then Just ["Run with 'verbose=True' for further information"]
+                                                                                                                       else Nothing
+                                                                                           }
 
                     terminateSolver = do hClose inh
                                          outMVar <- newEmptyMVar
@@ -680,19 +680,19 @@ runSolver cfg ctx execPath opts pgm continuation
                              ExitSuccess -> return ()
                              _           -> if ignoreExitCode cfg
                                                then msg ["Ignoring non-zero exit code of " ++ show ex ++ " per user request!"]
-                                               else C.throwIO $ SBVException { sbvExceptionDescription = "Failed to complete the call to " ++ nm
-                                                                             , sbvExceptionSent        = Nothing
-                                                                             , sbvExceptionExpected    = Nothing
-                                                                             , sbvExceptionReceived    = Nothing
-                                                                             , sbvExceptionStdOut      = Just out
-                                                                             , sbvExceptionStdErr      = Just err
-                                                                             , sbvExceptionExitCode    = Just ex
-                                                                             , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
-                                                                             , sbvExceptionReason      = Nothing
-                                                                             , sbvExceptionHint        = if not (verbose cfg)
-                                                                                                         then Just ["Run with 'verbose=True' for further information"]
-                                                                                                         else Nothing
-                                                                             }
+                                               else C.throwIO SBVException { sbvExceptionDescription = "Failed to complete the call to " ++ nm
+                                                                           , sbvExceptionSent        = Nothing
+                                                                           , sbvExceptionExpected    = Nothing
+                                                                           , sbvExceptionReceived    = Nothing
+                                                                           , sbvExceptionStdOut      = Just out
+                                                                           , sbvExceptionStdErr      = Just err
+                                                                           , sbvExceptionExitCode    = Just ex
+                                                                           , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
+                                                                           , sbvExceptionReason      = Nothing
+                                                                           , sbvExceptionHint        = if not (verbose cfg)
+                                                                                                       then Just ["Run with 'verbose=True' for further information"]
+                                                                                                       else Nothing
+                                                                           }
 
                 return (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid)
 
