@@ -130,7 +130,6 @@ Library
                   , Data.SBV.Core.Model
                   , Data.SBV.Core.Operations
                   , Data.SBV.Core.Floating
-                  , Data.SBV.Core.List
                   , Data.SBV.Core.Splittable
                   , Data.SBV.Core.Symbolic
                   , Data.SBV.Control.Query
