@@ -26,6 +26,7 @@
 ***                  proof (bool) (default: false)
 ***                  rlimit (unsigned int) (default: 0)
 ***                  smtlib2_compliant (bool) (default: false)
+***                  stats (bool) (default: false)
 ***                  timeout (unsigned int) (default: 4294967295)
 ***                  trace (bool) (default: false)
 ***                  trace_file_name (string) (default: z3.log)
