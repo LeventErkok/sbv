@@ -9,18 +9,18 @@
 -- Instance declarations for our symbolic world
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE TypeSynonymInstances   #-}
-{-# LANGUAGE BangPatterns           #-}
-{-# LANGUAGE PatternGuards          #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE Rank2Types             #-}
-{-# LANGUAGE TypeOperators          #-}
-{-# LANGUAGE DefaultSignatures      #-}
+{-# LANGUAGE BangPatterns          #-}
+{-# LANGUAGE DefaultSignatures     #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternGuards         #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE Rank2Types            #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
 
-{-# OPTIONS_GHC -fno-warn-orphans   #-}
+{-# OPTIONS_GHC -fno-warn-orphans  #-}
 
 module Data.SBV.Core.Model (
     Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), assertWithPenalty, SIntegral, SFiniteBits(..)
@@ -58,6 +58,8 @@ import Data.Maybe  (fromMaybe)
 import Data.String (IsString(..))
 import Data.Word   (Word8, Word16, Word32, Word64)
 
+import Data.Dynamic (fromDynamic, toDyn, Typeable)
+
 import Test.QuickCheck                         (Testable(..), Arbitrary(..))
 import qualified Test.QuickCheck.Test    as QC (isSuccess)
 import qualified Test.QuickCheck         as QC (quickCheckResult, counterexample)
@@ -65,7 +67,6 @@ import qualified Test.QuickCheck.Monadic as QC (monadicIO, run, assert, pre, mon
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
-import Data.SBV.Core.List
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Operations
 
@@ -73,6 +74,7 @@ import Data.SBV.Provers.Prover (defaultSMTCfg, SafeResult(..))
 import Data.SBV.SMT.SMT        (showModel)
 
 import Data.SBV.Utils.Boolean
+import Data.SBV.Utils.Lib      (isKString)
 
 -- Symbolic-Word class instances
 
@@ -183,31 +185,35 @@ instance SymWord Double where
   -- and in the presence of NaN's it would be incorrect to do any optimization
   isConcretely _ _ = False
 
-instance SymWord String where
-  mkSymWord = genMkSymVar KString
-  literal   = SBV . SVal KString . Left . CW KString . CWString
-  fromCW (CW _ (CWString a)) = a
-  fromCW c                   = error $ "SymWord.String: Unexpected non-string value: " ++ show c
-
 instance SymWord Char where
   mkSymWord = genMkSymVar KChar
   literal c = SBV . SVal KChar . Left . CW KChar $ CWChar c
   fromCW (CW _ (CWChar a)) = a
   fromCW c                 = error $ "SymWord.String: Unexpected non-char value: " ++ show c
 
+instance (Typeable a, SymWord a) => SymWord [a] where
+  mkSymWord
+    | isKString (undefined :: [a]) = genMkSymVar KString
+    | True                         = genMkSymVar (KList (kindOf (undefined :: a)))
+
+  literal as
+    | isKString (undefined :: [a]) = case fromDynamic (toDyn as) of
+                                       Just s  -> SBV . SVal KString . Left . CW KString . CWString $ s
+                                       Nothing -> error "SString: Cannot construct literal string!"
+    | True                         = let k = KList (kindOf (undefined :: a))
+                                         toCWVal a = case literal a of
+                                                       SBV (SVal _ (Left (CW _ cwval))) -> cwval
+                                                       _                                -> error "SymWord.Sequence: could not produce a concrete word for value"
+                                     in SBV $ SVal k $ Left $ CW k $ CWList $ map toCWVal as
+
+  fromCW (CW _ (CWString a)) = case fromDynamic (toDyn a) of
+                                 Just r  -> r
+                                 Nothing -> error "SString: Cannot extract a literal string!"
+  fromCW (CW _ (CWList a))   = fromCW . CW (kindOf (undefined :: a)) <$> a
+  fromCW c                   = error $ "SymWord.fromCW: Unexpected non-list value: " ++ show c
+
 instance IsString SString where
   fromString = literal
-
-instance SymWord a => SymWord (List a) where
-  mkSymWord = genMkSymVar (KList (kindOf (undefined :: a)))
-  literal (List as) = let k = KList (kindOf (undefined :: a))
-                          toCWVal a = case literal a of
-                                        SBV (SVal _ (Left (CW _ cwval))) -> cwval
-                                        _                                -> error "SymWord.Sequence: could not produce a concrete word for value"
-                      in SBV $ SVal k $ Left $ CW k $ CWList $ map toCWVal as
-
-  fromCW (CW _ (CWList a)) = List (fromCW . CW (kindOf (undefined :: a)) <$> a)
-  fromCW c                 = error $ "SymWord.fromCW: Unexpected non-list value: " ++ show c
 
 ------------------------------------------------------------------------------------
 -- * Smart constructors for creating symbolic values. These are not strictly
@@ -335,11 +341,11 @@ sStrings :: [String] -> Symbolic [SString]
 sStrings = symbolics
 
 -- | Declare an 'SList'
-sList :: SymWord a => String -> Symbolic (SList a)
+sList :: forall a. (Typeable a, SymWord a) => String -> Symbolic (SList a)
 sList = symbolic
 
 -- | Declare a list of 'SList's
-sLists :: SymWord a => [String] -> Symbolic [SList a]
+sLists :: forall a. (Typeable a, SymWord a) => [String] -> Symbolic [SList a]
 sLists = symbolics
 
 -- | Convert an SReal to an SInteger. That is, it computes the

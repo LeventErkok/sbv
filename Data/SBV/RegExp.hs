@@ -88,7 +88,7 @@ class RegExpMatchable a where
 
 -- | Matching a character simply means the singleton string matches the regex.
 instance RegExpMatchable SChar where
-   match = match . charToStr
+   match = match . singleton
 
 -- | Matching symbolic strings.
 instance RegExpMatchable SString where

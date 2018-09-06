@@ -41,6 +41,9 @@ import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, interca
 import Data.Char     (isPunctuation, isSpace, chr, ord)
 import Data.Function (on)
 
+import Data.Dynamic  (fromDynamic, toDyn)
+import Data.Typeable (Typeable)
+
 import Data.Int
 import Data.Word
 
@@ -76,7 +79,6 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSW
 
 import Data.SBV.Core.AlgReals   (mergeAlgReals)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
-import Data.SBV.Core.List       (List(..))
 
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
 import Data.SBV.SMT.Utils   (showTimeoutValue, addAnnotations, alignPlain, debug, mergeSExpr, SBVException(..))
@@ -366,23 +368,19 @@ instance SMTValue AlgReal where
    sexprToVal (ENum (v, _)) = Just (fromIntegral v)
    sexprToVal _             = Nothing
 
-instance SMTValue String where
-   sexprToVal (ECon s)
-     | length s >= 2 && head s == '"' && last s == '"'
-     = Just (tail (init s))
-   sexprToVal _        = Nothing
-
 instance SMTValue Char where
    sexprToVal (ENum (i, _)) = Just (chr (fromIntegral i))
    sexprToVal _             = Nothing
 
-instance SMTValue a => SMTValue (List a) where
-   sexprToVal (EApp [ECon "seq.++", l, r])            = do List l' <- sexprToVal l
-                                                           List r' <- sexprToVal r
-                                                           return $ List $ l' ++ r'
+instance (SMTValue a, Typeable a) => SMTValue [a] where
+   sexprToVal (ECon s)
+    | length s >= 2 && head s == '"' && last s == '"' = fromDynamic (toDyn (tail (init s)))
+   sexprToVal (EApp [ECon "seq.++", l, r])            = do l' <- sexprToVal l
+                                                           r' <- sexprToVal r
+                                                           return $ l' ++ r'
    sexprToVal (EApp [ECon "seq.unit", a])             = do a' <- sexprToVal a
-                                                           return $ List [a']
-   sexprToVal (EApp [ECon "as", ECon "seq.empty", _]) = return $ List []
+                                                           return $ [a']
+   sexprToVal (EApp [ECon "as", ECon "seq.empty", _]) = return $ []
    sexprToVal _                                       = Nothing
 
 -- | Get the value of a term.

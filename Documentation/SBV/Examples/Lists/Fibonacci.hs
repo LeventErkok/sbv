@@ -12,7 +12,6 @@
 module Documentation.SBV.Examples.Lists.Fibonacci where
 
 import Data.SBV
-import GHC.Exts (IsList(toList))
 
 import           Data.SBV.List ((.!!))
 import qualified Data.SBV.List as L
@@ -47,4 +46,4 @@ genFibs = do fibs <- sList "fibs"
                         case cs of
                           Unk   -> error "Solver returned unknown!"
                           Unsat -> error "Solver couldn't generate the fibonacci sequence!"
-                          Sat   -> toList <$> getValue fibs
+                          Sat   -> getValue fibs

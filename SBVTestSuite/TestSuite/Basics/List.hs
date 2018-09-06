@@ -25,8 +25,6 @@ import Control.Monad (unless)
 import Data.Maybe (catMaybes)
 import Data.List (sort)
 
-import GHC.Exts(IsList(..))
-
 -- Test suite
 tests :: TestTree
 tests =
@@ -138,6 +136,6 @@ strExamples9 = do m <- allSat $ do (s :: SList Word8) <- sList "s"
                                    return $ L.length s .== 1
 
                   let vals :: [Word8]
-                      vals = sort $ concatMap toList (catMaybes (getModelValues "s" m) :: [List Word8])
+                      vals = sort $ concat (catMaybes (getModelValues "s" m) :: [[Word8]])
 
                   return $ vals == [0..255]

@@ -55,7 +55,7 @@ module Data.SBV.Core.Data
  ) where
 
 import GHC.Generics (Generic)
-import GHC.Exts (IsList(..))
+import GHC.Exts     (IsList(..))
 
 import Control.DeepSeq      (NFData(..))
 import Control.Monad.Reader (ask)
@@ -71,7 +71,6 @@ import System.Random
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
-import Data.SBV.Core.List
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Operations
 
@@ -155,15 +154,15 @@ type SString = SBV String
 -- haskell lists\/sequences. An 'SList' is a symbolic value of its own, of possibly arbitrary but finite
 -- length, and internally processed as one unit as opposed to a fixed-length list of items.
 -- Note that lists can be nested, i.e., we do allow lists of lists of ... items.
-type SList a = SBV (List a)
+type SList a = SBV [a]
 
 -- | IsList instance allows list literals to be written compactly.
-instance SymWord (List a) => IsList (SList a) where
-   type Item (SList a) = a
-   fromList = literal . List
-   toList x = case unliteral x of
-                Nothing        -> error "IsList.toList used in a symbolic context!"
-                Just (List xs) -> xs
+instance SymWord [a] => IsList (SList a) where
+  type Item (SList a) = a
+  fromList = literal
+  toList x = case unliteral x of
+               Nothing -> error "IsList.toList used in a symbolic context!"
+               Just xs -> xs
 
 -- | Not-A-Number for 'Double' and 'Float'. Surprisingly, Haskell
 -- Prelude doesn't have this value defined, so we provide it here.

@@ -147,7 +147,7 @@ module Data.SBV (
   , SChar, SString
   -- ** Symbolic lists
   -- $lists
-  , List(..), SList
+  , SList
   -- * Arrays of symbolic values
   , SymArray(newArray_, newArray, readArray, writeArray), SArray, SFunArray
 
@@ -293,7 +293,6 @@ import qualified Control.Exception as C
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
-import Data.SBV.Core.List
 import Data.SBV.Core.Model
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Splittable

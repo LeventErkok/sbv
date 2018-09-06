@@ -9,10 +9,11 @@
 -- Internal data-structures for the sbv library
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE    DefaultSignatures    #-}
-{-# LANGUAGE    FlexibleInstances    #-}
-{-# LANGUAGE    ScopedTypeVariables  #-}
-{-# LANGUAGE    TypeSynonymInstances #-}
+{-# LANGUAGE DefaultSignatures    #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+
 {-# OPTIONS_GHC -fno-warn-orphans    #-}
 
 module Data.SBV.Core.Kind (Kind(..), HasKind(..), constructUKind, kindRank, smtType) where
@@ -22,7 +23,10 @@ import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeO
 import Data.Int
 import Data.Word
 import Data.SBV.Core.AlgReals
-import Data.SBV.Core.List
+
+import Data.Typeable (Typeable)
+
+import Data.SBV.Utils.Lib (isKString)
 
 -- | Kind of symbolic value
 data Kind = KBool
@@ -209,10 +213,10 @@ instance HasKind AlgReal where kindOf _ = KReal
 instance HasKind Float   where kindOf _ = KFloat
 instance HasKind Double  where kindOf _ = KDouble
 instance HasKind Char    where kindOf _ = KChar
-instance HasKind String  where kindOf _ = KString
 
-instance HasKind a => HasKind (List a) where
-   kindOf _ = KList (kindOf (undefined :: a))
+instance (Typeable a, HasKind a) => HasKind [a] where
+   kindOf _ | isKString (undefined :: [a]) = KString
+            | True                         = KList (kindOf (undefined :: a))
 
 instance HasKind Kind where
   kindOf = id

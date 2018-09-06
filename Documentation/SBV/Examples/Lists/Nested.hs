@@ -20,14 +20,12 @@ import Data.SBV.Control
 import Data.SBV.List ((.!!))
 import qualified Data.SBV.List as L
 
-import GHC.Exts(IsList(toList))
-
 -- | Simple example demonstrating the use of nested lists. We have:
 --
 -- >>> nestedExample
 -- [[1,2,3],[4,5,6,7]]
 nestedExample :: IO ()
-nestedExample = runSMT $ do a :: SList (List Integer) <- free "a"
+nestedExample = runSMT $ do a :: SList [Integer] <- free "a"
 
                             constrain $ a .!! 0 .== [1, 2, 3]
                             constrain $ a .!! 1 .== [4, 5, 6, 7]
@@ -37,5 +35,5 @@ nestedExample = runSMT $ do a :: SList (List Integer) <- free "a"
                                        case cs of
                                          Unk   -> error "Solver said unknown!"
                                          Unsat -> io $ putStrLn "Unsat"
-                                         Sat   -> do v <- (map toList . toList) <$> getValue a
-                                                     io $ print (v :: [[Integer]])
+                                         Sat   -> do v <- getValue a
+                                                     io $ print v

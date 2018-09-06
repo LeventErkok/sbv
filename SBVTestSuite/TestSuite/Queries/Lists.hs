@@ -19,8 +19,6 @@ import Data.SBV.Control
 
 import Utils.SBVTestFramework
 
-import GHC.Exts(IsList(toList))
-
 -- Test suite
 tests :: TestTree
 tests =
@@ -39,7 +37,7 @@ queryLists1 = do a :: SList Integer <- sList "a"
 
                  query $ do _ <- checkSat
 
-                            av <- toList <$> getValue a
+                            av <- getValue a
 
                             if av == [1..5]
                                then return av

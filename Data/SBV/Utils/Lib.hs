@@ -9,16 +9,26 @@
 -- Misc helpers
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Data.SBV.Utils.Lib ( mlift2, mlift3, mlift4, mlift5, mlift6, mlift7, mlift8
                           , joinArgs, splitArgs
-                          , stringToQFS, qfsToString)
+                          , stringToQFS, qfsToString
+                          , isKString
+                          )
                           where
 
-import Data.Char (isSpace, chr, ord)
-import Data.Maybe (fromJust, isNothing)
+import Data.Char    (isSpace, chr, ord)
+import Data.Dynamic (fromDynamic, toDyn, Typeable)
+import Data.Maybe   (fromJust, isJust, isNothing)
 
 import Numeric (readHex, readOct, showHex)
 
+-- We have a nasty issue with the usual String/List confusion in Haskell. However, we can
+-- do a simple dynamic trick to determine where we are. The ice is thin here, but it seems to work.
+isKString :: forall a. Typeable a => a -> Bool
+isKString _ = isJust (fromDynamic (toDyn (undefined :: a)) :: Maybe String)
 
 -- | Monadic lift over 2-tuples
 mlift2 :: Monad m => (a' -> b' -> r) -> (a -> m a') -> (b -> m b') -> (a, b) -> m r
