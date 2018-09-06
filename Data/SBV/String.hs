@@ -22,7 +22,7 @@ module Data.SBV.String (
         -- * Length, emptiness
           length, null
         -- * Deconstructing/Reconstructing
-        , head, tail, charToStr, strToStrAt, strToCharAt, (.!!), implode, concat, (.++)
+        , head, tail, singleton, strToStrAt, strToCharAt, (.!!), implode, concat, (.++)
         -- * Containment
         , isInfixOf, isSuffixOf, isPrefixOf
         -- * Substrings
@@ -75,18 +75,18 @@ null s
 
 -- | @`head`@ returns the head of a string. Unspecified if the string is empty.
 --
--- >>> prove $ \c -> head (charToStr c) .== c
+-- >>> prove $ \c -> head (singleton c) .== c
 -- Q.E.D.
 head :: SString -> SChar
 head = (`strToCharAt` 0)
 
 -- | @`tail`@ returns the tail of a string. Unspecified if the string is empty.
 --
--- >>> prove $ \h s -> tail (charToStr h .++ s) .== s
+-- >>> prove $ \h s -> tail (singleton h .++ s) .== s
 -- Q.E.D.
 -- >>> prove $ \s -> length s .> 0 ==> length (tail s) .== length s - 1
 -- Q.E.D.
--- >>> prove $ \s -> bnot (null s) ==> charToStr (head s) .++ tail s .== s
+-- >>> prove $ \s -> bnot (null s) ==> singleton (head s) .++ tail s .== s
 -- Q.E.D.
 tail :: SString -> SString
 tail s
@@ -95,15 +95,15 @@ tail s
  | True
  = subStr s 1 (length s - 1)
 
--- | @`charToStr` c@ is the string of length 1 that contains the only character
+-- | @`singleton` c@ is the string of length 1 that contains the only character
 -- whose value is the 8-bit value @c@.
 --
--- >>> prove $ \c -> c .== literal 'A' ==> charToStr c .== "A"
+-- >>> prove $ \c -> c .== literal 'A' ==> singleton c .== "A"
 -- Q.E.D.
--- >>> prove $ \c -> length (charToStr c) .== 1
+-- >>> prove $ \c -> length (singleton c) .== 1
 -- Q.E.D.
-charToStr :: SChar -> SString
-charToStr = lift1 StrUnit (Just wrap)
+singleton :: SChar -> SString
+singleton = lift1 StrUnit (Just wrap)
   where wrap c = [c]
 
 -- | @`strToStrAt` s offset@. Substring of length 1 at @offset@ in @s@. Unspecified if
@@ -122,7 +122,7 @@ strToStrAt s offset = subStr s offset 1
 --
 -- >>> prove $ \i -> i .>= 0 &&& i .<= 4 ==> "AAAAA" `strToCharAt` i .== literal 'A'
 -- Q.E.D.
--- >>> prove $ \s i c -> s `strToCharAt` i .== c ==> indexOf s (charToStr c) .<= i
+-- >>> prove $ \s i c -> s `strToCharAt` i .== c ==> indexOf s (singleton c) .<= i
 -- Q.E.D.
 strToCharAt :: SString -> SInteger -> SChar
 strToCharAt s i
@@ -154,7 +154,7 @@ strToCharAt s i
 -- >>> prove $ \c1 c2 c3 -> map (strToCharAt (implode [c1, c2, c3])) (map literal [0 .. 2]) .== [c1, c2, c3]
 -- Q.E.D.
 implode :: [SChar] -> SString
-implode = foldr ((.++) . charToStr) ""
+implode = foldr ((.++) . singleton) ""
 
 -- | Concatenate two strings. See also `.++`.
 concat :: SString -> SString -> SString
