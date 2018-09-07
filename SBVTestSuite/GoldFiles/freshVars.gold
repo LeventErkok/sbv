@@ -4,6 +4,7 @@
 [GOOD] (set-option :global-declarations true)
 [GOOD] (set-option :smtlib2_compliant true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
+[GOOD] (set-option :pp.max_depth 4294967295)
 [GOOD] (set-option :produce-models true)
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
@@ -102,6 +103,27 @@
 [GOOD] (define-fun s57 () (_ BitVec 8) #x58)
 [GOOD] (define-fun s58 () Bool (= s53 s57))
 [GOOD] (assert s58)
+[GOOD] (define-fun s59 () Int 1)
+[GOOD] (define-fun s60 () Bool (= s43 s59))
+[GOOD] (assert s60)
+[GOOD] (define-fun s61 () Bool (not s44))
+[GOOD] (assert s61)
+[GOOD] (declare-fun s62 () String)
+[GOOD] (declare-fun s63 () (Seq Int))
+[GOOD] (declare-fun s64 () (Seq (Seq Int)))
+[GOOD] (declare-fun s65 () (Seq (_ BitVec 8)))
+[GOOD] (define-fun s66 () String "hello")
+[GOOD] (define-fun s67 () Bool (= s62 s66))
+[GOOD] (assert s67)
+[GOOD] (define-fun s68 () (Seq Int) (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3) (seq.unit 4)))
+[GOOD] (define-fun s69 () Bool (= s63 s68))
+[GOOD] (assert s69)
+[GOOD] (define-fun s70 () (Seq (Seq Int)) (seq.++ (seq.unit (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3))) (seq.unit (seq.++ (seq.unit 4) (seq.unit 5) (seq.unit 6) (seq.unit 7)))))
+[GOOD] (define-fun s71 () Bool (= s64 s70))
+[GOOD] (assert s71)
+[GOOD] (define-fun s72 () (Seq (_ BitVec 8)) (seq.++ (seq.unit #x01) (seq.unit #x02)))
+[GOOD] (define-fun s73 () Bool (= s65 s72))
+[GOOD] (assert s73)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -142,27 +164,42 @@
 [RECV] ((s52 42))
 [SEND] (get-value (s53))
 [RECV] ((s53 #x58))
+[SEND] (get-value (s62))
+[RECV] ((s62 "hello"))
+[SEND] (get-value (s63))
+[RECV] ((s63 (seq.++ (seq.unit 1) (seq.++ (seq.unit 2) (seq.++ (seq.unit 3) (seq.unit 4))))))
+[SEND] (get-value (s64))
+[RECV] ((s64 (seq.++ (seq.unit (seq.++ (seq.unit 1) (seq.++ (seq.unit 2) (seq.unit 3))))
+               (seq.unit (seq.++ (seq.unit 4)
+                                 (seq.++ (seq.unit 5)
+                                         (seq.++ (seq.unit 6) (seq.unit 7))))))))
+[SEND] (get-value (s65))
+[RECV] ((s65 "\x01\x02"))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
  FINAL:Satisfiable. Model:
-  a        =     0 :: Integer
-  vBool    =  True :: Bool
-  vWord8   =     1 :: Word8
-  s5       =     2 :: Word16
-  s6       =     3 :: Word32
-  vWord64  =     4 :: Word64
-  vInt8    =     5 :: Int8
-  s9       =     6 :: Int16
-  s10      =     7 :: Int32
-  vInt64   =     8 :: Int64
-  vFloat   =   9.0 :: Float
-  s13      =  10.0 :: Double
-  s14      =  11.0 :: Real
-  vInteger =    12 :: Integer
-  vBinOp   =  Plus :: BinOp
-  i1       =     1 :: Integer
-  i2       = False :: Bool
-  mustBe42 =    42 :: Integer
-  mustBeX  =   'X' :: Char
+  a        =                   0 :: Integer
+  vBool    =                True :: Bool
+  vWord8   =                   1 :: Word8
+  s5       =                   2 :: Word16
+  s6       =                   3 :: Word32
+  vWord64  =                   4 :: Word64
+  vInt8    =                   5 :: Int8
+  s9       =                   6 :: Int16
+  s10      =                   7 :: Int32
+  vInt64   =                   8 :: Int64
+  vFloat   =                 9.0 :: Float
+  s13      =                10.0 :: Double
+  s14      =                11.0 :: Real
+  vInteger =                  12 :: Integer
+  vBinOp   =                Plus :: BinOp
+  i1       =                   1 :: Integer
+  i2       =               False :: Bool
+  mustBe42 =                  42 :: Integer
+  mustBeX  =                 'X' :: Char
+  vString  =             "hello" :: String
+  vList1   =           [1,2,3,4] :: [SInteger]
+  vList2   = [[1,2,3],[4,5,6,7]] :: [[SInteger]]
+  vList3   =               [1,2] :: [SWord8]
 DONE!

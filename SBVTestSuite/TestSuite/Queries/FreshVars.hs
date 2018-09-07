@@ -14,6 +14,8 @@
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE OverloadedLists     #-}
 
 module TestSuite.Queries.FreshVars (tests)  where
 
@@ -42,20 +44,22 @@ fv = do a <- sInteger "a"
 
         constrain $ a .== 0
 
-        query $ do vBool    :: SBool    <- freshVar  "vBool"
-                   vWord8   :: SWord8   <- freshVar  "vWord8"
-                   vWord16  :: SWord16  <- freshVar_
-                   vWord32  :: SWord32  <- freshVar_
-                   vWord64  :: SWord64  <- freshVar  "vWord64"
-                   vInt8    :: SInt8    <- freshVar  "vInt8"
-                   vInt16   :: SInt16   <- freshVar_
-                   vInt32   :: SInt32   <- freshVar_
-                   vInt64   :: SInt64   <- freshVar  "vInt64"
-                   vFloat   :: SFloat   <- freshVar  "vFloat"
-                   vDouble  :: SDouble  <- freshVar_
-                   vReal    :: SReal    <- freshVar_
-                   vInteger :: SInteger <- freshVar  "vInteger"
-                   vBinOp   :: SBinOp   <- freshVar  "vBinOp"
+        setOption $ OptionKeyword ":pp.max_depth" ["4294967295"]
+
+        query $ do vBool    :: SBool           <- freshVar  "vBool"
+                   vWord8   :: SWord8          <- freshVar  "vWord8"
+                   vWord16  :: SWord16         <- freshVar_
+                   vWord32  :: SWord32         <- freshVar_
+                   vWord64  :: SWord64         <- freshVar  "vWord64"
+                   vInt8    :: SInt8           <- freshVar  "vInt8"
+                   vInt16   :: SInt16          <- freshVar_
+                   vInt32   :: SInt32          <- freshVar_
+                   vInt64   :: SInt64          <- freshVar  "vInt64"
+                   vFloat   :: SFloat          <- freshVar  "vFloat"
+                   vDouble  :: SDouble         <- freshVar_
+                   vReal    :: SReal           <- freshVar_
+                   vInteger :: SInteger        <- freshVar  "vInteger"
+                   vBinOp   :: SBinOp          <- freshVar  "vBinOp"
 
                    constrain   vBool
                    constrain $ vWord8   .== 1
@@ -86,6 +90,20 @@ fv = do a <- sInteger "a"
 
                    constrain $ readArray viSArray 96    .== mustBe42
                    constrain $ readArray viFArray false .== mustBeX
+                   constrain $ vi1 .== 1
+                   constrain $ bnot vi2
+
+                   vString  :: SString         <- freshVar  "vString"
+                   vList1   :: SList Integer   <- freshVar  "vList1"
+                   vList2   :: SList [Integer] <- freshVar  "vList2"
+                   vList3   :: SList Word8     <- freshVar  "vList3"
+                   vList4   :: SList [Word16]  <- freshVar  "vList4"
+
+                   constrain $ vString  .== "hello"
+                   constrain $ vList1   .== [1,2,3,4]
+                   constrain $ vList2   .== [[1,2,3], [4,5,6,7]]
+                   constrain $ vList3   .== [1,2]
+                   constrain $ vList4   .== [[1,2,3],[],[4,5,6]]
 
                    cs <- checkSat
                    case cs of
@@ -108,6 +126,11 @@ fv = do a <- sInteger "a"
                                vi2Val      <- getValue vi2
                                mustBe42Val <- getValue mustBe42
                                mustBeXVal  <- getValue mustBeX
+                               vStringVal  <- getValue vString
+                               vList1Val   <- getValue vList1
+                               vList2Val   <- getValue vList2
+                               vList3Val   <- getValue vList3
+                               vList4Val   <- getValue vList4
 
                                mkSMTResult [ a          |-> aVal
                                            , vBool      |-> vBoolVal
@@ -128,5 +151,10 @@ fv = do a <- sInteger "a"
                                            , vi2        |-> vi2Val
                                            , mustBe42   |-> mustBe42Val
                                            , mustBeX    |-> mustBeXVal
+                                           , vString    |-> vStringVal
+                                           , vList1     |-> vList1Val
+                                           , vList2     |-> vList2Val
+                                           , vList3     |-> vList3Val
+                                           , vList4     |-> vList4Val
                                            ]
                      _   -> error "didn't expect non-Sat here!"
