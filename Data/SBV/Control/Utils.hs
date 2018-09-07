@@ -41,7 +41,6 @@ import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, interca
 import Data.Char     (isPunctuation, isSpace, chr, ord)
 import Data.Function (on)
 
-import Data.Dynamic  (fromDynamic, toDyn)
 import Data.Typeable (Typeable)
 
 import Data.Int
@@ -83,7 +82,7 @@ import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
 import Data.SBV.SMT.Utils   (showTimeoutValue, addAnnotations, alignPlain, debug, mergeSExpr, SBVException(..))
 
-import Data.SBV.Utils.Lib (qfsToString)
+import Data.SBV.Utils.Lib (qfsToString, isKString)
 
 import Data.SBV.Utils.SExpr
 import Data.SBV.Control.Types
@@ -93,6 +92,8 @@ import qualified Data.Set as Set (toList)
 import qualified Control.Exception as C
 
 import GHC.Stack
+
+import Unsafe.Coerce (unsafeCoerce) -- Only used safely!
 
 -- | 'Query' as a 'SolverContext'.
 instance SolverContext Query where
@@ -373,14 +374,27 @@ instance SMTValue Char where
    sexprToVal _             = Nothing
 
 instance (SMTValue a, Typeable a) => SMTValue [a] where
+   -- NB. The conflation of String/[Char] forces us to have this bastard case here
+   -- with unsafeCoerce to cast back to a regular string. This is unfortunate,
+   -- and the ice is thin here. But it works, and is much better than a plethora
+   -- of overlapping instances. Sigh.
    sexprToVal (ECon s)
-    | length s >= 2 && head s == '"' && last s == '"' = fromDynamic (toDyn (tail (init s)))
+    | isKString (undefined :: [a]) && length s >= 2 && head s == '"' && last s == '"'
+    = Just $ map unsafeCoerce s'
+    | True
+    = Just $ map (unsafeCoerce . c2w8) s'
+    where s' = qfsToString (tail (init s))
+          c2w8  :: Char -> Word8
+          c2w8 = fromIntegral . ord
+
+   -- Otherwise we have a good old sequence, just parse it simply:
    sexprToVal (EApp [ECon "seq.++", l, r])            = do l' <- sexprToVal l
                                                            r' <- sexprToVal r
                                                            return $ l' ++ r'
    sexprToVal (EApp [ECon "seq.unit", a])             = do a' <- sexprToVal a
                                                            return [a']
    sexprToVal (EApp [ECon "as", ECon "seq.empty", _]) = return []
+
    sexprToVal _                                       = Nothing
 
 -- | Get the value of a term.
