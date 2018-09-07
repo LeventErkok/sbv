@@ -5,7 +5,8 @@
 [GOOD] (set-option :smtlib2_compliant true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
 [GOOD] (set-option :produce-models true)
-[GOOD] (set-option :pp.max_depth 4294967295)
+[GOOD] (set-option :pp.max_depth      4294967295)
+[GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-logic ALL)
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- literal constants ---

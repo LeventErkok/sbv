@@ -5,6 +5,7 @@
 [GOOD] (set-option :smtlib2_compliant true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
 [GOOD] (set-option :pp.max_depth 4294967295)
+[GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :produce-models true)
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---

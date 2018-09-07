@@ -44,7 +44,8 @@ fv = do a <- sInteger "a"
 
         constrain $ a .== 0
 
-        setOption $ OptionKeyword ":pp.max_depth" ["4294967295"]
+        setOption $ OptionKeyword ":pp.max_depth"      ["4294967295"]
+        setOption $ OptionKeyword ":pp.min_alias_size" ["4294967295"]
 
         query $ do vBool    :: SBool           <- freshVar  "vBool"
                    vWord8   :: SWord8          <- freshVar  "vWord8"
