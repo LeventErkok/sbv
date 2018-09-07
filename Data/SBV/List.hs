@@ -103,7 +103,7 @@ tail l
 -- >>> prove $ \(x :: SInteger) -> length (singleton x) .== 1
 -- Q.E.D.
 singleton :: (Typeable a, SymWord a) => SBV a -> SList a
-singleton = lift1 SeqUnit (Just (\x -> [x]))
+singleton = lift1 SeqUnit (Just (: []))
 
 -- | @`listToListAt` l offset@. List of length 1 at @offset@ in @l@. Unspecified if
 -- index is out of bounds.

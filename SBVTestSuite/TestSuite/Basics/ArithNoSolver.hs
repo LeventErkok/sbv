@@ -21,7 +21,7 @@ import qualified Data.ReinterpretCast as RC (wordToFloat, wordToDouble, floatToW
 import Data.SBV.Internals
 import Utils.SBVTestFramework
 
-import Data.Maybe (fromJust, isJust)
+import Data.Maybe (fromJust, isJust, fromMaybe)
 
 import Data.List (genericIndex, isInfixOf, isPrefixOf, isSuffixOf, genericTake, genericDrop, genericLength)
 
@@ -103,9 +103,7 @@ genBoolTest nm op opS = map mkTest $
      ++ zipWith pair [(show x, show y, toL x `op` toL y) | x <- ssl,  y <- ssl ] [x `opS` y | x <- ssl,   y <- ssl  ]
   where pair (x, y, a) b = (x, y, Just a == unliteral b)
         mkTest (x, y, s) = testCase ("arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y) (s `showsAs` "True")
-        toL x = case unliteral x of
-                  Nothing -> error "genBoolTest: Cannot extract a literal!"
-                  Just xs -> xs
+        toL x = fromMaybe (error "genBoolTest: Cannot extract a literal!") (unliteral x)
 
 genUnTest :: String -> (forall a. (Num a, Bits a) => a -> a) -> [TestTree]
 genUnTest nm op = map mkTest $

@@ -63,6 +63,7 @@ import Control.Monad.Trans  (liftIO)
 import Data.Int             (Int8, Int16, Int32, Int64)
 import Data.Word            (Word8, Word16, Word32, Word64)
 import Data.List            (elemIndex)
+import Data.Maybe           (fromMaybe)
 
 import qualified Data.Generics as G    (Data(..))
 
@@ -160,9 +161,7 @@ type SList a = SBV [a]
 instance SymWord [a] => IsList (SList a) where
   type Item (SList a) = a
   fromList = literal
-  toList x = case unliteral x of
-               Nothing -> error "IsList.toList used in a symbolic context!"
-               Just xs -> xs
+  toList x = fromMaybe (error "IsList.toList used in a symbolic context!") (unliteral x)
 
 -- | Not-A-Number for 'Double' and 'Float'. Surprisingly, Haskell
 -- Prelude doesn't have this value defined, so we provide it here.

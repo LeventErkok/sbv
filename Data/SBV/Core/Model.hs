@@ -206,9 +206,8 @@ instance (Typeable a, SymWord a) => SymWord [a] where
                                                        _                                -> error "SymWord.Sequence: could not produce a concrete word for value"
                                      in SBV $ SVal k $ Left $ CW k $ CWList $ map toCWVal as
 
-  fromCW (CW _ (CWString a)) = case fromDynamic (toDyn a) of
-                                 Just r  -> r
-                                 Nothing -> error "SString: Cannot extract a literal string!"
+  fromCW (CW _ (CWString a)) = fromMaybe (error "SString: Cannot extract a literal string!")
+                                         (fromDynamic (toDyn a))
   fromCW (CW _ (CWList a))   = fromCW . CW (kindOf (undefined :: a)) <$> a
   fromCW c                   = error $ "SymWord.fromCW: Unexpected non-list value: " ++ show c
 

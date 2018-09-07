@@ -379,8 +379,8 @@ instance (SMTValue a, Typeable a) => SMTValue [a] where
                                                            r' <- sexprToVal r
                                                            return $ l' ++ r'
    sexprToVal (EApp [ECon "seq.unit", a])             = do a' <- sexprToVal a
-                                                           return $ [a']
-   sexprToVal (EApp [ECon "as", ECon "seq.empty", _]) = return $ []
+                                                           return [a']
+   sexprToVal (EApp [ECon "as", ECon "seq.empty", _]) = return []
    sexprToVal _                                       = Nothing
 
 -- | Get the value of a term.
