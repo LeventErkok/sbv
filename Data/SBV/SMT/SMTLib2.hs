@@ -98,7 +98,7 @@ cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs ui
 
         -- SBV always requires the production of models!
         getModels   = "(set-option :produce-models true)"
-                    : [flattenConfig | hasList, Just flattenConfig <- [supportsFlattenedSequences solverCaps]]
+                    : concat [flattenConfig | hasList, Just flattenConfig <- [supportsFlattenedSequences solverCaps]]
 
         -- process all other settings we're given
         userSettings = concatMap opts $ solverSetOptions cfg
