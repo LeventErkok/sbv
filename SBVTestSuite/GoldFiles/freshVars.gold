@@ -112,18 +112,22 @@
 [GOOD] (declare-fun s63 () (Seq Int))
 [GOOD] (declare-fun s64 () (Seq (Seq Int)))
 [GOOD] (declare-fun s65 () (Seq (_ BitVec 8)))
-[GOOD] (define-fun s66 () String "hello")
-[GOOD] (define-fun s67 () Bool (= s62 s66))
-[GOOD] (assert s67)
-[GOOD] (define-fun s68 () (Seq Int) (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3) (seq.unit 4)))
-[GOOD] (define-fun s69 () Bool (= s63 s68))
-[GOOD] (assert s69)
-[GOOD] (define-fun s70 () (Seq (Seq Int)) (seq.++ (seq.unit (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3))) (seq.unit (seq.++ (seq.unit 4) (seq.unit 5) (seq.unit 6) (seq.unit 7)))))
-[GOOD] (define-fun s71 () Bool (= s64 s70))
-[GOOD] (assert s71)
-[GOOD] (define-fun s72 () (Seq (_ BitVec 8)) (seq.++ (seq.unit #x01) (seq.unit #x02)))
-[GOOD] (define-fun s73 () Bool (= s65 s72))
-[GOOD] (assert s73)
+[GOOD] (declare-fun s66 () (Seq (Seq (_ BitVec 16))))
+[GOOD] (define-fun s67 () String "hello")
+[GOOD] (define-fun s68 () Bool (= s62 s67))
+[GOOD] (assert s68)
+[GOOD] (define-fun s69 () (Seq Int) (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3) (seq.unit 4)))
+[GOOD] (define-fun s70 () Bool (= s63 s69))
+[GOOD] (assert s70)
+[GOOD] (define-fun s71 () (Seq (Seq Int)) (seq.++ (seq.unit (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3))) (seq.unit (seq.++ (seq.unit 4) (seq.unit 5) (seq.unit 6) (seq.unit 7)))))
+[GOOD] (define-fun s72 () Bool (= s64 s71))
+[GOOD] (assert s72)
+[GOOD] (define-fun s73 () (Seq (_ BitVec 8)) (seq.++ (seq.unit #x01) (seq.unit #x02)))
+[GOOD] (define-fun s74 () Bool (= s65 s73))
+[GOOD] (assert s74)
+[GOOD] (define-fun s75 () (Seq (Seq (_ BitVec 16))) (seq.++ (seq.unit (seq.++ (seq.unit #x0001) (seq.unit #x0002) (seq.unit #x0003))) (seq.unit (as seq.empty (Seq (_ BitVec 16)))) (seq.unit (seq.++ (seq.unit #x0004) (seq.unit #x0005) (seq.unit #x0006)))))
+[GOOD] (define-fun s76 () Bool (= s66 s75))
+[GOOD] (assert s76)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -175,31 +179,38 @@
                                          (seq.++ (seq.unit 6) (seq.unit 7))))))))
 [SEND] (get-value (s65))
 [RECV] ((s65 "\x01\x02"))
+[SEND] (get-value (s66))
+[RECV] ((s66 (seq.++ (seq.unit (seq.++ (seq.unit #x0001)
+                                 (seq.++ (seq.unit #x0002) (seq.unit #x0003))))
+               (seq.++ (seq.unit (as seq.empty (Seq (_ BitVec 16))))
+                       (seq.unit (seq.++ (seq.unit #x0004)
+                                         (seq.++ (seq.unit #x0005) (seq.unit #x0006))))))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
  FINAL:Satisfiable. Model:
-  a        =                   0 :: Integer
-  vBool    =                True :: Bool
-  vWord8   =                   1 :: Word8
-  s5       =                   2 :: Word16
-  s6       =                   3 :: Word32
-  vWord64  =                   4 :: Word64
-  vInt8    =                   5 :: Int8
-  s9       =                   6 :: Int16
-  s10      =                   7 :: Int32
-  vInt64   =                   8 :: Int64
-  vFloat   =                 9.0 :: Float
-  s13      =                10.0 :: Double
-  s14      =                11.0 :: Real
-  vInteger =                  12 :: Integer
-  vBinOp   =                Plus :: BinOp
-  i1       =                   1 :: Integer
-  i2       =               False :: Bool
-  mustBe42 =                  42 :: Integer
-  mustBeX  =                 'X' :: Char
-  vString  =             "hello" :: String
-  vList1   =           [1,2,3,4] :: [SInteger]
-  vList2   = [[1,2,3],[4,5,6,7]] :: [[SInteger]]
-  vList3   =               [1,2] :: [SWord8]
+  a        =                    0 :: Integer
+  vBool    =                 True :: Bool
+  vWord8   =                    1 :: Word8
+  s5       =                    2 :: Word16
+  s6       =                    3 :: Word32
+  vWord64  =                    4 :: Word64
+  vInt8    =                    5 :: Int8
+  s9       =                    6 :: Int16
+  s10      =                    7 :: Int32
+  vInt64   =                    8 :: Int64
+  vFloat   =                  9.0 :: Float
+  s13      =                 10.0 :: Double
+  s14      =                 11.0 :: Real
+  vInteger =                   12 :: Integer
+  vBinOp   =                 Plus :: BinOp
+  i1       =                    1 :: Integer
+  i2       =                False :: Bool
+  mustBe42 =                   42 :: Integer
+  mustBeX  =                  'X' :: Char
+  vString  =              "hello" :: String
+  vList1   =            [1,2,3,4] :: [SInteger]
+  vList2   =  [[1,2,3],[4,5,6,7]] :: [[SInteger]]
+  vList3   =                [1,2] :: [SWord8]
+  vList4   = [[1,2,3],[],[4,5,6]] :: [[SWord16]]
 DONE!
