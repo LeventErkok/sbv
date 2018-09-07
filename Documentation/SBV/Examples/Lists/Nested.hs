@@ -23,13 +23,14 @@ import qualified Data.SBV.List as L
 -- | Simple example demonstrating the use of nested lists. We have:
 --
 -- >>> nestedExample
--- [[1,2,3],[4,5,6,7]]
+-- [[1,2,3],[4,5,6,7],[8,9,10],[11,12,13]]
 nestedExample :: IO ()
 nestedExample = runSMT $ do a :: SList [Integer] <- free "a"
 
                             constrain $ a .!! 0 .== [1, 2, 3]
                             constrain $ a .!! 1 .== [4, 5, 6, 7]
-                            constrain $ L.length a .== 2
+                            constrain $ L.tail (L.tail a) .== [[8, 9, 10], [11, 12, 13]]
+                            constrain $ L.length a .== 4
 
                             query $ do cs <- checkSat
                                        case cs of
