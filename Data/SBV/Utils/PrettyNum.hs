@@ -327,9 +327,10 @@ cwToSMTLib rm x
 
         smtLibSeq :: Kind -> [CWVal] -> String
         smtLibSeq k          [] = "(as seq.empty " ++ smtType k ++ ")"
-        smtLibSeq (KList ek) xs = let mkSeq  inner = "(seq.++ "   ++ inner ++ ")"
+        smtLibSeq (KList ek) xs = let mkSeq  [e]   = e
+                                      mkSeq  es    = "(seq.++ " ++ unwords es ++ ")"
                                       mkUnit inner = "(seq.unit " ++ inner ++ ")"
-                                  in mkSeq (unwords (mkUnit . cwToSMTLib rm . CW ek <$> xs))
+                                  in mkSeq (mkUnit . cwToSMTLib rm . CW ek <$> xs)
         smtLibSeq k _ = error "SBV.cwToSMTLib: Impossible case (smtLibSeq), received kind: " ++ show k
 
         -- anamoly at the 2's complement min value! Have to use binary notation here
