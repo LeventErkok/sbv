@@ -12,8 +12,8 @@
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s_2 () Bool false)
 [GOOD] (define-fun s_1 () Bool true)
-[GOOD] (define-fun s1 () (Seq Int) (seq.++ (seq.unit 2)))
-[GOOD] (define-fun s3 () (Seq Int) (seq.++ (seq.unit 1)))
+[GOOD] (define-fun s1 () (Seq Int) (seq.unit 2))
+[GOOD] (define-fun s3 () (Seq Int) (seq.unit 1))
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (Seq Int)) ; tracks user variable "a"
 [GOOD] ; --- constant tables ---

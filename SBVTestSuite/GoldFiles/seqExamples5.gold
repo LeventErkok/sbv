@@ -14,7 +14,7 @@
 [GOOD] (define-fun s_1 () Bool true)
 [GOOD] (define-fun s3 () (Seq Int) (seq.++ (seq.unit 1) (seq.unit 2)))
 [GOOD] (define-fun s6 () (Seq Int) (seq.++ (seq.unit 2) (seq.unit 1)))
-[GOOD] (define-fun s12 () (Seq Int) (seq.++ (seq.unit 1)))
+[GOOD] (define-fun s12 () (Seq Int) (seq.unit 1))
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (Seq Int)) ; tracks user variable "a"
 [GOOD] (declare-fun s1 () (Seq Int)) ; tracks user variable "b"
