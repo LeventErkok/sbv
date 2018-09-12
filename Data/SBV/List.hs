@@ -61,7 +61,7 @@ import Data.Typeable (Typeable)
 length :: (Typeable a, SymWord a) => SList a -> SInteger
 length = lift1 SeqLen (Just (fromIntegral . P.length))
 
--- | @`null` s@ is True iff the string is empty
+-- | @`null` s@ is True iff the list is empty
 --
 -- >>> prove $ \(l :: SList Word16) -> null l <=> length l .== 0
 -- Q.E.D.
@@ -132,8 +132,8 @@ elemAt l i
   where kElem = kindOf (undefined :: a)
         kSeq  = KList kElem
         -- This is trickier than it needs to be, but necessary since there's
-        -- no SMTLib function to extract the character from a string. Instead,
-        -- we form a singleton string, and assert that it is equivalent to
+        -- no SMTLib function to extract the element from a list. Instead,
+        -- we form a singleton list, and assert that it is equivalent to
         -- the extracted value. See <http://github.com/Z3Prover/z3/issues/1302>
         y si st = do e <- internalVariable st kElem
                      es <- newExpr st kSeq (SBVApp (SeqOp SeqUnit) [e])
@@ -145,7 +145,7 @@ elemAt l i
 (.!!) :: (Typeable a, SymWord a) => SList a -> SInteger -> SBV a
 (.!!) = elemAt
 
--- | @`implode` es@ is the string of length @|es|@ containing precisely those
+-- | @`implode` es@ is the list of length @|es|@ containing precisely those
 -- elements. Note that there is no corresponding function @explode@, since
 -- we wouldn't know the length of a symbolic list.
 --
@@ -233,7 +233,7 @@ drop i s = ite (i .>= ls) (literal [])
          $ subList s i (ls - i)
   where ls = length s
 
--- | @`subList` s offset len@ is the substring of @s@ at offset `offset` with length `len`.
+-- | @`subList` s offset len@ is the sublist of @s@ at offset `offset` with length `len`.
 -- This function is under-specified when the offset is outside the range of positions in @s@ or @len@
 -- is negative or @offset+len@ exceeds the length of @s@. For a friendlier version of this function
 -- that acts like Haskell's `take`\/`drop`, see `strTake`\/`strDrop`.
@@ -251,7 +251,7 @@ subList l offset len
   | Just c  <- unliteral l                   -- a constant list
   , Just o  <- unliteral offset              -- a constant offset
   , Just sz <- unliteral len                 -- a constant length
-  , let lc = genericLength c                 -- length of the string
+  , let lc = genericLength c                 -- length of the list
   , let valid x = x >= 0 && x <= lc          -- predicate that checks valid point
   , valid o                                  -- offset is valid
   , sz >= 0                                  -- length is not-negative
@@ -317,7 +317,7 @@ offsetIndexOf s sub offset
   | True
   = lift3 SeqIndexOf Nothing s sub offset
 
--- | Lift a unary operator over strings.
+-- | Lift a unary operator over lists.
 lift1 :: forall a b. (SymWord a, SymWord b) => SeqOp -> Maybe (a -> b) -> SBV a -> SBV b
 lift1 w mbOp a
   | Just cv <- concEval1 mbOp a
@@ -328,7 +328,7 @@ lift1 w mbOp a
         r st = do swa <- sbvToSW st a
                   newExpr st k (SBVApp (SeqOp w) [swa])
 
--- | Lift a binary operator over strings.
+-- | Lift a binary operator over lists.
 lift2 :: forall a b c. (SymWord a, SymWord b, SymWord c) => SeqOp -> Maybe (a -> b -> c) -> SBV a -> SBV b -> SBV c
 lift2 w mbOp a b
   | Just cv <- concEval2 mbOp a b
@@ -340,7 +340,7 @@ lift2 w mbOp a b
                   swb <- sbvToSW st b
                   newExpr st k (SBVApp (SeqOp w) [swa, swb])
 
--- | Lift a ternary operator over strings.
+-- | Lift a ternary operator over lists.
 lift3 :: forall a b c d. (SymWord a, SymWord b, SymWord c, SymWord d) => SeqOp -> Maybe (a -> b -> c -> d) -> SBV a -> SBV b -> SBV c -> SBV d
 lift3 w mbOp a b c
   | Just cv <- concEval3 mbOp a b c
@@ -365,7 +365,7 @@ concEval2 mbOp a b = literal <$> (mbOp <*> unliteral a <*> unliteral b)
 concEval3 :: (SymWord a, SymWord b, SymWord c, SymWord d) => Maybe (a -> b -> c -> d) -> SBV a -> SBV b -> SBV c -> Maybe (SBV d)
 concEval3 mbOp a b c = literal <$> (mbOp <*> unliteral a <*> unliteral b <*> unliteral c)
 
--- | Is the string concretely known empty?
+-- | Is the list concretely known empty?
 isConcretelyEmpty :: (Typeable a, SymWord a) => SList a -> Bool
 isConcretelyEmpty sl | Just l <- unliteral sl = P.null l
                      | True                   = False
