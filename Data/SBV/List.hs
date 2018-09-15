@@ -26,18 +26,22 @@ module Data.SBV.List (
         , isInfixOf, isSuffixOf, isPrefixOf
         -- * Sublists
         , take, drop, subList, replace, indexOf, offsetIndexOf
+        -- * Extras
+        , isSorted, zipWith, foldl, foldr
         ) where
 
-import Prelude hiding (head, tail, length, take, drop, concat, null)
+import Prelude hiding (head, tail, length, take, drop, concat, null, zip, zipWith, foldr, foldl)
 import qualified Prelude as P
 
 import Data.SBV.Core.Data hiding (StrOp(..))
 import Data.SBV.Core.Model
+import Data.SBV.Utils.Boolean (bAnd, true, (|||), (&&&))
 
 import Data.List (genericLength, genericIndex, genericDrop, genericTake)
-import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
+import qualified Data.List as L (tail, tails, isSuffixOf, isPrefixOf, isInfixOf, zip, zipWith)
 
 import Data.Typeable (Typeable)
+
 
 -- For doctest use only
 --
@@ -154,7 +158,7 @@ elemAt l i
 -- >>> prove $ \(e1 :: SInteger) e2 e3 -> map (elemAt (implode [e1, e2, e3])) (map literal [0 .. 2]) .== [e1, e2, e3]
 -- Q.E.D.
 implode :: (Typeable a, SymWord a) => [SBV a] -> SList a
-implode = foldr ((.++) . singleton) (literal [])
+implode = P.foldr ((.++) . singleton) (literal [])
 
 -- | Concatenate two lists. See also `.++`.
 concat :: (Typeable a, SymWord a) => SList a -> SList a -> SList a
@@ -311,11 +315,41 @@ offsetIndexOf s sub offset
   , Just n <- unliteral sub      -- a constant search pattern
   , Just o <- unliteral offset   -- at a constant offset
   , o >= 0, o <= genericLength c        -- offset is good
-  = case [i | (i, t) <- zip [o ..] (L.tails (genericDrop o c)), n `L.isPrefixOf` t] of
+  = case [i | (i, t) <- L.zip [o ..] (L.tails (genericDrop o c)), n `L.isPrefixOf` t] of
       (i:_) -> literal i
       _     -> -1
   | True
   = lift3 SeqIndexOf Nothing s sub offset
+
+zipWith
+  :: (Typeable a, SymWord a, Typeable b, SymWord b, Typeable c, SymWord c)
+  => (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
+zipWith f l1 l2
+  | Just cl1 <- unliteral l1
+  , Just cl2 <- unliteral l2
+  = implode $ L.zipWith f (fmap literal cl1) (fmap literal cl2)
+  | True
+  = ite (null l1 ||| null l2) (literal []) $
+    singleton (f (head l1) (head l2)) .++ zipWith f (tail l1) (tail l2)
+
+foldr
+  :: (Typeable a, SymWord a, Typeable b, SymWord b)
+  => (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
+foldr f z lst = ite (null lst) z $
+  f (head lst) (foldr f z (tail lst))
+
+foldl
+  :: (Typeable a, SymWord a, Typeable b, SymWord b)
+  => (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
+foldl f z lst = ite (null lst) z $
+  foldl f (f z (head lst)) (tail lst)
+
+isSorted :: (Typeable a, SymWord a) => SList a -> SBool
+isSorted lst
+  | Just cLst <- unliteral lst
+  = literal $ and $ L.zipWith (<=) cLst (L.tail cLst)
+  | True
+  = foldr (&&&) true $ zipWith (.<=) lst (tail lst)
 
 -- | Lift a unary operator over lists.
 lift1 :: forall a b. (SymWord a, SymWord b) => SeqOp -> Maybe (a -> b) -> SBV a -> SBV b
