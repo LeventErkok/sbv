@@ -18,6 +18,7 @@ module TestSuite.Basics.List(tests)  where
 import Data.SBV.Control
 import Utils.SBVTestFramework
 
+-- import Data.SBV.Utils.Boolean (
 import Data.SBV.List ((.!!), (.++))
 import qualified Data.SBV.List as L
 
@@ -41,7 +42,9 @@ tests =
     , goldenCapturedIO "seqExamples6"  $ \rf -> checkWith z3{redirectVerbose=Just rf} seqExamples6    Unsat
     , goldenCapturedIO "seqExamples7"  $ \rf -> checkWith z3{redirectVerbose=Just rf} seqExamples7    Sat
     , goldenCapturedIO "seqExamples8"  $ \rf -> checkWith z3{redirectVerbose=Just rf} seqExamples8    Unsat
-    , testCase         "seqExamples9"  $ assert strExamples9
+    , testCase         "seqExamples9"  $ assert seqExamples9
+    , goldenCapturedIO "seqExamples10" $ \rf -> checkWith z3{redirectVerbose=Just rf} seqExamples10   Sat
+    , goldenCapturedIO "seqExamples11" $ \rf -> checkWith z3{redirectVerbose=Just rf} seqExamples11   Sat
     ]
 
 checkWith :: SMTConfig -> Symbolic () -> CheckSatResult -> IO ()
@@ -131,11 +134,35 @@ seqExamples8 = do
   constrain $ bnot $ a .== b .++ c
 
 -- Generate all length one sequences, to enumerate all and making sure we can parse correctly
-strExamples9 :: IO Bool
-strExamples9 = do m <- allSat $ do (s :: SList Word8) <- sList "s"
+seqExamples9 :: IO Bool
+seqExamples9 = do m <- allSat $ do (s :: SList Word8) <- sList "s"
                                    return $ L.length s .== 1
 
                   let vals :: [Word8]
                       vals = sort $ concat (catMaybes (getModelValues "s" m) :: [[Word8]])
 
                   return $ vals == [0..255]
+
+seqExamples10 :: Symbolic ()
+seqExamples10 = do
+  constrain $ (.== literal [True, True, True, False]) $ L.zipWith (|||)
+    (literal [True, False, True , False])
+    (literal [True,  True, False, False])
+
+  constrain $ (.== literal [True]) $ L.zipWith (|||)
+    (literal [True                     ])
+    (literal [True,  True, False, False])
+
+  constrain $ (.== literal [True]) $ L.zipWith (|||)
+    (literal [True,  True, False, False])
+    (literal [True                     ])
+
+seqExamples11 :: Symbolic ()
+seqExamples11 = do
+  constrain        $ L.isSorted (literal []        :: SList Integer)
+  constrain        $ L.isSorted (literal [1]       :: SList Integer)
+  constrain        $ L.isSorted (literal [1, 2, 3] :: SList Integer)
+  constrain . bnot $ L.isSorted (literal [2, 1, 3] :: SList Integer)
+
+  [a, b, c] <- sBools ["a", "b", "c"]
+  constrain $ a .<= b &&& b .<= c <=> L.isSorted (L.implode [a, b, c])
