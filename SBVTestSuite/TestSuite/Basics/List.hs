@@ -41,7 +41,7 @@ tests =
     , goldenCapturedIO "seqExamples6"  $ \rf -> checkWith z3{redirectVerbose=Just rf} seqExamples6    Unsat
     , goldenCapturedIO "seqExamples7"  $ \rf -> checkWith z3{redirectVerbose=Just rf} seqExamples7    Sat
     , goldenCapturedIO "seqExamples8"  $ \rf -> checkWith z3{redirectVerbose=Just rf} seqExamples8    Unsat
-    , testCase         "seqExamples9"  $ assert strExamples9
+    , testCase         "seqExamples9"  $ assert seqExamples9
     ]
 
 checkWith :: SMTConfig -> Symbolic () -> CheckSatResult -> IO ()
@@ -131,8 +131,8 @@ seqExamples8 = do
   constrain $ bnot $ a .== b .++ c
 
 -- Generate all length one sequences, to enumerate all and making sure we can parse correctly
-strExamples9 :: IO Bool
-strExamples9 = do m <- allSat $ do (s :: SList Word8) <- sList "s"
+seqExamples9 :: IO Bool
+seqExamples9 = do m <- allSat $ do (s :: SList Word8) <- sList "s"
                                    return $ L.length s .== 1
 
                   let vals :: [Word8]
