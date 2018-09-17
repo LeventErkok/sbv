@@ -21,7 +21,7 @@ module Data.SBV.List (
         -- * Length, emptiness
           length, null
         -- * Deconstructing/Reconstructing
-        , head, tail, singleton, listToListAt, elemAt, (.!!), implode, concat, (.++)
+        , head, tail, singleton, listToListAt, elemAt, (.!!), implode, concat, (.:), (.++)
         -- * Containment
         , isInfixOf, isSuffixOf, isPrefixOf
         -- * Sublists
@@ -161,6 +161,11 @@ concat :: (Typeable a, SymWord a) => SList a -> SList a -> SList a
 concat x y | isConcretelyEmpty x = y
            | isConcretelyEmpty y = x
            | True                = lift2 SeqConcat (Just (++)) x y
+
+-- | Prepend an element, the traditional @cons@.
+infixr 5 .:
+(.:) :: (Typeable a, SymWord a) => SBV a -> SList a -> SList a
+a .: as = singleton a .++ as
 
 -- | Short cut for `concat`.
 --

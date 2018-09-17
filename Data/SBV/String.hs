@@ -22,7 +22,7 @@ module Data.SBV.String (
         -- * Length, emptiness
           length, null
         -- * Deconstructing/Reconstructing
-        , head, tail, singleton, strToStrAt, strToCharAt, (.!!), implode, concat, (.++)
+        , head, tail, singleton, strToStrAt, strToCharAt, (.!!), implode, concat, (.:), (.++)
         -- * Containment
         , isInfixOf, isSuffixOf, isPrefixOf
         -- * Substrings
@@ -155,6 +155,11 @@ strToCharAt s i
 -- Q.E.D.
 implode :: [SChar] -> SString
 implode = foldr ((.++) . singleton) ""
+
+-- | Prepend an element, the traditional @cons@.
+infixr 5 .:
+(.:) :: SChar -> SString -> SString
+c .: cs = singleton c .++ cs
 
 -- | Concatenate two strings. See also `.++`.
 concat :: SString -> SString -> SString
