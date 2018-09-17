@@ -9,7 +9,7 @@ before_build:
 - git clone -q https://github.com/Z3Prover/bin.git Z3Prover
 - 7z e C:\projects\sbv\Z3Prover\nightly\z3*x64*win*zip -oc:\projects\sbv\z3_downloaded -r
 - choco install -y cabal
-- choco install -y ghc --version 8.4.2
+- choco install -y ghc --version 8.4.3
 - refreshenv
 - set PATH=C:\projects\sbv\z3_downloaded;%PATH%
 - ghc --version
