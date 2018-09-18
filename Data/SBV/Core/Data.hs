@@ -64,6 +64,7 @@ import Data.Int             (Int8, Int16, Int32, Int64)
 import Data.Word            (Word8, Word16, Word32, Word64)
 import Data.List            (elemIndex)
 import Data.Maybe           (fromMaybe)
+import Data.Typeable        (Typeable)
 
 import qualified Data.Generics as G    (Data(..))
 
@@ -351,7 +352,7 @@ instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtabl
 -- to be fed to a symbolic program. Note that these methods are typically not needed
 -- in casual uses with 'prove', 'sat', 'allSat' etc, as default instances automatically
 -- provide the necessary bits.
-class (HasKind a, Ord a) => SymWord a where
+class (HasKind a, Ord a, Typeable a) => SymWord a where
   -- | Create a user named input (universal)
   forall :: String -> Symbolic (SBV a)
   -- | Create an automatically named input

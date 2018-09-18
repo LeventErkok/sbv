@@ -58,7 +58,7 @@ import Data.Maybe  (fromMaybe)
 import Data.String (IsString(..))
 import Data.Word   (Word8, Word16, Word32, Word64)
 
-import Data.Dynamic (fromDynamic, toDyn, Typeable)
+import Data.Dynamic (fromDynamic, toDyn)
 
 import Test.QuickCheck                         (Testable(..), Arbitrary(..))
 import qualified Test.QuickCheck.Test    as QC (isSuccess)
@@ -191,7 +191,7 @@ instance SymWord Char where
   fromCW (CW _ (CWChar a)) = a
   fromCW c                 = error $ "SymWord.String: Unexpected non-char value: " ++ show c
 
-instance (Typeable a, SymWord a) => SymWord [a] where
+instance SymWord a => SymWord [a] where
   mkSymWord
     | isKString (undefined :: [a]) = genMkSymVar KString
     | True                         = genMkSymVar (KList (kindOf (undefined :: a)))
@@ -340,11 +340,11 @@ sStrings :: [String] -> Symbolic [SString]
 sStrings = symbolics
 
 -- | Declare an 'SList'
-sList :: forall a. (Typeable a, SymWord a) => String -> Symbolic (SList a)
+sList :: forall a. SymWord a => String -> Symbolic (SList a)
 sList = symbolic
 
 -- | Declare a list of 'SList's
-sLists :: forall a. (Typeable a, SymWord a) => [String] -> Symbolic [SList a]
+sLists :: forall a. SymWord a => [String] -> Symbolic [SList a]
 sLists = symbolics
 
 -- | Convert an SReal to an SInteger. That is, it computes the

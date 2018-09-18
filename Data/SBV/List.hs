@@ -37,8 +37,6 @@ import Data.SBV.Core.Model
 import Data.List (genericLength, genericIndex, genericDrop, genericTake)
 import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 
-import Data.Typeable (Typeable)
-
 -- For doctest use only
 --
 -- $setup
@@ -58,7 +56,7 @@ import Data.Typeable (Typeable)
 -- Unsatisfiable
 -- >>> prove $ \(l1 :: SList Word16) (l2 :: SList Word16) -> length l1 + length l2 .== length (l1 .++ l2)
 -- Q.E.D.
-length :: (Typeable a, SymWord a) => SList a -> SInteger
+length :: SymWord a => SList a -> SInteger
 length = lift1 SeqLen (Just (fromIntegral . P.length))
 
 -- | @`null` s@ is True iff the list is empty
@@ -67,7 +65,7 @@ length = lift1 SeqLen (Just (fromIntegral . P.length))
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Word16) -> null l <=> l .== []
 -- Q.E.D.
-null :: (Typeable a, SymWord a) => SList a -> SBool
+null :: SymWord a => SList a -> SBool
 null l
   | Just cs <- unliteral l
   = literal (P.null cs)
@@ -78,7 +76,7 @@ null l
 --
 -- >>> prove $ \c -> head (singleton c) .== (c :: SInteger)
 -- Q.E.D.
-head :: (Typeable a, SymWord a) => SList a -> SBV a
+head :: SymWord a => SList a -> SBV a
 head = (`elemAt` 0)
 
 -- | @`tail`@ returns the tail of a list. Unspecified if the list is empty.
@@ -89,7 +87,7 @@ head = (`elemAt` 0)
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Integer) -> bnot (null l) ==> singleton (head l) .++ tail l .== l
 -- Q.E.D.
-tail :: (Typeable a, SymWord a) => SList a -> SList a
+tail :: SymWord a => SList a -> SList a
 tail l
  | Just (_:cs) <- unliteral l
  = literal cs
@@ -102,7 +100,7 @@ tail l
 -- Q.E.D.
 -- >>> prove $ \(x :: SInteger) -> length (singleton x) .== 1
 -- Q.E.D.
-singleton :: (Typeable a, SymWord a) => SBV a -> SList a
+singleton :: SymWord a => SBV a -> SList a
 singleton = lift1 SeqUnit (Just (: []))
 
 -- | @`listToListAt` l offset@. List of length 1 at @offset@ in @l@. Unspecified if
@@ -113,7 +111,7 @@ singleton = lift1 SeqUnit (Just (: []))
 -- >>> sat $ \(l :: SList Word16) -> length l .>= 2 &&& listToListAt l 0 ./= listToListAt l (length l - 1)
 -- Satisfiable. Model:
 --   s0 = [0,0,4096] :: [SWord16]
-listToListAt :: (Typeable a, SymWord a) => SList a -> SInteger -> SList a
+listToListAt :: SymWord a => SList a -> SInteger -> SList a
 listToListAt s offset = subList s offset 1
 
 -- | @`elemAt` l i@ is the value stored at location @i@. Unspecified if
@@ -123,7 +121,7 @@ listToListAt s offset = subList s offset 1
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Integer) i e -> l `elemAt` i .== e ==> indexOf l (singleton e) .<= i
 -- Q.E.D.
-elemAt :: forall a. (Typeable a, SymWord a) => SList a -> SInteger -> SBV a
+elemAt :: forall a. SymWord a => SList a -> SInteger -> SBV a
 elemAt l i
   | Just xs <- unliteral l, Just ci <- unliteral i, ci >= 0, ci < genericLength xs, let x = xs `genericIndex` ci
   = literal x
@@ -142,7 +140,7 @@ elemAt l i
                      return e
 
 -- | Short cut for 'elemAt'
-(.!!) :: (Typeable a, SymWord a) => SList a -> SInteger -> SBV a
+(.!!) :: SymWord a => SList a -> SInteger -> SBV a
 (.!!) = elemAt
 
 -- | @`implode` es@ is the list of length @|es|@ containing precisely those
@@ -153,18 +151,18 @@ elemAt l i
 -- Q.E.D.
 -- >>> prove $ \(e1 :: SInteger) e2 e3 -> map (elemAt (implode [e1, e2, e3])) (map literal [0 .. 2]) .== [e1, e2, e3]
 -- Q.E.D.
-implode :: (Typeable a, SymWord a) => [SBV a] -> SList a
+implode :: SymWord a => [SBV a] -> SList a
 implode = foldr ((.++) . singleton) (literal [])
 
 -- | Concatenate two lists. See also `.++`.
-concat :: (Typeable a, SymWord a) => SList a -> SList a -> SList a
+concat :: SymWord a => SList a -> SList a -> SList a
 concat x y | isConcretelyEmpty x = y
            | isConcretelyEmpty y = x
            | True                = lift2 SeqConcat (Just (++)) x y
 
 -- | Prepend an element, the traditional @cons@.
 infixr 5 .:
-(.:) :: (Typeable a, SymWord a) => SBV a -> SList a -> SList a
+(.:) :: SymWord a => SBV a -> SList a -> SList a
 a .: as = singleton a .++ as
 
 -- | Short cut for `concat`.
@@ -175,7 +173,7 @@ a .: as = singleton a .++ as
 --   s1 =              [6] :: [SInteger]
 --   s2 = [7,8,9,10,11,12] :: [SInteger]
 infixr 5 .++
-(.++) :: (Typeable a, SymWord a) => SList a -> SList a -> SList a
+(.++) :: SymWord a => SList a -> SList a -> SList a
 (.++) = concat
 
 -- | @`isInfixOf` sub l@. Does @l@ contain the subsequence @sub@?
@@ -184,7 +182,7 @@ infixr 5 .++
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isInfixOf` l2 &&& l2 `isInfixOf` l1 <=> l1 .== l2
 -- Q.E.D.
-isInfixOf :: (Typeable a, SymWord a) => SList a -> SList a -> SBool
+isInfixOf :: SymWord a => SList a -> SList a -> SBool
 sub `isInfixOf` l
   | isConcretelyEmpty sub
   = literal True
@@ -197,7 +195,7 @@ sub `isInfixOf` l
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isPrefixOf` l2 ==> subList l2 0 (length l1) .== l1
 -- Q.E.D.
-isPrefixOf :: (Typeable a, SymWord a) => SList a -> SList a -> SBool
+isPrefixOf :: SymWord a => SList a -> SList a -> SBool
 pre `isPrefixOf` l
   | isConcretelyEmpty pre
   = literal True
@@ -210,7 +208,7 @@ pre `isPrefixOf` l
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Word16) l2 -> l1 `isSuffixOf` l2 ==> subList l2 (length l2 - length l1) (length l1) .== l1
 -- Q.E.D.
-isSuffixOf :: (Typeable a, SymWord a) => SList a -> SList a -> SBool
+isSuffixOf :: SymWord a => SList a -> SList a -> SBool
 suf `isSuffixOf` l
   | isConcretelyEmpty suf
   = literal True
@@ -221,7 +219,7 @@ suf `isSuffixOf` l
 --
 -- >>> prove $ \(l :: SList Integer) i -> i .>= 0 ==> length (take i l) .<= i
 -- Q.E.D.
-take :: (Typeable a, SymWord a) => SInteger -> SList a -> SList a
+take :: SymWord a => SInteger -> SList a -> SList a
 take i l = ite (i .<= 0)        (literal [])
          $ ite (i .>= length l) l
          $ subList l 0 i
@@ -232,7 +230,7 @@ take i l = ite (i .<= 0)        (literal [])
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Word16) i -> take i l .++ drop i l .== l
 -- Q.E.D.
-drop :: (Typeable a, SymWord a) => SInteger -> SList a -> SList a
+drop :: SymWord a => SInteger -> SList a -> SList a
 drop i s = ite (i .>= ls) (literal [])
          $ ite (i .<= 0)  s
          $ subList s i (ls - i)
@@ -251,7 +249,7 @@ drop i s = ite (i .>= ls) (literal [])
 --   s1 = 3 :: Integer
 -- >>> sat  $ \i j -> subList [1..5] i j .== ([6..7] :: SList Integer)
 -- Unsatisfiable
-subList :: (Typeable a, SymWord a) => SList a -> SInteger -> SInteger -> SList a
+subList :: SymWord a => SList a -> SInteger -> SInteger -> SList a
 subList l offset len
   | Just c  <- unliteral l                   -- a constant list
   , Just o  <- unliteral offset              -- a constant offset
@@ -271,7 +269,7 @@ subList l offset len
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Integer) l2 l3 -> length l2 .> length l1 ==> replace l1 l2 l3 .== l1
 -- Q.E.D.
-replace :: (Typeable a, SymWord a) => SList a -> SList a -> SList a -> SList a
+replace :: SymWord a => SList a -> SList a -> SList a -> SList a
 replace l src dst
   | Just b <- unliteral src, P.null b   -- If src is null, simply prepend
   = dst .++ l
@@ -298,7 +296,7 @@ replace l src dst
 --   s1 =           4 :: Integer
 -- >>> prove $ \(l1 :: SList Word16) l2 -> length l2 .> length l1 ==> indexOf l1 l2 .== -1
 -- Q.E.D.
-indexOf :: (Typeable a, SymWord a) => SList a -> SList a -> SInteger
+indexOf :: SymWord a => SList a -> SList a -> SInteger
 indexOf s sub = offsetIndexOf s sub 0
 
 -- | @`offsetIndexOf` l sub offset@. Retrieves first position of @sub@ at or
@@ -310,7 +308,7 @@ indexOf s sub = offsetIndexOf s sub 0
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Int8) sub i -> i .> length l ==> offsetIndexOf l sub i .== -1
 -- Q.E.D.
-offsetIndexOf :: (Typeable a, SymWord a) => SList a -> SList a -> SInteger -> SInteger
+offsetIndexOf :: SymWord a => SList a -> SList a -> SInteger -> SInteger
 offsetIndexOf s sub offset
   | Just c <- unliteral s        -- a constant list
   , Just n <- unliteral sub      -- a constant search pattern
@@ -371,6 +369,6 @@ concEval3 :: (SymWord a, SymWord b, SymWord c, SymWord d) => Maybe (a -> b -> c 
 concEval3 mbOp a b c = literal <$> (mbOp <*> unliteral a <*> unliteral b <*> unliteral c)
 
 -- | Is the list concretely known empty?
-isConcretelyEmpty :: (Typeable a, SymWord a) => SList a -> Bool
+isConcretelyEmpty :: SymWord a => SList a -> Bool
 isConcretelyEmpty sl | Just l <- unliteral sl = P.null l
                      | True                   = False
