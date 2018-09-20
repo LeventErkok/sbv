@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 7.10, 2018-07-20
+* Latest Hackage released version: 7.11, 2018-09-20
 
-### Version 7.10.5, Not yet released
+### Version 7.11, 2018-09-20
 
   * Add support for symbolic lists. (That is, arbitrary but fixed length symbolic
     lists of integers, floats, reals, etc. Nested lists are allowed as well.)
@@ -19,6 +19,9 @@
     file can come in handy when expressing bounded-model-checking style
     algorithms. See "Documentation/SBV/Examples/Lists/BoundedMutex.hs" for a
     simple mutex algorithm proof.
+
+  * Remove dependency on data-binary-ieee754 package; which is no longer
+    supported.
 
 ### Version 7.10, 2018-07-20
 
