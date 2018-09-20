@@ -54,13 +54,15 @@ kindRank KString         = Left 6
 kindRank (KList _)       = Left 7
 {-# INLINE kindRank #-}
 
--- | We want to equate user-sorts only by name
+-- | We want to equate by rank; but be careful on KList!
 instance Eq Kind where
-  k1 == k2 = kindRank k1 == kindRank k2
+  KList k1 == KList k2 = k1 == k2
+  k1       == k2       = kindRank k1 == kindRank k2
 
--- | We want to order user-sorts only by name
+-- | We want to order by rank; but be careful on KList!
 instance Ord Kind where
-  k1 `compare` k2 = kindRank k1 `compare` kindRank k2
+  KList k1 `compare` KList k2 = k1 `compare` k2
+  k1       `compare` k2       = kindRank k1 `compare` kindRank k2
 
 instance Show Kind where
   show KBool              = "SBool"
