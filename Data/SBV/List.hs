@@ -21,7 +21,7 @@ module Data.SBV.List (
         -- * Length, emptiness
           length, null
         -- * Deconstructing/Reconstructing
-        , head, tail, init, singleton, listToListAt, elemAt, (.!!), implode, concat, (.:), (.++)
+        , head, tail, uncons, init, singleton, listToListAt, elemAt, (.!!), implode, concat, (.:), (.++)
         -- * Containment
         , isInfixOf, isSuffixOf, isPrefixOf
         -- * Sublists
@@ -93,6 +93,10 @@ tail l
  = literal cs
  | True
  = subList l 1 (length l - 1)
+
+-- | @`uncons` returns the pair of the head and tail. Unspecified if the list is empty.
+uncons :: SymWord a => SList a -> (SBV a, SList a)
+uncons l = (head l, tail l)
 
 -- | @`init`@ returns all but the last element of the list. Unspecified if the list is empty.
 --
