@@ -22,7 +22,7 @@ module Data.SBV.String (
         -- * Length, emptiness
           length, null
         -- * Deconstructing/Reconstructing
-        , head, tail, singleton, strToStrAt, strToCharAt, (.!!), implode, concat, (.:), (.++)
+        , head, tail, init, singleton, strToStrAt, strToCharAt, (.!!), implode, concat, (.:), (.++)
         -- * Containment
         , isInfixOf, isSuffixOf, isPrefixOf
         -- * Substrings
@@ -31,7 +31,7 @@ module Data.SBV.String (
         , strToNat, natToStr
         ) where
 
-import Prelude hiding (head, tail, length, take, drop, concat, null)
+import Prelude hiding (head, tail, init, length, take, drop, concat, null)
 import qualified Prelude as P
 
 import Data.SBV.Core.Data hiding (SeqOp(..))
@@ -94,6 +94,17 @@ tail s
  = literal cs
  | True
  = subStr s 1 (length s - 1)
+
+-- | @`init`@ returns all but the last element of the list. Unspecified if the string is empty.
+--
+-- >>> prove $ \c t -> init (t .++ singleton c) .== t
+-- Q.E.D.
+init :: SString -> SString
+init s
+ | Just (cs@(_:_)) <- unliteral s
+ = literal $ P.init cs
+ | True
+ = subStr s 0 (length s - 1)
 
 -- | @`singleton` c@ is the string of length 1 that contains the only character
 -- whose value is the 8-bit value @c@.

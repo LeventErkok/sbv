@@ -21,14 +21,14 @@ module Data.SBV.List (
         -- * Length, emptiness
           length, null
         -- * Deconstructing/Reconstructing
-        , head, tail, singleton, listToListAt, elemAt, (.!!), implode, concat, (.:), (.++)
+        , head, tail, init, singleton, listToListAt, elemAt, (.!!), implode, concat, (.:), (.++)
         -- * Containment
         , isInfixOf, isSuffixOf, isPrefixOf
         -- * Sublists
         , take, drop, subList, replace, indexOf, offsetIndexOf
         ) where
 
-import Prelude hiding (head, tail, length, take, drop, concat, null)
+import Prelude hiding (head, tail, init, length, take, drop, concat, null)
 import qualified Prelude as P
 
 import Data.SBV.Core.Data hiding (StrOp(..))
@@ -93,6 +93,17 @@ tail l
  = literal cs
  | True
  = subList l 1 (length l - 1)
+
+-- | @`init`@ returns all but the last element of the list. Unspecified if the list is empty.
+--
+-- >>> prove $ \(h :: SInteger) t -> init (t .++ singleton h) .== t
+-- Q.E.D.
+init :: SymWord a => SList a -> SList a
+init l
+ | Just (cs@(_:_)) <- unliteral l
+ = literal $ P.init cs
+ | True
+ = subList l 0 (length l - 1)
 
 -- | @`singleton` x@ is the list of length 1 that contains the only value `x`.
 --
