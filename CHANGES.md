@@ -13,6 +13,13 @@
     "Documentation/SBV/Examples/Lists/Fibonacci.hs" for an example, and the
     module "Data.SBV.List" for details.
 
+  * A new module 'Data.SBV.List.Bounded' provides extra functions to manipulate
+    lists with given concrete bounds. Note that SMT solvers cannot deal with
+    recursive functions/inductive proofs in general, so the utilities in this
+    file can come in handy when expressing bounded-model-checking style
+    algorithms. See "Documentation/SBV/Examples/Lists/BoundedMutex.hs" for a
+    simple mutex algorithm proof.
+
 ### Version 7.10, 2018-07-20
 
   * [BACKWARDS COMPATIBILITY] Array declarations are reworked to take
