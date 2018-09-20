@@ -16,13 +16,15 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans    #-}
 
-module Data.SBV.Core.Kind (Kind(..), HasKind(..), constructUKind, kindRank, smtType) where
+module Data.SBV.Core.Kind (Kind(..), HasKind(..), constructUKind, smtType) where
 
 import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
 
 import Data.Int
 import Data.Word
 import Data.SBV.Core.AlgReals
+
+import Data.List (isPrefixOf, intercalate)
 
 import Data.Typeable (Typeable)
 
@@ -39,31 +41,11 @@ data Kind = KBool
           | KChar
           | KString
           | KList Kind
+          deriving (Eq, Ord)
 
--- | Helper for Eq/Ord instances below
-kindRank :: Kind -> Either Int (Either (Bool, Int) String)
-kindRank KBool           = Left 0
-kindRank (KBounded  b i) = Right (Left (b, i))
-kindRank KUnbounded      = Left 1
-kindRank KReal           = Left 2
-kindRank (KUserSort s _) = Right (Right s)
-kindRank KFloat          = Left 3
-kindRank KDouble         = Left 4
-kindRank KChar           = Left 5
-kindRank KString         = Left 6
-kindRank (KList _)       = Left 7
-{-# INLINE kindRank #-}
-
--- | We want to equate by rank; but be careful on KList!
-instance Eq Kind where
-  KList k1 == KList k2 = k1 == k2
-  k1       == k2       = kindRank k1 == kindRank k2
-
--- | We want to order by rank; but be careful on KList!
-instance Ord Kind where
-  KList k1 `compare` KList k2 = k1 `compare` k2
-  k1       `compare` k2       = kindRank k1 `compare` kindRank k2
-
+-- | The interesting about the show instance is that it can tell apart two kinds nicely; since it conveniently
+-- ignores the enumeration constructors. Also, when we construct a 'KUserSort', we make sure we don't use any of
+-- the reserved names; see 'constructUIKind' for details.
 instance Show Kind where
   show KBool              = "SBool"
   show (KBounded False n) = "SWord" ++ show n
@@ -114,8 +96,15 @@ kindHasSign k =
 -- | Construct an uninterpreted/enumerated kind from a piece of data; we distinguish simple enumerations as those
 -- are mapped to proper SMT-Lib2 data-types; while others go completely uninterpreted
 constructUKind :: forall a. (Read a, G.Data a) => a -> Kind
-constructUKind a = KUserSort sortName mbEnumFields
-  where dataType      = G.dataTypeOf a
+constructUKind a
+  | any (`isPrefixOf` sortName) badPrefixes
+  = error $ "Data.SBV: Cannot construct user-sort with name: " ++ show sortName ++ ": Must not start with any of " ++ intercalate ", " badPrefixes
+  | True
+  = KUserSort sortName mbEnumFields
+  where -- make sure we don't step on ourselves:
+        badPrefixes   = ["SBool", "SWord", "SInt", "SInteger", "SReal", "SFloat", "SDouble", "SString", "SChar", "["]
+
+        dataType      = G.dataTypeOf a
         sortName      = G.tyconUQname . G.dataTypeName $ dataType
         constrs       = G.dataTypeConstrs dataType
         isEnumeration = not (null constrs) && all (null . G.constrFields) constrs
