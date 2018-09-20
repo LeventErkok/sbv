@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 7.11, 2018-09-20
 
+### Version 7.11.5, Not yet released
+  
+  * New dev version.
+
 ### Version 7.11, 2018-09-20
 
   * Add support for symbolic lists. (That is, arbitrary but fixed length symbolic
