@@ -106,10 +106,13 @@ exploitRe = R.KPlus (statementRe * "; ")
 --   query ("SELECT msg FROM msgs where topicid='" ++ my_topicid ++ "'")
 -- @
 --
--- We have:
+-- We have: (NB. Turning this doctest off, since Z3 no longer can handle
+-- it, see: <http://github.com/LeventErkok/sbv/issues/418>.)
 --
--- >>> findInjection exampleProgram
--- "h'; DROP TABLE 'users"
+-- @
+--   findInjection exampleProgram
+--   "h'; DROP TABLE 'users"
+-- @
 --
 -- Indeed, if we substitute the suggested string, we get the program:
 --
