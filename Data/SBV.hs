@@ -48,7 +48,9 @@
 --
 --   * 'SDouble': IEEE-754 double-precision floating point values
 --
---   * 'SString', 'RegExp': Strings and regular expressions
+--   * 'SChar', 'SString', 'RegExp': Characters, strings and regular expressions
+--
+--   * 'SList': Symbolic lists (which can be nested)
 --
 --   * 'SArray', 'SFunArray': Flat arrays of symbolic values.
 --
