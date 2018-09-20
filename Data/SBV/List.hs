@@ -100,7 +100,7 @@ tail l
 -- Q.E.D.
 init :: SymWord a => SList a -> SList a
 init l
- | Just (cs@(_:_)) <- unliteral l
+ | Just cs@(_:_) <- unliteral l
  = literal $ P.init cs
  | True
  = subList l 0 (length l - 1)

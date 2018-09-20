@@ -101,7 +101,7 @@ tail s
 -- Q.E.D.
 init :: SString -> SString
 init s
- | Just (cs@(_:_)) <- unliteral s
+ | Just cs@(_:_) <- unliteral s
  = literal $ P.init cs
  | True
  = subStr s 0 (length s - 1)
