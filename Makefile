@@ -31,8 +31,12 @@ endif
 
 .PHONY: install docs test release testPattern tags clean veryclean
 
-all: install
+all: quick
 
+quick: tags
+	@$(TIME) cabal build
+	@$(TIME) cabal install --force-reinstalls
+	
 install: tags
 	@$(TIME) cabal configure --enable-tests --ghc-options=$(CONFIGOPTS)
 	@$(TIME) cabal build
