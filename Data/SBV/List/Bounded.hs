@@ -95,5 +95,5 @@ bzipWith cnt f = go cnt
                           (f (L.head xs) (L.head ys) .: go (i-1) (L.tail xs) (L.tail ys))
 
 -- | Bounded element check
-belem :: Int -> a -> SList a -> SBool
+belem :: SymWord a => Int -> SBV a -> SList a -> SBool
 belem i e = bany i (e .==)
