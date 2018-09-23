@@ -5,7 +5,10 @@
 
 ### Version 7.11.5, Not yet released
   
-  * New dev version.
+  * Modifications to make SBV compile with GHC 8.6.1
+
+  * Improve the BoundedMutex example to show a non-fair trace.
+    See "Documentation/SBV/Examples/Lists/BoundedMutex.hs".
 
 ### Version 7.11, 2018-09-20
 
