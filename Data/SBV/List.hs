@@ -109,7 +109,7 @@ init l
  | True
  = subList l 0 (length l - 1)
 
--- | @`singleton` x@ is the list of length 1 that contains the only value `x`.
+-- | @`singleton` x@ is the list of length 1 that contains the only value @x@.
 --
 -- >>> prove $ \(x :: SInteger) -> head (singleton x) .== x
 -- Q.E.D.
@@ -251,10 +251,9 @@ drop i s = ite (i .>= ls) (literal [])
          $ subList s i (ls - i)
   where ls = length s
 
--- | @`subList` s offset len@ is the sublist of @s@ at offset `offset` with length `len`.
+-- | @`subList` s offset len@ is the sublist of @s@ at offset @offset@ with length @len@.
 -- This function is under-specified when the offset is outside the range of positions in @s@ or @len@
--- is negative or @offset+len@ exceeds the length of @s@. For a friendlier version of this function
--- that acts like Haskell's `take`\/`drop`, see `strTake`\/`strDrop`.
+-- is negative or @offset+len@ exceeds the length of @s@.
 --
 -- >>> prove $ \(l :: SList Integer) i -> i .>= 0 &&& i .< length l ==> subList l 0 i .++ subList l i (length l - i) .== l
 -- Q.E.D.

@@ -249,10 +249,9 @@ drop i s = ite (i .>= ls) (literal "")
          $ subStr s i (ls - i)
   where ls = length s
 
--- | @`subStr` s offset len@ is the substring of @s@ at offset `offset` with length `len`.
+-- | @`subStr` s offset len@ is the substring of @s@ at offset @offset@ with length @len@.
 -- This function is under-specified when the offset is outside the range of positions in @s@ or @len@
--- is negative or @offset+len@ exceeds the length of @s@. For a friendlier version of this function
--- that acts like Haskell's `take`\/`drop`, see `strTake`\/`strDrop`.
+-- is negative or @offset+len@ exceeds the length of @s@.
 --
 -- >>> prove $ \s i -> i .>= 0 &&& i .< length s ==> subStr s 0 i .++ subStr s i (length s - i) .== s
 -- Q.E.D.
@@ -334,7 +333,7 @@ offsetIndexOf s sub offset
   = lift3 StrIndexOf Nothing s sub offset
 
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
--- Note that by definition this function only works when 's' only contains digits,
+-- Note that by definition this function only works when @s@ only contains digits,
 -- that is, if it encodes a natural number. Otherwise, it returns '-1'.
 -- See <http://cvc4.cs.stanford.edu/wiki/Strings> for details.
 --
