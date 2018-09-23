@@ -99,7 +99,7 @@ instance RegExpMatchable SString where
            opt = Nothing
 
 -- | A literal regular-expression, matching the given string exactly. Note that
--- with 'OverloadedStrings' extension, you can simply use a Haskell
+-- with @OverloadedStrings@ extension, you can simply use a Haskell
 -- string to mean the same thing, so this function is rarely needed.
 --
 -- >>> prove $ \(s :: SString) -> s `match` exactly "LITERAL" <=> s .== "LITERAL"
@@ -295,7 +295,7 @@ __unused = undefined isSpace length take elem notElem head
 {- $matching
 A symbolic string or a character ('SString' or 'SChar') can be matched against a regular-expression. Note
 that the regular-expression itself is not a symbolic object: It's a fully concrete representation, as
-captured by the 'RegExp' class. The 'RegExp' class is an instance of 'IsString', which makes writing
+captured by the 'RegExp' class. The 'RegExp' class is an instance of the @IsString@ class, which makes writing
 literal matches easier. The 'RegExp' type also has a (somewhat degenerate) 'Num' instance: Concatenation
 corresponds to multiplication, union corresponds to addition, and @0@ corresponds to the empty language.
 
