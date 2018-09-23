@@ -88,6 +88,10 @@ import Data.SBV.Utils.Lib   (stringToQFS)
 
 import Data.SBV.Control.Types
 
+#if MIN_VERSION_base(4,11,0)
+import Control.Monad.Fail as Fail
+#endif
+
 -- | A symbolic node id
 newtype NodeId = NodeId Int deriving (Eq, Ord)
 
@@ -999,7 +1003,11 @@ svToSymSW sbv = do st <- ask
 -- state of the computation, layered on top of IO for creating unique
 -- references to hold onto intermediate results.
 newtype Symbolic a = Symbolic (ReaderT State IO a)
-                   deriving (Applicative, Functor, Monad, MonadIO, MonadReader State)
+                   deriving ( Applicative, Functor, Monad, MonadIO, MonadReader State
+#if MIN_VERSION_base(4,11,0)
+                            , Fail.MonadFail
+#endif
+                            )
 
 -- | Create a symbolic value, based on the quantifier we have. If an
 -- explicit quantifier is given, we just use that. If not, then we

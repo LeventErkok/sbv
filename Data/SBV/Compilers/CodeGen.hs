@@ -9,6 +9,7 @@
 -- Code generation utilities
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
@@ -54,6 +55,10 @@ import qualified Text.PrettyPrint.HughesPJ as P (render)
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (svToSymSW, svMkSymVar, outputSVal)
+
+#if MIN_VERSION_base(4,11,0)
+import Control.Monad.Fail as Fail
+#endif
 
 -- | Abstract over code generation for different languages
 class CgTarget a where
@@ -115,7 +120,11 @@ initCgState = CgState {
 -- reference parameters (for returning composite values in languages such as C),
 -- and return values.
 newtype SBVCodeGen a = SBVCodeGen (StateT CgState Symbolic a)
-                   deriving (Applicative, Functor, Monad, MonadIO, MonadState CgState)
+                   deriving ( Applicative, Functor, Monad, MonadIO, MonadState CgState
+#if MIN_VERSION_base(4,11,0)
+                            , Fail.MonadFail
+#endif
+                            )
 
 -- | Reach into symbolic monad from code-generation
 cgSym :: Symbolic a -> SBVCodeGen a
