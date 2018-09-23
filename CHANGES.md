@@ -1,11 +1,14 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 7.11, 2018-09-20
+* Latest Hackage released version: 7.12, 2018-09-23
 
-### Version 7.11.5, Not yet released
+### Version 7.12, 2018-09-23
   
-  * Modifications to make SBV compile with GHC 8.6.1.
+  * Modifications to make SBV compile with GHC 8.6.1. (SBV should
+    now compile fine with all versions of GHC since 8.0.1; and
+    possibly earlier. Please report if you are using a version
+    in this range and have issues.)
 
   * Improve the BoundedMutex example to show a non-fair trace.
     See "Documentation/SBV/Examples/Lists/BoundedMutex.hs".
