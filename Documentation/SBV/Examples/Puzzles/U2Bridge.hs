@@ -83,7 +83,7 @@ here, there :: SLocation
 --
 -- This type is equipped with an automatically derived 'Mergeable' instance
 -- because each field is 'Mergeable'. A 'Generic' instance must also be derived
--- for this to work, and the 'DeriveAnyClass' language extension must be
+-- for this to work, and the @DeriveAnyClass@ language extension must be
 -- enabled. The derived 'Mergeable' instance simply walks down the structure
 -- field by field and merges each one. An equivalent hand-written 'Mergeable'
 -- instance is provided in a comment below.
@@ -162,7 +162,7 @@ bumpTime1 p = modify $ \s -> s{time = time s + sCrossTime p}
 bumpTime2 :: SU2Member -> SU2Member -> Move ()
 bumpTime2 p1 p2 = modify $ \s -> s{time = time s + sCrossTime p1 `smax` sCrossTime p2}
 
--- | Symbolic version of 'when'
+-- | Symbolic version of 'Control.Monad.when'
 whenS :: SBool -> Move () -> Move ()
 whenS t a = ite t a (return ())
 

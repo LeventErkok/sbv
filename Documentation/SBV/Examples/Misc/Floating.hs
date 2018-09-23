@@ -165,7 +165,7 @@ multInverse = prove $ do a <- sDouble "a"
 -- Satisfiable. Model:
 --   s0 = 0.999939 :: Float
 --
--- We can see why these two resuls are indeed different: The 'RoundTowardsPositive'
+-- We can see why these two resuls are indeed different: The 'RoundTowardPositive'
 -- (which rounds towards positive-infinity) produces a larger result. Indeed, if we treat these numbers
 -- as 'Double' values, we get:
 --
