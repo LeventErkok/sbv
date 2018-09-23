@@ -6,23 +6,24 @@
 OS := $(shell uname)
 
 GHCVERSION := $(shell ghc --version | awk '{print $$NF}')
-
-ifeq ($(GHCVERSION), 8.0.1)
-# GHC 8.0.1 (and possibly others) don't understand hide-source-paths and are picky about redundant constraints. Also,
-# for this version use old style cabal comands.
-CONFIGOPTS = "-Werror -Wall -Wno-redundant-constraints"
 CBUILD=build
 CINSTALL=install
 CCONFIGURE=configure
 CHADDOCK=haddock
 CSDIST=sdist
+
+ifeq ($(GHCVERSION), 8.0.1)
+# GHC 8.0.1 (and possibly others) don't understand hide-source-paths and are picky about redundant constraints. Also,
+# for this version use old style cabal comands.
+CONFIGOPTS = "-Werror -Wall -Wno-redundant-constraints"
 else
 CONFIGOPTS = "-Werror -Wall -fhide-source-paths"
-CBUILD=new-build
-CINSTALL=new-install
-CCONFIGURE=new-configure
-CHADDOCK=new-haddock
-CSDIST=new-sdist
+# Haven't had much luck with the new-* stuff yet..
+# CBUILD=new-build
+# CINSTALL=new-install
+# CCONFIGURE=new-configure
+# CHADDOCK=new-haddock
+# CSDIST=new-sdist
 endif
 
 SHELL := /usr/bin/env bash
