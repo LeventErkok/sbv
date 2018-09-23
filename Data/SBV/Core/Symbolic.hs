@@ -254,7 +254,7 @@ data StrOp = StrConcat       -- ^ Concatenation of one or more strings
            deriving (Eq, Ord)
 
 -- | Regular expressions. Note that regular expressions themselves are
--- concrete, but the `match` function from the 'RegExpMatchable' class
+-- concrete, but the `match` function from the 'Data.SBV.RegExp.RegExpMatchable' class
 -- can check membership against a symbolic string/character. Also, we
 -- are preferring a datatype approach here, as opposed to coming up with
 -- some string-representation; there are way too many alternatives
@@ -321,7 +321,7 @@ instance Show RegExp where
   show (Union [x])       = show x
   show (Union xs)        = "(re.union " ++ unwords (map show xs) ++ ")"
 
--- | Show instance for `StrOp`. Note that the mapping here is
+-- | Show instance for 'StrOp'. Note that the mapping here is
 -- important to match the SMTLib equivalents, see here: <http://rise4fun.com/z3/tutorialcontent/sequences>
 instance Show StrOp where
   show StrConcat   = "str.++"
@@ -917,7 +917,7 @@ newSW st k = do ctr <- incrementInternalCounter st
 -- the new kind might introduce a constraint that effects the logic. For
 -- instance, if we're seeing 'Double' for the first time and using a BV
 -- logic, then things would fall apart. But this should be rare, and hopefully
--- the 'success' checking mechanism will catch the rare cases where this
+-- the success-response checking mechanism will catch the rare cases where this
 -- is an issue. In either case, the user can always arrange for the right
 -- logic by calling 'setLogic' appropriately, so it seems safe to just
 -- allow for this.
@@ -1013,7 +1013,7 @@ newtype Symbolic a = Symbolic (ReaderT State IO a)
 -- explicit quantifier is given, we just use that. If not, then we
 -- pick the quantifier appropriately based on the run-mode.
 -- @randomCW@ is used for generating random values for this variable
--- when used for 'quickCheck' or 'genTest' purposes.
+-- when used for @quickCheck@ or 'genTest' purposes.
 svMkSymVar :: Maybe Quantifier -> Kind -> Maybe String -> State -> IO SVal
 svMkSymVar = svMkSymVarGen False
 

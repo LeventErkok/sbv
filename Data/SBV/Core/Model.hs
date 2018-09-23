@@ -1216,7 +1216,7 @@ instance SDivisible SInt8 where
   sQuotRem = liftQRem
   sDivMod  = liftDMod
 
--- | Lift 'QRem' to symbolic words. Division by 0 is defined s.t. @x/0 = 0@; which
+-- | Lift 'quotRem' to symbolic words. Division by 0 is defined s.t. @x/0 = 0@; which
 -- holds even when @x@ is @0@ itself.
 liftQRem :: SymWord a => SBV a -> SBV a -> (SBV a, SBV a)
 liftQRem x y
@@ -1239,7 +1239,7 @@ liftQRem x y
                                    mkSymOp o st sgnsz sw1 sw2
         z = genLiteral (kindOf x) (0::Integer)
 
--- | Lift 'DMod' to symbolic words. Division by 0 is defined s.t. @x/0 = 0@; which
+-- | Lift 'divMod' to symbolic words. Division by 0 is defined s.t. @x/0 = 0@; which
 -- holds even when @x@ is @0@ itself. Essentially, this is conversion from quotRem
 -- (truncate to 0) to divMod (truncate towards negative infinity)
 liftDMod :: (SymWord a, Num a, SDivisible (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
@@ -1295,9 +1295,9 @@ instance (SymWord a, Arbitrary a) => Arbitrary (SBV a) where
 -- with a default value, simulating array/list indexing. It's an n-way generalization
 -- of the 'ite' function.
 --
--- Minimal complete definition: None, if the type is instance of 'Generic'. Otherwise
+-- Minimal complete definition: None, if the type is instance of @Generic@. Otherwise
 -- 'symbolicMerge'. Note that most types subject to merging are likely to be
--- trivial instances of 'Generic'.
+-- trivial instances of @Generic@.
 class Mergeable a where
    -- | Merge two values based on the condition. The first argument states
    -- whether we force the then-and-else branches before the merging, at the

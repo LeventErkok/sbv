@@ -104,7 +104,7 @@ instance ArithOverflow SVal where
 
 -- | A class of checked-arithmetic operations. These follow the usual arithmetic,
 -- except make calls to 'sAssert' to ensure no overflow/underflow can occur.
--- Use them in conjunction with 'safe' to ensure no overflow can happen.
+-- Use them in conjunction with 'Data.SBV.safe' to ensure no overflow can happen.
 class (ArithOverflow (SBV a), Num a, SymWord a) => CheckedArithmetic a where
   (+!)          :: (?loc :: CallStack) => SBV a -> SBV a -> SBV a
   (-!)          :: (?loc :: CallStack) => SBV a -> SBV a -> SBV a
@@ -455,7 +455,7 @@ sFromIntegralO x = case (kindOf x, kindOf (undefined :: b)) of
                   | m > n = false
                   | True  = SBV $ svAll [(unSBV x `svTestBit` (n-1)) `svEqual` svFalse, svNot $ allZero (n-1) (m-1) x]
 
--- | Version of 'sFromIntegral' that has calls to 'sAssert' for checking no overflow/underflow can happen. Use it with a 'safe' call.
+-- | Version of 'sFromIntegral' that has calls to 'Data.SBV.sAssert' for checking no overflow/underflow can happen. Use it with a 'Data.SBV.safe' call.
 sFromIntegralChecked :: forall a b. (?loc :: CallStack, Integral a, HasKind a, HasKind b, Num a, SymWord a, HasKind b, Num b, SymWord b) => SBV a -> SBV b
 sFromIntegralChecked x = sAssert (Just ?loc) (msg "underflows") (bnot u)
                        $ sAssert (Just ?loc) (msg "overflows")  (bnot o)

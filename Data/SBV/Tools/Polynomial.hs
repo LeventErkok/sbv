@@ -211,7 +211,7 @@ divx n i xs ys'        = (q:qs, rs)
 -- polynomial division, but this routine is much faster in practice.)
 --
 -- NB. The @n@th bit of the polynomial @p@ /must/ be set for the CRC
--- to be computed correctly. Note that the polynomial argument 'p' will
+-- to be computed correctly. Note that the polynomial argument @p@ will
 -- not even have this bit present most of the time, as it will typically
 -- contain bits @0@ through @n-1@ as usual in the CRC literature. The higher
 -- order @n@th bit is simply assumed to be set, as it does not make
@@ -221,9 +221,9 @@ divx n i xs ys'        = (q:qs, rs)
 -- NB. The literature on CRC's has many variants on how CRC's are computed.
 -- We follow the following simple procedure:
 --
---     * Extend the message 'm' by adding 'n' 0 bits on the right
+--     * Extend the message @m@ by adding @n@ 0 bits on the right
 --
---     * Divide the polynomial thus obtained by the 'p'
+--     * Divide the polynomial thus obtained by the @p@
 --
 --     * The remainder is the CRC value.
 --

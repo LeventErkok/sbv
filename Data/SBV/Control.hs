@@ -131,8 +131,8 @@ they allow direct control of the solver. Here's a simple example:
                                                 return $ Just (xv2, yv2)
 @
 
-Note the type of 'test', it returns an optional pair of integers in the 'Symbolic' monad. We turn
-it into an IO value with the 'runSMT' function: (There's also 'runSMTWith' that uses a user specified
+Note the type of @test@: it returns an optional pair of integers in the 'Symbolic' monad. We turn
+it into an IO value with the 'Data.SBV.Control.runSMT' function: (There's also 'Data.SBV.Control.runSMTWith' that uses a user specified
 solver instead of the default.)
 
 @

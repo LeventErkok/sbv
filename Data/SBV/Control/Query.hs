@@ -397,7 +397,7 @@ checkSatAssuming sBools = fst <$> checkSatAssumingHelper False sBools
 -- for this call to not error out!
 --
 -- Usage note: 'getUnsatCore' is usually easier to use than 'checkSatAssumingWithUnsatisfiableSet', as it
--- allows the use of named assertions, as obtained by 'namedAssert'. If 'getUnsatCore'
+-- allows the use of named assertions, as obtained by 'namedConstraint'. If 'getUnsatCore'
 -- fills your needs, you should definitely prefer it over 'checkSatAssumingWithUnsatisfiableSet'.
 checkSatAssumingWithUnsatisfiableSet :: [SBool] -> Query (CheckSatResult, Maybe [SBool])
 checkSatAssumingWithUnsatisfiableSet = checkSatAssumingHelper True
@@ -554,9 +554,10 @@ caseSplit printCases cases = do cfg <- getConfig
                                               return $ Just (n, res)
 
 -- | Reset the solver, by forgetting all the assertions. However, bindings are kept as is,
--- as opposed to 'reset'. Use this variant to clean-up the solver state while leaving the bindings
--- intact. Pops all assertion levels. Declarations and definitions resulting from the 'setLogic'
--- command are unaffected. Note that SBV implicitly uses global-declarations, so bindings will remain intact.
+-- as opposed to a full reset of the solver. Use this variant to clean-up the solver
+-- state while leaving the bindings intact. Pops all assertion levels. Declarations and
+-- definitions resulting from the 'Data.SBV.setLogic' command are unaffected. Note that SBV
+-- implicitly uses global-declarations, so bindings will remain intact.
 resetAssertions :: Query ()
 resetAssertions = do send True "(reset-assertions)"
                      modifyQueryState $ \s -> s{queryAssertionStackDepth = 0}

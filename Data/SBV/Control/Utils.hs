@@ -557,7 +557,7 @@ getQuantifiedInputs = do State{rinps} <- get
 
                          return $ preQs ++ trackers ++ postQs
 
--- | Get observables, i.e., those explicitly labeled by the user with a call to 'observe'.
+-- | Get observables, i.e., those explicitly labeled by the user with a call to 'Data.SBV.observe'.
 getObservables :: Query [(String, SW)]
 getObservables = do State{rObservables} <- get
 
@@ -664,8 +664,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                         Just d  -> do constrain d
                                                       go (cnt+1) resultsSoFar
 
--- | Retrieve the set of unsatisfiable assumptions, following a call to 'checkSatAssumingWithUnsatisfiableSet'. Note that
--- this function isn't exported to the user, but rather used internally. The user simple calls 'checkSatAssumingWithUnsatisfiableSet'.
+-- | Retrieve the set of unsatisfiable assumptions, following a call to 'Data.SBV.Control.checkSatAssumingWithUnsatisfiableSet'. Note that
+-- this function isn't exported to the user, but rather used internally. The user simple calls 'Data.SBV.Control.checkSatAssumingWithUnsatisfiableSet'.
 getUnsatAssumptions :: [String] -> [(String, a)] -> Query [a]
 getUnsatAssumptions originals proxyMap = do
         let cmd = "(get-unsat-assumptions)"
