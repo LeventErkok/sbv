@@ -66,7 +66,7 @@ bfilter i f = bfoldr i (\x y -> ite (f x) (x .: y) y) []
 band :: Int -> SList Bool -> SBool
 band i = bfoldr i (&&&) (true  :: SBool)
 
--- | Bounded logical and
+-- | Bounded logical or
 bor :: Int -> SList Bool -> SBool
 bor i = bfoldr i (|||) (false :: SBool)
 
