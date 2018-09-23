@@ -87,7 +87,7 @@ sendRequestToSolver = Query.ask
 {- $coordinateSolverInfo
 In rare cases it might be necessary to send an arbitrary string down to the solver. Needless to say, this
 should be avoided if at all possible. Users should prefer the provided API. If you do find yourself
-needing 'send' and 'ask' directly, please get in touch to see if SBV can support a typed API for your use case.
+needing 'Data.SBV.Control.Utils.send' and 'Data.SBV.Control.Utils.ask' directly, please get in touch to see if SBV can support a typed API for your use case.
 Similarly, the function 'retrieveResponseFromSolver' might occasionally be necessary to clean-up the communication
 buffer. We would like to hear if you do need these functions regularly so we can provide better support.
 -}

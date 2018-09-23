@@ -875,7 +875,7 @@ translated to proper SMT data-types.
 
 
 Uninterpreted functions over both uninterpreted and regular sorts can be declared using the facilities introduced by
-the 'Uninterpreted' class.
+the 'Data.SBV.Core.Model.Uninterpreted' class.
 -}
 
 {- $enumerations

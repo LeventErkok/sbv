@@ -153,7 +153,7 @@ provides access to many SMTLib features in the query mode, as exported from this
 
 For other examples see:
 
-  - "Documentation.SBV.Examples.Queries.AllSat": Simulating SBV's 'allSat' using queries.
+  - "Documentation.SBV.Examples.Queries.AllSat": Simulating SBV's 'Data.SBV.allSat' using queries.
   - "Documentation.SBV.Examples.Queries.CaseSplit": Performing a case-split during a query.
   - "Documentation.SBV.Examples.Queries.Enums": Using enumerations in queries.
   - "Documentation.SBV.Examples.Queries.FourFours": Solution to a fun arithmetic puzzle, coded using queries.

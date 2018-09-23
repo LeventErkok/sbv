@@ -173,7 +173,7 @@ cgSRealType :: CgSRealType -> SBVCodeGen ()
 cgSRealType rt = modify' (\s -> s {cgFinalConfig = (cgFinalConfig s) { cgReal = Just rt }})
 
 -- | Should we generate a driver program? Default: 'True'. When a library is generated, it will have
--- a driver if any of the contituent functions has a driver. (See 'compileToCLib'.)
+-- a driver if any of the contituent functions has a driver. (See 'Data.SBV.Tools.CodeGen.compileToCLib'.)
 cgGenerateDriver :: Bool -> SBVCodeGen ()
 cgGenerateDriver b = modify' (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgGenDriver = b } })
 
@@ -373,7 +373,7 @@ renderCgPgmBundle (Just dirName) (cfg, CgPgmBundle _ files) = do
                                      unless overWrite $ putStrLn $ "Generating: " ++ show fn ++ ".."
                                      writeFile fn (render' (vcat ds))
 
--- | An alternative to Pretty's 'render', which might have "leading" white-space in empty lines. This version
+-- | An alternative to Pretty's @render@, which might have "leading" white-space in empty lines. This version
 -- eliminates such whitespace.
 render' :: Doc -> String
 render' = unlines . map clean . lines . P.render
