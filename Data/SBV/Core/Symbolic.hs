@@ -238,7 +238,7 @@ instance Show OvOp where
   show Overflow_SMul_UDFL = "bvsmul_noudfl"
   show Overflow_UMul_OVFL = "bvumul_noovfl"
 
--- | String operations. Note that we do not define `StrAt` as it translates to `StrSubStr` trivially.
+-- | String operations. Note that we do not define @StrAt@ as it translates to 'StrSubStr' trivially.
 data StrOp = StrConcat       -- ^ Concatenation of one or more strings
            | StrLen          -- ^ String length
            | StrUnit         -- ^ Unit string
@@ -1428,8 +1428,9 @@ data RoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable 
 -- | 'RoundingMode' kind
 instance HasKind RoundingMode
 
--- | Solver configuration. See also 'z3', 'yices', 'cvc4', 'boolector', 'mathSAT', etc. which are instantiations of this type for those solvers, with
--- reasonable defaults. In particular, custom configuration can be created by varying those values. (Such as @z3{verbose=True}@.)
+-- | Solver configuration. See also 'Data.SBV.z3', 'Data.SBV.yices', 'Data.SBV.cvc4', 'Data.SBV.boolector', 'Data.SBV.mathSAT', etc.
+-- which are instantiations of this type for those solvers, with reasonable defaults. In particular, custom configuration can be 
+-- created by varying those values. (Such as @z3{verbose=True}@.)
 --
 -- Most fields are self explanatory. The notion of precision for printing algebraic reals stems from the fact that such values does
 -- not necessarily have finite decimal representations, and hence we have to stop printing at some depth. It is important to

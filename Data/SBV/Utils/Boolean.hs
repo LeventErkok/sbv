@@ -18,7 +18,7 @@ infixr 2 |||, ~|   -- or, nor
 infixr 1 ==>, <=>  -- implies, iff
 
 -- | The 'Boolean' class: a generalization of Haskell's 'Bool' type
--- Haskell 'Bool' and SBV's 'SBool' are instances of this class, unifying the treatment of boolean values.
+-- Haskell 'Bool' and SBV's 'Data.SBV.SBool' are instances of this class, unifying the treatment of boolean values.
 --
 -- Minimal complete definition: 'true', 'bnot', '&&&'
 -- However, it's advisable to define 'false', and '|||' as well (typically), for clarity.

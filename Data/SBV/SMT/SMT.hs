@@ -172,7 +172,7 @@ instance Show OptimizeResult where
                                     (tag "Optimal in an extension field:" ++ "\n")
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
--- solvers. The idea is that the sbv infrastructure provides a stream of 'CW''s (constant-words)
+-- solvers. The idea is that the sbv infrastructure provides a stream of CW's (constant-words)
 -- coming from the solver, and the type @a@ is interpreted based on these constants. Many typical
 -- instances are already provided, so new instances can be declared with relative ease.
 --
