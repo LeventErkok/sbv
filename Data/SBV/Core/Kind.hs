@@ -45,7 +45,7 @@ data Kind = KBool
 
 -- | The interesting about the show instance is that it can tell apart two kinds nicely; since it conveniently
 -- ignores the enumeration constructors. Also, when we construct a 'KUserSort', we make sure we don't use any of
--- the reserved names; see 'constructUIKind' for details.
+-- the reserved names; see 'constructUKind' for details.
 instance Show Kind where
   show KBool              = "SBool"
   show (KBounded False n) = "SWord" ++ show n
@@ -122,7 +122,7 @@ constructUKind a
 -- | A class for capturing values that have a sign and a size (finite or infinite)
 -- minimal complete definition: kindOf, unless you can take advantage of the default
 -- signature: This class can be automatically derived for data-types that have
--- a 'Data' instance; this is useful for creating uninterpreted sorts. So, in
+-- a 'G.Data' instance; this is useful for creating uninterpreted sorts. So, in
 -- reality, end users should almost never need to define any methods.
 class HasKind a where
   kindOf          :: a -> Kind

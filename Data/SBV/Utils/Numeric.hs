@@ -40,7 +40,7 @@ fpMaxH x y
    where isN0   = isNegativeZero
          isP0 a = a == 0 && not (isN0 a)
 
--- | SMTLib compliant definition for 'fpMin'. See the comments for 'fpMax'.
+-- | SMTLib compliant definition for 'Data.SBV.fpMin'. See the comments for 'Data.SBV.fpMax'.
 fpMinH :: RealFloat a => a -> a -> a
 fpMinH x y
    | isNaN x                                  = y

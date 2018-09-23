@@ -605,7 +605,7 @@ instance SIntegral Int64
 instance SIntegral Integer
 
 -- | Finite bit-length symbolic values. Essentially the same as 'SIntegral', but further leaves out 'Integer'. Loosely
--- based on Haskell's 'FiniteBits' class, but with more methods defined and structured differently to fit into the
+-- based on Haskell's @FiniteBits@ class, but with more methods defined and structured differently to fit into the
 -- symbolic world view. Minimal complete definition: 'sFiniteBitSize'.
 class (SymWord a, Num a, Bits a) => SFiniteBits a where
     -- | Bit size.
@@ -760,42 +760,42 @@ liftPB w o xs
                     registerKind st KUnbounded
                     newExpr st KBool (SBVApp (PseudoBoolean o) xsw)
 
--- | 'true' if at most `k` of the input arguments are 'true'
+-- | 'true' if at most @k@ of the input arguments are 'true'
 pbAtMost :: [SBool] -> Int -> SBool
 pbAtMost xs k
  | k < 0             = error $ "SBV.pbAtMost: Non-negative value required, received: " ++ show k
  | all isConcrete xs = literal $ sum (map (pbToInteger "pbAtMost" 1) xs) <= fromIntegral k
  | True              = liftPB "pbAtMost" (PB_AtMost k) xs
 
--- | 'true' if at least `k` of the input arguments are 'true'
+-- | 'true' if at least @k@ of the input arguments are 'true'
 pbAtLeast :: [SBool] -> Int -> SBool
 pbAtLeast xs k
  | k < 0             = error $ "SBV.pbAtLeast: Non-negative value required, received: " ++ show k
  | all isConcrete xs = literal $ sum (map (pbToInteger "pbAtLeast" 1) xs) >= fromIntegral k
  | True              = liftPB "pbAtLeast" (PB_AtLeast k) xs
 
--- | 'true' if exactly `k` of the input arguments are 'true'
+-- | 'true' if exactly @k@ of the input arguments are 'true'
 pbExactly :: [SBool] -> Int -> SBool
 pbExactly xs k
  | k < 0             = error $ "SBV.pbExactly: Non-negative value required, received: " ++ show k
  | all isConcrete xs = literal $ sum (map (pbToInteger "pbExactly" 1) xs) == fromIntegral k
  | True              = liftPB "pbExactly" (PB_Exactly k) xs
 
--- | 'true' if the sum of coefficients for 'true' elements is at most 'k'. Generalizes 'pbAtMost'.
+-- | 'true' if the sum of coefficients for 'true' elements is at most @k@. Generalizes 'pbAtMost'.
 pbLe :: [(Int, SBool)] -> Int -> SBool
 pbLe xs k
  | k < 0                       = error $ "SBV.pbLe: Non-negative value required, received: " ++ show k
  | all isConcrete (map snd xs) = literal $ sum [pbToInteger "pbLe" c b | (c, b) <- xs] <= fromIntegral k
  | True                        = liftPB "pbLe" (PB_Le (map fst xs) k) (map snd xs)
 
--- | 'true' if the sum of coefficients for 'true' elements is at least 'k'. Generalizes 'pbAtLeast'.
+-- | 'true' if the sum of coefficients for 'true' elements is at least @k@. Generalizes 'pbAtLeast'.
 pbGe :: [(Int, SBool)] -> Int -> SBool
 pbGe xs k
  | k < 0                       = error $ "SBV.pbGe: Non-negative value required, received: " ++ show k
  | all isConcrete (map snd xs) = literal $ sum [pbToInteger "pbGe" c b | (c, b) <- xs] >= fromIntegral k
  | True                        = liftPB "pbGe" (PB_Ge (map fst xs) k) (map snd xs)
 
--- | 'true' if the sum of coefficients for 'true' elements is exactly least 'k'. Useful for coding
+-- | 'true' if the sum of coefficients for 'true' elements is exactly least @k@. Useful for coding
 -- /exactly K-of-N/ constraints, and in particular mutex constraints.
 pbEq :: [(Int, SBool)] -> Int -> SBool
 pbEq xs k
@@ -1870,7 +1870,7 @@ instance Testable (Symbolic SBool) where
 
            noQC us         = error $ "Cannot quick-check in the presence of uninterpreted constants: " ++ intercalate ", " us
 
--- | Quick check an SBV property. Note that a regular 'quickCheck' call will work just as
+-- | Quick check an SBV property. Note that a regular @quickCheck@ call will work just as
 -- well. Use this variant if you want to receive the boolean result.
 sbvQuickCheck :: Symbolic SBool -> IO Bool
 sbvQuickCheck prop = QC.isSuccess `fmap` QC.quickCheckResult prop

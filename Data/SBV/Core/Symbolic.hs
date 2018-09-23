@@ -1041,7 +1041,7 @@ sIntN_ w = ask >>= liftIO . svMkSymVar Nothing (KBounded True w) Nothing
 -- explicit quantifier is given, we just use that. If not, then we
 -- pick the quantifier appropriately based on the run-mode.
 -- @randomCW@ is used for generating random values for this variable
--- when used for 'quickCheck' or 'genTest' purposes.
+-- when used for @quickCheck@ or 'genTest' purposes.
 svMkSymVarGen :: Bool -> Maybe Quantifier -> Kind -> Maybe String -> State -> IO SVal
 svMkSymVarGen isTracker mbQ k mbNm st = do
         rm <- readIORef (runMode st)

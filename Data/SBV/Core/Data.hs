@@ -453,7 +453,7 @@ instance (Random a, SymWord a) => Random (SBV a) where
 --
 --    * 'SArray' produces SMTLib arrays, and requires a solver that understands the
 --      array theory. 'SFunArray' is internally handled, and thus can be used with
---      any solver. (Note that all solvers except 'abc' support arrays, so this isn't
+--      any solver. (Note that all solvers except 'Data.SBV.abc' support arrays, so this isn't
 --      a big decision factor.)
 --
 --    * For both arrays, if a default value is supplied, then reading from uninitialized

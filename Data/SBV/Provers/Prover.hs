@@ -562,7 +562,7 @@ class SExecutable a where
    safe :: a -> IO [SafeResult]
    safe = safeWith defaultSMTCfg
 
-   -- | Check if any of the 'sAssert' calls can be violated.
+   -- | Check if any of the 'Data.SBV.sAssert' calls can be violated.
    safeWith :: SMTConfig -> a -> IO [SafeResult]
    safeWith cfg a = do cwd <- (++ "/") <$> getCurrentDirectory
                        let mkRelative path
@@ -572,7 +572,7 @@ class SExecutable a where
      where check mkRelative = Control.query $ Control.getSBVAssertions >>= mapM (verify mkRelative)
 
            -- check that the cond is unsatisfiable. If satisfiable, that would
-           -- indicate the assignment under which the 'sAssert' would fail
+           -- indicate the assignment under which the 'Data.SBV.sAssert' would fail
            verify :: (FilePath -> FilePath) -> (String, Maybe CallStack, SW) -> Query SafeResult
            verify mkRelative (msg, cs, cond) = do
                    let locInfo ps = let loc (f, sl) = concat [mkRelative (srcLocFile sl), ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]

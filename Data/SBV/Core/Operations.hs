@@ -498,20 +498,20 @@ svSymbolicMerge k force t a b
                                      where k = ite (y .== 0) x (x+1)
 
                                 When we reduce the 'then' branch of the first ite, we'd record the assumption that y is 0. But while reducing the 'then' branch, we'd
-                                like to share 'k', which would evaluate (correctly) to 'x' under the given assumption. When we backtrack and evaluate the 'else'
-                                branch of the first ite, we'd see 'k' is needed again, and we'd look it up from our sharing map to find (incorrectly) that its value
-                                is 'x', which was stored there under the assumption that y was 0, which no longer holds. Clearly, this is unsound.
+                                like to share @k@, which would evaluate (correctly) to @x@ under the given assumption. When we backtrack and evaluate the 'else'
+                                branch of the first ite, we'd see @k@ is needed again, and we'd look it up from our sharing map to find (incorrectly) that its value
+                                is @x@, which was stored there under the assumption that y was 0, which no longer holds. Clearly, this is unsound.
 
                                 A sound implementation would have to precisely track which assumptions were active at the time expressions get shared. That is,
-                                in the above example, we should record that the value of 'k' was cached under the assumption that 'y' is 0. While sound, this
+                                in the above example, we should record that the value of @k@ was cached under the assumption that @y@ is 0. While sound, this
                                 approach unfortunately leads to significant loss of valid sharing when the value itself had nothing to do with the assumption itself.
                                 To wit, consider:
 
                                    foo x y = ite (y .== 0) k (k+1)
                                      where k = x+5
 
-                                If we tracked the assumptions, we would recompute 'k' twice, since the branch assumptions would differ. Clearly, there is no need to
-                                re-compute 'k' in this case since its value is independent of y. Note that the whole SBV performance story is based on agressive sharing,
+                                If we tracked the assumptions, we would recompute @k@ twice, since the branch assumptions would differ. Clearly, there is no need to
+                                re-compute @k@ in this case since its value is independent of @y@. Note that the whole SBV performance story is based on agressive sharing,
                                 and losing that would have other significant ramifications.
 
                                 The "proper" solution would be to track, with each shared computation, precisely which assumptions it actually *depends* on, rather

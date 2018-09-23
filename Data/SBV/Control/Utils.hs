@@ -132,7 +132,7 @@ getSBVPgm :: Query SBVPgm
 getSBVPgm = do State{spgm} <- get
                io $ readIORef spgm
 
--- | Get the assertions put in via 'sAssert'
+-- | Get the assertions put in via 'Data.SBV.sAssert'
 getSBVAssertions :: Query [(String, Maybe CallStack, SW)]
 getSBVAssertions = do State{rAsserts} <- get
                       io $ reverse <$> readIORef rAsserts
@@ -198,7 +198,7 @@ freshVar_ = inNewContext $ fmap SBV . svMkSymVar (Just EX) k Nothing
   where k = kindOf (undefined :: a)
 
 -- | Create a fresh variable in query mode. You should prefer
--- creating input variables using 'sBool', 'sInt32', etc., which act
+-- creating input variables using 'Data.SBV.sBool', 'Data.SBV.sInt32', etc., which act
 -- as primary inputs to the model and can be existential or universal.
 -- Use 'freshVar' only in query mode for anonymous temporary variables.
 -- Such variables are always existential. Note that 'freshVar' should hardly be

@@ -79,24 +79,24 @@ resultConfig (SatExtField   c _) = c
 resultConfig (Unknown       c _) = c
 resultConfig (ProofError    c _) = c
 
--- | A 'prove' call results in a 'ThmResult'
+-- | A 'Data.SBV.prove' call results in a 'ThmResult'
 newtype ThmResult = ThmResult SMTResult
                   deriving NFData
 
--- | A 'sat' call results in a 'SatResult'
+-- | A 'Data.SBV.sat' call results in a 'SatResult'
 -- The reason for having a separate 'SatResult' is to have a more meaningful 'Show' instance.
 newtype SatResult = SatResult SMTResult
                   deriving NFData
 
--- | An 'allSat' call results in a 'AllSatResult'. The first boolean says whether we
+-- | An 'Data.SBV.allSat' call results in a 'AllSatResult'. The first boolean says whether we
 -- hit the max-model limit as we searched. The second boolean says whether
 -- there were prefix-existentials.
 newtype AllSatResult = AllSatResult (Bool, Bool, [SMTResult])
 
--- | A 'safe' call results in a 'SafeResult'
+-- | A 'Data.SBV.safe' call results in a 'SafeResult'
 newtype SafeResult   = SafeResult   (Maybe String, String, SMTResult)
 
--- | An 'optimize' call results in a 'OptimizeResult'. In the 'ParetoResult' case, the boolean is 'True'
+-- | An 'Data.SBV.optimize' call results in a 'OptimizeResult'. In the 'ParetoResult' case, the boolean is 'True'
 -- if we reached pareto-query limit and so there might be more unqueried results remaining. If 'False',
 -- it means that we have all the pareto fronts returned. See the 'Pareto' 'OptimizeStyle' for details.
 data OptimizeResult = LexicographicResult SMTResult
@@ -256,7 +256,7 @@ instance SatModel Double where
   parseCWs (CW KDouble (CWDouble i) : r) = Just (i, r)
   parseCWs _                             = Nothing
 
--- | 'CW' as extracted from a model; trivial definition
+-- | @CW@ as extracted from a model; trivial definition
 instance SatModel CW where
   parseCWs (cw : r) = Just (cw, r)
   parseCWs []       = Nothing
@@ -349,7 +349,7 @@ class Modelable a where
   getModelObjectiveValue :: String -> a -> Maybe GeneralizedCW
   getModelObjectiveValue v r = v `M.lookup` getModelObjectives r
 
--- | Return all the models from an 'allSat' call, similar to 'extractModel' but
+-- | Return all the models from an 'Data.SBV.allSat' call, similar to 'extractModel' but
 -- is suitable for the case of multiple results.
 extractModels :: SatModel a => AllSatResult -> [a]
 extractModels (AllSatResult (_, _, xs)) = [ms | Right (_, ms) <- map getModelAssignment xs]
@@ -411,9 +411,9 @@ parseModelOut m = case parseCWs [c | (_, c) <- modelAssocs m] of
                    Just (_, ys) -> error $ "SBV.parseModelOut: Partially constructed model; remaining elements: " ++ show ys
                    Nothing      -> error $ "SBV.parseModelOut: Cannot construct a model from: " ++ show m
 
--- | Given an 'allSat' call, we typically want to iterate over it and print the results in sequence. The
--- 'displayModels' function automates this task by calling 'disp' on each result, consecutively. The first
--- 'Int' argument to 'disp' 'is the current model number. The second argument is a tuple, where the first
+-- | Given an 'Data.SBV.allSat' call, we typically want to iterate over it and print the results in sequence. The
+-- 'displayModels' function automates this task by calling @disp@ on each result, consecutively. The first
+-- 'Int' argument to @disp@ 'is the current model number. The second argument is a tuple, where the first
 -- element indicates whether the model is alleged (i.e., if the solver is not sure, returing Unknown)
 displayModels :: SatModel a => (Int -> (Bool, a) -> IO ()) -> AllSatResult -> IO Int
 displayModels disp (AllSatResult (_, _, ms)) = do
@@ -532,7 +532,7 @@ data SolverLine = SolverRegular   String  -- ^ All is well
                 | SolverTimeout   String  -- ^ Timeout expired
                 | SolverException String  -- ^ Something else went wrong
 
--- | A variant of 'readProcessWithExitCode'; except it deals with SBV continuations
+-- | A variant of @readProcessWithExitCode@; except it deals with SBV continuations
 runSolver :: SMTConfig -> State -> FilePath -> [String] -> String -> (State -> IO a) -> IO a
 runSolver cfg ctx execPath opts pgm continuation
  = do let nm  = show (name (solver cfg))

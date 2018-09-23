@@ -103,7 +103,7 @@ instance ArithOverflow SVal where
   bvNegO     = signPick1 bvunego     bvsnego
 
 -- | A class of checked-arithmetic operations. These follow the usual arithmetic,
--- except make calls to 'sAssert' to ensure no overflow/underflow can occur.
+-- except make calls to 'Data.SBV.sAssert' to ensure no overflow/underflow can occur.
 -- Use them in conjunction with 'Data.SBV.safe' to ensure no overflow can happen.
 class (ArithOverflow (SBV a), Num a, SymWord a) => CheckedArithmetic a where
   (+!)          :: (?loc :: CallStack) => SBV a -> SBV a -> SBV a
