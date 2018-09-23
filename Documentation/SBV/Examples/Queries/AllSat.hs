@@ -8,7 +8,7 @@
 --
 -- When we would like to find all solutions to a problem, we can query the
 -- solver repeatedly, telling it to give us a new model each time. SBV already
--- provides 'allSat' that precisely does this. However, this example demonstrates
+-- provides 'Data.SBV.allSat' that precisely does this. However, this example demonstrates
 -- how the query mode can be used to achieve the same, and can also incorporate
 -- extra conditions with easy as we walk through solutions.
 -----------------------------------------------------------------------------

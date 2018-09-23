@@ -375,14 +375,14 @@ getObjectiveValues = do let cmd = "(get-objectives)"
                         simplify (EApp xs)                  = EApp (map simplify xs)
                         simplify e                          = e
 
--- | Check for satisfiability, under the given conditions. Similar to 'checkSat' except it allows making
+-- | Check for satisfiability, under the given conditions. Similar to 'Data.SBV.Control.checkSat' except it allows making
 -- further assumptions as captured by the first argument of booleans. (Also see 'checkSatAssumingWithUnsatisfiableSet'
 -- for a variant that returns the subset of the given assumptions that led to the 'Unsat' conclusion.)
 checkSatAssuming :: [SBool] -> Query CheckSatResult
 checkSatAssuming sBools = fst <$> checkSatAssumingHelper False sBools
 
 -- | Check for satisfiability, under the given conditions. Returns the unsatisfiable
--- set of assumptions. Similar to 'checkSat' except it allows making further assumptions
+-- set of assumptions. Similar to 'Data.SBV.Control.checkSat' except it allows making further assumptions
 -- as captured by the first argument of booleans. If the result is 'Unsat', the user will
 -- also receive a subset of the given assumptions that led to the 'Unsat' conclusion. Note
 -- that while this set will be a subset of the inputs, it is not necessarily guaranteed to be minimal.

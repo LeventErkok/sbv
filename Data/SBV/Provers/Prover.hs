@@ -187,7 +187,7 @@ class Provable a where
   -- in the configuration.
   --
   -- NB. Uninterpreted constant/function values and counter-examples for array values are ignored for
-  -- the purposes of @'allSat'@. That is, only the satisfying assignments modulo uninterpreted functions and
+  -- the purposes of 'allSat'. That is, only the satisfying assignments modulo uninterpreted functions and
   -- array inputs will be returned. This is due to the limitation of not having a robust means of getting a
   -- function counter-example back from the SMT solver.
   --  Find all satisfying assignments using the given SMT-solver

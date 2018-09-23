@@ -27,7 +27,7 @@ import Generics.Deriving.Show (GShow, gshow)
 
 import Control.DeepSeq (NFData(..))
 
--- | Result of a 'checkSat' or 'checkSatAssuming' call.
+-- | Result of a 'Data.SBV.Control.checkSat' or 'Data.SBV.Control.checkSatAssuming' call.
 data CheckSatResult = Sat           -- ^ Satisfiable: A model is available, which can be queried with 'Data.SBV.Control.getValue'.
                     | Unsat         -- ^ Unsatisfiable: No model is available. Unsat cores might be obtained via 'Data.SBV.Control.getUnsatCore'.
                     | Unk           -- ^ Unknown: Use 'Data.SBV.Control.getUnknownReason' to obtain an explanation why this might be the case.
@@ -161,7 +161,7 @@ setSMTOption = cvt
         logic l          = "(set-logic " ++ show l ++ ")"
 
 -- | SMT-Lib logics. If left unspecified SBV will pick the logic based on what it determines is needed. However, the
--- user can override this choice using a call to 'setLogic' This is especially handy if one is experimenting with custom
+-- user can override this choice using a call to 'Data.SBV.setLogic' This is especially handy if one is experimenting with custom
 -- logics that might be supported on new solvers. See <http://smtlib.cs.uiowa.edu/logics.shtml> for the official list.
 data Logic
   = AUFLIA             -- ^ Formulas over the theory of linear integer arithmetic and arrays extended with free sort and function symbols but restricted to arrays with integer indices and values.
