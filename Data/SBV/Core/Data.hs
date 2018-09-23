@@ -91,7 +91,7 @@ getPathCondition st = SBV (getSValPathCondition st)
 extendPathCondition :: State -> (SBool -> SBool) -> State
 extendPathCondition st f = extendSValPathCondition st (unSBV . f . SBV)
 
--- | The "Symbolic" value. The parameter 'a' is phantom, but is
+-- | The "Symbolic" value. The parameter @a@ is phantom, but is
 -- extremely important in keeping the user interface strongly typed.
 newtype SBV a = SBV { unSBV :: SVal }
               deriving (Generic, NFData)
