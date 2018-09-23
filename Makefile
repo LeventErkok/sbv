@@ -24,6 +24,11 @@ CONFIGOPTS = "-Werror -Wall -fhide-source-paths"
 # CCONFIGURE=new-configure
 # CHADDOCK=new-haddock
 # CSDIST=new-sdist
+CBUILD=v1-build
+CINSTALL=v1-install
+CCONFIGURE=v1-configure
+CHADDOCK=v1-haddock
+CSDIST=v1-sdist
 endif
 
 SHELL := /usr/bin/env bash
