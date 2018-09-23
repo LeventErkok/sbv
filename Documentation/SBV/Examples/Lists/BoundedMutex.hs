@@ -22,6 +22,7 @@ module Documentation.SBV.Examples.Lists.BoundedMutex where
 import Data.SBV
 import Data.SBV.Control
 
+import Data.SBV.List ((.!!))
 import qualified Data.SBV.List         as L
 import qualified Data.SBV.List.Bounded as L
 
@@ -124,3 +125,52 @@ checkMutex b = runSMT $ do
                                               io . putStrLn $ "P1: " ++ show p1V
                                               io . putStrLn $ "P2: " ++ show p2V
                                               io . putStrLn $ "Ts: " ++ show ts
+
+-- | Our algorithm is correct, but it is not fair. It does not guarantee that a process that
+-- wants to enter its critical-section will always do so eventually. Demonstrate this by
+-- trying to show a bounded trace of length 10, such that the second process is ready but
+-- never transitions to critical. We have:
+--
+-- >>> notFair 10
+-- Fairness is violated at bound: 10
+-- P1: [Idle,Idle,Ready,Critical,Idle,Idle,Ready,Critical,Idle,Idle]
+-- P2: [Idle,Ready,Ready,Ready,Ready,Ready,Ready,Ready,Ready,Ready]
+-- Ts: [1,2,1,1,1,1,1,1,1,1]
+--
+-- As expected, P2 gets ready but never goes critical since the arbiter keeps picking
+-- P1 unfairly.
+--
+-- Exercise for the reader: Change the 'validTurns' function so that it alternates the turns
+-- from the previous value if neither process is in critical. Show that this makes the 'notFair'
+-- function below no longer exhibits the issue. Is this sufficient? Concurrent programming is tricky!
+notFair :: Int -> IO ()
+notFair b = runSMT $ do p1    :: SList State   <- sList "p1"
+                        p2    :: SList State   <- sList "p2"
+                        turns :: SList Integer <- sList "turns"
+
+                        -- Ensure that both sequences and the turns are valid
+                        constrain $ validSequence b 1 turns p1
+                        constrain $ validSequence b 2 turns p2
+                        constrain $ validTurns    b turns p1 p2
+
+                        -- Ensure that the second process becomes ready in the second cycle:
+                        constrain $ p2 .!! 1 .== ready
+
+                        -- Find a trace where p2 never goes critical
+                        -- counter example, we would've found a violation!
+                        constrain $ bnot $ L.belem b critical p2
+
+                        query $ do cs <- checkSat
+                                   case cs of
+                                     Unk   -> error "Solver said Unknown!"
+                                     Unsat -> error "Solver couldn't find a violating trace!"
+                                     Sat   -> do io . putStrLn $ "Fairness is violated at bound: " ++ show b
+                                                 do p1V <- getValue p1
+                                                    p2V <- getValue p2
+                                                    ts  <- getValue turns
+
+                                                    io . putStrLn $ "P1: " ++ show p1V
+                                                    io . putStrLn $ "P2: " ++ show p2V
+                                                    io . putStrLn $ "Ts: " ++ show ts
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
