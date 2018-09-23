@@ -19,8 +19,8 @@
 module Data.SBV.List.Bounded (
      -- * General folds
      bfoldr, bfoldl
-     -- * Map, filter, zipWith
-   , bmap, bfilter, bzipWith
+     -- * Map, filter, zipWith, elem
+   , bmap, bfilter, bzipWith, belem
      -- * Aggregates
    , bsum, bprod, band, bor, bany, ball, bmaximum, bminimum
    )
@@ -93,3 +93,7 @@ bzipWith cnt f = go cnt
          go i xs ys = ite (L.null xs ||| L.null ys)
                           []
                           (f (L.head xs) (L.head ys) .: go (i-1) (L.tail xs) (L.tail ys))
+
+-- | Bounded element check
+belem :: Int -> a -> SList a -> SBool
+belem i e = bany i (e .==)
