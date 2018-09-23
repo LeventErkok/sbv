@@ -508,15 +508,15 @@ What happens if we make sure to arrange for this invariant? Consider this versio
 
 >>> let safeSub x y = ite (x .>= y) (sub x y) 0
 
-Clearly, 'safeSub' must be safe. And indeed, SBV can prove that:
+Clearly, @safeSub@ must be safe. And indeed, SBV can prove that:
 
 >>> safe (safeSub :: SInt8 -> SInt8 -> SInt8)
 [sub: x >= y must hold!: No violations detected]
 
-Note how we used 'sub' and 'safeSub' polymorphically. We only need to monomorphise our types when a proof
+Note how we used @sub@ and @safeSub@ polymorphically. We only need to monomorphise our types when a proof
 attempt is done, as we did in the 'safe' calls.
 
-If required, the user can pass a 'CallStack' through the first argument to 'sAssert', which will be used
+If required, the user can pass a @CallStack@ through the first argument to 'sAssert', which will be used
 by SBV to print a diagnostic info to pinpoint the failure.
 
 Also see "Documentation.SBV.Examples.Misc.NoDiv0" for the classic div-by-zero example.
@@ -524,7 +524,7 @@ Also see "Documentation.SBV.Examples.Misc.NoDiv0" for the classic div-by-zero ex
 
 
 {- $optiIntro
-  SBV can optimize metric functions, i.e., those that generate both bounded 'SIntN', 'SWordN', and unbounded 'SInteger'
+  SBV can optimize metric functions, i.e., those that generate both bounded @SIntN@, @SWordN@, and unbounded 'SInteger'
   types, along with those produce 'SReal's. That is, it can find models satisfying all the constraints while minimizing
   or maximizing user given metrics. Currently, optimization requires the use of the z3 SMT solver as the backend,
   and a good review of these features is given
@@ -766,14 +766,14 @@ depends on the context:
     holds. In other words, the constraint says that we only care about
     the input space that satisfies the constraint.
 
-  * In a 'quickCheck' call: The constraint acts as a filter for 'quickCheck';
+  * In a @quickCheck@ call: The constraint acts as a filter for @quickCheck@;
     if the constraint does not hold, then the input value is considered to be irrelevant
     and is skipped. Note that this is similar to 'prove', but is stronger: We do not
     accept a test case to be valid just because the constraints fail on them, although
     semantically the implication does hold. We simply skip that test case as a /bad/
     test vector.
 
-  * In a 'genTest' call: Similar to 'quickCheck' and 'prove': If a constraint
+  * In a 'Data.SBV.Tools.GenTest.genTest' call: Similar to @quickCheck@ and 'prove': If a constraint
     does not hold, the input value is ignored and is not included in the test
     set.
 -}
@@ -798,8 +798,8 @@ it's (vacuously) true, since it excludes the entire domain of values, thus makin
 trivial. Hence, this predicate is provable, but is not satisfiable. To make sure the given
 constraints are not vacuous, the functions 'isVacuous' (and 'isVacuousWith') can be used.
 
-Also note that this semantics imply that test case generation ('genTest') and quick-check
-can take arbitrarily long in the presence of constraints, if the random input values generated
+Also note that this semantics imply that test case generation ('Data.SBV.Tools.GenTest.genTest') and
+quick-check can take arbitrarily long in the presence of constraints, if the random input values generated
 rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'false'@.)
 -}
 
@@ -854,7 +854,7 @@ Note that a 'namedConstraint' is equivalent to a 'constrainWithAttribute' call, 
 -}
 
 {- $unsatCores
-Named constraints are useful when used in conjunction with 'getUnsatCore' function
+Named constraints are useful when used in conjunction with 'Data.SBV.Control.getUnsatCore' function
 where the backend solver can be queried to obtain an unsat core in case the constraints are unsatisfiable.
 See 'Data.SBV.Control.getUnsatCore' for details and "Documentation.SBV.Examples.Queries.UnsatCore" for an example use case.
 -}
@@ -869,8 +869,8 @@ following example demonstrates:
 
 (Note that you'll also need to use the language pragmas @DeriveDataTypeable@, @DeriveAnyClass@, and import @Data.Generics@ for the above to work.)
 
-This is all it takes to introduce 'B' as an uninterpreted sort in SBV, which makes the type @SBV B@ automagically become available as the type
-of symbolic values that ranges over 'B' values. Note that the @()@ argument is important to distinguish it from enumerations, which will be
+This is all it takes to introduce @B@ as an uninterpreted sort in SBV, which makes the type @SBV B@ automagically become available as the type
+of symbolic values that ranges over @B@ values. Note that the @()@ argument is important to distinguish it from enumerations, which will be
 translated to proper SMT data-types.
 
 
@@ -985,7 +985,7 @@ SBV provides various levels of verbosity to aid in debugging, by using the 'SMTC
 {- $observeInternal
 
 The 'observe' command can be used to trace values of arbitrary expressions during a 'sat', 'prove', or perhaps more
-importantly, in a 'quickCheck' call. This is useful for, for instance, recording expected/obtained expressions as a symbolic program is executing.
+importantly, in a @quickCheck@ call. This is useful for, for instance, recording expected/obtained expressions as a symbolic program is executing.
 
 >>> :{
 prove $ do a1 <- free "i1"

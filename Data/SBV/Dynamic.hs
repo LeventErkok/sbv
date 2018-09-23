@@ -112,7 +112,7 @@ module Data.SBV.Dynamic
   -- ** Code generation with uninterpreted functions
   , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIgnoreSAssert
 
-  -- ** Code generation with 'SInteger' and 'SReal' types
+  -- ** Code generation with 'Data.SBV.SInteger' and 'Data.SBV.SReal' types
   , cgIntegerSize, cgSRealType, CgSRealType(..)
 
   -- ** Compilation to C
@@ -209,6 +209,6 @@ getModelAssignment :: SMTResult -> Either String (Bool, [CW])
 getModelAssignment = SBV.getModelAssignment
 
 -- | Extract a model dictionary. Extract a dictionary mapping the variables to
--- their respective values as returned by the SMT solver. Also see `getModelDictionaries`.
+-- their respective values as returned by the SMT solver. Also see `Data.SBV.SMT.getModelDictionaries`.
 getModelDictionary :: SMTResult -> Map String CW
 getModelDictionary = SBV.getModelDictionary

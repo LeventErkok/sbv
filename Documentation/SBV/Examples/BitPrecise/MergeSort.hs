@@ -71,8 +71,8 @@ isPermutationOf as bs = go as (zip bs (repeat true)) &&& go bs (zip as (repeat t
 
 -- | Asserting correctness of merge-sort for a list of the given size. Note that we can
 -- only check correctness for fixed-size lists. Also, the proof will get more and more
--- complicated for the backend SMT solver as 'n' increases. A value around 5 or 6 should
--- be fairly easy to prove. For instance, we have:
+-- complicated for the backend SMT solver as the list size increases. A value around
+-- 5 or 6 should be fairly easy to prove. For instance, we have:
 --
 -- >>> correctness 5
 -- Q.E.D.
@@ -85,7 +85,7 @@ correctness n = prove $ do xs <- mkFreeVars n
 -- * Generating C code
 -----------------------------------------------------------------------------
 
--- | Generate C code for merge-sorting an array of size 'n'. Again, we're restricted
+-- | Generate C code for merge-sorting an array of size @n@. Again, we're restricted
 -- to fixed size inputs. While the output is not how one would code merge sort in C
 -- by hand, it's a faithful rendering of all the operations merge-sort would do as
 -- described by its Haskell counterpart.
