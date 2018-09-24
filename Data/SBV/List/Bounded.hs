@@ -36,13 +36,13 @@ lcase s e c = ite (L.null s) e (c (L.head s) (L.tail s))
 
 -- | Bounded fold from the right.
 bfoldr :: (SymWord a, SymWord b) => Int -> (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
-bfoldr cnt f b = go cnt
+bfoldr cnt f b = go (cnt `max` 0)
   where go 0 _ = b
         go i s = lcase s b (\h t -> h `f` go (i-1) t)
 
 -- | Bounded fold from the left.
 bfoldl :: (SymWord a, SymWord b) => Int -> (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
-bfoldl cnt f = go cnt
+bfoldl cnt f = go (cnt `max` 0)
   where go 0 b _ = b
         go i b s = lcase s b (\h t -> go (i-1) (b `f` h) t)
 
@@ -88,7 +88,7 @@ bminimum i l = bfoldl (i-1) smin (L.head l) (L.tail l)
 
 -- | Bounded zipWith
 bzipWith :: (SymWord a, SymWord b, SymWord c) => Int -> (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
-bzipWith cnt f = go cnt
+bzipWith cnt f = go (cnt `max` 0)
    where go 0 _  _  = []
          go i xs ys = ite (L.null xs ||| L.null ys)
                           []
