@@ -131,14 +131,14 @@ checkMutex b = runSMT $ do
 -- trying to show a bounded trace of length 10, such that the second process is ready but
 -- never transitions to critical. We have:
 --
--- >>> notFair 10
--- Fairness is violated at bound: 10
--- P1: [Idle,Idle,Ready,Critical,Idle,Idle,Ready,Critical,Idle,Idle]
--- P2: [Idle,Ready,Ready,Ready,Ready,Ready,Ready,Ready,Ready,Ready]
--- Ts: [1,2,1,1,1,1,1,1,1,1]
+-- > ghci> notFair 10
+-- > Fairness is violated at bound: 10
+-- > P1: [Idle,Idle,Ready,Critical,Idle,Idle,Ready,Critical,Idle,Idle]
+-- > P2: [Idle,Ready,Ready,Ready,Ready,Ready,Ready,Ready,Ready,Ready]
+-- > Ts: [1,2,1,1,1,1,1,1,1,1]
 --
 -- As expected, P2 gets ready but never goes critical since the arbiter keeps picking
--- P1 unfairly.
+-- P1 unfairly. (You might get a different trace depending on what z3 happens to produce!)
 --
 -- Exercise for the reader: Change the 'validTurns' function so that it alternates the turns
 -- from the previous value if neither process is in critical. Show that this makes the 'notFair'
