@@ -718,10 +718,13 @@ getUnsatAssumptions originals proxyMap = do
 --
 -- If the solver responds within the time-out specified, then we continue as usual. However, if the backend solver times-out
 -- using this mechanism, there is no telling what the state of the solver will be. Thus, we raise an error in this case.
+--
+-- After this supplied timeout is applied to every call in @q@, the previous timeout value is restored.
 timeout :: Int -> Query a -> Query a
-timeout n q = do modifyQueryState (\qs -> qs {queryTimeOutValue = Just n})
+timeout n q = do prevTimeOut <- queryTimeOutValue <$> getQueryState
+                 modifyQueryState (\qs -> qs {queryTimeOutValue = Just n})
                  r <- q
-                 modifyQueryState (\qs -> qs {queryTimeOutValue = Nothing})
+                 modifyQueryState (\qs -> qs {queryTimeOutValue = prevTimeOut})
                  return r
 
 -- | Bail out if a parse goes bad
