@@ -567,14 +567,17 @@ runSolver cfg ctx execPath opts pgm continuation
                                   in if null cmd || ";" `isPrefixOf` cmd
                                      then return "success"
                                      else do send mbTimeOut command
-                                             getResponseFromSolver (Just command) mbTimeOut
+                                             getResponseFromSolver' (Just command) mbTimeOut
 
                     -- Get a response from the solver, with an optional time-out on how long
                     -- to wait. Note that there's *always* a time-out of 5 seconds once we get the
                     -- first line of response, as while the solver might take it's time to respond,
                     -- once it starts responding successive lines should come quickly.
-                    getResponseFromSolver :: Maybe String -> Maybe Int -> IO String
-                    getResponseFromSolver mbCommand mbTimeOut = do
+                    getResponseFromSolver :: Maybe Int -> IO String
+                    getResponseFromSolver = getResponseFromSolver' Nothing
+
+                    getResponseFromSolver' :: Maybe String -> Maybe Int -> IO String
+                    getResponseFromSolver' mbCommand mbTimeOut = do
                                 response <- go True 0 []
                                 let collated = intercalate "\n" $ reverse response
                                 recordTranscript (transcript cfg) $ Right collated
@@ -720,7 +723,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                     ]
 
                                                             -- put a sync point here before we die so we consume everything
-                                                            mbExtras <- (Right <$> getResponseFromSolver Nothing (Just 5000000))
+                                                            mbExtras <- (Right <$> getResponseFromSolver (Just 5000000))
                                                                         `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (Left (show e))))
 
                                                             -- Ignore any exceptions from last sync, pointless.
@@ -789,7 +792,7 @@ runSolver cfg ctx execPath opts pgm continuation
                              -- Prepare the query context and ship it off
                              let qs = QueryState { queryAsk                 = ask
                                                  , querySend                = send
-                                                 , queryRetrieveResponse    = getResponseFromSolver Nothing
+                                                 , queryRetrieveResponse    = getResponseFromSolver
                                                  , queryConfig              = cfg
                                                  , queryTerminate           = cleanUp
                                                  , queryTimeOutValue        = Nothing
