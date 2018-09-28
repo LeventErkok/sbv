@@ -813,18 +813,19 @@ runSolver cfg ctx execPath opts pgm continuation
                              -- off we go!
                              continuation ctx
 
-      -- NB. Don't use 'bracket' here, as it wouldn't have access to the exception.
-      let launchSolver = do startTranscript    (transcript cfg) cfg
+      let finalize mExitCode = do finalizeTranscript (transcript cfg) mExitCode
+                                  recordEndTime      cfg ctx
+
+          -- NB. Don't use 'bracket' here, as it wouldn't have access to the exception.
+          launchSolver = do startTranscript    (transcript cfg) cfg
                             r <- executeSolver
-                            finalizeTranscript (transcript cfg) Nothing
-                            recordEndTime      cfg ctx
+                            finalize Nothing
                             return r
 
       launchSolver `C.catch` (\(e :: C.SomeException) -> handleAsync e $ do terminateProcess pid
                                                                             ec <- waitForProcess pid
-                                                                            recordException    (transcript cfg) (show e)
-                                                                            finalizeTranscript (transcript cfg) (Just ec)
-                                                                            recordEndTime      cfg ctx
+                                                                            recordException (transcript cfg) (show e)
+                                                                            finalize        (Just ec)
                                                                             C.throwIO e)
 
 -- | Compute and report the end time
