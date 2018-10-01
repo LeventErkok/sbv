@@ -538,7 +538,7 @@ runSolver cfg ctx execPath opts pgm continuation
  = do let nm  = show (name (solver cfg))
           msg = debug cfg . map ("*** " ++)
 
-      (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid) <- do
+      (send, ask, getResponseFromSolver, closeSolver, cleanUp, abortSolver) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
 
                 let -- send a command down, but check that we're balanced in parens. If we aren't
@@ -657,21 +657,21 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                                                        else Nothing
                                                                                            }
 
-                    terminateSolver = do hClose inh
-                                         outMVar <- newEmptyMVar
-                                         out <- hGetContents outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return (show e)))
-                                         _ <- forkIO $ C.evaluate (length out) >> putMVar outMVar ()
-                                         err <- hGetContents errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return (show e)))
-                                         _ <- forkIO $ C.evaluate (length err) >> putMVar outMVar ()
-                                         takeMVar outMVar
-                                         takeMVar outMVar
-                                         hClose outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return ()))
-                                         hClose errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return ()))
-                                         ex <- waitForProcess pid `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (ExitFailure (-999))))
-                                         return (out, err, ex)
+                    closeSolver = do hClose inh
+                                     outMVar <- newEmptyMVar
+                                     out <- hGetContents outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return (show e)))
+                                     _ <- forkIO $ C.evaluate (length out) >> putMVar outMVar ()
+                                     err <- hGetContents errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return (show e)))
+                                     _ <- forkIO $ C.evaluate (length err) >> putMVar outMVar ()
+                                     takeMVar outMVar
+                                     takeMVar outMVar
+                                     hClose outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return ()))
+                                     hClose errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return ()))
+                                     ex <- waitForProcess pid `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (ExitFailure (-999))))
+                                     return (out, err, ex)
 
                     cleanUp
-                      = do (out, err, ex) <- terminateSolver
+                      = do (out, err, ex) <- closeSolver
 
                            msg $   [ "Solver   : " ++ nm
                                    , "Exit code: " ++ show ex
@@ -697,7 +697,11 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                                        else Nothing
                                                                            }
 
-                return (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid)
+                    abortSolver :: IO ExitCode
+                    abortSolver = do terminateProcess pid
+                                     waitForProcess pid
+
+                return (send, ask, getResponseFromSolver, closeSolver, cleanUp, abortSolver)
 
       let executeSolver = do let sendAndGetSuccess :: Maybe Int -> String -> IO ()
                                  sendAndGetSuccess mbTimeOut l
@@ -731,7 +735,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                            Left _   -> []
                                                                            Right xs -> xs
 
-                                                            (outOrig, errOrig, ex) <- terminateSolver
+                                                            (outOrig, errOrig, ex) <- closeSolver
                                                             let out = intercalate "\n" . lines $ outOrig
                                                                 err = intercalate "\n" . lines $ errOrig
 
@@ -822,8 +826,7 @@ runSolver cfg ctx execPath opts pgm continuation
                             finalize Nothing
                             return r
 
-      launchSolver `C.catch` (\(e :: C.SomeException) -> handleAsync e $ do terminateProcess pid
-                                                                            ec <- waitForProcess pid
+      launchSolver `C.catch` (\(e :: C.SomeException) -> handleAsync e $ do ec <- abortSolver
                                                                             recordException (transcript cfg) (show e)
                                                                             finalize        (Just ec)
                                                                             C.throwIO e)
