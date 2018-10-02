@@ -532,6 +532,37 @@ data SolverLine = SolverRegular   String  -- ^ All is well
                 | SolverTimeout   String  -- ^ Timeout expired
                 | SolverException String  -- ^ Something else went wrong
 
+data SolverProcess = SolverProcess
+    { writeLine :: String -> IO ()
+    , readLine  :: IO String
+    , close     :: IO (String, String, ExitCode)
+    , terminate :: IO ()
+    , await     :: IO ExitCode
+    }
+
+startExecutableProcess :: FilePath -> [String] -> IO SolverProcess
+startExecutableProcess path opts = do
+    (inh, outh, errh, pid) <- runInteractiveProcess path opts Nothing Nothing
+    pure $ SolverProcess
+        { writeLine = \s -> do hPutStrLn inh s
+                               hFlush inh
+        , readLine  = hGetLine outh
+        , close     = do hClose inh
+                         outMVar <- newEmptyMVar
+                         out <- hGetContents outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return (show e)))
+                         _ <- forkIO $ C.evaluate (length out) >> putMVar outMVar ()
+                         err <- hGetContents errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return (show e)))
+                         _ <- forkIO $ C.evaluate (length err) >> putMVar outMVar ()
+                         takeMVar outMVar
+                         takeMVar outMVar
+                         hClose outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return ()))
+                         hClose errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return ()))
+                         ex <- waitForProcess pid `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (ExitFailure (-999))))
+                         return (out, err, ex)
+        , terminate = terminateProcess pid
+        , await     = waitForProcess pid
+        }
+
 -- | A variant of @readProcessWithExitCode@; except it deals with SBV continuations
 runSolver :: SMTConfig -> State -> FilePath -> [String] -> String -> (State -> IO a) -> IO a
 runSolver cfg ctx execPath opts pgm continuation
@@ -539,7 +570,7 @@ runSolver cfg ctx execPath opts pgm continuation
           msg = debug cfg . map ("*** " ++)
 
       (send, ask, getResponseFromSolver, closeSolver, cleanUp, abortSolver) <- do
-                (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
+                SolverProcess{writeLine,readLine,close,terminate,await} <- startExecutableProcess execPath opts
 
                 let -- send a command down, but check that we're balanced in parens. If we aren't
                     -- this is most likely an SBV bug.
@@ -554,8 +585,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                         , "*** This is most likely an SBV bug. Please report!"
                                         ]
                       | True
-                      = do hPutStrLn inh command
-                           hFlush inh
+                      = do writeLine command
                            recordTranscript (transcript cfg) $ Left (command, mbTimeOut)
 
                     -- Send a line, get a whole s-expr. We ignore the pathetic case that there might be a string with an unbalanced parentheses in it in a response.
@@ -592,7 +622,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                              -- Like hGetLine, except it keeps getting lines if inside a string.
                                              getFullLine :: IO String
                                              getFullLine = intercalate "\n" . reverse <$> collect False []
-                                                where collect inString sofar = do ln <- hGetLine outh
+                                                where collect inString sofar = do ln <- readLine
 
                                                                                   let walk inside []           = inside
                                                                                       walk inside ('"':cs)     = walk (not inside) cs
@@ -629,7 +659,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                         (False, False) -> go False   need (ln:sofar)
                                                                         (False, True)  -> return (ln:sofar)
 
-                                              SolverException e -> do terminateProcess pid
+                                              SolverException e -> do terminate
                                                                       C.throwIO SBVException { sbvExceptionDescription = e
                                                                                              , sbvExceptionSent        = mbCommand
                                                                                              , sbvExceptionExpected    = Nothing
@@ -642,7 +672,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                              , sbvExceptionHint        = Nothing
                                                                                              }
 
-                                              SolverTimeout e -> do terminateProcess pid -- NB. Do not *wait* for the process, just quit.
+                                              SolverTimeout e -> do terminate -- NB. Do not *wait* for the process, just quit.
                                                                     C.throwIO SBVException { sbvExceptionDescription = "Timeout! " ++ e
                                                                                            , sbvExceptionSent        = mbCommand
                                                                                            , sbvExceptionExpected    = Nothing
@@ -657,21 +687,8 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                                                        else Nothing
                                                                                            }
 
-                    closeSolver = do hClose inh
-                                     outMVar <- newEmptyMVar
-                                     out <- hGetContents outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return (show e)))
-                                     _ <- forkIO $ C.evaluate (length out) >> putMVar outMVar ()
-                                     err <- hGetContents errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return (show e)))
-                                     _ <- forkIO $ C.evaluate (length err) >> putMVar outMVar ()
-                                     takeMVar outMVar
-                                     takeMVar outMVar
-                                     hClose outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return ()))
-                                     hClose errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return ()))
-                                     ex <- waitForProcess pid `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (ExitFailure (-999))))
-                                     return (out, err, ex)
-
                     cleanUp
-                      = do (out, err, ex) <- closeSolver
+                      = do (out, err, ex) <- close
 
                            msg $   [ "Solver   : " ++ nm
                                    , "Exit code: " ++ show ex
@@ -698,10 +715,10 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                            }
 
                     abortSolver :: IO ExitCode
-                    abortSolver = do terminateProcess pid
-                                     waitForProcess pid
+                    abortSolver = do terminate
+                                     await
 
-                return (send, ask, getResponseFromSolver, closeSolver, cleanUp, abortSolver)
+                return (send, ask, getResponseFromSolver, close, cleanUp, abortSolver)
 
       let executeSolver = do let sendAndGetSuccess :: Maybe Int -> String -> IO ()
                                  sendAndGetSuccess mbTimeOut l
