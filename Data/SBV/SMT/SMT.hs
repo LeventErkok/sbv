@@ -480,19 +480,6 @@ shCW = sh . printBase
         sh 16 = hexS
         sh n  = \w -> show w ++ " -- Ignoring unsupported printBase " ++ show n ++ ", use 2, 10, or 16."
 
--- | Helper function to spin off to an SMT solver.
-pipeProcess :: SMTConfig -> State -> String -> [String] -> String -> (State -> IO a) -> IO a
-pipeProcess cfg ctx execName opts pgm continuation =
-      runSolver cfg ctx execName opts pgm continuation
-      `C.catches`
-       [ C.Handler (\(e :: SBVException)    -> C.throwIO e)
-       , C.Handler (\(e :: C.ErrorCall)     -> C.throwIO e)
-       , C.Handler (\(e :: C.SomeException) -> handleAsync e $ error $ unlines [ "Failed to start the external solver:\n" ++ show e
-                                                                               , "Make sure you can start " ++ show execName
-                                                                               , "from the command line without issues."
-                                                                               ])
-       ]
-
 -- | A standard engine interface. If the solver is SMT-Lib compliant, then this function should suffice in
 -- communicating with it.
 standardEngine :: String
@@ -502,17 +489,29 @@ standardEngine :: String
                -> String          -- ^ The program
                -> (State -> IO a) -- ^ The continuation
                -> IO a
-standardEngine envName envOptName cfg ctx pgm continuation = do
-    execName <-                    getEnv envName     `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (executable (solver cfg))))
-    execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (options (solver cfg) cfg)))
+standardEngine envName envOptName cfg0 ctx unforcedPgm continuation = do
+    let solver0 = solver cfg0
+    execName <-                    getEnv envName     `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (executable solver0)))
+    execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (options solver0 cfg0)))
 
-    let cfg'     = cfg {solver = (solver cfg) {executable = execName, options = const execOpts}}
-        msg s    = debug cfg' ["** " ++ s]
-        smtSolver= solver cfg'
+    let cfg      = cfg0 {solver = solver0 {executable = execName, options = const execOpts}}
+        msg s    = debug cfg ["** " ++ s]
+        smtSolver= solver cfg
         exec     = executable smtSolver
-        opts     = options smtSolver cfg'
+        opts     = options smtSolver cfg
+        pgm      = rnf unforcedPgm `seq` unforcedPgm
+
     msg $ "Calling: "  ++ (exec ++ (if null opts then "" else " ") ++ joinArgs opts)
-    rnf pgm `seq` pipeProcess cfg' ctx exec opts pgm continuation
+
+    runSolver cfg ctx execName opts pgm continuation
+        `C.catches`
+         [ C.Handler (\(e :: SBVException)    -> C.throwIO e)
+         , C.Handler (\(e :: C.ErrorCall)     -> C.throwIO e)
+         , C.Handler (\(e :: C.SomeException) -> handleAsync e $ error $ unlines [ "Failed to start the external solver:\n" ++ show e
+                                                                                 , "Make sure you can start " ++ show execName
+                                                                                 , "from the command line without issues."
+                                                                                 ])
+         ]
 
 -- | An internal type to track of solver interactions
 data SolverLine = SolverRegular   String  -- ^ All is well
