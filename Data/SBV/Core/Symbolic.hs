@@ -1510,7 +1510,7 @@ data Solver = Z3
 -- | An SMT solver
 data SMTSolver = SMTSolver {
          name           :: Solver                -- ^ The solver in use
-       , executable     :: String                -- ^ The path to its executable
+       , executable     :: String                -- ^ The name of its executable
        , options        :: SMTConfig -> [String] -- ^ Options to provide to the solver
        , engine         :: SMTEngine             -- ^ The solver engine, responsible for interpreting solver output
        , capabilities   :: SolverCapabilities    -- ^ Various capabilities of the solver

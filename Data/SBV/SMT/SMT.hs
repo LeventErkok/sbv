@@ -482,22 +482,16 @@ shCW = sh . printBase
 
 -- | Helper function to spin off to an SMT solver.
 pipeProcess :: SMTConfig -> State -> String -> [String] -> String -> (State -> IO a) -> IO a
-pipeProcess cfg ctx execName opts pgm continuation = do
-    mbExecPath <- findExecutable execName
-    case mbExecPath of
-      Nothing      -> error $ unlines [ "Unable to locate executable for " ++ show (name (solver cfg))
-                                      , "Executable specified: " ++ show execName
-                                      ]
-
-      Just execPath -> runSolver cfg ctx execPath opts pgm continuation
-                       `C.catches`
-                        [ C.Handler (\(e :: SBVException)    -> C.throwIO e)
-                        , C.Handler (\(e :: C.ErrorCall)     -> C.throwIO e)
-                        , C.Handler (\(e :: C.SomeException) -> handleAsync e $ error $ unlines [ "Failed to start the external solver:\n" ++ show e
-                                                                                                , "Make sure you can start " ++ show execPath
-                                                                                                , "from the command line without issues."
-                                                                                                ])
-                        ]
+pipeProcess cfg ctx execName opts pgm continuation =
+      runSolver cfg ctx execName opts pgm continuation
+      `C.catches`
+       [ C.Handler (\(e :: SBVException)    -> C.throwIO e)
+       , C.Handler (\(e :: C.ErrorCall)     -> C.throwIO e)
+       , C.Handler (\(e :: C.SomeException) -> handleAsync e $ error $ unlines [ "Failed to start the external solver:\n" ++ show e
+                                                                               , "Make sure you can start " ++ show execName
+                                                                               , "from the command line without issues."
+                                                                               ])
+       ]
 
 -- | A standard engine interface. Most solvers follow-suit here in how we "chat" to them..
 standardEngine :: String
@@ -540,37 +534,43 @@ data SolverProcess = SolverProcess
     , await     :: IO ExitCode
     }
 
-startExecutableProcess :: FilePath -> [String] -> IO SolverProcess
-startExecutableProcess path opts = do
-    (inh, outh, errh, pid) <- runInteractiveProcess path opts Nothing Nothing
-    pure $ SolverProcess
-        { writeLine = \s -> do hPutStrLn inh s
-                               hFlush inh
-        , readLine  = hGetLine outh
-        , close     = do hClose inh
-                         outMVar <- newEmptyMVar
-                         out <- hGetContents outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return (show e)))
-                         _ <- forkIO $ C.evaluate (length out) >> putMVar outMVar ()
-                         err <- hGetContents errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return (show e)))
-                         _ <- forkIO $ C.evaluate (length err) >> putMVar outMVar ()
-                         takeMVar outMVar
-                         takeMVar outMVar
-                         hClose outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return ()))
-                         hClose errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return ()))
-                         ex <- waitForProcess pid `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (ExitFailure (-999))))
-                         return (out, err, ex)
-        , terminate = terminateProcess pid
-        , await     = waitForProcess pid
-        }
+startExecutableProcess :: String -> String -> [String] -> IO SolverProcess
+startExecutableProcess solverName execName opts = do
+    mbExecPath <- findExecutable execName
+    case mbExecPath of
+        Nothing   -> error $ unlines [ "Unable to locate executable for " ++ solverName
+                                     , "Executable specified: " ++ show execName
+                                     ]
+
+        Just path -> do (inh, outh, errh, pid) <- runInteractiveProcess path opts Nothing Nothing
+                        pure $ SolverProcess
+                            { writeLine = \s -> do hPutStrLn inh s
+                                                   hFlush inh
+                            , readLine  = hGetLine outh
+                            , close     = do hClose inh
+                                             outMVar <- newEmptyMVar
+                                             out <- hGetContents outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return (show e)))
+                                             _ <- forkIO $ C.evaluate (length out) >> putMVar outMVar ()
+                                             err <- hGetContents errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return (show e)))
+                                             _ <- forkIO $ C.evaluate (length err) >> putMVar outMVar ()
+                                             takeMVar outMVar
+                                             takeMVar outMVar
+                                             hClose outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return ()))
+                                             hClose errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return ()))
+                                             ex <- waitForProcess pid `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (ExitFailure (-999))))
+                                             return (out, err, ex)
+                            , terminate = terminateProcess pid
+                            , await     = waitForProcess pid
+                            }
 
 -- | A variant of @readProcessWithExitCode@; except it deals with SBV continuations
-runSolver :: SMTConfig -> State -> FilePath -> [String] -> String -> (State -> IO a) -> IO a
-runSolver cfg ctx execPath opts pgm continuation
+runSolver :: SMTConfig -> State -> String -> [String] -> String -> (State -> IO a) -> IO a
+runSolver cfg ctx execName opts pgm continuation
  = do let nm  = show (name (solver cfg))
           msg = debug cfg . map ("*** " ++)
 
       (send, ask, getResponseFromSolver, closeSolver, cleanUp, abortSolver) <- do
-                SolverProcess{writeLine,readLine,close,terminate,await} <- startExecutableProcess execPath opts
+                SolverProcess{writeLine,readLine,close,terminate,await} <- startExecutableProcess nm execName opts
 
                 let -- send a command down, but check that we're balanced in parens. If we aren't
                     -- this is most likely an SBV bug.
@@ -667,7 +667,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                              , sbvExceptionStdOut      = Nothing
                                                                                              , sbvExceptionStdErr      = Nothing
                                                                                              , sbvExceptionExitCode    = Nothing
-                                                                                             , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
+                                                                                             , sbvExceptionConfig      = cfg
                                                                                              , sbvExceptionReason      = Nothing
                                                                                              , sbvExceptionHint        = Nothing
                                                                                              }
@@ -680,7 +680,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                            , sbvExceptionStdOut      = Nothing
                                                                                            , sbvExceptionStdErr      = Nothing
                                                                                            , sbvExceptionExitCode    = Nothing
-                                                                                           , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
+                                                                                           , sbvExceptionConfig      = cfg
                                                                                            , sbvExceptionReason      = Nothing
                                                                                            , sbvExceptionHint        = if not (verbose cfg)
                                                                                                                        then Just ["Run with 'verbose=True' for further information"]
@@ -707,7 +707,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                            , sbvExceptionStdOut      = Just out
                                                                            , sbvExceptionStdErr      = Just err
                                                                            , sbvExceptionExitCode    = Just ex
-                                                                           , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
+                                                                           , sbvExceptionConfig      = cfg
                                                                            , sbvExceptionReason      = Nothing
                                                                            , sbvExceptionHint        = if not (verbose cfg)
                                                                                                        then Just ["Run with 'verbose=True' for further information"]
@@ -763,7 +763,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                    , sbvExceptionStdOut      = Just out
                                                                                    , sbvExceptionStdErr      = Just err
                                                                                    , sbvExceptionExitCode    = Just ex
-                                                                                   , sbvExceptionConfig      = cfg { solver = (solver cfg) {executable = execPath } }
+                                                                                   , sbvExceptionConfig      = cfg
                                                                                    , sbvExceptionReason      = Just reason
                                                                                    , sbvExceptionHint        = Nothing
                                                                                    }
