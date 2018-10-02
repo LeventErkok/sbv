@@ -60,7 +60,7 @@ import qualified Data.Map.Strict as M
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (SMTEngine, State(..))
+import Data.SBV.Core.Symbolic (State(..))
 
 import Data.SBV.SMT.Utils     (showTimeoutValue, alignPlain, debug, mergeSExpr, SBVException(..))
 
@@ -493,33 +493,26 @@ pipeProcess cfg ctx execName opts pgm continuation =
                                                                                ])
        ]
 
--- | A standard engine interface. Most solvers follow-suit here in how we "chat" to them..
+-- | A standard engine interface. If the solver is SMT-Lib compliant, then this function should suffice in
+-- communicating with it.
 standardEngine :: String
                -> String
-               -> SMTEngine
-standardEngine envName envOptName cfg ctx pgm continuation = do
-
-    execName <-                    getEnv envName     `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (executable (solver cfg))))
-    execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (options (solver cfg) cfg)))
-
-    let cfg' = cfg {solver = (solver cfg) {executable = execName, options = const execOpts}}
-
-    standardSolver cfg' ctx pgm continuation
-
--- | A standard solver interface. If the solver is SMT-Lib compliant, then this function should suffice in
--- communicating with it.
-standardSolver :: SMTConfig       -- ^ The currrent configuration
+               -> SMTConfig       -- ^ The currrent configuration
                -> State           -- ^ Context in which we are running
                -> String          -- ^ The program
                -> (State -> IO a) -- ^ The continuation
                -> IO a
-standardSolver config ctx pgm continuation = do
-    let msg s    = debug config ["** " ++ s]
-        smtSolver= solver config
+standardEngine envName envOptName cfg ctx pgm continuation = do
+    execName <-                    getEnv envName     `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (executable (solver cfg))))
+    execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (options (solver cfg) cfg)))
+
+    let cfg'     = cfg {solver = (solver cfg) {executable = execName, options = const execOpts}}
+        msg s    = debug cfg' ["** " ++ s]
+        smtSolver= solver cfg'
         exec     = executable smtSolver
-        opts     = options smtSolver config
+        opts     = options smtSolver cfg'
     msg $ "Calling: "  ++ (exec ++ (if null opts then "" else " ") ++ joinArgs opts)
-    rnf pgm `seq` pipeProcess config ctx exec opts pgm continuation
+    rnf pgm `seq` pipeProcess cfg' ctx exec opts pgm continuation
 
 -- | An internal type to track of solver interactions
 data SolverLine = SolverRegular   String  -- ^ All is well
