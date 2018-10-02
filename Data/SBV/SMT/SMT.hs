@@ -583,7 +583,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                 recordTranscript (transcript cfg) $ Right collated
                                 return collated
 
-                      where safeGetLine isFirst h =
+                      where safeGetLine isFirst =
                                          let timeOutToUse | isFirst = mbTimeOut
                                                           | True    = Just 5000000
                                              timeOutMsg t | isFirst = "User specified timeout of " ++ showTimeoutValue t ++ " exceeded."
@@ -592,7 +592,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                              -- Like hGetLine, except it keeps getting lines if inside a string.
                                              getFullLine :: IO String
                                              getFullLine = intercalate "\n" . reverse <$> collect False []
-                                                where collect inString sofar = do ln <- hGetLine h
+                                                where collect inString sofar = do ln <- hGetLine outh
 
                                                                                   let walk inside []           = inside
                                                                                       walk inside ('"':cs)     = walk (not inside) cs
@@ -615,7 +615,7 @@ runSolver cfg ctx execPath opts pgm continuation
 
 
                             go isFirst i sofar = do
-                                            errln <- safeGetLine isFirst outh `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (SolverException (show e))))
+                                            errln <- safeGetLine isFirst `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (SolverException (show e))))
                                             case errln of
                                               SolverRegular ln -> let need  = i + parenDeficit ln
                                                                       -- make sure we get *something*
