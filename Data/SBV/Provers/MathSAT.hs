@@ -26,7 +26,9 @@ mathSAT = SMTSolver {
            name         = MathSAT
          , executable   = "mathsat"
          , options      = modConfig ["-input=smt2", "-theory.fp.minmax_zero_mode=4"]
-         , engine       = standardEngine "SBV_MATHSAT" "SBV_MATHSAT_OPTIONS"
+         , envExecName  = "SBV_MATHSAT"
+         , envOptsName  = "SBV_MATHSAT_OPTIONS"
+         , startProcess = startExecutableProcess
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = True
                               , supportsUninterpretedSorts = True

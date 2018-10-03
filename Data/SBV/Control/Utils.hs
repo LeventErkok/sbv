@@ -79,6 +79,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSW
 import Data.SBV.Core.AlgReals   (mergeAlgReals)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
+import Data.SBV.SMT.SMT     (startBackend)
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
 import Data.SBV.SMT.Utils   (showTimeoutValue, addAnnotations, alignPlain, debug, mergeSExpr, SBVException(..))
 
@@ -843,8 +844,6 @@ executeQuery queryContext (Query userQuery) = do
         -- Transitioning from setup
         SMTMode stage isSAT cfg | not (isRunIStage stage) -> liftIO $ do
 
-                                                let backend = engine (solver cfg)
-
                                                 res     <- extractSymbolicSimulationState st
                                                 setOpts <- reverse <$> readIORef (rSMTOptions st)
 
@@ -854,7 +853,7 @@ executeQuery queryContext (Query userQuery) = do
 
                                                 writeIORef (runMode st) $ SMTMode IRun isSAT cfg
 
-                                                backend cfg' st (show pgm) $ evalStateT userQuery
+                                                startBackend cfg' st (show pgm) $ evalStateT userQuery
 
         -- Already in a query, in theory we can just continue, but that causes use-case issues
         -- so we reject it. TODO: Review if we should actually support this. The issue arises with

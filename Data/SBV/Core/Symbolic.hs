@@ -50,7 +50,7 @@ module Data.SBV.Core.Symbolic
   , extractSymbolicSimulationState
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , Query(..), QueryState(..), QueryContext(..)
-  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
+  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SolverProcess(..), SMTConfig(..)
   , outputSVal
   ) where
 
@@ -79,6 +79,7 @@ import qualified Data.Foldable      as F    (toList)
 import qualified Data.Sequence      as S    (Seq, empty, (|>))
 
 import System.Mem.StableName
+import System.Exit           (ExitCode)
 
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
@@ -1490,14 +1491,6 @@ data SMTScript = SMTScript {
         , scriptModel :: [String] -- ^ Continuation script, to extract results
         }
 
--- | An SMT engine
-type SMTEngine =  forall res.
-                  SMTConfig         -- ^ current configuration
-               -> State             -- ^ the state in which to run the engine
-               -> String            -- ^ program
-               -> (State -> IO res) -- ^ continuation
-               -> IO res
-
 -- | Solvers that SBV is aware of
 data Solver = Z3
             | Yices
@@ -1507,13 +1500,25 @@ data Solver = Z3
             | ABC
             deriving (Show, Enum, Bounded)
 
+-- | The interface by which SBV interacts with a solver process. This could be backed by an OS
+-- process, a network process, or a "pure" (while still 'IO') implementation.
+data SolverProcess = SolverProcess {
+         writeLine :: String -> IO ()               -- ^ Sends a line of input to the process
+       , readLine  :: IO String                     -- ^ Reads a line of output from the process
+       , close     :: IO (String, String, ExitCode) -- ^ Closes the process, returning remaining data from its output, and the entirety of its error stream
+       , terminate :: IO ()                         -- ^ Forcefully terminates the process
+       , await     :: IO ExitCode                   -- ^ Waits for the process to terminate and returns its exit code
+       }
+
 -- | An SMT solver
 data SMTSolver = SMTSolver {
-         name           :: Solver                -- ^ The solver in use
-       , executable     :: String                -- ^ The name of its executable
-       , options        :: SMTConfig -> [String] -- ^ Options to provide to the solver
-       , engine         :: SMTEngine             -- ^ The solver engine, responsible for interpreting solver output
-       , capabilities   :: SolverCapabilities    -- ^ Various capabilities of the solver
+         name           :: Solver                        -- ^ The solver in use
+       , executable     :: String                        -- ^ The name of its executable
+       , options        :: SMTConfig -> [String]         -- ^ Options to provide to the solver
+       , envExecName    :: String                        -- ^ Environment variable for executable name
+       , envOptsName    :: String                        -- ^ Environment variable for executable name
+       , startProcess   :: SMTConfig -> IO SolverProcess -- ^ Starts the solver process
+       , capabilities   :: SolverCapabilities            -- ^ Various capabilities of the solver
        }
 
 -- | Query execution context

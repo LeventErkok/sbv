@@ -23,8 +23,9 @@ module Data.SBV.SMT.SMT (
        , getModelDictionaries, getModelUninterpretedValues
        , displayModels, showModel
 
-       -- * Standard prover engine
-       , standardEngine
+       -- * Prover engine
+       , startExecutableProcess
+       , startBackend
 
        -- * Results of various tasks
        , ThmResult(..)
@@ -60,7 +61,7 @@ import qualified Data.Map.Strict as M
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (State(..))
+import Data.SBV.Core.Symbolic (SolverProcess(..), State(..))
 
 import Data.SBV.SMT.Utils     (showTimeoutValue, alignPlain, debug, mergeSExpr, SBVException(..))
 
@@ -482,17 +483,15 @@ shCW = sh . printBase
 
 -- | A standard engine interface. If the solver is SMT-Lib compliant, then this function should suffice in
 -- communicating with it.
-standardEngine :: String
-               -> String
-               -> SMTConfig       -- ^ The currrent configuration
-               -> State           -- ^ Context in which we are running
-               -> String          -- ^ The program
-               -> (State -> IO a) -- ^ The continuation
-               -> IO a
-standardEngine envName envOptName cfg0 ctx unforcedPgm continuation = do
+startBackend :: SMTConfig       -- ^ The currrent configuration
+             -> State           -- ^ Context in which we are running
+             -> String          -- ^ The program
+             -> (State -> IO a) -- ^ The continuation
+             -> IO a
+startBackend cfg0 ctx unforcedPgm continuation = do
     let solver0 = solver cfg0
-    execName <-                    getEnv envName     `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (executable solver0)))
-    execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (options solver0 cfg0)))
+    execName <-                getEnv (envExecName solver0)  `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (executable solver0)))
+    execOpts <- (splitArgs <$> getEnv (envOptsName solver0)) `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (options solver0 cfg0)))
 
     let cfg      = cfg0 {solver = solver0 {executable = execName, options = const execOpts}}
         msg s    = debug cfg ["** " ++ s]
@@ -503,7 +502,7 @@ standardEngine envName envOptName cfg0 ctx unforcedPgm continuation = do
 
     msg $ "Calling: "  ++ (exec ++ (if null opts then "" else " ") ++ joinArgs opts)
 
-    runSolver cfg ctx execName opts pgm continuation
+    runSolver cfg ctx pgm continuation
         `C.catches`
          [ C.Handler (\(e :: SBVException)    -> C.throwIO e)
          , C.Handler (\(e :: C.ErrorCall)     -> C.throwIO e)
@@ -518,16 +517,14 @@ data SolverLine = SolverRegular   String  -- ^ All is well
                 | SolverTimeout   String  -- ^ Timeout expired
                 | SolverException String  -- ^ Something else went wrong
 
-data SolverProcess = SolverProcess
-    { writeLine :: String -> IO ()
-    , readLine  :: IO String
-    , close     :: IO (String, String, ExitCode)
-    , terminate :: IO ()
-    , await     :: IO ExitCode
-    }
+-- | Starts a 'SolverProcess' that finds the named executable on the PATH, and runs the solver locally.
+startExecutableProcess :: SMTConfig -> IO SolverProcess
+startExecutableProcess cfg = do
+    let smtSolver  = solver cfg
+        solverName = show (name smtSolver)
+        execName   = executable smtSolver
+        opts       = options smtSolver cfg
 
-startExecutableProcess :: String -> String -> [String] -> IO SolverProcess
-startExecutableProcess solverName execName opts = do
     mbExecPath <- findExecutable execName
     case mbExecPath of
         Nothing   -> error $ unlines [ "Unable to locate executable for " ++ solverName
@@ -556,13 +553,14 @@ startExecutableProcess solverName execName opts = do
                             }
 
 -- | A variant of @readProcessWithExitCode@; except it deals with SBV continuations
-runSolver :: SMTConfig -> State -> String -> [String] -> String -> (State -> IO a) -> IO a
-runSolver cfg ctx execName opts pgm continuation
- = do let nm  = show (name (solver cfg))
+runSolver :: SMTConfig -> State -> String -> (State -> IO a) -> IO a
+runSolver cfg ctx pgm continuation
+ = do let smtSolver = solver cfg
+          nm  = show (name smtSolver)
           msg = debug cfg . map ("*** " ++)
 
       (send, ask, getResponseFromSolver, closeSolver, cleanUp, abortSolver) <- do
-                SolverProcess{writeLine,readLine,close,terminate,await} <- startExecutableProcess nm execName opts
+                SolverProcess{writeLine,readLine,close,terminate,await} <- startProcess smtSolver cfg
 
                 let -- send a command down, but check that we're balanced in parens. If we aren't
                     -- this is most likely an SBV bug.
