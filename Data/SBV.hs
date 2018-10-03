@@ -264,7 +264,7 @@ module Data.SBV (
   , getModelDictionaries, getModelValues, getModelUninterpretedValues
 
   -- * SMT Interface
-  , SMTConfig(..), Timing(..), SMTLibVersion(..), Solver(..), SMTSolver(..)
+  , SMTConfig(..), Timing(..), SMTLibVersion(..), Solver(..), SMTSolver(..), SolverProcess(..)
   -- ** Controlling verbosity
   -- $verbosity
 

@@ -49,7 +49,7 @@ module Data.SBV.Core.Data
  , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension, smtLibReservedNames
  , SolverCapabilities(..)
  , extractSymbolicSimulationState
- , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
+ , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SolverProcess(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
  , QueryState(..), Query(..), SMTProblem(..)
  ) where
