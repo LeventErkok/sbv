@@ -25,7 +25,7 @@ import Data.Maybe   (fromJust, isJust, isNothing)
 
 import Numeric (readHex, readOct, showHex)
 
--- We have a nasty issue with the usual String/List confusion in Haskell. However, we can
+-- | We have a nasty issue with the usual String/List confusion in Haskell. However, we can
 -- do a simple dynamic trick to determine where we are. The ice is thin here, but it seems to work.
 isKString :: forall a. Typeable a => a -> Bool
 isKString _ = isJust (fromDynamic (toDyn (undefined :: a)) :: Maybe String)

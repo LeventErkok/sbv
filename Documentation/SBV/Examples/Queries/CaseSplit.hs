@@ -19,6 +19,7 @@ import Data.SBV.Control
 -- of the number (such as NaN, negative-zero, etc. is most suitable.)
 --
 -- We have:
+--
 -- >>> csDemo1
 -- Case fpIsNegativeZero: Starting
 -- Case fpIsNegativeZero: Unsatisfiable
@@ -56,6 +57,7 @@ csDemo1 = runSMT $ do
 -- | Demonstrates the "coverage" case.
 --
 -- We have:
+--
 -- >>> csDemo2
 -- Case negative: Starting
 -- Case negative: Unsatisfiable
