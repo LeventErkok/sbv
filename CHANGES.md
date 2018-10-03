@@ -5,7 +5,8 @@
 
 ### Version 7.12.5, Not yet released
 
-  * New development version
+  * Generalize the type of bminimum/bmaximum by removing the Num
+    constraint.
 
 ### Version 7.12, 2018-09-23
   

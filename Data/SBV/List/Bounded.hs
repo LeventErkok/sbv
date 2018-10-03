@@ -79,11 +79,11 @@ ball :: SymWord a => Int -> (SBV a -> SBool) -> SList a -> SBool
 ball i f = band i . bmap i f
 
 -- | Bounded maximum. Undefined if list is empty.
-bmaximum :: (SymWord a, Num a) => Int -> SList a -> SBV a
+bmaximum :: SymWord a => Int -> SList a -> SBV a
 bmaximum i l = bfoldl (i-1) smax (L.head l) (L.tail l)
 
 -- | Bounded minimum. Undefined if list is empty.
-bminimum :: (SymWord a, Num a) => Int -> SList a -> SBV a
+bminimum :: SymWord a => Int -> SList a -> SBV a
 bminimum i l = bfoldl (i-1) smin (L.head l) (L.tail l)
 
 -- | Bounded zipWith
