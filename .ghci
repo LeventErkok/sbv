@@ -1,3 +1,7 @@
-:set -fwarn-unused-binds -fwarn-unused-imports -fhide-source-paths
+:set -Wall
+:set -Werror
+:set -fwarn-unused-binds
+:set -fwarn-unused-imports
+:set -fhide-source-paths
 :set -i./Data -i./SBVTestSuite
 :load Data/SBV.hs
