@@ -12,7 +12,7 @@ CCONFIGURE=configure
 CHADDOCK=haddock
 CSDIST=sdist
 
-ifeq ($(GHCVERSION), 8.0.1)
+ifeq ($(GHCVERSION), $(filter $(GHCVERSION), 8.0.1 8.4.3))
 # GHC 8.0.1 (and possibly others) don't understand hide-source-paths and are picky about redundant constraints. Also,
 # for this version use old style cabal comands.
 CONFIGOPTS = "-Werror -Wall -Wno-redundant-constraints"
