@@ -995,9 +995,7 @@ prove $ do a1 <- free "i1"
                res  = ite (a1 .== 12 &&& a2 .== 22)   -- insert a malicious bug!
                           1
                           (a1 + a2)
-           observe "Expected" spec
-           observe "Result"   res
-           return $ spec .== res
+           return $ observe "Expected" spec .== observe "Result" res
 :}
 Falsifiable. Counter-example:
   i1       = 12 :: Word8

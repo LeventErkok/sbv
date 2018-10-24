@@ -195,11 +195,8 @@ qc1 nm opC opS = [cf, sm]
 
                             v = extract "i" i
 
-                            expected = literal $ opC v
-                            result   = opS i
-
-                        observe "Expected" expected
-                        observe "Result"   result
+                        expected <- observe "Expected" $ literal $ opC v
+                        result   <- observe "Result"   $ opS i
 
                         case (unliteral expected, unliteral result) of
                            (Just _, Just _) -> return $ expected .== result

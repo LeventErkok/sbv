@@ -362,7 +362,8 @@ sRealToSInteger x
                   newExpr st KUnbounded (SBVApp (KindCast KReal KUnbounded) [xsw])
 
 -- | label: Label the result of an expression. This is essentially a no-op, but useful as it generates a comment in the generated C/SMT-Lib code.
--- Note that if the argument is a constant, then the label is dropped completely, per the usual constant folding strategy.
+-- Note that if the argument is a constant, then the label is dropped completely, per the usual constant folding strategy. Compare this to 'observe'
+-- which is good for printing counter-examples.
 label :: SymWord a => String -> SBV a -> SBV a
 label m x
    | Just _ <- unliteral x = x
@@ -373,8 +374,9 @@ label m x
 
 -- | Observe the value of an expression.  Such values are useful in model construction, as they are printed part of a satisfying model, or a
 -- counter-example. The same works for quick-check as well. Useful when we want to see intermediate values, or expected/obtained
--- pairs in a particular run.
-observe :: SymWord a => String -> SBV a -> Symbolic ()
+-- pairs in a particular run. Note that an observed expression is always symbolic, i.e., it won't be constant folded. Compare this to 'label'
+-- which is used for putting a label in the generated SMTLib-C code.
+observe :: SymWord a => String -> SBV a -> SBV a
 observe m x
   | null m
   = error "SBV.observe: Bad empty name!"
@@ -383,9 +385,11 @@ observe m x
   | "s" `isPrefixOf` m && all isDigit (drop 1 m)
   = error $ "SBV.observe: Names of the form sXXX are internal to SBV, please use a different name: " ++ show m
   | True
-  = do st <- ask
-       liftIO $ do xsw <- sbvToSW st x
-                   recordObservable st m xsw
+  = SBV $ SVal k $ Right $ cache r
+  where k = kindOf x
+        r st = do xsw <- sbvToSW st x
+                  recordObservable st m xsw
+                  return xsw
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.

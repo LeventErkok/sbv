@@ -5,8 +5,18 @@
 
 ### Version 7.12.5, Not yet released
 
-  * Generalize the type of bminimum/bmaximum by removing the Num
+  * Generalize the types of 'bminimum' and 'bmaximum' by removing the 'Num'
     constraint.
+
+  * Change the type of 'observe' from: 'SymWord a => String -> SBV a -> Symbolic ()'
+    to 'SymWord a => String -> SBV a -> SBV a'. This allows for more concise observables,
+    like this:
+
+       prove $ \x -> observe "lhs" (x+x) .== observe "rhs" (2*x+1)
+       Falsifiable. Counter-example:
+         s0  = 0 :: Integer
+         lhs = 0 :: Integer
+         rhs = 1 :: Integer
 
 ### Version 7.12, 2018-09-23
   
