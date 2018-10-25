@@ -19,7 +19,7 @@
           rhs = 1 :: Integer
 
 ### Version 7.12, 2018-09-23
-  
+
   * Modifications to make SBV compile with GHC 8.6.1. (SBV should
     now compile fine with all versions of GHC since 8.0.1; and
     possibly earlier. Please report if you are using a version
@@ -134,7 +134,7 @@
     synchronous errors.) Thanks to Oliver Charles for pointing out this corner case.
 
 ### Version 7.9, 2018-06-15
- 
+
   * Add support for bit-vector arithmetic underflow/overflow detection. The new
     'ArithmeticOverflow' class captures conditions under which addition, subtraction,
     multiplication, division, and negation can underflow/overflow for
@@ -160,7 +160,7 @@
     your old code will need some modifications. See the example in
     Documentation.SBV.Examples.Queries.Interpolants for the new usage.
 
-  * Add 'constrainWithAttribute' call, which can be used to attach 
+  * Add 'constrainWithAttribute' call, which can be used to attach
     arbitrary attribute to a constraint. Main use case is in interpolant
     generation with MathSAT.
 
@@ -169,11 +169,11 @@
 
   * Code reorg: Simplify constant mapping table, by properly accounting
     for negative-zero floats.
-    
+
   * Export 'sexprToVal' for the class SMTValue, which allows for custom
     definitions of value extractions. Thanks to Brian Schroeder for the
     patch.
-  
+
   * Export 'Logic' directly from Data.SBV. (Previously was from Control.)
 
   * Fix a long standing issue (ever since we introduced queries) where
@@ -220,7 +220,7 @@
 
   * Add support for Symbolic characters ('SChar') and strings ('SString'.)
     Thanks to Joel Burget for the initial implementation.
-    
+
     The 'SChar' type currently corresponds to the Latin-1 character
     set, and is thus a subset of the Haskell 'Char' type. This is
     due to the current limitations in SMT-solvers. However, there
@@ -389,7 +389,7 @@
     Optimization routines now properly handle quantified formulas, so long as the
     quantified metric does not involve any universal quantification itself. Thanks
     to Matthew Danish for reporting the issue.
-  
+
   * Development/Infrastructure: Lots of work around the continuous integration
     for SBV. We now build/test on Linux/Mac/Windows on every commit. Thanks to
     Travis/Appveyor for providing free remote infrastructure. There are still
@@ -397,7 +397,7 @@
     would like to be involved and improve the test suite, please get in touch!
 
 ### Version 7.1, 2017-07-29
-  
+
   * Add support for 'getInterpolant' in Query mode.
 
   * Support for SMT-results that can contain multi-line strings, which
@@ -531,7 +531,7 @@
 
   * Add support for unsat-core extraction. To use this feature, use
     the `namedConstraint` function:
-    
+
         namedConstraint :: String -> SBool -> Symbolic ()
 
     to associate a label to a constrain or a boolean term that
@@ -553,7 +553,7 @@
     as speculated in the SMT-Lib document itself.
 
     Currently, Z3, MathSAT, and CVC4 backends support unsat-cores.
-    
+
     (Thanks to Rohit Ramesh for the suggestion leading to this feature.)
 
   * Added function `distinct`, which returns true if all the elements of the
@@ -589,7 +589,7 @@
     but the fix should be as simple as `import Data.SBV.Tools.CodeGen`.
 
   * Move the following two functions to `Data.SBV.Internals`:
-  
+
          compileToSMTLib
          generateSMTBenchmarks
 
@@ -629,8 +629,8 @@
         - `minimize`: Minimize a given arithmetic goal
         - `maximize`: Minimize a given arithmetic goal
 
-    For instance, a call of the form 
-    
+    For instance, a call of the form
+
          minimize "name-of-goal" $ x + 2*y
 
     Minimizes the arithmetic goal x+2*y, where x and y can be bit-vectors, reals,
@@ -648,7 +648,7 @@
     a user-given numeric penalty to satisfy the remaining constraints. The solver then
     tries to minimize the penalty, i.e., satisfy as many of the soft-asserts as possible
     such that the total penalty for those that are not satisfied is minimized.
-    
+
     Note that `assertSoft` works well with optimization goals (minimize/maximize etc.),
     and are most useful when we are optimizing a metric and thus some of the constraints
     can be relaxed with a penalty to obtain a good solution.
@@ -682,7 +682,7 @@
         - `Data.SBV.Tools.GenTest` (test case generation)
         - `Data.SBV.Tools.Polynomial` (polynomial arithmetic, CRCs etc.)
         - `Data.SBV.Tools.STree` (full symbolic binary trees)
- 
+
     To use the functionality of these modules, users must now explicitly import the corresponding
     module. Not other changes should be needed other than the explicit import.
 
@@ -712,14 +712,14 @@
       - Data.SBV.Examples.Optimization.LinearOpt: Simple linear-optimization example.
       - Data.SBV.Examples.Optimization.Production: Scheduling machines in a shop
       - Data.SBV.Examples.Optimization.VM: Scheduling virtual-machines in a data-center
-    
+
 ### Version 5.15, 2017-01-30
 
   * Bump up dependency on CrackNum >= 1.9, to get access to hexadecimal floats.
   * Improve time/tracking-print code. Thanks to Iavor Diatchki for the patch.
 
 ### Version 5.14, 2017-01-12
-  
+
   * Bump up QuickCheck dependency to >= 2.9.2 to avoid the following quick-check
     bug <http://github.com/nick8325/quickcheck/issues/113>, which transitively impacted
     the quick-check as implemented by SBV.
@@ -813,7 +813,7 @@
     generalizations are also done for the dynamic variants.
 
 ### Version 5.6, 2015-12-06
-  
+
   * Minor changes to how we print models:
   * Align by the type
   * Always print the type (previously we were skipping for Bool)
@@ -842,7 +842,7 @@
     it simply returns its final argument. Use in coordination with 'safe' and 'safeWith', see below.
 
   * Implement 'safe' and 'safeWith', which statically determine all calls to 'sAssert'
-    being safe to execute. Any violations will be flagged. 
+    being safe to execute. Any violations will be flagged.
 
   * SBV->C: Translate 'sAssert' calls to dynamic checks in the generated C code. If this is
     not desired, use the 'cgIgnoreSAssert' function to turn it off.
@@ -875,7 +875,7 @@
     output. SBV similarly changed to allow for non-determinism here.
 
   * Change the types of the following Floating-point operations:
-  
+
         * sFloatAsSWord32, sFloatAsSWord32, blastSFloat, blastSDouble
 
     These were previously coded as relations, since NaN values were not representable
@@ -963,12 +963,12 @@
 
        * Boolector: Upgraded to work with new Boolector release 2.0.7. Note that earlier versions
          of Boolector are *not* supported.
-     
+
        * MathSAT: Upgraded to work with latest release 5.3.7. Note that earlier versions of MathSAT
          are *not* supported (due to a buffering issue in MathSAT itself.)
-     
+
        * MathSAT: Enabled floating-point support in MathSAT.
-     
+
   * New examples:
 
        * Add Data.SBV.Examples.Puzzles.Birthday, which solves the Cheryl-Birthday problem that
@@ -989,7 +989,7 @@
   * Rework floating-point arithmetic, and add missing floating-point operations:
 
       * fpRem            : remainder
-      * fpRoundToIntegral: truncating round 
+      * fpRoundToIntegral: truncating round
       * fpMin            : min
       * fpMax            : max
       * fpIsEqualObject  : FP equality as object (i.e., NaN equals NaN, +0 does not equal -0, etc.)
@@ -1008,7 +1008,7 @@
     equivalent to 'map sTestBit'.
 
   * Rename a set of symbolic functions for consistency. Here are the old/new names:
-   
+
      * sbvTestBit               --> sTestBit
      * sbvPopCount              --> sPopCount
      * sbvShiftLeft             --> sShiftLeft
@@ -1019,16 +1019,16 @@
 
   * Rename all FP recognizers to be in sync with FP operations. Here are the old/new names:
 
-     * isNormalFP       --> fpIsNormal       
-     * isSubnormalFP    --> fpIsSubnormal    
-     * isZeroFP         --> fpIsZero         
-     * isInfiniteFP     --> fpIsInfinite     
-     * isNaNFP          --> fpIsNaN          
-     * isNegativeFP     --> fpIsNegative     
-     * isPositiveFP     --> fpIsPositive     
-     * isNegativeZeroFP --> fpIsNegativeZero 
-     * isPositiveZeroFP --> fpIsPositiveZero 
-     * isPointFP        --> fpIsPoint        
+     * isNormalFP       --> fpIsNormal
+     * isSubnormalFP    --> fpIsSubnormal
+     * isZeroFP         --> fpIsZero
+     * isInfiniteFP     --> fpIsInfinite
+     * isNaNFP          --> fpIsNaN
+     * isNegativeFP     --> fpIsNegative
+     * isPositiveFP     --> fpIsPositive
+     * isNegativeZeroFP --> fpIsNegativeZero
+     * isPositiveZeroFP --> fpIsPositiveZero
+     * isPointFP        --> fpIsPoint
 
   * Lots of other work around floating-point, test cases, reorg, etc.
 
@@ -1040,7 +1040,7 @@
 
   * Hook-up crackNum package; so counter-examples involving floats and
     doubles can be printed in detail when the printBase is chosen to be
-    2 or 16. (With base 10, we still get the simple output.) 
+    2 or 16. (With base 10, we still get the simple output.)
 
       ```
       Prelude Data.SBV> satWith z3{printBase=2} $ \x -> x .== (2::SFloat)
@@ -1085,7 +1085,7 @@
     unliteral. Contributed by Brian Huffman.
 
   * Introduce FP conversion functions:
-  
+
        * Between SReal and SFloat/SDouble
            * fpToSReal
            * sRealToSFloat
@@ -1130,7 +1130,7 @@
   * Silence some hlint/ghci warnings. Thanks to Trevor Elliott for the patch!
 
   * Haddock documentation fixes, improvements, etc.
-  
+
   * Change ABC default option string to %blast; "&sweep -C 5000; &syn4; &cec -s -m -C 2000"
     which seems to give good results. Use SBV_ABC_OPTIONS environment variable (or
     via abc.rc file and a combination of SBV_ABC_OPTIONS) to experiment.
@@ -1155,12 +1155,12 @@
     RoundNearestTiesToAway, but with SBV, we get all 5 IEEE754 rounding-modes
     and all the basic operations ('fpAdd', 'fpMul', 'fpDiv', etc.) with these
     modes.
-    
+
   * Allow Floating-Point RoundingMode to be symbolic as well
 
   * Improve the example "Data/SBV/Examples/Misc/Floating.hs" to include
     rounding-mode based addition example.
-    
+
   * Changes required to make SBV compile with GHC 7.10; mostly around instance
     NFData declarations. Thanks to Iavor Diatchki for the patch.
 
@@ -1176,7 +1176,7 @@ incorporate arbitrary bit-sized vectors and ints using this mechanism,
 but in the interim, this release provides a means for the users to introduce
 individual instances.
 
-  * Modifications to support arbitrary bit-sized vectors; 
+  * Modifications to support arbitrary bit-sized vectors;
     These changes have been contributed by Brian Huffman
     of Galois.. Thanks Brian.
   * A new example "Data/SBV/Examples/Misc/Word4.hs" showing
@@ -1255,14 +1255,14 @@ uninterpreted.
     means that you need at least v2.0.0 of Boolector installed if you want to use that
     particular solver.
 
-  * Fix long-standing translation bug regarding boolean Ord class comparisons. (i.e., 
+  * Fix long-standing translation bug regarding boolean Ord class comparisons. (i.e.,
     'False > True' etc.) While Haskell allows for this, SMT-Lib does not; and hence
     we have to be careful in translating. Thanks to Brian Huffman for reporting.
 
   * C code generation: Correctly translate square-root and fusedMA functions to C.
 
 ### Version 3.1, 2014-07-12
- 
+
  NB: GHC 7.8.1 and 7.8.2 has a serious bug <https://ghc.haskell.org/trac/ghc/ticket/9078>
      that causes SBV to crash under heavy/repeated calls. The bug is addressed
      in GHC 7.8.3; so upgrading to GHC 7.8.3 is essential for using SBV!
@@ -1287,7 +1287,7 @@ uninterpreted.
         simulation, if termination can be established this way. Needless
         to say, this problem is always decidable as far as SBV programs
         are concerned, but it does not mean the decision procedure is cheap!
-        Use with care. 
+        Use with care.
       * sBranchTimeOut config parameter can be used to curtail long runs when
         sBranch is used. Of course, if time-out happens, SBV will
         assume the branch is feasible, in which case symbolic-termination
@@ -1312,7 +1312,7 @@ uninterpreted.
        user-visible impact, but comes in handy for internal reasons.
 
 ### Version 3.0, 2014-02-16
-   
+
  * Support for floating-point numbers:
       * Preliminary support for IEEE-floating point arithmetic, introducing
         the types `SFloat` and `SDouble`. The support is still quite new,
@@ -1360,7 +1360,7 @@ uninterpreted.
         z3 complete the proof quickly. (The BV logics take too long for this problem.)
 
 ### Version 2.10, 2013-03-22
- 
+
  * Add support for the Boolector SMT solver
     * See: http://fmv.jku.at/boolector/
     * Use `import Data.SBV.Bridge.Boolector` to use Boolector from SBV
@@ -1413,7 +1413,7 @@ uninterpreted.
           import Data.SBV.Bridge.CVC4
           import Data.SBV.Bridge.Yices
           import Data.SBV.Bridge.Z3
-   
+
     to pick the appropriate default solver. if you simply 'import Data.SBV', then
     you will get the default SMT solver, which is currently Z3. The value
     'defaultSMTSolver' refers to z3 (currently), and 'sbvCurrentSolver' refers
@@ -1459,7 +1459,7 @@ uninterpreted.
     is also an instance of this class, and SDivisible is a
     more appropriate name to start with. Also add sQuot and sRem
     methods; along with sDivMod, sDiv, and sMod, with usual
-    semantics. 
+    semantics.
   * Improve test suite, adding many constant-folding tests
     and start using cabal based tests (--enable-tests option.)
 
@@ -1516,7 +1516,7 @@ uninterpreted.
       for illustrating uninterpreted sorts and axioms.
 
 ### Version 2.0, 2012-05-10
-  
+
   This is a major release of SBV, adding support for symbolic algebraic reals: SReal.
   See http://en.wikipedia.org/wiki/Algebraic_number for details. In brief, algebraic
   reals are solutions to univariate polynomials with rational coefficients. The arithmetic
@@ -1525,7 +1525,7 @@ uninterpreted.
   representable in this way. (For instance, "sqrt 2" is algebraic, but pi, e are not.)
   However, algebraic reals is a superset of rationals, so SBV now also supports symbolic
   rationals as well.
-    
+
   You *should* use Z3 v4.0 when working with real numbers. While the interface will
   work with older versions of Z3 (or other SMT solvers in general), it uses Z3
   root-obj construct to retrieve and query algebraic reals.
@@ -1695,7 +1695,7 @@ uninterpreted.
      was not worth the complexity.
 
 ### Version 0.9.23, 2011-12-05
-  
+
   Library:
 
    * Add support for SInteger, the type of signed unbounded integer
@@ -1724,7 +1724,7 @@ uninterpreted.
      multiplication of two variables.)
 
 ### Version 0.9.22, 2011-11-13
-   
+
   The major change in this release is the support for quantifiers. The
   SBV library *no* longer assumes all variables are universals in a proof,
   (and correspondingly existential in a sat) call. Instead, the user
@@ -1736,7 +1736,7 @@ uninterpreted.
 
   This release also adds support for the Z3 solver, which is the main
   SMT-solver used for solving formulas involving quantifiers. More formally,
-  we use the new AUFBV/ABV/UFBV logics when quantifiers are involved. Also, 
+  we use the new AUFBV/ABV/UFBV logics when quantifiers are involved. Also,
   the communication with Z3 is now done via SMT-Lib2 format. Eventually
   the SMTLib1 connection will be severed.
 
@@ -1774,7 +1774,7 @@ uninterpreted.
    * Add USB CRC code generation example, both via polynomials and using the internal CRC functionality
 
 ### Version 0.9.21, 2011-08-05
-   
+
  Code generation:
 
   * Allow for inclusion of user makefiles
@@ -1782,7 +1782,7 @@ uninterpreted.
   * Other minor clean-up
 
 ### Version 0.9.20, 2011-06-05
-   
+
   Regression on 0.9.19; add missing file to cabal
 
 ### Version 0.9.19, 2011-06-05
@@ -1819,7 +1819,7 @@ Examples:
     AES encryption
 
 ### Version 0.9.17, 2011-03-29
-   
+
 Code:
 
   * Simplify and reorganize the test suite
@@ -1828,7 +1828,7 @@ Examples:
 
   * Improve AES decryption example, by using
     table-lookups in InvMixColumns.
-  
+
 ### Version 0.9.16, 2011-03-28
 
 Code:
@@ -1842,7 +1842,7 @@ Examples:
     for use with the code-generator
 
 ### Version 0.9.15, 2011-03-24
-   
+
 Bug fixes:
 
   * Fix rotateL/rotateR instances on concrete
@@ -1860,14 +1860,14 @@ Testing:
     of them, ~30K, but they run quickly.)
 
 ### Version 0.9.14, 2011-03-19
-    
+
   * Re-implement sharing using Stable names, inspired
     by the Data.Reify techniques. This avoids tricks
     with unsafe memory stashing, and hence is safe.
     Thus, issues with respect to CAFs are now resolved.
 
 ### Version 0.9.13, 2011-03-16
-    
+
 Bug fixes:
 
   * Make sure SBool short-cut evaluations are done
@@ -1882,7 +1882,7 @@ Examples:
   * Add a GCD code-generation/verification example
 
 ### Version 0.9.12, 2011-03-10
-  
+
 New features:
 
   * Add support for compilation to C
@@ -1894,7 +1894,7 @@ Bug fixes:
   * Specification bug in Legatos multiplier example
 
 ### Version 0.9.11, 2011-02-16
-  
+
   * Make ghc-7.0 happy, minor re-org on the cabal file/Setup.hs
 
 ### Version 0.9.10, 2011-02-15
