@@ -3,17 +3,17 @@ Solution #1:
   s1 = 1 :: Word8
 Solution #2:
   s0 = 0 :: Word8
-  s1 = 3 :: Word8
+  s1 = 2 :: Word8
 Solution #3:
   s0 = 0 :: Word8
-  s1 = 2 :: Word8
+  s1 = 3 :: Word8
 Solution #4:
   s0 = 1 :: Word8
   s1 = 2 :: Word8
 Solution #5:
-  s0 = 2 :: Word8
+  s0 = 1 :: Word8
   s1 = 3 :: Word8
 Solution #6:
-  s0 = 1 :: Word8
+  s0 = 2 :: Word8
   s1 = 3 :: Word8
 Found 6 different solutions.
