@@ -20,13 +20,13 @@ import Data.SBV.Tools.Overflow
 --
 -- >>> checkArithOverflow midPointBroken
 -- Documentation/SBV/Examples/BitPrecise/BrokenSearch.hs:33:28:+!: SInt32 addition overflows: Violated. Model:
---   low  = 2147483583 :: Int32
+--   low  = 2147483647 :: Int32
 --   high = 2147483647 :: Int32
 --
 -- Indeed:
 --
--- >>> (2147483583 + 2147483647) `div` (2::Int32)
--- -33
+-- >>> (2147483647 + 2147483647) `div` (2::Int32)
+-- -1
 --
 -- giving us a negative mid-point value!
 midPointBroken :: SInt32 -> SInt32 -> SInt32
