@@ -18,6 +18,9 @@
           lhs = 0 :: Integer
           rhs = 1 :: Integer
 
+  * Fix list-element extraction code, which asserted too strong a constraint. See issue #421
+    for details. Thanks to Joel Burget for reporting.
+
 ### Version 7.12, 2018-09-23
 
   * Modifications to make SBV compile with GHC 8.6.1. (SBV should

@@ -33,6 +33,7 @@ import qualified Prelude as P
 
 import Data.SBV.Core.Data hiding (StrOp(..))
 import Data.SBV.Core.Model
+import Data.SBV.Utils.Boolean ((==>))
 
 import Data.List (genericLength, genericIndex, genericDrop, genericTake)
 import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
@@ -151,7 +152,7 @@ elemAt l i
         y si st = do e <- internalVariable st kElem
                      es <- newExpr st kSeq (SBVApp (SeqOp SeqUnit) [e])
                      let esSBV = SBV (SVal kSeq (Right (cache (\_ -> return es))))
-                     internalConstraint st False [] $ unSBV $ esSBV .== si
+                     internalConstraint st False [] $ unSBV $ length l .> i ==> esSBV .== si
                      return e
 
 -- | Short cut for 'elemAt'

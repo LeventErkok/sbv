@@ -36,6 +36,7 @@ import qualified Prelude as P
 
 import Data.SBV.Core.Data hiding (SeqOp(..))
 import Data.SBV.Core.Model
+import Data.SBV.Utils.Boolean ((==>))
 
 import qualified Data.Char as C
 import Data.List (genericLength, genericIndex, genericDrop, genericTake)
@@ -149,7 +150,7 @@ strToCharAt s i
         y si st = do c <- internalVariable st w8
                      cs <- newExpr st KString (SBVApp (StrOp StrUnit) [c])
                      let csSBV = SBV (SVal KString (Right (cache (\_ -> return cs))))
-                     internalConstraint st False [] $ unSBV $ csSBV .== si
+                     internalConstraint st False [] $ unSBV $ length s .> i ==> csSBV .== si
                      return c
 
 -- | Short cut for 'strToCharAt'
