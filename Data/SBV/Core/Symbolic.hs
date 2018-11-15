@@ -41,7 +41,7 @@ module Data.SBV.Core.Symbolic
   , NamedSymVar
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
-  , SBVPgm(..), Symbolic, runSymbolic, State(..), withNewIncState, IncState(..), incrementInternalCounter
+  , SBVPgm(..), SymbolicT, Symbolic, runSymbolic, State(..), withNewIncState, IncState(..), incrementInternalCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..)
   , registerKind, registerLabel, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable
@@ -994,7 +994,7 @@ svToSW st (SVal _ (Left c))  = newConst st c
 svToSW st (SVal _ (Right f)) = uncache f st
 
 -- | Convert a symbolic value to an SW, inside the Symbolic monad
-svToSymSW :: SVal -> Symbolic SW
+svToSymSW :: MonadIO m => SVal -> SymbolicT m SW
 svToSymSW sbv = do st <- ask
                    liftIO $ svToSW st sbv
 
@@ -1004,12 +1004,14 @@ svToSymSW sbv = do st <- ask
 -- | A Symbolic computation. Represented by a reader monad carrying the
 -- state of the computation, layered on top of IO for creating unique
 -- references to hold onto intermediate results.
-newtype Symbolic a = Symbolic (ReaderT State IO a)
+newtype SymbolicT m a = SymbolicT (ReaderT State m a)
                    deriving ( Applicative, Functor, Monad, MonadIO, MonadReader State
 #if MIN_VERSION_base(4,11,0)
                             , Fail.MonadFail
 #endif
                             )
+
+type Symbolic = SymbolicT IO
 
 -- | Create a symbolic value, based on the quantifier we have. If an
 -- explicit quantifier is given, we just use that. If not, then we
@@ -1024,19 +1026,19 @@ svMkTrackerVar :: Kind -> String -> State -> IO SVal
 svMkTrackerVar k nm = svMkSymVarGen True (Just EX) k (Just nm)
 
 -- | Create an N-bit symbolic unsigned named variable
-sWordN :: Int -> String -> Symbolic SVal
+sWordN :: MonadIO m => Int -> String -> SymbolicT m SVal
 sWordN w nm = ask >>= liftIO . svMkSymVar Nothing (KBounded False w) (Just nm)
 
 -- | Create an N-bit symbolic unsigned unnamed variable
-sWordN_ :: Int -> Symbolic SVal
+sWordN_ :: MonadIO m => Int -> SymbolicT m SVal
 sWordN_ w = ask >>= liftIO . svMkSymVar Nothing (KBounded False w) Nothing
 
 -- | Create an N-bit symbolic signed named variable
-sIntN :: Int -> String -> Symbolic SVal
+sIntN :: MonadIO m => Int -> String -> SymbolicT m SVal
 sIntN w nm = ask >>= liftIO . svMkSymVar Nothing (KBounded True w) (Just nm)
 
 -- | Create an N-bit symbolic signed unnamed variable
-sIntN_ :: Int -> Symbolic SVal
+sIntN_ :: MonadIO m => Int -> SymbolicT m SVal
 sIntN_ w = ask >>= liftIO . svMkSymVar Nothing (KBounded True w) Nothing
 
 -- | Create a symbolic value, based on the quantifier we have. If an
@@ -1106,7 +1108,7 @@ introduceUserName st isTracker nm k q sw = do
 -- of the axiom text as expressed in SMT-Lib notation. Note that we perform no checks on the axiom
 -- itself, to see whether it's actually well-formed or is sensical by any means.
 -- A separate formalization of SMT-Lib would be very useful here.
-addAxiom :: String -> [String] -> Symbolic ()
+addAxiom :: MonadIO m => String -> [String] -> SymbolicT m ()
 addAxiom nm ax = do
         st <- ask
         liftIO $ modifyState st raxioms ((nm, ax) :)
@@ -1116,35 +1118,35 @@ addAxiom nm ax = do
                                            ]
 
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
-runSymbolic :: SBVRunMode -> Symbolic a -> IO (a, Result)
-runSymbolic currentRunMode (Symbolic c) = do
-   currTime  <- getCurrentTime
-   rm        <- newIORef currentRunMode
-   ctr       <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
-   cInfo     <- newIORef []
-   observes  <- newIORef []
-   pgm       <- newIORef (SBVPgm S.empty)
-   emap      <- newIORef Map.empty
-   cmap      <- newIORef Map.empty
-   inps      <- newIORef ([], [])
-   outs      <- newIORef []
-   tables    <- newIORef Map.empty
-   arrays    <- newIORef IMap.empty
-   fArrays   <- newIORef IMap.empty
-   uis       <- newIORef Map.empty
-   cgs       <- newIORef Map.empty
-   axioms    <- newIORef []
-   swCache   <- newIORef IMap.empty
-   aiCache   <- newIORef IMap.empty
-   faiCache  <- newIORef IMap.empty
-   usedKinds <- newIORef Set.empty
-   usedLbls  <- newIORef Set.empty
-   cstrs     <- newIORef []
-   smtOpts   <- newIORef []
-   optGoals  <- newIORef []
-   asserts   <- newIORef []
-   istate    <- newIORef =<< newIncState
-   qstate    <- newIORef Nothing
+runSymbolic :: MonadIO m => SBVRunMode -> SymbolicT m a -> m (a, Result)
+runSymbolic currentRunMode (SymbolicT c) = do
+   currTime  <- liftIO getCurrentTime
+   rm        <- liftIO $ newIORef currentRunMode
+   ctr       <- liftIO $ newIORef (-2) -- start from -2; False and True will always occupy the first two elements
+   cInfo     <- liftIO $ newIORef []
+   observes  <- liftIO $ newIORef []
+   pgm       <- liftIO $ newIORef (SBVPgm S.empty)
+   emap      <- liftIO $ newIORef Map.empty
+   cmap      <- liftIO $ newIORef Map.empty
+   inps      <- liftIO $ newIORef ([], [])
+   outs      <- liftIO $ newIORef []
+   tables    <- liftIO $ newIORef Map.empty
+   arrays    <- liftIO $ newIORef IMap.empty
+   fArrays   <- liftIO $ newIORef IMap.empty
+   uis       <- liftIO $ newIORef Map.empty
+   cgs       <- liftIO $ newIORef Map.empty
+   axioms    <- liftIO $ newIORef []
+   swCache   <- liftIO $ newIORef IMap.empty
+   aiCache   <- liftIO $ newIORef IMap.empty
+   faiCache  <- liftIO $ newIORef IMap.empty
+   usedKinds <- liftIO $ newIORef Set.empty
+   usedLbls  <- liftIO $ newIORef Set.empty
+   cstrs     <- liftIO $ newIORef []
+   smtOpts   <- liftIO $ newIORef []
+   optGoals  <- liftIO $ newIORef []
+   asserts   <- liftIO $ newIORef []
+   istate    <- liftIO $ newIORef =<< newIncState
+   qstate    <- liftIO $ newIORef Nothing
    let st = State { runMode      = rm
                   , startTime    = currTime
                   , pathCond     = SVal KBool (Left trueCW)
@@ -1174,16 +1176,16 @@ runSymbolic currentRunMode (Symbolic c) = do
                   , rAsserts     = asserts
                   , queryState   = qstate
                   }
-   _ <- newConst st falseCW -- s(-2) == falseSW
-   _ <- newConst st trueCW  -- s(-1) == trueSW
+   _ <- liftIO $ newConst st falseCW -- s(-2) == falseSW
+   _ <- liftIO $ newConst st trueCW  -- s(-1) == trueSW
    r <- runReaderT c st
-   res <- extractSymbolicSimulationState st
+   res <- liftIO $ extractSymbolicSimulationState st
 
    -- Clean-up after ourselves
-   qs <- readIORef qstate
+   qs <- liftIO $ readIORef qstate
    case qs of
      Nothing                         -> return ()
-     Just QueryState{queryTerminate} -> queryTerminate
+     Just QueryState{queryTerminate} -> liftIO queryTerminate
 
    return (r, res)
 
@@ -1217,12 +1219,12 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    return $ Result knds traceVals observables cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs assertions outsO
 
 -- | Add a new option
-addNewSMTOption :: SMTOption -> Symbolic ()
+addNewSMTOption :: MonadIO m => SMTOption -> SymbolicT m ()
 addNewSMTOption o =  do st <- ask
                         liftIO $ modifyState st rSMTOptions (o:) (return ())
 
 -- | Handling constraints
-imposeConstraint :: Bool -> [(String, String)] -> SVal -> Symbolic ()
+imposeConstraint :: MonadIO m => Bool -> [(String, String)] -> SVal -> SymbolicT m ()
 imposeConstraint isSoft attrs c = do st <- ask
                                      rm <- liftIO $ readIORef (runMode st)
                                      case rm of
@@ -1241,7 +1243,7 @@ internalConstraint st isSoft attrs b = do v <- svToSW st b
                | True   = ""
 
 -- | Add an optimization goal
-addSValOptGoal :: Objective SVal -> Symbolic ()
+addSValOptGoal :: MonadIO m => Objective SVal -> SymbolicT m ()
 addSValOptGoal obj = do st <- ask
 
                         -- create the tracking variable here for the metric
@@ -1262,7 +1264,7 @@ addSValOptGoal obj = do st <- ask
 
 -- | Mark an interim result as an output. Useful when constructing Symbolic programs
 -- that return multiple values, or when the result is programmatically computed.
-outputSVal :: SVal -> Symbolic ()
+outputSVal :: MonadIO m => SVal -> SymbolicT m ()
 outputSVal (SVal _ (Left c)) = do
   st <- ask
   sw <- liftIO $ newConst st c

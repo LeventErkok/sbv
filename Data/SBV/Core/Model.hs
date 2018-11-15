@@ -39,8 +39,9 @@ module Data.SBV.Core.Model (
   )
   where
 
-import Control.Applicative  (ZipList(ZipList))
-import Control.Monad        (when, unless, mplus)
+import Control.Applicative    (ZipList(ZipList))
+import Control.Monad          (when, unless, mplus)
+import Control.Monad.IO.Class (MonadIO)
 
 import GHC.Generics (U1(..), M1(..), (:*:)(..), K1(..))
 import qualified GHC.Generics as G
@@ -1808,7 +1809,7 @@ instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymW
     where uc7 (cs, fn) = (cs, \a b c d e f g -> fn (a, b, c, d, e, f, g))
 
 -- | Symbolic computations provide a context for writing symbolic programs.
-instance SolverContext Symbolic where
+instance MonadIO m => SolverContext (SymbolicT m) where
    constrain                   (SBV c) = imposeConstraint False []               c
    softConstrain               (SBV c) = imposeConstraint True  []               c
    namedConstraint        nm   (SBV c) = imposeConstraint False [(":named", nm)] c

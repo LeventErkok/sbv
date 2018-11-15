@@ -41,7 +41,7 @@ module Data.SBV.Core.Data
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, uncacheAI, HasKind(..)
  , Op(..), PBOp(..), FPOp(..), StrOp(..), SeqOp(..), RegExp(..), NamedSymVar, getTableIndex
- , SBVPgm(..), Symbolic, runSymbolic, State, getPathCondition, extendPathCondition
+ , SBVPgm(..), SymbolicT, Symbolic, runSymbolic, State, getPathCondition, extendPathCondition
  , inSMTMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
  , SolverContext(..), internalVariable, internalConstraint, isCodeGenMode
  , SBVType(..), newUninterpreted, addAxiom
