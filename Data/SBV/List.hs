@@ -42,7 +42,7 @@ import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 --
 -- $setup
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
--- >>> import Data.SBV.Utils.Boolean  ((==>), (&&&), bnot, (<=>))
+-- >>> import Data.SBV.Utils.Boolean  ((&&&), bnot, (<=>))
 -- >>> import Data.Int
 -- >>> import Data.Word
 -- >>> :set -XOverloadedLists
