@@ -18,7 +18,7 @@
 
 module Data.SBV.List.Bounded (
      -- * General folds
-     bfoldr, bfoldl, ibfoldr, ibfoldl
+     bfoldr, bfoldl
      -- * Map, filter, zipWith, elem
    , bmap, bfilter, bzipWith, belem
      -- * Aggregates
@@ -42,23 +42,11 @@ bfoldr cnt f b = go (cnt `max` 0)
   where go 0 _ = b
         go i s = lcase s b (\h t -> h `f` go (i-1) t)
 
--- | Indexed, bounded fold from the right.
-ibfoldr :: (SymWord a, SymWord b) => Int -> (Int -> SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
-ibfoldr cnt f b = go (cnt `max` 0)
-  where go 0 _ = b
-        go i s = lcase s b (\h t -> f (cnt-i) h (go (i-1) t))
-
 -- | Bounded fold from the left.
 bfoldl :: (SymWord a, SymWord b) => Int -> (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
 bfoldl cnt f = go (cnt `max` 0)
   where go 0 b _ = b
         go i b s = lcase s b (\h t -> go (i-1) (b `f` h) t)
-
--- | Indexed, bounded fold from the left.
-ibfoldl :: (SymWord a, SymWord b) => Int -> (Int -> SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
-ibfoldl cnt f = go (cnt `max` 0)
-  where go 0 b _ = b
-        go i b s = lcase s b (\h t -> go (i-1) (f (cnt-i) b h) t)
 
 -- | Bounded sum.
 bsum :: (SymWord a, Num a) => Int -> SList a -> SBV a

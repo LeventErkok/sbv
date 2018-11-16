@@ -34,10 +34,6 @@ tests =
     , goldenCapturedIO "foldlABC1"       $ \rf -> checkWith z3{redirectVerbose=Just rf} (foldlABC 1)       Unsat
     , goldenCapturedIO "foldlABC2"       $ \rf -> checkWith z3{redirectVerbose=Just rf} (foldlABC 2)       Unsat
     , goldenCapturedIO "foldlABC3"       $ \rf -> checkWith z3{redirectVerbose=Just rf} (foldlABC 3)       Sat
-    , goldenCapturedIO "concreteIbfoldr" $ \rf -> checkWith z3{redirectVerbose=Just rf} concreteIbfoldrSat Sat
-    , goldenCapturedIO "ibfoldr"         $ \rf -> checkWith z3{redirectVerbose=Just rf} ibfoldrSat         Sat
-    , goldenCapturedIO "concreteIbfoldl" $ \rf -> checkWith z3{redirectVerbose=Just rf} concreteIbfoldlSat Sat
-    , goldenCapturedIO "ibfoldl"         $ \rf -> checkWith z3{redirectVerbose=Just rf} ibfoldlUnsat       Unsat
     , goldenCapturedIO "concreteReverse" $ \rf -> checkWith z3{redirectVerbose=Just rf} concreteReverseSat Sat
     , goldenCapturedIO "reverse"         $ \rf -> checkWith z3{redirectVerbose=Just rf} reverseSat         Sat
     , goldenCapturedIO "concreteSort"    $ \rf -> checkWith z3{redirectVerbose=Just rf} concreteSortSat    Sat
@@ -76,36 +72,6 @@ foldlABC bound = do
   constrain $ b .> 0
   constrain $ c .> 0
   constrain $ BL.bfoldr bound (+) 0 (L.implode [a, b, c]) .== a + b + c
-
-concreteIbfoldrSat :: Symbolic ()
-concreteIbfoldrSat = constrain $
-  BL.ibfoldr 10 (\i a b -> if i == 6 then a else b) (-1) [0..9]
-  .==
-  (6 :: SInteger)
-
-ibfoldrSat :: Symbolic ()
-ibfoldrSat = do
-  abcd <- sIntegers ["a", "b", "c", "d"]
-  constrain $ BL.ibfoldr 10
-    (\i a' b' -> (fromIntegral i .== a') &&& b')
-    true
-    (L.implode abcd)
-
-concreteIbfoldlSat :: Symbolic ()
-concreteIbfoldlSat = constrain $
-  BL.ibfoldl 10 (\i b a -> if i == 6 then a else b) (-1) [0..9]
-  .==
-  (6 :: SInteger)
-
--- unsatisfiable
-ibfoldlUnsat :: Symbolic ()
-ibfoldlUnsat = do
-  abcd@[_, _, c, _] <- sIntegers ["a", "b", "c", "d"]
-  constrain $ BL.ibfoldl 10
-    (\i a' b' -> a' &&& ite (fromIntegral i .== (2 :: SBV Integer)) (b' .== 42) true)
-    true
-    (L.implode abcd)
-  constrain $ c .== 43
 
 concreteReverseSat :: Symbolic ()
 concreteReverseSat = constrain $
