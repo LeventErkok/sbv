@@ -18,7 +18,7 @@ module Data.SBV.Core.Floating (
        , blastSFloat, blastSDouble
        ) where
 
-import qualified Data.ReinterpretCast as RC (wordToFloat, wordToDouble, floatToWord, doubleToWord)
+import qualified Data.Numbers.CrackNum as CN (wordToFloat, wordToDouble, floatToWord, doubleToWord)
 
 import Data.Int            (Int8,  Int16,  Int32,  Int64)
 import Data.Word           (Word8, Word16, Word32, Word64)
@@ -379,7 +379,7 @@ lift3 w mbOp mbRm a b c
 sFloatAsSWord32 :: SFloat -> SWord32
 sFloatAsSWord32 fVal
   | Just f <- unliteral fVal, not (isNaN f)
-  = literal (RC.floatToWord f)
+  = literal (CN.floatToWord f)
   | True
   = SBV (SVal w32 (Right (cache y)))
   where w32  = KBounded False 32
@@ -400,7 +400,7 @@ sFloatAsSWord32 fVal
 sDoubleAsSWord64 :: SDouble -> SWord64
 sDoubleAsSWord64 fVal
   | Just f <- unliteral fVal, not (isNaN f)
-  = literal (RC.doubleToWord f)
+  = literal (CN.doubleToWord f)
   | True
   = SBV (SVal w64 (Right (cache y)))
   where w64  = KBounded False 64
@@ -428,7 +428,7 @@ blastSDouble = extract . sDoubleAsSWord64
 -- | Reinterpret the bits in a 32-bit word as a single-precision floating point number
 sWord32AsSFloat :: SWord32 -> SFloat
 sWord32AsSFloat fVal
-  | Just f <- unliteral fVal = literal $ RC.wordToFloat f
+  | Just f <- unliteral fVal = literal $ CN.wordToFloat f
   | True                     = SBV (SVal KFloat (Right (cache y)))
   where y st = do xsw <- sbvToSW st fVal
                   newExpr st KFloat (SBVApp (IEEEFP (FP_Reinterpret (kindOf fVal) KFloat)) [xsw])
@@ -436,7 +436,7 @@ sWord32AsSFloat fVal
 -- | Reinterpret the bits in a 32-bit word as a single-precision floating point number
 sWord64AsSDouble :: SWord64 -> SDouble
 sWord64AsSDouble dVal
-  | Just d <- unliteral dVal = literal $ RC.wordToDouble d
+  | Just d <- unliteral dVal = literal $ CN.wordToDouble d
   | True                     = SBV (SVal KDouble (Right (cache y)))
   where y st = do xsw <- sbvToSW st dVal
                   newExpr st KDouble (SBVApp (IEEEFP (FP_Reinterpret (kindOf dVal) KDouble)) [xsw])

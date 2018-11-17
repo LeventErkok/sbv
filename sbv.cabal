@@ -48,10 +48,10 @@ Library
                     TypeOperators
                     TypeSynonymInstances
   Build-Depends   : base >= 4.9 && < 5
-                  , crackNum >= 2.2
+                  , crackNum >= 2.3
                   , ghc, QuickCheck, template-haskell
                   , array, async, containers, deepseq, directory, filepath, time
-                  , pretty, process, mtl, random, syb, reinterpret-cast
+                  , pretty, process, mtl, random, syb
                   , generic-deriving
   Exposed-modules : Data.SBV
                   , Data.SBV.Control
@@ -166,7 +166,7 @@ Test-Suite SBVTest
                   , DeriveDataTypeable
                   , Rank2Types
                   , ScopedTypeVariables
-  Build-depends : base >= 4.9, reinterpret-cast, filepath, syb
+  Build-depends : base >= 4.9, filepath, syb
                 , sbv, directory, random, mtl, containers
                 , template-haskell, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, QuickCheck
   Hs-Source-Dirs  : SBVTestSuite

@@ -13,16 +13,17 @@
 
 module Data.SBV.Utils.SExpr (SExpr(..), parenDeficit, parseSExpr) where
 
-import Data.Bits            (setBit, testBit)
-import Data.Word            (Word32, Word64)
-import Data.Char            (isDigit, ord, isSpace)
-import Data.List            (isPrefixOf)
-import Data.Maybe           (fromMaybe, listToMaybe)
-import Numeric              (readInt, readDec, readHex, fromRat)
-import Data.ReinterpretCast (wordToFloat, wordToDouble)
+import Data.Bits  (setBit, testBit)
+import Data.Word  (Word32, Word64)
+import Data.Char  (isDigit, ord, isSpace)
+import Data.List  (isPrefixOf)
+import Data.Maybe (fromMaybe, listToMaybe)
+import Numeric    (readInt, readDec, readHex, fromRat)
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data (nan, infinity, RoundingMode(..))
+
+import Data.Numbers.CrackNum (wordToFloat, wordToDouble)
 
 -- | ADT S-Expression format, suitable for representing get-model output of SMT-Lib
 data SExpr = ECon    String
