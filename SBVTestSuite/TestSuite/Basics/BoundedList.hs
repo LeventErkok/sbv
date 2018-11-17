@@ -17,6 +17,7 @@ module TestSuite.Basics.BoundedList(tests)  where
 import Data.SBV.Control
 import Utils.SBVTestFramework
 
+import Data.SBV.List ((.:))
 import qualified Data.SBV.List as L
 import qualified Data.SBV.List.Bounded as BL
 
@@ -36,6 +37,7 @@ tests =
     , goldenCapturedIO "foldlABC3"       $ \rf -> checkWith z3{redirectVerbose=Just rf} (foldlABC 3)       Sat
     , goldenCapturedIO "concreteReverse" $ \rf -> checkWith z3{redirectVerbose=Just rf} concreteReverseSat Sat
     , goldenCapturedIO "reverse"         $ \rf -> checkWith z3{redirectVerbose=Just rf} reverseSat         Sat
+    , goldenCapturedIO "reverseAlt10"    $ \rf -> checkWith z3{redirectVerbose=Just rf} (reverseAlt 10)    Unsat
     , goldenCapturedIO "concreteSort"    $ \rf -> checkWith z3{redirectVerbose=Just rf} concreteSortSat    Sat
     , goldenCapturedIO "sort"            $ \rf -> checkWith z3{redirectVerbose=Just rf} sortSat            Sat
     ]
@@ -80,6 +82,19 @@ reverseSat :: Symbolic ()
 reverseSat = do
   abcd <- sIntegers ["a", "b", "c", "d"]
   constrain $ BL.breverse 10 (L.implode abcd) .== L.implode (reverse abcd)
+
+reverseAlt :: Int -> Symbolic ()
+reverseAlt i = do
+  xs <- sList "xs"
+
+  -- Assert the negation; so Unsat response means it's all good!
+  constrain $ BL.breverse i xs ./= rev i xs ([] :: SList Integer)
+ where  -- classic reverse with accumulator
+       rev 0 _  sofar = sofar
+       rev c xs sofar = ite (L.null xs)
+                            sofar
+                            (rev (c-1) (L.tail xs) (L.head xs .: sofar))
+
 
 concreteSortSat :: Symbolic ()
 concreteSortSat = constrain $ BL.bsort 10 [5,6,3,8,9,2,1,7,10,4] .== ([1..10] :: SList Integer)
