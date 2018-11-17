@@ -23,7 +23,7 @@ module Data.SBV.List.Bounded (
    , bmap, bfilter, bzipWith, belem
      -- * Aggregates
    , bsum, bprod, band, bor, bany, ball, bmaximum, bminimum
-     -- * reverse, sort
+     -- * Miscellaneous: Reverse and sort
    , breverse, bsort
    )
    where
