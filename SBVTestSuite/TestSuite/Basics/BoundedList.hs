@@ -46,9 +46,9 @@ checkWith cfg props csExpected = runSMTWith cfg{verbose=True} $ do
         query $ do cs <- checkSat
                    unless (cs == csExpected) $
                      case cs of
-                       Unsat -> error "Failed! Expected Sat, got UNSAT"
-                       Sat   -> getModel         >>= \r -> error $ "Failed! Expected Unsat, got SAT:\n" ++ show (SatResult (Satisfiable cfg r))
-                       Unk   -> getUnknownReason >>= \r -> error $ "Failed! Expected Unsat, got UNK:\n" ++ show r
+                       Unsat -> error $ "Failed! Expected " ++ show cs ++ ", got UNSAT"
+                       Sat   -> getModel         >>= \r -> error $ "Failed! Expected " ++ show cs ++ ", got SAT:\n" ++ show (SatResult (Satisfiable cfg r))
+                       Unk   -> getUnknownReason >>= \r -> error $ "Failed! Expected " ++ show cs ++ ", got UNK:\n" ++ show r
 
 concreteFoldrSat :: Symbolic ()
 concreteFoldrSat = constrain $ BL.bfoldr 3 (+) 0 [1..3] .== (6 :: SInteger)
@@ -74,8 +74,7 @@ foldlABC bound = do
   constrain $ BL.bfoldr bound (+) 0 (L.implode [a, b, c]) .== a + b + c
 
 concreteReverseSat :: Symbolic ()
-concreteReverseSat = constrain $
-  BL.breverse 10 [1..10] .== ([10,9..1] :: SList Integer)
+concreteReverseSat = constrain $ BL.breverse 10 [1..10] .== ([10,9..1] :: SList Integer)
 
 reverseSat :: Symbolic ()
 reverseSat = do
@@ -83,30 +82,19 @@ reverseSat = do
   constrain $ BL.breverse 10 (L.implode abcd) .== L.implode (reverse abcd)
 
 concreteSortSat :: Symbolic ()
-concreteSortSat = constrain $
-  BL.bsort 10 [5,6,3,8,9,2,1,7,10,4]
-  .==
-  ([1..10] :: SList Integer)
+concreteSortSat = constrain $ BL.bsort 10 [5,6,3,8,9,2,1,7,10,4] .== ([1..10] :: SList Integer)
 
 sortSat :: Symbolic ()
-sortSat = do
-  [a, b, c] <- sIntegers ["a", "b", "c"]
-  let sorted = BL.bsort 3 $ L.implode [a, b, c]
-      inconsistent = false
+sortSat = do [a, b, c] <- sIntegers ["a", "b", "c"]
 
-  constrain $
-    ite (a .< b)
-      (ite (a .< c)
-        (ite (b .< c)
-          (sorted .== L.implode [a, b, c])
-          (sorted .== L.implode [a, c, b]))
-        (ite (b .< c)
-          (sorted .== L.implode [c, a, b])
-          inconsistent))
-      (ite (a .< c)
-        (ite (b .< c)
-          (sorted .== L.implode [b, a, c])
-          inconsistent)
-        (ite (b .< c)
-          (sorted .== L.implode [b, c, a])
-          (sorted .== L.implode [c, b, a])))
+             let sorted = BL.bsort 3 $ L.implode [a, b, c]
+
+                 ordered :: (SInteger, SInteger, SInteger) -> SBool
+                 ordered (x, y, z) = x .<= y &&& y .<= z
+
+             constrain $ ordered (a, b, c) ==> sorted .== L.implode [a, b, c]
+             constrain $ ordered (a, c, b) ==> sorted .== L.implode [a, c, b]
+             constrain $ ordered (b, a, c) ==> sorted .== L.implode [b, a, c]
+             constrain $ ordered (b, c, a) ==> sorted .== L.implode [b, c, a]
+             constrain $ ordered (c, a, b) ==> sorted .== L.implode [c, a, b]
+             constrain $ ordered (c, b, a) ==> sorted .== L.implode [c, b, a]
