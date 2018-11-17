@@ -16,7 +16,7 @@
 
 module TestSuite.Basics.ArithNoSolver(tests) where
 
-import qualified Data.ReinterpretCast as RC (wordToFloat, wordToDouble, floatToWord, doubleToWord)
+import qualified Data.Numbers.CrackNum as CN (wordToFloat, wordToDouble, floatToWord, doubleToWord)
 
 import Data.SBV.Internals
 import Utils.SBVTestFramework
@@ -419,11 +419,11 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                  ++ map cvtTestI [("fromFP_Double_ToInteger", show x, (fromSDouble sRNE :: SDouble -> SInteger) (literal x), ((fromIntegral :: Integer -> SInteger) . fpRound0) x) | x <- ds]
                  ++ map cvtTestI [("fromFP_Double_ToReal",    show x, (fromSDouble sRNE :: SDouble -> SReal)    (literal x),                          (fromRational . fpRatio0) x) | x <- ds]
 
-                 ++ map cvtTest  [("reinterp_Word32_Float",  show x, sWord32AsSFloat  (literal x), literal (RC.wordToFloat  x)) | x <- w32s]
-                 ++ map cvtTest  [("reinterp_Word64_Double", show x, sWord64AsSDouble (literal x), literal (RC.wordToDouble x)) | x <- w64s]
+                 ++ map cvtTest  [("reinterp_Word32_Float",  show x, sWord32AsSFloat  (literal x), literal (CN.wordToFloat  x)) | x <- w32s]
+                 ++ map cvtTest  [("reinterp_Word64_Double", show x, sWord64AsSDouble (literal x), literal (CN.wordToDouble x)) | x <- w64s]
 
-                 ++ map cvtTestI [("reinterp_Float_Word32",  show x, sFloatAsSWord32  (literal x), literal (RC.floatToWord x))  | x <- fs, not (isNaN x)] -- Not unique for NaN
-                 ++ map cvtTestI [("reinterp_Double_Word64", show x, sDoubleAsSWord64 (literal x), literal (RC.doubleToWord x)) | x <- ds, not (isNaN x)] -- Not unique for NaN
+                 ++ map cvtTestI [("reinterp_Float_Word32",  show x, sFloatAsSWord32  (literal x), literal (CN.floatToWord x))  | x <- fs, not (isNaN x)] -- Not unique for NaN
+                 ++ map cvtTestI [("reinterp_Double_Word64", show x, sDoubleAsSWord64 (literal x), literal (CN.doubleToWord x)) | x <- ds, not (isNaN x)] -- Not unique for NaN
 
         floatRun1   nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- fs]
         doubleRun1  nm f g cmb = map (nm,) [cmb (x,    f x,   extract (g                         (literal x)))             | x <- ds]

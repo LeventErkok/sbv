@@ -166,7 +166,7 @@ Test-Suite SBVTest
                   , DeriveDataTypeable
                   , Rank2Types
                   , ScopedTypeVariables
-  Build-depends : base >= 4.9, filepath, syb
+  Build-depends : base >= 4.9, filepath, syb, crackNum >= 2.3
                 , sbv, directory, random, mtl, containers
                 , template-haskell, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, QuickCheck
   Hs-Source-Dirs  : SBVTestSuite

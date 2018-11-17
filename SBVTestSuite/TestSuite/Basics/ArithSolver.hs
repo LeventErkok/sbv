@@ -17,7 +17,7 @@
 
 module TestSuite.Basics.ArithSolver(tests) where
 
-import qualified Data.ReinterpretCast as RC (wordToFloat, wordToDouble, floatToWord, doubleToWord)
+import qualified Data.Numbers.CrackNum as RC (wordToFloat, wordToDouble, floatToWord, doubleToWord)
 
 import Data.SBV.Internals
 import Utils.SBVTestFramework
