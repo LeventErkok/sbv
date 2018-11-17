@@ -105,24 +105,19 @@ breverse :: SymWord a => Int -> SList a -> SList a
 breverse cnt = bfoldr cnt (\a b -> b .++ L.singleton a) []
 
 -- | Bounded paramorphism (not exported).
-bpara
-  :: (SymWord a, SymWord b)
-  => Int -> (SBV a -> SBV [a] -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
+bpara :: (SymWord a, SymWord b) => Int -> (SBV a -> SBV [a] -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
 bpara cnt f b = go (cnt `max` 0)
   where go 0 _ = b
         go i s = lcase s b (\h t -> f h t (go (i-1) t))
 
 -- | Insert an element into a sorted list (not exported).
 binsert :: SymWord a => Int -> SBV a -> SList a -> SList a
-binsert cnt a l = bpara cnt
-  (\sortedHd sortedTl sortedTl' -> ite (a .< sortedHd)
-    (a .: sortedHd .: sortedTl)
-    (sortedHd .: sortedTl'))
-  (L.singleton a)
-  l
+binsert cnt a = bpara cnt f (L.singleton a)
+  where f sortedHd sortedTl sortedTl' = ite (a .< sortedHd)
+                                            (a .: sortedHd .: sortedTl)
+                                            (sortedHd .: sortedTl')
 
 -- | Bounded insertion sort
 bsort :: SymWord a => Int -> SList a -> SList a
-bsort cnt l = ite (L.null l) [] $
-  let (hd, tl) = L.uncons l
-  in bfoldr cnt (binsert cnt) (L.singleton hd) tl
+bsort cnt l = ite (L.null l) [] $ bfoldr cnt (binsert cnt) (L.singleton hd) tl
+  where (hd, tl) = L.uncons l
