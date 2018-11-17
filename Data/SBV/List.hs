@@ -307,8 +307,8 @@ replace l src dst
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Word16) i -> i .> 0 &&& i .< length l ==> indexOf l (subList l i 1) .== i
 -- Falsifiable. Counter-example:
---   s0 = [0,0,0,0,0] :: [SWord16]
---   s1 =           3 :: Integer
+--   s0 = [128,0,0,0,0] :: [SWord16]
+--   s1 =             3 :: Integer
 -- >>> prove $ \(l1 :: SList Word16) l2 -> length l2 .> length l1 ==> indexOf l1 l2 .== -1
 -- Q.E.D.
 indexOf :: SymWord a => SList a -> SList a -> SInteger
