@@ -119,5 +119,4 @@ binsert cnt a = bpara cnt f (L.singleton a)
 
 -- | Bounded insertion sort
 bsort :: SymWord a => Int -> SList a -> SList a
-bsort cnt l = ite (L.null l) [] $ bfoldr cnt (binsert cnt) (L.singleton hd) tl
-  where (hd, tl) = L.uncons l
+bsort cnt = bfoldr cnt (binsert cnt) []
