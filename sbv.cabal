@@ -180,6 +180,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.ArithSolver
                   , TestSuite.Basics.Assert
                   , TestSuite.Basics.BasicTests
+                  , TestSuite.Basics.BoundedList
                   , TestSuite.Basics.Exceptions
                   , TestSuite.Basics.GenBenchmark
                   , TestSuite.Basics.Higher

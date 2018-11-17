@@ -23,11 +23,13 @@ module Data.SBV.List.Bounded (
    , bmap, bfilter, bzipWith, belem
      -- * Aggregates
    , bsum, bprod, band, bor, bany, ball, bmaximum, bminimum
+     -- * reverse, sort
+   , breverse, bsort
    )
    where
 
 import Data.SBV
-import Data.SBV.List ((.:))
+import Data.SBV.List ((.:), (.++))
 import qualified Data.SBV.List as L
 
 -- | Case analysis on a symbolic list. (Not exported.)
@@ -97,3 +99,30 @@ bzipWith cnt f = go (cnt `max` 0)
 -- | Bounded element check
 belem :: SymWord a => Int -> SBV a -> SList a -> SBool
 belem i e = bany i (e .==)
+
+-- | Bounded reverse
+breverse :: SymWord a => Int -> SList a -> SList a
+breverse cnt = bfoldr cnt (\a b -> b .++ L.singleton a) []
+
+-- | Bounded paramorphism (not exported).
+bpara
+  :: (SymWord a, SymWord b)
+  => Int -> (SBV a -> SBV [a] -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
+bpara cnt f b = go (cnt `max` 0)
+  where go 0 _ = b
+        go i s = lcase s b (\h t -> f h t (go (i-1) t))
+
+-- | Insert an element into a sorted list (not exported).
+binsert :: SymWord a => Int -> SBV a -> SList a -> SList a
+binsert cnt a l = bpara cnt
+  (\sortedHd sortedTl sortedTl' -> ite (a .< sortedHd)
+    (a .: sortedHd .: sortedTl)
+    (sortedHd .: sortedTl'))
+  (L.singleton a)
+  l
+
+-- | Bounded insertion sort
+bsort :: SymWord a => Int -> SList a -> SList a
+bsort cnt l = ite (L.null l) [] $
+  let (hd, tl) = L.uncons l
+  in bfoldr cnt (binsert cnt) (L.singleton hd) tl
