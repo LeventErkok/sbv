@@ -25,7 +25,7 @@ import Control.Monad (unless)
 -- Test suite
 tests :: TestTree
 tests =
-  testGroup "Basics.List" [
+  testGroup "Basics.BoundedList" [
       goldenCapturedIO "concreteFoldr"   $ \rf -> checkWith z3{redirectVerbose=Just rf} concreteFoldrSat   Sat
     , goldenCapturedIO "concreteFoldl"   $ \rf -> checkWith z3{redirectVerbose=Just rf} concreteFoldlSat   Sat
     , goldenCapturedIO "foldrAB1"        $ \rf -> checkWith z3{redirectVerbose=Just rf} (foldrAB 1)        Unsat
