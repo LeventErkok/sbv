@@ -78,11 +78,11 @@ import Data.SBV.Utils.Lib      (isKString)
 -- Symbolic-Word class instances
 
 -- | Generate a finite symbolic bitvector, named
-genVar :: Maybe Quantifier -> Kind -> String -> Symbolic (SBV a)
+genVar :: MonadIO m => Maybe Quantifier -> Kind -> String -> SymbolicT m (SBV a)
 genVar q k = mkSymSBV q k . Just
 
 -- | Generate a finite symbolic bitvector, unnamed
-genVar_ :: Maybe Quantifier -> Kind -> Symbolic (SBV a)
+genVar_ :: MonadIO m => Maybe Quantifier -> Kind -> SymbolicT m (SBV a)
 genVar_ q k = mkSymSBV q k Nothing
 
 -- | Generate a finite constant bitvector
@@ -95,7 +95,7 @@ genFromCW (CW _ (CWInteger x)) = fromInteger x
 genFromCW c                    = error $ "genFromCW: Unsupported non-integral value: " ++ show c
 
 -- | Generically make a symbolic var
-genMkSymVar :: Kind -> Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
+genMkSymVar :: MonadIO m => Kind -> Maybe Quantifier -> Maybe String -> SymbolicT m (SBV a)
 genMkSymVar k mbq Nothing  = genVar_ mbq k
 genMkSymVar k mbq (Just s) = genVar  mbq k s
 
@@ -1818,7 +1818,7 @@ instance MonadIO m => SolverContext (SymbolicT m) where
    setOption o = addNewSMTOption  o
 
 -- | Introduce a soft assertion, with an optional penalty
-assertWithPenalty :: String -> SBool -> Penalty -> Symbolic ()
+assertWithPenalty :: MonadIO m => String -> SBool -> Penalty -> SymbolicT m ()
 assertWithPenalty nm o p = addSValOptGoal $ unSBV `fmap` AssertWithPenalty nm o p
 
 -- | Class of metrics we can optimize for. Currently,
@@ -1830,10 +1830,10 @@ assertWithPenalty nm o p = addSValOptGoal $ unSBV `fmap` AssertWithPenalty nm o 
 -- <http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>.
 class Metric a where
   -- | Minimize a named metric
-  minimize :: String -> a -> Symbolic ()
+  minimize :: MonadIO m => String -> a -> SymbolicT m ()
 
   -- | Maximize a named metric
-  maximize :: String -> a -> Symbolic ()
+  maximize :: MonadIO m => String -> a -> SymbolicT m ()
 
 instance Metric SWord8   where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
 instance Metric SWord16  where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)

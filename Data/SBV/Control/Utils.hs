@@ -52,6 +52,7 @@ import qualified Data.IntMap.Strict as IMap
 import qualified Control.Monad.Reader as R (ask)
 
 import Control.Monad            (unless)
+import Control.Monad.IO.Class   (MonadIO)
 import Control.Monad.State.Lazy (get, liftIO)
 
 import Control.Monad.State      (evalStateT)
@@ -69,7 +70,7 @@ import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, K
                               , Result(..), SMTProblem(..), trueSW, SymWord(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
                               )
 
-import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSW, Symbolic
+import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSW, SymbolicT
                               , QueryContext(..)
                               , registerLabel, svMkSymVar
                               , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), Query(..)
@@ -787,7 +788,7 @@ runProofOn rm comments res@(Result ki _qcInfo _observables _codeSegs is consts t
      in SMTProblem { smtLibPgm = toSMTLib config ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o }
 
 -- | Execute a query
-executeQuery :: QueryContext -> Query a -> Symbolic a
+executeQuery :: MonadIO m => QueryContext -> Query a -> SymbolicT m a
 executeQuery queryContext (Query userQuery) = do
      st <- R.ask
      rm <- liftIO $ readIORef (runMode st)

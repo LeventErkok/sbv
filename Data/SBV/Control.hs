@@ -74,14 +74,16 @@ module Data.SBV.Control (
      , SMTOption(..)
      ) where
 
+import Control.Monad.IO.Class (MonadIO)
+
 import Data.SBV.Core.Data     (SMTConfig(..))
-import Data.SBV.Core.Symbolic (Query, Symbolic, Query(..), QueryContext(..))
+import Data.SBV.Core.Symbolic (Query, SymbolicT, Query(..), QueryContext(..))
 
 import Data.SBV.Control.Query
 import Data.SBV.Control.Utils (SMTValue(..), queryDebug, executeQuery)
 
 -- | Run a custom query
-query :: Query a -> Symbolic a
+query :: MonadIO m => Query a -> SymbolicT m a
 query = executeQuery QueryExternal
 
 {- $queryIntro

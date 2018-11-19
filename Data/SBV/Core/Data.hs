@@ -57,14 +57,15 @@ module Data.SBV.Core.Data
 import GHC.Generics (Generic)
 import GHC.Exts     (IsList(..))
 
-import Control.DeepSeq      (NFData(..))
-import Control.Monad.Reader (ask)
-import Control.Monad.Trans  (liftIO)
-import Data.Int             (Int8, Int16, Int32, Int64)
-import Data.Word            (Word8, Word16, Word32, Word64)
-import Data.List            (elemIndex)
-import Data.Maybe           (fromMaybe)
-import Data.Typeable        (Typeable)
+import Control.DeepSeq        (NFData(..))
+import Control.Monad.IO.Class (MonadIO)
+import Control.Monad.Reader   (ask)
+import Control.Monad.Trans    (liftIO)
+import Data.Int               (Int8, Int16, Int32, Int64)
+import Data.Word              (Word8, Word16, Word32, Word64)
+import Data.List              (elemIndex)
+import Data.Maybe             (fromMaybe)
+import Data.Typeable          (Typeable)
 
 import qualified Data.Generics as G    (Data(..))
 
@@ -267,11 +268,11 @@ sbvToSW st (SBV s) = svToSW st s
 -------------------------------------------------------------------------
 
 -- | Create a symbolic variable.
-mkSymSBV :: forall a. Maybe Quantifier -> Kind -> Maybe String -> Symbolic (SBV a)
+mkSymSBV :: forall a m. MonadIO m => Maybe Quantifier -> Kind -> Maybe String -> SymbolicT m (SBV a)
 mkSymSBV mbQ k mbNm = SBV <$> (ask >>= liftIO . svMkSymVar mbQ k mbNm)
 
 -- | Convert a symbolic value to an SW, inside the Symbolic monad
-sbvToSymSW :: SBV a -> Symbolic SW
+sbvToSymSW :: MonadIO m => SBV a -> SymbolicT m SW
 sbvToSymSW sbv = do
         st <- ask
         liftIO $ sbvToSW st sbv
@@ -311,7 +312,7 @@ class SolverContext m where
 class Outputtable a where
   -- | Mark an interim result as an output. Useful when constructing Symbolic programs
   -- that return multiple values, or when the result is programmatically computed.
-  output :: a -> Symbolic a
+  output :: MonadIO m => a -> SymbolicT m a
 
 instance Outputtable (SBV a) where
   output i = do
@@ -360,9 +361,9 @@ class (HasKind a, Ord a, Typeable a) => SymWord a where
   -- | Get a bunch of new words
   mkForallVars :: Int -> Symbolic [SBV a]
   -- | Create an existential variable
-  exists  :: String -> Symbolic (SBV a)
+  exists  :: MonadIO m => String -> SymbolicT m (SBV a)
   -- | Create an automatically named existential variable
-  exists_ :: Symbolic (SBV a)
+  exists_ :: MonadIO m => SymbolicT m (SBV a)
   -- | Create a bunch of existentials
   mkExistVars :: Int -> Symbolic [SBV a]
   -- | Create a free variable, universal in a proof, existential in sat
@@ -388,7 +389,7 @@ class (HasKind a, Ord a, Typeable a) => SymWord a where
   -- | Does it concretely satisfy the given predicate?
   isConcretely :: SBV a -> (a -> Bool) -> Bool
   -- | One stop allocator
-  mkSymWord :: Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
+  mkSymWord :: MonadIO m => Maybe Quantifier -> Maybe String -> SymbolicT m (SBV a)
 
   -- minimal complete definition:: Nothing.
   -- Giving no instances is ok when defining an uninterpreted/enumerated sort, but otherwise you really
@@ -425,7 +426,7 @@ class (HasKind a, Ord a, Typeable a) => SymWord a where
   fromCW (CW _ (CWUserSort (_, s))) = read s
   fromCW cw                         = error $ "Cannot convert CW " ++ show cw ++ " to kind " ++ show (kindOf (undefined :: a))
 
-  default mkSymWord :: (Read a, G.Data a) => Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
+  default mkSymWord :: (MonadIO m, Read a, G.Data a) => Maybe Quantifier -> Maybe String -> SymbolicT m (SBV a)
   mkSymWord mbQ mbNm = SBV <$> (ask >>= liftIO . svMkSymVar mbQ k mbNm)
     where k = constructUKind (undefined :: a)
 

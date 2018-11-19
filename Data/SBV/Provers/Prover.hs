@@ -9,11 +9,12 @@
 -- Provable abstraction and the connection to SMT solvers
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                  #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE NamedFieldPuns       #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE CPP                   #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
 
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate, Provable(..), Goal
@@ -26,8 +27,9 @@ module Data.SBV.Provers.Prover (
        ) where
 
 
-import Control.Monad   (when, unless)
-import Control.DeepSeq (rnf, NFData(..))
+import Control.Monad          (when, unless)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.DeepSeq        (rnf, NFData(..))
 
 import Control.Concurrent.Async (async, waitAny, asyncThreadId, Async)
 import Control.Exception (finally, throwTo, AsyncException(ThreadKilled))
@@ -554,22 +556,23 @@ sbvWithAll solvers what a = do beginTime <- getCurrentTime
 
 -- | Symbolically executable program fragments. This class is mainly used for 'safe' calls, and is sufficently populated internally to cover most use
 -- cases. Users can extend it as they wish to allow 'safe' checks for SBV programs that return/take types that are user-defined.
-class SExecutable a where
-   sName_ :: a -> Symbolic ()
-   sName  :: [String] -> a -> Symbolic ()
+class MonadIO m => SExecutable m a where
+   sName_ :: a -> SymbolicT m ()
+   sName  :: [String] -> a -> SymbolicT m ()
 
    -- | Check safety using the default solver.
-   safe :: a -> IO [SafeResult]
+   safe :: a -> m [SafeResult]
    safe = safeWith defaultSMTCfg
 
    -- | Check if any of the 'Data.SBV.sAssert' calls can be violated.
-   safeWith :: SMTConfig -> a -> IO [SafeResult]
-   safeWith cfg a = do cwd <- (++ "/") <$> getCurrentDirectory
+   safeWith :: SMTConfig -> a -> m [SafeResult]
+   safeWith cfg a = do cwd <- (++ "/") <$> liftIO getCurrentDirectory
                        let mkRelative path
                               | cwd `isPrefixOf` path = drop (length cwd) path
                               | True                  = path
                        fst <$> runSymbolic (SMTMode ISafe True cfg) (sName_ a >> check mkRelative)
-     where check mkRelative = Control.query $ Control.getSBVAssertions >>= mapM (verify mkRelative)
+     where check :: (FilePath -> FilePath) -> SymbolicT m [SafeResult]
+           check mkRelative = Control.query $ Control.getSBVAssertions >>= mapM (verify mkRelative)
 
            -- check that the cond is unsatisfiable. If satisfiable, that would
            -- indicate the assignment under which the 'Data.SBV.sAssert' would fail
@@ -587,93 +590,93 @@ class SExecutable a where
 
                    return $ SafeResult (location, msg, result)
 
-instance NFData a => SExecutable (Symbolic a) where
+instance (MonadIO m, NFData a) => SExecutable m (SymbolicT m a) where
    sName_   a = a >>= \r -> rnf r `seq` return ()
    sName []   = sName_
    sName xs   = error $ "SBV.SExecutable.sName: Extra unmapped name(s): " ++ intercalate ", " xs
 
-instance SExecutable (SBV a) where
-   sName_   v = sName_ (output v)
-   sName xs v = sName xs (output v)
+instance MonadIO m => SExecutable m (SBV a) where
+   sName_   v = sName_   (output v :: SymbolicT m (SBV a))
+   sName xs v = sName xs (output v :: SymbolicT m (SBV a))
 
 -- Unit output
-instance SExecutable () where
-   sName_   () = sName_   (output ())
-   sName xs () = sName xs (output ())
+instance MonadIO m => SExecutable m () where
+   sName_   () = sName_   (output () :: SymbolicT m ())
+   sName xs () = sName xs (output () :: SymbolicT m ())
 
 -- List output
-instance SExecutable [SBV a] where
-   sName_   vs = sName_   (output vs)
-   sName xs vs = sName xs (output vs)
+instance MonadIO m => SExecutable m [SBV a] where
+   sName_   vs = sName_   (output vs :: SymbolicT m [SBV a])
+   sName xs vs = sName xs (output vs :: SymbolicT m [SBV a])
 
 -- 2 Tuple output
-instance (NFData a, SymWord a, NFData b, SymWord b) => SExecutable (SBV a, SBV b) where
-  sName_ (a, b) = sName_ (output a >> output b)
+instance (MonadIO m, NFData a, SymWord a, NFData b, SymWord b) => SExecutable m (SBV a, SBV b) where
+  sName_ (a, b) = sName_ (output a >> output b :: SymbolicT m (SBV b))
   sName _       = sName_
 
 -- 3 Tuple output
-instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c) => SExecutable (SBV a, SBV b, SBV c) where
-  sName_ (a, b, c) = sName_ (output a >> output b >> output c)
+instance (MonadIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c) => SExecutable m (SBV a, SBV b, SBV c) where
+  sName_ (a, b, c) = sName_ (output a >> output b >> output c :: SymbolicT m (SBV c))
   sName _          = sName_
 
 -- 4 Tuple output
-instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d) => SExecutable (SBV a, SBV b, SBV c, SBV d) where
-  sName_ (a, b, c, d) = sName_ (output a >> output b >> output c >> output c >> output d)
+instance (MonadIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d) => SExecutable m (SBV a, SBV b, SBV c, SBV d) where
+  sName_ (a, b, c, d) = sName_ (output a >> output b >> output c >> output c >> output d :: SymbolicT m (SBV d))
   sName _             = sName_
 
 -- 5 Tuple output
-instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e) => SExecutable (SBV a, SBV b, SBV c, SBV d, SBV e) where
-  sName_ (a, b, c, d, e) = sName_ (output a >> output b >> output c >> output d >> output e)
+instance (MonadIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e) where
+  sName_ (a, b, c, d, e) = sName_ (output a >> output b >> output c >> output d >> output e :: SymbolicT m (SBV e))
   sName _                = sName_
 
 -- 6 Tuple output
-instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f) => SExecutable (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
-  sName_ (a, b, c, d, e, f) = sName_ (output a >> output b >> output c >> output d >> output e >> output f)
+instance (MonadIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
+  sName_ (a, b, c, d, e, f) = sName_ (output a >> output b >> output c >> output d >> output e >> output f :: SymbolicT m (SBV f))
   sName _                   = sName_
 
 -- 7 Tuple output
-instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f, NFData g, SymWord g) => SExecutable (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
-  sName_ (a, b, c, d, e, f, g) = sName_ (output a >> output b >> output c >> output d >> output e >> output f >> output g)
+instance (MonadIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f, NFData g, SymWord g) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
+  sName_ (a, b, c, d, e, f, g) = sName_ (output a >> output b >> output c >> output d >> output e >> output f >> output g :: SymbolicT m (SBV g))
   sName _                      = sName_
 
 -- Functions
-instance (SymWord a, SExecutable p) => SExecutable (SBV a -> p) where
+instance (SymWord a, SExecutable m p) => SExecutable m (SBV a -> p) where
    sName_        k = exists_   >>= \a -> sName_   $ k a
    sName (s:ss)  k = exists s  >>= \a -> sName ss $ k a
    sName []      k = sName_ k
 
 -- 2 Tuple input
-instance (SymWord a, SymWord b, SExecutable p) => SExecutable ((SBV a, SBV b) -> p) where
+instance (SymWord a, SymWord b, SExecutable m p) => SExecutable m ((SBV a, SBV b) -> p) where
   sName_        k = exists_  >>= \a -> sName_   $ \b -> k (a, b)
   sName (s:ss)  k = exists s >>= \a -> sName ss $ \b -> k (a, b)
   sName []      k = sName_ k
 
 -- 3 Tuple input
-instance (SymWord a, SymWord b, SymWord c, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c) -> p) where
   sName_       k  = exists_  >>= \a -> sName_   $ \b c -> k (a, b, c)
   sName (s:ss) k  = exists s >>= \a -> sName ss $ \b c -> k (a, b, c)
   sName []     k  = sName_ k
 
 -- 4 Tuple input
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
   sName_        k = exists_  >>= \a -> sName_   $ \b c d -> k (a, b, c, d)
   sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d -> k (a, b, c, d)
   sName []      k = sName_ k
 
 -- 5 Tuple input
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
   sName_        k = exists_  >>= \a -> sName_   $ \b c d e -> k (a, b, c, d, e)
   sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e -> k (a, b, c, d, e)
   sName []      k = sName_ k
 
 -- 6 Tuple input
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
   sName_        k = exists_  >>= \a -> sName_   $ \b c d e f -> k (a, b, c, d, e, f)
   sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e f -> k (a, b, c, d, e, f)
   sName []      k = sName_ k
 
 -- 7 Tuple input
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
   sName_        k = exists_  >>= \a -> sName_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
   sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   sName []      k = sName_ k
