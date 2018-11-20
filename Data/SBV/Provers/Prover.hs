@@ -11,13 +11,18 @@
 
 {-# LANGUAGE CPP                   #-}
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
 
 module Data.SBV.Provers.Prover (
-         SMTSolver(..), SMTConfig(..), Predicate, Provable(..), Goal
+         SMTSolver(..), SMTConfig(..), Predicate
+       , Provable(..), isVacuous, isVacuousWith, isTheorem, isTheoremWith
+       , isSatisfiable, isSatisfiableWith, proveWithAll, proveWithAny
+       , satWithAll, satWithAny, generateSMTBenchmark
+       , Goal
        , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
        , SExecutable(..), isSafe
        , runSMT, runSMTWith
@@ -133,7 +138,7 @@ type Goal = Symbolic ()
 -- each element is either a symbolic type or up-to a 7-tuple of symbolic-types. So
 -- predicates can be constructed from almost arbitrary Haskell functions that have arbitrary
 -- shapes. (See the instance declarations below.)
-class Provable a where
+class MonadIO m => Provable m a where
   -- | Turns a value into a universally quantified predicate, internally naming the inputs.
   -- In this case the sbv library will use names of the form @s1, s2@, etc. to name these variables
   -- Example:
@@ -142,7 +147,7 @@ class Provable a where
   --
   -- is a predicate with two arguments, captured using an ordinary Haskell function. Internally,
   -- @x@ will be named @s0@ and @y@ will be named @s1@.
-  forAll_ :: a -> Predicate
+  forAll_ :: a -> SymbolicT m SBool
 
   -- | Turns a value into a predicate, allowing users to provide names for the inputs.
   -- If the user does not provide enough number of names for the variables, the remaining ones
@@ -153,33 +158,33 @@ class Provable a where
   --
   -- This is the same as above, except the variables will be named @x@ and @y@ respectively,
   -- simplifying the counter-examples when they are printed.
-  forAll  :: [String] -> a -> Predicate
+  forAll  :: [String] -> a -> SymbolicT m SBool
 
   -- | Turns a value into an existentially quantified predicate. (Indeed, 'exists' would have been
   -- a better choice here for the name, but alas it's already taken.)
-  forSome_ :: a -> Predicate
+  forSome_ :: a -> SymbolicT m SBool
 
   -- | Version of 'forSome' that allows user defined names.
-  forSome :: [String] -> a -> Predicate
+  forSome :: [String] -> a -> SymbolicT m SBool
 
   -- | Prove a predicate, using the default solver.
-  prove :: a -> IO ThmResult
+  prove :: a -> m ThmResult
   prove = proveWith defaultSMTCfg
 
   -- | Prove the predicate using the given SMT-solver.
-  proveWith :: SMTConfig -> a -> IO ThmResult
+  proveWith :: SMTConfig -> a -> m ThmResult
   proveWith = runWithQuery False $ checkNoOptimizations >> ThmResult <$> Control.getSMTResult
 
   -- | Find a satisfying assignment for a predicate, using the default solver.
-  sat :: a -> IO SatResult
+  sat :: a -> m SatResult
   sat = satWith defaultSMTCfg
 
   -- | Find a satisfying assignment using the given SMT-solver.
-  satWith :: SMTConfig -> a -> IO SatResult
+  satWith :: SMTConfig -> a -> m SatResult
   satWith = runWithQuery True $ checkNoOptimizations >> SatResult <$> Control.getSMTResult
 
   -- | Find all satisfying assignments, using the default solver. See 'allSatWith' for details.
-  allSat :: a -> IO AllSatResult
+  allSat :: a -> m AllSatResult
   allSat = allSatWith defaultSMTCfg
 
   -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
@@ -193,15 +198,15 @@ class Provable a where
   -- array inputs will be returned. This is due to the limitation of not having a robust means of getting a
   -- function counter-example back from the SMT solver.
   --  Find all satisfying assignments using the given SMT-solver
-  allSatWith :: SMTConfig -> a -> IO AllSatResult
+  allSatWith :: SMTConfig -> a -> m AllSatResult
   allSatWith = runWithQuery True $ checkNoOptimizations >> AllSatResult <$> Control.getAllSatResult
 
   -- | Optimize a given collection of `Objective`s
-  optimize :: OptimizeStyle -> a -> IO OptimizeResult
+  optimize :: OptimizeStyle -> a -> m OptimizeResult
   optimize = optimizeWith defaultSMTCfg
 
   -- | Optimizes the objectives using the given SMT-solver.
-  optimizeWith :: SMTConfig -> OptimizeStyle -> a -> IO OptimizeResult
+  optimizeWith :: SMTConfig -> OptimizeStyle -> a -> m OptimizeResult
   optimizeWith config style = runWithQuery True opt config
     where opt = do objectives <- Control.getObjectives
                    qinps      <- Control.getQuantifiedInputs
@@ -304,86 +309,88 @@ class Provable a where
                       Independent   -> IndependentResult   <$> Control.getIndependentOptResults (map objectiveName objectives)
                       Pareto mbN    -> ParetoResult        <$> Control.getParetoOptResults mbN
 
-  -- | Check if the constraints given are consistent, using the default solver.
-  isVacuous :: a -> IO Bool
-  isVacuous = isVacuousWith defaultSMTCfg
+-- | Check if the constraints given are consistent, using the default solver.
+isVacuous :: (MonadIO m, Provable m a) => a -> m Bool
+isVacuous = isVacuousWith defaultSMTCfg
 
-  -- | Determine if the constraints are vacuous using the given SMT-solver.
-  isVacuousWith :: SMTConfig -> a -> IO Bool
-  isVacuousWith cfg a = -- NB. Can't call runWithQuery since last constraint would become the implication!
-                        fst <$> runSymbolic (SMTMode ISetup True cfg) (forSome_ a >> Control.query check)
-     where check = do cs <- Control.checkSat
-                      case cs of
-                        Control.Unsat -> return True
-                        Control.Sat   -> return False
-                        Control.Unk   -> error "SBV: isVacuous: Solver returned unknown!"
+-- | Determine if the constraints are vacuous using the given SMT-solver.
+isVacuousWith :: (MonadIO m, Provable m a) => SMTConfig -> a -> m Bool
+isVacuousWith cfg a = -- NB. Can't call runWithQuery since last constraint would become the implication!
+                      fst <$> runSymbolic (SMTMode ISetup True cfg) (forSome_ a >> Control.query check)
+   where
+     check :: Query Bool
+     check = do cs <- Control.checkSat
+                case cs of
+                  Control.Unsat -> return True
+                  Control.Sat   -> return False
+                  Control.Unk   -> error "SBV: isVacuous: Solver returned unknown!"
 
-  -- | Checks theoremhood using the default solver.
-  isTheorem :: a -> IO Bool
-  isTheorem = isTheoremWith defaultSMTCfg
+-- | Checks theoremhood using the default solver.
+isTheorem :: (MonadIO m, Provable m a) => a -> m Bool
+isTheorem = isTheoremWith defaultSMTCfg
 
-  -- | Check whether a given property is a theorem.
-  isTheoremWith :: SMTConfig -> a -> IO Bool
-  isTheoremWith cfg p = do r <- proveWith cfg p
-                           case r of
-                             ThmResult Unsatisfiable{} -> return True
-                             ThmResult Satisfiable{}   -> return False
-                             _                         -> error $ "SBV.isTheorem: Received:\n" ++ show r
+-- | Check whether a given property is a theorem.
+isTheoremWith :: (MonadIO m, Provable m a) => SMTConfig -> a -> m Bool
+isTheoremWith cfg p = do r <- proveWith cfg p
+                         case r of
+                           ThmResult Unsatisfiable{} -> return True
+                           ThmResult Satisfiable{}   -> return False
+                           _                         -> error $ "SBV.isTheorem: Received:\n" ++ show r
 
 
-  -- | Checks satisfiability using the default solver.
-  isSatisfiable :: a -> IO Bool
-  isSatisfiable = isSatisfiableWith defaultSMTCfg
+-- | Checks satisfiability using the default solver.
+isSatisfiable :: (MonadIO m, Provable m a) => a -> m Bool
+isSatisfiable = isSatisfiableWith defaultSMTCfg
 
-  -- | Check whether a given property is satisfiable.
-  isSatisfiableWith :: SMTConfig -> a -> IO Bool
-  isSatisfiableWith cfg p = do r <- satWith cfg p
-                               case r of
-                                 SatResult Satisfiable{}   -> return True
-                                 SatResult Unsatisfiable{} -> return False
-                                 _                         -> error $ "SBV.isSatisfiable: Received: " ++ show r
+-- | Check whether a given property is satisfiable.
+isSatisfiableWith :: (MonadIO m, Provable m a) => SMTConfig -> a -> m Bool
+isSatisfiableWith cfg p = do r <- satWith cfg p
+                             case r of
+                               SatResult Satisfiable{}   -> return True
+                               SatResult Unsatisfiable{} -> return False
+                               _                         -> error $ "SBV.isSatisfiable: Received: " ++ show r
 
-  -- | Prove a property with multiple solvers, running them in separate threads. The
-  -- results will be returned in the order produced.
-  proveWithAll :: [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, ThmResult)]
-  proveWithAll  = (`sbvWithAll` proveWith)
+-- | Prove a property with multiple solvers, running them in separate threads. The
+-- results will be returned in the order produced.
+proveWithAll :: Provable IO a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, ThmResult)]
+proveWithAll  = (`sbvWithAll` proveWith)
 
-  -- | Prove a property with multiple solvers, running them in separate threads. Only
-  -- the result of the first one to finish will be returned, remaining threads will be killed.
-  -- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
-  -- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
-  -- that some processes take their time to terminate. So, this solution favors quick turnaround.
-  proveWithAny :: [SMTConfig] -> a -> IO (Solver, NominalDiffTime, ThmResult)
-  proveWithAny  = (`sbvWithAny` proveWith)
+-- | Prove a property with multiple solvers, running them in separate threads. Only
+-- the result of the first one to finish will be returned, remaining threads will be killed.
+-- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
+-- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
+-- that some processes take their time to terminate. So, this solution favors quick turnaround.
+proveWithAny :: Provable IO a => [SMTConfig] -> a -> IO (Solver, NominalDiffTime, ThmResult)
+proveWithAny  = (`sbvWithAny` proveWith)
 
-  -- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. The
-  -- results will be returned in the order produced.
-  satWithAll :: [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, SatResult)]
-  satWithAll = (`sbvWithAll` satWith)
+-- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. The
+-- results will be returned in the order produced.
+satWithAll :: Provable IO a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, SatResult)]
+satWithAll = (`sbvWithAll` satWith)
 
-  -- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. Only
-  -- the result of the first one to finish will be returned, remaining threads will be killed.
-  -- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
-  -- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
-  -- that some processes take their time to terminate. So, this solution favors quick turnaround.
-  satWithAny :: [SMTConfig] -> a -> IO (Solver, NominalDiffTime, SatResult)
-  satWithAny    = (`sbvWithAny` satWith)
+-- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. Only
+-- the result of the first one to finish will be returned, remaining threads will be killed.
+-- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
+-- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
+-- that some processes take their time to terminate. So, this solution favors quick turnaround.
+satWithAny :: Provable IO a => [SMTConfig] -> a -> IO (Solver, NominalDiffTime, SatResult)
+satWithAny    = (`sbvWithAny` satWith)
 
-  -- | Create an SMT-Lib2 benchmark. The 'Bool' argument controls whether this is a SAT instance, i.e.,
-  -- translate the query directly, or a PROVE instance, i.e., translate the negated query.
-  generateSMTBenchmark :: Bool -> a -> IO String
-  generateSMTBenchmark isSat a = do
-        t <- getZonedTime
+-- | Create an SMT-Lib2 benchmark. The 'Bool' argument controls whether this is a SAT instance, i.e.,
+-- translate the query directly, or a PROVE instance, i.e., translate the negated query.
+generateSMTBenchmark :: (MonadIO m, Provable m a) => Bool -> a -> m String
+generateSMTBenchmark isSat a = do
+      t <- liftIO getZonedTime
 
-        let comments = ["Automatically created by SBV on " ++ show t]
-            cfg      = defaultSMTCfg { smtLibVersion = SMTLib2 }
+      let comments = ["Automatically created by SBV on " ++ show t]
+          cfg      = defaultSMTCfg { smtLibVersion = SMTLib2 }
 
-        (_, res) <- runSymbolic (SMTMode ISetup isSat cfg) $ (if isSat then forSome_ else forAll_) a >>= output
+      (_, res) <- runSymbolic (SMTMode ISetup isSat cfg) $ (if isSat then forSome_ else forAll_) a >>= output
 
-        let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode IRun isSat cfg) comments res
-            out                   = show (smtLibPgm cfg)
+      let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode IRun isSat cfg) comments res
+          out                   = show (smtLibPgm cfg)
 
-        return $ out ++ "\n(check-sat)\n"
+      return $ out ++ "\n(check-sat)\n"
 
 checkNoOptimizations :: Query ()
 checkNoOptimizations = do objectives <- Control.getObjectives
@@ -394,7 +401,7 @@ checkNoOptimizations = do objectives <- Control.getObjectives
                                                 , "*** Use \"optimize\"/\"optimizeWith\" to calculate optimal satisfaction!"
                                                 ]
 
-instance Provable Predicate where
+instance MonadIO m => Provable m (SymbolicT m SBool) where
   forAll_    = id
   forAll []  = id
   forAll xs  = error $ "SBV.forAll: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
@@ -402,7 +409,7 @@ instance Provable Predicate where
   forSome [] = id
   forSome xs = error $ "SBV.forSome: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
 
-instance Provable SBool where
+instance MonadIO m => Provable m SBool where
   forAll_   = return
   forAll _  = return
   forSome_  = return
@@ -421,7 +428,7 @@ instance Provable Bool where
 -}
 
 -- Functions
-instance (SymWord a, Provable p) => Provable (SBV a -> p) where
+instance (SymWord a, Provable m p) => Provable m (SBV a -> p) where
   forAll_        k = forall_   >>= \a -> forAll_   $ k a
   forAll (s:ss)  k = forall s  >>= \a -> forAll ss $ k a
   forAll []      k = forAll_ k
@@ -430,7 +437,7 @@ instance (SymWord a, Provable p) => Provable (SBV a -> p) where
   forSome []     k = forSome_ k
 
 -- SFunArrays (memory, functional representation), only supported universally for the time being
-instance (HasKind a, HasKind b, Provable p) => Provable (SArray a b -> p) where
+instance (HasKind a, HasKind b, Provable m p) => Provable m (SArray a b -> p) where
   forAll_       k = newArray_  Nothing >>= \a -> forAll_   $ k a
   forAll (s:ss) k = newArray s Nothing >>= \a -> forAll ss $ k a
   forAll []     k = forAll_ k
@@ -438,7 +445,7 @@ instance (HasKind a, HasKind b, Provable p) => Provable (SArray a b -> p) where
   forSome _     _ = error "SBV.forSome.SFunArray: Existential arrays are not currently supported."
 
 -- SArrays (memory, SMT-Lib notion of arrays), only supported universally for the time being
-instance (HasKind a, HasKind b, Provable p) => Provable (SFunArray a b -> p) where
+instance (HasKind a, HasKind b, Provable m p) => Provable m (SFunArray a b -> p) where
   forAll_       k = newArray_  Nothing >>= \a -> forAll_   $ k a
   forAll (s:ss) k = newArray s Nothing >>= \a -> forAll ss $ k a
   forAll []     k = forAll_ k
@@ -446,7 +453,7 @@ instance (HasKind a, HasKind b, Provable p) => Provable (SFunArray a b -> p) whe
   forSome _     _ = error "SBV.forSome.SArray: Existential arrays are not currently supported."
 
 -- 2 Tuple
-instance (SymWord a, SymWord b, Provable p) => Provable ((SBV a, SBV b) -> p) where
+instance (SymWord a, SymWord b, Provable m p) => Provable m ((SBV a, SBV b) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b -> k (a, b)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b -> k (a, b)
   forAll []      k = forAll_ k
@@ -455,7 +462,7 @@ instance (SymWord a, SymWord b, Provable p) => Provable ((SBV a, SBV b) -> p) wh
   forSome []     k = forSome_ k
 
 -- 3 Tuple
-instance (SymWord a, SymWord b, SymWord c, Provable p) => Provable ((SBV a, SBV b, SBV c) -> p) where
+instance (SymWord a, SymWord b, SymWord c, Provable m p) => Provable m ((SBV a, SBV b, SBV c) -> p) where
   forAll_       k  = forall_  >>= \a -> forAll_   $ \b c -> k (a, b, c)
   forAll (s:ss) k  = forall s >>= \a -> forAll ss $ \b c -> k (a, b, c)
   forAll []     k  = forAll_ k
@@ -464,7 +471,7 @@ instance (SymWord a, SymWord b, SymWord c, Provable p) => Provable ((SBV a, SBV 
   forSome []     k = forSome_ k
 
 -- 4 Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, Provable p) => Provable ((SBV a, SBV b, SBV c, SBV d) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, Provable m p) => Provable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b c d -> k (a, b, c, d)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d -> k (a, b, c, d)
   forAll []      k = forAll_ k
@@ -473,7 +480,7 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, Provable p) => Provable ((
   forSome []     k = forSome_ k
 
 -- 5 Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, Provable p) => Provable ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, Provable m p) => Provable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e -> k (a, b, c, d, e)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e -> k (a, b, c, d, e)
   forAll []      k = forAll_ k
@@ -482,7 +489,7 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, Provable p) => 
   forSome []     k = forSome_ k
 
 -- 6 Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, Provable p) => Provable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, Provable m p) => Provable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e f -> k (a, b, c, d, e, f)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e f -> k (a, b, c, d, e, f)
   forAll []      k = forAll_ k
@@ -491,7 +498,7 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, Prov
   forSome []     k = forSome_ k
 
 -- 7 Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, Provable p) => Provable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, Provable m p) => Provable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   forAll []      k = forAll_ k
@@ -500,15 +507,15 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymW
   forSome []     k = forSome_ k
 
 -- | Run an arbitrary symbolic computation, equivalent to @'runSMTWith' 'defaultSMTCfg'@
-runSMT :: Symbolic a -> IO a
+runSMT :: MonadIO m => SymbolicT m a -> m a
 runSMT = runSMTWith defaultSMTCfg
 
 -- | Runs an arbitrary symbolic computation, exposed to the user in SAT mode
-runSMTWith :: SMTConfig -> Symbolic a -> IO a
+runSMTWith :: MonadIO m => SMTConfig -> SymbolicT m a -> m a
 runSMTWith cfg a = fst <$> runSymbolic (SMTMode ISetup True cfg) a
 
 -- | Runs with a query.
-runWithQuery :: Provable a => Bool -> Query b -> SMTConfig -> a -> IO b
+runWithQuery :: (MonadIO m, Provable m a) => Bool -> Query b -> SMTConfig -> a -> m b
 runWithQuery isSAT q cfg a = fst <$> runSymbolic (SMTMode ISetup isSAT cfg) comp
   where comp =  do _ <- (if isSAT then forSome_ else forAll_) a >>= output
                    Control.executeQuery QueryInternal q

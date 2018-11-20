@@ -58,7 +58,7 @@ crcGood hd poly sent received =
 genPoly :: SWord8 -> IO ()
 genPoly hd = do res <- allSat $ do
                         -- the polynomial is existentially specified
-                        p <- exists "polynomial"
+                        p <- exists "polynomial" :: Symbolic (SBV Word16)
                         -- sent word, universal
                         s <- do sh <- forall "sh"
                                 sl <- forall "sl"

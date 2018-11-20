@@ -112,11 +112,12 @@
 -- get in touch if there is a solver you'd like to see included.
 ---------------------------------------------------------------------------------
 
-{-# LANGUAGE    FlexibleInstances   #-}
-{-# LANGUAGE    QuasiQuotes         #-}
-{-# LANGUAGE    TemplateHaskell     #-}
-{-# LANGUAGE    ScopedTypeVariables #-}
-{-# LANGUAGE    StandaloneDeriving  #-}
+{-# LANGUAGE    FlexibleInstances     #-}
+{-# LANGUAGE    MultiParamTypeClasses #-}
+{-# LANGUAGE    QuasiQuotes           #-}
+{-# LANGUAGE    TemplateHaskell       #-}
+{-# LANGUAGE    ScopedTypeVariables   #-}
+{-# LANGUAGE    StandaloneDeriving    #-}
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 
 module Data.SBV (
@@ -204,7 +205,10 @@ module Data.SBV (
   -- $proveIntro
   -- $noteOnNestedQuantifiers
   -- $multiIntro
-  , Predicate, Goal, Provable(..), solve
+  , Predicate, Goal, Provable(..), isVacuous, isVacuousWith, isTheorem
+  , isTheoremWith, isSatisfiable, isSatisfiableWith, proveWithAll, proveWithAny
+  , satWithAll, satWithAny, generateSMTBenchmark
+  , solve
   -- * Constraints
   -- $constrainIntro
   -- ** General constraints
@@ -278,7 +282,7 @@ module Data.SBV (
 
   -- * Abstract SBV type
   , SBV, HasKind(..), Kind(..), SymWord(..)
-  , Symbolic, label, output, runSMT, runSMTWith
+  , Symbolic, SymbolicT, label, output, runSMT, runSMTWith
 
   -- * Module exports
   -- $moduleExportIntro
@@ -289,7 +293,8 @@ module Data.SBV (
   , module Data.Ratio
   ) where
 
-import Control.Monad (filterM)
+import Control.Monad          (filterM)
+import Control.Monad.IO.Class (MonadIO)
 
 import qualified Control.Exception as C
 
@@ -350,11 +355,11 @@ sbvAvailableSolvers = filterM sbvCheckSolverInstallation (map defaultSolverConfi
 
 -- If we get a program producing nothing (i.e., Symbolic ()), pretend it simply returns True.
 -- This is useful since min/max calls and constraints will provide the context
-instance Provable Goal where
-  forAll_    a = forAll_    ((a >> return true) :: Predicate)
-  forAll ns  a = forAll ns  ((a >> return true) :: Predicate)
-  forSome_   a = forSome_   ((a >> return true) :: Predicate)
-  forSome ns a = forSome ns ((a >> return true) :: Predicate)
+instance MonadIO m => Provable m (SymbolicT m ()) where
+  forAll_    a = forAll_    ((a >> return true) :: SymbolicT m SBool)
+  forAll ns  a = forAll ns  ((a >> return true) :: SymbolicT m SBool)
+  forSome_   a = forSome_   ((a >> return true) :: SymbolicT m SBool)
+  forSome ns a = forSome ns ((a >> return true) :: SymbolicT m SBool)
 
 -- | Equality as a proof method. Allows for
 -- very concise construction of equivalence proofs, which is very typical in

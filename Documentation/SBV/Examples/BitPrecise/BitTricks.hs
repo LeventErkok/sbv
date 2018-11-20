@@ -10,6 +10,8 @@
 --      <http://graphics.stanford.edu/~seander/bithacks.html>
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleContexts #-}
+
 module Documentation.SBV.Examples.BitPrecise.BitTricks where
 
 import Data.SBV
@@ -49,7 +51,7 @@ powerOfTwoCorrect v = f .== s
 -- | Collection of queries
 queries :: IO ()
 queries =
-  let check :: Provable a => String -> a -> IO ()
+  let check :: Provable IO a => String -> a -> IO ()
       check w t = do putStr $ "Proving " ++ show w ++ ": "
                      print =<< prove t
   in do check "Fast min             " fastMinCorrect

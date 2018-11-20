@@ -33,7 +33,7 @@ nQueens :: Int -> IO ()
 nQueens n
  | n < 0 = putStrLn $ "n must be non-negative, received: " ++ show n
  | True  = do putStrLn $ "Finding all " ++ show n ++ "-queens solutions.."
-              res <- allSat $ isValid n `fmap` mkExistVars n
+              res <- allSat $ isValid n `fmap` (mkExistVars n :: Symbolic [SBV Word8])
               cnt <- displayModels disp res
               putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
    where disp i (_, s) = do putStr $ "Solution #" ++ show i ++ ": "

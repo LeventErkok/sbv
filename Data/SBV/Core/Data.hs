@@ -355,17 +355,17 @@ instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtabl
 -- default instances automatically provide the necessary bits.
 class (HasKind a, Ord a, Typeable a) => SymWord a where
   -- | Create a user named input (universal)
-  forall :: String -> Symbolic (SBV a)
+  forall :: MonadIO m => String -> SymbolicT m (SBV a)
   -- | Create an automatically named input
-  forall_ :: Symbolic (SBV a)
+  forall_ :: MonadIO m => SymbolicT m (SBV a)
   -- | Get a bunch of new words
-  mkForallVars :: Int -> Symbolic [SBV a]
+  mkForallVars :: MonadIO m => Int -> SymbolicT m [SBV a]
   -- | Create an existential variable
   exists  :: MonadIO m => String -> SymbolicT m (SBV a)
   -- | Create an automatically named existential variable
   exists_ :: MonadIO m => SymbolicT m (SBV a)
   -- | Create a bunch of existentials
-  mkExistVars :: Int -> Symbolic [SBV a]
+  mkExistVars :: MonadIO m => Int -> SymbolicT m [SBV a]
   -- | Create a free variable, universal in a proof, existential in sat
   free :: String -> Symbolic (SBV a)
   -- | Create an unnamed free variable, universal in proof, existential in sat
@@ -478,16 +478,16 @@ instance (Random a, SymWord a) => Random (SBV a) where
 --      'SFunArray', SBV only generates code for individual elements and the array itself never
 --      shows up in the resulting SMTLib program. This puts more onus on the SBV side and might
 --      have some performance impacts, but it might generate problems that are easier for the SMT
---      solvers to handle. 
+--      solvers to handle.
 --
 -- As a rule of thumb, try 'SArray' first. These should generate compact code. However, if
 -- the backend solver has hard time solving the generated problems, switch to
 -- 'SFunArray'. If you still have issues, please report so we can see what the problem might be!
 class SymArray array where
   -- | Create a new anonymous array, possibly with a default initial value.
-  newArray_      :: (HasKind a, HasKind b) => Maybe (SBV b) -> Symbolic (array a b)
+  newArray_      :: (MonadIO m, HasKind a, HasKind b) => Maybe (SBV b) -> SymbolicT m (array a b)
   -- | Create a named new array, possibly with a default initial value.
-  newArray       :: (HasKind a, HasKind b) => String -> Maybe (SBV b) -> Symbolic (array a b)
+  newArray       :: (MonadIO m, HasKind a, HasKind b) => String -> Maybe (SBV b) -> SymbolicT m (array a b)
   -- | Read the array element at @a@
   readArray      :: array a b -> SBV a -> SBV b
   -- | Update the element at @a@ to be @b@
