@@ -13,7 +13,7 @@ report any issues you might see with newer releases.
       * Version as downloaded from the above site on May 23, 2017
   * MathSAT:
       * http://mathsat.fbk.eu/
-      * Version 5.5.2
+      * Version 5.5.3
   * Yices:
       * https://github.com/SRI-CSL/yices2
       * Version 2.6.0
