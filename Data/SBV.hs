@@ -240,7 +240,7 @@ module Data.SBV (
   , OptimizeStyle(..)
   -- ** Objectives
   , Objective(..), Metric(..)
-  -- ** Soft assumptions
+  -- ** Soft assertions
   -- $softAssertions
   , assertWithPenalty , Penalty(..)
   -- ** Field extensions
