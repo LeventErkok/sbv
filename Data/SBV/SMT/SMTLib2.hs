@@ -14,7 +14,7 @@
 module Data.SBV.SMT.SMTLib2(cvt, cvtInc) where
 
 import Data.Bits  (bit)
-import Data.List  (intercalate, partition, unzip3)
+import Data.List  (intercalate, partition, unzip3, nub)
 import Data.Maybe (listToMaybe, fromMaybe)
 
 import qualified Data.Foldable as F (toList)
@@ -678,7 +678,16 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           | Just f <- lookup op uninterpretedTable
           = f (map ssw args)
           | True
-          = error $ "SBV.SMT.SMTLib2.cvtExp.sh: impossible happened; can't translate: " ++ show inp
+          = if not (null args) && isUninterpreted (head args)
+            then error $ unlines [ ""
+                                 , "*** Cannot translate operator        : " ++ show op
+                                 , "*** When applied to arguments of kind: " ++ intercalate ", " (nub (map (show . kindOf) args))
+                                 , "*** Found as part of the expression  : " ++ show inp
+                                 , "***"
+                                 , "*** Note that uninterpreted kinds only support equality."
+                                 , "*** If you believe this is in error, please report!"
+                                 ]
+            else error $ "SBV.SMT.SMTLib2.cvtExp.sh: impossible happened; can't translate: " ++ show inp
           where smtOpBVTable  = [ (Plus,          lift2   "bvadd")
                                 , (Minus,         lift2   "bvsub")
                                 , (Times,         lift2   "bvmul")
