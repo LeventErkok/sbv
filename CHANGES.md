@@ -23,6 +23,8 @@
 
   * New bounded list functions: breverse/bsort. Contributed by Joel Burget.
 
+  * Add a new puzzle example: "Documentation/SBV/Examples/Puzzles/LadyAndTigers.hs"
+
 ### Version 7.12, 2018-09-23
 
   * Modifications to make SBV compile with GHC 8.6.1. (SBV should
