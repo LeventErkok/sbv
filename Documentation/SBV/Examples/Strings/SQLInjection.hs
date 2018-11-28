@@ -103,19 +103,19 @@ exploitRe = R.KPlus (statementRe * "; ")
 -- Remember that our example program (in pseudo-code) is:
 --
 -- @
---   query ("SELECT msg FROM msgs where topicid='" ++ my_topicid ++ "'")
+--   query ("SELECT msg FROM msgs WHERE topicid='" ++ my_topicid ++ "'")
 -- @
 --
 -- We have:
 --
 -- >>> findInjection exampleProgram
--- "h'; DROP TABLE 'users"
+-- "  d'; DROP TABLE 'users"
 --
 -- Indeed, if we substitute the suggested string, we get the program:
 --
--- > query ("SELECT msg FROM msgs where topicid='h'; DROP TABLE 'users'")
+-- > query ("SELECT msg FROM msgs WHERE topicid='  d'; DROP TABLE 'users'")
 --
--- which would query for topic @h@ and then delete the users table!
+-- which would query for topic @'  d'@ and then delete the users table!
 findInjection :: SQLExpr -> IO String
 findInjection expr = runSMT $ do
     badTopic <- sString "badTopic"
