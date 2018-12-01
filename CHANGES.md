@@ -21,7 +21,8 @@
   * Fix list-element extraction code, which asserted too strong a constraint. See issue #421
     for details. Thanks to Joel Burget for reporting.
 
-  * New bounded list functions: breverse/bsort. Contributed by Joel Burget.
+  * New bounded list functions: breverse, bsort, bfoldrM, bfoldlM, and bmapM. Contributed by
+    Joel Burget.
 
   * Add a new puzzle example: "Documentation/SBV/Examples/Puzzles/LadyAndTigers.hs"
 
