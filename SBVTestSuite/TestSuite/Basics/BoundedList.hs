@@ -9,19 +9,43 @@
 -- Test the bounded sequence/list functions.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE OverloadedLists     #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedLists            #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 
 module TestSuite.Basics.BoundedList(tests)  where
 
 import Data.SBV.Control
 import Utils.SBVTestFramework
 
-import Data.SBV.List ((.:))
+import Data.SBV.List ((.:), (.!!))
 import qualified Data.SBV.List as L
 import qualified Data.SBV.List.Bounded as BL
 
 import Control.Monad (unless)
+import Control.Monad.State
+
+-- | Flag to mark a failed computation
+newtype Failure = Failure SBool
+  deriving (Boolean, Mergeable, EqSymbolic)
+
+-- | Evaluation monad with failure
+newtype Eval a = Eval { unEval :: State Failure a }
+  deriving (Functor, Applicative, Monad, MonadState Failure)
+
+runEval :: Eval a -> (a, Failure)
+runEval (Eval eval) = runState eval false
+
+instance Mergeable a => Mergeable (Eval a) where
+  symbolicMerge force test left right = Eval $ state $ \s0 ->
+    let (resL, sL) = runState (unEval left)  s0
+        (resR, sR) = runState (unEval right) s0
+    in ( symbolicMerge force test resL resR
+       , symbolicMerge force test sL   sR
+       )
+
+markFailure :: SBool -> Eval ()
+markFailure failure = modify (||| Failure failure)
 
 -- Test suite
 tests :: TestTree
@@ -40,6 +64,10 @@ tests =
     , goldenCapturedIO "reverseAlt10"    $ \rf -> checkWith z3{redirectVerbose=Just rf} (reverseAlt 10)    Unsat
     , goldenCapturedIO "concreteSort"    $ \rf -> checkWith z3{redirectVerbose=Just rf} concreteSortSat    Sat
     , goldenCapturedIO "sort"            $ \rf -> checkWith z3{redirectVerbose=Just rf} sortSat            Sat
+    , goldenCapturedIO "mapWithFailure"  $ \rf -> checkWith z3{redirectVerbose=Just rf} mapWithFailure     Sat
+    , goldenCapturedIO "mapNoFailure"    $ \rf -> checkWith z3{redirectVerbose=Just rf} mapNoFailure       Unsat
+    , goldenCapturedIO "maxlWithFailure" $ \rf -> checkWith z3{redirectVerbose=Just rf} maxlWithFailure    Sat
+    , goldenCapturedIO "maxrWithFailure" $ \rf -> checkWith z3{redirectVerbose=Just rf} maxrWithFailure    Sat
     ]
 
 checkWith :: SMTConfig -> Symbolic () -> CheckSatResult -> IO ()
@@ -113,3 +141,56 @@ sortSat = do [a, b, c] <- sIntegers ["a", "b", "c"]
              constrain $ ordered (b, c, a) ==> sorted .== L.implode [b, c, a]
              constrain $ ordered (c, a, b) ==> sorted .== L.implode [c, a, b]
              constrain $ ordered (c, b, a) ==> sorted .== L.implode [c, b, a]
+
+-- | Increment, failing if a value lies outside of [0, 10]
+boundedIncr :: SList Integer -> Eval (SList Integer)
+boundedIncr = BL.bmapM 10 $ \i -> do
+  markFailure $ i .< 0 ||| i .> 10
+  pure $ i + 1
+
+-- | Max (based on foldr), failing if a value lies outside of [0, 10]
+boundedMaxr :: SList Integer -> Eval SInteger
+boundedMaxr = BL.bfoldrM 10
+  (\i maxi -> do
+    markFailure $ i .< 0 ||| i .> 10
+    pure $ smax i maxi)
+  0
+
+-- | Max (based on foldl), failing if a value lies outside of [0, 10]
+boundedMaxl :: SList Integer -> Eval SInteger
+boundedMaxl = BL.bfoldlM 10
+  (\maxi i -> do
+    markFailure $ i .< 0 ||| i .> 10
+    pure $ smax i maxi)
+  0
+
+-- the mapping will have failed if one of the resulting values is greater than
+-- 11
+mapWithFailure :: Symbolic ()
+mapWithFailure = do
+  lst <- sList "ints"
+  let (lst', failure) = runEval $ boundedIncr lst
+  constrain $ lst' .!! 2 .> 11 ==> failure .== true
+
+-- mapping over these values of a, b, and c cannot fail (this is unsat)
+mapNoFailure :: Symbolic ()
+mapNoFailure = do
+  [a, b, c] <- sIntegers ["a", "b", "c"]
+  let (_lst', Failure failure) = runEval $ boundedIncr $ L.implode [a, b, c]
+  constrain $ a + b + c .== 6
+  constrain $ a .> 0 &&& b .> 0 &&& c .> 0
+  constrain failure
+
+-- boundedMaxl fails if one of the values is too big
+maxlWithFailure :: Symbolic ()
+maxlWithFailure = do
+  lst <- sList "ints"
+  let (maxi, Failure failure) = runEval $ boundedMaxl lst
+  constrain $ maxi .> 10 ==> failure
+
+-- boundedMaxl fails if one of the values is too big
+maxrWithFailure :: Symbolic ()
+maxrWithFailure = do
+  lst <- sList "ints"
+  let (maxi, Failure failure) = runEval $ boundedMaxr lst
+  constrain $ maxi .> 10 ==> failure
