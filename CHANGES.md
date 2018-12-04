@@ -59,6 +59,9 @@
     supported.
 
 ### Version 7.10, 2018-07-20
+  * [BACKWARDS COMPATIBILITY] '==' and '/=' now always throw an error instead of
+    only throwing an error for non-concrete values.
+    https://github.com/LeventErkok/sbv/issues/301
 
   * [BACKWARDS COMPATIBILITY] Array declarations are reworked to take
     an initial value. The call 'newArray' now accepts an optional default

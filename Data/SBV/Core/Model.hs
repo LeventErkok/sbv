@@ -946,6 +946,8 @@ lift2FNS nm f sv1 sv2
 
 -- NB. In the optimizations below, use of -1 is valid as
 -- -1 has all bits set to True for both signed and unsigned values
+-- | Using 'popCount' or 'testBit' on non-concrete values will result in an
+-- error. Use 'sPopCount' or 'sTestBit' instead.
 instance (Num a, Bits a, SymWord a) => Bits (SBV a) where
   SBV x .&. SBV y    = SBV (svAnd x y)
   SBV x .|. SBV y    = SBV (svOr x y)
