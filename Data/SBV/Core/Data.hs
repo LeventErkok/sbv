@@ -367,15 +367,15 @@ class (HasKind a, Ord a, Typeable a) => SymWord a where
   -- | Create a bunch of existentials
   mkExistVars :: MonadIO m => Int -> SymbolicT m [SBV a]
   -- | Create a free variable, universal in a proof, existential in sat
-  free :: String -> Symbolic (SBV a)
+  free :: MonadIO m => String -> SymbolicT m (SBV a)
   -- | Create an unnamed free variable, universal in proof, existential in sat
-  free_ :: Symbolic (SBV a)
+  free_ :: MonadIO m => SymbolicT m (SBV a)
   -- | Create a bunch of free vars
-  mkFreeVars :: Int -> Symbolic [SBV a]
+  mkFreeVars :: MonadIO m => Int -> SymbolicT m [SBV a]
   -- | Similar to free; Just a more convenient name
-  symbolic  :: String -> Symbolic (SBV a)
+  symbolic  :: MonadIO m => String -> SymbolicT m (SBV a)
   -- | Similar to mkFreeVars; but automatically gives names based on the strings
-  symbolics :: [String] -> Symbolic [SBV a]
+  symbolics :: MonadIO m => [String] -> SymbolicT m [SBV a]
   -- | Turn a literal constant to symbolic
   literal :: a -> SBV a
   -- | Extract a literal, if the value is concrete

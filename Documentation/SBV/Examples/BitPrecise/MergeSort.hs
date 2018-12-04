@@ -77,7 +77,7 @@ isPermutationOf as bs = go as (zip bs (repeat true)) &&& go bs (zip as (repeat t
 -- >>> correctness 5
 -- Q.E.D.
 correctness :: Int -> IO ThmResult
-correctness n = prove $ do xs <- mkFreeVars n
+correctness n = prove $ do xs <- mkFreeVars n :: Symbolic [SBV Word8]
                            let ys = mergeSort xs
                            return $ nonDecreasing ys &&& isPermutationOf xs ys
 

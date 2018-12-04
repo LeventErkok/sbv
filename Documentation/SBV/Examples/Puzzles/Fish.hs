@@ -80,7 +80,8 @@ fishOwner = do vs <- getModelValues "fishOwner" `fmap` allSat puzzle
                  [Just (v::Nationality)] -> print v
                  []                      -> error "no solution"
                  _                       -> error "no unique solution"
- where puzzle = do
+ where puzzle :: Symbolic ()
+       puzzle = do
 
           let c = uninterpret "color"
               n = uninterpret "nationality"
