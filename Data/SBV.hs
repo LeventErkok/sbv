@@ -118,7 +118,6 @@
 {-# LANGUAGE    TemplateHaskell       #-}
 {-# LANGUAGE    ScopedTypeVariables   #-}
 {-# LANGUAGE    StandaloneDeriving    #-}
-{-# OPTIONS_GHC -fno-warn-orphans  #-}
 
 module Data.SBV (
   -- $progIntro
@@ -351,14 +350,6 @@ defaultSolverConfig ABC       = abc
 -- | Return the known available solver configs, installed on your machine.
 sbvAvailableSolvers :: IO [SMTConfig]
 sbvAvailableSolvers = filterM sbvCheckSolverInstallation (map defaultSolverConfig [minBound .. maxBound])
-
--- If we get a program producing nothing (i.e., Symbolic ()), pretend it simply returns True.
--- This is useful since min/max calls and constraints will provide the context
-instance MonadIO m => Provable m (SymbolicT m ()) where
-  forAll_    a = forAll_    ((a >> return true) :: SymbolicT m SBool)
-  forAll ns  a = forAll ns  ((a >> return true) :: SymbolicT m SBool)
-  forSome_   a = forSome_   ((a >> return true) :: SymbolicT m SBool)
-  forSome ns a = forSome ns ((a >> return true) :: SymbolicT m SBool)
 
 -- | Equality as a proof method. Allows for
 -- very concise construction of equivalence proofs, which is very typical in

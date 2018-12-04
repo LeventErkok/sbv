@@ -53,6 +53,7 @@ import qualified Data.Foldable   as S (toList)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.SMT.SMT
+import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.TDiff
 import Data.SBV.Utils.PrettyNum
 
@@ -399,6 +400,14 @@ checkNoOptimizations = do objectives <- Control.getObjectives
                                                 , "*** Data.SBV: Unsupported call sat/prove when optimization objectives are present."
                                                 , "*** Use \"optimize\"/\"optimizeWith\" to calculate optimal satisfaction!"
                                                 ]
+
+-- If we get a program producing nothing (i.e., Symbolic ()), pretend it simply returns True.
+-- This is useful since min/max calls and constraints will provide the context
+instance MonadIO m => Provable m (SymbolicT m ()) where
+  forAll_    a = forAll_    ((a >> return true) :: SymbolicT m SBool)
+  forAll ns  a = forAll ns  ((a >> return true) :: SymbolicT m SBool)
+  forSome_   a = forSome_   ((a >> return true) :: SymbolicT m SBool)
+  forSome ns a = forSome ns ((a >> return true) :: SymbolicT m SBool)
 
 instance MonadIO m => Provable m (SymbolicT m SBool) where
   forAll_    = id
