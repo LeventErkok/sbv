@@ -799,6 +799,8 @@ instance Show SVal where
 -- We really don't want an 'Eq' instance for 'SBV' or 'SVal'. As it really makes no sense.
 -- But since we do want the 'Bits' instance, we're forced to define equality. See
 -- <http://github.com/LeventErkok/sbv/issues/301>. We simply error out.
+-- | This instance is only defined so that we can define an instance for
+-- 'Data.Bits.Bits'. '==' and '/=' simply throw an error.
 instance Eq SVal where
   a == b = error $ "Comparing symbolic bit-vectors; Use (.==) instead. Received: " ++ show (a, b)
   a /= b = error $ "Comparing symbolic bit-vectors; Use (./=) instead. Received: " ++ show (a, b)

@@ -243,14 +243,14 @@ sRTZ :: SRoundingMode
 sRTZ = sRoundTowardZero
 
 -- | A 'Show' instance is not particularly "desirable," when the value is symbolic,
--- but we do need this instance as otherwise we cannot simply evaluate Haskell functions 
+-- but we do need this instance as otherwise we cannot simply evaluate Haskell functions
 -- that return symbolic values and have their constant values printed easily!
 instance Show (SBV a) where
   show (SBV sv) = show sv
 
--- | Equality constraint on SBV values. Not desirable since we can't really compare two
--- symbolic values, but will do. Note that we do need this instance since we want
--- Bits as a class for SBV that we implement, which necessiates the Eq class.
+-- | This instance is only defined so that we can define an instance for
+-- 'Data.Bits.Bits'. '==' and '/=' simply throw an error. Use
+-- 'Data.SBV.EqSymbolic' instead.
 instance Eq (SBV a) where
   SBV a == SBV b = a == b
   SBV a /= SBV b = a /= b
