@@ -327,7 +327,7 @@ import Data.SBV.Control.Types (SMTReasonUnknown(..), Logic(..))
 --   sat $ do [x, y, z] <- sIntegers [\"x\", \"y\", \"z\"]
 --            solve [x .> 5, y + z .< x]
 -- @
-solve :: [SBool] -> Symbolic SBool
+solve :: MonadIO m => [SBool] -> SymbolicT m SBool
 solve = return . bAnd
 
 -- | Check whether the given solver is installed and is ready to go. This call does a
