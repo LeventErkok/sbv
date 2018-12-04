@@ -33,7 +33,7 @@ import Data.SBV
 -- True
 sendMoreMoney :: IO AllSatResult
 sendMoreMoney = allSat $ do
-        ds@[s,e,n,d,m,o,r,y] <- mapM sInteger ["s", "e", "n", "d", "m", "o", "r", "y"]
+        ds@[s,e,n,d,m,o,r,y] <- mapM sInteger ["s", "e", "n", "d", "m", "o", "r", "y"] :: Symbolic [SInteger]
         let isDigit x = x .>= 0 &&& x .<= 9
             val xs    = sum $ zipWith (*) (reverse xs) (iterate (*10) 1)
             send      = val [s,e,n,d]

@@ -27,7 +27,7 @@ import Data.SBV
 -- This is the only solution.
 puzzle :: IO AllSatResult
 puzzle = allSat $ do
-           [dog, cat, mouse] <- sIntegers ["dog", "cat", "mouse"]
+           [dog, cat, mouse] <- sIntegers ["dog", "cat", "mouse"] :: Symbolic [SInteger]
            solve [ dog   .>= 1                                           -- at least one dog
                  , cat   .>= 1                                           -- at least one cat
                  , mouse .>= 1                                           -- at least one mouse

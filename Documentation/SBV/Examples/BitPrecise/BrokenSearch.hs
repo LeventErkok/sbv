@@ -72,7 +72,7 @@ midPointAlternative low high = sFromIntegral ((low' +! high') `shiftR` 1)
 -- | A helper predicate to check safety under the conditions that @low@ is at least 0
 -- and @high@ is at least @low@.
 checkArithOverflow :: (SInt32 -> SInt32 -> SInt32) -> IO ()
-checkArithOverflow f = do sr <- safe $ do low   <- sInt32 "low"
+checkArithOverflow f = do sr <- safe $ do low  <- sInt32 "low" :: Symbolic SInt32
                                           high <- sInt32 "high"
 
                                           constrain $ low .>= 0
@@ -87,7 +87,7 @@ checkArithOverflow f = do sr <- safe $ do low   <- sInt32 "low"
 -- | Another helper to show that the result is actually the correct value, if it was done over
 -- 64-bit integers, which is sufficiently large enough.
 checkCorrectMidValue :: (SInt32 -> SInt32 -> SInt32) -> IO ThmResult
-checkCorrectMidValue f = prove $ do low  <- sInt32 "low"
+checkCorrectMidValue f = prove $ do low  <- sInt32 "low" :: Symbolic SInt32
                                     high <- sInt32 "high"
 
                                     constrain $ low .>= 0

@@ -219,131 +219,131 @@ instance IsString SString where
 -- they nonetheless make programming easier.
 ------------------------------------------------------------------------------------
 -- | Declare an 'SBool'
-sBool :: String -> Symbolic SBool
+sBool :: MonadIO m => String -> SymbolicT m SBool
 sBool = symbolic
 
 -- | Declare a list of 'SBool's
-sBools :: [String] -> Symbolic [SBool]
+sBools :: MonadIO m => [String] -> SymbolicT m [SBool]
 sBools = symbolics
 
 -- | Declare an 'SWord8'
-sWord8 :: String -> Symbolic SWord8
+sWord8 :: MonadIO m => String -> SymbolicT m SWord8
 sWord8 = symbolic
 
 -- | Declare a list of 'SWord8's
-sWord8s :: [String] -> Symbolic [SWord8]
+sWord8s :: MonadIO m => [String] -> SymbolicT m [SWord8]
 sWord8s = symbolics
 
 -- | Declare an 'SWord16'
-sWord16 :: String -> Symbolic SWord16
+sWord16 :: MonadIO m => String -> SymbolicT m SWord16
 sWord16 = symbolic
 
 -- | Declare a list of 'SWord16's
-sWord16s :: [String] -> Symbolic [SWord16]
+sWord16s :: MonadIO m => [String] -> SymbolicT m [SWord16]
 sWord16s = symbolics
 
 -- | Declare an 'SWord32'
-sWord32 :: String -> Symbolic SWord32
+sWord32 :: MonadIO m => String -> SymbolicT m SWord32
 sWord32 = symbolic
 
 -- | Declare a list of 'SWord32's
-sWord32s :: [String] -> Symbolic [SWord32]
+sWord32s :: MonadIO m => [String] -> SymbolicT m [SWord32]
 sWord32s = symbolics
 
 -- | Declare an 'SWord64'
-sWord64 :: String -> Symbolic SWord64
+sWord64 :: MonadIO m => String -> SymbolicT m SWord64
 sWord64 = symbolic
 
 -- | Declare a list of 'SWord64's
-sWord64s :: [String] -> Symbolic [SWord64]
+sWord64s :: MonadIO m => [String] -> SymbolicT m [SWord64]
 sWord64s = symbolics
 
 -- | Declare an 'SInt8'
-sInt8 :: String -> Symbolic SInt8
+sInt8 :: MonadIO m => String -> SymbolicT m SInt8
 sInt8 = symbolic
 
 -- | Declare a list of 'SInt8's
-sInt8s :: [String] -> Symbolic [SInt8]
+sInt8s :: MonadIO m => [String] -> SymbolicT m [SInt8]
 sInt8s = symbolics
 
 -- | Declare an 'SInt16'
-sInt16 :: String -> Symbolic SInt16
+sInt16 :: MonadIO m => String -> SymbolicT m SInt16
 sInt16 = symbolic
 
 -- | Declare a list of 'SInt16's
-sInt16s :: [String] -> Symbolic [SInt16]
+sInt16s :: MonadIO m => [String] -> SymbolicT m [SInt16]
 sInt16s = symbolics
 
 -- | Declare an 'SInt32'
-sInt32 :: String -> Symbolic SInt32
+sInt32 :: MonadIO m => String -> SymbolicT m SInt32
 sInt32 = symbolic
 
 -- | Declare a list of 'SInt32's
-sInt32s :: [String] -> Symbolic [SInt32]
+sInt32s :: MonadIO m => [String] -> SymbolicT m [SInt32]
 sInt32s = symbolics
 
 -- | Declare an 'SInt64'
-sInt64 :: String -> Symbolic SInt64
+sInt64 :: MonadIO m => String -> SymbolicT m SInt64
 sInt64 = symbolic
 
 -- | Declare a list of 'SInt64's
-sInt64s :: [String] -> Symbolic [SInt64]
+sInt64s :: MonadIO m => [String] -> SymbolicT m [SInt64]
 sInt64s = symbolics
 
 -- | Declare an 'SInteger'
-sInteger:: String -> Symbolic SInteger
+sInteger:: MonadIO m => String -> SymbolicT m SInteger
 sInteger = symbolic
 
 -- | Declare a list of 'SInteger's
-sIntegers :: [String] -> Symbolic [SInteger]
+sIntegers :: MonadIO m => [String] -> SymbolicT m [SInteger]
 sIntegers = symbolics
 
 -- | Declare an 'SReal'
-sReal:: String -> Symbolic SReal
+sReal:: MonadIO m => String -> SymbolicT m SReal
 sReal = symbolic
 
 -- | Declare a list of 'SReal's
-sReals :: [String] -> Symbolic [SReal]
+sReals :: MonadIO m => [String] -> SymbolicT m [SReal]
 sReals = symbolics
 
 -- | Declare an 'SFloat'
-sFloat :: String -> Symbolic SFloat
+sFloat :: MonadIO m => String -> SymbolicT m SFloat
 sFloat = symbolic
 
 -- | Declare a list of 'SFloat's
-sFloats :: [String] -> Symbolic [SFloat]
+sFloats :: MonadIO m => [String] -> SymbolicT m [SFloat]
 sFloats = symbolics
 
 -- | Declare an 'SDouble'
-sDouble :: String -> Symbolic SDouble
+sDouble :: MonadIO m => String -> SymbolicT m SDouble
 sDouble = symbolic
 
 -- | Declare a list of 'SDouble's
-sDoubles :: [String] -> Symbolic [SDouble]
+sDoubles :: MonadIO m => [String] -> SymbolicT m [SDouble]
 sDoubles = symbolics
 
 -- | Declare an 'SChar'
-sChar :: String -> Symbolic SChar
+sChar :: MonadIO m => String -> SymbolicT m SChar
 sChar = symbolic
 
 -- | Declare an 'SString'
-sString :: String -> Symbolic SString
+sString :: MonadIO m => String -> SymbolicT m SString
 sString = symbolic
 
 -- | Declare a list of 'SChar's
-sChars :: [String] -> Symbolic [SChar]
+sChars :: MonadIO m => [String] -> SymbolicT m [SChar]
 sChars = symbolics
 
 -- | Declare a list of 'SString's
-sStrings :: [String] -> Symbolic [SString]
+sStrings :: MonadIO m => [String] -> SymbolicT m [SString]
 sStrings = symbolics
 
 -- | Declare an 'SList'
-sList :: forall a. SymWord a => String -> Symbolic (SList a)
+sList :: (SymWord a, MonadIO m) => String -> SymbolicT m (SList a)
 sList = symbolic
 
 -- | Declare a list of 'SList's
-sLists :: forall a. SymWord a => [String] -> Symbolic [SList a]
+sLists :: (SymWord a, MonadIO m) => [String] -> SymbolicT m [SList a]
 sLists = symbolics
 
 -- | Convert an SReal to an SInteger. That is, it computes the
