@@ -205,9 +205,8 @@ module Data.SBV (
   -- $proveIntro
   -- $noteOnNestedQuantifiers
   -- $multiIntro
-  , Predicate, Goal, Provable(..), isVacuous, isVacuousWith, isTheorem
-  , isTheoremWith, isSatisfiable, isSatisfiableWith, proveWithAll, proveWithAny
-  , satWithAll, satWithAny, generateSMTBenchmark
+  , Predicate, Goal, Provable(..), proveWithAll, proveWithAny , satWithAll
+  , satWithAny, generateSMTBenchmark
   , solve
   -- * Constraints
   -- $constrainIntro

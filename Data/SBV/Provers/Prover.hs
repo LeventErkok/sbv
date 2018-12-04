@@ -19,9 +19,8 @@
 
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate
-       , Provable(..), isVacuous, isVacuousWith, isTheorem, isTheoremWith
-       , isSatisfiable, isSatisfiableWith, proveWithAll, proveWithAny
-       , satWithAll, satWithAny, generateSMTBenchmark
+       , Provable(..), proveWithAll, proveWithAny , satWithAll, satWithAny
+       , generateSMTBenchmark
        , Goal
        , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
        , SExecutable(..), isSafe
@@ -309,46 +308,46 @@ class MonadIO m => Provable m a where
                       Independent   -> IndependentResult   <$> Control.getIndependentOptResults (map objectiveName objectives)
                       Pareto mbN    -> ParetoResult        <$> Control.getParetoOptResults mbN
 
--- | Check if the constraints given are consistent, using the default solver.
-isVacuous :: (MonadIO m, Provable m a) => a -> m Bool
-isVacuous = isVacuousWith defaultSMTCfg
+  -- | Check if the constraints given are consistent, using the default solver.
+  isVacuous :: a -> m Bool
+  isVacuous = isVacuousWith defaultSMTCfg
 
--- | Determine if the constraints are vacuous using the given SMT-solver.
-isVacuousWith :: (MonadIO m, Provable m a) => SMTConfig -> a -> m Bool
-isVacuousWith cfg a = -- NB. Can't call runWithQuery since last constraint would become the implication!
-                      fst <$> runSymbolic (SMTMode ISetup True cfg) (forSome_ a >> Control.query check)
-   where
-     check :: Query Bool
-     check = do cs <- Control.checkSat
-                case cs of
-                  Control.Unsat -> return True
-                  Control.Sat   -> return False
-                  Control.Unk   -> error "SBV: isVacuous: Solver returned unknown!"
+  -- | Determine if the constraints are vacuous using the given SMT-solver.
+  isVacuousWith :: SMTConfig -> a -> m Bool
+  isVacuousWith cfg a = -- NB. Can't call runWithQuery since last constraint would become the implication!
+                        fst <$> runSymbolic (SMTMode ISetup True cfg) (forSome_ a >> Control.query check)
+     where
+       check :: Query Bool
+       check = do cs <- Control.checkSat
+                  case cs of
+                    Control.Unsat -> return True
+                    Control.Sat   -> return False
+                    Control.Unk   -> error "SBV: isVacuous: Solver returned unknown!"
 
--- | Checks theoremhood using the default solver.
-isTheorem :: (MonadIO m, Provable m a) => a -> m Bool
-isTheorem = isTheoremWith defaultSMTCfg
+  -- | Checks theoremhood using the default solver.
+  isTheorem :: a -> m Bool
+  isTheorem = isTheoremWith defaultSMTCfg
 
--- | Check whether a given property is a theorem.
-isTheoremWith :: (MonadIO m, Provable m a) => SMTConfig -> a -> m Bool
-isTheoremWith cfg p = do r <- proveWith cfg p
-                         case r of
-                           ThmResult Unsatisfiable{} -> return True
-                           ThmResult Satisfiable{}   -> return False
-                           _                         -> error $ "SBV.isTheorem: Received:\n" ++ show r
+  -- | Check whether a given property is a theorem.
+  isTheoremWith :: SMTConfig -> a -> m Bool
+  isTheoremWith cfg p = do r <- proveWith cfg p
+                           case r of
+                             ThmResult Unsatisfiable{} -> return True
+                             ThmResult Satisfiable{}   -> return False
+                             _                         -> error $ "SBV.isTheorem: Received:\n" ++ show r
 
 
--- | Checks satisfiability using the default solver.
-isSatisfiable :: (MonadIO m, Provable m a) => a -> m Bool
-isSatisfiable = isSatisfiableWith defaultSMTCfg
+  -- | Checks satisfiability using the default solver.
+  isSatisfiable :: a -> m Bool
+  isSatisfiable = isSatisfiableWith defaultSMTCfg
 
--- | Check whether a given property is satisfiable.
-isSatisfiableWith :: (MonadIO m, Provable m a) => SMTConfig -> a -> m Bool
-isSatisfiableWith cfg p = do r <- satWith cfg p
-                             case r of
-                               SatResult Satisfiable{}   -> return True
-                               SatResult Unsatisfiable{} -> return False
-                               _                         -> error $ "SBV.isSatisfiable: Received: " ++ show r
+  -- | Check whether a given property is satisfiable.
+  isSatisfiableWith :: SMTConfig -> a -> m Bool
+  isSatisfiableWith cfg p = do r <- satWith cfg p
+                               case r of
+                                 SatResult Satisfiable{}   -> return True
+                                 SatResult Unsatisfiable{} -> return False
+                                 _                         -> error $ "SBV.isSatisfiable: Received: " ++ show r
 
 -- | Prove a property with multiple solvers, running them in separate threads. The
 -- results will be returned in the order produced.
