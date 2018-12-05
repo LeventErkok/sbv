@@ -85,7 +85,7 @@ ax3 = ["(assert (forall ((p B)) (= (NOT (NOT p)) p)))"]
 -- >>> test
 -- Q.E.D.
 test :: IO ThmResult
-test = prove $ do addAxiom "OR distributes over AND" ax1 :: Symbolic ()
+test = prove $ do addAxiom "OR distributes over AND" ax1
                   addAxiom "de Morgan"               ax2
                   addAxiom "double negation"         ax3
                   p <- free "p"

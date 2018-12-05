@@ -51,7 +51,7 @@ ldn mbLim problem = do solution <- basis mbLim (map (map literal) m)
 -- issue. See: <http://z3.codeplex.com/workitem/88>.)
 basis :: Maybe Int -> [[SInteger]] -> IO [[Integer]]
 basis mbLim m = extractModels `fmap` allSatWith z3{allSatMaxModelCount = mbLim} cond
- where cond = do as <- mkExistVars  n :: Symbolic [SBV Integer]
+ where cond = do as <- mkExistVars  n
                  bs <- mkForallVars n
 
                  -- Tell the solver to use this logic!

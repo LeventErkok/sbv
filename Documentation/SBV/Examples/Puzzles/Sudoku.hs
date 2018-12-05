@@ -53,7 +53,7 @@ type Puzzle = (Int, [SWord8] -> Board)
 -- | Solve a given puzzle and print the results
 sudoku :: Puzzle -> IO ()
 sudoku p@(i, f) = do putStrLn "Solving the puzzle.."
-                     model <- getModelAssignment `fmap` sat ((valid . f) `fmap` (mkExistVars i :: Symbolic [SBV Word8]))
+                     model <- getModelAssignment `fmap` sat ((valid . f) `fmap` mkExistVars i)
                      case model of
                        Right sln -> dispSolution p sln
                        Left m    -> putStrLn $ "Unsolvable puzzle: " ++ m
@@ -73,7 +73,7 @@ dispSolution (i, f) (_, fs)
 -- | Find all solutions to a puzzle
 solveAll :: Puzzle -> IO ()
 solveAll p@(i, f) = do putStrLn "Finding all solutions.."
-                       res <- allSat $ (valid . f) `fmap` (mkExistVars i :: Symbolic [SBV Word8])
+                       res <- allSat $ (valid . f) `fmap` mkExistVars i
                        cnt <- displayModels disp res
                        putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
    where disp n s = do putStrLn $ "Solution #" ++ show n

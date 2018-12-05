@@ -68,7 +68,7 @@ classify = uninterpret "classify"
 -- Found 3 different solutions.
 genLs :: IO AllSatResult
 genLs = allSatWith z3
-               $ do [l, l0, l1, l2] <- symbolics ["l", "l0", "l1", "l2"] :: Symbolic [SBV L]
+               $ do [l, l0, l1, l2] <- symbolics ["l", "l0", "l1", "l2"]
                     constrain $ classify l0 .== 0
                     constrain $ classify l1 .== 1
                     constrain $ classify l2 .== 2

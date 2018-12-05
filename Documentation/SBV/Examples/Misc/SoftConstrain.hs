@@ -31,7 +31,7 @@ import Data.SBV
 -- doesn't kick in, but @y@ takes the default value since it is acceptable by
 -- all the other hard constraints.
 example :: IO SatResult
-example = sat $ do x <- sString "x" :: Symbolic SString
+example = sat $ do x <- sString "x"
                    y <- sString "y"
 
                    constrain $ x .== "x-must-really-be-hello"

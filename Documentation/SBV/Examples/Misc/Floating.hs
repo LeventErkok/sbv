@@ -72,7 +72,7 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 --
 -- Note the difference between two additions!
 assocPlusRegular :: IO ThmResult
-assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"] :: Symbolic [SFloat]
+assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
                               let lhs = x+(y+z)
                                   rhs = (x+y)+z
                               -- make sure we do not overflow at the intermediate points
@@ -104,7 +104,7 @@ assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"] :: Symbolic [
 -- False
 --
 nonZeroAddition :: IO ThmResult
-nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"] :: Symbolic [SFloat]
+nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
                              constrain $ fpIsPoint a
                              constrain $ fpIsPoint b
                              constrain $ a + b .== a
@@ -129,7 +129,7 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"] :: Symbolic [SFloat]
 -- >>> a * (1/a)
 -- 1.0000000000000002
 multInverse :: IO ThmResult
-multInverse = prove $ do a <- sDouble "a" :: Symbolic SDouble
+multInverse = prove $ do a <- sDouble "a"
                          constrain $ fpIsPoint a
                          constrain $ fpIsPoint (1/a)
                          return $ a * (1/a) .== 1
@@ -180,7 +180,7 @@ multInverse = prove $ do a <- sDouble "a" :: Symbolic SDouble
 roundingAdd :: IO SatResult
 roundingAdd = sat $ do m :: SRoundingMode <- free "rm"
                        constrain $ m ./= literal RoundNearestTiesToEven
-                       x <- sFloat "x" :: Symbolic SFloat
+                       x <- sFloat "x"
                        y <- sFloat "y"
                        let lhs = fpAdd m x y
                        let rhs = x + y

@@ -20,7 +20,7 @@ import Data.SBV
 -- | A simple function to generate a new integer value, that is not in the
 -- given set of values. We also require the value to be non-negative
 outside :: [Integer] -> IO SatResult
-outside disallow = sat $ do x <- sInteger "x" :: Symbolic SInteger
+outside disallow = sat $ do x <- sInteger "x"
                             let notEq i = constrain $ x ./= literal i
                             mapM_ notEq disallow
                             return $ x .>= 0

@@ -48,7 +48,7 @@ ladyAndTigers = allSat $ do
     [tiger1, tiger2, tiger3] <- mapM sBool ["tiger1", "tiger2", "tiger3"]
 
     -- Room 1 sign: A Tiger is in this room
-    constrain $ sign1 <=> tiger1 :: Symbolic ()
+    constrain $ sign1 <=> tiger1
 
     -- Room 2 sign: A Lady is in this room
     constrain $ sign2 <=> bnot tiger2

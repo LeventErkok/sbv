@@ -131,7 +131,7 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
                                  Just (v, []) -> v
                                  _            -> error $ "Data.SBV.interval.getRegVal: Cannot parse " ++ show cw
 
-            IndependentResult m <- optimizeWith cfg Independent $ do x <- (free_ :: Symbolic (SBV a))
+            IndependentResult m <- optimizeWith cfg Independent $ do x <- free_
                                                                      constrain $ prop x
                                                                      minimize "min" x
                                                                      maximize "max" x

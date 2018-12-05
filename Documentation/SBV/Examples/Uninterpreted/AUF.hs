@@ -56,7 +56,7 @@ thm x y a = lhs ==> rhs
 -- Q.E.D.
 proveSArray :: IO ThmResult
 proveSArray = prove $ do
-                x <- free "x" :: Symbolic (SBV Word32)
+                x <- free "x"
                 y <- free "y"
                 a :: SArray Word32 Word32 <- newArray_ Nothing
                 return $ thm x y a
@@ -67,7 +67,7 @@ proveSArray = prove $ do
 -- Q.E.D.
 proveSFunArray :: IO ThmResult
 proveSFunArray = prove $ do
-                x <- free "x" :: Symbolic (SBV Word32)
+                x <- free "x"
                 y <- free "y"
                 a :: SFunArray Word32 Word32 <- newArray_ Nothing
                 return $ thm x y a

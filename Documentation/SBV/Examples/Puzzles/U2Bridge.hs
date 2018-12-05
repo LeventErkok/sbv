@@ -222,7 +222,7 @@ isValid as = time end .<= 17 &&& bAll check as &&& zigZag (cycle [there, here]) 
 -- | See if there is a solution that has precisely @n@ steps
 solveN :: Int -> IO Bool
 solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ plu n ++ "."
-              let genAct = do b  <- exists_ :: Symbolic (SBV Bool)
+              let genAct = do b  <- exists_
                               p1 <- exists_
                               p2 <- exists_
                               return (b, p1, p2)

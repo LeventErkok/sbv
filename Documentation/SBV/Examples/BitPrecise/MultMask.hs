@@ -43,7 +43,7 @@ import Data.SBV
 -- to positions @[56,57,58,59,60,61,62,63]@ respectively.
 maskAndMult :: IO ()
 maskAndMult = print =<< satWith z3{printBase=16} find
-  where find = do mask <- exists "mask" :: Symbolic (SBV Word64)
+  where find = do mask <- exists "mask"
                   mult <- exists "mult"
                   inp  <- forall "inp"
                   let res = (mask .&. inp) * (mult :: SWord64)

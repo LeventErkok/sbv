@@ -35,7 +35,7 @@ f = uninterpret "f"
 -- Satisfiable. Model:
 --   x = Q!val!0 :: Q
 t1 :: IO SatResult
-t1 = sat $ do x <- free "x" :: Symbolic (SBV Q)
+t1 = sat $ do x <- free "x"
               return $ f x ./= x
 
 -- | This is a variant on the first example, except we also add an axiom
@@ -45,6 +45,6 @@ t1 = sat $ do x <- free "x" :: Symbolic (SBV Q)
 -- >>> t2
 -- Unsatisfiable
 t2 :: IO SatResult
-t2 = sat $ do x <- free "x" :: Symbolic (SBV Q)
+t2 = sat $ do x <- free "x"
               addAxiom "Q" ["(assert (forall ((x Q) (y Q)) (= x y)))"]
               return $ f x ./= x

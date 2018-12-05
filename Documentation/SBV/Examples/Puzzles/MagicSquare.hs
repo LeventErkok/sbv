@@ -56,7 +56,7 @@ magic :: Int -> IO ()
 magic n
  | n < 0 = putStrLn $ "n must be non-negative, received: " ++ show n
  | True  = do putStrLn $ "Finding all " ++ show n ++ "-magic squares.."
-              res <- allSat $ (isMagic . chunk n) `fmap` (mkExistVars n2 :: Symbolic [SBV Word32])
+              res <- allSat $ (isMagic . chunk n) `fmap` mkExistVars n2
               cnt <- displayModels disp res
               putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
    where n2 = n * n
