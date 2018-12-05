@@ -62,6 +62,7 @@ Library
                   , Data.SBV.String
                   , Data.SBV.Char
                   , Data.SBV.RegExp
+                  , Data.SBV.Trans
                   , Data.SBV.Tools.CodeGen
                   , Data.SBV.Tools.GenTest
                   , Data.SBV.Tools.Overflow
