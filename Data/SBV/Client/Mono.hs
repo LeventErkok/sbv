@@ -20,10 +20,12 @@ import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
                                 SReal, SString, SW, SWord8, SWord16, SWord32,
                                 SWord64)
 import Data.SBV.Core.Model     (Metric)
-import Data.SBV.Core.Symbolic  (Objective, Quantifier, Result, Symbolic,
-                                SBVRunMode, SMTConfig, SVal)
+import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Quantifier, Result,
+                                Symbolic, SBVRunMode, SMTConfig, SVal)
 import Data.SBV.Control.Types  (SMTOption)
-import Data.SBV.Provers.Prover (Provable, SExecutable)
+import Data.SBV.Provers.Prover (Provable, SExecutable, ThmResult)
+import Data.SBV.SMT.SMT        (AllSatResult, SafeResult, SatResult,
+                                OptimizeResult)
 
 import qualified Data.SBV.Core.Data      as Trans
 import qualified Data.SBV.Core.Model     as Trans
@@ -44,6 +46,48 @@ forSome_ = Trans.forSome_
 forSome :: Provable IO a => [String] -> a -> Symbolic SBool
 forSome = Trans.forSome
 
+prove :: Provable IO a => a -> IO ThmResult
+prove = Trans.prove
+
+proveWith :: Provable IO a => SMTConfig -> a -> IO ThmResult
+proveWith = Trans.proveWith
+
+sat :: Provable IO a => a -> IO SatResult
+sat = Trans.sat
+
+satWith :: Provable IO a => SMTConfig -> a -> IO SatResult
+satWith = Trans.satWith
+
+allSat :: Provable IO a => a -> IO AllSatResult
+allSat = Trans.allSat
+
+allSatWith :: Provable IO a => SMTConfig -> a -> IO AllSatResult
+allSatWith = Trans.allSatWith
+
+optimize :: Provable IO a => OptimizeStyle -> a -> IO OptimizeResult
+optimize = Trans.optimize
+
+optimizeWith :: Provable IO a => SMTConfig -> OptimizeStyle -> a -> IO OptimizeResult
+optimizeWith = Trans.optimizeWith
+
+isVacuous :: Provable IO a => a -> IO Bool
+isVacuous = Trans.isVacuous
+
+isVacuousWith :: Provable IO a => SMTConfig -> a -> IO Bool
+isVacuousWith = Trans.isVacuousWith
+
+isTheorem :: Provable IO a => a -> IO Bool
+isTheorem = Trans.isTheorem
+
+isTheoremWith :: Provable IO a => SMTConfig -> a -> IO Bool
+isTheoremWith = Trans.isTheoremWith
+
+isSatisfiable :: Provable IO a => a -> IO Bool
+isSatisfiable = Trans.isSatisfiable
+
+isSatisfiableWith :: Provable IO a => SMTConfig -> a -> IO Bool
+isSatisfiableWith = Trans.isSatisfiableWith
+
 runSMT :: Symbolic a -> IO a
 runSMT = Trans.runSMT
 
@@ -55,6 +99,12 @@ sName_ = Trans.sName_
 
 sName :: SExecutable IO a => [String] -> a -> Symbolic ()
 sName = Trans.sName
+
+safe :: SExecutable IO a => a -> IO [SafeResult]
+safe = Trans.safe
+
+safeWith :: SExecutable IO a => SMTConfig -> a -> IO [SafeResult]
+safeWith = Trans.safeWith
 
 -- Data.SBV.Core.Data:
 

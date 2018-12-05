@@ -25,7 +25,7 @@ module Data.SBV.Tools.Range (
 import Data.SBV
 import Data.SBV.Control
 
-import Data.SBV.Internals hiding (Range)
+import Data.SBV.Internals hiding (Range, free_)
 
 -- Doctest only
 -- $setup

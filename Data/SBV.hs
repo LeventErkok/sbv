@@ -197,7 +197,11 @@ module Data.SBV (
   -- $proveIntro
   -- $noteOnNestedQuantifiers
   -- $multiIntro
-  , Predicate, Goal, Provable(..), proveWithAll, proveWithAny , satWithAll
+  , Predicate, Goal
+  , Provable, forAll_, forAll, forSome_, forSome, prove, proveWith, sat
+  , satWith, allSat, allSatWith, optimize, optimizeWith, isVacuous
+  , isVacuousWith, isTheorem, isTheoremWith, isSatisfiable, isSatisfiableWith
+  , proveWithAll, proveWithAny, satWithAll
   , satWithAny, generateSMTBenchmark
   , solve
   -- * Constraints
@@ -222,7 +226,7 @@ module Data.SBV (
 
   -- * Checking safety
   -- $safeIntro
-  , sAssert, isSafe, SExecutable(..)
+  , sAssert, isSafe, SExecutable, sName_, sName, safe, safeWith
 
   -- * Quick-checking
   , sbvQuickCheck
@@ -272,7 +276,10 @@ module Data.SBV (
   , SBVException(..)
 
   -- * Abstract SBV type
-  , SBV, HasKind(..), Kind(..), SymWord(..)
+  , SBV, HasKind(..), Kind(..)
+  , SymWord, forall, forall_, mkForallVars, exists, exists_, mkExistVars, free
+  , free_, mkFreeVars, symbolic, symbolics, literal, unliteral, fromCW
+  , isConcrete, isSymbolic, isConcretely, mkSymWord
   , Symbolic, SymbolicT, label, output, runSMT, runSMTWith
 
   -- * Module exports
@@ -285,20 +292,30 @@ module Data.SBV (
   ) where
 
 import Data.SBV.Core.AlgReals
-import Data.SBV.Core.Data       hiding (addAxiom, output)
-import Data.SBV.Core.Model      hiding (assertWithPenalty, solve, sBool,
-                                        sBools, sChar, sChars, sDouble,
-                                        sDoubles, sFloat, sFloats, sInt8,
-                                        sInt8s, sInt16, sInt16s, sInt32,
-                                        sInt32s, sInt64, sInt64s, sInteger,
-                                        sIntegers, sList, sLists, sReal,
-                                        sReals, sString, sStrings, sWord8,
-                                        sWord8s, sWord16, sWord16s, sWord32,
-                                        sWord32s, sWord64, sWord64s)
+import Data.SBV.Core.Data       hiding (addAxiom, forall, forall_,
+                                        mkForallVars, exists, exists_,
+                                        mkExistVars, free, free_, mkFreeVars,
+                                        output, symbolic, symbolics, mkSymWord)
+import Data.SBV.Core.Model      hiding (assertWithPenalty, forall, forall_,
+                                        exists, exists_, solve, sBool, sBools,
+                                        sChar, sChars, sDouble, sDoubles,
+                                        sFloat, sFloats, sInt8, sInt8s, sInt16,
+                                        sInt16s, sInt32, sInt32s, sInt64,
+                                        sInt64s, sInteger, sIntegers, sList,
+                                        sLists, sReal, sReals, sString,
+                                        sStrings, sWord8, sWord8s, sWord16,
+                                        sWord16s, sWord32, sWord32s, sWord64,
+                                        sWord64s)
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Splittable
 
-import Data.SBV.Provers.Prover hiding (runSMT, runSMTWith)
+import Data.SBV.Provers.Prover hiding (forAll_, forAll, forSome_, forSome,
+                                       prove, proveWith, sat, satWith, allSat,
+                                       allSatWith, optimize, optimizeWith,
+                                       isVacuous, isVacuousWith, isTheorem,
+                                       isTheoremWith, isSatisfiable,
+                                       isSatisfiableWith, runSMT, runSMTWith,
+                                       sName_, sName, safe, safeWith)
 
 import Data.SBV.Client
 import Data.SBV.Client.Mono
