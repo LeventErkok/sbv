@@ -23,13 +23,14 @@
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 
 module Data.SBV.Core.Model (
-    Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), assertWithPenalty, SIntegral, SFiniteBits(..)
+    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), assertWithPenalty, SIntegral, SFiniteBits(..)
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, (.^)
   , oneIf, genVar, genVar_, forall, forall_, exists, exists_
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   , sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, sChar, sChars, sString, sStrings, sList, sLists
+  , solve
   , slet
   , sRealToSInteger, label, observe
   , sAssert
@@ -69,8 +70,8 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Operations
 
-import Data.SBV.Provers.Prover (defaultSMTCfg, SafeResult(..))
-import Data.SBV.SMT.SMT        (showModel)
+import Data.SBV.Provers.Prover (defaultSMTCfg, SafeResult(..), prove)
+import Data.SBV.SMT.SMT        (ThmResult, showModel)
 
 import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.Lib      (isKString)
@@ -345,6 +346,16 @@ sList = symbolic
 -- | Declare a list of 'SList's
 sLists :: (SymWord a, MonadIO m) => [String] -> SymbolicT m [SList a]
 sLists = symbolics
+
+-- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
+-- problems with constraints, like the following:
+--
+-- @
+--   sat $ do [x, y, z] <- sIntegers [\"x\", \"y\", \"z\"]
+--            solve [x .> 5, y + z .< x]
+-- @
+solve :: MonadIO m => [SBool] -> SymbolicT m SBool
+solve = return . bAnd
 
 -- | Convert an SReal to an SInteger. That is, it computes the
 -- largest integer @n@ that satisfies @sIntegerToSReal n <= r@
@@ -1899,6 +1910,54 @@ slet x f = SBV $ SVal k $ Right $ cache r
                     let xsbv = SBV $ SVal (kindOf x) (Right (cache (const (return xsw))))
                         res  = f xsbv
                     sbvToSW st res
+
+-- | Equality as a proof method. Allows for
+-- very concise construction of equivalence proofs, which is very typical in
+-- bit-precise proofs.
+infix 4 ===
+class Equality a where
+  (===) :: a -> a -> IO ThmResult
+
+instance {-# OVERLAPPABLE #-} (SymWord a, EqSymbolic z) => Equality (SBV a -> z) where
+  k === l = prove $ \a -> k a .== l a
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, EqSymbolic z) => Equality (SBV a -> SBV b -> z) where
+  k === l = prove $ \a b -> k a b .== l a b
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, EqSymbolic z) => Equality ((SBV a, SBV b) -> z) where
+  k === l = prove $ \a b -> k (a, b) .== l (a, b)
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> z) where
+  k === l = prove $ \a b c -> k a b c .== l a b c
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c) -> z) where
+  k === l = prove $ \a b c -> k (a, b, c) .== l (a, b, c)
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> z) where
+  k === l = prove $ \a b c d -> k a b c d .== l a b c d
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d) -> z) where
+  k === l = prove $ \a b c d -> k (a, b, c, d) .== l (a, b, c, d)
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> z) where
+  k === l = prove $ \a b c d e -> k a b c d e .== l a b c d e
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e) -> z) where
+  k === l = prove $ \a b c d e -> k (a, b, c, d, e) .== l (a, b, c, d, e)
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> z) where
+  k === l = prove $ \a b c d e f -> k a b c d e f .== l a b c d e f
+
+instance {-# OVERLAPPABLE #-}
+ (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> z) where
+  k === l = prove $ \a b c d e f -> k (a, b, c, d, e, f) .== l (a, b, c, d, e, f)
+
+instance {-# OVERLAPPABLE #-}
+ (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV g -> z) where
+  k === l = prove $ \a b c d e f g -> k a b c d e f g .== l a b c d e f g
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> z) where
+  k === l = prove $ \a b c d e f g -> k (a, b, c, d, e, f, g) .== l (a, b, c, d, e, f, g)
 
 {-# ANN module   ("HLint: ignore Reduce duplication" :: String) #-}
 {-# ANN module   ("HLint: ignore Eta reduce" :: String)         #-}

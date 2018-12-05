@@ -129,7 +129,8 @@ Library
                   , Documentation.SBV.Examples.Uninterpreted.Shannon
                   , Documentation.SBV.Examples.Uninterpreted.Sort
                   , Documentation.SBV.Examples.Uninterpreted.UISortAllSat
-  Other-modules   : Data.SBV.Core.AlgReals
+  Other-modules   : Data.SBV.Client
+                  , Data.SBV.Core.AlgReals
                   , Data.SBV.Core.Concrete
                   , Data.SBV.Core.Data
                   , Data.SBV.Core.Kind
