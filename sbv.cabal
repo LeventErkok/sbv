@@ -62,7 +62,6 @@ Library
                   , Data.SBV.String
                   , Data.SBV.Char
                   , Data.SBV.RegExp
-                  , Data.SBV.Trans
                   , Data.SBV.Tools.CodeGen
                   , Data.SBV.Tools.GenTest
                   , Data.SBV.Tools.Overflow
@@ -70,6 +69,8 @@ Library
                   , Data.SBV.Tools.Range
                   , Data.SBV.Tools.BoundedFix
                   , Data.SBV.Tools.STree
+                  , Data.SBV.Trans
+                  , Data.SBV.Trans.Control
                   , Documentation.SBV.Examples.BitPrecise.BitTricks
                   , Documentation.SBV.Examples.BitPrecise.BrokenSearch
                   , Documentation.SBV.Examples.BitPrecise.Legato

@@ -20,13 +20,11 @@ import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
                                 SReal, SString, SW, SWord8, SWord16, SWord32,
                                 SWord64)
 import Data.SBV.Core.Model     (Metric)
-import Data.SBV.Core.Symbolic  (Objective, Quantifier, Query, QueryContext,
-                                Result, Symbolic, SBVRunMode, SMTConfig, SVal)
+import Data.SBV.Core.Symbolic  (Objective, Quantifier, Result, Symbolic,
+                                SBVRunMode, SMTConfig, SVal)
 import Data.SBV.Control.Types  (SMTOption)
 import Data.SBV.Provers.Prover (Provable, SExecutable)
 
-import qualified Data.SBV.Control        as Trans
-import qualified Data.SBV.Control.Utils  as Trans
 import qualified Data.SBV.Core.Data      as Trans
 import qualified Data.SBV.Core.Model     as Trans
 import qualified Data.SBV.Core.Symbolic  as Trans
@@ -230,11 +228,6 @@ minimize = Trans.minimize
 maximize :: Metric a => String -> a -> Symbolic ()
 maximize = Trans.maximize
 
--- Data.SBV.Control:
-
-query :: Query a -> Symbolic a
-query = Trans.query
-
 -- Data.SBV.Core.Symbolic:
 
 svToSymSW :: SVal -> Symbolic SW
@@ -269,8 +262,3 @@ addSValOptGoal = Trans.addSValOptGoal
 
 outputSVal :: SVal -> Symbolic ()
 outputSVal = Trans.outputSVal
-
--- Data.SBV.Control.Utils
-
-executeQuery :: QueryContext -> Query a -> Symbolic a
-executeQuery = Trans.executeQuery
