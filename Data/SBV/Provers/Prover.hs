@@ -57,7 +57,7 @@ import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.TDiff
 import Data.SBV.Utils.PrettyNum
 
-import qualified Data.SBV.Control       as Control
+import qualified Data.SBV.Trans.Control as Control
 import qualified Data.SBV.Control.Query as Control
 import qualified Data.SBV.Control.Utils as Control
 
