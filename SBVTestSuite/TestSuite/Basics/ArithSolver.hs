@@ -19,7 +19,7 @@ module TestSuite.Basics.ArithSolver(tests) where
 
 import qualified Data.Numbers.CrackNum as RC (wordToFloat, wordToDouble, floatToWord, doubleToWord)
 
-import Data.SBV.Internals
+import Data.SBV.Internals hiding (free, free_)
 import Utils.SBVTestFramework
 
 import Data.List (genericIndex, isInfixOf, isPrefixOf, isSuffixOf, genericTake, genericDrop, genericLength)
@@ -356,7 +356,7 @@ genIEEE754 origin vs =  map tst1 [("pred_"   ++ nm, x, y)    | (nm, x, y)    <- 
         fpProver :: SMTConfig
         fpProver = z3 -- mathSAT
 
-        fpThm :: Provable a => a -> IO Bool
+        fpThm :: Provable IO a => a -> IO Bool
         fpThm = isTheoremWith fpProver
 
         mkThmP op x r = fpThm $ do a <- free "x"
@@ -477,7 +477,7 @@ genFPConverts = map tst1 [("fpCast_" ++ nm, x, y) | (nm, x, y) <- converts]
         fpProver :: SMTConfig
         fpProver = z3 -- mathSAT
 
-        fpThm :: Provable a => a -> IO Bool
+        fpThm :: Provable IO a => a -> IO Bool
         fpThm = isTheoremWith fpProver
 
         mkThmP op x r = fpThm $ do a <- free "x"

@@ -9,6 +9,8 @@
 -- Test the sAssert feature.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleContexts #-}
+
 module TestSuite.Basics.Assert(tests) where
 
 import Utils.SBVTestFramework
