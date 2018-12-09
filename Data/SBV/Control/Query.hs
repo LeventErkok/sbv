@@ -336,18 +336,38 @@ getObjectiveValues = do let cmd = "(get-objectives)"
         getObjValue :: (forall a. Maybe [String] -> Query a) -> [NamedSymVar] -> SExpr -> Query (Maybe (String, GeneralizedCW))
         getObjValue bailOut inputs expr =
                 case expr of
-                  EApp [_]                                       -> return Nothing            -- Happens when a soft-assertion has no associated group.
-                  EApp [ECon nm, v]                              -> locate nm v               -- Regular case
-                  EApp [EApp [ECon "bvadd", ECon nm, ENum _], v] -> locate nm v               -- Happens when we "adjust" a signed-bounded objective
-                  _                                              -> dontUnderstand (show expr)
+                  EApp [_]                                            -> return Nothing            -- Happens when a soft-assertion has no associated group.
+                  EApp [ECon nm, v]                                   -> locate nm v Nothing       -- Regular case
+                  EApp [EApp [ECon "bvadd", ECon nm, ENum (a, _)], v] -> locate nm v (Just a)      -- Happens when we "adjust" a signed-bounded objective
+                  _                                                   -> dontUnderstand (show expr)
 
-          where locate nm v = case listToMaybe [p | p@(sw, _) <- inputs, show sw == nm] of
-                                Nothing               -> return Nothing -- Happens when the soft assertion has a group-id that's not one of the input names
-                                Just (sw, actualName) -> grab sw v >>= \val -> return $ Just (actualName, val)
+          where locate nm v mbAdjust = case listToMaybe [p | p@(sw, _) <- inputs, show sw == nm] of
+                                         Nothing               -> return Nothing -- Happens when the soft assertion has a group-id that's not one of the input names
+                                         Just (sw, actualName) -> grab sw v >>= \val -> return $ Just (actualName, signAdjust mbAdjust val)
 
                 dontUnderstand s = bailOut $ Just [ "Unable to understand solver output."
                                                   , "While trying to process: " ++ s
                                                   ]
+
+                signAdjust :: Maybe Integer -> GeneralizedCW -> GeneralizedCW
+                signAdjust Nothing    v = v
+                signAdjust (Just adj) e = goG e
+                  where goG :: GeneralizedCW -> GeneralizedCW
+                        goG (ExtendedCW ecw) = ExtendedCW $ goE ecw
+                        goG (RegularCW  cw)  = RegularCW  $ go cw
+
+                        goE :: ExtCW -> ExtCW
+                        goE (Infinite k)      = Infinite k
+                        goE (Epsilon  k)      = Epsilon  k
+                        goE (Interval  lo hi) = Interval  (goE lo) (goE hi)
+                        goE (BoundedCW cw)    = BoundedCW (go cw)
+                        goE (AddExtCW  a b)   = AddExtCW  (goE a) (goE b)
+                        goE (MulExtCW  a b)   = MulExtCW  (goE a) (goE b)
+
+                        go :: CW -> CW
+                        go cw = case (kindOf cw, cwVal cw) of
+                                  (k@(KBounded True _), CWInteger v) -> normCW $ CW k (CWInteger (v - adj))
+                                  _                                  -> error $ "SBV.getObjValue: Unexpected cw received! " ++ show cw
 
                 grab :: SW -> SExpr -> Query GeneralizedCW
                 grab s topExpr
