@@ -125,7 +125,7 @@ singleton = lift1 StrUnit (Just wrap)
 -- Q.E.D.
 -- >>> sat $ \s -> length s .>= 2 &&& strToStrAt s 0 ./= strToStrAt s (length s - 1)
 -- Satisfiable. Model:
---   s0 = "\NUL\NUL\EOT" :: String
+--   s0 = "\NUL\NUL\b" :: String
 strToStrAt :: SString -> SInteger -> SString
 strToStrAt s offset = subStr s offset 1
 

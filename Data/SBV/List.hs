@@ -126,7 +126,7 @@ singleton = lift1 SeqUnit (Just (: []))
 -- Q.E.D.
 -- >>> sat $ \(l :: SList Word16) -> length l .>= 2 &&& listToListAt l 0 ./= listToListAt l (length l - 1)
 -- Satisfiable. Model:
---   s0 = [0,0,32] :: [SWord16]
+--   s0 = [0,0,512] :: [SWord16]
 listToListAt :: SymWord a => SList a -> SInteger -> SList a
 listToListAt s offset = subList s offset 1
 
@@ -307,8 +307,8 @@ replace l src dst
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Word16) i -> i .> 0 &&& i .< length l ==> indexOf l (subList l i 1) .== i
 -- Falsifiable. Counter-example:
---   s0 = [8,0,0,0,0] :: [SWord16]
---   s1 =           3 :: Integer
+--   s0 = [128,0,0,0,0] :: [SWord16]
+--   s1 =             3 :: Integer
 -- >>> prove $ \(l1 :: SList Word16) l2 -> length l2 .> length l1 ==> indexOf l1 l2 .== -1
 -- Q.E.D.
 indexOf :: SymWord a => SList a -> SList a -> SInteger
