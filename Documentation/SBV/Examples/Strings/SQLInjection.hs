@@ -109,15 +109,21 @@ exploitRe = R.KPlus (statementRe * "; ")
 -- We have:
 --
 -- >>> findInjection exampleProgram
--- "  d'; DROP TABLE 'users"
+-- "  f'; DROP TABLE 'users"
 --
 -- Indeed, if we substitute the suggested string, we get the program:
 --
--- > query ("SELECT msg FROM msgs WHERE topicid='  d'; DROP TABLE 'users'")
+-- > query ("SELECT msg FROM msgs WHERE topicid='  f'; DROP TABLE 'users'")
 --
--- which would query for topic @'  d'@ and then delete the users table!
+-- which would query for topic @'  f'@ and then delete the users table!
 findInjection :: SQLExpr -> IO String
 findInjection expr = runSMT $ do
+
+    -- This example generates different outputs on different platforms (Mac vs Linux).
+    -- So, we explicitly set the random-seed to get a consistent doctest output
+    -- Otherwise the following line isn't needed.
+    setOption $ OptionKeyword ":smt.random_seed" ["1"]
+
     badTopic <- sString "badTopic"
 
     -- Create an initial environment that returns the symbolic
