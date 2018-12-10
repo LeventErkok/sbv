@@ -71,14 +71,14 @@ module Data.SBV.Trans.Control (
      , SMTOption(..)
      ) where
 
-import Control.Monad.IO.Class (MonadIO)
-
 import Data.SBV.Core.Data     (SMTConfig(..))
-import Data.SBV.Core.Symbolic (Query, SymbolicT, Query(..), QueryContext(..))
+import Data.SBV.Core.Symbolic (QueryT, Query, SymbolicT, QueryContext(..))
 
 import Data.SBV.Control.Query
 import Data.SBV.Control.Utils (SMTValue(..), queryDebug, executeQuery)
 
--- | Run a custom query
-query :: MonadIO m => Query a -> SymbolicT m a
+import Data.SBV.Utils.ExtractIO
+
+-- | Run a custom query.
+query :: ExtractIO m => QueryT m a -> SymbolicT m a
 query = executeQuery QueryExternal

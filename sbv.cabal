@@ -142,6 +142,7 @@ Library
                   , Data.SBV.Core.Floating
                   , Data.SBV.Core.Splittable
                   , Data.SBV.Core.Symbolic
+                  , Data.SBV.Control.Mono
                   , Data.SBV.Control.Query
                   , Data.SBV.Control.Types
                   , Data.SBV.Control.Utils
@@ -160,6 +161,7 @@ Library
                   , Data.SBV.Provers.MathSAT
                   , Data.SBV.Provers.ABC
                   , Data.SBV.Utils.Boolean
+                  , Data.SBV.Utils.ExtractIO
                   , Data.SBV.Utils.Numeric
                   , Data.SBV.Utils.TDiff
                   , Data.SBV.Utils.Lib

@@ -48,6 +48,8 @@ module Data.SBV.Internals (
 
   ) where
 
+import Control.Monad.IO.Class (MonadIO)
+
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model      (genLiteral, genFromCW, genMkSymVar, liftQRem, liftDMod)
 import Data.SBV.Core.Symbolic   (IStage(..), addSValOptGoal, registerKind)
@@ -67,7 +69,7 @@ import qualified Data.SBV.Control.Utils as Query
 -- | Send an arbitrary string to the solver in a query.
 -- Note that this is inherently dangerous as it can put the solver in an arbitrary
 -- state and confuse SBV. If you use this feature, you are on your own!
-sendStringToSolver :: String -> Query ()
+sendStringToSolver :: MonadIO m => String -> QueryT m ()
 sendStringToSolver = Query.send False
 
 -- | Retrieve multiple responses from the solver, until it responds with a user given
@@ -75,13 +77,13 @@ sendStringToSolver = Query.send False
 -- If the time-out is exceeded, then we will raise an error. Note that this is inherently
 -- dangerous as it can put the solver in an arbitrary state and confuse SBV. If you use this
 -- feature, you are on your own!
-retrieveResponseFromSolver :: String -> Maybe Int -> Query [String]
+retrieveResponseFromSolver :: MonadIO m => String -> Maybe Int -> QueryT m [String]
 retrieveResponseFromSolver = Query.retrieveResponse
 
 -- | Send an arbitrary string to the solver in a query, and return a response.
 -- Note that this is inherently dangerous as it can put the solver in an arbitrary
 -- state and confuse SBV.
-sendRequestToSolver :: String -> Query String
+sendRequestToSolver :: MonadIO m => String -> QueryT m String
 sendRequestToSolver = Query.ask
 
 {- $coordinateSolverInfo

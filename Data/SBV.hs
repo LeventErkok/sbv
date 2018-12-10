@@ -198,6 +198,7 @@ module Data.SBV (
   -- $noteOnNestedQuantifiers
   -- $multiIntro
   , Predicate, Goal
+  , ExtractIO(..)
   , Provable, forAll_, forAll, forSome_, forSome, prove, proveWith, sat
   , satWith, allSat, allSatWith, optimize, optimizeWith, isVacuous
   , isVacuousWith, isTheorem, isTheoremWith, isSatisfiable, isSatisfiableWith
@@ -323,7 +324,8 @@ import Data.SBV.Client
 import Data.SBV.Client.Mono
 
 import Data.SBV.Utils.Boolean
-import Data.SBV.Utils.TDiff   (Timing(..))
+import Data.SBV.Utils.ExtractIO (ExtractIO(..))
+import Data.SBV.Utils.TDiff     (Timing(..))
 
 import Data.Bits
 import Data.Int

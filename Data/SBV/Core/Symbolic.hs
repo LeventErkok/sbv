@@ -49,7 +49,7 @@ module Data.SBV.Core.Symbolic
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
-  , Query(..), QueryState(..), QueryContext(..)
+  , QueryT(..), Query, QueryState(..), QueryContext(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
   , outputSVal
   ) where
@@ -59,7 +59,7 @@ import Control.DeepSeq          (NFData(..))
 import Control.Monad            (when, unless)
 import Control.Monad.Reader     (MonadReader, ReaderT, ask, runReaderT)
 import Control.Monad.State.Lazy (MonadState, StateT(..))
-import Control.Monad.Trans      (MonadIO, liftIO)
+import Control.Monad.Trans      (MonadIO, MonadTrans, liftIO)
 import Data.Char                (isAlpha, isAlphaNum, toLower)
 import Data.IORef               (IORef, newIORef, readIORef)
 import Data.List                (intercalate, sortBy)
@@ -487,8 +487,10 @@ data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -
                              }
 
 -- | A query is a user-guided mechanism to directly communicate and extract results from the solver.
-newtype Query a = Query (StateT State IO a)
+newtype QueryT m a = Query (StateT State m a)
              deriving (Applicative, Functor, Monad, MonadIO, MonadState State)
+
+type Query = QueryT IO
 
 instance NFData OptimizeStyle where
    rnf x = x `seq` ()
@@ -1005,7 +1007,7 @@ svToSymSW sbv = do st <- ask
 -- state of the computation, layered on top of IO for creating unique
 -- references to hold onto intermediate results.
 newtype SymbolicT m a = SymbolicT (ReaderT State m a)
-                   deriving ( Applicative, Functor, Monad, MonadIO, MonadReader State
+                   deriving ( Applicative, Functor, Monad, MonadIO, MonadReader State, MonadTrans
 #if MIN_VERSION_base(4,11,0)
                             , Fail.MonadFail
 #endif
@@ -1433,7 +1435,7 @@ data RoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable 
 instance HasKind RoundingMode
 
 -- | Solver configuration. See also 'Data.SBV.z3', 'Data.SBV.yices', 'Data.SBV.cvc4', 'Data.SBV.boolector', 'Data.SBV.mathSAT', etc.
--- which are instantiations of this type for those solvers, with reasonable defaults. In particular, custom configuration can be 
+-- which are instantiations of this type for those solvers, with reasonable defaults. In particular, custom configuration can be
 -- created by varying those values. (Such as @z3{verbose=True}@.)
 --
 -- Most fields are self explanatory. The notion of precision for printing algebraic reals stems from the fact that such values does

@@ -51,7 +51,7 @@ module Data.SBV.Core.Data
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
- , QueryState(..), Query(..), SMTProblem(..)
+ , QueryState(..), QueryT(..), SMTProblem(..)
  ) where
 
 import GHC.Generics (Generic)

@@ -75,14 +75,30 @@ module Data.SBV.Control (
      ) where
 
 import Data.SBV.Core.Data     (SMTConfig(..))
-import Data.SBV.Core.Symbolic (Query, Symbolic, Query(..), QueryContext(..))
+import Data.SBV.Core.Symbolic (Query, Symbolic, QueryContext(..))
 
-import Data.SBV.Control.Query
-import Data.SBV.Control.Utils (SMTValue(..), queryDebug, executeQuery)
+import Data.SBV.Control.Mono
+import Data.SBV.Control.Query hiding (getInfo, getOption, getUnknownReason,
+                                      getSMTResult, getLexicographicOptResults,
+                                      getIndependentOptResults,
+                                      getParetoOptResults, getModel,
+                                      checkSatAssuming,
+                                      checkSatAssumingWithUnsatisfiableSet,
+                                      getAssertionStackDepth,
+                                      inNewAssertionStack, push, pop,
+                                      caseSplit, resetAssertions, echo, exit,
+                                      getUnsatCore, getProof, getInterpolant,
+                                      getAssertions, getAssignment,
+                                      mkSMTResult, freshVar, freshArray,
+                                      freshArray_, checkSatUsing, getValue,
+                                      getUninterpretedValue, timeout, io)
+import Data.SBV.Control.Utils (SMTValue)
+
+import qualified Data.SBV.Control.Utils as Trans
 
 -- | Run a custom query
 query :: Query a -> Symbolic a
-query = executeQuery QueryExternal
+query = Trans.executeQuery QueryExternal
 
 {- $queryIntro
 In certain cases, the user might want to take over the communication with the solver, programmatically

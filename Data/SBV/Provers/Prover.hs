@@ -54,6 +54,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.SMT.SMT
 import Data.SBV.Utils.Boolean
+import Data.SBV.Utils.ExtractIO
 import Data.SBV.Utils.TDiff
 import Data.SBV.Utils.PrettyNum
 
@@ -138,7 +139,7 @@ type Goal = Symbolic ()
 -- each element is either a symbolic type or up-to a 7-tuple of symbolic-types. So
 -- predicates can be constructed from almost arbitrary Haskell functions that have arbitrary
 -- shapes. (See the instance declarations below.)
-class MonadIO m => Provable m a where
+class ExtractIO m => Provable m a where
   -- | Turns a value into a universally quantified predicate, internally naming the inputs.
   -- In this case the sbv library will use names of the form @s1, s2@, etc. to name these variables
   -- Example:
@@ -316,9 +317,9 @@ class MonadIO m => Provable m a where
   -- | Determine if the constraints are vacuous using the given SMT-solver.
   isVacuousWith :: SMTConfig -> a -> m Bool
   isVacuousWith cfg a = -- NB. Can't call runWithQuery since last constraint would become the implication!
-                        fst <$> runSymbolic (SMTMode ISetup True cfg) (forSome_ a >> Control.query check)
+       fst <$> runSymbolic (SMTMode ISetup True cfg) (forSome_ a >> Control.query check)
      where
-       check :: Query Bool
+       check :: QueryT m Bool
        check = do cs <- Control.checkSat
                   case cs of
                     Control.Unsat -> return True
@@ -392,7 +393,7 @@ generateSMTBenchmark isSat a = do
 
       return $ out ++ "\n(check-sat)\n"
 
-checkNoOptimizations :: Query ()
+checkNoOptimizations :: MonadIO m => QueryT m ()
 checkNoOptimizations = do objectives <- Control.getObjectives
 
                           unless (null objectives) $
@@ -403,13 +404,13 @@ checkNoOptimizations = do objectives <- Control.getObjectives
 
 -- If we get a program producing nothing (i.e., Symbolic ()), pretend it simply returns True.
 -- This is useful since min/max calls and constraints will provide the context
-instance MonadIO m => Provable m (SymbolicT m ()) where
+instance ExtractIO m => Provable m (SymbolicT m ()) where
   forAll_    a = forAll_    ((a >> return true) :: SymbolicT m SBool)
   forAll ns  a = forAll ns  ((a >> return true) :: SymbolicT m SBool)
   forSome_   a = forSome_   ((a >> return true) :: SymbolicT m SBool)
   forSome ns a = forSome ns ((a >> return true) :: SymbolicT m SBool)
 
-instance MonadIO m => Provable m (SymbolicT m SBool) where
+instance ExtractIO m => Provable m (SymbolicT m SBool) where
   forAll_    = id
   forAll []  = id
   forAll xs  = error $ "SBV.forAll: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
@@ -417,7 +418,7 @@ instance MonadIO m => Provable m (SymbolicT m SBool) where
   forSome [] = id
   forSome xs = error $ "SBV.forSome: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
 
-instance MonadIO m => Provable m SBool where
+instance ExtractIO m => Provable m SBool where
   forAll_   = return
   forAll _  = return
   forSome_  = return
@@ -523,7 +524,7 @@ runSMTWith :: MonadIO m => SMTConfig -> SymbolicT m a -> m a
 runSMTWith cfg a = fst <$> runSymbolic (SMTMode ISetup True cfg) a
 
 -- | Runs with a query.
-runWithQuery :: (MonadIO m, Provable m a) => Bool -> Query b -> SMTConfig -> a -> m b
+runWithQuery :: Provable m a => Bool -> QueryT m b -> SMTConfig -> a -> m b
 runWithQuery isSAT q cfg a = fst <$> runSymbolic (SMTMode ISetup isSAT cfg) comp
   where comp =  do _ <- (if isSAT then forSome_ else forAll_) a >>= output
                    Control.executeQuery QueryInternal q
@@ -571,7 +572,7 @@ sbvWithAll solvers what a = do beginTime <- getCurrentTime
 
 -- | Symbolically executable program fragments. This class is mainly used for 'safe' calls, and is sufficently populated internally to cover most use
 -- cases. Users can extend it as they wish to allow 'safe' checks for SBV programs that return/take types that are user-defined.
-class MonadIO m => SExecutable m a where
+class ExtractIO m => SExecutable m a where
    sName_ :: a -> SymbolicT m ()
    sName  :: [String] -> a -> SymbolicT m ()
 
@@ -591,7 +592,7 @@ class MonadIO m => SExecutable m a where
 
            -- check that the cond is unsatisfiable. If satisfiable, that would
            -- indicate the assignment under which the 'Data.SBV.sAssert' would fail
-           verify :: (FilePath -> FilePath) -> (String, Maybe CallStack, SW) -> Query SafeResult
+           verify :: (FilePath -> FilePath) -> (String, Maybe CallStack, SW) -> QueryT m SafeResult
            verify mkRelative (msg, cs, cond) = do
                    let locInfo ps = let loc (f, sl) = concat [mkRelative (srcLocFile sl), ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
                                     in intercalate ",\n " (map loc ps)
@@ -605,52 +606,52 @@ class MonadIO m => SExecutable m a where
 
                    return $ SafeResult (location, msg, result)
 
-instance (MonadIO m, NFData a) => SExecutable m (SymbolicT m a) where
+instance (ExtractIO m, NFData a) => SExecutable m (SymbolicT m a) where
    sName_   a = a >>= \r -> rnf r `seq` return ()
    sName []   = sName_
    sName xs   = error $ "SBV.SExecutable.sName: Extra unmapped name(s): " ++ intercalate ", " xs
 
-instance MonadIO m => SExecutable m (SBV a) where
+instance ExtractIO m => SExecutable m (SBV a) where
    sName_   v = sName_   (output v :: SymbolicT m (SBV a))
    sName xs v = sName xs (output v :: SymbolicT m (SBV a))
 
 -- Unit output
-instance MonadIO m => SExecutable m () where
+instance ExtractIO m => SExecutable m () where
    sName_   () = sName_   (output () :: SymbolicT m ())
    sName xs () = sName xs (output () :: SymbolicT m ())
 
 -- List output
-instance MonadIO m => SExecutable m [SBV a] where
+instance ExtractIO m => SExecutable m [SBV a] where
    sName_   vs = sName_   (output vs :: SymbolicT m [SBV a])
    sName xs vs = sName xs (output vs :: SymbolicT m [SBV a])
 
 -- 2 Tuple output
-instance (MonadIO m, NFData a, SymWord a, NFData b, SymWord b) => SExecutable m (SBV a, SBV b) where
+instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b) => SExecutable m (SBV a, SBV b) where
   sName_ (a, b) = sName_ (output a >> output b :: SymbolicT m (SBV b))
   sName _       = sName_
 
 -- 3 Tuple output
-instance (MonadIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c) => SExecutable m (SBV a, SBV b, SBV c) where
+instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c) => SExecutable m (SBV a, SBV b, SBV c) where
   sName_ (a, b, c) = sName_ (output a >> output b >> output c :: SymbolicT m (SBV c))
   sName _          = sName_
 
 -- 4 Tuple output
-instance (MonadIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d) => SExecutable m (SBV a, SBV b, SBV c, SBV d) where
+instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d) => SExecutable m (SBV a, SBV b, SBV c, SBV d) where
   sName_ (a, b, c, d) = sName_ (output a >> output b >> output c >> output c >> output d :: SymbolicT m (SBV d))
   sName _             = sName_
 
 -- 5 Tuple output
-instance (MonadIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e) where
+instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e) where
   sName_ (a, b, c, d, e) = sName_ (output a >> output b >> output c >> output d >> output e :: SymbolicT m (SBV e))
   sName _                = sName_
 
 -- 6 Tuple output
-instance (MonadIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
+instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
   sName_ (a, b, c, d, e, f) = sName_ (output a >> output b >> output c >> output d >> output e >> output f :: SymbolicT m (SBV f))
   sName _                   = sName_
 
 -- 7 Tuple output
-instance (MonadIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f, NFData g, SymWord g) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
+instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f, NFData g, SymWord g) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
   sName_ (a, b, c, d, e, f, g) = sName_ (output a >> output b >> output c >> output d >> output e >> output f >> output g :: SymbolicT m (SBV g))
   sName _                      = sName_
 
