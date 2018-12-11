@@ -141,6 +141,7 @@ module Data.SBV.Trans (
 
   -- * Abstract SBV type
   , SBV, HasKind(..), Kind(..), SymWord(..)
+  , forall, forall_, mkForallVars, exists, exists_, mkExistVars, free, free_, mkFreeVars, symbolic, symbolics, isConcrete, isSymbolic, unliteral
   , Symbolic, SymbolicT, label, output, runSMT, runSMTWith
 
   -- * Module exports

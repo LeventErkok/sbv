@@ -31,6 +31,7 @@ module Data.SBV.Core.Data
  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
  , sRNE, sRNA, sRTP, sRTN, sRTZ
  , SymWord(..)
+ , forall, forall_, mkForallVars, exists, exists_, mkExistVars, free, free_, mkFreeVars, symbolic, symbolics, isConcrete, isSymbolic, unliteral
  , CW(..), CWVal(..), AlgReal(..), AlgRealPoly, ExtCW(..), GeneralizedCW(..), isRegularCW, cwSameType, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
  , SW(..), trueSW, falseSW, trueCW, falseCW, normCW
@@ -353,65 +354,22 @@ instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtabl
 -- in casual uses with 'Data.SBV.prove', 'Data.SBV.sat', 'Data.SBV.allSat' etc, as
 -- default instances automatically provide the necessary bits.
 class (HasKind a, Ord a, Typeable a) => SymWord a where
-  -- | Create a user named input (universal)
-  forall :: MonadIO m => String -> SymbolicT m (SBV a)
-  -- | Create an automatically named input
-  forall_ :: MonadIO m => SymbolicT m (SBV a)
-  -- | Get a bunch of new words
-  mkForallVars :: MonadIO m => Int -> SymbolicT m [SBV a]
-  -- | Create an existential variable
-  exists  :: MonadIO m => String -> SymbolicT m (SBV a)
-  -- | Create an automatically named existential variable
-  exists_ :: MonadIO m => SymbolicT m (SBV a)
-  -- | Create a bunch of existentials
-  mkExistVars :: MonadIO m => Int -> SymbolicT m [SBV a]
-  -- | Create a free variable, universal in a proof, existential in sat
-  free :: MonadIO m => String -> SymbolicT m (SBV a)
-  -- | Create an unnamed free variable, universal in proof, existential in sat
-  free_ :: MonadIO m => SymbolicT m (SBV a)
-  -- | Create a bunch of free vars
-  mkFreeVars :: MonadIO m => Int -> SymbolicT m [SBV a]
-  -- | Similar to free; Just a more convenient name
-  symbolic  :: MonadIO m => String -> SymbolicT m (SBV a)
-  -- | Similar to mkFreeVars; but automatically gives names based on the strings
-  symbolics :: MonadIO m => [String] -> SymbolicT m [SBV a]
-  -- | Turn a literal constant to symbolic
-  literal :: a -> SBV a
-  -- | Extract a literal, if the value is concrete
-  unliteral :: SBV a -> Maybe a
-  -- | Extract a literal, from a CW representation
-  fromCW :: CW -> a
-  -- | Is the symbolic word concrete?
-  isConcrete :: SBV a -> Bool
-  -- | Is the symbolic word really symbolic?
-  isSymbolic :: SBV a -> Bool
-  -- | Does it concretely satisfy the given predicate?
-  isConcretely :: SBV a -> (a -> Bool) -> Bool
   -- | One stop allocator
   mkSymWord :: MonadIO m => Maybe Quantifier -> Maybe String -> SymbolicT m (SBV a)
+  -- | Turn a literal constant to symbolic
+  literal :: a -> SBV a
+  -- | Extract a literal, from a CW representation
+  fromCW :: CW -> a
+  -- | Does it concretely satisfy the given predicate?
+  isConcretely :: SBV a -> (a -> Bool) -> Bool
 
-  -- minimal complete definition:: Nothing.
-  -- Giving no instances is ok when defining an uninterpreted/enumerated sort, but otherwise you really
+  -- minimal complete definition: Nothing.
+  -- Giving no instances is okay when defining an uninterpreted/enumerated sort, but otherwise you really
   -- want to define: literal, fromCW, mkSymWord
-  forall   = mkSymWord (Just ALL) . Just
-  forall_  = mkSymWord (Just ALL)   Nothing
-  exists   = mkSymWord (Just EX)  . Just
-  exists_  = mkSymWord (Just EX)    Nothing
-  free     = mkSymWord Nothing    . Just
-  free_    = mkSymWord Nothing      Nothing
-  mkForallVars n = mapM (const forall_) [1 .. n]
-  mkExistVars n  = mapM (const exists_) [1 .. n]
-  mkFreeVars n   = mapM (const free_)   [1 .. n]
-  symbolic       = free
-  symbolics      = mapM symbolic
-  unliteral (SBV (SVal _ (Left c)))  = Just $ fromCW c
-  unliteral _                        = Nothing
-  isConcrete (SBV (SVal _ (Left _))) = True
-  isConcrete _                       = False
-  isSymbolic = not . isConcrete
-  isConcretely s p
-    | Just i <- unliteral s = p i
-    | True                  = False
+
+  default mkSymWord :: (MonadIO m, Read a, G.Data a) => Maybe Quantifier -> Maybe String -> SymbolicT m (SBV a)
+  mkSymWord mbQ mbNm = SBV <$> (ask >>= liftIO . svMkSymVar mbQ k mbNm)
+    where k = constructUKind (undefined :: a)
 
   default literal :: Show a => a -> SBV a
   literal x = let k@(KUserSort  _ conts) = kindOf x
@@ -425,9 +383,68 @@ class (HasKind a, Ord a, Typeable a) => SymWord a where
   fromCW (CW _ (CWUserSort (_, s))) = read s
   fromCW cw                         = error $ "Cannot convert CW " ++ show cw ++ " to kind " ++ show (kindOf (undefined :: a))
 
-  default mkSymWord :: (MonadIO m, Read a, G.Data a) => Maybe Quantifier -> Maybe String -> SymbolicT m (SBV a)
-  mkSymWord mbQ mbNm = SBV <$> (ask >>= liftIO . svMkSymVar mbQ k mbNm)
-    where k = constructUKind (undefined :: a)
+  default isConcretely :: SBV a -> (a -> Bool) -> Bool
+  isConcretely s p
+    | Just i <- unliteral s = p i
+    | True                  = False
+
+-- | Create a user named input (universal)
+forall :: (MonadIO m, SymWord a) => String -> SymbolicT m (SBV a)
+forall = mkSymWord (Just ALL) . Just
+
+-- | Create an automatically named input
+forall_ :: (MonadIO m, SymWord a) => SymbolicT m (SBV a)
+forall_ = mkSymWord (Just ALL)   Nothing
+
+-- | Get a bunch of new words
+mkForallVars :: (MonadIO m, SymWord a) => Int -> SymbolicT m [SBV a]
+mkForallVars n = mapM (const forall_) [1 .. n]
+
+-- | Create an existential variable
+exists :: (MonadIO m, SymWord a) => String -> SymbolicT m (SBV a)
+exists = mkSymWord (Just EX)  . Just
+
+-- | Create an automatically named existential variable
+exists_ :: (MonadIO m, SymWord a) => SymbolicT m (SBV a)
+exists_ = mkSymWord (Just EX)    Nothing
+
+-- | Create a bunch of existentials
+mkExistVars :: (MonadIO m, SymWord a) => Int -> SymbolicT m [SBV a]
+mkExistVars n = mapM (const exists_) [1 .. n]
+
+-- | Create a free variable, universal in a proof, existential in sat
+free :: (MonadIO m, SymWord a) => String -> SymbolicT m (SBV a)
+free = mkSymWord Nothing . Just
+
+-- | Create an unnamed free variable, universal in proof, existential in sat
+free_ :: (MonadIO m, SymWord a) => SymbolicT m (SBV a)
+free_ = mkSymWord Nothing Nothing
+
+-- | Create a bunch of free vars
+mkFreeVars :: (MonadIO m, SymWord a) => Int -> SymbolicT m [SBV a]
+mkFreeVars n = mapM (const free_) [1 .. n]
+
+-- | Similar to free; Just a more convenient name
+symbolic :: (MonadIO m, SymWord a) => String -> SymbolicT m (SBV a)
+symbolic = free
+
+-- | Similar to mkFreeVars; but automatically gives names based on the strings
+symbolics :: (MonadIO m, SymWord a) => [String] -> SymbolicT m [SBV a]
+symbolics = mapM symbolic
+
+-- | Extract a literal, if the value is concrete
+unliteral :: SymWord a => SBV a -> Maybe a
+unliteral (SBV (SVal _ (Left c)))  = Just $ fromCW c
+unliteral _                        = Nothing
+
+-- | Is the symbolic word concrete?
+isConcrete :: SymWord a => SBV a -> Bool
+isConcrete (SBV (SVal _ (Left _))) = True
+isConcrete _                       = False
+
+-- | Is the symbolic word really symbolic?
+isSymbolic :: SymWord a => SBV a -> Bool
+isSymbolic = not . isConcrete
 
 instance (Random a, SymWord a) => Random (SBV a) where
   randomR (l, h) g = case (unliteral l, unliteral h) of
