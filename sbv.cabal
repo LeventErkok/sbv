@@ -123,6 +123,7 @@ Library
                   , Documentation.SBV.Examples.Queries.CaseSplit
                   , Documentation.SBV.Examples.Queries.Enums
                   , Documentation.SBV.Examples.Queries.Interpolants
+                  , Documentation.SBV.Examples.Queries.Transformer
                   , Documentation.SBV.Examples.Strings.RegexCrossword
                   , Documentation.SBV.Examples.Strings.SQLInjection
                   , Documentation.SBV.Examples.Uninterpreted.AUF
