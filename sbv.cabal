@@ -104,6 +104,7 @@ Library
                   , Documentation.SBV.Examples.Puzzles.DogCatMouse
                   , Documentation.SBV.Examples.Puzzles.Euler185
                   , Documentation.SBV.Examples.Puzzles.Fish
+                  , Documentation.SBV.Examples.Puzzles.Garden
                   , Documentation.SBV.Examples.Puzzles.HexPuzzle
                   , Documentation.SBV.Examples.Puzzles.LadyAndTigers
                   , Documentation.SBV.Examples.Puzzles.MagicSquare

@@ -24,7 +24,9 @@
   * New bounded list functions: breverse, bsort, bfoldrM, bfoldlM, and bmapM. Contributed by
     Joel Burget.
 
-  * Add a new puzzle example: "Documentation/SBV/Examples/Puzzles/LadyAndTigers.hs"
+  * Add two new puzzle examples:
+       * "Documentation/SBV/Examples/Puzzles/LadyAndTigers.hs"
+       * "Documentation/SBV/Examples/Puzzles/Garden.hs"
 
 ### Version 7.12, 2018-09-23
 
