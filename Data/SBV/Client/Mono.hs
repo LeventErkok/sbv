@@ -161,12 +161,6 @@ newArray = Trans.newArray
 
 -- Data.SBV.Core.Model:
 
-genVar :: Maybe Quantifier -> Kind -> String -> Symbolic (SBV a)
-genVar = Trans.genVar
-
-genVar_ :: Maybe Quantifier -> Kind -> Symbolic (SBV a)
-genVar_ = Trans.genVar_
-
 genMkSymVar :: Kind -> Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
 genMkSymVar = Trans.genMkSymVar
 
