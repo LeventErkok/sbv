@@ -282,7 +282,7 @@ module Data.SBV (
   , SymWord, forall, forall_, mkForallVars, exists, exists_, mkExistVars, free
   , free_, mkFreeVars, symbolic, symbolics, literal, unliteral, fromCW
   , isConcrete, isSymbolic, isConcretely, mkSymWord
-  , Symbolic, SymbolicT, label, output, runSMT, runSMTWith
+  , MonadSymbolic(..), Symbolic, SymbolicT, label, output, runSMT, runSMTWith
 
   -- * Module exports
   -- $moduleExportIntro
@@ -311,6 +311,7 @@ import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         sWord32s, sWord64, sWord64s)
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Splittable
+import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT)
 
 import Data.SBV.Provers.Prover hiding (forAll_, forAll, forSome_, forSome,
                                        prove, proveWith, sat, satWith, allSat,

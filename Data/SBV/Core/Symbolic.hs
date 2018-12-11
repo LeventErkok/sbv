@@ -10,9 +10,11 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE    CPP                        #-}
+{-# LANGUAGE    DefaultSignatures          #-}
 {-# LANGUAGE    DeriveDataTypeable         #-}
 {-# LANGUAGE    DeriveFunctor              #-}
 {-# LANGUAGE    FlexibleInstances          #-}
+{-# LANGUAGE    GADTs                      #-}
 {-# LANGUAGE    GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE    MultiParamTypeClasses      #-}
 {-# LANGUAGE    NamedFieldPuns             #-}
@@ -42,7 +44,7 @@ module Data.SBV.Core.Symbolic
   , NamedSymVar
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
-  , SBVPgm(..), SymbolicT, Symbolic, runSymbolic, State(..), withNewIncState, IncState(..), incrementInternalCounter
+  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, State(..), withNewIncState, IncState(..), incrementInternalCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..)
   , registerKind, registerLabel, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable
@@ -53,17 +55,17 @@ module Data.SBV.Core.Symbolic
   , QueryT(..), Query, QueryState(..), QueryContext(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
   , outputSVal
-  , ask
   ) where
 
 import Control.Arrow               (first, second, (***))
 import Control.DeepSeq             (NFData(..))
 import Control.Monad               (when, unless)
-import Control.Monad.Except        (MonadError)
-import Control.Monad.Reader        (MonadReader, ReaderT, runReaderT,
+import Control.Monad.Except        (MonadError, ExceptT)
+import Control.Monad.Reader        (MonadReader(..), ReaderT, runReaderT,
                                     mapReaderT)
 import Control.Monad.State.Lazy    (MonadState(get, put, state), StateT(..))
 import Control.Monad.Trans         (MonadIO(liftIO), MonadTrans(lift))
+import Control.Monad.Trans.Maybe   (MaybeT)
 import Control.Monad.Writer.Strict (MonadWriter)
 import Data.Char                   (isAlpha, isAlphaNum, toLower)
 import Data.IORef                  (IORef, newIORef, readIORef)
@@ -75,14 +77,17 @@ import Data.Time (getCurrentTime, UTCTime)
 
 import GHC.Stack
 
-import qualified Control.Monad.Reader as R
-import qualified Data.IORef           as Ref  (modifyIORef')
-import qualified Data.Generics        as G    (Data(..))
-import qualified Data.IntMap.Strict   as IMap (IntMap, empty, toAscList, lookup, insertWith)
-import qualified Data.Map.Strict      as Map  (Map, empty, toList, lookup, insert, size)
-import qualified Data.Set             as Set  (Set, empty, toList, insert, member)
-import qualified Data.Foldable        as F    (toList)
-import qualified Data.Sequence        as S    (Seq, empty, (|>))
+import qualified Control.Monad.State.Lazy    as LS
+import qualified Control.Monad.State.Strict  as SS
+import qualified Control.Monad.Writer.Lazy   as LW
+import qualified Control.Monad.Writer.Strict as SW
+import qualified Data.IORef                  as R    (modifyIORef')
+import qualified Data.Generics               as G    (Data(..))
+import qualified Data.IntMap.Strict          as IMap (IntMap, empty, toAscList, lookup, insertWith)
+import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size)
+import qualified Data.Set                    as Set  (Set, empty, toList, insert, member)
+import qualified Data.Foldable               as F    (toList)
+import qualified Data.Sequence               as S    (Seq, empty, (|>))
 
 import System.Mem.StableName
 
@@ -739,7 +744,7 @@ newIncState = do
 withNewIncState :: State -> (State -> IO a) -> IO (IncState, a)
 withNewIncState st cont = do
         is <- newIncState
-        Ref.modifyIORef' (rIncState st) (const is)
+        R.modifyIORef' (rIncState st) (const is)
         r  <- cont st
         finalIncState <- readIORef (rIncState st)
         return (finalIncState, r)
@@ -834,7 +839,7 @@ noInteractive ss = error $ unlines $  ""
 -- ignore if it has no impact.)
 modifyState :: State -> (State -> IORef a) -> (a -> a) -> IO () -> IO ()
 modifyState st@State{runMode} field update interactiveUpdate = do
-        Ref.modifyIORef' (field st) update
+        R.modifyIORef' (field st) update
         rm <- readIORef runMode
         case rm of
           SMTMode IRun _ _ -> interactiveUpdate
@@ -844,7 +849,7 @@ modifyState st@State{runMode} field update interactiveUpdate = do
 modifyIncState  :: State -> (IncState -> IORef a) -> (a -> a) -> IO ()
 modifyIncState State{rIncState} field update = do
         incState <- readIORef rIncState
-        Ref.modifyIORef' (field incState) update
+        R.modifyIORef' (field incState) update
 
 -- | Add an observable
 recordObservable :: State -> String -> SW -> IO ()
@@ -886,12 +891,12 @@ newUninterpreted st nm t mbCode
 
                               -- No need to record the code in interactive mode: CodeGen doesn't use interactive
                               when (isJust mbCode) $ modifyState st rCgMap (Map.insert nm (fromJust mbCode)) (return ())
-  where checkType t' cont
+  where checkType :: SBVType -> r -> r
+        checkType t' cont
           | t /= t' = error $  "Uninterpreted constant " ++ show nm ++ " used at incompatible types\n"
                             ++ "      Current type      : " ++ show t ++ "\n"
                             ++ "      Previously used at: " ++ show t'
           | True    = cont
-
 
         validChar x = isAlphaNum x || x `elem` "_"
         enclosed    = head nm == '|' && last nm == '|' && length nm > 2 && not (any (`elem` "|\\") (tail (init nm)))
@@ -1009,12 +1014,9 @@ svToSW :: State -> SVal -> IO SW
 svToSW st (SVal _ (Left c))  = newConst st c
 svToSW st (SVal _ (Right f)) = uncache f st
 
-ask :: Monad m => SymbolicT m State
-ask = SymbolicT R.ask
-
 -- | Convert a symbolic value to an SW, inside the Symbolic monad
-svToSymSW :: MonadIO m => SVal -> SymbolicT m SW
-svToSymSW sbv = do st <- ask
+svToSymSW :: MonadSymbolic m => SVal -> m SW
+svToSymSW sbv = do st <- symbolicEnv
                    liftIO $ svToSW st sbv
 
 -------------------------------------------------------------------------
@@ -1023,6 +1025,21 @@ svToSymSW sbv = do st <- ask
 -- | A Symbolic computation. Represented by a reader monad carrying the
 -- state of the computation, layered on top of IO for creating unique
 -- references to hold onto intermediate results.
+
+class MonadIO m => MonadSymbolic m where
+  symbolicEnv :: m State
+
+  default symbolicEnv :: (MonadTrans t, MonadSymbolic m', m ~ t m') => m State
+  symbolicEnv = lift symbolicEnv
+
+instance MonadSymbolic m             => MonadSymbolic (ExceptT e m)
+instance MonadSymbolic m             => MonadSymbolic (MaybeT m)
+instance MonadSymbolic m             => MonadSymbolic (ReaderT r m)
+instance MonadSymbolic m             => MonadSymbolic (SS.StateT s m)
+instance MonadSymbolic m             => MonadSymbolic (LS.StateT s m)
+instance (MonadSymbolic m, Monoid w) => MonadSymbolic (SW.WriterT w m)
+instance (MonadSymbolic m, Monoid w) => MonadSymbolic (LW.WriterT w m)
+
 newtype SymbolicT m a = SymbolicT { runSymbolicT :: ReaderT State m a }
                    deriving ( Applicative, Functor, Monad, MonadIO, MonadTrans
                             , MonadError e, MonadState s, MonadWriter w
@@ -1031,14 +1048,17 @@ newtype SymbolicT m a = SymbolicT { runSymbolicT :: ReaderT State m a }
 #endif
                             )
 
+instance MonadIO m => MonadSymbolic (SymbolicT m) where
+  symbolicEnv = SymbolicT ask
+
 mapSymbolicT :: (ReaderT State m a -> ReaderT State n b) -> SymbolicT m a -> SymbolicT n b
 mapSymbolicT f = SymbolicT . f . runSymbolicT
 {-# INLINE mapSymbolicT #-}
 
 -- Have to define this one by hand, because we use ReaderT in the implementation
 instance MonadReader r m => MonadReader r (SymbolicT m) where
-  ask = lift R.ask
-  local f = mapSymbolicT $ mapReaderT $ R.local f
+  ask = lift ask
+  local f = mapSymbolicT $ mapReaderT $ local f
 
 type Symbolic = SymbolicT IO
 
@@ -1055,20 +1075,20 @@ svMkTrackerVar :: Kind -> String -> State -> IO SVal
 svMkTrackerVar k nm = svMkSymVarGen True (Just EX) k (Just nm)
 
 -- | Create an N-bit symbolic unsigned named variable
-sWordN :: MonadIO m => Int -> String -> SymbolicT m SVal
-sWordN w nm = ask >>= liftIO . svMkSymVar Nothing (KBounded False w) (Just nm)
+sWordN :: MonadSymbolic m => Int -> String -> m SVal
+sWordN w nm = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded False w) (Just nm)
 
 -- | Create an N-bit symbolic unsigned unnamed variable
-sWordN_ :: MonadIO m => Int -> SymbolicT m SVal
-sWordN_ w = ask >>= liftIO . svMkSymVar Nothing (KBounded False w) Nothing
+sWordN_ :: MonadSymbolic m => Int -> m SVal
+sWordN_ w = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded False w) Nothing
 
 -- | Create an N-bit symbolic signed named variable
-sIntN :: MonadIO m => Int -> String -> SymbolicT m SVal
-sIntN w nm = ask >>= liftIO . svMkSymVar Nothing (KBounded True w) (Just nm)
+sIntN :: MonadSymbolic m => Int -> String -> m SVal
+sIntN w nm = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded True w) (Just nm)
 
 -- | Create an N-bit symbolic signed unnamed variable
-sIntN_ :: MonadIO m => Int -> SymbolicT m SVal
-sIntN_ w = ask >>= liftIO . svMkSymVar Nothing (KBounded True w) Nothing
+sIntN_ :: MonadSymbolic m => Int -> m SVal
+sIntN_ w = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded True w) Nothing
 
 -- | Create a symbolic value, based on the quantifier we have. If an
 -- explicit quantifier is given, we just use that. If not, then we
@@ -1137,9 +1157,9 @@ introduceUserName st isTracker nm k q sw = do
 -- of the axiom text as expressed in SMT-Lib notation. Note that we perform no checks on the axiom
 -- itself, to see whether it's actually well-formed or is sensical by any means.
 -- A separate formalization of SMT-Lib would be very useful here.
-addAxiom :: MonadIO m => String -> [String] -> SymbolicT m ()
+addAxiom :: MonadSymbolic m => String -> [String] -> m ()
 addAxiom nm ax = do
-        st <- ask
+        st <- symbolicEnv
         liftIO $ modifyState st raxioms ((nm, ax) :)
                            $ noInteractive [ "Adding a new axiom:"
                                            , "  Named: " ++ show nm
@@ -1248,13 +1268,13 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    return $ Result knds traceVals observables cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs assertions outsO
 
 -- | Add a new option
-addNewSMTOption :: MonadIO m => SMTOption -> SymbolicT m ()
-addNewSMTOption o =  do st <- ask
+addNewSMTOption :: MonadSymbolic m => SMTOption -> m ()
+addNewSMTOption o =  do st <- symbolicEnv
                         liftIO $ modifyState st rSMTOptions (o:) (return ())
 
 -- | Handling constraints
-imposeConstraint :: MonadIO m => Bool -> [(String, String)] -> SVal -> SymbolicT m ()
-imposeConstraint isSoft attrs c = do st <- ask
+imposeConstraint :: MonadSymbolic m => Bool -> [(String, String)] -> SVal -> m ()
+imposeConstraint isSoft attrs c = do st <- symbolicEnv
                                      rm <- liftIO $ readIORef (runMode st)
                                      case rm of
                                        CodeGen -> error "SBV: constraints are not allowed in code-generation"
@@ -1272,8 +1292,8 @@ internalConstraint st isSoft attrs b = do v <- svToSW st b
                | True   = ""
 
 -- | Add an optimization goal
-addSValOptGoal :: MonadIO m => Objective SVal -> SymbolicT m ()
-addSValOptGoal obj = do st <- ask
+addSValOptGoal :: MonadSymbolic m => Objective SVal -> m ()
+addSValOptGoal obj = do st <- symbolicEnv
 
                         -- create the tracking variable here for the metric
                         let mkGoal nm orig = liftIO $ do origSW  <- svToSW st orig
@@ -1293,13 +1313,13 @@ addSValOptGoal obj = do st <- ask
 
 -- | Mark an interim result as an output. Useful when constructing Symbolic programs
 -- that return multiple values, or when the result is programmatically computed.
-outputSVal :: MonadIO m => SVal -> SymbolicT m ()
+outputSVal :: MonadSymbolic m => SVal -> m ()
 outputSVal (SVal _ (Left c)) = do
-  st <- ask
+  st <- symbolicEnv
   sw <- liftIO $ newConst st c
   liftIO $ modifyState st routs (sw:) (return ())
 outputSVal (SVal _ (Right f)) = do
-  st <- ask
+  st <- symbolicEnv
   sw <- liftIO $ uncache f st
   liftIO $ modifyState st routs (sw:) (return ())
 
@@ -1361,7 +1381,7 @@ uncacheGen getCache (Cached f) st = do
         case maybe Nothing (sn `lookup`) (h `IMap.lookup` stored) of
           Just r  -> return r
           Nothing -> do r <- f st
-                        r `seq` Ref.modifyIORef' rCache (IMap.insertWith (++) h [(sn, r)])
+                        r `seq` R.modifyIORef' rCache (IMap.insertWith (++) h [(sn, r)])
                         return r
 
 -- | Representation of SMTLib Program versions. As of June 2015, we're dropping support

@@ -142,7 +142,7 @@ module Data.SBV.Trans (
   -- * Abstract SBV type
   , SBV, HasKind(..), Kind(..), SymWord(..)
   , forall, forall_, mkForallVars, exists, exists_, mkExistVars, free, free_, mkFreeVars, symbolic, symbolics, isConcrete, isSymbolic, unliteral
-  , Symbolic, SymbolicT, label, output, runSMT, runSMTWith
+  , MonadSymbolic(..), Symbolic, SymbolicT, label, output, runSMT, runSMTWith
 
   -- * Module exports
 
@@ -157,6 +157,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Splittable
+import Data.SBV.Core.Symbolic
 
 import Data.SBV.Provers.Prover
 

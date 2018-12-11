@@ -79,11 +79,11 @@ import Data.SBV.Utils.Lib      (isKString)
 -- Symbolic-Word class instances
 
 -- | Generate a finite symbolic bitvector, named
-genVar :: MonadIO m => Maybe Quantifier -> Kind -> String -> SymbolicT m (SBV a)
+genVar :: MonadSymbolic m => Maybe Quantifier -> Kind -> String -> m (SBV a)
 genVar q k = mkSymSBV q k . Just
 
 -- | Generate a finite symbolic bitvector, unnamed
-genVar_ :: MonadIO m => Maybe Quantifier -> Kind -> SymbolicT m (SBV a)
+genVar_ :: MonadSymbolic m => Maybe Quantifier -> Kind -> m (SBV a)
 genVar_ q k = mkSymSBV q k Nothing
 
 -- | Generate a finite constant bitvector
@@ -96,7 +96,7 @@ genFromCW (CW _ (CWInteger x)) = fromInteger x
 genFromCW c                    = error $ "genFromCW: Unsupported non-integral value: " ++ show c
 
 -- | Generically make a symbolic var
-genMkSymVar :: MonadIO m => Kind -> Maybe Quantifier -> Maybe String -> SymbolicT m (SBV a)
+genMkSymVar :: MonadSymbolic m => Kind -> Maybe Quantifier -> Maybe String -> m (SBV a)
 genMkSymVar k mbq Nothing  = genVar_ mbq k
 genMkSymVar k mbq (Just s) = genVar  mbq k s
 
@@ -220,131 +220,131 @@ instance IsString SString where
 -- they nonetheless make programming easier.
 ------------------------------------------------------------------------------------
 -- | Declare an 'SBool'
-sBool :: MonadIO m => String -> SymbolicT m SBool
+sBool :: MonadSymbolic m => String -> m SBool
 sBool = symbolic
 
 -- | Declare a list of 'SBool's
-sBools :: MonadIO m => [String] -> SymbolicT m [SBool]
+sBools :: MonadSymbolic m => [String] -> m [SBool]
 sBools = symbolics
 
 -- | Declare an 'SWord8'
-sWord8 :: MonadIO m => String -> SymbolicT m SWord8
+sWord8 :: MonadSymbolic m => String -> m SWord8
 sWord8 = symbolic
 
 -- | Declare a list of 'SWord8's
-sWord8s :: MonadIO m => [String] -> SymbolicT m [SWord8]
+sWord8s :: MonadSymbolic m => [String] -> m [SWord8]
 sWord8s = symbolics
 
 -- | Declare an 'SWord16'
-sWord16 :: MonadIO m => String -> SymbolicT m SWord16
+sWord16 :: MonadSymbolic m => String -> m SWord16
 sWord16 = symbolic
 
 -- | Declare a list of 'SWord16's
-sWord16s :: MonadIO m => [String] -> SymbolicT m [SWord16]
+sWord16s :: MonadSymbolic m => [String] -> m [SWord16]
 sWord16s = symbolics
 
 -- | Declare an 'SWord32'
-sWord32 :: MonadIO m => String -> SymbolicT m SWord32
+sWord32 :: MonadSymbolic m => String -> m SWord32
 sWord32 = symbolic
 
 -- | Declare a list of 'SWord32's
-sWord32s :: MonadIO m => [String] -> SymbolicT m [SWord32]
+sWord32s :: MonadSymbolic m => [String] -> m [SWord32]
 sWord32s = symbolics
 
 -- | Declare an 'SWord64'
-sWord64 :: MonadIO m => String -> SymbolicT m SWord64
+sWord64 :: MonadSymbolic m => String -> m SWord64
 sWord64 = symbolic
 
 -- | Declare a list of 'SWord64's
-sWord64s :: MonadIO m => [String] -> SymbolicT m [SWord64]
+sWord64s :: MonadSymbolic m => [String] -> m [SWord64]
 sWord64s = symbolics
 
 -- | Declare an 'SInt8'
-sInt8 :: MonadIO m => String -> SymbolicT m SInt8
+sInt8 :: MonadSymbolic m => String -> m SInt8
 sInt8 = symbolic
 
 -- | Declare a list of 'SInt8's
-sInt8s :: MonadIO m => [String] -> SymbolicT m [SInt8]
+sInt8s :: MonadSymbolic m => [String] -> m [SInt8]
 sInt8s = symbolics
 
 -- | Declare an 'SInt16'
-sInt16 :: MonadIO m => String -> SymbolicT m SInt16
+sInt16 :: MonadSymbolic m => String -> m SInt16
 sInt16 = symbolic
 
 -- | Declare a list of 'SInt16's
-sInt16s :: MonadIO m => [String] -> SymbolicT m [SInt16]
+sInt16s :: MonadSymbolic m => [String] -> m [SInt16]
 sInt16s = symbolics
 
 -- | Declare an 'SInt32'
-sInt32 :: MonadIO m => String -> SymbolicT m SInt32
+sInt32 :: MonadSymbolic m => String -> m SInt32
 sInt32 = symbolic
 
 -- | Declare a list of 'SInt32's
-sInt32s :: MonadIO m => [String] -> SymbolicT m [SInt32]
+sInt32s :: MonadSymbolic m => [String] -> m [SInt32]
 sInt32s = symbolics
 
 -- | Declare an 'SInt64'
-sInt64 :: MonadIO m => String -> SymbolicT m SInt64
+sInt64 :: MonadSymbolic m => String -> m SInt64
 sInt64 = symbolic
 
 -- | Declare a list of 'SInt64's
-sInt64s :: MonadIO m => [String] -> SymbolicT m [SInt64]
+sInt64s :: MonadSymbolic m => [String] -> m [SInt64]
 sInt64s = symbolics
 
 -- | Declare an 'SInteger'
-sInteger:: MonadIO m => String -> SymbolicT m SInteger
+sInteger:: MonadSymbolic m => String -> m SInteger
 sInteger = symbolic
 
 -- | Declare a list of 'SInteger's
-sIntegers :: MonadIO m => [String] -> SymbolicT m [SInteger]
+sIntegers :: MonadSymbolic m => [String] -> m [SInteger]
 sIntegers = symbolics
 
 -- | Declare an 'SReal'
-sReal:: MonadIO m => String -> SymbolicT m SReal
+sReal:: MonadSymbolic m => String -> m SReal
 sReal = symbolic
 
 -- | Declare a list of 'SReal's
-sReals :: MonadIO m => [String] -> SymbolicT m [SReal]
+sReals :: MonadSymbolic m => [String] -> m [SReal]
 sReals = symbolics
 
 -- | Declare an 'SFloat'
-sFloat :: MonadIO m => String -> SymbolicT m SFloat
+sFloat :: MonadSymbolic m => String -> m SFloat
 sFloat = symbolic
 
 -- | Declare a list of 'SFloat's
-sFloats :: MonadIO m => [String] -> SymbolicT m [SFloat]
+sFloats :: MonadSymbolic m => [String] -> m [SFloat]
 sFloats = symbolics
 
 -- | Declare an 'SDouble'
-sDouble :: MonadIO m => String -> SymbolicT m SDouble
+sDouble :: MonadSymbolic m => String -> m SDouble
 sDouble = symbolic
 
 -- | Declare a list of 'SDouble's
-sDoubles :: MonadIO m => [String] -> SymbolicT m [SDouble]
+sDoubles :: MonadSymbolic m => [String] -> m [SDouble]
 sDoubles = symbolics
 
 -- | Declare an 'SChar'
-sChar :: MonadIO m => String -> SymbolicT m SChar
+sChar :: MonadSymbolic m => String -> m SChar
 sChar = symbolic
 
 -- | Declare an 'SString'
-sString :: MonadIO m => String -> SymbolicT m SString
+sString :: MonadSymbolic m => String -> m SString
 sString = symbolic
 
 -- | Declare a list of 'SChar's
-sChars :: MonadIO m => [String] -> SymbolicT m [SChar]
+sChars :: MonadSymbolic m => [String] -> m [SChar]
 sChars = symbolics
 
 -- | Declare a list of 'SString's
-sStrings :: MonadIO m => [String] -> SymbolicT m [SString]
+sStrings :: MonadSymbolic m => [String] -> m [SString]
 sStrings = symbolics
 
 -- | Declare an 'SList'
-sList :: (SymWord a, MonadIO m) => String -> SymbolicT m (SList a)
+sList :: (SymWord a, MonadSymbolic m) => String -> m (SList a)
 sList = symbolic
 
 -- | Declare a list of 'SList's
-sLists :: (SymWord a, MonadIO m) => [String] -> SymbolicT m [SList a]
+sLists :: (SymWord a, MonadSymbolic m) => [String] -> m [SList a]
 sLists = symbolics
 
 -- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
@@ -354,7 +354,7 @@ sLists = symbolics
 --   sat $ do [x, y, z] <- sIntegers [\"x\", \"y\", \"z\"]
 --            solve [x .> 5, y + z .< x]
 -- @
-solve :: MonadIO m => [SBool] -> SymbolicT m SBool
+solve :: MonadSymbolic m => [SBool] -> m SBool
 solve = return . bAnd
 
 -- | Convert an SReal to an SInteger. That is, it computes the
@@ -1829,7 +1829,7 @@ instance MonadIO m => SolverContext (SymbolicT m) where
    setOption o = addNewSMTOption  o
 
 -- | Introduce a soft assertion, with an optional penalty
-assertWithPenalty :: MonadIO m => String -> SBool -> Penalty -> SymbolicT m ()
+assertWithPenalty :: MonadSymbolic m => String -> SBool -> Penalty -> m ()
 assertWithPenalty nm o p = addSValOptGoal $ unSBV `fmap` AssertWithPenalty nm o p
 
 -- | Class of metrics we can optimize for. Currently,
@@ -1841,10 +1841,10 @@ assertWithPenalty nm o p = addSValOptGoal $ unSBV `fmap` AssertWithPenalty nm o 
 -- <http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>.
 class Metric a where
   -- | Minimize a named metric
-  minimize :: MonadIO m => String -> a -> SymbolicT m ()
+  minimize :: MonadSymbolic m => String -> a -> m ()
 
   -- | Maximize a named metric
-  maximize :: MonadIO m => String -> a -> SymbolicT m ()
+  maximize :: MonadSymbolic m => String -> a -> m ()
 
 instance Metric SWord8   where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
 instance Metric SWord16  where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)

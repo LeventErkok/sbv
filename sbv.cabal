@@ -51,7 +51,7 @@ Library
                   , crackNum >= 2.3
                   , ghc, QuickCheck, template-haskell
                   , array, async, containers, deepseq, directory, filepath, time
-                  , pretty, process, mtl, random, syb
+                  , pretty, process, mtl, random, syb, transformers
                   , generic-deriving
   Exposed-modules : Data.SBV
                   , Data.SBV.Control

@@ -42,7 +42,7 @@ module Data.SBV.Core.Data
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, uncacheAI, HasKind(..)
  , Op(..), PBOp(..), FPOp(..), StrOp(..), SeqOp(..), RegExp(..), NamedSymVar, getTableIndex
- , SBVPgm(..), SymbolicT, Symbolic, runSymbolic, State, getPathCondition, extendPathCondition
+ , SBVPgm(..), Symbolic, runSymbolic, State, getPathCondition, extendPathCondition
  , inSMTMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
  , SolverContext(..), internalVariable, internalConstraint, isCodeGenMode
  , SBVType(..), newUninterpreted, addAxiom
@@ -59,7 +59,6 @@ import GHC.Generics (Generic)
 import GHC.Exts     (IsList(..))
 
 import Control.DeepSeq        (NFData(..))
-import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.Trans    (liftIO)
 import Data.Int               (Int8, Int16, Int32, Int64)
 import Data.Word              (Word8, Word16, Word32, Word64)
@@ -268,13 +267,13 @@ sbvToSW st (SBV s) = svToSW st s
 -------------------------------------------------------------------------
 
 -- | Create a symbolic variable.
-mkSymSBV :: forall a m. MonadIO m => Maybe Quantifier -> Kind -> Maybe String -> SymbolicT m (SBV a)
-mkSymSBV mbQ k mbNm = SBV <$> (ask >>= liftIO . svMkSymVar mbQ k mbNm)
+mkSymSBV :: forall a m. MonadSymbolic m => Maybe Quantifier -> Kind -> Maybe String -> m (SBV a)
+mkSymSBV mbQ k mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar mbQ k mbNm)
 
 -- | Convert a symbolic value to an SW, inside the Symbolic monad
-sbvToSymSW :: MonadIO m => SBV a -> SymbolicT m SW
+sbvToSymSW :: MonadSymbolic m => SBV a -> m SW
 sbvToSymSW sbv = do
-        st <- ask
+        st <- symbolicEnv
         liftIO $ sbvToSW st sbv
 
 -- | Actions we can do in a context: Either at problem description
@@ -312,7 +311,7 @@ class SolverContext m where
 class Outputtable a where
   -- | Mark an interim result as an output. Useful when constructing Symbolic programs
   -- that return multiple values, or when the result is programmatically computed.
-  output :: MonadIO m => a -> SymbolicT m a
+  output :: MonadSymbolic m => a -> m a
 
 instance Outputtable (SBV a) where
   output i = do
@@ -355,7 +354,7 @@ instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtabl
 -- default instances automatically provide the necessary bits.
 class (HasKind a, Ord a, Typeable a) => SymWord a where
   -- | One stop allocator
-  mkSymWord :: MonadIO m => Maybe Quantifier -> Maybe String -> SymbolicT m (SBV a)
+  mkSymWord :: MonadSymbolic m => Maybe Quantifier -> Maybe String -> m (SBV a)
   -- | Turn a literal constant to symbolic
   literal :: a -> SBV a
   -- | Extract a literal, from a CW representation
@@ -367,8 +366,8 @@ class (HasKind a, Ord a, Typeable a) => SymWord a where
   -- Giving no instances is okay when defining an uninterpreted/enumerated sort, but otherwise you really
   -- want to define: literal, fromCW, mkSymWord
 
-  default mkSymWord :: (MonadIO m, Read a, G.Data a) => Maybe Quantifier -> Maybe String -> SymbolicT m (SBV a)
-  mkSymWord mbQ mbNm = SBV <$> (ask >>= liftIO . svMkSymVar mbQ k mbNm)
+  default mkSymWord :: (MonadSymbolic m, Read a, G.Data a) => Maybe Quantifier -> Maybe String -> m (SBV a)
+  mkSymWord mbQ mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar mbQ k mbNm)
     where k = constructUKind (undefined :: a)
 
   default literal :: Show a => a -> SBV a
@@ -389,47 +388,47 @@ class (HasKind a, Ord a, Typeable a) => SymWord a where
     | True                  = False
 
 -- | Create a user named input (universal)
-forall :: (MonadIO m, SymWord a) => String -> SymbolicT m (SBV a)
+forall :: (MonadSymbolic m, SymWord a) => String -> m (SBV a)
 forall = mkSymWord (Just ALL) . Just
 
 -- | Create an automatically named input
-forall_ :: (MonadIO m, SymWord a) => SymbolicT m (SBV a)
-forall_ = mkSymWord (Just ALL)   Nothing
+forall_ :: (MonadSymbolic m, SymWord a) => m (SBV a)
+forall_ = mkSymWord (Just ALL) Nothing
 
 -- | Get a bunch of new words
-mkForallVars :: (MonadIO m, SymWord a) => Int -> SymbolicT m [SBV a]
+mkForallVars :: (MonadSymbolic m, SymWord a) => Int -> m [SBV a]
 mkForallVars n = mapM (const forall_) [1 .. n]
 
 -- | Create an existential variable
-exists :: (MonadIO m, SymWord a) => String -> SymbolicT m (SBV a)
-exists = mkSymWord (Just EX)  . Just
+exists :: (MonadSymbolic m, SymWord a) => String -> m (SBV a)
+exists = mkSymWord (Just EX) . Just
 
 -- | Create an automatically named existential variable
-exists_ :: (MonadIO m, SymWord a) => SymbolicT m (SBV a)
-exists_ = mkSymWord (Just EX)    Nothing
+exists_ :: (MonadSymbolic m, SymWord a) => m (SBV a)
+exists_ = mkSymWord (Just EX) Nothing
 
 -- | Create a bunch of existentials
-mkExistVars :: (MonadIO m, SymWord a) => Int -> SymbolicT m [SBV a]
+mkExistVars :: (MonadSymbolic m, SymWord a) => Int -> m [SBV a]
 mkExistVars n = mapM (const exists_) [1 .. n]
 
 -- | Create a free variable, universal in a proof, existential in sat
-free :: (MonadIO m, SymWord a) => String -> SymbolicT m (SBV a)
+free :: (MonadSymbolic m, SymWord a) => String -> m (SBV a)
 free = mkSymWord Nothing . Just
 
 -- | Create an unnamed free variable, universal in proof, existential in sat
-free_ :: (MonadIO m, SymWord a) => SymbolicT m (SBV a)
+free_ :: (MonadSymbolic m, SymWord a) => m (SBV a)
 free_ = mkSymWord Nothing Nothing
 
 -- | Create a bunch of free vars
-mkFreeVars :: (MonadIO m, SymWord a) => Int -> SymbolicT m [SBV a]
+mkFreeVars :: (MonadSymbolic m, SymWord a) => Int -> m [SBV a]
 mkFreeVars n = mapM (const free_) [1 .. n]
 
 -- | Similar to free; Just a more convenient name
-symbolic :: (MonadIO m, SymWord a) => String -> SymbolicT m (SBV a)
+symbolic :: (MonadSymbolic m, SymWord a) => String -> m (SBV a)
 symbolic = free
 
 -- | Similar to mkFreeVars; but automatically gives names based on the strings
-symbolics :: (MonadIO m, SymWord a) => [String] -> SymbolicT m [SBV a]
+symbolics :: (MonadSymbolic m, SymWord a) => [String] -> m [SBV a]
 symbolics = mapM symbolic
 
 -- | Extract a literal, if the value is concrete
@@ -501,9 +500,9 @@ instance (Random a, SymWord a) => Random (SBV a) where
 -- 'SFunArray'. If you still have issues, please report so we can see what the problem might be!
 class SymArray array where
   -- | Create a new anonymous array, possibly with a default initial value.
-  newArray_      :: (MonadIO m, HasKind a, HasKind b) => Maybe (SBV b) -> SymbolicT m (array a b)
+  newArray_      :: (MonadSymbolic m, HasKind a, HasKind b) => Maybe (SBV b) -> m (array a b)
   -- | Create a named new array, possibly with a default initial value.
-  newArray       :: (MonadIO m, HasKind a, HasKind b) => String -> Maybe (SBV b) -> SymbolicT m (array a b)
+  newArray       :: (MonadSymbolic m, HasKind a, HasKind b) => String -> Maybe (SBV b) -> m (array a b)
   -- | Read the array element at @a@
   readArray      :: array a b -> SBV a -> SBV b
   -- | Update the element at @a@ to be @b@
@@ -516,8 +515,8 @@ class SymArray array where
   newArrayInState :: (HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> State -> IO (array a b)
 
   {-# MINIMAL readArray, writeArray, mergeArrays, newArrayInState #-}
-  newArray_   mbVal = ask >>= liftIO . newArrayInState Nothing   mbVal
-  newArray nm mbVal = ask >>= liftIO . newArrayInState (Just nm) mbVal
+  newArray_   mbVal = symbolicEnv >>= liftIO . newArrayInState Nothing   mbVal
+  newArray nm mbVal = symbolicEnv >>= liftIO . newArrayInState (Just nm) mbVal
 
 -- | Arrays implemented in terms of SMT-arrays: <http://smtlib.cs.uiowa.edu/theories-ArraysEx.shtml>
 --

@@ -70,7 +70,7 @@ import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, K
                               , Result(..), SMTProblem(..), trueSW, SymWord(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
                               )
 
-import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSW, SymbolicT
+import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSW, symbolicEnv, SymbolicT
                               , QueryContext(..)
                               , registerLabel, svMkSymVar
                               , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), QueryT(..)
@@ -88,8 +88,6 @@ import Data.SBV.Utils.Lib (qfsToString, isKString)
 import Data.SBV.Utils.SExpr
 import Data.SBV.Control.Types
 
-import qualified Data.SBV.Core.Symbolic as Sym (ask)
-
 import qualified Data.Set as Set (toList)
 
 import qualified Control.Exception as C
@@ -100,10 +98,10 @@ import Unsafe.Coerce (unsafeCoerce) -- Only used safely!
 
 -- | 'Query' as a 'SolverContext'.
 instance MonadIO m => SolverContext (QueryT m) where
-   constrain                 = addQueryConstraint False []
-   softConstrain             = addQueryConstraint True  []
-   namedConstraint nm        = addQueryConstraint False [(":named", nm)]
-   constrainWithAttribute    = addQueryConstraint False
+   constrain              = addQueryConstraint False []
+   softConstrain          = addQueryConstraint True  []
+   namedConstraint nm     = addQueryConstraint False [(":named", nm)]
+   constrainWithAttribute = addQueryConstraint False
 
    setOption o
      | isStartModeOption o = error $ unlines [ ""
@@ -792,10 +790,10 @@ runProofOn rm comments res@(Result ki _qcInfo _observables _codeSegs is consts t
 
      in SMTProblem { smtLibPgm = toSMTLib config ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o }
 
--- | Execute a query. @extractIO@ describes how to extract all @IO@ from a 'MonadIO' computation.
+-- | Execute a query.
 executeQuery :: forall m a. ExtractIO m => QueryContext -> QueryT m a -> SymbolicT m a
 executeQuery queryContext (QueryT userQuery) = do
-     st <- Sym.ask
+     st <- symbolicEnv
      rm <- liftIO $ readIORef (runMode st)
 
      -- If we're doing an external query, then we cannot allow quantifiers to be present. Why?
