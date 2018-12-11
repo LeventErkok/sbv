@@ -22,6 +22,7 @@
 {-# LANGUAGE    TupleSections              #-}
 {-# LANGUAGE    TypeOperators              #-}
 {-# LANGUAGE    TypeSynonymInstances       #-}
+{-# LANGUAGE    UndecidableInstances       #-} -- for undetermined s in MonadState
 {-# OPTIONS_GHC -fno-warn-orphans          #-}
 
 module Data.SBV.Core.Symbolic
@@ -52,31 +53,36 @@ module Data.SBV.Core.Symbolic
   , QueryT(..), Query, QueryState(..), QueryContext(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
   , outputSVal
+  , ask
   ) where
 
-import Control.Arrow            (first, second, (***))
-import Control.DeepSeq          (NFData(..))
-import Control.Monad            (when, unless)
-import Control.Monad.Reader     (MonadReader, ReaderT, ask, runReaderT)
-import Control.Monad.State.Lazy (MonadState, StateT(..))
-import Control.Monad.Trans      (MonadIO, MonadTrans, liftIO)
-import Data.Char                (isAlpha, isAlphaNum, toLower)
-import Data.IORef               (IORef, newIORef, readIORef)
-import Data.List                (intercalate, sortBy)
-import Data.Maybe               (isJust, fromJust, fromMaybe, listToMaybe)
-import Data.String              (IsString(fromString))
+import Control.Arrow               (first, second, (***))
+import Control.DeepSeq             (NFData(..))
+import Control.Monad               (when, unless)
+import Control.Monad.Except        (MonadError)
+import Control.Monad.Reader        (MonadReader, ReaderT, runReaderT,
+                                    mapReaderT)
+import Control.Monad.State.Lazy    (MonadState(get, put, state), StateT(..))
+import Control.Monad.Trans         (MonadIO(liftIO), MonadTrans(lift))
+import Control.Monad.Writer.Strict (MonadWriter)
+import Data.Char                   (isAlpha, isAlphaNum, toLower)
+import Data.IORef                  (IORef, newIORef, readIORef)
+import Data.List                   (intercalate, sortBy)
+import Data.Maybe                  (isJust, fromJust, fromMaybe, listToMaybe)
+import Data.String                 (IsString(fromString))
 
 import Data.Time (getCurrentTime, UTCTime)
 
 import GHC.Stack
 
-import qualified Data.IORef         as R    (modifyIORef')
-import qualified Data.Generics      as G    (Data(..))
-import qualified Data.IntMap.Strict as IMap (IntMap, empty, toAscList, lookup, insertWith)
-import qualified Data.Map.Strict    as Map  (Map, empty, toList, lookup, insert, size)
-import qualified Data.Set           as Set  (Set, empty, toList, insert, member)
-import qualified Data.Foldable      as F    (toList)
-import qualified Data.Sequence      as S    (Seq, empty, (|>))
+import qualified Control.Monad.Reader as R
+import qualified Data.IORef           as Ref  (modifyIORef')
+import qualified Data.Generics        as G    (Data(..))
+import qualified Data.IntMap.Strict   as IMap (IntMap, empty, toAscList, lookup, insertWith)
+import qualified Data.Map.Strict      as Map  (Map, empty, toList, lookup, insert, size)
+import qualified Data.Set             as Set  (Set, empty, toList, insert, member)
+import qualified Data.Foldable        as F    (toList)
+import qualified Data.Sequence        as S    (Seq, empty, (|>))
 
 import System.Mem.StableName
 
@@ -486,9 +492,17 @@ data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -
                              , queryTblArrPreserveIndex :: Maybe (Int, Int)
                              }
 
--- | A query is a user-guided mechanism to directly communicate and extract results from the solver.
+-- | A query is a user-guided mechanism to directly communicate and extract
+-- results from the solver.
 newtype QueryT m a = Query (StateT State m a)
-             deriving (Applicative, Functor, Monad, MonadIO, MonadState State)
+    deriving (Applicative, Functor, Monad, MonadIO, MonadTrans,
+              MonadError e, MonadReader r, MonadWriter w)
+
+-- Have to define this one by hand, because we use StateT in the implementation
+instance MonadState s m => MonadState s (QueryT m) where
+  get = lift get
+  put = lift . put
+  state = lift . state
 
 type Query = QueryT IO
 
@@ -725,7 +739,7 @@ newIncState = do
 withNewIncState :: State -> (State -> IO a) -> IO (IncState, a)
 withNewIncState st cont = do
         is <- newIncState
-        R.modifyIORef' (rIncState st) (const is)
+        Ref.modifyIORef' (rIncState st) (const is)
         r  <- cont st
         finalIncState <- readIORef (rIncState st)
         return (finalIncState, r)
@@ -820,7 +834,7 @@ noInteractive ss = error $ unlines $  ""
 -- ignore if it has no impact.)
 modifyState :: State -> (State -> IORef a) -> (a -> a) -> IO () -> IO ()
 modifyState st@State{runMode} field update interactiveUpdate = do
-        R.modifyIORef' (field st) update
+        Ref.modifyIORef' (field st) update
         rm <- readIORef runMode
         case rm of
           SMTMode IRun _ _ -> interactiveUpdate
@@ -830,7 +844,7 @@ modifyState st@State{runMode} field update interactiveUpdate = do
 modifyIncState  :: State -> (IncState -> IORef a) -> (a -> a) -> IO ()
 modifyIncState State{rIncState} field update = do
         incState <- readIORef rIncState
-        R.modifyIORef' (field incState) update
+        Ref.modifyIORef' (field incState) update
 
 -- | Add an observable
 recordObservable :: State -> String -> SW -> IO ()
@@ -995,6 +1009,9 @@ svToSW :: State -> SVal -> IO SW
 svToSW st (SVal _ (Left c))  = newConst st c
 svToSW st (SVal _ (Right f)) = uncache f st
 
+ask :: Monad m => SymbolicT m State
+ask = SymbolicT R.ask
+
 -- | Convert a symbolic value to an SW, inside the Symbolic monad
 svToSymSW :: MonadIO m => SVal -> SymbolicT m SW
 svToSymSW sbv = do st <- ask
@@ -1006,12 +1023,22 @@ svToSymSW sbv = do st <- ask
 -- | A Symbolic computation. Represented by a reader monad carrying the
 -- state of the computation, layered on top of IO for creating unique
 -- references to hold onto intermediate results.
-newtype SymbolicT m a = SymbolicT (ReaderT State m a)
-                   deriving ( Applicative, Functor, Monad, MonadIO, MonadReader State, MonadTrans
+newtype SymbolicT m a = SymbolicT { runSymbolicT :: ReaderT State m a }
+                   deriving ( Applicative, Functor, Monad, MonadIO, MonadTrans
+                            , MonadError e, MonadState s, MonadWriter w
 #if MIN_VERSION_base(4,11,0)
                             , Fail.MonadFail
 #endif
                             )
+
+mapSymbolicT :: (ReaderT State m a -> ReaderT State n b) -> SymbolicT m a -> SymbolicT n b
+mapSymbolicT f = SymbolicT . f . runSymbolicT
+{-# INLINE mapSymbolicT #-}
+
+-- Have to define this one by hand, because we use ReaderT in the implementation
+instance MonadReader r m => MonadReader r (SymbolicT m) where
+  ask = lift R.ask
+  local f = mapSymbolicT $ mapReaderT $ R.local f
 
 type Symbolic = SymbolicT IO
 
@@ -1334,7 +1361,7 @@ uncacheGen getCache (Cached f) st = do
         case maybe Nothing (sn `lookup`) (h `IMap.lookup` stored) of
           Just r  -> return r
           Nothing -> do r <- f st
-                        r `seq` R.modifyIORef' rCache (IMap.insertWith (++) h [(sn, r)])
+                        r `seq` Ref.modifyIORef' rCache (IMap.insertWith (++) h [(sn, r)])
                         return r
 
 -- | Representation of SMTLib Program versions. As of June 2015, we're dropping support

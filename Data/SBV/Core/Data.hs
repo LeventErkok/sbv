@@ -59,7 +59,6 @@ import GHC.Exts     (IsList(..))
 
 import Control.DeepSeq        (NFData(..))
 import Control.Monad.IO.Class (MonadIO)
-import Control.Monad.Reader   (ask)
 import Control.Monad.Trans    (liftIO)
 import Data.Int               (Int8, Int16, Int32, Int64)
 import Data.Word              (Word8, Word16, Word32, Word64)

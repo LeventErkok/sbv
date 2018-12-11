@@ -41,7 +41,6 @@ module Data.SBV.Compilers.CodeGen (
         ) where
 
 import Control.Monad             (filterM, replicateM, unless)
-import Control.Monad.Reader      (ask)
 import Control.Monad.Trans       (MonadIO, lift, liftIO)
 import Control.Monad.State.Lazy  (MonadState, StateT(..), modify')
 import Data.Char                 (toLower, isSpace)
@@ -54,7 +53,7 @@ import           Text.PrettyPrint.HughesPJ      (Doc, vcat)
 import qualified Text.PrettyPrint.HughesPJ as P (render)
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (svToSymSW, svMkSymVar, outputSVal)
+import Data.SBV.Core.Symbolic (ask, svToSymSW, svMkSymVar, outputSVal)
 
 #if MIN_VERSION_base(4,11,0)
 import Control.Monad.Fail as Fail

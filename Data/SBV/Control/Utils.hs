@@ -33,6 +33,7 @@ module Data.SBV.Control.Utils (
      , recoverKindedValue
      , runProofOn
      , executeQuery
+     , get
      ) where
 
 import Data.Maybe (isJust)
@@ -49,13 +50,11 @@ import Data.Word
 import qualified Data.Map.Strict    as Map
 import qualified Data.IntMap.Strict as IMap
 
-import qualified Control.Monad.Reader as R (ask)
+import qualified Control.Monad.State.Lazy as S (get)
 
 import Control.Monad            (join, unless)
-import Control.Monad.IO.Class   (MonadIO)
-import Control.Monad.State.Lazy (get, liftIO)
+import Control.Monad.IO.Class   (MonadIO, liftIO)
 import Control.Monad.Trans      (lift)
-
 import Control.Monad.State      (evalStateT)
 
 import Data.IORef (readIORef, writeIORef)
@@ -88,6 +87,8 @@ import Data.SBV.Utils.ExtractIO
 import Data.SBV.Utils.Lib (qfsToString, isKString)
 import Data.SBV.Utils.SExpr
 import Data.SBV.Control.Types
+
+import qualified Data.SBV.Core.Symbolic as Sym (ask)
 
 import qualified Data.Set as Set (toList)
 
@@ -123,6 +124,9 @@ addQueryConstraint isSoft atts b = do sw <- inNewContext (\st -> liftIO $ do map
 -- | Get the current configuration
 getConfig :: MonadIO m => QueryT m SMTConfig
 getConfig = queryConfig <$> getQueryState
+
+get :: Monad m => QueryT m State
+get = Query S.get
 
 -- | Get the objectives
 getObjectives :: MonadIO m => QueryT m [Objective (SW, SW)]
@@ -791,7 +795,7 @@ runProofOn rm comments res@(Result ki _qcInfo _observables _codeSegs is consts t
 -- | Execute a query. @extractIO@ describes how to extract all @IO@ from a 'MonadIO' computation.
 executeQuery :: forall m a. ExtractIO m => QueryContext -> QueryT m a -> SymbolicT m a
 executeQuery queryContext (Query userQuery) = do
-     st <- R.ask
+     st <- Sym.ask
      rm <- liftIO $ readIORef (runMode st)
 
      -- If we're doing an external query, then we cannot allow quantifiers to be present. Why?

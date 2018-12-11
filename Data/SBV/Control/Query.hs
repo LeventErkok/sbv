@@ -33,7 +33,6 @@ module Data.SBV.Control.Query (
 
 import Control.Monad            (unless, when, zipWithM)
 import Control.Monad.IO.Class   (MonadIO)
-import Control.Monad.State.Lazy (get)
 
 import Data.IORef (readIORef)
 
