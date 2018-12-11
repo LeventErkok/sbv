@@ -126,7 +126,7 @@ getConfig :: MonadIO m => QueryT m SMTConfig
 getConfig = queryConfig <$> getQueryState
 
 get :: Monad m => QueryT m State
-get = Query S.get
+get = QueryT S.get
 
 -- | Get the objectives
 getObjectives :: MonadIO m => QueryT m [Objective (SW, SW)]
@@ -794,7 +794,7 @@ runProofOn rm comments res@(Result ki _qcInfo _observables _codeSegs is consts t
 
 -- | Execute a query. @extractIO@ describes how to extract all @IO@ from a 'MonadIO' computation.
 executeQuery :: forall m a. ExtractIO m => QueryContext -> QueryT m a -> SymbolicT m a
-executeQuery queryContext (Query userQuery) = do
+executeQuery queryContext (QueryT userQuery) = do
      st <- Sym.ask
      rm <- liftIO $ readIORef (runMode st)
 

@@ -494,7 +494,7 @@ data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -
 
 -- | A query is a user-guided mechanism to directly communicate and extract
 -- results from the solver.
-newtype QueryT m a = Query (StateT State m a)
+newtype QueryT m a = QueryT (StateT State m a)
     deriving (Applicative, Functor, Monad, MonadIO, MonadTrans,
               MonadError e, MonadReader r, MonadWriter w)
 
