@@ -76,9 +76,9 @@ checkWith cfg props csExpected = runSMTWith cfg{verbose=True} $ do
         query $ do cs <- checkSat
                    unless (cs == csExpected) $
                      case cs of
-                       Unsat -> error $ "Failed! Expected " ++ show cs ++ ", got UNSAT"
-                       Sat   -> getModel         >>= \r -> error $ "Failed! Expected " ++ show cs ++ ", got SAT:\n" ++ show (SatResult (Satisfiable cfg r))
-                       Unk   -> getUnknownReason >>= \r -> error $ "Failed! Expected " ++ show cs ++ ", got UNK:\n" ++ show r
+                       Unsat -> error $ "Failed! Expected " ++ show csExpected ++ ", got Unsat"
+                       Sat   -> getModel         >>= \r -> error $ "Failed! Expected " ++ show csExpected ++ ", got Sat:\n" ++ show (SatResult (Satisfiable cfg r))
+                       Unk   -> getUnknownReason >>= \r -> error $ "Failed! Expected " ++ show csExpected ++ ", got Unk:\n" ++ show r
 
 concreteFoldrSat :: Symbolic ()
 concreteFoldrSat = constrain $ BL.bfoldr 3 (+) 0 [1..3] .== (6 :: SInteger)
