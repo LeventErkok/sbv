@@ -104,6 +104,7 @@ runPropertyEval (Result res) env (Property term) =
 -- * Checking whether a program satisfies a property
 
 data CheckResult = Proved | Counterexample Integer Integer
+    deriving (Show)
 
 generalize :: Monad m => Identity a -> m a
 generalize = pure . runIdentity
@@ -122,3 +123,13 @@ check term prop = runExceptT $ runSMTWith z3 $ do
                                     <*> getValue (envY env)
             Unsat -> pure Proved
             Unk   -> throwError "unknown"
+
+-- * An example
+
+ex1 :: IO (Either String CheckResult)
+ex1 = check program (Property property)
+    where program  = Var "x" `Plus` Lit 1 `Plus` Var "y"
+          property = Var "result" `LessThan` Lit 10
+
+-- λ> ex1
+-- Right (Counterexample 0 9)
