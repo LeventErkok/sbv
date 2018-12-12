@@ -6,8 +6,8 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- A demonstration of the use of the QueryT transformer for queries that can
--- "go wrong".
+-- A demonstration of the use of the 'SymbolicT' and 'QueryT' transformers in
+-- the setting of symbolic program evaluation.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DeriveFunctor              #-}
@@ -103,7 +103,7 @@ runPropertyEval (Result res) env (Property term) =
 
 -- * Checking whether a program satisfies a property
 
-data CheckResult = Proved | UnknownResult | Counterexample Integer Integer
+data CheckResult = Proved | Counterexample Integer Integer
 
 generalize :: Monad m => Identity a -> m a
 generalize = pure . runIdentity
@@ -121,4 +121,4 @@ check term prop = runExceptT $ runSMTWith z3 $ do
             Sat   -> Counterexample <$> getValue (envX env)
                                     <*> getValue (envY env)
             Unsat -> pure Proved
-            Unk   -> pure UnknownResult
+            Unk   -> throwError "unknown"
