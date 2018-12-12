@@ -85,13 +85,15 @@ eval (LessThan t1 t2) = (.<) <$> eval t1 <*> eval t2
 runEval :: Env -> Term a -> Except String (SBV a)
 runEval env term = runReaderT (unEval $ eval term) env
 
+newtype Program a = Program (Term a)
+
 newtype Result = Result SVal
 
 mkResult :: SBV a -> Result
 mkResult = Result . unSBV
 
-runProgramEval :: Env -> Term a -> Except String Result
-runProgramEval env term = mkResult <$> runEval env term
+runProgramEval :: Env -> Program a -> Except String Result
+runProgramEval env (Program term) = mkResult <$> runEval env term
 
 -- * Property evaluation
 
@@ -109,11 +111,11 @@ data CheckResult = Proved | Counterexample Integer Integer
 generalize :: Monad m => Identity a -> m a
 generalize = pure . runIdentity
 
-check :: Term a -> Property -> IO (Either String CheckResult)
-check term prop = runExceptT $ runSMTWith z3 $ do
+check :: Program a -> Property -> IO (Either String CheckResult)
+check program prop = runExceptT $ runSMTWith z3 $ do
     env <- runAlloc allocEnv
     test <- lift $ mapExceptT generalize $ do
-        res <- runProgramEval env term
+        res <- runProgramEval env program
         runPropertyEval res env prop
     constrain $ bnot test
     query $ do
@@ -127,9 +129,8 @@ check term prop = runExceptT $ runSMTWith z3 $ do
 -- * An example
 
 ex1 :: IO (Either String CheckResult)
-ex1 = check program (Property property)
-    where program  = Var "x" `Plus` Lit 1 `Plus` Var "y"
-          property = Var "result" `LessThan` Lit 10
+ex1 = check (Program  $ Var "x" `Plus` Lit 1 `Plus` Var "y")
+            (Property $ Var "result" `LessThan` Lit 10)
 
 -- λ> ex1
 -- Right (Counterexample 0 9)
