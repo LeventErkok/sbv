@@ -80,7 +80,7 @@ module Data.SBV.Trans (
   , Uninterpreted(..), addAxiom
 
   -- * Properties, proofs, and satisfiability
-  , Predicate, Goal, Provable(..), proveWithAll, proveWithAny , satWithAll
+  , Predicate, Goal, MProvable(..), Provable, proveWithAll, proveWithAny , satWithAll
   , satWithAny, generateSMTBenchmark
   , solve
   -- * Constraints

@@ -162,7 +162,7 @@ doTheDiff nm ref new act = goldenTest nm (BS.readFile ref) (act >> BS.readFile n
          slashr  = fromIntegral (ord '\r')
 
 -- | Count the number of models
-numberOfModels :: Provable IO a => a -> IO Int
+numberOfModels :: Provable a => a -> IO Int
 numberOfModels p = do AllSatResult (_, _, rs) <- allSat p
                       return $ length rs
 
@@ -171,19 +171,19 @@ runSAT :: Symbolic a -> IO Result
 runSAT cmp = snd <$> runSymbolic (SMTMode ISetup True defaultSMTCfg) cmp
 
 -- | Turn provable to an assertion, theorem case
-assertIsThm :: Provable IO a => a -> Assertion
+assertIsThm :: Provable a => a -> Assertion
 assertIsThm t = assert (isTheorem t)
 
 -- | Turn provable to a negative assertion, theorem case
-assertIsntThm :: Provable IO a => a -> Assertion
+assertIsntThm :: Provable a => a -> Assertion
 assertIsntThm t = assert (fmap not (isTheorem t))
 
 -- | Turn provable to an assertion, satisfiability case
-assertIsSat :: Provable IO a => a -> Assertion
+assertIsSat :: Provable a => a -> Assertion
 assertIsSat p = assert (isSatisfiable p)
 
 -- | Turn provable to a negative assertion, satisfiability case
-assertIsntSat :: Provable IO a => a -> Assertion
+assertIsntSat :: Provable a => a -> Assertion
 assertIsntSat p = assert (fmap not (isSatisfiable p))
 
 -- | Quick-check a unary function, creating one version for constant folding, and another for solver

@@ -34,58 +34,58 @@ import qualified Data.SBV.Provers.Prover as Trans
 
 -- Data.SBV.Provers.Prover:
 
-forAll_ :: Provable IO a => a -> Symbolic SBool
+forAll_ :: Provable a => a -> Symbolic SBool
 forAll_ = Trans.forAll_
 
-forAll :: Provable IO a => [String] -> a -> Symbolic SBool
+forAll :: Provable a => [String] -> a -> Symbolic SBool
 forAll = Trans.forAll
 
-forSome_ :: Provable IO a => a -> Symbolic SBool
+forSome_ :: Provable a => a -> Symbolic SBool
 forSome_ = Trans.forSome_
 
-forSome :: Provable IO a => [String] -> a -> Symbolic SBool
+forSome :: Provable a => [String] -> a -> Symbolic SBool
 forSome = Trans.forSome
 
-prove :: Provable IO a => a -> IO ThmResult
+prove :: Provable a => a -> IO ThmResult
 prove = Trans.prove
 
-proveWith :: Provable IO a => SMTConfig -> a -> IO ThmResult
+proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
 proveWith = Trans.proveWith
 
-sat :: Provable IO a => a -> IO SatResult
+sat :: Provable a => a -> IO SatResult
 sat = Trans.sat
 
-satWith :: Provable IO a => SMTConfig -> a -> IO SatResult
+satWith :: Provable a => SMTConfig -> a -> IO SatResult
 satWith = Trans.satWith
 
-allSat :: Provable IO a => a -> IO AllSatResult
+allSat :: Provable a => a -> IO AllSatResult
 allSat = Trans.allSat
 
-allSatWith :: Provable IO a => SMTConfig -> a -> IO AllSatResult
+allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
 allSatWith = Trans.allSatWith
 
-optimize :: Provable IO a => OptimizeStyle -> a -> IO OptimizeResult
+optimize :: Provable a => OptimizeStyle -> a -> IO OptimizeResult
 optimize = Trans.optimize
 
-optimizeWith :: Provable IO a => SMTConfig -> OptimizeStyle -> a -> IO OptimizeResult
+optimizeWith :: Provable a => SMTConfig -> OptimizeStyle -> a -> IO OptimizeResult
 optimizeWith = Trans.optimizeWith
 
-isVacuous :: Provable IO a => a -> IO Bool
+isVacuous :: Provable a => a -> IO Bool
 isVacuous = Trans.isVacuous
 
-isVacuousWith :: Provable IO a => SMTConfig -> a -> IO Bool
+isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
 isVacuousWith = Trans.isVacuousWith
 
-isTheorem :: Provable IO a => a -> IO Bool
+isTheorem :: Provable a => a -> IO Bool
 isTheorem = Trans.isTheorem
 
-isTheoremWith :: Provable IO a => SMTConfig -> a -> IO Bool
+isTheoremWith :: Provable a => SMTConfig -> a -> IO Bool
 isTheoremWith = Trans.isTheoremWith
 
-isSatisfiable :: Provable IO a => a -> IO Bool
+isSatisfiable :: Provable a => a -> IO Bool
 isSatisfiable = Trans.isSatisfiable
 
-isSatisfiableWith :: Provable IO a => SMTConfig -> a -> IO Bool
+isSatisfiableWith :: Provable a => SMTConfig -> a -> IO Bool
 isSatisfiableWith = Trans.isSatisfiableWith
 
 runSMT :: Symbolic a -> IO a

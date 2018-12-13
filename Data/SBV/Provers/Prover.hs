@@ -9,6 +9,7 @@
 -- Provable abstraction and the connection to SMT solvers
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE CPP                   #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE FlexibleContexts      #-}
@@ -19,7 +20,7 @@
 
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate
-       , Provable(..), proveWithAll, proveWithAny , satWithAll, satWithAny
+       , MProvable(..), Provable, proveWithAll, proveWithAny , satWithAll, satWithAny
        , generateSMTBenchmark
        , Goal
        , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
@@ -139,7 +140,7 @@ type Goal = Symbolic ()
 -- each element is either a symbolic type or up-to a 7-tuple of symbolic-types. So
 -- predicates can be constructed from almost arbitrary Haskell functions that have arbitrary
 -- shapes. (See the instance declarations below.)
-class ExtractIO m => Provable m a where
+class ExtractIO m => MProvable m a where
   -- | Turns a value into a universally quantified predicate, internally naming the inputs.
   -- In this case the sbv library will use names of the form @s1, s2@, etc. to name these variables
   -- Example:
@@ -351,9 +352,11 @@ class ExtractIO m => Provable m a where
                                  SatResult Unsatisfiable{} -> return False
                                  _                         -> error $ "SBV.isSatisfiable: Received: " ++ show r
 
+type Provable = MProvable IO
+
 -- | Prove a property with multiple solvers, running them in separate threads. The
 -- results will be returned in the order produced.
-proveWithAll :: Provable IO a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, ThmResult)]
+proveWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, ThmResult)]
 proveWithAll  = (`sbvWithAll` proveWith)
 
 -- | Prove a property with multiple solvers, running them in separate threads. Only
@@ -361,12 +364,12 @@ proveWithAll  = (`sbvWithAll` proveWith)
 -- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
 -- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
 -- that some processes take their time to terminate. So, this solution favors quick turnaround.
-proveWithAny :: Provable IO a => [SMTConfig] -> a -> IO (Solver, NominalDiffTime, ThmResult)
+proveWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, NominalDiffTime, ThmResult)
 proveWithAny  = (`sbvWithAny` proveWith)
 
 -- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. The
 -- results will be returned in the order produced.
-satWithAll :: Provable IO a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, SatResult)]
+satWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, SatResult)]
 satWithAll = (`sbvWithAll` satWith)
 
 -- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. Only
@@ -374,12 +377,12 @@ satWithAll = (`sbvWithAll` satWith)
 -- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
 -- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
 -- that some processes take their time to terminate. So, this solution favors quick turnaround.
-satWithAny :: Provable IO a => [SMTConfig] -> a -> IO (Solver, NominalDiffTime, SatResult)
+satWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, NominalDiffTime, SatResult)
 satWithAny    = (`sbvWithAny` satWith)
 
 -- | Create an SMT-Lib2 benchmark. The 'Bool' argument controls whether this is a SAT instance, i.e.,
 -- translate the query directly, or a PROVE instance, i.e., translate the negated query.
-generateSMTBenchmark :: (MonadIO m, Provable m a) => Bool -> a -> m String
+generateSMTBenchmark :: (MonadIO m, MProvable m a) => Bool -> a -> m String
 generateSMTBenchmark isSat a = do
       t <- liftIO getZonedTime
 
@@ -404,13 +407,13 @@ checkNoOptimizations = do objectives <- Control.getObjectives
 
 -- If we get a program producing nothing (i.e., Symbolic ()), pretend it simply returns True.
 -- This is useful since min/max calls and constraints will provide the context
-instance ExtractIO m => Provable m (SymbolicT m ()) where
+instance ExtractIO m => MProvable m (SymbolicT m ()) where
   forAll_    a = forAll_    ((a >> return true) :: SymbolicT m SBool)
   forAll ns  a = forAll ns  ((a >> return true) :: SymbolicT m SBool)
   forSome_   a = forSome_   ((a >> return true) :: SymbolicT m SBool)
   forSome ns a = forSome ns ((a >> return true) :: SymbolicT m SBool)
 
-instance ExtractIO m => Provable m (SymbolicT m SBool) where
+instance ExtractIO m => MProvable m (SymbolicT m SBool) where
   forAll_    = id
   forAll []  = id
   forAll xs  = error $ "SBV.forAll: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
@@ -418,7 +421,7 @@ instance ExtractIO m => Provable m (SymbolicT m SBool) where
   forSome [] = id
   forSome xs = error $ "SBV.forSome: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
 
-instance ExtractIO m => Provable m SBool where
+instance ExtractIO m => MProvable m SBool where
   forAll_   = return
   forAll _  = return
   forSome_  = return
@@ -437,7 +440,7 @@ instance Provable Bool where
 -}
 
 -- Functions
-instance (SymWord a, Provable m p) => Provable m (SBV a -> p) where
+instance (SymWord a, MProvable m p) => MProvable m (SBV a -> p) where
   forAll_        k = forall_   >>= \a -> forAll_   $ k a
   forAll (s:ss)  k = forall s  >>= \a -> forAll ss $ k a
   forAll []      k = forAll_ k
@@ -446,7 +449,7 @@ instance (SymWord a, Provable m p) => Provable m (SBV a -> p) where
   forSome []     k = forSome_ k
 
 -- SFunArrays (memory, functional representation), only supported universally for the time being
-instance (HasKind a, HasKind b, Provable m p) => Provable m (SArray a b -> p) where
+instance (HasKind a, HasKind b, MProvable m p) => MProvable m (SArray a b -> p) where
   forAll_       k = newArray_  Nothing >>= \a -> forAll_   $ k a
   forAll (s:ss) k = newArray s Nothing >>= \a -> forAll ss $ k a
   forAll []     k = forAll_ k
@@ -454,7 +457,7 @@ instance (HasKind a, HasKind b, Provable m p) => Provable m (SArray a b -> p) wh
   forSome _     _ = error "SBV.forSome.SFunArray: Existential arrays are not currently supported."
 
 -- SArrays (memory, SMT-Lib notion of arrays), only supported universally for the time being
-instance (HasKind a, HasKind b, Provable m p) => Provable m (SFunArray a b -> p) where
+instance (HasKind a, HasKind b, MProvable m p) => MProvable m (SFunArray a b -> p) where
   forAll_       k = newArray_  Nothing >>= \a -> forAll_   $ k a
   forAll (s:ss) k = newArray s Nothing >>= \a -> forAll ss $ k a
   forAll []     k = forAll_ k
@@ -462,7 +465,7 @@ instance (HasKind a, HasKind b, Provable m p) => Provable m (SFunArray a b -> p)
   forSome _     _ = error "SBV.forSome.SArray: Existential arrays are not currently supported."
 
 -- 2 Tuple
-instance (SymWord a, SymWord b, Provable m p) => Provable m ((SBV a, SBV b) -> p) where
+instance (SymWord a, SymWord b, MProvable m p) => MProvable m ((SBV a, SBV b) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b -> k (a, b)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b -> k (a, b)
   forAll []      k = forAll_ k
@@ -471,7 +474,7 @@ instance (SymWord a, SymWord b, Provable m p) => Provable m ((SBV a, SBV b) -> p
   forSome []     k = forSome_ k
 
 -- 3 Tuple
-instance (SymWord a, SymWord b, SymWord c, Provable m p) => Provable m ((SBV a, SBV b, SBV c) -> p) where
+instance (SymWord a, SymWord b, SymWord c, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c) -> p) where
   forAll_       k  = forall_  >>= \a -> forAll_   $ \b c -> k (a, b, c)
   forAll (s:ss) k  = forall s >>= \a -> forAll ss $ \b c -> k (a, b, c)
   forAll []     k  = forAll_ k
@@ -480,7 +483,7 @@ instance (SymWord a, SymWord b, SymWord c, Provable m p) => Provable m ((SBV a, 
   forSome []     k = forSome_ k
 
 -- 4 Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, Provable m p) => Provable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b c d -> k (a, b, c, d)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d -> k (a, b, c, d)
   forAll []      k = forAll_ k
@@ -489,7 +492,7 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, Provable m p) => Provable 
   forSome []     k = forSome_ k
 
 -- 5 Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, Provable m p) => Provable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e -> k (a, b, c, d, e)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e -> k (a, b, c, d, e)
   forAll []      k = forAll_ k
@@ -498,7 +501,7 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, Provable m p) =
   forSome []     k = forSome_ k
 
 -- 6 Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, Provable m p) => Provable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e f -> k (a, b, c, d, e, f)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e f -> k (a, b, c, d, e, f)
   forAll []      k = forAll_ k
@@ -507,7 +510,7 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, Prov
   forSome []     k = forSome_ k
 
 -- 7 Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, Provable m p) => Provable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   forAll []      k = forAll_ k
@@ -524,7 +527,7 @@ runSMTWith :: MonadIO m => SMTConfig -> SymbolicT m a -> m a
 runSMTWith cfg a = fst <$> runSymbolic (SMTMode ISetup True cfg) a
 
 -- | Runs with a query.
-runWithQuery :: Provable m a => Bool -> QueryT m b -> SMTConfig -> a -> m b
+runWithQuery :: MProvable m a => Bool -> QueryT m b -> SMTConfig -> a -> m b
 runWithQuery isSAT q cfg a = fst <$> runSymbolic (SMTMode ISetup isSAT cfg) comp
   where comp =  do _ <- (if isSAT then forSome_ else forAll_) a >>= output
                    Control.executeQuery QueryInternal q
