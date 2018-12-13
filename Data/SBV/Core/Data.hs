@@ -382,7 +382,6 @@ class (HasKind a, Ord a, Typeable a) => SymWord a where
   fromCW (CW _ (CWUserSort (_, s))) = read s
   fromCW cw                         = error $ "Cannot convert CW " ++ show cw ++ " to kind " ++ show (kindOf (undefined :: a))
 
-  default isConcretely :: SBV a -> (a -> Bool) -> Bool
   isConcretely s p
     | Just i <- unliteral s = p i
     | True                  = False
