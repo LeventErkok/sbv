@@ -777,7 +777,7 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rSWCache     :: IORef (Cache SW)
                     , rAICache     :: IORef (Cache ArrayIndex)
                     , rFAICache    :: IORef (Cache FArrayIndex)
-                    , queryState   :: IORef (Maybe QueryState)
+                    , rQueryState  :: IORef (Maybe QueryState)
                     }
 
 -- NFData is a bit of a lie, but it's sufficient, most of the content is iorefs that we don't want to touch
@@ -1224,7 +1224,7 @@ runSymbolic currentRunMode (SymbolicT c) = do
                   , rSMTOptions  = smtOpts
                   , rOptGoals    = optGoals
                   , rAsserts     = asserts
-                  , queryState   = qstate
+                  , rQueryState   = qstate
                   }
    _ <- liftIO $ newConst st falseCW -- s(-2) == falseSW
    _ <- liftIO $ newConst st trueCW  -- s(-1) == trueSW
@@ -1232,7 +1232,7 @@ runSymbolic currentRunMode (SymbolicT c) = do
    res <- liftIO $ extractSymbolicSimulationState st
 
    -- Clean-up after ourselves
-   qs <- liftIO $ readIORef $ queryState st
+   qs <- liftIO $ readIORef $ rQueryState st
    case qs of
      Nothing                         -> return ()
      Just QueryState{queryTerminate} -> liftIO queryTerminate

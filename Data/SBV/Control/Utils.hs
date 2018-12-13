@@ -165,7 +165,7 @@ syncUpSolver afterAPush is = do
 -- | Retrieve the query context
 getQueryState :: MonadIO m => QueryT m QueryState
 getQueryState = do state <- get
-                   mbQS  <- io $ readIORef (queryState state)
+                   mbQS  <- io $ readIORef (rQueryState state)
                    case mbQS of
                      Nothing -> error $ unlines [ ""
                                                 , "*** Data.SBV: Impossible happened: Query context required in a non-query mode."
@@ -176,20 +176,20 @@ getQueryState = do state <- get
 -- | Modify the query state
 modifyQueryState :: MonadIO m => (QueryState -> QueryState) -> QueryT m ()
 modifyQueryState f = do state <- get
-                        mbQS  <- io $ readIORef (queryState state)
+                        mbQS  <- io $ readIORef (rQueryState state)
                         case mbQS of
                           Nothing -> error $ unlines [ ""
                                                      , "*** Data.SBV: Impossible happened: Query context required in a non-query mode."
                                                      , "Please report this as a bug!"
                                                      ]
                           Just qs -> let fqs = f qs
-                                     in fqs `seq` io $ writeIORef (queryState state) $ Just fqs
+                                     in fqs `seq` io $ writeIORef (rQueryState state) $ Just fqs
 
 -- | Execute in a new incremental context
 inNewContext :: MonadIO m => (State -> IO a) -> QueryT m a
 inNewContext act = do st <- get
                       (is, r) <- io $ withNewIncState st act
-                      mbQS <- io . readIORef . queryState $ st
+                      mbQS <- io . readIORef . rQueryState $ st
                       let afterAPush = case mbQS of
                                          Nothing -> False
                                          Just qs -> isJust (queryTblArrPreserveIndex qs)
