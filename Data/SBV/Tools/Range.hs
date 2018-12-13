@@ -18,7 +18,7 @@ module Data.SBV.Tools.Range(
         Range(..), Boundary(..)
 
         -- * Computing valid ranges
-        , range
+        , ranges
         ) where
 
 import Data.SBV
@@ -41,11 +41,11 @@ instance Show a => Show (Range a) where
                            Closed (Just v) | onLeft -> "[" ++ show v
                                            | True   -> show v ++ "]"
 
-range :: forall a. (SymWord a,  SMTValue a, SatModel a, Metric (SBV a)) => (SBV a -> SBool) -> IO [Range a]
-range prop = do mbBounds <- getInitialBounds
-                case mbBounds of
-                  Nothing -> return []
-                  Just r  -> search [r] []
+ranges :: forall a. (SymWord a,  SMTValue a, SatModel a, Metric (SBV a)) => (SBV a -> SBool) -> IO [Range a]
+ranges prop = do mbBounds <- getInitialBounds
+                 case mbBounds of
+                   Nothing -> return []
+                   Just r  -> search [r] []
 
   where getInitialBounds :: IO (Maybe (Range a))
         getInitialBounds = do
@@ -119,13 +119,13 @@ range prop = do mbBounds <- getInitialBounds
 -- [[-oo,8.0),(8.0,12.7]]
 -- [[-128,6),(6,7]]
 main :: IO ()
-main = do print =<< interval (\(_ :: SInteger) -> true)
-          print =<< interval (\(_ :: SInteger) -> false)
-          print =<< interval (\(x :: SInteger) -> bAnd [x .<= 120, x .>= -12, x ./= 3])
-          print =<< interval (\(x :: SInteger) -> bAnd [x .<= 75, x .>= 5, x ./= 6, x ./= 67])
-          print =<< interval (\(x :: SInteger) -> bAnd [x .<= 75, x ./= 3, x ./= 67])
-          print =<< interval (\(x :: SReal)    -> bAnd [x .> 3.2, x .<  12.7])
-          print =<< interval (\(x :: SReal)    -> bAnd [x .> 3.2, x .<= 12.7])
-          print =<< interval (\(x :: SReal)    -> bAnd [x .<= 12.7, x ./= 8])
-          print =<< interval (\(x :: SInt8)    -> bAnd [x .<= 7, x ./= 6])
+main = do print =<< ranges (\(_ :: SInteger) -> true)
+          print =<< ranges (\(_ :: SInteger) -> false)
+          print =<< ranges (\(x :: SInteger) -> bAnd [x .<= 120, x .>= -12, x ./= 3])
+          print =<< ranges (\(x :: SInteger) -> bAnd [x .<= 75, x .>= 5, x ./= 6, x ./= 67])
+          print =<< ranges (\(x :: SInteger) -> bAnd [x .<= 75, x ./= 3, x ./= 67])
+          print =<< ranges (\(x :: SReal)    -> bAnd [x .> 3.2, x .<  12.7])
+          print =<< ranges (\(x :: SReal)    -> bAnd [x .> 3.2, x .<= 12.7])
+          print =<< ranges (\(x :: SReal)    -> bAnd [x .<= 12.7, x ./= 8])
+          print =<< ranges (\(x :: SInt8)    -> bAnd [x .<= 7, x ./= 6])
 -}
