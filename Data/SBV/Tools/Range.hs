@@ -14,12 +14,13 @@
 
 module Data.SBV.Tools.Range(
 
-        -- * Boundaries and ranges
-        Range(..), Boundary(..)
+         -- * Boundaries and ranges
+         Range(..), Boundary(..)
 
-        -- * Computing valid ranges
-        , ranges
-        ) where
+         -- * Computing valid ranges
+       , ranges
+
+       ) where
 
 import Data.SBV
 import Data.SBV.Control
@@ -32,9 +33,9 @@ data Range a    = Range (Boundary a) (Boundary a)
 instance Show a => Show (Range a) where
    show (Range l u) = sh True l ++ "," ++ sh False u
      where sh onLeft b = case b of
-                           Open  Nothing   | onLeft -> "(-oo"
+                           Open   Nothing  | onLeft -> "(-oo"
                                            | True   -> "oo)"
-                           Open  (Just v)  | onLeft -> "(" ++ show v
+                           Open   (Just v) | onLeft -> "(" ++ show v
                                            | True   -> show v ++ ")"
                            Closed Nothing  | onLeft -> "[-oo"
                                            | True   -> "oo]"
