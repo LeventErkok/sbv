@@ -1169,34 +1169,35 @@ addAxiom nm ax = do
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
 runSymbolic :: MonadIO m => SBVRunMode -> SymbolicT m a -> m (a, Result)
 runSymbolic currentRunMode (SymbolicT c) = do
-   currTime  <- liftIO getCurrentTime
-   rm        <- liftIO $ newIORef currentRunMode
-   ctr       <- liftIO $ newIORef (-2) -- start from -2; False and True will always occupy the first two elements
-   cInfo     <- liftIO $ newIORef []
-   observes  <- liftIO $ newIORef []
-   pgm       <- liftIO $ newIORef (SBVPgm S.empty)
-   emap      <- liftIO $ newIORef Map.empty
-   cmap      <- liftIO $ newIORef Map.empty
-   inps      <- liftIO $ newIORef ([], [])
-   outs      <- liftIO $ newIORef []
-   tables    <- liftIO $ newIORef Map.empty
-   arrays    <- liftIO $ newIORef IMap.empty
-   fArrays   <- liftIO $ newIORef IMap.empty
-   uis       <- liftIO $ newIORef Map.empty
-   cgs       <- liftIO $ newIORef Map.empty
-   axioms    <- liftIO $ newIORef []
-   swCache   <- liftIO $ newIORef IMap.empty
-   aiCache   <- liftIO $ newIORef IMap.empty
-   faiCache  <- liftIO $ newIORef IMap.empty
-   usedKinds <- liftIO $ newIORef Set.empty
-   usedLbls  <- liftIO $ newIORef Set.empty
-   cstrs     <- liftIO $ newIORef []
-   smtOpts   <- liftIO $ newIORef []
-   optGoals  <- liftIO $ newIORef []
-   asserts   <- liftIO $ newIORef []
-   istate    <- liftIO $ newIORef =<< newIncState
-   qstate    <- liftIO $ newIORef Nothing
-   let st = State { runMode      = rm
+   st <- liftIO $ do
+     currTime  <- getCurrentTime
+     rm        <- newIORef currentRunMode
+     ctr       <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
+     cInfo     <- newIORef []
+     observes  <- newIORef []
+     pgm       <- newIORef (SBVPgm S.empty)
+     emap      <- newIORef Map.empty
+     cmap      <- newIORef Map.empty
+     inps      <- newIORef ([], [])
+     outs      <- newIORef []
+     tables    <- newIORef Map.empty
+     arrays    <- newIORef IMap.empty
+     fArrays   <- newIORef IMap.empty
+     uis       <- newIORef Map.empty
+     cgs       <- newIORef Map.empty
+     axioms    <- newIORef []
+     swCache   <- newIORef IMap.empty
+     aiCache   <- newIORef IMap.empty
+     faiCache  <- newIORef IMap.empty
+     usedKinds <- newIORef Set.empty
+     usedLbls  <- newIORef Set.empty
+     cstrs     <- newIORef []
+     smtOpts   <- newIORef []
+     optGoals  <- newIORef []
+     asserts   <- newIORef []
+     istate    <- newIORef =<< newIncState
+     qstate    <- newIORef Nothing
+     pure $ State { runMode      = rm
                   , startTime    = currTime
                   , pathCond     = SVal KBool (Left trueCW)
                   , rIncState    = istate
@@ -1231,7 +1232,7 @@ runSymbolic currentRunMode (SymbolicT c) = do
    res <- liftIO $ extractSymbolicSimulationState st
 
    -- Clean-up after ourselves
-   qs <- liftIO $ readIORef qstate
+   qs <- liftIO $ readIORef $ queryState st
    case qs of
      Nothing                         -> return ()
      Just QueryState{queryTerminate} -> liftIO queryTerminate
