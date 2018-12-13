@@ -10,8 +10,6 @@
 -- @Data.SBV.Control@.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE Rank2Types #-}
-
 module Data.SBV.Control.Mono where
 
 import Data.SBV.Control.Query (Assignment)
