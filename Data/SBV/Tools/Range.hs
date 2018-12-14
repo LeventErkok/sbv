@@ -12,7 +12,7 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Data.SBV.Tools.Range(
+module Data.SBV.Tools.Range (
 
          -- * Boundaries and ranges
          Range(..), Boundary(..)
@@ -27,9 +27,18 @@ import Data.SBV.Control
 
 import Data.SBV.Internals hiding (Range)
 
-data Boundary a = Open (Maybe a) | Closed (Maybe a)
-data Range a    = Range (Boundary a) (Boundary a)
+-- Doctest only
+-- $setup
+-- >>> :set -XScopedTypeVariables
 
+-- | A boundary over an optional value. 'Nothing' signifies @Infinity@.
+data Boundary a = Open (Maybe a)   -- ^ Exclusive of the point
+                | Closed (Maybe a) -- ^ Inclusive of the point
+
+-- | A range is a pair of boundaries: Lower and upper bounds
+data Range a = Range (Boundary a) (Boundary a)
+
+-- | Show instance for 'Range'
 instance Show a => Show (Range a) where
    show (Range l u) = sh True l ++ "," ++ sh False u
      where sh onLeft b = case b of
@@ -42,6 +51,31 @@ instance Show a => Show (Range a) where
                            Closed (Just v) | onLeft -> "[" ++ show v
                                            | True   -> show v ++ "]"
 
+-- | Given a single predicate over a single variable, find the contiguous ranges over which the predicate
+-- is satisfied. SBV will make one call to the optimizer, and then as many calls to the solver as there are
+-- disjoint ranges that the predicate is satisfied over. (Linear in the number of ranges.) Note that the
+-- number of ranges is large, this can take a long time! Some examples:
+--
+-- >>> ranges (\(_ :: SInteger) -> false)
+-- []
+-- >>> ranges (\(_ :: SInteger) -> true)
+-- [[-oo,oo]]
+-- >>> ranges (\(x :: SInteger) -> bAnd [x .<= 120, x .>= -12, x ./= 3])
+-- [[-12,3),(3,120]]
+-- >>> ranges (\(x :: SInteger) -> bAnd [x .<= 75, x .>= 5, x ./= 6, x ./= 67])
+-- [[5,6),(6,67),(67,75]]
+-- >>> ranges (\(x :: SInteger) -> bAnd [x .<= 75, x ./= 3, x ./= 67])
+-- [[-oo,3),(3,67),(67,75]]
+-- >>> ranges (\(x :: SReal) -> bAnd [x .> 3.2, x .<  12.7])
+-- [(3.2,12.7)]
+-- >>> ranges (\(x :: SReal) -> bAnd [x .> 3.2, x .<= 12.7])
+-- [(3.2,12.7]]
+-- >>> ranges (\(x :: SReal) -> bAnd [x .<= 12.7, x ./= 8])
+-- [[-oo,8.0),(8.0,12.7]]
+-- >>> ranges (\(x :: SReal) -> bAnd [x .>= 12.7, x ./= 15])
+-- [[12.7,15.0),(15.0,oo]]
+-- >>> ranges (\(x :: SInt8) -> bAnd [x .<= 7, x ./= 6])
+-- [[-128,6),(6,7]]
 ranges :: forall a. (SymWord a,  SMTValue a, SatModel a, Metric (SBV a)) => (SBV a -> SBool) -> IO [Range a]
 ranges prop = do mbBounds <- getInitialBounds
                  case mbBounds of
@@ -107,26 +141,3 @@ ranges prop = do mbBounds <- getInitialBounds
                                  case mbCS of
                                    Nothing  -> search cs          (c:sofar)
                                    Just xss -> search (xss ++ cs) sofar
-
-{-
--- Prints:
--- [[-oo,oo]]
--- []
--- [[-12,3),(3,120]]
--- [[5,6),(6,67),(67,75]]
--- [[-oo,3),(3,67),(67,75]]
--- [(3.2,12.7)]
--- [(3.2,12.7]]
--- [[-oo,8.0),(8.0,12.7]]
--- [[-128,6),(6,7]]
-main :: IO ()
-main = do print =<< ranges (\(_ :: SInteger) -> true)
-          print =<< ranges (\(_ :: SInteger) -> false)
-          print =<< ranges (\(x :: SInteger) -> bAnd [x .<= 120, x .>= -12, x ./= 3])
-          print =<< ranges (\(x :: SInteger) -> bAnd [x .<= 75, x .>= 5, x ./= 6, x ./= 67])
-          print =<< ranges (\(x :: SInteger) -> bAnd [x .<= 75, x ./= 3, x ./= 67])
-          print =<< ranges (\(x :: SReal)    -> bAnd [x .> 3.2, x .<  12.7])
-          print =<< ranges (\(x :: SReal)    -> bAnd [x .> 3.2, x .<= 12.7])
-          print =<< ranges (\(x :: SReal)    -> bAnd [x .<= 12.7, x ./= 8])
-          print =<< ranges (\(x :: SInt8)    -> bAnd [x .<= 7, x ./= 6])
--}

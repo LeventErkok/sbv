@@ -18,6 +18,9 @@
           lhs = 0 :: Integer
           rhs = 1 :: Integer
 
+  * Add Data.SBV.Tools.Range module and ranges function: It computes the satisfying contiguous
+    ranges for predicates with a single variable.
+
   * Fix list-element extraction code, which asserted too strong a constraint. See issue #421
     for details. Thanks to Joel Burget for reporting.
 
@@ -25,8 +28,8 @@
     Joel Burget.
 
   * Add two new puzzle examples:
-       * "Documentation/SBV/Examples/Puzzles/LadyAndTigers.hs"
-       * "Documentation/SBV/Examples/Puzzles/Garden.hs"
+       * Documentation.SBV.Examples.Puzzles.LadyAndTigers
+       * Documentation.SBV.Examples.Puzzles.Garden
 
 ### Version 7.12, 2018-09-23
 
