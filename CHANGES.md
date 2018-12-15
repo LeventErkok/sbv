@@ -21,6 +21,9 @@
   * Add Data.SBV.Tools.Range module and ranges function: It computes the satisfying contiguous
     ranges for predicates with a single variable.
 
+  * Add Data.SBV.Tools.BoundedFix module, which defines the operator bfix that can be used
+    as a bounded fixed-point operator for use in bounded-model-checking like algorithms.
+
   * Fix list-element extraction code, which asserted too strong a constraint. See issue #421
     for details. Thanks to Joel Burget for reporting.
 

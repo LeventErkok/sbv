@@ -67,6 +67,7 @@ Library
                   , Data.SBV.Tools.Overflow
                   , Data.SBV.Tools.Polynomial
                   , Data.SBV.Tools.Range
+                  , Data.SBV.Tools.BoundedFix
                   , Data.SBV.Tools.STree
                   , Documentation.SBV.Examples.BitPrecise.BitTricks
                   , Documentation.SBV.Examples.BitPrecise.BrokenSearch
