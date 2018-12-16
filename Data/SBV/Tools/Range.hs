@@ -31,9 +31,9 @@ import Data.SBV.Internals hiding (Range)
 -- $setup
 -- >>> :set -XScopedTypeVariables
 
--- | A boundary over an optional value. 'Nothing' signifies @Infinity@.
-data Boundary a = Open (Maybe a)   -- ^ Exclusive of the point
-                | Closed (Maybe a) -- ^ Inclusive of the point
+-- | A boundary over an optional value. In 'Open', 'Nothing' signifies @Infinity@.
+data Boundary a = Open   (Maybe a)   -- ^ Exclusive of the point
+                | Closed a           -- ^ Inclusive of the point
 
 -- | A range is a pair of boundaries: Lower and upper bounds
 data Range a = Range (Boundary a) (Boundary a)
@@ -46,9 +46,7 @@ instance Show a => Show (Range a) where
                                            | True   -> "oo)"
                            Open   (Just v) | onLeft -> "(" ++ show v
                                            | True   -> show v ++ ")"
-                           Closed Nothing  | onLeft -> "[-oo"
-                                           | True   -> "oo]"
-                           Closed (Just v) | onLeft -> "[" ++ show v
+                           Closed v        | onLeft -> "[" ++ show v
                                            | True   -> show v ++ "]"
 
 -- | Given a single predicate over a single variable, find the contiguous ranges over which the predicate
@@ -59,27 +57,27 @@ instance Show a => Show (Range a) where
 -- >>> ranges (\(_ :: SInteger) -> false)
 -- []
 -- >>> ranges (\(_ :: SInteger) -> true)
--- [[-oo,oo]]
+-- [(-oo,oo)]
 -- >>> ranges (\(x :: SInteger) -> bAnd [x .<= 120, x .>= -12, x ./= 3])
 -- [[-12,3),(3,120]]
 -- >>> ranges (\(x :: SInteger) -> bAnd [x .<= 75, x .>= 5, x ./= 6, x ./= 67])
 -- [[5,6),(6,67),(67,75]]
 -- >>> ranges (\(x :: SInteger) -> bAnd [x .<= 75, x ./= 3, x ./= 67])
--- [[-oo,3),(3,67),(67,75]]
+-- [(-oo,3),(3,67),(67,75]]
 -- >>> ranges (\(x :: SReal) -> bAnd [x .> 3.2, x .<  12.7])
 -- [(3.2,12.7)]
 -- >>> ranges (\(x :: SReal) -> bAnd [x .> 3.2, x .<= 12.7])
 -- [(3.2,12.7]]
 -- >>> ranges (\(x :: SReal) -> bAnd [x .<= 12.7, x ./= 8])
--- [[-oo,8.0),(8.0,12.7]]
+-- [(-oo,8.0),(8.0,12.7]]
 -- >>> ranges (\(x :: SReal) -> bAnd [x .>= 12.7, x ./= 15])
--- [[12.7,15.0),(15.0,oo]]
+-- [[12.7,15.0),(15.0,oo)]
 -- >>> ranges (\(x :: SInt8) -> bAnd [x .<= 7, x ./= 6])
 -- [[-128,6),(6,7]]
 -- >>> ranges $ \x -> x .> (0::SReal)
--- [(0.0,oo]]
+-- [(0.0,oo)]
 -- >>> ranges $ \x -> x .< (0::SReal)
--- [[-oo,0.0)]
+-- [(-oo,0.0)]
 ranges :: forall a. (SymWord a,  SMTValue a, SatModel a, Metric (SBV a)) => (SBV a -> SBool) -> IO [Range a]
 ranges = rangesWith defaultSMTCfg
 
@@ -93,14 +91,14 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
   where getInitialBounds :: IO (Maybe (Range a))
         getInitialBounds = do
             let getGenVal :: GeneralizedCW -> Boundary a
-                getGenVal (ExtendedCW (Infinite _))                                       = Closed Nothing
-                getGenVal (ExtendedCW (MulExtCW _ (Infinite _)))                          = Closed Nothing
-                getGenVal (ExtendedCW (BoundedCW cw))                                     = Closed $ Just $ getRegVal cw
-                getGenVal (RegularCW  cw)                                                 = Closed $ Just $ getRegVal cw
-                getGenVal (ExtendedCW (Epsilon k))                                        = Open   $ Just $ getRegVal (mkConstCW k (0::Integer))
-                getGenVal (ExtendedCW (MulExtCW _ (Epsilon k)))                           = Open   $ Just $ getRegVal (mkConstCW k (0::Integer))
-                getGenVal (ExtendedCW (AddExtCW (BoundedCW cw) (Epsilon _)))              = Open   $ Just $ getRegVal cw
-                getGenVal (ExtendedCW (AddExtCW (BoundedCW cw) (MulExtCW _ (Epsilon _)))) = Open   $ Just $ getRegVal cw
+                getGenVal (ExtendedCW (BoundedCW cw))                                     = Closed $ getRegVal cw
+                getGenVal (RegularCW  cw)                                                 = Closed $ getRegVal cw
+                getGenVal (ExtendedCW (Infinite _))                                       = Open Nothing
+                getGenVal (ExtendedCW (MulExtCW _ (Infinite _)))                          = Open Nothing
+                getGenVal (ExtendedCW (Epsilon k))                                        = Open $ Just $ getRegVal (mkConstCW k (0::Integer))
+                getGenVal (ExtendedCW (MulExtCW _ (Epsilon k)))                           = Open $ Just $ getRegVal (mkConstCW k (0::Integer))
+                getGenVal (ExtendedCW (AddExtCW (BoundedCW cw) (Epsilon _)))              = Open $ Just $ getRegVal cw
+                getGenVal (ExtendedCW (AddExtCW (BoundedCW cw) (MulExtCW _ (Epsilon _)))) = Open $ Just $ getRegVal cw
                 getGenVal gw                                                              = error $ "Data.SBV.interval.getGenVal: TBD: " ++ show gw
 
                 getRegVal :: CW -> a
@@ -125,17 +123,13 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
         bisect (Range lo hi) = runSMTWith cfg $ do
                                      x <- free_
 
-                                     let lower = case lo of
-                                                   Open  Nothing   -> true
-                                                   Open  (Just v)  -> x .> literal v
-                                                   Closed Nothing  -> true
-                                                   Closed (Just v) -> x .>= literal v
+                                     let restrict v open closed = case v of
+                                                                    Open  Nothing  -> true
+                                                                    Open  (Just a) -> x `open`   literal a
+                                                                    Closed a       -> x `closed` literal a
 
-                                         upper = case hi of
-                                                   Open  Nothing   -> true
-                                                   Open  (Just v)  -> x .< literal v
-                                                   Closed Nothing  -> true
-                                                   Closed (Just v) -> x .<= literal v
+                                         lower = restrict lo (.>) (.>=)
+                                         upper = restrict hi (.<) (.<=)
 
                                      constrain $ lower &&& upper &&& bnot (prop x)
 
