@@ -15,7 +15,7 @@
 module Data.SBV.Tools.Range (
 
          -- * Boundaries and ranges
-         Range(..), Boundary(..)
+         Boundary(..), Range(..)
 
          -- * Computing valid ranges
        , ranges, rangesWith
@@ -31,9 +31,16 @@ import Data.SBV.Internals hiding (Range)
 -- $setup
 -- >>> :set -XScopedTypeVariables
 
--- | A boundary over an optional value. In 'Open', 'Nothing' signifies @Infinity@.
-data Boundary a = Open   (Maybe a)   -- ^ Exclusive of the point
-                | Closed a           -- ^ Inclusive of the point
+-- | A boundary value
+data Boundary a = Unbounded -- ^ Unbounded
+                | Open   a  -- ^ Exclusive of the point
+                | Closed a  -- ^ Inclusive of the point
+
+-- | Is this a closed value?
+isClosed :: Boundary a -> Bool
+isClosed Unbounded  = False
+isClosed (Open   _) = False
+isClosed (Closed _) = True
 
 -- | A range is a pair of boundaries: Lower and upper bounds
 data Range a = Range (Boundary a) (Boundary a)
@@ -42,12 +49,12 @@ data Range a = Range (Boundary a) (Boundary a)
 instance Show a => Show (Range a) where
    show (Range l u) = sh True l ++ "," ++ sh False u
      where sh onLeft b = case b of
-                           Open   Nothing  | onLeft -> "(-oo"
-                                           | True   -> "oo)"
-                           Open   (Just v) | onLeft -> "(" ++ show v
-                                           | True   -> show v ++ ")"
-                           Closed v        | onLeft -> "[" ++ show v
-                                           | True   -> show v ++ "]"
+                           Unbounded | onLeft -> "(-oo"
+                                     | True   -> "oo)"
+                           Open   v  | onLeft -> "(" ++ show v
+                                     | True   -> show v ++ ")"
+                           Closed v  | onLeft -> "[" ++ show v
+                                     | True   -> show v ++ "]"
 
 -- | Given a single predicate over a single variable, find the contiguous ranges over which the predicate
 -- is satisfied. SBV will make one call to the optimizer, and then as many calls to the solver as there are
@@ -78,11 +85,11 @@ instance Show a => Show (Range a) where
 -- [(0.0,oo)]
 -- >>> ranges $ \x -> x .< (0::SReal)
 -- [(-oo,0.0)]
-ranges :: forall a. (SymWord a,  SMTValue a, SatModel a, Metric (SBV a)) => (SBV a -> SBool) -> IO [Range a]
+ranges :: forall a. (Num a, SymWord a,  SMTValue a, SatModel a, Metric (SBV a)) => (SBV a -> SBool) -> IO [Range a]
 ranges = rangesWith defaultSMTCfg
 
--- | Compute ranges, using the given solver configuration
-rangesWith :: forall a. (SymWord a,  SMTValue a, SatModel a, Metric (SBV a)) => SMTConfig -> (SBV a -> SBool) -> IO [Range a]
+-- | Compute ranges, using the given solver configuration.
+rangesWith :: forall a. (Num a, SymWord a,  SMTValue a, SatModel a, Metric (SBV a)) => SMTConfig -> (SBV a -> SBool) -> IO [Range a]
 rangesWith cfg prop = do mbBounds <- getInitialBounds
                          case mbBounds of
                            Nothing -> return []
@@ -91,15 +98,33 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
   where getInitialBounds :: IO (Maybe (Range a))
         getInitialBounds = do
             let getGenVal :: GeneralizedCW -> Boundary a
-                getGenVal (RegularCW  cw)                                                 = Closed $ getRegVal cw
-                getGenVal (ExtendedCW (BoundedCW cw))                                     = Closed $ getRegVal cw
-                getGenVal (ExtendedCW (Infinite _))                                       = Open Nothing
-                getGenVal (ExtendedCW (MulExtCW _ (Infinite _)))                          = Open Nothing
-                getGenVal (ExtendedCW (Epsilon k))                                        = Open $ Just $ getRegVal (mkConstCW k (0::Integer))
-                getGenVal (ExtendedCW (MulExtCW _ (Epsilon k)))                           = Open $ Just $ getRegVal (mkConstCW k (0::Integer))
-                getGenVal (ExtendedCW (AddExtCW (BoundedCW cw) (Epsilon _)))              = Open $ Just $ getRegVal cw
-                getGenVal (ExtendedCW (AddExtCW (BoundedCW cw) (MulExtCW _ (Epsilon _)))) = Open $ Just $ getRegVal cw
-                getGenVal gw                                                              = error $ "Data.SBV.interval.getGenVal: TBD: " ++ show gw
+                getGenVal (RegularCW  cw)  = Closed $ getRegVal cw
+                getGenVal (ExtendedCW ecw) = getExtVal ecw
+
+                getExtVal :: ExtCW -> Boundary a
+                getExtVal (Infinite _)   = Unbounded
+                getExtVal (Epsilon  k)   = Open $ getRegVal (mkConstCW k (0::Integer))
+                getExtVal i@(Interval{}) = error $ unlines [ "*** Data.SBV.ranges.getExtVal: Unexpected interval bounds!"
+                                                           , "***"
+                                                           , "*** Found bound: " ++ show i
+                                                           , "*** Please report this as a bug!"
+                                                           ]
+                getExtVal (BoundedCW cw) = Closed $ getRegVal cw
+                getExtVal (AddExtCW a b) = getExtVal a `addBound` getExtVal b
+                getExtVal (MulExtCW a b) = getExtVal a `mulBound` getExtVal b
+
+                opBound :: (a -> a -> a) -> Boundary a -> Boundary a -> Boundary a
+                opBound f x y = case (fromBound x, fromBound y, isClosed x && isClosed y) of
+                                  (Just a, Just b, True)  -> Closed $ a `f` b
+                                  (Just a, Just b, False) -> Open   $ a `f` b
+                                  _                       -> Unbounded
+                  where fromBound Unbounded  = Nothing
+                        fromBound (Open   a) = Just a
+                        fromBound (Closed a) = Just a
+
+                addBound, mulBound :: Boundary a -> Boundary a -> Boundary a
+                addBound = opBound (+)
+                mulBound = opBound (*)
 
                 getRegVal :: CW -> a
                 getRegVal cw = case parseCWs [cw] of
@@ -124,9 +149,9 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
                                      x <- free_
 
                                      let restrict v open closed = case v of
-                                                                    Open  Nothing  -> true
-                                                                    Open  (Just a) -> x `open`   literal a
-                                                                    Closed a       -> x `closed` literal a
+                                                                    Unbounded -> true
+                                                                    Open   a  -> x `open`   literal a
+                                                                    Closed a  -> x `closed` literal a
 
                                          lower = restrict lo (.>) (.>=)
                                          upper = restrict hi (.<) (.<=)
@@ -137,7 +162,7 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
                                                 case cs of
                                                   Unsat -> return Nothing
                                                   Unk   -> error "Data.SBV.interval.bisect: Solver said unknown!"
-                                                  Sat   -> do midV <- Open . Just <$> getValue x
+                                                  Sat   -> do midV <- Open <$> getValue x
                                                               return $ Just [Range lo midV, Range midV hi]
 
         search :: [Range a] -> [Range a] -> IO [Range a]
