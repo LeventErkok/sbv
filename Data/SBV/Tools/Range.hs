@@ -18,7 +18,7 @@ module Data.SBV.Tools.Range (
          Range(..), Boundary(..)
 
          -- * Computing valid ranges
-       , ranges
+       , ranges, rangesWith
 
        ) where
 
@@ -76,11 +76,19 @@ instance Show a => Show (Range a) where
 -- [[12.7,15.0),(15.0,oo]]
 -- >>> ranges (\(x :: SInt8) -> bAnd [x .<= 7, x ./= 6])
 -- [[-128,6),(6,7]]
+-- >>> ranges $ \x -> x .> (0::SReal)
+-- [(0.0,oo]]
+-- >>> ranges $ \x -> x .< (0::SReal)
+-- [[-oo,0.0)]
 ranges :: forall a. (SymWord a,  SMTValue a, SatModel a, Metric (SBV a)) => (SBV a -> SBool) -> IO [Range a]
-ranges prop = do mbBounds <- getInitialBounds
-                 case mbBounds of
-                   Nothing -> return []
-                   Just r  -> search [r] []
+ranges = rangesWith defaultSMTCfg
+
+-- | Compute ranges, using the given solver configuration
+rangesWith :: forall a. (SymWord a,  SMTValue a, SatModel a, Metric (SBV a)) => SMTConfig -> (SBV a -> SBool) -> IO [Range a]
+rangesWith cfg prop = do mbBounds <- getInitialBounds
+                         case mbBounds of
+                           Nothing -> return []
+                           Just r  -> search [r] []
 
   where getInitialBounds :: IO (Maybe (Range a))
         getInitialBounds = do
@@ -100,10 +108,10 @@ ranges prop = do mbBounds <- getInitialBounds
                                  Just (v, []) -> v
                                  _            -> error $ "Data.SBV.interval.getRegVal: Cannot parse " ++ show cw
 
-            IndependentResult m <- optimize Independent $ do x <- free_
-                                                             constrain $ prop x
-                                                             minimize "min" x
-                                                             maximize "max" x
+            IndependentResult m <- optimizeWith cfg Independent $ do x <- free_
+                                                                     constrain $ prop x
+                                                                     minimize "min" x
+                                                                     maximize "max" x
             case head (map snd m) of
               Unsatisfiable{} -> return Nothing
               Unknown{}       -> error "Solver said Unknown!"
@@ -114,28 +122,29 @@ ranges prop = do mbBounds <- getInitialBounds
 
 
         bisect :: Range a -> IO (Maybe [Range a])
-        bisect (Range lo hi) = runSMT $ do x <- free_
+        bisect (Range lo hi) = runSMTWith cfg $ do
+                                     x <- free_
 
-                                           let lower = case lo of
-                                                         Open  Nothing   -> true
-                                                         Open  (Just v)  -> x .> literal v
-                                                         Closed Nothing  -> true
-                                                         Closed (Just v) -> x .>= literal v
+                                     let lower = case lo of
+                                                   Open  Nothing   -> true
+                                                   Open  (Just v)  -> x .> literal v
+                                                   Closed Nothing  -> true
+                                                   Closed (Just v) -> x .>= literal v
 
-                                               upper = case hi of
-                                                         Open  Nothing   -> true
-                                                         Open  (Just v)  -> x .< literal v
-                                                         Closed Nothing  -> true
-                                                         Closed (Just v) -> x .<= literal v
+                                         upper = case hi of
+                                                   Open  Nothing   -> true
+                                                   Open  (Just v)  -> x .< literal v
+                                                   Closed Nothing  -> true
+                                                   Closed (Just v) -> x .<= literal v
 
-                                           constrain $ lower &&& upper &&& bnot (prop x)
+                                     constrain $ lower &&& upper &&& bnot (prop x)
 
-                                           query $ do cs <- checkSat
-                                                      case cs of
-                                                        Unsat -> return Nothing
-                                                        Unk   -> error "Data.SBV.interval.bisect: Solver said unknown!"
-                                                        Sat   -> do midV <- Open . Just <$> getValue x
-                                                                    return $ Just [Range lo midV, Range midV hi]
+                                     query $ do cs <- checkSat
+                                                case cs of
+                                                  Unsat -> return Nothing
+                                                  Unk   -> error "Data.SBV.interval.bisect: Solver said unknown!"
+                                                  Sat   -> do midV <- Open . Just <$> getValue x
+                                                              return $ Just [Range lo midV, Range midV hi]
 
         search :: [Range a] -> [Range a] -> IO [Range a]
         search []     sofar = return $ reverse sofar
