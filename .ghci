@@ -4,4 +4,4 @@
 :set -fwarn-unused-imports
 :set -fhide-source-paths
 :set -i./Data -i./SBVTestSuite
-:load Data/SBV/Tools/Range.hs
+:load Data/SBV.hs
