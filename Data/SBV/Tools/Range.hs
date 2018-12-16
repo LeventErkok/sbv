@@ -91,8 +91,8 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
   where getInitialBounds :: IO (Maybe (Range a))
         getInitialBounds = do
             let getGenVal :: GeneralizedCW -> Boundary a
-                getGenVal (ExtendedCW (BoundedCW cw))                                     = Closed $ getRegVal cw
                 getGenVal (RegularCW  cw)                                                 = Closed $ getRegVal cw
+                getGenVal (ExtendedCW (BoundedCW cw))                                     = Closed $ getRegVal cw
                 getGenVal (ExtendedCW (Infinite _))                                       = Open Nothing
                 getGenVal (ExtendedCW (MulExtCW _ (Infinite _)))                          = Open Nothing
                 getGenVal (ExtendedCW (Epsilon k))                                        = Open $ Just $ getRegVal (mkConstCW k (0::Integer))
