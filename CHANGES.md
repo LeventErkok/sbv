@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 7.12, 2018-09-23
+* Latest Hackage released version: 7.13, 2018-12-16
 
-### Version 7.12.5, Not yet released
+### Version 7.13, 2018-12-16
 
   * Generalize the types of `bminimum` and `bmaximum` by removing the `Num`
     constraint.
@@ -19,10 +19,12 @@
           rhs = 1 :: Integer
 
   * Add `Data.SBV.Tools.Range` module which defines `ranges` and `rangesWith` functions: They
-    compute the satisfying contiguous ranges for predicates with a single variable.
+    compute the satisfying contiguous ranges for predicates with a single variable. See
+    `Data.SBV.Tools.Range` for examples.
 
   * Add `Data.SBV.Tools.BoundedFix` module, which defines the operator `bfix` that can be used
-    as a bounded fixed-point operator for use in bounded-model-checking like algorithms.
+    as a bounded fixed-point operator for use in bounded-model-checking like algorithms. See
+    `Data.SBV.Tools.BoundedFix` for some example use cases.
 
   * Fix list-element extraction code, which asserted too strong a constraint. See issue #421
     for details. Thanks to Joel Burget for reporting.
