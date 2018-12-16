@@ -39,7 +39,7 @@ DOCTESTSOURCES := $(shell find Data/SBV -name "*.hs") $(shell find Documentation
 
 ifeq ($(OS), Darwin)
 # OSX tends to sleep for long jobs; so run through caffeinate
-TIME        = /usr/bin/time caffeinate
+TIME        = /usr/bin/time caffeinate -dimsu
 NO_OF_CORES = `sysctl hw.ncpu | awk '{print $$2}'`
 else
 TIME        = /usr/bin/time
