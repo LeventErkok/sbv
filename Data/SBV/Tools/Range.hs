@@ -102,13 +102,13 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
                 getGenVal (ExtendedCW ecw) = getExtVal ecw
 
                 getExtVal :: ExtCW -> Boundary a
-                getExtVal (Infinite _)   = Unbounded
-                getExtVal (Epsilon  k)   = Open $ getRegVal (mkConstCW k (0::Integer))
-                getExtVal i@(Interval{}) = error $ unlines [ "*** Data.SBV.ranges.getExtVal: Unexpected interval bounds!"
-                                                           , "***"
-                                                           , "*** Found bound: " ++ show i
-                                                           , "*** Please report this as a bug!"
-                                                           ]
+                getExtVal (Infinite _) = Unbounded
+                getExtVal (Epsilon  k) = Open $ getRegVal (mkConstCW k (0::Integer))
+                getExtVal i@Interval{} = error $ unlines [ "*** Data.SBV.ranges.getExtVal: Unexpected interval bounds!"
+                                                         , "***"
+                                                         , "*** Found bound: " ++ show i
+                                                         , "*** Please report this as a bug!"
+                                                         ]
                 getExtVal (BoundedCW cw) = Closed $ getRegVal cw
                 getExtVal (AddExtCW a b) = getExtVal a `addBound` getExtVal b
                 getExtVal (MulExtCW a b) = getExtVal a `mulBound` getExtVal b
