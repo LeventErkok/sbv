@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 7.13, 2018-12-16
 
+### Version 7.13.5, New development version
+
+  * No changes yet.
+
 ### Version 7.13, 2018-12-16
 
   * Generalize the types of `bminimum` and `bmaximum` by removing the `Num`
