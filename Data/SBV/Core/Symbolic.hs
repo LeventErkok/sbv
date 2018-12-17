@@ -500,6 +500,17 @@ data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -
 class Monad m => MonadQuery m where
   queryState :: m State
 
+  default queryState :: (MonadTrans t, MonadQuery m', m ~ t m') => m State
+  queryState = lift queryState
+
+instance MonadQuery m             => MonadQuery (ExceptT e m)
+instance MonadQuery m             => MonadQuery (MaybeT m)
+instance MonadQuery m             => MonadQuery (ReaderT r m)
+instance MonadQuery m             => MonadQuery (SS.StateT s m)
+instance MonadQuery m             => MonadQuery (LS.StateT s m)
+instance (MonadQuery m, Monoid w) => MonadQuery (SW.WriterT w m)
+instance (MonadQuery m, Monoid w) => MonadQuery (LW.WriterT w m)
+
 -- | A query is a user-guided mechanism to directly communicate and extract
 -- results from the solver.
 newtype QueryT m a = QueryT { runQueryT :: ReaderT State m a }
