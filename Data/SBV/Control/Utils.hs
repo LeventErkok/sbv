@@ -52,7 +52,7 @@ import qualified Data.IntMap.Strict as IMap
 import Control.Monad            (join, unless)
 import Control.Monad.IO.Class   (MonadIO, liftIO)
 import Control.Monad.Trans      (lift)
-import Control.Monad.State      (evalStateT)
+import Control.Monad.Reader     (runReaderT)
 
 import Data.IORef (readIORef, writeIORef)
 
@@ -853,7 +853,7 @@ executeQuery queryContext (QueryT userQuery) = do
                                                 liftIO $ writeIORef (runMode st) $ SMTMode IRun isSAT cfg
 
                                                 lift $ join $ liftIO $ backend cfg' st (show pgm) $
-                                                    extractIO . evalStateT userQuery
+                                                    extractIO . runReaderT userQuery
 
         -- Already in a query, in theory we can just continue, but that causes use-case issues
         -- so we reject it. TODO: Review if we should actually support this. The issue arises with

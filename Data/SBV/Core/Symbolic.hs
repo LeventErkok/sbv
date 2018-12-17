@@ -63,7 +63,7 @@ import Control.Monad               (when, unless)
 import Control.Monad.Except        (MonadError, ExceptT)
 import Control.Monad.Reader        (MonadReader(..), ReaderT, runReaderT,
                                     mapReaderT)
-import Control.Monad.State.Lazy    (MonadState(get, put, state), StateT(..))
+import Control.Monad.State.Lazy    (MonadState)
 import Control.Monad.Trans         (MonadIO(liftIO), MonadTrans(lift))
 import Control.Monad.Trans.Maybe   (MaybeT)
 import Control.Monad.Writer.Strict (MonadWriter)
@@ -502,18 +502,21 @@ class Monad m => MonadQuery m where
 
 -- | A query is a user-guided mechanism to directly communicate and extract
 -- results from the solver.
-newtype QueryT m a = QueryT (StateT State m a)
+newtype QueryT m a = QueryT { runQueryT :: ReaderT State m a }
     deriving (Applicative, Functor, Monad, MonadIO, MonadTrans,
-              MonadError e, MonadReader r, MonadWriter w)
+              MonadError e, MonadState s, MonadWriter w)
 
 instance Monad m => MonadQuery (QueryT m) where
-  queryState = QueryT get
+  queryState = QueryT ask
 
--- Have to define this one by hand, because we use StateT in the implementation
-instance MonadState s m => MonadState s (QueryT m) where
-  get = lift get
-  put = lift . put
-  state = lift . state
+mapQueryT :: (ReaderT State m a -> ReaderT State n b) -> QueryT m a -> QueryT n b
+mapQueryT f = QueryT . f . runQueryT
+{-# INLINE mapQueryT #-}
+
+-- Have to define this one by hand, because we use ReaderT in the implementation
+instance MonadReader r m => MonadReader r (QueryT m) where
+  ask = lift ask
+  local f = mapQueryT $ mapReaderT $ local f
 
 type Query = QueryT IO
 
