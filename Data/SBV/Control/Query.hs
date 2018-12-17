@@ -47,7 +47,7 @@ import Data.Function (on)
 
 import Data.SBV.Core.Data
 
-import Data.SBV.Core.Symbolic   (MonadQuery(..), QueryState(..), QueryT(..), SMTModel(..), SMTResult(..), State(..), incrementInternalCounter)
+import Data.SBV.Core.Symbolic   (MonadQuery(..), QueryState(..), SMTModel(..), SMTResult(..), State(..), incrementInternalCounter)
 
 import Data.SBV.Utils.SExpr
 import Data.SBV.Utils.Boolean
@@ -103,7 +103,7 @@ serialize removeQuotes = go
           | True  = show i
 
 -- | Ask solver for info.
-getInfo :: MonadIO m => SMTInfoFlag -> QueryT m SMTInfoResponse
+getInfo :: (MonadIO m, MonadQuery m) => SMTInfoFlag -> m SMTInfoResponse
 getInfo flag = do
     let cmd = "(get-info " ++ show flag ++ ")"
         bad = unexpected "getInfo" cmd "a valid get-info response" Nothing
@@ -159,7 +159,7 @@ getInfo flag = do
 -- either @Nothing@ or @Just (ProduceUnsatCores True)@ or @Just (ProduceUnsatCores False)@.
 --
 -- Result will be 'Nothing' if the solver does not support this option.
-getOption :: MonadIO m => (a -> SMTOption) -> QueryT m (Maybe SMTOption)
+getOption :: (MonadIO m, MonadQuery m) => (a -> SMTOption) -> m (Maybe SMTOption)
 getOption f = case f undefined of
                  DiagnosticOutputChannel{}   -> askFor "DiagnosticOutputChannel"   ":diagnostic-output-channel"   $ string     DiagnosticOutputChannel
                  ProduceAssertions{}         -> askFor "ProduceAssertions"         ":produce-assertions"          $ bool       ProduceAssertions
@@ -199,7 +199,7 @@ getOption f = case f undefined of
         stringList c e _ = return $ Just $ c $ stringsOf e
 
 -- | Get the reason unknown. Only internally used.
-getUnknownReason :: MonadIO m => QueryT m SMTReasonUnknown
+getUnknownReason :: (MonadIO m, MonadQuery m) => m SMTReasonUnknown
 getUnknownReason = do ru <- getInfo ReasonUnknown
                       case ru of
                         Resp_Unsupported     -> return $ UnknownOther "Solver responded: Unsupported."
@@ -208,7 +208,7 @@ getUnknownReason = do ru <- getInfo ReasonUnknown
                         _                    -> error $ "Unexpected reason value received: " ++ show ru
 
 -- | Issue check-sat and get an SMT Result out.
-getSMTResult :: MonadIO m => QueryT m SMTResult
+getSMTResult :: (MonadIO m, MonadQuery m) => m SMTResult
 getSMTResult = do cfg <- getConfig
                   cs  <- checkSat
                   case cs of
@@ -223,7 +223,7 @@ classifyModel cfg m = case filter (not . isRegularCW . snd) (modelObjectives m) 
                         _  -> SatExtField cfg m
 
 -- | Issue check-sat and get results of a lexicographic optimization.
-getLexicographicOptResults :: MonadIO m => QueryT m SMTResult
+getLexicographicOptResults :: (MonadIO m, MonadQuery m) => m SMTResult
 getLexicographicOptResults = do cfg <- getConfig
                                 cs  <- checkSat
                                 case cs of
@@ -235,7 +235,7 @@ getLexicographicOptResults = do cfg <- getConfig
                                      return m {modelObjectives = objectiveValues}
 
 -- | Issue check-sat and get results of an independent (boxed) optimization.
-getIndependentOptResults :: forall m. MonadIO m => [String] -> QueryT m [(String, SMTResult)]
+getIndependentOptResults :: forall m. (MonadIO m, MonadQuery m) => [String] -> m [(String, SMTResult)]
 getIndependentOptResults objNames = do cfg <- getConfig
                                        cs  <- checkSat
 
@@ -249,12 +249,12 @@ getIndependentOptResults objNames = do cfg <- getConfig
                                nms <- zipWithM getIndependentResult [0..] objNames
                                return [(n, classify (m {modelObjectives = objectiveValues})) | (n, m) <- nms]
 
-        getIndependentResult :: Int -> String -> QueryT m (String, SMTModel)
+        getIndependentResult :: Int -> String -> m (String, SMTModel)
         getIndependentResult i s = do m <- getModelAtIndex (Just i)
                                       return (s, m)
 
 -- | Construct a pareto-front optimization result
-getParetoOptResults :: MonadIO m => Maybe Int -> QueryT m (Bool, [SMTResult])
+getParetoOptResults :: (MonadIO m, MonadQuery m) => Maybe Int -> m (Bool, [SMTResult])
 getParetoOptResults (Just i)
         | i <= 0             = return (True, [])
 getParetoOptResults mbN      = do cfg <- getConfig
@@ -270,7 +270,7 @@ getParetoOptResults mbN      = do cfg <- getConfig
                                (limReached, fronts) <- getParetoFronts (subtract 1 <$> mbN) [m]
                                return (limReached, reverse (map classify fronts))
 
-        getParetoFronts :: MonadIO m => Maybe Int -> [SMTModel] -> QueryT m (Bool, [SMTModel])
+        getParetoFronts :: (MonadIO m, MonadQuery m) => Maybe Int -> [SMTModel] -> m (Bool, [SMTModel])
         getParetoFronts (Just i) sofar | i <= 0 = return (True, sofar)
         getParetoFronts mbi      sofar          = do cs <- checkSat
                                                      let more = getModel >>= \m -> getParetoFronts (subtract 1 <$> mbi) (m : sofar)
@@ -282,11 +282,11 @@ getParetoOptResults mbN      = do cfg <- getConfig
 -- | Collect model values. It is implicitly assumed that we are in a check-sat
 -- context. See 'getSMTResult' for a variant that issues a check-sat first and
 -- returns an 'SMTResult'.
-getModel :: MonadIO m => QueryT m SMTModel
+getModel :: (MonadIO m, MonadQuery m) => m SMTModel
 getModel = getModelAtIndex Nothing
 
 -- | Get a model stored at an index. This is likely very Z3 specific!
-getModelAtIndex :: MonadIO m => Maybe Int -> QueryT m SMTModel
+getModelAtIndex :: (MonadIO m, MonadQuery m) => Maybe Int -> m SMTModel
 getModelAtIndex mbi = do
              State{runMode} <- queryState
              cfg   <- getConfig
@@ -321,7 +321,7 @@ getModelAtIndex mbi = do
 
 -- | Just after a check-sat is issued, collect objective values. Used
 -- internally only, not exposed to the user.
-getObjectiveValues :: forall m. MonadIO m => QueryT m [(String, GeneralizedCW)]
+getObjectiveValues :: forall m. (MonadIO m, MonadQuery m) => m [(String, GeneralizedCW)]
 getObjectiveValues = do let cmd = "(get-objectives)"
 
                             bad = unexpected "getObjectiveValues" cmd "a list of objective values" Nothing
@@ -334,7 +334,7 @@ getObjectiveValues = do let cmd = "(get-objectives)"
                                             _                             -> bad r Nothing
 
   where -- | Parse an objective value out.
-        getObjValue :: (forall a. Maybe [String] -> QueryT m a) -> [NamedSymVar] -> SExpr -> QueryT m (Maybe (String, GeneralizedCW))
+        getObjValue :: (forall a. Maybe [String] -> m a) -> [NamedSymVar] -> SExpr -> m (Maybe (String, GeneralizedCW))
         getObjValue bailOut inputs expr =
                 case expr of
                   EApp [_]                                            -> return Nothing            -- Happens when a soft-assertion has no associated group.
@@ -370,14 +370,14 @@ getObjectiveValues = do let cmd = "(get-objectives)"
                                   (k@(KBounded True _), CWInteger v) -> normCW $ CW k (CWInteger (v - adj))
                                   _                                  -> error $ "SBV.getObjValue: Unexpected cw received! " ++ show cw
 
-                grab :: SW -> SExpr -> QueryT m GeneralizedCW
+                grab :: SW -> SExpr -> m GeneralizedCW
                 grab s topExpr
                   | Just v <- recoverKindedValue k topExpr = return $ RegularCW v
                   | True                                   = ExtendedCW <$> cvt (simplify topExpr)
                   where k = kindOf s
 
                         -- Convert to an extended expression. Hopefully complete!
-                        cvt :: SExpr -> QueryT m ExtCW
+                        cvt :: SExpr -> m ExtCW
                         cvt (ECon "oo")                    = return $ Infinite  k
                         cvt (ECon "epsilon")               = return $ Epsilon   k
                         cvt (EApp [ECon "interval", x, y]) =          Interval  <$> cvt x <*> cvt y
@@ -399,7 +399,7 @@ getObjectiveValues = do let cmd = "(get-objectives)"
 -- | Check for satisfiability, under the given conditions. Similar to 'Data.SBV.Control.checkSat' except it allows making
 -- further assumptions as captured by the first argument of booleans. (Also see 'checkSatAssumingWithUnsatisfiableSet'
 -- for a variant that returns the subset of the given assumptions that led to the 'Unsat' conclusion.)
-checkSatAssuming :: MonadIO m => [SBool] -> QueryT m CheckSatResult
+checkSatAssuming :: (MonadIO m, MonadQuery m) => [SBool] -> m CheckSatResult
 checkSatAssuming sBools = fst <$> checkSatAssumingHelper False sBools
 
 -- | Check for satisfiability, under the given conditions. Returns the unsatisfiable
@@ -420,11 +420,11 @@ checkSatAssuming sBools = fst <$> checkSatAssumingHelper False sBools
 -- Usage note: 'getUnsatCore' is usually easier to use than 'checkSatAssumingWithUnsatisfiableSet', as it
 -- allows the use of named assertions, as obtained by 'namedConstraint'. If 'getUnsatCore'
 -- fills your needs, you should definitely prefer it over 'checkSatAssumingWithUnsatisfiableSet'.
-checkSatAssumingWithUnsatisfiableSet :: MonadIO m => [SBool] -> QueryT m (CheckSatResult, Maybe [SBool])
+checkSatAssumingWithUnsatisfiableSet :: (MonadIO m, MonadQuery m) => [SBool] -> m (CheckSatResult, Maybe [SBool])
 checkSatAssumingWithUnsatisfiableSet = checkSatAssumingHelper True
 
 -- | Helper for the two variants of checkSatAssuming we have. Internal only.
-checkSatAssumingHelper :: MonadIO m => Bool -> [SBool] -> QueryT m (CheckSatResult, Maybe [SBool])
+checkSatAssumingHelper :: (MonadIO m, MonadQuery m) => Bool -> [SBool] -> m (CheckSatResult, Maybe [SBool])
 checkSatAssumingHelper getAssumptions sBools = do
         -- sigh.. SMT-Lib requires the values to be literals only. So, create proxies.
         let mkAssumption st = do swsOriginal <- mapM (\sb -> do sw <- sbvToSW st sb
@@ -473,11 +473,11 @@ checkSatAssumingHelper getAssumptions sBools = do
                             _              -> bad r Nothing
 
 -- | The current assertion stack depth, i.e., #push - #pops after start. Always non-negative.
-getAssertionStackDepth :: MonadIO m => QueryT m Int
+getAssertionStackDepth :: (MonadIO m, MonadQuery m) => m Int
 getAssertionStackDepth = queryAssertionStackDepth <$> getQueryState
 
 -- | Upon a pop, we need to restore all arrays and tables. See: http://github.com/LeventErkok/sbv/issues/374
-restoreTablesAndArrays :: MonadIO m => QueryT m ()
+restoreTablesAndArrays :: (MonadIO m, MonadQuery m) => m ()
 restoreTablesAndArrays = do st <- queryState
                             qs <- getQueryState
 
@@ -496,7 +496,7 @@ restoreTablesAndArrays = do st <- queryState
                                                     xs  -> send True $ "(assert (and " ++ unwords xs ++ "))"
 
 -- | Upon a push, record the cut-off point for table and array restoration, if we haven't already
-recordTablesAndArrayCutOff :: MonadIO m => QueryT m ()
+recordTablesAndArrayCutOff :: (MonadIO m, MonadQuery m) => m ()
 recordTablesAndArrayCutOff = do st <- queryState
                                 qs <- getQueryState
 
@@ -509,14 +509,14 @@ recordTablesAndArrayCutOff = do st <- queryState
 
 -- | Run the query in a new assertion stack. That is, we push the context, run the query
 -- commands, and pop it back.
-inNewAssertionStack :: MonadIO m => QueryT m a -> QueryT m a
+inNewAssertionStack :: (MonadIO m, MonadQuery m) => m a -> m a
 inNewAssertionStack q = do push 1
                            r <- q
                            pop 1
                            return r
 
 -- | Push the context, entering a new one. Pushes multiple levels if /n/ > 1.
-push :: MonadIO m => Int -> QueryT m ()
+push :: (MonadIO m, MonadQuery m) => Int -> m ()
 push i
  | i <= 0 = error $ "Data.SBV: push requires a strictly positive level argument, received: " ++ show i
  | True   = do depth <- getAssertionStackDepth
@@ -525,7 +525,7 @@ push i
                modifyQueryState $ \s -> s{queryAssertionStackDepth = depth + i}
 
 -- | Pop the context, exiting a new one. Pops multiple levels if /n/ > 1. It's an error to pop levels that don't exist.
-pop :: MonadIO m => Int -> QueryT m ()
+pop :: (MonadIO m, MonadQuery m) => Int -> m ()
 pop i
  | i <= 0 = error $ "Data.SBV: pop requires a strictly positive level argument, received: " ++ show i
  | True   = do depth <- getAssertionStackDepth
@@ -551,7 +551,7 @@ pop i
 -- for it automatically as well. In that latter case, the string returned will be "Coverage".
 -- The first argument controls printing progress messages  See "Documentation.SBV.Examples.Queries.CaseSplit"
 -- for an example use case.
-caseSplit :: MonadIO m => Bool -> [(String, SBool)] -> QueryT m (Maybe (String, SMTResult))
+caseSplit :: (MonadIO m, MonadQuery m) => Bool -> [(String, SBool)] -> m (Maybe (String, SMTResult))
 caseSplit printCases cases = do cfg <- getConfig
                                 go cfg (cases ++ [("Coverage", bnot (bOr (map snd cases)))])
   where msg = when printCases . io . putStrLn
@@ -579,12 +579,12 @@ caseSplit printCases cases = do cfg <- getConfig
 -- state while leaving the bindings intact. Pops all assertion levels. Declarations and
 -- definitions resulting from the 'Data.SBV.setLogic' command are unaffected. Note that SBV
 -- implicitly uses global-declarations, so bindings will remain intact.
-resetAssertions :: MonadIO m => QueryT m ()
+resetAssertions :: (MonadIO m, MonadQuery m) => m ()
 resetAssertions = do send True "(reset-assertions)"
                      modifyQueryState $ \s -> s{queryAssertionStackDepth = 0}
 
 -- | Echo a string. Note that the echoing is done by the solver, not by SBV.
-echo :: MonadIO m => String -> QueryT m ()
+echo :: (MonadIO m, MonadQuery m) => String -> m ()
 echo s = do let cmd = "(echo \"" ++ concatMap sanitize s ++ "\")"
 
             -- we send the command, but otherwise ignore the response
@@ -600,7 +600,7 @@ echo s = do let cmd = "(echo \"" ++ concatMap sanitize s ++ "\")"
 
 -- | Exit the solver. This action will cause the solver to terminate. Needless to say,
 -- trying to communicate with the solver after issuing "exit" will simply fail.
-exit :: MonadIO m => QueryT m ()
+exit :: (MonadIO m, MonadQuery m) => m ()
 exit = do send True "(exit)"
           modifyQueryState $ \s -> s{queryAssertionStackDepth = 0}
 
@@ -624,7 +624,7 @@ exit = do send True "(exit)"
 -- @
 --
 -- Note that this only works with Z3.
-getUnsatCore :: MonadIO m => QueryT m [String]
+getUnsatCore :: (MonadIO m, MonadQuery m) => m [String]
 getUnsatCore = do
         let cmd = "(get-unsat-core)"
             bad = unexpected "getUnsatCore" cmd "an unsat-core response"
@@ -652,7 +652,7 @@ getUnsatCore = do
            _                                     -> bad r Nothing
 
 -- | Retrieve the unsat core if it was asked for in the configuration
-getUnsatCoreIfRequested :: MonadIO m => QueryT m (Maybe [String])
+getUnsatCoreIfRequested :: (MonadIO m, MonadQuery m) => m (Maybe [String])
 getUnsatCoreIfRequested = do
         cfg <- getConfig
         if or [b | ProduceUnsatCores b <- solverSetOptions cfg]
@@ -671,7 +671,7 @@ getUnsatCoreIfRequested = do
 -- A proof is simply a 'String', as returned by the solver. In the future, SBV might
 -- provide a better datatype, depending on the use cases. Please get in touch if you
 -- use this function and can suggest a better API.
-getProof :: MonadIO m => QueryT m String
+getProof :: (MonadIO m, MonadQuery m) => m String
 getProof = do
         let cmd = "(get-proof)"
             bad = unexpected "getProof" cmd "a get-proof response"
@@ -717,7 +717,7 @@ getProof = do
 --
 -- N.B. As of Z3 version 4.8.0; Z3 no longer supports interpolants. Use the MathSAT backend for extracting
 -- interpolants. See "Documentation.SBV.Examples.Queries.Interpolants" for an example.
-getInterpolant :: MonadIO m => [String] -> QueryT m String
+getInterpolant :: (MonadIO m, MonadQuery m) => [String] -> m String
 getInterpolant fs
   | null fs
   = error "SBV.getInterpolant requires at least one marked constraint, received none!"
@@ -751,7 +751,7 @@ getInterpolant fs
 -- case for 'getProof'. In the future, SBV might provide a better datatype, depending
 -- on the use cases. Please get in touch if you use this function and can suggest
 -- a better API.
-getAssertions :: MonadIO m => QueryT m [String]
+getAssertions :: (MonadIO m, MonadQuery m) => m [String]
 getAssertions = do
         let cmd = "(get-assertions)"
             bad = unexpected "getAssertions" cmd "a get-assertions response"
@@ -780,7 +780,7 @@ getAssertions = do
 -- @
 --
 -- for this call to not error out!
-getAssignment :: MonadIO m => QueryT m [(String, Bool)]
+getAssignment :: (MonadIO m, MonadQuery m) => m [(String, Bool)]
 getAssignment = do
         let cmd = "(get-assignment)"
             bad = unexpected "getAssignment" cmd "a get-assignment response"
@@ -821,7 +821,7 @@ SBV a |-> v = case literal v of
                 r                      -> error $ "Data.SBV: Impossible happened in |->: Cannot construct a CW with literal: " ++ show r
 
 -- | Produce the query result from an assignment.
-mkSMTResult :: MonadIO m => [Assignment] -> QueryT m SMTResult
+mkSMTResult :: (MonadIO m, MonadQuery m) => [Assignment] -> m SMTResult
 mkSMTResult asgns = do
              QueryState{queryConfig} <- getQueryState
              inps <- getQuantifiedInputs
