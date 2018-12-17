@@ -111,6 +111,19 @@ data CheckResult = Proved | Counterexample Integer Integer
 generalize :: Monad m => Identity a -> m a
 generalize = pure . runIdentity
 
+newtype Q a = Q { runQ :: QueryT (ExceptT String IO) a }
+    deriving (Functor, Applicative, Monad, MonadIO,
+              MonadError String, MonadQuery)
+
+mkQuery :: Env -> Q CheckResult
+mkQuery env = do
+    satResult <- checkSat
+    case satResult of
+        Sat   -> Counterexample <$> getValue (envX env)
+                                <*> getValue (envY env)
+        Unsat -> pure Proved
+        Unk   -> throwError "unknown"
+
 check :: Program a -> Property -> IO (Either String CheckResult)
 check program prop = runExceptT $ runSMTWith z3 $ do
     env <- runAlloc allocEnv
@@ -118,13 +131,7 @@ check program prop = runExceptT $ runSMTWith z3 $ do
         res <- runProgramEval env program
         runPropertyEval res env prop
     constrain $ bnot test
-    query $ do
-        satResult <- checkSat
-        case satResult of
-            Sat   -> Counterexample <$> getValue (envX env)
-                                    <*> getValue (envY env)
-            Unsat -> pure Proved
-            Unk   -> throwError "unknown"
+    query $ runQ $ mkQuery env
 
 -- * An example
 
