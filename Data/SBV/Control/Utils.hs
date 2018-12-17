@@ -33,7 +33,6 @@ module Data.SBV.Control.Utils (
      , recoverKindedValue
      , runProofOn
      , executeQuery
-     , get
      ) where
 
 import Data.Maybe (isJust)
@@ -50,8 +49,6 @@ import Data.Word
 import qualified Data.Map.Strict    as Map
 import qualified Data.IntMap.Strict as IMap
 
-import qualified Control.Monad.State.Lazy as S (get)
-
 import Control.Monad            (join, unless)
 import Control.Monad.IO.Class   (MonadIO, liftIO)
 import Control.Monad.Trans      (lift)
@@ -63,7 +60,7 @@ import Data.Time (getZonedTime)
 
 import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, Kind(..)
                               , HasKind(..), mkConstCW, CWVal(..), SMTResult(..)
-                              , NamedSymVar, SMTConfig(..), QueryT, SMTModel(..)
+                              , NamedSymVar, SMTConfig(..), SMTModel(..)
                               , QueryState(..), SVal(..), Quantifier(..), cache
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..), SymArray(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
@@ -71,7 +68,7 @@ import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, K
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSW, symbolicEnv, SymbolicT
-                              , QueryContext(..)
+                              , MonadQuery(..), QueryContext(..)
                               , registerLabel, svMkSymVar
                               , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), QueryT(..)
                               , extractSymbolicSimulationState
@@ -123,22 +120,19 @@ addQueryConstraint isSoft atts b = do sw <- inNewContext (\st -> liftIO $ do map
 getConfig :: MonadIO m => QueryT m SMTConfig
 getConfig = queryConfig <$> getQueryState
 
-get :: Monad m => QueryT m State
-get = QueryT S.get
-
 -- | Get the objectives
 getObjectives :: MonadIO m => QueryT m [Objective (SW, SW)]
-getObjectives = do State{rOptGoals} <- get
+getObjectives = do State{rOptGoals} <- queryState
                    io $ reverse <$> readIORef rOptGoals
 
 -- | Get the program
 getSBVPgm :: MonadIO m => QueryT m SBVPgm
-getSBVPgm = do State{spgm} <- get
+getSBVPgm = do State{spgm} <- queryState
                io $ readIORef spgm
 
 -- | Get the assertions put in via 'Data.SBV.sAssert'
 getSBVAssertions :: MonadIO m => QueryT m [(String, Maybe CallStack, SW)]
-getSBVAssertions = do State{rAsserts} <- get
+getSBVAssertions = do State{rAsserts} <- queryState
                       io $ reverse <$> readIORef rAsserts
 
 -- | Perform an arbitrary IO action.
@@ -164,7 +158,7 @@ syncUpSolver afterAPush is = do
 
 -- | Retrieve the query context
 getQueryState :: MonadIO m => QueryT m QueryState
-getQueryState = do state <- get
+getQueryState = do state <- queryState
                    mbQS  <- io $ readIORef (rQueryState state)
                    case mbQS of
                      Nothing -> error $ unlines [ ""
@@ -175,7 +169,7 @@ getQueryState = do state <- get
 
 -- | Modify the query state
 modifyQueryState :: MonadIO m => (QueryState -> QueryState) -> QueryT m ()
-modifyQueryState f = do state <- get
+modifyQueryState f = do state <- queryState
                         mbQS  <- io $ readIORef (rQueryState state)
                         case mbQS of
                           Nothing -> error $ unlines [ ""
@@ -187,7 +181,7 @@ modifyQueryState f = do state <- get
 
 -- | Execute in a new incremental context
 inNewContext :: MonadIO m => (State -> IO a) -> QueryT m a
-inNewContext act = do st <- get
+inNewContext act = do st <- queryState
                       (is, r) <- io $ withNewIncState st act
                       mbQS <- io . readIORef . rQueryState $ st
                       let afterAPush = case mbQS of
@@ -550,7 +544,7 @@ checkSatUsing cmd = do let bad = unexpected "checkSat" cmd "one of sat/unsat/unk
 
 -- | What are the top level inputs? Trackers are returned as top level existentials
 getQuantifiedInputs :: MonadIO m => QueryT m [(Quantifier, NamedSymVar)]
-getQuantifiedInputs = do State{rinps} <- get
+getQuantifiedInputs = do State{rinps} <- queryState
                          (rQinps, rTrackers) <- liftIO $ readIORef rinps
 
                          let qinps    = reverse rQinps
@@ -563,7 +557,7 @@ getQuantifiedInputs = do State{rinps} <- get
 
 -- | Get observables, i.e., those explicitly labeled by the user with a call to 'Data.SBV.observe'.
 getObservables :: MonadIO m => QueryT m [(String, SW)]
-getObservables = do State{rObservables} <- get
+getObservables = do State{rObservables} <- queryState
 
                     rObs <- liftIO $ readIORef rObservables
 
@@ -576,7 +570,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                      cfg <- getConfig
 
-                     State{rUsedKinds} <- get
+                     State{rUsedKinds} <- queryState
 
                      ki    <- liftIO $ readIORef rUsedKinds
                      qinps <- getQuantifiedInputs

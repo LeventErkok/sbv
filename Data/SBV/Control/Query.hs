@@ -47,7 +47,7 @@ import Data.Function (on)
 
 import Data.SBV.Core.Data
 
-import Data.SBV.Core.Symbolic   (QueryState(..), QueryT(..), SMTModel(..), SMTResult(..), State(..), incrementInternalCounter)
+import Data.SBV.Core.Symbolic   (MonadQuery(..), QueryState(..), QueryT(..), SMTModel(..), SMTResult(..), State(..), incrementInternalCounter)
 
 import Data.SBV.Utils.SExpr
 import Data.SBV.Utils.Boolean
@@ -288,7 +288,7 @@ getModel = getModelAtIndex Nothing
 -- | Get a model stored at an index. This is likely very Z3 specific!
 getModelAtIndex :: MonadIO m => Maybe Int -> QueryT m SMTModel
 getModelAtIndex mbi = do
-             State{runMode} <- get
+             State{runMode} <- queryState
              cfg   <- getConfig
              inps  <- getQuantifiedInputs
              obsvs <- getObservables
@@ -478,7 +478,7 @@ getAssertionStackDepth = queryAssertionStackDepth <$> getQueryState
 
 -- | Upon a pop, we need to restore all arrays and tables. See: http://github.com/LeventErkok/sbv/issues/374
 restoreTablesAndArrays :: MonadIO m => QueryT m ()
-restoreTablesAndArrays = do st <- get
+restoreTablesAndArrays = do st <- queryState
                             qs <- getQueryState
 
                             case queryTblArrPreserveIndex qs of
@@ -497,7 +497,7 @@ restoreTablesAndArrays = do st <- get
 
 -- | Upon a push, record the cut-off point for table and array restoration, if we haven't already
 recordTablesAndArrayCutOff :: MonadIO m => QueryT m ()
-recordTablesAndArrayCutOff = do st <- get
+recordTablesAndArrayCutOff = do st <- queryState
                                 qs <- getQueryState
 
                                 case queryTblArrPreserveIndex qs of

@@ -52,7 +52,7 @@ module Data.SBV.Core.Symbolic
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
-  , QueryT(..), Query, QueryState(..), QueryContext(..)
+  , MonadQuery(..), QueryT(..), Query, QueryState(..), QueryContext(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
   , outputSVal
   ) where
@@ -497,11 +497,17 @@ data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -
                              , queryTblArrPreserveIndex :: Maybe (Int, Int)
                              }
 
+class Monad m => MonadQuery m where
+  queryState :: m State
+
 -- | A query is a user-guided mechanism to directly communicate and extract
 -- results from the solver.
 newtype QueryT m a = QueryT (StateT State m a)
     deriving (Applicative, Functor, Monad, MonadIO, MonadTrans,
               MonadError e, MonadReader r, MonadWriter w)
+
+instance Monad m => MonadQuery (QueryT m) where
+  queryState = QueryT get
 
 -- Have to define this one by hand, because we use StateT in the implementation
 instance MonadState s m => MonadState s (QueryT m) where
