@@ -144,7 +144,7 @@ module Data.SBV (
   -- $lists
   , SList
   -- * Arrays of symbolic values
-  , SymArray(readArray, writeArray), newArray_, newArray, SArray, SFunArray
+  , SymArray(readArray, writeArray, mergeArrays), newArray_, newArray, SArray, SFunArray
 
   -- * Creating symbolic values
   -- ** Single value
