@@ -160,6 +160,8 @@ data Op = Plus
         | OverflowOp    OvOp                    -- Overflow-ops, categorized separately
         | StrOp StrOp                           -- String ops, categorized separately
         | SeqOp SeqOp                           -- Sequence ops, categorized separately
+        | TupleConstructor Int
+        | TupleAccess Int
         deriving (Eq, Ord)
 
 -- | Floating point operations
@@ -373,16 +375,18 @@ instance Show Op where
   show (LkUp (ti, at, rt, l) i e)
         = "lookup(" ++ tinfo ++ ", " ++ show i ++ ", " ++ show e ++ ")"
         where tinfo = "table" ++ show ti ++ "(" ++ show at ++ " -> " ++ show rt ++ ", " ++ show l ++ ")"
-  show (ArrEq i j)       = "array_" ++ show i ++ " == array_" ++ show j
-  show (ArrRead i)       = "select array_" ++ show i
-  show (KindCast fr to)  = "cast_" ++ show fr ++ "_" ++ show to
-  show (Uninterpreted i) = "[uninterpreted] " ++ i
-  show (Label s)         = "[label] " ++ s
-  show (IEEEFP w)        = show w
-  show (PseudoBoolean p) = show p
-  show (OverflowOp o)    = show o
-  show (StrOp s)         = show s
-  show (SeqOp s)         = show s
+  show (ArrEq i j)          = "array_" ++ show i ++ " == array_" ++ show j
+  show (ArrRead i)          = "select array_" ++ show i
+  show (KindCast fr to)     = "cast_" ++ show fr ++ "_" ++ show to
+  show (Uninterpreted i)    = "[uninterpreted] " ++ i
+  show (Label s)            = "[label] " ++ s
+  show (IEEEFP w)           = show w
+  show (PseudoBoolean p)    = show p
+  show (OverflowOp o)       = show o
+  show (StrOp s)            = show s
+  show (SeqOp s)            = show s
+  show (TupleConstructor n) = "mk-tup-" ++ show n
+  show (TupleAccess      i) = "proj-" ++ show i
   show op
     | Just s <- op `lookup` syms = s
     | True                       = error "impossible happened; can't find op!"
@@ -1431,7 +1435,7 @@ data RoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable 
 instance HasKind RoundingMode
 
 -- | Solver configuration. See also 'Data.SBV.z3', 'Data.SBV.yices', 'Data.SBV.cvc4', 'Data.SBV.boolector', 'Data.SBV.mathSAT', etc.
--- which are instantiations of this type for those solvers, with reasonable defaults. In particular, custom configuration can be 
+-- which are instantiations of this type for those solvers, with reasonable defaults. In particular, custom configuration can be
 -- created by varying those values. (Such as @z3{verbose=True}@.)
 --
 -- Most fields are self explanatory. The notion of precision for printing algebraic reals stems from the fact that such values does

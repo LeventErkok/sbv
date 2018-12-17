@@ -9,8 +9,16 @@
 -- Internal data-structures for the sbv library
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE PolyKinds             #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts      #-}
+
 {-# LANGUAGE DefaultSignatures    #-}
 {-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE GADTs                #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
@@ -27,6 +35,10 @@ import Data.SBV.Core.AlgReals
 import Data.List (isPrefixOf, intercalate)
 
 import Data.Typeable (Typeable)
+-- import Data.Type.Equality (apply, (:~:)(Refl))
+-- import Data.Type.Map
+-- import Data.Kind
+-- import Data.Maybe (isJust)
 
 import Data.SBV.Utils.Lib (isKString)
 
@@ -41,7 +53,59 @@ data Kind = KBool
           | KChar
           | KString
           | KList Kind
+          | KTuple [ Kind ]
           deriving (Eq, Ord)
+
+-- data family Sing :: k -> Type
+
+-- data instance Sing (a :: Kind) where
+--   SBool      ::                     Sing 'KBool
+--   SBounded   :: Sing b -> Sing i -> Sing ('KBounded b i)
+--   SUnbounded ::                     Sing 'KUnbounded
+--   SReal      ::                     Sing 'KReal
+--   SUserSort  :: Sing s -> Sing e -> Sing ('KUserSort s e)
+--   SFloat     ::                     Sing 'KFloat
+--   SDouble    ::                     Sing 'KDouble
+--   SChar      ::                     Sing 'KChar
+--   SString    ::                     Sing 'KString
+--   SList      :: Sing k ->           Sing ('KList k)
+--   STuple     :: Sing m ->           Sing ('KTuple m)
+
+-- type SingKind (a :: Kind) = Sing a
+
+-- -- Similar to @Data.Type.Equality.TestEquality@, but fixing @f@ to @Sing@, with
+-- -- a given kind.
+-- class TestEquality ty where
+--   testEquality :: forall (a :: ty) (b :: ty). Sing a -> Sing b -> Maybe (a :~: b)
+
+-- instance TestEquality Char where
+--   testEquality a b = _
+
+-- instance TestEquality Bool where
+-- -- instance TestEquality String where
+-- instance TestEquality Int where
+-- instance (TestEquality a, TestEquality b) => TestEquality (Either a b) where
+-- instance TestEquality a => TestEquality [a] where
+
+-- instance TestEquality Kind where
+--   testEquality SBool SBool = Just Refl
+--   testEquality (SBounded b1 i1) (SBounded b2 i2) = do
+--     Refl <- testEquality b1 b2
+--     Refl <- testEquality i1 i2
+--     pure Refl
+--   testEquality SUnbounded SUnbounded = Just Refl
+--   testEquality SReal SReal = Just Refl
+--   testEquality (SUserSort s1 e1) (SUserSort s2 e2) = do
+--     Refl <- testEquality s1 s2
+--     Refl <- testEquality e1 e2
+--     pure Refl
+--   testEquality SFloat SFloat = Just Refl
+--   testEquality SDouble SDouble = Just Refl
+--   testEquality SChar SChar = Just Refl
+--   testEquality SString SString = Just Refl
+--   testEquality (SList a) (SList b) = apply Refl <$> testEquality a b
+--   testEquality (STuple  a) (STuple  b) = apply Refl <$> testEquality a b
+--   -- TODO
 
 -- | The interesting about the show instance is that it can tell apart two kinds nicely; since it conveniently
 -- ignores the enumeration constructors. Also, when we construct a 'KUserSort', we make sure we don't use any of
@@ -58,6 +122,7 @@ instance Show Kind where
   show KString            = "SString"
   show KChar              = "SChar"
   show (KList e)          = "[" ++ show e ++ "]"
+  show (KTuple m)         = "(" ++ intercalate ", " (show <$> m) ++ ")"
 
 -- | How the type maps to SMT land
 smtType :: Kind -> String
@@ -71,6 +136,7 @@ smtType KString         = "String"
 smtType KChar           = "(_ BitVec 8)"
 smtType (KList k)       = "(Seq " ++ smtType k ++ ")"
 smtType (KUserSort s _) = s
+smtType (KTuple kinds)  = "(tup-" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
 
 instance Eq  G.DataType where
    a == b = G.tyconUQname (G.dataTypeName a) == G.tyconUQname (G.dataTypeName b)
@@ -92,6 +158,7 @@ kindHasSign k =
     KString      -> False
     KChar        -> False
     KList{}      -> False
+    KTuple{}     -> False
 
 -- | Construct an uninterpreted/enumerated kind from a piece of data; we distinguish simple enumerations as those
 -- are mapped to proper SMT-Lib2 data-types; while others go completely uninterpreted
@@ -153,6 +220,7 @@ class HasKind a where
                   KString       -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KChar         -> error "SBV.HasKind.intSizeOf((S)Char)"
                   KList ek      -> error $ "SBV.HasKind.intSizeOf((S)List)" ++ show ek
+                  KTuple tys    -> error $ "SBV.HasKind.intSizeOf((S)Tuple)" ++ show tys
 
   isBoolean       x | KBool{}      <- kindOf x = True
                     | True                     = False
@@ -211,3 +279,67 @@ instance (Typeable a, HasKind a) => HasKind [a] where
 
 instance HasKind Kind where
   kindOf = id
+
+instance (HasKind a, HasKind b) => HasKind (a, b) where
+   kindOf _ = KTuple
+     [ kindOf (undefined :: a)
+     , kindOf (undefined :: b)
+     ]
+instance (HasKind a, HasKind b, HasKind c) => HasKind (a, b, c) where
+   kindOf _ = KTuple
+     [ kindOf (undefined :: a)
+     , kindOf (undefined :: b)
+     , kindOf (undefined :: c)
+     ]
+instance (HasKind a, HasKind b, HasKind c, HasKind d)
+  => HasKind (a, b, c, d) where
+   kindOf _ = KTuple
+     [ kindOf (undefined :: a)
+     , kindOf (undefined :: b)
+     , kindOf (undefined :: c)
+     , kindOf (undefined :: d)
+     ]
+instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e)
+  => HasKind (a, b, c, d, e) where
+   kindOf _ = KTuple
+     [ kindOf (undefined :: a)
+     , kindOf (undefined :: b)
+     , kindOf (undefined :: c)
+     , kindOf (undefined :: d)
+     , kindOf (undefined :: e)
+     ]
+instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f)
+  => HasKind (a, b, c, d, e, f) where
+   kindOf _ = KTuple
+     [ kindOf (undefined :: a)
+     , kindOf (undefined :: b)
+     , kindOf (undefined :: c)
+     , kindOf (undefined :: d)
+     , kindOf (undefined :: e)
+     , kindOf (undefined :: f)
+     ]
+instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f,
+  HasKind g)
+  => HasKind (a, b, c, d, e, f, g) where
+   kindOf _ = KTuple
+     [ kindOf (undefined :: a)
+     , kindOf (undefined :: b)
+     , kindOf (undefined :: c)
+     , kindOf (undefined :: d)
+     , kindOf (undefined :: e)
+     , kindOf (undefined :: f)
+     , kindOf (undefined :: g)
+     ]
+instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f,
+  HasKind g, HasKind h)
+  => HasKind (a, b, c, d, e, f, g, h) where
+   kindOf _ = KTuple
+     [ kindOf (undefined :: a)
+     , kindOf (undefined :: b)
+     , kindOf (undefined :: c)
+     , kindOf (undefined :: d)
+     , kindOf (undefined :: e)
+     , kindOf (undefined :: f)
+     , kindOf (undefined :: g)
+     , kindOf (undefined :: h)
+     ]

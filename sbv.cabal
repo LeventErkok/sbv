@@ -51,7 +51,7 @@ Library
                   , crackNum >= 2.3
                   , ghc, QuickCheck, template-haskell
                   , array, async, containers, deepseq, directory, filepath, time
-                  , pretty, process, mtl, random, syb
+                  , pretty, process, mtl, random, syb, type-level-sets
                   , generic-deriving
   Exposed-modules : Data.SBV
                   , Data.SBV.Control
@@ -60,6 +60,7 @@ Library
                   , Data.SBV.List
                   , Data.SBV.List.Bounded
                   , Data.SBV.String
+                  , Data.SBV.Tuple
                   , Data.SBV.Char
                   , Data.SBV.RegExp
                   , Data.SBV.Tools.CodeGen
@@ -95,6 +96,7 @@ Library
                   , Documentation.SBV.Examples.Misc.NoDiv0
                   , Documentation.SBV.Examples.Misc.Polynomials
                   , Documentation.SBV.Examples.Misc.SoftConstrain
+                  , Documentation.SBV.Examples.Misc.Tuple
                   , Documentation.SBV.Examples.Misc.Word4
                   , Documentation.SBV.Examples.Optimization.LinearOpt
                   , Documentation.SBV.Examples.Optimization.Production

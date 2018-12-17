@@ -43,6 +43,7 @@ cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs ui
         hasDouble      = KDouble    `Set.member` kindInfo
         hasBVs         = hasChar || not (null [() | KBounded{} <- Set.toList kindInfo])   -- Remember, characters map to Word8
         usorts         = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
+        tuplesorts     = [tupKs | KTuple tupKs <- Set.toList kindInfo]
         hasNonBVArrays = (not . null) [() | (_, (_, (k1, k2), _)) <- arrs, not (isBounded k1 && isBounded k2)]
         hasArrayInits  = (not . null) [() | (_, (_, _, ArrayFree (Just _))) <- arrs]
         hasList        = any isList kindInfo
@@ -113,6 +114,8 @@ cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs ui
              ++ settings
              ++ [ "; --- uninterpreted sorts ---" ]
              ++ concatMap declSort usorts
+             ++ [ "; --- tuples ---" ]
+             ++ map declTuple tuplesorts
              ++ [ "; --- literal constants ---" ]
              ++ map (declConst cfg) consts
              ++ [ "; --- skolem constants ---" ]
@@ -273,11 +276,22 @@ declSort (s, Right fs) = [ "(declare-datatypes () ((" ++ s ++ " " ++ unwords (ma
               body [_]    i = show i
               body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
 
+declTuple :: [Kind] -> String
+declTuple ks =
+  let n = length ks
+      (args, fields) = unzip $ zipWith
+        (\i _ -> ("T" ++ show i, "(proj-" ++ show i ++ " T" ++ show i ++ ")"))
+        ([1..] :: [Int]) ks
+  in "(declare-datatypes (" ++ unwords args ++ ") " ++
+        "((tup-" ++ show n ++ " (mk-tup-" ++ show n ++ " " ++ unwords fields ++ "))))"
+
 -- | Convert in a query context
 cvtInc :: Bool -> SMTLibIncConverter [String]
 cvtInc afterAPush inps ks consts arrs tbls uis (SBVPgm asgnsSeq) cfg =
             -- sorts
                concatMap declSort [(s, dt) | KUserSort s dt <- Set.toList ks]
+            -- tuples
+            ++ map declTuple [tupKs | KTuple tupKs <- Set.toList ks]
             -- constants
             ++ map (declConst cfg) consts
             -- inputs
@@ -580,6 +594,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                               KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected char valued index"
                               KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                               KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected list valued: " ++ show k
+                              KTuple k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued: " ++ show k
                               KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
                 lkUp = "(" ++ getTable tableMap t ++ " " ++ ssw i ++ ")"
                 cond
@@ -595,6 +610,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
+                                KTuple k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued index: " ++ show k
                                 KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
                 mkCnst = cvtCW rm . mkConstCW (kindOf i)
                 le0  = "(" ++ less ++ " " ++ ssw i ++ " " ++ mkCnst 0 ++ ")"
@@ -657,6 +673,9 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (StrOp op)          args) = "(" ++ show op ++ " " ++ unwords (map ssw args) ++ ")"
 
         sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map ssw args) ++ ")"
+
+        sh (SBVApp (TupleConstructor n) args) = "(mk-tup-" ++ show n ++ " " ++ unwords (map ssw args) ++ ")"
+        sh (SBVApp (TupleAccess n) [tup]) = "(proj-" ++ show n ++ " " ++ ssw tup ++ ")"
 
         sh inp@(SBVApp op args)
           | intOp, Just f <- lookup op smtOpIntTable
