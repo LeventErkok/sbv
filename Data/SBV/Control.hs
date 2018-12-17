@@ -15,7 +15,7 @@ module Data.SBV.Control (
      -- $queryIntro
 
      -- * User queries
-       Query, query
+       ExtractIO(..), MonadQuery(..), Query, query
 
      -- * Create a fresh variable
      , freshVar_, freshVar
@@ -75,7 +75,7 @@ module Data.SBV.Control (
      ) where
 
 import Data.SBV.Core.Data     (SMTConfig(..))
-import Data.SBV.Core.Symbolic (Query, Symbolic, QueryContext(..))
+import Data.SBV.Core.Symbolic (MonadQuery(..), Query, Symbolic, QueryContext(..))
 
 import Data.SBV.Control.Mono
 import Data.SBV.Control.Query hiding (getInfo, getOption, getUnknownReason,
@@ -93,6 +93,8 @@ import Data.SBV.Control.Query hiding (getInfo, getOption, getUnknownReason,
                                       freshArray_, checkSatUsing, getValue,
                                       getUninterpretedValue, timeout, io)
 import Data.SBV.Control.Utils (SMTValue)
+
+import Data.SBV.Utils.ExtractIO (ExtractIO(..))
 
 import qualified Data.SBV.Control.Utils as Trans
 

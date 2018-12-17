@@ -12,7 +12,7 @@
 module Data.SBV.Trans.Control (
 
      -- * User queries
-       Query, query
+       ExtractIO(..), MonadQuery(..), QueryT, Query, query
 
      -- * Create a fresh variable
      , freshVar_, freshVar
@@ -72,7 +72,7 @@ module Data.SBV.Trans.Control (
      ) where
 
 import Data.SBV.Core.Data     (SMTConfig(..))
-import Data.SBV.Core.Symbolic (QueryT, Query, SymbolicT, QueryContext(..))
+import Data.SBV.Core.Symbolic (MonadQuery(..), QueryT, Query, SymbolicT, QueryContext(..))
 
 import Data.SBV.Control.Query
 import Data.SBV.Control.Utils (SMTValue(..), queryDebug, executeQuery)
