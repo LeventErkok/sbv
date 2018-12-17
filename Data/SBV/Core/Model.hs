@@ -29,7 +29,7 @@ module Data.SBV.Core.Model (
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   , sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
-  , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, sChar, sChars, sString, sStrings, sList, sLists
+  , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, sChar, sChars, sString, sStrings, sList, sLists, sTuple, sTuples
   , solve
   , slet
   , sRealToSInteger, label, observe
@@ -210,6 +210,48 @@ instance SymWord a => SymWord [a] where
   fromCW (CW _ (CWList a))   = fromCW . CW (kindOf (undefined :: a)) <$> a
   fromCW c                   = error $ "SymWord.fromCW: Unexpected non-list value: " ++ show c
 
+instance (SymWord a, SymWord b) => SymWord (a, b) where
+  mkSymWord = genMkSymVar $ KTuple
+    [ kindOf (undefined :: a)
+    , kindOf (undefined :: b)
+    ]
+
+  literal (a, b) =
+    let k = KTuple [ kindOf a, kindOf b ]
+        toCWVal a' = case literal a' of
+          SBV (SVal _ (Left (CW _ cwval))) -> cwval
+          _ -> error "SymWord.Tuple(2): could not produce a concrete word for value"
+
+    in SBV . SVal k . Left . CW k $ CWTuple [toCWVal a, toCWVal b]
+
+  fromCW (CW _ (CWTuple [ka, kb])) =
+    ( fromCW (CW (kindOf (undefined :: a)) ka)
+    , fromCW (CW (kindOf (undefined :: b)) kb)
+    )
+  fromCW c = error $ "SymWord.fromCW: Unexpected non-2-tuple value: " ++ show c
+
+instance (SymWord a, SymWord b, SymWord c) => SymWord (a, b, c) where
+  mkSymWord = genMkSymVar $ KTuple
+    [ kindOf (undefined :: a)
+    , kindOf (undefined :: b)
+    , kindOf (undefined :: c)
+    ]
+
+  literal (a, b, c) =
+    let k = KTuple [ kindOf a, kindOf b, kindOf c ]
+        toCWVal a' = case literal a' of
+          SBV (SVal _ (Left (CW _ cwval))) -> cwval
+          _ -> error "SymWord.Tuple(3): could not produce a concrete word for value"
+
+    in SBV . SVal k . Left . CW k $ CWTuple [toCWVal a, toCWVal b, toCWVal c]
+
+  fromCW (CW _ (CWTuple [ka, kb, kc])) =
+    ( fromCW (CW (kindOf (undefined :: a)) ka)
+    , fromCW (CW (kindOf (undefined :: b)) kb)
+    , fromCW (CW (kindOf (undefined :: c)) kc)
+    )
+  fromCW c = error $ "SymWord.fromCW: Unexpected non-3-tuple value: " ++ show c
+
 instance IsString SString where
   fromString = literal
 
@@ -345,6 +387,12 @@ sList = symbolic
 -- | Generalization of 'Data.SBV.sLists'
 sLists :: (SymWord a, MonadSymbolic m) => [String] -> m [SList a]
 sLists = symbolics
+
+sTuple :: forall tup. SymWord tup => String -> Symbolic (SBV tup)
+sTuple = symbolic
+
+sTuples :: forall tup. SymWord tup => [String] -> Symbolic [SBV tup]
+sTuples = symbolics
 
 -- | Generalization of 'Data.SBV.solve'
 solve :: MonadSymbolic m => [SBool] -> m SBool
@@ -902,6 +950,7 @@ instance (SymWord a, Fractional a) => Fractional (SBV a) where
                       k@KChar       -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KList{}     -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KUserSort{} -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KTuple{}    -> error $ "Unexpected Fractional case for: " ++ show k
 
 -- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat and SDouble
 -- Note that most of the fields are "undefined" for symbolic values, we add methods as they are supported by SMTLib.
