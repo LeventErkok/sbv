@@ -20,6 +20,12 @@
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
 
+{-# LANGUAGE KindSignatures  #-}
+{-# LANGUAGE DataKinds  #-}
+{-# LANGUAGE TypeFamilies  #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TypeApplications  #-}
+
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 
 module Data.SBV.Core.Model (
@@ -43,6 +49,7 @@ module Data.SBV.Core.Model (
 import Control.Applicative    (ZipList(ZipList))
 import Control.Monad          (when, unless, mplus)
 import Control.Monad.IO.Class (MonadIO)
+import Data.Typeable          (Typeable)
 
 import GHC.Generics (U1(..), M1(..), (:*:)(..), K1(..))
 import qualified GHC.Generics as G
@@ -210,47 +217,91 @@ instance SymWord a => SymWord [a] where
   fromCW (CW _ (CWList a))   = fromCW . CW (kindOf (undefined :: a)) <$> a
   fromCW c                   = error $ "SymWord.fromCW: Unexpected non-list value: " ++ show c
 
-instance (SymWord a, SymWord b) => SymWord (a, b) where
-  mkSymWord = genMkSymVar $ KTuple
-    [ kindOf (undefined :: a)
-    , kindOf (undefined :: b)
-    ]
+data family HList (l :: [*])
 
-  literal (a, b) =
-    let k = KTuple [ kindOf a, kindOf b ]
-        toCWVal a' = case literal a' of
-          SBV (SVal _ (Left (CW _ cwval))) -> cwval
-          _ -> error "SymWord.Tuple(2): could not produce a concrete word for value"
+data instance HList '[] = HNil
+data instance HList (x ': xs) = x `HCons` HList xs
 
-    in SBV . SVal k . Left . CW k $ CWTuple [toCWVal a, toCWVal b]
+deriving instance Eq (HList '[])
+deriving instance (Eq x, Eq (HList xs)) => Eq (HList (x ': xs))
 
-  fromCW (CW _ (CWTuple [ka, kb])) =
-    ( fromCW (CW (kindOf (undefined :: a)) ka)
-    , fromCW (CW (kindOf (undefined :: b)) kb)
-    )
+deriving instance Ord (HList '[])
+deriving instance (Ord x, Ord (HList xs)) => Ord (HList (x ': xs))
+
+instance HasKind (HList '[]) where
+  kindOf _ = KTuple []
+
+instance SymWord (HList '[]) where
+  mkSymWord = genMkSymVar $ KTuple []
+
+  literal HNil =
+    let k = KTuple []
+    in SBV . SVal k . Left . CW k $ CWTuple []
+
+  fromCW (CW _ (CWTuple [])) = HNil
   fromCW c = error $ "SymWord.fromCW: Unexpected non-2-tuple value: " ++ show c
 
+instance (HasKind x, HasKind (HList xs)) => HasKind (HList (x ': xs)) where
+  kindOf (HCons x xs) = case kindOf xs of
+    KTuple ks -> KTuple $ kindOf x : ks
+    _         -> error "TODO"
+
+-- TODO: why is typeable required?
+instance (Typeable xs, SymWord x, SymWord (HList xs)) => SymWord (HList (x ': xs)) where
+  mkSymWord = genMkSymVar (kindOf (undefined :: HList (x ': xs)))
+
+  literal (HCons x xs) = case literal x of
+    SBV (SVal _ (Left (CW _ xval))) -> case literal xs of
+      SBV (SVal (KTuple kxs) (Left (CW _ (CWTuple xsval)))) ->
+        let k = KTuple (kindOf x : kxs)
+        in SBV $ SVal k $ Left $ CW k $ CWTuple $ xval : xsval
+      _ -> error "TODO"
+    _ -> error "TODO"
+
+  fromCW (CW (KTuple (k:ks)) (CWTuple (x:xs))) = HCons
+    (fromCW (CW k x))
+    (fromCW (CW (KTuple ks) (CWTuple xs)))
+  fromCW c = error $ "SymWord.fromCW: Unexpected non-HCons value: " ++ show c
+
+class HListable tup where
+  type HLTy tup :: [*]
+  toHList :: tup -> HList (HLTy tup)
+  fromHList :: HList (HLTy tup) -> tup
+
+coerceTup :: SBV (HList (HLTy tup)) -> SBV tup
+coerceTup (SBV x) = SBV x
+
+infixr `HCons`
+
+instance (SymWord a, SymWord b) => HListable (a, b) where
+  type HLTy (a, b) = [a, b]
+  toHList (a, b) = a `HCons` b `HCons` HNil
+  fromHList (a `HCons` b `HCons` HNil) = (a, b)
+
+instance (SymWord a, SymWord b, SymWord c) => HListable (a, b, c) where
+  type HLTy (a, b, c) = [a, b, c]
+  toHList (a, b, c) = a `HCons` b `HCons` c `HCons` HNil
+  fromHList (a `HCons` b `HCons` c `HCons` HNil) = (a, b, c)
+
+instance (SymWord a, SymWord b, SymWord c) => HListable (a, b, c, d) where
+  type HLTy (a, b, c, d) = [a, b, c, d]
+  toHList (a, b, c, d) = a `HCons` b `HCons` c `HCons` d `HCons` HNil
+  fromHList (a `HCons` b `HCons` c `HCons` d `HCons` HNil) = (a, b, c, d)
+
+instance (SymWord a, SymWord b) => SymWord (a, b) where
+  mkSymWord x y = fmap coerceTup $ mkSymWord x y
+  literal       = coerceTup . literal . toHList
+  fromCW        = fromHList . fromCW
+
 instance (SymWord a, SymWord b, SymWord c) => SymWord (a, b, c) where
-  mkSymWord = genMkSymVar $ KTuple
-    [ kindOf (undefined :: a)
-    , kindOf (undefined :: b)
-    , kindOf (undefined :: c)
-    ]
+  mkSymWord x y = fmap coerceTup $ mkSymWord x y
+  literal       = coerceTup . literal . toHList
+  fromCW        = fromHList . fromCW
 
-  literal (a, b, c) =
-    let k = KTuple [ kindOf a, kindOf b, kindOf c ]
-        toCWVal a' = case literal a' of
-          SBV (SVal _ (Left (CW _ cwval))) -> cwval
-          _ -> error "SymWord.Tuple(3): could not produce a concrete word for value"
-
-    in SBV . SVal k . Left . CW k $ CWTuple [toCWVal a, toCWVal b, toCWVal c]
-
-  fromCW (CW _ (CWTuple [ka, kb, kc])) =
-    ( fromCW (CW (kindOf (undefined :: a)) ka)
-    , fromCW (CW (kindOf (undefined :: b)) kb)
-    , fromCW (CW (kindOf (undefined :: c)) kc)
-    )
-  fromCW c = error $ "SymWord.fromCW: Unexpected non-3-tuple value: " ++ show c
+instance (SymWord a, SymWord b, SymWord c, SymWord d) => SymWord (a, b, c, d) where
+  mkSymWord x y = fmap coerceTup $ mkSymWord x y
+  literal       = coerceTup . literal . toHList
+  fromCW        = fromHList . fromCW
 
 instance IsString SString where
   fromString = literal
@@ -1526,42 +1577,48 @@ instance Mergeable b => Mergeable (a -> b) where
 -- 2-Tuple
 instance (Mergeable a, Mergeable b) => Mergeable (a, b) where
   symbolicMerge f t (i0, i1) (j0, j1) = (i i0 j0, i i1 j1)
-    where i a b = symbolicMerge f t a b
+    where i :: Mergeable x => x -> x -> x
+          i a b = symbolicMerge f t a b
   select xs (err1, err2) ind = (select as err1 ind, select bs err2 ind)
     where (as, bs) = unzip xs
 
 -- 3-Tuple
 instance (Mergeable a, Mergeable b, Mergeable c) => Mergeable (a, b, c) where
   symbolicMerge f t (i0, i1, i2) (j0, j1, j2) = (i i0 j0, i i1 j1, i i2 j2)
-    where i a b = symbolicMerge f t a b
+    where i :: Mergeable x => x -> x -> x
+          i a b = symbolicMerge f t a b
   select xs (err1, err2, err3) ind = (select as err1 ind, select bs err2 ind, select cs err3 ind)
     where (as, bs, cs) = unzip3 xs
 
 -- 4-Tuple
 instance (Mergeable a, Mergeable b, Mergeable c, Mergeable d) => Mergeable (a, b, c, d) where
   symbolicMerge f t (i0, i1, i2, i3) (j0, j1, j2, j3) = (i i0 j0, i i1 j1, i i2 j2, i i3 j3)
-    where i a b = symbolicMerge f t a b
+    where i :: Mergeable x => x -> x -> x
+          i a b = symbolicMerge f t a b
   select xs (err1, err2, err3, err4) ind = (select as err1 ind, select bs err2 ind, select cs err3 ind, select ds err4 ind)
     where (as, bs, cs, ds) = unzip4 xs
 
 -- 5-Tuple
 instance (Mergeable a, Mergeable b, Mergeable c, Mergeable d, Mergeable e) => Mergeable (a, b, c, d, e) where
   symbolicMerge f t (i0, i1, i2, i3, i4) (j0, j1, j2, j3, j4) = (i i0 j0, i i1 j1, i i2 j2, i i3 j3, i i4 j4)
-    where i a b = symbolicMerge f t a b
+    where i :: Mergeable x => x -> x -> x
+          i a b = symbolicMerge f t a b
   select xs (err1, err2, err3, err4, err5) ind = (select as err1 ind, select bs err2 ind, select cs err3 ind, select ds err4 ind, select es err5 ind)
     where (as, bs, cs, ds, es) = unzip5 xs
 
 -- 6-Tuple
 instance (Mergeable a, Mergeable b, Mergeable c, Mergeable d, Mergeable e, Mergeable f) => Mergeable (a, b, c, d, e, f) where
   symbolicMerge f t (i0, i1, i2, i3, i4, i5) (j0, j1, j2, j3, j4, j5) = (i i0 j0, i i1 j1, i i2 j2, i i3 j3, i i4 j4, i i5 j5)
-    where i a b = symbolicMerge f t a b
+    where i :: Mergeable x => x -> x -> x
+          i a b = symbolicMerge f t a b
   select xs (err1, err2, err3, err4, err5, err6) ind = (select as err1 ind, select bs err2 ind, select cs err3 ind, select ds err4 ind, select es err5 ind, select fs err6 ind)
     where (as, bs, cs, ds, es, fs) = unzip6 xs
 
 -- 7-Tuple
 instance (Mergeable a, Mergeable b, Mergeable c, Mergeable d, Mergeable e, Mergeable f, Mergeable g) => Mergeable (a, b, c, d, e, f, g) where
   symbolicMerge f t (i0, i1, i2, i3, i4, i5, i6) (j0, j1, j2, j3, j4, j5, j6) = (i i0 j0, i i1 j1, i i2 j2, i i3 j3, i i4 j4, i i5 j5, i i6 j6)
-    where i a b = symbolicMerge f t a b
+    where i :: Mergeable x => x -> x -> x
+          i a b = symbolicMerge f t a b
   select xs (err1, err2, err3, err4, err5, err6, err7) ind = (select as err1 ind, select bs err2 ind, select cs err3 ind, select ds err4 ind, select es err5 ind, select fs err6 ind, select gs err7 ind)
     where (as, bs, cs, ds, es, fs, gs) = unzip7 xs
 
