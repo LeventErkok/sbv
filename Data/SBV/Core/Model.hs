@@ -233,8 +233,8 @@ instance (Typeable xs, SymWord x, SymWord (HList xs)) => SymWord (HList (x ': xs
       SBV (SVal (KTuple kxs) (Left (CW _ (CWTuple xsval)))) ->
         let k = KTuple (kindOf x : kxs)
         in SBV $ SVal k $ Left $ CW k $ CWTuple $ xval : xsval
-      _ -> error "TODO"
-    _ -> error "TODO"
+      _ -> error "SymWord.literal: Cannot construct a literal value!"
+    _ -> error "SymWord.literal: Cannot construct a literal value!"
 
   fromCW (CW (KTuple (k:ks)) (CWTuple (x:xs))) = HCons
     (fromCW (CW k x))
