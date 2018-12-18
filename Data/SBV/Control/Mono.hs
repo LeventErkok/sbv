@@ -110,6 +110,9 @@ modifyQueryState = Trans.modifyQueryState
 inNewContext :: (State -> IO a) -> Query a
 inNewContext = Trans.inNewContext
 
+freshVar_ :: SymWord a => Query (SBV a)
+freshVar_ = Trans.freshVar_
+
 freshVar :: SymWord a => String -> Query (SBV a)
 freshVar = Trans.freshVar
 
