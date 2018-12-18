@@ -52,6 +52,7 @@ module Data.SBV.Core.Data
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
  , QueryState(..), Query(..), SMTProblem(..)
+ , HList(..)
  ) where
 
 import GHC.Generics (Generic)
@@ -477,7 +478,7 @@ instance (Random a, SymWord a) => Random (SBV a) where
 --      'SFunArray', SBV only generates code for individual elements and the array itself never
 --      shows up in the resulting SMTLib program. This puts more onus on the SBV side and might
 --      have some performance impacts, but it might generate problems that are easier for the SMT
---      solvers to handle. 
+--      solvers to handle.
 --
 -- As a rule of thumb, try 'SArray' first. These should generate compact code. However, if
 -- the backend solver has hard time solving the generated problems, switch to
