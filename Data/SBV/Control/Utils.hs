@@ -453,8 +453,8 @@ recoverKindedValue k e = case e of
                              , length args == n
                              , KTuple tupks <- k
                              -> CW k . CWTuple . fmap cwVal <$> traverse
-                               (\(k', arg) -> recoverKindedValue k'
-                               arg) (zip tupks args)
+                               (\(k', arg) -> recoverKindedValue k' arg)
+                               (zip tupks args)
 
                            _ -> Nothing
   where isIntegralLike = or [f k | f <- [isBoolean, isBounded, isInteger, isReal, isFloat, isDouble]]
