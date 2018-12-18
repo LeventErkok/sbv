@@ -31,7 +31,6 @@ module Data.SBV.Core.Data
  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
  , sRNE, sRNA, sRTP, sRTN, sRTZ
  , SymWord(..)
- , forall, forall_, mkForallVars, exists, exists_, mkExistVars, free, free_, mkFreeVars, symbolic, symbolics, isConcrete, isSymbolic, unliteral
  , CW(..), CWVal(..), AlgReal(..), AlgRealPoly, ExtCW(..), GeneralizedCW(..), isRegularCW, cwSameType, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
  , SW(..), trueSW, falseSW, trueCW, falseCW, normCW
@@ -386,63 +385,63 @@ class (HasKind a, Ord a, Typeable a) => SymWord a where
     | Just i <- unliteral s = p i
     | True                  = False
 
--- | Create a user named input (universal)
-forall :: (MonadSymbolic m, SymWord a) => String -> m (SBV a)
-forall = mkSymWord (Just ALL) . Just
+  -- | Create a user named input (universal)
+  forall :: MonadSymbolic m => String -> m (SBV a)
+  forall = mkSymWord (Just ALL) . Just
 
--- | Create an automatically named input
-forall_ :: (MonadSymbolic m, SymWord a) => m (SBV a)
-forall_ = mkSymWord (Just ALL) Nothing
+  -- | Create an automatically named input
+  forall_ :: MonadSymbolic m => m (SBV a)
+  forall_ = mkSymWord (Just ALL) Nothing
 
--- | Get a bunch of new words
-mkForallVars :: (MonadSymbolic m, SymWord a) => Int -> m [SBV a]
-mkForallVars n = mapM (const forall_) [1 .. n]
+  -- | Get a bunch of new words
+  mkForallVars :: MonadSymbolic m => Int -> m [SBV a]
+  mkForallVars n = mapM (const forall_) [1 .. n]
 
--- | Create an existential variable
-exists :: (MonadSymbolic m, SymWord a) => String -> m (SBV a)
-exists = mkSymWord (Just EX) . Just
+  -- | Create an existential variable
+  exists :: MonadSymbolic m => String -> m (SBV a)
+  exists = mkSymWord (Just EX) . Just
 
--- | Create an automatically named existential variable
-exists_ :: (MonadSymbolic m, SymWord a) => m (SBV a)
-exists_ = mkSymWord (Just EX) Nothing
+  -- | Create an automatically named existential variable
+  exists_ :: MonadSymbolic m => m (SBV a)
+  exists_ = mkSymWord (Just EX) Nothing
 
--- | Create a bunch of existentials
-mkExistVars :: (MonadSymbolic m, SymWord a) => Int -> m [SBV a]
-mkExistVars n = mapM (const exists_) [1 .. n]
+  -- | Create a bunch of existentials
+  mkExistVars :: MonadSymbolic m => Int -> m [SBV a]
+  mkExistVars n = mapM (const exists_) [1 .. n]
 
--- | Create a free variable, universal in a proof, existential in sat
-free :: (MonadSymbolic m, SymWord a) => String -> m (SBV a)
-free = mkSymWord Nothing . Just
+  -- | Create a free variable, universal in a proof, existential in sat
+  free :: MonadSymbolic m => String -> m (SBV a)
+  free = mkSymWord Nothing . Just
 
--- | Create an unnamed free variable, universal in proof, existential in sat
-free_ :: (MonadSymbolic m, SymWord a) => m (SBV a)
-free_ = mkSymWord Nothing Nothing
+  -- | Create an unnamed free variable, universal in proof, existential in sat
+  free_ :: MonadSymbolic m => m (SBV a)
+  free_ = mkSymWord Nothing Nothing
 
--- | Create a bunch of free vars
-mkFreeVars :: (MonadSymbolic m, SymWord a) => Int -> m [SBV a]
-mkFreeVars n = mapM (const free_) [1 .. n]
+  -- | Create a bunch of free vars
+  mkFreeVars :: MonadSymbolic m => Int -> m [SBV a]
+  mkFreeVars n = mapM (const free_) [1 .. n]
 
--- | Similar to free; Just a more convenient name
-symbolic :: (MonadSymbolic m, SymWord a) => String -> m (SBV a)
-symbolic = free
+  -- | Similar to free; Just a more convenient name
+  symbolic :: MonadSymbolic m => String -> m (SBV a)
+  symbolic = free
 
--- | Similar to mkFreeVars; but automatically gives names based on the strings
-symbolics :: (MonadSymbolic m, SymWord a) => [String] -> m [SBV a]
-symbolics = mapM symbolic
+  -- | Similar to mkFreeVars; but automatically gives names based on the strings
+  symbolics :: MonadSymbolic m => [String] -> m [SBV a]
+  symbolics = mapM symbolic
 
--- | Extract a literal, if the value is concrete
-unliteral :: SymWord a => SBV a -> Maybe a
-unliteral (SBV (SVal _ (Left c)))  = Just $ fromCW c
-unliteral _                        = Nothing
+  -- | Extract a literal, if the value is concrete
+  unliteral :: SBV a -> Maybe a
+  unliteral (SBV (SVal _ (Left c)))  = Just $ fromCW c
+  unliteral _                        = Nothing
 
--- | Is the symbolic word concrete?
-isConcrete :: SymWord a => SBV a -> Bool
-isConcrete (SBV (SVal _ (Left _))) = True
-isConcrete _                       = False
+  -- | Is the symbolic word concrete?
+  isConcrete :: SBV a -> Bool
+  isConcrete (SBV (SVal _ (Left _))) = True
+  isConcrete _                       = False
 
--- | Is the symbolic word really symbolic?
-isSymbolic :: SymWord a => SBV a -> Bool
-isSymbolic = not . isConcrete
+  -- | Is the symbolic word really symbolic?
+  isSymbolic :: SBV a -> Bool
+  isSymbolic = not . isConcrete
 
 instance (Random a, SymWord a) => Random (SBV a) where
   randomR (l, h) g = case (unliteral l, unliteral h) of
