@@ -513,9 +513,13 @@ class SymArray array where
   -- | Internal function, not exported to the user
   newArrayInState :: (HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> State -> IO (array a b)
 
-  {-# MINIMAL readArray, writeArray, mergeArrays, newArrayInState #-}
+  {-# MINIMAL readArray, writeArray, mergeArrays, ((newArray_, newArray) | newArrayInState) #-}
   newArray_   mbVal = symbolicEnv >>= liftIO . newArrayInState Nothing   mbVal
   newArray nm mbVal = symbolicEnv >>= liftIO . newArrayInState (Just nm) mbVal
+
+  -- Despite our MINIMAL pragma and default implementations for newArray_ and
+  -- newArray, we must provide a dummy implementation for newArrayInState:
+  newArrayInState = error "undefined: newArrayInState"
 
 -- | Arrays implemented in terms of SMT-arrays: <http://smtlib.cs.uiowa.edu/theories-ArraysEx.shtml>
 --
