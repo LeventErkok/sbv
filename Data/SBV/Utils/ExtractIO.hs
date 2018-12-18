@@ -22,7 +22,7 @@ import qualified Control.Monad.Writer.Strict as SW
 -- | Monads which support 'IO' operations and can extract all 'IO' behavior for
 -- interoperation with functions like 'Control.Concurrent.catches', which takes
 -- an 'IO' action in negative position. This function can not be implemented
--- for transformers like 'ReaderT r' or 'StateT s', whose resultant 'IO'
+-- for transformers like @ReaderT r@ or @StateT s@, whose resultant 'IO'
 -- actions are a function of some environment or state.
 class MonadIO m => ExtractIO m where
     -- | Law: the @m a@ yielded by 'IO' is pure with respect to 'IO'.

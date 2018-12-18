@@ -141,73 +141,47 @@ type Goal = Symbolic ()
 -- predicates can be constructed from almost arbitrary Haskell functions that have arbitrary
 -- shapes. (See the instance declarations below.)
 class ExtractIO m => MProvable m a where
-  -- | Turns a value into a universally quantified predicate, internally naming the inputs.
-  -- In this case the sbv library will use names of the form @s1, s2@, etc. to name these variables
-  -- Example:
-  --
-  -- >  forAll_ $ \(x::SWord8) y -> x `shiftL` 2 .== y
-  --
-  -- is a predicate with two arguments, captured using an ordinary Haskell function. Internally,
-  -- @x@ will be named @s0@ and @y@ will be named @s1@.
+  -- | Generalization of 'Data.SBV.forAll_'
   forAll_ :: a -> SymbolicT m SBool
 
-  -- | Turns a value into a predicate, allowing users to provide names for the inputs.
-  -- If the user does not provide enough number of names for the variables, the remaining ones
-  -- will be internally generated. Note that the names are only used for printing models and has no
-  -- other significance; in particular, we do not check that they are unique. Example:
-  --
-  -- >  forAll ["x", "y"] $ \(x::SWord8) y -> x `shiftL` 2 .== y
-  --
-  -- This is the same as above, except the variables will be named @x@ and @y@ respectively,
-  -- simplifying the counter-examples when they are printed.
+  -- | Generalization of 'Data.SBV.forAll'
   forAll  :: [String] -> a -> SymbolicT m SBool
 
-  -- | Turns a value into an existentially quantified predicate. (Indeed, 'exists' would have been
-  -- a better choice here for the name, but alas it's already taken.)
+  -- | Generalization of 'Data.SBV.forSome_'
   forSome_ :: a -> SymbolicT m SBool
 
-  -- | Version of 'forSome' that allows user defined names.
+  -- | Generalization of 'Data.SBV.forSome'
   forSome :: [String] -> a -> SymbolicT m SBool
 
-  -- | Prove a predicate, using the default solver.
+  -- | Generalization of 'Data.SBV.prove'
   prove :: a -> m ThmResult
   prove = proveWith defaultSMTCfg
 
-  -- | Prove the predicate using the given SMT-solver.
+  -- | Generalization of 'Data.SBV.proveWith'
   proveWith :: SMTConfig -> a -> m ThmResult
   proveWith = runWithQuery False $ checkNoOptimizations >> ThmResult <$> Control.getSMTResult
 
-  -- | Find a satisfying assignment for a predicate, using the default solver.
+  -- | Generalization of 'Data.SBV.sat'
   sat :: a -> m SatResult
   sat = satWith defaultSMTCfg
 
-  -- | Find a satisfying assignment using the given SMT-solver.
+  -- | Generalization of 'Data.SBV.satWith'
   satWith :: SMTConfig -> a -> m SatResult
   satWith = runWithQuery True $ checkNoOptimizations >> SatResult <$> Control.getSMTResult
 
-  -- | Find all satisfying assignments, using the default solver. See 'allSatWith' for details.
+  -- | Generalization of 'Data.SBV.allSat'
   allSat :: a -> m AllSatResult
   allSat = allSatWith defaultSMTCfg
 
-  -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
-  -- Note that this call will block until all satisfying assignments are found. If you have a problem
-  -- with infinitely many satisfying models (consider 'SInteger') or a very large number of them, you
-  -- might have to wait for a long time. To avoid such cases, use the 'allSatMaxModelCount' parameter
-  -- in the configuration.
-  --
-  -- NB. Uninterpreted constant/function values and counter-examples for array values are ignored for
-  -- the purposes of 'allSat'. That is, only the satisfying assignments modulo uninterpreted functions and
-  -- array inputs will be returned. This is due to the limitation of not having a robust means of getting a
-  -- function counter-example back from the SMT solver.
-  --  Find all satisfying assignments using the given SMT-solver
+  -- | Generalization of 'Data.SBV.allSatWith'
   allSatWith :: SMTConfig -> a -> m AllSatResult
   allSatWith = runWithQuery True $ checkNoOptimizations >> AllSatResult <$> Control.getAllSatResult
 
-  -- | Optimize a given collection of `Objective`s
+  -- | Generalization of 'Data.SBV.optimize'
   optimize :: OptimizeStyle -> a -> m OptimizeResult
   optimize = optimizeWith defaultSMTCfg
 
-  -- | Optimizes the objectives using the given SMT-solver.
+  -- | Generalization of 'Data.SBV.optimizeWith'
   optimizeWith :: SMTConfig -> OptimizeStyle -> a -> m OptimizeResult
   optimizeWith config style = runWithQuery True opt config
     where opt = do objectives <- Control.getObjectives
@@ -311,11 +285,11 @@ class ExtractIO m => MProvable m a where
                       Independent   -> IndependentResult   <$> Control.getIndependentOptResults (map objectiveName objectives)
                       Pareto mbN    -> ParetoResult        <$> Control.getParetoOptResults mbN
 
-  -- | Check if the constraints given are consistent, using the default solver.
+  -- | Generalization of 'Data.SBV.isVacuous'
   isVacuous :: a -> m Bool
   isVacuous = isVacuousWith defaultSMTCfg
 
-  -- | Determine if the constraints are vacuous using the given SMT-solver.
+  -- | Generalization of 'Data.SBV.isVacuousWith'
   isVacuousWith :: SMTConfig -> a -> m Bool
   isVacuousWith cfg a = -- NB. Can't call runWithQuery since last constraint would become the implication!
        fst <$> runSymbolic (SMTMode ISetup True cfg) (forSome_ a >> Control.query check)
@@ -327,11 +301,11 @@ class ExtractIO m => MProvable m a where
                     Control.Sat   -> return False
                     Control.Unk   -> error "SBV: isVacuous: Solver returned unknown!"
 
-  -- | Checks theoremhood using the default solver.
+  -- | Generalization of 'Data.SBV.isTheorem'
   isTheorem :: a -> m Bool
   isTheorem = isTheoremWith defaultSMTCfg
 
-  -- | Check whether a given property is a theorem.
+  -- | Generalization of 'Data.SBV.isTheoremWith'
   isTheoremWith :: SMTConfig -> a -> m Bool
   isTheoremWith cfg p = do r <- proveWith cfg p
                            case r of
@@ -340,11 +314,11 @@ class ExtractIO m => MProvable m a where
                              _                         -> error $ "SBV.isTheorem: Received:\n" ++ show r
 
 
-  -- | Checks satisfiability using the default solver.
+  -- | Generalization of 'Data.SBV.isSatisfiable'
   isSatisfiable :: a -> m Bool
   isSatisfiable = isSatisfiableWith defaultSMTCfg
 
-  -- | Check whether a given property is satisfiable.
+  -- | Generalization of 'Data.SBV.isSatisfiableWith'
   isSatisfiableWith :: SMTConfig -> a -> m Bool
   isSatisfiableWith cfg p = do r <- satWith cfg p
                                case r of
@@ -518,11 +492,11 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymW
   forSome (s:ss) k = exists s >>= \a -> forSome ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   forSome []     k = forSome_ k
 
--- | Run an arbitrary symbolic computation, equivalent to @'runSMTWith' 'defaultSMTCfg'@
+-- | Generalization of 'Data.SBV.runSMT'
 runSMT :: MonadIO m => SymbolicT m a -> m a
 runSMT = runSMTWith defaultSMTCfg
 
--- | Runs an arbitrary symbolic computation, exposed to the user in SAT mode
+-- | Generalization of 'Data.SBV.runSMTWith'
 runSMTWith :: MonadIO m => SMTConfig -> SymbolicT m a -> m a
 runSMTWith cfg a = fst <$> runSymbolic (SMTMode ISetup True cfg) a
 
@@ -576,14 +550,16 @@ sbvWithAll solvers what a = do beginTime <- getCurrentTime
 -- | Symbolically executable program fragments. This class is mainly used for 'safe' calls, and is sufficently populated internally to cover most use
 -- cases. Users can extend it as they wish to allow 'safe' checks for SBV programs that return/take types that are user-defined.
 class ExtractIO m => SExecutable m a where
+   -- | Generalization of 'Data.SBV.sName_'
    sName_ :: a -> SymbolicT m ()
+   -- | Generalization of 'Data.SBV.sName'
    sName  :: [String] -> a -> SymbolicT m ()
 
-   -- | Check safety using the default solver.
+   -- | Generalization of 'Data.SBV.safe'
    safe :: a -> m [SafeResult]
    safe = safeWith defaultSMTCfg
 
-   -- | Check if any of the 'Data.SBV.sAssert' calls can be violated.
+   -- | Generalization of 'Data.SBV.safeWith'
    safeWith :: SMTConfig -> a -> m [SafeResult]
    safeWith cfg a = do cwd <- (++ "/") <$> liftIO getCurrentDirectory
                        let mkRelative path

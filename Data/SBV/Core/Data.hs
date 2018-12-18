@@ -265,11 +265,11 @@ sbvToSW st (SBV s) = svToSW st s
 -- * Symbolic Computations
 -------------------------------------------------------------------------
 
--- | Create a symbolic variable.
+-- | Generalization of 'Data.SBV.mkSymSBV'
 mkSymSBV :: forall a m. MonadSymbolic m => Maybe Quantifier -> Kind -> Maybe String -> m (SBV a)
 mkSymSBV mbQ k mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar mbQ k mbNm)
 
--- | Convert a symbolic value to an SW, inside the Symbolic monad
+-- | Generalization of 'Data.SBV.sbvToSymSW'
 sbvToSymSW :: MonadSymbolic m => SBV a -> m SW
 sbvToSymSW sbv = do
         st <- symbolicEnv
@@ -308,8 +308,7 @@ class SolverContext m where
 
 -- | A class representing what can be returned from a symbolic computation.
 class Outputtable a where
-  -- | Mark an interim result as an output. Useful when constructing Symbolic programs
-  -- that return multiple values, or when the result is programmatically computed.
+  -- | Generalization of 'Data.SBV.output'
   output :: MonadSymbolic m => a -> m a
 
 instance Outputtable (SBV a) where
@@ -352,7 +351,7 @@ instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtabl
 -- in casual uses with 'Data.SBV.prove', 'Data.SBV.sat', 'Data.SBV.allSat' etc, as
 -- default instances automatically provide the necessary bits.
 class (HasKind a, Ord a, Typeable a) => SymWord a where
-  -- | One stop allocator
+  -- | Generalization of 'Data.SBV.mkSymWord'
   mkSymWord :: MonadSymbolic m => Maybe Quantifier -> Maybe String -> m (SBV a)
   -- | Turn a literal constant to symbolic
   literal :: a -> SBV a
@@ -385,47 +384,47 @@ class (HasKind a, Ord a, Typeable a) => SymWord a where
     | Just i <- unliteral s = p i
     | True                  = False
 
-  -- | Create a user named input (universal)
+  -- | Generalization of 'Data.SBV.forall'
   forall :: MonadSymbolic m => String -> m (SBV a)
   forall = mkSymWord (Just ALL) . Just
 
-  -- | Create an automatically named input
+  -- | Generalization of 'Data.SBV.forall_'
   forall_ :: MonadSymbolic m => m (SBV a)
   forall_ = mkSymWord (Just ALL) Nothing
 
-  -- | Get a bunch of new words
+  -- | Generalization of 'Data.SBV.mkForallVars'
   mkForallVars :: MonadSymbolic m => Int -> m [SBV a]
   mkForallVars n = mapM (const forall_) [1 .. n]
 
-  -- | Create an existential variable
+  -- | Generalization of 'Data.SBV.exists'
   exists :: MonadSymbolic m => String -> m (SBV a)
   exists = mkSymWord (Just EX) . Just
 
-  -- | Create an automatically named existential variable
+  -- | Generalization of 'Data.SBV.exists_'
   exists_ :: MonadSymbolic m => m (SBV a)
   exists_ = mkSymWord (Just EX) Nothing
 
-  -- | Create a bunch of existentials
+  -- | Generalization of 'Data.SBV.mkExistVars'
   mkExistVars :: MonadSymbolic m => Int -> m [SBV a]
   mkExistVars n = mapM (const exists_) [1 .. n]
 
-  -- | Create a free variable, universal in a proof, existential in sat
+  -- | Generalization of 'Data.SBV.free'
   free :: MonadSymbolic m => String -> m (SBV a)
   free = mkSymWord Nothing . Just
 
-  -- | Create an unnamed free variable, universal in proof, existential in sat
+  -- | Generalization of 'Data.SBV.free_'
   free_ :: MonadSymbolic m => m (SBV a)
   free_ = mkSymWord Nothing Nothing
 
-  -- | Create a bunch of free vars
+  -- | Generalization of 'Data.SBV.mkFreeVars'
   mkFreeVars :: MonadSymbolic m => Int -> m [SBV a]
   mkFreeVars n = mapM (const free_) [1 .. n]
 
-  -- | Similar to free; Just a more convenient name
+  -- | Generalization of 'Data.SBV.symbolic'
   symbolic :: MonadSymbolic m => String -> m (SBV a)
   symbolic = free
 
-  -- | Similar to mkFreeVars; but automatically gives names based on the strings
+  -- | Generalization of 'Data.SBV.symbolics'
   symbolics :: MonadSymbolic m => [String] -> m [SBV a]
   symbolics = mapM symbolic
 
@@ -497,9 +496,9 @@ instance (Random a, SymWord a) => Random (SBV a) where
 -- the backend solver has hard time solving the generated problems, switch to
 -- 'SFunArray'. If you still have issues, please report so we can see what the problem might be!
 class SymArray array where
-  -- | Create a new anonymous array, possibly with a default initial value.
+  -- | Generalization of 'Data.SBV.newArray_'
   newArray_      :: (MonadSymbolic m, HasKind a, HasKind b) => Maybe (SBV b) -> m (array a b)
-  -- | Create a named new array, possibly with a default initial value.
+  -- | Generalization of 'Data.SBV.newArray'
   newArray       :: (MonadSymbolic m, HasKind a, HasKind b) => String -> Maybe (SBV b) -> m (array a b)
   -- | Read the array element at @a@
   readArray      :: array a b -> SBV a -> SBV b

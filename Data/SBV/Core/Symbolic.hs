@@ -1034,7 +1034,7 @@ svToSW :: State -> SVal -> IO SW
 svToSW st (SVal _ (Left c))  = newConst st c
 svToSW st (SVal _ (Right f)) = uncache f st
 
--- | Convert a symbolic value to an SW, inside the Symbolic monad
+-- | Generalization of 'Data.SBV.svToSymSW'
 svToSymSW :: MonadSymbolic m => SVal -> m SW
 svToSymSW sbv = do st <- symbolicEnv
                    liftIO $ svToSW st sbv
@@ -1094,19 +1094,19 @@ svMkSymVar = svMkSymVarGen False
 svMkTrackerVar :: Kind -> String -> State -> IO SVal
 svMkTrackerVar k nm = svMkSymVarGen True (Just EX) k (Just nm)
 
--- | Create an N-bit symbolic unsigned named variable
+-- | Generalization of 'Data.SBV.sWordN'
 sWordN :: MonadSymbolic m => Int -> String -> m SVal
 sWordN w nm = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded False w) (Just nm)
 
--- | Create an N-bit symbolic unsigned unnamed variable
+-- | Generalization of 'Data.SBV.sWordN_'
 sWordN_ :: MonadSymbolic m => Int -> m SVal
 sWordN_ w = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded False w) Nothing
 
--- | Create an N-bit symbolic signed named variable
+-- | Generalization of 'Data.SBV.sIntN'
 sIntN :: MonadSymbolic m => Int -> String -> m SVal
 sIntN w nm = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded True w) (Just nm)
 
--- | Create an N-bit symbolic signed unnamed variable
+-- | Generalization of 'Data.SBV.sIntN_'
 sIntN_ :: MonadSymbolic m => Int -> m SVal
 sIntN_ w = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded True w) Nothing
 
@@ -1172,11 +1172,7 @@ introduceUserName st isTracker nm k q sw = do
                                           $ modifyIncState st rNewInps newInp
                         return $ SVal k $ Right $ cache (const (return sw))
 
--- | Add a user specified axiom to the generated SMT-Lib file. The first argument is a mere
--- string, use for commenting purposes. The second argument is intended to hold the multiple-lines
--- of the axiom text as expressed in SMT-Lib notation. Note that we perform no checks on the axiom
--- itself, to see whether it's actually well-formed or is sensical by any means.
--- A separate formalization of SMT-Lib would be very useful here.
+-- | Generalization of 'Data.SBV.addAxiom'
 addAxiom :: MonadSymbolic m => String -> [String] -> m ()
 addAxiom nm ax = do
         st <- symbolicEnv
@@ -1186,7 +1182,7 @@ addAxiom nm ax = do
                                            , "  Axiom: " ++ unlines ax
                                            ]
 
--- | Run a symbolic computation, and return a extra value paired up with the 'Result'
+-- | Generalization of 'Data.SBV.runSymbolic'
 runSymbolic :: MonadIO m => SBVRunMode -> SymbolicT m a -> m (a, Result)
 runSymbolic currentRunMode (SymbolicT c) = do
    st <- liftIO $ do
@@ -1288,12 +1284,12 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
 
    return $ Result knds traceVals observables cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs assertions outsO
 
--- | Add a new option
+-- | Generalization of 'Data.SBV.addNewSMTOption'
 addNewSMTOption :: MonadSymbolic m => SMTOption -> m ()
 addNewSMTOption o =  do st <- symbolicEnv
                         liftIO $ modifyState st rSMTOptions (o:) (return ())
 
--- | Handling constraints
+-- | Generalization of 'Data.SBV.imposeConstraint'
 imposeConstraint :: MonadSymbolic m => Bool -> [(String, String)] -> SVal -> m ()
 imposeConstraint isSoft attrs c = do st <- symbolicEnv
                                      rm <- liftIO $ readIORef (runMode st)
@@ -1312,7 +1308,7 @@ internalConstraint st isSoft attrs b = do v <- svToSW st b
     where soft | isSoft = "soft-"
                | True   = ""
 
--- | Add an optimization goal
+-- | Generalization of 'Data.SBV.addSValOptGoal'
 addSValOptGoal :: MonadSymbolic m => Objective SVal -> m ()
 addSValOptGoal obj = do st <- symbolicEnv
 
@@ -1332,8 +1328,7 @@ addSValOptGoal obj = do st <- symbolicEnv
                                                            , "  Objective: " ++ show obj
                                                            ]
 
--- | Mark an interim result as an output. Useful when constructing Symbolic programs
--- that return multiple values, or when the result is programmatically computed.
+-- | Generalization of 'Data.SBV.outputSVal'
 outputSVal :: MonadSymbolic m => SVal -> m ()
 outputSVal (SVal _ (Left c)) = do
   st <- symbolicEnv

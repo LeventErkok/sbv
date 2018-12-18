@@ -95,7 +95,7 @@ genFromCW :: Integral a => CW -> a
 genFromCW (CW _ (CWInteger x)) = fromInteger x
 genFromCW c                    = error $ "genFromCW: Unsupported non-integral value: " ++ show c
 
--- | Generically make a symbolic var
+-- | Generalization of 'Data.SBV.genMkSymVar'
 genMkSymVar :: MonadSymbolic m => Kind -> Maybe Quantifier -> Maybe String -> m (SBV a)
 genMkSymVar k mbq Nothing  = genVar_ mbq k
 genMkSymVar k mbq (Just s) = genVar  mbq k s
@@ -219,141 +219,135 @@ instance IsString SString where
 -- necessary, as they are mere aliases for 'symbolic' and 'symbolics', but
 -- they nonetheless make programming easier.
 ------------------------------------------------------------------------------------
--- | Declare an 'SBool'
+-- | Generalization of 'Data.SBV.sBool'
 sBool :: MonadSymbolic m => String -> m SBool
 sBool = symbolic
 
--- | Declare a list of 'SBool's
+-- | Generalization of 'Data.SBV.sBools'
 sBools :: MonadSymbolic m => [String] -> m [SBool]
 sBools = symbolics
 
--- | Declare an 'SWord8'
+-- | Generalization of 'Data.SBV.sWord8'
 sWord8 :: MonadSymbolic m => String -> m SWord8
 sWord8 = symbolic
 
--- | Declare a list of 'SWord8's
+-- | Generalization of 'Data.SBV.sWord8s'
 sWord8s :: MonadSymbolic m => [String] -> m [SWord8]
 sWord8s = symbolics
 
--- | Declare an 'SWord16'
+-- | Generalization of 'Data.SBV.sWord16'
 sWord16 :: MonadSymbolic m => String -> m SWord16
 sWord16 = symbolic
 
--- | Declare a list of 'SWord16's
+-- | Generalization of 'Data.SBV.sWord16s'
 sWord16s :: MonadSymbolic m => [String] -> m [SWord16]
 sWord16s = symbolics
 
--- | Declare an 'SWord32'
+-- | Generalization of 'Data.SBV.sWord32'
 sWord32 :: MonadSymbolic m => String -> m SWord32
 sWord32 = symbolic
 
--- | Declare a list of 'SWord32's
+-- | Generalization of 'Data.SBV.sWord32s'
 sWord32s :: MonadSymbolic m => [String] -> m [SWord32]
 sWord32s = symbolics
 
--- | Declare an 'SWord64'
+-- | Generalization of 'Data.SBV.sWord64'
 sWord64 :: MonadSymbolic m => String -> m SWord64
 sWord64 = symbolic
 
--- | Declare a list of 'SWord64's
+-- | Generalization of 'Data.SBV.sWord64s'
 sWord64s :: MonadSymbolic m => [String] -> m [SWord64]
 sWord64s = symbolics
 
--- | Declare an 'SInt8'
+-- | Generalization of 'Data.SBV.sInt8'
 sInt8 :: MonadSymbolic m => String -> m SInt8
 sInt8 = symbolic
 
--- | Declare a list of 'SInt8's
+-- | Generalization of 'Data.SBV.sInt8s'
 sInt8s :: MonadSymbolic m => [String] -> m [SInt8]
 sInt8s = symbolics
 
--- | Declare an 'SInt16'
+-- | Generalization of 'Data.SBV.sInt16'
 sInt16 :: MonadSymbolic m => String -> m SInt16
 sInt16 = symbolic
 
--- | Declare a list of 'SInt16's
+-- | Generalization of 'Data.SBV.sInt16s'
 sInt16s :: MonadSymbolic m => [String] -> m [SInt16]
 sInt16s = symbolics
 
--- | Declare an 'SInt32'
+-- | Generalization of 'Data.SBV.sInt32'
 sInt32 :: MonadSymbolic m => String -> m SInt32
 sInt32 = symbolic
 
--- | Declare a list of 'SInt32's
+-- | Generalization of 'Data.SBV.sInt32s'
 sInt32s :: MonadSymbolic m => [String] -> m [SInt32]
 sInt32s = symbolics
 
--- | Declare an 'SInt64'
+-- | Generalization of 'Data.SBV.sInt64'
 sInt64 :: MonadSymbolic m => String -> m SInt64
 sInt64 = symbolic
 
--- | Declare a list of 'SInt64's
+-- | Generalization of 'Data.SBV.sInt64s'
 sInt64s :: MonadSymbolic m => [String] -> m [SInt64]
 sInt64s = symbolics
 
--- | Declare an 'SInteger'
+-- | Generalization of 'Data.SBV.sInteger'
 sInteger:: MonadSymbolic m => String -> m SInteger
 sInteger = symbolic
 
--- | Declare a list of 'SInteger's
+-- | Generalization of 'Data.SBV.sIntegers'
 sIntegers :: MonadSymbolic m => [String] -> m [SInteger]
 sIntegers = symbolics
 
--- | Declare an 'SReal'
+-- | Generalization of 'Data.SBV.sReal'
 sReal:: MonadSymbolic m => String -> m SReal
 sReal = symbolic
 
--- | Declare a list of 'SReal's
+-- | Generalization of 'Data.SBV.sReals'
 sReals :: MonadSymbolic m => [String] -> m [SReal]
 sReals = symbolics
 
--- | Declare an 'SFloat'
+-- | Generalization of 'Data.SBV.sFloat'
 sFloat :: MonadSymbolic m => String -> m SFloat
 sFloat = symbolic
 
--- | Declare a list of 'SFloat's
+-- | Generalization of 'Data.SBV.sFloats'
 sFloats :: MonadSymbolic m => [String] -> m [SFloat]
 sFloats = symbolics
 
--- | Declare an 'SDouble'
+-- | Generalization of 'Data.SBV.sDouble'
 sDouble :: MonadSymbolic m => String -> m SDouble
 sDouble = symbolic
 
--- | Declare a list of 'SDouble's
+-- | Generalization of 'Data.SBV.sDoubles'
 sDoubles :: MonadSymbolic m => [String] -> m [SDouble]
 sDoubles = symbolics
 
--- | Declare an 'SChar'
+-- | Generalization of 'Data.SBV.sChar'
 sChar :: MonadSymbolic m => String -> m SChar
 sChar = symbolic
 
--- | Declare an 'SString'
+-- | Generalization of 'Data.SBV.sString'
 sString :: MonadSymbolic m => String -> m SString
 sString = symbolic
 
--- | Declare a list of 'SChar's
+-- | Generalization of 'Data.SBV.sChars'
 sChars :: MonadSymbolic m => [String] -> m [SChar]
 sChars = symbolics
 
--- | Declare a list of 'SString's
+-- | Generalization of 'Data.SBV.sStrings'
 sStrings :: MonadSymbolic m => [String] -> m [SString]
 sStrings = symbolics
 
--- | Declare an 'SList'
+-- | Generalization of 'Data.SBV.sList'
 sList :: (SymWord a, MonadSymbolic m) => String -> m (SList a)
 sList = symbolic
 
--- | Declare a list of 'SList's
+-- | Generalization of 'Data.SBV.sLists'
 sLists :: (SymWord a, MonadSymbolic m) => [String] -> m [SList a]
 sLists = symbolics
 
--- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
--- problems with constraints, like the following:
---
--- @
---   sat $ do [x, y, z] <- sIntegers [\"x\", \"y\", \"z\"]
---            solve [x .> 5, y + z .< x]
--- @
+-- | Generalization of 'Data.SBV.solve'
 solve :: MonadSymbolic m => [SBool] -> m SBool
 solve = return . bAnd
 
@@ -1828,7 +1822,7 @@ instance MonadIO m => SolverContext (SymbolicT m) where
 
    setOption o = addNewSMTOption  o
 
--- | Introduce a soft assertion, with an optional penalty
+-- | Generalization of 'Data.SBV.assertWithPenalty'
 assertWithPenalty :: MonadSymbolic m => String -> SBool -> Penalty -> m ()
 assertWithPenalty nm o p = addSValOptGoal $ unSBV `fmap` AssertWithPenalty nm o p
 
@@ -1840,10 +1834,10 @@ assertWithPenalty nm o p = addSValOptGoal $ unSBV `fmap` AssertWithPenalty nm o 
 -- A good reference on these features is given in the following paper:
 -- <http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>.
 class Metric a where
-  -- | Minimize a named metric
+  -- | Generalization of 'Data.SBV.minimize'
   minimize :: MonadSymbolic m => String -> a -> m ()
 
-  -- | Maximize a named metric
+  -- | Generalization of 'Data.SBV.maximize'
   maximize :: MonadSymbolic m => String -> a -> m ()
 
 instance Metric SWord8   where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
