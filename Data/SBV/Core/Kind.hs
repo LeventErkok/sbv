@@ -21,10 +21,11 @@
 {-# LANGUAGE GADTs                #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE StandaloneDeriving   #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans    #-}
 
-module Data.SBV.Core.Kind (Kind(..), HasKind(..), constructUKind, smtType) where
+module Data.SBV.Core.Kind (HList(..), Kind(..), HasKind(..), constructUKind, smtType) where
 
 import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
 
@@ -55,6 +56,19 @@ data Kind = KBool
           | KList Kind
           | KTuple [ Kind ]
           deriving (Eq, Ord)
+
+data family HList (l :: [*])
+
+data instance HList '[] = HNil
+data instance HList (x ': xs) = x `HCons` HList xs
+
+infixr `HCons`
+
+deriving instance Eq (HList '[])
+deriving instance (Eq x, Eq (HList xs)) => Eq (HList (x ': xs))
+
+deriving instance Ord (HList '[])
+deriving instance (Ord x, Ord (HList xs)) => Ord (HList (x ': xs))
 
 -- data family Sing :: k -> Type
 
@@ -343,3 +357,11 @@ instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f,
      , kindOf (undefined :: g)
      , kindOf (undefined :: h)
      ]
+
+instance HasKind (HList '[]) where
+  kindOf _ = KTuple []
+
+instance (HasKind x, HasKind (HList xs)) => HasKind (HList (x ': xs)) where
+  kindOf (HCons x xs) = case kindOf xs of
+    KTuple ks -> KTuple $ kindOf x : ks
+    _         -> error "HasKind"

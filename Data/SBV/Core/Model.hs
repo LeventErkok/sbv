@@ -20,11 +20,8 @@
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
 
-{-# LANGUAGE KindSignatures  #-}
 {-# LANGUAGE DataKinds  #-}
 {-# LANGUAGE TypeFamilies  #-}
-{-# LANGUAGE StandaloneDeriving  #-}
-{-# LANGUAGE TypeApplications  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 
@@ -217,20 +214,6 @@ instance SymWord a => SymWord [a] where
   fromCW (CW _ (CWList a))   = fromCW . CW (kindOf (undefined :: a)) <$> a
   fromCW c                   = error $ "SymWord.fromCW: Unexpected non-list value: " ++ show c
 
-data family HList (l :: [*])
-
-data instance HList '[] = HNil
-data instance HList (x ': xs) = x `HCons` HList xs
-
-deriving instance Eq (HList '[])
-deriving instance (Eq x, Eq (HList xs)) => Eq (HList (x ': xs))
-
-deriving instance Ord (HList '[])
-deriving instance (Ord x, Ord (HList xs)) => Ord (HList (x ': xs))
-
-instance HasKind (HList '[]) where
-  kindOf _ = KTuple []
-
 instance SymWord (HList '[]) where
   mkSymWord = genMkSymVar $ KTuple []
 
@@ -240,11 +223,6 @@ instance SymWord (HList '[]) where
 
   fromCW (CW _ (CWTuple [])) = HNil
   fromCW c = error $ "SymWord.fromCW: Unexpected non-2-tuple value: " ++ show c
-
-instance (HasKind x, HasKind (HList xs)) => HasKind (HList (x ': xs)) where
-  kindOf (HCons x xs) = case kindOf xs of
-    KTuple ks -> KTuple $ kindOf x : ks
-    _         -> error "TODO"
 
 -- TODO: why is typeable required?
 instance (Typeable xs, SymWord x, SymWord (HList xs)) => SymWord (HList (x ': xs)) where
@@ -271,22 +249,48 @@ class HListable tup where
 coerceTup :: SBV (HList (HLTy tup)) -> SBV tup
 coerceTup (SBV x) = SBV x
 
-infixr `HCons`
-
-instance (SymWord a, SymWord b) => HListable (a, b) where
+instance HListable (a, b) where
   type HLTy (a, b) = [a, b]
   toHList (a, b) = a `HCons` b `HCons` HNil
   fromHList (a `HCons` b `HCons` HNil) = (a, b)
 
-instance (SymWord a, SymWord b, SymWord c) => HListable (a, b, c) where
+instance HListable (a, b, c) where
   type HLTy (a, b, c) = [a, b, c]
   toHList (a, b, c) = a `HCons` b `HCons` c `HCons` HNil
   fromHList (a `HCons` b `HCons` c `HCons` HNil) = (a, b, c)
 
-instance (SymWord a, SymWord b, SymWord c) => HListable (a, b, c, d) where
+instance HListable (a, b, c, d) where
   type HLTy (a, b, c, d) = [a, b, c, d]
   toHList (a, b, c, d) = a `HCons` b `HCons` c `HCons` d `HCons` HNil
   fromHList (a `HCons` b `HCons` c `HCons` d `HCons` HNil) = (a, b, c, d)
+
+instance HListable (a, b, c, d, e) where
+  type HLTy (a, b, c, d, e) = [a, b, c, d, e]
+  toHList (a, b, c, d, e)
+    = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` HNil
+  fromHList (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` HNil)
+    = (a, b, c, d, e)
+
+instance HListable (a, b, c, d, e, f) where
+  type HLTy (a, b, c, d, e, f) = [a, b, c, d, e, f]
+  toHList (a, b, c, d, e, f)
+    = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` HNil
+  fromHList (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` HNil)
+    = (a, b, c, d, e, f)
+
+instance HListable (a, b, c, d, e, f, g) where
+  type HLTy (a, b, c, d, e, f, g) = [a, b, c, d, e, f, g]
+  toHList (a, b, c, d, e, f, g) = a `HCons` b `HCons` c `HCons` d `HCons` e
+    `HCons` f `HCons` g `HCons` HNil
+  fromHList (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g
+    `HCons` HNil) = (a, b, c, d, e, f, g)
+
+instance HListable (a, b, c, d, e, f, g, h) where
+  type HLTy (a, b, c, d, e, f, g, h) = [a, b, c, d, e, f, g, h]
+  toHList (a, b, c, d, e, f, g, h) = a `HCons` b `HCons` c `HCons` d `HCons` e
+    `HCons` f `HCons` g `HCons` h `HCons` HNil
+  fromHList (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g
+    `HCons` h `HCons` HNil) = (a, b, c, d, e, f, g, h)
 
 instance (SymWord a, SymWord b) => SymWord (a, b) where
   mkSymWord x y = fmap coerceTup $ mkSymWord x y
@@ -298,7 +302,32 @@ instance (SymWord a, SymWord b, SymWord c) => SymWord (a, b, c) where
   literal       = coerceTup . literal . toHList
   fromCW        = fromHList . fromCW
 
-instance (SymWord a, SymWord b, SymWord c, SymWord d) => SymWord (a, b, c, d) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d)
+  => SymWord (a, b, c, d) where
+  mkSymWord x y = fmap coerceTup $ mkSymWord x y
+  literal       = coerceTup . literal . toHList
+  fromCW        = fromHList . fromCW
+
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e)
+  => SymWord (a, b, c, d, e) where
+  mkSymWord x y = fmap coerceTup $ mkSymWord x y
+  literal       = coerceTup . literal . toHList
+  fromCW        = fromHList . fromCW
+
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f)
+  => SymWord (a, b, c, d, e, f) where
+  mkSymWord x y = fmap coerceTup $ mkSymWord x y
+  literal       = coerceTup . literal . toHList
+  fromCW        = fromHList . fromCW
+
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f,
+  SymWord g) => SymWord (a, b, c, d, e, f, g) where
+  mkSymWord x y = fmap coerceTup $ mkSymWord x y
+  literal       = coerceTup . literal . toHList
+  fromCW        = fromHList . fromCW
+
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f,
+  SymWord g, SymWord h) => SymWord (a, b, c, d, e, f, g, h) where
   mkSymWord x y = fmap coerceTup $ mkSymWord x y
   literal       = coerceTup . literal . toHList
   fromCW        = fromHList . fromCW
