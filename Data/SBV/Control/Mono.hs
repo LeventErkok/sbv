@@ -143,6 +143,9 @@ getUninterpretedValue = Trans.getUninterpretedValue
 getValueCW :: Maybe Int -> SW -> Query CW
 getValueCW = Trans.getValueCW
 
+checkSat :: Query CheckSatResult
+checkSat = Trans.checkSat
+
 checkSatUsing :: String -> Query CheckSatResult
 checkSatUsing = Trans.checkSatUsing
 

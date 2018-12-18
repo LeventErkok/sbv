@@ -90,9 +90,9 @@ import Data.SBV.Control.Query hiding (getInfo, getOption, getUnknownReason,
                                       getUnsatCore, getProof, getInterpolant,
                                       getAssertions, getAssignment,
                                       mkSMTResult, freshVar_, freshVar,
-                                      freshArray, freshArray_, checkSatUsing,
-                                      getValue, getUninterpretedValue, timeout,
-                                      io)
+                                      freshArray, freshArray_, checkSat,
+                                      checkSatUsing, getValue,
+                                      getUninterpretedValue, timeout, io)
 import Data.SBV.Control.Utils (SMTValue)
 
 import Data.SBV.Utils.ExtractIO (ExtractIO(..))
