@@ -257,7 +257,7 @@ showCW shk w               = liftCW show show show show show show snd shL shT w 
                            KList k -> k
                            kw      -> error $ "Data.SBV.showCW: Impossible happened, expected list, got: " ++ show kw
             shT :: [CWVal] -> String
-            shT xs = "[" ++ intercalate "," xs' ++ "]"
+            shT xs = "(" ++ intercalate "," xs' ++ ")"
               where xs' = case kindOf w of
                             KTuple ks
                               | length ks == length xs

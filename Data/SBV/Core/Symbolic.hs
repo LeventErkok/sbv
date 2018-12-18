@@ -171,8 +171,8 @@ data Op = Plus
         | OverflowOp    OvOp                    -- Overflow-ops, categorized separately
         | StrOp StrOp                           -- String ops, categorized separately
         | SeqOp SeqOp                           -- Sequence ops, categorized separately
-        | TupleConstructor Int
-        | TupleAccess Int
+        | TupleConstructor Int                  -- Construct an n-tuple
+        | TupleAccess Int                       -- Access element i of a tuple
         deriving (Eq, Ord)
 
 -- | Floating point operations
