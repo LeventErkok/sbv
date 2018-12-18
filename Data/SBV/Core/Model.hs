@@ -39,6 +39,7 @@ module Data.SBV.Core.Model (
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCW, genMkSymVar
   , sbvQuickCheck
+  , HListable(..)
   )
   where
 
@@ -78,6 +79,7 @@ import Data.SBV.SMT.SMT        (showModel)
 
 import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.Lib      (isKString)
+
 
 -- Symbolic-Word class instances
 
