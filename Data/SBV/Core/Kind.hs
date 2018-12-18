@@ -9,19 +9,15 @@
 -- Internal data-structures for the sbv library
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE PolyKinds             #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleContexts      #-}
-
+{-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE DefaultSignatures    #-}
+{-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE GADTs                #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeOperators        #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans    #-}
 
@@ -36,10 +32,6 @@ import Data.SBV.Core.AlgReals
 import Data.List (isPrefixOf, intercalate)
 
 import Data.Typeable (Typeable)
--- import Data.Type.Equality (apply, (:~:)(Refl))
--- import Data.Type.Map
--- import Data.Kind
--- import Data.Maybe (isJust)
 
 import Data.SBV.Utils.Lib (isKString)
 
@@ -57,6 +49,7 @@ data Kind = KBool
           | KTuple [ Kind ]
           deriving (Eq, Ord)
 
+-- | A heterogeneous list (a sequence of values of different types).
 data family HList (l :: [*])
 
 data instance HList '[] = HNil
@@ -69,57 +62,6 @@ deriving instance (Eq x, Eq (HList xs)) => Eq (HList (x ': xs))
 
 deriving instance Ord (HList '[])
 deriving instance (Ord x, Ord (HList xs)) => Ord (HList (x ': xs))
-
--- data family Sing :: k -> Type
-
--- data instance Sing (a :: Kind) where
---   SBool      ::                     Sing 'KBool
---   SBounded   :: Sing b -> Sing i -> Sing ('KBounded b i)
---   SUnbounded ::                     Sing 'KUnbounded
---   SReal      ::                     Sing 'KReal
---   SUserSort  :: Sing s -> Sing e -> Sing ('KUserSort s e)
---   SFloat     ::                     Sing 'KFloat
---   SDouble    ::                     Sing 'KDouble
---   SChar      ::                     Sing 'KChar
---   SString    ::                     Sing 'KString
---   SList      :: Sing k ->           Sing ('KList k)
---   STuple     :: Sing m ->           Sing ('KTuple m)
-
--- type SingKind (a :: Kind) = Sing a
-
--- -- Similar to @Data.Type.Equality.TestEquality@, but fixing @f@ to @Sing@, with
--- -- a given kind.
--- class TestEquality ty where
---   testEquality :: forall (a :: ty) (b :: ty). Sing a -> Sing b -> Maybe (a :~: b)
-
--- instance TestEquality Char where
---   testEquality a b = _
-
--- instance TestEquality Bool where
--- -- instance TestEquality String where
--- instance TestEquality Int where
--- instance (TestEquality a, TestEquality b) => TestEquality (Either a b) where
--- instance TestEquality a => TestEquality [a] where
-
--- instance TestEquality Kind where
---   testEquality SBool SBool = Just Refl
---   testEquality (SBounded b1 i1) (SBounded b2 i2) = do
---     Refl <- testEquality b1 b2
---     Refl <- testEquality i1 i2
---     pure Refl
---   testEquality SUnbounded SUnbounded = Just Refl
---   testEquality SReal SReal = Just Refl
---   testEquality (SUserSort s1 e1) (SUserSort s2 e2) = do
---     Refl <- testEquality s1 s2
---     Refl <- testEquality e1 e2
---     pure Refl
---   testEquality SFloat SFloat = Just Refl
---   testEquality SDouble SDouble = Just Refl
---   testEquality SChar SChar = Just Refl
---   testEquality SString SString = Just Refl
---   testEquality (SList a) (SList b) = apply Refl <$> testEquality a b
---   testEquality (STuple  a) (STuple  b) = apply Refl <$> testEquality a b
---   -- TODO
 
 -- | The interesting about the show instance is that it can tell apart two kinds nicely; since it conveniently
 -- ignores the enumeration constructors. Also, when we construct a 'KUserSort', we make sure we don't use any of
@@ -293,70 +235,6 @@ instance (Typeable a, HasKind a) => HasKind [a] where
 
 instance HasKind Kind where
   kindOf = id
-
-instance (HasKind a, HasKind b) => HasKind (a, b) where
-   kindOf _ = KTuple
-     [ kindOf (undefined :: a)
-     , kindOf (undefined :: b)
-     ]
-instance (HasKind a, HasKind b, HasKind c) => HasKind (a, b, c) where
-   kindOf _ = KTuple
-     [ kindOf (undefined :: a)
-     , kindOf (undefined :: b)
-     , kindOf (undefined :: c)
-     ]
-instance (HasKind a, HasKind b, HasKind c, HasKind d)
-  => HasKind (a, b, c, d) where
-   kindOf _ = KTuple
-     [ kindOf (undefined :: a)
-     , kindOf (undefined :: b)
-     , kindOf (undefined :: c)
-     , kindOf (undefined :: d)
-     ]
-instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e)
-  => HasKind (a, b, c, d, e) where
-   kindOf _ = KTuple
-     [ kindOf (undefined :: a)
-     , kindOf (undefined :: b)
-     , kindOf (undefined :: c)
-     , kindOf (undefined :: d)
-     , kindOf (undefined :: e)
-     ]
-instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f)
-  => HasKind (a, b, c, d, e, f) where
-   kindOf _ = KTuple
-     [ kindOf (undefined :: a)
-     , kindOf (undefined :: b)
-     , kindOf (undefined :: c)
-     , kindOf (undefined :: d)
-     , kindOf (undefined :: e)
-     , kindOf (undefined :: f)
-     ]
-instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f,
-  HasKind g)
-  => HasKind (a, b, c, d, e, f, g) where
-   kindOf _ = KTuple
-     [ kindOf (undefined :: a)
-     , kindOf (undefined :: b)
-     , kindOf (undefined :: c)
-     , kindOf (undefined :: d)
-     , kindOf (undefined :: e)
-     , kindOf (undefined :: f)
-     , kindOf (undefined :: g)
-     ]
-instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f,
-  HasKind g, HasKind h)
-  => HasKind (a, b, c, d, e, f, g, h) where
-   kindOf _ = KTuple
-     [ kindOf (undefined :: a)
-     , kindOf (undefined :: b)
-     , kindOf (undefined :: c)
-     , kindOf (undefined :: d)
-     , kindOf (undefined :: e)
-     , kindOf (undefined :: f)
-     , kindOf (undefined :: g)
-     , kindOf (undefined :: h)
-     ]
 
 instance HasKind (HList '[]) where
   kindOf _ = KTuple []

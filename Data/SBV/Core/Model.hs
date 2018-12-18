@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE BangPatterns          #-}
+{-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DefaultSignatures     #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -17,11 +18,9 @@
 {-# LANGUAGE PatternGuards         #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE Rank2Types            #-}
+{-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
-
-{-# LANGUAGE DataKinds  #-}
-{-# LANGUAGE TypeFamilies  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 
@@ -79,7 +78,6 @@ import Data.SBV.Provers.Prover (defaultSMTCfg, SafeResult(..), prove)
 import Data.SBV.SMT.SMT        (ThmResult, showModel)
 
 import Data.SBV.Utils.Lib      (isKString)
-
 
 -- Symbolic-Word class instances
 
@@ -250,6 +248,39 @@ class HListable tup where
 
 coerceTup :: SBV (HList (HLTy tup)) -> SBV tup
 coerceTup (SBV x) = SBV x
+
+instance (HasKind a, HasKind b) => HasKind (a, b) where
+   kindOf = kindOf . toHList
+
+instance (HasKind a, HasKind b, HasKind c) => HasKind (a, b, c) where
+   kindOf = kindOf . toHList
+
+instance (HasKind a, HasKind b, HasKind c, HasKind d)
+  => HasKind (a, b, c, d) where
+   kindOf = kindOf . toHList
+
+instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e)
+  => HasKind (a, b, c, d, e) where
+   kindOf = kindOf . toHList
+
+instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f)
+  => HasKind (a, b, c, d, e, f) where
+   kindOf = kindOf . toHList
+
+instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f,
+  HasKind g)
+  => HasKind (a, b, c, d, e, f, g) where
+   kindOf = kindOf . toHList
+
+instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f,
+  HasKind g, HasKind h)
+  => HasKind (a, b, c, d, e, f, g, h) where
+   kindOf = kindOf . toHList
+
+instance HListable (HList l) where
+  type HLTy (HList l) = l
+  toHList   = id
+  fromHList = id
 
 instance HListable (a, b) where
   type HLTy (a, b) = [a, b]

@@ -447,14 +447,16 @@ recoverKindedValue k e = case e of
                            ECon    s | isString        k -> Just $ CW KString  (CWString   (interpretString s))
                            ECon    s | isUninterpreted k -> Just $ CW k        (CWUserSort (getUIIndex k s, s))
                            _         | isList          k -> Just $ CW k        (CWList     (interpretList e))
+
+                           -- eg `(mk-tup-3 a b c)`
                            EApp (ECon f:args)
                              | "mk-tup-" `isPrefixOf` f
                              , Just n <- readMaybe (drop 7 f)
                              , length args == n
-                             , KTuple tupks <- k
+                             , KTuple argks <- k
                              -> CW k . CWTuple . fmap cwVal <$> traverse
                                (\(k', arg) -> recoverKindedValue k' arg)
-                               (zip tupks args)
+                               (zip argks args)
 
                            _ -> Nothing
   where isIntegralLike = or [f k | f <- [isBoolean, isBounded, isInteger, isReal, isFloat, isDouble]]

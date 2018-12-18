@@ -283,6 +283,14 @@ declSort (s, Right fs) = [ "(declare-datatypes () ((" ++ s ++ " " ++ unwords (ma
               body [_]    i = show i
               body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
 
+-- | Declare tuple datatypes
+--
+-- eg:
+--
+-- @
+-- (declare-datatypes (T1 T2)
+--   ((tup-2 (mk-tup-2 (proj-1 T1) (proj-2 T2)))))
+-- @
 declTuple :: [Kind] -> String
 declTuple ks =
   let n = length ks

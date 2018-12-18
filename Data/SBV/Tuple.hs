@@ -10,6 +10,7 @@ import Data.SBV.Core.Data hiding (StrOp(..))
 import Data.SBV.Core.Symbolic (svToSW)
 import Data.SBV.Core.Model (HListable(..))
 
+-- | Access the first field of a tuple or `HList`.
 field1
   :: forall a tup tys.
      (HListable tup, SymWord tup, SymWord a, HLTy tup ~ (a : tys))
@@ -20,6 +21,7 @@ field1 tup
   | True
   = symbolicFieldAccess 1 tup
 
+-- | Access the second field of a tuple or `HList`.
 field2
   :: forall a b tup tys.
      (HListable tup, SymWord tup, SymWord b, HLTy tup ~ (a : b : tys))
@@ -30,6 +32,7 @@ field2 tup
   | True
   = symbolicFieldAccess 2 tup
 
+-- | Access the third field of a tuple or `HList`.
 field3
   :: forall a b c tup tys.
      (HListable tup, SymWord tup, SymWord c, HLTy tup ~ (a : b : c : tys))
@@ -40,6 +43,7 @@ field3 tup
   | True
   = symbolicFieldAccess 3 tup
 
+-- | Access the fourth field of a tuple or `HList`.
 field4
   :: forall a b c d tup tys.
      (HListable tup, SymWord tup, SymWord d, HLTy tup ~ (a : b : c : d : tys))
@@ -50,6 +54,7 @@ field4 tup
   | True
   = symbolicFieldAccess 4 tup
 
+-- | Access the fifth field of a tuple or `HList`.
 field5
   :: forall a b c d e tup tys.
      ( HListable tup, SymWord tup, SymWord e
@@ -63,6 +68,7 @@ field5 tup
   | True
   = symbolicFieldAccess 5 tup
 
+-- | Access the sixth field of a tuple or `HList`.
 field6
   :: forall a b c d e f tup tys.
      ( HListable tup, SymWord tup, SymWord f
@@ -76,6 +82,7 @@ field6 tup
   | True
   = symbolicFieldAccess 6 tup
 
+-- | Access the seventh field of a tuple or `HList`.
 field7
   :: forall a b c d e f g tup tys.
      ( HListable tup, SymWord tup, SymWord g
@@ -89,6 +96,7 @@ field7 tup
   | True
   = symbolicFieldAccess 7 tup
 
+-- | Access the eighth field of a tuple or `HList`.
 field8
   :: forall a b c d e f g h tup tys.
      ( HListable tup, SymWord tup, SymWord h
