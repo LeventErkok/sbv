@@ -230,7 +230,7 @@ svCgOutput nm v = do _ <- outputSVal v
 svCgOutputArr :: String -> [SVal] -> SBVCodeGen ()
 svCgOutputArr nm vs
   | sz < 1 = error $ "SBV.cgOutputArr: Array outputs must have at least one element, received " ++ show sz ++ " for " ++ show nm
-  | True   = do _ <- mapM outputSVal vs
+  | True   = do mapM_ outputSVal vs
                 sws <- mapM svToSymSW vs
                 modify' (\s -> s { cgOutputs = (nm, CgArray sws) : cgOutputs s })
   where sz = length vs
@@ -245,7 +245,7 @@ svCgReturn v = do _ <- outputSVal v
 svCgReturnArr :: [SVal] -> SBVCodeGen ()
 svCgReturnArr vs
   | sz < 1 = error $ "SBV.cgReturnArr: Array returns must have at least one element, received " ++ show sz
-  | True   = do _ <- mapM outputSVal vs
+  | True   = do mapM_ outputSVal vs
                 sws <- mapM svToSymSW vs
                 modify' (\s -> s { cgReturns = CgArray sws : cgReturns s })
   where sz = length vs
@@ -276,7 +276,7 @@ cgOutput nm v = do _ <- output v
 cgOutputArr :: SymWord a => String -> [SBV a] -> SBVCodeGen ()
 cgOutputArr nm vs
   | sz < 1 = error $ "SBV.cgOutputArr: Array outputs must have at least one element, received " ++ show sz ++ " for " ++ show nm
-  | True   = do _ <- mapM output vs
+  | True   = do mapM_ output vs
                 sws <- mapM sbvToSymSW vs
                 modify' (\s -> s { cgOutputs = (nm, CgArray sws) : cgOutputs s })
   where sz = length vs
@@ -291,7 +291,7 @@ cgReturn v = do _ <- output v
 cgReturnArr :: SymWord a => [SBV a] -> SBVCodeGen ()
 cgReturnArr vs
   | sz < 1 = error $ "SBV.cgReturnArr: Array returns must have at least one element, received " ++ show sz
-  | True   = do _ <- mapM output vs
+  | True   = do mapM_ output vs
                 sws <- mapM sbvToSymSW vs
                 modify' (\s -> s { cgReturns = CgArray sws : cgReturns s })
   where sz = length vs
