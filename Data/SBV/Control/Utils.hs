@@ -49,12 +49,10 @@ import Data.Word
 import qualified Data.Map.Strict    as Map
 import qualified Data.IntMap.Strict as IMap
 
-import qualified Control.Monad.Reader as R (ask)
-
-import Control.Monad            (unless)
-import Control.Monad.State.Lazy (get, liftIO)
-
-import Control.Monad.State      (evalStateT)
+import Control.Monad            (join, unless)
+import Control.Monad.IO.Class   (MonadIO, liftIO)
+import Control.Monad.Trans      (lift)
+import Control.Monad.Reader     (runReaderT)
 
 import Data.IORef (readIORef, writeIORef)
 
@@ -62,17 +60,17 @@ import Data.Time (getZonedTime)
 
 import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, Kind(..)
                               , HasKind(..), mkConstCW, CWVal(..), SMTResult(..)
-                              , NamedSymVar, SMTConfig(..), Query, SMTModel(..)
+                              , NamedSymVar, SMTConfig(..), SMTModel(..)
                               , QueryState(..), SVal(..), Quantifier(..), cache
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..), SymArray(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSW, SymWord(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
                               )
 
-import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSW, Symbolic
-                              , QueryContext(..)
+import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSW, symbolicEnv, SymbolicT
+                              , MonadQuery(..), QueryContext(..)
                               , registerLabel, svMkSymVar
-                              , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), Query(..)
+                              , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), QueryT(..)
                               , extractSymbolicSimulationState
                               )
 
@@ -82,8 +80,8 @@ import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
 import Data.SBV.SMT.Utils   (showTimeoutValue, addAnnotations, alignPlain, debug, mergeSExpr, SBVException(..))
 
+import Data.SBV.Utils.ExtractIO
 import Data.SBV.Utils.Lib (qfsToString, isKString)
-
 import Data.SBV.Utils.SExpr
 import Data.SBV.Control.Types
 
@@ -96,11 +94,11 @@ import GHC.Stack
 import Unsafe.Coerce (unsafeCoerce) -- Only used safely!
 
 -- | 'Query' as a 'SolverContext'.
-instance SolverContext Query where
-   constrain                 = addQueryConstraint False []
-   softConstrain             = addQueryConstraint True  []
-   namedConstraint nm        = addQueryConstraint False [(":named", nm)]
-   constrainWithAttribute    = addQueryConstraint False
+instance MonadIO m => SolverContext (QueryT m) where
+   constrain              = addQueryConstraint False []
+   softConstrain          = addQueryConstraint True  []
+   namedConstraint nm     = addQueryConstraint False [(":named", nm)]
+   constrainWithAttribute = addQueryConstraint False
 
    setOption o
      | isStartModeOption o = error $ unlines [ ""
@@ -111,38 +109,38 @@ instance SolverContext Query where
 
 -- | Adding a constraint, possibly with attributes and possibly soft. Only used internally.
 -- Use 'constrain' and 'namedConstraint' from user programs.
-addQueryConstraint :: Bool -> [(String, String)] -> SBool -> Query ()
-addQueryConstraint isSoft atts b = do sw <- inNewContext (\st -> do mapM_ (registerLabel "Constraint" st) [nm | (":named", nm) <- atts]
-                                                                    sbvToSW st b)
+addQueryConstraint :: (MonadIO m, MonadQuery m) => Bool -> [(String, String)] -> SBool -> m ()
+addQueryConstraint isSoft atts b = do sw <- inNewContext (\st -> liftIO $ do mapM_ (registerLabel "Constraint" st) [nm | (":named", nm) <- atts]
+                                                                             sbvToSW st b)
                                       send True $ "(" ++ asrt ++ " " ++ addAnnotations atts (show sw)  ++ ")"
    where asrt | isSoft = "assert-soft"
               | True   = "assert"
 
 -- | Get the current configuration
-getConfig :: Query SMTConfig
+getConfig :: (MonadIO m, MonadQuery m) => m SMTConfig
 getConfig = queryConfig <$> getQueryState
 
 -- | Get the objectives
-getObjectives :: Query [Objective (SW, SW)]
-getObjectives = do State{rOptGoals} <- get
+getObjectives :: (MonadIO m, MonadQuery m) => m [Objective (SW, SW)]
+getObjectives = do State{rOptGoals} <- queryState
                    io $ reverse <$> readIORef rOptGoals
 
 -- | Get the program
-getSBVPgm :: Query SBVPgm
-getSBVPgm = do State{spgm} <- get
+getSBVPgm :: (MonadIO m, MonadQuery m) => m SBVPgm
+getSBVPgm = do State{spgm} <- queryState
                io $ readIORef spgm
 
 -- | Get the assertions put in via 'Data.SBV.sAssert'
-getSBVAssertions :: Query [(String, Maybe CallStack, SW)]
-getSBVAssertions = do State{rAsserts} <- get
+getSBVAssertions :: (MonadIO m, MonadQuery m) => m [(String, Maybe CallStack, SW)]
+getSBVAssertions = do State{rAsserts} <- queryState
                       io $ reverse <$> readIORef rAsserts
 
--- | Perform an arbitrary IO action.
-io :: IO a -> Query a
+-- | Generalization of 'Data.SBV.Control.io'
+io :: MonadIO m => IO a -> m a
 io = liftIO
 
 -- | Sync-up the external solver with new context we have generated
-syncUpSolver :: Bool -> IncState -> Query ()
+syncUpSolver :: (MonadIO m, MonadQuery m) => Bool -> IncState -> m ()
 syncUpSolver afterAPush is = do
         cfg <- getConfig
         ls  <- io $ do let swap  (a, b)        = (b, a)
@@ -159,9 +157,9 @@ syncUpSolver afterAPush is = do
         mapM_ (send True) $ mergeSExpr ls
 
 -- | Retrieve the query context
-getQueryState :: Query QueryState
-getQueryState = do state <- get
-                   mbQS  <- io $ readIORef (queryState state)
+getQueryState :: (MonadIO m, MonadQuery m) => m QueryState
+getQueryState = do state <- queryState
+                   mbQS  <- io $ readIORef (rQueryState state)
                    case mbQS of
                      Nothing -> error $ unlines [ ""
                                                 , "*** Data.SBV: Impossible happened: Query context required in a non-query mode."
@@ -169,69 +167,58 @@ getQueryState = do state <- get
                                                 ]
                      Just qs -> return qs
 
--- | Modify the query state
-modifyQueryState :: (QueryState -> QueryState) -> Query ()
-modifyQueryState f = do state <- get
-                        mbQS  <- io $ readIORef (queryState state)
+-- | Generalization of 'Data.SBV.Control.modifyQueryState'
+modifyQueryState :: (MonadIO m, MonadQuery m) => (QueryState -> QueryState) -> m ()
+modifyQueryState f = do state <- queryState
+                        mbQS  <- io $ readIORef (rQueryState state)
                         case mbQS of
                           Nothing -> error $ unlines [ ""
                                                      , "*** Data.SBV: Impossible happened: Query context required in a non-query mode."
                                                      , "Please report this as a bug!"
                                                      ]
                           Just qs -> let fqs = f qs
-                                     in fqs `seq` io $ writeIORef (queryState state) $ Just fqs
+                                     in fqs `seq` io $ writeIORef (rQueryState state) $ Just fqs
 
--- | Execute in a new incremental context
-inNewContext :: (State -> IO a) -> Query a
-inNewContext act = do st <- get
+-- | Generalization of 'Data.SBV.Control.inNewContext'
+inNewContext :: (MonadIO m, MonadQuery m) => (State -> IO a) -> m a
+inNewContext act = do st <- queryState
                       (is, r) <- io $ withNewIncState st act
-                      mbQS <- io . readIORef . queryState $ st
+                      mbQS <- io . readIORef . rQueryState $ st
                       let afterAPush = case mbQS of
                                          Nothing -> False
                                          Just qs -> isJust (queryTblArrPreserveIndex qs)
                       syncUpSolver afterAPush is
                       return r
 
--- | Similar to 'freshVar', except creates unnamed variable.
-freshVar_ :: forall a. SymWord a => Query (SBV a)
+-- | Generalization of 'Data.SBV.Control.freshVar_'
+freshVar_ :: forall a m. (MonadIO m, MonadQuery m, SymWord a) => m (SBV a)
 freshVar_ = inNewContext $ fmap SBV . svMkSymVar (Just EX) k Nothing
   where k = kindOf (undefined :: a)
 
--- | Create a fresh variable in query mode. You should prefer
--- creating input variables using 'Data.SBV.sBool', 'Data.SBV.sInt32', etc., which act
--- as primary inputs to the model and can be existential or universal.
--- Use 'freshVar' only in query mode for anonymous temporary variables.
--- Such variables are always existential. Note that 'freshVar' should hardly be
--- needed: Your input variables and symbolic expressions should suffice for
--- most major use cases.
-freshVar :: forall a. SymWord a => String -> Query (SBV a)
+-- | Generalization of 'Data.SBV.Control.freshVar'
+freshVar :: forall a m. (MonadIO m, MonadQuery m, SymWord a) => String -> m (SBV a)
 freshVar nm = inNewContext $ fmap SBV . svMkSymVar (Just EX) k (Just nm)
   where k = kindOf (undefined :: a)
 
--- | Similar to 'freshArray', except creates unnamed array.
-freshArray_ :: (SymArray array, HasKind a, HasKind b) => Maybe (SBV b) -> Query (array a b)
+-- | Generalization of 'Data.SBV.Control.freshArray_'
+freshArray_ :: (MonadIO m, MonadQuery m, SymArray array, HasKind a, HasKind b) => Maybe (SBV b) -> m (array a b)
 freshArray_ = mkFreshArray Nothing
 
--- | Create a fresh array in query mode. Again, you should prefer
--- creating arrays before the queries start using 'newArray', but this
--- method can come in handy in occasional cases where you need a new array
--- after you start the query based interaction.
-freshArray :: (SymArray array, HasKind a, HasKind b) => String -> Maybe (SBV b) -> Query (array a b)
+-- | Generalization of 'Data.SBV.Control.freshArray'
+freshArray :: (MonadIO m, MonadQuery m, SymArray array, HasKind a, HasKind b) => String -> Maybe (SBV b) -> m (array a b)
 freshArray nm = mkFreshArray (Just nm)
 
 -- | Creating arrays, internal use only.
-mkFreshArray :: (SymArray array, HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> Query (array a b)
+mkFreshArray :: (MonadIO m, MonadQuery m, SymArray array, HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> m (array a b)
 mkFreshArray mbNm mbVal = inNewContext $ newArrayInState mbNm mbVal
 
--- | If 'verbose' is 'True', print the message, useful for debugging messages
--- in custom queries. Note that 'redirectVerbose' will be respected: If a
--- file redirection is given, the output will go to the file.
-queryDebug :: [String] -> Query ()
+-- | Generalization of 'Data.SBV.Control.queryDebug'
+queryDebug :: (MonadIO m, MonadQuery m) => [String] -> m ()
 queryDebug msgs = do QueryState{queryConfig} <- getQueryState
                      io $ debug queryConfig msgs
 
--- | Send a string to the solver, and return the response
-ask :: String -> Query String
+-- | Generalization of 'Data.SBV.Control.ask'
+ask :: (MonadIO m, MonadQuery m) => String -> m String
 ask s = do QueryState{queryAsk, queryTimeOutValue} <- getQueryState
 
            case queryTimeOutValue of
@@ -244,7 +231,7 @@ ask s = do QueryState{queryAsk, queryTimeOutValue} <- getQueryState
 
 -- | Send a string to the solver, and return the response. Except, if the response
 -- is one of the "ignore" ones, keep querying.
-askIgnoring :: String -> [String] -> Query String
+askIgnoring :: (MonadIO m, MonadQuery m) => String -> [String] -> m String
 askIgnoring s ignoreList = do
 
            QueryState{queryAsk, queryRetrieveResponse, queryTimeOutValue} <- getQueryState
@@ -266,9 +253,8 @@ askIgnoring s ignoreList = do
 
            loop r
 
--- | Send a string to the solver. If the first argument is 'True', we will require
--- a "success" response as well. Otherwise, we'll fire and forget.
-send :: Bool -> String -> Query ()
+-- | Generalization of 'Data.SBV.Control.send'
+send :: (MonadIO m, MonadQuery m) => Bool -> String -> m ()
 send requireSuccess s = do
 
             QueryState{queryAsk, querySend, queryConfig, queryTimeOutValue} <- getQueryState
@@ -291,13 +277,8 @@ send requireSuccess s = do
 
                else io $ querySend queryTimeOutValue s  -- fire and forget. if you use this, you're on your own!
 
--- | Retrieve a responses from the solver until it produces a synchronization tag. We make the tag
--- unique by attaching a time stamp, so no need to worry about getting the wrong tag unless it happens
--- in the very same picosecond! We return multiple valid s-expressions till the solver responds with the tag.
--- Should only be used for internal tasks or when we want to synchronize communications, and not on a
--- regular basis! Use 'send'/'ask' for that purpose. This comes in handy, however, when solvers respond
--- multiple times as in optimization for instance, where we both get a check-sat answer and some objective values.
-retrieveResponse :: String -> Maybe Int -> Query [String]
+-- | Generalization of 'Data.SBV.Control.retrieveResponse'
+retrieveResponse :: (MonadIO m, MonadQuery m) => String -> Maybe Int -> m [String]
 retrieveResponse userTag mbTo = do
              ts  <- io (show <$> getZonedTime)
 
@@ -397,8 +378,8 @@ instance (SMTValue a, Typeable a) => SMTValue [a] where
 
    sexprToVal _                                       = Nothing
 
--- | Get the value of a term.
-getValue :: SMTValue a => SBV a -> Query a
+-- | Generalization of 'Data.SBV.Control.getValue'
+getValue :: (MonadIO m, MonadQuery m, SMTValue a) => SBV a -> m a
 getValue s = do sw <- inNewContext (`sbvToSW` s)
                 let nm  = show sw
                     cmd = "(get-value (" ++ nm ++ "))"
@@ -409,8 +390,8 @@ getValue s = do sw <- inNewContext (`sbvToSW` s)
                                                                                  Just c  -> return c
                                     _                                       -> bad r Nothing
 
--- | Get the value of an uninterpreted sort, as a String
-getUninterpretedValue :: HasKind a => SBV a -> Query String
+-- | Generalization of 'Data.SBV.Control.getUninterpretedValue'
+getUninterpretedValue :: (MonadIO m, MonadQuery m, HasKind a) => SBV a -> m String
 getUninterpretedValue s =
         case kindOf s of
           KUserSort _ (Left _) -> do sw <- inNewContext (`sbvToSW` s)
@@ -434,7 +415,7 @@ getUninterpretedValue s =
                                                   ]
 
 -- | Get the value of a term, but in CW form. Used internally. The model-index, in particular is extremely Z3 specific!
-getValueCWHelper :: Maybe Int -> SW -> Query CW
+getValueCWHelper :: (MonadIO m, MonadQuery m) => Maybe Int -> SW -> m CW
 getValueCWHelper mbi s = do
        let nm  = show s
            k   = kindOf s
@@ -503,9 +484,8 @@ recoverKindedValue k e = case e of
                        KList ik -> ik
                        _        -> error $ "Impossible: Expected a sequence kind, bug got: " ++ show k
 
--- | Get the value of a term. If the kind is Real and solver supports decimal approximations,
--- we will "squash" the representations.
-getValueCW :: Maybe Int -> SW -> Query CW
+-- | Generalization of 'Data.SBV.Control.getValueCW'
+getValueCW :: (MonadIO m, MonadQuery m) => Maybe Int -> SW -> m CW
 getValueCW mbi s
   | kindOf s /= KReal
   = getValueCWHelper mbi s
@@ -525,13 +505,13 @@ getValueCW mbi s
                     (CW KReal (CWAlgReal a), CW KReal (CWAlgReal b)) -> return $ CW KReal (CWAlgReal (mergeAlgReals ("Cannot merge real-values for " ++ show s) a b))
                     _                                                -> bad
 
--- | Check for satisfiability.
-checkSat :: Query CheckSatResult
+-- | Generalization of 'Data.SBV.Control.checkSat'
+checkSat :: (MonadIO m, MonadQuery m) => m CheckSatResult
 checkSat = do cfg <- getConfig
               checkSatUsing $ satCmd cfg
 
--- | Check for satisfiability with a custom check-sat-using command.
-checkSatUsing :: String -> Query CheckSatResult
+-- | Generalization of 'Data.SBV.Control.checkSatUsing'
+checkSatUsing :: (MonadIO m, MonadQuery m) => String -> m CheckSatResult
 checkSatUsing cmd = do let bad = unexpected "checkSat" cmd "one of sat/unsat/unknown" Nothing
 
                            -- Sigh.. Ignore some of the pesky warnings. We only do it as an exception here.
@@ -545,8 +525,8 @@ checkSatUsing cmd = do let bad = unexpected "checkSat" cmd "one of sat/unsat/unk
                                            _              -> bad r Nothing
 
 -- | What are the top level inputs? Trackers are returned as top level existentials
-getQuantifiedInputs :: Query [(Quantifier, NamedSymVar)]
-getQuantifiedInputs = do State{rinps} <- get
+getQuantifiedInputs :: (MonadIO m, MonadQuery m) => m [(Quantifier, NamedSymVar)]
+getQuantifiedInputs = do State{rinps} <- queryState
                          (rQinps, rTrackers) <- liftIO $ readIORef rinps
 
                          let qinps    = reverse rQinps
@@ -558,8 +538,8 @@ getQuantifiedInputs = do State{rinps} <- get
                          return $ preQs ++ trackers ++ postQs
 
 -- | Get observables, i.e., those explicitly labeled by the user with a call to 'Data.SBV.observe'.
-getObservables :: Query [(String, SW)]
-getObservables = do State{rObservables} <- get
+getObservables :: (MonadIO m, MonadQuery m) => m [(String, SW)]
+getObservables = do State{rObservables} <- queryState
 
                     rObs <- liftIO $ readIORef rObservables
 
@@ -567,12 +547,12 @@ getObservables = do State{rObservables} <- get
 
 -- | Repeatedly issue check-sat, after refuting the previous model.
 -- The bool is true if the model is unique upto prefix existentials.
-getAllSatResult :: Query (Bool, Bool, [SMTResult])
+getAllSatResult :: forall m. (MonadIO m, MonadQuery m, SolverContext m) => m (Bool, Bool, [SMTResult])
 getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                      cfg <- getConfig
 
-                     State{rUsedKinds} <- get
+                     State{rUsedKinds} <- queryState
 
                      ki    <- liftIO $ readIORef rUsedKinds
                      qinps <- getQuantifiedInputs
@@ -604,8 +584,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
          isFree _                      = False
 
          loop vars cfg = go (1::Int) []
-            where go :: Int -> [SMTResult] -> Query (Bool, [SMTResult])
-                  go !cnt sofar
+           where go :: Int -> [SMTResult] -> m (Bool, [SMTResult])
+                 go !cnt sofar
                    | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
                    = do queryDebug ["*** Maximum model count request of " ++ show maxModels ++ " reached, stopping the search."]
                         return (True, sofar)
@@ -664,9 +644,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                         Just d  -> do constrain d
                                                       go (cnt+1) resultsSoFar
 
--- | Retrieve the set of unsatisfiable assumptions, following a call to 'Data.SBV.Control.checkSatAssumingWithUnsatisfiableSet'. Note that
--- this function isn't exported to the user, but rather used internally. The user simple calls 'Data.SBV.Control.checkSatAssumingWithUnsatisfiableSet'.
-getUnsatAssumptions :: [String] -> [(String, a)] -> Query [a]
+-- | Generalization of 'Data.SBV.Control.getUnsatAssumptions'
+getUnsatAssumptions :: (MonadIO m, MonadQuery m) => [String] -> [(String, a)] -> m [a]
 getUnsatAssumptions originals proxyMap = do
         let cmd = "(get-unsat-assumptions)"
 
@@ -704,21 +683,8 @@ getUnsatAssumptions originals proxyMap = do
            EApp es | Just xs <- mapM fromECon es -> walk xs []
            _                                     -> bad r Nothing
 
--- | Timeout a query action, typically a command call to the underlying SMT solver.
--- The duration is in microseconds (@1\/10^6@ seconds). If the duration
--- is negative, then no timeout is imposed. When specifying long timeouts, be careful not to exceed
--- @maxBound :: Int@. (On a 64 bit machine, this bound is practically infinite. But on a 32 bit
--- machine, it corresponds to about 36 minutes!)
---
--- Semantics: The call @timeout n q@ causes the timeout value to be applied to all interactive calls that take place
--- as we execute the query @q@. That is, each call that happens during the execution of @q@ gets a separate
--- time-out value, as opposed to one timeout value that limits the whole query. This is typically the intended behavior.
--- It is advisible to apply this combinator to calls that involve a single call to the solver for
--- finer control, as opposed to an entire set of interactions. However, different use cases might call for different scenarios.
---
--- If the solver responds within the time-out specified, then we continue as usual. However, if the backend solver times-out
--- using this mechanism, there is no telling what the state of the solver will be. Thus, we raise an error in this case.
-timeout :: Int -> Query a -> Query a
+-- | Generalization of 'Data.SBV.Control.timeout'
+timeout :: (MonadIO m, MonadQuery m) => Int -> m a -> m a
 timeout n q = do modifyQueryState (\qs -> qs {queryTimeOutValue = Just n})
                  r <- q
                  modifyQueryState (\qs -> qs {queryTimeOutValue = Nothing})
@@ -730,8 +696,8 @@ parse r fCont sCont = case parseSExpr r of
                         Left  e   -> fCont r (Just [e])
                         Right res -> sCont res
 
--- | Bail out if we don't get what we expected
-unexpected :: String -> String -> String -> Maybe [String] -> String -> Maybe [String] -> Query a
+-- | Generalization of 'Data.SBV.Control.unexpected'
+unexpected :: (MonadIO m, MonadQuery m) => String -> String -> String -> Maybe [String] -> String -> Maybe [String] -> m a
 unexpected ctx sent expected mbHint received mbReason = do
         -- empty the response channel first
         extras <- retrieveResponse "terminating upon unexpected response" (Just 5000000)
@@ -786,10 +752,10 @@ runProofOn rm comments res@(Result ki _qcInfo _observables _codeSegs is consts t
 
      in SMTProblem { smtLibPgm = toSMTLib config ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o }
 
--- | Execute a query
-executeQuery :: QueryContext -> Query a -> Symbolic a
-executeQuery queryContext (Query userQuery) = do
-     st <- R.ask
+-- | Generalization of 'Data.SBV.Control.executeQuery'
+executeQuery :: forall m a. ExtractIO m => QueryContext -> QueryT m a -> SymbolicT m a
+executeQuery queryContext (QueryT userQuery) = do
+     st <- symbolicEnv
      rm <- liftIO $ readIORef (runMode st)
 
      -- If we're doing an external query, then we cannot allow quantifiers to be present. Why?
@@ -841,20 +807,21 @@ executeQuery queryContext (Query userQuery) = do
 
      case rm of
         -- Transitioning from setup
-        SMTMode stage isSAT cfg | not (isRunIStage stage) -> liftIO $ do
+        SMTMode stage isSAT cfg | not (isRunIStage stage) -> do
 
                                                 let backend = engine (solver cfg)
 
-                                                res     <- extractSymbolicSimulationState st
-                                                setOpts <- reverse <$> readIORef (rSMTOptions st)
+                                                res     <- liftIO $ extractSymbolicSimulationState st
+                                                setOpts <- liftIO $ reverse <$> readIORef (rSMTOptions st)
 
                                                 let SMTProblem{smtLibPgm} = runProofOn rm [] res
                                                     cfg' = cfg { solverSetOptions = solverSetOptions cfg ++ setOpts }
                                                     pgm  = smtLibPgm cfg'
 
-                                                writeIORef (runMode st) $ SMTMode IRun isSAT cfg
+                                                liftIO $ writeIORef (runMode st) $ SMTMode IRun isSAT cfg
 
-                                                backend cfg' st (show pgm) $ evalStateT userQuery
+                                                lift $ join $ liftIO $ backend cfg' st (show pgm) $
+                                                    extractIO . runReaderT userQuery
 
         -- Already in a query, in theory we can just continue, but that causes use-case issues
         -- so we reject it. TODO: Review if we should actually support this. The issue arises with

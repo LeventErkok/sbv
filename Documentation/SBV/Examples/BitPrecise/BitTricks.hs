@@ -10,6 +10,8 @@
 --      <http://graphics.stanford.edu/~seander/bithacks.html>
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleContexts #-}
+
 module Documentation.SBV.Examples.BitPrecise.BitTricks where
 
 import Data.SBV

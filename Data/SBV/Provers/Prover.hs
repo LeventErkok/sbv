@@ -9,14 +9,20 @@
 -- Provable abstraction and the connection to SMT solvers
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                  #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE NamedFieldPuns       #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE ConstraintKinds       #-}
+{-# LANGUAGE CPP                   #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
 
 module Data.SBV.Provers.Prover (
-         SMTSolver(..), SMTConfig(..), Predicate, Provable(..), Goal
+         SMTSolver(..), SMTConfig(..), Predicate
+       , MProvable(..), Provable, proveWithAll, proveWithAny , satWithAll, satWithAny
+       , generateSMTBenchmark
+       , Goal
        , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
        , SExecutable(..), isSafe
        , runSMT, runSMTWith
@@ -26,8 +32,9 @@ module Data.SBV.Provers.Prover (
        ) where
 
 
-import Control.Monad   (when, unless)
-import Control.DeepSeq (rnf, NFData(..))
+import Control.Monad          (when, unless)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.DeepSeq        (rnf, NFData(..))
 
 import Control.Concurrent.Async (async, waitAny, asyncThreadId, Async)
 import Control.Exception (finally, throwTo, AsyncException(ThreadKilled))
@@ -47,10 +54,12 @@ import qualified Data.Foldable   as S (toList)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.SMT.SMT
+import Data.SBV.Utils.Boolean
+import Data.SBV.Utils.ExtractIO
 import Data.SBV.Utils.TDiff
 import Data.SBV.Utils.PrettyNum
 
-import qualified Data.SBV.Control       as Control
+import qualified Data.SBV.Trans.Control as Control
 import qualified Data.SBV.Control.Query as Control
 import qualified Data.SBV.Control.Utils as Control
 
@@ -131,75 +140,49 @@ type Goal = Symbolic ()
 -- each element is either a symbolic type or up-to a 7-tuple of symbolic-types. So
 -- predicates can be constructed from almost arbitrary Haskell functions that have arbitrary
 -- shapes. (See the instance declarations below.)
-class Provable a where
-  -- | Turns a value into a universally quantified predicate, internally naming the inputs.
-  -- In this case the sbv library will use names of the form @s1, s2@, etc. to name these variables
-  -- Example:
-  --
-  -- >  forAll_ $ \(x::SWord8) y -> x `shiftL` 2 .== y
-  --
-  -- is a predicate with two arguments, captured using an ordinary Haskell function. Internally,
-  -- @x@ will be named @s0@ and @y@ will be named @s1@.
-  forAll_ :: a -> Predicate
+class ExtractIO m => MProvable m a where
+  -- | Generalization of 'Data.SBV.forAll_'
+  forAll_ :: a -> SymbolicT m SBool
 
-  -- | Turns a value into a predicate, allowing users to provide names for the inputs.
-  -- If the user does not provide enough number of names for the variables, the remaining ones
-  -- will be internally generated. Note that the names are only used for printing models and has no
-  -- other significance; in particular, we do not check that they are unique. Example:
-  --
-  -- >  forAll ["x", "y"] $ \(x::SWord8) y -> x `shiftL` 2 .== y
-  --
-  -- This is the same as above, except the variables will be named @x@ and @y@ respectively,
-  -- simplifying the counter-examples when they are printed.
-  forAll  :: [String] -> a -> Predicate
+  -- | Generalization of 'Data.SBV.forAll'
+  forAll  :: [String] -> a -> SymbolicT m SBool
 
-  -- | Turns a value into an existentially quantified predicate. (Indeed, 'exists' would have been
-  -- a better choice here for the name, but alas it's already taken.)
-  forSome_ :: a -> Predicate
+  -- | Generalization of 'Data.SBV.forSome_'
+  forSome_ :: a -> SymbolicT m SBool
 
-  -- | Version of 'forSome' that allows user defined names.
-  forSome :: [String] -> a -> Predicate
+  -- | Generalization of 'Data.SBV.forSome'
+  forSome :: [String] -> a -> SymbolicT m SBool
 
-  -- | Prove a predicate, using the default solver.
-  prove :: a -> IO ThmResult
+  -- | Generalization of 'Data.SBV.prove'
+  prove :: a -> m ThmResult
   prove = proveWith defaultSMTCfg
 
-  -- | Prove the predicate using the given SMT-solver.
-  proveWith :: SMTConfig -> a -> IO ThmResult
+  -- | Generalization of 'Data.SBV.proveWith'
+  proveWith :: SMTConfig -> a -> m ThmResult
   proveWith = runWithQuery False $ checkNoOptimizations >> ThmResult <$> Control.getSMTResult
 
-  -- | Find a satisfying assignment for a predicate, using the default solver.
-  sat :: a -> IO SatResult
+  -- | Generalization of 'Data.SBV.sat'
+  sat :: a -> m SatResult
   sat = satWith defaultSMTCfg
 
-  -- | Find a satisfying assignment using the given SMT-solver.
-  satWith :: SMTConfig -> a -> IO SatResult
+  -- | Generalization of 'Data.SBV.satWith'
+  satWith :: SMTConfig -> a -> m SatResult
   satWith = runWithQuery True $ checkNoOptimizations >> SatResult <$> Control.getSMTResult
 
-  -- | Find all satisfying assignments, using the default solver. See 'allSatWith' for details.
-  allSat :: a -> IO AllSatResult
+  -- | Generalization of 'Data.SBV.allSat'
+  allSat :: a -> m AllSatResult
   allSat = allSatWith defaultSMTCfg
 
-  -- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
-  -- Note that this call will block until all satisfying assignments are found. If you have a problem
-  -- with infinitely many satisfying models (consider 'SInteger') or a very large number of them, you
-  -- might have to wait for a long time. To avoid such cases, use the 'allSatMaxModelCount' parameter
-  -- in the configuration.
-  --
-  -- NB. Uninterpreted constant/function values and counter-examples for array values are ignored for
-  -- the purposes of 'allSat'. That is, only the satisfying assignments modulo uninterpreted functions and
-  -- array inputs will be returned. This is due to the limitation of not having a robust means of getting a
-  -- function counter-example back from the SMT solver.
-  --  Find all satisfying assignments using the given SMT-solver
-  allSatWith :: SMTConfig -> a -> IO AllSatResult
+  -- | Generalization of 'Data.SBV.allSatWith'
+  allSatWith :: SMTConfig -> a -> m AllSatResult
   allSatWith = runWithQuery True $ checkNoOptimizations >> AllSatResult <$> Control.getAllSatResult
 
-  -- | Optimize a given collection of `Objective`s
-  optimize :: OptimizeStyle -> a -> IO OptimizeResult
+  -- | Generalization of 'Data.SBV.optimize'
+  optimize :: OptimizeStyle -> a -> m OptimizeResult
   optimize = optimizeWith defaultSMTCfg
 
-  -- | Optimizes the objectives using the given SMT-solver.
-  optimizeWith :: SMTConfig -> OptimizeStyle -> a -> IO OptimizeResult
+  -- | Generalization of 'Data.SBV.optimizeWith'
+  optimizeWith :: SMTConfig -> OptimizeStyle -> a -> m OptimizeResult
   optimizeWith config style = runWithQuery True opt config
     where opt = do objectives <- Control.getObjectives
                    qinps      <- Control.getQuantifiedInputs
@@ -302,26 +285,28 @@ class Provable a where
                       Independent   -> IndependentResult   <$> Control.getIndependentOptResults (map objectiveName objectives)
                       Pareto mbN    -> ParetoResult        <$> Control.getParetoOptResults mbN
 
-  -- | Check if the constraints given are consistent, using the default solver.
-  isVacuous :: a -> IO Bool
+  -- | Generalization of 'Data.SBV.isVacuous'
+  isVacuous :: a -> m Bool
   isVacuous = isVacuousWith defaultSMTCfg
 
-  -- | Determine if the constraints are vacuous using the given SMT-solver.
-  isVacuousWith :: SMTConfig -> a -> IO Bool
+  -- | Generalization of 'Data.SBV.isVacuousWith'
+  isVacuousWith :: SMTConfig -> a -> m Bool
   isVacuousWith cfg a = -- NB. Can't call runWithQuery since last constraint would become the implication!
-                        fst <$> runSymbolic (SMTMode ISetup True cfg) (forSome_ a >> Control.query check)
-     where check = do cs <- Control.checkSat
-                      case cs of
-                        Control.Unsat -> return True
-                        Control.Sat   -> return False
-                        Control.Unk   -> error "SBV: isVacuous: Solver returned unknown!"
+       fst <$> runSymbolic (SMTMode ISetup True cfg) (forSome_ a >> Control.query check)
+     where
+       check :: QueryT m Bool
+       check = do cs <- Control.checkSat
+                  case cs of
+                    Control.Unsat -> return True
+                    Control.Sat   -> return False
+                    Control.Unk   -> error "SBV: isVacuous: Solver returned unknown!"
 
-  -- | Checks theoremhood using the default solver.
-  isTheorem :: a -> IO Bool
+  -- | Generalization of 'Data.SBV.isTheorem'
+  isTheorem :: a -> m Bool
   isTheorem = isTheoremWith defaultSMTCfg
 
-  -- | Check whether a given property is a theorem.
-  isTheoremWith :: SMTConfig -> a -> IO Bool
+  -- | Generalization of 'Data.SBV.isTheoremWith'
+  isTheoremWith :: SMTConfig -> a -> m Bool
   isTheoremWith cfg p = do r <- proveWith cfg p
                            case r of
                              ThmResult Unsatisfiable{} -> return True
@@ -329,61 +314,63 @@ class Provable a where
                              _                         -> error $ "SBV.isTheorem: Received:\n" ++ show r
 
 
-  -- | Checks satisfiability using the default solver.
-  isSatisfiable :: a -> IO Bool
+  -- | Generalization of 'Data.SBV.isSatisfiable'
+  isSatisfiable :: a -> m Bool
   isSatisfiable = isSatisfiableWith defaultSMTCfg
 
-  -- | Check whether a given property is satisfiable.
-  isSatisfiableWith :: SMTConfig -> a -> IO Bool
+  -- | Generalization of 'Data.SBV.isSatisfiableWith'
+  isSatisfiableWith :: SMTConfig -> a -> m Bool
   isSatisfiableWith cfg p = do r <- satWith cfg p
                                case r of
                                  SatResult Satisfiable{}   -> return True
                                  SatResult Unsatisfiable{} -> return False
                                  _                         -> error $ "SBV.isSatisfiable: Received: " ++ show r
 
-  -- | Prove a property with multiple solvers, running them in separate threads. The
-  -- results will be returned in the order produced.
-  proveWithAll :: [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, ThmResult)]
-  proveWithAll  = (`sbvWithAll` proveWith)
+type Provable = MProvable IO
 
-  -- | Prove a property with multiple solvers, running them in separate threads. Only
-  -- the result of the first one to finish will be returned, remaining threads will be killed.
-  -- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
-  -- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
-  -- that some processes take their time to terminate. So, this solution favors quick turnaround.
-  proveWithAny :: [SMTConfig] -> a -> IO (Solver, NominalDiffTime, ThmResult)
-  proveWithAny  = (`sbvWithAny` proveWith)
+-- | Prove a property with multiple solvers, running them in separate threads. The
+-- results will be returned in the order produced.
+proveWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, ThmResult)]
+proveWithAll  = (`sbvWithAll` proveWith)
 
-  -- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. The
-  -- results will be returned in the order produced.
-  satWithAll :: [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, SatResult)]
-  satWithAll = (`sbvWithAll` satWith)
+-- | Prove a property with multiple solvers, running them in separate threads. Only
+-- the result of the first one to finish will be returned, remaining threads will be killed.
+-- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
+-- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
+-- that some processes take their time to terminate. So, this solution favors quick turnaround.
+proveWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, NominalDiffTime, ThmResult)
+proveWithAny  = (`sbvWithAny` proveWith)
 
-  -- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. Only
-  -- the result of the first one to finish will be returned, remaining threads will be killed.
-  -- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
-  -- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
-  -- that some processes take their time to terminate. So, this solution favors quick turnaround.
-  satWithAny :: [SMTConfig] -> a -> IO (Solver, NominalDiffTime, SatResult)
-  satWithAny    = (`sbvWithAny` satWith)
+-- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. The
+-- results will be returned in the order produced.
+satWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, SatResult)]
+satWithAll = (`sbvWithAll` satWith)
 
-  -- | Create an SMT-Lib2 benchmark. The 'Bool' argument controls whether this is a SAT instance, i.e.,
-  -- translate the query directly, or a PROVE instance, i.e., translate the negated query.
-  generateSMTBenchmark :: Bool -> a -> IO String
-  generateSMTBenchmark isSat a = do
-        t <- getZonedTime
+-- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. Only
+-- the result of the first one to finish will be returned, remaining threads will be killed.
+-- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
+-- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
+-- that some processes take their time to terminate. So, this solution favors quick turnaround.
+satWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, NominalDiffTime, SatResult)
+satWithAny    = (`sbvWithAny` satWith)
 
-        let comments = ["Automatically created by SBV on " ++ show t]
-            cfg      = defaultSMTCfg { smtLibVersion = SMTLib2 }
+-- | Create an SMT-Lib2 benchmark. The 'Bool' argument controls whether this is a SAT instance, i.e.,
+-- translate the query directly, or a PROVE instance, i.e., translate the negated query.
+generateSMTBenchmark :: (MonadIO m, MProvable m a) => Bool -> a -> m String
+generateSMTBenchmark isSat a = do
+      t <- liftIO getZonedTime
 
-        (_, res) <- runSymbolic (SMTMode ISetup isSat cfg) $ (if isSat then forSome_ else forAll_) a >>= output
+      let comments = ["Automatically created by SBV on " ++ show t]
+          cfg      = defaultSMTCfg { smtLibVersion = SMTLib2 }
 
-        let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode IRun isSat cfg) comments res
-            out                   = show (smtLibPgm cfg)
+      (_, res) <- runSymbolic (SMTMode ISetup isSat cfg) $ (if isSat then forSome_ else forAll_) a >>= output
 
-        return $ out ++ "\n(check-sat)\n"
+      let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode IRun isSat cfg) comments res
+          out                   = show (smtLibPgm cfg)
 
-checkNoOptimizations :: Query ()
+      return $ out ++ "\n(check-sat)\n"
+
+checkNoOptimizations :: MonadIO m => QueryT m ()
 checkNoOptimizations = do objectives <- Control.getObjectives
 
                           unless (null objectives) $
@@ -392,7 +379,15 @@ checkNoOptimizations = do objectives <- Control.getObjectives
                                                 , "*** Use \"optimize\"/\"optimizeWith\" to calculate optimal satisfaction!"
                                                 ]
 
-instance Provable Predicate where
+-- If we get a program producing nothing (i.e., Symbolic ()), pretend it simply returns True.
+-- This is useful since min/max calls and constraints will provide the context
+instance ExtractIO m => MProvable m (SymbolicT m ()) where
+  forAll_    a = forAll_    ((a >> return true) :: SymbolicT m SBool)
+  forAll ns  a = forAll ns  ((a >> return true) :: SymbolicT m SBool)
+  forSome_   a = forSome_   ((a >> return true) :: SymbolicT m SBool)
+  forSome ns a = forSome ns ((a >> return true) :: SymbolicT m SBool)
+
+instance ExtractIO m => MProvable m (SymbolicT m SBool) where
   forAll_    = id
   forAll []  = id
   forAll xs  = error $ "SBV.forAll: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
@@ -400,7 +395,7 @@ instance Provable Predicate where
   forSome [] = id
   forSome xs = error $ "SBV.forSome: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
 
-instance Provable SBool where
+instance ExtractIO m => MProvable m SBool where
   forAll_   = return
   forAll _  = return
   forSome_  = return
@@ -419,7 +414,7 @@ instance Provable Bool where
 -}
 
 -- Functions
-instance (SymWord a, Provable p) => Provable (SBV a -> p) where
+instance (SymWord a, MProvable m p) => MProvable m (SBV a -> p) where
   forAll_        k = forall_   >>= \a -> forAll_   $ k a
   forAll (s:ss)  k = forall s  >>= \a -> forAll ss $ k a
   forAll []      k = forAll_ k
@@ -428,7 +423,7 @@ instance (SymWord a, Provable p) => Provable (SBV a -> p) where
   forSome []     k = forSome_ k
 
 -- SFunArrays (memory, functional representation), only supported universally for the time being
-instance (HasKind a, HasKind b, Provable p) => Provable (SArray a b -> p) where
+instance (HasKind a, HasKind b, MProvable m p) => MProvable m (SArray a b -> p) where
   forAll_       k = newArray_  Nothing >>= \a -> forAll_   $ k a
   forAll (s:ss) k = newArray s Nothing >>= \a -> forAll ss $ k a
   forAll []     k = forAll_ k
@@ -436,7 +431,7 @@ instance (HasKind a, HasKind b, Provable p) => Provable (SArray a b -> p) where
   forSome _     _ = error "SBV.forSome.SFunArray: Existential arrays are not currently supported."
 
 -- SArrays (memory, SMT-Lib notion of arrays), only supported universally for the time being
-instance (HasKind a, HasKind b, Provable p) => Provable (SFunArray a b -> p) where
+instance (HasKind a, HasKind b, MProvable m p) => MProvable m (SFunArray a b -> p) where
   forAll_       k = newArray_  Nothing >>= \a -> forAll_   $ k a
   forAll (s:ss) k = newArray s Nothing >>= \a -> forAll ss $ k a
   forAll []     k = forAll_ k
@@ -444,7 +439,7 @@ instance (HasKind a, HasKind b, Provable p) => Provable (SFunArray a b -> p) whe
   forSome _     _ = error "SBV.forSome.SArray: Existential arrays are not currently supported."
 
 -- 2 Tuple
-instance (SymWord a, SymWord b, Provable p) => Provable ((SBV a, SBV b) -> p) where
+instance (SymWord a, SymWord b, MProvable m p) => MProvable m ((SBV a, SBV b) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b -> k (a, b)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b -> k (a, b)
   forAll []      k = forAll_ k
@@ -453,7 +448,7 @@ instance (SymWord a, SymWord b, Provable p) => Provable ((SBV a, SBV b) -> p) wh
   forSome []     k = forSome_ k
 
 -- 3 Tuple
-instance (SymWord a, SymWord b, SymWord c, Provable p) => Provable ((SBV a, SBV b, SBV c) -> p) where
+instance (SymWord a, SymWord b, SymWord c, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c) -> p) where
   forAll_       k  = forall_  >>= \a -> forAll_   $ \b c -> k (a, b, c)
   forAll (s:ss) k  = forall s >>= \a -> forAll ss $ \b c -> k (a, b, c)
   forAll []     k  = forAll_ k
@@ -462,7 +457,7 @@ instance (SymWord a, SymWord b, SymWord c, Provable p) => Provable ((SBV a, SBV 
   forSome []     k = forSome_ k
 
 -- 4 Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, Provable p) => Provable ((SBV a, SBV b, SBV c, SBV d) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b c d -> k (a, b, c, d)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d -> k (a, b, c, d)
   forAll []      k = forAll_ k
@@ -471,7 +466,7 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, Provable p) => Provable ((
   forSome []     k = forSome_ k
 
 -- 5 Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, Provable p) => Provable ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e -> k (a, b, c, d, e)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e -> k (a, b, c, d, e)
   forAll []      k = forAll_ k
@@ -480,7 +475,7 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, Provable p) => 
   forSome []     k = forSome_ k
 
 -- 6 Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, Provable p) => Provable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e f -> k (a, b, c, d, e, f)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e f -> k (a, b, c, d, e, f)
   forAll []      k = forAll_ k
@@ -489,7 +484,7 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, Prov
   forSome []     k = forSome_ k
 
 -- 7 Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, Provable p) => Provable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   forAll []      k = forAll_ k
@@ -497,16 +492,16 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymW
   forSome (s:ss) k = exists s >>= \a -> forSome ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   forSome []     k = forSome_ k
 
--- | Run an arbitrary symbolic computation, equivalent to @'runSMTWith' 'defaultSMTCfg'@
-runSMT :: Symbolic a -> IO a
+-- | Generalization of 'Data.SBV.runSMT'
+runSMT :: MonadIO m => SymbolicT m a -> m a
 runSMT = runSMTWith defaultSMTCfg
 
--- | Runs an arbitrary symbolic computation, exposed to the user in SAT mode
-runSMTWith :: SMTConfig -> Symbolic a -> IO a
+-- | Generalization of 'Data.SBV.runSMTWith'
+runSMTWith :: MonadIO m => SMTConfig -> SymbolicT m a -> m a
 runSMTWith cfg a = fst <$> runSymbolic (SMTMode ISetup True cfg) a
 
 -- | Runs with a query.
-runWithQuery :: Provable a => Bool -> Query b -> SMTConfig -> a -> IO b
+runWithQuery :: MProvable m a => Bool -> QueryT m b -> SMTConfig -> a -> m b
 runWithQuery isSAT q cfg a = fst <$> runSymbolic (SMTMode ISetup isSAT cfg) comp
   where comp =  do _ <- (if isSAT then forSome_ else forAll_) a >>= output
                    Control.executeQuery QueryInternal q
@@ -554,26 +549,29 @@ sbvWithAll solvers what a = do beginTime <- getCurrentTime
 
 -- | Symbolically executable program fragments. This class is mainly used for 'safe' calls, and is sufficently populated internally to cover most use
 -- cases. Users can extend it as they wish to allow 'safe' checks for SBV programs that return/take types that are user-defined.
-class SExecutable a where
-   sName_ :: a -> Symbolic ()
-   sName  :: [String] -> a -> Symbolic ()
+class ExtractIO m => SExecutable m a where
+   -- | Generalization of 'Data.SBV.sName_'
+   sName_ :: a -> SymbolicT m ()
+   -- | Generalization of 'Data.SBV.sName'
+   sName  :: [String] -> a -> SymbolicT m ()
 
-   -- | Check safety using the default solver.
-   safe :: a -> IO [SafeResult]
+   -- | Generalization of 'Data.SBV.safe'
+   safe :: a -> m [SafeResult]
    safe = safeWith defaultSMTCfg
 
-   -- | Check if any of the 'Data.SBV.sAssert' calls can be violated.
-   safeWith :: SMTConfig -> a -> IO [SafeResult]
-   safeWith cfg a = do cwd <- (++ "/") <$> getCurrentDirectory
+   -- | Generalization of 'Data.SBV.safeWith'
+   safeWith :: SMTConfig -> a -> m [SafeResult]
+   safeWith cfg a = do cwd <- (++ "/") <$> liftIO getCurrentDirectory
                        let mkRelative path
                               | cwd `isPrefixOf` path = drop (length cwd) path
                               | True                  = path
                        fst <$> runSymbolic (SMTMode ISafe True cfg) (sName_ a >> check mkRelative)
-     where check mkRelative = Control.query $ Control.getSBVAssertions >>= mapM (verify mkRelative)
+     where check :: (FilePath -> FilePath) -> SymbolicT m [SafeResult]
+           check mkRelative = Control.query $ Control.getSBVAssertions >>= mapM (verify mkRelative)
 
            -- check that the cond is unsatisfiable. If satisfiable, that would
            -- indicate the assignment under which the 'Data.SBV.sAssert' would fail
-           verify :: (FilePath -> FilePath) -> (String, Maybe CallStack, SW) -> Query SafeResult
+           verify :: (FilePath -> FilePath) -> (String, Maybe CallStack, SW) -> QueryT m SafeResult
            verify mkRelative (msg, cs, cond) = do
                    let locInfo ps = let loc (f, sl) = concat [mkRelative (srcLocFile sl), ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
                                     in intercalate ",\n " (map loc ps)
@@ -587,93 +585,93 @@ class SExecutable a where
 
                    return $ SafeResult (location, msg, result)
 
-instance NFData a => SExecutable (Symbolic a) where
+instance (ExtractIO m, NFData a) => SExecutable m (SymbolicT m a) where
    sName_   a = a >>= \r -> rnf r `seq` return ()
    sName []   = sName_
    sName xs   = error $ "SBV.SExecutable.sName: Extra unmapped name(s): " ++ intercalate ", " xs
 
-instance SExecutable (SBV a) where
-   sName_   v = sName_ (output v)
-   sName xs v = sName xs (output v)
+instance ExtractIO m => SExecutable m (SBV a) where
+   sName_   v = sName_   (output v :: SymbolicT m (SBV a))
+   sName xs v = sName xs (output v :: SymbolicT m (SBV a))
 
 -- Unit output
-instance SExecutable () where
-   sName_   () = sName_   (output ())
-   sName xs () = sName xs (output ())
+instance ExtractIO m => SExecutable m () where
+   sName_   () = sName_   (output () :: SymbolicT m ())
+   sName xs () = sName xs (output () :: SymbolicT m ())
 
 -- List output
-instance SExecutable [SBV a] where
-   sName_   vs = sName_   (output vs)
-   sName xs vs = sName xs (output vs)
+instance ExtractIO m => SExecutable m [SBV a] where
+   sName_   vs = sName_   (output vs :: SymbolicT m [SBV a])
+   sName xs vs = sName xs (output vs :: SymbolicT m [SBV a])
 
 -- 2 Tuple output
-instance (NFData a, SymWord a, NFData b, SymWord b) => SExecutable (SBV a, SBV b) where
-  sName_ (a, b) = sName_ (output a >> output b)
+instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b) => SExecutable m (SBV a, SBV b) where
+  sName_ (a, b) = sName_ (output a >> output b :: SymbolicT m (SBV b))
   sName _       = sName_
 
 -- 3 Tuple output
-instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c) => SExecutable (SBV a, SBV b, SBV c) where
-  sName_ (a, b, c) = sName_ (output a >> output b >> output c)
+instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c) => SExecutable m (SBV a, SBV b, SBV c) where
+  sName_ (a, b, c) = sName_ (output a >> output b >> output c :: SymbolicT m (SBV c))
   sName _          = sName_
 
 -- 4 Tuple output
-instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d) => SExecutable (SBV a, SBV b, SBV c, SBV d) where
-  sName_ (a, b, c, d) = sName_ (output a >> output b >> output c >> output c >> output d)
+instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d) => SExecutable m (SBV a, SBV b, SBV c, SBV d) where
+  sName_ (a, b, c, d) = sName_ (output a >> output b >> output c >> output c >> output d :: SymbolicT m (SBV d))
   sName _             = sName_
 
 -- 5 Tuple output
-instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e) => SExecutable (SBV a, SBV b, SBV c, SBV d, SBV e) where
-  sName_ (a, b, c, d, e) = sName_ (output a >> output b >> output c >> output d >> output e)
+instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e) where
+  sName_ (a, b, c, d, e) = sName_ (output a >> output b >> output c >> output d >> output e :: SymbolicT m (SBV e))
   sName _                = sName_
 
 -- 6 Tuple output
-instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f) => SExecutable (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
-  sName_ (a, b, c, d, e, f) = sName_ (output a >> output b >> output c >> output d >> output e >> output f)
+instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
+  sName_ (a, b, c, d, e, f) = sName_ (output a >> output b >> output c >> output d >> output e >> output f :: SymbolicT m (SBV f))
   sName _                   = sName_
 
 -- 7 Tuple output
-instance (NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f, NFData g, SymWord g) => SExecutable (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
-  sName_ (a, b, c, d, e, f, g) = sName_ (output a >> output b >> output c >> output d >> output e >> output f >> output g)
+instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f, NFData g, SymWord g) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
+  sName_ (a, b, c, d, e, f, g) = sName_ (output a >> output b >> output c >> output d >> output e >> output f >> output g :: SymbolicT m (SBV g))
   sName _                      = sName_
 
 -- Functions
-instance (SymWord a, SExecutable p) => SExecutable (SBV a -> p) where
+instance (SymWord a, SExecutable m p) => SExecutable m (SBV a -> p) where
    sName_        k = exists_   >>= \a -> sName_   $ k a
    sName (s:ss)  k = exists s  >>= \a -> sName ss $ k a
    sName []      k = sName_ k
 
 -- 2 Tuple input
-instance (SymWord a, SymWord b, SExecutable p) => SExecutable ((SBV a, SBV b) -> p) where
+instance (SymWord a, SymWord b, SExecutable m p) => SExecutable m ((SBV a, SBV b) -> p) where
   sName_        k = exists_  >>= \a -> sName_   $ \b -> k (a, b)
   sName (s:ss)  k = exists s >>= \a -> sName ss $ \b -> k (a, b)
   sName []      k = sName_ k
 
 -- 3 Tuple input
-instance (SymWord a, SymWord b, SymWord c, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c) -> p) where
   sName_       k  = exists_  >>= \a -> sName_   $ \b c -> k (a, b, c)
   sName (s:ss) k  = exists s >>= \a -> sName ss $ \b c -> k (a, b, c)
   sName []     k  = sName_ k
 
 -- 4 Tuple input
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
   sName_        k = exists_  >>= \a -> sName_   $ \b c d -> k (a, b, c, d)
   sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d -> k (a, b, c, d)
   sName []      k = sName_ k
 
 -- 5 Tuple input
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
   sName_        k = exists_  >>= \a -> sName_   $ \b c d e -> k (a, b, c, d, e)
   sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e -> k (a, b, c, d, e)
   sName []      k = sName_ k
 
 -- 6 Tuple input
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
   sName_        k = exists_  >>= \a -> sName_   $ \b c d e f -> k (a, b, c, d, e, f)
   sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e f -> k (a, b, c, d, e, f)
   sName []      k = sName_ k
 
 -- 7 Tuple input
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, SExecutable p) => SExecutable ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
   sName_        k = exists_  >>= \a -> sName_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
   sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   sName []      k = sName_ k

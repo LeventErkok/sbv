@@ -10,9 +10,11 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE    CPP                        #-}
+{-# LANGUAGE    DefaultSignatures          #-}
 {-# LANGUAGE    DeriveDataTypeable         #-}
 {-# LANGUAGE    DeriveFunctor              #-}
 {-# LANGUAGE    FlexibleInstances          #-}
+{-# LANGUAGE    GADTs                      #-}
 {-# LANGUAGE    GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE    MultiParamTypeClasses      #-}
 {-# LANGUAGE    NamedFieldPuns             #-}
@@ -22,6 +24,7 @@
 {-# LANGUAGE    TupleSections              #-}
 {-# LANGUAGE    TypeOperators              #-}
 {-# LANGUAGE    TypeSynonymInstances       #-}
+{-# LANGUAGE    UndecidableInstances       #-} -- for undetermined s in MonadState
 {-# OPTIONS_GHC -fno-warn-orphans          #-}
 
 module Data.SBV.Core.Symbolic
@@ -41,7 +44,7 @@ module Data.SBV.Core.Symbolic
   , NamedSymVar
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
-  , SBVPgm(..), Symbolic, runSymbolic, State(..), withNewIncState, IncState(..), incrementInternalCounter
+  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, State(..), withNewIncState, IncState(..), incrementInternalCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..)
   , registerKind, registerLabel, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable
@@ -49,34 +52,42 @@ module Data.SBV.Core.Symbolic
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
-  , Query(..), QueryState(..), QueryContext(..)
+  , MonadQuery(..), QueryT(..), Query, QueryState(..), QueryContext(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
   , outputSVal
   ) where
 
-import Control.Arrow            (first, second, (***))
-import Control.DeepSeq          (NFData(..))
-import Control.Monad            (when, unless)
-import Control.Monad.Reader     (MonadReader, ReaderT, ask, runReaderT)
-import Control.Monad.State.Lazy (MonadState, StateT(..))
-import Control.Monad.Trans      (MonadIO, liftIO)
-import Data.Char                (isAlpha, isAlphaNum, toLower)
-import Data.IORef               (IORef, newIORef, readIORef)
-import Data.List                (intercalate, sortBy)
-import Data.Maybe               (isJust, fromJust, fromMaybe, listToMaybe)
-import Data.String              (IsString(fromString))
+import Control.Arrow               (first, second, (***))
+import Control.DeepSeq             (NFData(..))
+import Control.Monad               (when, unless)
+import Control.Monad.Except        (MonadError, ExceptT)
+import Control.Monad.Reader        (MonadReader(..), ReaderT, runReaderT,
+                                    mapReaderT)
+import Control.Monad.State.Lazy    (MonadState)
+import Control.Monad.Trans         (MonadIO(liftIO), MonadTrans(lift))
+import Control.Monad.Trans.Maybe   (MaybeT)
+import Control.Monad.Writer.Strict (MonadWriter)
+import Data.Char                   (isAlpha, isAlphaNum, toLower)
+import Data.IORef                  (IORef, newIORef, readIORef)
+import Data.List                   (intercalate, sortBy)
+import Data.Maybe                  (isJust, fromJust, fromMaybe, listToMaybe)
+import Data.String                 (IsString(fromString))
 
 import Data.Time (getCurrentTime, UTCTime)
 
 import GHC.Stack
 
-import qualified Data.IORef         as R    (modifyIORef')
-import qualified Data.Generics      as G    (Data(..))
-import qualified Data.IntMap.Strict as IMap (IntMap, empty, toAscList, lookup, insertWith)
-import qualified Data.Map.Strict    as Map  (Map, empty, toList, lookup, insert, size)
-import qualified Data.Set           as Set  (Set, empty, toList, insert, member)
-import qualified Data.Foldable      as F    (toList)
-import qualified Data.Sequence      as S    (Seq, empty, (|>))
+import qualified Control.Monad.State.Lazy    as LS
+import qualified Control.Monad.State.Strict  as SS
+import qualified Control.Monad.Writer.Lazy   as LW
+import qualified Control.Monad.Writer.Strict as SW
+import qualified Data.IORef                  as R    (modifyIORef')
+import qualified Data.Generics               as G    (Data(..))
+import qualified Data.IntMap.Strict          as IMap (IntMap, empty, toAscList, lookup, insertWith)
+import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size)
+import qualified Data.Set                    as Set  (Set, empty, toList, insert, member)
+import qualified Data.Foldable               as F    (toList)
+import qualified Data.Sequence               as S    (Seq, empty, (|>))
 
 import System.Mem.StableName
 
@@ -486,9 +497,42 @@ data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -
                              , queryTblArrPreserveIndex :: Maybe (Int, Int)
                              }
 
--- | A query is a user-guided mechanism to directly communicate and extract results from the solver.
-newtype Query a = Query (StateT State IO a)
-             deriving (Applicative, Functor, Monad, MonadIO, MonadState State)
+-- | Computations which support query operations.
+class Monad m => MonadQuery m where
+  queryState :: m State
+
+  default queryState :: (MonadTrans t, MonadQuery m', m ~ t m') => m State
+  queryState = lift queryState
+
+instance MonadQuery m             => MonadQuery (ExceptT e m)
+instance MonadQuery m             => MonadQuery (MaybeT m)
+instance MonadQuery m             => MonadQuery (ReaderT r m)
+instance MonadQuery m             => MonadQuery (SS.StateT s m)
+instance MonadQuery m             => MonadQuery (LS.StateT s m)
+instance (MonadQuery m, Monoid w) => MonadQuery (SW.WriterT w m)
+instance (MonadQuery m, Monoid w) => MonadQuery (LW.WriterT w m)
+
+-- | A query is a user-guided mechanism to directly communicate and extract
+-- results from the solver. A generalization of 'Data.SBV.Query'.
+newtype QueryT m a = QueryT { runQueryT :: ReaderT State m a }
+    deriving (Applicative, Functor, Monad, MonadIO, MonadTrans,
+              MonadError e, MonadState s, MonadWriter w)
+
+instance Monad m => MonadQuery (QueryT m) where
+  queryState = QueryT ask
+
+mapQueryT :: (ReaderT State m a -> ReaderT State n b) -> QueryT m a -> QueryT n b
+mapQueryT f = QueryT . f . runQueryT
+{-# INLINE mapQueryT #-}
+
+-- Have to define this one by hand, because we use ReaderT in the implementation
+instance MonadReader r m => MonadReader r (QueryT m) where
+  ask = lift ask
+  local f = mapQueryT $ mapReaderT $ local f
+
+-- | A query is a user-guided mechanism to directly communicate and extract
+-- results from the solver.
+type Query = QueryT IO
 
 instance NFData OptimizeStyle where
    rnf x = x `seq` ()
@@ -756,7 +800,7 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rSWCache     :: IORef (Cache SW)
                     , rAICache     :: IORef (Cache ArrayIndex)
                     , rFAICache    :: IORef (Cache FArrayIndex)
-                    , queryState   :: IORef (Maybe QueryState)
+                    , rQueryState  :: IORef (Maybe QueryState)
                     }
 
 -- NFData is a bit of a lie, but it's sufficient, most of the content is iorefs that we don't want to touch
@@ -870,12 +914,12 @@ newUninterpreted st nm t mbCode
 
                               -- No need to record the code in interactive mode: CodeGen doesn't use interactive
                               when (isJust mbCode) $ modifyState st rCgMap (Map.insert nm (fromJust mbCode)) (return ())
-  where checkType t' cont
+  where checkType :: SBVType -> r -> r
+        checkType t' cont
           | t /= t' = error $  "Uninterpreted constant " ++ show nm ++ " used at incompatible types\n"
                             ++ "      Current type      : " ++ show t ++ "\n"
                             ++ "      Previously used at: " ++ show t'
           | True    = cont
-
 
         validChar x = isAlphaNum x || x `elem` "_"
         enclosed    = head nm == '|' && last nm == '|' && length nm > 2 && not (any (`elem` "|\\") (tail (init nm)))
@@ -993,9 +1037,9 @@ svToSW :: State -> SVal -> IO SW
 svToSW st (SVal _ (Left c))  = newConst st c
 svToSW st (SVal _ (Right f)) = uncache f st
 
--- | Convert a symbolic value to an SW, inside the Symbolic monad
-svToSymSW :: SVal -> Symbolic SW
-svToSymSW sbv = do st <- ask
+-- | Generalization of 'Data.SBV.svToSymSW'
+svToSymSW :: MonadSymbolic m => SVal -> m SW
+svToSymSW sbv = do st <- symbolicEnv
                    liftIO $ svToSW st sbv
 
 -------------------------------------------------------------------------
@@ -1004,12 +1048,44 @@ svToSymSW sbv = do st <- ask
 -- | A Symbolic computation. Represented by a reader monad carrying the
 -- state of the computation, layered on top of IO for creating unique
 -- references to hold onto intermediate results.
-newtype Symbolic a = Symbolic (ReaderT State IO a)
-                   deriving ( Applicative, Functor, Monad, MonadIO, MonadReader State
+
+-- | Computations which support symbolic operations
+class MonadIO m => MonadSymbolic m where
+  symbolicEnv :: m State
+
+  default symbolicEnv :: (MonadTrans t, MonadSymbolic m', m ~ t m') => m State
+  symbolicEnv = lift symbolicEnv
+
+instance MonadSymbolic m             => MonadSymbolic (ExceptT e m)
+instance MonadSymbolic m             => MonadSymbolic (MaybeT m)
+instance MonadSymbolic m             => MonadSymbolic (ReaderT r m)
+instance MonadSymbolic m             => MonadSymbolic (SS.StateT s m)
+instance MonadSymbolic m             => MonadSymbolic (LS.StateT s m)
+instance (MonadSymbolic m, Monoid w) => MonadSymbolic (SW.WriterT w m)
+instance (MonadSymbolic m, Monoid w) => MonadSymbolic (LW.WriterT w m)
+
+-- | A generalization of 'Data.SBV.Symbolic'.
+newtype SymbolicT m a = SymbolicT { runSymbolicT :: ReaderT State m a }
+                   deriving ( Applicative, Functor, Monad, MonadIO, MonadTrans
+                            , MonadError e, MonadState s, MonadWriter w
 #if MIN_VERSION_base(4,11,0)
                             , Fail.MonadFail
 #endif
                             )
+
+instance MonadIO m => MonadSymbolic (SymbolicT m) where
+  symbolicEnv = SymbolicT ask
+
+mapSymbolicT :: (ReaderT State m a -> ReaderT State n b) -> SymbolicT m a -> SymbolicT n b
+mapSymbolicT f = SymbolicT . f . runSymbolicT
+{-# INLINE mapSymbolicT #-}
+
+-- Have to define this one by hand, because we use ReaderT in the implementation
+instance MonadReader r m => MonadReader r (SymbolicT m) where
+  ask = lift ask
+  local f = mapSymbolicT $ mapReaderT $ local f
+
+type Symbolic = SymbolicT IO
 
 -- | Create a symbolic value, based on the quantifier we have. If an
 -- explicit quantifier is given, we just use that. If not, then we
@@ -1023,21 +1099,21 @@ svMkSymVar = svMkSymVarGen False
 svMkTrackerVar :: Kind -> String -> State -> IO SVal
 svMkTrackerVar k nm = svMkSymVarGen True (Just EX) k (Just nm)
 
--- | Create an N-bit symbolic unsigned named variable
-sWordN :: Int -> String -> Symbolic SVal
-sWordN w nm = ask >>= liftIO . svMkSymVar Nothing (KBounded False w) (Just nm)
+-- | Generalization of 'Data.SBV.sWordN'
+sWordN :: MonadSymbolic m => Int -> String -> m SVal
+sWordN w nm = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded False w) (Just nm)
 
--- | Create an N-bit symbolic unsigned unnamed variable
-sWordN_ :: Int -> Symbolic SVal
-sWordN_ w = ask >>= liftIO . svMkSymVar Nothing (KBounded False w) Nothing
+-- | Generalization of 'Data.SBV.sWordN_'
+sWordN_ :: MonadSymbolic m => Int -> m SVal
+sWordN_ w = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded False w) Nothing
 
--- | Create an N-bit symbolic signed named variable
-sIntN :: Int -> String -> Symbolic SVal
-sIntN w nm = ask >>= liftIO . svMkSymVar Nothing (KBounded True w) (Just nm)
+-- | Generalization of 'Data.SBV.sIntN'
+sIntN :: MonadSymbolic m => Int -> String -> m SVal
+sIntN w nm = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded True w) (Just nm)
 
--- | Create an N-bit symbolic signed unnamed variable
-sIntN_ :: Int -> Symbolic SVal
-sIntN_ w = ask >>= liftIO . svMkSymVar Nothing (KBounded True w) Nothing
+-- | Generalization of 'Data.SBV.sIntN_'
+sIntN_ :: MonadSymbolic m => Int -> m SVal
+sIntN_ w = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded True w) Nothing
 
 -- | Create a symbolic value, based on the quantifier we have. If an
 -- explicit quantifier is given, we just use that. If not, then we
@@ -1101,51 +1177,48 @@ introduceUserName st isTracker nm k q sw = do
                                           $ modifyIncState st rNewInps newInp
                         return $ SVal k $ Right $ cache (const (return sw))
 
--- | Add a user specified axiom to the generated SMT-Lib file. The first argument is a mere
--- string, use for commenting purposes. The second argument is intended to hold the multiple-lines
--- of the axiom text as expressed in SMT-Lib notation. Note that we perform no checks on the axiom
--- itself, to see whether it's actually well-formed or is sensical by any means.
--- A separate formalization of SMT-Lib would be very useful here.
-addAxiom :: String -> [String] -> Symbolic ()
+-- | Generalization of 'Data.SBV.addAxiom'
+addAxiom :: MonadSymbolic m => String -> [String] -> m ()
 addAxiom nm ax = do
-        st <- ask
+        st <- symbolicEnv
         liftIO $ modifyState st raxioms ((nm, ax) :)
                            $ noInteractive [ "Adding a new axiom:"
                                            , "  Named: " ++ show nm
                                            , "  Axiom: " ++ unlines ax
                                            ]
 
--- | Run a symbolic computation, and return a extra value paired up with the 'Result'
-runSymbolic :: SBVRunMode -> Symbolic a -> IO (a, Result)
-runSymbolic currentRunMode (Symbolic c) = do
-   currTime  <- getCurrentTime
-   rm        <- newIORef currentRunMode
-   ctr       <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
-   cInfo     <- newIORef []
-   observes  <- newIORef []
-   pgm       <- newIORef (SBVPgm S.empty)
-   emap      <- newIORef Map.empty
-   cmap      <- newIORef Map.empty
-   inps      <- newIORef ([], [])
-   outs      <- newIORef []
-   tables    <- newIORef Map.empty
-   arrays    <- newIORef IMap.empty
-   fArrays   <- newIORef IMap.empty
-   uis       <- newIORef Map.empty
-   cgs       <- newIORef Map.empty
-   axioms    <- newIORef []
-   swCache   <- newIORef IMap.empty
-   aiCache   <- newIORef IMap.empty
-   faiCache  <- newIORef IMap.empty
-   usedKinds <- newIORef Set.empty
-   usedLbls  <- newIORef Set.empty
-   cstrs     <- newIORef []
-   smtOpts   <- newIORef []
-   optGoals  <- newIORef []
-   asserts   <- newIORef []
-   istate    <- newIORef =<< newIncState
-   qstate    <- newIORef Nothing
-   let st = State { runMode      = rm
+-- | Generalization of 'Data.SBV.runSymbolic'
+runSymbolic :: MonadIO m => SBVRunMode -> SymbolicT m a -> m (a, Result)
+runSymbolic currentRunMode (SymbolicT c) = do
+   st <- liftIO $ do
+     currTime  <- getCurrentTime
+     rm        <- newIORef currentRunMode
+     ctr       <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
+     cInfo     <- newIORef []
+     observes  <- newIORef []
+     pgm       <- newIORef (SBVPgm S.empty)
+     emap      <- newIORef Map.empty
+     cmap      <- newIORef Map.empty
+     inps      <- newIORef ([], [])
+     outs      <- newIORef []
+     tables    <- newIORef Map.empty
+     arrays    <- newIORef IMap.empty
+     fArrays   <- newIORef IMap.empty
+     uis       <- newIORef Map.empty
+     cgs       <- newIORef Map.empty
+     axioms    <- newIORef []
+     swCache   <- newIORef IMap.empty
+     aiCache   <- newIORef IMap.empty
+     faiCache  <- newIORef IMap.empty
+     usedKinds <- newIORef Set.empty
+     usedLbls  <- newIORef Set.empty
+     cstrs     <- newIORef []
+     smtOpts   <- newIORef []
+     optGoals  <- newIORef []
+     asserts   <- newIORef []
+     istate    <- newIORef =<< newIncState
+     qstate    <- newIORef Nothing
+     pure $ State { runMode      = rm
                   , startTime    = currTime
                   , pathCond     = SVal KBool (Left trueCW)
                   , rIncState    = istate
@@ -1172,18 +1245,18 @@ runSymbolic currentRunMode (Symbolic c) = do
                   , rSMTOptions  = smtOpts
                   , rOptGoals    = optGoals
                   , rAsserts     = asserts
-                  , queryState   = qstate
+                  , rQueryState   = qstate
                   }
-   _ <- newConst st falseCW -- s(-2) == falseSW
-   _ <- newConst st trueCW  -- s(-1) == trueSW
+   _ <- liftIO $ newConst st falseCW -- s(-2) == falseSW
+   _ <- liftIO $ newConst st trueCW  -- s(-1) == trueSW
    r <- runReaderT c st
-   res <- extractSymbolicSimulationState st
+   res <- liftIO $ extractSymbolicSimulationState st
 
    -- Clean-up after ourselves
-   qs <- readIORef qstate
+   qs <- liftIO $ readIORef $ rQueryState st
    case qs of
      Nothing                         -> return ()
-     Just QueryState{queryTerminate} -> queryTerminate
+     Just QueryState{queryTerminate} -> liftIO queryTerminate
 
    return (r, res)
 
@@ -1216,14 +1289,14 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
 
    return $ Result knds traceVals observables cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs assertions outsO
 
--- | Add a new option
-addNewSMTOption :: SMTOption -> Symbolic ()
-addNewSMTOption o =  do st <- ask
+-- | Generalization of 'Data.SBV.addNewSMTOption'
+addNewSMTOption :: MonadSymbolic m => SMTOption -> m ()
+addNewSMTOption o =  do st <- symbolicEnv
                         liftIO $ modifyState st rSMTOptions (o:) (return ())
 
--- | Handling constraints
-imposeConstraint :: Bool -> [(String, String)] -> SVal -> Symbolic ()
-imposeConstraint isSoft attrs c = do st <- ask
+-- | Generalization of 'Data.SBV.imposeConstraint'
+imposeConstraint :: MonadSymbolic m => Bool -> [(String, String)] -> SVal -> m ()
+imposeConstraint isSoft attrs c = do st <- symbolicEnv
                                      rm <- liftIO $ readIORef (runMode st)
                                      case rm of
                                        CodeGen -> error "SBV: constraints are not allowed in code-generation"
@@ -1240,9 +1313,9 @@ internalConstraint st isSoft attrs b = do v <- svToSW st b
     where soft | isSoft = "soft-"
                | True   = ""
 
--- | Add an optimization goal
-addSValOptGoal :: Objective SVal -> Symbolic ()
-addSValOptGoal obj = do st <- ask
+-- | Generalization of 'Data.SBV.addSValOptGoal'
+addSValOptGoal :: MonadSymbolic m => Objective SVal -> m ()
+addSValOptGoal obj = do st <- symbolicEnv
 
                         -- create the tracking variable here for the metric
                         let mkGoal nm orig = liftIO $ do origSW  <- svToSW st orig
@@ -1260,15 +1333,14 @@ addSValOptGoal obj = do st <- ask
                                                            , "  Objective: " ++ show obj
                                                            ]
 
--- | Mark an interim result as an output. Useful when constructing Symbolic programs
--- that return multiple values, or when the result is programmatically computed.
-outputSVal :: SVal -> Symbolic ()
+-- | Generalization of 'Data.SBV.outputSVal'
+outputSVal :: MonadSymbolic m => SVal -> m ()
 outputSVal (SVal _ (Left c)) = do
-  st <- ask
+  st <- symbolicEnv
   sw <- liftIO $ newConst st c
   liftIO $ modifyState st routs (sw:) (return ())
 outputSVal (SVal _ (Right f)) = do
-  st <- ask
+  st <- symbolicEnv
   sw <- liftIO $ uncache f st
   liftIO $ modifyState st routs (sw:) (return ())
 
@@ -1431,7 +1503,7 @@ data RoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable 
 instance HasKind RoundingMode
 
 -- | Solver configuration. See also 'Data.SBV.z3', 'Data.SBV.yices', 'Data.SBV.cvc4', 'Data.SBV.boolector', 'Data.SBV.mathSAT', etc.
--- which are instantiations of this type for those solvers, with reasonable defaults. In particular, custom configuration can be 
+-- which are instantiations of this type for those solvers, with reasonable defaults. In particular, custom configuration can be
 -- created by varying those values. (Such as @z3{verbose=True}@.)
 --
 -- Most fields are self explanatory. The notion of precision for printing algebraic reals stems from the fact that such values does

@@ -51,20 +51,19 @@ module Data.SBV.Core.Data
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
- , QueryState(..), Query(..), SMTProblem(..)
+ , QueryState(..), QueryT(..), SMTProblem(..)
  ) where
 
 import GHC.Generics (Generic)
 import GHC.Exts     (IsList(..))
 
-import Control.DeepSeq      (NFData(..))
-import Control.Monad.Reader (ask)
-import Control.Monad.Trans  (liftIO)
-import Data.Int             (Int8, Int16, Int32, Int64)
-import Data.Word            (Word8, Word16, Word32, Word64)
-import Data.List            (elemIndex)
-import Data.Maybe           (fromMaybe)
-import Data.Typeable        (Typeable)
+import Control.DeepSeq        (NFData(..))
+import Control.Monad.Trans    (liftIO)
+import Data.Int               (Int8, Int16, Int32, Int64)
+import Data.Word              (Word8, Word16, Word32, Word64)
+import Data.List              (elemIndex)
+import Data.Maybe             (fromMaybe)
+import Data.Typeable          (Typeable)
 
 import qualified Data.Generics as G    (Data(..))
 
@@ -266,14 +265,14 @@ sbvToSW st (SBV s) = svToSW st s
 -- * Symbolic Computations
 -------------------------------------------------------------------------
 
--- | Create a symbolic variable.
-mkSymSBV :: forall a. Maybe Quantifier -> Kind -> Maybe String -> Symbolic (SBV a)
-mkSymSBV mbQ k mbNm = SBV <$> (ask >>= liftIO . svMkSymVar mbQ k mbNm)
+-- | Generalization of 'Data.SBV.mkSymSBV'
+mkSymSBV :: forall a m. MonadSymbolic m => Maybe Quantifier -> Kind -> Maybe String -> m (SBV a)
+mkSymSBV mbQ k mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar mbQ k mbNm)
 
--- | Convert a symbolic value to an SW, inside the Symbolic monad
-sbvToSymSW :: SBV a -> Symbolic SW
+-- | Generalization of 'Data.SBV.sbvToSymSW'
+sbvToSymSW :: MonadSymbolic m => SBV a -> m SW
 sbvToSymSW sbv = do
-        st <- ask
+        st <- symbolicEnv
         liftIO $ sbvToSW st sbv
 
 -- | Actions we can do in a context: Either at problem description
@@ -309,9 +308,8 @@ class SolverContext m where
 
 -- | A class representing what can be returned from a symbolic computation.
 class Outputtable a where
-  -- | Mark an interim result as an output. Useful when constructing Symbolic programs
-  -- that return multiple values, or when the result is programmatically computed.
-  output :: a -> Symbolic a
+  -- | Generalization of 'Data.SBV.output'
+  output :: MonadSymbolic m => a -> m a
 
 instance Outputtable (SBV a) where
   output i = do
@@ -353,65 +351,22 @@ instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtabl
 -- in casual uses with 'Data.SBV.prove', 'Data.SBV.sat', 'Data.SBV.allSat' etc, as
 -- default instances automatically provide the necessary bits.
 class (HasKind a, Ord a, Typeable a) => SymWord a where
-  -- | Create a user named input (universal)
-  forall :: String -> Symbolic (SBV a)
-  -- | Create an automatically named input
-  forall_ :: Symbolic (SBV a)
-  -- | Get a bunch of new words
-  mkForallVars :: Int -> Symbolic [SBV a]
-  -- | Create an existential variable
-  exists  :: String -> Symbolic (SBV a)
-  -- | Create an automatically named existential variable
-  exists_ :: Symbolic (SBV a)
-  -- | Create a bunch of existentials
-  mkExistVars :: Int -> Symbolic [SBV a]
-  -- | Create a free variable, universal in a proof, existential in sat
-  free :: String -> Symbolic (SBV a)
-  -- | Create an unnamed free variable, universal in proof, existential in sat
-  free_ :: Symbolic (SBV a)
-  -- | Create a bunch of free vars
-  mkFreeVars :: Int -> Symbolic [SBV a]
-  -- | Similar to free; Just a more convenient name
-  symbolic  :: String -> Symbolic (SBV a)
-  -- | Similar to mkFreeVars; but automatically gives names based on the strings
-  symbolics :: [String] -> Symbolic [SBV a]
+  -- | Generalization of 'Data.SBV.mkSymWord'
+  mkSymWord :: MonadSymbolic m => Maybe Quantifier -> Maybe String -> m (SBV a)
   -- | Turn a literal constant to symbolic
   literal :: a -> SBV a
-  -- | Extract a literal, if the value is concrete
-  unliteral :: SBV a -> Maybe a
   -- | Extract a literal, from a CW representation
   fromCW :: CW -> a
-  -- | Is the symbolic word concrete?
-  isConcrete :: SBV a -> Bool
-  -- | Is the symbolic word really symbolic?
-  isSymbolic :: SBV a -> Bool
   -- | Does it concretely satisfy the given predicate?
   isConcretely :: SBV a -> (a -> Bool) -> Bool
-  -- | One stop allocator
-  mkSymWord :: Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
 
-  -- minimal complete definition:: Nothing.
-  -- Giving no instances is ok when defining an uninterpreted/enumerated sort, but otherwise you really
+  -- minimal complete definition: Nothing.
+  -- Giving no instances is okay when defining an uninterpreted/enumerated sort, but otherwise you really
   -- want to define: literal, fromCW, mkSymWord
-  forall   = mkSymWord (Just ALL) . Just
-  forall_  = mkSymWord (Just ALL)   Nothing
-  exists   = mkSymWord (Just EX)  . Just
-  exists_  = mkSymWord (Just EX)    Nothing
-  free     = mkSymWord Nothing    . Just
-  free_    = mkSymWord Nothing      Nothing
-  mkForallVars n = mapM (const forall_) [1 .. n]
-  mkExistVars n  = mapM (const exists_) [1 .. n]
-  mkFreeVars n   = mapM (const free_)   [1 .. n]
-  symbolic       = free
-  symbolics      = mapM symbolic
-  unliteral (SBV (SVal _ (Left c)))  = Just $ fromCW c
-  unliteral _                        = Nothing
-  isConcrete (SBV (SVal _ (Left _))) = True
-  isConcrete _                       = False
-  isSymbolic = not . isConcrete
-  isConcretely s p
-    | Just i <- unliteral s = p i
-    | True                  = False
+
+  default mkSymWord :: (MonadSymbolic m, Read a, G.Data a) => Maybe Quantifier -> Maybe String -> m (SBV a)
+  mkSymWord mbQ mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar mbQ k mbNm)
+    where k = constructUKind (undefined :: a)
 
   default literal :: Show a => a -> SBV a
   literal x = let k@(KUserSort  _ conts) = kindOf x
@@ -425,9 +380,67 @@ class (HasKind a, Ord a, Typeable a) => SymWord a where
   fromCW (CW _ (CWUserSort (_, s))) = read s
   fromCW cw                         = error $ "Cannot convert CW " ++ show cw ++ " to kind " ++ show (kindOf (undefined :: a))
 
-  default mkSymWord :: (Read a, G.Data a) => Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
-  mkSymWord mbQ mbNm = SBV <$> (ask >>= liftIO . svMkSymVar mbQ k mbNm)
-    where k = constructUKind (undefined :: a)
+  isConcretely s p
+    | Just i <- unliteral s = p i
+    | True                  = False
+
+  -- | Generalization of 'Data.SBV.forall'
+  forall :: MonadSymbolic m => String -> m (SBV a)
+  forall = mkSymWord (Just ALL) . Just
+
+  -- | Generalization of 'Data.SBV.forall_'
+  forall_ :: MonadSymbolic m => m (SBV a)
+  forall_ = mkSymWord (Just ALL) Nothing
+
+  -- | Generalization of 'Data.SBV.mkForallVars'
+  mkForallVars :: MonadSymbolic m => Int -> m [SBV a]
+  mkForallVars n = mapM (const forall_) [1 .. n]
+
+  -- | Generalization of 'Data.SBV.exists'
+  exists :: MonadSymbolic m => String -> m (SBV a)
+  exists = mkSymWord (Just EX) . Just
+
+  -- | Generalization of 'Data.SBV.exists_'
+  exists_ :: MonadSymbolic m => m (SBV a)
+  exists_ = mkSymWord (Just EX) Nothing
+
+  -- | Generalization of 'Data.SBV.mkExistVars'
+  mkExistVars :: MonadSymbolic m => Int -> m [SBV a]
+  mkExistVars n = mapM (const exists_) [1 .. n]
+
+  -- | Generalization of 'Data.SBV.free'
+  free :: MonadSymbolic m => String -> m (SBV a)
+  free = mkSymWord Nothing . Just
+
+  -- | Generalization of 'Data.SBV.free_'
+  free_ :: MonadSymbolic m => m (SBV a)
+  free_ = mkSymWord Nothing Nothing
+
+  -- | Generalization of 'Data.SBV.mkFreeVars'
+  mkFreeVars :: MonadSymbolic m => Int -> m [SBV a]
+  mkFreeVars n = mapM (const free_) [1 .. n]
+
+  -- | Generalization of 'Data.SBV.symbolic'
+  symbolic :: MonadSymbolic m => String -> m (SBV a)
+  symbolic = free
+
+  -- | Generalization of 'Data.SBV.symbolics'
+  symbolics :: MonadSymbolic m => [String] -> m [SBV a]
+  symbolics = mapM symbolic
+
+  -- | Extract a literal, if the value is concrete
+  unliteral :: SBV a -> Maybe a
+  unliteral (SBV (SVal _ (Left c)))  = Just $ fromCW c
+  unliteral _                        = Nothing
+
+  -- | Is the symbolic word concrete?
+  isConcrete :: SBV a -> Bool
+  isConcrete (SBV (SVal _ (Left _))) = True
+  isConcrete _                       = False
+
+  -- | Is the symbolic word really symbolic?
+  isSymbolic :: SBV a -> Bool
+  isSymbolic = not . isConcrete
 
 instance (Random a, SymWord a) => Random (SBV a) where
   randomR (l, h) g = case (unliteral l, unliteral h) of
@@ -477,16 +490,16 @@ instance (Random a, SymWord a) => Random (SBV a) where
 --      'SFunArray', SBV only generates code for individual elements and the array itself never
 --      shows up in the resulting SMTLib program. This puts more onus on the SBV side and might
 --      have some performance impacts, but it might generate problems that are easier for the SMT
---      solvers to handle. 
+--      solvers to handle.
 --
 -- As a rule of thumb, try 'SArray' first. These should generate compact code. However, if
 -- the backend solver has hard time solving the generated problems, switch to
 -- 'SFunArray'. If you still have issues, please report so we can see what the problem might be!
 class SymArray array where
-  -- | Create a new anonymous array, possibly with a default initial value.
-  newArray_      :: (HasKind a, HasKind b) => Maybe (SBV b) -> Symbolic (array a b)
-  -- | Create a named new array, possibly with a default initial value.
-  newArray       :: (HasKind a, HasKind b) => String -> Maybe (SBV b) -> Symbolic (array a b)
+  -- | Generalization of 'Data.SBV.newArray_'
+  newArray_      :: (MonadSymbolic m, HasKind a, HasKind b) => Maybe (SBV b) -> m (array a b)
+  -- | Generalization of 'Data.SBV.newArray'
+  newArray       :: (MonadSymbolic m, HasKind a, HasKind b) => String -> Maybe (SBV b) -> m (array a b)
   -- | Read the array element at @a@
   readArray      :: array a b -> SBV a -> SBV b
   -- | Update the element at @a@ to be @b@
@@ -498,9 +511,13 @@ class SymArray array where
   -- | Internal function, not exported to the user
   newArrayInState :: (HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> State -> IO (array a b)
 
-  {-# MINIMAL readArray, writeArray, mergeArrays, newArrayInState #-}
-  newArray_   mbVal = ask >>= liftIO . newArrayInState Nothing   mbVal
-  newArray nm mbVal = ask >>= liftIO . newArrayInState (Just nm) mbVal
+  {-# MINIMAL readArray, writeArray, mergeArrays, ((newArray_, newArray) | newArrayInState) #-}
+  newArray_   mbVal = symbolicEnv >>= liftIO . newArrayInState Nothing   mbVal
+  newArray nm mbVal = symbolicEnv >>= liftIO . newArrayInState (Just nm) mbVal
+
+  -- Despite our MINIMAL pragma and default implementations for newArray_ and
+  -- newArray, we must provide a dummy implementation for newArrayInState:
+  newArrayInState = error "undefined: newArrayInState"
 
 -- | Arrays implemented in terms of SMT-arrays: <http://smtlib.cs.uiowa.edu/theories-ArraysEx.shtml>
 --

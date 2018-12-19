@@ -796,7 +796,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                  , queryAssertionStackDepth = 0
                                                  , queryTblArrPreserveIndex = Nothing
                                                  }
-                                 qsp = queryState ctx
+                                 qsp = rQueryState ctx
 
                              mbQS <- readIORef qsp
 

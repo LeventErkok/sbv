@@ -13,8 +13,8 @@ module TestSuite.Basics.Recursive(tests) where
 
 import Utils.SBVTestFramework
 
-import Control.Monad.Reader (ask)
-import Control.Monad.Trans  (liftIO)
+import Data.SBV.Internals  (genMkSymVar, unSBV)
+
 import qualified Data.SBV.Dynamic as D
 
 -- This is recursive and suffers from the termination problem.
@@ -27,7 +27,7 @@ mgcdDyn :: Int -> IO ThmResult
 mgcdDyn i = D.proveWith z3 $ do
 
               let var8 :: String -> Symbolic D.SVal
-                  var8 nm = ask >>= liftIO . D.svMkSymVar (Just D.ALL) word8 (Just nm)
+                  var8 nm = unSBV <$> genMkSymVar word8 (Just D.ALL) (Just nm)
 
                   word8   = KBounded False 8
                   zero8   = D.svInteger word8 0

@@ -51,7 +51,7 @@ Library
                   , crackNum >= 2.3
                   , ghc, QuickCheck, template-haskell
                   , array, async, containers, deepseq, directory, filepath, time
-                  , pretty, process, mtl, random, syb
+                  , pretty, process, mtl, random, syb, transformers
                   , generic-deriving
   Exposed-modules : Data.SBV
                   , Data.SBV.Control
@@ -69,6 +69,8 @@ Library
                   , Data.SBV.Tools.Range
                   , Data.SBV.Tools.BoundedFix
                   , Data.SBV.Tools.STree
+                  , Data.SBV.Trans
+                  , Data.SBV.Trans.Control
                   , Documentation.SBV.Examples.BitPrecise.BitTricks
                   , Documentation.SBV.Examples.BitPrecise.BrokenSearch
                   , Documentation.SBV.Examples.BitPrecise.Legato
@@ -123,13 +125,16 @@ Library
                   , Documentation.SBV.Examples.Queries.Interpolants
                   , Documentation.SBV.Examples.Strings.RegexCrossword
                   , Documentation.SBV.Examples.Strings.SQLInjection
+                  , Documentation.SBV.Examples.Transformers.SymbolicEval
                   , Documentation.SBV.Examples.Uninterpreted.AUF
                   , Documentation.SBV.Examples.Uninterpreted.Deduce
                   , Documentation.SBV.Examples.Uninterpreted.Function
                   , Documentation.SBV.Examples.Uninterpreted.Shannon
                   , Documentation.SBV.Examples.Uninterpreted.Sort
                   , Documentation.SBV.Examples.Uninterpreted.UISortAllSat
-  Other-modules   : Data.SBV.Core.AlgReals
+  Other-modules   : Data.SBV.Client
+                  , Data.SBV.Client.Mono
+                  , Data.SBV.Core.AlgReals
                   , Data.SBV.Core.Concrete
                   , Data.SBV.Core.Data
                   , Data.SBV.Core.Kind
@@ -138,6 +143,7 @@ Library
                   , Data.SBV.Core.Floating
                   , Data.SBV.Core.Splittable
                   , Data.SBV.Core.Symbolic
+                  , Data.SBV.Control.Mono
                   , Data.SBV.Control.Query
                   , Data.SBV.Control.Types
                   , Data.SBV.Control.Utils
@@ -156,6 +162,7 @@ Library
                   , Data.SBV.Provers.MathSAT
                   , Data.SBV.Provers.ABC
                   , Data.SBV.Utils.Boolean
+                  , Data.SBV.Utils.ExtractIO
                   , Data.SBV.Utils.Numeric
                   , Data.SBV.Utils.TDiff
                   , Data.SBV.Utils.Lib
@@ -256,6 +263,7 @@ Test-Suite SBVTest
                   , TestSuite.Queries.Strings
                   , TestSuite.Queries.Uninterpreted
                   , TestSuite.QuickCheck.QC
+                  , TestSuite.Transformers.SymbolicEval
                   , TestSuite.Uninterpreted.AUF
                   , TestSuite.Uninterpreted.Axioms
                   , TestSuite.Uninterpreted.Function

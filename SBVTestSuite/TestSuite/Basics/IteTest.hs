@@ -11,6 +11,8 @@
 
 module TestSuite.Basics.IteTest(tests)  where
 
+import Data.SBV.Internals (Result)
+
 import Utils.SBVTestFramework
 
 chk1 :: (SBool -> SBool -> SBool -> SBool) -> SWord8 -> SBool
@@ -33,4 +35,5 @@ tests =
     , testCase "iteTest5" (assertIsThm (chk2 iteLazy))
     , testCase "iteTest6" (assertIsThm (chk3 iteLazy))
     ]
- where rs f = runSAT $ forAll ["x"] f
+ where rs :: (SWord8 -> SBool) -> IO Result
+       rs f = runSAT $ forAll ["x"] f

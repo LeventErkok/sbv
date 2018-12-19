@@ -9,6 +9,7 @@
 -- Various goodies for testing SBV
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 

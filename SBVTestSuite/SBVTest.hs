@@ -99,6 +99,7 @@ import qualified TestSuite.Queries.Lists
 import qualified TestSuite.Queries.Strings
 import qualified TestSuite.Queries.Uninterpreted
 import qualified TestSuite.QuickCheck.QC
+import qualified TestSuite.Transformers.SymbolicEval
 import qualified TestSuite.Uninterpreted.AUF
 import qualified TestSuite.Uninterpreted.Axioms
 import qualified TestSuite.Uninterpreted.Function
@@ -224,6 +225,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Queries.Lists.tests
                , TestSuite.Queries.Strings.tests
                , TestSuite.Queries.Uninterpreted.tests
+               , TestSuite.Transformers.SymbolicEval.tests
                , TestSuite.Uninterpreted.AUF.tests
                , TestSuite.Uninterpreted.Axioms.tests
                , TestSuite.Uninterpreted.Function.tests

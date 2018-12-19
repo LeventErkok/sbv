@@ -14,7 +14,7 @@
 
 module TestSuite.Basics.BasicTests(tests) where
 
-import Data.SBV.Internals
+import Data.SBV.Internals hiding (forall, output)
 import Utils.SBVTestFramework
 
 -- Test suite

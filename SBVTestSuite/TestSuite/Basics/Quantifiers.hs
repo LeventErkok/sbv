@@ -9,6 +9,8 @@
 -- Various combinations of quantifiers
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleContexts #-}
+
 module TestSuite.Basics.Quantifiers(tests) where
 
 import Control.Monad (void)

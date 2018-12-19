@@ -9,6 +9,7 @@
 -- Test suite for optimization iwth quantifiers
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module TestSuite.Optimization.Quantified(tests) where

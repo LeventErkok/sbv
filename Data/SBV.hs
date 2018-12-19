@@ -112,13 +112,6 @@
 -- get in touch if there is a solver you'd like to see included.
 ---------------------------------------------------------------------------------
 
-{-# LANGUAGE    FlexibleInstances   #-}
-{-# LANGUAGE    QuasiQuotes         #-}
-{-# LANGUAGE    TemplateHaskell     #-}
-{-# LANGUAGE    ScopedTypeVariables #-}
-{-# LANGUAGE    StandaloneDeriving  #-}
-{-# OPTIONS_GHC -fno-warn-orphans  #-}
-
 module Data.SBV (
   -- $progIntro
 
@@ -151,7 +144,7 @@ module Data.SBV (
   -- $lists
   , SList
   -- * Arrays of symbolic values
-  , SymArray(newArray_, newArray, readArray, writeArray), SArray, SFunArray
+  , SymArray(readArray, writeArray, mergeArrays), newArray_, newArray, SArray, SFunArray
 
   -- * Creating symbolic values
   -- ** Single value
@@ -204,7 +197,13 @@ module Data.SBV (
   -- $proveIntro
   -- $noteOnNestedQuantifiers
   -- $multiIntro
-  , Predicate, Goal, Provable(..), solve
+  , Predicate, Goal
+  , Provable, forAll_, forAll, forSome_, forSome, prove, proveWith, sat
+  , satWith, allSat, allSatWith, optimize, optimizeWith, isVacuous
+  , isVacuousWith, isTheorem, isTheoremWith, isSatisfiable, isSatisfiableWith
+  , proveWithAll, proveWithAny, satWithAll
+  , satWithAny, generateSMTBenchmark
+  , solve
   -- * Constraints
   -- $constrainIntro
   -- ** General constraints
@@ -227,7 +226,7 @@ module Data.SBV (
 
   -- * Checking safety
   -- $safeIntro
-  , sAssert, isSafe, SExecutable(..)
+  , sAssert, isSafe, SExecutable, sName_, sName, safe, safeWith
 
   -- * Quick-checking
   , sbvQuickCheck
@@ -239,7 +238,8 @@ module Data.SBV (
   -- $multiOpt
   , OptimizeStyle(..)
   -- ** Objectives
-  , Objective(..), Metric(..)
+  , Objective(..)
+  , Metric, minimize, maximize
   -- ** Soft assertions
   -- $softAssertions
   , assertWithPenalty , Penalty(..)
@@ -277,8 +277,11 @@ module Data.SBV (
   , SBVException(..)
 
   -- * Abstract SBV type
-  , SBV, HasKind(..), Kind(..), SymWord(..)
-  , Symbolic, label, output, runSMT, runSMTWith
+  , SBV, HasKind(..), Kind(..)
+  , SymWord, forall, forall_, mkForallVars, exists, exists_, mkExistVars, free
+  , free_, mkFreeVars, symbolic, symbolics, literal, unliteral, fromCW
+  , isConcrete, isSymbolic, isConcretely, mkSymWord
+  , MonadSymbolic(..), Symbolic, SymbolicT, label, output, runSMT, runSMTWith
 
   -- * Module exports
   -- $moduleExportIntro
@@ -289,135 +292,47 @@ module Data.SBV (
   , module Data.Ratio
   ) where
 
-import Control.Monad (filterM)
-
-import qualified Control.Exception as C
-
 import Data.SBV.Core.AlgReals
-import Data.SBV.Core.Data
-import Data.SBV.Core.Model
+import Data.SBV.Core.Data       hiding (addAxiom, forall, forall_,
+                                        mkForallVars, exists, exists_,
+                                        mkExistVars, free, free_, mkFreeVars,
+                                        output, symbolic, symbolics, mkSymWord,
+                                        newArray, newArray_)
+import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
+                                        forall, forall_, exists, exists_,
+                                        solve, sBool, sBools, sChar, sChars,
+                                        sDouble, sDoubles, sFloat, sFloats,
+                                        sInt8, sInt8s, sInt16, sInt16s, sInt32,
+                                        sInt32s, sInt64, sInt64s, sInteger,
+                                        sIntegers, sList, sLists, sReal,
+                                        sReals, sString, sStrings, sWord8,
+                                        sWord8s, sWord16, sWord16s, sWord32,
+                                        sWord32s, sWord64, sWord64s)
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Splittable
+import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT)
 
-import Data.SBV.Provers.Prover
+import Data.SBV.Provers.Prover hiding (forAll_, forAll, forSome_, forSome,
+                                       prove, proveWith, sat, satWith, allSat,
+                                       allSatWith, optimize, optimizeWith,
+                                       isVacuous, isVacuousWith, isTheorem,
+                                       isTheoremWith, isSatisfiable,
+                                       isSatisfiableWith, runSMT, runSMTWith,
+                                       sName_, sName, safe, safeWith)
+
+import Data.SBV.Client
+import Data.SBV.Client.Mono
 
 import Data.SBV.Utils.Boolean
-import Data.SBV.Utils.TDiff   (Timing(..))
+import Data.SBV.Utils.TDiff     (Timing(..))
 
 import Data.Bits
 import Data.Int
 import Data.Ratio
 import Data.Word
 
-import qualified Language.Haskell.TH as TH
-import Data.Generics
-
 import Data.SBV.SMT.Utils (SBVException(..))
-import Data.SBV.Control.Utils (SMTValue (..))
 import Data.SBV.Control.Types (SMTReasonUnknown(..), Logic(..))
-
--- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
--- problems with constraints, like the following:
---
--- @
---   sat $ do [x, y, z] <- sIntegers [\"x\", \"y\", \"z\"]
---            solve [x .> 5, y + z .< x]
--- @
-solve :: [SBool] -> Symbolic SBool
-solve = return . bAnd
-
--- | Check whether the given solver is installed and is ready to go. This call does a
--- simple call to the solver to ensure all is well.
-sbvCheckSolverInstallation :: SMTConfig -> IO Bool
-sbvCheckSolverInstallation cfg = check `C.catch` (\(_ :: C.SomeException) -> return False)
-  where check = do ThmResult r <- proveWith cfg $ \x -> (x+x) .== ((x*2) :: SWord8)
-                   case r of
-                     Unsatisfiable{} -> return True
-                     _               -> return False
-
--- | The default configs corresponding to supported SMT solvers
-defaultSolverConfig :: Solver -> SMTConfig
-defaultSolverConfig Z3        = z3
-defaultSolverConfig Yices     = yices
-defaultSolverConfig Boolector = boolector
-defaultSolverConfig CVC4      = cvc4
-defaultSolverConfig MathSAT   = mathSAT
-defaultSolverConfig ABC       = abc
-
--- | Return the known available solver configs, installed on your machine.
-sbvAvailableSolvers :: IO [SMTConfig]
-sbvAvailableSolvers = filterM sbvCheckSolverInstallation (map defaultSolverConfig [minBound .. maxBound])
-
--- If we get a program producing nothing (i.e., Symbolic ()), pretend it simply returns True.
--- This is useful since min/max calls and constraints will provide the context
-instance Provable Goal where
-  forAll_    a = forAll_    ((a >> return true) :: Predicate)
-  forAll ns  a = forAll ns  ((a >> return true) :: Predicate)
-  forSome_   a = forSome_   ((a >> return true) :: Predicate)
-  forSome ns a = forSome ns ((a >> return true) :: Predicate)
-
--- | Equality as a proof method. Allows for
--- very concise construction of equivalence proofs, which is very typical in
--- bit-precise proofs.
-infix 4 ===
-class Equality a where
-  (===) :: a -> a -> IO ThmResult
-
-instance {-# OVERLAPPABLE #-} (SymWord a, EqSymbolic z) => Equality (SBV a -> z) where
-  k === l = prove $ \a -> k a .== l a
-
-instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, EqSymbolic z) => Equality (SBV a -> SBV b -> z) where
-  k === l = prove $ \a b -> k a b .== l a b
-
-instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, EqSymbolic z) => Equality ((SBV a, SBV b) -> z) where
-  k === l = prove $ \a b -> k (a, b) .== l (a, b)
-
-instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> z) where
-  k === l = prove $ \a b c -> k a b c .== l a b c
-
-instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c) -> z) where
-  k === l = prove $ \a b c -> k (a, b, c) .== l (a, b, c)
-
-instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> z) where
-  k === l = prove $ \a b c d -> k a b c d .== l a b c d
-
-instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d) -> z) where
-  k === l = prove $ \a b c d -> k (a, b, c, d) .== l (a, b, c, d)
-
-instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> z) where
-  k === l = prove $ \a b c d e -> k a b c d e .== l a b c d e
-
-instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e) -> z) where
-  k === l = prove $ \a b c d e -> k (a, b, c, d, e) .== l (a, b, c, d, e)
-
-instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> z) where
-  k === l = prove $ \a b c d e f -> k a b c d e f .== l a b c d e f
-
-instance {-# OVERLAPPABLE #-}
- (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> z) where
-  k === l = prove $ \a b c d e f -> k (a, b, c, d, e, f) .== l (a, b, c, d, e, f)
-
-instance {-# OVERLAPPABLE #-}
- (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV g -> z) where
-  k === l = prove $ \a b c d e f g -> k a b c d e f g .== l a b c d e f g
-
-instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> z) where
-  k === l = prove $ \a b c d e f g -> k (a, b, c, d, e, f, g) .== l (a, b, c, d, e, f, g)
-
--- | Make an enumeration a symbolic type.
-mkSymbolicEnumeration :: TH.Name -> TH.Q [TH.Dec]
-mkSymbolicEnumeration typeName = do
-    let typeCon = TH.conT typeName
-    [d| deriving instance Eq       $(typeCon)
-        deriving instance Show     $(typeCon)
-        deriving instance Ord      $(typeCon)
-        deriving instance Read     $(typeCon)
-        deriving instance Data     $(typeCon)
-        deriving instance SymWord  $(typeCon)
-        deriving instance HasKind  $(typeCon)
-        deriving instance SMTValue $(typeCon)
-        deriving instance SatModel $(typeCon)
-      |]
 
 -- Haddock section documentation
 {- $progIntro

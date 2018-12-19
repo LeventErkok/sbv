@@ -11,7 +11,7 @@
 
 module TestSuite.BitPrecise.Legato(tests) where
 
-import Data.SBV.Internals
+import Data.SBV.Internals hiding (free, output)
 import Documentation.SBV.Examples.BitPrecise.Legato
 
 import Utils.SBVTestFramework

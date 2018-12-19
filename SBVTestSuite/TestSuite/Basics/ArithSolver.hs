@@ -19,7 +19,7 @@ module TestSuite.Basics.ArithSolver(tests) where
 
 import qualified Data.Numbers.CrackNum as RC (wordToFloat, wordToDouble, floatToWord, doubleToWord)
 
-import Data.SBV.Internals
+import Data.SBV.Internals hiding (free, free_)
 import Utils.SBVTestFramework
 
 import Data.List (genericIndex, isInfixOf, isPrefixOf, isSuffixOf, genericTake, genericDrop, genericLength)

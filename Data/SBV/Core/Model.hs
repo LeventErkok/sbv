@@ -23,13 +23,14 @@
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
 
 module Data.SBV.Core.Model (
-    Mergeable(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), assertWithPenalty, SIntegral, SFiniteBits(..)
+    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), assertWithPenalty, SIntegral, SFiniteBits(..)
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, (.^)
   , oneIf, genVar, genVar_, forall, forall_, exists, exists_
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   , sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
   , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, sChar, sChars, sString, sStrings, sList, sLists
+  , solve
   , slet
   , sRealToSInteger, label, observe
   , sAssert
@@ -39,8 +40,9 @@ module Data.SBV.Core.Model (
   )
   where
 
-import Control.Applicative  (ZipList(ZipList))
-import Control.Monad        (when, unless, mplus)
+import Control.Applicative    (ZipList(ZipList))
+import Control.Monad          (when, unless, mplus)
+import Control.Monad.IO.Class (MonadIO)
 
 import GHC.Generics (U1(..), M1(..), (:*:)(..), K1(..))
 import qualified GHC.Generics as G
@@ -68,8 +70,8 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Operations
 
-import Data.SBV.Provers.Prover (defaultSMTCfg, SafeResult(..))
-import Data.SBV.SMT.SMT        (showModel)
+import Data.SBV.Provers.Prover (defaultSMTCfg, SafeResult(..), prove)
+import Data.SBV.SMT.SMT        (ThmResult, showModel)
 
 import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.Lib      (isKString)
@@ -77,11 +79,11 @@ import Data.SBV.Utils.Lib      (isKString)
 -- Symbolic-Word class instances
 
 -- | Generate a finite symbolic bitvector, named
-genVar :: Maybe Quantifier -> Kind -> String -> Symbolic (SBV a)
+genVar :: MonadSymbolic m => Maybe Quantifier -> Kind -> String -> m (SBV a)
 genVar q k = mkSymSBV q k . Just
 
 -- | Generate a finite symbolic bitvector, unnamed
-genVar_ :: Maybe Quantifier -> Kind -> Symbolic (SBV a)
+genVar_ :: MonadSymbolic m => Maybe Quantifier -> Kind -> m (SBV a)
 genVar_ q k = mkSymSBV q k Nothing
 
 -- | Generate a finite constant bitvector
@@ -93,8 +95,8 @@ genFromCW :: Integral a => CW -> a
 genFromCW (CW _ (CWInteger x)) = fromInteger x
 genFromCW c                    = error $ "genFromCW: Unsupported non-integral value: " ++ show c
 
--- | Generically make a symbolic var
-genMkSymVar :: Kind -> Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
+-- | Generalization of 'Data.SBV.genMkSymVar'
+genMkSymVar :: MonadSymbolic m => Kind -> Maybe Quantifier -> Maybe String -> m (SBV a)
 genMkSymVar k mbq Nothing  = genVar_ mbq k
 genMkSymVar k mbq (Just s) = genVar  mbq k s
 
@@ -217,133 +219,137 @@ instance IsString SString where
 -- necessary, as they are mere aliases for 'symbolic' and 'symbolics', but
 -- they nonetheless make programming easier.
 ------------------------------------------------------------------------------------
--- | Declare an 'SBool'
-sBool :: String -> Symbolic SBool
+-- | Generalization of 'Data.SBV.sBool'
+sBool :: MonadSymbolic m => String -> m SBool
 sBool = symbolic
 
--- | Declare a list of 'SBool's
-sBools :: [String] -> Symbolic [SBool]
+-- | Generalization of 'Data.SBV.sBools'
+sBools :: MonadSymbolic m => [String] -> m [SBool]
 sBools = symbolics
 
--- | Declare an 'SWord8'
-sWord8 :: String -> Symbolic SWord8
+-- | Generalization of 'Data.SBV.sWord8'
+sWord8 :: MonadSymbolic m => String -> m SWord8
 sWord8 = symbolic
 
--- | Declare a list of 'SWord8's
-sWord8s :: [String] -> Symbolic [SWord8]
+-- | Generalization of 'Data.SBV.sWord8s'
+sWord8s :: MonadSymbolic m => [String] -> m [SWord8]
 sWord8s = symbolics
 
--- | Declare an 'SWord16'
-sWord16 :: String -> Symbolic SWord16
+-- | Generalization of 'Data.SBV.sWord16'
+sWord16 :: MonadSymbolic m => String -> m SWord16
 sWord16 = symbolic
 
--- | Declare a list of 'SWord16's
-sWord16s :: [String] -> Symbolic [SWord16]
+-- | Generalization of 'Data.SBV.sWord16s'
+sWord16s :: MonadSymbolic m => [String] -> m [SWord16]
 sWord16s = symbolics
 
--- | Declare an 'SWord32'
-sWord32 :: String -> Symbolic SWord32
+-- | Generalization of 'Data.SBV.sWord32'
+sWord32 :: MonadSymbolic m => String -> m SWord32
 sWord32 = symbolic
 
--- | Declare a list of 'SWord32's
-sWord32s :: [String] -> Symbolic [SWord32]
+-- | Generalization of 'Data.SBV.sWord32s'
+sWord32s :: MonadSymbolic m => [String] -> m [SWord32]
 sWord32s = symbolics
 
--- | Declare an 'SWord64'
-sWord64 :: String -> Symbolic SWord64
+-- | Generalization of 'Data.SBV.sWord64'
+sWord64 :: MonadSymbolic m => String -> m SWord64
 sWord64 = symbolic
 
--- | Declare a list of 'SWord64's
-sWord64s :: [String] -> Symbolic [SWord64]
+-- | Generalization of 'Data.SBV.sWord64s'
+sWord64s :: MonadSymbolic m => [String] -> m [SWord64]
 sWord64s = symbolics
 
--- | Declare an 'SInt8'
-sInt8 :: String -> Symbolic SInt8
+-- | Generalization of 'Data.SBV.sInt8'
+sInt8 :: MonadSymbolic m => String -> m SInt8
 sInt8 = symbolic
 
--- | Declare a list of 'SInt8's
-sInt8s :: [String] -> Symbolic [SInt8]
+-- | Generalization of 'Data.SBV.sInt8s'
+sInt8s :: MonadSymbolic m => [String] -> m [SInt8]
 sInt8s = symbolics
 
--- | Declare an 'SInt16'
-sInt16 :: String -> Symbolic SInt16
+-- | Generalization of 'Data.SBV.sInt16'
+sInt16 :: MonadSymbolic m => String -> m SInt16
 sInt16 = symbolic
 
--- | Declare a list of 'SInt16's
-sInt16s :: [String] -> Symbolic [SInt16]
+-- | Generalization of 'Data.SBV.sInt16s'
+sInt16s :: MonadSymbolic m => [String] -> m [SInt16]
 sInt16s = symbolics
 
--- | Declare an 'SInt32'
-sInt32 :: String -> Symbolic SInt32
+-- | Generalization of 'Data.SBV.sInt32'
+sInt32 :: MonadSymbolic m => String -> m SInt32
 sInt32 = symbolic
 
--- | Declare a list of 'SInt32's
-sInt32s :: [String] -> Symbolic [SInt32]
+-- | Generalization of 'Data.SBV.sInt32s'
+sInt32s :: MonadSymbolic m => [String] -> m [SInt32]
 sInt32s = symbolics
 
--- | Declare an 'SInt64'
-sInt64 :: String -> Symbolic SInt64
+-- | Generalization of 'Data.SBV.sInt64'
+sInt64 :: MonadSymbolic m => String -> m SInt64
 sInt64 = symbolic
 
--- | Declare a list of 'SInt64's
-sInt64s :: [String] -> Symbolic [SInt64]
+-- | Generalization of 'Data.SBV.sInt64s'
+sInt64s :: MonadSymbolic m => [String] -> m [SInt64]
 sInt64s = symbolics
 
--- | Declare an 'SInteger'
-sInteger:: String -> Symbolic SInteger
+-- | Generalization of 'Data.SBV.sInteger'
+sInteger:: MonadSymbolic m => String -> m SInteger
 sInteger = symbolic
 
--- | Declare a list of 'SInteger's
-sIntegers :: [String] -> Symbolic [SInteger]
+-- | Generalization of 'Data.SBV.sIntegers'
+sIntegers :: MonadSymbolic m => [String] -> m [SInteger]
 sIntegers = symbolics
 
--- | Declare an 'SReal'
-sReal:: String -> Symbolic SReal
+-- | Generalization of 'Data.SBV.sReal'
+sReal:: MonadSymbolic m => String -> m SReal
 sReal = symbolic
 
--- | Declare a list of 'SReal's
-sReals :: [String] -> Symbolic [SReal]
+-- | Generalization of 'Data.SBV.sReals'
+sReals :: MonadSymbolic m => [String] -> m [SReal]
 sReals = symbolics
 
--- | Declare an 'SFloat'
-sFloat :: String -> Symbolic SFloat
+-- | Generalization of 'Data.SBV.sFloat'
+sFloat :: MonadSymbolic m => String -> m SFloat
 sFloat = symbolic
 
--- | Declare a list of 'SFloat's
-sFloats :: [String] -> Symbolic [SFloat]
+-- | Generalization of 'Data.SBV.sFloats'
+sFloats :: MonadSymbolic m => [String] -> m [SFloat]
 sFloats = symbolics
 
--- | Declare an 'SDouble'
-sDouble :: String -> Symbolic SDouble
+-- | Generalization of 'Data.SBV.sDouble'
+sDouble :: MonadSymbolic m => String -> m SDouble
 sDouble = symbolic
 
--- | Declare a list of 'SDouble's
-sDoubles :: [String] -> Symbolic [SDouble]
+-- | Generalization of 'Data.SBV.sDoubles'
+sDoubles :: MonadSymbolic m => [String] -> m [SDouble]
 sDoubles = symbolics
 
--- | Declare an 'SChar'
-sChar :: String -> Symbolic SChar
+-- | Generalization of 'Data.SBV.sChar'
+sChar :: MonadSymbolic m => String -> m SChar
 sChar = symbolic
 
--- | Declare an 'SString'
-sString :: String -> Symbolic SString
+-- | Generalization of 'Data.SBV.sString'
+sString :: MonadSymbolic m => String -> m SString
 sString = symbolic
 
--- | Declare a list of 'SChar's
-sChars :: [String] -> Symbolic [SChar]
+-- | Generalization of 'Data.SBV.sChars'
+sChars :: MonadSymbolic m => [String] -> m [SChar]
 sChars = symbolics
 
--- | Declare a list of 'SString's
-sStrings :: [String] -> Symbolic [SString]
+-- | Generalization of 'Data.SBV.sStrings'
+sStrings :: MonadSymbolic m => [String] -> m [SString]
 sStrings = symbolics
 
--- | Declare an 'SList'
-sList :: forall a. SymWord a => String -> Symbolic (SList a)
+-- | Generalization of 'Data.SBV.sList'
+sList :: (SymWord a, MonadSymbolic m) => String -> m (SList a)
 sList = symbolic
 
--- | Declare a list of 'SList's
-sLists :: forall a. SymWord a => [String] -> Symbolic [SList a]
+-- | Generalization of 'Data.SBV.sLists'
+sLists :: (SymWord a, MonadSymbolic m) => [String] -> m [SList a]
 sLists = symbolics
+
+-- | Generalization of 'Data.SBV.solve'
+solve :: MonadSymbolic m => [SBool] -> m SBool
+solve = return . bAnd
 
 -- | Convert an SReal to an SInteger. That is, it computes the
 -- largest integer @n@ that satisfies @sIntegerToSReal n <= r@
@@ -1808,7 +1814,7 @@ instance (SymWord h, SymWord g, SymWord f, SymWord e, SymWord d, SymWord c, SymW
     where uc7 (cs, fn) = (cs, \a b c d e f g -> fn (a, b, c, d, e, f, g))
 
 -- | Symbolic computations provide a context for writing symbolic programs.
-instance SolverContext Symbolic where
+instance MonadIO m => SolverContext (SymbolicT m) where
    constrain                   (SBV c) = imposeConstraint False []               c
    softConstrain               (SBV c) = imposeConstraint True  []               c
    namedConstraint        nm   (SBV c) = imposeConstraint False [(":named", nm)] c
@@ -1816,8 +1822,8 @@ instance SolverContext Symbolic where
 
    setOption o = addNewSMTOption  o
 
--- | Introduce a soft assertion, with an optional penalty
-assertWithPenalty :: String -> SBool -> Penalty -> Symbolic ()
+-- | Generalization of 'Data.SBV.assertWithPenalty'
+assertWithPenalty :: MonadSymbolic m => String -> SBool -> Penalty -> m ()
 assertWithPenalty nm o p = addSValOptGoal $ unSBV `fmap` AssertWithPenalty nm o p
 
 -- | Class of metrics we can optimize for. Currently,
@@ -1828,11 +1834,11 @@ assertWithPenalty nm o p = addSValOptGoal $ unSBV `fmap` AssertWithPenalty nm o 
 -- A good reference on these features is given in the following paper:
 -- <http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>.
 class Metric a where
-  -- | Minimize a named metric
-  minimize :: String -> a -> Symbolic ()
+  -- | Generalization of 'Data.SBV.minimize'
+  minimize :: MonadSymbolic m => String -> a -> m ()
 
-  -- | Maximize a named metric
-  maximize :: String -> a -> Symbolic ()
+  -- | Generalization of 'Data.SBV.maximize'
+  maximize :: MonadSymbolic m => String -> a -> m ()
 
 instance Metric SWord8   where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
 instance Metric SWord16  where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
@@ -1898,6 +1904,54 @@ slet x f = SBV $ SVal k $ Right $ cache r
                     let xsbv = SBV $ SVal (kindOf x) (Right (cache (const (return xsw))))
                         res  = f xsbv
                     sbvToSW st res
+
+-- | Equality as a proof method. Allows for
+-- very concise construction of equivalence proofs, which is very typical in
+-- bit-precise proofs.
+infix 4 ===
+class Equality a where
+  (===) :: a -> a -> IO ThmResult
+
+instance {-# OVERLAPPABLE #-} (SymWord a, EqSymbolic z) => Equality (SBV a -> z) where
+  k === l = prove $ \a -> k a .== l a
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, EqSymbolic z) => Equality (SBV a -> SBV b -> z) where
+  k === l = prove $ \a b -> k a b .== l a b
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, EqSymbolic z) => Equality ((SBV a, SBV b) -> z) where
+  k === l = prove $ \a b -> k (a, b) .== l (a, b)
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> z) where
+  k === l = prove $ \a b c -> k a b c .== l a b c
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c) -> z) where
+  k === l = prove $ \a b c -> k (a, b, c) .== l (a, b, c)
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> z) where
+  k === l = prove $ \a b c d -> k a b c d .== l a b c d
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d) -> z) where
+  k === l = prove $ \a b c d -> k (a, b, c, d) .== l (a, b, c, d)
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> z) where
+  k === l = prove $ \a b c d e -> k a b c d e .== l a b c d e
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e) -> z) where
+  k === l = prove $ \a b c d e -> k (a, b, c, d, e) .== l (a, b, c, d, e)
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> z) where
+  k === l = prove $ \a b c d e f -> k a b c d e f .== l a b c d e f
+
+instance {-# OVERLAPPABLE #-}
+ (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> z) where
+  k === l = prove $ \a b c d e f -> k (a, b, c, d, e, f) .== l (a, b, c, d, e, f)
+
+instance {-# OVERLAPPABLE #-}
+ (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, EqSymbolic z) => Equality (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV g -> z) where
+  k === l = prove $ \a b c d e f g -> k a b c d e f g .== l a b c d e f g
+
+instance {-# OVERLAPPABLE #-} (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> z) where
+  k === l = prove $ \a b c d e f g -> k (a, b, c, d, e, f, g) .== l (a, b, c, d, e, f, g)
 
 {-# ANN module   ("HLint: ignore Reduce duplication" :: String) #-}
 {-# ANN module   ("HLint: ignore Eta reduce" :: String)         #-}
