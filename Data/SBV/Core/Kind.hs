@@ -161,6 +161,7 @@ class HasKind a where
   isChar          :: a -> Bool
   isString        :: a -> Bool
   isList          :: a -> Bool
+  isTuple         :: a -> Bool
   showType        :: a -> String
   -- defaults
   hasSign x = kindHasSign (kindOf x)
@@ -208,6 +209,9 @@ class HasKind a where
   isList          x | KList{}      <- kindOf x = True
                     | True                     = False
 
+  isTuple         x | KTuple{}     <- kindOf x = True
+                    | True                     = False
+
   showType = show . kindOf
 
   -- default signature for uninterpreted/enumerated kinds
@@ -240,6 +244,6 @@ instance HasKind (HList '[]) where
   kindOf _ = KTuple []
 
 instance (HasKind x, HasKind (HList xs)) => HasKind (HList (x ': xs)) where
-  kindOf (HCons x xs) = case kindOf xs of
-    KTuple ks -> KTuple $ kindOf x : ks
-    _         -> error "HasKind"
+  kindOf _ = case kindOf (undefined :: HList xs) of
+    KTuple ks -> KTuple $ kindOf (undefined :: x) : ks
+    other     -> error $ "SBV.HasKind(HList) not a tuple: " ++ show other
