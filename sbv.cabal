@@ -123,9 +123,9 @@ Library
                   , Documentation.SBV.Examples.Queries.CaseSplit
                   , Documentation.SBV.Examples.Queries.Enums
                   , Documentation.SBV.Examples.Queries.Interpolants
-                  , Documentation.SBV.Examples.Queries.Transformer
                   , Documentation.SBV.Examples.Strings.RegexCrossword
                   , Documentation.SBV.Examples.Strings.SQLInjection
+                  , Documentation.SBV.Examples.Transformers.SymbolicEval
                   , Documentation.SBV.Examples.Uninterpreted.AUF
                   , Documentation.SBV.Examples.Uninterpreted.Deduce
                   , Documentation.SBV.Examples.Uninterpreted.Function
@@ -263,6 +263,7 @@ Test-Suite SBVTest
                   , TestSuite.Queries.Strings
                   , TestSuite.Queries.Uninterpreted
                   , TestSuite.QuickCheck.QC
+                  , TestSuite.Transformers.SymbolicEval
                   , TestSuite.Uninterpreted.AUF
                   , TestSuite.Uninterpreted.Axioms
                   , TestSuite.Uninterpreted.Function
