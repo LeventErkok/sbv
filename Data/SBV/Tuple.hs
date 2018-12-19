@@ -1,115 +1,126 @@
-{-# LANGUAGE Rank2Types #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DataKinds              #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE KindSignatures         #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE Rank2Types             #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE TypeOperators          #-}
 
-module Data.SBV.Tuple where
+module Data.SBV.Tuple (
+  -- * Natural numbers
+    Nat(..), SNat(..)
+  -- * Field access
+  , field, field1, field2, field3, field4, field5, field6, field7, field8
+  ) where
 
 import Data.SBV.Core.Data hiding (StrOp(..))
 import Data.SBV.Core.Symbolic (svToSW)
 import Data.SBV.Core.Model (HListable(..))
 
--- | Access the first field of a tuple or `HList`.
-field1
-  :: forall a tup tys.
-     (HListable tup, SymWord tup, SymWord a, HLTy tup ~ (a : tys))
-  => SBV tup -> SBV a
-field1 tup
-  | Just (HCons a _) <- toHList <$> unliteral tup
+-- | Natural numbers. These are used as an (type-level) index into a tuple or
+-- @HList@.
+data Nat = Z | S Nat
+
+-- | Singleton natural numbers. These are used as an (term-level) index into a
+-- tuple or @HList@.
+data SNat (n :: Nat) where
+  SZ ::           SNat 'Z
+  SS :: SNat n -> SNat ('S n)
+
+-- | Constraint that a given position in a tuple or @HList@ is of a given type.
+class IndexType (n :: Nat) (xs :: [*]) (i :: *) | n xs -> i where
+  fromIndex :: SNat n -> HList xs -> i
+
+instance IndexType 'Z (x ': xs) x where
+  fromIndex SZ (HCons x _) = x
+
+instance IndexType n xs x => IndexType ('S n) (x ': xs) x where
+  fromIndex (SS n) (HCons _ xs) = fromIndex n xs
+
+-- | Access the @n@th field of a tuple or @HList@.
+field
+  :: forall tup a n.
+     ( HListable tup, SymWord tup, SymWord a
+     , IndexType n (HListTy tup) a
+     )
+  => SNat n -> SBV tup -> SBV a
+field n tup
+  | Just a <- fromIndex n . toHList <$> unliteral tup
   = literal a
   | True
-  = symbolicFieldAccess 1 tup
+  = symbolicFieldAccess (sNatToInt n) tup
+  where
 
--- | Access the second field of a tuple or `HList`.
+    sNatToInt :: SNat n' -> Int
+    sNatToInt SZ      = 0
+    sNatToInt (SS n') = succ (sNatToInt n')
+
+-- | Access the first field of a tuple or @HList@.
+field1
+  :: ( HListable tup, SymWord tup, SymWord a
+     , IndexType ('S 'Z) (HListTy tup) a
+     )
+  => SBV tup -> SBV a
+field1 = field $ SS SZ
+
+-- | Access the second field of a tuple or @HList@.
 field2
-  :: forall a b tup tys.
-     (HListable tup, SymWord tup, SymWord b, HLTy tup ~ (a : b : tys))
-  => SBV tup -> SBV b
-field2 tup
-  | Just (HCons _ (HCons b _)) <- toHList <$> unliteral tup
-  = literal b
-  | True
-  = symbolicFieldAccess 2 tup
+  :: ( HListable tup, SymWord tup, SymWord a
+     , IndexType ('S ('S 'Z)) (HListTy tup) a
+     )
+  => SBV tup -> SBV a
+field2 = field $ SS $ SS SZ
 
--- | Access the third field of a tuple or `HList`.
+-- | Access the third field of a tuple or @HList@.
 field3
-  :: forall a b c tup tys.
-     (HListable tup, SymWord tup, SymWord c, HLTy tup ~ (a : b : c : tys))
-  => SBV tup -> SBV c
-field3 tup
-  | Just (HCons _ (HCons _ (HCons c _))) <- toHList <$> unliteral tup
-  = literal c
-  | True
-  = symbolicFieldAccess 3 tup
+  :: ( HListable tup, SymWord tup, SymWord a
+     , IndexType ('S ('S ('S 'Z))) (HListTy tup) a
+     )
+  => SBV tup -> SBV a
+field3 = field $ SS $ SS $ SS SZ
 
--- | Access the fourth field of a tuple or `HList`.
+-- | Access the fourth field of a tuple or @HList@.
 field4
-  :: forall a b c d tup tys.
-     (HListable tup, SymWord tup, SymWord d, HLTy tup ~ (a : b : c : d : tys))
-  => SBV tup -> SBV d
-field4 tup
-  | Just (HCons _ (HCons _ (HCons _ (HCons d _)))) <- toHList <$> unliteral tup
-  = literal d
-  | True
-  = symbolicFieldAccess 4 tup
+  :: ( HListable tup, SymWord tup, SymWord a
+     , IndexType ('S ('S ('S ('S 'Z)))) (HListTy tup) a
+     )
+  => SBV tup -> SBV a
+field4 = field $ SS $ SS $ SS $ SS SZ
 
--- | Access the fifth field of a tuple or `HList`.
+-- | Access the fifth field of a tuple or @HList@.
 field5
-  :: forall a b c d e tup tys.
-     ( HListable tup, SymWord tup, SymWord e
-     , HLTy tup ~ (a : b : c : d : e : tys)
+  :: ( HListable tup, SymWord tup, SymWord a
+     , IndexType ('S ('S ('S ('S ('S 'Z))))) (HListTy tup) a
      )
-  => SBV tup -> SBV e
-field5 tup
-  | Just (HCons _ (HCons _ (HCons _ (HCons _ (HCons e _)))))
-    <- toHList <$> unliteral tup
-  = literal e
-  | True
-  = symbolicFieldAccess 5 tup
+  => SBV tup -> SBV a
+field5 = field $ SS $ SS $ SS $ SS $ SS SZ
 
--- | Access the sixth field of a tuple or `HList`.
+-- | Access the sixth field of a tuple or @HList@.
 field6
-  :: forall a b c d e f tup tys.
-     ( HListable tup, SymWord tup, SymWord f
-     , HLTy tup ~ (a : b : c : d : e : f : tys)
+  :: ( HListable tup, SymWord tup, SymWord a
+     , IndexType ('S ('S ('S ('S ('S ('S 'Z)))))) (HListTy tup) a
      )
-  => SBV tup -> SBV f
-field6 tup
-  | Just (HCons _ (HCons _ (HCons _ (HCons _ (HCons _ (HCons f _))))))
-    <- toHList <$> unliteral tup
-  = literal f
-  | True
-  = symbolicFieldAccess 6 tup
+  => SBV tup -> SBV a
+field6 = field $ SS $ SS $ SS $ SS $ SS $ SS SZ
 
--- | Access the seventh field of a tuple or `HList`.
+-- | Access the seventh field of a tuple or @HList@.
 field7
-  :: forall a b c d e f g tup tys.
-     ( HListable tup, SymWord tup, SymWord g
-     , HLTy tup ~ (a : b : c : d : e : f : g : tys)
+  :: ( HListable tup, SymWord tup, SymWord a
+     , IndexType ('S ('S ('S ('S ('S ('S ('S 'Z))))))) (HListTy tup) a
      )
-  => SBV tup -> SBV g
-field7 tup
-  | Just (HCons _ (HCons _ (HCons _ (HCons _ (HCons _ (HCons _ (HCons g _)))))))
-    <- toHList <$> unliteral tup
-  = literal g
-  | True
-  = symbolicFieldAccess 7 tup
+  => SBV tup -> SBV a
+field7 = field $ SS $ SS $ SS $ SS $ SS $ SS $ SS SZ
 
--- | Access the eighth field of a tuple or `HList`.
+-- | Access the eighth field of a tuple or @HList@.
 field8
-  :: forall a b c d e f g h tup tys.
-     ( HListable tup, SymWord tup, SymWord h
-     , HLTy tup ~ (a : b : c : d : e : f : g : h : tys)
+  :: ( HListable tup, SymWord tup, SymWord a
+     , IndexType ('S ('S ('S ('S ('S ('S ('S ('S 'Z)))))))) (HListTy tup) a
      )
-  => SBV tup -> SBV h
-field8 tup
-  | Just (HCons _ (HCons _ (HCons _ (HCons _ (HCons _ (HCons _ (HCons _
-      (HCons h _))))))))
-    <- toHList <$> unliteral tup
-  = literal h
-  | True
-  = symbolicFieldAccess 8 tup
+  => SBV tup -> SBV a
+field8 = field $ SS $ SS $ SS $ SS $ SS $ SS $ SS $ SS SZ
 
 symbolicFieldAccess :: forall a tup. HasKind a => Int -> SBV tup -> SBV a
 symbolicFieldAccess n tup
