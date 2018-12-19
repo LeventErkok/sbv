@@ -13,8 +13,6 @@ module TestSuite.Basics.Recursive(tests) where
 
 import Utils.SBVTestFramework
 
-import Control.Monad.Trans (liftIO)
-
 import Data.SBV.Internals  (genMkSymVar, unSBV)
 
 import qualified Data.SBV.Dynamic as D

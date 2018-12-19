@@ -14,7 +14,6 @@ module TestSuite.Basics.SmallShifts(tests) where
 
 import Utils.SBVTestFramework hiding (proveWith)
 
-import Control.Monad.Trans (liftIO)
 import Data.SBV.Dynamic
 import Data.SBV.Internals  (genMkSymVar, unSBV)
 
