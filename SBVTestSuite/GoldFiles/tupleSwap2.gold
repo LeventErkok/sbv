@@ -21,11 +21,11 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s2 () Int (proj-1 s0))
-[GOOD] (define-fun s3 () Int (proj-2 s1))
+[GOOD] (define-fun s2 () Int (proj-2 s0))
+[GOOD] (define-fun s3 () Int (proj-3 s1))
 [GOOD] (define-fun s4 () Bool (= s2 s3))
-[GOOD] (define-fun s5 () Int (proj-2 s0))
-[GOOD] (define-fun s6 () Int (proj-1 s1))
+[GOOD] (define-fun s5 () Int (proj-3 s0))
+[GOOD] (define-fun s6 () Int (proj-2 s1))
 [GOOD] (define-fun s7 () Bool (= s5 s6))
 [GOOD] (assert s4)
 [GOOD] (assert s7)
