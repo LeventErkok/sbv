@@ -242,11 +242,11 @@ instance (Typeable xs, SymWord x, SymWord (HList xs)) => SymWord (HList (x ': xs
   fromCW c = error $ "SymWord.fromCW: Unexpected non-HCons value: " ++ show c
 
 class HListable tup where
-  type HLTy tup :: [*]
-  toHList :: tup -> HList (HLTy tup)
-  fromHList :: HList (HLTy tup) -> tup
+  type HListTy tup :: [*]
+  toHList :: tup -> HList (HListTy tup)
+  fromHList :: HList (HListTy tup) -> tup
 
-coerceTup :: SBV (HList (HLTy tup)) -> SBV tup
+coerceTup :: SBV (HList (HListTy tup)) -> SBV tup
 coerceTup (SBV x) = SBV x
 
 instance (HasKind a, HasKind b) => HasKind (a, b) where
@@ -278,48 +278,48 @@ instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f,
    kindOf = kindOf . toHList
 
 instance HListable (HList l) where
-  type HLTy (HList l) = l
+  type HListTy (HList l) = l
   toHList   = id
   fromHList = id
 
 instance HListable (a, b) where
-  type HLTy (a, b) = [a, b]
+  type HListTy (a, b) = [a, b]
   toHList (a, b) = a `HCons` b `HCons` HNil
   fromHList (a `HCons` b `HCons` HNil) = (a, b)
 
 instance HListable (a, b, c) where
-  type HLTy (a, b, c) = [a, b, c]
+  type HListTy (a, b, c) = [a, b, c]
   toHList (a, b, c) = a `HCons` b `HCons` c `HCons` HNil
   fromHList (a `HCons` b `HCons` c `HCons` HNil) = (a, b, c)
 
 instance HListable (a, b, c, d) where
-  type HLTy (a, b, c, d) = [a, b, c, d]
+  type HListTy (a, b, c, d) = [a, b, c, d]
   toHList (a, b, c, d) = a `HCons` b `HCons` c `HCons` d `HCons` HNil
   fromHList (a `HCons` b `HCons` c `HCons` d `HCons` HNil) = (a, b, c, d)
 
 instance HListable (a, b, c, d, e) where
-  type HLTy (a, b, c, d, e) = [a, b, c, d, e]
+  type HListTy (a, b, c, d, e) = [a, b, c, d, e]
   toHList (a, b, c, d, e)
     = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` HNil
   fromHList (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` HNil)
     = (a, b, c, d, e)
 
 instance HListable (a, b, c, d, e, f) where
-  type HLTy (a, b, c, d, e, f) = [a, b, c, d, e, f]
+  type HListTy (a, b, c, d, e, f) = [a, b, c, d, e, f]
   toHList (a, b, c, d, e, f)
     = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` HNil
   fromHList (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` HNil)
     = (a, b, c, d, e, f)
 
 instance HListable (a, b, c, d, e, f, g) where
-  type HLTy (a, b, c, d, e, f, g) = [a, b, c, d, e, f, g]
+  type HListTy (a, b, c, d, e, f, g) = [a, b, c, d, e, f, g]
   toHList (a, b, c, d, e, f, g) = a `HCons` b `HCons` c `HCons` d `HCons` e
     `HCons` f `HCons` g `HCons` HNil
   fromHList (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g
     `HCons` HNil) = (a, b, c, d, e, f, g)
 
 instance HListable (a, b, c, d, e, f, g, h) where
-  type HLTy (a, b, c, d, e, f, g, h) = [a, b, c, d, e, f, g, h]
+  type HListTy (a, b, c, d, e, f, g, h) = [a, b, c, d, e, f, g, h]
   toHList (a, b, c, d, e, f, g, h) = a `HCons` b `HCons` c `HCons` d `HCons` e
     `HCons` f `HCons` g `HCons` h `HCons` HNil
   fromHList (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g
