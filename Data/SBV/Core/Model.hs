@@ -224,7 +224,16 @@ instance SymWord (HList '[]) where
   fromCW (CW _ (CWTuple [])) = HNil
   fromCW c = error $ "SymWord.fromCW: Unexpected non-2-tuple value: " ++ show c
 
--- TODO: why is typeable required?
+-- Note: why is Typeable required? This is why I believe it's required.
+-- - requirement: `SymWord (HList (x ': xs))` => `Typeable (HList (x ': xs))`
+--   (superclass)
+-- - `Typeable (HList (x ': xs))` => *
+--   - `Typeable x` (satisfied by `SymWord x`)
+--   - `Typeable xs`
+--
+-- Starred is the step I'm confused about. Where does this instance come from?
+-- We never declare an instance of `Typeable` for `HList`. Is it magically
+-- declared for data families?
 instance (Typeable xs, SymWord x, SymWord (HList xs)) => SymWord (HList (x ': xs)) where
   mkSymWord = genMkSymVar (kindOf (undefined :: HList (x ': xs)))
 
