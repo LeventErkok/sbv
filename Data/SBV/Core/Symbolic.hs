@@ -497,6 +497,7 @@ data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -
                              , queryTblArrPreserveIndex :: Maybe (Int, Int)
                              }
 
+-- | Computations which support query operations.
 class Monad m => MonadQuery m where
   queryState :: m State
 
@@ -512,7 +513,7 @@ instance (MonadQuery m, Monoid w) => MonadQuery (SW.WriterT w m)
 instance (MonadQuery m, Monoid w) => MonadQuery (LW.WriterT w m)
 
 -- | A query is a user-guided mechanism to directly communicate and extract
--- results from the solver.
+-- results from the solver. A generalization of 'Data.SBV.Query'.
 newtype QueryT m a = QueryT { runQueryT :: ReaderT State m a }
     deriving (Applicative, Functor, Monad, MonadIO, MonadTrans,
               MonadError e, MonadState s, MonadWriter w)
@@ -529,6 +530,8 @@ instance MonadReader r m => MonadReader r (QueryT m) where
   ask = lift ask
   local f = mapQueryT $ mapReaderT $ local f
 
+-- | A query is a user-guided mechanism to directly communicate and extract
+-- results from the solver.
 type Query = QueryT IO
 
 instance NFData OptimizeStyle where
@@ -1046,6 +1049,7 @@ svToSymSW sbv = do st <- symbolicEnv
 -- state of the computation, layered on top of IO for creating unique
 -- references to hold onto intermediate results.
 
+-- | Computations which support symbolic operations
 class MonadIO m => MonadSymbolic m where
   symbolicEnv :: m State
 
@@ -1060,6 +1064,7 @@ instance MonadSymbolic m             => MonadSymbolic (LS.StateT s m)
 instance (MonadSymbolic m, Monoid w) => MonadSymbolic (SW.WriterT w m)
 instance (MonadSymbolic m, Monoid w) => MonadSymbolic (LW.WriterT w m)
 
+-- | A generalization of 'Data.SBV.Symbolic'.
 newtype SymbolicT m a = SymbolicT { runSymbolicT :: ReaderT State m a }
                    deriving ( Applicative, Functor, Monad, MonadIO, MonadTrans
                             , MonadError e, MonadState s, MonadWriter w
