@@ -214,6 +214,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.String
                   , TestSuite.Basics.List
                   , TestSuite.Basics.TOut
+                  , TestSuite.Basics.Tuple
                   , TestSuite.BitPrecise.BitTricks
                   , TestSuite.BitPrecise.Legato
                   , TestSuite.BitPrecise.MergeSort

@@ -43,6 +43,7 @@ import qualified TestSuite.Basics.SmallShifts
 import qualified TestSuite.Basics.SquashReals
 import qualified TestSuite.Basics.String
 import qualified TestSuite.Basics.TOut
+import qualified TestSuite.Basics.Tuple
 import qualified TestSuite.BitPrecise.BitTricks
 import qualified TestSuite.BitPrecise.Legato
 import qualified TestSuite.BitPrecise.MergeSort
@@ -178,6 +179,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Basics.SquashReals.tests
                , TestSuite.Basics.String.tests
                , TestSuite.Basics.TOut.tests
+               , TestSuite.Basics.Tuple.tests
                , TestSuite.BitPrecise.BitTricks.tests
                , TestSuite.BitPrecise.Legato.tests
                , TestSuite.BitPrecise.MergeSort.tests

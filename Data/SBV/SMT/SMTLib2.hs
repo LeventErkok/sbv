@@ -20,6 +20,7 @@ import Data.Maybe (listToMaybe, fromMaybe)
 import qualified Data.Foldable as F (toList)
 import qualified Data.Map.Strict      as M
 import qualified Data.IntMap.Strict   as IM
+import           Data.Set             (Set)
 import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
@@ -44,7 +45,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
         hasDouble      = KDouble    `Set.member` kindInfo
         hasBVs         = hasChar || not (null [() | KBounded{} <- Set.toList kindInfo])   -- Remember, characters map to Word8
         usorts         = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
-        tuplesorts     = [tupKs | KTuple tupKs <- Set.toList kindInfo]
+        tupleArities   = allTupleArities kindInfo
         hasNonBVArrays = (not . null) [() | (_, (_, (k1, k2), _)) <- arrs, not (isBounded k1 && isBounded k2)]
         hasArrayInits  = (not . null) [() | (_, (_, _, ArrayFree (Just _))) <- arrs]
         hasList        = any isList kindInfo
@@ -122,7 +123,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
              ++ [ "; --- uninterpreted sorts ---" ]
              ++ concatMap declSort usorts
              ++ [ "; --- tuples ---" ]
-             ++ map declTuple tuplesorts
+             ++ map declTuple tupleArities
              ++ [ "; --- literal constants ---" ]
              ++ map (declConst cfg) consts
              ++ [ "; --- skolem constants ---" ]
@@ -291,14 +292,20 @@ declSort (s, Right fs) = [ "(declare-datatypes () ((" ++ s ++ " " ++ unwords (ma
 -- (declare-datatypes (T1 T2)
 --   ((tup-2 (mk-tup-2 (proj-1 T1) (proj-2 T2)))))
 -- @
-declTuple :: [Kind] -> String
-declTuple ks =
-  let n = length ks
-      (args, fields) = unzip $ zipWith
-        (\i _ -> ("T" ++ show i, "(proj-" ++ show i ++ " T" ++ show i ++ ")"))
-        ([1..] :: [Int]) ks
+declTuple :: Int -> String
+declTuple arity =
+  let (args, fields) = unzip $ fmap
+        (\i -> ("T" ++ show i, "(proj-" ++ show i ++ " T" ++ show i ++ ")"))
+        ([1..arity] :: [Int])
   in "(declare-datatypes (" ++ unwords args ++ ") " ++
-        "((tup-" ++ show n ++ " (mk-tup-" ++ show n ++ " " ++ unwords fields ++ "))))"
+        "((tup-" ++ show arity ++ " (mk-tup-" ++ show arity ++ " " ++ unwords fields ++ "))))"
+
+-- Find the set of tuple sizes to declare, eg (2-tuple, 5-tuple).
+allTupleArities :: Set Kind -> [Int]
+allTupleArities ks
+  = Set.toList
+  $ Set.map length
+  $ Set.fromList [ tupKs | KTuple tupKs <- Set.toList ks ]
 
 -- | Convert in a query context
 cvtInc :: Bool -> SMTLibIncConverter [String]
@@ -306,7 +313,7 @@ cvtInc afterAPush inps ks consts arrs tbls uis (SBVPgm asgnsSeq) cfg =
             -- sorts
                concatMap declSort [(s, dt) | KUserSort s dt <- Set.toList ks]
             -- tuples
-            ++ map declTuple [tupKs | KTuple tupKs <- Set.toList ks]
+            ++ map declTuple (allTupleArities ks)
             -- constants
             ++ map (declConst cfg) consts
             -- inputs
