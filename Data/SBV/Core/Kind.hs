@@ -53,9 +53,9 @@ data Kind = KBool
 data family HList (l :: [*])
 
 data instance HList '[] = HNil
-data instance HList (x ': xs) = x `HCons` HList xs
+data instance HList (x ': xs) = x :% HList xs
 
-infixr `HCons`
+infixr :%
 
 deriving instance Eq (HList '[])
 deriving instance (Eq x, Eq (HList xs)) => Eq (HList (x ': xs))

@@ -228,7 +228,7 @@ instance SymWord (HList '[]) where
 instance (Typeable xs, SymWord x, SymWord (HList xs)) => SymWord (HList (x ': xs)) where
   mkSymWord = genMkSymVar (kindOf (undefined :: HList (x ': xs)))
 
-  literal (HCons x xs) = case literal x of
+  literal (x :% xs) = case literal x of
     SBV (SVal _ (Left (CW _ xval))) -> case literal xs of
       SBV (SVal (KTuple kxs) (Left (CW _ (CWTuple xsval)))) ->
         let k = KTuple (kindOf x : kxs)
@@ -236,10 +236,9 @@ instance (Typeable xs, SymWord x, SymWord (HList xs)) => SymWord (HList (x ': xs
       _ -> error "SymWord.literal: Cannot construct a literal value!"
     _ -> error "SymWord.literal: Cannot construct a literal value!"
 
-  fromCW (CW (KTuple (k:ks)) (CWTuple (x:xs))) = HCons
-    (fromCW (CW k x))
-    (fromCW (CW (KTuple ks) (CWTuple xs)))
-  fromCW c = error $ "SymWord.fromCW: Unexpected non-HCons value: " ++ show c
+  fromCW (CW (KTuple (k:ks)) (CWTuple (x:xs))) =
+    fromCW (CW k x) :% fromCW (CW (KTuple ks) (CWTuple xs))
+  fromCW c = error $ "SymWord.fromCW: Unexpected non-:% value: " ++ show c
 
 class HListable tup where
   type HListTy tup :: [*]
@@ -284,46 +283,40 @@ instance HListable (HList l) where
 
 instance HListable (a, b) where
   type HListTy (a, b) = [a, b]
-  toHList (a, b) = a `HCons` b `HCons` HNil
-  fromHList (a `HCons` b `HCons` HNil) = (a, b)
+  toHList (a, b) = a :% b :% HNil
+  fromHList (a :% b :% HNil) = (a, b)
 
 instance HListable (a, b, c) where
   type HListTy (a, b, c) = [a, b, c]
-  toHList (a, b, c) = a `HCons` b `HCons` c `HCons` HNil
-  fromHList (a `HCons` b `HCons` c `HCons` HNil) = (a, b, c)
+  toHList (a, b, c) = a :% b :% c :% HNil
+  fromHList (a :% b :% c :% HNil) = (a, b, c)
 
 instance HListable (a, b, c, d) where
   type HListTy (a, b, c, d) = [a, b, c, d]
-  toHList (a, b, c, d) = a `HCons` b `HCons` c `HCons` d `HCons` HNil
-  fromHList (a `HCons` b `HCons` c `HCons` d `HCons` HNil) = (a, b, c, d)
+  toHList (a, b, c, d) = a :% b :% c :% d :% HNil
+  fromHList (a :% b :% c :% d :% HNil) = (a, b, c, d)
 
 instance HListable (a, b, c, d, e) where
   type HListTy (a, b, c, d, e) = [a, b, c, d, e]
-  toHList (a, b, c, d, e)
-    = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` HNil
-  fromHList (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` HNil)
-    = (a, b, c, d, e)
+  toHList (a, b, c, d, e) = a :% b :% c :% d :% e :% HNil
+  fromHList (a :% b :% c :% d :% e :% HNil) = (a, b, c, d, e)
 
 instance HListable (a, b, c, d, e, f) where
   type HListTy (a, b, c, d, e, f) = [a, b, c, d, e, f]
-  toHList (a, b, c, d, e, f)
-    = a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` HNil
-  fromHList (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` HNil)
-    = (a, b, c, d, e, f)
+  toHList (a, b, c, d, e, f) = a :% b :% c :% d :% e :% f :% HNil
+  fromHList (a :% b :% c :% d :% e :% f :% HNil) = (a, b, c, d, e, f)
 
 instance HListable (a, b, c, d, e, f, g) where
   type HListTy (a, b, c, d, e, f, g) = [a, b, c, d, e, f, g]
-  toHList (a, b, c, d, e, f, g) = a `HCons` b `HCons` c `HCons` d `HCons` e
-    `HCons` f `HCons` g `HCons` HNil
-  fromHList (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g
-    `HCons` HNil) = (a, b, c, d, e, f, g)
+  toHList (a, b, c, d, e, f, g) = a :% b :% c :% d :% e :% f :% g :% HNil
+  fromHList (a :% b :% c :% d :% e :% f :% g :% HNil) = (a, b, c, d, e, f, g)
 
 instance HListable (a, b, c, d, e, f, g, h) where
   type HListTy (a, b, c, d, e, f, g, h) = [a, b, c, d, e, f, g, h]
-  toHList (a, b, c, d, e, f, g, h) = a `HCons` b `HCons` c `HCons` d `HCons` e
-    `HCons` f `HCons` g `HCons` h `HCons` HNil
-  fromHList (a `HCons` b `HCons` c `HCons` d `HCons` e `HCons` f `HCons` g
-    `HCons` h `HCons` HNil) = (a, b, c, d, e, f, g, h)
+  toHList (a, b, c, d, e, f, g, h)
+    = a :% b :% c :% d :% e :% f :% g :% h :% HNil
+  fromHList (a :% b :% c :% d :% e :% f :% g :% h :% HNil)
+    = (a, b, c, d, e, f, g, h)
 
 instance (SymWord a, SymWord b) => SymWord (a, b) where
   mkSymWord x y = fmap coerceTup $ mkSymWord x y

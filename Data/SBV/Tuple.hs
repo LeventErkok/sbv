@@ -35,10 +35,10 @@ class IndexType (n :: Nat) (xs :: [*]) (i :: *) | n xs -> i where
   fromIndex :: SNat n -> HList xs -> i
 
 instance IndexType 'Z (x ': xs) x where
-  fromIndex SZ (HCons x _) = x
+  fromIndex SZ (x :% _) = x
 
 instance IndexType n xs x => IndexType ('S n) (x ': xs) x where
-  fromIndex (SS n) (HCons _ xs) = fromIndex n xs
+  fromIndex (SS n) (_ :% xs) = fromIndex n xs
 
 -- | Access the @n@th field of a tuple or @HList@.
 field
