@@ -328,42 +328,42 @@ instance HListable (a, b, c, d, e, f, g, h) where
     = (a, b, c, d, e, f, g, h)
 
 instance (SymWord a, SymWord b) => SymWord (a, b) where
-  mkSymWord x y = fmap coerceTup $ mkSymWord x y
+  mkSymWord x y = coerceTup <$> mkSymWord x y
   literal       = coerceTup . literal . toHList
   fromCW        = fromHList . fromCW
 
 instance (SymWord a, SymWord b, SymWord c) => SymWord (a, b, c) where
-  mkSymWord x y = fmap coerceTup $ mkSymWord x y
+  mkSymWord x y = coerceTup <$> mkSymWord x y
   literal       = coerceTup . literal . toHList
   fromCW        = fromHList . fromCW
 
 instance (SymWord a, SymWord b, SymWord c, SymWord d)
   => SymWord (a, b, c, d) where
-  mkSymWord x y = fmap coerceTup $ mkSymWord x y
+  mkSymWord x y = coerceTup <$> mkSymWord x y
   literal       = coerceTup . literal . toHList
   fromCW        = fromHList . fromCW
 
 instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e)
   => SymWord (a, b, c, d, e) where
-  mkSymWord x y = fmap coerceTup $ mkSymWord x y
+  mkSymWord x y = coerceTup <$> mkSymWord x y
   literal       = coerceTup . literal . toHList
   fromCW        = fromHList . fromCW
 
 instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f)
   => SymWord (a, b, c, d, e, f) where
-  mkSymWord x y = fmap coerceTup $ mkSymWord x y
+  mkSymWord x y = coerceTup <$> mkSymWord x y
   literal       = coerceTup . literal . toHList
   fromCW        = fromHList . fromCW
 
 instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f,
   SymWord g) => SymWord (a, b, c, d, e, f, g) where
-  mkSymWord x y = fmap coerceTup $ mkSymWord x y
+  mkSymWord x y = coerceTup <$> mkSymWord x y
   literal       = coerceTup . literal . toHList
   fromCW        = fromHList . fromCW
 
 instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f,
   SymWord g, SymWord h) => SymWord (a, b, c, d, e, f, g, h) where
-  mkSymWord x y = fmap coerceTup $ mkSymWord x y
+  mkSymWord x y = coerceTup <$> mkSymWord x y
   literal       = coerceTup . literal . toHList
   fromCW        = fromHList . fromCW
 
