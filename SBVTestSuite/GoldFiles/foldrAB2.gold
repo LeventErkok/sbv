@@ -9,6 +9,7 @@
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-logic ALL)
 [GOOD] ; --- uninterpreted sorts ---
+[GOOD] ; --- tuples ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s_2 () Bool false)
 [GOOD] (define-fun s_1 () Bool true)

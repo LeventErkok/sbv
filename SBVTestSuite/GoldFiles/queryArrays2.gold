@@ -7,6 +7,7 @@
 [GOOD] (set-option :produce-models true)
 [GOOD] (set-logic QF_UFBV) ; NB. User specified.
 [GOOD] ; --- uninterpreted sorts ---
+[GOOD] ; --- tuples ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s_2 () Bool false)
 [GOOD] (define-fun s_1 () Bool true)
