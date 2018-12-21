@@ -147,25 +147,31 @@ check program prop = runExceptT $ runSMTWith z3 $ do
 
 -- * Some examples
 
+-- | Check that @x+y+1@ generates a counter-example for the property that the
+-- result is less than @10@ when @x+y@ exceeds @9@. We have:
+--
+-- >>> ex1
+-- Right (Counterexample 0 9)
 ex1 :: IO (Either String CheckResult)
 ex1 = check (Program  $ Var "x" `Plus` Lit 1 `Plus` Var "y")
             (Property $ Var "result" `LessThan` Lit 10)
 
--- λ> ex1
--- Right (Counterexample 0 9)
-
+-- | Check that the program @x+y@ correctly produces a result greater than @1@ when
+-- both @x@ and @y@ are at least @1@. We have:
+--
+-- >>> ex2
+-- Right Proved
 ex2 :: IO (Either String CheckResult)
 ex2 = check (Program  $ Var "x" `Plus` Var "y")
             (Property $ (positive (Var "x") `And` positive (Var "y"))
                 `Implies` (Var "result" `GreaterThan` Lit 1))
   where positive t = t `GreaterThan` Lit 0
 
--- λ> ex2
--- Right Proved
-
+-- | Check that we catch the cases properly through the monad stack when there is a
+-- syntax error, like an undefined variable. We have:
+--
+-- >>> ex3
+-- Left "unknown variable"
 ex3 :: IO (Either String CheckResult)
 ex3 = check (Program  $ Var "notAValidVar")
             (Property $ Var "result" `LessThan` Lit 10)
-
--- λ> ex3
--- Left "unknown variable"
