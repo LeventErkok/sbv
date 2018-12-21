@@ -1,18 +1,18 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Client.Mono
+-- Module      :  Data.SBV.Client.BaseIO
 -- Copyright   :  (c) Brian Schroeder, Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
 -- Monomorphized versions of functions for simplified client use via
--- @Data.SBV@.
+-- @Data.SBV@, where we restrict the underlying monad to be IO.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE FlexibleContexts #-}
 
-module Data.SBV.Client.Mono where
+module Data.SBV.Client.BaseIO where
 
 import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
                                 SymWord, SBool, SBV, SChar, SDouble, SFloat,
@@ -98,17 +98,18 @@ sat = Trans.sat
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
 satWith = Trans.satWith
 
--- | Find all satisfying assignments, using the default solver. See 'allSatWith' for details.
+-- | Find all satisfying assignments, using the default solver.
+-- Equivalent to @'allSatWith' 'Data.SBV.defaultSMTCfg'@. See 'allSatWith' for details.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.allSat'
 allSat :: Provable a => a -> IO AllSatResult
 allSat = Trans.allSat
 
--- | Return all satisfying assignments for a predicate, equivalent to @'allSatWith' 'defaultSMTCfg'@.
+-- | Return all satisfying assignments for a predicate.
 -- Note that this call will block until all satisfying assignments are found. If you have a problem
 -- with infinitely many satisfying models (consider 'SInteger') or a very large number of them, you
--- might have to wait for a long time. To avoid such cases, use the 'allSatMaxModelCount' parameter
--- in the configuration.
+-- might have to wait for a long time. To avoid such cases, use the 'Data.SBV.Core.Symbolic.allSatMaxModelCount'
+-- parameter in the configuration.
 --
 -- NB. Uninterpreted constant/function values and counter-examples for array values are ignored for
 -- the purposes of 'allSat'. That is, only the satisfying assignments modulo uninterpreted functions and
@@ -168,7 +169,7 @@ isSatisfiable = Trans.isSatisfiable
 isSatisfiableWith :: Provable a => SMTConfig -> a -> IO Bool
 isSatisfiableWith = Trans.isSatisfiableWith
 
--- | Run an arbitrary symbolic computation, equivalent to @'runSMTWith' 'defaultSMTCfg'@
+-- | Run an arbitrary symbolic computation, equivalent to @'runSMTWith' 'Data.SBV.defaultSMTCfg'@
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.runSMT'
 runSMT :: Symbolic a -> IO a

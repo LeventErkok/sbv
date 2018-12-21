@@ -321,7 +321,7 @@ import Data.SBV.Provers.Prover hiding (forAll_, forAll, forSome_, forSome,
                                        sName_, sName, safe, safeWith)
 
 import Data.SBV.Client
-import Data.SBV.Client.Mono
+import Data.SBV.Client.BaseIO
 
 import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.TDiff     (Timing(..))

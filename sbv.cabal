@@ -133,7 +133,7 @@ Library
                   , Documentation.SBV.Examples.Uninterpreted.Sort
                   , Documentation.SBV.Examples.Uninterpreted.UISortAllSat
   Other-modules   : Data.SBV.Client
-                  , Data.SBV.Client.Mono
+                  , Data.SBV.Client.BaseIO
                   , Data.SBV.Core.AlgReals
                   , Data.SBV.Core.Concrete
                   , Data.SBV.Core.Data
@@ -143,7 +143,7 @@ Library
                   , Data.SBV.Core.Floating
                   , Data.SBV.Core.Splittable
                   , Data.SBV.Core.Symbolic
-                  , Data.SBV.Control.Mono
+                  , Data.SBV.Control.BaseIO
                   , Data.SBV.Control.Query
                   , Data.SBV.Control.Types
                   , Data.SBV.Control.Utils

@@ -77,7 +77,7 @@ module Data.SBV.Control (
 import Data.SBV.Core.Data     (SMTConfig(..))
 import Data.SBV.Core.Symbolic (MonadQuery(..), Query, Symbolic, QueryContext(..))
 
-import Data.SBV.Control.Mono
+import Data.SBV.Control.BaseIO
 import Data.SBV.Control.Query hiding (getInfo, getOption, getUnknownReason,
                                       getSMTResult, getLexicographicOptResults,
                                       getIndependentOptResults,

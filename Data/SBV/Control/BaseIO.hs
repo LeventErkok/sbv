@@ -1,16 +1,16 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Control.Mono
+-- Module      :  Data.SBV.Control.BaseIO
 -- Copyright   :  (c) Brian Schroeder, Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
 -- Monomorphized versions of functions for simplified client use via
--- @Data.SBV.Control@.
+-- @Data.SBV.Control@, where we restrict the underlying monad to be IO.
 -----------------------------------------------------------------------------
 
-module Data.SBV.Control.Mono where
+module Data.SBV.Control.BaseIO where
 
 import Data.SBV.Control.Query (Assignment)
 import Data.SBV.Control.Types (CheckSatResult, SMTInfoFlag, SMTInfoResponse,
@@ -34,7 +34,7 @@ getInfo :: SMTInfoFlag -> Query SMTInfoResponse
 getInfo = Trans.getInfo
 
 -- | Retrieve the value of an 'SMTOption.' The curious function argument is on purpose here,
--- simply pass the constructor name. Example: the call @'getOption' 'ProduceUnsatCores'@ will return
+-- simply pass the constructor name. Example: the call @'getOption' 'Data.SBV.Control.ProduceUnsatCores'@ will return
 -- either @Nothing@ or @Just (ProduceUnsatCores True)@ or @Just (ProduceUnsatCores False)@.
 --
 -- Result will be 'Nothing' if the solver does not support this option.
@@ -83,7 +83,7 @@ getModel = Trans.getModel
 
 -- | Check for satisfiability, under the given conditions. Similar to 'Data.SBV.Control.checkSat' except it allows making
 -- further assumptions as captured by the first argument of booleans. (Also see 'checkSatAssumingWithUnsatisfiableSet'
--- for a variant that returns the subset of the given assumptions that led to the 'Unsat' conclusion.)
+-- for a variant that returns the subset of the given assumptions that led to the 'Data.SBV.Control.Unsat' conclusion.)
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.checkSatAssuming'
 checkSatAssuming :: [SBool] -> Query CheckSatResult
@@ -91,21 +91,21 @@ checkSatAssuming = Trans.checkSatAssuming
 
 -- | Check for satisfiability, under the given conditions. Returns the unsatisfiable
 -- set of assumptions. Similar to 'Data.SBV.Control.checkSat' except it allows making further assumptions
--- as captured by the first argument of booleans. If the result is 'Unsat', the user will
--- also receive a subset of the given assumptions that led to the 'Unsat' conclusion. Note
+-- as captured by the first argument of booleans. If the result is 'Data.SBV.Control.Unsat', the user will
+-- also receive a subset of the given assumptions that led to the 'Data.SBV.Control.Unsat' conclusion. Note
 -- that while this set will be a subset of the inputs, it is not necessarily guaranteed to be minimal.
 --
 -- You must have arranged for the production of unsat assumptions
 -- first via
 --
 -- @
---     'setOption' $ 'ProduceUnsatAssumptions' 'True'
+--     'Data.SBV.setOption' $ 'Data.SBV.Control.ProduceUnsatAssumptions' 'True'
 -- @
 --
 -- for this call to not error out!
 --
 -- Usage note: 'getUnsatCore' is usually easier to use than 'checkSatAssumingWithUnsatisfiableSet', as it
--- allows the use of named assertions, as obtained by 'namedConstraint'. If 'getUnsatCore'
+-- allows the use of named assertions, as obtained by 'Data.SBV.namedConstraint'. If 'getUnsatCore'
 -- fills your needs, you should definitely prefer it over 'checkSatAssumingWithUnsatisfiableSet'.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.checkSatAssumingWithUnsatisfiableSet'
@@ -175,7 +175,7 @@ exit = Trans.exit
 -- unsat cores to be produced first via
 --
 -- @
---     'setOption' $ 'ProduceUnsatCores' 'True'
+--     'Data.SBV.setOption' $ 'Data.SBV.Control.ProduceUnsatCores' 'True'
 -- @
 --
 -- for this call to not error out!
@@ -187,7 +187,7 @@ exit = Trans.exit
 -- in the core are relevant, use:
 --
 -- @
---     'setOption' $ 'OptionKeyword' ":smt.core.minimize" ["true"]
+--     'Data.SBV.setOption' $ 'Data.SBV.Control.OptionKeyword' ":smt.core.minimize" ["true"]
 -- @
 --
 -- Note that this only works with Z3.
@@ -200,7 +200,7 @@ getUnsatCore = Trans.getUnsatCore
 -- proofs to be produced first via
 --
 -- @
---     'setOption' $ 'ProduceProofs' 'True'
+--     'Data.SBV.setOption' $ 'Data.SBV.Control.ProduceProofs' 'True'
 -- @
 --
 -- for this call to not error out!
@@ -213,16 +213,16 @@ getUnsatCore = Trans.getUnsatCore
 getProof :: Query String
 getProof = Trans.getProof
 
--- | Retrieve an interpolant after an 'Unsat' result is obtained. Note you must have arranged for
+-- | Retrieve an interpolant after an 'Data.SBV.Control.Unsat' result is obtained. Note you must have arranged for
 -- interpolants to be produced first via
 --
 -- @
---     'setOption' $ 'ProduceInterpolants' 'True'
+--     'Data.SBV.setOption' $ 'Data.SBV.Control.ProduceInterpolants' 'True'
 -- @
 --
 -- for this call to not error out!
 --
--- To get an interpolant for a pair of formulas @A@ and @B@, use a 'constrainWithAttribute' call to attach
+-- To get an interpolant for a pair of formulas @A@ and @B@, use a 'Data.SBV.constrainWithAttribute' call to attach
 -- interplation groups to @A@ and @B@. Then call 'getInterpolant' @[\"A\"]@, assuming those are the names
 -- you gave to the formulas in the @A@ group.
 --
@@ -249,7 +249,7 @@ getInterpolant = Trans.getInterpolant
 -- assertions to be available first via
 --
 -- @
---     'setOption' $ 'ProduceAssertions' 'True'
+--     'Data.SBV.setOption' $ 'Data.SBV.Control.ProduceAssertions' 'True'
 -- @
 --
 -- for this call to not error out!
@@ -269,7 +269,7 @@ getAssertions = Trans.getAssertions
 -- You must have first arranged for assignments to be produced via
 --
 -- @
---     'setOption' $ 'ProduceAssignments' 'True'
+--     'Data.SBV.setOption' $ 'Data.SBV.Control.ProduceAssignments' 'True'
 -- @
 --
 -- for this call to not error out!
@@ -329,7 +329,7 @@ freshArray_ :: (SymArray array, HasKind a, HasKind b) => Maybe (SBV b) -> Query 
 freshArray_ = Trans.freshArray_
 
 -- | Create a fresh array in query mode. Again, you should prefer
--- creating arrays before the queries start using 'newArray', but this
+-- creating arrays before the queries start using 'Data.SBV.newArray', but this
 -- method can come in handy in occasional cases where you need a new array
 -- after you start the query based interaction.
 --
@@ -337,8 +337,8 @@ freshArray_ = Trans.freshArray_
 freshArray :: (SymArray array, HasKind a, HasKind b) => String -> Maybe (SBV b) -> Query (array a b)
 freshArray = Trans.freshArray
 
--- | If 'verbose' is 'True', print the message, useful for debugging messages
--- in custom queries. Note that 'redirectVerbose' will be respected: If a
+-- | If 'Data.SBV.verbose' is 'True', print the message, useful for debugging messages
+-- in custom queries. Note that 'Data.SBV.redirectVerbose' will be respected: If a
 -- file redirection is given, the output will go to the file.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.queryDebug'
