@@ -3,9 +3,23 @@
 
 * Latest Hackage released version: 7.13, 2018-12-16
 
-### Version 7.13.5, New development version
+### Version 8.0, New development version
 
-  * No changes yet.
+  * This is a major release of SBV, contributed by Brian Brian Schroeder. Brian
+    reworked the internals of SBV to allow for custom monad stacks. In particular,
+    there is now a `SymbolicT` monad transformer, which generalizes the `Symbolic`
+    monad over an arbitrary base type, allowing users to build SBV based symbolic
+    execution engines on top of their own monad infrastructure.
+
+    Brian took the pains to ensure existing users (or those who do not have their
+    own monad stack), the transformer capabilities remain transparent. That is,
+    your existing code should recompile as is, or perhaps with minor aesthetic
+    changes. Please report if you find otherwise, or need help.
+
+    See `Documentation.SBV.Examples.Transformers.SymbolicEval` for an example of
+    how to use the transformer based code.
+
+    Thanks to Brian Schroeder for this massive effort to modernize SBV code-base!
 
 ### Version 7.13, 2018-12-16
 
