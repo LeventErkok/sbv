@@ -474,7 +474,7 @@ recoverKindedValue k e = case e of
                              , length args == n
                              , KTuple argks <- k
                              -> CW k . CWTuple . fmap cwVal <$> traverse
-                               (\(k', arg) -> recoverKindedValue k' arg)
+                               (uncurry recoverKindedValue)
                                (zip argks args)
 
                            _ -> Nothing
