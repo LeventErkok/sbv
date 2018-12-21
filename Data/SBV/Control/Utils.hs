@@ -93,7 +93,7 @@ import GHC.Stack
 
 import Unsafe.Coerce (unsafeCoerce) -- Only used safely!
 
--- | 'Query' as a 'SolverContext'.
+-- | 'Data.SBV.Trans.Control.QueryT' as a 'SolverContext'.
 instance MonadIO m => SolverContext (QueryT m) where
    constrain              = addQueryConstraint False []
    softConstrain          = addQueryConstraint True  []

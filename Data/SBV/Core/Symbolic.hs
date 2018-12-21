@@ -1073,9 +1073,11 @@ newtype SymbolicT m a = SymbolicT { runSymbolicT :: ReaderT State m a }
 #endif
                             )
 
+-- | `MonadSymbolic` instance for `SymbolicT m`
 instance MonadIO m => MonadSymbolic (SymbolicT m) where
   symbolicEnv = SymbolicT ask
 
+-- | Map a computation over the symbolic transformer.
 mapSymbolicT :: (ReaderT State m a -> ReaderT State n b) -> SymbolicT m a -> SymbolicT n b
 mapSymbolicT f = SymbolicT . f . runSymbolicT
 {-# INLINE mapSymbolicT #-}
@@ -1085,6 +1087,8 @@ instance MonadReader r m => MonadReader r (SymbolicT m) where
   ask = lift ask
   local f = mapSymbolicT $ mapReaderT $ local f
 
+-- | `Symbolic` is specialization of `SymbolicT` to the `IO` monad. Unless you are using
+-- transformers explicitly, this is the type you should prefer.
 type Symbolic = SymbolicT IO
 
 -- | Create a symbolic value, based on the quantifier we have. If an

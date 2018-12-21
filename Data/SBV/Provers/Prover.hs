@@ -326,6 +326,8 @@ class ExtractIO m => MProvable m a where
                                  SatResult Unsatisfiable{} -> return False
                                  _                         -> error $ "SBV.isSatisfiable: Received: " ++ show r
 
+-- | `Provable` is specialization of `MProvable` to the `IO` monad. Unless you are using
+-- transformers explicitly, this is the type you should prefer.
 type Provable = MProvable IO
 
 -- | Prove a property with multiple solvers, running them in separate threads. The

@@ -24,7 +24,6 @@ module Data.SBV.Trans (
   -- *** Signed bit-vectors
   , SInt8, SInt16, SInt32, SInt64
   -- ** Unbounded integers
-  -- $unboundedLimitations
   , SInteger
   -- ** Floating point numbers
   , SFloat, SDouble
