@@ -11,6 +11,7 @@
 [GOOD] (define-fun BinOp_constrIndex ((x BinOp)) Int
           (ite (= x Plus) 0 (ite (= x Minus) 1 2))
        )
+[GOOD] ; --- tuples ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s_2 () Bool false)
 [GOOD] (define-fun s_1 () Bool true)
