@@ -3,7 +3,7 @@
 
 * Latest Hackage released version: 7.13, 2018-12-16
 
-### Version 8.0, New development version
+### Version 7.13.5, New development version
 
   * This is a major release of SBV, contributed by Brian Brian Schroeder. Brian
     reworked the internals of SBV to allow for custom monad stacks. In particular,
@@ -19,7 +19,7 @@
     See `Documentation.SBV.Examples.Transformers.SymbolicEval` for an example of
     how to use the transformer based code.
 
-    Thanks to Brian Schroeder for this massive effort to modernize SBV code-base!
+    Thanks to Brian Schroeder for this massive effort to modernize the SBV code-base!
 
 ### Version 7.13, 2018-12-16
 
