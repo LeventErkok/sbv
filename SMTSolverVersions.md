@@ -10,7 +10,7 @@ report any issues you might see with newer releases.
       * Version as downloaded from the above site on Jul 2 2018
   * CVC4:
       * https://github.com/CVC4/CVC4
-      * Version as downloaded from the above site on May 23, 2017
+      * Version as downloaded from the above site on April 15, 2018
   * MathSAT:
       * http://mathsat.fbk.eu/
       * Version 5.5.3
@@ -19,5 +19,5 @@ report any issues you might see with newer releases.
       * Version 2.6.0
   * Z3:
       * http://github.com/Z3Prover/z3
-      * Version as downloaded from the above site on Jul 2, 2018
-      * You should use at least version 4.7.1 of Z3, or compile directly from the sources.
+      * Version as downloaded from the above site on Dec 22, 2018
+      * You should use at least version 4.8.0 of Z3, or compile directly from the sources.
