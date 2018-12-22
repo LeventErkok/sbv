@@ -148,7 +148,7 @@ check program prop = runExceptT $ runSMTWith z3 $ do
 -- * Some examples
 
 -- | Check that @x+y+1@ generates a counter-example for the property that the
--- result is less than @10@ when @x+y@ exceeds @9@. We have:
+-- result is less than @10@ when @x+y@ is at least @9@. We have:
 --
 -- >>> ex1
 -- Right (Counterexample 0 9)
