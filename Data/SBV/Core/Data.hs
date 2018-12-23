@@ -204,7 +204,7 @@ infixr 3 .&&
 SBV x .&& SBV y = SBV (x `svAnd` y)
 
 -- | Symbolic disjunction
-infixr 3 .||
+infixr 2 .||
 (.||) :: SBool -> SBool -> SBool
 SBV x .|| SBV y = SBV (x `svOr` y)
 
