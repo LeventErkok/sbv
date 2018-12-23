@@ -1125,7 +1125,7 @@ class SDivisible a where
   sDiv     :: a -> a -> a
   sMod     :: a -> a -> a
 
-  {-# MINIMAL sQuotRem, sDivMod -#}
+  {-# MINIMAL sQuotRem, sDivMod #-}
 
   x `sQuot` y = fst $ x `sQuotRem` y
   x `sRem`  y = snd $ x `sQuotRem` y
