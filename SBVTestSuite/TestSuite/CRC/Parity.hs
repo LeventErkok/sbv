@@ -20,7 +20,7 @@ tests =
     ]
 
 parity :: SWord64 -> SBool
-parity x = bnot (isOdd cnt)
+parity x = sNot (isOdd cnt)
   where cnt :: SWord8
         cnt = sum $ map oneIf $ blastLE x
 
@@ -30,7 +30,7 @@ isOdd = lsb
 -- Example suggested by Lee Pike
 -- If x and y differ in odd-number of bits, then their parities are flipped
 parityOK :: SWord64 -> SWord64 -> SBool
-parityOK x y = isOdd cnt ==> px .== bnot py
+parityOK x y = isOdd cnt .=> px .== sNot py
   where cnt = sum $ map oneIf $ zipWith (./=) (blastLE x) (blastLE y)
         px  = parity x
         py  = parity y

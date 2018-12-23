@@ -201,7 +201,7 @@ qc1 nm opC opS = [cf, sm]
 
                         case (unliteral expected, unliteral result) of
                            (Just _, Just _) -> return $ expected .== result
-                           _                -> return false
+                           _                -> return sFalse
 
          sm = QC.testProperty (nm ++ ".symbolic") $ QC.monadicIO $ do
                         ((i, expected), result) <- QC.run $ runSMT $ do v   <- liftIO $ QC.generate QC.arbitrary
@@ -255,7 +255,7 @@ qc2 nm opC opS = [cf, sm]
 
                         case (unliteral expected, unliteral result) of
                            (Just _, Just _) -> return $ expected .== result
-                           _                -> return false
+                           _                -> return sFalse
 
          sm = QC.testProperty (nm ++ ".symbolic") $ QC.monadicIO $ do
                         ((i1, i2, expected), result) <- QC.run $ runSMT $ do v1  <- liftIO $ QC.generate QC.arbitrary

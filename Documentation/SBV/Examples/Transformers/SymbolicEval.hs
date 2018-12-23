@@ -89,10 +89,10 @@ eval (Plus t1 t2)        = (+)  <$> eval t1 <*> eval t2
 eval (LessThan t1 t2)    = (.<) <$> eval t1 <*> eval t2
 eval (GreaterThan t1 t2) = (.>) <$> eval t1 <*> eval t2
 eval (Equals t1 t2)      = (.==) <$> eval t1 <*> eval t2
-eval (Not t)             = bnot <$> eval t
-eval (Or t1 t2)          = (|||) <$> eval t1 <*> eval t2
-eval (And t1 t2)         = (&&&) <$> eval t1 <*> eval t2
-eval (Implies t1 t2)     = (==>) <$> eval t1 <*> eval t2
+eval (Not t)             = sNot <$> eval t
+eval (Or t1 t2)          = (.||) <$> eval t1 <*> eval t2
+eval (And t1 t2)         = (.&&) <$> eval t1 <*> eval t2
+eval (Implies t1 t2)     = (.=>) <$> eval t1 <*> eval t2
 
 runEval :: Env -> Term a -> Except String (SBV a)
 runEval env term = runReaderT (unEval $ eval term) env
@@ -142,7 +142,7 @@ check program prop = runExceptT $ runSMTWith z3 $ do
     test <- lift $ mapExceptT generalize $ do
         res <- runProgramEval env program
         runPropertyEval res env prop
-    constrain $ bnot test
+    constrain $ sNot test
     query $ runQ $ mkQuery env
 
 -- * Some examples

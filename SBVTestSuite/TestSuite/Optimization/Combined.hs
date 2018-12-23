@@ -48,7 +48,7 @@ combined2 = do a <- sBool "a"
                assertWithPenalty "soft_c" c (Penalty 3 (Just "A"))
 
                constrain $ a .== c
-               constrain $ bnot (a &&& b)
+               constrain $ sNot (a .&& b)
 
 pareto1 :: Goal
 pareto1 = do x <- sInteger "x"

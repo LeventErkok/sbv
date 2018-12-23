@@ -229,8 +229,8 @@ getProof = Trans.getProof
 -- An interpolant for @A@ and @B@ is a formula @I@ such that:
 --
 -- @
---        A ==> I
---    and B ==> not I
+--        A .=> I
+--    and B .=> sNot I
 -- @
 --
 -- That is, it's evidence that @A@ and @B@ cannot be true together

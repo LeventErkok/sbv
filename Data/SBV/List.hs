@@ -33,7 +33,6 @@ import qualified Prelude as P
 
 import Data.SBV.Core.Data hiding (StrOp(..))
 import Data.SBV.Core.Model
-import Data.SBV.Utils.Boolean ((==>))
 
 import Data.List (genericLength, genericIndex, genericDrop, genericTake)
 import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
@@ -42,7 +41,6 @@ import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 --
 -- $setup
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
--- >>> import Data.SBV.Utils.Boolean  ((&&&), bnot, (<=>))
 -- >>> import Data.Int
 -- >>> import Data.Word
 -- >>> :set -XOverloadedLists
@@ -62,9 +60,9 @@ length = lift1 SeqLen (Just (fromIntegral . P.length))
 
 -- | @`null` s@ is True iff the list is empty
 --
--- >>> prove $ \(l :: SList Word16) -> null l <=> length l .== 0
+-- >>> prove $ \(l :: SList Word16) -> null l .<=> length l .== 0
 -- Q.E.D.
--- >>> prove $ \(l :: SList Word16) -> null l <=> l .== []
+-- >>> prove $ \(l :: SList Word16) -> null l .<=> l .== []
 -- Q.E.D.
 null :: SymWord a => SList a -> SBool
 null l
@@ -84,9 +82,9 @@ head = (`elemAt` 0)
 --
 -- >>> prove $ \(h :: SInteger) t -> tail (singleton h .++ t) .== t
 -- Q.E.D.
--- >>> prove $ \(l :: SList Integer) -> length l .> 0 ==> length (tail l) .== length l - 1
+-- >>> prove $ \(l :: SList Integer) -> length l .> 0 .=> length (tail l) .== length l - 1
 -- Q.E.D.
--- >>> prove $ \(l :: SList Integer) -> bnot (null l) ==> singleton (head l) .++ tail l .== l
+-- >>> prove $ \(l :: SList Integer) -> sNot (null l) .=> singleton (head l) .++ tail l .== l
 -- Q.E.D.
 tail :: SymWord a => SList a -> SList a
 tail l
@@ -124,7 +122,7 @@ singleton = lift1 SeqUnit (Just (: []))
 --
 -- >>> prove $ \(l1 :: SList Integer) l2 -> listToListAt (l1 .++ l2) (length l1) .== listToListAt l2 0
 -- Q.E.D.
--- >>> sat $ \(l :: SList Word16) -> length l .>= 2 &&& listToListAt l 0 ./= listToListAt l (length l - 1)
+-- >>> sat $ \(l :: SList Word16) -> length l .>= 2 .&& listToListAt l 0 ./= listToListAt l (length l - 1)
 -- Satisfiable. Model:
 --   s0 = [0,0,32] :: [SWord16]
 listToListAt :: SymWord a => SList a -> SInteger -> SList a
@@ -133,9 +131,9 @@ listToListAt s offset = subList s offset 1
 -- | @`elemAt` l i@ is the value stored at location @i@. Unspecified if
 -- index is out of bounds.
 --
--- >>> prove $ \i -> i .>= 0 &&& i .<= 4 ==> [1,1,1,1,1] `elemAt` i .== (1::SInteger)
+-- >>> prove $ \i -> i .>= 0 .&& i .<= 4 .=> [1,1,1,1,1] `elemAt` i .== (1::SInteger)
 -- Q.E.D.
--- >>> prove $ \(l :: SList Integer) i e -> l `elemAt` i .== e ==> indexOf l (singleton e) .<= i
+-- >>> prove $ \(l :: SList Integer) i e -> l `elemAt` i .== e .=> indexOf l (singleton e) .<= i
 -- Q.E.D.
 elemAt :: forall a. SymWord a => SList a -> SInteger -> SBV a
 elemAt l i
@@ -152,7 +150,7 @@ elemAt l i
         y si st = do e <- internalVariable st kElem
                      es <- newExpr st kSeq (SBVApp (SeqOp SeqUnit) [e])
                      let esSBV = SBV (SVal kSeq (Right (cache (\_ -> return es))))
-                     internalConstraint st False [] $ unSBV $ length l .> i ==> esSBV .== si
+                     internalConstraint st False [] $ unSBV $ length l .> i .=> esSBV .== si
                      return e
 
 -- | Short cut for 'elemAt'
@@ -183,7 +181,7 @@ a .: as = singleton a .++ as
 
 -- | Short cut for `concat`.
 --
--- >>> sat $ \x y z -> length x .== 5 &&& length y .== 1 &&& x .++ y .++ z .== [1 .. 12]
+-- >>> sat $ \x y z -> length x .== 5 .&& length y .== 1 .&& x .++ y .++ z .== [1 .. 12]
 -- Satisfiable. Model:
 --   s0 =      [1,2,3,4,5] :: [SInteger]
 --   s1 =              [6] :: [SInteger]
@@ -196,7 +194,7 @@ infixr 5 .++
 --
 -- >>> prove $ \(l1 :: SList Integer) l2 l3 -> l2 `isInfixOf` (l1 .++ l2 .++ l3)
 -- Q.E.D.
--- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isInfixOf` l2 &&& l2 `isInfixOf` l1 <=> l1 .== l2
+-- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isInfixOf` l2 .&& l2 `isInfixOf` l1 .<=> l1 .== l2
 -- Q.E.D.
 isInfixOf :: SymWord a => SList a -> SList a -> SBool
 sub `isInfixOf` l
@@ -209,7 +207,7 @@ sub `isInfixOf` l
 --
 -- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isPrefixOf` (l1 .++ l2)
 -- Q.E.D.
--- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isPrefixOf` l2 ==> subList l2 0 (length l1) .== l1
+-- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isPrefixOf` l2 .=> subList l2 0 (length l1) .== l1
 -- Q.E.D.
 isPrefixOf :: SymWord a => SList a -> SList a -> SBool
 pre `isPrefixOf` l
@@ -222,7 +220,7 @@ pre `isPrefixOf` l
 --
 -- >>> prove $ \(l1 :: SList Word16) l2 -> l2 `isSuffixOf` (l1 .++ l2)
 -- Q.E.D.
--- >>> prove $ \(l1 :: SList Word16) l2 -> l1 `isSuffixOf` l2 ==> subList l2 (length l2 - length l1) (length l1) .== l1
+-- >>> prove $ \(l1 :: SList Word16) l2 -> l1 `isSuffixOf` l2 .=> subList l2 (length l2 - length l1) (length l1) .== l1
 -- Q.E.D.
 isSuffixOf :: SymWord a => SList a -> SList a -> SBool
 suf `isSuffixOf` l
@@ -233,7 +231,7 @@ suf `isSuffixOf` l
 
 -- | @`take` len l@. Corresponds to Haskell's `take` on symbolic lists.
 --
--- >>> prove $ \(l :: SList Integer) i -> i .>= 0 ==> length (take i l) .<= i
+-- >>> prove $ \(l :: SList Integer) i -> i .>= 0 .=> length (take i l) .<= i
 -- Q.E.D.
 take :: SymWord a => SInteger -> SList a -> SList a
 take i l = ite (i .<= 0)        (literal [])
@@ -256,7 +254,7 @@ drop i s = ite (i .>= ls) (literal [])
 -- This function is under-specified when the offset is outside the range of positions in @s@ or @len@
 -- is negative or @offset+len@ exceeds the length of @s@.
 --
--- >>> prove $ \(l :: SList Integer) i -> i .>= 0 &&& i .< length l ==> subList l 0 i .++ subList l i (length l - i) .== l
+-- >>> prove $ \(l :: SList Integer) i -> i .>= 0 .&& i .< length l .=> subList l 0 i .++ subList l i (length l - i) .== l
 -- Q.E.D.
 -- >>> sat  $ \i j -> subList [1..5] i j .== ([2..4] :: SList Integer)
 -- Satisfiable. Model:
@@ -280,9 +278,9 @@ subList l offset len
 
 -- | @`replace` l src dst@. Replace the first occurrence of @src@ by @dst@ in @s@
 --
--- >>> prove $ \l -> replace [1..5] l [6..10] .== [6..10] ==> l .== ([1..5] :: SList Word8)
+-- >>> prove $ \l -> replace [1..5] l [6..10] .== [6..10] .=> l .== ([1..5] :: SList Word8)
 -- Q.E.D.
--- >>> prove $ \(l1 :: SList Integer) l2 l3 -> length l2 .> length l1 ==> replace l1 l2 l3 .== l1
+-- >>> prove $ \(l1 :: SList Integer) l2 l3 -> length l2 .> length l1 .=> replace l1 l2 l3 .== l1
 -- Q.E.D.
 replace :: SymWord a => SList a -> SList a -> SList a -> SList a
 replace l src dst
@@ -303,13 +301,13 @@ replace l src dst
 -- | @`indexOf` l sub@. Retrieves first position of @sub@ in @l@, @-1@ if there are no occurrences.
 -- Equivalent to @`offsetIndexOf` l sub 0@.
 --
--- >>> prove $ \(l :: SList Int8) i -> i .> 0 &&& i .< length l ==> indexOf l (subList l i 1) .<= i
+-- >>> prove $ \(l :: SList Int8) i -> i .> 0 .&& i .< length l .=> indexOf l (subList l i 1) .<= i
 -- Q.E.D.
--- >>> prove $ \(l :: SList Word16) i -> i .> 0 &&& i .< length l ==> indexOf l (subList l i 1) .== i
+-- >>> prove $ \(l :: SList Word16) i -> i .> 0 .&& i .< length l .=> indexOf l (subList l i 1) .== i
 -- Falsifiable. Counter-example:
 --   s0 = [32,0,0] :: [SWord16]
 --   s1 =        2 :: Integer
--- >>> prove $ \(l1 :: SList Word16) l2 -> length l2 .> length l1 ==> indexOf l1 l2 .== -1
+-- >>> prove $ \(l1 :: SList Word16) l2 -> length l2 .> length l1 .=> indexOf l1 l2 .== -1
 -- Q.E.D.
 indexOf :: SymWord a => SList a -> SList a -> SInteger
 indexOf s sub = offsetIndexOf s sub 0
@@ -319,9 +317,9 @@ indexOf s sub = offsetIndexOf s sub 0
 --
 -- >>> prove $ \(l :: SList Int8) sub -> offsetIndexOf l sub 0 .== indexOf l sub
 -- Q.E.D.
--- >>> prove $ \(l :: SList Int8) sub i -> i .>= length l &&& length sub .> 0 ==> offsetIndexOf l sub i .== -1
+-- >>> prove $ \(l :: SList Int8) sub i -> i .>= length l .&& length sub .> 0 .=> offsetIndexOf l sub i .== -1
 -- Q.E.D.
--- >>> prove $ \(l :: SList Int8) sub i -> i .> length l ==> offsetIndexOf l sub i .== -1
+-- >>> prove $ \(l :: SList Int8) sub i -> i .> length l .=> offsetIndexOf l sub i .== -1
 -- Q.E.D.
 offsetIndexOf :: SymWord a => SList a -> SList a -> SInteger -> SInteger
 offsetIndexOf s sub offset

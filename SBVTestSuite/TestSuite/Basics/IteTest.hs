@@ -16,13 +16,13 @@ import Data.SBV.Internals (Result)
 import Utils.SBVTestFramework
 
 chk1 :: (SBool -> SBool -> SBool -> SBool) -> SWord8 -> SBool
-chk1 cond x = cond (x .== x) true undefined
+chk1 cond x = cond (x .== x) sTrue undefined
 
 chk2 :: (SBool -> [SBool] -> [SBool] -> [SBool]) -> SWord8 -> SBool
-chk2 cond x = head (cond (x .== x) [true] [undefined])
+chk2 cond x = head (cond (x .== x) [sTrue] [undefined])
 
 chk3 :: (SBool -> (SBool, SBool) -> (SBool, SBool)  -> (SBool, SBool)) -> SWord8 -> SBool
-chk3 cond x = fst (cond (x .== x) (true, undefined::SBool) (undefined, undefined))
+chk3 cond x = fst (cond (x .== x) (sTrue, undefined::SBool) (undefined, undefined))
 
 -- Test suite
 tests :: TestTree

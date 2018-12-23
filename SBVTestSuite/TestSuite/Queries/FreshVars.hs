@@ -89,10 +89,10 @@ fv = do a <- sInteger "a"
                    mustBe42                               <- freshVar "mustBe42"
                    mustBeX                                <- freshVar "mustBeX"
 
-                   constrain $ readArray viSArray 96    .== mustBe42
-                   constrain $ readArray viFArray false .== mustBeX
+                   constrain $ readArray viSArray 96     .== mustBe42
+                   constrain $ readArray viFArray sFalse .== mustBeX
                    constrain $ vi1 .== 1
-                   constrain $ bnot vi2
+                   constrain $ sNot vi2
 
                    vString  :: SString         <- freshVar  "vString"
                    vList1   :: SList Integer   <- freshVar  "vList1"

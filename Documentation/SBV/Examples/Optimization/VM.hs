@@ -67,9 +67,9 @@ allocate = do
     constrain $ capacity3 .<= 200
 
     -- compute #of servers running:
-    let y1 = bOr [x11, x21, x31]
-        y2 = bOr [x12, x22, x32]
-        y3 = bOr [x13, x23, x33]
+    let y1 = sOr [x11, x21, x31]
+        y2 = sOr [x12, x22, x32]
+        y3 = sOr [x13, x23, x33]
 
         b2n b = ite b 1 0
 

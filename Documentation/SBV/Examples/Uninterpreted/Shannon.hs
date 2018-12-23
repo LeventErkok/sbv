@@ -31,12 +31,12 @@ type Binary = SBool -> SBool-> SBool
 -- | Positive Shannon cofactor of a boolean function, with
 -- respect to its first argument
 pos :: (SBool -> a) -> a
-pos f = f true
+pos f = f sTrue
 
 -- | Negative Shannon cofactor of a boolean function, with
 -- respect to its first argument
 neg :: (SBool -> a) -> a
-neg f = f false
+neg f = f sFalse
 
 -----------------------------------------------------------------------------
 -- * Shannon expansion theorem
@@ -47,7 +47,7 @@ neg f = f false
 -- >>> shannon
 -- Q.E.D.
 shannon :: IO ThmResult
-shannon = prove $ \x y z -> f x y z .== (x &&& pos f y z ||| bnot x &&& neg f y z)
+shannon = prove $ \x y z -> f x y z .== (x .&& pos f y z .|| sNot x .&& neg f y z)
  where f :: Ternary
        f = uninterpret "f"
 
@@ -56,7 +56,7 @@ shannon = prove $ \x y z -> f x y z .== (x &&& pos f y z ||| bnot x &&& neg f y 
 -- >>> shannon2
 -- Q.E.D.
 shannon2 :: IO ThmResult
-shannon2 = prove $ \x y z -> f x y z .== ((x ||| neg f y z) &&& (bnot x ||| pos f y z))
+shannon2 = prove $ \x y z -> f x y z .== ((x .|| neg f y z) .&& (sNot x .|| pos f y z))
  where f :: Ternary
        f = uninterpret "f"
 
@@ -68,7 +68,7 @@ shannon2 = prove $ \x y z -> f x y z .== ((x ||| neg f y z) &&& (bnot x ||| pos 
 -- Defined as exclusive-or of Shannon cofactors with respect to that
 -- variable.
 derivative :: Ternary -> Binary
-derivative f y z = pos f y z <+> neg f y z
+derivative f y z = pos f y z .<+> neg f y z
 
 -- | The no-wiggle theorem: If the derivative of a function with respect to
 -- a variable is constant False, then that variable does not "wiggle" the
@@ -79,7 +79,7 @@ derivative f y z = pos f y z <+> neg f y z
 -- >>> noWiggle
 -- Q.E.D.
 noWiggle :: IO ThmResult
-noWiggle = prove $ \y z -> bnot (f' y z) <=> pos f y z .== neg f y z
+noWiggle = prove $ \y z -> sNot (f' y z) .<=> pos f y z .== neg f y z
   where f :: Ternary
         f  = uninterpret "f"
         f' = derivative f
@@ -91,7 +91,7 @@ noWiggle = prove $ \y z -> bnot (f' y z) <=> pos f y z .== neg f y z
 -- | Universal quantification of a boolean function with respect to a variable.
 -- Simply defined as the conjunction of the Shannon cofactors.
 universal :: Ternary -> Binary
-universal f y z = pos f y z &&& neg f y z
+universal f y z = pos f y z .&& neg f y z
 
 -- | Show that universal quantification is really meaningful: That is, if the universal
 -- quantification with respect to a variable is True, then both cofactors are true for
@@ -101,7 +101,7 @@ universal f y z = pos f y z &&& neg f y z
 -- >>> univOK
 -- Q.E.D.
 univOK :: IO ThmResult
-univOK = prove $ \y z -> f' y z ==> pos f y z &&& neg f y z
+univOK = prove $ \y z -> f' y z .=> pos f y z .&& neg f y z
   where f :: Ternary
         f  = uninterpret "f"
         f' = universal f
@@ -113,7 +113,7 @@ univOK = prove $ \y z -> f' y z ==> pos f y z &&& neg f y z
 -- | Existential quantification of a boolean function with respect to a variable.
 -- Simply defined as the conjunction of the Shannon cofactors.
 existential :: Ternary -> Binary
-existential f y z = pos f y z ||| neg f y z
+existential f y z = pos f y z .|| neg f y z
 
 -- | Show that existential quantification is really meaningful: That is, if the existential
 -- quantification with respect to a variable is True, then one of the cofactors must be true for
@@ -123,7 +123,7 @@ existential f y z = pos f y z ||| neg f y z
 -- >>> existsOK
 -- Q.E.D.
 existsOK :: IO ThmResult
-existsOK = prove $ \y z -> f' y z ==> pos f y z ||| neg f y z
+existsOK = prove $ \y z -> f' y z .=> pos f y z .|| neg f y z
   where f :: Ternary
         f  = uninterpret "f"
         f' = existential f

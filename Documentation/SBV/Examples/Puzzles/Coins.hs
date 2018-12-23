@@ -41,7 +41,7 @@ type Coin = SWord16
 -- we constrain the value to be one of the valid U.S. coin values as we create it.
 mkCoin :: Int -> Symbolic Coin
 mkCoin i = do c <- exists $ 'c' : show i
-              constrain $ bAny (.== c) [1, 5, 10, 25, 50, 100]
+              constrain $ sAny (.== c) [1, 5, 10, 25, 50, 100]
               return c
 
 -- | Return all combinations of a sequence of values.
@@ -98,6 +98,6 @@ puzzle = sat $ do
         -- the following constraint is not necessary for solving the puzzle
         -- however, it makes sure that the solution comes in decreasing value of coins,
         -- thus allowing the above test to succeed regardless of the solver used.
-        constrain $ bAnd $ zipWith (.>=) cs (tail cs)
+        constrain $ sAnd $ zipWith (.>=) cs (tail cs)
         -- assert that the sum must be 115 cents.
         return $ sum cs .== 115

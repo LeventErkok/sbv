@@ -113,7 +113,7 @@ q6 = do (a :: SArray Integer Integer) <- newArray "a" Nothing
                             Unk   -> error "Unknown"
                             Unsat -> do pop 1
                                         d <- freshVar $ "d" ++ show (length sofar)
-                                        constrain $ d .>= 1 &&& d .< 3
+                                        constrain $ d .>= 1 .&& d .< 3
                                         loop (writeArray a 1 (readArray a 1 + d)) (sofar ++ [d])
                             Sat   -> mapM getValue sofar
 

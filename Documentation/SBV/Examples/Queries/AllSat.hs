@@ -52,7 +52,7 @@ goodSum = do x <- sInteger "x"
                                   -- Note that we do *not* put these separately, as we do want
                                   -- to allow repetition on one value if the other is different!
                                   constrain $   x ./= literal xv
-                                            ||| y ./= literal yv
+                                            .|| y ./= literal yv
 
                                   -- Also request @x@ to be twice as large, for demo purposes:
                                   constrain $ x .>= 2 * literal xv

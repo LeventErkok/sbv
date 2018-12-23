@@ -76,7 +76,7 @@ strIndexOfUnsat = constrain $ S.indexOf "abcabc" "a" ./= 0
 
 -- Basic string operations
 strExamples1 :: Symbolic ()
-strExamples1 = constrain $ bAnd
+strExamples1 = constrain $ sAnd
   [ S.singleton ("abc" .!! 1) .++ S.singleton ("abc" .!! 0) .== "ba"
   , "abcabc" `S.indexOf` "a"                                .== 0
   , S.offsetIndexOf "abcabc" "a" 1                          .== 3
@@ -95,7 +95,7 @@ strExamples3 = do
   [a, b, c] <- sStrings ["a", "b", "c"]
   constrain $ a .++ b .== "abcd"
   constrain $ b .++ c .== "cdef"
-  constrain $ bnot $ b .== ""
+  constrain $ sNot $ b .== ""
 
 -- There is a solution to a of length at most 2.
 strExamples4 :: Symbolic ()
@@ -110,7 +110,7 @@ strExamples5 = do
   [a, b, c] <- sStrings ["a", "b", "c"]
   constrain $ a .++ "ab" .++ b .== b .++ "ba" .++ c
   constrain $ c .== a .++ b
-  constrain $ bnot $ a.++ "a" .== "a" .++ a
+  constrain $ sNot $ a.++ "a" .== "a" .++ a
 
 -- Contains is transitive.
 strExamples6 :: Symbolic ()
@@ -118,7 +118,7 @@ strExamples6 = do
   [a, b, c] <- sStrings ["a", "b", "c"]
   constrain $ b `S.isInfixOf` a
   constrain $ c `S.isInfixOf` b
-  constrain $ bnot $ c `S.isInfixOf` a
+  constrain $ sNot $ c `S.isInfixOf` a
 
 -- But containment is not a linear order.
 strExamples7 :: Symbolic ()
@@ -126,8 +126,8 @@ strExamples7 = do
   [a, b, c] <- sStrings ["a", "b", "c"]
   constrain $ b `S.isInfixOf` a
   constrain $ c `S.isInfixOf` a
-  constrain $ bnot $ c `S.isInfixOf` b
-  constrain $ bnot $ b `S.isInfixOf` c
+  constrain $ sNot $ c `S.isInfixOf` b
+  constrain $ sNot $ b `S.isInfixOf` c
 
 -- Any string is equal to the prefix and suffix that add up to a its length.
 strExamples8 :: Symbolic ()
@@ -136,7 +136,7 @@ strExamples8 = do
   constrain $ b `S.isPrefixOf` a
   constrain $ c `S.isSuffixOf` a
   constrain $ S.length a .== S.length b + S.length c
-  constrain $ bnot $ a .== b .++ c
+  constrain $ sNot $ a .== b .++ c
 
 -- The maximal length is 6 for a string of length 2 repeated at most 3 times
 strExamples9 :: Symbolic ()
@@ -157,21 +157,21 @@ strExamples11 :: Symbolic ()
 strExamples11 = do
    i <- sInteger "i"
    constrain $ i .== 11
-   constrain $ bnot $ S.natToStr i .== "11"
+   constrain $ sNot $ S.natToStr i .== "11"
 
 -- Conversion from nat to string, negative values produce empty string
 strExamples12 :: Symbolic ()
 strExamples12 = do
    i <- sInteger "i"
    constrain $ i .== -2
-   constrain $ bnot $ S.natToStr i .== ""
+   constrain $ sNot $ S.natToStr i .== ""
 
 -- Conversion from string to nat, only ground terms
 strExamples13 :: Symbolic ()
 strExamples13 = do
    s <- sString "s"
    constrain $ s .== "13"
-   constrain $ bnot $ S.strToNat s .== 13
+   constrain $ sNot $ S.strToNat s .== 13
 
 -- Generate all length one strings, to enumerate all and making sure we can parse correctly
 strExamples14 :: IO Bool

@@ -161,7 +161,6 @@ Library
                   , Data.SBV.Provers.Z3
                   , Data.SBV.Provers.MathSAT
                   , Data.SBV.Provers.ABC
-                  , Data.SBV.Utils.Boolean
                   , Data.SBV.Utils.ExtractIO
                   , Data.SBV.Utils.Numeric
                   , Data.SBV.Utils.TDiff

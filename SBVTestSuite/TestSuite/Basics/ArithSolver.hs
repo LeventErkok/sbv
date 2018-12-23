@@ -348,8 +348,8 @@ genIEEE754 origin vs =  map tst1 [("pred_"   ++ nm, x, y)    | (nm, x, y)    <- 
           | isNaN          val        = constrain $ fpIsNaN v
           | isNegativeZero val        = constrain $ fpIsNegativeZero v
           | val == 0                  = constrain $ fpIsPositiveZero v
-          | isInfinite val && val > 0 = constrain $ fpIsInfinite v &&& fpIsPositive v
-          | isInfinite val && val < 0 = constrain $ fpIsInfinite v &&& fpIsNegative v
+          | isInfinite val && val > 0 = constrain $ fpIsInfinite v .&& fpIsPositive v
+          | isInfinite val && val < 0 = constrain $ fpIsInfinite v .&& fpIsNegative v
           | True                      = constrain $ v .== literal val
 
         -- Quickly pick which solver to use. Currently z3 or mathSAT supports FP
@@ -381,7 +381,7 @@ genIEEE754 origin vs =  map tst1 [("pred_"   ++ nm, x, y)    | (nm, x, y)    <- 
                                           eqF a x
                                           eqF b y
                                           return $ if isNaN x || isNaN y
-                                                   then (if neq then a `op` b else bnot (a `op` b))
+                                                   then (if neq then a `op` b else sNot (a `op` b))
                                                    else literal r .== a `op` b
 
         predicates :: (IEEEFloating a) => [(String, SBV a -> SBool, a -> Bool)]
@@ -469,8 +469,8 @@ genFPConverts = map tst1 [("fpCast_" ++ nm, x, y) | (nm, x, y) <- converts]
           | isNaN          val        = constrain $ fpIsNaN v
           | isNegativeZero val        = constrain $ fpIsNegativeZero v
           | val == 0                  = constrain $ fpIsPositiveZero v
-          | isInfinite val && val > 0 = constrain $ fpIsInfinite v &&& fpIsPositive v
-          | isInfinite val && val < 0 = constrain $ fpIsInfinite v &&& fpIsNegative v
+          | isInfinite val && val > 0 = constrain $ fpIsInfinite v .&& fpIsPositive v
+          | isInfinite val && val < 0 = constrain $ fpIsInfinite v .&& fpIsNegative v
           | True                      = constrain $ v .== literal val
 
         -- Quickly pick which solver to use. Currently z3 or mathSAT supports FP

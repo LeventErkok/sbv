@@ -31,7 +31,6 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
-import Data.SBV.Utils.Boolean
 
 import GHC.Stack
 
@@ -41,7 +40,6 @@ import Data.Word
 -- Doctest only
 -- $setup
 -- >>> import Data.SBV.Provers.Prover (prove, allSat)
--- >>> import Data.SBV.Utils.Boolean ((<=>))
 
 -- | Detecting underflow/overflow conditions. For each function,
 -- the first result is the condition under which the computation
@@ -52,7 +50,7 @@ class ArithOverflow a where
   --
   -- A tell tale sign of unsigned addition overflow is when the sum is less than minumum of the arguments.
   --
-  -- >>> prove $ \x y -> snd (bvAddO x (y::SWord16)) <=> x + y .< x `smin` y
+  -- >>> prove $ \x y -> snd (bvAddO x (y::SWord16)) .<=> x + y .< x `smin` y
   -- Q.E.D.
   bvAddO :: a -> a -> (SBool, SBool)
 
@@ -81,7 +79,7 @@ class ArithOverflow a where
   -- | Bit-vector negation. Unsigned negation neither underflows nor overflows. Signed negation can only overflow, when the argument is
   -- @minBound@:
   --
-  -- >>> prove $ \x -> x .== minBound <=> snd (bvNegO (x::SInt16))
+  -- >>> prove $ \x -> x .== minBound .<=> snd (bvNegO (x::SInt16))
   -- Q.E.D.
   bvNegO :: a -> (SBool, SBool)
 
@@ -389,7 +387,7 @@ bvsnego n x = (underflow, overflow)
 -- (254 :: SWord8,(True,False))
 -- >>> sFromIntegralO (2 :: SInt16) :: (SWord8, (SBool, SBool))
 -- (2 :: SWord8,(False,False))
--- >>> prove $ \x -> sFromIntegralO (x::SInt32) .== (sFromIntegral x :: SInteger, (false, false))
+-- >>> prove $ \x -> sFromIntegralO (x::SInt32) .== (sFromIntegral x :: SInteger, (sFalse, sFalse))
 -- Q.E.D.
 --
 -- As the last example shows, converting to `sInteger` never underflows or overflows for any value.
@@ -400,8 +398,8 @@ sFromIntegralO x = case (kindOf x, kindOf (undefined :: b)) of
                      (KBounded True n,  KBounded False m) -> (res, s2u n m)
                      (KBounded True n,  KBounded True  m) -> (res, s2s n m)
                      (KUnbounded,       KBounded s m)     -> (res, checkBounds s m)
-                     (KBounded{},       KUnbounded)       -> (res, (false, false))
-                     (KUnbounded,       KUnbounded)       -> (res, (false, false))
+                     (KBounded{},       KUnbounded)       -> (res, (sFalse, sFalse))
+                     (KUnbounded,       KUnbounded)       -> (res, (sFalse, sFalse))
                      (kFrom,            kTo)              -> error $ "sFromIntegralO: Expected bounded-BV types, received: " ++ show (kFrom, kTo)
 
   where res :: SBV b
@@ -425,16 +423,16 @@ sFromIntegralO x = case (kindOf x, kindOf (undefined :: b)) of
 
         u2u :: Int -> Int -> (SBool, SBool)
         u2u n m = (underflow, overflow)
-          where underflow  = false
+          where underflow  = sFalse
                 overflow
-                  | n <= m = false
+                  | n <= m = sFalse
                   | True   = SBV $ svNot $ allZero (n-1) m x
 
         u2s :: Int -> Int -> (SBool, SBool)
         u2s n m = (underflow, overflow)
-          where underflow = false
+          where underflow = sFalse
                 overflow
-                  | m > n = false
+                  | m > n = sFalse
                   | True  = SBV $ svNot $ allZero (n-1) (m-1) x
 
         s2u :: Int -> Int -> (SBool, SBool)
@@ -442,23 +440,23 @@ sFromIntegralO x = case (kindOf x, kindOf (undefined :: b)) of
           where underflow = SBV $ (unSBV x `svTestBit` (n-1)) `svEqual` svTrue
 
                 overflow
-                  | m >= n - 1 = false
+                  | m >= n - 1 = sFalse
                   | True       = SBV $ svAll [(unSBV x `svTestBit` (n-1)) `svEqual` svFalse, svNot $ allZero (n-1) m x]
 
         s2s :: Int -> Int -> (SBool, SBool)
         s2s n m = (underflow, overflow)
           where underflow
-                  | m > n = false
+                  | m > n = sFalse
                   | True  = SBV $ svAll [(unSBV x `svTestBit` (n-1)) `svEqual` svTrue,  svNot $ allOne  (n-1) (m-1) x]
 
                 overflow
-                  | m > n = false
+                  | m > n = sFalse
                   | True  = SBV $ svAll [(unSBV x `svTestBit` (n-1)) `svEqual` svFalse, svNot $ allZero (n-1) (m-1) x]
 
 -- | Version of 'sFromIntegral' that has calls to 'Data.SBV.sAssert' for checking no overflow/underflow can happen. Use it with a 'Data.SBV.safe' call.
 sFromIntegralChecked :: forall a b. (?loc :: CallStack, Integral a, HasKind a, HasKind b, Num a, SymWord a, HasKind b, Num b, SymWord b) => SBV a -> SBV b
-sFromIntegralChecked x = sAssert (Just ?loc) (msg "underflows") (bnot u)
-                       $ sAssert (Just ?loc) (msg "overflows")  (bnot o)
+sFromIntegralChecked x = sAssert (Just ?loc) (msg "underflows") (sNot u)
+                       $ sAssert (Just ?loc) (msg "overflows")  (sNot o)
                          r
   where kFrom = show $ kindOf x
         kTo   = show $ kindOf (undefined :: b)
@@ -487,8 +485,8 @@ signPick1 fu fs a
  where n = intSizeOf a
 
 checkOp1 :: HasKind a => CallStack -> String -> (a -> SBV b) -> (a -> (SBool, SBool)) -> a -> SBV b
-checkOp1 loc w op cop a = sAssert (Just loc) (msg "underflows") (bnot u)
-                        $ sAssert (Just loc) (msg "overflows")  (bnot o)
+checkOp1 loc w op cop a = sAssert (Just loc) (msg "underflows") (sNot u)
+                        $ sAssert (Just loc) (msg "overflows")  (sNot o)
                         $ op a
   where k = show $ kindOf a
         msg c = k ++ " " ++ w ++ " " ++ c
@@ -496,8 +494,8 @@ checkOp1 loc w op cop a = sAssert (Just loc) (msg "underflows") (bnot u)
         (u, o) = cop a
 
 checkOp2 :: HasKind a => CallStack -> String -> (a -> b -> SBV c) -> (a -> b -> (SBool, SBool)) -> a -> b -> SBV c
-checkOp2 loc w op cop a b = sAssert (Just loc) (msg "underflows") (bnot u)
-                          $ sAssert (Just loc) (msg "overflows")  (bnot o)
+checkOp2 loc w op cop a b = sAssert (Just loc) (msg "underflows") (sNot u)
+                          $ sAssert (Just loc) (msg "overflows")  (sNot o)
                           $ a `op` b
   where k = show $ kindOf a
         msg c = k ++ " " ++ w ++ " " ++ c

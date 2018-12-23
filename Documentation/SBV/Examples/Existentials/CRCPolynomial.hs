@@ -38,7 +38,7 @@ diffCount ((h1, l1), crc1) ((h2, l2), crc2) = count xorBits
   where bits1   = blastBE h1 ++ blastBE l1 ++ crc1
         bits2   = blastBE h2 ++ blastBE l2 ++ crc2
         -- xor will give us a false if bits match, true if they differ
-        xorBits = zipWith (<+>) bits1 bits2
+        xorBits = zipWith (.<+>) bits1 bits2
         count []     = 0
         count (b:bs) = let r = count bs in ite b (1+r) r
 
@@ -50,7 +50,7 @@ diffCount ((h1, l1), crc1) ((h2, l2), crc2) = count xorBits
 -- more than @hd@ bits.
 crcGood :: SWord8 -> SWord16 -> SWord48 -> SWord48 -> SBool
 crcGood hd poly sent received =
-     sent ./= received ==> diffCount (sent, crcSent) (received, crcReceived) .>= hd
+     sent ./= received .=> diffCount (sent, crcSent) (received, crcReceived) .>= hd
    where crcSent     = crc_48_16 sent     poly
          crcReceived = crc_48_16 received poly
 
@@ -72,7 +72,7 @@ genPoly hd = do res <- allSat $ do
                         -- the least significant bit must be set in the
                         -- polynomial, as all CRC polynomials have the "+1"
                         -- term in them set. This simplifies the query.
-                        return $ sTestBit p 0 &&& crcGood hd p s r
+                        return $ sTestBit p 0 .&& crcGood hd p s r
                 cnt <- displayModels disp res
                 putStrLn $ "Found: " ++ show cnt ++ " polynomail(s)."
         where disp :: Int -> (Bool, Word16) -> IO ()

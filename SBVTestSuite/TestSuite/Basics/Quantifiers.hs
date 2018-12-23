@@ -29,7 +29,7 @@ tests = testGroup "Basics.Quantifiers" $ concatMap mkGoal goals ++ concatMap mkP
          qs   = [(exists, "exists"), (forall, "forall")]
 
          acts = [ (\x y -> x + (y - x) .== y  , "thm")
-                , (\x y -> x .== y &&& x ./= y, "contradiction")
+                , (\x y -> x .== y .&& x ./= y, "contradiction")
                 , (\x y -> x .== y + 1        , "satisfiable")
                 ]
 

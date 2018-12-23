@@ -447,7 +447,7 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
         combN (x, y, a, b) = (show x, show y, checkNaN f x y a b) where f v w =      v && w   -- /=: Both should be True
         combE (x, y, a, b) = (show x, show y, a == b)
         comb1 (x, a, b)    = (show x, same a b)
-        same a b = (isNaN a &&& isNaN b) || (a == b)
+        same a b = (isNaN a && isNaN b) || (a == b)
         checkNaN f x y a b
           | isNaN x || isNaN y = f a b
           | True               = a == b

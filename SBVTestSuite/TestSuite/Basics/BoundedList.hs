@@ -27,14 +27,14 @@ import Control.Monad.State
 
 -- | Flag to mark a failed computation
 newtype Failure = Failure SBool
-  deriving (Boolean, Mergeable, EqSymbolic)
+  deriving (Mergeable, EqSymbolic)
 
 -- | Evaluation monad with failure
 newtype Eval a = Eval { unEval :: State Failure a }
   deriving (Functor, Applicative, Monad, MonadState Failure)
 
 runEval :: Eval a -> (a, Failure)
-runEval (Eval eval) = runState eval false
+runEval (Eval eval) = runState eval (Failure sFalse)
 
 instance Mergeable a => Mergeable (Eval a) where
   symbolicMerge force test left right = Eval $ state $ \s0 ->
@@ -45,7 +45,7 @@ instance Mergeable a => Mergeable (Eval a) where
        )
 
 markFailure :: SBool -> Eval ()
-markFailure failure = modify (||| Failure failure)
+markFailure failure = modify (\(Failure b) -> Failure (b .|| failure))
 
 -- Test suite
 tests :: TestTree
@@ -133,26 +133,26 @@ sortSat = do [a, b, c] <- sIntegers ["a", "b", "c"]
              let sorted = BL.bsort 3 $ L.implode [a, b, c]
 
                  ordered :: (SInteger, SInteger, SInteger) -> SBool
-                 ordered (x, y, z) = x .<= y &&& y .<= z
+                 ordered (x, y, z) = x .<= y .&& y .<= z
 
-             constrain $ ordered (a, b, c) ==> sorted .== L.implode [a, b, c]
-             constrain $ ordered (a, c, b) ==> sorted .== L.implode [a, c, b]
-             constrain $ ordered (b, a, c) ==> sorted .== L.implode [b, a, c]
-             constrain $ ordered (b, c, a) ==> sorted .== L.implode [b, c, a]
-             constrain $ ordered (c, a, b) ==> sorted .== L.implode [c, a, b]
-             constrain $ ordered (c, b, a) ==> sorted .== L.implode [c, b, a]
+             constrain $ ordered (a, b, c) .=> sorted .== L.implode [a, b, c]
+             constrain $ ordered (a, c, b) .=> sorted .== L.implode [a, c, b]
+             constrain $ ordered (b, a, c) .=> sorted .== L.implode [b, a, c]
+             constrain $ ordered (b, c, a) .=> sorted .== L.implode [b, c, a]
+             constrain $ ordered (c, a, b) .=> sorted .== L.implode [c, a, b]
+             constrain $ ordered (c, b, a) .=> sorted .== L.implode [c, b, a]
 
 -- | Increment, failing if a value lies outside of [0, 10]
 boundedIncr :: SList Integer -> Eval (SList Integer)
 boundedIncr = BL.bmapM 10 $ \i -> do
-  markFailure $ i .< 0 ||| i .> 10
+  markFailure $ i .< 0 .|| i .> 10
   pure $ i + 1
 
 -- | Max (based on foldr), failing if a value lies outside of [0, 10]
 boundedMaxr :: SList Integer -> Eval SInteger
 boundedMaxr = BL.bfoldrM 10
   (\i maxi -> do
-    markFailure $ i .< 0 ||| i .> 10
+    markFailure $ i .< 0 .|| i .> 10
     pure $ smax i maxi)
   0
 
@@ -160,7 +160,7 @@ boundedMaxr = BL.bfoldrM 10
 boundedMaxl :: SList Integer -> Eval SInteger
 boundedMaxl = BL.bfoldlM 10
   (\maxi i -> do
-    markFailure $ i .< 0 ||| i .> 10
+    markFailure $ i .< 0 .|| i .> 10
     pure $ smax i maxi)
   0
 
@@ -170,7 +170,7 @@ mapWithFailure :: Symbolic ()
 mapWithFailure = do
   lst <- sList "ints"
   let (lst', failure) = runEval $ boundedIncr lst
-  constrain $ lst' .!! 2 .> 11 ==> failure .== true
+  constrain $ lst' .!! 2 .> 11 .=> failure .== Failure sTrue
 
 -- mapping over these values of a, b, and c cannot fail (this is unsat)
 mapNoFailure :: Symbolic ()
@@ -178,7 +178,7 @@ mapNoFailure = do
   [a, b, c] <- sIntegers ["a", "b", "c"]
   let (_lst', Failure failure) = runEval $ boundedIncr $ L.implode [a, b, c]
   constrain $ a + b + c .== 6
-  constrain $ a .> 0 &&& b .> 0 &&& c .> 0
+  constrain $ a .> 0 .&& b .> 0 .&& c .> 0
   constrain failure
 
 -- boundedMaxl fails if one of the values is too big
@@ -186,11 +186,11 @@ maxlWithFailure :: Symbolic ()
 maxlWithFailure = do
   lst <- sList "ints"
   let (maxi, Failure failure) = runEval $ boundedMaxl lst
-  constrain $ maxi .> 10 ==> failure
+  constrain $ maxi .> 10 .=> failure
 
 -- boundedMaxl fails if one of the values is too big
 maxrWithFailure :: Symbolic ()
 maxrWithFailure = do
   lst <- sList "ints"
   let (maxi, Failure failure) = runEval $ boundedMaxr lst
-  constrain $ maxi .> 10 ==> failure
+  constrain $ maxi .> 10 .=> failure

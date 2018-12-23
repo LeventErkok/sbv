@@ -118,11 +118,11 @@ module Data.SBV (
   -- * Symbolic types
 
   -- ** Booleans
-    SBool, oneIf
-  -- *** The Boolean class
-  , Boolean(..)
-  -- *** Logical operations
-  , bAnd, bOr, bAny, bAll
+    SBool
+  -- *** Boolean values and functions
+  , sTrue, sFalse, sNot, (.&&), (.||), (.<+>), (.~&), (.~|), (.=>), (.<=>), fromBool, oneIf
+  -- *** Logical functions
+  , sAnd, sOr, sAny, sAll
   -- ** Bit-vectors
   -- *** Unsigned bit-vectors
   , SWord8, SWord16, SWord32, SWord64
@@ -323,8 +323,7 @@ import Data.SBV.Provers.Prover hiding (forAll_, forAll, forSome_, forSome,
 import Data.SBV.Client
 import Data.SBV.Client.BaseIO
 
-import Data.SBV.Utils.Boolean
-import Data.SBV.Utils.TDiff     (Timing(..))
+import Data.SBV.Utils.TDiff (Timing(..))
 
 import Data.Bits
 import Data.Int
@@ -907,7 +906,7 @@ prove $ do a1 <- free "i1"
            a2 <- free "i2"
            let spec, res :: SWord8
                spec = a1 + a2
-               res  = ite (a1 .== 12 &&& a2 .== 22)   -- insert a malicious bug!
+               res  = ite (a1 .== 12 .&& a2 .== 22)   -- insert a malicious bug!
                           1
                           (a1 + a2)
            return $ observe "Expected" spec .== observe "Result" res

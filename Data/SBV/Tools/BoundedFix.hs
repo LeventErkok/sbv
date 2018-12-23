@@ -41,12 +41,12 @@ import Data.SBV
 -- This definition unrolls the recursion in factorial at most 10 times before uninterpreting the result.
 -- We can now prove:
 --
--- >>> prove $ \n -> n .>= 1 &&& n .<= 9 ==> bfac n .== n * bfac (n-1)
+-- >>> prove $ \n -> n .>= 1 .&& n .<= 9 .=> bfac n .== n * bfac (n-1)
 -- Q.E.D.
 --
 -- And we would get a bogus counter-example if the proof of our property needs a larger bound:
 --
--- >>> prove $ \n -> n .== 10 ==> bfac n .== 3628800
+-- >>> prove $ \n -> n .== 10 .=> bfac n .== 3628800
 -- Falsifiable. Counter-example:
 --   s0 = 10 :: Integer
 --
@@ -55,7 +55,7 @@ import Data.SBV
 -- only applies if the given argument is symbolic. This fact can be used to observe concrete
 -- values to see where the bounded-model-checking approach fails:
 --
--- >>> prove $ \n -> n .== 10 ==> observe "bfac_n" (bfac n) .== observe "bfac_10" (bfac 10)
+-- >>> prove $ \n -> n .== 10 .=> observe "bfac_n" (bfac n) .== observe "bfac_10" (bfac 10)
 -- Falsifiable. Counter-example:
 --   s0      =      10 :: Integer
 --   bfac_n  = 7257600 :: Integer

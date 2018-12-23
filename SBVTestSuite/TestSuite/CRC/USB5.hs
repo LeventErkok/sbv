@@ -50,7 +50,7 @@ diffCount x y = count $ zipWith (.==) (blastLE x) (blastLE y)
 -- Claim: If there is an undetected corruption, it must be at least at 3 bits
 usbGood :: SWord16 -> SWord16 -> SBool
 usbGood sent16 received16 =
-    sent ./= received ==> diffCount frameSent frameReceived .>= 3
+    sent ./= received .=> diffCount frameSent frameReceived .>= 3
    where sent     = mkSWord11 sent16
          received = mkSWord11 received16
          frameSent     = mkFrame sent

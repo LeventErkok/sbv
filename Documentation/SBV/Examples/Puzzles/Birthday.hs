@@ -70,19 +70,19 @@ valid month day = (month, day) `sElem` candidates
 
 -- | Assert that the given function holds for one of the possible days.
 existsDay :: (Day -> SBool) -> SBool
-existsDay f = bAny (f . literal) [14 .. 19]
+existsDay f = sAny (f . literal) [14 .. 19]
 
 -- | Assert that the given function holds for all of the possible days.
 forallDay :: (Day -> SBool) -> SBool
-forallDay f = bAll (f . literal) [14 .. 19]
+forallDay f = sAll (f . literal) [14 .. 19]
 
 -- | Assert that the given function holds for one of the possible months.
 existsMonth :: (Month -> SBool) -> SBool
-existsMonth f = bAny f [may .. august]
+existsMonth f = sAny f [may .. august]
 
 -- | Assert that the given function holds for all of the possible months.
 forallMonth :: (Month -> SBool) -> SBool
-forallMonth f = bAll f [may .. august]
+forallMonth f = sAll f [may .. august]
 
 -----------------------------------------------------------------------------------------------
 -- * The puzzle
@@ -103,26 +103,26 @@ puzzle = do birthDay   <- exists "birthDay"
 
             -- Albert: I do not know
             let a1 m = existsDay $ \d1 -> existsDay $ \d2 ->
-                           d1 ./= d2 &&& valid m d1 &&& valid m d2
+                           d1 ./= d2 .&& valid m d1 .&& valid m d2
 
             -- Albert: I know that Bernard doesn't know
-            let a2 m = forallDay $ \d -> valid m d ==>
+            let a2 m = forallDay $ \d -> valid m d .=>
                           existsMonth (\m1 -> existsMonth $ \m2 ->
-                                m1 ./= m2 &&& valid m1 d &&& valid m2 d)
+                                m1 ./= m2 .&& valid m1 d .&& valid m2 d)
 
             -- Bernard: I did not know
             let b1 d = existsMonth $ \m1 -> existsMonth $ \m2 ->
-                           m1 ./= m2 &&& valid m1 d &&& valid m2 d
+                           m1 ./= m2 .&& valid m1 d .&& valid m2 d
 
             -- Bernard: But now I know
-            let b2p m d = valid m d &&& a1 m &&& a2 m
+            let b2p m d = valid m d .&& a1 m .&& a2 m
                 b2  d   = forallMonth $ \m1 -> forallMonth $ \m2 ->
-                                (b2p m1 d &&& b2p m2 d) ==> m1 .== m2
+                                (b2p m1 d .&& b2p m2 d) .=> m1 .== m2
 
             -- Albert: Now I know too
-            let a3p m d = valid m d &&& a1 m &&& a2 m &&& b1 d &&& b2 d
+            let a3p m d = valid m d .&& a1 m .&& a2 m .&& b1 d .&& b2 d
                 a3 m    = forallDay $ \d1 -> forallDay $ \d2 ->
-                                (a3p m d1 &&& a3p m d2) ==> d1 .== d2
+                                (a3p m d1 .&& a3p m d2) .=> d1 .== d2
 
             -- Assert all the statements made:
             constrain $ a1 birthMonth

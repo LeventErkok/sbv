@@ -50,23 +50,23 @@ There are two main parts to proving that a sorting algorithm is correct:
 
 -- | Check whether a given sequence is non-decreasing.
 nonDecreasing :: [E] -> SBool
-nonDecreasing []       = true
-nonDecreasing [_]      = true
-nonDecreasing (a:b:xs) = a .<= b &&& nonDecreasing (b:xs)
+nonDecreasing []       = sTrue
+nonDecreasing [_]      = sTrue
+nonDecreasing (a:b:xs) = a .<= b .&& nonDecreasing (b:xs)
 
 -- | Check whether two given sequences are permutations. We simply check that each sequence
 -- is a subset of the other, when considered as a set. The check is slightly complicated
 -- for the need to account for possibly duplicated elements.
 isPermutationOf :: [E] -> [E] -> SBool
-isPermutationOf as bs = go as (zip bs (repeat true)) &&& go bs (zip as (repeat true))
-  where go []     _  = true
-        go (x:xs) ys = let (found, ys') = mark x ys in found &&& go xs ys'
+isPermutationOf as bs = go as (zip bs (repeat sTrue)) .&& go bs (zip as (repeat sTrue))
+  where go []     _  = sTrue
+        go (x:xs) ys = let (found, ys') = mark x ys in found .&& go xs ys'
         -- Go and mark off an instance of 'x' in the list, if possible. We keep track
         -- of unmarked elements by associating a boolean bit. Note that we have to
         -- keep the lists equal size for the recursive result to merge properly.
-        mark _ []         = (false, [])
-        mark x ((y,v):ys) = ite (v &&& x .== y)
-                                (true, (y, bnot v):ys)
+        mark _ []         = (sFalse, [])
+        mark x ((y,v):ys) = ite (v .&& x .== y)
+                                (sTrue, (y, sNot v):ys)
                                 (let (r, ys') = mark x ys in (r, (y,v):ys'))
 
 -- | Asserting correctness of merge-sort for a list of the given size. Note that we can
@@ -79,7 +79,7 @@ isPermutationOf as bs = go as (zip bs (repeat true)) &&& go bs (zip as (repeat t
 correctness :: Int -> IO ThmResult
 correctness n = prove $ do xs <- mkFreeVars n
                            let ys = mergeSort xs
-                           return $ nonDecreasing ys &&& isPermutationOf xs ys
+                           return $ nonDecreasing ys .&& isPermutationOf xs ys
 
 -----------------------------------------------------------------------------
 -- * Generating C code

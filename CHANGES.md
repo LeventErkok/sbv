@@ -21,6 +21,29 @@
 
     Thanks to Brian Schroeder for this massive effort to modernize the SBV code-base!
 
+  * [BACKWARDS COMPATIBILITY] The 'Boolean' class is removed, which used to abstract
+    over logical connectives. Previously, this class handled 'SBool' and 'Bool', but
+    the generality was hardly ever used and caused typing ambiguities. The new
+    implementation simplifies boolean operators to simply operate on the `SBool`
+    type. Also changed the operator names to fit with all the others by starting
+    them with dots. A simple conversion guide:
+
+        * Literal True: 'true' became 'sTrue'
+        * Literal False: 'false' became sFalse
+        * Negation: 'bNot' became 'sNot'
+        * Conjunction: '&&&' became '.&&'
+        * Disjunction: '|||' became '.||'
+        * Xor: '<+>' became '.<+>'
+        * Nand: '~&' became '.~&'
+        * Nor: '~|' became '.~|'
+        * Implication: '==>' became '.=>'
+        * Iff: '<=>' became '.<=>'
+        * 'bAnd' became 'sAnd'
+	* 'bnot' became 'sNot'
+        * 'bOr' became 'sOr'
+        * 'bAny' became 'sAny'
+        * 'bAll' became 'sAll'
+
 ### Version 7.13, 2018-12-16
 
   * Generalize the types of `bminimum` and `bmaximum` by removing the `Num`

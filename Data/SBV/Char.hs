@@ -44,7 +44,6 @@ import qualified Prelude as P
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
-import Data.SBV.Utils.Boolean
 
 import qualified Data.Char as C
 
@@ -61,23 +60,23 @@ import Data.SBV.String (isInfixOf, singleton)
 -- >>> :set -XOverloadedStrings
 -- >>> prove $ \c -> c `elem` singleton c
 -- Q.E.D.
--- >>> prove $ \c -> bnot (c `elem` "")
+-- >>> prove $ \c -> sNot (c `elem` "")
 -- Q.E.D.
 elem :: SChar -> SString -> SBool
 c `elem` s
  | Just cs <- unliteral s, Just cc <- unliteral c
  = literal (cc `P.elem` cs)
  | Just cs <- unliteral s                            -- If only the second string is concrete, element-wise checking is still much better!
- = bAny (c .==) $ map literal cs
+ = sAny (c .==) $ map literal cs
  | True
  = singleton c `isInfixOf` s
 
 -- | Is the character not in the string?
 --
--- >>> prove $ \c s -> c `elem` s <=> bnot (c `notElem` s)
+-- >>> prove $ \c s -> c `elem` s .<=> sNot (c `notElem` s)
 -- Q.E.D.
 notElem :: SChar -> SString -> SBool
-c `notElem` s = bnot (c `elem` s)
+c `notElem` s = sNot (c `elem` s)
 
 -- | The 'ord' of a character.
 ord :: SChar -> SInteger
@@ -93,7 +92,7 @@ ord c
 
 -- | Conversion from an integer to a character.
 --
--- >>> prove $ \x -> 0 .<= x &&& x .< 256 ==> ord (chr x) .== x
+-- >>> prove $ \x -> 0 .<= x .&& x .< 256 .=> ord (chr x) .== x
 -- Q.E.D.
 -- >>> prove $ \x -> chr (ord x) .== x
 -- Q.E.D.
@@ -112,7 +111,7 @@ chr w
 --
 -- >>> prove $ \c -> toLower (toLower c) .== toLower c
 -- Q.E.D.
--- >>> prove $ \c -> isLower c ==> toLower (toUpper c) .== c
+-- >>> prove $ \c -> isLower c .=> toLower (toUpper c) .== c
 -- Q.E.D.
 toLower :: SChar -> SChar
 toLower c = ite (isUpper c) (chr (ord c + 32)) c
@@ -131,17 +130,17 @@ toLower c = ite (isUpper c) (chr (ord c + 32)) c
 --
 -- >>> prove $ \c -> toUpper (toUpper c) .== toUpper c
 -- Q.E.D.
--- >>> prove $ \c -> isUpper c ==> toUpper (toLower c) .== c
+-- >>> prove $ \c -> isUpper c .=> toUpper (toLower c) .== c
 -- Q.E.D.
 toUpper :: SChar -> SChar
-toUpper c = ite (isLower c &&& c `notElem` "\181\223\255") (chr (ord c - 32)) c
+toUpper c = ite (isLower c .&& c `notElem` "\181\223\255") (chr (ord c - 32)) c
 
 -- | Convert a digit to an integer. Works for hexadecimal digits too. If the input isn't a digit,
 -- then return -1.
 --
--- >>> prove $ \c -> isDigit c ||| isHexDigit c ==> digitToInt c .>= 0 &&& digitToInt c .<= 15
+-- >>> prove $ \c -> isDigit c .|| isHexDigit c .=> digitToInt c .>= 0 .&& digitToInt c .<= 15
 -- Q.E.D.
--- >>> prove $ \c -> bnot (isDigit c ||| isHexDigit c) ==> digitToInt c .== -1
+-- >>> prove $ \c -> sNot (isDigit c .|| isHexDigit c) .=> digitToInt c .== -1
 -- Q.E.D.
 digitToInt :: SChar -> SInteger
 digitToInt c = ite (uc `elem` "0123456789") (sFromIntegral (o - ord (literal '0')))
@@ -154,15 +153,15 @@ digitToInt c = ite (uc `elem` "0123456789") (sFromIntegral (o - ord (literal '0'
 -- bounds, we return the arbitrarily chosen space character. Note that for hexadecimal
 -- letters, we return the corresponding lowercase letter.
 --
--- >>> prove $ \i -> i .>= 0 &&& i .<= 15 ==> digitToInt (intToDigit i) .== i
+-- >>> prove $ \i -> i .>= 0 .&& i .<= 15 .=> digitToInt (intToDigit i) .== i
 -- Q.E.D.
--- >>> prove $ \i -> i .<  0 ||| i .>  15 ==> digitToInt (intToDigit i) .== -1
+-- >>> prove $ \i -> i .<  0 .|| i .>  15 .=> digitToInt (intToDigit i) .== -1
 -- Q.E.D.
--- >>> prove $ \c -> digitToInt c .== -1 <=> intToDigit (digitToInt c) .== literal ' '
+-- >>> prove $ \c -> digitToInt c .== -1 .<=> intToDigit (digitToInt c) .== literal ' '
 -- Q.E.D.
 intToDigit :: SInteger -> SChar
-intToDigit i = ite (i .>=  0 &&& i .<=  9) (chr (sFromIntegral i + ord (literal '0')))
-             $ ite (i .>= 10 &&& i .<= 15) (chr (sFromIntegral i + ord (literal 'a') - 10))
+intToDigit i = ite (i .>=  0 .&& i .<=  9) (chr (sFromIntegral i + ord (literal '0')))
+             $ ite (i .>= 10 .&& i .<= 15) (chr (sFromIntegral i + ord (literal 'a') - 10))
              $ literal ' '
 
 -- | Is this a control character? Control characters are essentially the non-printing characters.
@@ -177,7 +176,7 @@ isSpace = (`elem` spaces)
 
 -- | Is this a lower-case character?
 --
--- >>> prove $ \c -> isUpper c ==> isLower (toLower c)
+-- >>> prove $ \c -> isUpper c .=> isLower (toLower c)
 -- Q.E.D.
 isLower :: SChar -> SBool
 isLower = (`elem` lower)
@@ -185,7 +184,7 @@ isLower = (`elem` lower)
 
 -- | Is this an upper-case character?
 --
--- >>> prove $ \c -> bnot (isLower c &&& isUpper c)
+-- >>> prove $ \c -> sNot (isLower c .&& isUpper c)
 -- Q.E.D.
 isUpper :: SChar -> SBool
 isUpper = (`elem` upper)
@@ -198,43 +197,43 @@ isAlpha = (`elem` alpha)
 
 -- | Is this an 'isAlpha' or 'isNumber'.
 --
--- >>> prove $ \c -> isAlphaNum c <=> isAlpha c ||| isNumber c
+-- >>> prove $ \c -> isAlphaNum c .<=> isAlpha c .|| isNumber c
 -- Q.E.D.
 isAlphaNum :: SChar -> SBool
-isAlphaNum c = isAlpha c ||| isNumber c
+isAlphaNum c = isAlpha c .|| isNumber c
 
 -- | Is this a printable character? Essentially the complement of 'isControl', with one
 -- exception. The Latin-1 character \173 is neither control nor printable. Go figure.
 --
--- >>> prove $ \c -> c .== literal '\173' ||| isControl c <=> bnot (isPrint c)
+-- >>> prove $ \c -> c .== literal '\173' .|| isControl c .<=> sNot (isPrint c)
 -- Q.E.D.
 isPrint :: SChar -> SBool
-isPrint c = c ./= literal '\173' &&& bnot (isControl c)
+isPrint c = c ./= literal '\173' .&& sNot (isControl c)
 
 -- | Is this an ASCII digit, i.e., one of @0@..@9@. Note that this is a subset of 'isNumber'
 --
--- >>> prove $ \c -> isDigit c ==> isNumber c
+-- >>> prove $ \c -> isDigit c .=> isNumber c
 -- Q.E.D.
 isDigit :: SChar -> SBool
 isDigit = (`elem` "0123456789")
 
 -- | Is this an Octal digit, i.e., one of @0@..@7@.
 --
--- >>> prove $ \c -> isOctDigit c ==> isDigit c
+-- >>> prove $ \c -> isOctDigit c .=> isDigit c
 -- Q.E.D.
 isOctDigit :: SChar -> SBool
 isOctDigit = (`elem` "01234567")
 
 -- | Is this a Hex digit, i.e, one of @0@..@9@, @a@..@f@, @A@..@F@.
 --
--- >>> prove $ \c -> isHexDigit c ==> isAlphaNum c
+-- >>> prove $ \c -> isHexDigit c .=> isAlphaNum c
 -- Q.E.D.
 isHexDigit :: SChar -> SBool
 isHexDigit = (`elem` "0123456789abcdefABCDEF")
 
 -- | Is this an alphabet character. Note that this function is equivalent to 'isAlpha'.
 --
--- >>> prove $ \c -> isLetter c <=> isAlpha c
+-- >>> prove $ \c -> isLetter c .<=> isAlpha c
 -- Q.E.D.
 isLetter :: SChar -> SBool
 isLetter = isAlpha
@@ -242,10 +241,10 @@ isLetter = isAlpha
 -- | Is this a mark? Note that the Latin-1 subset doesn't have any marks; so this function
 -- is simply constant false for the time being.
 --
--- >>> prove $ bnot . isMark
+-- >>> prove $ sNot . isMark
 -- Q.E.D.
 isMark :: SChar -> SBool
-isMark = const false
+isMark = const sFalse
 
 -- | Is this a number character? Note that this set contains not only the digits, but also
 -- the codes for a few numeric looking characters like 1/2 etc. Use 'isDigit' for the digits @0@ through @9@.
@@ -262,7 +261,7 @@ isSymbol = (`elem` "$+<=>^`|~\162\163\164\165\166\168\169\172\174\175\176\177\18
 
 -- | Is this a separator?
 --
--- >>> prove $ \c -> isSeparator c ==> isSpace c
+-- >>> prove $ \c -> isSeparator c .=> isSpace c
 -- Q.E.D.
 isSeparator :: SChar -> SBool
 isSeparator = (`elem` " \160")
@@ -277,29 +276,29 @@ isAscii c = ord c .< 128
 -- >>> prove isLatin1
 -- Q.E.D.
 isLatin1 :: SChar -> SBool
-isLatin1 = const true
+isLatin1 = const sTrue
 
 -- | Is this an ASCII letter?
 --
--- >>> prove $ \c -> isAsciiLetter c <=> isAsciiUpper c ||| isAsciiLower c
+-- >>> prove $ \c -> isAsciiLetter c .<=> isAsciiUpper c .|| isAsciiLower c
 -- Q.E.D.
 isAsciiLetter :: SChar -> SBool
-isAsciiLetter c = isAsciiUpper c ||| isAsciiLower c
+isAsciiLetter c = isAsciiUpper c .|| isAsciiLower c
 
 -- | Is this an ASCII Upper-case letter? i.e., @A@ thru @Z@
 --
--- >>> prove $ \c -> isAsciiUpper c <=> ord c .>= ord (literal 'A') &&& ord c .<= ord (literal 'Z')
+-- >>> prove $ \c -> isAsciiUpper c .<=> ord c .>= ord (literal 'A') .&& ord c .<= ord (literal 'Z')
 -- Q.E.D.
--- >>> prove $ \c -> isAsciiUpper c <=> isAscii c &&& isUpper c
+-- >>> prove $ \c -> isAsciiUpper c .<=> isAscii c .&& isUpper c
 -- Q.E.D.
 isAsciiUpper :: SChar -> SBool
 isAsciiUpper = (`elem` literal ['A' .. 'Z'])
 
 -- | Is this an ASCII Lower-case letter? i.e., @a@ thru @z@
 --
--- >>> prove $ \c -> isAsciiLower c <=> ord c .>= ord (literal 'a') &&& ord c .<= ord (literal 'z')
+-- >>> prove $ \c -> isAsciiLower c .<=> ord c .>= ord (literal 'a') .&& ord c .<= ord (literal 'z')
 -- Q.E.D.
--- >>> prove $ \c -> isAsciiLower c <=> isAscii c &&& isLower c
+-- >>> prove $ \c -> isAsciiLower c .<=> isAscii c .&& isLower c
 -- Q.E.D.
 isAsciiLower :: SChar -> SBool
 isAsciiLower = (`elem` literal ['a' .. 'z'])

@@ -28,4 +28,4 @@ tests = testGroup "Existentials.CRCPolynomial" [
                 r <- do rh <- forall "rh"
                         rl <- forall "rl"
                         return (rh, rl)
-                output $ sTestBit p 0 &&& crcGood 4 p s r
+                output $ sTestBit p 0 .&& crcGood 4 p s r

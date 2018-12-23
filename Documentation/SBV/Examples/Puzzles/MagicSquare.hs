@@ -28,7 +28,7 @@ type Board = [Row]
 
 -- | Checks that all elements in a list are within bounds
 check :: Elem -> Elem -> [Elem] -> SBool
-check low high = bAll $ \x -> x .>= low &&& x .<= high
+check low high = sAll $ \x -> x .>= low .&& x .<= high
 
 -- | Get the diagonal of a square matrix
 diag :: [[a]] -> [a]
@@ -37,7 +37,7 @@ diag _          = []
 
 -- | Test if a given board is a magic square
 isMagic :: Board -> SBool
-isMagic rows = bAnd $ fromBool isSquare : allEqual (map sum items) : distinct (concat rows) : map chk items
+isMagic rows = sAnd $ fromBool isSquare : allEqual (map sum items) : distinct (concat rows) : map chk items
   where items = d1 : d2 : rows ++ columns
         n = genericLength rows
         isSquare = all (\r -> genericLength r == n) rows

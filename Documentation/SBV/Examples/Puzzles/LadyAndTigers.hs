@@ -48,13 +48,13 @@ ladyAndTigers = allSat $ do
     [tiger1, tiger2, tiger3] <- mapM sBool ["tiger1", "tiger2", "tiger3"]
 
     -- Room 1 sign: A Tiger is in this room
-    constrain $ sign1 <=> tiger1
+    constrain $ sign1 .<=> tiger1
 
     -- Room 2 sign: A Lady is in this room
-    constrain $ sign2 <=> bnot tiger2
+    constrain $ sign2 .<=> sNot tiger2
 
     -- Room 3 sign: A Tiger is in room 2
-    constrain $ sign3 <=> tiger2
+    constrain $ sign3 .<=> tiger2
 
     -- At most one sign is true
     constrain $ [sign1, sign2, sign3] `pbAtMost` 1

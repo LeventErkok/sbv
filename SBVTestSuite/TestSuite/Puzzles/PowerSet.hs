@@ -21,5 +21,5 @@ tests =
 pSet :: Int -> IO Bool
 pSet n = do cnt <- numberOfModels $ do mapM_ (\i -> sBool ("e" ++ show i)) [1..n]
                                        -- Look ma! No constraints!
-                                       return (true :: SBool)
+                                       return sTrue
             return (cnt == 2^n)

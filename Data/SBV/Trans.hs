@@ -13,11 +13,11 @@ module Data.SBV.Trans (
   -- * Symbolic types
 
   -- ** Booleans
-    SBool, oneIf
-  -- *** The Boolean class
-  , Boolean(..)
-  -- *** Logical operations
-  , bAnd, bOr, bAny, bAll
+    SBool
+  -- *** Boolean values and functions
+  , sTrue, sFalse, sNot, (.&&), (.||), (.<+>), (.~&), (.~|), (.=>), (.<=>), fromBool, oneIf
+  -- *** Logical functions
+  , sAnd, sOr, sAny, sAll
   -- ** Bit-vectors
   -- *** Unsigned bit-vectors
   , SWord8, SWord16, SWord32, SWord64
@@ -161,7 +161,6 @@ import Data.SBV.Provers.Prover
 
 import Data.SBV.Client
 
-import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.TDiff   (Timing(..))
 
 import Data.Bits

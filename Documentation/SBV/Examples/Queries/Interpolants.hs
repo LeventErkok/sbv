@@ -31,7 +31,7 @@ import Data.SBV.Control
 -- satisfies the second. However, there's no triple @(x, y, z)@ that satisfies all
 -- these four formulas together. We can use SBV to check this fact:
 --
--- >>> sat $ \x y z -> bAnd [x - 3*y .>= -1, x + y .>= 0, z - 2*x .>= 3, 2 * z .<= (1::SInteger)]
+-- >>> sat $ \x y z -> sAnd [x - 3*y .>= -1, x + y .>= 0, z - 2*x .>= 3, 2 * z .<= (1::SInteger)]
 -- Unsatisfiable
 --
 -- An interpolant for these sets would only talk about the variable @x@ that is common
@@ -45,12 +45,12 @@ import Data.SBV.Control
 -- is entailed by the first set of formulas, and is inconsistent with the second. Let's use SBV
 -- to indeed show that this is the case:
 --
--- >>> prove $ \x y -> (x - 3*y .>= -1 &&& x + y .>= 0) ==> (x .>= (0::SInteger))
+-- >>> prove $ \x y -> (x - 3*y .>= -1 .&& x + y .>= 0) .=> (x .>= (0::SInteger))
 -- Q.E.D.
 --
 -- And:
 --
--- >>> prove $ \x z -> (z - 2*x .>= 3 &&& 2 * z .<= 1) ==> bnot (x .>= (0::SInteger))
+-- >>> prove $ \x z -> (z - 2*x .>= 3 .&& 2 * z .<= 1) .=> sNot (x .>= (0::SInteger))
 -- Q.E.D.
 --
 -- This establishes that we indeed have an interpolant!

@@ -48,6 +48,6 @@ diffCount x y = count $ zipWith (.==) (blastLE x) (blastLE y)
 -- Claim: If there is an undetected corruption, it must be at least at 4 bits; i.e. HD is 4
 crcGood :: SWord48 -> SWord48 -> SBool
 crcGood sent received =
-     sent ./= received ==> diffCount frameSent frameReceived .> 3
+     sent ./= received .=> diffCount frameSent frameReceived .> 3
    where frameSent     = mkFrame sent
          frameReceived = mkFrame received

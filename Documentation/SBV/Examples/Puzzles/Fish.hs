@@ -88,35 +88,35 @@ fishOwner = do vs <- getModelValues "fishOwner" `fmap` allSat puzzle
               p = uninterpret "pet"
               s = uninterpret "sport"
 
-          let i `neighbor` j = i .== j+1 ||| j .== i+1
+          let i `neighbor` j = i .== j+1 .|| j .== i+1
               a `is`       v = a .== literal v
 
           let fact0   = constrain
               fact1 f = do i <- free_
-                           constrain $ 1 .<= i &&& i .<= (5 :: SInteger)
+                           constrain $ 1 .<= i .&& i .<= (5 :: SInteger)
                            constrain $ f i
               fact2 f = do i <- free_
                            j <- free_
-                           constrain $ 1 .<= i &&& i .<= (5 :: SInteger)
-                           constrain $ 1 .<= j &&& j .<= 5
+                           constrain $ 1 .<= i .&& i .<= (5 :: SInteger)
+                           constrain $ 1 .<= j .&& j .<= 5
                            constrain $ i ./= j
                            constrain $ f i j
 
-          fact1 $ \i   -> n i `is` Briton     &&& c i `is` Red
-          fact1 $ \i   -> n i `is` Swede      &&& p i `is` Dog
-          fact1 $ \i   -> n i `is` Dane       &&& b i `is` Tea
-          fact2 $ \i j -> c i `is` Green      &&& c j `is` White    &&& i .== j-1
-          fact1 $ \i   -> c i `is` Green      &&& b i `is` Coffee
-          fact1 $ \i   -> s i `is` Football   &&& p i `is` Bird
-          fact1 $ \i   -> c i `is` Yellow     &&& s i `is` Baseball
+          fact1 $ \i   -> n i `is` Briton     .&& c i `is` Red
+          fact1 $ \i   -> n i `is` Swede      .&& p i `is` Dog
+          fact1 $ \i   -> n i `is` Dane       .&& b i `is` Tea
+          fact2 $ \i j -> c i `is` Green      .&& c j `is` White    .&& i .== j-1
+          fact1 $ \i   -> c i `is` Green      .&& b i `is` Coffee
+          fact1 $ \i   -> s i `is` Football   .&& p i `is` Bird
+          fact1 $ \i   -> c i `is` Yellow     .&& s i `is` Baseball
           fact0 $         b 3 `is` Milk
           fact0 $         n 1 `is` Norwegian
-          fact2 $ \i j -> s i `is` Volleyball &&& p j `is` Cat      &&& i `neighbor` j
-          fact2 $ \i j -> p i `is` Horse      &&& s j `is` Baseball &&& i `neighbor` j
-          fact1 $ \i   -> s i `is` Tennis     &&& b i `is` Beer
-          fact1 $ \i   -> n i `is` German     &&& s i `is` Hockey
-          fact2 $ \i j -> n i `is` Norwegian  &&& c j `is` Blue     &&& i `neighbor` j
-          fact2 $ \i j -> s i `is` Volleyball &&& b j `is` Water    &&& i `neighbor` j
+          fact2 $ \i j -> s i `is` Volleyball .&& p j `is` Cat      .&& i `neighbor` j
+          fact2 $ \i j -> p i `is` Horse      .&& s j `is` Baseball .&& i `neighbor` j
+          fact1 $ \i   -> s i `is` Tennis     .&& b i `is` Beer
+          fact1 $ \i   -> n i `is` German     .&& s i `is` Hockey
+          fact2 $ \i j -> n i `is` Norwegian  .&& c j `is` Blue     .&& i `neighbor` j
+          fact2 $ \i j -> s i `is` Volleyball .&& b j `is` Water    .&& i `neighbor` j
 
           ownsFish <- free "fishOwner"
-          fact1 $ \i -> n i .== ownsFish &&& p i `is` Fish
+          fact1 $ \i -> n i .== ownsFish .&& p i `is` Fish

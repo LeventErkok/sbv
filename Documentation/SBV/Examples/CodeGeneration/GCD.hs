@@ -33,7 +33,7 @@ import Data.SBV.Tools.CodeGen
 sgcd :: SWord8 -> SWord8 -> SWord8
 sgcd a b = go a b 12
   where go :: SWord8 -> SWord8 -> SWord8 -> SWord8
-        go x y c = ite (c .== 0 ||| y .== 0)   -- stop if y is 0, or if we reach the recursion depth
+        go x y c = ite (c .== 0 .|| y .== 0)   -- stop if y is 0, or if we reach the recursion depth
                        x
                        (go y y' (c-1))
           where (_, y') = x `sQuotRem` y
@@ -55,10 +55,10 @@ and it is at least as large as any given @k@, provided @k@ is a common divisor a
 sgcdIsCorrect :: SWord8 -> SWord8 -> SWord8 -> SBool
 sgcdIsCorrect x y k = ite (y  .== 0)                        -- if y is 0
                           (k' .== x)                        -- then k' must be x, nothing else to prove by definition
-                          (isCommonDivisor k'  &&&          -- otherwise, k' is a common divisor and
-                          (isCommonDivisor k ==> k' .>= k)) -- if k is a common divisor as well, then k' is at least as large as k
+                          (isCommonDivisor k'  .&&          -- otherwise, k' is a common divisor and
+                          (isCommonDivisor k .=> k' .>= k)) -- if k is a common divisor as well, then k' is at least as large as k
   where k' = sgcd x y
-        isCommonDivisor a = z1 .== 0 &&& z2 .== 0
+        isCommonDivisor a = z1 .== 0 .&& z2 .== 0
            where (_, z1) = x `sQuotRem` a
                  (_, z2) = y `sQuotRem` a
 

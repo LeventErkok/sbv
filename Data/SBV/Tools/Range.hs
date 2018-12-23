@@ -65,21 +65,21 @@ instance Show a => Show (Range a) where
 -- []
 -- >>> ranges (\(_ :: SInteger) -> true)
 -- [(-oo,oo)]
--- >>> ranges (\(x :: SInteger) -> bAnd [x .<= 120, x .>= -12, x ./= 3])
+-- >>> ranges (\(x :: SInteger) -> sAnd [x .<= 120, x .>= -12, x ./= 3])
 -- [[-12,3),(3,120]]
--- >>> ranges (\(x :: SInteger) -> bAnd [x .<= 75, x .>= 5, x ./= 6, x ./= 67])
+-- >>> ranges (\(x :: SInteger) -> sAnd [x .<= 75, x .>= 5, x ./= 6, x ./= 67])
 -- [[5,6),(6,67),(67,75]]
--- >>> ranges (\(x :: SInteger) -> bAnd [x .<= 75, x ./= 3, x ./= 67])
+-- >>> ranges (\(x :: SInteger) -> sAnd [x .<= 75, x ./= 3, x ./= 67])
 -- [(-oo,3),(3,67),(67,75]]
--- >>> ranges (\(x :: SReal) -> bAnd [x .> 3.2, x .<  12.7])
+-- >>> ranges (\(x :: SReal) -> sAnd [x .> 3.2, x .<  12.7])
 -- [(3.2,12.7)]
--- >>> ranges (\(x :: SReal) -> bAnd [x .> 3.2, x .<= 12.7])
+-- >>> ranges (\(x :: SReal) -> sAnd [x .> 3.2, x .<= 12.7])
 -- [(3.2,12.7]]
--- >>> ranges (\(x :: SReal) -> bAnd [x .<= 12.7, x ./= 8])
+-- >>> ranges (\(x :: SReal) -> sAnd [x .<= 12.7, x ./= 8])
 -- [(-oo,8.0),(8.0,12.7]]
--- >>> ranges (\(x :: SReal) -> bAnd [x .>= 12.7, x ./= 15])
+-- >>> ranges (\(x :: SReal) -> sAnd [x .>= 12.7, x ./= 15])
 -- [[12.7,15.0),(15.0,oo)]
--- >>> ranges (\(x :: SInt8) -> bAnd [x .<= 7, x ./= 6])
+-- >>> ranges (\(x :: SInt8) -> sAnd [x .<= 7, x ./= 6])
 -- [[-128,6),(6,7]]
 -- >>> ranges $ \x -> x .> (0::SReal)
 -- [(0.0,oo)]
@@ -149,14 +149,14 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
                                      x <- free_
 
                                      let restrict v open closed = case v of
-                                                                    Unbounded -> true
+                                                                    Unbounded -> sTrue
                                                                     Open   a  -> x `open`   literal a
                                                                     Closed a  -> x `closed` literal a
 
                                          lower = restrict lo (.>) (.>=)
                                          upper = restrict hi (.<) (.<=)
 
-                                     constrain $ lower &&& upper &&& bnot (prop x)
+                                     constrain $ lower .&& upper .&& sNot (prop x)
 
                                      query $ do cs <- checkSat
                                                 case cs of

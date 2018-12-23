@@ -50,7 +50,6 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic   (MonadQuery(..), QueryState(..), SMTModel(..), SMTResult(..), State(..), incrementInternalCounter)
 
 import Data.SBV.Utils.SExpr
-import Data.SBV.Utils.Boolean
 
 import Data.SBV.Control.Types
 import Data.SBV.Control.Utils
@@ -522,7 +521,7 @@ pop i
 -- | Generalization of 'Data.SBV.Control.caseSplit'
 caseSplit :: (MonadIO m, MonadQuery m) => Bool -> [(String, SBool)] -> m (Maybe (String, SMTResult))
 caseSplit printCases cases = do cfg <- getConfig
-                                go cfg (cases ++ [("Coverage", bnot (bOr (map snd cases)))])
+                                go cfg (cases ++ [("Coverage", sNot (sOr (map snd cases)))])
   where msg = when printCases . io . putStrLn
 
         go _ []            = return Nothing

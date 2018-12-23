@@ -42,4 +42,4 @@ example = sat $ do x <- sString "x"
                    softConstrain $ x .== "default-x-value"
                    softConstrain $ y .== "default-y-value"
 
-                   return (true :: SBool)
+                   return sTrue

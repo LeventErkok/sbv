@@ -35,6 +35,7 @@ module Data.SBV.Core.Data
  , mkConstCW ,liftCW2, mapCW, mapCW2
  , SW(..), trueSW, falseSW, trueCW, falseCW, normCW
  , SVal(..)
+ , sTrue, sFalse, sNot, (.&&), (.||), (.<+>), (.~&), (.~|), (.=>), (.<=>), sAnd, sOr, sAny, sAll, fromBool
  , SBV(..), NodeId(..), mkSymSBV
  , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), SArray(..)
  , sbvToSW, sbvToSymSW, forceSWArg
@@ -80,7 +81,6 @@ import Data.SBV.Control.Types
 import Data.SBV.SMT.SMTLibNames
 
 import Data.SBV.Utils.Lib
-import Data.SBV.Utils.Boolean
 
 -- | Get the current path condition
 getPathCondition :: State -> SBool
@@ -186,14 +186,73 @@ sInfinity = literal infinity
 -- | Internal representation of a symbolic simulation result
 newtype SMTProblem = SMTProblem {smtLibPgm :: SMTConfig -> SMTLibPgm} -- ^ SMTLib representation, given the config
 
--- Boolean combinators
-instance Boolean SBool where
-  true  = SBV (svBool True)
-  false = SBV (svBool False)
-  bnot (SBV b) = SBV (svNot b)
-  SBV a &&& SBV b = SBV (svAnd a b)
-  SBV a ||| SBV b = SBV (svOr a b)
-  SBV a <+> SBV b = SBV (svXOr a b)
+-- | Symbolic True
+sTrue :: SBool
+sTrue = SBV (svBool True)
+
+-- | Symbolic False
+sFalse :: SBool
+sFalse = SBV (svBool False)
+
+-- | Symbolic boolean negation
+sNot :: SBool -> SBool
+sNot (SBV b) = SBV (svNot b)
+
+-- | Symbolic conjunction
+infixr 3 .&&
+(.&&) :: SBool -> SBool -> SBool
+SBV x .&& SBV y = SBV (x `svAnd` y)
+
+-- | Symbolic disjunction
+infixr 3 .||
+(.||) :: SBool -> SBool -> SBool
+SBV x .|| SBV y = SBV (x `svOr` y)
+
+-- | Symbolic logical xor
+infixl 6 .<+>
+(.<+>) :: SBool -> SBool -> SBool
+SBV x .<+> SBV y = SBV (x `svXOr` y)
+
+-- | Symbolic nand
+infixr 3 .~&
+(.~&) :: SBool -> SBool -> SBool
+x .~& y = sNot (x .&& y)
+
+-- | Symbolic nor
+infixr 2 .~|
+(.~|) :: SBool -> SBool -> SBool
+x .~| y = sNot (x .|| y)
+
+-- | Symbolic implication
+infixr 1 .=>
+(.=>) :: SBool -> SBool -> SBool
+x .=> y = sNot x .|| y
+
+-- | Symbolic boolean equivalence
+infixr 1 .<=>
+(.<=>) :: SBool -> SBool -> SBool
+x .<=> y = (x .&& y) .|| (sNot x .&& sNot y)
+
+-- | Conversion from 'Bool' to 'SBool'
+fromBool :: Bool -> SBool
+fromBool True  = sTrue
+fromBool False = sFalse
+
+-- | Generalization of 'and'
+sAnd :: [SBool] -> SBool
+sAnd = foldr (.&&) sTrue
+
+-- | Generalization of 'or'
+sOr :: [SBool] -> SBool
+sOr  = foldr (.||) sFalse
+
+-- | Generalization of 'any'
+sAny :: (a -> SBool) -> [a] -> SBool
+sAny f = sOr  . map f
+
+-- | Generalization of 'all'
+sAll :: (a -> SBool) -> [a] -> SBool
+sAll f = sAnd . map f
 
 -- | 'RoundingMode' can be used symbolically
 instance SymWord RoundingMode
