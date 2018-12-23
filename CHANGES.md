@@ -38,11 +38,10 @@
         * Nor          : ~|      became   .~|
         * Implication  : ==>     became   .=>
         * Iff          : <=>     became   .<=>
-        * bAnd         :         became   sAnd
-	* bnot         :         became   sNot
-        * bOr          :         became   sOr
-        * bAny         :         became   sAny
-        * bAll         :         became   sAll
+        * Aggregate and: bAnd    became   sAnd
+        * Aggregate or : bOr     became   sOr
+        * Existential  : bAny    became   sAny
+        * Universal    : bAll    became   sAll
 
 ### Version 7.13, 2018-12-16
 
