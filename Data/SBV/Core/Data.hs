@@ -186,11 +186,11 @@ sInfinity = literal infinity
 -- | Internal representation of a symbolic simulation result
 newtype SMTProblem = SMTProblem {smtLibPgm :: SMTConfig -> SMTLibPgm} -- ^ SMTLib representation, given the config
 
--- | Symbolic True
+-- | Symbolic 'True'
 sTrue :: SBool
 sTrue = SBV (svBool True)
 
--- | Symbolic False
+-- | Symbolic 'False'
 sFalse :: SBool
 sFalse = SBV (svBool False)
 

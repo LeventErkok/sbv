@@ -121,7 +121,7 @@ module Data.SBV (
     SBool
   -- *** Boolean values and functions
   , sTrue, sFalse, sNot, (.&&), (.||), (.<+>), (.~&), (.~|), (.=>), (.<=>), fromBool, oneIf
-  -- *** Logical functions
+  -- *** Logical aggregations
   , sAnd, sOr, sAny, sAll
   -- ** Bit-vectors
   -- *** Unsigned bit-vectors
@@ -714,7 +714,7 @@ constraints are not vacuous, the functions 'isVacuous' (and 'isVacuousWith') can
 
 Also note that this semantics imply that test case generation ('Data.SBV.Tools.GenTest.genTest') and
 quick-check can take arbitrarily long in the presence of constraints, if the random input values generated
-rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'false'@.)
+rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'sFalse'@.)
 -}
 
 {- $constraintVacuity
@@ -874,7 +874,7 @@ is precisely equivalent to:
 
    > sum (map (\b -> ite b 1 0) [b0, b1, b2, b3]) .<= 2
 
-and they both express that at most /two/ of @b0@, @b1@, @b2@, and @b3@ can be 'true'.
+and they both express that at most /two/ of @b0@, @b1@, @b2@, and @b3@ can be 'sTrue'.
 However, the equivalent forms give rise to long formulas and the cardinality constraint
 can get lost in the translation. The idea here is that if you use these functions instead, SBV will
 produce better translations to SMTLib for more efficient solving of cardinality constraints, assuming
