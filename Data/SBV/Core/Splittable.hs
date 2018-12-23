@@ -28,12 +28,12 @@ infixr 5 #
 -- Intuitively, @a@ is a larger bit-size word than @b@, typically double.
 -- The 'extend' operation captures embedding of a @b@ value into an @a@
 -- without changing its semantic value.
---
--- Minimal complete definition: All, no defaults.
 class Splittable a b | b -> a where
   split  :: a -> (b, b)
   (#)    :: b -> b -> a
   extend :: b -> a
+
+  {-# MINIMAL split, (#), extend #-}
 
 genSplit :: (Integral a, Num b) => Int -> a -> (b, b)
 genSplit ss x = (fromIntegral ((ix `shiftR` ss) .&. mask), fromIntegral (ix .&. mask))

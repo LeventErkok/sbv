@@ -70,7 +70,7 @@ class (Num a, Bits a) => Polynomial a where
  -- controls if the final type is shown as well.
  showPolynomial :: Bool -> a -> String
 
- -- defaults.. Minumum complete definition: pMult, pDivMod, showPolynomial
+ {-# MINIMAL pMult, pDivMod, showPolynomial #-}
  polynomial = foldr (flip setBit) 0
  pAdd       = xor
  pDiv x y   = fst (pDivMod x y)

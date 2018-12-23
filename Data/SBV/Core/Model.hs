@@ -647,6 +647,8 @@ class (SymWord a, Num a, Bits a) => SFiniteBits a where
     -- | Count trailing zeros in a word, big-endian interpretation.
     sCountTrailingZeros :: SBV a -> SWord8
 
+    {-# MINIMAL sFiniteBitSize #-}
+
     -- Default implementations
     lsb (SBV v) = SBV (svTestBit v 0)
     msb x       = sTestBit x (sFiniteBitSize x - 1)
@@ -1115,8 +1117,6 @@ enumCvt w x = case unliteral x of
 -- Note that our instances implement this law even when @x@ is @0@ itself.
 --
 -- NB. 'quot' truncates toward zero, while 'div' truncates toward negative infinity.
---
--- Minimal complete definition: 'sQuotRem', 'sDivMod'
 class SDivisible a where
   sQuotRem :: a -> a -> (a, a)
   sDivMod  :: a -> a -> (a, a)
@@ -1124,6 +1124,8 @@ class SDivisible a where
   sRem     :: a -> a -> a
   sDiv     :: a -> a -> a
   sMod     :: a -> a -> a
+
+  {-# MINIMAL sQuotRem, sDivMod -#}
 
   x `sQuot` y = fst $ x `sQuotRem` y
   x `sRem`  y = snd $ x `sQuotRem` y
@@ -1839,6 +1841,8 @@ class Metric a where
 
   -- | Generalization of 'Data.SBV.maximize'
   maximize :: MonadSymbolic m => String -> a -> m ()
+
+  {-# MINIMAL minimize, maximize #-}
 
 instance Metric SWord8   where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
 instance Metric SWord16  where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
