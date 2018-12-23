@@ -28,21 +28,21 @@
     type. Also changed the operator names to fit with all the others by starting
     them with dots. A simple conversion guide:
 
-        * Literal True: 'true' became 'sTrue'
-        * Literal False: 'false' became sFalse
-        * Negation: 'bNot' became 'sNot'
-        * Conjunction: '&&&' became '.&&'
-        * Disjunction: '|||' became '.||'
-        * Xor: '<+>' became '.<+>'
-        * Nand: '~&' became '.~&'
-        * Nor: '~|' became '.~|'
-        * Implication: '==>' became '.=>'
-        * Iff: '<=>' became '.<=>'
-        * 'bAnd' became 'sAnd'
-	* 'bnot' became 'sNot'
-        * 'bOr' became 'sOr'
-        * 'bAny' became 'sAny'
-        * 'bAll' became 'sAll'
+        * Literal True : true    became   sTrue
+        * Literal False: false   became   sFalse
+        * Negation     : bNot    became   sNot
+        * Conjunction  : &&&     became   .&&
+        * Disjunction  : |||     became   .||
+        * XOr          : <+>     became   .<+>
+        * Nand         : ~&      became   .~&
+        * Nor          : ~|      became   .~|
+        * Implication  : ==>     became   .=>
+        * Iff          : <=>     became   .<=>
+        * bAnd         :         became   sAnd
+	* bnot         :         became   sNot
+        * bOr          :         became   sOr
+        * bAny         :         became   sAny
+        * bAll         :         became   sAll
 
 ### Version 7.13, 2018-12-16
 
