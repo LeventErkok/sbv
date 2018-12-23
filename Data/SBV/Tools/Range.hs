@@ -61,9 +61,9 @@ instance Show a => Show (Range a) where
 -- disjoint ranges that the predicate is satisfied over. (Linear in the number of ranges.) Note that the
 -- number of ranges is large, this can take a long time! Some examples:
 --
--- >>> ranges (\(_ :: SInteger) -> false)
+-- >>> ranges (\(_ :: SInteger) -> sFalse)
 -- []
--- >>> ranges (\(_ :: SInteger) -> true)
+-- >>> ranges (\(_ :: SInteger) -> sTrue)
 -- [(-oo,oo)]
 -- >>> ranges (\(x :: SInteger) -> sAnd [x .<= 120, x .>= -12, x ./= 3])
 -- [[-12,3),(3,120]]
