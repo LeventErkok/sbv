@@ -43,6 +43,10 @@
         * Existential  : bAny    became   sAny
         * Universal    : bAll    became   sAll
 
+   * Add `Data.SBV.Tools.BMC` module, which provides a BMC (bounded-model
+     checking engine) for traditional state transition systems. See
+     `Documentation.SBV.Examples.Misc.BMC` for example uses.
+
 ### Version 7.13, 2018-12-16
 
   * Generalize the types of `bminimum` and `bmaximum` by removing the `Num`

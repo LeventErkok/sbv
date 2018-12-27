@@ -62,6 +62,7 @@ Library
                   , Data.SBV.String
                   , Data.SBV.Char
                   , Data.SBV.RegExp
+                  , Data.SBV.Tools.BMC
                   , Data.SBV.Tools.BoundedFix
                   , Data.SBV.Tools.CodeGen
                   , Data.SBV.Tools.GenTest
@@ -90,6 +91,7 @@ Library
                   , Documentation.SBV.Examples.Lists.Fibonacci
                   , Documentation.SBV.Examples.Lists.Nested
                   , Documentation.SBV.Examples.Lists.BoundedMutex
+                  , Documentation.SBV.Examples.Misc.BMC
                   , Documentation.SBV.Examples.Misc.Enumerate
                   , Documentation.SBV.Examples.Misc.Floating
                   , Documentation.SBV.Examples.Misc.ModelExtract
