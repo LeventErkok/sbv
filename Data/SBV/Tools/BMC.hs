@@ -30,7 +30,7 @@ import Control.Monad (when)
 bmc :: EqSymbolic st
     => Maybe Int                        -- ^ Optional bound
     -> Bool                             -- ^ Verbose: prints iteration count
-    -> Symbolic ()                      -- ^ Setup code, if necessary. (Pass @return ()@ if not needed.)
+    -> Symbolic ()                      -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
     -> Query st                         -- ^ How to create a new state
     -> (st -> Query res)                -- ^ How to query a symbolic state
     -> (st -> SBool)                    -- ^ Initial condition
