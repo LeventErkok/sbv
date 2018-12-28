@@ -4,7 +4,7 @@
 ** Backend solver Yices does not support global decls.
 ** Some incremental calls, such as pop, will be limited.
 [GOOD] (set-option :produce-models true)
-[GOOD] (set-logic QF_BV)
+[GOOD] (set-logic ALL) ; external query, using all logics.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s_2 () Bool false)
