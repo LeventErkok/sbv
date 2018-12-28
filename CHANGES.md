@@ -47,6 +47,13 @@
      checking engine) for traditional state transition systems. See
      `Documentation.SBV.Examples.Misc.BMC` for example uses.
 
+   * [BACKWARDS COMPATIBILITY] When user queries are present, SBV now picks the logic
+     "ALL" (as opposed to a suitable variant of bit-vectors as in the past versions).
+     This can be overridden by the 'setLogic' command as usual of course. While the new
+     choice breaks backwards compatibility, I expect the impact will be minimal, and
+     the new behavior matches better with user expectations on how external queries are
+     usually employed.
+
 ### Version 7.13, 2018-12-16
 
   * Generalize the types of `bminimum` and `bmaximum` by removing the `Num`

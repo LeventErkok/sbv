@@ -23,6 +23,7 @@ import qualified Data.IntMap.Strict   as IM
 import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
+import Data.SBV.Core.Symbolic (QueryContext(..))
 import Data.SBV.Core.Kind (smtType)
 import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
@@ -34,7 +35,7 @@ tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
 cvt :: SMTLibConverter [String]
-cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out cfg = pgm
+cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out cfg = pgm
   where hasInteger     = KUnbounded `Set.member` kindInfo
         hasReal        = KReal      `Set.member` kindInfo
         hasFloat       = KFloat     `Set.member` kindInfo
@@ -87,8 +88,14 @@ cvt kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs ui
                      | hasNonBVArrays    = "has non-bitvector arrays"
                      | True              = "cannot determine the SMTLib-logic to use"
              in ["(set-logic ALL) ; "  ++ why ++ ", using catch-all."]
+
+           -- If we're in a user query context, we'll pick ALL, otherwise
+           -- we'll stick to some bit-vector logic based on what we see in the problem.
+           -- This is controversial, but seems to work well in practice.
            | True
-           = ["(set-logic " ++ qs ++ as ++ ufs ++ "BV)"]
+           = case ctx of
+               QueryExternal -> ["(set-logic ALL) ; external query, using all logics."]
+               QueryInternal -> ["(set-logic " ++ qs ++ as ++ ufs ++ "BV)"]
           where qs  | null foralls && null axs = "QF_"  -- axioms are likely to contain quantifiers
                     | True                     = ""
                 as  | null arrs                = ""

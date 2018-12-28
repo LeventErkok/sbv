@@ -37,7 +37,7 @@ toIncSMTLib afterAPush SMTConfig{smtLibVersion} = case smtLibVersion of
 -- | Convert to SMTLib-2 format
 toSMTLib2 :: SMTLibConverter SMTLibPgm
 toSMTLib2 = cvt SMTLib2
-  where cvt v kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config
+  where cvt v ctx kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config
          | KUnbounded `Set.member` kindInfo && not (supportsUnboundedInts solverCaps)
          = unsupported "unbounded integers"
          | KReal `Set.member` kindInfo  && not (supportsReals solverCaps)
@@ -57,7 +57,7 @@ toSMTLib2 = cvt SMTLib2
                                                ]
                converter = case v of
                              SMTLib2 -> SMT2.cvt
-               pgm = converter kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config
+               pgm = converter ctx kindInfo isSat comments qinps skolemMap consts tbls arrs uis axs asgnsSeq cstrs out config
 
                needsFloats  = KFloat  `Set.member` kindInfo
                needsDoubles = KDouble `Set.member` kindInfo

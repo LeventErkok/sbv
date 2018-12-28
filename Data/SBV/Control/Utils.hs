@@ -719,8 +719,8 @@ unexpected ctx sent expected mbHint received mbReason = do
         io $ C.throwIO exc
 
 -- | Convert a query result to an SMT Problem
-runProofOn :: SBVRunMode -> [String] -> Result -> SMTProblem
-runProofOn rm comments res@(Result ki _qcInfo _observables _codeSegs is consts tbls arrs uis axs pgm cstrs _assertions outputs) =
+runProofOn :: SBVRunMode -> QueryContext -> [String] -> Result -> SMTProblem
+runProofOn rm context comments res@(Result ki _qcInfo _observables _codeSegs is consts tbls arrs uis axs pgm cstrs _assertions outputs) =
      let (config, isSat, isSafe, isSetup) = case rm of
                                               SMTMode stage s c -> (c, s, isSafetyCheckingIStage stage, isSetupIStage stage)
                                               _                 -> error $ "runProofOn: Unexpected run mode: " ++ show rm
@@ -750,7 +750,7 @@ runProofOn rm comments res@(Result ki _qcInfo _observables _codeSegs is consts t
                                                , "*** Check calls to \"output\", they are typically not needed!"
                                                ]
 
-     in SMTProblem { smtLibPgm = toSMTLib config ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o }
+     in SMTProblem { smtLibPgm = toSMTLib config context ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o }
 
 -- | Generalization of 'Data.SBV.Control.executeQuery'
 executeQuery :: forall m a. ExtractIO m => QueryContext -> QueryT m a -> SymbolicT m a
@@ -814,7 +814,7 @@ executeQuery queryContext (QueryT userQuery) = do
                                                 res     <- liftIO $ extractSymbolicSimulationState st
                                                 setOpts <- liftIO $ reverse <$> readIORef (rSMTOptions st)
 
-                                                let SMTProblem{smtLibPgm} = runProofOn rm [] res
+                                                let SMTProblem{smtLibPgm} = runProofOn rm queryContext [] res
                                                     cfg' = cfg { solverSetOptions = solverSetOptions cfg ++ setOpts }
                                                     pgm  = smtLibPgm cfg'
 

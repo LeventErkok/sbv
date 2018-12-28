@@ -42,10 +42,11 @@ instance EqSymbolic a => EqSymbolic (S a) where
 problem :: Int -> (S SInteger -> SBool) -> IO (Either String (Int, [(Integer, Integer)]))
 problem lim initial = bmc (Just lim) True setup fresh extract initial trans goal
   where
-        -- Our problem requires unbounded integers; tell the solver to use
-        -- a general enough logic.
+        -- This is where we would put solver options, typically via
+        -- calls to 'Data.SBV.setOption'. We do not need any for this problem,
+        -- so we simply do nothing.
         setup :: Symbolic ()
-        setup = setLogic Logic_ALL
+        setup = return ()
 
         -- Getting a new state:
         fresh :: Query (S SInteger)

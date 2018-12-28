@@ -366,7 +366,7 @@ generateSMTBenchmark isSat a = do
 
       (_, res) <- runSymbolic (SMTMode ISetup isSat cfg) $ (if isSat then forSome_ else forAll_) a >>= output
 
-      let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode IRun isSat cfg) comments res
+      let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode IRun isSat cfg) QueryInternal comments res
           out                   = show (smtLibPgm cfg)
 
       return $ out ++ "\n(check-sat)\n"
