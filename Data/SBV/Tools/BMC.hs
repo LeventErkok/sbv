@@ -35,7 +35,7 @@ bmc :: EqSymbolic st
     -> (st -> Query res)                -- ^ How to query a symbolic state
     -> (st -> SBool)                    -- ^ Initial condition
     -> (st -> [st])                     -- ^ Transition relation
-    -> (st -> SBool)                    -- ^ Goal
+    -> (st -> SBool)                    -- ^ Goal to cover, i.e., we find a set of transitions that satisfy this predicate.
     -> IO (Either String (Int, [res]))  -- ^ Either a result, or a satisfying path of given length and intermediate observations.
 bmc = bmcWith defaultSMTCfg
 
