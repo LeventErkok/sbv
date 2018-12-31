@@ -20,7 +20,7 @@ import Utils.SBVTestFramework
 
 import Data.SBV.List ((.:), (.!!))
 import qualified Data.SBV.List as L
-import qualified Data.SBV.List.Bounded as BL
+import qualified Data.SBV.Tools.BoundedList as BL
 
 import Control.Monad (unless)
 import Control.Monad.State

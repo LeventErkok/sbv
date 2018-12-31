@@ -58,11 +58,11 @@ Library
                   , Data.SBV.Dynamic
                   , Data.SBV.Internals
                   , Data.SBV.List
-                  , Data.SBV.List.Bounded
                   , Data.SBV.String
                   , Data.SBV.Char
                   , Data.SBV.RegExp
                   , Data.SBV.Tools.BMC
+                  , Data.SBV.Tools.BoundedList
                   , Data.SBV.Tools.Induction
                   , Data.SBV.Tools.BoundedFix
                   , Data.SBV.Tools.CodeGen

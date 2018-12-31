@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.List.Bounded
+-- Module      :  Data.SBV.Tools.BoundedList
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -18,7 +18,7 @@
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Data.SBV.List.Bounded (
+module Data.SBV.Tools.BoundedList (
      -- * General folds
      bfoldr, bfoldrM, bfoldl, bfoldlM
      -- * Map, filter, zipWith, elem

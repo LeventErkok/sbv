@@ -23,8 +23,8 @@ import Data.SBV
 import Data.SBV.Control
 
 import Data.SBV.List ((.!!))
-import qualified Data.SBV.List         as L
-import qualified Data.SBV.List.Bounded as L
+import qualified Data.SBV.List              as L
+import qualified Data.SBV.Tools.BoundedList as L
 
 -- | Each agent can be in one of the three states
 data State = Idle     -- ^ Regular work
