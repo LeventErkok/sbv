@@ -50,8 +50,8 @@
      the new behavior matches better with user expectations on how external queries are
      usually employed.
 
-   * [BACKWARDS COMPATIBILITY] Renamed the module "Data.SBV.List.Bounded" to
-     "Data.SBV.Tools.BoundedList".
+   * [BACKWARDS COMPATIBILITY] Renamed the module `Data.SBV.List.Bounded` to
+     `Data.SBV.Tools.BoundedList..
 
    * Add `Data.SBV.Tools.BMC` module, which provides a BMC (bounded-model
      checking engine) for traditional state transition systems. See
