@@ -6,7 +6,7 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Bounded model checking interface. See "Documentation.SBV.Examples.Misc.BMC"
+-- Bounded model checking interface. See "Documentation.SBV.Examples.ProofTools.BMC"
 -- for an example use case.
 -----------------------------------------------------------------------------
 
@@ -22,7 +22,7 @@ import Data.SBV.Control
 
 import Control.Monad (when)
 
--- | Bounded model checking, using the default solver. See "Documentation.SBV.Examples.Misc.BMC"
+-- | Bounded model checking, using the default solver. See "Documentation.SBV.Examples.ProofTools.BMC"
 -- for an example use case.
 --
 -- Note that the BMC engine does *not* guarantee that the solution is unique. However, if it does
