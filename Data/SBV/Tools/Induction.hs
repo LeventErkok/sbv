@@ -56,10 +56,6 @@ instance Show InductionStep where
 --    * A 'Failed' result in a 'PartialCorrectness' step means that the invariant holds, but assuming the
 --      termination condition the goal still does not follow. That is, the partial correctness
 --      does not hold.
---
--- See "Documentation.SBV.Examples.ProofTools.Strengthen" for a worked out example of invariant
--- strengthening and "Documentation.SBV.Examples.ProofTools.Sum" for a worked out example of proof
--- by induction.
 data InductionResult a = Failed InductionStep a
                        | Proven
 
@@ -88,16 +84,16 @@ induct = inductWith defaultSMTCfg
 
 -- | Induction engine, configurable with the solver
 inductWith :: Show res
-           => SMTConfig                   -- ^ Configuration to use
-           -> Bool                        -- ^ Verbose mode
-           -> Symbolic ()                 -- ^ Setup code, if any
-           -> Query st                    -- ^ Get a fresh state
-           -> (st -> Query res)           -- ^ Extract observable
-           -> (st -> SBool)               -- ^ Initial condition
-           -> (st -> [st])                -- ^ Transition relation
-           -> [(String, st -> SBool)]     -- ^ Strengthenings
-           -> (st -> SBool)               -- ^ Invariant that ensures the goal upon termination
-           -> (st -> (SBool, SBool))      -- ^ Termination condition and the goal to establish
+           => SMTConfig
+           -> Bool
+           -> Symbolic ()
+           -> Query st
+           -> (st -> Query res)
+           -> (st -> SBool)
+           -> (st -> [st])
+           -> [(String, st -> SBool)]
+           -> (st -> SBool)
+           -> (st -> (SBool, SBool))
            -> IO (InductionResult res)
 inductWith cfg chatty setup fresh extract initial trans strengthenings inv goal =
      try "Proving initiation"
