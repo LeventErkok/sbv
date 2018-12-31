@@ -43,16 +43,16 @@
         * Existential  : bAny    became   sAny
         * Universal    : bAll    became   sAll
 
-   * Add `Data.SBV.Tools.BMC` module, which provides a BMC (bounded-model
-     checking engine) for traditional state transition systems. See
-     `Documentation.SBV.Examples.Misc.BMC` for example uses.
-
    * [BACKWARDS COMPATIBILITY] When user queries are present, SBV now picks the logic
      "ALL" (as opposed to a suitable variant of bit-vectors as in the past versions).
      This can be overridden by the 'setLogic' command as usual of course. While the new
      choice breaks backwards compatibility, I expect the impact will be minimal, and
      the new behavior matches better with user expectations on how external queries are
      usually employed.
+
+   * Add `Data.SBV.Tools.BMC` module, which provides a BMC (bounded-model
+     checking engine) for traditional state transition systems. See
+     `Documentation.SBV.Examples.Misc.BMC` for example uses.
 
 ### Version 7.13, 2018-12-16
 
