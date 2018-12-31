@@ -52,11 +52,11 @@
 
    * Add `Data.SBV.Tools.BMC` module, which provides a BMC (bounded-model
      checking engine) for traditional state transition systems. See
-     `Documentation.SBV.Examples.Misc.BMC` for example uses.
+     `Documentation.SBV.Examples.ProofTools.BMC` for example uses.
 
    * Add `Data.SBV.Tools.Induction` module, which provides an induction engine
-     for traditional state transition systems. See `Documentation.SBV.Examples.Misc.Induct`
-     for example uses.
+     for traditional state transition systems. See `Documentation.SBV.Examples.ProofTools.Sum`
+     and `Documentation.SBV.Examples.ProofTools.Strengthen` for example uses.
 
 ### Version 7.13, 2018-12-16
 

@@ -1,14 +1,14 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Documentation.SBV.Examples.Misc.Induct
+-- Module      :  Documentation.SBV.Examples.ProofTools.Strengthen
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- An induction, showing how traditional state-transition invariance
--- problems can be coded using SBV, using induction. We also demonstrate
--- the use of invariant strengthening.
+-- An example showing how traditional state-transition invariance problems
+-- can be coded using SBV, using induction. We also demonstrate the use of
+-- invariant strengthening.
 --
 -- This example comes from Bradley's [Understanding IC3](http://theory.stanford.edu/~arbrad/papers/Understanding_IC3.pdf) paper,
 -- which considers the following two programs:
@@ -31,7 +31,7 @@
 
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Documentation.SBV.Examples.Misc.Induct where
+module Documentation.SBV.Examples.ProofTools.Strengthen where
 
 import Data.SBV
 import Data.SBV.Tools.Induction
@@ -48,7 +48,7 @@ data S a = S { x :: a, y :: a } deriving Show
 -- | We parameterize over the transition relation and the strengthenings to
 -- investigate various combinations.
 problem :: (S SInteger -> [S SInteger]) -> [(String, S SInteger -> SBool)] -> IO (InductionResult (S Integer))
-problem trans strengthenings = induct chatty setup fresh extract initial strengthenings trans goal
+problem trans strengthenings = induct chatty setup fresh extract initial trans strengthenings inv goal
   where -- Set this to True for SBV to print steps as it proceeds
         -- through the inductive proof
         chatty :: Bool
@@ -60,14 +60,6 @@ problem trans strengthenings = induct chatty setup fresh extract initial strengt
         setup :: Symbolic ()
         setup = return ()
 
-        -- Initially, @x@ and @y@ are both @1@
-        initial :: S SInteger -> SBool
-        initial S{x, y} = x .== 1 .&& y .== 1
-
-        -- Invariant to prove:
-        goal :: S SInteger -> SBool
-        goal S{y} = y .>= 1
-
         -- Getting a new state:
         fresh :: Query (S SInteger)
         fresh = S <$> freshVar_ <*> freshVar_
@@ -75,6 +67,18 @@ problem trans strengthenings = induct chatty setup fresh extract initial strengt
         -- Extracting an obvervable state:
         extract :: S SInteger -> Query (S Integer)
         extract S{x, y} = S <$> getValue x <*> getValue y
+
+        -- Initially, @x@ and @y@ are both @1@
+        initial :: S SInteger -> SBool
+        initial S{x, y} = x .== 1 .&& y .== 1
+
+        -- Invariant to prove:
+        inv :: S SInteger -> SBool
+        inv S{y} = y .>= 1
+
+        -- We're not interested in termination/goal for this problem, so just pass trivial values
+        goal :: S SInteger -> (SBool, SBool)
+        goal _ = (sTrue, sTrue)
 
 -- | The first program, coded as a transition relation:
 pgm1 :: S SInteger -> [S SInteger]
@@ -90,7 +94,7 @@ pgm2 S{x, y} = [S{x = x+y, y = y+x}]
 --
 -- >>> ex1
 -- Failed while establishing consecution.
--- Counter-example:
+-- Counter-example to inductiveness:
 --   S {x = -1, y = 1}
 ex1 :: IO (InductionResult (S Integer))
 ex1 = problem pgm1 strengthenings
@@ -110,7 +114,7 @@ ex2 = problem pgm1 strengthenings
 --
 -- >>> ex3
 -- Failed while establishing consecution.
--- Counter-example:
+-- Counter-example to inductiveness:
 --   S {x = -1, y = 1}
 ex3 :: IO (InductionResult (S Integer))
 ex3 = problem pgm2 strengthenings
@@ -121,7 +125,7 @@ ex3 = problem pgm2 strengthenings
 --
 -- >>> ex4
 -- Failed while establishing consecution for strengthening "x >= 0".
--- Counter-example:
+-- Counter-example to inductiveness:
 --   S {x = 0, y = -1}
 ex4 :: IO (InductionResult (S Integer))
 ex4 = problem pgm2 strengthenings
@@ -132,7 +136,7 @@ ex4 = problem pgm2 strengthenings
 --
 -- >>> ex5
 -- Failed while establishing consecution for strengthening "x >= 0".
--- Counter-example:
+-- Counter-example to inductiveness:
 --   S {x = 0, y = -1}
 --
 -- Note how this was sufficient in 'ex2' to establish the invariant for the first

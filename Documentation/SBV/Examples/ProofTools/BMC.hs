@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Documentation.SBV.Examples.Misc.BMC
+-- Module      :  Documentation.SBV.Examples.ProofTools.BMC
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -20,7 +20,7 @@
 
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Documentation.SBV.Examples.Misc.BMC where
+module Documentation.SBV.Examples.ProofTools.BMC where
 
 import Data.SBV
 import Data.SBV.Tools.BMC
