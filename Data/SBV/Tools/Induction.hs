@@ -6,8 +6,8 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Induction engine for state transition systems. See "Documentation.SBV.Examples.Misc.Induct"
--- for an example use case.
+-- Induction engine for state transition systems. See "Documentation.SBV.Examples.ProofTools.Strengthen"
+-- and "Documentation.SBV.Examples.ProofTools.Sum" for example use cases.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE NamedFieldPuns #-}
@@ -26,6 +26,7 @@ import Control.Monad (when)
 -- the step belongs to the subproof that establishes the strengthening named @nm@.
 data InductionStep = Initiation  (Maybe String)
                    | Consecution (Maybe String)
+                   | PartialCorrectness
 
 -- | Show instance for 'InductionStep', diagnostic purposes only.
 instance Show InductionStep where
@@ -33,12 +34,13 @@ instance Show InductionStep where
    show (Initiation  (Just s)) = "initiation for strengthening " ++ show s
    show (Consecution Nothing)  = "consecution"
    show (Consecution (Just s)) = "consecution for strengthening " ++ show s
+   show PartialCorrectness     = "partial correctness"
 
 -- | Result of an inductive proof, with a counter-example in case of failure.
 --
--- If a proof is found (indicated by a 'Proven' result), then the goal is an
--- invariant of the system. If it fails, then it can fail either in an
--- initiation step or in a consecution step:
+-- If a proof is found (indicated by a 'Proven' result), then the invariant holds
+-- and the goal is established once the termination condition holds. If it fails, then
+-- it can fail either in an initiation step or in a consecution step:
 --
 --    * A 'Failed' result in an 'Initiation' step means that the invariant does /not/ hold for
 --      the initial state, and thus indicates a true failure.
@@ -50,8 +52,14 @@ instance Show InductionStep where
 --      algorithm like IC3 for certain domains---is needed to see if one can strengthen the
 --      invariant so an inductive proof can be found. How this strengthening can be done remains
 --      an art, but the science is improving with algorithms like IC3.
---      See "Documentation.SBV.Examples.Misc.Induct" for a worked out example of invariant
---      strengthening.
+--
+--    * A 'Failed' result in a 'PartialCorrectness' step means that the invariant holds, but assuming the
+--      termination condition the goal still does not follow. That is, the partial correctness
+--      does not hold.
+--
+-- See "Documentation.SBV.Examples.ProofTools.Strengthen" for a worked out example of invariant
+-- strengthening and "Documentation.SBV.Examples.ProofTools.Sum" for a worked out example of proof
+-- by induction.
 data InductionResult a = Failed InductionStep a
                        | Proven
 
@@ -59,21 +67,22 @@ data InductionResult a = Failed InductionStep a
 instance Show a => Show (InductionResult a) where
   show Proven       = "Q.E.D."
   show (Failed s e) = intercalate "\n" [ "Failed while establishing " ++ show s ++ "."
-                                       , "Counter-example:"
+                                       , "Counter-example to inductiveness:"
                                        , intercalate "\n" ["  " ++ l | l <- lines (show e)]
                                        ]
 
--- | Induction engine, using the default solver. See "Documentation.SBV.Examples.Misc.Induct"
--- for an example use case.
+-- | Induction engine, using the default solver. See "Documentation.SBV.Examples.ProofTools.Strengthen"
+-- and "Documentation.SBV.Examples.ProofTools.Sum" for examples.
 induct :: Show res
        => Bool                       -- ^ Verbose mode
        -> Symbolic ()                -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
        -> Query st                   -- ^ How to create a new state
        -> (st -> Query res)          -- ^ How to query a symbolic state
        -> (st -> SBool)              -- ^ Initial condition
-       -> [(String, st -> SBool)]    -- ^ Strengthenings, if any. The @String@ is a simple tag.
        -> (st -> [st])               -- ^ Transition relation
-       -> (st -> SBool)              -- ^ Goal to prove, i.e., we establish this is an invariant of the state.
+       -> [(String, st -> SBool)]    -- ^ Strengthenings, if any. The @String@ is a simple tag.
+       -> (st -> SBool)              -- ^ Invariant that ensures the goal upon termination
+       -> (st -> (SBool, SBool))     -- ^ Termination condition and the goal to establish
        -> IO (InductionResult res)   -- ^ Either proven, or a concrete state value that, if reachable, fails the invariant.
 induct = inductWith defaultSMTCfg
 
@@ -85,19 +94,23 @@ inductWith :: Show res
            -> Query st                    -- ^ Get a fresh state
            -> (st -> Query res)           -- ^ Extract observable
            -> (st -> SBool)               -- ^ Initial condition
-           -> [(String, st -> SBool)]     -- ^ Strengthenings
            -> (st -> [st])                -- ^ Transition relation
-           -> (st -> SBool)               -- ^ Goal to prove
+           -> [(String, st -> SBool)]     -- ^ Strengthenings
+           -> (st -> SBool)               -- ^ Invariant that ensures the goal upon termination
+           -> (st -> (SBool, SBool))      -- ^ Termination condition and the goal to establish
            -> IO (InductionResult res)
-inductWith cfg chatty setup fresh extract initial strengthenings trans goal =
+inductWith cfg chatty setup fresh extract initial trans strengthenings inv goal =
      try "Proving initiation"
-         (\s -> initial s .=> goal s)
+         (\s -> initial s .=> inv s)
          (Failed (Initiation Nothing))
          $ strengthen strengthenings
          $ try "Proving consecution"
-               (\s -> sAnd (goal s : [st s | (_, st) <- strengthenings]) .=> sAll goal (trans s))
+               (\s -> sAnd (inv s : [st s | (_, st) <- strengthenings]) .=> sAll inv (trans s))
                (Failed (Consecution Nothing))
-               (msg "Done" >> return Proven)
+               $ try "Proving partial correctness"
+                     (\s -> let (term, result) = goal s in inv s .&& term .=> result)
+                     (Failed PartialCorrectness)
+                     (msg "Done" >> return Proven)
 
   where msg = when chatty . putStrLn
 
