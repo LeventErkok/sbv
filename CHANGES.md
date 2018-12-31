@@ -51,7 +51,7 @@
      usually employed.
 
    * [BACKWARDS COMPATIBILITY] Renamed the module `Data.SBV.List.Bounded` to
-     `Data.SBV.Tools.BoundedList..
+     `Data.SBV.Tools.BoundedList`.
 
    * Add `Data.SBV.Tools.BMC` module, which provides a BMC (bounded-model
      checking engine) for traditional state transition systems. See
