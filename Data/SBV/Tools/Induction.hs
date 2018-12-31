@@ -22,8 +22,8 @@ import Data.SBV.Control
 import Data.List     (intercalate)
 import Control.Monad (when)
 
--- | A step in an inductive proof. If the tags are given (i.e., @Just nm@), then
--- the step belongs to the subproof that establishes the strengthening @nm@.
+-- | A step in an inductive proof. If the tag is present (i.e., @Just nm@), then
+-- the step belongs to the subproof that establishes the strengthening named @nm@.
 data InductionStep = Initiation  (Maybe String)
                    | Consecution (Maybe String)
 
@@ -35,6 +35,23 @@ instance Show InductionStep where
    show (Consecution (Just s)) = "consecution for strengthening " ++ show s
 
 -- | Result of an inductive proof, with a counter-example in case of failure.
+--
+-- If a proof is found (indicated by a 'Proven' result), then the goal is an
+-- invariant of the system. If it fails, then it can fail either in an
+-- initiation step or in a consecution step:
+--
+--    * A 'Failed' result in an 'Initiation' step means that the invariant does /not/ hold for
+--      the initial state, and thus indicates a true failure.
+--
+--    * A 'Failed' result in a 'Consecution' step will return a state /s/. This state is known as a
+--      CTI (counterexample to inductiveness): It will lead to a violation of the invariant
+--      in one step. However, this does not mean the property is invalid: It could be the
+--      case that it is simply not inductive. In this case, human intervention---or a smarter
+--      algorithm like IC3 for certain domains---is needed to see if one can strengthen the
+--      invariant so an inductive proof can be found. How this strengthening can be done remains
+--      an art, but the science is improving with algorithms like IC3.
+--      See "Documentation.SBV.Examples.Misc.Induct" for a worked out example of invariant
+--      strengthening.
 data InductionResult a = Failed InductionStep a
                        | Proven
 
@@ -48,13 +65,6 @@ instance Show a => Show (InductionResult a) where
 
 -- | Induction engine, using the default solver. See "Documentation.SBV.Examples.Misc.Induct"
 -- for an example use case.
---
--- Note that if a counter-example is returned then it is guaranteed to violate the invariant
--- we are trying to prove. However, it is __not__ guaranteed that this state is actually reachable
--- from the initial state. (That is, the property may not be inductive.) This is the role of
--- the strengthenings parameter: The art of induction is coming up the proper inductive strengthening
--- to establish properties of interest, and the user has to provide these strenghtenings in case
--- the invariant is not inductive.
 induct :: Show res
        => Bool                       -- ^ Verbose mode
        -> Symbolic ()                -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
