@@ -54,6 +54,10 @@
      checking engine) for traditional state transition systems. See
      `Documentation.SBV.Examples.Misc.BMC` for example uses.
 
+   * Add `Data.SBV.Tools.Induction` module, which provides an induction engine
+     for traditional state transition systems. See `Documentation.SBV.Examples.Misc.Induct`
+     for example uses.
+
 ### Version 7.13, 2018-12-16
 
   * Generalize the types of `bminimum` and `bmaximum` by removing the `Num`
