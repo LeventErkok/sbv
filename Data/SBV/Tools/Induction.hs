@@ -6,8 +6,17 @@
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
 --
--- Induction engine for state transition systems. See "Documentation.SBV.Examples.ProofTools.Strengthen"
--- and "Documentation.SBV.Examples.ProofTools.Sum" for example use cases.
+-- Induction engine for state transition systems. See the following examples
+-- for details:
+--
+--   * "Documentation.SBV.Examples.ProofTools.Strengthen": Use of strengthening
+--     to establish inductive invariants.
+--
+--   * "Documentation.SBV.Examples.ProofTools.Sum": Proof for correctness of
+--     an algorithm to sum up numbers,
+--
+--   * "Documentation.SBV.Examples.ProofTools.Fibonacci": Proof for correctness of
+--     an algorithm to fast-compute fibonacci numbers, using axiomatization.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE NamedFieldPuns #-}

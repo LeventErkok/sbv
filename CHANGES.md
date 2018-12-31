@@ -58,8 +58,8 @@
      `Documentation.SBV.Examples.ProofTools.BMC` for example uses.
 
    * Add `Data.SBV.Tools.Induction` module, which provides an induction engine
-     for traditional state transition systems. See `Documentation.SBV.Examples.ProofTools.Sum`
-     and `Documentation.SBV.Examples.ProofTools.Strengthen` for example uses.
+     for traditional state transition systems. Also added several example use
+     cases in the directory `Documentation.SBV.Examples.ProofTools`.
 
 ### Version 7.13, 2018-12-16
 
