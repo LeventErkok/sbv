@@ -105,8 +105,8 @@ Library
                   , Documentation.SBV.Examples.Optimization.VM
                   , Documentation.SBV.Examples.Optimization.ExtField
                   , Documentation.SBV.Examples.ProofTools.BMC
-                  , Documentation.SBV.Examples.ProofTools.Sum
                   , Documentation.SBV.Examples.ProofTools.Strengthen
+                  , Documentation.SBV.Examples.ProofTools.Sum
                   , Documentation.SBV.Examples.Puzzles.Birthday
                   , Documentation.SBV.Examples.Puzzles.Coins
                   , Documentation.SBV.Examples.Puzzles.Counts
