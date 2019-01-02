@@ -68,7 +68,7 @@ seqIndexOfUnsat = constrain $ L.indexOf ([1,2,3,1,2,3] :: SList Integer) [1] ./=
 
 -- Basic sequence operations
 seqExamples1 :: Symbolic ()
-seqExamples1 = constrain $ bAnd
+seqExamples1 = constrain $ sAnd
   [ L.singleton (([1,2,3] :: SList Integer) .!! 1) .++ L.singleton (([1,2,3] :: SList Integer) .!! 0) .== [2,1]
   , ([1,2,3,1,2,3] :: SList Integer) `L.indexOf` [1]                                                  .== 0
   , L.offsetIndexOf ([1,2,3,1,2,3] :: SList Integer) [1] 1                                            .== 3
@@ -87,7 +87,7 @@ seqExamples3 = do
   [a, b, c :: SList Integer] <- sLists ["a", "b", "c"]
   constrain $ a .++ b .== [1..4]
   constrain $ b .++ c .== [3..6]
-  constrain $ bnot $ b .== []
+  constrain $ sNot $ b .== []
 
 -- There is a solution to a of length at most 2.
 seqExamples4 :: Symbolic ()
@@ -102,7 +102,7 @@ seqExamples5 = do
   [a, b, c :: SList Integer] <- sLists ["a", "b", "c"]
   constrain $ a .++ [1,2] .++ b .== b .++ [2,1] .++ c
   constrain $ c .== a .++ b
-  constrain $ bnot $ a.++ [1] .== [1] .++ a
+  constrain $ sNot $ a.++ [1] .== [1] .++ a
 
 -- Contains is transitive.
 seqExamples6 :: Symbolic ()
@@ -110,7 +110,7 @@ seqExamples6 = do
   [a, b, c :: SList Integer] <- sLists ["a", "b", "c"]
   constrain $ b `L.isInfixOf` a
   constrain $ c `L.isInfixOf` b
-  constrain $ bnot $ c `L.isInfixOf` a
+  constrain $ sNot $ c `L.isInfixOf` a
 
 -- But containment is not a linear order.
 seqExamples7 :: Symbolic ()
@@ -118,8 +118,8 @@ seqExamples7 = do
   [a, b, c :: SList Integer] <- sLists ["a", "b", "c"]
   constrain $ b `L.isInfixOf` a
   constrain $ c `L.isInfixOf` a
-  constrain $ bnot $ c `L.isInfixOf` b
-  constrain $ bnot $ b `L.isInfixOf` c
+  constrain $ sNot $ c `L.isInfixOf` b
+  constrain $ sNot $ b `L.isInfixOf` c
 
 -- Any string is equal to the prefix and suffix that add up to a its length.
 seqExamples8 :: Symbolic ()
@@ -128,7 +128,7 @@ seqExamples8 = do
   constrain $ b `L.isPrefixOf` a
   constrain $ c `L.isSuffixOf` a
   constrain $ L.length a .== L.length b + L.length c
-  constrain $ bnot $ a .== b .++ c
+  constrain $ sNot $ a .== b .++ c
 
 -- Generate all length one sequences, to enumerate all and making sure we can parse correctly
 seqExamples9 :: IO Bool

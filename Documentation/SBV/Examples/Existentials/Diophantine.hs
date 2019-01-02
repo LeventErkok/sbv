@@ -57,12 +57,13 @@ basis mbLim m = extractModels `fmap` allSatWith z3{allSatMaxModelCount = mbLim} 
                  -- Tell the solver to use this logic!
                  setLogic AUFLIA
 
-                 return $ ok as &&& (ok bs ==> as .== bs ||| bnot (bs `less` as))
+                 return $ ok as .&& (ok bs .=> as .== bs .|| sNot (bs `less` as))
 
        n = if null m then 0 else length (head m)
 
-       ok xs = bAny (.> 0) xs &&& bAll (.>= 0) xs &&& bAnd [sum (zipWith (*) r xs) .== 0 | r <- m]
-       as `less` bs = bAnd (zipWith (.<=) as bs) &&& bOr (zipWith (.<) as bs)
+       ok xs = sAny (.> 0) xs .&& sAll (.>= 0) xs .&& sAnd [sum (zipWith (*) r xs) .== 0 | r <- m]
+
+       as `less` bs = sAnd (zipWith (.<=) as bs) .&& sOr (zipWith (.<) as bs)
 
 --------------------------------------------------------------------------------------------------
 -- * Examples

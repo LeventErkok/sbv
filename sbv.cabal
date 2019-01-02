@@ -7,7 +7,7 @@ Description:   Express properties about Haskell programs and automatically prove
                .
                For details, please see: <http://leventerkok.github.com/sbv/>
 
-Copyright:     Levent Erkok, 2010-2018
+Copyright:     Levent Erkok, 2010-2019
 License:       BSD3
 License-file:  LICENSE
 Stability:     Experimental
@@ -58,16 +58,18 @@ Library
                   , Data.SBV.Dynamic
                   , Data.SBV.Internals
                   , Data.SBV.List
-                  , Data.SBV.List.Bounded
                   , Data.SBV.String
                   , Data.SBV.Char
                   , Data.SBV.RegExp
+                  , Data.SBV.Tools.BMC
+                  , Data.SBV.Tools.BoundedList
+                  , Data.SBV.Tools.Induction
+                  , Data.SBV.Tools.BoundedFix
                   , Data.SBV.Tools.CodeGen
                   , Data.SBV.Tools.GenTest
                   , Data.SBV.Tools.Overflow
                   , Data.SBV.Tools.Polynomial
                   , Data.SBV.Tools.Range
-                  , Data.SBV.Tools.BoundedFix
                   , Data.SBV.Tools.STree
                   , Data.SBV.Trans
                   , Data.SBV.Trans.Control
@@ -102,6 +104,10 @@ Library
                   , Documentation.SBV.Examples.Optimization.Production
                   , Documentation.SBV.Examples.Optimization.VM
                   , Documentation.SBV.Examples.Optimization.ExtField
+                  , Documentation.SBV.Examples.ProofTools.BMC
+                  , Documentation.SBV.Examples.ProofTools.Fibonacci
+                  , Documentation.SBV.Examples.ProofTools.Strengthen
+                  , Documentation.SBV.Examples.ProofTools.Sum
                   , Documentation.SBV.Examples.Puzzles.Birthday
                   , Documentation.SBV.Examples.Puzzles.Coins
                   , Documentation.SBV.Examples.Puzzles.Counts
@@ -161,7 +167,6 @@ Library
                   , Data.SBV.Provers.Z3
                   , Data.SBV.Provers.MathSAT
                   , Data.SBV.Provers.ABC
-                  , Data.SBV.Utils.Boolean
                   , Data.SBV.Utils.ExtractIO
                   , Data.SBV.Utils.Numeric
                   , Data.SBV.Utils.TDiff

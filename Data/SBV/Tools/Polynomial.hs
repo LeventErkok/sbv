@@ -27,8 +27,6 @@ import Data.Word  (Word8, Word16, Word32, Word64)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 
-import Data.SBV.Utils.Boolean
-
 -- | Implements polynomial addition, multiplication, division, and modulus operations
 -- over GF(2^n).  NB. Similar to 'sQuotRem', division by @0@ is interpreted as follows:
 --
@@ -70,7 +68,7 @@ class (Num a, Bits a) => Polynomial a where
  -- controls if the final type is shown as well.
  showPolynomial :: Bool -> a -> String
 
- -- defaults.. Minumum complete definition: pMult, pDivMod, showPolynomial
+ {-# MINIMAL pMult, pDivMod, showPolynomial #-}
  polynomial = foldr (flip setBit) 0
  pAdd       = xor
  pDiv x y   = fst (pDivMod x y)
@@ -114,11 +112,11 @@ sp st a
 addPoly :: [SBool] -> [SBool] -> [SBool]
 addPoly xs    []      = xs
 addPoly []    ys      = ys
-addPoly (x:xs) (y:ys) = x <+> y : addPoly xs ys
+addPoly (x:xs) (y:ys) = x .<+> y : addPoly xs ys
 
 -- | Run down a boolean condition over two lists. Note that this is
 -- different than zipWith as shorter list is assumed to be filled with
--- false at the end (i.e., zero-bits); which nicely pads it when
+-- sFalse at the end (i.e., zero-bits); which nicely pads it when
 -- considered as an unsigned number in little-endian form.
 ites :: SBool -> [SBool] -> [SBool] -> [SBool]
 ites s xs ys
@@ -127,8 +125,8 @@ ites s xs ys
  | True
  = go xs ys
  where go []     []     = []
-       go []     (b:bs) = ite s false b : go [] bs
-       go (a:as) []     = ite s a false : go as []
+       go []     (b:bs) = ite s sFalse b : go [] bs
+       go (a:as) []     = ite s a sFalse : go as []
        go (a:as) (b:bs) = ite s a b : go as bs
 
 -- | Multiply two polynomials and reduce by the third (concrete) irreducible, given by its coefficients.
@@ -140,13 +138,13 @@ polyMult (x, y, red)
   | not (isBounded x)
   = error $ "SBV.polyMult: Received infinite precision value: " ++ show x
   | True
-  = fromBitsLE $ genericTake sz $ r ++ repeat false
+  = fromBitsLE $ genericTake sz $ r ++ repeat sFalse
   where (_, r) = mdp ms rs
-        ms = genericTake (2*sz) $ mul (blastLE x) (blastLE y) [] ++ repeat false
-        rs = genericTake (2*sz) $ [if i `elem` red then true else false |  i <- [0 .. foldr max 0 red] ] ++ repeat false
+        ms = genericTake (2*sz) $ mul (blastLE x) (blastLE y) [] ++ repeat sFalse
+        rs = genericTake (2*sz) $ [fromBool (i `elem` red) |  i <- [0 .. foldr max 0 red] ] ++ repeat sFalse
         sz = intSizeOf x
         mul _  []     ps = ps
-        mul as (b:bs) ps = mul (false:as) bs (ites b (as `addPoly` ps) ps)
+        mul as (b:bs) ps = mul (sFalse:as) bs (ites b (as `addPoly` ps) ps)
 
 polyDivMod :: SFiniteBits a => SBV a -> SBV a -> (SBV a, SBV a)
 polyDivMod x y
@@ -156,7 +154,7 @@ polyDivMod x y
    = error $ "SBV.polyDivMod: Received infinite precision value: " ++ show x
    | True
    = ite (y .== 0) (0, x) (adjust d, adjust r)
-   where adjust xs = fromBitsLE $ genericTake sz $ xs ++ repeat false
+   where adjust xs = fromBitsLE $ genericTake sz $ xs ++ repeat sFalse
          sz        = intSizeOf x
          (d, r)    = mdp (blastLE x) (blastLE y)
 
@@ -180,13 +178,13 @@ mdp xs ys = go (length ys - 1) (reverse ys)
          | True     = let (rqs, rrs) = go (n-1) bs
                       in (ites b (reverse qs) rqs, ites b rs rrs)
          where degQuot = degTop - n
-               ys' = replicate degQuot false ++ ys
+               ys' = replicate degQuot sFalse ++ ys
                (qs, rs) = divx (degQuot+1) degTop xs ys'
 
--- return the element at index i; if not enough elements, return false
--- N.B. equivalent to '(xs ++ repeat false) !! i', but more efficient
+-- return the element at index i; if not enough elements, return sFalse
+-- N.B. equivalent to '(xs ++ repeat sFalse) !! i', but more efficient
 idx :: [SBool] -> Int -> SBool
-idx []     _ = false
+idx []     _ = sFalse
 idx (x:_)  0 = x
 idx (_:xs) i = idx xs (i-1)
 
@@ -230,12 +228,12 @@ divx n i xs ys'        = (q:qs, rs)
 -- There are many variants on final XOR's, reversed polynomials etc., so
 -- it is essential to double check you use the correct /algorithm/.
 crcBV :: Int -> [SBool] -> [SBool] -> [SBool]
-crcBV n m p = take n $ go (replicate n false) (m ++ replicate n false)
+crcBV n m p = take n $ go (replicate n sFalse) (m ++ replicate n sFalse)
   where mask = drop (length p - n) p
         go c []     = c
         go c (b:bs) = go next bs
           where c' = drop 1 c ++ [b]
-                next = ite (head c) (zipWith (<+>) c' mask) c'
+                next = ite (head c) (zipWith (.<+>) c' mask) c'
 
 -- | Compute CRC's over polynomials, i.e., symbolic words. The first
 -- 'Int' argument plays the same role as the one in the 'crcBV' function.
@@ -246,5 +244,5 @@ crc n m p
   | not (isBounded m) || not (isBounded p)
   = error $ "SBV.crc: Received an infinite precision value: " ++ show (m, p)
   | True
-  = fromBitsBE $ replicate (sz - n) false ++ crcBV n (blastBE m) (blastBE p)
+  = fromBitsBE $ replicate (sz - n) sFalse ++ crcBV n (blastBE m) (blastBE p)
   where sz = intSizeOf p

@@ -22,4 +22,4 @@ f = uninterpret "f"
 -- >>> prove thmGood
 -- Q.E.D.
 thmGood :: SWord8 -> SWord8 -> SWord8 -> SBool
-thmGood x y z = x .== y+2 ==> f x z .== f (y + 2) z
+thmGood x y z = x .== y+2 .=> f x z .== f (y + 2) z

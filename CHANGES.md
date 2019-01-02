@@ -3,7 +3,7 @@
 
 * Latest Hackage released version: 7.13, 2018-12-16
 
-### Version 8.0, New development version
+### Version 7.13.5, New development version
 
   * This is a major release of SBV, contributed by Brian Brian Schroeder. Brian
     reworked the internals of SBV to allow for custom monad stacks. In particular,
@@ -19,7 +19,47 @@
     See `Documentation.SBV.Examples.Transformers.SymbolicEval` for an example of
     how to use the transformer based code.
 
-    Thanks to Brian Schroeder for this massive effort to modernize SBV code-base!
+    Thanks to Brian Schroeder for this massive effort to modernize the SBV code-base!
+
+  * [BACKWARDS COMPATIBILITY] The 'Boolean' class is removed, which used to abstract
+    over logical connectives. Previously, this class handled 'SBool' and 'Bool', but
+    the generality was hardly ever used and caused typing ambiguities. The new
+    implementation simplifies boolean operators to simply operate on the `SBool`
+    type. Also changed the operator names to fit with all the others by starting
+    them with dots. A simple conversion guide:
+
+        * Literal True : true    became   sTrue
+        * Literal False: false   became   sFalse
+        * Negation     : bNot    became   sNot
+        * Conjunction  : &&&     became   .&&
+        * Disjunction  : |||     became   .||
+        * XOr          : <+>     became   .<+>
+        * Nand         : ~&      became   .~&
+        * Nor          : ~|      became   .~|
+        * Implication  : ==>     became   .=>
+        * Iff          : <=>     became   .<=>
+        * Aggregate and: bAnd    became   sAnd
+        * Aggregate or : bOr     became   sOr
+        * Existential  : bAny    became   sAny
+        * Universal    : bAll    became   sAll
+
+   * [BACKWARDS COMPATIBILITY] When user queries are present, SBV now picks the logic
+     "ALL" (as opposed to a suitable variant of bit-vectors as in the past versions).
+     This can be overridden by the 'setLogic' command as usual of course. While the new
+     choice breaks backwards compatibility, I expect the impact will be minimal, and
+     the new behavior matches better with user expectations on how external queries are
+     usually employed.
+
+   * [BACKWARDS COMPATIBILITY] Renamed the module `Data.SBV.List.Bounded` to
+     `Data.SBV.Tools.BoundedList`.
+
+   * Add `Data.SBV.Tools.BMC` module, which provides a BMC (bounded-model
+     checking engine) for traditional state transition systems. See
+     `Documentation.SBV.Examples.ProofTools.BMC` for example uses.
+
+   * Add `Data.SBV.Tools.Induction` module, which provides an induction engine
+     for traditional state transition systems. Also added several example use
+     cases in the directory `Documentation.SBV.Examples.ProofTools`.
 
 ### Version 7.13, 2018-12-16
 

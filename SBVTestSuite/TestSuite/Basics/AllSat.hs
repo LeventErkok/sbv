@@ -26,8 +26,8 @@ tests =
     , goldenVsStringShow "allSat2" t2
     , goldenVsStringShow "allSat3" $            allSat $ \x -> x .== (0::SFloat)
     , goldenVsStringShow "allSat4" $            allSat $ \x -> x .<  (0::SWord8)
-    , goldenVsStringShow "allSat5" $ fmap srt $ allSat $ \x y -> x .< y &&& y .< (4::SWord8)
-    , goldenVsStringShow "allSat6" $            allSat $ exists "x" >>= \x -> exists "y" >>= \y -> forall "z" >>= \z -> return (x .< (y::SWord8) &&& y .< 3 &&& z .== (z::SWord8))
+    , goldenVsStringShow "allSat5" $ fmap srt $ allSat $ \x y -> x .< y .&& y .< (4::SWord8)
+    , goldenVsStringShow "allSat6" $            allSat $ exists "x" >>= \x -> exists "y" >>= \y -> forall "z" >>= \z -> return (x .< (y::SWord8) .&& y .< 3 .&& z .== (z::SWord8))
     ]
 
 srt :: AllSatResult -> AllSatResult
@@ -45,4 +45,4 @@ t2 :: IO AllSatResult
 t2 = allSat $ do x <- free "x"
                  y <- free "y"
                  z <- free "z"
-                 return $ x .== (y :: SQ) &&& z .== (z :: SQ)
+                 return $ x .== (y :: SQ) .&& z .== (z :: SQ)

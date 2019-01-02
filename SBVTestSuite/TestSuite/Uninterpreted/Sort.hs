@@ -41,5 +41,5 @@ p0 = do
     constrain $ len l0 .== 0
     constrain $ len l1 .== 1
     x :: SInteger <- symbolic "x"
-    constrain $ x .== 0 ||| x.== 1
-    return $ l .== l0 ||| l .== l1
+    constrain $ x .== 0 .|| x.== 1
+    return $ l .== l0 .|| l .== l1

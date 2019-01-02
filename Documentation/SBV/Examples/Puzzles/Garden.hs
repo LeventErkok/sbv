@@ -55,7 +55,7 @@ col = uninterpret "col"
 -- we have @n@ flowers to start with. Essentially the numbers should
 -- be within bounds and distinct.
 validPick :: SInteger -> Flower -> Flower -> Flower -> SBool
-validPick n i j k = distinct [i, j, k] &&& bAll ok [i, j, k]
+validPick n i j k = distinct [i, j, k] .&& sAll ok [i, j, k]
   where ok x = inRange x (1, n)
 
 -- | Count the number of flowers that occur in a given set of flowers.
@@ -88,13 +88,13 @@ puzzle = do n <- sInteger "N"
             constrain $ map col [ef1, ef2, ef3] .== map literal [Red, Yellow, Blue]
 
             -- Pick any three, at least one is Red
-            constrain $ valid af1 af2 af3 ==> count Red    [af1, af2, af3] .>= 1
+            constrain $ valid af1 af2 af3 .=> count Red    [af1, af2, af3] .>= 1
 
             -- Pick any three, at least one is Yellow
-            constrain $ valid af1 af2 af3 ==> count Yellow [af1, af2, af3] .>= 1
+            constrain $ valid af1 af2 af3 .=> count Yellow [af1, af2, af3] .>= 1
 
             -- Pick any three, at least one is Blue
-            constrain $ valid af1 af2 af3 ==> count Blue   [af1, af2, af3] .>= 1
+            constrain $ valid af1 af2 af3 .=> count Blue   [af1, af2, af3] .>= 1
 
 -- | Solve the puzzle. We have:
 --

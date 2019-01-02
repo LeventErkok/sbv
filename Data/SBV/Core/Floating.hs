@@ -26,7 +26,6 @@ import Data.Word           (Word8, Word16, Word32, Word64)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 import Data.SBV.Core.AlgReals (isExactRational)
-import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.Numeric
 
 -- | A class of floating-point (IEEE754) operations, some of
@@ -129,9 +128,9 @@ class (SymWord a, RealFloat a) => IEEEFloating a where
   fpIsNaN            = lift1B FP_IsNaN           isNaN
   fpIsNegative       = lift1B FP_IsNegative      (\x -> x < 0 ||       isNegativeZero x)
   fpIsPositive       = lift1B FP_IsPositive      (\x -> x >= 0 && not (isNegativeZero x))
-  fpIsNegativeZero x = fpIsZero x &&& fpIsNegative x
-  fpIsPositiveZero x = fpIsZero x &&& fpIsPositive x
-  fpIsPoint        x = bnot (fpIsNaN x ||| fpIsInfinite x)
+  fpIsNegativeZero x = fpIsZero x .&& fpIsNegative x
+  fpIsPositiveZero x = fpIsZero x .&& fpIsPositive x
+  fpIsPoint        x = sNot (fpIsNaN x .|| fpIsInfinite x)
 
 -- | SFloat instance
 instance IEEEFloating Float

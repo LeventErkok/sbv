@@ -112,7 +112,7 @@ search initial final = runSMT $ do emptyGrid :: Grid <- newArray "emptyGrid" (Ju
                                           findOthers sofar vs
 
         findOthers vs = go
-                where go curVals = do constrain $ bOr $ zipWith (\v c -> v ./= literal c) vs curVals
+                where go curVals = do constrain $ sOr $ zipWith (\v c -> v ./= literal c) vs curVals
                                       cs <- checkSat
                                       case cs of
                                        Unk   -> error "Unknown!"

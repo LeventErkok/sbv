@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.List.Bounded
+-- Module      :  Data.SBV.Tools.BoundedList
 -- Copyright   :  (c) Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
@@ -18,7 +18,7 @@
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Data.SBV.List.Bounded (
+module Data.SBV.Tools.BoundedList (
      -- * General folds
      bfoldr, bfoldrM, bfoldl, bfoldlM
      -- * Map, filter, zipWith, elem
@@ -89,11 +89,11 @@ bfilter i f = bfoldr i (\x y -> ite (f x) (x .: y) y) []
 
 -- | Bounded logical and
 band :: Int -> SList Bool -> SBool
-band i = bfoldr i (&&&) (true  :: SBool)
+band i = bfoldr i (.&&) (sTrue  :: SBool)
 
 -- | Bounded logical or
 bor :: Int -> SList Bool -> SBool
-bor i = bfoldr i (|||) (false :: SBool)
+bor i = bfoldr i (.||) (sFalse :: SBool)
 
 -- | Bounded any
 bany :: SymWord a => Int -> (SBV a -> SBool) -> SList a -> SBool
@@ -115,7 +115,7 @@ bminimum i l = bfoldl (i-1) smin (L.head l) (L.tail l)
 bzipWith :: (SymWord a, SymWord b, SymWord c) => Int -> (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
 bzipWith cnt f = go (cnt `max` 0)
    where go 0 _  _  = []
-         go i xs ys = ite (L.null xs ||| L.null ys)
+         go i xs ys = ite (L.null xs .|| L.null ys)
                           []
                           (f (L.head xs) (L.head ys) .: go (i-1) (L.tail xs) (L.tail ys))
 

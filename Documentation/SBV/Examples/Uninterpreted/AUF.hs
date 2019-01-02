@@ -45,7 +45,7 @@ f = uninterpret "f"
 -- the given array @a@. Note that we're being generic in the type of
 -- array we're expecting.
 thm :: SymArray a => SWord32 -> SWord32 -> a Word32 Word32 -> SBool
-thm x y a = lhs ==> rhs
+thm x y a = lhs .=> rhs
   where lhs = x + 2 .== y
         rhs =     f (readArray (writeArray a x 3) (y - 2))
               .== f (y - x + 1)

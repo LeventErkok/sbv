@@ -66,7 +66,7 @@ gf28Pow n = pow
 -- turns out that raising to the 254 power gives us the multiplicative inverse.
 -- Of course, we can prove this using SBV:
 --
--- >>> prove $ \x -> x ./= 0 ==> x `gf28Mult` gf28Inverse x .== 1
+-- >>> prove $ \x -> x ./= 0 .=> x `gf28Mult` gf28Inverse x .== 1
 -- Q.E.D.
 --
 -- Note that we exclude @0@ in our theorem, as it does not have a
@@ -207,7 +207,7 @@ unSBox = select unSBoxTable 0
 -- Q.E.D.
 --
 sboxInverseCorrect :: GF28 -> SBool
-sboxInverseCorrect x = unSBox (sbox x) .== x &&& sbox (unSBox x) .== x
+sboxInverseCorrect x = unSBox (sbox x) .== x .&& sbox (unSBox x) .== x
 
 -----------------------------------------------------------------------------
 -- ** AddRoundKey transformation

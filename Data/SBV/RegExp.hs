@@ -61,7 +61,6 @@ import Data.SBV.Char
 -- $setup
 -- >>> import Prelude hiding (length, take, elem, notElem, head)
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
--- >>> import Data.SBV.Utils.Boolean  ((<=>), (==>), bAny, (&&&), (|||), bnot)
 -- >>> import Data.SBV.Core.Model
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XScopedTypeVariables
@@ -102,14 +101,14 @@ instance RegExpMatchable SString where
 -- with @OverloadedStrings@ extension, you can simply use a Haskell
 -- string to mean the same thing, so this function is rarely needed.
 --
--- >>> prove $ \(s :: SString) -> s `match` exactly "LITERAL" <=> s .== "LITERAL"
+-- >>> prove $ \(s :: SString) -> s `match` exactly "LITERAL" .<=> s .== "LITERAL"
 -- Q.E.D.
 exactly :: String -> RegExp
 exactly = Literal
 
 -- | Helper to define a character class.
 --
--- >>> prove $ \(c :: SChar) -> c `match` oneOf "ABCD" <=> bAny (c .==) (map literal "ABCD")
+-- >>> prove $ \(c :: SChar) -> c `match` oneOf "ABCD" .<=> sAny (c .==) (map literal "ABCD")
 -- Q.E.D.
 oneOf :: String -> RegExp
 oneOf xs = Union [exactly [x] | x <- xs]
@@ -118,7 +117,7 @@ oneOf xs = Union [exactly [x] | x <- xs]
 --
 -- >>> newline
 -- (re.union (str.to.re "\n") (str.to.re "\r") (str.to.re "\f"))
--- >>> prove $ \c -> c `match` newline ==> isSpace c
+-- >>> prove $ \c -> c `match` newline .=> isSpace c
 -- Q.E.D.
 newline :: RegExp
 newline = oneOf "\n\r\f"
@@ -127,7 +126,7 @@ newline = oneOf "\n\r\f"
 --
 -- >>> tab
 -- (str.to.re "\x09")
--- >>> prove $ \c -> c `match` tab ==> c .== literal '\t'
+-- >>> prove $ \c -> c `match` tab .=> c .== literal '\t'
 -- Q.E.D.
 tab :: RegExp
 tab = oneOf "\t"
@@ -136,14 +135,14 @@ tab = oneOf "\t"
 --
 -- >>> whiteSpaceNoNewLine
 -- (re.union (str.to.re "\x09") (re.union (str.to.re "\v") (str.to.re "\xa0") (str.to.re " ")))
--- >>> prove $ \c -> c `match` whiteSpaceNoNewLine ==> c `match` whiteSpace &&& c ./= literal '\n'
+-- >>> prove $ \c -> c `match` whiteSpaceNoNewLine .=> c `match` whiteSpace .&& c ./= literal '\n'
 -- Q.E.D.
 whiteSpaceNoNewLine :: RegExp
 whiteSpaceNoNewLine = tab + oneOf "\v\160 "
 
 -- | Recognize white space.
 --
--- >>> prove $ \c -> c `match` whiteSpace ==> isSpace c
+-- >>> prove $ \c -> c `match` whiteSpace .=> isSpace c
 -- Q.E.D.
 whiteSpace :: RegExp
 whiteSpace = newline + whiteSpaceNoNewLine
@@ -151,7 +150,7 @@ whiteSpace = newline + whiteSpaceNoNewLine
 -- | Recognize a punctuation character. Anything that satisfies the predicate 'isPunctuation' will
 -- be accepted.  (TODO: Will need modification when we move to unicode.)
 --
--- >>> prove $ \c -> c `match` punctuation ==> isPunctuation c
+-- >>> prove $ \c -> c `match` punctuation .=> isPunctuation c
 -- Q.E.D.
 punctuation :: RegExp
 punctuation = oneOf $ filter C.isPunctuation $ map C.chr [0..255]
@@ -160,9 +159,9 @@ punctuation = oneOf $ filter C.isPunctuation $ map C.chr [0..255]
 --
 -- >>> asciiLetter
 -- (re.union (re.range "a" "z") (re.range "A" "Z"))
--- >>> prove $ \c -> c `match` asciiLetter <=> toUpper c `match` asciiLetter
+-- >>> prove $ \c -> c `match` asciiLetter .<=> toUpper c `match` asciiLetter
 -- Q.E.D.
--- >>> prove $ \c -> c `match` asciiLetter <=> toLower c `match` asciiLetter
+-- >>> prove $ \c -> c `match` asciiLetter .<=> toLower c `match` asciiLetter
 -- Q.E.D.
 asciiLetter :: RegExp
 asciiLetter = asciiLower + asciiUpper
@@ -171,11 +170,11 @@ asciiLetter = asciiLower + asciiUpper
 --
 -- >>> asciiLower
 -- (re.range "a" "z")
--- >>> prove $ \c -> (c :: SChar) `match` asciiLower  ==> c `match` asciiLetter
+-- >>> prove $ \c -> (c :: SChar) `match` asciiLower  .=> c `match` asciiLetter
 -- Q.E.D.
--- >>> prove $ \c -> c `match` asciiLower  ==> toUpper c `match` asciiUpper
+-- >>> prove $ \c -> c `match` asciiLower  .=> toUpper c `match` asciiUpper
 -- Q.E.D.
--- >>> prove $ \c -> c `match` asciiLetter ==> toLower c `match` asciiLower
+-- >>> prove $ \c -> c `match` asciiLetter .=> toLower c `match` asciiLower
 -- Q.E.D.
 asciiLower :: RegExp
 asciiLower = Range 'a' 'z'
@@ -184,11 +183,11 @@ asciiLower = Range 'a' 'z'
 --
 -- >>> asciiUpper
 -- (re.range "A" "Z")
--- >>> prove $ \c -> (c :: SChar) `match` asciiUpper  ==> c `match` asciiLetter
+-- >>> prove $ \c -> (c :: SChar) `match` asciiUpper  .=> c `match` asciiLetter
 -- Q.E.D.
--- >>> prove $ \c -> c `match` asciiUpper  ==> toLower c `match` asciiLower
+-- >>> prove $ \c -> c `match` asciiUpper  .=> toLower c `match` asciiLower
 -- Q.E.D.
--- >>> prove $ \c -> c `match` asciiLetter ==> toUpper c `match` asciiUpper
+-- >>> prove $ \c -> c `match` asciiLetter .=> toUpper c `match` asciiUpper
 -- Q.E.D.
 asciiUpper :: RegExp
 asciiUpper = Range 'A' 'Z'
@@ -197,7 +196,7 @@ asciiUpper = Range 'A' 'Z'
 --
 -- >>> digit
 -- (re.range "0" "9")
--- >>> prove $ \c -> c `match` digit <=> let v = digitToInt c in 0 .<= v &&& v .< 10
+-- >>> prove $ \c -> c `match` digit .<=> let v = digitToInt c in 0 .<= v .&& v .< 10
 -- Q.E.D.
 digit :: RegExp
 digit = Range '0' '9'
@@ -206,9 +205,9 @@ digit = Range '0' '9'
 --
 -- >>> octDigit
 -- (re.range "0" "7")
--- >>> prove $ \c -> c `match` octDigit <=> let v = digitToInt c in 0 .<= v &&& v .< 8
+-- >>> prove $ \c -> c `match` octDigit .<=> let v = digitToInt c in 0 .<= v .&& v .< 8
 -- Q.E.D.
--- >>> prove $ \(c :: SChar) -> c `match` octDigit ==> c `match` digit
+-- >>> prove $ \(c :: SChar) -> c `match` octDigit .=> c `match` digit
 -- Q.E.D.
 octDigit :: RegExp
 octDigit = Range '0' '7'
@@ -217,9 +216,9 @@ octDigit = Range '0' '7'
 --
 -- >>> hexDigit
 -- (re.union (re.range "0" "9") (re.range "a" "f") (re.range "A" "F"))
--- >>> prove $ \c -> c `match` hexDigit <=> let v = digitToInt c in 0 .<= v &&& v .< 16
+-- >>> prove $ \c -> c `match` hexDigit .<=> let v = digitToInt c in 0 .<= v .&& v .< 16
 -- Q.E.D.
--- >>> prove $ \(c :: SChar) -> c `match` digit ==> c `match` hexDigit
+-- >>> prove $ \(c :: SChar) -> c `match` digit .=> c `match` hexDigit
 -- Q.E.D.
 hexDigit :: RegExp
 hexDigit = digit + Range 'a' 'f' + Range 'A' 'F'
@@ -228,7 +227,7 @@ hexDigit = digit + Range 'a' 'f' + Range 'A' 'F'
 --
 -- >>> decimal
 -- (re.+ (re.range "0" "9"))
--- >>> prove $ \s -> (s::SString) `match` decimal ==> bnot (s `match` KStar asciiLetter)
+-- >>> prove $ \s -> (s::SString) `match` decimal .=> sNot (s `match` KStar asciiLetter)
 -- Q.E.D.
 decimal :: RegExp
 decimal = KPlus digit
@@ -237,7 +236,7 @@ decimal = KPlus digit
 --
 -- >>> octal
 -- (re.++ (re.union (str.to.re "0o") (str.to.re "0O")) (re.+ (re.range "0" "7")))
--- >>> prove $ \s -> s `match` octal ==> bAny (.== take 2 s) ["0o", "0O"]
+-- >>> prove $ \s -> s `match` octal .=> sAny (.== take 2 s) ["0o", "0O"]
 -- Q.E.D.
 octal :: RegExp
 octal = ("0o" + "0O") * KPlus octDigit
@@ -246,7 +245,7 @@ octal = ("0o" + "0O") * KPlus octDigit
 --
 -- >>> hexadecimal
 -- (re.++ (re.union (str.to.re "0x") (str.to.re "0X")) (re.+ (re.union (re.range "0" "9") (re.range "a" "f") (re.range "A" "F"))))
--- >>> prove $ \s -> s `match` hexadecimal ==> bAny (.== take 2 s) ["0x", "0X"]
+-- >>> prove $ \s -> s `match` hexadecimal .=> sAny (.== take 2 s) ["0x", "0X"]
 -- Q.E.D.
 hexadecimal :: RegExp
 hexadecimal = ("0x" + "0X") * KPlus hexDigit
@@ -254,7 +253,7 @@ hexadecimal = ("0x" + "0X") * KPlus hexDigit
 -- | Recognize a floating point number. The exponent part is optional if a fraction
 -- is present. The exponent may or may not have a sign.
 --
--- >>> prove $ \s -> s `match` floating ==> length s .>= 3
+-- >>> prove $ \s -> s `match` floating .=> length s .>= 3
 -- Q.E.D.
 floating :: RegExp
 floating = withFraction + withoutFraction
@@ -266,9 +265,9 @@ floating = withFraction + withoutFraction
 -- followed by zero or more letters, digits, underscores, and single quotes. The first
 -- letter must be lowercase.
 --
--- >>> prove $ \s -> s `match` identifier ==> isAsciiLower (head s)
+-- >>> prove $ \s -> s `match` identifier .=> isAsciiLower (head s)
 -- Q.E.D.
--- >>> prove $ \s -> s `match` identifier ==> length s .>= 1
+-- >>> prove $ \s -> s `match` identifier .=> length s .>= 1
 -- Q.E.D.
 identifier :: RegExp
 identifier = asciiLower * KStar (asciiLetter + digit + "_" + "'")
@@ -303,19 +302,19 @@ Note that since `match` is a method of 'RegExpMatchable' class, both 'SChar' and
 an argument for matching. In practice, this means you might have to disambiguate with a type-ascription
 if it is not deducible from context.
 
->>> prove $ \s -> (s :: SString) `match` "hello" <=> s .== "hello"
+>>> prove $ \s -> (s :: SString) `match` "hello" .<=> s .== "hello"
 Q.E.D.
->>> prove $ \s -> s `match` Loop 2 5 "xyz" ==> length s .>= 6
+>>> prove $ \s -> s `match` Loop 2 5 "xyz" .=> length s .>= 6
 Q.E.D.
->>> prove $ \s -> s `match` Loop 2 5 "xyz" ==> length s .<= 15
+>>> prove $ \s -> s `match` Loop 2 5 "xyz" .=> length s .<= 15
 Q.E.D.
->>> prove $ \s -> match s (Loop 2 5 "xyz") ==> length s .>= 7
+>>> prove $ \s -> match s (Loop 2 5 "xyz") .=> length s .>= 7
 Falsifiable. Counter-example:
   s0 = "xyzxyz" :: String
->>> prove $ \s -> (s :: SString) `match` "hello" ==> s `match` ("hello" + "world")
+>>> prove $ \s -> (s :: SString) `match` "hello" .=> s `match` ("hello" + "world")
 Q.E.D.
->>> prove $ \s -> bnot $ (s::SString) `match` ("so close" * 0)
+>>> prove $ \s -> sNot $ (s::SString) `match` ("so close" * 0)
 Q.E.D.
->>> prove $ \c -> (c :: SChar) `match` oneOf "abcd" ==> ord c .>= ord (literal 'a') &&& ord c .<= ord (literal 'd')
+>>> prove $ \c -> (c :: SChar) `match` oneOf "abcd" .=> ord c .>= ord (literal 'a') .&& ord c .<= ord (literal 'd')
 Q.E.D.
 -}

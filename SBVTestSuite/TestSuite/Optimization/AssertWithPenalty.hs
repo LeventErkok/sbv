@@ -31,12 +31,12 @@ assertWithPenalty1 = do
                      a3 = x+y .<= 0
 
                  constrain $ a1 .== a3
-                 constrain $ a3 ||| a2
+                 constrain $ a3 .|| a2
 
                  assertWithPenalty "as1" a3        (Penalty  3 Nothing)
-                 assertWithPenalty "as2" (bnot a3) (Penalty  5 Nothing)
-                 assertWithPenalty "as3" (bnot a1) (Penalty 10 Nothing)
-                 assertWithPenalty "as4" (bnot a2) (Penalty  3 Nothing)
+                 assertWithPenalty "as2" (sNot a3) (Penalty  5 Nothing)
+                 assertWithPenalty "as3" (sNot a1) (Penalty 10 Nothing)
+                 assertWithPenalty "as4" (sNot a2) (Penalty  3 Nothing)
 
 assertWithPenalty2 :: Goal
 assertWithPenalty2 = do
@@ -47,4 +47,4 @@ assertWithPenalty2 = do
                  assertWithPenalty "as_a1" a1                    (Penalty  0.1 Nothing)
                  assertWithPenalty "as_a2" a2                    (Penalty  1.0 Nothing)
                  assertWithPenalty "as_a3" a3                    (Penalty  1   Nothing)
-                 assertWithPenalty "as_a4" (bnot a1 ||| bnot a2) (Penalty 3.2 Nothing)
+                 assertWithPenalty "as_a4" (sNot a1 .|| sNot a2) (Penalty 3.2 Nothing)

@@ -73,7 +73,6 @@ import Data.SBV.Core.Operations
 import Data.SBV.Provers.Prover (defaultSMTCfg, SafeResult(..), prove)
 import Data.SBV.SMT.SMT        (ThmResult, showModel)
 
-import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.Lib      (isKString)
 
 -- Symbolic-Word class instances
@@ -349,7 +348,7 @@ sLists = symbolics
 
 -- | Generalization of 'Data.SBV.solve'
 solve :: MonadSymbolic m => [SBool] -> m SBool
-solve = return . bAnd
+solve = return . sAnd
 
 -- | Convert an SReal to an SInteger. That is, it computes the
 -- largest integer @n@ that satisfies @sIntegerToSReal n <= r@
@@ -404,27 +403,27 @@ class EqSymbolic a where
   -- | Symbolic inequality.
   (./=) :: a -> a -> SBool
 
-  -- | Returns (symbolic) true if all the elements of the given list are different.
+  -- | Returns (symbolic) 'sTrue' if all the elements of the given list are different.
   distinct :: [a] -> SBool
 
-  -- | Returns (symbolic) true if all the elements of the given list are the same.
+  -- | Returns (symbolic) 'sTrue' if all the elements of the given list are the same.
   allEqual :: [a] -> SBool
 
   -- | Symbolic membership test.
   sElem    :: a -> [a] -> SBool
   {-# MINIMAL (.==) #-}
 
-  x ./= y = bnot (x .== y)
+  x ./= y = sNot (x .== y)
 
-  allEqual []     = true
-  allEqual (x:xs) = bAll (x .==) xs
+  allEqual []     = sTrue
+  allEqual (x:xs) = sAll (x .==) xs
 
   -- Default implementation of distinct. Note that we override
   -- this method for the base types to generate better code.
-  distinct []     = true
-  distinct (x:xs) = bAll (x ./=) xs &&& distinct xs
+  distinct []     = sTrue
+  distinct (x:xs) = sAll (x ./=) xs .&& distinct xs
 
-  sElem x xs = bAny (.== x) xs
+  sElem x xs = sAny (.== x) xs
 
 -- | Symbolic Comparisons. Similar to 'Eq', we cannot implement Haskell's 'Ord' class
 -- since there is no way to return an 'Ordering' value from a symbolic comparison.
@@ -449,20 +448,20 @@ class (Mergeable a, EqSymbolic a) => OrdSymbolic a where
 
   {-# MINIMAL (.<) #-}
 
-  a .<= b    = a .< b ||| a .== b
+  a .<= b    = a .< b .|| a .== b
   a .>  b    = b .<  a
   a .>= b    = b .<= a
 
   a `smin` b = ite (a .<= b) a b
   a `smax` b = ite (a .<= b) b a
 
-  inRange x (y, z) = x .>= y &&& x .<= z
+  inRange x (y, z) = x .>= y .&& x .<= z
 
 
 {- We can't have a generic instance of the form:
 
 instance Eq a => EqSymbolic a where
-  x .== y = if x == y then true else false
+  x .== y = if x == y then true else sFalse
 
 even if we're willing to allow Flexible/undecidable instances..
 This is because if we allow this it would imply EqSymbolic (SBV a);
@@ -476,8 +475,8 @@ instance EqSymbolic (SBV a) where
   SBV x ./= SBV y = SBV (svNotEqual x y)
 
   -- Custom version of distinct that generates better code for base types
-  distinct []  = true
-  distinct [_] = true
+  distinct []  = sTrue
+  distinct [_] = sTrue
   distinct xs
     | all isConc xs
     = checkDiff xs
@@ -490,8 +489,8 @@ instance EqSymbolic (SBV a) where
           -- reduce to a constant and generate no code at all!
           -- Note that this is essentially the same as the default
           -- definition, which unfortunately we can no longer call!
-          checkDiff []     = true
-          checkDiff (a:as) = bAll (a ./=) as &&& checkDiff as
+          checkDiff []     = sTrue
+          checkDiff (a:as) = sAll (a ./=) as .&& checkDiff as
 
           -- Sigh, we can't use isConcrete since that requires SymWord
           -- constraint that we don't have here. (To support SBools.)
@@ -506,87 +505,87 @@ instance SymWord a => OrdSymbolic (SBV a) where
 
 -- Bool
 instance EqSymbolic Bool where
-  x .== y = if x == y then true else false
+  x .== y = fromBool $ x == y
 
 -- Lists
 instance EqSymbolic a => EqSymbolic [a] where
-  []     .== []     = true
-  (x:xs) .== (y:ys) = x .== y &&& xs .== ys
-  _      .== _      = false
+  []     .== []     = sTrue
+  (x:xs) .== (y:ys) = x .== y .&& xs .== ys
+  _      .== _      = sFalse
 
 instance OrdSymbolic a => OrdSymbolic [a] where
-  []     .< []     = false
-  []     .< _      = true
-  _      .< []     = false
-  (x:xs) .< (y:ys) = x .< y ||| (x .== y &&& xs .< ys)
+  []     .< []     = sFalse
+  []     .< _      = sTrue
+  _      .< []     = sFalse
+  (x:xs) .< (y:ys) = x .< y .|| (x .== y .&& xs .< ys)
 
 -- Maybe
 instance EqSymbolic a => EqSymbolic (Maybe a) where
-  Nothing .== Nothing = true
+  Nothing .== Nothing = sTrue
   Just a  .== Just b  = a .== b
-  _       .== _       = false
+  _       .== _       = sFalse
 
 instance (OrdSymbolic a) => OrdSymbolic (Maybe a) where
-  Nothing .<  Nothing = false
-  Nothing .<  _       = true
-  Just _  .<  Nothing = false
+  Nothing .<  Nothing = sFalse
+  Nothing .<  _       = sTrue
+  Just _  .<  Nothing = sFalse
   Just a  .<  Just b  = a .< b
 
 -- Either
 instance (EqSymbolic a, EqSymbolic b) => EqSymbolic (Either a b) where
   Left a  .== Left b  = a .== b
   Right a .== Right b = a .== b
-  _       .== _       = false
+  _       .== _       = sFalse
 
 instance (OrdSymbolic a, OrdSymbolic b) => OrdSymbolic (Either a b) where
   Left a  .< Left b  = a .< b
-  Left _  .< Right _ = true
-  Right _ .< Left _  = false
+  Left _  .< Right _ = sTrue
+  Right _ .< Left _  = sFalse
   Right a .< Right b = a .< b
 
 -- 2-Tuple
 instance (EqSymbolic a, EqSymbolic b) => EqSymbolic (a, b) where
-  (a0, b0) .== (a1, b1) = a0 .== a1 &&& b0 .== b1
+  (a0, b0) .== (a1, b1) = a0 .== a1 .&& b0 .== b1
 
 instance (OrdSymbolic a, OrdSymbolic b) => OrdSymbolic (a, b) where
-  (a0, b0) .< (a1, b1) = a0 .< a1 ||| (a0 .== a1 &&& b0 .< b1)
+  (a0, b0) .< (a1, b1) = a0 .< a1 .|| (a0 .== a1 .&& b0 .< b1)
 
 -- 3-Tuple
 instance (EqSymbolic a, EqSymbolic b, EqSymbolic c) => EqSymbolic (a, b, c) where
-  (a0, b0, c0) .== (a1, b1, c1) = (a0, b0) .== (a1, b1) &&& c0 .== c1
+  (a0, b0, c0) .== (a1, b1, c1) = (a0, b0) .== (a1, b1) .&& c0 .== c1
 
 instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c) => OrdSymbolic (a, b, c) where
-  (a0, b0, c0) .< (a1, b1, c1) = (a0, b0) .< (a1, b1) ||| ((a0, b0) .== (a1, b1) &&& c0 .< c1)
+  (a0, b0, c0) .< (a1, b1, c1) = (a0, b0) .< (a1, b1) .|| ((a0, b0) .== (a1, b1) .&& c0 .< c1)
 
 -- 4-Tuple
 instance (EqSymbolic a, EqSymbolic b, EqSymbolic c, EqSymbolic d) => EqSymbolic (a, b, c, d) where
-  (a0, b0, c0, d0) .== (a1, b1, c1, d1) = (a0, b0, c0) .== (a1, b1, c1) &&& d0 .== d1
+  (a0, b0, c0, d0) .== (a1, b1, c1, d1) = (a0, b0, c0) .== (a1, b1, c1) .&& d0 .== d1
 
 instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c, OrdSymbolic d) => OrdSymbolic (a, b, c, d) where
-  (a0, b0, c0, d0) .< (a1, b1, c1, d1) = (a0, b0, c0) .< (a1, b1, c1) ||| ((a0, b0, c0) .== (a1, b1, c1) &&& d0 .< d1)
+  (a0, b0, c0, d0) .< (a1, b1, c1, d1) = (a0, b0, c0) .< (a1, b1, c1) .|| ((a0, b0, c0) .== (a1, b1, c1) .&& d0 .< d1)
 
 -- 5-Tuple
 instance (EqSymbolic a, EqSymbolic b, EqSymbolic c, EqSymbolic d, EqSymbolic e) => EqSymbolic (a, b, c, d, e) where
-  (a0, b0, c0, d0, e0) .== (a1, b1, c1, d1, e1) = (a0, b0, c0, d0) .== (a1, b1, c1, d1) &&& e0 .== e1
+  (a0, b0, c0, d0, e0) .== (a1, b1, c1, d1, e1) = (a0, b0, c0, d0) .== (a1, b1, c1, d1) .&& e0 .== e1
 
 instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c, OrdSymbolic d, OrdSymbolic e) => OrdSymbolic (a, b, c, d, e) where
-  (a0, b0, c0, d0, e0) .< (a1, b1, c1, d1, e1) = (a0, b0, c0, d0) .< (a1, b1, c1, d1) ||| ((a0, b0, c0, d0) .== (a1, b1, c1, d1) &&& e0 .< e1)
+  (a0, b0, c0, d0, e0) .< (a1, b1, c1, d1, e1) = (a0, b0, c0, d0) .< (a1, b1, c1, d1) .|| ((a0, b0, c0, d0) .== (a1, b1, c1, d1) .&& e0 .< e1)
 
 -- 6-Tuple
 instance (EqSymbolic a, EqSymbolic b, EqSymbolic c, EqSymbolic d, EqSymbolic e, EqSymbolic f) => EqSymbolic (a, b, c, d, e, f) where
-  (a0, b0, c0, d0, e0, f0) .== (a1, b1, c1, d1, e1, f1) = (a0, b0, c0, d0, e0) .== (a1, b1, c1, d1, e1) &&& f0 .== f1
+  (a0, b0, c0, d0, e0, f0) .== (a1, b1, c1, d1, e1, f1) = (a0, b0, c0, d0, e0) .== (a1, b1, c1, d1, e1) .&& f0 .== f1
 
 instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c, OrdSymbolic d, OrdSymbolic e, OrdSymbolic f) => OrdSymbolic (a, b, c, d, e, f) where
   (a0, b0, c0, d0, e0, f0) .< (a1, b1, c1, d1, e1, f1) =    (a0, b0, c0, d0, e0) .<  (a1, b1, c1, d1, e1)
-                                                       ||| ((a0, b0, c0, d0, e0) .== (a1, b1, c1, d1, e1) &&& f0 .< f1)
+                                                       .|| ((a0, b0, c0, d0, e0) .== (a1, b1, c1, d1, e1) .&& f0 .< f1)
 
 -- 7-Tuple
 instance (EqSymbolic a, EqSymbolic b, EqSymbolic c, EqSymbolic d, EqSymbolic e, EqSymbolic f, EqSymbolic g) => EqSymbolic (a, b, c, d, e, f, g) where
-  (a0, b0, c0, d0, e0, f0, g0) .== (a1, b1, c1, d1, e1, f1, g1) = (a0, b0, c0, d0, e0, f0) .== (a1, b1, c1, d1, e1, f1) &&& g0 .== g1
+  (a0, b0, c0, d0, e0, f0, g0) .== (a1, b1, c1, d1, e1, f1, g1) = (a0, b0, c0, d0, e0, f0) .== (a1, b1, c1, d1, e1, f1) .&& g0 .== g1
 
 instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c, OrdSymbolic d, OrdSymbolic e, OrdSymbolic f, OrdSymbolic g) => OrdSymbolic (a, b, c, d, e, f, g) where
   (a0, b0, c0, d0, e0, f0, g0) .< (a1, b1, c1, d1, e1, f1, g1) =    (a0, b0, c0, d0, e0, f0) .<  (a1, b1, c1, d1, e1, f1)
-                                                               ||| ((a0, b0, c0, d0, e0, f0) .== (a1, b1, c1, d1, e1, f1) &&& g0 .< g1)
+                                                               .|| ((a0, b0, c0, d0, e0, f0) .== (a1, b1, c1, d1, e1, f1) .&& g0 .< g1)
 
 -- | Symbolic Numbers. This is a simple class that simply incorporates all number like
 -- base types together, simplifying writing polymorphic type-signatures that work for all
@@ -647,6 +646,8 @@ class (SymWord a, Num a, Bits a) => SFiniteBits a where
     -- | Count trailing zeros in a word, big-endian interpretation.
     sCountTrailingZeros :: SBV a -> SWord8
 
+    {-# MINIMAL sFiniteBitSize #-}
+
     -- Default implementations
     lsb (SBV v) = SBV (svTestBit v 0)
     msb x       = sTestBit x (sFiniteBitSize x - 1)
@@ -686,7 +687,7 @@ class (SymWord a, Num a, Bits a) => SFiniteBits a where
 
     fullAdder a b
       | isSigned a = error "fullAdder: only works on unsigned numbers"
-      | True       = (a .> s ||| b .> s, s)
+      | True       = (a .> s .|| b .> s, s)
       where s = a + b
 
     -- N.B. The higher-order bits are determined using a simple shift-add multiplier,
@@ -696,7 +697,7 @@ class (SymWord a, Num a, Bits a) => SFiniteBits a where
       | isSigned a = error "fullMultiplier: only works on unsigned numbers"
       | True       = (go (sFiniteBitSize a) 0 a, a*b)
       where go 0 p _ = p
-            go n p x = let (c, p')  = ite (lsb x) (fullAdder p b) (false, p)
+            go n p x = let (c, p')  = ite (lsb x) (fullAdder p b) (sFalse, p)
                            (o, p'') = shiftIn c p'
                            (_, x')  = shiftIn o x
                        in go (n-1) p'' x'
@@ -733,7 +734,7 @@ instance SFiniteBits Int16  where sFiniteBitSize _ = 16
 instance SFiniteBits Int32  where sFiniteBitSize _ = 32
 instance SFiniteBits Int64  where sFiniteBitSize _ = 64
 
--- | Returns 1 if the boolean is true, otherwise 0.
+-- | Returns 1 if the boolean is 'sTrue', otherwise 0.
 oneIf :: (Num a, SymWord a) => SBool -> SBV a
 oneIf t = ite t 1 0
 
@@ -768,42 +769,42 @@ liftPB w o xs
                     registerKind st KUnbounded
                     newExpr st KBool (SBVApp (PseudoBoolean o) xsw)
 
--- | 'true' if at most @k@ of the input arguments are 'true'
+-- | 'sTrue' if at most @k@ of the input arguments are 'sTrue'
 pbAtMost :: [SBool] -> Int -> SBool
 pbAtMost xs k
  | k < 0             = error $ "SBV.pbAtMost: Non-negative value required, received: " ++ show k
  | all isConcrete xs = literal $ sum (map (pbToInteger "pbAtMost" 1) xs) <= fromIntegral k
  | True              = liftPB "pbAtMost" (PB_AtMost k) xs
 
--- | 'true' if at least @k@ of the input arguments are 'true'
+-- | 'sTrue' if at least @k@ of the input arguments are 'sTrue'
 pbAtLeast :: [SBool] -> Int -> SBool
 pbAtLeast xs k
  | k < 0             = error $ "SBV.pbAtLeast: Non-negative value required, received: " ++ show k
  | all isConcrete xs = literal $ sum (map (pbToInteger "pbAtLeast" 1) xs) >= fromIntegral k
  | True              = liftPB "pbAtLeast" (PB_AtLeast k) xs
 
--- | 'true' if exactly @k@ of the input arguments are 'true'
+-- | 'sTrue' if exactly @k@ of the input arguments are 'sTrue'
 pbExactly :: [SBool] -> Int -> SBool
 pbExactly xs k
  | k < 0             = error $ "SBV.pbExactly: Non-negative value required, received: " ++ show k
  | all isConcrete xs = literal $ sum (map (pbToInteger "pbExactly" 1) xs) == fromIntegral k
  | True              = liftPB "pbExactly" (PB_Exactly k) xs
 
--- | 'true' if the sum of coefficients for 'true' elements is at most @k@. Generalizes 'pbAtMost'.
+-- | 'sTrue' if the sum of coefficients for 'sTrue' elements is at most @k@. Generalizes 'pbAtMost'.
 pbLe :: [(Int, SBool)] -> Int -> SBool
 pbLe xs k
  | k < 0                       = error $ "SBV.pbLe: Non-negative value required, received: " ++ show k
  | all isConcrete (map snd xs) = literal $ sum [pbToInteger "pbLe" c b | (c, b) <- xs] <= fromIntegral k
  | True                        = liftPB "pbLe" (PB_Le (map fst xs) k) (map snd xs)
 
--- | 'true' if the sum of coefficients for 'true' elements is at least @k@. Generalizes 'pbAtLeast'.
+-- | 'sTrue' if the sum of coefficients for 'sTrue' elements is at least @k@. Generalizes 'pbAtLeast'.
 pbGe :: [(Int, SBool)] -> Int -> SBool
 pbGe xs k
  | k < 0                       = error $ "SBV.pbGe: Non-negative value required, received: " ++ show k
  | all isConcrete (map snd xs) = literal $ sum [pbToInteger "pbGe" c b | (c, b) <- xs] >= fromIntegral k
  | True                        = liftPB "pbGe" (PB_Ge (map fst xs) k) (map snd xs)
 
--- | 'true' if the sum of coefficients for 'true' elements is exactly least @k@. Useful for coding
+-- | 'sTrue' if the sum of coefficients for 'sTrue' elements is exactly least @k@. Useful for coding
 -- /exactly K-of-N/ constraints, and in particular mutex constraints.
 pbEq :: [(Int, SBool)] -> Int -> SBool
 pbEq xs k
@@ -811,11 +812,11 @@ pbEq xs k
  | all isConcrete (map snd xs) = literal $ sum [pbToInteger "pbEq" c b | (c, b) <- xs] == fromIntegral k
  | True                        = liftPB "pbEq" (PB_Eq (map fst xs) k) (map snd xs)
 
--- | 'true' if there is at most one set bit
+-- | 'sTrue' if there is at most one set bit
 pbMutexed :: [SBool] -> SBool
 pbMutexed xs = pbAtMost xs 1
 
--- | 'true' if there is exactly one set bit
+-- | 'sTrue' if there is exactly one set bit
 pbStronglyMutexed :: [SBool] -> SBool
 pbStronglyMutexed xs = pbExactly xs 1
 
@@ -1115,8 +1116,6 @@ enumCvt w x = case unliteral x of
 -- Note that our instances implement this law even when @x@ is @0@ itself.
 --
 -- NB. 'quot' truncates toward zero, while 'div' truncates toward negative infinity.
---
--- Minimal complete definition: 'sQuotRem', 'sDivMod'
 class SDivisible a where
   sQuotRem :: a -> a -> (a, a)
   sDivMod  :: a -> a -> (a, a)
@@ -1124,6 +1123,8 @@ class SDivisible a where
   sRem     :: a -> a -> a
   sDiv     :: a -> a -> a
   sMod     :: a -> a -> a
+
+  {-# MINIMAL sQuotRem, sDivMod #-}
 
   x `sQuot` y = fst $ x `sQuotRem` y
   x `sRem`  y = snd $ x `sQuotRem` y
@@ -1282,7 +1283,7 @@ instance SDivisible SInteger where
     | True
     = ite (y .== 0) (0, x) (qE+i, rE-i*y)
     where (qE, rE) = liftQRem x y   -- for integers, this is euclidean due to SMTLib semantics
-          i = ite (x .>= 0 ||| rE .== 0) 0
+          i = ite (x .>= 0 .|| rE .== 0) 0
             $ ite (y .>  0)              1 (-1)
 
 -- Quickcheck interface
@@ -1356,7 +1357,7 @@ iteLazy t a b
   | Just r <- unliteral t = if r then a else b
   | True                  = symbolicMerge False t a b
 
--- | Symbolic assert. Check that the given boolean condition is always true in the given path. The
+-- | Symbolic assert. Check that the given boolean condition is always 'sTrue' in the given path. The
 -- optional first argument can be used to provide call-stack info via GHC's location facilities.
 sAssert :: Maybe CallStack -> String -> SBool -> SBV a -> SBV a
 sAssert cs msg cond x
@@ -1371,7 +1372,7 @@ sAssert cs msg cond x
                    let pc = getPathCondition st
                        -- We're checking if there are any cases where the path-condition holds, but not the condition
                        -- Any violations of this, should be signaled, i.e., whenever the following formula is satisfiable
-                       mustNeverHappen = pc &&& bnot cond
+                       mustNeverHappen = pc .&& sNot cond
                    cnd <- sbvToSW st mustNeverHappen
                    addAssertion st cs msg cnd
                    return xsw
@@ -1839,6 +1840,8 @@ class Metric a where
 
   -- | Generalization of 'Data.SBV.maximize'
   maximize :: MonadSymbolic m => String -> a -> m ()
+
+  {-# MINIMAL minimize, maximize #-}
 
 instance Metric SWord8   where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
 instance Metric SWord16  where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)

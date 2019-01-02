@@ -35,6 +35,6 @@ tests = testGroup "BitPrecise.Legato" [
                     cgSetDriverValues [87, 92]
                     x <- cgInput "x"
                     y <- cgInput "y"
-                    let (hi, lo) = runLegato (initMachine (x, y, 0, 0, 0, false, false))
+                    let (hi, lo) = runLegato (initMachine (x, y, 0, 0, 0, sFalse, sFalse))
                     cgOutput "hi" hi
                     cgOutput "lo" lo)

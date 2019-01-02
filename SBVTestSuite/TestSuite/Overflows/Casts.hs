@@ -128,7 +128,7 @@ chk mb cvt = do (x :: SBV a) <- free "x"
                     ix = sFromIntegral x
 
                     (ufCorrect, ovCorrect) = case mb of
-                                               Nothing       -> (uf .== false,            ov .== false)
-                                               Just (lb, ub) -> (uf <=> ix .< literal lb, ov <=> ix .> literal ub)
+                                               Nothing       -> (uf .== sFalse,            ov .== sFalse)
+                                               Just (lb, ub) -> (uf .<=> ix .< literal lb, ov .<=> ix .> literal ub)
 
-                return $ ufCorrect &&& ovCorrect
+                return $ ufCorrect .&& ovCorrect

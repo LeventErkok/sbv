@@ -41,8 +41,8 @@ q1 = do a <- sInteger "a"
 
         setOption $ ProduceInterpolants True
 
-        iConstraint "c1" $ a .== b &&& a .== c
-        iConstraint "c2" $ b .== d &&& bnot (c .== d)
+        iConstraint "c1" $ a .== b .&& a .== c
+        iConstraint "c2" $ b .== d .&& sNot (c .== d)
 
         query $ do _ <- checkSat
                    getInterpolant ["c1"]
@@ -59,8 +59,8 @@ q2 = do a <- sInteger "a"
 
         setOption $ ProduceInterpolants True
 
-        iConstraint "c1" $ f a .== c &&& f b .== d
-        iConstraint "c2" $   a .== b &&& g c ./= g d
+        iConstraint "c1" $ f a .== c .&& f b .== d
+        iConstraint "c2" $   a .== b .&& g c ./= g d
 
         query $ do _ <- checkSat
                    getInterpolant ["c1"]

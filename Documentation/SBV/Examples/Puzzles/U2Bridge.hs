@@ -181,7 +181,7 @@ move2 p1 p2 = do f  <- peek flash
                  l1 <- whereIs p1
                  l2 <- whereIs p2
                  -- only do the move if both people and the flash are at the same side
-                 whenS (f .== l1 &&& f .== l2) $ do bumpTime2 p1 p2
+                 whenS (f .== l1 .&& f .== l2) $ do bumpTime2 p1 p2
                                                     xferFlash
                                                     xferPerson p1
                                                     xferPerson p2
@@ -208,12 +208,12 @@ run = mapM step
 -- | Check if a given sequence of actions is valid, i.e., they must all
 -- cross the bridge according to the rules and in less than 17 seconds
 isValid :: Actions -> SBool
-isValid as = time end .<= 17 &&& bAll check as &&& zigZag (cycle [there, here]) (map flash states) &&& bAll (.== there) [lBono end, lEdge end, lAdam end, lLarry end]
-  where check (s, p1, p2) =   (bnot s ==> p1 .> p2)      -- for two person moves, ensure first person is "larger"
-                          &&& (s      ==> p2 .== bono)   -- for one person moves, ensure second person is always "bono"
+isValid as = time end .<= 17 .&& sAll check as .&& zigZag (cycle [there, here]) (map flash states) .&& sAll (.== there) [lBono end, lEdge end, lAdam end, lLarry end]
+  where check (s, p1, p2) =   (sNot s .=> p1 .> p2)      -- for two person moves, ensure first person is "larger"
+                          .&& (s      .=> p2 .== bono)   -- for one person moves, ensure second person is always "bono"
         states = evalState (run as) start
         end = last states
-        zigZag reqs locs = bAnd $ zipWith (.==) locs reqs
+        zigZag reqs locs = sAnd $ zipWith (.==) locs reqs
 
 -------------------------------------------------------------
 -- * Solving the puzzle

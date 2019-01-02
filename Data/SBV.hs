@@ -118,11 +118,11 @@ module Data.SBV (
   -- * Symbolic types
 
   -- ** Booleans
-    SBool, oneIf
-  -- *** The Boolean class
-  , Boolean(..)
-  -- *** Logical operations
-  , bAnd, bOr, bAny, bAll
+    SBool
+  -- *** Boolean values and functions
+  , sTrue, sFalse, sNot, (.&&), (.||), (.<+>), (.~&), (.~|), (.=>), (.<=>), fromBool, oneIf
+  -- *** Logical aggregations
+  , sAnd, sOr, sAny, sAll
   -- ** Bit-vectors
   -- *** Unsigned bit-vectors
   , SWord8, SWord16, SWord32, SWord64
@@ -323,8 +323,7 @@ import Data.SBV.Provers.Prover hiding (forAll_, forAll, forSome_, forSome,
 import Data.SBV.Client
 import Data.SBV.Client.BaseIO
 
-import Data.SBV.Utils.Boolean
-import Data.SBV.Utils.TDiff     (Timing(..))
+import Data.SBV.Utils.TDiff (Timing(..))
 
 import Data.Bits
 import Data.Int
@@ -416,8 +415,8 @@ We can use 'safe' to statically see if such a violation is possible before we us
 
 >>> safe (sub :: SInt8 -> SInt8 -> SInt8)
 [sub: x >= y must hold!: Violated. Model:
-  s0 = 6 :: Int8
-  s1 = 8 :: Int8]
+  s0 = 0 :: Int8
+  s1 = 1 :: Int8]
 
 What happens if we make sure to arrange for this invariant? Consider this version:
 
@@ -715,7 +714,7 @@ constraints are not vacuous, the functions 'isVacuous' (and 'isVacuousWith') can
 
 Also note that this semantics imply that test case generation ('Data.SBV.Tools.GenTest.genTest') and
 quick-check can take arbitrarily long in the presence of constraints, if the random input values generated
-rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'false'@.)
+rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'sFalse'@.)
 -}
 
 {- $constraintVacuity
@@ -875,7 +874,7 @@ is precisely equivalent to:
 
    > sum (map (\b -> ite b 1 0) [b0, b1, b2, b3]) .<= 2
 
-and they both express that at most /two/ of @b0@, @b1@, @b2@, and @b3@ can be 'true'.
+and they both express that at most /two/ of @b0@, @b1@, @b2@, and @b3@ can be 'sTrue'.
 However, the equivalent forms give rise to long formulas and the cardinality constraint
 can get lost in the translation. The idea here is that if you use these functions instead, SBV will
 produce better translations to SMTLib for more efficient solving of cardinality constraints, assuming
@@ -907,7 +906,7 @@ prove $ do a1 <- free "i1"
            a2 <- free "i2"
            let spec, res :: SWord8
                spec = a1 + a2
-               res  = ite (a1 .== 12 &&& a2 .== 22)   -- insert a malicious bug!
+               res  = ite (a1 .== 12 .&& a2 .== 22)   -- insert a malicious bug!
                           1
                           (a1 + a2)
            return $ observe "Expected" spec .== observe "Result" res

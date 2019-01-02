@@ -31,7 +31,7 @@ fastMaxCorrect x y = m .== fm
 -- | Formalizes <http://graphics.stanford.edu/~seander/bithacks.html#DetectOppositeSigns>
 oppositeSignsCorrect :: SInt32 -> SInt32 -> SBool
 oppositeSignsCorrect x y = r .== os
-  where r  = (x .< 0 &&& y .>= 0) ||| (x .>= 0 &&& y .< 0)
+  where r  = (x .< 0 .&& y .>= 0) .|| (x .>= 0 .&& y .< 0)
         os = (x `xor` y) .< 0
 
 -- | Formalizes <http://graphics.stanford.edu/~seander/bithacks.html#ConditionalSetOrClearBitsWithoutBranching>
@@ -43,10 +43,10 @@ conditionalSetClearCorrect f m w = r .== r'
 -- | Formalizes <http://graphics.stanford.edu/~seander/bithacks.html#DetermineIfPowerOf2>
 powerOfTwoCorrect :: SWord32 -> SBool
 powerOfTwoCorrect v = f .== s
-  where f = (v ./= 0) &&& ((v .&. (v-1)) .== 0);
+  where f = (v ./= 0) .&& ((v .&. (v-1)) .== 0);
         powers :: [Word32]
         powers = map ((2::Word32)^) [(0::Word32) .. 31]
-        s = bAny (v .==) $ map literal powers
+        s = sAny (v .==) $ map literal powers
 
 -- | Collection of queries
 queries :: IO ()

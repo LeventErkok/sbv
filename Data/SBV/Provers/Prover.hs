@@ -54,7 +54,6 @@ import qualified Data.Foldable   as S (toList)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.SMT.SMT
-import Data.SBV.Utils.Boolean
 import Data.SBV.Utils.ExtractIO
 import Data.SBV.Utils.TDiff
 import Data.SBV.Utils.PrettyNum
@@ -367,7 +366,7 @@ generateSMTBenchmark isSat a = do
 
       (_, res) <- runSymbolic (SMTMode ISetup isSat cfg) $ (if isSat then forSome_ else forAll_) a >>= output
 
-      let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode IRun isSat cfg) comments res
+      let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode IRun isSat cfg) QueryInternal comments res
           out                   = show (smtLibPgm cfg)
 
       return $ out ++ "\n(check-sat)\n"
@@ -384,10 +383,10 @@ checkNoOptimizations = do objectives <- Control.getObjectives
 -- If we get a program producing nothing (i.e., Symbolic ()), pretend it simply returns True.
 -- This is useful since min/max calls and constraints will provide the context
 instance ExtractIO m => MProvable m (SymbolicT m ()) where
-  forAll_    a = forAll_    ((a >> return true) :: SymbolicT m SBool)
-  forAll ns  a = forAll ns  ((a >> return true) :: SymbolicT m SBool)
-  forSome_   a = forSome_   ((a >> return true) :: SymbolicT m SBool)
-  forSome ns a = forSome ns ((a >> return true) :: SymbolicT m SBool)
+  forAll_    a = forAll_    ((a >> return sTrue) :: SymbolicT m SBool)
+  forAll ns  a = forAll ns  ((a >> return sTrue) :: SymbolicT m SBool)
+  forSome_   a = forSome_   ((a >> return sTrue) :: SymbolicT m SBool)
+  forSome ns a = forSome ns ((a >> return sTrue) :: SymbolicT m SBool)
 
 instance ExtractIO m => MProvable m (SymbolicT m SBool) where
   forAll_    = id

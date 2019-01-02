@@ -27,6 +27,7 @@ module Data.SBV.SMT.Utils (
 import qualified Control.Exception as C
 
 import Data.SBV.Core.Data
+import Data.SBV.Core.Symbolic (QueryContext)
 import Data.SBV.Utils.Lib (joinArgs)
 
 import Data.List (intercalate)
@@ -35,7 +36,8 @@ import qualified Data.Set as Set (Set)
 import System.Exit (ExitCode(..))
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
-type SMTLibConverter a =  Set.Set Kind                                  -- ^ Kinds used in the problem
+type SMTLibConverter a =  QueryContext                                  -- ^ Internal or external query?
+                       -> Set.Set Kind                                  -- ^ Kinds used in the problem
                        -> Bool                                          -- ^ is this a sat problem?
                        -> [String]                                      -- ^ extra comments to place on top
                        -> ([(Quantifier, NamedSymVar)], [NamedSymVar])  -- ^ inputs and aliasing names and trackers

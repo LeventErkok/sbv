@@ -37,7 +37,7 @@ test1 n = isTheorem $ do
                 r2 = (select :: [SWord8] -> SWord8 -> SWord8 -> SWord8) elts err ind2
                 r3 = slowSearch elts err ind
                 r4 = slowSearch elts err ind2
-            return $ r1 .== r3 &&& r2 .== r4
+            return $ r1 .== r3 .&& r2 .== r4
  where slowSearch elts err i = ite (i .< 0) err (go elts i)
          where go []     _      = err
                go (x:xs) curInd = ite (curInd .== 0) x (go xs (curInd - 1))
@@ -56,7 +56,7 @@ test2 n = isTheorem $ do
                 r2 = (select :: [(SWord8, SWord8)] -> (SWord8, SWord8) -> SWord8 -> (SWord8, SWord8)) elts err ind2
                 r3 = slowSearch elts err ind
                 r4 = slowSearch elts err ind2
-            return $ r1 .== r3 &&& r2 .== r4
+            return $ r1 .== r3 .&& r2 .== r4
  where slowSearch elts err i = ite (i .< 0) err (go elts i)
          where go []     _      = err
                go (x:xs) curInd = ite (curInd .== 0) x (go xs (curInd - 1))

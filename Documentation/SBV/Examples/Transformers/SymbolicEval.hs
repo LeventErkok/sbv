@@ -107,10 +107,10 @@ eval (Plus t1 t2)        = (+)  <$> eval t1 <*> eval t2
 eval (LessThan t1 t2)    = (.<) <$> eval t1 <*> eval t2
 eval (GreaterThan t1 t2) = (.>) <$> eval t1 <*> eval t2
 eval (Equals t1 t2)      = (.==) <$> eval t1 <*> eval t2
-eval (Not t)             = bnot <$> eval t
-eval (Or t1 t2)          = (|||) <$> eval t1 <*> eval t2
-eval (And t1 t2)         = (&&&) <$> eval t1 <*> eval t2
-eval (Implies t1 t2)     = (==>) <$> eval t1 <*> eval t2
+eval (Not t)             = sNot <$> eval t
+eval (Or t1 t2)          = (.||) <$> eval t1 <*> eval t2
+eval (And t1 t2)         = (.&&) <$> eval t1 <*> eval t2
+eval (Implies t1 t2)     = (.=>) <$> eval t1 <*> eval t2
 
 -- | Runs symbolic evaluation, sending a 'Term' to a symbolic value (or
 -- failing). Used for symbolic evaluation of programs and properties.
@@ -175,7 +175,7 @@ check program prop = runExceptT $ runSMTWith z3 $ do
     test <- lift $ mapExceptT generalize $ do
         res <- runProgramEval env program
         runPropertyEval res env prop
-    constrain $ bnot test
+    constrain $ sNot test
     query $ runQ $ mkQuery env
 
 -- * Some examples

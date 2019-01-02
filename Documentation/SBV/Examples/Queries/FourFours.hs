@@ -117,8 +117,8 @@ eval tree = case tree of
               F       -> return 4
 
   where binOp :: SBinOp -> SInteger -> SInteger -> Symbolic SInteger
-        binOp o l r = do constrain $ o .== literal Divide ==> r .== 4 ||| r .== 2
-                         constrain $ o .== literal Expt   ==> r .== 0
+        binOp o l r = do constrain $ o .== literal Divide .=> r .== 4 .|| r .== 2
+                         constrain $ o .== literal Expt   .=> r .== 0
                          return $ sCase o
                                     [ (Plus,    l+r)
                                     , (Minus,   l-r)
@@ -128,8 +128,8 @@ eval tree = case tree of
                                     ]
 
         uOp :: SUnOp -> SInteger -> Symbolic SInteger
-        uOp o v = do constrain $ o .== literal Sqrt      ==> v .== 4
-                     constrain $ o .== literal Factorial ==> v .== 4
+        uOp o v = do constrain $ o .== literal Sqrt      .=> v .== 4
+                     constrain $ o .== literal Factorial .=> v .== 4
                      return $ sCase o
                                 [ (Negate,    -v)
                                 , (Sqrt,       2)  -- argument is restricted to 4, so the value is 2

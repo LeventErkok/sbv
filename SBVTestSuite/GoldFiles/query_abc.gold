@@ -5,7 +5,7 @@
 ** Some incremental calls, such as pop, will be limited.
 [ISSUE] (set-option :diagnostic-output-channel "stdout")
 [ISSUE] (set-option :produce-models true)
-[ISSUE] (set-logic QF_BV)
+[ISSUE] (set-logic ALL) ; external query, using all logics.
 [ISSUE] ; --- uninterpreted sorts ---
 [ISSUE] ; --- literal constants ---
 [ISSUE] (define-fun s_2 () Bool false)

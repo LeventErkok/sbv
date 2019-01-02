@@ -35,7 +35,7 @@ tests =
 checkWith :: SMTConfig -> ([SBool] -> SBool) -> IO ()
 checkWith cfg spec = runSMTWith cfg{verbose=True} $ do
         bs <- sBools $ map (\i -> "b" ++ show i) [0..(9::Int)]
-        constrain $ bnot (spec bs)
+        constrain $ sNot (spec bs)
         query $ do cs <- checkSat
                    case cs of
                      Unsat -> return ()
@@ -69,8 +69,8 @@ propPbEq bs = pbEq ibs 7 .== (sum (map valIf ibs) .== (7::SInteger))
 -- Reported here as a bug <http://github.com/Z3Prover/z3/issues/1571>
 -- and SBV didn't catch this. So let's add it as a test case.
 propPbEq2 :: [SBool] -> SBool
-propPbEq2 bs = (c1 &&& c2) ==> (   ([a, b, c, d, e] .== [false, true, false, true, false])
-                               ||| ([a, b, c, d, e] .== [false, true, false, false, true]))
+propPbEq2 bs = (c1 .&& c2) .=> (   ([a, b, c, d, e] .== [sFalse, sTrue, sFalse, sTrue, sFalse])
+                               .|| ([a, b, c, d, e] .== [sFalse, sTrue, sFalse, sFalse, sTrue]))
   where ~(a : b : c : d : e : _) = take 5 bs
         c1 = ite a (pbEq [(1, b), (1, c)]         3) (pbEq [(1, b), (1, c)]         1)
         c2 = ite c (pbEq [(1, a), (1, d), (1, e)] 3) (pbEq [(1, a), (1, d), (1, e)] 1)

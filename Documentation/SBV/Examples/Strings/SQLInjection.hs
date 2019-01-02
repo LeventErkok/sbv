@@ -135,7 +135,7 @@ findInjection expr = runSMT $ do
     (_, queries) <- runWriterT (evalStateT (eval expr) env)
 
     -- For all the queries thus generated, ask that one of them be "explotiable"
-    constrain $ bAny (`R.match` exploitRe) queries
+    constrain $ sAny (`R.match` exploitRe) queries
 
     query $ do cs <- checkSat
                case cs of

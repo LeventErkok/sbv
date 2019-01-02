@@ -36,8 +36,6 @@ import Data.SBV.Core.AlgReals (algRealToSMTLib2)
 import Data.SBV.Utils.Lib (stringToQFS)
 
 -- | PrettyNum class captures printing of numbers in hex and binary formats; also supporting negative numbers.
---
--- Minimal complete definition: 'hexS' and 'binS'
 class PrettyNum a where
   -- | Show a number in hexadecimal (starting with @0x@ and type.)
   hexS :: a -> String

@@ -27,7 +27,7 @@ raw a v m = readArray (writeArray m a v) a .== v
 
 -- | if read from a place you didn't write to, the result doesn't change
 rawd :: SymArray m => Address -> Address -> Value -> Memory m -> SBool
-rawd a b v m = a ./= b ==> readArray (writeArray m a v) b .== readArray m b
+rawd a b v m = a ./= b .=> readArray (writeArray m a v) b .== readArray m b
 
 -- | write-after-write: If you write to the same location twice, then the first one is ignored
 waw :: SymArray m => Address -> Value -> Value -> Memory m -> Address -> SBool
@@ -38,7 +38,7 @@ waw a v1 v2 m0 i = readArray m2 i .== readArray m3 i
 
 -- | Two writes to different locations commute, i.e., can be done in any order
 wcommutesGood :: SymArray m => (Address, Value) -> (Address, Value) -> Memory m -> Address -> SBool
-wcommutesGood (a, x) (b, y) m i = a ./= b ==> wcommutesBad (a, x) (b, y) m i
+wcommutesGood (a, x) (b, y) m i = a ./= b .=> wcommutesBad (a, x) (b, y) m i
 
 -- | Two writes do not commute if they can be done to the same location
 wcommutesBad :: SymArray m => (Address, Value) -> (Address, Value) -> Memory m -> Address -> SBool
@@ -52,20 +52,20 @@ wcommutesBad (a, x) (b, y) m i = readArray m0 i .== readArray m1 i
 -- quantifier here.
 extensionality :: (SymArray m, EqSymbolic (Memory m)) => Memory m -> Memory m -> Predicate
 extensionality m1 m2 = do i <- exists_
-                          return $ (readArray m1 i ./= readArray m2 i) ||| m1 .== m2
+                          return $ (readArray m1 i ./= readArray m2 i) .|| m1 .== m2
 
 -- | Extensionality, second variant. Expressible for both kinds of arrays.
 extensionality2 :: SymArray m => Memory m -> Memory m -> Address -> Predicate
 extensionality2 m1 m2 i = do j <- exists_
-                             return $ (readArray m1 j ./= readArray m2 j) ||| readArray m1 i .== readArray m2 i
+                             return $ (readArray m1 j ./= readArray m2 j) .|| readArray m1 i .== readArray m2 i
 
 -- | Merge, using memory equality to check result
 mergeEq :: (SymArray m, Mergeable (Memory m), EqSymbolic (Memory m)) => SBool -> Memory m  -> Memory m -> SBool
-mergeEq b m1 m2 = ite b m1 m2 .== ite (bnot b) m2 m1
+mergeEq b m1 m2 = ite b m1 m2 .== ite (sNot b) m2 m1
 
 -- | Merge, using extensionality to check result
 mergeExt :: (SymArray m, Mergeable (Memory m)) => SBool -> Memory m -> Memory m -> Address -> SBool
-mergeExt b m1 m2 i = readArray (ite b m1 m2) i .== readArray (ite (bnot b) m2 m1) i
+mergeExt b m1 m2 i = readArray (ite b m1 m2) i .== readArray (ite (sNot b) m2 m1) i
 
 -- | Merge semantics
 mergeSem :: (SymArray m, Mergeable (Memory m)) => SBool -> Memory m -> Memory m -> Address -> SBool

@@ -53,7 +53,7 @@ diffCount x y = count $ zipWith (.==) (blastLE x) (blastLE y)
 
 crcGood :: SWord8 -> SWord16 -> SWord48 -> SWord48 -> SBool
 crcGood hd divisor sent received =
-     sent ./= received ==> diffCount frameSent frameReceived .> hd
+     sent ./= received .=> diffCount frameSent frameReceived .> hd
    where frameSent     = mkFrame poly sent
          frameReceived = mkFrame poly received
          poly          = mkPoly divisor

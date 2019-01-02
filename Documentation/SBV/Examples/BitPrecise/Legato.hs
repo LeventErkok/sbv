@@ -125,7 +125,7 @@ poke a v m = m {memory = memory m // [(a, v)]}
 -- by this function. Note that we verify the correctness of this check
 -- separately below in `checkOverflowCorrect`.
 checkOverflow :: SWord8 -> SWord8 -> SBool -> SBool
-checkOverflow x y c = s .< x ||| s .< y ||| s' .< s
+checkOverflow x y c = s .< x .|| s .< y .|| s' .< s
   where s  = x + y
         s' = s + ite c 1 0
 
@@ -159,7 +159,7 @@ lda v k = k . setReg RegA v
 
 -- | CLC: Clear the carry flag
 clc :: Instruction
-clc k = k . setFlag FlagC false
+clc k = k . setFlag FlagC sFalse
 
 -- | ROR, memory version: Rotate the value at memory location @a@
 -- to the right by 1 bit, using the carry flag as a transfer position.
@@ -182,9 +182,9 @@ rorR r k m = k . setFlag FlagC c' . setReg r v' $ m
         v' = setBitTo (v `rotateR` 1) 7 c
         c' = sTestBit v 0
 
--- | BCC: branch to label @l@ if the carry flag is false
+-- | BCC: branch to label @l@ if the carry flag is sFalse
 bcc :: Program -> Instruction
-bcc l k m = ite (c .== false) (l m) (k m)
+bcc l k m = ite (c .== sFalse) (l m) (k m)
   where c = getFlag FlagC m
 
 -- | ADC: Increment the value of register @A@ by the value of memory contents
@@ -202,9 +202,9 @@ dex :: Instruction
 dex k m = k . setFlag FlagZ (x .== 0) . setReg RegX x $ m
   where x = getReg RegX m - 1
 
--- | BNE: Branch if the zero-flag is false
+-- | BNE: Branch if the zero-flag is sFalse
 bne :: Program -> Instruction
-bne l k m = ite (z .== false) (l m) (k m)
+bne l k m = ite (z .== sFalse) (l m) (k m)
   where z = getFlag FlagZ m
 
 -- | The 'end' combinator "stops" our program, providing the final continuation
@@ -303,7 +303,7 @@ legatoInC :: IO ()
 legatoInC = compileToC Nothing "runLegato" $ do
                 x <- cgInput "x"
                 y <- cgInput "y"
-                let (hi, lo) = runLegato (initMachine (x, y, 0, 0, 0, false, false))
+                let (hi, lo) = runLegato (initMachine (x, y, 0, 0, 0, sFalse, sFalse))
                 cgOutput "hi" hi
                 cgOutput "lo" lo
 
