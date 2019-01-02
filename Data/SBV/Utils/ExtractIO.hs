@@ -40,10 +40,10 @@ instance ExtractIO m => ExtractIO (MaybeT m) where
 instance ExtractIO m => ExtractIO (ExceptT e m) where
     extractIO = fmap ExceptT . extractIO . runExceptT
 
--- | IO extraction for lazy 'WriterT'.
+-- | IO extraction for lazy 'LW.WriterT'.
 instance (Monoid w, ExtractIO m) => ExtractIO (LW.WriterT w m) where
     extractIO = fmap LW.WriterT . extractIO . LW.runWriterT
 
--- | IO extraction for strict 'WriterT'.
+-- | IO extraction for strict 'SW.WriterT'.
 instance (Monoid w, ExtractIO m) => ExtractIO (SW.WriterT w m) where
     extractIO = fmap SW.WriterT . extractIO . SW.runWriterT
