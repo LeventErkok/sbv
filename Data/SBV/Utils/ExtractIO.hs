@@ -28,17 +28,22 @@ class MonadIO m => ExtractIO m where
     -- | Law: the @m a@ yielded by 'IO' is pure with respect to 'IO'.
     extractIO :: m a -> IO (m a)
 
+-- | Trivial IO extraction for 'IO'.
 instance ExtractIO IO where
     extractIO = pure
 
+-- | IO extraction for 'MaybeT'.
 instance ExtractIO m => ExtractIO (MaybeT m) where
     extractIO = fmap MaybeT . extractIO . runMaybeT
 
+-- | IO extraction for 'ExceptT'.
 instance ExtractIO m => ExtractIO (ExceptT e m) where
     extractIO = fmap ExceptT . extractIO . runExceptT
 
+-- | IO extraction for lazy 'WriterT'.
 instance (Monoid w, ExtractIO m) => ExtractIO (LW.WriterT w m) where
     extractIO = fmap LW.WriterT . extractIO . LW.runWriterT
 
+-- | IO extraction for strict 'WriterT'.
 instance (Monoid w, ExtractIO m) => ExtractIO (SW.WriterT w m) where
     extractIO = fmap SW.WriterT . extractIO . SW.runWriterT
