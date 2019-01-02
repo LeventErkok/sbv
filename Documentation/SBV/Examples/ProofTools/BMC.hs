@@ -28,18 +28,17 @@ import Data.SBV.Control
 
 -- * System state
 
--- | System state. We simply have two components, parameterized
--- over the type so we can put in both concrete and symbolic values.
-data S a = S { x :: a, y :: a }
+-- | System state, containing the two integers.
+data S = S { x :: SInteger, y :: SInteger }
 
 -- | Symbolic equality for @S@.
-instance EqSymbolic a => EqSymbolic (S a) where
+instance EqSymbolic S where
    S {x = x1, y = y1} .== S {x = x2, y = y2} = x1 .== x2 .&& y1 .== y2
 
 -- * Encoding the problem
 
 -- | We parameterize over the initial state for different variations.
-problem :: Int -> (S SInteger -> SBool) -> IO (Either String (Int, [(Integer, Integer)]))
+problem :: Int -> (S -> SBool) -> IO (Either String (Int, [(Integer, Integer)]))
 problem lim initial = bmc (Just lim) True setup fresh extract initial trans goal
   where
         -- This is where we would put solver options, typically via
@@ -49,22 +48,22 @@ problem lim initial = bmc (Just lim) True setup fresh extract initial trans goal
         setup = return ()
 
         -- Getting a new state:
-        fresh :: Query (S SInteger)
+        fresh :: Query S
         fresh = S <$> freshVar_ <*> freshVar_
 
         -- Extracting the state into what we want to observe
-        extract :: S SInteger -> Query (Integer, Integer)
+        extract :: S -> Query (Integer, Integer)
         extract S{x, y} = (,) <$> getValue x <*> getValue y
 
         -- Transition relation: At each step we either
         -- get to increase @x@ by 2, or decrement @y@ by 4:
-        trans :: S SInteger -> [S SInteger]
+        trans :: S -> [S]
         trans S{x, y} = [ S { x = x + 2, y = y     }
                         , S { x = x,     y = y - 4 }
                         ]
 
         -- Goal state is when @x@ equals @y@:
-        goal :: S SInteger -> SBool
+        goal :: S -> SBool
         goal S{x, y} = x .== y
 
 -- * Examples
@@ -86,7 +85,7 @@ problem lim initial = bmc (Just lim) True setup fresh extract initial trans goal
 -- our goal.)
 ex1 :: IO (Either String (Int, [(Integer, Integer)]))
 ex1 = problem 10 isInitial
-  where isInitial :: S SInteger -> SBool
+  where isInitial :: S -> SBool
         isInitial S{x, y} = x .== 0 .&& y .== 10
 
 -- | Example 2: We start from @x=0@, @y=11@, and search up to depth @10@. We have:
@@ -112,5 +111,5 @@ ex1 = problem 10 isInitial
 -- remains that BMC is just not capable of establishing inductive facts.
 ex2 :: IO (Either String (Int, [(Integer, Integer)]))
 ex2 = problem 10 isInitial
-  where isInitial :: S SInteger -> SBool
+  where isInitial :: S -> SBool
         isInitial S{x, y} = x .== 0 .&& y .== 11
