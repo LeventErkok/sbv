@@ -8,6 +8,16 @@
 --
 -- A demonstration of the use of the 'SymbolicT' and 'QueryT' transformers in
 -- the setting of symbolic program evaluation.
+--
+-- In this example, we perform symbolic evaluation across three steps:
+--
+-- 1. allocate free variables, so we can extract a model after evaluation
+-- 2. perform symbolic evaluation of a program and an associated property
+-- 3. querying the solver for whether it's possible to find a set of program
+--    inputs that falsify the property. if there is, we extract a model.
+--
+-- To simplify the example, our programs always have exactly two integer inputs
+-- named @x@ and @y@.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DeriveFunctor              #-}
@@ -31,10 +41,12 @@ import Data.SBV.Trans.Control
 
 -- * Allocation of symbolic variables, so we can extract a model later.
 
+-- | Monad for allocating free variables.
 newtype Alloc a = Alloc { runAlloc :: SymbolicT (ExceptT String IO) a }
     deriving (Functor, Applicative, Monad, MonadIO,
               MonadError String, MonadSymbolic)
 
+-- | Environment holding allocated variables.
 data Env = Env { envX   :: SBV Integer
                , envY   :: SBV Integer
                , result :: Maybe SVal -- could be integer or bool. during
@@ -44,10 +56,12 @@ data Env = Env { envX   :: SBV Integer
                }
     deriving (Eq, Show)
 
+-- | Allocate an integer variable with the provided name.
 alloc :: String -> Alloc (SBV Integer)
 alloc "" = throwError "tried to allocate unnamed value"
 alloc nm = free nm
 
+-- | Allocate an 'Env' holding all input variables for the program.
 allocEnv :: Alloc Env
 allocEnv = do
     x <- alloc "x"
@@ -56,6 +70,7 @@ allocEnv = do
 
 -- * Symbolic term evaluation
 
+-- | The term language we use to express programs and properties.
 data Term :: * -> * where
     Var         :: String                       -> Term r
     Lit         :: Integer                      -> Term Integer
@@ -68,14 +83,17 @@ data Term :: * -> * where
     And         :: Term Bool    -> Term Bool    -> Term Bool
     Implies     :: Term Bool    -> Term Bool    -> Term Bool
 
+-- | Monad for performing symbolic evaluation.
 newtype Eval a = Eval { unEval :: ReaderT Env (Except String) a }
     deriving (Functor, Applicative, Monad,
               MonadReader Env, MonadError String)
 
--- Unsafe. In real code, we would check types.
+-- | Unsafe cast for symbolic values. In production code, we would check types
+-- instead.
 unsafeCastSBV :: SBV a -> SBV b
 unsafeCastSBV = SBV . unSBV
 
+-- | Symbolic evaluation function for 'Term'.
 eval :: Term r -> Eval (SBV r)
 eval (Var "x")           = unsafeCastSBV . envX <$> ask
 eval (Var "y")           = unsafeCastSBV . envY <$> ask
@@ -94,39 +112,53 @@ eval (Or t1 t2)          = (|||) <$> eval t1 <*> eval t2
 eval (And t1 t2)         = (&&&) <$> eval t1 <*> eval t2
 eval (Implies t1 t2)     = (==>) <$> eval t1 <*> eval t2
 
+-- | Runs symbolic evaluation, sending a 'Term' to a symbolic value (or
+-- failing). Used for symbolic evaluation of programs and properties.
 runEval :: Env -> Term a -> Except String (SBV a)
 runEval env term = runReaderT (unEval $ eval term) env
 
+-- | A program that can reference two input variables, @x@ and @y@.
 newtype Program a = Program (Term a)
 
+-- | A symbolic value representing the result of running a program -- its
+-- output.
 newtype Result = Result SVal
 
+-- | Makes a 'Result' from a symbolic value.
 mkResult :: SBV a -> Result
 mkResult = Result . unSBV
 
+-- | Performs symbolic evaluation of a 'Program'.
 runProgramEval :: Env -> Program a -> Except String Result
 runProgramEval env (Program term) = mkResult <$> runEval env term
 
 -- * Property evaluation
 
+-- | A property describes a quality of a 'Program'. It is a 'Term' yields a
+-- boolean value.
 newtype Property = Property (Term Bool)
 
+-- | Performs symbolic evaluation of a 'Property.
 runPropertyEval :: Result -> Env -> Property -> Except String (SBV Bool)
 runPropertyEval (Result res) env (Property term) =
     runEval (env { result = Just res }) term
 
 -- * Checking whether a program satisfies a property
 
+-- | The result of 'check'ing the combination of a 'Program' and a 'Property'.
 data CheckResult = Proved | Counterexample Integer Integer
     deriving (Eq, Show)
 
+-- | Sends an 'Identity' computation to an arbitrary monadic computation.
 generalize :: Monad m => Identity a -> m a
 generalize = pure . runIdentity
 
+-- | Monad for querying a solver.
 newtype Q a = Q { runQ :: QueryT (ExceptT String IO) a }
     deriving (Functor, Applicative, Monad, MonadIO,
               MonadError String, MonadQuery)
 
+-- | Creates a computation that queries a solver and yields a 'CheckResult'.
 mkQuery :: Env -> Q CheckResult
 mkQuery env = do
     satResult <- checkSat
@@ -136,6 +168,7 @@ mkQuery env = do
         Unsat -> pure Proved
         Unk   -> throwError "unknown"
 
+-- | Checks a 'Property' of a 'Program' (or fails).
 check :: Program a -> Property -> IO (Either String CheckResult)
 check program prop = runExceptT $ runSMTWith z3 $ do
     env <- runAlloc allocEnv
