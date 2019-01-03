@@ -171,6 +171,8 @@ data Op = Plus
         | OverflowOp    OvOp                    -- Overflow-ops, categorized separately
         | StrOp StrOp                           -- String ops, categorized separately
         | SeqOp SeqOp                           -- Sequence ops, categorized separately
+        | TupleConstructor Int                  -- Construct an n-tuple
+        | TupleAccess Int                       -- Access element i of a tuple
         deriving (Eq, Ord)
 
 -- | Floating point operations
@@ -384,16 +386,18 @@ instance Show Op where
   show (LkUp (ti, at, rt, l) i e)
         = "lookup(" ++ tinfo ++ ", " ++ show i ++ ", " ++ show e ++ ")"
         where tinfo = "table" ++ show ti ++ "(" ++ show at ++ " -> " ++ show rt ++ ", " ++ show l ++ ")"
-  show (ArrEq i j)       = "array_" ++ show i ++ " == array_" ++ show j
-  show (ArrRead i)       = "select array_" ++ show i
-  show (KindCast fr to)  = "cast_" ++ show fr ++ "_" ++ show to
-  show (Uninterpreted i) = "[uninterpreted] " ++ i
-  show (Label s)         = "[label] " ++ s
-  show (IEEEFP w)        = show w
-  show (PseudoBoolean p) = show p
-  show (OverflowOp o)    = show o
-  show (StrOp s)         = show s
-  show (SeqOp s)         = show s
+  show (ArrEq i j)          = "array_" ++ show i ++ " == array_" ++ show j
+  show (ArrRead i)          = "select array_" ++ show i
+  show (KindCast fr to)     = "cast_" ++ show fr ++ "_" ++ show to
+  show (Uninterpreted i)    = "[uninterpreted] " ++ i
+  show (Label s)            = "[label] " ++ s
+  show (IEEEFP w)           = show w
+  show (PseudoBoolean p)    = show p
+  show (OverflowOp o)       = show o
+  show (StrOp s)            = show s
+  show (SeqOp s)            = show s
+  show (TupleConstructor n) = "mk-tup-" ++ show n
+  show (TupleAccess      i) = "proj-" ++ show i
   show op
     | Just s <- op `lookup` syms = s
     | True                       = error "impossible happened; can't find op!"

@@ -9,14 +9,19 @@
 -- Internal data-structures for the sbv library
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE DefaultSignatures    #-}
+{-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans    #-}
 
-module Data.SBV.Core.Kind (Kind(..), HasKind(..), constructUKind, smtType) where
+module Data.SBV.Core.Kind (HList(..), Kind(..), HasKind(..), constructUKind, smtType) where
 
 import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
 
@@ -41,7 +46,22 @@ data Kind = KBool
           | KChar
           | KString
           | KList Kind
+          | KTuple [ Kind ]
           deriving (Eq, Ord)
+
+-- | A heterogeneous list (a sequence of values of different types).
+data family HList (l :: [*])
+
+data instance HList '[] = HNil
+data instance HList (x ': xs) = x :% HList xs
+
+infixr :%
+
+deriving instance Eq (HList '[])
+deriving instance (Eq x, Eq (HList xs)) => Eq (HList (x ': xs))
+
+deriving instance Ord (HList '[])
+deriving instance (Ord x, Ord (HList xs)) => Ord (HList (x ': xs))
 
 -- | The interesting about the show instance is that it can tell apart two kinds nicely; since it conveniently
 -- ignores the enumeration constructors. Also, when we construct a 'KUserSort', we make sure we don't use any of
@@ -58,6 +78,7 @@ instance Show Kind where
   show KString            = "SString"
   show KChar              = "SChar"
   show (KList e)          = "[" ++ show e ++ "]"
+  show (KTuple m)         = "(" ++ intercalate ", " (show <$> m) ++ ")"
 
 -- | How the type maps to SMT land
 smtType :: Kind -> String
@@ -71,6 +92,7 @@ smtType KString         = "String"
 smtType KChar           = "(_ BitVec 8)"
 smtType (KList k)       = "(Seq " ++ smtType k ++ ")"
 smtType (KUserSort s _) = s
+smtType (KTuple kinds)  = "(tup-" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
 
 instance Eq  G.DataType where
    a == b = G.tyconUQname (G.dataTypeName a) == G.tyconUQname (G.dataTypeName b)
@@ -92,6 +114,7 @@ kindHasSign k =
     KString      -> False
     KChar        -> False
     KList{}      -> False
+    KTuple{}     -> False
 
 -- | Construct an uninterpreted/enumerated kind from a piece of data; we distinguish simple enumerations as those
 -- are mapped to proper SMT-Lib2 data-types; while others go completely uninterpreted
@@ -138,6 +161,7 @@ class HasKind a where
   isChar          :: a -> Bool
   isString        :: a -> Bool
   isList          :: a -> Bool
+  isTuple         :: a -> Bool
   showType        :: a -> String
   -- defaults
   hasSign x = kindHasSign (kindOf x)
@@ -153,6 +177,7 @@ class HasKind a where
                   KString       -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KChar         -> error "SBV.HasKind.intSizeOf((S)Char)"
                   KList ek      -> error $ "SBV.HasKind.intSizeOf((S)List)" ++ show ek
+                  KTuple tys    -> error $ "SBV.HasKind.intSizeOf((S)Tuple)" ++ show tys
 
   isBoolean       x | KBool{}      <- kindOf x = True
                     | True                     = False
@@ -184,6 +209,9 @@ class HasKind a where
   isList          x | KList{}      <- kindOf x = True
                     | True                     = False
 
+  isTuple         x | KTuple{}     <- kindOf x = True
+                    | True                     = False
+
   showType = show . kindOf
 
   -- default signature for uninterpreted/enumerated kinds
@@ -211,3 +239,11 @@ instance (Typeable a, HasKind a) => HasKind [a] where
 
 instance HasKind Kind where
   kindOf = id
+
+instance HasKind (HList '[]) where
+  kindOf _ = KTuple []
+
+instance (HasKind x, HasKind (HList xs)) => HasKind (HList (x ': xs)) where
+  kindOf _ = case kindOf (undefined :: HList xs) of
+    KTuple ks -> KTuple $ kindOf (undefined :: x) : ks
+    other     -> error $ "SBV.HasKind(HList) not a tuple: " ++ show other

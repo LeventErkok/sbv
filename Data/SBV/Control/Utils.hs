@@ -36,7 +36,7 @@ module Data.SBV.Control.Utils (
      ) where
 
 import Data.Maybe (isJust)
-import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate)
+import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, isPrefixOf)
 
 import Data.Char     (isPunctuation, isSpace, chr, ord)
 import Data.Function (on)
@@ -90,6 +90,7 @@ import qualified Data.Set as Set (toList)
 import qualified Control.Exception as C
 
 import GHC.Stack
+import Text.Read (readMaybe)
 
 import Unsafe.Coerce (unsafeCoerce) -- Only used safely!
 
@@ -446,7 +447,18 @@ recoverKindedValue k e = case e of
                            ECon    s | isString        k -> Just $ CW KString  (CWString   (interpretString s))
                            ECon    s | isUninterpreted k -> Just $ CW k        (CWUserSort (getUIIndex k s, s))
                            _         | isList          k -> Just $ CW k        (CWList     (interpretList e))
-                           _                             -> Nothing
+
+                           -- eg `(mk-tup-3 a b c)`
+                           EApp (ECon f:args)
+                             | "mk-tup-" `isPrefixOf` f
+                             , Just n <- readMaybe (drop 7 f)
+                             , length args == n
+                             , KTuple argks <- k
+                             -> CW k . CWTuple . fmap cwVal <$> traverse
+                               (uncurry recoverKindedValue)
+                               (zip argks args)
+
+                           _ -> Nothing
   where isIntegralLike = or [f k | f <- [isBoolean, isBounded, isInteger, isReal, isFloat, isDouble]]
 
         getUIIndex (KUserSort  _ (Right xs)) i = i `elemIndex` xs
