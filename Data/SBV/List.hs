@@ -183,9 +183,9 @@ a .: as = singleton a .++ as
 --
 -- >>> sat $ \x y z -> length x .== 5 .&& length y .== 1 .&& x .++ y .++ z .== [1 .. 12]
 -- Satisfiable. Model:
---   s0 =      [1,2,3,4,5] :: [SInteger]
---   s1 =              [6] :: [SInteger]
---   s2 = [7,8,9,10,11,12] :: [SInteger]
+--   s0 =      [1,2,3,4,5] :: [Integer]
+--   s1 =              [6] :: [Integer]
+--   s2 = [7,8,9,10,11,12] :: [Integer]
 infixr 5 .++
 (.++) :: SymWord a => SList a -> SList a -> SList a
 (.++) = concat
