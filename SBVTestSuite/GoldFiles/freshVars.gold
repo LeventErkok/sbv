@@ -211,8 +211,8 @@
   mustBe42 =                   42 :: Integer
   mustBeX  =                  'X' :: Char
   vString  =              "hello" :: String
-  vList1   =            [1,2,3,4] :: [SInteger]
-  vList2   =  [[1,2,3],[4,5,6,7]] :: [[SInteger]]
-  vList3   =                [1,2] :: [SWord8]
-  vList4   = [[1,2,3],[],[4,5,6]] :: [[SWord16]]
+  vList1   =            [1,2,3,4] :: [Integer]
+  vList2   =  [[1,2,3],[4,5,6,7]] :: [[Integer]]
+  vList3   =                [1,2] :: [Word8]
+  vList4   = [[1,2,3],[],[4,5,6]] :: [[Word16]]
 DONE!
