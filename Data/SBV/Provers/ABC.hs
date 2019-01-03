@@ -23,6 +23,7 @@ abc :: SMTSolver
 abc = SMTSolver {
            name         = ABC
          , executable   = "abc"
+         , preprocess   = id
          , options      = const ["-S", "%blast; &sweep -C 5000; &syn4; &cec -s -m -C 2000"]
          , engine       = standardEngine "SBV_ABC" "SBV_ABC_OPTIONS"
          , capabilities = SolverCapabilities {

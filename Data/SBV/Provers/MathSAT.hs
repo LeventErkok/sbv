@@ -25,6 +25,7 @@ mathSAT :: SMTSolver
 mathSAT = SMTSolver {
            name         = MathSAT
          , executable   = "mathsat"
+         , preprocess   = id
          , options      = modConfig ["-input=smt2", "-theory.fp.minmax_zero_mode=4"]
          , engine       = standardEngine "SBV_MATHSAT" "SBV_MATHSAT_OPTIONS"
          , capabilities = SolverCapabilities {

@@ -13,6 +13,8 @@
 
 module Data.SBV.Provers.CVC4(cvc4) where
 
+import Data.Char (isSpace)
+
 import Data.SBV.Core.Data
 import Data.SBV.SMT.SMT
 
@@ -23,6 +25,7 @@ cvc4 :: SMTSolver
 cvc4 = SMTSolver {
            name         = CVC4
          , executable   = "cvc4"
+         , preprocess   = clean
          , options      = const ["--lang", "smt", "--incremental", "--interactive", "--no-interactive-prompt"]
          , engine       = standardEngine "SBV_CVC4" "SBV_CVC4_OPTIONS"
          , capabilities = SolverCapabilities {
@@ -39,3 +42,13 @@ cvc4 = SMTSolver {
                               , supportsFlattenedSequences = Nothing
                               }
          }
+  where -- CVC4 wants all input on one line
+        clean = map simpleSpace . noComment
+
+        noComment ""       = ""
+        noComment (';':cs) = noComment $ dropWhile (/= '\n') cs
+        noComment (c:cs)   = c : noComment cs
+
+        simpleSpace c
+          | isSpace c = ' '
+          | True      = c

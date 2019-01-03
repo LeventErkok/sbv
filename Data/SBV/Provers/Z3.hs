@@ -23,6 +23,7 @@ z3 :: SMTSolver
 z3 = SMTSolver {
            name         = Z3
          , executable   = "z3"
+         , preprocess   = id
          , options      = modConfig ["-nw", "-in", "-smt2"]
          , engine       = standardEngine "SBV_Z3" "SBV_Z3_OPTIONS"
          , capabilities = SolverCapabilities {

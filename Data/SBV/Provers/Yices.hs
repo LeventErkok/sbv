@@ -23,6 +23,7 @@ yices :: SMTSolver
 yices = SMTSolver {
            name         = Yices
          , executable   = "yices-smt2"
+         , preprocess   = id
          , options      = const ["--incremental"]
          , engine       = standardEngine "SBV_YICES" "SBV_YICES_OPTIONS"
          , capabilities = SolverCapabilities {
