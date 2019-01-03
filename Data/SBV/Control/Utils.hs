@@ -381,6 +381,61 @@ instance (SMTValue a, Typeable a) => SMTValue [a] where
 
    sexprToVal _                                       = Nothing
 
+-- | Convert a sexpr of n-tuple to constituent sexprs. Z3 and CVC4 differ here on how they
+-- present tuples, so we accommodate both:
+sexprToTuple :: Int -> SExpr -> [SExpr]
+sexprToTuple n e = try e
+  where -- Z3 way
+        try (EApp (ECon f : args)) = case splitAt (length "mkSBVTuple") f of
+                                       ("mkSBVTuple", c) | all isDigit c && read c == n && length args == n -> args
+                                       _  -> bad
+        -- CVC4 way
+        try  (EApp (EApp [ECon "as", ECon f, _] : args)) = try (EApp (ECon f : args))
+        try  _ = bad
+        bad = error $ "Data.SBV.sexprToTuple: Impossible: Expected a constructor for " ++ show n ++ " tuple, but got: " ++ show e
+
+-- 2-tuple
+instance (SMTValue a, SMTValue b) => SMTValue (a, b) where
+   sexprToVal s = case sexprToTuple 2 s of
+                    [a, b] -> (,) <$> sexprToVal a <*> sexprToVal b
+                    _      -> Nothing
+
+-- 3-tuple
+instance (SMTValue a, SMTValue b, SMTValue c) => SMTValue (a, b, c) where
+   sexprToVal s = case sexprToTuple 3 s of
+                    [a, b, c] -> (,,) <$> sexprToVal a <*> sexprToVal b <*> sexprToVal c
+                    _         -> Nothing
+
+-- 4-tuple
+instance (SMTValue a, SMTValue b, SMTValue c, SMTValue d) => SMTValue (a, b, c, d) where
+   sexprToVal s = case sexprToTuple 4 s of
+                    [a, b, c, d] -> (,,,) <$> sexprToVal a <*> sexprToVal b <*> sexprToVal c <*> sexprToVal d
+                    _            -> Nothing
+
+-- 5-tuple
+instance (SMTValue a, SMTValue b, SMTValue c, SMTValue d, SMTValue e) => SMTValue (a, b, c, d, e) where
+   sexprToVal s = case sexprToTuple 5 s of
+                    [a, b, c, d, e] -> (,,,,) <$> sexprToVal a <*> sexprToVal b <*> sexprToVal c <*> sexprToVal d <*> sexprToVal e
+                    _               -> Nothing
+
+-- 6-tuple
+instance (SMTValue a, SMTValue b, SMTValue c, SMTValue d, SMTValue e, SMTValue f) => SMTValue (a, b, c, d, e, f) where
+   sexprToVal s = case sexprToTuple 6 s of
+                    [a, b, c, d, e, f] -> (,,,,,) <$> sexprToVal a <*> sexprToVal b <*> sexprToVal c <*> sexprToVal d <*> sexprToVal e <*> sexprToVal f
+                    _                  -> Nothing
+
+-- 7-tuple
+instance (SMTValue a, SMTValue b, SMTValue c, SMTValue d, SMTValue e, SMTValue f, SMTValue g) => SMTValue (a, b, c, d, e, f, g) where
+   sexprToVal s = case sexprToTuple 7 s of
+                    [a, b, c, d, e, f, g] -> (,,,,,,) <$> sexprToVal a <*> sexprToVal b <*> sexprToVal c <*> sexprToVal d <*> sexprToVal e <*> sexprToVal f <*> sexprToVal g
+                    _                     -> Nothing
+
+-- 8-tuple
+instance (SMTValue a, SMTValue b, SMTValue c, SMTValue d, SMTValue e, SMTValue f, SMTValue g, SMTValue h) => SMTValue (a, b, c, d, e, f, g, h) where
+   sexprToVal s = case sexprToTuple 8 s of
+                    [a, b, c, d, e, f, g, h] -> (,,,,,,,) <$> sexprToVal a <*> sexprToVal b <*> sexprToVal c <*> sexprToVal d <*> sexprToVal e <*> sexprToVal f <*> sexprToVal g <*> sexprToVal h
+                    _                        -> Nothing
+
 -- | Generalization of 'Data.SBV.Control.getValue'
 getValue :: (MonadIO m, MonadQuery m, SMTValue a) => SBV a -> m a
 getValue s = do sw <- inNewContext (`sbvToSW` s)
@@ -490,14 +545,14 @@ recoverKindedValue k e = case e of
                        KList ik -> ik
                        _        -> error $ "Impossible: Expected a sequence kind, but got: " ++ show k
 
-        -- Z3 way
-        interpretTuple te@(EApp (ECon f : args)) = case splitAt (length "mkSBVTuple") f of
-                                                     ("mkSBVTuple", c) | all isDigit c && read c == n && length args == n
-                                                         -> walk (1 :: Int) (zipWith recoverKindedValue ks args) []
-                                                     _   -> error $ "Impossible: Expected a " ++ show k ++ " constructor, but got: " ++ show te
+        interpretTuple te = walk (1 :: Int) (zipWith recoverKindedValue ks args) []
                 where (ks, n) = case k of
                                   KTuple eks -> (eks, length eks)
-                                  _          -> error $ "Impossible: Expected a tuple kind, but got: " ++ show k
+                                  _          -> error $ unlines [ "Impossible: Expected a tuple kind, but got: " ++ show k
+                                                                , "While trying to parse: " ++ show te
+                                                                ]
+
+                      args = sexprToTuple n te
 
                       walk _ []           sofar = reverse sofar
                       walk i (Just el:es) sofar = walk (i+1) es (cwVal el : sofar)
@@ -505,10 +560,6 @@ recoverKindedValue k e = case e of
                                                                   , "Kind: " ++ show k
                                                                   , "Expr: " ++ show te
                                                                   ]
-        -- CVC4 way
-        interpretTuple (EApp (EApp [ECon "as", ECon f, _] : args)) = interpretTuple (EApp (ECon f : args))
-
-        interpretTuple te = error $ "Impossible: Expected a " ++ show k ++ " constructor, but got: " ++ show te
 
 -- | Generalization of 'Data.SBV.Control.getValueCW'
 getValueCW :: (MonadIO m, MonadQuery m) => Maybe Int -> SW -> m CW
