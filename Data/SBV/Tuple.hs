@@ -13,7 +13,7 @@ module Data.SBV.Tuple (
   -- * Natural numbers
     Nat(..), SNat(..)
   -- * Field access
-  , field, field1, field2, field3, field4, field5, field6, field7, field8, symbolicFieldAccess
+  , field, field1, field2, field3, field4, field5, field6, field7, field8
   ) where
 
 import Data.SBV.Core.Data hiding (StrOp(..))
