@@ -14,7 +14,7 @@
 module Data.SBV.SMT.SMTLib2(cvt, cvtInc) where
 
 import Data.Bits  (bit)
-import Data.List  (intercalate, partition, unzip3, nub)
+import Data.List  (intercalate, partition, unzip3, nub, (\\))
 import Data.Maybe (listToMaybe, fromMaybe)
 
 import qualified Data.Foldable as F (toList)
@@ -315,17 +315,17 @@ declTuple arity
 
 -- Find the set of tuple sizes to declare, eg (2-tuple, 5-tuple).
 findTupleArities :: Set Kind -> [Int]
-findTupleArities ks = Set.toList
+findTupleArities ks = Set.toAscList
                     $ Set.map length
                     $ Set.fromList [ tupKs | KTuple tupKs <- Set.toList ks ]
 
 -- | Convert in a query context
 cvtInc :: Bool -> SMTLibIncConverter [String]
-cvtInc afterAPush inps ks consts arrs tbls uis (SBVPgm asgnsSeq) cfg =
+cvtInc afterAPush inps (oldKs, newKs) consts arrs tbls uis (SBVPgm asgnsSeq) cfg =
             -- sorts
-               concatMap declSort [(s, dt) | KUserSort s dt <- Set.toList ks]
-            -- tuples
-            ++ concatMap declTuple (findTupleArities ks)
+               concatMap declSort [(s, dt) | KUserSort s dt <- Set.toList newKs]
+            -- tuples. NB. Only declare the new sizes, old sizes persist.
+            ++ concatMap declTuple (findTupleArities newKs \\ findTupleArities oldKs)
             -- constants
             ++ map (declConst cfg) consts
             -- inputs
