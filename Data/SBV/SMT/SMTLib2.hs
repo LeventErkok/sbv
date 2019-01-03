@@ -45,10 +45,11 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
         hasDouble      = KDouble    `Set.member` kindInfo
         hasBVs         = hasChar || not (null [() | KBounded{} <- Set.toList kindInfo])   -- Remember, characters map to Word8
         usorts         = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
-        tupleArities   = allTupleArities kindInfo
+        tupleArities   = findTupleArities kindInfo
         hasNonBVArrays = (not . null) [() | (_, (_, (k1, k2), _)) <- arrs, not (isBounded k1 && isBounded k2)]
         hasArrayInits  = (not . null) [() | (_, (_, _, ArrayFree (Just _))) <- arrs]
         hasList        = any isList kindInfo
+        hasTuples      = not . null $ tupleArities
         rm             = roundingMode cfg
         solverCaps     = capabilities (solver cfg)
 
@@ -83,11 +84,12 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
              else if hasBVs
                   then ["(set-logic QF_FPBV)"]
                   else ["(set-logic QF_FP)"]
-           | hasInteger || hasReal || not (null usorts) || hasNonBVArrays
+           | hasInteger || hasReal || not (null usorts) || hasNonBVArrays || hasTuples
            = let why | hasInteger        = "has unbounded values"
                      | hasReal           = "has algebraic reals"
                      | not (null usorts) = "has user-defined sorts"
                      | hasNonBVArrays    = "has non-bitvector arrays"
+                     | hasTuples         = "has tuples"
                      | True              = "cannot determine the SMTLib-logic to use"
              in ["(set-logic ALL) ; "  ++ why ++ ", using catch-all."]
 
@@ -301,11 +303,10 @@ declTuple arity =
         "((tup-" ++ show arity ++ " (mk-tup-" ++ show arity ++ " " ++ unwords fields ++ "))))"
 
 -- Find the set of tuple sizes to declare, eg (2-tuple, 5-tuple).
-allTupleArities :: Set Kind -> [Int]
-allTupleArities ks
-  = Set.toList
-  $ Set.map length
-  $ Set.fromList [ tupKs | KTuple tupKs <- Set.toList ks ]
+findTupleArities :: Set Kind -> [Int]
+findTupleArities ks = Set.toList
+                    $ Set.map length
+                    $ Set.fromList [ tupKs | KTuple tupKs <- Set.toList ks ]
 
 -- | Convert in a query context
 cvtInc :: Bool -> SMTLibIncConverter [String]
