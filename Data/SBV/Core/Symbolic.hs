@@ -990,6 +990,20 @@ registerKind st k
        unless (k `Set.member` ks) $ modifyState st rUsedKinds (Set.insert k)
                                               $ modifyIncState st rNewKinds (Set.insert k)
 
+       -- Don't forget to register subkinds!
+       case k of
+         KBool      {}  -> return ()
+         KBounded   {}  -> return ()
+         KUnbounded {}  -> return ()
+         KReal      {}  -> return ()
+         KUserSort  {}  -> return ()
+         KFloat     {}  -> return ()
+         KDouble    {}  -> return ()
+         KChar      {}  -> return ()
+         KString    {}  -> return ()
+         KList      ek  -> registerKind st ek
+         KTuple     eks -> mapM_ (registerKind st) eks
+
 -- | Register a new label with the system, making sure they are unique and have no '|'s in them
 registerLabel :: String -> State -> String -> IO ()
 registerLabel whence st nm
