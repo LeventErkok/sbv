@@ -44,93 +44,47 @@ instance IndexType n xs => IndexType ('S n) (y ': xs) where
   fromIndex (SS n) (_ :% xs) = fromIndex n xs
 
 -- | Access the @n@th field of a tuple or @HList@.
-field
-  :: forall tup a n.
-     ( HListable tup, SymWord tup, SymWord a
-     , IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a
-     )
-  => SNat n -> SBV tup -> SBV a
+field :: forall tup a n.  (HListable tup, SymWord tup, SymWord a, IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SNat n -> SBV tup -> SBV a
 field n tup
   | Just a <- fromIndex n . toHList <$> unliteral tup
   = literal a
   | True
   = symbolicFieldAccess (sNatToInt n + 1) tup
-  where
 
-    sNatToInt :: SNat n' -> Int
-    sNatToInt SZ      = 0
-    sNatToInt (SS n') = succ (sNatToInt n')
+  where sNatToInt :: SNat n' -> Int
+        sNatToInt SZ      = 0
+        sNatToInt (SS n') = succ (sNatToInt n')
 
 -- | Access the first field of a tuple or @HList@.
-field1
-  :: ( HListable tup, SymWord tup, SymWord a
-     , n ~ 'Z
-     , IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a
-     )
-  => SBV tup -> SBV a
+field1 :: (HListable tup, SymWord tup, SymWord a, n ~ 'Z, IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
 field1 = field SZ
 
 -- | Access the second field of a tuple or @HList@.
-field2
-  :: ( HListable tup, SymWord tup, SymWord a
-     , n ~ 'S 'Z
-     , IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a
-     )
-  => SBV tup -> SBV a
+field2 :: (HListable tup, SymWord tup, SymWord a, n ~ 'S 'Z, IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
 field2 = field $ SS SZ
 
 -- | Access the third field of a tuple or @HList@.
-field3
-  :: ( HListable tup, SymWord tup, SymWord a
-     , n ~ 'S ('S 'Z)
-     , IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a
-     )
-  => SBV tup -> SBV a
+field3 :: (HListable tup, SymWord tup, SymWord a, n ~ 'S ('S 'Z), IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
 field3 = field $ SS $ SS SZ
 
 -- | Access the fourth field of a tuple or @HList@.
-field4
-  :: ( HListable tup, SymWord tup, SymWord a
-     , n ~ 'S ('S ('S 'Z))
-     , IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a
-     )
-  => SBV tup -> SBV a
+field4 :: (HListable tup, SymWord tup, SymWord a, n ~ 'S ('S ('S 'Z)) , IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
 field4 = field $ SS $ SS $ SS SZ
 
 -- | Access the fifth field of a tuple or @HList@.
-field5
-  :: ( HListable tup, SymWord tup, SymWord a
-     , n ~ 'S ('S ('S ('S 'Z)))
-     , IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a
-     )
-  => SBV tup -> SBV a
+field5 :: (HListable tup, SymWord tup, SymWord a, n ~ 'S ('S ('S ('S 'Z))), IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
 field5 = field $ SS $ SS $ SS $ SS SZ
 
 -- | Access the sixth field of a tuple or @HList@.
-field6
-  :: ( HListable tup, SymWord tup, SymWord a
-     , n ~ 'S ('S ('S ('S ('S 'Z))))
-     , IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a
-     )
-  => SBV tup -> SBV a
+field6 :: ( HListable tup, SymWord tup, SymWord a, n ~ 'S ('S ('S ('S ('S 'Z)))), IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
 field6 = field $ SS $ SS $ SS $ SS $ SS SZ
 
 -- | Access the seventh field of a tuple or @HList@.
-field7
-  :: ( HListable tup, SymWord tup, SymWord a
-     , n ~ 'S ('S ('S ('S ('S ('S 'Z)))))
-     , IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a
-     )
-  => SBV tup -> SBV a
+field7 :: (HListable tup, SymWord tup, SymWord a, n ~ 'S ('S ('S ('S ('S ('S 'Z))))), IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
 field7 = field $ SS $ SS $ SS $ SS $ SS $ SS SZ
 
 -- | Access the eighth field of a tuple or @HList@.
-field8
-  :: ( HListable tup, SymWord tup, SymWord a
-     , n ~ 'S ('S ('S ('S ('S ('S ('S 'Z))))))
-     , IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a
-     )
-  => SBV tup -> SBV a
+field8 :: (HListable tup, SymWord tup, SymWord a, n ~ 'S ('S ('S ('S ('S ('S ('S 'Z)))))), IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
 field8 = field $ SS $ SS $ SS $ SS $ SS $ SS $ SS SZ
 
 symbolicFieldAccess :: forall a tup. HasKind a => Int -> SBV tup -> SBV a
