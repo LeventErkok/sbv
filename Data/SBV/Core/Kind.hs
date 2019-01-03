@@ -46,7 +46,7 @@ data Kind = KBool
           | KChar
           | KString
           | KList Kind
-          | KTuple [ Kind ]
+          | KTuple [Kind]
           deriving (Eq, Ord)
 
 -- | A heterogeneous list (a sequence of values of different types).
