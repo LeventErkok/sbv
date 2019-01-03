@@ -380,20 +380,30 @@ instance Show SeqOp where
 instance Show Op where
   show Shl    = "<<"
   show Shr    = ">>"
+
   show (Rol i) = "<<<" ++ show i
   show (Ror i) = ">>>" ++ show i
+
   show (Extract i j) = "choose [" ++ show i ++ ":" ++ show j ++ "]"
+
   show (LkUp (ti, at, rt, l) i e)
         = "lookup(" ++ tinfo ++ ", " ++ show i ++ ", " ++ show e ++ ")"
         where tinfo = "table" ++ show ti ++ "(" ++ show at ++ " -> " ++ show rt ++ ", " ++ show l ++ ")"
+
   show (ArrEq i j)          = "array_" ++ show i ++ " == array_" ++ show j
   show (ArrRead i)          = "select array_" ++ show i
+
   show (KindCast fr to)     = "cast_" ++ show fr ++ "_" ++ show to
   show (Uninterpreted i)    = "[uninterpreted] " ++ i
+
   show (Label s)            = "[label] " ++ s
+
   show (IEEEFP w)           = show w
+
   show (PseudoBoolean p)    = show p
+
   show (OverflowOp o)       = show o
+
   show (StrOp s)            = show s
   show (SeqOp s)            = show s
   show (TupleConstructor n) = "mk-tup-" ++ show n

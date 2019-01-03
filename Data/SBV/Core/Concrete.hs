@@ -252,10 +252,12 @@ showCW shk w | isBoolean w = show (cwToBool w) ++ (if shk then " :: Bool" else "
 showCW shk w               = liftCW show show show show show show snd shL shT w ++ kInfo
       where kInfo | shk  = " :: " ++ showBaseKind (kindOf w)
                   | True = ""
+
             shL xs = "[" ++ intercalate "," (map (showCW False . CW ke) xs) ++ "]"
               where ke = case kindOf w of
                            KList k -> k
                            kw      -> error $ "Data.SBV.showCW: Impossible happened, expected list, got: " ++ show kw
+
             shT :: [CWVal] -> String
             shT xs = "(" ++ intercalate "," xs' ++ ")"
               where xs' = case kindOf w of
