@@ -87,7 +87,7 @@ field7 = field $ SS $ SS $ SS $ SS $ SS $ SS SZ
 field8 :: (HListable tup, SymWord tup, SymWord a, n ~ 'S ('S ('S ('S ('S ('S ('S 'Z)))))), IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
 field8 = field $ SS $ SS $ SS $ SS $ SS $ SS $ SS SZ
 
--- | Access the @i@ element of a typle
+-- | Access the @i@ element of a tuple
 symbolicFieldAccess :: forall a tup. HasKind a => Int -> SBV tup -> SBV a
 symbolicFieldAccess i tup = SBV $ SVal kElem $ Right $ cache y
   where (kElem, n) = pick (kindOf tup)
