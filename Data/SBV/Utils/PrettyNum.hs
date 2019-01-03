@@ -308,6 +308,8 @@ cwToSMTLib rm x
   | isChar x         , CWChar c          <- cwVal x = smtLibHex 8 (fromIntegral (ord c))
   | isString x       , CWString s        <- cwVal x = '\"' : stringToQFS s ++ "\""
   | isList x         , CWList xs         <- cwVal x = smtLibSeq (kindOf x) xs
+  | isTuple x        , CWTuple xs        <- cwVal x = smtLibTup (kindOf x) xs
+
   | True = error $ "SBV.cvtCW: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
   where roundModeConvert s = fromMaybe s (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])
         -- Carefully code hex numbers, SMTLib is picky about lengths of hex constants. For the time
@@ -330,6 +332,10 @@ cwToSMTLib rm x
                                       mkUnit inner = "(seq.unit " ++ inner ++ ")"
                                   in mkSeq (mkUnit . cwToSMTLib rm . CW ek <$> xs)
         smtLibSeq k _ = error "SBV.cwToSMTLib: Impossible case (smtLibSeq), received kind: " ++ show k
+
+        smtLibTup :: Kind -> [CWVal] -> String
+        smtLibTup (KTuple ks) xs = "(mkSBVTuple" ++ show (length ks) ++ " " ++ unwords (zipWith (\ek e -> cwToSMTLib rm (CW ek e)) ks xs) ++ ")"
+        smtLibTup k           _  = error "SBV.cwToSMTLib: Impossible case (smtLibTup), received kind: " ++ show k
 
         -- anamoly at the 2's complement min value! Have to use binary notation here
         -- as there is no positive value we can provide to make the bvneg work.. (see above)
