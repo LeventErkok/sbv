@@ -261,14 +261,14 @@ showCW shk w               = liftCW show show show show show show snd shL shT w 
             shT :: [CWVal] -> String
             shT xs = "(" ++ intercalate "," xs' ++ ")"
               where xs' = case kindOf w of
-                            KTuple ks
-                              | length ks == length xs
-                              -> zipWith (\k x -> showCW False (CW k x)) ks xs
+                            KTuple ks | length ks == length xs -> zipWith (\k x -> showCW False (CW k x)) ks xs
                             kw -> error $ "Data.SBV.showCW: Impossible happened, expected tuple (of length " ++ show (length xs) ++ "), got: " ++ show kw
 
 -- | A version of show for kinds that says Bool instead of SBool
 showBaseKind :: Kind -> String
 showBaseKind k@KUserSort {} = show k   -- Leave user-sorts untouched!
+showBaseKind (KList k)      = "[" ++ showBaseKind k ++ "]"
+showBaseKind (KTuple ks)    = "(" ++ intercalate ", " (map showBaseKind ks) ++ ")"
 showBaseKind k = case show k of
                    ('S':sk) -> sk
                    s        -> s
