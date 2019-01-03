@@ -36,9 +36,9 @@ module Data.SBV.Control.Utils (
      ) where
 
 import Data.Maybe (isJust)
-import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, isPrefixOf)
+import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate)
 
-import Data.Char     (isPunctuation, isSpace, chr, ord)
+import Data.Char     (isPunctuation, isSpace, chr, ord, isDigit)
 import Data.Function (on)
 
 import Data.Typeable (Typeable)
@@ -90,7 +90,6 @@ import qualified Data.Set as Set (toList)
 import qualified Control.Exception as C
 
 import GHC.Stack
-import Text.Read (readMaybe)
 
 import Unsafe.Coerce (unsafeCoerce) -- Only used safely!
 
@@ -447,18 +446,10 @@ recoverKindedValue k e = case e of
                            ECon    s | isString        k -> Just $ CW KString  (CWString   (interpretString s))
                            ECon    s | isUninterpreted k -> Just $ CW k        (CWUserSort (getUIIndex k s, s))
                            _         | isList          k -> Just $ CW k        (CWList     (interpretList e))
-
-                           -- eg `(mk-tup-3 a b c)`
-                           EApp (ECon f:args)
-                             | "mk-tup-" `isPrefixOf` f
-                             , Just n <- readMaybe (drop 7 f)
-                             , length args == n
-                             , KTuple argks <- k
-                             -> CW k . CWTuple . fmap cwVal <$> traverse
-                               (uncurry recoverKindedValue)
-                               (zip argks args)
+                           _         | isTuple         k -> Just $ CW k        (CWTuple    (interpretTuple e))
 
                            _ -> Nothing
+
   where isIntegralLike = or [f k | f <- [isBoolean, isBounded, isInteger, isReal, isFloat, isDouble]]
 
         getUIIndex (KUserSort  _ (Right xs)) i = i `elemIndex` xs
@@ -494,7 +485,27 @@ recoverKindedValue k e = case e of
 
                 ek = case k of
                        KList ik -> ik
-                       _        -> error $ "Impossible: Expected a sequence kind, bug got: " ++ show k
+                       _        -> error $ "Impossible: Expected a sequence kind, but got: " ++ show k
+
+        -- Z3 way
+        interpretTuple te@(EApp (ECon f : args)) = case splitAt (length "mkSBVTuple") f of
+                                                     ("mkSBVTuple", c) | all isDigit c && read c == n && length args == n
+                                                         -> walk (1 :: Int) (zipWith recoverKindedValue ks args) []
+                                                     _   -> error $ "Impossible: Expected a " ++ show k ++ " constructor, but got: " ++ show te
+                where (ks, n) = case k of
+                                  KTuple eks -> (eks, length eks)
+                                  _          -> error $ "Impossible: Expected a tuple kind, but got: " ++ show k
+
+                      walk _ []           sofar = reverse sofar
+                      walk i (Just el:es) sofar = walk (i+1) es (cwVal el : sofar)
+                      walk i (Nothing:_)  _     = error $ unlines [ "Couldn't parse a tuple element at position " ++ show i
+                                                                  , "Kind: " ++ show k
+                                                                  , "Expr: " ++ show te
+                                                                  ]
+        -- CVC4 way
+        interpretTuple (EApp (EApp [ECon "as", ECon f, _] : args)) = interpretTuple (EApp (ECon f : args))
+
+        interpretTuple te = error $ "Impossible: Expected a " ++ show k ++ " constructor, but got: " ++ show te
 
 -- | Generalization of 'Data.SBV.Control.getValueCW'
 getValueCW :: (MonadIO m, MonadQuery m) => Maybe Int -> SW -> m CW
