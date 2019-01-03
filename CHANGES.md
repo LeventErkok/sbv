@@ -5,7 +5,7 @@
 
 ### Version 7.13.5, New development version
 
-  * This is a major release of SBV, contributed by Brian Brian Schroeder. Brian
+  * This is a major release of SBV, contributed by Brian Schroeder. Brian
     reworked the internals of SBV to allow for custom monad stacks. In particular,
     there is now a `SymbolicT` monad transformer, which generalizes the `Symbolic`
     monad over an arbitrary base type, allowing users to build SBV based symbolic
