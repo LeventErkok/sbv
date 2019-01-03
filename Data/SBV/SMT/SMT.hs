@@ -538,6 +538,8 @@ runSolver cfg ctx execPath opts pgm continuation
  = do let nm  = show (name (solver cfg))
           msg = debug cfg . map ("*** " ++)
 
+          clean = preprocess (solver cfg)
+
       (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
 
@@ -546,15 +548,17 @@ runSolver cfg ctx execPath opts pgm continuation
                     send :: Maybe Int -> String -> IO ()
                     send mbTimeOut command
                       | parenDeficit command /= 0
-                      = error $ unlines [ ""
-                                        , "*** Data.SBV: Unbalanced input detected."
-                                        , "***"
-                                        , "***   Sending: " ++ command
-                                        , "***"
-                                        , "*** This is most likely an SBV bug. Please report!"
-                                        ]
+                      = error $ unlines $  [ ""
+                                           , "*** Data.SBV: Unbalanced input detected."
+                                           , "***"
+                                           , "***   Sending: "
+                                           ]
+                                        ++ [ "***     " ++ l | l <- lines command ]
+                                        ++ [ "***"
+                                           , "*** This is most likely an SBV bug. Please report!"
+                                           ]
                       | True
-                      = do hPutStrLn inh command
+                      = do hPutStrLn inh (clean command)
                            hFlush inh
                            recordTranscript (transcript cfg) $ Left (command, mbTimeOut)
 
