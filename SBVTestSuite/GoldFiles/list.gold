@@ -10,7 +10,9 @@
 [GOOD] (set-logic ALL)
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
-[GOOD] (declare-datatypes (T1 T2) ((tup-2 (mk-tup-2 (proj-1 T1) (proj-2 T2)))))
+[GOOD] (declare-datatypes ((SBVTuple2 2)) ((par (T1 T2)
+                                           ((mkSBVTuple2 (proj_1_SBVTuple2 T1)
+                                                         (proj_2_SBVTuple2 T2))))))
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s_2 () Bool false)
 [GOOD] (define-fun s_1 () Bool true)
@@ -19,40 +21,40 @@
 [GOOD] (define-fun s12 () Int 2)
 [GOOD] (define-fun s31 () String "foo")
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (Seq (tup-2 Int (Seq (tup-2 Int String))))) ; tracks user variable "lst"
-[GOOD] (declare-fun s1 () (tup-2 Int (Seq (tup-2 Int String)))) ; tracks user variable "__internal_sbv_s1"
-[GOOD] (declare-fun s14 () (tup-2 Int String)) ; tracks user variable "__internal_sbv_s14"
-[GOOD] (declare-fun s16 () (tup-2 Int (Seq (tup-2 Int String)))) ; tracks user variable "__internal_sbv_s16"
+[GOOD] (declare-fun s0 () (Seq (SBVTuple2 Int (Seq (SBVTuple2 Int String))))) ; tracks user variable "lst"
+[GOOD] (declare-fun s1 () (SBVTuple2 Int (Seq (SBVTuple2 Int String)))) ; tracks user variable "__internal_sbv_s1"
+[GOOD] (declare-fun s14 () (SBVTuple2 Int String)) ; tracks user variable "__internal_sbv_s14"
+[GOOD] (declare-fun s16 () (SBVTuple2 Int (Seq (SBVTuple2 Int String)))) ; tracks user variable "__internal_sbv_s16"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s2 () (Seq (tup-2 Int (Seq (tup-2 Int String)))) (seq.unit s1))
+[GOOD] (define-fun s2 () (Seq (SBVTuple2 Int (Seq (SBVTuple2 Int String)))) (seq.unit s1))
 [GOOD] (define-fun s3 () Int (seq.len s0))
 [GOOD] (define-fun s5 () Bool (> s3 s4))
 [GOOD] (define-fun s6 () Bool (not s5))
-[GOOD] (define-fun s8 () (Seq (tup-2 Int (Seq (tup-2 Int String)))) (seq.extract s0 s4 s7))
+[GOOD] (define-fun s8 () (Seq (SBVTuple2 Int (Seq (SBVTuple2 Int String)))) (seq.extract s0 s4 s7))
 [GOOD] (define-fun s9 () Bool (= s2 s8))
 [GOOD] (define-fun s10 () Bool (or s6 s9))
-[GOOD] (define-fun s11 () Int (proj-1 s1))
+[GOOD] (define-fun s11 () Int (proj_1_SBVTuple2 s1))
 [GOOD] (define-fun s13 () Bool (= s11 s12))
-[GOOD] (define-fun s15 () (Seq (tup-2 Int String)) (seq.unit s14))
-[GOOD] (define-fun s17 () (Seq (tup-2 Int (Seq (tup-2 Int String)))) (seq.unit s16))
+[GOOD] (define-fun s15 () (Seq (SBVTuple2 Int String)) (seq.unit s14))
+[GOOD] (define-fun s17 () (Seq (SBVTuple2 Int (Seq (SBVTuple2 Int String)))) (seq.unit s16))
 [GOOD] (define-fun s18 () Bool (> s3 s7))
 [GOOD] (define-fun s19 () Bool (not s18))
-[GOOD] (define-fun s20 () (Seq (tup-2 Int (Seq (tup-2 Int String)))) (seq.extract s0 s7 s7))
+[GOOD] (define-fun s20 () (Seq (SBVTuple2 Int (Seq (SBVTuple2 Int String)))) (seq.extract s0 s7 s7))
 [GOOD] (define-fun s21 () Bool (= s17 s20))
 [GOOD] (define-fun s22 () Bool (or s19 s21))
-[GOOD] (define-fun s23 () (Seq (tup-2 Int String)) (proj-2 s16))
+[GOOD] (define-fun s23 () (Seq (SBVTuple2 Int String)) (proj_2_SBVTuple2 s16))
 [GOOD] (define-fun s24 () Int (seq.len s23))
 [GOOD] (define-fun s25 () Bool (> s24 s7))
 [GOOD] (define-fun s26 () Bool (not s25))
-[GOOD] (define-fun s27 () (Seq (tup-2 Int String)) (seq.extract s23 s7 s7))
+[GOOD] (define-fun s27 () (Seq (SBVTuple2 Int String)) (seq.extract s23 s7 s7))
 [GOOD] (define-fun s28 () Bool (= s15 s27))
 [GOOD] (define-fun s29 () Bool (or s26 s28))
-[GOOD] (define-fun s30 () String (proj-2 s14))
+[GOOD] (define-fun s30 () String (proj_2_SBVTuple2 s14))
 [GOOD] (define-fun s32 () Bool (= s30 s31))
 [GOOD] (assert s10)
 [GOOD] (assert s13)

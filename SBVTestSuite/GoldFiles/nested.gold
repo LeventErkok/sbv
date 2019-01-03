@@ -8,7 +8,9 @@
 [GOOD] (set-logic ALL)
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
-[GOOD] (declare-datatypes (T1 T2) ((tup-2 (mk-tup-2 (proj-1 T1) (proj-2 T2)))))
+[GOOD] (declare-datatypes ((SBVTuple2 2)) ((par (T1 T2)
+                                           ((mkSBVTuple2 (proj_1_SBVTuple2 T1)
+                                                         (proj_2_SBVTuple2 T2))))))
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s_2 () Bool false)
 [GOOD] (define-fun s_1 () Bool true)
@@ -17,22 +19,22 @@
 [GOOD] (define-fun s10 () (_ BitVec 8) #x63)
 [GOOD] (define-fun s7 () String "foo")
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (tup-2 (tup-2 Int (tup-2 String (_ BitVec 8))) (_ BitVec 8))) ; tracks user variable "abcd"
+[GOOD] (declare-fun s0 () (SBVTuple2 (SBVTuple2 Int (SBVTuple2 String (_ BitVec 8))) (_ BitVec 8))) ; tracks user variable "abcd"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s1 () (tup-2 Int (tup-2 String (_ BitVec 8))) (proj-1 s0))
-[GOOD] (define-fun s2 () Int (proj-1 s1))
+[GOOD] (define-fun s1 () (SBVTuple2 Int (SBVTuple2 String (_ BitVec 8))) (proj_1_SBVTuple2 s0))
+[GOOD] (define-fun s2 () Int (proj_1_SBVTuple2 s1))
 [GOOD] (define-fun s4 () Bool (= s2 s3))
-[GOOD] (define-fun s5 () (tup-2 String (_ BitVec 8)) (proj-2 s1))
-[GOOD] (define-fun s6 () String (proj-1 s5))
+[GOOD] (define-fun s5 () (SBVTuple2 String (_ BitVec 8)) (proj_2_SBVTuple2 s1))
+[GOOD] (define-fun s6 () String (proj_1_SBVTuple2 s5))
 [GOOD] (define-fun s8 () Bool (= s6 s7))
-[GOOD] (define-fun s9 () (_ BitVec 8) (proj-2 s5))
+[GOOD] (define-fun s9 () (_ BitVec 8) (proj_2_SBVTuple2 s5))
 [GOOD] (define-fun s11 () Bool (= s9 s10))
-[GOOD] (define-fun s12 () (_ BitVec 8) (proj-2 s0))
+[GOOD] (define-fun s12 () (_ BitVec 8) (proj_2_SBVTuple2 s0))
 [GOOD] (define-fun s14 () Bool (= s12 s13))
 [GOOD] (assert s4)
 [GOOD] (assert s8)

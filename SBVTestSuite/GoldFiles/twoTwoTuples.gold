@@ -5,27 +5,29 @@
 [GOOD] (set-option :smtlib2_compliant true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
 [GOOD] (set-option :produce-models true)
-[GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
+[GOOD] (set-logic ALL)
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
-[GOOD] (declare-datatypes (T1 T2) ((tup-2 (mk-tup-2 (proj-1 T1) (proj-2 T2)))))
+[GOOD] (declare-datatypes ((SBVTuple2 2)) ((par (T1 T2)
+                                           ((mkSBVTuple2 (proj_1_SBVTuple2 T1)
+                                                         (proj_2_SBVTuple2 T2))))))
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s_2 () Bool false)
 [GOOD] (define-fun s_1 () Bool true)
 [GOOD] (define-fun s3 () Int 1)
 [GOOD] (define-fun s6 () (_ BitVec 8) #x63)
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (tup-2 Int String)) ; tracks user variable "ab"
-[GOOD] (declare-fun s1 () (tup-2 (_ BitVec 8) (_ BitVec 8))) ; tracks user variable "cd"
+[GOOD] (declare-fun s0 () (SBVTuple2 Int String)) ; tracks user variable "ab"
+[GOOD] (declare-fun s1 () (SBVTuple2 (_ BitVec 8) (_ BitVec 8))) ; tracks user variable "cd"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s2 () Int (proj-1 s0))
+[GOOD] (define-fun s2 () Int (proj_1_SBVTuple2 s0))
 [GOOD] (define-fun s4 () Bool (= s2 s3))
-[GOOD] (define-fun s5 () (_ BitVec 8) (proj-1 s1))
+[GOOD] (define-fun s5 () (_ BitVec 8) (proj_1_SBVTuple2 s1))
 [GOOD] (define-fun s7 () Bool (= s5 s6))
 [GOOD] (assert s4)
 [GOOD] (assert s7)
