@@ -125,7 +125,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
              ++ [ "; --- uninterpreted sorts ---" ]
              ++ concatMap declSort usorts
              ++ [ "; --- tuples ---" ]
-             ++ map declTuple tupleArities
+             ++ concatMap declTuple tupleArities
              ++ [ "; --- literal constants ---" ]
              ++ map (declConst cfg) consts
              ++ [ "; --- skolem constants ---" ]
@@ -291,16 +291,27 @@ declSort (s, Right fs) = [ "(declare-datatypes () ((" ++ s ++ " " ++ unwords (ma
 -- eg:
 --
 -- @
--- (declare-datatypes (T1 T2)
---   ((tup-2 (mk-tup-2 (proj-1 T1) (proj-2 T2)))))
+-- (declare-datatypes ((SBVTuple2 2)) ((par (T1 T2)
+--                                     ((mkSBVTuple2 (proj_1_SBVTuple2 T1)
+--                                                   (proj_2_SBVTuple2 T2))))))
 -- @
-declTuple :: Int -> String
-declTuple arity =
-  let (args, fields) = unzip $ fmap
-        (\i -> ("T" ++ show i, "(proj-" ++ show i ++ " T" ++ show i ++ ")"))
-        ([1..arity] :: [Int])
-  in "(declare-datatypes (" ++ unwords args ++ ") " ++
-        "((tup-" ++ show arity ++ " (mk-tup-" ++ show arity ++ " " ++ unwords fields ++ "))))"
+declTuple :: Int -> [String]
+declTuple arity
+  | arity < 1 = error $ "Data.SBV.declTuple: Unexpected tuple size: " ++ show arity
+  | True      =    (l1 ++ "(par (" ++ unwords [param i | i <- [1..arity]] ++ ")")
+                :  [pre i ++ proj i ++ post i    | i <- [1..arity]]
+  where l1     = "(declare-datatypes ((SBVTuple" ++ show arity ++ " " ++ show arity ++ ")) ("
+        l2     = replicate (length l1) ' ' ++ "((mkSBVTuple" ++ show arity ++ " "
+        tab    = replicate (length l2) ' '
+
+        pre 1  = l2
+        pre _  = tab
+
+        proj i = "(proj_" ++ show i ++ "_SBVTuple" ++ show arity ++ " " ++ param i ++ ")"
+
+        post i = if i == arity then ")))))" else ""
+
+        param i = "T" ++ show i
 
 -- Find the set of tuple sizes to declare, eg (2-tuple, 5-tuple).
 findTupleArities :: Set Kind -> [Int]
@@ -314,7 +325,7 @@ cvtInc afterAPush inps ks consts arrs tbls uis (SBVPgm asgnsSeq) cfg =
             -- sorts
                concatMap declSort [(s, dt) | KUserSort s dt <- Set.toList ks]
             -- tuples
-            ++ map declTuple (allTupleArities ks)
+            ++ concatMap declTuple (findTupleArities ks)
             -- constants
             ++ map (declConst cfg) consts
             -- inputs
@@ -697,8 +708,8 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
 
         sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map ssw args) ++ ")"
 
-        sh (SBVApp (TupleConstructor n) args) = "(mk-tup-" ++ show n ++ " " ++ unwords (map ssw args) ++ ")"
-        sh (SBVApp (TupleAccess n) [tup]) = "(proj-" ++ show n ++ " " ++ ssw tup ++ ")"
+        sh (SBVApp (TupleConstructor n)   args)  = "(mkSBVTuple" ++ show n ++ " " ++ unwords (map ssw args) ++ ")"
+        sh (SBVApp (TupleAccess      i n) [tup]) = "(proj_" ++ show i ++ "_SBVTuple" ++ show n ++ " " ++ ssw tup ++ ")"
 
         sh inp@(SBVApp op args)
           | intOp, Just f <- lookup op smtOpIntTable

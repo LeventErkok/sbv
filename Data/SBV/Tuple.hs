@@ -87,10 +87,18 @@ field7 = field $ SS $ SS $ SS $ SS $ SS $ SS SZ
 field8 :: (HListable tup, SymWord tup, SymWord a, n ~ 'S ('S ('S ('S ('S ('S ('S 'Z)))))), IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
 field8 = field $ SS $ SS $ SS $ SS $ SS $ SS $ SS SZ
 
+-- | Access the @i@ element of a typle
 symbolicFieldAccess :: forall a tup. HasKind a => Int -> SBV tup -> SBV a
-symbolicFieldAccess n tup
-  = SBV (SVal kElem (Right (cache y)))
-  where kElem = kindOf (undefined :: a)
-        y st = do
-          sw <- svToSW st $ unSBV tup
-          newExpr st kElem (SBVApp (TupleAccess n) [sw])
+symbolicFieldAccess i tup = SBV $ SVal kElem $ Right $ cache y
+  where (kElem, n) = pick (kindOf tup)
+        y st = do sw <- svToSW st $ unSBV tup
+                  newExpr st kElem (SBVApp (TupleAccess i n) [sw])
+
+        pick k@(KTuple ks)
+          | i <= l = (ks !! (i-1), l)
+          | True   = bad $ " of an " ++ show l ++ "-tuple: " ++ show k
+         where l = length ks
+
+        pick k = bad $ " of a non-tuple: " ++ show k
+
+        bad w = error $ "Data.SBV.symbolicFieldAccess: Impossible happened; accessing field " ++ show i ++ w

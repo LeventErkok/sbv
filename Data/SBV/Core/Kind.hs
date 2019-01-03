@@ -92,7 +92,7 @@ smtType KString         = "String"
 smtType KChar           = "(_ BitVec 8)"
 smtType (KList k)       = "(Seq " ++ smtType k ++ ")"
 smtType (KUserSort s _) = s
-smtType (KTuple kinds)  = "(tup-" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
+smtType (KTuple kinds)  = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
 
 instance Eq  G.DataType where
    a == b = G.tyconUQname (G.dataTypeName a) == G.tyconUQname (G.dataTypeName b)

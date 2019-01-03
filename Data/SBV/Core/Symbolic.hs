@@ -172,7 +172,7 @@ data Op = Plus
         | StrOp StrOp                           -- String ops, categorized separately
         | SeqOp SeqOp                           -- Sequence ops, categorized separately
         | TupleConstructor Int                  -- Construct an n-tuple
-        | TupleAccess Int                       -- Access element i of a tuple
+        | TupleAccess Int Int                   -- Access element i of an n-tuple; second argument is n
         deriving (Eq, Ord)
 
 -- | Floating point operations
@@ -406,8 +406,10 @@ instance Show Op where
 
   show (StrOp s)            = show s
   show (SeqOp s)            = show s
-  show (TupleConstructor n) = "mk-tup-" ++ show n
-  show (TupleAccess      i) = "proj-" ++ show i
+
+  show (TupleConstructor   n) = "mkSBVTuple" ++ show n
+  show (TupleAccess      i n) = "proj_" ++ show i ++ "_SBVTuple" ++ show n
+
   show op
     | Just s <- op `lookup` syms = s
     | True                       = error "impossible happened; can't find op!"
