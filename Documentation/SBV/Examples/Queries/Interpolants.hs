@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Documentation.SBV.Examples.Queries.Interpolants
--- Copyright   :  (c) Levent Erkok
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Documentation.SBV.Examples.Queries.Interpolants
+-- Copyright : (c) Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- Demonstrates extraction of interpolants via queries.
 --

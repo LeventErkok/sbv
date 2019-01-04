@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Utils.Lib
--- Copyright   :  (c) Levent Erkok
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Data.SBV.Utils.Lib
+-- Copyright : (c) Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- Misc helpers
 -----------------------------------------------------------------------------

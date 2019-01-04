@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Provers.MathSAT
--- Copyright   :  (c) Levent Erkok
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Data.SBV.Provers.MathSAT
+-- Copyright : (c) Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- The connection to the MathSAT SMT solver
 -----------------------------------------------------------------------------

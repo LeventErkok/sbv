@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Provers.Boolector
--- Copyright   :  (c) Levent Erkok
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Data.SBV.Provers.Boolector
+-- Copyright : (c) Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- The connection to the Boolector SMT solver
 -----------------------------------------------------------------------------

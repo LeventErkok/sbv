@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Documentation.SBV.Examples.Uninterpreted.Shannon
--- Copyright   :  (c) Levent Erkok
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Documentation.SBV.Examples.Uninterpreted.Shannon
+-- Copyright : (c) Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- Proves (instances of) Shannon's expansion theorem and other relevant
 -- facts.  See: <http://en.wikipedia.org/wiki/Shannon's_expansion>

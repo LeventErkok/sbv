@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Documentation.SBV.Examples.Queries.FourFours
--- Copyright   :  (c) Levent Erkok
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Documentation.SBV.Examples.Queries.FourFours
+-- Copyright : (c) Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- A query based solution to the four-fours puzzle.
 -- Inspired by <http://www.gigamonkeys.com/trees/>

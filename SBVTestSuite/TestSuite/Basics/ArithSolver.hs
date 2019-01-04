@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  TestSuite.Basics.ArithSolver
--- Copyright   :  (c) Levent Erkok
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : TestSuite.Basics.ArithSolver
+-- Copyright : (c) Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- Test suite for basic non-concrete arithmetic, i.e., testing all
 -- basic arithmetic reasoning using an SMT solver without any

@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Documentation.SBV.Examples.BitPrecise.BrokenSearch
--- Copyright   :  (c) Levent Erkok
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Documentation.SBV.Examples.BitPrecise.BrokenSearch
+-- Copyright : (c) Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- The classic "binary-searches are broken" example:
 --     <http://ai.googleblog.com/2006/06/extra-extra-read-all-about-it-nearly.html>

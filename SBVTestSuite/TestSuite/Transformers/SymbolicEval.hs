@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  TestSuite.Transformers.SymbolicEval
--- Copyright   :  (c) Brian Schroeder
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : TestSuite.Transformers.SymbolicEval
+-- Copyright : (c) Brian Schroeder
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- Test suite for Documentation.SBV.Examples.Transformers.SymbolicEval
 -----------------------------------------------------------------------------

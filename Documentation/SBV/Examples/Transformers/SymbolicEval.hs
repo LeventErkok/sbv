@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Documentation.SBV.Examples.Transformers.SymbolicEval
--- Copyright   :  (c) Brian Schroeder
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Documentation.SBV.Examples.Transformers.SymbolicEval
+-- Copyright : (c) Brian Schroeder
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- A demonstration of the use of the 'SymbolicT' and 'QueryT' transformers in
 -- the setting of symbolic program evaluation.

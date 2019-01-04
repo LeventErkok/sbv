@@ -1,14 +1,10 @@
-{-# LANGUAGE Rank2Types          #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.String
--- Copyright   :  (c) Joel Burget, Levent Erkok
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Data.SBV.String
+-- Copyright : (c) Joel Burget, Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- A collection of string/character utilities, useful when working
 -- with symbolic strings. To the extent possible, the functions
@@ -17,6 +13,10 @@
 -- @OverloadedStrings@ extension to allow literal strings to be
 -- used as symbolic-strings.
 -----------------------------------------------------------------------------
+
+{-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Data.SBV.String (
         -- * Length, emptiness

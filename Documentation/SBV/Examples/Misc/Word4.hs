@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Documentation.SBV.Examples.Misc.Enumerate
--- Copyright   :  (c) Brian Huffman
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Documentation.SBV.Examples.Misc.Word4
+-- Copyright : (c) Brian Huffman
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- Demonstrates how new sizes of word/int types can be defined and
 -- used with SBV.

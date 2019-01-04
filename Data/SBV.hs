@@ -1,10 +1,10 @@
----------------------------------------------------------------------------------
+-----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV
--- Copyright   :  (c) Levent Erkok
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Data.SBV
+-- Copyright : (c) Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- (The sbv library is hosted at <http://github.com/LeventErkok/sbv>.
 -- Comments, bug reports, and patches are always welcome.)
@@ -110,7 +110,7 @@
 --
 -- Support for other compliant solvers can be added relatively easily, please
 -- get in touch if there is a solver you'd like to see included.
----------------------------------------------------------------------------------
+-----------------------------------------------------------------------------
 
 module Data.SBV (
   -- $progIntro

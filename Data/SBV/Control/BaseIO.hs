@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Control.BaseIO
--- Copyright   :  (c) Brian Schroeder, Levent Erkok
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Data.SBV.Control.BaseIO
+-- Copyright : (c) Brian Schroeder, Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- Monomorphized versions of functions for simplified client use via
 -- @Data.SBV.Control@, where we restrict the underlying monad to be IO.

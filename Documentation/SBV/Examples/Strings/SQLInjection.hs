@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Documentation.SBV.Examples.Puzzles.SQLInjection
--- Copyright   :  (c) Joel Burget
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Documentation.SBV.Examples.Strings.SQLInjection
+-- Copyright : (c) Joel Burget
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- Implement the symbolic evaluation of a language which operates on
 -- strings in a way similar to bash. It's possible to do different analyses,

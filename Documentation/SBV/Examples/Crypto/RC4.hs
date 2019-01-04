@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Documentation.SBV.Examples.Crypto.RC4
--- Copyright   :  (c) Austin Seipp
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Documentation.SBV.Examples.Crypto.RC4
+-- Copyright : (c) Austin Seipp
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- An implementation of RC4 (AKA Rivest Cipher 4 or Alleged RC4/ARC4),
 -- using SBV. For information on RC4, see: <http://en.wikipedia.org/wiki/RC4>.

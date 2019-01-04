@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Trans.Control
--- Copyright   :  (c) Brian Schroeder, Levent Erkok
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Data.SBV.Trans.Control
+-- Copyright : (c) Brian Schroeder, Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- More generalized alternative to @Data.SBV.Control@ for advanced client use
 -----------------------------------------------------------------------------
