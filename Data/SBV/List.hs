@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.List
--- Copyright   :  (c) Joel Burget, Levent Erkok
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Data.SBV.List
+-- Copyright : (c) Joel Burget, Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- A collection of list utilities, useful when working with symbolic lists.
 -- To the extent possible, the functions in this module follow those of "Data.List"

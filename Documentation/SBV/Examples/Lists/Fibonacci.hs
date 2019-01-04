@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Documentation.SBV.Examples.Lists.Fibonacci
--- Copyright   :  (c) Joel Burget
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Documentation.SBV.Examples.Lists.Fibonacci
+-- Copyright : (c) Joel Burget
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- Define the fibonacci sequence as an SBV symbolic list.
 -----------------------------------------------------------------------------

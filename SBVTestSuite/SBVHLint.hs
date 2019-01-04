@@ -1,3 +1,14 @@
+-----------------------------------------------------------------------------
+-- |
+-- Module    : SBVHLint
+-- Copyright : (c) Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
+--
+-- HLint interface for SBV testsuite
+-----------------------------------------------------------------------------
+
 module Main (main) where
 
 import Utils.SBVTestFramework (getTestEnvironment, TestEnvironment(..))

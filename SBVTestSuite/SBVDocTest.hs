@@ -1,3 +1,14 @@
+-----------------------------------------------------------------------------
+-- |
+-- Module    : SBVDocTest
+-- Copyright : (c) Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
+--
+-- Doctest interface for SBV testsuite
+-----------------------------------------------------------------------------
+
 module Main (main) where
 
 import System.FilePath.Glob (glob)

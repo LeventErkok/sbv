@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Provers.ABC
--- Copyright   :  (c) Adam Foltzer
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Data.SBV.Provers.ABC
+-- Copyright : (c) Adam Foltzer
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- The connection to the ABC verification and synthesis tool
 -----------------------------------------------------------------------------

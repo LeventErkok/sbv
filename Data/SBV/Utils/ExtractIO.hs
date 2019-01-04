@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Control.Mono
--- Copyright   :  (c) Brian Schroeder
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Data.SBV.Utils.ExtractIO
+-- Copyright : (c) Brian Schroeder
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- Helper typeclass for interoperation with APIs which take IO actions in
 -- negative position.

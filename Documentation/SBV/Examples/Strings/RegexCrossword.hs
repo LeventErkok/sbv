@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Documentation.SBV.Examples.Puzzles.RegexCrossword
--- Copyright   :  (c) Joel Burget
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Documentation.SBV.Examples.Strings.RegexCrossword
+-- Copyright : (c) Joel Burget
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- This example solves regex crosswords from <http://regexcrossword.com>
 -----------------------------------------------------------------------------

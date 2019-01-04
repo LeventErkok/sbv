@@ -1,15 +1,15 @@
----------------------------------------------------------------------------------
+-----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Internals
--- Copyright   :  (c) Levent Erkok
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Data.SBV.Internals
+-- Copyright : (c) Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- Low level functions to access the SBV infrastructure, for developers who
 -- want to build further tools on top of SBV. End-users of the library
 -- should not need to use this module.
----------------------------------------------------------------------------------
+-----------------------------------------------------------------------------
 
 module Data.SBV.Internals (
   -- * Running symbolic programs /manually/

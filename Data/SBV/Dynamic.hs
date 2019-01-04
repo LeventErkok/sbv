@@ -1,16 +1,16 @@
----------------------------------------------------------------------------------
+-----------------------------------------------------------------------------
 -- |
--- Module      :  Data.SBV.Dynamic
--- Copyright   :  (c) Brian Huffman
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : Data.SBV.Dynamic
+-- Copyright : (c) Brian Huffman
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- Dynamically typed low-level API to the SBV library, for users who
 -- want to generate symbolic values at run-time. Note that with this
 -- API it is possible to create terms that are not type correct; use
 -- at your own risk!
----------------------------------------------------------------------------------
+-----------------------------------------------------------------------------
 
 module Data.SBV.Dynamic
   (
