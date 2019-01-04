@@ -53,6 +53,9 @@
    * [BACKWARDS COMPATIBILITY] Renamed the module `Data.SBV.List.Bounded` to
      `Data.SBV.Tools.BoundedList`.
 
+   * Added `nil` to `Data.SBV.List`. Added `nil` and `uncons` to `Data.SBV.String`.
+     These were inadvertently left out previously.
+
    * Add `Data.SBV.Tools.BMC` module, which provides a BMC (bounded-model
      checking engine) for traditional state transition systems. See
      `Documentation.SBV.Examples.ProofTools.BMC` for example uses.

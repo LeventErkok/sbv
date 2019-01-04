@@ -22,7 +22,7 @@ module Data.SBV.String (
         -- * Length, emptiness
           length, null
         -- * Deconstructing/Reconstructing
-        , head, tail, init, singleton, strToStrAt, strToCharAt, (.!!), implode, concat, (.:), (.++)
+        , head, tail, uncons, init, singleton, strToStrAt, strToCharAt, (.!!), implode, concat, (.:), nil, (.++)
         -- * Containment
         , isInfixOf, isSuffixOf, isPrefixOf
         -- * Substrings
@@ -93,6 +93,10 @@ tail s
  = literal cs
  | True
  = subStr s 1 (length s - 1)
+
+-- | @`uncons` returns the pair of the first character and tail. Unspecified if the string is empty.
+uncons :: SString -> (SChar, SString)
+uncons l = (head l, tail l)
 
 -- | @`init`@ returns all but the last element of the list. Unspecified if the string is empty.
 --
@@ -170,6 +174,13 @@ implode = foldr ((.++) . singleton) ""
 infixr 5 .:
 (.:) :: SChar -> SString -> SString
 c .: cs = singleton c .++ cs
+
+-- | Empty string. This value has the property that it's the only string with length 0:
+--
+-- >>> prove $ \l -> length l .== 0 .<=> l .== nil
+-- Q.E.D.
+nil :: SString
+nil = ""
 
 -- | Concatenate two strings. See also `.++`.
 concat :: SString -> SString -> SString
