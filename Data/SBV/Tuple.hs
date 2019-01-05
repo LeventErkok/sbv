@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : Data.SBV.Tuple
--- Author    : Joel Burget
+-- Author    : Joel Burget, Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Symbolic tuples.
+-- Accessing symbolic tuple fields.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds              #-}
@@ -56,12 +56,7 @@ instance IndexType n xs => IndexType ('S n) (y ': xs) where
 
 -- | Access the @n@th field of a tuple or @HList@.
 field :: forall tup a n.  (HListable tup, SymWord tup, SymWord a, IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SNat n -> SBV tup -> SBV a
-field n tup
-  | Just a <- fromIndex n . toHList <$> unliteral tup
-  = literal a
-  | True
-  = symbolicFieldAccess (sNatToInt n + 1) tup
-
+field n = symbolicFieldAccess (sNatToInt n + 1)
   where sNatToInt :: SNat n' -> Int
         sNatToInt SZ      = 0
         sNatToInt (SS n') = succ (sNatToInt n')
@@ -98,18 +93,37 @@ field7 = field $ SS $ SS $ SS $ SS $ SS $ SS SZ
 field8 :: (HListable tup, SymWord tup, SymWord a, n ~ 'S ('S ('S ('S ('S ('S ('S 'Z)))))), IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
 field8 = field $ SS $ SS $ SS $ SS $ SS $ SS $ SS SZ
 
--- | Access the @i@ element of a tuple
-symbolicFieldAccess :: forall a tup. HasKind a => Int -> SBV tup -> SBV a
-symbolicFieldAccess i tup = SBV $ SVal kElem $ Right $ cache y
-  where (kElem, n) = pick (kindOf tup)
-        y st = do sw <- svToSW st $ unSBV tup
-                  newExpr st kElem (SBVApp (TupleAccess i n) [sw])
+-- | Dynamic interface to exporting tuples, this function is not
+-- exported on purpose; use it only via the 'field' functions.
+symbolicFieldAccess :: SymWord a => Int -> SBV tup -> SBV a
+symbolicFieldAccess i tup
+  | 1 > i || i > lks
+  = bad $ "Index is out of bounds, " ++ show i ++ " is outside [1," ++ show lks ++ "]"
+  | SBV (SVal kval (Left v)) <- tup
+  = case cwVal v of
+      CWTuple vs | kval      /= ktup -> bad $ "Kind/value mismatch: "      ++ show kval
+                 | length vs /= lks  -> bad $ "Value has fewer elements: " ++ show (CW kval (CWTuple vs))
+                 | True              -> literal $ fromCW $ CW kElem (vs !! (i-1))
+      _                              -> bad $ "Kind/value mismatch: " ++ show v
+  | True
+  = symAccess
+  where ktup = kindOf tup
 
-        pick k@(KTuple ks)
-          | i <= l = (ks !! (i-1), l)
-          | True   = bad $ " of an " ++ show l ++ "-tuple: " ++ show k
-         where l = length ks
+        (lks, eks) = case ktup of
+                       KTuple ks -> (length ks, ks)
+                       _         -> bad "Was expecting to receive a tuple!"
 
-        pick k = bad $ " of a non-tuple: " ++ show k
+        kElem = eks !! (i-1)
 
-        bad w = error $ "Data.SBV.symbolicFieldAccess: Impossible happened; accessing field " ++ show i ++ w
+        bad :: String -> a
+        bad problem = error $ unlines [ "*** Data.SBV.field: Impossible happened"
+                                      , "***   Accessing element: " ++ show i
+                                      , "***   Argument kind    : " ++ show ktup
+                                      , "***   Problem          : " ++ problem
+                                      , "*** Please report this as a bug!"
+                                      ]
+
+        symAccess :: SBV a
+        symAccess = SBV $ SVal kElem $ Right $ cache y
+          where y st = do sw <- svToSW st $ unSBV tup
+                          newExpr st kElem (SBVApp (TupleAccess i lks) [sw])
