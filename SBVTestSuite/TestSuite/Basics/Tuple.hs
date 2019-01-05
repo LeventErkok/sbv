@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  TestSuite.Basics.Tuple
--- Copyright   :  (c) Levent Erkok
--- License     :  BSD3
--- Maintainer  :  erkokl@gmail.com
--- Stability   :  experimental
+-- Module    : TestSuite.Basics.Tuple
+-- Author    : Joel Burget
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
 --
 -- Test tuples.
 -----------------------------------------------------------------------------
@@ -12,7 +12,7 @@
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TypeApplications #-}
 
-module TestSuite.Basics.Tuple(tests)  where
+module TestSuite.Basics.Tuple (tests)  where
 
 import           Control.Monad          (unless)
 

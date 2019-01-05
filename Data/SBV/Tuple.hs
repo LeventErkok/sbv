@@ -1,3 +1,14 @@
+-----------------------------------------------------------------------------
+-- |
+-- Module    : Data.SBV.Tuple
+-- Author    : Joel Burget
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
+--
+-- Symbolic tuples.
+-----------------------------------------------------------------------------
+
 {-# LANGUAGE DataKinds              #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
