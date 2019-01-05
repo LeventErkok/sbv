@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : Documentation.SBV.Examples.CodeGeneration.Fibonacci
--- Copyright : (c) Lee Pike, Levent Erkok
+-- Author    : Lee Pike, Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental

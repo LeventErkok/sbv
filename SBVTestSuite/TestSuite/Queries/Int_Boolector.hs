@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : TestSuite.Queries.Int_Boolector
--- Copyright : (c) Levent Erkok
+-- Author    : Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental

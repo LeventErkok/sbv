@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : Data.SBV.Client.BaseIO
--- Copyright : (c) Brian Schroeder, Levent Erkok
+-- Author    : Brian Schroeder, Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
