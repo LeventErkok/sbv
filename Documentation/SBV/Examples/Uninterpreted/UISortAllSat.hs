@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : Documentation.SBV.Examples.Uninterpreted.UISortAllSat
--- Copyright : (c) Levent Erkok
+-- Author    : Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental

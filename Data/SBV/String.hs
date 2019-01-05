@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : Data.SBV.String
--- Copyright : (c) Joel Burget, Levent Erkok
+-- Author    : Joel Burget, Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental

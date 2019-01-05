@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : TestSuite.Transformers.SymbolicEval
--- Copyright : (c) Brian Schroeder
+-- Author    : Brian Schroeder
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental

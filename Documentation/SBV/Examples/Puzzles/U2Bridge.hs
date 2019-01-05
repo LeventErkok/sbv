@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : Documentation.SBV.Examples.Puzzles.U2Bridge
--- Copyright : (c) Levent Erkok
+-- Author    : Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental

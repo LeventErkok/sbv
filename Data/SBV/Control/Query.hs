@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : Data.SBV.Control.Query
--- Copyright : (c) Levent Erkok
+-- Author    : Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental

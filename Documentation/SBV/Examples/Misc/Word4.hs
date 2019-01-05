@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : Documentation.SBV.Examples.Misc.Word4
--- Copyright : (c) Brian Huffman
+-- Author    : Brian Huffman
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental

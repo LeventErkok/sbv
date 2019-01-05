@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : Data.SBV.Utils.ExtractIO
--- Copyright : (c) Brian Schroeder
+-- Author    : Brian Schroeder
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
