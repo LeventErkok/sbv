@@ -497,13 +497,13 @@ sStrings = Trans.sStrings
 -- | Declare an 'SList'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sList'
-sList :: (SymWord a) => String -> Symbolic (SList a)
+sList :: SymWord a => String -> Symbolic (SList a)
 sList = Trans.sList
 
 -- | Declare a list of 'SList's
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sLists'
-sLists :: (SymWord a) => [String] -> Symbolic [SList a]
+sLists :: SymWord a => [String] -> Symbolic [SList a]
 sLists = Trans.sLists
 
 -- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
