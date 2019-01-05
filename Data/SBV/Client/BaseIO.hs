@@ -506,6 +506,18 @@ sList = Trans.sList
 sLists :: SymWord a => [String] -> Symbolic [SList a]
 sLists = Trans.sLists
 
+-- | Declare a tuple.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sTuple'
+sTuple :: SymWord tup => String -> Symbolic (SBV tup)
+sTuple = Trans.sTuple
+
+-- | Declare a list of tuples.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sTuples'
+sTuples :: SymWord tup => [String] -> Symbolic [SBV tup]
+sTuples = Trans.sTuples
+
 -- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
 -- problems with constraints, like the following:
 --

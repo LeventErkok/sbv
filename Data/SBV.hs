@@ -305,12 +305,12 @@ import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         forall, forall_, exists, exists_,
                                         solve, sBool, sBools, sChar, sChars,
                                         sDouble, sDoubles, sFloat, sFloats,
-                                        sInt8, sInt8s, sInt16, sInt16s, sInt32,
-                                        sInt32s, sInt64, sInt64s, sInteger,
-                                        sIntegers, sList, sLists, sReal,
-                                        sReals, sString, sStrings, sWord8,
-                                        sWord8s, sWord16, sWord16s, sWord32,
-                                        sWord32s, sWord64, sWord64s)
+                                        sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, 
+                                        sInt64, sInt64s, sInteger, sIntegers, 
+                                        sList, sLists, sTuple, sTuples,
+                                        sReal, sReals, sString, sStrings,
+                                        sWord8, sWord8s, sWord16, sWord16s,
+                                        sWord32, sWord32s, sWord64, sWord64s)
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Splittable
 import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT)

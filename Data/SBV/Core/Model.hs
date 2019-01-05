@@ -503,10 +503,12 @@ sList = symbolic
 sLists :: (SymWord a, MonadSymbolic m) => [String] -> m [SList a]
 sLists = symbolics
 
-sTuple :: forall tup. SymWord tup => String -> Symbolic (SBV tup)
+-- | Generalization of 'Data.SBV.sTuple'
+sTuple :: (SymWord tup, MonadSymbolic m) => String -> m (SBV tup)
 sTuple = symbolic
 
-sTuples :: forall tup. SymWord tup => [String] -> Symbolic [SBV tup]
+-- | Generalization of 'Data.SBV.sTuples'
+sTuples :: (SymWord tup, MonadSymbolic m) => [String] -> m [SBV tup]
 sTuples = symbolics
 
 -- | Generalization of 'Data.SBV.solve'
