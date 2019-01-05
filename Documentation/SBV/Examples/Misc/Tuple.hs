@@ -9,8 +9,7 @@
 -- Some tuple examples.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Documentation.SBV.Examples.Misc.Tuple where
 
