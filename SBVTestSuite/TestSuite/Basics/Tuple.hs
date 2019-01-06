@@ -9,18 +9,27 @@
 -- Test tuples.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE TypeApplications    #-}
+
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module TestSuite.Basics.Tuple (tests)  where
 
 import Data.SBV.Control
-import Data.SBV.List ((.!!))
+import Data.SBV.List ((.!!), (.:))
 import Data.SBV.Tuple
 
 import qualified Data.SBV.List as L
 
 import Utils.SBVTestFramework
+
+data E = A | B | C
+mkSymbolicEnumeration ''E
 
 -- Test suite
 tests :: TestTree
@@ -29,6 +38,7 @@ tests = testGroup "Basics.Tuple" [
         , goldenCapturedIO "tuple_twoTwo" $ t twoTwoTuples
         , goldenCapturedIO "tuple_nested" $ t nested
         , goldenCapturedIO "tuple_list"   $ t list
+        , goldenCapturedIO "tuple_enum"   $ t enum
         ]
     where t tc goldFile = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile} tc
                              appendFile goldFile ("\n FINAL: " ++ show r ++ "\nDONE!\n")
@@ -74,5 +84,27 @@ list = do
 
   query $ do _ <- checkSat
              getValue lst
+
+enum :: Symbolic ([(E, [Bool])], (Word8, (E, Float)))
+enum = do
+   vTup1 :: SList (E, [Bool]) <- sTuple "v1"
+   q <- sBool "q"
+   constrain $ sNot q
+   constrain $ (vTup1 .!! 1)^._2 .== sTrue .: q .: L.nil
+   constrain $ L.length vTup1 .== 3
+
+   case untuple (vTup1 .!! 2)  of
+     (e, b) -> do constrain $ e .== literal C
+                  constrain $ L.length b .== 6
+                  constrain $ b .!! 4 .== sTrue
+
+   query $ do
+     vTup2 :: STuple2 Word8 (E, Float) <- freshVar "v2"
+     constrain $ vTup2 .== literal (5, (C, 8.12))
+
+     constrain $ vTup1 .== literal [(B, []), (A, [True, False]), (C, [False, False, False, False, True, False])]
+
+     _ <- checkSat
+     (,) <$> getValue vTup1 <*> getValue vTup2
 
 {-# ANN module ("HLint: ignore Use ." :: String) #-}
