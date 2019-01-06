@@ -215,7 +215,7 @@ instance SymWord a => SymWord [a] where
 toCW :: SymWord a => a -> CWVal
 toCW a = case literal a of
            SBV (SVal _ (Left cw)) -> cwVal cw
-           _                      -> error $ "SymWord.toCW: Impossible happened, couldn't produce a concrete value"
+           _                      -> error "SymWord.toCW: Impossible happened, couldn't produce a concrete value"
 
 mkCWTup :: Int -> Kind -> [CWVal] -> SBV a
 mkCWTup i k@(KTuple ks) cs
