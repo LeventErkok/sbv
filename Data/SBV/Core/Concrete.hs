@@ -275,17 +275,17 @@ showBaseKind k = case show k of
 
 -- | Create a constant word from an integral.
 mkConstCW :: Integral a => Kind -> a -> CW
-mkConstCW KBool        a = normCW $ CW KBool      (CWInteger (toInteger a))
-mkConstCW k@KBounded{} a = normCW $ CW k          (CWInteger (toInteger a))
-mkConstCW KUnbounded   a = normCW $ CW KUnbounded (CWInteger (toInteger a))
-mkConstCW KReal        a = normCW $ CW KReal      (CWAlgReal (fromInteger (toInteger a)))
-mkConstCW KFloat       a = normCW $ CW KFloat     (CWFloat   (fromInteger (toInteger a)))
-mkConstCW KDouble      a = normCW $ CW KDouble    (CWDouble  (fromInteger (toInteger a)))
-mkConstCW KChar        a = error $ "Unexpected call to mkConstCW (Char) with value: " ++ show (toInteger a)
-mkConstCW KString      a = error $ "Unexpected call to mkConstCW (String) with value: " ++ show (toInteger a)
-mkConstCW k@KList{}    a = error $ "Unexpected call to mkConstCW (" ++ show k ++ ") with value: " ++ show (toInteger a)
+mkConstCW KBool           a = normCW $ CW KBool      (CWInteger (toInteger a))
+mkConstCW k@KBounded{}    a = normCW $ CW k          (CWInteger (toInteger a))
+mkConstCW KUnbounded      a = normCW $ CW KUnbounded (CWInteger (toInteger a))
+mkConstCW KReal           a = normCW $ CW KReal      (CWAlgReal (fromInteger (toInteger a)))
+mkConstCW KFloat          a = normCW $ CW KFloat     (CWFloat   (fromInteger (toInteger a)))
+mkConstCW KDouble         a = normCW $ CW KDouble    (CWDouble  (fromInteger (toInteger a)))
+mkConstCW KChar           a = error $ "Unexpected call to mkConstCW (Char) with value: " ++ show (toInteger a)
+mkConstCW KString         a = error $ "Unexpected call to mkConstCW (String) with value: " ++ show (toInteger a)
+mkConstCW k@KList{}       a = error $ "Unexpected call to mkConstCW (" ++ show k ++ ") with value: " ++ show (toInteger a)
 mkConstCW (KUserSort s _) a = error $ "Unexpected call to mkConstCW with uninterpreted kind: " ++ s ++ " with value: " ++ show (toInteger a)
-mkConstCW k@KTuple{}   a = error $ "Unexpected call to mkConstCW (" ++ show k ++ ") with value: " ++ show (toInteger a)
+mkConstCW k@KTuple{}      a = error $ "Unexpected call to mkConstCW (" ++ show k ++ ") with value: " ++ show (toInteger a)
 
 -- | Generate a random constant value ('CWVal') of the correct kind.
 randomCWVal :: Kind -> IO CWVal
