@@ -5,11 +5,18 @@
 
 ### Version 7.13.5, New development version
 
-  * This is a major release of SBV, contributed by Brian Schroeder. Brian
-    reworked the internals of SBV to allow for custom monad stacks. In particular,
-    there is now a `SymbolicT` monad transformer, which generalizes the `Symbolic`
-    monad over an arbitrary base type, allowing users to build SBV based symbolic
-    execution engines on top of their own monad infrastructure.
+  * This is a major release of SBV, with several BACKWARDS COMPATIBILITY breaking
+    changes. Lots of reworking of the internals to modernize the SBV code base.
+    A few external API changes happened as well, mainly in terms of renamed
+    types/operators to reflect the current state of things. I expect most end user
+    programs to carry over unchanged, perhaps needing a bunch of renames. See below
+    for details.
+
+  * Transformer stack and `SymbolicT`: This major internal revamping was contributed
+    by Brian Schroeder. Brian reworked the internals of SBV to allow for custom monad
+    stacks. In particular, there is now a `SymbolicT` monad transformer, which
+    generalizes the `Symbolic` monad over an arbitrary base type, allowing users to
+    build SBV based symbolic execution engines on top of their own monad infrastructure.
 
     Brian took the pains to ensure existing users (or those who do not have their
     own monad stack), the transformer capabilities remain transparent. That is,
@@ -20,6 +27,16 @@
     how to use the transformer based code.
 
     Thanks to Brian Schroeder for this massive effort to modernize the SBV code-base!
+
+  * Support for tuples: Thanks to Joel Burget, SBV now supports tuple types (up-to
+    8-tuples), and allows mixing and matching of lists and tuples arbitrarily
+    as symbolic values. For instance `SBV [(Integer, String)]` is a valid type as
+    is `SBV [(Integer, [(Char, (Float, String))])]`, with each component symbolically
+    represented. There are new type synonyms for `STupleN` for `N` between 2 to 8,
+    along with `untuple` destructor, and field accessors similar to lens: For instance
+    `p^._4` would project the 4th element of a tuple that has at least 4 fields.
+    The mixing and matching of field types and nesting allows for very rich
+    symbolic value representations.
 
   * [BACKWARDS COMPATIBILITY] The 'Boolean' class is removed, which used to abstract
     over logical connectives. Previously, this class handled 'SBool' and 'Bool', but
