@@ -74,8 +74,8 @@ symbolicFieldAccess i tup
 data Label (l :: Symbol) = Get
 
 -- | The class 'HasField' captures the notion that a type has a certain field
-class SymWord b => HasField l b a | l a -> b where
-  field :: Label l -> SBV a -> SBV b
+class SymWord elt => HasField l elt tup | l tup -> elt where
+  field :: Label l -> SBV tup -> SBV elt
 
 instance SymWord a => HasField "_1" a (a, b)                   where field _ = symbolicFieldAccess 1
 instance SymWord a => HasField "_1" a (a, b, c)                where field _ = symbolicFieldAccess 1
