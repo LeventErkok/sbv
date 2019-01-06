@@ -60,40 +60,40 @@
         * Existential  : bAny    became   sAny
         * Universal    : bAll    became   sAll
 
-   * [BACKWARDS COMPATIBILITY] Hostorically, SBV focused on bit-vectors and machine
-     words, which meant lots of internal types were named suggestive of this heritage.
-     With the addition of `SInteger`, `SReal`, `SFloat`, `SDouble` we have expanded
-     this, but still remained focused on atomic types. But, thanks largely to
-     Joel Burget, SBV now supports symbolic characters, strings, lists, and now
-     tuples; which makes this all naming confusing. To reflect, we have made the
-     following internal renamings:
+  * [BACKWARDS COMPATIBILITY] Hostorically, SBV focused on bit-vectors and machine
+    words, which meant lots of internal types were named suggestive of this heritage.
+    With the addition of `SInteger`, `SReal`, `SFloat`, `SDouble` we have expanded
+    this, but still remained focused on atomic types. But, thanks largely to
+    Joel Burget, SBV now supports symbolic characters, strings, lists, and now
+    tuples; which makes this all naming confusing. To reflect, we have made the
+    following internal renamings:
 
         * SymWord became SymVal
 
-     For most casual users, these changes should not require any changes. But if you were
-     developing libraries on top of SBV, then you will have to adapt to the new schema.
-     Please report if there are any gotchas we have forgotten about.
+    For most casual users, these changes should not require any changes. But if you were
+    developing libraries on top of SBV, then you will have to adapt to the new schema.
+    Please report if there are any gotchas we have forgotten about.
 
-   * [BACKWARDS COMPATIBILITY] When user queries are present, SBV now picks the logic
-     "ALL" (as opposed to a suitable variant of bit-vectors as in the past versions).
-     This can be overridden by the 'setLogic' command as usual of course. While the new
-     choice breaks backwards compatibility, I expect the impact will be minimal, and
-     the new behavior matches better with user expectations on how external queries are
-     usually employed.
+  * [BACKWARDS COMPATIBILITY] When user queries are present, SBV now picks the logic
+    "ALL" (as opposed to a suitable variant of bit-vectors as in the past versions).
+    This can be overridden by the 'setLogic' command as usual of course. While the new
+    choice breaks backwards compatibility, I expect the impact will be minimal, and
+    the new behavior matches better with user expectations on how external queries are
+    usually employed.
 
-   * [BACKWARDS COMPATIBILITY] Renamed the module `Data.SBV.List.Bounded` to
-     `Data.SBV.Tools.BoundedList`.
+  * [BACKWARDS COMPATIBILITY] Renamed the module `Data.SBV.List.Bounded` to
+    `Data.SBV.Tools.BoundedList`.
 
-   * Added `nil` to `Data.SBV.List`. Added `nil` and `uncons` to `Data.SBV.String`.
-     These were inadvertently left out previously.
+  * Added `nil` to `Data.SBV.List`. Added `nil` and `uncons` to `Data.SBV.String`.
+    These were inadvertently left out previously.
 
-   * Add `Data.SBV.Tools.BMC` module, which provides a BMC (bounded-model
-     checking engine) for traditional state transition systems. See
-     `Documentation.SBV.Examples.ProofTools.BMC` for example uses.
+  * Add `Data.SBV.Tools.BMC` module, which provides a BMC (bounded-model
+    checking engine) for traditional state transition systems. See
+    `Documentation.SBV.Examples.ProofTools.BMC` for example uses.
 
-   * Add `Data.SBV.Tools.Induction` module, which provides an induction engine
-     for traditional state transition systems. Also added several example use
-     cases in the directory `Documentation.SBV.Examples.ProofTools`.
+  * Add `Data.SBV.Tools.Induction` module, which provides an induction engine
+    for traditional state transition systems. Also added several example use
+    cases in the directory `Documentation.SBV.Examples.ProofTools`.
 
 ### Version 7.13, 2018-12-16
 
