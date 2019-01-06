@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Accessing symbolic tuple fields.
+-- Accessing symbolic tuple fields and deconstruction.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds              #-}
@@ -18,7 +18,9 @@
 
 module Data.SBV.Tuple (
   -- * Symbolic field access
-  (^.), _1, _2, _3, _4, _5, _6, _7, _8
+    (^.), _1, _2, _3, _4, _5, _6, _7, _8
+  -- * Untupling
+  , untuple
   ) where
 
 import GHC.TypeLits
@@ -151,3 +153,29 @@ _7 = field (Get :: Label "_7")
 -- | Access the 8th element of an @STupleN@, @8 <= N <= 8@. Also see '^.'.
 _8 :: HasField "_8" b a => SBV a -> SBV b
 _8 = field (Get :: Label "_8")
+
+-- | Unconstructing a tuple to its parts
+class Untuple tup a | tup -> a where
+  -- | Deconstruct a tuple, getting its constituent parts apart.
+  untuple :: SBV tup -> a
+
+instance (SymWord a, SymWord b) => Untuple (a, b) (SBV a, SBV b) where
+  untuple p = (p^._1, p^._2)
+
+instance (SymWord a, SymWord b, SymWord c) => Untuple (a, b, c) (SBV a, SBV b, SBV c) where
+  untuple p = (p^._1, p^._2, p^._3)
+
+instance (SymWord a, SymWord b, SymWord c, SymWord d) => Untuple (a, b, c, d) (SBV a, SBV b, SBV c, SBV d) where
+  untuple p = (p^._1, p^._2, p^._3, p^._4)
+
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e) => Untuple (a, b, c, d, e) (SBV a, SBV b, SBV c, SBV d, SBV e) where
+  untuple p = (p^._1, p^._2, p^._3, p^._4, p^._5)
+
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f) => Untuple (a, b, c, d, e, f) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
+  untuple p = (p^._1, p^._2, p^._3, p^._4, p^._5, p^._6)
+
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g) => Untuple (a, b, c, d, e, f, g) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
+  untuple p = (p^._1, p^._2, p^._3, p^._4, p^._5, p^._6, p^._7)
+
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, SymWord h) => Untuple (a, b, c, d, e, f, g, h) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h) where
+  untuple p = (p^._1, p^._2, p^._3, p^._4, p^._5, p^._6, p^._7, p^._8)
