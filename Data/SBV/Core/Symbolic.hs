@@ -59,7 +59,7 @@ module Data.SBV.Core.Symbolic
 
 import Control.Arrow               (first, second, (***))
 import Control.DeepSeq             (NFData(..))
-import Control.Monad               (when, unless)
+import Control.Monad               (when)
 import Control.Monad.Except        (MonadError, ExceptT)
 import Control.Monad.Reader        (MonadReader(..), ReaderT, runReaderT,
                                     mapReaderT)
@@ -988,9 +988,20 @@ registerKind st k
   | KUserSort sortName _ <- k, map toLower sortName `elem` smtLibReservedNames
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | True
-  = do ks <- readIORef (rUsedKinds st)
-       unless (k `Set.member` ks) $ modifyState st rUsedKinds (Set.insert k)
-                                              $ modifyIncState st rNewKinds (Set.insert k)
+  = do -- Adding a kind to the incState is tricky; we only need to add it
+       --     *    If it's an uninterpreted sort that's not already in the general state
+       --     * OR If it's a tuple-sort whose cardinality isn't already in the general state
+
+       existingKinds <- readIORef (rUsedKinds st)
+
+       modifyState st rUsedKinds (Set.insert k) $ do
+
+                          let needsAdding = case k of
+                                              KUserSort{} -> k `notElem` existingKinds
+                                              KTuple nks  -> length nks `notElem` [length oks | KTuple oks <- Set.toList existingKinds]
+                                              _           -> False
+
+                          when needsAdding $ modifyIncState st rNewKinds (Set.insert k)
 
        -- Don't forget to register subkinds!
        case k of

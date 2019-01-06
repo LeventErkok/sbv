@@ -140,8 +140,8 @@ io :: MonadIO m => IO a -> m a
 io = liftIO
 
 -- | Sync-up the external solver with new context we have generated
-syncUpSolver :: (MonadIO m, MonadQuery m) => Bool -> State -> IncState -> m ()
-syncUpSolver afterAPush st is = do
+syncUpSolver :: (MonadIO m, MonadQuery m) => Bool -> IncState -> m ()
+syncUpSolver afterAPush is = do
         cfg <- getConfig
         ls  <- io $ do let swap  (a, b)        = (b, a)
                            cmp   (a, _) (b, _) = a `compare` b
@@ -154,9 +154,7 @@ syncUpSolver afterAPush st is = do
                        uis   <- Map.toAscList <$> readIORef (rNewUIs is)
                        as    <- readIORef (rNewAsgns is)
 
-                       origKinds <- readIORef (rUsedKinds st)
-
-                       return $ toIncSMTLib afterAPush cfg inps (origKinds, ks) cnsts arrs tbls uis as cfg
+                       return $ toIncSMTLib afterAPush cfg inps ks cnsts arrs tbls uis as cfg
         mapM_ (send True) $ mergeSExpr ls
 
 -- | Retrieve the query context
@@ -190,7 +188,7 @@ inNewContext act = do st <- queryState
                       let afterAPush = case mbQS of
                                          Nothing -> False
                                          Just qs -> isJust (queryTblArrPreserveIndex qs)
-                      syncUpSolver afterAPush st is
+                      syncUpSolver afterAPush is
                       return r
 
 -- | Generalization of 'Data.SBV.Control.freshVar_'

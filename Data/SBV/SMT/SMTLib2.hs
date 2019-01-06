@@ -14,7 +14,7 @@
 module Data.SBV.SMT.SMTLib2(cvt, cvtInc) where
 
 import Data.Bits  (bit)
-import Data.List  (intercalate, partition, unzip3, nub, (\\))
+import Data.List  (intercalate, partition, unzip3, nub)
 import Data.Maybe (listToMaybe, fromMaybe)
 
 import qualified Data.Foldable as F (toList)
@@ -313,7 +313,10 @@ declTuple arity
 
         param i = "T" ++ show i
 
--- Find the set of tuple sizes to declare, eg (2-tuple, 5-tuple).
+-- | Find the set of tuple sizes to declare, eg (2-tuple, 5-tuple).
+-- NB. We do *not* need to recursively go into list/tuple kinds here,
+-- because register-kind function automatically registers all subcomponent
+-- kinds, thus everything we need is available at the top-level.
 findTupleArities :: Set Kind -> [Int]
 findTupleArities ks = Set.toAscList
                     $ Set.map length
@@ -321,11 +324,11 @@ findTupleArities ks = Set.toAscList
 
 -- | Convert in a query context
 cvtInc :: Bool -> SMTLibIncConverter [String]
-cvtInc afterAPush inps (oldKs, newKs) consts arrs tbls uis (SBVPgm asgnsSeq) cfg =
+cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cfg =
             -- sorts
                concatMap declSort [(s, dt) | KUserSort s dt <- Set.toList newKs]
             -- tuples. NB. Only declare the new sizes, old sizes persist.
-            ++ concatMap declTuple (findTupleArities newKs \\ findTupleArities oldKs)
+            ++ concatMap declTuple (findTupleArities newKs)
             -- constants
             ++ map (declConst cfg) consts
             -- inputs

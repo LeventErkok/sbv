@@ -55,7 +55,7 @@ type SMTLibConverter a =  QueryContext                                  -- ^ Int
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
 type SMTLibIncConverter a =  [NamedSymVar]                -- ^ inputs
-                          -> (Set.Set Kind, Set.Set Kind) -- ^ Originally know kinds, and newly registered kinds
+                          -> Set.Set Kind                 -- ^ new kinds
                           -> [(SW, CW)]                   -- ^ constants
                           -> [(Int, ArrayInfo)]           -- ^ newly created arrays
                           -> [((Int, Kind, Kind), [SW])]  -- ^ newly created tables
