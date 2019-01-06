@@ -103,7 +103,7 @@ instance ArithOverflow SVal where
 -- | A class of checked-arithmetic operations. These follow the usual arithmetic,
 -- except make calls to 'Data.SBV.sAssert' to ensure no overflow/underflow can occur.
 -- Use them in conjunction with 'Data.SBV.safe' to ensure no overflow can happen.
-class (ArithOverflow (SBV a), Num a, SymWord a) => CheckedArithmetic a where
+class (ArithOverflow (SBV a), Num a, SymVal a) => CheckedArithmetic a where
   (+!)          :: (?loc :: CallStack) => SBV a -> SBV a -> SBV a
   (-!)          :: (?loc :: CallStack) => SBV a -> SBV a -> SBV a
   (*!)          :: (?loc :: CallStack) => SBV a -> SBV a -> SBV a
@@ -391,7 +391,7 @@ bvsnego n x = (underflow, overflow)
 -- Q.E.D.
 --
 -- As the last example shows, converting to `sInteger` never underflows or overflows for any value.
-sFromIntegralO :: forall a b. (Integral a, HasKind a, Num a, SymWord a, HasKind b, Num b, SymWord b) => SBV a -> (SBV b, (SBool, SBool))
+sFromIntegralO :: forall a b. (Integral a, HasKind a, Num a, SymVal a, HasKind b, Num b, SymVal b) => SBV a -> (SBV b, (SBool, SBool))
 sFromIntegralO x = case (kindOf x, kindOf (undefined :: b)) of
                      (KBounded False n, KBounded False m) -> (res, u2u n m)
                      (KBounded False n, KBounded True  m) -> (res, u2s n m)
@@ -454,7 +454,7 @@ sFromIntegralO x = case (kindOf x, kindOf (undefined :: b)) of
                   | True  = SBV $ svAll [(unSBV x `svTestBit` (n-1)) `svEqual` svFalse, svNot $ allZero (n-1) (m-1) x]
 
 -- | Version of 'sFromIntegral' that has calls to 'Data.SBV.sAssert' for checking no overflow/underflow can happen. Use it with a 'Data.SBV.safe' call.
-sFromIntegralChecked :: forall a b. (?loc :: CallStack, Integral a, HasKind a, HasKind b, Num a, SymWord a, HasKind b, Num b, SymWord b) => SBV a -> SBV b
+sFromIntegralChecked :: forall a b. (?loc :: CallStack, Integral a, HasKind a, HasKind b, Num a, SymVal a, HasKind b, Num b, SymVal b) => SBV a -> SBV b
 sFromIntegralChecked x = sAssert (Just ?loc) (msg "underflows") (sNot u)
                        $ sAssert (Just ?loc) (msg "overflows")  (sNot o)
                          r

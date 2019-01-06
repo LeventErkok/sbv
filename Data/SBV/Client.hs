@@ -63,7 +63,7 @@ mkSymbolicEnumeration typeName = do
         deriving instance Ord      $(typeCon)
         deriving instance Read     $(typeCon)
         deriving instance Data     $(typeCon)
-        deriving instance SymWord  $(typeCon)
+        deriving instance SymVal   $(typeCon)
         deriving instance HasKind  $(typeCon)
         deriving instance SMTValue $(typeCon)
         deriving instance SatModel $(typeCon)

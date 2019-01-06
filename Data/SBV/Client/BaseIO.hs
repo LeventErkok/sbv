@@ -15,7 +15,7 @@
 module Data.SBV.Client.BaseIO where
 
 import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
-                                SymWord, SBool, SBV, SChar, SDouble, SFloat,
+                                SymVal, SBool, SBV, SChar, SDouble, SFloat,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
                                 SReal, SString, SW, SWord8, SWord16, SWord32,
                                 SWord64)
@@ -225,74 +225,74 @@ output = Trans.output
 -- | Create a user named input (universal)
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.forall'
-forall :: SymWord a => String -> Symbolic (SBV a)
+forall :: SymVal a => String -> Symbolic (SBV a)
 forall = Trans.forall
 
 -- | Create an automatically named input
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.forall_'
-forall_ :: SymWord a => Symbolic (SBV a)
+forall_ :: SymVal a => Symbolic (SBV a)
 forall_ = Trans.forall_
 
 -- | Get a bunch of new words
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.mkForallVars'
-mkForallVars :: SymWord a => Int -> Symbolic [SBV a]
+mkForallVars :: SymVal a => Int -> Symbolic [SBV a]
 mkForallVars = Trans.mkForallVars
 
 -- | Create an existential variable
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.exists'
-exists :: SymWord a => String -> Symbolic (SBV a)
+exists :: SymVal a => String -> Symbolic (SBV a)
 exists = Trans.exists
 
 -- | Create an automatically named existential variable
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.exists_'
-exists_ :: SymWord a => Symbolic (SBV a)
+exists_ :: SymVal a => Symbolic (SBV a)
 exists_ = Trans.exists_
 
 -- | Create a bunch of existentials
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.mkExistVars'
-mkExistVars :: SymWord a => Int -> Symbolic [SBV a]
+mkExistVars :: SymVal a => Int -> Symbolic [SBV a]
 mkExistVars = Trans.mkExistVars
 
 -- | Create a free variable, universal in a proof, existential in sat
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.free'
-free :: SymWord a => String -> Symbolic (SBV a)
+free :: SymVal a => String -> Symbolic (SBV a)
 free = Trans.free
 
 -- | Create an unnamed free variable, universal in proof, existential in sat
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.free_'
-free_ :: SymWord a => Symbolic (SBV a)
+free_ :: SymVal a => Symbolic (SBV a)
 free_ = Trans.free_
 
 -- | Create a bunch of free vars
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.mkFreeVars'
-mkFreeVars :: SymWord a => Int -> Symbolic [SBV a]
+mkFreeVars :: SymVal a => Int -> Symbolic [SBV a]
 mkFreeVars = Trans.mkFreeVars
 
 -- | Similar to free; Just a more convenient name
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.symbolic'
-symbolic :: SymWord a => String -> Symbolic (SBV a)
+symbolic :: SymVal a => String -> Symbolic (SBV a)
 symbolic = Trans.symbolic
 
 -- | Similar to mkFreeVars; but automatically gives names based on the strings
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.symbolics'
-symbolics :: SymWord a => [String] -> Symbolic [SBV a]
+symbolics :: SymVal a => [String] -> Symbolic [SBV a]
 symbolics = Trans.symbolics
 
 -- | One stop allocator
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.mkSymWord'
-mkSymWord :: SymWord a => Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
-mkSymWord = Trans.mkSymWord
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.mkSymVal'
+mkSymVal :: SymVal a => Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
+mkSymVal = Trans.mkSymVal
 
 -- | Create a new anonymous array, possibly with a default initial value.
 --
@@ -497,25 +497,25 @@ sStrings = Trans.sStrings
 -- | Declare an 'SList'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sList'
-sList :: SymWord a => String -> Symbolic (SList a)
+sList :: SymVal a => String -> Symbolic (SList a)
 sList = Trans.sList
 
 -- | Declare a list of 'SList's
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sLists'
-sLists :: SymWord a => [String] -> Symbolic [SList a]
+sLists :: SymVal a => [String] -> Symbolic [SList a]
 sLists = Trans.sLists
 
 -- | Declare a tuple.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sTuple'
-sTuple :: SymWord tup => String -> Symbolic (SBV tup)
+sTuple :: SymVal tup => String -> Symbolic (SBV tup)
 sTuple = Trans.sTuple
 
 -- | Declare a list of tuples.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sTuples'
-sTuples :: SymWord tup => [String] -> Symbolic [SBV tup]
+sTuples :: SymVal tup => [String] -> Symbolic [SBV tup]
 sTuples = Trans.sTuples
 
 -- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing

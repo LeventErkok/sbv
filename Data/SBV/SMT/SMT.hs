@@ -325,7 +325,7 @@ class Modelable a where
   getModelDictionary :: a -> M.Map String CW
 
   -- | Extract a model value for a given element. Also see `getModelValues`.
-  getModelValue :: SymWord b => String -> a -> Maybe b
+  getModelValue :: SymVal b => String -> a -> Maybe b
   getModelValue v r = fromCW `fmap` (v `M.lookup` getModelDictionary r)
 
   -- | Extract a representative name for the model value of an uninterpreted kind.
@@ -359,7 +359,7 @@ getModelDictionaries :: AllSatResult -> [M.Map String CW]
 getModelDictionaries (AllSatResult (_, _, xs)) = map getModelDictionary xs
 
 -- | Extract value of a variable from an all-sat call. Similar to `getModelValue`.
-getModelValues :: SymWord b => String -> AllSatResult -> [Maybe b]
+getModelValues :: SymVal b => String -> AllSatResult -> [Maybe b]
 getModelValues s (AllSatResult (_, _, xs)) =  map (s `getModelValue`) xs
 
 -- | Extract value of an uninterpreted variable from an all-sat call. Similar to `getModelUninterpretedValue`.

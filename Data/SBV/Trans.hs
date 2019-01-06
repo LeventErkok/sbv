@@ -139,7 +139,7 @@ module Data.SBV.Trans (
   , SBVException(..)
 
   -- * Abstract SBV type
-  , SBV, HasKind(..), Kind(..), SymWord(..)
+  , SBV, HasKind(..), Kind(..), SymVal(..)
   , MonadSymbolic(..), Symbolic, SymbolicT, label, output, runSMT, runSMTWith
 
   -- * Module exports

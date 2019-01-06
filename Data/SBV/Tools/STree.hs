@@ -34,14 +34,14 @@ data STreeInternal i e = SLeaf e                        -- NB. parameter 'i' is 
                        | SBin  (STreeInternal i e) (STreeInternal i e)
                        deriving Show
 
-instance SymWord e => Mergeable (STree i e) where
+instance SymVal e => Mergeable (STree i e) where
   symbolicMerge f b (SLeaf i)  (SLeaf j)    = SLeaf (symbolicMerge f b i j)
   symbolicMerge f b (SBin l r) (SBin l' r') = SBin  (symbolicMerge f b l l') (symbolicMerge f b r r')
   symbolicMerge _ _ _          _            = error "SBV.STree.symbolicMerge: Impossible happened while merging states"
 
 -- | Reading a value. We bit-blast the index and descend down the full tree
 -- according to bit-values.
-readSTree :: (SFiniteBits i, SymWord e) => STree i e -> SBV i -> SBV e
+readSTree :: (SFiniteBits i, SymVal e) => STree i e -> SBV i -> SBV e
 readSTree s i = walk (blastBE i) s
   where walk []     (SLeaf v)  = v
         walk (b:bs) (SBin l r) = ite b (walk bs r) (walk bs l)
@@ -49,7 +49,7 @@ readSTree s i = walk (blastBE i) s
 
 -- | Writing a value, similar to how reads are done. The important thing is that the tree
 -- representation keeps updates to a minimum.
-writeSTree :: (SFiniteBits i, SymWord e) => STree i e -> SBV i -> SBV e -> STree i e
+writeSTree :: (SFiniteBits i, SymVal e) => STree i e -> SBV i -> SBV e -> STree i e
 writeSTree s i j = walk (blastBE i) s
   where walk []     _          = SLeaf j
         walk (b:bs) (SBin l r) = SBin (ite b l (walk bs l)) (ite b (walk bs r) r)

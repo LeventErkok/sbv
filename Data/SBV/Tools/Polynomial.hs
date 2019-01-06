@@ -85,11 +85,11 @@ instance Polynomial SWord16 where {showPolynomial b = liftS (sp b); pMult = poly
 instance Polynomial SWord32 where {showPolynomial b = liftS (sp b); pMult = polyMult;      pDivMod = polyDivMod}
 instance Polynomial SWord64 where {showPolynomial b = liftS (sp b); pMult = polyMult;      pDivMod = polyDivMod}
 
-lift :: SymWord a => ((SBV a, SBV a, [Int]) -> SBV a) -> (a, a, [Int]) -> a
+lift :: SymVal a => ((SBV a, SBV a, [Int]) -> SBV a) -> (a, a, [Int]) -> a
 lift f (x, y, z) = fromJust $ unliteral $ f (literal x, literal y, z)
-liftC :: SymWord a => (SBV a -> SBV a -> (SBV a, SBV a)) -> a -> a -> (a, a)
+liftC :: SymVal a => (SBV a -> SBV a -> (SBV a, SBV a)) -> a -> a -> (a, a)
 liftC f x y = let (a, b) = f (literal x) (literal y) in (fromJust (unliteral a), fromJust (unliteral b))
-liftS :: SymWord a => (a -> String) -> SBV a -> String
+liftS :: SymVal a => (a -> String) -> SBV a -> String
 liftS f s
   | Just x <- unliteral s = f x
   | True                  = show s

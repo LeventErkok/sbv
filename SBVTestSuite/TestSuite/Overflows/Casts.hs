@@ -119,7 +119,7 @@ tests = testGroup "Overflows" [testGroup "Casts" ts]
                                ]
              ]
 
-chk :: forall a b. (SymWord a, SymWord b, Integral a, Integral b) => Maybe (Integer, Integer) -> (SBV a -> (SBV b, (SBool, SBool))) -> Predicate
+chk :: forall a b. (SymVal a, SymVal b, Integral a, Integral b) => Maybe (Integer, Integer) -> (SBV a -> (SBV b, (SBool, SBool))) -> Predicate
 chk mb cvt = do (x :: SBV a) <- free "x"
 
                 let (_ :: SBV b, (uf, ov)) = cvt x

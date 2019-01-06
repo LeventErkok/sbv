@@ -23,7 +23,7 @@ tests =
     [ testCase "unint-axioms" (assertIsThm p0) ]
 
 -- Example provided by Thomas DuBuisson:
-newtype Bitstring = Bitstring () deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind)
+newtype Bitstring = Bitstring () deriving (Eq, Ord, Show, Read, Data, SymVal, HasKind)
 type SBitstring = SBV Bitstring
 
 a :: SBitstring -> SBool

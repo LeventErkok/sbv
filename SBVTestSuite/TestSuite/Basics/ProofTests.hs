@@ -27,7 +27,7 @@ tests =
     , testCase "proofs-9" (assertIsSat (exists "x" >>= \x -> return x :: Predicate))
     ]
 
-xyEq :: (EqSymbolic a, SymWord a1) => (SBV a1 -> SBV Word8 -> a) -> (SBV a1 -> SWord8 -> a) -> Symbolic SBool
+xyEq :: (EqSymbolic a, SymVal a1) => (SBV a1 -> SBV Word8 -> a) -> (SBV a1 -> SWord8 -> a) -> Symbolic SBool
 func1 `xyEq` func2 = do x <- exists_
                         y <- exists_
                         return $ func1 x y .== func2 x (y :: SWord8)

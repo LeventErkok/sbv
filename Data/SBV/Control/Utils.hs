@@ -64,7 +64,7 @@ import Data.SBV.Core.Data     ( SW(..), CW(..), SBV, AlgReal, sbvToSW, kindOf, K
                               , QueryState(..), SVal(..), Quantifier(..), cache
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..), SymArray(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
-                              , Result(..), SMTProblem(..), trueSW, SymWord(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
+                              , Result(..), SMTProblem(..), trueSW, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSW, symbolicEnv, SymbolicT
@@ -192,12 +192,12 @@ inNewContext act = do st <- queryState
                       return r
 
 -- | Generalization of 'Data.SBV.Control.freshVar_'
-freshVar_ :: forall a m. (MonadIO m, MonadQuery m, SymWord a) => m (SBV a)
+freshVar_ :: forall a m. (MonadIO m, MonadQuery m, SymVal a) => m (SBV a)
 freshVar_ = inNewContext $ fmap SBV . svMkSymVar (Just EX) k Nothing
   where k = kindOf (undefined :: a)
 
 -- | Generalization of 'Data.SBV.Control.freshVar'
-freshVar :: forall a m. (MonadIO m, MonadQuery m, SymWord a) => String -> m (SBV a)
+freshVar :: forall a m. (MonadIO m, MonadQuery m, SymVal a) => String -> m (SBV a)
 freshVar nm = inNewContext $ fmap SBV . svMkSymVar (Just EX) k (Just nm)
   where k = kindOf (undefined :: a)
 

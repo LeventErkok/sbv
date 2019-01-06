@@ -585,7 +585,7 @@ cgAES128Library = compileToCLib Nothing "aes128Lib" aes128LibComponents
 
 --------------------------------------------------------------------------------------------
 -- | For doctest purposes only
-hex8 :: (SymWord a, Show a, Integral a) => SBV a -> String
+hex8 :: (SymVal a, Show a, Integral a) => SBV a -> String
 hex8 v = replicate (8 - length s) '0' ++ s
   where s = flip showHex "" . fromJust . unliteral $ v
 

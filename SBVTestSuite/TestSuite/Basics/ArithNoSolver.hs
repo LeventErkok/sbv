@@ -173,7 +173,7 @@ genShiftMixSize = map mkTest $
         ++ map pair [(show x, show y, "shr_i8_w16", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- i8s,  y <- yw16s]
         ++ map pair [(show x, show y, "shl_i16_w8", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- i16s, y <- w8s]
         ++ map pair [(show x, show y, "shr_i16_w8", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- i16s, y <- w8s]
-   where pair :: (SymWord a, Show a) => (String, String, String, SBV a, a) -> (String, Bool)
+   where pair :: (SymVal a, Show a) => (String, String, String, SBV a, a) -> (String, Bool)
          pair (x, y, l, sr, lr) = (l ++ "." ++ x ++ "_" ++ y ++ "_" ++  show (unliteral sr) ++ "_" ++ show lr, isJust (unliteral sr) && unliteral sr == Just lr)
          mkTest (l, s) = testCase ("arithCF-genShiftMixSize" ++ l) (s `showsAs` "True")
 
@@ -231,7 +231,7 @@ genIntCasts = map mkTest $  cast w8s ++ cast w16s ++ cast w32s ++ cast w64s
    where mkTest (x, r) = testCase ("intCast-" ++ x) (r `showsAs` "True")
          lhs x = sFromIntegral (literal x)
          rhs x = literal (fromIntegral x)
-         cast :: forall a. (Show a, Integral a, SymWord a) => [a] -> [(String, SBool)]
+         cast :: forall a. (Show a, Integral a, SymVal a) => [a] -> [(String, SBool)]
          cast xs = toWords xs ++ toInts xs
          toWords xs =  [(show x, lhs x .== (rhs x :: SWord8 ))  | x <- xs]
                     ++ [(show x, lhs x .== (rhs x :: SWord16))  | x <- xs]
@@ -439,7 +439,7 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
         alt0 x y = isNegativeZero x && y == 0 && not (isNegativeZero y)
         uTests = map mkTest1 $  concatMap (checkPred fs sfs) predicates
                              ++ concatMap (checkPred ds sds) predicates
-        extract :: SymWord a => SBV a -> a
+        extract :: SymVal a => SBV a -> a
         extract = fromJust . unliteral
 
         comb  (x, y, a, b) = (show x, show y, same a b)

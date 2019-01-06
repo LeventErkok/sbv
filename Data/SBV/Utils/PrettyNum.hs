@@ -107,7 +107,7 @@ instance PrettyNum CW where
          | not (isBounded cw) = let CWInteger w = cwVal cw in sbinI False False w
          | True               = let CWInteger w = cwVal cw in sbin  False False (hasSign cw, intSizeOf cw) w
 
-instance (SymWord a, PrettyNum a) => PrettyNum (SBV a) where
+instance (SymVal a, PrettyNum a) => PrettyNum (SBV a) where
   hexS s = maybe (show s) (hexS :: a -> String) $ unliteral s
   binS s = maybe (show s) (binS :: a -> String) $ unliteral s
   hex  s = maybe (show s) (hex  :: a -> String) $ unliteral s

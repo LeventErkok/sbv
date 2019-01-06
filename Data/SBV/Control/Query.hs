@@ -701,7 +701,7 @@ getAssignment = do
 -- However, an explicit 'Assignment' might be handy in complex scenarios where a model needs to be
 -- created manually.
 infix 1 |->
-(|->) :: SymWord a => SBV a -> a -> Assignment
+(|->) :: SymVal a => SBV a -> a -> Assignment
 SBV a |-> v = case literal v of
                 SBV (SVal _ (Left cw)) -> Assign a cw
                 r                      -> error $ "Data.SBV: Impossible happened in |->: Cannot construct a CW with literal: " ++ show r

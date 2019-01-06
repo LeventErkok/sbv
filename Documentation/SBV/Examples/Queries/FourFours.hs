@@ -100,7 +100,7 @@ fill F         = return F
 
 -- | Minor helper for writing "symbolic" case statements. Simply walks down a list
 -- of values to match against a symbolic version of the key.
-sCase :: (SymWord a, Mergeable v) => SBV a -> [(a, v)] -> v
+sCase :: (SymVal a, Mergeable v) => SBV a -> [(a, v)] -> v
 sCase k = walk
   where walk []              = error "sCase: Expected a non-empty list of cases!"
         walk [(_, v)]        = v

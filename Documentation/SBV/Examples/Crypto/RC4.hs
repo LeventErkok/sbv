@@ -148,6 +148,6 @@ rc4IsCorrect = prove $ do
 
 --------------------------------------------------------------------------------------------
 -- | For doctest purposes only
-hex2 :: (SymWord a, Show a, Integral a) => SBV a -> String
+hex2 :: (SymVal a, Show a, Integral a) => SBV a -> String
 hex2 v = replicate (2 - length s) '0' ++ s
   where s = flip showHex "" . fromJust . unliteral $ v

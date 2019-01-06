@@ -31,7 +31,7 @@ module Data.SBV.Core.Data
  , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode
  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
  , sRNE, sRNA, sRTP, sRTN, sRTZ
- , SymWord(..)
+ , SymVal(..)
  , CW(..), CWVal(..), AlgReal(..), AlgRealPoly, ExtCW(..), GeneralizedCW(..), isRegularCW, cwSameType, cwToBool
  , mkConstCW ,liftCW2, mapCW, mapCW2
  , SW(..), trueSW, falseSW, trueCW, falseCW, normCW
@@ -180,7 +180,7 @@ type STuple7 a b c d e f g = SBV (a, b, c, d, e, f, g)
 type STuple8 a b c d e f g h = SBV (a, b, c, d, e, f, g, h)
 
 -- | IsList instance allows list literals to be written compactly.
-instance SymWord [a] => IsList (SList a) where
+instance SymVal [a] => IsList (SList a) where
   type Item (SList a) = a
   fromList = literal
   toList x = fromMaybe (error "IsList.toList used in a symbolic context!") (unliteral x)
@@ -197,12 +197,12 @@ infinity = 1/0
 
 -- | Symbolic variant of Not-A-Number. This value will inhabit both
 -- 'SDouble' and 'SFloat'.
-sNaN :: (Floating a, SymWord a) => SBV a
+sNaN :: (Floating a, SymVal a) => SBV a
 sNaN = literal nan
 
 -- | Symbolic variant of infinity. This value will inhabit both
 -- 'SDouble' and 'SFloat'.
-sInfinity :: (Floating a, SymWord a) => SBV a
+sInfinity :: (Floating a, SymVal a) => SBV a
 sInfinity = literal infinity
 
 -- | Internal representation of a symbolic simulation result
@@ -277,7 +277,7 @@ sAll :: (a -> SBool) -> [a] -> SBool
 sAll f = sAnd . map f
 
 -- | 'RoundingMode' can be used symbolically
-instance SymWord RoundingMode
+instance SymVal RoundingMode
 
 -- | The symbolic variant of 'RoundingMode'
 type SRoundingMode = SBV RoundingMode
@@ -425,15 +425,12 @@ instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtabl
   output = mlift8 (,,,,,,,) output output output output output output output output
 
 -------------------------------------------------------------------------------
--- * Symbolic Words
+-- * Symbolic Values
 -------------------------------------------------------------------------------
--- | A 'SymWord' is a potential symbolic bitvector that can be created instances of
--- to be fed to a symbolic program. Note that these methods are typically not needed
--- in casual uses with 'Data.SBV.prove', 'Data.SBV.sat', 'Data.SBV.allSat' etc, as
--- default instances automatically provide the necessary bits.
-class (HasKind a, Ord a, Typeable a) => SymWord a where
-  -- | Generalization of 'Data.SBV.mkSymWord'
-  mkSymWord :: MonadSymbolic m => Maybe Quantifier -> Maybe String -> m (SBV a)
+-- | A 'SymVal' is a potential symbolic value that can be created instances of to be fed to a symbolic program.
+class (HasKind a, Ord a, Typeable a) => SymVal a where
+  -- | Generalization of 'Data.SBV.mkSymVal'
+  mkSymVal :: MonadSymbolic m => Maybe Quantifier -> Maybe String -> m (SBV a)
   -- | Turn a literal constant to symbolic
   literal :: a -> SBV a
   -- | Extract a literal, from a CW representation
@@ -443,10 +440,10 @@ class (HasKind a, Ord a, Typeable a) => SymWord a where
 
   -- minimal complete definition: Nothing.
   -- Giving no instances is okay when defining an uninterpreted/enumerated sort, but otherwise you really
-  -- want to define: literal, fromCW, mkSymWord
+  -- want to define: literal, fromCW, mkSymVal
 
-  default mkSymWord :: (MonadSymbolic m, Read a, G.Data a) => Maybe Quantifier -> Maybe String -> m (SBV a)
-  mkSymWord mbQ mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar mbQ k mbNm)
+  default mkSymVal :: (MonadSymbolic m, Read a, G.Data a) => Maybe Quantifier -> Maybe String -> m (SBV a)
+  mkSymVal mbQ mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar mbQ k mbNm)
     where k = constructUKind (undefined :: a)
 
   default literal :: Show a => a -> SBV a
@@ -467,11 +464,11 @@ class (HasKind a, Ord a, Typeable a) => SymWord a where
 
   -- | Generalization of 'Data.SBV.forall'
   forall :: MonadSymbolic m => String -> m (SBV a)
-  forall = mkSymWord (Just ALL) . Just
+  forall = mkSymVal (Just ALL) . Just
 
   -- | Generalization of 'Data.SBV.forall_'
   forall_ :: MonadSymbolic m => m (SBV a)
-  forall_ = mkSymWord (Just ALL) Nothing
+  forall_ = mkSymVal (Just ALL) Nothing
 
   -- | Generalization of 'Data.SBV.mkForallVars'
   mkForallVars :: MonadSymbolic m => Int -> m [SBV a]
@@ -479,11 +476,11 @@ class (HasKind a, Ord a, Typeable a) => SymWord a where
 
   -- | Generalization of 'Data.SBV.exists'
   exists :: MonadSymbolic m => String -> m (SBV a)
-  exists = mkSymWord (Just EX) . Just
+  exists = mkSymVal (Just EX) . Just
 
   -- | Generalization of 'Data.SBV.exists_'
   exists_ :: MonadSymbolic m => m (SBV a)
-  exists_ = mkSymWord (Just EX) Nothing
+  exists_ = mkSymVal (Just EX) Nothing
 
   -- | Generalization of 'Data.SBV.mkExistVars'
   mkExistVars :: MonadSymbolic m => Int -> m [SBV a]
@@ -491,11 +488,11 @@ class (HasKind a, Ord a, Typeable a) => SymWord a where
 
   -- | Generalization of 'Data.SBV.free'
   free :: MonadSymbolic m => String -> m (SBV a)
-  free = mkSymWord Nothing . Just
+  free = mkSymVal Nothing . Just
 
   -- | Generalization of 'Data.SBV.free_'
   free_ :: MonadSymbolic m => m (SBV a)
-  free_ = mkSymWord Nothing Nothing
+  free_ = mkSymVal Nothing Nothing
 
   -- | Generalization of 'Data.SBV.mkFreeVars'
   mkFreeVars :: MonadSymbolic m => Int -> m [SBV a]
@@ -523,7 +520,7 @@ class (HasKind a, Ord a, Typeable a) => SymWord a where
   isSymbolic :: SBV a -> Bool
   isSymbolic = not . isConcrete
 
-instance (Random a, SymWord a) => Random (SBV a) where
+instance (Random a, SymVal a) => Random (SBV a) where
   randomR (l, h) g = case (unliteral l, unliteral h) of
                        (Just lb, Just hb) -> let (v, g') = randomR (lb, hb) g in (literal (v :: a), g')
                        _                  -> error "SBV.Random: Cannot generate random values with symbolic bounds"
@@ -584,11 +581,11 @@ class SymArray array where
   -- | Read the array element at @a@
   readArray      :: array a b -> SBV a -> SBV b
   -- | Update the element at @a@ to be @b@
-  writeArray     :: SymWord b => array a b -> SBV a -> SBV b -> array a b
+  writeArray     :: SymVal b => array a b -> SBV a -> SBV b -> array a b
   -- | Merge two given arrays on the symbolic condition
   -- Intuitively: @mergeArrays cond a b = if cond then a else b@.
   -- Merging pushes the if-then-else choice down on to elements
-  mergeArrays    :: SymWord b => SBV Bool -> array a b -> array a b -> array a b
+  mergeArrays    :: SymVal b => SBV Bool -> array a b -> array a b -> array a b
   -- | Internal function, not exported to the user
   newArrayInState :: (HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> State -> IO (array a b)
 

@@ -109,11 +109,11 @@ instance Random Word4 where
 -- | SWord4 type synonym
 type SWord4 = SBV Word4
 
--- | SymWord instance, allowing this type to be used in proofs/sat etc.
-instance SymWord Word4 where
-  mkSymWord  = genMkSymVar (KBounded False 4)
-  literal    = genLiteral  (KBounded False 4)
-  fromCW     = genFromCW
+-- | SymVal instance, allowing this type to be used in proofs/sat etc.
+instance SymVal Word4 where
+  mkSymVal = genMkSymVar (KBounded False 4)
+  literal  = genLiteral  (KBounded False 4)
+  fromCW   = genFromCW
 
 -- | HasKind instance; simply returning the underlying kind for the type
 instance HasKind Word4 where

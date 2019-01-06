@@ -27,8 +27,8 @@ data L = Nil
        deriving (Eq, Ord, Show, Read, Data)
 
 -- | Declare instances to make 'L' a usable uninterpreted sort. First we need the
--- 'SymWord' instance, with the default definition sufficing.
-instance SymWord L
+-- 'SymVal' instance, with the default definition sufficing.
+instance SymVal L
 
 -- | Similarly, 'HasKind's default implementation is sufficient.
 instance HasKind L

@@ -39,7 +39,7 @@ infixl 8 ^.
 
 -- | Dynamic interface to exporting tuples, this function is not
 -- exported on purpose; use it only via the field functions '_1', '_2', etc.
-symbolicFieldAccess :: SymWord a => Int -> SBV tup -> SBV a
+symbolicFieldAccess :: SymVal a => Int -> SBV tup -> SBV a
 symbolicFieldAccess i tup
   | 1 > i || i > lks
   = bad $ "Index is out of bounds, " ++ show i ++ " is outside [1," ++ show lks ++ "]"
@@ -76,51 +76,51 @@ symbolicFieldAccess i tup
 data Label (l :: Symbol) = Get
 
 -- | The class 'HasField' captures the notion that a type has a certain field
-class SymWord elt => HasField l elt tup | l tup -> elt where
+class SymVal elt => HasField l elt tup | l tup -> elt where
   field :: Label l -> SBV tup -> SBV elt
 
-instance SymWord a => HasField "_1" a (a, b)                   where field _ = symbolicFieldAccess 1
-instance SymWord a => HasField "_1" a (a, b, c)                where field _ = symbolicFieldAccess 1
-instance SymWord a => HasField "_1" a (a, b, c, d)             where field _ = symbolicFieldAccess 1
-instance SymWord a => HasField "_1" a (a, b, c, d, e)          where field _ = symbolicFieldAccess 1
-instance SymWord a => HasField "_1" a (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 1
-instance SymWord a => HasField "_1" a (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 1
-instance SymWord a => HasField "_1" a (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 1
+instance SymVal a => HasField "_1" a (a, b)                   where field _ = symbolicFieldAccess 1
+instance SymVal a => HasField "_1" a (a, b, c)                where field _ = symbolicFieldAccess 1
+instance SymVal a => HasField "_1" a (a, b, c, d)             where field _ = symbolicFieldAccess 1
+instance SymVal a => HasField "_1" a (a, b, c, d, e)          where field _ = symbolicFieldAccess 1
+instance SymVal a => HasField "_1" a (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 1
+instance SymVal a => HasField "_1" a (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 1
+instance SymVal a => HasField "_1" a (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 1
 
-instance SymWord b => HasField "_2" b (a, b)                   where field _ = symbolicFieldAccess 2
-instance SymWord b => HasField "_2" b (a, b, c)                where field _ = symbolicFieldAccess 2
-instance SymWord b => HasField "_2" b (a, b, c, d)             where field _ = symbolicFieldAccess 2
-instance SymWord b => HasField "_2" b (a, b, c, d, e)          where field _ = symbolicFieldAccess 2
-instance SymWord b => HasField "_2" b (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 2
-instance SymWord b => HasField "_2" b (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 2
-instance SymWord b => HasField "_2" b (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 2
+instance SymVal b => HasField "_2" b (a, b)                   where field _ = symbolicFieldAccess 2
+instance SymVal b => HasField "_2" b (a, b, c)                where field _ = symbolicFieldAccess 2
+instance SymVal b => HasField "_2" b (a, b, c, d)             where field _ = symbolicFieldAccess 2
+instance SymVal b => HasField "_2" b (a, b, c, d, e)          where field _ = symbolicFieldAccess 2
+instance SymVal b => HasField "_2" b (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 2
+instance SymVal b => HasField "_2" b (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 2
+instance SymVal b => HasField "_2" b (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 2
 
-instance SymWord c => HasField "_3" c (a, b, c)                where field _ = symbolicFieldAccess 3
-instance SymWord c => HasField "_3" c (a, b, c, d)             where field _ = symbolicFieldAccess 3
-instance SymWord c => HasField "_3" c (a, b, c, d, e)          where field _ = symbolicFieldAccess 3
-instance SymWord c => HasField "_3" c (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 3
-instance SymWord c => HasField "_3" c (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 3
-instance SymWord c => HasField "_3" c (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 3
+instance SymVal c => HasField "_3" c (a, b, c)                where field _ = symbolicFieldAccess 3
+instance SymVal c => HasField "_3" c (a, b, c, d)             where field _ = symbolicFieldAccess 3
+instance SymVal c => HasField "_3" c (a, b, c, d, e)          where field _ = symbolicFieldAccess 3
+instance SymVal c => HasField "_3" c (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 3
+instance SymVal c => HasField "_3" c (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 3
+instance SymVal c => HasField "_3" c (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 3
 
-instance SymWord d => HasField "_4" d (a, b, c, d)             where field _ = symbolicFieldAccess 4
-instance SymWord d => HasField "_4" d (a, b, c, d, e)          where field _ = symbolicFieldAccess 4
-instance SymWord d => HasField "_4" d (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 4
-instance SymWord d => HasField "_4" d (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 4
-instance SymWord d => HasField "_4" d (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 4
+instance SymVal d => HasField "_4" d (a, b, c, d)             where field _ = symbolicFieldAccess 4
+instance SymVal d => HasField "_4" d (a, b, c, d, e)          where field _ = symbolicFieldAccess 4
+instance SymVal d => HasField "_4" d (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 4
+instance SymVal d => HasField "_4" d (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 4
+instance SymVal d => HasField "_4" d (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 4
 
-instance SymWord e => HasField "_5" e (a, b, c, d, e)          where field _ = symbolicFieldAccess 5
-instance SymWord e => HasField "_5" e (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 5
-instance SymWord e => HasField "_5" e (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 5
-instance SymWord e => HasField "_5" e (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 5
+instance SymVal e => HasField "_5" e (a, b, c, d, e)          where field _ = symbolicFieldAccess 5
+instance SymVal e => HasField "_5" e (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 5
+instance SymVal e => HasField "_5" e (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 5
+instance SymVal e => HasField "_5" e (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 5
 
-instance SymWord f => HasField "_6" f (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 6
-instance SymWord f => HasField "_6" f (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 6
-instance SymWord f => HasField "_6" f (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 6
+instance SymVal f => HasField "_6" f (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 6
+instance SymVal f => HasField "_6" f (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 6
+instance SymVal f => HasField "_6" f (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 6
 
-instance SymWord g => HasField "_7" g (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 7
-instance SymWord g => HasField "_7" g (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 7
+instance SymVal g => HasField "_7" g (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 7
+instance SymVal g => HasField "_7" g (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 7
 
-instance SymWord h => HasField "_8" h (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 8
+instance SymVal h => HasField "_8" h (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 8
 
 -- | Access the 1st element of an @STupleN@, @2 <= N <= 8@. Also see '^.'.
 _1 :: HasField "_1" b a => SBV a -> SBV b
@@ -159,23 +159,23 @@ class Untuple tup a | tup -> a where
   -- | Deconstruct a tuple, getting its constituent parts apart.
   untuple :: SBV tup -> a
 
-instance (SymWord a, SymWord b) => Untuple (a, b) (SBV a, SBV b) where
+instance (SymVal a, SymVal b) => Untuple (a, b) (SBV a, SBV b) where
   untuple p = (p^._1, p^._2)
 
-instance (SymWord a, SymWord b, SymWord c) => Untuple (a, b, c) (SBV a, SBV b, SBV c) where
+instance (SymVal a, SymVal b, SymVal c) => Untuple (a, b, c) (SBV a, SBV b, SBV c) where
   untuple p = (p^._1, p^._2, p^._3)
 
-instance (SymWord a, SymWord b, SymWord c, SymWord d) => Untuple (a, b, c, d) (SBV a, SBV b, SBV c, SBV d) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d) => Untuple (a, b, c, d) (SBV a, SBV b, SBV c, SBV d) where
   untuple p = (p^._1, p^._2, p^._3, p^._4)
 
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e) => Untuple (a, b, c, d, e) (SBV a, SBV b, SBV c, SBV d, SBV e) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e) => Untuple (a, b, c, d, e) (SBV a, SBV b, SBV c, SBV d, SBV e) where
   untuple p = (p^._1, p^._2, p^._3, p^._4, p^._5)
 
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f) => Untuple (a, b, c, d, e, f) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f) => Untuple (a, b, c, d, e, f) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
   untuple p = (p^._1, p^._2, p^._3, p^._4, p^._5, p^._6)
 
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g) => Untuple (a, b, c, d, e, f, g) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g) => Untuple (a, b, c, d, e, f, g) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
   untuple p = (p^._1, p^._2, p^._3, p^._4, p^._5, p^._6, p^._7)
 
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, SymWord h) => Untuple (a, b, c, d, e, f, g, h) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h) => Untuple (a, b, c, d, e, f, g, h) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h) where
   untuple p = (p^._1, p^._2, p^._3, p^._4, p^._5, p^._6, p^._7, p^._8)

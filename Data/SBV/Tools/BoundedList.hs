@@ -35,17 +35,17 @@ import Data.SBV.List ((.:), (.++))
 import qualified Data.SBV.List as L
 
 -- | Case analysis on a symbolic list. (Not exported.)
-lcase :: (SymWord a, Mergeable b) => SList a -> b -> (SBV a -> SList a -> b) -> b
+lcase :: (SymVal a, Mergeable b) => SList a -> b -> (SBV a -> SList a -> b) -> b
 lcase s e c = ite (L.null s) e (c (L.head s) (L.tail s))
 
 -- | Bounded fold from the right.
-bfoldr :: (SymWord a, SymWord b) => Int -> (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
+bfoldr :: (SymVal a, SymVal b) => Int -> (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
 bfoldr cnt f b = go (cnt `max` 0)
   where go 0 _ = b
         go i s = lcase s b (\h t -> h `f` go (i-1) t)
 
 -- | Bounded monadic fold from the right.
-bfoldrM :: forall a b m. (SymWord a, SymWord b, Monad m, Mergeable (m (SBV b)))
+bfoldrM :: forall a b m. (SymVal a, SymVal b, Monad m, Mergeable (m (SBV b)))
         => Int -> (SBV a -> SBV b -> m (SBV b)) -> SBV b -> SList a -> m (SBV b)
 bfoldrM cnt f b = go (cnt `max` 0)
   where go :: Int -> SList a -> m (SBV b)
@@ -53,13 +53,13 @@ bfoldrM cnt f b = go (cnt `max` 0)
         go i s = lcase s (return b) (\h t -> f h =<< go (i-1) t)
 
 -- | Bounded fold from the left.
-bfoldl :: (SymWord a, SymWord b) => Int -> (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
+bfoldl :: (SymVal a, SymVal b) => Int -> (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
 bfoldl cnt f = go (cnt `max` 0)
   where go 0 b _ = b
         go i b s = lcase s b (\h t -> go (i-1) (b `f` h) t)
 
 -- | Bounded monadic fold from the left.
-bfoldlM :: forall a b m. (SymWord a, SymWord b, Monad m, Mergeable (m (SBV b)))
+bfoldlM :: forall a b m. (SymVal a, SymVal b, Monad m, Mergeable (m (SBV b)))
         => Int -> (SBV b -> SBV a -> m (SBV b)) -> SBV b -> SList a -> m (SBV b)
 bfoldlM cnt f = go (cnt `max` 0)
   where go :: Int -> SBV b -> SList a -> m (SBV b)
@@ -67,24 +67,24 @@ bfoldlM cnt f = go (cnt `max` 0)
         go i b s = lcase s (return b) (\h t -> do { fbh <- f b h; go (i-1) fbh t })
 
 -- | Bounded sum.
-bsum :: (SymWord a, Num a) => Int -> SList a -> SBV a
+bsum :: (SymVal a, Num a) => Int -> SList a -> SBV a
 bsum i = bfoldl i (+) 0
 
 -- | Bounded product.
-bprod :: (SymWord a, Num a) => Int -> SList a -> SBV a
+bprod :: (SymVal a, Num a) => Int -> SList a -> SBV a
 bprod i = bfoldl i (*) 1
 
 -- | Bounded map.
-bmap :: (SymWord a, SymWord b) => Int -> (SBV a -> SBV b) -> SList a -> SList b
+bmap :: (SymVal a, SymVal b) => Int -> (SBV a -> SBV b) -> SList a -> SList b
 bmap i f = bfoldr i (\x -> (f x .:)) []
 
 -- | Bounded monadic map.
-bmapM :: (SymWord a, SymWord b, Monad m, Mergeable (m (SBV [b])))
+bmapM :: (SymVal a, SymVal b, Monad m, Mergeable (m (SBV [b])))
       => Int -> (SBV a -> m (SBV b)) -> SList a -> m (SList b)
 bmapM i f = bfoldrM i (\a bs -> (.:) <$> f a <*> pure bs) []
 
 -- | Bounded filter.
-bfilter :: SymWord a => Int -> (SBV a -> SBool) -> SList a -> SList a
+bfilter :: SymVal a => Int -> (SBV a -> SBool) -> SList a -> SList a
 bfilter i f = bfoldr i (\x y -> ite (f x) (x .: y) y) []
 
 -- | Bounded logical and
@@ -96,23 +96,23 @@ bor :: Int -> SList Bool -> SBool
 bor i = bfoldr i (.||) (sFalse :: SBool)
 
 -- | Bounded any
-bany :: SymWord a => Int -> (SBV a -> SBool) -> SList a -> SBool
+bany :: SymVal a => Int -> (SBV a -> SBool) -> SList a -> SBool
 bany i f = bor i . bmap i f
 
 -- | Bounded all
-ball :: SymWord a => Int -> (SBV a -> SBool) -> SList a -> SBool
+ball :: SymVal a => Int -> (SBV a -> SBool) -> SList a -> SBool
 ball i f = band i . bmap i f
 
 -- | Bounded maximum. Undefined if list is empty.
-bmaximum :: SymWord a => Int -> SList a -> SBV a
+bmaximum :: SymVal a => Int -> SList a -> SBV a
 bmaximum i l = bfoldl (i-1) smax (L.head l) (L.tail l)
 
 -- | Bounded minimum. Undefined if list is empty.
-bminimum :: SymWord a => Int -> SList a -> SBV a
+bminimum :: SymVal a => Int -> SList a -> SBV a
 bminimum i l = bfoldl (i-1) smin (L.head l) (L.tail l)
 
 -- | Bounded zipWith
-bzipWith :: (SymWord a, SymWord b, SymWord c) => Int -> (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
+bzipWith :: (SymVal a, SymVal b, SymVal c) => Int -> (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
 bzipWith cnt f = go (cnt `max` 0)
    where go 0 _  _  = []
          go i xs ys = ite (L.null xs .|| L.null ys)
@@ -120,26 +120,26 @@ bzipWith cnt f = go (cnt `max` 0)
                           (f (L.head xs) (L.head ys) .: go (i-1) (L.tail xs) (L.tail ys))
 
 -- | Bounded element check
-belem :: SymWord a => Int -> SBV a -> SList a -> SBool
+belem :: SymVal a => Int -> SBV a -> SList a -> SBool
 belem i e = bany i (e .==)
 
 -- | Bounded reverse
-breverse :: SymWord a => Int -> SList a -> SList a
+breverse :: SymVal a => Int -> SList a -> SList a
 breverse cnt = bfoldr cnt (\a b -> b .++ L.singleton a) []
 
 -- | Bounded paramorphism (not exported).
-bpara :: (SymWord a, SymWord b) => Int -> (SBV a -> SBV [a] -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
+bpara :: (SymVal a, SymVal b) => Int -> (SBV a -> SBV [a] -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
 bpara cnt f b = go (cnt `max` 0)
   where go 0 _ = b
         go i s = lcase s b (\h t -> f h t (go (i-1) t))
 
 -- | Insert an element into a sorted list (not exported).
-binsert :: SymWord a => Int -> SBV a -> SList a -> SList a
+binsert :: SymVal a => Int -> SBV a -> SList a -> SList a
 binsert cnt a = bpara cnt f (L.singleton a)
   where f sortedHd sortedTl sortedTl' = ite (a .< sortedHd)
                                             (a .: sortedHd .: sortedTl)
                                             (sortedHd .: sortedTl')
 
 -- | Bounded insertion sort
-bsort :: SymWord a => Int -> SList a -> SList a
+bsort :: SymVal a => Int -> SList a -> SList a
 bsort cnt = bfoldr cnt (binsert cnt) []

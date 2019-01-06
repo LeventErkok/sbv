@@ -415,7 +415,7 @@ instance Provable Bool where
 -}
 
 -- Functions
-instance (SymWord a, MProvable m p) => MProvable m (SBV a -> p) where
+instance (SymVal a, MProvable m p) => MProvable m (SBV a -> p) where
   forAll_        k = forall_   >>= \a -> forAll_   $ k a
   forAll (s:ss)  k = forall s  >>= \a -> forAll ss $ k a
   forAll []      k = forAll_ k
@@ -440,7 +440,7 @@ instance (HasKind a, HasKind b, MProvable m p) => MProvable m (SFunArray a b -> 
   forSome _     _ = error "SBV.forSome.SArray: Existential arrays are not currently supported."
 
 -- 2 Tuple
-instance (SymWord a, SymWord b, MProvable m p) => MProvable m ((SBV a, SBV b) -> p) where
+instance (SymVal a, SymVal b, MProvable m p) => MProvable m ((SBV a, SBV b) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b -> k (a, b)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b -> k (a, b)
   forAll []      k = forAll_ k
@@ -449,7 +449,7 @@ instance (SymWord a, SymWord b, MProvable m p) => MProvable m ((SBV a, SBV b) ->
   forSome []     k = forSome_ k
 
 -- 3 Tuple
-instance (SymWord a, SymWord b, SymWord c, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c) -> p) where
+instance (SymVal a, SymVal b, SymVal c, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c) -> p) where
   forAll_       k  = forall_  >>= \a -> forAll_   $ \b c -> k (a, b, c)
   forAll (s:ss) k  = forall s >>= \a -> forAll ss $ \b c -> k (a, b, c)
   forAll []     k  = forAll_ k
@@ -458,7 +458,7 @@ instance (SymWord a, SymWord b, SymWord c, MProvable m p) => MProvable m ((SBV a
   forSome []     k = forSome_ k
 
 -- 4 Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b c d -> k (a, b, c, d)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d -> k (a, b, c, d)
   forAll []      k = forAll_ k
@@ -467,7 +467,7 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, MProvable m p) => MProvabl
   forSome []     k = forSome_ k
 
 -- 5 Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e -> k (a, b, c, d, e)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e -> k (a, b, c, d, e)
   forAll []      k = forAll_ k
@@ -476,7 +476,7 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, MProvable m p) 
   forSome []     k = forSome_ k
 
 -- 6 Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e f -> k (a, b, c, d, e, f)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e f -> k (a, b, c, d, e, f)
   forAll []      k = forAll_ k
@@ -485,7 +485,7 @@ instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, MPro
   forSome []     k = forSome_ k
 
 -- 7 Tuple
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
   forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
   forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   forAll []      k = forAll_ k
@@ -606,73 +606,73 @@ instance ExtractIO m => SExecutable m [SBV a] where
    sName xs vs = sName xs (output vs :: SymbolicT m [SBV a])
 
 -- 2 Tuple output
-instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b) => SExecutable m (SBV a, SBV b) where
+instance (ExtractIO m, NFData a, SymVal a, NFData b, SymVal b) => SExecutable m (SBV a, SBV b) where
   sName_ (a, b) = sName_ (output a >> output b :: SymbolicT m (SBV b))
   sName _       = sName_
 
 -- 3 Tuple output
-instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c) => SExecutable m (SBV a, SBV b, SBV c) where
+instance (ExtractIO m, NFData a, SymVal a, NFData b, SymVal b, NFData c, SymVal c) => SExecutable m (SBV a, SBV b, SBV c) where
   sName_ (a, b, c) = sName_ (output a >> output b >> output c :: SymbolicT m (SBV c))
   sName _          = sName_
 
 -- 4 Tuple output
-instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d) => SExecutable m (SBV a, SBV b, SBV c, SBV d) where
+instance (ExtractIO m, NFData a, SymVal a, NFData b, SymVal b, NFData c, SymVal c, NFData d, SymVal d) => SExecutable m (SBV a, SBV b, SBV c, SBV d) where
   sName_ (a, b, c, d) = sName_ (output a >> output b >> output c >> output c >> output d :: SymbolicT m (SBV d))
   sName _             = sName_
 
 -- 5 Tuple output
-instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e) where
+instance (ExtractIO m, NFData a, SymVal a, NFData b, SymVal b, NFData c, SymVal c, NFData d, SymVal d, NFData e, SymVal e) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e) where
   sName_ (a, b, c, d, e) = sName_ (output a >> output b >> output c >> output d >> output e :: SymbolicT m (SBV e))
   sName _                = sName_
 
 -- 6 Tuple output
-instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
+instance (ExtractIO m, NFData a, SymVal a, NFData b, SymVal b, NFData c, SymVal c, NFData d, SymVal d, NFData e, SymVal e, NFData f, SymVal f) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
   sName_ (a, b, c, d, e, f) = sName_ (output a >> output b >> output c >> output d >> output e >> output f :: SymbolicT m (SBV f))
   sName _                   = sName_
 
 -- 7 Tuple output
-instance (ExtractIO m, NFData a, SymWord a, NFData b, SymWord b, NFData c, SymWord c, NFData d, SymWord d, NFData e, SymWord e, NFData f, SymWord f, NFData g, SymWord g) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
+instance (ExtractIO m, NFData a, SymVal a, NFData b, SymVal b, NFData c, SymVal c, NFData d, SymVal d, NFData e, SymVal e, NFData f, SymVal f, NFData g, SymVal g) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
   sName_ (a, b, c, d, e, f, g) = sName_ (output a >> output b >> output c >> output d >> output e >> output f >> output g :: SymbolicT m (SBV g))
   sName _                      = sName_
 
 -- Functions
-instance (SymWord a, SExecutable m p) => SExecutable m (SBV a -> p) where
+instance (SymVal a, SExecutable m p) => SExecutable m (SBV a -> p) where
    sName_        k = exists_   >>= \a -> sName_   $ k a
    sName (s:ss)  k = exists s  >>= \a -> sName ss $ k a
    sName []      k = sName_ k
 
 -- 2 Tuple input
-instance (SymWord a, SymWord b, SExecutable m p) => SExecutable m ((SBV a, SBV b) -> p) where
+instance (SymVal a, SymVal b, SExecutable m p) => SExecutable m ((SBV a, SBV b) -> p) where
   sName_        k = exists_  >>= \a -> sName_   $ \b -> k (a, b)
   sName (s:ss)  k = exists s >>= \a -> sName ss $ \b -> k (a, b)
   sName []      k = sName_ k
 
 -- 3 Tuple input
-instance (SymWord a, SymWord b, SymWord c, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c) -> p) where
   sName_       k  = exists_  >>= \a -> sName_   $ \b c -> k (a, b, c)
   sName (s:ss) k  = exists s >>= \a -> sName ss $ \b c -> k (a, b, c)
   sName []     k  = sName_ k
 
 -- 4 Tuple input
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
   sName_        k = exists_  >>= \a -> sName_   $ \b c d -> k (a, b, c, d)
   sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d -> k (a, b, c, d)
   sName []      k = sName_ k
 
 -- 5 Tuple input
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
   sName_        k = exists_  >>= \a -> sName_   $ \b c d e -> k (a, b, c, d, e)
   sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e -> k (a, b, c, d, e)
   sName []      k = sName_ k
 
 -- 6 Tuple input
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
   sName_        k = exists_  >>= \a -> sName_   $ \b c d e f -> k (a, b, c, d, e, f)
   sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e f -> k (a, b, c, d, e, f)
   sName []      k = sName_ k
 
 -- 7 Tuple input
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
   sName_        k = exists_  >>= \a -> sName_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
   sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   sName []      k = sName_ k

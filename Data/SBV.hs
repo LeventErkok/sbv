@@ -281,9 +281,9 @@ module Data.SBV (
 
   -- * Abstract SBV type
   , SBV, HasKind(..), Kind(..)
-  , SymWord, forall, forall_, mkForallVars, exists, exists_, mkExistVars, free
+  , SymVal, forall, forall_, mkForallVars, exists, exists_, mkExistVars, free
   , free_, mkFreeVars, symbolic, symbolics, literal, unliteral, fromCW
-  , isConcrete, isSymbolic, isConcretely, mkSymWord
+  , isConcrete, isSymbolic, isConcretely, mkSymVal
   , MonadSymbolic(..), Symbolic, SymbolicT, label, output, runSMT, runSMTWith
 
   -- * Module exports
@@ -299,7 +299,7 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data       hiding (addAxiom, forall, forall_,
                                         mkForallVars, exists, exists_,
                                         mkExistVars, free, free_, mkFreeVars,
-                                        output, symbolic, symbolics, mkSymWord,
+                                        output, symbolic, symbolics, mkSymVal,
                                         newArray, newArray_)
 import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         forall, forall_, exists, exists_,
@@ -785,7 +785,7 @@ Users can introduce new uninterpreted sorts simply by defining a data-type in Ha
 following example demonstrates:
 
   @
-     data B = B () deriving (Eq, Ord, Show, Read, Data, SymWord, HasKind, SatModel)
+     data B = B () deriving (Eq, Ord, Show, Read, Data, SymVal, HasKind, SatModel)
   @
 
 (Note that you'll also need to use the language pragmas @DeriveDataTypeable@, @DeriveAnyClass@, and import @Data.Generics@ for the above to work.)

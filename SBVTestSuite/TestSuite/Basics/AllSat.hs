@@ -33,7 +33,7 @@ tests =
 srt :: AllSatResult -> AllSatResult
 srt (AllSatResult (b1, b2, rs)) = AllSatResult (b1, b2, sortOn getModelDictionary rs)
 
-newtype Q = Q () deriving (Eq, Ord, Data, Read, Show, SymWord, HasKind)
+newtype Q = Q () deriving (Eq, Ord, Data, Read, Show, SymVal, HasKind)
 type SQ = SBV Q
 
 t1 :: IO AllSatResult

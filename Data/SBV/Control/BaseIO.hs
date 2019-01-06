@@ -13,14 +13,11 @@
 module Data.SBV.Control.BaseIO where
 
 import Data.SBV.Control.Query (Assignment)
-import Data.SBV.Control.Types (CheckSatResult, SMTInfoFlag, SMTInfoResponse,
-                               SMTOption, SMTReasonUnknown)
+import Data.SBV.Control.Types (CheckSatResult, SMTInfoFlag, SMTInfoResponse, SMTOption, SMTReasonUnknown)
 import Data.SBV.Control.Utils (SMTValue)
 import Data.SBV.Core.Concrete (CW)
-import Data.SBV.Core.Data     (HasKind, Symbolic, SymArray, SymWord, SBool,
-                               SBV)
-import Data.SBV.Core.Symbolic (Query, QueryContext, QueryState, State,
-                               SMTModel, SMTResult, SW)
+import Data.SBV.Core.Data     (HasKind, Symbolic, SymArray, SymVal, SBool, SBV)
+import Data.SBV.Core.Symbolic (Query, QueryContext, QueryState, State, SMTModel, SMTResult, SW)
 
 import qualified Data.SBV.Control.Query as Trans
 import qualified Data.SBV.Control.Utils as Trans
@@ -307,7 +304,7 @@ inNewContext = Trans.inNewContext
 -- | Similar to 'freshVar', except creates unnamed variable.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.freshVar_'
-freshVar_ :: SymWord a => Query (SBV a)
+freshVar_ :: SymVal a => Query (SBV a)
 freshVar_ = Trans.freshVar_
 
 -- | Create a fresh variable in query mode. You should prefer
@@ -319,7 +316,7 @@ freshVar_ = Trans.freshVar_
 -- most major use cases.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.freshVar'
-freshVar :: SymWord a => String -> Query (SBV a)
+freshVar :: SymVal a => String -> Query (SBV a)
 freshVar = Trans.freshVar
 
 -- | Similar to 'freshArray', except creates unnamed array.

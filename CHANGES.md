@@ -60,6 +60,20 @@
         * Existential  : bAny    became   sAny
         * Universal    : bAll    became   sAll
 
+   * [BACKWARDS COMPATIBILITY] Hostorically, SBV focused on bit-vectors and machine
+     words, which meant lots of internal types were named suggestive of this heritage.
+     With the addition of `SInteger`, `SReal`, `SFloat`, `SDouble` we have expanded
+     this, but still remained focused on atomic types. But, thanks largely to
+     Joel Burget, SBV now supports symbolic characters, strings, lists, and now
+     tuples; which makes this all naming confusing. To reflect, we have made the
+     following internal renamings:
+
+        * SymWord became SymVal
+
+     For most casual users, these changes should not require any changes. But if you were
+     developing libraries on top of SBV, then you will have to adapt to the new schema.
+     Please report if there are any gotchas we have forgotten about.
+
    * [BACKWARDS COMPATIBILITY] When user queries are present, SBV now picks the logic
      "ALL" (as opposed to a suitable variant of bit-vectors as in the past versions).
      This can be overridden by the 'setLogic' command as usual of course. While the new

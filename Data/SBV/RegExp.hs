@@ -273,7 +273,7 @@ identifier :: RegExp
 identifier = asciiLower * KStar (asciiLetter + digit + "_" + "'")
 
 -- | Lift a unary operator over strings.
-lift1 :: forall a b. (SymWord a, SymWord b) => StrOp -> Maybe (a -> b) -> SBV a -> SBV b
+lift1 :: forall a b. (SymVal a, SymVal b) => StrOp -> Maybe (a -> b) -> SBV a -> SBV b
 lift1 w mbOp a
   | Just cv <- concEval1 mbOp a
   = cv
@@ -284,7 +284,7 @@ lift1 w mbOp a
                   newExpr st k (SBVApp (StrOp w) [swa])
 
 -- | Concrete evaluation for unary ops
-concEval1 :: (SymWord a, SymWord b) => Maybe (a -> b) -> SBV a -> Maybe (SBV b)
+concEval1 :: (SymVal a, SymVal b) => Maybe (a -> b) -> SBV a -> Maybe (SBV b)
 concEval1 mbOp a = literal <$> (mbOp <*> unliteral a)
 
 -- | Quiet GHC about testing only imports

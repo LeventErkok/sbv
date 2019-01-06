@@ -34,7 +34,7 @@ testQuery rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Ju
 data L = A | B ()
        deriving (Eq, Ord, Show, Read, Data)
 
-instance SymWord L
+instance SymVal L
 instance HasKind L
 instance SMTValue L
 

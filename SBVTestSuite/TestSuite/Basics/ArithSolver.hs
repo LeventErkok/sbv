@@ -203,7 +203,7 @@ genShiftMixSize = map mkTest $  [(show x, show y, "shl_w8_w16", mk sShiftLeft  x
          yw16s = [0, 255, 256, 257, maxBound]
 
          mkTest (x, y, l, t) = testCase ("genShiftMixSize." ++ l ++ "." ++ x ++ "_" ++ y) (assert t)
-         mk :: (SymWord a, SymWord b) => (SBV a -> SBV b -> SBV a) -> a -> b -> a -> IO Bool
+         mk :: (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV a) -> a -> b -> a -> IO Bool
          mk o x y r
           = isTheorem $ do a <- free "x"
                            b <- free "y"
@@ -260,7 +260,7 @@ genIntCasts = map mkTest $  cast w8s ++ cast w16s ++ cast w32s ++ cast w64s
                          ++ cast i8s ++ cast i16s ++ cast i32s ++ cast i64s
                          ++ cast iUBs
    where mkTest (x, t) = testCase ("sIntCast-" ++ x) (assert t)
-         cast :: forall a. (Show a, Integral a, SymWord a) => [a] -> [(String, IO Bool)]
+         cast :: forall a. (Show a, Integral a, SymVal a) => [a] -> [(String, IO Bool)]
          cast xs = toWords xs ++ toInts xs
          toWords xs =  [(show x, mkThm x (fromIntegral x :: Word8 ))  | x <- xs]
                     ++ [(show x, mkThm x (fromIntegral x :: Word16))  | x <- xs]
