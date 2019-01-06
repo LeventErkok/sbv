@@ -10,91 +10,24 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds              #-}
-{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE KindSignatures         #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE Rank2Types             #-}
-{-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE TypeFamilies           #-}
-{-# LANGUAGE TypeOperators          #-}
 
 module Data.SBV.Tuple (
-  -- * Natural numbers
-    Nat(..), SNat(..)
-  -- * Field access
-  , field, field1, field2, field3, field4, field5, field6, field7, field8
+  -- * Symbolic field access
+  _1, _2, _3, _4, _5, _6, _7, _8
   ) where
 
-import Data.SBV.Core.Data hiding (StrOp(..))
-import Data.SBV.Core.Symbolic (svToSW)
-import Data.SBV.Core.Model (HListable(..))
+import GHC.TypeLits
 
--- | Natural numbers. These are used as an (type-level) index into a tuple or
--- @HList@.
-data Nat = Z | S Nat
-
--- | Singleton natural numbers. These are used as an (term-level) index into a
--- tuple or @HList@.
-data SNat (n :: Nat) where
-  SZ ::           SNat 'Z
-  SS :: SNat n -> SNat ('S n)
-
--- | Constraint that a given position in a tuple or @HList@ is of a given type.
-class IndexType (n :: Nat) (xs :: [*]) where
-  type TheResult n xs :: *
-  fromIndex :: SNat n -> HList xs -> TheResult n xs
-
-instance IndexType 'Z (x ': xs) where
-  type TheResult 'Z (x ': xs) = x
-  fromIndex SZ (x :% _) = x
-
-instance IndexType n xs => IndexType ('S n) (y ': xs) where
-  type TheResult ('S n) (y ': xs) = TheResult n xs
-  fromIndex (SS n) (_ :% xs) = fromIndex n xs
-
--- | Access the @n@th field of a tuple or @HList@.
-field :: forall tup a n.  (HListable tup, SymWord tup, SymWord a, IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SNat n -> SBV tup -> SBV a
-field n = symbolicFieldAccess (sNatToInt n + 1)
-  where sNatToInt :: SNat n' -> Int
-        sNatToInt SZ      = 0
-        sNatToInt (SS n') = succ (sNatToInt n')
-
--- | Access the first field of a tuple or @HList@.
-field1 :: (HListable tup, SymWord tup, SymWord a, n ~ 'Z, IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
-field1 = field SZ
-
--- | Access the second field of a tuple or @HList@.
-field2 :: (HListable tup, SymWord tup, SymWord a, n ~ 'S 'Z, IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
-field2 = field $ SS SZ
-
--- | Access the third field of a tuple or @HList@.
-field3 :: (HListable tup, SymWord tup, SymWord a, n ~ 'S ('S 'Z), IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
-field3 = field $ SS $ SS SZ
-
--- | Access the fourth field of a tuple or @HList@.
-field4 :: (HListable tup, SymWord tup, SymWord a, n ~ 'S ('S ('S 'Z)) , IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
-field4 = field $ SS $ SS $ SS SZ
-
--- | Access the fifth field of a tuple or @HList@.
-field5 :: (HListable tup, SymWord tup, SymWord a, n ~ 'S ('S ('S ('S 'Z))), IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
-field5 = field $ SS $ SS $ SS $ SS SZ
-
--- | Access the sixth field of a tuple or @HList@.
-field6 :: ( HListable tup, SymWord tup, SymWord a, n ~ 'S ('S ('S ('S ('S 'Z)))), IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
-field6 = field $ SS $ SS $ SS $ SS $ SS SZ
-
--- | Access the seventh field of a tuple or @HList@.
-field7 :: (HListable tup, SymWord tup, SymWord a, n ~ 'S ('S ('S ('S ('S ('S 'Z))))), IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
-field7 = field $ SS $ SS $ SS $ SS $ SS $ SS SZ
-
--- | Access the eighth field of a tuple or @HList@.
-field8 :: (HListable tup, SymWord tup, SymWord a, n ~ 'S ('S ('S ('S ('S ('S ('S 'Z)))))), IndexType n (HListTy tup), TheResult n (HListTy tup) ~ a) => SBV tup -> SBV a
-field8 = field $ SS $ SS $ SS $ SS $ SS $ SS $ SS SZ
+import Data.SBV.Core.Data
+import Data.SBV.Core.Symbolic
 
 -- | Dynamic interface to exporting tuples, this function is not
--- exported on purpose; use it only via the 'field' functions.
+-- exported on purpose; use it only via the field functions '_1', '_2', etc.
 symbolicFieldAccess :: SymWord a => Int -> SBV tup -> SBV a
 symbolicFieldAccess i tup
   | 1 > i || i > lks
@@ -127,3 +60,77 @@ symbolicFieldAccess i tup
         symAccess = SBV $ SVal kElem $ Right $ cache y
           where y st = do sw <- svToSW st $ unSBV tup
                           newExpr st kElem (SBVApp (TupleAccess i lks) [sw])
+
+-- | Field labels
+data Label (l :: Symbol) = Get
+
+-- | The class 'HasField' captures the notion that a type has a certain field
+class SymWord b => HasField l b a | l a -> b where
+  field :: Label l -> SBV a -> SBV b
+
+instance SymWord a => HasField "_1" a (a, b)                   where field _ = symbolicFieldAccess 1
+instance SymWord a => HasField "_1" a (a, b, c)                where field _ = symbolicFieldAccess 1
+instance SymWord a => HasField "_1" a (a, b, c, d)             where field _ = symbolicFieldAccess 1
+instance SymWord a => HasField "_1" a (a, b, c, d, e)          where field _ = symbolicFieldAccess 1
+instance SymWord a => HasField "_1" a (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 1
+instance SymWord a => HasField "_1" a (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 1
+instance SymWord a => HasField "_1" a (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 1
+
+instance SymWord b => HasField "_2" b (a, b)                   where field _ = symbolicFieldAccess 2
+instance SymWord b => HasField "_2" b (a, b, c)                where field _ = symbolicFieldAccess 2
+instance SymWord b => HasField "_2" b (a, b, c, d)             where field _ = symbolicFieldAccess 2
+instance SymWord b => HasField "_2" b (a, b, c, d, e)          where field _ = symbolicFieldAccess 2
+instance SymWord b => HasField "_2" b (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 2
+instance SymWord b => HasField "_2" b (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 2
+instance SymWord b => HasField "_2" b (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 2
+
+instance SymWord c => HasField "_3" c (a, b, c)                where field _ = symbolicFieldAccess 3
+instance SymWord c => HasField "_3" c (a, b, c, d)             where field _ = symbolicFieldAccess 3
+instance SymWord c => HasField "_3" c (a, b, c, d, e)          where field _ = symbolicFieldAccess 3
+instance SymWord c => HasField "_3" c (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 3
+instance SymWord c => HasField "_3" c (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 3
+instance SymWord c => HasField "_3" c (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 3
+
+instance SymWord d => HasField "_4" d (a, b, c, d)             where field _ = symbolicFieldAccess 4
+instance SymWord d => HasField "_4" d (a, b, c, d, e)          where field _ = symbolicFieldAccess 4
+instance SymWord d => HasField "_4" d (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 4
+instance SymWord d => HasField "_4" d (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 4
+instance SymWord d => HasField "_4" d (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 4
+
+instance SymWord e => HasField "_5" e (a, b, c, d, e)          where field _ = symbolicFieldAccess 5
+instance SymWord e => HasField "_5" e (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 5
+instance SymWord e => HasField "_5" e (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 5
+instance SymWord e => HasField "_5" e (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 5
+
+instance SymWord f => HasField "_6" f (a, b, c, d, e, f)       where field _ = symbolicFieldAccess 6
+instance SymWord f => HasField "_6" f (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 6
+instance SymWord f => HasField "_6" f (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 6
+
+instance SymWord g => HasField "_7" g (a, b, c, d, e, f, g)    where field _ = symbolicFieldAccess 7
+instance SymWord g => HasField "_7" g (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 7
+
+instance SymWord h => HasField "_8" h (a, b, c, d, e, f, g, h) where field _ = symbolicFieldAccess 8
+
+_1 :: HasField "_1" b a => SBV a -> SBV b
+_1 = field (Get :: Label "_1")
+
+_2 :: HasField "_2" b a => SBV a -> SBV b
+_2 = field (Get :: Label "_2")
+
+_3 :: HasField "_3" b a => SBV a -> SBV b
+_3 = field (Get :: Label "_3")
+
+_4 :: HasField "_4" b a => SBV a -> SBV b
+_4 = field (Get :: Label "_4")
+
+_5 :: HasField "_5" b a => SBV a -> SBV b
+_5 = field (Get :: Label "_5")
+
+_6 :: HasField "_6" b a => SBV a -> SBV b
+_6 = field (Get :: Label "_6")
+
+_7 :: HasField "_7" b a => SBV a -> SBV b
+_7 = field (Get :: Label "_7")
+
+_8 :: HasField "_8" b a => SBV a -> SBV b
+_8 = field (Get :: Label "_8")
