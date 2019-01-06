@@ -337,7 +337,7 @@ cwToSMTLib rm x
         smtLibTup (KTuple ks) xs = "(mkSBVTuple" ++ show (length ks) ++ " " ++ unwords (zipWith (\ek e -> cwToSMTLib rm (CW ek e)) ks xs) ++ ")"
         smtLibTup k           _  = error $ "SBV.cwToSMTLib: Impossible case (smtLibTup), received kind: " ++ show k
 
-        -- anamoly at the 2's complement min value! Have to use binary notation here
+        -- anomaly at the 2's complement min value! Have to use binary notation here
         -- as there is no positive value we can provide to make the bvneg work.. (see above)
         mkMinBound :: Int -> String
         mkMinBound i = "#b1" ++ replicate (i-1) '0'
