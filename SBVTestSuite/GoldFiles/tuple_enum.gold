@@ -78,8 +78,12 @@
 [GOOD] (assert s33)
 [GOOD] (assert s41)
 [GOOD] (assert s34)
-[GOOD] (declare-fun s42 () (SBVTuple2 (_ BitVec 8) (SBVTuple2 E (_ FloatingPoint  8 24))))
-[GOOD] (define-fun s43 () (SBVTuple2 (_ BitVec 8) (SBVTuple2 E (_ FloatingPoint  8 24))) (mkSBVTuple2 #x05 (mkSBVTuple2 C ((_ to_fp 8 24) roundNearestTiesToEven (/ 8514437.0 1048576.0)))))
+[GOOD] (declare-datatypes ((SBVTuple3 3)) ((par (T1 T2 T3)
+                                           ((mkSBVTuple3 (proj_1_SBVTuple3 T1)
+                                                         (proj_2_SBVTuple3 T2)
+                                                         (proj_3_SBVTuple3 T3))))))
+[GOOD] (declare-fun s42 () (SBVTuple2 (_ BitVec 8) (SBVTuple3 E (_ BitVec 8) (_ FloatingPoint  8 24))))
+[GOOD] (define-fun s43 () (SBVTuple2 (_ BitVec 8) (SBVTuple3 E (_ BitVec 8) (_ FloatingPoint  8 24))) (mkSBVTuple2 #x05 (mkSBVTuple3 C #x41 ((_ to_fp 8 24) roundNearestTiesToEven (/ 8514437.0 1048576.0)))))
 [GOOD] (define-fun s44 () Bool (= s42 s43))
 [GOOD] (assert s44)
 [GOOD] (define-fun s45 () (Seq (SBVTuple2 E (Seq Bool))) (seq.++ (seq.unit (mkSBVTuple2 B (as seq.empty (Seq Bool)))) (seq.unit (mkSBVTuple2 A (seq.++ (seq.unit true) (seq.unit false)))) (seq.unit (mkSBVTuple2 C (seq.++ (seq.unit false) (seq.unit false) (seq.unit false) (seq.unit false) (seq.unit true) (seq.unit false))))))
@@ -99,9 +103,9 @@
                                                                               (seq.++ (seq.unit true)
                                                                                       (seq.unit false))))))))))))
 [SEND] (get-value (s42))
-[RECV] ((s42 (mkSBVTuple2 #x05 (mkSBVTuple2 C (fp #b0 #x82 #b00000011110101110000101)))))
+[RECV] ((s42 (mkSBVTuple2 #x05 (mkSBVTuple3 C #x41 (fp #b0 #x82 #b00000011110101110000101)))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
- FINAL: ([(B,[]),(A,[True,False]),(C,[False,False,False,False,True,False])],(5,(C,8.12)))
+ FINAL: ([(B,[]),(A,[True,False]),(C,[False,False,False,False,True,False])],(5,(C,'A',8.12)))
 DONE!

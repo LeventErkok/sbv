@@ -85,7 +85,7 @@ list = do
   query $ do _ <- checkSat
              getValue lst
 
-enum :: Symbolic ([(E, [Bool])], (Word8, (E, Float)))
+enum :: Symbolic ([(E, [Bool])], (Word8, (E, Char, Float)))
 enum = do
    vTup1 :: SList (E, [Bool]) <- sTuple "v1"
    q <- sBool "q"
@@ -99,8 +99,8 @@ enum = do
                   constrain $ b .!! 4 .== sTrue
 
    query $ do
-     vTup2 :: STuple2 Word8 (E, Float) <- freshVar "v2"
-     constrain $ vTup2 .== literal (5, (C, 8.12))
+     vTup2 :: STuple2 Word8 (E, Char, Float) <- freshVar "v2"
+     constrain $ vTup2 .== literal (5, (C, 'A', 8.12))
 
      constrain $ vTup1 .== literal [(B, []), (A, [True, False]), (C, [False, False, False, False, True, False])]
 
