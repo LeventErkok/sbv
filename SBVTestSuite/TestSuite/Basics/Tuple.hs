@@ -14,12 +14,13 @@
 
 module TestSuite.Basics.Tuple (tests)  where
 
-import           Control.Monad          (unless)
+import Control.Monad (unless)
 
-import           Data.SBV.Control
-import qualified Data.SBV.List          as L
-import           Data.SBV.Tuple
-import           Utils.SBVTestFramework
+import Data.SBV.Control
+import Data.SBV.List ((.!!))
+import Data.SBV.Tuple
+
+import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree
@@ -44,26 +45,28 @@ checkWith cfg props csExpected = runSMTWith cfg{verbose=True} $ do
 tupleSwapSat :: Symbolic ()
 tupleSwapSat = do
   [abx, bay] <- sTuples @(Integer, Integer, Integer) ["abx", "bay"]
-  constrain $ _1 abx .== _2 bay
-  constrain $ _2 abx .== _1 bay
+  constrain $ abx^._1 .== bay^._2
+  constrain $ abx^._2 .== bay^._1
 
 twoTwoTuples :: Symbolic ()
 twoTwoTuples = do
   ab <- sTuple @(Integer, String) "ab"
   cd <- sTuple @(Char,    Word8)  "cd"
-  constrain $ _1 ab .== 1
-  constrain $ _1 cd .== literal 'c'
+  constrain $ ab^._1 .== 1
+  constrain $ cd^._1 .== literal 'c'
 
 nested :: Symbolic ()
 nested = do
   abcd <- sTuple @((Integer, (String, Char)), Word8) "abcd"
-  constrain $     _1 (_1 abcd)  .== 1
-  constrain $ _1 (_2 (_1 abcd)) .== literal "foo"
-  constrain $ _2 (_2 (_1 abcd)) .== literal 'c'
-  constrain $         _2 abcd   .== 0
+  constrain $     abcd^._1^._1 .== 1
+  constrain $ abcd^._1^._2^._1 .== literal "foo"
+  constrain $ abcd^._1^._2^._2 .== literal 'c'
+  constrain $         abcd^._2 .== 0
 
 list :: Symbolic ()
 list = do
   lst <- sList @(Integer, [(Integer, String)]) "lst"
-  constrain $                   _1 (L.elemAt lst 0) .== 2
-  constrain $ _2 (L.elemAt (_2 (L.elemAt lst 1)) 1) .== literal "foo"
+  constrain $ (lst .!! 0)^._1 .== 2
+  constrain $ (((lst .!! 1)^._2) .!! 1)^._2 .== literal "foo"
+
+{-# ANN module ("HLint: ignore Use ." :: String) #-}

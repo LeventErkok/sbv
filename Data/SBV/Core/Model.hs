@@ -39,14 +39,12 @@ module Data.SBV.Core.Model (
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCW, genMkSymVar
   , sbvQuickCheck
-  , HListable(..)
   )
   where
 
 import Control.Applicative    (ZipList(ZipList))
 import Control.Monad          (when, unless, mplus)
 import Control.Monad.IO.Class (MonadIO)
-import Data.Typeable          (Typeable)
 
 import GHC.Generics (U1(..), M1(..), (:*:)(..), K1(..))
 import qualified GHC.Generics as G
@@ -214,158 +212,80 @@ instance SymWord a => SymWord [a] where
   fromCW (CW _ (CWList a))   = fromCW . CW (kindOf (undefined :: a)) <$> a
   fromCW c                   = error $ "SymWord.fromCW: Unexpected non-list value: " ++ show c
 
-instance SymWord (HList '[]) where
-  mkSymWord = genMkSymVar $ KTuple []
+toCW :: SymWord a => a -> CWVal
+toCW a = case literal a of
+           SBV (SVal _ (Left cw)) -> cwVal cw
+           _                      -> error $ "SymWord.toCW: Impossible happened, couldn't produce a concrete value"
 
-  literal HNil =
-    let k = KTuple []
-    in SBV . SVal k . Left . CW k $ CWTuple []
+mkCWTup :: Int -> Kind -> [CWVal] -> SBV a
+mkCWTup i k@(KTuple ks) cs
+  | lks == lcs && lks == i
+  = SBV $ SVal k $ Left $ CW k $ CWTuple cs
+  | True
+  = error $ "SymWord.mkCWTup: Impossible happened. Malformed tuple received: " ++ show (i, k)
+   where lks = length ks
+         lcs = length cs
+mkCWTup i k _
+  = error $ "SymWord.mkCWTup: Impossible happened. Non-tuple received: " ++ show (i, k)
 
-  fromCW (CW _ (CWTuple [])) = HNil
-  fromCW c = error $ "SymWord.fromCW: Unexpected non-2-tuple value: " ++ show c
+fromCWTup :: Int -> CW -> [CW]
+fromCWTup i inp@(CW (KTuple ks) (CWTuple cs))
+   | lks == lcs && lks == i
+   = zipWith CW ks cs
+   | True
+   = error $ "SymWord.fromCWTup: Impossible happened. Malformed tuple received: " ++ show (i, inp)
+   where lks = length ks
+         lcs = length cs
+fromCWTup i inp = error $ "SymWord.fromCWTup: Impossible happened. Non-tuple received: " ++ show (i, inp)
 
--- Note: why is Typeable required? This is why I believe it's required.
--- - requirement: `SymWord (HList (x ': xs))` => `Typeable (HList (x ': xs))`
---   (superclass)
--- - `Typeable (HList (x ': xs))` => *
---   - `Typeable x` (satisfied by `SymWord x`)
---   - `Typeable xs`
---
--- Starred is the step I'm confused about. Where does this instance come from?
--- We never declare an instance of `Typeable` for `HList`. Is it magically
--- declared for data families?
-instance (Typeable xs, SymWord x, SymWord (HList xs)) => SymWord (HList (x ': xs)) where
-  mkSymWord = genMkSymVar (kindOf (undefined :: HList (x ': xs)))
-
-  literal (x :% xs) = case literal x of
-    SBV (SVal _ (Left (CW _ xval))) -> case literal xs of
-      SBV (SVal (KTuple kxs) (Left (CW _ (CWTuple xsval)))) ->
-        let k = KTuple (kindOf x : kxs)
-        in SBV $ SVal k $ Left $ CW k $ CWTuple $ xval : xsval
-      _ -> error "SymWord.literal: Cannot construct a literal value!"
-    _ -> error "SymWord.literal: Cannot construct a literal value!"
-
-  fromCW (CW (KTuple (k:ks)) (CWTuple (x:xs))) =
-    fromCW (CW k x) :% fromCW (CW (KTuple ks) (CWTuple xs))
-  fromCW c = error $ "SymWord.fromCW: Unexpected non-:% value: " ++ show c
-
-class HListable tup where
-  type HListTy tup :: [*]
-  toHList :: tup -> HList (HListTy tup)
-  fromHList :: HList (HListTy tup) -> tup
-
-coerceTup :: SBV (HList (HListTy tup)) -> SBV tup
-coerceTup (SBV x) = SBV x
-
-instance (HasKind a, HasKind b) => HasKind (a, b) where
-   kindOf = kindOf . toHList
-
-instance (HasKind a, HasKind b, HasKind c) => HasKind (a, b, c) where
-   kindOf = kindOf . toHList
-
-instance (HasKind a, HasKind b, HasKind c, HasKind d)
-  => HasKind (a, b, c, d) where
-   kindOf = kindOf . toHList
-
-instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e)
-  => HasKind (a, b, c, d, e) where
-   kindOf = kindOf . toHList
-
-instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f)
-  => HasKind (a, b, c, d, e, f) where
-   kindOf = kindOf . toHList
-
-instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f,
-  HasKind g)
-  => HasKind (a, b, c, d, e, f, g) where
-   kindOf = kindOf . toHList
-
-instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f,
-  HasKind g, HasKind h)
-  => HasKind (a, b, c, d, e, f, g, h) where
-   kindOf = kindOf . toHList
-
-instance HListable (HList l) where
-  type HListTy (HList l) = l
-  toHList   = id
-  fromHList = id
-
-instance HListable (a, b) where
-  type HListTy (a, b) = [a, b]
-  toHList (a, b) = a :% b :% HNil
-  fromHList (a :% b :% HNil) = (a, b)
-
-instance HListable (a, b, c) where
-  type HListTy (a, b, c) = [a, b, c]
-  toHList (a, b, c) = a :% b :% c :% HNil
-  fromHList (a :% b :% c :% HNil) = (a, b, c)
-
-instance HListable (a, b, c, d) where
-  type HListTy (a, b, c, d) = [a, b, c, d]
-  toHList (a, b, c, d) = a :% b :% c :% d :% HNil
-  fromHList (a :% b :% c :% d :% HNil) = (a, b, c, d)
-
-instance HListable (a, b, c, d, e) where
-  type HListTy (a, b, c, d, e) = [a, b, c, d, e]
-  toHList (a, b, c, d, e) = a :% b :% c :% d :% e :% HNil
-  fromHList (a :% b :% c :% d :% e :% HNil) = (a, b, c, d, e)
-
-instance HListable (a, b, c, d, e, f) where
-  type HListTy (a, b, c, d, e, f) = [a, b, c, d, e, f]
-  toHList (a, b, c, d, e, f) = a :% b :% c :% d :% e :% f :% HNil
-  fromHList (a :% b :% c :% d :% e :% f :% HNil) = (a, b, c, d, e, f)
-
-instance HListable (a, b, c, d, e, f, g) where
-  type HListTy (a, b, c, d, e, f, g) = [a, b, c, d, e, f, g]
-  toHList (a, b, c, d, e, f, g) = a :% b :% c :% d :% e :% f :% g :% HNil
-  fromHList (a :% b :% c :% d :% e :% f :% g :% HNil) = (a, b, c, d, e, f, g)
-
-instance HListable (a, b, c, d, e, f, g, h) where
-  type HListTy (a, b, c, d, e, f, g, h) = [a, b, c, d, e, f, g, h]
-  toHList (a, b, c, d, e, f, g, h)
-    = a :% b :% c :% d :% e :% f :% g :% h :% HNil
-  fromHList (a :% b :% c :% d :% e :% f :% g :% h :% HNil)
-    = (a, b, c, d, e, f, g, h)
-
+-- | SymWord for 2-tuples
 instance (SymWord a, SymWord b) => SymWord (a, b) where
-  mkSymWord x y = coerceTup <$> mkSymWord x y
-  literal       = coerceTup . literal . toHList
-  fromCW        = fromHList . fromCW
+   mkSymWord        = genMkSymVar (kindOf (undefined :: (a, b)))
+   literal (v1, v2) = mkCWTup 2   (kindOf (undefined :: (a, b))) [toCW v1, toCW v2]
+   fromCW  cw       = let ~[v1, v2] = fromCWTup 2 cw
+                      in (fromCW v1, fromCW v2)
 
+-- | SymWord for 3-tuples
 instance (SymWord a, SymWord b, SymWord c) => SymWord (a, b, c) where
-  mkSymWord x y = coerceTup <$> mkSymWord x y
-  literal       = coerceTup . literal . toHList
-  fromCW        = fromHList . fromCW
+   mkSymWord            = genMkSymVar (kindOf (undefined :: (a, b, c)))
+   literal (v1, v2, v3) = mkCWTup 3   (kindOf (undefined :: (a, b, c))) [toCW v1, toCW v2, toCW v3]
+   fromCW  cw           = let ~[v1, v2, v3] = fromCWTup 3 cw
+                          in (fromCW v1, fromCW v2, fromCW v3)
 
-instance (SymWord a, SymWord b, SymWord c, SymWord d)
-  => SymWord (a, b, c, d) where
-  mkSymWord x y = coerceTup <$> mkSymWord x y
-  literal       = coerceTup . literal . toHList
-  fromCW        = fromHList . fromCW
+-- | SymWord for 4-tuples
+instance (SymWord a, SymWord b, SymWord c, SymWord d) => SymWord (a, b, c, d) where
+   mkSymWord                = genMkSymVar (kindOf (undefined :: (a, b, c, d)))
+   literal (v1, v2, v3, v4) = mkCWTup 4   (kindOf (undefined :: (a, b, c, d))) [toCW v1, toCW v2, toCW v3, toCW v4]
+   fromCW  cw               = let ~[v1, v2, v3, v4] = fromCWTup 4 cw
+                              in (fromCW v1, fromCW v2, fromCW v3, fromCW v4)
 
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e)
-  => SymWord (a, b, c, d, e) where
-  mkSymWord x y = coerceTup <$> mkSymWord x y
-  literal       = coerceTup . literal . toHList
-  fromCW        = fromHList . fromCW
+-- | SymWord for 5-tuples
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e) => SymWord (a, b, c, d, e) where
+   mkSymWord                    = genMkSymVar (kindOf (undefined :: (a, b, c, d, e)))
+   literal (v1, v2, v3, v4, v5) = mkCWTup 5   (kindOf (undefined :: (a, b, c, d, e))) [toCW v1, toCW v2, toCW v3, toCW v4, toCW v5]
+   fromCW  cw                   = let ~[v1, v2, v3, v4, v5] = fromCWTup 5 cw
+                                  in (fromCW v1, fromCW v2, fromCW v3, fromCW v4, fromCW v5)
 
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f)
-  => SymWord (a, b, c, d, e, f) where
-  mkSymWord x y = coerceTup <$> mkSymWord x y
-  literal       = coerceTup . literal . toHList
-  fromCW        = fromHList . fromCW
+-- | SymWord for 6-tuples
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f) => SymWord (a, b, c, d, e, f) where
+   mkSymWord                        = genMkSymVar (kindOf (undefined :: (a, b, c, d, e, f)))
+   literal (v1, v2, v3, v4, v5, v6) = mkCWTup 6   (kindOf (undefined :: (a, b, c, d, e, f))) [toCW v1, toCW v2, toCW v3, toCW v4, toCW v5, toCW v6]
+   fromCW  cw                       = let ~[v1, v2, v3, v4, v5, v6] = fromCWTup 6 cw
+                                      in (fromCW v1, fromCW v2, fromCW v3, fromCW v4, fromCW v5, fromCW v6)
 
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f,
-  SymWord g) => SymWord (a, b, c, d, e, f, g) where
-  mkSymWord x y = coerceTup <$> mkSymWord x y
-  literal       = coerceTup . literal . toHList
-  fromCW        = fromHList . fromCW
+-- | SymWord for 7-tuples
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g) => SymWord (a, b, c, d, e, f, g) where
+   mkSymWord                            = genMkSymVar (kindOf (undefined :: (a, b, c, d, e, f, g)))
+   literal (v1, v2, v3, v4, v5, v6, v7) = mkCWTup 7   (kindOf (undefined :: (a, b, c, d, e, f, g))) [toCW v1, toCW v2, toCW v3, toCW v4, toCW v5, toCW v6, toCW v7]
+   fromCW  cw                           = let ~[v1, v2, v3, v4, v5, v6, v7] = fromCWTup 7 cw
+                                          in (fromCW v1, fromCW v2, fromCW v3, fromCW v4, fromCW v5, fromCW v6, fromCW v7)
 
-instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f,
-  SymWord g, SymWord h) => SymWord (a, b, c, d, e, f, g, h) where
-  mkSymWord x y = coerceTup <$> mkSymWord x y
-  literal       = coerceTup . literal . toHList
-  fromCW        = fromHList . fromCW
+-- | SymWord for 8-tuples
+instance (SymWord a, SymWord b, SymWord c, SymWord d, SymWord e, SymWord f, SymWord g, SymWord h) => SymWord (a, b, c, d, e, f, g, h) where
+   mkSymWord                                = genMkSymVar (kindOf (undefined :: (a, b, c, d, e, f, g, h)))
+   literal (v1, v2, v3, v4, v5, v6, v7, v8) = mkCWTup 8   (kindOf (undefined :: (a, b, c, d, e, f, g, h))) [toCW v1, toCW v2, toCW v3, toCW v4, toCW v5, toCW v6, toCW v7, toCW v8]
+   fromCW  cw                               = let ~[v1, v2, v3, v4, v5, v6, v7, v8] = fromCWTup 8 cw
+                                              in (fromCW v1, fromCW v2, fromCW v3, fromCW v4, fromCW v5, fromCW v6, fromCW v7, fromCW v8)
 
 instance IsString SString where
   fromString = literal

@@ -143,9 +143,9 @@ module Data.SBV (
   -- ** Symbolic lists
   -- $lists
   , SList
-  -- ** Tuples / HLists
+  -- ** Tuples
   -- $tuples
-  , HList(..)
+  , STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
   -- * Arrays of symbolic values
   , SymArray(readArray, writeArray, mergeArrays), newArray_, newArray, SArray, SFunArray
 
@@ -648,9 +648,7 @@ See "Data.SBV.List" for related functions.
 -}
 
 {- $tuples
-Tuples can be used as symbolic values. This is useful in combination with lists, for example @SBV [(Integer, String)]@ is a valid type. These types can be arbitrarily nested, eg @SBV [(Integer, [(Char, (Integer, String))])]@.
-
-@HList@s can be used as arbitrarily-sized tuples (instances for up to 8-tuples are provided).
+Tuples can be used as symbolic values. This is useful in combination with lists, for example @SBV [(Integer, String)]@ is a valid type. These types can be arbitrarily nested, eg @SBV [(Integer, [(Char, (Integer, String))])]@. Instances of upto 8-tuples are provided.
 -}
 
 {- $shiftRotate

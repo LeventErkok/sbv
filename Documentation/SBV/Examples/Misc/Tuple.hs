@@ -19,5 +19,5 @@ import Data.SBV.Tuple
 example :: IO SatResult
 example = sat $ do
   [ab, cd] <- sTuples @(Integer, Integer, Integer) ["ab", "cd"]
-  constrain $ _1 ab .== _2 cd
-  constrain $ _2 ab .== _1 cd
+  constrain $ ab^._1 .== cd^._2
+  constrain $ ab^._2 .== cd^._1

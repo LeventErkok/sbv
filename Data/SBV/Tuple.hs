@@ -18,13 +18,22 @@
 
 module Data.SBV.Tuple (
   -- * Symbolic field access
-  _1, _2, _3, _4, _5, _6, _7, _8
+  (^.), _1, _2, _3, _4, _5, _6, _7, _8
   ) where
 
 import GHC.TypeLits
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
+
+-- | Field access, inspired by the lens library. This is merely reverse
+-- application, but allows us to write things like @(1, 2)^._1@ which is
+-- likely to be familiar to most Haskell programmers out there. Note that
+-- this is precisely equivalent to @_1 (1, 2)@, but perhaps it reads a little
+-- nicer.
+(^.) :: a -> (a -> b) -> b
+t ^. f = f t
+infixl 8 ^.
 
 -- | Dynamic interface to exporting tuples, this function is not
 -- exported on purpose; use it only via the field functions '_1', '_2', etc.
