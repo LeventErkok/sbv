@@ -27,6 +27,7 @@ import GHC.TypeLits
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
+import Data.SBV.Core.Model () -- instances only
 
 -- | Field access, inspired by the lens library. This is merely reverse
 -- application, but allows us to write things like @(1, 2)^._1@ which is
@@ -161,7 +162,7 @@ class Tuple tup a | tup -> a where
   -- | Constructing a tuple from its parts
   tuple   :: a -> SBV tup
 
-instance (SymVal a, SymVal b, SymVal (a, b)) => Tuple (a, b) (SBV a, SBV b) where
+instance (SymVal a, SymVal b) => Tuple (a, b) (SBV a, SBV b) where
   untuple p = (p^._1, p^._2)
 
   tuple p@(sa, sb)
@@ -174,7 +175,7 @@ instance (SymVal a, SymVal b, SymVal (a, b)) => Tuple (a, b) (SBV a, SBV b) wher
                       bsv <- sbvToSV st sb
                       newExpr st k (SBVApp (TupleConstructor 2) [asv, bsv])
 
-instance (SymVal a, SymVal b, SymVal c, SymVal (a, b, c)) => Tuple (a, b, c) (SBV a, SBV b, SBV c) where
+instance (SymVal a, SymVal b, SymVal c) => Tuple (a, b, c) (SBV a, SBV b, SBV c) where
   untuple p = (p^._1, p^._2, p^._3)
 
   tuple p@(sa, sb, sc)
@@ -188,7 +189,7 @@ instance (SymVal a, SymVal b, SymVal c, SymVal (a, b, c)) => Tuple (a, b, c) (SB
                       csv <- sbvToSV st sc
                       newExpr st k (SBVApp (TupleConstructor 3) [asv, bsv, csv])
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal (a, b, c, d)) => Tuple (a, b, c, d) (SBV a, SBV b, SBV c, SBV d) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d) => Tuple (a, b, c, d) (SBV a, SBV b, SBV c, SBV d) where
   untuple p = (p^._1, p^._2, p^._3, p^._4)
 
   tuple p@(sa, sb, sc, sd)
@@ -203,7 +204,7 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal (a, b, c, d)) => Tuple 
                       dsv <- sbvToSV st sd
                       newExpr st k (SBVApp (TupleConstructor 4) [asv, bsv, csv, dsv])
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal (a, b, c, d, e)) => Tuple (a, b, c, d, e) (SBV a, SBV b, SBV c, SBV d, SBV e) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e) => Tuple (a, b, c, d, e) (SBV a, SBV b, SBV c, SBV d, SBV e) where
   untuple p = (p^._1, p^._2, p^._3, p^._4, p^._5)
 
   tuple p@(sa, sb, sc, sd, se)
@@ -219,7 +220,7 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal (a, b, c, d, 
                       esv <- sbvToSV st se
                       newExpr st k (SBVApp (TupleConstructor 5) [asv, bsv, csv, dsv, esv])
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal (a, b, c, d, e, f)) => Tuple (a, b, c, d, e, f) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f) => Tuple (a, b, c, d, e, f) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
   untuple p = (p^._1, p^._2, p^._3, p^._4, p^._5, p^._6)
 
   tuple p@(sa, sb, sc, sd, se, sf)
@@ -236,7 +237,7 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal (a,
                       fsv <- sbvToSV st sf
                       newExpr st k (SBVApp (TupleConstructor 6) [asv, bsv, csv, dsv, esv, fsv])
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal (a, b, c, d, e, f, g)) => Tuple (a, b, c, d, e, f, g) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g) => Tuple (a, b, c, d, e, f, g) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
   untuple p = (p^._1, p^._2, p^._3, p^._4, p^._5, p^._6, p^._7)
 
   tuple p@(sa, sb, sc, sd, se, sf, sg)
@@ -254,7 +255,7 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, 
                       gsv <- sbvToSV st sg
                       newExpr st k (SBVApp (TupleConstructor 7) [asv, bsv, csv, dsv, esv, fsv, gsv])
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h, SymVal (a, b, c, d, e, f, g, h)) => Tuple (a, b, c, d, e, f, g, h) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h) => Tuple (a, b, c, d, e, f, g, h) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h) where
   untuple p = (p^._1, p^._2, p^._3, p^._4, p^._5, p^._6, p^._7, p^._8)
 
   tuple p@(sa, sb, sc, sd, se, sf, sg, sh)
