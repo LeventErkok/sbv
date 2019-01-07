@@ -484,7 +484,7 @@ signPick1 fu fs a
  | True      = let (u, o) = fu n a in (SBV u, SBV o)
  where n = intSizeOf a
 
-checkOp1 :: HasKind a => CallStack -> String -> (a -> SBV b) -> (a -> (SBool, SBool)) -> a -> SBV b
+checkOp1 :: (HasKind a, HasKind b) => CallStack -> String -> (a -> SBV b) -> (a -> (SBool, SBool)) -> a -> SBV b
 checkOp1 loc w op cop a = sAssert (Just loc) (msg "underflows") (sNot u)
                         $ sAssert (Just loc) (msg "overflows")  (sNot o)
                         $ op a
@@ -493,7 +493,7 @@ checkOp1 loc w op cop a = sAssert (Just loc) (msg "underflows") (sNot u)
 
         (u, o) = cop a
 
-checkOp2 :: HasKind a => CallStack -> String -> (a -> b -> SBV c) -> (a -> b -> (SBool, SBool)) -> a -> b -> SBV c
+checkOp2 :: (HasKind a, HasKind c) => CallStack -> String -> (a -> b -> SBV c) -> (a -> b -> (SBool, SBool)) -> a -> b -> SBV c
 checkOp2 loc w op cop a b = sAssert (Just loc) (msg "underflows") (sNot u)
                           $ sAssert (Just loc) (msg "overflows")  (sNot o)
                           $ a `op` b
