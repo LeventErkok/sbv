@@ -1441,7 +1441,7 @@ iteLazy t a b
 
 -- | Symbolic assert. Check that the given boolean condition is always 'sTrue' in the given path. The
 -- optional first argument can be used to provide call-stack info via GHC's location facilities.
-sAssert :: Maybe CallStack -> String -> SBool -> SBV a -> SBV a
+sAssert :: HasKind a => Maybe CallStack -> String -> SBool -> SBV a -> SBV a
 sAssert cs msg cond x
    | Just mustHold <- unliteral cond
    = if mustHold
