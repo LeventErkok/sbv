@@ -272,3 +272,5 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, 
                       gsv <- sbvToSV st sg
                       hsv <- sbvToSV st sh
                       newExpr st k (SBVApp (TupleConstructor 8) [asv, bsv, csv, dsv, esv, fsv, gsv, hsv])
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
