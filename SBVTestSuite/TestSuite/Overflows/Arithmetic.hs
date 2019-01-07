@@ -131,7 +131,7 @@ exactlyWhen :: SBool -> SVal -> SBool
 exactlyWhen (SBV a) b = SBV $ (a `svAnd` b) `svOr` (svNot a `svAnd` svNot b)
 
 -- Properly extend to a dynamic large vector
-toLarge :: SBV a -> SLarge
+toLarge :: HasKind a => SBV a -> SLarge
 toLarge v
   | extra < 0 = error $ "toLarge: Unexpected size: " ++ show (n, large)
   | hasSign v = p `svJoin` dv
