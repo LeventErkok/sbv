@@ -335,8 +335,8 @@ instance Eq (SBV a) where
   SBV a == SBV b = a == b
   SBV a /= SBV b = a /= b
 
-instance HasKind (SBV a) where
-  kindOf (SBV (SVal k _)) = k
+instance HasKind a => HasKind (SBV a) where
+  kindOf _ = kindOf (undefined :: a)
 
 -- | Convert a symbolic value to a symbolic-word
 sbvToSV :: State -> SBV a -> IO SV
