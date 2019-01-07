@@ -71,8 +71,5 @@ example = runSMT $ do dict :: Dict String Integer <- free "dict"
                       let keys = [(dict .!! fromIntegral i)^._1 | i <- range]
                       constrain $ distinct keys
 
-                      query $ do cs <- checkSat
-                                 case cs of
-                                   Unk   -> error "Solver said Unknown!"
-                                   Unsat -> error "Solver said Unsat!"
-                                   Sat   -> getValue dict
+                      query $ do ensureSat
+                                 getValue dict
