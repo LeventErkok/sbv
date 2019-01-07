@@ -36,7 +36,8 @@
     along with `untuple` destructor, and field accessors similar to lens: For instance
     `p^._4` would project the 4th element of a tuple that has at least 4 fields.
     The mixing and matching of field types and nesting allows for very rich
-    symbolic value representations.
+    symbolic value representations. See `Documentation.SBV.Examples.Misc.Tuple` for
+    an example.
 
   * [BACKWARDS COMPATIBILITY] The `Boolean` class is removed, which used to abstract
     over logical connectives. Previously, this class handled 'SBool' and 'Bool', but
@@ -75,7 +76,7 @@
 
     Along with these, many of the internal constructor/variable names also changed in
     a similar fashion.
-    
+
     For most casual users, these changes should not require any changes. But if you were
     developing libraries on top of SBV, then you will have to adapt to the new schema.
     Please report if there are any gotchas we have forgotten about.
@@ -142,7 +143,7 @@
     in this range and have issues.)
 
   * Improve the BoundedMutex example to show a non-fair trace.
-    See "Documentation/SBV/Examples/Lists/BoundedMutex.hs".
+    See `Documentation/SBV/Examples/Lists/BoundedMutex.hs`.
 
   * Improve Haddock documentation links throughout.
 
@@ -153,14 +154,14 @@
     This is building on top of Joel Burget's initial work for supporting symbolic
     strings and sequences, as supported by Z3. Note that the list theory solvers
     are incomplete, so some queries might receive an unknown answer. See
-    "Documentation/SBV/Examples/Lists/Fibonacci.hs" for an example, and the
-    module "Data.SBV.List" for details.
+    `Documentation/SBV/Examples/Lists/Fibonacci.hs` for an example, and the
+    module `Data.SBV.List` for details.
 
-  * A new module 'Data.SBV.List.Bounded' provides extra functions to manipulate
+  * A new module `Data.SBV.List.Bounded` provides extra functions to manipulate
     lists with given concrete bounds. Note that SMT solvers cannot deal with
     recursive functions/inductive proofs in general, so the utilities in this
     file can come in handy when expressing bounded-model-checking style
-    algorithms. See "Documentation/SBV/Examples/Lists/BoundedMutex.hs" for a
+    algorithms. See `Documentation/SBV/Examples/Lists/BoundedMutex.hs` for a
     simple mutex algorithm proof.
 
   * Remove dependency on data-binary-ieee754 package; which is no longer
@@ -195,12 +196,12 @@
     better reflects the nature of this function. Also add extra checks to warn
     the user if optimization constraints are present in a regular sat/prove call.
 
-  * Implement 'softConstrain': Similar to 'constrain', except the solver is
+  * Implement `softConstrain`: Similar to 'constrain', except the solver is
     free to leave it unsatisfied (i.e., leave it false) if necessary to
     find a satisfying solution. Useful in modeling conditions that are
     "nice-to-have" but not "required." Note that this is similar to
     'assertWithPenalty', except it works in non-optimization contexts.
-    See "Documentation.SBV.Examples.Misc.SoftConstrain" for a simple example.
+    See `Documentation.SBV.Examples.Misc.SoftConstrain` for a simple example.
 
   * Add 'CheckedArithmetic' class, which provides bit-vector arithmetic
     operations that do automatic underflow/overflow checking. The operations
@@ -213,7 +214,7 @@
   * Similar to above, add 'sFromIntegralChecked', providing overflow/underflow
     checks for cast operations.
 
-  * Add "Documentation.SBV.Examples.BitPrecise.BrokenSearch" module to show the
+  * Add `Documentation.SBV.Examples.BitPrecise.BrokenSearch` module to show the
     use of overflow checking utilities, using the classic broken binary search
     example from http://ai.googleblog.com/2006/06/extra-extra-read-all-about-it-nearly.html
 
@@ -260,7 +261,7 @@
     both signed and unsigned bit-vector values. The implementation is based on
     http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/z3prefix.pdf,
     and can be used to detect overflow caused bugs in machine arithmetic.
-    See "Data.SBV.Tools.Overflow" for details.
+    See `Data.SBV.Tools.Overflow` for details.
 
   * Add 'sFromIntegralO', which is the overflow/underflow detecting variant
     of 'sFromIntegral'. This function returns (along with the converted
@@ -306,7 +307,7 @@
     -min_value as a valid literal!  Instead we use the macros provided in
     stdint.h. Thanks to Matt Peddie for reporting this corner case.
 
-  * Fix translation of the "abs" function in C code generation, making
+  * Fix translation of the `abs` function in C code generation, making
     sure we use the correct variant. Thanks to Matt Peddie for reporting.
 
   * Fix handling of tables and arrays in pushed-contexts. Previously,
@@ -542,7 +543,7 @@
     The motivation is to allow the end-users to send/receive arbitrary SMTLib
     commands to the solver, instead of the cooked-up recipes. SBV still provides
     all the recipes for its existing functionality, but users can now interact
-    with the solver directly. See the module "Data.SBV.Control" for the main
+    with the solver directly. See the module `Data.SBV.Control` for the main
     API, together with the new functions 'runSMT' and 'runSMTWith'.
 
   * The 'Tactic' based solver control (introduced in v6.0) is completely removed, and
@@ -580,7 +581,7 @@
     is an infinite number of them.
 
   * Extraction of unsat-cores has changed. To use this feature, we now use
-    custom queries. See "Data.SBV.Examples.Misc.UnsatCore" for an example.
+    custom queries. See `Data.SBV.Examples.Misc.UnsatCore` for an example.
     Old style of unsat-core extraction is no longer supported.
 
   * The 'timing' option of SMTConfig has been reworked. Since we now start the
@@ -629,7 +630,7 @@
     and has an accurate account of precisely what SBV sent.
 
   * Enumerations are now much easier to use symbolically, with the addition
-    of the template-haskell splice mkSymbolicEnumeration. See "Data/SBV/Examples/Misc/Enumerate.hs"
+    of the template-haskell splice mkSymbolicEnumeration. See `Data/SBV/Examples/Misc/Enumerate.hs`
     for an example.
 
   * Thanks to Kanishka Azimi, our external test suite is now run by
@@ -906,7 +907,7 @@
     to take into account certain variables from a model-building
     perspective. This comes handy in doing an `allSat` calls where
     there might be witness variables that we do not care the uniqueness
-    for. See "Data/SBV/Examples/Misc/Auxiliary.hs" for an example, and
+    for. See `Data/SBV/Examples/Misc/Auxiliary.hs` for an example, and
     the discussion in https://github.com/LeventErkok/sbv/issues/208 for
     motivation.
 
@@ -1049,12 +1050,12 @@
     used, and required a very old version of Yices that was no longer supported by SRI and has
     lacked in other features. So, in reality this change should hardly matter for end-users.
 
-  * Added function "label", which is useful in emitting comments around expressions. It is essentially
+  * Added function `label`, which is useful in emitting comments around expressions. It is essentially
     a no-op, but does generate a comment with the given text in the SMT-Lib and C output, for diagnostic
     purposes.
 
-  * Added "sFromIntegral": Conversions from all integral types (SInteger, SWord/SInts) between
-    each other. Similar to the "fromIntegral" function of Haskell. These generate simple casts when
+  * Added `sFromIntegral`: Conversions from all integral types (SInteger, SWord/SInts) between
+    each other. Similar to the `fromIntegral` function of Haskell. These generate simple casts when
     used in code-generation to C, and thus are very efficient.
 
   * SBV no longer supports the functions sBranch/sAssert, as we realized these functions can cause
@@ -1189,7 +1190,7 @@
   * Introduce Data.SBV.Dynamic, by Brian Huffman. This is mostly an internal
     reorg of the SBV codebase, and end-users should not be impacted by the
     changes. The introduction of the Dynamic SBV variant (i.e., one that does
-    not mandate a phantom type as in "SBV Word8" etc. allows library writers
+    not mandate a phantom type as in `SBV Word8` etc. allows library writers
     more flexibility as they deal with arbitrary bit-vector sizes. The main
     customer of these changes are the Cryptol language and the associated
     toolset, but other developers building on top of SBV can find it useful
@@ -1277,7 +1278,7 @@
 
   * Allow Floating-Point RoundingMode to be symbolic as well
 
-  * Improve the example "Data/SBV/Examples/Misc/Floating.hs" to include
+  * Improve the example `Data/SBV/Examples/Misc/Floating.hs` to include
     rounding-mode based addition example.
 
   * Changes required to make SBV compile with GHC 7.10; mostly around instance
@@ -1297,8 +1298,8 @@ individual instances.
 
   * Modifications to support arbitrary bit-sized vectors;
     These changes have been contributed by Brian Huffman
-    of Galois.. Thanks Brian.
-  * A new example "Data/SBV/Examples/Misc/Word4.hs" showing
+    of Galois. Thanks Brian.
+  * A new example `Data/SBV/Examples/Misc/Word4.hs` showing
     how users can add new symbolic types.
   * Support for rotate-left/rotate-right with variable
     rotation amounts. (From Brian Huffman.)
@@ -1426,7 +1427,7 @@ uninterpreted.
        to Philipp Meyer for the fine report.
  * Misc:
      * Add missing SFloat/SDouble instances for SatModel class
-     * Explicitly support KBool as a kind, separating it from "KUnbounded False 1".
+     * Explicitly support KBool as a kind, separating it from `KUnbounded False 1`.
        Thanks to Brian Huffman for contributing the changes. This should have no
        user-visible impact, but comes in handy for internal reasons.
 
