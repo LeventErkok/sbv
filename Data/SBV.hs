@@ -247,8 +247,8 @@ module Data.SBV (
   -- $softAssertions
   , assertWithPenalty , Penalty(..)
   -- ** Field extensions
-  -- | If an optimization results in an infinity/epsilon value, the returned `CW` value will be in the corresponding extension field.
-  , ExtCW(..), GeneralizedCW(..)
+  -- | If an optimization results in an infinity/epsilon value, the returned `CV` value will be in the corresponding extension field.
+  , ExtCV(..), GeneralizedCV(..)
 
   -- * Model extraction
   -- $modelExtraction
@@ -282,7 +282,7 @@ module Data.SBV (
   -- * Abstract SBV type
   , SBV, HasKind(..), Kind(..)
   , SymVal, forall, forall_, mkForallVars, exists, exists_, mkExistVars, free
-  , free_, mkFreeVars, symbolic, symbolics, literal, unliteral, fromCW
+  , free_, mkFreeVars, symbolic, symbolics, literal, unliteral, fromCV
   , isConcrete, isSymbolic, isConcretely, mkSymVal
   , MonadSymbolic(..), Symbolic, SymbolicT, label, output, runSMT, runSMTWith
 

@@ -113,7 +113,7 @@ type SWord4 = SBV Word4
 instance SymVal Word4 where
   mkSymVal = genMkSymVar (KBounded False 4)
   literal  = genLiteral  (KBounded False 4)
-  fromCW   = genFromCW
+  fromCV   = genFromCV
 
 -- | HasKind instance; simply returning the underlying kind for the type
 instance HasKind Word4 where
@@ -121,7 +121,7 @@ instance HasKind Word4 where
 
 -- | SatModel instance, merely uses the generic parsing method.
 instance SatModel Word4 where
-  parseCWs = genParse (KBounded False 4)
+  parseCVs = genParse (KBounded False 4)
 
 -- | SDvisible instance, using 0-extension
 instance SDivisible Word4 where

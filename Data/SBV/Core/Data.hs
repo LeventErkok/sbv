@@ -32,14 +32,14 @@ module Data.SBV.Core.Data
  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
  , sRNE, sRNA, sRTP, sRTN, sRTZ
  , SymVal(..)
- , CW(..), CWVal(..), AlgReal(..), AlgRealPoly, ExtCW(..), GeneralizedCW(..), isRegularCW, cwSameType, cwToBool
- , mkConstCW ,liftCW2, mapCW, mapCW2
- , SW(..), trueSW, falseSW, trueCW, falseCW, normCW
+ , CV(..), CVal(..), AlgReal(..), AlgRealPoly, ExtCV(..), GeneralizedCV(..), isRegularCV, cvSameType, cvToBool
+ , mkConstCV ,liftCV2, mapCV, mapCV2
+ , SV(..), trueSV, falseSV, trueCV, falseCV, normCV
  , SVal(..)
  , sTrue, sFalse, sNot, (.&&), (.||), (.<+>), (.~&), (.~|), (.=>), (.<=>), sAnd, sOr, sAny, sAll, fromBool
  , SBV(..), NodeId(..), mkSymSBV
  , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), SArray(..)
- , sbvToSW, sbvToSymSW, forceSWArg
+ , sbvToSV, sbvToSymSV, forceSVArg
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, uncacheAI, HasKind(..)
  , Op(..), PBOp(..), FPOp(..), StrOp(..), SeqOp(..), RegExp(..), NamedSymVar, getTableIndex
@@ -339,8 +339,8 @@ instance HasKind (SBV a) where
   kindOf (SBV (SVal k _)) = k
 
 -- | Convert a symbolic value to a symbolic-word
-sbvToSW :: State -> SBV a -> IO SW
-sbvToSW st (SBV s) = svToSW st s
+sbvToSV :: State -> SBV a -> IO SV
+sbvToSV st (SBV s) = svToSV st s
 
 -------------------------------------------------------------------------
 -- * Symbolic Computations
@@ -351,10 +351,10 @@ mkSymSBV :: forall a m. MonadSymbolic m => Maybe Quantifier -> Kind -> Maybe Str
 mkSymSBV mbQ k mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar mbQ k mbNm)
 
 -- | Generalization of 'Data.SBV.sbvToSymSW'
-sbvToSymSW :: MonadSymbolic m => SBV a -> m SW
-sbvToSymSW sbv = do
+sbvToSymSV :: MonadSymbolic m => SBV a -> m SV
+sbvToSymSV sbv = do
         st <- symbolicEnv
-        liftIO $ sbvToSW st sbv
+        liftIO $ sbvToSV st sbv
 
 -- | Actions we can do in a context: Either at problem description
 -- time or while we are dynamically querying. 'Symbolic' and 'Query' are
@@ -433,14 +433,14 @@ class (HasKind a, Ord a, Typeable a) => SymVal a where
   mkSymVal :: MonadSymbolic m => Maybe Quantifier -> Maybe String -> m (SBV a)
   -- | Turn a literal constant to symbolic
   literal :: a -> SBV a
-  -- | Extract a literal, from a CW representation
-  fromCW :: CW -> a
+  -- | Extract a literal, from a CV representation
+  fromCV :: CV -> a
   -- | Does it concretely satisfy the given predicate?
   isConcretely :: SBV a -> (a -> Bool) -> Bool
 
   -- minimal complete definition: Nothing.
   -- Giving no instances is okay when defining an uninterpreted/enumerated sort, but otherwise you really
-  -- want to define: literal, fromCW, mkSymVal
+  -- want to define: literal, fromCV, mkSymVal
 
   default mkSymVal :: (MonadSymbolic m, Read a, G.Data a) => Maybe Quantifier -> Maybe String -> m (SBV a)
   mkSymVal mbQ mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar mbQ k mbNm)
@@ -452,11 +452,11 @@ class (HasKind a, Ord a, Typeable a) => SymVal a where
                   mbIdx = case conts of
                             Right xs -> sx `elemIndex` xs
                             _        -> Nothing
-              in SBV $ SVal k (Left (CW k (CWUserSort (mbIdx, sx))))
+              in SBV $ SVal k (Left (CV k (CUserSort (mbIdx, sx))))
 
-  default fromCW :: Read a => CW -> a
-  fromCW (CW _ (CWUserSort (_, s))) = read s
-  fromCW cw                         = error $ "Cannot convert CW " ++ show cw ++ " to kind " ++ show (kindOf (undefined :: a))
+  default fromCV :: Read a => CV -> a
+  fromCV (CV _ (CUserSort (_, s))) = read s
+  fromCV cv                        = error $ "Cannot convert CV " ++ show cv ++ " to kind " ++ show (kindOf (undefined :: a))
 
   isConcretely s p
     | Just i <- unliteral s = p i
@@ -508,8 +508,8 @@ class (HasKind a, Ord a, Typeable a) => SymVal a where
 
   -- | Extract a literal, if the value is concrete
   unliteral :: SBV a -> Maybe a
-  unliteral (SBV (SVal _ (Left c)))  = Just $ fromCW c
-  unliteral _                        = Nothing
+  unliteral (SBV (SVal _ (Left c))) = Just $ fromCV c
+  unliteral _                       = Nothing
 
   -- | Is the symbolic word concrete?
   isConcrete :: SBV a -> Bool

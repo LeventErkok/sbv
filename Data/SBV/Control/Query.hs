@@ -55,7 +55,7 @@ import Data.SBV.Control.Types
 import Data.SBV.Control.Utils
 
 -- | An Assignment of a model binding
-data Assignment = Assign SVal CW
+data Assignment = Assign SVal CV
 
 -- Remove one pair of surrounding 'c's, if present
 noSurrounding :: Char -> String -> String
@@ -213,7 +213,7 @@ getSMTResult = do cfg <- getConfig
 
 -- | Classify a model based on whether it has unbound objectives or not.
 classifyModel :: SMTConfig -> SMTModel -> SMTResult
-classifyModel cfg m = case filter (not . isRegularCW . snd) (modelObjectives m) of
+classifyModel cfg m = case filter (not . isRegularCV . snd) (modelObjectives m) of
                         [] -> Satisfiable cfg m
                         _  -> SatExtField cfg m
 
@@ -299,14 +299,14 @@ getModelAtIndex mbi = do
 
                                                    -- observables are only meaningful if we're not in a quantified context
                                                    allPrefixObservables | insideQuantifier = []
-                                                                        | True             = [(EX, (sw, nm)) | (nm, sw) <- obsvs]
+                                                                        | True             = [(EX, (sv, nm)) | (nm, sv) <- obsvs]
 
                                                    sortByNodeId :: [NamedSymVar] -> [NamedSymVar]
-                                                   sortByNodeId = sortBy (compare `on` (\(SW _ n, _) -> n))
+                                                   sortByNodeId = sortBy (compare `on` (\(SV _ n, _) -> n))
 
                                                in sortByNodeId [nv | (_, nv@(_, n)) <- allModelInputs ++ allPrefixObservables, not (isNonModelVar cfg n)]
 
-             assocs <- mapM (\(sw, n) -> (n, ) <$> getValueCW mbi sw) vars
+             assocs <- mapM (\(sv, n) -> (n, ) <$> getValueCV mbi sv) vars
 
              return SMTModel { modelObjectives = []
                              , modelAssocs     = assocs
@@ -314,7 +314,7 @@ getModelAtIndex mbi = do
 
 -- | Just after a check-sat is issued, collect objective values. Used
 -- internally only, not exposed to the user.
-getObjectiveValues :: forall m. (MonadIO m, MonadQuery m) => m [(String, GeneralizedCW)]
+getObjectiveValues :: forall m. (MonadIO m, MonadQuery m) => m [(String, GeneralizedCV)]
 getObjectiveValues = do let cmd = "(get-objectives)"
 
                             bad = unexpected "getObjectiveValues" cmd "a list of objective values" Nothing
@@ -327,7 +327,7 @@ getObjectiveValues = do let cmd = "(get-objectives)"
                                             _                             -> bad r Nothing
 
   where -- | Parse an objective value out.
-        getObjValue :: (forall a. Maybe [String] -> m a) -> [NamedSymVar] -> SExpr -> m (Maybe (String, GeneralizedCW))
+        getObjValue :: (forall a. Maybe [String] -> m a) -> [NamedSymVar] -> SExpr -> m (Maybe (String, GeneralizedCV))
         getObjValue bailOut inputs expr =
                 case expr of
                   EApp [_]                                            -> return Nothing            -- Happens when a soft-assertion has no associated group.
@@ -335,51 +335,51 @@ getObjectiveValues = do let cmd = "(get-objectives)"
                   EApp [EApp [ECon "bvadd", ECon nm, ENum (a, _)], v] -> locate nm v (Just a)      -- Happens when we "adjust" a signed-bounded objective
                   _                                                   -> dontUnderstand (show expr)
 
-          where locate nm v mbAdjust = case listToMaybe [p | p@(sw, _) <- inputs, show sw == nm] of
+          where locate nm v mbAdjust = case listToMaybe [p | p@(sv, _) <- inputs, show sv == nm] of
                                          Nothing               -> return Nothing -- Happens when the soft assertion has a group-id that's not one of the input names
-                                         Just (sw, actualName) -> grab sw v >>= \val -> return $ Just (actualName, signAdjust mbAdjust val)
+                                         Just (sv, actualName) -> grab sv v >>= \val -> return $ Just (actualName, signAdjust mbAdjust val)
 
                 dontUnderstand s = bailOut $ Just [ "Unable to understand solver output."
                                                   , "While trying to process: " ++ s
                                                   ]
 
-                signAdjust :: Maybe Integer -> GeneralizedCW -> GeneralizedCW
+                signAdjust :: Maybe Integer -> GeneralizedCV -> GeneralizedCV
                 signAdjust Nothing    v = v
                 signAdjust (Just adj) e = goG e
-                  where goG :: GeneralizedCW -> GeneralizedCW
-                        goG (ExtendedCW ecw) = ExtendedCW $ goE ecw
-                        goG (RegularCW  cw)  = RegularCW  $ go cw
+                  where goG :: GeneralizedCV -> GeneralizedCV
+                        goG (ExtendedCV ecv) = ExtendedCV $ goE ecv
+                        goG (RegularCV  cv)  = RegularCV  $ go cv
 
-                        goE :: ExtCW -> ExtCW
+                        goE :: ExtCV -> ExtCV
                         goE (Infinite k)      = Infinite k
                         goE (Epsilon  k)      = Epsilon  k
                         goE (Interval  lo hi) = Interval  (goE lo) (goE hi)
-                        goE (BoundedCW cw)    = BoundedCW (go cw)
-                        goE (AddExtCW  a b)   = AddExtCW  (goE a) (goE b)
-                        goE (MulExtCW  a b)   = MulExtCW  (goE a) (goE b)
+                        goE (BoundedCV cv)    = BoundedCV (go cv)
+                        goE (AddExtCV  a b)   = AddExtCV  (goE a) (goE b)
+                        goE (MulExtCV  a b)   = MulExtCV  (goE a) (goE b)
 
-                        go :: CW -> CW
-                        go cw = case (kindOf cw, cwVal cw) of
-                                  (k@(KBounded True _), CWInteger v) -> normCW $ CW k (CWInteger (v - adj))
-                                  _                                  -> error $ "SBV.getObjValue: Unexpected cw received! " ++ show cw
+                        go :: CV -> CV
+                        go cv = case (kindOf cv, cvVal cv) of
+                                  (k@(KBounded True _), CInteger v) -> normCV $ CV k (CInteger (v - adj))
+                                  _                                 -> error $ "SBV.getObjValue: Unexpected cv received! " ++ show cv
 
-                grab :: SW -> SExpr -> m GeneralizedCW
+                grab :: SV -> SExpr -> m GeneralizedCV
                 grab s topExpr
-                  | Just v <- recoverKindedValue k topExpr = return $ RegularCW v
-                  | True                                   = ExtendedCW <$> cvt (simplify topExpr)
+                  | Just v <- recoverKindedValue k topExpr = return $ RegularCV v
+                  | True                                   = ExtendedCV <$> cvt (simplify topExpr)
                   where k = kindOf s
 
                         -- Convert to an extended expression. Hopefully complete!
-                        cvt :: SExpr -> m ExtCW
+                        cvt :: SExpr -> m ExtCV
                         cvt (ECon "oo")                    = return $ Infinite  k
                         cvt (ECon "epsilon")               = return $ Epsilon   k
                         cvt (EApp [ECon "interval", x, y]) =          Interval  <$> cvt x <*> cvt y
-                        cvt (ENum    (i, _))               = return $ BoundedCW $ mkConstCW k i
-                        cvt (EReal   r)                    = return $ BoundedCW $ CW k $ CWAlgReal r
-                        cvt (EFloat  f)                    = return $ BoundedCW $ CW k $ CWFloat   f
-                        cvt (EDouble d)                    = return $ BoundedCW $ CW k $ CWDouble  d
-                        cvt (EApp [ECon "+", x, y])        =          AddExtCW <$> cvt x <*> cvt y
-                        cvt (EApp [ECon "*", x, y])        =          MulExtCW <$> cvt x <*> cvt y
+                        cvt (ENum    (i, _))               = return $ BoundedCV $ mkConstCV k i
+                        cvt (EReal   r)                    = return $ BoundedCV $ CV k $ CAlgReal r
+                        cvt (EFloat  f)                    = return $ BoundedCV $ CV k $ CFloat   f
+                        cvt (EDouble d)                    = return $ BoundedCV $ CV k $ CDouble  d
+                        cvt (EApp [ECon "+", x, y])        =          AddExtCV <$> cvt x <*> cvt y
+                        cvt (EApp [ECon "*", x, y])        =          MulExtCV <$> cvt x <*> cvt y
                         -- Nothing else should show up, hopefully!
                         cvt e = dontUnderstand (show e)
 
@@ -401,18 +401,18 @@ checkSatAssumingWithUnsatisfiableSet = checkSatAssumingHelper True
 checkSatAssumingHelper :: (MonadIO m, MonadQuery m) => Bool -> [SBool] -> m (CheckSatResult, Maybe [SBool])
 checkSatAssumingHelper getAssumptions sBools = do
         -- sigh.. SMT-Lib requires the values to be literals only. So, create proxies.
-        let mkAssumption st = do swsOriginal <- mapM (\sb -> do sw <- sbvToSW st sb
-                                                                return (sw, sb)) sBools
+        let mkAssumption st = do swsOriginal <- mapM (\sb -> do sv <- sbvToSV st sb
+                                                                return (sv, sb)) sBools
 
                                  -- drop duplicates and trues
-                                 let swbs = [p | p@(sw, _) <- nubBy ((==) `on` fst) swsOriginal, sw /= trueSW]
+                                 let swbs = [p | p@(sv, _) <- nubBy ((==) `on` fst) swsOriginal, sv /= trueSV]
 
                                  -- get a unique proxy name for each
-                                 uniqueSWBs <- mapM (\(sw, sb) -> do unique <- incrementInternalCounter st
-                                                                     return (sw, (unique, sb))) swbs
+                                 uniqueSWBs <- mapM (\(sv, sb) -> do unique <- incrementInternalCounter st
+                                                                     return (sv, (unique, sb))) swbs
 
-                                 let translate (sw, (unique, sb)) = (nm, decls, (proxy, sb))
-                                        where nm    = show sw
+                                 let translate (sv, (unique, sb)) = (nm, decls, (proxy, sb))
+                                        where nm    = show sv
                                               proxy = "__assumption_proxy_" ++ nm ++ "_" ++ show unique
                                               decls = [ "(declare-const " ++ proxy ++ " Bool)"
                                                       , "(assert (= " ++ proxy ++ " " ++ nm ++ "))"
@@ -703,8 +703,8 @@ getAssignment = do
 infix 1 |->
 (|->) :: SymVal a => SBV a -> a -> Assignment
 SBV a |-> v = case literal v of
-                SBV (SVal _ (Left cw)) -> Assign a cw
-                r                      -> error $ "Data.SBV: Impossible happened in |->: Cannot construct a CW with literal: " ++ show r
+                SBV (SVal _ (Left cv)) -> Assign a cv
+                r                      -> error $ "Data.SBV: Impossible happened in |->: Cannot construct a CV with literal: " ++ show r
 
 -- | Generalization of 'Data.SBV.Control.mkSMTResult'
 mkSMTResult :: (MonadIO m, MonadQuery m) => [Assignment] -> m SMTResult
@@ -712,7 +712,7 @@ mkSMTResult asgns = do
              QueryState{queryConfig} <- getQueryState
              inps <- getQuantifiedInputs
 
-             let grabValues st = do let extract (Assign s n) = sbvToSW st (SBV s) >>= \sw -> return (sw, n)
+             let grabValues st = do let extract (Assign s n) = sbvToSV st (SBV s) >>= \sv -> return (sv, n)
 
                                     modelAssignment <- mapM extract asgns
 

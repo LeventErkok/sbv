@@ -220,15 +220,15 @@ qc1 nm opC opS = [cf, sm]
                                                                                      Sat   -> do r <- getValue res
                                                                                                  return (pre, Right r)
 
-                        let getCW vnm (SBV (SVal _ (Left c))) = (vnm, c)
-                            getCW vnm (SBV (SVal k _       )) = error $ "qc2.getCW: Impossible happened, non-CW value while extracting: " ++ show (vnm, k)
+                        let getCV vnm (SBV (SVal _ (Left c))) = (vnm, c)
+                            getCV vnm (SBV (SVal k _       )) = error $ "qc2.getCV: Impossible happened, non-CV value while extracting: " ++ show (vnm, k)
 
-                            vals = [ getCW "i"        (literal i)
-                                   , getCW "Expected" (literal expected)
+                            vals = [ getCV "i"        (literal i)
+                                   , getCV "Expected" (literal expected)
                                    ]
 
                             model = case result of
-                                      Right v -> showModel defaultSMTCfg (SMTModel [] (vals ++ [getCW "Result" (literal v)]))
+                                      Right v -> showModel defaultSMTCfg (SMTModel [] (vals ++ [getCV "Result" (literal v)]))
                                       Left  e -> showModel defaultSMTCfg (SMTModel [] vals) ++ "\n" ++ e
 
                         QC.monitor (QC.counterexample model)
@@ -277,16 +277,16 @@ qc2 nm opC opS = [cf, sm]
                                                                                           Sat   -> do r <- getValue res
                                                                                                       return (pre, Right r)
 
-                        let getCW vnm (SBV (SVal _ (Left c))) = (vnm, c)
-                            getCW vnm (SBV (SVal k _       )) = error $ "qc2.getCW: Impossible happened, non-CW value while extracting: " ++ show (vnm, k)
+                        let getCV vnm (SBV (SVal _ (Left c))) = (vnm, c)
+                            getCV vnm (SBV (SVal k _       )) = error $ "qc2.getCV: Impossible happened, non-CV value while extracting: " ++ show (vnm, k)
 
-                            vals = [ getCW "i1"       (literal i1)
-                                   , getCW "i2"       (literal i2)
-                                   , getCW "Expected" (literal expected)
+                            vals = [ getCV "i1"       (literal i1)
+                                   , getCV "i2"       (literal i2)
+                                   , getCV "Expected" (literal expected)
                                    ]
 
                             model = case result of
-                                      Right v -> showModel defaultSMTCfg (SMTModel [] (vals ++ [getCW "Result" (literal v)]))
+                                      Right v -> showModel defaultSMTCfg (SMTModel [] (vals ++ [getCV "Result" (literal v)]))
                                       Left  e -> showModel defaultSMTCfg (SMTModel [] vals) ++ "\n" ++ e
 
                         QC.monitor (QC.counterexample model)

@@ -44,11 +44,11 @@ symbolicFieldAccess i tup
   | 1 > i || i > lks
   = bad $ "Index is out of bounds, " ++ show i ++ " is outside [1," ++ show lks ++ "]"
   | SBV (SVal kval (Left v)) <- tup
-  = case cwVal v of
-      CWTuple vs | kval      /= ktup -> bad $ "Kind/value mismatch: "      ++ show kval
-                 | length vs /= lks  -> bad $ "Value has fewer elements: " ++ show (CW kval (CWTuple vs))
-                 | True              -> literal $ fromCW $ CW kElem (vs !! (i-1))
-      _                              -> bad $ "Kind/value mismatch: " ++ show v
+  = case cvVal v of
+      CTuple vs | kval      /= ktup -> bad $ "Kind/value mismatch: "      ++ show kval
+                | length vs /= lks  -> bad $ "Value has fewer elements: " ++ show (CV kval (CTuple vs))
+                | True              -> literal $ fromCV $ CV kElem (vs !! (i-1))
+      _                             -> bad $ "Kind/value mismatch: " ++ show v
   | True
   = symAccess
   where ktup = kindOf tup
@@ -69,8 +69,8 @@ symbolicFieldAccess i tup
 
         symAccess :: SBV a
         symAccess = SBV $ SVal kElem $ Right $ cache y
-          where y st = do sw <- svToSW st $ unSBV tup
-                          newExpr st kElem (SBVApp (TupleAccess i lks) [sw])
+          where y st = do sv <- svToSV st $ unSBV tup
+                          newExpr st kElem (SBVApp (TupleAccess i lks) [sv])
 
 -- | Field labels
 data Label (l :: Symbol) = Get

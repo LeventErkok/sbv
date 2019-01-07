@@ -161,9 +161,9 @@ genericFPConverter mbConcreteOK mbSymbolicOK converter rm f
         check w = maybe True ($ w) mbConcreteOK
         kFrom   = kindOf f
         kTo     = kindOf (undefined :: r)
-        y st    = do msw <- sbvToSW st rm
-                     xsw <- sbvToSW st f
-                     newExpr st kTo (SBVApp (IEEEFP (FP_Cast kFrom kTo msw)) [xsw])
+        y st    = do msv <- sbvToSV st rm
+                     xsv <- sbvToSV st f
+                     newExpr st kTo (SBVApp (IEEEFP (FP_Cast kFrom kTo msv)) [xsv])
 
 -- | Check that a given float is a point
 ptCheck :: IEEEFloating a => Maybe (SBV a -> SBool)
@@ -283,10 +283,10 @@ concEval3 mbOp mbRm a b c = do op <- mbOp
                                  _                           -> Nothing
 
 -- | Add the converted rounding mode if given as an argument
-addRM :: State -> Maybe SRoundingMode -> [SW] -> IO [SW]
+addRM :: State -> Maybe SRoundingMode -> [SV] -> IO [SV]
 addRM _  Nothing   as = return as
-addRM st (Just rm) as = do swm <- sbvToSW st rm
-                           return (swm : as)
+addRM st (Just rm) as = do svm <- sbvToSV st rm
+                           return (svm : as)
 
 -- | Lift a 1 arg FP-op
 lift1 :: SymVal a => FPOp -> Maybe (a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a
@@ -296,8 +296,8 @@ lift1 w mbOp mbRm a
   | True
   = SBV $ SVal k $ Right $ cache r
   where k    = kindOf a
-        r st = do swa  <- sbvToSW st a
-                  args <- addRM st mbRm [swa]
+        r st = do sva  <- sbvToSV st a
+                  args <- addRM st mbRm [sva]
                   newExpr st k (SBVApp (IEEEFP w) args)
 
 -- | Lift an FP predicate
@@ -305,8 +305,8 @@ lift1B :: SymVal a => FPOp -> (a -> Bool) -> SBV a -> SBool
 lift1B w f a
    | Just v <- unliteral a = literal $ f v
    | True                  = SBV $ SVal KBool $ Right $ cache r
-   where r st = do swa <- sbvToSW st a
-                   newExpr st KBool (SBVApp (IEEEFP w) [swa])
+   where r st = do sva <- sbvToSV st a
+                   newExpr st KBool (SBVApp (IEEEFP w) [sva])
 
 
 -- | Lift a 2 arg FP-op
@@ -317,9 +317,9 @@ lift2 w mbOp mbRm a b
   | True
   = SBV $ SVal k $ Right $ cache r
   where k    = kindOf a
-        r st = do swa  <- sbvToSW st a
-                  swb  <- sbvToSW st b
-                  args <- addRM st mbRm [swa, swb]
+        r st = do sva  <- sbvToSV st a
+                  svb  <- sbvToSV st b
+                  args <- addRM st mbRm [sva, svb]
                   newExpr st k (SBVApp (IEEEFP w) args)
 
 -- | Lift min/max: Note that we protect against constant folding if args are alternating sign 0's, since
@@ -336,9 +336,9 @@ liftMM w mbOp mbRm a b
   where isN0   = isNegativeZero
         isP0 x = x == 0 && not (isN0 x)
         k    = kindOf a
-        r st = do swa  <- sbvToSW st a
-                  swb  <- sbvToSW st b
-                  args <- addRM st mbRm [swa, swb]
+        r st = do sva  <- sbvToSV st a
+                  svb  <- sbvToSV st b
+                  args <- addRM st mbRm [sva, svb]
                   newExpr st k (SBVApp (IEEEFP w) args)
 
 -- | Lift a 2 arg FP-op, producing bool
@@ -348,9 +348,9 @@ lift2B w mbOp mbRm a b
   = cv
   | True
   = SBV $ SVal KBool $ Right $ cache r
-  where r st = do swa  <- sbvToSW st a
-                  swb  <- sbvToSW st b
-                  args <- addRM st mbRm [swa, swb]
+  where r st = do sva  <- sbvToSV st a
+                  svb  <- sbvToSV st b
+                  args <- addRM st mbRm [sva, svb]
                   newExpr st KBool (SBVApp (IEEEFP w) args)
 
 -- | Lift a 3 arg FP-op
@@ -361,10 +361,10 @@ lift3 w mbOp mbRm a b c
   | True
   = SBV $ SVal k $ Right $ cache r
   where k    = kindOf a
-        r st = do swa  <- sbvToSW st a
-                  swb  <- sbvToSW st b
-                  swc  <- sbvToSW st c
-                  args <- addRM st mbRm [swa, swb, swc]
+        r st = do sva  <- sbvToSV st a
+                  svb  <- sbvToSV st b
+                  svc  <- sbvToSV st c
+                  args <- addRM st mbRm [sva, svb, svc]
                   newExpr st k (SBVApp (IEEEFP w) args)
 
 -- | Convert an 'SFloat' to an 'SWord32', preserving the bit-correspondence. Note that since the
@@ -384,7 +384,7 @@ sFloatAsSWord32 fVal
   where w32  = KBounded False 32
         y st = do cg <- isCodeGenMode st
                   if cg
-                     then do f <- sbvToSW st fVal
+                     then do f <- sbvToSV st fVal
                              newExpr st w32 (SBVApp (IEEEFP (FP_Reinterpret KFloat w32)) [f])
                      else do n   <- internalVariable st w32
                              ysw <- newExpr st KFloat (SBVApp (IEEEFP (FP_Reinterpret w32 KFloat)) [n])
@@ -405,7 +405,7 @@ sDoubleAsSWord64 fVal
   where w64  = KBounded False 64
         y st = do cg <- isCodeGenMode st
                   if cg
-                     then do f <- sbvToSW st fVal
+                     then do f <- sbvToSV st fVal
                              newExpr st w64 (SBVApp (IEEEFP (FP_Reinterpret KDouble w64)) [f])
                      else do n   <- internalVariable st w64
                              ysw <- newExpr st KDouble (SBVApp (IEEEFP (FP_Reinterpret w64 KDouble)) [n])
@@ -429,15 +429,15 @@ sWord32AsSFloat :: SWord32 -> SFloat
 sWord32AsSFloat fVal
   | Just f <- unliteral fVal = literal $ CN.wordToFloat f
   | True                     = SBV (SVal KFloat (Right (cache y)))
-  where y st = do xsw <- sbvToSW st fVal
-                  newExpr st KFloat (SBVApp (IEEEFP (FP_Reinterpret (kindOf fVal) KFloat)) [xsw])
+  where y st = do xsv <- sbvToSV st fVal
+                  newExpr st KFloat (SBVApp (IEEEFP (FP_Reinterpret (kindOf fVal) KFloat)) [xsv])
 
 -- | Reinterpret the bits in a 32-bit word as a single-precision floating point number
 sWord64AsSDouble :: SWord64 -> SDouble
 sWord64AsSDouble dVal
   | Just d <- unliteral dVal = literal $ CN.wordToDouble d
   | True                     = SBV (SVal KDouble (Right (cache y)))
-  where y st = do xsw <- sbvToSW st dVal
-                  newExpr st KDouble (SBVApp (IEEEFP (FP_Reinterpret (kindOf dVal) KDouble)) [xsw])
+  where y st = do xsv <- sbvToSV st dVal
+                  newExpr st KDouble (SBVApp (IEEEFP (FP_Reinterpret (kindOf dVal) KDouble)) [xsv])
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

@@ -348,8 +348,8 @@ lift1 w mbOp a
   | True
   = SBV $ SVal k $ Right $ cache r
   where k = kindOf (undefined :: b)
-        r st = do swa <- sbvToSW st a
-                  newExpr st k (SBVApp (SeqOp w) [swa])
+        r st = do sva <- sbvToSV st a
+                  newExpr st k (SBVApp (SeqOp w) [sva])
 
 -- | Lift a binary operator over lists.
 lift2 :: forall a b c. (SymVal a, SymVal b, SymVal c) => SeqOp -> Maybe (a -> b -> c) -> SBV a -> SBV b -> SBV c
@@ -359,9 +359,9 @@ lift2 w mbOp a b
   | True
   = SBV $ SVal k $ Right $ cache r
   where k = kindOf (undefined :: c)
-        r st = do swa <- sbvToSW st a
-                  swb <- sbvToSW st b
-                  newExpr st k (SBVApp (SeqOp w) [swa, swb])
+        r st = do sva <- sbvToSV st a
+                  svb <- sbvToSV st b
+                  newExpr st k (SBVApp (SeqOp w) [sva, svb])
 
 -- | Lift a ternary operator over lists.
 lift3 :: forall a b c d. (SymVal a, SymVal b, SymVal c, SymVal d) => SeqOp -> Maybe (a -> b -> c -> d) -> SBV a -> SBV b -> SBV c -> SBV d
@@ -371,10 +371,10 @@ lift3 w mbOp a b c
   | True
   = SBV $ SVal k $ Right $ cache r
   where k = kindOf (undefined :: d)
-        r st = do swa <- sbvToSW st a
-                  swb <- sbvToSW st b
-                  swc <- sbvToSW st c
-                  newExpr st k (SBVApp (SeqOp w) [swa, swb, swc])
+        r st = do sva <- sbvToSV st a
+                  svb <- sbvToSV st b
+                  svc <- sbvToSV st c
+                  newExpr st k (SBVApp (SeqOp w) [sva, svb, svc])
 
 -- | Concrete evaluation for unary ops
 concEval1 :: (SymVal a, SymVal b) => Maybe (a -> b) -> SBV a -> Maybe (SBV b)

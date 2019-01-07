@@ -18,7 +18,7 @@ module Data.SBV.Dynamic
   -- ** Symbolic types
   -- *** Abstract symbolic value type
     SVal
-  , HasKind(..), Kind(..), CW(..), CWVal(..), cwToBool
+  , HasKind(..), Kind(..), CV(..), CVal(..), cvToBool
   -- *** SMT Arrays of symbolic values
   , SArr, readSArr, writeSArr, mergeSArr, newSArr, eqSArr
   -- *** Functional arrays of symbolic values
@@ -205,10 +205,10 @@ satWithAny cfgs s = SBV.satWithAny cfgs (fmap toSBool s)
 
 -- | Extract a model, the result is a tuple where the first argument (if True)
 -- indicates whether the model was "probable". (i.e., if the solver returned unknown.)
-getModelAssignment :: SMTResult -> Either String (Bool, [CW])
+getModelAssignment :: SMTResult -> Either String (Bool, [CV])
 getModelAssignment = SBV.getModelAssignment
 
 -- | Extract a model dictionary. Extract a dictionary mapping the variables to
 -- their respective values as returned by the SMT solver. Also see `Data.SBV.SMT.getModelDictionaries`.
-getModelDictionary :: SMTResult -> Map String CW
+getModelDictionary :: SMTResult -> Map String CV
 getModelDictionary = SBV.getModelDictionary

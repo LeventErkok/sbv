@@ -27,110 +27,110 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH, fpCompareObjectH)
 
 -- | A constant value
-data CWVal = CWAlgReal  !AlgReal              -- ^ algebraic real
-           | CWInteger  !Integer              -- ^ bit-vector/unbounded integer
-           | CWFloat    !Float                -- ^ float
-           | CWDouble   !Double               -- ^ double
-           | CWChar     !Char                 -- ^ character
-           | CWString   !String               -- ^ string
-           | CWList     ![CWVal]              -- ^ list
-           | CWUserSort !(Maybe Int, String)  -- ^ value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
-           | CWTuple    ![CWVal]              -- ^ tuple
+data CVal = CAlgReal  !AlgReal             -- ^ algebraic real
+          | CInteger  !Integer             -- ^ bit-vector/unbounded integer
+          | CFloat    !Float               -- ^ float
+          | CDouble   !Double              -- ^ double
+          | CChar     !Char                -- ^ character
+          | CString   !String              -- ^ string
+          | CList     ![CVal]              -- ^ list
+          | CUserSort !(Maybe Int, String) -- ^ value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
+          | CTuple    ![CVal]              -- ^ tuple
 
--- | Assing a rank to CW Values, this is structural and helps with ordering
-cwRank :: CWVal -> Int
-cwRank CWAlgReal  {} = 0
-cwRank CWInteger  {} = 1
-cwRank CWFloat    {} = 2
-cwRank CWDouble   {} = 3
-cwRank CWChar     {} = 4
-cwRank CWString   {} = 5
-cwRank CWList     {} = 6
-cwRank CWUserSort {} = 7
-cwRank CWTuple    {} = 8
+-- | Assing a rank to constant values, this is structural and helps with ordering
+cvRank :: CVal -> Int
+cvRank CAlgReal  {} = 0
+cvRank CInteger  {} = 1
+cvRank CFloat    {} = 2
+cvRank CDouble   {} = 3
+cvRank CChar     {} = 4
+cvRank CString   {} = 5
+cvRank CList     {} = 6
+cvRank CUserSort {} = 7
+cvRank CTuple    {} = 8
 
--- | Eq instance for CWVal. Note that we cannot simply derive Eq/Ord, since CWAlgReal doesn't have proper
+-- | Eq instance for CVVal. Note that we cannot simply derive Eq/Ord, since CVAlgReal doesn't have proper
 -- instances for these when values are infinitely precise reals. However, we do
 -- need a structural eq/ord for Map indexes; so define custom ones here:
-instance Eq CWVal where
-  CWAlgReal  a == CWAlgReal  b = a `algRealStructuralEqual` b
-  CWInteger  a == CWInteger  b = a == b
-  CWFloat    a == CWFloat    b = a `fpIsEqualObjectH` b   -- We don't want +0/-0 to be confused; and also we want NaN = NaN here!
-  CWDouble   a == CWDouble   b = a `fpIsEqualObjectH` b   -- ditto
-  CWChar     a == CWChar     b = a == b
-  CWString   a == CWString   b = a == b
-  CWList     a == CWList     b = a == b
-  CWUserSort a == CWUserSort b = a == b
-  CWTuple    a == CWTuple    b = a == b
-  _            == _            = False
+instance Eq CVal where
+  CAlgReal  a == CAlgReal  b = a `algRealStructuralEqual` b
+  CInteger  a == CInteger  b = a == b
+  CFloat    a == CFloat    b = a `fpIsEqualObjectH` b   -- We don't want +0/-0 to be confused; and also we want NaN = NaN here!
+  CDouble   a == CDouble   b = a `fpIsEqualObjectH` b   -- ditto
+  CChar     a == CChar     b = a == b
+  CString   a == CString   b = a == b
+  CList     a == CList     b = a == b
+  CUserSort a == CUserSort b = a == b
+  CTuple    a == CTuple    b = a == b
+  _           == _           = False
 
--- | Ord instance for CWVal. Same comments as the 'Eq' instance why this cannot be derived.
-instance Ord CWVal where
-  CWAlgReal  a `compare` CWAlgReal b  = a        `algRealStructuralCompare` b
-  CWInteger  a `compare` CWInteger b  = a        `compare`                  b
-  CWFloat    a `compare` CWFloat b    = a        `fpCompareObjectH`         b
-  CWDouble   a `compare` CWDouble b   = a        `fpCompareObjectH`         b
-  CWChar     a `compare` CWChar b     = a        `compare`                  b
-  CWString   a `compare` CWString b   = a        `compare`                  b
-  CWList     a `compare` CWList   b   = a        `compare`                  b
-  CWUserSort a `compare` CWUserSort b = a        `compare`                  b
-  CWTuple    a `compare` CWTuple    b = a        `compare`                  b
-  a            `compare` b            = cwRank a `compare`                  cwRank b
+-- | Ord instance for VWVal. Same comments as the 'Eq' instance why this cannot be derived.
+instance Ord CVal where
+  CAlgReal  a `compare` CAlgReal b  = a        `algRealStructuralCompare` b
+  CInteger  a `compare` CInteger b  = a        `compare`                  b
+  CFloat    a `compare` CFloat b    = a        `fpCompareObjectH`         b
+  CDouble   a `compare` CDouble b   = a        `fpCompareObjectH`         b
+  CChar     a `compare` CChar b     = a        `compare`                  b
+  CString   a `compare` CString b   = a        `compare`                  b
+  CList     a `compare` CList   b   = a        `compare`                  b
+  CUserSort a `compare` CUserSort b = a        `compare`                  b
+  CTuple    a `compare` CTuple    b = a        `compare`                  b
+  a           `compare` b           = cvRank a `compare`                  cvRank b
 
--- | 'CW' represents a concrete word of a fixed size:
+-- | 'CV' represents a concrete word of a fixed size:
 -- For signed words, the most significant digit is considered to be the sign.
-data CW = CW { _cwKind  :: !Kind
-             , cwVal    :: !CWVal
+data CV = CV { _cvKind  :: !Kind
+             , cvVal    :: !CVal
              }
         deriving (Eq, Ord)
 
--- | A generalized CW allows for expressions involving infinite and epsilon values/intervals Used in optimization problems.
-data GeneralizedCW = ExtendedCW ExtCW
-                   | RegularCW  CW
+-- | A generalized CV allows for expressions involving infinite and epsilon values/intervals Used in optimization problems.
+data GeneralizedCV = ExtendedCV ExtCV
+                   | RegularCV  CV
 
 -- | A simple expression type over extendent values, covering infinity, epsilon and intervals.
-data ExtCW = Infinite  Kind         -- infinity
+data ExtCV = Infinite  Kind         -- infinity
            | Epsilon   Kind         -- epsilon
-           | Interval  ExtCW ExtCW  -- closed interval
-           | BoundedCW CW           -- a bounded value (i.e., neither infinity, nor epsilon). Note that this cannot appear at top, but can appear as a sub-expr.
-           | AddExtCW  ExtCW ExtCW  -- addition
-           | MulExtCW  ExtCW ExtCW  -- multiplication
+           | Interval  ExtCV ExtCV  -- closed interval
+           | BoundedCV CV           -- a bounded value (i.e., neither infinity, nor epsilon). Note that this cannot appear at top, but can appear as a sub-expr.
+           | AddExtCV  ExtCV ExtCV  -- addition
+           | MulExtCV  ExtCV ExtCV  -- multiplication
 
--- | Kind instance for Extended CW
-instance HasKind ExtCW where
+-- | Kind instance for Extended CV
+instance HasKind ExtCV where
   kindOf (Infinite  k)   = k
   kindOf (Epsilon   k)   = k
   kindOf (Interval  l _) = kindOf l
-  kindOf (BoundedCW  c)  = kindOf c
-  kindOf (AddExtCW  l _) = kindOf l
-  kindOf (MulExtCW  l _) = kindOf l
+  kindOf (BoundedCV  c)  = kindOf c
+  kindOf (AddExtCV  l _) = kindOf l
+  kindOf (MulExtCV  l _) = kindOf l
 
 -- | Show instance, shows with the kind
-instance Show ExtCW where
-  show = showExtCW True
+instance Show ExtCV where
+  show = showExtCV True
 
--- | Show an extended CW, with kind if required
-showExtCW :: Bool -> ExtCW -> String
-showExtCW = go False
-  where go parens shk extCW = case extCW of
+-- | Show an extended CV, with kind if required
+showExtCV :: Bool -> ExtCV -> String
+showExtCV = go False
+  where go parens shk extCV = case extCV of
                                 Infinite{}    -> withKind False "oo"
                                 Epsilon{}     -> withKind False "epsilon"
-                                Interval  l u -> withKind True  $ '['  : showExtCW False l ++ " .. " ++ showExtCW False u ++ "]"
-                                BoundedCW c   -> showCW shk c
-                                AddExtCW l r  -> par $ withKind False $ add (go True False l) (go True False r)
+                                Interval  l u -> withKind True  $ '['  : showExtCV False l ++ " .. " ++ showExtCV False u ++ "]"
+                                BoundedCV c   -> showCV shk c
+                                AddExtCV l r  -> par $ withKind False $ add (go True False l) (go True False r)
 
                                 -- a few niceties here to grok -oo and -epsilon
-                                MulExtCW (BoundedCW (CW KUnbounded (CWInteger (-1)))) Infinite{} -> withKind False "-oo"
-                                MulExtCW (BoundedCW (CW KReal      (CWAlgReal (-1)))) Infinite{} -> withKind False "-oo"
-                                MulExtCW (BoundedCW (CW KUnbounded (CWInteger (-1)))) Epsilon{}  -> withKind False "-epsilon"
-                                MulExtCW (BoundedCW (CW KReal      (CWAlgReal (-1)))) Epsilon{}  -> withKind False "-epsilon"
+                                MulExtCV (BoundedCV (CV KUnbounded (CInteger (-1)))) Infinite{} -> withKind False "-oo"
+                                MulExtCV (BoundedCV (CV KReal      (CAlgReal (-1)))) Infinite{} -> withKind False "-oo"
+                                MulExtCV (BoundedCV (CV KUnbounded (CInteger (-1)))) Epsilon{}  -> withKind False "-epsilon"
+                                MulExtCV (BoundedCV (CV KReal      (CAlgReal (-1)))) Epsilon{}  -> withKind False "-epsilon"
 
-                                MulExtCW l r  -> par $ withKind False $ mul (go True False l) (go True False r)
+                                MulExtCV l r  -> par $ withKind False $ mul (go True False l) (go True False r)
            where par v | parens = '(' : v ++ ")"
                        | True   = v
                  withKind isInterval v | not shk    = v
-                                       | isInterval = v ++ " :: [" ++ showBaseKind (kindOf extCW) ++ "]"
-                                       | True       = v ++ " :: "  ++ showBaseKind (kindOf extCW)
+                                       | isInterval = v ++ " :: [" ++ showBaseKind (kindOf extCV) ++ "]"
+                                       | True       = v ++ " :: "  ++ showBaseKind (kindOf extCV)
 
                  add :: String -> String -> String
                  add n v
@@ -140,129 +140,129 @@ showExtCW = go False
                  mul :: String -> String -> String
                  mul n v = n ++ " * " ++ v
 
--- | Is this a regular CW?
-isRegularCW :: GeneralizedCW -> Bool
-isRegularCW RegularCW{}  = True
-isRegularCW ExtendedCW{} = False
+-- | Is this a regular CV?
+isRegularCV :: GeneralizedCV -> Bool
+isRegularCV RegularCV{}  = True
+isRegularCV ExtendedCV{} = False
 
--- | 'Kind' instance for CW
-instance HasKind CW where
-  kindOf (CW k _) = k
+-- | 'Kind' instance for CV
+instance HasKind CV where
+  kindOf (CV k _) = k
 
--- | 'Kind' instance for generalized CW
-instance HasKind GeneralizedCW where
-  kindOf (ExtendedCW e) = kindOf e
-  kindOf (RegularCW  c) = kindOf c
+-- | 'Kind' instance for generalized CV
+instance HasKind GeneralizedCV where
+  kindOf (ExtendedCV e) = kindOf e
+  kindOf (RegularCV  c) = kindOf c
 
--- | Are two CW's of the same type?
-cwSameType :: CW -> CW -> Bool
-cwSameType x y = kindOf x == kindOf y
+-- | Are two CV's of the same type?
+cvSameType :: CV -> CV -> Bool
+cvSameType x y = kindOf x == kindOf y
 
--- | Convert a CW to a Haskell boolean (NB. Assumes input is well-kinded)
-cwToBool :: CW -> Bool
-cwToBool x = cwVal x /= CWInteger 0
+-- | Convert a CV to a Haskell boolean (NB. Assumes input is well-kinded)
+cvToBool :: CV -> Bool
+cvToBool x = cvVal x /= CInteger 0
 
--- | Normalize a CW. Essentially performs modular arithmetic to make sure the
+-- | Normalize a CV. Essentially performs modular arithmetic to make sure the
 -- value can fit in the given bit-size. Note that this is rather tricky for
 -- negative values, due to asymmetry. (i.e., an 8-bit negative number represents
 -- values in the range -128 to 127; thus we have to be careful on the negative side.)
-normCW :: CW -> CW
-normCW c@(CW (KBounded signed sz) (CWInteger v)) = c { cwVal = CWInteger norm }
+normCV :: CV -> CV
+normCV c@(CV (KBounded signed sz) (CInteger v)) = c { cvVal = CInteger norm }
  where norm | sz == 0 = 0
             | signed  = let rg = 2 ^ (sz - 1)
                         in case divMod v rg of
                                   (a, b) | even a -> b
                                   (_, b)          -> b - rg
             | True    = v `mod` (2 ^ sz)
-normCW c@(CW KBool (CWInteger v)) = c { cwVal = CWInteger (v .&. 1) }
-normCW c = c
+normCV c@(CV KBool (CInteger v)) = c { cvVal = CInteger (v .&. 1) }
+normCV c                         = c
 
--- | Constant False as a CW. We represent it using the integer value 0.
-falseCW :: CW
-falseCW = CW KBool (CWInteger 0)
+-- | Constant False as a 'CV'. We represent it using the integer value 0.
+falseCV :: CV
+falseCV = CV KBool (CInteger 0)
 
--- | Constant True as a CW. We represent it using the integer value 1.
-trueCW :: CW
-trueCW  = CW KBool (CWInteger 1)
+-- | Constant True as a 'CV'. We represent it using the integer value 1.
+trueCV :: CV
+trueCV  = CV KBool (CInteger 1)
 
--- | Lift a unary function through a CW
-liftCW :: (AlgReal -> b) -> (Integer -> b) -> (Float -> b) -> (Double -> b) -> (Char -> b) -> (String -> b) -> ((Maybe Int, String) -> b) -> ([CWVal] -> b) -> ([CWVal] -> b) -> CW -> b
-liftCW f _ _ _ _ _ _ _ _ (CW _ (CWAlgReal  v)) = f v
-liftCW _ f _ _ _ _ _ _ _ (CW _ (CWInteger  v)) = f v
-liftCW _ _ f _ _ _ _ _ _ (CW _ (CWFloat    v)) = f v
-liftCW _ _ _ f _ _ _ _ _ (CW _ (CWDouble   v)) = f v
-liftCW _ _ _ _ f _ _ _ _ (CW _ (CWChar     v)) = f v
-liftCW _ _ _ _ _ f _ _ _ (CW _ (CWString   v)) = f v
-liftCW _ _ _ _ _ _ f _ _ (CW _ (CWUserSort v)) = f v
-liftCW _ _ _ _ _ _ _ f _ (CW _ (CWList     v)) = f v
-liftCW _ _ _ _ _ _ _ _ f (CW _ (CWTuple    v)) = f v
+-- | Lift a unary function through a 'CV'.
+liftCV :: (AlgReal -> b) -> (Integer -> b) -> (Float -> b) -> (Double -> b) -> (Char -> b) -> (String -> b) -> ((Maybe Int, String) -> b) -> ([CVal] -> b) -> ([CVal] -> b) -> CV -> b
+liftCV f _ _ _ _ _ _ _ _ (CV _ (CAlgReal  v)) = f v
+liftCV _ f _ _ _ _ _ _ _ (CV _ (CInteger  v)) = f v
+liftCV _ _ f _ _ _ _ _ _ (CV _ (CFloat    v)) = f v
+liftCV _ _ _ f _ _ _ _ _ (CV _ (CDouble   v)) = f v
+liftCV _ _ _ _ f _ _ _ _ (CV _ (CChar     v)) = f v
+liftCV _ _ _ _ _ f _ _ _ (CV _ (CString   v)) = f v
+liftCV _ _ _ _ _ _ f _ _ (CV _ (CUserSort v)) = f v
+liftCV _ _ _ _ _ _ _ f _ (CV _ (CList     v)) = f v
+liftCV _ _ _ _ _ _ _ _ f (CV _ (CTuple    v)) = f v
 
--- | Lift a binary function through a CW
-liftCW2 :: (AlgReal -> AlgReal -> b) -> (Integer -> Integer -> b) -> (Float -> Float -> b) -> (Double -> Double -> b) -> (Char -> Char -> b) -> (String -> String -> b) -> ([CWVal] -> [CWVal] -> b) -> ([CWVal] -> [CWVal] -> b) -> ((Maybe Int, String) -> (Maybe Int, String) -> b) -> CW -> CW -> b
-liftCW2 r i f d c s u v w x y = case (cwVal x, cwVal y) of
-                                (CWAlgReal  a, CWAlgReal  b) -> r a b
-                                (CWInteger  a, CWInteger  b) -> i a b
-                                (CWFloat    a, CWFloat    b) -> f a b
-                                (CWDouble   a, CWDouble   b) -> d a b
-                                (CWChar     a, CWChar     b) -> c a b
-                                (CWString   a, CWString   b) -> s a b
-                                (CWList     a, CWList     b) -> u a b
-                                (CWTuple    a, CWTuple    b) -> v a b
-                                (CWUserSort a, CWUserSort b) -> w a b
-                                _                            -> error $ "SBV.liftCW2: impossible, incompatible args received: " ++ show (x, y)
+-- | Lift a binary function through a 'CV'.
+liftCV2 :: (AlgReal -> AlgReal -> b) -> (Integer -> Integer -> b) -> (Float -> Float -> b) -> (Double -> Double -> b) -> (Char -> Char -> b) -> (String -> String -> b) -> ([CVal] -> [CVal] -> b) -> ([CVal] -> [CVal] -> b) -> ((Maybe Int, String) -> (Maybe Int, String) -> b) -> CV -> CV -> b
+liftCV2 r i f d c s u v w x y = case (cvVal x, cvVal y) of
+                                (CAlgReal  a, CAlgReal  b) -> r a b
+                                (CInteger  a, CInteger  b) -> i a b
+                                (CFloat    a, CFloat    b) -> f a b
+                                (CDouble   a, CDouble   b) -> d a b
+                                (CChar     a, CChar     b) -> c a b
+                                (CString   a, CString   b) -> s a b
+                                (CList     a, CList     b) -> u a b
+                                (CTuple    a, CTuple    b) -> v a b
+                                (CUserSort a, CUserSort b) -> w a b
+                                _                          -> error $ "SBV.liftCV2: impossible, incompatible args received: " ++ show (x, y)
 
--- | Map a unary function through a CW.
-mapCW :: (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> (Char -> Char) -> (String -> String) -> ((Maybe Int, String) -> (Maybe Int, String)) -> CW -> CW
-mapCW r i f d c s u x  = normCW $ CW (kindOf x) $ case cwVal x of
-                                                    CWAlgReal  a -> CWAlgReal  (r a)
-                                                    CWInteger  a -> CWInteger  (i a)
-                                                    CWFloat    a -> CWFloat    (f a)
-                                                    CWDouble   a -> CWDouble   (d a)
-                                                    CWChar     a -> CWChar     (c a)
-                                                    CWString   a -> CWString   (s a)
-                                                    CWUserSort a -> CWUserSort (u a)
-                                                    CWList{}     -> error "Data.SBV.mapCW: Unexpected call through mapCW with lists!"
-                                                    CWTuple{}    -> error "Data.SBV.mapCW: Unexpected call through mapCW with tuples!"
+-- | Map a unary function through a 'CV'.
+mapCV :: (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> (Char -> Char) -> (String -> String) -> ((Maybe Int, String) -> (Maybe Int, String)) -> CV -> CV
+mapCV r i f d c s u x  = normCV $ CV (kindOf x) $ case cvVal x of
+                                                    CAlgReal  a -> CAlgReal  (r a)
+                                                    CInteger  a -> CInteger  (i a)
+                                                    CFloat    a -> CFloat    (f a)
+                                                    CDouble   a -> CDouble   (d a)
+                                                    CChar     a -> CChar     (c a)
+                                                    CString   a -> CString   (s a)
+                                                    CUserSort a -> CUserSort (u a)
+                                                    CList{}     -> error "Data.SBV.mapCV: Unexpected call through mapCV with lists!"
+                                                    CTuple{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with tuples!"
 
--- | Map a binary function through a CW.
-mapCW2 :: (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (Float -> Float -> Float) -> (Double -> Double -> Double) -> (Char -> Char -> Char) -> (String -> String -> String) -> ((Maybe Int, String) -> (Maybe Int, String) -> (Maybe Int, String)) -> CW -> CW -> CW
-mapCW2 r i f d c s u x y = case (cwSameType x y, cwVal x, cwVal y) of
-                            (True, CWAlgReal  a, CWAlgReal  b) -> normCW $ CW (kindOf x) (CWAlgReal  (r a b))
-                            (True, CWInteger  a, CWInteger  b) -> normCW $ CW (kindOf x) (CWInteger  (i a b))
-                            (True, CWFloat    a, CWFloat    b) -> normCW $ CW (kindOf x) (CWFloat    (f a b))
-                            (True, CWDouble   a, CWDouble   b) -> normCW $ CW (kindOf x) (CWDouble   (d a b))
-                            (True, CWChar     a, CWChar     b) -> normCW $ CW (kindOf x) (CWChar     (c a b))
-                            (True, CWString   a, CWString   b) -> normCW $ CW (kindOf x) (CWString   (s a b))
-                            (True, CWUserSort a, CWUserSort b) -> normCW $ CW (kindOf x) (CWUserSort (u a b))
-                            (True, CWList{},     CWList{})     -> error "Data.SBV.mapCW2: Unexpected call through mapCW2 with lists!"
-                            _                                  -> error $ "SBV.mapCW2: impossible, incompatible args received: " ++ show (x, y)
+-- | Map a binary function through a 'CV'.
+mapCV2 :: (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (Float -> Float -> Float) -> (Double -> Double -> Double) -> (Char -> Char -> Char) -> (String -> String -> String) -> ((Maybe Int, String) -> (Maybe Int, String) -> (Maybe Int, String)) -> CV -> CV -> CV
+mapCV2 r i f d c s u x y = case (cvSameType x y, cvVal x, cvVal y) of
+                            (True, CAlgReal  a, CAlgReal  b) -> normCV $ CV (kindOf x) (CAlgReal  (r a b))
+                            (True, CInteger  a, CInteger  b) -> normCV $ CV (kindOf x) (CInteger  (i a b))
+                            (True, CFloat    a, CFloat    b) -> normCV $ CV (kindOf x) (CFloat    (f a b))
+                            (True, CDouble   a, CDouble   b) -> normCV $ CV (kindOf x) (CDouble   (d a b))
+                            (True, CChar     a, CChar     b) -> normCV $ CV (kindOf x) (CChar     (c a b))
+                            (True, CString   a, CString   b) -> normCV $ CV (kindOf x) (CString   (s a b))
+                            (True, CUserSort a, CUserSort b) -> normCV $ CV (kindOf x) (CUserSort (u a b))
+                            (True, CList{},     CList{})     -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with lists!"
+                            _                                -> error $ "SBV.mapCV2: impossible, incompatible args received: " ++ show (x, y)
 
--- | Show instance for 'CW'.
-instance Show CW where
-  show = showCW True
+-- | Show instance for 'CV'.
+instance Show CV where
+  show = showCV True
 
--- | Show instance for Generalized 'CW'
-instance Show GeneralizedCW where
-  show (ExtendedCW k) = showExtCW True k
-  show (RegularCW  c) = showCW    True c
+-- | Show instance for Generalized 'CV'
+instance Show GeneralizedCV where
+  show (ExtendedCV k) = showExtCV True k
+  show (RegularCV  c) = showCV    True c
 
--- | Show a CW, with kind info if bool is True
-showCW :: Bool -> CW -> String
-showCW shk w | isBoolean w = show (cwToBool w) ++ (if shk then " :: Bool" else "")
-showCW shk w               = liftCW show show show show show show snd shL shT w ++ kInfo
+-- | Show a CV, with kind info if bool is True
+showCV :: Bool -> CV -> String
+showCV shk w | isBoolean w = show (cvToBool w) ++ (if shk then " :: Bool" else "")
+showCV shk w               = liftCV show show show show show show snd shL shT w ++ kInfo
       where kInfo | shk  = " :: " ++ showBaseKind (kindOf w)
                   | True = ""
 
-            shL xs = "[" ++ intercalate "," (map (showCW False . CW ke) xs) ++ "]"
+            shL xs = "[" ++ intercalate "," (map (showCV False . CV ke) xs) ++ "]"
               where ke = case kindOf w of
                            KList k -> k
-                           kw      -> error $ "Data.SBV.showCW: Impossible happened, expected list, got: " ++ show kw
+                           kw      -> error $ "Data.SBV.showCV: Impossible happened, expected list, got: " ++ show kw
 
-            shT :: [CWVal] -> String
+            shT :: [CVal] -> String
             shT xs = "(" ++ intercalate "," xs' ++ ")"
               where xs' = case kindOf w of
-                            KTuple ks | length ks == length xs -> zipWith (\k x -> showCW False (CW k x)) ks xs
-                            kw -> error $ "Data.SBV.showCW: Impossible happened, expected tuple (of length " ++ show (length xs) ++ "), got: " ++ show kw
+                            KTuple ks | length ks == length xs -> zipWith (\k x -> showCV False (CV k x)) ks xs
+                            kw -> error $ "Data.SBV.showCV: Impossible happened, expected tuple (of length " ++ show (length xs) ++ "), got: " ++ show kw
 
 -- | A version of show for kinds that says Bool instead of SBool
 showBaseKind :: Kind -> String
@@ -274,42 +274,42 @@ showBaseKind k = case show k of
                    s        -> s
 
 -- | Create a constant word from an integral.
-mkConstCW :: Integral a => Kind -> a -> CW
-mkConstCW KBool           a = normCW $ CW KBool      (CWInteger (toInteger a))
-mkConstCW k@KBounded{}    a = normCW $ CW k          (CWInteger (toInteger a))
-mkConstCW KUnbounded      a = normCW $ CW KUnbounded (CWInteger (toInteger a))
-mkConstCW KReal           a = normCW $ CW KReal      (CWAlgReal (fromInteger (toInteger a)))
-mkConstCW KFloat          a = normCW $ CW KFloat     (CWFloat   (fromInteger (toInteger a)))
-mkConstCW KDouble         a = normCW $ CW KDouble    (CWDouble  (fromInteger (toInteger a)))
-mkConstCW KChar           a = error $ "Unexpected call to mkConstCW (Char) with value: " ++ show (toInteger a)
-mkConstCW KString         a = error $ "Unexpected call to mkConstCW (String) with value: " ++ show (toInteger a)
-mkConstCW k@KList{}       a = error $ "Unexpected call to mkConstCW (" ++ show k ++ ") with value: " ++ show (toInteger a)
-mkConstCW (KUserSort s _) a = error $ "Unexpected call to mkConstCW with uninterpreted kind: " ++ s ++ " with value: " ++ show (toInteger a)
-mkConstCW k@KTuple{}      a = error $ "Unexpected call to mkConstCW (" ++ show k ++ ") with value: " ++ show (toInteger a)
+mkConstCV :: Integral a => Kind -> a -> CV
+mkConstCV KBool           a = normCV $ CV KBool      (CInteger (toInteger a))
+mkConstCV k@KBounded{}    a = normCV $ CV k          (CInteger (toInteger a))
+mkConstCV KUnbounded      a = normCV $ CV KUnbounded (CInteger (toInteger a))
+mkConstCV KReal           a = normCV $ CV KReal      (CAlgReal (fromInteger (toInteger a)))
+mkConstCV KFloat          a = normCV $ CV KFloat     (CFloat   (fromInteger (toInteger a)))
+mkConstCV KDouble         a = normCV $ CV KDouble    (CDouble  (fromInteger (toInteger a)))
+mkConstCV KChar           a = error $ "Unexpected call to mkConstCV (Char) with value: " ++ show (toInteger a)
+mkConstCV KString         a = error $ "Unexpected call to mkConstCV (String) with value: " ++ show (toInteger a)
+mkConstCV k@KList{}       a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
+mkConstCV (KUserSort s _) a = error $ "Unexpected call to mkConstCV with uninterpreted kind: " ++ s ++ " with value: " ++ show (toInteger a)
+mkConstCV k@KTuple{}      a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 
--- | Generate a random constant value ('CWVal') of the correct kind.
-randomCWVal :: Kind -> IO CWVal
-randomCWVal k =
+-- | Generate a random constant value ('CVal') of the correct kind.
+randomCVal :: Kind -> IO CVal
+randomCVal k =
   case k of
-    KBool         -> CWInteger <$> randomRIO (0, 1)
-    KBounded s w  -> CWInteger <$> randomRIO (bounds s w)
-    KUnbounded    -> CWInteger <$> randomIO
-    KReal         -> CWAlgReal <$> randomIO
-    KFloat        -> CWFloat   <$> randomIO
-    KDouble       -> CWDouble  <$> randomIO
+    KBool         -> CInteger <$> randomRIO (0, 1)
+    KBounded s w  -> CInteger <$> randomRIO (bounds s w)
+    KUnbounded    -> CInteger <$> randomIO
+    KReal         -> CAlgReal <$> randomIO
+    KFloat        -> CFloat   <$> randomIO
+    KDouble       -> CDouble  <$> randomIO
     -- TODO: KString/KChar currently only go for 0..255; include unicode?
     KString       -> do l <- randomRIO (0, 100)
-                        CWString <$> replicateM l (chr <$> randomRIO (0, 255))
-    KChar         -> CWChar . chr <$> randomRIO (0, 255)
-    KUserSort s _ -> error $ "Unexpected call to randomCWVal with uninterpreted kind: " ++ s
+                        CString <$> replicateM l (chr <$> randomRIO (0, 255))
+    KChar         -> CChar . chr <$> randomRIO (0, 255)
+    KUserSort s _ -> error $ "Unexpected call to randomCVal with uninterpreted kind: " ++ s
     KList ek      -> do l <- randomRIO (0, 100)
-                        CWList <$> replicateM l (randomCWVal ek)
-    KTuple ks     -> CWTuple <$> traverse randomCWVal ks
+                        CList <$> replicateM l (randomCVal ek)
+    KTuple ks     -> CTuple <$> traverse randomCVal ks
   where
     bounds :: Bool -> Int -> (Integer, Integer)
     bounds False w = (0, 2^w - 1)
     bounds True  w = (-x, x-1) where x = 2^(w-1)
 
--- | Generate a random constant value ('CW') of the correct kind.
-randomCW :: Kind -> IO CW
-randomCW k = CW k <$> randomCWVal k
+-- | Generate a random constant value ('CV') of the correct kind.
+randomCV :: Kind -> IO CV
+randomCV k = CV k <$> randomCVal k

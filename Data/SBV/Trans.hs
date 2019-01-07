@@ -111,8 +111,8 @@ module Data.SBV.Trans (
   -- ** Soft assumptions
   , assertWithPenalty , Penalty(..)
   -- ** Field extensions
-  -- | If an optimization results in an infinity/epsilon value, the returned `CW` value will be in the corresponding extension field.
-  , ExtCW(..), GeneralizedCW(..)
+  -- | If an optimization results in an infinity/epsilon value, the returned `CV` value will be in the corresponding extension field.
+  , ExtCV(..), GeneralizedCV(..)
 
   -- * Model extraction
 

@@ -28,7 +28,7 @@ data L = Nil | Cons Int L deriving (Eq, Ord, Data, Read, Show)
 instance SymVal L
 instance HasKind L
 instance SatModel L where
-  parseCWs = undefined -- make GHC shut up about the missing method, we won't actually call it
+  parseCVs = undefined -- make GHC shut up about the missing method, we won't actually call it
 
 type UList = SBV L
 

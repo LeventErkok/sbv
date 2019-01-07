@@ -16,7 +16,7 @@
 module Data.SBV.Utils.PrettyNum (
         PrettyNum(..), readBin, shex, chex, shexI, sbin, sbinI
       , showCFloat, showCDouble, showHFloat, showHDouble
-      , showSMTFloat, showSMTDouble, smtRoundingMode, cwToSMTLib, mkSkolemZero
+      , showSMTFloat, showSMTDouble, smtRoundingMode, cvToSMTLib, mkSkolemZero
       ) where
 
 import Data.Char  (intToDigit, ord)
@@ -70,42 +70,42 @@ instance PrettyNum Int64  where
 instance PrettyNum Integer where
   {hexS = shexI True True; binS = sbinI True True; hex = shexI False False; bin = sbinI False False;}
 
-instance PrettyNum CW where
-  hexS cw | isUninterpreted cw = show cw ++ " :: " ++ show (kindOf cw)
-          | isBoolean cw       = hexS (cwToBool cw) ++ " :: Bool"
-          | isFloat cw         = let CWFloat   f = cwVal cw in show f ++ " :: Float\n"  ++ show (floatToFP f)
-          | isDouble cw        = let CWDouble  d = cwVal cw in show d ++ " :: Double\n" ++ show (doubleToFP d)
-          | isReal cw          = let CWAlgReal w = cwVal cw in show w ++ " :: Real"
-          | isString cw        = let CWString  s = cwVal cw in show s ++ " :: String"
-          | not (isBounded cw) = let CWInteger w = cwVal cw in shexI True True w
-          | True               = let CWInteger w = cwVal cw in shex  True True (hasSign cw, intSizeOf cw) w
+instance PrettyNum CV where
+  hexS cv | isUninterpreted cv = show cv ++ " :: " ++ show (kindOf cv)
+          | isBoolean       cv = hexS (cvToBool cv) ++ " :: Bool"
+          | isFloat         cv = let CFloat   f = cvVal cv in show f ++ " :: Float\n"  ++ show (floatToFP f)
+          | isDouble        cv = let CDouble  d = cvVal cv in show d ++ " :: Double\n" ++ show (doubleToFP d)
+          | isReal          cv = let CAlgReal r = cvVal cv in show r ++ " :: Real"
+          | isString        cv = let CString  s = cvVal cv in show s ++ " :: String"
+          | not (isBounded cv) = let CInteger i = cvVal cv in shexI True True i
+          | True               = let CInteger i = cvVal cv in shex  True True (hasSign cv, intSizeOf cv) i
 
-  binS cw | isUninterpreted cw = show cw  ++ " :: " ++ show (kindOf cw)
-          | isBoolean cw       = binS (cwToBool cw)  ++ " :: Bool"
-          | isFloat cw         = let CWFloat   f = cwVal cw in show f ++ " :: Float\n"  ++ show (floatToFP f)
-          | isDouble cw        = let CWDouble  d = cwVal cw in show d ++ " :: Double\n" ++ show (doubleToFP d)
-          | isReal cw          = let CWAlgReal w = cwVal cw in show w ++ " :: Real"
-          | isString cw        = let CWString  s = cwVal cw in show s ++ " :: String"
-          | not (isBounded cw) = let CWInteger w = cwVal cw in sbinI True True w
-          | True               = let CWInteger w = cwVal cw in sbin  True True (hasSign cw, intSizeOf cw) w
+  binS cv | isUninterpreted cv = show cv  ++ " :: " ++ show (kindOf cv)
+          | isBoolean       cv = binS (cvToBool cv)  ++ " :: Bool"
+          | isFloat         cv = let CFloat   f = cvVal cv in show f ++ " :: Float\n"  ++ show (floatToFP f)
+          | isDouble        cv = let CDouble  d = cvVal cv in show d ++ " :: Double\n" ++ show (doubleToFP d)
+          | isReal          cv = let CAlgReal r = cvVal cv in show r ++ " :: Real"
+          | isString        cv = let CString  s = cvVal cv in show s ++ " :: String"
+          | not (isBounded cv) = let CInteger i = cvVal cv in sbinI True True i
+          | True               = let CInteger i = cvVal cv in sbin  True True (hasSign cv, intSizeOf cv) i
 
-  hex cw | isUninterpreted cw = show cw
-         | isBoolean cw       = hexS (cwToBool cw) ++ " :: Bool"
-         | isFloat cw         = let CWFloat   f = cwVal cw in show f
-         | isDouble cw        = let CWDouble  d = cwVal cw in show d
-         | isReal cw          = let CWAlgReal w = cwVal cw in show w
-         | isString cw        = let CWString  s = cwVal cw in show s
-         | not (isBounded cw) = let CWInteger w = cwVal cw in shexI False False w
-         | True               = let CWInteger w = cwVal cw in shex  False False (hasSign cw, intSizeOf cw) w
+  hex cv | isUninterpreted cv = show cv
+         | isBoolean       cv = hexS (cvToBool cv) ++ " :: Bool"
+         | isFloat         cv = let CFloat   f = cvVal cv in show f
+         | isDouble        cv = let CDouble  d = cvVal cv in show d
+         | isReal          cv = let CAlgReal r = cvVal cv in show r
+         | isString        cv = let CString  s = cvVal cv in show s
+         | not (isBounded cv) = let CInteger i = cvVal cv in shexI False False i
+         | True               = let CInteger i = cvVal cv in shex  False False (hasSign cv, intSizeOf cv) i
 
-  bin cw | isUninterpreted cw = show cw
-         | isBoolean cw       = binS (cwToBool cw) ++ " :: Bool"
-         | isFloat cw         = let CWFloat  f  = cwVal cw in show f
-         | isDouble cw        = let CWDouble d  = cwVal cw in show d
-         | isReal cw          = let CWAlgReal w = cwVal cw in show w
-         | isString cw        = let CWString  s = cwVal cw in show s
-         | not (isBounded cw) = let CWInteger w = cwVal cw in sbinI False False w
-         | True               = let CWInteger w = cwVal cw in sbin  False False (hasSign cw, intSizeOf cw) w
+  bin cv | isUninterpreted cv = show cv
+         | isBoolean       cv = binS (cvToBool cv) ++ " :: Bool"
+         | isFloat         cv = let CFloat   f = cvVal cv in show f
+         | isDouble        cv = let CDouble  d = cvVal cv in show d
+         | isReal          cv = let CAlgReal r = cvVal cv in show r
+         | isString        cv = let CString  s = cvVal cv in show s
+         | not (isBounded cv) = let CInteger i = cvVal cv in sbinI False False i
+         | True               = let CInteger i = cvVal cv in sbin  False False (hasSign cv, intSizeOf cv) i
 
 instance (SymVal a, PrettyNum a) => PrettyNum (SBV a) where
   hexS s = maybe (show s) (hexS :: a -> String) $ unliteral s
@@ -289,28 +289,28 @@ smtRoundingMode RoundTowardPositive    = "roundTowardPositive"
 smtRoundingMode RoundTowardNegative    = "roundTowardNegative"
 smtRoundingMode RoundTowardZero        = "roundTowardZero"
 
--- | Convert a CW to an SMTLib2 compliant value
-cwToSMTLib :: RoundingMode -> CW -> String
-cwToSMTLib rm x
-  | isBoolean       x, CWInteger  w      <- cwVal x = if w == 0 then "false" else "true"
-  | isUninterpreted x, CWUserSort (_, s) <- cwVal x = roundModeConvert s
-  | isReal          x, CWAlgReal  r      <- cwVal x = algRealToSMTLib2 r
-  | isFloat         x, CWFloat    f      <- cwVal x = showSMTFloat  rm f
-  | isDouble        x, CWDouble   d      <- cwVal x = showSMTDouble rm d
-  | not (isBounded x), CWInteger  w      <- cwVal x = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
-  | not (hasSign x)  , CWInteger  w      <- cwVal x = smtLibHex (intSizeOf x) w
+-- | Convert a CV to an SMTLib2 compliant value
+cvToSMTLib :: RoundingMode -> CV -> String
+cvToSMTLib rm x
+  | isBoolean       x, CInteger  w      <- cvVal x = if w == 0 then "false" else "true"
+  | isUninterpreted x, CUserSort (_, s) <- cvVal x = roundModeConvert s
+  | isReal          x, CAlgReal  r      <- cvVal x = algRealToSMTLib2 r
+  | isFloat         x, CFloat    f      <- cvVal x = showSMTFloat  rm f
+  | isDouble        x, CDouble   d      <- cvVal x = showSMTDouble rm d
+  | not (isBounded x), CInteger  w      <- cvVal x = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
+  | not (hasSign x)  , CInteger  w      <- cvVal x = smtLibHex (intSizeOf x) w
   -- signed numbers (with 2's complement representation) is problematic
   -- since there's no way to put a bvneg over a positive number to get minBound..
   -- Hence, we punt and use binary notation in that particular case
-  | hasSign x        , CWInteger  w      <- cwVal x = if w == negate (2 ^ intSizeOf x)
-                                                      then mkMinBound (intSizeOf x)
-                                                      else negIf (w < 0) $ smtLibHex (intSizeOf x) (abs w)
-  | isChar x         , CWChar c          <- cwVal x = smtLibHex 8 (fromIntegral (ord c))
-  | isString x       , CWString s        <- cwVal x = '\"' : stringToQFS s ++ "\""
-  | isList x         , CWList xs         <- cwVal x = smtLibSeq (kindOf x) xs
-  | isTuple x        , CWTuple xs        <- cwVal x = smtLibTup (kindOf x) xs
+  | hasSign x        , CInteger  w      <- cvVal x = if w == negate (2 ^ intSizeOf x)
+                                                     then mkMinBound (intSizeOf x)
+                                                     else negIf (w < 0) $ smtLibHex (intSizeOf x) (abs w)
+  | isChar x         , CChar c          <- cvVal x = smtLibHex 8 (fromIntegral (ord c))
+  | isString x       , CString s        <- cvVal x = '\"' : stringToQFS s ++ "\""
+  | isList x         , CList xs         <- cvVal x = smtLibSeq (kindOf x) xs
+  | isTuple x        , CTuple xs        <- cvVal x = smtLibTup (kindOf x) xs
 
-  | True = error $ "SBV.cvtCW: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
+  | True = error $ "SBV.cvtCV: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
   where roundModeConvert s = fromMaybe s (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])
         -- Carefully code hex numbers, SMTLib is picky about lengths of hex constants. For the time
         -- being, SBV only supports sizes that are multiples of 4, but the below code is more robust
@@ -325,17 +325,17 @@ cwToSMTLib rm x
         negIf True  a = "(bvneg " ++ a ++ ")"
         negIf False a = a
 
-        smtLibSeq :: Kind -> [CWVal] -> String
+        smtLibSeq :: Kind -> [CVal] -> String
         smtLibSeq k          [] = "(as seq.empty " ++ smtType k ++ ")"
         smtLibSeq (KList ek) xs = let mkSeq  [e]   = e
                                       mkSeq  es    = "(seq.++ " ++ unwords es ++ ")"
                                       mkUnit inner = "(seq.unit " ++ inner ++ ")"
-                                  in mkSeq (mkUnit . cwToSMTLib rm . CW ek <$> xs)
-        smtLibSeq k _ = error "SBV.cwToSMTLib: Impossible case (smtLibSeq), received kind: " ++ show k
+                                  in mkSeq (mkUnit . cvToSMTLib rm . CV ek <$> xs)
+        smtLibSeq k _ = error "SBV.cvToSMTLib: Impossible case (smtLibSeq), received kind: " ++ show k
 
-        smtLibTup :: Kind -> [CWVal] -> String
-        smtLibTup (KTuple ks) xs = "(mkSBVTuple" ++ show (length ks) ++ " " ++ unwords (zipWith (\ek e -> cwToSMTLib rm (CW ek e)) ks xs) ++ ")"
-        smtLibTup k           _  = error $ "SBV.cwToSMTLib: Impossible case (smtLibTup), received kind: " ++ show k
+        smtLibTup :: Kind -> [CVal] -> String
+        smtLibTup (KTuple ks) xs = "(mkSBVTuple" ++ show (length ks) ++ " " ++ unwords (zipWith (\ek e -> cvToSMTLib rm (CV ek e)) ks xs) ++ ")"
+        smtLibTup k           _  = error $ "SBV.cvToSMTLib: Impossible case (smtLibTup), received kind: " ++ show k
 
         -- anomaly at the 2's complement min value! Have to use binary notation here
         -- as there is no positive value we can provide to make the bvneg work.. (see above)
@@ -346,4 +346,4 @@ cwToSMTLib rm x
 mkSkolemZero :: RoundingMode -> Kind -> String
 mkSkolemZero _ (KUserSort _ (Right (f:_))) = f
 mkSkolemZero _ (KUserSort s _)             = error $ "SBV.mkSkolemZero: Unexpected uninterpreted sort: " ++ s
-mkSkolemZero rm k                          = cwToSMTLib rm (mkConstCW k (0::Integer))
+mkSkolemZero rm k                          = cvToSMTLib rm (mkConstCV k (0::Integer))

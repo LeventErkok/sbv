@@ -17,7 +17,7 @@ module Data.SBV.Client.BaseIO where
 import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
                                 SymVal, SBool, SBV, SChar, SDouble, SFloat,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
-                                SReal, SString, SW, SWord8, SWord16, SWord32,
+                                SReal, SString, SV, SWord8, SWord16, SWord32,
                                 SWord64)
 import Data.SBV.Core.Model     (Metric)
 import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Quantifier, Result,
@@ -209,11 +209,11 @@ safeWith = Trans.safeWith
 mkSymSBV :: Maybe Quantifier -> Kind -> Maybe String -> Symbolic (SBV a)
 mkSymSBV = Trans.mkSymSBV
 
--- | Convert a symbolic value to an SW, inside the Symbolic monad
+-- | Convert a symbolic value to an SV, inside the Symbolic monad
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sbvToSymSW'
-sbvToSymSW :: SBV a -> Symbolic SW
-sbvToSymSW = Trans.sbvToSymSW
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sbvToSymSV'
+sbvToSymSV :: SBV a -> Symbolic SV
+sbvToSymSV = Trans.sbvToSymSV
 
 -- | Mark an interim result as an output. Useful when constructing Symbolic programs
 -- that return multiple values, or when the result is programmatically computed.
@@ -550,11 +550,11 @@ maximize = Trans.maximize
 
 -- Data.SBV.Core.Symbolic:
 
--- | Convert a symbolic value to an SW, inside the Symbolic monad
+-- | Convert a symbolic value to an SV, inside the Symbolic monad
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.svToSymSW'
-svToSymSW :: SVal -> Symbolic SW
-svToSymSW = Trans.svToSymSW
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.svToSymSV'
+svToSymSV :: SVal -> Symbolic SV
+svToSymSV = Trans.svToSymSV
 
 -- | Create an N-bit symbolic unsigned named variable
 --

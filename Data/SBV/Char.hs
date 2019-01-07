@@ -87,8 +87,8 @@ ord c
  = SBV $ SVal kTo $ Right $ cache r
  where kFrom = KBounded False 8
        kTo   = KUnbounded
-       r st = do csw <- sbvToSW st c
-                 newExpr st kTo (SBVApp (KindCast kFrom kTo) [csw])
+       r st = do csv <- sbvToSV st c
+                 newExpr st kTo (SBVApp (KindCast kFrom kTo) [csv])
 
 -- | Conversion from an integer to a character.
 --
@@ -104,8 +104,8 @@ chr w
  = SBV $ SVal KChar $ Right $ cache r
  where w8 :: SWord8
        w8 = sFromIntegral w
-       r st = do SW _ n <- sbvToSW st w8
-                 return $ SW KChar n
+       r st = do SV _ n <- sbvToSV st w8
+                 return $ SV KChar n
 
 -- | Convert to lower-case.
 --

@@ -172,94 +172,94 @@ instance Show OptimizeResult where
                                     (tag "Optimal in an extension field:" ++ "\n")
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
--- solvers. The idea is that the sbv infrastructure provides a stream of CW's (constant-words)
+-- solvers. The idea is that the sbv infrastructure provides a stream of CV's (constant values)
 -- coming from the solver, and the type @a@ is interpreted based on these constants. Many typical
 -- instances are already provided, so new instances can be declared with relative ease.
 --
--- Minimum complete definition: 'parseCWs'
+-- Minimum complete definition: 'parseCVs'
 class SatModel a where
   -- | Given a sequence of constant-words, extract one instance of the type @a@, returning
   -- the remaining elements untouched. If the next element is not what's expected for this
   -- type you should return 'Nothing'
-  parseCWs  :: [CW] -> Maybe (a, [CW])
+  parseCVs  :: [CV] -> Maybe (a, [CV])
   -- | Given a parsed model instance, transform it using @f@, and return the result.
   -- The default definition for this method should be sufficient in most use cases.
-  cvtModel  :: (a -> Maybe b) -> Maybe (a, [CW]) -> Maybe (b, [CW])
+  cvtModel  :: (a -> Maybe b) -> Maybe (a, [CV]) -> Maybe (b, [CV])
   cvtModel f x = x >>= \(a, r) -> f a >>= \b -> return (b, r)
 
-  default parseCWs :: Read a => [CW] -> Maybe (a, [CW])
-  parseCWs (CW _ (CWUserSort (_, s)) : r) = Just (read s, r)
-  parseCWs _                              = Nothing
+  default parseCVs :: Read a => [CV] -> Maybe (a, [CV])
+  parseCVs (CV _ (CUserSort (_, s)) : r) = Just (read s, r)
+  parseCVs _                             = Nothing
 
--- | Parse a signed/sized value from a sequence of CWs
-genParse :: Integral a => Kind -> [CW] -> Maybe (a, [CW])
-genParse k (x@(CW _ (CWInteger i)):r) | kindOf x == k = Just (fromIntegral i, r)
-genParse _ _                                          = Nothing
+-- | Parse a signed/sized value from a sequence of CVs
+genParse :: Integral a => Kind -> [CV] -> Maybe (a, [CV])
+genParse k (x@(CV _ (CInteger i)):r) | kindOf x == k = Just (fromIntegral i, r)
+genParse _ _                                         = Nothing
 
 -- | Base case for 'SatModel' at unit type. Comes in handy if there are no real variables.
 instance SatModel () where
-  parseCWs xs = return ((), xs)
+  parseCVs xs = return ((), xs)
 
 -- | 'Bool' as extracted from a model
 instance SatModel Bool where
-  parseCWs xs = do (x, r) <- genParse KBool xs
+  parseCVs xs = do (x, r) <- genParse KBool xs
                    return ((x :: Integer) /= 0, r)
 
 -- | 'Word8' as extracted from a model
 instance SatModel Word8 where
-  parseCWs = genParse (KBounded False 8)
+  parseCVs = genParse (KBounded False 8)
 
 -- | 'Int8' as extracted from a model
 instance SatModel Int8 where
-  parseCWs = genParse (KBounded True 8)
+  parseCVs = genParse (KBounded True 8)
 
 -- | 'Word16' as extracted from a model
 instance SatModel Word16 where
-  parseCWs = genParse (KBounded False 16)
+  parseCVs = genParse (KBounded False 16)
 
 -- | 'Int16' as extracted from a model
 instance SatModel Int16 where
-  parseCWs = genParse (KBounded True 16)
+  parseCVs = genParse (KBounded True 16)
 
 -- | 'Word32' as extracted from a model
 instance SatModel Word32 where
-  parseCWs = genParse (KBounded False 32)
+  parseCVs = genParse (KBounded False 32)
 
 -- | 'Int32' as extracted from a model
 instance SatModel Int32 where
-  parseCWs = genParse (KBounded True 32)
+  parseCVs = genParse (KBounded True 32)
 
 -- | 'Word64' as extracted from a model
 instance SatModel Word64 where
-  parseCWs = genParse (KBounded False 64)
+  parseCVs = genParse (KBounded False 64)
 
 -- | 'Int64' as extracted from a model
 instance SatModel Int64 where
-  parseCWs = genParse (KBounded True 64)
+  parseCVs = genParse (KBounded True 64)
 
 -- | 'Integer' as extracted from a model
 instance SatModel Integer where
-  parseCWs = genParse KUnbounded
+  parseCVs = genParse KUnbounded
 
 -- | 'AlgReal' as extracted from a model
 instance SatModel AlgReal where
-  parseCWs (CW KReal (CWAlgReal i) : r) = Just (i, r)
-  parseCWs _                            = Nothing
+  parseCVs (CV KReal (CAlgReal i) : r) = Just (i, r)
+  parseCVs _                           = Nothing
 
 -- | 'Float' as extracted from a model
 instance SatModel Float where
-  parseCWs (CW KFloat (CWFloat i) : r) = Just (i, r)
-  parseCWs _                           = Nothing
+  parseCVs (CV KFloat (CFloat i) : r) = Just (i, r)
+  parseCVs _                          = Nothing
 
 -- | 'Double' as extracted from a model
 instance SatModel Double where
-  parseCWs (CW KDouble (CWDouble i) : r) = Just (i, r)
-  parseCWs _                             = Nothing
+  parseCVs (CV KDouble (CDouble i) : r) = Just (i, r)
+  parseCVs _                            = Nothing
 
--- | @CW@ as extracted from a model; trivial definition
-instance SatModel CW where
-  parseCWs (cw : r) = Just (cw, r)
-  parseCWs []       = Nothing
+-- | @CV@ as extracted from a model; trivial definition
+instance SatModel CV where
+  parseCVs (cv : r) = Just (cv, r)
+  parseCVs []       = Nothing
 
 -- | A rounding mode, extracted from a model. (Default definition suffices)
 instance SatModel RoundingMode
@@ -268,47 +268,47 @@ instance SatModel RoundingMode
 -- go as long as we can (maximal-munch). Note that this never fails, as
 -- we can always return the empty list!
 instance SatModel a => SatModel [a] where
-  parseCWs [] = Just ([], [])
-  parseCWs xs = case parseCWs xs of
-                  Just (a, ys) -> case parseCWs ys of
+  parseCVs [] = Just ([], [])
+  parseCVs xs = case parseCVs xs of
+                  Just (a, ys) -> case parseCVs ys of
                                     Just (as, zs) -> Just (a:as, zs)
                                     Nothing       -> Just ([], ys)
                   Nothing     -> Just ([], xs)
 
 -- | Tuples extracted from a model
 instance (SatModel a, SatModel b) => SatModel (a, b) where
-  parseCWs as = do (a, bs) <- parseCWs as
-                   (b, cs) <- parseCWs bs
+  parseCVs as = do (a, bs) <- parseCVs as
+                   (b, cs) <- parseCVs bs
                    return ((a, b), cs)
 
 -- | 3-Tuples extracted from a model
 instance (SatModel a, SatModel b, SatModel c) => SatModel (a, b, c) where
-  parseCWs as = do (a,      bs) <- parseCWs as
-                   ((b, c), ds) <- parseCWs bs
+  parseCVs as = do (a,      bs) <- parseCVs as
+                   ((b, c), ds) <- parseCVs bs
                    return ((a, b, c), ds)
 
 -- | 4-Tuples extracted from a model
 instance (SatModel a, SatModel b, SatModel c, SatModel d) => SatModel (a, b, c, d) where
-  parseCWs as = do (a,         bs) <- parseCWs as
-                   ((b, c, d), es) <- parseCWs bs
+  parseCVs as = do (a,         bs) <- parseCVs as
+                   ((b, c, d), es) <- parseCVs bs
                    return ((a, b, c, d), es)
 
 -- | 5-Tuples extracted from a model
 instance (SatModel a, SatModel b, SatModel c, SatModel d, SatModel e) => SatModel (a, b, c, d, e) where
-  parseCWs as = do (a, bs)            <- parseCWs as
-                   ((b, c, d, e), fs) <- parseCWs bs
+  parseCVs as = do (a, bs)            <- parseCVs as
+                   ((b, c, d, e), fs) <- parseCVs bs
                    return ((a, b, c, d, e), fs)
 
 -- | 6-Tuples extracted from a model
 instance (SatModel a, SatModel b, SatModel c, SatModel d, SatModel e, SatModel f) => SatModel (a, b, c, d, e, f) where
-  parseCWs as = do (a, bs)               <- parseCWs as
-                   ((b, c, d, e, f), gs) <- parseCWs bs
+  parseCVs as = do (a, bs)               <- parseCVs as
+                   ((b, c, d, e, f), gs) <- parseCVs bs
                    return ((a, b, c, d, e, f), gs)
 
 -- | 7-Tuples extracted from a model
 instance (SatModel a, SatModel b, SatModel c, SatModel d, SatModel e, SatModel f, SatModel g) => SatModel (a, b, c, d, e, f, g) where
-  parseCWs as = do (a, bs)                  <- parseCWs as
-                   ((b, c, d, e, f, g), hs) <- parseCWs bs
+  parseCVs as = do (a, bs)                  <- parseCVs as
+                   ((b, c, d, e, f, g), hs) <- parseCVs bs
                    return ((a, b, c, d, e, f, g), hs)
 
 -- | Various SMT results that we can extract models out of.
@@ -322,19 +322,19 @@ class Modelable a where
 
   -- | Extract a model dictionary. Extract a dictionary mapping the variables to
   -- their respective values as returned by the SMT solver. Also see `getModelDictionaries`.
-  getModelDictionary :: a -> M.Map String CW
+  getModelDictionary :: a -> M.Map String CV
 
   -- | Extract a model value for a given element. Also see `getModelValues`.
   getModelValue :: SymVal b => String -> a -> Maybe b
-  getModelValue v r = fromCW `fmap` (v `M.lookup` getModelDictionary r)
+  getModelValue v r = fromCV `fmap` (v `M.lookup` getModelDictionary r)
 
   -- | Extract a representative name for the model value of an uninterpreted kind.
   -- This is supposed to correspond to the value as computed internally by the
   -- SMT solver; and is unportable from solver to solver. Also see `getModelUninterpretedValues`.
   getModelUninterpretedValue :: String -> a -> Maybe String
   getModelUninterpretedValue v r = case v `M.lookup` getModelDictionary r of
-                                     Just (CW _ (CWUserSort (_, s))) -> Just s
-                                     _                               -> Nothing
+                                     Just (CV _ (CUserSort (_, s))) -> Just s
+                                     _                              -> Nothing
 
   -- | A simpler variant of 'getModelAssignment' to get a model out without the fuss.
   extractModel :: SatModel b => a -> Maybe b
@@ -343,10 +343,10 @@ class Modelable a where
                      _            -> Nothing
 
   -- | Extract model objective values, for all optimization goals.
-  getModelObjectives :: a -> M.Map String GeneralizedCW
+  getModelObjectives :: a -> M.Map String GeneralizedCV
 
   -- | Extract the value of an objective
-  getModelObjectiveValue :: String -> a -> Maybe GeneralizedCW
+  getModelObjectiveValue :: String -> a -> Maybe GeneralizedCV
   getModelObjectiveValue v r = v `M.lookup` getModelObjectives r
 
 -- | Return all the models from an 'Data.SBV.allSat' call, similar to 'extractModel' but
@@ -355,7 +355,7 @@ extractModels :: SatModel a => AllSatResult -> [a]
 extractModels (AllSatResult (_, _, xs)) = [ms | Right (_, ms) <- map getModelAssignment xs]
 
 -- | Get dictionaries from an all-sat call. Similar to `getModelDictionary`.
-getModelDictionaries :: AllSatResult -> [M.Map String CW]
+getModelDictionaries :: AllSatResult -> [M.Map String CV]
 getModelDictionaries (AllSatResult (_, _, xs)) = map getModelDictionary xs
 
 -- | Extract value of a variable from an all-sat call. Similar to `getModelValue`.
@@ -406,7 +406,7 @@ instance Modelable SMTResult where
 
 -- | Extract a model out, will throw error if parsing is unsuccessful
 parseModelOut :: SatModel a => SMTModel -> a
-parseModelOut m = case parseCWs [c | (_, c) <- modelAssocs m] of
+parseModelOut m = case parseCVs [c | (_, c) <- modelAssocs m] of
                    Just (x, []) -> x
                    Just (_, ys) -> error $ "SBV.parseModelOut: Partially constructed model; remaining elements: " ++ show ys
                    Nothing      -> error $ "SBV.parseModelOut: Cannot construct a model from: " ++ show m
@@ -438,10 +438,10 @@ showSMTResult unsatMsg unkMsg satMsg satMsgModel satExtMsg result = case result 
 -- | Show a model in human readable form. Ignore bindings to those variables that start
 -- with "__internal_sbv_" and also those marked as "nonModelVar" in the config; as these are only for internal purposes
 showModel :: SMTConfig -> SMTModel -> String
-showModel cfg model = showModelDictionary cfg [(n, RegularCW c) | (n, c) <- modelAssocs model]
+showModel cfg model = showModelDictionary cfg [(n, RegularCV c) | (n, c) <- modelAssocs model]
 
 -- | Show bindings in a generalized model dictionary, tabulated
-showModelDictionary :: SMTConfig -> [(String, GeneralizedCW)] -> String
+showModelDictionary :: SMTConfig -> [(String, GeneralizedCV)] -> String
 showModelDictionary cfg allVars
    | null allVars
    = "[There are no variables bound by the model.]"
@@ -452,7 +452,7 @@ showModelDictionary cfg allVars
   where relevantVars  = filter (not . ignore) allVars
         ignore (s, _) = "__internal_sbv_" `isPrefixOf` s || isNonModelVar cfg s
 
-        shM (s, RegularCW v) = let vs = shCW cfg v in ((length s, s), (vlength vs, vs))
+        shM (s, RegularCV v) = let vs = shCV cfg v in ((length s, s), (vlength vs, vs))
         shM (s, other)       = let vs = show other in ((length s, s), (vlength vs, vs))
 
         display svs   = map line svs
@@ -473,8 +473,8 @@ showModelDictionary cfg allVars
         lTrimRight = length . dropWhile isSpace . reverse
 
 -- | Show a constant value, in the user-specified base
-shCW :: SMTConfig -> CW -> String
-shCW = sh . printBase
+shCV :: SMTConfig -> CV -> String
+shCV = sh . printBase
   where sh 2  = binS
         sh 10 = show
         sh 16 = hexS

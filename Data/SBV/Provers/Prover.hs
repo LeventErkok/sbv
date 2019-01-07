@@ -205,9 +205,9 @@ class ExtractIO m => MProvable m a where
                          | null universals = error "Data.SBV: Impossible happened! Universal optimization with no universals!"
                          | True            = minimum (map (nodeId . fst) universals)
 
-                       nodeId (SW _ n) = n
+                       nodeId (SV _ n) = n
 
-                       mappings :: M.Map SW SBVExpr
+                       mappings :: M.Map SV SBVExpr
                        mappings = M.fromList (S.toList (pgmAssignments spgm))
 
                        chaseUniversal entry = map snd $ go entry []
@@ -265,7 +265,7 @@ class ExtractIO m => MProvable m a where
                                -- if the goal is a signed-BV, then we need to add 2^{n-1} to the maximal value
                                -- is properly placed in the correct range. See http://github.com/Z3Prover/z3/issues/1339 for
                                -- details on why we have to do this:
-                               signAdjust :: SW -> String -> String
+                               signAdjust :: SV -> String -> String
                                signAdjust v o = case kindOf v of
                                                   -- NB. The order we spit out the addition here (i.e., "bvadd v constant")
                                                   -- is important as we parse it back in precisely that form when we
@@ -273,8 +273,8 @@ class ExtractIO m => MProvable m a where
                                                   KBounded True sz -> "(bvadd " ++ o ++ " " ++ adjust sz ++ ")"
                                                   _                -> o
                                   where adjust :: Int -> String
-                                        adjust sz = cwToSMTLib RoundNearestTiesToEven -- rounding mode doesn't matter here, just pick one
-                                                              (mkConstCW (KBounded False sz)
+                                        adjust sz = cvToSMTLib RoundNearestTiesToEven -- rounding mode doesn't matter here, just pick one
+                                                              (mkConstCV (KBounded False sz)
                                                                          ((2::Integer)^(fromIntegral sz - (1::Integer))))
 
                    mapM_ (Control.send True) optimizerDirectives
@@ -572,7 +572,7 @@ class ExtractIO m => SExecutable m a where
 
            -- check that the cond is unsatisfiable. If satisfiable, that would
            -- indicate the assignment under which the 'Data.SBV.sAssert' would fail
-           verify :: (FilePath -> FilePath) -> (String, Maybe CallStack, SW) -> QueryT m SafeResult
+           verify :: (FilePath -> FilePath) -> (String, Maybe CallStack, SV) -> QueryT m SafeResult
            verify mkRelative (msg, cs, cond) = do
                    let locInfo ps = let loc (f, sl) = concat [mkRelative (srcLocFile sl), ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
                                     in intercalate ",\n " (map loc ps)

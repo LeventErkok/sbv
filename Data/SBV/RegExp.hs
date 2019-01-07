@@ -280,8 +280,8 @@ lift1 w mbOp a
   | True
   = SBV $ SVal k $ Right $ cache r
   where k = kindOf (undefined :: b)
-        r st = do swa <- sbvToSW st a
-                  newExpr st k (SBVApp (StrOp w) [swa])
+        r st = do sva <- sbvToSV st a
+                  newExpr st k (SBVApp (StrOp w) [sva])
 
 -- | Concrete evaluation for unary ops
 concEval1 :: (SymVal a, SymVal b) => Maybe (a -> b) -> SBV a -> Maybe (SBV b)

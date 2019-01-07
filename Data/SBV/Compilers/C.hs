@@ -136,37 +136,37 @@ cgen cfg nm st sbvProg
 -- | Pretty print a functions type. If there is only one output, we compile it
 -- as a function that returns that value. Otherwise, we compile it as a void function
 -- that takes return values as pointers to be updated.
-pprCFunHeader :: String -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SW -> Doc
+pprCFunHeader :: String -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> Doc
 pprCFunHeader fn ins outs mbRet = retType <+> text fn P.<> parens (fsep (punctuate comma (map mkParam ins ++ map mkPParam outs)))
   where retType = case mbRet of
                    Nothing -> text "void"
-                   Just sw -> pprCWord False sw
+                   Just sv -> pprCWord False sv
 
 mkParam, mkPParam :: (String, CgVal) -> Doc
-mkParam  (n, CgAtomic sw)     = pprCWord True  sw <+> text n
+mkParam  (n, CgAtomic sv)     = pprCWord True  sv <+> text n
 mkParam  (_, CgArray  [])     = die "mkParam: CgArray with no elements!"
-mkParam  (n, CgArray  (sw:_)) = pprCWord True  sw <+> text "*" P.<> text n
-mkPParam (n, CgAtomic sw)     = pprCWord False sw <+> text "*" P.<> text n
+mkParam  (n, CgArray  (sv:_)) = pprCWord True  sv <+> text "*" P.<> text n
+mkPParam (n, CgAtomic sv)     = pprCWord False sv <+> text "*" P.<> text n
 mkPParam (_, CgArray  [])     = die "mPkParam: CgArray with no elements!"
-mkPParam (n, CgArray  (sw:_)) = pprCWord False sw <+> text "*" P.<> text n
+mkPParam (n, CgArray  (sv:_)) = pprCWord False sv <+> text "*" P.<> text n
 
 -- | Renders as "const SWord8 s0", etc. the first parameter is the width of the typefield
-declSW :: Int -> SW -> Doc
-declSW w sw = text "const" <+> pad (showCType sw) <+> text (show sw)
+declSV :: Int -> SV -> Doc
+declSV w sv = text "const" <+> pad (showCType sv) <+> text (show sv)
   where pad s = text $ s ++ replicate (w - length s) ' '
 
 -- | Return the proper declaration and the result as a pair. No consts
-declSWNoConst :: Int -> SW -> (Doc, Doc)
-declSWNoConst w sw = (text "     " <+> pad (showCType sw), text (show sw))
+declSVNoConst :: Int -> SV -> (Doc, Doc)
+declSVNoConst w sv = (text "     " <+> pad (showCType sv), text (show sv))
   where pad s = text $ s ++ replicate (w - length s) ' '
 
 -- | Renders as "s0", etc, or the corresponding constant
-showSW :: CgConfig -> [(SW, CW)] -> SW -> Doc
-showSW cfg consts sw
-  | sw == falseSW                 = text "false"
-  | sw == trueSW                  = text "true"
-  | Just cw <- sw `lookup` consts = mkConst cfg cw
-  | True                          = text $ show sw
+showSV :: CgConfig -> [(SV, CV)] -> SV -> Doc
+showSV cfg consts sv
+  | sv == falseSV                 = text "false"
+  | sv == trueSV                  = text "true"
+  | Just cv <- sv `lookup` consts = mkConst cfg cv
+  | True                          = text $ show sv
 
 -- | Words as it would map to a C word
 pprCWord :: HasKind a => Bool -> a -> Doc
@@ -180,8 +180,8 @@ showCType i = case kindOf i of
                 k                -> show k
 
 -- | The printf specifier for the type
-specifier :: CgConfig -> SW -> Doc
-specifier cfg sw = case kindOf sw of
+specifier :: CgConfig -> SV -> Doc
+specifier cfg sv = case kindOf sv of
                      KBool         -> spec (False, 1)
                      KBounded b i  -> spec (b, i)
                      KUnbounded    -> spec (True, fromJust (cgInteger cfg))
@@ -212,19 +212,19 @@ specifier cfg sw = case kindOf sw of
 -- | Make a constant value of the given type. We don't check for out of bounds here, as it should not be needed.
 --   There are many options here, using binary, decimal, etc. We simply use decimal for values 8-bits or less,
 --   and hex otherwise.
-mkConst :: CgConfig -> CW -> Doc
-mkConst cfg  (CW KReal (CWAlgReal (AlgRational _ r))) = double (fromRational r :: Double) P.<> sRealSuffix (fromJust (cgReal cfg))
+mkConst :: CgConfig -> CV -> Doc
+mkConst cfg  (CV KReal (CAlgReal (AlgRational _ r))) = double (fromRational r :: Double) P.<> sRealSuffix (fromJust (cgReal cfg))
   where sRealSuffix CgFloat      = text "F"
         sRealSuffix CgDouble     = empty
         sRealSuffix CgLongDouble = text "L"
-mkConst cfg (CW KUnbounded       (CWInteger i)) = showSizedConst i (True, fromJust (cgInteger cfg))
-mkConst _   (CW (KBounded sg sz) (CWInteger i)) = showSizedConst i (sg,   sz)
-mkConst _   (CW KBool            (CWInteger i)) = showSizedConst i (False, 1)
-mkConst _   (CW KFloat           (CWFloat f))   = text $ showCFloat f
-mkConst _   (CW KDouble          (CWDouble d))  = text $ showCDouble d
-mkConst _   (CW KString          (CWString s))  = text $ show s
-mkConst _   (CW KChar            (CWChar c))    = text $ show c
-mkConst _   cw                                  = die $ "mkConst: " ++ show cw
+mkConst cfg (CV KUnbounded       (CInteger i)) = showSizedConst i (True, fromJust (cgInteger cfg))
+mkConst _   (CV (KBounded sg sz) (CInteger i)) = showSizedConst i (sg,   sz)
+mkConst _   (CV KBool            (CInteger i)) = showSizedConst i (False, 1)
+mkConst _   (CV KFloat           (CFloat f))   = text $ showCFloat f
+mkConst _   (CV KDouble          (CDouble d))  = text $ showCDouble d
+mkConst _   (CV KString          (CString s))  = text $ show s
+mkConst _   (CV KChar            (CChar c))    = text $ show c
+mkConst _   cv                                 = die $ "mkConst: " ++ show cv
 
 showSizedConst :: Integer -> (Bool, Int) -> Doc
 showSizedConst i   (False,  1) = text (if i == 0 then "false" else "true")
@@ -345,7 +345,7 @@ sepIf :: Bool -> Doc
 sepIf b = if b then text "" else empty
 
 -- | Generate an example driver program
-genDriver :: CgConfig -> [Integer] -> String -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SW -> [Doc]
+genDriver :: CgConfig -> [Integer] -> String -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> [Doc]
 genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
  where pre    =  text "/* Example driver program for" <+> nm P.<> text ". */"
               $$ text "/* Automatically generated by SBV. Edit as you see fit! */"
@@ -362,7 +362,7 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
                       $$ call
                       $$ text ""
                       $$ (case mbRet of
-                              Just sw -> text "printf" P.<> parens (printQuotes (fcall <+> text "=" <+> specifier cfg sw P.<> text "\\n")
+                              Just sv -> text "printf" P.<> parens (printQuotes (fcall <+> text "=" <+> specifier cfg sv P.<> text "\\n")
                                                                               P.<> comma <+> resultVar) P.<> semi
                               Nothing -> text "printf" P.<> parens (printQuotes (fcall <+> text "->\\n")) P.<> semi)
                       $$ vcat (map display outs)
@@ -375,50 +375,50 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
        pairedInputs = matchRands (map abs randVals) inps
        matchRands _      []                                 = []
        matchRands []     _                                  = die "Run out of driver values!"
-       matchRands (r:rs) ((n, CgAtomic sw)            : cs) = ([mkRVal sw r], n, CgAtomic sw) : matchRands rs cs
+       matchRands (r:rs) ((n, CgAtomic sv)            : cs) = ([mkRVal sv r], n, CgAtomic sv) : matchRands rs cs
        matchRands _      ((n, CgArray [])             : _ ) = die $ "Unsupported empty array input " ++ show n
-       matchRands rs     ((n, a@(CgArray sws@(sw:_))) : cs)
+       matchRands rs     ((n, a@(CgArray sws@(sv:_))) : cs)
           | length frs /= l                                 = die "Run out of driver values!"
-          | True                                            = (map (mkRVal sw) frs, n, a) : matchRands srs cs
+          | True                                            = (map (mkRVal sv) frs, n, a) : matchRands srs cs
           where l          = length sws
                 (frs, srs) = splitAt l rs
-       mkRVal sw r = mkConst cfg $ mkConstCW (kindOf sw) r
+       mkRVal sv r = mkConst cfg $ mkConstCV (kindOf sv) r
        mkInp (_,  _, CgAtomic{})         = empty  -- constant, no need to declare
        mkInp (_,  n, CgArray [])         = die $ "Unsupported empty array value for " ++ show n
-       mkInp (vs, n, CgArray sws@(sw:_)) =  pprCWord True sw <+> text n P.<> brackets (int (length sws)) <+> text "= {"
+       mkInp (vs, n, CgArray sws@(sv:_)) =  pprCWord True sv <+> text n P.<> brackets (int (length sws)) <+> text "= {"
                                                       $$ nest 4 (fsep (punctuate comma (align vs)))
                                                       $$ text "};"
                                          $$ text ""
                                          $$ text "printf" P.<> parens (printQuotes (text "Contents of input array" <+> text n P.<> text ":\\n")) P.<> semi
                                          $$ display (n, CgArray sws)
                                          $$ text ""
-       mkOut (v, CgAtomic sw)            = pprCWord False sw <+> text v P.<> semi
+       mkOut (v, CgAtomic sv)            = pprCWord False sv <+> text v P.<> semi
        mkOut (v, CgArray [])             = die $ "Unsupported empty array value for " ++ show v
-       mkOut (v, CgArray sws@(sw:_))     = pprCWord False sw <+> text v P.<> brackets (int (length sws)) P.<> semi
+       mkOut (v, CgArray sws@(sv:_))     = pprCWord False sv <+> text v P.<> brackets (int (length sws)) P.<> semi
        resultVar = text "__result"
        call = case mbRet of
                 Nothing -> fcall P.<> semi
-                Just sw -> pprCWord True sw <+> resultVar <+> text "=" <+> fcall P.<> semi
+                Just sv -> pprCWord True sv <+> resultVar <+> text "=" <+> fcall P.<> semi
        fcall = nm P.<> parens (fsep (punctuate comma (map mkCVal pairedInputs ++ map mkOVal outs)))
        mkCVal ([v], _, CgAtomic{}) = v
        mkCVal (vs,  n, CgAtomic{}) = die $ "Unexpected driver value computed for " ++ show n ++ render (hcat vs)
        mkCVal (_,   n, CgArray{})  = text n
        mkOVal (n, CgAtomic{})      = text "&" P.<> text n
        mkOVal (n, CgArray{})       = text n
-       display (n, CgAtomic sw)         = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=" <+> specifier cfg sw
+       display (n, CgAtomic sv)         = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=" <+> specifier cfg sv
                                                                                 P.<> text "\\n") P.<> comma <+> text n) P.<> semi
        display (n, CgArray [])         =  die $ "Unsupported empty array value for " ++ show n
-       display (n, CgArray sws@(sw:_)) =   text "int" <+> nctr P.<> semi
+       display (n, CgArray sws@(sv:_)) =   text "int" <+> nctr P.<> semi
                                         $$ text "for(" P.<> nctr <+> text "= 0;" <+> nctr <+> text "<" <+> int (length sws) <+> text "; ++" P.<> nctr P.<> text ")"
                                         $$ nest 2 (text "printf" P.<> parens (printQuotes (text " " <+> entrySpec <+> text "=" <+> spec P.<> text "\\n")
                                                                  P.<> comma <+> nctr <+> comma P.<> entry) P.<> semi)
                   where nctr      = text n P.<> text "_ctr"
                         entry     = text n P.<> text "[" P.<> nctr P.<> text "]"
                         entrySpec = text n P.<> text "[%d]"
-                        spec      = specifier cfg sw
+                        spec      = specifier cfg sv
 
 -- | Generate the C program
-genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SW -> Doc -> ([Doc], [String])
+genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> Doc -> ([Doc], [String])
 genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins preConsts tbls arrs _uis _axioms (SBVPgm asgns) cstrs origAsserts _) inVars outVars mbRet extDecls
   | isNothing (cgInteger cfg) && KUnbounded `Set.member` kindInfo
   = error $ "SBV->C: Unbounded integers are not supported by the C compiler."
@@ -471,7 +471,7 @@ genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins preConsts tbls arrs
 
        -- Do we need any linker flags for C?
        flagsNeeded = nub $ concatMap (getLDFlag . opRes) assignments
-          where opRes (sw, SBVApp o _) = (o, kindOf sw)
+          where opRes (sv, SBVApp o _) = (o, kindOf sv)
 
        codeSeg (fnm, ls) =  text "/* User specified custom code for" <+> doubleQuotes (text fnm) <+> text "*/"
                          $$ vcat (map text ls)
@@ -494,7 +494,7 @@ genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins preConsts tbls arrs
                       getMax m []     = m
                       getMax m (x:xs) = getMax (m `max` x) xs
 
-       consts = (falseSW, falseCW) : (trueSW, trueCW) : preConsts
+       consts = (falseSV, falseCV) : (trueSV, trueCV) : preConsts
 
        isConst s = isJust (lookup s consts)
 
@@ -512,32 +512,32 @@ genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins preConsts tbls arrs
                opSWs _                        = Set.empty
 
        isAlive :: (String, CgVal) -> Bool
-       isAlive (_, CgAtomic sw) = sw `Set.member` usedVariables
+       isAlive (_, CgAtomic sv) = sv `Set.member` usedVariables
        isAlive (_, _)           = True
 
        genIO :: Bool -> (Bool, (String, CgVal)) -> [Doc]
-       genIO True  (alive, (cNm, CgAtomic sw)) = [declSW typeWidth sw  <+> text "=" <+> text cNm P.<> semi               | alive]
-       genIO False (alive, (cNm, CgAtomic sw)) = [text "*" P.<> text cNm <+> text "=" <+> showSW cfg consts sw P.<> semi | alive]
+       genIO True  (alive, (cNm, CgAtomic sv)) = [declSV typeWidth sv  <+> text "=" <+> text cNm P.<> semi               | alive]
+       genIO False (alive, (cNm, CgAtomic sv)) = [text "*" P.<> text cNm <+> text "=" <+> showSV cfg consts sv P.<> semi | alive]
        genIO isInp (_,     (cNm, CgArray sws)) = zipWith genElt sws [(0::Int)..]
-         where genElt sw i
-                 | isInp = declSW typeWidth sw <+> text "=" <+> text entry       P.<> semi
-                 | True  = text entry          <+> text "=" <+> showSW cfg consts sw P.<> semi
+         where genElt sv i
+                 | isInp = declSV typeWidth sv <+> text "=" <+> text entry       P.<> semi
+                 | True  = text entry          <+> text "=" <+> showSV cfg consts sv P.<> semi
                  where entry = cNm ++ "[" ++ show i ++ "]"
 
-       mkRet sw = text "return" <+> showSW cfg consts sw P.<> semi
+       mkRet sv = text "return" <+> showSV cfg consts sv P.<> semi
 
-       genTbl :: ((Int, Kind, Kind), [SW]) -> (Int, Doc)
+       genTbl :: ((Int, Kind, Kind), [SV]) -> (Int, Doc)
        genTbl ((i, _, k), elts) =  (location, static <+> text "const" <+> text (show k) <+> text ("table" ++ show i) P.<> text "[] = {"
-                                              $$ nest 4 (fsep (punctuate comma (align (map (showSW cfg consts) elts))))
+                                              $$ nest 4 (fsep (punctuate comma (align (map (showSV cfg consts) elts))))
                                               $$ text "};")
          where static   = if location == -1 then text "static" else empty
                location = maximum (-1 : map getNodeId elts)
 
-       getNodeId s@(SW _ (NodeId n)) | isConst s = -1
+       getNodeId s@(SV _ (NodeId n)) | isConst s = -1
                                      | True      = n
 
-       genAsgn :: (SW, SBVExpr) -> (Int, Doc)
-       genAsgn (sw, n) = (getNodeId sw, ppExpr cfg consts n (declSW typeWidth sw) (declSWNoConst typeWidth sw) P.<> semi)
+       genAsgn :: (SV, SBVExpr) -> (Int, Doc)
+       genAsgn (sv, n) = (getNodeId sv, ppExpr cfg consts n (declSV typeWidth sv) (declSVNoConst typeWidth sv) P.<> semi)
 
        -- merge tables intermixed with assignments and assertions, paying attention to putting tables as
        -- early as possible and tables right after.. Note that the assignment list (second argument) is sorted on its order
@@ -549,11 +549,11 @@ genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins preConsts tbls arrs
                  | i < i'                                 = (i,  t)  : merge2 trest as
                  | True                                   = (i', a) : merge2 ts arest
 
-       genAssert (msg, cs, sw) = (getNodeId sw, doc)
+       genAssert (msg, cs, sv) = (getNodeId sv, doc)
          where doc =     text "/* ASSERTION:" <+> text msg
                      $$  maybe empty (vcat . map text) (locInfo (getCallStack `fmap` cs))
                      $$  text " */"
-                     $$  text "if" P.<> parens (showSW cfg consts sw)
+                     $$  text "if" P.<> parens (showSV cfg consts sv)
                      $$  text "{"
                      $+$ nest 2 (vcat [errOut, text "exit(-1);"])
                      $$  text "}"
@@ -577,7 +577,7 @@ handlePB o args = case o of
   where addIf :: [Int] -> Doc
         addIf cs = parens $ fsep $ intersperse (text "+") [parens (a <+> text "?" <+> int c <+> text ":" <+> int 0) | (a, c) <- zip args cs]
 
-handleIEEE :: FPOp -> [(SW, CW)] -> [(SW, Doc)] -> Doc -> Doc
+handleIEEE :: FPOp -> [(SV, CV)] -> [(SV, Doc)] -> Doc -> Doc
 handleIEEE w consts as var = cvt w
   where same f                   = (f, f)
         named fnm dnm f          = (f fnm, f dnm)
@@ -643,11 +643,11 @@ handleIEEE w consts as var = cvt w
         -- Check that the RM is RoundNearestTiesToEven.
         -- If we start supporting other rounding-modes, this would be the point where we'd insert the rounding-mode set/reset code
         -- instead of merely returning OK or not
-        checkRM (Just cv@(CW (KUserSort "RoundingMode" _) v)) =
+        checkRM (Just cv@(CV (KUserSort "RoundingMode" _) v)) =
               case v of
-                CWUserSort (_, "RoundNearestTiesToEven") -> Nothing
-                CWUserSort (_, s)                        -> Just (Right $ "handleIEEE: Unsupported rounding-mode: " ++ show s ++ " for: " ++ show w)
-                _                                        -> Just (Left  $ "handleIEEE: Unexpected value for rounding-mode: " ++ show cv ++ " for: " ++ show w)
+                CUserSort (_, "RoundNearestTiesToEven") -> Nothing
+                CUserSort (_, s)                        -> Just (Right $ "handleIEEE: Unsupported rounding-mode: " ++ show s ++ " for: " ++ show w)
+                _                                       -> Just (Left  $ "handleIEEE: Unexpected value for rounding-mode: " ++ show cv ++ " for: " ++ show w)
         checkRM (Just cv) = Just (Left  $ "handleIEEE: Expected rounding-mode, but got: " ++ show cv ++ " for: " ++ show w)
         checkRM Nothing   = Just (Right $ "handleIEEE: Non-constant rounding-mode for: " ++ show w)
 
@@ -670,7 +670,7 @@ handleIEEE w consts as var = cvt w
                        <+> text "&&" <+> parens (text "FP_ZERO == fpclassify" P.<> parens b)                                      -- b is zero
                        <+> text "&&" <+> parens (text "signbit" P.<> parens a <+> text "!=" <+> text "signbit" P.<> parens b)       -- a and b differ in sign
 
-ppExpr :: CgConfig -> [(SW, CW)] -> SBVExpr -> Doc -> (Doc, Doc) -> Doc
+ppExpr :: CgConfig -> [(SV, CV)] -> SBVExpr -> Doc -> (Doc, Doc) -> Doc
 ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
   | doNotAssign op
   = typ <+> var P.<> semi <+> rhs
@@ -679,7 +679,7 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
   where doNotAssign (IEEEFP FP_Reinterpret{}) = True   -- generates a memcpy instead; no simple assignment
         doNotAssign _                         = False  -- generates simple assignment
 
-        rhs = p op (map (showSW cfg consts) opArgs)
+        rhs = p op (map (showSV cfg consts) opArgs)
 
         rtc = cgRTC cfg
 
@@ -689,9 +689,9 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                   ]
 
         -- see if we can find a constant shift; makes the output way more readable
-        getShiftAmnt def [_, sw] = case sw `lookup` consts of
-                                    Just (CW _  (CWInteger i)) -> integer i
-                                    _                          -> def
+        getShiftAmnt def [_, sv] = case sv `lookup` consts of
+                                    Just (CV _  (CInteger i)) -> integer i
+                                    _                         -> def
         getShiftAmnt def _       = def
 
         p :: Op -> [Doc] -> Doc
@@ -721,8 +721,8 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
           | needsCheckL                = cndLkUp checkLeft
           | needsCheckR                = cndLkUp checkRight
           | True                       = lkUp
-          where [index, defVal] = map (showSW cfg consts) [ind, def]
-                lkUp = text "table" P.<> int t P.<> brackets (showSW cfg consts ind)
+          where [index, defVal] = map (showSV cfg consts) [ind, def]
+                lkUp = text "table" P.<> int t P.<> brackets (showSV cfg consts ind)
                 cndLkUp cnd = cnd <+> text "?" <+> defVal <+> text ":" <+> lkUp
                 checkLeft  = index <+> text "< 0"
                 checkRight = index <+> text ">=" <+> int len
@@ -747,7 +747,7 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
         -- NB: Quot is supposed to truncate toward 0; Not clear to me if C guarantees this behavior.
         -- Brief googling suggests C99 does indeed truncate toward 0, but other C compilers might differ.
         p Quot [a, b] = let k = kindOf (head opArgs)
-                            z = mkConst cfg $ mkConstCW k (0::Integer)
+                            z = mkConst cfg $ mkConstCV k (0::Integer)
                         in protectDiv0 k "/" z a b
         p Rem  [a, b] = protectDiv0 (kindOf (head opArgs)) "%" a a b
         p UNeg [a]    = parens (text "-" <+> a)

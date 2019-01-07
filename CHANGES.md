@@ -60,16 +60,22 @@
         * Existential  : bAny    became   sAny
         * Universal    : bAll    became   sAll
 
-  * [BACKWARDS COMPATIBILITY] Hostorically, SBV focused on bit-vectors and machine
+  * [BACKWARDS COMPATIBILITY, INTERNAL] Hostorically, SBV focused on bit-vectors and machine
     words, which meant lots of internal types were named suggestive of this heritage.
     With the addition of `SInteger`, `SReal`, `SFloat`, `SDouble` we have expanded
     this, but still remained focused on atomic types. But, thanks largely to
     Joel Burget, SBV now supports symbolic characters, strings, lists, and now
-    tuples; which makes this all naming confusing. To reflect, we have made the
-    following internal renamings:
+    tuples, and nested tuples/lists, which makes this word-oriented naming confusing.
+    To reflect, we made the following internal renamings:
 
-        * SymWord became SymVal
+        * SymWord     became      SymVal
+        * SW          became      SV
+        * CW          became      CV
+        * CWVal       became      CVal
 
+    Along with these, many of the internal constructor/variable names also changed in
+    a similar fashion.
+    
     For most casual users, these changes should not require any changes. But if you were
     developing libraries on top of SBV, then you will have to adapt to the new schema.
     Please report if there are any gotchas we have forgotten about.

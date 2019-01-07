@@ -65,11 +65,11 @@ import Data.Ratio
 
 -- | Boolean True.
 svTrue :: SVal
-svTrue = SVal KBool (Left trueCW)
+svTrue = SVal KBool (Left trueCV)
 
 -- | Boolean False.
 svFalse :: SVal
-svFalse = SVal KBool (Left falseCW)
+svFalse = SVal KBool (Left falseCV)
 
 -- | Convert from a Boolean.
 svBool :: Bool -> SVal
@@ -77,50 +77,50 @@ svBool b = if b then svTrue else svFalse
 
 -- | Convert from an Integer.
 svInteger :: Kind -> Integer -> SVal
-svInteger k n = SVal k (Left $! mkConstCW k n)
+svInteger k n = SVal k (Left $! mkConstCV k n)
 
 -- | Convert from a Float
 svFloat :: Float -> SVal
-svFloat f = SVal KFloat (Left $! CW KFloat (CWFloat f))
+svFloat f = SVal KFloat (Left $! CV KFloat (CFloat f))
 
 -- | Convert from a Float
 svDouble :: Double -> SVal
-svDouble d = SVal KDouble (Left $! CW KDouble (CWDouble d))
+svDouble d = SVal KDouble (Left $! CV KDouble (CDouble d))
 
 -- | Convert from a String
 svString :: String -> SVal
-svString s = SVal KString (Left $! CW KString (CWString s))
+svString s = SVal KString (Left $! CV KString (CString s))
 
 -- | Convert from a Char
 svChar :: Char -> SVal
-svChar c = SVal KChar (Left $! CW KChar (CWChar c))
+svChar c = SVal KChar (Left $! CV KChar (CChar c))
 
 -- | Convert from a Rational
 svReal :: Rational -> SVal
-svReal d = SVal KReal (Left $! CW KReal (CWAlgReal (fromRational d)))
+svReal d = SVal KReal (Left $! CV KReal (CAlgReal (fromRational d)))
 
 --------------------------------------------------------------------------------
 -- Basic destructors
 
 -- | Extract a bool, by properly interpreting the integer stored.
 svAsBool :: SVal -> Maybe Bool
-svAsBool (SVal _ (Left cw)) = Just (cwToBool cw)
+svAsBool (SVal _ (Left cv)) = Just (cvToBool cv)
 svAsBool _                  = Nothing
 
 -- | Extract an integer from a concrete value.
 svAsInteger :: SVal -> Maybe Integer
-svAsInteger (SVal _ (Left (CW _ (CWInteger n)))) = Just n
-svAsInteger _                                    = Nothing
+svAsInteger (SVal _ (Left (CV _ (CInteger n)))) = Just n
+svAsInteger _                                   = Nothing
 
 -- | Grab the numerator of an SReal, if available
 svNumerator :: SVal -> Maybe Integer
-svNumerator (SVal KReal (Left (CW KReal (CWAlgReal (AlgRational True r))))) = Just $ numerator r
-svNumerator _                                                               = Nothing
+svNumerator (SVal KReal (Left (CV KReal (CAlgReal (AlgRational True r))))) = Just $ numerator r
+svNumerator _                                                              = Nothing
 
 -- | Grab the denominator of an SReal, if available
 svDenominator :: SVal -> Maybe Integer
-svDenominator (SVal KReal (Left (CW KReal (CWAlgReal (AlgRational True r))))) = Just $ denominator r
-svDenominator _                                                               = Nothing
+svDenominator (SVal KReal (Left (CV KReal (CAlgReal (AlgRational True r))))) = Just $ denominator r
+svDenominator _                                                              = Nothing
 
 -------------------------------------------------------------------------------------
 -- | Constructing [x, y, .. z] and [x .. y]. Only works when all arguments are concrete and integral and the result is guaranteed finite
@@ -269,50 +269,50 @@ svQuotRem :: SVal -> SVal -> (SVal, SVal)
 svQuotRem x y = (x `svQuot` y, x `svRem` y)
 
 -- | Optimize away x == true and x /= false to x; otherwise just do eqOpt
-eqOptBool :: Op -> SW -> SW -> SW -> Maybe SW
+eqOptBool :: Op -> SV -> SV -> SV -> Maybe SV
 eqOptBool op w x y
-  | k == KBool && op == Equal    && x == trueSW  = Just y         -- true  .== y     --> y
-  | k == KBool && op == Equal    && y == trueSW  = Just x         -- x     .== true  --> x
-  | k == KBool && op == NotEqual && x == falseSW = Just y         -- false ./= y     --> y
-  | k == KBool && op == NotEqual && y == falseSW = Just x         -- x     ./= false --> x
+  | k == KBool && op == Equal    && x == trueSV  = Just y         -- true  .== y     --> y
+  | k == KBool && op == Equal    && y == trueSV  = Just x         -- x     .== true  --> x
+  | k == KBool && op == NotEqual && x == falseSV = Just y         -- false ./= y     --> y
+  | k == KBool && op == NotEqual && y == falseSV = Just x         -- x     ./= false --> x
   | True                                         = eqOpt w x y    -- fallback
   where k = swKind x
 
 -- | Equality.
 svEqual :: SVal -> SVal -> SVal
-svEqual = liftSym2B (mkSymOpSC (eqOptBool Equal trueSW) Equal) rationalCheck (==) (==) (==) (==) (==) (==) (==) (==) (==)
+svEqual = liftSym2B (mkSymOpSC (eqOptBool Equal trueSV) Equal) rationalCheck (==) (==) (==) (==) (==) (==) (==) (==) (==)
 
 -- | Inequality.
 svNotEqual :: SVal -> SVal -> SVal
-svNotEqual = liftSym2B (mkSymOpSC (eqOptBool NotEqual falseSW) NotEqual) rationalCheck (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=)
+svNotEqual = liftSym2B (mkSymOpSC (eqOptBool NotEqual falseSV) NotEqual) rationalCheck (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=)
 
 -- | Less than.
 svLessThan :: SVal -> SVal -> SVal
 svLessThan x y
   | isConcreteMax x = svFalse
   | isConcreteMin y = svFalse
-  | True            = liftSym2B (mkSymOpSC (eqOpt falseSW) LessThan) rationalCheck (<) (<) (<) (<) (<) (<) (<) (<) (uiLift "<" (<)) x y
+  | True            = liftSym2B (mkSymOpSC (eqOpt falseSV) LessThan) rationalCheck (<) (<) (<) (<) (<) (<) (<) (<) (uiLift "<" (<)) x y
 
 -- | Greater than.
 svGreaterThan :: SVal -> SVal -> SVal
 svGreaterThan x y
   | isConcreteMin x = svFalse
   | isConcreteMax y = svFalse
-  | True            = liftSym2B (mkSymOpSC (eqOpt falseSW) GreaterThan) rationalCheck (>) (>) (>) (>) (>) (>) (>) (>) (uiLift ">"  (>)) x y
+  | True            = liftSym2B (mkSymOpSC (eqOpt falseSV) GreaterThan) rationalCheck (>) (>) (>) (>) (>) (>) (>) (>) (uiLift ">"  (>)) x y
 
 -- | Less than or equal to.
 svLessEq :: SVal -> SVal -> SVal
 svLessEq x y
   | isConcreteMin x = svTrue
   | isConcreteMax y = svTrue
-  | True            = liftSym2B (mkSymOpSC (eqOpt trueSW) LessEq) rationalCheck (<=) (<=) (<=) (<=) (<=) (<=) (<=) (<=) (uiLift "<=" (<=)) x y
+  | True            = liftSym2B (mkSymOpSC (eqOpt trueSV) LessEq) rationalCheck (<=) (<=) (<=) (<=) (<=) (<=) (<=) (<=) (uiLift "<=" (<=)) x y
 
 -- | Greater than or equal to.
 svGreaterEq :: SVal -> SVal -> SVal
 svGreaterEq x y
   | isConcreteMax x = svTrue
   | isConcreteMin y = svTrue
-  | True            = liftSym2B (mkSymOpSC (eqOpt trueSW) GreaterEq) rationalCheck (>=) (>=) (>=) (>=) (>=) (>=) (>=) (>=) (uiLift ">=" (>=)) x y
+  | True            = liftSym2B (mkSymOpSC (eqOpt trueSV) GreaterEq) rationalCheck (>=) (>=) (>=) (>=) (>=) (>=) (>=) (>=) (uiLift ">=" (>=)) x y
 
 -- | Bitwise and.
 svAnd :: SVal -> SVal -> SVal
@@ -323,9 +323,9 @@ svAnd x y
   | isConcreteOnes y = x
   | True             = liftSym2 (mkSymOpSC opt And) (const (const True)) (noReal ".&.") (.&.) (noFloat ".&.") (noDouble ".&.") x y
   where opt a b
-          | a == falseSW || b == falseSW = Just falseSW
-          | a == trueSW                  = Just b
-          | b == trueSW                  = Just a
+          | a == falseSV || b == falseSV = Just falseSV
+          | a == trueSV                  = Just b
+          | b == trueSV                  = Just a
           | True                         = Nothing
 
 -- | Bitwise or.
@@ -338,9 +338,9 @@ svOr x y
   | True             = liftSym2 (mkSymOpSC opt Or) (const (const True))
                        (noReal ".|.") (.|.) (noFloat ".|.") (noDouble ".|.") x y
   where opt a b
-          | a == trueSW || b == trueSW = Just trueSW
-          | a == falseSW               = Just b
-          | b == falseSW               = Just a
+          | a == trueSV || b == trueSV = Just trueSV
+          | a == falseSV               = Just b
+          | b == falseSV               = Just a
           | True                       = Nothing
 
 -- | Bitwise xor.
@@ -353,9 +353,9 @@ svXOr x y
   | True             = liftSym2 (mkSymOpSC opt XOr) (const (const True))
                        (noReal "xor") xor (noFloat "xor") (noDouble "xor") x y
   where opt a b
-          | a == b && swKind a == KBool = Just falseSW
-          | a == falseSW                = Just b
-          | b == falseSW                = Just a
+          | a == b && swKind a == KBool = Just falseSV
+          | a == falseSV                = Just b
+          | b == falseSV                = Just a
           | True                        = Nothing
 
 -- | Bitwise complement.
@@ -364,8 +364,8 @@ svNot = liftSym1 (mkSymOp1SC opt Not)
                  (noRealUnary "complement") complement
                  (noFloatUnary "complement") (noDoubleUnary "complement")
   where opt a
-          | a == falseSW = Just trueSW
-          | a == trueSW  = Just falseSW
+          | a == falseSV = Just trueSV
+          | a == trueSV  = Just falseSV
           | True         = Nothing
 
 -- | Shift left by a constant amount. Translates to the "bvshl"
@@ -435,14 +435,14 @@ rot toLeft sz amt x
 svExtract :: Int -> Int -> SVal -> SVal
 svExtract i j x@(SVal (KBounded s _) _)
   | i < j
-  = SVal k (Left $! CW k (CWInteger 0))
-  | SVal _ (Left (CW _ (CWInteger v))) <- x
-  = SVal k (Left $! normCW (CW k (CWInteger (v `shiftR` j))))
+  = SVal k (Left $! CV k (CInteger 0))
+  | SVal _ (Left (CV _ (CInteger v))) <- x
+  = SVal k (Left $! normCV (CV k (CInteger (v `shiftR` j))))
   | True
   = SVal k (Right (cache y))
   where k = KBounded s (i - j + 1)
-        y st = do sw <- svToSW st x
-                  newExpr st k (SBVApp (Extract i j) [sw])
+        y st = do sv <- svToSV st x
+                  newExpr st k (SBVApp (Extract i j) [sv])
 svExtract _ _ _ = error "extract: non-bitvector type"
 
 -- | Join two words, by concataneting
@@ -450,14 +450,14 @@ svJoin :: SVal -> SVal -> SVal
 svJoin x@(SVal (KBounded s i) a) y@(SVal (KBounded _ j) b)
   | i == 0 = y
   | j == 0 = x
-  | Left (CW _ (CWInteger m)) <- a, Left (CW _ (CWInteger n)) <- b
-  = SVal k (Left $! CW k (CWInteger (m `shiftL` j .|. n)))
+  | Left (CV _ (CInteger m)) <- a, Left (CV _ (CInteger n)) <- b
+  = SVal k (Left $! CV k (CInteger (m `shiftL` j .|. n)))
   | True
   = SVal k (Right (cache z))
   where
     k = KBounded s (i + j)
-    z st = do xsw <- svToSW st x
-              ysw <- svToSW st y
+    z st = do xsw <- svToSV st x
+              ysw <- svToSV st y
               newExpr st k (SBVApp Join [xsw, ysw])
 svJoin _ _ = error "svJoin: non-bitvector type"
 
@@ -482,10 +482,10 @@ svSymbolicMerge k force t a b
   where sameResult (SVal _ (Left c1)) (SVal _ (Left c2)) = c1 == c2
         sameResult _                  _                  = False
 
-        c st = do swt <- svToSW st t
+        c st = do swt <- svToSV st t
                   case () of
-                    () | swt == trueSW  -> svToSW st a       -- these two cases should never be needed as we expect symbolicMerge to be
-                    () | swt == falseSW -> svToSW st b       -- called with symbolic tests, but just in case..
+                    () | swt == trueSV  -> svToSV st a       -- these two cases should never be needed as we expect symbolicMerge to be
+                    () | swt == falseSV -> svToSV st b       -- called with symbolic tests, but just in case..
                     () -> do {- It is tempting to record the choice of the test expression here as we branch down to the 'then' and 'else' branches. That is,
                                 when we evaluate 'a', we can make use of the fact that the test expression is True, and similarly we can use the fact that it
                                 is False when b is evaluated. In certain cases this can cut down on symbolic simulation significantly, for instance if
@@ -543,12 +543,12 @@ svSymbolicMerge k force t a b
                              -}
                              let sta = st `extendSValPathCondition` svAnd t
                              let stb = st `extendSValPathCondition` svAnd (svNot t)
-                             swa <- svToSW sta a -- evaluate 'then' branch
-                             swb <- svToSW stb b -- evaluate 'else' branch
+                             swa <- svToSV sta a -- evaluate 'then' branch
+                             swb <- svToSV stb b -- evaluate 'else' branch
                              case () of               -- merge:
                                () | swa == swb                      -> return swa
-                               () | swa == trueSW && swb == falseSW -> return swt
-                               () | swa == falseSW && swb == trueSW -> newExpr st k (SBVApp Not [swt])
+                               () | swa == trueSV && swb == falseSV -> return swt
+                               () | swa == falseSV && swb == trueSV -> newExpr st k (SBVApp Not [swt])
                                ()                                   -> newExpr st k (SBVApp Ite [swt, swa, swb])
 
 -- | Total indexing operation. @svSelect xs default index@ is
@@ -557,11 +557,11 @@ svSymbolicMerge k force t a b
 svSelect :: [SVal] -> SVal -> SVal -> SVal
 svSelect xs err ind
   | SVal _ (Left c) <- ind =
-    case cwVal c of
-      CWInteger i -> if i < 0 || i >= genericLength xs
-                     then err
-                     else xs `genericIndex` i
-      _           -> error $ "SBV.select: unsupported " ++ show (kindOf ind) ++ " valued select/index expression"
+    case cvVal c of
+      CInteger i -> if i < 0 || i >= genericLength xs
+                    then err
+                    else xs `genericIndex` i
+      _          -> error $ "SBV.select: unsupported " ++ show (kindOf ind) ++ " valued select/index expression"
 svSelect xsOrig err ind = xs `seq` SVal kElt (Right (cache r))
   where
     kInd = kindOf ind
@@ -574,12 +574,12 @@ svSelect xsOrig err ind = xs `seq` SVal kElt (Right (cache r))
            KBounded True  i -> genericTake ((2::Integer) ^ (i-1)) xsOrig
            KUnbounded       -> xsOrig
            _                -> error $ "SBV.select: unsupported " ++ show kInd ++ " valued select/index expression"
-    r st = do sws <- mapM (svToSW st) xs
-              swe <- svToSW st err
+    r st = do sws <- mapM (svToSV st) xs
+              swe <- svToSV st err
               if all (== swe) sws  -- off-chance that all elts are the same
                  then return swe
                  else do idx <- getTableIndex st kInd kElt sws
-                         swi <- svToSW st ind
+                         swi <- svToSV st ind
                          let len = length xs
                          -- NB. No need to worry here that the index
                          -- might be < 0; as the SMTLib translation
@@ -592,7 +592,7 @@ svChangeSign s x
   | True                    = SVal k (Right (cache y))
   where
     k = KBounded s (intSizeOf x)
-    y st = do xsw <- svToSW st x
+    y st = do xsw <- svToSV st x
               newExpr st k (SBVApp (Extract (intSizeOf x - 1) 0) [xsw])
 
 -- | Convert a symbolic bitvector from unsigned to signed.
@@ -612,7 +612,7 @@ svFromIntegral kTo x
   = result
   where result = SVal kTo (Right (cache y))
         kFrom  = kindOf x
-        y st   = do xsw <- svToSW st x
+        y st   = do xsw <- svToSV st x
                     newExpr st kTo (SBVApp (KindCast kFrom kTo) [xsw])
 
 --------------------------------------------------------------------------------
@@ -682,7 +682,7 @@ svShift toLeft x i
           = Just x
 
           | Just xv <- getConst x, Just iv <- getConst i
-          = Just $ SVal kx . Left $! normCW $ CW kx (CWInteger (xv `opC` shiftAmount iv))
+          = Just $ SVal kx . Left $! normCV $ CV kx (CInteger (xv `opC` shiftAmount iv))
 
           | isInteger x || isInteger i
           = bailOut $ "Not yet implemented unbounded/non-constants shifts for " ++ show (kx, ki) ++ ", please file a request!"
@@ -695,8 +695,8 @@ svShift toLeft x i
 
           where bailOut m = error $ "SBV." ++ nm ++ ": " ++ m
 
-                getConst (SVal _ (Left (CW _ (CWInteger val)))) = Just val
-                getConst _                                      = Nothing
+                getConst (SVal _ (Left (CV _ (CInteger val)))) = Just val
+                getConst _                                     = Nothing
 
                 opC | toLeft = shiftL
                     | True   = shiftR
@@ -738,8 +738,8 @@ svShift toLeft x i
         -- Regular shift, we know that the shift value fits into the bit-width of x, since it's between 0 and sizeOf x. So, we can just
         -- turn it into a properly sized argument and ship it to SMTLib
         regularShiftValue = SVal kx $ Right $ cache result
-           where result st = do sw1 <- svToSW st x
-                                sw2 <- svToSW st i
+           where result st = do sw1 <- svToSV st x
+                                sw2 <- svToSV st i
 
                                 let op | toLeft = Shl
                                        | True   = Shr
@@ -794,8 +794,8 @@ svRotateRight x i
 -- | Overflow detection.
 svMkOverflow :: OvOp -> SVal -> SVal -> SVal
 svMkOverflow o x y = SVal KBool (Right (cache r))
-    where r st = do sx <- svToSW st x
-                    sy <- svToSW st y
+    where r st = do sx <- svToSV st x
+                    sy <- svToSV st y
                     newExpr st KBool $ SBVApp (OverflowOp o) [sx, sy]
 
 ---------------------------------------------------------------------------------
@@ -809,15 +809,15 @@ data SArr = SArr (Kind, Kind) (Cached ArrayIndex)
 readSArr :: SArr -> SVal -> SVal
 readSArr (SArr (_, bk) f) a = SVal bk $ Right $ cache r
   where r st = do arr <- uncacheAI f st
-                  i   <- svToSW st a
+                  i   <- svToSV st a
                   newExpr st bk (SBVApp (ArrRead arr) [i])
 
 -- | Update the element at @a@ to be @b@
 writeSArr :: SArr -> SVal -> SVal -> SArr
 writeSArr (SArr ainfo f) a b = SArr ainfo $ cache g
   where g st = do arr  <- uncacheAI f st
-                  addr <- svToSW st a
-                  val  <- svToSW st b
+                  addr <- svToSV st a
+                  val  <- svToSV st b
                   amap <- R.readIORef (rArrayMap st)
 
                   let j   = ArrayIndex $ IMap.size amap
@@ -833,7 +833,7 @@ mergeSArr :: SVal -> SArr -> SArr -> SArr
 mergeSArr t (SArr ainfo a) (SArr _ b) = SArr ainfo $ cache h
   where h st = do ai <- uncacheAI a st
                   bi <- uncacheAI b st
-                  ts <- svToSW st t
+                  ts <- svToSV st t
                   amap <- R.readIORef (rArrayMap st)
 
                   let k   = ArrayIndex $ IMap.size amap
@@ -849,7 +849,7 @@ newSArr st ainfo mkNm mbDef = do
 
     mbSWDef <- case mbDef of
                  Nothing -> return Nothing
-                 Just sv -> Just <$> svToSW st sv
+                 Just sv -> Just <$> svToSV st sv
 
     let i   = ArrayIndex $ IMap.size amap
         nm  = mkNm (unArrayIndex i)
@@ -872,26 +872,26 @@ data SFunArr = SFunArr (Kind, Kind) (Cached FArrayIndex)
 
 -- | Convert a node-id to an SVal
 nodeIdToSVal :: Kind -> Int -> SVal
-nodeIdToSVal k i = swToSVal $ SW k (NodeId i)
+nodeIdToSVal k i = swToSVal $ SV k (NodeId i)
 
--- | Convert an SW to an SVal
-swToSVal :: SW -> SVal
-swToSVal sw@(SW k _) = SVal k $ Right $ cache $ const $ return sw
+-- | Convert an 'SV' to an 'SVal'
+swToSVal :: SV -> SVal
+swToSVal sv@(SV k _) = SVal k $ Right $ cache $ const $ return sv
 
 -- | A variant of SVal equality, but taking into account of constants
 -- NB. The rationalCheck is paranid perhaps, but is necessary in case
 -- we have some funky polynomial roots in there. We do allow for
--- floating-points here though. Why? Because the Eq instance of CW
+-- floating-points here though. Why? Because the Eq instance of 'CV'
 -- does the right thing by using object equality. (i.e., it does
 -- the right thing for NaN/+0/-0 etc.) A straightforward equality
 -- here would be wrong for floats!
-svEqualWithConsts :: (SVal, Maybe CW) -> (SVal, Maybe CW) -> SVal
-svEqualWithConsts sv1 sv2 = case (grabCW sv1, grabCW sv2) of
-                               (Just cw, Just cw') | rationalCheck cw cw' -> if cw == cw' then svTrue else svFalse
+svEqualWithConsts :: (SVal, Maybe CV) -> (SVal, Maybe CV) -> SVal
+svEqualWithConsts sv1 sv2 = case (grabCV sv1, grabCV sv2) of
+                               (Just cv, Just cv') | rationalCheck cv cv' -> if cv == cv' then svTrue else svFalse
                                _                                          -> fst sv1 `svEqual` fst sv2
-  where grabCW (_,                Just cw) = Just cw
-        grabCW (SVal _ (Left cw), _      ) = Just cw
-        grabCW _                           = Nothing
+  where grabCV (_,                Just cv) = Just cv
+        grabCV (SVal _ (Left cv), _      ) = Just cv
+        grabCV _                           = Nothing
 
 -- | Read the array element at @a@. For efficiency purposes, we create a memo-table
 -- as we go along, as otherwise we suffer significant performance penalties. See:
@@ -907,13 +907,13 @@ readSFunArr (SFunArr (ak, bk) f) address
                   fArrMap     <- R.readIORef (rFArrayMap st)
 
                   constMap <- R.readIORef (rconstMap st)
-                  let consts = Map.fromList [(i, cw) | (cw, SW _ (NodeId i)) <- Map.toList constMap]
+                  let consts = Map.fromList [(i, cv) | (cv, SV _ (NodeId i)) <- Map.toList constMap]
 
                   case unFArrayIndex fArrayIndex `IMap.lookup` fArrMap of
                     Nothing -> error $ "Data.SBV.readSFunArr: Impossible happened while trying to access SFunArray, can't find index: " ++ show fArrayIndex
                     Just (uninitializedRead, rCache) -> do
                         memoTable  <- R.readIORef rCache
-                        SW _ (NodeId addressNodeId) <- svToSW st address
+                        SV _ (NodeId addressNodeId) <- svToSV st address
 
                         -- If we hit the cache, return the result right away. If we miss, we need to
                         -- walk through each element to "merge" all possible reads as we do not know
@@ -925,13 +925,13 @@ readSFunArr (SFunArr (ak, bk) f) address
                           Nothing -> -- cache miss; walk down the cache items to form the chain of reads:
                                      do let aInfo = (address, addressNodeId `Map.lookup` consts)
 
-                                            find :: [(Int, SW)] -> SVal
+                                            find :: [(Int, SV)] -> SVal
                                             find []             = uninitializedRead address
                                             find ((i, v) : ivs) = svIte (svEqualWithConsts (nodeIdToSVal ak i, i `Map.lookup` consts) aInfo) (swToSVal v) (find ivs)
 
                                             finalValue = find (IMap.toAscList memoTable)
 
-                                        finalSW <- svToSW st finalValue
+                                        finalSW <- svToSV st finalValue
 
                                         -- Cache the result, so next time we can retrieve it faster if we look it up with the same address!
                                         -- The following line is really the whole point of having caching in SFunArray!
@@ -952,15 +952,15 @@ writeSFunArr (SFunArr (ak, bk) f) address b
                   fArrMap     <- R.readIORef (rFArrayMap st)
                   constMap    <- R.readIORef (rconstMap st)
 
-                  let consts = Map.fromList [(i, cw) | (cw, SW _ (NodeId i)) <- Map.toList constMap]
+                  let consts = Map.fromList [(i, cv) | (cv, SV _ (NodeId i)) <- Map.toList constMap]
 
                   case unFArrayIndex fArrayIndex `IMap.lookup` fArrMap of
                     Nothing          -> error $ "Data.SBV.writeSFunArr: Impossible happened while trying to access SFunArray, can't find index: " ++ show fArrayIndex
 
                     Just (aUi, rCache) -> do
                        memoTable <- R.readIORef rCache
-                       SW _ (NodeId addressNodeId) <- svToSW st address
-                       val              <- svToSW st b
+                       SV _ (NodeId addressNodeId) <- svToSV st address
+                       val                         <- svToSV st b
 
                        -- There are three cases:
                        --
@@ -982,14 +982,14 @@ writeSFunArr (SFunArr (ak, bk) f) address b
 
                                             -- NB. The order of modifications here is important as we
                                             -- keep the keys in ascending order. (Since we'll call fromAscList later on.)
-                                            walk :: [(Int, SW)] -> [(Int, SW)] -> IO [(Int, SW)]
+                                            walk :: [(Int, SV)] -> [(Int, SV)] -> IO [(Int, SV)]
                                             walk []           sofar = return $ reverse sofar
                                             walk ((i, s):iss) sofar = modify i s >>= \s' -> walk iss ((i, s') : sofar)
 
                                             -- At the cached address i, currently storing value s. Conditionally update it to `b` (new value)
                                             -- if the addresses match. Otherwise keep it the same.
-                                            modify :: Int -> SW -> IO SW
-                                            modify i s = svToSW st $ svIte (svEqualWithConsts (nodeIdToSVal ak i, i `Map.lookup` consts) aInfo) b (swToSVal s)
+                                            modify :: Int -> SV -> IO SV
+                                            modify i s = svToSV st $ svIte (svEqualWithConsts (nodeIdToSVal ak i, i `Map.lookup` consts) aInfo) b (swToSVal s)
 
                                         Right . IMap.fromAscList <$> walk (IMap.toAscList memoTable) []
 
@@ -1023,7 +1023,7 @@ mergeSFunArr t array1@(SFunArr ainfo@(sourceKind, targetKind) a) array2@(SFunArr
                   bi <- uncacheFAI b st
 
                   constMap <- R.readIORef (rconstMap st)
-                  let consts = Map.fromList [(i, cw) | (cw, SW _ (NodeId i)) <- Map.toList constMap]
+                  let consts = Map.fromList [(i, cv) | (cv, SV _ (NodeId i)) <- Map.toList constMap]
 
                   -- Catch the degenerate case of merging an array with itself. One
                   -- can argue this is pointless, but actually it comes up when one
@@ -1051,21 +1051,21 @@ mergeSFunArr t array1@(SFunArr ainfo@(sourceKind, targetKind) a) array2@(SFunArr
                                        bMemoT = IMap.toAscList bMemo
 
                                        -- gen takes a uninitialized-read creator, a key, and the choices from the "other"
-                                       -- cache that this key may map to. And creates a new SW that corresponds to the
+                                       -- cache that this key may map to. And creates a new SV that corresponds to the
                                        -- merged value:
-                                       gen :: (SVal -> SVal) -> Int -> [(Int, SW)] -> IO SW
-                                       gen mk k choices = svToSW st $ walk choices
+                                       gen :: (SVal -> SVal) -> Int -> [(Int, SV)] -> IO SV
+                                       gen mk k choices = svToSV st $ walk choices
                                          where kInfo = (nodeIdToSVal sourceKind k, k `Map.lookup` consts)
 
-                                               walk :: [(Int, SW)] -> SVal
+                                               walk :: [(Int, SV)] -> SVal
                                                walk []             = mk (fst kInfo)
                                                walk ((i, v) : ivs) = svIte (svEqualWithConsts (nodeIdToSVal sourceKind i, i `Map.lookup` consts) kInfo)
                                                                            (swToSVal v)
                                                                            (walk ivs)
 
                                        -- Insert into an existing map the new key value by merging according to the test
-                                       fill :: Int -> SW -> SW -> IMap.IntMap SW -> IO (IMap.IntMap SW)
-                                       fill k (SW _ (NodeId ni1)) (SW _ (NodeId ni2)) m = do v <- svToSW st (svIte t sval1 sval2)
+                                       fill :: Int -> SV -> SV -> IMap.IntMap SV -> IO (IMap.IntMap SV)
+                                       fill k (SV _ (NodeId ni1)) (SV _ (NodeId ni2)) m = do v <- svToSV st (svIte t sval1 sval2)
                                                                                              return $ IMap.insert k v m
                                          where sval1 = nodeIdToSVal targetKind ni1
                                                sval2 = nodeIdToSVal targetKind ni2
@@ -1136,11 +1136,11 @@ noCharLift2 x y = error $ "Unexpected binary operation called on chars: " ++ sho
 noStringLift2 :: String -> String -> a
 noStringLift2 x y = error $ "Unexpected binary operation called on strings: " ++ show (x, y)
 
-liftSym1 :: (State -> Kind -> SW -> IO SW) -> (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> SVal -> SVal
-liftSym1 _   opCR opCI opCF opCD   (SVal k (Left a)) = SVal k . Left  $! mapCW opCR opCI opCF opCD noCharLift noStringLift noUnint a
+liftSym1 :: (State -> Kind -> SV -> IO SV) -> (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> SVal -> SVal
+liftSym1 _   opCR opCI opCF opCD   (SVal k (Left a)) = SVal k . Left  $! mapCV opCR opCI opCF opCD noCharLift noStringLift noUnint a
 liftSym1 opS _    _    _    _    a@(SVal k _)        = SVal k $ Right $ cache c
-   where c st = do swa <- svToSW st a
-                   opS st k swa
+   where c st = do sva <- svToSV st a
+                   opS st k sva
 
 {- A note on constant folding.
 
@@ -1158,23 +1158,23 @@ If you try this, you'll see that it generates (shortened):
     (define-fun s3 () Bool (bvult s1 s2))
 
 But clearly we have all the info for s3 to be computed! The issue here is that the reduction of @x .== x@ to @true@
-happens after we start computing the if-then-else, hence we are already committed to an SW at that point. The call
-to ite eventually recognizes this, but at that point it picks up the now constants from SW's, missing the constant
+happens after we start computing the if-then-else, hence we are already committed to an SV at that point. The call
+to ite eventually recognizes this, but at that point it picks up the now constants from SV's, missing the constant
 folding opportunity.
 
-We can fix this, by looking up the constants table in liftSW2, like this:
+We can fix this, by looking up the constants table in liftSV2, along the lines of:
 
 
-    liftSW2 :: (CW -> CW -> Bool) -> (CW -> CW -> CW) -> (State -> Kind -> SW -> SW -> IO SW) -> Kind -> SVal -> SVal -> Cached SW
-    liftSW2 okCW opCW opS k a b = cache c
-      where c st = do sw1 <- svToSW st a
-                      sw2 <- svToSW st b
+    liftSV2 :: (CV -> CV -> Bool) -> (CV -> CV -> CV) -> (State -> Kind -> SV -> SV -> IO SV) -> Kind -> SVal -> SVal -> Cached SV
+    liftSV2 okCV opCV opS k a b = cache c
+      where c st = do sw1 <- svToSV st a
+                      sw2 <- svToSV st b
                       cmap <- readIORef (rconstMap st)
-                      let cw1  = [cw | ((_, cw), sw) <- M.toList cmap, sw == sw1]
-                          cw2  = [cw | ((_, cw), sw) <- M.toList cmap, sw == sw2]
-                      case (cw1, cw2) of
-                        ([x], [y]) | okCW x y -> newConst st $ opCW x y
-                        _                     -> opS st k sw1 sw2
+                      let cv1  = [cv | ((_, cv), sv) <- M.toList cmap, sv == sv1]
+                          cv2  = [cv | ((_, cv), sv) <- M.toList cmap, sv == sv2]
+                      case (cv1, cv2) of
+                        ([x], [y]) | okCV x y -> newConst st $ opCV x y
+                        _                     -> opS st k sv1 sv2
 
 (with obvious modifications to call sites to get the proper arguments.)
 
@@ -1188,39 +1188,39 @@ here to ignore these cases.
 
 See http://github.com/LeventErkok/sbv/issues/379 for some further discussion.
 -}
-liftSW2 :: (State -> Kind -> SW -> SW -> IO SW) -> Kind -> SVal -> SVal -> Cached SW
-liftSW2 opS k a b = cache c
-  where c st = do sw1 <- svToSW st a
-                  sw2 <- svToSW st b
+liftSV2 :: (State -> Kind -> SV -> SV -> IO SV) -> Kind -> SVal -> SVal -> Cached SV
+liftSV2 opS k a b = cache c
+  where c st = do sw1 <- svToSV st a
+                  sw2 <- svToSV st b
                   opS st k sw1 sw2
 
-liftSym2 :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (Float -> Float -> Float) -> (Double -> Double -> Double) -> SVal -> SVal -> SVal
-liftSym2 _   okCW opCR opCI opCF opCD   (SVal k (Left a)) (SVal _ (Left b)) | okCW a b = SVal k . Left  $! mapCW2 opCR opCI opCF opCD noCharLift2 noStringLift2 noUnint2 a b
-liftSym2 opS _    _    _    _    _    a@(SVal k _)        b                            = SVal k $ Right $  liftSW2 opS k a b
+liftSym2 :: (State -> Kind -> SV -> SV -> IO SV) -> (CV -> CV -> Bool) -> (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (Float -> Float -> Float) -> (Double -> Double -> Double) -> SVal -> SVal -> SVal
+liftSym2 _   okCV opCR opCI opCF opCD   (SVal k (Left a)) (SVal _ (Left b)) | okCV a b = SVal k . Left  $! mapCV2 opCR opCI opCF opCD noCharLift2 noStringLift2 noUnint2 a b
+liftSym2 opS _    _    _    _    _    a@(SVal k _)        b                            = SVal k $ Right $  liftSV2 opS k a b
 
-liftSym2B :: (State -> Kind -> SW -> SW -> IO SW) -> (CW -> CW -> Bool) -> (AlgReal -> AlgReal -> Bool) -> (Integer -> Integer -> Bool) -> (Float -> Float -> Bool) -> (Double -> Double -> Bool) -> (Char -> Char -> Bool) -> (String -> String -> Bool) -> ([CWVal] -> [CWVal] -> Bool) -> ([CWVal] -> [CWVal] -> Bool) -> ((Maybe Int, String) -> (Maybe Int, String) -> Bool) -> SVal -> SVal -> SVal
-liftSym2B _   okCW opCR opCI opCF opCD opCC opCS opCSeq opCTup opUI (SVal _ (Left a)) (SVal _ (Left b)) | okCW a b = svBool (liftCW2 opCR opCI opCF opCD opCC opCS opCSeq opCTup opUI a b)
-liftSym2B opS _    _    _    _    _    _    _    _      _      _    a                 b                            = SVal KBool $ Right $ liftSW2 opS KBool a b
+liftSym2B :: (State -> Kind -> SV -> SV -> IO SV) -> (CV -> CV -> Bool) -> (AlgReal -> AlgReal -> Bool) -> (Integer -> Integer -> Bool) -> (Float -> Float -> Bool) -> (Double -> Double -> Bool) -> (Char -> Char -> Bool) -> (String -> String -> Bool) -> ([CVal] -> [CVal] -> Bool) -> ([CVal] -> [CVal] -> Bool) -> ((Maybe Int, String) -> (Maybe Int, String) -> Bool) -> SVal -> SVal -> SVal
+liftSym2B _   okCV opCR opCI opCF opCD opCC opCS opCSeq opCTup opUI (SVal _ (Left a)) (SVal _ (Left b)) | okCV a b = svBool (liftCV2 opCR opCI opCF opCD opCC opCS opCSeq opCTup opUI a b)
+liftSym2B opS _    _    _    _    _    _    _    _      _      _    a                 b                            = SVal KBool $ Right $ liftSV2 opS KBool a b
 
 -- | Create a symbolic two argument operation; with shortcut optimizations
-mkSymOpSC :: (SW -> SW -> Maybe SW) -> Op -> State -> Kind -> SW -> SW -> IO SW
+mkSymOpSC :: (SV -> SV -> Maybe SV) -> Op -> State -> Kind -> SV -> SV -> IO SV
 mkSymOpSC shortCut op st k a b = maybe (newExpr st k (SBVApp op [a, b])) return (shortCut a b)
 
 -- | Create a symbolic two argument operation; no shortcut optimizations
-mkSymOp :: Op -> State -> Kind -> SW -> SW -> IO SW
+mkSymOp :: Op -> State -> Kind -> SV -> SV -> IO SV
 mkSymOp = mkSymOpSC (const (const Nothing))
 
-mkSymOp1SC :: (SW -> Maybe SW) -> Op -> State -> Kind -> SW -> IO SW
+mkSymOp1SC :: (SV -> Maybe SV) -> Op -> State -> Kind -> SV -> IO SV
 mkSymOp1SC shortCut op st k a = maybe (newExpr st k (SBVApp op [a])) return (shortCut a)
 
-mkSymOp1 :: Op -> State -> Kind -> SW -> IO SW
+mkSymOp1 :: Op -> State -> Kind -> SV -> IO SV
 mkSymOp1 = mkSymOp1SC (const Nothing)
 
--- | eqOpt says the references are to the same SW, thus we can optimize. Note that
+-- | eqOpt says the references are to the same SV, thus we can optimize. Note that
 -- we explicitly disallow KFloat/KDouble here. Why? Because it's *NOT* true that
 -- NaN == NaN, NaN >= NaN, and so-forth. So, we have to make sure we don't optimize
 -- floats and doubles, in case the argument turns out to be NaN.
-eqOpt :: SW -> SW -> SW -> Maybe SW
+eqOpt :: SV -> SV -> SV -> Maybe SV
 eqOpt w x y = case swKind x of
                 KFloat  -> Nothing
                 KDouble -> Nothing
@@ -1237,52 +1237,52 @@ uiLift w _   a           b           = error $ "Data.SBV.Core.Operations: Imposs
 -- 0 * x = 0 fails if x happens to be NaN or +/- Infinity. So,
 -- we merely return False when given a floating-point value here.
 isConcreteZero :: SVal -> Bool
-isConcreteZero (SVal _     (Left (CW _     (CWInteger n)))) = n == 0
-isConcreteZero (SVal KReal (Left (CW KReal (CWAlgReal v)))) = isExactRational v && v == 0
-isConcreteZero _                                            = False
+isConcreteZero (SVal _     (Left (CV _     (CInteger n)))) = n == 0
+isConcreteZero (SVal KReal (Left (CV KReal (CAlgReal v)))) = isExactRational v && v == 0
+isConcreteZero _                                           = False
 
 -- | Predicate for optimizing word operations like (+) and (*).
 -- NB. See comment on 'isConcreteZero' for why we don't match
 -- for Float/Double values here.
 isConcreteOne :: SVal -> Bool
-isConcreteOne (SVal _     (Left (CW _     (CWInteger 1)))) = True
-isConcreteOne (SVal KReal (Left (CW KReal (CWAlgReal v)))) = isExactRational v && v == 1
-isConcreteOne _                                            = False
+isConcreteOne (SVal _     (Left (CV _     (CInteger 1)))) = True
+isConcreteOne (SVal KReal (Left (CV KReal (CAlgReal v)))) = isExactRational v && v == 1
+isConcreteOne _                                           = False
 
 -- | Predicate for optimizing bitwise operations. The unbounded integer case of checking
 -- against -1 might look dubious, but that's how Haskell treats 'Integer' as a member
 -- of the Bits class, try @(-1 :: Integer) `testBit` i@ for any @i@ and you'll get 'True'.
 isConcreteOnes :: SVal -> Bool
-isConcreteOnes (SVal _ (Left (CW (KBounded b w) (CWInteger n)))) = n == if b then -1 else bit w - 1
-isConcreteOnes (SVal _ (Left (CW KUnbounded     (CWInteger n)))) = n == -1  -- see comment above
-isConcreteOnes (SVal _ (Left (CW KBool          (CWInteger n)))) = n == 1
-isConcreteOnes _                                                 = False
+isConcreteOnes (SVal _ (Left (CV (KBounded b w) (CInteger n)))) = n == if b then -1 else bit w - 1
+isConcreteOnes (SVal _ (Left (CV KUnbounded     (CInteger n)))) = n == -1  -- see comment above
+isConcreteOnes (SVal _ (Left (CV KBool          (CInteger n)))) = n == 1
+isConcreteOnes _                                                = False
 
 -- | Predicate for optimizing comparisons.
 isConcreteMax :: SVal -> Bool
-isConcreteMax (SVal _ (Left (CW (KBounded False w) (CWInteger n)))) = n == bit w - 1
-isConcreteMax (SVal _ (Left (CW (KBounded True  w) (CWInteger n)))) = n == bit (w - 1) - 1
-isConcreteMax (SVal _ (Left (CW KBool              (CWInteger n)))) = n == 1
-isConcreteMax _                                                     = False
+isConcreteMax (SVal _ (Left (CV (KBounded False w) (CInteger n)))) = n == bit w - 1
+isConcreteMax (SVal _ (Left (CV (KBounded True  w) (CInteger n)))) = n == bit (w - 1) - 1
+isConcreteMax (SVal _ (Left (CV KBool              (CInteger n)))) = n == 1
+isConcreteMax _                                                    = False
 
 -- | Predicate for optimizing comparisons.
 isConcreteMin :: SVal -> Bool
-isConcreteMin (SVal _ (Left (CW (KBounded False _) (CWInteger n)))) = n == 0
-isConcreteMin (SVal _ (Left (CW (KBounded True  w) (CWInteger n)))) = n == - bit (w - 1)
-isConcreteMin (SVal _ (Left (CW KBool              (CWInteger n)))) = n == 0
-isConcreteMin _                                                     = False
+isConcreteMin (SVal _ (Left (CV (KBounded False _) (CInteger n)))) = n == 0
+isConcreteMin (SVal _ (Left (CV (KBounded True  w) (CInteger n)))) = n == - bit (w - 1)
+isConcreteMin (SVal _ (Left (CV KBool              (CInteger n)))) = n == 0
+isConcreteMin _                                                    = False
 
 -- | Most operations on concrete rationals require a compatibility check to avoid faulting
 -- on algebraic reals.
-rationalCheck :: CW -> CW -> Bool
-rationalCheck a b = case (cwVal a, cwVal b) of
-                     (CWAlgReal x, CWAlgReal y) -> isExactRational x && isExactRational y
-                     _                          -> True
+rationalCheck :: CV -> CV -> Bool
+rationalCheck a b = case (cvVal a, cvVal b) of
+                     (CAlgReal x, CAlgReal y) -> isExactRational x && isExactRational y
+                     _                        -> True
 
 -- | Quot/Rem operations require a nonzero check on the divisor.
 --
-nonzeroCheck :: CW -> CW -> Bool
-nonzeroCheck _ b = cwVal b /= CWInteger 0
+nonzeroCheck :: CV -> CV -> Bool
+nonzeroCheck _ b = cvVal b /= CInteger 0
 
 -- | Same as rationalCheck, except for SBV's
 rationalSBVCheck :: SVal -> SVal -> Bool

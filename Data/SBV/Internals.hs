@@ -22,7 +22,7 @@ module Data.SBV.Internals (
   , module Data.SBV.Core.Data
 
   -- * Operations useful for instantiating SBV type classes
-  , genLiteral, genFromCW, CW(..), genMkSymVar, genParse, showModel, SMTModel(..), liftQRem, liftDMod, registerKind
+  , genLiteral, genFromCV, CV(..), genMkSymVar, genParse, showModel, SMTModel(..), liftQRem, liftDMod, registerKind
 
   -- * Compilation to C, extras
   , compileToC', compileToCLib'
@@ -51,7 +51,7 @@ module Data.SBV.Internals (
 import Control.Monad.IO.Class (MonadIO)
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model      (genLiteral, genFromCW, genMkSymVar, liftQRem, liftDMod)
+import Data.SBV.Core.Model      (genLiteral, genFromCV, genMkSymVar, liftQRem, liftDMod)
 import Data.SBV.Core.Symbolic   (IStage(..), MonadQuery, addSValOptGoal, registerKind)
 
 import Data.SBV.Compilers.C       (compileToC', compileToCLib')

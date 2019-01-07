@@ -15,9 +15,9 @@ module Data.SBV.Control.BaseIO where
 import Data.SBV.Control.Query (Assignment)
 import Data.SBV.Control.Types (CheckSatResult, SMTInfoFlag, SMTInfoResponse, SMTOption, SMTReasonUnknown)
 import Data.SBV.Control.Utils (SMTValue)
-import Data.SBV.Core.Concrete (CW)
+import Data.SBV.Core.Concrete (CV)
 import Data.SBV.Core.Data     (HasKind, Symbolic, SymArray, SymVal, SBool, SBV)
-import Data.SBV.Core.Symbolic (Query, QueryContext, QueryState, State, SMTModel, SMTResult, SW)
+import Data.SBV.Core.Symbolic (Query, QueryContext, QueryState, State, SMTModel, SMTResult, SV)
 
 import qualified Data.SBV.Control.Query as Trans
 import qualified Data.SBV.Control.Utils as Trans
@@ -381,9 +381,9 @@ getUninterpretedValue = Trans.getUninterpretedValue
 -- | Get the value of a term. If the kind is Real and solver supports decimal approximations,
 -- we will "squash" the representations.
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getValueCW'
-getValueCW :: Maybe Int -> SW -> Query CW
-getValueCW = Trans.getValueCW
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getValueCV'
+getValueCV :: Maybe Int -> SV -> Query CV
+getValueCV = Trans.getValueCV
 
 -- | Check for satisfiability.
 --
