@@ -38,7 +38,7 @@
     The mixing and matching of field types and nesting allows for very rich
     symbolic value representations.
 
-  * [BACKWARDS COMPATIBILITY] The 'Boolean' class is removed, which used to abstract
+  * [BACKWARDS COMPATIBILITY] The `Boolean` class is removed, which used to abstract
     over logical connectives. Previously, this class handled 'SBool' and 'Bool', but
     the generality was hardly ever used and caused typing ambiguities. The new
     implementation simplifies boolean operators to simply operate on the `SBool`
