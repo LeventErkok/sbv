@@ -29,6 +29,13 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Model () -- instances only
 
+-- For doctest use only
+--
+-- $setup
+-- >>> :set -XTypeApplications
+-- >>> import Data.SBV.Provers.Prover (prove)
+-- >>> import Data.SBV.Core.Model
+
 -- | Field access, inspired by the lens library. This is merely reverse
 -- application, but allows us to write things like @(1, 2)^._1@ which is
 -- likely to be familiar to most Haskell programmers out there. Note that
@@ -155,11 +162,19 @@ _7 = field (Get :: Label "_7")
 _8 :: HasField "_8" b a => SBV a -> SBV b
 _8 = field (Get :: Label "_8")
 
--- | Constructing a tuple from its parts and deconstructing back
+-- | Constructing a tuple from its parts and deconstructing back.
 class Tuple tup a | tup -> a where
-  -- | Deconstruct a tuple, getting its constituent parts apart.
+  -- | Deconstruct a tuple, getting its constituent parts apart. Forms an
+  -- isomorphism pair with 'untuple':
+  --
+  -- >>> prove $ \p -> tuple @(Integer, Bool, (String, Char)) (untuple p) .== p
+  -- Q.E.D.
+
   untuple :: SBV tup -> a
-  -- | Constructing a tuple from its parts
+  -- | Constructing a tuple from its parts. Forms an isomorphism pair with 'tuple':
+  --
+  -- >>> prove $ \p -> untuple @(Integer, Bool, (String, Char)) (tuple p) .== p
+  -- Q.E.D.
   tuple   :: a -> SBV tup
 
 instance (SymVal a, SymVal b) => Tuple (a, b) (SBV a, SBV b) where
