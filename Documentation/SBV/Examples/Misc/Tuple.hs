@@ -35,10 +35,18 @@ type Dict a b = SBV [(a, b)]
 -- | Create a dictionary of length 5, such that each element
 -- has an string key and each value is the length of the key.
 -- We impose a few more constraints to make the output interesting. 
--- We have:
+-- For instance, you might get:
 --
--- >>> example
+-- @ ghci> example
 -- [("nt_",3),("dHAk",4),("kzkk0",5),("mZxs9s",6),("c32'dPM",7)]
+-- @
+--
+-- Depending on your version of z3, a different answer might be provided.
+-- Here, we check that it satisfies our length conditions:
+--
+-- >>> import Data.List (genericLength)
+-- >>> example >>= \ex -> return (length ex == 5 && all (\(l, i) -> genericLength l == i) ex)
+-- True
 example :: IO [(String, Integer)]
 example = runSMT $ do dict :: Dict String Integer <- free "dict"
 
