@@ -6,18 +6,65 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Some tuple examples.
+-- A basic tuple use case, also demonstrating regular expressions,
+-- strings, etc. This is a basic template for getting SBV to produce
+-- valid data for applications that require inputs that satisfy
+-- arbitrary criteria.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Documentation.SBV.Examples.Misc.Tuple where
 
 import Data.SBV
 import Data.SBV.Tuple
+import Data.SBV.Control
 
-example :: IO SatResult
-example = sat $ do
-  [ab, cd] <- sTuples @(Integer, Integer, Integer) ["ab", "cd"]
-  constrain $ ab^._1 .== cd^._2
-  constrain $ ab^._2 .== cd^._1
+import Data.SBV.List   ((.!!))
+import Data.SBV.RegExp
+
+import qualified Data.SBV.String as S
+import qualified Data.SBV.List   as L
+
+-- | A dictionary is a list of lookup values. Note that we
+-- store the type @[(a, b)]@ as a symbolic value here, mixing
+-- sequences and tuples.
+type Dict a b = SBV [(a, b)]
+
+-- | Create a dictionary of length 5, such that each element
+-- has an string key and each value is the length of the key.
+-- We impose a few more constraints to make the output interesting. 
+-- We have:
+--
+-- >>> example
+-- [("nt_",3),("dHAk",4),("kzkk0",5),("mZxs9s",6),("c32'dPM",7)]
+example :: IO [(String, Integer)]
+example = runSMT $ do dict :: Dict String Integer <- free "dict"
+
+                      -- require precisely 5 elements
+                      let len   = 5 :: Int
+                          range = [0 .. len - 1]
+
+                      constrain $ L.length dict .== fromIntegral len
+
+                      -- require each key to be at of length 3 more than the index it occupies
+                      -- and look like an identifier
+                      let goodKey i s = let l = S.length s
+                                            r = asciiLower * KStar (asciiLetter + digit + "_" + "'")
+                                      in l .== fromIntegral i+3 .&& s `match` r
+
+                          restrict i = case untuple (dict .!! fromIntegral i) of
+                                         (k, v) -> constrain $ goodKey i k .&& v .== S.length k
+
+                      mapM_ restrict range
+
+                      -- require distinct keys:
+                      let keys = [(dict .!! fromIntegral i)^._1 | i <- range]
+                      constrain $ distinct keys
+
+                      query $ do cs <- checkSat
+                                 case cs of
+                                   Unk   -> error "Solver said Unknown!"
+                                   Unsat -> error "Solver said Unsat!"
+                                   Sat   -> getValue dict
