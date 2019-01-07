@@ -91,6 +91,10 @@
   * [BACKWARDS COMPATIBILITY] Renamed the module `Data.SBV.List.Bounded` to
     `Data.SBV.Tools.BoundedList`.
 
+  * Added function `ensureSat`, which makes sure the solver context is satisfiable
+    when called in the query mode. If not, an error will be thrown. Simplifies
+    programming when we expect a satisfiable result and want to bail out if otherwise.
+
   * Added `nil` to `Data.SBV.List`. Added `nil` and `uncons` to `Data.SBV.String`.
     These were inadvertently left out previously.
 

@@ -391,6 +391,12 @@ getValueCV = Trans.getValueCV
 checkSat :: Query CheckSatResult
 checkSat = Trans.checkSat
 
+-- | Ensure that the current context is satisfiable. If not, this function will throw an error.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.ensureSat'
+ensureSat :: Query ()
+ensureSat = Trans.ensureSat
+
 -- | Check for satisfiability with a custom check-sat-using command.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.checkSatUsing'

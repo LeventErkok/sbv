@@ -24,7 +24,7 @@ module Data.SBV.Control (
      , freshArray_, freshArray
 
      -- * Checking satisfiability
-     , CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet
+     , CheckSatResult(..), checkSat, ensureSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet
 
      -- * Querying the solver
      -- ** Extracting values
@@ -78,21 +78,21 @@ import Data.SBV.Core.Data     (SMTConfig(..))
 import Data.SBV.Core.Symbolic (MonadQuery(..), Query, Symbolic, QueryContext(..))
 
 import Data.SBV.Control.BaseIO
-import Data.SBV.Control.Query hiding (getInfo, getOption, getUnknownReason,
-                                      getSMTResult, getLexicographicOptResults,
-                                      getIndependentOptResults,
-                                      getParetoOptResults, getModel,
-                                      checkSatAssuming,
-                                      checkSatAssumingWithUnsatisfiableSet,
-                                      getAssertionStackDepth,
-                                      inNewAssertionStack, push, pop,
-                                      caseSplit, resetAssertions, echo, exit,
-                                      getUnsatCore, getProof, getInterpolant,
-                                      getAssertions, getAssignment,
-                                      mkSMTResult, freshVar_, freshVar,
-                                      freshArray, freshArray_, checkSat,
-                                      checkSatUsing, getValue,
-                                      getUninterpretedValue, timeout, io)
+import Data.SBV.Control.Query hiding (  getInfo, getOption, getUnknownReason
+                                      , getSMTResult, getLexicographicOptResults
+                                      , getIndependentOptResults
+                                      , getParetoOptResults, getModel
+                                      , checkSatAssuming
+                                      , checkSatAssumingWithUnsatisfiableSet
+                                      , getAssertionStackDepth
+                                      , inNewAssertionStack, push, pop
+                                      , caseSplit, resetAssertions, echo, exit
+                                      , getUnsatCore, getProof, getInterpolant
+                                      , getAssertions, getAssignment
+                                      , mkSMTResult, freshVar_, freshVar
+                                      , freshArray, freshArray_, checkSat, ensureSat
+                                      , checkSatUsing, getValue
+                                      , getUninterpretedValue, timeout, io)
 import Data.SBV.Control.Utils (SMTValue)
 
 import Data.SBV.Utils.ExtractIO (ExtractIO(..))

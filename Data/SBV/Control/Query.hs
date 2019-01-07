@@ -22,7 +22,7 @@ module Data.SBV.Control.Query (
      , CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet
      , getUnsatCore, getProof, getInterpolant, getAssignment, getOption, freshVar, freshVar_, freshArray, freshArray_, push, pop, getAssertionStackDepth
      , inNewAssertionStack, echo, caseSplit, resetAssertions, exit, getAssertions, getValue, getUninterpretedValue, getModel, getSMTResult
-     , getLexicographicOptResults, getIndependentOptResults, getParetoOptResults, getAllSatResult, getUnknownReason
+     , getLexicographicOptResults, getIndependentOptResults, getParetoOptResults, getAllSatResult, getUnknownReason, ensureSat
      , SMTOption(..), SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
      , Logic(..), Assignment(..)
      , ignoreExitCode, timeout
@@ -201,6 +201,19 @@ getUnknownReason = do ru <- getInfo ReasonUnknown
                         Resp_ReasonUnknown r -> return r
                         -- Shouldn't happen, but just in case:
                         _                    -> error $ "Unexpected reason value received: " ++ show ru
+
+-- | Generalization of 'Data.SBV.Control.ensureSat'
+ensureSat :: (MonadIO m, MonadQuery m) => m ()
+ensureSat = do cfg <- getConfig
+               cs <- checkSatUsing $ satCmd cfg
+               case cs of
+                 Sat -> return ()
+                 Unk -> do s <- getUnknownReason
+                           error $ unlines [ ""
+                                           , "*** Data.SBV.ensureSat: Solver reported Unknown!"
+                                           , "*** Reason: " ++ show s
+                                           ]
+                 Unsat -> error "Data.SBV.ensureSat: Solver reported Unsat!"
 
 -- | Generalization of 'Data.SBV.Control.getSMTResult'
 getSMTResult :: (MonadIO m, MonadQuery m) => m SMTResult
