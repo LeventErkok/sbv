@@ -21,7 +21,7 @@ module Data.SBV.Trans.Control (
      , freshArray_, freshArray
 
      -- * Checking satisfiability
-     , CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet
+     , CheckSatResult(..), checkSat, ensureSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet
 
      -- * Querying the solver
      -- ** Extracting values
