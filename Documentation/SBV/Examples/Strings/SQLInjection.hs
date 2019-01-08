@@ -109,13 +109,13 @@ exploitRe = R.KPlus (statementRe * "; ")
 -- We have:
 --
 -- >>> findInjection exampleProgram
--- "  f'; DROP TABLE 'users"
+-- "kg'; DROP TABLE 'users"
 --
 -- Indeed, if we substitute the suggested string, we get the program:
 --
--- > query ("SELECT msg FROM msgs WHERE topicid='  f'; DROP TABLE 'users'")
+-- > query ("SELECT msg FROM msgs WHERE topicid='kg'; DROP TABLE 'users'")
 --
--- which would query for topic @'  f'@ and then delete the users table!
+-- which would query for topic @'kg'@ and then delete the users table!
 findInjection :: SQLExpr -> IO String
 findInjection expr = runSMT $ do
 
