@@ -26,27 +26,41 @@ source-repository head
 
 Library
   default-language: Haskell2010
-  ghc-options     : -Wall
+  ghc-options     : -Wall -O2
   other-extensions: BangPatterns
+                    CPP
+                    ConstraintKinds
+                    DataKinds
                     DefaultSignatures
                     DeriveAnyClass
                     DeriveDataTypeable
+                    DeriveFunctor
+                    DeriveGeneric
                     FlexibleContexts
                     FlexibleInstances
                     FunctionalDependencies
+                    GADTs
                     GeneralizedNewtypeDeriving
+                    ImplicitParams
+                    InstanceSigs
+                    KindSignatures
+                    LambdaCase
                     MultiParamTypeClasses
-                    OverlappingInstances
-                    ParallelListComp
+                    NamedFieldPuns
+                    OverloadedLists
+                    OverloadedStrings
                     PatternGuards
+                    QuasiQuotes
                     Rank2Types
                     RankNTypes
                     ScopedTypeVariables
                     StandaloneDeriving
                     TemplateHaskell
                     TupleSections
+                    TypeFamilies
                     TypeOperators
                     TypeSynonymInstances
+                    UndecidableInstances
   Build-Depends   : base >= 4.9 && < 5
                   , crackNum >= 2.3
                   , ghc, QuickCheck, template-haskell
@@ -179,11 +193,21 @@ Library
 Test-Suite SBVTest
   type            : exitcode-stdio-1.0
   default-language: Haskell2010
-  ghc-options     : -Wall -with-rtsopts=-K64m
-  other-extensions: DeriveAnyClass
-                  , DeriveDataTypeable
-                  , Rank2Types
-                  , ScopedTypeVariables
+  ghc-options     : -Wall -with-rtsopts=-K64m -O2
+  other-extensions: DataKinds
+                    DeriveAnyClass
+                    DeriveDataTypeable
+                    FlexibleContexts
+                    GeneralizedNewtypeDeriving
+                    OverloadedLists
+                    OverloadedStrings
+                    Rank2Types
+                    RankNTypes
+                    ScopedTypeVariables
+                    StandaloneDeriving
+                    TemplateHaskell
+                    TupleSections
+                    TypeApplications
   Build-depends : base >= 4.9, filepath, syb, crackNum >= 2.3
                 , sbv, directory, random, mtl, containers
                 , template-haskell, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, QuickCheck
@@ -282,6 +306,21 @@ Test-Suite SBVDocTest
     Build-Depends:    base, directory, filepath, random
                     , doctest, Glob, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, mtl, QuickCheck, random
                     , sbv
+    ghc-options     : -Wall -O2
+    other-extensions: DataKinds
+                      DeriveAnyClass
+                      DeriveDataTypeable
+                      FlexibleContexts
+                      GeneralizedNewtypeDeriving
+                      OverloadedLists
+                      OverloadedStrings
+                      Rank2Types
+                      RankNTypes
+                      ScopedTypeVariables
+                      StandaloneDeriving
+                      TemplateHaskell
+                      TupleSections
+                      TypeApplications
     default-language: Haskell2010
     Hs-Source-Dirs  : SBVTestSuite
     main-is:          SBVDocTest.hs
@@ -292,6 +331,21 @@ Test-Suite SBVHLint
     build-depends:    base, directory, filepath, random
                     , hlint, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, mtl, QuickCheck
                     , sbv
+    ghc-options     : -Wall -O2
+    other-extensions: DataKinds
+                      DeriveAnyClass
+                      DeriveDataTypeable
+                      FlexibleContexts
+                      GeneralizedNewtypeDeriving
+                      OverloadedLists
+                      OverloadedStrings
+                      Rank2Types
+                      RankNTypes
+                      ScopedTypeVariables
+                      StandaloneDeriving
+                      TemplateHaskell
+                      TupleSections
+                      TypeApplications
     default-language: Haskell2010
     hs-source-dirs:   SBVTestSuite
     Other-modules   : Utils.SBVTestFramework
