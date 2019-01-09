@@ -54,6 +54,8 @@ import Data.SBV.Core.Model () -- instances only
 import Data.SBV.String
 import qualified Data.Char as C
 
+import Data.Proxy
+
 -- For testing only
 import Data.SBV.Char
 
@@ -280,7 +282,7 @@ lift1 w mbOp a
   = cv
   | True
   = SBV $ SVal k $ Right $ cache r
-  where k = kindOf (undefined :: b)
+  where k = kindOf (Proxy @b)
         r st = do sva <- sbvToSV st a
                   newExpr st k (SBVApp (StrOp w) [sva])
 

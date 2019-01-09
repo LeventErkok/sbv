@@ -10,19 +10,20 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                   #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE DefaultSignatures     #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE InstanceSigs          #-}
-{-# LANGUAGE PatternGuards         #-}
-{-# LANGUAGE DefaultSignatures     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE DeriveAnyClass        #-}
-{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE PatternGuards         #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
 
 module Data.SBV.Core.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
@@ -65,6 +66,8 @@ import Data.Int               (Int8, Int16, Int32, Int64)
 import Data.Word              (Word8, Word16, Word32, Word64)
 import Data.List              (elemIndex)
 import Data.Maybe             (fromMaybe)
+
+import Data.Proxy
 import Data.Typeable          (Typeable)
 
 import qualified Data.Generics as G    (Data(..))
@@ -336,7 +339,7 @@ instance Eq (SBV a) where
   SBV a /= SBV b = a /= b
 
 instance HasKind a => HasKind (SBV a) where
-  kindOf _ = kindOf (undefined :: a)
+  kindOf _ = kindOf (Proxy @a)
 
 -- | Convert a symbolic value to a symbolic-word
 sbvToSV :: State -> SBV a -> IO SV
@@ -444,11 +447,15 @@ class (HasKind a, Ord a, Typeable a) => SymVal a where
 
   default mkSymVal :: (MonadSymbolic m, Read a, G.Data a) => Maybe Quantifier -> Maybe String -> m (SBV a)
   mkSymVal mbQ mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar mbQ k mbNm)
-    where k = constructUKind (undefined :: a)
+    where -- NB.A call of the form
+          --      constructUKind (Proxy @a)
+          -- would be wrong here, as it would uninterpret the Proxy datatype!
+          -- So, we have to use the dreaded undefined value in this case.
+          k = constructUKind (undefined :: a)
 
   default literal :: Show a => a -> SBV a
-  literal x = let k@(KUserSort  _ conts) = kindOf x
-                  sx                     = show x
+  literal x = let k@(KUninterpreted  _ conts) = kindOf x
+                  sx                          = show x
                   mbIdx = case conts of
                             Right xs -> sx `elemIndex` xs
                             _        -> Nothing
@@ -456,7 +463,7 @@ class (HasKind a, Ord a, Typeable a) => SymVal a where
 
   default fromCV :: Read a => CV -> a
   fromCV (CV _ (CUserSort (_, s))) = read s
-  fromCV cv                        = error $ "Cannot convert CV " ++ show cv ++ " to kind " ++ show (kindOf (undefined :: a))
+  fromCV cv                        = error $ "Cannot convert CV " ++ show cv ++ " to kind " ++ show (kindOf (Proxy @a))
 
   isConcretely s p
     | Just i <- unliteral s = p i
@@ -614,7 +621,7 @@ class SymArray array where
 newtype SArray a b = SArray { unSArray :: SArr }
 
 instance (HasKind a, HasKind b) => Show (SArray a b) where
-  show SArray{} = "SArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"
+  show SArray{} = "SArray<" ++ showType (Proxy @a) ++ ":" ++ showType (Proxy @b) ++ ">"
 
 instance SymArray SArray where
   readArray   (SArray arr) (SBV a)               = SBV (readSArr arr a)
@@ -626,8 +633,8 @@ instance SymArray SArray where
                                      SArray <$> newSArr st (aknd, bknd) (mkNm mbNm) (unSBV <$> mbVal)
      where mkNm Nothing   t = "array_" ++ show t
            mkNm (Just nm) _ = nm
-           aknd = kindOf (undefined :: a)
-           bknd = kindOf (undefined :: b)
+           aknd = kindOf (Proxy @a)
+           bknd = kindOf (Proxy @b)
 
 -- | Arrays implemented internally, without translating to SMT-Lib functions:
 --
@@ -647,7 +654,7 @@ instance SymArray SArray where
 newtype SFunArray a b = SFunArray { unSFunArray :: SFunArr }
 
 instance (HasKind a, HasKind b) => Show (SFunArray a b) where
-  show SFunArray{} = "SFunArray<" ++ showType (undefined :: a) ++ ":" ++ showType (undefined :: b) ++ ">"
+  show SFunArray{} = "SFunArray<" ++ showType (Proxy @a) ++ ":" ++ showType (Proxy @b) ++ ">"
 
 instance SymArray SFunArray where
   readArray   (SFunArray arr) (SBV a)             = SBV (readSFunArr arr a)
@@ -659,5 +666,5 @@ instance SymArray SFunArray where
                                      SFunArray <$> newSFunArr st (aknd, bknd) (mkNm mbNm) (unSBV <$> mbVal)
     where mkNm Nothing t   = "funArray_" ++ show t
           mkNm (Just nm) _ = nm
-          aknd = kindOf (undefined :: a)
-          bknd = kindOf (undefined :: b)
+          aknd = kindOf (Proxy @a)
+          bknd = kindOf (Proxy @b)

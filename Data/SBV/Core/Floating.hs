@@ -11,6 +11,7 @@
 
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 module Data.SBV.Core.Floating (
          IEEEFloating(..), IEEEFloatConvertable(..)
@@ -22,6 +23,8 @@ import qualified Data.Numbers.CrackNum as CN (wordToFloat, wordToDouble, floatTo
 
 import Data.Int            (Int8,  Int16,  Int32,  Int64)
 import Data.Word           (Word8, Word16, Word32, Word64)
+
+import Data.Proxy
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
@@ -160,7 +163,7 @@ genericFPConverter mbConcreteOK mbSymbolicOK converter rm f
   where result  = SBV (SVal kTo (Right (cache y)))
         check w = maybe True ($ w) mbConcreteOK
         kFrom   = kindOf f
-        kTo     = kindOf (undefined :: r)
+        kTo     = kindOf (Proxy @r)
         y st    = do msv <- sbvToSV st rm
                      xsv <- sbvToSV st f
                      newExpr st kTo (SBVApp (IEEEFP (FP_Cast kFrom kTo msv)) [xsv])

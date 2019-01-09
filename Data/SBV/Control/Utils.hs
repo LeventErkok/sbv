@@ -43,6 +43,7 @@ import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, interca
 import Data.Char     (isPunctuation, isSpace, chr, ord, isDigit)
 import Data.Function (on)
 
+import Data.Proxy
 import Data.Typeable (Typeable)
 
 import Data.Int
@@ -196,12 +197,12 @@ inNewContext act = do st <- queryState
 -- | Generalization of 'Data.SBV.Control.freshVar_'
 freshVar_ :: forall a m. (MonadIO m, MonadQuery m, SymVal a) => m (SBV a)
 freshVar_ = inNewContext $ fmap SBV . svMkSymVar (Just EX) k Nothing
-  where k = kindOf (undefined :: a)
+  where k = kindOf (Proxy @a)
 
 -- | Generalization of 'Data.SBV.Control.freshVar'
 freshVar :: forall a m. (MonadIO m, MonadQuery m, SymVal a) => String -> m (SBV a)
 freshVar nm = inNewContext $ fmap SBV . svMkSymVar (Just EX) k (Just nm)
-  where k = kindOf (undefined :: a)
+  where k = kindOf (Proxy @a)
 
 -- | Generalization of 'Data.SBV.Control.freshArray_'
 freshArray_ :: (MonadIO m, MonadQuery m, SymArray array, HasKind a, HasKind b) => Maybe (SBV b) -> m (array a b)
@@ -363,7 +364,7 @@ instance (SMTValue a, Typeable a) => SMTValue [a] where
    -- and the ice is thin here. But it works, and is much better than a plethora
    -- of overlapping instances. Sigh.
    sexprToVal (ECon s)
-    | isKString (undefined :: [a]) && length s >= 2 && head s == '"' && last s == '"'
+    | isKString @[a] undefined && length s >= 2 && head s == '"' && last s == '"'
     = Just $ map unsafeCoerce s'
     | True
     = Just $ map (unsafeCoerce . c2w8) s'
@@ -452,25 +453,25 @@ getValue s = do sv <- inNewContext (`sbvToSV` s)
 getUninterpretedValue :: (MonadIO m, MonadQuery m, HasKind a) => SBV a -> m String
 getUninterpretedValue s =
         case kindOf s of
-          KUserSort _ (Left _) -> do sv <- inNewContext (`sbvToSV` s)
+          KUninterpreted _ (Left _) -> do sv <- inNewContext (`sbvToSV` s)
 
-                                     let nm  = show sv
-                                         cmd = "(get-value (" ++ nm ++ "))"
-                                         bad = unexpected "getValue" cmd "a model value" Nothing
+                                          let nm  = show sv
+                                              cmd = "(get-value (" ++ nm ++ "))"
+                                              bad = unexpected "getValue" cmd "a model value" Nothing
 
-                                     r <- ask cmd
+                                          r <- ask cmd
 
-                                     parse r bad $ \case EApp [EApp [ECon o,  ECon v]] | o == show sv -> return v
-                                                         _                                            -> bad r Nothing
+                                          parse r bad $ \case EApp [EApp [ECon o,  ECon v]] | o == show sv -> return v
+                                                              _                                            -> bad r Nothing
 
-          k                    -> error $ unlines [""
-                                                  , "*** SBV.getUninterpretedValue: Called on an 'interpreted' kind"
-                                                  , "*** "
-                                                  , "***    Kind: " ++ show k
-                                                  , "***    Hint: Use 'getValue' to extract value for interpreted kinds."
-                                                  , "*** "
-                                                  , "*** Only truly uninterpreted sorts should be used with 'getUninterpretedValue.'"
-                                                  ]
+          k                         -> error $ unlines [""
+                                                       , "*** SBV.getUninterpretedValue: Called on an 'interpreted' kind"
+                                                       , "*** "
+                                                       , "***    Kind: " ++ show k
+                                                       , "***    Hint: Use 'getValue' to extract value for interpreted kinds."
+                                                       , "*** "
+                                                       , "*** Only truly uninterpreted sorts should be used with 'getUninterpretedValue.'"
+                                                       ]
 
 -- | Get the value of a term, but in CV form. Used internally. The model-index, in particular is extremely Z3 specific!
 getValueCVHelper :: (MonadIO m, MonadQuery m) => Maybe Int -> SV -> m CV

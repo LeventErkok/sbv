@@ -42,6 +42,8 @@ import qualified Data.Char as C
 import Data.List (genericLength, genericIndex, genericDrop, genericTake)
 import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 
+import Data.Proxy
+
 -- For doctest use only
 --
 -- $setup
@@ -380,7 +382,7 @@ lift1 w mbOp a
   = cv
   | True
   = SBV $ SVal k $ Right $ cache r
-  where k = kindOf (undefined :: b)
+  where k = kindOf (Proxy @b)
         r st = do sva <- sbvToSV st a
                   newExpr st k (SBVApp (StrOp w) [sva])
 
@@ -391,7 +393,7 @@ lift2 w mbOp a b
   = cv
   | True
   = SBV $ SVal k $ Right $ cache r
-  where k = kindOf (undefined :: c)
+  where k = kindOf (Proxy @c)
         r st = do sva <- sbvToSV st a
                   svb <- sbvToSV st b
                   newExpr st k (SBVApp (StrOp w) [sva, svb])
@@ -403,7 +405,7 @@ lift3 w mbOp a b c
   = cv
   | True
   = SBV $ SVal k $ Right $ cache r
-  where k = kindOf (undefined :: d)
+  where k = kindOf (Proxy @d)
         r st = do sva <- sbvToSV st a
                   svb <- sbvToSV st b
                   svc <- sbvToSV st c

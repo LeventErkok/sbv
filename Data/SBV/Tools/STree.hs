@@ -21,6 +21,8 @@ module Data.SBV.Tools.STree (STree, readSTree, writeSTree, mkSTree) where
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 
+import Data.Proxy
+
 -- | A symbolic tree containing values of type e, indexed by
 -- elements of type i. Note that these are full-trees, and their
 -- their shapes remain constant. There is no API provided that
@@ -59,15 +61,15 @@ writeSTree s i j = walk (blastBE i) s
 -- | Construct the fully balanced initial tree using the given values.
 mkSTree :: forall i e. HasKind i => [SBV e] -> STree i e
 mkSTree ivals
-  | isReal (undefined :: i)
+  | isReal (Proxy @i)
   = error "SBV.STree.mkSTree: Cannot build a real-valued sized tree"
-  | not (isBounded (undefined :: i))
+  | not (isBounded (Proxy @i))
   = error "SBV.STree.mkSTree: Cannot build an infinitely large tree"
   | reqd /= given
   = error $ "SBV.STree.mkSTree: Required " ++ show reqd ++ " elements, received: " ++ show given
   | True
   = go ivals
-  where reqd = 2 ^ intSizeOf (undefined :: i)
+  where reqd = 2 ^ intSizeOf (Proxy @i)
         given = length ivals
         go []  = error "SBV.STree.mkSTree: Impossible happened, ran out of elements"
         go [l] = SLeaf l

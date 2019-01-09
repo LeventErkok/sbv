@@ -57,6 +57,7 @@ import Data.Maybe  (fromMaybe)
 import Data.String (IsString(..))
 import Data.Word   (Word8, Word16, Word32, Word64)
 
+import Data.Proxy
 import Data.Dynamic (fromDynamic, toDyn)
 
 import Test.QuickCheck                         (Testable(..), Arbitrary(..))
@@ -194,19 +195,19 @@ instance SymVal Char where
 
 instance SymVal a => SymVal [a] where
   mkSymVal
-    | isKString (undefined :: [a]) = genMkSymVar KString
-    | True                         = genMkSymVar (KList (kindOf (undefined :: a)))
+    | isKString @[a] undefined = genMkSymVar KString
+    | True                     = genMkSymVar (KList (kindOf (Proxy @a)))
 
   literal as
-    | isKString (undefined :: [a]) = case fromDynamic (toDyn as) of
-                                       Just s  -> SBV . SVal KString . Left . CV KString . CString $ s
-                                       Nothing -> error "SString: Cannot construct literal string!"
-    | True                         = let k = KList (kindOf (undefined :: a))
-                                     in SBV $ SVal k $ Left $ CV k $ CList $ map toCV as
+    | isKString @[a] undefined = case fromDynamic (toDyn as) of
+                                   Just s  -> SBV . SVal KString . Left . CV KString . CString $ s
+                                   Nothing -> error "SString: Cannot construct literal string!"
+    | True                     = let k = KList (kindOf (Proxy @a))
+                                 in SBV $ SVal k $ Left $ CV k $ CList $ map toCV as
 
   fromCV (CV _ (CString a)) = fromMaybe (error "SString: Cannot extract a literal string!")
                                         (fromDynamic (toDyn a))
-  fromCV (CV _ (CList a))   = fromCV . CV (kindOf (undefined :: a)) <$> a
+  fromCV (CV _ (CList a))   = fromCV . CV (kindOf (Proxy @a)) <$> a
   fromCV c                  = error $ "SymVal.fromCV: Unexpected non-list value: " ++ show c
 
 toCV :: SymVal a => a -> CVal
@@ -237,50 +238,50 @@ fromCVTup i inp = error $ "SymVal.fromCVTup: Impossible happened. Non-tuple rece
 
 -- | SymVal for 2-tuples
 instance (SymVal a, SymVal b) => SymVal (a, b) where
-   mkSymVal         = genMkSymVar (kindOf (undefined :: (a, b)))
-   literal (v1, v2) = mkCVTup 2   (kindOf (undefined :: (a, b))) [toCV v1, toCV v2]
+   mkSymVal         = genMkSymVar (kindOf (Proxy @(a, b)))
+   literal (v1, v2) = mkCVTup 2   (kindOf (Proxy @(a, b))) [toCV v1, toCV v2]
    fromCV  cv       = let ~[v1, v2] = fromCVTup 2 cv
                       in (fromCV v1, fromCV v2)
 
 -- | SymVal for 3-tuples
 instance (SymVal a, SymVal b, SymVal c) => SymVal (a, b, c) where
-   mkSymVal             = genMkSymVar (kindOf (undefined :: (a, b, c)))
-   literal (v1, v2, v3) = mkCVTup 3   (kindOf (undefined :: (a, b, c))) [toCV v1, toCV v2, toCV v3]
+   mkSymVal             = genMkSymVar (kindOf (Proxy @(a, b, c)))
+   literal (v1, v2, v3) = mkCVTup 3   (kindOf (Proxy @(a, b, c))) [toCV v1, toCV v2, toCV v3]
    fromCV  cv           = let ~[v1, v2, v3] = fromCVTup 3 cv
                           in (fromCV v1, fromCV v2, fromCV v3)
 
 -- | SymVal for 4-tuples
 instance (SymVal a, SymVal b, SymVal c, SymVal d) => SymVal (a, b, c, d) where
-   mkSymVal                 = genMkSymVar (kindOf (undefined :: (a, b, c, d)))
-   literal (v1, v2, v3, v4) = mkCVTup 4   (kindOf (undefined :: (a, b, c, d))) [toCV v1, toCV v2, toCV v3, toCV v4]
+   mkSymVal                 = genMkSymVar (kindOf (Proxy @(a, b, c, d)))
+   literal (v1, v2, v3, v4) = mkCVTup 4   (kindOf (Proxy @(a, b, c, d))) [toCV v1, toCV v2, toCV v3, toCV v4]
    fromCV  cv               = let ~[v1, v2, v3, v4] = fromCVTup 4 cv
                               in (fromCV v1, fromCV v2, fromCV v3, fromCV v4)
 
 -- | SymVal for 5-tuples
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e) => SymVal (a, b, c, d, e) where
-   mkSymVal                     = genMkSymVar (kindOf (undefined :: (a, b, c, d, e)))
-   literal (v1, v2, v3, v4, v5) = mkCVTup 5   (kindOf (undefined :: (a, b, c, d, e))) [toCV v1, toCV v2, toCV v3, toCV v4, toCV v5]
+   mkSymVal                     = genMkSymVar (kindOf (Proxy @(a, b, c, d, e)))
+   literal (v1, v2, v3, v4, v5) = mkCVTup 5   (kindOf (Proxy @(a, b, c, d, e))) [toCV v1, toCV v2, toCV v3, toCV v4, toCV v5]
    fromCV  cv                   = let ~[v1, v2, v3, v4, v5] = fromCVTup 5 cv
                                   in (fromCV v1, fromCV v2, fromCV v3, fromCV v4, fromCV v5)
 
 -- | SymVal for 6-tuples
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f) => SymVal (a, b, c, d, e, f) where
-   mkSymVal                         = genMkSymVar (kindOf (undefined :: (a, b, c, d, e, f)))
-   literal (v1, v2, v3, v4, v5, v6) = mkCVTup 6   (kindOf (undefined :: (a, b, c, d, e, f))) [toCV v1, toCV v2, toCV v3, toCV v4, toCV v5, toCV v6]
+   mkSymVal                         = genMkSymVar (kindOf (Proxy @(a, b, c, d, e, f)))
+   literal (v1, v2, v3, v4, v5, v6) = mkCVTup 6   (kindOf (Proxy @(a, b, c, d, e, f))) [toCV v1, toCV v2, toCV v3, toCV v4, toCV v5, toCV v6]
    fromCV  cv                       = let ~[v1, v2, v3, v4, v5, v6] = fromCVTup 6 cv
                                       in (fromCV v1, fromCV v2, fromCV v3, fromCV v4, fromCV v5, fromCV v6)
 
 -- | SymVal for 7-tuples
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g) => SymVal (a, b, c, d, e, f, g) where
-   mkSymVal                             = genMkSymVar (kindOf (undefined :: (a, b, c, d, e, f, g)))
-   literal (v1, v2, v3, v4, v5, v6, v7) = mkCVTup 7   (kindOf (undefined :: (a, b, c, d, e, f, g))) [toCV v1, toCV v2, toCV v3, toCV v4, toCV v5, toCV v6, toCV v7]
+   mkSymVal                             = genMkSymVar (kindOf (Proxy @(a, b, c, d, e, f, g)))
+   literal (v1, v2, v3, v4, v5, v6, v7) = mkCVTup 7   (kindOf (Proxy @(a, b, c, d, e, f, g))) [toCV v1, toCV v2, toCV v3, toCV v4, toCV v5, toCV v6, toCV v7]
    fromCV  cv                           = let ~[v1, v2, v3, v4, v5, v6, v7] = fromCVTup 7 cv
                                           in (fromCV v1, fromCV v2, fromCV v3, fromCV v4, fromCV v5, fromCV v6, fromCV v7)
 
 -- | SymVal for 8-tuples
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h) => SymVal (a, b, c, d, e, f, g, h) where
-   mkSymVal                                 = genMkSymVar (kindOf (undefined :: (a, b, c, d, e, f, g, h)))
-   literal (v1, v2, v3, v4, v5, v6, v7, v8) = mkCVTup 8   (kindOf (undefined :: (a, b, c, d, e, f, g, h))) [toCV v1, toCV v2, toCV v3, toCV v4, toCV v5, toCV v6, toCV v7, toCV v8]
+   mkSymVal                                 = genMkSymVar (kindOf (Proxy @(a, b, c, d, e, f, g, h)))
+   literal (v1, v2, v3, v4, v5, v6, v7, v8) = mkCVTup 8   (kindOf (Proxy @(a, b, c, d, e, f, g, h))) [toCV v1, toCV v2, toCV v3, toCV v4, toCV v5, toCV v6, toCV v7, toCV v8]
    fromCV  cv                               = let ~[v1, v2, v3, v4, v5, v6, v7, v8] = fromCVTup 8 cv
                                               in (fromCV v1, fromCV v2, fromCV v3, fromCV v4, fromCV v5, fromCV v6, fromCV v7, fromCV v8)
 
@@ -973,18 +974,18 @@ instance (SymVal a, Fractional a) => Fractional (SBV a) where
        where res  = SBV (svDivide x y)
              -- Identify those kinds where we have a div-0 equals 0 exception
              div0 = case kindOf sy of
-                      KFloat        -> False
-                      KDouble       -> False
-                      KReal         -> True
-                      -- Following two cases should not happen since these types should *not* be instances of Fractional
-                      k@KBounded{}  -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KUnbounded  -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KBool       -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KString     -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KChar       -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KList{}     -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KUserSort{} -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KTuple{}    -> error $ "Unexpected Fractional case for: " ++ show k
+                      KFloat             -> False
+                      KDouble            -> False
+                      KReal              -> True
+                      -- Following cases should not happen since these types should *not* be instances of Fractional
+                      k@KBounded{}       -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KUnbounded       -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KBool            -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KString          -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KChar            -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KList{}          -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KUninterpreted{} -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KTuple{}         -> error $ "Unexpected Fractional case for: " ++ show k
 
 -- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat and SDouble
 -- Note that most of the fields are "undefined" for symbolic values, we add methods as they are supported by SMTLib.
@@ -1078,7 +1079,7 @@ sFromIntegral x
   = result
   where result = SBV (SVal kTo (Right (cache y)))
         kFrom  = kindOf x
-        kTo    = kindOf (undefined :: b)
+        kTo    = kindOf (Proxy @b)
         y st   = do xsv <- sbvToSV st x
                     newExpr st kTo (SBVApp (KindCast kFrom kTo) [xsv])
 
@@ -1473,8 +1474,8 @@ symbolicMergeWithKind k force (SBV t) (SBV a) (SBV b) = SBV (svSymbolicMerge k f
 instance SymVal a => Mergeable (SBV a) where
     symbolicMerge force t x y
     -- Carefully use the kindOf instance to avoid strictness issues.
-       | force = symbolicMergeWithKind (kindOf x)                True  t x y
-       | True  = symbolicMergeWithKind (kindOf (undefined :: a)) False t x y
+       | force = symbolicMergeWithKind (kindOf x)          True  t x y
+       | True  = symbolicMergeWithKind (kindOf (Proxy @a)) False t x y
     -- Custom version of select that translates to SMT-Lib tables at the base type of words
     select xs err ind
       | SBV (SVal _ (Left c)) <- ind = case cvVal c of
@@ -1687,7 +1688,7 @@ instance HasKind a => Uninterpreted (SBV a) where
   sbvUninterpret mbCgData nm
      | Just (_, v) <- mbCgData = v
      | True                    = SBV $ SVal ka $ Right $ cache result
-    where ka = kindOf (undefined :: a)
+    where ka = kindOf (Proxy @a)
           result st = do isSMT <- inSMTMode st
                          case (isSMT, mbCgData) of
                            (True, Just (_, v)) -> sbvToSV st v
@@ -1702,8 +1703,8 @@ instance (SymVal b, HasKind a) => Uninterpreted (SBV b -> SBV a) where
            = v arg0
            | True
            = SBV $ SVal ka $ Right $ cache result
-           where ka = kindOf (undefined :: a)
-                 kb = kindOf (undefined :: b)
+           where ka = kindOf (Proxy @a)
+                 kb = kindOf (Proxy @b)
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, mbCgData) of
                                   (True, Just (_, v)) -> sbvToSV st (v arg0)
@@ -1720,9 +1721,9 @@ instance (SymVal c, SymVal b, HasKind a) => Uninterpreted (SBV c -> SBV b -> SBV
            = v arg0 arg1
            | True
            = SBV $ SVal ka $ Right $ cache result
-           where ka = kindOf (undefined :: a)
-                 kb = kindOf (undefined :: b)
-                 kc = kindOf (undefined :: c)
+           where ka = kindOf (Proxy @a)
+                 kb = kindOf (Proxy @b)
+                 kc = kindOf (Proxy @c)
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, mbCgData) of
                                   (True, Just (_, v)) -> sbvToSV st (v arg0 arg1)
@@ -1740,10 +1741,10 @@ instance (SymVal d, SymVal c, SymVal b, HasKind a) => Uninterpreted (SBV d -> SB
            = v arg0 arg1 arg2
            | True
            = SBV $ SVal ka $ Right $ cache result
-           where ka = kindOf (undefined :: a)
-                 kb = kindOf (undefined :: b)
-                 kc = kindOf (undefined :: c)
-                 kd = kindOf (undefined :: d)
+           where ka = kindOf (Proxy @a)
+                 kb = kindOf (Proxy @b)
+                 kc = kindOf (Proxy @c)
+                 kd = kindOf (Proxy @d)
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, mbCgData) of
                                   (True, Just (_, v)) -> sbvToSV st (v arg0 arg1 arg2)
@@ -1762,11 +1763,11 @@ instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => Uninterpreted (S
            = v arg0 arg1 arg2 arg3
            | True
            = SBV $ SVal ka $ Right $ cache result
-           where ka = kindOf (undefined :: a)
-                 kb = kindOf (undefined :: b)
-                 kc = kindOf (undefined :: c)
-                 kd = kindOf (undefined :: d)
-                 ke = kindOf (undefined :: e)
+           where ka = kindOf (Proxy @a)
+                 kb = kindOf (Proxy @b)
+                 kc = kindOf (Proxy @c)
+                 kd = kindOf (Proxy @d)
+                 ke = kindOf (Proxy @e)
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, mbCgData) of
                                   (True, Just (_, v)) -> sbvToSV st (v arg0 arg1 arg2 arg3)
@@ -1786,12 +1787,12 @@ instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => Uninte
            = v arg0 arg1 arg2 arg3 arg4
            | True
            = SBV $ SVal ka $ Right $ cache result
-           where ka = kindOf (undefined :: a)
-                 kb = kindOf (undefined :: b)
-                 kc = kindOf (undefined :: c)
-                 kd = kindOf (undefined :: d)
-                 ke = kindOf (undefined :: e)
-                 kf = kindOf (undefined :: f)
+           where ka = kindOf (Proxy @a)
+                 kb = kindOf (Proxy @b)
+                 kc = kindOf (Proxy @c)
+                 kd = kindOf (Proxy @d)
+                 ke = kindOf (Proxy @e)
+                 kf = kindOf (Proxy @f)
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, mbCgData) of
                                   (True, Just (_, v)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4)
@@ -1812,13 +1813,13 @@ instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
            = v arg0 arg1 arg2 arg3 arg4 arg5
            | True
            = SBV $ SVal ka $ Right $ cache result
-           where ka = kindOf (undefined :: a)
-                 kb = kindOf (undefined :: b)
-                 kc = kindOf (undefined :: c)
-                 kd = kindOf (undefined :: d)
-                 ke = kindOf (undefined :: e)
-                 kf = kindOf (undefined :: f)
-                 kg = kindOf (undefined :: g)
+           where ka = kindOf (Proxy @a)
+                 kb = kindOf (Proxy @b)
+                 kc = kindOf (Proxy @c)
+                 kd = kindOf (Proxy @d)
+                 ke = kindOf (Proxy @e)
+                 kf = kindOf (Proxy @f)
+                 kg = kindOf (Proxy @g)
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, mbCgData) of
                                   (True, Just (_, v)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4 arg5)
@@ -1841,14 +1842,14 @@ instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, 
            = v arg0 arg1 arg2 arg3 arg4 arg5 arg6
            | True
            = SBV $ SVal ka $ Right $ cache result
-           where ka = kindOf (undefined :: a)
-                 kb = kindOf (undefined :: b)
-                 kc = kindOf (undefined :: c)
-                 kd = kindOf (undefined :: d)
-                 ke = kindOf (undefined :: e)
-                 kf = kindOf (undefined :: f)
-                 kg = kindOf (undefined :: g)
-                 kh = kindOf (undefined :: h)
+           where ka = kindOf (Proxy @a)
+                 kb = kindOf (Proxy @b)
+                 kc = kindOf (Proxy @c)
+                 kd = kindOf (Proxy @d)
+                 ke = kindOf (Proxy @e)
+                 kf = kindOf (Proxy @f)
+                 kg = kindOf (Proxy @g)
+                 kh = kindOf (Proxy @h)
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, mbCgData) of
                                   (True, Just (_, v)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6)
@@ -1985,7 +1986,7 @@ instance Testable (Symbolic SVal) where
 -- use cases of the SBV library should simply use Haskell's @let@ construct for this purpose.
 slet :: forall a b. (HasKind a, HasKind b) => SBV a -> (SBV a -> SBV b) -> SBV b
 slet x f = SBV $ SVal k $ Right $ cache r
-    where k    = kindOf (undefined :: b)
+    where k    = kindOf (Proxy @b)
           r st = do xsv <- sbvToSV st x
                     let xsbv = SBV $ SVal (kindOf x) (Right (cache (const (return xsv))))
                         res  = f xsbv

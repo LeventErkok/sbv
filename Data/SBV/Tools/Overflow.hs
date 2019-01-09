@@ -15,6 +15,7 @@
 {-# LANGUAGE ImplicitParams       #-}
 {-# LANGUAGE Rank2Types           #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Data.SBV.Tools.Overflow (
@@ -36,6 +37,7 @@ import GHC.Stack
 
 import Data.Int
 import Data.Word
+import Data.Proxy
 
 -- Doctest only
 -- $setup
@@ -392,7 +394,7 @@ bvsnego n x = (underflow, overflow)
 --
 -- As the last example shows, converting to `sInteger` never underflows or overflows for any value.
 sFromIntegralO :: forall a b. (Integral a, HasKind a, Num a, SymVal a, HasKind b, Num b, SymVal b) => SBV a -> (SBV b, (SBool, SBool))
-sFromIntegralO x = case (kindOf x, kindOf (undefined :: b)) of
+sFromIntegralO x = case (kindOf x, kindOf (Proxy @b)) of
                      (KBounded False n, KBounded False m) -> (res, u2u n m)
                      (KBounded False n, KBounded True  m) -> (res, u2s n m)
                      (KBounded True n,  KBounded False m) -> (res, s2u n m)
@@ -459,7 +461,7 @@ sFromIntegralChecked x = sAssert (Just ?loc) (msg "underflows") (sNot u)
                        $ sAssert (Just ?loc) (msg "overflows")  (sNot o)
                          r
   where kFrom = show $ kindOf x
-        kTo   = show $ kindOf (undefined :: b)
+        kTo   = show $ kindOf (Proxy @b)
         msg c = "Casting from " ++ kFrom ++ " to " ++ kTo ++ " " ++ c
 
         (r, (u, o)) = sFromIntegralO x

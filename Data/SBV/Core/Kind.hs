@@ -13,7 +13,9 @@
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE ViewPatterns         #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -24,6 +26,8 @@ import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeO
 import Data.Int
 import Data.Word
 import Data.SBV.Core.AlgReals
+
+import Data.Proxy
 
 import Data.List (isPrefixOf, intercalate)
 
@@ -198,6 +202,11 @@ class HasKind a where
   default kindOf :: (Read a, G.Data a) => a -> Kind
   kindOf = constructUKind
 
+-- | This instance allows us to use the `kindOf (Proxy @a)` idiom instead of
+-- the `kindOf (undefined :: a)`, which is safer and looks more idiomatic.
+instance HasKind a => HasKind (Proxy a) where
+  kindOf _ = kindOf (undefined :: a)
+
 instance HasKind Bool    where kindOf _ = KBool
 instance HasKind Int8    where kindOf _ = KBounded True  8
 instance HasKind Word8   where kindOf _ = KBounded False 8
@@ -214,29 +223,29 @@ instance HasKind Double  where kindOf _ = KDouble
 instance HasKind Char    where kindOf _ = KChar
 
 instance (Typeable a, HasKind a) => HasKind [a] where
-   kindOf _ | isKString (undefined :: [a]) = KString
-            | True                         = KList (kindOf (undefined :: a))
+   kindOf x | isKString @[a] x = KString
+            | True             = KList (kindOf (Proxy @a))
 
 instance HasKind Kind where
   kindOf = id
 
 instance (HasKind a, HasKind b) => HasKind (a, b) where
-  kindOf _ = KTuple [kindOf (undefined :: a), kindOf (undefined :: b)]
+  kindOf _ = KTuple [kindOf (Proxy @a), kindOf (Proxy @b)]
 
 instance (HasKind a, HasKind b, HasKind c) => HasKind (a, b, c) where
-  kindOf _ = KTuple [kindOf (undefined :: a), kindOf (undefined :: b), kindOf (undefined :: c)]
+  kindOf _ = KTuple [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c)]
 
 instance (HasKind a, HasKind b, HasKind c, HasKind d) => HasKind (a, b, c, d) where
-  kindOf _ = KTuple [kindOf (undefined :: a), kindOf (undefined :: b), kindOf (undefined :: c), kindOf (undefined :: d)]
+  kindOf _ = KTuple [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d)]
 
 instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e) => HasKind (a, b, c, d, e) where
-  kindOf _ = KTuple [kindOf (undefined :: a), kindOf (undefined :: b), kindOf (undefined :: c), kindOf (undefined :: d), kindOf (undefined :: e)]
+  kindOf _ = KTuple [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e)]
 
 instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f) => HasKind (a, b, c, d, e, f) where
-  kindOf _ = KTuple [kindOf (undefined :: a), kindOf (undefined :: b), kindOf (undefined :: c), kindOf (undefined :: d), kindOf (undefined :: e), kindOf (undefined :: f)]
+  kindOf _ = KTuple [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f)]
 
 instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f, HasKind g) => HasKind (a, b, c, d, e, f, g) where
-  kindOf _ = KTuple [kindOf (undefined :: a), kindOf (undefined :: b), kindOf (undefined :: c), kindOf (undefined :: d), kindOf (undefined :: e), kindOf (undefined :: f), kindOf (undefined :: g)]
+  kindOf _ = KTuple [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g)]
 
 instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f, HasKind g, HasKind h) => HasKind (a, b, c, d, e, f, g, h) where
-  kindOf _ = KTuple [kindOf (undefined :: a), kindOf (undefined :: b), kindOf (undefined :: c), kindOf (undefined :: d), kindOf (undefined :: e), kindOf (undefined :: f), kindOf (undefined :: g), kindOf (undefined :: h)]
+  kindOf _ = KTuple [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g), kindOf (Proxy @h)]

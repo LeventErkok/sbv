@@ -13,9 +13,10 @@
 -- be used as symbolic-lists.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE OverloadedLists     #-}
+{-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 module Data.SBV.List (
         -- * Length, emptiness
@@ -36,6 +37,8 @@ import Data.SBV.Core.Model
 
 import Data.List (genericLength, genericIndex, genericDrop, genericTake)
 import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
+
+import Data.Proxy
 
 -- For doctest use only
 --
@@ -141,7 +144,7 @@ elemAt l i
   = literal x
   | True
   = SBV (SVal kElem (Right (cache (y (l `listToListAt` i)))))
-  where kElem = kindOf (undefined :: a)
+  where kElem = kindOf (Proxy @a)
         kSeq  = KList kElem
         -- This is trickier than it needs to be, but necessary since there's
         -- no SMTLib function to extract the element from a list. Instead,
@@ -347,7 +350,7 @@ lift1 w mbOp a
   = cv
   | True
   = SBV $ SVal k $ Right $ cache r
-  where k = kindOf (undefined :: b)
+  where k = kindOf (Proxy @b)
         r st = do sva <- sbvToSV st a
                   newExpr st k (SBVApp (SeqOp w) [sva])
 
@@ -358,7 +361,7 @@ lift2 w mbOp a b
   = cv
   | True
   = SBV $ SVal k $ Right $ cache r
-  where k = kindOf (undefined :: c)
+  where k = kindOf (Proxy @c)
         r st = do sva <- sbvToSV st a
                   svb <- sbvToSV st b
                   newExpr st k (SBVApp (SeqOp w) [sva, svb])
@@ -370,7 +373,7 @@ lift3 w mbOp a b c
   = cv
   | True
   = SBV $ SVal k $ Right $ cache r
-  where k = kindOf (undefined :: d)
+  where k = kindOf (Proxy @d)
         r st = do sva <- sbvToSV st a
                   svb <- sbvToSV st b
                   svc <- sbvToSV st c
