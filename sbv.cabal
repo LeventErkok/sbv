@@ -57,10 +57,12 @@ Library
                     StandaloneDeriving
                     TemplateHaskell
                     TupleSections
+                    TypeApplications
                     TypeFamilies
                     TypeOperators
                     TypeSynonymInstances
                     UndecidableInstances
+                    ViewPatterns
   Build-Depends   : base >= 4.9 && < 5
                   , crackNum >= 2.3
                   , ghc, QuickCheck, template-haskell
