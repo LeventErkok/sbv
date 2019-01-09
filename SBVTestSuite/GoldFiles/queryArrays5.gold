@@ -21,7 +21,6 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s_1)
 [GOOD] (define-fun s4 () (_ BitVec 8) #x01)
 [GOOD] (define-fun s2 () (_ BitVec 8) #x01)
 [GOOD] (declare-fun array_1 () (Array (_ BitVec 8) (_ BitVec 8)))

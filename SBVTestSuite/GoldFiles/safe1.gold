@@ -24,7 +24,6 @@
 [GOOD] (define-fun s2 () Bool (= s0 s1))
 [GOOD] (define-fun s4 () Bool (> s0 s3))
 [GOOD] (define-fun s5 () Bool (not s4))
-[GOOD] (assert s_1)
 [GOOD] (push 1)
 [GOOD] (assert s5)
 [SEND] (check-sat)

@@ -23,7 +23,6 @@
 [GOOD] ; --- formula ---
 [GOOD] (define-fun s3 () Bool (> s0 s2))
 [GOOD] (define-fun s4 () Bool (not s3))
-[GOOD] (assert s_1)
 [GOOD] (push 1)
 [GOOD] (assert s4)
 [SEND] (check-sat)

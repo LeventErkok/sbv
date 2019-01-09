@@ -20,7 +20,6 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s_1)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))

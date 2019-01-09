@@ -19,7 +19,6 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s_1)
 [GOOD] (push 1)
 [GOOD] (define-fun s0 () Int 1)
 [GOOD] (define-fun s2 () Int 5)
