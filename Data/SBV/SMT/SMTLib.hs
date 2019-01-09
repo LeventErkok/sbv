@@ -50,7 +50,7 @@ toSMTLib2 = cvt SMTLib2
          = unsupported "uninterpreted sorts"
          | True
          = SMTLibPgm v pgm
-         where sorts = [s | KUserSort s _ <- Set.toList kindInfo]
+         where sorts = [s | KUninterpreted s _ <- Set.toList kindInfo]
                solverCaps = capabilities (solver config)
                unsupported w = error $ unlines [ "SBV: Given problem needs " ++ w
                                                , "*** Which is not supported by SBV for the chosen solver: " ++ show (name (solver config))

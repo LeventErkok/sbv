@@ -44,7 +44,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
         hasChar        = KChar      `Set.member` kindInfo
         hasDouble      = KDouble    `Set.member` kindInfo
         hasBVs         = hasChar || not (null [() | KBounded{} <- Set.toList kindInfo])   -- Remember, characters map to Word8
-        usorts         = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
+        usorts         = [(s, dt) | KUninterpreted s dt <- Set.toList kindInfo]
         tupleArities   = findTupleArities kindInfo
         hasNonBVArrays = (not . null) [() | (_, (_, (k1, k2), _)) <- arrs, not (isBounded k1 && isBounded k2)]
         hasArrayInits  = (not . null) [() | (_, (_, _, ArrayFree (Just _))) <- arrs]
@@ -326,7 +326,7 @@ findTupleArities ks = Set.toAscList
 cvtInc :: Bool -> SMTLibIncConverter [String]
 cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cfg =
             -- sorts
-               concatMap declSort [(s, dt) | KUserSort s dt <- Set.toList newKs]
+               concatMap declSort [(s, dt) | KUninterpreted s dt <- Set.toList newKs]
             -- tuples. NB. Only declare the new sizes, old sizes persist.
             ++ concatMap declTuple (findTupleArities newKs)
             -- constants
@@ -601,7 +601,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                       | True                = lift2 o
 
         unintComp o [a, b]
-          | KUserSort s (Right _) <- kindOf (head arguments)
+          | KUninterpreted s (Right _) <- kindOf (head arguments)
           = let idx v = "(" ++ s ++ "_constrIndex " ++ v ++ ")" in "(" ++ o ++ " " ++ idx a ++ " " ++ idx b ++ ")"
         unintComp o sbvs = error $ "SBV.SMT.SMTLib2.sh.unintComp: Unexpected arguments: "   ++ show (o, sbvs)
 
@@ -630,33 +630,37 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           | needsCheck = "(ite " ++ cond ++ ssv e ++ " " ++ lkUp ++ ")"
           | True       = lkUp
           where needsCheck = case aKnd of
-                              KBool         -> (2::Integer) > fromIntegral l
-                              KBounded _ n  -> (2::Integer)^n > fromIntegral l
-                              KUnbounded    -> True
-                              KReal         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
-                              KFloat        -> error "SBV.SMT.SMTLib2.cvtExp: unexpected float valued index"
-                              KDouble       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected double valued index"
-                              KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected char valued index"
-                              KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
-                              KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected list valued: " ++ show k
-                              KTuple k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued: " ++ show k
-                              KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
+                              KBool              -> (2::Integer) > fromIntegral l
+                              KBounded _ n       -> (2::Integer)^n > fromIntegral l
+                              KUnbounded         -> True
+                              KReal              -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
+                              KFloat             -> error "SBV.SMT.SMTLib2.cvtExp: unexpected float valued index"
+                              KDouble            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected double valued index"
+                              KChar              -> error "SBV.SMT.SMTLib2.cvtExp: unexpected char valued index"
+                              KString            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
+                              KList k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected list valued: " ++ show k
+                              KTuple k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued: " ++ show k
+                              KUninterpreted s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
+
                 lkUp = "(" ++ getTable tableMap t ++ " " ++ ssv i ++ ")"
+
                 cond
                  | hasSign i = "(or " ++ le0 ++ " " ++ gtl ++ ") "
                  | True      = gtl ++ " "
+
                 (less, leq) = case aKnd of
-                                KBool         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected boolean valued index"
-                                KBounded{}    -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
-                                KUnbounded    -> ("<", "<=")
-                                KReal         -> ("<", "<=")
-                                KFloat        -> ("fp.lt", "fp.leq")
-                                KDouble       -> ("fp.lt", "fp.geq")
-                                KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
-                                KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
-                                KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
-                                KTuple k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued index: " ++ show k
-                                KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
+                                KBool              -> error "SBV.SMT.SMTLib2.cvtExp: unexpected boolean valued index"
+                                KBounded{}         -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
+                                KUnbounded         -> ("<", "<=")
+                                KReal              -> ("<", "<=")
+                                KFloat             -> ("fp.lt", "fp.leq")
+                                KDouble            -> ("fp.lt", "fp.geq")
+                                KChar              -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
+                                KString            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
+                                KList k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
+                                KTuple k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued index: " ++ show k
+                                KUninterpreted s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
+
                 mkCnst = cvtCV rm . mkConstCV (kindOf i)
                 le0  = "(" ++ less ++ " " ++ ssv i ++ " " ++ mkCnst 0 ++ ")"
                 gtl  = "(" ++ leq  ++ " " ++ mkCnst l ++ " " ++ ssv i ++ ")"

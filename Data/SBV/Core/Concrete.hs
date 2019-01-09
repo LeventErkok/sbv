@@ -266,45 +266,45 @@ showCV shk w               = liftCV show show show show show show snd shL shT w 
 
 -- | A version of show for kinds that says Bool instead of SBool
 showBaseKind :: Kind -> String
-showBaseKind k@KUserSort {} = show k   -- Leave user-sorts untouched!
-showBaseKind (KList k)      = "[" ++ showBaseKind k ++ "]"
-showBaseKind (KTuple ks)    = "(" ++ intercalate ", " (map showBaseKind ks) ++ ")"
+showBaseKind k@KUninterpreted{} = show k   -- Leave user-sorts untouched!
+showBaseKind (KList k)          = "[" ++ showBaseKind k ++ "]"
+showBaseKind (KTuple ks)        = "(" ++ intercalate ", " (map showBaseKind ks) ++ ")"
 showBaseKind k = case show k of
                    ('S':sk) -> sk
                    s        -> s
 
 -- | Create a constant word from an integral.
 mkConstCV :: Integral a => Kind -> a -> CV
-mkConstCV KBool           a = normCV $ CV KBool      (CInteger (toInteger a))
-mkConstCV k@KBounded{}    a = normCV $ CV k          (CInteger (toInteger a))
-mkConstCV KUnbounded      a = normCV $ CV KUnbounded (CInteger (toInteger a))
-mkConstCV KReal           a = normCV $ CV KReal      (CAlgReal (fromInteger (toInteger a)))
-mkConstCV KFloat          a = normCV $ CV KFloat     (CFloat   (fromInteger (toInteger a)))
-mkConstCV KDouble         a = normCV $ CV KDouble    (CDouble  (fromInteger (toInteger a)))
-mkConstCV KChar           a = error $ "Unexpected call to mkConstCV (Char) with value: " ++ show (toInteger a)
-mkConstCV KString         a = error $ "Unexpected call to mkConstCV (String) with value: " ++ show (toInteger a)
-mkConstCV k@KList{}       a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
-mkConstCV (KUserSort s _) a = error $ "Unexpected call to mkConstCV with uninterpreted kind: " ++ s ++ " with value: " ++ show (toInteger a)
-mkConstCV k@KTuple{}      a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
+mkConstCV KBool                a = normCV $ CV KBool      (CInteger (toInteger a))
+mkConstCV k@KBounded{}         a = normCV $ CV k          (CInteger (toInteger a))
+mkConstCV KUnbounded           a = normCV $ CV KUnbounded (CInteger (toInteger a))
+mkConstCV KReal                a = normCV $ CV KReal      (CAlgReal (fromInteger (toInteger a)))
+mkConstCV KFloat               a = normCV $ CV KFloat     (CFloat   (fromInteger (toInteger a)))
+mkConstCV KDouble              a = normCV $ CV KDouble    (CDouble  (fromInteger (toInteger a)))
+mkConstCV KChar                a = error $ "Unexpected call to mkConstCV (Char) with value: " ++ show (toInteger a)
+mkConstCV KString              a = error $ "Unexpected call to mkConstCV (String) with value: " ++ show (toInteger a)
+mkConstCV (KUninterpreted s _) a = error $ "Unexpected call to mkConstCV with uninterpreted kind: " ++ s ++ " with value: " ++ show (toInteger a)
+mkConstCV k@KList{}            a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
+mkConstCV k@KTuple{}           a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 
 -- | Generate a random constant value ('CVal') of the correct kind.
 randomCVal :: Kind -> IO CVal
 randomCVal k =
   case k of
-    KBool         -> CInteger <$> randomRIO (0, 1)
-    KBounded s w  -> CInteger <$> randomRIO (bounds s w)
-    KUnbounded    -> CInteger <$> randomIO
-    KReal         -> CAlgReal <$> randomIO
-    KFloat        -> CFloat   <$> randomIO
-    KDouble       -> CDouble  <$> randomIO
+    KBool              -> CInteger <$> randomRIO (0, 1)
+    KBounded s w       -> CInteger <$> randomRIO (bounds s w)
+    KUnbounded         -> CInteger <$> randomIO
+    KReal              -> CAlgReal <$> randomIO
+    KFloat             -> CFloat   <$> randomIO
+    KDouble            -> CDouble  <$> randomIO
     -- TODO: KString/KChar currently only go for 0..255; include unicode?
-    KString       -> do l <- randomRIO (0, 100)
-                        CString <$> replicateM l (chr <$> randomRIO (0, 255))
-    KChar         -> CChar . chr <$> randomRIO (0, 255)
-    KUserSort s _ -> error $ "Unexpected call to randomCVal with uninterpreted kind: " ++ s
-    KList ek      -> do l <- randomRIO (0, 100)
-                        CList <$> replicateM l (randomCVal ek)
-    KTuple ks     -> CTuple <$> traverse randomCVal ks
+    KString            -> do l <- randomRIO (0, 100)
+                             CString <$> replicateM l (chr <$> randomRIO (0, 255))
+    KChar              -> CChar . chr <$> randomRIO (0, 255)
+    KUninterpreted s _ -> error $ "Unexpected call to randomCVal with uninterpreted kind: " ++ s
+    KList ek           -> do l <- randomRIO (0, 100)
+                             CList <$> replicateM l (randomCVal ek)
+    KTuple ks          -> CTuple <$> traverse randomCVal ks
   where
     bounds :: Bool -> Int -> (Integer, Integer)
     bounds False w = (0, 2^w - 1)

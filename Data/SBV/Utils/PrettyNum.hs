@@ -344,6 +344,6 @@ cvToSMTLib rm x
 
 -- | Create a skolem 0 for the kind
 mkSkolemZero :: RoundingMode -> Kind -> String
-mkSkolemZero _ (KUserSort _ (Right (f:_))) = f
-mkSkolemZero _ (KUserSort s _)             = error $ "SBV.mkSkolemZero: Unexpected uninterpreted sort: " ++ s
-mkSkolemZero rm k                          = cvToSMTLib rm (mkConstCV k (0::Integer))
+mkSkolemZero _ (KUninterpreted _ (Right (f:_))) = f
+mkSkolemZero _ (KUninterpreted s _)             = error $ "SBV.mkSkolemZero: Unexpected uninterpreted sort: " ++ s
+mkSkolemZero rm k                               = cvToSMTLib rm (mkConstCV k (0::Integer))

@@ -510,8 +510,8 @@ recoverKindedValue k e = case e of
 
   where isIntegralLike = or [f k | f <- [isBoolean, isBounded, isInteger, isReal, isFloat, isDouble]]
 
-        getUIIndex (KUserSort  _ (Right xs)) i = i `elemIndex` xs
-        getUIIndex _                         _ = Nothing
+        getUIIndex (KUninterpreted  _ (Right xs)) i = i `elemIndex` xs
+        getUIIndex _                              _ = Nothing
 
         stringLike xs = length xs >= 2 && head xs == '"' && last xs == '"'
 
@@ -634,7 +634,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      ki    <- liftIO $ readIORef rUsedKinds
                      qinps <- getQuantifiedInputs
 
-                     let usorts = [s | us@(KUserSort s _) <- Set.toList ki, isFree us]
+                     let usorts = [s | us@(KUninterpreted s _) <- Set.toList ki, isFree us]
 
                      unless (null usorts) $ queryDebug [ "*** SBV.allSat: Uninterpreted sorts present: " ++ unwords usorts
                                                        , "***             SBV will use equivalence classes to generate all-satisfying instances."
@@ -657,8 +657,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      (sc, ms) <- loop vars cfg
                      return (sc, w, reverse ms)
 
-   where isFree (KUserSort _ (Left _)) = True
-         isFree _                      = False
+   where isFree (KUninterpreted _ (Left _)) = True
+         isFree _                           = False
 
          loop vars cfg = go (1::Int) []
            where go :: Int -> [SMTResult] -> m (Bool, [SMTResult])

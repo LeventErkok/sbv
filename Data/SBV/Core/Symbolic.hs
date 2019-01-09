@@ -614,7 +614,7 @@ instance Show Result where
     where sh2 :: Show a => [a] -> [String]
           sh2 = map (("  "++) . show)
 
-          usorts = [sh s t | KUserSort s t <- Set.toList kinds]
+          usorts = [sh s t | KUninterpreted s t <- Set.toList kinds]
                    where sh s (Left   _) = s
                          sh s (Right es) = s ++ " (" ++ intercalate ", " es ++ ")"
 
@@ -984,7 +984,7 @@ newSV st k = do ctr <- incrementInternalCounter st
 -- allow for this.
 registerKind :: State -> Kind -> IO ()
 registerKind st k
-  | KUserSort sortName _ <- k, map toLower sortName `elem` smtLibReservedNames
+  | KUninterpreted sortName _ <- k, map toLower sortName `elem` smtLibReservedNames
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | True
   = do -- Adding a kind to the incState is tricky; we only need to add it
@@ -996,25 +996,25 @@ registerKind st k
        modifyState st rUsedKinds (Set.insert k) $ do
 
                           let needsAdding = case k of
-                                              KUserSort{} -> k `notElem` existingKinds
-                                              KTuple nks  -> length nks `notElem` [length oks | KTuple oks <- Set.toList existingKinds]
-                                              _           -> False
+                                              KUninterpreted{} -> k `notElem` existingKinds
+                                              KTuple nks       -> length nks `notElem` [length oks | KTuple oks <- Set.toList existingKinds]
+                                              _                -> False
 
                           when needsAdding $ modifyIncState st rNewKinds (Set.insert k)
 
        -- Don't forget to register subkinds!
        case k of
-         KBool      {}  -> return ()
-         KBounded   {}  -> return ()
-         KUnbounded {}  -> return ()
-         KReal      {}  -> return ()
-         KUserSort  {}  -> return ()
-         KFloat     {}  -> return ()
-         KDouble    {}  -> return ()
-         KChar      {}  -> return ()
-         KString    {}  -> return ()
-         KList      ek  -> registerKind st ek
-         KTuple     eks -> mapM_ (registerKind st) eks
+         KBool          {}  -> return ()
+         KBounded       {}  -> return ()
+         KUnbounded     {}  -> return ()
+         KReal          {}  -> return ()
+         KUninterpreted {}  -> return ()
+         KFloat         {}  -> return ()
+         KDouble        {}  -> return ()
+         KChar          {}  -> return ()
+         KString        {}  -> return ()
+         KList          ek  -> registerKind st ek
+         KTuple         eks -> mapM_ (registerKind st) eks
 
 -- | Register a new label with the system, making sure they are unique and have no '|'s in them
 registerLabel :: String -> State -> String -> IO ()

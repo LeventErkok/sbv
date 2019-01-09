@@ -11,6 +11,7 @@
 
 {-# LANGUAGE DefaultSignatures    #-}
 {-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
@@ -35,7 +36,7 @@ data Kind = KBool
           | KBounded !Bool !Int
           | KUnbounded
           | KReal
-          | KUserSort String (Either String [String])  -- name. Left: uninterpreted. Right: enum constructors.
+          | KUninterpreted String (Either String [String])  -- name. Left: uninterpreted. Right: enum constructors.
           | KFloat
           | KDouble
           | KChar
@@ -45,35 +46,35 @@ data Kind = KBool
           deriving (Eq, Ord)
 
 -- | The interesting about the show instance is that it can tell apart two kinds nicely; since it conveniently
--- ignores the enumeration constructors. Also, when we construct a 'KUserSort', we make sure we don't use any of
+-- ignores the enumeration constructors. Also, when we construct a 'KUninterpreted', we make sure we don't use any of
 -- the reserved names; see 'constructUKind' for details.
 instance Show Kind where
-  show KBool              = "SBool"
-  show (KBounded False n) = "SWord" ++ show n
-  show (KBounded True n)  = "SInt"  ++ show n
-  show KUnbounded         = "SInteger"
-  show KReal              = "SReal"
-  show (KUserSort s _)    = s
-  show KFloat             = "SFloat"
-  show KDouble            = "SDouble"
-  show KString            = "SString"
-  show KChar              = "SChar"
-  show (KList e)          = "[" ++ show e ++ "]"
-  show (KTuple m)         = "(" ++ intercalate ", " (show <$> m) ++ ")"
+  show KBool                = "SBool"
+  show (KBounded False n)   = "SWord" ++ show n
+  show (KBounded True n)    = "SInt"  ++ show n
+  show KUnbounded           = "SInteger"
+  show KReal                = "SReal"
+  show (KUninterpreted s _) = s
+  show KFloat               = "SFloat"
+  show KDouble              = "SDouble"
+  show KString              = "SString"
+  show KChar                = "SChar"
+  show (KList e)            = "[" ++ show e ++ "]"
+  show (KTuple m)           = "(" ++ intercalate ", " (show <$> m) ++ ")"
 
 -- | How the type maps to SMT land
 smtType :: Kind -> String
-smtType KBool           = "Bool"
-smtType (KBounded _ sz) = "(_ BitVec " ++ show sz ++ ")"
-smtType KUnbounded      = "Int"
-smtType KReal           = "Real"
-smtType KFloat          = "(_ FloatingPoint  8 24)"
-smtType KDouble         = "(_ FloatingPoint 11 53)"
-smtType KString         = "String"
-smtType KChar           = "(_ BitVec 8)"
-smtType (KList k)       = "(Seq " ++ smtType k ++ ")"
-smtType (KUserSort s _) = s
-smtType (KTuple kinds)  = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
+smtType KBool                = "Bool"
+smtType (KBounded _ sz)      = "(_ BitVec " ++ show sz ++ ")"
+smtType KUnbounded           = "Int"
+smtType KReal                = "Real"
+smtType KFloat               = "(_ FloatingPoint  8 24)"
+smtType KDouble              = "(_ FloatingPoint 11 53)"
+smtType KString              = "String"
+smtType KChar                = "(_ BitVec 8)"
+smtType (KList k)            = "(Seq " ++ smtType k ++ ")"
+smtType (KUninterpreted s _) = s
+smtType (KTuple kinds)       = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
 
 instance Eq  G.DataType where
    a == b = G.tyconUQname (G.dataTypeName a) == G.tyconUQname (G.dataTypeName b)
@@ -83,19 +84,17 @@ instance Ord G.DataType where
 
 -- | Does this kind represent a signed quantity?
 kindHasSign :: Kind -> Bool
-kindHasSign k =
-  case k of
-    KBool        -> False
-    KBounded b _ -> b
-    KUnbounded   -> True
-    KReal        -> True
-    KFloat       -> True
-    KDouble      -> True
-    KUserSort{}  -> False
-    KString      -> False
-    KChar        -> False
-    KList{}      -> False
-    KTuple{}     -> False
+kindHasSign = \case KBool            -> False
+                    KBounded b _     -> b
+                    KUnbounded       -> True
+                    KReal            -> True
+                    KFloat           -> True
+                    KDouble          -> True
+                    KUninterpreted{} -> False
+                    KString          -> False
+                    KChar            -> False
+                    KList{}          -> False
+                    KTuple{}         -> False
 
 -- | Construct an uninterpreted/enumerated kind from a piece of data; we distinguish simple enumerations as those
 -- are mapped to proper SMT-Lib2 data-types; while others go completely uninterpreted
@@ -104,7 +103,7 @@ constructUKind a
   | any (`isPrefixOf` sortName) badPrefixes
   = error $ "Data.SBV: Cannot construct user-sort with name: " ++ show sortName ++ ": Must not start with any of " ++ intercalate ", " badPrefixes
   | True
-  = KUserSort sortName mbEnumFields
+  = KUninterpreted sortName mbEnumFields
   where -- make sure we don't step on ourselves:
         badPrefixes   = ["SBool", "SWord", "SInt", "SInteger", "SReal", "SFloat", "SDouble", "SString", "SChar", "["]
 
@@ -148,50 +147,50 @@ class HasKind a where
   hasSign x = kindHasSign (kindOf x)
 
   intSizeOf x = case kindOf x of
-                  KBool         -> error "SBV.HasKind.intSizeOf((S)Bool)"
-                  KBounded _ s  -> s
-                  KUnbounded    -> error "SBV.HasKind.intSizeOf((S)Integer)"
-                  KReal         -> error "SBV.HasKind.intSizeOf((S)Real)"
-                  KFloat        -> error "SBV.HasKind.intSizeOf((S)Float)"
-                  KDouble       -> error "SBV.HasKind.intSizeOf((S)Double)"
-                  KUserSort s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
-                  KString       -> error "SBV.HasKind.intSizeOf((S)Double)"
-                  KChar         -> error "SBV.HasKind.intSizeOf((S)Char)"
-                  KList ek      -> error $ "SBV.HasKind.intSizeOf((S)List)" ++ show ek
-                  KTuple tys    -> error $ "SBV.HasKind.intSizeOf((S)Tuple)" ++ show tys
+                  KBool              -> error "SBV.HasKind.intSizeOf((S)Bool)"
+                  KBounded _ s       -> s
+                  KUnbounded         -> error "SBV.HasKind.intSizeOf((S)Integer)"
+                  KReal              -> error "SBV.HasKind.intSizeOf((S)Real)"
+                  KFloat             -> error "SBV.HasKind.intSizeOf((S)Float)"
+                  KDouble            -> error "SBV.HasKind.intSizeOf((S)Double)"
+                  KUninterpreted s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
+                  KString            -> error "SBV.HasKind.intSizeOf((S)Double)"
+                  KChar              -> error "SBV.HasKind.intSizeOf((S)Char)"
+                  KList ek           -> error $ "SBV.HasKind.intSizeOf((S)List)" ++ show ek
+                  KTuple tys         -> error $ "SBV.HasKind.intSizeOf((S)Tuple)" ++ show tys
 
-  isBoolean       x | KBool{}      <- kindOf x = True
-                    | True                     = False
+  isBoolean       (kindOf -> KBool{})          = True
+  isBoolean       _                            = False
 
-  isBounded       x | KBounded{}   <- kindOf x = True
-                    | True                     = False
+  isBounded       (kindOf -> KBounded{})       = True
+  isBounded       _                            = False
 
-  isReal          x | KReal{}      <- kindOf x = True
-                    | True                     = False
+  isReal          (kindOf -> KReal{})          = True
+  isReal          _                            = False
 
-  isFloat         x | KFloat{}     <- kindOf x = True
-                    | True                     = False
+  isFloat         (kindOf -> KFloat{})         = True
+  isFloat         _                            = False
 
-  isDouble        x | KDouble{}    <- kindOf x = True
-                    | True                     = False
+  isDouble        (kindOf -> KDouble{})        = True
+  isDouble        _                            = False
 
-  isInteger       x | KUnbounded{} <- kindOf x = True
-                    | True                     = False
+  isInteger       (kindOf -> KUnbounded{})     = True
+  isInteger       _                            = False
 
-  isUninterpreted x | KUserSort{}  <- kindOf x = True
-                    | True                     = False
+  isUninterpreted (kindOf -> KUninterpreted{}) = True
+  isUninterpreted _                            = False
 
-  isString        x | KString{}    <- kindOf x = True
-                    | True                     = False
+  isChar          (kindOf -> KChar{})          = True
+  isChar          _                            = False
 
-  isChar          x | KChar{}      <- kindOf x = True
-                    | True                     = False
+  isString        (kindOf -> KString{})        = True
+  isString        _                            = False
 
-  isList          x | KList{}      <- kindOf x = True
-                    | True                     = False
+  isList          (kindOf -> KList{})          = True
+  isList          _                            = False
 
-  isTuple         x | KTuple{}     <- kindOf x = True
-                    | True                     = False
+  isTuple         (kindOf -> KTuple{})         = True
+  isTuple         _                            = False
 
   showType = show . kindOf
 
