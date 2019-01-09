@@ -26,6 +26,8 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# LANGUAGE UndecidableInstances       #-} -- for undetermined s in MonadState
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SV(..), swKind, trueSV, falseSV

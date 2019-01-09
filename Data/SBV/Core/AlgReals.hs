@@ -11,6 +11,7 @@
 
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Data.SBV.Core.AlgReals (

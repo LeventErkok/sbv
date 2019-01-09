@@ -13,7 +13,7 @@
 -- recursive programs on symbolic lists. But most of the time all we need is a
 -- bounded prefix of this list, at which point these functions come in handy.
 -----------------------------------------------------------------------------
---
+
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
