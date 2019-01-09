@@ -9,15 +9,17 @@
 -- Query related utils.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE    BangPatterns         #-}
-{-# LANGUAGE    DefaultSignatures    #-}
-{-# LANGUAGE    LambdaCase           #-}
-{-# LANGUAGE    NamedFieldPuns       #-}
-{-# LANGUAGE    ScopedTypeVariables  #-}
-{-# LANGUAGE    TupleSections        #-}
-{-# LANGUAGE    TypeSynonymInstances #-}
-{-# LANGUAGE    FlexibleInstances    #-}
-{-# OPTIONS_GHC -fno-warn-orphans    #-}
+{-# LANGUAGE BangPatterns         #-}
+{-# LANGUAGE DefaultSignatures    #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE NamedFieldPuns       #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TupleSections        #-}
+{-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Data.SBV.Control.Utils (
        io

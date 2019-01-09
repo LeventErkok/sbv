@@ -20,9 +20,9 @@
 -- For details, see: <http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml>
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE OverloadedStrings   #-}
 
 module Data.SBV.Char (
         -- * Occurrence in a string

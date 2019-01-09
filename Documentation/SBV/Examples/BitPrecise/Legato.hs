@@ -31,8 +31,8 @@
 -- is indeed correct.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveGeneric  #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric  #-}
 
 module Documentation.SBV.Examples.BitPrecise.Legato where
 

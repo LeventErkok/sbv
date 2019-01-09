@@ -10,13 +10,12 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE TypeApplications    #-}
-
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE StandaloneDeriving  #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeApplications    #-}
 
 module TestSuite.Basics.Tuple (tests)  where
 

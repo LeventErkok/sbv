@@ -9,8 +9,8 @@
 -- Testing uninterpreted value extraction
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module TestSuite.Queries.Uninterpreted where
 

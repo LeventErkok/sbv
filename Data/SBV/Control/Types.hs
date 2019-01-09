@@ -9,8 +9,8 @@
 -- Types related to interactive queries
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveGeneric  #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric  #-}
 
 module Data.SBV.Control.Types (
        CheckSatResult(..)

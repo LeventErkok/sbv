@@ -21,9 +21,9 @@
 -- @s@ is the sum of all numbers up to and including @n@ upon termination.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric  #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Documentation.SBV.Examples.ProofTools.Sum where
 

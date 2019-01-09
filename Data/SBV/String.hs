@@ -14,9 +14,10 @@
 -- used as symbolic-strings.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 module Data.SBV.String (
         -- * Length, emptiness

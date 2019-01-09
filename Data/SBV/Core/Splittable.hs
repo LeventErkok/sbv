@@ -9,10 +9,10 @@
 -- Implementation of bit-vector concatanetation and splits
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE TypeSynonymInstances   #-}
 {-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE TypeSynonymInstances   #-}
 
 module Data.SBV.Core.Splittable (Splittable(..)) where
 

@@ -10,9 +10,9 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE QuasiQuotes         #-}
-{-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 module Data.SBV.Client
   ( sbvCheckSolverInstallation

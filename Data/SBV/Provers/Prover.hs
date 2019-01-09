@@ -9,10 +9,10 @@
 -- Provable abstraction and the connection to SMT solvers
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE CPP                   #-}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE ScopedTypeVariables   #-}

@@ -9,13 +9,13 @@
 -- The famous U2 bridge crossing puzzle: <http://www.braingle.com/brainteasers/515/u2.html>
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE TemplateHaskell      #-}
-{-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE DeriveAnyClass       #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Documentation.SBV.Examples.Puzzles.U2Bridge where
 

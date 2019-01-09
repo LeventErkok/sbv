@@ -12,11 +12,11 @@
 -- example involving enumerations.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE StandaloneDeriving  #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 module Documentation.SBV.Examples.Misc.Enumerate where
 

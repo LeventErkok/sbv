@@ -9,7 +9,7 @@
 -- Bounded fixed-point unrolling.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Data.SBV.Tools.BoundedFix (
          bfix

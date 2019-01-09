@@ -11,9 +11,9 @@
 
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
-{-# LANGUAGE Rank2Types          #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 

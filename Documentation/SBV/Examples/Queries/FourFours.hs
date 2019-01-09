@@ -19,12 +19,12 @@
 -- and ask the SMT solver to find the appropriate fillings.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE StandaloneDeriving  #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 module Documentation.SBV.Examples.Queries.FourFours where
 

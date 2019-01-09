@@ -22,9 +22,9 @@
 -- uninterpreted function.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric  #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Documentation.SBV.Examples.ProofTools.Fibonacci where
 

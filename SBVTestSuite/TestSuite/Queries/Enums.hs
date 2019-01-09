@@ -9,11 +9,11 @@
 -- Test suite for Documentation.SBV.Examples.Uninterpreted.AUF
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE StandaloneDeriving  #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 module TestSuite.Queries.Enums where
 

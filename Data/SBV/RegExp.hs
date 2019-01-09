@@ -15,10 +15,11 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE Rank2Types           #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Data.SBV.RegExp (
         -- * Regular expressions

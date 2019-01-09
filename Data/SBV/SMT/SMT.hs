@@ -9,11 +9,11 @@
 -- Abstraction of SMT solvers
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE DefaultSignatures          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE Rank2Types                 #-}
 {-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE Rank2Types                 #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 
 module Data.SBV.SMT.SMT (
        -- * Model extraction

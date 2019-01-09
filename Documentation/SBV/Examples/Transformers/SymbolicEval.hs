@@ -21,8 +21,8 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DeriveFunctor              #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures             #-}
 
 module Documentation.SBV.Examples.Transformers.SymbolicEval where

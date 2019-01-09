@@ -28,10 +28,10 @@
 -- case, the second student would be right.
 ------------------------------------------------------------------------------
 
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE StandaloneDeriving  #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 module Documentation.SBV.Examples.Puzzles.Garden where
 

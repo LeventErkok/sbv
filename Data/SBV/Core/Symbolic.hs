@@ -9,23 +9,22 @@
 -- Symbolic values
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE    CPP                        #-}
-{-# LANGUAGE    DefaultSignatures          #-}
-{-# LANGUAGE    DeriveDataTypeable         #-}
-{-# LANGUAGE    DeriveFunctor              #-}
-{-# LANGUAGE    FlexibleInstances          #-}
-{-# LANGUAGE    GADTs                      #-}
-{-# LANGUAGE    GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE    MultiParamTypeClasses      #-}
-{-# LANGUAGE    NamedFieldPuns             #-}
-{-# LANGUAGE    PatternGuards              #-}
-{-# LANGUAGE    Rank2Types                 #-}
-{-# LANGUAGE    ScopedTypeVariables        #-}
-{-# LANGUAGE    TupleSections              #-}
-{-# LANGUAGE    TypeOperators              #-}
-{-# LANGUAGE    TypeSynonymInstances       #-}
-{-# LANGUAGE    UndecidableInstances       #-} -- for undetermined s in MonadState
-{-# OPTIONS_GHC -fno-warn-orphans          #-}
+{-# LANGUAGE CPP                        #-}
+{-# LANGUAGE DefaultSignatures          #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE PatternGuards              #-}
+{-# LANGUAGE Rank2Types                 #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TupleSections              #-}
+{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
+{-# LANGUAGE UndecidableInstances       #-} -- for undetermined s in MonadState
 
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
