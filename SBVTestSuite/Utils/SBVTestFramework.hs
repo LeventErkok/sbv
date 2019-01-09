@@ -149,7 +149,7 @@ doTheDiff nm ref new act = goldenTest nm (BS.readFile ref) (act >> BS.readFile n
                 diff    = concatMap pick $ zip3 [1..diffLen] (lxs ++ repeat "") (lys ++ repeat "")
 
                 pick (i, expected, got)
-                  | expected == got
+                  | filter (/= '\r') expected == filter (/= '\r') got
                   = []
                   | True
                   = [ "== Line " ++ show i ++ " =="
