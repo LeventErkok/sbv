@@ -127,7 +127,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
              ++ [ "; --- tuples ---" ]
              ++ concatMap declTuple tupleArities
              ++ [ "; --- literal constants ---" ]
-             ++ map (declConst cfg) consts
+             ++ concatMap (declConst cfg) consts
              ++ [ "; --- skolem constants ---" ]
              ++ [ "(declare-fun " ++ show s ++ " " ++ svFunType ss s ++ ")" ++ userName s | Right (s, ss) <- skolemInps]
              ++ [ "; --- optimization tracker variables ---" | not (null trackerVars) ]
@@ -334,7 +334,7 @@ cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cfg =
             -- tuples. NB. Only declare the new sizes, old sizes persist.
             ++ concatMap declTuple (findTupleArities newKs)
             -- constants
-            ++ map (declConst cfg) consts
+            ++ concatMap (declConst cfg) consts
             -- inputs
             ++ map declInp inps
             -- arrays
@@ -376,8 +376,13 @@ defineFun (s, def) mbComment = "(define-fun "   ++ varT ++ " " ++ def ++ ")" ++ 
   where varT      = show s ++ " " ++ svFunType [] s
         cmnt      = maybe "" (" ; " ++) mbComment
 
-declConst :: SMTConfig -> (SV, CV) -> String
-declConst cfg (s, c) = defineFun (s, cvtCV (roundingMode cfg) c) Nothing
+-- Declare constants. NB. We don't declare true/false; but just inline those as necessary
+declConst :: SMTConfig -> (SV, CV) -> [String]
+declConst cfg (s, c)
+  | s == falseSV || s == trueSV
+  = []
+  | True
+  = [defineFun (s, cvtCV (roundingMode cfg) c) Nothing]
 
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = ["(declare-fun " ++ i ++ " " ++ cvtType t ++ ")"]
@@ -507,12 +512,17 @@ cvtType (SBVType xs) = "(" ++ unwords (map smtType body) ++ ") " ++ smtType ret
 type SkolemMap = M.Map SV [SV]
 type TableMap  = IM.IntMap String
 
+-- Present an SV; inline true/false as needed
 cvtSV :: SkolemMap -> SV -> String
-cvtSV skolemMap s
+cvtSV skolemMap s@(SV _ (NodeId n))
   | Just ss <- s `M.lookup` skolemMap
   = "(" ++ show s ++ concatMap ((" " ++) . show) ss ++ ")"
+  | s == trueSV
+  = "true"
+  | s == falseSV
+  = "false"
   | True
-  = show s
+  = 's' : show n
 
 cvtCV :: RoundingMode -> CV -> String
 cvtCV = cvToSMTLib
