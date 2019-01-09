@@ -115,7 +115,7 @@ exploitRe = R.KPlus (statementRe * "; ")
 --
 -- > query ("SELECT msg FROM msgs WHERE topicid='kg'; DROP TABLE 'users'")
 --
--- which would query for topic @'kg'@ and then delete the users table!
+-- which would query for topic @kg@ and then delete the users table!
 findInjection :: SQLExpr -> IO String
 findInjection expr = runSMT $ do
 
