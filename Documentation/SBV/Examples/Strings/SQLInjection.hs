@@ -106,16 +106,23 @@ exploitRe = R.KPlus (statementRe * "; ")
 --   query ("SELECT msg FROM msgs WHERE topicid='" ++ my_topicid ++ "'")
 -- @
 --
--- We have:
+-- Depending on your z3 version, you might see an output of the form:
 --
--- >>> findInjection exampleProgram
--- "kg'; DROP TABLE 'users"
+-- @
+--   ghci> findInjection exampleProgram
+--   "kg'; DROP TABLE 'users"
+-- @
 --
--- Indeed, if we substitute the suggested string, we get the program:
+-- though the topic might change obviously. Indeed, if we substitute the suggested string, we get the program:
 --
 -- > query ("SELECT msg FROM msgs WHERE topicid='kg'; DROP TABLE 'users'")
 --
 -- which would query for topic @kg@ and then delete the users table!
+--
+-- Here, we make sure that the injection ends with the malicious string:
+--
+-- >>> ("'; DROP TABLE 'users" `Data.List.isSuffixOf`) <$> findInjection exampleProgram
+-- True
 findInjection :: SQLExpr -> IO String
 findInjection expr = runSMT $ do
 
