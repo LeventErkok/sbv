@@ -549,6 +549,7 @@ svSymbolicMerge k force t a b
                                () | swa == swb                      -> return swa
                                () | swa == trueSV && swb == falseSV -> return swt
                                () | swa == falseSV && swb == trueSV -> newExpr st k (SBVApp Not [swt])
+                               () | swb == falseSV                  -> newExpr st k (SBVApp And [swt, swa])
                                ()                                   -> newExpr st k (SBVApp Ite [swt, swa, swb])
 
 -- | Total indexing operation. @svSelect xs default index@ is
