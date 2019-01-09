@@ -60,7 +60,7 @@ module Data.SBV.Core.Symbolic
 
 import Control.Arrow               (first, second, (***))
 import Control.DeepSeq             (NFData(..))
-import Control.Monad               (when)
+import Control.Monad               (when, unless)
 import Control.Monad.Except        (MonadError, ExceptT)
 import Control.Monad.Reader        (MonadReader(..), ReaderT, runReaderT,
                                     mapReaderT)
@@ -1352,10 +1352,11 @@ imposeConstraint isSoft attrs c = do st <- symbolicEnv
 -- | Require a boolean condition to be true in the state. Only used for internal purposes.
 internalConstraint :: State -> Bool -> [(String, String)] -> SVal -> IO ()
 internalConstraint st isSoft attrs b = do v <- svToSV st b
-                                          modifyState st rConstraints ((isSoft, attrs, v):)
-                                                    $ noInteractive [ "Adding an internal " ++ soft ++ "constraint:"
-                                                                    , "  Named: " ++ fromMaybe "<unnamed>" (listToMaybe [nm | (":named", nm) <- attrs])
-                                                                    ]
+                                          unless (null attrs && v == trueSV) $
+                                                 modifyState st rConstraints ((isSoft, attrs, v):)
+                                                              $ noInteractive [ "Adding an internal " ++ soft ++ "constraint:"
+                                                                              , "  Named: " ++ fromMaybe "<unnamed>" (listToMaybe [nm | (":named", nm) <- attrs])
+                                                                              ]
     where soft | isSoft = "soft-"
                | True   = ""
 

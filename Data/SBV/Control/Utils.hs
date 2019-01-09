@@ -115,7 +115,9 @@ instance MonadIO m => SolverContext (QueryT m) where
 addQueryConstraint :: (MonadIO m, MonadQuery m) => Bool -> [(String, String)] -> SBool -> m ()
 addQueryConstraint isSoft atts b = do sv <- inNewContext (\st -> liftIO $ do mapM_ (registerLabel "Constraint" st) [nm | (":named", nm) <- atts]
                                                                              sbvToSV st b)
-                                      send True $ "(" ++ asrt ++ " " ++ addAnnotations atts (show sv)  ++ ")"
+
+                                      unless (null atts && sv == trueSV) $
+                                             send True $ "(" ++ asrt ++ " " ++ addAnnotations atts (show sv)  ++ ")"
    where asrt | isSoft = "assert-soft"
               | True   = "assert"
 

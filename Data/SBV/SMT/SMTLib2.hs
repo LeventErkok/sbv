@@ -190,6 +190,8 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
         letShift = align 12
 
         finalAssert
+          | null foralls && noConstraints
+          = []
           | null foralls
           =    map (\a -> "(assert "      ++ uncurry addAnnotations a ++ ")") hardAsserts
             ++ map (\a -> "(assert-soft " ++ uncurry addAnnotations a ++ ")") softAsserts
@@ -205,7 +207,9 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
                                      ]
           | True
           = [impAlign (letShift combined) ++ replicate noOfCloseParens ')']
-          where namedAsserts = [findName attrs | (_, attrs, _) <- assertions, not (null attrs)]
+          where (noConstraints, assertions) = finalAssertions
+
+                namedAsserts = [findName attrs | (_, attrs, _) <- assertions, not (null attrs)]
                  where findName attrs = fromMaybe "<anonymous>" (listToMaybe [nm | (":named", nm) <- attrs])
 
                 hardAsserts = [(attr, v) | (False, attr, v) <- assertions]
@@ -234,10 +238,10 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
         -- That is, we always assert all path constraints and path conditions AND
         --     -- negation of the output in a prove
         --     -- output itself in a sat
-        assertions :: [(Bool, [(String, String)], String)]
-        assertions
-           | null finals = [(False, [], cvtSV skolemMap trueSV)]
-           | True        = finals
+        finalAssertions :: (Bool, [(Bool, [(String, String)], String)])
+        finalAssertions
+           | null finals = (True,  [(False, [], cvtSV skolemMap trueSV)])
+           | True        = (False, finals)
 
            where finals  = cstrs' ++ maybe [] (\r -> [(False, [], r)]) mbO
 
