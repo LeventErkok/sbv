@@ -11,8 +11,6 @@
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s_2 () Bool false)
-[GOOD] (define-fun s_1 () Bool true)
 [GOOD] (define-fun s13 () Int 1)
 [GOOD] (define-fun s53 () Int 0)
 [GOOD] (define-fun s11 () (Seq Int) (as seq.empty (Seq Int)))

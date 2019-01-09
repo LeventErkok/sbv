@@ -9,8 +9,6 @@
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s_2 () Bool false)
-[GOOD] (define-fun s_1 () Bool true)
 [GOOD] (define-fun s2 () (_ BitVec 8) #x01)
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s1 ((_ BitVec 8)) (_ BitVec 8)) ; tracks user variable "y"
@@ -23,7 +21,7 @@
 [GOOD] (assert (forall ((s0 (_ BitVec 8)))
                    (let ((s3 (bvadd (s1 s0) s2)))
                    (let ((s4 (= s0 s3)))
-                   (and s4 s_2)))))
+                   (and s4 false)))))
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3

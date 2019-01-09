@@ -19,8 +19,6 @@
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s_2 () Bool false)
-[GOOD] (define-fun s_1 () Bool true)
 [GOOD] (define-fun s6 () Int 0)
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () Int) ; tracks user variable "a"
@@ -96,7 +94,7 @@
 [SEND] (check-sat-assuming (__assumption_proxy_s18_20))
 [RECV] sat
 [SEND] (get-assignment)
-[RECV] ((s_1 true) (s7 true) (|a > 0| true) (s15 true) (s_2 false) (s8 true) (a+b_<_12 true) (s17 true) (|later, a > 4| true) (s18 true) (s12 true))
+[RECV] ((s7 true) (|a > 0| true) (s15 true) (s8 true) (a+b_<_12 true) (s17 true) (|later, a > 4| true) (s18 true) (s12 true))
 [SEND] (get-info :assertion-stack-levels)
 [RECV] (:assertion-stack-levels 0)
 [SEND] (get-info :authors)

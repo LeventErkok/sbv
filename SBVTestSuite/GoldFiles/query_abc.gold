@@ -9,8 +9,6 @@
 [ISSUE] ; --- uninterpreted sorts ---
 [ISSUE] ; --- tuples ---
 [ISSUE] ; --- literal constants ---
-[ISSUE] (define-fun s_2 () Bool false)
-[ISSUE] (define-fun s_1 () Bool true)
 [ISSUE] (define-fun s2 () (_ BitVec 32) #x00000000)
 [ISSUE] ; --- skolem constants ---
 [ISSUE] (declare-fun s0 () (_ BitVec 32)) ; tracks user variable "a"

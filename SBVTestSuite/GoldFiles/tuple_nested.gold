@@ -12,8 +12,6 @@
                                            ((mkSBVTuple2 (proj_1_SBVTuple2 T1)
                                                          (proj_2_SBVTuple2 T2))))))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s_2 () Bool false)
-[GOOD] (define-fun s_1 () Bool true)
 [GOOD] (define-fun s13 () (_ BitVec 8) #x00)
 [GOOD] (define-fun s3 () Int 1)
 [GOOD] (define-fun s10 () (_ BitVec 8) #x63)

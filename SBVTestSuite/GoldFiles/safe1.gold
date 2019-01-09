@@ -9,8 +9,6 @@
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s_2 () Bool false)
-[GOOD] (define-fun s_1 () Bool true)
 [GOOD] (define-fun s1 () Int 12)
 [GOOD] (define-fun s3 () Int 2)
 [GOOD] ; --- skolem constants ---

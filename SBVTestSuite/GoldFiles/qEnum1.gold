@@ -13,8 +13,6 @@
        )
 [GOOD] ; --- tuples ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s_2 () Bool false)
-[GOOD] (define-fun s_1 () Bool true)
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () BinOp) ; tracks user variable "p"
 [GOOD] (declare-fun s1 () BinOp) ; tracks user variable "m"

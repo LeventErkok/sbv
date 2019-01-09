@@ -9,8 +9,6 @@
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s_2 () Bool false)
-[GOOD] (define-fun s_1 () Bool true)
 [GOOD] (define-fun s11 () (_ BitVec 32) #x00000001)
 [GOOD] (define-fun s12 () (_ BitVec 32) #x00000000)
 [GOOD] (define-fun s32 () (_ BitVec 32) #x00000005)

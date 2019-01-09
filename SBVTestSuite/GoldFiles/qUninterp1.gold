@@ -10,8 +10,6 @@
 [GOOD] (declare-sort L 0)  ; N.B. Uninterpreted: L.B: not a nullary constructor
 [GOOD] ; --- tuples ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s_2 () Bool false)
-[GOOD] (define-fun s_1 () Bool true)
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () L)
 [GOOD] ; --- constant tables ---

@@ -5,8 +5,6 @@
 ; --- uninterpreted sorts ---
 ; --- tuples ---
 ; --- literal constants ---
-(define-fun s_2 () Bool false)
-(define-fun s_1 () Bool true)
 (define-fun s1 () (_ BitVec 8) #x01)
 ; --- skolem constants ---
 (declare-fun s0 () (_ BitVec 8))
