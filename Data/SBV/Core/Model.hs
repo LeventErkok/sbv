@@ -558,14 +558,15 @@ instance EqSymbolic (SBV a) where
   SBV x ./= SBV y = SBV (svNotEqual x y)
 
   -- Custom version of distinct that generates better code for base types
-  distinct []                                           = sTrue
-  distinct [_]                                          = sTrue
-  distinct xs | all isConc xs                           = checkDiff xs
-              | [SBV a, SBV b] <- xs, a == svBool True  = SBV $ svNot b
-              | [SBV a, SBV b] <- xs, b == svBool True  = SBV $ svNot a
-              | [SBV a, SBV b] <- xs, a == svBool False = SBV b
-              | [SBV a, SBV b] <- xs, b == svBool False = SBV a
-              | True                                    = SBV (SVal KBool (Right (cache r)))
+  distinct []                                             = sTrue
+  distinct [_]                                            = sTrue
+  distinct xs | all isConc xs                             = checkDiff xs
+              | [SBV a, SBV b] <- xs, a `is` svBool True  = SBV $ svNot b
+              | [SBV a, SBV b] <- xs, b `is` svBool True  = SBV $ svNot a
+              | [SBV a, SBV b] <- xs, a `is` svBool False = SBV b
+              | [SBV a, SBV b] <- xs, b `is` svBool False = SBV a
+              | length xs > 2 && isBool (head xs)         = sFalse
+              | True                                      = SBV (SVal KBool (Right (cache r)))
     where r st = do xsv <- mapM (sbvToSV st) xs
                     newExpr st KBool (SBVApp NotEqual xsv)
 
@@ -580,6 +581,13 @@ instance EqSymbolic (SBV a) where
           -- constraint that we don't have here. (To support SBools.)
           isConc (SBV (SVal _ (Left _))) = True
           isConc _                       = False
+
+          -- Likewise here; need to go lower.
+          SVal k1 (Left c1) `is` SVal k2 (Left c2) = (k1, c1) == (k2, c2)
+          _                 `is` _                 = False
+
+          isBool (SBV (SVal KBool _)) = True
+          isBool _                    = False
 
 instance SymVal a => OrdSymbolic (SBV a) where
   SBV x .<  SBV y = SBV (svLessThan x y)
