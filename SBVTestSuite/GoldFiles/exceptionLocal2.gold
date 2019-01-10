@@ -17,7 +17,7 @@ CAUGHT SMT EXCEPTION
 ***
 ***    Sent      : (declare-fun s0 () Real) ; tracks user variable "x"
 ***    Expected  : success
-***    Received  : (error "line 10 column 23: logic does not support reals")
+***    Received  : (error "line 8 column 23: logic does not support reals")
 ***
 ***    Exit code : ExitFailure (-15)
 ***    Executable: /usr/local/bin/z3

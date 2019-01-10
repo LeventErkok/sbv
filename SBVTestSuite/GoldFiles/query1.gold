@@ -59,14 +59,14 @@
 [SEND] (get-option :produce-unsat-assumptions)
 [RECV] unsupported
 [SEND] (get-option :produce-unsat-cores)
-[SKIP] ; :produce-unsat-assumptions line: 44 position: 0
+[SKIP] ; :produce-unsat-assumptions line: 42 position: 0
 [RECV] true
 [SEND] (get-option :random-seed)
 [RECV] 123
 [SEND] (get-option :reproducible-resource-limit)
 [RECV] unsupported
 [SEND] (get-option :verbosity)
-[SKIP] ; :reproducible-resource-limit line: 47 position: 0
+[SKIP] ; :reproducible-resource-limit line: 45 position: 0
 [RECV] 0
 [SEND] (get-option :smt.mbqi)
 [RECV] true
@@ -94,7 +94,7 @@
 [SEND] (check-sat-assuming (__assumption_proxy_s18_20))
 [RECV] sat
 [SEND] (get-assignment)
-[RECV] ((s7 true) (|a > 0| true) (s15 true) (s8 true) (a+b_<_12 true) (s17 true) (|later, a > 4| true) (s18 true) (s12 true))
+[RECV] ((s7 true) (|a > 0| true) (s15 true) (s8 true) (s17 true) (a+b_<_12 true) (|later, a > 4| true) (s18 true) (s12 true))
 [SEND] (get-info :assertion-stack-levels)
 [RECV] (:assertion-stack-levels 0)
 [SEND] (get-info :authors)
@@ -110,10 +110,10 @@
 [SEND] (get-info :memory)
 [RECV] unsupported
 [SEND] (get-info :time)
-[SKIP] ; :memory line: 73 position: 0
+[SKIP] ; :memory line: 71 position: 0
 [RECV] unsupported
 [SEND] (get-value (s0))
-[SKIP] ; :time line: 74 position: 0
+[SKIP] ; :time line: 72 position: 0
 [RECV] ((s0 5))
 [SEND] (get-value (s1))
 [RECV] ((s1 1))

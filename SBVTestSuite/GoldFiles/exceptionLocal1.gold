@@ -57,7 +57,7 @@ CAUGHT SMT EXCEPTION
 ***
 ***    Sent      : (define-fun s35 () (_ BitVec 32) (bvmul s34 s34))
 ***    Expected  : success
-***    Received  : (error "at line 42, column 35: in bvmul: maximal polynomial degree exceeded")
+***    Received  : (error "at line 40, column 35: in bvmul: maximal polynomial degree exceeded")
 ***
 ***    Exit code : ExitSuccess
 ***    Executable: /usr/local/bin/yices-smt2
