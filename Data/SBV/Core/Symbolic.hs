@@ -114,9 +114,10 @@ instance HasKind SV where
   kindOf (SV k _) = k
 
 instance Show SV where
-  show (SV _ (NodeId n))
-    | n < 0 = "s_" ++ show (abs n)
-    | True  = 's' : show n
+  show (SV _ (NodeId n)) = case n of
+                             -2 -> "false"
+                             -1 -> "true"
+                             _  -> 's' : show n
 
 -- | Kind of a symbolic word.
 swKind :: SV -> Kind
@@ -594,7 +595,7 @@ instance Show Result where
                 ++ map shn (fst is)
                 ++ (if null (snd is) then [] else "TRACKER VARS" : map (shn . (EX,)) (snd is))
                 ++ ["CONSTANTS"]
-                ++ map shc cs
+                ++ concatMap shc cs
                 ++ ["TABLES"]
                 ++ map sht ts
                 ++ ["ARRAYS"]
@@ -624,7 +625,11 @@ instance Show Result where
 
           sht ((i, at, rt), es)  = "  Table " ++ show i ++ " : " ++ show at ++ "->" ++ show rt ++ " = " ++ show es
 
-          shc (sv, cv) = "  " ++ show sv ++ " = " ++ show cv
+          shc (sv, cv)
+            | sv == falseSV || sv == trueSV
+            = []
+            | True
+            = ["  " ++ show sv ++ " = " ++ show cv]
 
           shcg (s, ss) = ("Variable: " ++ s) : map ("  " ++) ss
 
