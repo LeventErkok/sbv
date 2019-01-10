@@ -193,8 +193,8 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
           | null foralls && noConstraints
           = []
           | null foralls
-          =    map (\a -> "(assert "      ++ uncurry addAnnotations a ++ ")") hardAsserts
-            ++ map (\a -> "(assert-soft " ++ uncurry addAnnotations a ++ ")") softAsserts
+          =    map (\(attr, v) -> "(assert "      ++ addAnnotations attr (mkLiteral v) ++ ")") hardAsserts
+            ++ map (\(attr, v) -> "(assert-soft " ++ addAnnotations attr (mkLiteral v) ++ ")") softAsserts
           | not (null namedAsserts)
           = error $ intercalate "\n" [ "SBV: Constraints with attributes and quantifiers cannot be mixed!"
                                      , "   Quantified variables: " ++ unwords (map show foralls)
@@ -207,18 +207,28 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
                                      ]
           | True
           = [impAlign (letShift combined) ++ replicate noOfCloseParens ')']
-          where (noConstraints, assertions) = finalAssertions
+          where mkLiteral (Left  v) =            cvtSV skolemMap v
+                mkLiteral (Right v) = "(not " ++ cvtSV skolemMap v ++ ")"
+
+                (noConstraints, assertions) = finalAssertions
 
                 namedAsserts = [findName attrs | (_, attrs, _) <- assertions, not (null attrs)]
                  where findName attrs = fromMaybe "<anonymous>" (listToMaybe [nm | (":named", nm) <- attrs])
 
+                hardAsserts, softAsserts :: [([(String, String)], Either SV SV)]
                 hardAsserts = [(attr, v) | (False, attr, v) <- assertions]
                 softAsserts = [(attr, v) | (True,  attr, v) <- assertions]
 
-                combined = case filter (/= "true") $ nub $ sort $ map snd hardAsserts of
-                              []                                 -> "true"
-                              literals | "false" `elem` literals -> "false"
-                                       | True                    -> "(and " ++ unwords literals ++ ")"
+                combined = case lits of
+                             []               -> "true"
+                             [x]              -> mkLiteral x
+                             xs  | any bad xs -> "false"
+                                 | True       -> "(and " ++ unwords (map mkLiteral xs) ++ ")"
+                  where lits = filter (not . redundant) $ nub (sort (map snd hardAsserts))
+                        redundant (Left v)  = v == trueSV
+                        redundant (Right v) = v == falseSV
+                        bad (Left  v) = v == falseSV
+                        bad (Right v) = v == trueSV
 
         impAlign s
           | null delayedEqualities = s
@@ -226,22 +236,9 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
 
         align n s = replicate n ' ' ++ s
 
-        -- We have:
-        --    - cstrs   : Explicitly given constraints (via calls to constrain)
-        --    - p1..pn  : The path conditions in a case-split that led us here. This is given in a case-split.
-        --    - c1..cm  : All the other case-split constraints for the coverage case. This is in a case-coverage.
-        -- if sat:
-        --     -- we assert (cstrs /\ (p1 /\ p2 /\ ... /\ pn) /\ ~(c1 \/ c2 \/ .. \/ cm) /\ out)
-        --            i.e., cstrs /\ p1 /\ p2 /\ ... /\ pn /\ ~c1 /\ ~c2 /\ ~c3 .. /\ ~cm /\ out
-        -- if prove:
-        --     -- we assert ~((cstrs /\  (p1 /\ p2 /\ .. /\ pn) /\ ~(c1 \/ c2 \/ .. \/ cm)) => out)
-        --            i.e., cstrs /\ p1 /\ p2 /\ .. /\ pn /\ ~c1 /\ ~c2 /\ ~c3 .. /\ ~cm /\ ~out
-        -- That is, we always assert all path constraints and path conditions AND
-        --     -- negation of the output in a prove
-        --     -- output itself in a sat
-        finalAssertions :: (Bool, [(Bool, [(String, String)], String)])
+        finalAssertions :: (Bool, [(Bool, [(String, String)], Either SV SV)])  -- If Left: positive, Right: negative
         finalAssertions
-           | null finals = (True,  [(False, [], cvtSV skolemMap trueSV)])
+           | null finals = (True,  [(False, [], Left trueSV)])
            | True        = (False, finals)
 
            where finals  = cstrs' ++ maybe [] (\r -> [(False, [], r)]) mbO
@@ -252,14 +249,14 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
                      | True  = neg out
 
                  neg s
-                  | s == trueSV  = Just $ cvtSV skolemMap falseSV
                   | s == falseSV = Nothing
-                  | True         = Just $ "(not " ++ cvtSV skolemMap s ++ ")"
+                  | s == trueSV  = Just $ Left falseSV
+                  | True         = Just $ Right s
 
                  pos s
                   | s == trueSV  = Nothing
-                  | s == falseSV = Just $ cvtSV skolemMap falseSV
-                  | True         = Just $ cvtSV skolemMap s
+                  | s == falseSV = Just $ Left falseSV
+                  | True         = Just $ Left s
 
         skolemMap = M.fromList [(s, ss) | Right (s, ss) <- skolemInps, not (null ss)]
         tableMap  = IM.fromList $ map mkConstTable constTables ++ map mkSkTable skolemTables
