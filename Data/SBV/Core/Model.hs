@@ -558,13 +558,14 @@ instance EqSymbolic (SBV a) where
   SBV x ./= SBV y = SBV (svNotEqual x y)
 
   -- Custom version of distinct that generates better code for base types
-  distinct []  = sTrue
-  distinct [_] = sTrue
-  distinct xs
-    | all isConc xs
-    = checkDiff xs
-    | True
-    = SBV (SVal KBool (Right (cache r)))
+  distinct []                                           = sTrue
+  distinct [_]                                          = sTrue
+  distinct xs | all isConc xs                           = checkDiff xs
+              | [SBV a, SBV b] <- xs, a == svBool True  = SBV $ svNot b
+              | [SBV a, SBV b] <- xs, b == svBool True  = SBV $ svNot a
+              | [SBV a, SBV b] <- xs, a == svBool False = SBV b
+              | [SBV a, SBV b] <- xs, b == svBool False = SBV a
+              | True                                    = SBV (SVal KBool (Right (cache r)))
     where r st = do xsv <- mapM (sbvToSV st) xs
                     newExpr st KBool (SBVApp NotEqual xsv)
 
