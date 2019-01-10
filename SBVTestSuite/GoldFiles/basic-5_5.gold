@@ -2,8 +2,6 @@ INPUTS
   s0 :: SWord8, aliasing "x"
   s1 :: SWord8, aliasing "q"
 CONSTANTS
-  s_2 = False :: Bool
-  s_1 = True :: Bool
   s2 = 1 :: Word8
 TABLES
 ARRAYS

@@ -4,8 +4,6 @@ INPUTS
   s2 :: SWord32
   s3 :: SWord16
 CONSTANTS
-  s_2 = False :: Bool
-  s_1 = True :: Bool
   s13 = 0 :: Word1
   s1686 = 0 :: Word8
   s1687 = 1 :: Word8

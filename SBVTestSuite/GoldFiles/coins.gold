@@ -6,8 +6,6 @@ INPUTS
   s54 :: SWord16, existential, aliasing "c5"
   s66 :: SWord16, existential, aliasing "c6"
 CONSTANTS
-  s_2 = False :: Bool
-  s_1 = True :: Bool
   s1 = 1 :: Word16
   s3 = 5 :: Word16
   s5 = 10 :: Word16

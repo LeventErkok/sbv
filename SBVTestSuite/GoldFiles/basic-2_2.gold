@@ -1,8 +1,6 @@
 INPUTS
   s0 :: SWord8, aliasing "y"
 CONSTANTS
-  s_2 = False :: Bool
-  s_1 = True :: Bool
   s1 = 9 :: Word8
 TABLES
 ARRAYS
