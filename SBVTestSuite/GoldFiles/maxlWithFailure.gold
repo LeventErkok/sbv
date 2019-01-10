@@ -211,8 +211,9 @@
 [GOOD] (define-fun s190 () Bool (ite s34 s155 s189))
 [GOOD] (define-fun s191 () Bool (ite s21 s151 s190))
 [GOOD] (define-fun s192 () Bool (ite s8 s147 s191))
-[GOOD] (define-fun s193 () Bool (ite s2 false s192))
-[GOOD] (define-fun s194 () Bool (or s144 s193))
+[GOOD] (define-fun s193 () Bool (not s2))
+[GOOD] (define-fun s194 () Bool (and s192 s193))
+[GOOD] (define-fun s195 () Bool (or s144 s194))
 [GOOD] (assert s15)
 [GOOD] (assert s28)
 [GOOD] (assert s41)
@@ -223,7 +224,7 @@
 [GOOD] (assert s106)
 [GOOD] (assert s119)
 [GOOD] (assert s129)
-[GOOD] (assert s194)
+[GOOD] (assert s195)
 [SEND] (check-sat)
 [RECV] sat
 *** Solver   : Z3
