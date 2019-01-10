@@ -7,8 +7,6 @@ INPUTS
   s5 :: SBool, existential, aliasing "flagC"
   s6 :: SBool, existential, aliasing "flagZ"
 CONSTANTS
-  s_2 = False :: Bool
-  s_1 = True :: Bool
   s10 = 0 :: Word1
   s8 = 0 :: Word8
   s14 = 128 :: Word8
@@ -22,14 +20,14 @@ AXIOMS
 DEFINE
   s9 :: SWord1 = choose [0:0] s0
   s11 :: SBool = s9 /= s10
-  s12 :: SBool = s_2 == s11
+  s12 :: SBool = false == s11
   s13 :: SWord8 = s0 >>> 1
   s15 :: SWord8 = s13 | s14
   s17 :: SWord8 = s13 & s16
   s18 :: SWord8 = if s5 then s15 else s17
   s19 :: SWord1 = choose [0:0] s18
   s20 :: SBool = s10 /= s19
-  s21 :: SBool = s_2 == s20
+  s21 :: SBool = false == s20
   s22 :: SWord1 = choose [0:0] s2
   s23 :: SBool = s10 /= s22
   s24 :: SWord8 = s18 >>> 1
@@ -38,7 +36,7 @@ DEFINE
   s27 :: SWord8 = if s23 then s25 else s26
   s28 :: SWord1 = choose [0:0] s27
   s29 :: SBool = s10 /= s28
-  s30 :: SBool = s_2 == s29
+  s30 :: SBool = false == s29
   s31 :: SWord8 = s2 >>> 1
   s32 :: SWord8 = s16 & s31
   s33 :: SWord1 = choose [0:0] s32
@@ -49,7 +47,7 @@ DEFINE
   s38 :: SWord8 = if s34 then s36 else s37
   s39 :: SWord1 = choose [0:0] s38
   s40 :: SBool = s10 /= s39
-  s41 :: SBool = s_2 == s40
+  s41 :: SBool = false == s40
   s42 :: SWord8 = if s11 then s14 else s8
   s43 :: SWord1 = choose [0:0] s42
   s44 :: SBool = s10 /= s43
@@ -65,7 +63,7 @@ DEFINE
   s54 :: SWord8 = if s50 then s52 else s53
   s55 :: SWord1 = choose [0:0] s54
   s56 :: SBool = s10 /= s55
-  s57 :: SBool = s_2 == s56
+  s57 :: SBool = false == s56
   s58 :: SWord8 = s42 >>> 1
   s59 :: SWord8 = s14 | s58
   s60 :: SWord8 = s16 & s58
@@ -84,7 +82,7 @@ DEFINE
   s73 :: SWord8 = if s69 then s71 else s72
   s74 :: SWord1 = choose [0:0] s73
   s75 :: SBool = s10 /= s74
-  s76 :: SBool = s_2 == s75
+  s76 :: SBool = false == s75
   s77 :: SWord8 = s61 >>> 1
   s78 :: SWord8 = s14 | s77
   s79 :: SWord8 = s16 & s77
@@ -103,7 +101,7 @@ DEFINE
   s92 :: SWord8 = if s88 then s90 else s91
   s93 :: SWord1 = choose [0:0] s92
   s94 :: SBool = s10 /= s93
-  s95 :: SBool = s_2 == s94
+  s95 :: SBool = false == s94
   s96 :: SWord8 = s80 >>> 1
   s97 :: SWord8 = s14 | s96
   s98 :: SWord8 = s16 & s96
@@ -122,7 +120,7 @@ DEFINE
   s111 :: SWord8 = if s107 then s109 else s110
   s112 :: SWord1 = choose [0:0] s111
   s113 :: SBool = s10 /= s112
-  s114 :: SBool = s_2 == s113
+  s114 :: SBool = false == s113
   s115 :: SWord8 = s99 >>> 1
   s116 :: SWord8 = s14 | s115
   s117 :: SWord8 = s16 & s115
@@ -227,7 +225,7 @@ DEFINE
   s216 :: SWord8 = if s215 then s109 else s110
   s217 :: SWord1 = choose [0:0] s216
   s218 :: SBool = s10 /= s217
-  s219 :: SBool = s_2 == s218
+  s219 :: SBool = false == s218
   s220 :: SBool = s210 < s1
   s221 :: SBool = s210 < s99
   s222 :: SBool = s220 | s221
@@ -336,7 +334,7 @@ DEFINE
   s325 :: SWord8 = if s324 then s90 else s91
   s326 :: SWord1 = choose [0:0] s325
   s327 :: SBool = s10 /= s326
-  s328 :: SBool = s_2 == s327
+  s328 :: SBool = false == s327
   s329 :: SBool = s319 < s1
   s330 :: SBool = s319 < s80
   s331 :: SBool = s329 | s330
@@ -358,7 +356,7 @@ DEFINE
   s347 :: SWord8 = if s343 then s345 else s346
   s348 :: SWord1 = choose [0:0] s347
   s349 :: SBool = s10 /= s348
-  s350 :: SBool = s_2 == s349
+  s350 :: SBool = false == s349
   s351 :: SWord8 = s335 >>> 1
   s352 :: SWord8 = s14 | s351
   s353 :: SWord8 = s16 & s351
@@ -463,7 +461,7 @@ DEFINE
   s452 :: SWord8 = if s451 then s345 else s346
   s453 :: SWord1 = choose [0:0] s452
   s454 :: SBool = s10 /= s453
-  s455 :: SBool = s_2 == s454
+  s455 :: SBool = false == s454
   s456 :: SBool = s446 < s1
   s457 :: SBool = s446 < s335
   s458 :: SBool = s456 | s457
@@ -573,7 +571,7 @@ DEFINE
   s562 :: SWord8 = if s561 then s71 else s72
   s563 :: SWord1 = choose [0:0] s562
   s564 :: SBool = s10 /= s563
-  s565 :: SBool = s_2 == s564
+  s565 :: SBool = false == s564
   s566 :: SBool = s556 < s1
   s567 :: SBool = s556 < s61
   s568 :: SBool = s566 | s567
@@ -595,7 +593,7 @@ DEFINE
   s584 :: SWord8 = if s580 then s582 else s583
   s585 :: SWord1 = choose [0:0] s584
   s586 :: SBool = s10 /= s585
-  s587 :: SBool = s_2 == s586
+  s587 :: SBool = false == s586
   s588 :: SWord8 = s572 >>> 1
   s589 :: SWord8 = s14 | s588
   s590 :: SWord8 = s16 & s588
@@ -614,7 +612,7 @@ DEFINE
   s603 :: SWord8 = if s599 then s601 else s602
   s604 :: SWord1 = choose [0:0] s603
   s605 :: SBool = s10 /= s604
-  s606 :: SBool = s_2 == s605
+  s606 :: SBool = false == s605
   s607 :: SWord8 = s591 >>> 1
   s608 :: SWord8 = s14 | s607
   s609 :: SWord8 = s16 & s607
@@ -719,7 +717,7 @@ DEFINE
   s708 :: SWord8 = if s707 then s601 else s602
   s709 :: SWord1 = choose [0:0] s708
   s710 :: SBool = s10 /= s709
-  s711 :: SBool = s_2 == s710
+  s711 :: SBool = false == s710
   s712 :: SBool = s702 < s1
   s713 :: SBool = s702 < s591
   s714 :: SBool = s712 | s713
@@ -828,7 +826,7 @@ DEFINE
   s817 :: SWord8 = if s816 then s582 else s583
   s818 :: SWord1 = choose [0:0] s817
   s819 :: SBool = s10 /= s818
-  s820 :: SBool = s_2 == s819
+  s820 :: SBool = false == s819
   s821 :: SBool = s811 < s1
   s822 :: SBool = s811 < s572
   s823 :: SBool = s821 | s822
@@ -850,7 +848,7 @@ DEFINE
   s839 :: SWord8 = if s835 then s837 else s838
   s840 :: SWord1 = choose [0:0] s839
   s841 :: SBool = s10 /= s840
-  s842 :: SBool = s_2 == s841
+  s842 :: SBool = false == s841
   s843 :: SWord8 = s827 >>> 1
   s844 :: SWord8 = s14 | s843
   s845 :: SWord8 = s16 & s843
@@ -955,7 +953,7 @@ DEFINE
   s944 :: SWord8 = if s943 then s837 else s838
   s945 :: SWord1 = choose [0:0] s944
   s946 :: SBool = s10 /= s945
-  s947 :: SBool = s_2 == s946
+  s947 :: SBool = false == s946
   s948 :: SBool = s938 < s1
   s949 :: SBool = s938 < s827
   s950 :: SBool = s948 | s949
@@ -1066,7 +1064,7 @@ DEFINE
   s1055 :: SWord8 = if s1054 then s52 else s53
   s1056 :: SWord1 = choose [0:0] s1055
   s1057 :: SBool = s10 /= s1056
-  s1058 :: SBool = s_2 == s1057
+  s1058 :: SBool = false == s1057
   s1059 :: SBool = s1049 < s1
   s1060 :: SBool = s1049 < s42
   s1061 :: SBool = s1059 | s1060
@@ -1088,7 +1086,7 @@ DEFINE
   s1077 :: SWord8 = if s1073 then s1075 else s1076
   s1078 :: SWord1 = choose [0:0] s1077
   s1079 :: SBool = s10 /= s1078
-  s1080 :: SBool = s_2 == s1079
+  s1080 :: SBool = false == s1079
   s1081 :: SWord8 = s1065 >>> 1
   s1082 :: SWord8 = s14 | s1081
   s1083 :: SWord8 = s16 & s1081
@@ -1107,7 +1105,7 @@ DEFINE
   s1096 :: SWord8 = if s1092 then s1094 else s1095
   s1097 :: SWord1 = choose [0:0] s1096
   s1098 :: SBool = s10 /= s1097
-  s1099 :: SBool = s_2 == s1098
+  s1099 :: SBool = false == s1098
   s1100 :: SWord8 = s1084 >>> 1
   s1101 :: SWord8 = s14 | s1100
   s1102 :: SWord8 = s16 & s1100
@@ -1126,7 +1124,7 @@ DEFINE
   s1115 :: SWord8 = if s1111 then s1113 else s1114
   s1116 :: SWord1 = choose [0:0] s1115
   s1117 :: SBool = s10 /= s1116
-  s1118 :: SBool = s_2 == s1117
+  s1118 :: SBool = false == s1117
   s1119 :: SWord8 = s1103 >>> 1
   s1120 :: SWord8 = s14 | s1119
   s1121 :: SWord8 = s16 & s1119
@@ -1231,7 +1229,7 @@ DEFINE
   s1220 :: SWord8 = if s1219 then s1113 else s1114
   s1221 :: SWord1 = choose [0:0] s1220
   s1222 :: SBool = s10 /= s1221
-  s1223 :: SBool = s_2 == s1222
+  s1223 :: SBool = false == s1222
   s1224 :: SBool = s1214 < s1
   s1225 :: SBool = s1214 < s1103
   s1226 :: SBool = s1224 | s1225
@@ -1340,7 +1338,7 @@ DEFINE
   s1329 :: SWord8 = if s1328 then s1094 else s1095
   s1330 :: SWord1 = choose [0:0] s1329
   s1331 :: SBool = s10 /= s1330
-  s1332 :: SBool = s_2 == s1331
+  s1332 :: SBool = false == s1331
   s1333 :: SBool = s1323 < s1
   s1334 :: SBool = s1323 < s1084
   s1335 :: SBool = s1333 | s1334
@@ -1362,7 +1360,7 @@ DEFINE
   s1351 :: SWord8 = if s1347 then s1349 else s1350
   s1352 :: SWord1 = choose [0:0] s1351
   s1353 :: SBool = s10 /= s1352
-  s1354 :: SBool = s_2 == s1353
+  s1354 :: SBool = false == s1353
   s1355 :: SWord8 = s1339 >>> 1
   s1356 :: SWord8 = s14 | s1355
   s1357 :: SWord8 = s16 & s1355
@@ -1467,7 +1465,7 @@ DEFINE
   s1456 :: SWord8 = if s1455 then s1349 else s1350
   s1457 :: SWord1 = choose [0:0] s1456
   s1458 :: SBool = s10 /= s1457
-  s1459 :: SBool = s_2 == s1458
+  s1459 :: SBool = false == s1458
   s1460 :: SBool = s1450 < s1
   s1461 :: SBool = s1450 < s1339
   s1462 :: SBool = s1460 | s1461
@@ -1577,7 +1575,7 @@ DEFINE
   s1566 :: SWord8 = if s1565 then s1075 else s1076
   s1567 :: SWord1 = choose [0:0] s1566
   s1568 :: SBool = s10 /= s1567
-  s1569 :: SBool = s_2 == s1568
+  s1569 :: SBool = false == s1568
   s1570 :: SBool = s1560 < s1
   s1571 :: SBool = s1560 < s1065
   s1572 :: SBool = s1570 | s1571
@@ -1599,7 +1597,7 @@ DEFINE
   s1588 :: SWord8 = if s1584 then s1586 else s1587
   s1589 :: SWord1 = choose [0:0] s1588
   s1590 :: SBool = s10 /= s1589
-  s1591 :: SBool = s_2 == s1590
+  s1591 :: SBool = false == s1590
   s1592 :: SWord8 = s1576 >>> 1
   s1593 :: SWord8 = s14 | s1592
   s1594 :: SWord8 = s16 & s1592
@@ -1618,7 +1616,7 @@ DEFINE
   s1607 :: SWord8 = if s1603 then s1605 else s1606
   s1608 :: SWord1 = choose [0:0] s1607
   s1609 :: SBool = s10 /= s1608
-  s1610 :: SBool = s_2 == s1609
+  s1610 :: SBool = false == s1609
   s1611 :: SWord8 = s1595 >>> 1
   s1612 :: SWord8 = s14 | s1611
   s1613 :: SWord8 = s16 & s1611
@@ -1723,7 +1721,7 @@ DEFINE
   s1712 :: SWord8 = if s1711 then s1605 else s1606
   s1713 :: SWord1 = choose [0:0] s1712
   s1714 :: SBool = s10 /= s1713
-  s1715 :: SBool = s_2 == s1714
+  s1715 :: SBool = false == s1714
   s1716 :: SBool = s1706 < s1
   s1717 :: SBool = s1706 < s1595
   s1718 :: SBool = s1716 | s1717
@@ -1832,7 +1830,7 @@ DEFINE
   s1821 :: SWord8 = if s1820 then s1586 else s1587
   s1822 :: SWord1 = choose [0:0] s1821
   s1823 :: SBool = s10 /= s1822
-  s1824 :: SBool = s_2 == s1823
+  s1824 :: SBool = false == s1823
   s1825 :: SBool = s1815 < s1
   s1826 :: SBool = s1815 < s1576
   s1827 :: SBool = s1825 | s1826
@@ -1854,7 +1852,7 @@ DEFINE
   s1843 :: SWord8 = if s1839 then s1841 else s1842
   s1844 :: SWord1 = choose [0:0] s1843
   s1845 :: SBool = s10 /= s1844
-  s1846 :: SBool = s_2 == s1845
+  s1846 :: SBool = false == s1845
   s1847 :: SWord8 = s1831 >>> 1
   s1848 :: SWord8 = s14 | s1847
   s1849 :: SWord8 = s16 & s1847
@@ -1959,7 +1957,7 @@ DEFINE
   s1948 :: SWord8 = if s1947 then s1841 else s1842
   s1949 :: SWord1 = choose [0:0] s1948
   s1950 :: SBool = s10 /= s1949
-  s1951 :: SBool = s_2 == s1950
+  s1951 :: SBool = false == s1950
   s1952 :: SBool = s1942 < s1
   s1953 :: SBool = s1942 < s1831
   s1954 :: SBool = s1952 | s1953
@@ -2071,7 +2069,7 @@ DEFINE
   s2060 :: SWord8 = if s2059 then s36 else s37
   s2061 :: SWord1 = choose [0:0] s2060
   s2062 :: SBool = s10 /= s2061
-  s2063 :: SBool = s_2 == s2062
+  s2063 :: SBool = false == s2062
   s2064 :: SWord8 = s1 >>> 1
   s2065 :: SWord8 = s16 & s2064
   s2066 :: SWord1 = choose [0:0] s2065
@@ -2088,7 +2086,7 @@ DEFINE
   s2077 :: SWord8 = if s2073 then s2075 else s2076
   s2078 :: SWord1 = choose [0:0] s2077
   s2079 :: SBool = s10 /= s2078
-  s2080 :: SBool = s_2 == s2079
+  s2080 :: SBool = false == s2079
   s2081 :: SWord8 = s2065 >>> 1
   s2082 :: SWord8 = s14 | s2081
   s2083 :: SWord8 = s16 & s2081
@@ -2107,7 +2105,7 @@ DEFINE
   s2096 :: SWord8 = if s2092 then s2094 else s2095
   s2097 :: SWord1 = choose [0:0] s2096
   s2098 :: SBool = s10 /= s2097
-  s2099 :: SBool = s_2 == s2098
+  s2099 :: SBool = false == s2098
   s2100 :: SWord8 = s2084 >>> 1
   s2101 :: SWord8 = s14 | s2100
   s2102 :: SWord8 = s16 & s2100
@@ -2126,7 +2124,7 @@ DEFINE
   s2115 :: SWord8 = if s2111 then s2113 else s2114
   s2116 :: SWord1 = choose [0:0] s2115
   s2117 :: SBool = s10 /= s2116
-  s2118 :: SBool = s_2 == s2117
+  s2118 :: SBool = false == s2117
   s2119 :: SWord8 = s2103 >>> 1
   s2120 :: SWord8 = s14 | s2119
   s2121 :: SWord8 = s16 & s2119
@@ -2145,7 +2143,7 @@ DEFINE
   s2134 :: SWord8 = if s2130 then s2132 else s2133
   s2135 :: SWord1 = choose [0:0] s2134
   s2136 :: SBool = s10 /= s2135
-  s2137 :: SBool = s_2 == s2136
+  s2137 :: SBool = false == s2136
   s2138 :: SWord8 = s2122 >>> 1
   s2139 :: SWord8 = s14 | s2138
   s2140 :: SWord8 = s16 & s2138
@@ -2250,7 +2248,7 @@ DEFINE
   s2239 :: SWord8 = if s2238 then s2132 else s2133
   s2240 :: SWord1 = choose [0:0] s2239
   s2241 :: SBool = s10 /= s2240
-  s2242 :: SBool = s_2 == s2241
+  s2242 :: SBool = false == s2241
   s2243 :: SBool = s2233 < s1
   s2244 :: SBool = s2233 < s2122
   s2245 :: SBool = s2243 | s2244
@@ -2359,7 +2357,7 @@ DEFINE
   s2348 :: SWord8 = if s2347 then s2113 else s2114
   s2349 :: SWord1 = choose [0:0] s2348
   s2350 :: SBool = s10 /= s2349
-  s2351 :: SBool = s_2 == s2350
+  s2351 :: SBool = false == s2350
   s2352 :: SBool = s2342 < s1
   s2353 :: SBool = s2342 < s2103
   s2354 :: SBool = s2352 | s2353
@@ -2381,7 +2379,7 @@ DEFINE
   s2370 :: SWord8 = if s2366 then s2368 else s2369
   s2371 :: SWord1 = choose [0:0] s2370
   s2372 :: SBool = s10 /= s2371
-  s2373 :: SBool = s_2 == s2372
+  s2373 :: SBool = false == s2372
   s2374 :: SWord8 = s2358 >>> 1
   s2375 :: SWord8 = s14 | s2374
   s2376 :: SWord8 = s16 & s2374
@@ -2486,7 +2484,7 @@ DEFINE
   s2475 :: SWord8 = if s2474 then s2368 else s2369
   s2476 :: SWord1 = choose [0:0] s2475
   s2477 :: SBool = s10 /= s2476
-  s2478 :: SBool = s_2 == s2477
+  s2478 :: SBool = false == s2477
   s2479 :: SBool = s2469 < s1
   s2480 :: SBool = s2469 < s2358
   s2481 :: SBool = s2479 | s2480
@@ -2596,7 +2594,7 @@ DEFINE
   s2585 :: SWord8 = if s2584 then s2094 else s2095
   s2586 :: SWord1 = choose [0:0] s2585
   s2587 :: SBool = s10 /= s2586
-  s2588 :: SBool = s_2 == s2587
+  s2588 :: SBool = false == s2587
   s2589 :: SBool = s2579 < s1
   s2590 :: SBool = s2579 < s2084
   s2591 :: SBool = s2589 | s2590
@@ -2618,7 +2616,7 @@ DEFINE
   s2607 :: SWord8 = if s2603 then s2605 else s2606
   s2608 :: SWord1 = choose [0:0] s2607
   s2609 :: SBool = s10 /= s2608
-  s2610 :: SBool = s_2 == s2609
+  s2610 :: SBool = false == s2609
   s2611 :: SWord8 = s2595 >>> 1
   s2612 :: SWord8 = s14 | s2611
   s2613 :: SWord8 = s16 & s2611
@@ -2637,7 +2635,7 @@ DEFINE
   s2626 :: SWord8 = if s2622 then s2624 else s2625
   s2627 :: SWord1 = choose [0:0] s2626
   s2628 :: SBool = s10 /= s2627
-  s2629 :: SBool = s_2 == s2628
+  s2629 :: SBool = false == s2628
   s2630 :: SWord8 = s2614 >>> 1
   s2631 :: SWord8 = s14 | s2630
   s2632 :: SWord8 = s16 & s2630
@@ -2742,7 +2740,7 @@ DEFINE
   s2731 :: SWord8 = if s2730 then s2624 else s2625
   s2732 :: SWord1 = choose [0:0] s2731
   s2733 :: SBool = s10 /= s2732
-  s2734 :: SBool = s_2 == s2733
+  s2734 :: SBool = false == s2733
   s2735 :: SBool = s2725 < s1
   s2736 :: SBool = s2725 < s2614
   s2737 :: SBool = s2735 | s2736
@@ -2851,7 +2849,7 @@ DEFINE
   s2840 :: SWord8 = if s2839 then s2605 else s2606
   s2841 :: SWord1 = choose [0:0] s2840
   s2842 :: SBool = s10 /= s2841
-  s2843 :: SBool = s_2 == s2842
+  s2843 :: SBool = false == s2842
   s2844 :: SBool = s2834 < s1
   s2845 :: SBool = s2834 < s2595
   s2846 :: SBool = s2844 | s2845
@@ -2873,7 +2871,7 @@ DEFINE
   s2862 :: SWord8 = if s2858 then s2860 else s2861
   s2863 :: SWord1 = choose [0:0] s2862
   s2864 :: SBool = s10 /= s2863
-  s2865 :: SBool = s_2 == s2864
+  s2865 :: SBool = false == s2864
   s2866 :: SWord8 = s2850 >>> 1
   s2867 :: SWord8 = s14 | s2866
   s2868 :: SWord8 = s16 & s2866
@@ -2978,7 +2976,7 @@ DEFINE
   s2967 :: SWord8 = if s2966 then s2860 else s2861
   s2968 :: SWord1 = choose [0:0] s2967
   s2969 :: SBool = s10 /= s2968
-  s2970 :: SBool = s_2 == s2969
+  s2970 :: SBool = false == s2969
   s2971 :: SBool = s2961 < s1
   s2972 :: SBool = s2961 < s2850
   s2973 :: SBool = s2971 | s2972
@@ -3089,7 +3087,7 @@ DEFINE
   s3078 :: SWord8 = if s3077 then s2075 else s2076
   s3079 :: SWord1 = choose [0:0] s3078
   s3080 :: SBool = s10 /= s3079
-  s3081 :: SBool = s_2 == s3080
+  s3081 :: SBool = false == s3080
   s3082 :: SBool = s3072 < s1
   s3083 :: SBool = s3072 < s2065
   s3084 :: SBool = s3082 | s3083
@@ -3111,7 +3109,7 @@ DEFINE
   s3100 :: SWord8 = if s3096 then s3098 else s3099
   s3101 :: SWord1 = choose [0:0] s3100
   s3102 :: SBool = s10 /= s3101
-  s3103 :: SBool = s_2 == s3102
+  s3103 :: SBool = false == s3102
   s3104 :: SWord8 = s3088 >>> 1
   s3105 :: SWord8 = s14 | s3104
   s3106 :: SWord8 = s16 & s3104
@@ -3130,7 +3128,7 @@ DEFINE
   s3119 :: SWord8 = if s3115 then s3117 else s3118
   s3120 :: SWord1 = choose [0:0] s3119
   s3121 :: SBool = s10 /= s3120
-  s3122 :: SBool = s_2 == s3121
+  s3122 :: SBool = false == s3121
   s3123 :: SWord8 = s3107 >>> 1
   s3124 :: SWord8 = s14 | s3123
   s3125 :: SWord8 = s16 & s3123
@@ -3149,7 +3147,7 @@ DEFINE
   s3138 :: SWord8 = if s3134 then s3136 else s3137
   s3139 :: SWord1 = choose [0:0] s3138
   s3140 :: SBool = s10 /= s3139
-  s3141 :: SBool = s_2 == s3140
+  s3141 :: SBool = false == s3140
   s3142 :: SWord8 = s3126 >>> 1
   s3143 :: SWord8 = s14 | s3142
   s3144 :: SWord8 = s16 & s3142
@@ -3254,7 +3252,7 @@ DEFINE
   s3243 :: SWord8 = if s3242 then s3136 else s3137
   s3244 :: SWord1 = choose [0:0] s3243
   s3245 :: SBool = s10 /= s3244
-  s3246 :: SBool = s_2 == s3245
+  s3246 :: SBool = false == s3245
   s3247 :: SBool = s3237 < s1
   s3248 :: SBool = s3237 < s3126
   s3249 :: SBool = s3247 | s3248
@@ -3363,7 +3361,7 @@ DEFINE
   s3352 :: SWord8 = if s3351 then s3117 else s3118
   s3353 :: SWord1 = choose [0:0] s3352
   s3354 :: SBool = s10 /= s3353
-  s3355 :: SBool = s_2 == s3354
+  s3355 :: SBool = false == s3354
   s3356 :: SBool = s3346 < s1
   s3357 :: SBool = s3346 < s3107
   s3358 :: SBool = s3356 | s3357
@@ -3385,7 +3383,7 @@ DEFINE
   s3374 :: SWord8 = if s3370 then s3372 else s3373
   s3375 :: SWord1 = choose [0:0] s3374
   s3376 :: SBool = s10 /= s3375
-  s3377 :: SBool = s_2 == s3376
+  s3377 :: SBool = false == s3376
   s3378 :: SWord8 = s3362 >>> 1
   s3379 :: SWord8 = s14 | s3378
   s3380 :: SWord8 = s16 & s3378
@@ -3490,7 +3488,7 @@ DEFINE
   s3479 :: SWord8 = if s3478 then s3372 else s3373
   s3480 :: SWord1 = choose [0:0] s3479
   s3481 :: SBool = s10 /= s3480
-  s3482 :: SBool = s_2 == s3481
+  s3482 :: SBool = false == s3481
   s3483 :: SBool = s3473 < s1
   s3484 :: SBool = s3473 < s3362
   s3485 :: SBool = s3483 | s3484
@@ -3600,7 +3598,7 @@ DEFINE
   s3589 :: SWord8 = if s3588 then s3098 else s3099
   s3590 :: SWord1 = choose [0:0] s3589
   s3591 :: SBool = s10 /= s3590
-  s3592 :: SBool = s_2 == s3591
+  s3592 :: SBool = false == s3591
   s3593 :: SBool = s3583 < s1
   s3594 :: SBool = s3583 < s3088
   s3595 :: SBool = s3593 | s3594
@@ -3622,7 +3620,7 @@ DEFINE
   s3611 :: SWord8 = if s3607 then s3609 else s3610
   s3612 :: SWord1 = choose [0:0] s3611
   s3613 :: SBool = s10 /= s3612
-  s3614 :: SBool = s_2 == s3613
+  s3614 :: SBool = false == s3613
   s3615 :: SWord8 = s3599 >>> 1
   s3616 :: SWord8 = s14 | s3615
   s3617 :: SWord8 = s16 & s3615
@@ -3641,7 +3639,7 @@ DEFINE
   s3630 :: SWord8 = if s3626 then s3628 else s3629
   s3631 :: SWord1 = choose [0:0] s3630
   s3632 :: SBool = s10 /= s3631
-  s3633 :: SBool = s_2 == s3632
+  s3633 :: SBool = false == s3632
   s3634 :: SWord8 = s3618 >>> 1
   s3635 :: SWord8 = s14 | s3634
   s3636 :: SWord8 = s16 & s3634
@@ -3746,7 +3744,7 @@ DEFINE
   s3735 :: SWord8 = if s3734 then s3628 else s3629
   s3736 :: SWord1 = choose [0:0] s3735
   s3737 :: SBool = s10 /= s3736
-  s3738 :: SBool = s_2 == s3737
+  s3738 :: SBool = false == s3737
   s3739 :: SBool = s3729 < s1
   s3740 :: SBool = s3729 < s3618
   s3741 :: SBool = s3739 | s3740
@@ -3855,7 +3853,7 @@ DEFINE
   s3844 :: SWord8 = if s3843 then s3609 else s3610
   s3845 :: SWord1 = choose [0:0] s3844
   s3846 :: SBool = s10 /= s3845
-  s3847 :: SBool = s_2 == s3846
+  s3847 :: SBool = false == s3846
   s3848 :: SBool = s3838 < s1
   s3849 :: SBool = s3838 < s3599
   s3850 :: SBool = s3848 | s3849
@@ -3877,7 +3875,7 @@ DEFINE
   s3866 :: SWord8 = if s3862 then s3864 else s3865
   s3867 :: SWord1 = choose [0:0] s3866
   s3868 :: SBool = s10 /= s3867
-  s3869 :: SBool = s_2 == s3868
+  s3869 :: SBool = false == s3868
   s3870 :: SWord8 = s3854 >>> 1
   s3871 :: SWord8 = s14 | s3870
   s3872 :: SWord8 = s16 & s3870
@@ -3982,7 +3980,7 @@ DEFINE
   s3971 :: SWord8 = if s3970 then s3864 else s3865
   s3972 :: SWord1 = choose [0:0] s3971
   s3973 :: SBool = s10 /= s3972
-  s3974 :: SBool = s_2 == s3973
+  s3974 :: SBool = false == s3973
   s3975 :: SBool = s3965 < s1
   s3976 :: SBool = s3965 < s3854
   s3977 :: SBool = s3975 | s3976
