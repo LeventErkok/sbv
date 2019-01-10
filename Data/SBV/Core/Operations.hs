@@ -545,11 +545,18 @@ svSymbolicMerge k force t a b
                              let stb = st `extendSValPathCondition` svAnd (svNot t)
                              swa <- svToSV sta a -- evaluate 'then' branch
                              swb <- svToSV stb b -- evaluate 'else' branch
-                             case () of               -- merge:
-                               () | swa == swb                      -> return swa
-                               () | swa == trueSV && swb == falseSV -> return swt
-                               () | swa == falseSV && swb == trueSV -> newExpr st k (SBVApp Not [swt])
-                               () | swb == falseSV                  -> newExpr st k (SBVApp And [swt, swa])
+
+                             -- merge, but simplify for certain boolean cases:
+                             case () of
+                               () | swa == swb                      -> return swa                                     -- if t then a      else a     ==> a
+                               () | swa == trueSV && swb == falseSV -> return swt                                     -- if t then true   else false ==> t
+                               () | swa == falseSV && swb == trueSV -> newExpr st k (SBVApp Not [swt])                -- if t then false  else true  ==> not t
+                               () | swa == trueSV                   -> newExpr st k (SBVApp Or  [swt, swb])           -- if t then true   else b     ==> t OR b
+                               () | swa == falseSV                  -> do swt' <- newExpr st KBool (SBVApp Not [swt])
+                                                                          newExpr st k (SBVApp And [swt', swb])       -- if t then false  else b     ==> t' AND b
+                               () | swb == trueSV                   -> do swt' <- newExpr st KBool (SBVApp Not [swt])
+                                                                          newExpr st k (SBVApp Or [swt', swa])        -- if t then a      else true  ==> t' OR a
+                               () | swb == falseSV                  -> newExpr st k (SBVApp And [swt, swa])           -- if t then a      else false ==> t AND a
                                ()                                   -> newExpr st k (SBVApp Ite [swt, swa, swb])
 
 -- | Total indexing operation. @svSelect xs default index@ is
