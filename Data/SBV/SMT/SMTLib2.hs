@@ -14,7 +14,7 @@
 module Data.SBV.SMT.SMTLib2(cvt, cvtInc) where
 
 import Data.Bits  (bit)
-import Data.List  (intercalate, partition, unzip3, nub)
+import Data.List  (intercalate, partition, unzip3, nub, sort)
 import Data.Maybe (listToMaybe, fromMaybe)
 
 import qualified Data.Foldable as F (toList)
@@ -215,9 +215,10 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
                 hardAsserts = [(attr, v) | (False, attr, v) <- assertions]
                 softAsserts = [(attr, v) | (True,  attr, v) <- assertions]
 
-                combined = case map snd hardAsserts of
-                             [x] -> x
-                             xs  -> "(and " ++ unwords xs ++ ")"
+                combined = case filter (/= "true") $ nub $ sort $ map snd hardAsserts of
+                              []                                 -> "true"
+                              literals | "false" `elem` literals -> "false"
+                                       | True                    -> "(and " ++ unwords literals ++ ")"
 
         impAlign s
           | null delayedEqualities = s
