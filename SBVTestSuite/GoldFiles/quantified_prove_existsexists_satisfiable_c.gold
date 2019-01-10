@@ -21,7 +21,7 @@
                         (s1 (_ BitVec 8)))
                    (let ((s3 (bvadd s1 s2)))
                    (let ((s4 (= s0 s3)))
-                   (and s4 false)))))
+                   false))))
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3

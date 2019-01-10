@@ -21,7 +21,7 @@
                    (let ((s2 (bvsub s1 s0)))
                    (let ((s3 (bvadd s0 s2)))
                    (let ((s4 (= s1 s3)))
-                   (and s4 false))))))
+                   false)))))
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3

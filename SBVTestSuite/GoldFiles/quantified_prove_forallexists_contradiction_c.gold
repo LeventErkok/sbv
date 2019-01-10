@@ -21,7 +21,7 @@
                    (let ((s2 (= s0 s1)))
                    (let ((s3 (distinct s0 s1)))
                    (let ((s4 (and s2 s3)))
-                   (and s4 false))))))
+                   false)))))
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3
