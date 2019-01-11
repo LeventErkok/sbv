@@ -334,6 +334,7 @@ cvToSMTLib rm x
         smtLibSeq k _ = error "SBV.cvToSMTLib: Impossible case (smtLibSeq), received kind: " ++ show k
 
         smtLibTup :: Kind -> [CVal] -> String
+        smtLibTup (KTuple []) _  = "SBVTuple0"
         smtLibTup (KTuple ks) xs = "(mkSBVTuple" ++ show (length ks) ++ " " ++ unwords (zipWith (\ek e -> cvToSMTLib rm (CV ek e)) ks xs) ++ ")"
         smtLibTup k           _  = error $ "SBV.cvToSMTLib: Impossible case (smtLibTup), received kind: " ++ show k
 

@@ -33,11 +33,13 @@ mkSymbolicEnumeration ''E
 -- Test suite
 tests :: TestTree
 tests = testGroup "Basics.Tuple" [
-          goldenCapturedIO "tuple_swap"   $ t tupleSwapSat
-        , goldenCapturedIO "tuple_twoTwo" $ t twoTwoTuples
-        , goldenCapturedIO "tuple_nested" $ t nested
-        , goldenCapturedIO "tuple_list"   $ t list
-        , goldenCapturedIO "tuple_enum"   $ t enum
+          goldenCapturedIO "tuple_swap"       $ t tupleSwapSat
+        , goldenCapturedIO "tuple_twoTwo"     $ t twoTwoTuples
+        , goldenCapturedIO "tuple_nested"     $ t nested
+        , goldenCapturedIO "tuple_list"       $ t list
+        , goldenCapturedIO "tuple_enum"       $ t enum
+        , goldenCapturedIO "tuple_unit"       $ t unit
+        , goldenCapturedIO "tuple_makePair"   $ t makePair
         ]
     where t tc goldFile = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile} tc
                              appendFile goldFile ("\n FINAL: " ++ show r ++ "\nDONE!\n")
@@ -105,5 +107,17 @@ enum = do
 
      _ <- checkSat
      (,) <$> getValue vTup1 <*> getValue vTup2
+
+unit :: Symbolic ()
+unit = do
+  x <- sTuple @() "x"
+  y <- sTuple @() "y"
+  constrain $ x .== y
+
+makePair :: Symbolic ()
+makePair = do
+  [x, y] <- sIntegers ["x", "y"]
+  let xy = mkPair x y
+  constrain $ xy^._1 + xy^._2 .== 0
 
 {-# ANN module ("HLint: ignore Use ." :: String) #-}

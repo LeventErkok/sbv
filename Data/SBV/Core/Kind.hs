@@ -78,6 +78,7 @@ smtType KString              = "String"
 smtType KChar                = "(_ BitVec 8)"
 smtType (KList k)            = "(Seq " ++ smtType k ++ ")"
 smtType (KUninterpreted s _) = s
+smtType (KTuple [])          = "SBVTuple0"
 smtType (KTuple kinds)       = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
 
 instance Eq  G.DataType where
@@ -228,6 +229,9 @@ instance (Typeable a, HasKind a) => HasKind [a] where
 
 instance HasKind Kind where
   kindOf = id
+
+instance HasKind () where
+  kindOf _ = KTuple []
 
 instance (HasKind a, HasKind b) => HasKind (a, b) where
   kindOf _ = KTuple [kindOf (Proxy @a), kindOf (Proxy @b)]

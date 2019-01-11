@@ -409,6 +409,7 @@ instance Show Op where
   show (StrOp s)            = show s
   show (SeqOp s)            = show s
 
+  show (TupleConstructor   0) = "SBVTuple0"
   show (TupleConstructor   n) = "mkSBVTuple" ++ show n
   show (TupleAccess      i n) = "proj_" ++ show i ++ "_SBVTuple" ++ show n
 
