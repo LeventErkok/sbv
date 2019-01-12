@@ -61,7 +61,7 @@ import Data.IORef (readIORef, writeIORef)
 
 import Data.Time (getZonedTime)
 
-import Data.SBV.Core.Data     ( SV(..), CV(..), SBV, AlgReal, sbvToSV, kindOf, Kind(..)
+import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV, SBV, AlgReal, sbvToSV, kindOf, Kind(..)
                               , HasKind(..), mkConstCV, CVal(..), SMTResult(..)
                               , NamedSymVar, SMTConfig(..), SMTModel(..)
                               , QueryState(..), SVal(..), Quantifier(..), cache
@@ -477,8 +477,13 @@ getUninterpretedValue s =
 
 -- | Get the value of a term, but in CV form. Used internally. The model-index, in particular is extremely Z3 specific!
 getValueCVHelper :: (MonadIO m, MonadQuery m) => Maybe Int -> SV -> m CV
-getValueCVHelper mbi s = do
-       let nm  = show s
+getValueCVHelper mbi s
+  | s == trueSV
+  = return trueCV
+  | s == falseSV
+  = return falseCV
+  | True
+  = do let nm  = show s
            k   = kindOf s
 
            modelIndex = case mbi of
