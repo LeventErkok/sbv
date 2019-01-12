@@ -31,7 +31,7 @@ module Data.SBV.Core.Model (
   , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, sChar, sChars, sString, sStrings, sList, sLists, sTuple, sTuples
   , solve
   , slet
-  , sRealToSInteger, label, observe
+  , sRealToSInteger, label, observe, observeIf
   , sAssert
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCV, genMkSymVar
@@ -53,7 +53,7 @@ import Data.Bits   (Bits(..))
 import Data.Char   (toLower, isDigit)
 import Data.Int    (Int8, Int16, Int32, Int64)
 import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate, isPrefixOf)
-import Data.Maybe  (fromMaybe)
+import Data.Maybe  (fromMaybe, mapMaybe)
 import Data.String (IsString(..))
 import Data.Word   (Word8, Word16, Word32, Word64)
 
@@ -458,12 +458,12 @@ label m x
         r st = do xsv <- sbvToSV st x
                   newExpr st k (SBVApp (Label m) [xsv])
 
--- | Observe the value of an expression.  Such values are useful in model construction, as they are printed part of a satisfying model, or a
+-- | Observe the value of an expression, if the given condition holds.  Such values are useful in model construction, as they are printed part of a satisfying model, or a
 -- counter-example. The same works for quick-check as well. Useful when we want to see intermediate values, or expected/obtained
 -- pairs in a particular run. Note that an observed expression is always symbolic, i.e., it won't be constant folded. Compare this to 'label'
 -- which is used for putting a label in the generated SMTLib-C code.
-observe :: SymVal a => String -> SBV a -> SBV a
-observe m x
+observeIf :: SymVal a => (a -> Bool) -> String -> SBV a -> SBV a
+observeIf cond m x
   | null m
   = error "SBV.observe: Bad empty name!"
   | map toLower m `elem` smtLibReservedNames
@@ -474,8 +474,12 @@ observe m x
   = SBV $ SVal k $ Right $ cache r
   where k = kindOf x
         r st = do xsv <- sbvToSV st x
-                  recordObservable st m xsv
+                  recordObservable st m (cond . fromCV) xsv
                   return xsv
+
+-- | Observe the value of an expression, uncoditionally. See 'observeIf' for a generalized version.
+observe :: SymVal a => String -> SBV a -> SBV a
+observe = observeIf (const True)
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.
@@ -1962,14 +1966,14 @@ instance Testable (Symbolic SBool) where
                      let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
                          cond = and [cvToBool (cval v) | (False, _, v) <- cstrs] -- Only pick-up "hard" constraints, as indicated by False in the fist component
 
-                         getObservable (nm, v) = case v `lookup` cs of
-                                                   Just cv -> (nm, cv)
-                                                   Nothing -> error $ "Quick-check: Observable " ++ nm ++ " did not reduce to a constant!"
+                         getObservable (nm, f, v) = case v `lookup` cs of
+                                                      Just cv -> if f cv then Just (nm, cv) else Nothing
+                                                      Nothing -> error $ "Quick-check: Observable " ++ nm ++ " did not reduce to a constant!"
 
                      case map fst unints of
                        [] -> case unliteral r of
                                Nothing -> noQC [show r]
-                               Just b  -> return (cond, b, tvals ++ map getObservable ovals)
+                               Just b  -> return (cond, b, tvals ++ mapMaybe getObservable ovals)
                        us -> noQC us
 
            complain qcInfo = showModel defaultSMTCfg (SMTModel [] qcInfo)

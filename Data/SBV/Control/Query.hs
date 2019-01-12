@@ -22,7 +22,7 @@ module Data.SBV.Control.Query (
      , CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet
      , getUnsatCore, getProof, getInterpolant, getAssignment, getOption, freshVar, freshVar_, freshArray, freshArray_, push, pop, getAssertionStackDepth
      , inNewAssertionStack, echo, caseSplit, resetAssertions, exit, getAssertions, getValue, getUninterpretedValue, getModel, getSMTResult
-     , getLexicographicOptResults, getIndependentOptResults, getParetoOptResults, getAllSatResult, getUnknownReason, ensureSat
+     , getLexicographicOptResults, getIndependentOptResults, getParetoOptResults, getAllSatResult, getUnknownReason, getObservables, ensureSat
      , SMTOption(..), SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
      , Logic(..), Assignment(..)
      , ignoreExitCode, timeout
@@ -41,7 +41,7 @@ import qualified Data.IntMap.Strict as IM
 
 
 import Data.Char     (toLower)
-import Data.List     (unzip3, intercalate, nubBy, sortBy)
+import Data.List     (unzip3, intercalate, nubBy, sortBy, sortOn)
 import Data.Maybe    (listToMaybe, catMaybes)
 import Data.Function (on)
 
@@ -295,31 +295,32 @@ getModel = getModelAtIndex Nothing
 getModelAtIndex :: (MonadIO m, MonadQuery m) => Maybe Int -> m SMTModel
 getModelAtIndex mbi = do
              State{runMode} <- queryState
-             cfg   <- getConfig
-             inps  <- getQuantifiedInputs
-             obsvs <- getObservables
-             rm    <- io $ readIORef runMode
-             let vars :: [NamedSymVar]
-                 vars = case rm of
-                          m@CodeGen         -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
-                          m@Concrete        -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
-                          SMTMode _ isSAT _ -> -- for "sat", display the prefix existentials. for "proof", display the prefix universals
-                                               let allModelInputs = if isSAT then takeWhile ((/= ALL) . fst) inps
-                                                                             else takeWhile ((== ALL) . fst) inps
+             cfg    <- getConfig
+             inps   <- getQuantifiedInputs
+             obsvs  <- getObservables
+             rm     <- io $ readIORef runMode
+             assocs <- case rm of
+                         m@CodeGen         -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+                         m@Concrete        -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+                         SMTMode _ isSAT _ -> -- for "sat", display the prefix existentials. for "proof", display the prefix universals
+                                              let allModelInputs = if isSAT then takeWhile ((/= ALL) . fst) inps
+                                                                            else takeWhile ((== ALL) . fst) inps
 
-                                                   -- are we inside a quantifier
-                                                   insideQuantifier = length allModelInputs < length inps
+                                                  -- are we inside a quantifier
+                                                  insideQuantifier = length allModelInputs < length inps
 
-                                                   -- observables are only meaningful if we're not in a quantified context
-                                                   allPrefixObservables | insideQuantifier = []
-                                                                        | True             = [(EX, (sv, nm)) | (nm, sv) <- obsvs]
+                                                  -- observables are only meaningful if we're not in a quantified context
+                                                  prefixObservables | insideQuantifier = []
+                                                                    | True             = obsvs
 
-                                                   sortByNodeId :: [NamedSymVar] -> [NamedSymVar]
-                                                   sortByNodeId = sortBy (compare `on` (\(SV _ n, _) -> n))
+                                                  sortByNodeId :: [(NamedSymVar, a)] -> [a]
+                                                  sortByNodeId = map snd . sortBy (compare `on` (\((SV _ nid, _), _) -> nid))
 
-                                               in sortByNodeId [nv | (_, nv@(_, n)) <- allModelInputs ++ allPrefixObservables, not (isNonModelVar cfg n)]
+                                                  grab (sv, nm) = ((sv, nm),) <$> getValueCV mbi sv
 
-             assocs <- mapM (\(sv, n) -> (n, ) <$> getValueCV mbi sv) vars
+                                              in do inputAssocs <- mapM (grab . snd) allModelInputs
+                                                    return $  sortOn fst prefixObservables
+                                                           ++ sortByNodeId [(sv, (nm, val)) | (sv@(_, nm), val) <- inputAssocs, not (isNonModelVar cfg nm)]
 
              return SMTModel { modelObjectives = []
                              , modelAssocs     = assocs

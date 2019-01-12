@@ -565,20 +565,20 @@ instance NFData a => NFData (Objective a) where
    rnf (AssertWithPenalty s a p) = rnf s `seq` rnf a `seq` rnf p `seq` ()
 
 -- | Result of running a symbolic computation
-data Result = Result { reskinds       :: Set.Set Kind                                     -- ^ kinds used in the program
-                     , resTraces      :: [(String, CV)]                                   -- ^ quick-check counter-example information (if any)
-                     , resObservables :: [(String, SV)]                                   -- ^ observable expressions (part of the model)
-                     , resUISegs      :: [(String, [String])]                             -- ^ uninterpeted code segments
-                     , resInputs      :: ([(Quantifier, NamedSymVar)], [NamedSymVar])     -- ^ inputs (possibly existential) + tracker vars
-                     , resConsts      :: [(SV, CV)]                                       -- ^ constants
-                     , resTables      :: [((Int, Kind, Kind), [SV])]                      -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
-                     , resArrays      :: [(Int, ArrayInfo)]                               -- ^ arrays (user specified)
-                     , resUIConsts    :: [(String, SBVType)]                              -- ^ uninterpreted constants
-                     , resAxioms      :: [(String, [String])]                             -- ^ axioms
-                     , resAsgns       :: SBVPgm                                           -- ^ assignments
-                     , resConstraints :: [(Bool, [(String, String)], SV)]                       -- ^ additional constraints (boolean)
-                     , resAssertions  :: [(String, Maybe CallStack, SV)]                  -- ^ assertions
-                     , resOutputs     :: [SV]                                             -- ^ outputs
+data Result = Result { reskinds       :: Set.Set Kind                                 -- ^ kinds used in the program
+                     , resTraces      :: [(String, CV)]                               -- ^ quick-check counter-example information (if any)
+                     , resObservables :: [(String, CV -> Bool, SV)]                   -- ^ observable expressions (part of the model)
+                     , resUISegs      :: [(String, [String])]                         -- ^ uninterpeted code segments
+                     , resInputs      :: ([(Quantifier, NamedSymVar)], [NamedSymVar]) -- ^ inputs (possibly existential) + tracker vars
+                     , resConsts      :: [(SV, CV)]                                   -- ^ constants
+                     , resTables      :: [((Int, Kind, Kind), [SV])]                  -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
+                     , resArrays      :: [(Int, ArrayInfo)]                           -- ^ arrays (user specified)
+                     , resUIConsts    :: [(String, SBVType)]                          -- ^ uninterpreted constants
+                     , resAxioms      :: [(String, [String])]                         -- ^ axioms
+                     , resAsgns       :: SBVPgm                                       -- ^ assignments
+                     , resConstraints :: [(Bool, [(String, String)], SV)]                   -- ^ additional constraints (boolean)
+                     , resAssertions  :: [(String, Maybe CallStack, SV)]              -- ^ assertions
+                     , resOutputs     :: [SV]                                         -- ^ outputs
                      }
 
 -- Show instance for 'Result'. Only for debugging purposes.
@@ -800,7 +800,7 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , runMode      :: IORef SBVRunMode
                     , rIncState    :: IORef IncState
                     , rCInfo       :: IORef [(String, CV)]
-                    , rObservables :: IORef [(String, SV)]
+                    , rObservables :: IORef [(String, CV -> Bool, SV)]
                     , rctr         :: IORef Int
                     , rUsedKinds   :: IORef KindSet
                     , rUsedLbls    :: IORef (Set.Set String)
@@ -897,8 +897,8 @@ modifyIncState State{rIncState} field update = do
         R.modifyIORef' (field incState) update
 
 -- | Add an observable
-recordObservable :: State -> String -> SV -> IO ()
-recordObservable st nm sv = modifyState st rObservables ((nm, sv):) (return ())
+recordObservable :: State -> String -> (CV -> Bool) -> SV -> IO ()
+recordObservable st nm chk sv = modifyState st rObservables ((nm, chk, sv):) (return ())
 
 -- | Increment the variable counter
 incrementInternalCounter :: State -> IO Int

@@ -259,7 +259,7 @@ module Data.SBV (
 
   -- ** Observing expressions
   -- $observeInternal
-  , observe
+  , observe, observeIf
 
   -- ** Programmable model extraction
   -- $programmableExtraction
@@ -923,6 +923,9 @@ Falsifiable. Counter-example:
   i2       = 22 :: Word8
   Expected = 34 :: Word8
   Result   =  1 :: Word8
+
+The 'observeIf' variant allows the user to specify a boolean condition when the value is interesting to observe. Useful when
+you have lots of "debugging" points, but not all are of interest.
 -}
 
 {-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}

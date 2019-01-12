@@ -46,6 +46,12 @@ getOption = Trans.getOption
 getUnknownReason :: Query SMTReasonUnknown
 getUnknownReason = Trans.getUnknownReason
 
+-- | Get the observables recorded during a query run.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getObservables'
+getObservables :: Query [(String, CV)]
+getObservables = Trans.getObservables
+
 -- | Issue check-sat and get an SMT Result out.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getSMTResult'

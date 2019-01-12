@@ -28,7 +28,7 @@ module Data.SBV.Control (
 
      -- * Querying the solver
      -- ** Extracting values
-     , SMTValue(..), getValue, getUninterpretedValue, getModel, getAssignment, getSMTResult, getUnknownReason
+     , SMTValue(..), getValue, getUninterpretedValue, getModel, getAssignment, getSMTResult, getUnknownReason, getObservables
 
      -- ** Extracting the unsat core
      , getUnsatCore
@@ -78,7 +78,7 @@ import Data.SBV.Core.Data     (SMTConfig(..))
 import Data.SBV.Core.Symbolic (MonadQuery(..), Query, Symbolic, QueryContext(..))
 
 import Data.SBV.Control.BaseIO
-import Data.SBV.Control.Query hiding (  getInfo, getOption, getUnknownReason
+import Data.SBV.Control.Query hiding (  getInfo, getOption, getUnknownReason, getObservables
                                       , getSMTResult, getLexicographicOptResults
                                       , getIndependentOptResults
                                       , getParetoOptResults, getModel

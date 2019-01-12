@@ -623,12 +623,19 @@ getQuantifiedInputs = do State{rinps} <- queryState
                          return $ preQs ++ trackers ++ postQs
 
 -- | Get observables, i.e., those explicitly labeled by the user with a call to 'Data.SBV.observe'.
-getObservables :: (MonadIO m, MonadQuery m) => m [(String, SV)]
+getObservables :: (MonadIO m, MonadQuery m) => m [(String, CV)]
 getObservables = do State{rObservables} <- queryState
 
                     rObs <- liftIO $ readIORef rObservables
 
-                    return $ reverse rObs
+                    -- This intentionally reverses the result; since 'rObs' stores in reversed order
+                    let walk []             sofar = return sofar
+                        walk ((n, f, s):os) sofar = do cv <- getValueCV Nothing s
+                                                       if f cv
+                                                          then walk os ((n, cv) : sofar)
+                                                          else walk os            sofar
+
+                    walk rObs []
 
 -- | Repeatedly issue check-sat, after refuting the previous model.
 -- The bool is true if the model is unique upto prefix existentials.
