@@ -369,13 +369,13 @@ retrieveResponse = Trans.retrieveResponse
 -- | Get the value of a term.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getValue'
-getValue :: (SMTValue a) => SBV a -> Query a
+getValue :: SMTValue a => SBV a -> Query a
 getValue = Trans.getValue
 
 -- | Get the value of an uninterpreted sort, as a String
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getUninterpretedValue'
-getUninterpretedValue :: (HasKind a) => SBV a -> Query String
+getUninterpretedValue :: HasKind a => SBV a -> Query String
 getUninterpretedValue = Trans.getUninterpretedValue
 
 -- | Get the value of a term. If the kind is Real and solver supports decimal approximations,
