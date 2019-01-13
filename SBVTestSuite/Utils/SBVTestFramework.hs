@@ -192,9 +192,9 @@ qc1 nm opC opS = [cf, sm]
    where cf = QC.testProperty (nm ++ ".constantFold") $ do
                         i <- free "i"
 
-                        let extract n = fromMaybe (error $ "qc1." ++ nm ++ ": Cannot extract value for: " ++ n) . unliteral
+                        let grab n = fromMaybe (error $ "qc1." ++ nm ++ ": Cannot extract value for: " ++ n) . unliteral
 
-                            v = extract "i" i
+                            v = grab "i" i
 
                             expected = literal $ opC v
                             result   = opS i
@@ -245,10 +245,10 @@ qc2 nm opC opS = [cf, sm]
                         i1 <- free "i1"
                         i2 <- free "i2"
 
-                        let extract n = fromMaybe (error $ "qc2." ++ nm ++ ": Cannot extract value for: " ++ n) . unliteral
+                        let grab n = fromMaybe (error $ "qc2." ++ nm ++ ": Cannot extract value for: " ++ n) . unliteral
 
-                            v1 = extract "i1" i1
-                            v2 = extract "i2" i2
+                            v1 = grab "i1" i1
+                            v2 = grab "i2" i2
 
                             expected = literal $ opC v1 v2
                             result   = opS i1 i2
