@@ -546,7 +546,7 @@ mapQueryT f = QueryT . f . runQueryT
 
 -- | An queriable value.
 class Queriable a b | a -> b where
-  -- | ^ Create a new symbolic value of type 'a'
+  -- | ^ Create a new symbolic value of type @a@
   fresh   :: QueryT IO a
   -- | ^ Extract the current value in a SAT context
   extract :: a -> QueryT IO b
