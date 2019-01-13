@@ -14,6 +14,7 @@
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE FunctionalDependencies     #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
@@ -53,7 +54,7 @@ module Data.SBV.Core.Symbolic
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
-  , MonadQuery(..), QueryT(..), Query, QueryState(..), QueryContext(..)
+  , MonadQuery(..), QueryT(..), Query, Queriable(..), QueryState(..), QueryContext(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
   , outputSVal
   ) where
@@ -542,6 +543,13 @@ instance Monad m => MonadQuery (QueryT m) where
 mapQueryT :: (ReaderT State m a -> ReaderT State n b) -> QueryT m a -> QueryT n b
 mapQueryT f = QueryT . f . runQueryT
 {-# INLINE mapQueryT #-}
+
+-- | An queriable value.
+class Queriable a b | a -> b where
+  -- | ^ Create a new symbolic value of type 'a'
+  fresh   :: QueryT IO a
+  -- | ^ Extract the current value in a SAT context
+  extract :: a -> QueryT IO b
 
 -- Have to define this one by hand, because we use ReaderT in the implementation
 instance MonadReader r m => MonadReader r (QueryT m) where

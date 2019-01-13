@@ -9,13 +9,14 @@
 -- Control sublanguage for interacting with SMT solvers.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE NamedFieldPuns  #-}
 
 module Data.SBV.Control (
      -- $queryIntro
 
      -- * User queries
-       ExtractIO(..), MonadQuery(..), Query, query
+       ExtractIO(..), MonadQuery(..), Queriable(..), Query, query
 
      -- * Create a fresh variable
      , freshVar_, freshVar
@@ -75,7 +76,7 @@ module Data.SBV.Control (
      ) where
 
 import Data.SBV.Core.Data     (SMTConfig(..))
-import Data.SBV.Core.Symbolic (MonadQuery(..), Query, Symbolic, QueryContext(..))
+import Data.SBV.Core.Symbolic (MonadQuery(..), Query, Queriable(..), Symbolic, QueryContext(..))
 
 import Data.SBV.Control.BaseIO
 import Data.SBV.Control.Query hiding (  getInfo, getOption, getUnknownReason, getObservables

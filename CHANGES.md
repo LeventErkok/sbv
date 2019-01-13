@@ -91,6 +91,10 @@
   * [BACKWARDS COMPATIBILITY] Renamed the module `Data.SBV.List.Bounded` to
     `Data.SBV.Tools.BoundedList`.
 
+  * Introduced a `Queriable` class, which simplifies symbolic programming with composite
+    user types. See `Documentation.SBV.Examples.ProofTools` directory for several
+    use cases and examples.
+
   * Added function `observeIf`, companion to `observe`. Allows observing of values
     if they satisfy a given predicate.
 

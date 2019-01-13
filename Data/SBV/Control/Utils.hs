@@ -9,15 +9,16 @@
 -- Query related utils.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE BangPatterns         #-}
-{-# LANGUAGE DefaultSignatures    #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE LambdaCase           #-}
-{-# LANGUAGE NamedFieldPuns       #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE TupleSections        #-}
-{-# LANGUAGE TypeApplications     #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE BangPatterns          #-}
+{-# LANGUAGE DefaultSignatures     #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -71,7 +72,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
-                              , MonadQuery(..), QueryContext(..)
+                              , MonadQuery(..), QueryContext(..), Queriable(..)
                               , registerLabel, svMkSymVar
                               , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), QueryT(..)
                               , extractSymbolicSimulationState
@@ -195,6 +196,11 @@ inNewContext act = do st <- queryState
                                          Just qs -> isJust (queryTblArrPreserveIndex qs)
                       syncUpSolver afterAPush is
                       return r
+
+-- | Generic 'Queriable' instance for 'SymVal'/'SMTValue' values
+instance (SymVal a, SMTValue a) => Queriable (SBV a) a where
+  fresh   = freshVar_
+  extract = getValue
 
 -- | Generalization of 'Data.SBV.Control.freshVar_'
 freshVar_ :: forall a m. (MonadIO m, MonadQuery m, SymVal a) => m (SBV a)
