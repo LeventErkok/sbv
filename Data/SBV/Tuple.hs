@@ -20,16 +20,14 @@
 {-# LANGUAGE TypeApplications       #-}
 
 module Data.SBV.Tuple (
-    mkPair
   -- * Symbolic field access
-  , (^.), _1, _2, _3, _4, _5, _6, _7, _8
+    (^.), _1, _2, _3, _4, _5, _6, _7, _8
   -- * Tupling and untupling
   , tuple, untuple
   ) where
 
 import GHC.TypeLits
 
-import Data.Proxy (Proxy(Proxy))
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Model () -- instances only
@@ -40,19 +38,6 @@ import Data.SBV.Core.Model () -- instances only
 -- >>> :set -XTypeApplications
 -- >>> import Data.SBV.Provers.Prover (prove)
 -- >>> import Data.SBV.Core.Model
-
-mkPair :: forall a b. (SymVal a, SymVal b) => SBV a -> SBV b -> SBV (a, b)
-mkPair a b
-  | Just a' <- unliteral a
-  , Just b' <- unliteral b
-  = literal (a', b')
-  | otherwise
-  = SBV (SVal kElem (Right (cache y)))
-  where kElem = kindOf (Proxy @a, Proxy @b)
-        y st = do
-          swa <- sbvToSV st a
-          swb <- sbvToSV st b
-          newExpr st kElem (SBVApp (TupleConstructor 2) [swa, swb])
 
 -- | Field access, inspired by the lens library. This is merely reverse
 -- application, but allows us to write things like @(1, 2)^._1@ which is
@@ -181,7 +166,7 @@ _8 :: HasField "_8" b a => SBV a -> SBV b
 _8 = field (Get @"_8")
 
 -- | Constructing a tuple from its parts and deconstructing back.
-class Tuple tup a | tup -> a where
+class Tuple tup a | a -> tup, tup -> a where
   -- | Deconstruct a tuple, getting its constituent parts apart. Forms an
   -- isomorphism pair with 'untuple':
   --

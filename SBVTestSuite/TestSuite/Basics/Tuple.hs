@@ -117,7 +117,7 @@ unit = do
 makePair :: Symbolic ()
 makePair = do
   [x, y] <- sIntegers ["x", "y"]
-  let xy = mkPair x y
+  let xy = tuple (x, y)
   constrain $ xy^._1 + xy^._2 .== 0
 
 {-# ANN module ("HLint: ignore Use ." :: String) #-}

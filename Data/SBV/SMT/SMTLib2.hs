@@ -300,7 +300,7 @@ declSort (s, Right fs) = [ "(declare-datatypes () ((" ++ s ++ " " ++ unwords (ma
 declTuple :: Int -> [String]
 declTuple arity
   | arity == 0 = ["(declare-datatypes () ((SBVTuple0 SBVTuple0)))"]
-  | arity < 1  = error $ "Data.SBV.declTuple: Unexpected tuple size: " ++ show arity
+  | arity == 1 = error "Data.SBV.declTuple: Unexpected one-tuple"
   | True       =    (l1 ++ "(par (" ++ unwords [param i | i <- [1..arity]] ++ ")")
                  :  [pre i ++ proj i ++ post i    | i <- [1..arity]]
   where l1     = "(declare-datatypes ((SBVTuple" ++ show arity ++ " " ++ show arity ++ ")) ("
