@@ -390,6 +390,10 @@ instance (SMTValue a, Typeable a) => SMTValue [a] where
 
    sexprToVal _                                       = Nothing
 
+instance SMTValue () where
+   sexprToVal (ECon "SBVTuple0") = Just ()
+   sexprToVal _                  = Nothing
+
 -- | Convert a sexpr of n-tuple to constituent sexprs. Z3 and CVC4 differ here on how they
 -- present tuples, so we accommodate both:
 sexprToTuple :: Int -> SExpr -> [SExpr]

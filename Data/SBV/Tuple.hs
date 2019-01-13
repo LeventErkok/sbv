@@ -15,6 +15,9 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE KindSignatures         #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE Rank2Types             #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE TypeApplications       #-}
 
 module Data.SBV.Tuple (
   -- * Symbolic field access
@@ -132,38 +135,38 @@ instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f, HasK
 
 -- | Access the 1st element of an @STupleN@, @2 <= N <= 8@. Also see '^.'.
 _1 :: HasField "_1" b a => SBV a -> SBV b
-_1 = field (Get :: Label "_1")
+_1 = field (Get @"_1")
 
 -- | Access the 2nd element of an @STupleN@, @2 <= N <= 8@. Also see '^.'.
 _2 :: HasField "_2" b a => SBV a -> SBV b
-_2 = field (Get :: Label "_2")
+_2 = field (Get @"_2")
 
 -- | Access the 3nd element of an @STupleN@, @3 <= N <= 8@. Also see '^.'.
 _3 :: HasField "_3" b a => SBV a -> SBV b
-_3 = field (Get :: Label "_3")
+_3 = field (Get @"_3")
 
 -- | Access the 4th element of an @STupleN@, @4 <= N <= 8@. Also see '^.'.
 _4 :: HasField "_4" b a => SBV a -> SBV b
-_4 = field (Get :: Label "_4")
+_4 = field (Get @"_4")
 
 -- | Access the 5th element of an @STupleN@, @5 <= N <= 8@. Also see '^.'.
 _5 :: HasField "_5" b a => SBV a -> SBV b
-_5 = field (Get :: Label "_5")
+_5 = field (Get @"_5")
 
 -- | Access the 6th element of an @STupleN@, @6 <= N <= 8@. Also see '^.'.
 _6 :: HasField "_6" b a => SBV a -> SBV b
-_6 = field (Get :: Label "_6")
+_6 = field (Get @"_6")
 
 -- | Access the 7th element of an @STupleN@, @7 <= N <= 8@. Also see '^.'.
 _7 :: HasField "_7" b a => SBV a -> SBV b
-_7 = field (Get :: Label "_7")
+_7 = field (Get @"_7")
 
 -- | Access the 8th element of an @STupleN@, @8 <= N <= 8@. Also see '^.'.
 _8 :: HasField "_8" b a => SBV a -> SBV b
-_8 = field (Get :: Label "_8")
+_8 = field (Get @"_8")
 
 -- | Constructing a tuple from its parts and deconstructing back.
-class Tuple tup a | tup -> a where
+class Tuple tup a | a -> tup, tup -> a where
   -- | Deconstruct a tuple, getting its constituent parts apart. Forms an
   -- isomorphism pair with 'untuple':
   --

@@ -295,6 +295,7 @@ Test-Suite SBVTest
                   , TestSuite.Queries.Interpolants
                   , TestSuite.Queries.Lists
                   , TestSuite.Queries.Strings
+                  , TestSuite.Queries.Tuples
                   , TestSuite.Queries.Uninterpreted
                   , TestSuite.QuickCheck.QC
                   , TestSuite.Transformers.SymbolicEval
