@@ -21,9 +21,11 @@
 -- @s@ is the sum of all numbers up to and including @n@ upon termination.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric  #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 
 module Documentation.SBV.Examples.ProofTools.Sum where
 
@@ -39,12 +41,17 @@ import GHC.Generics hiding (S)
 -- over the type so we can put in both concrete and symbolic values.
 data S a = S { s :: a, i :: a, n :: a } deriving (Show, Mergeable, Generic)
 
+-- | Queriable instance for our state
+instance Queriable (S SInteger) (S Integer) where
+  fresh              = S <$> freshVar_  <*> freshVar_  <*> freshVar_
+  extract S{s, i, n} = S <$> getValue s <*> getValue i <*> getValue n
+
 -- | Encoding partial correctness of the sum algorithm. We have:
 --
 -- >>> sumCorrect
 -- Q.E.D.
 sumCorrect :: IO (InductionResult (S Integer))
-sumCorrect = induct chatty setup fresh extract initial trans strengthenings inv goal
+sumCorrect = induct chatty setup initial trans strengthenings inv goal
   where -- Set this to True for SBV to print steps as it proceeds
         -- through the inductive proof
         chatty :: Bool
@@ -55,14 +62,6 @@ sumCorrect = induct chatty setup fresh extract initial trans strengthenings inv 
         -- so we simply do nothing.
         setup :: Symbolic ()
         setup = return ()
-
-        -- Getting a new state:
-        fresh :: Query (S SInteger)
-        fresh = S <$> freshVar_ <*> freshVar_ <*> freshVar_
-
-        -- Extracting an obvervable state:
-        extract :: S SInteger -> Query (S Integer)
-        extract S{s, i, n} = S <$> getValue s <*> getValue i <*> getValue n
 
         -- Initially, @s@ and @i@ are both @0@. We also require @n@ to be at least @0@.
         initial :: S SInteger -> SBool

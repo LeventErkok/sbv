@@ -29,7 +29,9 @@
 -- in Bradley's paper quite closely.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 
 module Documentation.SBV.Examples.ProofTools.Strengthen where
 
@@ -43,12 +45,17 @@ import Data.SBV.Control
 -- over the type so we can put in both concrete and symbolic values.
 data S a = S { x :: a, y :: a } deriving Show
 
+-- | Make our state queriable
+instance Queriable (S SInteger) (S Integer) where
+  fresh = S <$> freshVar_ <*> freshVar_
+  extract S{x, y} = S <$> getValue x <*> getValue y
+
 -- * Encoding the problem
 
 -- | We parameterize over the transition relation and the strengthenings to
 -- investigate various combinations.
 problem :: (S SInteger -> [S SInteger]) -> [(String, S SInteger -> SBool)] -> IO (InductionResult (S Integer))
-problem trans strengthenings = induct chatty setup fresh extract initial trans strengthenings inv goal
+problem trans strengthenings = induct chatty setup initial trans strengthenings inv goal
   where -- Set this to True for SBV to print steps as it proceeds
         -- through the inductive proof
         chatty :: Bool
@@ -59,14 +66,6 @@ problem trans strengthenings = induct chatty setup fresh extract initial trans s
         -- so we simply do nothing.
         setup :: Symbolic ()
         setup = return ()
-
-        -- Getting a new state:
-        fresh :: Query (S SInteger)
-        fresh = S <$> freshVar_ <*> freshVar_
-
-        -- Extracting an obvervable state:
-        extract :: S SInteger -> Query (S Integer)
-        extract S{x, y} = S <$> getValue x <*> getValue y
 
         -- Initially, @x@ and @y@ are both @1@
         initial :: S SInteger -> SBool

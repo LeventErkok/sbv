@@ -22,9 +22,11 @@
 -- uninterpreted function.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric  #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 
 module Documentation.SBV.Examples.ProofTools.Fibonacci where
 
@@ -41,6 +43,11 @@ import GHC.Generics hiding (S)
 data S a = S { i :: a, k :: a, m :: a, n :: a }
          deriving (Show, Mergeable, Generic)
 
+-- | Make our state queriable
+instance Queriable (S SInteger) (S Integer) where
+   fresh = S <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
+   extract S{i, k, m, n} = S <$> getValue i <*> getValue k <*> getValue m <*> getValue n
+
 -- | Encoding partial correctness of the sum algorithm. We have:
 --
 -- >>> fibCorrect
@@ -51,7 +58,7 @@ data S a = S { i :: a, k :: a, m :: a, n :: a }
 -- or the coding, z3 pretty much spins forever without finding a counter-example.
 -- However, with the correct coding, the proof is almost instantaneous!
 fibCorrect :: IO (InductionResult (S Integer))
-fibCorrect = induct chatty setup fresh extract initial trans strengthenings inv goal
+fibCorrect = induct chatty setup initial trans strengthenings inv goal
   where -- Set this to True for SBV to print steps as it proceeds
         -- through the inductive proof
         chatty :: Bool
@@ -73,14 +80,6 @@ fibCorrect = induct chatty setup fresh extract initial trans strengthenings inv 
                    addAxiom "fib_n" [ "(assert (forall ((x Int))"
                                     , "                (= (fib (+ x 2)) (+ (fib (+ x 1)) (fib x)))))"
                                     ]
-
-        -- Getting a new state:
-        fresh :: Query (S SInteger)
-        fresh = S <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
-
-        -- Extracting an obvervable state:
-        extract :: S SInteger -> Query (S Integer)
-        extract S{i, k, m, n} = S <$> getValue i <*> getValue k <*> getValue m <*> getValue n
 
         -- Initialize variables
         initial :: S SInteger -> SBool

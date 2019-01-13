@@ -19,7 +19,8 @@
 --     an algorithm to fast-compute fibonacci numbers, using axiomatization.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns   #-}
 
 module Data.SBV.Tools.Induction (
          InductionResult(..), InductionStep(..), induct, inductWith
@@ -78,33 +79,29 @@ instance Show a => Show (InductionResult a) where
 
 -- | Induction engine, using the default solver. See "Documentation.SBV.Examples.ProofTools.Strengthen"
 -- and "Documentation.SBV.Examples.ProofTools.Sum" for examples.
-induct :: Show res
-       => Bool                       -- ^ Verbose mode
-       -> Symbolic ()                -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
-       -> Query st                   -- ^ How to create a new state
-       -> (st -> Query res)          -- ^ How to query a symbolic state
-       -> (st -> SBool)              -- ^ Initial condition
-       -> (st -> [st])               -- ^ Transition relation
-       -> [(String, st -> SBool)]    -- ^ Strengthenings, if any. The @String@ is a simple tag.
-       -> (st -> SBool)              -- ^ Invariant that ensures the goal upon termination
-       -> (st -> (SBool, SBool))     -- ^ Termination condition and the goal to establish
-       -> IO (InductionResult res)   -- ^ Either proven, or a concrete state value that, if reachable, fails the invariant.
+induct :: (Show res, Queriable st res)
+       => Bool                         -- ^ Verbose mode
+       -> Symbolic ()                  -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
+       -> (st -> SBool)                -- ^ Initial condition
+       -> (st -> [st])                 -- ^ Transition relation
+       -> [(String, st -> SBool)]      -- ^ Strengthenings, if any. The @String@ is a simple tag.
+       -> (st -> SBool)                -- ^ Invariant that ensures the goal upon termination
+       -> (st -> (SBool, SBool))       -- ^ Termination condition and the goal to establish
+       -> IO (InductionResult res)     -- ^ Either proven, or a concrete state value that, if reachable, fails the invariant.
 induct = inductWith defaultSMTCfg
 
 -- | Induction engine, configurable with the solver
-inductWith :: Show res
+inductWith :: (Show res, Queriable st res)
            => SMTConfig
            -> Bool
            -> Symbolic ()
-           -> Query st
-           -> (st -> Query res)
            -> (st -> SBool)
            -> (st -> [st])
            -> [(String, st -> SBool)]
            -> (st -> SBool)
            -> (st -> (SBool, SBool))
            -> IO (InductionResult res)
-inductWith cfg chatty setup fresh extract initial trans strengthenings inv goal =
+inductWith cfg chatty setup initial trans strengthenings inv goal =
      try "Proving initiation"
          (\s -> initial s .=> inv s)
          (Failed (Initiation Nothing))

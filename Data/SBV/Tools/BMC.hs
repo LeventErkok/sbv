@@ -27,31 +27,27 @@ import Control.Monad (when)
 --
 -- Note that the BMC engine does *not* guarantee that the solution is unique. However, if it does
 -- find a solution at depth @i@, it is guaranteed that there are no shorter solutions.
-bmc :: EqSymbolic st
-    => Maybe Int                        -- ^ Optional bound
-    -> Bool                             -- ^ Verbose: prints iteration count
-    -> Symbolic ()                      -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
-    -> Query st                         -- ^ How to create a new state
-    -> (st -> Query res)                -- ^ How to query a symbolic state
-    -> (st -> SBool)                    -- ^ Initial condition
-    -> (st -> [st])                     -- ^ Transition relation
-    -> (st -> SBool)                    -- ^ Goal to cover, i.e., we find a set of transitions that satisfy this predicate.
-    -> IO (Either String (Int, [res]))  -- ^ Either a result, or a satisfying path of given length and intermediate observations.
+bmc :: (EqSymbolic st, Queriable st res)
+    => Maybe Int                          -- ^ Optional bound
+    -> Bool                               -- ^ Verbose: prints iteration count
+    -> Symbolic ()                        -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
+    -> (st -> SBool)                      -- ^ Initial condition
+    -> (st -> [st])                       -- ^ Transition relation
+    -> (st -> SBool)                      -- ^ Goal to cover, i.e., we find a set of transitions that satisfy this predicate.
+    -> IO (Either String (Int, [res]))    -- ^ Either a result, or a satisfying path of given length and intermediate observations.
 bmc = bmcWith defaultSMTCfg
 
 -- | Bounded model checking, configurable with the solver
-bmcWith :: EqSymbolic st
+bmcWith :: (EqSymbolic st, Queriable st res)
         => SMTConfig
         -> Maybe Int
         -> Bool
         -> Symbolic ()
-        -> Query st
-        -> (st -> Query res)
         -> (st -> SBool)
         -> (st -> [st])
         -> (st -> SBool)
         -> IO (Either String (Int, [res]))
-bmcWith cfg mbLimit chatty setup fresh extract initial trans goal
+bmcWith cfg mbLimit chatty setup initial trans goal
   = runSMTWith cfg $ do setup
                         query $ do state <- fresh
                                    constrain $ initial state
