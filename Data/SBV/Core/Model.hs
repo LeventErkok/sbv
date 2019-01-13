@@ -99,10 +99,6 @@ genMkSymVar :: MonadSymbolic m => Kind -> Maybe Quantifier -> Maybe String -> m 
 genMkSymVar k mbq Nothing  = genVar_ mbq k
 genMkSymVar k mbq (Just s) = genVar  mbq k s
 
--- | Base type of () allows simple construction for uninterpreted types.
-instance SymVal ()
-instance HasKind ()
-
 instance SymVal Bool where
   mkSymVal = genMkSymVar KBool
   literal  = SBV . svBool
@@ -235,6 +231,12 @@ fromCVTup i inp@(CV (KTuple ks) (CTuple cs))
    where lks = length ks
          lcs = length cs
 fromCVTup i inp = error $ "SymVal.fromCVTup: Impossible happened. Non-tuple received: " ++ show (i, inp)
+
+instance SymVal () where
+  mkSymVal   = genMkSymVar (KTuple [])
+  literal () = mkCVTup 0 (kindOf (Proxy @())) []
+  fromCV (CV _ (CTuple [])) = ()
+  fromCV c                  = error $ "SymVal.fromCV @(): Impossible happened. Non-unit received: " ++ show c
 
 -- | SymVal for 2-tuples
 instance (SymVal a, SymVal b) => SymVal (a, b) where
