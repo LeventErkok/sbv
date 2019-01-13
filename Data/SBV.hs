@@ -919,10 +919,10 @@ prove $ do a1 <- free "i1"
            return $ observe "Expected" spec .== observe "Result" res
 :}
 Falsifiable. Counter-example:
-  i1       = 12 :: Word8
-  i2       = 22 :: Word8
   Expected = 34 :: Word8
   Result   =  1 :: Word8
+  i1       = 12 :: Word8
+  i2       = 22 :: Word8
 
 The 'observeIf' variant allows the user to specify a boolean condition when the value is interesting to observe. Useful when
 you have lots of "debugging" points, but not all are of interest.

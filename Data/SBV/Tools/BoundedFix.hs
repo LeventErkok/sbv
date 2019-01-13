@@ -57,9 +57,9 @@ import Data.SBV
 --
 -- >>> prove $ \n -> n .== 10 .=> observe "bfac_n" (bfac n) .== observe "bfac_10" (bfac 10)
 -- Falsifiable. Counter-example:
---   s0      =      10 :: Integer
---   bfac_n  = 7257600 :: Integer
 --   bfac_10 = 3628800 :: Integer
+--   bfac_n  = 7257600 :: Integer
+--   s0      =      10 :: Integer
 --
 -- Here, we see that the SMT solver must have decided to assign the value @2@ in the final call just
 -- as it was reaching the base case, and thus got the final result incorrect. (Note
