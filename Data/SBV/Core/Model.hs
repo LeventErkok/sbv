@@ -232,11 +232,11 @@ fromCVTup i inp@(CV (KTuple ks) (CTuple cs))
          lcs = length cs
 fromCVTup i inp = error $ "SymVal.fromCVTup: Impossible happened. Non-tuple received: " ++ show (i, inp)
 
+-- | SymVal for 0-tuple (i.e., unit)
 instance SymVal () where
   mkSymVal   = genMkSymVar (KTuple [])
-  literal () = mkCVTup 0 (kindOf (Proxy @())) []
-  fromCV (CV _ (CTuple [])) = ()
-  fromCV c                  = error $ "SymVal.fromCV @(): Impossible happened. Non-unit received: " ++ show c
+  literal () = mkCVTup 0   (kindOf (Proxy @())) []
+  fromCV cv  = fromCVTup 0 cv `seq` ()
 
 -- | SymVal for 2-tuples
 instance (SymVal a, SymVal b) => SymVal (a, b) where
