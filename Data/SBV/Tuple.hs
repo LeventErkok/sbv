@@ -172,8 +172,8 @@ class Tuple tup a | a -> tup, tup -> a where
   --
   -- >>> prove $ \p -> tuple @(Integer, Bool, (String, Char)) (untuple p) .== p
   -- Q.E.D.
-
   untuple :: SBV tup -> a
+
   -- | Constructing a tuple from its parts. Forms an isomorphism pair with 'tuple':
   --
   -- >>> prove $ \p -> untuple @(Integer, Bool, (String, Char)) (tuple p) .== p
