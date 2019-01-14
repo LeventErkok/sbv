@@ -27,8 +27,7 @@
 
 module Documentation.SBV.Examples.Transformers.SymbolicEval where
 
-import Control.Monad.Except   (Except, ExceptT, MonadError, mapExceptT,
-                               runExceptT, throwError)
+import Control.Monad.Except   (Except, ExceptT, MonadError, mapExceptT, runExceptT, throwError)
 import Control.Monad.Identity (Identity(runIdentity))
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.Reader   (MonadReader(ask, reader), ReaderT, runReaderT)
@@ -85,11 +84,9 @@ data Term :: * -> * where
 
 -- | Monad for performing symbolic evaluation.
 newtype Eval a = Eval { unEval :: ReaderT Env (Except String) a }
-    deriving (Functor, Applicative, Monad,
-              MonadReader Env, MonadError String)
+    deriving (Functor, Applicative, Monad, MonadReader Env, MonadError String)
 
--- | Unsafe cast for symbolic values. In production code, we would check types
--- instead.
+-- | Unsafe cast for symbolic values. In production code, we would check types instead.
 unsafeCastSBV :: SBV a -> SBV b
 unsafeCastSBV = SBV . unSBV
 
@@ -103,14 +100,14 @@ eval (Var "result")      = do mRes <- reader result
                                 Just sv -> pure $ SBV sv
 eval (Var _)             = throwError "unknown variable"
 eval (Lit i)             = pure $ literal i
-eval (Plus t1 t2)        = (+)  <$> eval t1 <*> eval t2
-eval (LessThan t1 t2)    = (.<) <$> eval t1 <*> eval t2
-eval (GreaterThan t1 t2) = (.>) <$> eval t1 <*> eval t2
-eval (Equals t1 t2)      = (.==) <$> eval t1 <*> eval t2
-eval (Not t)             = sNot <$> eval t
-eval (Or t1 t2)          = (.||) <$> eval t1 <*> eval t2
-eval (And t1 t2)         = (.&&) <$> eval t1 <*> eval t2
-eval (Implies t1 t2)     = (.=>) <$> eval t1 <*> eval t2
+eval (Plus        t1 t2) = (+)   <$> eval t1 <*> eval t2
+eval (LessThan    t1 t2) = (.<)  <$> eval t1 <*> eval t2
+eval (GreaterThan t1 t2) = (.>)  <$> eval t1 <*> eval t2
+eval (Equals      t1 t2) = (.==) <$> eval t1 <*> eval t2
+eval (Not         t)     = sNot  <$> eval t
+eval (Or          t1 t2) = (.||) <$> eval t1 <*> eval t2
+eval (And         t1 t2) = (.&&) <$> eval t1 <*> eval t2
+eval (Implies     t1 t2) = (.=>) <$> eval t1 <*> eval t2
 
 -- | Runs symbolic evaluation, sending a 'Term' to a symbolic value (or
 -- failing). Used for symbolic evaluation of programs and properties.
@@ -155,8 +152,7 @@ generalize = pure . runIdentity
 
 -- | Monad for querying a solver.
 newtype Q a = Q { runQ :: QueryT (ExceptT String IO) a }
-    deriving (Functor, Applicative, Monad, MonadIO,
-              MonadError String, MonadQuery)
+    deriving (Functor, Applicative, Monad, MonadIO, MonadError String, MonadQuery)
 
 -- | Creates a computation that queries a solver and yields a 'CheckResult'.
 mkQuery :: Env -> Q CheckResult
