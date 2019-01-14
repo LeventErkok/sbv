@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 7.13, 2018-12-16
+* Latest Hackage released version: 8.0, 2019-01-14
 
-### Version 7.13.5, New development version
+### Version 8.0, 2019-01-14
 
   * This is a major release of SBV, with several BACKWARDS COMPATIBILITY breaking
     changes. Lots of reworking of the internals to modernize the SBV code base.
