@@ -546,11 +546,11 @@ mapQueryT f = QueryT . f . runQueryT
 {-# INLINE mapQueryT #-}
 
 -- | An queriable value.
-class Queriable a b | a -> b where
+class Queriable m a b | a -> b where
   -- | ^ Create a new symbolic value of type @a@
-  fresh   :: QueryT IO a
+  fresh   :: QueryT m a
   -- | ^ Extract the current value in a SAT context
-  extract :: a -> QueryT IO b
+  extract :: a -> QueryT m b
 
 -- Have to define this one by hand, because we use ReaderT in the implementation
 instance MonadReader r m => MonadReader r (QueryT m) where

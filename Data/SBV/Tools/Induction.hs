@@ -79,19 +79,19 @@ instance Show a => Show (InductionResult a) where
 
 -- | Induction engine, using the default solver. See "Documentation.SBV.Examples.ProofTools.Strengthen"
 -- and "Documentation.SBV.Examples.ProofTools.Sum" for examples.
-induct :: (Show res, Queriable st res)
-       => Bool                         -- ^ Verbose mode
-       -> Symbolic ()                  -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
-       -> (st -> SBool)                -- ^ Initial condition
-       -> (st -> [st])                 -- ^ Transition relation
-       -> [(String, st -> SBool)]      -- ^ Strengthenings, if any. The @String@ is a simple tag.
-       -> (st -> SBool)                -- ^ Invariant that ensures the goal upon termination
-       -> (st -> (SBool, SBool))       -- ^ Termination condition and the goal to establish
-       -> IO (InductionResult res)     -- ^ Either proven, or a concrete state value that, if reachable, fails the invariant.
+induct :: (Show res, Queriable IO st res)
+       => Bool                             -- ^ Verbose mode
+       -> Symbolic ()                      -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
+       -> (st -> SBool)                    -- ^ Initial condition
+       -> (st -> [st])                     -- ^ Transition relation
+       -> [(String, st -> SBool)]          -- ^ Strengthenings, if any. The @String@ is a simple tag.
+       -> (st -> SBool)                    -- ^ Invariant that ensures the goal upon termination
+       -> (st -> (SBool, SBool))           -- ^ Termination condition and the goal to establish
+       -> IO (InductionResult res)         -- ^ Either proven, or a concrete state value that, if reachable, fails the invariant.
 induct = inductWith defaultSMTCfg
 
 -- | Induction engine, configurable with the solver
-inductWith :: (Show res, Queriable st res)
+inductWith :: (Show res, Queriable IO st res)
            => SMTConfig
            -> Bool
            -> Symbolic ()

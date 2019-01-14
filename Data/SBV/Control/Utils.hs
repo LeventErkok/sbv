@@ -198,7 +198,7 @@ inNewContext act = do st <- queryState
                       return r
 
 -- | Generic 'Queriable' instance for 'SymVal'/'SMTValue' values
-instance (SymVal a, SMTValue a) => Queriable (SBV a) a where
+instance (MonadIO m, SymVal a, SMTValue a) => Queriable m (SBV a) a where
   fresh   = freshVar_
   extract = getValue
 

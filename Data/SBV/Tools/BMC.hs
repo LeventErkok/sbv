@@ -10,12 +10,12 @@
 -- for an example use case.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns   #-}
 
 module Data.SBV.Tools.BMC (
          bmc, bmcWith
        ) where
-
 
 import Data.SBV
 import Data.SBV.Control
@@ -27,18 +27,18 @@ import Control.Monad (when)
 --
 -- Note that the BMC engine does *not* guarantee that the solution is unique. However, if it does
 -- find a solution at depth @i@, it is guaranteed that there are no shorter solutions.
-bmc :: (EqSymbolic st, Queriable st res)
-    => Maybe Int                          -- ^ Optional bound
-    -> Bool                               -- ^ Verbose: prints iteration count
-    -> Symbolic ()                        -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
-    -> (st -> SBool)                      -- ^ Initial condition
-    -> (st -> [st])                       -- ^ Transition relation
-    -> (st -> SBool)                      -- ^ Goal to cover, i.e., we find a set of transitions that satisfy this predicate.
-    -> IO (Either String (Int, [res]))    -- ^ Either a result, or a satisfying path of given length and intermediate observations.
+bmc :: (EqSymbolic st, Queriable IO st res)
+    => Maybe Int                            -- ^ Optional bound
+    -> Bool                                 -- ^ Verbose: prints iteration count
+    -> Symbolic ()                          -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
+    -> (st -> SBool)                        -- ^ Initial condition
+    -> (st -> [st])                         -- ^ Transition relation
+    -> (st -> SBool)                        -- ^ Goal to cover, i.e., we find a set of transitions that satisfy this predicate.
+    -> IO (Either String (Int, [res]))      -- ^ Either a result, or a satisfying path of given length and intermediate observations.
 bmc = bmcWith defaultSMTCfg
 
 -- | Bounded model checking, configurable with the solver
-bmcWith :: (EqSymbolic st, Queriable st res)
+bmcWith :: (EqSymbolic st, Queriable IO st res)
         => SMTConfig
         -> Maybe Int
         -> Bool

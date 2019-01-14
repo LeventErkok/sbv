@@ -42,7 +42,7 @@ import GHC.Generics hiding (S)
 data S a = S { s :: a, i :: a, n :: a } deriving (Show, Mergeable, Generic)
 
 -- | Queriable instance for our state
-instance Queriable (S SInteger) (S Integer) where
+instance Queriable IO (S SInteger) (S Integer) where
   fresh              = S <$> freshVar_  <*> freshVar_  <*> freshVar_
   extract S{s, i, n} = S <$> getValue s <*> getValue i <*> getValue n
 

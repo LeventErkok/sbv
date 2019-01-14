@@ -44,7 +44,7 @@ data S a = S { i :: a, k :: a, m :: a, n :: a }
          deriving (Show, Mergeable, Generic)
 
 -- | Make our state queriable
-instance Queriable (S SInteger) (S Integer) where
+instance Queriable IO (S SInteger) (S Integer) where
    fresh = S <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
    extract S{i, k, m, n} = S <$> getValue i <*> getValue k <*> getValue m <*> getValue n
 

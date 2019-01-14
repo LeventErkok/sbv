@@ -46,7 +46,7 @@ import Data.SBV.Control
 data S a = S { x :: a, y :: a } deriving Show
 
 -- | Make our state queriable
-instance Queriable (S SInteger) (S Integer) where
+instance Queriable IO (S SInteger) (S Integer) where
   fresh = S <$> freshVar_ <*> freshVar_
   extract S{x, y} = S <$> getValue x <*> getValue y
 
