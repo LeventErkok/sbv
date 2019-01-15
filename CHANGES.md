@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 8.0, 2019-01-14
 
+### Version 8.1, Not yet released
+
+  * New development version
+
 ### Version 8.0, 2019-01-14
 
   * This is a major release of SBV, with several BACKWARDS COMPATIBILITY breaking
@@ -748,7 +752,7 @@
     capability optimize objectives, and solve MaxSAT problems; by appropriately
     employing the corresponding capabilities in z3. A good review of these features
     as implemented by Z3, and thus what is available in SBV is given in this
-    paper: http://www.easychair.org/publications/download/Z_-_Maximal_Satisfaction_with_Z3
+    paper: https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf
 
   * SBV now allows for  real or integral valued metrics. Goals can be lexicographically
     (default), independently, or pareto-front optimized. Currently, only the z3 backend
