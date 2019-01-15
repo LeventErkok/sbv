@@ -88,6 +88,7 @@ Library
                   , Data.SBV.Tools.Polynomial
                   , Data.SBV.Tools.Range
                   , Data.SBV.Tools.STree
+                  , Data.SBV.Tools.WeakestPreconditions
                   , Data.SBV.Trans
                   , Data.SBV.Trans.Control
                   , Documentation.SBV.Examples.BitPrecise.BitTricks

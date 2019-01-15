@@ -7,6 +7,13 @@
 
   * Rework the 'Queriable' class to allow projection/embedding pairs.
 
+  * Added `Data.SBV.Tools.WeakestPreconditions` module, which provides a total
+    correctness proof engine for imperative programs, written in a toy language.
+    It uses Dijkstra's weakest preconditions methodology to establish total correctness,
+    i.e., along with correctness, termination is also guaranteed. Loop invariants and
+    termination measures are supplied by the user. For an example use case, see the
+    example in `Documentation.SBV.Examples.ProofTools.WPSum`.
+
 ### Version 8.0, 2019-01-14
 
   * This is a major release of SBV, with several BACKWARDS COMPATIBILITY breaking
