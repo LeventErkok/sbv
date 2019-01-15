@@ -48,9 +48,13 @@ instance Show a => Show (ProofResult a) where
                                             , intercalate "\n" ["  " ++ l | l <- lines (show a)]
                                             ]
 
+
+-- Left: Line no, Right iteration count
+type Loc = [Either Int Int]
+
 traceExecution :: forall st. Show st => Bool -> st -> Prog st -> (st -> SBool) -> IO Bool
 traceExecution chatty start prog prop = do printST start
-                                           mbEnd <- go [1] prog start
+                                           mbEnd <- go [Left 1] prog start
                                            case mbEnd of
                                              Nothing  -> do msg ""
                                                             msg "Program execution aborted."
@@ -64,29 +68,31 @@ traceExecution chatty start prog prop = do printST start
   where msg :: String -> IO ()
         msg = when chatty . putStrLn
 
-        sLoc :: [Int] -> String
-        sLoc l = "==> [" ++ intercalate "." (map show (reverse l)) ++ "]"
+        sLoc :: Loc -> String
+        sLoc l = "==> [" ++ intercalate "." (map sh (reverse l)) ++ "]"
+          where sh (Left  i) = show i
+                sh (Right i) = "{" ++ show i ++ "}"
 
-        step :: [Int] -> String -> st -> IO st
+        step :: Loc -> String -> st -> IO st
         step l m st = do msg $ sLoc l ++ " " ++ m
                          printST st
                          return st
 
-        stop :: [Int] -> String -> IO (Maybe st)
+        stop :: Loc -> String -> IO (Maybe st)
         stop l m = do msg $ sLoc l ++ " " ++ m
                       return Nothing
 
-        noChange :: [Int] -> String -> st -> IO (Maybe st)
+        noChange :: Loc -> String -> st -> IO (Maybe st)
         noChange l m st = Just <$> step l m st
 
         printST :: st -> IO ()
         printST st = msg $ " " ++ show st
 
-        unwrap :: SymVal a => [Int] -> String -> SBV a -> a
+        unwrap :: SymVal a => Loc -> String -> SBV a -> a
         unwrap l m = fromMaybe die . unliteral
            where die = error $ "*** traceExecution: " ++ sLoc l ++ ": Failed to extract concrete value while " ++ show m
 
-        go :: [Int] -> Prog st -> st -> IO (Maybe st)
+        go :: Loc -> Prog st -> st -> IO (Maybe st)
         go loc p st = analyze p
           where analyze Skip         = noChange loc "Skip"  st
 
@@ -95,13 +101,13 @@ traceExecution chatty start prog prop = do printST start
                 analyze (Assign f)   = Just . f <$> step loc "Assign" st
 
                 analyze (If c tb eb)
-                  | branchTrue       = go (1 : loc) tb =<< step loc "Conditional, taking the \"then\" branch" st
-                  | True             = go (2 : loc) eb =<< step loc "Conditional, taking the \"else\" branch" st
+                  | branchTrue       = go (Left 1 : loc) tb =<< step loc "Conditional, taking the \"then\" branch" st
+                  | True             = go (Left 2 : loc) eb =<< step loc "Conditional, taking the \"else\" branch" st
                   where branchTrue = unwrap loc "evaluating the test condition" (c st)
 
                 analyze (Seq stmts)  = walk stmts 1 st
                   where walk []     _ is = return $ Just is
-                        walk (s:ss) c is = do mbS <- go (c:loc) s is
+                        walk (s:ss) c is = do mbS <- go (Left c : loc) s is
                                               case mbS of
                                                 Just is' -> walk ss (c+1) is'
                                                 Nothing  -> return Nothing
@@ -121,7 +127,7 @@ traceExecution chatty start prog prop = do printST start
                                 | Just mPrev <- mbmPrev, mCur >= mPrev
                                 = stop loc ("Loop " ++ loopName ++ ": measure failed to decrease, prev = " ++ show mPrev ++ ", current = " ++ show mCur)
                                 | True
-                                = do mbS <- go (c : loc) body =<< step loc ("Loop " ++ loopName ++ ": condition holds, executing body") is
+                                = do mbS <- go (Right c : loc) body =<< step loc ("Loop " ++ loopName ++ ": condition holds, executing body") is
                                      case mbS of
                                        Just is' -> while (c+1) (Just mCur) is'
                                        Nothing  -> return Nothing
