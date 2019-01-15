@@ -43,8 +43,9 @@ instance EqSymbolic a => EqSymbolic (S a) where
 
 -- | Queriable instance for our state
 instance Queriable IO (S SInteger) (S Integer) where
-  fresh           = S <$> freshVar_  <*> freshVar_
-  extract S{x, y} = S <$> getValue x <*> getValue y
+  create          = S <$> freshVar_  <*> freshVar_
+  project S{x, y} = S <$> getValue x <*> getValue y
+  embed   S{x, y} = return $ S (literal x) (literal  y)
 
 -- * Encoding the problem
 

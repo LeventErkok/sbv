@@ -49,7 +49,7 @@ bmcWith :: (EqSymbolic st, Queriable IO st res)
         -> IO (Either String (Int, [res]))
 bmcWith cfg mbLimit chatty setup initial trans goal
   = runSMTWith cfg $ do setup
-                        query $ do state <- fresh
+                        query $ do state <- create
                                    constrain $ initial state
                                    go 0 state []
    where go i _ _
@@ -61,11 +61,11 @@ bmcWith cfg mbLimit chatty setup initial trans goal
                                   cs <- checkSat
                                   case cs of
                                     Sat   -> do when chatty $ io $ putStrLn $ "BMC: Solution found at iteration " ++ show i
-                                                ms <- mapM extract (curState : sofar)
+                                                ms <- mapM project (curState : sofar)
                                                 return $ Right (i, reverse ms)
                                     Unk   -> do when chatty $ io $ putStrLn $ "BMC: Backend solver said unknown at iteration " ++ show  i
                                                 return $ Left $ "BMC: Solver said unknown in iteration " ++ show i
                                     Unsat -> do pop 1
-                                                nextState <- fresh
+                                                nextState <- create
                                                 constrain $ sAny (nextState .==) (trans curState)
                                                 go (i+1) nextState (curState : sofar)

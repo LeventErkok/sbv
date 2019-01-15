@@ -45,8 +45,9 @@ data S a = S { i :: a, k :: a, m :: a, n :: a }
 
 -- | Make our state queriable
 instance Queriable IO (S SInteger) (S Integer) where
-   fresh = S <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
-   extract S{i, k, m, n} = S <$> getValue i <*> getValue k <*> getValue m <*> getValue n
+   create                = S <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
+   project S{i, k, m, n} = S <$> getValue i <*> getValue k <*> getValue m <*> getValue n
+   embed   S{i, k, m, n} = return $ S (literal i) (literal k) (literal m) (literal n)
 
 -- | Encoding partial correctness of the sum algorithm. We have:
 --

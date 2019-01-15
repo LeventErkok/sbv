@@ -199,8 +199,9 @@ inNewContext act = do st <- queryState
 
 -- | Generic 'Queriable' instance for 'SymVal'/'SMTValue' values
 instance (MonadIO m, SymVal a, SMTValue a) => Queriable m (SBV a) a where
-  fresh   = freshVar_
-  extract = getValue
+  create  = freshVar_
+  project = getValue
+  embed   = return . literal
 
 -- | Generalization of 'Data.SBV.Control.freshVar_'
 freshVar_ :: forall a m. (MonadIO m, MonadQuery m, SymVal a) => m (SBV a)

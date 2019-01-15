@@ -124,7 +124,7 @@ inductWith cfg chatty setup initial trans strengthenings inv goal =
 
         check p = runSMTWith cfg $ do
                         setup
-                        query $ do st <- fresh
+                        query $ do st <- create
                                    constrain $ sNot (p st)
 
                                    cs <- checkSat
@@ -132,7 +132,7 @@ inductWith cfg chatty setup initial trans strengthenings inv goal =
                                      Unk   -> error "Solver said unknown"
                                      Unsat -> return Nothing
                                      Sat   -> do io $ msg "Failed:"
-                                                 ex <- extract st
+                                                 ex <- project st
                                                  io $ msg $ show ex
                                                  return $ Just ex
 

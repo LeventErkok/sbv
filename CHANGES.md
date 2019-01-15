@@ -5,7 +5,7 @@
 
 ### Version 8.1, Not yet released
 
-  * New development version
+  * Rework the 'Queriable' class to allow projection/embedding pairs.
 
 ### Version 8.0, 2019-01-14
 

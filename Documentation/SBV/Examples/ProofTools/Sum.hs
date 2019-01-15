@@ -43,8 +43,9 @@ data S a = S { s :: a, i :: a, n :: a } deriving (Show, Mergeable, Generic)
 
 -- | Queriable instance for our state
 instance Queriable IO (S SInteger) (S Integer) where
-  fresh              = S <$> freshVar_  <*> freshVar_  <*> freshVar_
-  extract S{s, i, n} = S <$> getValue s <*> getValue i <*> getValue n
+  create             = S <$> freshVar_  <*> freshVar_  <*> freshVar_
+  project S{s, i, n} = S <$> getValue s <*> getValue i <*> getValue n
+  embed   S{s, i, n} = return $ S (literal s) (literal i) (literal n)
 
 -- | Encoding partial correctness of the sum algorithm. We have:
 --

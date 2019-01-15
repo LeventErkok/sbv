@@ -548,9 +548,12 @@ mapQueryT f = QueryT . f . runQueryT
 -- | An queriable value.
 class Queriable m a b | a -> b where
   -- | ^ Create a new symbolic value of type @a@
-  fresh   :: QueryT m a
+  create  :: QueryT m a
   -- | ^ Extract the current value in a SAT context
-  extract :: a -> QueryT m b
+  project :: a -> QueryT m b
+  -- | ^ Create a literal value. Morally, 'embed' and 'project' are inverses of each other
+  -- via the 'QueryT' monad transformer.
+  embed   :: b -> QueryT m a
 
 -- Have to define this one by hand, because we use ReaderT in the implementation
 instance MonadReader r m => MonadReader r (QueryT m) where
