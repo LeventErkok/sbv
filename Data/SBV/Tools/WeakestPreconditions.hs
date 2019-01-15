@@ -11,14 +11,13 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 
 module Data.SBV.Tools.WeakestPreconditions (ProofResult(..), Prog, Stmt(..), traceExecution, check, checkWith) where
 
 import Data.List (intercalate)
-import Data.Maybe (maybe)
+import Data.Maybe (fromMaybe)
 
 import Control.Monad (when, unless)
 
@@ -29,11 +28,11 @@ data Stmt st = Skip
              | Abort
              | Assign (st -> st)
              | If     (st -> SBool) (Stmt st) (Stmt st)
-             | While  String            -- ^ Loop name (for diagnostic purposes)
-                      (st -> SBool)     -- ^ Loop invariant
-                      (st -> SInteger)  -- ^ Termination measure
-                      (st -> SBool)     -- ^ Loop condition
-                      (Stmt st)         -- ^ Loop body
+             | While  String            -- Loop name (for diagnostic purposes)
+                      (st -> SBool)     -- Loop invariant
+                      (st -> SInteger)  -- Termination measure
+                      (st -> SBool)     -- Loop condition
+                      (Stmt st)         -- Loop body
              | Seq    [Stmt st]
 
 type Prog st = Stmt st
@@ -68,71 +67,70 @@ traceExecution chatty start prog prop = do printST start
         sLoc :: [Int] -> String
         sLoc l = "==> [" ++ intercalate "." (map show (reverse l)) ++ "]"
 
-        step :: [Int] -> String -> Maybe st -> IO ()
-        step l m mbST = do msg $ sLoc l ++ " " ++ m
-                           maybe (return ()) printST mbST
+        step :: [Int] -> String -> st -> IO st
+        step l m st = do msg $ sLoc l ++ " " ++ m
+                         printST st
+                         return st
+
+        stop :: [Int] -> String -> IO (Maybe st)
+        stop l m = do msg $ sLoc l ++ " " ++ m
+                      return Nothing
+
+        noChange :: [Int] -> String -> st -> IO (Maybe st)
+        noChange l m st = Just <$> step l m st
 
         printST :: st -> IO ()
         printST st = msg $ " " ++ show st
 
         unwrap :: SymVal a => [Int] -> String -> SBV a -> a
-        unwrap l m v = case unliteral v of
-                         Nothing -> error $ "*** traceExecution: " ++ sLoc l ++ ": Failed to extract concrete value while " ++ show m
-                         Just i  -> i
+        unwrap l m = fromMaybe die . unliteral
+           where die = error $ "*** traceExecution: " ++ sLoc l ++ ": Failed to extract concrete value while " ++ show m
 
         go :: [Int] -> Prog st -> st -> IO (Maybe st)
-        go loc p st = case p of
-                        Skip       -> do step loc "Skip" (Just st)
-                                         return $ Just st
+        go loc p st = analyze p
+          where analyze Skip         = noChange loc "Skip"  st
 
-                        Abort      -> do step loc "Abort" (Just st)
-                                         return Nothing
+                analyze Abort        = noChange loc "Abort" st
 
-                        Assign f   -> do step loc "Assign" (Just st)
-                                         return $ Just $ f st
+                analyze (Assign f)   = Just . f <$> step loc "Assign" st
 
-                        If c tb eb -> case unwrap loc "evaluating the test condition" (c st) of
-                                        True  -> do step loc "Conditional, taking the \"then\" branch" (Just st)
-                                                    go (1 : loc) tb st
-                                        False -> do step loc "Conditional, taking the \"else\" branch" (Just st)
-                                                    go (2 : loc) eb st
+                analyze (If c tb eb)
+                  | branchTrue       = go (1 : loc) tb =<< step loc "Conditional, taking the \"then\" branch" st
+                  | True             = go (2 : loc) eb =<< step loc "Conditional, taking the \"else\" branch" st
+                  where branchTrue = unwrap loc "evaluating the test condition" (c st)
 
-                        Seq stmts  -> let walk []     _ is = return $ Just is
-                                          walk (s:ss) c is = do mbS <- go (c:loc) s is
-                                                                case mbS of
-                                                                  Just is' -> walk ss (c+1) is'
-                                                                  Nothing  -> return Nothing
-                                      in walk stmts 1 st
+                analyze (Seq stmts)  = walk stmts 1 st
+                  where walk []     _ is = return $ Just is
+                        walk (s:ss) c is = do mbS <- go (c:loc) s is
+                                              case mbS of
+                                                Just is' -> walk ss (c+1) is'
+                                                Nothing  -> return Nothing
 
-                        While loopName invariant measure condition body -> do
-                                let currentCondition is = unwrap loc ("Loop " ++ loopName ++ ", evaluating the while condition") (condition is)
-                                    currentMeasure   is = unwrap loc ("Loop " ++ loopName ++ ", evaluating the measure")         (measure   is)
-                                    currentInvariant is = unwrap loc ("Loop " ++ loopName ++ ", evaluating the invariant")       (invariant is)
+                analyze (While loopName invariant measure condition body) = do
+                          let currentCondition is = unwrap loc ("Loop " ++ loopName ++ ", evaluating the while condition") (condition is)
+                              currentMeasure   is = unwrap loc ("Loop " ++ loopName ++ ", evaluating the measure")         (measure   is)
+                              currentInvariant is = unwrap loc ("Loop " ++ loopName ++ ", evaluating the invariant")       (invariant is)
 
-                                    while c mbmPrev is
-                                      | not inv
-                                      = do step loc ("Loop " ++ loopName ++ ": invariant fails to hold") Nothing
-                                           return Nothing
-                                      | stop
-                                      = do step loc ("Loop " ++ loopName ++ ": condition fails, terminating") (Just is)
-                                           return $ Just is
-                                      | mCur < 0
-                                      = do step loc ("Loop " ++ loopName ++ ": measure must be non-negative, evaluated to: " ++ show mCur) Nothing
-                                           return Nothing
-                                      | Just mPrev <- mbmPrev, mCur >= mPrev
-                                      = do step loc ("Loop " ++ loopName ++ ": measure failed to decrease, prev = " ++ show mPrev ++ ", current = " ++ show mCur) Nothing
-                                           return Nothing
-                                      | True
-                                      = do step loc ("Loop " ++ loopName ++ ": condition holds, executing body") (Just is)
-                                           mbS <- go (c:loc) body is
-                                           case mbS of
-                                             Just is' -> while (c+1) (Just mCur) is'
-                                             Nothing  -> return Nothing
-                                      where stop = not $ currentCondition is
-                                            mCur = currentMeasure   is
-                                            inv  = currentInvariant is
+                              while c mbmPrev is
+                                | not inv
+                                = stop loc ("Loop " ++ loopName ++ ": invariant fails to hold")
+                                | not cCur
+                                = noChange loc ("Loop " ++ loopName ++ ": condition fails, terminating") is
+                                | mCur < 0
+                                = stop loc ("Loop " ++ loopName ++ ": measure must be non-negative, evaluated to: " ++ show mCur)
+                                | Just mPrev <- mbmPrev, mCur >= mPrev
+                                = stop loc ("Loop " ++ loopName ++ ": measure failed to decrease, prev = " ++ show mPrev ++ ", current = " ++ show mCur)
+                                | True
+                                = do mbS <- go (c : loc) body =<< step loc ("Loop " ++ loopName ++ ": condition holds, executing body") is
+                                     case mbS of
+                                       Just is' -> while (c+1) (Just mCur) is'
+                                       Nothing  -> return Nothing
 
-                                while 1 Nothing st
+                                where cCur = currentCondition is
+                                      mCur = currentMeasure   is
+                                      inv  = currentInvariant is
+
+                          while 1 Nothing st
 
 checkWith :: forall st res. (Show st, Queriable IO st res)
           => SMTConfig
@@ -149,8 +147,7 @@ checkWith cfg chatty prog prop = runSMTWith cfg $ query $ do
 
         do cs <- checkSat
            case cs of
-             Unk  -> do r <- getUnknownReason
-                        return $ Indeterminate (show r)
+             Unk   -> Indeterminate . show <$> getUnknownReason
              Unsat -> do msg "Total correctness is established."
                          return Proven
              Sat   -> do bad <- project st
@@ -160,10 +157,10 @@ checkWith cfg chatty prog prop = runSMTWith cfg $ query $ do
                             unless (null os) $ do let m = "Following proof " ++ plu "obligation" os ++ " failed: "
                                                   msg m
                                                   msg $ replicate (length m) '='
-                                                  mapM_ (msg . ("  " ++)) (map fst os)
+                                                  mapM_ (msg . ("  " ++) . fst) os
                                                   msg ""
-                            msg $ "Execution leading to failed proof obligation:"
-                            msg $ "============================================="
+                            msg "Execution leading to failed proof obligation:"
+                            msg "============================================="
                             lst <- embed bad
                             res <- io $ traceExecution chatty lst prog prop
                             if res
