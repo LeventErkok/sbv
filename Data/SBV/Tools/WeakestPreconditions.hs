@@ -157,7 +157,7 @@ checkWith cfg chatty prog prop = runSMTWith cfg $ query $ do
                             unless (null os) $ do let m = "Following proof " ++ plu "obligation" os ++ " failed: "
                                                   msg m
                                                   msg $ replicate (length m) '='
-                                                  mapM_ (msg . ("  " ++) . fst) os
+                                                  mapM_ (msg . (' ' :) . fst) os
                                                   msg ""
                             msg "Execution leading to failed proof obligation:"
                             msg "============================================="
