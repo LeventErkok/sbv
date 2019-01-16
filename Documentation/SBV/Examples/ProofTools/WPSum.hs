@@ -11,9 +11,10 @@
 -- different versions lead to proofs and failures.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 
 module Documentation.SBV.Examples.ProofTools.WPSum where
 
@@ -22,56 +23,108 @@ import Data.SBV.Control
 
 import Data.SBV.Tools.WeakestPreconditions
 
-data SumS a = SumS { i, s, n :: a }
+-- * System state
 
-instance Show (SumS SInteger) where
+-- | The state for the sum program, parameterized over a base type @a@.
+data SumS a = SumS { i :: a    -- ^ Loop counter
+                   , s :: a    -- ^ Running sum
+                   , n :: a    -- ^ The input value
+                   }
+
+-- | Show instance for 'SumS'. A deriving clause would work just as well,
+-- but we want it to be a little prettier here.
+instance (SymVal a, Show a) => Show (SumS (SBV a)) where
    show (SumS i s n) = "{n = " ++ sh n ++ ", i = " ++ sh i ++ ", s = " ++ sh s ++ "}"
      where sh v = case unliteral v of
                     Nothing -> "<symbolic>"
                     Just l  -> show l
 
-instance Show (SumS Integer) where
-   show (SumS i s n) = show (SumS (literal i) (literal s) (literal n))
-
-instance Queriable IO (SumS SInteger) (SumS Integer) where
+-- | Make our state 'Data.SBV.Control.Queariable'
+instance (SymVal a, SMTValue a) => Queriable IO (SumS (SBV a)) (SumS a) where
  create                = SumS <$> freshVar_  <*> freshVar_  <*> freshVar_
  project SumS{i, s, n} = SumS <$> getValue i <*> getValue s <*> getValue n
  embed   SumS{i, s, n} = return $ SumS (literal i) (literal s) (literal n)
 
-type I  = Integer
-type SI = SBV I
+-- | Helper type synonym
+type S = SumS SInteger
 
-iSum :: (SumS SI -> SBool) -> Prog (SumS SI)
-iSum inv = Seq [ Assign $ \st -> st{i = 0, s = 0}
-               , While "i <= n"
-                       inv
-                       (\SumS{n, i} -> n - i + 1)
-                       (\SumS{n, i} -> i .<= n)
-                       $ Seq [ Assign $ \st@SumS{s, i} -> st{s = s+i}
-                             , Assign $ \st@SumS{i}    -> st{i = i+1}
-                             ]
-               ]
+-- * The algorithm
 
-inv1, inv2, inv3, inv4, inv5, inv6, inv7, inv8 :: SumS SI -> SBool
-inv1 _          = sFalse
-inv2 _          = sTrue
-inv3 SumS{n}    = n .>= 0
-inv4 SumS{i, n} = i .<= n+1
-inv5 SumS{s, i} = s .== (i * (i-1)) `sDiv` 2
-inv6 s          = inv3 s .=> inv4 s
-inv7 s          = inv3 s .=> inv5 s
-inv8 s          = inv3 s .=> inv4 s .&& inv5 s
-
--- | Correctness proof
+-- | The imperative summation algorithm:
 --
--- >>> correctness inv1
--- >>> correctness inv2
--- >>> correctness inv3
--- >>> correctness inv4
--- >>> correctness inv5
--- >>> correctness inv6
--- >>> correctness inv7
--- >>> correctness inv8
-correctness :: (SumS SI -> SBool) -> IO (ProofResult (SumS I))
-correctness inv = checkWith z3{verbose=False} True (iSum inv) prop
+-- @
+--    i = 0
+--    s = 0
+--    while i <= n
+--      s = s+i
+--      i = i+1
+-- @
+--
+-- Note that we need to explicitly annotate each loop with its invariant and the termination
+-- measure. For convenience, we take those two as parameters, so we can experiment later.
+imperativeSum :: Invariant S -> Measure S -> Program S
+imperativeSum invariant measure =
+        Seq [ Assign $ \st -> st{i = 0, s = 0}
+            , While "i <= n"
+                    invariant
+                    measure
+                    (\SumS{i, n} -> i .<= n)
+                    $ Seq [ Assign $ \st@SumS{i, s} -> st{s = s+i}
+                          , Assign $ \st@SumS{i}    -> st{i = i+1}
+                          ]
+            ]
+
+
+inv1 _             = sFalse
+inv2 _             = sTrue
+inv3 SumS{i, n}    = n .>= 0 .=> i .<= n+1
+inv4 SumS{i, s, n} = n .>= 0 .=> s .== (i * (i-1)) `sDiv` 2
+inv5 s@SumS{n}     = n .>= 0 .=> inv3 s .&& inv4 s
+measure1 SumS{i} = i - 10
+measure2 SumS{i} = i
+measure3 SumS{i} = n-i
+
+-- * Correctness proof
+
+-- | Check that the program terminates and @s@ equals @n*(n+1)/2@
+-- upon termination, i.e., the sum of all numbers upto @n@. Note
+-- that this only holds if @n >= 0@ to start with, so our
+-- as stipulated by our correctness predicate in the program.
+--
+-- The correct termination measure is @n-i@: It goes down in each
+-- iteration provided we start with @n >= 0@ and it always remains
+-- non-negative while the loop is executing.
+--
+-- The correct invariant is that @s@ is equiavlent to the sum of
+-- numbers @0@ upto @i@. This clearly holds at the beginning when
+-- @i = s = 0@, and is maintained in each iteration of the body.
+--
+-- Example proofs:
+--
+-- 1. Proof using the correct measure but always false invariant. We have:
+--
+-- >>> correctness (const sFalse) (\SumS{i, n} = n - i)
+-- Following proof obligation failed:
+-- ===================================
+--   Loop "i <= n": Invariant must hold prior to loop entry
+-- <BLANKLINE>
+-- Execution leading to failed proof obligation:
+-- =============================================
+--   {n = 0, i = 0, s = 0}
+-- ===> [1.1] Assign
+--   {n = 0, i = 0, s = 0}
+-- ===> [1.2] Loop i <= n: invariant fails to hold prior to loop entry
+-- <BLANKLINE>
+-- Program execution aborted in state:
+--   {n = 0, i = 0, s = 0}
+--
+-- When the invariant is constant false, it fails upon entry to the loop, and thus the
+-- proof itself fails.
+--
+-- 2. This doesn't look good:
+--
+-- >>> correctness  (\SumS{i, s} -> s .== i*(i+1)`sDiv` 2) (\SumS{i, n} -> n-i)
+-- HMM
+correctness :: Invariant S -> Measure S -> IO (ProofResult (SumS Integer))
+correctness invariant measure = checkWith z3{verbose=False} True (imperativeSum invariant measure) prop
   where prop SumS{s, n} = n .>= 0 .=> s .== (n * (n+1)) `sDiv` 2
