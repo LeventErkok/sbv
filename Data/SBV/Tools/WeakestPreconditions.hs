@@ -131,8 +131,8 @@ checkWith cfg chatty prog prop = runSMTWith cfg $ query $ do
                 inv' <- wp s inv
                 m'   <- wp s (\st -> m st .< m st')
                 return $ \st -> sAnd [ tag  "hold prior to loop entry"     $ inv st
-                                     , tag  "establish the post condition" $ inv st' .&& sNot (c st') .=> post st'
                                      , tag  "be maintained by the loop"    $ inv st' .&&       c st'  .=> inv' st'
+                                     , tag  "establish the post condition" $ inv st' .&& sNot (c st') .=> post st'
                                      , term "get smaller"                  $ inv st' .&&       c st'  .=> m' st'
                                      , term "always be non-negative"       $ inv st' .&&       c st'  .=> m  st' .>= 0
                                      ]
