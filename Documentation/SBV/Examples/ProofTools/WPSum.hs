@@ -23,6 +23,11 @@ import Data.SBV.Control
 
 import Data.SBV.Tools.WeakestPreconditions
 
+-- For doctest use only
+--
+-- $setup
+-- >>> :set -XNamedFieldPuns
+
 -- * System state
 
 -- | The state for the sum program, parameterized over a base type @a@.
@@ -74,17 +79,7 @@ imperativeSum invariant measure =
                           ]
             ]
 
-
-inv1 _             = sFalse
-inv2 _             = sTrue
-inv3 SumS{i, n}    = n .>= 0 .=> i .<= n+1
-inv4 SumS{i, s, n} = n .>= 0 .=> s .== (i * (i-1)) `sDiv` 2
-inv5 s@SumS{n}     = n .>= 0 .=> inv3 s .&& inv4 s
-measure1 SumS{i} = i - 10
-measure2 SumS{i} = i
-measure3 SumS{i} = n-i
-
--- * Correctness proof
+-- * Weakest precondition proofs
 
 -- | Check that the program terminates and @s@ equals @n*(n+1)/2@
 -- upon termination, i.e., the sum of all numbers upto @n@. Note
@@ -95,36 +90,61 @@ measure3 SumS{i} = n-i
 -- iteration provided we start with @n >= 0@ and it always remains
 -- non-negative while the loop is executing.
 --
--- The correct invariant is that @s@ is equiavlent to the sum of
--- numbers @0@ upto @i@. This clearly holds at the beginning when
--- @i = s = 0@, and is maintained in each iteration of the body.
---
--- Example proofs:
---
--- 1. Proof using the correct measure but always false invariant. We have:
---
--- >>> correctness (const sFalse) (\SumS{i, n} = n - i)
--- Following proof obligation failed:
--- ===================================
---   Loop "i <= n": Invariant must hold prior to loop entry
--- <BLANKLINE>
--- Execution leading to failed proof obligation:
--- =============================================
---   {n = 0, i = 0, s = 0}
--- ===> [1.1] Assign
---   {n = 0, i = 0, s = 0}
--- ===> [1.2] Loop i <= n: invariant fails to hold prior to loop entry
--- <BLANKLINE>
--- Program execution aborted in state:
---   {n = 0, i = 0, s = 0}
---
--- When the invariant is constant false, it fails upon entry to the loop, and thus the
--- proof itself fails.
---
--- 2. This doesn't look good:
---
--- >>> correctness  (\SumS{i, s} -> s .== i*(i+1)`sDiv` 2) (\SumS{i, n} -> n-i)
--- HMM
+-- The correct invariant is a conjunct. First, we have that @s@ is
+-- equivalent to the sum of numbers @0@ upto but not including @i@.
+-- (When @i=0@, we define this sum to be @0@.) This clearly holds at
+-- the beginning when @i = s = 0@, and is maintained in each iteration
+-- of the body. Second, it always holds that @i <= n+1@ as long as the
+-- loop executes, both before and after each execution of the body.
 correctness :: Invariant S -> Measure S -> IO (ProofResult (SumS Integer))
 correctness invariant measure = checkWith z3{verbose=False} True (imperativeSum invariant measure) prop
   where prop SumS{s, n} = n .>= 0 .=> s .== (n * (n+1)) `sDiv` 2
+
+
+-- inv1 _             = sFalse
+-- inv2 _             = sTrue
+-- inv3 SumS{i, n}    = n .>= 0 .=> i .<= n+1
+-- inv4 SumS{i, s, n} = n .>= 0 .=> s .== (i * (i-1)) `sDiv` 2
+-- inv5 s@SumS{n}     = n .>= 0 .=> inv3 s .&& inv4 s
+-- measure1 SumS{i} = i - 10
+-- measure2 SumS{i} = i
+-- measure3 SumS{n, i} = n-i
+
+-- * Example cases
+
+{- $examples
+
+== Always false invariant
+
+The simplest thing to try is to see what happens if the invariant
+is always false:
+
+>>> let invariant _          = sFalse
+>>> let measure   SumS{i, n} = n - i
+>>> correctness invariant measure
+Following proof obligation failed:
+===================================
+  Loop "i <= n": Invariant must hold prior to loop entry
+<BLANKLINE>
+Execution leading to failed proof obligation:
+=============================================
+  {n = 0, i = 0, s = 0}
+===> [1.1] Assign
+  {n = 0, i = 0, s = 0}
+===> [1.2] Loop i <= n: invariant fails to hold prior to loop entry
+<BLANKLINE>
+Program execution aborted in state:
+  {n = 0, i = 0, s = 0}
+
+When the invariant is constant false, it fails upon entry to the loop, and thus the
+proof itself fails.
+
+== Full proof
+
+>>> let invariant SumS{i, s, n} = n .>= 0 .=> s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
+>>> let measure   SumS{i, n}    = n - i
+>>> correctness invariant measure
+Total correctness is established.
+
+Finally, we have the full proof and a guarantee of termination!
+-}
