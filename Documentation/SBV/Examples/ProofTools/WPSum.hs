@@ -23,11 +23,6 @@ import Data.SBV.Control
 
 import Data.SBV.Tools.WeakestPreconditions
 
--- For doctest use only
---
--- $setup
--- >>> :set -XNamedFieldPuns
-
 -- * System state
 
 -- | The state for the sum program, parameterized over a base type @a@.
@@ -119,6 +114,7 @@ correctness invariant measure = checkWith z3{verbose=False} True (imperativeSum 
 The simplest thing to try is to see what happens if the invariant
 is always false:
 
+>>> :set -XNamedFieldPuns
 >>> let invariant _          = sFalse
 >>> let measure   SumS{i, n} = n - i
 >>> correctness invariant measure
@@ -141,6 +137,7 @@ proof itself fails.
 
 == Full proof
 
+>>> :set -XNamedFieldPuns
 >>> let invariant SumS{i, s, n} = n .>= 0 .=> s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
 >>> let measure   SumS{i, n}    = n - i
 >>> correctness invariant measure
