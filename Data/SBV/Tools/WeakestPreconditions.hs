@@ -117,12 +117,19 @@ checkWith cfg chatty prog prop = runSMTWith cfg $ query $ do
                          let giveUp endState s = do lEndState <- project endState
                                                     return $ Failed s startState lEndState
 
-                         case finalState of
-                           Stuck end -> giveUp end "Program got stuck prior to termination."
-                           Good  end -> do case unliteral (prop end) of
-                                             Nothing    -> error "Impossible happened, property evaluated to a symbolic value in the end."
-                                             Just True  -> giveUp end "Not all proof obligations were established."
-                                             Just False -> giveUp end "Property fails to hold in the final state."
+                         res <- case finalState of
+                                  Stuck end s -> giveUp end s
+                                  Good  end   -> do case unliteral (prop end) of
+                                                      Nothing    -> error "Impossible happened, property evaluated to a symbolic value in the end."
+                                                      Just True  -> giveUp end "Not all proof obligations were established."
+                                                      Just False -> giveUp end "Property fails to hold in the final state."
+
+                         case res of
+                           Failed{}        -> msg "\nAnalysis complete. Proof Failed."
+                           Indeterminate{} -> msg "\nAnalysis complete. Unable to prove correctness."
+                           Proven{}        -> msg "\nAnalysis complete. Property proven successfully."
+
+                         return res
 
   where msg = io . when chatty . putStrLn
 
@@ -167,8 +174,8 @@ data Location = Line Int
 type Loc = [Location]
 
 -- | Are we in a good state, or in a stuck state?
-data Status st = Good st
-               | Stuck st
+data Status st = Good st                -- ^ Execution finished in the given state.
+               | Stuck st String        -- ^ Execution got stuck in the state, with some explanation why.
 
 -- | Trace the execution of a program. The return value will have a 'Good' state to indicate
 -- the program ended successfully, if that is the case. The result will be 'Stuck' if the program aborts without
@@ -185,10 +192,11 @@ traceExecution chatty prog start = do printST start
                                       endState <- go [Line 1] prog (Good start)
 
                                       case endState of
-                                        Good  end -> do msg "\nProgram successfully terminated in state:"
-                                                        printST end
-                                        Stuck end -> do msg "\nProgram execution aborted in state:"
-                                                        printST end
+                                        Good  end   -> do msg "\nProgram successfully terminated in state:"
+                                                          printST end
+                                        Stuck end s -> do msg $ "\nProgram execution aborted: " ++ s
+                                                          msg "Stuck in state:"
+                                                          printST end
 
                                       return endState
   where msg :: String -> IO ()
@@ -206,7 +214,7 @@ traceExecution chatty prog start = do printST start
 
         stop :: Loc -> st -> String -> IO (Status st)
         stop l st m = do msg $ sLoc l ++ " " ++ m
-                         return $ Stuck st
+                         return $ Stuck st m
 
         dispST :: st -> String
         dispST st = intercalate "\n" ["  " ++ l | l <- lines (show st)]
@@ -219,7 +227,7 @@ traceExecution chatty prog start = do printST start
            where die = error $ "*** traceExecution: " ++ sLoc l ++ ": Failed to extract concrete value while " ++ show m
 
         go :: Loc -> Program st -> Status st -> IO (Status st)
-        go _   _ (Stuck st) = return $ Stuck st
+        go _   _ s@Stuck{}  = return s
         go loc p (Good  st) = analyze p
           where analyze Skip         = step loc st "Skip"
 
@@ -247,7 +255,7 @@ traceExecution chatty prog start = do printST start
                          currentMeasure   = unwrap loc (tag  "evaluating the measure")         . measure
                          currentInvariant = unwrap loc (tag  "evaluating the invariant")       . invariant
 
-                         while _ _     (Stuck is) = return $ Stuck is
+                         while _ _     s@Stuck{}  = return s
                          while c mPrev (Good  is)
                            | not (currentCondition is)
                            = step loc st $ tag "condition fails, terminating"
@@ -256,7 +264,7 @@ traceExecution chatty prog start = do printST start
                            | True
                            = do nextState <- go (Iteration c : loc) body =<< step loc is (tag "condition holds, executing the body")
                                 case nextState of
-                                  Stuck end -> return $ Stuck end
+                                  Stuck{}   -> return nextState
                                   Good  end -> let abort = stop loc end . tag
                                                    mCur  = currentMeasure   end
                                                in case (mCur <= mPrev, mCur < 0) of
