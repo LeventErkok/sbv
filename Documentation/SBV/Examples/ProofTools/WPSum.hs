@@ -144,6 +144,47 @@ Failed in state:
 When the invariant is constant false, it fails upon entry to the loop, and thus the
 proof itself fails.
 
+== Always true invariant
+We can try and see what happens if we simply take the always true invariant:
+
+>>> :set -XNamedFieldPuns
+>>> let invariant _          = sTrue
+>>> let measure   SumS{i, n} = n - i
+>>> correctness invariant measure
+Following proof obligation failed:
+===================================
+  Loop "i <= n": Invariant must establish the post condition
+<BLANKLINE>
+Execution leading to failed proof obligation:
+=============================================
+  {n = 0, i = 0, s = 0}
+===> [1.1] Assign
+  {n = 0, i = 0, s = 0}
+===> [1.2] Loop i <= n: condition holds, executing the body
+  {n = 0, i = 0, s = 0}
+===> [1.2.{1}.1] Assign
+  {n = 0, i = 0, s = 0}
+===> [1.2.{1}.2] Assign
+  {n = 0, i = 1, s = 0}
+===> [1.2] Loop i <= n: condition fails, terminating
+  {n = 0, i = 0, s = 0}
+<BLANKLINE>
+Program successfully terminated in state:
+  {n = 0, i = 0, s = 0}
+<BLANKLINE>
+Analysis complete. Proof Failed.
+Proof failure: Not all proof obligations were established.
+Starting state:
+  SumS {i = 0, s = 0, n = 0}
+Failed in state:
+  SumS {i = 0, s = 0, n = 0}
+
+The trace shows that the program indeed successfully terminate, but
+it failed to establish the output predicate. This might be a bit confusing
+since the final state does indeed satisfy the requirement that @s@ is the
+sum of all numbers up to @0@, but the invariant is just too weak to establish
+in the general case.
+
 == Full proof
 
 >>> :set -XNamedFieldPuns
