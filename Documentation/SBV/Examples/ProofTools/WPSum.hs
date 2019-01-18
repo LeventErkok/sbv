@@ -30,10 +30,11 @@ data SumS a = SumS { i :: a    -- ^ Loop counter
                    , s :: a    -- ^ Running sum
                    , n :: a    -- ^ The input value
                    }
+                   deriving Show
 
--- | Show instance for 'SumS'. A deriving clause would work just as well,
--- but we want it to be a little prettier here.
-instance (SymVal a, Show a) => Show (SumS (SBV a)) where
+-- | Show instance for 'SumS'. The above deriving clause would work just as well,
+-- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
+instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (SumS (SBV a)) where
    show (SumS i s n) = "{n = " ++ sh n ++ ", i = " ++ sh i ++ ", s = " ++ sh s ++ "}"
      where sh v = case unliteral v of
                     Nothing -> "<symbolic>"
@@ -91,8 +92,8 @@ imperativeSum invariant measure =
 -- the beginning when @i = s = 0@, and is maintained in each iteration
 -- of the body. Second, it always holds that @i <= n+1@ as long as the
 -- loop executes, both before and after each execution of the body.
-correctness :: Invariant S -> Measure S -> IO (ProofResult (SumS Integer))
-correctness invariant measure = checkWith z3{verbose=False} True (imperativeSum invariant measure) prop
+correctness :: Invariant S -> Measure S -> IO ()
+correctness invariant measure = print =<< checkWith z3{verbose=False} True (imperativeSum invariant measure) prop
   where prop SumS{s, n} = n .>= 0 .=> s .== (n * (n+1)) `sDiv` 2
 
 

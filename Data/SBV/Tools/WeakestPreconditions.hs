@@ -54,18 +54,22 @@ data Stmt st = Skip                                                             
              | Seq [Stmt st]                                                       -- ^ A sequence of statements.
 
 -- | The result of a weakest-precondition proof.
-data ProofResult st = Proven                     -- ^ The property holds, and termination is guaranteed.
-                    | Indeterminate String       -- ^ The property fails, but no causing start state is found.
-                                                 --   This typically happens if the loop invariants are not strong enough.
-                    | Failed st                  -- ^ The property fails, when the program is executed in the indicated state.
+data ProofResult res = Proven                     -- ^ The property holds, and termination is guaranteed.
+                     | Indeterminate String       -- ^ The property fails, but no causing start state is found.
+                                                  --   This typically happens if the loop invariants are not strong enough.
+                     | Failed String res res      -- ^ The property fails. The string is the reason for failure, and the
+                                                  --   two @res@ values are the starting and ending states, respectively.
 
 -- | 'Show' instance for proofs, for readability.
-instance Show st => Show (ProofResult st) where
-  show Proven            = "Q.E.D."
-  show (Indeterminate s) = "Indeterminate: " ++ s
-  show (Failed st)       = intercalate "\n" [ "Property fails, starting at program state:"
-                                            , intercalate "\n" ["  " ++ l | l <- lines (show st)]
-                                            ]
+instance Show res => Show (ProofResult res) where
+  show Proven             = "Q.E.D."
+  show (Indeterminate s)  = "Indeterminate: " ++ s
+  show (Failed s beg end) = intercalate "\n" [ "Proof failure: "++ s
+                                             , "Starting state:"
+                                             , intercalate "\n" ["  " ++ l | l <- lines (show beg)]
+                                             , "Ending state:"
+                                             , intercalate "\n" ["  " ++ l | l <- lines (show end)]
+                                             ]
 
 -- | An invariant takes a state and evaluates to a boolean.
 type Invariant st = st -> SBool
@@ -84,33 +88,41 @@ checkWith cfg chatty prog prop = runSMTWith cfg $ query $ do
 
         weakestPrecondition <- wp prog prop
 
-        st <- create
-        constrain $ sNot (weakestPrecondition st)
+        start <- create
+        constrain $ sNot (weakestPrecondition start)
 
         do cs <- checkSat
            case cs of
              Unk   -> Indeterminate . show <$> getUnknownReason
              Unsat -> do msg "Total correctness is established."
                          return Proven
-             Sat   -> do bad <- project st
-                         do os <- getObservables
-                            let plu w (_:_:_) = w ++ "s"
-                                plu w _       = w
-                            unless (null os) $ do let m = "Following proof " ++ plu "obligation" os ++ " failed: "
-                                                  msg m
-                                                  msg $ replicate (length m) '='
-                                                  mapM_ (msg . ("  " ++) . fst) os
-                                                  msg ""
-                            msg "Execution leading to failed proof obligation:"
-                            msg "============================================="
-                            lst <- embed bad
-                            finalState <- io $ traceExecution chatty lst prog
-                            case finalState of
-                              Stuck end -> return $ Indeterminate $ "Program execution aborted in state: " ++ show end
-                              Good  end -> case unliteral (prop end) of
+             Sat   -> do os <- getObservables
+
+                         let plu w (_:_:_) = w ++ "s"
+                             plu w _       = w
+
+                         unless (null os) $ do let m = "Following proof " ++ plu "obligation" os ++ " failed: "
+                                               msg m
+                                               msg $ replicate (length m) '='
+                                               mapM_ (msg . ("  " ++) . fst) os
+                                               msg ""
+
+                         msg "Execution leading to failed proof obligation:"
+                         msg "============================================="
+
+                         startState  <- project start
+                         lStartState <- embed   startState
+                         finalState  <- io $ traceExecution chatty prog lStartState
+
+                         let giveUp endState s = do lEndState <- project endState
+                                                    return $ Failed s startState lEndState
+
+                         case finalState of
+                           Stuck end -> giveUp end "Program got stuck prior to termination."
+                           Good  end -> do case unliteral (prop end) of
                                              Nothing    -> error "Impossible happened, property evaluated to a symbolic value in the end."
-                                             Just True  -> return $ Indeterminate "Not all proof obligations were established. Might need stronger invariants."
-                                             Just False -> return $ Failed bad
+                                             Just True  -> giveUp end "Not all proof obligations were established."
+                                             Just False -> giveUp end "Property fails to hold in the final state."
 
   where msg = io . when chatty . putStrLn
 
@@ -165,10 +177,10 @@ data Status st = Good st
 -- a readable trace of the program execution.
 traceExecution :: forall st. Show st
                => Bool                  -- ^ Verbose output
-               -> st                    -- ^ Starting state
                -> Program st            -- ^ Program
+               -> st                    -- ^ Starting state
                -> IO (Status st)
-traceExecution chatty start prog = do printST start
+traceExecution chatty prog start = do printST start
 
                                       endState <- go [Line 1] prog (Good start)
 
