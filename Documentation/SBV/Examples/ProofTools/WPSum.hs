@@ -130,8 +130,16 @@ Execution leading to failed proof obligation:
   {n = 0, i = 0, s = 0}
 ===> [1.2] Loop i <= n: invariant fails to hold prior to loop entry
 <BLANKLINE>
-Program execution aborted in state:
+Program execution aborted: Loop i <= n: invariant fails to hold prior to loop entry
+Stuck in state:
   {n = 0, i = 0, s = 0}
+<BLANKLINE>
+Analysis complete. Proof Failed.
+Proof failure: Loop i <= n: invariant fails to hold prior to loop entry
+Starting state:
+  SumS {i = 0, s = 0, n = 0}
+Failed in state:
+  SumS {i = 0, s = 0, n = 0}
 
 When the invariant is constant false, it fails upon entry to the loop, and thus the
 proof itself fails.
@@ -143,6 +151,7 @@ proof itself fails.
 >>> let measure   SumS{i, n}    = n - i
 >>> correctness invariant measure
 Total correctness is established.
+Q.E.D.
 
 Finally, we have the full proof and a guarantee of termination!
 -}

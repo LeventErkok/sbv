@@ -67,7 +67,7 @@ instance Show res => Show (ProofResult res) where
   show (Failed s beg end) = intercalate "\n" [ "Proof failure: "++ s
                                              , "Starting state:"
                                              , intercalate "\n" ["  " ++ l | l <- lines (show beg)]
-                                             , "Ending state:"
+                                             , "Failed in state:"
                                              , intercalate "\n" ["  " ++ l | l <- lines (show end)]
                                              ]
 
