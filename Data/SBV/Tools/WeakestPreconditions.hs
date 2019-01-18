@@ -119,10 +119,10 @@ checkWith cfg chatty prog prop = runSMTWith cfg $ query $ do
 
                          res <- case finalState of
                                   Stuck end s -> giveUp end s
-                                  Good  end   -> do case unliteral (prop end) of
-                                                      Nothing    -> error "Impossible happened, property evaluated to a symbolic value in the end."
-                                                      Just True  -> giveUp end "Not all proof obligations were established."
-                                                      Just False -> giveUp end "Property fails to hold in the final state."
+                                  Good  end   -> case unliteral (prop end) of
+                                                   Nothing    -> error "Impossible happened, property evaluated to a symbolic value in the end."
+                                                   Just True  -> giveUp end "Not all proof obligations were established."
+                                                   Just False -> giveUp end "Property fails to hold in the final state."
 
                          case res of
                            Failed{}        -> msg "\nAnalysis complete. Proof Failed."
