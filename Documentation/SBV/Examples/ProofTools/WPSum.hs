@@ -97,8 +97,6 @@ correctness invariant measure = print =<< checkWith z3{verbose=False} True (impe
   where prop SumS{s, n} = n .>= 0 .=> s .== (n * (n+1)) `sDiv` 2
 
 
--- inv1 _             = sFalse
--- inv2 _             = sTrue
 -- inv3 SumS{i, n}    = n .>= 0 .=> i .<= n+1
 -- inv4 SumS{i, s, n} = n .>= 0 .=> s .== (i * (i-1)) `sDiv` 2
 -- inv5 s@SumS{n}     = n .>= 0 .=> inv3 s .&& inv4 s
@@ -145,6 +143,7 @@ When the invariant is constant false, it fails upon entry to the loop, and thus 
 proof itself fails.
 
 == Always true invariant
+
 We can try and see what happens if we simply take the always true invariant:
 
 >>> :set -XNamedFieldPuns
@@ -185,7 +184,76 @@ since the final state does indeed satisfy the requirement that @s@ is the
 sum of all numbers up to @0@, but the invariant is just too weak to establish
 in the general case.
 
+== Relating @i@ to @n@
+
+As is typical in most weakest-precondition proofs, the correct invariant has to relate
+the final result to the loop-counter. In particular, we want the invariant to imply
+the correctness when the loop terminates. So, we can try relating @i@ to @n@. Observe
+that @i@ always less than @n+1@ when the loop body completes. Let us try that:
+
+>>> :set -XNamedFieldPuns
+>>> let invariant SumS{i, s, n} = i .<= n+1
+>>> let measure   SumS{i, n}    = n - i
+>>> correctness invariant measure
+Following proof obligation failed:
+===================================
+  Loop "i <= n": Invariant must hold prior to loop entry
+<BLANKLINE>
+Execution leading to failed proof obligation:
+=============================================
+  {n = -2, i = 0, s = 0}
+===> [1.1] Assign
+  {n = -2, i = 0, s = 0}
+===> [1.2] Loop i <= n: invariant fails to hold prior to loop entry
+<BLANKLINE>
+Program execution aborted: Loop i <= n: invariant fails to hold prior to loop entry
+Stuck in state:
+  {n = -2, i = 0, s = 0}
+<BLANKLINE>
+Analysis complete. Proof Failed.
+Proof failure: Loop i <= n: invariant fails to hold prior to loop entry
+Starting state:
+  SumS {i = 0, s = 0, n = -2}
+Failed in state:
+  SumS {i = 0, s = 0, n = -2}
+
+The engine is telling us that that we have forgotten about the case when @n@ starts negative, even though
+our correctness claim is only when @n@ is at least @0@. So, let's remedy that:
+
+>>> :set -XNamedFieldPuns
+>>> let invariant SumS{i, s, n} = n .>= 0 .=> i .<= n+1
+>>> let measure   SumS{i, n}    = n - i
+>>> correctness invariant measure
+Following proof obligation failed:
+===================================
+  Loop "i <= n": Invariant must establish the post condition
+<BLANKLINE>
+Execution leading to failed proof obligation:
+=============================================
+  {n = -8, i = 0, s = 0}
+===> [1.1] Assign
+  {n = -8, i = 0, s = 0}
+===> [1.2] Loop i <= n: condition fails, terminating
+  {n = -8, i = 0, s = 0}
+<BLANKLINE>
+Program successfully terminated in state:
+  {n = -8, i = 0, s = 0}
+<BLANKLINE>
+Analysis complete. Proof Failed.
+Proof failure: Not all proof obligations were established.
+Starting state:
+  SumS {i = 0, s = 0, n = -8}
+Failed in state:
+  SumS {i = 0, s = 0, n = -8}
+
+Note that the failure is different now. The invariant does indeed hold before the loop starts,
+but it is just not strong enough to establish the post condition. Clearly, we need to relate @s@
+to @i@ as well.
+
 == Full proof
+
+In this round we strengthen our invariant so it asserts @s@ is the sum of all numbers up to
+(but not including) @i@. Turns out this is enough to establish correctness:
 
 >>> :set -XNamedFieldPuns
 >>> let invariant SumS{i, s, n} = n .>= 0 .=> s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
