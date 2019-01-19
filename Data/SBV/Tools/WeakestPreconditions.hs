@@ -14,11 +14,12 @@
 
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE NamedFieldPuns         #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 
 module Data.SBV.Tools.WeakestPreconditions (
         -- * Programs and statements
-          Program, Stmt(..)
+          Program(..), Stmt(..)
 
         -- * Invariants and measures
         , Invariant, Measure
@@ -41,8 +42,18 @@ import Control.Monad (when, unless)
 import Data.SBV
 import Data.SBV.Control
 
--- | A Program over a state is simply a statement.
-type Program st = Stmt st
+-- | A Program over a state is simply a statement, together with
+-- a pre-condition capturing environmental assumptions and
+-- a post-condition that states its correctness. In the usual
+-- Hoare-triple notation, it captures:
+--
+--   @
+--     {precondition} program {postcondition}
+--   @
+data Program st = Program { precondition  :: st -> SBool   -- ^ Environmental assumptions
+                          , program       :: Stmt st       -- ^ Program
+                          , postcondition :: st -> SBool   -- ^ Correctness statement
+                          }
 
 -- | A statement in our imperative program, parameterized over the state.
 data Stmt st = Skip                                                                -- ^ Skip, do nothing.
@@ -82,14 +93,18 @@ checkWith :: forall st res. (Show st, Queriable IO st res)
           => SMTConfig             -- ^ Solver to use
           -> Bool                  -- ^ Be chatty
           -> Program st            -- ^ Program to check
-          -> (st -> SBool)         -- ^ Property to establish
           -> IO (ProofResult res)
-checkWith cfg chatty prog prop = runSMTWith cfg $ query $ do
+checkWith cfg chatty prog@Program{precondition, program, postcondition} = runSMTWith cfg $ query $ do
 
-        weakestPrecondition <- wp prog prop
+        weakestPrecondition <- wp program postcondition
 
+        -- The program is correct, if we can prove the precondition
+        -- implies the post-condition for all starting states
+        let correctness st = precondition st .=> weakestPrecondition st
+
+        -- As usual, assert the negation of the requirement and do a check-sat:
         start <- create
-        constrain $ sNot (weakestPrecondition start)
+        constrain $ sNot (correctness start)
 
         do cs <- checkSat
            case cs of
@@ -119,10 +134,7 @@ checkWith cfg chatty prog prop = runSMTWith cfg $ query $ do
 
                          res <- case finalState of
                                   Stuck end s -> giveUp end s
-                                  Good  end   -> case unliteral (prop end) of
-                                                   Nothing    -> error "Impossible happened, property evaluated to a symbolic value in the end."
-                                                   Just True  -> giveUp end "Not all proof obligations were established."
-                                                   Just False -> giveUp end "Property fails to hold in the final state."
+                                  Good  end   -> giveUp end "Not all proof obligations were established."
 
                          case res of
                            Failed{}        -> msg "\nAnalysis complete. Proof Failed."
@@ -160,7 +172,6 @@ checkWith cfg chatty prog prop = runSMTWith cfg $ query $ do
 check :: (Show st, Queriable IO st res)
       => Bool
       -> Program st
-      -> (st -> SBool)
       -> IO (ProofResult res)
 check = checkWith defaultSMTCfg
 
@@ -187,23 +198,27 @@ traceExecution :: forall st. Show st
                -> Program st            -- ^ Program
                -> st                    -- ^ Starting state
                -> IO (Status st)
-traceExecution chatty prog start = do printST start
+traceExecution chatty Program{precondition, program, postcondition} start = do
 
-                                      endState <- go [Line 1] prog (Good start)
+                printST start
 
-                                      case endState of
-                                        Good  end   -> do msg "\nProgram successfully terminated in state:"
-                                                          printST end
-                                        Stuck end s -> do msg $ "\nProgram execution aborted: " ++ s
-                                                          msg "Stuck in state:"
-                                                          printST end
+                status <- if unwrap [] "checking precondition" (precondition start)
+                          then go [Line 1] program =<< step [] start "Precondition holds, starting execution"
+                          else stop [] start "Initial state does not satisfy the precondition"
 
-                                      return endState
+                case status of
+                  s@Stuck{} -> return s
+                  Good end  -> if unwrap [] "checking postcondition" (postcondition end)
+                               then step [] end "Program successfully terminated, post condition holds of the final state"
+                               else stop [] end "final state does not satisfy the postcondition"
+
   where msg :: String -> IO ()
         msg = when chatty . putStrLn
 
         sLoc :: Loc -> String
-        sLoc l = "===> [" ++ intercalate "." (map sh (reverse l)) ++ "]"
+        sLoc l
+          | null l = "===>"
+          | True   = "===> [" ++ intercalate "." (map sh (reverse l)) ++ "]"
           where sh (Line  i)     = show i
                 sh (Iteration i) = "{" ++ show i ++ "}"
 
@@ -226,7 +241,7 @@ traceExecution chatty prog start = do printST start
         unwrap l m = fromMaybe die . unliteral
            where die = error $ "*** traceExecution: " ++ sLoc l ++ ": Failed to extract concrete value while " ++ show m
 
-        go :: Loc -> Program st -> Status st -> IO (Status st)
+        go :: Loc -> Stmt st -> Status st -> IO (Status st)
         go _   _ s@Stuck{}  = return s
         go loc p (Good  st) = analyze p
           where analyze Skip         = step loc st "Skip"
@@ -246,7 +261,7 @@ traceExecution chatty prog start = do printST start
 
                 analyze (While loopName invariant measure condition body)
                    | currentInvariant st
-                   = while 1 (currentMeasure st) (Good st)
+                   = while 1 Nothing (Good st)
                    | True
                    = stop loc st $ "Loop " ++ loopName ++ ": invariant fails to hold prior to loop entry"
                    where tag s = "Loop " ++ loopName ++ ": " ++ s
@@ -255,19 +270,17 @@ traceExecution chatty prog start = do printST start
                          currentMeasure   = unwrap loc (tag  "evaluating the measure")         . measure
                          currentInvariant = unwrap loc (tag  "evaluating the invariant")       . invariant
 
-                         while _ _     s@Stuck{}  = return s
-                         while c mPrev (Good  is)
+                         while _ _      s@Stuck{}  = return s
+                         while c mbPrev (Good  is)
                            | not (currentCondition is)
                            = step loc st $ tag "condition fails, terminating"
                            | not (currentInvariant is)
                            = stop loc st $ tag "invariant fails to hold in iteration " ++ show c
+                           | mCur < 0
+                           = stop loc st $ tag "measure must be non-negative, evaluated to: " ++ show mCur
+                           | Just mPrev <- mbPrev, mCur >= mPrev
+                           = stop loc st $ tag "measure failed to decrease, prev = " ++ show mPrev ++ ", current = " ++ show mCur
                            | True
                            = do nextState <- go (Iteration c : loc) body =<< step loc is (tag "condition holds, executing the body")
-                                case nextState of
-                                  Stuck{}   -> return nextState
-                                  Good  end -> let abort = stop loc end . tag
-                                                   mCur  = currentMeasure   end
-                                               in case (mCur <= mPrev, mCur < 0) of
-                                                    (False, _    ) -> abort $ "measure failed to decrease, prev = " ++ show mPrev ++ ", current = " ++ show mCur
-                                                    (True,  False) -> abort $ "measure must be non-negative, evaluated to: " ++ show mCur
-                                                    (True,  True ) -> while (c+1) mCur (Good end)
+                                while (c+1) (Just mCur) nextState
+                           where mCur = currentMeasure is
