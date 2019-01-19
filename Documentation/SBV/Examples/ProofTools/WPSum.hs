@@ -63,17 +63,32 @@ type S = SumS SInteger
 --
 -- Note that we need to explicitly annotate each loop with its invariant and the termination
 -- measure. For convenience, we take those two as parameters, so we can experiment later.
+algorithm :: Invariant S -> Measure S -> Stmt S
+algorithm inv msr = Seq [ Assign $ \st -> st{i = 0, s = 0}
+                        , While "i <= n"
+                                inv
+                                msr
+                                (\SumS{i, n} -> i .<= n)
+                                $ Seq [ Assign $ \st@SumS{i, s} -> st{s = s+i}
+                                      , Assign $ \st@SumS{i}    -> st{i = i+1}
+                                      ]
+                        ]
+
+-- | Precondition for our program: @n@ must be non-negative.
+pre :: S -> SBool
+pre SumS{n} = n .>= 0
+
+-- | Postcondition for our program: @s@ must be the sum of all numbers up to
+-- and including @n@.
+post :: S -> SBool
+post SumS{s, n} = s .== (n * (n+1)) `sDiv` 2
+
+-- | A program is the algorithm, together with its pre- and post-conditions.
 imperativeSum :: Invariant S -> Measure S -> Program S
-imperativeSum invariant measure =
-        Seq [ Assign $ \st -> st{i = 0, s = 0}
-            , While "i <= n"
-                    invariant
-                    measure
-                    (\SumS{i, n} -> i .<= n)
-                    $ Seq [ Assign $ \st@SumS{i, s} -> st{s = s+i}
-                          , Assign $ \st@SumS{i}    -> st{i = i+1}
-                          ]
-            ]
+imperativeSum inv msr = Program { precondition  = pre
+                                , program       = algorithm inv msr
+                                , postcondition = post
+                                }
 
 -- * Weakest precondition proofs
 
@@ -92,175 +107,14 @@ imperativeSum invariant measure =
 -- the beginning when @i = s = 0@, and is maintained in each iteration
 -- of the body. Second, it always holds that @i <= n+1@ as long as the
 -- loop executes, both before and after each execution of the body.
+--
+-- We have:
+--
+-- >>> :set -XNamedFieldPuns
+-- >>> let invariant SumS{i, s, n} = s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
+-- >>> let measure   SumS{i, n}    = n - i
+-- >>> correctness invariant measure
+-- Total correctness is established.
+-- Q.E.D.
 correctness :: Invariant S -> Measure S -> IO ()
-correctness invariant measure = print =<< checkWith z3{verbose=False} True (imperativeSum invariant measure) prop
-  where prop SumS{s, n} = n .>= 0 .=> s .== (n * (n+1)) `sDiv` 2
-
-
--- inv3 SumS{i, n}    = n .>= 0 .=> i .<= n+1
--- inv4 SumS{i, s, n} = n .>= 0 .=> s .== (i * (i-1)) `sDiv` 2
--- inv5 s@SumS{n}     = n .>= 0 .=> inv3 s .&& inv4 s
--- measure1 SumS{i} = i - 10
--- measure2 SumS{i} = i
--- measure3 SumS{n, i} = n-i
-
--- * Example cases
-
-{- $examples
-
-== Always false invariant
-
-The simplest thing to try is to see what happens if the invariant
-is always false:
-
->>> :set -XNamedFieldPuns
->>> let invariant _          = sFalse
->>> let measure   SumS{i, n} = n - i
->>> correctness invariant measure
-Following proof obligation failed:
-===================================
-  Loop "i <= n": Invariant must hold prior to loop entry
-<BLANKLINE>
-Execution leading to failed proof obligation:
-=============================================
-  {n = 0, i = 0, s = 0}
-===> [1.1] Assign
-  {n = 0, i = 0, s = 0}
-===> [1.2] Loop i <= n: invariant fails to hold prior to loop entry
-<BLANKLINE>
-Program execution aborted: Loop i <= n: invariant fails to hold prior to loop entry
-Stuck in state:
-  {n = 0, i = 0, s = 0}
-<BLANKLINE>
-Analysis complete. Proof Failed.
-Proof failure: Loop i <= n: invariant fails to hold prior to loop entry
-Starting state:
-  SumS {i = 0, s = 0, n = 0}
-Failed in state:
-  SumS {i = 0, s = 0, n = 0}
-
-When the invariant is constant false, it fails upon entry to the loop, and thus the
-proof itself fails.
-
-== Always true invariant
-
-We can try and see what happens if we simply take the always true invariant:
-
->>> :set -XNamedFieldPuns
->>> let invariant _          = sTrue
->>> let measure   SumS{i, n} = n - i
->>> correctness invariant measure
-Following proof obligation failed:
-===================================
-  Loop "i <= n": Invariant must establish the post condition
-<BLANKLINE>
-Execution leading to failed proof obligation:
-=============================================
-  {n = 0, i = 0, s = 0}
-===> [1.1] Assign
-  {n = 0, i = 0, s = 0}
-===> [1.2] Loop i <= n: condition holds, executing the body
-  {n = 0, i = 0, s = 0}
-===> [1.2.{1}.1] Assign
-  {n = 0, i = 0, s = 0}
-===> [1.2.{1}.2] Assign
-  {n = 0, i = 1, s = 0}
-===> [1.2] Loop i <= n: condition fails, terminating
-  {n = 0, i = 0, s = 0}
-<BLANKLINE>
-Program successfully terminated in state:
-  {n = 0, i = 0, s = 0}
-<BLANKLINE>
-Analysis complete. Proof Failed.
-Proof failure: Not all proof obligations were established.
-Starting state:
-  SumS {i = 0, s = 0, n = 0}
-Failed in state:
-  SumS {i = 0, s = 0, n = 0}
-
-The trace shows that the program indeed successfully terminate, but
-it failed to establish the output predicate. This might be a bit confusing
-since the final state does indeed satisfy the requirement that @s@ is the
-sum of all numbers up to @0@, but the invariant is just too weak to establish
-in the general case.
-
-== Relating @i@ to @n@
-
-As is typical in most weakest-precondition proofs, the correct invariant has to relate
-the final result to the loop-counter. In particular, we want the invariant to imply
-the correctness when the loop terminates. So, we can try relating @i@ to @n@. Observe
-that @i@ always less than @n+1@ when the loop body completes. Let us try that:
-
->>> :set -XNamedFieldPuns
->>> let invariant SumS{i, s, n} = i .<= n+1
->>> let measure   SumS{i, n}    = n - i
->>> correctness invariant measure
-Following proof obligation failed:
-===================================
-  Loop "i <= n": Invariant must hold prior to loop entry
-<BLANKLINE>
-Execution leading to failed proof obligation:
-=============================================
-  {n = -2, i = 0, s = 0}
-===> [1.1] Assign
-  {n = -2, i = 0, s = 0}
-===> [1.2] Loop i <= n: invariant fails to hold prior to loop entry
-<BLANKLINE>
-Program execution aborted: Loop i <= n: invariant fails to hold prior to loop entry
-Stuck in state:
-  {n = -2, i = 0, s = 0}
-<BLANKLINE>
-Analysis complete. Proof Failed.
-Proof failure: Loop i <= n: invariant fails to hold prior to loop entry
-Starting state:
-  SumS {i = 0, s = 0, n = -2}
-Failed in state:
-  SumS {i = 0, s = 0, n = -2}
-
-The engine is telling us that that we have forgotten about the case when @n@ starts negative, even though
-our correctness claim is only when @n@ is at least @0@. So, let's remedy that:
-
->>> :set -XNamedFieldPuns
->>> let invariant SumS{i, s, n} = n .>= 0 .=> i .<= n+1
->>> let measure   SumS{i, n}    = n - i
->>> correctness invariant measure
-Following proof obligation failed:
-===================================
-  Loop "i <= n": Invariant must establish the post condition
-<BLANKLINE>
-Execution leading to failed proof obligation:
-=============================================
-  {n = -8, i = 0, s = 0}
-===> [1.1] Assign
-  {n = -8, i = 0, s = 0}
-===> [1.2] Loop i <= n: condition fails, terminating
-  {n = -8, i = 0, s = 0}
-<BLANKLINE>
-Program successfully terminated in state:
-  {n = -8, i = 0, s = 0}
-<BLANKLINE>
-Analysis complete. Proof Failed.
-Proof failure: Not all proof obligations were established.
-Starting state:
-  SumS {i = 0, s = 0, n = -8}
-Failed in state:
-  SumS {i = 0, s = 0, n = -8}
-
-Note that the failure is different now. The invariant does indeed hold before the loop starts,
-but it is just not strong enough to establish the post condition. Clearly, we need to relate @s@
-to @i@ as well.
-
-== Full proof
-
-In this round we strengthen our invariant so it asserts @s@ is the sum of all numbers up to
-(but not including) @i@. Turns out this is enough to establish correctness:
-
->>> :set -XNamedFieldPuns
->>> let invariant SumS{i, s, n} = n .>= 0 .=> s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
->>> let measure   SumS{i, n}    = n - i
->>> correctness invariant measure
-Total correctness is established.
-Q.E.D.
-
-Finally, we have the full proof and a guarantee of termination!
--}
+correctness inv msr = print =<< checkWith z3{verbose=False} True (imperativeSum inv msr)
