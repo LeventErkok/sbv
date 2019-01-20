@@ -351,7 +351,7 @@ traceExecution WPConfig{wpVerbose} Program{precondition, program, postcondition}
         go loc p (Good  st) = analyze p
           where analyze Skip         = step loc st "Skip"
 
-                analyze Abort        = step loc st "Abort"
+                analyze Abort        = stop loc st "Abort command executed"
 
                 analyze (Assign f)   = step loc (f st) "Assign"
 
