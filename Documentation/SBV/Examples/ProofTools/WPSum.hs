@@ -134,7 +134,7 @@ imperativeSum inv msr = Program { precondition  = pre
 -- Total correctness is established.
 -- Q.E.D.
 correctness :: Invariant S -> Measure S -> IO ()
-correctness inv msr = print =<< checkWith z3{verbose=False} True (imperativeSum inv msr)
+correctness inv msr = print =<< wpProveWith defaultWPCfg{wpVerbose=True} (imperativeSum inv msr)
 
 -- * Example proof attempts
 --

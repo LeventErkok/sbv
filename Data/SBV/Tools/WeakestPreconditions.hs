@@ -28,7 +28,7 @@ module Data.SBV.Tools.WeakestPreconditions (
         , ProofResult(..)
 
         -- * Checking WP total correctness
-        , check, checkWith
+        , wpProve, wpProveWith, WPConfig(..), defaultWPCfg
 
         -- * Tracing concrete execution
         , Status(..), traceExecution
@@ -89,8 +89,8 @@ type Invariant st = st -> SBool
 type Measure st = st -> SInteger
 
 -- | Checking WP based correctness
-wpProof :: forall st res. (Show st, Mergeable st, Queriable IO st res) => SMTConfig -> Bool -> Program st -> IO (ProofResult res)
-wpProof cfg chatty prog@Program{precondition, program, postcondition} = runSMTWith cfg $ query $ do
+proveWP :: forall st res. (Show st, Mergeable st, Queriable IO st res) => WPConfig -> Program st -> IO (ProofResult res)
+proveWP cfg@WPConfig{wpVerbose} prog@Program{precondition, program, postcondition} = runSMTWith (wpSolver cfg) $ query $ do
 
         weakestPrecondition <- wp program postcondition
 
@@ -126,7 +126,7 @@ wpProof cfg chatty prog@Program{precondition, program, postcondition} = runSMTWi
                                                  return $ Failed s startState lEndState
 
                       case finalState of
-                        Stuck end s -> if chatty
+                        Stuck end s -> if wpVerbose
                                        then do msg "Execution trace:"
                                                msg "================"
                                                _ <- io $ traceExecution True prog lStartState
@@ -134,7 +134,7 @@ wpProof cfg chatty prog@Program{precondition, program, postcondition} = runSMTWi
                                        else return $ Indeterminate "Not all proof obligations were established."
                         Good  _     -> return $ Indeterminate "Not all proof obligations were established."
 
-  where msg = io . when chatty . putStrLn
+  where msg = io . when wpVerbose . putStrLn
 
         -- Compute the weakest precondition to establish the property:
         wp :: Stmt st -> (st -> SBool) -> Query (st -> SBool)
@@ -162,8 +162,8 @@ wpProof cfg chatty prog@Program{precondition, program, postcondition} = runSMTWi
 -- | Do a forward proof at a given bound for each one of its @While@ loops. If there are nested loops, each will be unrolled
 -- @bound@ times, so the unrolling is multiplicative. In case we cannot establish correctness, try to find a starting state that
 -- violates one of the conditions. This is good old bounded-model checking, but comes in quite handy.
-unrollBound :: forall st res. (Show st, Mergeable st, Queriable IO st res) => SMTConfig -> Int -> Bool -> Program st -> IO (Maybe (res, res))
-unrollBound cfg bound chatty prog@Program{precondition, program, postcondition} = runSMTWith cfg $ query $ do
+unrollBound :: forall st res. (Show st, Mergeable st, Queriable IO st res) => WPConfig -> Int -> Program st -> IO (Maybe (res, res))
+unrollBound cfg@WPConfig{wpVerbose} bound prog@Program{precondition, program, postcondition} = runSMTWith (wpSolver cfg) $ query $ do
 
         let go :: Int -> SBool -> Stmt st -> st -> (SBool, SBool, st)
             go _ _     Skip                            st = (sTrue, sTrue,      st)
@@ -212,47 +212,54 @@ unrollBound cfg bound chatty prog@Program{precondition, program, postcondition} 
                       es <- project endState
 
                       sls <- embed ls
-                      when chatty $ io $ void (traceExecution True prog sls)
+                      when wpVerbose $ io $ void (traceExecution True prog sls)
 
                       return $ Just (ls, es)
 
 -- | Try to find a good counter-example by unrolling up to 20 times
-unroll :: forall st res. (Show st, Mergeable st, Queriable IO st res) => SMTConfig -> Bool -> String -> Program st -> IO (ProofResult res)
-unroll cfg chatty reason prog = go 0
-  where unrollMax = 20
+unroll :: forall st res. (Show st, Mergeable st, Queriable IO st res) => WPConfig -> String -> Program st -> IO (ProofResult res)
+unroll cfg@WPConfig{wpVerbose, wpCexDepth} reason prog = go 0
+  where msg = when wpVerbose . putStrLn
 
-        msg = when chatty . putStrLn
+        go i | i > wpCexDepth = do msg $ "No violating trace found (searched up to depth: " ++ show wpCexDepth ++ ")"
+                                   return $ Indeterminate reason
+             | True           = do mbRes <- unrollBound cfg i prog
+                                   case mbRes of
+                                     Nothing       -> go (i+1)
+                                     Just (ls, le) -> return $ Failed reason ls le
 
-        go i | i > unrollMax = do msg $ "No violating trace found (searched up to depth: " ++ show unrollMax ++ ")"
-                                  return $ Indeterminate reason
-             | True          = do mbRes <- unrollBound cfg i chatty prog
-                                  case mbRes of
-                                    Nothing       -> go (i+1)
-                                    Just (ls, le) -> return $ Failed reason ls le
+-- | Configuration for WP proofs.
+data WPConfig = WPConfig { wpSolver   :: SMTConfig   -- ^ SMT Solver to use
+                         , wpVerbose  :: Bool        -- ^ Should we be chatty?
+                         , wpCexDepth :: Int         -- ^ In case of proof failure, search for cex's upto this depth
+                         }
+
+-- | Default WP configuration.
+defaultWPCfg :: WPConfig
+defaultWPCfg = WPConfig { wpSolver   = defaultSMTCfg
+                        , wpVerbose  = False
+                        , wpCexDepth = 20
+                        }
 
 -- | Checking WP based correctness
-checkWith :: forall st res. (Show st, Mergeable st, Queriable IO st res)
-          => SMTConfig             -- ^ Solver to use
-          -> Bool                  -- ^ Be chatty
-          -> Program st            -- ^ Program to check
-          -> IO (ProofResult res)
-checkWith cfg chatty prog = do
+wpProveWith :: forall st res. (Show st, Mergeable st, Queriable IO st res)
+            => WPConfig              -- ^ Configuration to use
+            -> Program st            -- ^ Program to check
+            -> IO (ProofResult res)
+wpProveWith cfg@WPConfig{wpVerbose} prog = do
 
-        let msg = when chatty . putStrLn
+        let msg = when wpVerbose . putStrLn
 
-        res <- wpProof cfg chatty prog
+        res <- proveWP cfg prog
         case res of
           Failed{}             -> do msg "\nAnalysis complete. Proof Failed."
                                      return res
           Proven{}             -> return res
-          Indeterminate reason -> unroll cfg chatty reason prog
+          Indeterminate reason -> unroll cfg reason prog
 
--- | Check correctness using the default solver.
-check :: (Show st, Mergeable st, Queriable IO st res)
-      => Bool
-      -> Program st
-      -> IO (ProofResult res)
-check = checkWith defaultSMTCfg
+-- | Check correctness using the default solver. Equivalent to @'wpProveWith' 'defaultWPCfg'@.
+wpProve :: (Show st, Mergeable st, Queriable IO st res) => Program st -> IO (ProofResult res)
+wpProve = wpProveWith defaultWPCfg
 
 -- * Concrete execution of a program
 
