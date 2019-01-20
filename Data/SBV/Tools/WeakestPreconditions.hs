@@ -37,7 +37,7 @@ module Data.SBV.Tools.WeakestPreconditions (
 import Data.List   (intercalate)
 import Data.Maybe  (fromMaybe)
 
-import Control.Monad (when, unless, void)
+import Control.Monad (when, unless)
 
 import Data.SBV
 import Data.SBV.Control
@@ -116,20 +116,20 @@ proveWP cfg@WPConfig{wpVerbose} prog@Program{precondition, program, postconditio
                                             msg m
                                             msg $ replicate (length m) '='
                                             mapM_ (msg . ("  " ++) . fst) os
-                                            msg ""
 
                       startState  <- project start
                       lStartState <- embed   startState
-                      finalState  <- io $ traceExecution False prog lStartState
+                      finalState  <- io $ traceExecution cfg{wpVerbose=False} prog lStartState
 
                       let giveUp endState s = do lEndState <- project endState
                                                  return $ Failed s startState lEndState
 
                       case finalState of
                         Stuck end s -> if wpVerbose
-                                       then do msg "Execution trace:"
+                                       then do msg ""
+                                               msg "Execution trace:"
                                                msg "================"
-                                               _ <- io $ traceExecution True prog lStartState
+                                               _ <- io $ traceExecution cfg prog lStartState
                                                giveUp end s
                                        else return $ Indeterminate "Not all proof obligations were established."
                         Good  _     -> return $ Indeterminate "Not all proof obligations were established."
@@ -162,7 +162,7 @@ proveWP cfg@WPConfig{wpVerbose} prog@Program{precondition, program, postconditio
 -- | Do a forward proof at a given bound for each one of its @While@ loops. If there are nested loops, each will be unrolled
 -- @bound@ times, so the unrolling is multiplicative. In case we cannot establish correctness, try to find a starting state that
 -- violates one of the conditions. This is good old bounded-model checking, but comes in quite handy.
-unrollBound :: forall st res. (Show st, Mergeable st, Queriable IO st res) => WPConfig -> Int -> Program st -> IO (Maybe (res, res))
+unrollBound :: forall st res. (Show st, Show res, Mergeable st, Queriable IO st res) => WPConfig -> Int -> Program st -> IO (Maybe (ProofResult res))
 unrollBound cfg@WPConfig{wpVerbose} bound prog@Program{precondition, program, postcondition} = runSMTWith (wpSolver cfg) $ query $ do
 
         let go :: Int -> SBool -> Stmt st -> st -> (SBool, SBool, st)
@@ -212,21 +212,34 @@ unrollBound cfg@WPConfig{wpVerbose} bound prog@Program{precondition, program, po
                       es <- project endState
 
                       sls <- embed ls
-                      when wpVerbose $ io $ void (traceExecution True prog sls)
+                      msg $ "Found a counter-example violation at depth " ++ show bound ++ ":"
+                      msg ""
+                      res <- io $ traceExecution cfg prog sls
+                      msg ""
+                      case res of
+                        Good{}    -> error $ unlines [ "Impossible happened! Unrolling semantics found a bad state, but executor did not reach it."
+                                                     , "Start state: " ++ show ls
+                                                     , "End   state: " ++ show es
+                                                     , "Please report this as a bug in SBV!"
+                                                     ]
+                        -- Should really ensure here that the trace result state is the same as @es@,
+                        -- but let's not worry about that for now
+                        Stuck _ r -> do msg "Analysis complete. Proof failed."
+                                        return $ Just $ Failed r ls es
 
-                      return $ Just (ls, es)
+   where msg = when wpVerbose . io . putStrLn
 
 -- | Try to find a good counter-example by unrolling up to 20 times
-unroll :: forall st res. (Show st, Mergeable st, Queriable IO st res) => WPConfig -> String -> Program st -> IO (ProofResult res)
+unroll :: forall st res. (Show st, Show res, Mergeable st, Queriable IO st res) => WPConfig -> String -> Program st -> IO (ProofResult res)
 unroll cfg@WPConfig{wpVerbose, wpCexDepth} reason prog = go 0
   where msg = when wpVerbose . putStrLn
 
-        go i | i > wpCexDepth = do msg $ "No violating trace found (searched up to depth: " ++ show wpCexDepth ++ ")"
+        go i | i > wpCexDepth = do msg $ "No violating trace found. (Searched up to depth " ++ show wpCexDepth ++ ".)"
                                    return $ Indeterminate reason
              | True           = do mbRes <- unrollBound cfg i prog
                                    case mbRes of
-                                     Nothing       -> go (i+1)
-                                     Just (ls, le) -> return $ Failed reason ls le
+                                     Nothing -> go (i+1)
+                                     Just r  -> return r
 
 -- | Configuration for WP proofs.
 data WPConfig = WPConfig { wpSolver   :: SMTConfig   -- ^ SMT Solver to use
@@ -242,7 +255,7 @@ defaultWPCfg = WPConfig { wpSolver   = defaultSMTCfg
                         }
 
 -- | Checking WP based correctness
-wpProveWith :: forall st res. (Show st, Mergeable st, Queriable IO st res)
+wpProveWith :: forall st res. (Show st, Show res, Mergeable st, Queriable IO st res)
             => WPConfig              -- ^ Configuration to use
             -> Program st            -- ^ Program to check
             -> IO (ProofResult res)
@@ -252,13 +265,14 @@ wpProveWith cfg@WPConfig{wpVerbose} prog = do
 
         res <- proveWP cfg prog
         case res of
-          Failed{}             -> do msg "\nAnalysis complete. Proof Failed."
+          Failed{}             -> do msg "\nAnalysis complete. Proof failed."
                                      return res
           Proven{}             -> return res
-          Indeterminate reason -> unroll cfg reason prog
+          Indeterminate reason -> do msg "\nAnalysis is indeterminate, not all proof obligations were established. Searching for a counter-example."
+                                     unroll cfg reason prog
 
 -- | Check correctness using the default solver. Equivalent to @'wpProveWith' 'defaultWPCfg'@.
-wpProve :: (Show st, Mergeable st, Queriable IO st res) => Program st -> IO (ProofResult res)
+wpProve :: (Show st, Show res, Mergeable st, Queriable IO st res) => Program st -> IO (ProofResult res)
 wpProve = wpProveWith defaultWPCfg
 
 -- * Concrete execution of a program
@@ -280,11 +294,11 @@ data Status st = Good st                -- ^ Execution finished in the given sta
 -- or if a metric fails to go down through a loop body. In these latter cases, turning verbosity on will print
 -- a readable trace of the program execution.
 traceExecution :: forall st. Show st
-               => Bool                  -- ^ Verbose output
+               => WPConfig              -- ^ Configuration
                -> Program st            -- ^ Program
                -> st                    -- ^ Starting state
                -> IO (Status st)
-traceExecution chatty Program{precondition, program, postcondition} start = do
+traceExecution WPConfig{wpVerbose} Program{precondition, program, postcondition} start = do
 
                 printST start
 
@@ -299,7 +313,7 @@ traceExecution chatty Program{precondition, program, postcondition} start = do
                                else stop [] end "final state does not satisfy the postcondition"
 
   where msg :: String -> IO ()
-        msg = when chatty . putStrLn
+        msg = when wpVerbose . putStrLn
 
         sLoc :: Loc -> String
         sLoc l

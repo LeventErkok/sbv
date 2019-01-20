@@ -166,7 +166,7 @@ Execution trace:
   {n = 0, i = 0, s = 0}
 ===> [1.2] Loop i <= n: invariant fails to hold prior to loop entry
 <BLANKLINE>
-Analysis complete. Proof Failed.
+Analysis complete. Proof failed.
 Proof failure: Loop i <= n: invariant fails to hold prior to loop entry
 Starting state:
   SumS {n = 0, i = 0, s = 0}
@@ -190,7 +190,8 @@ Following proof obligation failed:
 ===================================
   Loop "i <= n": Invariant must establish the post condition
 <BLANKLINE>
-No violating trace found (searched up to depth: 20)
+Analysis is indeterminate, not all proof obligations were established. Searching for a counter-example.
+No violating trace found. (Searched up to depth 20.)
 Indeterminate: Not all proof obligations were established.
 
 In this case, we are told that the invariant was not sufficient to establish
@@ -213,6 +214,9 @@ Following proof obligation failed:
 ===================================
   Loop "i <= n": Invariant must be maintained by the loop
 <BLANKLINE>
+Analysis is indeterminate, not all proof obligations were established. Searching for a counter-example.
+Found a counter-example violation at depth 2:
+<BLANKLINE>
   {n = 1, i = 0, s = 0}
 ===> Precondition holds, starting execution
   {n = 1, i = 0, s = 0}
@@ -225,7 +229,9 @@ Following proof obligation failed:
 ===> [1.2.{1}.2] Assign
   {n = 1, i = 1, s = 0}
 ===> [1.2] Loop i <= n: invariant fails to hold in iteration 2
-Proof failure: Not all proof obligations were established.
+<BLANKLINE>
+Analysis complete. Proof failed.
+Proof failure: Loop i <= n: invariant fails to hold in iteration 2
 Starting state:
   SumS {n = 1, i = 0, s = 0}
 Failed in state:
